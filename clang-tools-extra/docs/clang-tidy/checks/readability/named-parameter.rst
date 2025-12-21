@@ -10,7 +10,26 @@ Guide:
 
 https://google.github.io/styleguide/cppguide.html#Function_Declarations_and_Definitions
 
-All parameters should be named, with identical names in the declaration and
-implementation.
+All parameters should have the same name in both the function declaration and
+definition. If a parameter is not utilized, its name can be commented out in a
+function definition.
+
+.. code-block:: c++
+
+    int doingSomething(int a, int b, int c);
+
+    int doingSomething(int a, int b, int /*c*/) {
+        // Ok: the third param is not used
+        return a + b;
+    }
 
 Corresponding cpplint.py check name: `readability/function`.
+
+Options
+-------
+
+.. option:: InsertPlainNamesInForwardDecls
+
+   If set to `true`, the check will insert parameter names without comments for
+   forward declarations only. Otherwise, the check will insert parameter names
+   as comments (e.g., ``/*param*/``). Default is `false`.

@@ -1,5 +1,5 @@
 ; RUN: opt -vector-library=MASSV -mtriple=powerpc64le-unknown-linux-gnu -passes=inject-tli-mappings,loop-vectorize -force-vector-interleave=1 -S < %s | FileCheck %s
-; RUN: opt -vector-library=MASSV -vec-extabi -mattr=+altivec -mtriple=powerpc64-ibm-aix-xcoff -passes=inject-tli-mappings,loop-vectorize -force-vector-interleave=1 -S < %s | FileCheck %s
+; RUN: opt -vector-library=MASSV -vec-extabi -mattr=+altivec -mcpu=ppc64 -mtriple=powerpc64-ibm-aix-xcoff -passes=inject-tli-mappings,loop-vectorize -force-vector-interleave=1 -S < %s | FileCheck %s
 
 declare double @cbrt(double) #0
 declare float @cbrtf(float) #0
@@ -1234,6 +1234,52 @@ for.body:
   %tmp = trunc i64 %iv to i32
   %conv = sitofp i32 %tmp to float
   %call = tail call float @atan2f(float %conv, float %conv)
+  %arrayidx = getelementptr inbounds float, ptr %varray, i64 %iv
+  store float %call, ptr %arrayidx, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, 1000
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
+define void @atan2_f64_intrinsic(ptr nocapture %varray) {
+; CHECK-LABEL: @atan2_f64_intrinsic(
+; CHECK: __atan2d2{{.*}}<2 x double>
+; CHECK: ret void
+;
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %tmp = trunc i64 %iv to i32
+  %conv = sitofp i32 %tmp to double
+  %call = tail call double @llvm.atan2.f64(double %conv, double %conv)
+  %arrayidx = getelementptr inbounds double, ptr %varray, i64 %iv
+  store double %call, ptr %arrayidx, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, 1000
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
+define void @atan2_f32_intrinsic(ptr nocapture %varray) {
+; CHECK-LABEL: @atan2_f32_intrinsic(
+; CHECK: __atan2f4{{.*}}<4 x float>
+; CHECK: ret void
+;
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %tmp = trunc i64 %iv to i32
+  %conv = sitofp i32 %tmp to float
+  %call = tail call float @llvm.atan2.f32(float %conv, float %conv)
   %arrayidx = getelementptr inbounds float, ptr %varray, i64 %iv
   store float %call, ptr %arrayidx, align 4
   %iv.next = add nuw nsw i64 %iv, 1

@@ -13,18 +13,21 @@
 #ifndef LLVM_LIBC_SRC_STRING_MEMORY_UTILS_OP_AARCH64_H
 #define LLVM_LIBC_SRC_STRING_MEMORY_UTILS_OP_AARCH64_H
 
+#include "src/__support/macros/attributes.h" // LIBC_INLINE
+#include "src/__support/macros/config.h"     // LIBC_NAMESPACE_DECL
 #include "src/__support/macros/properties/architectures.h"
 
 #if defined(LIBC_TARGET_ARCH_IS_AARCH64)
 
+#include "src/__support/CPP/type_traits.h" // cpp::always_false
 #include "src/__support/common.h"
 #include "src/string/memory_utils/op_generic.h"
 
 #ifdef __ARM_NEON
 #include <arm_neon.h>
-#endif //__ARM_NEON
 
-namespace LIBC_NAMESPACE::aarch64 {
+namespace LIBC_NAMESPACE_DECL {
+namespace aarch64 {
 
 LIBC_INLINE_VAR constexpr bool kNeon = LLVM_LIBC_IS_DEFINED(__ARM_NEON);
 
@@ -81,8 +84,7 @@ template <size_t Size> struct Bcmp {
       uint8x16_t a = vld1q_u8(_p1);
       uint8x16_t n = vld1q_u8(_p2);
       uint8x16_t an = veorq_u8(a, n);
-      uint32x2_t an_reduced = vqmovn_u64(vreinterpretq_u64_u8(an));
-      return vmaxv_u32(an_reduced);
+      return vmaxvq_u32(vreinterpretq_u32_u8(an));
     } else if constexpr (Size == 32) {
       auto _p1 = as_u8(p1);
       auto _p2 = as_u8(p2);
@@ -94,20 +96,17 @@ template <size_t Size> struct Bcmp {
       uint8x16_t bo = veorq_u8(b, o);
       // anbo = (a ^ n) | (b ^ o).  At least one byte is nonzero if there is
       // a difference between the two buffers.  We reduce this value down to 4
-      // bytes in two steps. First, calculate the saturated move value when
-      // going from 2x64b to 2x32b. Second, compute the max of the 2x32b to get
-      // a single 32 bit nonzero value if a mismatch occurred.
+      // bytes using the UMAXV instruction to compute the max across the vector.
       uint8x16_t anbo = vorrq_u8(an, bo);
-      uint32x2_t anbo_reduced = vqmovn_u64(vreinterpretq_u64_u8(anbo));
-      return vmaxv_u32(anbo_reduced);
+      return vmaxvq_u32(vreinterpretq_u32_u8(anbo));
     } else if constexpr ((Size % BlockSize) == 0) {
       for (size_t offset = 0; offset < Size; offset += BlockSize)
         if (auto value = Bcmp<BlockSize>::block(p1 + offset, p2 + offset))
           return value;
     } else {
-      deferred_static_assert("SIZE not implemented");
+      static_assert(cpp::always_false<decltype(Size)>, "SIZE not implemented");
     }
-    return BcmpReturnType::ZERO();
+    return BcmpReturnType::zero();
   }
 
   LIBC_INLINE static BcmpReturnType tail(CPtr p1, CPtr p2, size_t count) {
@@ -126,8 +125,7 @@ template <size_t Size> struct Bcmp {
       uint8x16_t bo = veorq_u8(b, o);
       // anbo = (a ^ n) | (b ^ o)
       uint8x16_t anbo = vorrq_u8(an, bo);
-      uint32x2_t anbo_reduced = vqmovn_u64(vreinterpretq_u64_u8(anbo));
-      return vmaxv_u32(anbo_reduced);
+      return vmaxvq_u32(vreinterpretq_u32_u8(anbo));
     } else if constexpr (Size == 32) {
       auto _p1 = as_u8(p1);
       auto _p2 = as_u8(p2);
@@ -147,13 +145,12 @@ template <size_t Size> struct Bcmp {
       uint8x16_t cpdq = vorrq_u8(cp, dq);
       // abnocpdq = ((a ^ n) | (b ^ o)) | ((c ^ p) | (d ^ q)).  Reduce this to
       // a nonzero 32 bit value if a mismatch occurred.
-      uint64x2_t abnocpdq = vreinterpretq_u64_u8(anbo | cpdq);
-      uint32x2_t abnocpdq_reduced = vqmovn_u64(abnocpdq);
-      return vmaxv_u32(abnocpdq_reduced);
+      uint8x16_t abnocpdq = anbo | cpdq;
+      return vmaxvq_u32(vreinterpretq_u32_u8(abnocpdq));
     } else {
-      deferred_static_assert("SIZE not implemented");
+      static_assert(cpp::always_false<decltype(Size)>, "SIZE not implemented");
     }
-    return BcmpReturnType::ZERO();
+    return BcmpReturnType::zero();
   }
 
   LIBC_INLINE static BcmpReturnType loop_and_tail(CPtr p1, CPtr p2,
@@ -169,9 +166,13 @@ template <size_t Size> struct Bcmp {
   }
 };
 
-} // namespace LIBC_NAMESPACE::aarch64
+} // namespace aarch64
+} // namespace LIBC_NAMESPACE_DECL
 
-namespace LIBC_NAMESPACE::generic {
+#endif //__ARM_NEON
+
+namespace LIBC_NAMESPACE_DECL {
+namespace generic {
 
 ///////////////////////////////////////////////////////////////////////////////
 // Specializations for uint16_t
@@ -216,8 +217,10 @@ LIBC_INLINE MemcmpReturnType cmp<uint64_t>(CPtr p1, CPtr p2, size_t offset) {
   const auto b = load_be<uint64_t>(p2, offset);
   if (a != b)
     return a > b ? 1 : -1;
-  return MemcmpReturnType::ZERO();
+  return MemcmpReturnType::zero();
 }
+
+#if defined(__ARM_NEON)
 
 ///////////////////////////////////////////////////////////////////////////////
 // Specializations for uint8x16_t
@@ -244,7 +247,7 @@ LIBC_INLINE MemcmpReturnType cmp<uint8x16_t>(CPtr p1, CPtr p2, size_t offset) {
       return cmp_neq_uint64_t(a, b);
     offset += sizeof(uint64_t);
   }
-  return MemcmpReturnType::ZERO();
+  return MemcmpReturnType::zero();
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -261,9 +264,13 @@ LIBC_INLINE MemcmpReturnType cmp<uint8x16x2_t>(CPtr p1, CPtr p2,
       return cmp_neq_uint64_t(a, b);
     offset += sizeof(uint64_t);
   }
-  return MemcmpReturnType::ZERO();
+  return MemcmpReturnType::zero();
 }
-} // namespace LIBC_NAMESPACE::generic
+
+#endif // __ARM_NEON
+
+} // namespace generic
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LIBC_TARGET_ARCH_IS_AARCH64
 

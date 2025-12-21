@@ -1,8 +1,10 @@
-! Test that flang-new forwards Flang frontend
-! options to flang-new -fc1 as expected.
+! Test that flang forwards Flang frontend
+! options to flang -fc1 as expected.
 
 ! RUN: %flang -fsyntax-only -### %s -o %t 2>&1 \
 ! RUN:     -finput-charset=utf-8 \
+! RUN:     -fdefault-integer-4 \
+! RUN:     -fdefault-real-4 \
 ! RUN:     -fdefault-double-8 \
 ! RUN:     -fdefault-integer-8 \
 ! RUN:     -fdefault-real-8 \
@@ -14,9 +16,10 @@
 ! RUN:     -fno-signed-zeros \
 ! RUN:     -fassociative-math \
 ! RUN:     -freciprocal-math \
+! RUN:     -fno-strict-overflow \
+! RUN:     -fomit-frame-pointer \
 ! RUN:     -fpass-plugin=Bye%pluginext \
 ! RUN:     -fversion-loops-for-stride \
-! RUN:     -flang-experimental-polymorphism \
 ! RUN:     -flang-experimental-hlfir \
 ! RUN:     -fno-ppc-native-vector-element-order \
 ! RUN:     -fppc-native-vector-element-order \
@@ -34,6 +37,8 @@
 
 ! CHECK: "-P"
 ! CHECK: "-finput-charset=utf-8"
+! CHECK: "-fdefault-integer-4"
+! CHECK: "-fdefault-real-4"
 ! CHECK: "-fdefault-double-8"
 ! CHECK: "-fdefault-integer-8"
 ! CHECK: "-fdefault-real-8"
@@ -47,7 +52,6 @@
 ! CHECK: "-fconvert=little-endian"
 ! CHECK: "-fpass-plugin=Bye
 ! CHECK: "-fversion-loops-for-stride"
-! CHECK: "-flang-experimental-polymorphism"
 ! CHECK: "-flang-experimental-hlfir"
 ! CHECK: "-fno-ppc-native-vector-element-order"
 ! CHECK: "-fppc-native-vector-element-order"
@@ -59,4 +63,5 @@
 ! CHECK: "-Rno-everything"
 ! CHECK: "-Rpass=inline"
 ! CHECK: "-mllvm" "-print-before-all"
+! CHECK: "-fwrapv"
 ! CHECK: "-save-temps=obj"

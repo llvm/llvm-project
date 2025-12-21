@@ -22,9 +22,9 @@ add_custom_target(prepare-check-lit
 # Add rules for lit's own test suite
 add_lit_testsuite(check-lit "Running lit's tests"
   ${CMAKE_CURRENT_BINARY_DIR}
-  DEPENDS "FileCheck" "not" "prepare-check-lit"
+  DEPENDS "FileCheck" "not" "split-file" "prepare-check-lit"
 )
 
 # For IDEs
-set_target_properties(check-lit PROPERTIES FOLDER "Tests")
-set_target_properties(prepare-check-lit PROPERTIES FOLDER "Tests")
+set_target_properties(check-lit PROPERTIES FOLDER "LLVM/Tests")
+set_target_properties(prepare-check-lit PROPERTIES FOLDER "LLVM/Tests")

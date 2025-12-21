@@ -10,15 +10,25 @@
 #define LLDB_TOOLS_LLDB_DAP_JSONUTILS_H
 
 #include "DAPForward.h"
-#include "lldb/API/SBModule.h"
+#include "Protocol/ProtocolRequests.h"
+#include "lldb/API/SBCompileUnit.h"
+#include "lldb/API/SBFormat.h"
+#include "lldb/API/SBType.h"
+#include "lldb/API/SBValue.h"
+#include "lldb/lldb-types.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/JSON.h"
 #include <cstdint>
 #include <optional>
+#include <string>
+#include <unordered_map>
+#include <utility>
+#include <vector>
 
 namespace lldb_dap {
 
-/// Emplace a StringRef in a json::Object after enusring that the
+/// Emplace a StringRef in a json::Object after ensuring that the
 /// string is valid UTF8. If not, first call llvm::json::fixUTF8
 /// before emplacing.
 ///
@@ -54,13 +64,15 @@ llvm::StringRef GetAsString(const llvm::json::Value &value);
 ///
 /// \return
 ///     A llvm::StringRef that contains the string value for the
-///     specified \a key, or an empty string if there is no key that
+///     specified \a key, or \a std::nullopt if there is no key that
 ///     matches or if the value is not a string.
-llvm::StringRef GetString(const llvm::json::Object &obj, llvm::StringRef key);
-llvm::StringRef GetString(const llvm::json::Object *obj, llvm::StringRef key);
+std::optional<llvm::StringRef> GetString(const llvm::json::Object &obj,
+                                         llvm::StringRef key);
+std::optional<llvm::StringRef> GetString(const llvm::json::Object *obj,
+                                         llvm::StringRef key);
 
-/// Extract the unsigned integer value for the specified key from
-/// the specified object.
+/// Extract the integer value for the specified key from the specified object
+/// and return it as the specified integer type T.
 ///
 /// \param[in] obj
 ///     A JSON object that we will attempt to extract the value from
@@ -69,13 +81,23 @@ llvm::StringRef GetString(const llvm::json::Object *obj, llvm::StringRef key);
 ///     The key to use when extracting the value
 ///
 /// \return
-///     The unsigned integer value for the specified \a key, or
-///     \a fail_value  if there is no key that matches or if the
-///     value is not an integer.
-uint64_t GetUnsigned(const llvm::json::Object &obj, llvm::StringRef key,
-                     uint64_t fail_value);
-uint64_t GetUnsigned(const llvm::json::Object *obj, llvm::StringRef key,
-                     uint64_t fail_value);
+///     The integer value for the specified \a key, or std::nullopt if there is
+///     no key that matches or if the value is not an integer.
+/// @{
+template <typename T>
+std::optional<T> GetInteger(const llvm::json::Object &obj,
+                            llvm::StringRef key) {
+  return obj.getInteger(key);
+}
+
+template <typename T>
+std::optional<T> GetInteger(const llvm::json::Object *obj,
+                            llvm::StringRef key) {
+  if (obj != nullptr)
+    return GetInteger<T>(*obj, key);
+  return std::nullopt;
+}
+/// @}
 
 /// Extract the boolean value for the specified key from the
 /// specified object.
@@ -87,31 +109,15 @@ uint64_t GetUnsigned(const llvm::json::Object *obj, llvm::StringRef key,
 ///     The key to use when extracting the value
 ///
 /// \return
-///     The boolean value for the specified \a key, or \a fail_value
+///     The boolean value for the specified \a key, or std::nullopt
 ///     if there is no key that matches or if the value is not a
 ///     boolean value of an integer.
-bool GetBoolean(const llvm::json::Object &obj, llvm::StringRef key,
-                bool fail_value);
-bool GetBoolean(const llvm::json::Object *obj, llvm::StringRef key,
-                bool fail_value);
-
-/// Extract the signed integer for the specified key from the
-/// specified object.
-///
-/// \param[in] obj
-///     A JSON object that we will attempt to extract the value from
-///
-/// \param[in] key
-///     The key to use when extracting the value
-///
-/// \return
-///     The signed integer value for the specified \a key, or
-///     \a fail_value if there is no key that matches or if the
-///     value is not an integer.
-int64_t GetSigned(const llvm::json::Object &obj, llvm::StringRef key,
-                  int64_t fail_value);
-int64_t GetSigned(const llvm::json::Object *obj, llvm::StringRef key,
-                  int64_t fail_value);
+/// @{
+std::optional<bool> GetBoolean(const llvm::json::Object &obj,
+                               llvm::StringRef key);
+std::optional<bool> GetBoolean(const llvm::json::Object *obj,
+                               llvm::StringRef key);
+/// @}
 
 /// Check if the specified key exists in the specified object.
 ///
@@ -124,6 +130,41 @@ int64_t GetSigned(const llvm::json::Object *obj, llvm::StringRef key,
 /// \return
 ///     \b True if the key exists in the \a obj, \b False otherwise.
 bool ObjectContainsKey(const llvm::json::Object &obj, llvm::StringRef key);
+
+/// Encodes a memory reference
+std::string EncodeMemoryReference(lldb::addr_t addr);
+
+/// Decodes a memory reference
+std::optional<lldb::addr_t>
+DecodeMemoryReference(llvm::StringRef memoryReference);
+
+/// Decodes a memory reference from the given json value.
+///
+/// \param[in] v
+///    A JSON value that we expected to contain the memory reference.
+///
+/// \param[in] key
+///    The key of the memory reference.
+///
+/// \param[out] out
+///    The memory address, if successfully decoded.
+///
+/// \param[in] path
+///    The path for reporting errors.
+///
+/// \param[in] required
+///    Indicates if the key is required to be present, otherwise report an error
+///    if the key is missing.
+///
+/// \param[in] allow_empty
+///    Interpret empty string as a valid value, don't report an error (see
+///    VS Code issue https://github.com/microsoft/vscode/issues/270593).
+///
+/// \return
+///    Returns \b true if the address was decoded successfully.
+bool DecodeMemoryReference(const llvm::json::Value &v, llvm::StringLiteral key,
+                           lldb::addr_t &out, llvm::json::Path path,
+                           bool required, bool allow_empty = false);
 
 /// Extract an array of strings for the specified key from an object.
 ///
@@ -146,6 +187,27 @@ bool ObjectContainsKey(const llvm::json::Object &obj, llvm::StringRef key);
 std::vector<std::string> GetStrings(const llvm::json::Object *obj,
                                     llvm::StringRef key);
 
+/// Extract an object of key value strings for the specified key from an object.
+///
+/// String values in the object will be extracted without any quotes
+/// around them. Numbers and Booleans will be converted into
+/// strings. Any NULL, array or objects values in the array will be
+/// ignored.
+///
+/// \param[in] obj
+///     A JSON object that we will attempt to extract the array from
+///
+/// \param[in] key
+///     The key to use when extracting the value
+///
+/// \return
+///     An object of key value strings for the specified \a key, or
+///     \a fail_value if there is no key that matches or if the
+///     value is not an object or key and values in the object are not
+///     strings, numbers or booleans.
+std::unordered_map<std::string, std::string>
+GetStringMap(const llvm::json::Object &obj, llvm::StringRef key);
+
 /// Fill a response object given the request object.
 ///
 /// The \a response object will get its "type" set to "response",
@@ -162,101 +224,6 @@ std::vector<std::string> GetStrings(const llvm::json::Object *obj,
 void FillResponse(const llvm::json::Object &request,
                   llvm::json::Object &response);
 
-/// Emplace the string value from an SBValue into the supplied object
-/// using \a key as the key that will contain the value.
-///
-/// The value is what we will display in VS Code. Some SBValue objects
-/// can have a value and/or a summary. If a value has both, we
-/// combine the value and the summary into one string. If we only have a
-/// value or summary, then that is considered the value. If there is
-/// no value and no summary then the value is the type name followed by
-/// the address of the type if it has an address.
-///
-///
-/// \param[in] v
-///     A lldb::SBValue object to extract the string value from
-///
-///
-/// \param[in] object
-///     The object to place the value object into
-///
-///
-/// \param[in] key
-///     The key name to use when inserting the value object we create
-void SetValueForKey(lldb::SBValue &v, llvm::json::Object &object,
-                    llvm::StringRef key);
-
-/// Converts \a bp to a JSON value and appends the first valid location to the
-/// \a breakpoints array.
-///
-/// \param[in] bp
-///     A LLDB breakpoint object which will get the first valid location
-///     extracted and converted into a JSON object in the \a breakpoints array
-///
-/// \param[in] breakpoints
-///     A JSON array that will get a llvm::json::Value for \a bp
-///     appended to it.
-///
-/// \param[in] request_path
-///     An optional source path to use when creating the "Source" object of this
-///     breakpoint. If not specified, the "Source" object is created from the
-///     breakpoint's address' LineEntry. It is useful to ensure the same source
-///     paths provided by the setBreakpoints request are returned to the IDE.
-///
-/// \param[in] request_line
-///     An optional line to use when creating the "Breakpoint" object to append.
-///     It is used if the breakpoint has no valid locations.
-///     It is useful to ensure the same line
-///     provided by the setBreakpoints request are returned to the IDE as a
-///     fallback.
-void AppendBreakpoint(
-    lldb::SBBreakpoint &bp, llvm::json::Array &breakpoints,
-    std::optional<llvm::StringRef> request_path = std::nullopt,
-    std::optional<uint32_t> request_line = std::nullopt);
-
-/// Converts breakpoint location to a debug adaptor protocol "Breakpoint".
-///
-/// \param[in] bp
-///     A LLDB breakpoint object to convert into a JSON value
-///
-/// \param[in] request_path
-///     An optional source path to use when creating the "Source" object of this
-///     breakpoint. If not specified, the "Source" object is created from the
-///     breakpoint's address' LineEntry. It is useful to ensure the same source
-///     paths provided by the setBreakpoints request are returned to the IDE.
-///
-/// \param[in] request_line
-///     An optional line to use when creating the resulting "Breakpoint" object.
-///     It is used if the breakpoint has no valid locations.
-///     It is useful to ensure the same line
-///     provided by the setBreakpoints request are returned to the IDE as a
-///     fallback.
-///
-/// \param[in] request_column
-///     An optional column to use when creating the resulting "Breakpoint"
-///     object. It is used if the breakpoint has no valid locations. It is
-///     useful to ensure the same column provided by the setBreakpoints request
-///     are returned to the IDE as a fallback.
-///
-/// \return
-///     A "Breakpoint" JSON object with that follows the formal JSON
-///     definition outlined by Microsoft.
-llvm::json::Value
-CreateBreakpoint(lldb::SBBreakpoint &bp,
-                 std::optional<llvm::StringRef> request_path = std::nullopt,
-                 std::optional<uint32_t> request_line = std::nullopt,
-                 std::optional<uint32_t> request_column = std::nullopt);
-
-/// Converts a LLDB module to a VS Code DAP module for use in "modules" events.
-///
-/// \param[in] module
-///     A LLDB module object to convert into a JSON value
-///
-/// \return
-///     A "Module" JSON object with that follows the formal JSON
-///     definition outlined by Microsoft.
-llvm::json::Value CreateModule(lldb::SBModule &module);
-
 /// Create a "Event" JSON object using \a event_name as the event name
 ///
 /// \param[in] event_name
@@ -266,60 +233,6 @@ llvm::json::Value CreateModule(lldb::SBModule &module);
 ///     A "Event" JSON object with that follows the formal JSON
 ///     definition outlined by Microsoft.
 llvm::json::Object CreateEventObject(const llvm::StringRef event_name);
-
-/// Create a "ExceptionBreakpointsFilter" JSON object as described in
-/// the debug adaptor definition.
-///
-/// \param[in] bp
-///     The exception breakpoint object to use
-///
-/// \return
-///     A "ExceptionBreakpointsFilter" JSON object with that follows
-///     the formal JSON definition outlined by Microsoft.
-llvm::json::Value
-CreateExceptionBreakpointFilter(const ExceptionBreakpoint &bp);
-
-/// Create a "Scope" JSON object as described in the debug adaptor definition.
-///
-/// \param[in] name
-///     The value to place into the "name" key
-//
-/// \param[in] variablesReference
-///     The value to place into the "variablesReference" key
-//
-/// \param[in] namedVariables
-///     The value to place into the "namedVariables" key
-//
-/// \param[in] expensive
-///     The value to place into the "expensive" key
-///
-/// \return
-///     A "Scope" JSON object with that follows the formal JSON
-///     definition outlined by Microsoft.
-llvm::json::Value CreateScope(const llvm::StringRef name,
-                              int64_t variablesReference,
-                              int64_t namedVariables, bool expensive);
-
-/// Create a "Source" JSON object as described in the debug adaptor definition.
-///
-/// \param[in] line_entry
-///     The LLDB line table to use when populating out the "Source"
-///     object
-///
-/// \return
-///     A "Source" JSON object with that follows the formal JSON
-///     definition outlined by Microsoft.
-llvm::json::Value CreateSource(lldb::SBLineEntry &line_entry);
-
-/// Create a "Source" object for a given source path.
-///
-/// \param[in] source_path
-///     The path to the source to use when creating the "Source" object.
-///
-/// \return
-///     A "Source" JSON object that follows the formal JSON
-///     definition outlined by Microsoft.
-llvm::json::Value CreateSource(llvm::StringRef source_path);
 
 /// Create a "StackFrame" object for a LLDB frame object.
 ///
@@ -331,16 +244,24 @@ llvm::json::Value CreateSource(llvm::StringRef source_path);
 ///   "line" - the source file line number as an integer
 ///   "column" - the source file column number as an integer
 ///
+/// \param[in] dap
+///     The DAP session associated with the stopped thread.
+///
 /// \param[in] frame
 ///     The LLDB stack frame to use when populating out the "StackFrame"
+///     object.
+///
+/// \param[in] format
+///     The LLDB format to use when populating out the "StackFrame"
 ///     object.
 ///
 /// \return
 ///     A "StackFrame" JSON object with that follows the formal JSON
 ///     definition outlined by Microsoft.
-llvm::json::Value CreateStackFrame(lldb::SBFrame &frame);
+llvm::json::Value CreateStackFrame(DAP &dap, lldb::SBFrame &frame,
+                                   lldb::SBFormat &format);
 
-/// Create a "Thread" object for a LLDB thread object.
+/// Create a "StackFrame" label object for a LLDB thread.
 ///
 /// This function will fill in the following keys in the returned
 /// object:
@@ -348,15 +269,20 @@ llvm::json::Value CreateStackFrame(lldb::SBFrame &frame);
 ///   "name" - the thread name as a string which combines the LLDB
 ///            thread index ID along with the string name of the thread
 ///            from the OS if it has a name.
+///   "presentationHint" - "label"
 ///
 /// \param[in] thread
 ///     The LLDB thread to use when populating out the "Thread"
 ///     object.
 ///
+/// \param[in] format
+///     The configured formatter for the DAP session.
+///
 /// \return
-///     A "Thread" JSON object with that follows the formal JSON
+///     A "StackFrame" JSON object with that follows the formal JSON
 ///     definition outlined by Microsoft.
-llvm::json::Value CreateThread(lldb::SBThread &thread);
+llvm::json::Value CreateExtendedStackFrameLabel(lldb::SBThread &thread,
+                                                lldb::SBFormat &format);
 
 /// Create a "StoppedEvent" object for a LLDB thread object.
 ///
@@ -372,94 +298,89 @@ llvm::json::Value CreateThread(lldb::SBThread &thread);
 ///   "allThreadsStopped" - set to True to indicate that all threads
 ///                         stop when any thread stops.
 ///
+/// \param[in] dap
+///     The DAP session associated with the stopped thread.
+///
 /// \param[in] thread
 ///     The LLDB thread to use when populating out the "StoppedEvent"
 ///     object.
 ///
+/// \param[in] stop_id
+///     The stop id for this event.
+///
 /// \return
 ///     A "StoppedEvent" JSON object with that follows the formal JSON
 ///     definition outlined by Microsoft.
-llvm::json::Value CreateThreadStopped(lldb::SBThread &thread, uint32_t stop_id);
+llvm::json::Value CreateThreadStopped(DAP &dap, lldb::SBThread &thread,
+                                      uint32_t stop_id);
 
 /// \return
 ///     The variable name of \a value or a default placeholder.
-const char *GetNonNullVariableName(lldb::SBValue value);
+const char *GetNonNullVariableName(lldb::SBValue &value);
 
 /// VSCode can't display two variables with the same name, so we need to
 /// distinguish them by using a suffix.
 ///
 /// If the source and line information is present, we use it as the suffix.
 /// Otherwise, we fallback to the variable address or register location.
-std::string CreateUniqueVariableNameForDisplay(lldb::SBValue v,
+std::string CreateUniqueVariableNameForDisplay(lldb::SBValue &v,
                                                bool is_name_duplicated);
 
-/// Create a "Variable" object for a LLDB thread object.
-///
-/// This function will fill in the following keys in the returned
-/// object:
-///   "name" - the name of the variable
-///   "value" - the value of the variable as a string
-///   "type" - the typename of the variable as a string
-///   "id" - a unique identifier for a value in case there are multiple
-///          variables with the same name. Other parts of the DAP
-///          protocol refer to values by name so this can help
-///          disambiguate such cases if a IDE passes this "id" value
-///          back down.
-///   "variablesReference" - Zero if the variable has no children,
-///          non-zero integer otherwise which can be used to expand
-///          the variable.
-///   "evaluateName" - The name of the variable to use in expressions
-///                    as a string.
-///
-/// \param[in] v
-///     The LLDB value to use when populating out the "Variable"
-///     object.
-///
-/// \param[in] variablesReference
-///     The variable reference. Zero if this value isn't structured
-///     and has no children, non-zero if it does have children and
-///     might be asked to expand itself.
-///
-/// \param[in] varID
-///     A unique variable identifier to help in properly identifying
-///     variables with the same name. This is an extension to the
-///     VS protocol.
-///
-/// \param[in] format_hex
-///     It set to true the variable will be formatted as hex in
-///     the "value" key value pair for the value of the variable.
-///
-/// \param[in] is_name_duplicated
-///     Whether the same variable name appears multiple times within the same
-///     context (e.g. locals). This can happen due to shadowed variables in
-///     nested blocks.
-///
-///     As VSCode doesn't render two of more variables with the same name, we
-///     apply a suffix to distinguish duplicated variables.
-///
-/// \param[in] custom_name
-///     A provided custom name that is used instead of the SBValue's when
-///     creating the JSON representation.
-///
-/// \return
-///     A "Variable" JSON object with that follows the formal JSON
-///     definition outlined by Microsoft.
-llvm::json::Value CreateVariable(lldb::SBValue v, int64_t variablesReference,
-                                 int64_t varID, bool format_hex,
-                                 bool is_name_duplicated = false,
-                                 std::optional<std::string> custom_name = {});
+/// Helper struct that parses the metadata of an \a lldb::SBValue and produces
+/// a canonical set of properties that can be sent to DAP clients.
+struct VariableDescription {
+  // The error message if SBValue.GetValue() fails.
+  std::optional<std::string> error;
+  // The display description to show on the IDE.
+  std::string display_value;
+  // The display name to show on the IDE.
+  std::string name;
+  // The variable path for this variable.
+  std::string evaluate_name;
+  // The output of SBValue.GetValue() if it doesn't fail. It might be empty.
+  std::string value;
+  // The summary string of this variable. It might be empty.
+  std::string summary;
+  // The auto summary if using `enableAutoVariableSummaries`.
+  std::optional<std::string> auto_summary;
+  // The type of this variable.
+  lldb::SBType type_obj;
+  // The display type name of this variable.
+  std::string display_type_name;
+  /// The SBValue for this variable.
+  lldb::SBValue v;
 
-llvm::json::Value CreateCompileUnit(lldb::SBCompileUnit unit);
+  VariableDescription(lldb::SBValue v, bool auto_variable_summaries,
+                      bool format_hex = false, bool is_name_duplicated = false,
+                      std::optional<std::string> custom_name = {});
+
+  /// Returns a description of the value appropriate for the specified context.
+  std::string GetResult(protocol::EvaluateContext context);
+};
+
+/// Does the given variable have an associated value location?
+bool ValuePointsToCode(lldb::SBValue v);
+
+/// Pack a location into a single integer which we can send via
+/// the debug adapter protocol.
+int64_t PackLocation(int64_t var_ref, bool is_value_location);
+
+/// Reverse of `PackLocation`
+std::pair<int64_t, bool> UnpackLocation(int64_t location_id);
 
 /// Create a runInTerminal reverse request object
 ///
-/// \param[in] launch_request
-///     The original launch_request object whose fields are used to construct
-///     the reverse request object.
+/// \param[in] program
+///     Path to the program to run in the terminal.
 ///
-/// \param[in] debug_adaptor_path
-///     Path to the current debug adaptor. It will be used to delegate the
-///     launch of the target.
+/// \param[in] args
+///     The arguments for the program.
+///
+/// \param[in] env
+///     The environment variables to set in the terminal.
+///
+/// \param[in] cwd
+///     The working directory for the run in terminal request.
 ///
 /// \param[in] comm_file
 ///     The fifo file used to communicate the with the target launcher.
@@ -469,20 +390,28 @@ llvm::json::Value CreateCompileUnit(lldb::SBCompileUnit unit);
 ///     launcher uses it on Linux tell the kernel that it should allow the
 ///     debugger process to attach.
 ///
+/// \param[in] stdio
+///     An array of file paths for redirecting the program's standard IO
+///     streams.
+///
+/// \param[in] external
+///     If set to true, the program will run in an external terminal window
+///     instead of IDE's integrated terminal.
+///
 /// \return
 ///     A "runInTerminal" JSON object that follows the specification outlined by
 ///     Microsoft.
-llvm::json::Object
-CreateRunInTerminalReverseRequest(const llvm::json::Object &launch_request,
-                                  llvm::StringRef debug_adaptor_path,
-                                  llvm::StringRef comm_file,
-                                  lldb::pid_t debugger_pid);
+llvm::json::Object CreateRunInTerminalReverseRequest(
+    llvm::StringRef program, const std::vector<std::string> &args,
+    const llvm::StringMap<std::string> &env, llvm::StringRef cwd,
+    llvm::StringRef comm_file, lldb::pid_t debugger_pid,
+    const std::vector<std::optional<std::string>> &stdio, bool external);
 
 /// Create a "Terminated" JSON object that contains statistics
 ///
 /// \return
 ///     A body JSON object with debug info and breakpoint info
-llvm::json::Object CreateTerminatedEventObject();
+llvm::json::Object CreateTerminatedEventObject(lldb::SBTarget &target);
 
 /// Convert a given JSON object to a string.
 std::string JSONToString(const llvm::json::Value &json);

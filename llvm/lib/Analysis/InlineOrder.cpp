@@ -114,7 +114,10 @@ public:
   CostBenefitPriority(const CallBase *CB, FunctionAnalysisManager &FAM,
                       const InlineParams &Params) {
     auto IC = getInlineCostWrapper(const_cast<CallBase &>(*CB), FAM, Params);
-    Cost = IC.getCost();
+    if (IC.isVariable())
+      Cost = IC.getCost();
+    else
+      Cost = IC.isNever() ? INT_MAX : INT_MIN;
     StaticBonusApplied = IC.getStaticBonusApplied();
     CostBenefit = IC.getCostBenefit();
   }
@@ -222,13 +225,12 @@ class PriorityInlineOrder : public InlineOrder<std::pair<CallBase *, int>> {
   // desirability of the front call site decreases, an updated one would be
   // pushed right back into the heap. For simplicity, those cases where the
   // desirability of a call site increases are ignored here.
-  void adjust() {
+  void pop_heap_adjust() {
     std::pop_heap(Heap.begin(), Heap.end(), isLess);
     while (updateAndCheckDecreased(Heap.back())) {
       std::push_heap(Heap.begin(), Heap.end(), isLess);
       std::pop_heap(Heap.begin(), Heap.end(), isLess);
     }
-    std::push_heap(Heap.begin(), Heap.end(), isLess);
   }
 
 public:
@@ -253,9 +255,8 @@ public:
 
   T pop() override {
     assert(size() > 0);
-    adjust();
+    pop_heap_adjust();
 
-    std::pop_heap(Heap.begin(), Heap.end(), isLess);
     CallBase *CB = Heap.pop_back_val();
     T Result = std::make_pair(CB, InlineHistoryMap[CB]);
     InlineHistoryMap.erase(CB);
@@ -264,7 +265,7 @@ public:
 
   void erase_if(function_ref<bool(T)> Pred) override {
     auto PredWrapper = [=](CallBase *CB) -> bool {
-      return Pred(std::make_pair(CB, 0));
+      return Pred(std::make_pair(CB, InlineHistoryMap[CB]));
     };
     llvm::erase_if(Heap, PredWrapper);
     std::make_heap(Heap.begin(), Heap.end(), isLess);
@@ -282,7 +283,6 @@ private:
 } // namespace
 
 AnalysisKey llvm::PluginInlineOrderAnalysis::Key;
-bool llvm::PluginInlineOrderAnalysis::HasBeenRegistered;
 
 std::unique_ptr<InlineOrder<std::pair<CallBase *, int>>>
 llvm::getDefaultInlineOrder(FunctionAnalysisManager &FAM,
@@ -312,7 +312,7 @@ llvm::getDefaultInlineOrder(FunctionAnalysisManager &FAM,
 std::unique_ptr<InlineOrder<std::pair<CallBase *, int>>>
 llvm::getInlineOrder(FunctionAnalysisManager &FAM, const InlineParams &Params,
                      ModuleAnalysisManager &MAM, Module &M) {
-  if (llvm::PluginInlineOrderAnalysis::isRegistered()) {
+  if (MAM.isPassRegistered<PluginInlineOrderAnalysis>()) {
     LLVM_DEBUG(dbgs() << "    Current used priority: plugin ---- \n");
     return MAM.getResult<PluginInlineOrderAnalysis>(M).Factory(FAM, Params, MAM,
                                                                M);

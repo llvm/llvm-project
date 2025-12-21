@@ -19,6 +19,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/Value.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cassert>
 #include <string>
@@ -63,10 +64,11 @@ public:
 
   /// InlineAsm::get - Return the specified uniqued inline asm string.
   ///
-  static InlineAsm *get(FunctionType *Ty, StringRef AsmString,
-                        StringRef Constraints, bool hasSideEffects,
-                        bool isAlignStack = false,
-                        AsmDialect asmDialect = AD_ATT, bool canThrow = false);
+  LLVM_ABI static InlineAsm *get(FunctionType *Ty, StringRef AsmString,
+                                 StringRef Constraints, bool hasSideEffects,
+                                 bool isAlignStack = false,
+                                 AsmDialect asmDialect = AD_ATT,
+                                 bool canThrow = false);
 
   bool hasSideEffects() const { return HasSideEffects; }
   bool isAlignStack() const { return IsAlignStack; }
@@ -81,15 +83,15 @@ public:
 
   /// getFunctionType - InlineAsm's are always pointers to functions.
   ///
-  FunctionType *getFunctionType() const;
+  LLVM_ABI FunctionType *getFunctionType() const;
 
-  const std::string &getAsmString() const { return AsmString; }
-  const std::string &getConstraintString() const { return Constraints; }
-  void collectAsmStrs(SmallVectorImpl<StringRef> &AsmStrs) const;
+  StringRef getAsmString() const { return AsmString; }
+  StringRef getConstraintString() const { return Constraints; }
+  LLVM_ABI void collectAsmStrs(SmallVectorImpl<StringRef> &AsmStrs) const;
 
   /// This static method can be used by the parser to check to see if the
   /// specified constraint string is legal for the type.
-  static Error verify(FunctionType *Ty, StringRef Constraints);
+  LLVM_ABI static Error verify(FunctionType *Ty, StringRef Constraints);
 
   // Constraint String Parsing
   enum ConstraintPrefix {
@@ -169,11 +171,11 @@ public:
     /// Parse - Analyze the specified string (e.g. "=*&{eax}") and fill in the
     /// fields in this structure.  If the constraint string is not understood,
     /// return true, otherwise return false.
-    bool Parse(StringRef Str, ConstraintInfoVector &ConstraintsSoFar);
+    LLVM_ABI bool Parse(StringRef Str, ConstraintInfoVector &ConstraintsSoFar);
 
     /// selectAlternative - Point this constraint to the alternative constraint
     /// indicated by the index.
-    void selectAlternative(unsigned index);
+    LLVM_ABI void selectAlternative(unsigned index);
 
     /// Whether this constraint corresponds to an argument.
     bool hasArg() const {
@@ -184,7 +186,8 @@ public:
   /// ParseConstraints - Split up the constraint string into the specific
   /// constraints and their prefixes.  If this returns an empty vector, and if
   /// the constraint string itself isn't empty, there was an error parsing.
-  static ConstraintInfoVector ParseConstraints(StringRef ConstraintString);
+  LLVM_ABI static ConstraintInfoVector
+  ParseConstraints(StringRef ConstraintString);
 
   /// ParseConstraints - Parse the constraints of this inlineasm object,
   /// returning them the same way that ParseConstraints(str) does.
@@ -291,18 +294,23 @@ public:
   //     Bits 30-16 - A ConstraintCode:: value indicating the original
   //                  constraint code. (MemConstraintCode)
   //   Else:
-  //     Bits 30-16 - The register class ID to use for the operand. (RegClass)
+  //     Bits 29-16 - The register class ID to use for the operand. (RegClass)
+  //     Bit  30    - If the register is permitted to be spilled.
+  //                  (RegMayBeFolded)
+  //                  Defaults to false "r", may be set for constraints like
+  //                  "rm" (or "g").
   //
-  //   As such, MatchedOperandNo, MemConstraintCode, and RegClass are views of
-  //   the same slice of bits, but are mutually exclusive depending on the
-  //   fields IsMatched then KindField.
+  //   As such, MatchedOperandNo, MemConstraintCode, and
+  //   (RegClass+RegMayBeFolded) are views of the same slice of bits, but are
+  //   mutually exclusive depending on the fields IsMatched then KindField.
   class Flag {
     uint32_t Storage;
     using KindField = Bitfield::Element<Kind, 0, 3, Kind::Func>;
     using NumOperands = Bitfield::Element<unsigned, 3, 13>;
     using MatchedOperandNo = Bitfield::Element<unsigned, 16, 15>;
     using MemConstraintCode = Bitfield::Element<ConstraintCode, 16, 15, ConstraintCode::Max>;
-    using RegClass = Bitfield::Element<unsigned, 16, 15>;
+    using RegClass = Bitfield::Element<unsigned, 16, 14>;
+    using RegMayBeFolded = Bitfield::Element<bool, 30, 1>;
     using IsMatched = Bitfield::Element<bool, 31, 1>;
 
 
@@ -412,6 +420,26 @@ public:
       assert((isMemKind() || isFuncKind()) &&
              "Flag is not a memory or function constraint!");
       Bitfield::set<MemConstraintCode>(Storage, ConstraintCode::Unknown);
+    }
+
+    /// Set a bit to denote that while this operand is some kind of register
+    /// (use, def, ...), a memory flag did appear in the original constraint
+    /// list.  This is set by the instruction selection framework, and consumed
+    /// by the register allocator. While the register allocator is generally
+    /// responsible for spilling registers, we need to be able to distinguish
+    /// between registers that the register allocator has permission to fold
+    /// ("rm") vs ones it does not ("r"). This is because the inline asm may use
+    /// instructions which don't support memory addressing modes for that
+    /// operand.
+    void setRegMayBeFolded(bool B) {
+      assert((isRegDefKind() || isRegDefEarlyClobberKind() || isRegUseKind()) &&
+             "Must be reg");
+      Bitfield::set<RegMayBeFolded>(Storage, B);
+    }
+    bool getRegMayBeFolded() const {
+      assert((isRegDefKind() || isRegDefEarlyClobberKind() || isRegUseKind()) &&
+             "Must be reg");
+      return Bitfield::get<RegMayBeFolded>(Storage);
     }
   };
 

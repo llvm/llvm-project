@@ -8,9 +8,6 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 
-// This test uses iterator types from std::filesystem
-// XFAIL: availability-filesystem-missing
-
 // template<class T>
 // struct iterator_traits;
 
@@ -147,8 +144,13 @@ static_assert(testIOIterator<std::insert_iterator<std::vector<int>>, std::output
 static_assert(testConst<std::istream_iterator<int, char>, std::input_iterator_tag, int>());
 
 #if !defined(TEST_HAS_NO_LOCALIZATION)
-// libc++-specific since pointer type is unspecified:
-LIBCPP_STATIC_ASSERT(test<std::istreambuf_iterator<char>, std::input_iterator_tag, char, long long, char, char*>());
+// We use std::istreambuf_iterator<char>::pointer because it's unspecified, it doesn't have to be char*
+static_assert(test<std::istreambuf_iterator<char>,
+                   std::input_iterator_tag,
+                   char,
+                   std::streamoff,
+                   char,
+                   std::istreambuf_iterator<char>::pointer>());
 static_assert(test<std::move_iterator<int*>, std::random_access_iterator_tag, int, std::ptrdiff_t, int&&, int*>());
 static_assert(testIOIterator<std::ostream_iterator<int, char>, std::output_iterator_tag>());
 static_assert(testIOIterator<std::ostreambuf_iterator<int, char>, std::output_iterator_tag>());

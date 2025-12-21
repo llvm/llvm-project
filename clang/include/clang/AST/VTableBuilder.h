@@ -150,7 +150,7 @@ public:
 
   bool isRTTIKind() const { return isRTTIKind(getKind()); }
 
-  GlobalDecl getGlobalDecl() const {
+  GlobalDecl getGlobalDecl(bool HasVectorDeletingDtors) const {
     assert(isUsedFunctionPointerKind() &&
            "GlobalDecl can be created only from virtual function");
 
@@ -161,7 +161,9 @@ public:
     case CK_CompleteDtorPointer:
       return GlobalDecl(DtorDecl, CXXDtorType::Dtor_Complete);
     case CK_DeletingDtorPointer:
-      return GlobalDecl(DtorDecl, CXXDtorType::Dtor_Deleting);
+      return GlobalDecl(DtorDecl, (HasVectorDeletingDtors)
+                                      ? CXXDtorType::Dtor_VectorDeleting
+                                      : CXXDtorType::Dtor_Deleting);
     case CK_VCallOffset:
     case CK_VBaseOffset:
     case CK_OffsetToTop:
@@ -244,12 +246,12 @@ public:
   // point for a given vtable index.
   typedef llvm::SmallVector<unsigned, 4> AddressPointsIndexMapTy;
 
+  using VTableIndicesTy = llvm::SmallVector<std::size_t>;
+
 private:
-  // Stores the component indices of the first component of each virtual table in
-  // the virtual table group. To save a little memory in the common case where
-  // the vtable group contains a single vtable, an empty vector here represents
-  // the vector {0}.
-  OwningArrayRef<size_t> VTableIndices;
+  // Stores the component indices of the first component of each virtual table
+  // in the virtual table group.
+  VTableIndicesTy VTableIndices;
 
   OwningArrayRef<VTableComponent> VTableComponents;
 
@@ -263,7 +265,8 @@ private:
   AddressPointsIndexMapTy AddressPointIndices;
 
 public:
-  VTableLayout(ArrayRef<size_t> VTableIndices,
+  // Requires `VTableIndices.front() == 0`
+  VTableLayout(VTableIndicesTy VTableIndices,
                ArrayRef<VTableComponent> VTableComponents,
                ArrayRef<VTableThunkTy> VTableThunks,
                const AddressPointsMapTy &AddressPoints);
@@ -290,26 +293,11 @@ public:
     return AddressPointIndices;
   }
 
-  size_t getNumVTables() const {
-    if (VTableIndices.empty())
-      return 1;
-    return VTableIndices.size();
-  }
+  size_t getNumVTables() const { return VTableIndices.size(); }
 
-  size_t getVTableOffset(size_t i) const {
-    if (VTableIndices.empty()) {
-      assert(i == 0);
-      return 0;
-    }
-    return VTableIndices[i];
-  }
+  size_t getVTableOffset(size_t i) const { return VTableIndices[i]; }
 
   size_t getVTableSize(size_t i) const {
-    if (VTableIndices.empty()) {
-      assert(i == 0);
-      return vtable_components().size();
-    }
-
     size_t thisIndex = VTableIndices[i];
     size_t nextIndex = (i + 1 == VTableIndices.size())
                            ? vtable_components().size()
@@ -361,6 +349,10 @@ public:
 };
 
 class ItaniumVTableContext : public VTableContextBase {
+public:
+  typedef llvm::DenseMap<const CXXMethodDecl *, const CXXMethodDecl *>
+      OriginalMethodMapTy;
+
 private:
 
   /// Contains the index (relative to the vtable address point)
@@ -383,6 +375,10 @@ private:
   typedef llvm::DenseMap<ClassPairTy, CharUnits>
     VirtualBaseClassOffsetOffsetsMapTy;
   VirtualBaseClassOffsetOffsetsMapTy VirtualBaseClassOffsetOffsets;
+
+  /// Map from a virtual method to the nearest method in the primary base class
+  /// chain that it overrides.
+  OriginalMethodMapTy OriginalMethodMap;
 
   void computeVTableRelatedInformation(const CXXRecordDecl *RD) override;
 
@@ -424,6 +420,27 @@ public:
   /// Base must be a virtual base class or an unambiguous base.
   CharUnits getVirtualBaseOffsetOffset(const CXXRecordDecl *RD,
                                        const CXXRecordDecl *VBase);
+
+  /// Return the method that added the v-table slot that will be used to call
+  /// the given method.
+  ///
+  /// In the Itanium ABI, where overrides always cause methods to be added to
+  /// the primary v-table if they're not already there, this will be the first
+  /// declaration in the primary base class chain for which the return type
+  /// adjustment is trivial.
+  GlobalDecl findOriginalMethod(GlobalDecl GD);
+
+  const CXXMethodDecl *findOriginalMethodInMap(const CXXMethodDecl *MD) const;
+
+  void setOriginalMethod(const CXXMethodDecl *Key, const CXXMethodDecl *Val) {
+    OriginalMethodMap[Key] = Val;
+  }
+
+  /// This method is reserved for the implementation and shouldn't be used
+  /// directly.
+  const OriginalMethodMapTy &getOriginalMethodMap() {
+    return OriginalMethodMap;
+  }
 
   static bool classof(const VTableContextBase *VT) {
     return !VT->isMicrosoft();

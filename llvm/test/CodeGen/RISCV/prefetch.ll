@@ -10,8 +10,6 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+zicbop,+zihintntl -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefix=RV64ZICBOPZIHINTNTL %s
 
-declare void @llvm.prefetch(ptr, i32, i32, i32)
-
 define void @test_prefetch_read_locality_0(ptr %a) nounwind {
 ; RV32I-LABEL: test_prefetch_read_locality_0:
 ; RV32I:       # %bb.0:
@@ -263,7 +261,6 @@ define void @test_prefetch_instruction_locality_2(ptr %a) nounwind {
   call void @llvm.prefetch(ptr %a, i32 0, i32 2, i32 0)
   ret void
 }
-
 
 define void @test_prefetch_read_locality_3(ptr %a) nounwind {
 ; RV32I-LABEL: test_prefetch_read_locality_3:
@@ -695,7 +692,7 @@ define void @test_prefetch_frameindex_0() nounwind {
 ; RV64ZICBOPZIHINTNTL-NEXT:    addi sp, sp, 512
 ; RV64ZICBOPZIHINTNTL-NEXT:    ret
   %data = alloca [128 x i32], align 4
-  %base = bitcast [128 x i32]* %data to i8*
+  %base = bitcast ptr %data to ptr
   %ptr = getelementptr [128 x i32], ptr %base, i32 0, i32 0
   call void @llvm.prefetch(ptr %ptr, i32 0, i32 0, i32 1)
   ret void
@@ -715,10 +712,10 @@ define void @test_prefetch_frameindex_1() nounwind {
 ; RV64I-LABEL: test_prefetch_frameindex_1:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    lui a0, 1
-; RV64I-NEXT:    addiw a0, a0, 16
+; RV64I-NEXT:    addi a0, a0, 16
 ; RV64I-NEXT:    sub sp, sp, a0
 ; RV64I-NEXT:    lui a0, 1
-; RV64I-NEXT:    addiw a0, a0, 16
+; RV64I-NEXT:    addi a0, a0, 16
 ; RV64I-NEXT:    add sp, sp, a0
 ; RV64I-NEXT:    ret
 ;
@@ -737,29 +734,29 @@ define void @test_prefetch_frameindex_1() nounwind {
 ; RV64ZICBOP-LABEL: test_prefetch_frameindex_1:
 ; RV64ZICBOP:       # %bb.0:
 ; RV64ZICBOP-NEXT:    lui a0, 1
-; RV64ZICBOP-NEXT:    addiw a0, a0, 16
+; RV64ZICBOP-NEXT:    addi a0, a0, 16
 ; RV64ZICBOP-NEXT:    sub sp, sp, a0
 ; RV64ZICBOP-NEXT:    addi a0, sp, 16
 ; RV64ZICBOP-NEXT:    prefetch.r 0(a0)
 ; RV64ZICBOP-NEXT:    lui a0, 1
-; RV64ZICBOP-NEXT:    addiw a0, a0, 16
+; RV64ZICBOP-NEXT:    addi a0, a0, 16
 ; RV64ZICBOP-NEXT:    add sp, sp, a0
 ; RV64ZICBOP-NEXT:    ret
 ;
 ; RV64ZICBOPZIHINTNTL-LABEL: test_prefetch_frameindex_1:
 ; RV64ZICBOPZIHINTNTL:       # %bb.0:
 ; RV64ZICBOPZIHINTNTL-NEXT:    lui a0, 1
-; RV64ZICBOPZIHINTNTL-NEXT:    addiw a0, a0, 16
+; RV64ZICBOPZIHINTNTL-NEXT:    addi a0, a0, 16
 ; RV64ZICBOPZIHINTNTL-NEXT:    sub sp, sp, a0
 ; RV64ZICBOPZIHINTNTL-NEXT:    addi a0, sp, 16
 ; RV64ZICBOPZIHINTNTL-NEXT:    ntl.all
 ; RV64ZICBOPZIHINTNTL-NEXT:    prefetch.r 0(a0)
 ; RV64ZICBOPZIHINTNTL-NEXT:    lui a0, 1
-; RV64ZICBOPZIHINTNTL-NEXT:    addiw a0, a0, 16
+; RV64ZICBOPZIHINTNTL-NEXT:    addi a0, a0, 16
 ; RV64ZICBOPZIHINTNTL-NEXT:    add sp, sp, a0
 ; RV64ZICBOPZIHINTNTL-NEXT:    ret
   %data = alloca [1024 x i32], align 4
-  %ptr = bitcast [1024 x i32]* %data to i8*
+  %ptr = bitcast ptr %data to ptr
   call void @llvm.prefetch(ptr %ptr, i32 0, i32 0, i32 1)
   ret void
 }
@@ -802,7 +799,7 @@ define void @test_prefetch_frameindex_2() nounwind {
 ; RV64ZICBOPZIHINTNTL-NEXT:    addi sp, sp, 512
 ; RV64ZICBOPZIHINTNTL-NEXT:    ret
   %data = alloca [128 x i32], align 4
-  %base = bitcast [128 x i32]* %data to i8*
+  %base = bitcast ptr %data to ptr
   %ptr = getelementptr [128 x i32], ptr %base, i32 0, i32 4
   call void @llvm.prefetch(ptr %ptr, i32 0, i32 0, i32 1)
   ret void
@@ -846,7 +843,7 @@ define void @test_prefetch_frameindex_3() nounwind {
 ; RV64ZICBOPZIHINTNTL-NEXT:    addi sp, sp, 512
 ; RV64ZICBOPZIHINTNTL-NEXT:    ret
   %data = alloca [128 x i32], align 4
-  %base = bitcast [128 x i32]* %data to i8*
+  %base = bitcast ptr %data to ptr
   %ptr = getelementptr [128 x i32], ptr %base, i32 0, i32 -4
   call void @llvm.prefetch(ptr %ptr, i32 0, i32 0, i32 1)
   ret void
@@ -887,7 +884,7 @@ define void @test_prefetch_frameindex_4() nounwind {
 ; RV64ZICBOPZIHINTNTL-NEXT:    addi sp, sp, 512
 ; RV64ZICBOPZIHINTNTL-NEXT:    ret
   %data = alloca [128 x i32], align 4
-  %base = bitcast [128 x i32]* %data to i8*
+  %base = bitcast ptr %data to ptr
   %ptr = getelementptr [128 x i32], ptr %base, i32 0, i32 8
   call void @llvm.prefetch(ptr %ptr, i32 0, i32 0, i32 1)
   ret void
@@ -928,7 +925,7 @@ define void @test_prefetch_frameindex_5() nounwind {
 ; RV64ZICBOPZIHINTNTL-NEXT:    addi sp, sp, 512
 ; RV64ZICBOPZIHINTNTL-NEXT:    ret
   %data = alloca [128 x i32], align 4
-  %base = bitcast [128 x i32]* %data to i8*
+  %base = bitcast ptr %data to ptr
   %ptr = getelementptr [128 x i32], ptr %base, i32 0, i32 -8
   call void @llvm.prefetch(ptr %ptr, i32 0, i32 0, i32 1)
   ret void
@@ -969,7 +966,7 @@ define void @test_prefetch_frameindex_6() nounwind {
 ; RV64ZICBOPZIHINTNTL-NEXT:    addi sp, sp, 512
 ; RV64ZICBOPZIHINTNTL-NEXT:    ret
   %data = alloca [128 x i32], align 4
-  %base = bitcast [128 x i32]* %data to i8*
+  %base = bitcast ptr %data to ptr
   %ptr = getelementptr [128 x i32], ptr %base, i32 0, i32 504
   call void @llvm.prefetch(ptr %ptr, i32 0, i32 0, i32 1)
   ret void
@@ -1010,7 +1007,7 @@ define void @test_prefetch_frameindex_7() nounwind {
 ; RV64ZICBOPZIHINTNTL-NEXT:    addi sp, sp, 512
 ; RV64ZICBOPZIHINTNTL-NEXT:    ret
   %data = alloca [128 x i32], align 4
-  %base = bitcast [128 x i32]* %data to i8*
+  %base = bitcast ptr %data to ptr
   %ptr = getelementptr [128 x i32], ptr %base, i32 0, i32 -512
   call void @llvm.prefetch(ptr %ptr, i32 0, i32 0, i32 1)
   ret void
@@ -1054,7 +1051,7 @@ define void @test_prefetch_frameindex_8() nounwind {
 ; RV64ZICBOPZIHINTNTL-NEXT:    addi sp, sp, 512
 ; RV64ZICBOPZIHINTNTL-NEXT:    ret
   %data = alloca [128 x i32], align 4
-  %base = bitcast [128 x i32]* %data to i8*
+  %base = bitcast ptr %data to ptr
   %ptr = getelementptr [128 x i32], ptr %base, i32 0, i32 505
   call void @llvm.prefetch(ptr %ptr, i32 0, i32 0, i32 1)
   ret void
@@ -1101,7 +1098,7 @@ define void @test_prefetch_frameindex_9() nounwind {
 ; RV64ZICBOPZIHINTNTL-NEXT:    addi sp, sp, 512
 ; RV64ZICBOPZIHINTNTL-NEXT:    ret
   %data = alloca [128 x i32], align 4
-  %base = bitcast [128 x i32]* %data to i8*
+  %base = bitcast ptr %data to ptr
   %ptr = getelementptr [128 x i32], ptr %base, i32 0, i32 -513
   call void @llvm.prefetch(ptr %ptr, i32 0, i32 0, i32 1)
   ret void
@@ -1134,7 +1131,7 @@ define void @test_prefetch_constant_address_0() nounwind {
 ; RV64ZICBOPZIHINTNTL-NEXT:    ntl.all
 ; RV64ZICBOPZIHINTNTL-NEXT:    prefetch.r 32(a0)
 ; RV64ZICBOPZIHINTNTL-NEXT:    ret
-  %ptr = inttoptr i64 4128 to i8*
+  %ptr = inttoptr i64 4128 to ptr
   call void @llvm.prefetch(ptr %ptr, i32 0, i32 0, i32 1)
   ret void
 }
@@ -1158,18 +1155,18 @@ define void @test_prefetch_constant_address_1() nounwind {
 ; RV64ZICBOP-LABEL: test_prefetch_constant_address_1:
 ; RV64ZICBOP:       # %bb.0:
 ; RV64ZICBOP-NEXT:    lui a0, 1
-; RV64ZICBOP-NEXT:    addiw a0, a0, 31
+; RV64ZICBOP-NEXT:    addi a0, a0, 31
 ; RV64ZICBOP-NEXT:    prefetch.r 0(a0)
 ; RV64ZICBOP-NEXT:    ret
 ;
 ; RV64ZICBOPZIHINTNTL-LABEL: test_prefetch_constant_address_1:
 ; RV64ZICBOPZIHINTNTL:       # %bb.0:
 ; RV64ZICBOPZIHINTNTL-NEXT:    lui a0, 1
-; RV64ZICBOPZIHINTNTL-NEXT:    addiw a0, a0, 31
+; RV64ZICBOPZIHINTNTL-NEXT:    addi a0, a0, 31
 ; RV64ZICBOPZIHINTNTL-NEXT:    ntl.all
 ; RV64ZICBOPZIHINTNTL-NEXT:    prefetch.r 0(a0)
 ; RV64ZICBOPZIHINTNTL-NEXT:    ret
-  %ptr = inttoptr i64 4127 to i8*
+  %ptr = inttoptr i64 4127 to ptr
   call void @llvm.prefetch(ptr %ptr, i32 0, i32 0, i32 1)
   ret void
 }
@@ -1201,7 +1198,7 @@ define void @test_prefetch_constant_address_2() nounwind {
 ; RV64ZICBOPZIHINTNTL-NEXT:    ntl.all
 ; RV64ZICBOPZIHINTNTL-NEXT:    prefetch.r 32(a0)
 ; RV64ZICBOPZIHINTNTL-NEXT:    ret
-  %ptr = inttoptr i64 18446744073709490208 to i8*
+  %ptr = inttoptr i64 18446744073709490208 to ptr
   call void @llvm.prefetch(ptr %ptr, i32 0, i32 0, i32 1)
   ret void
 }
@@ -1225,18 +1222,18 @@ define void @test_prefetch_constant_address_3() nounwind {
 ; RV64ZICBOP-LABEL: test_prefetch_constant_address_3:
 ; RV64ZICBOP:       # %bb.0:
 ; RV64ZICBOP-NEXT:    lui a0, 1048561
-; RV64ZICBOP-NEXT:    addiw a0, a0, 31
+; RV64ZICBOP-NEXT:    addi a0, a0, 31
 ; RV64ZICBOP-NEXT:    prefetch.r 0(a0)
 ; RV64ZICBOP-NEXT:    ret
 ;
 ; RV64ZICBOPZIHINTNTL-LABEL: test_prefetch_constant_address_3:
 ; RV64ZICBOPZIHINTNTL:       # %bb.0:
 ; RV64ZICBOPZIHINTNTL-NEXT:    lui a0, 1048561
-; RV64ZICBOPZIHINTNTL-NEXT:    addiw a0, a0, 31
+; RV64ZICBOPZIHINTNTL-NEXT:    addi a0, a0, 31
 ; RV64ZICBOPZIHINTNTL-NEXT:    ntl.all
 ; RV64ZICBOPZIHINTNTL-NEXT:    prefetch.r 0(a0)
 ; RV64ZICBOPZIHINTNTL-NEXT:    ret
-  %ptr = inttoptr i64 18446744073709490207 to i8*
+  %ptr = inttoptr i64 18446744073709490207 to ptr
   call void @llvm.prefetch(ptr %ptr, i32 0, i32 0, i32 1)
   ret void
 }

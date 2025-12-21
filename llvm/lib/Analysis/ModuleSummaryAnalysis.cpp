@@ -22,6 +22,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
+#include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/IndirectCallPromotionAnalysis.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/MemoryProfileInfo.h"
@@ -50,8 +51,8 @@
 #include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/FileSystem.h"
-#include <algorithm>
 #include <cassert>
 #include <cstdint>
 #include <vector>
@@ -66,7 +67,6 @@ using namespace llvm::memprof;
 namespace llvm {
 FunctionSummary::ForceSummaryHotnessType ForceSummaryEdgesCold =
     FunctionSummary::FSHT_None;
-} // namespace llvm
 
 static cl::opt<FunctionSummary::ForceSummaryHotnessType, true> FSEC(
     "force-summary-edges-cold", cl::Hidden, cl::location(ForceSummaryEdgesCold),
@@ -80,7 +80,30 @@ static cl::opt<std::string> ModuleSummaryDotFile(
     "module-summary-dot-file", cl::Hidden, cl::value_desc("filename"),
     cl::desc("File to emit dot graph of new summary into"));
 
-extern cl::opt<bool> ScalePartialSampleProfileWorkingSetSize;
+static cl::opt<bool> EnableMemProfIndirectCallSupport(
+    "enable-memprof-indirect-call-support", cl::init(true), cl::Hidden,
+    cl::desc(
+        "Enable MemProf support for summarizing and cloning indirect calls"));
+
+// This can be used to override the number of callees created from VP metadata
+// normally taken from the -icp-max-prom option with a larger amount, if useful
+// for analysis. Use a separate option so that we can control the number of
+// indirect callees for ThinLTO summary based analysis (e.g. for MemProf which
+// needs this information for a correct and not overly-conservative callsite
+// graph analysis, especially because allocation contexts may not be very
+// frequent), without affecting normal ICP.
+cl::opt<unsigned>
+    MaxSummaryIndirectEdges("module-summary-max-indirect-edges", cl::init(0),
+                            cl::Hidden,
+                            cl::desc("Max number of summary edges added from "
+                                     "indirect call profile metadata"));
+
+LLVM_ABI extern cl::opt<bool> ScalePartialSampleProfileWorkingSetSize;
+
+extern cl::opt<unsigned> MaxNumVTableAnnotations;
+
+extern cl::opt<bool> MemProfReportHintedSizes;
+} // namespace llvm
 
 // Walk through the operands of a given User via worklist iteration and populate
 // the set of GlobalValue references encountered. Invoked either on an
@@ -92,9 +115,13 @@ extern cl::opt<bool> ScalePartialSampleProfileWorkingSetSize;
 // global vars at all. When importing function we aren't interested if any
 // instruction in it takes an address of any basic block, because instruction
 // can only take an address of basic block located in the same function.
-static bool findRefEdges(ModuleSummaryIndex &Index, const User *CurUser,
-                         SetVector<ValueInfo, std::vector<ValueInfo>> &RefEdges,
-                         SmallPtrSet<const User *, 8> &Visited) {
+// Set `RefLocalLinkageIFunc` to true if the analyzed value references a
+// local-linkage ifunc.
+static bool
+findRefEdges(ModuleSummaryIndex &Index, const User *CurUser,
+             SetVector<ValueInfo, SmallVector<ValueInfo, 0>> &RefEdges,
+             SmallPtrSet<const User *, 8> &Visited,
+             bool &RefLocalLinkageIFunc) {
   bool HasBlockAddress = false;
   SmallVector<const User *, 32> Worklist;
   if (Visited.insert(CurUser).second)
@@ -116,13 +143,36 @@ static bool findRefEdges(ModuleSummaryIndex &Index, const User *CurUser,
         // We have a reference to a global value. This should be added to
         // the reference set unless it is a callee. Callees are handled
         // specially by WriteFunction and are added to a separate list.
-        if (!(CB && CB->isCallee(&OI)))
+        if (!(CB && CB->isCallee(&OI))) {
+          // If an ifunc has local linkage, do not add it into ref edges, and
+          // sets `RefLocalLinkageIFunc` to true. The referencer is not eligible
+          // for import. An ifunc doesn't have summary and ThinLTO cannot
+          // promote it; importing the referencer may cause linkage errors.
+          if (auto *GI = dyn_cast_if_present<GlobalIFunc>(GV);
+              GI && GI->hasLocalLinkage()) {
+            RefLocalLinkageIFunc = true;
+            continue;
+          }
           RefEdges.insert(Index.getOrInsertValueInfo(GV));
+        }
         continue;
       }
       if (Visited.insert(Operand).second)
         Worklist.push_back(Operand);
     }
+  }
+
+  const Instruction *I = dyn_cast<Instruction>(CurUser);
+  if (I) {
+    uint64_t TotalCount = 0;
+    // MaxNumVTableAnnotations is the maximum number of vtables annotated on
+    // the instruction.
+    auto ValueDataArray = getValueProfDataFromInst(
+        *I, IPVK_VTableTarget, MaxNumVTableAnnotations, TotalCount);
+
+    for (const auto &V : ValueDataArray)
+      RefEdges.insert(Index.getOrInsertValueInfo(/* VTableGUID = */
+                                                 V.Value));
   }
   return HasBlockAddress;
 }
@@ -186,7 +236,8 @@ static void addIntrinsicToSummary(
     auto *TypeId = dyn_cast<MDString>(TypeMDVal->getMetadata());
     if (!TypeId)
       break;
-    GlobalValue::GUID Guid = GlobalValue::getGUID(TypeId->getString());
+    GlobalValue::GUID Guid =
+        GlobalValue::getGUIDAssumingExternalLinkage(TypeId->getString());
 
     // Produce a summary from type.test intrinsics. We only summarize type.test
     // intrinsics that are used other than by an llvm.assume intrinsic.
@@ -214,7 +265,8 @@ static void addIntrinsicToSummary(
     auto *TypeId = dyn_cast<MDString>(TypeMDVal->getMetadata());
     if (!TypeId)
       break;
-    GlobalValue::GUID Guid = GlobalValue::getGUID(TypeId->getString());
+    GlobalValue::GUID Guid =
+        GlobalValue::getGUIDAssumingExternalLinkage(TypeId->getString());
 
     SmallVector<DevirtCallSite, 4> DevirtCalls;
     SmallVector<Instruction *, 4> LoadedPtrs;
@@ -277,9 +329,9 @@ static void computeFunctionSummary(
   // Map from callee ValueId to profile count. Used to accumulate profile
   // counts for all static calls to a given callee.
   MapVector<ValueInfo, CalleeInfo, DenseMap<ValueInfo, unsigned>,
-            std::vector<std::pair<ValueInfo, CalleeInfo>>>
+            SmallVector<FunctionSummary::EdgeTy, 0>>
       CallGraphEdges;
-  SetVector<ValueInfo, std::vector<ValueInfo>> RefEdges, LoadRefEdges,
+  SetVector<ValueInfo, SmallVector<ValueInfo, 0>> RefEdges, LoadRefEdges,
       StoreRefEdges;
   SetVector<GlobalValue::GUID, std::vector<GlobalValue::GUID>> TypeTests;
   SetVector<FunctionSummary::VFuncId, std::vector<FunctionSummary::VFuncId>>
@@ -292,7 +344,8 @@ static void computeFunctionSummary(
 
   // Add personality function, prefix data and prologue data to function's ref
   // list.
-  findRefEdges(Index, &F, RefEdges, Visited);
+  bool HasLocalIFuncCallOrRef = false;
+  findRefEdges(Index, &F, RefEdges, Visited, HasLocalIFuncCallOrRef);
   std::vector<const Instruction *> NonVolatileLoads;
   std::vector<const Instruction *> NonVolatileStores;
 
@@ -305,7 +358,6 @@ static void computeFunctionSummary(
 
   bool HasInlineAsmMaybeReferencingInternal = false;
   bool HasIndirBranchToBlockAddress = false;
-  bool HasIFuncCall = false;
   bool HasUnknownCall = false;
   bool MayThrow = false;
   for (const BasicBlock &BB : F) {
@@ -351,11 +403,11 @@ static void computeFunctionSummary(
             // of calling it we should add GV to RefEdges directly.
             RefEdges.insert(Index.getOrInsertValueInfo(GV));
           else if (auto *U = dyn_cast<User>(Stored))
-            findRefEdges(Index, U, RefEdges, Visited);
+            findRefEdges(Index, U, RefEdges, Visited, HasLocalIFuncCallOrRef);
           continue;
         }
       }
-      findRefEdges(Index, &I, RefEdges, Visited);
+      findRefEdges(Index, &I, RefEdges, Visited, HasLocalIFuncCallOrRef);
       const auto *CB = dyn_cast<CallBase>(&I);
       if (!CB) {
         if (I.mayThrow())
@@ -371,6 +423,11 @@ static void computeFunctionSummary(
       // referenced value).
       if (HasLocalsInUsedOrAsm && CI && CI->isInlineAsm())
         HasInlineAsmMaybeReferencingInternal = true;
+
+      // Compute this once per indirect call.
+      uint32_t NumCandidates = 0;
+      uint64_t TotalCount = 0;
+      MutableArrayRef<InstrProfValueData> CandidateProfileData;
 
       auto *CalledValue = CB->getCalledOperand();
       auto *CalledFunction = CB->getCalledFunction();
@@ -409,6 +466,8 @@ static void computeFunctionSummary(
         auto &ValueInfo = CallGraphEdges[Index.getOrInsertValueInfo(
             cast<GlobalValue>(CalledValue))];
         ValueInfo.updateHotness(Hotness);
+        if (CB->isTailCall())
+          ValueInfo.setHasTailCall(true);
         // Add the relative block frequency to CalleeInfo if there is no profile
         // information.
         if (BFI != nullptr && Hotness == CalleeInfo::HotnessType::Unknown) {
@@ -427,7 +486,7 @@ static void computeFunctionSummary(
         // Non-local ifunc is not cloned and does not have the issue.
         if (auto *GI = dyn_cast_if_present<GlobalIFunc>(CalledValue))
           if (GI->hasLocalLinkage())
-            HasIFuncCall = true;
+            HasLocalIFuncCallOrRef = true;
         // Skip inline assembly calls.
         if (CI && CI->isInlineAsm())
           continue;
@@ -447,11 +506,9 @@ static void computeFunctionSummary(
           }
         }
 
-        uint32_t NumVals, NumCandidates;
-        uint64_t TotalCount;
-        auto CandidateProfileData =
+        CandidateProfileData =
             ICallAnalysis.getPromotionCandidatesForInstruction(
-                &I, NumVals, TotalCount, NumCandidates);
+                &I, TotalCount, NumCandidates, MaxSummaryIndirectEdges);
         for (const auto &Candidate : CandidateProfileData)
           CallGraphEdges[Index.getOrInsertValueInfo(Candidate.Value)]
               .updateHotness(getHotness(Candidate.Count, PSI));
@@ -461,14 +518,8 @@ static void computeFunctionSummary(
       if (!IsThinLTO)
         continue;
 
-      // TODO: Skip indirect calls for now. Need to handle these better, likely
-      // by creating multiple Callsites, one per target, then speculatively
-      // devirtualize while applying clone info in the ThinLTO backends. This
-      // will also be important because we will have a different set of clone
-      // versions per target. This handling needs to match that in the ThinLTO
-      // backend so we handle things consistently for matching of callsite
-      // summaries to instructions.
-      if (!CalledFunction)
+      // Skip indirect calls if we haven't enabled memprof ICP.
+      if (!CalledFunction && !EnableMemProfIndirectCallSupport)
         continue;
 
       // Ensure we keep this analysis in sync with the handling in the ThinLTO
@@ -486,6 +537,8 @@ static void computeFunctionSummary(
       auto *MemProfMD = I.getMetadata(LLVMContext::MD_memprof);
       if (MemProfMD) {
         std::vector<MIBInfo> MIBs;
+        std::vector<std::vector<ContextTotalSize>> ContextSizeInfos;
+        bool HasNonZeroContextSizeInfos = false;
         for (auto &MDOp : MemProfMD->operands()) {
           auto *MIBMD = cast<const MDNode>(MDOp);
           MDNode *StackNode = getMIBStackNode(MIBMD);
@@ -503,21 +556,74 @@ static void computeFunctionSummary(
             if (StackIdIndices.empty() || StackIdIndices.back() != StackIdIdx)
               StackIdIndices.push_back(StackIdIdx);
           }
+          // If we have context size information, collect it for inclusion in
+          // the summary.
+          assert(MIBMD->getNumOperands() > 2 ||
+                 !metadataIncludesAllContextSizeInfo());
+          if (MIBMD->getNumOperands() > 2) {
+            std::vector<ContextTotalSize> ContextSizes;
+            for (unsigned I = 2; I < MIBMD->getNumOperands(); I++) {
+              MDNode *ContextSizePair = dyn_cast<MDNode>(MIBMD->getOperand(I));
+              assert(ContextSizePair->getNumOperands() == 2);
+              uint64_t FullStackId = mdconst::dyn_extract<ConstantInt>(
+                                         ContextSizePair->getOperand(0))
+                                         ->getZExtValue();
+              uint64_t TS = mdconst::dyn_extract<ConstantInt>(
+                                ContextSizePair->getOperand(1))
+                                ->getZExtValue();
+              ContextSizes.push_back({FullStackId, TS});
+            }
+            // Flag that we need to keep the ContextSizeInfos array for this
+            // alloc as it now contains non-zero context info sizes.
+            HasNonZeroContextSizeInfos = true;
+            ContextSizeInfos.push_back(std::move(ContextSizes));
+          } else {
+            // The ContextSizeInfos must be in the same relative position as the
+            // associated MIB. In some cases we only include a ContextSizeInfo
+            // for a subset of MIBs in an allocation. To handle that, eagerly
+            // fill any MIB entries that don't have context size info metadata
+            // with a pair of 0s. Later on we will only use this array if it
+            // ends up containing any non-zero entries (see where we set
+            // HasNonZeroContextSizeInfos above).
+            ContextSizeInfos.push_back({{0, 0}});
+          }
           MIBs.push_back(
               MIBInfo(getMIBAllocType(MIBMD), std::move(StackIdIndices)));
         }
         Allocs.push_back(AllocInfo(std::move(MIBs)));
+        assert(HasNonZeroContextSizeInfos ||
+               !metadataIncludesAllContextSizeInfo());
+        // We eagerly build the ContextSizeInfos array, but it will be filled
+        // with sub arrays of pairs of 0s if no MIBs on this alloc actually
+        // contained context size info metadata. Only save it if any MIBs had
+        // any such metadata.
+        if (HasNonZeroContextSizeInfos) {
+          assert(Allocs.back().MIBs.size() == ContextSizeInfos.size());
+          Allocs.back().ContextSizeInfos = std::move(ContextSizeInfos);
+        }
       } else if (!InstCallsite.empty()) {
         SmallVector<unsigned> StackIdIndices;
         for (auto StackId : InstCallsite)
           StackIdIndices.push_back(Index.addOrGetStackIdIndex(StackId));
-        // Use the original CalledValue, in case it was an alias. We want
-        // to record the call edge to the alias in that case. Eventually
-        // an alias summary will be created to associate the alias and
-        // aliasee.
-        auto CalleeValueInfo =
-            Index.getOrInsertValueInfo(cast<GlobalValue>(CalledValue));
-        Callsites.push_back({CalleeValueInfo, StackIdIndices});
+        if (CalledFunction) {
+          // Use the original CalledValue, in case it was an alias. We want
+          // to record the call edge to the alias in that case. Eventually
+          // an alias summary will be created to associate the alias and
+          // aliasee.
+          auto CalleeValueInfo =
+              Index.getOrInsertValueInfo(cast<GlobalValue>(CalledValue));
+          Callsites.push_back({CalleeValueInfo, StackIdIndices});
+        } else {
+          assert(EnableMemProfIndirectCallSupport);
+          // For indirect callsites, create multiple Callsites, one per target.
+          // This enables having a different set of clone versions per target,
+          // and we will apply the cloning decisions while speculatively
+          // devirtualizing in the ThinLTO backends.
+          for (const auto &Candidate : CandidateProfileData) {
+            auto CalleeValueInfo = Index.getOrInsertValueInfo(Candidate.Value);
+            Callsites.push_back({CalleeValueInfo, StackIdIndices});
+          }
+        }
       }
     }
   }
@@ -525,16 +631,17 @@ static void computeFunctionSummary(
   if (PSI->hasPartialSampleProfile() && ScalePartialSampleProfileWorkingSetSize)
     Index.addBlockCount(F.size());
 
-  std::vector<ValueInfo> Refs;
+  SmallVector<ValueInfo, 0> Refs;
   if (IsThinLTO) {
-    auto AddRefEdges = [&](const std::vector<const Instruction *> &Instrs,
-                           SetVector<ValueInfo, std::vector<ValueInfo>> &Edges,
-                           SmallPtrSet<const User *, 8> &Cache) {
-      for (const auto *I : Instrs) {
-        Cache.erase(I);
-        findRefEdges(Index, I, Edges, Cache);
-      }
-    };
+    auto AddRefEdges =
+        [&](const std::vector<const Instruction *> &Instrs,
+            SetVector<ValueInfo, SmallVector<ValueInfo, 0>> &Edges,
+            SmallPtrSet<const User *, 8> &Cache) {
+          for (const auto *I : Instrs) {
+            Cache.erase(I);
+            findRefEdges(Index, I, Edges, Cache, HasLocalIFuncCallOrRef);
+          }
+        };
 
     // By now we processed all instructions in a function, except
     // non-volatile loads and non-volatile value stores. Let's find
@@ -564,12 +671,10 @@ static void computeFunctionSummary(
     // All new reference edges inserted in two loops below are either
     // read or write only. They will be grouped in the end of RefEdges
     // vector, so we can use a single integer value to identify them.
-    for (const auto &VI : LoadRefEdges)
-      RefEdges.insert(VI);
+    RefEdges.insert_range(LoadRefEdges);
 
     unsigned FirstWORef = RefEdges.size();
-    for (const auto &VI : StoreRefEdges)
-      RefEdges.insert(VI);
+    RefEdges.insert_range(StoreRefEdges);
 
     Refs = RefEdges.takeVector();
     for (; RefCnt < FirstWORef; ++RefCnt)
@@ -608,12 +713,13 @@ static void computeFunctionSummary(
 #endif
 
   bool NonRenamableLocal = isNonRenamableLocal(F);
-  bool NotEligibleForImport = NonRenamableLocal ||
-                              HasInlineAsmMaybeReferencingInternal ||
-                              HasIndirBranchToBlockAddress || HasIFuncCall;
+  bool NotEligibleForImport =
+      NonRenamableLocal || HasInlineAsmMaybeReferencingInternal ||
+      HasIndirBranchToBlockAddress || HasLocalIFuncCallOrRef;
   GlobalValueSummary::GVFlags Flags(
       F.getLinkage(), F.getVisibility(), NotEligibleForImport,
-      /* Live = */ false, F.isDSOLocal(), F.canBeOmittedFromSymbolTable());
+      /* Live = */ false, F.isDSOLocal(), F.canBeOmittedFromSymbolTable(),
+      GlobalValueSummary::ImportKind::Definition);
   FunctionSummary::FFlags FunFlags{
       F.doesNotAccessMemory(), F.onlyReadsMemory() && !F.doesNotAccessMemory(),
       F.hasFnAttribute(Attribute::NoRecurse), F.returnDoesNotAlias(),
@@ -627,9 +733,9 @@ static void computeFunctionSummary(
   if (auto *SSI = GetSSICallback(F))
     ParamAccesses = SSI->getParamAccesses(Index);
   auto FuncSummary = std::make_unique<FunctionSummary>(
-      Flags, NumInsts, FunFlags, /*EntryCount=*/0, std::move(Refs),
-      CallGraphEdges.takeVector(), TypeTests.takeVector(),
-      TypeTestAssumeVCalls.takeVector(), TypeCheckedLoadVCalls.takeVector(),
+      Flags, NumInsts, FunFlags, std::move(Refs), CallGraphEdges.takeVector(),
+      TypeTests.takeVector(), TypeTestAssumeVCalls.takeVector(),
+      TypeCheckedLoadVCalls.takeVector(),
       TypeTestAssumeConstVCalls.takeVector(),
       TypeCheckedLoadConstVCalls.takeVector(), std::move(ParamAccesses),
       std::move(Callsites), std::move(Allocs));
@@ -645,7 +751,8 @@ static void computeFunctionSummary(
 /// within the initializer.
 static void findFuncPointers(const Constant *I, uint64_t StartingOffset,
                              const Module &M, ModuleSummaryIndex &Index,
-                             VTableFuncList &VTableFuncs) {
+                             VTableFuncList &VTableFuncs,
+                             const GlobalVariable &OrigGV) {
   // First check if this is a function pointer.
   if (I->getType()->isPointerTy()) {
     auto C = I->stripPointerCasts();
@@ -673,7 +780,7 @@ static void findFuncPointers(const Constant *I, uint64_t StartingOffset,
       auto Offset = SL->getElementOffset(EI.index());
       unsigned Op = SL->getElementContainingOffset(Offset);
       findFuncPointers(cast<Constant>(I->getOperand(Op)),
-                       StartingOffset + Offset, M, Index, VTableFuncs);
+                       StartingOffset + Offset, M, Index, VTableFuncs, OrigGV);
     }
   } else if (auto *C = dyn_cast<ConstantArray>(I)) {
     ArrayType *ATy = C->getType();
@@ -681,7 +788,34 @@ static void findFuncPointers(const Constant *I, uint64_t StartingOffset,
     uint64_t EltSize = DL.getTypeAllocSize(EltTy);
     for (unsigned i = 0, e = ATy->getNumElements(); i != e; ++i) {
       findFuncPointers(cast<Constant>(I->getOperand(i)),
-                       StartingOffset + i * EltSize, M, Index, VTableFuncs);
+                       StartingOffset + i * EltSize, M, Index, VTableFuncs,
+                       OrigGV);
+    }
+  } else if (const auto *CE = dyn_cast<ConstantExpr>(I)) {
+    // For relative vtables, the next sub-component should be a trunc.
+    if (CE->getOpcode() != Instruction::Trunc ||
+        !(CE = dyn_cast<ConstantExpr>(CE->getOperand(0))))
+      return;
+
+    // If this constant can be reduced to the offset between a function and a
+    // global, then we know this is a valid virtual function if the RHS is the
+    // original vtable we're scanning through.
+    if (CE->getOpcode() == Instruction::Sub) {
+      GlobalValue *LHS, *RHS;
+      APSInt LHSOffset, RHSOffset;
+      if (IsConstantOffsetFromGlobal(CE->getOperand(0), LHS, LHSOffset, DL) &&
+          IsConstantOffsetFromGlobal(CE->getOperand(1), RHS, RHSOffset, DL) &&
+          RHS == &OrigGV &&
+
+          // For relative vtables, this component should point to the callable
+          // function without any offsets.
+          LHSOffset == 0 &&
+
+          // Also, the RHS should always point to somewhere within the vtable.
+          RHSOffset <=
+              static_cast<uint64_t>(DL.getTypeAllocSize(OrigGV.getInitializer()->getType()))) {
+        findFuncPointers(LHS, StartingOffset, M, Index, VTableFuncs, OrigGV);
+      }
     }
   }
 }
@@ -694,7 +828,7 @@ static void computeVTableFuncs(ModuleSummaryIndex &Index,
     return;
 
   findFuncPointers(V.getInitializer(), /*StartingOffset=*/0, M, Index,
-                   VTableFuncs);
+                   VTableFuncs, V);
 
 #ifndef NDEBUG
   // Validate that the VTableFuncs list is ordered by offset.
@@ -733,13 +867,17 @@ static void computeVariableSummary(ModuleSummaryIndex &Index,
                                    DenseSet<GlobalValue::GUID> &CantBePromoted,
                                    const Module &M,
                                    SmallVectorImpl<MDNode *> &Types) {
-  SetVector<ValueInfo, std::vector<ValueInfo>> RefEdges;
+  SetVector<ValueInfo, SmallVector<ValueInfo, 0>> RefEdges;
   SmallPtrSet<const User *, 8> Visited;
-  bool HasBlockAddress = findRefEdges(Index, &V, RefEdges, Visited);
+  bool RefLocalIFunc = false;
+  bool HasBlockAddress =
+      findRefEdges(Index, &V, RefEdges, Visited, RefLocalIFunc);
+  const bool NotEligibleForImport = (HasBlockAddress || RefLocalIFunc);
   bool NonRenamableLocal = isNonRenamableLocal(V);
   GlobalValueSummary::GVFlags Flags(
       V.getLinkage(), V.getVisibility(), NonRenamableLocal,
-      /* Live = */ false, V.isDSOLocal(), V.canBeOmittedFromSymbolTable());
+      /* Live = */ false, V.isDSOLocal(), V.canBeOmittedFromSymbolTable(),
+      GlobalValueSummary::Definition);
 
   VTableFuncList VTableFuncs;
   // If splitting is not enabled, then we compute the summary information
@@ -768,7 +906,7 @@ static void computeVariableSummary(ModuleSummaryIndex &Index,
                                                          RefEdges.takeVector());
   if (NonRenamableLocal)
     CantBePromoted.insert(V.getGUID());
-  if (HasBlockAddress)
+  if (NotEligibleForImport)
     GVarSummary->setNotEligibleToImport();
   if (!VTableFuncs.empty())
     GVarSummary->setVTableFuncs(VTableFuncs);
@@ -785,7 +923,8 @@ static void computeAliasSummary(ModuleSummaryIndex &Index, const GlobalAlias &A,
   bool NonRenamableLocal = isNonRenamableLocal(A);
   GlobalValueSummary::GVFlags Flags(
       A.getLinkage(), A.getVisibility(), NonRenamableLocal,
-      /* Live = */ false, A.isDSOLocal(), A.canBeOmittedFromSymbolTable());
+      /* Live = */ false, A.isDSOLocal(), A.canBeOmittedFromSymbolTable(),
+      GlobalValueSummary::Definition);
   auto AS = std::make_unique<AliasSummary>(Flags);
   auto AliaseeVI = Index.getValueInfo(Aliasee->getGUID());
   assert(AliaseeVI && "Alias expects aliasee summary to be available");
@@ -799,7 +938,8 @@ static void computeAliasSummary(ModuleSummaryIndex &Index, const GlobalAlias &A,
 
 // Set LiveRoot flag on entries matching the given value name.
 static void setLiveRoot(ModuleSummaryIndex &Index, StringRef Name) {
-  if (ValueInfo VI = Index.getValueInfo(GlobalValue::getGUID(Name)))
+  if (ValueInfo VI =
+          Index.getValueInfo(GlobalValue::getGUIDAssumingExternalLinkage(Name)))
     for (const auto &Summary : VI.getSummaryList())
       Summary->setLive(true);
 }
@@ -865,7 +1005,8 @@ ModuleSummaryIndex llvm::buildModuleSummaryIndex(
               GlobalValue::InternalLinkage, GlobalValue::DefaultVisibility,
               /* NotEligibleToImport = */ true,
               /* Live = */ true,
-              /* Local */ GV->isDSOLocal(), GV->canBeOmittedFromSymbolTable());
+              /* Local */ GV->isDSOLocal(), GV->canBeOmittedFromSymbolTable(),
+              GlobalValueSummary::Definition);
           CantBePromoted.insert(GV->getGUID());
           // Create the appropriate summary type.
           if (Function *F = dyn_cast<Function>(GV)) {
@@ -883,8 +1024,8 @@ ModuleSummaryIndex llvm::buildModuleSummaryIndex(
                         /* MayThrow */ true,
                         /* HasUnknownCall */ true,
                         /* MustBeUnreachable */ false},
-                    /*EntryCount=*/0, ArrayRef<ValueInfo>{},
-                    ArrayRef<FunctionSummary::EdgeTy>{},
+                    SmallVector<ValueInfo, 0>{},
+                    SmallVector<FunctionSummary::EdgeTy, 0>{},
                     ArrayRef<GlobalValue::GUID>{},
                     ArrayRef<FunctionSummary::VFuncId>{},
                     ArrayRef<FunctionSummary::VFuncId>{},
@@ -900,7 +1041,7 @@ ModuleSummaryIndex llvm::buildModuleSummaryIndex(
                     GlobalVarSummary::GVarFlags(
                         false, false, cast<GlobalVariable>(GV)->isConstant(),
                         GlobalObject::VCallVisibilityPublic),
-                    ArrayRef<ValueInfo>{});
+                    SmallVector<ValueInfo, 0>{});
             Index.addGlobalValueSummary(*GV, std::move(Summary));
           }
         });
@@ -972,12 +1113,12 @@ ModuleSummaryIndex llvm::buildModuleSummaryIndex(
 
   for (auto &GlobalList : Index) {
     // Ignore entries for references that are undefined in the current module.
-    if (GlobalList.second.SummaryList.empty())
+    if (GlobalList.second.getSummaryList().empty())
       continue;
 
-    assert(GlobalList.second.SummaryList.size() == 1 &&
+    assert(GlobalList.second.getSummaryList().size() == 1 &&
            "Expected module's index to have one summary per GUID");
-    auto &Summary = GlobalList.second.SummaryList[0];
+    auto &Summary = GlobalList.second.getSummaryList()[0];
     if (!IsThinLTO) {
       Summary->setNotEligibleToImport();
       continue;
@@ -1004,7 +1145,7 @@ ModuleSummaryIndex llvm::buildModuleSummaryIndex(
 
   if (!ModuleSummaryDotFile.empty()) {
     std::error_code EC;
-    raw_fd_ostream OSDot(ModuleSummaryDotFile, EC, sys::fs::OpenFlags::OF_None);
+    raw_fd_ostream OSDot(ModuleSummaryDotFile, EC, sys::fs::OpenFlags::OF_Text);
     if (EC)
       report_fatal_error(Twine("Failed to open dot file ") +
                          ModuleSummaryDotFile + ": " + EC.message() + "\n");
@@ -1050,9 +1191,7 @@ ModulePass *llvm::createModuleSummaryIndexWrapperPass() {
 }
 
 ModuleSummaryIndexWrapperPass::ModuleSummaryIndexWrapperPass()
-    : ModulePass(ID) {
-  initializeModuleSummaryIndexWrapperPassPass(*PassRegistry::getPassRegistry());
-}
+    : ModulePass(ID) {}
 
 bool ModuleSummaryIndexWrapperPass::runOnModule(Module &M) {
   auto *PSI = &getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
@@ -1090,10 +1229,7 @@ char ImmutableModuleSummaryIndexWrapperPass::ID = 0;
 
 ImmutableModuleSummaryIndexWrapperPass::ImmutableModuleSummaryIndexWrapperPass(
     const ModuleSummaryIndex *Index)
-    : ImmutablePass(ID), Index(Index) {
-  initializeImmutableModuleSummaryIndexWrapperPassPass(
-      *PassRegistry::getPassRegistry());
-}
+    : ImmutablePass(ID), Index(Index) {}
 
 void ImmutableModuleSummaryIndexWrapperPass::getAnalysisUsage(
     AnalysisUsage &AU) const {
@@ -1134,9 +1270,16 @@ bool llvm::mayHaveMemprofSummary(const CallBase *CB) {
     if (CI && CalledFunction->isIntrinsic())
       return false;
   } else {
-    // TODO: For now skip indirect calls. See comments in
-    // computeFunctionSummary for what is needed to handle this.
-    return false;
+    // Skip indirect calls if we haven't enabled memprof ICP.
+    if (!EnableMemProfIndirectCallSupport)
+      return false;
+    // Skip inline assembly calls.
+    if (CI && CI->isInlineAsm())
+      return false;
+    // Skip direct calls via Constant.
+    if (!CalledValue || isa<Constant>(CalledValue))
+      return false;
+    return true;
   }
   return true;
 }

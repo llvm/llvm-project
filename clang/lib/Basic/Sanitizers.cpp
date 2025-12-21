@@ -12,11 +12,56 @@
 
 #include "clang/Basic/Sanitizers.h"
 #include "llvm/ADT/Hashing.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringSwitch.h"
-#include "llvm/Support/MathExtras.h"
+#include "llvm/Support/Format.h"
+#include "llvm/Support/raw_ostream.h"
+#include <algorithm>
+#include <cmath>
+#include <optional>
 
 using namespace clang;
+
+static const double SanitizerMaskCutoffsEps = 0.000000001f;
+
+void SanitizerMaskCutoffs::set(SanitizerMask K, double V) {
+  if (V < SanitizerMaskCutoffsEps && Cutoffs.empty())
+    return;
+  for (unsigned int i = 0; i < SanitizerKind::SO_Count; ++i)
+    if (K & SanitizerMask::bitPosToMask(i)) {
+      Cutoffs.resize(SanitizerKind::SO_Count);
+      Cutoffs[i] = V;
+    }
+}
+
+std::optional<double> SanitizerMaskCutoffs::operator[](unsigned Kind) const {
+  if (Cutoffs.empty() || Cutoffs[Kind] < SanitizerMaskCutoffsEps)
+    return std::nullopt;
+
+  return Cutoffs[Kind];
+}
+
+void SanitizerMaskCutoffs::clear(SanitizerMask K) { set(K, 0); }
+
+std::optional<std::vector<unsigned>>
+SanitizerMaskCutoffs::getAllScaled(unsigned ScalingFactor) const {
+  std::vector<unsigned> ScaledCutoffs;
+
+  bool AnyCutoff = false;
+  for (unsigned int i = 0; i < SanitizerKind::SO_Count; ++i) {
+    auto C = (*this)[i];
+    if (C.has_value()) {
+      ScaledCutoffs.push_back(lround(std::clamp(*C, 0.0, 1.0) * ScalingFactor));
+      AnyCutoff = true;
+    } else {
+      ScaledCutoffs.push_back(0);
+    }
+  }
+
+  if (AnyCutoff)
+    return ScaledCutoffs;
+
+  return std::nullopt;
+}
 
 // Once LLVM switches to C++17, the constexpr variables can be inline and we
 // won't need this.
@@ -36,11 +81,45 @@ SanitizerMask clang::parseSanitizerValue(StringRef Value, bool AllowGroups) {
   return ParsedKind;
 }
 
+bool clang::parseSanitizerWeightedValue(StringRef Value, bool AllowGroups,
+                                        SanitizerMaskCutoffs &Cutoffs) {
+  SanitizerMask ParsedKind = llvm::StringSwitch<SanitizerMask>(Value)
+#define SANITIZER(NAME, ID) .StartsWith(NAME "=", SanitizerKind::ID)
+#define SANITIZER_GROUP(NAME, ID, ALIAS)                                       \
+  .StartsWith(NAME "=",                                                        \
+              AllowGroups ? SanitizerKind::ID##Group : SanitizerMask())
+#include "clang/Basic/Sanitizers.def"
+                                 .Default(SanitizerMask());
+
+  if (!ParsedKind)
+    return false;
+  auto [N, W] = Value.split('=');
+  double A;
+  if (W.getAsDouble(A) || A < 0.0 || A > 1.0)
+    return false;
+  // AllowGroups is already taken into account for ParsedKind,
+  // hence we unconditionally expandSanitizerGroups.
+  Cutoffs.set(expandSanitizerGroups(ParsedKind), A);
+  return true;
+}
+
 void clang::serializeSanitizerSet(SanitizerSet Set,
                                   SmallVectorImpl<StringRef> &Values) {
 #define SANITIZER(NAME, ID)                                                    \
   if (Set.has(SanitizerKind::ID))                                              \
     Values.push_back(NAME);
+#include "clang/Basic/Sanitizers.def"
+}
+
+void clang::serializeSanitizerMaskCutoffs(
+    const SanitizerMaskCutoffs &Cutoffs, SmallVectorImpl<std::string> &Values) {
+#define SANITIZER(NAME, ID)                                                    \
+  if (auto C = Cutoffs[SanitizerKind::SO_##ID]) {                              \
+    std::string Str;                                                           \
+    llvm::raw_string_ostream OS(Str);                                          \
+    OS << NAME "=" << llvm::format("%.8f", *C);                                \
+    Values.emplace_back(StringRef(Str).rtrim('0'));                            \
+  }
 #include "clang/Basic/Sanitizers.def"
 }
 

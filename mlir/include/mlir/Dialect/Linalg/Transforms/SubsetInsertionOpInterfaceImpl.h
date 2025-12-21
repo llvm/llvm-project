@@ -13,8 +13,7 @@ namespace mlir {
 class DialectRegistry;
 
 namespace linalg {
-void registerSubsetInsertionOpInterfaceExternalModels(
-    DialectRegistry &registry);
+void registerSubsetOpInterfaceExternalModels(DialectRegistry &registry);
 } // namespace linalg
 } // namespace mlir
 

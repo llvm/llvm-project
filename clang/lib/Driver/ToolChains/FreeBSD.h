@@ -19,7 +19,7 @@ namespace tools {
 
 /// Directly call GNU Binutils assembler and linker
 namespace freebsd {
-class LLVM_LIBRARY_VISIBILITY Assembler : public Tool {
+class LLVM_LIBRARY_VISIBILITY Assembler final : public Tool {
 public:
   Assembler(const ToolChain &TC)
       : Tool("freebsd::Assembler", "assembler", TC) {}
@@ -32,7 +32,7 @@ public:
                     const char *LinkingOutput) const override;
 };
 
-class LLVM_LIBRARY_VISIBILITY Linker : public Tool {
+class LLVM_LIBRARY_VISIBILITY Linker final : public Tool {
 public:
   Linker(const ToolChain &TC) : Tool("freebsd::Linker", "linker", TC) {}
 
@@ -78,18 +78,19 @@ public:
   void AddHIPIncludeArgs(const llvm::opt::ArgList &DriverArgs,
                          llvm::opt::ArgStringList &CC1Args) const override;
 
+  bool IsAArch64OutlineAtomicsDefault(
+      const llvm::opt::ArgList &Args) const override {
+    return true;
+  }
+
   UnwindTableLevel
   getDefaultUnwindTableLevel(const llvm::opt::ArgList &Args) const override;
   bool isPIEDefault(const llvm::opt::ArgList &Args) const override;
   SanitizerMask getSupportedSanitizers() const override;
-  unsigned GetDefaultDwarfVersion() const override;
+  unsigned GetDefaultDwarfVersion() const override { return 4; }
   // Until dtrace (via CTF) and LLDB can deal with distributed debug info,
   // FreeBSD defaults to standalone/full debug info.
   bool GetDefaultStandaloneDebug() const override { return true; }
-  void
-  addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
-                        llvm::opt::ArgStringList &CC1Args,
-                        Action::OffloadKind DeviceOffloadKind) const override;
 
 protected:
   Tool *buildAssembler() const override;

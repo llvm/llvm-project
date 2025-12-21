@@ -12,6 +12,7 @@
 // template<container-compatible-range<bool> R>
 //   constexpr void assign_range(R&& rg); // C++23
 
+#include <sstream>
 #include <vector>
 
 #include "../insert_range_sequence_containers.h"
@@ -25,16 +26,16 @@ constexpr bool test() {
   static_assert(test_constraints_assign_range<std::vector, bool, char>());
 
   for_all_iterators_and_allocators<bool, const int*>([]<class Iter, class Sent, class Alloc>() {
-    test_sequence_assign_range<std::vector<bool, Alloc>, Iter, Sent>([](auto&& c) {
+    test_sequence_assign_range<std::vector<bool, Alloc>, Iter, Sent>([]([[maybe_unused]] auto&& c) {
       LIBCPP_ASSERT(c.__invariants());
       // `is_contiguous_container_asan_correct` doesn't work on `vector<bool>`.
     });
   });
 
-  { // Vector may or may not need to reallocate because of the assignment -- make sure to test both cases.
+  {   // Vector may or may not need to reallocate because of the assignment -- make sure to test both cases.
     { // Ensure reallocation happens. Note that `vector<bool>` typically reserves a lot of capacity.
-      constexpr int N = 255;
-      bool in[N] = {};
+      constexpr int N     = 255;
+      bool in[N]          = {};
       std::vector<bool> v = {0, 0, 0, 1, 1, 0, 0, 0};
       assert(v.capacity() < v.size() + std::ranges::size(in));
 
@@ -43,16 +44,34 @@ constexpr bool test() {
     }
 
     { // Ensure no reallocation happens.
-      bool in[] = {1, 1, 0, 1, 1};
+      bool in[]           = {1, 1, 0, 1, 1};
       std::vector<bool> v = {0, 0, 0, 1, 1, 0, 0, 0};
 
       v.assign_range(in);
       assert(std::ranges::equal(v, in));
     }
+
+    { // Ensure input-only sized ranges are accepted.
+      using input_iter = cpp20_input_iterator<const bool*>;
+      const bool in[]{true, true, false, true};
+      std::vector<bool> v;
+      v.assign_range(std::views::counted(input_iter{std::ranges::begin(in)}, std::ranges::ssize(in)));
+      assert(std::ranges::equal(v, std::vector<bool>{true, true, false, true}));
+    }
   }
 
   return true;
 }
+
+#ifndef TEST_HAS_NO_LOCALIZATION
+void test_counted_istream_view() {
+  std::istringstream is{"1 1 0 1"};
+  auto vals = std::views::istream<bool>(is);
+  std::vector<bool> v;
+  v.assign_range(std::views::counted(vals.begin(), 3));
+  assert(v == (std::vector{true, true, false}));
+}
+#endif
 
 int main(int, char**) {
   test();
@@ -60,6 +79,10 @@ int main(int, char**) {
 
   // Note: `test_assign_range_exception_safety_throwing_copy` doesn't apply because copying booleans cannot throw.
   test_assign_range_exception_safety_throwing_allocator<std::vector, bool>();
+
+#ifndef TEST_HAS_NO_LOCALIZATION
+  test_counted_istream_view();
+#endif
 
   return 0;
 }

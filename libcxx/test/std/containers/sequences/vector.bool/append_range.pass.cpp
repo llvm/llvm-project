@@ -25,18 +25,18 @@ constexpr bool test() {
   static_assert(test_constraints_append_range<std::vector, bool, char>());
 
   for_all_iterators_and_allocators<bool, const int*>([]<class Iter, class Sent, class Alloc>() {
-    test_sequence_append_range<std::vector<bool, Alloc>, Iter, Sent>([](auto&& c) {
+    test_sequence_append_range<std::vector<bool, Alloc>, Iter, Sent>([]([[maybe_unused]] auto&& c) {
       LIBCPP_ASSERT(c.__invariants());
       // `is_contiguous_container_asan_correct` doesn't work on `vector<bool>`.
     });
   });
 
-  { // Vector may or may not need to reallocate because of the insertion -- make sure to test both cases.
+  {   // Vector may or may not need to reallocate because of the insertion -- make sure to test both cases.
     { // Ensure reallocation happens.
-      constexpr int N = 255;
-      bool in[N] = {};
+      constexpr int N     = 255;
+      bool in[N]          = {};
       std::vector<bool> v = {0, 0, 0, 1, 1, 0, 0, 0};
-      auto initial = v;
+      auto initial        = v;
       assert(v.capacity() < v.size() + std::ranges::size(in));
 
       v.append_range(in);
@@ -48,7 +48,7 @@ constexpr bool test() {
     }
 
     { // Ensure no reallocation happens.
-      bool in[] = {1, 1, 1, 1, 0, 0, 1, 1, 1, 1};
+      bool in[]           = {1, 1, 1, 1, 0, 0, 1, 1, 1, 1};
       std::vector<bool> v = {0, 0, 0, 1, 1, 0, 0, 0};
       v.reserve(v.size() + std::ranges::size(in));
       assert(v.capacity() >= v.size() + std::ranges::size(in));

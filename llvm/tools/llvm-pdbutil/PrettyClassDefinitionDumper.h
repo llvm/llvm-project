@@ -15,10 +15,6 @@
 #include "llvm/DebugInfo/PDB/PDBSymbolData.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolFunc.h"
 
-#include <list>
-#include <memory>
-#include <unordered_map>
-
 namespace llvm {
 class BitVector;
 

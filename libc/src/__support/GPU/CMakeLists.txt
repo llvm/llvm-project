@@ -1,16 +1,33 @@
-if(NOT LIBC_TARGET_ARCHITECTURE_IS_GPU)
+# These utilities are GPU only.
+if(NOT LIBC_TARGET_OS_IS_GPU)
   return()
 endif()
-
-foreach(target nvptx amdgpu generic)
-  add_subdirectory(${target})
-  list(APPEND target_gpu_utils libc.src.__support.GPU.${target}.${target}_utils)
-endforeach()
 
 add_header_library(
   utils
   HDRS
     utils.h
+)
+
+add_header_library(
+  fixedstack
+  HDRS
+    fixedstack.h
+)
+
+add_object_library(
+  allocator
+  SRCS
+    allocator.cpp
+  HDRS
+    allocator.h
   DEPENDS
-    ${target_gpu_utils}
+    libc.hdr.stdint_proxy
+    libc.src.__support.common
+    libc.src.__support.RPC.rpc_client
+    libc.src.__support.CPP.atomic
+    libc.src.__support.CPP.bit
+    libc.src.__support.CPP.new
+    .utils
+    .fixedstack
 )

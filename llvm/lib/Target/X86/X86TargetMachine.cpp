@@ -19,7 +19,7 @@
 #include "X86Subtarget.h"
 #include "X86TargetObjectFile.h"
 #include "X86TargetTransformInfo.h"
-#include "llvm/ADT/STLExtras.h"
+#include "llvm-c/Visibility.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
@@ -28,12 +28,12 @@
 #include "llvm/CodeGen/GlobalISel/CallLowering.h"
 #include "llvm/CodeGen/GlobalISel/IRTranslator.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelect.h"
-#include "llvm/CodeGen/GlobalISel/InstructionSelector.h"
 #include "llvm/CodeGen/GlobalISel/Legalizer.h"
 #include "llvm/CodeGen/GlobalISel/RegBankSelect.h"
+#include "llvm/CodeGen/MIRParser/MIParser.h"
+#include "llvm/CodeGen/MIRYamlMapping.h"
 #include "llvm/CodeGen/MachineScheduler.h"
 #include "llvm/CodeGen/Passes.h"
-#include "llvm/CodeGen/RegAllocRegistry.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/DataLayout.h"
@@ -50,7 +50,6 @@
 #include "llvm/Transforms/CFGuard.h"
 #include <memory>
 #include <optional>
-#include <string>
 
 using namespace llvm;
 
@@ -63,7 +62,7 @@ static cl::opt<bool>
                      cl::desc("Enable the tile register allocation pass"),
                      cl::init(true), cl::Hidden);
 
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeX86Target() {
+extern "C" LLVM_C_ABI void LLVMInitializeX86Target() {
   // Register the target.
   RegisterTargetMachine<X86TargetMachine> X(getTheX86_32Target());
   RegisterTargetMachine<X86TargetMachine> Y(getTheX86_64Target());
@@ -75,9 +74,9 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeX86Target() {
   initializeGlobalISel(PR);
   initializeWinEHStatePassPass(PR);
   initializeFixupBWInstPassPass(PR);
-  initializeEvexToVexInstPassPass(PR);
+  initializeCompressEVEXPassPass(PR);
   initializeFixupLEAPassPass(PR);
-  initializeFPSPass(PR);
+  initializeX86FPStackifierLegacyPass(PR);
   initializeX86FixupSetCCPassPass(PR);
   initializeX86CallFrameOptimizationPass(PR);
   initializeX86CmovConverterPassPass(PR);
@@ -90,83 +89,44 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeX86Target() {
   initializeX86ExecutionDomainFixPass(PR);
   initializeX86DomainReassignmentPass(PR);
   initializeX86AvoidSFBPassPass(PR);
-  initializeX86AvoidTrailingCallPassPass(PR);
+  initializeX86AvoidTrailingCallLegacyPassPass(PR);
   initializeX86SpeculativeLoadHardeningPassPass(PR);
   initializeX86SpeculativeExecutionSideEffectSuppressionPass(PR);
   initializeX86FlagsCopyLoweringPassPass(PR);
   initializeX86LoadValueInjectionLoadHardeningPassPass(PR);
   initializeX86LoadValueInjectionRetHardeningPassPass(PR);
   initializeX86OptimizeLEAPassPass(PR);
-  initializeX86PartialReductionPass(PR);
+  initializeX86PartialReductionLegacyPass(PR);
   initializePseudoProbeInserterPass(PR);
   initializeX86ReturnThunksPass(PR);
-  initializeX86DAGToDAGISelPass(PR);
+  initializeX86DAGToDAGISelLegacyPass(PR);
   initializeX86ArgumentStackSlotPassPass(PR);
+  initializeX86AsmPrinterPass(PR);
+  initializeX86FixupInstTuningPassPass(PR);
+  initializeX86FixupVectorConstantsPassPass(PR);
+  initializeX86DynAllocaExpanderLegacyPass(PR);
+  initializeX86SuppressAPXForRelocationPassPass(PR);
+  initializeX86WinEHUnwindV2Pass(PR);
 }
 
 static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
   if (TT.isOSBinFormatMachO()) {
-    if (TT.getArch() == Triple::x86_64)
+    if (TT.isX86_64())
       return std::make_unique<X86_64MachoTargetObjectFile>();
     return std::make_unique<TargetLoweringObjectFileMachO>();
   }
 
   if (TT.isOSBinFormatCOFF())
     return std::make_unique<TargetLoweringObjectFileCOFF>();
+
+  if (TT.isX86_64())
+    return std::make_unique<X86_64ELFTargetObjectFile>();
   return std::make_unique<X86ELFTargetObjectFile>();
-}
-
-static std::string computeDataLayout(const Triple &TT) {
-  // X86 is little endian
-  std::string Ret = "e";
-
-  Ret += DataLayout::getManglingComponent(TT);
-  // X86 and x32 have 32 bit pointers.
-  if (!TT.isArch64Bit() || TT.isX32() || TT.isOSNaCl())
-    Ret += "-p:32:32";
-
-  // Address spaces for 32 bit signed, 32 bit unsigned, and 64 bit pointers.
-  Ret += "-p270:32:32-p271:32:32-p272:64:64";
-
-  // Some ABIs align 64 bit integers and doubles to 64 bits, others to 32.
-  // 128 bit integers are not specified in the 32-bit ABIs but are used
-  // internally for lowering f128, so we match the alignment to that.
-  if (TT.isArch64Bit() || TT.isOSWindows() || TT.isOSNaCl())
-    Ret += "-i64:64-i128:128";
-  else if (TT.isOSIAMCU())
-    Ret += "-i64:32-f64:32";
-  else
-    Ret += "-i128:128-f64:32:64";
-
-  // Some ABIs align long double to 128 bits, others to 32.
-  if (TT.isOSNaCl() || TT.isOSIAMCU())
-    ; // No f80
-  else if (TT.isArch64Bit() || TT.isOSDarwin() || TT.isWindowsMSVCEnvironment())
-    Ret += "-f80:128";
-  else
-    Ret += "-f80:32";
-
-  if (TT.isOSIAMCU())
-    Ret += "-f128:32";
-
-  // The registers can hold 8, 16, 32 or, in x86-64, 64 bits.
-  if (TT.isArch64Bit())
-    Ret += "-n8:16:32:64";
-  else
-    Ret += "-n8:16:32";
-
-  // The stack is aligned to 32 bits on some ABIs and 128 bits on others.
-  if ((!TT.isArch64Bit() && TT.isOSWindows()) || TT.isOSIAMCU())
-    Ret += "-a:0:32-S32";
-  else
-    Ret += "-S128";
-
-  return Ret;
 }
 
 static Reloc::Model getEffectiveRelocModel(const Triple &TT, bool JIT,
                                            std::optional<Reloc::Model> RM) {
-  bool is64Bit = TT.getArch() == Triple::x86_64;
+  bool is64Bit = TT.isX86_64();
   if (!RM) {
     // JIT codegen should use static relocations by default, since it's
     // typically executed in process and not relocatable.
@@ -206,11 +166,12 @@ static Reloc::Model getEffectiveRelocModel(const Triple &TT, bool JIT,
 }
 
 static CodeModel::Model
-getEffectiveX86CodeModel(std::optional<CodeModel::Model> CM, bool JIT,
-                         bool Is64Bit) {
+getEffectiveX86CodeModel(const Triple &TT, std::optional<CodeModel::Model> CM,
+                         bool JIT) {
+  bool Is64Bit = TT.isX86_64();
   if (CM) {
     if (*CM == CodeModel::Tiny)
-      report_fatal_error("Target does not support the tiny CodeModel", false);
+      reportFatalUsageError("target does not support the tiny CodeModel");
     return *CM;
   }
   if (JIT)
@@ -226,14 +187,15 @@ X86TargetMachine::X86TargetMachine(const Target &T, const Triple &TT,
                                    std::optional<Reloc::Model> RM,
                                    std::optional<CodeModel::Model> CM,
                                    CodeGenOptLevel OL, bool JIT)
-    : LLVMTargetMachine(
-          T, computeDataLayout(TT), TT, CPU, FS, Options,
-          getEffectiveRelocModel(TT, JIT, RM),
-          getEffectiveX86CodeModel(CM, JIT, TT.getArch() == Triple::x86_64),
-          OL),
+    : CodeGenTargetMachineImpl(T, TT.computeDataLayout(), TT, CPU, FS, Options,
+                               getEffectiveRelocModel(TT, JIT, RM),
+                               getEffectiveX86CodeModel(TT, CM, JIT), OL),
       TLOF(createTLOF(getTargetTriple())), IsJIT(JIT) {
   // On PS4/PS5, the "return address" of a 'noreturn' call must still be within
-  // the calling function, and TrapUnreachable is an easy way to get that.
+  // the calling function. Note that this also includes __stack_chk_fail,
+  // so there was some target-specific logic in the instruction selectors
+  // to handle that. That code has since been generalized, so the only thing
+  // needed is to set TrapUnreachable here.
   if (TT.isPS() || TT.isOSBinFormatMachO()) {
     this->Options.TrapUnreachable = true;
     this->Options.NoTrapAfterNoreturn = TT.isOSBinFormatMachO();
@@ -338,6 +300,24 @@ X86TargetMachine::getSubtargetImpl(const Function &F) const {
   return I.get();
 }
 
+yaml::MachineFunctionInfo *X86TargetMachine::createDefaultFuncInfoYAML() const {
+  return new yaml::X86MachineFunctionInfo();
+}
+
+yaml::MachineFunctionInfo *
+X86TargetMachine::convertFuncInfoToYAML(const MachineFunction &MF) const {
+  const auto *MFI = MF.getInfo<X86MachineFunctionInfo>();
+  return new yaml::X86MachineFunctionInfo(*MFI);
+}
+
+bool X86TargetMachine::parseMachineFunctionInfo(
+    const yaml::MachineFunctionInfo &MFI, PerFunctionMIParsingState &PFS,
+    SMDiagnostic &Error, SMRange &SourceRange) const {
+  const auto &YamlMFI = static_cast<const yaml::X86MachineFunctionInfo &>(MFI);
+  PFS.MF.getInfo<X86MachineFunctionInfo>()->initializeBaseYamlFields(YamlMFI);
+  return false;
+}
+
 bool X86TargetMachine::isNoopAddrSpaceCast(unsigned SrcAS,
                                            unsigned DestAS) const {
   assert(SrcAS != DestAS && "Expected different address spaces!");
@@ -346,13 +326,29 @@ bool X86TargetMachine::isNoopAddrSpaceCast(unsigned SrcAS,
   return SrcAS < 256 && DestAS < 256;
 }
 
+void X86TargetMachine::reset() { SubtargetMap.clear(); }
+
+ScheduleDAGInstrs *
+X86TargetMachine::createMachineScheduler(MachineSchedContext *C) const {
+  ScheduleDAGMILive *DAG = createSchedLive(C);
+  DAG->addMutation(createX86MacroFusionDAGMutation());
+  return DAG;
+}
+
+ScheduleDAGInstrs *
+X86TargetMachine::createPostMachineScheduler(MachineSchedContext *C) const {
+  ScheduleDAGMI *DAG = createSchedPostRA(C);
+  DAG->addMutation(createX86MacroFusionDAGMutation());
+  return DAG;
+}
+
 //===----------------------------------------------------------------------===//
 // X86 TTI query.
 //===----------------------------------------------------------------------===//
 
 TargetTransformInfo
 X86TargetMachine::getTargetTransformInfo(const Function &F) const {
-  return TargetTransformInfo(X86TTIImpl(this, F));
+  return TargetTransformInfo(std::make_unique<X86TTIImpl>(this, F));
 }
 
 //===----------------------------------------------------------------------===//
@@ -369,20 +365,6 @@ public:
 
   X86TargetMachine &getX86TargetMachine() const {
     return getTM<X86TargetMachine>();
-  }
-
-  ScheduleDAGInstrs *
-  createMachineScheduler(MachineSchedContext *C) const override {
-    ScheduleDAGMILive *DAG = createGenericSchedLive(C);
-    DAG->addMutation(createX86MacroFusionDAGMutation());
-    return DAG;
-  }
-
-  ScheduleDAGInstrs *
-  createPostMachineScheduler(MachineSchedContext *C) const override {
-    ScheduleDAGMI *DAG = createGenericSchedPostRA(C);
-    DAG->addMutation(createX86MacroFusionDAGMutation());
-    return DAG;
   }
 
   void addIRPasses() override;
@@ -419,7 +401,7 @@ char X86ExecutionDomainFix::ID;
 
 INITIALIZE_PASS_BEGIN(X86ExecutionDomainFix, "x86-execution-domain-fix",
   "X86 Execution Domain Fix", false, false)
-INITIALIZE_PASS_DEPENDENCY(ReachingDefAnalysis)
+INITIALIZE_PASS_DEPENDENCY(ReachingDefInfoWrapperPass)
 INITIALIZE_PASS_END(X86ExecutionDomainFix, "x86-execution-domain-fix",
   "X86 Execution Domain Fix", false, false)
 
@@ -435,18 +417,18 @@ MachineFunctionInfo *X86TargetMachine::createMachineFunctionInfo(
 }
 
 void X86PassConfig::addIRPasses() {
-  addPass(createAtomicExpandPass());
+  addPass(createAtomicExpandLegacyPass());
 
   // We add both pass anyway and when these two passes run, we skip the pass
   // based on the option level and option attribute.
-  addPass(createX86LowerAMXIntrinsicsPass());
-  addPass(createX86LowerAMXTypePass());
+  addPass(createX86LowerAMXIntrinsicsLegacyPass());
+  addPass(createX86LowerAMXTypeLegacyPass());
 
   TargetPassConfig::addIRPasses();
 
   if (TM->getOptLevel() != CodeGenOptLevel::None) {
     addPass(createInterleavedAccessPass());
-    addPass(createX86PartialReductionPass());
+    addPass(createX86PartialReductionLegacyPass());
   }
 
   // Add passes that handle indirect branch removal and insertion of a retpoline
@@ -457,7 +439,7 @@ void X86PassConfig::addIRPasses() {
   // Add Control Flow Guard checks.
   const Triple &TT = TM->getTargetTriple();
   if (TT.isOSWindows()) {
-    if (TT.getArch() == Triple::x86_64) {
+    if (TT.isX86_64()) {
       addPass(createCFGuardDispatchPass());
     } else {
       addPass(createCFGuardCheckPass());
@@ -499,11 +481,14 @@ bool X86PassConfig::addRegBankSelect() {
 
 bool X86PassConfig::addGlobalInstructionSelect() {
   addPass(new InstructionSelect(getOptLevel()));
+  // Add GlobalBaseReg in case there is no SelectionDAG passes afterwards
+  if (isGlobalISelAbortEnabled())
+    addPass(createX86GlobalBaseRegPass());
   return false;
 }
 
 bool X86PassConfig::addILPOpts() {
-  addPass(&EarlyIfConverterID);
+  addPass(&EarlyIfConverterLegacyID);
   if (EnableMachineCombinerPass)
     addPass(&MachineCombinerID);
   addPass(createX86CmovConverterPass());
@@ -513,7 +498,7 @@ bool X86PassConfig::addILPOpts() {
 bool X86PassConfig::addPreISel() {
   // Only add this pass for 32-bit x86 Windows.
   const Triple &TT = TM->getTargetTriple();
-  if (TT.isOSWindows() && TT.getArch() == Triple::x86)
+  if (TT.isOSWindows() && TT.isX86_32())
     addPass(createX86WinEHStatePass());
   return true;
 }
@@ -527,9 +512,11 @@ void X86PassConfig::addPreRegAlloc() {
     addPass(createX86AvoidStoreForwardingBlocks());
   }
 
+  addPass(createX86SuppressAPXForRelocationPass());
+
   addPass(createX86SpeculativeLoadHardeningPass());
   addPass(createX86FlagsCopyLoweringPass());
-  addPass(createX86DynAllocaExpander());
+  addPass(createX86DynAllocaExpanderLegacyPass());
 
   if (getOptLevel() != CodeGenOptLevel::None)
     addPass(createX86PreTileConfigPass());
@@ -544,7 +531,7 @@ void X86PassConfig::addMachineSSAOptimization() {
 
 void X86PassConfig::addPostRegAlloc() {
   addPass(createX86LowerTileCopyPass());
-  addPass(createX86FloatingPointStackifierPass());
+  addPass(createX86FPStackifierLegacyPass());
   // When -O0 is enabled, the Load Value Injection Hardening pass will fall back
   // to using the Speculative Execution Side Effect Suppression pass for
   // mitigation. This is to prevent slow downs due to
@@ -575,9 +562,7 @@ void X86PassConfig::addPreEmitPass() {
     addPass(createX86FixupInstTuning());
     addPass(createX86FixupVectorConstants());
   }
-  addPass(createX86EvexToVexInsts());
-  addPass(createX86DiscriminateMemOpsPass());
-  addPass(createX86InsertPrefetchPass());
+  addPass(createX86CompressEVEXPass());
   addPass(createX86InsertX87waitPass());
 }
 
@@ -600,8 +585,8 @@ void X86PassConfig::addPreEmitPass2() {
 
   // Insert extra int3 instructions after trailing call instructions to avoid
   // issues in the unwinder.
-  if (TT.isOSWindows() && TT.getArch() == Triple::x86_64)
-    addPass(createX86AvoidTrailingCallPass());
+  if (TT.isOSWindows() && TT.isX86_64())
+    addPass(createX86AvoidTrailingCallLegacyPass());
 
   // Verify basic block incoming and outgoing cfa offset and register values and
   // correct CFA calculation rule where needed by inserting appropriate CFI
@@ -615,7 +600,7 @@ void X86PassConfig::addPreEmitPass2() {
     // Identify valid longjmp targets for Windows Control Flow Guard.
     addPass(createCFGuardLongjmpPass());
     // Identify valid eh continuation targets for Windows EHCont Guard.
-    addPass(createEHContGuardCatchretPass());
+    addPass(createEHContGuardTargetsPass());
   }
   addPass(createX86LoadValueInjectionRetHardeningPass());
 
@@ -634,6 +619,11 @@ void X86PassConfig::addPreEmitPass2() {
             (M->getFunction("objc_retainAutoreleasedReturnValue") ||
              M->getFunction("objc_unsafeClaimAutoreleasedReturnValue")));
   }));
+
+  // Analyzes and emits pseudos to support Win x64 Unwind V2. This pass must run
+  // after all real instructions have been added to the epilog.
+  if (TT.isOSWindows() && TT.isX86_64())
+    addPass(createX86WinEHUnwindV2Pass());
 }
 
 bool X86PassConfig::addPostFastRegAllocRewrite() {
@@ -646,8 +636,10 @@ std::unique_ptr<CSEConfigBase> X86PassConfig::getCSEConfig() const {
 }
 
 static bool onlyAllocateTileRegisters(const TargetRegisterInfo &TRI,
-                                      const TargetRegisterClass &RC) {
-  return static_cast<const X86RegisterInfo &>(TRI).isTileRegisterClass(&RC);
+                                      const MachineRegisterInfo &MRI,
+                                      const Register Reg) {
+  const TargetRegisterClass *RC = MRI.getRegClass(Reg);
+  return static_cast<const X86RegisterInfo &>(TRI).isTileRegisterClass(RC);
 }
 
 bool X86PassConfig::addRegAssignAndRewriteOptimized() {

@@ -1,10 +1,10 @@
-# RUN: %python %s | FileCheck %s
+# RUN: %python %s nanobind | FileCheck %s
 
 from mlir_standalone.ir import *
-from mlir_standalone.dialects import builtin as builtin_d, standalone as standalone_d
+from mlir_standalone.dialects import standalone_nanobind as standalone_d
 
 with Context():
-    standalone_d.register_dialect()
+    standalone_d.register_dialects()
     module = Module.parse(
         """
     %0 = arith.constant 2 : i32

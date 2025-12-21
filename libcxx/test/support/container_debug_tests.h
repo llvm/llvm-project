@@ -9,12 +9,13 @@
 #ifndef TEST_SUPPORT_CONTAINER_DEBUG_TESTS_H
 #define TEST_SUPPORT_CONTAINER_DEBUG_TESTS_H
 
-#include <ciso646>
+#include "test_macros.h"
+
 #ifndef _LIBCPP_VERSION
 #error This header may only be used for libc++ tests
 #endif
 
-#if !_LIBCPP_ENABLE_DEBUG_MODE
+#if _LIBCPP_HARDENING_MODE != _LIBCPP_HARDENING_MODE_DEBUG
 #error The library must be built with the debug mode enabled in order to use this header
 #endif
 
@@ -25,7 +26,6 @@
 
 #include "check_assertion.h"
 #include "test_allocator.h"
-#include "test_macros.h"
 
 // These test make use of 'if constexpr'.
 #if TEST_STD_VER <= 14

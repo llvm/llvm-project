@@ -32,7 +32,7 @@ class DebuggerAPITestCase(TestBase):
         self.dbg.SetCurrentPlatformSDKRoot(None)
 
         fresh_dbg = lldb.SBDebugger()
-        self.assertEquals(len(fresh_dbg), 0)
+        self.assertEqual(len(fresh_dbg), 0)
 
     def test_debugger_delete_invalid_target(self):
         """SBDebugger.DeleteTarget() should not crash LLDB given and invalid target."""
@@ -91,6 +91,10 @@ class DebuggerAPITestCase(TestBase):
         # Test the local property again, is it set to new_cache_line_size?
         self.assertEqual(get_cache_line_size(), new_cache_line_size)
 
+    @expectedFailureAll(
+        remote=True,
+        bugnumber="github.com/llvm/llvm-project/issues/92419",
+    )
     def test_CreateTarget_platform(self):
         exe = self.getBuildArtifact("a.out")
         self.yaml2obj("elf.yaml", exe)
@@ -161,3 +165,279 @@ class DebuggerAPITestCase(TestBase):
         original_dbg_id = self.dbg.GetID()
         self.dbg.Destroy(self.dbg)
         self.assertEqual(destroy_dbg_id, original_dbg_id)
+
+    def test_AddDestroyCallback(self):
+        original_dbg_id = self.dbg.GetID()
+        called = []
+
+        def foo(dbg_id):
+            # Need nonlocal to modify closure variable.
+            nonlocal called
+            called += [('foo', dbg_id)]
+
+        def bar(dbg_id):
+            # Need nonlocal to modify closure variable.
+            nonlocal called
+            called += [('bar', dbg_id)]
+
+        token_foo = self.dbg.AddDestroyCallback(foo)
+        token_bar = self.dbg.AddDestroyCallback(bar)
+        self.dbg.Destroy(self.dbg)
+
+        # Should call both `foo()` and `bar()`.
+        self.assertEqual(called, [
+            ('foo', original_dbg_id),
+            ('bar', original_dbg_id),
+        ])
+
+    def test_RemoveDestroyCallback(self):
+        original_dbg_id = self.dbg.GetID()
+        called = []
+
+        def foo(dbg_id):
+            # Need nonlocal to modify closure variable.
+            nonlocal called
+            called += [('foo', dbg_id)]
+
+        def bar(dbg_id):
+            # Need nonlocal to modify closure variable.
+            nonlocal called
+            called += [('bar', dbg_id)]
+
+        token_foo = self.dbg.AddDestroyCallback(foo)
+        token_bar = self.dbg.AddDestroyCallback(bar)
+        ret = self.dbg.RemoveDestroyCallback(token_foo)
+        self.dbg.Destroy(self.dbg)
+
+        # `Remove` should be successful
+        self.assertTrue(ret)
+        # Should only call `bar()`
+        self.assertEqual(called, [('bar', original_dbg_id)])
+
+    def test_RemoveDestroyCallback_invalid_token(self):
+        original_dbg_id = self.dbg.GetID()
+        magic_token_that_should_not_exist = 32413
+        called = []
+
+        def foo(dbg_id):
+            # Need nonlocal to modify closure variable.
+            nonlocal called
+            called += [('foo', dbg_id)]
+
+        token_foo = self.dbg.AddDestroyCallback(foo)
+        ret = self.dbg.RemoveDestroyCallback(magic_token_that_should_not_exist)
+        self.dbg.Destroy(self.dbg)
+
+        # `Remove` should be unsuccessful
+        self.assertFalse(ret)
+        # Should call `foo()`
+        self.assertEqual(called, [('foo', original_dbg_id)])
+
+    def test_HandleDestroyCallback(self):
+        """
+        Validates:
+        1. AddDestroyCallback and RemoveDestroyCallback work during debugger destroy.
+        2. HandleDestroyCallback invokes all callbacks in FIFO order.
+        """
+        original_dbg_id = self.dbg.GetID()
+        events = []
+        bar_token = None
+
+        def foo(dbg_id):
+            # Need nonlocal to modify closure variable.
+            nonlocal events
+            events.append(('foo called', dbg_id))
+
+        def bar(dbg_id):
+            # Need nonlocal to modify closure variable.
+            nonlocal events
+            events.append(('bar called', dbg_id))
+
+        def add_foo(dbg_id):
+            # Need nonlocal to modify closure variable.
+            nonlocal events
+            events.append(('add_foo called', dbg_id))
+            events.append(('foo token', self.dbg.AddDestroyCallback(foo)))
+
+        def remove_bar(dbg_id):
+            # Need nonlocal to modify closure variable.
+            nonlocal events
+            events.append(('remove_bar called', dbg_id))
+            events.append(('remove bar ret', self.dbg.RemoveDestroyCallback(bar_token)))
+
+        # Setup
+        events.append(('add_foo token', self.dbg.AddDestroyCallback(add_foo)))
+        bar_token = self.dbg.AddDestroyCallback(bar)
+        events.append(('bar token', bar_token))
+        events.append(('remove_bar token', self.dbg.AddDestroyCallback(remove_bar)))
+        # Destroy
+        self.dbg.Destroy(self.dbg)
+
+        self.assertEqual(events, [
+            # Setup
+            ('add_foo token', 0), # add_foo should be added
+            ('bar token', 1), # bar should be added
+            ('remove_bar token', 2), # remove_bar should be added
+            # Destroy
+            ('add_foo called', original_dbg_id), # add_foo should be called
+            ('foo token', 3), # foo should be added
+            ('bar called', original_dbg_id), # bar should be called
+            ('remove_bar called', original_dbg_id), # remove_bar should be called
+            ('remove bar ret', False), # remove_bar should fail, because it's already invoked and removed
+            ('foo called', original_dbg_id), # foo should be called
+        ])
+
+    def test_version(self):
+        instance_str = self.dbg.GetVersionString()
+        class_str = lldb.SBDebugger.GetVersionString()
+        property_str = lldb.SBDebugger.version
+
+        self.assertEqual(instance_str, class_str)
+        self.assertEqual(class_str, property_str)
+
+    def test_find_target_with_unique_id(self):
+        """Test SBDebugger.FindTargetByGloballyUniqueID() functionality."""
+
+        # Test with invalid ID - should return invalid target
+        invalid_target = self.dbg.FindTargetByGloballyUniqueID(999999)
+        self.assertFalse(invalid_target.IsValid())
+
+        # Test with ID 0 - should return invalid target
+        zero_target = self.dbg.FindTargetByGloballyUniqueID(0)
+        self.assertFalse(zero_target.IsValid())
+
+        # Build a real executable and create target with it
+        self.build()
+        exe = self.getBuildArtifact("a.out")
+        target = self.dbg.CreateTarget(exe)
+        self.assertTrue(target.IsValid())
+
+        # Find the target using its unique ID
+        unique_id = target.GetGloballyUniqueID()
+        self.assertNotEqual(unique_id, lldb.LLDB_INVALID_GLOBALLY_UNIQUE_TARGET_ID)
+        found_target = self.dbg.FindTargetByGloballyUniqueID(unique_id)
+        self.assertTrue(found_target.IsValid())
+        self.assertEqual(
+            self.dbg.GetIndexOfTarget(target), self.dbg.GetIndexOfTarget(found_target)
+        )
+        self.assertEqual(found_target.GetGloballyUniqueID(), unique_id)
+
+    def test_target_unique_id_uniqueness(self):
+        """Test that Target.GetGloballyUniqueID() returns unique values across multiple targets."""
+
+        # Create multiple targets and verify they all have unique IDs
+        self.build()
+        exe = self.getBuildArtifact("a.out")
+        targets = []
+        unique_ids = set()
+
+        for i in range(10):
+            target = self.dbg.CreateTarget(exe)
+            self.assertTrue(target.IsValid())
+
+            unique_id = target.GetGloballyUniqueID()
+            self.assertNotEqual(unique_id, 0)
+
+            # Verify this ID hasn't been used before
+            self.assertNotIn(
+                unique_id, unique_ids, f"Duplicate unique ID found: {unique_id}"
+            )
+
+            unique_ids.add(unique_id)
+            targets.append(target)
+
+        # Verify all targets can still be found by their IDs
+        for target in targets:
+            unique_id = target.GetGloballyUniqueID()
+            found = self.dbg.FindTargetByGloballyUniqueID(unique_id)
+            self.assertTrue(found.IsValid())
+            self.assertEqual(found.GetGloballyUniqueID(), unique_id)
+
+    def test_target_unique_id_uniqueness_after_deletion(self):
+        """Test finding targets have unique ID after target deletion."""
+        # Create two targets
+        self.build()
+        exe = self.getBuildArtifact("a.out")
+        target1 = self.dbg.CreateTarget(exe)
+        target2 = self.dbg.CreateTarget(exe)
+        self.assertTrue(target1.IsValid())
+        self.assertTrue(target2.IsValid())
+
+        unique_id1 = target1.GetGloballyUniqueID()
+        unique_id2 = target2.GetGloballyUniqueID()
+        self.assertNotEqual(unique_id1, 0)
+        self.assertNotEqual(unique_id2, 0)
+        self.assertNotEqual(unique_id1, unique_id2)
+
+        # Verify we can find them initially
+        found_target1 = self.dbg.FindTargetByGloballyUniqueID(unique_id1)
+        found_target2 = self.dbg.FindTargetByGloballyUniqueID(unique_id2)
+        self.assertTrue(found_target1.IsValid())
+        self.assertTrue(found_target2.IsValid())
+        target2_index = self.dbg.GetIndexOfTarget(target2)
+
+        # Delete target 2
+        deleted = self.dbg.DeleteTarget(target2)
+        self.assertTrue(deleted)
+
+        # Try to find the deleted target - should not be found
+        not_found_target = self.dbg.FindTargetByGloballyUniqueID(unique_id2)
+        self.assertFalse(not_found_target.IsValid())
+
+        # Create a new target
+        target3 = self.dbg.CreateTarget(exe)
+        self.assertTrue(target3.IsValid())
+        # Target list index of target3 should be the same as target2's
+        # since it was deleted, but it should have a distinct unique ID
+        target3_index = self.dbg.GetIndexOfTarget(target3)
+        unique_id3 = target3.GetGloballyUniqueID()
+        self.assertEqual(target3_index, target2_index)
+        self.assertNotEqual(unique_id3, unique_id2)
+        self.assertNotEqual(unique_id3, unique_id1)
+        # Make sure we can find the new target
+        found_target3 = self.dbg.FindTargetByGloballyUniqueID(
+            target3.GetGloballyUniqueID()
+        )
+        self.assertTrue(found_target3.IsValid())
+
+    def test_target_globally_unique_id_across_debuggers(self):
+        """Test that target IDs are globally unique across multiple debuggers."""
+        self.build()
+        exe = self.getBuildArtifact("a.out")
+
+        # Create two debuggers with targets each
+        debugger1 = lldb.SBDebugger.Create()
+        debugger2 = lldb.SBDebugger.Create()
+        self.addTearDownHook(lambda: lldb.SBDebugger.Destroy(debugger1))
+        self.addTearDownHook(lambda: lldb.SBDebugger.Destroy(debugger2))
+
+        # Create 2 targets per debugger
+        targets_d1 = [debugger1.CreateTarget(exe), debugger1.CreateTarget(exe)]
+        targets_d2 = [debugger2.CreateTarget(exe), debugger2.CreateTarget(exe)]
+        targets = targets_d1 + targets_d2
+
+        # Get all IDs and verify they're unique
+        ids = [target.GetGloballyUniqueID() for target in targets]
+        self.assertEqual(
+            len(set(ids)), len(ids), f"IDs should be globally unique: {ids}"
+        )
+        self.assertTrue(
+            all(uid != lldb.LLDB_INVALID_GLOBALLY_UNIQUE_TARGET_ID for uid in ids),
+            "All IDs should be valid",
+        )
+
+        # Verify targets can be found by their IDs in respective debuggers
+        for debugger, target_pair in [
+            (debugger1, targets[:2]),
+            (debugger2, targets[2:]),
+        ]:
+            for target in target_pair:
+                found = debugger.FindTargetByGloballyUniqueID(
+                    target.GetGloballyUniqueID()
+                )
+                self.assertTrue(
+                    found.IsValid(), "Target should be found by its unique ID"
+                )
+                self.assertEqual(
+                    found.GetGloballyUniqueID(), target.GetGloballyUniqueID()
+                )

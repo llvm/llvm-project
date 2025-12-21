@@ -26,16 +26,15 @@ BreakpointResolverFileRegex::BreakpointResolverFileRegex(
       m_regex(std::move(regex)), m_exact_match(exact_match),
       m_function_names(func_names) {}
 
-BreakpointResolver *BreakpointResolverFileRegex::CreateFromStructuredData(
-    const lldb::BreakpointSP &bkpt, const StructuredData::Dictionary &options_dict,
-    Status &error) {
+BreakpointResolverSP BreakpointResolverFileRegex::CreateFromStructuredData(
+    const StructuredData::Dictionary &options_dict, Status &error) {
   bool success;
 
   llvm::StringRef regex_string;
   success = options_dict.GetValueForKeyAsString(
       GetKey(OptionNames::RegexString), regex_string);
   if (!success) {
-    error.SetErrorString("BRFR::CFSD: Couldn't find regex entry.");
+    error = Status::FromErrorString("BRFR::CFSD: Couldn't find regex entry.");
     return nullptr;
   }
   RegularExpression regex(regex_string);
@@ -44,7 +43,8 @@ BreakpointResolver *BreakpointResolverFileRegex::CreateFromStructuredData(
   success = options_dict.GetValueForKeyAsBoolean(
       GetKey(OptionNames::ExactMatch), exact_match);
   if (!success) {
-    error.SetErrorString("BRFL::CFSD: Couldn't find exact match entry.");
+    error =
+        Status::FromErrorString("BRFL::CFSD: Couldn't find exact match entry.");
     return nullptr;
   }
 
@@ -56,19 +56,19 @@ BreakpointResolver *BreakpointResolverFileRegex::CreateFromStructuredData(
   if (success && names_array) {
     size_t num_names = names_array->GetSize();
     for (size_t i = 0; i < num_names; i++) {
-      llvm::StringRef name;
-      success = names_array->GetItemAtIndexAsString(i, name);
-      if (!success) {
-        error.SetErrorStringWithFormat(
-            "BRFR::CFSD: Malformed element %zu in the names array.", i);
+      std::optional<llvm::StringRef> maybe_name =
+          names_array->GetItemAtIndexAsString(i);
+      if (!maybe_name) {
+        error = Status::FromErrorStringWithFormatv(
+            "BRFR::CFSD: Malformed element {0} in the names array.", i);
         return nullptr;
       }
-      names_set.insert(std::string(name));
+      names_set.insert(std::string(*maybe_name));
     }
   }
 
-  return new BreakpointResolverFileRegex(bkpt, std::move(regex), names_set,
-                                         exact_match);
+  return std::make_shared<BreakpointResolverFileRegex>(
+      nullptr, std::move(regex), names_set, exact_match);
 }
 
 StructuredData::ObjectSP
@@ -102,7 +102,8 @@ Searcher::CallbackReturn BreakpointResolverFileRegex::SearchCallback(
   FileSpec cu_file_spec = cu->GetPrimaryFile();
   std::vector<uint32_t> line_matches;
   context.target_sp->GetSourceManager().FindLinesMatchingRegex(
-      cu_file_spec, m_regex, 1, UINT32_MAX, line_matches);
+      std::make_shared<SupportFile>(cu_file_spec), m_regex, 1, UINT32_MAX,
+      line_matches);
 
   uint32_t num_matches = line_matches.size();
   for (uint32_t i = 0; i < num_matches; i++) {

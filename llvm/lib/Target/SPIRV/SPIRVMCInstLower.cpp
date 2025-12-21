@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "SPIRVMCInstLower.h"
-#include "SPIRV.h"
 #include "SPIRVModuleAnalysis.h"
 #include "SPIRVUtils.h"
 #include "llvm/CodeGen/MachineInstr.h"
@@ -23,6 +22,11 @@ using namespace llvm;
 void SPIRVMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI,
                              SPIRV::ModuleAnalysisInfo *MAI) const {
   OutMI.setOpcode(MI->getOpcode());
+  // Propagate previously set flags
+  if (MI->getAsmPrinterFlags() & SPIRV::ASM_PRINTER_WIDTH16)
+    OutMI.setFlags(SPIRV::INST_PRINTER_WIDTH16);
+  if (MI->getAsmPrinterFlags() & SPIRV::ASM_PRINTER_WIDTH64)
+    OutMI.setFlags(SPIRV::INST_PRINTER_WIDTH64);
   const MachineFunction *MF = MI->getMF();
   for (unsigned i = 0, e = MI->getNumOperands(); i != e; ++i) {
     const MachineOperand &MO = MI->getOperand(i);
@@ -31,8 +35,14 @@ void SPIRVMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI,
     default:
       llvm_unreachable("unknown operand type");
     case MachineOperand::MO_GlobalAddress: {
-      Register FuncReg = MAI->getFuncReg(dyn_cast<Function>(MO.getGlobal()));
-      assert(FuncReg.isValid() && "Cannot find function Id");
+      MCRegister FuncReg = MAI->getFuncReg(dyn_cast<Function>(MO.getGlobal()));
+      if (!FuncReg.isValid()) {
+        std::string DiagMsg;
+        raw_string_ostream OS(DiagMsg);
+        MI->print(OS);
+        DiagMsg = "Unknown function in:" + DiagMsg;
+        report_fatal_error(DiagMsg.c_str());
+      }
       MCOp = MCOperand::createReg(FuncReg);
       break;
     }
@@ -40,13 +50,14 @@ void SPIRVMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI,
       MCOp = MCOperand::createReg(MAI->getOrCreateMBBRegister(*MO.getMBB()));
       break;
     case MachineOperand::MO_Register: {
-      Register NewReg = MAI->getRegisterAlias(MF, MO.getReg());
-      MCOp = MCOperand::createReg(NewReg.isValid() ? NewReg : MO.getReg());
+      MCRegister NewReg = MAI->getRegisterAlias(MF, MO.getReg());
+      MCOp = MCOperand::createReg(NewReg.isValid() ? NewReg
+                                                   : MO.getReg().asMCReg());
       break;
     }
     case MachineOperand::MO_Immediate:
       if (MI->getOpcode() == SPIRV::OpExtInst && i == 2) {
-        Register Reg = MAI->getExtInstSetReg(MO.getImm());
+        MCRegister Reg = MAI->getExtInstSetReg(MO.getImm());
         MCOp = MCOperand::createReg(Reg);
       } else {
         MCOp = MCOperand::createImm(MO.getImm());

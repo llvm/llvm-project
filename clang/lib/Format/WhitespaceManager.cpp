@@ -35,13 +35,15 @@ WhitespaceManager::Change::Change(const FormatToken &Tok,
                                   bool CreateReplacement,
                                   SourceRange OriginalWhitespaceRange,
                                   int Spaces, unsigned StartOfTokenColumn,
+                                  unsigned IndentedFromColumn,
                                   unsigned NewlinesBefore,
                                   StringRef PreviousLinePostfix,
                                   StringRef CurrentLinePrefix, bool IsAligned,
                                   bool ContinuesPPDirective, bool IsInsideToken)
     : Tok(&Tok), CreateReplacement(CreateReplacement),
       OriginalWhitespaceRange(OriginalWhitespaceRange),
-      StartOfTokenColumn(StartOfTokenColumn), NewlinesBefore(NewlinesBefore),
+      StartOfTokenColumn(StartOfTokenColumn),
+      IndentedFromColumn(IndentedFromColumn), NewlinesBefore(NewlinesBefore),
       PreviousLinePostfix(PreviousLinePostfix),
       CurrentLinePrefix(CurrentLinePrefix), IsAligned(IsAligned),
       ContinuesPPDirective(ContinuesPPDirective), Spaces(Spaces),
@@ -53,13 +55,15 @@ WhitespaceManager::Change::Change(const FormatToken &Tok,
 void WhitespaceManager::replaceWhitespace(FormatToken &Tok, unsigned Newlines,
                                           unsigned Spaces,
                                           unsigned StartOfTokenColumn,
-                                          bool IsAligned, bool InPPDirective) {
+                                          bool IsAligned, bool InPPDirective,
+                                          unsigned IndentedFromColumn) {
   if (Tok.Finalized || (Tok.MacroCtx && Tok.MacroCtx->Role == MR_ExpandedArg))
     return;
   Tok.setDecision((Newlines > 0) ? FD_Break : FD_Continue);
   Changes.push_back(Change(Tok, /*CreateReplacement=*/true, Tok.WhitespaceRange,
-                           Spaces, StartOfTokenColumn, Newlines, "", "",
-                           IsAligned, InPPDirective && !Tok.IsFirst,
+                           Spaces, StartOfTokenColumn, IndentedFromColumn,
+                           Newlines, "", "", IsAligned,
+                           InPPDirective && !Tok.IsFirst,
                            /*IsInsideToken=*/false));
 }
 
@@ -67,11 +71,11 @@ void WhitespaceManager::addUntouchableToken(const FormatToken &Tok,
                                             bool InPPDirective) {
   if (Tok.Finalized || (Tok.MacroCtx && Tok.MacroCtx->Role == MR_ExpandedArg))
     return;
-  Changes.push_back(Change(Tok, /*CreateReplacement=*/false,
-                           Tok.WhitespaceRange, /*Spaces=*/0,
-                           Tok.OriginalColumn, Tok.NewlinesBefore, "", "",
-                           /*IsAligned=*/false, InPPDirective && !Tok.IsFirst,
-                           /*IsInsideToken=*/false));
+  Changes.push_back(Change(
+      Tok, /*CreateReplacement=*/false, Tok.WhitespaceRange, /*Spaces=*/0,
+      Tok.OriginalColumn, /*IndentedFromColumn=*/0, Tok.NewlinesBefore, "", "",
+      /*IsAligned=*/false, InPPDirective && !Tok.IsFirst,
+      /*IsInsideToken=*/false));
 }
 
 llvm::Error
@@ -95,7 +99,8 @@ void WhitespaceManager::replaceWhitespaceInToken(
   Changes.push_back(
       Change(Tok, /*CreateReplacement=*/true,
              SourceRange(Start, Start.getLocWithOffset(ReplaceChars)), Spaces,
-             std::max(0, Spaces), Newlines, PreviousPostfix, CurrentPrefix,
+             std::max(0, Spaces), /*IndentedFromColumn=*/0, Newlines,
+             PreviousPostfix, CurrentPrefix,
              /*IsAligned=*/true, InPPDirective && !Tok.IsFirst,
              /*IsInsideToken=*/true));
 }
@@ -107,10 +112,16 @@ const tooling::Replacements &WhitespaceManager::generateReplacements() {
   llvm::sort(Changes, Change::IsBeforeInFile(SourceMgr));
   calculateLineBreakInformation();
   alignConsecutiveMacros();
-  alignConsecutiveShortCaseStatements();
+  alignConsecutiveShortCaseStatements(/*IsExpr=*/true);
+  alignConsecutiveShortCaseStatements(/*IsExpr=*/false);
   alignConsecutiveDeclarations();
   alignConsecutiveBitFields();
   alignConsecutiveAssignments();
+  if (Style.isTableGen()) {
+    alignConsecutiveTableGenBreakingDAGArgColons();
+    alignConsecutiveTableGenCondOperatorColons();
+    alignConsecutiveTableGenDefinitions();
+  }
   alignChainedConditionals();
   alignTrailingComments();
   alignEscapedNewlines();
@@ -123,11 +134,14 @@ const tooling::Replacements &WhitespaceManager::generateReplacements() {
 void WhitespaceManager::calculateLineBreakInformation() {
   Changes[0].PreviousEndOfTokenColumn = 0;
   Change *LastOutsideTokenChange = &Changes[0];
-  for (unsigned i = 1, e = Changes.size(); i != e; ++i) {
+  for (unsigned I = 1, e = Changes.size(); I != e; ++I) {
+    auto &C = Changes[I];
+    auto &P = Changes[I - 1];
+    auto &PrevTokLength = P.TokenLength;
     SourceLocation OriginalWhitespaceStart =
-        Changes[i].OriginalWhitespaceRange.getBegin();
+        C.OriginalWhitespaceRange.getBegin();
     SourceLocation PreviousOriginalWhitespaceEnd =
-        Changes[i - 1].OriginalWhitespaceRange.getEnd();
+        P.OriginalWhitespaceRange.getEnd();
     unsigned OriginalWhitespaceStartOffset =
         SourceMgr.getFileOffset(OriginalWhitespaceStart);
     unsigned PreviousOriginalWhitespaceEndOffset =
@@ -162,31 +176,28 @@ void WhitespaceManager::calculateLineBreakInformation() {
     // line of the token.
     auto NewlinePos = Text.find_first_of('\n');
     if (NewlinePos == StringRef::npos) {
-      Changes[i - 1].TokenLength = OriginalWhitespaceStartOffset -
-                                   PreviousOriginalWhitespaceEndOffset +
-                                   Changes[i].PreviousLinePostfix.size() +
-                                   Changes[i - 1].CurrentLinePrefix.size();
+      PrevTokLength = OriginalWhitespaceStartOffset -
+                      PreviousOriginalWhitespaceEndOffset +
+                      C.PreviousLinePostfix.size() + P.CurrentLinePrefix.size();
+      if (!P.IsInsideToken)
+        PrevTokLength = std::min(PrevTokLength, P.Tok->ColumnWidth);
     } else {
-      Changes[i - 1].TokenLength =
-          NewlinePos + Changes[i - 1].CurrentLinePrefix.size();
+      PrevTokLength = NewlinePos + P.CurrentLinePrefix.size();
     }
 
     // If there are multiple changes in this token, sum up all the changes until
     // the end of the line.
-    if (Changes[i - 1].IsInsideToken && Changes[i - 1].NewlinesBefore == 0) {
-      LastOutsideTokenChange->TokenLength +=
-          Changes[i - 1].TokenLength + Changes[i - 1].Spaces;
-    } else {
-      LastOutsideTokenChange = &Changes[i - 1];
-    }
+    if (P.IsInsideToken && P.NewlinesBefore == 0)
+      LastOutsideTokenChange->TokenLength += PrevTokLength + P.Spaces;
+    else
+      LastOutsideTokenChange = &P;
 
-    Changes[i].PreviousEndOfTokenColumn =
-        Changes[i - 1].StartOfTokenColumn + Changes[i - 1].TokenLength;
+    C.PreviousEndOfTokenColumn = P.StartOfTokenColumn + PrevTokLength;
 
-    Changes[i - 1].IsTrailingComment =
-        (Changes[i].NewlinesBefore > 0 || Changes[i].Tok->is(tok::eof) ||
-         (Changes[i].IsInsideToken && Changes[i].Tok->is(tok::comment))) &&
-        Changes[i - 1].Tok->is(tok::comment) &&
+    P.IsTrailingComment =
+        (C.NewlinesBefore > 0 || C.Tok->is(tok::eof) ||
+         (C.IsInsideToken && C.Tok->is(tok::comment))) &&
+        P.Tok->is(tok::comment) &&
         // FIXME: This is a dirty hack. The problem is that
         // BreakableLineCommentSection does comment reflow changes and here is
         // the aligning of trailing comments. Consider the case where we reflow
@@ -273,28 +284,34 @@ void WhitespaceManager::calculateLineBreakInformation() {
 }
 
 // Align a single sequence of tokens, see AlignTokens below.
-// Column - The token for which Matches returns true is moved to this column.
+// Column - The tokens indexed in Matches are moved to this column.
 // RightJustify - Whether it is the token's right end or left end that gets
 // moved to that column.
-template <typename F>
 static void
 AlignTokenSequence(const FormatStyle &Style, unsigned Start, unsigned End,
-                   unsigned Column, bool RightJustify, F &&Matches,
+                   unsigned Column, bool RightJustify,
+                   ArrayRef<unsigned> Matches,
                    SmallVector<WhitespaceManager::Change, 16> &Changes) {
-  bool FoundMatchOnLine = false;
+  unsigned OriginalMatchColumn = 0;
   int Shift = 0;
+  // Set when the shift is applied anywhere in the line. Cleared when the line
+  // ends.
+  bool LineShifted = false;
 
-  // ScopeStack keeps track of the current scope depth. It contains indices of
-  // the first token on each scope.
-  // We only run the "Matches" function on tokens from the outer-most scope.
+  // ScopeStack keeps track of the current scope depth. It contains the levels
+  // of at most 2 scopes. The first one is the one that the matched token is
+  // in. The second one is the one that should not be moved by this procedure.
+  // The "Matches" indices should only have tokens from the outer-most scope.
   // However, we do need to pay special attention to one class of tokens
-  // that are not in the outer-most scope, and that is function parameters
-  // which are split across multiple lines, as illustrated by this example:
+  // that are not in the outer-most scope, and that is the continuations of an
+  // unwrapped line whose positions are derived from a token to the right of the
+  // aligned token, as illustrated by this example:
   //   double a(int x);
   //   int    b(int  y,
   //          double z);
   // In the above example, we need to take special care to ensure that
-  // 'double z' is indented along with it's owning function 'b'.
+  // 'double z' is indented along with its owning function 'b', because its
+  // position is derived from the '(' token to the right of the 'b' token.
   // The same holds for calling a function:
   //   double a = foo(x);
   //   int    b = bar(foo(y),
@@ -304,150 +321,60 @@ AlignTokenSequence(const FormatStyle &Style, unsigned Start, unsigned End,
   //   auto s   = "Hello"
   //          "World";
   // Special handling is required for 'nested' ternary operators.
-  SmallVector<unsigned, 16> ScopeStack;
+  SmallVector<std::tuple<unsigned, unsigned, unsigned>, 2> ScopeStack;
 
   for (unsigned i = Start; i != End; ++i) {
     auto &CurrentChange = Changes[i];
-    if (ScopeStack.size() != 0 &&
-        CurrentChange.indentAndNestingLevel() <
-            Changes[ScopeStack.back()].indentAndNestingLevel()) {
+    if (!Matches.empty() && Matches[0] < i)
+      Matches.consume_front();
+    assert(Matches.empty() || Matches[0] >= i);
+    while (!ScopeStack.empty() &&
+           CurrentChange.indentAndNestingLevel() < ScopeStack.back()) {
       ScopeStack.pop_back();
     }
 
-    // Compare current token to previous non-comment token to ensure whether
-    // it is in a deeper scope or not.
-    unsigned PreviousNonComment = i - 1;
-    while (PreviousNonComment > Start &&
-           Changes[PreviousNonComment].Tok->is(tok::comment)) {
-      --PreviousNonComment;
-    }
-    if (i != Start && CurrentChange.indentAndNestingLevel() >
-                          Changes[PreviousNonComment].indentAndNestingLevel()) {
-      ScopeStack.push_back(i);
+    // Keep track of the level that should not move with the aligned token.
+    if (ScopeStack.size() == 1u && CurrentChange.NewlinesBefore != 0u &&
+        CurrentChange.indentAndNestingLevel() > ScopeStack[0] &&
+        CurrentChange.IndentedFromColumn < OriginalMatchColumn) {
+      ScopeStack.push_back(CurrentChange.indentAndNestingLevel());
     }
 
-    bool InsideNestedScope = ScopeStack.size() != 0;
-    bool ContinuedStringLiteral = i > Start &&
-                                  CurrentChange.Tok->is(tok::string_literal) &&
-                                  Changes[i - 1].Tok->is(tok::string_literal);
-    bool SkipMatchCheck = InsideNestedScope || ContinuedStringLiteral;
+    bool InsideNestedScope =
+        !ScopeStack.empty() &&
+        (CurrentChange.indentAndNestingLevel() > ScopeStack[0] ||
+         (CurrentChange.indentAndNestingLevel() == ScopeStack[0] &&
+          CurrentChange.IndentedFromColumn >= OriginalMatchColumn));
 
-    if (CurrentChange.NewlinesBefore > 0 && !SkipMatchCheck) {
-      Shift = 0;
-      FoundMatchOnLine = false;
+    if (CurrentChange.NewlinesBefore > 0) {
+      LineShifted = false;
+      if (!InsideNestedScope)
+        Shift = 0;
     }
 
     // If this is the first matching token to be aligned, remember by how many
     // spaces it has to be shifted, so the rest of the changes on the line are
     // shifted by the same amount
-    if (!FoundMatchOnLine && !SkipMatchCheck && Matches(CurrentChange)) {
-      FoundMatchOnLine = true;
+    if (!Matches.empty() && Matches[0] == i) {
+      OriginalMatchColumn = CurrentChange.StartOfTokenColumn;
       Shift = Column - (RightJustify ? CurrentChange.TokenLength : 0) -
               CurrentChange.StartOfTokenColumn;
-      CurrentChange.Spaces += Shift;
-      // FIXME: This is a workaround that should be removed when we fix
-      // http://llvm.org/PR53699. An assertion later below verifies this.
-      if (CurrentChange.NewlinesBefore == 0) {
-        CurrentChange.Spaces =
-            std::max(CurrentChange.Spaces,
-                     static_cast<int>(CurrentChange.Tok->SpacesRequiredBefore));
-      }
+      ScopeStack = {CurrentChange.indentAndNestingLevel()};
     }
 
     if (Shift == 0)
       continue;
 
-    // This is for function parameters that are split across multiple lines,
-    // as mentioned in the ScopeStack comment.
-    if (InsideNestedScope && CurrentChange.NewlinesBefore > 0) {
-      unsigned ScopeStart = ScopeStack.back();
-      auto ShouldShiftBeAdded = [&] {
-        // Function declaration
-        if (Changes[ScopeStart - 1].Tok->is(TT_FunctionDeclarationName))
-          return true;
-
-        // Lambda.
-        if (Changes[ScopeStart - 1].Tok->is(TT_LambdaLBrace))
-          return false;
-
-        // Continued function declaration
-        if (ScopeStart > Start + 1 &&
-            Changes[ScopeStart - 2].Tok->is(TT_FunctionDeclarationName)) {
-          return true;
-        }
-
-        // Continued (template) function call.
-        if (ScopeStart > Start + 1 &&
-            Changes[ScopeStart - 2].Tok->isOneOf(tok::identifier,
-                                                 TT_TemplateCloser) &&
-            Changes[ScopeStart - 1].Tok->is(tok::l_paren) &&
-            Changes[ScopeStart].Tok->isNot(TT_LambdaLSquare)) {
-          if (CurrentChange.Tok->MatchingParen &&
-              CurrentChange.Tok->MatchingParen->is(TT_LambdaLBrace)) {
-            return false;
-          }
-          if (Changes[ScopeStart].NewlinesBefore > 0)
-            return false;
-          if (CurrentChange.Tok->is(tok::l_brace) &&
-              CurrentChange.Tok->is(BK_BracedInit)) {
-            return true;
-          }
-          return Style.BinPackArguments;
-        }
-
-        // Ternary operator
-        if (CurrentChange.Tok->is(TT_ConditionalExpr))
-          return true;
-
-        // Period Initializer .XXX = 1.
-        if (CurrentChange.Tok->is(TT_DesignatedInitializerPeriod))
-          return true;
-
-        // Continued ternary operator
-        if (CurrentChange.Tok->Previous &&
-            CurrentChange.Tok->Previous->is(TT_ConditionalExpr)) {
-          return true;
-        }
-
-        // Continued direct-list-initialization using braced list.
-        if (ScopeStart > Start + 1 &&
-            Changes[ScopeStart - 2].Tok->is(tok::identifier) &&
-            Changes[ScopeStart - 1].Tok->is(tok::l_brace) &&
-            CurrentChange.Tok->is(tok::l_brace) &&
-            CurrentChange.Tok->is(BK_BracedInit)) {
-          return true;
-        }
-
-        // Continued braced list.
-        if (ScopeStart > Start + 1 &&
-            Changes[ScopeStart - 2].Tok->isNot(tok::identifier) &&
-            Changes[ScopeStart - 1].Tok->is(tok::l_brace) &&
-            CurrentChange.Tok->isNot(tok::r_brace)) {
-          for (unsigned OuterScopeStart : llvm::reverse(ScopeStack)) {
-            // Lambda.
-            if (OuterScopeStart > Start &&
-                Changes[OuterScopeStart - 1].Tok->is(TT_LambdaLBrace)) {
-              return false;
-            }
-          }
-          if (Changes[ScopeStart].NewlinesBefore > 0)
-            return false;
-          return true;
-        }
-
-        // Continued template parameter.
-        if (Changes[ScopeStart - 1].Tok->is(TT_TemplateOpener))
-          return true;
-
-        return false;
-      };
-
-      if (ShouldShiftBeAdded())
-        CurrentChange.Spaces += Shift;
-    }
-
-    if (ContinuedStringLiteral)
+    // This is for lines that are split across multiple lines, as mentioned in
+    // the ScopeStack comment. The stack size being 1 means that the token is
+    // not in a scope that should not move.
+    if ((!Matches.empty() && Matches[0] == i) ||
+        (ScopeStack.size() == 1u && CurrentChange.NewlinesBefore > 0 &&
+         InsideNestedScope)) {
+      LineShifted = true;
+      CurrentChange.IndentedFromColumn += Shift;
       CurrentChange.Spaces += Shift;
+    }
 
     // We should not remove required spaces unless we break the line before.
     assert(Shift > 0 || Changes[i].NewlinesBefore > 0 ||
@@ -455,23 +382,26 @@ AlignTokenSequence(const FormatStyle &Style, unsigned Start, unsigned End,
                static_cast<int>(Changes[i].Tok->SpacesRequiredBefore) ||
            CurrentChange.Tok->is(tok::eof));
 
-    CurrentChange.StartOfTokenColumn += Shift;
-    if (i + 1 != Changes.size())
-      Changes[i + 1].PreviousEndOfTokenColumn += Shift;
+    if (LineShifted) {
+      CurrentChange.StartOfTokenColumn += Shift;
+      if (i + 1 != Changes.size())
+        Changes[i + 1].PreviousEndOfTokenColumn += Shift;
+    }
 
-    // If PointerAlignment is PAS_Right, keep *s or &s next to the token
+    // If PointerAlignment is PAS_Right, keep *s or &s next to the token,
+    // except if the token is equal, then a space is needed.
     if ((Style.PointerAlignment == FormatStyle::PAS_Right ||
          Style.ReferenceAlignment == FormatStyle::RAS_Right) &&
-        CurrentChange.Spaces != 0) {
+        CurrentChange.Spaces != 0 &&
+        CurrentChange.Tok->isNoneOf(tok::equal, tok::r_paren,
+                                    TT_TemplateCloser)) {
       const bool ReferenceNotRightAligned =
           Style.ReferenceAlignment != FormatStyle::RAS_Right &&
           Style.ReferenceAlignment != FormatStyle::RAS_Pointer;
       for (int Previous = i - 1;
-           Previous >= 0 &&
-           Changes[Previous].Tok->getType() == TT_PointerOrReference;
+           Previous >= 0 && Changes[Previous].Tok->is(TT_PointerOrReference);
            --Previous) {
-        assert(
-            Changes[Previous].Tok->isOneOf(tok::star, tok::amp, tok::ampamp));
+        assert(Changes[Previous].Tok->isPointerOrReference());
         if (Changes[Previous].Tok->isNot(tok::star)) {
           if (ReferenceNotRightAligned)
             continue;
@@ -517,7 +447,11 @@ AlignTokenSequence(const FormatStyle &Style, unsigned Start, unsigned End,
 // right-justified. It is used to align compound assignments like `+=` and `=`.
 // When RightJustify and ACS.PadOperators are true, operators in each block to
 // be aligned will be padded on the left to the same length before aligning.
-template <typename F>
+//
+// The simple check will not look at the indentaion and nesting level to recurse
+// into the line for alignment. It will also not count the commas. This is e.g.
+// for aligning macro definitions.
+template <typename F, bool SimpleCheck = false>
 static unsigned AlignTokens(const FormatStyle &Style, F &&Matches,
                             SmallVector<WhitespaceManager::Change, 16> &Changes,
                             unsigned StartAt,
@@ -525,12 +459,14 @@ static unsigned AlignTokens(const FormatStyle &Style, F &&Matches,
                             bool RightJustify = false) {
   // We arrange each line in 3 parts. The operator to be aligned (the anchor),
   // and text to its left and right. In the aligned text the width of each part
-  // will be the maximum of that over the block that has been aligned. Maximum
-  // widths of each part so far. When RightJustify is true and ACS.PadOperators
-  // is false, the part from start of line to the right end of the anchor.
-  // Otherwise, only the part to the left of the anchor. Including the space
-  // that exists on its left from the start. Not including the padding added on
-  // the left to right-justify the anchor.
+  // will be the maximum of that over the block that has been aligned.
+
+  // Maximum widths of each part so far.
+  // When RightJustify is true and ACS.PadOperators is false, the part from
+  // start of line to the right end of the anchor. Otherwise, only the part to
+  // the left of the anchor. Including the space that exists on its left from
+  // the start. Not including the padding added on the left to right-justify the
+  // anchor.
   unsigned WidthLeft = 0;
   // The operator to be aligned when RightJustify is true and ACS.PadOperators
   // is false. 0 otherwise.
@@ -543,11 +479,14 @@ static unsigned AlignTokens(const FormatStyle &Style, F &&Matches,
   unsigned StartOfSequence = 0;
   unsigned EndOfSequence = 0;
 
+  // The positions of the tokens to be aligned.
+  SmallVector<unsigned> MatchedIndices;
+
   // Measure the scope level (i.e. depth of (), [], {}) of the first token, and
   // abort when we hit any token in a higher scope than the starting one.
-  auto IndentAndNestingLevel = StartAt < Changes.size()
-                                   ? Changes[StartAt].indentAndNestingLevel()
-                                   : std::tuple<unsigned, unsigned, unsigned>();
+  const auto IndentAndNestingLevel =
+      StartAt < Changes.size() ? Changes[StartAt].indentAndNestingLevel()
+                               : std::tuple<unsigned, unsigned, unsigned>();
 
   // Keep track of the number of commas before the matching tokens, we will only
   // align a sequence of matching tokens if they are preceded by the same number
@@ -571,7 +510,7 @@ static unsigned AlignTokens(const FormatStyle &Style, F &&Matches,
   auto AlignCurrentSequence = [&] {
     if (StartOfSequence > 0 && StartOfSequence < EndOfSequence) {
       AlignTokenSequence(Style, StartOfSequence, EndOfSequence,
-                         WidthLeft + WidthAnchor, RightJustify, Matches,
+                         WidthLeft + WidthAnchor, RightJustify, MatchedIndices,
                          Changes);
     }
     WidthLeft = 0;
@@ -579,17 +518,19 @@ static unsigned AlignTokens(const FormatStyle &Style, F &&Matches,
     WidthRight = 0;
     StartOfSequence = 0;
     EndOfSequence = 0;
+    MatchedIndices.clear();
   };
 
-  unsigned i = StartAt;
-  for (unsigned e = Changes.size(); i != e; ++i) {
-    auto &CurrentChange = Changes[i];
+  unsigned I = StartAt;
+  const auto E = Changes.size();
+  for (; I != E; ++I) {
+    auto &CurrentChange = Changes[I];
     if (CurrentChange.indentAndNestingLevel() < IndentAndNestingLevel)
       break;
 
     if (CurrentChange.NewlinesBefore != 0) {
       CommasBeforeMatch = 0;
-      EndOfSequence = i;
+      EndOfSequence = I;
 
       // Whether to break the alignment sequence because of an empty line.
       bool EmptyLineBreak =
@@ -605,8 +546,8 @@ static unsigned AlignTokens(const FormatStyle &Style, F &&Matches,
 
       // A new line starts, re-initialize line status tracking bools.
       // Keep the match state if a string literal is continued on this line.
-      if (i == 0 || CurrentChange.Tok->isNot(tok::string_literal) ||
-          Changes[i - 1].Tok->isNot(tok::string_literal)) {
+      if (I == 0 || CurrentChange.Tok->isNot(tok::string_literal) ||
+          Changes[I - 1].Tok->isNot(tok::string_literal)) {
         FoundMatchOnLine = false;
       }
       LineIsComment = true;
@@ -615,14 +556,17 @@ static unsigned AlignTokens(const FormatStyle &Style, F &&Matches,
     if (CurrentChange.Tok->isNot(tok::comment))
       LineIsComment = false;
 
-    if (CurrentChange.Tok->is(tok::comma)) {
-      ++CommasBeforeMatch;
-    } else if (CurrentChange.indentAndNestingLevel() > IndentAndNestingLevel) {
-      // Call AlignTokens recursively, skipping over this scope block.
-      unsigned StoppedAt =
-          AlignTokens(Style, Matches, Changes, i, ACS, RightJustify);
-      i = StoppedAt - 1;
-      continue;
+    if (!SimpleCheck) {
+      if (CurrentChange.Tok->is(tok::comma)) {
+        ++CommasBeforeMatch;
+      } else if (CurrentChange.indentAndNestingLevel() >
+                 IndentAndNestingLevel) {
+        // Call AlignTokens recursively, skipping over this scope block.
+        const auto StoppedAt =
+            AlignTokens(Style, Matches, Changes, I, ACS, RightJustify);
+        I = StoppedAt - 1;
+        continue;
+      }
     }
 
     if (!Matches(CurrentChange))
@@ -630,35 +574,78 @@ static unsigned AlignTokens(const FormatStyle &Style, F &&Matches,
 
     // If there is more than one matching token per line, or if the number of
     // preceding commas, do not match anymore, end the sequence.
-    if (FoundMatchOnLine || CommasBeforeMatch != CommasBeforeLastMatch)
+    if (FoundMatchOnLine || CommasBeforeMatch != CommasBeforeLastMatch) {
+      MatchedIndices.push_back(I);
       AlignCurrentSequence();
+    }
 
     CommasBeforeLastMatch = CommasBeforeMatch;
     FoundMatchOnLine = true;
 
     if (StartOfSequence == 0)
-      StartOfSequence = i;
+      StartOfSequence = I;
 
     unsigned ChangeWidthLeft = CurrentChange.StartOfTokenColumn;
     unsigned ChangeWidthAnchor = 0;
     unsigned ChangeWidthRight = 0;
+    unsigned CurrentChangeWidthRight = 0;
     if (RightJustify)
       if (ACS.PadOperators)
         ChangeWidthAnchor = CurrentChange.TokenLength;
       else
         ChangeWidthLeft += CurrentChange.TokenLength;
     else
-      ChangeWidthRight = CurrentChange.TokenLength;
-    for (unsigned j = i + 1; j != e && Changes[j].NewlinesBefore == 0; ++j) {
-      ChangeWidthRight += Changes[j].Spaces;
+      CurrentChangeWidthRight = CurrentChange.TokenLength;
+    const FormatToken *MatchingParenToEncounter = nullptr;
+    for (unsigned J = I + 1;
+         J != E && (Changes[J].NewlinesBefore == 0 ||
+                    MatchingParenToEncounter || Changes[J].IsAligned);
+         ++J) {
+      const auto &Change = Changes[J];
+      const auto *Tok = Change.Tok;
+
+      if (Tok->MatchingParen) {
+        if (Tok->isOneOf(tok::l_paren, tok::l_brace, tok::l_square,
+                         TT_TemplateOpener) &&
+            !MatchingParenToEncounter) {
+          // If the next token is on the next line, we probably don't need to
+          // check the following lengths, because it most likely isn't aligned
+          // with the rest.
+          if (J + 1 != E && Changes[J + 1].NewlinesBefore == 0)
+            MatchingParenToEncounter = Tok->MatchingParen;
+        } else if (MatchingParenToEncounter == Tok->MatchingParen) {
+          MatchingParenToEncounter = nullptr;
+        }
+      }
+
+      if (Change.NewlinesBefore != 0) {
+        ChangeWidthRight = std::max(ChangeWidthRight, CurrentChangeWidthRight);
+        const auto ChangeWidthStart = ChangeWidthLeft + ChangeWidthAnchor;
+        // If the position of the current token is columnwise before the begin
+        // of the alignment, we drop out here, because the next line does not
+        // have to be moved with the previous one(s) for the alignment. E.g.:
+        // int i1 = 1;     | <- ColumnLimit                | int i1 = 1;
+        // int j  = 0;     |          Without the break -> | int j  = 0;
+        // int k  = bar(   | We still want to align the =  | int k = bar(
+        //     argument1,  | here, even if we can't move   |     argument1,
+        //     argument2); | the following lines.          |     argument2);
+        if (Change.IndentedFromColumn < ChangeWidthStart)
+          break;
+        CurrentChangeWidthRight = Change.Spaces - ChangeWidthStart;
+      } else {
+        CurrentChangeWidthRight += Change.Spaces;
+      }
+
       // Changes are generally 1:1 with the tokens, but a change could also be
       // inside of a token, in which case it's counted more than once: once for
       // the whitespace surrounding the token (!IsInsideToken) and once for
       // each whitespace change within it (IsInsideToken).
       // Therefore, changes inside of a token should only count the space.
-      if (!Changes[j].IsInsideToken)
-        ChangeWidthRight += Changes[j].TokenLength;
+      if (!Change.IsInsideToken)
+        CurrentChangeWidthRight += Change.TokenLength;
     }
+
+    ChangeWidthRight = std::max(ChangeWidthRight, CurrentChangeWidthRight);
 
     // If we are restricted by the maximum column width, end the sequence.
     unsigned NewLeft = std::max(ChangeWidthLeft, WidthLeft);
@@ -668,7 +655,7 @@ static unsigned AlignTokens(const FormatStyle &Style, F &&Matches,
     if (Style.ColumnLimit != 0 &&
         Style.ColumnLimit < NewLeft + NewAnchor + NewRight) {
       AlignCurrentSequence();
-      StartOfSequence = i;
+      StartOfSequence = I;
       WidthLeft = ChangeWidthLeft;
       WidthAnchor = ChangeWidthAnchor;
       WidthRight = ChangeWidthRight;
@@ -677,11 +664,19 @@ static unsigned AlignTokens(const FormatStyle &Style, F &&Matches,
       WidthAnchor = NewAnchor;
       WidthRight = NewRight;
     }
+    MatchedIndices.push_back(I);
   }
 
-  EndOfSequence = i;
+  // Pass entire lines to the function so that it can update the state of all
+  // tokens that move.
+  for (EndOfSequence = I;
+       EndOfSequence < E && Changes[EndOfSequence].NewlinesBefore == 0;
+       ++EndOfSequence) {
+  }
   AlignCurrentSequence();
-  return i;
+  // The return value should still be where the level ends. The rest of the line
+  // may contain stuff to be aligned within an outer level.
+  return I;
 }
 
 // Aligns a sequence of matching tokens, on the MinColumn column.
@@ -732,7 +727,7 @@ void WhitespaceManager::alignConsecutiveMacros() {
 
   auto AlignMacrosMatches = [](const Change &C) {
     const FormatToken *Current = C.Tok;
-    unsigned SpacesRequiredBefore = 1;
+    assert(Current);
 
     if (Current->SpacesRequiredBefore == 0 || !Current->Previous)
       return false;
@@ -741,79 +736,26 @@ void WhitespaceManager::alignConsecutiveMacros() {
 
     // If token is a ")", skip over the parameter list, to the
     // token that precedes the "("
-    if (Current->is(tok::r_paren) && Current->MatchingParen) {
-      Current = Current->MatchingParen->Previous;
-      SpacesRequiredBefore = 0;
+    if (Current->is(tok::r_paren)) {
+      const auto *MatchingParen = Current->MatchingParen;
+      // For a macro function, 0 spaces are required between the
+      // identifier and the lparen that opens the parameter list.
+      if (!MatchingParen || MatchingParen->SpacesRequiredBefore > 0 ||
+          !MatchingParen->Previous) {
+        return false;
+      }
+      Current = MatchingParen->Previous;
+    } else if (Current->Next->SpacesRequiredBefore != 1) {
+      // For a simple macro, 1 space is required between the
+      // identifier and the first token of the defined value.
+      return false;
     }
 
-    if (!Current || Current->isNot(tok::identifier))
-      return false;
-
-    if (!Current->Previous || Current->Previous->isNot(tok::pp_define))
-      return false;
-
-    // For a macro function, 0 spaces are required between the
-    // identifier and the lparen that opens the parameter list.
-    // For a simple macro, 1 space is required between the
-    // identifier and the first token of the defined value.
-    return Current->Next->SpacesRequiredBefore == SpacesRequiredBefore;
+    return Current->endsSequence(tok::identifier, tok::pp_define);
   };
 
-  unsigned MinColumn = 0;
-
-  // Start and end of the token sequence we're processing.
-  unsigned StartOfSequence = 0;
-  unsigned EndOfSequence = 0;
-
-  // Whether a matching token has been found on the current line.
-  bool FoundMatchOnLine = false;
-
-  // Whether the current line consists only of comments
-  bool LineIsComment = true;
-
-  unsigned I = 0;
-  for (unsigned E = Changes.size(); I != E; ++I) {
-    if (Changes[I].NewlinesBefore != 0) {
-      EndOfSequence = I;
-
-      // Whether to break the alignment sequence because of an empty line.
-      bool EmptyLineBreak = (Changes[I].NewlinesBefore > 1) &&
-                            !Style.AlignConsecutiveMacros.AcrossEmptyLines;
-
-      // Whether to break the alignment sequence because of a line without a
-      // match.
-      bool NoMatchBreak =
-          !FoundMatchOnLine &&
-          !(LineIsComment && Style.AlignConsecutiveMacros.AcrossComments);
-
-      if (EmptyLineBreak || NoMatchBreak) {
-        AlignMatchingTokenSequence(StartOfSequence, EndOfSequence, MinColumn,
-                                   AlignMacrosMatches, Changes);
-      }
-
-      // A new line starts, re-initialize line status tracking bools.
-      FoundMatchOnLine = false;
-      LineIsComment = true;
-    }
-
-    if (Changes[I].Tok->isNot(tok::comment))
-      LineIsComment = false;
-
-    if (!AlignMacrosMatches(Changes[I]))
-      continue;
-
-    FoundMatchOnLine = true;
-
-    if (StartOfSequence == 0)
-      StartOfSequence = I;
-
-    unsigned ChangeMinColumn = Changes[I].StartOfTokenColumn;
-    MinColumn = std::max(MinColumn, ChangeMinColumn);
-  }
-
-  EndOfSequence = I;
-  AlignMatchingTokenSequence(StartOfSequence, EndOfSequence, MinColumn,
-                             AlignMacrosMatches, Changes);
+  AlignTokens<decltype(AlignMacrosMatches) &, /*SimpleCheck=*/true>(
+      Style, AlignMacrosMatches, Changes, 0, Style.AlignConsecutiveMacros);
 }
 
 void WhitespaceManager::alignConsecutiveAssignments() {
@@ -850,7 +792,12 @@ void WhitespaceManager::alignConsecutiveAssignments() {
 }
 
 void WhitespaceManager::alignConsecutiveBitFields() {
-  if (!Style.AlignConsecutiveBitFields.Enabled)
+  alignConsecutiveColons(Style.AlignConsecutiveBitFields, TT_BitFieldColon);
+}
+
+void WhitespaceManager::alignConsecutiveColons(
+    const FormatStyle::AlignConsecutiveStyle &AlignStyle, TokenType Type) {
+  if (!AlignStyle.Enabled)
     return;
 
   AlignTokens(
@@ -864,27 +811,32 @@ void WhitespaceManager::alignConsecutiveBitFields() {
         if (&C != &Changes.back() && (&C + 1)->NewlinesBefore > 0)
           return false;
 
-        return C.Tok->is(TT_BitFieldColon);
+        return C.Tok->is(Type);
       },
-      Changes, /*StartAt=*/0, Style.AlignConsecutiveBitFields);
+      Changes, /*StartAt=*/0, AlignStyle);
 }
 
-void WhitespaceManager::alignConsecutiveShortCaseStatements() {
+void WhitespaceManager::alignConsecutiveShortCaseStatements(bool IsExpr) {
   if (!Style.AlignConsecutiveShortCaseStatements.Enabled ||
-      !Style.AllowShortCaseLabelsOnASingleLine) {
+      !(IsExpr ? Style.AllowShortCaseExpressionOnASingleLine
+               : Style.AllowShortCaseLabelsOnASingleLine)) {
     return;
   }
 
+  const auto Type = IsExpr ? TT_CaseLabelArrow : TT_CaseLabelColon;
+  const auto &Option = Style.AlignConsecutiveShortCaseStatements;
+  const bool AlignArrowOrColon =
+      IsExpr ? Option.AlignCaseArrows : Option.AlignCaseColons;
+
   auto Matches = [&](const Change &C) {
-    if (Style.AlignConsecutiveShortCaseStatements.AlignCaseColons)
-      return C.Tok->is(TT_CaseLabelColon);
+    if (AlignArrowOrColon)
+      return C.Tok->is(Type);
 
     // Ignore 'IsInsideToken' to allow matching trailing comments which
     // need to be reflowed as that causes the token to appear in two
     // different changes, which will cause incorrect alignment as we'll
     // reflow early due to detecting multiple aligning tokens per line.
-    return !C.IsInsideToken && C.Tok->Previous &&
-           C.Tok->Previous->is(TT_CaseLabelColon);
+    return !C.IsInsideToken && C.Tok->Previous && C.Tok->Previous->is(Type);
   };
 
   unsigned MinColumn = 0;
@@ -935,7 +887,7 @@ void WhitespaceManager::alignConsecutiveShortCaseStatements() {
     if (Changes[I].Tok->isNot(tok::comment))
       LineIsComment = false;
 
-    if (Changes[I].Tok->is(TT_CaseLabelColon)) {
+    if (Changes[I].Tok->is(Type)) {
       LineIsEmptyCase =
           !Changes[I].Tok->Next || Changes[I].Tok->Next->isTrailingComment();
 
@@ -973,15 +925,32 @@ void WhitespaceManager::alignConsecutiveShortCaseStatements() {
                              Changes);
 }
 
+void WhitespaceManager::alignConsecutiveTableGenBreakingDAGArgColons() {
+  alignConsecutiveColons(Style.AlignConsecutiveTableGenBreakingDAGArgColons,
+                         TT_TableGenDAGArgListColonToAlign);
+}
+
+void WhitespaceManager::alignConsecutiveTableGenCondOperatorColons() {
+  alignConsecutiveColons(Style.AlignConsecutiveTableGenCondOperatorColons,
+                         TT_TableGenCondOperatorColon);
+}
+
+void WhitespaceManager::alignConsecutiveTableGenDefinitions() {
+  alignConsecutiveColons(Style.AlignConsecutiveTableGenDefinitionColons,
+                         TT_InheritanceColon);
+}
+
 void WhitespaceManager::alignConsecutiveDeclarations() {
   if (!Style.AlignConsecutiveDeclarations.Enabled)
     return;
 
   AlignTokens(
       Style,
-      [](Change const &C) {
-        if (C.Tok->isOneOf(TT_FunctionDeclarationName, TT_FunctionTypeLParen))
-          return true;
+      [&](Change const &C) {
+        if (C.Tok->is(TT_FunctionTypeLParen))
+          return Style.AlignConsecutiveDeclarations.AlignFunctionPointers;
+        if (C.Tok->is(TT_FunctionDeclarationName))
+          return Style.AlignConsecutiveDeclarations.AlignFunctionDeclarations;
         if (C.Tok->isNot(TT_StartOfName))
           return false;
         if (C.Tok->Previous &&
@@ -1014,7 +983,7 @@ void WhitespaceManager::alignChainedConditionals() {
           return C.Tok->is(TT_ConditionalExpr) &&
                  ((C.Tok->is(tok::question) && !C.NewlinesBefore) ||
                   (C.Tok->is(tok::colon) && C.Tok->Next &&
-                   (C.Tok->Next->FakeLParens.size() == 0 ||
+                   (C.Tok->Next->FakeLParens.empty() ||
                     C.Tok->Next->FakeLParens.back() != prec::Conditional)));
         },
         Changes, /*StartAt=*/0);
@@ -1023,7 +992,7 @@ void WhitespaceManager::alignChainedConditionals() {
       FormatToken *Previous = C.Tok->getPreviousNonComment();
       return C.NewlinesBefore && Previous && Previous->is(TT_ConditionalExpr) &&
              (Previous->is(tok::colon) &&
-              (C.Tok->FakeLParens.size() == 0 ||
+              (C.Tok->FakeLParens.empty() ||
                C.Tok->FakeLParens.back() != prec::Conditional));
     };
     // Ensure we keep alignment of wrapped operands with non-wrapped operands
@@ -1048,10 +1017,17 @@ void WhitespaceManager::alignChainedConditionals() {
 }
 
 void WhitespaceManager::alignTrailingComments() {
+  if (Style.AlignTrailingComments.Kind == FormatStyle::TCAS_Never)
+    return;
+
   const int Size = Changes.size();
+  if (Size == 0)
+    return;
+
   int MinColumn = 0;
   int StartOfSequence = 0;
   bool BreakBeforeNext = false;
+  bool IsInPP = Changes.front().Tok->Tok.is(tok::hash);
   int NewLineThreshold = 1;
   if (Style.AlignTrailingComments.Kind == FormatStyle::TCAS_Always)
     NewLineThreshold = Style.AlignTrailingComments.OverEmptyLines + 1;
@@ -1060,7 +1036,19 @@ void WhitespaceManager::alignTrailingComments() {
     auto &C = Changes[I];
     if (C.StartOfBlockComment)
       continue;
-    Newlines += C.NewlinesBefore;
+    if (C.NewlinesBefore != 0) {
+      Newlines += C.NewlinesBefore;
+      const bool WasInPP = std::exchange(
+          IsInPP, C.Tok->Tok.is(tok::hash) || (IsInPP && C.IsTrailingComment) ||
+                      C.ContinuesPPDirective);
+      if (IsInPP != WasInPP && !Style.AlignTrailingComments.AlignPPAndNotPP) {
+        alignTrailingComments(StartOfSequence, I, MinColumn);
+        MinColumn = 0;
+        MaxColumn = INT_MAX;
+        StartOfSequence = I;
+        Newlines = 0;
+      }
+    }
     if (!C.IsTrailingComment)
       continue;
 
@@ -1076,7 +1064,7 @@ void WhitespaceManager::alignTrailingComments() {
       // leave the comments.
       if (RestoredLineLength >= Style.ColumnLimit && Style.ColumnLimit > 0)
         break;
-      C.Spaces = OriginalSpaces;
+      C.Spaces = C.NewlinesBefore > 0 ? C.Tok->OriginalColumn : OriginalSpaces;
       continue;
     }
 
@@ -1118,16 +1106,48 @@ void WhitespaceManager::alignTrailingComments() {
       }
     }
 
-    // We don't want to align namespace end comments.
-    const bool DontAlignThisComment =
-        I > 0 && C.NewlinesBefore == 0 &&
-        Changes[I - 1].Tok->is(TT_NamespaceRBrace);
-    if (Style.AlignTrailingComments.Kind == FormatStyle::TCAS_Never ||
-        DontAlignThisComment) {
+    // We don't want to align comments which end a scope, which are here
+    // identified by most closing braces.
+    auto DontAlignThisComment = [](const auto *Tok) {
+      if (Tok->is(tok::semi)) {
+        Tok = Tok->getPreviousNonComment();
+        if (!Tok)
+          return false;
+      }
+      if (Tok->is(tok::r_paren)) {
+        // Back up past the parentheses and a `TT_DoWhile` that may precede.
+        Tok = Tok->MatchingParen;
+        if (!Tok)
+          return false;
+        Tok = Tok->getPreviousNonComment();
+        if (!Tok)
+          return false;
+        if (Tok->is(TT_DoWhile)) {
+          const auto *Prev = Tok->getPreviousNonComment();
+          if (!Prev) {
+            // A do-while-loop without braces.
+            return true;
+          }
+          Tok = Prev;
+        }
+      }
+
+      if (Tok->isNot(tok::r_brace))
+        return false;
+
+      while (Tok->Previous && Tok->Previous->is(tok::r_brace))
+        Tok = Tok->Previous;
+      return Tok->NewlinesBefore > 0;
+    };
+
+    if (I > 0 && C.NewlinesBefore == 0 &&
+        DontAlignThisComment(Changes[I - 1].Tok)) {
       alignTrailingComments(StartOfSequence, I, MinColumn);
-      MinColumn = ChangeMinColumn;
-      MaxColumn = ChangeMinColumn;
-      StartOfSequence = I;
+      // Reset to initial values, but skip this change for the next alignment
+      // pass.
+      MinColumn = 0;
+      MaxColumn = INT_MAX;
+      StartOfSequence = I + 1;
     } else if (BreakBeforeNext || Newlines > NewLineThreshold ||
                (ChangeMinColumn > MaxColumn || ChangeMaxColumn < MinColumn) ||
                // Break the comment sequence if the previous line did not end
@@ -1173,22 +1193,29 @@ void WhitespaceManager::alignTrailingComments(unsigned Start, unsigned End,
 }
 
 void WhitespaceManager::alignEscapedNewlines() {
-  if (Style.AlignEscapedNewlines == FormatStyle::ENAS_DontAlign)
+  const auto Align = Style.AlignEscapedNewlines;
+  if (Align == FormatStyle::ENAS_DontAlign)
     return;
 
-  bool AlignLeft = Style.AlignEscapedNewlines == FormatStyle::ENAS_Left;
-  unsigned MaxEndOfLine = AlignLeft ? 0 : Style.ColumnLimit;
+  const bool WithLastLine = Align == FormatStyle::ENAS_LeftWithLastLine;
+  const bool AlignLeft = Align == FormatStyle::ENAS_Left || WithLastLine;
+  const auto MaxColumn = Style.ColumnLimit;
+  unsigned MaxEndOfLine = AlignLeft ? 0 : MaxColumn;
   unsigned StartOfMacro = 0;
   for (unsigned i = 1, e = Changes.size(); i < e; ++i) {
     Change &C = Changes[i];
-    if (C.NewlinesBefore > 0) {
-      if (C.ContinuesPPDirective) {
-        MaxEndOfLine = std::max(C.PreviousEndOfTokenColumn + 2, MaxEndOfLine);
-      } else {
-        alignEscapedNewlines(StartOfMacro + 1, i, MaxEndOfLine);
-        MaxEndOfLine = AlignLeft ? 0 : Style.ColumnLimit;
-        StartOfMacro = i;
-      }
+    if (C.NewlinesBefore == 0 && (!WithLastLine || C.Tok->isNot(tok::eof)))
+      continue;
+    const bool InPPDirective = C.ContinuesPPDirective;
+    const auto BackslashColumn = C.PreviousEndOfTokenColumn + 2;
+    if (InPPDirective ||
+        (WithLastLine && (MaxColumn == 0 || BackslashColumn <= MaxColumn))) {
+      MaxEndOfLine = std::max(BackslashColumn, MaxEndOfLine);
+    }
+    if (!InPPDirective) {
+      alignEscapedNewlines(StartOfMacro + 1, i, MaxEndOfLine);
+      MaxEndOfLine = AlignLeft ? 0 : MaxColumn;
+      StartOfMacro = i;
     }
   }
   alignEscapedNewlines(StartOfMacro + 1, Changes.size(), MaxEndOfLine);
@@ -1219,7 +1246,10 @@ void WhitespaceManager::alignArrayInitializers() {
       bool FoundComplete = false;
       for (unsigned InsideIndex = ChangeIndex + 1; InsideIndex < ChangeEnd;
            ++InsideIndex) {
-        if (Changes[InsideIndex].Tok == C.Tok->MatchingParen) {
+        const auto *Tok = Changes[InsideIndex].Tok;
+        if (Tok->is(tok::pp_define))
+          break;
+        if (Tok == C.Tok->MatchingParen) {
           alignArrayInitializers(ChangeIndex, InsideIndex + 1);
           ChangeIndex = InsideIndex + 1;
           FoundComplete = true;
@@ -1245,7 +1275,8 @@ void WhitespaceManager::alignArrayInitializersRightJustified(
   if (!CellDescs.isRectangular())
     return;
 
-  const int BracePadding = Style.Cpp11BracedListStyle ? 0 : 1;
+  const int BracePadding =
+      Style.Cpp11BracedListStyle != FormatStyle::BLS_Block ? 0 : 1;
   auto &Cells = CellDescs.Cells;
   // Now go through and fixup the spaces.
   auto *CellIter = Cells.begin();
@@ -1282,6 +1313,8 @@ void WhitespaceManager::alignArrayInitializersRightJustified(
         auto Offset = std::distance(Cells.begin(), CellIter);
         for (const auto *Next = CellIter->NextColumnElement; Next;
              Next = Next->NextColumnElement) {
+          if (RowCount >= CellDescs.CellCounts.size())
+            break;
           auto *Start = (Cells.begin() + RowCount * CellDescs.CellCounts[0]);
           auto *End = Start + Offset;
           ThisNetWidth = getNetWidth(Start, End, CellDescs.InitialSpaces);
@@ -1319,15 +1352,17 @@ void WhitespaceManager::alignArrayInitializersLeftJustified(
   if (!CellDescs.isRectangular())
     return;
 
-  const int BracePadding = Style.Cpp11BracedListStyle ? 0 : 1;
+  const int BracePadding =
+      Style.Cpp11BracedListStyle != FormatStyle::BLS_Block ? 0 : 1;
   auto &Cells = CellDescs.Cells;
   // Now go through and fixup the spaces.
   auto *CellIter = Cells.begin();
-  // The first cell needs to be against the left brace.
-  if (Changes[CellIter->Index].NewlinesBefore == 0)
-    Changes[CellIter->Index].Spaces = BracePadding;
-  else
-    Changes[CellIter->Index].Spaces = CellDescs.InitialSpaces;
+  // The first cell of every row needs to be against the left brace.
+  for (const auto *Next = CellIter; Next; Next = Next->NextColumnElement) {
+    auto &Change = Changes[Next->Index];
+    Change.Spaces =
+        Change.NewlinesBefore == 0 ? BracePadding : CellDescs.InitialSpaces;
+  }
   ++CellIter;
   for (auto i = 1U; i < CellDescs.CellCounts[0]; i++, ++CellIter) {
     auto MaxNetWidth = getMaximumNetWidth(
@@ -1345,7 +1380,7 @@ void WhitespaceManager::alignArrayInitializersLeftJustified(
     auto Offset = std::distance(Cells.begin(), CellIter);
     for (const auto *Next = CellIter->NextColumnElement; Next;
          Next = Next->NextColumnElement) {
-      if (RowCount > CellDescs.CellCounts.size())
+      if (RowCount >= CellDescs.CellCounts.size())
         break;
       auto *Start = (Cells.begin() + RowCount * CellDescs.CellCounts[0]);
       auto *End = Start + Offset;
@@ -1408,8 +1443,10 @@ WhitespaceManager::CellDescriptions WhitespaceManager::getCells(unsigned Start,
       } else if (C.Tok->is(tok::comma)) {
         if (!Cells.empty())
           Cells.back().EndIndex = i;
-        if (C.Tok->getNextNonComment()->isNot(tok::r_brace)) // dangling comma
+        if (const auto *Next = C.Tok->getNextNonComment();
+            Next && Next->isNot(tok::r_brace)) { // dangling comma
           ++Cell;
+        }
       }
     } else if (Depth == 1) {
       if (C.Tok == MatchingParen) {
@@ -1420,10 +1457,10 @@ WhitespaceManager::CellDescriptions WhitespaceManager::getCells(unsigned Start,
                                                                 : Cell);
         // Go to the next non-comment and ensure there is a break in front
         const auto *NextNonComment = C.Tok->getNextNonComment();
-        while (NextNonComment->is(tok::comma))
+        while (NextNonComment && NextNonComment->is(tok::comma))
           NextNonComment = NextNonComment->getNextNonComment();
         auto j = i;
-        while (Changes[j].Tok != NextNonComment && j < End)
+        while (j < End && Changes[j].Tok != NextNonComment)
           ++j;
         if (j < End && Changes[j].NewlinesBefore == 0 &&
             Changes[j].Tok->isNot(tok::r_brace)) {
@@ -1431,7 +1468,7 @@ WhitespaceManager::CellDescriptions WhitespaceManager::getCells(unsigned Start,
           // Account for the added token lengths
           Changes[j].Spaces = InitialSpaces - InitialTokenLength;
         }
-      } else if (C.Tok->is(tok::comment)) {
+      } else if (C.Tok->is(tok::comment) && C.Tok->NewlinesBefore == 0) {
         // Trailing comments stay at a space past the last token
         C.Spaces = Changes[i - 1].Tok->is(tok::comma) ? 1 : 2;
       } else if (C.Tok->is(tok::l_brace)) {
@@ -1588,7 +1625,7 @@ void WhitespaceManager::generateChanges() {
                                  C.PreviousEndOfTokenColumn,
                                  C.EscapedNewlineColumn);
       } else {
-        appendNewlineText(ReplacementText, C.NewlinesBefore);
+        appendNewlineText(ReplacementText, C);
       }
       // FIXME: This assert should hold if we computed the column correctly.
       // assert((int)C.StartOfTokenColumn >= C.Spaces);
@@ -1620,15 +1657,18 @@ void WhitespaceManager::storeReplacement(SourceRange Range, StringRef Text) {
   }
 }
 
-void WhitespaceManager::appendNewlineText(std::string &Text,
-                                          unsigned Newlines) {
-  if (UseCRLF) {
-    Text.reserve(Text.size() + 2 * Newlines);
-    for (unsigned i = 0; i < Newlines; ++i)
-      Text.append("\r\n");
-  } else {
-    Text.append(Newlines, '\n');
-  }
+void WhitespaceManager::appendNewlineText(std::string &Text, const Change &C) {
+  if (C.NewlinesBefore <= 0)
+    return;
+
+  StringRef Newline = UseCRLF ? "\r\n" : "\n";
+  Text.append(Newline);
+
+  if (C.Tok->HasFormFeedBefore)
+    Text.append("\f");
+
+  for (unsigned I = 1; I < C.NewlinesBefore; ++I)
+    Text.append(Newline);
 }
 
 void WhitespaceManager::appendEscapedNewlineText(

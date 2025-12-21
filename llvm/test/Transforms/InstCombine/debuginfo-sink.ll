@@ -9,8 +9,8 @@ declare void @llvm.dbg.value(metadata, metadata, metadata)
 ; into, to maximise liveness.
 ;
 ; CHECK-LABEL: define i32 @foo(ptr
-; CHECK:       call void @llvm.dbg.value(metadata ptr %a, metadata !{{[0-9]+}},
-; CHECK-SAME:  metadata !DIExpression(DW_OP_plus_uconst, 4, DW_OP_stack_value))
+; CHECK:       #dbg_value(ptr %a, !{{[0-9]+}},
+; CHECK-SAME:  !DIExpression(DW_OP_plus_uconst, 4, DW_OP_stack_value),
 ; CHECK-NEXT:  br label %sink1
 
 define i32 @foo(ptr %a) !dbg !7 {
@@ -21,8 +21,8 @@ entry:
 
 sink1:
 ; CHECK-LABEL: sink1:
-; CHECK:       call void @llvm.dbg.value(metadata ptr %gep,
-; CHECK-SAME:                    metadata !{{[0-9]+}}, metadata !DIExpression())
+; CHECK:       #dbg_value(ptr %gep,
+; CHECK-SAME:                    !{{[0-9]+}}, !DIExpression(),
 ; CHECK-NEXT:  load
   %0 = load i32, ptr %gep, align 4, !dbg !15
   ret i32 %0, !dbg !15
@@ -33,7 +33,7 @@ sink1:
 ; value range.
 
 ; CHECK-LABEL: define i32 @bar(
-; CHECK:       call void @llvm.dbg.value(metadata ptr poison,
+; CHECK:       #dbg_value(ptr poison,
 ; CHECK-NEXT:  br label %sink2
 
 define i32 @bar(ptr %a, i32 %b) !dbg !70 {
@@ -44,8 +44,8 @@ entry:
 
 sink2:
 ; CHECK-LABEL: sink2:
-; CHECK:       call void @llvm.dbg.value(metadata ptr %gep,
-; CHECK-SAME:                    metadata !{{[0-9]+}}, metadata !DIExpression())
+; CHECK:       #dbg_value(ptr %gep,
+; CHECK-SAME:                    !{{[0-9]+}}, !DIExpression(),
 ; CHECK-NEXT:  load
 ; CHECK-NEXT:  extractelement
 ; CHECK-NEXT:  ret
@@ -59,10 +59,10 @@ sink2:
 ; original dbg.values are salvaged.
 ;
 ; CHECK-LABEL: define i32 @baz(ptr
-; CHECK:       call void @llvm.dbg.value(metadata ptr %a, metadata !{{[0-9]+}},
-; CHECK-SAME:  metadata !DIExpression(DW_OP_plus_uconst, 4, DW_OP_stack_value))
-; CHECK-NEXT:  call void @llvm.dbg.value(metadata ptr %a, metadata !{{[0-9]+}},
-; CHECK-SAME:  metadata !DIExpression(DW_OP_plus_uconst, 4, DW_OP_plus_uconst, 5, DW_OP_stack_value))
+; CHECK:       #dbg_value(ptr %a, !{{[0-9]+}},
+; CHECK-SAME:  !DIExpression(DW_OP_plus_uconst, 4, DW_OP_stack_value),
+; CHECK-NEXT:  #dbg_value(ptr %a, !{{[0-9]+}},
+; CHECK-SAME:  !DIExpression(DW_OP_plus_uconst, 9, DW_OP_stack_value),
 ; CHECK-NEXT:  br label %sink1
 
 define i32 @baz(ptr %a) !dbg !80 {
@@ -74,8 +74,8 @@ entry:
 
 sink1:
 ; CHECK-LABEL: sink1:
-; CHECK:       call void @llvm.dbg.value(metadata ptr %gep,
-; CHECK-SAME:  metadata !{{[0-9]+}}, metadata !DIExpression(DW_OP_plus_uconst, 5))
+; CHECK:       #dbg_value(ptr %gep,
+; CHECK-SAME:  !{{[0-9]+}}, !DIExpression(DW_OP_plus_uconst, 5),
 ; CHECK-NEXT:  load
   %0 = load i32, ptr %gep, align 4, !dbg !85
   ret i32 %0, !dbg !85

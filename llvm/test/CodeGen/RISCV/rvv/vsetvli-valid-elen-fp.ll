@@ -7,9 +7,8 @@
 define void @foo(half %y, ptr %i64p) {
 ; CHECK-NO-FELEN64-LABEL: foo:
 ; CHECK-NO-FELEN64:       # %bb.0: # %entry
-; CHECK-NO-FELEN64-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
+; CHECK-NO-FELEN64-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
 ; CHECK-NO-FELEN64-NEXT:    vle64.v v8, (a0)
-; CHECK-NO-FELEN64-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
 ; CHECK-NO-FELEN64-NEXT:    vfmv.s.f v9, fa0
 ; CHECK-NO-FELEN64-NEXT:    #APP
 ; CHECK-NO-FELEN64-NEXT:    # use v8 v9
@@ -31,9 +30,6 @@ entry:
   tail call void asm sideeffect "# use $0 $1", "^vr,^vr"(<vscale x 1 x i64> %0, <vscale x 4 x half> %1)
   ret void
 }
-
-declare <vscale x 1 x i64> @llvm.riscv.vle.nxv1i64.i64(<vscale x 1 x i64>, ptr nocapture, i64)
-declare <vscale x 4 x half> @llvm.riscv.vfmv.s.f.nxv4f16.i64(<vscale x 4 x half>, half, i64)
 
 define void @bar(half %y, ptr %i32p) {
 ; CHECK-NO-FELEN64-LABEL: bar:
@@ -62,4 +58,3 @@ entry:
   ret void
 }
 
-declare <vscale x 2 x i32> @llvm.riscv.vle.nxv2i32.i64(<vscale x 2 x i32>, ptr nocapture, i64)

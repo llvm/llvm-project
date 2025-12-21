@@ -17,6 +17,25 @@
 // RUN: %clang_cc1 -std=c++20 %t/A3.cppm -emit-module-interface -o %t/A3.pcm
 // RUN: %clang_cc1 -std=c++20 %t/TestA3.cpp -fprebuilt-module-path=%t -fsyntax-only -verify
 
+// Test again with reduced BMI.
+// RUN: rm -rf %t
+// RUN: mkdir -p %t
+// RUN: split-file %s %t
+//
+// RUN: %clang_cc1 -std=c++20 %t/A.cppm -emit-reduced-module-interface -o %t/A.pcm
+// RUN: %clang_cc1 -std=c++20 %t/A0.cppm -emit-reduced-module-interface -o %t/A0.pcm
+// RUN: %clang_cc1 -std=c++20 %t/TestA.cpp -fprebuilt-module-path=%t -fsyntax-only -verify
+//
+// RUN: %clang_cc1 -std=c++20 %t/A1.cppm -emit-reduced-module-interface -o %t/A1.pcm
+// RUN: %clang_cc1 -std=c++20 %t/TestA1.cpp -fprebuilt-module-path=%t -fsyntax-only -verify
+//
+// RUN: %clang_cc1 -std=c++20 %t/A2.cppm -emit-reduced-module-interface -o %t/A2.pcm
+// RUN: %clang_cc1 -std=c++20 %t/TestA2.cpp -fprebuilt-module-path=%t -fsyntax-only -verify
+//
+// RUN: %clang_cc1 -std=c++20 %t/A3.cppm -emit-reduced-module-interface -o %t/A3.pcm
+// RUN: %clang_cc1 -std=c++20 %t/TestA3.cpp -fprebuilt-module-path=%t -fsyntax-only -verify
+
+
 //--- A.h
 template <class _Tp>
 concept A = requires(const _Tp& __t) { []<class __Up>(const __Up&) {}(__t); };

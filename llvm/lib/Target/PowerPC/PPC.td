@@ -52,13 +52,19 @@ def DirectivePwr7: SubtargetFeature<"", "CPUDirective", "PPC::DIR_PWR7", "">;
 def DirectivePwr8: SubtargetFeature<"", "CPUDirective", "PPC::DIR_PWR8", "">;
 def DirectivePwr9: SubtargetFeature<"", "CPUDirective", "PPC::DIR_PWR9", "">;
 def DirectivePwr10: SubtargetFeature<"", "CPUDirective", "PPC::DIR_PWR10", "">;
+def DirectivePwr11: SubtargetFeature<"", "CPUDirective", "PPC::DIR_PWR11", "">;
 def DirectivePwrFuture
     : SubtargetFeature<"", "CPUDirective", "PPC::DIR_PWR_FUTURE", "">;
 
 // Specifies that the selected CPU supports 64-bit instructions, regardless of
 // whether we are in 32-bit or 64-bit mode.
-def Feature64Bit     : SubtargetFeature<"64bit","Has64BitSupport", "true",
-                                        "Enable 64-bit instructions">;
+def Feature64BitSupport : SubtargetFeature<"64bit-support", "Has64BitSupport", "true",
+                                        "Supports 64-bit instructions">;
+// 64-bit is enabled.
+def Feature64Bit     : SubtargetFeature<"64bit", "IsPPC64", "true",
+                                        "Enable 64-bit mode",
+                                        [Feature64BitSupport]>;
+
 def AIXOS: SubtargetFeature<"aix", "IsAIX", "true", "AIX OS">;
 def FeatureModernAIXAs
     : SubtargetFeature<"modern-aix-as", "HasModernAIXAs", "true",
@@ -84,7 +90,7 @@ def FeatureAltivec   : SubtargetFeature<"altivec","HasAltivec", "true",
 def FeatureSPE       : SubtargetFeature<"spe","HasSPE", "true",
                                         "Enable SPE instructions",
                                         [FeatureHardFloat]>;
-def FeatureEFPU2 : SubtargetFeature<"efpu2", "HasEFPU2", "true", 
+def FeatureEFPU2 : SubtargetFeature<"efpu2", "HasEFPU2", "true",
                                         "Enable Embedded Floating-Point APU 2 instructions",
                                         [FeatureSPE]>;
 def FeatureMFOCRF    : SubtargetFeature<"mfocrf","HasMFOCRF", "true",
@@ -296,8 +302,7 @@ def FeatureVectorsUseTwoUnits : SubtargetFeature<"vectors-use-two-units",
 def FeaturePrefixInstrs : SubtargetFeature<"prefix-instrs", "HasPrefixInstrs",
                                            "true",
                                            "Enable prefixed instructions",
-                                           [FeatureISA3_0, FeatureP8Vector,
-                                            FeatureP9Altivec]>;
+                                           [FeatureISA3_1]>;
 def FeaturePCRelativeMemops :
   SubtargetFeature<"pcrelative-memops", "HasPCRelativeMemops", "true",
                    "Enable PC relative Memory Ops",
@@ -329,6 +334,21 @@ def FeatureAIXLocalExecTLS :
                    "Produce a TOC-free local-exec TLS sequence for this function "
                    "for 64-bit AIX">;
 
+// Specifies that local-dynamic TLS accesses in any function with this target
+// attribute should use the optimized sequence (where the offset is an immediate
+// off the module-handle for which the linker might add fix-up code for if the
+// immediate is too large).
+def FeatureAIXLocalDynamicTLS :
+  SubtargetFeature<"aix-small-local-dynamic-tls", "HasAIXSmallLocalDynamicTLS",
+                   "true", "Produce a faster local-dynamic TLS sequence for this "
+                   "function for 64-bit AIX">;
+
+def FeatureAIXSharedLibTLSModelOpt :
+  SubtargetFeature<"aix-shared-lib-tls-model-opt",
+                   "HasAIXShLibTLSModelOpt", "true",
+                   "Tune TLS model at function level in shared library loaded "
+                   "with the main program (for 64-bit AIX only)">;
+
 def FeaturePredictableSelectIsExpensive :
   SubtargetFeature<"predictable-select-expensive",
                    "PredictableSelectIsExpensive",
@@ -337,6 +357,76 @@ def FeaturePredictableSelectIsExpensive :
 
 def FeatureFastMFLR : SubtargetFeature<"fast-MFLR", "HasFastMFLR", "true",
                                        "MFLR is a fast instruction">;
+
+//===----------------------------------------------------------------------===//
+// PowerPC Instruction Predicate Definitions.
+
+def IsLittleEndian : Predicate<"Subtarget->isLittleEndian()">;
+def IsBigEndian : Predicate<"!Subtarget->isLittleEndian()">;
+def IsPPC32 : Predicate<"!Subtarget->isPPC64()">;
+def IsPPC64 : Predicate<"Subtarget->isPPC64()">;
+def IsBookE  : Predicate<"Subtarget->isBookE()">;
+def IsNotBookE  : Predicate<"!Subtarget->isBookE()">;
+def HasOnlyMSYNC : Predicate<"Subtarget->hasOnlyMSYNC()">;
+def HasSYNC   : Predicate<"!Subtarget->hasOnlyMSYNC()">;
+def IsPPC4xx  : Predicate<"Subtarget->isPPC4xx()">;
+def IsPPC6xx  : Predicate<"Subtarget->isPPC6xx()">;
+def IsE500  : Predicate<"Subtarget->isE500()">;
+def HasSPE  : Predicate<"Subtarget->hasSPE()">;
+def HasICBT : Predicate<"Subtarget->hasICBT()">;
+def HasPartwordAtomics : Predicate<"Subtarget->hasPartwordAtomics()">;
+def HasQuadwordAtomics : Predicate<"Subtarget->hasQuadwordAtomics()">;
+def NoNaNsFPMath
+    : Predicate<"Subtarget->getTargetMachine().Options.NoNaNsFPMath">;
+def NaNsFPMath
+    : Predicate<"!Subtarget->getTargetMachine().Options.NoNaNsFPMath">;
+def HasBPERMD : Predicate<"Subtarget->hasBPERMD()">;
+def HasExtDiv : Predicate<"Subtarget->hasExtDiv()">;
+def HasFPU : Predicate<"Subtarget->hasFPU()">;
+def HasHTM : Predicate<"Subtarget->hasHTM()">;
+def HasDirectMove : Predicate<"Subtarget->hasDirectMove()">;
+def HasP8Crypto : Predicate<"Subtarget->hasP8Crypto()">;
+def PCRelativeMemops : Predicate<"Subtarget->hasPCRelativeMemops()">;
+def PrefixInstrs : Predicate<"Subtarget->hasPrefixInstrs()">;
+def PairedVectorMemops : Predicate<"Subtarget->pairedVectorMemops()">;
+def MMA : Predicate<"Subtarget->hasMMA()">;
+
+// Vector support predicates
+def HasVSX : Predicate<"Subtarget->hasVSX()">;
+def NoP8Vector : Predicate<"!Subtarget->hasP8Vector()">;
+def HasP8Vector : Predicate<"Subtarget->hasP8Vector()">;
+def HasAltivec : Predicate<"Subtarget->hasAltivec()">;
+def HasP8Altivec : Predicate<"Subtarget->hasP8Altivec()">;
+def NoP9Vector : Predicate<"!Subtarget->hasP9Vector()">;
+def HasP9Vector : Predicate<"Subtarget->hasP9Vector()">;
+def NoP9Altivec : Predicate<"!Subtarget->hasP9Altivec()">;
+def HasP9Altivec : Predicate<"Subtarget->hasP9Altivec()">;
+def HasOnlySwappingMemOps : Predicate<"!Subtarget->hasP9Vector()">;
+def NoP10Vector : Predicate<"!Subtarget->hasP10Vector()">;
+def HasP10Vector : Predicate<"Subtarget->hasP10Vector()">;
+
+// Predicates used to differenciate between different ISAs.
+def IsISA2_06 : Predicate<"Subtarget->isISA2_06()">;
+def IsISA2_07 : Predicate<"Subtarget->isISA2_07()">;
+def IsISA3_0 : Predicate<"Subtarget->isISA3_0()">;
+def IsNotISA3_0 : Predicate<"!Subtarget->isISA3_0()">;
+def IsISA3_1 : Predicate<"Subtarget->isISA3_1()">;
+def IsNotISA3_1 : Predicate<"!Subtarget->isISA3_1()">;
+def IsISAFuture : Predicate<"Subtarget->isISAFuture()">;
+def IsNotISAFuture : Predicate<"!Subtarget->isISAFuture()">;
+
+// AIX assembler may not be modern enough to support some extended mne.
+def ModernAs: Predicate<"!Subtarget->isAIXABI() || Subtarget->HasModernAIXAs">,
+                 AssemblerPredicate<(any_of (not AIXOS), FeatureModernAIXAs)>;
+def IsAIX : Predicate<"Subtarget->isAIXABI()">;
+def NotAIX : Predicate<"!Subtarget->isAIXABI()">;
+
+//===----------------------------------------------------------------------===//
+// HwModes
+//===----------------------------------------------------------------------===//
+
+defvar PPC32 = DefaultMode;
+def PPC64 : HwMode<[IsPPC64]>;
 
 // Since new processors generally contain a superset of features of those that
 // came before them, the idea is to make implementations of new processors
@@ -377,7 +467,7 @@ def ProcessorFeatures {
                                                   FeaturePOPCNTD,
                                                   FeatureCMPB,
                                                   FeatureLDBRX,
-                                                  Feature64Bit,
+                                                  Feature64BitSupport,
                                                   /* Feature64BitRegs, */
                                                   FeatureBPERMD,
                                                   FeatureExtDiv,
@@ -396,7 +486,6 @@ def ProcessorFeatures {
      FeatureP8Altivec,
      FeatureP8Vector,
      FeatureP8Crypto,
-     FeatureHTM,
      FeatureDirectMove,
      FeatureICBT,
      FeaturePartwordAtomic,
@@ -407,6 +496,7 @@ def ProcessorFeatures {
     ];
 
   list<SubtargetFeature> P8SpecificFeatures = [FeatureAddiLoadFusion,
+                                               FeatureHTM,
                                                FeatureAddisLoadFusion];
   list<SubtargetFeature> P8InheritableFeatures =
     !listconcat(P7InheritableFeatures, P8AdditionalFeatures);
@@ -420,8 +510,7 @@ def ProcessorFeatures {
      FeatureP9Vector,
      FeaturePPCPreRASched,
      FeaturePPCPostRASched,
-     FeatureISA3_0,
-     FeaturePredictableSelectIsExpensive
+     FeatureISA3_0
     ];
 
   // Some features are unique to Power9 and there is no reason to assume
@@ -429,7 +518,7 @@ def ProcessorFeatures {
   // dispatch for vector operations than scalar ones. For the time being,
   // this list also includes scheduling-related features since we do not have
   // enough info to create custom scheduling strategies for future CPUs.
-  list<SubtargetFeature> P9SpecificFeatures = [FeatureVectorsUseTwoUnits];
+  list<SubtargetFeature> P9SpecificFeatures = [FeatureVectorsUseTwoUnits, FeatureHTM];
   list<SubtargetFeature> P9InheritableFeatures =
     !listconcat(P8InheritableFeatures, P9AdditionalFeatures);
   list<SubtargetFeature> P9Features =
@@ -453,13 +542,26 @@ def ProcessorFeatures {
   list<SubtargetFeature> P10Features =
     !listconcat(P10InheritableFeatures, P10SpecificFeatures);
 
-  // Future
-  // For future CPU we assume that all of the existing features from Power10
+  // Power11
+  // For P11 CPU we assume that all the existing features from Power10
   // still exist with the exception of those we know are Power10 specific.
-  list<SubtargetFeature> FutureAdditionalFeatures = [FeatureISAFuture];
+  list<SubtargetFeature> P11AdditionalFeatures =
+    [DirectivePwr11];
+  list<SubtargetFeature> P11SpecificFeatures =
+    [];
+  list<SubtargetFeature> P11InheritableFeatures =
+    !listconcat(P10InheritableFeatures, P11AdditionalFeatures);
+  list<SubtargetFeature> P11Features =
+    !listconcat(P11InheritableFeatures, P11SpecificFeatures);
+
+  // Future
+  // For future CPU we assume that all of the existing features from Power11
+  // still exist with the exception of those we know are Power11 specific.
+  list<SubtargetFeature> FutureAdditionalFeatures = [DirectivePwrFuture,
+                                                     FeatureISAFuture];
   list<SubtargetFeature> FutureSpecificFeatures = [];
   list<SubtargetFeature> FutureInheritableFeatures =
-    !listconcat(P10InheritableFeatures, FutureAdditionalFeatures);
+    !listconcat(P11InheritableFeatures, FutureAdditionalFeatures);
   list<SubtargetFeature> FutureFeatures =
     !listconcat(FutureInheritableFeatures, FutureSpecificFeatures);
 }
@@ -522,6 +624,18 @@ def getAltVSXFMAOpcode : InstrMapping {
   // The key column are the (default) addend-killing instructions.
   let KeyCol = ["0"];
   // Value columns IsVSXFMAAlt=1
+  let ValueCols = [["1"]];
+}
+
+def get64BitInstrFromSignedExt32BitInstr : InstrMapping {
+  let FilterClass = "SExt32To64";
+  // Instructions with the same opcode.
+  let RowFields = ["Inst"];
+  // Instructions with the same Interpretation64Bit value form a column.
+  let ColFields = ["Interpretation64Bit"];
+  // The key column are not the Interpretation64Bit-form instructions.
+  let KeyCol = ["0"];
+  // Value columns are the Interpretation64Bit-form instructions.
   let ValueCols = [["1"]];
 }
 
@@ -591,13 +705,13 @@ def : ProcessorModel<"970", G5Model,
                   [Directive970, FeatureAltivec,
                    FeatureMFOCRF, FeatureFSqrt,
                    FeatureFRES, FeatureFRSQRTE, FeatureSTFIWX,
-                   Feature64Bit /*, Feature64BitRegs */,
+                   Feature64BitSupport /*, Feature64BitRegs */,
                    FeatureMFTB]>;
 def : ProcessorModel<"g5", G5Model,
                   [Directive970, FeatureAltivec,
                    FeatureMFOCRF, FeatureFSqrt, FeatureSTFIWX,
                    FeatureFRES, FeatureFRSQRTE,
-                   Feature64Bit /*, Feature64BitRegs */,
+                   Feature64BitSupport /*, Feature64BitRegs */,
                    FeatureMFTB, DeprecatedDST]>;
 def : ProcessorModel<"e500", PPCE500Model,
                   [DirectiveE500,
@@ -608,7 +722,7 @@ def : ProcessorModel<"e500mc", PPCE500mcModel,
                    FeatureSTFIWX, FeatureICBT, FeatureBookE,
                    FeatureISEL, FeatureMFTB]>;
 def : ProcessorModel<"e5500", PPCE5500Model,
-                  [DirectiveE5500, FeatureMFOCRF, Feature64Bit,
+                  [DirectiveE5500, FeatureMFOCRF, Feature64BitSupport,
                    FeatureSTFIWX, FeatureICBT, FeatureBookE,
                    FeatureISEL, FeatureMFTB]>;
 def : ProcessorModel<"a2", PPCA2Model,
@@ -618,46 +732,47 @@ def : ProcessorModel<"a2", PPCA2Model,
                    FeatureSTFIWX, FeatureLFIWAX,
                    FeatureFPRND, FeatureFPCVT, FeatureISEL,
                    FeatureSlowPOPCNTD, FeatureCMPB, FeatureLDBRX,
-                   Feature64Bit /*, Feature64BitRegs */, FeatureMFTB,
+                   Feature64BitSupport /*, Feature64BitRegs */, FeatureMFTB,
                    FeatureISA2_06]>;
 def : ProcessorModel<"pwr3", G5Model,
                   [DirectivePwr3, FeatureAltivec,
                    FeatureFRES, FeatureFRSQRTE, FeatureMFOCRF,
-                   FeatureSTFIWX, Feature64Bit]>;
+                   FeatureSTFIWX, Feature64BitSupport]>;
 def : ProcessorModel<"pwr4", G5Model,
                   [DirectivePwr4, FeatureAltivec, FeatureMFOCRF,
                    FeatureFSqrt, FeatureFRES, FeatureFRSQRTE,
-                   FeatureSTFIWX, Feature64Bit, FeatureMFTB]>;
+                   FeatureSTFIWX, Feature64BitSupport, FeatureMFTB]>;
 def : ProcessorModel<"pwr5", G5Model,
                   [DirectivePwr5, FeatureAltivec, FeatureMFOCRF,
                    FeatureFSqrt, FeatureFRE, FeatureFRES,
                    FeatureFRSQRTE, FeatureFRSQRTES,
-                   FeatureSTFIWX, Feature64Bit,
+                   FeatureSTFIWX, Feature64BitSupport,
                    FeatureMFTB, DeprecatedDST]>;
 def : ProcessorModel<"pwr5x", G5Model,
                   [DirectivePwr5x, FeatureAltivec, FeatureMFOCRF,
                    FeatureFSqrt, FeatureFRE, FeatureFRES,
                    FeatureFRSQRTE, FeatureFRSQRTES,
-                   FeatureSTFIWX, FeatureFPRND, Feature64Bit,
+                   FeatureSTFIWX, FeatureFPRND, Feature64BitSupport,
                    FeatureMFTB, DeprecatedDST]>;
 def : ProcessorModel<"pwr6", G5Model,
                   [DirectivePwr6, FeatureAltivec,
                    FeatureMFOCRF, FeatureFCPSGN, FeatureFSqrt, FeatureFRE,
                    FeatureFRES, FeatureFRSQRTE, FeatureFRSQRTES,
                    FeatureRecipPrec, FeatureSTFIWX, FeatureLFIWAX, FeatureCMPB,
-                   FeatureFPRND, Feature64Bit /*, Feature64BitRegs */,
+                   FeatureFPRND, Feature64BitSupport /*, Feature64BitRegs */,
                    FeatureMFTB, DeprecatedDST]>;
 def : ProcessorModel<"pwr6x", G5Model,
                   [DirectivePwr5x, FeatureAltivec, FeatureMFOCRF,
                    FeatureFCPSGN, FeatureFSqrt, FeatureFRE, FeatureFRES,
                    FeatureFRSQRTE, FeatureFRSQRTES, FeatureRecipPrec,
                    FeatureSTFIWX, FeatureLFIWAX, FeatureCMPB,
-                   FeatureFPRND, Feature64Bit,
+                   FeatureFPRND, Feature64BitSupport,
                    FeatureMFTB, DeprecatedDST]>;
 def : ProcessorModel<"pwr7", P7Model, ProcessorFeatures.P7Features>;
 def : ProcessorModel<"pwr8", P8Model, ProcessorFeatures.P8Features>;
 def : ProcessorModel<"pwr9", P9Model, ProcessorFeatures.P9Features>;
 def : ProcessorModel<"pwr10", P10Model, ProcessorFeatures.P10Features>;
+def : ProcessorModel<"pwr11", P10Model, ProcessorFeatures.P11Features>;
 // No scheduler model for future CPU.
 def : ProcessorModel<"future", NoSchedModel,
                   ProcessorFeatures.FutureFeatures>;
@@ -669,7 +784,7 @@ def : ProcessorModel<"ppc64", G5Model,
                   [Directive64, FeatureAltivec,
                    FeatureMFOCRF, FeatureFSqrt, FeatureFRES,
                    FeatureFRSQRTE, FeatureSTFIWX,
-                   Feature64Bit /*, Feature64BitRegs */,
+                   Feature64BitSupport /*, Feature64BitRegs */,
                    FeatureMFTB]>;
 def : ProcessorModel<"ppc64le", P8Model, ProcessorFeatures.P8Features>;
 
@@ -691,7 +806,8 @@ def PPCAsmWriter : AsmWriter {
 }
 
 def PPCAsmParser : AsmParser {
-  let ShouldEmitMatchRegisterName = 0;
+  let ShouldEmitMatchRegisterName = 1;
+  let AllowDuplicateRegisterNames = 1;
 }
 
 def PPCAsmParserVariant : AsmParserVariant {
@@ -703,6 +819,8 @@ def PPCAsmParserVariant : AsmParserVariant {
   string RegisterPrefix = "%";
   string BreakCharacters = ".";
 }
+
+defm : RemapAllTargetPseudoPointerOperands<ppc_ptr_rc>;
 
 def PPC : Target {
   // Information about the instructions.

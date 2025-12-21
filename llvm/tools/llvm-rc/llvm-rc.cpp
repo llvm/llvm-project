@@ -26,7 +26,6 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FileUtilities.h"
-#include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
@@ -58,12 +57,13 @@ enum ID {
 };
 
 namespace rc_opt {
-#define PREFIX(NAME, VALUE)                                                    \
-  static constexpr StringLiteral NAME##_init[] = VALUE;                        \
-  static constexpr ArrayRef<StringLiteral> NAME(NAME##_init,                   \
-                                                std::size(NAME##_init) - 1);
+#define OPTTABLE_STR_TABLE_CODE
 #include "Opts.inc"
-#undef PREFIX
+#undef OPTTABLE_STR_TABLE_CODE
+
+#define OPTTABLE_PREFIXES_TABLE_CODE
+#include "Opts.inc"
+#undef OPTTABLE_PREFIXES_TABLE_CODE
 
 static constexpr opt::OptTable::Info InfoTable[] = {
 #define OPTION(...) LLVM_CONSTRUCT_OPT_INFO(__VA_ARGS__),
@@ -74,7 +74,10 @@ static constexpr opt::OptTable::Info InfoTable[] = {
 
 class RcOptTable : public opt::GenericOptTable {
 public:
-  RcOptTable() : GenericOptTable(rc_opt::InfoTable, /* IgnoreCase = */ true) {}
+  RcOptTable()
+      : GenericOptTable(rc_opt::OptionStrTable, rc_opt::OptionPrefixesTable,
+                        rc_opt::InfoTable,
+                        /* IgnoreCase = */ true) {}
 };
 
 enum Windres_ID {
@@ -85,12 +88,13 @@ enum Windres_ID {
 };
 
 namespace windres_opt {
-#define PREFIX(NAME, VALUE)                                                    \
-  static constexpr StringLiteral NAME##_init[] = VALUE;                        \
-  static constexpr ArrayRef<StringLiteral> NAME(NAME##_init,                   \
-                                                std::size(NAME##_init) - 1);
+#define OPTTABLE_STR_TABLE_CODE
 #include "WindresOpts.inc"
-#undef PREFIX
+#undef OPTTABLE_STR_TABLE_CODE
+
+#define OPTTABLE_PREFIXES_TABLE_CODE
+#include "WindresOpts.inc"
+#undef OPTTABLE_PREFIXES_TABLE_CODE
 
 static constexpr opt::OptTable::Info InfoTable[] = {
 #define OPTION(...)                                                            \
@@ -103,7 +107,10 @@ static constexpr opt::OptTable::Info InfoTable[] = {
 class WindresOptTable : public opt::GenericOptTable {
 public:
   WindresOptTable()
-      : GenericOptTable(windres_opt::InfoTable, /* IgnoreCase = */ false) {}
+      : GenericOptTable(windres_opt::OptionStrTable,
+                        windres_opt::OptionPrefixesTable,
+                        windres_opt::InfoTable,
+                        /* IgnoreCase = */ false) {}
 };
 
 static ExitOnError ExitOnErr;
@@ -194,7 +201,7 @@ std::string getMingwTriple() {
   Triple T(sys::getDefaultTargetTriple());
   if (!isUsableArch(T.getArch()))
     T.setArch(getDefaultFallbackArch());
-  if (T.isWindowsGNUEnvironment())
+  if (T.isOSCygMing())
     return T.str();
   // Write out the literal form of the vendor/env here, instead of
   // constructing them with enum values (which end up with them in
@@ -209,7 +216,7 @@ struct RcOptions {
   bool Preprocess = true;
   bool PrintCmdAndExit = false;
   std::string Triple;
-  std::vector<std::string> PreprocessCmd;
+  std::optional<std::string> Preprocessor;
   std::vector<std::string> PreprocessArgs;
 
   std::string InputFile;
@@ -229,7 +236,7 @@ struct RcOptions {
 void preprocess(StringRef Src, StringRef Dst, const RcOptions &Opts,
                 const char *Argv0) {
   std::string Clang;
-  if (Opts.PrintCmdAndExit || !Opts.PreprocessCmd.empty()) {
+  if (Opts.PrintCmdAndExit || Opts.Preprocessor) {
     Clang = "clang";
   } else {
     ErrorOr<std::string> ClangOrErr = findClang(Argv0, Opts.Triple);
@@ -248,16 +255,21 @@ void preprocess(StringRef Src, StringRef Dst, const RcOptions &Opts,
   SmallVector<StringRef, 8> Args = {
       Clang, "--driver-mode=gcc", "-target", Opts.Triple, "-E",
       "-xc", "-DRC_INVOKED"};
-  if (!Opts.PreprocessCmd.empty()) {
+  std::string PreprocessorExecutable;
+  if (Opts.Preprocessor) {
     Args.clear();
-    for (const auto &S : Opts.PreprocessCmd)
-      Args.push_back(S);
+    Args.push_back(*Opts.Preprocessor);
+    if (!sys::fs::can_execute(Args[0])) {
+      if (auto P = sys::findProgramByName(Args[0])) {
+        PreprocessorExecutable = *P;
+        Args[0] = PreprocessorExecutable;
+      }
+    }
   }
+  llvm::append_range(Args, Opts.PreprocessArgs);
   Args.push_back(Src);
   Args.push_back("-o");
   Args.push_back(Dst);
-  for (const auto &S : Opts.PreprocessArgs)
-    Args.push_back(S);
   if (Opts.PrintCmdAndExit || Opts.BeVerbose) {
     for (const auto &A : Args) {
       outs() << " ";
@@ -269,9 +281,15 @@ void preprocess(StringRef Src, StringRef Dst, const RcOptions &Opts,
   }
   // The llvm Support classes don't handle reading from stdout of a child
   // process; otherwise we could avoid using a temp file.
-  int Res = sys::ExecuteAndWait(Args[0], Args);
+  std::string ErrMsg;
+  int Res =
+      sys::ExecuteAndWait(Args[0], Args, /*Env=*/std::nullopt, /*Redirects=*/{},
+                          /*SecondsToWait=*/0, /*MemoryLimit=*/0, &ErrMsg);
   if (Res) {
-    fatalError("llvm-rc: Preprocessing failed.");
+    if (!ErrMsg.empty())
+      fatalError("llvm-rc: Preprocessing failed: " + ErrMsg);
+    else
+      fatalError("llvm-rc: Preprocessing failed.");
   }
 }
 
@@ -329,36 +347,6 @@ std::string unescape(StringRef S) {
   return Out;
 }
 
-std::vector<std::string> unescapeSplit(StringRef S) {
-  std::vector<std::string> OutArgs;
-  std::string Out;
-  bool InQuote = false;
-  for (int I = 0, E = S.size(); I < E; I++) {
-    if (S[I] == '\\') {
-      if (I + 1 < E)
-        Out.push_back(S[++I]);
-      else
-        fatalError("Unterminated escape");
-      continue;
-    }
-    if (S[I] == '"') {
-      InQuote = !InQuote;
-      continue;
-    }
-    if (S[I] == ' ' && !InQuote) {
-      OutArgs.push_back(Out);
-      Out.clear();
-      continue;
-    }
-    Out.push_back(S[I]);
-  }
-  if (InQuote)
-    fatalError("Unterminated quote");
-  if (!Out.empty())
-    OutArgs.push_back(Out);
-  return OutArgs;
-}
-
 RcOptions parseWindresOptions(ArrayRef<const char *> ArgsArr,
                               ArrayRef<const char *> InputArgsArray,
                               std::string Prefix) {
@@ -383,7 +371,7 @@ RcOptions parseWindresOptions(ArrayRef<const char *> ArgsArr,
   }
 
   std::vector<std::string> FileArgs = InputArgs.getAllArgValues(WINDRES_INPUT);
-  FileArgs.insert(FileArgs.end(), InputArgsArray.begin(), InputArgsArray.end());
+  llvm::append_range(FileArgs, InputArgsArray);
 
   if (InputArgs.hasArg(WINDRES_input)) {
     Opts.InputFile = InputArgs.getLastArgValue(WINDRES_input).str();
@@ -493,11 +481,8 @@ RcOptions parseWindresOptions(ArrayRef<const char *> ArgsArr,
       break;
     }
   }
-  // TODO: If --use-temp-file is set, we shouldn't be unescaping
-  // the --preprocessor argument either, only splitting it.
   if (InputArgs.hasArg(WINDRES_preprocessor))
-    Opts.PreprocessCmd =
-        unescapeSplit(InputArgs.getLastArgValue(WINDRES_preprocessor));
+    Opts.Preprocessor = InputArgs.getLastArgValue(WINDRES_preprocessor);
 
   Opts.Params.CodePage = CpWin1252; // Different default
   if (InputArgs.hasArg(WINDRES_codepage)) {
@@ -534,8 +519,7 @@ RcOptions parseRcOptions(ArrayRef<const char *> ArgsArr,
   }
 
   std::vector<std::string> InArgsInfo = InputArgs.getAllArgValues(OPT_INPUT);
-  InArgsInfo.insert(InArgsInfo.end(), InputArgsArray.begin(),
-                    InputArgsArray.end());
+  llvm::append_range(InArgsInfo, InputArgsArray);
   if (InArgsInfo.size() != 1) {
     fatalError("Exactly one input file should be provided.");
   }
@@ -583,7 +567,7 @@ RcOptions parseRcOptions(ArrayRef<const char *> ArgsArr,
     SmallString<128> OutputFile(Opts.InputFile);
     llvm::sys::fs::make_absolute(OutputFile);
     llvm::sys::path::replace_extension(OutputFile, "res");
-    OutArgsInfo.push_back(std::string(OutputFile.str()));
+    OutArgsInfo.push_back(std::string(OutputFile));
   }
   if (!Opts.IsDryRun) {
     if (OutArgsInfo.size() != 1)
@@ -625,7 +609,7 @@ void doRc(std::string Src, std::string Dest, RcOptions &Opts,
 
   // Read and tokenize the input file.
   ErrorOr<std::unique_ptr<MemoryBuffer>> File =
-      MemoryBuffer::getFile(PreprocessedFile);
+      MemoryBuffer::getFile(PreprocessedFile, /*IsText=*/true);
   if (!File) {
     fatalError("Error opening file '" + Twine(PreprocessedFile) +
                "': " + File.getError().message());
@@ -635,7 +619,8 @@ void doRc(std::string Src, std::string Dest, RcOptions &Opts,
   StringRef Contents = FileContents->getBuffer();
 
   std::string FilteredContents = filterCppOutput(Contents);
-  std::vector<RCToken> Tokens = ExitOnErr(tokenizeRC(FilteredContents));
+  std::vector<RCToken> Tokens =
+      ExitOnErr(tokenizeRC(FilteredContents, Opts.IsWindres));
 
   if (Opts.BeVerbose) {
     const Twine TokenNames[] = {
@@ -704,7 +689,7 @@ void doCvtres(std::string Src, std::string Dest, std::string TargetTriple) {
   object::WindowsResourceParser Parser;
 
   ErrorOr<std::unique_ptr<MemoryBuffer>> BufferOrErr =
-      MemoryBuffer::getFile(Src);
+      MemoryBuffer::getFile(Src, /*IsText=*/true);
   if (!BufferOrErr)
     fatalError("Error opening file '" + Twine(Src) +
                "': " + BufferOrErr.getError().message());
@@ -732,7 +717,10 @@ void doCvtres(std::string Src, std::string Dest, std::string TargetTriple) {
     MachineType = COFF::IMAGE_FILE_MACHINE_ARMNT;
     break;
   case Triple::aarch64:
-    MachineType = COFF::IMAGE_FILE_MACHINE_ARM64;
+    if (T.isWindowsArm64EC())
+      MachineType = COFF::IMAGE_FILE_MACHINE_ARM64EC;
+    else
+      MachineType = COFF::IMAGE_FILE_MACHINE_ARM64;
     break;
   default:
     fatalError("Unsupported architecture in target '" + Twine(TargetTriple) +
@@ -752,7 +740,6 @@ void doCvtres(std::string Src, std::string Dest, std::string TargetTriple) {
 } // anonymous namespace
 
 int llvm_rc_main(int Argc, char **Argv, const llvm::ToolContext &) {
-  InitLLVM X(Argc, Argv);
   ExitOnErr.setBanner("llvm-rc: ");
 
   char **DashDash = std::find_if(Argv + 1, Argv + Argc,

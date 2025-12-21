@@ -15,16 +15,16 @@
 |*                                                                            *|
 \*===----------------------------------------------------------------------===*/
 
-#include <assert.h>
-#include <stdlib.h>
-#include <string.h>
+#include "llvm_ocaml.h"
+#include "caml/callback.h"
+#include "caml/fail.h"
+#include "caml/memory.h"
 #include "llvm-c/Core.h"
 #include "llvm-c/Support.h"
 #include "llvm/Config/llvm-config.h"
-#include "caml/memory.h"
-#include "caml/fail.h"
-#include "caml/callback.h"
-#include "llvm_ocaml.h"
+#include <assert.h>
+#include <stdlib.h>
+#include <string.h>
 
 #if OCAML_VERSION < 41200
 value caml_alloc_some(value v) {
@@ -239,7 +239,9 @@ value llvm_dispose_context(value C) {
 }
 
 /* unit -> llcontext */
-value llvm_global_context(value Unit) { return to_val(LLVMGetGlobalContext()); }
+value llvm_global_context(value Unit) {
+  return to_val(LLVMGetGlobalContext());
+}
 
 /* llcontext -> string -> int */
 value llvm_mdkind_id(value C, value Name) {
@@ -687,8 +689,18 @@ value llvm_label_type(value Context) {
 }
 
 /* llcontext -> lltype */
-value llvm_x86_mmx_type(value Context) {
-  return to_val(LLVMX86MMXTypeInContext(Context_val(Context)));
+value llvm_x86_amx_type(value Context) {
+  return to_val(LLVMX86AMXTypeInContext(Context_val(Context)));
+}
+
+/* llcontext -> lltype */
+value llvm_token_type(value Context) {
+  return to_val(LLVMTokenTypeInContext(Context_val(Context)));
+}
+
+/* llcontext -> lltype */
+value llvm_metadata_type(value Context) {
+  return to_val(LLVMMetadataTypeInContext(Context_val(Context)));
 }
 
 /* llmodule -> string -> lltype option */
@@ -794,6 +806,15 @@ value llvm_dump_value(value Val) {
 /* llvalue -> string */
 value llvm_string_of_llvalue(value M) {
   char *ValueCStr = LLVMPrintValueToString(Value_val(M));
+  value ValueStr = caml_copy_string(ValueCStr);
+  LLVMDisposeMessage(ValueCStr);
+
+  return ValueStr;
+}
+
+/* lldbgrecord -> string */
+value llvm_string_of_lldbgrecord(value Record) {
+  char *ValueCStr = LLVMPrintDbgRecordToString(DbgRecord_val(Record));
   value ValueStr = caml_copy_string(ValueCStr);
   LLVMDisposeMessage(ValueCStr);
 
@@ -1043,14 +1064,14 @@ value llvm_const_float_of_string(value RealTy, value S) {
 
 /* llcontext -> string -> llvalue */
 value llvm_const_string(value Context, value Str) {
-  return to_val(LLVMConstStringInContext(Context_val(Context), String_val(Str),
-                                         caml_string_length(Str), 1));
+  return to_val(LLVMConstStringInContext2(Context_val(Context), String_val(Str),
+                                          caml_string_length(Str), 1));
 }
 
 /* llcontext -> string -> llvalue */
 value llvm_const_stringz(value Context, value Str) {
-  return to_val(LLVMConstStringInContext(Context_val(Context), String_val(Str),
-                                         caml_string_length(Str), 0));
+  return to_val(LLVMConstStringInContext2(Context_val(Context), String_val(Str),
+                                          caml_string_length(Str), 0));
 }
 
 /* lltype -> llvalue array -> llvalue */
@@ -1144,12 +1165,6 @@ value llvm_const_nsw_neg(value Value) {
 }
 
 /* llvalue -> llvalue */
-value llvm_const_nuw_neg(value Value) {
-  LLVMValueRef NegValue = LLVMConstNUWNeg(Value_val(Value));
-  return to_val(NegValue);
-}
-
-/* llvalue -> llvalue */
 value llvm_const_not(value Value) {
   LLVMValueRef NotValue = LLVMConstNot(Value_val(Value));
   return to_val(NotValue);
@@ -1192,56 +1207,8 @@ value llvm_const_nuw_sub(value LHS, value RHS) {
 }
 
 /* llvalue -> llvalue -> llvalue */
-value llvm_const_mul(value LHS, value RHS) {
-  LLVMValueRef Value = LLVMConstMul(Value_val(LHS), Value_val(RHS));
-  return to_val(Value);
-}
-
-/* llvalue -> llvalue -> llvalue */
-value llvm_const_nsw_mul(value LHS, value RHS) {
-  LLVMValueRef Value = LLVMConstNSWMul(Value_val(LHS), Value_val(RHS));
-  return to_val(Value);
-}
-
-/* llvalue -> llvalue -> llvalue */
-value llvm_const_nuw_mul(value LHS, value RHS) {
-  LLVMValueRef Value = LLVMConstNUWMul(Value_val(LHS), Value_val(RHS));
-  return to_val(Value);
-}
-
-/* llvalue -> llvalue -> llvalue */
 value llvm_const_xor(value LHS, value RHS) {
   LLVMValueRef Value = LLVMConstXor(Value_val(LHS), Value_val(RHS));
-  return to_val(Value);
-}
-
-/* Icmp.t -> llvalue -> llvalue -> llvalue */
-value llvm_const_icmp(value Pred, value LHSConstant, value RHSConstant) {
-  return to_val(LLVMConstICmp(Int_val(Pred) + LLVMIntEQ, Value_val(LHSConstant),
-                              Value_val(RHSConstant)));
-}
-
-/* Fcmp.t -> llvalue -> llvalue -> llvalue */
-value llvm_const_fcmp(value Pred, value LHSConstant, value RHSConstant) {
-  return to_val(LLVMConstFCmp(Int_val(Pred), Value_val(LHSConstant),
-                              Value_val(RHSConstant)));
-}
-
-/* llvalue -> llvalue -> llvalue */
-value llvm_const_shl(value LHS, value RHS) {
-  LLVMValueRef Value = LLVMConstShl(Value_val(LHS), Value_val(RHS));
-  return to_val(Value);
-}
-
-/* llvalue -> llvalue -> llvalue */
-value llvm_const_lshr(value LHS, value RHS) {
-  LLVMValueRef Value = LLVMConstLShr(Value_val(LHS), Value_val(RHS));
-  return to_val(Value);
-}
-
-/* llvalue -> llvalue -> llvalue */
-value llvm_const_ashr(value LHS, value RHS) {
-  LLVMValueRef Value = LLVMConstAShr(Value_val(LHS), Value_val(RHS));
   return to_val(Value);
 }
 
@@ -1272,54 +1239,6 @@ value llvm_const_trunc(value CV, value T) {
 }
 
 /* llvalue -> lltype -> llvalue */
-value llvm_const_sext(value CV, value T) {
-  LLVMValueRef Value = LLVMConstSExt(Value_val(CV), Type_val(T));
-  return to_val(Value);
-}
-
-/* llvalue -> lltype -> llvalue */
-value llvm_const_zext(value CV, value T) {
-  LLVMValueRef Value = LLVMConstZExt(Value_val(CV), Type_val(T));
-  return to_val(Value);
-}
-
-/* llvalue -> lltype -> llvalue */
-value llvm_const_fptrunc(value CV, value T) {
-  LLVMValueRef Value = LLVMConstFPTrunc(Value_val(CV), Type_val(T));
-  return to_val(Value);
-}
-
-/* llvalue -> lltype -> llvalue */
-value llvm_const_fpext(value CV, value T) {
-  LLVMValueRef Value = LLVMConstFPExt(Value_val(CV), Type_val(T));
-  return to_val(Value);
-}
-
-/* llvalue -> lltype -> llvalue */
-value llvm_const_uitofp(value CV, value T) {
-  LLVMValueRef Value = LLVMConstUIToFP(Value_val(CV), Type_val(T));
-  return to_val(Value);
-}
-
-/* llvalue -> lltype -> llvalue */
-value llvm_const_sitofp(value CV, value T) {
-  LLVMValueRef Value = LLVMConstSIToFP(Value_val(CV), Type_val(T));
-  return to_val(Value);
-}
-
-/* llvalue -> lltype -> llvalue */
-value llvm_const_fptoui(value CV, value T) {
-  LLVMValueRef Value = LLVMConstFPToUI(Value_val(CV), Type_val(T));
-  return to_val(Value);
-}
-
-/* llvalue -> lltype -> llvalue */
-value llvm_const_fptosi(value CV, value T) {
-  LLVMValueRef Value = LLVMConstFPToSI(Value_val(CV), Type_val(T));
-  return to_val(Value);
-}
-
-/* llvalue -> lltype -> llvalue */
 value llvm_const_ptrtoint(value CV, value T) {
   LLVMValueRef Value = LLVMConstPtrToInt(Value_val(CV), Type_val(T));
   return to_val(Value);
@@ -1338,18 +1257,6 @@ value llvm_const_bitcast(value CV, value T) {
 }
 
 /* llvalue -> lltype -> llvalue */
-value llvm_const_zext_or_bitcast(value CV, value T) {
-  LLVMValueRef Value = LLVMConstZExtOrBitCast(Value_val(CV), Type_val(T));
-  return to_val(Value);
-}
-
-/* llvalue -> lltype -> llvalue */
-value llvm_const_sext_or_bitcast(value CV, value T) {
-  LLVMValueRef Value = LLVMConstSExtOrBitCast(Value_val(CV), Type_val(T));
-  return to_val(Value);
-}
-
-/* llvalue -> lltype -> llvalue */
 value llvm_const_trunc_or_bitcast(value CV, value T) {
   LLVMValueRef Value = LLVMConstTruncOrBitCast(Value_val(CV), Type_val(T));
   return to_val(Value);
@@ -1358,18 +1265,6 @@ value llvm_const_trunc_or_bitcast(value CV, value T) {
 /* llvalue -> lltype -> llvalue */
 value llvm_const_pointercast(value CV, value T) {
   LLVMValueRef Value = LLVMConstPointerCast(Value_val(CV), Type_val(T));
-  return to_val(Value);
-}
-
-/* llvalue -> lltype -> is_signed:bool -> llvalue */
-value llvm_const_intcast(value CV, value T, value IsSigned) {
-  return to_val(
-      LLVMConstIntCast(Value_val(CV), Type_val(T), Bool_val(IsSigned)));
-}
-
-/* llvalue -> lltype -> llvalue */
-value llvm_const_fpcast(value CV, value T) {
-  LLVMValueRef Value = LLVMConstFPCast(Value_val(CV), Type_val(T));
   return to_val(Value);
 }
 
@@ -1644,6 +1539,14 @@ value llvm_is_global_constant(value GlobalVar) {
 /* bool -> llvalue -> unit */
 value llvm_set_global_constant(value Flag, value GlobalVar) {
   LLVMSetGlobalConstant(Value_val(GlobalVar), Bool_val(Flag));
+  return Val_unit;
+}
+
+/* llvalue -> llmdkind -> llmetadata -> unit */
+value llvm_global_set_metadata(value Value, value MetadataKind,
+                               value Metadata) {
+  LLVMGlobalSetMetadata(Value_val(Value), (unsigned int)Int_val(MetadataKind),
+                        Metadata_val(Metadata));
   return Val_unit;
 }
 
@@ -2092,6 +1995,18 @@ value llvm_builder(value C) {
 }
 
 /* (llbasicblock, llvalue) llpos -> llbuilder -> unit */
+value llvm_position_builder_before_dbg_records(value Pos, value B) {
+  if (Tag_val(Pos) == 0) {
+    LLVMBasicBlockRef BB = BasicBlock_val(Field(Pos, 0));
+    LLVMPositionBuilderAtEnd(Builder_val(B), BB);
+  } else {
+    LLVMValueRef I = Value_val(Field(Pos, 0));
+    LLVMPositionBuilderBeforeInstrAndDbgRecords(Builder_val(B), I);
+  }
+  return Val_unit;
+}
+
+/* (llbasicblock, llvalue) llpos -> llbuilder -> unit */
 value llvm_position_builder(value Pos, value B) {
   if (Tag_val(Pos) == 0) {
     LLVMBasicBlockRef BB = BasicBlock_val(Field(Pos, 0));
@@ -2437,12 +2352,6 @@ value llvm_build_neg(value X, value Name, value B) {
 value llvm_build_nsw_neg(value X, value Name, value B) {
   return to_val(
       LLVMBuildNSWNeg(Builder_val(B), Value_val(X), String_val(Name)));
-}
-
-/* llvalue -> string -> llbuilder -> llvalue */
-value llvm_build_nuw_neg(value X, value Name, value B) {
-  return to_val(
-      LLVMBuildNUWNeg(Builder_val(B), Value_val(X), String_val(Name)));
 }
 
 /* llvalue -> string -> llbuilder -> llvalue */

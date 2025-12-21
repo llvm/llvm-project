@@ -1,7 +1,7 @@
+// REQUIRES: symlinks
+
 // Check that we canonicalize the module map path without changing the module
 // directory, which would break header lookup.
-
-// REQUIRES: shell
 
 // RUN: rm -rf %t
 // RUN: split-file %s %t
@@ -14,7 +14,7 @@
 
 // RUN: clang-scan-deps -compilation-database %t/cdb.json -j 1 \
 // RUN:   -format experimental-full  -mode=preprocess-dependency-directives \
-// RUN:   -optimize-args -module-files-dir %t/build > %t/deps.json
+// RUN:   -optimize-args=all -module-files-dir %t/build > %t/deps.json
 
 // RUN: cat %t/deps.json | sed 's:\\\\\?:/:g' | FileCheck -DPREFIX=%/t %s
 

@@ -91,8 +91,13 @@ Bind default visibility defined function symbols locally for
 .It Fl Bsymbolic-non-weak-functions
 Bind default visibility defined STB_GLOBAL function symbols locally for
 .Fl shared.
-.It Fl --be8
+.It Fl -be8
 Write a Big Endian ELF File using BE8 format(AArch32 only)
+.It Fl -branch-to-branch
+Enable the branch-to-branch optimizations: a branch whose target is
+another branch instruction is rewritten to point to the latter branch
+target (AArch64 and X86_64 only). Enabled by default at
+.Fl O2 Ns .
 .It Fl -build-id Ns = Ns Ar value
 Generate a build ID note.
 .Ar value
@@ -119,7 +124,7 @@ are calculated from the object contents.
 is not intended to be cryptographically secure.
 .It Fl -build-id
 Synonym for
-.Fl -build-id Ns = Ns Cm fast .
+.Fl -build-id Ns = Ns Cm sha1 .
 .It Fl -call-graph-profile-sort Ns = Ns Ar algorithm
 .Ar algorithm
 may be:
@@ -128,9 +133,9 @@ may be:
 .It Cm none
 Ignore call graph profile.
 .It Cm hfsort
-Use hfsort (default).
+Use hfsort.
 .It Cm cdsort
-Use cdsort.
+Use cdsort (default).
 .El
 .Pp
 .It Fl -color-diagnostics Ns = Ns Ar value
@@ -148,6 +153,7 @@ Alias for
 .Fl -color-diagnostics Ns = Ns Cm auto .
 .It Fl -compress-debug-sections Ns = Ns Ar value
 Compress DWARF debug sections.
+The sections remain uncompressed if compressed content would be larger.
 .Cm value
 may be
 .Pp
@@ -156,18 +162,31 @@ may be
 No compression.
 .It Cm zlib
 The default compression level is 1 (fastest) as the debug info usually
-compresses well at that level. If you want to compress it more,
-you can specify
-.Fl O2
-to set the compression level to 6.
+compresses well at that level.
 .It Cm zstd
-The compression level is 5.
+Use the default compression level in zstd.
 .El
 .Pp
+.It Fl -compress-sections Ns = Ns Ar section-glob={none,zlib,zstd}[:level]
+Compress output sections that match the glob and do not have the SHF_ALLOC flag.
+The matched sections remain uncompressed if compressed content would be larger.
+The compression level is
+.Cm level
+(if specified) or a default speed-focused level.
+This is like a generalized
+.Cm --compress-debug-sections.
 .It Fl -cref
 Output cross reference table. If
 .Fl Map
 is specified, print to the map file.
+.It Fl -debug-names
+Generate a merged
+.Li .debug_names
+section.
+.It Fl -default-script Ns = Ns Ar file , Fl dT Ar file
+In the absence of
+.Fl -script ,
+read this default linker script.
 .It Fl -defsym Ns = Ns Ar symbol Ns = Ns Ar expression
 Define a symbol alias.
 .Ar expression
@@ -210,6 +229,8 @@ segment header.
 Generate relocations in the output.
 .It Fl -enable-new-dtags
 Enable new dynamic tags.
+.It Fl -enable-non-contiguous-regions
+Spill input sections to later matching output sections to avoid memory region overflow.
 .It Fl -end-lib
 End a grouping of objects that should be treated as if they were together
 in an archive.
@@ -262,6 +283,8 @@ Set the
 field to the specified value.
 .It Fl -fini Ns = Ns Ar symbol
 Specify a finalizer function.
+.It Fl -force-group-allocation
+Only meaningful for -r. Section groups are discarded. If two section group members are placed to the same output section, combine their relocations as well.
 .It Fl -format Ns = Ns Ar input-format , Fl b Ar input-format
 Specify the format of the inputs following this option.
 .Ar input-format
@@ -374,6 +397,8 @@ Do not put read-only non-executable sections in their own segment.
 Do not report version scripts that refer to undefined symbols.
 .It Fl -no-undefined
 Report unresolved symbols even if the linker is creating a shared library.
+.It Fl -no-warn-mismatch
+Do not reject unknown section types.
 .It Fl -no-warn-symbol-ordering
 Do not warn about problems with the symbol ordering file or call graph profile.
 .It Fl -no-warnings , Fl w
@@ -394,7 +419,7 @@ If not specified,
 .Dv a.out
 is used as a default.
 .It Fl O Ns Ar value
-Optimize output file size.
+Optimize output file.
 .Ar value
 may be:
 .Pp
@@ -404,9 +429,7 @@ Disable string merging.
 .It Cm 1
 Enable string merging.
 .It Cm 2
-Enable string tail merging. If
-.Fl -compress-debug-sections
-is given, compress debug sections at compression level 6 instead of 1.
+Enable string tail merging and branch-to-branch optimization.
 .El
 .Pp
 .Fl O Ns Cm 1
@@ -475,6 +498,10 @@ If
 .Fl -use-android-relr-tags
 is specified, use SHT_ANDROID_RELR instead of SHT_RELR.
 .Pp
+.It Fl -package-metadata
+Emit a percent-encoded string to the
+.Cm .note.package
+section. For example, %25 decodes to a single %.
 .It Fl -pic-veneer
 Always generate position independent thunks.
 .It Fl -pie , Fl -pic-executable
@@ -495,6 +522,8 @@ Don't use.
 
 .It Fl -print-gc-sections
 List removed unused sections.
+.It Fl -print-gc-sections Ns = Ns Ar file
+List removed unused sections to the specified file.
 .It Fl -print-icf-sections
 List identical folded sections.
 .It Fl -print-map
@@ -511,6 +540,19 @@ and
 .It Fl -pop-state
 Restore the states saved by
 .Fl -push-state.
+.It Fl -randomize-section-padding Ns = Ns Ar seed
+Randomly insert padding between input sections and at the start of each segment using the given seed.
+Padding is inserted into output sections with names matching the following patterns:
+.Cm .bss ,
+.Cm .data ,
+.Cm .data.rel.ro ,
+.Cm .lbss ,
+.Cm .ldata ,
+.Cm .lrodata ,
+.Cm .ltext ,
+.Cm .rodata
+and
+.Cm .text* .
 .It Fl --relax-gp
 Enable global pointer relaxation for RISC-V.
 .It Fl -relocatable , Fl r
@@ -677,6 +719,19 @@ a given pattern are handled as if they were given as arguments of
 Creates a separate output section for every orphan input section.
 .It Fl -unresolved-symbols Ns = Ns Ar value
 Determine how to handle unresolved symbols.
+.Ar value
+may be:
+.Pp
+.Bl -tag -width 2n -compact
+.It Cm report-all
+Report unresolved symbols (default).
+.It Cm ignore-in-object-files
+Only report unresolved symbols contained in shared libraries.
+.It Cm ignore-in-shared-libs
+Only report unresolved symbols contained in object files.
+.It Cm ignore-all
+Do not report unresolved symbols.
+.El
 .It Fl -use-android-relr-tags
 Use SHT_ANDROID_RELR / DT_ANDROID_RELR* tags instead of SHT_RELR / DT_RELR*.
 .It Fl v , Fl V
@@ -720,6 +775,8 @@ Report unresolved symbols as warnings.
 Force load of all members in a static library.
 .It Fl -why-extract Ns = Ns Ar file
 Print to a file about why archive members are extracted.
+.It Fl -why-live Ns = Ns Ar glob
+Report a chain of references preventing garbage collection for each symbol matching the glob.
 .It Fl -wrap Ns = Ns Ar symbol
 Redirect
 .Ar symbol
@@ -753,6 +810,26 @@ is the default, linker will not report the missing property otherwise will be re
 .Pp
 .It Cm cet-report Ns = Ns Ar [none|warning|error]
 Specify how to report the missing GNU_PROPERTY_X86_FEATURE_1_IBT or GNU_PROPERTY_X86_FEATURE_1_SHSTK properties.
+.Cm none
+is the default, linker will not report the missing property otherwise will be reported as a warning or an error.
+.Pp
+.It Cm gcs-report Ns = Ns Ar [none|warning|error]
+Specify how to report missing
+.Cm GNU_PROPERTY_AARCH64_FEATURE_1_GCS
+property. GNU_PROPERTY_AARCH64_FEATURE_1_GCS indicates object file support for the Guarded Control Stack security feature.
+.Cm none
+is the default, linker will not report the missing property otherwise will be reported as a warning or an error.
+.Pp
+.It Cm dynamic-undefined-weak
+Make undefined weak symbols dynamic when the dynamic symbol table is present, if they are referenced from
+relocatable object files and not forced local by symbol visibility or versioning. Do not make them dynamic when
+.Cm nodynamic-undefined-weak
+is specified.
+.Cm dynamic-undefined-weak
+is the default when building a shared object, or when an input shared object is present.
+.Pp
+.It Cm pauth-report Ns = Ns Ar [none|warning|error]
+Specify how to report the missing GNU_PROPERTY_AARCH64_FEATURE_PAUTH property.
 .Cm none
 is the default, linker will not report the missing property otherwise will be reported as a warning or an error.
 .Pp
@@ -790,6 +867,9 @@ Set the
 flag to indicate to the runtime linker that the object is an interposer.
 During symbol resolution interposers are searched after the application
 but before other dependencies.
+.Pp
+.It Cm lrodata-after-bss
+Place .lrodata after .bss.
 .Pp
 .It Cm muldefs
 Do not error if a symbol is defined multiple times.
@@ -830,6 +910,9 @@ after initial relocation processing.
 The object will omit the
 .Dv PT_GNU_RELRO
 segment.
+.Pp
+.It Cm nosectionheader
+Don't generate the section header table.
 .Pp
 .It Cm notext
 Allow relocations against read-only segments.
@@ -892,6 +975,17 @@ disallows overlap.
 .It Cm shstk
 x86 only, use shadow stack.
 .Pp
+.It Cm gcs Ns = Ns Ar [implicit|never|always]
+Specifies how the
+.Cm GNU_PROPERTY_AARCH64_FEATURE_1_GCS
+bit is set in the output ELF file. When set, it indicates support for the Guarded Control Stack (GCS) security feature.
+.Cm implicit
+(default) The GCS feature bit is set if all input relocatable files have a .note.gnu.property section containing the GNU_PROPERTY_AARCH64_FEATURE_1_GCS bit.
+.Cm never
+clears the GCS feature bit regardless of input relocatable files' markings.
+.Cm always
+sets the GCS feature bit regardless of input object markings.
+.Pp
 .It Cm stack-size Ns = Ns Ar size
 Set the main thread's stack size to
 .Ar size .
@@ -909,6 +1003,11 @@ Let __start_/__stop_ references retain the associated C identifier name sections
 .It Cm text
 Do not allow relocations against read-only segments.
 This is the default.
+.Pp
+.It Cm nobtcfi
+Create a
+.Dv PT_OPENBSD_NOBTCFI
+segment.
 .Pp
 .It Cm wxneeded
 Create a

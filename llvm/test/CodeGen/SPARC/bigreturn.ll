@@ -5,7 +5,7 @@
 ;; Structs up to six registers in size can be returned in registers.
 ;; Note that the maximum return size and member placement is NOT
 ;; compatible with the C ABI - see SparcCallingConv.td.
-define { i32, i32 } @ret_i32_pair(i32 %a0, i32 %a1, i32* %p, i32* %q) {
+define { i32, i32 } @ret_i32_pair(i32 %a0, i32 %a1, ptr %p, ptr %q) {
 ; SPARC-LABEL: ret_i32_pair:
 ; SPARC:         .cfi_startproc
 ; SPARC-NEXT:  ! %bb.0:
@@ -33,15 +33,15 @@ define { i32, i32 } @ret_i32_pair(i32 %a0, i32 %a1, i32* %p, i32* %q) {
 ; SPARC64-NEXT:    restore
 ; SPARC64-NEXT:    retl
 ; SPARC64-NEXT:    nop
-  %r1 = load i32, i32* %p
+  %r1 = load i32, ptr %p
   %rv1 = insertvalue { i32, i32 } undef, i32 %r1, 0
-  store i32 0, i32* %p
-  %r2 = load i32, i32* %q
+  store i32 0, ptr %p
+  %r2 = load i32, ptr %q
   %rv2 = insertvalue { i32, i32 } %rv1, i32 %r2, 1
   ret { i32, i32 } %rv2
 }
 
-define void @call_ret_i32_pair(i32* %i0) {
+define void @call_ret_i32_pair(ptr %i0) {
 ; SPARC-LABEL: call_ret_i32_pair:
 ; SPARC:         .cfi_startproc
 ; SPARC-NEXT:  ! %bb.0:
@@ -72,11 +72,11 @@ define void @call_ret_i32_pair(i32* %i0) {
 ; SPARC64-NEXT:    retl
 ; SPARC64-NEXT:    nop
   %rv = call { i32, i32 } @ret_i32_pair(i32 undef, i32 undef,
-                                        i32* undef, i32* undef)
+                                        ptr undef, ptr undef)
   %e0 = extractvalue { i32, i32 } %rv, 0
-  store volatile i32 %e0, i32* %i0
+  store volatile i32 %e0, ptr %i0
   %e1 = extractvalue { i32, i32 } %rv, 1
-  store i32 %e1, i32* %i0
+  store i32 %e1, ptr %i0
   ret void
 }
 
@@ -92,9 +92,9 @@ define i32 @call_ret_i32_arr(i32 %0) {
 ; SPARC-NEXT:    .cfi_def_cfa_register %fp
 ; SPARC-NEXT:    .cfi_window_save
 ; SPARC-NEXT:    .cfi_register %o7, %i7
-; SPARC-NEXT:    add %fp, -64, %i1
-; SPARC-NEXT:    st %i1, [%sp+64]
 ; SPARC-NEXT:    mov %i0, %o0
+; SPARC-NEXT:    add %fp, -64, %i0
+; SPARC-NEXT:    st %i0, [%sp+64]
 ; SPARC-NEXT:    call ret_i32_arr
 ; SPARC-NEXT:    nop
 ; SPARC-NEXT:    unimp 64
@@ -110,8 +110,8 @@ define i32 @call_ret_i32_arr(i32 %0) {
 ; SPARC64-NEXT:    .cfi_def_cfa_register %fp
 ; SPARC64-NEXT:    .cfi_window_save
 ; SPARC64-NEXT:    .cfi_register %o7, %i7
-; SPARC64-NEXT:    add %fp, 1983, %o0
 ; SPARC64-NEXT:    mov %i0, %o1
+; SPARC64-NEXT:    add %fp, 1983, %o0
 ; SPARC64-NEXT:    call ret_i32_arr
 ; SPARC64-NEXT:    nop
 ; SPARC64-NEXT:    ld [%fp+2043], %i0
@@ -127,7 +127,7 @@ define i32 @call_ret_i32_arr(i32 %0) {
 ;; Structs up to six registers in size can be returned in registers.
 ;; Note that the maximum return size and member placement is NOT
 ;; compatible with the C ABI - see SparcCallingConv.td.
-define { i64, i64 } @ret_i64_pair(i32 %a0, i32 %a1, i64* %p, i64* %q) {
+define { i64, i64 } @ret_i64_pair(i32 %a0, i32 %a1, ptr %p, ptr %q) {
 ; SPARC-LABEL: ret_i64_pair:
 ; SPARC:         .cfi_startproc
 ; SPARC-NEXT:  ! %bb.0:
@@ -157,15 +157,15 @@ define { i64, i64 } @ret_i64_pair(i32 %a0, i32 %a1, i64* %p, i64* %q) {
 ; SPARC64-NEXT:    restore
 ; SPARC64-NEXT:    retl
 ; SPARC64-NEXT:    nop
-  %r1 = load i64, i64* %p
+  %r1 = load i64, ptr %p
   %rv1 = insertvalue { i64, i64 } undef, i64 %r1, 0
-  store i64 0, i64* %p
-  %r2 = load i64, i64* %q
+  store i64 0, ptr %p
+  %r2 = load i64, ptr %q
   %rv2 = insertvalue { i64, i64 } %rv1, i64 %r2, 1
   ret { i64, i64 } %rv2
 }
 
-define void @call_ret_i64_pair(i64* %i0) {
+define void @call_ret_i64_pair(ptr %i0) {
 ; SPARC-LABEL: call_ret_i64_pair:
 ; SPARC:         .cfi_startproc
 ; SPARC-NEXT:  ! %bb.0:
@@ -200,11 +200,11 @@ define void @call_ret_i64_pair(i64* %i0) {
 ; SPARC64-NEXT:    retl
 ; SPARC64-NEXT:    nop
   %rv = call { i64, i64 } @ret_i64_pair(i32 undef, i32 undef,
-                                        i64* undef, i64* undef)
+                                        ptr undef, ptr undef)
   %e0 = extractvalue { i64, i64 } %rv, 0
-  store volatile i64 %e0, i64* %i0
+  store volatile i64 %e0, ptr %i0
   %e1 = extractvalue { i64, i64 } %rv, 1
-  store i64 %e1, i64* %i0
+  store i64 %e1, ptr %i0
   ret void
 }
 
@@ -220,10 +220,10 @@ define i64 @call_ret_i64_arr(i64 %0) {
 ; SPARC-NEXT:    .cfi_def_cfa_register %fp
 ; SPARC-NEXT:    .cfi_window_save
 ; SPARC-NEXT:    .cfi_register %o7, %i7
-; SPARC-NEXT:    add %fp, -128, %i2
-; SPARC-NEXT:    st %i2, [%sp+64]
-; SPARC-NEXT:    mov %i0, %o0
 ; SPARC-NEXT:    mov %i1, %o1
+; SPARC-NEXT:    mov %i0, %o0
+; SPARC-NEXT:    add %fp, -128, %i0
+; SPARC-NEXT:    st %i0, [%sp+64]
 ; SPARC-NEXT:    call ret_i64_arr
 ; SPARC-NEXT:    nop
 ; SPARC-NEXT:    unimp 128
@@ -239,8 +239,8 @@ define i64 @call_ret_i64_arr(i64 %0) {
 ; SPARC64-NEXT:    .cfi_def_cfa_register %fp
 ; SPARC64-NEXT:    .cfi_window_save
 ; SPARC64-NEXT:    .cfi_register %o7, %i7
-; SPARC64-NEXT:    add %fp, 1919, %o0
 ; SPARC64-NEXT:    mov %i0, %o1
+; SPARC64-NEXT:    add %fp, 1919, %o0
 ; SPARC64-NEXT:    call ret_i64_arr
 ; SPARC64-NEXT:    nop
 ; SPARC64-NEXT:    ldx [%fp+2039], %i0

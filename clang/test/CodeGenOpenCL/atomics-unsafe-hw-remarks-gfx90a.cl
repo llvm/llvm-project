@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -cl-std=CL2.0 -O0 -triple=amdgcn-amd-amdhsa -target-cpu gfx90a \
-// RUN:     -Rpass=si-lower -munsafe-fp-atomics %s -S -emit-llvm -o - 2>&1 | \
+// RUN:     -Rpass=si-lower -munsafe-fp-atomics %s -emit-llvm -o - 2>&1 | \
 // RUN:     FileCheck %s --check-prefix=GFX90A-HW
 
 // RUN: %clang_cc1 -cl-std=CL2.0 -O0 -triple=amdgcn-amd-amdhsa -target-cpu gfx90a \
@@ -27,12 +27,13 @@ typedef enum memory_scope {
 #endif
 } memory_scope;
 
-// GFX90A-HW-REMARK: Hardware instruction generated for atomic fadd operation at memory scope workgroup-one-as due to an unsafe request. [-Rpass=si-lower]
-// GFX90A-HW-REMARK: Hardware instruction generated for atomic fadd operation at memory scope agent-one-as due to an unsafe request. [-Rpass=si-lower]
 // GFX90A-HW-REMARK: Hardware instruction generated for atomic fadd operation at memory scope wavefront-one-as due to an unsafe request. [-Rpass=si-lower]
-// GFX90A-HW-REMARK: global_atomic_add_f32 v0, v[0:1], v2, off glc
-// GFX90A-HW-REMARK: global_atomic_add_f32 v0, v[0:1], v2, off glc
-// GFX90A-HW-REMARK: global_atomic_add_f32 v0, v[0:1], v2, off glc
+// GFX90A-HW-REMARK: Hardware instruction generated for atomic fadd operation at memory scope agent-one-as due to an unsafe request. [-Rpass=si-lower]
+// GFX90A-HW-REMARK: Hardware instruction generated for atomic fadd operation at memory scope workgroup-one-as due to an unsafe request. [-Rpass=si-lower]
+
+// GFX90A-HW-REMARK: global_atomic_add_f32 v{{[0-9]+}}, v[{{[0-9]+}}:{{[0-9]+}}], v{{[0-9]+}}, off glc
+// GFX90A-HW-REMARK: global_atomic_add_f32 v{{[0-9]+}}, v[{{[0-9]+}}:{{[0-9]+}}], v{{[0-9]+}}, off glc
+// GFX90A-HW-REMARK: global_atomic_add_f32 v{{[0-9]+}}, v[{{[0-9]+}}:{{[0-9]+}}], v{{[0-9]+}}, off glc
 // GFX90A-HW-LABEL: @atomic_unsafe_hw
 // GFX90A-HW:   atomicrmw fadd ptr addrspace(1) %{{.*}}, float %{{.*}} syncscope("workgroup-one-as") monotonic, align 4
 // GFX90A-HW:   atomicrmw fadd ptr addrspace(1) %{{.*}}, float %{{.*}} syncscope("agent-one-as") monotonic, align 4

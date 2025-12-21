@@ -11,14 +11,14 @@ another if a mismatch is detected
 
 Casing types include:
 
- - ``lower_case``,
- - ``UPPER_CASE``,
- - ``camelBack``,
- - ``CamelCase``,
- - ``camel_Snake_Back``,
- - ``Camel_Snake_Case``,
- - ``aNy_CasE``,
- - ``Leading_upper_snake_case``.
+ - ``lower_case``
+ - ``UPPER_CASE``
+ - ``camelBack``
+ - ``CamelCase``
+ - ``camel_Snake_Back``
+ - ``Camel_Snake_Case``
+ - ``aNy_CasE``
+ - ``Leading_upper_snake_case``
 
 It also supports a fixed prefix and suffix that will be prepended or appended
 to the identifiers, regardless of the casing.
@@ -31,69 +31,197 @@ The naming of virtual methods is reported where they occur in the base class,
 but not where they are overridden, as it can't be fixed locally there.
 This also applies for pseudo-override patterns like CRTP.
 
-``Leading_upper_snake_case`` is a naming convention where the first word is capitalized
-followed by lower case word(s) seperated by underscore(s) '_'. Examples include:
-Cap_snake_case, Cobra_case, Foo_bar_baz, and Master_copy_8gb.
+``Leading_upper_snake_case`` is a naming convention where the first word is
+capitalized followed by lower case word(s) separated by underscore(s) '_'.
+Examples include: `Cap_snake_case`, `Cobra_case`, `Foo_bar_baz`,
+and `Master_copy_8gb`.
 
-Options
--------
+Hungarian notation can be customized using different *HungarianPrefix*
+settings. The options and their corresponding values are:
 
-The following options are described below:
+ - ``Off`` - the default setting
+ - ``On`` - example: ``int iVariable``
+ - ``LowerCase`` - example: ``int i_Variable``
+ - ``CamelCase`` - example: ``int IVariable``
 
- - :option:`AbstractClassCase`, :option:`AbstractClassPrefix`, :option:`AbstractClassSuffix`, :option:`AbstractClassIgnoredRegexp`, :option:`AbstractClassHungarianPrefix`
+Options summary
+---------------
+
+The available options are summarized below:
+
+**General options**
+
  - :option:`AggressiveDependentMemberLookup`
- - :option:`ClassCase`, :option:`ClassPrefix`, :option:`ClassSuffix`, :option:`ClassIgnoredRegexp`, :option:`ClassHungarianPrefix`
- - :option:`ClassConstantCase`, :option:`ClassConstantPrefix`, :option:`ClassConstantSuffix`, :option:`ClassConstantIgnoredRegexp`, :option:`ClassConstantHungarianPrefix`
- - :option:`ClassMemberCase`, :option:`ClassMemberPrefix`, :option:`ClassMemberSuffix`, :option:`ClassMemberIgnoredRegexp`, :option:`ClassMemberHungarianPrefix`
- - :option:`ClassMethodCase`, :option:`ClassMethodPrefix`, :option:`ClassMethodSuffix`, :option:`ClassMethodIgnoredRegexp`
- - :option:`ConstantCase`, :option:`ConstantPrefix`, :option:`ConstantSuffix`, :option:`ConstantIgnoredRegexp`, :option:`ConstantHungarianPrefix`
- - :option:`ConstantMemberCase`, :option:`ConstantMemberPrefix`, :option:`ConstantMemberSuffix`, :option:`ConstantMemberIgnoredRegexp`, :option:`ConstantMemberHungarianPrefix`
- - :option:`ConstantParameterCase`, :option:`ConstantParameterPrefix`, :option:`ConstantParameterSuffix`, :option:`ConstantParameterIgnoredRegexp`, :option:`ConstantParameterHungarianPrefix`
- - :option:`ConstantPointerParameterCase`, :option:`ConstantPointerParameterPrefix`, :option:`ConstantPointerParameterSuffix`, :option:`ConstantPointerParameterIgnoredRegexp`, :option:`ConstantPointerParameterHungarianPrefix`
- - :option:`ConstexprFunctionCase`, :option:`ConstexprFunctionPrefix`, :option:`ConstexprFunctionSuffix`, :option:`ConstexprFunctionIgnoredRegexp`
- - :option:`ConstexprMethodCase`, :option:`ConstexprMethodPrefix`, :option:`ConstexprMethodSuffix`, :option:`ConstexprMethodIgnoredRegexp`
- - :option:`ConstexprVariableCase`, :option:`ConstexprVariablePrefix`, :option:`ConstexprVariableSuffix`, :option:`ConstexprVariableIgnoredRegexp`, :option:`ConstexprVariableHungarianPrefix`
- - :option:`EnumCase`, :option:`EnumPrefix`, :option:`EnumSuffix`, :option:`EnumIgnoredRegexp`
- - :option:`EnumConstantCase`, :option:`EnumConstantPrefix`, :option:`EnumConstantSuffix`, :option:`EnumConstantIgnoredRegexp`, :option:`EnumConstantHungarianPrefix`
- - :option:`FunctionCase`, :option:`FunctionPrefix`, :option:`FunctionSuffix`, :option:`FunctionIgnoredRegexp`
+ - :option:`CheckAnonFieldInParent`
  - :option:`GetConfigPerFile`
- - :option:`GlobalConstantCase`, :option:`GlobalConstantPrefix`, :option:`GlobalConstantSuffix`, :option:`GlobalConstantIgnoredRegexp`, :option:`GlobalConstantHungarianPrefix`
- - :option:`GlobalConstantPointerCase`, :option:`GlobalConstantPointerPrefix`, :option:`GlobalConstantPointerSuffix`, :option:`GlobalConstantPointerIgnoredRegexp`, :option:`GlobalConstantPointerHungarianPrefix`
- - :option:`GlobalFunctionCase`, :option:`GlobalFunctionPrefix`, :option:`GlobalFunctionSuffix`, :option:`GlobalFunctionIgnoredRegexp`
- - :option:`GlobalPointerCase`, :option:`GlobalPointerPrefix`, :option:`GlobalPointerSuffix`, :option:`GlobalPointerIgnoredRegexp`, :option:`GlobalPointerHungarianPrefix`
- - :option:`GlobalVariableCase`, :option:`GlobalVariablePrefix`, :option:`GlobalVariableSuffix`, :option:`GlobalVariableIgnoredRegexp`, :option:`GlobalVariableHungarianPrefix`
  - :option:`IgnoreMainLikeFunctions`
- - :option:`InlineNamespaceCase`, :option:`InlineNamespacePrefix`, :option:`InlineNamespaceSuffix`, :option:`InlineNamespaceIgnoredRegexp`
- - :option:`LocalConstantCase`, :option:`LocalConstantPrefix`, :option:`LocalConstantSuffix`, :option:`LocalConstantIgnoredRegexp`, :option:`LocalConstantHungarianPrefix`
- - :option:`LocalConstantPointerCase`, :option:`LocalConstantPointerPrefix`, :option:`LocalConstantPointerSuffix`, :option:`LocalConstantPointerIgnoredRegexp`, :option:`LocalConstantPointerHungarianPrefix`
- - :option:`LocalPointerCase`, :option:`LocalPointerPrefix`, :option:`LocalPointerSuffix`, :option:`LocalPointerIgnoredRegexp`, :option:`LocalPointerHungarianPrefix`
- - :option:`LocalVariableCase`, :option:`LocalVariablePrefix`, :option:`LocalVariableSuffix`, :option:`LocalVariableIgnoredRegexp`, :option:`LocalVariableHungarianPrefix`
- - :option:`MacroDefinitionCase`, :option:`MacroDefinitionPrefix`, :option:`MacroDefinitionSuffix`, :option:`MacroDefinitionIgnoredRegexp`
- - :option:`MemberCase`, :option:`MemberPrefix`, :option:`MemberSuffix`, :option:`MemberIgnoredRegexp`, :option:`MemberHungarianPrefix`
- - :option:`MethodCase`, :option:`MethodPrefix`, :option:`MethodSuffix`, :option:`MethodIgnoredRegexp`
- - :option:`NamespaceCase`, :option:`NamespacePrefix`, :option:`NamespaceSuffix`, :option:`NamespaceIgnoredRegexp`
- - :option:`ParameterCase`, :option:`ParameterPrefix`, :option:`ParameterSuffix`, :option:`ParameterIgnoredRegexp`, :option:`ParameterHungarianPrefix`
- - :option:`ParameterPackCase`, :option:`ParameterPackPrefix`, :option:`ParameterPackSuffix`, :option:`ParameterPackIgnoredRegexp`
- - :option:`PointerParameterCase`, :option:`PointerParameterPrefix`, :option:`PointerParameterSuffix`, :option:`PointerParameterIgnoredRegexp`, :option:`PointerParameterHungarianPrefix`
- - :option:`PrivateMemberCase`, :option:`PrivateMemberPrefix`, :option:`PrivateMemberSuffix`, :option:`PrivateMemberIgnoredRegexp`, :option:`PrivateMemberHungarianPrefix`
- - :option:`PrivateMethodCase`, :option:`PrivateMethodPrefix`, :option:`PrivateMethodSuffix`, :option:`PrivateMethodIgnoredRegexp`
- - :option:`ProtectedMemberCase`, :option:`ProtectedMemberPrefix`, :option:`ProtectedMemberSuffix`, :option:`ProtectedMemberIgnoredRegexp`, :option:`ProtectedMemberHungarianPrefix`
- - :option:`ProtectedMethodCase`, :option:`ProtectedMethodPrefix`, :option:`ProtectedMethodSuffix`, :option:`ProtectedMethodIgnoredRegexp`
- - :option:`PublicMemberCase`, :option:`PublicMemberPrefix`, :option:`PublicMemberSuffix`, :option:`PublicMemberIgnoredRegexp`, :option:`PublicMemberHungarianPrefix`
- - :option:`PublicMethodCase`, :option:`PublicMethodPrefix`, :option:`PublicMethodSuffix`, :option:`PublicMethodIgnoredRegexp`
- - :option:`ScopedEnumConstantCase`, :option:`ScopedEnumConstantPrefix`, :option:`ScopedEnumConstantSuffix`, :option:`ScopedEnumConstantIgnoredRegexp`
- - :option:`StaticConstantCase`, :option:`StaticConstantPrefix`, :option:`StaticConstantSuffix`, :option:`StaticConstantIgnoredRegexp`, :option:`StaticConstantHungarianPrefix`
- - :option:`StaticVariableCase`, :option:`StaticVariablePrefix`, :option:`StaticVariableSuffix`, :option:`StaticVariableIgnoredRegexp`, :option:`StaticVariableHungarianPrefix`
- - :option:`StructCase`, :option:`StructPrefix`, :option:`StructSuffix`, :option:`StructIgnoredRegexp`
- - :option:`TemplateParameterCase`, :option:`TemplateParameterPrefix`, :option:`TemplateParameterSuffix`, :option:`TemplateParameterIgnoredRegexp`
- - :option:`TemplateTemplateParameterCase`, :option:`TemplateTemplateParameterPrefix`, :option:`TemplateTemplateParameterSuffix`, :option:`TemplateTemplateParameterIgnoredRegexp`
- - :option:`TypeAliasCase`, :option:`TypeAliasPrefix`, :option:`TypeAliasSuffix`, :option:`TypeAliasIgnoredRegexp`
- - :option:`TypedefCase`, :option:`TypedefPrefix`, :option:`TypedefSuffix`, :option:`TypedefIgnoredRegexp`
- - :option:`TypeTemplateParameterCase`, :option:`TypeTemplateParameterPrefix`, :option:`TypeTemplateParameterSuffix`, :option:`TypeTemplateParameterIgnoredRegexp`
- - :option:`UnionCase`, :option:`UnionPrefix`, :option:`UnionSuffix`, :option:`UnionIgnoredRegexp`
- - :option:`ValueTemplateParameterCase`, :option:`ValueTemplateParameterPrefix`, :option:`ValueTemplateParameterSuffix`, :option:`ValueTemplateParameterIgnoredRegexp`
- - :option:`VariableCase`, :option:`VariablePrefix`, :option:`VariableSuffix`, :option:`VariableIgnoredRegexp`, :option:`VariableHungarianPrefix`
- - :option:`VirtualMethodCase`, :option:`VirtualMethodPrefix`, :option:`VirtualMethodSuffix`, :option:`VirtualMethodIgnoredRegexp`
+
+**Specific options**
+
+ - :option:`AbstractClassCase`, :option:`AbstractClassPrefix`,
+   :option:`AbstractClassSuffix`, :option:`AbstractClassIgnoredRegexp`,
+   :option:`AbstractClassHungarianPrefix`
+ - :option:`ClassCase`, :option:`ClassPrefix`, :option:`ClassSuffix`,
+   :option:`ClassIgnoredRegexp`, :option:`ClassHungarianPrefix`
+ - :option:`ClassConstexprCase`, :option:`ClassConstexprPrefix`,
+   :option:`ClassConstexprSuffix`, :option:`ClassConstexprIgnoredRegexp`,
+   :option:`ClassConstexprHungarianPrefix`
+ - :option:`ClassConstantCase`, :option:`ClassConstantPrefix`,
+   :option:`ClassConstantSuffix`, :option:`ClassConstantIgnoredRegexp`,
+   :option:`ClassConstantHungarianPrefix`
+ - :option:`ClassMemberCase`, :option:`ClassMemberPrefix`,
+   :option:`ClassMemberSuffix`, :option:`ClassMemberIgnoredRegexp`,
+   :option:`ClassMemberHungarianPrefix`
+ - :option:`ClassMethodCase`, :option:`ClassMethodPrefix`,
+   :option:`ClassMethodSuffix`, :option:`ClassMethodIgnoredRegexp`
+ - :option:`ConceptCase`, :option:`ConceptPrefix`, :option:`ConceptSuffix`,
+   :option:`ConceptIgnoredRegexp`
+ - :option:`ConstantCase`, :option:`ConstantPrefix`, :option:`ConstantSuffix`,
+   :option:`ConstantIgnoredRegexp`, :option:`ConstantHungarianPrefix`
+ - :option:`ConstantMemberCase`, :option:`ConstantMemberPrefix`,
+   :option:`ConstantMemberSuffix`, :option:`ConstantMemberIgnoredRegexp`,
+   :option:`ConstantMemberHungarianPrefix`
+ - :option:`ConstantParameterCase`, :option:`ConstantParameterPrefix`,
+   :option:`ConstantParameterSuffix`, :option:`ConstantParameterIgnoredRegexp`,
+   :option:`ConstantParameterHungarianPrefix`
+ - :option:`ConstantPointerParameterCase`,
+   :option:`ConstantPointerParameterPrefix`,
+   :option:`ConstantPointerParameterSuffix`,
+   :option:`ConstantPointerParameterIgnoredRegexp`,
+   :option:`ConstantPointerParameterHungarianPrefix`
+ - :option:`ConstexprFunctionCase`, :option:`ConstexprFunctionPrefix`,
+   :option:`ConstexprFunctionSuffix`, :option:`ConstexprFunctionIgnoredRegexp`
+ - :option:`ConstexprMethodCase`, :option:`ConstexprMethodPrefix`,
+   :option:`ConstexprMethodSuffix`, :option:`ConstexprMethodIgnoredRegexp`
+ - :option:`ConstexprVariableCase`, :option:`ConstexprVariablePrefix`,
+   :option:`ConstexprVariableSuffix`, :option:`ConstexprVariableIgnoredRegexp`,
+   :option:`ConstexprVariableHungarianPrefix`
+ - :option:`EnumCase`, :option:`EnumPrefix`, :option:`EnumSuffix`,
+   :option:`EnumIgnoredRegexp`
+ - :option:`EnumConstantCase`, :option:`EnumConstantPrefix`,
+   :option:`EnumConstantSuffix`, :option:`EnumConstantIgnoredRegexp`,
+   :option:`EnumConstantHungarianPrefix`
+ - :option:`FunctionCase`, :option:`FunctionPrefix`, :option:`FunctionSuffix`,
+   :option:`FunctionIgnoredRegexp`
+ - :option:`GlobalConstexprVariableCase`,
+   :option:`GlobalConstexprVariablePrefix`,
+   :option:`GlobalConstexprVariableSuffix`,
+   :option:`GlobalConstexprVariableIgnoredRegexp`,
+   :option:`GlobalConstexprVariableHungarianPrefix`
+ - :option:`GlobalConstantCase`, :option:`GlobalConstantPrefix`,
+   :option:`GlobalConstantSuffix`, :option:`GlobalConstantIgnoredRegexp`,
+   :option:`GlobalConstantHungarianPrefix`
+ - :option:`GlobalConstantPointerCase`,
+   :option:`GlobalConstantPointerPrefix`,
+   :option:`GlobalConstantPointerSuffix`,
+   :option:`GlobalConstantPointerIgnoredRegexp`,
+   :option:`GlobalConstantPointerHungarianPrefix`
+ - :option:`GlobalFunctionCase`, :option:`GlobalFunctionPrefix`,
+   :option:`GlobalFunctionSuffix`, :option:`GlobalFunctionIgnoredRegexp`
+ - :option:`GlobalPointerCase`, :option:`GlobalPointerPrefix`,
+   :option:`GlobalPointerSuffix`, :option:`GlobalPointerIgnoredRegexp`,
+   :option:`GlobalPointerHungarianPrefix`
+ - :option:`GlobalVariableCase`, :option:`GlobalVariablePrefix`,
+   :option:`GlobalVariableSuffix`, :option:`GlobalVariableIgnoredRegexp`,
+   :option:`GlobalVariableHungarianPrefix`
+ - :option:`InlineNamespaceCase`, :option:`InlineNamespacePrefix`,
+   :option:`InlineNamespaceSuffix`, :option:`InlineNamespaceIgnoredRegexp`
+ - :option:`LocalConstexprVariableCase`,
+   :option:`LocalConstexprVariablePrefix`,
+   :option:`LocalConstexprVariableSuffix`,
+   :option:`LocalConstexprVariableIgnoredRegexp`,
+   :option:`LocalConstexprVariableHungarianPrefix`
+ - :option:`LocalConstantCase`, :option:`LocalConstantPrefix`,
+   :option:`LocalConstantSuffix`, :option:`LocalConstantIgnoredRegexp`,
+   :option:`LocalConstantHungarianPrefix`
+ - :option:`LocalConstantPointerCase`,
+   :option:`LocalConstantPointerPrefix`,
+   :option:`LocalConstantPointerSuffix`,
+   :option:`LocalConstantPointerIgnoredRegexp`,
+   :option:`LocalConstantPointerHungarianPrefix`
+ - :option:`LocalPointerCase`, :option:`LocalPointerPrefix`,
+   :option:`LocalPointerSuffix`, :option:`LocalPointerIgnoredRegexp`,
+   :option:`LocalPointerHungarianPrefix`
+ - :option:`LocalVariableCase`, :option:`LocalVariablePrefix`,
+   :option:`LocalVariableSuffix`, :option:`LocalVariableIgnoredRegexp`,
+   :option:`LocalVariableHungarianPrefix`
+ - :option:`MacroDefinitionCase`, :option:`MacroDefinitionPrefix`,
+   :option:`MacroDefinitionSuffix`, :option:`MacroDefinitionIgnoredRegexp`
+ - :option:`MemberCase`, :option:`MemberPrefix`, :option:`MemberSuffix`,
+   :option:`MemberIgnoredRegexp`, :option:`MemberHungarianPrefix`
+ - :option:`MethodCase`, :option:`MethodPrefix`, :option:`MethodSuffix`,
+   :option:`MethodIgnoredRegexp`
+ - :option:`NamespaceCase`, :option:`NamespacePrefix`,
+   :option:`NamespaceSuffix`, :option:`NamespaceIgnoredRegexp`
+ - :option:`ParameterCase`, :option:`ParameterPrefix`,
+   :option:`ParameterSuffix`, :option:`ParameterIgnoredRegexp`,
+   :option:`ParameterHungarianPrefix`
+ - :option:`ParameterPackCase`, :option:`ParameterPackPrefix`,
+   :option:`ParameterPackSuffix`, :option:`ParameterPackIgnoredRegexp`
+ - :option:`PointerParameterCase`, :option:`PointerParameterPrefix`,
+   :option:`PointerParameterSuffix`, :option:`PointerParameterIgnoredRegexp`,
+   :option:`PointerParameterHungarianPrefix`
+ - :option:`PrivateMemberCase`, :option:`PrivateMemberPrefix`,
+   :option:`PrivateMemberSuffix`, :option:`PrivateMemberIgnoredRegexp`,
+   :option:`PrivateMemberHungarianPrefix`
+ - :option:`PrivateMethodCase`, :option:`PrivateMethodPrefix`,
+   :option:`PrivateMethodSuffix`, :option:`PrivateMethodIgnoredRegexp`
+ - :option:`ProtectedMemberCase`, :option:`ProtectedMemberPrefix`,
+   :option:`ProtectedMemberSuffix`, :option:`ProtectedMemberIgnoredRegexp`,
+   :option:`ProtectedMemberHungarianPrefix`
+ - :option:`ProtectedMethodCase`, :option:`ProtectedMethodPrefix`,
+   :option:`ProtectedMethodSuffix`, :option:`ProtectedMethodIgnoredRegexp`
+ - :option:`PublicMemberCase`, :option:`PublicMemberPrefix`,
+   :option:`PublicMemberSuffix`, :option:`PublicMemberIgnoredRegexp`,
+   :option:`PublicMemberHungarianPrefix`
+ - :option:`PublicMethodCase`, :option:`PublicMethodPrefix`,
+   :option:`PublicMethodSuffix`, :option:`PublicMethodIgnoredRegexp`
+ - :option:`ScopedEnumConstantCase`, :option:`ScopedEnumConstantPrefix`,
+   :option:`ScopedEnumConstantSuffix`,
+   :option:`ScopedEnumConstantIgnoredRegexp`
+ - :option:`StaticConstexprVariableCase`,
+   :option:`StaticConstexprVariablePrefix`,
+   :option:`StaticConstexprVariableSuffix`,
+   :option:`StaticConstexprVariableIgnoredRegexp`,
+   :option:`StaticConstexprVariableHungarianPrefix`
+ - :option:`StaticConstantCase`, :option:`StaticConstantPrefix`,
+   :option:`StaticConstantSuffix`, :option:`StaticConstantIgnoredRegexp`,
+   :option:`StaticConstantHungarianPrefix`
+ - :option:`StaticVariableCase`, :option:`StaticVariablePrefix`,
+   :option:`StaticVariableSuffix`, :option:`StaticVariableIgnoredRegexp`,
+   :option:`StaticVariableHungarianPrefix`
+ - :option:`StructCase`, :option:`StructPrefix`, :option:`StructSuffix`,
+   :option:`StructIgnoredRegexp`
+ - :option:`TemplateParameterCase`, :option:`TemplateParameterPrefix`,
+   :option:`TemplateParameterSuffix`, :option:`TemplateParameterIgnoredRegexp`
+ - :option:`TemplateTemplateParameterCase`,
+   :option:`TemplateTemplateParameterPrefix`,
+   :option:`TemplateTemplateParameterSuffix`,
+   :option:`TemplateTemplateParameterIgnoredRegexp`
+ - :option:`TypeAliasCase`, :option:`TypeAliasPrefix`,
+   :option:`TypeAliasSuffix`, :option:`TypeAliasIgnoredRegexp`
+ - :option:`TypedefCase`, :option:`TypedefPrefix`, :option:`TypedefSuffix`,
+   :option:`TypedefIgnoredRegexp`
+ - :option:`TypeTemplateParameterCase`,
+   :option:`TypeTemplateParameterPrefix`,
+   :option:`TypeTemplateParameterSuffix`,
+   :option:`TypeTemplateParameterIgnoredRegexp`
+ - :option:`UnionCase`, :option:`UnionPrefix`, :option:`UnionSuffix`,
+   :option:`UnionIgnoredRegexp`
+ - :option:`ValueTemplateParameterCase`,
+   :option:`ValueTemplateParameterPrefix`,
+   :option:`ValueTemplateParameterSuffix`,
+   :option:`ValueTemplateParameterIgnoredRegexp`
+ - :option:`VariableCase`, :option:`VariablePrefix`, :option:`VariableSuffix`,
+   :option:`VariableIgnoredRegexp`, :option:`VariableHungarianPrefix`
+ - :option:`VirtualMethodCase`, :option:`VirtualMethodPrefix`,
+   :option:`VirtualMethodSuffix`, :option:`VirtualMethodIgnoredRegexp`
+
+
+Options description
+-------------------
+
+A detailed description of each option is presented below:
 
 .. option:: AbstractClassCase
 
@@ -103,7 +231,7 @@ The following options are described below:
 .. option:: AbstractClassPrefix
 
     When defined, the check will ensure abstract class names will add the
-    prefixed with the given value (regardless of casing).
+    prefix with the given value (regardless of casing).
 
 .. option:: AbstractClassIgnoredRegexp
 
@@ -206,6 +334,32 @@ After if AggressiveDependentMemberLookup is `true`:
       }
     };
 
+.. option:: CheckAnonFieldInParent
+
+    When set to `true`, fields in anonymous records (i.e. anonymous
+    unions and structs) will be treated as names in the enclosing scope
+    rather than public members of the anonymous record for the purpose
+    of name checking.
+
+For example:
+
+.. code-block:: c++
+
+    class Foo {
+    private:
+      union {
+        int iv_;
+        float fv_;
+      };
+    };
+
+If :option:`CheckAnonFieldInParent` is `false`, you may get warnings
+that ``iv_`` and ``fv_`` are not coherent to public member names, because
+``iv_`` and ``fv_`` are public members of the anonymous union. When
+:option:`CheckAnonFieldInParent` is `true`, ``iv_`` and ``fv_`` will be
+treated as private data members of ``Foo`` for the purpose of name checking
+and thus no warnings will be emitted.
+
 .. option:: ClassCase
 
     When defined, the check will ensure class names conform to the
@@ -214,7 +368,7 @@ After if AggressiveDependentMemberLookup is `true`:
 .. option:: ClassPrefix
 
     When defined, the check will ensure class names will add the
-    prefixed with the given value (regardless of casing).
+    prefix with the given value (regardless of casing).
 
 .. option:: ClassIgnoredRegexp
 
@@ -260,6 +414,58 @@ After:
       ~pre_foo_post();
     };
 
+.. option:: ClassConstexprCase
+
+    When defined, the check will ensure class ``constexpr`` names conform to
+    the selected casing.
+
+.. option:: ClassConstexprPrefix
+
+    When defined, the check will ensure class ``constexpr`` names will add the
+    prefix with the given value (regardless of casing).
+
+.. option:: ClassConstexprIgnoredRegexp
+
+    Identifier naming checks won't be enforced for class ``constexpr`` names
+    matching this regular expression.
+
+.. option:: ClassConstexprSuffix
+
+    When defined, the check will ensure class ``constexpr`` names will add the
+    suffix with the given value (regardless of casing).
+
+.. option:: ClassConstexprHungarianPrefix
+
+    When enabled, the check ensures that the declared identifier will have a
+    Hungarian notation prefix based on the declared type.
+
+For example using values of:
+
+   - ClassConstexprCase of ``lower_case``
+   - ClassConstexprPrefix of ``pre_``
+   - ClassConstexprSuffix of ``_post``
+   - ClassConstexprHungarianPrefix of ``On``
+
+Identifies and/or transforms class ``constexpr`` variable names as follows:
+
+Before:
+
+.. code-block:: c++
+
+    class FOO {
+    public:
+      static constexpr int CLASS_CONSTEXPR;
+    };
+
+After:
+
+.. code-block:: c++
+
+    class FOO {
+    public:
+      static const int pre_class_constexpr_post;
+    };
+
 .. option:: ClassConstantCase
 
     When defined, the check will ensure class constant names conform to the
@@ -268,7 +474,7 @@ After:
 .. option:: ClassConstantPrefix
 
     When defined, the check will ensure class constant names will add the
-    prefixed with the given value (regardless of casing).
+    prefix with the given value (regardless of casing).
 
 .. option:: ClassConstantIgnoredRegexp
 
@@ -320,7 +526,7 @@ After:
 .. option:: ClassMemberPrefix
 
     When defined, the check will ensure class member names will add the
-    prefixed with the given value (regardless of casing).
+    prefix with the given value (regardless of casing).
 
 .. option:: ClassMemberIgnoredRegexp
 
@@ -372,7 +578,7 @@ After:
 .. option:: ClassMethodPrefix
 
     When defined, the check will ensure class method names will add the
-    prefixed with the given value (regardless of casing).
+    prefix with the given value (regardless of casing).
 
 .. option:: ClassMethodIgnoredRegexp
 
@@ -410,6 +616,46 @@ After:
       int pre_class_member_post();
     };
 
+.. option:: ConceptCase
+
+    When defined, the check will ensure concept names conform to the
+    selected casing.
+
+.. option:: ConceptPrefix
+
+    When defined, the check will ensure concept names will add the
+    prefix with the given value (regardless of casing).
+
+.. option:: ConceptIgnoredRegexp
+
+    Identifier naming checks won't be enforced for concept names
+    matching this regular expression.
+
+.. option:: ConceptSuffix
+
+    When defined, the check will ensure concept names will add the
+    suffix with the given value (regardless of casing).
+
+For example using values of:
+
+   - ConceptCase of ``CamelCase``
+   - ConceptPrefix of ``Pre``
+   - ConceptSuffix of ``Post``
+
+Identifies and/or transforms concept names as follows:
+
+Before:
+
+.. code-block:: c++
+
+    template<typename T> concept my_concept = requires (T t) { {t++}; };
+
+After:
+
+.. code-block:: c++
+
+    template<typename T> concept PreMyConceptPost = requires (T t) { {t++}; };
+
 .. option:: ConstantCase
 
     When defined, the check will ensure constant names conform to the
@@ -418,7 +664,7 @@ After:
 .. option:: ConstantPrefix
 
     When defined, the check will ensure constant names will add the
-    prefixed with the given value (regardless of casing).
+    prefix with the given value (regardless of casing).
 
 .. option:: ConstantIgnoredRegexp
 
@@ -464,7 +710,7 @@ After:
 .. option:: ConstantMemberPrefix
 
     When defined, the check will ensure constant member names will add the
-    prefixed with the given value (regardless of casing).
+    prefix with the given value (regardless of casing).
 
 .. option:: ConstantMemberIgnoredRegexp
 
@@ -514,7 +760,7 @@ After:
 .. option:: ConstantParameterPrefix
 
     When defined, the check will ensure constant parameter names will add the
-    prefixed with the given value (regardless of casing).
+    prefix with the given value (regardless of casing).
 
 .. option:: ConstantParameterIgnoredRegexp
 
@@ -560,7 +806,7 @@ After:
 .. option:: ConstantPointerParameterPrefix
 
     When defined, the check will ensure constant pointer parameter names will add the
-    prefixed with the given value (regardless of casing).
+    prefix with the given value (regardless of casing).
 
 .. option:: ConstantPointerParameterIgnoredRegexp
 
@@ -606,7 +852,7 @@ After:
 .. option:: ConstexprFunctionPrefix
 
     When defined, the check will ensure constexpr function names will add the
-    prefixed with the given value (regardless of casing).
+    prefix with the given value (regardless of casing).
 
 .. option:: ConstexprFunctionIgnoredRegexp
 
@@ -646,7 +892,7 @@ After:
 .. option:: ConstexprMethodPrefix
 
     When defined, the check will ensure constexpr method names will add the
-    prefixed with the given value (regardless of casing).
+    prefix with the given value (regardless of casing).
 
 .. option:: ConstexprMethodIgnoredRegexp
 
@@ -692,7 +938,7 @@ After:
 .. option:: ConstexprVariablePrefix
 
     When defined, the check will ensure constexpr variable names will add the
-    prefixed with the given value (regardless of casing).
+    prefix with the given value (regardless of casing).
 
 .. option:: ConstexprVariableIgnoredRegexp
 
@@ -738,7 +984,7 @@ After:
 .. option:: EnumPrefix
 
     When defined, the check will ensure enumeration names will add the
-    prefixed with the given value (regardless of casing).
+    prefix with the given value (regardless of casing).
 
 .. option:: EnumIgnoredRegexp
 
@@ -778,7 +1024,7 @@ After:
 .. option:: EnumConstantPrefix
 
     When defined, the check will ensure enumeration constant names will add the
-    prefixed with the given value (regardless of casing).
+    prefix with the given value (regardless of casing).
 
 .. option:: EnumConstantIgnoredRegexp
 
@@ -824,7 +1070,7 @@ After:
 .. option:: FunctionPrefix
 
     When defined, the check will ensure function names will add the
-    prefixed with the given value (regardless of casing).
+    prefix with the given value (regardless of casing).
 
 .. option:: FunctionIgnoredRegexp
 
@@ -863,6 +1109,52 @@ After:
     different style.
     Default value is `true`.
 
+.. option:: GlobalConstexprVariableCase
+
+    When defined, the check will ensure global ``constexpr`` variable names
+    conform to the selected casing.
+
+.. option:: GlobalConstexprVariablePrefix
+
+    When defined, the check will ensure global ``constexpr`` variable names
+    will add the prefixed with the given value (regardless of casing).
+
+.. option:: GlobalConstexprVariableIgnoredRegexp
+
+    Identifier naming checks won't be enforced for global ``constexpr``
+    variable names matching this regular expression.
+
+.. option:: GlobalConstexprVariableSuffix
+
+    When defined, the check will ensure global ``constexpr`` variable names
+    will add the suffix with the given value (regardless of casing).
+
+.. option:: GlobalConstexprVariableHungarianPrefix
+
+    When enabled, the check ensures that the declared identifier will have a
+    Hungarian notation prefix based on the declared type.
+
+For example using values of:
+
+   - GlobalConstexprVariableCase of ``lower_case``
+   - GlobalConstexprVariablePrefix of ``pre_``
+   - GlobalConstexprVariableSuffix of ``_post``
+   - GlobalConstexprVariableHungarianPrefix of ``On``
+
+Identifies and/or transforms global ``constexpr`` variable names as follows:
+
+Before:
+
+.. code-block:: c++
+
+    constexpr unsigned ImportantValue = 69;
+
+After:
+
+.. code-block:: c++
+
+    constexpr unsigned pre_important_value_post = 69;
+
 .. option:: GlobalConstantCase
 
     When defined, the check will ensure global constant names conform to the
@@ -871,7 +1163,7 @@ After:
 .. option:: GlobalConstantPrefix
 
     When defined, the check will ensure global constant names will add the
-    prefixed with the given value (regardless of casing).
+    prefix with the given value (regardless of casing).
 
 .. option:: GlobalConstantIgnoredRegexp
 
@@ -917,7 +1209,7 @@ After:
 .. option:: GlobalConstantPointerPrefix
 
     When defined, the check will ensure global constant pointer names will add the
-    prefixed with the given value (regardless of casing).
+    prefix with the given value (regardless of casing).
 
 .. option:: GlobalConstantPointerIgnoredRegexp
 
@@ -963,7 +1255,7 @@ After:
 .. option:: GlobalFunctionPrefix
 
     When defined, the check will ensure global function names will add the
-    prefixed with the given value (regardless of casing).
+    prefix with the given value (regardless of casing).
 
 .. option:: GlobalFunctionIgnoredRegexp
 
@@ -1003,7 +1295,7 @@ After:
 .. option:: GlobalPointerPrefix
 
     When defined, the check will ensure global pointer names will add the
-    prefixed with the given value (regardless of casing).
+    prefix with the given value (regardless of casing).
 
 .. option:: GlobalPointerIgnoredRegexp
 
@@ -1049,7 +1341,7 @@ After:
 .. option:: GlobalVariablePrefix
 
     When defined, the check will ensure global variable names will add the
-    prefixed with the given value (regardless of casing).
+    prefix with the given value (regardless of casing).
 
 .. option:: GlobalVariableIgnoredRegexp
 
@@ -1101,7 +1393,7 @@ After:
 .. option:: InlineNamespacePrefix
 
     When defined, the check will ensure inline namespaces names will add the
-    prefixed with the given value (regardless of casing).
+    prefix with the given value (regardless of casing).
 
 .. option:: InlineNamespaceIgnoredRegexp
 
@@ -1141,6 +1433,52 @@ After:
     }
     } // namespace FOO_NS
 
+.. option:: LocalConstexprVariableCase
+
+    When defined, the check will ensure local ``constexpr`` variable names
+    conform to the selected casing.
+
+.. option:: LocalConstexprVariablePrefix
+
+    When defined, the check will ensure local ``constexpr`` variable names will
+    add the prefixed with the given value (regardless of casing).
+
+.. option:: LocalConstexprVariableIgnoredRegexp
+
+    Identifier naming checks won't be enforced for local ``constexpr`` variable
+    names matching this regular expression.
+
+.. option:: LocalConstexprVariableSuffix
+
+    When defined, the check will ensure local ``constexpr`` variable names will
+    add the suffix with the given value (regardless of casing).
+
+.. option:: LocalConstexprVariableHungarianPrefix
+
+    When enabled, the check ensures that the declared identifier will have a
+    Hungarian notation prefix based on the declared type.
+
+For example using values of:
+
+   - LocalConstexprVariableCase of ``lower_case``
+   - LocalConstexprVariablePrefix of ``pre_``
+   - LocalConstexprVariableSuffix of ``_post``
+   - LocalConstexprVariableHungarianPrefix of ``On``
+
+Identifies and/or transforms local ``constexpr`` variable names as follows:
+
+Before:
+
+.. code-block:: c++
+
+    void foo() { int const local_Constexpr = 420; }
+
+After:
+
+.. code-block:: c++
+
+    void foo() { int const pre_local_constexpr_post = 420; }
+
 .. option:: LocalConstantCase
 
     When defined, the check will ensure local constant names conform to the
@@ -1149,7 +1487,7 @@ After:
 .. option:: LocalConstantPrefix
 
     When defined, the check will ensure local constant names will add the
-    prefixed with the given value (regardless of casing).
+    prefix with the given value (regardless of casing).
 
 .. option:: LocalConstantIgnoredRegexp
 
@@ -1195,7 +1533,7 @@ After:
 .. option:: LocalConstantPointerPrefix
 
     When defined, the check will ensure local constant pointer names will add the
-    prefixed with the given value (regardless of casing).
+    prefix with the given value (regardless of casing).
 
 .. option:: LocalConstantPointerIgnoredRegexp
 
@@ -1241,7 +1579,7 @@ After:
 .. option:: LocalPointerPrefix
 
     When defined, the check will ensure local pointer names will add the
-    prefixed with the given value (regardless of casing).
+    prefix with the given value (regardless of casing).
 
 .. option:: LocalPointerIgnoredRegexp
 
@@ -1287,7 +1625,7 @@ After:
 .. option:: LocalVariablePrefix
 
     When defined, the check will ensure local variable names will add the
-    prefixed with the given value (regardless of casing).
+    prefix with the given value (regardless of casing).
 
 .. option:: LocalVariableIgnoredRegexp
 
@@ -1341,7 +1679,7 @@ After:
 .. option:: MacroDefinitionPrefix
 
     When defined, the check will ensure macro definitions will add the
-    prefixed with the given value (regardless of casing).
+    prefix with the given value (regardless of casing).
 
 .. option:: MacroDefinitionIgnoredRegexp
 
@@ -1373,8 +1711,8 @@ After:
 
     #define pre_my_macro_definition_post
 
-Note: This will not warn on builtin macros or macros defined on the command line
-using the ``-D`` flag.
+Note: This will not warn on builtin macros or macros defined on the
+command line using the ``-D`` flag.
 
 .. option:: MemberCase
 
@@ -1384,7 +1722,7 @@ using the ``-D`` flag.
 .. option:: MemberPrefix
 
     When defined, the check will ensure member names will add the
-    prefixed with the given value (regardless of casing).
+    prefix with the given value (regardless of casing).
 
 .. option:: MemberIgnoredRegexp
 
@@ -1434,7 +1772,7 @@ After:
 .. option:: MethodPrefix
 
     When defined, the check will ensure method names will add the
-    prefixed with the given value (regardless of casing).
+    prefix with the given value (regardless of casing).
 
 .. option:: MethodIgnoredRegexp
 
@@ -1478,7 +1816,7 @@ After:
 .. option:: NamespacePrefix
 
     When defined, the check will ensure namespace names will add the
-    prefixed with the given value (regardless of casing).
+    prefix with the given value (regardless of casing).
 
 .. option:: NamespaceIgnoredRegexp
 
@@ -1522,7 +1860,7 @@ After:
 .. option:: ParameterPrefix
 
     When defined, the check will ensure parameter names will add the
-    prefixed with the given value (regardless of casing).
+    prefix with the given value (regardless of casing).
 
 .. option:: ParameterIgnoredRegexp
 
@@ -1568,7 +1906,7 @@ After:
 .. option:: ParameterPackPrefix
 
     When defined, the check will ensure parameter pack names will add the
-    prefixed with the given value (regardless of casing).
+    prefix with the given value (regardless of casing).
 
 .. option:: ParameterPackIgnoredRegexp
 
@@ -1612,7 +1950,7 @@ After:
 .. option:: PointerParameterPrefix
 
     When defined, the check will ensure pointer parameter names will add the
-    prefixed with the given value (regardless of casing).
+    prefix with the given value (regardless of casing).
 
 .. option:: PointerParameterIgnoredRegexp
 
@@ -1658,7 +1996,7 @@ After:
 .. option:: PrivateMemberPrefix
 
     When defined, the check will ensure private member names will add the
-    prefixed with the given value (regardless of casing).
+    prefix with the given value (regardless of casing).
 
 .. option:: PrivateMemberIgnoredRegexp
 
@@ -1710,7 +2048,7 @@ After:
 .. option:: PrivateMethodPrefix
 
     When defined, the check will ensure private method names will add the
-    prefixed with the given value (regardless of casing).
+    prefix with the given value (regardless of casing).
 
 .. option:: PrivateMethodIgnoredRegexp
 
@@ -1756,7 +2094,7 @@ After:
 .. option:: ProtectedMemberPrefix
 
     When defined, the check will ensure protected member names will add the
-    prefixed with the given value (regardless of casing).
+    prefix with the given value (regardless of casing).
 
 .. option:: ProtectedMemberIgnoredRegexp
 
@@ -1808,7 +2146,7 @@ After:
 .. option:: ProtectedMethodPrefix
 
     When defined, the check will ensure protected method names will add the
-    prefixed with the given value (regardless of casing).
+    prefix with the given value (regardless of casing).
 
 .. option:: ProtectedMethodIgnoredRegexp
 
@@ -1854,7 +2192,7 @@ After:
 .. option:: PublicMemberPrefix
 
     When defined, the check will ensure public member names will add the
-    prefixed with the given value (regardless of casing).
+    prefix with the given value (regardless of casing).
 
 .. option:: PublicMemberIgnoredRegexp
 
@@ -1906,7 +2244,7 @@ After:
 .. option:: PublicMethodPrefix
 
     When defined, the check will ensure public method names will add the
-    prefixed with the given value (regardless of casing).
+    prefix with the given value (regardless of casing).
 
 .. option:: PublicMethodIgnoredRegexp
 
@@ -1952,7 +2290,7 @@ After:
 .. option:: ScopedEnumConstantPrefix
 
     When defined, the check will ensure scoped enum constant names will add the
-    prefixed with the given value (regardless of casing).
+    prefix with the given value (regardless of casing).
 
 .. option:: ScopedEnumConstantIgnoredRegexp
 
@@ -1990,6 +2328,52 @@ After:
 
     enum class FOO { pre_One_post, pre_Two_post, pre_Three_post };
 
+.. option:: StaticConstexprVariableCase
+
+    When defined, the check will ensure static ``constexpr`` variable names
+    conform to the selected casing.
+
+.. option:: StaticConstexprVariablePrefix
+
+    When defined, the check will ensure static ``constexpr`` variable names
+    will add the prefixed with the given value (regardless of casing).
+
+.. option:: StaticConstexprVariableIgnoredRegexp
+
+    Identifier naming checks won't be enforced for static ``constexpr``
+    variable names matching this regular expression.
+
+.. option:: StaticConstexprVariableSuffix
+
+    When defined, the check will ensure static ``constexpr`` variable names
+    will add the suffix with the given value (regardless of casing).
+
+.. option:: StaticConstexprVariableHungarianPrefix
+
+    When enabled, the check ensures that the declared identifier will have a
+    Hungarian notation prefix based on the declared type.
+
+For example using values of:
+
+   - StaticConstexprVariableCase of ``lower_case``
+   - StaticConstexprVariablePrefix of ``pre_``
+   - StaticConstexprVariableSuffix of ``_post``
+   - StaticConstexprVariableHungarianPrefix of ``On``
+
+Identifies and/or transforms static ``constexpr`` variable names as follows:
+
+Before:
+
+.. code-block:: c++
+
+    static unsigned constexpr MyConstexprStatic_array[] = {1, 2, 3};
+
+After:
+
+.. code-block:: c++
+
+    static unsigned constexpr pre_my_constexpr_static_array_post[] = {1, 2, 3};
+
 .. option:: StaticConstantCase
 
     When defined, the check will ensure static constant names conform to the
@@ -1998,7 +2382,7 @@ After:
 .. option:: StaticConstantPrefix
 
     When defined, the check will ensure static constant names will add the
-    prefixed with the given value (regardless of casing).
+    prefix with the given value (regardless of casing).
 
 .. option:: StaticConstantIgnoredRegexp
 
@@ -2044,7 +2428,7 @@ After:
 .. option:: StaticVariablePrefix
 
     When defined, the check will ensure static variable names will add the
-    prefixed with the given value (regardless of casing).
+    prefix with the given value (regardless of casing).
 
 .. option:: StaticVariableIgnoredRegexp
 
@@ -2090,7 +2474,7 @@ After:
 .. option:: StructPrefix
 
     When defined, the check will ensure struct names will add the
-    prefixed with the given value (regardless of casing).
+    prefix with the given value (regardless of casing).
 
 .. option:: StructIgnoredRegexp
 
@@ -2136,7 +2520,7 @@ After:
 .. option:: TemplateParameterPrefix
 
     When defined, the check will ensure template parameter names will add the
-    prefixed with the given value (regardless of casing).
+    prefix with the given value (regardless of casing).
 
 .. option:: TemplateParameterIgnoredRegexp
 
@@ -2176,7 +2560,7 @@ After:
 .. option:: TemplateTemplateParameterPrefix
 
     When defined, the check will ensure template template parameter names will add the
-    prefixed with the given value (regardless of casing).
+    prefix with the given value (regardless of casing).
 
 .. option:: TemplateTemplateParameterIgnoredRegexp
 
@@ -2218,7 +2602,7 @@ After:
 .. option:: TypeAliasPrefix
 
     When defined, the check will ensure type alias names will add the
-    prefixed with the given value (regardless of casing).
+    prefix with the given value (regardless of casing).
 
 .. option:: TypeAliasIgnoredRegexp
 
@@ -2258,7 +2642,7 @@ After:
 .. option:: TypedefPrefix
 
     When defined, the check will ensure typedef names will add the
-    prefixed with the given value (regardless of casing).
+    prefix with the given value (regardless of casing).
 
 .. option:: TypedefIgnoredRegexp
 
@@ -2298,7 +2682,7 @@ After:
 .. option:: TypeTemplateParameterPrefix
 
     When defined, the check will ensure type template parameter names will add the
-    prefixed with the given value (regardless of casing).
+    prefix with the given value (regardless of casing).
 
 .. option:: TypeTemplateParameterIgnoredRegexp
 
@@ -2340,7 +2724,7 @@ After:
 .. option:: UnionPrefix
 
     When defined, the check will ensure union names will add the
-    prefixed with the given value (regardless of casing).
+    prefix with the given value (regardless of casing).
 
 .. option:: UnionIgnoredRegexp
 
@@ -2386,7 +2770,7 @@ After:
 .. option:: ValueTemplateParameterPrefix
 
     When defined, the check will ensure value template parameter names will add the
-    prefixed with the given value (regardless of casing).
+    prefix with the given value (regardless of casing).
 
 .. option:: ValueTemplateParameterIgnoredRegexp
 
@@ -2428,7 +2812,7 @@ After:
 .. option:: VariablePrefix
 
     When defined, the check will ensure variable names will add the
-    prefixed with the given value (regardless of casing).
+    prefix with the given value (regardless of casing).
 
 .. option:: VariableIgnoredRegexp
 
@@ -2474,7 +2858,7 @@ After:
 .. option:: VirtualMethodPrefix
 
     When defined, the check will ensure virtual method names will add the
-    prefixed with the given value (regardless of casing).
+    prefix with the given value (regardless of casing).
 
 .. option:: VirtualMethodIgnoredRegexp
 
@@ -2523,44 +2907,45 @@ distinguished as the given name. The first character of the given name can be
 capitalized to separate it from the type indicators (see also CamelCase).
 Otherwise the case of this character denotes scope.
 
-The following table is the default mapping table of Hungarian Notation which
-maps Decl to its prefix string. You can also have your own style in config file.
+The following table is the default mapping table of Hungarian Notation
+which maps Decl to its prefix string. You can also have your own style
+in config file.
 
-================= ============== ====================== ============== =========== ==============
-Primitive Types                                                        Microsoft data types
----------------------------------------------------------------------- --------------------------
-    Type          Prefix         Type                   Prefix         Type        Prefix
-================= ============== ====================== ============== =========== ==============
-int8_t            i8             signed int             si             BOOL        b
-int16_t           i16            signed short           ss             BOOLEAN     b
-int32_t           i32            signed short int       ssi            BYTE        by
-int64_t           i64            signed long long int   slli           CHAR        c
-uint8_t           u8             signed long long       sll            UCHAR       uc
-uint16_t          u16            signed long int        sli            SHORT       s
-uint32_t          u32            signed long            sl             USHORT      us
-uint64_t          u64            signed                 s              WORD        w
-char8_t           c8             unsigned long long int ulli           DWORD       dw
-char16_t          c16            unsigned long long     ull            DWORD32     dw32
-char32_t          c32            unsigned long int      uli            DWORD64     dw64
-float             f              unsigned long          ul             LONG        l
-double            d              unsigned short int     usi            ULONG       ul
-char              c              unsigned short         us             ULONG32     ul32
-bool              b              unsigned int           ui             ULONG64     ul64
-_Bool             b              unsigned char          uc             ULONGLONG   ull
-int               i              unsigned               u              HANDLE      h
-size_t            n              long long int          lli            INT         i
-short             s              long double            ld             INT8        i8
-signed            i              long long              ll             INT16       i16
-unsigned          u              long int               li             INT32       i32
-long              l              long                   l              INT64       i64
-long long         ll             ptrdiff_t              p              UINT        ui
-unsigned long     ul             void                   *none*         UINT8       u8
-long double       ld                                                   UINT16      u16
-ptrdiff_t         p                                                    UINT32      u32
-wchar_t           wc                                                   UINT64      u64
-short int         si                                                   PVOID       p
-short             s
-================= ============== ====================== ============== =========== ==============
+============== ======== ====================== ======== ============== ========
+Primitive Type                                          Microsoft Type
+-------------- -------- ---------------------- -------- -------------- --------
+    Type       Prefix   Type                   Prefix   Type           Prefix
+============== ======== ====================== ======== ============== ========
+int8_t         i8       signed int             si       BOOL           b
+int16_t        i16      signed short           ss       BOOLEAN        b
+int32_t        i32      signed short int       ssi      BYTE           by
+int64_t        i64      signed long long int   slli     CHAR           c
+uint8_t        u8       signed long long       sll      UCHAR          uc
+uint16_t       u16      signed long int        sli      SHORT          s
+uint32_t       u32      signed long            sl       USHORT         us
+uint64_t       u64      signed                 s        WORD           w
+char8_t        c8       unsigned long long int ulli     DWORD          dw
+char16_t       c16      unsigned long long     ull      DWORD32        dw32
+char32_t       c32      unsigned long int      uli      DWORD64        dw64
+float          f        unsigned long          ul       LONG           l
+double         d        unsigned short int     usi      ULONG          ul
+char           c        unsigned short         us       ULONG32        ul32
+bool           b        unsigned int           ui       ULONG64        ul64
+_Bool          b        unsigned char          uc       ULONGLONG      ull
+int            i        unsigned               u        HANDLE         h
+size_t         n        long long int          lli      INT            i
+short          s        long double            ld       INT8           i8
+signed         i        long long              ll       INT16          i16
+unsigned       u        long int               li       INT32          i32
+long           l        long                   l        INT64          i64
+long long      ll       ptrdiff_t              p        UINT           ui
+unsigned long  ul       void                   *none*   UINT8          u8
+long double    ld                                       UINT16         u16
+ptrdiff_t      p                                        UINT32         u32
+wchar_t        wc                                       UINT64         u64
+short int      si                                       PVOID          p
+short          s
+============== ======== ====================== ======== ============== ========
 
 **There are more trivial options for Hungarian Notation:**
 

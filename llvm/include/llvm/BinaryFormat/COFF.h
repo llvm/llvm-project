@@ -22,6 +22,7 @@
 #ifndef LLVM_BINARYFORMAT_COFF_H
 #define LLVM_BINARYFORMAT_COFF_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/DataTypes.h"
 #include <cassert>
 
@@ -417,6 +418,39 @@ enum RelocationTypesARM64 : unsigned {
   IMAGE_REL_ARM64_REL32 = 0x0011,
 };
 
+enum RelocationTypesMips : unsigned {
+  IMAGE_REL_MIPS_ABSOLUTE = 0x0000,
+  IMAGE_REL_MIPS_REFHALF = 0x0001,
+  IMAGE_REL_MIPS_REFWORD = 0x0002,
+  IMAGE_REL_MIPS_JMPADDR = 0x0003,
+  IMAGE_REL_MIPS_REFHI = 0x0004,
+  IMAGE_REL_MIPS_REFLO = 0x0005,
+  IMAGE_REL_MIPS_GPREL = 0x0006,
+  IMAGE_REL_MIPS_LITERAL = 0x0007,
+  IMAGE_REL_MIPS_SECTION = 0x000A,
+  IMAGE_REL_MIPS_SECREL = 0x000B,
+  IMAGE_REL_MIPS_SECRELLO = 0x000C,
+  IMAGE_REL_MIPS_SECRELHI = 0x000D,
+  IMAGE_REL_MIPS_JMPADDR16 = 0x0010,
+  IMAGE_REL_MIPS_REFWORDNB = 0x0022,
+  IMAGE_REL_MIPS_PAIR = 0x0025,
+};
+
+enum DynamicRelocationType : unsigned {
+  IMAGE_DYNAMIC_RELOCATION_GUARD_RF_PROLOGUE = 1,
+  IMAGE_DYNAMIC_RELOCATION_GUARD_RF_EPILOGUE = 2,
+  IMAGE_DYNAMIC_RELOCATION_GUARD_IMPORT_CONTROL_TRANSFER = 3,
+  IMAGE_DYNAMIC_RELOCATION_GUARD_INDIR_CONTROL_TRANSFER = 4,
+  IMAGE_DYNAMIC_RELOCATION_GUARD_SWITCHTABLE_BRANCH = 5,
+  IMAGE_DYNAMIC_RELOCATION_ARM64X = 6,
+};
+
+enum Arm64XFixupType : uint8_t {
+  IMAGE_DVRT_ARM64X_FIXUP_TYPE_ZEROFILL = 0,
+  IMAGE_DVRT_ARM64X_FIXUP_TYPE_VALUE = 1,
+  IMAGE_DVRT_ARM64X_FIXUP_TYPE_DELTA = 2,
+};
+
 enum COMDATType : uint8_t {
   IMAGE_COMDAT_SELECT_NODUPLICATES = 1,
   IMAGE_COMDAT_SELECT_ANY,
@@ -660,7 +694,24 @@ enum DLLCharacteristics : unsigned {
 
 enum ExtendedDLLCharacteristics : unsigned {
   /// Image is CET compatible
-  IMAGE_DLL_CHARACTERISTICS_EX_CET_COMPAT = 0x0001
+  IMAGE_DLL_CHARACTERISTICS_EX_CET_COMPAT = 0x0001,
+  /// Image is CET compatible in strict mode
+  IMAGE_DLL_CHARACTERISTICS_EX_CET_COMPAT_STRICT_MODE = 0x0002,
+  /// Image is CET compatible in such a way that context IP validation is
+  /// relaxed
+  IMAGE_DLL_CHARACTERISTICS_EX_CET_SET_CONTEXT_IP_VALIDATION_RELAXED_MODE =
+      0x0004,
+  /// Image is CET compatible in such a way that the use of
+  /// dynamic APIs is restricted to processes only
+  IMAGE_DLL_CHARACTERISTICS_EX_CET_DYNAMIC_APIS_ALLOW_IN_PROC_ONLY = 0x0008,
+  /// Reserved for future use. Not used by MSVC link.exe
+  IMAGE_DLL_CHARACTERISTICS_EX_CET_RESERVED_1 = 0x0010,
+  /// Reserved for future use. Not used by MSVC link.exe
+  IMAGE_DLL_CHARACTERISTICS_EX_CET_RESERVED_2 = 0x0020,
+  /// Image is CFI compatible.
+  IMAGE_DLL_CHARACTERISTICS_EX_FORWARD_CFI_COMPAT = 0x0040,
+  /// Image is hotpatch compatible.
+  IMAGE_DLL_CHARACTERISTICS_EX_HOTPATCH_COMPATIBLE = 0x0080,
 };
 
 enum DebugType : unsigned {
@@ -716,7 +767,10 @@ enum ImportNameType : unsigned {
   IMPORT_NAME_NOPREFIX = 2,
   /// The import name is the public symbol name, but skipping the leading ?,
   /// @, or optionally _, and truncating at the first @.
-  IMPORT_NAME_UNDECORATE = 3
+  IMPORT_NAME_UNDECORATE = 3,
+  /// The import name is specified as a separate string in the import library
+  /// object file.
+  IMPORT_NAME_EXPORTAS = 4
 };
 
 enum class GuardFlags : uint32_t {
@@ -803,13 +857,19 @@ enum Feat00Flags : uint32_t {
   Kernel = 0x40000000,
 };
 
+enum Arm64ECThunkType : uint8_t {
+  GuestExit = 0,
+  Entry = 1,
+  Exit = 4,
+};
+
 inline bool isReservedSectionNumber(int32_t SectionNumber) {
   return SectionNumber <= 0;
 }
 
 /// Encode section name based on string table offset.
 /// The size of Out must be at least COFF::NameSize.
-bool encodeSectionName(char *Out, uint64_t Offset);
+LLVM_ABI bool encodeSectionName(char *Out, uint64_t Offset);
 
 } // End namespace COFF.
 } // End namespace llvm.

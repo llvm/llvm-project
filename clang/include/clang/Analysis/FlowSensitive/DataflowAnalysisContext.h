@@ -18,8 +18,9 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/TypeOrdering.h"
+#include "clang/Analysis/FlowSensitive/ASTOps.h"
+#include "clang/Analysis/FlowSensitive/AdornedCFG.h"
 #include "clang/Analysis/FlowSensitive/Arena.h"
-#include "clang/Analysis/FlowSensitive/ControlFlowContext.h"
 #include "clang/Analysis/FlowSensitive/Solver.h"
 #include "clang/Analysis/FlowSensitive/StorageLocation.h"
 #include "clang/Analysis/FlowSensitive/Value.h"
@@ -30,38 +31,27 @@
 #include <cassert>
 #include <memory>
 #include <optional>
-#include <type_traits>
-#include <utility>
-#include <vector>
 
 namespace clang {
 namespace dataflow {
 class Logger;
 
-/// Skip past nodes that the CFG does not emit. These nodes are invisible to
-/// flow-sensitive analysis, and should be ignored as they will effectively not
-/// exist.
-///
-///   * `ParenExpr` - The CFG takes the operator precedence into account, but
-///   otherwise omits the node afterwards.
-///
-///   * `ExprWithCleanups` - The CFG will generate the appropriate calls to
-///   destructors and then omit the node.
-///
-const Expr &ignoreCFGOmittedNodes(const Expr &E);
-const Stmt &ignoreCFGOmittedNodes(const Stmt &S);
-
-/// A set of `FieldDecl *`. Use `SmallSetVector` to guarantee deterministic
-/// iteration order.
-using FieldSet = llvm::SmallSetVector<const FieldDecl *, 4>;
-
-/// Returns the set of all fields in the type.
-FieldSet getObjectFields(QualType Type);
-
 struct ContextSensitiveOptions {
   /// The maximum depth to analyze. A value of zero is equivalent to disabling
   /// context-sensitive analysis entirely.
   unsigned Depth = 2;
+};
+
+/// A simple representation of essential elements of the logical context used in
+/// environments. Designed for import/export for applications requiring
+/// serialization support.
+struct SimpleLogicalContext {
+  // Global invariant that applies for all definitions in the context.
+  const Formula *Invariant;
+  // Flow-condition tokens in the context.
+  llvm::DenseMap<Atom, const Formula *> TokenDefs;
+  // Dependencies between flow-condition definitions.
+  llvm::DenseMap<Atom, llvm::DenseSet<Atom>> TokenDeps;
 };
 
 /// Owns objects that encompass the state of a program and stores context that
@@ -89,13 +79,55 @@ public:
   DataflowAnalysisContext(std::unique_ptr<Solver> S,
                           Options Opts = Options{
                               /*ContextSensitiveOpts=*/std::nullopt,
-                              /*Logger=*/nullptr});
+                              /*Logger=*/nullptr})
+      : DataflowAnalysisContext(*S, std::move(S), Opts) {}
+
+  /// Constructs a dataflow analysis context.
+  ///
+  /// Requirements:
+  ///
+  ///  `S` must outlive the `DataflowAnalysisContext`.
+  DataflowAnalysisContext(Solver &S, Options Opts = Options{
+                                         /*ContextSensitiveOpts=*/std::nullopt,
+                                         /*Logger=*/nullptr})
+      : DataflowAnalysisContext(S, nullptr, Opts) {}
+
   ~DataflowAnalysisContext();
+
+  /// Sets a callback that returns the names and types of the synthetic fields
+  /// to add to a `RecordStorageLocation` of a given type.
+  /// Typically, this is called from the constructor of a `DataflowAnalysis`
+  ///
+  /// The field types returned by the callback may not have reference type.
+  ///
+  /// To maintain the invariant that all `RecordStorageLocation`s of a given
+  /// type have the same fields:
+  /// *  The callback must always return the same result for a given type
+  /// *  `setSyntheticFieldCallback()` must be called before any
+  //     `RecordStorageLocation`s are created.
+  void setSyntheticFieldCallback(
+      std::function<llvm::StringMap<QualType>(QualType)> CB) {
+    assert(!RecordStorageLocationCreated);
+    SyntheticFieldCallback = CB;
+  }
 
   /// Returns a new storage location appropriate for `Type`.
   ///
   /// A null `Type` is interpreted as the pointee type of `std::nullptr_t`.
   StorageLocation &createStorageLocation(QualType Type);
+
+  /// Creates a `RecordStorageLocation` for the given type and with the given
+  /// fields.
+  ///
+  /// Requirements:
+  ///
+  ///  `FieldLocs` must contain exactly the fields returned by
+  ///  `getModeledFields(Type)`.
+  ///  `SyntheticFields` must contain exactly the fields returned by
+  ///  `getSyntheticFields(Type)`.
+  RecordStorageLocation &createRecordStorageLocation(
+      QualType Type, RecordStorageLocation::FieldToLoc FieldLocs,
+      RecordStorageLocation::SyntheticFieldMap SyntheticFields);
 
   /// Returns a stable storage location for `D`.
   StorageLocation &getStableStorageLocation(const ValueDecl &D);
@@ -120,6 +152,15 @@ public:
   /// Adds `Constraint` to the flow condition identified by `Token`.
   void addFlowConditionConstraint(Atom Token, const Formula &Constraint);
 
+  /// Adds `Deps` to the dependencies of the flow condition identified by
+  /// `Token`. Intended for use in deserializing contexts. The formula alone
+  /// doesn't have enough information to indicate its deps.
+  void addFlowConditionDeps(Atom Token, const llvm::DenseSet<Atom> &Deps) {
+    // Avoid creating an entry for `Token` with an empty set.
+    if (!Deps.empty())
+      FlowConditionDeps[Token].insert(Deps.begin(), Deps.end());
+  }
+
   /// Creates a new flow condition with the same constraints as the flow
   /// condition identified by `Token` and returns its token.
   Atom forkFlowCondition(Atom Token);
@@ -129,13 +170,17 @@ public:
   /// token.
   Atom joinFlowConditions(Atom FirstToken, Atom SecondToken);
 
-  /// Returns true if and only if the constraints of the flow condition
-  /// identified by `Token` imply that `Val` is true.
-  bool flowConditionImplies(Atom Token, const Formula &);
+  /// Returns true if the constraints of the flow condition identified by
+  /// `Token` imply that `F` is true.
+  /// Returns false if the flow condition does not imply `F` or if the solver
+  /// times out.
+  bool flowConditionImplies(Atom Token, const Formula &F);
 
-  /// Returns true if and only if the constraints of the flow condition
-  /// identified by `Token` are always true.
-  bool flowConditionIsTautology(Atom Token);
+  /// Returns true if the constraints of the flow condition identified by
+  /// `Token` still allow `F` to be true.
+  /// Returns false if the flow condition implies that `F` is false or if the
+  /// solver times out.
+  bool flowConditionAllows(Atom Token, const Formula &F);
 
   /// Returns true if `Val1` is equivalent to `Val2`.
   /// Note: This function doesn't take into account constraints on `Val1` and
@@ -145,9 +190,9 @@ public:
   LLVM_DUMP_METHOD void dumpFlowCondition(Atom Token,
                                           llvm::raw_ostream &OS = llvm::dbgs());
 
-  /// Returns the `ControlFlowContext` registered for `F`, if any. Otherwise,
+  /// Returns the `AdornedCFG` registered for `F`, if any. Otherwise,
   /// returns null.
-  const ControlFlowContext *getControlFlowContext(const FunctionDecl *F);
+  const AdornedCFG *getAdornedCFG(const FunctionDecl *F);
 
   const Options &getOptions() { return Opts; }
 
@@ -165,6 +210,32 @@ public:
   /// context.
   FieldSet getModeledFields(QualType Type);
 
+  /// Returns the names and types of the synthetic fields for the given record
+  /// type.
+  llvm::StringMap<QualType> getSyntheticFields(QualType Type) {
+    assert(Type->isRecordType());
+    if (SyntheticFieldCallback) {
+      llvm::StringMap<QualType> Result = SyntheticFieldCallback(Type);
+      // Synthetic fields are not allowed to have reference type.
+      assert([&Result] {
+        for (const auto &Entry : Result)
+          if (Entry.getValue()->isReferenceType())
+            return false;
+        return true;
+      }());
+      return Result;
+    }
+    return {};
+  }
+
+  /// Export the logical-context portions of `AC`, limited to the given target
+  /// flow-condition tokens.
+  SimpleLogicalContext
+  exportLogicalContext(llvm::DenseSet<dataflow::Atom> TargetTokens) const;
+
+  /// Initializes this context's "logical" components with `LC`.
+  void initLogicalContext(SimpleLogicalContext LC);
+
 private:
   friend class Environment;
 
@@ -179,6 +250,18 @@ private:
     using DenseMapInfo::isEqual;
   };
 
+  /// `S` is the solver to use. `OwnedSolver` may be:
+  /// *  Null (in which case `S` is non-onwed and must outlive this object), or
+  /// *  Non-null (in which case it must refer to `S`, and the
+  ///    `DataflowAnalysisContext will take ownership of `OwnedSolver`).
+  DataflowAnalysisContext(Solver &S, std::unique_ptr<Solver> &&OwnedSolver,
+                          Options Opts);
+
+  /// Computes the transitive closure of dependencies of (flow-condition)
+  /// `Tokens`. That is, the set of flow-condition tokens reachable from
+  /// `Tokens` in the dependency graph.
+  llvm::DenseSet<Atom> collectDependencies(llvm::DenseSet<Atom> Tokens) const;
+
   // Extends the set of modeled field declarations.
   void addModeledFields(const FieldSet &Fields);
 
@@ -188,6 +271,12 @@ private:
   addTransitiveFlowConditionConstraints(Atom Token,
                                         llvm::SetVector<const Formula *> &Out);
 
+  /// Returns true if the solver is able to prove that there is a satisfying
+  /// assignment for `Constraints`.
+  bool isSatisfiable(llvm::SetVector<const Formula *> Constraints) {
+    return querySolver(std::move(Constraints)).getStatus() ==
+           Solver::Result::Status::Satisfiable;
+  }
 
   /// Returns true if the solver is able to prove that there is no satisfying
   /// assignment for `Constraints`
@@ -196,7 +285,8 @@ private:
            Solver::Result::Status::Unsatisfiable;
   }
 
-  std::unique_ptr<Solver> S;
+  Solver &S;
+  std::unique_ptr<Solver> OwnedSolver;
   std::unique_ptr<Arena> A;
 
   // Maps from program declarations and statements to storage locations that are
@@ -234,12 +324,17 @@ private:
   llvm::DenseMap<Atom, const Formula *> FlowConditionConstraints;
   const Formula *Invariant = nullptr;
 
-  llvm::DenseMap<const FunctionDecl *, ControlFlowContext> FunctionContexts;
+  llvm::DenseMap<const FunctionDecl *, AdornedCFG> FunctionContexts;
 
   // Fields modeled by environments covered by this context.
   FieldSet ModeledFields;
 
   std::unique_ptr<Logger> LogOwner; // If created via flags.
+
+  std::function<llvm::StringMap<QualType>(QualType)> SyntheticFieldCallback;
+
+  /// Has any `RecordStorageLocation` been created yet?
+  bool RecordStorageLocationCreated = false;
 };
 
 } // namespace dataflow

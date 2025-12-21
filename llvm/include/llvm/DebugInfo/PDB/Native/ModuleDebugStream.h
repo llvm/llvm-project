@@ -14,6 +14,7 @@
 #include "llvm/DebugInfo/CodeView/DebugSubsectionRecord.h"
 #include "llvm/DebugInfo/PDB/Native/DbiModuleDescriptor.h"
 #include "llvm/Support/BinaryStreamRef.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include <cstdint>
 #include <memory>
@@ -32,42 +33,42 @@ class ModuleDebugStreamRef {
   using DebugSubsectionIterator = codeview::DebugSubsectionArray::Iterator;
 
 public:
-  ModuleDebugStreamRef(const DbiModuleDescriptor &Module,
-                       std::unique_ptr<msf::MappedBlockStream> Stream);
+  LLVM_ABI ModuleDebugStreamRef(const DbiModuleDescriptor &Module,
+                                std::unique_ptr<msf::MappedBlockStream> Stream);
   ModuleDebugStreamRef(ModuleDebugStreamRef &&Other) = default;
   ModuleDebugStreamRef(const ModuleDebugStreamRef &Other) = default;
-  ~ModuleDebugStreamRef();
+  LLVM_ABI ~ModuleDebugStreamRef();
 
-  Error reload();
+  LLVM_ABI Error reload();
 
   uint32_t signature() const { return Signature; }
 
-  iterator_range<codeview::CVSymbolArray::Iterator>
+  LLVM_ABI iterator_range<codeview::CVSymbolArray::Iterator>
   symbols(bool *HadError) const;
 
   const codeview::CVSymbolArray &getSymbolArray() const { return SymbolArray; }
-  const codeview::CVSymbolArray
+  LLVM_ABI const codeview::CVSymbolArray
   getSymbolArrayForScope(uint32_t ScopeBegin) const;
 
-  BinarySubstreamRef getSymbolsSubstream() const;
-  BinarySubstreamRef getC11LinesSubstream() const;
-  BinarySubstreamRef getC13LinesSubstream() const;
-  BinarySubstreamRef getGlobalRefsSubstream() const;
+  LLVM_ABI BinarySubstreamRef getSymbolsSubstream() const;
+  LLVM_ABI BinarySubstreamRef getC11LinesSubstream() const;
+  LLVM_ABI BinarySubstreamRef getC13LinesSubstream() const;
+  LLVM_ABI BinarySubstreamRef getGlobalRefsSubstream() const;
 
   ModuleDebugStreamRef &operator=(ModuleDebugStreamRef &&Other) = delete;
 
-  codeview::CVSymbol readSymbolAtOffset(uint32_t Offset) const;
+  LLVM_ABI codeview::CVSymbol readSymbolAtOffset(uint32_t Offset) const;
 
-  iterator_range<DebugSubsectionIterator> subsections() const;
+  LLVM_ABI iterator_range<DebugSubsectionIterator> subsections() const;
   codeview::DebugSubsectionArray getSubsectionsArray() const {
     return Subsections;
   }
 
-  bool hasDebugSubsections() const;
+  LLVM_ABI bool hasDebugSubsections() const;
 
-  Error commit();
+  LLVM_ABI Error commit();
 
-  Expected<codeview::DebugChecksumsSubsectionRef>
+  LLVM_ABI Expected<codeview::DebugChecksumsSubsectionRef>
   findChecksumsSubsection() const;
 
 private:

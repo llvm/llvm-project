@@ -5,7 +5,8 @@
 
 # Create a bin directory to store the mock-driver and add it to the path
 # RUN: mkdir -p %t.dir/bin
-# RUN: export PATH=%t.dir/bin:$PATH
+# RUN: %python -c "print(__import__('os').environ['PATH'])" | tr -d '\n' > %t.path
+# RUN: export PATH=%t.dir/bin:%{readfile:%t.path}
 # Generate a mock-driver that will print %temp_dir%/my/dir and
 # %temp_dir%/my/dir2 as include search paths.
 # RUN: echo '#!/bin/sh' >> %t.dir/bin/my_driver.sh
@@ -18,6 +19,11 @@
 # RUN: echo '[ -z "${args##*"--sysroot /my/sysroot/path"*}" ] || exit' >> %t.dir/bin/my_driver.sh
 # RUN: echo '[ -z "${args##*"-isysroot /isysroot"*}" ] || exit' >> %t.dir/bin/my_driver.sh
 # RUN: echo '[ -z "${args##*"-target arm-linux-gnueabihf"*}" ] || exit' >> %t.dir/bin/my_driver.sh
+# RUN: echo '[ -z "${args##*"--stdlib libc++"*}" ] || exit' >> %t.dir/bin/my_driver.sh
+# RUN: echo '[ -z "${args##*"-specs=test.spec"*}" ] || exit' >> %t.dir/bin/my_driver.sh
+# RUN: echo '[ -z "${args##*"--specs=test2.spec"*}" ] || exit' >> %t.dir/bin/my_driver.sh
+# Check that clangd drops other flags like -lc++, which don't affect includes
+# RUN: echo '[ -n "${args##*"-lc++"*}" ] || exit' >> %t.dir/bin/my_driver.sh
 # RUN: echo 'echo line to ignore >&2' >> %t.dir/bin/my_driver.sh
 # RUN: echo 'printf "Target: arm-linux-gnueabihf\r\n" >&2' >> %t.dir/bin/my_driver.sh
 # RUN: echo 'printf "#include <...> search starts here:\r\n" >&2' >> %t.dir/bin/my_driver.sh
@@ -37,7 +43,7 @@
 
 # Generate a compile_commands.json that will query the mock driver we've
 # created. Which should add a.h and b.h into include search path.
-# RUN: echo '[{"directory": "%/t.dir", "command": "my_driver.sh the-file.cpp --target=arm-linux-gnueabihf -nostdinc --sysroot /my/sysroot/path -isysroot/isysroot", "file": "the-file.cpp"}]' > %t.dir/compile_commands.json
+# RUN: echo '[{"directory": "%/t.dir", "command": "my_driver.sh the-file.cpp --target=arm-linux-gnueabihf -nostdinc --sysroot /my/sysroot/path -isysroot/isysroot -stdlib=libc++ -lc++ -specs=test.spec --specs=test2.spec", "file": "the-file.cpp"}]' > %t.dir/compile_commands.json
 
 # RUN: sed -e "s|INPUT_DIR|%/t.dir|g" %s > %t.test.1
 # On Windows, we need the URI in didOpen to look like "uri":"file:///C:/..."
@@ -47,7 +53,7 @@
 # Bless the mock driver we've just created so that clangd can execute it.
 # Note: include clangd's stderr in the FileCheck input with "2>&1" so that we
 # can match output lines like "ASTWorker building file"
-# RUN: clangd -lit-test -query-driver="**.test,**.sh" < %t.test 2>&1 | FileCheck -strict-whitespace %t.test
+# RUN: clangd --clang-tidy=false -lit-test -query-driver="**.test,**.sh" < %t.test 2>&1 | FileCheck -strict-whitespace %t.test
 {"jsonrpc":"2.0","id":0,"method":"initialize","params":{}}
 ---
 {
@@ -75,7 +81,7 @@
 {"jsonrpc":"2.0","method":"exit"}
 
 # Generate a different compile_commands.json which does not point to the mock driver
-# RUN: echo '[{"directory": "%/t.dir", "command": "gcc the-file.cpp --target=arm-linux-gnueabihf -nostdinc --sysroot /my/sysroot/path -isysroot/isysroot", "file": "the-file.cpp"}]' > %t.dir/compile_commands.json
+# RUN: echo '[{"directory": "%/t.dir", "command": "gcc the-file.cpp --target=arm-linux-gnueabihf -nostdinc --sysroot /my/sysroot/path -isysroot/isysroot -stdlib=libc++ -lc++ -specs=test.spec --specs=test2.spec", "file": "the-file.cpp"}]' > %t.dir/compile_commands.json
 
 # Generate a clangd config file which points to the mock driver instead
 # RUN: echo 'CompileFlags:' > %t.dir/.clangd
@@ -83,4 +89,4 @@
 
 # Run clangd a second time, to make sure it picks up the driver name from the config file
 # Note, we need to pass -enable-config because -lit-test otherwise disables it
-# RUN: clangd -lit-test -enable-config -query-driver="**.test,**.sh" < %t.test 2>&1 | FileCheck -strict-whitespace %t.test
+# RUN: clangd --clang-tidy=false -lit-test -enable-config -query-driver="**.test,**.sh" < %t.test 2>&1 | FileCheck -strict-whitespace %t.test

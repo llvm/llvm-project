@@ -24,45 +24,87 @@ class OpBuilder;
 class Operation;
 class Type;
 class ValueRange;
+class SymbolTableCollection;
 
 namespace LLVM {
 class LLVMFuncOp;
 
-/// Helper functions to lookup or create the declaration for commonly used
+/// Helper functions to look up or create the declaration for commonly used
 /// external C function calls. The list of functions provided here must be
 /// implemented separately (e.g. as part of a support runtime library or as part
 /// of the libc).
-LLVM::LLVMFuncOp lookupOrCreatePrintI64Fn(ModuleOp moduleOp);
-LLVM::LLVMFuncOp lookupOrCreatePrintU64Fn(ModuleOp moduleOp);
-LLVM::LLVMFuncOp lookupOrCreatePrintF16Fn(ModuleOp moduleOp);
-LLVM::LLVMFuncOp lookupOrCreatePrintBF16Fn(ModuleOp moduleOp);
-LLVM::LLVMFuncOp lookupOrCreatePrintF32Fn(ModuleOp moduleOp);
-LLVM::LLVMFuncOp lookupOrCreatePrintF64Fn(ModuleOp moduleOp);
-LLVM::LLVMFuncOp lookupOrCreatePrintStrFn(ModuleOp moduleOp,
-                                          bool opaquePointers);
-LLVM::LLVMFuncOp lookupOrCreatePrintOpenFn(ModuleOp moduleOp);
-LLVM::LLVMFuncOp lookupOrCreatePrintCloseFn(ModuleOp moduleOp);
-LLVM::LLVMFuncOp lookupOrCreatePrintCommaFn(ModuleOp moduleOp);
-LLVM::LLVMFuncOp lookupOrCreatePrintNewlineFn(ModuleOp moduleOp);
-LLVM::LLVMFuncOp lookupOrCreateMallocFn(ModuleOp moduleOp, Type indexType,
-                                        bool opaquePointers);
-LLVM::LLVMFuncOp lookupOrCreateAlignedAllocFn(ModuleOp moduleOp, Type indexType,
-                                              bool opaquePointers);
-LLVM::LLVMFuncOp lookupOrCreateFreeFn(ModuleOp moduleOp, bool opaquePointers);
-LLVM::LLVMFuncOp lookupOrCreateGenericAllocFn(ModuleOp moduleOp, Type indexType,
-                                              bool opaquePointers);
-LLVM::LLVMFuncOp lookupOrCreateGenericAlignedAllocFn(ModuleOp moduleOp,
-                                                     Type indexType,
-                                                     bool opaquePointers);
-LLVM::LLVMFuncOp lookupOrCreateGenericFreeFn(ModuleOp moduleOp,
-                                             bool opaquePointers);
-LLVM::LLVMFuncOp lookupOrCreateMemRefCopyFn(ModuleOp moduleOp, Type indexType,
-                                            Type unrankedDescriptorType);
+/// Failure if an unexpected version of function is found.
+FailureOr<LLVM::LLVMFuncOp>
+lookupOrCreatePrintI64Fn(OpBuilder &b, Operation *moduleOp,
+                         SymbolTableCollection *symbolTables = nullptr);
+FailureOr<LLVM::LLVMFuncOp>
+lookupOrCreatePrintU64Fn(OpBuilder &b, Operation *moduleOp,
+                         SymbolTableCollection *symbolTables = nullptr);
+FailureOr<LLVM::LLVMFuncOp>
+lookupOrCreatePrintF16Fn(OpBuilder &b, Operation *moduleOp,
+                         SymbolTableCollection *symbolTables = nullptr);
+FailureOr<LLVM::LLVMFuncOp>
+lookupOrCreatePrintBF16Fn(OpBuilder &b, Operation *moduleOp,
+                          SymbolTableCollection *symbolTables = nullptr);
+FailureOr<LLVM::LLVMFuncOp>
+lookupOrCreatePrintF32Fn(OpBuilder &b, Operation *moduleOp,
+                         SymbolTableCollection *symbolTables = nullptr);
+FailureOr<LLVM::LLVMFuncOp>
+lookupOrCreatePrintF64Fn(OpBuilder &b, Operation *moduleOp,
+                         SymbolTableCollection *symbolTables = nullptr);
+FailureOr<LLVM::LLVMFuncOp>
+lookupOrCreateApFloatPrintFn(OpBuilder &b, Operation *moduleOp,
+                             SymbolTableCollection *symbolTables = nullptr);
+
+/// Declares a function to print a C-string.
+/// If a custom runtime function is defined via `runtimeFunctionName`, it must
+/// have the signature void(char const*). The default function is `printString`.
+FailureOr<LLVM::LLVMFuncOp>
+lookupOrCreatePrintStringFn(OpBuilder &b, Operation *moduleOp,
+                            std::optional<StringRef> runtimeFunctionName = {},
+                            SymbolTableCollection *symbolTables = nullptr);
+FailureOr<LLVM::LLVMFuncOp>
+lookupOrCreatePrintOpenFn(OpBuilder &b, Operation *moduleOp,
+                          SymbolTableCollection *symbolTables = nullptr);
+FailureOr<LLVM::LLVMFuncOp>
+lookupOrCreatePrintCloseFn(OpBuilder &b, Operation *moduleOp,
+                           SymbolTableCollection *symbolTables = nullptr);
+FailureOr<LLVM::LLVMFuncOp>
+lookupOrCreatePrintCommaFn(OpBuilder &b, Operation *moduleOp,
+                           SymbolTableCollection *symbolTables = nullptr);
+FailureOr<LLVM::LLVMFuncOp>
+lookupOrCreatePrintNewlineFn(OpBuilder &b, Operation *moduleOp,
+                             SymbolTableCollection *symbolTables = nullptr);
+FailureOr<LLVM::LLVMFuncOp>
+lookupOrCreateMallocFn(OpBuilder &b, Operation *moduleOp, Type indexType,
+                       SymbolTableCollection *symbolTables = nullptr);
+FailureOr<LLVM::LLVMFuncOp>
+lookupOrCreateAlignedAllocFn(OpBuilder &b, Operation *moduleOp, Type indexType,
+                             SymbolTableCollection *symbolTables = nullptr);
+FailureOr<LLVM::LLVMFuncOp>
+lookupOrCreateFreeFn(OpBuilder &b, Operation *moduleOp,
+                     SymbolTableCollection *symbolTables = nullptr);
+FailureOr<LLVM::LLVMFuncOp>
+lookupOrCreateGenericAllocFn(OpBuilder &b, Operation *moduleOp, Type indexType,
+                             SymbolTableCollection *symbolTables = nullptr);
+FailureOr<LLVM::LLVMFuncOp> lookupOrCreateGenericAlignedAllocFn(
+    OpBuilder &b, Operation *moduleOp, Type indexType,
+    SymbolTableCollection *symbolTables = nullptr);
+FailureOr<LLVM::LLVMFuncOp>
+lookupOrCreateGenericFreeFn(OpBuilder &b, Operation *moduleOp,
+                            SymbolTableCollection *symbolTables = nullptr);
+FailureOr<LLVM::LLVMFuncOp>
+lookupOrCreateMemRefCopyFn(OpBuilder &b, Operation *moduleOp, Type indexType,
+                           Type unrankedDescriptorType,
+                           SymbolTableCollection *symbolTables = nullptr);
 
 /// Create a FuncOp with signature `resultType`(`paramTypes`)` and name `name`.
-LLVM::LLVMFuncOp lookupOrCreateFn(ModuleOp moduleOp, StringRef name,
-                                  ArrayRef<Type> paramTypes = {},
-                                  Type resultType = {}, bool isVarArg = false);
+/// Return a failure if the FuncOp found has unexpected signature.
+FailureOr<LLVM::LLVMFuncOp>
+lookupOrCreateFn(OpBuilder &b, Operation *moduleOp, StringRef name,
+                 ArrayRef<Type> paramTypes = {}, Type resultType = {},
+                 bool isVarArg = false, bool isReserved = false,
+                 SymbolTableCollection *symbolTables = nullptr);
 
 } // namespace LLVM
 } // namespace mlir

@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 #
 # Run as: CLANG=bin/clang build_symbolizer.sh out.o
+# If you want to use a local copy of zlib, set ZLIB_SRC.
 # zlib can be downloaded from http://www.zlib.net.
 #
 # Script compiles self-contained object file with symbolization code.
@@ -20,6 +21,12 @@ set -u
 
 SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
 SRC_DIR=$(readlink -f $SCRIPT_DIR/..)
+
+if [[ $# -ne 1 ]]; then
+  echo "Missing output file"
+  exit 1
+fi
+
 OUTPUT=$(readlink -f $1)
 COMPILER_RT_SRC=$(readlink -f ${SCRIPT_DIR}/../../../..)
 LLVM_SRC=${LLVM_SRC:-${COMPILER_RT_SRC}/../llvm}
@@ -48,10 +55,12 @@ cd $BUILD_DIR
 
 ZLIB_BUILD=${BUILD_DIR}/zlib
 LIBCXX_BUILD=${BUILD_DIR}/libcxx
+LIBCXX_INSTALL=${BUILD_DIR}/libcxx-install
 LLVM_BUILD=${BUILD_DIR}/llvm
 SYMBOLIZER_BUILD=${BUILD_DIR}/symbolizer
 
 FLAGS=${FLAGS:-}
+ZLIB_SRC=${ZLIB_SRC:-}
 TARGET_TRIPLE=$($CC -print-target-triple $FLAGS)
 if [[ "$FLAGS" =~ "-m32" ]] ; then
   # Avoid new wrappers.
@@ -63,18 +72,30 @@ FLAGS+=" -include ${SRC_DIR}/../sanitizer_redefine_builtins.h -DSANITIZER_COMMON
 LINKFLAGS="-fuse-ld=lld -target $TARGET_TRIPLE"
 
 # Build zlib.
-[[ -d ${ZLIB_BUILD} ]] || git clone https://github.com/madler/zlib ${ZLIB_BUILD}
+if [[ ! -d ${ZLIB_BUILD} ]]; then
+  if [[ -z "${ZLIB_SRC}" ]]; then
+    git clone https://github.com/madler/zlib ${ZLIB_BUILD}
+  else
+    ZLIB_SRC=$(readlink -f $ZLIB_SRC)
+    mkdir -p ${ZLIB_BUILD}
+    cp -r ${ZLIB_SRC}/* ${ZLIB_BUILD}/
+  fi
+fi
+
 cd ${ZLIB_BUILD}
-AR="${AR}" CC="${CC}" CFLAGS="$FLAGS -Wno-deprecated-non-prototype" RANLIB=/bin/true ./configure --static
+AR="${AR}" CC="${CC}" CFLAGS="$FLAGS -Wno-deprecated-non-prototype -fuse-ld=lld" RANLIB=/bin/true ./configure --static
+# TODO: remove this. this is for debugging buildbot problems
+cat configure.log
 make -j libz.a
 
 # Build and install libcxxabi and libcxx.
-if [[ ! -f ${LLVM_BUILD}/build.ninja ]]; then
-  rm -rf ${LIBCXX_BUILD}
-  mkdir -p ${LIBCXX_BUILD}
+if [[ ! -f ${LIBCXX_BUILD}/build.ninja ]]; then
+  rm -rf "${LIBCXX_BUILD}" "${LIBCXX_INSTALL}"
+  mkdir -p ${LIBCXX_BUILD} ${LIBCXX_INSTALL}
   cd ${LIBCXX_BUILD}
   LIBCXX_FLAGS="${FLAGS} -Wno-macro-redefined"
   cmake -GNinja \
+    -DCMAKE_INSTALL_PREFIX="${LIBCXX_INSTALL}" \
     -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi" \
     -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_C_COMPILER_WORKS=ON \
@@ -87,6 +108,7 @@ if [[ ! -f ${LLVM_BUILD}/build.ninja ]]; then
     -DCMAKE_CXX_FLAGS_RELEASE="${LIBCXX_FLAGS}" \
     -DLIBCXXABI_ENABLE_ASSERTIONS=OFF \
     -DLIBCXXABI_ENABLE_EXCEPTIONS=OFF \
+    -DLIBCXXABI_USE_LLVM_UNWINDER=OFF \
     -DLIBCXX_ENABLE_ASSERTIONS=OFF \
     -DLIBCXX_ENABLE_EXCEPTIONS=OFF \
     -DLIBCXX_ENABLE_RTTI=OFF \
@@ -96,11 +118,11 @@ if [[ ! -f ${LLVM_BUILD}/build.ninja ]]; then
   $LLVM_SRC/../runtimes
 fi
 cd ${LIBCXX_BUILD}
-ninja cxx cxxabi
+ninja cxx cxxabi && ninja install-cxx install-cxxabi
 
 FLAGS="${FLAGS} -fno-rtti -fno-exceptions"
 LLVM_CFLAGS="${FLAGS} -Wno-global-constructors"
-LLVM_CXXFLAGS="${LLVM_CFLAGS} -nostdinc++ -I${ZLIB_BUILD} -isystem ${LIBCXX_BUILD}/include -isystem ${LIBCXX_BUILD}/include/c++/v1"
+LLVM_CXXFLAGS="-isystem ${LIBCXX_INSTALL}/include -isystem ${LIBCXX_INSTALL}/include/c++/v1 ${LLVM_CFLAGS} -nostdinc++ -I${ZLIB_BUILD}"
 
 # Build LLVM.
 if [[ ! -f ${LLVM_BUILD}/build.ninja ]]; then
@@ -116,17 +138,16 @@ if [[ ! -f ${LLVM_BUILD}/build.ninja ]]; then
     -DLLVM_ENABLE_LIBCXX=ON \
     -DCMAKE_C_FLAGS_RELEASE="${LLVM_CFLAGS}" \
     -DCMAKE_CXX_FLAGS_RELEASE="${LLVM_CXXFLAGS}" \
-    -DCMAKE_EXE_LINKER_FLAGS="$LINKFLAGS -stdlib=libc++ -L${LIBCXX_BUILD}/lib" \
+    -DCMAKE_EXE_LINKER_FLAGS="$LINKFLAGS -stdlib=libc++ -L${LIBCXX_INSTALL}/lib" \
     -DLLVM_TABLEGEN=$TBLGEN \
     -DLLVM_INCLUDE_TESTS=OFF \
     -DLLVM_ENABLE_ZLIB=ON \
     -DLLVM_ENABLE_ZSTD=OFF \
-    -DLLVM_ENABLE_TERMINFO=OFF \
     -DLLVM_ENABLE_THREADS=OFF \
   $LLVM_SRC
 fi
 cd ${LLVM_BUILD}
-ninja LLVMSymbolize LLVMObject LLVMBinaryFormat LLVMDebugInfoDWARF LLVMSupport LLVMDebugInfoPDB LLVMDebuginfod LLVMMC LLVMDemangle LLVMTextAPI LLVMTargetParser
+ninja LLVMSymbolize LLVMObject LLVMBinaryFormat LLVMDebugInfoDWARF LLVMDebugInfoGSYM LLVMSupport LLVMDebugInfoPDB LLVMDebuginfod LLVMMC LLVMDemangle LLVMTextAPI LLVMTargetParser LLVMCore
 
 cd ${BUILD_DIR}
 rm -rf ${SYMBOLIZER_BUILD}
@@ -146,7 +167,7 @@ SYMBOLIZER_API_LIST+=,__sanitizer_symbolize_demangle
 SYMBOLIZER_API_LIST+=,__sanitizer_symbolize_set_demangle
 SYMBOLIZER_API_LIST+=,__sanitizer_symbolize_set_inline_frames
 
-LIBCXX_ARCHIVE_DIR=$(dirname $(find $LIBCXX_BUILD -name libc++.a | head -n1))
+LIBCXX_ARCHIVE_DIR=$(dirname $(find $LIBCXX_INSTALL -name libc++.a | head -n1))
 
 # Merge all the object files together and copy the resulting library back.
 $LINK $LIBCXX_ARCHIVE_DIR/libc++.a \
@@ -155,6 +176,8 @@ $LINK $LIBCXX_ARCHIVE_DIR/libc++.a \
       $LLVM_BUILD/lib/libLLVMObject.a \
       $LLVM_BUILD/lib/libLLVMBinaryFormat.a \
       $LLVM_BUILD/lib/libLLVMDebugInfoDWARF.a \
+      $LLVM_BUILD/lib/libLLVMDebugInfoDWARFLowLevel.a \
+      $LLVM_BUILD/lib/libLLVMDebugInfoGSYM.a \
       $LLVM_BUILD/lib/libLLVMSupport.a \
       $LLVM_BUILD/lib/libLLVMDebugInfoPDB.a \
       $LLVM_BUILD/lib/libLLVMDebugInfoMSF.a \
@@ -164,6 +187,7 @@ $LINK $LIBCXX_ARCHIVE_DIR/libc++.a \
       $LLVM_BUILD/lib/libLLVMMC.a \
       $LLVM_BUILD/lib/libLLVMTextAPI.a \
       $LLVM_BUILD/lib/libLLVMTargetParser.a \
+      $LLVM_BUILD/lib/libLLVMCore.a \
       $ZLIB_BUILD/libz.a \
       symbolizer.a \
       -ignore-non-bitcode -o all.bc
@@ -173,8 +197,10 @@ $OPT -passes=internalize -internalize-public-api-list=${SYMBOLIZER_API_LIST} all
 $CC $FLAGS -fno-lto -c opt.bc -o symbolizer.o
 
 echo "Checking undefined symbols..."
-nm -f posix -g symbolizer.o | cut -f 1,2 -d \  | LC_COLLATE=C sort -u > undefined.new
-(diff -u $SCRIPT_DIR/global_symbols.txt undefined.new | grep -E "^\+[^+]") && \
+export LC_ALL=C
+nm -f posix -g symbolizer.o | cut -f 1,2 -d \  | sort -u > undefined.new
+grep -Ev "^#|^$" $SCRIPT_DIR/global_symbols.txt | sort -u > expected.new
+(diff -u expected.new undefined.new | grep -E "^\+[^+]") && \
   (echo "Failed: unexpected symbols"; exit 1)
 
 cp -f symbolizer.o $OUTPUT

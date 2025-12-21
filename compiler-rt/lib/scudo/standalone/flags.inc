@@ -32,6 +32,12 @@ SCUDO_FLAG(bool, delete_size_mismatch, true,
            "Terminate on a size mismatch between a sized-delete and the actual "
            "size of a chunk (as provided to new/new[]).")
 
+#if SCUDO_FUCHSIA
+SCUDO_FLAG(int, zero_on_dealloc_max_size, 0,
+           "Only chunks smaller or equal to this threshold will be zeroed on "
+           "deallocation. Requires zero on dealloc to be enabled.")
+#endif
+
 SCUDO_FLAG(bool, zero_contents, false, "Zero chunk contents on allocation.")
 
 SCUDO_FLAG(bool, pattern_fill_contents, false,
@@ -42,9 +48,10 @@ SCUDO_FLAG(bool, may_return_null, true,
            "returning NULL in otherwise non-fatal error scenarios, eg: OOM, "
            "invalid allocation alignments, etc.")
 
-SCUDO_FLAG(int, release_to_os_interval_ms, SCUDO_ANDROID ? INT32_MIN : 5000,
+SCUDO_FLAG(int, release_to_os_interval_ms, 5000,
            "Interval (in milliseconds) at which to attempt release of unused "
            "memory to the OS. Negative values disable the feature.")
 
 SCUDO_FLAG(int, allocation_ring_buffer_size, 32768,
-           "Entries to keep in the allocation ring buffer for scudo.")
+           "Entries to keep in the allocation ring buffer for scudo. "
+           "Values less or equal to zero disable the buffer.")

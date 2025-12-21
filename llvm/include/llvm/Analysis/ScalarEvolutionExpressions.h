@@ -16,11 +16,11 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/iterator_range.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cassert>
 #include <cstddef>
@@ -106,8 +106,8 @@ protected:
   const SCEV *Op;
   Type *Ty;
 
-  SCEVCastExpr(const FoldingSetNodeIDRef ID, SCEVTypes SCEVTy, const SCEV *op,
-               Type *ty);
+  LLVM_ABI SCEVCastExpr(const FoldingSetNodeIDRef ID, SCEVTypes SCEVTy,
+                        const SCEV *op, Type *ty);
 
 public:
   const SCEV *getOperand() const { return Op; }
@@ -141,8 +141,8 @@ public:
 /// This is the base class for unary integral cast operator classes.
 class SCEVIntegralCastExpr : public SCEVCastExpr {
 protected:
-  SCEVIntegralCastExpr(const FoldingSetNodeIDRef ID, SCEVTypes SCEVTy,
-                       const SCEV *op, Type *ty);
+  LLVM_ABI SCEVIntegralCastExpr(const FoldingSetNodeIDRef ID, SCEVTypes SCEVTy,
+                                const SCEV *op, Type *ty);
 
 public:
   /// Methods for support type inquiry through isa, cast, and dyn_cast:
@@ -395,12 +395,14 @@ public:
 
   /// Return the value of this chain of recurrences at the specified
   /// iteration number.
-  const SCEV *evaluateAtIteration(const SCEV *It, ScalarEvolution &SE) const;
+  LLVM_ABI const SCEV *evaluateAtIteration(const SCEV *It,
+                                           ScalarEvolution &SE) const;
 
   /// Return the value of this chain of recurrences at the specified iteration
   /// number. Takes an explicit list of operands to represent an AddRec.
-  static const SCEV *evaluateAtIteration(ArrayRef<const SCEV *> Operands,
-                                         const SCEV *It, ScalarEvolution &SE);
+  LLVM_ABI static const SCEV *
+  evaluateAtIteration(ArrayRef<const SCEV *> Operands, const SCEV *It,
+                      ScalarEvolution &SE);
 
   /// Return the number of iterations of this loop that produce
   /// values in the specified constant range.  Another way of
@@ -408,12 +410,12 @@ public:
   /// where the value is not in the condition, thus computing the
   /// exit count.  If the iteration count can't be computed, an
   /// instance of SCEVCouldNotCompute is returned.
-  const SCEV *getNumIterationsInRange(const ConstantRange &Range,
-                                      ScalarEvolution &SE) const;
+  LLVM_ABI const SCEV *getNumIterationsInRange(const ConstantRange &Range,
+                                               ScalarEvolution &SE) const;
 
   /// Return an expression representing the value of this expression
   /// one iteration of the loop ahead.
-  const SCEVAddRecExpr *getPostIncExpr(ScalarEvolution &SE) const;
+  LLVM_ABI const SCEVAddRecExpr *getPostIncExpr(ScalarEvolution &SE) const;
 
   /// Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const SCEV *S) {
@@ -512,8 +514,9 @@ public:
 /// This node is the base class for sequential/in-order min/max selections.
 /// Note that their fundamental difference from SCEVMinMaxExpr's is that they
 /// are early-returning upon reaching saturation point.
-/// I.e. given `0 umin_seq poison`, the result will be `0`,
-/// while the result of `0 umin poison` is `poison`.
+/// I.e. given `0 umin_seq poison`, the result will be `0`, while the result of
+/// `0 umin poison` is `poison`. When returning early, later expressions are not
+/// executed, so `0 umin_seq (%x u/ 0)` does not result in undefined behavior.
 class SCEVSequentialMinMaxExpr : public SCEVNAryExpr {
   friend class ScalarEvolution;
 
@@ -574,7 +577,7 @@ public:
 /// This means that we are dealing with an entirely unknown SCEV
 /// value, and only represent it as its LLVM Value.  This is the
 /// "bottom" value for the analysis.
-class SCEVUnknown final : public SCEV, private CallbackVH {
+class LLVM_ABI SCEVUnknown final : public SCEV, private CallbackVH {
   friend class ScalarEvolution;
 
   /// The parent ScalarEvolution value. This is used to update the
@@ -944,10 +947,11 @@ public:
       Operands.push_back(visit(Op));
 
     const Loop *L = Expr->getLoop();
-    if (0 == Map.count(L))
+    auto It = Map.find(L);
+    if (It == Map.end())
       return SE.getAddRecExpr(Operands, L, Expr->getNoWrapFlags());
 
-    return SCEVAddRecExpr::evaluateAtIteration(Operands, Map[L], SE);
+    return SCEVAddRecExpr::evaluateAtIteration(Operands, It->second, SE);
   }
 
 private:

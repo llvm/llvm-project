@@ -1,8 +1,8 @@
-// RUN: mlir-opt -convert-func-to-llvm='use-opaque-pointers=1' -reconcile-unrealized-casts %s | FileCheck %s
+// RUN: mlir-opt -convert-func-to-llvm -reconcile-unrealized-casts %s | FileCheck %s
 
-// RUN: mlir-opt -convert-func-to-llvm='use-bare-ptr-memref-call-conv=1 use-opaque-pointers=1'  %s | FileCheck %s --check-prefix=BAREPTR
+// RUN: mlir-opt -convert-func-to-llvm='use-bare-ptr-memref-call-conv=1' -reconcile-unrealized-casts %s | FileCheck %s --check-prefix=BAREPTR
 
-// RUN: mlir-opt -test-transform-dialect-interpreter %s | FileCheck %s --check-prefix=BAREPTR
+// RUN: mlir-opt -transform-interpreter -reconcile-unrealized-casts %s | FileCheck %s --check-prefix=BAREPTR
 
 // These tests were separated from func-memref.mlir because applying
 // -reconcile-unrealized-casts resulted in `llvm.extractvalue` ops getting
@@ -17,7 +17,7 @@
 func.func @check_static_return(%static : memref<32x18xf32>) -> memref<32x18xf32> {
 // CHECK:  llvm.return %{{.*}} : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
 
-// BAREPTR: %[[udf:.*]] = llvm.mlir.undef : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
+// BAREPTR: %[[udf:.*]] = llvm.mlir.poison : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
 // BAREPTR-NEXT: %[[base0:.*]] = llvm.insertvalue %[[arg]], %[[udf]][0] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
 // BAREPTR-NEXT: %[[aligned:.*]] = llvm.insertvalue %[[arg]], %[[base0]][1] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
 // BAREPTR-NEXT: %[[val0:.*]] = llvm.mlir.constant(0 : index) : i64
@@ -44,7 +44,7 @@ func.func @check_static_return(%static : memref<32x18xf32>) -> memref<32x18xf32>
 func.func @check_static_return_with_offset(%static : memref<32x18xf32, strided<[22,1], offset: 7>>) -> memref<32x18xf32, strided<[22,1], offset: 7>> {
 // CHECK:  llvm.return %{{.*}} : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
 
-// BAREPTR: %[[udf:.*]] = llvm.mlir.undef : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
+// BAREPTR: %[[udf:.*]] = llvm.mlir.poison : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
 // BAREPTR-NEXT: %[[base0:.*]] = llvm.insertvalue %[[arg]], %[[udf]][0] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
 // BAREPTR-NEXT: %[[aligned:.*]] = llvm.insertvalue %[[arg]], %[[base0]][1] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
 // BAREPTR-NEXT: %[[val0:.*]] = llvm.mlir.constant(7 : index) : i64
@@ -72,7 +72,7 @@ func.func @check_memref_func_call(%in : memref<10xi8>) -> memref<20xi8> {
   // BAREPTR:         %[[inDesc:.*]] = llvm.insertvalue %{{.*}}, %{{.*}}[4, 0]
   // BAREPTR-NEXT:    %[[barePtr:.*]] = llvm.extractvalue %[[inDesc]][1] : !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>
   // BAREPTR-NEXT:    %[[call:.*]] = llvm.call @foo(%[[barePtr]]) : (!llvm.ptr) -> !llvm.ptr
-  // BAREPTR-NEXT:    %[[desc0:.*]] = llvm.mlir.undef : !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>
+  // BAREPTR-NEXT:    %[[desc0:.*]] = llvm.mlir.poison : !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>
   // BAREPTR-NEXT:    %[[desc1:.*]] = llvm.insertvalue %[[call]], %[[desc0]][0] : !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>
   // BAREPTR-NEXT:    %[[desc2:.*]] = llvm.insertvalue %[[call]], %[[desc1]][1] : !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>
   // BAREPTR-NEXT:    %[[c0:.*]] = llvm.mlir.constant(0 : index) : i64
@@ -110,17 +110,20 @@ func.func @unranked_memref(%arg0:memref<*xi32>) {
 }
 func.func private @printMemrefI32(memref<*xi32>)
 
-transform.sequence failures(propagate) {
-^bb1(%toplevel_module: !transform.any_op):
-  %func = transform.structured.match ops{["func.func"]} in %toplevel_module
-    : (!transform.any_op) -> !transform.any_op
-  transform.apply_conversion_patterns to %func {
-    transform.apply_conversion_patterns.func.func_to_llvm
-  } with type_converter {
-    transform.apply_conversion_patterns.memref.memref_to_llvm_type_converter
-      {use_bare_ptr_call_conv = true, use_opaque_pointers = true}
-  } {
-    legal_dialects = ["llvm"],
-    partial_conversion
-  } : !transform.any_op
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(
+      %toplevel_module: !transform.any_op {transform.readonly}) {
+    %func = transform.structured.match ops{["func.func"]} in %toplevel_module
+      : (!transform.any_op) -> !transform.any_op
+    transform.apply_conversion_patterns to %func {
+      transform.apply_conversion_patterns.func.func_to_llvm
+    } with type_converter {
+      transform.apply_conversion_patterns.memref.memref_to_llvm_type_converter
+        {use_bare_ptr_call_conv = true, use_opaque_pointers = true}
+    } {
+      legal_dialects = ["llvm"],
+      partial_conversion
+    } : !transform.any_op
+    transform.yield
+  }
 }

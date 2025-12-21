@@ -12,7 +12,7 @@
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/IR/AttrTypeBase.td"
 
-include "UBOpsInterfaces.td"
+include "mlir/Dialect/UB/IR/UBOpsInterfaces.td"
 
 def UB_Dialect : Dialect {
   let name = "ub";
@@ -48,12 +48,6 @@ def PoisonOp : UB_Op<"poison", [ConstantLike, Pure]> {
     semantics (e.g. partially poisoned vectors), default value indicates results
     is fully poisoned.
 
-    Syntax:
-
-    ```
-    poison-op ::= `poison` (`<` value `>`)? `:` type
-    ```
-
     Examples:
 
     ```
@@ -70,6 +64,26 @@ def PoisonOp : UB_Op<"poison", [ConstantLike, Pure]> {
   let assemblyFormat = "attr-dict (`<` $value^ `>`)? `:` type($result)";
 
   let hasFolder = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// UnreachableOp
+//===----------------------------------------------------------------------===//
+
+def UnreachableOp : UB_Op<"unreachable", [Terminator]> {
+  let summary = "Unreachable operation.";
+  let description = [{
+    The `unreachable` operation triggers immediate undefined behavior if
+    executed.
+
+    Example:
+
+    ```
+    ub.unreachable
+    ```
+  }];
+
+  let assemblyFormat = "attr-dict";
 }
 
 #endif // MLIR_DIALECT_UB_IR_UBOPS_TD

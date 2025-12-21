@@ -16,6 +16,7 @@
 #include <algorithm>
 #include <cassert>
 #include <random>
+#include <vector>
 
 #include "test_macros.h"
 
@@ -64,7 +65,7 @@ int main(int, char**)
   std::make_heap(v.begin(), v.end());
   assert(stats.copied == 0);
   assert(stats.moved == 153'486);
-#if !_LIBCPP_ENABLE_DEBUG_MODE
+#if _LIBCPP_HARDENING_MODE != _LIBCPP_HARDENING_MODE_DEBUG
   assert(stats.compared == 188'285);
 #endif
 

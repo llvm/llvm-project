@@ -6,28 +6,55 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <algorithm>
+#include "JSONUtils.h"
+#include "DAP.h"
+#include "ExceptionBreakpoint.h"
+#include "LLDBUtils.h"
+#include "Protocol/ProtocolBase.h"
+#include "Protocol/ProtocolRequests.h"
+#include "ProtocolUtils.h"
+#include "lldb/API/SBAddress.h"
+#include "lldb/API/SBCompileUnit.h"
+#include "lldb/API/SBDeclaration.h"
+#include "lldb/API/SBEnvironment.h"
+#include "lldb/API/SBError.h"
+#include "lldb/API/SBFileSpec.h"
+#include "lldb/API/SBFrame.h"
+#include "lldb/API/SBFunction.h"
+#include "lldb/API/SBInstructionList.h"
+#include "lldb/API/SBLineEntry.h"
+#include "lldb/API/SBModule.h"
+#include "lldb/API/SBQueue.h"
+#include "lldb/API/SBSection.h"
+#include "lldb/API/SBStream.h"
+#include "lldb/API/SBStringList.h"
+#include "lldb/API/SBStructuredData.h"
+#include "lldb/API/SBTarget.h"
+#include "lldb/API/SBThread.h"
+#include "lldb/API/SBType.h"
+#include "lldb/API/SBValue.h"
+#include "lldb/Host/PosixApi.h" // IWYU pragma: keep
+#include "lldb/lldb-defines.h"
+#include "lldb/lldb-enumerations.h"
+#include "lldb/lldb-types.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
+#include "llvm/Support/Format.h"
+#include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/JSON.h"
+#include "llvm/Support/Path.h"
+#include "llvm/Support/ScopedPrinter.h"
+#include "llvm/Support/raw_ostream.h"
+#include <chrono>
+#include <cstddef>
 #include <iomanip>
 #include <optional>
 #include <sstream>
-#include <string.h>
-
-#include "llvm/Support/FormatAdapters.h"
-#include "llvm/Support/Path.h"
-#include "llvm/Support/ScopedPrinter.h"
-
-#include "lldb/API/SBBreakpoint.h"
-#include "lldb/API/SBBreakpointLocation.h"
-#include "lldb/API/SBDeclaration.h"
-#include "lldb/API/SBStringList.h"
-#include "lldb/API/SBStructuredData.h"
-#include "lldb/API/SBValue.h"
-#include "lldb/Host/PosixApi.h"
-
-#include "DAP.h"
-#include "ExceptionBreakpoint.h"
-#include "JSONUtils.h"
-#include "LLDBUtils.h"
+#include <string>
+#include <utility>
+#include <vector>
 
 namespace lldb_dap {
 
@@ -46,72 +73,100 @@ llvm::StringRef GetAsString(const llvm::json::Value &value) {
 }
 
 // Gets a string from a JSON object using the key, or returns an empty string.
-llvm::StringRef GetString(const llvm::json::Object &obj, llvm::StringRef key) {
-  if (std::optional<llvm::StringRef> value = obj.getString(key))
-    return *value;
-  return llvm::StringRef();
+std::optional<llvm::StringRef> GetString(const llvm::json::Object &obj,
+                                         llvm::StringRef key) {
+  return obj.getString(key);
 }
 
-llvm::StringRef GetString(const llvm::json::Object *obj, llvm::StringRef key) {
+std::optional<llvm::StringRef> GetString(const llvm::json::Object *obj,
+                                         llvm::StringRef key) {
   if (obj == nullptr)
-    return llvm::StringRef();
+    return std::nullopt;
+
   return GetString(*obj, key);
 }
 
-// Gets an unsigned integer from a JSON object using the key, or returns the
-// specified fail value.
-uint64_t GetUnsigned(const llvm::json::Object &obj, llvm::StringRef key,
-                     uint64_t fail_value) {
-  if (auto value = obj.getInteger(key))
-    return (uint64_t)*value;
-  return fail_value;
-}
-
-uint64_t GetUnsigned(const llvm::json::Object *obj, llvm::StringRef key,
-                     uint64_t fail_value) {
-  if (obj == nullptr)
-    return fail_value;
-  return GetUnsigned(*obj, key, fail_value);
-}
-
-bool GetBoolean(const llvm::json::Object &obj, llvm::StringRef key,
-                bool fail_value) {
+std::optional<bool> GetBoolean(const llvm::json::Object &obj,
+                               llvm::StringRef key) {
   if (auto value = obj.getBoolean(key))
     return *value;
   if (auto value = obj.getInteger(key))
     return *value != 0;
-  return fail_value;
+  return std::nullopt;
 }
 
-bool GetBoolean(const llvm::json::Object *obj, llvm::StringRef key,
-                bool fail_value) {
-  if (obj == nullptr)
-    return fail_value;
-  return GetBoolean(*obj, key, fail_value);
-}
-
-int64_t GetSigned(const llvm::json::Object &obj, llvm::StringRef key,
-                  int64_t fail_value) {
-  if (auto value = obj.getInteger(key))
-    return *value;
-  return fail_value;
-}
-
-int64_t GetSigned(const llvm::json::Object *obj, llvm::StringRef key,
-                  int64_t fail_value) {
-  if (obj == nullptr)
-    return fail_value;
-  return GetSigned(*obj, key, fail_value);
+std::optional<bool> GetBoolean(const llvm::json::Object *obj,
+                               llvm::StringRef key) {
+  if (obj != nullptr)
+    return GetBoolean(*obj, key);
+  return std::nullopt;
 }
 
 bool ObjectContainsKey(const llvm::json::Object &obj, llvm::StringRef key) {
   return obj.find(key) != obj.end();
 }
 
+std::string EncodeMemoryReference(lldb::addr_t addr) {
+  return "0x" + llvm::utohexstr(addr);
+}
+
+std::optional<lldb::addr_t>
+DecodeMemoryReference(llvm::StringRef memoryReference) {
+  if (!memoryReference.starts_with("0x"))
+    return std::nullopt;
+
+  lldb::addr_t addr;
+  if (memoryReference.consumeInteger(0, addr))
+    return std::nullopt;
+
+  return addr;
+}
+
+bool DecodeMemoryReference(const llvm::json::Value &v, llvm::StringLiteral key,
+                           lldb::addr_t &out, llvm::json::Path path,
+                           bool required, bool allow_empty) {
+  const llvm::json::Object *v_obj = v.getAsObject();
+  if (!v_obj) {
+    path.report("expected object");
+    return false;
+  }
+
+  const llvm::json::Value *mem_ref_value = v_obj->get(key);
+  if (!mem_ref_value) {
+    if (!required)
+      return true;
+
+    path.field(key).report("missing value");
+    return false;
+  }
+
+  const std::optional<llvm::StringRef> mem_ref_str =
+      mem_ref_value->getAsString();
+  if (!mem_ref_str) {
+    path.field(key).report("expected string");
+    return false;
+  }
+
+  if (allow_empty && mem_ref_str->empty()) {
+    out = LLDB_INVALID_ADDRESS;
+    return true;
+  }
+
+  const std::optional<lldb::addr_t> addr_opt =
+      DecodeMemoryReference(*mem_ref_str);
+  if (!addr_opt) {
+    path.field(key).report("malformed memory reference");
+    return false;
+  }
+
+  out = *addr_opt;
+  return true;
+}
+
 std::vector<std::string> GetStrings(const llvm::json::Object *obj,
                                     llvm::StringRef key) {
   std::vector<std::string> strs;
-  auto json_array = obj->getArray(key);
+  const auto *json_array = obj->getArray(key);
   if (!json_array)
     return strs;
   for (const auto &value : *json_array) {
@@ -132,17 +187,41 @@ std::vector<std::string> GetStrings(const llvm::json::Object *obj,
   return strs;
 }
 
+std::unordered_map<std::string, std::string>
+GetStringMap(const llvm::json::Object &obj, llvm::StringRef key) {
+  std::unordered_map<std::string, std::string> strs;
+  const auto *const json_object = obj.getObject(key);
+  if (!json_object)
+    return strs;
+
+  for (const auto &[key, value] : *json_object) {
+    switch (value.kind()) {
+    case llvm::json::Value::String:
+      strs.emplace(key.str(), value.getAsString()->str());
+      break;
+    case llvm::json::Value::Number:
+    case llvm::json::Value::Boolean:
+      strs.emplace(key.str(), llvm::to_string(value));
+      break;
+    case llvm::json::Value::Null:
+    case llvm::json::Value::Object:
+    case llvm::json::Value::Array:
+      break;
+    }
+  }
+  return strs;
+}
+
+static bool IsClassStructOrUnionType(lldb::SBType t) {
+  return (t.GetTypeClass() & (lldb::eTypeClassUnion | lldb::eTypeClassStruct |
+                              lldb::eTypeClassArray)) != 0;
+}
+
 /// Create a short summary for a container that contains the summary of its
 /// first children, so that the user can get a glimpse of its contents at a
 /// glance.
 static std::optional<std::string>
 TryCreateAutoSummaryForContainer(lldb::SBValue &v) {
-  // We gate this feature because it performs GetNumChildren(), which can
-  // cause performance issues because LLDB needs to complete possibly huge
-  // types.
-  if (!g_dap.enable_auto_variable_summaries)
-    return std::nullopt;
-
   if (!v.MightHaveChildren())
     return std::nullopt;
   /// As this operation can be potentially slow, we limit the total time spent
@@ -170,21 +249,23 @@ TryCreateAutoSummaryForContainer(lldb::SBValue &v) {
     lldb::SBValue child = v.GetChildAtIndex(i);
 
     if (llvm::StringRef name = child.GetName(); !name.empty()) {
-      llvm::StringRef value;
+      llvm::StringRef desc;
       if (llvm::StringRef summary = child.GetSummary(); !summary.empty())
-        value = summary;
+        desc = summary;
+      else if (llvm::StringRef value = child.GetValue(); !value.empty())
+        desc = value;
+      else if (IsClassStructOrUnionType(child.GetType()))
+        desc = "{...}";
       else
-        value = child.GetValue();
+        continue;
 
-      if (!value.empty()) {
-        // If the child is an indexed entry, we don't show its index to save
-        // characters.
-        if (name.starts_with("["))
-          os << separator << value;
-        else
-          os << separator << name << ":" << value;
-        separator = ", ";
-      }
+      // If the child is an indexed entry, we don't show its index to save
+      // characters.
+      if (name.starts_with("["))
+        os << separator << desc;
+      else
+        os << separator << name << ":" << desc;
+      separator = ", ";
     }
   }
   os << "}";
@@ -196,10 +277,7 @@ TryCreateAutoSummaryForContainer(lldb::SBValue &v) {
 
 /// Try to create a summary string for the given value that doesn't have a
 /// summary of its own.
-static std::optional<std::string> TryCreateAutoSummary(lldb::SBValue value) {
-  if (!g_dap.enable_auto_variable_summaries)
-    return std::nullopt;
-
+static std::optional<std::string> TryCreateAutoSummary(lldb::SBValue &value) {
   // We use the dereferenced value for generating the summary.
   if (value.GetType().IsPointerType() || value.GetType().IsReferenceType())
     value = value.Dereference();
@@ -208,49 +286,15 @@ static std::optional<std::string> TryCreateAutoSummary(lldb::SBValue value) {
   return TryCreateAutoSummaryForContainer(value);
 }
 
-void SetValueForKey(lldb::SBValue &v, llvm::json::Object &object,
-                    llvm::StringRef key) {
-  std::string result;
-  llvm::raw_string_ostream strm(result);
-
-  lldb::SBError error = v.GetError();
-  if (!error.Success()) {
-    strm << "<error: " << error.GetCString() << ">";
-  } else {
-    llvm::StringRef value = v.GetValue();
-    llvm::StringRef nonAutoSummary = v.GetSummary();
-    std::optional<std::string> summary = !nonAutoSummary.empty()
-                                             ? nonAutoSummary.str()
-                                             : TryCreateAutoSummary(v);
-    if (!value.empty()) {
-      strm << value;
-      if (summary)
-        strm << ' ' << *summary;
-    } else if (summary) {
-      strm << *summary;
-
-      // As last resort, we print its type and address if available.
-    } else {
-      if (llvm::StringRef type_name = v.GetType().GetDisplayTypeName();
-          !type_name.empty()) {
-        strm << type_name;
-        lldb::addr_t address = v.GetLoadAddress();
-        if (address != LLDB_INVALID_ADDRESS)
-          strm << " @ " << llvm::format_hex(address, 0);
-      }
-    }
-  }
-  EmplaceSafeString(object, key, result);
-}
-
 void FillResponse(const llvm::json::Object &request,
                   llvm::json::Object &response) {
   // Fill in all of the needed response fields to a "request" and set "success"
   // to true by default.
   response.try_emplace("type", "response");
-  response.try_emplace("seq", (int64_t)0);
-  EmplaceSafeString(response, "command", GetString(request, "command"));
-  const int64_t seq = GetSigned(request, "seq", 0);
+  response.try_emplace("seq", protocol::kCalculateSeq);
+  EmplaceSafeString(response, "command",
+                    GetString(request, "command").value_or(""));
+  const uint64_t seq = GetInteger<uint64_t>(request, "seq").value_or(0);
   response.try_emplace("request_seq", seq);
   response.try_emplace("success", true);
 }
@@ -340,201 +384,6 @@ llvm::json::Value CreateScope(const llvm::StringRef name,
   return llvm::json::Value(std::move(object));
 }
 
-// "Breakpoint": {
-//   "type": "object",
-//   "description": "Information about a Breakpoint created in setBreakpoints
-//                   or setFunctionBreakpoints.",
-//   "properties": {
-//     "id": {
-//       "type": "integer",
-//       "description": "An optional unique identifier for the breakpoint."
-//     },
-//     "verified": {
-//       "type": "boolean",
-//       "description": "If true breakpoint could be set (but not necessarily
-//                       at the desired location)."
-//     },
-//     "message": {
-//       "type": "string",
-//       "description": "An optional message about the state of the breakpoint.
-//                       This is shown to the user and can be used to explain
-//                       why a breakpoint could not be verified."
-//     },
-//     "source": {
-//       "$ref": "#/definitions/Source",
-//       "description": "The source where the breakpoint is located."
-//     },
-//     "line": {
-//       "type": "integer",
-//       "description": "The start line of the actual range covered by the
-//                       breakpoint."
-//     },
-//     "column": {
-//       "type": "integer",
-//       "description": "An optional start column of the actual range covered
-//                       by the breakpoint."
-//     },
-//     "endLine": {
-//       "type": "integer",
-//       "description": "An optional end line of the actual range covered by
-//                       the breakpoint."
-//     },
-//     "endColumn": {
-//       "type": "integer",
-//       "description": "An optional end column of the actual range covered by
-//                       the breakpoint. If no end line is given, then the end
-//                       column is assumed to be in the start line."
-//     }
-//   },
-//   "required": [ "verified" ]
-// }
-llvm::json::Value CreateBreakpoint(lldb::SBBreakpoint &bp,
-                                   std::optional<llvm::StringRef> request_path,
-                                   std::optional<uint32_t> request_line,
-                                   std::optional<uint32_t> request_column) {
-  // Each breakpoint location is treated as a separate breakpoint for VS code.
-  // They don't have the notion of a single breakpoint with multiple locations.
-  llvm::json::Object object;
-  if (!bp.IsValid())
-    return llvm::json::Value(std::move(object));
-
-  object.try_emplace("verified", bp.GetNumResolvedLocations() > 0);
-  object.try_emplace("id", bp.GetID());
-  // VS Code DAP doesn't currently allow one breakpoint to have multiple
-  // locations so we just report the first one. If we report all locations
-  // then the IDE starts showing the wrong line numbers and locations for
-  // other source file and line breakpoints in the same file.
-
-  // Below we search for the first resolved location in a breakpoint and report
-  // this as the breakpoint location since it will have a complete location
-  // that is at least loaded in the current process.
-  lldb::SBBreakpointLocation bp_loc;
-  const auto num_locs = bp.GetNumLocations();
-  for (size_t i = 0; i < num_locs; ++i) {
-    bp_loc = bp.GetLocationAtIndex(i);
-    if (bp_loc.IsResolved())
-      break;
-  }
-  // If not locations are resolved, use the first location.
-  if (!bp_loc.IsResolved())
-    bp_loc = bp.GetLocationAtIndex(0);
-  auto bp_addr = bp_loc.GetAddress();
-
-  if (request_path)
-    object.try_emplace("source", CreateSource(*request_path));
-
-  if (bp_addr.IsValid()) {
-    std::string formatted_addr =
-        "0x" + llvm::utohexstr(bp_addr.GetLoadAddress(g_dap.target));
-    object.try_emplace("instructionReference", formatted_addr);
-    auto line_entry = bp_addr.GetLineEntry();
-    const auto line = line_entry.GetLine();
-    if (line != UINT32_MAX)
-      object.try_emplace("line", line);
-    const auto column = line_entry.GetColumn();
-    if (column != 0)
-      object.try_emplace("column", column);
-    object.try_emplace("source", CreateSource(line_entry));
-  }
-  // We try to add request_line as a fallback
-  if (request_line)
-    object.try_emplace("line", *request_line);
-  if (request_column)
-    object.try_emplace("column", *request_column);
-  return llvm::json::Value(std::move(object));
-}
-
-static uint64_t GetDebugInfoSizeInSection(lldb::SBSection section) {
-  uint64_t debug_info_size = 0;
-  llvm::StringRef section_name(section.GetName());
-  if (section_name.startswith(".debug") || section_name.startswith("__debug") ||
-      section_name.startswith(".apple") || section_name.startswith("__apple"))
-    debug_info_size += section.GetFileByteSize();
-  size_t num_sub_sections = section.GetNumSubSections();
-  for (size_t i = 0; i < num_sub_sections; i++) {
-    debug_info_size +=
-        GetDebugInfoSizeInSection(section.GetSubSectionAtIndex(i));
-  }
-  return debug_info_size;
-}
-
-static uint64_t GetDebugInfoSize(lldb::SBModule module) {
-  uint64_t debug_info_size = 0;
-  size_t num_sections = module.GetNumSections();
-  for (size_t i = 0; i < num_sections; i++) {
-    debug_info_size += GetDebugInfoSizeInSection(module.GetSectionAtIndex(i));
-  }
-  return debug_info_size;
-}
-
-static std::string ConvertDebugInfoSizeToString(uint64_t debug_info) {
-  std::ostringstream oss;
-  oss << std::fixed << std::setprecision(1);
-  if (debug_info < 1024) {
-    oss << debug_info << "B";
-  } else if (debug_info < 1024 * 1024) {
-    double kb = double(debug_info) / 1024.0;
-    oss << kb << "KB";
-  } else if (debug_info < 1024 * 1024 * 1024) {
-    double mb = double(debug_info) / (1024.0 * 1024.0);
-    oss << mb << "MB";
-  } else {
-    double gb = double(debug_info) / (1024.0 * 1024.0 * 1024.0);
-    oss << gb << "GB";
-  }
-  return oss.str();
-}
-llvm::json::Value CreateModule(lldb::SBModule &module) {
-  llvm::json::Object object;
-  if (!module.IsValid())
-    return llvm::json::Value(std::move(object));
-  const char *uuid = module.GetUUIDString();
-  object.try_emplace("id", uuid ? std::string(uuid) : std::string(""));
-  object.try_emplace("name", std::string(module.GetFileSpec().GetFilename()));
-  char module_path_arr[PATH_MAX];
-  module.GetFileSpec().GetPath(module_path_arr, sizeof(module_path_arr));
-  std::string module_path(module_path_arr);
-  object.try_emplace("path", module_path);
-  if (module.GetNumCompileUnits() > 0) {
-    std::string symbol_str = "Symbols loaded.";
-    std::string debug_info_size;
-    uint64_t debug_info = GetDebugInfoSize(module);
-    if (debug_info > 0) {
-      debug_info_size = ConvertDebugInfoSizeToString(debug_info);
-    }
-    object.try_emplace("symbolStatus", symbol_str);
-    object.try_emplace("debugInfoSize", debug_info_size);
-    char symbol_path_arr[PATH_MAX];
-    module.GetSymbolFileSpec().GetPath(symbol_path_arr,
-                                       sizeof(symbol_path_arr));
-    std::string symbol_path(symbol_path_arr);
-    object.try_emplace("symbolFilePath", symbol_path);
-  } else {
-    object.try_emplace("symbolStatus", "Symbols not found.");
-  }
-  std::string loaded_addr = std::to_string(
-      module.GetObjectFileHeaderAddress().GetLoadAddress(g_dap.target));
-  object.try_emplace("addressRange", loaded_addr);
-  std::string version_str;
-  uint32_t version_nums[3];
-  uint32_t num_versions =
-      module.GetVersion(version_nums, sizeof(version_nums) / sizeof(uint32_t));
-  for (uint32_t i = 0; i < num_versions; ++i) {
-    if (!version_str.empty())
-      version_str += ".";
-    version_str += std::to_string(version_nums[i]);
-  }
-  if (!version_str.empty())
-    object.try_emplace("version", version_str);
-  return llvm::json::Value(std::move(object));
-}
-
-void AppendBreakpoint(lldb::SBBreakpoint &bp, llvm::json::Array &breakpoints,
-                      std::optional<llvm::StringRef> request_path,
-                      std::optional<uint32_t> request_line) {
-  breakpoints.emplace_back(CreateBreakpoint(bp, request_path, request_line));
-}
-
 // "Event": {
 //   "allOf": [ { "$ref": "#/definitions/ProtocolMessage" }, {
 //     "type": "object",
@@ -575,140 +424,10 @@ void AppendBreakpoint(lldb::SBBreakpoint &bp, llvm::json::Array &breakpoints,
 // }
 llvm::json::Object CreateEventObject(const llvm::StringRef event_name) {
   llvm::json::Object event;
-  event.try_emplace("seq", 0);
+  event.try_emplace("seq", protocol::kCalculateSeq);
   event.try_emplace("type", "event");
   EmplaceSafeString(event, "event", event_name);
   return event;
-}
-
-// "ExceptionBreakpointsFilter": {
-//   "type": "object",
-//   "description": "An ExceptionBreakpointsFilter is shown in the UI as an
-//                   option for configuring how exceptions are dealt with.",
-//   "properties": {
-//     "filter": {
-//       "type": "string",
-//       "description": "The internal ID of the filter. This value is passed
-//                       to the setExceptionBreakpoints request."
-//     },
-//     "label": {
-//       "type": "string",
-//       "description": "The name of the filter. This will be shown in the UI."
-//     },
-//     "default": {
-//       "type": "boolean",
-//       "description": "Initial value of the filter. If not specified a value
-//                       'false' is assumed."
-//     }
-//   },
-//   "required": [ "filter", "label" ]
-// }
-llvm::json::Value
-CreateExceptionBreakpointFilter(const ExceptionBreakpoint &bp) {
-  llvm::json::Object object;
-  EmplaceSafeString(object, "filter", bp.filter);
-  EmplaceSafeString(object, "label", bp.label);
-  object.try_emplace("default", bp.default_value);
-  return llvm::json::Value(std::move(object));
-}
-
-// "Source": {
-//   "type": "object",
-//   "description": "A Source is a descriptor for source code. It is returned
-//                   from the debug adapter as part of a StackFrame and it is
-//                   used by clients when specifying breakpoints.",
-//   "properties": {
-//     "name": {
-//       "type": "string",
-//       "description": "The short name of the source. Every source returned
-//                       from the debug adapter has a name. When sending a
-//                       source to the debug adapter this name is optional."
-//     },
-//     "path": {
-//       "type": "string",
-//       "description": "The path of the source to be shown in the UI. It is
-//                       only used to locate and load the content of the
-//                       source if no sourceReference is specified (or its
-//                       value is 0)."
-//     },
-//     "sourceReference": {
-//       "type": "number",
-//       "description": "If sourceReference > 0 the contents of the source must
-//                       be retrieved through the SourceRequest (even if a path
-//                       is specified). A sourceReference is only valid for a
-//                       session, so it must not be used to persist a source."
-//     },
-//     "presentationHint": {
-//       "type": "string",
-//       "description": "An optional hint for how to present the source in the
-//                       UI. A value of 'deemphasize' can be used to indicate
-//                       that the source is not available or that it is
-//                       skipped on stepping.",
-//       "enum": [ "normal", "emphasize", "deemphasize" ]
-//     },
-//     "origin": {
-//       "type": "string",
-//       "description": "The (optional) origin of this source: possible values
-//                       'internal module', 'inlined content from source map',
-//                       etc."
-//     },
-//     "sources": {
-//       "type": "array",
-//       "items": {
-//         "$ref": "#/definitions/Source"
-//       },
-//       "description": "An optional list of sources that are related to this
-//                       source. These may be the source that generated this
-//                       source."
-//     },
-//     "adapterData": {
-//       "type":["array","boolean","integer","null","number","object","string"],
-//       "description": "Optional data that a debug adapter might want to loop
-//                       through the client. The client should leave the data
-//                       intact and persist it across sessions. The client
-//                       should not interpret the data."
-//     },
-//     "checksums": {
-//       "type": "array",
-//       "items": {
-//         "$ref": "#/definitions/Checksum"
-//       },
-//       "description": "The checksums associated with this file."
-//     }
-//   }
-// }
-llvm::json::Value CreateSource(lldb::SBLineEntry &line_entry) {
-  llvm::json::Object object;
-  lldb::SBFileSpec file = line_entry.GetFileSpec();
-  if (file.IsValid()) {
-    const char *name = file.GetFilename();
-    if (name)
-      EmplaceSafeString(object, "name", name);
-    char path[PATH_MAX] = "";
-    if (file.GetPath(path, sizeof(path)) &&
-        lldb::SBFileSpec::ResolvePath(path, path, PATH_MAX)) {
-      EmplaceSafeString(object, "path", std::string(path));
-    }
-  }
-  return llvm::json::Value(std::move(object));
-}
-
-llvm::json::Value CreateSource(llvm::StringRef source_path) {
-  llvm::json::Object source;
-  llvm::StringRef name = llvm::sys::path::filename(source_path);
-  EmplaceSafeString(source, "name", name);
-  EmplaceSafeString(source, "path", source_path);
-  return llvm::json::Value(std::move(source));
-}
-
-std::optional<llvm::json::Value> CreateSource(lldb::SBFrame &frame) {
-  auto line_entry = frame.GetLineEntry();
-  // A line entry of 0 indicates the line is compiler generated i.e. no source
-  // file is associated with the frame.
-  if (line_entry.GetFileSpec().IsValid() && line_entry.GetLine() != 0)
-    return CreateSource(line_entry);
-
-  return {};
 }
 
 // "StackFrame": {
@@ -753,8 +472,7 @@ std::optional<llvm::json::Value> CreateSource(lldb::SBFrame &frame) {
 //     "instructionPointerReference": {
 // 	     "type": "string",
 // 	     "description": "A memory reference for the current instruction
-// pointer
-//                       in this frame."
+//                         pointer in this frame."
 //     },
 //     "moduleId": {
 //       "type": ["integer", "string"],
@@ -773,43 +491,62 @@ std::optional<llvm::json::Value> CreateSource(lldb::SBFrame &frame) {
 //   },
 //   "required": [ "id", "name", "line", "column" ]
 // }
-llvm::json::Value CreateStackFrame(lldb::SBFrame &frame) {
+llvm::json::Value CreateStackFrame(DAP &dap, lldb::SBFrame &frame,
+                                   lldb::SBFormat &format) {
   llvm::json::Object object;
   int64_t frame_id = MakeDAPFrameID(frame);
   object.try_emplace("id", frame_id);
 
-  // `function_name` can be a nullptr, which throws an error when assigned to an
-  // `std::string`.
-  const char *function_name = frame.GetDisplayFunctionName();
-  std::string frame_name =
-      function_name == nullptr ? std::string() : function_name;
+  std::string frame_name;
+  lldb::SBStream stream;
+  if (format && frame.GetDescriptionWithFormat(format, stream).Success()) {
+    frame_name = stream.GetData();
+
+    // `function_name` can be a nullptr, which throws an error when assigned to
+    // an `std::string`.
+  } else if (const char *name = frame.GetDisplayFunctionName()) {
+    frame_name = name;
+  }
+
   if (frame_name.empty()) {
     // If the function name is unavailable, display the pc address as a 16-digit
     // hex string, e.g. "0x0000000000012345"
-    llvm::raw_string_ostream os(frame_name);
-    os << llvm::format_hex(frame.GetPC(), 18);
+    frame_name = GetLoadAddressString(frame.GetPC());
   }
-  bool is_optimized = frame.GetFunction().GetIsOptimized();
-  if (is_optimized)
+
+  // We only include `[opt]` if a custom frame format is not specified.
+  if (!format && frame.GetFunction().GetIsOptimized())
     frame_name += " [opt]";
+
   EmplaceSafeString(object, "name", frame_name);
 
-  auto source = CreateSource(frame);
+  std::optional<protocol::Source> source = dap.ResolveSource(frame);
 
-  if (source) {
-    object.try_emplace("source", *source);
+  if (source && !IsAssemblySource(*source)) {
+    // This is a normal source with a valid line entry.
     auto line_entry = frame.GetLineEntry();
-    auto line = line_entry.GetLine();
-    if (line && line != LLDB_INVALID_LINE_NUMBER)
-      object.try_emplace("line", line);
+    object.try_emplace("line", line_entry.GetLine());
     auto column = line_entry.GetColumn();
-    if (column && column != LLDB_INVALID_COLUMN_NUMBER)
-      object.try_emplace("column", column);
+    object.try_emplace("column", column);
+  } else if (frame.GetSymbol().IsValid()) {
+    // This is a source where the disassembly is used, but there is a valid
+    // symbol. Calculate the line of the current PC from the start of the
+    // current symbol.
+    lldb::SBInstructionList inst_list = dap.target.ReadInstructions(
+        frame.GetSymbol().GetStartAddress(), frame.GetPCAddress(), nullptr);
+    size_t inst_line = inst_list.GetSize();
+
+    // Line numbers are 1-based.
+    object.try_emplace("line", inst_line + 1);
+    object.try_emplace("column", 1);
   } else {
-    object.try_emplace("line", 0);
-    object.try_emplace("column", 0);
-    object.try_emplace("presentationHint", "subtle");
+    // No valid line entry or symbol.
+    object.try_emplace("line", 1);
+    object.try_emplace("column", 1);
   }
+
+  if (source)
+    object.try_emplace("source", std::move(source).value());
 
   const auto pc = frame.GetPC();
   if (pc != LLDB_INVALID_ADDRESS) {
@@ -817,52 +554,38 @@ llvm::json::Value CreateStackFrame(lldb::SBFrame &frame) {
     object.try_emplace("instructionPointerReference", formatted_addr);
   }
 
+  if (frame.IsArtificial() || frame.IsHidden())
+    object.try_emplace("presentationHint", "subtle");
+
+  lldb::SBModule module = frame.GetModule();
+  if (module.IsValid()) {
+    if (const llvm::StringRef uuid = module.GetUUIDString(); !uuid.empty())
+      object.try_emplace("moduleId", uuid.str());
+  }
+
   return llvm::json::Value(std::move(object));
 }
 
-// "Thread": {
-//   "type": "object",
-//   "description": "A Thread",
-//   "properties": {
-//     "id": {
-//       "type": "integer",
-//       "description": "Unique identifier for the thread."
-//     },
-//     "name": {
-//       "type": "string",
-//       "description": "A name of the thread."
-//     }
-//   },
-//   "required": [ "id", "name" ]
-// }
-llvm::json::Value CreateThread(lldb::SBThread &thread) {
-  llvm::json::Object object;
-  object.try_emplace("id", (int64_t)thread.GetThreadID());
-  const char *thread_name = thread.GetName();
-  const char *queue_name = thread.GetQueueName();
-
-  std::string thread_str;
-  if (thread_name) {
-    thread_str = std::string(thread_name);
-  } else if (queue_name) {
-    auto kind = thread.GetQueue().GetKind();
-    std::string queue_kind_label = "";
-    if (kind == lldb::eQueueKindSerial) {
-      queue_kind_label = " (serial)";
-    } else if (kind == lldb::eQueueKindConcurrent) {
-      queue_kind_label = " (concurrent)";
-    }
-
-    thread_str = llvm::formatv("Thread {0} Queue: {1}{2}", thread.GetIndexID(),
-                               queue_name, queue_kind_label)
-                     .str();
+llvm::json::Value CreateExtendedStackFrameLabel(lldb::SBThread &thread,
+                                                lldb::SBFormat &format) {
+  std::string name;
+  lldb::SBStream stream;
+  if (format && thread.GetDescriptionWithFormat(format, stream).Success()) {
+    name = stream.GetData();
   } else {
-    thread_str = llvm::formatv("Thread {0}", thread.GetIndexID()).str();
+    const uint32_t thread_idx = thread.GetExtendedBacktraceOriginatingIndexID();
+    const char *queue_name = thread.GetQueueName();
+    if (queue_name != nullptr) {
+      name = llvm::formatv("Enqueued from {0} (Thread {1})", queue_name,
+                           thread_idx);
+    } else {
+      name = llvm::formatv("Thread {0}", thread_idx);
+    }
   }
 
-  EmplaceSafeString(object, "name", thread_str);
-
-  return llvm::json::Value(std::move(object));
+  return llvm::json::Value(llvm::json::Object{{"id", thread.GetThreadID() + 1},
+                                              {"name", name},
+                                              {"presentationHint", "label"}});
 }
 
 // "StoppedEvent": {
@@ -922,7 +645,7 @@ llvm::json::Value CreateThread(lldb::SBThread &thread) {
 //     "required": [ "event", "body" ]
 //   }]
 // }
-llvm::json::Value CreateThreadStopped(lldb::SBThread &thread,
+llvm::json::Value CreateThreadStopped(DAP &dap, lldb::SBThread &thread,
                                       uint32_t stop_id) {
   llvm::json::Object event(CreateEventObject("stopped"));
   llvm::json::Object body;
@@ -932,28 +655,48 @@ llvm::json::Value CreateThreadStopped(lldb::SBThread &thread,
     body.try_emplace("reason", "step");
     break;
   case lldb::eStopReasonBreakpoint: {
-    ExceptionBreakpoint *exc_bp = g_dap.GetExceptionBPFromStopReason(thread);
+    ExceptionBreakpoint *exc_bp = dap.GetExceptionBPFromStopReason(thread);
     if (exc_bp) {
       body.try_emplace("reason", "exception");
-      EmplaceSafeString(body, "description", exc_bp->label);
+      EmplaceSafeString(body, "description", exc_bp->GetLabel());
     } else {
-      body.try_emplace("reason", "breakpoint");
-      char desc_str[64];
-      uint64_t bp_id = thread.GetStopReasonDataAtIndex(0);
-      uint64_t bp_loc_id = thread.GetStopReasonDataAtIndex(1);
-      snprintf(desc_str, sizeof(desc_str), "breakpoint %" PRIu64 ".%" PRIu64,
-               bp_id, bp_loc_id);
-      body.try_emplace("hitBreakpointIds",
-                       llvm::json::Array{llvm::json::Value(bp_id)});
+      InstructionBreakpoint *inst_bp =
+          dap.GetInstructionBPFromStopReason(thread);
+      if (inst_bp) {
+        body.try_emplace("reason", "instruction breakpoint");
+      } else {
+        body.try_emplace("reason", "breakpoint");
+      }
+      std::vector<lldb::break_id_t> bp_ids;
+      std::ostringstream desc_sstream;
+      desc_sstream << "breakpoint";
+      for (size_t idx = 0; idx < thread.GetStopReasonDataCount(); idx += 2) {
+        lldb::break_id_t bp_id = thread.GetStopReasonDataAtIndex(idx);
+        lldb::break_id_t bp_loc_id = thread.GetStopReasonDataAtIndex(idx + 1);
+        bp_ids.push_back(bp_id);
+        desc_sstream << " " << bp_id << "." << bp_loc_id;
+      }
+      std::string desc_str = desc_sstream.str();
+      body.try_emplace("hitBreakpointIds", llvm::json::Array(bp_ids));
       EmplaceSafeString(body, "description", desc_str);
     }
   } break;
-  case lldb::eStopReasonWatchpoint:
+  case lldb::eStopReasonWatchpoint: {
+    body.try_emplace("reason", "data breakpoint");
+    lldb::break_id_t bp_id = thread.GetStopReasonDataAtIndex(0);
+    body.try_emplace("hitBreakpointIds",
+                     llvm::json::Array{llvm::json::Value(bp_id)});
+    EmplaceSafeString(body, "description",
+                      llvm::formatv("data breakpoint {0}", bp_id).str());
+  } break;
   case lldb::eStopReasonInstrumentation:
     body.try_emplace("reason", "breakpoint");
     break;
   case lldb::eStopReasonProcessorTrace:
     body.try_emplace("reason", "processor trace");
+    break;
+  case lldb::eStopReasonHistoryBoundary:
+    body.try_emplace("reason", "history boundary");
     break;
   case lldb::eStopReasonSignal:
   case lldb::eStopReasonException:
@@ -971,13 +714,16 @@ llvm::json::Value CreateThreadStopped(lldb::SBThread &thread,
   case lldb::eStopReasonVForkDone:
     body.try_emplace("reason", "vforkdone");
     break;
+  case lldb::eStopReasonInterrupt:
+    body.try_emplace("reason", "async interrupt");
+    break;
   case lldb::eStopReasonThreadExiting:
   case lldb::eStopReasonInvalid:
   case lldb::eStopReasonNone:
     break;
   }
   if (stop_id == 0)
-    body.try_emplace("reason", "entry");
+    body["reason"] = "entry";
   const lldb::tid_t tid = thread.GetThreadID();
   body.try_emplace("threadId", (int64_t)tid);
   // If no description has been set, then set it to the default thread stopped
@@ -986,25 +732,25 @@ llvm::json::Value CreateThreadStopped(lldb::SBThread &thread,
   if (!ObjectContainsKey(body, "description")) {
     char description[1024];
     if (thread.GetStopDescription(description, sizeof(description))) {
-      EmplaceSafeString(body, "description", std::string(description));
+      EmplaceSafeString(body, "description", description);
     }
   }
   // "threadCausedFocus" is used in tests to validate breaking behavior.
-  if (tid == g_dap.focus_tid) {
+  if (tid == dap.focus_tid) {
     body.try_emplace("threadCausedFocus", true);
   }
-  body.try_emplace("preserveFocusHint", tid != g_dap.focus_tid);
+  body.try_emplace("preserveFocusHint", tid != dap.focus_tid);
   body.try_emplace("allThreadsStopped", true);
   event.try_emplace("body", std::move(body));
   return llvm::json::Value(std::move(event));
 }
 
-const char *GetNonNullVariableName(lldb::SBValue v) {
+const char *GetNonNullVariableName(lldb::SBValue &v) {
   const char *name = v.GetName();
   return name ? name : "<null>";
 }
 
-std::string CreateUniqueVariableNameForDisplay(lldb::SBValue v,
+std::string CreateUniqueVariableNameForDisplay(lldb::SBValue &v,
                                                bool is_name_duplicated) {
   lldb::SBStream name_builder;
   name_builder.Print(GetNonNullVariableName(v));
@@ -1021,182 +767,151 @@ std::string CreateUniqueVariableNameForDisplay(lldb::SBValue v,
   return name_builder.GetData();
 }
 
-// "Variable": {
-//   "type": "object",
-//   "description": "A Variable is a name/value pair. Optionally a variable
-//                   can have a 'type' that is shown if space permits or when
-//                   hovering over the variable's name. An optional 'kind' is
-//                   used to render additional properties of the variable,
-//                   e.g. different icons can be used to indicate that a
-//                   variable is public or private. If the value is
-//                   structured (has children), a handle is provided to
-//                   retrieve the children with the VariablesRequest. If
-//                   the number of named or indexed children is large, the
-//                   numbers should be returned via the optional
-//                   'namedVariables' and 'indexedVariables' attributes. The
-//                   client can use this optional information to present the
-//                   children in a paged UI and fetch them in chunks.",
-//   "properties": {
-//     "name": {
-//       "type": "string",
-//       "description": "The variable's name."
-//     },
-//     "value": {
-//       "type": "string",
-//       "description": "The variable's value. This can be a multi-line text,
-//                       e.g. for a function the body of a function."
-//     },
-//     "type": {
-//       "type": "string",
-//       "description": "The type of the variable's value. Typically shown in
-//                       the UI when hovering over the value."
-//     },
-//     "presentationHint": {
-//       "$ref": "#/definitions/VariablePresentationHint",
-//       "description": "Properties of a variable that can be used to determine
-//                       how to render the variable in the UI."
-//     },
-//     "evaluateName": {
-//       "type": "string",
-//       "description": "Optional evaluatable name of this variable which can
-//                       be passed to the 'EvaluateRequest' to fetch the
-//                       variable's value."
-//     },
-//     "variablesReference": {
-//       "type": "integer",
-//       "description": "If variablesReference is > 0, the variable is
-//                       structured and its children can be retrieved by
-//                       passing variablesReference to the VariablesRequest."
-//     },
-//     "namedVariables": {
-//       "type": "integer",
-//       "description": "The number of named child variables. The client can
-//                       use this optional information to present the children
-//                       in a paged UI and fetch them in chunks."
-//     },
-//     "indexedVariables": {
-//       "type": "integer",
-//       "description": "The number of indexed child variables. The client
-//                       can use this optional information to present the
-//                       children in a paged UI and fetch them in chunks."
-//     }
-//   },
-//   "required": [ "name", "value", "variablesReference" ]
-// }
-llvm::json::Value CreateVariable(lldb::SBValue v, int64_t variablesReference,
-                                 int64_t varID, bool format_hex,
-                                 bool is_name_duplicated,
-                                 std::optional<std::string> custom_name) {
-  llvm::json::Object object;
-  EmplaceSafeString(
-      object, "name",
-      custom_name ? *custom_name
-                  : CreateUniqueVariableNameForDisplay(v, is_name_duplicated));
+VariableDescription::VariableDescription(lldb::SBValue v,
+                                         bool auto_variable_summaries,
+                                         bool format_hex,
+                                         bool is_name_duplicated,
+                                         std::optional<std::string> custom_name)
+    : v(v) {
+  name = custom_name
+             ? *custom_name
+             : CreateUniqueVariableNameForDisplay(v, is_name_duplicated);
 
-  if (format_hex)
-    v.SetFormat(lldb::eFormatHex);
-  SetValueForKey(v, object, "value");
-  auto type_obj = v.GetType();
-  auto type_cstr = type_obj.GetDisplayTypeName();
-  // If we have a type with many children, we would like to be able to
-  // give a hint to the IDE that the type has indexed children so that the
-  // request can be broken up in grabbing only a few children at a time. We want
-  // to be careful and only call "v.GetNumChildren()" if we have an array type
-  // or if we have a synthetic child provider. We don't want to call
-  // "v.GetNumChildren()" on all objects as class, struct and union types don't
-  // need to be completed if they are never expanded. So we want to avoid
-  // calling this to only cases where we it makes sense to keep performance high
-  // during normal debugging.
+  type_obj = v.GetType();
+  std::string raw_display_type_name =
+      llvm::StringRef(type_obj.GetDisplayTypeName()).str();
+  display_type_name =
+      !raw_display_type_name.empty() ? raw_display_type_name : NO_TYPENAME;
 
-  // If we have an array type, say that it is indexed and provide the number of
-  // children in case we have a huge array. If we don't do this, then we might
-  // take a while to produce all children at onces which can delay your debug
-  // session.
-  const bool is_array = type_obj.IsArrayType();
-  const bool is_synthetic = v.IsSynthetic();
-  if (is_array || is_synthetic) {
-    const auto num_children = v.GetNumChildren();
-    // We create a "[raw]" fake child for each synthetic type, so we have to
-    // account for it when returning indexed variables. We don't need to do this
-    // for non-indexed ones.
-    bool has_raw_child = is_synthetic && g_dap.enable_synthetic_child_debugging;
-    int actual_num_children = num_children + (has_raw_child ? 1 : 0);
-    if (is_array) {
-      object.try_emplace("indexedVariables", actual_num_children);
-    } else if (num_children > 0) {
-      // If a type has a synthetic child provider, then the SBType of "v" won't
-      // tell us anything about what might be displayed. So we can check if the
-      // first child's name is "[0]" and then we can say it is indexed.
-      const char *first_child_name = v.GetChildAtIndex(0).GetName();
-      if (first_child_name && strcmp(first_child_name, "[0]") == 0)
-        object.try_emplace("indexedVariables", actual_num_children);
+  // Only format hex/default if there is no existing special format.
+  if (v.GetFormat() == lldb::eFormatDefault ||
+      v.GetFormat() == lldb::eFormatHex) {
+    if (format_hex)
+      v.SetFormat(lldb::eFormatHex);
+    else
+      v.SetFormat(lldb::eFormatDefault);
+  }
+
+  llvm::raw_string_ostream os_display_value(display_value);
+
+  if (lldb::SBError sb_error = v.GetError(); sb_error.Fail()) {
+    error = sb_error.GetCString();
+    os_display_value << "<error: " << error << ">";
+  } else {
+    value = llvm::StringRef(v.GetValue()).str();
+    summary = llvm::StringRef(v.GetSummary()).str();
+    if (summary.empty() && auto_variable_summaries)
+      auto_summary = TryCreateAutoSummary(v);
+
+    std::optional<std::string> effective_summary =
+        !summary.empty() ? summary : auto_summary;
+
+    if (!value.empty()) {
+      os_display_value << value;
+      if (effective_summary)
+        os_display_value << " " << *effective_summary;
+    } else if (effective_summary) {
+      os_display_value << *effective_summary;
+
+      // As last resort, we print its type and address if available.
+    } else if (!raw_display_type_name.empty()) {
+      os_display_value << raw_display_type_name;
     }
   }
-  EmplaceSafeString(object, "type", type_cstr ? type_cstr : NO_TYPENAME);
-  if (varID != INT64_MAX)
-    object.try_emplace("id", varID);
-  if (v.MightHaveChildren())
-    object.try_emplace("variablesReference", variablesReference);
-  else
-    object.try_emplace("variablesReference", (int64_t)0);
+
   lldb::SBStream evaluateStream;
   v.GetExpressionPath(evaluateStream);
-  const char *evaluateName = evaluateStream.GetData();
-  if (evaluateName && evaluateName[0])
-    EmplaceSafeString(object, "evaluateName", std::string(evaluateName));
-  return llvm::json::Value(std::move(object));
+  evaluate_name = llvm::StringRef(evaluateStream.GetData()).str();
 }
 
-llvm::json::Value CreateCompileUnit(lldb::SBCompileUnit unit) {
-  llvm::json::Object object;
-  char unit_path_arr[PATH_MAX];
-  unit.GetFileSpec().GetPath(unit_path_arr, sizeof(unit_path_arr));
-  std::string unit_path(unit_path_arr);
-  object.try_emplace("compileUnitPath", unit_path);
-  return llvm::json::Value(std::move(object));
+std::string VariableDescription::GetResult(protocol::EvaluateContext context) {
+  // In repl context, the results can be displayed as multiple lines so more
+  // detailed descriptions can be returned.
+  if (context != protocol::eEvaluateContextRepl)
+    return display_value;
+
+  if (!v.IsValid())
+    return display_value;
+
+  // Try the SBValue::GetDescription(), which may call into language runtime
+  // specific formatters (see ValueObjectPrinter).
+  lldb::SBStream stream;
+  v.GetDescription(stream);
+  llvm::StringRef description = stream.GetData();
+  return description.trim().str();
+}
+
+bool ValuePointsToCode(lldb::SBValue v) {
+  if (!v.GetType().GetPointeeType().IsFunctionType())
+    return false;
+
+  lldb::addr_t addr = v.GetValueAsAddress();
+  lldb::SBLineEntry line_entry =
+      v.GetTarget().ResolveLoadAddress(addr).GetLineEntry();
+
+  return line_entry.IsValid();
+}
+
+int64_t PackLocation(int64_t var_ref, bool is_value_location) {
+  return var_ref << 1 | is_value_location;
+}
+
+std::pair<int64_t, bool> UnpackLocation(int64_t location_id) {
+  return std::pair{location_id >> 1, location_id & 1};
 }
 
 /// See
 /// https://microsoft.github.io/debug-adapter-protocol/specification#Reverse_Requests_RunInTerminal
-llvm::json::Object
-CreateRunInTerminalReverseRequest(const llvm::json::Object &launch_request,
-                                  llvm::StringRef debug_adaptor_path,
-                                  llvm::StringRef comm_file,
-                                  lldb::pid_t debugger_pid) {
+llvm::json::Object CreateRunInTerminalReverseRequest(
+    llvm::StringRef program, const std::vector<std::string> &args,
+    const llvm::StringMap<std::string> &env, llvm::StringRef cwd,
+    llvm::StringRef comm_file, lldb::pid_t debugger_pid,
+    const std::vector<std::optional<std::string>> &stdio, bool external) {
   llvm::json::Object run_in_terminal_args;
-  // This indicates the IDE to open an embedded terminal, instead of opening the
-  // terminal in a new window.
-  run_in_terminal_args.try_emplace("kind", "integrated");
-
-  auto launch_request_arguments = launch_request.getObject("arguments");
-  // The program path must be the first entry in the "args" field
-  std::vector<std::string> args = {debug_adaptor_path.str(), "--comm-file",
-                                   comm_file.str()};
-  if (debugger_pid != LLDB_INVALID_PROCESS_ID) {
-    args.push_back("--debugger-pid");
-    args.push_back(std::to_string(debugger_pid));
+  if (external) {
+    // This indicates the IDE to open an external terminal window.
+    run_in_terminal_args.try_emplace("kind", "external");
+  } else {
+    // This indicates the IDE to open an embedded terminal, instead of opening
+    // the terminal in a new window.
+    run_in_terminal_args.try_emplace("kind", "integrated");
   }
-  args.push_back("--launch-target");
-  args.push_back(GetString(launch_request_arguments, "program").str());
-  std::vector<std::string> target_args =
-      GetStrings(launch_request_arguments, "args");
-  args.insert(args.end(), target_args.begin(), target_args.end());
-  run_in_terminal_args.try_emplace("args", args);
+  // The program path must be the first entry in the "args" field
+  std::vector<std::string> req_args = {DAP::debug_adapter_path.str(),
+                                       "--comm-file", comm_file.str()};
+  if (debugger_pid != LLDB_INVALID_PROCESS_ID) {
+    req_args.push_back("--debugger-pid");
+    req_args.push_back(std::to_string(debugger_pid));
+  }
+  req_args.push_back("--launch-target");
+  req_args.push_back(program.str());
+  if (!stdio.empty()) {
+    req_args.push_back("--stdio");
+    std::stringstream ss;
+    for (const std::optional<std::string> &file : stdio) {
+      if (file)
+        ss << *file;
+      ss << ":";
+    }
+    std::string files = ss.str();
+    files.pop_back();
+    req_args.push_back(std::move(files));
+  }
+  req_args.insert(req_args.end(), args.begin(), args.end());
+  run_in_terminal_args.try_emplace("args", req_args);
 
-  const auto cwd = GetString(launch_request_arguments, "cwd");
   if (!cwd.empty())
     run_in_terminal_args.try_emplace("cwd", cwd);
 
-  // We need to convert the input list of environments variables into a
-  // dictionary
-  std::vector<std::string> envs = GetStrings(launch_request_arguments, "env");
-  llvm::json::Object environment;
-  for (const std::string &env : envs) {
-    size_t index = env.find('=');
-    environment.try_emplace(env.substr(0, index), env.substr(index + 1));
+  if (!env.empty()) {
+    llvm::json::Object env_json;
+    for (const auto &kv : env) {
+      if (!kv.first().empty())
+        env_json.try_emplace(kv.first(), kv.second);
+    }
+    run_in_terminal_args.try_emplace("env",
+                                     llvm::json::Value(std::move(env_json)));
   }
-  run_in_terminal_args.try_emplace("env",
-                                   llvm::json::Value(std::move(environment)));
 
   return run_in_terminal_args;
 }
@@ -1204,11 +919,11 @@ CreateRunInTerminalReverseRequest(const llvm::json::Object &launch_request,
 // Keep all the top level items from the statistics dump, except for the
 // "modules" array. It can be huge and cause delay
 // Array and dictionary value will return as <key, JSON string> pairs
-void FilterAndGetValueForKey(const lldb::SBStructuredData data, const char *key,
-                             llvm::json::Object &out) {
+static void FilterAndGetValueForKey(const lldb::SBStructuredData data,
+                                    const char *key, llvm::json::Object &out) {
   lldb::SBStructuredData value = data.GetValueForKey(key);
   std::string key_utf8 = llvm::json::fixUTF8(key);
-  if (strcmp(key, "modules") == 0)
+  if (llvm::StringRef(key) == "modules")
     return;
   switch (value.GetType()) {
   case lldb::eStructuredDataTypeFloat:
@@ -1247,8 +962,8 @@ void FilterAndGetValueForKey(const lldb::SBStructuredData data, const char *key,
   }
 }
 
-void addStatistic(llvm::json::Object &event) {
-  lldb::SBStructuredData statistics = g_dap.target.GetStatistics();
+static void addStatistic(lldb::SBTarget &target, llvm::json::Object &event) {
+  lldb::SBStructuredData statistics = target.GetStatistics();
   bool is_dictionary =
       statistics.GetType() == lldb::eStructuredDataTypeDictionary;
   if (!is_dictionary)
@@ -1262,12 +977,13 @@ void addStatistic(llvm::json::Object &event) {
     const char *key = keys.GetStringAtIndex(i);
     FilterAndGetValueForKey(statistics, key, stats_body);
   }
-  event.try_emplace("statistics", std::move(stats_body));
+  llvm::json::Object body{{"$__lldb_statistics", std::move(stats_body)}};
+  event.try_emplace("body", std::move(body));
 }
 
-llvm::json::Object CreateTerminatedEventObject() {
+llvm::json::Object CreateTerminatedEventObject(lldb::SBTarget &target) {
   llvm::json::Object event(CreateEventObject("terminated"));
-  addStatistic(event);
+  addStatistic(target, event);
   return event;
 }
 
@@ -1275,7 +991,6 @@ std::string JSONToString(const llvm::json::Value &json) {
   std::string data;
   llvm::raw_string_ostream os(data);
   os << json;
-  os.flush();
   return data;
 }
 

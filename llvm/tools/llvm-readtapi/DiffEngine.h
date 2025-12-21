@@ -39,7 +39,7 @@ enum DiffAttrKind {
 class AttributeDiff {
 public:
   AttributeDiff(DiffAttrKind Kind) : Kind(Kind){};
-  virtual ~AttributeDiff(){};
+  virtual ~AttributeDiff() = default;
   DiffAttrKind getKind() const { return Kind; }
 
 private:
@@ -94,7 +94,7 @@ private:
   /// The order is the file from which the diff is found.
   InterfaceInputOrder Order;
   const MachO::Symbol *Val;
-  StringLiteral getSymbolNamePrefix(MachO::SymbolKind Kind);
+  StringLiteral getSymbolNamePrefix(MachO::EncodeKind Kind);
 };
 
 class DiffStrVec : public AttributeDiff {
@@ -128,9 +128,12 @@ public:
   std::string InstallName;
   /// Differences found from each file.
   std::vector<DiffOutput> DocValues;
-  InlineDoc(StringRef InstName, std::vector<DiffOutput> Diff)
+  /// Whether document only exists for one input.
+  bool IsMissingDoc;
+  InlineDoc(StringRef InstName, std::vector<DiffOutput> Diff,
+            bool IsMissingDoc = false)
       : AttributeDiff(AD_Inline_Doc), InstallName(InstName),
-        DocValues(std::move(Diff)){};
+        DocValues(std::move(Diff)), IsMissingDoc(IsMissingDoc) {};
 
   static bool classof(const AttributeDiff *A) {
     return A->getKind() == AD_Inline_Doc;
@@ -141,14 +144,14 @@ public:
 /// output of the differences found in the files.
 class DiffEngine {
 public:
-  DiffEngine(object::TapiUniversal *InputFileNameLHS,
-             object::TapiUniversal *InputFileNameRHS)
+  DiffEngine(MachO::InterfaceFile *InputFileNameLHS,
+             MachO::InterfaceFile *InputFileNameRHS)
       : FileLHS(InputFileNameLHS), FileRHS(InputFileNameRHS){};
   bool compareFiles(raw_ostream &);
 
 private:
-  object::TapiUniversal *FileLHS;
-  object::TapiUniversal *FileRHS;
+  MachO::InterfaceFile *FileLHS;
+  MachO::InterfaceFile *FileRHS;
 
   /// Function that prints the differences found in the files.
   void printDifferences(raw_ostream &, const std::vector<DiffOutput> &, int);

@@ -81,12 +81,12 @@ public:
 
 protected:
   // The int bits are used to mark the kind.
-  llvm::PointerIntPair<void *, 2> Data1;
-  llvm::PointerIntPair<void *, 2> Data2;
+  llvm::PointerIntPair<const void *, 2> Data1;
+  llvm::PointerIntPair<const void *, 2> Data2;
 
   CFGElement(Kind kind, const void *Ptr1, const void *Ptr2 = nullptr)
-      : Data1(const_cast<void*>(Ptr1), ((unsigned) kind) & 0x3),
-        Data2(const_cast<void*>(Ptr2), (((unsigned) kind) >> 2) & 0x3) {
+      : Data1(Ptr1, ((unsigned)kind) & 0x3),
+        Data2(Ptr2, (((unsigned)kind) >> 2) & 0x3) {
     assert(getKind() == kind);
   }
 
@@ -122,7 +122,8 @@ public:
     return (Kind) x;
   }
 
-  void dumpToStream(llvm::raw_ostream &OS) const;
+  void dumpToStream(llvm::raw_ostream &OS,
+                    bool TerminateWithNewLine = true) const;
 
   void dump() const {
     dumpToStream(llvm::errs());
@@ -159,11 +160,11 @@ public:
                           const ConstructionContext *C)
       : CFGStmt(CE, Constructor) {
     assert(C);
-    Data2.setPointer(const_cast<ConstructionContext *>(C));
+    Data2.setPointer(C);
   }
 
   const ConstructionContext *getConstructionContext() const {
-    return static_cast<ConstructionContext *>(Data2.getPointer());
+    return static_cast<const ConstructionContext *>(Data2.getPointer());
   }
 
 private:
@@ -205,11 +206,11 @@ public:
                  isa<ConstructorInitializerConstructionContext>(C) ||
                  isa<ArgumentConstructionContext>(C) ||
                  isa<LambdaCaptureConstructionContext>(C)));
-    Data2.setPointer(const_cast<ConstructionContext *>(C));
+    Data2.setPointer(C);
   }
 
   const ConstructionContext *getConstructionContext() const {
-    return static_cast<ConstructionContext *>(Data2.getPointer());
+    return static_cast<const ConstructionContext *>(Data2.getPointer());
   }
 
 private:
@@ -229,8 +230,8 @@ public:
   explicit CFGInitializer(const CXXCtorInitializer *initializer)
       : CFGElement(Initializer, initializer) {}
 
-  CXXCtorInitializer* getInitializer() const {
-    return static_cast<CXXCtorInitializer*>(Data1.getPointer());
+  const CXXCtorInitializer *getInitializer() const {
+    return static_cast<const CXXCtorInitializer *>(Data1.getPointer());
   }
 
 private:
@@ -251,7 +252,7 @@ public:
 
   // Get the new expression.
   const CXXNewExpr *getAllocatorExpr() const {
-    return static_cast<CXXNewExpr *>(Data1.getPointer());
+    return static_cast<const CXXNewExpr *>(Data1.getPointer());
   }
 
 private:
@@ -275,7 +276,7 @@ public:
   explicit CFGLoopExit(const Stmt *stmt) : CFGElement(LoopExit, stmt) {}
 
   const Stmt *getLoopStmt() const {
-    return static_cast<Stmt *>(Data1.getPointer());
+    return static_cast<const Stmt *>(Data1.getPointer());
   }
 
 private:
@@ -295,11 +296,11 @@ public:
       : CFGElement(LifetimeEnds, var, stmt) {}
 
   const VarDecl *getVarDecl() const {
-    return static_cast<VarDecl *>(Data1.getPointer());
+    return static_cast<const VarDecl *>(Data1.getPointer());
   }
 
   const Stmt *getTriggerStmt() const {
-    return static_cast<Stmt *>(Data2.getPointer());
+    return static_cast<const Stmt *>(Data2.getPointer());
   }
 
 private:
@@ -322,12 +323,12 @@ public:
 
   // Get statement that triggered a new scope.
   const Stmt *getTriggerStmt() const {
-    return static_cast<Stmt*>(Data2.getPointer());
+    return static_cast<const Stmt *>(Data2.getPointer());
   }
 
   // Get VD that triggered a new scope.
   const VarDecl *getVarDecl() const {
-    return static_cast<VarDecl *>(Data1.getPointer());
+    return static_cast<const VarDecl *>(Data1.getPointer());
   }
 
 private:
@@ -346,11 +347,11 @@ public:
   CFGScopeEnd(const VarDecl *VD, const Stmt *S) : CFGElement(ScopeEnd, VD, S) {}
 
   const VarDecl *getVarDecl() const {
-    return static_cast<VarDecl *>(Data1.getPointer());
+    return static_cast<const VarDecl *>(Data1.getPointer());
   }
 
   const Stmt *getTriggerStmt() const {
-    return static_cast<Stmt *>(Data2.getPointer());
+    return static_cast<const Stmt *>(Data2.getPointer());
   }
 
 private:
@@ -394,7 +395,7 @@ public:
   }
 
   const VarDecl *getVarDecl() const {
-    return static_cast<VarDecl *>(Data1.getPointer());
+    return static_cast<const VarDecl *>(Data1.getPointer());
   }
 
   /// Returns the function to be called when cleaning up the var decl.
@@ -420,12 +421,12 @@ public:
       : CFGImplicitDtor(AutomaticObjectDtor, var, stmt) {}
 
   const VarDecl *getVarDecl() const {
-    return static_cast<VarDecl*>(Data1.getPointer());
+    return static_cast<const VarDecl *>(Data1.getPointer());
   }
 
   // Get statement end of which triggered the destructor call.
   const Stmt *getTriggerStmt() const {
-    return static_cast<Stmt*>(Data2.getPointer());
+    return static_cast<const Stmt *>(Data2.getPointer());
   }
 
 private:
@@ -445,12 +446,12 @@ public:
       : CFGImplicitDtor(DeleteDtor, RD, DE) {}
 
   const CXXRecordDecl *getCXXRecordDecl() const {
-    return static_cast<CXXRecordDecl*>(Data1.getPointer());
+    return static_cast<const CXXRecordDecl *>(Data1.getPointer());
   }
 
   // Get Delete expression which triggered the destructor call.
   const CXXDeleteExpr *getDeleteExpr() const {
-    return static_cast<CXXDeleteExpr *>(Data2.getPointer());
+    return static_cast<const CXXDeleteExpr *>(Data2.getPointer());
   }
 
 private:
@@ -695,6 +696,11 @@ class CFGBlock {
     void dump() const {
       dumpToStream(llvm::errs());
     }
+
+    void Profile(llvm::FoldingSetNodeID &ID) const {
+      ID.AddPointer(Parent);
+      ID.AddInteger(Index);
+    }
   };
 
   template <bool IsReverse, bool IsConst> class ElementRefIterator {
@@ -879,6 +885,7 @@ private:
   ///
   /// Optimization Note: This bit could be profitably folded with Terminator's
   /// storage if the memory usage of CFGBlock becomes an issue.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned HasNoReturnElement : 1;
 
   /// The parent CFG that owns this CFGBlock.
@@ -1007,7 +1014,9 @@ public:
 
   class FilterOptions {
   public:
+    LLVM_PREFERRED_TYPE(bool)
     unsigned IgnoreNullPredecessors : 1;
+    LLVM_PREFERRED_TYPE(bool)
     unsigned IgnoreDefaultsWithCoveredEnums : 1;
 
     FilterOptions()
@@ -1086,11 +1095,7 @@ public:
   /// C itself, while this method would only return C.
   const Expr *getLastCondition() const;
 
-  Stmt *getTerminatorCondition(bool StripParens = true);
-
-  const Stmt *getTerminatorCondition(bool StripParens = true) const {
-    return const_cast<CFGBlock*>(this)->getTerminatorCondition(StripParens);
-  }
+  const Stmt *getTerminatorCondition(bool StripParens = true) const;
 
   const Stmt *getLoopTarget() const { return LoopTarget; }
 
@@ -1187,6 +1192,8 @@ public:
   }
 };
 
+using ConstCFGElementRef = CFGBlock::ConstCFGElementRef;
+
 /// CFGCallback defines methods that should be called when a logical
 /// operator error is found when building the CFG.
 class CFGCallback {
@@ -1215,7 +1222,9 @@ public:
   //===--------------------------------------------------------------------===//
 
   class BuildOptions {
-    std::bitset<Stmt::lastStmtConstant> alwaysAddMask;
+    // Stmt::lastStmtConstant has the same value as the last Stmt kind,
+    // so make sure we add one to account for this!
+    std::bitset<Stmt::lastStmtConstant + 1> alwaysAddMask;
 
   public:
     using ForcedBlkExprs = llvm::DenseMap<const Stmt *, const CFGBlock *>;
@@ -1238,6 +1247,7 @@ public:
     bool MarkElidedCXXConstructors = false;
     bool AddVirtualBaseBranches = false;
     bool OmitImplicitValueInitializers = false;
+    bool AssumeReachableDefaultInSwitchStatements = false;
 
     BuildOptions() = default;
 
@@ -1381,11 +1391,10 @@ public:
   //===--------------------------------------------------------------------===//
 
   template <typename Callback> void VisitBlockStmts(Callback &O) const {
-    for (const_iterator I = begin(), E = end(); I != E; ++I)
-      for (CFGBlock::const_iterator BI = (*I)->begin(), BE = (*I)->end();
-           BI != BE; ++BI) {
-        if (std::optional<CFGStmt> stmt = BI->getAs<CFGStmt>())
-          O(const_cast<Stmt *>(stmt->getStmt()));
+    for (CFGBlock *BB : *this)
+      for (const CFGElement &Elem : *BB) {
+        if (std::optional<CFGStmt> stmt = Elem.getAs<CFGStmt>())
+          O(stmt->getStmt());
       }
   }
 

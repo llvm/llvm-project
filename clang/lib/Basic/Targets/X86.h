@@ -46,6 +46,11 @@ static const unsigned X86AddrSpaceMap[] = {
     271, // ptr32_uptr
     272, // ptr64
     0,   // hlsl_groupshared
+    0,   // hlsl_constant
+    0,   // hlsl_private
+    0,   // hlsl_device
+    0,   // hlsl_input
+    0,   // hlsl_push_constant
     // Wasm address space values for this target are dummy values,
     // as it is only enabled for Wasm targets.
     20, // wasm_funcref
@@ -67,12 +72,7 @@ class LLVM_LIBRARY_VISIBILITY X86TargetInfo : public TargetInfo {
     AVX2,
     AVX512F
   } SSELevel = NoSSE;
-  enum MMX3DNowEnum {
-    NoMMX3DNow,
-    MMX,
-    AMD3DNow,
-    AMD3DNowAthlon
-  } MMX3DNowLevel = NoMMX3DNow;
+  bool HasMMX = false;
   enum XOPEnum { NoXOP, SSE4A, FMA4, XOP } XOPLevel = NoXOP;
   enum AddrSpace { ptr32_sptr = 270, ptr32_uptr = 271, ptr64 = 272 };
 
@@ -96,15 +96,12 @@ class LLVM_LIBRARY_VISIBILITY X86TargetInfo : public TargetInfo {
   bool HasFMA = false;
   bool HasF16C = false;
   bool HasAVX10_1 = false;
-  bool HasAVX10_1_512 = false;
-  bool HasEVEX512 = false;
+  bool HasAVX10_2 = false;
   bool HasAVX512CD = false;
   bool HasAVX512VPOPCNTDQ = false;
   bool HasAVX512VNNI = false;
   bool HasAVX512FP16 = false;
   bool HasAVX512BF16 = false;
-  bool HasAVX512ER = false;
-  bool HasAVX512PF = false;
   bool HasAVX512DQ = false;
   bool HasAVX512BITALG = false;
   bool HasAVX512BW = false;
@@ -135,8 +132,8 @@ class LLVM_LIBRARY_VISIBILITY X86TargetInfo : public TargetInfo {
   bool HasCLFLUSHOPT = false;
   bool HasCLWB = false;
   bool HasMOVBE = false;
+  bool HasMOVRS = false;
   bool HasPREFETCHI = false;
-  bool HasPREFETCHWT1 = false;
   bool HasRDPID = false;
   bool HasRDPRU = false;
   bool HasRetpolineExternalThunk = false;
@@ -162,12 +159,26 @@ class LLVM_LIBRARY_VISIBILITY X86TargetInfo : public TargetInfo {
   bool HasAMXINT8 = false;
   bool HasAMXBF16 = false;
   bool HasAMXCOMPLEX = false;
+  bool HasAMXFP8 = false;
+  bool HasAMXMOVRS = false;
+  bool HasAMXAVX512 = false;
+  bool HasAMXTF32 = false;
   bool HasSERIALIZE = false;
   bool HasTSXLDTRK = false;
   bool HasUSERMSR = false;
   bool HasUINTR = false;
   bool HasCRC32 = false;
   bool HasX87 = false;
+  bool HasEGPR = false;
+  bool HasPush2Pop2 = false;
+  bool HasPPX = false;
+  bool HasNDD = false;
+  bool HasCCMP = false;
+  bool HasNF = false;
+  bool HasCF = false;
+  bool HasZU = false;
+  bool HasInlineAsmUseGPR32 = false;
+  bool HasBranchHint = false;
 
 protected:
   llvm::X86::CPUKind CPU = llvm::X86::CK_None;
@@ -182,6 +193,7 @@ public:
     LongDoubleFormat = &llvm::APFloat::x87DoubleExtended();
     AddrSpaceMap = &X86AddrSpaceMap;
     HasStrictFP = true;
+    HasUnalignedAccess = true;
 
     bool IsWinCOFF =
         getTriple().isOSWindows() && getTriple().isOSBinFormatCOFF();
@@ -205,14 +217,18 @@ public:
   ArrayRef<const char *> getGCCRegNames() const override;
 
   ArrayRef<TargetInfo::GCCRegAlias> getGCCRegAliases() const override {
-    return std::nullopt;
+    return {};
   }
 
   ArrayRef<TargetInfo::AddlRegName> getGCCAddlRegNames() const override;
 
   bool isSPRegName(StringRef RegName) const override {
-    return RegName.equals("esp") || RegName.equals("rsp");
+    return RegName == "esp" || RegName == "rsp";
   }
+
+  bool supportsCpuSupports() const override { return true; }
+  bool supportsCpuIs() const override { return true; }
+  bool supportsCpuInit() const override { return true; }
 
   bool validateCpuSupports(StringRef FeatureStr) const override;
 
@@ -235,7 +251,7 @@ public:
                                       bool &HasSizeMismatch) const override {
     // esp and ebp are the only 32-bit registers the x86 backend can currently
     // handle.
-    if (RegName.equals("esp") || RegName.equals("ebp")) {
+    if (RegName == "esp" || RegName == "ebp") {
       // Check that the register size is 32-bit.
       HasSizeMismatch = RegSize != 32;
       return true;
@@ -336,8 +352,7 @@ public:
       return "avx512";
     if (getTriple().getArch() == llvm::Triple::x86_64 && SSELevel >= AVX)
       return "avx";
-    if (getTriple().getArch() == llvm::Triple::x86 &&
-        MMX3DNowLevel == NoMMX3DNow)
+    if (getTriple().getArch() == llvm::Triple::x86 && !HasMMX)
       return "no-mmx";
     return "";
   }
@@ -370,7 +385,7 @@ public:
     return CPU != llvm::X86::CK_None;
   }
 
-  unsigned multiVersionSortPriority(StringRef Name) const override;
+  llvm::APInt getFMVPriority(ArrayRef<StringRef> Features) const override;
 
   bool setFPMath(StringRef Name) override;
 
@@ -391,10 +406,11 @@ public:
     case CC_Swift:
     case CC_X86Pascal:
     case CC_IntelOclBicc:
-    case CC_OpenCLKernel:
       return CCCR_OK;
     case CC_SwiftAsync:
       return CCCR_Error;
+    case CC_DeviceKernel:
+      return IsOpenCL ? CCCR_OK : CCCR_Warning;
     default:
       return CCCR_Warning;
     }
@@ -422,7 +438,14 @@ public:
   uint64_t getPointerAlignV(LangAS AddrSpace) const override {
     return getPointerWidthV(AddrSpace);
   }
+  void adjust(DiagnosticsEngine &Diags, LangOptions &Opts,
+              const TargetInfo *Aux) override {
+    TargetInfo::adjust(Diags, Opts, Aux);
+    IsOpenCL = Opts.OpenCL;
+  }
 
+private:
+  bool IsOpenCL = false;
 };
 
 // X86-32 generic target
@@ -434,12 +457,7 @@ public:
     LongDoubleWidth = 96;
     LongDoubleAlign = 32;
     SuitableAlign = 128;
-    resetDataLayout(Triple.isOSBinFormatMachO()
-                        ? "e-m:o-p:32:32-p270:32:32-p271:32:32-p272:64:64-i128:"
-                          "128-f64:32:64-f80:32-n8:16:32-S128"
-                        : "e-m:e-p:32:32-p270:32:32-p271:32:32-p272:64:64-i128:"
-                          "128-f64:32:64-f80:32-n8:16:32-S128",
-                    Triple.isOSBinFormatMachO() ? "_" : "");
+    resetDataLayout();
     SizeType = UnsignedInt;
     PtrDiffType = SignedInt;
     IntPtrType = SignedInt;
@@ -494,7 +512,7 @@ public:
       MaxAtomicInlineWidth = 64;
   }
 
-  ArrayRef<Builtin::Info> getTargetBuiltins() const override;
+  llvm::SmallVector<Builtin::InfosShard> getTargetBuiltins() const override;
 
   bool hasBitIntType() const override { return true; }
   size_t getMaxBitIntWidth() const override {
@@ -507,15 +525,6 @@ class LLVM_LIBRARY_VISIBILITY NetBSDI386TargetInfo
 public:
   NetBSDI386TargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
       : NetBSDTargetInfo<X86_32TargetInfo>(Triple, Opts) {}
-
-  LangOptions::FPEvalMethodKind getFPEvalMethod() const override {
-    VersionTuple OsVersion = getTriple().getOSVersion();
-    // New NetBSD uses the default rounding mode.
-    if (OsVersion >= VersionTuple(6, 99, 26) || OsVersion.getMajor() == 0)
-      return X86_32TargetInfo::getFPEvalMethod();
-    // NetBSD before 6.99.26 defaults to "double" rounding.
-    return LangOptions::FPEvalMethodKind::FEM_Double;
-  }
 };
 
 class LLVM_LIBRARY_VISIBILITY OpenBSDI386TargetInfo
@@ -527,6 +536,14 @@ public:
     IntPtrType = SignedLong;
     PtrDiffType = SignedLong;
   }
+};
+
+class LLVM_LIBRARY_VISIBILITY AppleMachOI386TargetInfo
+    : public AppleMachOTargetInfo<X86_32TargetInfo> {
+public:
+  AppleMachOI386TargetInfo(const llvm::Triple &Triple,
+                           const TargetOptions &Opts)
+      : AppleMachOTargetInfo<X86_32TargetInfo>(Triple, Opts) {}
 };
 
 class LLVM_LIBRARY_VISIBILITY DarwinI386TargetInfo
@@ -544,9 +561,7 @@ public:
       UseSignedCharForObjCBool = false;
     SizeType = UnsignedLong;
     IntPtrType = SignedLong;
-    resetDataLayout("e-m:o-p:32:32-p270:32:32-p271:32:32-p272:64:64-i128:128-"
-                    "f64:32:64-f80:128-n8:16:32-S128",
-                    "_");
+    resetDataLayout();
     HasAlignMac68kSupport = true;
   }
 
@@ -576,7 +591,9 @@ public:
     Layout += "-p:32:32-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-";
     Layout += IsMSVC ? "f80:128" : "f80:32";
     Layout += "-n8:16:32-a:0:32-S32";
-    resetDataLayout(Layout, IsWinCOFF ? "_" : "");
+    if (IsWinCOFF)
+      UserLabelPrefix = "_";
+    resetDataLayout();
   }
 };
 
@@ -623,10 +640,11 @@ public:
   CygwinX86_32TargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
       : X86_32TargetInfo(Triple, Opts) {
     this->WCharType = TargetInfo::UnsignedShort;
+    this->WIntType = TargetInfo::UnsignedInt;
+    this->UseMicrosoftManglingForC = true;
     DoubleAlign = LongLongAlign = 64;
-    resetDataLayout("e-m:x-p:32:32-p270:32:32-p271:32:32-p272:64:64-i64:64-"
-                    "i128:128-f80:32-n8:16:32-a:0:32-S32",
-                    "_");
+    UserLabelPrefix = "_";
+    resetDataLayout();
   }
 
   void getTargetDefines(const LangOptions &Opts,
@@ -662,9 +680,9 @@ public:
   MCUX86_32TargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
       : X86_32TargetInfo(Triple, Opts) {
     LongDoubleWidth = 64;
+    DefaultAlignForAttributeAligned = 32;
     LongDoubleFormat = &llvm::APFloat::IEEEdouble();
-    resetDataLayout("e-m:e-p:32:32-p270:32:32-p271:32:32-p272:64:64-i64:32-"
-                    "f64:32-f128:32-n8:16:32-a:0:32-S32");
+    resetDataLayout();
     WIntType = UnsignedInt;
   }
 
@@ -707,8 +725,6 @@ public:
   X86_64TargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
       : X86TargetInfo(Triple, Opts) {
     const bool IsX32 = getTriple().isX32();
-    bool IsWinCOFF =
-        getTriple().isOSWindows() && getTriple().isOSBinFormatCOFF();
     LongWidth = LongAlign = PointerWidth = PointerAlign = IsX32 ? 32 : 64;
     LongDoubleWidth = 128;
     LongDoubleAlign = 128;
@@ -722,13 +738,7 @@ public:
     Int64Type = IsX32 ? SignedLongLong : SignedLong;
     RegParmMax = 6;
 
-    // Pointers are 32-bit in x32.
-    resetDataLayout(IsX32 ? "e-m:e-p:32:32-p270:32:32-p271:32:32-p272:64:64-"
-                            "i64:64-i128:128-f80:128-n8:16:32:64-S128"
-                    : IsWinCOFF ? "e-m:w-p270:32:32-p271:32:32-p272:64:64-i64:"
-                                  "64-i128:128-f80:128-n8:16:32:64-S128"
-                                : "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:"
-                                  "64-i128:128-f80:128-n8:16:32:64-S128");
+    resetDataLayout();
 
     // Use fpret only for long double.
     RealTypeUsesObjCFPRetMask = (unsigned)FloatModeKind::LongDouble;
@@ -766,9 +776,11 @@ public:
     case CC_Win64:
     case CC_PreserveMost:
     case CC_PreserveAll:
+    case CC_PreserveNone:
     case CC_X86RegCall:
-    case CC_OpenCLKernel:
       return CCCR_OK;
+    case CC_DeviceKernel:
+      return IsOpenCL ? CCCR_OK : CCCR_Warning;
     default:
       return CCCR_Warning;
     }
@@ -789,7 +801,7 @@ public:
                                       bool &HasSizeMismatch) const override {
     // rsp and rbp are the only 64-bit registers the x86 backend can currently
     // handle.
-    if (RegName.equals("rsp") || RegName.equals("rbp")) {
+    if (RegName == "rsp" || RegName == "rbp") {
       // Check that the register size is 64-bit.
       HasSizeMismatch = RegSize != 64;
       return true;
@@ -799,17 +811,72 @@ public:
     return X86TargetInfo::validateGlobalRegisterVariable(RegName, RegSize,
                                                          HasSizeMismatch);
   }
-
   void setMaxAtomicWidth() override {
     if (hasFeature("cx16"))
       MaxAtomicInlineWidth = 128;
   }
 
-  ArrayRef<Builtin::Info> getTargetBuiltins() const override;
+  llvm::SmallVector<Builtin::InfosShard> getTargetBuiltins() const override;
 
   bool hasBitIntType() const override { return true; }
   size_t getMaxBitIntWidth() const override {
     return llvm::IntegerType::MAX_INT_BITS;
+  }
+
+  void adjust(DiagnosticsEngine &Diags, LangOptions &Opts,
+              const TargetInfo *Aux) override {
+    TargetInfo::adjust(Diags, Opts, Aux);
+    IsOpenCL = Opts.OpenCL;
+  }
+
+private:
+  bool IsOpenCL = false;
+};
+
+// x86-64 UEFI target
+class LLVM_LIBRARY_VISIBILITY UEFIX86_64TargetInfo
+    : public UEFITargetInfo<X86_64TargetInfo> {
+public:
+  UEFIX86_64TargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
+      : UEFITargetInfo<X86_64TargetInfo>(Triple, Opts) {
+    // The UEFI spec does not mandate specific C++ ABI, integer widths, or
+    // alignment. We are setting these defaults to match the Windows target as
+    // it is the only way to build EFI applications with Clang/LLVM today. We
+    // intend to offer flexibility by supporting choices that are not default in
+    // Windows target in the future.
+    this->TheCXXABI.set(TargetCXXABI::Microsoft);
+    LongWidth = LongAlign = 32;
+    DoubleAlign = LongLongAlign = 64;
+    LongDoubleWidth = LongDoubleAlign = 64;
+    LongDoubleFormat = &llvm::APFloat::IEEEdouble();
+    IntMaxType = SignedLongLong;
+    Int64Type = SignedLongLong;
+    SizeType = UnsignedLongLong;
+    PtrDiffType = SignedLongLong;
+    IntPtrType = SignedLongLong;
+    WCharType = UnsignedShort;
+    WIntType = UnsignedShort;
+    this->resetDataLayout();
+  }
+
+  BuiltinVaListKind getBuiltinVaListKind() const override {
+    return TargetInfo::CharPtrBuiltinVaList;
+  }
+
+  CallingConvCheckResult checkCallingConvention(CallingConv CC) const override {
+    switch (CC) {
+    case CC_C:
+    case CC_Win64:
+    case CC_X86_64SysV:
+      return CCCR_OK;
+    default:
+      return CCCR_Warning;
+    }
+  }
+
+  TargetInfo::CallingConvKind
+  getCallingConvKind(bool ClangABICompat4) const override {
+    return CCK_MicrosoftWin64;
   }
 };
 
@@ -843,11 +910,12 @@ public:
     case CC_IntelOclBicc:
     case CC_PreserveMost:
     case CC_PreserveAll:
+    case CC_PreserveNone:
     case CC_X86_64SysV:
     case CC_Swift:
     case CC_SwiftAsync:
     case CC_X86RegCall:
-    case CC_OpenCLKernel:
+    case CC_DeviceKernel:
       return CCCR_OK;
     default:
       return CCCR_Warning;
@@ -899,7 +967,8 @@ public:
   CygwinX86_64TargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
       : X86_64TargetInfo(Triple, Opts) {
     this->WCharType = TargetInfo::UnsignedShort;
-    TLSSupported = false;
+    this->WIntType = TargetInfo::UnsignedInt;
+    this->UseMicrosoftManglingForC = true;
   }
 
   void getTargetDefines(const LangOptions &Opts,
@@ -913,6 +982,33 @@ public:
     if (Opts.CPlusPlus)
       Builder.defineMacro("_GNU_SOURCE");
   }
+
+  CallingConvCheckResult checkCallingConvention(CallingConv CC) const override {
+    switch (CC) {
+    case CC_X86StdCall:
+    case CC_X86ThisCall:
+    case CC_X86FastCall:
+      return CCCR_Ignore;
+    case CC_C:
+    case CC_X86VectorCall:
+    case CC_IntelOclBicc:
+    case CC_PreserveMost:
+    case CC_PreserveAll:
+    case CC_PreserveNone:
+    case CC_X86_64SysV:
+    case CC_Swift:
+    case CC_SwiftAsync:
+    case CC_X86RegCall:
+    case CC_DeviceKernel:
+      return CCCR_OK;
+    default:
+      return CCCR_Warning;
+    }
+  }
+
+  BuiltinVaListKind getBuiltinVaListKind() const override {
+    return TargetInfo::CharPtrBuiltinVaList;
+  }
 };
 
 class LLVM_LIBRARY_VISIBILITY DarwinX86_64TargetInfo
@@ -925,9 +1021,7 @@ public:
     llvm::Triple T = llvm::Triple(Triple);
     if (T.isiOS())
       UseSignedCharForObjCBool = false;
-    resetDataLayout("e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-"
-                    "f80:128-n8:16:32:64-S128",
-                    "_");
+    resetDataLayout();
   }
 
   bool handleTargetFeatures(std::vector<std::string> &Features,

@@ -176,6 +176,13 @@ public:
     Array() = default;
     ~Array() { clear(); }
 
+    Array(Array &&Other) : Size(Other.Size), LIUs(Other.LIUs) {
+      Other.Size = 0;
+      Other.LIUs = nullptr;
+    }
+
+    Array(const Array &) = delete;
+
     // Initialize the array to have Size entries.
     // Reuse an existing allocation if the size matches.
     void init(LiveIntervalUnion::Allocator&, unsigned Size);
@@ -184,14 +191,14 @@ public:
 
     void clear();
 
-    LiveIntervalUnion& operator[](unsigned idx) {
-      assert(idx <  Size && "idx out of bounds");
-      return LIUs[idx];
+    LiveIntervalUnion &operator[](MCRegUnit Unit) {
+      assert(static_cast<unsigned>(Unit) < Size && "Unit out of bounds");
+      return LIUs[static_cast<unsigned>(Unit)];
     }
 
-    const LiveIntervalUnion& operator[](unsigned Idx) const {
-      assert(Idx < Size && "Idx out of bounds");
-      return LIUs[Idx];
+    const LiveIntervalUnion &operator[](MCRegUnit Unit) const {
+      assert(static_cast<unsigned>(Unit) < Size && "Unit out of bounds");
+      return LIUs[static_cast<unsigned>(Unit)];
     }
   };
 };

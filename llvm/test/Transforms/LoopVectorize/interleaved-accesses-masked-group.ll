@@ -127,7 +127,7 @@ if.then:
   %mul = shl nuw nsw i32 %ix.024, 1
   %arrayidx = getelementptr inbounds i8, ptr %p, i32 %mul
   %0 = load i8, ptr %arrayidx, align 1
-  %add = or i32 %mul, 1
+  %add = or disjoint i32 %mul, 1
   %arrayidx4 = getelementptr inbounds i8, ptr %p, i32 %add
   %1 = load i8, ptr %arrayidx4, align 1
   %cmp.i = icmp slt i8 %0, %1
@@ -163,7 +163,7 @@ for.body:
   br i1 %cmp1, label %if.then, label %for.inc
 
 if.then:
-  %add = or i32 %mul, 1
+  %add = or disjoint i32 %mul, 1
   %arrayidx3 = getelementptr inbounds i8, ptr %q, i32 %add
   store i8 2, ptr %arrayidx3, align 1
   br label %for.inc
@@ -200,7 +200,7 @@ if.end:
   br i1 %cmp4, label %if.then6, label %for.inc
 
 if.then6:
-  %add = or i32 %mul, 1
+  %add = or disjoint i32 %mul, 1
   %arrayidx7 = getelementptr inbounds i8, ptr %q, i32 %add
   store i8 2, ptr %arrayidx7, align 1
   br label %for.inc

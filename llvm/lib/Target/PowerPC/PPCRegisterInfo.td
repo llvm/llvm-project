@@ -17,6 +17,7 @@ def sub_un : SubRegIndex<1, 3>;
 def sub_32 : SubRegIndex<32>;
 def sub_32_hi_phony : SubRegIndex<32,32>;
 def sub_64 : SubRegIndex<64>;
+def sub_64_hi_phony : SubRegIndex<64,64>;
 def sub_vsx0 : SubRegIndex<128>;
 def sub_vsx1 : SubRegIndex<128, 128>;
 def sub_gp8_x0 : SubRegIndex<64>;
@@ -77,19 +78,19 @@ class VF<bits<5> num, string n> : PPCReg<n> {
 }
 
 // VR - One of the 32 128-bit vector registers
-class VR<VF SubReg, string n> : PPCReg<n> {
+class VR<VF SubReg, VF SubRegH, string n> : PPCReg<n> {
   let HWEncoding{4-0} = SubReg.HWEncoding{4-0};
   let HWEncoding{5} = 0;
-  let SubRegs = [SubReg];
-  let SubRegIndices = [sub_64];
+  let SubRegs = [SubReg, SubRegH];
+  let SubRegIndices = [sub_64, sub_64_hi_phony];
 }
 
 // VSRL - One of the 32 128-bit VSX registers that overlap with the scalar
 // floating-point registers.
-class VSRL<FPR SubReg, string n> : PPCReg<n> {
+class VSRL<FPR SubReg, FPR SubRegH, string n> : PPCReg<n> {
   let HWEncoding = SubReg.HWEncoding;
-  let SubRegs = [SubReg];
-  let SubRegIndices = [sub_64];
+  let SubRegs = [SubReg, SubRegH];
+  let SubRegIndices = [sub_64, sub_64_hi_phony];
 }
 
 // VSXReg - One of the VSX registers in the range vs32-vs63 with numbering
@@ -155,6 +156,22 @@ foreach Index = 0-31 in {
                 DwarfRegNum<[!add(Index, 32), !add(Index, 32)]>;
 }
 
+// The FH and VFH registers have been marked as Artifical because there are no
+// instructions on PowerPC that use those register classes. They only exist
+// in order to ensure that the super registers (V and VSL) are covered by their
+// subregisters and have correct subregister lane masks.
+let isArtificial = 1 in {
+  foreach Index = 0-31 in {
+    def FH#Index : FPR<-1, "">;
+    def VFH#Index : VF<-1, "">;
+  }
+}
+
+let isAllocatable = 0, CopyCost = -1 in {
+  def VFHRC : RegisterClass<"PPC", [f64], 64, (sequence "VFH%u", 0, 31)>;
+  def FHRC : RegisterClass<"PPC", [f64], 64, (sequence "FH%u", 0, 31)>;
+}
+
 // Floating-point pair registers
 foreach Index = { 0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30 } in {
   def Fpair#Index : FPPair<"fp"#Index, Index>;
@@ -168,16 +185,18 @@ foreach Index = 0-31 in {
                  DwarfRegNum<[!add(Index, 77), !add(Index, 77)]>;
 }
 
+let CoveredBySubRegs = 1 in {
 // Vector registers
 foreach Index = 0-31 in {
-  def V#Index : VR<!cast<VF>("VF"#Index), "v"#Index>,
+  def V#Index : VR<!cast<VF>("VF"#Index), !cast<VF>("VFH"#Index), "v"#Index>,
                 DwarfRegNum<[!add(Index, 77), !add(Index, 77)]>;
 }
 
 // VSX registers
 foreach Index = 0-31 in {
-  def VSL#Index : VSRL<!cast<FPR>("F"#Index), "vs"#Index>,
+  def VSL#Index : VSRL<!cast<FPR>("F"#Index), !cast<FPR>("FH"#Index), "vs"#Index>,
                   DwarfRegAlias<!cast<FPR>("F"#Index)>;
+}
 }
 
 // Dummy VSX registers, this defines string: "vs32"-"vs63", and is only used for
@@ -199,7 +218,7 @@ let SubRegIndices = [sub_vsx0, sub_vsx1] in {
     def VSRp#!add(!srl(Index, 1), 16) :
       VSRPair<!add(!srl(Index, 1), 16), "vsp"#!add(Index, 32),
               [!cast<VR>("V"#Index), !cast<VR>("V"#!add(Index, 1))]>,
-      DwarfRegNum<[-1, -1]>;
+              DwarfRegAlias<!cast<VR>("V"#Index)>;
   }
 }
 
@@ -270,12 +289,15 @@ def CR7 : CR<7, "cr7", [CR7LT, CR7GT, CR7EQ, CR7UN]>, DwarfRegNum<[75, 75]>;
 
 // Link register
 def LR  : SPR<8, "lr">, DwarfRegNum<[-2, 65]>;
-//let Aliases = [LR] in
-def LR8 : SPR<8, "lr">, DwarfRegNum<[65, -2]>;
+def LR8 : SPR<8, "lr">, DwarfRegNum<[65, -2]> {
+  let Aliases = [LR];
+}
 
 // Count register
 def CTR  : SPR<9, "ctr">, DwarfRegNum<[-2, 66]>;
-def CTR8 : SPR<9, "ctr">, DwarfRegNum<[66, -2]>;
+def CTR8 : SPR<9, "ctr">, DwarfRegNum<[66, -2]> {
+  let Aliases = [CTR];
+}
 
 // VRsave register
 def VRSAVE: SPR<256, "vrsave">, DwarfRegNum<[109]>;
@@ -472,13 +494,14 @@ def LR8RC : RegisterClass<"PPC", [i64], 64, (add LR8)> {
 def VRSAVERC : RegisterClass<"PPC", [i32], 32, (add VRSAVE)>;
 def CARRYRC : RegisterClass<"PPC", [i32], 32, (add CARRY, XER)> {
   let CopyCost = -1;
+  let isAllocatable = 0;
 }
 
 // Make AllocationOrder as similar as G8RC's to avoid potential spilling.
 // Similarly, we have an AltOrder for 64-bit ELF ABI which r2 is allocated
 // at last.
 def G8pRC :
-  RegisterClass<"PPC", [i128], 128,
+  RegisterClass<"PPC", [untyped], 128,
                 (add (sequence "G8p%u", 1, 5),
                      (sequence "G8p%u", 14, 7),
                      G8p15, G8p6, G8p0)> {
@@ -592,7 +615,8 @@ def spe4rc : RegisterOperand<GPRC> {
 }
 
 def PPCU1ImmAsmOperand : AsmOperandClass {
-  let Name = "U1Imm"; let PredicateMethod = "isU1Imm";
+  let Name = "U1Imm";
+  let PredicateMethod = "isUImm<1>";
   let RenderMethod = "addImmOperands";
 }
 def u1imm   : Operand<i32> {
@@ -603,7 +627,8 @@ def u1imm   : Operand<i32> {
 }
 
 def PPCU2ImmAsmOperand : AsmOperandClass {
-  let Name = "U2Imm"; let PredicateMethod = "isU2Imm";
+  let Name = "U2Imm";
+  let PredicateMethod = "isUImm<2>";
   let RenderMethod = "addImmOperands";
 }
 def u2imm   : Operand<i32> {
@@ -624,7 +649,8 @@ def atimm   : Operand<i32> {
 }
 
 def PPCU3ImmAsmOperand : AsmOperandClass {
-  let Name = "U3Imm"; let PredicateMethod = "isU3Imm";
+  let Name = "U3Imm";
+  let PredicateMethod = "isUImm<3>";
   let RenderMethod = "addImmOperands";
 }
 def u3imm   : Operand<i32> {
@@ -635,7 +661,8 @@ def u3imm   : Operand<i32> {
 }
 
 def PPCU4ImmAsmOperand : AsmOperandClass {
-  let Name = "U4Imm"; let PredicateMethod = "isU4Imm";
+  let Name = "U4Imm";
+  let PredicateMethod = "isUImm<4>";
   let RenderMethod = "addImmOperands";
 }
 def u4imm   : Operand<i32> {
@@ -645,7 +672,8 @@ def u4imm   : Operand<i32> {
   let OperandType = "OPERAND_IMMEDIATE";
 }
 def PPCS5ImmAsmOperand : AsmOperandClass {
-  let Name = "S5Imm"; let PredicateMethod = "isS5Imm";
+  let Name = "S5Imm";
+  let PredicateMethod = "isSImm<5>";
   let RenderMethod = "addImmOperands";
 }
 def s5imm   : Operand<i32> {
@@ -655,7 +683,8 @@ def s5imm   : Operand<i32> {
   let OperandType = "OPERAND_IMMEDIATE";
 }
 def PPCU5ImmAsmOperand : AsmOperandClass {
-  let Name = "U5Imm"; let PredicateMethod = "isU5Imm";
+  let Name = "U5Imm";
+  let PredicateMethod = "isUImm<5>";
   let RenderMethod = "addImmOperands";
 }
 def u5imm   : Operand<i32> {
@@ -665,7 +694,8 @@ def u5imm   : Operand<i32> {
   let OperandType = "OPERAND_IMMEDIATE";
 }
 def PPCU6ImmAsmOperand : AsmOperandClass {
-  let Name = "U6Imm"; let PredicateMethod = "isU6Imm";
+  let Name = "U6Imm";
+  let PredicateMethod = "isUImm<6>";
   let RenderMethod = "addImmOperands";
 }
 def u6imm   : Operand<i32> {
@@ -675,7 +705,8 @@ def u6imm   : Operand<i32> {
   let OperandType = "OPERAND_IMMEDIATE";
 }
 def PPCU7ImmAsmOperand : AsmOperandClass {
-  let Name = "U7Imm"; let PredicateMethod = "isU7Imm";
+  let Name = "U7Imm";
+  let PredicateMethod = "isUImm<7>";
   let RenderMethod = "addImmOperands";
 }
 def u7imm   : Operand<i32> {
@@ -685,7 +716,8 @@ def u7imm   : Operand<i32> {
   let OperandType = "OPERAND_IMMEDIATE";
 }
 def PPCU8ImmAsmOperand : AsmOperandClass {
-  let Name = "U8Imm"; let PredicateMethod = "isU8Imm";
+  let Name = "U8Imm";
+  let PredicateMethod = "isUImm<8>";
   let RenderMethod = "addImmOperands";
 }
 def u8imm   : Operand<i32> {
@@ -695,7 +727,8 @@ def u8imm   : Operand<i32> {
   let OperandType = "OPERAND_IMMEDIATE";
 }
 def PPCU10ImmAsmOperand : AsmOperandClass {
-  let Name = "U10Imm"; let PredicateMethod = "isU10Imm";
+  let Name = "U10Imm";
+  let PredicateMethod = "isUImm<10>";
   let RenderMethod = "addImmOperands";
 }
 def u10imm  : Operand<i32> {
@@ -705,7 +738,8 @@ def u10imm  : Operand<i32> {
   let OperandType = "OPERAND_IMMEDIATE";
 }
 def PPCU12ImmAsmOperand : AsmOperandClass {
-  let Name = "U12Imm"; let PredicateMethod = "isU12Imm";
+  let Name = "U12Imm";
+  let PredicateMethod = "isUImm<12>";
   let RenderMethod = "addImmOperands";
 }
 def u12imm  : Operand<i32> {
@@ -720,7 +754,14 @@ def PPCS16ImmAsmOperand : AsmOperandClass {
 }
 def s16imm  : Operand<i32> {
   let PrintMethod = "printS16ImmOperand";
-  let EncoderMethod = "getImm16Encoding";
+  let EncoderMethod = "getImmEncoding<PPC::fixup_ppc_half16>";
+  let ParserMatchClass = PPCS16ImmAsmOperand;
+  let DecoderMethod = "decodeSImmOperand<16>";
+  let OperandType = "OPERAND_IMMEDIATE";
+}
+def s16imm64 : Operand<i64> {
+  let PrintMethod = "printS16ImmOperand";
+  let EncoderMethod = "getImmEncoding<PPC::fixup_ppc_half16>";
   let ParserMatchClass = PPCS16ImmAsmOperand;
   let DecoderMethod = "decodeSImmOperand<16>";
   let OperandType = "OPERAND_IMMEDIATE";
@@ -731,7 +772,14 @@ def PPCU16ImmAsmOperand : AsmOperandClass {
 }
 def u16imm  : Operand<i32> {
   let PrintMethod = "printU16ImmOperand";
-  let EncoderMethod = "getImm16Encoding";
+  let EncoderMethod = "getImmEncoding<PPC::fixup_ppc_half16>";
+  let ParserMatchClass = PPCU16ImmAsmOperand;
+  let DecoderMethod = "decodeUImmOperand<16>";
+  let OperandType = "OPERAND_IMMEDIATE";
+}
+def u16imm64 : Operand<i64> {
+  let PrintMethod = "printU16ImmOperand";
+  let EncoderMethod = "getImmEncoding<PPC::fixup_ppc_half16>";
   let ParserMatchClass = PPCU16ImmAsmOperand;
   let DecoderMethod = "decodeUImmOperand<16>";
   let OperandType = "OPERAND_IMMEDIATE";
@@ -745,9 +793,38 @@ def s17imm  : Operand<i32> {
   // to accept immediates in the range -65536..65535 for compatibility with
   // the GNU assembler.  The operand is treated as 16-bit otherwise.
   let PrintMethod = "printS16ImmOperand";
-  let EncoderMethod = "getImm16Encoding";
+  let EncoderMethod = "getImmEncoding<PPC::fixup_ppc_half16>";
   let ParserMatchClass = PPCS17ImmAsmOperand;
   let DecoderMethod = "decodeSImmOperand<16>";
+  let OperandType = "OPERAND_IMMEDIATE";
+}
+def s17imm64 : Operand<i64> {
+  // This operand type is used for addis/lis to allow the assembler parser
+  // to accept immediates in the range -65536..65535 for compatibility with
+  // the GNU assembler.  The operand is treated as 16-bit otherwise.
+  let PrintMethod = "printS16ImmOperand";
+  let EncoderMethod = "getImmEncoding<PPC::fixup_ppc_half16>";
+  let ParserMatchClass = PPCS17ImmAsmOperand;
+  let DecoderMethod = "decodeSImmOperand<16>";
+  let OperandType = "OPERAND_IMMEDIATE";
+}
+def PPCS32ImmAsmOperand : AsmOperandClass {
+  let Name = "S32Imm";
+  let PredicateMethod = "isS32Imm";
+  let RenderMethod = "addImmOperands";
+}
+def s32imm : Operand<i64> {
+  let PrintMethod = "printS32ImmOperand";
+  let EncoderMethod = "getImmEncoding<PPC::fixup_ppc_imm32>";
+  let ParserMatchClass = PPCS32ImmAsmOperand;
+  let DecoderMethod = "decodeSImmOperand<32>";
+  let OperandType = "OPERAND_IMMEDIATE";
+}
+def s32imm_pcrel : Operand<i64> {
+  let PrintMethod = "printS32ImmOperand";
+  let EncoderMethod = "getImmEncoding<PPC::fixup_ppc_pcrel32>";
+  let ParserMatchClass = PPCS32ImmAsmOperand;
+  let DecoderMethod = "decodeSImmOperand<32>";
   let OperandType = "OPERAND_IMMEDIATE";
 }
 def PPCS34ImmAsmOperand : AsmOperandClass {
@@ -757,14 +834,14 @@ def PPCS34ImmAsmOperand : AsmOperandClass {
 }
 def s34imm : Operand<i64> {
   let PrintMethod = "printS34ImmOperand";
-  let EncoderMethod = "getImm34EncodingNoPCRel";
+  let EncoderMethod = "getImmEncoding<PPC::fixup_ppc_imm34>";
   let ParserMatchClass = PPCS34ImmAsmOperand;
   let DecoderMethod = "decodeSImmOperand<34>";
   let OperandType = "OPERAND_IMMEDIATE";
 }
 def s34imm_pcrel : Operand<i64> {
   let PrintMethod = "printS34ImmOperand";
-  let EncoderMethod = "getImm34EncodingPCRel";
+  let EncoderMethod = "getImmEncoding<PPC::fixup_ppc_pcrel34>";
   let ParserMatchClass = PPCS34ImmAsmOperand;
   let DecoderMethod = "decodeSImmOperand<34>";
   let OperandType = "OPERAND_IMMEDIATE";
@@ -798,6 +875,7 @@ def directbrtarget : Operand<OtherVT> {
 def absdirectbrtarget : Operand<OtherVT> {
   let PrintMethod = "printAbsBranchOperand";
   let EncoderMethod = "getAbsDirectBrEncoding";
+  let DecoderMethod = "decodeDirectBrTarget";
   let ParserMatchClass = PPCDirectBrAsmOperand;
 }
 def PPCCondBrAsmOperand : AsmOperandClass {
@@ -814,6 +892,7 @@ def condbrtarget : Operand<OtherVT> {
 def abscondbrtarget : Operand<OtherVT> {
   let PrintMethod = "printAbsBranchOperand";
   let EncoderMethod = "getAbsCondBrEncoding";
+  let DecoderMethod = "decodeCondBrTarget";
   let ParserMatchClass = PPCCondBrAsmOperand;
 }
 def calltarget : Operand<iPTR> {
@@ -826,6 +905,7 @@ def calltarget : Operand<iPTR> {
 def abscalltarget : Operand<iPTR> {
   let PrintMethod = "printAbsBranchOperand";
   let EncoderMethod = "getAbsDirectBrEncoding";
+  let DecoderMethod = "decodeDirectBrTarget";
   let ParserMatchClass = PPCDirectBrAsmOperand;
 }
 def PPCCRBitMaskOperand : AsmOperandClass {
@@ -842,7 +922,16 @@ def crbitm: Operand<i8> {
 def PPCRegGxRCNoR0Operand : AsmOperandClass {
   let Name = "RegGxRCNoR0"; let PredicateMethod = "isRegNumber";
 }
-def ptr_rc_nor0 : Operand<iPTR>, PointerLikeRegClass<1> {
+
+def ppc_ptr_rc : RegClassByHwMode<
+  [PPC32, PPC64],
+  [GPRC, G8RC]>;
+
+def ptr_rc_nor0_by_hwmode : RegClassByHwMode<
+  [PPC32, PPC64],
+  [GPRC_NOR0, G8RC_NOX0]>;
+
+def ptr_rc_nor0 : RegisterOperand<ptr_rc_nor0_by_hwmode> {
   let ParserMatchClass = PPCRegGxRCNoR0Operand;
 }
 
@@ -876,7 +965,11 @@ def memri34_pcrel : Operand<iPTR> { // memri, imm is a 34-bit value.
 def PPCRegGxRCOperand : AsmOperandClass {
   let Name = "RegGxRC"; let PredicateMethod = "isRegNumber";
 }
-def ptr_rc_idx : Operand<iPTR>, PointerLikeRegClass<0> {
+
+def ptr_rc_idx_by_hwmode : RegClassByHwMode<[PPC32, PPC64],
+                                            [GPRC, G8RC]>;
+
+def ptr_rc_idx : RegisterOperand<ptr_rc_idx_by_hwmode> {
   let ParserMatchClass = PPCRegGxRCOperand;
 }
 

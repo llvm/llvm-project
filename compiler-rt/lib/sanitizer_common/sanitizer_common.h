@@ -32,6 +32,7 @@ struct AddressInfo;
 struct BufferedStackTrace;
 struct SignalContext;
 struct StackTrace;
+struct SymbolizedStack;
 
 // Constants.
 const uptr kWordSize = SANITIZER_WORDSIZE / 8;
@@ -59,14 +60,10 @@ inline int Verbosity() {
   return atomic_load(&current_verbosity, memory_order_relaxed);
 }
 
-#if SANITIZER_ANDROID
-inline uptr GetPageSize() {
-// Android post-M sysconf(_SC_PAGESIZE) crashes if called from .preinit_array.
-  return 4096;
-}
-inline uptr GetPageSizeCached() {
-  return 4096;
-}
+#if SANITIZER_ANDROID && !defined(__aarch64__)
+// 32-bit Android only has 4k pages.
+inline uptr GetPageSize() { return 4096; }
+inline uptr GetPageSizeCached() { return 4096; }
 #else
 uptr GetPageSize();
 extern uptr PageSizeCached;
@@ -76,24 +73,26 @@ inline uptr GetPageSizeCached() {
   return PageSizeCached;
 }
 #endif
+
 uptr GetMmapGranularity();
 uptr GetMaxVirtualAddress();
 uptr GetMaxUserVirtualAddress();
 // Threads
-tid_t GetTid();
-int TgKill(pid_t pid, tid_t tid, int sig);
+ThreadID GetTid();
+int TgKill(pid_t pid, ThreadID tid, int sig);
 uptr GetThreadSelf();
 void GetThreadStackTopAndBottom(bool at_initialization, uptr *stack_top,
                                 uptr *stack_bottom);
-void GetThreadStackAndTls(bool main, uptr *stk_addr, uptr *stk_size,
-                          uptr *tls_addr, uptr *tls_size);
+void GetThreadStackAndTls(bool main, uptr *stk_begin, uptr *stk_end,
+                          uptr *tls_begin, uptr *tls_end);
 
 // Memory management
 void *MmapOrDie(uptr size, const char *mem_type, bool raw_report = false);
+
 inline void *MmapOrDieQuietly(uptr size, const char *mem_type) {
   return MmapOrDie(size, mem_type, /*raw_report*/ true);
 }
-void UnmapOrDie(void *addr, uptr size);
+void UnmapOrDie(void *addr, uptr size, bool raw_report = false);
 // Behaves just like MmapOrDie, but tolerates out of memory condition, in that
 // case returns nullptr.
 void *MmapOrDieOnFatalError(uptr size, const char *mem_type);
@@ -138,7 +137,8 @@ void UnmapFromTo(uptr from, uptr to);
 // shadow_size_bytes bytes on the right, which on linux is mapped no access.
 // The high_mem_end may be updated if the original shadow size doesn't fit.
 uptr MapDynamicShadow(uptr shadow_size_bytes, uptr shadow_scale,
-                      uptr min_shadow_base_alignment, uptr &high_mem_end);
+                      uptr min_shadow_base_alignment, uptr &high_mem_end,
+                      uptr granularity);
 
 // Let S = max(shadow_size, num_aliases * alias_size, ring_buffer_size).
 // Reserves 2*S bytes of address space to the right of the returned address and
@@ -166,7 +166,7 @@ uptr FindAvailableMemoryRange(uptr size, uptr alignment, uptr left_padding,
 
 // Used to check if we can map shadow memory to a fixed location.
 bool MemoryRangeIsAvailable(uptr range_start, uptr range_end);
-// Releases memory pages entirely within the [beg, end] address range. Noop if
+// Releases memory pages entirely within the [beg, end) address range. Noop if
 // the provided range does not contain at least one entire page.
 void ReleaseMemoryPagesToOS(uptr beg, uptr end);
 void IncreaseTotalMmap(uptr size);
@@ -177,7 +177,7 @@ bool DontDumpShadowMemory(uptr addr, uptr length);
 // Check if the built VMA size matches the runtime one.
 void CheckVMASize();
 void RunMallocHooks(void *ptr, uptr size);
-void RunFreeHooks(void *ptr);
+int RunFreeHooks(void *ptr);
 
 class ReservedAddressRange {
  public:
@@ -239,13 +239,15 @@ void RemoveANSIEscapeSequencesFromString(char *buffer);
 void Printf(const char *format, ...) FORMAT(1, 2);
 void Report(const char *format, ...) FORMAT(1, 2);
 void SetPrintfAndReportCallback(void (*callback)(const char *));
-#define VReport(level, ...)                                              \
-  do {                                                                   \
-    if ((uptr)Verbosity() >= (level)) Report(__VA_ARGS__); \
+#define VReport(level, ...)                     \
+  do {                                          \
+    if (UNLIKELY((uptr)Verbosity() >= (level))) \
+      Report(__VA_ARGS__);                      \
   } while (0)
-#define VPrintf(level, ...)                                              \
-  do {                                                                   \
-    if ((uptr)Verbosity() >= (level)) Printf(__VA_ARGS__); \
+#define VPrintf(level, ...)                     \
+  do {                                          \
+    if (UNLIKELY((uptr)Verbosity() >= (level))) \
+      Printf(__VA_ARGS__);                      \
   } while (0)
 
 // Lock sanitizer error reporting and protects against nested errors.
@@ -266,7 +268,15 @@ class ScopedErrorReportLock {
 extern uptr stoptheworld_tracer_pid;
 extern uptr stoptheworld_tracer_ppid;
 
+// Returns true if the entire range can be read.
 bool IsAccessibleMemoryRange(uptr beg, uptr size);
+// Attempts to copy `n` bytes from memory range starting at `src` to `dest`.
+// Returns true if the entire range can be read. Returns `false` if any part of
+// the source range cannot be read, in which case the contents of `dest` are
+// undefined.
+bool TryMemCpy(void *dest, const void *src, uptr n);
+// Copies accessible memory, and zero fill inaccessible.
+void MemCpyAccessible(void *dest, const void *src, uptr n);
 
 // Error report formatting.
 const char *StripPathPrefix(const char *filepath,
@@ -380,6 +390,9 @@ void ReportDeadlySignal(const SignalContext &sig, u32 tid,
 void SetAlternateSignalStack();
 void UnsetAlternateSignalStack();
 
+bool IsSignalHandlerFromSanitizer(int signum);
+bool SetSignalHandlerFromSanitizer(int signum, bool new_state);
+
 // Construct a one-line string:
 //   SUMMARY: SanitizerToolName: error_message
 // and pass it to __sanitizer_report_error_summary.
@@ -393,6 +406,8 @@ void ReportErrorSummary(const char *error_type, const AddressInfo &info,
 // Same as above, but obtains AddressInfo by symbolizing top stack trace frame.
 void ReportErrorSummary(const char *error_type, const StackTrace *trace,
                         const char *alt_tool_name = nullptr);
+// Skips frames which we consider internal and not usefull to the users.
+const SymbolizedStack *SkipInternalFrames(const SymbolizedStack *frames);
 
 void ReportMmapWriteExec(int prot, int mflags);
 
@@ -472,6 +487,13 @@ inline uptr Log2(uptr x) {
   return LeastSignificantSetBitIndex(x);
 }
 
+inline bool IntervalsAreSeparate(uptr start1, uptr end1, uptr start2,
+                                 uptr end2) {
+  CHECK_LE(start1, end1);
+  CHECK_LE(start2, end2);
+  return (end1 < start2) || (end2 < start1);
+}
+
 // Don't use std::min, std::max or std::swap, to minimize dependency
 // on libstdc++.
 template <class T>
@@ -507,7 +529,7 @@ inline int ToLower(int c) {
 // A low-level vector based on mmap. May incur a significant memory overhead for
 // small vectors.
 // WARNING: The current implementation supports only POD types.
-template<typename T>
+template <typename T, bool raw_report = false>
 class InternalMmapVectorNoCtor {
  public:
   using value_type = T;
@@ -517,7 +539,7 @@ class InternalMmapVectorNoCtor {
     data_ = 0;
     reserve(initial_capacity);
   }
-  void Destroy() { UnmapOrDie(data_, capacity_bytes_); }
+  void Destroy() { UnmapOrDie(data_, capacity_bytes_, raw_report); }
   T &operator[](uptr i) {
     CHECK_LT(i, size_);
     return data_[i];
@@ -593,9 +615,10 @@ class InternalMmapVectorNoCtor {
     CHECK_LE(size_, new_capacity);
     uptr new_capacity_bytes =
         RoundUpTo(new_capacity * sizeof(T), GetPageSizeCached());
-    T *new_data = (T *)MmapOrDie(new_capacity_bytes, "InternalMmapVector");
+    T *new_data =
+        (T *)MmapOrDie(new_capacity_bytes, "InternalMmapVector", raw_report);
     internal_memcpy(new_data, data_, size_ * sizeof(T));
-    UnmapOrDie(data_, capacity_bytes_);
+    UnmapOrDie(data_, capacity_bytes_, raw_report);
     data_ = new_data;
     capacity_bytes_ = new_capacity_bytes;
   }
@@ -721,6 +744,7 @@ enum ModuleArch {
   kModuleArchARMV7S,
   kModuleArchARMV7K,
   kModuleArchARM64,
+  kModuleArchARM64E,
   kModuleArchLoongArch64,
   kModuleArchRISCV64,
   kModuleArchHexagon
@@ -794,6 +818,8 @@ inline const char *ModuleArchToString(ModuleArch arch) {
       return "armv7k";
     case kModuleArchARM64:
       return "arm64";
+    case kModuleArchARM64E:
+      return "arm64e";
     case kModuleArchLoongArch64:
       return "loongarch64";
     case kModuleArchRISCV64:
@@ -912,13 +938,6 @@ class ListOfModules {
 // Callback type for iterating over a set of memory ranges.
 typedef void (*RangeIteratorCallback)(uptr begin, uptr end, void *arg);
 
-enum AndroidApiLevel {
-  ANDROID_NOT_ANDROID = 0,
-  ANDROID_KITKAT = 19,
-  ANDROID_LOLLIPOP_MR1 = 22,
-  ANDROID_POST_LOLLIPOP = 23
-};
-
 void WriteToSyslog(const char *buffer);
 
 #if defined(SANITIZER_WINDOWS) && defined(_MSC_VER) && !defined(__clang__)
@@ -951,19 +970,8 @@ inline void AndroidLogInit() {}
 inline void SetAbortMessage(const char *) {}
 #endif
 
-#if SANITIZER_ANDROID
-void SanitizerInitializeUnwinder();
-AndroidApiLevel AndroidGetApiLevel();
-#else
-inline void AndroidLogWrite(const char *buffer_unused) {}
-inline void SanitizerInitializeUnwinder() {}
-inline AndroidApiLevel AndroidGetApiLevel() { return ANDROID_NOT_ANDROID; }
-#endif
-
 inline uptr GetPthreadDestructorIterations() {
-#if SANITIZER_ANDROID
-  return (AndroidGetApiLevel() == ANDROID_LOLLIPOP_MR1) ? 8 : 4;
-#elif SANITIZER_POSIX
+#if SANITIZER_POSIX
   return 4;
 #else
 // Unused on Windows.
@@ -1094,7 +1102,7 @@ inline u32 GetNumberOfCPUsCached() {
 
 }  // namespace __sanitizer
 
-inline void *operator new(__sanitizer::operator_new_size_type size,
+inline void *operator new(__sanitizer::usize size,
                           __sanitizer::LowLevelAllocator &alloc) {
   return alloc.Allocate(size);
 }

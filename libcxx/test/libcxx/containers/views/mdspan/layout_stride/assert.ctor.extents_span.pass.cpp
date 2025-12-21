@@ -8,8 +8,8 @@
 
 // REQUIRES: has-unix-headers
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
-// UNSUPPORTED: libcpp-hardening-mode=unchecked
-// XFAIL: availability-verbose_abort-missing
+// UNSUPPORTED: libcpp-hardening-mode=none
+// XFAIL: libcpp-hardening-mode=debug && availability-verbose_abort-missing
 
 // <mdspan>
 
@@ -30,8 +30,9 @@
 //
 // Effects: Direct-non-list-initializes extents_ with e, and for all d in the range [0, rank_), direct-non-list-initializes strides_[d] with as_const(s[d]).
 
-#include <mdspan>
 #include <cassert>
+#include <mdspan>
+#include <span>
 
 #include "check_assertion.h"
 
@@ -44,8 +45,8 @@ int main(int, char**) {
     TEST_LIBCPP_ASSERT_FAILURE(
         ([=] {
           std::array<int, 2> strides{20, 1};
-          std::layout_stride::template mapping<std::extents<char, D, 5>> m(
-              std::extents<char, D, 5>(20), std::span(strides));
+          std::layout_stride::mapping<std::extents<signed char, D, 5>> m(
+              std::extents<signed char, D, 5>(20), std::span(strides));
         }()),
         "layout_stride::mapping ctor: required span size is not representable as index_type.");
 
@@ -54,7 +55,7 @@ int main(int, char**) {
     TEST_LIBCPP_ASSERT_FAILURE(
         ([=] {
           std::array<unsigned, 2> strides{257, 1};
-          std::layout_stride::template mapping<std::extents<unsigned char, D, 5>> m(
+          std::layout_stride::mapping<std::extents<unsigned char, D, 5>> m(
               std::extents<unsigned char, D, 5>(20), std::span(strides));
         }()),
         "layout_stride::mapping ctor: required span size is not representable as index_type.");
@@ -63,7 +64,7 @@ int main(int, char**) {
     TEST_LIBCPP_ASSERT_FAILURE(
         ([=] {
           std::array<int, 2> strides{20, -1};
-          std::layout_stride::template mapping<std::extents<unsigned, D, 5>> m(
+          std::layout_stride::mapping<std::extents<unsigned, D, 5>> m(
               std::extents<unsigned, D, 5>(20), std::span(strides));
         }()),
         "layout_stride::mapping ctor: all strides must be greater than 0");
@@ -71,7 +72,7 @@ int main(int, char**) {
     TEST_LIBCPP_ASSERT_FAILURE(
         ([=] {
           std::array<unsigned, 2> strides{20, 0};
-          std::layout_stride::template mapping<std::extents<unsigned, D, 5>> m(
+          std::layout_stride::mapping<std::extents<unsigned, D, 5>> m(
               std::extents<unsigned, D, 5>(20), std::span(strides));
         }()),
         "layout_stride::mapping ctor: all strides must be greater than 0");

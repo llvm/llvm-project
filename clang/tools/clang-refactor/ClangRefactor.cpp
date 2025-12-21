@@ -117,7 +117,7 @@ public:
 
   bool forAllRanges(const SourceManager &SM,
                     llvm::function_ref<void(SourceRange R)> Callback) override {
-    auto FE = SM.getFileManager().getFile(Range.FileName);
+    auto FE = SM.getFileManager().getOptionalFileRef(Range.FileName);
     FileID FID = FE ? SM.translateFile(*FE) : FileID();
     if (!FE || FID.isInvalid()) {
       llvm::errs() << "error: -selection=" << Range.FileName
@@ -146,7 +146,7 @@ private:
 
 std::unique_ptr<SourceSelectionArgument>
 SourceSelectionArgument::fromString(StringRef Value) {
-  if (Value.startswith("test:")) {
+  if (Value.starts_with("test:")) {
     StringRef Filename = Value.drop_front(strlen("test:"));
     std::optional<TestSelectionRangesInFile> ParsedTestSelection =
         findTestSelectionRanges(Filename);
@@ -160,7 +160,8 @@ SourceSelectionArgument::fromString(StringRef Value) {
     return std::make_unique<SourceRangeSelectionArgument>(std::move(*Range));
   llvm::errs() << "error: '-selection' option must be specified using "
                   "<file>:<line>:<column> or "
-                  "<file>:<line>:<column>-<line>:<column> format\n";
+                  "<file>:<line>:<column>-<line>:<column> format, "
+                  "where <line> and <column> are integers greater than zero.\n";
   return nullptr;
 }
 
@@ -560,7 +561,6 @@ private:
          << "' can't be invoked with the given arguments:\n";
       for (const auto &Opt : MissingOptions)
         OS << "  missing '-" << Opt.getKey() << "' option\n";
-      OS.flush();
       return llvm::make_error<llvm::StringError>(
           Error, llvm::inconvertibleErrorCode());
     }
@@ -591,7 +591,6 @@ private:
       OS << "note: the following actions are supported:\n";
       for (const auto &Subcommand : SubCommands)
         OS.indent(2) << Subcommand->getName() << "\n";
-      OS.flush();
       return llvm::make_error<llvm::StringError>(
           Error, llvm::inconvertibleErrorCode());
     }

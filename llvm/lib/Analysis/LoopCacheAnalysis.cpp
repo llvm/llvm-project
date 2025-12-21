@@ -224,7 +224,7 @@ IndexedReference::hasTemporalReuse(const IndexedReference &Other,
   }
 
   std::unique_ptr<Dependence> D =
-      DI.depends(&StoreOrLoadInst, &Other.StoreOrLoadInst, true);
+      DI.depends(&StoreOrLoadInst, &Other.StoreOrLoadInst);
 
   if (D == nullptr) {
     LLVM_DEBUG(dbgs().indent(2) << "No temporal reuse: no dependence\n");
@@ -299,7 +299,12 @@ CacheCostTy IndexedReference::computeRefCost(const Loop &L,
     Stride = SE.getNoopOrAnyExtend(Stride, WiderType);
     TripCount = SE.getNoopOrZeroExtend(TripCount, WiderType);
     const SCEV *Numerator = SE.getMulExpr(Stride, TripCount);
-    RefCost = SE.getUDivExpr(Numerator, CacheLineSize);
+    // Round the fractional cost up to the nearest integer number.
+    // The impact is the most significant when cost is calculated
+    // to be a number less than one, because it makes more sense
+    // to say one cache line is used rather than zero cache line
+    // is used.
+    RefCost = SE.getUDivCeilSCEV(Numerator, CacheLineSize);
 
     LLVM_DEBUG(dbgs().indent(4)
                << "Access is consecutive: RefCost=(TripCount*Stride)/CLS="
@@ -315,7 +320,7 @@ CacheCostTy IndexedReference::computeRefCost(const Loop &L,
     RefCost = TripCount;
 
     int Index = getSubscriptIndex(L);
-    assert(Index >= 0 && "Cound not locate a valid Index");
+    assert(Index >= 0 && "Could not locate a valid Index");
 
     for (unsigned I = Index + 1; I < getNumSubscripts() - 1; ++I) {
       const SCEVAddRecExpr *AR = dyn_cast<SCEVAddRecExpr>(getSubscript(I));
@@ -323,6 +328,8 @@ CacheCostTy IndexedReference::computeRefCost(const Loop &L,
       const SCEV *TripCount =
           computeTripCount(*AR->getLoop(), *Sizes.back(), SE);
       Type *WiderType = SE.getWiderType(RefCost->getType(), TripCount->getType());
+      // For the multiplication result to fit, request a type twice as wide.
+      WiderType = WiderType->getExtendedType();
       RefCost = SE.getMulExpr(SE.getNoopOrZeroExtend(RefCost, WiderType),
                               SE.getNoopOrZeroExtend(TripCount, WiderType));
     }
@@ -333,33 +340,45 @@ CacheCostTy IndexedReference::computeRefCost(const Loop &L,
   assert(RefCost && "Expecting a valid RefCost");
 
   // Attempt to fold RefCost into a constant.
+  // CacheCostTy is a signed integer, but the tripcount value can be large
+  // and may not fit, so saturate/limit the value to the maximum signed
+  // integer value.
   if (auto ConstantCost = dyn_cast<SCEVConstant>(RefCost))
-    return ConstantCost->getValue()->getZExtValue();
+    return ConstantCost->getValue()->getLimitedValue(
+        std::numeric_limits<int64_t>::max());
 
   LLVM_DEBUG(dbgs().indent(4)
              << "RefCost is not a constant! Setting to RefCost=InvalidCost "
                 "(invalid value).\n");
 
-  return CacheCost::InvalidCost;
+  return CacheCostTy::getInvalid();
 }
 
 bool IndexedReference::tryDelinearizeFixedSize(
-    const SCEV *AccessFn, SmallVectorImpl<const SCEV *> &Subscripts) {
-  SmallVector<int, 4> ArraySizes;
-  if (!tryDelinearizeFixedSizeImpl(&SE, &StoreOrLoadInst, AccessFn, Subscripts,
-                                   ArraySizes))
+    const SCEV *AccessFn, SmallVectorImpl<const SCEV *> &Subscripts,
+    const SCEV *ElementSize) {
+  const SCEV *Offset = SE.removePointerBase(AccessFn);
+  if (!delinearizeFixedSizeArray(SE, Offset, Subscripts, Sizes, ElementSize)) {
+    Sizes.clear();
     return false;
+  }
 
-  // Populate Sizes with scev expressions to be used in calculations later.
-  for (auto Idx : seq<unsigned>(1, Subscripts.size()))
-    Sizes.push_back(
-        SE.getConstant(Subscripts[Idx]->getType(), ArraySizes[Idx - 1]));
+  // We expect Sizes and Subscipts have the same number of elements, and the
+  // last element of Sizes is ElementSize. It is for ensuring consistency with
+  // the load/store instruction being analyzed. It is not needed for further
+  // analysis.
+  // TODO: Maybe this property should be enforced in delinearizeFixedSizeArray.
+#ifndef NDEBUG
+  assert(!Sizes.empty() && Subscripts.size() == Sizes.size() &&
+         "Inconsistent length of Sizes and Subscripts");
+  Type *WideTy =
+      SE.getWiderType(ElementSize->getType(), Sizes.back()->getType());
+  const SCEV *ElemSizeExt = SE.getNoopOrZeroExtend(ElementSize, WideTy);
+  const SCEV *LastSizeExt = SE.getNoopOrZeroExtend(Sizes.back(), WideTy);
+  assert(ElemSizeExt == LastSizeExt && "Unexpected last element of Sizes");
+#endif
 
-  LLVM_DEBUG({
-    dbgs() << "Delinearized subscripts of fixed-size array\n"
-           << "GEP:" << *getLoadStorePointerOperand(&StoreOrLoadInst)
-           << "\n";
-  });
+  Sizes.pop_back();
   return true;
 }
 
@@ -386,7 +405,7 @@ bool IndexedReference::delinearize(const LoopInfo &LI) {
 
     bool IsFixedSize = false;
     // Try to delinearize fixed-size arrays.
-    if (tryDelinearizeFixedSize(AccessFn, Subscripts)) {
+    if (tryDelinearizeFixedSize(AccessFn, Subscripts, ElemSize)) {
       IsFixedSize = true;
       // The last element of Sizes is the element size.
       Sizes.push_back(ElemSize);
@@ -425,10 +444,9 @@ bool IndexedReference::delinearize(const LoopInfo &LI) {
       const SCEV *StepRec = AccessFnAR ? AccessFnAR->getStepRecurrence(SE) : nullptr;
 
       if (StepRec && SE.isKnownNegative(StepRec))
-        AccessFn = SE.getAddRecExpr(AccessFnAR->getStart(),
-                                    SE.getNegativeSCEV(StepRec),
-                                    AccessFnAR->getLoop(),
-                                    AccessFnAR->getNoWrapFlags());
+        AccessFn = SE.getAddRecExpr(
+            AccessFnAR->getStart(), SE.getNegativeSCEV(StepRec),
+            AccessFnAR->getLoop(), SCEV::NoWrapFlags::FlagAnyWrap);
       const SCEV *Div = SE.getUDivExactExpr(AccessFn, ElemSize);
       Subscripts.push_back(Div);
       Sizes.push_back(ElemSize);
@@ -691,7 +709,7 @@ CacheCostTy
 CacheCost::computeLoopCacheCost(const Loop &L,
                                 const ReferenceGroupsTy &RefGroups) const {
   if (!L.isLoopSimplifyForm())
-    return InvalidCost;
+    return CacheCostTy::getInvalid();
 
   LLVM_DEBUG(dbgs() << "Considering loop '" << L.getName()
                     << "' as innermost loop.\n");

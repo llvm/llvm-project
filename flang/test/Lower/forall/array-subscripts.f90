@@ -1,4 +1,4 @@
-! RUN: bbc -emit-fir %s -o - | FileCheck %s
+! RUN: bbc -emit-fir -hlfir=false %s -o - | FileCheck %s
 
   ! Make sure we use array values for subscripts that are arrays on the lhs so
   ! that copy-in/copy-out works correctly.
@@ -18,4 +18,4 @@ end
 ! CHECK: = fir.array_fetch %[[a2]], %{{.*}}, %{{.*}} : (!fir.array<4x4xi32>, index, index) -> i32
 ! CHECK: = fir.array_fetch %[[a3]], %{{.*}}, %{{.*}} : (!fir.array<4x4xi32>, index, index) -> i32
 ! CHECK: = fir.array_update %{{.*}}, %{{.*}}, %{{.*}} : (!fir.array<4x4xi32>, i32, index, index) -> !fir.array<4x4xi32>
-! CHECK : fir.array_merge_store %[[a1]], %[[av]] to %[[a]] : !fir.array<4x4xi32>, !fir.array<4x4xi32>, !fir.ref<!fir.array<4x4xi32>>
+! CHECK: fir.array_merge_store %[[a1]], %[[av]] to %[[a]] : !fir.array<4x4xi32>, !fir.array<4x4xi32>, !fir.ref<!fir.array<4x4xi32>>

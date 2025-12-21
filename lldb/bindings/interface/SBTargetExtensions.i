@@ -79,11 +79,11 @@ STRING_EXTENSION_LEVEL_OUTSIDE(SBTarget, lldb::eDescriptionLevelBrief)
                         module = self.sbtarget.GetModuleAtIndex(idx)
                         if module.uuid == key:
                             return module
-                elif type(key) is re.SRE_Pattern:
+                elif isinstance(key, type(re.compile(''))):
                     matching_modules = []
                     for idx in range(num_modules):
                         module = self.sbtarget.GetModuleAtIndex(idx)
-                        re_match = key.search(module.path.fullpath)
+                        re_match = key.search(module.file.fullpath)
                         if re_match:
                             matching_modules.append(module)
                     return matching_modules
@@ -172,7 +172,7 @@ STRING_EXTENSION_LEVEL_OUTSIDE(SBTarget, lldb::eDescriptionLevelBrief)
             '''An accessor function that returns a list() that contains all watchpoints in a lldb.SBtarget object.'''
             watchpoints = []
             for idx in range(self.GetNumWatchpoints()):
-                bkpts.append(self.GetWatchpointAtIndex(idx))
+                watchpoints.append(self.GetWatchpointAtIndex(idx))
             return watchpoints
 
         modules = property(get_modules_array, None, doc='''A read only property that returns a list() of lldb.SBModule objects contained in this target. This list is a list all modules that the target currently is tracking (the main executable and all dependent shared libraries).''')
@@ -190,6 +190,7 @@ STRING_EXTENSION_LEVEL_OUTSIDE(SBTarget, lldb::eDescriptionLevelBrief)
         byte_order = property(GetByteOrder, None, doc='''A read only property that returns an lldb enumeration value (lldb.eByteOrderLittle, lldb.eByteOrderBig, lldb.eByteOrderInvalid) that represents the byte order for this target.''')
         addr_size = property(GetAddressByteSize, None, doc='''A read only property that returns the size in bytes of an address for this target.''')
         triple = property(GetTriple, None, doc='''A read only property that returns the target triple (arch-vendor-os) for this target as a string.''')
+        arch_name = property(GetArchName, None, doc='''A read only property that returns the architecture name for this target as a string.''')
         data_byte_size = property(GetDataByteSize, None, doc='''A read only property that returns the size in host bytes of a byte in the data address space for this target.''')
         code_byte_size = property(GetCodeByteSize, None, doc='''A read only property that returns the size in host bytes of a byte in the code address space for this target.''')
         platform = property(GetPlatform, None, doc='''A read only property that returns the platform associated with with this target.''')

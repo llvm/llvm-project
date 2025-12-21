@@ -1,5 +1,5 @@
 ! RUN: %python %S/test_errors.py %s %flang_fc1
-module m
+module m1
   type :: t1
     sequence
     real :: x
@@ -29,8 +29,28 @@ module m
   end
 end
 
+module m2
+  type t10
+    integer n
+   contains
+    procedure :: f
+    generic:: operator(+) => f
+  end type
+ contains
+  elemental type(t10) function f(x,y)
+    class(t10), intent(in) :: x, y
+    f%n = x%n + y%n
+  end
+end
+
+module m3
+  use m2, only: rt10 => t10
+end
+
 program test
-  use m, only: s1a, s2a, s3a, s4a
+  use m1, only: s1a, s2a, s3a, s4a
+  use m2, only: t10
+  use m3, only: rt10 ! alias for t10, ensure no distinguishability error
   type :: t1
     sequence
     integer :: x ! distinct type

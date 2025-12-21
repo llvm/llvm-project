@@ -1,4 +1,4 @@
-//===--- SIMDIntrinsicsCheck.cpp - clang-tidy------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,8 +10,6 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Basic/TargetInfo.h"
-#include "llvm/ADT/StringMap.h"
-#include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/TargetParser/Triple.h"
 
@@ -59,17 +57,17 @@ static StringRef trySuggestX86(StringRef Name) {
     return {};
 
   // [simd.alg]
-  if (Name.startswith("max_"))
+  if (Name.starts_with("max_"))
     return "$simd::max";
-  if (Name.startswith("min_"))
+  if (Name.starts_with("min_"))
     return "$simd::min";
 
   // [simd.binary]
-  if (Name.startswith("add_"))
+  if (Name.starts_with("add_"))
     return "operator+ on $simd objects";
-  if (Name.startswith("sub_"))
+  if (Name.starts_with("sub_"))
     return "operator- on $simd objects";
-  if (Name.startswith("mul_"))
+  if (Name.starts_with("mul_"))
     return "operator* on $simd objects";
 
   return {};
@@ -106,9 +104,9 @@ void SIMDIntrinsicsCheck::check(const MatchFinder::MatchResult &Result) {
   if (!Callee)
     return;
 
-  StringRef Old = Callee->getName();
+  const StringRef Old = Callee->getName();
   StringRef New;
-  llvm::Triple::ArchType Arch =
+  const llvm::Triple::ArchType Arch =
       Result.Context->getTargetInfo().getTriple().getArch();
 
   // We warn or suggest if this SIMD intrinsic function has a std::simd

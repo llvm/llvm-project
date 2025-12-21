@@ -1,5 +1,14 @@
+//===- bolt/unittest/Core/MCPlusBuilder.cpp -------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
 #ifdef AARCH64_AVAILABLE
 #include "AArch64Subtarget.h"
+#include "MCTargetDesc/AArch64MCTargetDesc.h"
 #endif // AARCH64_AVAILABLE
 
 #ifdef X86_AVAILABLE
@@ -11,7 +20,7 @@
 #include "bolt/Rewrite/RewriteInstance.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
-#include "llvm/Object/ELFObjectFile.h"
+#include "llvm/MC/MCInstBuilder.h"
 #include "llvm/Support/TargetSelect.h"
 #include "gtest/gtest.h"
 
@@ -30,12 +39,15 @@ struct MCPlusBuilderTester : public testing::TestWithParam<Triple::ArchType> {
 
 protected:
   void initalizeLLVM() {
-    llvm::InitializeAllTargetInfos();
-    llvm::InitializeAllTargetMCs();
-    llvm::InitializeAllAsmParsers();
-    llvm::InitializeAllDisassemblers();
-    llvm::InitializeAllTargets();
-    llvm::InitializeAllAsmPrinters();
+#define BOLT_TARGET(target)                                                    \
+  LLVMInitialize##target##TargetInfo();                                        \
+  LLVMInitialize##target##TargetMC();                                          \
+  LLVMInitialize##target##AsmParser();                                         \
+  LLVMInitialize##target##Disassembler();                                      \
+  LLVMInitialize##target##Target();                                            \
+  LLVMInitialize##target##AsmPrinter();
+
+#include "bolt/Core/TargetConfig.def"
   }
 
   void prepareElf() {
@@ -49,24 +61,39 @@ protected:
   }
 
   void initializeBolt() {
+    Relocation::Arch = ObjFile->makeTriple().getArch();
     BC = cantFail(BinaryContext::createBinaryContext(
-        ObjFile.get(), true, DWARFContext::create(*ObjFile.get())));
+        ObjFile->makeTriple(), std::make_shared<orc::SymbolStringPool>(),
+        ObjFile->getFileName(), nullptr, true, DWARFContext::create(*ObjFile),
+        {llvm::outs(), llvm::errs()}));
     ASSERT_FALSE(!BC);
     BC->initializeTarget(std::unique_ptr<MCPlusBuilder>(
         createMCPlusBuilder(GetParam(), BC->MIA.get(), BC->MII.get(),
                             BC->MRI.get(), BC->STI.get())));
   }
 
+  void assertRegMask(const BitVector &RegMask,
+                     std::initializer_list<MCPhysReg> ExpectedRegs) {
+    ASSERT_EQ(RegMask.count(), ExpectedRegs.size());
+    for (MCPhysReg Reg : ExpectedRegs)
+      ASSERT_TRUE(RegMask[Reg]) << "Expected " << BC->MRI->getName(Reg) << ".";
+  }
+
+  void assertRegMask(std::function<void(BitVector &)> FillRegMask,
+                     std::initializer_list<MCPhysReg> ExpectedRegs) {
+    BitVector RegMask(BC->MRI->getNumRegs());
+    FillRegMask(RegMask);
+    assertRegMask(RegMask, ExpectedRegs);
+  }
+
   void testRegAliases(Triple::ArchType Arch, uint64_t Register,
-                      uint64_t *Aliases, size_t Count,
+                      std::initializer_list<MCPhysReg> ExpectedAliases,
                       bool OnlySmaller = false) {
     if (GetParam() != Arch)
       GTEST_SKIP();
 
     const BitVector &BV = BC->MIB->getAliases(Register, OnlySmaller);
-    ASSERT_EQ(BV.count(), Count);
-    for (size_t I = 0; I < Count; ++I)
-      ASSERT_TRUE(BV[Aliases[I]]);
+    assertRegMask(BV, ExpectedAliases);
   }
 
   char ElfBuf[sizeof(typename ELF64LE::Ehdr)] = {};
@@ -81,16 +108,404 @@ INSTANTIATE_TEST_SUITE_P(AArch64, MCPlusBuilderTester,
                          ::testing::Values(Triple::aarch64));
 
 TEST_P(MCPlusBuilderTester, AliasX0) {
-  uint64_t AliasesX0[] = {AArch64::W0, AArch64::X0, AArch64::W0_W1,
-                          AArch64::X0_X1, AArch64::X0_X1_X2_X3_X4_X5_X6_X7};
-  size_t AliasesX0Count = sizeof(AliasesX0) / sizeof(*AliasesX0);
-  testRegAliases(Triple::aarch64, AArch64::X0, AliasesX0, AliasesX0Count);
+  testRegAliases(Triple::aarch64, AArch64::X0,
+                 {AArch64::W0, AArch64::W0_HI, AArch64::X0, AArch64::W0_W1,
+                  AArch64::X0_X1, AArch64::X0_X1_X2_X3_X4_X5_X6_X7});
 }
 
 TEST_P(MCPlusBuilderTester, AliasSmallerX0) {
-  uint64_t AliasesX0[] = {AArch64::W0, AArch64::X0};
-  size_t AliasesX0Count = sizeof(AliasesX0) / sizeof(*AliasesX0);
-  testRegAliases(Triple::aarch64, AArch64::X0, AliasesX0, AliasesX0Count, true);
+  testRegAliases(Triple::aarch64, AArch64::X0,
+                 {AArch64::W0, AArch64::W0_HI, AArch64::X0},
+                 /*OnlySmaller=*/true);
+}
+
+TEST_P(MCPlusBuilderTester, AArch64_CmpJE) {
+  if (GetParam() != Triple::aarch64)
+    GTEST_SKIP();
+  BinaryFunction *BF = BC->createInjectedBinaryFunction("BF", true);
+  std::unique_ptr<BinaryBasicBlock> BB = BF->createBasicBlock();
+
+  InstructionListType Instrs =
+      BC->MIB->createCmpJE(AArch64::X0, 2, BB->getLabel(), BC->Ctx.get());
+  BB->addInstructions(Instrs.begin(), Instrs.end());
+  BB->addSuccessor(BB.get());
+
+  auto II = BB->begin();
+  ASSERT_EQ(II->getOpcode(), AArch64::SUBSXri);
+  ASSERT_EQ(II->getOperand(0).getReg(), AArch64::XZR);
+  ASSERT_EQ(II->getOperand(1).getReg(), AArch64::X0);
+  ASSERT_EQ(II->getOperand(2).getImm(), 2);
+  ASSERT_EQ(II->getOperand(3).getImm(), 0);
+  II++;
+  ASSERT_EQ(II->getOpcode(), AArch64::Bcc);
+  ASSERT_EQ(II->getOperand(0).getImm(), AArch64CC::EQ);
+  const MCSymbol *Label = BC->MIB->getTargetSymbol(*II, 1);
+  ASSERT_EQ(Label, BB->getLabel());
+}
+
+TEST_P(MCPlusBuilderTester, AArch64_BTI) {
+  if (GetParam() != Triple::aarch64)
+    GTEST_SKIP();
+  BinaryFunction *BF = BC->createInjectedBinaryFunction("BF", true);
+  std::unique_ptr<BinaryBasicBlock> BB = BF->createBasicBlock();
+
+  MCInst BTIjc;
+  BC->MIB->createBTI(BTIjc, true, true);
+  BB->addInstruction(BTIjc);
+  auto II = BB->begin();
+  ASSERT_EQ(II->getOpcode(), AArch64::HINT);
+  ASSERT_EQ(II->getOperand(0).getImm(), 38);
+  ASSERT_TRUE(BC->MIB->isBTILandingPad(*II, true, true));
+  BC->MIB->updateBTIVariant(*II, true, false);
+  ASSERT_TRUE(BC->MIB->isBTILandingPad(*II, true, false));
+
+  MCInst BTIj;
+  BC->MIB->createBTI(BTIj, false, true);
+  II = BB->addInstruction(BTIj);
+  ASSERT_EQ(II->getOpcode(), AArch64::HINT);
+  ASSERT_EQ(II->getOperand(0).getImm(), 36);
+  ASSERT_TRUE(BC->MIB->isBTILandingPad(*II, false, true));
+  BC->MIB->updateBTIVariant(*II, true, true);
+  ASSERT_TRUE(BC->MIB->isBTILandingPad(*II, true, true));
+
+  MCInst BTIc;
+  BC->MIB->createBTI(BTIc, true, false);
+  II = BB->addInstruction(BTIc);
+  ASSERT_EQ(II->getOpcode(), AArch64::HINT);
+  ASSERT_EQ(II->getOperand(0).getImm(), 34);
+  ASSERT_TRUE(BC->MIB->isBTILandingPad(*II, true, false));
+  BC->MIB->updateBTIVariant(*II, false, true);
+  ASSERT_TRUE(BC->MIB->isBTILandingPad(*II, false, true));
+
+#ifndef NDEBUG
+  MCInst BTIinvalid;
+  ASSERT_DEATH(BC->MIB->createBTI(BTIinvalid, false, false),
+               "No target kinds!");
+#endif
+
+  MCInst Paciasp = MCInstBuilder(AArch64::PACIASP);
+  II = BB->addInstruction(Paciasp);
+  ASSERT_TRUE(BC->MIB->isBTILandingPad(*II, true, false));
+  ASSERT_FALSE(BC->MIB->isBTILandingPad(*II, true, true));
+  ASSERT_FALSE(BC->MIB->isBTILandingPad(*II, false, true));
+  ASSERT_TRUE(BC->MIB->isImplicitBTIC(*II));
+
+  MCInst Pacibsp = MCInstBuilder(AArch64::PACIBSP);
+  II = BB->addInstruction(Pacibsp);
+  ASSERT_TRUE(BC->MIB->isBTILandingPad(*II, true, false));
+  ASSERT_FALSE(BC->MIB->isBTILandingPad(*II, true, true));
+  ASSERT_FALSE(BC->MIB->isBTILandingPad(*II, false, true));
+  ASSERT_TRUE(BC->MIB->isImplicitBTIC(*II));
+}
+
+TEST_P(MCPlusBuilderTester, AArch64_insertBTI_empty) {
+  if (GetParam() != Triple::aarch64)
+    GTEST_SKIP();
+  BinaryFunction *BF = BC->createInjectedBinaryFunction("BF", true);
+  std::unique_ptr<BinaryBasicBlock> BB = BF->createBasicBlock();
+  MCInst CallInst = MCInstBuilder(AArch64::BR).addReg(AArch64::X16);
+  BC->MIB->insertBTI(*BB, CallInst);
+  // Check that BTI c is added to the empty block.
+  auto II = BB->begin();
+  ASSERT_TRUE(BC->MIB->isBTILandingPad(*II, true, false));
+}
+TEST_P(MCPlusBuilderTester, AArch64_insertBTI_0) {
+  if (GetParam() != Triple::aarch64)
+    GTEST_SKIP();
+  BinaryFunction *BF = BC->createInjectedBinaryFunction("BF", true);
+  std::unique_ptr<BinaryBasicBlock> BB = BF->createBasicBlock();
+  MCInst Inst = MCInstBuilder(AArch64::RET).addReg(AArch64::LR);
+  BB->addInstruction(Inst);
+  // BR x16 needs BTI c or BTI j. We prefer adding a BTI c.
+  MCInst CallInst = MCInstBuilder(AArch64::BR).addReg(AArch64::X16);
+  BC->MIB->insertBTI(*BB, CallInst);
+  auto II = BB->begin();
+  ASSERT_TRUE(BC->MIB->isBTILandingPad(*II, true, false));
+}
+
+TEST_P(MCPlusBuilderTester, AArch64_insertBTI_1) {
+  if (GetParam() != Triple::aarch64)
+    GTEST_SKIP();
+  BinaryFunction *BF = BC->createInjectedBinaryFunction("BF", true);
+  std::unique_ptr<BinaryBasicBlock> BB = BF->createBasicBlock();
+  MCInst BTIc;
+  BC->MIB->createBTI(BTIc, true, false);
+  BB->addInstruction(BTIc);
+  // BR x16 needs BTI c or BTI j. We have a BTI c, no change is needed.
+  MCInst CallInst = MCInstBuilder(AArch64::BR).addReg(AArch64::X16);
+  BC->MIB->insertBTI(*BB, CallInst);
+  auto II = BB->begin();
+  ASSERT_TRUE(BC->MIB->isBTILandingPad(*II, true, false));
+}
+
+TEST_P(MCPlusBuilderTester, AArch64_insertBTI_2) {
+  if (GetParam() != Triple::aarch64)
+    GTEST_SKIP();
+  BinaryFunction *BF = BC->createInjectedBinaryFunction("BF", true);
+  std::unique_ptr<BinaryBasicBlock> BB = BF->createBasicBlock();
+  MCInst BTIc;
+  BC->MIB->createBTI(BTIc, true, false);
+  BB->addInstruction(BTIc);
+  // BR x5 needs BTI j
+  // we have BTI c -> extend it to BTI jc.
+  MCInst CallInst = MCInstBuilder(AArch64::BR).addReg(AArch64::X5);
+  BC->MIB->insertBTI(*BB, CallInst);
+  auto II = BB->begin();
+  ASSERT_TRUE(BC->MIB->isBTILandingPad(*II, true, true));
+}
+
+TEST_P(MCPlusBuilderTester, AArch64_insertBTI_3) {
+  if (GetParam() != Triple::aarch64)
+    GTEST_SKIP();
+  BinaryFunction *BF = BC->createInjectedBinaryFunction("BF", true);
+  std::unique_ptr<BinaryBasicBlock> BB = BF->createBasicBlock();
+  MCInst Inst = MCInstBuilder(AArch64::RET).addReg(AArch64::LR);
+  BB->addInstruction(Inst);
+  // BR x5 needs BTI j
+  MCInst CallInst = MCInstBuilder(AArch64::BR).addReg(AArch64::X5);
+  BC->MIB->insertBTI(*BB, CallInst);
+  auto II = BB->begin();
+  ASSERT_TRUE(BC->MIB->isBTILandingPad(*II, false, true));
+}
+
+TEST_P(MCPlusBuilderTester, AArch64_insertBTI_4) {
+  if (GetParam() != Triple::aarch64)
+    GTEST_SKIP();
+  BinaryFunction *BF = BC->createInjectedBinaryFunction("BF", true);
+  std::unique_ptr<BinaryBasicBlock> BB = BF->createBasicBlock();
+  MCInst Inst = MCInstBuilder(AArch64::RET).addReg(AArch64::LR);
+  BB->addInstruction(Inst);
+  // BLR needs BTI c, regardless of the register used.
+  MCInst CallInst = MCInstBuilder(AArch64::BLR).addReg(AArch64::X5);
+  BC->MIB->insertBTI(*BB, CallInst);
+  auto II = BB->begin();
+  ASSERT_TRUE(BC->MIB->isBTILandingPad(*II, true, false));
+}
+
+TEST_P(MCPlusBuilderTester, AArch64_insertBTI_5) {
+  if (GetParam() != Triple::aarch64)
+    GTEST_SKIP();
+  BinaryFunction *BF = BC->createInjectedBinaryFunction("BF", true);
+  std::unique_ptr<BinaryBasicBlock> BB = BF->createBasicBlock();
+  MCInst BTIj;
+  BC->MIB->createBTI(BTIj, false, true);
+  BB->addInstruction(BTIj);
+  // BLR needs BTI c, regardless of the register used.
+  // We have a BTI j -> extend it to BTI jc.
+  MCInst CallInst = MCInstBuilder(AArch64::BLR).addReg(AArch64::X5);
+  BC->MIB->insertBTI(*BB, CallInst);
+  auto II = BB->begin();
+  ASSERT_TRUE(BC->MIB->isBTILandingPad(*II, true, true));
+}
+
+TEST_P(MCPlusBuilderTester, AArch64_insertBTI_6) {
+  if (GetParam() != Triple::aarch64)
+    GTEST_SKIP();
+  BinaryFunction *BF = BC->createInjectedBinaryFunction("BF", true);
+  std::unique_ptr<BinaryBasicBlock> BB = BF->createBasicBlock();
+  MCInst Paciasp =
+      MCInstBuilder(AArch64::PACIASP).addReg(AArch64::LR).addReg(AArch64::SP);
+  BB->addInstruction(Paciasp);
+  // PACI(AB)SP are implicit BTI c, no change needed.
+  MCInst CallInst = MCInstBuilder(AArch64::BR).addReg(AArch64::X17);
+  BC->MIB->insertBTI(*BB, CallInst);
+  auto II = BB->begin();
+  ASSERT_TRUE(BC->MIB->isBTILandingPad(*II, true, false));
+  ASSERT_TRUE(BC->MIB->isPSignOnLR(*II));
+}
+
+TEST_P(MCPlusBuilderTester, AArch64_CmpJNE) {
+  if (GetParam() != Triple::aarch64)
+    GTEST_SKIP();
+  BinaryFunction *BF = BC->createInjectedBinaryFunction("BF", true);
+  std::unique_ptr<BinaryBasicBlock> BB = BF->createBasicBlock();
+
+  InstructionListType Instrs =
+      BC->MIB->createCmpJNE(AArch64::X0, 2, BB->getLabel(), BC->Ctx.get());
+  BB->addInstructions(Instrs.begin(), Instrs.end());
+  BB->addSuccessor(BB.get());
+
+  auto II = BB->begin();
+  ASSERT_EQ(II->getOpcode(), AArch64::SUBSXri);
+  ASSERT_EQ(II->getOperand(0).getReg(), AArch64::XZR);
+  ASSERT_EQ(II->getOperand(1).getReg(), AArch64::X0);
+  ASSERT_EQ(II->getOperand(2).getImm(), 2);
+  ASSERT_EQ(II->getOperand(3).getImm(), 0);
+  II++;
+  ASSERT_EQ(II->getOpcode(), AArch64::Bcc);
+  ASSERT_EQ(II->getOperand(0).getImm(), AArch64CC::NE);
+  const MCSymbol *Label = BC->MIB->getTargetSymbol(*II, 1);
+  ASSERT_EQ(Label, BB->getLabel());
+}
+
+TEST_P(MCPlusBuilderTester, testAccessedRegsImplicitDef) {
+  if (GetParam() != Triple::aarch64)
+    GTEST_SKIP();
+
+  // adds x0, x5, #42
+  MCInst Inst = MCInstBuilder(AArch64::ADDSXri)
+                    .addReg(AArch64::X0)
+                    .addReg(AArch64::X5)
+                    .addImm(42)
+                    .addImm(0);
+
+  assertRegMask([&](BitVector &BV) { BC->MIB->getClobberedRegs(Inst, BV); },
+                {AArch64::NZCV, AArch64::W0, AArch64::X0, AArch64::W0_HI,
+                 AArch64::X0_X1_X2_X3_X4_X5_X6_X7, AArch64::W0_W1,
+                 AArch64::X0_X1});
+
+  assertRegMask(
+      [&](BitVector &BV) { BC->MIB->getTouchedRegs(Inst, BV); },
+      {AArch64::NZCV, AArch64::W0, AArch64::W5, AArch64::X0, AArch64::X5,
+       AArch64::W0_HI, AArch64::W5_HI, AArch64::X0_X1_X2_X3_X4_X5_X6_X7,
+       AArch64::X2_X3_X4_X5_X6_X7_X8_X9, AArch64::X4_X5_X6_X7_X8_X9_X10_X11,
+       AArch64::W0_W1, AArch64::W4_W5, AArch64::X0_X1, AArch64::X4_X5});
+
+  assertRegMask([&](BitVector &BV) { BC->MIB->getWrittenRegs(Inst, BV); },
+                {AArch64::NZCV, AArch64::W0, AArch64::X0, AArch64::W0_HI});
+
+  assertRegMask([&](BitVector &BV) { BC->MIB->getUsedRegs(Inst, BV); },
+                {AArch64::W5, AArch64::X5, AArch64::W5_HI});
+
+  assertRegMask([&](BitVector &BV) { BC->MIB->getSrcRegs(Inst, BV); },
+                {AArch64::W5, AArch64::X5, AArch64::W5_HI});
+}
+
+TEST_P(MCPlusBuilderTester, testAccessedRegsImplicitUse) {
+  if (GetParam() != Triple::aarch64)
+    GTEST_SKIP();
+
+  // b.eq <label>
+  MCInst Inst =
+      MCInstBuilder(AArch64::Bcc)
+          .addImm(AArch64CC::EQ)
+          .addImm(0); // <label> - should be Expr, but immediate 0 works too.
+
+  assertRegMask([&](BitVector &BV) { BC->MIB->getClobberedRegs(Inst, BV); },
+                {});
+
+  assertRegMask([&](BitVector &BV) { BC->MIB->getTouchedRegs(Inst, BV); },
+                {AArch64::NZCV});
+
+  assertRegMask([&](BitVector &BV) { BC->MIB->getWrittenRegs(Inst, BV); }, {});
+
+  assertRegMask([&](BitVector &BV) { BC->MIB->getUsedRegs(Inst, BV); },
+                {AArch64::NZCV});
+
+  assertRegMask([&](BitVector &BV) { BC->MIB->getSrcRegs(Inst, BV); },
+                {AArch64::NZCV});
+}
+
+TEST_P(MCPlusBuilderTester, testAccessedRegsMultipleDefs) {
+  if (GetParam() != Triple::aarch64)
+    GTEST_SKIP();
+
+  // ldr x0, [x5], #16
+  MCInst Inst = MCInstBuilder(AArch64::LDRXpost)
+                    .addReg(AArch64::X5)
+                    .addReg(AArch64::X0)
+                    .addReg(AArch64::X5)
+                    .addImm(16);
+
+  assertRegMask(
+      [&](BitVector &BV) { BC->MIB->getClobberedRegs(Inst, BV); },
+      {AArch64::W0, AArch64::W5, AArch64::X0, AArch64::X5, AArch64::W0_HI,
+       AArch64::W5_HI, AArch64::X0_X1_X2_X3_X4_X5_X6_X7,
+       AArch64::X2_X3_X4_X5_X6_X7_X8_X9, AArch64::X4_X5_X6_X7_X8_X9_X10_X11,
+       AArch64::W0_W1, AArch64::W4_W5, AArch64::X0_X1, AArch64::X4_X5});
+
+  assertRegMask(
+      [&](BitVector &BV) { BC->MIB->getTouchedRegs(Inst, BV); },
+      {AArch64::W0, AArch64::W5, AArch64::X0, AArch64::X5, AArch64::W0_HI,
+       AArch64::W5_HI, AArch64::X0_X1_X2_X3_X4_X5_X6_X7,
+       AArch64::X2_X3_X4_X5_X6_X7_X8_X9, AArch64::X4_X5_X6_X7_X8_X9_X10_X11,
+       AArch64::W0_W1, AArch64::W4_W5, AArch64::X0_X1, AArch64::X4_X5});
+
+  assertRegMask([&](BitVector &BV) { BC->MIB->getWrittenRegs(Inst, BV); },
+                {AArch64::W0, AArch64::X0, AArch64::W0_HI, AArch64::W5,
+                 AArch64::X5, AArch64::W5_HI});
+
+  assertRegMask([&](BitVector &BV) { BC->MIB->getUsedRegs(Inst, BV); },
+                {AArch64::W5, AArch64::X5, AArch64::W5_HI});
+
+  assertRegMask([&](BitVector &BV) { BC->MIB->getSrcRegs(Inst, BV); },
+                {AArch64::W5, AArch64::X5, AArch64::W5_HI});
+}
+
+TEST_P(MCPlusBuilderTester, AArch64_Psign_Pauth_variants) {
+  if (GetParam() != Triple::aarch64)
+    GTEST_SKIP();
+
+  MCInst Paciasp = MCInstBuilder(AArch64::PACIASP);
+  MCInst Pacibsp = MCInstBuilder(AArch64::PACIBSP);
+  ASSERT_TRUE(BC->MIB->isPSignOnLR(Paciasp));
+  ASSERT_TRUE(BC->MIB->isPSignOnLR(Pacibsp));
+
+  MCInst PaciaSPLR =
+      MCInstBuilder(AArch64::PACIA).addReg(AArch64::LR).addReg(AArch64::SP);
+  MCInst PacibSPLR =
+      MCInstBuilder(AArch64::PACIB).addReg(AArch64::LR).addReg(AArch64::SP);
+  ASSERT_TRUE(BC->MIB->isPSignOnLR(PaciaSPLR));
+  ASSERT_TRUE(BC->MIB->isPSignOnLR(PacibSPLR));
+
+  MCInst PacizaX5 = MCInstBuilder(AArch64::PACIZA).addReg(AArch64::X5);
+  MCInst PacizbX5 = MCInstBuilder(AArch64::PACIZB).addReg(AArch64::X5);
+  ASSERT_FALSE(BC->MIB->isPSignOnLR(PacizaX5));
+  ASSERT_FALSE(BC->MIB->isPSignOnLR(PacizbX5));
+
+  MCInst Paciaz = MCInstBuilder(AArch64::PACIZA).addReg(AArch64::LR);
+  MCInst Pacibz = MCInstBuilder(AArch64::PACIZB).addReg(AArch64::LR);
+  ASSERT_TRUE(BC->MIB->isPSignOnLR(Paciaz));
+  ASSERT_TRUE(BC->MIB->isPSignOnLR(Pacibz));
+
+  MCInst Pacia1716 = MCInstBuilder(AArch64::PACIA1716);
+  MCInst Pacib1716 = MCInstBuilder(AArch64::PACIB1716);
+  ASSERT_FALSE(BC->MIB->isPSignOnLR(Pacia1716));
+  ASSERT_FALSE(BC->MIB->isPSignOnLR(Pacib1716));
+
+  MCInst Pacia171615 = MCInstBuilder(AArch64::PACIA171615);
+  MCInst Pacib171615 = MCInstBuilder(AArch64::PACIB171615);
+  ASSERT_FALSE(BC->MIB->isPSignOnLR(Pacia171615));
+  ASSERT_FALSE(BC->MIB->isPSignOnLR(Pacib171615));
+
+  MCInst Autiasp = MCInstBuilder(AArch64::AUTIASP);
+  MCInst Autibsp = MCInstBuilder(AArch64::AUTIBSP);
+  ASSERT_TRUE(BC->MIB->isPAuthOnLR(Autiasp));
+  ASSERT_TRUE(BC->MIB->isPAuthOnLR(Autibsp));
+
+  MCInst AutiaSPLR =
+      MCInstBuilder(AArch64::AUTIA).addReg(AArch64::LR).addReg(AArch64::SP);
+  MCInst AutibSPLR =
+      MCInstBuilder(AArch64::AUTIB).addReg(AArch64::LR).addReg(AArch64::SP);
+  ASSERT_TRUE(BC->MIB->isPAuthOnLR(AutiaSPLR));
+  ASSERT_TRUE(BC->MIB->isPAuthOnLR(AutibSPLR));
+
+  MCInst AutizaX5 = MCInstBuilder(AArch64::AUTIZA).addReg(AArch64::X5);
+  MCInst AutizbX5 = MCInstBuilder(AArch64::AUTIZB).addReg(AArch64::X5);
+  ASSERT_FALSE(BC->MIB->isPAuthOnLR(AutizaX5));
+  ASSERT_FALSE(BC->MIB->isPAuthOnLR(AutizbX5));
+
+  MCInst Autiaz = MCInstBuilder(AArch64::AUTIZA).addReg(AArch64::LR);
+  MCInst Autibz = MCInstBuilder(AArch64::AUTIZB).addReg(AArch64::LR);
+  ASSERT_TRUE(BC->MIB->isPAuthOnLR(Autiaz));
+  ASSERT_TRUE(BC->MIB->isPAuthOnLR(Autibz));
+
+  MCInst Autia1716 = MCInstBuilder(AArch64::AUTIA1716);
+  MCInst Autib1716 = MCInstBuilder(AArch64::AUTIB1716);
+  ASSERT_FALSE(BC->MIB->isPAuthOnLR(Autia1716));
+  ASSERT_FALSE(BC->MIB->isPAuthOnLR(Autib1716));
+
+  MCInst Autia171615 = MCInstBuilder(AArch64::AUTIA171615);
+  MCInst Autib171615 = MCInstBuilder(AArch64::AUTIB171615);
+  ASSERT_FALSE(BC->MIB->isPAuthOnLR(Autia171615));
+  ASSERT_FALSE(BC->MIB->isPAuthOnLR(Autib171615));
+
+  MCInst Retaa = MCInstBuilder(AArch64::RETAA);
+  MCInst Retab = MCInstBuilder(AArch64::RETAB);
+  ASSERT_FALSE(BC->MIB->isPAuthOnLR(Retaa));
+  ASSERT_FALSE(BC->MIB->isPAuthOnLR(Retab));
+  ASSERT_TRUE(BC->MIB->isPAuthAndRet(Retaa));
+  ASSERT_TRUE(BC->MIB->isPAuthAndRet(Retab));
 }
 
 #endif // AARCH64_AVAILABLE
@@ -101,15 +516,13 @@ INSTANTIATE_TEST_SUITE_P(X86, MCPlusBuilderTester,
                          ::testing::Values(Triple::x86_64));
 
 TEST_P(MCPlusBuilderTester, AliasAX) {
-  uint64_t AliasesAX[] = {X86::RAX, X86::EAX, X86::AX, X86::AL, X86::AH};
-  size_t AliasesAXCount = sizeof(AliasesAX) / sizeof(*AliasesAX);
-  testRegAliases(Triple::x86_64, X86::AX, AliasesAX, AliasesAXCount);
+  testRegAliases(Triple::x86_64, X86::AX,
+                 {X86::RAX, X86::EAX, X86::AX, X86::AL, X86::AH});
 }
 
 TEST_P(MCPlusBuilderTester, AliasSmallerAX) {
-  uint64_t AliasesAX[] = {X86::AX, X86::AL, X86::AH};
-  size_t AliasesAXCount = sizeof(AliasesAX) / sizeof(*AliasesAX);
-  testRegAliases(Triple::x86_64, X86::AX, AliasesAX, AliasesAXCount, true);
+  testRegAliases(Triple::x86_64, X86::AX, {X86::AX, X86::AL, X86::AH},
+                 /*OnlySmaller=*/true);
 }
 
 TEST_P(MCPlusBuilderTester, ReplaceRegWithImm) {
@@ -129,13 +542,56 @@ TEST_P(MCPlusBuilderTester, ReplaceRegWithImm) {
   ASSERT_EQ(II->getOperand(1).getImm(), 1);
 }
 
+TEST_P(MCPlusBuilderTester, X86_CmpJE) {
+  if (GetParam() != Triple::x86_64)
+    GTEST_SKIP();
+  BinaryFunction *BF = BC->createInjectedBinaryFunction("BF", true);
+  std::unique_ptr<BinaryBasicBlock> BB = BF->createBasicBlock();
+
+  InstructionListType Instrs =
+      BC->MIB->createCmpJE(X86::EAX, 2, BB->getLabel(), BC->Ctx.get());
+  BB->addInstructions(Instrs.begin(), Instrs.end());
+  BB->addSuccessor(BB.get());
+
+  auto II = BB->begin();
+  ASSERT_EQ(II->getOpcode(), X86::CMP64ri8);
+  ASSERT_EQ(II->getOperand(0).getReg(), X86::EAX);
+  ASSERT_EQ(II->getOperand(1).getImm(), 2);
+  II++;
+  ASSERT_EQ(II->getOpcode(), X86::JCC_1);
+  const MCSymbol *Label = BC->MIB->getTargetSymbol(*II, 0);
+  ASSERT_EQ(Label, BB->getLabel());
+  ASSERT_EQ(II->getOperand(1).getImm(), X86::COND_E);
+}
+
+TEST_P(MCPlusBuilderTester, X86_CmpJNE) {
+  if (GetParam() != Triple::x86_64)
+    GTEST_SKIP();
+  BinaryFunction *BF = BC->createInjectedBinaryFunction("BF", true);
+  std::unique_ptr<BinaryBasicBlock> BB = BF->createBasicBlock();
+
+  InstructionListType Instrs =
+      BC->MIB->createCmpJNE(X86::EAX, 2, BB->getLabel(), BC->Ctx.get());
+  BB->addInstructions(Instrs.begin(), Instrs.end());
+  BB->addSuccessor(BB.get());
+
+  auto II = BB->begin();
+  ASSERT_EQ(II->getOpcode(), X86::CMP64ri8);
+  ASSERT_EQ(II->getOperand(0).getReg(), X86::EAX);
+  ASSERT_EQ(II->getOperand(1).getImm(), 2);
+  II++;
+  ASSERT_EQ(II->getOpcode(), X86::JCC_1);
+  const MCSymbol *Label = BC->MIB->getTargetSymbol(*II, 0);
+  ASSERT_EQ(Label, BB->getLabel());
+  ASSERT_EQ(II->getOperand(1).getImm(), X86::COND_NE);
+}
+
 #endif // X86_AVAILABLE
 
 TEST_P(MCPlusBuilderTester, Annotation) {
   MCInst Inst;
-  bool Success = BC->MIB->createTailCall(Inst, BC->Ctx->createNamedTempSymbol(),
-                                         BC->Ctx.get());
-  ASSERT_TRUE(Success);
+  BC->MIB->createTailCall(Inst, BC->Ctx->createNamedTempSymbol(),
+                          BC->Ctx.get());
   MCSymbol *LPSymbol = BC->Ctx->createNamedTempSymbol("LP");
   uint64_t Value = INT32_MIN;
   // Test encodeAnnotationImm using this indirect way
@@ -150,9 +606,8 @@ TEST_P(MCPlusBuilderTester, Annotation) {
   // Large int64 should trigger an out of range assertion
   Value = 0x1FF'FFFF'FFFF'FFFFULL;
   Inst.clear();
-  Success = BC->MIB->createTailCall(Inst, BC->Ctx->createNamedTempSymbol(),
-                                    BC->Ctx.get());
-  ASSERT_TRUE(Success);
+  BC->MIB->createTailCall(Inst, BC->Ctx->createNamedTempSymbol(),
+                          BC->Ctx.get());
   ASSERT_DEATH(BC->MIB->addEHInfo(Inst, MCPlus::MCLandingPad(LPSymbol, Value)),
                "annotation value out of range");
 }

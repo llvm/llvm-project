@@ -1,11 +1,16 @@
 add_lldb_unittest(SymbolFileDWARFTests
   DWARFASTParserClangTests.cpp
+  DWARFDebugNamesIndexTest.cpp
   DWARFDIETest.cpp
   DWARFIndexCachingTest.cpp
   DWARFUnitTest.cpp
   SymbolFileDWARFTests.cpp
   XcodeSDKModuleTests.cpp
+  DWARF64UnitTest.cpp
 
+  LINK_COMPONENTS
+    Support
+    DebugInfoPDB
   LINK_LIBS
     lldbCore
     lldbHost
@@ -18,13 +23,11 @@ add_lldb_unittest(SymbolFileDWARFTests
     lldbUtilityHelpers
     lldbSymbolHelpers
     LLVMTestingSupport
-  LINK_COMPONENTS
-    Support
-    DebugInfoPDB
   )
 
 set(test_inputs
    test-dwarf.exe
-   DW_AT_default_value-test.yaml)
+   DW_AT_default_value-test.yaml
+   DW_AT_spec_decl_exists-test.yaml)
 
 add_unittest_inputs(SymbolFileDWARFTests "${test_inputs}")

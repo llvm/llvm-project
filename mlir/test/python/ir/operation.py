@@ -2,9 +2,12 @@
 
 import gc
 import io
-import itertools
+from tempfile import NamedTemporaryFile
 from mlir.ir import *
 from mlir.dialects.builtin import ModuleOp
+from mlir.dialects import arith, func, scf, shape
+from mlir.dialects._ods_common import _cext
+from mlir.extras import types as T
 
 
 def run(f):
@@ -40,8 +43,12 @@ def testTraverseOpRegionBlockIterators():
     )
     op = module.operation
     assert op.context is ctx
+    # Note, __nb_signature__ stores the fully-qualified signature - the actual type stub emitted is
+    # class RegionSequence(Sequence[Region])
+    # CHECK: class RegionSequence(collections.abc.Sequence[mlir._mlir_libs._mlir.ir.Region])
+    print(RegionSequence.__nb_signature__)
     # Get the block using iterators off of the named collections.
-    regions = list(op.regions)
+    regions = list(op.regions[:])
     blocks = list(regions[0].blocks)
     # CHECK: MODULE REGIONS=1 BLOCKS=1
     print(f"MODULE REGIONS={len(regions)} BLOCKS={len(blocks)}")
@@ -83,8 +90,24 @@ def testTraverseOpRegionBlockIterators():
     # CHECK:     Block iter: <mlir.{{.+}}.BlockIterator
     # CHECK: Operation iter: <mlir.{{.+}}.OperationIterator
     print("   Region iter:", iter(op.regions))
-    print("    Block iter:", iter(op.regions[0]))
-    print("Operation iter:", iter(op.regions[0].blocks[0]))
+    print("    Block iter:", iter(op.regions[-1]))
+    print("Operation iter:", iter(op.regions[-1].blocks[-1]))
+
+    try:
+        op.regions[-42]
+    except IndexError as e:
+        # CHECK: Region OOB: index out of range
+        print("Region OOB:", e)
+    try:
+        op.regions[0].blocks[-42]
+    except IndexError as e:
+        # CHECK: attempt to access out of bounds block
+        print(e)
+    try:
+        op.regions[0].blocks[0].operations[-42]
+    except IndexError as e:
+        # CHECK: attempt to access out of bounds operation
+        print(e)
 
 
 # Verify index based traversal of the op/region/block hierarchy.
@@ -550,12 +573,30 @@ def testOperationAttributes():
     # CHECK: Attribute value b'text'
     print(f"Attribute value {sattr.value_bytes}")
 
+    # Python dict-style iteration
     # We don't know in which order the attributes are stored.
-    # CHECK-DAG: NamedAttribute(dependent="text")
-    # CHECK-DAG: NamedAttribute(other.attribute=3.000000e+00 : f64)
-    # CHECK-DAG: NamedAttribute(some.attribute=1 : i8)
-    for attr in op.attributes:
-        print(str(attr))
+    # CHECK-DAG: dependent
+    # CHECK-DAG: other.attribute
+    # CHECK-DAG: some.attribute
+    for name in op.attributes:
+        print(name)
+
+    # Basic dict-like introspection
+    # CHECK: True
+    print("some.attribute" in op.attributes)
+    # CHECK: False
+    print("missing" in op.attributes)
+    # CHECK: Keys: ['dependent', 'other.attribute', 'some.attribute']
+    print("Keys:", sorted(op.attributes.keys()))
+    # CHECK: Values count 3
+    print("Values count", len(op.attributes.values()))
+    # CHECK: Items count 3
+    print("Items count", len(op.attributes.items()))
+
+    # Dict() conversion test
+    d = {k: v.value for k, v in dict(op.attributes).items()}
+    # CHECK: Dict mapping {'dependent': 'text', 'other.attribute': 3.0, 'some.attribute': 1}
+    print("Dict mapping", d)
 
     # Check that exceptions are raised as expected.
     try:
@@ -581,14 +622,24 @@ def testOperationPrint():
         r"""
     func.func @f1(%arg0: i32) -> i32 {
       %0 = arith.constant dense<[1, 2, 3, 4]> : tensor<4xi32> loc("nom")
+      %1 = arith.constant dense_resource<resource1> : tensor<3xi64>
       return %arg0 : i32
     }
+
+    {-#
+      dialect_resources: {
+          builtin: {
+            resource1: "0x08000000010000000000000002000000000000000300000000000000"
+          }
+        }
+      #-}
   """,
         ctx,
     )
 
     # Test print to stdout.
     # CHECK: return %arg0 : i32
+    # CHECK: resource1: "0x08
     module.operation.print()
 
     # Test print to text file.
@@ -605,7 +656,14 @@ def testOperationPrint():
     module.operation.write_bytecode(bytecode_stream, desired_version=1)
     bytecode = bytecode_stream.getvalue()
     assert bytecode.startswith(b"ML\xefR"), "Expected bytecode to start with MLïR"
-    module_roundtrip = Module.parse(bytecode, ctx)
+    with NamedTemporaryFile() as tmpfile:
+        module.operation.write_bytecode(str(tmpfile.name), desired_version=1)
+        tmpfile.seek(0)
+        assert tmpfile.read().startswith(
+            b"ML\xefR"
+        ), "Expected bytecode to start with MLïR"
+    ctx2 = Context()
+    module_roundtrip = Module.parse(bytecode, ctx2)
     f = io.StringIO()
     module_roundtrip.operation.print(file=f)
     roundtrip_value = f.getvalue()
@@ -620,13 +678,21 @@ def testOperationPrint():
     print(bytes_value.__class__)
     print(bytes_value)
 
-    # Test get_asm local_scope.
+    # Test print local_scope.
     # CHECK: constant dense<[1, 2, 3, 4]> : tensor<4xi32> loc("nom")
     module.operation.print(enable_debug_info=True, use_local_scope=True)
+    # CHECK: %nom = arith.constant dense<[1, 2, 3, 4]> : tensor<4xi32>
+    module.operation.print(use_name_loc_as_prefix=True, use_local_scope=True)
 
-    # Test get_asm with options.
+    # Test printing using state.
+    state = AsmState(module.operation)
+    # CHECK: constant dense<[1, 2, 3, 4]> : tensor<4xi32>
+    module.operation.print(state)
+
+    # Test print with options.
     # CHECK: value = dense_resource<__elided__> : tensor<4xi32>
-    # CHECK: "func.return"(%arg0) : (i32) -> () -:4:7
+    # CHECK: "func.return"(%arg0) : (i32) -> () -:5:7
+    # CHECK-NOT: resource1: "0x08
     module.operation.print(
         large_elements_limit=2,
         enable_debug_info=True,
@@ -634,6 +700,23 @@ def testOperationPrint():
         print_generic_op_form=True,
         use_local_scope=True,
     )
+
+    # Test print with skip_regions option
+    # CHECK: func.func @f1(%arg0: i32) -> i32
+    # CHECK-NOT: func.return
+    module.body.operations[0].print(
+        skip_regions=True,
+    )
+
+    # Test print with large_resource_limit.
+    # CHECK: func.func @f1(%arg0: i32) -> i32
+    # CHECK-NOT: resource1: "0x08
+    module.operation.print(large_resource_limit=2)
+
+    # Test large_elements_limit has no effect on resource string
+    # CHECK: func.func @f1(%arg0: i32) -> i32
+    # CHECK: resource1: "0x08
+    module.operation.print(large_elements_limit=2)
 
 
 # CHECK-LABEL: TEST: testKnownOpView
@@ -646,6 +729,7 @@ def testKnownOpView():
       %1 = "custom.f32"() : () -> f32
       %2 = "custom.f32"() : () -> f32
       %3 = arith.addf %1, %2 : f32
+      %4 = arith.constant 0 : i32
     """
         )
         print(module)
@@ -667,6 +751,46 @@ def testKnownOpView():
         custom = module.body.operations[0]
         # CHECK: OpView object
         print(repr(custom))
+
+        # constant should map to an extension OpView class in the arithmetic dialect.
+        constant = module.body.operations[3]
+        # CHECK: <mlir.dialects.arith.ConstantOp object
+        print(repr(constant))
+        # Checks that the arith extension is being registered successfully
+        # (literal_value is a property on the extension class but not on the default OpView).
+        # CHECK: literal value 0
+        print("literal value", constant.literal_value)
+
+        # Checks that "late" registration/replacement (i.e., post all module loading/initialization)
+        # is working correctly.
+        @_cext.register_operation(arith._Dialect, replace=True)
+        class ConstantOp(arith.ConstantOp):
+            def __init__(self, result, value, *, loc=None, ip=None):
+                if isinstance(value, int):
+                    super().__init__(IntegerAttr.get(result, value), loc=loc, ip=ip)
+                elif isinstance(value, float):
+                    super().__init__(FloatAttr.get(result, value), loc=loc, ip=ip)
+                else:
+                    super().__init__(value, loc=loc, ip=ip)
+
+        constant = module.body.operations[3]
+        # CHECK: <__main__.testKnownOpView.<locals>.ConstantOp object
+        print(repr(constant))
+
+
+# CHECK-LABEL: TEST: testFailedGenericOperationCreationReportsError
+@run
+def testFailedGenericOperationCreationReportsError():
+    with Context(), Location.unknown():
+        c0 = shape.const_shape([])
+        c1 = shape.const_shape([1, 2, 3])
+        try:
+            shape.MeetOp.build_generic(operands=[c0, c1])
+        except MLIRError as e:
+            # CHECK: unequal shape cardinality
+            print(e)
+        else:
+            assert False, "Expected exception"
 
 
 # CHECK-LABEL: TEST: testSingleResultProperty
@@ -821,7 +945,13 @@ def testCapsuleConversions():
         m_capsule = m._CAPIPtr
         assert '"mlir.ir.Operation._CAPIPtr"' in repr(m_capsule)
         m2 = Operation._CAPICreate(m_capsule)
-        assert m2 is m
+        assert m2 is not m
+        assert m2 == m
+        # Gc and verify destructed.
+        m = None
+        m_capsule = None
+        m2 = None
+        gc.collect()
 
 
 # CHECK-LABEL: TEST: testOperationErase
@@ -877,6 +1007,13 @@ def testOperationLoc():
         assert op.location == loc
         assert op.operation.location == loc
 
+        another_loc = Location.name("another_loc")
+        op.location = another_loc
+        assert op.location == another_loc
+        assert op.operation.location == another_loc
+        # CHECK: loc("another_loc")
+        print(op.location)
+
 
 # CHECK-LABEL: TEST: testModuleMerge
 @run
@@ -892,8 +1029,12 @@ def testModuleMerge():
         foo = m1.body.operations[0]
         bar = m2.body.operations[0]
         qux = m2.body.operations[1]
+        assert bar.is_before_in_block(qux)
         bar.move_before(foo)
+        assert bar.is_before_in_block(foo)
         qux.move_after(foo)
+        assert bar.is_before_in_block(qux)
+        assert foo.is_before_in_block(qux)
 
         # CHECK: module
         # CHECK: func private @bar
@@ -931,6 +1072,8 @@ def testDetachFromParent():
     with Context():
         m1 = Module.parse("func.func private @foo()")
         func = m1.body.operations[0].detach_from_parent()
+        # CHECK: func.attached=False
+        print(f"{func.attached=}")
 
         try:
             func.detach_from_parent()
@@ -952,6 +1095,12 @@ def testOperationHash():
     with ctx, Location.unknown():
         op = Operation.create("custom.op1")
         assert hash(op) == hash(op.operation)
+
+        module = Module.create()
+        with InsertionPoint(module.body):
+            op2 = Operation.create("custom.op2")
+            custom_op2 = module.body.operations[0]
+            assert hash(op2) == hash(custom_op2)
 
 
 # CHECK-LABEL: TEST: testOperationParse
@@ -982,3 +1131,146 @@ def testOperationParse():
         print(
             f"op_with_source_name: {o.get_asm(enable_debug_info=True, use_local_scope=True)}"
         )
+
+
+# CHECK-LABEL: TEST: testOpWalk
+@run
+def testOpWalk():
+    ctx = Context()
+    ctx.allow_unregistered_dialects = True
+    module = Module.parse(
+        r"""
+    builtin.module {
+      func.func @f() {
+        func.return
+      }
+    }
+  """,
+        ctx,
+    )
+
+    def callback(op):
+        print(op.name)
+        return WalkResult.ADVANCE
+
+    # Test post-order walk (default).
+    # CHECK-NEXT:  Post-order
+    # CHECK-NEXT:  func.return
+    # CHECK-NEXT:  func.func
+    # CHECK-NEXT:  builtin.module
+    print("Post-order")
+    module.operation.walk(callback)
+
+    # Test pre-order walk.
+    # CHECK-NEXT:  Pre-order
+    # CHECK-NEXT:  builtin.module
+    # CHECK-NEXT:  func.fun
+    # CHECK-NEXT:  func.return
+    print("Pre-order")
+    module.operation.walk(callback, WalkOrder.PRE_ORDER)
+
+    # Test interrput.
+    # CHECK-NEXT:  Interrupt post-order
+    # CHECK-NEXT:  func.return
+    print("Interrupt post-order")
+
+    def callback(op):
+        print(op.name)
+        return WalkResult.INTERRUPT
+
+    module.operation.walk(callback)
+
+    # Test skip.
+    # CHECK-NEXT:  Skip pre-order
+    # CHECK-NEXT:  builtin.module
+    print("Skip pre-order")
+
+    def callback(op):
+        print(op.name)
+        return WalkResult.SKIP
+
+    module.operation.walk(callback, WalkOrder.PRE_ORDER)
+
+    # Test exception.
+    # CHECK: Exception
+    # CHECK-NEXT: func.return
+    # CHECK-NEXT: Exception raised
+    print("Exception")
+
+    def callback(op):
+        print(op.name)
+        raise ValueError
+        return WalkResult.ADVANCE
+
+    try:
+        module.operation.walk(callback)
+    except RuntimeError:
+        print("Exception raised")
+
+
+# CHECK-LABEL: TEST: testOpReplaceUsesWith
+@run
+def testOpReplaceUsesWith():
+    ctx = Context()
+    ctx.allow_unregistered_dialects = True
+    with Location.unknown(ctx):
+        m = Module.create()
+        i32 = IntegerType.get_signless(32)
+        with InsertionPoint(m.body):
+            value = Operation.create("custom.op1", results=[i32]).results[0]
+            value2 = Operation.create("custom.op2", results=[i32]).results[0]
+            op = Operation.create("custom.op3", operands=[value])
+            op2 = Operation.create("custom.op4", operands=[value])
+            op.replace_uses_of_with(value, value2)
+
+    assert len(list(value.uses)) == 1
+
+    # CHECK: Use owner: "custom.op4"
+    # CHECK: Use operand_number: 0
+    for use in value.uses:
+        assert use.owner in [op2]
+        print(f"Use owner: {use.owner}")
+        print(f"Use operand_number: {use.operand_number}")
+
+    assert len(list(value2.uses)) == 1
+
+    # CHECK: Use owner: "custom.op3"
+    # CHECK: Use operand_number: 0
+    for use in value2.uses:
+        assert use.owner in [op]
+        print(f"Use owner: {use.owner}")
+        print(f"Use operand_number: {use.operand_number}")
+
+
+# CHECK-LABEL: TEST: testGetOwnerConcreteOpview
+@run
+def testGetOwnerConcreteOpview():
+    with Context() as ctx, Location.unknown():
+        module = Module.create()
+        with InsertionPoint(module.body):
+            a = arith.ConstantOp(value=42, result=IntegerType.get_signless(32))
+            r = arith.AddIOp(a, a, overflowFlags=arith.IntegerOverflowFlags.nsw)
+            for u in a.result.uses:
+                assert isinstance(u.owner, arith.AddIOp)
+
+
+# CHECK-LABEL: TEST: testIndexSwitch
+@run
+def testIndexSwitch():
+    with Context() as ctx, Location.unknown():
+        i32 = T.i32()
+        module = Module.create()
+        with InsertionPoint(module.body):
+
+            @func.FuncOp.from_py_func(T.index())
+            def index_switch(index):
+                c1 = arith.constant(i32, 1)
+                switch_op = scf.IndexSwitchOp(results=[i32], arg=index, cases=range(3))
+
+                assert len(switch_op.regions) == 4
+                assert len(switch_op.regions[2:]) == 2
+                assert len([i for i in switch_op.regions[2:]]) == 2
+                assert len(switch_op.caseRegions) == 3
+                assert len([i for i in switch_op.caseRegions]) == 3
+                assert len(switch_op.caseRegions[1:]) == 2
+                assert len([i for i in switch_op.caseRegions[1:]]) == 2

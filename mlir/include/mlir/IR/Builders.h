@@ -19,11 +19,12 @@ class AffineExpr;
 class IRMapping;
 class UnknownLoc;
 class FileLineColLoc;
+class FileLineColRange;
 class Type;
-class PrimitiveType;
 class IntegerType;
 class FloatType;
 class FunctionType;
+class GraphType;
 class IndexType;
 class MemRefType;
 class VectorType;
@@ -60,11 +61,7 @@ public:
                        Attribute metadata = Attribute());
 
   // Types.
-  FloatType getFloat8E5M2Type();
-  FloatType getFloat8E4M3FNType();
-  FloatType getFloat8E5M2FNUZType();
-  FloatType getFloat8E4M3FNUZType();
-  FloatType getFloat8E4M3B11FNUZType();
+  FloatType getF8E8M0Type();
   FloatType getBF16Type();
   FloatType getF16Type();
   FloatType getTF32Type();
@@ -85,6 +82,7 @@ public:
   IntegerType getIntegerType(unsigned width);
   IntegerType getIntegerType(unsigned width, bool isSigned);
   FunctionType getFunctionType(TypeRange inputs, TypeRange results);
+  GraphType getGraphType(TypeRange inputs, TypeRange results);
   TupleType getTupleType(TypeRange elementTypes);
   NoneType getNoneType();
 
@@ -118,6 +116,9 @@ public:
   // supports boolean, integer, and 16-/32-/64-bit float types, and vector or
   // ranked tensor of them. Returns null attribute otherwise.
   TypedAttr getZeroAttr(Type type);
+  // Returns a 1-valued attribute of the given `type`.
+  // Type constraints are the same as `getZeroAttr`.
+  TypedAttr getOneAttr(Type type);
 
   // Convenience methods for fixed types.
   FloatAttr getF16FloatAttr(float value);
@@ -205,6 +206,7 @@ protected:
 /// automatically inserted at an insertion point. The builder is copyable.
 class OpBuilder : public Builder {
 public:
+  class InsertPoint;
   struct Listener;
 
   /// Create a builder with the given context.
@@ -215,7 +217,7 @@ public:
   explicit OpBuilder(Region *region, Listener *listener = nullptr)
       : OpBuilder(region->getContext(), listener) {
     if (!region->empty())
-      setInsertionPoint(&region->front(), region->front().begin());
+      setInsertionPointToStart(&region->front());
   }
   explicit OpBuilder(Region &region, Listener *listener = nullptr)
       : OpBuilder(&region, listener) {}
@@ -285,13 +287,26 @@ public:
 
     virtual ~Listener() = default;
 
-    /// Notification handler for when an operation is inserted into the builder.
-    /// `op` is the operation that was inserted.
-    virtual void notifyOperationInserted(Operation *op) {}
+    /// Notify the listener that the specified operation was inserted.
+    ///
+    /// * If the operation was moved, then `previous` is the previous location
+    ///   of the op.
+    /// * If the operation was unlinked before it was inserted, then `previous`
+    ///   is empty.
+    ///
+    /// Note: Creating an (unlinked) op does not trigger this notification.
+    virtual void notifyOperationInserted(Operation *op, InsertPoint previous) {}
 
-    /// Notification handler for when a block is created using the builder.
-    /// `block` is the block that was created.
-    virtual void notifyBlockCreated(Block *block) {}
+    /// Notify the listener that the specified block was inserted.
+    ///
+    /// * If the block was moved, then `previous` and `previousIt` are the
+    ///   previous location of the block.
+    /// * If the block was unlinked before it was inserted, then `previous`
+    ///   is "nullptr".
+    ///
+    /// Note: Creating an (unlinked) block does not trigger this notification.
+    virtual void notifyBlockInserted(Block *block, Region *previous,
+                                     Region::iterator previousIt) {}
 
   protected:
     Listener(Kind kind) : ListenerBase(kind) {}
@@ -441,15 +456,14 @@ public:
   /// 'parent'. `locs` contains the locations of the inserted arguments, and
   /// should match the size of `argTypes`.
   Block *createBlock(Region *parent, Region::iterator insertPt = {},
-                     TypeRange argTypes = std::nullopt,
-                     ArrayRef<Location> locs = std::nullopt);
+                     TypeRange argTypes = {}, ArrayRef<Location> locs = {});
 
   /// Add new block with 'argTypes' arguments and set the insertion point to the
   /// end of it. The block is placed before 'insertBefore'. `locs` contains the
   /// locations of the inserted arguments, and should match the size of
   /// `argTypes`.
-  Block *createBlock(Block *insertBefore, TypeRange argTypes = std::nullopt,
-                     ArrayRef<Location> locs = std::nullopt);
+  Block *createBlock(Block *insertBefore, TypeRange argTypes = {},
+                     ArrayRef<Location> locs = {});
 
   //===--------------------------------------------------------------------===//
   // Operation Creation
@@ -473,7 +487,7 @@ private:
   template <typename OpT>
   RegisteredOperationName getCheckRegisteredInfo(MLIRContext *ctx) {
     std::optional<RegisteredOperationName> opName =
-        RegisteredOperationName::lookup(OpT::getOperationName(), ctx);
+        RegisteredOperationName::lookup(TypeID::get<OpT>(), ctx);
     if (LLVM_UNLIKELY(!opName)) {
       llvm::report_fatal_error(
           "Building op `" + OpT::getOperationName() +
@@ -488,6 +502,7 @@ private:
 public:
   /// Create an operation of specific op type at the current insertion point.
   template <typename OpTy, typename... Args>
+  [[deprecated("Use OpTy::create instead")]]
   OpTy create(Location location, Args &&...args) {
     OperationState state(location,
                          getCheckRegisteredInfo<OpTy>(location.getContext()));
@@ -500,22 +515,37 @@ public:
 
   /// Create an operation of specific op type at the current insertion point,
   /// and immediately try to fold it. This functions populates 'results' with
-  /// the results after folding the operation.
+  /// the results of the operation.
+  ///
+  /// Note: This performs opportunistic eager folding during IR construction.
+  /// The folders are designed to operate efficiently on canonical IR, which
+  /// this API does not enforce. Complete folding isn't only expected in the
+  /// context of canonicalization which intertwine folders with pattern
+  /// rewrites until fixed-point.
   template <typename OpTy, typename... Args>
   void createOrFold(SmallVectorImpl<Value> &results, Location location,
                     Args &&...args) {
-    // Create the operation without using 'create' as we don't want to
-    // insert it yet.
+    // Create the operation without using 'create' as we want to control when
+    // the listener is notified.
     OperationState state(location,
                          getCheckRegisteredInfo<OpTy>(location.getContext()));
     OpTy::build(*this, state, std::forward<Args>(args)...);
     Operation *op = Operation::create(state);
+    if (block)
+      block->getOperations().insert(insertPoint, op);
 
-    // Fold the operation. If successful destroy it, otherwise insert it.
-    if (succeeded(tryFold(op, results)))
-      op->destroy();
-    else
-      insert(op);
+    // Attempt to fold the operation.
+    if (succeeded(tryFold(op, results)) && !results.empty()) {
+      // Erase the operation, if the fold removed the need for this operation.
+      // Note: The fold already populated the results in this case.
+      op->erase();
+      return;
+    }
+
+    ResultRange opResults = op->getResults();
+    results.assign(opResults.begin(), opResults.end());
+    if (block && listener)
+      listener->notifyOperationInserted(op, /*previous=*/{});
   }
 
   /// Overload to create or fold a single result operation.
@@ -531,7 +561,7 @@ public:
   template <typename OpTy, typename... Args>
   std::enable_if_t<OpTy::template hasTrait<OpTrait::ZeroResults>(), OpTy>
   createOrFold(Location location, Args &&...args) {
-    auto op = create<OpTy>(location, std::forward<Args>(args)...);
+    auto op = OpTy::create(*this, location, std::forward<Args>(args)...);
     SmallVector<Value, 0> unused;
     (void)tryFold(op.getOperation(), unused);
 
@@ -541,9 +571,14 @@ public:
   }
 
   /// Attempts to fold the given operation and places new results within
-  /// 'results'. Returns success if the operation was folded, failure otherwise.
+  /// `results`. Returns success if the operation was folded, failure otherwise.
+  /// If the fold was in-place, `results` will not be filled. Optionally, newly
+  /// materialized constant operations can be returned to the caller.
+  ///
   /// Note: This function does not erase the operation on a successful fold.
-  LogicalResult tryFold(Operation *op, SmallVectorImpl<Value> &results);
+  LogicalResult
+  tryFold(Operation *op, SmallVectorImpl<Value> &results,
+          SmallVectorImpl<Operation *> *materializedConstants = nullptr);
 
   /// Creates a deep copy of the specified operation, remapping any operands
   /// that use values outside of the operation using the map that is provided
@@ -567,6 +602,16 @@ public:
     return cast<OpT>(cloneWithoutRegions(*op.getOperation()));
   }
 
+  /// Clone the blocks that belong to "region" before the given position in
+  /// another region "parent". The two regions must be different. The caller is
+  /// responsible for creating or updating the operation transferring flow of
+  /// control to the region and passing it the correct block arguments.
+  void cloneRegionBefore(Region &region, Region &parent,
+                         Region::iterator before, IRMapping &mapping);
+  void cloneRegionBefore(Region &region, Region &parent,
+                         Region::iterator before);
+  void cloneRegionBefore(Region &region, Block *before);
+
 protected:
   /// The optional listener for events of this builder.
   Listener *listener;
@@ -577,6 +622,96 @@ private:
   /// The insertion point within the block that this builder is inserting
   /// before.
   Block::iterator insertPoint;
+};
+
+/// ImplicitLocOpBuilder maintains a 'current location', allowing use of the
+/// create<> method without specifying the location.  It is otherwise the same
+/// as OpBuilder.
+class ImplicitLocOpBuilder : public mlir::OpBuilder {
+public:
+  /// OpBuilder has a bunch of convenience constructors - we support them all
+  /// with the additional Location.
+  template <typename... T>
+  ImplicitLocOpBuilder(Location loc, T &&...operands)
+      : OpBuilder(std::forward<T>(operands)...), curLoc(loc) {}
+
+  /// Create a builder and set the insertion point to before the first operation
+  /// in the block but still inside the block.
+  static ImplicitLocOpBuilder atBlockBegin(Location loc, Block *block,
+                                           Listener *listener = nullptr) {
+    return ImplicitLocOpBuilder(loc, block, block->begin(), listener);
+  }
+
+  /// Create a builder and set the insertion point to after the last operation
+  /// in the block but still inside the block.
+  static ImplicitLocOpBuilder atBlockEnd(Location loc, Block *block,
+                                         Listener *listener = nullptr) {
+    return ImplicitLocOpBuilder(loc, block, block->end(), listener);
+  }
+
+  /// Create a builder and set the insertion point to before the block
+  /// terminator.
+  static ImplicitLocOpBuilder atBlockTerminator(Location loc, Block *block,
+                                                Listener *listener = nullptr) {
+    auto *terminator = block->getTerminator();
+    assert(terminator != nullptr && "the block has no terminator");
+    return ImplicitLocOpBuilder(loc, block, Block::iterator(terminator),
+                                listener);
+  }
+
+  /// Accessors for the implied location.
+  Location getLoc() const { return curLoc; }
+  void setLoc(Location loc) { curLoc = loc; }
+
+  // We allow clients to use the explicit-loc version of create as well.
+  using OpBuilder::create;
+  using OpBuilder::createOrFold;
+
+  /// Create an operation of specific op type at the current insertion point and
+  /// location.
+  template <typename OpTy, typename... Args>
+  OpTy create(Args &&...args) {
+    return OpTy::create(*this, curLoc, std::forward<Args>(args)...);
+  }
+
+  /// Create an operation of specific op type at the current insertion point,
+  /// and immediately try to fold it. This functions populates 'results' with
+  /// the results after folding the operation.
+  template <typename OpTy, typename... Args>
+  void createOrFold(llvm::SmallVectorImpl<Value> &results, Args &&...args) {
+    OpBuilder::createOrFold<OpTy>(results, curLoc, std::forward<Args>(args)...);
+  }
+
+  /// Overload to create or fold a single result operation.
+  template <typename OpTy, typename... Args>
+  std::enable_if_t<OpTy::template hasTrait<mlir::OpTrait::OneResult>(), Value>
+  createOrFold(Args &&...args) {
+    return OpBuilder::createOrFold<OpTy>(curLoc, std::forward<Args>(args)...);
+  }
+
+  /// Overload to create or fold a zero result operation.
+  template <typename OpTy, typename... Args>
+  std::enable_if_t<OpTy::template hasTrait<mlir::OpTrait::ZeroResults>(), OpTy>
+  createOrFold(Args &&...args) {
+    return OpBuilder::createOrFold<OpTy>(curLoc, std::forward<Args>(args)...);
+  }
+
+  /// This builder can also be used to emit diagnostics to the current location.
+  mlir::InFlightDiagnostic
+  emitError(const llvm::Twine &message = llvm::Twine()) {
+    return mlir::emitError(curLoc, message);
+  }
+  mlir::InFlightDiagnostic
+  emitWarning(const llvm::Twine &message = llvm::Twine()) {
+    return mlir::emitWarning(curLoc, message);
+  }
+  mlir::InFlightDiagnostic
+  emitRemark(const llvm::Twine &message = llvm::Twine()) {
+    return mlir::emitRemark(curLoc, message);
+  }
+
+private:
+  Location curLoc;
 };
 
 } // namespace mlir

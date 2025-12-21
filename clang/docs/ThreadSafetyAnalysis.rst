@@ -118,7 +118,7 @@ require exclusive access, while read operations require only shared access.
 At any given moment during program execution, a thread holds a specific set of
 capabilities (e.g. the set of mutexes that it has locked.)  These act like keys
 or tokens that allow the thread to access a given resource.  Just like physical
-security keys, a thread cannot make copy of a capability, nor can it destroy
+security keys, a thread cannot make a copy of a capability, nor can it destroy
 one.  A thread can only release a capability to another thread, or acquire one
 from another thread.  The annotations are deliberately agnostic about the
 exact mechanism used to acquire and release capabilities; it assumes that the
@@ -131,7 +131,7 @@ by calculating an approximation of that set, called the *capability
 environment*.  The capability environment is calculated for every program point,
 and describes the set of capabilities that are statically known to be held, or
 not held, at that particular point.  This environment is a conservative
-approximation of the full set of capabilities that will actually held by a
+approximation of the full set of capabilities that will actually be held by a
 thread at run-time.
 
 
@@ -187,10 +187,13 @@ REQUIRES(...), REQUIRES_SHARED(...)
 
 *Previously*: ``EXCLUSIVE_LOCKS_REQUIRED``, ``SHARED_LOCKS_REQUIRED``
 
-``REQUIRES`` is an attribute on functions or methods, which
+``REQUIRES`` is an attribute on functions, methods or function parameters of
+reference to :ref:`scoped_capability`-annotated type, which
 declares that the calling thread must have exclusive access to the given
 capabilities.  More than one capability may be specified.  The capabilities
 must be held on entry to the function, *and must still be held on exit*.
+Additionally, if the attribute is on a function parameter, it declares that
+the scoped capability manages the specified capabilities in the given order.
 
 ``REQUIRES_SHARED`` is similar, but requires only shared access.
 
@@ -211,6 +214,20 @@ must be held on entry to the function, *and must still be held on exit*.
     mu1.Unlock();
   }
 
+  void require(MutexLocker& scope REQUIRES(mu1)) {
+    scope.Unlock();
+    a = 0; // Warning!  Requires mu1.
+    scope.Lock();
+  }
+
+  void testParameter() {
+    MutexLocker scope(&mu1), scope2(&mu2);
+    require(scope2); // Warning! Mutex managed by 'scope2' is 'mu2' instead of 'mu1'
+    require(scope); // OK.
+    scope.Unlock();
+    require(scope); // Warning!  Requires mu1.
+  }
+
 
 ACQUIRE(...), ACQUIRE_SHARED(...), RELEASE(...), RELEASE_SHARED(...), RELEASE_GENERIC(...)
 ------------------------------------------------------------------------------------------
@@ -218,10 +235,13 @@ ACQUIRE(...), ACQUIRE_SHARED(...), RELEASE(...), RELEASE_SHARED(...), RELEASE_GE
 *Previously*: ``EXCLUSIVE_LOCK_FUNCTION``, ``SHARED_LOCK_FUNCTION``,
 ``UNLOCK_FUNCTION``
 
-``ACQUIRE`` and ``ACQUIRE_SHARED`` are attributes on functions or methods
-declaring that the function acquires a capability, but does not release it.
+``ACQUIRE`` and ``ACQUIRE_SHARED`` are attributes on functions, methods
+or function parameters of reference to :ref:`scoped_capability`-annotated type,
+which declare that the function acquires a capability, but does not release it.
 The given capability must not be held on entry, and will be held on exit
 (exclusively for ``ACQUIRE``, shared for ``ACQUIRE_SHARED``).
+Additionally, if the attribute is on a function parameter, it declares that
+the scoped capability manages the specified capabilities in the given order.
 
 ``RELEASE``, ``RELEASE_SHARED``, and ``RELEASE_GENERIC`` declare that the
 function releases the given capability.  The capability must be held on entry
@@ -247,6 +267,14 @@ shared for ``RELEASE_GENERIC``), and will no longer be held on exit.
     myObject.doSomething();
     cleanupAndUnlock();
     myObject.doSomething();  // Warning, mu is not locked.
+  }
+
+  void release(MutexLocker& scope RELEASE(mu)) {
+  }                          // Warning!  Need to unlock mu.
+
+  void testParameter() {
+    MutexLocker scope(&mu);
+    release(scope);
   }
 
 If no argument is passed to ``ACQUIRE`` or ``RELEASE``, then the argument is
@@ -283,10 +311,13 @@ EXCLUDES(...)
 
 *Previously*: ``LOCKS_EXCLUDED``
 
-``EXCLUDES`` is an attribute on functions or methods, which declares that
+``EXCLUDES`` is an attribute on functions, methods or function parameters
+of reference to :ref:`scoped_capability`-annotated type, which declares that
 the caller must *not* hold the given capabilities.  This annotation is
 used to prevent deadlock.  Many mutex implementations are not re-entrant, so
 deadlock can occur if the function acquires the mutex a second time.
+Additionally, if the attribute is on a function parameter, it declares that
+the scoped capability manages the specified capabilities in the given order.
 
 .. code-block:: c++
 
@@ -303,6 +334,16 @@ deadlock can occur if the function acquires the mutex a second time.
     mu.Lock();
     clear();     // Warning!  Caller cannot hold 'mu'.
     mu.Unlock();
+  }
+
+  void exclude(MutexLocker& scope LOCKS_EXCLUDED(mu)) {
+    scope.Unlock(); // Warning! mu is not locked.
+    scope.Lock();
+  } // Warning! mu still held at the end of function.
+
+  void testParameter() {
+    MutexLocker scope(&mu);
+    exclude(scope); // Warning, mu is held.
   }
 
 Unlike ``REQUIRES``, ``EXCLUDES`` is optional.  The analysis will not issue a
@@ -328,7 +369,7 @@ thread-safe, but too complicated for the analysis to understand.  Reasons for
     void unsafeIncrement() NO_THREAD_SAFETY_ANALYSIS { a++; }
   };
 
-Unlike the other attributes, NO_THREAD_SAFETY_ANALYSIS is not part of the
+Unlike the other attributes, ``NO_THREAD_SAFETY_ANALYSIS`` is not part of the
 interface of a function, and should thus be placed on the function definition
 (in the ``.cc`` or ``.cpp`` file) rather than on the function declaration
 (in the header).
@@ -393,6 +434,22 @@ class can be used as a capability.  The string argument specifies the kind of
 capability in error messages, e.g. ``"mutex"``.  See the ``Container`` example
 given above, or the ``Mutex`` class in :ref:`mutexheader`.
 
+REENTRANT_CAPABILITY
+--------------------
+
+``REENTRANT_CAPABILITY`` is an attribute on capability classes, denoting that
+they are reentrant. Marking a capability as reentrant means that acquiring the
+same capability multiple times is safe. Acquiring the same capability with
+different access privileges (exclusive vs. shared) again is not considered
+reentrant by the analysis.
+
+Note: In many cases this attribute is only required where a capability is
+acquired reentrant within the same function, such as via macros or other
+helpers. Otherwise, best practice is to avoid explicitly acquiring a capability
+multiple times within the same function, and letting the analysis produce
+warnings on double-acquisition attempts.
+
+.. _scoped_capability:
 
 SCOPED_CAPABILITY
 -----------------
@@ -452,7 +509,7 @@ ASSERT_CAPABILITY(...) and ASSERT_SHARED_CAPABILITY(...)
 *Previously:*  ``ASSERT_EXCLUSIVE_LOCK``, ``ASSERT_SHARED_LOCK``
 
 These are attributes on a function or method which asserts the calling thread
-already holds the given capability, for example by performing a run-time test
+already holds the given capability, for example, by performing a run-time test
 and terminating if the capability is not held.  Presence of this annotation
 causes the analysis to assume the capability is held after calls to the
 annotated function.  See :ref:`mutexheader`, below, for example uses.
@@ -473,8 +530,12 @@ Warning flags
   + ``-Wthread-safety-analysis``: The core analysis.
   + ``-Wthread-safety-precise``: Requires that mutex expressions match precisely.
        This warning can be disabled for code which has a lot of aliases.
-  + ``-Wthread-safety-reference``: Checks when guarded members are passed by reference.
+  + ``-Wthread-safety-reference``: Checks when guarded members are passed or
+    returned by reference.
 
+* ``-Wthread-safety-pointer``: Checks when passing or returning pointers to
+  guarded variables, or pointers to guarded data, as function argument or
+  return value respectively.
 
 :ref:`negative` are an experimental feature, which are enabled with:
 
@@ -493,19 +554,19 @@ Negative Capabilities
 =====================
 
 Thread Safety Analysis is designed to prevent both race conditions and
-deadlock.  The GUARDED_BY and REQUIRES attributes prevent race conditions, by
+deadlock.  The ``GUARDED_BY`` and ``REQUIRES`` attributes prevent race conditions, by
 ensuring that a capability is held before reading or writing to guarded data,
-and the EXCLUDES attribute prevents deadlock, by making sure that a mutex is
+and the ``EXCLUDES`` attribute prevents deadlock, by making sure that a mutex is
 *not* held.
 
-However, EXCLUDES is an optional attribute, and does not provide the same
-safety guarantee as REQUIRES.  In particular:
+However, ``EXCLUDES`` is an optional attribute, and does not provide the same
+safety guarantee as ``REQUIRES``.  In particular:
 
   * A function which acquires a capability does not have to exclude it.
   * A function which calls a function that excludes a capability does not
-    have transitively exclude that capability.
+    have to transitively exclude that capability.
 
-As a result, EXCLUDES can easily produce false negatives:
+As a result, ``EXCLUDES`` can easily produce false negatives:
 
 .. code-block:: c++
 
@@ -533,8 +594,8 @@ As a result, EXCLUDES can easily produce false negatives:
   };
 
 
-Negative requirements are an alternative EXCLUDES that provide
-a stronger safety guarantee.  A negative requirement uses the  REQUIRES
+Negative requirements are an alternative to ``EXCLUDES`` that provide
+a stronger safety guarantee.  A negative requirement uses the  ``REQUIRES``
 attribute, in conjunction with the ``!`` operator, to indicate that a capability
 should *not* be held.
 
@@ -581,7 +642,7 @@ Frequently Asked Questions
 
 (A) Attributes are part of the formal interface of a function, and should
 always go in the header, where they are visible to anything that includes
-the header.  Attributes in the .cpp file are not visible outside of the
+the header.  Attributes in the ``.cpp`` file are not visible outside of the
 immediate translation unit, which leads to false negatives and false positives.
 
 
@@ -623,7 +684,7 @@ Private Mutexes
 ---------------
 
 Good software engineering practice dictates that mutexes should be private
-members, because the locking mechanism used by a thread-safe class is part of
+members because the locking mechanism used by a thread-safe class is part of
 its internal implementation.  However, private mutexes can sometimes leak into
 the public interface of a class.
 Thread safety attributes follow normal C++ access restrictions, so if ``mu``
@@ -764,12 +825,6 @@ doesn't know that munl.mu == mutex.  The SCOPED_CAPABILITY attribute handles
 aliasing for MutexLocker, but does so only for that particular pattern.
 
 
-ACQUIRED_BEFORE(...) and ACQUIRED_AFTER(...) are currently unimplemented.
--------------------------------------------------------------------------
-
-To be fixed in a future update.
-
-
 .. _mutexheader:
 
 mutex.h
@@ -798,6 +853,9 @@ implementation.
 
   #define CAPABILITY(x) \
     THREAD_ANNOTATION_ATTRIBUTE__(capability(x))
+
+  #define REENTRANT_CAPABILITY \
+    THREAD_ANNOTATION_ATTRIBUTE__(reentrant_capability)
 
   #define SCOPED_CAPABILITY \
     THREAD_ANNOTATION_ATTRIBUTE__(scoped_lockable)
@@ -932,11 +990,25 @@ implementation.
     MutexLocker(Mutex *mu, defer_lock_t) EXCLUDES(mu) : mut(mu), locked(false) {}
 
     // Same as constructors, but without tag types. (Requires C++17 copy elision.)
-    static MutexLocker Lock(Mutex *mu) ACQUIRE(mu);
-    static MutexLocker Adopt(Mutex *mu) REQUIRES(mu);
-    static MutexLocker ReaderLock(Mutex *mu) ACQUIRE_SHARED(mu);
-    static MutexLocker AdoptReaderLock(Mutex *mu) REQUIRES_SHARED(mu);
-    static MutexLocker DeferLock(Mutex *mu) EXCLUDES(mu);
+    static MutexLocker Lock(Mutex *mu) ACQUIRE(mu) {
+      return MutexLocker(mu);
+    }
+
+    static MutexLocker Adopt(Mutex *mu) REQUIRES(mu) {
+      return MutexLocker(mu, adopt_lock);
+    }
+
+    static MutexLocker ReaderLock(Mutex *mu) ACQUIRE_SHARED(mu) {
+      return MutexLocker(mu, shared_lock);
+    }
+
+    static MutexLocker AdoptReaderLock(Mutex *mu) REQUIRES_SHARED(mu) {
+      return MutexLocker(mu, adopt_lock, shared_lock);
+    }
+
+    static MutexLocker DeferLock(Mutex *mu) EXCLUDES(mu) {
+      return MutexLocker(mu, defer_lock);
+    }
 
     // Release *this and all associated mutexes, if they are still held.
     // There is no warning if the scope was already unlocked before.

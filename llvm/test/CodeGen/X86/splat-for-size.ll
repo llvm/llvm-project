@@ -387,10 +387,9 @@ define <32 x i8> @splat_v32i8_pgso(<32 x i8> %x) !prof !14 {
 define <8 x i64> @pr23259() #1 {
 ; AVX-LABEL: pr23259:
 ; AVX:       # %bb.0: # %entry
-; AVX-NEXT:    vmovaps A+16(%rip), %xmm0
-; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0,1],mem[2,3]
-; AVX-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1,2,3],mem[4,5,6,7]
 ; AVX-NEXT:    vbroadcastsd {{.*#+}} ymm1 = [1,1,1,1]
+; AVX-NEXT:    vblendps {{.*#+}} xmm0 = mem[0,1],xmm1[2,3]
+; AVX-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1,2,3],mem[4,5,6,7]
 ; AVX-NEXT:    retq
 ;
 ; AVX2-LABEL: pr23259:

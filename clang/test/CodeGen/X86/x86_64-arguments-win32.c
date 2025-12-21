@@ -21,11 +21,11 @@ void f4(unsigned short a) {}
 // CHECK-LABEL: define dso_local void @f5(i64 noundef %a.coerce)
 void f5(_Complex float a) {}
 
-// CHECK-LABEL: define dso_local void @f6(ptr noundef %a)
+// CHECK-LABEL: define dso_local void @f6(ptr dead_on_return noundef %a)
 void f6(_Complex double a) {}
 
 // CHECK-LABEL: define dso_local i64 @f7()
 _Complex float f7(void) { return 1.0; }
 
-// CHECK-LABEL: define dso_local void @f8(ptr noalias sret({ double, double }) align 8 %agg.result)
+// CHECK-LABEL: define dso_local void @f8(ptr dead_on_unwind noalias writable sret({ double, double }) align 8 %agg.result)
 _Complex double f8(void) { return 1.0; }

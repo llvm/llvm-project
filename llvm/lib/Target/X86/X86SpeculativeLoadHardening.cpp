@@ -20,13 +20,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "X86.h"
-#include "X86InstrBuilder.h"
 #include "X86InstrInfo.h"
 #include "X86Subtarget.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -53,11 +51,9 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
-#include <algorithm>
 #include <cassert>
 #include <iterator>
 #include <optional>
-#include <utility>
 
 using namespace llvm;
 
@@ -149,8 +145,8 @@ private:
 
   /// Manages the predicate state traced through the program.
   struct PredState {
-    unsigned InitialReg = 0;
-    unsigned PoisonReg = 0;
+    Register InitialReg;
+    Register PoisonReg;
 
     const TargetRegisterClass *RC;
     MachineSSAUpdater SSA;
@@ -180,7 +176,7 @@ private:
 
   void tracePredStateThroughBlocksAndHarden(MachineFunction &MF);
 
-  unsigned saveEFLAGS(MachineBasicBlock &MBB,
+  Register saveEFLAGS(MachineBasicBlock &MBB,
                       MachineBasicBlock::iterator InsertPt,
                       const DebugLoc &Loc);
   void restoreEFLAGS(MachineBasicBlock &MBB,
@@ -189,28 +185,28 @@ private:
 
   void mergePredStateIntoSP(MachineBasicBlock &MBB,
                             MachineBasicBlock::iterator InsertPt,
-                            const DebugLoc &Loc, unsigned PredStateReg);
-  unsigned extractPredStateFromSP(MachineBasicBlock &MBB,
+                            const DebugLoc &Loc, Register PredStateReg);
+  Register extractPredStateFromSP(MachineBasicBlock &MBB,
                                   MachineBasicBlock::iterator InsertPt,
                                   const DebugLoc &Loc);
 
   void
   hardenLoadAddr(MachineInstr &MI, MachineOperand &BaseMO,
                  MachineOperand &IndexMO,
-                 SmallDenseMap<unsigned, unsigned, 32> &AddrRegToHardenedReg);
+                 SmallDenseMap<Register, Register, 32> &AddrRegToHardenedReg);
   MachineInstr *
   sinkPostLoadHardenedInst(MachineInstr &MI,
                            SmallPtrSetImpl<MachineInstr *> &HardenedInstrs);
   bool canHardenRegister(Register Reg);
-  unsigned hardenValueInRegister(Register Reg, MachineBasicBlock &MBB,
+  Register hardenValueInRegister(Register Reg, MachineBasicBlock &MBB,
                                  MachineBasicBlock::iterator InsertPt,
                                  const DebugLoc &Loc);
-  unsigned hardenPostLoad(MachineInstr &MI);
+  Register hardenPostLoad(MachineInstr &MI);
   void hardenReturnInstr(MachineInstr &MI);
   void tracePredStateThroughCall(MachineInstr &MI);
   void hardenIndirectCallOrJumpInstr(
       MachineInstr &MI,
-      SmallDenseMap<unsigned, unsigned, 32> &AddrRegToHardenedReg);
+      SmallDenseMap<Register, Register, 32> &AddrRegToHardenedReg);
 };
 
 } // end anonymous namespace
@@ -484,7 +480,7 @@ bool X86SpeculativeLoadHardeningPass::runOnMachineFunction(
                          PredStateSubReg);
     ++NumInstsInserted;
     MachineOperand *ZeroEFLAGSDefOp =
-        ZeroI->findRegisterDefOperand(X86::EFLAGS);
+        ZeroI->findRegisterDefOperand(X86::EFLAGS, /*TRI=*/nullptr);
     assert(ZeroEFLAGSDefOp && ZeroEFLAGSDefOp->isImplicit() &&
            "Must have an implicit def of EFLAGS!");
     ZeroEFLAGSDefOp->setIsDead(true);
@@ -746,7 +742,7 @@ X86SpeculativeLoadHardeningPass::tracePredStateThroughCFG(
 
           // We will wire each cmov to each other, but need to start with the
           // incoming pred state.
-          unsigned CurStateReg = PS->InitialReg;
+          Register CurStateReg = PS->InitialReg;
 
           for (X86::CondCode Cond : Conds) {
             int PredStateSizeInBytes = TRI->getRegSizeInBits(*PS->RC) / 8;
@@ -763,7 +759,8 @@ X86SpeculativeLoadHardeningPass::tracePredStateThroughCFG(
             // If this is the last cmov and the EFLAGS weren't originally
             // live-in, mark them as killed.
             if (!LiveEFLAGS && Cond == Conds.back())
-              CMovI->findRegisterUseOperand(X86::EFLAGS)->setIsKill(true);
+              CMovI->findRegisterUseOperand(X86::EFLAGS, /*TRI=*/nullptr)
+                  ->setIsKill(true);
 
             ++NumInstsInserted;
             LLVM_DEBUG(dbgs() << "  Inserting cmov: "; CMovI->dump();
@@ -822,8 +819,7 @@ X86SpeculativeLoadHardeningPass::tracePredStateThroughCFG(
 
     // Sort and unique the codes to minimize them.
     llvm::sort(UncondCodeSeq);
-    UncondCodeSeq.erase(std::unique(UncondCodeSeq.begin(), UncondCodeSeq.end()),
-                        UncondCodeSeq.end());
+    UncondCodeSeq.erase(llvm::unique(UncondCodeSeq), UncondCodeSeq.end());
 
     // Build a checking version of the successor.
     BuildCheckingBlockForSuccAndConds(MBB, *UncondSucc, /*SuccCount*/ 1,
@@ -839,13 +835,12 @@ X86SpeculativeLoadHardeningPass::tracePredStateThroughCFG(
 /// a way to unfold into a newly created vreg rather than requiring a register
 /// input.
 static const TargetRegisterClass *
-getRegClassForUnfoldedLoad(MachineFunction &MF, const X86InstrInfo &TII,
-                           unsigned Opcode) {
+getRegClassForUnfoldedLoad(const X86InstrInfo &TII, unsigned Opcode) {
   unsigned Index;
   unsigned UnfoldedOpc = TII.getOpcodeAfterMemoryUnfold(
       Opcode, /*UnfoldLoad*/ true, /*UnfoldStore*/ false, &Index);
   const MCInstrDesc &MCID = TII.get(UnfoldedOpc);
-  return TII.getRegClass(MCID, Index, &TII.getRegisterInfo(), MF);
+  return TII.getRegClass(MCID, Index);
 }
 
 void X86SpeculativeLoadHardeningPass::unfoldCallAndJumpLoads(
@@ -896,11 +891,12 @@ void X86SpeculativeLoadHardeningPass::unfoldCallAndJumpLoads(
       case X86::TAILJMPm64_REX:
       case X86::TAILJMPm:
       case X86::TCRETURNmi64:
+      case X86::TCRETURN_WINmi64:
       case X86::TCRETURNmi: {
         // Use the generic unfold logic now that we know we're dealing with
         // expected instructions.
         // FIXME: We don't have test coverage for all of these!
-        auto *UnfoldedRC = getRegClassForUnfoldedLoad(MF, *TII, MI.getOpcode());
+        auto *UnfoldedRC = getRegClassForUnfoldedLoad(*TII, MI.getOpcode());
         if (!UnfoldedRC) {
           LLVM_DEBUG(dbgs()
                          << "ERROR: Unable to unfold load from instruction:\n";
@@ -921,9 +917,9 @@ void X86SpeculativeLoadHardeningPass::unfoldCallAndJumpLoads(
         for (auto *NewMI : NewMIs)
           MBB.insert(MI.getIterator(), NewMI);
 
-        // Update the call site info.
-        if (MI.isCandidateForCallSiteEntry())
-          MF.eraseCallSiteInfo(&MI);
+        // Update the call info.
+        if (MI.isCandidateForAdditionalCallInfo())
+          MF.eraseAdditionalCallInfo(&MI);
 
         MI.eraseFromParent();
         LLVM_DEBUG({
@@ -989,7 +985,7 @@ X86SpeculativeLoadHardeningPass::tracePredStateThroughIndirectBranches(
       // No terminator or non-branch terminator.
       continue;
 
-    unsigned TargetReg;
+    Register TargetReg;
 
     switch (TI.getOpcode()) {
     default:
@@ -1044,8 +1040,7 @@ X86SpeculativeLoadHardeningPass::tracePredStateThroughIndirectBranches(
     IndirectTerminatedMBBs.insert(&MBB);
 
     // Add all the successors to our target candidates.
-    for (MachineBasicBlock *Succ : MBB.successors())
-      IndirectTargetMBBs.insert(Succ);
+    IndirectTargetMBBs.insert_range(MBB.successors());
   }
 
   // Keep track of the cmov instructions we insert so we can return them.
@@ -1186,7 +1181,8 @@ X86SpeculativeLoadHardeningPass::tracePredStateThroughIndirectBranches(
             .addReg(PS->InitialReg)
             .addReg(PS->PoisonReg)
             .addImm(X86::COND_NE);
-    CMovI->findRegisterUseOperand(X86::EFLAGS)->setIsKill(true);
+    CMovI->findRegisterUseOperand(X86::EFLAGS, /*TRI=*/nullptr)
+        ->setIsKill(true);
     ++NumInstsInserted;
     LLVM_DEBUG(dbgs() << "  Inserting cmov: "; CMovI->dump(); dbgs() << "\n");
     CMovs.push_back(&*CMovI);
@@ -1203,7 +1199,8 @@ X86SpeculativeLoadHardeningPass::tracePredStateThroughIndirectBranches(
 // Returns true if the MI has EFLAGS as a register def operand and it's live,
 // otherwise it returns false
 static bool isEFLAGSDefLive(const MachineInstr &MI) {
-  if (const MachineOperand *DefOp = MI.findRegisterDefOperand(X86::EFLAGS)) {
+  if (const MachineOperand *DefOp =
+          MI.findRegisterDefOperand(X86::EFLAGS, /*TRI=*/nullptr)) {
     return !DefOp->isDead();
   }
   return false;
@@ -1214,7 +1211,8 @@ static bool isEFLAGSLive(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
   // Check if EFLAGS are alive by seeing if there is a def of them or they
   // live-in, and then seeing if that def is in turn used.
   for (MachineInstr &MI : llvm::reverse(llvm::make_range(MBB.begin(), I))) {
-    if (MachineOperand *DefOp = MI.findRegisterDefOperand(X86::EFLAGS)) {
+    if (MachineOperand *DefOp =
+            MI.findRegisterDefOperand(X86::EFLAGS, /*TRI=*/nullptr)) {
       // If the def is dead, then EFLAGS is not live.
       if (DefOp->isDead())
         return false;
@@ -1265,9 +1263,9 @@ void X86SpeculativeLoadHardeningPass::tracePredStateThroughBlocksAndHarden(
   SmallPtrSet<MachineInstr *, 16> HardenPostLoad;
   SmallPtrSet<MachineInstr *, 16> HardenLoadAddr;
 
-  SmallSet<unsigned, 16> HardenedAddrRegs;
+  SmallSet<Register, 16> HardenedAddrRegs;
 
-  SmallDenseMap<unsigned, unsigned, 32> AddrRegToHardenedReg;
+  SmallDenseMap<Register, Register, 32> AddrRegToHardenedReg;
 
   // Track the set of load-dependent registers through the basic block. Because
   // the values of these registers have an existing data dependency on a loaded
@@ -1297,11 +1295,11 @@ void X86SpeculativeLoadHardeningPass::tracePredStateThroughBlocksAndHarden(
         // FIXME: Do a more careful analysis of x86 to build a conservative
         // model here.
         if (llvm::any_of(MI.uses(), [&](MachineOperand &Op) {
-              return Op.isReg() && LoadDepRegs.test(Op.getReg());
+              return Op.isReg() && LoadDepRegs.test(Op.getReg().id());
             }))
           for (MachineOperand &Def : MI.defs())
             if (Def.isReg())
-              LoadDepRegs.set(Def.getReg());
+              LoadDepRegs.set(Def.getReg().id());
 
         // Both Intel and AMD are guiding that they will change the semantics of
         // LFENCE to be a speculation barrier, so if we see an LFENCE, there is
@@ -1318,20 +1316,13 @@ void X86SpeculativeLoadHardeningPass::tracePredStateThroughBlocksAndHarden(
           continue;
 
         // Extract the memory operand information about this instruction.
-        // FIXME: This doesn't handle loading pseudo instructions which we often
-        // could handle with similarly generic logic. We probably need to add an
-        // MI-layer routine similar to the MC-layer one we use here which maps
-        // pseudos much like this maps real instructions.
-        const MCInstrDesc &Desc = MI.getDesc();
-        int MemRefBeginIdx = X86II::getMemoryOperandNo(Desc.TSFlags);
+        const int MemRefBeginIdx = X86::getFirstAddrOperandIdx(MI);
         if (MemRefBeginIdx < 0) {
           LLVM_DEBUG(dbgs()
                          << "WARNING: unable to harden loading instruction: ";
                      MI.dump());
           continue;
         }
-
-        MemRefBeginIdx += X86II::getOperandBias(Desc);
 
         MachineOperand &BaseMO =
             MI.getOperand(MemRefBeginIdx + X86::AddrBaseReg);
@@ -1340,11 +1331,11 @@ void X86SpeculativeLoadHardeningPass::tracePredStateThroughBlocksAndHarden(
 
         // If we have at least one (non-frame-index, non-RIP) register operand,
         // and neither operand is load-dependent, we need to check the load.
-        unsigned BaseReg = 0, IndexReg = 0;
+        Register BaseReg, IndexReg;
         if (!BaseMO.isFI() && BaseMO.getReg() != X86::RIP &&
-            BaseMO.getReg() != X86::NoRegister)
+            BaseMO.getReg().isValid())
           BaseReg = BaseMO.getReg();
-        if (IndexMO.getReg() != X86::NoRegister)
+        if (IndexMO.getReg().isValid())
           IndexReg = IndexMO.getReg();
 
         if (!BaseReg && !IndexReg)
@@ -1355,8 +1346,8 @@ void X86SpeculativeLoadHardeningPass::tracePredStateThroughBlocksAndHarden(
         // needn't check it.
         // FIXME: Is this true in the case where we are hardening loads after
         // they complete? Unclear, need to investigate.
-        if ((BaseReg && LoadDepRegs.test(BaseReg)) ||
-            (IndexReg && LoadDepRegs.test(IndexReg)))
+        if ((BaseReg && LoadDepRegs.test(BaseReg.id())) ||
+            (IndexReg && LoadDepRegs.test(IndexReg.id())))
           continue;
 
         // If post-load hardening is enabled, this load is compatible with
@@ -1385,7 +1376,7 @@ void X86SpeculativeLoadHardeningPass::tracePredStateThroughBlocksAndHarden(
 
         for (MachineOperand &Def : MI.defs())
           if (Def.isReg())
-            LoadDepRegs.set(Def.getReg());
+            LoadDepRegs.set(Def.getReg().id());
       }
 
     // Now re-walk the instructions in the basic block, and apply whichever
@@ -1401,11 +1392,8 @@ void X86SpeculativeLoadHardeningPass::tracePredStateThroughBlocksAndHarden(
 
         // Check if this is a load whose address needs to be hardened.
         if (HardenLoadAddr.erase(&MI)) {
-          const MCInstrDesc &Desc = MI.getDesc();
-          int MemRefBeginIdx = X86II::getMemoryOperandNo(Desc.TSFlags);
+          const int MemRefBeginIdx = X86::getFirstAddrOperandIdx(MI);
           assert(MemRefBeginIdx >= 0 && "Cannot have an invalid index here!");
-
-          MemRefBeginIdx += X86II::getOperandBias(Desc);
 
           MachineOperand &BaseMO =
               MI.getOperand(MemRefBeginIdx + X86::AddrBaseReg);
@@ -1443,7 +1431,7 @@ void X86SpeculativeLoadHardeningPass::tracePredStateThroughBlocksAndHarden(
             }
           }
 
-          unsigned HardenedReg = hardenPostLoad(MI);
+          Register HardenedReg = hardenPostLoad(MI);
 
           // Mark the resulting hardened register as such so we don't re-harden.
           AddrRegToHardenedReg[HardenedReg] = HardenedReg;
@@ -1499,7 +1487,7 @@ void X86SpeculativeLoadHardeningPass::tracePredStateThroughBlocksAndHarden(
 /// Note that LLVM can only lower very simple patterns of saved and restored
 /// EFLAGS registers. The restore should always be within the same basic block
 /// as the save so that no PHI nodes are inserted.
-unsigned X86SpeculativeLoadHardeningPass::saveEFLAGS(
+Register X86SpeculativeLoadHardeningPass::saveEFLAGS(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator InsertPt,
     const DebugLoc &Loc) {
   // FIXME: Hard coding this to a 32-bit register class seems weird, but matches
@@ -1530,7 +1518,7 @@ void X86SpeculativeLoadHardeningPass::restoreEFLAGS(
 /// across normal stack adjustments.
 void X86SpeculativeLoadHardeningPass::mergePredStateIntoSP(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator InsertPt,
-    const DebugLoc &Loc, unsigned PredStateReg) {
+    const DebugLoc &Loc, Register PredStateReg) {
   Register TmpReg = MRI->createVirtualRegister(PS->RC);
   // FIXME: This hard codes a shift distance based on the number of bits needed
   // to stay canonical on 64-bit. We should compute this somehow and support
@@ -1548,7 +1536,7 @@ void X86SpeculativeLoadHardeningPass::mergePredStateIntoSP(
 }
 
 /// Extracts the predicate state stored in the high bits of the stack pointer.
-unsigned X86SpeculativeLoadHardeningPass::extractPredStateFromSP(
+Register X86SpeculativeLoadHardeningPass::extractPredStateFromSP(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator InsertPt,
     const DebugLoc &Loc) {
   Register PredStateReg = MRI->createVirtualRegister(PS->RC);
@@ -1571,7 +1559,7 @@ unsigned X86SpeculativeLoadHardeningPass::extractPredStateFromSP(
 
 void X86SpeculativeLoadHardeningPass::hardenLoadAddr(
     MachineInstr &MI, MachineOperand &BaseMO, MachineOperand &IndexMO,
-    SmallDenseMap<unsigned, unsigned, 32> &AddrRegToHardenedReg) {
+    SmallDenseMap<Register, Register, 32> &AddrRegToHardenedReg) {
   MachineBasicBlock &MBB = *MI.getParent();
   const DebugLoc &Loc = MI.getDebugLoc();
 
@@ -1650,7 +1638,7 @@ void X86SpeculativeLoadHardeningPass::hardenLoadAddr(
   // If EFLAGS are live and we don't have access to instructions that avoid
   // clobbering EFLAGS we need to save and restore them. This in turn makes
   // the EFLAGS no longer live.
-  unsigned FlagsReg = 0;
+  Register FlagsReg;
   if (EFLAGSLive && !Subtarget->hasBMI2()) {
     EFLAGSLive = false;
     FlagsReg = saveEFLAGS(MBB, InsertPt, Loc);
@@ -1803,11 +1791,9 @@ MachineInstr *X86SpeculativeLoadHardeningPass::sinkPostLoadHardenedInst(
 
         // Otherwise, this is a load and the load component can't be data
         // invariant so check how this register is being used.
-        const MCInstrDesc &Desc = UseMI.getDesc();
-        int MemRefBeginIdx = X86II::getMemoryOperandNo(Desc.TSFlags);
+        const int MemRefBeginIdx = X86::getFirstAddrOperandIdx(UseMI);
         assert(MemRefBeginIdx >= 0 &&
                "Should always have mem references here!");
-        MemRefBeginIdx += X86II::getOperandBias(Desc);
 
         MachineOperand &BaseMO =
             UseMI.getOperand(MemRefBeginIdx + X86::AddrBaseReg);
@@ -1841,7 +1827,7 @@ MachineInstr *X86SpeculativeLoadHardeningPass::sinkPostLoadHardenedInst(
       // just bail. Also check that its register class is one of the ones we
       // can harden.
       Register UseDefReg = UseMI.getOperand(0).getReg();
-      if (!UseDefReg.isVirtual() || !canHardenRegister(UseDefReg))
+      if (!canHardenRegister(UseDefReg))
         return {};
 
       SingleUseMI = &UseMI;
@@ -1864,6 +1850,10 @@ MachineInstr *X86SpeculativeLoadHardeningPass::sinkPostLoadHardenedInst(
 }
 
 bool X86SpeculativeLoadHardeningPass::canHardenRegister(Register Reg) {
+  // We only support hardening virtual registers.
+  if (!Reg.isVirtual())
+    return false;
+
   auto *RC = MRI->getRegClass(Reg);
   int RegBytes = TRI->getRegSizeInBits(*RC) / 8;
   if (RegBytes > 8)
@@ -1906,11 +1896,10 @@ bool X86SpeculativeLoadHardeningPass::canHardenRegister(Register Reg) {
 ///
 /// The new, hardened virtual register is returned. It will have the same
 /// register class as `Reg`.
-unsigned X86SpeculativeLoadHardeningPass::hardenValueInRegister(
+Register X86SpeculativeLoadHardeningPass::hardenValueInRegister(
     Register Reg, MachineBasicBlock &MBB, MachineBasicBlock::iterator InsertPt,
     const DebugLoc &Loc) {
   assert(canHardenRegister(Reg) && "Cannot harden this register!");
-  assert(Reg.isVirtual() && "Cannot harden a physical register!");
 
   auto *RC = MRI->getRegClass(Reg);
   int Bytes = TRI->getRegSizeInBits(*RC) / 8;
@@ -1928,7 +1917,7 @@ unsigned X86SpeculativeLoadHardeningPass::hardenValueInRegister(
     StateReg = NarrowStateReg;
   }
 
-  unsigned FlagsReg = 0;
+  Register FlagsReg;
   if (isEFLAGSLive(MBB, InsertPt, *TRI))
     FlagsReg = saveEFLAGS(MBB, InsertPt, Loc);
 
@@ -1957,7 +1946,7 @@ unsigned X86SpeculativeLoadHardeningPass::hardenValueInRegister(
 /// execution and coercing them to one is sufficient.
 ///
 /// Returns the newly hardened register.
-unsigned X86SpeculativeLoadHardeningPass::hardenPostLoad(MachineInstr &MI) {
+Register X86SpeculativeLoadHardeningPass::hardenPostLoad(MachineInstr &MI) {
   MachineBasicBlock &MBB = *MI.getParent();
   const DebugLoc &Loc = MI.getDebugLoc();
 
@@ -1974,7 +1963,7 @@ unsigned X86SpeculativeLoadHardeningPass::hardenPostLoad(MachineInstr &MI) {
   // Now harden this register's value, getting a hardened reg that is safe to
   // use. Note that we insert the instructions to compute this *after* the
   // defining instruction, not before it.
-  unsigned HardenedReg = hardenValueInRegister(
+  Register HardenedReg = hardenValueInRegister(
       UnhardenedReg, MBB, std::next(MI.getIterator()), Loc);
 
   // Finally, replace the old register (which now only has the uses of the
@@ -2098,7 +2087,7 @@ void X86SpeculativeLoadHardeningPass::tracePredStateThroughCall(
   MI.setPostInstrSymbol(MF, RetSymbol);
 
   const TargetRegisterClass *AddrRC = &X86::GR64RegClass;
-  unsigned ExpectedRetAddrReg = 0;
+  Register ExpectedRetAddrReg;
 
   // If we have no red zones or if the function returns twice (possibly without
   // using the `ret` instruction) like setjmp, we need to save the expected
@@ -2157,7 +2146,7 @@ void X86SpeculativeLoadHardeningPass::tracePredStateThroughCall(
   }
 
   // Now we extract the callee's predicate state from the stack pointer.
-  unsigned NewStateReg = extractPredStateFromSP(MBB, InsertPt, Loc);
+  Register NewStateReg = extractPredStateFromSP(MBB, InsertPt, Loc);
 
   // Test the expected return address against our actual address. If we can
   // form this basic block's address as an immediate, this is easy. Otherwise
@@ -2192,7 +2181,7 @@ void X86SpeculativeLoadHardeningPass::tracePredStateThroughCall(
                    .addReg(NewStateReg, RegState::Kill)
                    .addReg(PS->PoisonReg)
                    .addImm(X86::COND_NE);
-  CMovI->findRegisterUseOperand(X86::EFLAGS)->setIsKill(true);
+  CMovI->findRegisterUseOperand(X86::EFLAGS, /*TRI=*/nullptr)->setIsKill(true);
   ++NumInstsInserted;
   LLVM_DEBUG(dbgs() << "  Inserting cmov: "; CMovI->dump(); dbgs() << "\n");
 
@@ -2216,7 +2205,7 @@ void X86SpeculativeLoadHardeningPass::tracePredStateThroughCall(
 /// not already flagged and add them.
 void X86SpeculativeLoadHardeningPass::hardenIndirectCallOrJumpInstr(
     MachineInstr &MI,
-    SmallDenseMap<unsigned, unsigned, 32> &AddrRegToHardenedReg) {
+    SmallDenseMap<Register, Register, 32> &AddrRegToHardenedReg) {
   switch (MI.getOpcode()) {
   case X86::FARCALL16m:
   case X86::FARCALL32m:
@@ -2249,7 +2238,7 @@ void X86SpeculativeLoadHardeningPass::hardenIndirectCallOrJumpInstr(
   // Try to lookup a hardened version of this register. We retain a reference
   // here as we want to update the map to track any newly computed hardened
   // register.
-  unsigned &HardenedTargetReg = AddrRegToHardenedReg[OldTargetReg];
+  Register &HardenedTargetReg = AddrRegToHardenedReg[OldTargetReg];
 
   // If we don't have a hardened register yet, compute one. Otherwise, just use
   // the already hardened register.

@@ -18,20 +18,20 @@
 #include "MCTargetDesc/MipsBaseInfo.h"
 #include "MCTargetDesc/MipsMCTargetDesc.h"
 #include "Mips.h"
+#include "MipsSelectionDAGInfo.h"
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
-#include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/ValueTypes.h"
+#include "llvm/CodeGenTypes/MachineValueType.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/Type.h"
 #include "llvm/Target/TargetMachine.h"
 #include <algorithm>
-#include <cassert>
 #include <deque>
 #include <utility>
 #include <vector>
@@ -50,211 +50,6 @@ class MipsSubtarget;
 class MipsTargetMachine;
 class TargetLibraryInfo;
 class TargetRegisterClass;
-
-  namespace MipsISD {
-
-    enum NodeType : unsigned {
-      // Start the numbering from where ISD NodeType finishes.
-      FIRST_NUMBER = ISD::BUILTIN_OP_END,
-
-      // Jump and link (call)
-      JmpLink,
-
-      // Tail call
-      TailCall,
-
-      // Get the Highest (63-48) 16 bits from a 64-bit immediate
-      Highest,
-
-      // Get the Higher (47-32) 16 bits from a 64-bit immediate
-      Higher,
-
-      // Get the High 16 bits from a 32/64-bit immediate
-      // No relation with Mips Hi register
-      Hi,
-
-      // Get the Lower 16 bits from a 32/64-bit immediate
-      // No relation with Mips Lo register
-      Lo,
-
-      // Get the High 16 bits from a 32 bit immediate for accessing the GOT.
-      GotHi,
-
-      // Get the High 16 bits from a 32-bit immediate for accessing TLS.
-      TlsHi,
-
-      // Handle gp_rel (small data/bss sections) relocation.
-      GPRel,
-
-      // Thread Pointer
-      ThreadPointer,
-
-      // Vector Floating Point Multiply and Subtract
-      FMS,
-
-      // Floating Point Branch Conditional
-      FPBrcond,
-
-      // Floating Point Compare
-      FPCmp,
-
-      // Floating point Abs
-      FAbs,
-
-      // Floating point select
-      FSELECT,
-
-      // Node used to generate an MTC1 i32 to f64 instruction
-      MTC1_D64,
-
-      // Floating Point Conditional Moves
-      CMovFP_T,
-      CMovFP_F,
-
-      // FP-to-int truncation node.
-      TruncIntFP,
-
-      // Return
-      Ret,
-
-      // Interrupt, exception, error trap Return
-      ERet,
-
-      // Software Exception Return.
-      EH_RETURN,
-
-      // Node used to extract integer from accumulator.
-      MFHI,
-      MFLO,
-
-      // Node used to insert integers to accumulator.
-      MTLOHI,
-
-      // Mult nodes.
-      Mult,
-      Multu,
-
-      // MAdd/Sub nodes
-      MAdd,
-      MAddu,
-      MSub,
-      MSubu,
-
-      // DivRem(u)
-      DivRem,
-      DivRemU,
-      DivRem16,
-      DivRemU16,
-
-      BuildPairF64,
-      ExtractElementF64,
-
-      Wrapper,
-
-      DynAlloc,
-
-      Sync,
-
-      Ext,
-      Ins,
-      CIns,
-
-      // EXTR.W intrinsic nodes.
-      EXTP,
-      EXTPDP,
-      EXTR_S_H,
-      EXTR_W,
-      EXTR_R_W,
-      EXTR_RS_W,
-      SHILO,
-      MTHLIP,
-
-      // DPA.W intrinsic nodes.
-      MULSAQ_S_W_PH,
-      MAQ_S_W_PHL,
-      MAQ_S_W_PHR,
-      MAQ_SA_W_PHL,
-      MAQ_SA_W_PHR,
-      DPAU_H_QBL,
-      DPAU_H_QBR,
-      DPSU_H_QBL,
-      DPSU_H_QBR,
-      DPAQ_S_W_PH,
-      DPSQ_S_W_PH,
-      DPAQ_SA_L_W,
-      DPSQ_SA_L_W,
-      DPA_W_PH,
-      DPS_W_PH,
-      DPAQX_S_W_PH,
-      DPAQX_SA_W_PH,
-      DPAX_W_PH,
-      DPSX_W_PH,
-      DPSQX_S_W_PH,
-      DPSQX_SA_W_PH,
-      MULSA_W_PH,
-
-      MULT,
-      MULTU,
-      MADD_DSP,
-      MADDU_DSP,
-      MSUB_DSP,
-      MSUBU_DSP,
-
-      // DSP shift nodes.
-      SHLL_DSP,
-      SHRA_DSP,
-      SHRL_DSP,
-
-      // DSP setcc and select_cc nodes.
-      SETCC_DSP,
-      SELECT_CC_DSP,
-
-      // Vector comparisons.
-      // These take a vector and return a boolean.
-      VALL_ZERO,
-      VANY_ZERO,
-      VALL_NONZERO,
-      VANY_NONZERO,
-
-      // These take a vector and return a vector bitmask.
-      VCEQ,
-      VCLE_S,
-      VCLE_U,
-      VCLT_S,
-      VCLT_U,
-
-      // Vector Shuffle with mask as an operand
-      VSHF,  // Generic shuffle
-      SHF,   // 4-element set shuffle.
-      ILVEV, // Interleave even elements
-      ILVOD, // Interleave odd elements
-      ILVL,  // Interleave left elements
-      ILVR,  // Interleave right elements
-      PCKEV, // Pack even elements
-      PCKOD, // Pack odd elements
-
-      // Vector Lane Copy
-      INSVE, // Copy element from one vector to another
-
-      // Combined (XOR (OR $a, $b), -1)
-      VNOR,
-
-      // Extended vector element extraction
-      VEXTRACT_SEXT_ELT,
-      VEXTRACT_ZEXT_ELT,
-
-      // Load/Store Left/Right nodes.
-      LWL = ISD::FIRST_TARGET_MEMORY_OPCODE,
-      LWR,
-      SWL,
-      SWR,
-      LDL,
-      LDR,
-      SDL,
-      SDR
-    };
-
-  } // ene namespace MipsISD
 
   //===--------------------------------------------------------------------===//
   // TargetLowering Implementation
@@ -285,8 +80,7 @@ class TargetRegisterClass;
     bool isCheapToSpeculateCttz(Type *Ty) const override;
     bool isCheapToSpeculateCtlz(Type *Ty) const override;
     bool hasBitTest(SDValue X, SDValue Y) const override;
-    bool shouldFoldConstantShiftPairToMask(const SDNode *N,
-                                           CombineLevel Level) const override;
+    bool shouldFoldConstantShiftPairToMask(const SDNode *N) const override;
 
     /// Return the register type for a given MVT, ensuring vectors are treated
     /// as a series of gpr sized integers.
@@ -326,10 +120,6 @@ class TargetRegisterClass;
     void ReplaceNodeResults(SDNode *N, SmallVectorImpl<SDValue>&Results,
                             SelectionDAG &DAG) const override;
 
-    /// getTargetNodeName - This method returns the name of a target specific
-    //  DAG node.
-    const char *getTargetNodeName(unsigned Opcode) const override;
-
     /// getSetCCResultType - get the ISD::SETCC result ValueType
     EVT getSetCCResultType(const DataLayout &DL, LLVMContext &Context,
                            EVT VT) const override;
@@ -361,6 +151,8 @@ class TargetRegisterClass;
     getExceptionSelectorRegister(const Constant *PersonalityFn) const override {
       return ABI.IsN64() ? Mips::A1_64 : Mips::A1;
     }
+
+    bool softPromoteHalfType() const override { return true; }
 
     bool isJumpTableRelative() const override {
       return getTargetMachine().isPositionIndependent();
@@ -482,6 +274,33 @@ class TargetRegisterClass;
           DAG.getNode(MipsISD::GPRel, DL, DAG.getVTList(Ty), GPRel));
     }
 
+    // This method creates the following nodes, which are necessary for
+    // loading a dllimported symbol:
+    //
+    // (lw (add (shl(%high(sym), 16), %low(sym)))
+    template <class NodeTy>
+    SDValue getDllimportSymbol(NodeTy *N, const SDLoc &DL, EVT Ty,
+                               SelectionDAG &DAG) const {
+      SDValue Hi =
+          getTargetNode(N, Ty, DAG, MipsII::MO_ABS_HI | MipsII::MO_DLLIMPORT);
+      SDValue Lo =
+          getTargetNode(N, Ty, DAG, MipsII::MO_ABS_LO | MipsII::MO_DLLIMPORT);
+      return DAG.getNode(ISD::ADD, DL, Ty, DAG.getNode(MipsISD::Lo, DL, Ty, Lo),
+                         DAG.getNode(MipsISD::Hi, DL, Ty, Hi));
+    }
+
+    // This method creates the following nodes, which are necessary for
+    // loading a dllimported global variable:
+    //
+    // (lw (lw (add (shl(%high(sym), 16), %low(sym))))
+    template <class NodeTy>
+    SDValue getDllimportVariable(NodeTy *N, const SDLoc &DL, EVT Ty,
+                                 SelectionDAG &DAG, SDValue Chain,
+                                 const MachinePointerInfo &PtrInfo) const {
+      return DAG.getLoad(Ty, DL, Chain, getDllimportSymbol(N, DL, Ty, DAG),
+                         PtrInfo);
+    }
+
     /// This function fills Ops, which is the list of operands that will later
     /// be used when a function call node is created. It also generates
     /// copyToReg nodes to set up argument registers.
@@ -539,6 +358,7 @@ class TargetRegisterClass;
     SDValue lowerJumpTable(SDValue Op, SelectionDAG &DAG) const;
     SDValue lowerSELECT(SDValue Op, SelectionDAG &DAG) const;
     SDValue lowerSETCC(SDValue Op, SelectionDAG &DAG) const;
+    SDValue lowerFSETCC(SDValue Op, SelectionDAG &DAG) const;
     SDValue lowerVASTART(SDValue Op, SelectionDAG &DAG) const;
     SDValue lowerVAARG(SDValue Op, SelectionDAG &DAG) const;
     SDValue lowerFCOPYSIGN(SDValue Op, SelectionDAG &DAG) const;
@@ -547,6 +367,7 @@ class TargetRegisterClass;
                         bool HasExtractInsert) const;
     SDValue lowerFABS64(SDValue Op, SelectionDAG &DAG,
                         bool HasExtractInsert) const;
+    SDValue lowerFCANONICALIZE(SDValue Op, SelectionDAG &DAG) const;
     SDValue lowerFRAMEADDR(SDValue Op, SelectionDAG &DAG) const;
     SDValue lowerRETURNADDR(SDValue Op, SelectionDAG &DAG) const;
     SDValue lowerEH_RETURN(SDValue Op, SelectionDAG &DAG) const;
@@ -556,6 +377,8 @@ class TargetRegisterClass;
                                  bool IsSRA) const;
     SDValue lowerEH_DWARF_CFA(SDValue Op, SelectionDAG &DAG) const;
     SDValue lowerFP_TO_SINT(SDValue Op, SelectionDAG &DAG) const;
+    SDValue lowerSTRICT_FP_TO_INT(SDValue Op, SelectionDAG &DAG) const;
+    SDValue lowerREADCYCLECOUNTER(SDValue Op, SelectionDAG &DAG) const;
 
     /// isEligibleForTailCallOptimization - Check whether the call is eligible
     /// for tail call optimization.
@@ -607,7 +430,7 @@ class TargetRegisterClass;
     bool CanLowerReturn(CallingConv::ID CallConv, MachineFunction &MF,
                         bool isVarArg,
                         const SmallVectorImpl<ISD::OutputArg> &Outs,
-                        LLVMContext &Context) const override;
+                        LLVMContext &Context, const Type *RetTy) const override;
 
     SDValue LowerReturn(SDValue Chain, CallingConv::ID CallConv, bool isVarArg,
                         const SmallVectorImpl<ISD::OutputArg> &Outs,
@@ -617,7 +440,7 @@ class TargetRegisterClass;
     SDValue LowerInterruptReturn(SmallVectorImpl<SDValue> &RetOps,
                                  const SDLoc &DL, SelectionDAG &DAG) const;
 
-    bool shouldSignExtendTypeInLibCall(EVT Type, bool IsSigned) const override;
+    bool shouldSignExtendTypeInLibCall(Type *Ty, bool IsSigned) const override;
 
     // Inline asm support
     ConstraintType getConstraintType(StringRef Constraint) const override;
@@ -661,7 +484,7 @@ class TargetRegisterClass;
 
     bool isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const override;
 
-    EVT getOptimalMemOpType(const MemOp &Op,
+    EVT getOptimalMemOpType(LLVMContext &Context, const MemOp &Op,
                             const AttributeList &FuncAttributes) const override;
 
     /// isFPImmLegal - Returns true if the target can instruction select the
@@ -670,12 +493,19 @@ class TargetRegisterClass;
     bool isFPImmLegal(const APFloat &Imm, EVT VT,
                       bool ForCodeSize) const override;
 
+    bool isLegalICmpImmediate(int64_t Imm) const override;
+    bool isLegalAddImmediate(int64_t Imm) const override;
+
     unsigned getJumpTableEncoding() const override;
+    SDValue getPICJumpTableRelocBase(SDValue Table,
+                                     SelectionDAG &DAG) const override;
     bool useSoftFloat() const override;
 
     bool shouldInsertFencesForAtomic(const Instruction *I) const override {
       return true;
     }
+
+    int getCPURegisterIndex(StringRef Name) const;
 
     /// Emit a sign-extension using sll/sra, seb, or seh appropriately.
     MachineBasicBlock *emitSignExtendToI32InReg(MachineInstr &MI,

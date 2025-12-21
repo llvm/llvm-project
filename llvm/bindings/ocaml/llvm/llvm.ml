@@ -12,6 +12,7 @@ type llmodule
 type llmetadata
 type lltype
 type llvalue
+type lldbgrecord
 type lluse
 type llbasicblock
 type llbuilder
@@ -295,6 +296,14 @@ module AtomicRMWBinOp = struct
   | UMin
   | FAdd
   | FSub
+  | FMax
+  | FMin
+  | UInc_Wrap
+  | UDec_Wrap
+  | USub_Cond
+  | USub_Sat
+  | FMaximum
+  | FMinimum
 end
 
 module ValueKind = struct
@@ -518,7 +527,9 @@ external vector_size : lltype -> int = "llvm_vector_size"
 (*--... Operations on other types ..........................................--*)
 external void_type : llcontext -> lltype = "llvm_void_type"
 external label_type : llcontext -> lltype = "llvm_label_type"
-external x86_mmx_type : llcontext -> lltype = "llvm_x86_mmx_type"
+external x86_amx_type : llcontext -> lltype = "llvm_x86_amx_type"
+external token_type : llcontext -> lltype = "llvm_token_type"
+external metadata_type : llcontext -> lltype = "llvm_metadata_type"
 external type_by_name : llmodule -> string -> lltype option = "llvm_type_by_name"
 
 external classify_value : llvalue -> ValueKind.t = "llvm_classify_value"
@@ -528,6 +539,7 @@ external value_name : llvalue -> string = "llvm_value_name"
 external set_value_name : string -> llvalue -> unit = "llvm_set_value_name"
 external dump_value : llvalue -> unit = "llvm_dump_value"
 external string_of_llvalue : llvalue -> string = "llvm_string_of_llvalue"
+external string_of_lldbgrecord : lldbgrecord -> string = "llvm_string_of_lldbgrecord"
 external replace_all_uses_with : llvalue -> llvalue -> unit
                                = "llvm_replace_all_uses_with"
 
@@ -637,7 +649,6 @@ external align_of : lltype -> llvalue = "llvm_align_of"
 external size_of : lltype -> llvalue = "llvm_size_of"
 external const_neg : llvalue -> llvalue = "llvm_const_neg"
 external const_nsw_neg : llvalue -> llvalue = "llvm_const_nsw_neg"
-external const_nuw_neg : llvalue -> llvalue = "llvm_const_nuw_neg"
 external const_not : llvalue -> llvalue = "llvm_const_not"
 external const_add : llvalue -> llvalue -> llvalue = "llvm_const_add"
 external const_nsw_add : llvalue -> llvalue -> llvalue = "llvm_const_nsw_add"
@@ -645,44 +656,19 @@ external const_nuw_add : llvalue -> llvalue -> llvalue = "llvm_const_nuw_add"
 external const_sub : llvalue -> llvalue -> llvalue = "llvm_const_sub"
 external const_nsw_sub : llvalue -> llvalue -> llvalue = "llvm_const_nsw_sub"
 external const_nuw_sub : llvalue -> llvalue -> llvalue = "llvm_const_nuw_sub"
-external const_mul : llvalue -> llvalue -> llvalue = "llvm_const_mul"
-external const_nsw_mul : llvalue -> llvalue -> llvalue = "llvm_const_nsw_mul"
-external const_nuw_mul : llvalue -> llvalue -> llvalue = "llvm_const_nuw_mul"
 external const_xor : llvalue -> llvalue -> llvalue = "llvm_const_xor"
-external const_icmp : Icmp.t -> llvalue -> llvalue -> llvalue
-                    = "llvm_const_icmp"
-external const_fcmp : Fcmp.t -> llvalue -> llvalue -> llvalue
-                    = "llvm_const_fcmp"
-external const_shl : llvalue -> llvalue -> llvalue = "llvm_const_shl"
-external const_lshr : llvalue -> llvalue -> llvalue = "llvm_const_lshr"
-external const_ashr : llvalue -> llvalue -> llvalue = "llvm_const_ashr"
 external const_gep : lltype -> llvalue -> llvalue array -> llvalue
                    = "llvm_const_gep"
 external const_in_bounds_gep : lltype -> llvalue -> llvalue array -> llvalue
                              = "llvm_const_in_bounds_gep"
 external const_trunc : llvalue -> lltype -> llvalue = "llvm_const_trunc"
-external const_sext : llvalue -> lltype -> llvalue = "llvm_const_sext"
-external const_zext : llvalue -> lltype -> llvalue = "llvm_const_zext"
-external const_fptrunc : llvalue -> lltype -> llvalue = "llvm_const_fptrunc"
-external const_fpext : llvalue -> lltype -> llvalue = "llvm_const_fpext"
-external const_uitofp : llvalue -> lltype -> llvalue = "llvm_const_uitofp"
-external const_sitofp : llvalue -> lltype -> llvalue = "llvm_const_sitofp"
-external const_fptoui : llvalue -> lltype -> llvalue = "llvm_const_fptoui"
-external const_fptosi : llvalue -> lltype -> llvalue = "llvm_const_fptosi"
 external const_ptrtoint : llvalue -> lltype -> llvalue = "llvm_const_ptrtoint"
 external const_inttoptr : llvalue -> lltype -> llvalue = "llvm_const_inttoptr"
 external const_bitcast : llvalue -> lltype -> llvalue = "llvm_const_bitcast"
-external const_zext_or_bitcast : llvalue -> lltype -> llvalue
-                               = "llvm_const_zext_or_bitcast"
-external const_sext_or_bitcast : llvalue -> lltype -> llvalue
-                               = "llvm_const_sext_or_bitcast"
 external const_trunc_or_bitcast : llvalue -> lltype -> llvalue
                                 = "llvm_const_trunc_or_bitcast"
 external const_pointercast : llvalue -> lltype -> llvalue
                            = "llvm_const_pointercast"
-external const_intcast : llvalue -> lltype -> is_signed:bool -> llvalue
-                       = "llvm_const_intcast"
-external const_fpcast : llvalue -> lltype -> llvalue = "llvm_const_fpcast"
 external const_extractelement : llvalue -> llvalue -> llvalue
                               = "llvm_const_extractelement"
 external const_insertelement : llvalue -> llvalue -> llvalue -> llvalue
@@ -715,6 +701,8 @@ external global_copy_all_metadata : llvalue -> (llmdkind * llmetadata) array
 external is_global_constant : llvalue -> bool = "llvm_is_global_constant"
 external set_global_constant : bool -> llvalue -> unit
                              = "llvm_set_global_constant"
+external global_set_metadata : llvalue -> llmdkind -> llmetadata -> unit
+                             = "llvm_global_set_metadata"
 
 (*--... Operations on global variables .....................................--*)
 external declare_global : lltype -> string -> llmodule -> llvalue
@@ -1154,6 +1142,9 @@ external delete_instruction : llvalue -> unit = "llvm_delete_instruction"
 external builder : llcontext -> llbuilder = "llvm_builder"
 external position_builder : (llbasicblock, llvalue) llpos -> llbuilder -> unit
                           = "llvm_position_builder"
+external position_builder_before_dbg_records : (llbasicblock, llvalue) llpos ->
+                                               llbuilder -> unit
+                                  = "llvm_position_builder_before_dbg_records"
 external insertion_block : llbuilder -> llbasicblock = "llvm_insertion_block"
 external insert_into_builder : llvalue -> string -> llbuilder -> unit
                              = "llvm_insert_into_builder"
@@ -1167,6 +1158,8 @@ let builder_before context i = builder_at context (Before i)
 let builder_at_end context bb = builder_at context (At_end bb)
 
 let position_before i = position_builder (Before i)
+let position_before_dbg_records i =
+  position_builder_before_dbg_records (Before i)
 let position_at_end bb = position_builder (At_end bb)
 
 
@@ -1270,8 +1263,6 @@ external build_neg : llvalue -> string -> llbuilder -> llvalue
                    = "llvm_build_neg"
 external build_nsw_neg : llvalue -> string -> llbuilder -> llvalue
                        = "llvm_build_nsw_neg"
-external build_nuw_neg : llvalue -> string -> llbuilder -> llvalue
-                       = "llvm_build_nuw_neg"
 external build_fneg : llvalue -> string -> llbuilder -> llvalue
                     = "llvm_build_fneg"
 external build_not : llvalue -> string -> llbuilder -> llvalue

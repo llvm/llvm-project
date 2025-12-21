@@ -1,6 +1,5 @@
 ; RUN: llc < %s -mtriple=armv7-apple-ios6.0 | FileCheck %s
 ; RUN: llc < %s -mtriple=thumbv7-apple-ios6.0 | FileCheck %s
-; RUN: llc < %s -mtriple=armv7-unknown-nacl-gnueabi | FileCheck %s -check-prefix=NACL
 ; RUN: llc < %s -mtriple=armv5-none-linux-gnueabi | FileCheck %s -check-prefix=NOMOVT
 
 ; NOMOVT-NOT: movt
@@ -28,14 +27,6 @@ entry:
 ; CHECK: sub
 ; CHECK: str
 ; CHECK: bne
-; NACL-LABEL: g:
-; Ensure that use movw instead of constpool for the loop trip count. But don't
-; match the __stack_chk_guard movw
-; NACL: movw {{r[0-9]+|lr}}, #
-; NACL: ldr
-; NACL: sub
-; NACL: str
-; NACL: bne
   %st = alloca %struct.LargeStruct, align 4
   %call = call i32 @e2(ptr byval(%struct.LargeStruct) %st)
   ret i32 0
@@ -49,11 +40,6 @@ entry:
 ; CHECK: sub
 ; CHECK: vst1
 ; CHECK: bne
-; NACL: movw {{r[0-9]+|lr}}, #
-; NACL: vld1
-; NACL: sub
-; NACL: vst1
-; NACL: bne
   %st = alloca %struct.LargeStruct, align 16
   %call = call i32 @e3(ptr byval(%struct.LargeStruct) align 16 %st)
   ret i32 0
@@ -62,25 +48,6 @@ entry:
 declare i32 @e1(ptr nocapture byval(%struct.SmallStruct) %in) nounwind
 declare i32 @e2(ptr nocapture byval(%struct.LargeStruct) %in) nounwind
 declare i32 @e3(ptr nocapture byval(%struct.LargeStruct) align 16 %in) nounwind
-
-; rdar://12442472
-; We can't do tail call since address of s is passed to the callee and part of
-; s is in caller's local frame.
-define void @f3(ptr nocapture byval(%struct.SmallStruct) %s) nounwind optsize {
-; CHECK-LABEL: f3
-; CHECK: bl _consumestruct
-entry:
-  tail call void @consumestruct(ptr %s, i32 80) optsize
-  ret void
-}
-
-define void @f4(ptr nocapture byval(%struct.SmallStruct) %s) nounwind optsize {
-; CHECK-LABEL: f4
-; CHECK: bl _consumestruct
-entry:
-  tail call void @consumestruct(ptr %s, i32 80) optsize
-  ret void
-}
 
 ; We can do tail call here since s is in the incoming argument area.
 define void @f5(i32 %a, i32 %b, i32 %c, i32 %d, ptr nocapture byval(%struct.SmallStruct) %s) nounwind optsize {

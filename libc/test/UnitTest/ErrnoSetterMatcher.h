@@ -12,11 +12,12 @@
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/fpbits_str.h"
 #include "src/__support/StringUtil/error_to_string.h"
+#include "src/__support/libc_errno.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/architectures.h"
-#include "src/errno/libc_errno.h"
 #include "test/UnitTest/Test.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace testing {
 
 namespace internal {
@@ -100,9 +101,13 @@ public:
 
     if constexpr (!ignore_errno()) {
       if (!errno_cmp.compare(actual_errno)) {
-        tlog << "Expected errno to be " << errno_cmp.str() << " \""
-             << get_error_string(errno_cmp.expected) << "\" but got \""
-             << get_error_string(actual_errno) << "\".\n";
+        auto expected_str = try_get_errno_name(errno_cmp.expected);
+        auto actual_str = try_get_errno_name(actual_errno);
+        tlog << "Expected errno to be " << errno_cmp.str() << " "
+             << (expected_str ? *expected_str : "<unknown>") << "("
+             << errno_cmp.expected << ") but got "
+             << (actual_str ? *actual_str : "<unknown>") << "(" << actual_errno
+             << ").\n";
       }
     }
   }
@@ -161,15 +166,27 @@ static internal::ErrnoSetterMatcher<RetT> Fails(int ExpectedErrno,
                                             EQ(ExpectedErrno));
 }
 
+template <typename RetT = int> class ErrnoSetterMatcherBuilder {
+public:
+  template <typename T> using Cmp = internal::Comparator<T>;
+  ErrnoSetterMatcherBuilder(Cmp<RetT> cmp) : return_cmp(cmp) {}
+
+  internal::ErrnoSetterMatcher<RetT> with_errno(Cmp<int> cmp) {
+    return internal::ErrnoSetterMatcher<RetT>(return_cmp, cmp);
+  }
+
+private:
+  Cmp<RetT> return_cmp;
+};
+
 template <typename RetT>
-static internal::ErrnoSetterMatcher<RetT>
-returns(internal::Comparator<RetT> cmp) {
-  return internal::ErrnoSetterMatcher<RetT>(cmp);
+static ErrnoSetterMatcherBuilder<RetT> returns(internal::Comparator<RetT> cmp) {
+  return ErrnoSetterMatcherBuilder<RetT>(cmp);
 }
 
 } // namespace ErrnoSetterMatcher
 
 } // namespace testing
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_TEST_ERRNOSETTERMATCHER_H

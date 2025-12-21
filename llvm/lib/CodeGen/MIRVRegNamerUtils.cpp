@@ -20,7 +20,7 @@ static cl::opt<bool>
                        cl::Hidden,
                        cl::desc("Use Stable Hashing for MIR VReg Renaming"));
 
-using VRegRenameMap = std::map<unsigned, unsigned>;
+using VRegRenameMap = std::map<Register, Register>;
 
 bool VRegRenamer::doVRegRenaming(const VRegRenameMap &VRM) {
   bool Changed = false;
@@ -39,15 +39,13 @@ VRegRenamer::getVRegRenameMap(const std::vector<NamedVReg> &VRegs) {
   StringMap<unsigned> VRegNameCollisionMap;
 
   auto GetUniqueVRegName = [&VRegNameCollisionMap](const NamedVReg &Reg) {
-    if (!VRegNameCollisionMap.contains(Reg.getName()))
-      VRegNameCollisionMap[Reg.getName()] = 0;
     const unsigned Counter = ++VRegNameCollisionMap[Reg.getName()];
     return Reg.getName() + "__" + std::to_string(Counter);
   };
 
   VRegRenameMap VRM;
   for (const auto &VReg : VRegs) {
-    const unsigned Reg = VReg.getReg();
+    const Register Reg = VReg.getReg();
     VRM[Reg] = createVirtualRegisterWithLowerName(Reg, GetUniqueVRegName(VReg));
   }
   return VRM;
@@ -79,7 +77,7 @@ std::string VRegRenamer::getInstructionOpcodeHash(MachineInstr &MI) {
     case MachineOperand::MO_Register:
       if (MO.getReg().isVirtual())
         return MRI.getVRegDef(MO.getReg())->getOpcode();
-      return MO.getReg();
+      return MO.getReg().id();
     case MachineOperand::MO_Immediate:
       return MO.getImm();
     case MachineOperand::MO_TargetIndex:
@@ -95,11 +93,12 @@ std::string VRegRenamer::getInstructionOpcodeHash(MachineInstr &MI) {
     // is contributing to a hash collision but there's enough information
     // (Opcodes,other registers etc) that this will likely not be a problem.
 
-    // TODO: Handle the following Index/ID/Predicate cases. They can
+    // TODO: Handle the following Index/ID/Predicate/LaneMask cases. They can
     // be hashed on in a stable manner.
     case MachineOperand::MO_CFIIndex:
     case MachineOperand::MO_IntrinsicID:
     case MachineOperand::MO_Predicate:
+    case MachineOperand::MO_LaneMask:
 
     // In the cases below we havn't found a way to produce an artifact that will
     // result in a stable hash, in most cases because they are pointers. We want
@@ -123,7 +122,7 @@ std::string VRegRenamer::getInstructionOpcodeHash(MachineInstr &MI) {
   llvm::transform(MI.uses(), std::back_inserter(MIOperands), GetHashableMO);
 
   for (const auto *Op : MI.memoperands()) {
-    MIOperands.push_back((unsigned)Op->getSize());
+    MIOperands.push_back((unsigned)Op->getSize().getValue());
     MIOperands.push_back((unsigned)Op->getFlags());
     MIOperands.push_back((unsigned)Op->getOffset());
     MIOperands.push_back((unsigned)Op->getSuccessOrdering());
@@ -133,13 +132,13 @@ std::string VRegRenamer::getInstructionOpcodeHash(MachineInstr &MI) {
     MIOperands.push_back((unsigned)Op->getFailureOrdering());
   }
 
-  auto HashMI = hash_combine_range(MIOperands.begin(), MIOperands.end());
+  auto HashMI = hash_combine_range(MIOperands);
   OS << format_hex_no_prefix(HashMI, 16, true);
   return OS.str();
 }
 
-unsigned VRegRenamer::createVirtualRegister(unsigned VReg) {
-  assert(Register::isVirtualRegister(VReg) && "Expected Virtual Registers");
+Register VRegRenamer::createVirtualRegister(Register VReg) {
+  assert(VReg.isVirtual() && "Expected Virtual Registers");
   std::string Name = getInstructionOpcodeHash(*MRI.getVRegDef(VReg));
   return createVirtualRegisterWithLowerName(VReg, Name);
 }
@@ -162,10 +161,10 @@ bool VRegRenamer::renameInstsInMBB(MachineBasicBlock *MBB) {
         NamedVReg(MO.getReg(), Prefix + getInstructionOpcodeHash(Candidate)));
   }
 
-  return VRegs.size() ? doVRegRenaming(getVRegRenameMap(VRegs)) : false;
+  return !VRegs.empty() ? doVRegRenaming(getVRegRenameMap(VRegs)) : false;
 }
 
-unsigned VRegRenamer::createVirtualRegisterWithLowerName(unsigned VReg,
+Register VRegRenamer::createVirtualRegisterWithLowerName(Register VReg,
                                                          StringRef Name) {
   std::string LowerName = Name.lower();
   const TargetRegisterClass *RC = MRI.getRegClassOrNull(VReg);

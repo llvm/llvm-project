@@ -15,6 +15,7 @@
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/DataTypes.h"
 #include <cassert>
 #include <cstddef>
@@ -49,12 +50,13 @@ class FileLocker;
 /// output to a stream.  It does not support seeking, reopening, rewinding, line
 /// buffered disciplines etc. It is a simple buffer that outputs
 /// a chunk at a time.
-class raw_ostream {
+class LLVM_ABI raw_ostream {
 public:
   // Class kinds to support LLVM-style RTTI.
   enum class OStreamKind {
     OK_OStream,
     OK_FDStream,
+    OK_SVecStream,
   };
 
 private:
@@ -81,10 +83,6 @@ private:
   char *OutBufStart, *OutBufEnd, *OutBufCur;
   bool ColorEnabled = false;
 
-  /// Optional stream this stream is tied to. If this stream is written to, the
-  /// tied-to stream will be flushed first.
-  raw_ostream *TiedStream = nullptr;
-
   enum class BufferKind {
     Unbuffered = 0,
     InternalBuffer,
@@ -102,6 +100,14 @@ public:
     MAGENTA,
     CYAN,
     WHITE,
+    BRIGHT_BLACK,
+    BRIGHT_RED,
+    BRIGHT_GREEN,
+    BRIGHT_YELLOW,
+    BRIGHT_BLUE,
+    BRIGHT_MAGENTA,
+    BRIGHT_CYAN,
+    BRIGHT_WHITE,
     SAVEDCOLOR,
     RESET,
   };
@@ -114,6 +120,14 @@ public:
   static constexpr Colors MAGENTA = Colors::MAGENTA;
   static constexpr Colors CYAN = Colors::CYAN;
   static constexpr Colors WHITE = Colors::WHITE;
+  static constexpr Colors BRIGHT_BLACK = Colors::BRIGHT_BLACK;
+  static constexpr Colors BRIGHT_RED = Colors::BRIGHT_RED;
+  static constexpr Colors BRIGHT_GREEN = Colors::BRIGHT_GREEN;
+  static constexpr Colors BRIGHT_YELLOW = Colors::BRIGHT_YELLOW;
+  static constexpr Colors BRIGHT_BLUE = Colors::BRIGHT_BLUE;
+  static constexpr Colors BRIGHT_MAGENTA = Colors::BRIGHT_MAGENTA;
+  static constexpr Colors BRIGHT_CYAN = Colors::BRIGHT_CYAN;
+  static constexpr Colors BRIGHT_WHITE = Colors::BRIGHT_WHITE;
   static constexpr Colors SAVEDCOLOR = Colors::SAVEDCOLOR;
   static constexpr Colors RESET = Colors::RESET;
 
@@ -144,7 +158,7 @@ public:
   /// So that the stream could keep at least tell() + ExtraSize bytes
   /// without re-allocations. reserveExtraSpace() does not change
   /// the size/data of the stream.
-  virtual void reserveExtraSpace(uint64_t ExtraSize) {}
+  virtual void reserveExtraSpace(uint64_t ExtraSize) { (void)ExtraSize; }
 
   /// Set the stream to be buffered, with an automatically determined buffer
   /// size.
@@ -343,10 +357,6 @@ public:
 
   bool colors_enabled() const { return ColorEnabled; }
 
-  /// Tie this stream to the specified stream. Replaces any existing tied-to
-  /// stream. Specifying a nullptr unties the stream.
-  void tie(raw_ostream *TieTo) { TiedStream = TieTo; }
-
   //===--------------------------------------------------------------------===//
   // Subclass Interface
   //===--------------------------------------------------------------------===//
@@ -405,9 +415,6 @@ private:
   /// flushing. The result is affected by calls to enable_color().
   bool prepare_colors();
 
-  /// Flush the tied-to stream (if present) and then write the required data.
-  void flush_tied_then_write(const char *Ptr, size_t Size);
-
   virtual void anchor();
 };
 
@@ -425,7 +432,7 @@ operator<<(OStream &&OS, const T &Value) {
 /// An abstract base class for streams implementations that also support a
 /// pwrite operation. This is useful for code that can mostly stream out data,
 /// but needs to patch in a header that needs to know the output size.
-class raw_pwrite_stream : public raw_ostream {
+class LLVM_ABI raw_pwrite_stream : public raw_ostream {
   virtual void pwrite_impl(const char *Ptr, size_t Size, uint64_t Offset) = 0;
   void anchor() override;
 
@@ -451,12 +458,16 @@ public:
 
 /// A raw_ostream that writes to a file descriptor.
 ///
-class raw_fd_ostream : public raw_pwrite_stream {
+class LLVM_ABI raw_fd_ostream : public raw_pwrite_stream {
   int FD;
   bool ShouldClose;
   bool SupportsSeeking = false;
   bool IsRegularFile = false;
   mutable std::optional<bool> HasColors;
+
+  /// Optional stream this stream is tied to. If this stream is written to, the
+  /// tied-to stream will be flushed first.
+  raw_ostream *TiedStream = nullptr;
 
 #ifdef _WIN32
   /// True if this fd refers to a Windows console device. Mintty and other
@@ -536,6 +547,13 @@ public:
 
   bool has_colors() const override;
 
+  /// Tie this stream to the specified stream. Replaces any existing tied-to
+  /// stream. Specifying a nullptr unties the stream. This is intended for to
+  /// tie errs() to outs(), so that outs() is flushed whenever something is
+  /// written to errs(), preventing weird and hard-to-test output when stderr
+  /// is redirected to stdout.
+  void tie(raw_ostream *TieTo) { TiedStream = TieTo; }
+
   std::error_code error() const { return EC; }
 
   /// Return the value of the flag in this raw_fd_ostream indicating whether an
@@ -590,17 +608,17 @@ public:
 
 /// This returns a reference to a raw_fd_ostream for standard output. Use it
 /// like: outs() << "foo" << "bar";
-raw_fd_ostream &outs();
+LLVM_ABI raw_fd_ostream &outs();
 
 /// This returns a reference to a raw_ostream for standard error.
 /// Use it like: errs() << "foo" << "bar";
 /// By default, the stream is tied to stdout to ensure stdout is flushed before
 /// stderr is written, to ensure the error messages are written in their
 /// expected place.
-raw_fd_ostream &errs();
+LLVM_ABI raw_fd_ostream &errs();
 
 /// This returns a reference to a raw_ostream which simply discards output.
-raw_ostream &nulls();
+LLVM_ABI raw_ostream &nulls();
 
 //===----------------------------------------------------------------------===//
 // File Streams
@@ -613,7 +631,9 @@ public:
   /// Open the specified file for reading/writing/seeking. If an error occurs,
   /// information about the error is put into EC, and the stream should be
   /// immediately destroyed.
-  raw_fd_stream(StringRef Filename, std::error_code &EC);
+  LLVM_ABI raw_fd_stream(StringRef Filename, std::error_code &EC);
+
+  LLVM_ABI raw_fd_stream(int fd, bool shouldClose);
 
   /// This reads the \p Size bytes into a buffer pointed by \p Ptr.
   ///
@@ -624,10 +644,10 @@ public:
   /// On success, the number of bytes read is returned, and the file position is
   /// advanced by this number. On error, -1 is returned, use error() to get the
   /// error code.
-  ssize_t read(char *Ptr, size_t Size);
+  LLVM_ABI ssize_t read(char *Ptr, size_t Size);
 
   /// Check if \p OS is a pointer of type raw_fd_stream*.
-  static bool classof(const raw_ostream *OS);
+  LLVM_ABI static bool classof(const raw_ostream *OS);
 };
 
 //===----------------------------------------------------------------------===//
@@ -639,7 +659,7 @@ public:
 /// raw_string_ostream operates without a buffer, delegating all memory
 /// management to the std::string. Thus the std::string is always up-to-date,
 /// may be used directly and there is no need to call flush().
-class raw_string_ostream : public raw_ostream {
+class LLVM_ABI raw_string_ostream : public raw_ostream {
   std::string &OS;
 
   /// See raw_ostream::write_impl.
@@ -669,7 +689,7 @@ public:
 /// raw_svector_ostream operates without a buffer, delegating all memory
 /// management to the SmallString. Thus the SmallString is always up-to-date,
 /// may be used directly and there is no need to call flush().
-class raw_svector_ostream : public raw_pwrite_stream {
+class LLVM_ABI raw_svector_ostream : public raw_pwrite_stream {
   SmallVectorImpl<char> &OS;
 
   /// See raw_ostream::write_impl.
@@ -685,7 +705,11 @@ public:
   ///
   /// \param O The vector to write to; this should generally have at least 128
   /// bytes free to avoid any extraneous memory overhead.
-  explicit raw_svector_ostream(SmallVectorImpl<char> &O) : OS(O) {
+  explicit raw_svector_ostream(SmallVectorImpl<char> &O)
+      : raw_pwrite_stream(false, raw_ostream::OStreamKind::OK_SVecStream),
+        OS(O) {
+    // FIXME: here and in a few other places, set directly to unbuffered in the
+    // ctor.
     SetUnbuffered();
   }
 
@@ -695,14 +719,17 @@ public:
 
   /// Return a StringRef for the vector contents.
   StringRef str() const { return StringRef(OS.data(), OS.size()); }
+  SmallVectorImpl<char> &buffer() { return OS; }
 
   void reserveExtraSpace(uint64_t ExtraSize) override {
     OS.reserve(tell() + ExtraSize);
   }
+
+  static bool classof(const raw_ostream *OS);
 };
 
 /// A raw_ostream that discards all output.
-class raw_null_ostream : public raw_pwrite_stream {
+class LLVM_ABI raw_null_ostream : public raw_pwrite_stream {
   /// See raw_ostream::write_impl.
   void write_impl(const char *Ptr, size_t size) override;
   void pwrite_impl(const char *Ptr, size_t Size, uint64_t Offset) override;
@@ -712,11 +739,11 @@ class raw_null_ostream : public raw_pwrite_stream {
   uint64_t current_pos() const override;
 
 public:
-  explicit raw_null_ostream() = default;
+  explicit raw_null_ostream() : raw_pwrite_stream(/*Unbuffered=*/true) {}
   ~raw_null_ostream() override;
 };
 
-class buffer_ostream : public raw_svector_ostream {
+class LLVM_ABI buffer_ostream : public raw_svector_ostream {
   raw_ostream &OS;
   SmallVector<char, 0> Buffer;
 
@@ -727,7 +754,7 @@ public:
   ~buffer_ostream() override { OS << str(); }
 };
 
-class buffer_unique_ostream : public raw_svector_ostream {
+class LLVM_ABI buffer_unique_ostream : public raw_svector_ostream {
   std::unique_ptr<raw_ostream> OS;
   SmallVector<char, 0> Buffer;
 
@@ -743,6 +770,64 @@ public:
   ~buffer_unique_ostream() override { *OS << str(); }
 };
 
+// Helper struct to add indentation to raw_ostream. Instead of
+// OS.indent(6) << "more stuff";
+// you can use
+// OS << indent(6) << "more stuff";
+// which has better ergonomics (and clang-formats better as well).
+//
+// If indentation is always in increments of a fixed value, you can use Scale
+// to set that value once. So indent(1, 2) will add 2 spaces and
+// indent(1,2) + 1 will add 4 spaces.
+struct indent {
+  // Indentation is represented as `NumIndents` steps of size `Scale` each.
+  unsigned NumIndents;
+  unsigned Scale;
+
+  explicit indent(unsigned NumIndents, unsigned Scale = 1)
+      : NumIndents(NumIndents), Scale(Scale) {}
+
+  // These arithmeric operators preserve scale.
+  void operator+=(unsigned N) { NumIndents += N; }
+  void operator-=(unsigned N) {
+    assert(NumIndents >= N && "Indentation underflow");
+    NumIndents -= N;
+  }
+  indent operator+(unsigned N) const { return indent(NumIndents + N, Scale); }
+  indent operator-(unsigned N) const {
+    assert(NumIndents >= N && "Indentation undeflow");
+    return indent(NumIndents - N, Scale);
+  }
+  indent &operator++() { // Prefix ++.
+    ++NumIndents;
+    return *this;
+  }
+  indent operator++(int) { // Postfix ++.
+    indent Old = *this;
+    ++NumIndents;
+    return Old;
+  }
+  indent &operator--() { // Prefix --.
+    assert(NumIndents >= 1);
+    --NumIndents;
+    return *this;
+  }
+  indent operator--(int) { // Postfix --.
+    indent Old = *this;
+    assert(NumIndents >= 1);
+    --NumIndents;
+    return Old;
+  }
+  indent &operator=(unsigned N) {
+    NumIndents = N;
+    return *this;
+  }
+};
+
+inline raw_ostream &operator<<(raw_ostream &OS, const indent &Indent) {
+  return OS.indent(Indent.NumIndents * Indent.Scale);
+}
+
 class Error;
 
 /// This helper creates an output stream and then passes it to \p Write.
@@ -751,10 +836,10 @@ class Error;
 /// for other names. For raw_fd_ostream instances, the stream writes to
 /// a temporary file. The final output file is atomically replaced with the
 /// temporary file after the \p Write function is finished.
-Error writeToOutput(StringRef OutputFileName,
-                    std::function<Error(raw_ostream &)> Write);
+LLVM_ABI Error writeToOutput(StringRef OutputFileName,
+                             std::function<Error(raw_ostream &)> Write);
 
-raw_ostream &operator<<(raw_ostream &OS, std::nullopt_t);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, std::nullopt_t);
 
 template <typename T, typename = decltype(std::declval<raw_ostream &>()
                                           << std::declval<const T &>())>

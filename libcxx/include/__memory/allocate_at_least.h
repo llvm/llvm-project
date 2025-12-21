@@ -10,8 +10,8 @@
 #define _LIBCPP___MEMORY_ALLOCATE_AT_LEAST_H
 
 #include <__config>
+#include <__cstddef/size_t.h>
 #include <__memory/allocator_traits.h>
-#include <cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -19,40 +19,31 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER >= 23
-template <class _Pointer>
-struct allocation_result {
-  _Pointer ptr;
-  size_t count;
-};
-_LIBCPP_CTAD_SUPPORTED_FOR_TYPE(allocation_result);
-
-template <class _Alloc>
-[[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr
-allocation_result<typename allocator_traits<_Alloc>::pointer> allocate_at_least(_Alloc& __alloc, size_t __n) {
-  if constexpr (requires { __alloc.allocate_at_least(__n); }) {
-    return __alloc.allocate_at_least(__n);
-  } else {
-    return {__alloc.allocate(__n), __n};
-  }
-}
-
-template <class _Alloc>
-[[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr
-auto __allocate_at_least(_Alloc& __alloc, size_t __n) {
-  return std::allocate_at_least(__alloc, __n);
-}
-#else
-template <class _Pointer>
+template <class _Pointer, class _SizeT = size_t>
 struct __allocation_result {
   _Pointer ptr;
-  size_t count;
+  _SizeT count;
+
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR __allocation_result(_Pointer __ptr, _SizeT __count)
+      : ptr(__ptr), count(__count) {}
 };
+_LIBCPP_CTAD_SUPPORTED_FOR_TYPE(__allocation_result);
+
+#if _LIBCPP_STD_VER >= 23
 
 template <class _Alloc>
-_LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR
-__allocation_result<typename allocator_traits<_Alloc>::pointer> __allocate_at_least(_Alloc& __alloc, size_t __n) {
-  return {__alloc.allocate(__n), __n};
+[[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto __allocate_at_least(_Alloc& __alloc, size_t __n) {
+  auto __res = std::allocator_traits<_Alloc>::allocate_at_least(__alloc, __n);
+  return __allocation_result{__res.ptr, __res.count};
+}
+
+#else
+
+template <class _Alloc, class _Traits = allocator_traits<_Alloc> >
+[[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI
+_LIBCPP_CONSTEXPR __allocation_result<typename _Traits::pointer, typename _Traits::size_type>
+__allocate_at_least(_Alloc& __alloc, size_t __n) {
+  return __allocation_result<typename _Traits::pointer, typename _Traits::size_type>(__alloc.allocate(__n), __n);
 }
 
 #endif // _LIBCPP_STD_VER >= 23

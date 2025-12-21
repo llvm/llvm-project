@@ -10,12 +10,14 @@ tablegen(LLVM LoongArchGenInstrInfo.inc -gen-instr-info)
 tablegen(LLVM LoongArchGenMCPseudoLowering.inc -gen-pseudo-lowering)
 tablegen(LLVM LoongArchGenMCCodeEmitter.inc -gen-emitter)
 tablegen(LLVM LoongArchGenRegisterInfo.inc -gen-register-info)
+tablegen(LLVM LoongArchGenSDNodeInfo.inc -gen-sd-node-info)
 tablegen(LLVM LoongArchGenSubtargetInfo.inc -gen-subtarget)
 
 add_public_tablegen_target(LoongArchCommonTableGen)
 
 add_llvm_target(LoongArchCodeGen
   LoongArchAsmPrinter.cpp
+  LoongArchDeadRegisterDefinitions.cpp
   LoongArchExpandAtomicPseudoInsts.cpp
   LoongArchExpandPseudoInsts.cpp
   LoongArchFrameLowering.cpp
@@ -23,7 +25,10 @@ add_llvm_target(LoongArchCodeGen
   LoongArchISelDAGToDAG.cpp
   LoongArchISelLowering.cpp
   LoongArchMCInstLower.cpp
+  LoongArchMergeBaseOffset.cpp
+  LoongArchOptWInstrs.cpp
   LoongArchRegisterInfo.cpp
+  LoongArchSelectionDAGInfo.cpp
   LoongArchSubtarget.cpp
   LoongArchTargetMachine.cpp
   LoongArchTargetTransformInfo.cpp
@@ -42,6 +47,7 @@ add_llvm_target(LoongArchCodeGen
   Support
   Target
   TargetParser
+  TransformUtils
 
   ADD_TO_COMPONENT
   LoongArch

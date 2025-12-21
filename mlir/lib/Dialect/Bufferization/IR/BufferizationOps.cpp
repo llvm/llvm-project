@@ -11,7 +11,6 @@
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
-#include "mlir/Dialect/SparseTensor/IR/SparseTensor.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/IR/Matchers.h"
 #include <optional>
@@ -23,15 +22,13 @@ using namespace mlir::bufferization;
 // Helper functions
 //===----------------------------------------------------------------------===//
 
-FailureOr<Value>
-mlir::bufferization::castOrReallocMemRefValue(OpBuilder &b, Value value,
-                                              MemRefType destType) {
+FailureOr<Value> mlir::bufferization::castOrReallocMemRefValue(
+    OpBuilder &b, Value value, MemRefType destType,
+    const BufferizationOptions &options) {
   auto srcType = llvm::cast<MemRefType>(value.getType());
 
-  // Element type, rank and memory space must match.
+  // Element type and rank must match.
   if (srcType.getElementType() != destType.getElementType())
-    return failure();
-  if (srcType.getMemorySpace() != destType.getMemorySpace())
     return failure();
   if (srcType.getRank() != destType.getRank())
     return failure();
@@ -42,11 +39,11 @@ mlir::bufferization::castOrReallocMemRefValue(OpBuilder &b, Value value,
   auto isGuaranteedCastCompatible = [](MemRefType source, MemRefType target) {
     int64_t sourceOffset, targetOffset;
     SmallVector<int64_t, 4> sourceStrides, targetStrides;
-    if (failed(getStridesAndOffset(source, sourceStrides, sourceOffset)) ||
-        failed(getStridesAndOffset(target, targetStrides, targetOffset)))
+    if (failed(source.getStridesAndOffset(sourceStrides, sourceOffset)) ||
+        failed(target.getStridesAndOffset(targetStrides, targetOffset)))
       return false;
     auto dynamicToStatic = [](int64_t a, int64_t b) {
-      return ShapedType::isDynamic(a) && !ShapedType::isDynamic(b);
+      return ShapedType::isDynamic(a) && ShapedType::isStatic(b);
     };
     if (dynamicToStatic(sourceOffset, targetOffset))
       return false;
@@ -61,7 +58,7 @@ mlir::bufferization::castOrReallocMemRefValue(OpBuilder &b, Value value,
   // a fix extra conditions in `isGuaranteedCastCompatible`.
   if (memref::CastOp::areCastCompatible(srcType, destType) &&
       isGuaranteedCastCompatible(srcType, destType)) {
-    Value casted = b.create<memref::CastOp>(value.getLoc(), destType, value);
+    Value casted = memref::CastOp::create(b, value.getLoc(), destType, value);
     return casted;
   }
 
@@ -70,31 +67,34 @@ mlir::bufferization::castOrReallocMemRefValue(OpBuilder &b, Value value,
   for (int i = 0; i < destType.getRank(); ++i) {
     if (destType.getShape()[i] != ShapedType::kDynamic)
       continue;
-    Value size = b.create<memref::DimOp>(loc, value, i);
+    Value size = memref::DimOp::create(b, loc, value, i);
     dynamicOperands.push_back(size);
   }
-  // TODO: Use alloc/memcpy callback from BufferizationOptions if called via
-  // BufferizableOpInterface impl of ToMemrefOp.
-  Value copy = b.create<memref::AllocOp>(loc, destType, dynamicOperands);
-  b.create<memref::CopyOp>(loc, value, copy);
+
+  FailureOr<Value> copy =
+      options.createAlloc(b, loc, destType, dynamicOperands);
+  if (failed(copy))
+    return failure();
+  if (failed(options.createMemCpy(b, loc, value, *copy)))
+    return failure();
   return copy;
 }
 
-/// Try to fold to_memref(to_tensor(x)). If x's type and the result type of the
-/// to_memref op are different, a memref.cast is needed.
-LogicalResult
-mlir::bufferization::foldToMemrefToTensorPair(RewriterBase &rewriter,
-                                              ToMemrefOp toMemref) {
-  auto memrefToTensor = toMemref.getTensor().getDefiningOp<ToTensorOp>();
-  if (!memrefToTensor)
+/// Try to fold to_buffer(to_tensor(x)). If x's type and the result type of the
+/// to_buffer op are different, a memref.cast is needed.
+LogicalResult mlir::bufferization::foldToBufferToTensorPair(
+    RewriterBase &rewriter, ToBufferOp toBuffer,
+    const BufferizationOptions &options) {
+  auto bufferToTensor = toBuffer.getTensor().getDefiningOp<ToTensorOp>();
+  if (!bufferToTensor)
     return failure();
 
-  Type srcType = memrefToTensor.getMemref().getType();
-  Type destType = toMemref.getType();
+  Type srcType = bufferToTensor.getBuffer().getType();
+  Type destType = toBuffer.getType();
 
   // Directly rewrite if the type did not change.
   if (srcType == destType) {
-    rewriter.replaceOp(toMemref, memrefToTensor.getMemref());
+    rewriter.replaceOp(toBuffer, bufferToTensor.getBuffer());
     return success();
   }
 
@@ -105,11 +105,11 @@ mlir::bufferization::foldToMemrefToTensorPair(RewriterBase &rewriter,
   // Ranked memref -> Ranked memref cast.
   if (rankedSrcType && rankedDestType) {
     FailureOr<Value> replacement = castOrReallocMemRefValue(
-        rewriter, memrefToTensor.getMemref(), rankedDestType);
+        rewriter, bufferToTensor.getBuffer(), rankedDestType, options);
     if (failed(replacement))
       return failure();
 
-    rewriter.replaceOp(toMemref, *replacement);
+    rewriter.replaceOp(toBuffer, *replacement);
     return success();
   }
 
@@ -122,8 +122,8 @@ mlir::bufferization::foldToMemrefToTensorPair(RewriterBase &rewriter,
   // Ranked memref -> unranked memref cast: No copy needed.
   assert(memref::CastOp::areCastCompatible(srcType, destType) &&
          "expected that types are cast compatible");
-  rewriter.replaceOpWithNewOp<memref::CastOp>(toMemref, destType,
-                                              memrefToTensor.getMemref());
+  rewriter.replaceOpWithNewOp<memref::CastOp>(toBuffer, destType,
+                                              bufferToTensor.getBuffer());
   return success();
 }
 
@@ -134,10 +134,10 @@ void mlir::bufferization::populateDynamicDimSizes(
   for (int64_t i = 0; i < shapedType.getRank(); ++i) {
     if (shapedType.isDynamicDim(i)) {
       if (llvm::isa<MemRefType>(shapedType)) {
-        dynamicDims.push_back(b.create<memref::DimOp>(loc, shapedValue, i));
+        dynamicDims.push_back(memref::DimOp::create(b, loc, shapedValue, i));
       } else {
         assert(llvm::isa<RankedTensorType>(shapedType) && "expected tensor");
-        dynamicDims.push_back(b.create<tensor::DimOp>(loc, shapedValue, i));
+        dynamicDims.push_back(tensor::DimOp::create(b, loc, shapedValue, i));
       }
     }
   }
@@ -148,7 +148,8 @@ void mlir::bufferization::populateDynamicDimSizes(
 //===----------------------------------------------------------------------===//
 
 LogicalResult AllocTensorOp::bufferize(RewriterBase &rewriter,
-                                       const BufferizationOptions &options) {
+                                       const BufferizationOptions &options,
+                                       BufferizationState &state) {
   OpBuilder::InsertionGuard g(rewriter);
   Location loc = getLoc();
 
@@ -161,14 +162,15 @@ LogicalResult AllocTensorOp::bufferize(RewriterBase &rewriter,
   // Get "copy" buffer.
   Value copyBuffer;
   if (getCopy()) {
-    FailureOr<Value> maybeCopyBuffer = getBuffer(rewriter, getCopy(), options);
+    FailureOr<Value> maybeCopyBuffer =
+        getBuffer(rewriter, getCopy(), options, state);
     if (failed(maybeCopyBuffer))
       return failure();
     copyBuffer = *maybeCopyBuffer;
   }
 
   // Create memory allocation.
-  auto allocType = bufferization::getBufferType(getResult(), options);
+  auto allocType = bufferization::getBufferType(getResult(), options, state);
   if (failed(allocType))
     return failure();
   SmallVector<Value> dynamicDims = getDynamicSizes();
@@ -219,8 +221,9 @@ AliasingValueList AllocTensorOp::getAliasingValues(OpOperand &opOperand,
   return {};
 }
 
-FailureOr<BaseMemRefType>
+FailureOr<BufferLikeType>
 AllocTensorOp::getBufferType(Value value, const BufferizationOptions &options,
+                             const BufferizationState &state,
                              SmallVector<Value> &invocationStack) {
   assert(value == getResult() && "invalid value");
 
@@ -230,38 +233,29 @@ AllocTensorOp::getBufferType(Value value, const BufferizationOptions &options,
     memorySpace = *getMemorySpace();
   } else if (getCopy()) {
     auto copyBufferType =
-        bufferization::getBufferType(getCopy(), options, invocationStack);
+        bufferization::detail::asMemRefType(bufferization::getBufferType(
+            getCopy(), options, state, invocationStack));
     if (failed(copyBufferType))
       return failure();
     memorySpace = copyBufferType->getMemorySpace();
-  } else if (options.defaultMemorySpace.has_value()) {
-    memorySpace = *options.defaultMemorySpace;
+  } else if (auto ms = options.defaultMemorySpaceFn(getType())) {
+    memorySpace = *ms;
   } else {
     return getOperation()->emitError("could not infer memory space");
   }
 
-  return getMemRefTypeWithStaticIdentityLayout(getType(), memorySpace);
+  return cast<BufferLikeType>(
+      getMemRefTypeWithStaticIdentityLayout(getType(), memorySpace));
 }
 
 LogicalResult AllocTensorOp::verify() {
   if (getCopy() && !getDynamicSizes().empty())
     return emitError("dynamic sizes not needed when copying a tensor");
-  if (!getCopy() && getType().getNumDynamicDims() !=
-                        static_cast<int64_t>(getDynamicSizes().size()))
+  if (!getCopy() && getType().getNumDynamicDims() != getDynamicSizes().size())
     return emitError("expected ")
            << getType().getNumDynamicDims() << " dynamic sizes";
   if (getCopy() && getCopy().getType() != getType())
     return emitError("expected that `copy` and return type match");
-
-  // For sparse tensor allocation, we require that none of its
-  // uses escapes the function boundary directly.
-  if (sparse_tensor::getSparseTensorEncoding(getType())) {
-    for (auto &use : getOperation()->getUses())
-      if (isa<func::ReturnOp, func::CallOp, func::CallIndirectOp>(
-              use.getOwner()))
-        return emitError("sparse tensor allocation should not escape function");
-  }
-
   return success();
 }
 
@@ -314,7 +308,11 @@ struct ReplaceStaticShapeDims : OpRewritePattern<AllocTensorOp> {
       Value value = op.getDynamicSizes()[dynValCounter++];
       APInt intVal;
       if (matchPattern(value, m_ConstantInt(&intVal))) {
-        newShape[i] = intVal.getSExtValue();
+        int64_t dim = intVal.getSExtValue();
+        if (dim >= 0)
+          newShape[i] = intVal.getSExtValue();
+        else
+          newDynamicSizes.push_back(value);
       } else {
         newDynamicSizes.push_back(value);
       }
@@ -323,8 +321,8 @@ struct ReplaceStaticShapeDims : OpRewritePattern<AllocTensorOp> {
         newShape, op.getType().getElementType(), op.getType().getEncoding());
     if (newType == op.getType())
       return failure();
-    auto newOp = rewriter.create<AllocTensorOp>(
-        op.getLoc(), newType, newDynamicSizes, /*copy=*/Value());
+    auto newOp = AllocTensorOp::create(rewriter, op.getLoc(), newType,
+                                       newDynamicSizes, /*copy=*/Value());
     rewriter.replaceOpWithNewOp<tensor::CastOp>(op, op.getType(), newOp);
     return success();
   }
@@ -338,6 +336,9 @@ struct FoldDimOfAllocTensorOp : public OpRewritePattern<tensor::DimOp> {
     std::optional<int64_t> maybeConstantIndex = dimOp.getConstantIndex();
     auto allocTensorOp = dimOp.getSource().getDefiningOp<AllocTensorOp>();
     if (!allocTensorOp || !maybeConstantIndex)
+      return failure();
+    if (*maybeConstantIndex < 0 ||
+        *maybeConstantIndex >= allocTensorOp.getType().getRank())
       return failure();
     if (!allocTensorOp.getType().isDynamicDim(*maybeConstantIndex))
       return failure();
@@ -426,7 +427,7 @@ void AllocTensorOp::print(OpAsmPrinter &p) {
 Value AllocTensorOp::getDynamicSize(OpBuilder &b, unsigned idx) {
   assert(isDynamicDim(idx) && "expected dynamic dim");
   if (getCopy())
-    return b.create<tensor::DimOp>(getLoc(), getCopy(), idx);
+    return tensor::DimOp::create(b, getLoc(), getCopy(), idx);
   return getOperand(getIndexOfDynamicSize(idx));
 }
 
@@ -453,12 +454,21 @@ struct SimplifyClones : public OpRewritePattern<CloneOp> {
     }
 
     Value source = cloneOp.getInput();
+    if (source.getType() != cloneOp.getType() &&
+        !memref::CastOp::areCastCompatible({source.getType()},
+                                           {cloneOp.getType()}))
+      return failure();
+
     // Aims to find the dealloc op for the canonical source
     // which otherwise could prevent removal of unnecessary allocs.
     Value canonicalSource = source;
     while (auto iface = dyn_cast_or_null<ViewLikeOpInterface>(
-               canonicalSource.getDefiningOp()))
+               canonicalSource.getDefiningOp())) {
+      if (canonicalSource != iface.getViewDest()) {
+        break;
+      }
       canonicalSource = iface.getViewSource();
+    }
 
     std::optional<Operation *> maybeCloneDeallocOp =
         memref::findDealloc(cloneOp.getOutput());
@@ -496,6 +506,9 @@ struct SimplifyClones : public OpRewritePattern<CloneOp> {
     // of the source.
     for (Operation *pos = cloneOp->getNextNode(); pos != redundantDealloc;
          pos = pos->getNextNode()) {
+      // Bail if we run out of operations while looking for a deallocation op.
+      if (!pos)
+        return failure();
       auto effectInterface = dyn_cast<MemoryEffectOpInterface>(pos);
       if (!effectInterface)
         continue;
@@ -503,8 +516,10 @@ struct SimplifyClones : public OpRewritePattern<CloneOp> {
         return failure();
     }
 
-    rewriter.replaceOpWithNewOp<memref::CastOp>(cloneOp, cloneOp.getType(),
-                                                source);
+    if (source.getType() != cloneOp.getType())
+      source = memref::CastOp::create(rewriter, cloneOp.getLoc(),
+                                      cloneOp.getType(), source);
+    rewriter.replaceOp(cloneOp, source);
     rewriter.eraseOp(redundantDealloc);
     return success();
   }
@@ -522,11 +537,12 @@ void CloneOp::getCanonicalizationPatterns(RewritePatternSet &results,
 //===----------------------------------------------------------------------===//
 
 LogicalResult DeallocTensorOp::bufferize(RewriterBase &rewriter,
-                                         const BufferizationOptions &options) {
-  FailureOr<Value> buffer = getBuffer(rewriter, getTensor(), options);
+                                         const BufferizationOptions &options,
+                                         BufferizationState &state) {
+  FailureOr<Value> buffer = getBuffer(rewriter, getTensor(), options, state);
   if (failed(buffer))
     return failure();
-  rewriter.create<memref::DeallocOp>(getLoc(), *buffer);
+  memref::DeallocOp::create(rewriter, getLoc(), *buffer);
   rewriter.eraseOp(getOperation());
   return success();
 }
@@ -537,12 +553,12 @@ LogicalResult DeallocTensorOp::bufferize(RewriterBase &rewriter,
 
 bool MaterializeInDestinationOp::bufferizesToMemoryRead(
     OpOperand &opOperand, const AnalysisState &state) {
-  return &opOperand == &getSourceMutable();
+  return opOperand == getSourceMutable();
 }
 
 bool MaterializeInDestinationOp::bufferizesToMemoryWrite(
     OpOperand &opOperand, const AnalysisState &state) {
-  if (&opOperand == &getDestMutable()) {
+  if (opOperand == getDestMutable()) {
     assert(isa<TensorType>(getDest().getType()) && "expected tensor type");
     return true;
   }
@@ -560,7 +576,7 @@ bool MaterializeInDestinationOp::mustBufferizeInPlace(
 AliasingValueList
 MaterializeInDestinationOp::getAliasingValues(OpOperand &opOperand,
                                               const AnalysisState &state) {
-  if (&opOperand == &getDestMutable()) {
+  if (opOperand == getDestMutable()) {
     assert(isa<TensorType>(getDest().getType()) && "expected tensor type");
     return {{getOperation()->getResult(0), BufferRelation::Equivalent}};
   }
@@ -569,11 +585,13 @@ MaterializeInDestinationOp::getAliasingValues(OpOperand &opOperand,
 
 LogicalResult
 MaterializeInDestinationOp::bufferize(RewriterBase &rewriter,
-                                      const BufferizationOptions &options) {
+                                      const BufferizationOptions &options,
+                                      BufferizationState &state) {
   bool tensorDest = isa<TensorType>(getDest().getType());
   Value buffer;
   if (tensorDest) {
-    FailureOr<Value> maybeBuffer = getBuffer(rewriter, getDest(), options);
+    FailureOr<Value> maybeBuffer =
+        getBuffer(rewriter, getDest(), options, state);
     if (failed(maybeBuffer))
       return failure();
     buffer = *maybeBuffer;
@@ -581,7 +599,11 @@ MaterializeInDestinationOp::bufferize(RewriterBase &rewriter,
     assert(isa<BaseMemRefType>(getDest().getType()) && "expected memref type");
     buffer = getDest();
   }
-  rewriter.create<memref::TensorStoreOp>(getLoc(), getSource(), buffer);
+  auto srcBuffer = getBuffer(rewriter, getSource(), options, state);
+  if (failed(srcBuffer))
+    return failure();
+  if (failed(options.createMemCpy(rewriter, getLoc(), *srcBuffer, buffer)))
+    return failure();
   replaceOpWithBufferizedValues(rewriter, getOperation(),
                                 tensorDest ? ValueRange(buffer) : ValueRange());
   return success();
@@ -625,8 +647,10 @@ Value MaterializeInDestinationOp::buildSubsetExtraction(OpBuilder &builder,
   assert(getRestrict() &&
          "expected that ops with memrefs dest have 'restrict'");
   setRestrict(false);
-  return builder.create<ToTensorOp>(loc, getDest(), /*restrict=*/true,
-                                    getWritable());
+  return ToTensorOp::create(
+      builder, loc, memref::getTensorTypeFromMemRefType(getDest().getType()),
+      getDest(),
+      /*restrict=*/true, getWritable());
 }
 
 bool MaterializeInDestinationOp::isEquivalentSubset(
@@ -641,6 +665,18 @@ MaterializeInDestinationOp::getValuesNeededToBuildSubsetExtraction() {
 
 OpOperand &MaterializeInDestinationOp::getSourceOperand() {
   return getOperation()->getOpOperand(0) /*source*/;
+}
+
+bool MaterializeInDestinationOp::operatesOnEquivalentSubset(
+    SubsetOpInterface subsetOp,
+    function_ref<bool(Value, Value)> equivalenceFn) {
+  return false;
+}
+
+bool MaterializeInDestinationOp::operatesOnDisjointSubset(
+    SubsetOpInterface subsetOp,
+    function_ref<bool(Value, Value)> equivalenceFn) {
+  return false;
 }
 
 LogicalResult MaterializeInDestinationOp::verify() {
@@ -660,14 +696,33 @@ LogicalResult MaterializeInDestinationOp::verify() {
   if (getWritable() != isa<BaseMemRefType>(getDest().getType()))
     return emitOpError("'writable' must be specified if and only if the "
                        "destination is of memref type");
+  TensorType srcType = getSource().getType();
+  ShapedType destType = cast<ShapedType>(getDest().getType());
+  if (srcType.hasRank() != destType.hasRank())
+    return emitOpError("source/destination shapes are incompatible");
+  if (srcType.hasRank()) {
+    if (srcType.getRank() != destType.getRank())
+      return emitOpError("rank mismatch between source and destination shape");
+    for (auto [src, dest] :
+         llvm::zip(srcType.getShape(), destType.getShape())) {
+      if (src == ShapedType::kDynamic || dest == ShapedType::kDynamic) {
+        // Cannot verify dynamic dimension size. Assume that that they match at
+        // runtime.
+        continue;
+      }
+      if (src != dest)
+        return emitOpError("source/destination shapes are incompatible");
+    }
+  }
   return success();
 }
 
 void MaterializeInDestinationOp::build(OpBuilder &builder,
                                        OperationState &state, Value source,
                                        Value dest) {
-  assert(isa<TensorType>(dest.getType()) && "expected tensor type");
-  build(builder, state, /*result=*/dest.getType(), source, dest);
+  auto destTensorType = dyn_cast<TensorType>(dest.getType());
+  build(builder, state, /*result=*/destTensorType ? destTensorType : Type(),
+        source, dest);
 }
 
 bool MaterializeInDestinationOp::isWritable(Value value,
@@ -683,7 +738,7 @@ void MaterializeInDestinationOp::getEffects(
     SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
         &effects) {
   if (isa<BaseMemRefType>(getDest().getType()))
-    effects.emplace_back(MemoryEffects::Write::get(), getDest(),
+    effects.emplace_back(MemoryEffects::Write::get(), &getDestMutable(),
                          SideEffects::DefaultResource::get());
 }
 
@@ -696,12 +751,12 @@ bool ToTensorOp::isWritable(Value value, const AnalysisState &state) {
 }
 
 OpFoldResult ToTensorOp::fold(FoldAdaptor) {
-  if (auto toMemref = getMemref().getDefiningOp<ToMemrefOp>())
+  if (auto toBuffer = getBuffer().getDefiningOp<ToBufferOp>())
     // Approximate alias analysis by conservatively folding only when no there
     // is no interleaved operation.
-    if (toMemref->getBlock() == this->getOperation()->getBlock() &&
-        toMemref->getNextNode() == this->getOperation())
-      return toMemref.getTensor();
+    if (toBuffer->getBlock() == this->getOperation()->getBlock() &&
+        toBuffer->getNextNode() == this->getOperation())
+      return toBuffer.getTensor();
   return {};
 }
 
@@ -716,7 +771,7 @@ struct DimOfToTensorFolder : public OpRewritePattern<tensor::DimOp> {
       return failure();
 
     rewriter.replaceOpWithNewOp<memref::DimOp>(
-        dimOp, memrefToTensorOp.getMemref(), dimOp.getIndex());
+        dimOp, memrefToTensorOp.getBuffer(), dimOp.getIndex());
     return success();
   }
 };
@@ -728,77 +783,85 @@ void ToTensorOp::getCanonicalizationPatterns(RewritePatternSet &results,
 }
 
 //===----------------------------------------------------------------------===//
-// ToMemrefOp
+// ToBufferOp
 //===----------------------------------------------------------------------===//
 
-OpFoldResult ToMemrefOp::fold(FoldAdaptor) {
+OpFoldResult ToBufferOp::fold(FoldAdaptor) {
   if (auto memrefToTensor = getTensor().getDefiningOp<ToTensorOp>())
-    if (memrefToTensor.getMemref().getType() == getType())
-      return memrefToTensor.getMemref();
+    if (memrefToTensor.getBuffer().getType() == getType())
+      return memrefToTensor.getBuffer();
   return {};
 }
 
 namespace {
 
-/// Replace tensor.cast + to_memref by to_memref + memref.cast.
-struct ToMemrefOfCast : public OpRewritePattern<ToMemrefOp> {
-  using OpRewritePattern<ToMemrefOp>::OpRewritePattern;
+/// Replace tensor.cast + to_buffer by to_buffer + memref.cast.
+struct ToBufferOfCast : public OpRewritePattern<ToBufferOp> {
+  using OpRewritePattern<ToBufferOp>::OpRewritePattern;
 
-  LogicalResult matchAndRewrite(ToMemrefOp toMemref,
+  LogicalResult matchAndRewrite(ToBufferOp toBuffer,
                                 PatternRewriter &rewriter) const final {
     auto tensorCastOperand =
-        toMemref.getOperand().getDefiningOp<tensor::CastOp>();
+        toBuffer.getOperand().getDefiningOp<tensor::CastOp>();
     if (!tensorCastOperand)
       return failure();
     auto srcTensorType = llvm::dyn_cast<RankedTensorType>(
         tensorCastOperand.getOperand().getType());
     if (!srcTensorType)
       return failure();
-    auto memrefType = MemRefType::get(srcTensorType.getShape(),
-                                      srcTensorType.getElementType());
-    Value memref = rewriter.create<ToMemrefOp>(toMemref.getLoc(), memrefType,
-                                               tensorCastOperand.getOperand());
-    rewriter.replaceOpWithNewOp<memref::CastOp>(toMemref, toMemref.getType(),
+    auto currentOutputMemRefType =
+        dyn_cast<BaseMemRefType>(toBuffer.getResult().getType());
+    if (!currentOutputMemRefType)
+      return failure();
+
+    auto memrefType = currentOutputMemRefType.cloneWith(
+        srcTensorType.getShape(), srcTensorType.getElementType());
+    Value memref = ToBufferOp::create(rewriter, toBuffer.getLoc(), memrefType,
+                                      tensorCastOperand.getOperand(),
+                                      toBuffer.getReadOnly());
+    rewriter.replaceOpWithNewOp<memref::CastOp>(toBuffer, toBuffer.getType(),
                                                 memref);
     return success();
   }
 };
 
-/// Canonicalize bufferization.to_tensor + bufferization.to_memref. Insert a
+/// Canonicalize bufferization.to_tensor + bufferization.to_buffer. Insert a
 /// cast if necessary.
-struct ToMemrefToTensorFolding : public OpRewritePattern<ToMemrefOp> {
-  using OpRewritePattern<ToMemrefOp>::OpRewritePattern;
+struct ToBufferToTensorFolding : public OpRewritePattern<ToBufferOp> {
+  using OpRewritePattern<ToBufferOp>::OpRewritePattern;
 
-  LogicalResult matchAndRewrite(ToMemrefOp toMemref,
+  LogicalResult matchAndRewrite(ToBufferOp toBuffer,
                                 PatternRewriter &rewriter) const final {
-    return foldToMemrefToTensorPair(rewriter, toMemref);
+    BufferizationOptions options;
+    options.bufferAlignment = 0;
+    return foldToBufferToTensorPair(rewriter, toBuffer, options);
   }
 };
 
-/// Fold a load on a to_memref operation into an tensor.extract on the
+/// Fold a load on a to_buffer operation into an tensor.extract on the
 /// corresponding tensor.
-struct LoadOfToMemref : public OpRewritePattern<memref::LoadOp> {
+struct LoadOfToBuffer : public OpRewritePattern<memref::LoadOp> {
   using OpRewritePattern<memref::LoadOp>::OpRewritePattern;
 
   LogicalResult matchAndRewrite(memref::LoadOp load,
                                 PatternRewriter &rewriter) const override {
-    auto toMemref = load.getMemref().getDefiningOp<ToMemrefOp>();
-    if (!toMemref)
+    auto toBuffer = load.getMemref().getDefiningOp<ToBufferOp>();
+    if (!toBuffer)
       return failure();
 
-    rewriter.replaceOpWithNewOp<tensor::ExtractOp>(load, toMemref.getTensor(),
+    rewriter.replaceOpWithNewOp<tensor::ExtractOp>(load, toBuffer.getTensor(),
                                                    load.getIndices());
     return success();
   }
 };
 
-/// Fold dim of a to_memref into the dim of the tensor.
+/// Fold dim of a to_buffer into the dim of the tensor.
 struct DimOfCastOp : public OpRewritePattern<memref::DimOp> {
   using OpRewritePattern<memref::DimOp>::OpRewritePattern;
 
   LogicalResult matchAndRewrite(memref::DimOp dimOp,
                                 PatternRewriter &rewriter) const override {
-    auto castOp = dimOp.getSource().getDefiningOp<ToMemrefOp>();
+    auto castOp = dimOp.getSource().getDefiningOp<ToBufferOp>();
     if (!castOp)
       return failure();
     Value newSource = castOp.getOperand();
@@ -810,16 +873,17 @@ struct DimOfCastOp : public OpRewritePattern<memref::DimOp> {
 
 } // namespace
 
-void ToMemrefOp::getCanonicalizationPatterns(RewritePatternSet &results,
+void ToBufferOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                              MLIRContext *context) {
-  results.add<DimOfCastOp, LoadOfToMemref, ToMemrefOfCast,
-              ToMemrefToTensorFolding>(context);
+  results.add<DimOfCastOp, LoadOfToBuffer, ToBufferOfCast,
+              ToBufferToTensorFolding>(context);
 }
 
-LogicalResult ToMemrefOp::bufferize(RewriterBase &rewriter,
-                                    const BufferizationOptions &options) {
-  // Fold to_memref(to_tensor(x)) to x. Insert a cast if necessary.
-  (void)foldToMemrefToTensorPair(rewriter, *this);
+LogicalResult ToBufferOp::bufferize(RewriterBase &rewriter,
+                                    const BufferizationOptions &options,
+                                    BufferizationState &state) {
+  // Fold to_buffer(to_tensor(x)) to x. Insert a cast if necessary.
+  (void)foldToBufferToTensorPair(rewriter, *this, options);
   // Note: The return value of `bufferize` indicates whether there was an error
   // or not. (And not whether the pattern matched or not.)
   return success();
@@ -827,12 +891,12 @@ LogicalResult ToMemrefOp::bufferize(RewriterBase &rewriter,
 
 std::optional<Operation *> CloneOp::buildDealloc(OpBuilder &builder,
                                                  Value alloc) {
-  return builder.create<memref::DeallocOp>(alloc.getLoc(), alloc)
+  return memref::DeallocOp::create(builder, alloc.getLoc(), alloc)
       .getOperation();
 }
 
 std::optional<Value> CloneOp::buildClone(OpBuilder &builder, Value alloc) {
-  return builder.create<CloneOp>(alloc.getLoc(), alloc).getResult();
+  return CloneOp::create(builder, alloc.getLoc(), alloc).getResult();
 }
 
 //===----------------------------------------------------------------------===//
@@ -867,7 +931,7 @@ static LogicalResult updateDeallocIfChanged(DeallocOp deallocOp,
       deallocOp.getConditions() == conditions)
     return failure();
 
-  rewriter.updateRootInPlace(deallocOp, [&]() {
+  rewriter.modifyOpInPlace(deallocOp, [&]() {
     deallocOp.getMemrefsMutable().assign(memrefs);
     deallocOp.getConditionsMutable().assign(conditions);
   });
@@ -906,7 +970,7 @@ struct DeallocRemoveDuplicateDeallocMemrefs
         Value &newCond = newConditions[memrefToCondition[memref]];
         if (newCond != cond)
           newCond =
-              rewriter.create<arith::OrIOp>(deallocOp.getLoc(), newCond, cond);
+              arith::OrIOp::create(rewriter, deallocOp.getLoc(), newCond, cond);
       } else {
         memrefToCondition.insert({memref, newConditions.size()});
         newMemrefs.push_back(memref);
@@ -961,8 +1025,8 @@ struct DeallocRemoveDuplicateRetainedMemrefs
     // We need to create a new op because the number of results is always the
     // same as the number of condition operands.
     auto newDeallocOp =
-        rewriter.create<DeallocOp>(deallocOp.getLoc(), deallocOp.getMemrefs(),
-                                   deallocOp.getConditions(), newRetained);
+        DeallocOp::create(rewriter, deallocOp.getLoc(), deallocOp.getMemrefs(),
+                          deallocOp.getConditions(), newRetained);
     SmallVector<Value> replacements(
         llvm::map_range(resultReplacementIdx, [&](unsigned idx) {
           return newDeallocOp.getUpdatedConditions()[idx];
@@ -983,8 +1047,8 @@ struct EraseEmptyDealloc : public OpRewritePattern<DeallocOp> {
   LogicalResult matchAndRewrite(DeallocOp deallocOp,
                                 PatternRewriter &rewriter) const override {
     if (deallocOp.getMemrefs().empty()) {
-      Value constFalse = rewriter.create<arith::ConstantOp>(
-          deallocOp.getLoc(), rewriter.getBoolAttr(false));
+      Value constFalse = arith::ConstantOp::create(rewriter, deallocOp.getLoc(),
+                                                   rewriter.getBoolAttr(false));
       rewriter.replaceOp(
           deallocOp, SmallVector<Value>(deallocOp.getUpdatedConditions().size(),
                                         constFalse));

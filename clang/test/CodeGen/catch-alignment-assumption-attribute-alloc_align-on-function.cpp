@@ -39,11 +39,11 @@ passthrough(char **x, unsigned long alignment) {
 // CHECK-SANITIZE-NORECOVER-NEXT:    [[PTRINT:%.*]] = ptrtoint ptr [[CALL]] to i64
 // CHECK-SANITIZE-NORECOVER-NEXT:    [[MASKEDPTR:%.*]] = and i64 [[PTRINT]], 127
 // CHECK-SANITIZE-NORECOVER-NEXT:    [[MASKCOND:%.*]] = icmp eq i64 [[MASKEDPTR]], 0
-// CHECK-SANITIZE-NORECOVER-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[CALL]] to i64, !nosanitize !2
-// CHECK-SANITIZE-NORECOVER-NEXT:    br i1 [[MASKCOND]], label [[CONT:%.*]], label [[HANDLER_ALIGNMENT_ASSUMPTION:%.*]], !prof [[PROF3:![0-9]+]], !nosanitize !2
+// CHECK-SANITIZE-NORECOVER-NEXT:    br i1 [[MASKCOND]], label [[CONT:%.*]], label [[HANDLER_ALIGNMENT_ASSUMPTION:%.*]], !prof [[PROF2:![0-9]+]], !nosanitize [[META3:![0-9]+]]
 // CHECK-SANITIZE-NORECOVER:       handler.alignment_assumption:
-// CHECK-SANITIZE-NORECOVER-NEXT:    call void @__ubsan_handle_alignment_assumption_abort(ptr @[[GLOB1:[0-9]+]], i64 [[TMP1]], i64 128, i64 0) #[[ATTR3:[0-9]+]], !nosanitize !2
-// CHECK-SANITIZE-NORECOVER-NEXT:    unreachable, !nosanitize !2
+// CHECK-SANITIZE-NORECOVER-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[CALL]] to i64, !nosanitize [[META3]]
+// CHECK-SANITIZE-NORECOVER-NEXT:    call void @__ubsan_handle_alignment_assumption_abort(ptr @[[GLOB1:[0-9]+]], i64 [[TMP1]], i64 128, i64 0) #[[ATTR3:[0-9]+]], !nosanitize [[META3]]
+// CHECK-SANITIZE-NORECOVER-NEXT:    unreachable, !nosanitize [[META3]]
 // CHECK-SANITIZE-NORECOVER:       cont:
 // CHECK-SANITIZE-NORECOVER-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[CALL]], i64 128) ]
 // CHECK-SANITIZE-NORECOVER-NEXT:    ret ptr [[CALL]]
@@ -58,11 +58,11 @@ passthrough(char **x, unsigned long alignment) {
 // CHECK-SANITIZE-RECOVER-NEXT:    [[PTRINT:%.*]] = ptrtoint ptr [[CALL]] to i64
 // CHECK-SANITIZE-RECOVER-NEXT:    [[MASKEDPTR:%.*]] = and i64 [[PTRINT]], 127
 // CHECK-SANITIZE-RECOVER-NEXT:    [[MASKCOND:%.*]] = icmp eq i64 [[MASKEDPTR]], 0
-// CHECK-SANITIZE-RECOVER-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[CALL]] to i64, !nosanitize !2
-// CHECK-SANITIZE-RECOVER-NEXT:    br i1 [[MASKCOND]], label [[CONT:%.*]], label [[HANDLER_ALIGNMENT_ASSUMPTION:%.*]], !prof [[PROF3:![0-9]+]], !nosanitize !2
+// CHECK-SANITIZE-RECOVER-NEXT:    br i1 [[MASKCOND]], label [[CONT:%.*]], label [[HANDLER_ALIGNMENT_ASSUMPTION:%.*]], !prof [[PROF2:![0-9]+]], !nosanitize [[META3:![0-9]+]]
 // CHECK-SANITIZE-RECOVER:       handler.alignment_assumption:
-// CHECK-SANITIZE-RECOVER-NEXT:    call void @__ubsan_handle_alignment_assumption(ptr @[[GLOB1:[0-9]+]], i64 [[TMP1]], i64 128, i64 0) #[[ATTR3:[0-9]+]], !nosanitize !2
-// CHECK-SANITIZE-RECOVER-NEXT:    br label [[CONT]], !nosanitize !2
+// CHECK-SANITIZE-RECOVER-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[CALL]] to i64, !nosanitize [[META3]]
+// CHECK-SANITIZE-RECOVER-NEXT:    call void @__ubsan_handle_alignment_assumption(ptr @[[GLOB1:[0-9]+]], i64 [[TMP1]], i64 128, i64 0) #[[ATTR3:[0-9]+]], !nosanitize [[META3]]
+// CHECK-SANITIZE-RECOVER-NEXT:    br label [[CONT]], !nosanitize [[META3]]
 // CHECK-SANITIZE-RECOVER:       cont:
 // CHECK-SANITIZE-RECOVER-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[CALL]], i64 128) ]
 // CHECK-SANITIZE-RECOVER-NEXT:    ret ptr [[CALL]]
@@ -77,11 +77,10 @@ passthrough(char **x, unsigned long alignment) {
 // CHECK-SANITIZE-TRAP-NEXT:    [[PTRINT:%.*]] = ptrtoint ptr [[CALL]] to i64
 // CHECK-SANITIZE-TRAP-NEXT:    [[MASKEDPTR:%.*]] = and i64 [[PTRINT]], 127
 // CHECK-SANITIZE-TRAP-NEXT:    [[MASKCOND:%.*]] = icmp eq i64 [[MASKEDPTR]], 0
-// CHECK-SANITIZE-TRAP-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[CALL]] to i64, !nosanitize !2
-// CHECK-SANITIZE-TRAP-NEXT:    br i1 [[MASKCOND]], label [[CONT:%.*]], label [[TRAP:%.*]], !nosanitize !2
+// CHECK-SANITIZE-TRAP-NEXT:    br i1 [[MASKCOND]], label [[CONT:%.*]], label [[TRAP:%.*]], !prof [[PROF2:![0-9]+]], !nosanitize [[META3:![0-9]+]]
 // CHECK-SANITIZE-TRAP:       trap:
-// CHECK-SANITIZE-TRAP-NEXT:    call void @llvm.ubsantrap(i8 23) #[[ATTR3:[0-9]+]], !nosanitize !2
-// CHECK-SANITIZE-TRAP-NEXT:    unreachable, !nosanitize !2
+// CHECK-SANITIZE-TRAP-NEXT:    call void @llvm.ubsantrap(i8 23) #[[ATTR3:[0-9]+]], !nosanitize [[META3]]
+// CHECK-SANITIZE-TRAP-NEXT:    unreachable, !nosanitize [[META3]]
 // CHECK-SANITIZE-TRAP:       cont:
 // CHECK-SANITIZE-TRAP-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[CALL]], i64 128) ]
 // CHECK-SANITIZE-TRAP-NEXT:    ret ptr [[CALL]]

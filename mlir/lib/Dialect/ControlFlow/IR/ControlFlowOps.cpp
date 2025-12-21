@@ -8,11 +8,14 @@
 
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 
+#include "mlir/Conversion/ConvertToLLVM/ToLLVMInterface.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/Bufferization/IR/BufferDeallocationOpInterface.h"
+#include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
+#include "mlir/Dialect/UB/IR/UBOps.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/Builders.h"
-#include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/IR/Matchers.h"
@@ -20,12 +23,8 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/IR/Value.h"
-#include "mlir/Support/MathExtras.h"
 #include "mlir/Transforms/InliningUtils.h"
-#include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/Support/FormatVariadic.h"
-#include "llvm/Support/raw_ostream.h"
 #include <numeric>
 
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOpsDialect.cpp.inc"
@@ -67,6 +66,11 @@ void ControlFlowDialect::initialize() {
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.cpp.inc"
       >();
   addInterfaces<ControlFlowInlinerInterface>();
+  declarePromisedInterface<ConvertToLLVMPatternInterface, ControlFlowDialect>();
+  declarePromisedInterfaces<bufferization::BufferizableOpInterface, BranchOp,
+                            CondBranchOp>();
+  declarePromisedInterface<bufferization::BufferDeallocationOpInterface,
+                           CondBranchOp>();
 }
 
 //===----------------------------------------------------------------------===//
@@ -80,6 +84,13 @@ LogicalResult AssertOp::canonicalize(AssertOp op, PatternRewriter &rewriter) {
     return success();
   }
   return failure();
+}
+
+// This side effect models "program termination". 
+void AssertOp::getEffects(
+    SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+        &effects) {
+  effects.emplace_back(MemoryEffects::Write::get());
 }
 
 //===----------------------------------------------------------------------===//
@@ -112,6 +123,16 @@ static LogicalResult collapseBranch(Block *&successor,
   Block *successorDest = successorBranch.getDest();
   if (successorDest == successor)
     return failure();
+  // Don't try to collapse branches which participate in a cycle.
+  BranchOp nextBranch = dyn_cast<BranchOp>(successorDest->getTerminator());
+  llvm::DenseSet<Block *> visited{successor, successorDest};
+  while (nextBranch) {
+    Block *nextBranchDest = nextBranch.getDest();
+    if (visited.contains(nextBranchDest))
+      return failure();
+    visited.insert(nextBranchDest);
+    nextBranch = dyn_cast<BranchOp>(nextBranchDest->getTerminator());
+  }
 
   // Update the operands to the successor. If the branch parent has no
   // arguments, we can use the branch operands directly.
@@ -251,9 +272,9 @@ struct SimplifyPassThroughCondBranch : public OpRewritePattern<CondBranchOp> {
       return failure();
 
     // Create a new branch with the collapsed successors.
-    rewriter.replaceOpWithNewOp<CondBranchOp>(condbr, condbr.getCondition(),
-                                              trueDest, trueDestOperands,
-                                              falseDest, falseDestOperands);
+    rewriter.replaceOpWithNewOp<CondBranchOp>(
+        condbr, condbr.getCondition(), trueDest, trueDestOperands, falseDest,
+        falseDestOperands, condbr.getWeights());
     return success();
   }
 };
@@ -298,8 +319,9 @@ struct SimplifyCondBranchIdenticalSuccessors
       if (std::get<0>(it) == std::get<1>(it))
         mergedOperands.push_back(std::get<0>(it));
       else
-        mergedOperands.push_back(rewriter.create<arith::SelectOp>(
-            condbr.getLoc(), condition, std::get<0>(it), std::get<1>(it)));
+        mergedOperands.push_back(
+            arith::SelectOp::create(rewriter, condbr.getLoc(), condition,
+                                    std::get<0>(it), std::get<1>(it)));
     }
 
     rewriter.replaceOpWithNewOp<BranchOp>(condbr, trueDest, mergedOperands);
@@ -398,11 +420,11 @@ struct CondBranchTruthPropagation : public OpRewritePattern<CondBranchOp> {
           replaced = true;
 
           if (!constantTrue)
-            constantTrue = rewriter.create<arith::ConstantOp>(
-                condbr.getLoc(), ty, rewriter.getBoolAttr(true));
+            constantTrue = arith::ConstantOp::create(
+                rewriter, condbr.getLoc(), ty, rewriter.getBoolAttr(true));
 
-          rewriter.updateRootInPlace(use.getOwner(),
-                                     [&] { use.set(constantTrue); });
+          rewriter.modifyOpInPlace(use.getOwner(),
+                                   [&] { use.set(constantTrue); });
         }
       }
     }
@@ -413,15 +435,46 @@ struct CondBranchTruthPropagation : public OpRewritePattern<CondBranchOp> {
           replaced = true;
 
           if (!constantFalse)
-            constantFalse = rewriter.create<arith::ConstantOp>(
-                condbr.getLoc(), ty, rewriter.getBoolAttr(false));
+            constantFalse = arith::ConstantOp::create(
+                rewriter, condbr.getLoc(), ty, rewriter.getBoolAttr(false));
 
-          rewriter.updateRootInPlace(use.getOwner(),
-                                     [&] { use.set(constantFalse); });
+          rewriter.modifyOpInPlace(use.getOwner(),
+                                   [&] { use.set(constantFalse); });
         }
       }
     }
     return success(replaced);
+  }
+};
+
+/// If the destination block of a conditional branch contains only
+/// ub.unreachable, unconditionally branch to the other destination.
+struct DropUnreachableCondBranch : public OpRewritePattern<CondBranchOp> {
+  using OpRewritePattern<CondBranchOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(CondBranchOp condbr,
+                                PatternRewriter &rewriter) const override {
+    // If the "true" destination is unreachable, branch to the "false"
+    // destination.
+    Block *trueDest = condbr.getTrueDest();
+    Block *falseDest = condbr.getFalseDest();
+    if (llvm::hasSingleElement(*trueDest) &&
+        isa<ub::UnreachableOp>(trueDest->getTerminator())) {
+      rewriter.replaceOpWithNewOp<BranchOp>(condbr, falseDest,
+                                            condbr.getFalseOperands());
+      return success();
+    }
+
+    // If the "false" destination is unreachable, branch to the "true"
+    // destination.
+    if (llvm::hasSingleElement(*falseDest) &&
+        isa<ub::UnreachableOp>(falseDest->getTerminator())) {
+      rewriter.replaceOpWithNewOp<BranchOp>(condbr, trueDest,
+                                            condbr.getTrueOperands());
+      return success();
+    }
+
+    return failure();
   }
 };
 } // namespace
@@ -431,7 +484,7 @@ void CondBranchOp::getCanonicalizationPatterns(RewritePatternSet &results,
   results.add<SimplifyConstCondBranchPred, SimplifyPassThroughCondBranch,
               SimplifyCondBranchIdenticalSuccessors,
               SimplifyCondBranchFromCondBranchOnSameCondition,
-              CondBranchTruthPropagation>(context);
+              CondBranchTruthPropagation, DropUnreachableCondBranch>(context);
 }
 
 SuccessorOperands CondBranchOp::getSuccessorOperands(unsigned index) {
@@ -514,7 +567,7 @@ static ParseResult parseSwitchOpCases(
     int64_t value = 0;
     if (failed(parser.parseInteger(value)))
       return failure();
-    values.push_back(APInt(bitWidth, value));
+    values.push_back(APInt(bitWidth, value, /*isSigned=*/true));
 
     Block *destination;
     SmallVector<OpAsmParser::UnresolvedOperand> operands;
@@ -523,8 +576,8 @@ static ParseResult parseSwitchOpCases(
         failed(parser.parseSuccessor(destination)))
       return failure();
     if (succeeded(parser.parseOptionalLParen())) {
-      if (failed(parser.parseOperandList(operands, OpAsmParser::Delimiter::None,
-                                         /*allowResultNumber=*/false)) ||
+      if (failed(parser.parseOperandList(operands,
+                                         OpAsmParser::Delimiter::None)) ||
           failed(parser.parseColonTypeList(operandTypes)) ||
           failed(parser.parseRParen()))
         return failure();

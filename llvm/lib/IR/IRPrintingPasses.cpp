@@ -18,6 +18,7 @@
 #include "llvm/IR/PrintPasses.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -39,6 +40,10 @@ public:
         ShouldPreserveUseListOrder(ShouldPreserveUseListOrder) {}
 
   bool runOnModule(Module &M) override {
+    // Remove intrinsic declarations when printing in the new format.
+    // TODO: consider removing this as debug-intrinsics are gone.
+    M.removeDebugIntrinsicDeclarations();
+
     if (llvm::isFunctionInPrintList("*")) {
       if (!Banner.empty())
         OS << Banner << "\n";
@@ -55,6 +60,7 @@ public:
         }
       }
     }
+
     return false;
   }
 
@@ -84,6 +90,7 @@ public:
       else
         OS << Banner << '\n' << static_cast<Value &>(F);
     }
+
     return false;
   }
 

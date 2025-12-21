@@ -68,8 +68,13 @@ public:
   StringRef getNameAsRequested() const { return ME->first(); }
 
   const FileEntry &getFileEntry() const {
-    return *getBaseMapEntry().second->V.get<FileEntry *>();
+    return *cast<FileEntry *>(getBaseMapEntry().second->V);
   }
+
+  // This function is used if the buffer size needs to be increased
+  // due to potential z/OS EBCDIC -> UTF-8 conversion
+  inline void updateFileEntryBufferSize(unsigned BufferSize);
+
   DirectoryEntryRef getDir() const { return ME->second->Dir; }
 
   inline off_t getSize() const;
@@ -77,6 +82,7 @@ public:
   inline const llvm::sys::fs::UniqueID &getUniqueID() const;
   inline time_t getModificationTime() const;
   inline bool isNamedPipe() const;
+  inline bool isDeviceFile() const;
   inline void closeFile() const;
 
   /// Check if the underlying FileEntry is the same, intentially ignoring
@@ -212,11 +218,7 @@ class OptionalStorage<clang::FileEntryRef>
       clang::FileMgr::MapEntryOptionalStorage<clang::FileEntryRef>;
 
 public:
-  OptionalStorage() = default;
-
-  template <class... ArgTypes>
-  explicit OptionalStorage(std::in_place_t, ArgTypes &&...Args)
-      : StorageImpl(std::in_place_t{}, std::forward<ArgTypes>(Args)...) {}
+  using StorageImpl::StorageImpl;
 
   OptionalStorage &operator=(clang::FileEntryRef Ref) {
     StorageImpl::operator=(Ref);
@@ -279,72 +281,6 @@ template <> struct DenseMapInfo<clang::FileEntryRef> {
 
 namespace clang {
 
-/// Wrapper around OptionalFileEntryRef that degrades to 'const FileEntry*',
-/// facilitating incremental patches to propagate FileEntryRef.
-///
-/// This class can be used as return value or field where it's convenient for
-/// an OptionalFileEntryRef to degrade to a 'const FileEntry*'. The purpose
-/// is to avoid code churn due to dances like the following:
-/// \code
-/// // Old code.
-/// lvalue = rvalue;
-///
-/// // Temporary code from an incremental patch.
-/// OptionalFileEntryRef MaybeF = rvalue;
-/// lvalue = MaybeF ? &MaybeF.getFileEntry() : nullptr;
-///
-/// // Final code.
-/// lvalue = rvalue;
-/// \endcode
-///
-/// FIXME: Once FileEntryRef is "everywhere" and FileEntry::LastRef and
-/// FileEntry::getName have been deleted, delete this class and replace
-/// instances with OptionalFileEntryRef.
-class OptionalFileEntryRefDegradesToFileEntryPtr : public OptionalFileEntryRef {
-public:
-  OptionalFileEntryRefDegradesToFileEntryPtr() = default;
-  OptionalFileEntryRefDegradesToFileEntryPtr(
-      OptionalFileEntryRefDegradesToFileEntryPtr &&) = default;
-  OptionalFileEntryRefDegradesToFileEntryPtr(
-      const OptionalFileEntryRefDegradesToFileEntryPtr &) = default;
-  OptionalFileEntryRefDegradesToFileEntryPtr &
-  operator=(OptionalFileEntryRefDegradesToFileEntryPtr &&) = default;
-  OptionalFileEntryRefDegradesToFileEntryPtr &
-  operator=(const OptionalFileEntryRefDegradesToFileEntryPtr &) = default;
-
-  OptionalFileEntryRefDegradesToFileEntryPtr(std::nullopt_t) {}
-  OptionalFileEntryRefDegradesToFileEntryPtr(FileEntryRef Ref)
-      : OptionalFileEntryRef(Ref) {}
-  OptionalFileEntryRefDegradesToFileEntryPtr(OptionalFileEntryRef MaybeRef)
-      : OptionalFileEntryRef(MaybeRef) {}
-
-  OptionalFileEntryRefDegradesToFileEntryPtr &operator=(std::nullopt_t) {
-    OptionalFileEntryRef::operator=(std::nullopt);
-    return *this;
-  }
-  OptionalFileEntryRefDegradesToFileEntryPtr &operator=(FileEntryRef Ref) {
-    OptionalFileEntryRef::operator=(Ref);
-    return *this;
-  }
-  OptionalFileEntryRefDegradesToFileEntryPtr &
-  operator=(OptionalFileEntryRef MaybeRef) {
-    OptionalFileEntryRef::operator=(MaybeRef);
-    return *this;
-  }
-
-  /// Degrade to 'const FileEntry *' to allow  FileEntry::LastRef and
-  /// FileEntry::getName have been deleted, delete this class and replace
-  /// instances with OptionalFileEntryRef
-  operator const FileEntry *() const {
-    return has_value() ? &(*this)->getFileEntry() : nullptr;
-  }
-};
-
-static_assert(
-    std::is_trivially_copyable<
-        OptionalFileEntryRefDegradesToFileEntryPtr>::value,
-    "OptionalFileEntryRefDegradesToFileEntryPtr should be trivially copyable");
-
 inline bool operator==(const FileEntry *LHS, const OptionalFileEntryRef &RHS) {
   return LHS == (RHS ? &RHS->getFileEntry() : nullptr);
 }
@@ -377,6 +313,7 @@ class FileEntry {
   llvm::sys::fs::UniqueID UniqueID;
   unsigned UID = 0; // A unique (small) ID for the file.
   bool IsNamedPipe = false;
+  bool IsDeviceFile = false;
 
   /// The open file, if it is owned by the \p FileEntry.
   mutable std::unique_ptr<llvm::vfs::File> File;
@@ -384,20 +321,13 @@ class FileEntry {
   /// The file content, if it is owned by the \p FileEntry.
   std::unique_ptr<llvm::MemoryBuffer> Content;
 
-  // First access name for this FileEntry.
-  //
-  // This is Optional only to allow delayed construction (FileEntryRef has no
-  // default constructor). It should always have a value in practice.
-  //
-  // TODO: remove this once everyone that needs a name uses FileEntryRef.
-  OptionalFileEntryRef LastRef;
-
 public:
   ~FileEntry();
-  StringRef getName() const { return LastRef->getName(); }
 
   StringRef tryGetRealPathName() const { return RealPathName; }
   off_t getSize() const { return Size; }
+  // Size may increase due to potential z/OS EBCDIC -> UTF-8 conversion.
+  void setSize(off_t NewSize) { Size = NewSize; }
   unsigned getUID() const { return UID; }
   const llvm::sys::fs::UniqueID &getUniqueID() const { return UniqueID; }
   time_t getModificationTime() const { return ModTime; }
@@ -408,6 +338,7 @@ public:
   /// Check whether the file is a named pipe (and thus can't be opened by
   /// the native FileManager methods).
   bool isNamedPipe() const { return IsNamedPipe; }
+  bool isDeviceFile() const { return IsDeviceFile; }
 
   void closeFile() const;
 };
@@ -425,8 +356,15 @@ time_t FileEntryRef::getModificationTime() const {
 }
 
 bool FileEntryRef::isNamedPipe() const { return getFileEntry().isNamedPipe(); }
+bool FileEntryRef::isDeviceFile() const {
+  return getFileEntry().isDeviceFile();
+}
 
 void FileEntryRef::closeFile() const { getFileEntry().closeFile(); }
+
+void FileEntryRef::updateFileEntryBufferSize(unsigned BufferSize) {
+  cast<FileEntry *>(getBaseMapEntry().second->V)->setSize(BufferSize);
+}
 
 } // end namespace clang
 

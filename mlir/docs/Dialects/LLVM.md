@@ -52,7 +52,7 @@ module attributes {llvm.data_layout = "e",
 LLVM functions are represented by a special operation, `llvm.func`, that has
 syntax similar to that of the built-in function operation but supports
 LLVM-related features such as linkage and variadic argument lists. See detailed
-description in the operation list [below](#llvmfunc-mlirllvmllvmfuncop).
+description in the operation list [below](#llvmfunc-llvmllvmfuncop).
 
 ### PHI Nodes and Block Arguments
 
@@ -139,12 +139,12 @@ will be reevaluated after considering composite constants.
 ### Globals
 
 Global variables are also defined using a special operation,
-[`llvm.mlir.global`](#llvmmlirglobal-mlirllvmglobalop), located at the module
+[`llvm.mlir.global`](#llvmmlirglobal-llvmglobalop), located at the module
 level. Globals are MLIR symbols and are identified by their name.
 
 Since functions need to be isolated-from-above, i.e. values defined outside the
 function cannot be directly used inside the function, an additional operation,
-[`llvm.mlir.addressof`](#llvmmliraddressof-mlirllvmaddressofop), is provided to
+[`llvm.mlir.addressof`](#llvmmliraddressof-llvmaddressofop), is provided to
 locally define a value containing the _address_ of a global. The actual value
 can then be loaded from that pointer, or a new value can be stored into it if
 the global is not declared constant. This is similar to LLVM IR where globals
@@ -179,7 +179,7 @@ Example:
 
 ```mlir
 llvm.func @func() attributes {
-  passthrough = ["noinline",           // value-less attribute
+  passthrough = ["readonly",           // value-less attribute
                  ["alignstack", "4"],  // integer attribute with value
                  ["other", "attr"]]    // attribute unknown to LLVM
 } {
@@ -210,9 +210,9 @@ style for types with nested angle brackets and keyword specifiers rather than
 using different bracket styles to differentiate types. Types inside the angle
 brackets may omit the `!llvm.` prefix for brevity: the parser first attempts to
 find a type (starting with `!` or a built-in type) and falls back to accepting a
-keyword. For example, `!llvm.ptr<!llvm.ptr<i32>>` and `!llvm.ptr<ptr<i32>>` are
-equivalent, with the latter being the canonical form, and denote a pointer to a
-pointer to a 32-bit integer.
+keyword. For example, `!llvm.struct<(!llvm.ptr, f32)>` and
+`!llvm.struct<(ptr, f32)>` are equivalent, with the latter being the canonical
+form, and denote a struct containing a pointer and a float.
 
 ### Built-in Type Compatibility
 
@@ -232,16 +232,14 @@ compatibility check.
 
 Each LLVM IR type corresponds to *exactly one* MLIR type, either built-in or
 LLVM dialect type. For example, because `i32` is LLVM-compatible, there is no
-`!llvm.i32` type. However, `!llvm.ptr<T>` is defined in the LLVM dialect as
-there is no corresponding built-in type.
+`!llvm.i32` type. However, `!llvm.struct<(T, ...)>` is defined in the LLVM
+dialect as there is no corresponding built-in type.
 
 ### Additional Simple Types
 
 The following non-parametric types derived from the LLVM IR are available in the
 LLVM dialect:
 
--   `!llvm.x86_mmx` (`LLVMX86MMXType`) - value held in an MMX register on x86
-    machine.
 -   `!llvm.ppc_fp128` (`LLVMPPCFP128Type`) - 128-bit floating-point value (two
     64 bits).
 -   `!llvm.token` (`LLVMTokenType`) - a non-inspectable value associated with an
@@ -263,24 +261,19 @@ the element type, which can be either compatible built-in or LLVM dialect types.
 
 Pointer types specify an address in memory.
 
-Both opaque and type-parameterized pointer types are supported.
-[Opaque pointers](https://llvm.org/docs/OpaquePointers.html) do not indicate the
-type of the data pointed to, and are intended to simplify LLVM IR by encoding
-behavior relevant to the pointee type into operations rather than into types.
-Non-opaque pointer types carry the pointee type as a type parameter. Both kinds
-of pointers may be additionally parameterized by an address space. The address
-space is an integer, but this choice may be reconsidered if MLIR implements
-named address spaces. The syntax of pointer types is as follows:
+Pointers are [opaque](https://llvm.org/docs/OpaquePointers.html), i.e., do not
+indicate the type of the data pointed to, and are intended to simplify LLVM IR
+by encoding behavior relevant to the pointee type into operations rather than
+into types. Pointers can optionally be parametrized with an address space. The
+address space is an integer, but this choice may be reconsidered if MLIR
+implements named address spaces. The syntax of pointer types is as follows:
 
 ```
   llvm-ptr-type ::= `!llvm.ptr` (`<` integer-literal `>`)?
-                  | `!llvm.ptr<` type (`,` integer-literal)? `>`
 ```
 
-where the former case is the opaque pointer type and the latter case is the
-non-opaque pointer type; the optional group containing the integer literal
-corresponds to the memory space. All cases are represented by `LLVMPointerType`
-internally.
+where the optional group containing the integer literal corresponds to the
+address space. All cases are represented by `LLVMPointerType` internally.
 
 #### Array Types
 
@@ -334,45 +327,25 @@ multiple of some fixed size in case of _scalable_ vectors, and the element type.
 Vectors cannot be nested and only 1D vectors are supported. Scalable vectors are
 still considered 1D.
 
-LLVM dialect uses built-in vector types for _fixed_-size vectors of built-in
-types, and provides additional types for fixed-sized vectors of LLVM dialect
-types (`LLVMFixedVectorType`) and scalable vectors of any types
-(`LLVMScalableVectorType`). These two additional types share the following
-syntax:
-
-```
-  llvm-vec-type ::= `!llvm.vec<` (`?` `x`)? integer-literal `x` type `>`
-```
-
-Note that the sets of element types supported by built-in and LLVM dialect
-vector types are mutually exclusive, e.g., the built-in vector type does not
-accept `!llvm.ptr<i32>` and the LLVM dialect fixed-width vector type does not
-accept `i32`.
+The LLVM dialect uses built-in vector type.
 
 The following functions are provided to operate on any kind of the vector types
 compatible with the LLVM dialect:
 
 -   `bool LLVM::isCompatibleVectorType(Type)` - checks whether a type is a
     vector type compatible with the LLVM dialect;
--   `Type LLVM::getVectorElementType(Type)` - returns the element type of any
-    vector type compatible with the LLVM dialect;
 -   `llvm::ElementCount LLVM::getVectorNumElements(Type)` - returns the number
     of elements in any vector type compatible with the LLVM dialect;
--   `Type LLVM::getFixedVectorType(Type, unsigned)` - gets a fixed vector type
-    with the given element type and size; the resulting type is either a
-    built-in or an LLVM dialect vector type depending on which one supports the
-    given element type.
 
 #### Examples of Compatible Vector Types
 
 ```mlir
 vector<42 x i32>                   // Vector of 42 32-bit integers.
-!llvm.vec<42 x ptr<i32>>           // Vector of 42 pointers to 32-bit integers.
-!llvm.vec<? x 4 x i32>             // Scalable vector of 32-bit integers with
+vector<42 x !llvm.ptr>             // Vector of 42 pointers.
+vector<[4] x i32>                  // Scalable vector of 32-bit integers with
                                    // size divisible by 4.
 !llvm.array<2 x vector<2 x i32>>   // Array of 2 vectors of 2 32-bit integers.
-!llvm.array<2 x vec<2 x ptr<i32>>> // Array of 2 vectors of 2 pointers to 32-bit
-                                   // integers.
+!llvm.array<2 x vec<2 x ptr>> // Array of 2 vectors of 2 pointers.
 ```
 
 ### Structure Types
@@ -421,21 +394,6 @@ type-or-ref ::= <any compatible type with optional !llvm.>
               | `!llvm.`? `struct<` string-literal `>`
 ```
 
-The body of the identified struct is printed in full unless the it is
-transitively contained in the same struct. In the latter case, only the
-identifier is printed. For example, the structure containing the pointer to
-itself is represented as `!llvm.struct<"A", (ptr<"A">)>`, and the structure `A`
-containing two pointers to the structure `B` containing a pointer to the
-structure `A` is represented as `!llvm.struct<"A", (ptr<"B", (ptr<"A">)>,
-ptr<"B", (ptr<"A">))>`. Note that the structure `B` is "unrolled" for both
-elements. _A structure with the same name but different body is a syntax error._
-**The user must ensure structure name uniqueness across all modules processed in
-a given MLIR context.** Structure names are arbitrary string literals and may
-include, e.g., spaces and keywords.
-
-Identified structs may be _opaque_. In this case, the body is unknown but the
-structure type is considered _initialized_ and is valid in the IR.
-
 #### Literal Structure Types
 
 Literal structures are uniqued according to the list of elements they contain,
@@ -460,11 +418,10 @@ elements provided.
 !llvm.struct<packed (i8, i32)>  // packed struct
 !llvm.struct<"a">               // recursive reference, only allowed within
                                 // another struct, NOT allowed at top level
-!llvm.struct<"a", ptr<struct<"a">>>  // supported example of recursive reference
 !llvm.struct<"a", ()>           // empty, named (necessary to differentiate from
                                 // recursive reference)
 !llvm.struct<"a", opaque>       // opaque, named
-!llvm.struct<"a", (i32)>        // named
+!llvm.struct<"a", (i32, ptr)>        // named
 !llvm.struct<"a", packed (i8, i32)>  // named, packed
 ```
 

@@ -66,7 +66,7 @@ namespace sema {
 /// parsed.
 class CompoundScopeInfo {
 public:
-  /// Whether this compound stamement contains `for' or `while' loops
+  /// Whether this compound statement contains `for' or `while' loops
   /// with empty bodies.
   bool HasEmptyLoopBodies = false;
 
@@ -97,11 +97,13 @@ public:
       : PD(PD), Loc(Loc), Stmts(Stmts) {}
 };
 
+enum class FirstCoroutineStmtKind { CoReturn, CoAwait, CoYield };
+
 /// Retains information about a function, method, or block that is
 /// currently being parsed.
 class FunctionScopeInfo {
 protected:
-  enum ScopeKind {
+  enum ScopeKind : uint8_t {
     SK_Function,
     SK_Block,
     SK_Lambda,
@@ -168,8 +170,9 @@ public:
   /// to build, the initial and final coroutine suspend points
   bool NeedsCoroutineSuspends : 1;
 
-  /// An enumeration represeting the kind of the first coroutine statement
+  /// An enumeration representing the kind of the first coroutine statement
   /// in the function. One of co_return, co_await, or co_yield.
+  LLVM_PREFERRED_TYPE(FirstCoroutineStmtKind)
   unsigned char FirstCoroutineStmtKind : 2;
 
   /// Whether we found an immediate-escalating expression.
@@ -188,6 +191,9 @@ public:
 
   /// First SEH '__try' statement in the current function.
   SourceLocation FirstSEHTryLoc;
+
+  /// First use of a VLA within the current function.
+  SourceLocation FirstVLALoc;
 
 private:
   /// Used to determine if errors occurred in this function or block.
@@ -217,7 +223,7 @@ public:
   /// The initial and final coroutine suspend points.
   std::pair<Stmt *, Stmt *> CoroutineSuspends;
 
-  /// The stack of currently active compound stamement scopes in the
+  /// The stack of currently active compound statement scopes in the
   /// function.
   SmallVector<CompoundScopeInfo, 4> CompoundScopes;
 
@@ -473,6 +479,11 @@ public:
     FirstSEHTryLoc = TryLoc;
   }
 
+  void setHasVLA(SourceLocation VLALoc) {
+    if (FirstVLALoc.isInvalid())
+      FirstVLALoc = VLALoc;
+  }
+
   bool NeedsScopeChecking() const {
     return !HasDroppedStmt && (HasIndirectGoto || HasMustTail ||
                                (HasBranchProtectedScope && HasBranchIntoScope));
@@ -494,22 +505,30 @@ public:
     assert(FirstCoroutineStmtLoc.isInvalid() &&
                    "first coroutine statement location already set");
     FirstCoroutineStmtLoc = Loc;
-    FirstCoroutineStmtKind = llvm::StringSwitch<unsigned char>(Keyword)
-            .Case("co_return", 0)
-            .Case("co_await", 1)
-            .Case("co_yield", 2);
+    FirstCoroutineStmtKind =
+        llvm::StringSwitch<unsigned char>(Keyword)
+            .Case("co_return",
+                  llvm::to_underlying(FirstCoroutineStmtKind::CoReturn))
+            .Case("co_await",
+                  llvm::to_underlying(FirstCoroutineStmtKind::CoAwait))
+            .Case("co_yield",
+                  llvm::to_underlying(FirstCoroutineStmtKind::CoYield));
   }
 
   StringRef getFirstCoroutineStmtKeyword() const {
     assert(FirstCoroutineStmtLoc.isValid()
                    && "no coroutine statement available");
-    switch (FirstCoroutineStmtKind) {
-    case 0: return "co_return";
-    case 1: return "co_await";
-    case 2: return "co_yield";
-    default:
-      llvm_unreachable("FirstCoroutineStmtKind has an invalid value");
+    auto Value =
+        static_cast<enum FirstCoroutineStmtKind>(FirstCoroutineStmtKind);
+    switch (Value) {
+    case FirstCoroutineStmtKind::CoReturn:
+      return "co_return";
+    case FirstCoroutineStmtKind::CoAwait:
+      return "co_await";
+    case FirstCoroutineStmtKind::CoYield:
+      return "co_yield";
     };
+    llvm_unreachable("FirstCoroutineStmtKind has an invalid value");
   }
 
   void setNeedsCoroutineSuspends(bool value = true) {
@@ -574,25 +593,31 @@ class Capture {
   QualType CaptureType;
 
   /// The CaptureKind of this capture.
+  LLVM_PREFERRED_TYPE(CaptureKind)
   unsigned Kind : 2;
 
   /// Whether this is a nested capture (a capture of an enclosing capturing
   /// scope's capture).
+  LLVM_PREFERRED_TYPE(bool)
   unsigned Nested : 1;
 
   /// Whether this is a capture of '*this'.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned CapturesThis : 1;
 
   /// Whether an explicit capture has been odr-used in the body of the
   /// lambda.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned ODRUsed : 1;
 
   /// Whether an explicit capture has been non-odr-used in the body of
   /// the lambda.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned NonODRUsed : 1;
 
   /// Whether the capture is invalid (a capture was required but the entity is
   /// non-capturable).
+  LLVM_PREFERRED_TYPE(bool)
   unsigned Invalid : 1;
 
 public:
@@ -699,9 +724,15 @@ public:
   /// is deduced (e.g. a lambda or block with omitted return type).
   bool HasImplicitReturnType = false;
 
+  /// Whether this contains an unexpanded parameter pack.
+  bool ContainsUnexpandedParameterPack = false;
+
   /// ReturnType - The target type of return statements in this context,
   /// or null if unknown.
   QualType ReturnType;
+
+  /// Packs introduced by this, if any.
+  SmallVector<NamedDecl *, 4> LocalPacks;
 
   void addCapture(ValueDecl *Var, bool isBlock, bool isByref, bool isNested,
                   SourceLocation Loc, SourceLocation EllipsisLoc,
@@ -870,12 +901,6 @@ public:
   /// Whether any of the capture expressions requires cleanups.
   CleanupInfo Cleanup;
 
-  /// Whether the lambda contains an unexpanded parameter pack.
-  bool ContainsUnexpandedParameterPack = false;
-
-  /// Packs introduced by this lambda, if any.
-  SmallVector<NamedDecl*, 4> LocalPacks;
-
   /// Source range covering the explicit template parameter list (if it exists).
   SourceRange ExplicitTemplateParamsRange;
 
@@ -908,7 +933,7 @@ public:
   ///  to local variables that are usable as constant expressions and
   ///  do not involve an odr-use (they may still need to be captured
   ///  if the enclosing full-expression is instantiation dependent).
-  llvm::SmallSet<Expr *, 8> NonODRUsedCapturingExprs;
+  llvm::SmallPtrSet<Expr *, 8> NonODRUsedCapturingExprs;
 
   /// A map of explicit capture indices to their introducer source ranges.
   llvm::DenseMap<unsigned, SourceRange> ExplicitCaptureRanges;
@@ -917,12 +942,15 @@ public:
   /// that were defined in parent contexts. Used to avoid warnings when the
   /// shadowed variables are uncaptured by this lambda.
   struct ShadowedOuterDecl {
-    const VarDecl *VD;
-    const VarDecl *ShadowedDecl;
+    const NamedDecl *VD;
+    const NamedDecl *ShadowedDecl;
   };
   llvm::SmallVector<ShadowedOuterDecl, 4> ShadowingDecls;
 
   SourceLocation PotentialThisCaptureLocation;
+
+  /// Variables that are potentially ODR-used in CUDA/HIP.
+  llvm::SmallPtrSet<VarDecl *, 4> CUDAPotentialODRUsedVars;
 
   LambdaScopeInfo(DiagnosticsEngine &Diag)
       : CapturingScopeInfo(Diag, ImpCap_None) {
@@ -1027,7 +1055,7 @@ public:
     return NonODRUsedCapturingExprs.count(CapturingVarExpr);
   }
   void removePotentialCapture(Expr *E) {
-    llvm::erase_value(PotentiallyCapturingExprs, E);
+    llvm::erase(PotentiallyCapturingExprs, E);
   }
   void clearPotentialCaptures() {
     PotentiallyCapturingExprs.clear();

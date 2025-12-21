@@ -12,6 +12,7 @@
 
 #include "llvm/Object/XCOFFObjectFile.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/DataExtractor.h"
 #include "llvm/TargetParser/SubtargetFeature.h"
 #include <cstddef>
@@ -65,6 +66,12 @@ template <typename T> uint16_t XCOFFSectionHeader<T>::getSectionType() const {
 }
 
 template <typename T>
+uint32_t XCOFFSectionHeader<T>::getSectionSubtype() const {
+  const T &DerivedXCOFFSectionHeader = static_cast<const T &>(*this);
+  return DerivedXCOFFSectionHeader.Flags & ~SectionFlagsTypeMask;
+}
+
+template <typename T>
 bool XCOFFSectionHeader<T>::isReservedSectionType() const {
   return getSectionType() & SectionFlagsReservedMask;
 }
@@ -86,8 +93,8 @@ uint8_t XCOFFRelocation<AddressType>::getRelocatedLength() const {
   return (Info & XR_BIASED_LENGTH_MASK) + 1;
 }
 
-template struct ExceptionSectionEntry<support::ubig32_t>;
-template struct ExceptionSectionEntry<support::ubig64_t>;
+template struct LLVM_EXPORT_TEMPLATE ExceptionSectionEntry<support::ubig32_t>;
+template struct LLVM_EXPORT_TEMPLATE ExceptionSectionEntry<support::ubig64_t>;
 
 template <typename T>
 Expected<StringRef> getLoaderSecSymNameInStrTbl(const T *LoaderSecHeader,
@@ -299,7 +306,11 @@ Expected<SymbolRef::Type>
 XCOFFObjectFile::getSymbolType(DataRefImpl Symb) const {
   XCOFFSymbolRef XCOFFSym = toSymbolRef(Symb);
 
-  if (XCOFFSym.isFunction())
+  Expected<bool> IsFunction = XCOFFSym.isFunction();
+  if (!IsFunction)
+    return IsFunction.takeError();
+
+  if (*IsFunction)
     return SymbolRef::ST_Function;
 
   if (XCOFF::C_FILE == XCOFFSym.getStorageClass())
@@ -368,7 +379,7 @@ Expected<StringRef> XCOFFObjectFile::getSectionName(DataRefImpl Sec) const {
 }
 
 uint64_t XCOFFObjectFile::getSectionAddress(DataRefImpl Sec) const {
-  // Avoid ternary due to failure to convert the ubig32_t value to a unit64_t
+  // Avoid ternary due to failure to convert the ubig32_t value to a uint64_t
   // with MSVC.
   if (is64Bit())
     return toSection64(Sec)->VirtualAddress;
@@ -386,7 +397,7 @@ uint64_t XCOFFObjectFile::getSectionIndex(DataRefImpl Sec) const {
 }
 
 uint64_t XCOFFObjectFile::getSectionSize(DataRefImpl Sec) const {
-  // Avoid ternary due to failure to convert the ubig32_t value to a unit64_t
+  // Avoid ternary due to failure to convert the ubig32_t value to a uint64_t
   // with MSVC.
   if (is64Bit())
     return toSection64(Sec)->SectionSize;
@@ -418,9 +429,13 @@ XCOFFObjectFile::getSectionContents(DataRefImpl Sec) const {
 }
 
 uint64_t XCOFFObjectFile::getSectionAlignment(DataRefImpl Sec) const {
-  uint64_t Result = 0;
-  llvm_unreachable("Not yet implemented!");
-  return Result;
+  // TODO: Copied from MC/XCOFFObjectWriter.cpp
+  // Sections other than DWARF section use DefaultSectionAlign as the default
+  // alignment, while DWARF sections have their own alignments. DWARF section
+  // alignment is bigger than DefaultSectionAlign.
+  if (isDebugSection(Sec))
+    return 8;
+  return 4;
 }
 
 uint64_t XCOFFObjectFile::getSectionFileOffsetToRawData(DataRefImpl Sec) const {
@@ -727,9 +742,11 @@ bool XCOFFObjectFile::isRelocatableObject() const {
 }
 
 Expected<uint64_t> XCOFFObjectFile::getStartAddress() const {
-  // TODO FIXME Should get from auxiliary_header->o_entry when support for the
-  // auxiliary_header is added.
-  return 0;
+  if (AuxiliaryHeader == nullptr)
+    return 0;
+
+  return is64Bit() ? auxiliaryHeader64()->getEntryPointAddr()
+                   : auxiliaryHeader32()->getEntryPointAddr();
 }
 
 StringRef XCOFFObjectFile::mapDebugSectionName(StringRef Name) const {
@@ -1048,9 +1065,9 @@ Expected<ArrayRef<ExceptEnt>> XCOFFObjectFile::getExceptionEntries() const {
       ExceptEntStart, ExceptEntStart + getSectionSize(DRI) / sizeof(ExceptEnt));
 }
 
-template Expected<ArrayRef<ExceptionSectionEntry32>>
+template LLVM_EXPORT_TEMPLATE Expected<ArrayRef<ExceptionSectionEntry32>>
 XCOFFObjectFile::getExceptionEntries() const;
-template Expected<ArrayRef<ExceptionSectionEntry64>>
+template LLVM_EXPORT_TEMPLATE Expected<ArrayRef<ExceptionSectionEntry64>>
 XCOFFObjectFile::getExceptionEntries() const;
 
 Expected<XCOFFStringTable>
@@ -1225,7 +1242,7 @@ std::optional<StringRef> XCOFFObjectFile::tryGetCPUName() const {
   return StringRef("future");
 }
 
-bool XCOFFSymbolRef::isFunction() const {
+Expected<bool> XCOFFSymbolRef::isFunction() const {
   if (!isCsectSymbol())
     return false;
 
@@ -1233,34 +1250,62 @@ bool XCOFFSymbolRef::isFunction() const {
     return true;
 
   Expected<XCOFFCsectAuxRef> ExpCsectAuxEnt = getXCOFFCsectAuxRef();
-  if (!ExpCsectAuxEnt) {
-    // If we could not get the CSECT auxiliary entry, then treat this symbol as
-    // if it isn't a function. Consume the error and return `false` to move on.
-    consumeError(ExpCsectAuxEnt.takeError());
-    return false;
-  }
+  if (!ExpCsectAuxEnt)
+    return ExpCsectAuxEnt.takeError();
 
   const XCOFFCsectAuxRef CsectAuxRef = ExpCsectAuxEnt.get();
 
-  // A function definition should be a label definition.
-  // FIXME: This is not necessarily the case when -ffunction-sections is
-  // enabled.
-  if (!CsectAuxRef.isLabel())
+  if (CsectAuxRef.getStorageMappingClass() != XCOFF::XMC_PR &&
+      CsectAuxRef.getStorageMappingClass() != XCOFF::XMC_GL)
     return false;
 
-  if (CsectAuxRef.getStorageMappingClass() != XCOFF::XMC_PR)
+  // A function definition should not be a common type symbol or an external
+  // symbol.
+  if (CsectAuxRef.getSymbolType() == XCOFF::XTY_CM ||
+      CsectAuxRef.getSymbolType() == XCOFF::XTY_ER)
     return false;
 
-  const int16_t SectNum = getSectionNumber();
-  Expected<DataRefImpl> SI = getObject()->getSectionByNum(SectNum);
-  if (!SI) {
-    // If we could not get the section, then this symbol should not be
-    // a function. So consume the error and return `false` to move on.
-    consumeError(SI.takeError());
-    return false;
+  // If the next symbol is an XTY_LD type symbol with the same address, this
+  // XTY_SD symbol is not a function. Otherwise this is a function symbol for
+  // -ffunction-sections.
+  if (CsectAuxRef.getSymbolType() == XCOFF::XTY_SD) {
+    // If this is a csect with size 0, it won't be a function definition.
+    // This is used to work around the fact that LLVM always generates below
+    // symbol for -ffunction-sections:
+    // m   0x00000000     .text     1  unamex                    **No Symbol**
+    // a4  0x00000000       0    0     SD       PR    0    0
+    // FIXME: remove or replace this meaningless symbol.
+    if (getSize() == 0)
+      return false;
+
+    xcoff_symbol_iterator NextIt(this);
+    // If this is the last main symbol table entry, there won't be an XTY_LD
+    // type symbol below.
+    if (++NextIt == getObject()->symbol_end())
+      return true;
+
+    if (cantFail(getAddress()) != cantFail(NextIt->getAddress()))
+      return true;
+
+    // Check next symbol is XTY_LD. If so, this symbol is not a function.
+    Expected<XCOFFCsectAuxRef> NextCsectAuxEnt = NextIt->getXCOFFCsectAuxRef();
+    if (!NextCsectAuxEnt)
+      return NextCsectAuxEnt.takeError();
+
+    if (NextCsectAuxEnt.get().getSymbolType() == XCOFF::XTY_LD)
+      return false;
+
+    return true;
   }
 
-  return (getObject()->getSectionFlags(SI.get()) & XCOFF::STYP_TEXT);
+  if (CsectAuxRef.getSymbolType() == XCOFF::XTY_LD)
+    return true;
+
+  return createError(
+      "symbol csect aux entry with index " +
+      Twine(getObject()->getSymbolIndex(CsectAuxRef.getEntryAddress())) +
+      " has invalid symbol type " +
+      Twine::utohexstr(CsectAuxRef.getSymbolType()));
 }
 
 bool XCOFFSymbolRef::isCsectSymbol() const {
@@ -1329,21 +1374,23 @@ Expected<StringRef> XCOFFSymbolRef::getName() const {
   return getObject()->getStringTableEntry(getSymbol64()->Offset);
 }
 
-// Explictly instantiate template classes.
-template struct XCOFFSectionHeader<XCOFFSectionHeader32>;
-template struct XCOFFSectionHeader<XCOFFSectionHeader64>;
+// Explicitly instantiate template classes.
+template struct LLVM_EXPORT_TEMPLATE XCOFFSectionHeader<XCOFFSectionHeader32>;
+template struct LLVM_EXPORT_TEMPLATE XCOFFSectionHeader<XCOFFSectionHeader64>;
 
-template struct XCOFFRelocation<llvm::support::ubig32_t>;
-template struct XCOFFRelocation<llvm::support::ubig64_t>;
+template struct LLVM_EXPORT_TEMPLATE XCOFFRelocation<llvm::support::ubig32_t>;
+template struct LLVM_EXPORT_TEMPLATE XCOFFRelocation<llvm::support::ubig64_t>;
 
-template llvm::Expected<llvm::ArrayRef<llvm::object::XCOFFRelocation64>>
-llvm::object::XCOFFObjectFile::relocations<llvm::object::XCOFFSectionHeader64,
-                                           llvm::object::XCOFFRelocation64>(
-    llvm::object::XCOFFSectionHeader64 const &) const;
-template llvm::Expected<llvm::ArrayRef<llvm::object::XCOFFRelocation32>>
-llvm::object::XCOFFObjectFile::relocations<llvm::object::XCOFFSectionHeader32,
-                                           llvm::object::XCOFFRelocation32>(
-    llvm::object::XCOFFSectionHeader32 const &) const;
+template LLVM_EXPORT_TEMPLATE
+    llvm::Expected<llvm::ArrayRef<llvm::object::XCOFFRelocation64>>
+    llvm::object::XCOFFObjectFile::relocations<
+        llvm::object::XCOFFSectionHeader64, llvm::object::XCOFFRelocation64>(
+        llvm::object::XCOFFSectionHeader64 const &) const;
+template LLVM_EXPORT_TEMPLATE
+    llvm::Expected<llvm::ArrayRef<llvm::object::XCOFFRelocation32>>
+    llvm::object::XCOFFObjectFile::relocations<
+        llvm::object::XCOFFSectionHeader32, llvm::object::XCOFFRelocation32>(
+        llvm::object::XCOFFSectionHeader32 const &) const;
 
 bool doesXCOFFTracebackTableBegin(ArrayRef<uint8_t> Bytes) {
   if (Bytes.size() < 4)
@@ -1371,7 +1418,7 @@ TBVectorExt::TBVectorExt(StringRef TBvectorStrRef, Error &Err) {
   unsigned ParmsNum =
       GETVALUEWITHMASKSHIFT(NumberOfVectorParmsMask, NumberOfVectorParmsShift);
 
-  ErrorAsOutParameter EAO(&Err);
+  ErrorAsOutParameter EAO(Err);
   Expected<SmallString<32>> VecParmsTypeOrError =
       parseVectorParmsType(VecParmsTypeValue, ParmsNum);
   if (!VecParmsTypeOrError)
@@ -1415,7 +1462,7 @@ XCOFFTracebackTable::create(const uint8_t *Ptr, uint64_t &Size, bool Is64Bit) {
 XCOFFTracebackTable::XCOFFTracebackTable(const uint8_t *Ptr, uint64_t &Size,
                                          Error &Err, bool Is64Bit)
     : TBPtr(Ptr), Is64BitObj(Is64Bit) {
-  ErrorAsOutParameter EAO(&Err);
+  ErrorAsOutParameter EAO(Err);
   DataExtractor DE(ArrayRef<uint8_t>(Ptr, Size), /*IsLittleEndian=*/false,
                    /*AddressSize=*/0);
   DataExtractor::Cursor Cur(/*Offset=*/0);
@@ -1521,7 +1568,7 @@ uint8_t XCOFFTracebackTable::getLanguageID() const {
 }
 
 bool XCOFFTracebackTable::isGlobalLinkage() const {
-  return GETBITWITHMASK(0, IsGlobaLinkageMask);
+  return GETBITWITHMASK(0, IsGlobalLinkageMask);
 }
 
 bool XCOFFTracebackTable::isOutOfLineEpilogOrPrologue() const {

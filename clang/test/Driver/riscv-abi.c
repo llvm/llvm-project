@@ -4,8 +4,6 @@
 // RUN:   | FileCheck -check-prefix=CHECK-ILP32 %s
 // RUN: %clang --target=riscv32-unknown-elf %s -### -march=rv32imc 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK-ILP32 %s
-// RUN: %clang --target=riscv32-unknown-elf %s -### -march=rv32imf 2>&1 \
-// RUN:   | FileCheck -check-prefix=CHECK-ILP32 %s
 // RUN: %clang --target=riscv32-unknown-elf -x assembler %s -### 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK-ILP32 %s
 // RUN: %clang --target=riscv32-unknown-elf -x assembler %s -### \
@@ -23,6 +21,10 @@
 // CHECK-ILP32E: "-target-abi" "ilp32e"
 
 // RUN: %clang --target=riscv32-unknown-elf %s -### -march=rv32if -mabi=ilp32f 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK-ILP32F %s
+// RUN: %clang --target=riscv32-unknown-elf %s -### -mabi=ilp32f 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK-ILP32F %s
+// RUN: %clang --target=riscv32-unknown-elf %s -### -march=rv32if 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK-ILP32F %s
 
 // CHECK-ILP32F: "-target-abi" "ilp32f"
@@ -51,8 +53,6 @@
 // RUN:   | FileCheck -check-prefix=CHECK-LP64 %s
 // RUN: %clang --target=riscv64-unknown-elf %s -### -march=rv64imc 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK-LP64 %s
-// RUN: %clang --target=riscv64-unknown-elf %s -### -march=rv64imf 2>&1 \
-// RUN:   | FileCheck -check-prefix=CHECK-LP64 %s
 // RUN: %clang --target=riscv64-unknown-elf -x assembler %s -### 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK-LP64  %s
 // RUN: %clang --target=riscv64-unknown-elf -x assembler %s -### \
@@ -60,7 +60,11 @@
 
 // CHECK-LP64: "-target-abi" "lp64"
 
-// RUN:  not %clang --target=riscv64-unknown-elf %s -### -march=rv64f -mabi=lp64f 2>&1 \
+// RUN:  %clang --target=riscv64-unknown-elf %s -### -march=rv64if -mabi=lp64f 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK-LP64F %s
+// RUN:  %clang --target=riscv64-unknown-elf %s -### -mabi=lp64f 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK-LP64F %s
+// RUN:  %clang --target=riscv64-unknown-elf %s -### -march=rv64if 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK-LP64F %s
 
 // CHECK-LP64F: "-target-abi" "lp64f"

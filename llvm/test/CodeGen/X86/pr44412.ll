@@ -10,7 +10,7 @@ define void @bar(i32 %0, i32 %1) nounwind {
 ; CHECK-NEXT:    pushq %rbx
 ; CHECK-NEXT:    movl %edi, %ebx
 ; CHECK-NEXT:    decl %ebx
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_2: # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movl %ebx, %edi
 ; CHECK-NEXT:    callq foo@PLT
@@ -43,7 +43,7 @@ define void @baz(i32 %0, i32 %1) nounwind {
 ; CHECK-NEXT:    pushq %rbx
 ; CHECK-NEXT:    movl %edi, %ebx
 ; CHECK-NEXT:    decl %ebx
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB1_2: # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movl %ebx, %edi
 ; CHECK-NEXT:    callq foo@PLT

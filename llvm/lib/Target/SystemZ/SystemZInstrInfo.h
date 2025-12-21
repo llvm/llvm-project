@@ -71,18 +71,13 @@ enum {
   MO_GOT = (1 << 0),
 
   // @INDNTPOFF
-  MO_INDNTPOFF = (2 << 0)
-};
+  MO_INDNTPOFF = (2 << 0),
 
-// z/OS XPLink specific: classifies the types of
-// accesses to the ADA (Associated Data Area).
-// These enums contains values that overlap with the above MO_ enums,
-// but that's fine since the above enums are used with ELF,
-// while these values are used with z/OS.
-enum {
-  MO_ADA_DATA_SYMBOL_ADDR = 1,
-  MO_ADA_INDIRECT_FUNC_DESC,
-  MO_ADA_DIRECT_FUNC_DESC,
+  // z/OS XPLink specific: classifies the types of
+  // accesses to the ADA (Associated Data Area).
+  MO_ADA_DATA_SYMBOL_ADDR = (1 << 2),
+  MO_ADA_INDIRECT_FUNC_DESC = (2 << 2),
+  MO_ADA_DIRECT_FUNC_DESC = (3 << 2),
 };
 
 // Classifies a branch.
@@ -184,7 +179,7 @@ MachineBasicBlock *splitBlockBefore(MachineBasicBlock::iterator MI,
 
 class SystemZInstrInfo : public SystemZGenInstrInfo {
   const SystemZRegisterInfo RI;
-  SystemZSubtarget &STI;
+  const SystemZSubtarget &STI;
 
   void splitMove(MachineBasicBlock::iterator MI, unsigned NewOpcode) const;
   void splitAdjDynAlloc(MachineBasicBlock::iterator MI) const;
@@ -225,13 +220,17 @@ protected:
                                        unsigned CommuteOpIdx2) const override;
 
 public:
-  explicit SystemZInstrInfo(SystemZSubtarget &STI);
+  explicit SystemZInstrInfo(const SystemZSubtarget &STI);
 
   // Override TargetInstrInfo.
-  unsigned isLoadFromStackSlot(const MachineInstr &MI,
+  Register isLoadFromStackSlot(const MachineInstr &MI,
                                int &FrameIndex) const override;
-  unsigned isStoreToStackSlot(const MachineInstr &MI,
+  Register isStoreToStackSlot(const MachineInstr &MI,
                               int &FrameIndex) const override;
+  Register isLoadFromStackSlotPostFE(const MachineInstr &MI,
+                                     int &FrameIndex) const override;
+  Register isStoreToStackSlotPostFE(const MachineInstr &MI,
+                                    int &FrameIndex) const override;
   bool isStackSlotCopy(const MachineInstr &MI, int &DestFrameIndex,
                        int &SrcFrameIndex) const override;
   bool analyzeBranch(MachineBasicBlock &MBB, MachineBasicBlock *&TBB,
@@ -254,8 +253,9 @@ public:
                     const DebugLoc &DL, Register DstReg,
                     ArrayRef<MachineOperand> Cond, Register TrueReg,
                     Register FalseReg) const override;
-  bool FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI, Register Reg,
+  bool foldImmediate(MachineInstr &UseMI, MachineInstr &DefMI, Register Reg,
                      MachineRegisterInfo *MRI) const override;
+
   bool isPredicable(const MachineInstr &MI) const override;
   bool isProfitableToIfCvt(MachineBasicBlock &MBB, unsigned NumCycles,
                            unsigned ExtraPredCycles,
@@ -270,21 +270,29 @@ public:
   bool PredicateInstruction(MachineInstr &MI,
                             ArrayRef<MachineOperand> Pred) const override;
   void copyPhysReg(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
-                   const DebugLoc &DL, MCRegister DestReg, MCRegister SrcReg,
-                   bool KillSrc) const override;
-  void storeRegToStackSlot(MachineBasicBlock &MBB,
-                           MachineBasicBlock::iterator MBBI, Register SrcReg,
-                           bool isKill, int FrameIndex,
-                           const TargetRegisterClass *RC,
-                           const TargetRegisterInfo *TRI,
-                           Register VReg) const override;
-  void loadRegFromStackSlot(MachineBasicBlock &MBB,
-                            MachineBasicBlock::iterator MBBI, Register DestReg,
-                            int FrameIdx, const TargetRegisterClass *RC,
-                            const TargetRegisterInfo *TRI,
-                            Register VReg) const override;
+                   const DebugLoc &DL, Register DestReg, Register SrcReg,
+                   bool KillSrc, bool RenamableDest = false,
+                   bool RenamableSrc = false) const override;
+  void storeRegToStackSlot(
+      MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI, Register SrcReg,
+      bool isKill, int FrameIndex, const TargetRegisterClass *RC,
+
+      Register VReg,
+      MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const override;
+  void loadRegFromStackSlot(
+      MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
+      Register DestReg, int FrameIdx, const TargetRegisterClass *RC,
+
+      Register VReg,
+      MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const override;
   MachineInstr *convertToThreeAddress(MachineInstr &MI, LiveVariables *LV,
                                       LiveIntervals *LIS) const override;
+
+  bool useMachineCombiner() const override { return true; }
+  bool isAssociativeAndCommutative(const MachineInstr &Inst,
+                                   bool Invert) const override;
+  std::optional<unsigned> getInverseOpcode(unsigned Opcode) const override;
+
   MachineInstr *
   foldMemoryOperandImpl(MachineFunction &MF, MachineInstr &MI,
                         ArrayRef<unsigned> Ops,
@@ -372,6 +380,18 @@ public:
   bool
   areMemAccessesTriviallyDisjoint(const MachineInstr &MIa,
                                   const MachineInstr &MIb) const override;
+
+  bool getConstValDefinedInReg(const MachineInstr &MI, const Register Reg,
+                               int64_t &ImmVal) const override;
+
+  std::optional<DestSourcePair>
+  isCopyInstrImpl(const MachineInstr &MI) const override;
+
+  std::pair<unsigned, unsigned>
+  decomposeMachineOperandsTargetFlags(unsigned TF) const override;
+
+  ArrayRef<std::pair<unsigned, const char *>>
+  getSerializableDirectMachineOperandTargetFlags() const override;
 };
 
 } // end namespace llvm

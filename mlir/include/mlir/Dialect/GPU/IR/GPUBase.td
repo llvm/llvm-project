@@ -52,7 +52,20 @@ def GPU_Dialect : Dialect {
     /// Returns the numeric value used to identify the private memory address
     /// space.
     static AddressSpace getPrivateAddressSpace() { return AddressSpace::Private; }
+
+    /// Return true if the given MemRefType has an address space that matches
+    /// with the gpu::AddressSpaceAttr attribute with value 'workgroup`.
+    static bool hasWorkgroupMemoryAddressSpace(MemRefType type);
+
+    /// Return true if the given Attribute is an gpu::AddressSpaceAttr
+    /// attribute with value 'workgroup`.
+    static bool isWorkgroupMemoryAddressSpace(Attribute memorySpace);
   }];
+
+  let discardableAttrs = (ins
+    "::mlir::DenseI32ArrayAttr":$known_block_size,
+    "::mlir::DenseI32ArrayAttr":$known_grid_size
+  );
 
   let dependentDialects = ["arith::ArithDialect"];
   let useDefaultAttributePrinterParser = 1;
@@ -101,7 +114,7 @@ def GPU_MMAMatrix : DialectType<
   GPU_Dialect, IsMMAMatrixTypePred, "MMAMatrix type">;
 
 // Memref type acceptable to gpu.subgroup_mma_{load|store}_matrix ops.
-def GPU_MMAMemRef : MemRefOf<[I8, I32, F16, F32, VectorOfRankAndType<[1], [I8, I32, F16, F32]>]>;
+def GPU_MMAMemRef : MemRefOf<[I8, I32, F16, F32, F64, VectorOfRankAndType<[1], [I8, I32, F16, F32, F64]>]>;
 
 class MMAMatrixOf<list<Type> allowedTypes> :
   ContainerType<AnyTypeOf<allowedTypes>, IsMMAMatrixTypePred,

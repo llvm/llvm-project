@@ -3,9 +3,9 @@
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
 load("@bazel_skylib//rules:expand_template.bzl", "expand_template")
+load("@rules_cc//cc:defs.bzl", "cc_library")
 load("//llvm:lit_test.bzl", "package_path")
-load("//mlir:build_defs.bzl", "if_cuda_available")
-load("//mlir:tblgen.bzl", "gentbl_cc_library", "td_library")
+load("//mlir:tblgen.bzl", "gentbl_cc_library", "gentbl_sharded_ops", "td_library")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -31,19 +31,24 @@ expand_template(
         "@LIT_SITE_CFG_IN_HEADER@": LIT_SITE_CFG_IN_HEADER,
         "@LLVM_TOOLS_DIR@": package_path("//llvm:BUILD"),
         "@ENABLE_SHARED@": "1",
+        "@BUILD_SHARED_LIBS@": "1",
         "@ENABLE_ASSERTIONS@": "1",
         "@MLIR_SOURCE_DIR@": package_path("//mlir:BUILD"),
         "@MLIR_TOOLS_DIR@": package_path("//mlir:BUILD"),
         "\"@MLIR_BINARY_DIR@\"": "os.environ[\"TEST_UNDECLARED_OUTPUTS_DIR\"]",
         # All disabled, but required to substituted because they are not in quotes.
         "@LLVM_BUILD_EXAMPLES@": "0",
-        "@MLIR_ENABLE_CUDA_CONVERSIONS@": "0",
+        "@LLVM_HAS_NVPTX_TARGET@": "0",
+        "@LLVM_INCLUDE_SPIRV_TOOLS_TESTS@": "0",
         "@MLIR_ENABLE_CUDA_RUNNER@": "0",
         "@MLIR_ENABLE_ROCM_CONVERSIONS@": "0",
         "@MLIR_ENABLE_ROCM_RUNNER@": "0",
+        "@MLIR_ENABLE_SYCL_RUNNER@": "0",
+        "@MLIR_ENABLE_LEVELZERO_RUNNER@": "0",
         "@MLIR_ENABLE_SPIRV_CPU_RUNNER@": "0",
         "@MLIR_ENABLE_VULKAN_RUNNER@": "0",
         "@MLIR_ENABLE_BINDINGS_PYTHON@": "0",
+        "@MLIR_ENABLE_XEVM_CONVERSIONS@": "0",
         "@MLIR_RUN_AMX_TESTS@": "0",
         "@MLIR_RUN_ARM_SVE_TESTS@": "0",
         "@MLIR_RUN_ARM_SME_TESTS@": "0",
@@ -94,12 +99,14 @@ cc_library(
         "//mlir:AffineAnalysis",
         "//mlir:AffineDialect",
         "//mlir:Analysis",
+        "//mlir:CallOpInterfaces",
         "//mlir:ControlFlowInterfaces",
         "//mlir:FuncDialect",
         "//mlir:FunctionInterfaces",
         "//mlir:IR",
         "//mlir:MemRefDialect",
         "//mlir:Pass",
+        "//mlir:SideEffectInterfaces",
         "//mlir:Support",
     ],
 )
@@ -108,10 +115,11 @@ td_library(
     name = "TestOpTdFiles",
     srcs = glob(["lib/Dialect/Test/*.td"]),
     deps = [
+        "//mlir:BufferizableOpInterfaceTdFiles",
+        "//mlir:BufferizationTypeInterfacesTdFiles",
         "//mlir:BuiltinDialectTdFiles",
         "//mlir:CallInterfacesTdFiles",
         "//mlir:ControlFlowInterfacesTdFiles",
-        "//mlir:CopyOpInterfaceTdFiles",
         "//mlir:DLTIDialectTdFiles",
         "//mlir:DataLayoutInterfacesTdFiles",
         "//mlir:DestinationStyleOpInterfaceTdFiles",
@@ -119,24 +127,22 @@ td_library(
         "//mlir:InferIntRangeInterfaceTdFiles",
         "//mlir:InferTypeOpInterfaceTdFiles",
         "//mlir:LinalgStructuredOpsTdFiles",
+        "//mlir:MemorySlotInterfacesTdFiles",
+        "//mlir:NVVMRequiresSMTraitsTdFiles",
         "//mlir:OpBaseTdFiles",
+        "//mlir:PtrTdFiles",
         "//mlir:SideEffectInterfacesTdFiles",
+        "//mlir:ValueBoundsOpInterfaceTdFiles",
     ],
 )
 
 gentbl_cc_library(
     name = "TestOpsSyntaxIncGen",
     strip_include_prefix = "lib/Dialect/Test",
-    tbl_outs = [
-        (
-            ["-gen-op-decls"],
-            "lib/Dialect/Test/TestOpsSyntax.h.inc",
-        ),
-        (
-            ["-gen-op-defs"],
-            "lib/Dialect/Test/TestOpsSyntax.cpp.inc",
-        ),
-    ],
+    tbl_outs = {
+        "lib/Dialect/Test/TestOpsSyntax.h.inc": ["-gen-op-decls"],
+        "lib/Dialect/Test/TestOpsSyntax.cpp.inc": ["-gen-op-defs"],
+    },
     tblgen = "//mlir:mlir-tblgen",
     td_file = "lib/Dialect/Test/TestOpsSyntax.td",
     test = True,
@@ -148,34 +154,17 @@ gentbl_cc_library(
 gentbl_cc_library(
     name = "TestOpsIncGen",
     strip_include_prefix = "lib/Dialect/Test",
-    tbl_outs = [
-        (
-            ["-gen-op-decls"],
-            "lib/Dialect/Test/TestOps.h.inc",
-        ),
-        (
-            ["-gen-op-defs"],
-            "lib/Dialect/Test/TestOps.cpp.inc",
-        ),
-        (
-            [
-                "-gen-dialect-decls",
-                "-dialect=test",
-            ],
-            "lib/Dialect/Test/TestOpsDialect.h.inc",
-        ),
-        (
-            [
-                "-gen-dialect-defs",
-                "-dialect=test",
-            ],
-            "lib/Dialect/Test/TestOpsDialect.cpp.inc",
-        ),
-        (
-            ["-gen-rewriters"],
-            "lib/Dialect/Test/TestPatterns.inc",
-        ),
-    ],
+    tbl_outs = {
+        "lib/Dialect/Test/TestOpsDialect.h.inc": [
+            "-gen-dialect-decls",
+            "-dialect=test",
+        ],
+        "lib/Dialect/Test/TestOpsDialect.cpp.inc": [
+            "-gen-dialect-defs",
+            "-dialect=test",
+        ],
+        "lib/Dialect/Test/TestPatterns.inc": ["-gen-rewriters"],
+    },
     tblgen = "//mlir:mlir-tblgen",
     td_file = "lib/Dialect/Test/TestOps.td",
     test = True,
@@ -187,32 +176,14 @@ gentbl_cc_library(
 gentbl_cc_library(
     name = "TestInterfacesIncGen",
     strip_include_prefix = "lib/Dialect/Test",
-    tbl_outs = [
-        (
-            ["-gen-attr-interface-decls"],
-            "lib/Dialect/Test/TestAttrInterfaces.h.inc",
-        ),
-        (
-            ["-gen-attr-interface-defs"],
-            "lib/Dialect/Test/TestAttrInterfaces.cpp.inc",
-        ),
-        (
-            ["-gen-type-interface-decls"],
-            "lib/Dialect/Test/TestTypeInterfaces.h.inc",
-        ),
-        (
-            ["-gen-type-interface-defs"],
-            "lib/Dialect/Test/TestTypeInterfaces.cpp.inc",
-        ),
-        (
-            ["-gen-op-interface-decls"],
-            "lib/Dialect/Test/TestOpInterfaces.h.inc",
-        ),
-        (
-            ["-gen-op-interface-defs"],
-            "lib/Dialect/Test/TestOpInterfaces.cpp.inc",
-        ),
-    ],
+    tbl_outs = {
+        "lib/Dialect/Test/TestAttrInterfaces.h.inc": ["-gen-attr-interface-decls"],
+        "lib/Dialect/Test/TestAttrInterfaces.cpp.inc": ["-gen-attr-interface-defs"],
+        "lib/Dialect/Test/TestTypeInterfaces.h.inc": ["-gen-type-interface-decls"],
+        "lib/Dialect/Test/TestTypeInterfaces.cpp.inc": ["-gen-type-interface-defs"],
+        "lib/Dialect/Test/TestOpInterfaces.h.inc": ["-gen-op-interface-decls"],
+        "lib/Dialect/Test/TestOpInterfaces.cpp.inc": ["-gen-op-interface-defs"],
+    },
     tblgen = "//mlir:mlir-tblgen",
     td_file = "lib/Dialect/Test/TestInterfaces.td",
     test = True,
@@ -225,16 +196,16 @@ gentbl_cc_library(
 gentbl_cc_library(
     name = "TestAttrDefsIncGen",
     strip_include_prefix = "lib/Dialect/Test",
-    tbl_outs = [
-        (
-            ["-gen-attrdef-decls"],
-            "lib/Dialect/Test/TestAttrDefs.h.inc",
-        ),
-        (
-            ["-gen-attrdef-defs"],
-            "lib/Dialect/Test/TestAttrDefs.cpp.inc",
-        ),
-    ],
+    tbl_outs = {
+        "lib/Dialect/Test/TestAttrDefs.h.inc": [
+            "-gen-attrdef-decls",
+            "--attrdefs-dialect=test",
+        ],
+        "lib/Dialect/Test/TestAttrDefs.cpp.inc": [
+            "-gen-attrdef-defs",
+            "--attrdefs-dialect=test",
+        ],
+    },
     tblgen = "//mlir:mlir-tblgen",
     td_file = "lib/Dialect/Test/TestOps.td",
     test = True,
@@ -246,16 +217,10 @@ gentbl_cc_library(
 gentbl_cc_library(
     name = "TestEnumDefsIncGen",
     strip_include_prefix = "lib/Dialect/Test",
-    tbl_outs = [
-        (
-            ["-gen-enum-decls"],
-            "lib/Dialect/Test/TestOpEnums.h.inc",
-        ),
-        (
-            ["-gen-enum-defs"],
-            "lib/Dialect/Test/TestOpEnums.cpp.inc",
-        ),
-    ],
+    tbl_outs = {
+        "lib/Dialect/Test/TestOpEnums.h.inc": ["-gen-enum-decls"],
+        "lib/Dialect/Test/TestOpEnums.cpp.inc": ["-gen-enum-defs"],
+    },
     tblgen = "//mlir:mlir-tblgen",
     td_file = "lib/Dialect/Test/TestEnumDefs.td",
     test = True,
@@ -267,27 +232,23 @@ gentbl_cc_library(
 gentbl_cc_library(
     name = "TestTypeDefsIncGen",
     strip_include_prefix = "lib/Dialect/Test",
-    tbl_outs = [
-        (
-            [
-                "-gen-typedef-decls",
-                "--typedefs-dialect=test",
-            ],
-            "lib/Dialect/Test/TestTypeDefs.h.inc",
-        ),
-        (
-            [
-                "-gen-typedef-defs",
-                "--typedefs-dialect=test",
-            ],
-            "lib/Dialect/Test/TestTypeDefs.cpp.inc",
-        ),
-    ],
+    tbl_outs = {
+        "lib/Dialect/Test/TestTypeDefs.h.inc": [
+            "-gen-typedef-decls",
+            "--typedefs-dialect=test",
+        ],
+        "lib/Dialect/Test/TestTypeDefs.cpp.inc": [
+            "-gen-typedef-defs",
+            "--typedefs-dialect=test",
+        ],
+    },
     tblgen = "//mlir:mlir-tblgen",
     td_file = "lib/Dialect/Test/TestTypeDefs.td",
     test = True,
     deps = [
         ":TestOpTdFiles",
+        "//mlir:BufferizableOpInterfaceTdFiles",
+        "//mlir:BufferizationTypeInterfacesTdFiles",
         "//mlir:BuiltinDialectTdFiles",
     ],
 )
@@ -302,6 +263,35 @@ cc_library(
     ],
 )
 
+genrule(
+    name = "test_irdl_to_cpp_gen",
+    srcs = ["lib/Dialect/TestIRDLToCpp/test_irdl_to_cpp.irdl.mlir"],
+    outs = ["lib/Dialect/TestIRDLToCpp/test_irdl_to_cpp.irdl.mlir.cpp.inc"],
+    cmd = "$(location %s) $< -o $@" % "//mlir:irdl-to-cpp",
+    tools = ["//mlir:irdl-to-cpp"],
+)
+
+cc_library(
+    name = "TestIRDLToCpp",
+    srcs = glob(["lib/Dialect/TestIRDLToCpp/*.cpp"]) + ["lib/Dialect/TestIRDLToCpp/test_irdl_to_cpp.irdl.mlir.cpp.inc"],
+    hdrs = glob(["lib/Dialect/TestIRDLToCpp/*.h"]),
+    includes = ["lib/Dialect/TestIRDLToCpp"],
+    deps = [
+        ":test_irdl_to_cpp_gen",
+        "//llvm:Support",
+        "//mlir:BuiltinToLLVMIRTranslation",
+        "//mlir:IR",
+        "//mlir:InferTypeOpInterface",
+        "//mlir:LLVMToLLVMIRTranslation",
+        "//mlir:Pass",
+        "//mlir:SCFDialect",
+        "//mlir:ToLLVMIRTranslation",
+        "//mlir:TransformUtils",
+        "//mlir:Transforms",
+        "//mlir:TranslateLib",
+    ],
+)
+
 td_library(
     name = "TransformDialectTdFiles",
     srcs = glob(["lib/Dialect/Transform/*.td"]),
@@ -313,30 +303,18 @@ td_library(
 gentbl_cc_library(
     name = "TestTransformDialectExtensionIncGen",
     strip_include_prefix = "lib/Dialect/Transform",
-    tbl_outs = [
-        (
-            ["-gen-op-decls"],
-            "lib/Dialect/Transform/TestTransformDialectExtension.h.inc",
-        ),
-        (
-            ["-gen-op-defs"],
-            "lib/Dialect/Transform/TestTransformDialectExtension.cpp.inc",
-        ),
-        (
-            [
-                "-gen-typedef-decls",
-                "-typedefs-dialect=transform",
-            ],
-            "lib/Dialect/Transform/TestTransformDialectExtensionTypes.h.inc",
-        ),
-        (
-            [
-                "-gen-typedef-defs",
-                "-typedefs-dialect=transform",
-            ],
-            "lib/Dialect/Transform/TestTransformDialectExtensionTypes.cpp.inc",
-        ),
-    ],
+    tbl_outs = {
+        "lib/Dialect/Transform/TestTransformDialectExtension.h.inc": ["-gen-op-decls"],
+        "lib/Dialect/Transform/TestTransformDialectExtension.cpp.inc": ["-gen-op-defs"],
+        "lib/Dialect/Transform/TestTransformDialectExtensionTypes.h.inc": [
+            "-gen-typedef-decls",
+            "-typedefs-dialect=transform",
+        ],
+        "lib/Dialect/Transform/TestTransformDialectExtensionTypes.cpp.inc": [
+            "-gen-typedef-defs",
+            "-typedefs-dialect=transform",
+        ],
+    },
     tblgen = "//mlir:mlir-tblgen",
     td_file = "lib/Dialect/Transform/TestTransformDialectExtension.td",
     test = True,
@@ -356,13 +334,29 @@ cc_library(
     deps = [
         ":TestTransformDialectExtensionIncGen",
         "//llvm:Support",
+        "//mlir:BytecodeOpInterface",
         "//mlir:IR",
         "//mlir:PDLDialect",
         "//mlir:Pass",
+        "//mlir:TransformDebugExtension",
         "//mlir:TransformDialect",
+        "//mlir:TransformDialectInterfaces",
         "//mlir:TransformDialectTransforms",
         "//mlir:TransformPDLExtension",
     ],
+)
+
+gentbl_sharded_ops(
+    name = "TestDialectOpSrcs",
+    hdr_out = "lib/Dialect/Test/TestOps.h.inc",
+    shard_count = 20,
+    sharder = "//mlir:mlir-src-sharder",
+    src_file = "lib/Dialect/Test/TestOps.cpp",
+    src_out = "lib/Dialect/Test/TestOps.cpp.inc",
+    tblgen = "//mlir:mlir-tblgen",
+    td_file = "lib/Dialect/Test/TestOps.td",
+    test = True,
+    deps = [":TestOpTdFiles"],
 )
 
 cc_library(
@@ -370,7 +364,7 @@ cc_library(
     srcs = glob(
         ["lib/Dialect/Test/*.cpp"],
         exclude = ["lib/Dialect/Test/TestToLLVMIRTranslation.cpp"],
-    ),
+    ) + [":TestDialectOpSrcs"],
     hdrs = glob(["lib/Dialect/Test/*.h"]),
     includes = [
         "lib/Dialect/Test",
@@ -382,32 +376,49 @@ cc_library(
         ":TestOpsIncGen",
         ":TestOpsSyntaxIncGen",
         ":TestTypeDefsIncGen",
+        "//llvm:Core",
+        "//llvm:IRReader",
         "//llvm:Support",
         "//mlir:ArithDialect",
+        "//mlir:BufferizationDialect",
+        "//mlir:BufferizationInterfaces",
+        "//mlir:BytecodeOpInterface",
+        "//mlir:CallOpInterfaces",
+        "//mlir:CommonFolders",
         "//mlir:ControlFlowInterfaces",
-        "//mlir:CopyOpInterface",
+        "//mlir:ControlFlowTransforms",
         "//mlir:DLTIDialect",
         "//mlir:DataLayoutInterfaces",
         "//mlir:DerivedAttributeOpInterface",
         "//mlir:DestinationStyleOpInterface",
         "//mlir:Dialect",
         "//mlir:DialectUtils",
+        "//mlir:FromLLVMIRTranslation",
         "//mlir:FuncDialect",
         "//mlir:FuncTransforms",
         "//mlir:FunctionInterfaces",
         "//mlir:IR",
         "//mlir:InferIntRangeInterface",
         "//mlir:InferTypeOpInterface",
+        "//mlir:InliningUtils",
         "//mlir:LLVMDialect",
+        "//mlir:LLVMIRToLLVMTranslation",
         "//mlir:LinalgDialect",
+        "//mlir:LinalgInterfaces",
         "//mlir:LoopLikeInterface",
+        "//mlir:MemorySlotInterfaces",
+        "//mlir:NVVMDialect",
         "//mlir:Pass",
+        "//mlir:PtrDialect",
         "//mlir:Reducer",
+        "//mlir:SCFTransforms",
         "//mlir:SideEffectInterfaces",
         "//mlir:Support",
         "//mlir:TensorDialect",
         "//mlir:TransformUtils",
         "//mlir:Transforms",
+        "//mlir:TranslateLib",
+        "//mlir:ValueBoundsOpInterface",
         "//mlir:ViewLikeInterface",
     ],
 )
@@ -417,6 +428,7 @@ cc_library(
     srcs = ["lib/Dialect/Test/TestToLLVMIRTranslation.cpp"],
     deps = [
         ":TestDialect",
+        "//llvm:Core",
         "//llvm:Support",
         "//mlir:BuiltinToLLVMIRTranslation",
         "//mlir:IR",
@@ -434,6 +446,8 @@ cc_library(
         "//llvm:Support",
         "//mlir:Analysis",
         "//mlir:ArithDialect",
+        "//mlir:BufferizationInterfaces",
+        "//mlir:BytecodeOpInterface",
         "//mlir:BytecodeReader",
         "//mlir:BytecodeWriter",
         "//mlir:FuncDialect",
@@ -458,17 +472,36 @@ cc_library(
     ],
 )
 
+gentbl_cc_library(
+    name = "TestTilingInterfaceTransformOpsIncGen",
+    includes = ["lib/Interfaces/TilingInterface"],
+    strip_include_prefix = "lib",
+    tbl_outs = {
+        "lib/Interfaces/TilingInterface/TestTilingInterfaceTransformOps.h.inc": ["-gen-op-decls"],
+        "lib/Interfaces/TilingInterface/TestTilingInterfaceTransformOps.cpp.inc": ["-gen-op-defs"],
+    },
+    tblgen = "//mlir:mlir-tblgen",
+    td_file = "lib/Interfaces/TilingInterface/TestTilingInterfaceTransformOps.td",
+    deps = [
+        "//mlir:SCFTdFiles",
+        "//mlir:TransformDialectTdFiles",
+    ],
+)
+
 cc_library(
     name = "TestTilingInterface",
     srcs = glob(["lib/Interfaces/TilingInterface/*.cpp"]),
-    includes = ["lib/Dialect/Test"],
+    includes = ["lib/Interfaces/TilingInterface"],
     deps = [
+        ":TestTilingInterfaceTransformOpsIncGen",
         "//llvm:Support",
         "//mlir:AffineDialect",
         "//mlir:ArithDialect",
+        "//mlir:DialectUtils",
         "//mlir:FuncDialect",
         "//mlir:GPUDialect",
         "//mlir:IR",
+        "//mlir:IndexDialect",
         "//mlir:LinalgDialect",
         "//mlir:LinalgTransforms",
         "//mlir:MemRefDialect",
@@ -478,6 +511,8 @@ cc_library(
         "//mlir:TensorDialect",
         "//mlir:TensorTilingInterfaceImpl",
         "//mlir:TilingInterface",
+        "//mlir:TransformDialect",
+        "//mlir:TransformDialectInterfaces",
         "//mlir:Transforms",
     ],
 )
@@ -488,10 +523,34 @@ cc_library(
     deps = [
         ":TestDialect",
         "//llvm:Support",
+        "//mlir:ArithToSPIRV",
+        "//mlir:ArithTransforms",
         "//mlir:FuncDialect",
+        "//mlir:FuncToSPIRV",
+        "//mlir:GPUDialect",
+        "//mlir:GPUToGPURuntimeTransforms",
+        "//mlir:GPUToSPIRV",
+        "//mlir:GPUTransforms",
         "//mlir:IR",
+        "//mlir:IndexToSPIRV",
+        "//mlir:LLVMIRTransforms",
+        "//mlir:MemRefToLLVM",
+        "//mlir:MemRefToSPIRV",
+        "//mlir:MemRefTransforms",
         "//mlir:Pass",
+        "//mlir:ReconcileUnrealizedCasts",
+        "//mlir:Rewrite",
+        "//mlir:SCFToSPIRV",
+        "//mlir:SPIRVConversion",
+        "//mlir:SPIRVDialect",
+        "//mlir:SPIRVToLLVM",
+        "//mlir:SPIRVTransforms",
         "//mlir:Support",
+        "//mlir:TransformUtils",
+        "//mlir:UBToSPIRV",
+        "//mlir:VectorDialect",
+        "//mlir:VectorToSPIRV",
+        "//mlir:VectorTransforms",
     ],
 )
 
@@ -506,6 +565,7 @@ cc_library(
         "//mlir:Pass",
         "//mlir:Support",
         "//mlir:TransformUtils",
+        "//mlir:Transforms",
     ],
 )
 
@@ -521,21 +581,50 @@ cc_library(
     ],
 )
 
+td_library(
+    name = "TestTransformOpsTdFiles",
+    srcs = glob(["lib/Transforms/*.td"]),
+    deps = [
+        ":TransformDialectTdFiles",
+        "//mlir:OpBaseTdFiles",
+        "//mlir:SideEffectInterfacesTdFiles",
+        "//mlir:TransformDialectTdFiles",
+        "//mlir:TransformInterfacesTdFiles",
+    ],
+)
+
+gentbl_cc_library(
+    name = "TestTransformsOpsIncGen",
+    includes = ["lib/Dialect/Test"],
+    strip_include_prefix = "lib",
+    tbl_outs = {
+        "lib/TestTransformsOps.h.inc": ["-gen-op-decls"],
+        "lib/TestTransformsOps.cpp.inc": ["-gen-op-defs"],
+    },
+    tblgen = "//mlir:mlir-tblgen",
+    td_file = "lib/Transforms/TestTransformsOps.td",
+    deps = [
+        ":TestTransformOpsTdFiles",
+    ],
+)
+
 cc_library(
     name = "TestTransforms",
     srcs = glob(["lib/Transforms/*.cpp"]),
-    defines = ["MLIR_CUDA_CONVERSIONS_ENABLED"],
     includes = ["lib/Dialect/Test"],
     deps = [
         ":TestDialect",
         ":TestDialectConversionPDLLPatternsIncGen",
+        ":TestTransformsOpsIncGen",
         "//llvm:Support",
         "//mlir:AffineAnalysis",
         "//mlir:AffineDialect",
         "//mlir:Analysis",
         "//mlir:ArithDialect",
+        "//mlir:DialectUtils",
         "//mlir:FuncDialect",
         "//mlir:IR",
+        "//mlir:InliningUtils",
         "//mlir:MathDialect",
         "//mlir:PDLDialect",
         "//mlir:PDLInterpDialect",
@@ -543,40 +632,27 @@ cc_library(
         "//mlir:Pass",
         "//mlir:SCFDialect",
         "//mlir:SPIRVDialect",
+        "//mlir:SideEffectInterfaces",
         "//mlir:Support",
+        "//mlir:TransformDialect",
+        "//mlir:TransformDialectInterfaces",
         "//mlir:TransformUtils",
+        "//mlir:Transforms",
     ],
 )
 
 cc_library(
     name = "TestFuncToLLVM",
     srcs = glob(["lib/Conversion/FuncToLLVM/*.cpp"]),
-    defines = ["MLIR_CUDA_CONVERSIONS_ENABLED"],
     includes = ["lib/Dialect/Test"],
     deps = [
         ":TestDialect",
         "//mlir:FuncDialect",
         "//mlir:FuncToLLVM",
+        "//mlir:IR",
         "//mlir:LLVMCommonConversion",
         "//mlir:LLVMDialect",
         "//mlir:Pass",
-    ],
-)
-
-cc_library(
-    name = "TestOneToNTypeConversion",
-    srcs = glob(["lib/Conversion/OneToNTypeConversion/*.cpp"]),
-    defines = ["MLIR_CUDA_CONVERSIONS_ENABLED"],
-    includes = ["lib/Dialect/Test"],
-    deps = [
-        ":TestDialect",
-        "//mlir:FuncDialect",
-        "//mlir:FuncTransforms",
-        "//mlir:IR",
-        "//mlir:Pass",
-        "//mlir:SCFDialect",
-        "//mlir:SCFTransforms",
-        "//mlir:TransformUtils",
     ],
 )
 
@@ -588,9 +664,27 @@ cc_library(
         "//mlir:FuncDialect",
         "//mlir:Pass",
         "//mlir:SPIRVDialect",
+        "//mlir:TransformUtils",
         "//mlir:Transforms",
         "//mlir:VectorDialect",
         "//mlir:VectorToSPIRV",
+    ],
+)
+
+cc_library(
+    name = "TestConvertToSPIRV",
+    srcs = glob(["lib/Conversion/ConvertToSPIRV/*.cpp"]),
+    deps = [
+        "//mlir:ArithDialect",
+        "//mlir:FuncDialect",
+        "//mlir:Pass",
+        "//mlir:SPIRVConversion",
+        "//mlir:SPIRVDialect",
+        "//mlir:TransformUtils",
+        "//mlir:Transforms",
+        "//mlir:UBDialect",
+        "//mlir:VectorDialect",
+        "//mlir:VectorTransforms",
     ],
 )
 
@@ -600,6 +694,7 @@ cc_library(
         "lib/Dialect/Affine/*.cpp",
     ]),
     deps = [
+        ":TestDialect",
         "//llvm:Support",
         "//mlir:AffineAnalysis",
         "//mlir:AffineDialect",
@@ -609,12 +704,14 @@ cc_library(
         "//mlir:ArithTransforms",
         "//mlir:DialectUtils",
         "//mlir:FuncDialect",
+        "//mlir:FunctionInterfaces",
         "//mlir:IR",
         "//mlir:MemRefDialect",
         "//mlir:Pass",
         "//mlir:SCFDialect",
         "//mlir:Support",
         "//mlir:TensorDialect",
+        "//mlir:TransformUtils",
         "//mlir:Transforms",
         "//mlir:ValueBoundsOpInterface",
         "//mlir:VectorDialect",
@@ -625,7 +722,6 @@ cc_library(
 cc_library(
     name = "TestDLTI",
     srcs = glob(["lib/Dialect/DLTI/*.cpp"]),
-    defines = ["MLIR_CUDA_CONVERSIONS_ENABLED"],
     includes = ["lib/Dialect/Test"],
     deps = [
         ":TestDialect",
@@ -639,13 +735,12 @@ cc_library(
 cc_library(
     name = "TestGPU",
     srcs = glob(["lib/Dialect/GPU/*.cpp"]),
-    defines = ["MLIR_CUDA_CONVERSIONS_ENABLED"] + if_cuda_available([
-        "MLIR_GPU_TO_CUBIN_PASS_ENABLE",
-    ]),
     includes = ["lib/Dialect/Test"],
     deps = [
         "//llvm:NVPTXCodeGen",
         "//llvm:Support",
+        "//mlir:AMDGPUDialect",
+        "//mlir:AMDGPUUtils",
         "//mlir:AffineDialect",
         "//mlir:AffineToStandard",
         "//mlir:ArithDialect",
@@ -659,6 +754,8 @@ cc_library(
         "//mlir:IR",
         "//mlir:IndexDialect",
         "//mlir:IndexToLLVM",
+        "//mlir:LLVMDialect",
+        "//mlir:LinalgTransforms",
         "//mlir:MathToLLVM",
         "//mlir:MemRefDialect",
         "//mlir:MemRefToLLVM",
@@ -667,6 +764,7 @@ cc_library(
         "//mlir:NVVMToLLVM",
         "//mlir:NVVMToLLVMIRTranslation",
         "//mlir:Pass",
+        "//mlir:ROCDLDialect",
         "//mlir:ROCDLToLLVMIRTranslation",
         "//mlir:ReconcileUnrealizedCasts",
         "//mlir:SCFDialect",
@@ -684,7 +782,6 @@ cc_library(
 cc_library(
     name = "TestLinalg",
     srcs = glob(["lib/Dialect/Linalg/*.cpp"]),
-    defines = ["MLIR_CUDA_CONVERSIONS_ENABLED"],
     includes = ["lib/Dialect/Test"],
     deps = [
         "//llvm:Support",
@@ -718,14 +815,16 @@ cc_library(
 cc_library(
     name = "TestLLVM",
     srcs = glob(["lib/Dialect/LLVM/*.cpp"]),
-    defines = ["MLIR_CUDA_CONVERSIONS_ENABLED"],
     includes = ["lib/Dialect/Test"],
     deps = [
         "//mlir:AffineToStandard",
+        "//mlir:ArithToLLVM",
+        "//mlir:ControlFlowToLLVM",
         "//mlir:FuncDialect",
         "//mlir:FuncToLLVM",
         "//mlir:IR",
         "//mlir:IndexToLLVM",
+        "//mlir:LLVMCommonConversion",
         "//mlir:LLVMDialect",
         "//mlir:LinalgTransforms",
         "//mlir:MathToLLVM",
@@ -734,7 +833,9 @@ cc_library(
         "//mlir:Pass",
         "//mlir:ReconcileUnrealizedCasts",
         "//mlir:SCFToControlFlow",
+        "//mlir:TransformUtils",
         "//mlir:Transforms",
+        "//mlir:UBToLLVM",
         "//mlir:VectorToLLVM",
         "//mlir:VectorToSCF",
     ],
@@ -743,7 +844,6 @@ cc_library(
 cc_library(
     name = "TestMath",
     srcs = glob(["lib/Dialect/Math/*.cpp"]),
-    defines = ["MLIR_CUDA_CONVERSIONS_ENABLED"],
     includes = ["lib/Dialect/Test"],
     deps = [
         "//mlir:ArithDialect",
@@ -752,15 +852,32 @@ cc_library(
         "//mlir:Pass",
         "//mlir:SCFDialect",
         "//mlir:TransformUtils",
+        "//mlir:Transforms",
         "//mlir:VectorDialect",
         "//mlir:X86VectorDialect",
     ],
 )
 
 cc_library(
+    name = "TestMathToVCIX",
+    srcs = glob(["lib/Conversion/MathToVCIX/*.cpp"]),
+    includes = ["lib/Dialect/Test"],
+    deps = [
+        "//mlir:ArithDialect",
+        "//mlir:FuncDialect",
+        "//mlir:IR",
+        "//mlir:MathDialect",
+        "//mlir:Pass",
+        "//mlir:TransformUtils",
+        "//mlir:Transforms",
+        "//mlir:VCIXDialect",
+        "//mlir:VectorDialect",
+    ],
+)
+
+cc_library(
     name = "TestMemRef",
     srcs = glob(["lib/Dialect/MemRef/*.cpp"]),
-    defines = ["MLIR_CUDA_CONVERSIONS_ENABLED"],
     includes = ["lib/Dialect/Test"],
     deps = [
         ":TestDialect",
@@ -771,6 +888,7 @@ cc_library(
         "//mlir:MemRefDialect",
         "//mlir:MemRefTransforms",
         "//mlir:Pass",
+        "//mlir:TransformUtils",
         "//mlir:Transforms",
         "//mlir:VectorDialect",
         "//mlir:VectorTransforms",
@@ -778,9 +896,43 @@ cc_library(
 )
 
 cc_library(
+    name = "TestMemRefToLLVMWithTransforms",
+    srcs = glob(["lib/Conversion/MemRefToLLVM/*.cpp"]),
+    deps = [
+        "//mlir:FuncDialect",
+        "//mlir:FuncToLLVM",
+        "//mlir:IR",
+        "//mlir:LLVMCommonConversion",
+        "//mlir:LLVMDialect",
+        "//mlir:MemRefToLLVM",
+        "//mlir:MemRefTransforms",
+        "//mlir:Pass",
+    ],
+)
+
+cc_library(
+    name = "TestShard",
+    srcs = glob(["lib/Dialect/Shard/**/*.cpp"]),
+    includes = ["lib/Dialect/Test"],
+    deps = [
+        ":TestDialect",
+        "//mlir:ArithDialect",
+        "//mlir:DialectUtils",
+        "//mlir:FuncDialect",
+        "//mlir:IR",
+        "//mlir:Pass",
+        "//mlir:SPIRVDialect",
+        "//mlir:ShardDialect",
+        "//mlir:ShardTransforms",
+        "//mlir:Support",
+        "//mlir:TransformUtils",
+        "//mlir:Transforms",
+    ],
+)
+
+cc_library(
     name = "TestNVGPU",
     srcs = glob(["lib/Dialect/NVGPU/*.cpp"]),
-    defines = ["MLIR_CUDA_CONVERSIONS_ENABLED"],
     includes = ["lib/Dialect/Test"],
     deps = [
         "//mlir:AffineDialect",
@@ -798,13 +950,30 @@ cc_library(
         "//mlir:SCFDialect",
         "//mlir:Support",
         "//mlir:TransformUtils",
+        "//mlir:Transforms",
+    ],
+)
+
+cc_library(
+    name = "TestOpenACC",
+    srcs = glob(["lib/Dialect/OpenACC/*.cpp"]),
+    includes = ["lib/Dialect/Test"],
+    deps = [
+        "//llvm:Support",
+        "//mlir:ArithDialect",
+        "//mlir:FuncDialect",
+        "//mlir:IR",
+        "//mlir:MemRefDialect",
+        "//mlir:OpenACCAnalysis",
+        "//mlir:OpenACCDialect",
+        "//mlir:Pass",
+        "//mlir:Support",
     ],
 )
 
 cc_library(
     name = "TestSCF",
     srcs = glob(["lib/Dialect/SCF/*.cpp"]),
-    defines = ["MLIR_CUDA_CONVERSIONS_ENABLED"],
     includes = ["lib/Dialect/Test"],
     deps = [
         "//llvm:Support",
@@ -818,13 +987,13 @@ cc_library(
         "//mlir:SCFTransforms",
         "//mlir:SCFUtils",
         "//mlir:TransformUtils",
+        "//mlir:Transforms",
     ],
 )
 
 cc_library(
     name = "TestArith",
     srcs = glob(["lib/Dialect/Arith/*.cpp"]),
-    defines = ["MLIR_CUDA_CONVERSIONS_ENABLED"],
     includes = ["lib/Dialect/Test"],
     deps = [
         "//mlir:ArithDialect",
@@ -833,19 +1002,42 @@ cc_library(
         "//mlir:LLVMDialect",
         "//mlir:MathDialect",
         "//mlir:Pass",
+        "//mlir:TransformUtils",
         "//mlir:Transforms",
         "//mlir:VectorDialect",
     ],
 )
 
 cc_library(
-    name = "TestBufferization",
-    srcs = glob(["lib/Dialect/Bufferization/*.cpp"]),
-    defines = ["MLIR_CUDA_CONVERSIONS_ENABLED"],
+    name = "TestArmSME",
+    srcs = glob(["lib/Dialect/ArmSME/*.cpp"]),
     includes = ["lib/Dialect/Test"],
     deps = [
+        "//mlir:ArithToArmSME",
+        "//mlir:ArmSMEToLLVM",
+        "//mlir:ArmSMEToSCF",
+        "//mlir:ArmSMETransforms",
+        "//mlir:ArmSVETransforms",
+        "//mlir:FuncDialect",
+        "//mlir:IR",
+        "//mlir:Pass",
+        "//mlir:SCFToControlFlow",
+        "//mlir:Transforms",
+        "//mlir:VectorToArmSME",
+        "//mlir:VectorToSCF",
+    ],
+)
+
+cc_library(
+    name = "TestBufferization",
+    srcs = glob(["lib/Dialect/Bufferization/*.cpp"]),
+    includes = ["lib/Dialect/Test"],
+    deps = [
+        ":TestDialect",
         "//mlir:BufferizationDialect",
+        "//mlir:BufferizationInterfaces",
         "//mlir:BufferizationTransforms",
+        "//mlir:FuncDialect",
         "//mlir:IR",
         "//mlir:Pass",
     ],
@@ -862,6 +1054,7 @@ cc_library(
         "//mlir:LLVMCommonConversion",
         "//mlir:LLVMDialect",
         "//mlir:Pass",
+        "//mlir:TransformUtils",
         "//mlir:Transforms",
     ],
 )
@@ -903,7 +1096,6 @@ cc_library(
 cc_library(
     name = "TestFunc",
     srcs = glob(["lib/Dialect/Func/*.cpp"]),
-    defines = ["MLIR_CUDA_CONVERSIONS_ENABLED"],
     includes = ["lib/Dialect/Test"],
     deps = [
         ":TestDialect",
@@ -913,13 +1105,13 @@ cc_library(
         "//mlir:IR",
         "//mlir:Pass",
         "//mlir:TransformUtils",
+        "//mlir:Transforms",
     ],
 )
 
 cc_library(
     name = "TestTensor",
     srcs = glob(["lib/Dialect/Tensor/*.cpp"]),
-    defines = ["MLIR_CUDA_CONVERSIONS_ENABLED"],
     includes = ["lib/Dialect/Test"],
     deps = [
         "//mlir:ArithDialect",
@@ -929,6 +1121,8 @@ cc_library(
         "//mlir:TensorDialect",
         "//mlir:TensorTransforms",
         "//mlir:TransformDialect",
+        "//mlir:TransformDialectInterfaces",
+        "//mlir:TransformUtils",
         "//mlir:Transforms",
     ],
 )
@@ -936,7 +1130,6 @@ cc_library(
 cc_library(
     name = "TestVector",
     srcs = glob(["lib/Dialect/Vector/*.cpp"]),
-    defines = ["MLIR_CUDA_CONVERSIONS_ENABLED"],
     includes = ["lib/Dialect/Test"],
     deps = [
         "//mlir:AffineDialect",
@@ -951,25 +1144,15 @@ cc_library(
         "//mlir:NVGPUDialect",
         "//mlir:Pass",
         "//mlir:SCFDialect",
+        "//mlir:SCFTransforms",
         "//mlir:Support",
         "//mlir:TensorDialect",
         "//mlir:TransformUtils",
+        "//mlir:Transforms",
         "//mlir:VectorDialect",
         "//mlir:VectorToSCF",
         "//mlir:VectorTransforms",
         "//mlir:X86VectorDialect",
-    ],
-)
-
-cc_library(
-    name = "TestTypeDialect",
-    srcs = glob([
-        "lib/Dialect/LLVMIR/*.cpp",
-    ]),
-    deps = [
-        ":TestDialect",
-        "//mlir:IR",
-        "//mlir:LLVMDialect",
     ],
 )
 
@@ -984,6 +1167,7 @@ cc_library(
         "//mlir:Pass",
         "//mlir:TensorDialect",
         "//mlir:TosaDialect",
+        "//mlir:TransformUtils",
         "//mlir:Transforms",
     ],
 )
@@ -992,12 +1176,7 @@ gentbl_cc_library(
     name = "TestPDLLPatternsIncGen",
     includes = ["lib/Dialect/Test"],
     strip_include_prefix = "lib",
-    tbl_outs = [
-        (
-            ["-x=cpp"],
-            "lib/Tools/PDLL/TestPDLLPatterns.h.inc",
-        ),
-    ],
+    tbl_outs = {"lib/Tools/PDLL/TestPDLLPatterns.h.inc": ["-x=cpp"]},
     tblgen = "//mlir:mlir-pdll",
     td_file = "lib/Tools/PDLL/TestPDLL.pdll",
     deps = [
@@ -1010,12 +1189,7 @@ gentbl_cc_library(
     name = "TestDialectConversionPDLLPatternsIncGen",
     includes = ["lib/Dialect/Test"],
     strip_include_prefix = "lib",
-    tbl_outs = [
-        (
-            ["-x=cpp"],
-            "lib/TestDialectConversionPDLLPatterns.h.inc",
-        ),
-    ],
+    tbl_outs = {"lib/TestDialectConversionPDLLPatterns.h.inc": ["-x=cpp"]},
     tblgen = "//mlir:mlir-pdll",
     td_file = "lib/Transforms/TestDialectConversion.pdll",
     deps = [
@@ -1040,5 +1214,24 @@ cc_library(
         "//mlir:Pass",
         "//mlir:Support",
         "//mlir:TransformUtils",
+        "//mlir:Transforms",
+    ],
+)
+
+cc_library(
+    name = "TestXeGPU",
+    srcs = glob(["lib/Dialect/XeGPU/*.cpp"]),
+    includes = ["lib/Dialect/Test"],
+    deps = [
+        "//mlir:GPUDialect",
+        "//mlir:IR",
+        "//mlir:IndexDialect",
+        "//mlir:MemRefDialect",
+        "//mlir:Pass",
+        "//mlir:TransformUtils",
+        "//mlir:VectorTransforms",
+        "//mlir:XeGPUDialect",
+        "//mlir:XeGPUTransforms",
+        "//mlir:XeGPUUtils",
     ],
 )

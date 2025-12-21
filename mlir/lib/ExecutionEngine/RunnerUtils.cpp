@@ -81,11 +81,23 @@ extern "C" void _mlir_ciface_printMemrefI8(UnrankedMemRefType<int8_t> *M) {
   impl::printMemRef(*M);
 }
 
+extern "C" void _mlir_ciface_printMemrefI16(UnrankedMemRefType<int16_t> *M) {
+  impl::printMemRef(*M);
+}
+
 extern "C" void _mlir_ciface_printMemrefI32(UnrankedMemRefType<int32_t> *M) {
   impl::printMemRef(*M);
 }
 
 extern "C" void _mlir_ciface_printMemrefI64(UnrankedMemRefType<int64_t> *M) {
+  impl::printMemRef(*M);
+}
+
+extern "C" void _mlir_ciface_printMemrefF16(UnrankedMemRefType<f16> *M) {
+  impl::printMemRef(*M);
+}
+
+extern "C" void _mlir_ciface_printMemrefBF16(UnrankedMemRefType<bf16> *M) {
   impl::printMemRef(*M);
 }
 
@@ -158,8 +170,6 @@ extern "C" void printMemrefC64(int64_t rank, void *ptr) {
   _mlir_ciface_printMemrefC64(&descriptor);
 }
 
-extern "C" void printCString(char *str) { printf("%s", str); }
-
 extern "C" void _mlir_ciface_printMemref0dF32(StridedMemRefType<float, 0> *M) {
   impl::printMemRef(*M);
 }
@@ -210,8 +220,38 @@ _mlir_ciface_printMemref1dC64(StridedMemRefType<impl::complex64, 1> *M) {
 }
 
 extern "C" int64_t
+_mlir_ciface_verifyMemRefI8(UnrankedMemRefType<int8_t> *actual,
+                            UnrankedMemRefType<int8_t> *expected) {
+  return impl::verifyMemRef(*actual, *expected);
+}
+
+extern "C" int64_t
+_mlir_ciface_verifyMemRefI16(UnrankedMemRefType<int16_t> *actual,
+                             UnrankedMemRefType<int16_t> *expected) {
+  return impl::verifyMemRef(*actual, *expected);
+}
+
+extern "C" int64_t
 _mlir_ciface_verifyMemRefI32(UnrankedMemRefType<int32_t> *actual,
                              UnrankedMemRefType<int32_t> *expected) {
+  return impl::verifyMemRef(*actual, *expected);
+}
+
+extern "C" int64_t
+_mlir_ciface_verifyMemRefI64(UnrankedMemRefType<int64_t> *actual,
+                             UnrankedMemRefType<int64_t> *expected) {
+  return impl::verifyMemRef(*actual, *expected);
+}
+
+extern "C" int64_t
+_mlir_ciface_verifyMemRefF16(UnrankedMemRefType<f16> *actual,
+                             UnrankedMemRefType<f16> *expected) {
+  return impl::verifyMemRef(*actual, *expected);
+}
+
+extern "C" int64_t
+_mlir_ciface_verifyMemRefBF16(UnrankedMemRefType<bf16> *actual,
+                              UnrankedMemRefType<bf16> *expected) {
   return impl::verifyMemRef(*actual, *expected);
 }
 

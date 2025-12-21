@@ -8,7 +8,7 @@
 
 #include "abort_message.h"
 #include "cxxabi.h"
-#include <__threading_support>
+#include <__thread/support.h>
 #ifndef _LIBCXXABI_HAS_NO_THREADS
 #if defined(__ELF__) && defined(_LIBCXXABI_LINK_PTHREAD_LIB)
 #pragma comment(lib, "pthread")
@@ -89,7 +89,7 @@ namespace {
       // __cxa_thread_atexit() may be called arbitrarily late (for example, from
       // global destructors or atexit() handlers).
       if (std::__libcpp_tls_create(&dtors_key, run_dtors) != 0) {
-        abort_message("std::__libcpp_tls_create() failed in __cxa_thread_atexit()");
+        __abort_message("std::__libcpp_tls_create() failed in __cxa_thread_atexit()");
       }
     }
 
@@ -106,6 +106,7 @@ namespace {
 
 #endif // HAVE___CXA_THREAD_ATEXIT_IMPL
 
+#if defined(__linux__) || defined(__Fuchsia__)
 extern "C" {
 
   _LIBCXXABI_FUNC_VIS int __cxa_thread_atexit(Dtor dtor, void* obj, void* dso_symbol) throw() {
@@ -140,6 +141,6 @@ extern "C" {
     }
 #endif // HAVE___CXA_THREAD_ATEXIT_IMPL
   }
-
 } // extern "C"
+#endif // defined(__linux__) || defined(__Fuchsia__)
 } // namespace __cxxabiv1

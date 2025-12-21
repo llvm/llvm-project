@@ -16,7 +16,6 @@
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Section.h"
 #include "lldb/Host/Host.h"
-#include "lldb/Symbol/LocateSymbolFile.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/StreamString.h"
@@ -86,16 +85,16 @@ SymbolVendorPECOFF::CreateInstance(const lldb::ModuleSP &module_sp,
   module_spec.GetSymbolFileSpec() = fspec;
   module_spec.GetUUID() = uuid;
   FileSpecList search_paths = Target::GetDefaultDebugFileSearchPaths();
-  FileSpec dsym_fspec =
-      Symbols::LocateExecutableSymbolFile(module_spec, search_paths);
+  FileSpec dsym_fspec = PluginManager::LocateExecutableSymbolFile(
+      module_spec, search_paths, module_sp->GetSymbolLocatorStatistics());
   if (!dsym_fspec)
     return nullptr;
 
-  DataBufferSP dsym_file_data_sp;
+  DataExtractorSP dsym_file_extractor_sp;
   lldb::offset_t dsym_file_data_offset = 0;
   ObjectFileSP dsym_objfile_sp = ObjectFile::FindPlugin(
       module_sp, &dsym_fspec, 0, FileSystem::Instance().GetByteSize(dsym_fspec),
-      dsym_file_data_sp, dsym_file_data_offset);
+      dsym_file_extractor_sp, dsym_file_data_offset);
   if (!dsym_objfile_sp)
     return nullptr;
 

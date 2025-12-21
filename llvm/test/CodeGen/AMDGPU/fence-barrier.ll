@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx803 -verify-machineinstrs < %s | FileCheck --check-prefix=GCN %s
-; RUN: llvm-as -data-layout=A5 < %s | llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx803 -verify-machineinstrs | FileCheck --check-prefix=GCN %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx803 < %s | FileCheck --check-prefix=GCN %s
+; RUN: llvm-as -data-layout=A5 < %s | llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx803 | FileCheck --check-prefix=GCN %s
 
 declare ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
 declare ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
@@ -7,8 +7,8 @@ declare i32 @llvm.amdgcn.workitem.id.x()
 declare i32 @llvm.amdgcn.workgroup.id.x()
 declare void @llvm.amdgcn.s.barrier()
 
-@test_local.temp = internal addrspace(3) global [1 x i32] undef, align 4
-@test_global_local.temp = internal addrspace(3) global [1 x i32] undef, align 4
+@test_local.temp = internal addrspace(3) global [1 x i32] poison, align 4
+@test_global_local.temp = internal addrspace(3) global [1 x i32] poison, align 4
 
 
 ; GCN-LABEL: {{^}}test_local
@@ -56,7 +56,7 @@ bb5:                                              ; preds = %bb4, %bb
 ; GCN-LABEL: {{^}}test_global
 ; GCN: v_add_u32_e32 v{{[0-9]+}}, vcc, 0x888, v{{[0-9]+}}
 ; GCN: flat_store_dword
-; GCN: s_waitcnt vmcnt(0) lgkmcnt(0){{$}}
+; GCN: s_waitcnt vmcnt(0){{$}}
 ; GCN-NEXT: s_barrier
 define amdgpu_kernel void @test_global(ptr addrspace(1) %arg) {
 bb:

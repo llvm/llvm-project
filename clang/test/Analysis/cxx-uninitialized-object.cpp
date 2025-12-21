@@ -1182,3 +1182,24 @@ void fComplexTest() {
   // TODO: we should emit a warning for x2.x and x2.y.
   ComplexUninitTest x2;
 }
+
+struct PaddingBitfieldTest {
+  int a;
+  long long : 7; // padding, previously flagged as uninitialized
+  PaddingBitfieldTest(int a) : a(a) {}
+};
+
+void fPaddingBitfieldTest() {
+  PaddingBitfieldTest pb(42);
+  // no-warning: Unnamed bitfield is now ignored, fixing false positive
+}
+
+struct NamedBitfieldTest {
+  int b; 
+  long long named : 7; // expected-note{{uninitialized field 'this->named'}}
+  NamedBitfieldTest(int b) : b(b) {} // expected-warning{{1 uninitialized field at the end of the constructor call}}
+};
+
+void fNamedBitfieldTest() {
+  NamedBitfieldTest nb(42); 
+}

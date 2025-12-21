@@ -18,6 +18,17 @@
 #include "kmp_config.h"
 
 #if KMP_ARCH_X86 || KMP_ARCH_X86_64
+.att_syntax
+
+# if defined(__ELF__) && defined(__CET__) && defined(__has_include)
+# if __has_include(<cet.h>)
+# include <cet.h>
+# endif
+# endif
+
+# if !defined(_CET_ENDBR)
+# define _CET_ENDBR
+# endif
 
 # if KMP_MIC
 // the 'delay r16/r32/r64' should be used instead of the 'pause'.
@@ -66,6 +77,7 @@
 	ALIGN  4
 	.globl KMP_PREFIX_UNDERSCORE($0)
 KMP_PREFIX_UNDERSCORE($0):
+	_CET_ENDBR
 .endmacro
 # else // KMP_OS_DARWIN
 #  define KMP_PREFIX_UNDERSCORE(x) x //no extra underscore for Linux* OS symbols
@@ -92,6 +104,7 @@ KMP_PREFIX_UNDERSCORE($0):
         .globl KMP_PREFIX_UNDERSCORE(\proc)
 KMP_PREFIX_UNDERSCORE(\proc):
 	.cfi_startproc
+	_CET_ENDBR
 .endm
 .macro KMP_CFI_DEF_OFFSET sz
 	.cfi_def_cfa_offset	\sz
@@ -108,7 +121,7 @@ KMP_PREFIX_UNDERSCORE(\proc):
 # endif // KMP_OS_DARWIN
 #endif // KMP_ARCH_X86 || KMP_ARCH_x86_64
 
-#if (KMP_OS_LINUX || KMP_OS_DARWIN || KMP_OS_WINDOWS) && (KMP_ARCH_AARCH64 || KMP_ARCH_ARM)
+#if KMP_ARCH_AARCH64 || KMP_ARCH_AARCH64_32 || KMP_ARCH_ARM
 
 # if KMP_OS_DARWIN
 #  define KMP_PREFIX_UNDERSCORE(x) _##x  // extra underscore for OS X* symbols
@@ -176,7 +189,54 @@ KMP_PREFIX_UNDERSCORE(\proc):
 .endm
 # endif // KMP_OS_DARWIN
 
-#endif // (KMP_OS_LINUX || KMP_OS_DARWIN || KMP_OS_WINDOWS) && (KMP_ARCH_AARCH64 || KMP_ARCH_ARM)
+# if KMP_OS_LINUX || KMP_OS_OPENBSD
+// BTI and PAC gnu property note
+#  define NT_GNU_PROPERTY_TYPE_0 5
+#  define GNU_PROPERTY_AARCH64_FEATURE_1_AND 0xc0000000
+#  define GNU_PROPERTY_AARCH64_FEATURE_1_BTI 1
+#  define GNU_PROPERTY_AARCH64_FEATURE_1_PAC 2
+
+#  define GNU_PROPERTY(type, value)                                            \
+  .pushsection .note.gnu.property, "a";                                        \
+  .p2align 3;                                                                  \
+  .word 4;                                                                     \
+  .word 16;                                                                    \
+  .word NT_GNU_PROPERTY_TYPE_0;                                                \
+  .asciz "GNU";                                                                \
+  .word type;                                                                  \
+  .word 4;                                                                     \
+  .word value;                                                                 \
+  .word 0;                                                                     \
+  .popsection
+# endif
+
+# if defined(__ARM_FEATURE_BTI_DEFAULT)
+#  define BTI_FLAG GNU_PROPERTY_AARCH64_FEATURE_1_BTI
+# else
+#  define BTI_FLAG 0
+# endif
+# if __ARM_FEATURE_PAC_DEFAULT & 3
+#  define PAC_FLAG GNU_PROPERTY_AARCH64_FEATURE_1_PAC
+# else
+#  define PAC_FLAG 0
+# endif
+
+# if (BTI_FLAG | PAC_FLAG) != 0
+#  if PAC_FLAG != 0
+#   define PACBTI_C hint #25
+#   define PACBTI_RET hint #29
+#  else
+#   define PACBTI_C hint #34
+#   define PACBTI_RET
+#  endif
+#  define GNU_PROPERTY_BTI_PAC \
+    GNU_PROPERTY(GNU_PROPERTY_AARCH64_FEATURE_1_AND, BTI_FLAG | PAC_FLAG)
+# else
+#  define PACBTI_C
+#  define PACBTI_RET
+#  define GNU_PROPERTY_BTI_PAC
+# endif
+#endif // KMP_ARCH_AARCH64 || KMP_ARCH_AARCH64_32 || KMP_ARCH_ARM
 
 .macro COMMON name, size, align_power
 #if KMP_OS_DARWIN
@@ -1150,6 +1210,9 @@ KMP_LABEL(kmp_invoke_pass_parms):	// put 1st - 6th parms to pkfn in registers.
 	movq	%rdi, %rbx	// pkfn -> %rbx
 	leaq	__gtid(%rbp), %rdi // &gtid -> %rdi (store 1st parm to pkfn)
 	leaq	__tid(%rbp), %rsi  // &tid -> %rsi (store 2nd parm to pkfn)
+	// Check if argc is 0
+	cmpq $0, %rax
+	je KMP_LABEL(kmp_no_args) // Jump ahead
 
 	movq	%r8, %r11	// p_argv -> %r11
 
@@ -1195,6 +1258,7 @@ KMP_LABEL(kmp_1_exit):
 	cmovnsq	(%r11), %rdx	// p_argv[0] -> %rdx (store 3rd parm to pkfn)
 #endif // KMP_MIC
 
+KMP_LABEL(kmp_no_args):
 	call	*%rbx		// call (*pkfn)();
 	movq	$1, %rax	// move 1 into return register;
 
@@ -1236,7 +1300,7 @@ KMP_LABEL(kmp_1_exit):
 #endif /* KMP_ARCH_X86_64 */
 
 // '
-#if (KMP_OS_LINUX || KMP_OS_DARWIN || KMP_OS_WINDOWS) && KMP_ARCH_AARCH64
+#if KMP_ARCH_AARCH64 || KMP_ARCH_AARCH64_32
 
 //------------------------------------------------------------------------
 // int
@@ -1292,11 +1356,12 @@ __tid = 8
 // mark_begin;
 	.text
 	PROC __kmp_invoke_microtask
+	PACBTI_C
 
-	stp	x29, x30, [sp, #-16]!
 # if OMPT_SUPPORT
 	stp	x19, x20, [sp, #-16]!
 # endif
+	stp	x29, x30, [sp, #-16]!
 	mov	x29, sp
 
 	orr	w9, wzr, #1
@@ -1350,19 +1415,20 @@ KMP_LABEL(kmp_1):
 	blr	x8
 	orr	w0, wzr, #1
 	mov	sp, x29
+	ldp	x29, x30, [sp], #16
 # if OMPT_SUPPORT
 	str	xzr, [x19]
 	ldp	x19, x20, [sp], #16
 # endif
-	ldp	x29, x30, [sp], #16
+	PACBTI_RET
 	ret
 
 	DEBUG_INFO __kmp_invoke_microtask
 // -- End  __kmp_invoke_microtask
 
-#endif /* (KMP_OS_LINUX || KMP_OS_DARWIN || KMP_OS_WINDOWS) && KMP_ARCH_AARCH64 */
+#endif /* KMP_ARCH_AARCH64 || KMP_ARCH_AARCH64_32 */
 
-#if (KMP_OS_LINUX || KMP_OS_DARWIN || KMP_OS_WINDOWS) && KMP_ARCH_ARM
+#if KMP_ARCH_ARM
 
 //------------------------------------------------------------------------
 // int
@@ -1505,7 +1571,7 @@ KMP_LABEL(kmp_1):
 	DEBUG_INFO __kmp_invoke_microtask
 // -- End  __kmp_invoke_microtask
 
-#endif /* (KMP_OS_LINUX || KMP_OS_DARWIN || KMP_OS_WINDOWS) && KMP_ARCH_AARCH64 */
+#endif /* KMP_ARCH_ARM */
 
 #if KMP_ARCH_PPC64
 
@@ -2252,21 +2318,179 @@ __kmp_invoke_microtask:
 
 #endif /* KMP_ARCH_VE */
 
-#if KMP_ARCH_ARM || KMP_ARCH_MIPS
+#if KMP_ARCH_S390X
+
+//------------------------------------------------------------------------
+//
+// typedef void (*microtask_t)(int *gtid, int *tid, ...);
+//
+// int __kmp_invoke_microtask(microtask_t pkfn, int gtid, int tid, int argc,
+//                            void *p_argv[]
+// #if OMPT_SUPPORT
+//                            ,
+//                            void **exit_frame_ptr
+// #endif
+//                            ) {
+// #if OMPT_SUPPORT
+//   *exit_frame_ptr = OMPT_GET_FRAME_ADDRESS(0);
+// #endif
+//
+//   (*pkfn)(&gtid, &tid, argv[0], ...);
+//
+//   return 1;
+// }
+//
+// Parameters:
+//   r2: pkfn
+//   r3: gtid
+//   r4: tid
+//   r5: argc
+//   r6: p_argv
+//   SP+160: exit_frame_ptr
+//
+// Locals:
+//   __gtid: gtid param pushed on stack so can pass &gtid to pkfn
+//   __tid: tid param pushed on stack so can pass &tid to pkfn
+//
+// Temp. registers:
+//
+//  r0: used to fetch argv slots
+//  r7: used as temporary for number of remaining pkfn parms
+//  r8: argv
+//  r9: pkfn
+//  r10: stack size
+//  r11: previous fp
+//  r12: stack parameter area
+//  r13: argv slot
+//
+// return: r2 (always 1/TRUE)
+//
+
+// -- Begin __kmp_invoke_microtask
+// mark_begin;
+	.text
+	.globl	__kmp_invoke_microtask
+	.p2align	1
+	.type	__kmp_invoke_microtask,@function
+__kmp_invoke_microtask:
+	.cfi_startproc
+
+	stmg	%r6,%r14,48(%r15)
+        .cfi_offset %r6, -112
+        .cfi_offset %r7, -104
+        .cfi_offset %r8, -96
+        .cfi_offset %r9, -88
+        .cfi_offset %r10, -80
+        .cfi_offset %r11, -72
+        .cfi_offset %r12, -64
+        .cfi_offset %r13, -56
+        .cfi_offset %r14, -48
+        .cfi_offset %r15, -40
+	lgr	%r11,%r15
+	.cfi_def_cfa %r11, 160
+
+	// Compute the dynamic stack size:
+	//
+	// - We need 8 bytes for storing 'gtid' and 'tid', so we can pass them by
+	//   reference
+	// - We need 8 bytes for each argument that cannot be passed to the 'pkfn'
+	//   function by register. Given that we have 5 of such registers (r[2-6])
+	//   and two + 'argc' arguments (consider &gtid and &tid), we need to
+	//   reserve max(0, argc - 3)*8 extra bytes
+	//
+	// The total number of bytes is then max(0, argc - 3)*8 + 8
+
+	lgr	%r10,%r5
+	aghi	%r10,-2
+	jnm	0f
+	lghi	%r10,0
+0:
+	sllg	%r10,%r10,3
+	lgr	%r12,%r10
+	aghi	%r10,176
+	sgr 	%r15,%r10
+	agr	%r12,%r15
+	stg	%r11,0(%r15)
+
+	lgr	%r9,%r2			// pkfn
+
+#if OMPT_SUPPORT
+	// Save frame pointer into exit_frame
+	lg	%r8,160(%r11)
+	stg	%r11,0(%r8)
+#endif
+
+	// Prepare arguments for the pkfn function (first 5 using r2-r6 registers)
+
+	stg     %r3,160(%r12)
+	la	%r2,164(%r12)		// gid
+	stg	%r4,168(%r12)		
+	la	%r3,172(%r12)		// tid
+	lgr	%r8,%r6			// argv
+
+	// If argc > 0
+	ltgr	%r7,%r5
+	jz	1f
+
+	lg	%r4,0(%r8)		// argv[0]
+	aghi	%r7,-1
+	jz	1f
+
+	// If argc > 1
+	lg	%r5,8(%r8)		// argv[1]
+	aghi	%r7,-1
+	jz	1f
+
+	// If argc > 2
+	lg	%r6,16(%r8)		// argv[2]
+	aghi	%r7,-1
+	jz	1f
+
+	lghi	%r13,0			// Index [n]
+2:
+	lg	%r0,24(%r13,%r8)	// argv[2+n]
+	stg	%r0,160(%r13,%r15)	// parm[2+n]
+	aghi	%r13,8			// Next
+	aghi	%r7,-1
+	jnz	2b
+
+1:
+	basr	%r14,%r9		// Call pkfn
+
+	// Restore stack and return
+
+	lgr	%r15,%r11
+	lmg	%r6,%r14,48(%r15)
+	lghi	%r2,1
+	br	%r14
+.Lfunc_end0:
+	.size	__kmp_invoke_microtask, .Lfunc_end0-__kmp_invoke_microtask
+	.cfi_endproc
+
+// -- End  __kmp_invoke_microtask
+
+#endif /* KMP_ARCH_S390X */
+
+#if KMP_ARCH_ARM || KMP_ARCH_MIPS || KMP_ARCH_PPC || KMP_ARCH_AARCH64_32 || KMP_ARCH_SPARC32
+#ifndef KMP_PREFIX_UNDERSCORE
+# define KMP_PREFIX_UNDERSCORE(x) x
+#endif
     .data
     COMMON .gomp_critical_user_, 32, 3
     .data
     .align 4
-    .global __kmp_unnamed_critical_addr
-__kmp_unnamed_critical_addr:
+    .global KMP_PREFIX_UNDERSCORE(__kmp_unnamed_critical_addr)
+KMP_PREFIX_UNDERSCORE(__kmp_unnamed_critical_addr):
     .4byte .gomp_critical_user_
 #ifdef __ELF__
-    .size __kmp_unnamed_critical_addr,4
+    .type KMP_PREFIX_UNDERSCORE(__kmp_unnamed_critical_addr),%object
+    .size KMP_PREFIX_UNDERSCORE(__kmp_unnamed_critical_addr),4
 #endif
-#endif /* KMP_ARCH_ARM */
+#endif /* KMP_ARCH_ARM || KMP_ARCH_MIPS || KMP_ARCH_AARCH64_32 || KMP_ARCH_SPARC32 */
 
 #if KMP_ARCH_PPC64 || KMP_ARCH_AARCH64 || KMP_ARCH_MIPS64 ||                   \
-    KMP_ARCH_RISCV64 || KMP_ARCH_LOONGARCH64 || KMP_ARCH_VE
+    KMP_ARCH_RISCV64 || KMP_ARCH_LOONGARCH64 || KMP_ARCH_VE ||                 \
+    KMP_ARCH_S390X || KMP_ARCH_SPARC64
 #ifndef KMP_PREFIX_UNDERSCORE
 # define KMP_PREFIX_UNDERSCORE(x) x
 #endif
@@ -2278,15 +2502,22 @@ __kmp_unnamed_critical_addr:
 KMP_PREFIX_UNDERSCORE(__kmp_unnamed_critical_addr):
     .8byte .gomp_critical_user_
 #ifdef __ELF__
+    .type KMP_PREFIX_UNDERSCORE(__kmp_unnamed_critical_addr),%object
     .size KMP_PREFIX_UNDERSCORE(__kmp_unnamed_critical_addr),8
 #endif
 #endif /* KMP_ARCH_PPC64 || KMP_ARCH_AARCH64 || KMP_ARCH_MIPS64 ||
-          KMP_ARCH_RISCV64 || KMP_ARCH_LOONGARCH64 || KMP_ARCH_VE */
+          KMP_ARCH_RISCV64 || KMP_ARCH_LOONGARCH64 || KMP_ARCH_VE || 
+          KMP_ARCH_S390X || KMP_ARCH_SPARC64 */
 
 #if KMP_OS_LINUX
 # if KMP_ARCH_ARM || KMP_ARCH_AARCH64
 .section .note.GNU-stack,"",%progbits
-# else
+# elif !KMP_ARCH_WASM
 .section .note.GNU-stack,"",@progbits
 # endif
+#endif
+
+#if (KMP_OS_LINUX || KMP_OS_OPENBSD) &&                                        \
+    (KMP_ARCH_AARCH64 || KMP_ARCH_AARCH64_32)
+GNU_PROPERTY_BTI_PAC
 #endif

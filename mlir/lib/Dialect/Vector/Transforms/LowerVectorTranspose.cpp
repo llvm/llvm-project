@@ -11,27 +11,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/Affine/IR/AffineOps.h"
-#include "mlir/Dialect/Arith/IR/Arith.h"
-#include "mlir/Dialect/Arith/Utils/Utils.h"
-#include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
-#include "mlir/Dialect/SCF/IR/SCF.h"
-#include "mlir/Dialect/Tensor/IR/Tensor.h"
+#include "mlir/Dialect/UB/IR/UBOps.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/Vector/Transforms/LoweringPatterns.h"
 #include "mlir/Dialect/Vector/Utils/VectorUtils.h"
-#include "mlir/IR/BuiltinAttributeInterfaces.h"
 #include "mlir/IR/BuiltinTypes.h"
-#include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "mlir/IR/Location.h"
-#include "mlir/IR/Matchers.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
-#include "mlir/Interfaces/VectorInterfaces.h"
-#include "mlir/Support/LogicalResult.h"
 
 #define DEBUG_TYPE "lower-vector-transpose"
 
@@ -88,8 +78,8 @@ getUnpackShufflePermFor128Lane(ArrayRef<int64_t> vals, int numBits) {
 static Value createUnpackLoPd(ImplicitLocOpBuilder &b, Value v1, Value v2,
                               int numBits) {
   int numElem = numBits / 32;
-  return b.create<vector::ShuffleOp>(
-      v1, v2,
+  return vector::ShuffleOp::create(
+      b, v1, v2,
       getUnpackShufflePermFor128Lane({0, 1, numElem, numElem + 1}, numBits));
 }
 
@@ -102,8 +92,8 @@ static Value createUnpackLoPd(ImplicitLocOpBuilder &b, Value v1, Value v2,
 static Value createUnpackHiPd(ImplicitLocOpBuilder &b, Value v1, Value v2,
                               int numBits) {
   int numElem = numBits / 32;
-  return b.create<vector::ShuffleOp>(
-      v1, v2,
+  return vector::ShuffleOp::create(
+      b, v1, v2,
       getUnpackShufflePermFor128Lane({2, 3, numElem + 2, numElem + 3},
                                      numBits));
 }
@@ -117,8 +107,8 @@ static Value createUnpackHiPd(ImplicitLocOpBuilder &b, Value v1, Value v2,
 static Value createUnpackLoPs(ImplicitLocOpBuilder &b, Value v1, Value v2,
                               int numBits) {
   int numElem = numBits / 32;
-  auto shuffle = b.create<vector::ShuffleOp>(
-      v1, v2,
+  auto shuffle = vector::ShuffleOp::create(
+      b, v1, v2,
       getUnpackShufflePermFor128Lane({0, numElem, 1, numElem + 1}, numBits));
   return shuffle;
 }
@@ -132,8 +122,8 @@ static Value createUnpackLoPs(ImplicitLocOpBuilder &b, Value v1, Value v2,
 static Value createUnpackHiPs(ImplicitLocOpBuilder &b, Value v1, Value v2,
                               int numBits) {
   int numElem = numBits / 32;
-  return b.create<vector::ShuffleOp>(
-      v1, v2,
+  return vector::ShuffleOp::create(
+      b, v1, v2,
       getUnpackShufflePermFor128Lane({2, numElem + 2, 3, numElem + 3},
                                      numBits));
 }
@@ -189,7 +179,7 @@ static Value create4x128BitSuffle(ImplicitLocOpBuilder &b, Value v1, Value v2,
   appendToMask(0, b23);
   appendToMask(16, b45);
   appendToMask(16, b67);
-  return b.create<vector::ShuffleOp>(v1, v2, shuffleMask);
+  return vector::ShuffleOp::create(b, v1, v2, shuffleMask);
 }
 
 /// Lowers the value to a vector.shuffle op. The `source` is expected to be a
@@ -200,7 +190,7 @@ static Value transposeToShuffle1D(OpBuilder &b, Value source, int m, int n) {
   for (int64_t j = 0; j < n; ++j)
     for (int64_t i = 0; i < m; ++i)
       mask.push_back(i * n + j);
-  return b.create<vector::ShuffleOp>(source.getLoc(), source, source, mask);
+  return vector::ShuffleOp::create(b, source.getLoc(), source, source, mask);
 }
 
 /// Lowers the value to a sequence of vector.shuffle ops. The `source` is
@@ -210,7 +200,7 @@ static Value transposeToShuffle16x16(OpBuilder &builder, Value source, int m,
   ImplicitLocOpBuilder b(source.getLoc(), builder);
   SmallVector<Value> vs;
   for (int64_t i = 0; i < m; ++i)
-    vs.push_back(b.create<vector::ExtractOp>(source, i));
+    vs.push_back(b.createOrFold<vector::ExtractOp>(source, i));
 
   // Interleave 32-bit lanes using
   //   8x _mm512_unpacklo_epi32
@@ -292,10 +282,9 @@ static Value transposeToShuffle16x16(OpBuilder &builder, Value source, int m,
 
   auto reshInputType = VectorType::get(
       {m, n}, cast<VectorType>(source.getType()).getElementType());
-  Value res =
-      b.create<arith::ConstantOp>(reshInputType, b.getZeroAttr(reshInputType));
+  Value res = ub::PoisonOp::create(b, reshInputType);
   for (int64_t i = 0; i < m; ++i)
-    res = b.create<vector::InsertOp>(vs[i], res, i);
+    res = vector::InsertOp::create(b, vs[i], res, i);
   return res;
 }
 
@@ -311,12 +300,12 @@ namespace {
 ///   %x = vector.insert .., .. [.., ..]
 class TransposeOpLowering : public OpRewritePattern<vector::TransposeOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
-  TransposeOpLowering(vector::VectorTransformsOptions vectorTransformOptions,
+  TransposeOpLowering(vector::VectorTransposeLowering vectorTransposeLowering,
                       MLIRContext *context, PatternBenefit benefit = 1)
       : OpRewritePattern<vector::TransposeOp>(context, benefit),
-        vectorTransformOptions(vectorTransformOptions) {}
+        vectorTransposeLowering(vectorTransposeLowering) {}
 
   LogicalResult matchAndRewrite(vector::TransposeOp op,
                                 PatternRewriter &rewriter) const override {
@@ -326,31 +315,17 @@ public:
     VectorType inputType = op.getSourceVectorType();
     VectorType resType = op.getResultVectorType();
 
-    // Set up convenience transposition table.
-    SmallVector<int64_t> transp;
-    for (auto attr : op.getTransp())
-      transp.push_back(cast<IntegerAttr>(attr).getInt());
+    if (inputType.isScalable())
+      return rewriter.notifyMatchFailure(
+          op, "This lowering does not support scalable vectors");
 
-    if (isShuffleLike(vectorTransformOptions.vectorTransposeLowering) &&
+    // Set up convenience transposition table.
+    ArrayRef<int64_t> transp = op.getPermutation();
+
+    if (isShuffleLike(vectorTransposeLowering) &&
         succeeded(isTranspose2DSlice(op)))
       return rewriter.notifyMatchFailure(
           op, "Options specifies lowering to shuffle");
-
-    // Handle a true 2-D matrix transpose differently when requested.
-    if (vectorTransformOptions.vectorTransposeLowering ==
-            vector::VectorTransposeLowering::Flat &&
-        resType.getRank() == 2 && transp[0] == 1 && transp[1] == 0) {
-      Type flattenedType =
-          VectorType::get(resType.getNumElements(), resType.getElementType());
-      auto matrix =
-          rewriter.create<vector::ShapeCastOp>(loc, flattenedType, input);
-      auto rows = rewriter.getI32IntegerAttr(resType.getShape()[0]);
-      auto columns = rewriter.getI32IntegerAttr(resType.getShape()[1]);
-      Value trans = rewriter.create<vector::FlatTransposeOp>(
-          loc, flattenedType, matrix, rows, columns);
-      rewriter.replaceOpWithNewOp<vector::ShapeCastOp>(op, resType, trans);
-      return success();
-    }
 
     // Generate unrolled extract/insert ops. We do not unroll the rightmost
     // (i.e., highest-order) dimensions that are not transposed and leave them
@@ -367,8 +342,7 @@ public:
     // of the leftmost transposed dimensions. We traverse every transpose
     // element using a linearized index that we delinearize to generate the
     // appropriate indices for the extract/insert operations.
-    Value result = rewriter.create<arith::ConstantOp>(
-        loc, resType, rewriter.getZeroAttr(resType));
+    Value result = ub::PoisonOp::create(rewriter, loc, resType);
     int64_t numTransposedElements = ShapedType::getNumElements(prunedInShape);
 
     for (int64_t linearIdx = 0; linearIdx < numTransposedElements;
@@ -377,9 +351,9 @@ public:
       SmallVector<int64_t> insertIdxs(extractIdxs);
       applyPermutationToVector(insertIdxs, prunedTransp);
       Value extractOp =
-          rewriter.create<vector::ExtractOp>(loc, input, extractIdxs);
-      result =
-          rewriter.create<vector::InsertOp>(loc, extractOp, result, insertIdxs);
+          rewriter.createOrFold<vector::ExtractOp>(loc, input, extractIdxs);
+      result = rewriter.createOrFold<vector::InsertOp>(loc, extractOp, result,
+                                                       insertIdxs);
     }
 
     rewriter.replaceOp(op, result);
@@ -388,7 +362,65 @@ public:
 
 private:
   /// Options to control the vector patterns.
-  vector::VectorTransformsOptions vectorTransformOptions;
+  vector::VectorTransposeLowering vectorTransposeLowering;
+};
+
+/// Rewrites vector.transpose as vector.shape_cast. This pattern is only applied
+/// to 2D vectors with at least one unit dim. For example:
+///
+/// Replace:
+///   vector.transpose %0, [1, 0] : vector<4x1xi32>> to
+///                                 vector<1x4xi32>
+/// with:
+///   vector.shape_cast %0 : vector<4x1xi32> to vector<1x4xi32>
+///
+/// Source with leading unit dim (inverse) is also replaced. Unit dim must
+/// be fixed. Non-unit dim can be scalable.
+///
+/// TODO: This pattern was introduced specifically to help lower scalable
+/// vectors. In hindsight, a more specialised canonicalization (for shape_cast's
+/// to cancel out) would be preferable:
+///
+///  BEFORE:
+///     %0 = some_op
+///     %1 = vector.shape_cast %0 : vector<[4]xf32> to vector<[4]x1xf32>
+///     %2 = vector.transpose %1 [1, 0] : vector<[4]x1xf32> to vector<1x[4]xf32>
+///  AFTER:
+///     %0 = some_op
+///     %1 = vector.shape_cast %0 : vector<[4]xf32> to vector<1x[4]xf32>
+///
+/// Given the context above, we may want to consider (re-)moving this pattern
+/// at some later time. I am leaving it for now in case there are other users
+/// that I am not aware of.
+class Transpose2DWithUnitDimToShapeCast
+    : public OpRewritePattern<vector::TransposeOp> {
+public:
+  using Base::Base;
+
+  Transpose2DWithUnitDimToShapeCast(MLIRContext *context,
+                                    PatternBenefit benefit = 1)
+      : OpRewritePattern<vector::TransposeOp>(context, benefit) {}
+
+  LogicalResult matchAndRewrite(vector::TransposeOp op,
+                                PatternRewriter &rewriter) const override {
+    Value input = op.getVector();
+    VectorType resType = op.getResultVectorType();
+
+    // Set up convenience transposition table.
+    ArrayRef<int64_t> transp = op.getPermutation();
+
+    if (resType.getRank() == 2 &&
+        ((resType.getShape().front() == 1 &&
+          !resType.getScalableDims().front()) ||
+         (resType.getShape().back() == 1 &&
+          !resType.getScalableDims().back())) &&
+        transp == ArrayRef<int64_t>({1, 0})) {
+      rewriter.replaceOpWithNewOp<vector::ShapeCastOp>(op, resType, input);
+      return success();
+    }
+
+    return failure();
+  }
 };
 
 /// Rewrite a 2-D vector.transpose as a sequence of shuffle ops.
@@ -401,19 +433,23 @@ private:
 class TransposeOp2DToShuffleLowering
     : public OpRewritePattern<vector::TransposeOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   TransposeOp2DToShuffleLowering(
-      vector::VectorTransformsOptions vectorTransformOptions,
+      vector::VectorTransposeLowering vectorTransposeLowering,
       MLIRContext *context, PatternBenefit benefit = 1)
       : OpRewritePattern<vector::TransposeOp>(context, benefit),
-        vectorTransformOptions(vectorTransformOptions) {}
+        vectorTransposeLowering(vectorTransposeLowering) {}
 
   LogicalResult matchAndRewrite(vector::TransposeOp op,
                                 PatternRewriter &rewriter) const override {
-    if (!isShuffleLike(vectorTransformOptions.vectorTransposeLowering))
+    if (!isShuffleLike(vectorTransposeLowering))
       return rewriter.notifyMatchFailure(
           op, "not using vector shuffle based lowering");
+
+    if (op.getSourceVectorType().isScalable())
+      return rewriter.notifyMatchFailure(
+          op, "vector shuffle lowering not supported for scalable vectors");
 
     auto srcGtOneDims = isTranspose2DSlice(op);
     if (failed(srcGtOneDims))
@@ -429,15 +465,14 @@ public:
     Location loc = op.getLoc();
     auto flattenedType = VectorType::get({n * m}, srcType.getElementType());
     auto reshInputType = VectorType::get({m, n}, srcType.getElementType());
-    auto reshInput = rewriter.create<vector::ShapeCastOp>(loc, flattenedType,
-                                                          op.getVector());
+    auto reshInput = vector::ShapeCastOp::create(rewriter, loc, flattenedType,
+                                                 op.getVector());
 
     Value res;
-    if (vectorTransformOptions.vectorTransposeLowering ==
-            VectorTransposeLowering::Shuffle16x16 &&
+    if (vectorTransposeLowering == VectorTransposeLowering::Shuffle16x16 &&
         m == 16 && n == 16) {
       reshInput =
-          rewriter.create<vector::ShapeCastOp>(loc, reshInputType, reshInput);
+          vector::ShapeCastOp::create(rewriter, loc, reshInputType, reshInput);
       res = transposeToShuffle16x16(rewriter, reshInput, m, n);
     } else {
       // Fallback to shuffle on 1D approach.
@@ -452,13 +487,15 @@ public:
 
 private:
   /// Options to control the vector patterns.
-  vector::VectorTransformsOptions vectorTransformOptions;
+  vector::VectorTransposeLowering vectorTransposeLowering;
 };
 } // namespace
 
 void mlir::vector::populateVectorTransposeLoweringPatterns(
-    RewritePatternSet &patterns, VectorTransformsOptions options,
-    PatternBenefit benefit) {
+    RewritePatternSet &patterns,
+    VectorTransposeLowering vectorTransposeLowering, PatternBenefit benefit) {
+  patterns.add<Transpose2DWithUnitDimToShapeCast>(patterns.getContext(),
+                                                  benefit);
   patterns.add<TransposeOpLowering, TransposeOp2DToShuffleLowering>(
-      options, patterns.getContext(), benefit);
+      vectorTransposeLowering, patterns.getContext(), benefit);
 }

@@ -20,6 +20,7 @@
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/Object/ObjectFile.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/Error.h"
 #include "llvm/TargetParser/Host.h"
@@ -45,7 +46,7 @@ class DWARFUnitIndex;
 /// DWARFContext
 /// This data structure is the top level entity that deals with dwarf debug
 /// information parsing. The actual data is supplied through DWARFObj.
-class DWARFContext : public DIContext {
+class LLVM_ABI DWARFContext : public DIContext {
 public:
   /// DWARFContextState
   /// This structure contains all member variables for DWARFContext that need
@@ -100,9 +101,8 @@ public:
     virtual bool isThreadSafe() const = 0;
 
     /// Parse a macro[.dwo] or macinfo[.dwo] section.
-    std::unique_ptr<DWARFDebugMacro>
+    LLVM_ABI std::unique_ptr<DWARFDebugMacro>
     parseMacroOrMacinfo(MacroSecType SectionType);
-
   };
   friend class DWARFContextState;
 
@@ -195,7 +195,7 @@ public:
   /// Get all normal compile/type units in this context.
   unit_iterator_range normal_units() {
     DWARFUnitVector &NormalUnits = State->getNormalUnits();
-    return unit_iterator_range(NormalUnits.begin(), NormalUnits.end());
+    return NormalUnits;
   }
 
   /// Get units from .debug_info..dwo in the DWO context.
@@ -208,6 +208,9 @@ public:
   const DWARFUnitVector &getDWOUnitsVector() {
     return State->getDWOUnits();
   }
+
+  /// Return true of this DWARF context is a DWP file.
+  bool isDWP() const;
 
   /// Get units from .debug_types.dwo in the DWO context.
   unit_iterator_range dwo_types_section_units() {
@@ -228,7 +231,7 @@ public:
   /// Get all units in the DWO context.
   unit_iterator_range dwo_units() {
     DWARFUnitVector &DWOUnits = State->getDWOUnits();
-    return unit_iterator_range(DWOUnits.begin(), DWOUnits.end());
+    return DWOUnits;
   }
 
   /// Get the number of compile units in this context.
@@ -262,7 +265,10 @@ public:
   }
 
   DWARFCompileUnit *getDWOCompileUnitForHash(uint64_t Hash);
-  DWARFTypeUnit *getTypeUnitForHash(uint16_t Version, uint64_t Hash, bool IsDWO);
+  DWARFTypeUnit *getTypeUnitForHash(uint64_t Hash, bool IsDWO);
+
+  /// Return the DWARF unit that includes an offset (relative to .debug_info).
+  DWARFUnit *getUnitForOffset(uint64_t Offset);
 
   /// Return the compile unit that includes an offset (relative to .debug_info).
   DWARFCompileUnit *getCompileUnitForOffset(uint64_t Offset);
@@ -372,12 +378,18 @@ public:
   /// given address where applicable.
   /// TODO: change input parameter from "uint64_t Address"
   ///       into "SectionedAddress Address"
-  DIEsForAddress getDIEsForAddress(uint64_t Address);
+  /// \param[in] CheckDWO If this is false then only search for address matches
+  ///            in the current context's DIEs. If this is true, then each
+  ///            DWARFUnit that has a DWO file will have the debug info in the
+  ///            DWO file searched as well. This allows for lookups to succeed
+  ///            by searching the split DWARF debug info when using the main
+  ///            executable's debug info.
+  DIEsForAddress getDIEsForAddress(uint64_t Address, bool CheckDWO = false);
 
-  DILineInfo getLineInfoForAddress(
+  std::optional<DILineInfo> getLineInfoForAddress(
       object::SectionedAddress Address,
       DILineInfoSpecifier Specifier = DILineInfoSpecifier()) override;
-  DILineInfo
+  std::optional<DILineInfo>
   getLineInfoForDataAddress(object::SectionedAddress Address) override;
   DILineInfoTable getLineInfoForAddressRange(
       object::SectionedAddress Address, uint64_t Size,
@@ -416,7 +428,7 @@ public:
     for (unsigned Size : DWARFContext::getSupportedAddressSizes())
       Stream << LS << Size;
     Stream << ')';
-    return make_error<StringError>(Stream.str(), EC);
+    return make_error<StringError>(Buffer, EC);
   }
 
   std::shared_ptr<DWARFContext> getDWOContext(StringRef AbsolutePath);

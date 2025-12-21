@@ -25,6 +25,7 @@
 #include "llvm/IR/GlobalObject.h"
 #include "llvm/IR/OperandTraits.h"
 #include "llvm/IR/Value.h"
+#include "llvm/Support/Compiler.h"
 #include <cassert>
 #include <cstddef>
 
@@ -39,6 +40,8 @@ class DIGlobalVariableExpression;
 class GlobalVariable : public GlobalObject, public ilist_node<GlobalVariable> {
   friend class SymbolTableListTraits<GlobalVariable>;
 
+  constexpr static IntrusiveOperandsAllocMarker AllocMarker{1};
+
   AttributeSet Attrs;
 
   // Is this a global constant?
@@ -47,42 +50,57 @@ class GlobalVariable : public GlobalObject, public ilist_node<GlobalVariable> {
   // global initializers are run?
   bool isExternallyInitializedConstant : 1;
 
+private:
+  static const unsigned CodeModelBits = LastCodeModelBit - LastAlignmentBit;
+  static const unsigned CodeModelMask = (1 << CodeModelBits) - 1;
+  static const unsigned CodeModelShift = LastAlignmentBit + 1;
+
 public:
   /// GlobalVariable ctor - If a parent module is specified, the global is
   /// automatically inserted into the end of the specified modules global list.
-  GlobalVariable(Type *Ty, bool isConstant, LinkageTypes Linkage,
-                 Constant *Initializer = nullptr, const Twine &Name = "",
-                 ThreadLocalMode = NotThreadLocal, unsigned AddressSpace = 0,
-                 bool isExternallyInitialized = false);
+  LLVM_ABI GlobalVariable(Type *Ty, bool isConstant, LinkageTypes Linkage,
+                          Constant *Initializer = nullptr,
+                          const Twine &Name = "",
+                          ThreadLocalMode = NotThreadLocal,
+                          unsigned AddressSpace = 0,
+                          bool isExternallyInitialized = false);
   /// GlobalVariable ctor - This creates a global and inserts it before the
   /// specified other global.
-  GlobalVariable(Module &M, Type *Ty, bool isConstant, LinkageTypes Linkage,
-                 Constant *Initializer, const Twine &Name = "",
-                 GlobalVariable *InsertBefore = nullptr,
-                 ThreadLocalMode = NotThreadLocal,
-                 std::optional<unsigned> AddressSpace = std::nullopt,
-                 bool isExternallyInitialized = false);
+  LLVM_ABI GlobalVariable(Module &M, Type *Ty, bool isConstant,
+                          LinkageTypes Linkage, Constant *Initializer,
+                          const Twine &Name = "",
+                          GlobalVariable *InsertBefore = nullptr,
+                          ThreadLocalMode = NotThreadLocal,
+                          std::optional<unsigned> AddressSpace = std::nullopt,
+                          bool isExternallyInitialized = false);
   GlobalVariable(const GlobalVariable &) = delete;
   GlobalVariable &operator=(const GlobalVariable &) = delete;
 
+private:
+  /// Set the number of operands on a GlobalVariable.
+  ///
+  /// GlobalVariable always allocates space for a single operands, but
+  /// doesn't always use it.
+  void setGlobalVariableNumOperands(unsigned NumOps) {
+    assert(NumOps <= 1 && "GlobalVariable can only have 0 or 1 operands");
+    NumUserOperands = NumOps;
+  }
+
+public:
   ~GlobalVariable() {
     dropAllReferences();
+
+    // Number of operands can be set to 0 after construction and initialization.
+    // Make sure that number of operands is reset to 1, as this is needed in
+    // User::operator delete
+    setGlobalVariableNumOperands(1);
   }
 
   // allocate space for exactly one operand
-  void *operator new(size_t s) {
-    return User::operator new(s, 1);
-  }
+  void *operator new(size_t s) { return User::operator new(s, AllocMarker); }
 
   // delete space for exactly one operand as created in the corresponding new operator
-  void operator delete(void *ptr){
-    assert(ptr != nullptr && "must not be nullptr");
-    User *Obj = static_cast<User *>(ptr);
-    // Number of operands can be set to 0 after construction and initialization. Make sure
-    // that number of operands is reset to 1, as this is needed in User::operator delete
-    Obj->setGlobalVariableNumOperands(1);
-    User::operator delete(Obj);
-  }
+  void operator delete(void *ptr) { User::operator delete(ptr); }
 
   /// Provide fast operand accessors
   DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
@@ -142,9 +160,15 @@ public:
     return static_cast<Constant*>(Op<0>().get());
   }
   /// setInitializer - Sets the initializer for this global variable, removing
-  /// any existing initializer if InitVal==NULL.  If this GV has type T*, the
-  /// initializer must have type T.
-  void setInitializer(Constant *InitVal);
+  /// any existing initializer if InitVal==NULL. The initializer must have the
+  /// type getValueType().
+  LLVM_ABI void setInitializer(Constant *InitVal);
+
+  /// replaceInitializer - Sets the initializer for this global variable, and
+  /// sets the value type of the global to the type of the initializer. The
+  /// initializer must not be null.  This may affect the global's alignment if
+  /// it isn't explicitly set.
+  LLVM_ABI void replaceInitializer(Constant *InitVal);
 
   /// If the value is a global constant, its value is immutable throughout the
   /// runtime execution of the program.  Assigning a value into the constant
@@ -162,27 +186,28 @@ public:
 
   /// copyAttributesFrom - copy all additional attributes (those not needed to
   /// create a GlobalVariable) from the GlobalVariable Src to this one.
-  void copyAttributesFrom(const GlobalVariable *Src);
+  LLVM_ABI void copyAttributesFrom(const GlobalVariable *Src);
 
   /// removeFromParent - This method unlinks 'this' from the containing module,
   /// but does not delete it.
   ///
-  void removeFromParent();
+  LLVM_ABI void removeFromParent();
 
   /// eraseFromParent - This method unlinks 'this' from the containing module
   /// and deletes it.
   ///
-  void eraseFromParent();
+  LLVM_ABI void eraseFromParent();
 
   /// Drop all references in preparation to destroy the GlobalVariable. This
   /// drops not only the reference to the initializer but also to any metadata.
-  void dropAllReferences();
+  LLVM_ABI void dropAllReferences();
 
   /// Attach a DIGlobalVariableExpression.
-  void addDebugInfo(DIGlobalVariableExpression *GV);
+  LLVM_ABI void addDebugInfo(DIGlobalVariableExpression *GV);
 
   /// Fill the vector with all debug info attachements.
-  void getDebugInfo(SmallVectorImpl<DIGlobalVariableExpression *> &GVs) const;
+  LLVM_ABI void
+  getDebugInfo(SmallVectorImpl<DIGlobalVariableExpression *> &GVs) const;
 
   /// Add attribute to this global.
   void addAttribute(Attribute::AttrKind Kind) {
@@ -192,6 +217,11 @@ public:
   /// Add attribute to this global.
   void addAttribute(StringRef Kind, StringRef Val = StringRef()) {
     Attrs = Attrs.addAttribute(getContext(), Kind, Val);
+  }
+
+  /// Add attributes to this global.
+  void addAttributes(const AttrBuilder &AttrBuilder) {
+    Attrs = Attrs.addAttributes(getContext(), AttrBuilder);
   }
 
   /// Return true if the attribute exists.
@@ -246,6 +276,49 @@ public:
            getAttributes().hasAttribute("relro-section") ||
            getAttributes().hasAttribute("rodata-section");
   }
+
+  /// Get the custom code model raw value of this global.
+  ///
+  unsigned getCodeModelRaw() const {
+    unsigned Data = getGlobalValueSubClassData();
+    return (Data >> CodeModelShift) & CodeModelMask;
+  }
+
+  /// Get the custom code model of this global if it has one.
+  ///
+  /// If this global does not have a custom code model, the empty instance
+  /// will be returned.
+  std::optional<CodeModel::Model> getCodeModel() const {
+    unsigned CodeModelData = getCodeModelRaw();
+    if (CodeModelData > 0)
+      return static_cast<CodeModel::Model>(CodeModelData - 1);
+    return {};
+  }
+
+  /// Change the code model for this global.
+  ///
+  LLVM_ABI void setCodeModel(CodeModel::Model CM);
+
+  /// Remove the code model for this global.
+  ///
+  LLVM_ABI void clearCodeModel();
+
+  /// FIXME: Remove this function once transition to Align is over.
+  uint64_t getAlignment() const {
+    MaybeAlign Align = getAlign();
+    return Align ? Align->value() : 0;
+  }
+
+  /// Returns the alignment of the given variable.
+  MaybeAlign getAlign() const { return GlobalObject::getAlign(); }
+
+  /// Sets the alignment attribute of the GlobalVariable.
+  void setAlignment(Align Align) { GlobalObject::setAlignment(Align); }
+
+  /// Sets the alignment attribute of the GlobalVariable.
+  /// This method will be deprecated as the alignment property should always be
+  /// defined.
+  void setAlignment(MaybeAlign Align) { GlobalObject::setAlignment(Align); }
 
   // Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const Value *V) {

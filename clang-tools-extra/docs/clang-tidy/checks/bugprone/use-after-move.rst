@@ -83,9 +83,9 @@ move:
       std::cout << str;
     }
 
-If you want to avoid the overhead of actually reinitializing the object, you can
-create a dummy function that causes the check to assume the object was
-reinitialized:
+If you want to avoid the overhead of actually reinitializing the object,
+you can create a dummy function that causes the check to assume the object
+was reinitialized:
 
 .. code-block:: c++
 
@@ -104,9 +104,9 @@ You can use this as follows:
       std::cout << str;
     }
 
-The check will not output a warning in this case because passing the object to a
-function as a non-const pointer or reference counts as a reinitialization (see section
-`Reinitialization`_ below).
+The check will not output a warning in this case because passing the object
+to a function as a non-const pointer or reference counts as a reinitialization
+(see section `Reinitialization`_ below).
 
 Unsequenced moves, uses, and reinitializations
 ----------------------------------------------
@@ -143,10 +143,10 @@ reference parameter.
 
 This means that the check will flag a use-after-move even on a type that does
 not define a move constructor or move assignment operator. This is intentional.
-Developers may use ``std::move`` on such a type in the expectation that the type
-will add move semantics in the future. If such a ``std::move`` has the potential
-to cause a use-after-move, we want to warn about it even if the type does not
-implement move semantics yet.
+Developers may use ``std::move`` on such a type in the expectation that the
+type will add move semantics in the future. If such a ``std::move`` has the
+potential to cause a use-after-move, we want to warn about it even if the type
+does not implement move semantics yet.
 
 Furthermore, if the result of ``std::move`` *is* passed to an rvalue reference
 parameter, this will always be considered to cause a move, even if the function
@@ -169,13 +169,25 @@ that a move always takes place:
 The check will assume that the last line causes a move, even though, in this
 particular case, it does not. Again, this is intentional.
 
-There is one special case: A call to ``std::move`` inside a ``try_emplace`` call
-is conservatively assumed not to move. This is to avoid spurious warnings, as
-the check has no way to reason about the ``bool`` returned by ``try_emplace``.
+There is one special case: A call to ``std::move`` inside a ``try_emplace``
+call is conservatively assumed not to move. This is to avoid spurious warnings,
+as the check has no way to reason about the ``bool`` returned by ``try_emplace``.
 
 When analyzing the order in which moves, uses and reinitializations happen (see
 section `Unsequenced moves, uses, and reinitializations`_), the move is assumed
 to occur in whichever function the result of the ``std::move`` is passed to.
+
+The check also handles perfect-forwarding with ``std::forward`` so the
+following code will also trigger a use-after-move warning.
+
+.. code-block:: c++
+
+  void consume(int);
+
+  void f(int&& i) {
+    consume(std::forward<int>(i));
+    consume(std::forward<int>(i)); // use-after-move
+  }
 
 Use
 ---
@@ -184,11 +196,13 @@ Any occurrence of the moved variable that is not a reinitialization (see below)
 is considered to be a use.
 
 An exception to this are objects of type ``std::unique_ptr``,
-``std::shared_ptr`` and ``std::weak_ptr``, which have defined move behavior
-(objects of these classes are guaranteed to be empty after they have been moved
-from). Therefore, an object of these classes will only be considered to be used
-if it is dereferenced, i.e. if ``operator*``, ``operator->`` or ``operator[]``
-(in the case of ``std::unique_ptr<T []>``) is called on it.
+``std::shared_ptr``, ``std::weak_ptr``, ``std::optional``, and ``std::any``.
+An exception to this are objects of type ``std::unique_ptr``,
+``std::shared_ptr``, ``std::weak_ptr``, ``std::optional``, and ``std::any``,
+which can be reinitialized via ``reset``. For smart pointers specifically, the
+moved-from objects have a well-defined state of being ``nullptr``s, and only
+``operator*``, ``operator->`` and ``operator[]`` are considered bad accesses as
+they would be dereferencing a ``nullptr``.
 
 If multiple uses occur after a move, only the first of these is flagged.
 
@@ -203,14 +217,15 @@ The check considers a variable to be reinitialized in the following cases:
     lvalue reference. (It is assumed that the variable may be an out-parameter
     for the function.)
 
-  - ``clear()`` or ``assign()`` is called on the variable and the variable is of
-    one of the standard container types ``basic_string``, ``vector``, ``deque``,
-    ``forward_list``, ``list``, ``set``, ``map``, ``multiset``, ``multimap``,
-    ``unordered_set``, ``unordered_map``, ``unordered_multiset``,
+  - ``clear()`` or ``assign()`` is called on the variable and the variable is
+    of     one of the standard container types ``basic_string``, ``vector``,
+    ``deque``, ``forward_list``, ``list``, ``set``, ``map``, ``multiset``,
+    ``multimap``, ``unordered_set``, ``unordered_map``, ``unordered_multiset``,
     ``unordered_multimap``.
 
   - ``reset()`` is called on the variable and the variable is of type
-    ``std::unique_ptr``, ``std::shared_ptr`` or ``std::weak_ptr``.
+    ``std::unique_ptr``, ``std::shared_ptr``, ``std::weak_ptr``,
+    ``std::optional``, or ``std::any``.
 
   - A member function marked with the ``[[clang::reinitializes]]`` attribute is
     called on the variable.
@@ -238,3 +253,13 @@ For example, if an additional member variable is added to ``S``, it is easy to
 forget to add the reinitialization for this additional member. Instead, it is
 safer to assign to the entire struct in one go, and this will also avoid the
 use-after-move warning.
+
+Options
+-------
+
+.. option:: InvalidationFunctions
+
+  A semicolon-separated list of names of functions that cause their first
+  arguments to be invalidated (e.g., closing a handle).
+  For member functions, the first argument is considered to be the implicit
+  object argument (``this``). Default value is an empty string.

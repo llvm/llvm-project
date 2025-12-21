@@ -34,11 +34,10 @@ static_assert(ZX_HANDLE_INVALID == 0, "");
 
 static void NORETURN dieOnError(zx_status_t Status, const char *FnName,
                                 uptr Size) {
-  char Error[128];
-  formatString(Error, sizeof(Error),
-               "SCUDO ERROR: %s failed with size %zuKB (%s)", FnName,
+  ScopedString Error;
+  Error.append("SCUDO ERROR: %s failed with size %zuKB (%s)", FnName,
                Size >> 10, zx_status_get_string(Status));
-  outputRaw(Error);
+  outputRaw(Error.data());
   die();
 }
 
@@ -231,6 +230,9 @@ void outputRaw(const char *Buffer) {
 }
 
 void setAbortMessage(const char *Message) {}
+
+// TODO: Implement for fuchsia.
+u64 getResidentPages(uptr BaseAddress, uptr Size) { return 0; }
 
 } // namespace scudo
 

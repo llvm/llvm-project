@@ -30,6 +30,7 @@
 namespace mlir {
 class Builder;
 class OpBuilder;
+class ImplicitLocOpBuilder;
 
 /// This class implements `Optional` functionality for ParseResult. We don't
 /// directly use Optional here, because it provides an implicit conversion
@@ -74,7 +75,10 @@ void ensureRegionTerminator(
 
 /// Structure used by default as a "marker" when no "Properties" are set on an
 /// Operation.
-struct EmptyProperties {};
+struct EmptyProperties {
+  bool operator==(const EmptyProperties &) const { return true; }
+  bool operator!=(const EmptyProperties &) const { return false; }
+};
 
 /// Traits to detect whether an Operation defined a `Properties` type, otherwise
 /// it'll default to `EmptyProperties`.
@@ -111,7 +115,7 @@ public:
   MLIRContext *getContext() { return getOperation()->getContext(); }
 
   /// Print the operation to the given stream.
-  void print(raw_ostream &os, OpPrintingFlags flags = std::nullopt) {
+  void print(raw_ostream &os, OpPrintingFlags flags = {}) {
     state->print(os, flags);
   }
   void print(raw_ostream &os, AsmState &asmState) {
@@ -226,8 +230,10 @@ protected:
   static ParseResult genericParseProperties(OpAsmParser &parser,
                                             Attribute &result);
 
-  /// Print the properties as a Attribute.
-  static void genericPrintProperties(OpAsmPrinter &p, Attribute properties);
+  /// Print the properties as a Attribute with names not included within
+  /// 'elidedProps'
+  static void genericPrintProperties(OpAsmPrinter &p, Attribute properties,
+                                     ArrayRef<StringRef> elidedProps = {});
 
   /// Print an operation name, eliding the dialect prefix if necessary.
   static void printOpName(Operation *op, OpAsmPrinter &p,
@@ -267,7 +273,13 @@ class OpFoldResult : public PointerUnion<Attribute, Value> {
   using PointerUnion<Attribute, Value>::PointerUnion;
 
 public:
-  void dump() const { llvm::errs() << *this << "\n"; }
+  LLVM_DUMP_METHOD void dump() const { llvm::errs() << *this << "\n"; }
+
+  MLIRContext *getContext() const {
+    PointerUnion pu = *this;
+    return isa<Attribute>(pu) ? cast<Attribute>(pu).getContext()
+                              : cast<Value>(pu).getContext();
+  }
 };
 
 // Temporarily exit the MLIR namespace to add casting support as later code in
@@ -374,6 +386,7 @@ protected:
 
 //===----------------------------------------------------------------------===//
 // Operand Traits
+//===----------------------------------------------------------------------===//
 
 namespace detail {
 /// Utility trait base that provides accessors for derived traits that have
@@ -503,6 +516,7 @@ class VariadicOperands
 
 //===----------------------------------------------------------------------===//
 // Region Traits
+//===----------------------------------------------------------------------===//
 
 /// This class provides verification for ops that are known to have zero
 /// regions.
@@ -595,6 +609,7 @@ class VariadicRegions
 
 //===----------------------------------------------------------------------===//
 // Result Traits
+//===----------------------------------------------------------------------===//
 
 /// This class provides return value APIs for ops that are known to have
 /// zero results.
@@ -746,6 +761,7 @@ class VariadicResults
 
 //===----------------------------------------------------------------------===//
 // Terminator Traits
+//===----------------------------------------------------------------------===//
 
 /// This class indicates that the regions associated with this op don't have
 /// terminators.
@@ -857,6 +873,7 @@ class VariadicSuccessors
 
 //===----------------------------------------------------------------------===//
 // SingleBlock
+//===----------------------------------------------------------------------===//
 
 /// This class provides APIs and verifiers for ops with regions having a single
 /// block.
@@ -872,7 +889,7 @@ public:
         continue;
 
       // Non-empty regions must contain a single basic block.
-      if (!llvm::hasSingleElement(region))
+      if (!region.hasOneBlock())
         return op->emitOpError("expects region #")
                << i << " to have 0 or 1 blocks";
 
@@ -938,6 +955,7 @@ public:
 
 //===----------------------------------------------------------------------===//
 // SingleBlockImplicitTerminator
+//===----------------------------------------------------------------------===//
 
 /// This class provides APIs and verifiers for ops with regions having a single
 /// block that must terminate with `TerminatorOpType`.
@@ -1023,6 +1041,7 @@ struct hasSingleBlockImplicitTerminator<Op, false> {
 
 //===----------------------------------------------------------------------===//
 // Misc Traits
+//===----------------------------------------------------------------------===//
 
 /// This class provides verification for ops that are known to have the same
 /// operand shape: all operands are scalars, vectors/tensors of the same
@@ -1503,6 +1522,7 @@ bool hasElementwiseMappableTraits(Operation *op);
 namespace op_definition_impl {
 //===----------------------------------------------------------------------===//
 // Trait Existence
+//===----------------------------------------------------------------------===//
 
 /// Returns true if this given Trait ID matches the IDs of any of the provided
 /// trait types `Traits`.
@@ -1521,6 +1541,7 @@ inline bool hasTrait<>(TypeID traitID) {
 
 //===----------------------------------------------------------------------===//
 // Trait Folding
+//===----------------------------------------------------------------------===//
 
 /// Trait to check if T provides a 'foldTrait' method for single result
 /// operations.
@@ -1593,6 +1614,7 @@ static LogicalResult foldTraits(Operation *op, ArrayRef<Attribute> operands,
 
 //===----------------------------------------------------------------------===//
 // Trait Verification
+//===----------------------------------------------------------------------===//
 
 /// Trait to check if T provides a `verifyTrait` method.
 template <typename T, typename... Args>
@@ -1610,14 +1632,11 @@ using detect_has_verify_region_trait =
 
 /// Verify the given trait if it provides a verifier.
 template <typename T>
-std::enable_if_t<detect_has_verify_trait<T>::value, LogicalResult>
-verifyTrait(Operation *op) {
-  return T::verifyTrait(op);
-}
-template <typename T>
-inline std::enable_if_t<!detect_has_verify_trait<T>::value, LogicalResult>
-verifyTrait(Operation *) {
-  return success();
+LogicalResult verifyTrait(Operation *op) {
+  if constexpr (detect_has_verify_trait<T>::value)
+    return T::verifyTrait(op);
+  else
+    return success();
 }
 
 /// Given a set of traits, return the result of verifying the given operation.
@@ -1628,15 +1647,11 @@ LogicalResult verifyTraits(Operation *op) {
 
 /// Verify the given trait if it provides a region verifier.
 template <typename T>
-std::enable_if_t<detect_has_verify_region_trait<T>::value, LogicalResult>
-verifyRegionTrait(Operation *op) {
-  return T::verifyRegionTrait(op);
-}
-template <typename T>
-inline std::enable_if_t<!detect_has_verify_region_trait<T>::value,
-                        LogicalResult>
-verifyRegionTrait(Operation *) {
-  return success();
+LogicalResult verifyRegionTrait(Operation *op) {
+  if constexpr (detect_has_verify_region_trait<T>::value)
+    return T::verifyRegionTrait(op);
+  else
+    return success();
 }
 
 /// Given a set of traits, return the result of verifying the regions of the
@@ -1724,8 +1739,7 @@ public:
   template <typename... Models>
   static void attachInterface(MLIRContext &context) {
     std::optional<RegisteredOperationName> info =
-        RegisteredOperationName::lookup(ConcreteType::getOperationName(),
-                                        &context);
+        RegisteredOperationName::lookup(TypeID::get<ConcreteType>(), &context);
     if (!info)
       llvm::report_fatal_error(
           "Attempting to attach an interface to an unregistered operation " +
@@ -1801,10 +1815,13 @@ private:
   template <typename T>
   using detect_has_print = llvm::is_detected<has_print, T>;
 
-  /// Trait to check if printProperties(OpAsmPrinter, T) exist
+  /// Trait to check if printProperties(OpAsmPrinter, T, ArrayRef<StringRef>)
+  /// exist
   template <typename T, typename... Args>
-  using has_print_properties = decltype(printProperties(
-      std::declval<OpAsmPrinter &>(), std::declval<T>()));
+  using has_print_properties =
+      decltype(printProperties(std::declval<OpAsmPrinter &>(),
+                               std::declval<T>(),
+                               std::declval<ArrayRef<StringRef>>()));
   template <typename T>
   using detect_has_print_properties =
       llvm::is_detected<has_print_properties, T>;
@@ -1961,7 +1978,7 @@ public:
     if constexpr (!hasProperties())
       return getEmptyProperties();
     return *getOperation()
-                ->getPropertiesStorage()
+                ->getPropertiesStorageUnsafe()
                 .template as<InferredProperties<T> *>();
   }
 
@@ -1970,20 +1987,24 @@ public:
   static void populateDefaultProperties(OperationName opName,
                                         InferredProperties<T> &properties) {}
 
-  /// Print the operation properties. Unless overridden, this method will try to
-  /// dispatch to a `printProperties` free-function if it exists, and otherwise
-  /// by converting the properties to an Attribute.
+  /// Print the operation properties with names not included within
+  /// 'elidedProps'. Unless overridden, this method will try to dispatch to a
+  /// `printProperties` free-function if it exists, and otherwise by converting
+  /// the properties to an Attribute.
   template <typename T>
   static void printProperties(MLIRContext *ctx, OpAsmPrinter &p,
-                              const T &properties) {
+                              const T &properties,
+                              ArrayRef<StringRef> elidedProps = {}) {
     if constexpr (detect_has_print_properties<T>::value)
-      return printProperties(p, properties);
-    genericPrintProperties(p,
-                           ConcreteType::getPropertiesAsAttr(ctx, properties));
+      return printProperties(p, properties, elidedProps);
+    genericPrintProperties(
+        p, ConcreteType::getPropertiesAsAttr(ctx, properties), elidedProps);
   }
 
-  /// Parser the properties. Unless overridden, this method will print by
-  /// converting the properties to an Attribute.
+  /// Parses 'prop-dict' for the operation. Unless overridden, the method will
+  /// parse the properties using the generic property dictionary using the
+  /// '<{ ... }>' syntax. The resulting properties are stored within the
+  /// property structure of 'result', accessible via 'getOrAddProperties'.
   template <typename T = ConcreteType>
   static ParseResult parseProperties(OpAsmParser &parser,
                                      OperationState &result) {
@@ -1991,7 +2012,31 @@ public:
       return parseProperties(
           parser, result.getOrAddProperties<InferredProperties<T>>());
     }
-    return genericParseProperties(parser, result.propertiesAttr);
+
+    Attribute propertyDictionary;
+    if (genericParseProperties(parser, propertyDictionary))
+      return failure();
+
+    // The generated 'setPropertiesFromParsedAttr', like
+    // 'setPropertiesFromAttr', expects a 'DictionaryAttr' that is not null.
+    // Use an empty dictionary in the case that the whole dictionary is
+    // optional.
+    if (!propertyDictionary)
+      propertyDictionary = DictionaryAttr::get(result.getContext());
+
+    auto emitError = [&]() {
+      return mlir::emitError(result.location, "invalid properties ")
+             << propertyDictionary << " for op " << result.name.getStringRef()
+             << ": ";
+    };
+
+    // Copy the data from the dictionary attribute into the property struct of
+    // the operation. This method is generated by ODS by default if there are
+    // any occurrences of 'prop-dict' in the assembly format and should set
+    // any properties that aren't parsed elsewhere.
+    return ConcreteOpType::setPropertiesFromParsedAttr(
+        result.getOrAddProperties<InferredProperties<T>>(), propertyDictionary,
+        emitError);
   }
 
 private:

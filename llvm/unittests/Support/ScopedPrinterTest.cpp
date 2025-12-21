@@ -8,10 +8,20 @@
 
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/ADT/APSInt.h"
+#include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/Support/Format.h"
 #include "gtest/gtest.h"
 #include <cmath>
 #include <vector>
+
+namespace {
+enum class BitmaskEnum : uint8_t {
+  F1 = 0x1,
+  F2 = 0x2,
+  LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/F2),
+};
+LLVM_ENABLE_BITMASK_ENUMS_IN_NAMESPACE();
+} // namespace
 
 using namespace llvm;
 
@@ -30,10 +40,10 @@ TEST(JSONScopedPrinterTest, PrettyPrintCtor) {
 })";
   const char *NoPrettyPrintOut = R"({"Key":"Value"})";
   PrintFunc(PrettyPrintWriter);
-  EXPECT_EQ(PrettyPrintOut, OS.str());
+  EXPECT_EQ(PrettyPrintOut, StreamBuffer);
   StreamBuffer.clear();
   PrintFunc(NoPrettyPrintWriter);
-  EXPECT_EQ(NoPrettyPrintOut, OS.str());
+  EXPECT_EQ(NoPrettyPrintOut, StreamBuffer);
 }
 
 TEST(JSONScopedPrinterTest, DelimitedScopeCtor) {
@@ -44,20 +54,20 @@ TEST(JSONScopedPrinterTest, DelimitedScopeCtor) {
                                       std::make_unique<DictScope>());
     DictScopeWriter.printString("Label", "DictScope");
   }
-  EXPECT_EQ(R"({"Label":"DictScope"})", OS.str());
+  EXPECT_EQ(R"({"Label":"DictScope"})", StreamBuffer);
   StreamBuffer.clear();
   {
     JSONScopedPrinter ListScopeWriter(OS, /*PrettyPrint=*/false,
                                       std::make_unique<ListScope>());
     ListScopeWriter.printString("ListScope");
   }
-  EXPECT_EQ(R"(["ListScope"])", OS.str());
+  EXPECT_EQ(R"(["ListScope"])", StreamBuffer);
   StreamBuffer.clear();
   {
     JSONScopedPrinter NoScopeWriter(OS, /*PrettyPrint=*/false);
     NoScopeWriter.printString("NoScope");
   }
-  EXPECT_EQ(R"("NoScope")", OS.str());
+  EXPECT_EQ(R"("NoScope")", StreamBuffer);
 }
 
 class ScopedPrinterTest : public ::testing::Test {
@@ -78,7 +88,7 @@ protected:
   void verifyScopedPrinter(StringRef Expected, PrintFunc Func) {
     Func(Writer);
     Writer.flush();
-    EXPECT_EQ(Expected.str(), OS.str());
+    EXPECT_EQ(Expected.str(), StreamBuffer);
     StreamBuffer.clear();
   }
 
@@ -88,7 +98,7 @@ protected:
       Func(JSONWriter);
     }
     JSONWriter.flush();
-    EXPECT_EQ(Expected.str(), OS.str());
+    EXPECT_EQ(Expected.str(), StreamBuffer);
     StreamBuffer.clear();
     HasPrintedToJSON = true;
   }
@@ -99,7 +109,7 @@ protected:
     verifyJSONScopedPrinter(JSONExpectedOut, Func);
   }
 
-  void TearDown() {
+  void TearDown() override {
     // JSONScopedPrinter fails an assert if nothing's been printed.
     if (!HasPrintedToJSON)
       JSONWriter.printString("");
@@ -261,6 +271,12 @@ TEST_F(ScopedPrinterTest, PrintFlag) {
         {"SecondByte2", "Second2", 0x20u}, {"SecondByte3", "Second3", 0x30u},
         {"ThirdByte1", "Third1", 0x100u},  {"ThirdByte2", "Third2", 0x200u},
         {"ThirdByte3", "Third3", 0x300u}};
+
+    const EnumEntry<BitmaskEnum> ScopedFlags[] = {
+        {"F1", "AltF1", BitmaskEnum::F1},
+        {"F2", "AltF2", BitmaskEnum::F2},
+    };
+
     W.printFlags("ZeroFlag", 0, ArrayRef(SingleBitFlags));
     W.printFlags("NoFlag", 1 << 3, ArrayRef(SingleBitFlags));
     W.printFlags("Flag1", SingleBitFlags[1].Value, ArrayRef(SingleBitFlags));
@@ -286,6 +302,7 @@ TEST_F(ScopedPrinterTest, PrintFlag) {
                  FirstByteMask, SecondByteMask);
     W.printFlags("FirstSecondThirdByteMask", 0x333u, ArrayRef(EnumFlags),
                  FirstByteMask, SecondByteMask, ThirdByteMask);
+    W.printFlags("BitmaskEnum::F1", BitmaskEnum::F1, ArrayRef(ScopedFlags));
   };
 
   const char *ExpectedOut = R"(ZeroFlag [ (0x0)
@@ -342,6 +359,9 @@ FirstSecondThirdByteMask [ (0x333)
   FirstByte3 (0x3)
   SecondByte3 (0x30)
   ThirdByte3 (0x300)
+]
+BitmaskEnum::F1 [ (0x1)
+  F1 (0x1)
 ]
 )";
 
@@ -502,6 +522,15 @@ FirstSecondThirdByteMask [ (0x333)
       {
         "Name": "ThirdByte3",
         "Value": 768
+      }
+    ]
+  },
+  "BitmaskEnum::F1": {
+    "Value": 1,
+    "Flags": [
+      {
+        "Name": "F1",
+        "Value": 1
       }
     ]
   }

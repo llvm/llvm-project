@@ -28,11 +28,10 @@
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/IR/IntrinsicInst.h"
-#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/User.h"
@@ -59,37 +58,87 @@ static cl::opt<unsigned> MaxDeoptOrUnreachableSuccessorCheckDepth(
              "is followed by a block that either has a terminating "
              "deoptimizing call or is terminated with an unreachable"));
 
-void llvm::detachDeadBlocks(
-    ArrayRef<BasicBlock *> BBs,
-    SmallVectorImpl<DominatorTree::UpdateType> *Updates,
-    bool KeepOneInputPHIs) {
+/// Zap all the instructions in the block and replace them with an unreachable
+/// instruction and notify the basic block's successors that one of their
+/// predecessors is going away.
+static void
+emptyAndDetachBlock(BasicBlock *BB,
+                    SmallVectorImpl<DominatorTree::UpdateType> *Updates,
+                    bool KeepOneInputPHIs) {
+  // Loop through all of our successors and make sure they know that one
+  // of their predecessors is going away.
+  SmallPtrSet<BasicBlock *, 4> UniqueSuccessors;
+  for (BasicBlock *Succ : successors(BB)) {
+    Succ->removePredecessor(BB, KeepOneInputPHIs);
+    if (Updates && UniqueSuccessors.insert(Succ).second)
+      Updates->push_back({DominatorTree::Delete, BB, Succ});
+  }
+
+  // Zap all the instructions in the block.
+  while (!BB->empty()) {
+    Instruction &I = BB->back();
+    // If this instruction is used, replace uses with an arbitrary value.
+    // Because control flow can't get here, we don't care what we replace the
+    // value with. Note that since this block is unreachable, and all values
+    // contained within it must dominate their uses, that all uses will
+    // eventually be removed (they are themselves dead).
+    if (!I.use_empty())
+      I.replaceAllUsesWith(PoisonValue::get(I.getType()));
+    BB->back().eraseFromParent();
+  }
+  new UnreachableInst(BB->getContext(), BB);
+  assert(BB->size() == 1 && isa<UnreachableInst>(BB->getTerminator()) &&
+         "The successor list of BB isn't empty before "
+         "applying corresponding DTU updates.");
+}
+
+bool llvm::HasLoopOrEntryConvergenceToken(const BasicBlock *BB) {
+  for (const Instruction &I : *BB) {
+    const ConvergenceControlInst *CCI = dyn_cast<ConvergenceControlInst>(&I);
+    if (CCI && (CCI->isLoop() || CCI->isEntry()))
+      return true;
+  }
+  return false;
+}
+
+void llvm::detachDeadBlocks(ArrayRef<BasicBlock *> BBs,
+                            SmallVectorImpl<DominatorTree::UpdateType> *Updates,
+                            bool KeepOneInputPHIs) {
+  SmallPtrSet<BasicBlock *, 4> UniqueEHRetBlocksToDelete;
   for (auto *BB : BBs) {
-    // Loop through all of our successors and make sure they know that one
-    // of their predecessors is going away.
-    SmallPtrSet<BasicBlock *, 4> UniqueSuccessors;
-    for (BasicBlock *Succ : successors(BB)) {
-      Succ->removePredecessor(BB, KeepOneInputPHIs);
-      if (Updates && UniqueSuccessors.insert(Succ).second)
-        Updates->push_back({DominatorTree::Delete, BB, Succ});
+    auto NonFirstPhiIt = BB->getFirstNonPHIIt();
+    if (NonFirstPhiIt != BB->end()) {
+      Instruction &I = *NonFirstPhiIt;
+      // Exception handling funclets need to be explicitly addressed.
+      // These funclets must begin with cleanuppad or catchpad and end with
+      // cleanupred or catchret. The return instructions can be in different
+      // basic blocks than the pad instruction. If we would only delete the
+      // first block, the we would have possible cleanupret and catchret
+      // instructions with poison arguments, which wouldn't be valid.
+      if (isa<FuncletPadInst>(I)) {
+        UniqueEHRetBlocksToDelete.clear();
+
+        for (User *User : I.users()) {
+          Instruction *ReturnInstr = dyn_cast<Instruction>(User);
+          // If we have a cleanupret or catchret block, replace it with just an
+          // unreachable. The other alternative, that may use a catchpad is a
+          // catchswitch. That does not need special handling for now.
+          if (isa<CatchReturnInst>(ReturnInstr) ||
+              isa<CleanupReturnInst>(ReturnInstr)) {
+            BasicBlock *ReturnInstrBB = ReturnInstr->getParent();
+            UniqueEHRetBlocksToDelete.insert(ReturnInstrBB);
+          }
+        }
+
+        for (BasicBlock *EHRetBB : UniqueEHRetBlocksToDelete)
+          emptyAndDetachBlock(EHRetBB, Updates, KeepOneInputPHIs);
+      }
     }
 
-    // Zap all the instructions in the block.
-    while (!BB->empty()) {
-      Instruction &I = BB->back();
-      // If this instruction is used, replace uses with an arbitrary value.
-      // Because control flow can't get here, we don't care what we replace the
-      // value with.  Note that since this block is unreachable, and all values
-      // contained within it must dominate their uses, that all uses will
-      // eventually be removed (they are themselves dead).
-      if (!I.use_empty())
-        I.replaceAllUsesWith(PoisonValue::get(I.getType()));
-      BB->back().eraseFromParent();
-    }
-    new UnreachableInst(BB->getContext(), BB);
-    assert(BB->size() == 1 &&
-           isa<UnreachableInst>(BB->getTerminator()) &&
-           "The successor list of BB isn't empty before "
-           "applying corresponding DTU updates.");
+    UniqueEHRetBlocksToDelete.clear();
+
+    // Detaching and emptying the current basic block.
+    emptyAndDetachBlock(BB, Updates, KeepOneInputPHIs);
   }
 }
 
@@ -102,7 +151,7 @@ void llvm::DeleteDeadBlocks(ArrayRef <BasicBlock *> BBs, DomTreeUpdater *DTU,
                             bool KeepOneInputPHIs) {
 #ifndef NDEBUG
   // Make sure that all predecessors of each dead block is also dead.
-  SmallPtrSet<BasicBlock *, 4> Dead(BBs.begin(), BBs.end());
+  SmallPtrSet<BasicBlock *, 4> Dead(llvm::from_range, BBs);
   assert(Dead.size() == BBs.size() && "Duplicating blocks?");
   for (auto *BB : Dead)
     for (BasicBlock *Pred : predecessors(BB))
@@ -165,13 +214,11 @@ bool llvm::DeleteDeadPHIs(BasicBlock *BB, const TargetLibraryInfo *TLI,
                           MemorySSAUpdater *MSSAU) {
   // Recursively deleting a PHI may cause multiple PHIs to be deleted
   // or RAUW'd undef, so use an array of WeakTrackingVH for the PHIs to delete.
-  SmallVector<WeakTrackingVH, 8> PHIs;
-  for (PHINode &PN : BB->phis())
-    PHIs.push_back(&PN);
+  SmallVector<WeakTrackingVH, 8> PHIs(llvm::make_pointer_range(BB->phis()));
 
   bool Changed = false;
-  for (unsigned i = 0, e = PHIs.size(); i != e; ++i)
-    if (PHINode *PN = dyn_cast_or_null<PHINode>(PHIs[i].operator Value*()))
+  for (const auto &PHI : PHIs)
+    if (PHINode *PN = dyn_cast_or_null<PHINode>(PHI.operator Value *()))
       Changed |= RecursivelyDeleteDeadPHINode(PN, TLI, MSSAU);
 
   return Changed;
@@ -221,6 +268,13 @@ bool llvm::MergeBlockIntoPredecessor(BasicBlock *BB, DomTreeUpdater *DTU,
     if (llvm::is_contained(PN.incoming_values(), &PN))
       return false;
 
+  // Don't break if both the basic block and the predecessor contain loop or
+  // entry convergent intrinsics, since there may only be one convergence token
+  // per block.
+  if (HasLoopOrEntryConvergenceToken(BB) &&
+      HasLoopOrEntryConvergenceToken(PredBB))
+    return false;
+
   LLVM_DEBUG(dbgs() << "Merging: " << BB->getName() << " into "
                     << PredBB->getName() << "\n");
 
@@ -251,8 +305,8 @@ bool llvm::MergeBlockIntoPredecessor(BasicBlock *BB, DomTreeUpdater *DTU,
     assert(!DT && "cannot use both DT and DTU for updates");
     // To avoid processing the same predecessor more than once.
     SmallPtrSet<BasicBlock *, 8> SeenSuccs;
-    SmallPtrSet<BasicBlock *, 2> SuccsOfPredBB(succ_begin(PredBB),
-                                               succ_end(PredBB));
+    SmallPtrSet<BasicBlock *, 2> SuccsOfPredBB(llvm::from_range,
+                                               successors(PredBB));
     Updates.reserve(Updates.size() + 2 * succ_size(BB) + 1);
     // Add insert edges first. Experimentally, for the particular case of two
     // blocks that can be merged, with a single successor and single predecessor
@@ -380,34 +434,29 @@ bool llvm::MergeBlockSuccessorsIntoGivenBlocks(
 ///
 /// Possible improvements:
 /// - Check fully overlapping fragments and not only identical fragments.
-/// - Support dbg.declare. dbg.label, and possibly other meta instructions being
-///   part of the sequence of consecutive instructions.
 static bool removeRedundantDbgInstrsUsingBackwardScan(BasicBlock *BB) {
-  SmallVector<DbgValueInst *, 8> ToBeRemoved;
+  SmallVector<DbgVariableRecord *, 8> ToBeRemoved;
   SmallDenseSet<DebugVariable> VariableSet;
   for (auto &I : reverse(*BB)) {
-    if (DbgValueInst *DVI = dyn_cast<DbgValueInst>(&I)) {
-      DebugVariable Key(DVI->getVariable(),
-                        DVI->getExpression(),
-                        DVI->getDebugLoc()->getInlinedAt());
+    for (DbgVariableRecord &DVR :
+         reverse(filterDbgVars(I.getDbgRecordRange()))) {
+      DebugVariable Key(DVR.getVariable(), DVR.getExpression(),
+                        DVR.getDebugLoc()->getInlinedAt());
       auto R = VariableSet.insert(Key);
-      // If the variable fragment hasn't been seen before then we don't want
-      // to remove this dbg intrinsic.
+      // If the same variable fragment is described more than once it is enough
+      // to keep the last one (i.e. the first found since we for reverse
+      // iteration).
       if (R.second)
         continue;
 
-      if (auto *DAI = dyn_cast<DbgAssignIntrinsic>(DVI)) {
+      if (DVR.isDbgAssign()) {
         // Don't delete dbg.assign intrinsics that are linked to instructions.
-        if (!at::getAssignmentInsts(DAI).empty())
+        if (!at::getAssignmentInsts(&DVR).empty())
           continue;
         // Unlinked dbg.assign intrinsics can be treated like dbg.values.
       }
 
-      // If the same variable fragment is described more than once it is enough
-      // to keep the last one (i.e. the first found since we for reverse
-      // iteration).
-      ToBeRemoved.push_back(DVI);
-      continue;
+      ToBeRemoved.push_back(&DVR);
     }
     // Sequence with consecutive dbg.value instrs ended. Clear the map to
     // restart identifying redundant instructions if case we find another
@@ -415,8 +464,8 @@ static bool removeRedundantDbgInstrsUsingBackwardScan(BasicBlock *BB) {
     VariableSet.clear();
   }
 
-  for (auto &Instr : ToBeRemoved)
-    Instr->eraseFromParent();
+  for (auto &DVR : ToBeRemoved)
+    DVR->eraseFromParent();
 
   return !ToBeRemoved.empty();
 }
@@ -441,45 +490,44 @@ static bool removeRedundantDbgInstrsUsingBackwardScan(BasicBlock *BB) {
 /// Possible improvements:
 /// - Keep track of non-overlapping fragments.
 static bool removeRedundantDbgInstrsUsingForwardScan(BasicBlock *BB) {
-  SmallVector<DbgValueInst *, 8> ToBeRemoved;
-  DenseMap<DebugVariable, std::pair<SmallVector<Value *, 4>, DIExpression *>>
+  bool RemovedAny = false;
+  SmallDenseMap<DebugVariable,
+                std::pair<SmallVector<Value *, 4>, DIExpression *>, 4>
       VariableMap;
   for (auto &I : *BB) {
-    if (DbgValueInst *DVI = dyn_cast<DbgValueInst>(&I)) {
-      DebugVariable Key(DVI->getVariable(), std::nullopt,
-                        DVI->getDebugLoc()->getInlinedAt());
-      auto VMI = VariableMap.find(Key);
-      auto *DAI = dyn_cast<DbgAssignIntrinsic>(DVI);
+    for (DbgVariableRecord &DVR :
+         make_early_inc_range(filterDbgVars(I.getDbgRecordRange()))) {
+      if (DVR.getType() == DbgVariableRecord::LocationType::Declare)
+        continue;
+      DebugVariable Key(DVR.getVariable(), std::nullopt,
+                        DVR.getDebugLoc()->getInlinedAt());
+      auto [VMI, Inserted] = VariableMap.try_emplace(Key);
       // A dbg.assign with no linked instructions can be treated like a
       // dbg.value (i.e. can be deleted).
-      bool IsDbgValueKind = (!DAI || at::getAssignmentInsts(DAI).empty());
+      bool IsDbgValueKind =
+          (!DVR.isDbgAssign() || at::getAssignmentInsts(&DVR).empty());
 
       // Update the map if we found a new value/expression describing the
       // variable, or if the variable wasn't mapped already.
-      SmallVector<Value *, 4> Values(DVI->getValues());
-      if (VMI == VariableMap.end() || VMI->second.first != Values ||
-          VMI->second.second != DVI->getExpression()) {
-        // Use a sentinal value (nullptr) for the DIExpression when we see a
-        // linked dbg.assign so that the next debug intrinsic will never match
-        // it (i.e. always treat linked dbg.assigns as if they're unique).
+      SmallVector<Value *, 4> Values(DVR.location_ops());
+      if (Inserted || VMI->second.first != Values ||
+          VMI->second.second != DVR.getExpression()) {
         if (IsDbgValueKind)
-          VariableMap[Key] = {Values, DVI->getExpression()};
+          VMI->second = {Values, DVR.getExpression()};
         else
-          VariableMap[Key] = {Values, nullptr};
+          VMI->second = {Values, nullptr};
         continue;
       }
-
       // Don't delete dbg.assign intrinsics that are linked to instructions.
       if (!IsDbgValueKind)
         continue;
-      ToBeRemoved.push_back(DVI);
+      // Found an identical mapping. Remember the instruction for later removal.
+      DVR.eraseFromParent();
+      RemovedAny = true;
     }
   }
 
-  for (auto &Instr : ToBeRemoved)
-    Instr->eraseFromParent();
-
-  return !ToBeRemoved.empty();
+  return RemovedAny;
 }
 
 /// Remove redundant undef dbg.assign intrinsic from an entry block using a
@@ -501,39 +549,35 @@ static bool removeRedundantDbgInstrsUsingForwardScan(BasicBlock *BB) {
 /// then (only) the instruction marked with (*) can be removed.
 /// Possible improvements:
 /// - Keep track of non-overlapping fragments.
-static bool remomveUndefDbgAssignsFromEntryBlock(BasicBlock *BB) {
+static bool removeUndefDbgAssignsFromEntryBlock(BasicBlock *BB) {
   assert(BB->isEntryBlock() && "expected entry block");
-  SmallVector<DbgAssignIntrinsic *, 8> ToBeRemoved;
-  DenseSet<DebugVariable> SeenDefForAggregate;
-  // Returns the DebugVariable for DVI with no fragment info.
-  auto GetAggregateVariable = [](DbgValueInst *DVI) {
-    return DebugVariable(DVI->getVariable(), std::nullopt,
-                         DVI->getDebugLoc()->getInlinedAt());
-  };
+  bool RemovedAny = false;
+  DenseSet<DebugVariableAggregate> SeenDefForAggregate;
 
   // Remove undef dbg.assign intrinsics that are encountered before
   // any non-undef intrinsics from the entry block.
   for (auto &I : *BB) {
-    DbgValueInst *DVI = dyn_cast<DbgValueInst>(&I);
-    if (!DVI)
-      continue;
-    auto *DAI = dyn_cast<DbgAssignIntrinsic>(DVI);
-    bool IsDbgValueKind = (!DAI || at::getAssignmentInsts(DAI).empty());
-    DebugVariable Aggregate = GetAggregateVariable(DVI);
-    if (!SeenDefForAggregate.contains(Aggregate)) {
-      bool IsKill = DVI->isKillLocation() && IsDbgValueKind;
-      if (!IsKill) {
-        SeenDefForAggregate.insert(Aggregate);
-      } else if (DAI) {
-        ToBeRemoved.push_back(DAI);
+    for (DbgVariableRecord &DVR :
+         make_early_inc_range(filterDbgVars(I.getDbgRecordRange()))) {
+      if (!DVR.isDbgValue() && !DVR.isDbgAssign())
+        continue;
+      bool IsDbgValueKind =
+          (DVR.isDbgValue() || at::getAssignmentInsts(&DVR).empty());
+
+      DebugVariableAggregate Aggregate(&DVR);
+      if (!SeenDefForAggregate.contains(Aggregate)) {
+        bool IsKill = DVR.isKillLocation() && IsDbgValueKind;
+        if (!IsKill) {
+          SeenDefForAggregate.insert(Aggregate);
+        } else if (DVR.isDbgAssign()) {
+          DVR.eraseFromParent();
+          RemovedAny = true;
+        }
       }
     }
   }
 
-  for (DbgAssignIntrinsic *DAI : ToBeRemoved)
-    DAI->eraseFromParent();
-
-  return !ToBeRemoved.empty();
+  return RemovedAny;
 }
 
 bool llvm::RemoveRedundantDbgInstrs(BasicBlock *BB) {
@@ -552,7 +596,7 @@ bool llvm::RemoveRedundantDbgInstrs(BasicBlock *BB) {
   MadeChanges |= removeRedundantDbgInstrsUsingBackwardScan(BB);
   if (BB->isEntryBlock() &&
       isAssignmentTrackingEnabled(*BB->getParent()->getParent()))
-    MadeChanges |= remomveUndefDbgAssignsFromEntryBlock(BB);
+    MadeChanges |= removeUndefDbgAssignsFromEntryBlock(BB);
   MadeChanges |= removeRedundantDbgInstrsUsingForwardScan(BB);
 
   if (MadeChanges)
@@ -624,11 +668,6 @@ BasicBlock *llvm::SplitEdge(BasicBlock *BB, BasicBlock *Succ, DominatorTree *DT,
       CriticalEdgeSplittingOptions(DT, LI, MSSAU).setPreserveLCSSA();
 
   if ((isCriticalEdge(LatchTerm, SuccNum, Options.MergeIdenticalEdges))) {
-    // If it is a critical edge, and the succesor is an exception block, handle
-    // the split edge logic in this specific function
-    if (Succ->isEHPad())
-      return ehAwareSplitEdge(BB, Succ, nullptr, nullptr, Options, BBName);
-
     // If this is a critical edge, let SplitKnownCriticalEdge do it.
     return SplitKnownCriticalEdge(LatchTerm, SuccNum, Options, BBName);
   }
@@ -639,7 +678,7 @@ BasicBlock *llvm::SplitEdge(BasicBlock *BB, BasicBlock *Succ, DominatorTree *DT,
     // If the successor only has a single pred, split the top of the successor
     // block.
     assert(SP == BB && "CFG broken");
-    SP = nullptr;
+    (void)SP;
     return SplitBlock(Succ, &Succ->front(), DT, LI, MSSAU, BBName,
                       /*Before=*/true);
   }
@@ -649,6 +688,81 @@ BasicBlock *llvm::SplitEdge(BasicBlock *BB, BasicBlock *Succ, DominatorTree *DT,
   assert(BB->getTerminator()->getNumSuccessors() == 1 &&
          "Should have a single succ!");
   return SplitBlock(BB, BB->getTerminator(), DT, LI, MSSAU, BBName);
+}
+
+/// Helper function to update the cycle or loop information after inserting a
+/// new block between a callbr instruction and one of its target blocks.  Adds
+/// the new block to the innermost cycle or loop that the callbr instruction and
+/// the original target block share.
+/// \p LCI            cycle or loop information to update
+/// \p CallBrBlock    block containing the callbr instruction
+/// \p CallBrTarget   new target block of the callbr instruction
+/// \p Succ           original target block of the callbr instruction
+template <typename TI, typename T>
+static bool updateCycleLoopInfo(TI *LCI, BasicBlock *CallBrBlock,
+                                BasicBlock *CallBrTarget, BasicBlock *Succ) {
+  static_assert(std::is_same_v<TI, CycleInfo> || std::is_same_v<TI, LoopInfo>,
+                "type must be CycleInfo or LoopInfo");
+  if (!LCI)
+    return false;
+
+  T *LC;
+  if constexpr (std::is_same_v<TI, CycleInfo>)
+    LC = LCI->getSmallestCommonCycle(CallBrBlock, Succ);
+  else
+    LC = LCI->getSmallestCommonLoop(CallBrBlock, Succ);
+  if (!LC)
+    return false;
+
+  if constexpr (std::is_same_v<TI, CycleInfo>)
+    LCI->addBlockToCycle(CallBrTarget, LC);
+  else
+    LC->addBasicBlockToLoop(CallBrTarget, *LCI);
+
+  return true;
+}
+
+BasicBlock *llvm::SplitCallBrEdge(BasicBlock *CallBrBlock, BasicBlock *Succ,
+                                  unsigned SuccIdx, DomTreeUpdater *DTU,
+                                  CycleInfo *CI, LoopInfo *LI,
+                                  bool *UpdatedLI) {
+  CallBrInst *CallBr = dyn_cast<CallBrInst>(CallBrBlock->getTerminator());
+  assert(CallBr && "expected callbr terminator");
+  assert(SuccIdx < CallBr->getNumSuccessors() &&
+         Succ == CallBr->getSuccessor(SuccIdx) && "invalid successor index");
+
+  // Create a new block between callbr and the specified successor.
+  // splitBlockBefore cannot be re-used here since it cannot split if the split
+  // point is a PHI node (because BasicBlock::splitBasicBlockBefore cannot
+  // handle that). But we don't need to rewire every part of a potential PHI
+  // node. We only care about the edge between CallBrBlock and the original
+  // successor.
+  BasicBlock *CallBrTarget =
+      BasicBlock::Create(CallBrBlock->getContext(),
+                         CallBrBlock->getName() + ".target." + Succ->getName(),
+                         CallBrBlock->getParent());
+  // Rewire control flow from the new target block to the original successor.
+  Succ->replacePhiUsesWith(CallBrBlock, CallBrTarget);
+  // Rewire control flow from callbr to the new target block.
+  CallBr->setSuccessor(SuccIdx, CallBrTarget);
+  // Jump from the new target block to the original successor.
+  BranchInst::Create(Succ, CallBrTarget);
+
+  bool Updated =
+      updateCycleLoopInfo<LoopInfo, Loop>(LI, CallBrBlock, CallBrTarget, Succ);
+  if (UpdatedLI)
+    *UpdatedLI = Updated;
+  updateCycleLoopInfo<CycleInfo, Cycle>(CI, CallBrBlock, CallBrTarget, Succ);
+  if (DTU) {
+    DTU->applyUpdates({{DominatorTree::Insert, CallBrBlock, CallBrTarget}});
+    if (DTU->getDomTree().dominates(CallBrBlock, Succ)) {
+      if (!is_contained(successors(CallBrBlock), Succ))
+        DTU->applyUpdates({{DominatorTree::Delete, CallBrBlock, Succ}});
+      DTU->applyUpdates({{DominatorTree::Insert, CallBrTarget, Succ}});
+    }
+  }
+
+  return CallBrTarget;
 }
 
 void llvm::setUnwindEdgeTo(Instruction *TI, BasicBlock *Succ) {
@@ -690,7 +804,7 @@ BasicBlock *llvm::ehAwareSplitEdge(BasicBlock *BB, BasicBlock *Succ,
                                    const CriticalEdgeSplittingOptions &Options,
                                    const Twine &BBName) {
 
-  auto *PadInst = Succ->getFirstNonPHI();
+  auto PadInst = Succ->getFirstNonPHIIt();
   if (!LandingPadReplacement && !PadInst->isEHPad())
     return SplitEdge(BB, Succ, Options.DT, Options.LI, Options.MSSAU, BBName);
 
@@ -740,7 +854,7 @@ BasicBlock *llvm::ehAwareSplitEdge(BasicBlock *BB, BasicBlock *Succ,
   if (LandingPadReplacement) {
     auto *NewLP = OriginalPad->clone();
     auto *Terminator = BranchInst::Create(Succ, NewBB);
-    NewLP->insertBefore(Terminator);
+    NewLP->insertBefore(Terminator->getIterator());
     LandingPadReplacement->addIncoming(NewLP, NewBB);
   } else {
     Value *ParentPad = nullptr;
@@ -835,7 +949,7 @@ BasicBlock *llvm::ehAwareSplitEdge(BasicBlock *BB, BasicBlock *Succ,
 void llvm::createPHIsForSplitLoopExit(ArrayRef<BasicBlock *> Preds,
                                       BasicBlock *SplitBB, BasicBlock *DestBB) {
   // SplitBB shouldn't have anything non-trivial in it yet.
-  assert((SplitBB->getFirstNonPHI() == SplitBB->getTerminator() ||
+  assert((&*SplitBB->getFirstNonPHIIt() == SplitBB->getTerminator() ||
           SplitBB->isLandingPad()) &&
          "SplitBB has non-PHI nodes!");
 
@@ -996,6 +1110,7 @@ BasicBlock *llvm::splitBlockBefore(BasicBlock *Old, BasicBlock::iterator SplitPt
 }
 
 /// Update DominatorTree, LoopInfo, and LCCSA analysis information.
+/// Invalidates DFS Numbering when DTU or DT is provided.
 static void UpdateAnalysisInformation(BasicBlock *OldBB, BasicBlock *NewBB,
                                       ArrayRef<BasicBlock *> Preds,
                                       DomTreeUpdater *DTU, DominatorTree *DT,
@@ -1114,7 +1229,7 @@ static void UpdatePHINodes(BasicBlock *OrigBB, BasicBlock *NewBB,
                            ArrayRef<BasicBlock *> Preds, BranchInst *BI,
                            bool HasLoopExit) {
   // Otherwise, create a new PHI node in NewBB for each PHI node in OrigBB.
-  SmallPtrSet<BasicBlock *, 16> PredSet(Preds.begin(), Preds.end());
+  SmallPtrSet<BasicBlock *, 16> PredSet(llvm::from_range, Preds);
   for (BasicBlock::iterator I = OrigBB->begin(); isa<PHINode>(I); ) {
     PHINode *PN = cast<PHINode>(I++);
 
@@ -1155,7 +1270,7 @@ static void UpdatePHINodes(BasicBlock *OrigBB, BasicBlock *NewBB,
     // PHI.
     // Create the new PHI node, insert it into NewBB at the end of the block
     PHINode *NewPHI =
-        PHINode::Create(PN->getType(), Preds.size(), PN->getName() + ".ph", BI);
+        PHINode::Create(PN->getType(), Preds.size(), PN->getName() + ".ph", BI->getIterator());
 
     // NOTE! This loop walks backwards for a reason! First off, this minimizes
     // the cost of removal if we end up removing a large number of values, and
@@ -1256,13 +1371,13 @@ SplitBlockPredecessorsImpl(BasicBlock *BB, ArrayRef<BasicBlock *> Preds,
   if (OldLatch) {
     BasicBlock *NewLatch = L->getLoopLatch();
     if (NewLatch != OldLatch) {
-      MDNode *MD = OldLatch->getTerminator()->getMetadata("llvm.loop");
-      NewLatch->getTerminator()->setMetadata("llvm.loop", MD);
+      MDNode *MD = OldLatch->getTerminator()->getMetadata(LLVMContext::MD_loop);
+      NewLatch->getTerminator()->setMetadata(LLVMContext::MD_loop, MD);
       // It's still possible that OldLatch is the latch of another inner loop,
       // in which case we do not remove the metadata.
       Loop *IL = LI->getLoopFor(OldLatch);
       if (IL && IL->getLoopLatch() != OldLatch)
-        OldLatch->getTerminator()->setMetadata("llvm.loop", nullptr);
+        OldLatch->getTerminator()->setMetadata(LLVMContext::MD_loop, nullptr);
     }
   }
 
@@ -1303,7 +1418,7 @@ static void SplitLandingPadPredecessorsImpl(
 
   // The new block unconditionally branches to the old block.
   BranchInst *BI1 = BranchInst::Create(OrigBB, NewBB1);
-  BI1->setDebugLoc(OrigBB->getFirstNonPHI()->getDebugLoc());
+  BI1->setDebugLoc(OrigBB->getFirstNonPHIIt()->getDebugLoc());
 
   // Move the edges from Preds to point to NewBB1 instead of OrigBB.
   for (BasicBlock *Pred : Preds) {
@@ -1344,7 +1459,7 @@ static void SplitLandingPadPredecessorsImpl(
 
     // The new block unconditionally branches to the old block.
     BranchInst *BI2 = BranchInst::Create(OrigBB, NewBB2);
-    BI2->setDebugLoc(OrigBB->getFirstNonPHI()->getDebugLoc());
+    BI2->setDebugLoc(OrigBB->getFirstNonPHIIt()->getDebugLoc());
 
     // Move the remaining edges from OrigBB to point to NewBB2.
     for (BasicBlock *NewBB2Pred : NewBB2Preds)
@@ -1375,7 +1490,7 @@ static void SplitLandingPadPredecessorsImpl(
       assert(!LPad->getType()->isTokenTy() &&
              "Split cannot be applied if LPad is token type. Otherwise an "
              "invalid PHINode of token type would be created.");
-      PHINode *PN = PHINode::Create(LPad->getType(), 2, "lpad.phi", LPad);
+      PHINode *PN = PHINode::Create(LPad->getType(), 2, "lpad.phi", LPad->getIterator());
       PN->addIncoming(Clone1, NewBB1);
       PN->addIncoming(Clone2, NewBB2);
       LPad->replaceAllUsesWith(PN);
@@ -1389,17 +1504,6 @@ static void SplitLandingPadPredecessorsImpl(
   }
 }
 
-void llvm::SplitLandingPadPredecessors(BasicBlock *OrigBB,
-                                       ArrayRef<BasicBlock *> Preds,
-                                       const char *Suffix1, const char *Suffix2,
-                                       SmallVectorImpl<BasicBlock *> &NewBBs,
-                                       DominatorTree *DT, LoopInfo *LI,
-                                       MemorySSAUpdater *MSSAU,
-                                       bool PreserveLCSSA) {
-  return SplitLandingPadPredecessorsImpl(
-      OrigBB, Preds, Suffix1, Suffix2, NewBBs,
-      /*DTU=*/nullptr, DT, LI, MSSAU, PreserveLCSSA);
-}
 void llvm::SplitLandingPadPredecessors(BasicBlock *OrigBB,
                                        ArrayRef<BasicBlock *> Preds,
                                        const char *Suffix1, const char *Suffix2,
@@ -1524,7 +1628,7 @@ void llvm::SplitBlockAndInsertIfThenElse(
   SmallPtrSet<BasicBlock *, 8> UniqueOrigSuccessors;
   BasicBlock *Head = SplitBefore->getParent();
   if (DTU) {
-    UniqueOrigSuccessors.insert(succ_begin(Head), succ_end(Head));
+    UniqueOrigSuccessors.insert_range(successors(Head));
     Updates.reserve(4 + 2 * UniqueOrigSuccessors.size());
   }
 
@@ -1592,14 +1696,15 @@ void llvm::SplitBlockAndInsertIfThenElse(
   }
 }
 
-std::pair<Instruction*, Value*>
-llvm::SplitBlockAndInsertSimpleForLoop(Value *End, Instruction *SplitBefore) {
+std::pair<Instruction *, Value *>
+llvm::SplitBlockAndInsertSimpleForLoop(Value *End,
+                                       BasicBlock::iterator SplitBefore) {
   BasicBlock *LoopPred = SplitBefore->getParent();
   BasicBlock *LoopBody = SplitBlock(SplitBefore->getParent(), SplitBefore);
   BasicBlock *LoopExit = SplitBlock(SplitBefore->getParent(), SplitBefore);
 
   auto *Ty = End->getType();
-  auto &DL = SplitBefore->getModule()->getDataLayout();
+  auto &DL = SplitBefore->getDataLayout();
   const unsigned Bitwidth = DL.getTypeSizeInBits(Ty);
 
   IRBuilder<> Builder(LoopBody->getTerminator());
@@ -1616,14 +1721,14 @@ llvm::SplitBlockAndInsertSimpleForLoop(Value *End, Instruction *SplitBefore) {
   IV->addIncoming(ConstantInt::get(Ty, 0), LoopPred);
   IV->addIncoming(IVNext, LoopBody);
 
-  return std::make_pair(LoopBody->getFirstNonPHI(), IV);
+  return std::make_pair(&*LoopBody->getFirstNonPHIIt(), IV);
 }
 
-void llvm::SplitBlockAndInsertForEachLane(ElementCount EC,
-     Type *IndexTy, Instruction *InsertBefore,
-     std::function<void(IRBuilderBase&, Value*)> Func) {
+void llvm::SplitBlockAndInsertForEachLane(
+    ElementCount EC, Type *IndexTy, BasicBlock::iterator InsertBefore,
+    std::function<void(IRBuilderBase &, Value *)> Func) {
 
-  IRBuilder<> IRB(InsertBefore);
+  IRBuilder<> IRB(InsertBefore->getParent(), InsertBefore);
 
   if (EC.isScalable()) {
     Value *NumElements = IRB.CreateElementCount(IndexTy, EC);
@@ -1644,10 +1749,10 @@ void llvm::SplitBlockAndInsertForEachLane(ElementCount EC,
 }
 
 void llvm::SplitBlockAndInsertForEachLane(
-    Value *EVL, Instruction *InsertBefore,
+    Value *EVL, BasicBlock::iterator InsertBefore,
     std::function<void(IRBuilderBase &, Value *)> Func) {
 
-  IRBuilder<> IRB(InsertBefore);
+  IRBuilder<> IRB(InsertBefore->getParent(), InsertBefore);
   Type *Ty = EVL->getType();
 
   if (!isa<ConstantInt>(EVL)) {
@@ -1756,313 +1861,6 @@ BranchInst *llvm::GetIfCondition(BasicBlock *BB, BasicBlock *&IfTrue,
   return BI;
 }
 
-// After creating a control flow hub, the operands of PHINodes in an outgoing
-// block Out no longer match the predecessors of that block. Predecessors of Out
-// that are incoming blocks to the hub are now replaced by just one edge from
-// the hub. To match this new control flow, the corresponding values from each
-// PHINode must now be moved a new PHINode in the first guard block of the hub.
-//
-// This operation cannot be performed with SSAUpdater, because it involves one
-// new use: If the block Out is in the list of Incoming blocks, then the newly
-// created PHI in the Hub will use itself along that edge from Out to Hub.
-static void reconnectPhis(BasicBlock *Out, BasicBlock *GuardBlock,
-                          const SetVector<BasicBlock *> &Incoming,
-                          BasicBlock *FirstGuardBlock) {
-  auto I = Out->begin();
-  while (I != Out->end() && isa<PHINode>(I)) {
-    auto Phi = cast<PHINode>(I);
-    auto NewPhi =
-        PHINode::Create(Phi->getType(), Incoming.size(),
-                        Phi->getName() + ".moved", &FirstGuardBlock->front());
-    for (auto *In : Incoming) {
-      Value *V = UndefValue::get(Phi->getType());
-      if (In == Out) {
-        V = NewPhi;
-      } else if (Phi->getBasicBlockIndex(In) != -1) {
-        V = Phi->removeIncomingValue(In, false);
-      }
-      NewPhi->addIncoming(V, In);
-    }
-    assert(NewPhi->getNumIncomingValues() == Incoming.size());
-    if (Phi->getNumOperands() == 0) {
-      Phi->replaceAllUsesWith(NewPhi);
-      I = Phi->eraseFromParent();
-      continue;
-    }
-    Phi->addIncoming(NewPhi, GuardBlock);
-    ++I;
-  }
-}
-
-using BBPredicates = DenseMap<BasicBlock *, Instruction *>;
-using BBSetVector = SetVector<BasicBlock *>;
-
-// Redirects the terminator of the incoming block to the first guard
-// block in the hub. The condition of the original terminator (if it
-// was conditional) and its original successors are returned as a
-// tuple <condition, succ0, succ1>. The function additionally filters
-// out successors that are not in the set of outgoing blocks.
-//
-// - condition is non-null iff the branch is conditional.
-// - Succ1 is non-null iff the sole/taken target is an outgoing block.
-// - Succ2 is non-null iff condition is non-null and the fallthrough
-//         target is an outgoing block.
-static std::tuple<Value *, BasicBlock *, BasicBlock *>
-redirectToHub(BasicBlock *BB, BasicBlock *FirstGuardBlock,
-              const BBSetVector &Outgoing) {
-  assert(isa<BranchInst>(BB->getTerminator()) &&
-         "Only support branch terminator.");
-  auto Branch = cast<BranchInst>(BB->getTerminator());
-  auto Condition = Branch->isConditional() ? Branch->getCondition() : nullptr;
-
-  BasicBlock *Succ0 = Branch->getSuccessor(0);
-  BasicBlock *Succ1 = nullptr;
-  Succ0 = Outgoing.count(Succ0) ? Succ0 : nullptr;
-
-  if (Branch->isUnconditional()) {
-    Branch->setSuccessor(0, FirstGuardBlock);
-    assert(Succ0);
-  } else {
-    Succ1 = Branch->getSuccessor(1);
-    Succ1 = Outgoing.count(Succ1) ? Succ1 : nullptr;
-    assert(Succ0 || Succ1);
-    if (Succ0 && !Succ1) {
-      Branch->setSuccessor(0, FirstGuardBlock);
-    } else if (Succ1 && !Succ0) {
-      Branch->setSuccessor(1, FirstGuardBlock);
-    } else {
-      Branch->eraseFromParent();
-      BranchInst::Create(FirstGuardBlock, BB);
-    }
-  }
-
-  assert(Succ0 || Succ1);
-  return std::make_tuple(Condition, Succ0, Succ1);
-}
-// Setup the branch instructions for guard blocks.
-//
-// Each guard block terminates in a conditional branch that transfers
-// control to the corresponding outgoing block or the next guard
-// block. The last guard block has two outgoing blocks as successors
-// since the condition for the final outgoing block is trivially
-// true. So we create one less block (including the first guard block)
-// than the number of outgoing blocks.
-static void setupBranchForGuard(SmallVectorImpl<BasicBlock *> &GuardBlocks,
-                                const BBSetVector &Outgoing,
-                                BBPredicates &GuardPredicates) {
-  // To help keep the loop simple, temporarily append the last
-  // outgoing block to the list of guard blocks.
-  GuardBlocks.push_back(Outgoing.back());
-
-  for (int i = 0, e = GuardBlocks.size() - 1; i != e; ++i) {
-    auto Out = Outgoing[i];
-    assert(GuardPredicates.count(Out));
-    BranchInst::Create(Out, GuardBlocks[i + 1], GuardPredicates[Out],
-                       GuardBlocks[i]);
-  }
-
-  // Remove the last block from the guard list.
-  GuardBlocks.pop_back();
-}
-
-/// We are using one integer to represent the block we are branching to. Then at
-/// each guard block, the predicate was calcuated using a simple `icmp eq`.
-static void calcPredicateUsingInteger(
-    const BBSetVector &Incoming, const BBSetVector &Outgoing,
-    SmallVectorImpl<BasicBlock *> &GuardBlocks, BBPredicates &GuardPredicates) {
-  auto &Context = Incoming.front()->getContext();
-  auto FirstGuardBlock = GuardBlocks.front();
-
-  auto Phi = PHINode::Create(Type::getInt32Ty(Context), Incoming.size(),
-                             "merged.bb.idx", FirstGuardBlock);
-
-  for (auto In : Incoming) {
-    Value *Condition;
-    BasicBlock *Succ0;
-    BasicBlock *Succ1;
-    std::tie(Condition, Succ0, Succ1) =
-        redirectToHub(In, FirstGuardBlock, Outgoing);
-    Value *IncomingId = nullptr;
-    if (Succ0 && Succ1) {
-      // target_bb_index = Condition ? index_of_succ0 : index_of_succ1.
-      auto Succ0Iter = find(Outgoing, Succ0);
-      auto Succ1Iter = find(Outgoing, Succ1);
-      Value *Id0 = ConstantInt::get(Type::getInt32Ty(Context),
-                                    std::distance(Outgoing.begin(), Succ0Iter));
-      Value *Id1 = ConstantInt::get(Type::getInt32Ty(Context),
-                                    std::distance(Outgoing.begin(), Succ1Iter));
-      IncomingId = SelectInst::Create(Condition, Id0, Id1, "target.bb.idx",
-                                      In->getTerminator());
-    } else {
-      // Get the index of the non-null successor.
-      auto SuccIter = Succ0 ? find(Outgoing, Succ0) : find(Outgoing, Succ1);
-      IncomingId = ConstantInt::get(Type::getInt32Ty(Context),
-                                    std::distance(Outgoing.begin(), SuccIter));
-    }
-    Phi->addIncoming(IncomingId, In);
-  }
-
-  for (int i = 0, e = Outgoing.size() - 1; i != e; ++i) {
-    auto Out = Outgoing[i];
-    auto Cmp = ICmpInst::Create(Instruction::ICmp, ICmpInst::ICMP_EQ, Phi,
-                                ConstantInt::get(Type::getInt32Ty(Context), i),
-                                Out->getName() + ".predicate", GuardBlocks[i]);
-    GuardPredicates[Out] = Cmp;
-  }
-}
-
-/// We record the predicate of each outgoing block using a phi of boolean.
-static void calcPredicateUsingBooleans(
-    const BBSetVector &Incoming, const BBSetVector &Outgoing,
-    SmallVectorImpl<BasicBlock *> &GuardBlocks, BBPredicates &GuardPredicates,
-    SmallVectorImpl<WeakVH> &DeletionCandidates) {
-  auto &Context = Incoming.front()->getContext();
-  auto BoolTrue = ConstantInt::getTrue(Context);
-  auto BoolFalse = ConstantInt::getFalse(Context);
-  auto FirstGuardBlock = GuardBlocks.front();
-
-  // The predicate for the last outgoing is trivially true, and so we
-  // process only the first N-1 successors.
-  for (int i = 0, e = Outgoing.size() - 1; i != e; ++i) {
-    auto Out = Outgoing[i];
-    LLVM_DEBUG(dbgs() << "Creating guard for " << Out->getName() << "\n");
-
-    auto Phi =
-        PHINode::Create(Type::getInt1Ty(Context), Incoming.size(),
-                        StringRef("Guard.") + Out->getName(), FirstGuardBlock);
-    GuardPredicates[Out] = Phi;
-  }
-
-  for (auto *In : Incoming) {
-    Value *Condition;
-    BasicBlock *Succ0;
-    BasicBlock *Succ1;
-    std::tie(Condition, Succ0, Succ1) =
-        redirectToHub(In, FirstGuardBlock, Outgoing);
-
-    // Optimization: Consider an incoming block A with both successors
-    // Succ0 and Succ1 in the set of outgoing blocks. The predicates
-    // for Succ0 and Succ1 complement each other. If Succ0 is visited
-    // first in the loop below, control will branch to Succ0 using the
-    // corresponding predicate. But if that branch is not taken, then
-    // control must reach Succ1, which means that the incoming value of
-    // the predicate from `In` is true for Succ1.
-    bool OneSuccessorDone = false;
-    for (int i = 0, e = Outgoing.size() - 1; i != e; ++i) {
-      auto Out = Outgoing[i];
-      PHINode *Phi = cast<PHINode>(GuardPredicates[Out]);
-      if (Out != Succ0 && Out != Succ1) {
-        Phi->addIncoming(BoolFalse, In);
-      } else if (!Succ0 || !Succ1 || OneSuccessorDone) {
-        // Optimization: When only one successor is an outgoing block,
-        // the incoming predicate from `In` is always true.
-        Phi->addIncoming(BoolTrue, In);
-      } else {
-        assert(Succ0 && Succ1);
-        if (Out == Succ0) {
-          Phi->addIncoming(Condition, In);
-        } else {
-          auto Inverted = invertCondition(Condition);
-          DeletionCandidates.push_back(Condition);
-          Phi->addIncoming(Inverted, In);
-        }
-        OneSuccessorDone = true;
-      }
-    }
-  }
-}
-
-// Capture the existing control flow as guard predicates, and redirect
-// control flow from \p Incoming block through the \p GuardBlocks to the
-// \p Outgoing blocks.
-//
-// There is one guard predicate for each outgoing block OutBB. The
-// predicate represents whether the hub should transfer control flow
-// to OutBB. These predicates are NOT ORTHOGONAL. The Hub evaluates
-// them in the same order as the Outgoing set-vector, and control
-// branches to the first outgoing block whose predicate evaluates to true.
-static void
-convertToGuardPredicates(SmallVectorImpl<BasicBlock *> &GuardBlocks,
-                         SmallVectorImpl<WeakVH> &DeletionCandidates,
-                         const BBSetVector &Incoming,
-                         const BBSetVector &Outgoing, const StringRef Prefix,
-                         std::optional<unsigned> MaxControlFlowBooleans) {
-  BBPredicates GuardPredicates;
-  auto F = Incoming.front()->getParent();
-
-  for (int i = 0, e = Outgoing.size() - 1; i != e; ++i)
-    GuardBlocks.push_back(
-        BasicBlock::Create(F->getContext(), Prefix + ".guard", F));
-
-  // When we are using an integer to record which target block to jump to, we
-  // are creating less live values, actually we are using one single integer to
-  // store the index of the target block. When we are using booleans to store
-  // the branching information, we need (N-1) boolean values, where N is the
-  // number of outgoing block.
-  if (!MaxControlFlowBooleans || Outgoing.size() <= *MaxControlFlowBooleans)
-    calcPredicateUsingBooleans(Incoming, Outgoing, GuardBlocks, GuardPredicates,
-                               DeletionCandidates);
-  else
-    calcPredicateUsingInteger(Incoming, Outgoing, GuardBlocks, GuardPredicates);
-
-  setupBranchForGuard(GuardBlocks, Outgoing, GuardPredicates);
-}
-
-BasicBlock *llvm::CreateControlFlowHub(
-    DomTreeUpdater *DTU, SmallVectorImpl<BasicBlock *> &GuardBlocks,
-    const BBSetVector &Incoming, const BBSetVector &Outgoing,
-    const StringRef Prefix, std::optional<unsigned> MaxControlFlowBooleans) {
-  if (Outgoing.size() < 2)
-    return Outgoing.front();
-
-  SmallVector<DominatorTree::UpdateType, 16> Updates;
-  if (DTU) {
-    for (auto *In : Incoming) {
-      for (auto Succ : successors(In))
-        if (Outgoing.count(Succ))
-          Updates.push_back({DominatorTree::Delete, In, Succ});
-    }
-  }
-
-  SmallVector<WeakVH, 8> DeletionCandidates;
-  convertToGuardPredicates(GuardBlocks, DeletionCandidates, Incoming, Outgoing,
-                           Prefix, MaxControlFlowBooleans);
-  auto FirstGuardBlock = GuardBlocks.front();
-  
-  // Update the PHINodes in each outgoing block to match the new control flow.
-  for (int i = 0, e = GuardBlocks.size(); i != e; ++i)
-    reconnectPhis(Outgoing[i], GuardBlocks[i], Incoming, FirstGuardBlock);
-
-  reconnectPhis(Outgoing.back(), GuardBlocks.back(), Incoming, FirstGuardBlock);
-
-  if (DTU) {
-    int NumGuards = GuardBlocks.size();
-    assert((int)Outgoing.size() == NumGuards + 1);
-
-    for (auto In : Incoming)
-      Updates.push_back({DominatorTree::Insert, In, FirstGuardBlock});
-
-    for (int i = 0; i != NumGuards - 1; ++i) {
-      Updates.push_back({DominatorTree::Insert, GuardBlocks[i], Outgoing[i]});
-      Updates.push_back(
-          {DominatorTree::Insert, GuardBlocks[i], GuardBlocks[i + 1]});
-    }
-    Updates.push_back({DominatorTree::Insert, GuardBlocks[NumGuards - 1],
-                       Outgoing[NumGuards - 1]});
-    Updates.push_back({DominatorTree::Insert, GuardBlocks[NumGuards - 1],
-                       Outgoing[NumGuards]});
-    DTU->applyUpdates(Updates);
-  }
-
-  for (auto I : DeletionCandidates) {
-    if (I->use_empty())
-      if (auto Inst = dyn_cast_or_null<Instruction>(I))
-        Inst->eraseFromParent();
-  }
-
-  return FirstGuardBlock;
-}
-
 void llvm::InvertBranch(BranchInst *PBI, IRBuilderBase &Builder) {
   Value *NewCond = PBI->getCondition();
   // If this is a "cmp" instruction, only used for branching (and nowhere
@@ -2075,4 +1873,24 @@ void llvm::InvertBranch(BranchInst *PBI, IRBuilderBase &Builder) {
 
   PBI->setCondition(NewCond);
   PBI->swapSuccessors();
+}
+
+bool llvm::hasOnlySimpleTerminator(const Function &F) {
+  for (auto &BB : F) {
+    auto *Term = BB.getTerminator();
+    if (!(isa<ReturnInst>(Term) || isa<UnreachableInst>(Term) ||
+          isa<BranchInst>(Term)))
+      return false;
+  }
+  return true;
+}
+
+Printable llvm::printBasicBlock(const BasicBlock *BB) {
+  return Printable([BB](raw_ostream &OS) {
+    if (!BB) {
+      OS << "<nullptr>";
+      return;
+    }
+    BB->printAsOperand(OS);
+  });
 }

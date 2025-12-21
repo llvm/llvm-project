@@ -12,18 +12,22 @@
 #include "platform.h"
 #include "tests/scudo_unit_test.h"
 
+extern "C" void __hwasan_init() __attribute__((weak));
+
 #if SCUDO_LINUX
 namespace scudo {
 
 TEST(MemtagBasicDeathTest, Unsupported) {
   if (archSupportsMemoryTagging())
-    GTEST_SKIP();
+    TEST_SKIP("Memory tagging is not unsupported");
+  // Skip when running with HWASan.
+  if (&__hwasan_init != 0)
+    TEST_SKIP("Incompatible with HWASan");
 
   EXPECT_DEATH(archMemoryTagGranuleSize(), "not supported");
   EXPECT_DEATH(untagPointer((uptr)0), "not supported");
   EXPECT_DEATH(extractTag((uptr)0), "not supported");
 
-  EXPECT_DEATH(systemSupportsMemoryTagging(), "not supported");
   EXPECT_DEATH(systemDetectsMemoryTagFaultsTestOnly(), "not supported");
   EXPECT_DEATH(enableSystemMemoryTaggingTestOnly(), "not supported");
 
@@ -43,7 +47,7 @@ class MemtagTest : public Test {
 protected:
   void SetUp() override {
     if (!archSupportsMemoryTagging() || !systemDetectsMemoryTagFaultsTestOnly())
-      GTEST_SKIP() << "Memory tagging is not supported";
+      TEST_SKIP("Memory tagging is not supported");
 
     BufferSize = getPageSizeCached();
     ASSERT_FALSE(MemMap.isAllocated());
@@ -58,7 +62,7 @@ protected:
   void TearDown() override {
     if (Buffer) {
       ASSERT_TRUE(MemMap.isAllocated());
-      MemMap.unmap(MemMap.getBase(), MemMap.getCapacity());
+      MemMap.unmap();
     }
   }
 
@@ -120,7 +124,15 @@ TEST_F(MemtagTest, SelectRandomTag) {
     uptr Tags = 0;
     for (uptr I = 0; I < 100000; ++I)
       Tags = Tags | (1u << extractTag(selectRandomTag(Ptr, 0)));
-    EXPECT_EQ(0xfffeull, Tags);
+    // std::popcnt is C++20
+    int PopCnt = 0;
+    while (Tags) {
+      PopCnt += Tags & 1;
+      Tags >>= 1;
+    }
+    // Random tags are not always very random, and this test is not about PRNG
+    // quality.  Anything above half would be satisfactory.
+    EXPECT_GE(PopCnt, 8);
   }
 }
 

@@ -26,6 +26,9 @@
 #  pragma GCC system_header
 #endif
 
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
+
 #if _LIBCPP_STD_VER >= 20
 
 _LIBCPP_BEGIN_NAMESPACE_STD
@@ -35,9 +38,7 @@ namespace ranges {
 template <class _InIter, class _OutIter>
 using replace_copy_result = in_out_result<_InIter, _OutIter>;
 
-namespace __replace_copy {
-
-struct __fn {
+struct __replace_copy {
   template <input_iterator _InIter,
             sentinel_for<_InIter> _Sent,
             class _OldType,
@@ -53,7 +54,7 @@ struct __fn {
              const _OldType& __old_value,
              const _NewType& __new_value,
              _Proj __proj = {}) const {
-    auto __pred = [&](const auto& __value) { return __value == __old_value; };
+    auto __pred = [&](const auto& __value) -> bool { return __value == __old_value; };
     return ranges::__replace_copy_if_impl(
         std::move(__first), std::move(__last), std::move(__result), __pred, __new_value, __proj);
   }
@@ -68,21 +69,21 @@ struct __fn {
   _LIBCPP_HIDE_FROM_ABI constexpr replace_copy_result<borrowed_iterator_t<_Range>, _OutIter> operator()(
       _Range&& __range, _OutIter __result, const _OldType& __old_value, const _NewType& __new_value, _Proj __proj = {})
       const {
-    auto __pred = [&](const auto& __value) { return __value == __old_value; };
+    auto __pred = [&](const auto& __value) -> bool { return __value == __old_value; };
     return ranges::__replace_copy_if_impl(
         ranges::begin(__range), ranges::end(__range), std::move(__result), __pred, __new_value, __proj);
   }
 };
 
-} // namespace __replace_copy
-
 inline namespace __cpo {
-inline constexpr auto replace_copy = __replace_copy::__fn{};
+inline constexpr auto replace_copy = __replace_copy{};
 } // namespace __cpo
 } // namespace ranges
 
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_STD_VER >= 20
+
+_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP___ALGORITHM_RANGES_REPLACE_COPY_H

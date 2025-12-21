@@ -9,7 +9,6 @@
 #include "SemanticHighlighting.h"
 #include "Config.h"
 #include "FindTarget.h"
-#include "HeuristicResolver.h"
 #include "ParsedAST.h"
 #include "Protocol.h"
 #include "SourceCode.h"
@@ -27,6 +26,7 @@
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
+#include "clang/Sema/HeuristicResolver.h"
 #include "clang/Tooling/Syntax/Tokens.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -136,7 +136,7 @@ std::optional<HighlightingKind> kindForDecl(const NamedDecl *D,
   if (auto *OMD = dyn_cast<ObjCMethodDecl>(D))
     return OMD->isClassMethod() ? HighlightingKind::StaticMethod
                                 : HighlightingKind::Method;
-  if (isa<FieldDecl, ObjCPropertyDecl>(D))
+  if (isa<FieldDecl, IndirectFieldDecl, ObjCPropertyDecl>(D))
     return HighlightingKind::Field;
   if (isa<EnumDecl>(D))
     return HighlightingKind::Enum;
@@ -265,7 +265,7 @@ bool isStatic(const Decl *D) {
 
 bool isAbstract(const Decl *D) {
   if (const auto *CMD = llvm::dyn_cast<CXXMethodDecl>(D))
-    return CMD->isPure();
+    return CMD->isPureVirtual();
   if (const auto *CRD = llvm::dyn_cast<CXXRecordDecl>(D))
     return CRD->hasDefinition() && CRD->isAbstract();
   return false;
@@ -418,7 +418,8 @@ class HighlightingsBuilder {
 public:
   HighlightingsBuilder(const ParsedAST &AST, const HighlightingFilter &Filter)
       : TB(AST.getTokens()), SourceMgr(AST.getSourceManager()),
-        LangOpts(AST.getLangOpts()), Filter(Filter) {}
+        LangOpts(AST.getLangOpts()), Filter(Filter),
+        Resolver(AST.getHeuristicResolver()) {}
 
   HighlightingToken &addToken(SourceLocation Loc, HighlightingKind Kind) {
     auto Range = getRangeForSourceLocation(Loc);
@@ -446,11 +447,10 @@ public:
     if (!RLoc.isValid())
       return;
 
-    const auto *RTok = TB.spelledTokenAt(RLoc);
-    // Handle `>>`. RLoc is always pointing at the right location, just change
-    // the end to be offset by 1.
-    // We'll either point at the beginning of `>>`, hence get a proper spelled
-    // or point in the middle of `>>` hence get no spelled tok.
+    const auto *RTok = TB.spelledTokenContaining(RLoc);
+    // Handle `>>`. RLoc is either part of `>>` or a spelled token on its own
+    // `>`. If it's the former, slice to have length of 1, if latter use the
+    // token as-is.
     if (!RTok || RTok->kind() == tok::greatergreater) {
       Position Begin = sourceLocToPosition(SourceMgr, RLoc);
       Position End = sourceLocToPosition(SourceMgr, RLoc.getLocWithOffset(1));
@@ -489,7 +489,7 @@ public:
     // Initializer lists can give duplicates of tokens, therefore all tokens
     // must be deduplicated.
     llvm::sort(Tokens);
-    auto Last = std::unique(Tokens.begin(), Tokens.end());
+    auto Last = llvm::unique(Tokens);
     Tokens.erase(Last, Tokens.end());
 
     // Macros can give tokens that have the same source range but conflicting
@@ -576,7 +576,7 @@ private:
       return std::nullopt;
     // We might have offsets in the main file that don't correspond to any
     // spelled tokens.
-    const auto *Tok = TB.spelledTokenAt(Loc);
+    const auto *Tok = TB.spelledTokenContaining(Loc);
     if (!Tok)
       return std::nullopt;
     return halfOpenToRange(SourceMgr,
@@ -589,7 +589,7 @@ private:
   HighlightingFilter Filter;
   std::vector<HighlightingToken> Tokens;
   std::map<Range, llvm::SmallVector<HighlightingModifier, 1>> ExtraModifiers;
-  const HeuristicResolver *Resolver = nullptr;
+  const HeuristicResolver *Resolver;
   // returned from addToken(InvalidLoc)
   HighlightingToken InvalidHighlightingToken;
 };
@@ -597,7 +597,7 @@ private:
 std::optional<HighlightingModifier> scopeModifier(const NamedDecl *D) {
   const DeclContext *DC = D->getDeclContext();
   // Injected "Foo" within the class "Foo" has file scope, not class scope.
-  if (auto *R = dyn_cast_or_null<RecordDecl>(D))
+  if (auto *R = dyn_cast_or_null<CXXRecordDecl>(D))
     if (R->isInjectedClassName())
       DC = DC->getParent();
   // Lambda captures are considered function scope, not class scope.
@@ -617,7 +617,8 @@ std::optional<HighlightingModifier> scopeModifier(const NamedDecl *D) {
   if (DC->isTranslationUnit() && D->isTemplateParameter())
     return std::nullopt;
   // ExternalLinkage threshold could be tweaked, e.g. module-visible as global.
-  if (D->getLinkageInternal() < ExternalLinkage)
+  if (llvm::to_underlying(D->getLinkageInternal()) <
+      llvm::to_underlying(Linkage::External))
     return HighlightingModifier::FileScope;
   return HighlightingModifier::GlobalScope;
 }
@@ -691,17 +692,22 @@ public:
     return true;
   }
 
-  bool VisitClassTemplatePartialSpecializationDecl(
-      ClassTemplatePartialSpecializationDecl *D) {
-    if (auto *TPL = D->getTemplateParameters())
-      H.addAngleBracketTokens(TPL->getLAngleLoc(), TPL->getRAngleLoc());
+  bool
+  VisitClassTemplateSpecializationDecl(ClassTemplateSpecializationDecl *D) {
     if (auto *Args = D->getTemplateArgsAsWritten())
       H.addAngleBracketTokens(Args->getLAngleLoc(), Args->getRAngleLoc());
     return true;
   }
 
+  bool VisitClassTemplatePartialSpecializationDecl(
+      ClassTemplatePartialSpecializationDecl *D) {
+    if (auto *TPL = D->getTemplateParameters())
+      H.addAngleBracketTokens(TPL->getLAngleLoc(), TPL->getRAngleLoc());
+    return true;
+  }
+
   bool VisitVarTemplateSpecializationDecl(VarTemplateSpecializationDecl *D) {
-    if (auto *Args = D->getTemplateArgsInfo())
+    if (auto *Args = D->getTemplateArgsAsWritten())
       H.addAngleBracketTokens(Args->getLAngleLoc(), Args->getRAngleLoc());
     return true;
   }
@@ -710,8 +716,6 @@ public:
       VarTemplatePartialSpecializationDecl *D) {
     if (auto *TPL = D->getTemplateParameters())
       H.addAngleBracketTokens(TPL->getLAngleLoc(), TPL->getRAngleLoc());
-    if (auto *Args = D->getTemplateArgsAsWritten())
-      H.addAngleBracketTokens(Args->getLAngleLoc(), Args->getRAngleLoc());
     return true;
   }
 
@@ -721,11 +725,6 @@ public:
   }
   bool VisitMemberExpr(MemberExpr *E) {
     H.addAngleBracketTokens(E->getLAngleLoc(), E->getRAngleLoc());
-    return true;
-  }
-
-  bool VisitTemplateSpecializationTypeLoc(TemplateSpecializationTypeLoc L) {
-    H.addAngleBracketTokens(L.getLAngleLoc(), L.getRAngleLoc());
     return true;
   }
 
@@ -1083,11 +1082,12 @@ public:
     return true;
   }
 
-  bool VisitDependentTemplateSpecializationTypeLoc(
-      DependentTemplateSpecializationTypeLoc L) {
-    H.addToken(L.getTemplateNameLoc(), HighlightingKind::Type)
-        .addModifier(HighlightingModifier::DependentName)
-        .addModifier(HighlightingModifier::ClassScope);
+  bool VisitTemplateSpecializationTypeLoc(TemplateSpecializationTypeLoc L) {
+    if (!L.getTypePtr()->getTemplateName().getAsTemplateDecl(
+            /*IgnoreDeduced=*/true))
+      H.addToken(L.getTemplateNameLoc(), HighlightingKind::Type)
+          .addModifier(HighlightingModifier::DependentName)
+          .addModifier(HighlightingModifier::ClassScope);
     H.addAngleBracketTokens(L.getLAngleLoc(), L.getRAngleLoc());
     return true;
   }
@@ -1116,25 +1116,11 @@ public:
     case TemplateName::SubstTemplateTemplateParm:
     case TemplateName::SubstTemplateTemplateParmPack:
     case TemplateName::UsingTemplate:
+    case TemplateName::DeducedTemplate:
       // Names that could be resolved to a TemplateDecl are handled elsewhere.
       break;
     }
     return RecursiveASTVisitor::TraverseTemplateArgumentLoc(L);
-  }
-
-  // findExplicitReferences will walk nested-name-specifiers and
-  // find anything that can be resolved to a Decl. However, non-leaf
-  // components of nested-name-specifiers which are dependent names
-  // (kind "Identifier") cannot be resolved to a decl, so we visit
-  // them here.
-  bool TraverseNestedNameSpecifierLoc(NestedNameSpecifierLoc Q) {
-    if (NestedNameSpecifier *NNS = Q.getNestedNameSpecifier()) {
-      if (NNS->getKind() == NestedNameSpecifier::Identifier)
-        H.addToken(Q.getLocalBeginLoc(), HighlightingKind::Type)
-            .addModifier(HighlightingModifier::DependentName)
-            .addModifier(HighlightingModifier::ClassScope);
-    }
-    return RecursiveASTVisitor::TraverseNestedNameSpecifierLoc(Q);
   }
 
 private:

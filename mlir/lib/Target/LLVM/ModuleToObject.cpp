@@ -14,8 +14,8 @@
 #include "mlir/Target/LLVM/ModuleToObject.h"
 
 #include "mlir/ExecutionEngine/OptUtils.h"
-#include "mlir/IR/BuiltinOps.h"
-#include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
+#include "mlir/IR/BuiltinAttributeInterfaces.h"
+#include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/Target/LLVMIR/Export.h"
 #include "mlir/Target/LLVMIR/ModuleTranslation.h"
 
@@ -25,7 +25,7 @@
 #include "llvm/Linker/Linker.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/FileSystem.h"
-#include "llvm/Support/Path.h"
+#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
@@ -34,37 +34,46 @@
 using namespace mlir;
 using namespace mlir::LLVM;
 
-ModuleToObject::ModuleToObject(Operation &module, StringRef triple,
-                               StringRef chip, StringRef features, int optLevel)
+ModuleToObject::ModuleToObject(
+    Operation &module, StringRef triple, StringRef chip, StringRef features,
+    int optLevel, function_ref<void(llvm::Module &)> initialLlvmIRCallback,
+    function_ref<void(llvm::Module &)> linkedLlvmIRCallback,
+    function_ref<void(llvm::Module &)> optimizedLlvmIRCallback,
+    function_ref<void(StringRef)> isaCallback)
     : module(module), triple(triple), chip(chip), features(features),
-      optLevel(optLevel) {}
+      optLevel(optLevel), initialLlvmIRCallback(initialLlvmIRCallback),
+      linkedLlvmIRCallback(linkedLlvmIRCallback),
+      optimizedLlvmIRCallback(optimizedLlvmIRCallback),
+      isaCallback(isaCallback) {}
+
+ModuleToObject::~ModuleToObject() = default;
 
 Operation &ModuleToObject::getOperation() { return module; }
 
-std::unique_ptr<llvm::TargetMachine> ModuleToObject::createTargetMachine() {
-  std::string error;
+FailureOr<llvm::TargetMachine *> ModuleToObject::getOrCreateTargetMachine() {
+  if (targetMachine)
+    return targetMachine.get();
   // Load the target.
+  std::string error;
+  llvm::Triple parsedTriple(triple);
   const llvm::Target *target =
-      llvm::TargetRegistry::lookupTarget(triple, error);
-  if (!target) {
-    getOperation().emitError() << "Failed to lookup target: " << error;
-    return {};
-  }
+      llvm::TargetRegistry::lookupTarget(parsedTriple, error);
+  if (!target)
+    return getOperation().emitError()
+           << "Failed to lookup target for triple '" << triple << "' " << error;
 
   // Create the target machine using the target.
-  llvm::TargetMachine *machine =
-      target->createTargetMachine(triple, chip, features, {}, {});
-  if (!machine) {
-    getOperation().emitError() << "Failed to create the target machine.";
-    return {};
-  }
-  return std::unique_ptr<llvm::TargetMachine>{machine};
+  targetMachine.reset(
+      target->createTargetMachine(parsedTriple, chip, features, {}, {}));
+  if (!targetMachine)
+    return getOperation().emitError()
+           << "Failed to create target machine for triple '" << triple << "'";
+
+  return targetMachine.get();
 }
 
 std::unique_ptr<llvm::Module>
-ModuleToObject::loadBitcodeFile(llvm::LLVMContext &context,
-                                llvm::TargetMachine &targetMachine,
-                                StringRef path) {
+ModuleToObject::loadBitcodeFile(llvm::LLVMContext &context, StringRef path) {
   llvm::SMDiagnostic error;
   std::unique_ptr<llvm::Module> library =
       llvm::getLazyIRFileModule(path, error, context);
@@ -73,30 +82,60 @@ ModuleToObject::loadBitcodeFile(llvm::LLVMContext &context,
                                << ", error: " << error.getMessage();
     return nullptr;
   }
-  if (failed(handleBitcodeFile(*library, targetMachine))) {
+  if (failed(handleBitcodeFile(*library))) {
     return nullptr;
   }
   return library;
 }
 
 LogicalResult ModuleToObject::loadBitcodeFilesFromList(
-    llvm::LLVMContext &context, llvm::TargetMachine &targetMachine,
-    ArrayRef<std::string> fileList,
+    llvm::LLVMContext &context, ArrayRef<Attribute> librariesToLink,
     SmallVector<std::unique_ptr<llvm::Module>> &llvmModules,
     bool failureOnError) {
-  for (const std::string &str : fileList) {
-    // Test if the path exists, if it doesn't abort.
-    StringRef pathRef = StringRef(str.data(), str.size());
-    if (!llvm::sys::fs::is_regular_file(pathRef)) {
+  for (Attribute linkLib : librariesToLink) {
+    // Attributes in this list can be either list of file paths using
+    // StringAttr, or a resource attribute pointing to the LLVM bitcode in
+    // memory.
+    if (auto filePath = dyn_cast<StringAttr>(linkLib)) {
+      // Test if the path exists, if it doesn't abort.
+      if (!llvm::sys::fs::is_regular_file(filePath.strref())) {
+        getOperation().emitError()
+            << "File path: " << filePath << " does not exist or is not a file.";
+        return failure();
+      }
+      // Load the file or abort on error.
+      if (auto bcFile = loadBitcodeFile(context, filePath))
+        llvmModules.push_back(std::move(bcFile));
+      else if (failureOnError)
+        return failure();
+      continue;
+    }
+    if (auto blobAttr = dyn_cast<BlobAttr>(linkLib)) {
+      // Load the file or abort on error.
+      llvm::SMDiagnostic error;
+      ArrayRef<char> data = blobAttr.getData();
+      std::unique_ptr<llvm::MemoryBuffer> buffer =
+          llvm::MemoryBuffer::getMemBuffer(StringRef(data.data(), data.size()),
+                                           "blobLinkedLib",
+                                           /*RequiresNullTerminator=*/false);
+      std::unique_ptr<llvm::Module> mod =
+          getLazyIRModule(std::move(buffer), error, context);
+      if (mod) {
+        if (failed(handleBitcodeFile(*mod)))
+          return failure();
+        llvmModules.push_back(std::move(mod));
+      } else if (failureOnError) {
+        getOperation().emitError()
+            << "Couldn't load LLVM library for linking: " << error.getMessage();
+        return failure();
+      }
+      continue;
+    }
+    if (failureOnError) {
       getOperation().emitError()
-          << "File path: " << pathRef << " does not exist or is not a file.\n";
+          << "Unknown attribute describing LLVM library to load: " << linkLib;
       return failure();
     }
-    // Load the file or abort on error.
-    if (auto bcFile = loadBitcodeFile(context, targetMachine, pathRef))
-      llvmModules.push_back(std::move(bcFile));
-    else if (failureOnError)
-      return failure();
   }
   return success();
 }
@@ -137,16 +176,21 @@ ModuleToObject::linkFiles(llvm::Module &module,
 }
 
 LogicalResult ModuleToObject::optimizeModule(llvm::Module &module,
-                                             llvm::TargetMachine &targetMachine,
+
                                              int optLevel) {
   if (optLevel < 0 || optLevel > 3)
     return getOperation().emitError()
            << "Invalid optimization level: " << optLevel << ".";
 
-  targetMachine.setOptLevel(static_cast<llvm::CodeGenOptLevel>(optLevel));
+  FailureOr<llvm::TargetMachine *> targetMachine = getOrCreateTargetMachine();
+  if (failed(targetMachine))
+    return getOperation().emitError()
+           << "Target Machine unavailable for triple " << triple
+           << ", can't optimize with LLVM\n";
+  (*targetMachine)->setOptLevel(static_cast<llvm::CodeGenOptLevel>(optLevel));
 
   auto transformer =
-      makeOptimizingTransformer(optLevel, /*sizeLevel=*/0, &targetMachine);
+      makeOptimizingTransformer(optLevel, /*sizeLevel=*/0, *targetMachine);
   auto error = transformer(&module);
   if (error) {
     InFlightDiagnostic mlirError = getOperation().emitError();
@@ -159,11 +203,11 @@ LogicalResult ModuleToObject::optimizeModule(llvm::Module &module,
   return success();
 }
 
-std::optional<std::string>
-ModuleToObject::translateToISA(llvm::Module &llvmModule,
-                               llvm::TargetMachine &targetMachine) {
-  std::string targetISA;
-  llvm::raw_string_ostream stream(targetISA);
+FailureOr<SmallString<0>> ModuleToObject::translateModuleToISA(
+    llvm::Module &llvmModule, llvm::TargetMachine &targetMachine,
+    function_ref<InFlightDiagnostic()> emitError) {
+  SmallString<0> targetISA;
+  llvm::raw_svector_ostream stream(targetISA);
 
   { // Drop pstream after this to prevent the ISA from being stuck buffering
     llvm::buffer_ostream pstream(stream);
@@ -171,16 +215,26 @@ ModuleToObject::translateToISA(llvm::Module &llvmModule,
 
     if (targetMachine.addPassesToEmitFile(codegenPasses, pstream, nullptr,
                                           llvm::CodeGenFileType::AssemblyFile))
-      return std::nullopt;
+      return emitError() << "Target machine cannot emit assembly";
 
     codegenPasses.run(llvmModule);
   }
-  return stream.str();
+  return targetISA;
 }
 
-std::optional<SmallVector<char, 0>>
-ModuleToObject::moduleToObject(llvm::Module &llvmModule,
-                               llvm::TargetMachine &targetMachine) {
+void ModuleToObject::setDataLayoutAndTriple(llvm::Module &module) {
+  // Create the target machine.
+  FailureOr<llvm::TargetMachine *> targetMachine = getOrCreateTargetMachine();
+  if (failed(targetMachine))
+    return;
+
+  // Set the data layout and target triple of the module.
+  module.setDataLayout((*targetMachine)->createDataLayout());
+  module.setTargetTriple((*targetMachine)->getTargetTriple());
+}
+
+FailureOr<SmallVector<char, 0>>
+ModuleToObject::moduleToObject(llvm::Module &llvmModule) {
   SmallVector<char, 0> binaryData;
   // Write the LLVM module bitcode to a buffer.
   llvm::raw_svector_ostream outputStream(binaryData);
@@ -196,32 +250,33 @@ std::optional<SmallVector<char, 0>> ModuleToObject::run() {
     getOperation().emitError() << "Failed creating the llvm::Module.";
     return std::nullopt;
   }
+  setDataLayoutAndTriple(*llvmModule);
 
-  // Create the target machine.
-  std::unique_ptr<llvm::TargetMachine> targetMachine = createTargetMachine();
-  if (!targetMachine)
-    return std::nullopt;
-
-  // Set the data layout and target triple of the module.
-  llvmModule->setDataLayout(targetMachine->createDataLayout());
-  llvmModule->setTargetTriple(targetMachine->getTargetTriple().getTriple());
+  if (initialLlvmIRCallback)
+    initialLlvmIRCallback(*llvmModule);
 
   // Link bitcode files.
-  handleModulePreLink(*llvmModule, *targetMachine);
+  handleModulePreLink(*llvmModule);
   {
-    auto libs = loadBitcodeFiles(*llvmModule, *targetMachine);
+    auto libs = loadBitcodeFiles(*llvmModule);
     if (!libs)
       return std::nullopt;
     if (!libs->empty())
       if (failed(linkFiles(*llvmModule, std::move(*libs))))
         return std::nullopt;
-    handleModulePostLink(*llvmModule, *targetMachine);
+    handleModulePostLink(*llvmModule);
   }
 
+  if (linkedLlvmIRCallback)
+    linkedLlvmIRCallback(*llvmModule);
+
   // Optimize the module.
-  if (failed(optimizeModule(*llvmModule, *targetMachine, optLevel)))
+  if (failed(optimizeModule(*llvmModule, optLevel)))
     return std::nullopt;
 
+  if (optimizedLlvmIRCallback)
+    optimizedLlvmIRCallback(*llvmModule);
+
   // Return the serialized object.
-  return moduleToObject(*llvmModule, *targetMachine);
+  return moduleToObject(*llvmModule);
 }

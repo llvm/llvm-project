@@ -333,7 +333,7 @@ AppleThreadPlanStepThroughDirectDispatch::DoPlanExplainsStop(Event *event_ptr) {
       if (site_sp->IsBreakpointAtThisSite(break_sp->GetID())) {
         // If we aren't the only one with a breakpoint on this site, then we
         // should just stop and return control to the user.
-        if (site_sp->GetNumberOfOwners() > 1) {
+        if (site_sp->GetNumberOfConstituents() > 1) {
           SetPlanComplete(true);
           return false;
         }

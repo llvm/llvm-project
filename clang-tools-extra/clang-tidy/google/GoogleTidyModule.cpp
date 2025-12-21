@@ -1,4 +1,4 @@
-//===--- GoogleTidyModule.cpp - clang-tidy --------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -9,16 +9,17 @@
 #include "../ClangTidy.h"
 #include "../ClangTidyModule.h"
 #include "../ClangTidyModuleRegistry.h"
+#include "../modernize/AvoidCStyleCastCheck.h"
 #include "../readability/BracesAroundStatementsCheck.h"
 #include "../readability/FunctionSizeCheck.h"
 #include "../readability/NamespaceCommentCheck.h"
-#include "AvoidCStyleCastsCheck.h"
 #include "AvoidNSObjectNewCheck.h"
 #include "AvoidThrowingObjCExceptionCheck.h"
 #include "AvoidUnderscoreInGoogletestNameCheck.h"
 #include "DefaultArgumentsCheck.h"
 #include "ExplicitConstructorCheck.h"
 #include "ExplicitMakePairCheck.h"
+#include "FloatTypesCheck.h"
 #include "FunctionNamingCheck.h"
 #include "GlobalNamesInHeadersCheck.h"
 #include "GlobalVariableDeclarationCheck.h"
@@ -33,9 +34,10 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy {
 namespace google {
+namespace {
 
 class GoogleModule : public ClangTidyModule {
- public:
+public:
   void addCheckFactories(ClangTidyCheckFactories &CheckFactories) override {
     CheckFactories.registerCheck<build::ExplicitMakePairCheck>(
         "google-build-explicit-make-pair");
@@ -57,6 +59,8 @@ class GoogleModule : public ClangTidyModule {
         "google-objc-function-naming");
     CheckFactories.registerCheck<objc::GlobalVariableDeclarationCheck>(
         "google-objc-global-variable-declaration");
+    CheckFactories.registerCheck<runtime::RuntimeFloatCheck>(
+        "google-runtime-float");
     CheckFactories.registerCheck<runtime::IntegerTypesCheck>(
         "google-runtime-int");
     CheckFactories.registerCheck<runtime::OverloadedUnaryAndCheck>(
@@ -64,7 +68,7 @@ class GoogleModule : public ClangTidyModule {
     CheckFactories
         .registerCheck<readability::AvoidUnderscoreInGoogletestNameCheck>(
             "google-readability-avoid-underscore-in-googletest-name");
-    CheckFactories.registerCheck<readability::AvoidCStyleCastsCheck>(
+    CheckFactories.registerCheck<modernize::AvoidCStyleCastCheck>(
         "google-readability-casting");
     CheckFactories.registerCheck<readability::TodoCommentCheck>(
         "google-readability-todo");
@@ -92,14 +96,16 @@ class GoogleModule : public ClangTidyModule {
   }
 };
 
+} // namespace
+
 // Register the GoogleTidyModule using this statically initialized variable.
 static ClangTidyModuleRegistry::Add<GoogleModule> X("google-module",
                                                     "Adds Google lint checks.");
 
-}  // namespace google
+} // namespace google
 
 // This anchor is used to force the linker to link in the generated object file
 // and thus register the GoogleModule.
-volatile int GoogleModuleAnchorSource = 0;
+volatile int GoogleModuleAnchorSource = 0; // NOLINT(misc-use-internal-linkage)
 
 } // namespace clang::tidy

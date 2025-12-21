@@ -5,8 +5,8 @@
 // RUN: %clang_cl -MD -c -o %t.inits.o %p/Inputs/standalone-dylib.c
 // RUN: %clang_cl -MD -c -o %t.test.o %s
 // RUN: %llvm_jitlink \
-// RUN:   -alias dlopen=__orc_rt_coff_jit_dlopen \
-// RUN:   -alias dlclose=__orc_rt_coff_jit_dlclose \
+// RUN:   -alias Platform:dlopen=__orc_rt_coff_jit_dlopen \
+// RUN:   -alias Platform:dlclose=__orc_rt_coff_jit_dlclose \
 // RUN:   %t.test.o -jd inits %t.inits.o -lmain | FileCheck %s
 
 // CHECK: entering main

@@ -1,4 +1,4 @@
-//===--- FixItHintUtils.cpp - clang-tidy-----------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -11,6 +11,7 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/Type.h"
+#include "clang/Sema/DeclSpec.h"
 #include "clang/Tooling/FixIt.h"
 #include <optional>
 
@@ -20,6 +21,11 @@ FixItHint changeVarDeclToReference(const VarDecl &Var, ASTContext &Context) {
   SourceLocation AmpLocation = Var.getLocation();
   auto Token = utils::lexer::getPreviousToken(
       AmpLocation, Context.getSourceManager(), Context.getLangOpts());
+
+  // For parameter packs the '&' must go before the '...' token
+  if (Token.is(tok::ellipsis))
+    return FixItHint::CreateInsertion(Token.getLocation(), "&");
+
   if (!Token.is(tok::unknown))
     AmpLocation = Lexer::getLocForEndOfToken(Token.getLocation(), 0,
                                              Context.getSourceManager(),
@@ -71,15 +77,17 @@ static std::optional<FixItHint> fixIfNotDangerous(SourceLocation Loc,
 
 // Build a string that can be emitted as FixIt with either a space in before
 // or after the qualifier, either ' const' or 'const '.
-static std::string buildQualifier(DeclSpec::TQ Qualifier,
+static std::string buildQualifier(Qualifiers::TQ Qualifier,
                                   bool WhitespaceBefore = false) {
   if (WhitespaceBefore)
-    return (llvm::Twine(' ') + DeclSpec::getSpecifierName(Qualifier)).str();
-  return (llvm::Twine(DeclSpec::getSpecifierName(Qualifier)) + " ").str();
+    return (llvm::Twine(' ') + Qualifiers::fromCVRMask(Qualifier).getAsString())
+        .str();
+  return (llvm::Twine(Qualifiers::fromCVRMask(Qualifier).getAsString()) + " ")
+      .str();
 }
 
 static std::optional<FixItHint> changeValue(const VarDecl &Var,
-                                            DeclSpec::TQ Qualifier,
+                                            Qualifiers::TQ Qualifier,
                                             QualifierTarget QualTarget,
                                             QualifierPolicy QualPolicy,
                                             const ASTContext &Context) {
@@ -99,7 +107,7 @@ static std::optional<FixItHint> changeValue(const VarDecl &Var,
 }
 
 static std::optional<FixItHint> changePointerItself(const VarDecl &Var,
-                                                    DeclSpec::TQ Qualifier,
+                                                    Qualifiers::TQ Qualifier,
                                                     const ASTContext &Context) {
   if (locDangerous(Var.getLocation()))
     return std::nullopt;
@@ -112,7 +120,7 @@ static std::optional<FixItHint> changePointerItself(const VarDecl &Var,
 }
 
 static std::optional<FixItHint>
-changePointer(const VarDecl &Var, DeclSpec::TQ Qualifier, const Type *Pointee,
+changePointer(const VarDecl &Var, Qualifiers::TQ Qualifier, const Type *Pointee,
               QualifierTarget QualTarget, QualifierPolicy QualPolicy,
               const ASTContext &Context) {
   // The pointer itself shall be marked as `const`. This is always to the right
@@ -132,7 +140,7 @@ changePointer(const VarDecl &Var, DeclSpec::TQ Qualifier, const Type *Pointee,
     // the `*` token and placing the `const` left of it.
     // (`int const* p = nullptr;`)
     if (QualPolicy == QualifierPolicy::Right) {
-      SourceLocation BeforeStar = lexer::findPreviousTokenKind(
+      const SourceLocation BeforeStar = lexer::findPreviousTokenKind(
           Var.getLocation(), Context.getSourceManager(), Context.getLangOpts(),
           tok::star);
       if (locDangerous(BeforeStar))
@@ -153,7 +161,7 @@ changePointer(const VarDecl &Var, DeclSpec::TQ Qualifier, const Type *Pointee,
     // is the same as 'QualPolicy == Right && isValueType(Pointee)'.
     // The `const` must be left of the last `*` token.
     // (`int * const* p = nullptr;`)
-    SourceLocation BeforeStar = lexer::findPreviousTokenKind(
+    const SourceLocation BeforeStar = lexer::findPreviousTokenKind(
         Var.getLocation(), Context.getSourceManager(), Context.getLangOpts(),
         tok::star);
     return fixIfNotDangerous(BeforeStar, buildQualifier(Qualifier, true));
@@ -163,14 +171,14 @@ changePointer(const VarDecl &Var, DeclSpec::TQ Qualifier, const Type *Pointee,
 }
 
 static std::optional<FixItHint>
-changeReferencee(const VarDecl &Var, DeclSpec::TQ Qualifier, QualType Pointee,
+changeReferencee(const VarDecl &Var, Qualifiers::TQ Qualifier, QualType Pointee,
                  QualifierTarget QualTarget, QualifierPolicy QualPolicy,
                  const ASTContext &Context) {
   if (QualPolicy == QualifierPolicy::Left && isValueType(Pointee))
     return fixIfNotDangerous(Var.getTypeSpecStartLoc(),
                              buildQualifier(Qualifier));
 
-  SourceLocation BeforeRef = lexer::findPreviousAnyTokenKind(
+  const SourceLocation BeforeRef = lexer::findPreviousAnyTokenKind(
       Var.getLocation(), Context.getSourceManager(), Context.getLangOpts(),
       tok::amp, tok::ampamp);
   std::optional<SourceLocation> IgnoredParens =
@@ -183,7 +191,7 @@ changeReferencee(const VarDecl &Var, DeclSpec::TQ Qualifier, QualType Pointee,
 
 std::optional<FixItHint> addQualifierToVarDecl(const VarDecl &Var,
                                                const ASTContext &Context,
-                                               DeclSpec::TQ Qualifier,
+                                               Qualifiers::TQ Qualifier,
                                                QualifierTarget QualTarget,
                                                QualifierPolicy QualPolicy) {
   assert((QualPolicy == QualifierPolicy::Left ||
@@ -193,7 +201,7 @@ std::optional<FixItHint> addQualifierToVarDecl(const VarDecl &Var,
           QualTarget == QualifierTarget::Value) &&
          "Unexpected Target");
 
-  QualType ParenStrippedType = Var.getType().IgnoreParens();
+  const QualType ParenStrippedType = Var.getType().IgnoreParens();
   if (isValueType(ParenStrippedType))
     return changeValue(Var, Qualifier, QualTarget, QualPolicy, Context);
 
@@ -222,6 +230,39 @@ std::optional<FixItHint> addQualifierToVarDecl(const VarDecl &Var,
   }
 
   return std::nullopt;
+}
+
+bool areParensNeededForStatement(const Stmt &Node) {
+  if (isa<ParenExpr>(&Node))
+    return false;
+
+  if (isa<clang::BinaryOperator>(&Node) || isa<UnaryOperator>(&Node))
+    return true;
+
+  if (isa<clang::ConditionalOperator>(&Node) ||
+      isa<BinaryConditionalOperator>(&Node))
+    return true;
+
+  if (const auto *Op = dyn_cast<CXXOperatorCallExpr>(&Node))
+    switch (Op->getOperator()) {
+    case OO_PlusPlus:
+      [[fallthrough]];
+    case OO_MinusMinus:
+      return Op->getNumArgs() != 2;
+    case OO_Call:
+      [[fallthrough]];
+    case OO_Subscript:
+      [[fallthrough]];
+    case OO_Arrow:
+      return false;
+    default:
+      return true;
+    };
+
+  if (isa<CStyleCastExpr>(&Node))
+    return true;
+
+  return false;
 }
 
 // Return true if expr needs to be put in parens when it is an argument of a
@@ -259,9 +300,8 @@ std::string formatDereference(const Expr &ExprNode, const ASTContext &Context) {
   Text.consume_back("->");
 
   // Add leading '*'.
-  if (needParensAfterUnaryOperator(ExprNode)) {
+  if (needParensAfterUnaryOperator(ExprNode))
     return (llvm::Twine("*(") + Text + ")").str();
-  }
   return (llvm::Twine("*") + Text).str();
 }
 

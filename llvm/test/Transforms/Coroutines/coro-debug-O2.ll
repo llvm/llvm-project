@@ -1,11 +1,13 @@
 ; RUN: opt < %s -passes='module(coro-early),cgscc(coro-split<reuse-storage>),function(sroa)' -S | FileCheck %s
 
-; Checks whether the dbg.declare for `__promise` remains valid under O2.
+; Checks the dbg informations about promise and coroutine frames under O2.
 
 ; CHECK-LABEL: define internal fastcc void @f.resume({{.*}})
 ; CHECK:       entry.resume:
-; CHECK:        call void @llvm.dbg.declare(metadata ptr %begin, metadata ![[PROMISEVAR_RESUME:[0-9]+]], metadata !DIExpression(
+; CHECK:        #dbg_value(ptr poison, ![[PROMISEVAR_RESUME:[0-9]+]], !DIExpression(DW_OP_deref, DW_OP_plus_uconst, 16
+; CHECK:        #dbg_value(ptr %begin, ![[CORO_FRAME:[0-9]+]], !DIExpression(DW_OP_deref)
 ;
+; CHECK: ![[CORO_FRAME]] = !DILocalVariable(name: "__coro_frame"
 ; CHECK: ![[PROMISEVAR_RESUME]] = !DILocalVariable(name: "__promise"
 %promise_type = type { i32, i32, double }
 
@@ -110,7 +112,7 @@ cleanup.cont:                                     ; preds = %after.coro.free
     br label %coro.ret
 
 coro.ret:                                         ; preds = %cleanup.cont, %after.coro.free, %final.suspend, %await.suspend, %init.suspend
-    %end = call i1 @llvm.coro.end(ptr null, i1 false, token none)
+    call void @llvm.coro.end(ptr null, i1 false, token none)
     ret void
 
 unreachable:                                      ; preds = %after.coro.free
@@ -126,7 +128,7 @@ declare token @llvm.coro.save(ptr)
 declare ptr @llvm.coro.begin(token, ptr writeonly)
 declare i8 @llvm.coro.suspend(token, i1)
 declare ptr @llvm.coro.free(token, ptr nocapture readonly)
-declare i1 @llvm.coro.end(ptr, i1, token)
+declare void @llvm.coro.end(ptr, i1, token)
 
 declare ptr @new(i64)
 declare void @delete(ptr)

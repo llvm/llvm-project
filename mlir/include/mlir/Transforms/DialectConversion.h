@@ -13,6 +13,7 @@
 #ifndef MLIR_TRANSFORMS_DIALECTCONVERSION_H_
 #define MLIR_TRANSFORMS_DIALECTCONVERSION_H_
 
+#include "mlir/Config/mlir-config.h"
 #include "mlir/Rewrite/FrozenRewritePatternSet.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/StringMap.h"
@@ -23,9 +24,11 @@ namespace mlir {
 // Forward declarations.
 class Attribute;
 class Block;
+struct ConversionConfig;
 class ConversionPatternRewriter;
 class MLIRContext;
 class Operation;
+struct OperationConverter;
 class Type;
 class Value;
 
@@ -37,18 +40,20 @@ class Value;
 /// registered using addConversion and addMaterialization, respectively.
 class TypeConverter {
 public:
+  /// Type alias to allow derived classes to inherit constructors with
+  /// `using Base::Base;`.
+  using Base = TypeConverter;
+
   virtual ~TypeConverter() = default;
   TypeConverter() = default;
   // Copy the registered conversions, but not the caches
   TypeConverter(const TypeConverter &other)
       : conversions(other.conversions),
-        argumentMaterializations(other.argumentMaterializations),
         sourceMaterializations(other.sourceMaterializations),
         targetMaterializations(other.targetMaterializations),
         typeAttributeConversions(other.typeAttributeConversions) {}
   TypeConverter &operator=(const TypeConverter &other) {
     conversions = other.conversions;
-    argumentMaterializations = other.argumentMaterializations;
     sourceMaterializations = other.sourceMaterializations;
     targetMaterializations = other.targetMaterializations;
     typeAttributeConversions = other.typeAttributeConversions;
@@ -62,11 +67,14 @@ public:
     SignatureConversion(unsigned numOrigInputs)
         : remappedInputs(numOrigInputs) {}
 
-    /// This struct represents a range of new types or a single value that
+    /// This struct represents a range of new types or a range of values that
     /// remaps an existing signature input.
     struct InputMapping {
       size_t inputNo, size;
-      Value replacementValue;
+      SmallVector<Value, 1> replacementValues;
+
+      /// Return "true" if this input was replaces with one or multiple values.
+      bool replacedWithValues() const { return !replacementValues.empty(); }
     };
 
     /// Return the argument types for the new signature.
@@ -89,9 +97,9 @@ public:
     /// used if the new types are not intended to remap an existing input.
     void addInputs(ArrayRef<Type> types);
 
-    /// Remap an input of the original signature to another `replacement`
-    /// value. This drops the original argument.
-    void remapInput(unsigned origInputNo, Value replacement);
+    /// Remap an input of the original signature to `replacements`
+    /// values. This drops the original argument.
+    void remapInput(unsigned origInputNo, ArrayRef<Value> replacements);
 
   private:
     /// Remap an input of the original signature with a range of types in the
@@ -135,7 +143,9 @@ public:
   };
 
   /// Register a conversion function. A conversion function must be convertible
-  /// to any of the following forms(where `T` is a class derived from `Type`:
+  /// to any of the following forms (where `T` is `Value` or a class derived
+  /// from `Type`, including `Type` itself):
+  ///
   ///   * std::optional<Type>(T)
   ///     - This form represents a 1-1 type conversion. It should return nullptr
   ///       or `std::nullopt` to signify failure. If `std::nullopt` is returned,
@@ -148,15 +158,15 @@ public:
   ///       existing value are expected to be removed during conversion. If
   ///       `std::nullopt` is returned, the converter is allowed to try another
   ///       conversion function to perform the conversion.
-  ///   * std::optional<LogicalResult>(T, SmallVectorImpl<Type> &,
-  ///                                  ArrayRef<Type>)
-  ///     - This form represents a 1-N type conversion supporting recursive
-  ///       types. The first two arguments and the return value are the same as
-  ///       for the regular 1-N form. The third argument is contains is the
-  ///       "call stack" of the recursive conversion: it contains the list of
-  ///       types currently being converted, with the current type being the
-  ///       last one. If it is present more than once in the list, the
-  ///       conversion concerns a recursive type.
+  ///
+  /// Conversion functions that accept `Value` as the first argument are
+  /// context-aware. I.e., they can take into account IR when converting the
+  /// type of the given value. Context-unaware conversion functions accept
+  /// `Type` or a derived class as the first argument.
+  ///
+  /// Note: Context-unaware conversions are cached, but context-aware
+  /// conversions are not.
+  ///
   /// Note: When attempting to convert a type, e.g. via 'convertType', the
   ///       mostly recently added conversions will be invoked first.
   template <typename FnT, typename T = typename llvm::function_traits<
@@ -165,58 +175,72 @@ public:
     registerConversion(wrapCallback<T>(std::forward<FnT>(callback)));
   }
 
-  /// Register a materialization function, which must be convertible to the
-  /// following form:
-  ///   `std::optional<Value>(OpBuilder &, T, ValueRange, Location)`,
+  /// All of the following materializations require function objects that are
+  /// convertible to the following form:
+  ///   `Value(OpBuilder &, T, ValueRange, Location)`,
   /// where `T` is any subclass of `Type`. This function is responsible for
   /// creating an operation, using the OpBuilder and Location provided, that
   /// "casts" a range of values into a single value of the given type `T`. It
-  /// must return a Value of the converted type on success, an `std::nullopt` if
-  /// it failed but other materialization can be attempted, and `nullptr` on
-  /// unrecoverable failure. It will only be called for (sub)types of `T`.
-  /// Materialization functions must be provided when a type conversion may
-  /// persist after the conversion has finished.
+  /// must return a Value of the type `T` on success and `nullptr` if
+  /// it failed but other materialization should be attempted. Materialization
+  /// functions must be provided when a type conversion may persist after the
+  /// conversion has finished.
   ///
+  /// Note: Target materializations may optionally accept an additional Type
+  /// parameter, which is the original type of the SSA value. Furthermore, `T`
+  /// can be a TypeRange; in that case, the function must return a
+  /// SmallVector<Value>.
+
   /// This method registers a materialization that will be called when
-  /// converting an illegal block argument type, to a legal type.
-  template <typename FnT, typename T = typename llvm::function_traits<
-                              std::decay_t<FnT>>::template arg_t<1>>
-  void addArgumentMaterialization(FnT &&callback) {
-    argumentMaterializations.emplace_back(
-        wrapMaterialization<T>(std::forward<FnT>(callback)));
-  }
-  /// This method registers a materialization that will be called when
-  /// converting a legal type to an illegal source type. This is used when
-  /// conversions to an illegal type must persist beyond the main conversion.
+  /// converting a replacement value back to its original source type.
+  /// This is used when some uses of the original value persist beyond the main
+  /// conversion.
   template <typename FnT, typename T = typename llvm::function_traits<
                               std::decay_t<FnT>>::template arg_t<1>>
   void addSourceMaterialization(FnT &&callback) {
     sourceMaterializations.emplace_back(
-        wrapMaterialization<T>(std::forward<FnT>(callback)));
+        wrapSourceMaterialization<T>(std::forward<FnT>(callback)));
   }
+
   /// This method registers a materialization that will be called when
-  /// converting type from an illegal, or source, type to a legal type.
+  /// converting a value to a target type according to a pattern's type
+  /// converter.
+  ///
+  /// Note: Target materializations can optionally inspect the "original"
+  /// type. This type may be different from the type of the input value.
+  /// For example, let's assume that a conversion pattern "P1" replaced an SSA
+  /// value "v1" (type "t1") with "v2" (type "t2"). Then a different conversion
+  /// pattern "P2" matches an op that has "v1" as an operand. Let's furthermore
+  /// assume that "P2" determines that the converted target type of "t1" is
+  /// "t3", which may be different from "t2". In this example, the target
+  /// materialization will be invoked with: outputType = "t3", inputs = "v2",
+  /// originalType = "t1". Note that the original type "t1" cannot be recovered
+  /// from just "t3" and "v2"; that's why the originalType parameter exists.
+  ///
+  /// Note: During a 1:N conversion, the result types can be a TypeRange. In
+  /// that case the materialization produces a SmallVector<Value>.
   template <typename FnT, typename T = typename llvm::function_traits<
                               std::decay_t<FnT>>::template arg_t<1>>
   void addTargetMaterialization(FnT &&callback) {
     targetMaterializations.emplace_back(
-        wrapMaterialization<T>(std::forward<FnT>(callback)));
+        wrapTargetMaterialization<T>(std::forward<FnT>(callback)));
   }
 
   /// Register a conversion function for attributes within types. Type
-  /// converters may call this function in order to allow hoking into the
+  /// converters may call this function in order to allow hooking into the
   /// translation of attributes that exist within types. For example, a type
   /// converter for the `memref` type could use these conversions to convert
   /// memory spaces or layouts in an extensible way.
   ///
   /// The conversion functions take a non-null Type or subclass of Type and a
   /// non-null Attribute (or subclass of Attribute), and returns a
-  /// `AttributeConversionResult`. This result can either contan an `Attribute`,
-  /// which may be `nullptr`, representing the conversion's success,
-  /// `AttributeConversionResult::na()` (the default empty value), indicating
-  /// that the conversion function did not apply and that further conversion
-  /// functions should be checked, or `AttributeConversionResult::abort()`
-  /// indicating that the conversion process should be aborted.
+  /// `AttributeConversionResult`. This result can either contain an
+  /// `Attribute`, which may be `nullptr`, representing the conversion's
+  /// success, `AttributeConversionResult::na()` (the default empty value),
+  /// indicating that the conversion function did not apply and that further
+  /// conversion functions should be checked, or
+  /// `AttributeConversionResult::abort()` indicating that the conversion
+  /// process should be aborted.
   ///
   /// Registered conversion functions are callled in the reverse of the order in
   /// which they were registered.
@@ -231,41 +255,66 @@ public:
         wrapTypeAttributeConversion<T, A>(std::forward<FnT>(callback)));
   }
 
-  /// Convert the given type. This function should return failure if no valid
+  /// Convert the given type. This function returns failure if no valid
   /// conversion exists, success otherwise. If the new set of types is empty,
   /// the type is removed and any usages of the existing value are expected to
   /// be removed during conversion.
+  ///
+  /// Note: This overload invokes only context-unaware type conversion
+  /// functions. Users should call the other overload if possible.
   LogicalResult convertType(Type t, SmallVectorImpl<Type> &results) const;
+
+  /// Convert the type of the given value. This function returns failure if no
+  /// valid conversion exists, success otherwise. If the new set of types is
+  /// empty, the type is removed and any usages of the existing value are
+  /// expected to be removed during conversion.
+  ///
+  /// Note: This overload invokes both context-aware and context-unaware type
+  /// conversion functions.
+  LogicalResult convertType(Value v, SmallVectorImpl<Type> &results) const;
 
   /// This hook simplifies defining 1-1 type conversions. This function returns
   /// the type to convert to on success, and a null type on failure.
   Type convertType(Type t) const;
+  Type convertType(Value v) const;
 
   /// Attempts a 1-1 type conversion, expecting the result type to be
   /// `TargetType`. Returns the converted type cast to `TargetType` on success,
   /// and a null type on conversion or cast failure.
-  template <typename TargetType> TargetType convertType(Type t) const {
+  template <typename TargetType>
+  TargetType convertType(Type t) const {
     return dyn_cast_or_null<TargetType>(convertType(t));
   }
+  template <typename TargetType>
+  TargetType convertType(Value v) const {
+    return dyn_cast_or_null<TargetType>(convertType(v));
+  }
 
-  /// Convert the given set of types, filling 'results' as necessary. This
-  /// returns failure if the conversion of any of the types fails, success
+  /// Convert the given types, filling 'results' as necessary. This returns
+  /// "failure" if the conversion of any of the types fails, "success"
   /// otherwise.
   LogicalResult convertTypes(TypeRange types,
+                             SmallVectorImpl<Type> &results) const;
+
+  /// Convert the types of the given values, filling 'results' as necessary.
+  /// This returns "failure" if the conversion of any of the types fails,
+  /// "success" otherwise.
+  LogicalResult convertTypes(ValueRange values,
                              SmallVectorImpl<Type> &results) const;
 
   /// Return true if the given type is legal for this type converter, i.e. the
   /// type converts to itself.
   bool isLegal(Type type) const;
+  bool isLegal(Value value) const;
 
   /// Return true if all of the given types are legal for this type converter.
-  template <typename RangeT>
-  std::enable_if_t<!std::is_convertible<RangeT, Type>::value &&
-                       !std::is_convertible<RangeT, Operation *>::value,
-                   bool>
-  isLegal(RangeT &&range) const {
+  bool isLegal(TypeRange range) const {
     return llvm::all_of(range, [this](Type type) { return isLegal(type); });
   }
+  bool isLegal(ValueRange range) const {
+    return llvm::all_of(range, [this](Value value) { return isLegal(value); });
+  }
+
   /// Return true if the given operation has legal operand and result types.
   bool isLegal(Operation *op) const;
 
@@ -284,6 +333,11 @@ public:
   LogicalResult convertSignatureArgs(TypeRange types,
                                      SignatureConversion &result,
                                      unsigned origInputOffset = 0) const;
+  LogicalResult convertSignatureArg(unsigned inputNo, Value value,
+                                    SignatureConversion &result) const;
+  LogicalResult convertSignatureArgs(ValueRange values,
+                                     SignatureConversion &result,
+                                     unsigned origInputOffset = 0) const;
 
   /// This function converts the type signature of the given block, by invoking
   /// 'convertSignatureArg' for each argument. This function should return a
@@ -294,22 +348,16 @@ public:
   /// generating a cast sequence of some kind. See the respective
   /// `add*Materialization` for more information on the context for these
   /// methods.
-  Value materializeArgumentConversion(OpBuilder &builder, Location loc,
-                                      Type resultType,
-                                      ValueRange inputs) const {
-    return materializeConversion(argumentMaterializations, builder, loc,
-                                 resultType, inputs);
-  }
   Value materializeSourceConversion(OpBuilder &builder, Location loc,
-                                    Type resultType, ValueRange inputs) const {
-    return materializeConversion(sourceMaterializations, builder, loc,
-                                 resultType, inputs);
-  }
+                                    Type resultType, ValueRange inputs) const;
   Value materializeTargetConversion(OpBuilder &builder, Location loc,
-                                    Type resultType, ValueRange inputs) const {
-    return materializeConversion(targetMaterializations, builder, loc,
-                                 resultType, inputs);
-  }
+                                    Type resultType, ValueRange inputs,
+                                    Type originalType = {}) const;
+  SmallVector<Value> materializeTargetConversion(OpBuilder &builder,
+                                                 Location loc,
+                                                 TypeRange resultType,
+                                                 ValueRange inputs,
+                                                 Type originalType = {}) const;
 
   /// Convert an attribute present `attr` from within the type `type` using
   /// the registered conversion functions. If no applicable conversion has been
@@ -323,32 +371,34 @@ private:
   /// types is empty, the type is removed and any usages of the existing value
   /// are expected to be removed during conversion.
   using ConversionCallbackFn = std::function<std::optional<LogicalResult>(
-      Type, SmallVectorImpl<Type> &)>;
+      PointerUnion<Type, Value>, SmallVectorImpl<Type> &)>;
 
-  /// The signature of the callback used to materialize a conversion.
-  using MaterializationCallbackFn = std::function<std::optional<Value>(
-      OpBuilder &, Type, ValueRange, Location)>;
+  /// The signature of the callback used to materialize a source conversion.
+  ///
+  /// Arguments: builder, result type, inputs, location
+  using SourceMaterializationCallbackFn =
+      std::function<Value(OpBuilder &, Type, ValueRange, Location)>;
+
+  /// The signature of the callback used to materialize a target conversion.
+  ///
+  /// Arguments: builder, result types, inputs, location, original type
+  using TargetMaterializationCallbackFn = std::function<SmallVector<Value>(
+      OpBuilder &, TypeRange, ValueRange, Location, Type)>;
 
   /// The signature of the callback used to convert a type attribute.
   using TypeAttributeConversionCallbackFn =
       std::function<AttributeConversionResult(Type, Attribute)>;
 
-  /// Attempt to materialize a conversion using one of the provided
-  /// materialization functions.
-  Value
-  materializeConversion(ArrayRef<MaterializationCallbackFn> materializations,
-                        OpBuilder &builder, Location loc, Type resultType,
-                        ValueRange inputs) const;
-
   /// Generate a wrapper for the given callback. This allows for accepting
   /// different callback forms, that all compose into a single version.
-  /// With callback of form: `std::optional<Type>(T)`
+  /// With callback of form: `std::optional<Type>(T)`, where `T` can be a
+  /// `Value` or a `Type` (or a class derived from `Type`).
   template <typename T, typename FnT>
   std::enable_if_t<std::is_invocable_v<FnT, T>, ConversionCallbackFn>
-  wrapCallback(FnT &&callback) const {
+  wrapCallback(FnT &&callback) {
     return wrapCallback<T>([callback = std::forward<FnT>(callback)](
-                               T type, SmallVectorImpl<Type> &results) {
-      if (std::optional<Type> resultOpt = callback(type)) {
+                               T typeOrValue, SmallVectorImpl<Type> &results) {
+      if (std::optional<Type> resultOpt = callback(typeOrValue)) {
         bool wasSuccess = static_cast<bool>(*resultOpt);
         if (wasSuccess)
           results.push_back(*resultOpt);
@@ -358,18 +408,47 @@ private:
     });
   }
   /// With callback of form: `std::optional<LogicalResult>(
-  ///     T, SmallVectorImpl<Type> &, ArrayRef<Type>)`.
+  ///     T, SmallVectorImpl<Type> &)`, where `T` is a type.
   template <typename T, typename FnT>
-  std::enable_if_t<std::is_invocable_v<FnT, T, SmallVectorImpl<Type> &>,
+  std::enable_if_t<std::is_invocable_v<FnT, T, SmallVectorImpl<Type> &> &&
+                       std::is_base_of_v<Type, T>,
                    ConversionCallbackFn>
   wrapCallback(FnT &&callback) const {
     return [callback = std::forward<FnT>(callback)](
-               Type type,
+               PointerUnion<Type, Value> typeOrValue,
                SmallVectorImpl<Type> &results) -> std::optional<LogicalResult> {
-      T derivedType = dyn_cast<T>(type);
+      T derivedType;
+      if (Type t = dyn_cast<Type>(typeOrValue)) {
+        derivedType = dyn_cast<T>(t);
+      } else if (Value v = dyn_cast<Value>(typeOrValue)) {
+        derivedType = dyn_cast<T>(v.getType());
+      } else {
+        llvm_unreachable("unexpected variant");
+      }
       if (!derivedType)
         return std::nullopt;
       return callback(derivedType, results);
+    };
+  }
+  /// With callback of form: `std::optional<LogicalResult>(
+  ///     T, SmallVectorImpl<Type>)`, where `T` is a `Value`.
+  template <typename T, typename FnT>
+  std::enable_if_t<std::is_invocable_v<FnT, T, SmallVectorImpl<Type> &> &&
+                       std::is_same_v<T, Value>,
+                   ConversionCallbackFn>
+  wrapCallback(FnT &&callback) {
+    contextAwareTypeConversionsIndex = conversions.size();
+    return [callback = std::forward<FnT>(callback)](
+               PointerUnion<Type, Value> typeOrValue,
+               SmallVectorImpl<Type> &results) -> std::optional<LogicalResult> {
+      if (Type t = dyn_cast<Type>(typeOrValue)) {
+        // Context-aware type conversion was called with a type.
+        return std::nullopt;
+      } else if (Value v = dyn_cast<Value>(typeOrValue)) {
+        return callback(v, results);
+      }
+      llvm_unreachable("unexpected variant");
+      return std::nullopt;
     };
   }
 
@@ -380,18 +459,78 @@ private:
     cachedMultiConversions.clear();
   }
 
-  /// Generate a wrapper for the given materialization callback. The callback
-  /// may take any subclass of `Type` and the wrapper will check for the target
-  /// type to be of the expected class before calling the callback.
+  /// Generate a wrapper for the given source materialization callback. The
+  /// callback may take any subclass of `Type` and the wrapper will check for
+  /// the target type to be of the expected class before calling the callback.
   template <typename T, typename FnT>
-  MaterializationCallbackFn wrapMaterialization(FnT &&callback) const {
+  SourceMaterializationCallbackFn
+  wrapSourceMaterialization(FnT &&callback) const {
     return [callback = std::forward<FnT>(callback)](
                OpBuilder &builder, Type resultType, ValueRange inputs,
-               Location loc) -> std::optional<Value> {
+               Location loc) -> Value {
       if (T derivedType = dyn_cast<T>(resultType))
         return callback(builder, derivedType, inputs, loc);
-      return std::nullopt;
+      return Value();
     };
+  }
+
+  /// Generate a wrapper for the given target materialization callback.
+  /// The callback may take any subclass of `Type` and the wrapper will check
+  /// for the target type to be of the expected class before calling the
+  /// callback.
+  ///
+  /// With callback of form:
+  /// - Value(OpBuilder &, T, ValueRange, Location, Type)
+  /// - SmallVector<Value>(OpBuilder &, TypeRange, ValueRange, Location, Type)
+  template <typename T, typename FnT>
+  std::enable_if_t<
+      std::is_invocable_v<FnT, OpBuilder &, T, ValueRange, Location, Type>,
+      TargetMaterializationCallbackFn>
+  wrapTargetMaterialization(FnT &&callback) const {
+    return [callback = std::forward<FnT>(callback)](
+               OpBuilder &builder, TypeRange resultTypes, ValueRange inputs,
+               Location loc, Type originalType) -> SmallVector<Value> {
+      SmallVector<Value> result;
+      if constexpr (std::is_same<T, TypeRange>::value) {
+        // This is a 1:N target materialization. Return the produces values
+        // directly.
+        result = callback(builder, resultTypes, inputs, loc, originalType);
+      } else if constexpr (std::is_assignable<Type, T>::value) {
+        // This is a 1:1 target materialization. Invoke the callback only if a
+        // single SSA value is requested.
+        if (resultTypes.size() == 1) {
+          // Invoke the callback only if the type class of the callback matches
+          // the requested result type.
+          if (T derivedType = dyn_cast<T>(resultTypes.front())) {
+            // 1:1 materializations produce single values, but we store 1:N
+            // target materialization functions in the type converter. Wrap the
+            // result value in a SmallVector<Value>.
+            Value val =
+                callback(builder, derivedType, inputs, loc, originalType);
+            if (val)
+              result.push_back(val);
+          }
+        }
+      } else {
+        static_assert(sizeof(T) == 0, "T must be a Type or a TypeRange");
+      }
+      return result;
+    };
+  }
+  /// With callback of form:
+  /// - Value(OpBuilder &, T, ValueRange, Location)
+  /// - SmallVector<Value>(OpBuilder &, TypeRange, ValueRange, Location)
+  template <typename T, typename FnT>
+  std::enable_if_t<
+      std::is_invocable_v<FnT, OpBuilder &, T, ValueRange, Location>,
+      TargetMaterializationCallbackFn>
+  wrapTargetMaterialization(FnT &&callback) const {
+    return wrapTargetMaterialization<T>(
+        [callback = std::forward<FnT>(callback)](
+            OpBuilder &builder, T resultTypes, ValueRange inputs, Location loc,
+            Type originalType) {
+          return callback(builder, resultTypes, inputs, loc);
+        });
   }
 
   /// Generate a wrapper for the given memory space conversion callback. The
@@ -420,13 +559,16 @@ private:
     cachedMultiConversions.clear();
   }
 
+  /// Internal implementation of the type conversion.
+  LogicalResult convertTypeImpl(PointerUnion<Type, Value> t,
+                                SmallVectorImpl<Type> &results) const;
+
   /// The set of registered conversion functions.
   SmallVector<ConversionCallbackFn, 4> conversions;
 
   /// The list of registered materialization functions.
-  SmallVector<MaterializationCallbackFn, 2> argumentMaterializations;
-  SmallVector<MaterializationCallbackFn, 2> sourceMaterializations;
-  SmallVector<MaterializationCallbackFn, 2> targetMaterializations;
+  SmallVector<SourceMaterializationCallbackFn, 2> sourceMaterializations;
+  SmallVector<TargetMaterializationCallbackFn, 2> targetMaterializations;
 
   /// The list of registered type attribute conversion functions.
   SmallVector<TypeAttributeConversionCallbackFn, 2> typeAttributeConversions;
@@ -439,6 +581,15 @@ private:
   mutable DenseMap<Type, SmallVector<Type, 2>> cachedMultiConversions;
   /// A mutex used for cache access
   mutable llvm::sys::SmartRWMutex<true> cacheMutex;
+  /// Whether the type converter has context-aware type conversions. I.e.,
+  /// conversion rules that depend on the SSA value instead of just the type.
+  /// We store here the index in the `conversions` vector of the last added
+  /// context-aware conversion, if any. This is useful because we can't cache
+  /// the result of type conversion happening after context-aware conversions,
+  /// because the type converter may return different results for the same input
+  /// type. This is why it is recommened to add context-aware conversions first,
+  /// any context-free conversions after will benefit from caching.
+  int contextAwareTypeConversionsIndex = -1;
 };
 
 //===----------------------------------------------------------------------===//
@@ -450,24 +601,25 @@ private:
 /// patterns of this type can only be used with the 'apply*' methods below.
 class ConversionPattern : public RewritePattern {
 public:
-  /// Hook for derived classes to implement rewriting. `op` is the (first)
-  /// operation matched by the pattern, `operands` is a list of the rewritten
-  /// operand values that are passed to `op`, `rewriter` can be used to emit the
-  /// new operations. This function should not fail. If some specific cases of
-  /// the operation are not supported, these cases should not be matched.
-  virtual void rewrite(Operation *op, ArrayRef<Value> operands,
-                       ConversionPatternRewriter &rewriter) const {
-    llvm_unreachable("unimplemented rewrite");
-  }
+  using OpAdaptor = ArrayRef<Value>;
+  using OneToNOpAdaptor = ArrayRef<ValueRange>;
 
   /// Hook for derived classes to implement combined matching and rewriting.
+  /// This overload supports only 1:1 replacements. The 1:N overload is called
+  /// by the driver. By default, it calls this 1:1 overload or fails to match
+  /// if 1:N replacements were found.
   virtual LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const {
-    if (failed(match(op)))
-      return failure();
-    rewrite(op, operands, rewriter);
-    return success();
+    llvm_unreachable("matchAndRewrite is not implemented");
+  }
+
+  /// Hook for derived classes to implement combined matching and rewriting.
+  /// This overload supports 1:N replacements.
+  virtual LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<ValueRange> operands,
+                  ConversionPatternRewriter &rewriter) const {
+    return dispatchTo1To1(*this, op, operands, rewriter);
   }
 
   /// Attempt to match and rewrite the IR root at the specified operation.
@@ -496,12 +648,33 @@ protected:
       : RewritePattern(std::forward<Args>(args)...),
         typeConverter(&typeConverter) {}
 
+  /// Given an array of value ranges, which are the inputs to a 1:N adaptor,
+  /// try to extract the single value of each range to construct a the inputs
+  /// for a 1:1 adaptor.
+  ///
+  /// Returns failure if at least one range has 0 or more than 1 value.
+  FailureOr<SmallVector<Value>>
+  getOneToOneAdaptorOperands(ArrayRef<ValueRange> operands) const;
+
+  /// Overloaded method used to dispatch to the 1:1 'matchAndRewrite' method
+  /// if possible and emit diagnostic with a failure return value otherwise.
+  /// 'self' should be '*this' of the derived-pattern and is used to dispatch
+  /// to the correct 'matchAndRewrite' method in the derived pattern.
+  template <typename SelfPattern, typename SourceOp>
+  static LogicalResult dispatchTo1To1(const SelfPattern &self, SourceOp op,
+                                      ArrayRef<ValueRange> operands,
+                                      ConversionPatternRewriter &rewriter);
+
+  /// Same as above, but accepts an adaptor as operand.
+  template <typename SelfPattern, typename SourceOp>
+  static LogicalResult dispatchTo1To1(
+      const SelfPattern &self, SourceOp op,
+      typename SourceOp::template GenericAdaptor<ArrayRef<ValueRange>> adaptor,
+      ConversionPatternRewriter &rewriter);
+
 protected:
   /// An optional type converter for use by this pattern.
   const TypeConverter *typeConverter = nullptr;
-
-private:
-  using RewritePattern::rewrite;
 };
 
 /// OpConversionPattern is a wrapper around ConversionPattern that allows for
@@ -510,7 +683,13 @@ private:
 template <typename SourceOp>
 class OpConversionPattern : public ConversionPattern {
 public:
+  /// Type alias to allow derived classes to inherit constructors with
+  /// `using Base::Base;`.
+  using Base = OpConversionPattern;
+
   using OpAdaptor = typename SourceOp::Adaptor;
+  using OneToNOpAdaptor =
+      typename SourceOp::template GenericAdaptor<ArrayRef<ValueRange>>;
 
   OpConversionPattern(MLIRContext *context, PatternBenefit benefit = 1)
       : ConversionPattern(SourceOp::getOperationName(), benefit, context) {}
@@ -521,37 +700,31 @@ public:
 
   /// Wrappers around the ConversionPattern methods that pass the derived op
   /// type.
-  LogicalResult match(Operation *op) const final {
-    return match(cast<SourceOp>(op));
-  }
-  void rewrite(Operation *op, ArrayRef<Value> operands,
-               ConversionPatternRewriter &rewriter) const final {
-    auto sourceOp = cast<SourceOp>(op);
-    rewrite(sourceOp, OpAdaptor(operands, sourceOp), rewriter);
-  }
   LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const final {
     auto sourceOp = cast<SourceOp>(op);
     return matchAndRewrite(sourceOp, OpAdaptor(operands, sourceOp), rewriter);
   }
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<ValueRange> operands,
+                  ConversionPatternRewriter &rewriter) const final {
+    auto sourceOp = cast<SourceOp>(op);
+    return matchAndRewrite(sourceOp, OneToNOpAdaptor(operands, sourceOp),
+                           rewriter);
+  }
 
-  /// Rewrite and Match methods that operate on the SourceOp type. These must be
+  /// Methods that operate on the SourceOp type. One of these must be
   /// overridden by the derived pattern class.
-  virtual LogicalResult match(SourceOp op) const {
-    llvm_unreachable("must override match or matchAndRewrite");
-  }
-  virtual void rewrite(SourceOp op, OpAdaptor adaptor,
-                       ConversionPatternRewriter &rewriter) const {
-    llvm_unreachable("must override matchAndRewrite or a rewrite method");
-  }
   virtual LogicalResult
   matchAndRewrite(SourceOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const {
-    if (failed(match(op)))
-      return failure();
-    rewrite(op, adaptor, rewriter);
-    return success();
+    llvm_unreachable("matchAndRewrite is not implemented");
+  }
+  virtual LogicalResult
+  matchAndRewrite(SourceOp op, OneToNOpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const {
+    return dispatchTo1To1(*this, op, adaptor, rewriter);
   }
 
 private:
@@ -564,6 +737,10 @@ private:
 template <typename SourceOp>
 class OpInterfaceConversionPattern : public ConversionPattern {
 public:
+  /// Type alias to allow derived classes to inherit constructors with
+  /// `using Base::Base;`.
+  using Base = OpInterfaceConversionPattern;
+
   OpInterfaceConversionPattern(MLIRContext *context, PatternBenefit benefit = 1)
       : ConversionPattern(Pattern::MatchInterfaceOpTypeTag(),
                           SourceOp::getInterfaceID(), benefit, context) {}
@@ -574,51 +751,79 @@ public:
 
   /// Wrappers around the ConversionPattern methods that pass the derived op
   /// type.
-  void rewrite(Operation *op, ArrayRef<Value> operands,
-               ConversionPatternRewriter &rewriter) const final {
-    rewrite(cast<SourceOp>(op), operands, rewriter);
-  }
   LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const final {
     return matchAndRewrite(cast<SourceOp>(op), operands, rewriter);
   }
-
-  /// Rewrite and Match methods that operate on the SourceOp type. These must be
-  /// overridden by the derived pattern class.
-  virtual void rewrite(SourceOp op, ArrayRef<Value> operands,
-                       ConversionPatternRewriter &rewriter) const {
-    llvm_unreachable("must override matchAndRewrite or a rewrite method");
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<ValueRange> operands,
+                  ConversionPatternRewriter &rewriter) const final {
+    return matchAndRewrite(cast<SourceOp>(op), operands, rewriter);
   }
+
+  /// Methods that operate on the SourceOp type. One of these must be
+  /// overridden by the derived pattern class.
   virtual LogicalResult
   matchAndRewrite(SourceOp op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const {
-    if (failed(match(op)))
-      return failure();
-    rewrite(op, operands, rewriter);
-    return success();
+    llvm_unreachable("matchAndRewrite is not implemented");
+  }
+  virtual LogicalResult
+  matchAndRewrite(SourceOp op, ArrayRef<ValueRange> operands,
+                  ConversionPatternRewriter &rewriter) const {
+    return dispatchTo1To1(*this, op, operands, rewriter);
   }
 
 private:
   using ConversionPattern::matchAndRewrite;
 };
 
+/// OpTraitConversionPattern is a wrapper around ConversionPattern that allows
+/// for matching and rewriting against instances of an operation that possess a
+/// given trait.
+template <template <typename> class TraitType>
+class OpTraitConversionPattern : public ConversionPattern {
+public:
+  /// Type alias to allow derived classes to inherit constructors with
+  /// `using Base::Base;`.
+  using Base = OpTraitConversionPattern;
+
+  OpTraitConversionPattern(MLIRContext *context, PatternBenefit benefit = 1)
+      : ConversionPattern(Pattern::MatchTraitOpTypeTag(),
+                          TypeID::get<TraitType>(), benefit, context) {}
+  OpTraitConversionPattern(const TypeConverter &typeConverter,
+                           MLIRContext *context, PatternBenefit benefit = 1)
+      : ConversionPattern(typeConverter, Pattern::MatchTraitOpTypeTag(),
+                          TypeID::get<TraitType>(), benefit, context) {}
+};
+
+/// Generic utility to convert op result types according to type converter
+/// without knowing exact op type.
+/// Clones existing op with new result types and returns it.
+FailureOr<Operation *>
+convertOpResultTypes(Operation *op, ValueRange operands,
+                     const TypeConverter &converter,
+                     ConversionPatternRewriter &rewriter);
+
 /// Add a pattern to the given pattern list to convert the signature of a
 /// FunctionOpInterface op with the given type converter. This only supports
 /// ops which use FunctionType to represent their type.
 void populateFunctionOpInterfaceTypeConversionPattern(
     StringRef functionLikeOpName, RewritePatternSet &patterns,
-    const TypeConverter &converter);
+    const TypeConverter &converter, PatternBenefit benefit = 1);
 
 template <typename FuncOpT>
 void populateFunctionOpInterfaceTypeConversionPattern(
-    RewritePatternSet &patterns, const TypeConverter &converter) {
-  populateFunctionOpInterfaceTypeConversionPattern(FuncOpT::getOperationName(),
-                                                   patterns, converter);
+    RewritePatternSet &patterns, const TypeConverter &converter,
+    PatternBenefit benefit = 1) {
+  populateFunctionOpInterfaceTypeConversionPattern(
+      FuncOpT::getOperationName(), patterns, converter, benefit);
 }
 
 void populateAnyFunctionOpInterfaceTypeConversionPattern(
-    RewritePatternSet &patterns, const TypeConverter &converter);
+    RewritePatternSet &patterns, const TypeConverter &converter,
+    PatternBenefit benefit = 1);
 
 //===----------------------------------------------------------------------===//
 // Conversion PatternRewriter
@@ -631,44 +836,93 @@ struct ConversionPatternRewriterImpl;
 /// This class implements a pattern rewriter for use with ConversionPatterns. It
 /// extends the base PatternRewriter and provides special conversion specific
 /// hooks.
-class ConversionPatternRewriter final : public PatternRewriter,
-                                        public RewriterBase::Listener {
+class ConversionPatternRewriter final : public PatternRewriter {
 public:
-  explicit ConversionPatternRewriter(MLIRContext *ctx);
   ~ConversionPatternRewriter() override;
 
-  /// Apply a signature conversion to the entry block of the given region. This
-  /// replaces the entry block with a new block containing the updated
-  /// signature. The new entry block to the region is returned for convenience.
+  /// Return the configuration of the current dialect conversion.
+  const ConversionConfig &getConfig() const;
+
+  /// Apply a signature conversion to given block. This replaces the block with
+  /// a new block containing the updated signature. The operations of the given
+  /// block are inlined into the newly-created block, which is returned.
   ///
-  /// If provided, `converter` will be used for any materializations.
+  /// If no block argument types are changing, the original block will be
+  /// left in place and returned.
+  ///
+  /// A signature converison must be provided. (Type converters can construct
+  /// a signature conversion with `convertBlockSignature`.)
+  ///
+  /// Optionally, a type converter can be provided to build materializations.
+  /// Note: If no type converter was provided or the type converter does not
+  /// specify any suitable source/target materialization rules, the dialect
+  /// conversion may fail to legalize unresolved materializations.
   Block *
-  applySignatureConversion(Region *region,
+  applySignatureConversion(Block *block,
                            TypeConverter::SignatureConversion &conversion,
                            const TypeConverter *converter = nullptr);
 
-  /// Convert the types of block arguments within the given region. This
-  /// replaces each block with a new block containing the updated signature. The
-  /// entry block may have a special conversion if `entryConversion` is
-  /// provided. On success, the new entry block to the region is returned for
-  /// convenience. Otherwise, failure is returned.
+  /// Apply a signature conversion to each block in the given region. This
+  /// replaces each block with a new block containing the updated signature. If
+  /// an updated signature would match the current signature, the respective
+  /// block is left in place as is. (See `applySignatureConversion` for
+  /// details.) The new entry block of the region is returned.
+  ///
+  /// SignatureConversions are computed with the specified type converter.
+  /// This function returns "failure" if the type converter failed to compute
+  /// a SignatureConversion for at least one block.
+  ///
+  /// Optionally, a special SignatureConversion can be specified for the entry
+  /// block. This is because the types of the entry block arguments are often
+  /// tied semantically to the operation.
   FailureOr<Block *> convertRegionTypes(
       Region *region, const TypeConverter &converter,
       TypeConverter::SignatureConversion *entryConversion = nullptr);
 
-  /// Convert the types of block arguments within the given region except for
-  /// the entry region. This replaces each non-entry block with a new block
-  /// containing the updated signature.
+  /// Replace all the uses of `from` with `to`. The type of `from` and `to` is
+  /// allowed to differ. The conversion driver will try to reconcile all type
+  /// mismatches that still exist at the end of the conversion with
+  /// materializations. This function supports both 1:1 and 1:N replacements.
   ///
-  /// If special conversion behavior is needed for the non-entry blocks (for
-  /// example, we need to convert only a subset of a BB arguments), such
-  /// behavior can be specified in blockConversions.
-  LogicalResult convertNonEntryRegionTypes(
-      Region *region, const TypeConverter &converter,
-      ArrayRef<TypeConverter::SignatureConversion> blockConversions);
+  /// Note: If `allowPatternRollback` is set to "true", this function behaves
+  /// slightly different:
+  ///
+  /// 1. All current and future uses of `from` are replaced. The same value must
+  ///    not be replaced multiple times. That's an API violation.
+  /// 2. Uses are not replaced immediately but in a delayed fashion. Patterns
+  ///    may still see the original uses when inspecting IR.
+  /// 3. Uses within the same block that appear before the defining operation
+  ///    of the replacement value are not replaced. This allows users to
+  ///    perform certain replaceAllUsesExcept-style replacements, even though
+  ///    such API is not directly supported.
+  ///
+  /// Note: In an attempt to align the ConversionPatternRewriter and
+  /// RewriterBase APIs, (3) may be removed in the future.
+  void replaceAllUsesWith(Value from, ValueRange to);
+  void replaceAllUsesWith(Value from, Value to) override {
+    replaceAllUsesWith(from, ValueRange{to});
+  }
 
-  /// Replace all the uses of the block argument `from` with value `to`.
-  void replaceUsesOfBlockArgument(BlockArgument from, Value to);
+  /// Replace the uses of `from` with `to` for which the `functor` returns
+  /// "true". The conversion driver will try to reconcile all type mismatches
+  /// that still exist at the end of the conversion with materializations.
+  /// This function supports both 1:1 and 1:N replacements.
+  ///
+  /// Note: The functor is also applied to builtin.unrealized_conversion_cast
+  /// ops that may have been inserted by the conversion driver. Some uses may
+  /// have been wrapped in unrealized_conversion_cast ops due to type changes.
+  ///
+  /// Note: This function is not supported in rollback mode. Calling it in
+  /// rollback mode will trigger an assertion. Furthermore, the
+  /// `allUsesReplaced` flag is not supported yet.
+  void replaceUsesWithIf(Value from, Value to,
+                         function_ref<bool(OpOperand &)> functor,
+                         bool *allUsesReplaced = nullptr) override {
+    replaceUsesWithIf(from, ValueRange{to}, functor, allUsesReplaced);
+  }
+  void replaceUsesWithIf(Value from, ValueRange to,
+                         function_ref<bool(OpOperand &)> functor,
+                         bool *allUsesReplaced = nullptr);
 
   /// Return the converted value of 'key' with a type defined by the type
   /// converter of the currently executing pattern. Return nullptr in the case
@@ -690,17 +944,34 @@ public:
   /// patterns even if a failure is encountered during the rewrite step.
   bool canRecoverFromRewriteFailure() const override { return true; }
 
-  /// PatternRewriter hook for replacing an operation when the given functor
-  /// returns "true".
-  void replaceOpWithIf(
-      Operation *op, ValueRange newValues, bool *allUsesReplaced,
-      llvm::unique_function<bool(OpOperand &) const> functor) override;
-
-  /// PatternRewriter hook for replacing an operation.
+  /// Replace the given operation with the new values. The number of op results
+  /// and replacement values must match. The types may differ: the dialect
+  /// conversion driver will reconcile any surviving type mismatches at the end
+  /// of the conversion process with source materializations. The given
+  /// operation is erased.
   void replaceOp(Operation *op, ValueRange newValues) override;
 
-  /// PatternRewriter hook for replacing an operation.
+  /// Replace the given operation with the results of the new op. The number of
+  /// op results must match. The types may differ: the dialect conversion
+  /// driver will reconcile any surviving type mismatches at the end of the
+  /// conversion process with source materializations. The original operation
+  /// is erased.
   void replaceOp(Operation *op, Operation *newOp) override;
+
+  /// Replace the given operation with the new value ranges. The number of op
+  /// results and value ranges must match. The given  operation is erased.
+  void replaceOpWithMultiple(Operation *op,
+                             SmallVector<SmallVector<Value>> &&newValues);
+  template <typename RangeT = ValueRange>
+  void replaceOpWithMultiple(Operation *op, ArrayRef<RangeT> newValues) {
+    replaceOpWithMultiple(op,
+                          llvm::to_vector_of<SmallVector<Value>>(newValues));
+  }
+  template <typename RangeT>
+  void replaceOpWithMultiple(Operation *op, RangeT &&newValues) {
+    replaceOpWithMultiple(op,
+                          ArrayRef(llvm::to_vector_of<ValueRange>(newValues)));
+  }
 
   /// PatternRewriter hook for erasing a dead operation. The uses of this
   /// operation *must* be made dead by the end of the conversion process,
@@ -711,60 +982,93 @@ public:
   /// implemented for dialect conversion.
   void eraseBlock(Block *block) override;
 
-  /// PatternRewriter hook creating a new block.
-  void notifyBlockCreated(Block *block) override;
-
-  /// PatternRewriter hook for splitting a block into two parts.
-  Block *splitBlock(Block *block, Block::iterator before) override;
-
   /// PatternRewriter hook for inlining the ops of a block into another block.
   void inlineBlockBefore(Block *source, Block *dest, Block::iterator before,
-                         ValueRange argValues = std::nullopt) override;
+                         ValueRange argValues = {}) override;
   using PatternRewriter::inlineBlockBefore;
 
-  /// PatternRewriter hook for moving blocks out of a region.
-  void inlineRegionBefore(Region &region, Region &parent,
-                          Region::iterator before) override;
-  using PatternRewriter::inlineRegionBefore;
-
-  /// PatternRewriter hook for cloning blocks of one region into another. The
-  /// given region to clone *must* not have been modified as part of conversion
-  /// yet, i.e. it must be within an operation that is either in the process of
-  /// conversion, or has not yet been converted.
-  void cloneRegionBefore(Region &region, Region &parent,
-                         Region::iterator before, IRMapping &mapping) override;
-  using PatternRewriter::cloneRegionBefore;
-
-  /// PatternRewriter hook for inserting a new operation.
-  void notifyOperationInserted(Operation *op) override;
-
-  /// PatternRewriter hook for updating the root operation in-place.
-  /// Note: These methods only track updates to the top-level operation itself,
+  /// PatternRewriter hook for updating the given operation in-place.
+  /// Note: These methods only track updates to the given operation itself,
   /// and not nested regions. Updates to regions will still require notification
   /// through other more specific hooks above.
-  void startRootUpdate(Operation *op) override;
+  void startOpModification(Operation *op) override;
 
-  /// PatternRewriter hook for updating the root operation in-place.
-  void finalizeRootUpdate(Operation *op) override;
+  /// PatternRewriter hook for updating the given operation in-place.
+  void finalizeOpModification(Operation *op) override;
 
-  /// PatternRewriter hook for updating the root operation in-place.
-  void cancelRootUpdate(Operation *op) override;
-
-  /// PatternRewriter hook for notifying match failure reasons.
-  LogicalResult
-  notifyMatchFailure(Location loc,
-                     function_ref<void(Diagnostic &)> reasonCallback) override;
-  using PatternRewriter::notifyMatchFailure;
+  /// PatternRewriter hook for updating the given operation in-place.
+  void cancelOpModification(Operation *op) override;
 
   /// Return a reference to the internal implementation.
   detail::ConversionPatternRewriterImpl &getImpl();
 
+  /// Attempt to legalize the given operation. This can be used within
+  /// conversion patterns to change the default pre-order legalization order.
+  /// Returns "success" if the operation was legalized, "failure" otherwise.
+  ///
+  /// Note: In a partial conversion, this function returns "success" even if
+  /// the operation could not be legalized, as long as it was not explicitly
+  /// marked as illegal in the conversion target.
+  LogicalResult legalize(Operation *op);
+
+  /// Attempt to legalize the given region. This can be used within
+  /// conversion patterns to change the default pre-order legalization order.
+  /// Returns "success" if the region was legalized, "failure" otherwise.
+  ///
+  /// If the current pattern runs with a type converter, the entry block
+  /// signature will be converted before legalizing the operations in the
+  /// region.
+  ///
+  /// Note: In a partial conversion, this function returns "success" even if
+  /// an operation could not be legalized, as long as it was not explicitly
+  /// marked as illegal in the conversion target.
+  LogicalResult legalize(Region *r);
+
 private:
-  using OpBuilder::getListener;
+  // Allow OperationConverter to construct new rewriters.
+  friend struct OperationConverter;
+
+  /// Conversion pattern rewriters must not be used outside of dialect
+  /// conversions. They apply some IR rewrites in a delayed fashion and could
+  /// bring the IR into an inconsistent state when used standalone.
+  explicit ConversionPatternRewriter(MLIRContext *ctx,
+                                     const ConversionConfig &config,
+                                     OperationConverter &converter);
+
+  // Hide unsupported pattern rewriter API.
   using OpBuilder::setListener;
 
   std::unique_ptr<detail::ConversionPatternRewriterImpl> impl;
 };
+
+template <typename SelfPattern, typename SourceOp>
+LogicalResult
+ConversionPattern::dispatchTo1To1(const SelfPattern &self, SourceOp op,
+                                  ArrayRef<ValueRange> operands,
+                                  ConversionPatternRewriter &rewriter) {
+  FailureOr<SmallVector<Value>> oneToOneOperands =
+      self.getOneToOneAdaptorOperands(operands);
+  if (failed(oneToOneOperands))
+    return rewriter.notifyMatchFailure(op,
+                                       "pattern '" + self.getDebugName() +
+                                           "' does not support 1:N conversion");
+  return self.matchAndRewrite(op, *oneToOneOperands, rewriter);
+}
+
+template <typename SelfPattern, typename SourceOp>
+LogicalResult ConversionPattern::dispatchTo1To1(
+    const SelfPattern &self, SourceOp op,
+    typename SourceOp::template GenericAdaptor<ArrayRef<ValueRange>> adaptor,
+    ConversionPatternRewriter &rewriter) {
+  FailureOr<SmallVector<Value>> oneToOneOperands =
+      self.getOneToOneAdaptorOperands(adaptor.getOperands());
+  if (failed(oneToOneOperands))
+    return rewriter.notifyMatchFailure(op,
+                                       "pattern '" + self.getDebugName() +
+                                           "' does not support 1:N conversion");
+  return self.matchAndRewrite(
+      op, typename SourceOp::Adaptor(*oneToOneOperands, adaptor), rewriter);
+}
 
 //===----------------------------------------------------------------------===//
 // ConversionTarget
@@ -1015,6 +1319,7 @@ private:
   MLIRContext &ctx;
 };
 
+#if MLIR_ENABLE_PDL_IN_PATTERNMATCH
 //===----------------------------------------------------------------------===//
 // PDL Configuration
 //===----------------------------------------------------------------------===//
@@ -1044,6 +1349,154 @@ private:
 /// Register the dialect conversion PDL functions with the given pattern set.
 void registerConversionPDLFunctions(RewritePatternSet &patterns);
 
+#else
+
+// Stubs for when PDL in rewriting is not enabled.
+
+inline void registerConversionPDLFunctions(RewritePatternSet &patterns) {}
+
+class PDLConversionConfig final {
+public:
+  PDLConversionConfig(const TypeConverter * /*converter*/) {}
+};
+
+#endif // MLIR_ENABLE_PDL_IN_PATTERNMATCH
+
+//===----------------------------------------------------------------------===//
+// ConversionConfig
+//===----------------------------------------------------------------------===//
+
+/// An enum to control folding behavior during dialect conversion.
+enum class DialectConversionFoldingMode {
+  /// Never attempt to fold.
+  Never,
+  /// Only attempt to fold not legal operations before applying patterns.
+  BeforePatterns,
+  /// Only attempt to fold not legal operations after applying patterns.
+  AfterPatterns,
+};
+
+/// Dialect conversion configuration.
+struct ConversionConfig {
+  /// An optional callback used to notify about match failure diagnostics during
+  /// the conversion. Diagnostics reported to this callback may only be
+  /// available in debug mode.
+  function_ref<void(Diagnostic &)> notifyCallback = nullptr;
+
+  /// Partial conversion only. All operations that are found not to be
+  /// legalizable are placed in this set. (Note that if there is an op
+  /// explicitly marked as illegal, the conversion terminates and the set will
+  /// not necessarily be complete.)
+  DenseSet<Operation *> *unlegalizedOps = nullptr;
+
+  /// Analysis conversion only. All operations that are found to be legalizable
+  /// are placed in this set. Note that no actual rewrites are applied to the
+  /// IR during an analysis conversion and only pre-existing operations are
+  /// added to the set.
+  DenseSet<Operation *> *legalizableOps = nullptr;
+
+  /// An optional listener that is notified about all IR modifications in case
+  /// dialect conversion succeeds. If the dialect conversion fails and no IR
+  /// modifications are visible (i.e., they were all rolled back), or if the
+  /// dialect conversion is an "analysis conversion", no notifications are
+  /// sent (apart from `notifyPatternBegin`/notifyPatternEnd`).
+  ///
+  /// Note: Notifications are sent in a delayed fashion, when the dialect
+  /// conversion is guaranteed to succeed. At that point, some IR modifications
+  /// may already have been materialized. Consequently, operations/blocks that
+  /// are passed to listener callbacks should not be accessed. (Ops/blocks are
+  /// guaranteed to be valid pointers and accessing op names is allowed. But
+  /// there are no guarantees about the state of ops/blocks at the time that a
+  /// callback is triggered.)
+  ///
+  /// Example: Consider a dialect conversion a new op ("test.foo") is created
+  /// and inserted, and later moved to another block. (Moving ops also triggers
+  /// "notifyOperationInserted".)
+  ///
+  /// (1) notifyOperationInserted: "test.foo" (into block "b1")
+  /// (2) notifyOperationInserted: "test.foo" (moved to another block "b2")
+  ///
+  /// When querying "op->getBlock()" during the first "notifyOperationInserted",
+  /// "b2" would be returned because "moving an op" is a kind of rewrite that is
+  /// immediately performed by the dialect conversion (and rolled back upon
+  /// failure).
+  //
+  // Note: When receiving a "notifyBlockInserted"/"notifyOperationInserted"
+  // callback, the previous region/block is provided to the callback, but not
+  // the iterator pointing to the exact location within the region/block. That
+  // is because these notifications are sent with a delay (after the IR has
+  // already been modified) and iterators into past IR state cannot be
+  // represented at the moment.
+  RewriterBase::Listener *listener = nullptr;
+
+  /// If set to "true", the dialect conversion attempts to build source/target
+  /// materializations through the type converter API in lieu of
+  /// "builtin.unrealized_conversion_cast ops". The conversion process fails if
+  /// at least one materialization could not be built.
+  ///
+  /// If set to "false", the dialect conversion does not build any custom
+  /// materializations and instead inserts "builtin.unrealized_conversion_cast"
+  /// ops to ensure that the resulting IR is valid.
+  bool buildMaterializations = true;
+
+  /// If set to "true", pattern rollback is allowed. The conversion driver
+  /// rolls back IR modifications in the following situations.
+  ///
+  /// 1. Pattern implementation returns "failure" after modifying IR.
+  /// 2. Pattern produces IR (in-place modification or new IR) that is illegal
+  ///    and cannot be legalized by subsequent foldings / pattern applications.
+  ///
+  /// Experimental: If set to "false", the conversion driver will produce an
+  /// LLVM fatal error instead of rolling back IR modifications. Moreover, in
+  /// case of a failed conversion, the original IR is not restored. The
+  /// resulting IR may be a mix of original and rewritten IR. (Same as a failed
+  /// greedy pattern rewrite.) Use the cmake build option
+  /// `-DMLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS=ON` (ideally together with
+  /// ASAN) to detect invalid pattern API usage.
+  ///
+  /// When pattern rollback is disabled, the conversion driver has to maintain
+  /// less internal state. This is more efficient, but not supported by all
+  /// lowering patterns. For details, see
+  /// https://discourse.llvm.org/t/rfc-a-new-one-shot-dialect-conversion-driver/79083.
+  bool allowPatternRollback = true;
+
+  /// The folding mode to use during conversion.
+  DialectConversionFoldingMode foldingMode =
+      DialectConversionFoldingMode::BeforePatterns;
+
+  /// If set to "true", the materialization kind ("source" or "target") will be
+  /// attached to "builtin.unrealized_conversion_cast" ops. This flag is useful
+  /// for debugging, to find out what kind of materialization rule may be
+  /// missing.
+  bool attachDebugMaterializationKind = false;
+};
+
+//===----------------------------------------------------------------------===//
+// Reconcile Unrealized Casts
+//===----------------------------------------------------------------------===//
+
+/// Try to reconcile all given UnrealizedConversionCastOps and store the
+/// left-over ops in `remainingCastOps` (if provided).
+///
+/// This function processes cast ops in a worklist-driven fashion. For each
+/// cast op, if the chain of input casts eventually reaches a cast op where the
+/// input types match the output types of the matched op, replace the matched
+/// op with the inputs.
+///
+/// Example:
+/// %1 = unrealized_conversion_cast %0 : !A to !B
+/// %2 = unrealized_conversion_cast %1 : !B to !C
+/// %3 = unrealized_conversion_cast %2 : !C to !A
+///
+/// In the above example, %0 can be used instead of %3 and all cast ops are
+/// folded away.
+void reconcileUnrealizedCasts(
+    const DenseSet<UnrealizedConversionCastOp> &castOps,
+    SmallVectorImpl<UnrealizedConversionCastOp> *remainingCastOps = nullptr);
+void reconcileUnrealizedCasts(
+    ArrayRef<UnrealizedConversionCastOp> castOps,
+    SmallVectorImpl<UnrealizedConversionCastOp> *remainingCastOps = nullptr);
+
 //===----------------------------------------------------------------------===//
 // Op Conversion Entry Points
 //===----------------------------------------------------------------------===//
@@ -1057,19 +1510,16 @@ void registerConversionPDLFunctions(RewritePatternSet &patterns);
 /// Apply a partial conversion on the given operations and all nested
 /// operations. This method converts as many operations to the target as
 /// possible, ignoring operations that failed to legalize. This method only
-/// returns failure if there ops explicitly marked as illegal. If an
-/// `unconvertedOps` set is provided, all operations that are found not to be
-/// legalizable to the given `target` are placed within that set. (Note that if
-/// there is an op explicitly marked as illegal, the conversion terminates and
-/// the `unconvertedOps` set will not necessarily be complete.)
+/// returns failure if there ops explicitly marked as illegal.
 LogicalResult
-applyPartialConversion(ArrayRef<Operation *> ops, const ConversionTarget &target,
+applyPartialConversion(ArrayRef<Operation *> ops,
+                       const ConversionTarget &target,
                        const FrozenRewritePatternSet &patterns,
-                       DenseSet<Operation *> *unconvertedOps = nullptr);
+                       ConversionConfig config = ConversionConfig());
 LogicalResult
 applyPartialConversion(Operation *op, const ConversionTarget &target,
                        const FrozenRewritePatternSet &patterns,
-                       DenseSet<Operation *> *unconvertedOps = nullptr);
+                       ConversionConfig config = ConversionConfig());
 
 /// Apply a complete conversion on the given operations, and all nested
 /// operations. This method returns failure if the conversion of any operation
@@ -1077,31 +1527,27 @@ applyPartialConversion(Operation *op, const ConversionTarget &target,
 /// within 'ops'.
 LogicalResult applyFullConversion(ArrayRef<Operation *> ops,
                                   const ConversionTarget &target,
-                                  const FrozenRewritePatternSet &patterns);
+                                  const FrozenRewritePatternSet &patterns,
+                                  ConversionConfig config = ConversionConfig());
 LogicalResult applyFullConversion(Operation *op, const ConversionTarget &target,
-                                  const FrozenRewritePatternSet &patterns);
+                                  const FrozenRewritePatternSet &patterns,
+                                  ConversionConfig config = ConversionConfig());
 
 /// Apply an analysis conversion on the given operations, and all nested
 /// operations. This method analyzes which operations would be successfully
 /// converted to the target if a conversion was applied. All operations that
 /// were found to be legalizable to the given 'target' are placed within the
-/// provided 'convertedOps' set; note that no actual rewrites are applied to the
-/// operations on success and only pre-existing operations are added to the set.
-/// This method only returns failure if there are unreachable blocks in any of
-/// the regions nested within 'ops'. There's an additional argument
-/// `notifyCallback` which is used for collecting match failure diagnostics
-/// generated during the conversion. Diagnostics are only reported to this
-/// callback may only be available in debug mode.
-LogicalResult applyAnalysisConversion(
-    ArrayRef<Operation *> ops, ConversionTarget &target,
-    const FrozenRewritePatternSet &patterns,
-    DenseSet<Operation *> &convertedOps,
-    function_ref<void(Diagnostic &)> notifyCallback = nullptr);
-LogicalResult applyAnalysisConversion(
-    Operation *op, ConversionTarget &target,
-    const FrozenRewritePatternSet &patterns,
-    DenseSet<Operation *> &convertedOps,
-    function_ref<void(Diagnostic &)> notifyCallback = nullptr);
+/// provided 'config.legalizableOps' set; note that no actual rewrites are
+/// applied to the operations on success. This method only returns failure if
+/// there are unreachable blocks in any of the regions nested within 'ops'.
+LogicalResult
+applyAnalysisConversion(ArrayRef<Operation *> ops, ConversionTarget &target,
+                        const FrozenRewritePatternSet &patterns,
+                        ConversionConfig config = ConversionConfig());
+LogicalResult
+applyAnalysisConversion(Operation *op, ConversionTarget &target,
+                        const FrozenRewritePatternSet &patterns,
+                        ConversionConfig config = ConversionConfig());
 } // namespace mlir
 
 #endif // MLIR_TRANSFORMS_DIALECTCONVERSION_H_

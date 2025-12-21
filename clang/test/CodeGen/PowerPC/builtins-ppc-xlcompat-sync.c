@@ -194,6 +194,18 @@ void test_dcbz() {
   __dcbz(c);
 }
 
+// CHECK-LABEL: @test_fence(
+// CHECK:         call void @llvm.ppc.fence()
+// CHECK-NEXT:    ret void
+//
+// CHECK-32-LABEL: @test_fence(
+// CHECK-32:         call void @llvm.ppc.fence()
+// CHECK-32-NEXT:    ret void
+//
+void test_fence() {
+  __fence();
+}
+
 // CHECK-LABEL: @test_builtin_ppc_popcntb(
 // CHECK:    [[TMP0:%.*]] = load i64, ptr @a, align 8
 // CHECK-NEXT:    [[POPCNTB:%.*]] = call i64 @llvm.ppc.popcntb.i64.i64(i64 [[TMP0]])
@@ -374,4 +386,16 @@ void test_builtin_ppc_dcbtst() {
 //
 void test_builtin_ppc_dcbz() {
   __builtin_ppc_dcbz(c);
+}
+
+// CHECK-LABEL: @test_builtin_ppc_fence(
+// CHECK:         call void @llvm.ppc.fence()
+// CHECK-NEXT:    ret void
+//
+// CHECK-32-LABEL: @test_builtin_ppc_fence(
+// CHECK-32:         call void @llvm.ppc.fence()
+// CHECK-32-NEXT:    ret void
+//
+void test_builtin_ppc_fence() {
+  __builtin_ppc_fence();
 }

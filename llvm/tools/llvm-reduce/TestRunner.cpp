@@ -13,17 +13,18 @@
 
 using namespace llvm;
 
-TestRunner::TestRunner(StringRef TestName,
-                       const std::vector<std::string> &TestArgs,
+TestRunner::TestRunner(StringRef TestName, ArrayRef<std::string> RawTestArgs,
                        std::unique_ptr<ReducerWorkItem> Program,
                        std::unique_ptr<TargetMachine> TM, StringRef ToolName,
                        StringRef OutputName, bool InputIsBitcode,
                        bool OutputBitcode)
-    : TestName(TestName), ToolName(ToolName), TestArgs(TestArgs),
-      Program(std::move(Program)), TM(std::move(TM)),
-      OutputFilename(OutputName), InputIsBitcode(InputIsBitcode),
-      EmitBitcode(OutputBitcode) {
+    : TestName(TestName), ToolName(ToolName), Program(std::move(Program)),
+      TM(std::move(TM)), OutputFilename(OutputName),
+      InputIsBitcode(InputIsBitcode), EmitBitcode(OutputBitcode) {
   assert(this->Program && "Initialized with null program?");
+
+  TestArgs.push_back(TestName); // argv[0]
+  TestArgs.append(RawTestArgs.begin(), RawTestArgs.end());
 }
 
 static constexpr std::array<std::optional<StringRef>, 3> DefaultRedirects = {
@@ -33,25 +34,19 @@ static constexpr std::array<std::optional<StringRef>, 3> NullRedirects;
 /// Runs the interestingness test, passes file to be tested as first argument
 /// and other specified test arguments after that.
 int TestRunner::run(StringRef Filename) const {
-  std::vector<StringRef> ProgramArgs;
-  ProgramArgs.push_back(TestName);
-
-  for (const auto &Arg : TestArgs)
-    ProgramArgs.push_back(Arg);
-
-  ProgramArgs.push_back(Filename);
+  SmallVector<StringRef> ExecArgs(TestArgs);
+  ExecArgs.push_back(Filename);
 
   std::string ErrMsg;
 
   int Result =
-      sys::ExecuteAndWait(TestName, ProgramArgs, /*Env=*/std::nullopt,
+      sys::ExecuteAndWait(TestName, ExecArgs, /*Env=*/std::nullopt,
                           Verbose ? DefaultRedirects : NullRedirects,
                           /*SecondsToWait=*/0, /*MemoryLimit=*/0, &ErrMsg);
 
   if (Result < 0) {
-    Error E = make_error<StringError>("Error running interesting-ness test: " +
-                                          ErrMsg,
-                                      inconvertibleErrorCode());
+    Error E = make_error<StringError>(
+        "running interesting-ness test: " + ErrMsg, inconvertibleErrorCode());
     WithColor::error(errs(), ToolName) << toString(std::move(E)) << '\n';
     exit(1);
   }
@@ -65,7 +60,8 @@ void TestRunner::writeOutput(StringRef Message) {
                      EmitBitcode && !Program->isMIR() ? sys::fs::OF_None
                                                       : sys::fs::OF_Text);
   if (EC) {
-    errs() << "Error opening output file: " << EC.message() << "!\n";
+    WithColor::error(errs(), ToolName)
+        << "opening output file: " << EC.message() << '\n';
     exit(1);
   }
 

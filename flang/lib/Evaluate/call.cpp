@@ -7,13 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Evaluate/call.h"
-#include "flang/Common/Fortran.h"
 #include "flang/Common/idioms.h"
 #include "flang/Evaluate/characteristics.h"
 #include "flang/Evaluate/check-expression.h"
 #include "flang/Evaluate/expression.h"
 #include "flang/Evaluate/tools.h"
 #include "flang/Semantics/symbol.h"
+#include "flang/Support/Fortran.h"
 
 namespace Fortran::evaluate {
 
@@ -57,8 +57,7 @@ int ActualArgument::Rank() const {
 }
 
 bool ActualArgument::operator==(const ActualArgument &that) const {
-  return keyword_ == that.keyword_ && isPassedObject_ == that.isPassedObject_ &&
-      u_ == that.u_;
+  return keyword_ == that.keyword_ && attrs_ == that.attrs_ && u_ == that.u_;
 }
 
 void ActualArgument::Parenthesize() {

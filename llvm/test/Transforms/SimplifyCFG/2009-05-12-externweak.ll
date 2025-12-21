@@ -16,7 +16,8 @@ define i32 @main() nounwind ssp {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[BB4:%.*]]
 ; CHECK:       bb:
-; CHECK-NEXT:    br i1 icmp ne (ptr @i, ptr null), label [[BB1:%.*]], label [[BB3:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne ptr @i, null
+; CHECK-NEXT:    br i1 [[CMP]], label [[BB1:%.*]], label [[BB3:%.*]]
 ; CHECK:       bb1:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr @i, align 4
 ; CHECK-NEXT:    br label [[BB3]]
@@ -41,7 +42,8 @@ entry:
   br label %bb4
 
 bb:		; preds = %bb4
-  br i1 icmp ne (ptr @i, ptr null), label %bb1, label %bb2
+  %cmp = icmp ne ptr @i, null
+  br i1 %cmp, label %bb1, label %bb2
 
 bb1:		; preds = %bb
   %0 = load i32, ptr @i, align 4		; <i32> [#uses=1]

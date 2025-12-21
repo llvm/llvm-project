@@ -16,14 +16,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "Unix.h"
+
+#include "llvm/Support/IOSandbox.h"
+
 #include <limits.h>
 #include <stdio.h>
-#if HAVE_SYS_STAT_H
 #include <sys/stat.h>
-#endif
-#if HAVE_FCNTL_H
 #include <fcntl.h>
-#endif
 #ifdef HAVE_UNISTD_H
 #include <unistd.h>
 #endif
@@ -33,7 +32,6 @@
 
 #include <dirent.h>
 #include <pwd.h>
-#include <sys/file.h>
 
 #ifdef __APPLE__
 #include <copyfile.h>
@@ -74,7 +72,8 @@ extern char **environ;
 
 #include <sys/types.h>
 #if !defined(__APPLE__) && !defined(__OpenBSD__) && !defined(__FreeBSD__) &&   \
-    !defined(__linux__) && !defined(__FreeBSD_kernel__) && !defined(_AIX)
+    !defined(__linux__) && !defined(__FreeBSD_kernel__) && !defined(_AIX) &&   \
+    !defined(__managarm__)
 #include <sys/statvfs.h>
 #define STATVFS statvfs
 #define FSTATVFS fstatvfs
@@ -83,7 +82,7 @@ extern char **environ;
 #if defined(__OpenBSD__) || defined(__FreeBSD__)
 #include <sys/mount.h>
 #include <sys/param.h>
-#elif defined(__linux__)
+#elif defined(__linux__) || defined(__managarm__)
 #if defined(HAVE_LINUX_MAGIC_H)
 #include <linux/magic.h>
 #else
@@ -126,10 +125,12 @@ namespace fs {
 
 const file_t kInvalidFile = -1;
 
-#if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__) ||      \
-    defined(__FreeBSD_kernel__) || defined(__linux__) || defined(__CYGWIN__) || \
-    defined(__DragonFly__) || defined(_AIX) || defined(__GNU__) ||              \
-    (defined(__sun__) && defined(__svr4__))
+#if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__) ||     \
+    defined(__FreeBSD_kernel__) || defined(__linux__) ||                       \
+    defined(__CYGWIN__) || defined(__DragonFly__) || defined(_AIX) ||          \
+    defined(__GNU__) ||                                                        \
+    (defined(__sun__) && defined(__svr4__) || defined(__HAIKU__)) ||           \
+    defined(__managarm__)
 static int test_dir(char ret[PATH_MAX], const char *dir, const char *bin) {
   struct stat sb;
   char fullpath[PATH_MAX];
@@ -250,7 +251,8 @@ std::string getMainExecutable(const char *argv0, void *MainAddr) {
   // If we don't have procfs mounted, fall back to argv[0]
   if (getprogpath(exe_path, argv0) != NULL)
     return exe_path;
-#elif defined(__linux__) || defined(__CYGWIN__) || defined(__gnu_hurd__)
+#elif defined(__linux__) || defined(__CYGWIN__) || defined(__gnu_hurd__) ||    \
+    defined(__managarm__)
   char exe_path[PATH_MAX];
   const char *aPath = "/proc/self/exe";
   if (sys::fs::exists(aPath)) {
@@ -283,7 +285,7 @@ std::string getMainExecutable(const char *argv0, void *MainAddr) {
   // Fall back to the classical detection.
   if (getprogpath(exe_path, argv0))
     return exe_path;
-#elif defined(__OpenBSD__)
+#elif defined(__OpenBSD__) || defined(__HAIKU__)
   char exe_path[PATH_MAX];
   // argv[0] only
   if (getprogpath(exe_path, argv0) != NULL)
@@ -322,7 +324,7 @@ std::string getMainExecutable(const char *argv0, void *MainAddr) {
       return std::string(real_path);
     break; // Found entry, but realpath failed.
   }
-#elif defined(HAVE_DLFCN_H) && defined(HAVE_DLADDR)
+#elif defined(HAVE_DLOPEN)
   // Use dladdr to get executable path if available.
   Dl_info DLInfo;
   int err = dladdr(MainAddr, &DLInfo);
@@ -357,7 +359,7 @@ uint32_t file_status::getLinkCount() const { return fs_st_nlinks; }
 ErrorOr<space_info> disk_space(const Twine &Path) {
   struct STATVFS Vfs;
   if (::STATVFS(const_cast<char *>(Path.str().c_str()), &Vfs))
-    return std::error_code(errno, std::generic_category());
+    return errnoAsErrorCode();
   auto FrSize = STATVFS_F_FRSIZE(Vfs);
   space_info SpaceInfo;
   SpaceInfo.capacity = static_cast<uint64_t>(Vfs.f_blocks) * FrSize;
@@ -367,6 +369,8 @@ ErrorOr<space_info> disk_space(const Twine &Path) {
 }
 
 std::error_code current_path(SmallVectorImpl<char> &result) {
+  sandbox::violationIfEnabled();
+
   result.clear();
 
   const char *pwd = ::getenv("PWD");
@@ -386,12 +390,13 @@ std::error_code current_path(SmallVectorImpl<char> &result) {
       // See if there was a real error.
       if (errno != ENOMEM) {
         result.clear();
-        return std::error_code(errno, std::generic_category());
+        return errnoAsErrorCode();
       }
       // Otherwise there just wasn't enough space.
       result.resize_for_overwrite(result.capacity() * 2);
-    } else
+    } else {
       break;
+    }
   }
 
   result.truncate(strlen(result.data()));
@@ -399,11 +404,13 @@ std::error_code current_path(SmallVectorImpl<char> &result) {
 }
 
 std::error_code set_current_path(const Twine &path) {
+  sandbox::violationIfEnabled();
+
   SmallString<128> path_storage;
   StringRef p = path.toNullTerminatedStringRef(path_storage);
 
   if (::chdir(p.begin()) == -1)
-    return std::error_code(errno, std::generic_category());
+    return errnoAsErrorCode();
 
   return std::error_code();
 }
@@ -415,7 +422,7 @@ std::error_code create_directory(const Twine &path, bool IgnoreExisting,
 
   if (::mkdir(p.begin(), Perms) == -1) {
     if (errno != EEXIST || !IgnoreExisting)
-      return std::error_code(errno, std::generic_category());
+      return errnoAsErrorCode();
   }
 
   return std::error_code();
@@ -431,7 +438,7 @@ std::error_code create_link(const Twine &to, const Twine &from) {
   StringRef t = to.toNullTerminatedStringRef(to_storage);
 
   if (::symlink(t.begin(), f.begin()) == -1)
-    return std::error_code(errno, std::generic_category());
+    return errnoAsErrorCode();
 
   return std::error_code();
 }
@@ -444,7 +451,7 @@ std::error_code create_hard_link(const Twine &to, const Twine &from) {
   StringRef t = to.toNullTerminatedStringRef(to_storage);
 
   if (::link(t.begin(), f.begin()) == -1)
-    return std::error_code(errno, std::generic_category());
+    return errnoAsErrorCode();
 
   return std::error_code();
 }
@@ -456,7 +463,7 @@ std::error_code remove(const Twine &path, bool IgnoreNonExisting) {
   struct stat buf;
   if (lstat(p.begin(), &buf) != 0) {
     if (errno != ENOENT || !IgnoreNonExisting)
-      return std::error_code(errno, std::generic_category());
+      return errnoAsErrorCode();
     return std::error_code();
   }
 
@@ -470,14 +477,14 @@ std::error_code remove(const Twine &path, bool IgnoreNonExisting) {
 
   if (::remove(p.begin()) == -1) {
     if (errno != ENOENT || !IgnoreNonExisting)
-      return std::error_code(errno, std::generic_category());
+      return errnoAsErrorCode();
   }
 
   return std::error_code();
 }
 
 static bool is_local_impl(struct STATVFS &Vfs) {
-#if defined(__linux__) || defined(__GNU__)
+#if defined(__linux__) || defined(__GNU__) || defined(__managarm__)
 #ifndef NFS_SUPER_MAGIC
 #define NFS_SUPER_MAGIC 0x6969
 #endif
@@ -487,7 +494,7 @@ static bool is_local_impl(struct STATVFS &Vfs) {
 #ifndef CIFS_MAGIC_NUMBER
 #define CIFS_MAGIC_NUMBER 0xFF534D42
 #endif
-#ifdef __GNU__
+#if defined(__GNU__) && ((__GLIBC__ < 2) || ((__GLIBC__ == 2) && (__GLIBC_MINOR__ < 39)))
   switch ((uint32_t)Vfs.__f_type) {
 #else
   switch ((uint32_t)Vfs.f_type) {
@@ -516,7 +523,7 @@ static bool is_local_impl(struct STATVFS &Vfs) {
   // target
   StringRef fstype(Vfs.f_basetype);
   // NFS is the only non-local fstype??
-  return !fstype.equals("nfs");
+  return fstype != "nfs";
 #elif defined(_AIX)
   // Call mntctl; try more than twice in case of timing issues with a concurrent
   // mount.
@@ -561,18 +568,22 @@ static bool is_local_impl(struct STATVFS &Vfs) {
 }
 
 std::error_code is_local(const Twine &Path, bool &Result) {
+  sandbox::violationIfEnabled();
+
   struct STATVFS Vfs;
   if (::STATVFS(const_cast<char *>(Path.str().c_str()), &Vfs))
-    return std::error_code(errno, std::generic_category());
+    return errnoAsErrorCode();
 
   Result = is_local_impl(Vfs);
   return std::error_code();
 }
 
 std::error_code is_local(int FD, bool &Result) {
+  sandbox::violationIfEnabled();
+
   struct STATVFS Vfs;
   if (::FSTATVFS(FD, &Vfs))
-    return std::error_code(errno, std::generic_category());
+    return errnoAsErrorCode();
 
   Result = is_local_impl(Vfs);
   return std::error_code();
@@ -586,7 +597,7 @@ std::error_code rename(const Twine &from, const Twine &to) {
   StringRef t = to.toNullTerminatedStringRef(to_storage);
 
   if (::rename(f.begin(), t.begin()) == -1)
-    return std::error_code(errno, std::generic_category());
+    return errnoAsErrorCode();
 
   return std::error_code();
 }
@@ -595,9 +606,14 @@ std::error_code resize_file(int FD, uint64_t Size) {
   // Use ftruncate as a fallback. It may or may not allocate space. At least on
   // OS X with HFS+ it does.
   if (::ftruncate(FD, Size) == -1)
-    return std::error_code(errno, std::generic_category());
+    return errnoAsErrorCode();
 
   return std::error_code();
+}
+
+std::error_code resize_file_sparse(int FD, uint64_t Size) {
+  // On Unix, this is the same as `resize_file`.
+  return resize_file(FD, Size);
 }
 
 static int convertAccessMode(AccessMode Mode) {
@@ -613,11 +629,13 @@ static int convertAccessMode(AccessMode Mode) {
 }
 
 std::error_code access(const Twine &Path, AccessMode Mode) {
+  sandbox::violationIfEnabled();
+
   SmallString<128> PathStorage;
   StringRef P = Path.toNullTerminatedStringRef(PathStorage);
 
   if (::access(P.begin(), convertAccessMode(Mode)) == -1)
-    return std::error_code(errno, std::generic_category());
+    return errnoAsErrorCode();
 
   if (Mode == AccessMode::Execute) {
     // Don't say that directories are executable.
@@ -632,6 +650,8 @@ std::error_code access(const Twine &Path, AccessMode Mode) {
 }
 
 bool can_execute(const Twine &Path) {
+  sandbox::violationIfEnabled();
+
   return !access(Path, AccessMode::Execute);
 }
 
@@ -641,6 +661,8 @@ bool equivalent(file_status A, file_status B) {
 }
 
 std::error_code equivalent(const Twine &A, const Twine &B, bool &result) {
+  sandbox::violationIfEnabled();
+
   file_status fsA, fsB;
   if (std::error_code ec = status(A, fsA))
     return ec;
@@ -652,7 +674,7 @@ std::error_code equivalent(const Twine &A, const Twine &B, bool &result) {
 
 static void expandTildeExpr(SmallVectorImpl<char> &Path) {
   StringRef PathStr(Path.begin(), Path.size());
-  if (PathStr.empty() || !PathStr.startswith("~"))
+  if (PathStr.empty() || !PathStr.starts_with("~"))
     return;
 
   PathStr = PathStr.drop_front();
@@ -726,7 +748,7 @@ static file_type typeForMode(mode_t Mode) {
 static std::error_code fillStatus(int StatRet, const struct stat &Status,
                                   file_status &Result) {
   if (StatRet != 0) {
-    std::error_code EC(errno, std::generic_category());
+    std::error_code EC = errnoAsErrorCode();
     if (EC == errc::no_such_file_or_directory)
       Result = file_status(file_type::file_not_found);
     else
@@ -755,6 +777,8 @@ static std::error_code fillStatus(int StatRet, const struct stat &Status,
 }
 
 std::error_code status(const Twine &Path, file_status &Result, bool Follow) {
+  sandbox::violationIfEnabled();
+
   SmallString<128> PathStorage;
   StringRef P = Path.toNullTerminatedStringRef(PathStorage);
 
@@ -764,6 +788,8 @@ std::error_code status(const Twine &Path, file_status &Result, bool Follow) {
 }
 
 std::error_code status(int FD, file_status &Result) {
+  sandbox::violationIfEnabled();
+
   struct stat Status;
   int StatRet = ::fstat(FD, &Status);
   return fillStatus(StatRet, Status, Result);
@@ -782,13 +808,13 @@ std::error_code setPermissions(const Twine &Path, perms Permissions) {
   StringRef P = Path.toNullTerminatedStringRef(PathStorage);
 
   if (::chmod(P.begin(), Permissions))
-    return std::error_code(errno, std::generic_category());
+    return errnoAsErrorCode();
   return std::error_code();
 }
 
 std::error_code setPermissions(int FD, perms Permissions) {
   if (::fchmod(FD, Permissions))
-    return std::error_code(errno, std::generic_category());
+    return errnoAsErrorCode();
   return std::error_code();
 }
 
@@ -799,7 +825,7 @@ std::error_code setLastAccessAndModificationTime(int FD, TimePoint<> AccessTime,
   Times[0] = sys::toTimeSpec(AccessTime);
   Times[1] = sys::toTimeSpec(ModificationTime);
   if (::futimens(FD, Times))
-    return std::error_code(errno, std::generic_category());
+    return errnoAsErrorCode();
   return std::error_code();
 #elif defined(HAVE_FUTIMES)
   timeval Times[2];
@@ -809,7 +835,7 @@ std::error_code setLastAccessAndModificationTime(int FD, TimePoint<> AccessTime,
       sys::toTimeVal(std::chrono::time_point_cast<std::chrono::microseconds>(
           ModificationTime));
   if (::futimes(FD, Times))
-    return std::error_code(errno, std::generic_category());
+    return errnoAsErrorCode();
   return std::error_code();
 #elif defined(__MVS__)
   attrib_t Attr;
@@ -819,7 +845,7 @@ std::error_code setLastAccessAndModificationTime(int FD, TimePoint<> AccessTime,
   Attr.att_mtimechg = 1;
   Attr.att_mtime = sys::toTimeT(ModificationTime);
   if (::__fchattr(FD, &Attr, sizeof(Attr)) != 0)
-    return std::error_code(errno, std::generic_category());
+    return errnoAsErrorCode();
   return std::error_code();
 #else
 #warning Missing futimes() and futimens()
@@ -858,13 +884,15 @@ std::error_code mapped_file_region::init(int FD, uint64_t Offset,
 
   Mapping = ::mmap(nullptr, Size, prot, flags, FD, Offset);
   if (Mapping == MAP_FAILED)
-    return std::error_code(errno, std::generic_category());
+    return errnoAsErrorCode();
   return std::error_code();
 }
 
 mapped_file_region::mapped_file_region(int fd, mapmode mode, size_t length,
                                        uint64_t offset, std::error_code &ec)
     : Size(length), Mode(mode) {
+  sandbox::violationIfEnabled();
+
   (void)Mode;
   ec = init(fd, offset, mode);
   if (ec)
@@ -874,6 +902,12 @@ mapped_file_region::mapped_file_region(int fd, mapmode mode, size_t length,
 void mapped_file_region::unmapImpl() {
   if (Mapping)
     ::munmap(Mapping, Size);
+}
+
+std::error_code mapped_file_region::sync() const {
+  if (int Res = ::msync(Mapping, Size, MS_SYNC))
+    return std::error_code(Res, std::generic_category());
+  return std::error_code();
 }
 
 void mapped_file_region::dontNeedImpl() {
@@ -894,10 +928,12 @@ int mapped_file_region::alignment() { return Process::getPageSizeEstimate(); }
 std::error_code detail::directory_iterator_construct(detail::DirIterState &it,
                                                      StringRef path,
                                                      bool follow_symlinks) {
+  sandbox::violationIfEnabled();
+
   SmallString<128> path_null(path);
   DIR *directory = ::opendir(path_null.c_str());
   if (!directory)
-    return std::error_code(errno, std::generic_category());
+    return errnoAsErrorCode();
 
   it.IterationHandle = reinterpret_cast<intptr_t>(directory);
   // Add something for replace_filename to replace.
@@ -929,23 +965,28 @@ static file_type direntType(dirent *Entry) {
 }
 
 std::error_code detail::directory_iterator_increment(detail::DirIterState &It) {
+  sandbox::violationIfEnabled();
+
   errno = 0;
   dirent *CurDir = ::readdir(reinterpret_cast<DIR *>(It.IterationHandle));
   if (CurDir == nullptr && errno != 0) {
-    return std::error_code(errno, std::generic_category());
+    return errnoAsErrorCode();
   } else if (CurDir != nullptr) {
     StringRef Name(CurDir->d_name);
     if ((Name.size() == 1 && Name[0] == '.') ||
         (Name.size() == 2 && Name[0] == '.' && Name[1] == '.'))
       return directory_iterator_increment(It);
     It.CurrentEntry.replace_filename(Name, direntType(CurDir));
-  } else
+  } else {
     return directory_iterator_destruct(It);
+  }
 
   return std::error_code();
 }
 
 ErrorOr<basic_file_status> directory_entry::status() const {
+  sandbox::violationIfEnabled();
+
   file_status s;
   if (auto EC = fs::status(Path, s, FollowSymlinks))
     return EC;
@@ -1015,6 +1056,8 @@ static int nativeOpenFlags(CreationDisposition Disp, OpenFlags Flags,
 std::error_code openFile(const Twine &Name, int &ResultFD,
                          CreationDisposition Disp, FileAccess Access,
                          OpenFlags Flags, unsigned Mode) {
+  sandbox::violationIfEnabled();
+
   int OpenFlags = nativeOpenFlags(Disp, Flags, Access);
 
   SmallString<128> Storage;
@@ -1023,7 +1066,7 @@ std::error_code openFile(const Twine &Name, int &ResultFD,
   // when open is overloaded, such as in Bionic.
   auto Open = [&]() { return ::open(P.begin(), OpenFlags, Mode); };
   if ((ResultFD = sys::RetryAfterSignal(-1, Open)) < 0)
-    return std::error_code(errno, std::generic_category());
+    return errnoAsErrorCode();
 #ifndef O_CLOEXEC
   if (!(Flags & OF_ChildInherit)) {
     int r = fcntl(ResultFD, F_SETFD, FD_CLOEXEC);
@@ -1087,10 +1130,10 @@ std::error_code openFile(const Twine &Name, int &ResultFD,
    * open().
    */
   if ((Flags & OF_Append) && lseek(ResultFD, 0, SEEK_END) == -1)
-    return std::error_code(errno, std::generic_category());
+    return errnoAsErrorCode();
   struct stat Stat;
   if (fstat(ResultFD, &Stat) == -1)
-    return std::error_code(errno, std::generic_category());
+    return errnoAsErrorCode();
   if (S_ISREG(Stat.st_mode)) {
     bool DoSetTag = (Access & FA_Write) && (Disp != CD_OpenExisting) &&
                     !Stat.st_tag.ft_txtflag && !Stat.st_tag.ft_ccsid &&
@@ -1099,14 +1142,14 @@ std::error_code openFile(const Twine &Name, int &ResultFD,
       if (auto EC = llvm::enableAutoConversion(ResultFD))
         return EC;
       if (DoSetTag) {
-        if (auto EC = llvm::setFileTag(ResultFD, CCSID_IBM_1047, true))
+        if (auto EC = llvm::setzOSFileTag(ResultFD, CCSID_IBM_1047, true))
           return EC;
       }
     } else {
       if (auto EC = llvm::disableAutoConversion(ResultFD))
         return EC;
       if (DoSetTag) {
-        if (auto EC = llvm::setFileTag(ResultFD, FT_BINARY, false))
+        if (auto EC = llvm::setzOSFileTag(ResultFD, FT_BINARY, false))
           return EC;
       }
     }
@@ -1119,6 +1162,7 @@ std::error_code openFile(const Twine &Name, int &ResultFD,
 Expected<int> openNativeFile(const Twine &Name, CreationDisposition Disp,
                              FileAccess Access, OpenFlags Flags,
                              unsigned Mode) {
+  sandbox::violationIfEnabled();
 
   int FD;
   std::error_code EC = openFile(Name, FD, Disp, Access, Flags, Mode);
@@ -1130,6 +1174,8 @@ Expected<int> openNativeFile(const Twine &Name, CreationDisposition Disp,
 std::error_code openFileForRead(const Twine &Name, int &ResultFD,
                                 OpenFlags Flags,
                                 SmallVectorImpl<char> *RealPath) {
+  sandbox::violationIfEnabled();
+
   std::error_code EC =
       openFile(Name, ResultFD, CD_OpenExisting, FA_Read, Flags, 0666);
   if (EC)
@@ -1171,6 +1217,8 @@ std::error_code openFileForRead(const Twine &Name, int &ResultFD,
 
 Expected<file_t> openNativeFileForRead(const Twine &Name, OpenFlags Flags,
                                        SmallVectorImpl<char> *RealPath) {
+  sandbox::violationIfEnabled();
+
   file_t ResultFD;
   std::error_code EC = openFileForRead(Name, ResultFD, Flags, RealPath);
   if (EC)
@@ -1183,19 +1231,32 @@ file_t getStdoutHandle() { return 1; }
 file_t getStderrHandle() { return 2; }
 
 Expected<size_t> readNativeFile(file_t FD, MutableArrayRef<char> Buf) {
+  sandbox::violationIfEnabled();
+
 #if defined(__APPLE__)
   size_t Size = std::min<size_t>(Buf.size(), INT32_MAX);
 #else
   size_t Size = Buf.size();
 #endif
   ssize_t NumRead = sys::RetryAfterSignal(-1, ::read, FD, Buf.data(), Size);
-  if (ssize_t(NumRead) == -1)
-    return errorCodeToError(std::error_code(errno, std::generic_category()));
+  if (NumRead == -1)
+    return errorCodeToError(errnoAsErrorCode());
+// The underlying operation on these platforms allow opening directories
+// for reading in more cases than other platforms.
+#if defined(__MVS__) || defined(_AIX)
+  struct stat Status;
+  if (fstat(FD, &Status) == -1)
+    return errorCodeToError(errnoAsErrorCode());
+  if (S_ISDIR(Status.st_mode))
+    return errorCodeToError(make_error_code(errc::is_a_directory));
+#endif
   return NumRead;
 }
 
 Expected<size_t> readNativeFileSlice(file_t FD, MutableArrayRef<char> Buf,
                                      uint64_t Offset) {
+  sandbox::violationIfEnabled();
+
 #if defined(__APPLE__)
   size_t Size = std::min<size_t>(Buf.size(), INT32_MAX);
 #else
@@ -1206,21 +1267,29 @@ Expected<size_t> readNativeFileSlice(file_t FD, MutableArrayRef<char> Buf,
       sys::RetryAfterSignal(-1, ::pread, FD, Buf.data(), Size, Offset);
 #else
   if (lseek(FD, Offset, SEEK_SET) == -1)
-    return errorCodeToError(std::error_code(errno, std::generic_category()));
+    return errorCodeToError(errnoAsErrorCode());
   ssize_t NumRead = sys::RetryAfterSignal(-1, ::read, FD, Buf.data(), Size);
 #endif
   if (NumRead == -1)
-    return errorCodeToError(std::error_code(errno, std::generic_category()));
+    return errorCodeToError(errnoAsErrorCode());
   return NumRead;
 }
 
-std::error_code tryLockFile(int FD, std::chrono::milliseconds Timeout) {
+std::error_code tryLockFile(int FD, std::chrono::milliseconds Timeout,
+                            LockKind Kind) {
   auto Start = std::chrono::steady_clock::now();
   auto End = Start + Timeout;
   do {
     struct flock Lock;
     memset(&Lock, 0, sizeof(Lock));
-    Lock.l_type = F_WRLCK;
+    switch (Kind) {
+    case LockKind::Exclusive:
+      Lock.l_type = F_WRLCK;
+      break;
+    case LockKind::Shared:
+      Lock.l_type = F_RDLCK;
+      break;
+    }
     Lock.l_whence = SEEK_SET;
     Lock.l_start = 0;
     Lock.l_len = 0;
@@ -1229,22 +1298,30 @@ std::error_code tryLockFile(int FD, std::chrono::milliseconds Timeout) {
     int Error = errno;
     if (Error != EACCES && Error != EAGAIN)
       return std::error_code(Error, std::generic_category());
+    if (Timeout.count() == 0)
+      break;
     usleep(1000);
   } while (std::chrono::steady_clock::now() < End);
   return make_error_code(errc::no_lock_available);
 }
 
-std::error_code lockFile(int FD) {
+std::error_code lockFile(int FD, LockKind Kind) {
   struct flock Lock;
   memset(&Lock, 0, sizeof(Lock));
-  Lock.l_type = F_WRLCK;
+  switch (Kind) {
+  case LockKind::Exclusive:
+    Lock.l_type = F_WRLCK;
+    break;
+  case LockKind::Shared:
+    Lock.l_type = F_RDLCK;
+    break;
+  }
   Lock.l_whence = SEEK_SET;
   Lock.l_start = 0;
   Lock.l_len = 0;
   if (::fcntl(FD, F_SETLKW, &Lock) != -1)
     return std::error_code();
-  int Error = errno;
-  return std::error_code(Error, std::generic_category());
+  return errnoAsErrorCode();
 }
 
 std::error_code unlockFile(int FD) {
@@ -1255,10 +1332,12 @@ std::error_code unlockFile(int FD) {
   Lock.l_len = 0;
   if (::fcntl(FD, F_SETLK, &Lock) != -1)
     return std::error_code();
-  return std::error_code(errno, std::generic_category());
+  return errnoAsErrorCode();
 }
 
 std::error_code closeFile(file_t &F) {
+  sandbox::violationIfEnabled();
+
   file_t TmpF = F;
   F = kInvalidFile;
   return Process::SafelyCloseFileDescriptor(TmpF);
@@ -1306,6 +1385,8 @@ std::error_code remove_directories(const Twine &path, bool IgnoreErrors) {
 
 std::error_code real_path(const Twine &path, SmallVectorImpl<char> &dest,
                           bool expand_tilde) {
+  sandbox::violationIfEnabled();
+
   dest.clear();
   if (path.isTriviallyEmpty())
     return std::error_code();
@@ -1321,7 +1402,7 @@ std::error_code real_path(const Twine &path, SmallVectorImpl<char> &dest,
   StringRef P = path.toNullTerminatedStringRef(Storage);
   char Buffer[PATH_MAX];
   if (::realpath(P.begin(), Buffer) == nullptr)
-    return std::error_code(errno, std::generic_category());
+    return errnoAsErrorCode();
   dest.append(Buffer, Buffer + strlen(Buffer));
   return std::error_code();
 }
@@ -1330,7 +1411,7 @@ std::error_code changeFileOwnership(int FD, uint32_t Owner, uint32_t Group) {
   auto FChown = [&]() { return ::fchown(FD, Owner, Group); };
   // Retry if fchown call fails due to interruption.
   if ((sys::RetryAfterSignal(-1, FChown)) < 0)
-    return std::error_code(errno, std::generic_category());
+    return errnoAsErrorCode();
   return std::error_code();
 }
 
@@ -1513,7 +1594,7 @@ std::error_code copy_file(const Twine &From, const Twine &To) {
 #endif
   if (!copyfile(FromS.c_str(), ToS.c_str(), /*State=*/NULL, COPYFILE_DATA))
     return std::error_code();
-  return std::error_code(errno, std::generic_category());
+  return errnoAsErrorCode();
 }
 #endif // __APPLE__
 

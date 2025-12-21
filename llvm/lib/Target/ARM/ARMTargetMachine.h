@@ -17,33 +17,32 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/CodeGen/CodeGenTargetMachineImpl.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Target/TargetMachine.h"
+#include "llvm/TargetParser/ARMTargetParser.h"
 #include <memory>
 #include <optional>
 
 namespace llvm {
 
-class ARMBaseTargetMachine : public LLVMTargetMachine {
+class ARMBaseTargetMachine : public CodeGenTargetMachineImpl {
 public:
-  enum ARMABI {
-    ARM_ABI_UNKNOWN,
-    ARM_ABI_APCS,
-    ARM_ABI_AAPCS, // ARM EABI
-    ARM_ABI_AAPCS16
-  } TargetABI;
+  ARM::ARMABI TargetABI;
 
 protected:
   std::unique_ptr<TargetLoweringObjectFile> TLOF;
   bool isLittle;
   mutable StringMap<std::unique_ptr<ARMSubtarget>> SubtargetMap;
 
+  /// Reset internal state.
+  void reset() override;
+
 public:
   ARMBaseTargetMachine(const Target &T, const Triple &TT, StringRef CPU,
                        StringRef FS, const TargetOptions &Options,
                        std::optional<Reloc::Model> RM,
-                       std::optional<CodeModel::Model> CM, CodeGenOptLevel OL,
-                       bool isLittle);
+                       std::optional<CodeModel::Model> CM, CodeGenOptLevel OL);
   ~ARMBaseTargetMachine() override;
 
   const ARMSubtarget *getSubtargetImpl(const Function &F) const override;
@@ -62,14 +61,29 @@ public:
     return TLOF.get();
   }
 
+  bool isAPCS_ABI() const {
+    assert(TargetABI != ARM::ARM_ABI_UNKNOWN);
+    return TargetABI == ARM::ARM_ABI_APCS;
+  }
+
+  bool isAAPCS_ABI() const {
+    assert(TargetABI != ARM::ARM_ABI_UNKNOWN);
+    return TargetABI == ARM::ARM_ABI_AAPCS || TargetABI == ARM::ARM_ABI_AAPCS16;
+  }
+
+  bool isAAPCS16_ABI() const {
+    assert(TargetABI != ARM::ARM_ABI_UNKNOWN);
+    return TargetABI == ARM::ARM_ABI_AAPCS16;
+  }
+
   bool isTargetHardFloat() const {
     return TargetTriple.getEnvironment() == Triple::GNUEABIHF ||
+           TargetTriple.getEnvironment() == Triple::GNUEABIHFT64 ||
            TargetTriple.getEnvironment() == Triple::MuslEABIHF ||
            TargetTriple.getEnvironment() == Triple::EABIHF ||
            (TargetTriple.isOSBinFormatMachO() &&
             TargetTriple.getSubArch() == Triple::ARMSubArch_v7em) ||
-           TargetTriple.isOSWindows() ||
-           TargetABI == ARMBaseTargetMachine::ARM_ABI_AAPCS16;
+           TargetTriple.isOSWindows() || TargetABI == ARM::ARM_ABI_AAPCS16;
   }
 
   bool targetSchedulesPostRAScheduling() const override { return true; };
@@ -83,6 +97,32 @@ public:
     // Addrspacecasts are always noops.
     return true;
   }
+
+  bool isGVIndirectSymbol(const GlobalValue *GV) const {
+    if (!shouldAssumeDSOLocal(GV))
+      return true;
+
+    // 32 bit macho has no relocation for a-b if a is undefined, even if b is in
+    // the section that is being relocated. This means we have to use o load
+    // even for GVs that are known to be local to the dso.
+    if (getTargetTriple().isOSBinFormatMachO() && isPositionIndependent() &&
+        (GV->isDeclarationForLinker() || GV->hasCommonLinkage()))
+      return true;
+
+    return false;
+  }
+
+  yaml::MachineFunctionInfo *createDefaultFuncInfoYAML() const override;
+  yaml::MachineFunctionInfo *
+  convertFuncInfoToYAML(const MachineFunction &MF) const override;
+  bool parseMachineFunctionInfo(const yaml::MachineFunctionInfo &,
+                                PerFunctionMIParsingState &PFS,
+                                SMDiagnostic &Error,
+                                SMRange &SourceRange) const override;
+  ScheduleDAGInstrs *
+  createMachineScheduler(MachineSchedContext *C) const override;
+  ScheduleDAGInstrs *
+  createPostMachineScheduler(MachineSchedContext *C) const override;
 };
 
 /// ARM/Thumb little endian target machine.

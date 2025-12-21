@@ -20,7 +20,6 @@ class TestDAP_logpoints(lldbdap_testcase.DAPTestCaseBase):
         self.main_path = os.path.realpath(self.getBuildArtifact(self.main_basename))
 
     @skipIfWindows
-    @skipIfRemote
     def test_logmessage_basic(self):
         """Tests breakpoint logmessage basic functionality."""
         before_loop_line = line_number("main.cpp", "// before loop")
@@ -34,7 +33,7 @@ class TestDAP_logpoints(lldbdap_testcase.DAPTestCaseBase):
         before_loop_breakpoint_ids = self.set_source_breakpoints(
             self.main_path, [before_loop_line]
         )
-        self.assertEquals(len(before_loop_breakpoint_ids), 1, "expect one breakpoint")
+        self.assertEqual(len(before_loop_breakpoint_ids), 1, "expect one breakpoint")
 
         self.dap_server.request_continue()
 
@@ -48,7 +47,7 @@ class TestDAP_logpoints(lldbdap_testcase.DAPTestCaseBase):
         # 1. First at the loop line with logMessage
         # 2. Second guard breakpoint at a line after loop
         logMessage_prefix = "This is log message for { -- "
-        logMessage = logMessage_prefix + "{i + 3}"
+        logMessage = logMessage_prefix + "{i + 3}, {message}"
         [loop_breakpoint_id, post_loop_breakpoint_id] = self.set_source_breakpoints(
             self.main_path,
             [loop_line, after_loop_line],
@@ -72,13 +71,17 @@ class TestDAP_logpoints(lldbdap_testcase.DAPTestCaseBase):
         loop_count = 10
         self.assertEqual(len(logMessage_output), loop_count)
 
+        message_addr_pattern = r"\b0x[0-9A-Fa-f]+\b"
+        message_content = '"Hello from main!"'
         # Verify log message match
         for idx, logMessage_line in enumerate(logMessage_output):
             result = idx + 3
-            self.assertEqual(logMessage_line, logMessage_prefix + str(result))
+            reg_str = (
+                f"{logMessage_prefix}{result}, {message_addr_pattern} {message_content}"
+            )
+            self.assertRegex(logMessage_line, reg_str)
 
     @skipIfWindows
-    @skipIfRemote
     def test_logmessage_advanced(self):
         """Tests breakpoint logmessage functionality for complex expression."""
         before_loop_line = line_number("main.cpp", "// before loop")
@@ -92,7 +95,7 @@ class TestDAP_logpoints(lldbdap_testcase.DAPTestCaseBase):
         before_loop_breakpoint_ids = self.set_source_breakpoints(
             self.main_path, [before_loop_line]
         )
-        self.assertEquals(len(before_loop_breakpoint_ids), 1, "expect one breakpoint")
+        self.assertEqual(len(before_loop_breakpoint_ids), 1, "expect one breakpoint")
 
         self.dap_server.request_continue()
 
@@ -139,7 +142,6 @@ class TestDAP_logpoints(lldbdap_testcase.DAPTestCaseBase):
             self.assertEqual(logMessage_line, logMessage_prefix + str(result))
 
     @skipIfWindows
-    @skipIfRemote
     def test_logmessage_format(self):
         """
         Tests breakpoint logmessage functionality with format.
@@ -155,7 +157,7 @@ class TestDAP_logpoints(lldbdap_testcase.DAPTestCaseBase):
         before_loop_breakpoint_ids = self.set_source_breakpoints(
             self.main_path, [before_loop_line]
         )
-        self.assertEquals(len(before_loop_breakpoint_ids), 1, "expect one breakpoint")
+        self.assertEqual(len(before_loop_breakpoint_ids), 1, "expect one breakpoint")
 
         self.dap_server.request_continue()
 
@@ -204,7 +206,6 @@ class TestDAP_logpoints(lldbdap_testcase.DAPTestCaseBase):
             )
 
     @skipIfWindows
-    @skipIfRemote
     def test_logmessage_format_failure(self):
         """
         Tests breakpoint logmessage format with parsing failure.
@@ -220,7 +221,7 @@ class TestDAP_logpoints(lldbdap_testcase.DAPTestCaseBase):
         before_loop_breakpoint_ids = self.set_source_breakpoints(
             self.main_path, [before_loop_line]
         )
-        self.assertEquals(len(before_loop_breakpoint_ids), 1, "expect one breakpoint")
+        self.assertEqual(len(before_loop_breakpoint_ids), 1, "expect one breakpoint")
 
         self.dap_server.request_continue()
 

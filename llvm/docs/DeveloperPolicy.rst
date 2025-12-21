@@ -1,3 +1,5 @@
+.. _developer_policy:
+
 =====================
 LLVM Developer Policy
 =====================
@@ -14,188 +16,200 @@ to eliminate miscommunication, rework, and confusion that might arise from the
 distributed nature of LLVM's development.  By stating the policy in clear terms,
 we hope each developer can know ahead of time what to expect when making LLVM
 contributions.  This policy covers all llvm.org subprojects, including Clang,
-LLDB, libc++, etc.
+LLDB, libc++, MLIR, etc.
 
-This policy is also designed to accomplish the following objectives:
+The developer policy supports the following LLVM project objectives:
 
-#. Attract both users and developers to the LLVM project.
+#. Attract both users and new contributors to the LLVM project.
 
-#. Make life as simple and easy for contributors as possible.
+#. Help people contribute to LLVM by documenting our development practices.
 
-#. Keep the top of tree as stable as possible.
+#. Maintain the stability, performance, and quality of the ``main`` branch.
 
-#. Establish awareness of the project's :ref:`copyright, license, and patent
-   policies <copyright-license-patents>` with contributors to the project.
-
-This policy is aimed at frequent contributors to LLVM. People interested in
-contributing one-off patches can do so in an informal way by sending them to the
-`llvm-commits mailing list
-<http://lists.llvm.org/mailman/listinfo/llvm-commits>`_ and engaging another
-developer to see it through the process.
+#. Establish the project's :ref:`copyright, license, and patent
+   policies <copyright-license-patents>` policies.
 
 Developer Policies
 ==================
 
-This section contains policies that pertain to frequent LLVM developers.  We
-always welcome `one-off patches`_ from people who do not routinely contribute to
-LLVM, but we expect more from frequent contributors to keep the system as
-efficient as possible for everyone.  Frequent LLVM contributors are expected to
-meet the following requirements in order for LLVM to maintain a high standard of
-quality.
+Communication Channels
+----------------------
 
-Stay Informed
--------------
+LLVM is a large project with many subcomponents, and it has a wide array of
+communication channels that you can use to keep track of recent developments,
+upcoming projects, new designs, enhancements, and other community business.
 
-Developers should stay informed by reading the `LLVM Discourse forums`_ and subscribing
-to the categories of interest for notifications.
+First and foremost is the `LLVM Discourse forums`_, which is the successor
+to our former mailing lists (llvm-dev@, cfe-dev@, lldb-dev@, etc). This is
+probably the most vital and active communication channel to our highly
+distributed open source project. It enables long-form asynchronous text
+communication, and this is where people tend to propose major changes or
+propose new designs in the form of RFCs (Request For Comment), which are
+described later. Please be aware that the Discourse forums are public and
+archived, and that notices of confidentiality or non-disclosure cannot be
+respected.
 
-Paying attention to changes being made by others is a good way to see what other people
-are interested in and watching the flow of the project as a whole.
-
-Contibutions to the project are made through :ref:`GitHub Pull Requests <github-reviews>`.
-You can subscribe to notification for areas of the codebase by joining
+We accept code contributions as :ref:`GitHub Pull Requests <github-reviews>`.
+Our project is generally too large to subscribe to all github notifications, so
+if you want to be notified of pull requests affecting specific parts of the
+code, you can join
 one of the `pr-subscribers-* <https://github.com/orgs/llvm/teams?query=pr-subscribers>`_
 GitHub teams. This `mapping <https://github.com/llvm/llvm-project/blob/main/.github/new-prs-labeler.yml>`_
-indicates which team is associated with a particular paths in the repository.
+documents the paths that trigger notifications for each of the listed teams.
 
-You can also subscribe to the "commits" mailing list for a subproject you're interested in,
-such as `llvm-commits
-<http://lists.llvm.org/mailman/listinfo/llvm-commits>`_, `cfe-commits
-<http://lists.llvm.org/mailman/listinfo/cfe-commits>`_, or `lldb-commits
-<http://lists.llvm.org/mailman/listinfo/lldb-commits>`_.
+Missing features and bugs are tracked through our `GitHub issue tracker
+<https://github.com/llvm/llvm-project/issues>`_. You can subscribe for
+notification for specific components by joining one of the `issue-subscribers-*
+<https://github.com/orgs/llvm/teams?query=issue-subscribers>`_ teams. You may
+also subscribe to the `llvm-bugs
+<http://lists.llvm.org/mailman/listinfo/llvm-bugs>`_ email list to subscribe to
+the firehose of all issue notifications, which some community members use to
+perform custom filtering.
 
-Missing features and bugs are tracked through our `GitHub issue tracker <https://github.com/llvm/llvm-project/issues>`_
-and assigned labels. We recommend that active developers monitor incoming issues.
-You can subscribe for notification for specific components by joining
-one of the `issue-subscribers-* <https://github.com/orgs/llvm/teams?query=issue-subscribers>`_
-teams.
-You may also subscribe to the `llvm-bugs
-<http://lists.llvm.org/mailman/listinfo/llvm-bugs>`_ email list to keep track
-of bugs and enhancements occurring in the entire project.  We really appreciate people
-who are proactive at catching incoming bugs in their components and dealing with them
-promptly.
-
-Please be aware that all public LLVM mailing lists and discourse forums are public and archived, and
-that notices of confidentiality or non-disclosure cannot be respected.
+Beyond the asynchronous written communication channels, LLVM has a Discord
+server for real-time chat communication, as well as a community calendar with
+many regular workgroup video calls and office hours. See :doc:`GettingInvolved`
+for more information on other ways to engage with the community.
 
 .. _patch:
-.. _one-off patches:
 
 Making and Submitting a Patch
 -----------------------------
 
-When making a patch for review, the goal is to make it as easy for the reviewer
-to read it as possible.  As such, we recommend that you:
+Patches are submitted to GitHub and reviewed using Pull Requests. Follow the
+:ref:`Getting Started Guide <sources>` to check out sources, make a patch, and
+then follow the :ref:`GitHub Pull Request <github-reviews>` guide to upload a
+pull request.
 
-#. Make your patch against git main, not a branch, and not an old version
-   of LLVM.  This makes it easy to apply the patch.  For information on how to
-   clone from git, please see the :ref:`Getting Started Guide
-   <checkout>`.
+Here are some tips to enable a successful code review:
 
-#. Similarly, patches should be submitted soon after they are generated.  Old
-   patches may not apply correctly if the underlying code changes between the
-   time the patch was created and the time it is applied.
+* :ref:`Include a test <include a testcase>`. This tends to be one of the first
+  things a reviewer will ask for and look at to understand what a new patch
+  does.
 
-#. Once you have created your patch, create a
-   :ref:`GitHub Pull Request <github-reviews>` for
-   it (or commit it directly if applicable).
+* Identify 2-3 individuals to review the patch. Look through the relevant
+  :ref:`Maintainers` file or browse git blame for likely stakeholders for the
+  code you want to modify, and add ``@username`` to a PR comment to notify them
+  of your PR if you are unable to add reviewers yourself due to GitHub permissions.
+
+* To avoid precommit CI failures due to merge conflicts, base your patches on a
+  recent commit from ``main``. If you want to make changes to a release branch,
+  land a change in ``main`` first and then follow the
+  :ref:`backporting instructions <backporting>`.
+
+See :doc:`CodeReview` for more info on what to expect.
 
 When submitting patches, please do not add confidentiality or non-disclosure
 notices to the patches themselves.  These notices conflict with the LLVM
 licensing terms and may result in your contribution being excluded.
+
+.. _github-email-address:
+
+Email Addresses
+---------------
+
+The LLVM project uses email to communicate to contributors outside of the
+GitHub platform about their past contributions. Primarily, our buildbot
+infrastructure uses emails to contact contributors about build and test
+failures.
+
+Therefore, the LLVM community requires contributors to have a public email
+address associated with their GitHub commits, so please ensure that "Keep my
+email addresses private" is disabled in your `account settings
+<https://github.com/settings/emails>`_. There are many free email forwarding
+services available if you wish to keep your identity private.
 
 .. _code review:
 
 Code Reviews
 ------------
 
-LLVM has a code-review policy. Code review is one way to increase the quality of
-software. Please see :doc:`CodeReview` for more information on LLVM's code-review
-process.
+LLVM uses code review, which is a generally accepted software engineering best
+practice for maintaining high code quality. Please see :doc:`CodeReview` for
+more information on LLVM's code review process.
 
-.. _breaking:
+.. _maintainers:
 
-Making Potentially Breaking Changes
------------------------------------
-
-Please help notify users and vendors of potential disruptions when upgrading to
-a newer version of a tool. For example, deprecating a feature that is expected
-to be removed in the future, removing an already-deprecated feature, upgrading a
-diagnostic from a warning to an error, switching important default behavior, or
-any other potentially disruptive situation thought to be worth raising
-awareness of. For such changes, the following should be done:
-
-.. warning::
-
-  Phabricator is deprecated and will be switched to read-only mode in October
-  2023, for new code contributions use :ref:`GitHub Pull Requests <github-reviews>`.
-  This section contains old information that needs to be updated.
-
-* When performing the code review for the change, please add any applicable
-  "vendors" group to the review for their awareness. The purpose of these
-  groups is to give vendors early notice that potentially disruptive changes
-  are being considered but have not yet been accepted. Vendors can give early
-  testing feedback on the changes to alert us to unacceptable breakages. The
-  current list of vendor groups is:
-
-  * `Clang vendors <https://reviews.llvm.org/project/members/113/>`_
-  * `libc++ vendors <https://reviews.llvm.org/project/members/109/>`_
-
-  People interested in joining the vendors group can do so by clicking the
-  "Join Project" link on the vendor's "Members" page in Phabricator.
-
-* When committing the change to the repository, add appropriate information
-  about the potentially breaking changes to the ``Potentially Breaking Changes``
-  section of the project's release notes. The release note should have
-  information about what the change is, what is potentially disruptive about
-  it, as well as any code examples, links, and motivation that is appropriate
-  to share with users. This helps users to learn about potential issues with
-  upgrading to that release.
-
-* After the change has been committed to the repository, the potentially
-  disruptive changes described in the release notes should be posted to the
-  `Announcements <https://discourse.llvm.org/c/announce/>`_ channel on
-  Discourse. The post should be tagged with the ``potentially-breaking`` label
-  and a label specific to the project (such as ``clang``, ``llvm``, etc). This
-  is another mechanism by which we can give pre-release notice to users about
-  potentially disruptive changes. It is a lower-traffic alternative to the
-  joining "vendors" group. To automatically be notified of new announcements
-  with the ``potentially-breaking`` label, go to your user preferences page in
-  Discourse, and add the label to one of the watch categories under
-  ``Notifications->Tags``.
-
-.. _code owners:
-
-Code Owners
+Maintainers
 -----------
 
-The LLVM Project relies on two features of its process to maintain rapid
-development in addition to the high quality of its source base: the combination
-of code review plus post-commit review for trusted maintainers.  Having both is
-a great way for the project to take advantage of the fact that most people do
-the right thing most of the time, and only commit patches without pre-commit
-review when they are confident they are right.
+The LLVM Project aims to evolve features quickly while continually being in a
+release-ready state. In order to accomplish this, the project needs volunteers
+willing to do the less glamorous work to ensure we produce robust, high-quality
+products.
 
-The trick to this is that the project has to guarantee that all patches that are
-committed are reviewed after they go in: you don't want everyone to assume
-someone else will review it, allowing the patch to go unreviewed.  To solve this
-problem, we have a notion of an 'owner' for a piece of the code.  The sole
-responsibility of a code owner is to ensure that a commit to their area of the
-code is appropriately reviewed, either by themself or by someone else.  The list
-of current code owners can be found in the file `CODE_OWNERS.TXT
-<https://github.com/llvm/llvm-project/blob/main/llvm/CODE_OWNERS.TXT>`_ in the
-root of the LLVM source tree.
+Maintainers are those volunteers; they are regular contributors who volunteer
+to take on additional community responsibilities beyond code contributions.
+Community members can find active and inactive maintainers for a project in the
+``Maintainers.rst`` file at the root directory of the individual project.
 
-Note that code ownership is completely different than reviewers: anyone can
-review a piece of code, and we welcome code review from anyone who is
-interested.  Code owners are the "last line of defense" to guarantee that all
-patches that are committed are actually reviewed.
+Maintainers are volunteering to take on the following shared responsibilities
+within an area of a project:
 
-Being a code owner is a somewhat unglamorous position, but it is incredibly
-important for the ongoing success of the project.  Because people get busy,
-interests change, and unexpected things happen, code ownership is purely opt-in,
-and anyone can choose to resign their "title" at any time. For now, we do not
-have an official policy on how one gets elected to be a code owner.
+* ensure that commits receive high-quality review, either by the maintainer
+  or by someone else,
+* help to confirm and comment on issues,
+* mediate code review disagreements through collaboration with other
+  maintainers (and other reviewers) to come to a consensus on how best to
+  proceed with disputed changes,
+* actively engage with relevant RFCs,
+* aid release managers with backporting and other release-related
+  activities,
+* be a point of contact for contributors who need help (answering questions
+  on Discord/Discourse or holding office hours).
+
+Each top-level project in the monorepo will specify one or more
+lead maintainers who are responsible for ensuring community needs are
+met for that project. This role is like any other maintainer role,
+except the responsibilities span the project rather than a limited area
+within the project. If you cannot reach a maintainer or don't know which
+maintainer to reach out to, a lead maintainer is always a good choice
+to reach out to. If a project has no active lead maintainers, it may be a
+reasonable candidate for removal from the monorepo. A discussion should be
+started on Discourse to find a new, active lead maintainer or whether the
+project should be discontinued.
+
+All contributors with commit access to the LLVM Project are eligible to be a
+maintainer. However, we are looking for people who can commit to:
+
+* engaging in their responsibilities the majority of the days in a month,
+* ensuring that they, and the community members they interact with, abide by the
+  :ref:`LLVM Community Code of Conduct`, and
+* performing these duties for at least three months.
+
+We recognize that priorities shift, job changes happen, burnout is real,
+extended vacations are a blessing, and people's lives are generally complex.
+Therefore, we want as little friction as possible for someone to become a
+maintainer or to step down as a maintainer.
+
+*To become a new maintainer*, you can volunteer yourself by posting a PR which
+adds yourself to the area(s) you are volunteering for. Alternatively, an
+existing maintainer can nominate you by posting a PR, but the nominee must
+explicitly accept the PR so that it's clear they agree to volunteer within the
+proposed area(s). The PR will be accepted so long as at least one maintainer in
+the same project vouches for their ability to perform the responsibilities and
+there are no explicit objections raised by the community.
+
+*To step down as a maintainer*, you can move your name to the "inactive
+maintainers" section of the ``Maintainers.rst`` file for the project, or remove
+your name entirely; no PR review is necessary. Additionally, any maintainer who
+has not been actively performing their responsibilities over an extended period
+of time can be moved to the "inactive maintainers" section by another active
+maintainer within that project with agreement from one other active maintainer
+within that project. If there is only one active maintainer for a project,
+please post on Discourse to solicit wider community feedback about the removal
+and future direction for the project. However, please discuss the situation
+with the inactive maintainer before such removal to avoid accidental
+miscommunications. If the inactive maintainer is unreachable, no discussion
+with them is required. Stepping down or being removed as a maintainer is normal
+and does not prevent someone from resuming their activities as a maintainer in
+the future.
+
+*To resume activities as a maintainer*, you can post a PR moving your name from
+the "inactive maintainers" section of the ``Maintainers.rst`` file to the
+active maintainers list. Because the volunteer was already previously accepted,
+they will be re-accepted so long as at least one maintainer in the same project
+approves the PR and there are no explicit objections raised by the community.
 
 .. _include a testcase:
 
@@ -205,27 +219,47 @@ Test Cases
 Developers are required to create test cases for any bugs fixed and any new
 features added.  Some tips for getting your testcase approved:
 
-* All feature and regression test cases are added to the ``llvm/test``
-  directory. The appropriate sub-directory should be selected (see the
+* All feature and regression test cases are added to the ``test`` subdirectory
+  of each LLVM subproject, i.e. ``llvm-project/llvm/test`` for LLVM itself. The
+  appropriate sub-directory should be selected (see the
   :doc:`Testing Guide <TestingGuide>` for details).
 
-* Test cases should be written in :doc:`LLVM assembly language <LangRef>`.
+* We prefer that functional changes are tested using ``FileCheck`` and the tool
+  that fits most closely with the code being modified. For example, ``opt`` is
+  used to test IR transformations, ``llc`` for backend changes, and ``clang``
+  for frontend changes. Some components have scripts for generating and
+  updating golden tests in the ``utils/`` subproject directory, i.e.
+  `mlir/utils/generate-test-checks.py <https://github.com/llvm/llvm-project/blob/main/mlir/utils/generate-test-checks.py>`_
+  and `llvm/utils/update_llc_test_checks.py <https://github.com/llvm/llvm-project/blob/main/llvm/utils/update_llc_test_checks.py>`_
 
-* Test cases, especially for regressions, should be reduced as much as possible,
-  by :doc:`bugpoint <Bugpoint>` or manually. It is unacceptable to place an
-  entire failing program into ``llvm/test`` as this creates a *time-to-test*
-  burden on all developers. Please keep them short.
+* Some subprojects such as ``clang`` and ``clangd`` have project specific
+  testing tools, like the ``clang -verify`` flag (`docs
+  <https://clang.llvm.org/docs/InternalsManual.html#verifying-diagnostics>`_)
+  and the ``clangd -lit-test``
+  flag, which are preferred over ``FileCheck``.
+
+* Changes to libraries, such as Support, which are not directly observable
+  through tool invocations, are often best tested with unit tests. Unit tests
+  are located under the ``unittests`` subdirectory of each subproject.
+
+* Test cases should be targeted. Large inputs exhibiting bugs should be reduced
+  with tools like ``llvm-reduce`` before committing them to the suite. It is not
+  acceptable to place an entire failing program into ``llvm/test`` as this
+  creates a *time-to-test* burden on all developers. Please keep them short.
 
 * Avoid adding links to resources that are not available to the entire
   community, such as links to private bug trackers, internal corporate
   documentation, etc. Instead, add sufficient comments to the test to provide
   the context behind such links.
 
-Note that llvm/test and clang/test are designed for regression and small feature
-tests only. More extensive test cases (e.g., entire applications, benchmarks,
-etc) should be added to the ``llvm-test`` test suite.  The llvm-test suite is
-for coverage (correctness, performance, etc) testing, not feature or regression
-testing.
+As a project, we prefer to separate tests into small in-tree tests, and large
+out-of-tree integration tests. More extensive integration test cases (e.g.,
+entire applications, benchmarks, etc) should be added to the `llvm-test-suite
+<https://github.com/llvm/llvm-test-suite>`_ repository.  The
+``llvm-test-suite`` repository is for integration and application testing
+(correctness, performance, etc) testing, not feature or regression testing. It
+also serves to separate out third party code that falls under a different
+license.
 
 Release Notes
 -------------
@@ -262,54 +296,53 @@ Quality
 The minimum quality standards that any change must satisfy before being
 committed to the main development branch are:
 
-#. Code must adhere to the `LLVM Coding Standards <CodingStandards.html>`_.
+#. Code must adhere to the :doc:`LLVM Coding Standards <CodingStandards>`.
 
 #. Code must compile cleanly (no errors, no warnings) on at least one platform.
 
 #. Bug fixes and new features should `include a testcase`_ so we know if the
    fix/feature ever regresses in the future.
 
-#. Code must pass the ``llvm/test`` test suite.
-
-#. The code must not cause regressions on a reasonable subset of llvm-test,
-   where "reasonable" depends on the contributor's judgement and the scope of
-   the change (more invasive changes require more testing). A reasonable subset
-   might be something like "``llvm-test/MultiSource/Benchmarks``".
+#. Pull requests should build and pass premerge checks. For first-time
+   contributors, this will require an initial cursory review to run the checks.
 
 #. Ensure that links in source code and test files point to publicly available
-   resources and are used primarily to add additional information rather than
-   to supply critical context. The surrounding comments should be sufficient
-   to provide the context behind such links.
+   resources and are used primarily to add additional information rather than to
+   supply critical context. The surrounding comments should be sufficient to
+   provide the context behind such links.
 
 Additionally, the committer is responsible for addressing any problems found in
 the future that the change is responsible for.  For example:
 
-* The code should compile cleanly on all supported platforms.
+* The code needs to compile cleanly and pass tests on all stable `LLVM
+  buildbots <https://lab.llvm.org/buildbot/>`_.
 
-* The changes should not cause any correctness regressions in the ``llvm-test``
-  suite and must not cause any major performance regressions.
+* The changes should not cause any correctness regressions in the
+  `llvm-test-suite <https://github.com/llvm/llvm-test-suite>`_
+  and must not cause any major performance regressions.
 
 * The change set should not cause performance or correctness regressions for the
-  LLVM tools.
+  LLVM tools. See `llvm-compile-time-tracker.com <https://llvm-compile-time-tracker.com>`_
 
 * The changes should not cause performance or correctness regressions in code
   compiled by LLVM on all applicable targets.
 
-* You are expected to address any `GitHub Issues <https://github.com/llvm/llvm-project/issues>`_ that
-  result from your change.
+* You are expected to address any `GitHub Issues
+  <https://github.com/llvm/llvm-project/issues>`_ that result from your change.
 
-We prefer for this to be handled before submission but understand that it isn't
-possible to test all of this for every submission.  Our build bots and nightly
-testing infrastructure normally finds these problems.  A good rule of thumb is
-to check the nightly testers for regressions the day after your change.  Build
-bots will directly email you if a group of commits that included yours caused a
+Our build bots and `nightly testing infrastructure
+<https://llvm.org/docs/lnt/intro.html>`_ find many of these issues. Build bots
+will directly email you if a group of commits that included yours caused a
 failure.  You are expected to check the build bot messages to see if they are
-your fault and, if so, fix the breakage.
+your fault and, if so, fix the breakage. However, keep in mind that if you
+receive such an email, it is highly likely that your change is not at fault.
+Changes are batched together precisely because these tests are generally too
+expensive to run continuously for every change.
 
-Commits that violate these quality standards (e.g. are very broken) may be
-reverted. This is necessary when the change blocks other developers from making
-progress. The developer is welcome to re-commit the change after the problem has
-been fixed.
+Commits that violate these quality standards may be reverted (see below). This
+is necessary when the change blocks other developers from making progress. The
+developer is welcome to re-commit the change after the problem has been fixed.
+
 
 .. _commit messages:
 
@@ -321,12 +354,12 @@ you follow these guidelines to help review, search in logs, email formatting
 and so on. These guidelines are very similar to rules used by other open source
 projects.
 
-Most importantly, the contents of the message should be carefully written to
-convey the rationale of the change (without delving too much in detail). It
-also should avoid being vague or overly specific. For example, "bits were not
-set right" will leave the reviewer wondering about which bits, and why they
-weren't right, while "Correctly set overflow bits in TargetInfo" conveys almost
-all there is to the change.
+Commit messages should communicate briefly what the change does, but they
+should really emphasize why a change is being made and provide useful context.
+Commit messages should be thoughtfully written and specific, rather than vague.
+For example, "bits were not set right" will leave the reviewer wondering about
+which bits, and why they weren't right, while "Correctly set overflow bits in
+TargetInfo" conveys almost all there is to the change.
 
 Below are some guidelines about the format of the message itself:
 
@@ -354,10 +387,8 @@ Below are some guidelines about the format of the message itself:
   or "[OpenMP] ...". This helps email filters and searches for post-commit
   reviews.
 
-* The body, if it exists, should be separated from the title by an empty line.
-
 * The body should be concise, but explanatory, including a complete
-  reasoning.  Unless it is required to understand the change, examples,
+  rationale.  Unless it is required to understand the change, examples,
   code snippets and gory details should be left to bug comments, web
   review or the mailing list.
 
@@ -367,7 +398,7 @@ Below are some guidelines about the format of the message itself:
 * If the commit is a bug fix on top of another recently committed patch, or a
   revert or reapply of a patch, include the git commit hash of the prior
   related commit. This could be as simple as "Revert commit NNNN because it
-  caused PR#".
+  caused issue #".
 
 * If the patch has been reviewed, add a link to its review page, as shown
   `here <https://www.llvm.org/docs/Phabricator.html#committing-a-change>`__.
@@ -382,9 +413,19 @@ Below are some guidelines about the format of the message itself:
   message self-explanatory. Note that such non-public links should not be
   included in the submitted code.
 
+* Avoid 'tagging' someone's username in your commits and PR descriptions
+  (e.g., `@<someUser>`), doing so results in that account receiving a notification
+  every time the commit is cherry-picked and/or pushed to a fork.
+
+LLVM uses a squash workflow for pull requests, so as the pull request evolves
+during review, it's important to update the pull request description over the
+course of a review. GitHub uses the initial commit message to create the pull
+request description, but it ignores all subsequent commit messages. Authors and
+reviewers should make a final editing pass over the squashed commit description when
+squashing and merging PRs.
+
 For minor violations of these recommendations, the community normally favors
-reminding the contributor of this policy over reverting. Minor corrections and
-omissions can be handled by sending a reply to the commits mailing list.
+reminding the contributor of this policy over reverting.
 
 .. _revert_policy:
 
@@ -437,7 +478,7 @@ What are the expectations around a revert?
   the commit thread asking for assistance.  We aren't trying to enumerate
   every case, but rather give a set of guidelines.
 * You should be sure that reverting the change improves the stability of tip
-  of tree.  Sometimes reverting one change in a series can worsen things
+  of tree.  Sometimes, reverting one change in a series can worsen things
   instead of improving them.  We expect reasonable judgment to ensure that
   the proper patch or set of patches is being reverted.
 * The commit message for the reverting commit should explain why patch
@@ -468,28 +509,44 @@ What are the expectations around a revert?
 * When re-applying a reverted patch, the commit message should be updated to
   indicate the problem that was addressed and how it was addressed.
 
+.. _obtaining_commit_access:
+
 Obtaining Commit Access
 -----------------------
 
-We grant commit access to contributors with a track record of submitting high
-quality patches.  If you would like commit access, please send an email to
-`Chris <mailto:clattner@llvm.org>`_ with your GitHub username.  This is true
-for former contributors with SVN access as well as new contributors. If
-approved, a GitHub invitation will be sent to your GitHub account. In case you
-don't get notification from GitHub, go to
+Once you have 3 or more merged pull requests, you may use `this link
+<https://github.com/llvm/llvm-project/issues/new?title=Request%20Commit%20Access%20For%20%3Cuser%3E&body=%23%23%23%20Why%20Are%20you%20requesting%20commit%20access%20?>`_
+to file an issue and request commit access. Replace the <user> string in the title
+with your github username, and explain why you are requesting commit access in
+the issue description.  Once the issue is created, you will need to get two
+current contributors to support your request before commit access will be granted.
+
+Reviewers of your committed patches will automatically be CCed upon creating the issue.
+Most commonly these reviewers will provide the necessary approval, but approvals
+from other LLVM committers are also acceptable. Those reviewing the application are
+confirming that you have indeed had three patches committed, and that based on interactions
+on those reviews and elsewhere in the LLVM community they have no concern about you
+adhering to our Developer Policy and Code of Conduct. Reviewers should clearly state their
+reasoning for accepting or rejecting the request, and finish with a clear statement such
+as "I approve of this request", "LGTM", or "I do not approve of this request".
+
+
+If approved, a GitHub invitation will be sent to your
+GitHub account. In case you don't get notification from GitHub, go to
 `Invitation Link <https://github.com/orgs/llvm/invitation>`_ directly. Once
-accept the invitation, you'll get commit access.
+you accept the invitation, you'll get commit access.
 
 Prior to obtaining commit access, it is common practice to request that
 someone with commit access commits on your behalf. When doing so, please
 provide the name and email address you would like to use in the Author
 property of the commit.
 
-For external tracking purposes, committed changes are automatically reflected
-on a commits mailing list soon after the commit lands (e.g. llvm-commits_).
-Note that these mailing lists are moderated, and it is not unusual for a large
-commit to require a moderator to approve the email, so do not be concerned if a
-commit does not immediately appear in the archives.
+For external tracking purposes, committed changes are automatically reflected on
+a commits mailing list soon after the commit lands (e.g.
+llvm-commits@lists.llvm.org). Note that these mailing lists are moderated, and
+it is not unusual for a large commit to require a moderator to approve the
+email, so do not be concerned if a commit does not immediately appear in the
+archives.
 
 If you have recently been granted commit access, these policies apply:
 
@@ -523,40 +580,46 @@ after they are committed, depending on the nature of the change).  You are
 encouraged to review other peoples' patches as well, but you aren't required
 to do so.
 
+Obtaining Other Access or Permissions
+-------------------------------------
+
+To obtain access other than commit access, you can raise an issue like the one
+for obtaining commit access. However, instead of including PRs you have authored,
+include evidence of your need for the type of access you want.
+
+For example, if you are helping to triage issues and want the ability to add
+labels, include links to issues you have triaged previously and explain how
+having this ability would help that work.
+
 .. _discuss the change/gather consensus:
 
-Making a Major Change
----------------------
-
-When a developer begins a major new project with the aim of contributing it back
-to LLVM, they should inform the community with a post to the `LLVM Discourse forums`_, to the extent
-possible. The reason for this is to:
-
-#. keep the community informed about future changes to LLVM,
-
-#. avoid duplication of effort by preventing multiple parties working on the
-   same thing and not knowing about it, and
-
-#. ensure that any technical issues around the proposed work are discussed and
-   resolved before any significant work is done.
+Proposing Major Changes (RFCs)
+------------------------------
 
 The design of LLVM is carefully controlled to ensure that all the pieces fit
 together well and are as consistent as possible. If you plan to make a major
 change to the way LLVM works or want to add a major new extension, it is a good
-idea to get consensus with the development community before you start working on
-it.
+idea to get consensus with the development community before you invest
+significant effort in an implementation. Prototype implementations, however, can
+often be helpful in making design discussions more concrete by demonstrating
+what is possible.
 
-Once the design of the new feature is finalized, the work itself should be done
-as a series of `incremental changes`_, not as a long-term development branch.
+LLVM is a large community with many stakeholders, and before landing any major
+change, it is important to discuss the design of a change publicly with the
+community. This is done by posting a Request For Comments (RFC) on the `LLVM
+Discourse forums`_. See the :doc:`RFC process <RFCProcess>` documentation for
+more details.
 
-.. _incremental changes:
+.. _incremental-changes:
 
 Incremental Development
 -----------------------
 
-In the LLVM project, we do all significant changes as a series of incremental
-patches.  We have a strong dislike for huge changes or long-term development
-branches.  Long-term development branches have a number of drawbacks:
+In the LLVM project, we prefer the incremental development approach, where
+significant changes are developed in-tree incrementally. The alternative
+approach of implementing features in long-lived development branches or forks
+is discouraged, although we have accepted features developed this way in the
+past. Long-term development branches have a number of drawbacks:
 
 #. Branches must have mainline merged into them periodically.  If the branch
    development and mainline development occur in the same pieces of code,
@@ -606,6 +669,51 @@ If you are interested in making a large change, and this scares you, please make
 sure to first `discuss the change/gather consensus`_ then ask about the best way
 to go about making the change.
 
+.. _breaking:
+
+Making Potentially Breaking Changes
+-----------------------------------
+
+Please help notify users and vendors of potential disruptions when upgrading to
+a newer version of a tool. For example, deprecating a feature that is expected
+to be removed in the future, removing an already-deprecated feature, upgrading
+a diagnostic from a warning to an error, switching important default behavior,
+or any other potentially disruptive situation thought to be worth raising
+awareness of. For such changes, the following should be done:
+
+* When performing the code review for the change, please add any applicable
+  "vendors" github team to the review for their awareness. The purpose of these
+  groups is to give vendors early notice that potentially disruptive changes
+  are being considered but have not yet been accepted. Vendors can give early
+  testing feedback on the changes to alert us to unacceptable breakages. The
+  current list of vendor groups is:
+
+  * `Clang vendors <https://github.com/orgs/llvm/teams/clang-vendors>`_
+  * `libc++ vendors <https://github.com/orgs/llvm/teams/libcxx-vendors>`_
+
+  People interested in joining the vendors group can do so by clicking the
+  "Join team" button on the linked github pages above.
+
+* When committing the change to the repository, add appropriate information
+  about the potentially breaking changes to the ``Potentially Breaking Changes``
+  section of the project's release notes. The release note should have
+  information about what the change is, what is potentially disruptive about
+  it, as well as any code examples, links, and motivation that is appropriate
+  to share with users. This helps users to learn about potential issues with
+  upgrading to that release.
+
+* After the change has been committed to the repository, the potentially
+  disruptive changes described in the release notes should be posted to the
+  `Announcements <https://discourse.llvm.org/c/announce/>`_ channel on
+  Discourse. The post should be tagged with the ``potentially-breaking`` label
+  and a label specific to the project (such as ``clang``, ``llvm``, etc). This
+  is another mechanism by which we can give pre-release notice to users about
+  potentially disruptive changes. It is a lower-traffic alternative to the
+  joining "vendors" group. To automatically be notified of new announcements
+  with the ``potentially-breaking`` label, go to your user preferences page in
+  Discourse, and add the label to one of the watch categories under
+  ``Notifications->Tags``.
+
 Attribution of Changes
 ----------------------
 
@@ -633,6 +741,26 @@ author and the committer like git does. As such, older commits used a different
 attribution mechanism. The previous method was to include "Patch by John Doe."
 in a separate line of the commit message and there are automated processes that
 rely on this format.
+
+Bans
+----
+
+The goal of a ban is to protect people in the community from having to interact
+with people who are consistently not respecting the
+:ref:`LLVM Community Code of Conduct` in LLVM project spaces. Contributions of
+any variety (pull requests, issue reports, forum posts, etc.) require
+interacting with the community. Therefore, we do not accept any form of direct
+contribution from a banned individual.
+
+Indirect contributions are permissible only by someone taking full ownership of
+such a contribution and they are responsible for all related interactions with
+the community regarding that contribution.
+
+Trying to evade a non-permanent ban results in getting banned permanently.
+
+When in doubt how to act in a specific instance, please reach out to
+conduct@llvm.org for advice.
+
 
 .. _IR backwards compatibility:
 
@@ -712,6 +840,7 @@ will only be done through the following process:
       library features LLVM should use; avoid miscompiles in particular compiler
       versions, etc).
     - Detail downsides on important platforms (e.g. Ubuntu LTS status).
+    - See the :doc:`RFC process <RFCProcess>` documentation for more details.
 
   * Once the RFC reaches consensus, update the CMake toolchain version checks as
     well as the :doc:`getting started<GettingStarted>` guide.  This provides a
@@ -762,7 +891,7 @@ their patch with every possible configuration.
 
 *If someone else broke the build and this blocks your work*
 
-* Comment on the code review in `Phabricator <https://reviews.llvm.org/>`_
+* Comment on the code review in `GitHub <https://github.com/llvm/llvm-project/pulls>`_
   (if available) or email the author, explain the problem and how this impacts
   you. Add a link to the broken build and the error message so folks can
   understand the problem.
@@ -827,9 +956,10 @@ The differences between both classes are:
 
 The basic rules for a back-end to be upstreamed in **experimental** mode are:
 
-* Every target must have a :ref:`code owner<code owners>`. The `CODE_OWNERS.TXT`
-  file has to be updated as part of the first merge. The code owner makes sure
-  that changes to the target get reviewed and steers the overall effort.
+* Every target must have at least one :ref:`maintainer<maintainers>`. The
+  `Maintainers.rst` file has to be updated as part of the first merge. These
+  maintainers make sure that changes to the target get reviewed and steers the
+  overall effort.
 
 * There must be an active community behind the target. This community
   will help maintain the target by providing buildbots, fixing
@@ -899,12 +1029,13 @@ Those wishing to add a new target to LLVM must follow the procedure below:
    your target and how it follows all the requirements and what work has been
    done and will need to be done to accommodate the official target requirements.
    Make sure to expose any and all controversial issues, changes needed in the
-   base code, table gen, etc.
+   base code, table gen, etc. See the :doc:`RFC process <RFCProcess>`
+   documentation for more details.
 3. Once the response is positive, the LLVM community can start reviewing the
    actual patches (but they can be prepared before, to support the RFC). Create
    a sequence of N patches, numbered '1/N' to 'N/N' (make sure N is an actual
    number, not the letter 'N'), that completes the basic structure of the target.
-4. The initial patch should add documentation, code owners and triple support in
+4. The initial patch should add documentation, maintainers, and triple support in
    clang and LLVM. The following patches add TableGen infrastructure to describe
    the target and lower instructions to assembly. The final patch must show that
    the target can lower correctly with extensive LIT tests (IR to MIR, MIR to
@@ -916,7 +1047,7 @@ Those wishing to add a new target to LLVM must follow the procedure below:
    start working asynchronously on the target to complete support. They should
    still seek review from those who helped them in the initial phase, to make
    sure the progress is still consistent.
-7. Once all official requirements have been fulfilled (as above), the code owner
+7. Once all official requirements have been fulfilled (as above), the maintainers
    should request the target to be enabled by default by sending another RFC to
    the `LLVM Discourse forums`_.
 
@@ -941,7 +1072,7 @@ components to a high bar similar to "official targets", they:
  * Must conform to all of the policies laid out in this developer policy
    document, including license, patent, coding standards, and code of conduct.
  * Must have an active community that maintains the code, including established
-   code owners.
+   maintainers.
  * Should have reasonable documentation about how it works, including a high
    quality README file.
  * Should have CI to catch breakage within the project itself or due to
@@ -950,7 +1081,8 @@ components to a high bar similar to "official targets", they:
    clear path to resolving them.
  * Must be proposed through the LLVM RFC process, and have its addition approved
    by the LLVM community - this ultimately mediates the resolution of the
-   "should" concerns above.
+   "should" concerns above. See the :doc:`RFC process <RFCProcess>`
+   documentation for more details.
 
 If you have a project that you think would make sense to add to the LLVM
 monorepo, please start an RFC topic on the `LLVM Discourse forums`_ to kick off
@@ -994,7 +1126,8 @@ criteria:
    suggested wording below).
  * Must be proposed through the LLVM RFC process, and have its addition
    approved by the LLVM community - this ultimately mediates the resolution of
-   the "should" concerns above.
+   the "should" concerns above. See the :doc:`RFC process <RFCProcess>`
+   documentation for more details.
 
 That said, the project need not have any code to get started, and need not have
 an established community at all!  Furthermore, incubating projects may pass
@@ -1026,6 +1159,55 @@ Suggested disclaimer for the project README and the main project web page:
    necessarily a reflection of the completeness or stability of the code, it
    does indicate that the project is not yet endorsed as a component of LLVM.
 
+Adding or enabling a new LLVM pass
+----------------------------------
+
+The guidelines here are primarily targeted at the enablement of new major
+passes in the target-independent optimization pipeline. Small additions, or
+backend-specific passes, require a lesser degree of care. Before creating a new
+pass, consider whether the functionality can be integrated into an existing
+pass first. This is often both faster and more powerful.
+
+When adding a new pass, the goal should be to enable it as part of the default
+optimization pipeline as early as possible and then continue development
+incrementally. (This does not apply to passes that are only relevant for
+specific uses of LLVM, such as GC support passes.)
+
+The recommended workflow is:
+
+1. Implement a basic version of the pass and add it to the pass pipeline behind
+   a flag that is disabled by default. The initial version should focus on
+   handling simple cases correctly and efficiently.
+2. Enable the pass by default. Separating this step allows easily disabling the
+   pass if issues are encountered, without having to revert the entire
+   implementation.
+3. Incrementally extend the pass with new functionality. As the pass is already
+   enabled, it becomes easier to identify the specific change that has caused a
+   regression in correctness, optimization quality or compile-time.
+
+When enabling a pass, certain requirements must be met (in no particular order):
+
+ * **Maintenance:** The pass (and any analyses it depends on) must have at
+   least one maintainer.
+ * **Usefulness:** There should be evidence that the pass improves performance
+   (or whatever metric it optimizes for) on real-world workloads. Improvements
+   seen only on synthetic benchmarks may be insufficient.
+ * **Compile-Time:** The pass should not have a large impact on compile-time,
+   where the evaluation of what "large" means is up to reviewer discretion, and
+   may differ based on the value the pass provides. In any case, it is expected
+   that a concerted effort has been made to mitigate the compile-time impact,
+   both for the average case, and for pathological cases.
+ * **Correctness:** The pass should have no known correctness issues (except
+   global correctness issues that affect all of LLVM). If an old pass is being
+   enabled (rather than implementing a new one incrementally), additional due
+   diligence is required. The pass should be fully reviewed to ensure that it
+   still complies with current quality standards. Fuzzing with disabled
+   profitability checks may help gain additional confidence in the
+   implementation.
+
+If non-trivial issues are found in a newly enabled pass, it may be temporarily
+disabled again, until the issues have been resolved.
+
 .. _copyright-license-patents:
 
 Copyright, License, and Patents
@@ -1047,13 +1229,15 @@ In certain circumstances, code licensed under other licenses can be added
 to the codebase.  However, this may only be done with approval of the LLVM
 Foundation Board of Directors, and contributors should plan for the approval
 process to take at least 4-6 weeks.  If you would like to contribute code
-under a different license, please create a Phabricator review with the code
+under a different license, please create a pull request with the code
 you want to contribute and email board@llvm.org requesting a review.
 
 If you have questions or comments about these topics, please ask on the
 `LLVM Discourse forums`_.  However,
 please realize that most compiler developers are not lawyers, and therefore you
 will not be getting official legal advice.
+
+.. _LLVM Discourse forums: https://discourse.llvm.org
 
 Copyright
 ---------
@@ -1071,6 +1255,18 @@ contributors to LLVM and getting them to agree that a license change is
 acceptable for their contributions.  We feel that a high burden for relicensing
 is good for the project, because contributors do not have to fear that their
 code will be used in a way with which they disagree.
+
+Embedded Copyright or 'Contributed by' Statements
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The LLVM project does not accept contributions that include in-source copyright
+notices except where such notices are part of a larger external project being
+added as a vendored dependency.
+
+LLVM source code lives for a long time and is edited by many people, the best
+way to track contributions is through revision control history.
+See the `Attribution of Changes`_ section for more information about attributing
+changes to authors other than the committer.
 
 Relicensing
 -----------
@@ -1102,20 +1298,17 @@ To relicense LLVM, we will be seeking approval from all of the copyright holders
 of code in the repository, or potentially remove/rewrite code if we cannot.
 This is a large
 and challenging project which will take a significant amount of time to
-complete.  In the interim, **all contributions to the project will be made under
-the terms of both the new license and the legacy license scheme** (each of which
-is described below).  The exception to this is the legacy patent grant, which
-will not be required for new contributions.
+complete.
 
-When all of the code in the project has been converted to the new license or
-removed, we will drop the requirement to contribute under the legacy license.
-This will achieve the goal of having
-a single standardized license for the entire codebase.
+Starting on 2024-06-01 (first of June 2024), new contributions only need to
+be covered by the new LLVM license, i.e. Apache-2.0 WITH LLVM-exception.
+Before this date, the project required all contributions to be made under
+both the new license and the legacy license.
 
-If you are a prior contributor to LLVM and have not done so already, please do
-*TODO* to allow us to use your code. *Add a link to a separate page here, which
-is probably a click through web form or something like that.  Details to be
-determined later*.
+If you are a contributor to LLVM with contributions committed before 2019-01-19
+and have not done so already, please do follow the instructions at
+https://foundation.llvm.org/docs/relicensing/, under section "Individual
+Relicensing Agreement" to relicense your contributions under the new license.
 
 
 .. _open source licensing terms:
@@ -1242,12 +1435,11 @@ Legacy License Structure
 
 .. note::
    The code base was previously licensed under the Terms described here.
-   We are in the middle of relicensing to a new approach (described above), but
-   until this effort is complete, the code is also still available under these
-   terms.  Once we finish the relicensing project, new versions of the code will
-   not be available under these terms.  However, nothing takes away your right
-   to use old versions under the licensing terms under which they were
-   originally released.
+   We are in the middle of relicensing to a new approach (described above).
+   More than 99% of all contributions made to LLVM are covered by the Apache-2.0
+   WITH LLVM-exception license. A small portion of LLVM code remains exclusively
+   covered by the legacy license. Contributions after 2024-06-01 are covered
+   exclusively by the new license._
 
 We intend to keep LLVM perpetually open source and to use a permissive open
 source license.  The code in
@@ -1283,4 +1475,34 @@ to move code from (e.g.)  libc++ to the LLVM core without concern, but that code
 cannot be moved from the LLVM core to libc++ without the copyright owner's
 permission.
 
-.. _LLVM Discourse forums: https://discourse.llvm.org
+.. _ai contributions:
+
+AI generated contributions
+--------------------------
+
+Artificial intelligence systems raise many questions around copyright that have
+yet to be answered. Our policy on AI tools is guided by our copyright policy:
+Contributors are responsible for ensuring that they have the right to contribute
+code under the terms of our license, typically meaning that either they, their
+employer, or their collaborators hold the copyright. Using AI tools to
+regenerate copyrighted material does not remove the copyright, and contributors
+are responsible for ensuring that such material does not appear in their
+contributions.
+
+As such, the LLVM policy is that contributors are permitted to use artificial
+intelligence tools to produce contributions, provided that they have the right
+to license that code under the project license. Contributions found to violate
+this policy will be removed just like any other offending contribution.
+
+While the LLVM project has a liberal policy on AI tool use, contributors are
+considered responsible for their contributions. We encourage contributors to
+review all generated code before sending it for review to verify its
+correctness and to understand it so that they can answer questions during code
+review. Reviewing and maintaining generated code that the original contributor
+does not understand is not a good use of limited project resources.
+
+The one exception we reserve is for GitHub issues labelled with the
+"good first issue" label. These issues are selected by LLVM contributors
+to help newcomers get familiar with the code base. Thus, it makes no sense to
+fix them using AI tools. **Using AI tools to fix issues labelled as
+"good first issues" is forbidden**.

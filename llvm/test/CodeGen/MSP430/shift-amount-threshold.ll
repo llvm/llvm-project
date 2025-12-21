@@ -115,13 +115,12 @@ define i16 @testShiftAnd_1(i16 %x) {
 ; CHECK-LABEL: testShiftAnd_1:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    mov r12, r13
-; CHECK-NEXT:    mov #1, r12
+; CHECK-NEXT:    mov #2, r12
 ; CHECK-NEXT:    tst r13
 ; CHECK-NEXT:    jl .LBB6_2
 ; CHECK-NEXT:  ; %bb.1: ; %entry
 ; CHECK-NEXT:    clr r12
 ; CHECK-NEXT:  .LBB6_2: ; %entry
-; CHECK-NEXT:    add r12, r12
 ; CHECK-NEXT:    ret
 entry:
   %cmp = icmp slt i16 %x, 0

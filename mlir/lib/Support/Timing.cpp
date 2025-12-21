@@ -19,19 +19,18 @@
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Format.h"
-#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/RWMutex.h"
 #include "llvm/Support/Threading.h"
 #include "llvm/Support/raw_ostream.h"
 
-#include <atomic>
-#include <optional>
 #include <chrono>
+#include <optional>
 
 using namespace mlir;
 using namespace detail;
 using DisplayMode = DefaultTimingManager::DisplayMode;
+using OutputFormat = DefaultTimingManager::OutputFormat;
 
 constexpr llvm::StringLiteral kTimingDescription =
     "... Execution time report ...";
@@ -51,7 +50,8 @@ public:
   llvm::sys::SmartRWMutex<true> identifierMutex;
 
   /// A thread local cache of identifiers to reduce lock contention.
-  ThreadLocalCache<llvm::StringMap<llvm::StringMapEntry<std::nullopt_t> *>>
+  ThreadLocalCache<
+      llvm::StringMap<llvm::StringMapEntry<llvm::EmptyStringSetTag> *>>
       localIdentifierCache;
 
   TimingManagerImpl() : identifiers(identifierAllocator) {}
@@ -109,56 +109,105 @@ TimingIdentifier TimingIdentifier::get(StringRef str, TimingManager &tm) {
 
 namespace {
 
-/// Simple record class to record timing information.
-struct TimeRecord {
-  TimeRecord(double wall = 0.0, double user = 0.0) : wall(wall), user(user) {}
+class OutputTextStrategy : public OutputStrategy {
+public:
+  OutputTextStrategy(raw_ostream &os) : OutputStrategy(os) {}
 
-  TimeRecord &operator+=(const TimeRecord &other) {
-    wall += other.wall;
-    user += other.user;
-    return *this;
-  }
+  void printHeader(const TimeRecord &total) override {
+    // Figure out how many spaces to description name.
+    unsigned padding = (80 - kTimingDescription.size()) / 2;
+    os << "===" << std::string(73, '-') << "===\n";
+    os.indent(padding) << kTimingDescription << '\n';
+    os << "===" << std::string(73, '-') << "===\n";
 
-  TimeRecord &operator-=(const TimeRecord &other) {
-    wall -= other.wall;
-    user -= other.user;
-    return *this;
-  }
-
-  /// Print the current time record to 'os', with a breakdown showing
-  /// contributions to the give 'total' time record.
-  void print(raw_ostream &os, const TimeRecord &total) {
+    // Print the total time followed by the section headers.
+    os << llvm::format("  Total Execution Time: %.4f seconds\n\n", total.wall);
     if (total.user != total.wall)
-      os << llvm::format("  %8.4f (%5.1f%%)", user, 100.0 * user / total.user);
-    os << llvm::format("  %8.4f (%5.1f%%)  ", wall, 100.0 * wall / total.wall);
+      os << "  ----User Time----";
+    os << "  ----Wall Time----  ----Name----\n";
   }
 
-  double wall, user;
+  void printFooter() override { os.flush(); }
+
+  void printTime(const TimeRecord &time, const TimeRecord &total) override {
+    if (total.user != total.wall) {
+      os << llvm::format("  %8.4f (%5.1f%%)", time.user,
+                         100.0 * time.user / total.user);
+    }
+    os << llvm::format("  %8.4f (%5.1f%%)  ", time.wall,
+                       100.0 * time.wall / total.wall);
+  }
+
+  void printListEntry(StringRef name, const TimeRecord &time,
+                      const TimeRecord &total, bool lastEntry) override {
+    printTime(time, total);
+    os << name << "\n";
+  }
+
+  void printTreeEntry(unsigned indent, StringRef name, const TimeRecord &time,
+                      const TimeRecord &total) override {
+    printTime(time, total);
+    os.indent(indent) << name << "\n";
+  }
+
+  void printTreeEntryEnd(unsigned indent, bool lastEntry) override {}
+};
+
+class OutputJsonStrategy : public OutputStrategy {
+public:
+  OutputJsonStrategy(raw_ostream &os) : OutputStrategy(os) {}
+
+  void printHeader(const TimeRecord &total) override { os << "[" << "\n"; }
+
+  void printFooter() override {
+    os << "]" << "\n";
+    os.flush();
+  }
+
+  void printTime(const TimeRecord &time, const TimeRecord &total) override {
+    if (total.user != total.wall) {
+      os << "\"user\": {";
+      os << "\"duration\": " << llvm::format("%8.4f", time.user) << ", ";
+      os << "\"percentage\": "
+         << llvm::format("%5.1f", 100.0 * time.user / total.user);
+      os << "}, ";
+    }
+    os << "\"wall\": {";
+    os << "\"duration\": " << llvm::format("%8.4f", time.wall) << ", ";
+    os << "\"percentage\": "
+       << llvm::format("%5.1f", 100.0 * time.wall / total.wall);
+    os << "}";
+  }
+
+  void printListEntry(StringRef name, const TimeRecord &time,
+                      const TimeRecord &total, bool lastEntry) override {
+    os << "{";
+    printTime(time, total);
+    os << ", \"name\": " << "\"" << name << "\"";
+    os << "}";
+    if (!lastEntry)
+      os << ",";
+    os << "\n";
+  }
+
+  void printTreeEntry(unsigned indent, StringRef name, const TimeRecord &time,
+                      const TimeRecord &total) override {
+    os.indent(indent) << "{";
+    printTime(time, total);
+    os << ", \"name\": " << "\"" << name << "\"";
+    os << ", \"passes\": [" << "\n";
+  }
+
+  void printTreeEntryEnd(unsigned indent, bool lastEntry) override {
+    os.indent(indent) << "{}]";
+    os << "}";
+    if (!lastEntry)
+      os << ",";
+    os << "\n";
+  }
 };
 
 } // namespace
-
-/// Utility to print a single line entry in the timer output.
-static void printTimeEntry(raw_ostream &os, unsigned indent, StringRef name,
-                           TimeRecord time, TimeRecord total) {
-  time.print(os, total);
-  os.indent(indent) << name << "\n";
-}
-
-/// Utility to print the timer heading information.
-static void printTimeHeader(raw_ostream &os, TimeRecord total) {
-  // Figure out how many spaces to description name.
-  unsigned padding = (80 - kTimingDescription.size()) / 2;
-  os << "===" << std::string(73, '-') << "===\n";
-  os.indent(padding) << kTimingDescription << '\n';
-  os << "===" << std::string(73, '-') << "===\n";
-
-  // Print the total time followed by the section headers.
-  os << llvm::format("  Total Execution Time: %.4f seconds\n\n", total.wall);
-  if (total.user != total.wall)
-    os << "  ----User Time----";
-  os << "  ----Wall Time----  ----Name----\n";
-}
 
 //===----------------------------------------------------------------------===//
 // Timer Implementation for DefaultTimingManager
@@ -176,7 +225,8 @@ public:
   using ChildrenMap = llvm::MapVector<const void *, std::unique_ptr<TimerImpl>>;
   using AsyncChildrenMap = llvm::DenseMap<uint64_t, ChildrenMap>;
 
-  TimerImpl(std::string &&name) : threadId(llvm::get_threadid()), name(name) {}
+  TimerImpl(std::string &&name, std::unique_ptr<OutputStrategy> &output)
+      : threadId(llvm::get_threadid()), name(name), output(output) {}
 
   /// Start the timer.
   void start() { startTime = std::chrono::steady_clock::now(); }
@@ -206,7 +256,7 @@ public:
   TimerImpl *nestTail(std::unique_ptr<TimerImpl> &child,
                       function_ref<std::string()> nameBuilder) {
     if (!child)
-      child = std::make_unique<TimerImpl>(nameBuilder());
+      child = std::make_unique<TimerImpl>(nameBuilder(), output);
     return child.get();
   }
 
@@ -270,7 +320,6 @@ public:
   void mergeChildren(AsyncChildrenMap &&other) {
     for (auto &thread : other) {
       mergeChildren(std::move(thread.second));
-      assert(thread.second.empty());
     }
     other.clear();
   }
@@ -320,7 +369,7 @@ public:
   }
 
   /// Print the timing result in list mode.
-  void printAsList(raw_ostream &os, TimeRecord total) {
+  void printAsList(TimeRecord total) {
     // Flatten the leaf timers in the tree and merge them by name.
     llvm::StringMap<TimeRecord> mergedTimers;
     std::function<void(TimerImpl *)> addTimer = [&](TimerImpl *timer) {
@@ -343,34 +392,37 @@ public:
 
     // Print the timing information sequentially.
     for (auto &timeData : timerNameAndTime)
-      printTimeEntry(os, 0, timeData.first, timeData.second, total);
+      output->printListEntry(timeData.first, timeData.second, total);
   }
 
   /// Print the timing result in tree mode.
-  void printAsTree(raw_ostream &os, TimeRecord total, unsigned indent = 0) {
+  void printAsTree(TimeRecord total, unsigned indent = 0) {
     unsigned childIndent = indent;
     if (!hidden) {
-      printTimeEntry(os, indent, name, getTimeRecord(), total);
+      output->printTreeEntry(indent, name, getTimeRecord(), total);
       childIndent += 2;
     }
     for (auto &child : children) {
-      child.second->printAsTree(os, total, childIndent);
+      child.second->printAsTree(total, childIndent);
+    }
+    if (!hidden) {
+      output->printTreeEntryEnd(indent);
     }
   }
 
   /// Print the current timing information.
-  void print(raw_ostream &os, DisplayMode displayMode) {
+  void print(DisplayMode displayMode) {
     // Print the banner.
     auto total = getTimeRecord();
-    printTimeHeader(os, total);
+    output->printHeader(total);
 
     // Defer to a specialized printer for each display mode.
     switch (displayMode) {
     case DisplayMode::List:
-      printAsList(os, total);
+      printAsList(total);
       break;
     case DisplayMode::Tree:
-      printAsTree(os, total);
+      printAsTree(total);
       break;
     }
 
@@ -379,9 +431,9 @@ public:
     auto rest = total;
     for (auto &child : children)
       rest -= child.second->getTimeRecord();
-    printTimeEntry(os, 0, "Rest", rest, total);
-    printTimeEntry(os, 0, "Total", total, total);
-    os.flush();
+    output->printListEntry("Rest", rest, total);
+    output->printListEntry("Total", total, total, /*lastEntry=*/true);
+    output->printFooter();
   }
 
   /// The last time instant at which the timer was started.
@@ -415,6 +467,8 @@ public:
 
   /// Mutex for the async children.
   std::mutex asyncMutex;
+
+  std::unique_ptr<OutputStrategy> &output;
 };
 
 } // namespace
@@ -435,9 +489,6 @@ public:
   /// The configured display mode.
   DisplayMode displayMode = DisplayMode::Tree;
 
-  /// The stream where we should print our output. This will always be non-null.
-  raw_ostream *output = &llvm::errs();
-
   /// The root timer.
   std::unique_ptr<TimerImpl> rootTimer;
 };
@@ -446,7 +497,8 @@ public:
 } // namespace mlir
 
 DefaultTimingManager::DefaultTimingManager()
-    : impl(std::make_unique<DefaultTimingManagerImpl>()) {
+    : impl(std::make_unique<DefaultTimingManagerImpl>()),
+      out(std::make_unique<OutputTextStrategy>(llvm::errs())) {
   clear(); // initializes the root timer
 }
 
@@ -469,26 +521,22 @@ DefaultTimingManager::DisplayMode DefaultTimingManager::getDisplayMode() const {
 }
 
 /// Change the stream where the output will be printed to.
-void DefaultTimingManager::setOutput(raw_ostream &os) { impl->output = &os; }
-
-/// Return the current output stream where the output will be printed to.
-raw_ostream &DefaultTimingManager::getOutput() const {
-  assert(impl->output);
-  return *impl->output;
+void DefaultTimingManager::setOutput(std::unique_ptr<OutputStrategy> output) {
+  out = std::move(output);
 }
 
 /// Print and clear the timing results.
 void DefaultTimingManager::print() {
   if (impl->enabled) {
     impl->rootTimer->finalize();
-    impl->rootTimer->print(*impl->output, impl->displayMode);
+    impl->rootTimer->print(impl->displayMode);
   }
   clear();
 }
 
 /// Clear the timing results.
 void DefaultTimingManager::clear() {
-  impl->rootTimer = std::make_unique<TimerImpl>("root");
+  impl->rootTimer = std::make_unique<TimerImpl>("root", out);
   impl->rootTimer->hidden = true;
 }
 
@@ -500,13 +548,13 @@ void DefaultTimingManager::dumpTimers(raw_ostream &os) {
 /// Debug print the timers as a list.
 void DefaultTimingManager::dumpAsList(raw_ostream &os) {
   impl->rootTimer->finalize();
-  impl->rootTimer->print(os, DisplayMode::List);
+  impl->rootTimer->print(DisplayMode::List);
 }
 
 /// Debug print the timers as a tree.
 void DefaultTimingManager::dumpAsTree(raw_ostream &os) {
   impl->rootTimer->finalize();
-  impl->rootTimer->print(os, DisplayMode::Tree);
+  impl->rootTimer->print(DisplayMode::Tree);
 }
 
 std::optional<void *> DefaultTimingManager::rootTimer() {
@@ -549,6 +597,13 @@ struct DefaultTimingManagerOptions {
                      "display the results in a list sorted by total time"),
           clEnumValN(DisplayMode::Tree, "tree",
                      "display the results ina with a nested tree view"))};
+  llvm::cl::opt<OutputFormat> outputFormat{
+      "mlir-output-format", llvm::cl::desc("Output format for timing data"),
+      llvm::cl::init(OutputFormat::Text),
+      llvm::cl::values(clEnumValN(OutputFormat::Text, "text",
+                                  "display the results in text format"),
+                       clEnumValN(OutputFormat::Json, "json",
+                                  "display the results in JSON format"))};
 };
 } // namespace
 
@@ -564,4 +619,17 @@ void mlir::applyDefaultTimingManagerCLOptions(DefaultTimingManager &tm) {
     return;
   tm.setEnabled(options->timing);
   tm.setDisplayMode(options->displayMode);
+  tm.setOutput(createOutputStrategy(options->outputFormat, llvm::errs()));
+}
+
+std::unique_ptr<OutputStrategy>
+mlir::createOutputStrategy(DefaultTimingManager::OutputFormat fmt,
+                           raw_ostream &os) {
+  switch (fmt) {
+  case OutputFormat::Text:
+    return std::make_unique<OutputTextStrategy>(os);
+  case OutputFormat::Json:
+    return std::make_unique<OutputJsonStrategy>(os);
+  }
+  llvm_unreachable("Invalid output format");
 }

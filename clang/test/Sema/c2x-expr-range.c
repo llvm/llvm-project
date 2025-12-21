@@ -12,3 +12,15 @@ void test1(int *a) {
 void test2(__uint128_t *a) {
   (void)(*a >> ((__uint128_t)__UINT64_MAX__ + 1) <= 0); // expected-warning {{shift count >= width of type}}
 }
+
+// Regression test for bug where a faulty warning was given. We don't expect to
+// see any warning in this case.
+_BitInt(128) test3(_BitInt(128) a) {
+  return a << 12wb;
+}
+
+// Similar to test3 above, but with a too large shift count. We expect to see a
+// warning in this case.
+_BitInt(128) test4(_BitInt(128) a) {
+  return a << 129wb; // expected-warning {{shift count >= width of type}}
+}

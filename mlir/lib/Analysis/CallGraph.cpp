@@ -14,9 +14,13 @@
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/SymbolTable.h"
 #include "mlir/Interfaces/CallInterfaces.h"
-#include "llvm/ADT/PointerUnion.h"
+#include "mlir/Support/LLVM.h"
 #include "llvm/ADT/SCCIterator.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/raw_ostream.h"
+#include <cassert>
+#include <memory>
 
 using namespace mlir;
 
@@ -133,7 +137,7 @@ CallGraphNode *CallGraph::getOrAddNode(Region *region,
 /// Lookup a call graph node for the given region, or nullptr if none is
 /// registered.
 CallGraphNode *CallGraph::lookupNode(Region *region) const {
-  auto it = nodes.find(region);
+  const auto *it = nodes.find(region);
   return it == nodes.end() ? nullptr : it->second.get();
 }
 
@@ -142,7 +146,7 @@ CallGraphNode *CallGraph::lookupNode(Region *region) const {
 CallGraphNode *
 CallGraph::resolveCallable(CallOpInterface call,
                            SymbolTableCollection &symbolTable) const {
-  Operation *callable = call.resolveCallable(&symbolTable);
+  Operation *callable = call.resolveCallableInTable(&symbolTable);
   if (auto callableOp = dyn_cast_or_null<CallableOpInterface>(callable))
     if (auto *node = lookupNode(callableOp.getCallableRegion()))
       return node;
@@ -169,6 +173,7 @@ void CallGraph::eraseNode(CallGraphNode *node) {
 
 //===----------------------------------------------------------------------===//
 // Printing
+//===----------------------------------------------------------------------===//
 
 /// Dump the graph in a human readable format.
 void CallGraph::dump() const { print(llvm::errs()); }

@@ -30,8 +30,11 @@ The following requirements are shared on all platforms.
 If you want to run the test suite, you'll need to build LLDB with Python
 scripting support.
 
-* `Python <http://www.python.org/>`_
+* `Python <http://www.python.org/>`_ 3.8 or later.
 * `SWIG <http://swig.org/>`_ 4 or later.
+
+If you are on FreeBSD or NetBSD, you will need to install ``gmake`` for building
+the test programs. On other platforms ``make`` is used.
 
 .. _Optional Dependencies:
 
@@ -48,21 +51,21 @@ CMake flag to ``On`` or ``Off`` to force the dependency to be enabled or
 disabled. When a dependency is set to ``On`` and can't be found it will cause a
 CMake configuration error.
 
-+-------------------+------------------------------------------------------+--------------------------+
-| Feature           | Description                                          | CMake Flag               |
-+===================+======================================================+==========================+
-| Editline          | Generic line editing, history, Emacs and Vi bindings | ``LLDB_ENABLE_LIBEDIT``  |
-+-------------------+------------------------------------------------------+--------------------------+
-| Curses            | Text user interface                                  | ``LLDB_ENABLE_CURSES``   |
-+-------------------+------------------------------------------------------+--------------------------+
-| LZMA              | Lossless data compression                            | ``LLDB_ENABLE_LZMA``     |
-+-------------------+------------------------------------------------------+--------------------------+
-| Libxml2           | XML                                                  | ``LLDB_ENABLE_LIBXML2``  |
-+-------------------+------------------------------------------------------+--------------------------+
-| Python            | Python scripting                                     | ``LLDB_ENABLE_PYTHON``   |
-+-------------------+------------------------------------------------------+--------------------------+
-| Lua               | Lua scripting                                        | ``LLDB_ENABLE_LUA``      |
-+-------------------+------------------------------------------------------+--------------------------+
++-------------------+--------------------------------------------------------------+--------------------------+
+| Feature           | Description                                                  | CMake Flag               |
++===================+==============================================================+==========================+
+| Editline          | Generic line editing, history, Emacs and Vi bindings         | ``LLDB_ENABLE_LIBEDIT``  |
++-------------------+--------------------------------------------------------------+--------------------------+
+| Curses            | Text user interface                                          | ``LLDB_ENABLE_CURSES``   |
++-------------------+--------------------------------------------------------------+--------------------------+
+| LZMA              | Lossless data compression                                    | ``LLDB_ENABLE_LZMA``     |
++-------------------+--------------------------------------------------------------+--------------------------+
+| Libxml2           | XML                                                          | ``LLDB_ENABLE_LIBXML2``  |
++-------------------+--------------------------------------------------------------+--------------------------+
+| Python            | Python scripting. >= 3.8 is required.                        | ``LLDB_ENABLE_PYTHON``   |
++-------------------+--------------------------------------------------------------+--------------------------+
+| Lua               | Lua scripting. Lua 5.3 and 5.4 are supported.                | ``LLDB_ENABLE_LUA``      |
++-------------------+--------------------------------------------------------------+--------------------------+
 
 Depending on your platform and package manager, one might run any of the
 commands below.
@@ -70,52 +73,53 @@ commands below.
 ::
 
   $ yum install libedit-devel libxml2-devel ncurses-devel python-devel swig
-  $ sudo apt-get install build-essential swig python3-dev libedit-dev libncurses5-dev
-  $ pkg install swig python
-  $ pkgin install swig python36 cmake ninja-build
+  $ sudo apt-get install build-essential swig python3-dev libedit-dev libncurses5-dev libxml2-dev
+  $ pkg install swig python libxml2
+  $ pkgin install swig python38 cmake ninja-build
   $ brew install swig cmake ninja
 
-Note that there's an `incompatibility
-<https://github.com/swig/swig/issues/1321>`_ between Python version 3.7 and later
-and swig versions older than 4.0.0 which makes builds of LLDB using debug
-versions of python unusable. This primarily affects Windows, as debug builds of
-LLDB must use debug python as well.
+.. note::
+   There is an `incompatibility
+   <https://github.com/swig/swig/issues/1321>`_ between Python version 3.7 and later
+   and swig versions older than 4.0.0 which makes builds of LLDB using debug
+   versions of python unusable. This primarily affects Windows, as debug builds of
+   LLDB must use debug python as well.
 
+.. note::
+  Installing multiple versions of Curses, particularly when only one is built with
+  wide character support, can cause lldb to be linked with an incorrect set of
+  libraries. If your system already has Curses, we recommend you use that version.
+  If you do install another one, use a tool like ``ldd`` to ensure only one version
+  of Curses is being used in the final ``lldb`` executable.
 
 Windows
 *******
 
-* Visual Studio 2019.
-* The latest Windows SDK.
-* The Active Template Library (ATL).
-* `GnuWin32 <http://gnuwin32.sourceforge.net/>`_ for CoreUtils and Make.
-* `Python 3 <https://www.python.org/downloads/windows/>`_.  Make sure to (1) get
-  the x64 variant if that's what you're targetting and (2) install the debug
-  library if you want to build a debug lldb. The standalone installer is the
-  easiest way to get the debug library.
-* `Python Tools for Visual Studio
-  <https://github.com/Microsoft/PTVS/>`_. If you plan to debug test failures
-  or even write new tests at all, PTVS is an indispensable debugging
-  extension to VS that enables full editing and debugging support for Python
-  (including mixed native/managed debugging).
-* `SWIG for Windows <http://www.swig.org/download.html>`_
+The steps outlined here describe how to set up your system and install the
+required dependencies for building and testing LLDB on Windows. They only need
+to be performed once.
 
-The steps outlined here describes how to set up your system and install the
-required dependencies such that they can be found when needed during the build
-process. They only need to be performed once.
+Build Requirements
+^^^^^^^^^^^^^^^^^^
 
-#. Install Visual Studio with the "Desktop Development with C++" workload and
-   the "Python Development" workload.
-#. Install GnuWin32, making sure ``<GnuWin32 install dir>\bin`` is added to
-   your PATH environment variable. Verify that utilities like ``dirname`` and
-   ``make`` are available from your terminal.
-#. Install SWIG for Windows, making sure ``<SWIG install dir>`` is added to
-   your PATH environment variable. Verify that ``swig`` is available from your
-   terminal.
-#. Install Python 3 from the standalone installer and include the debug libraries
-   in the install, making sure the Python install path is added to your PATH
-   environment variable.
-#. Register the Debug Interface Access DLLs with the Registry from a privileged
+Please follow the steps below if you only want to **build** lldb.
+
+1. Install `Visual Studio <https://visualstudio.microsoft.com>`_ with the
+   "Desktop Development with C++" workload. Make sure that the latest Windows
+   SDK and the Active Template Library (ATL) are installed.
+2. Install `Git Bash <https://git-scm.com/install/windows>`_ and add
+   ``<Git install dir>\usr\bin`` to your ``PATH``. Verify that utilities like
+   ``dirname`` are available from your terminal.
+3. Install `make <https://sourceforge.net/projects/ezwinports/files/>`_ and
+   verify that it's in your ``PATH``.
+4. Install `Python 3 <https://www.python.org/downloads/windows/>`_ from the
+   GUI installer. If you will be building LLDB in Debug mode, **include the
+   debug libraries** during the install. Make sure ``python`` is added to your
+   ``PATH``.
+5. Install `SWIG for Windows <http://www.swig.org/download.html>`_. Make sure
+   ``swig`` is added to your ``PATH`` and that ``swig -swiglib`` points to the
+   correct directory.
+6. Register the Debug Interface Access DLLs with the Registry from a privileged
    terminal.
 
 ::
@@ -128,6 +132,16 @@ environment setup. This means you should open an appropriate `Developer Command
 Prompt for VS <https://docs.microsoft.com/en-us/visualstudio/ide/reference/command-prompt-powershell?view=vs-2019>`_
 corresponding to the version you wish to use or run ``vcvarsall.bat`` or
 ``VsDevCmd.bat``.
+
+Test Requirements
+^^^^^^^^^^^^^^^^^
+
+Please follow the steps above and below if you want to **test** `lldb`.
+
+* Install `Python Tools for Visual Studio <https://github.com/Microsoft/PTVS/>`_,
+  an indispensable debugging extension to Visual Studio which enables full
+  editing and debugging support for Python (including mixed native/managed
+  debugging).
 
 macOS
 *****
@@ -194,13 +208,15 @@ checked out above, but now we will have multiple build-trees:
 
 Run CMake with ``-B`` pointing to a new directory for the provided
 build-tree\ :sup:`1` and the positional argument pointing to the ``llvm``
-directory in the source-tree. Note that we leave out LLDB here and only include
+directory in the source-tree.\ :sup:`2` Note that we leave out LLDB here and only include
 Clang. Then we build the ``ALL`` target with ninja:
 
 ::
 
   $ cmake -B /path/to/llvm-build -G Ninja \
+          -DCMAKE_BUILD_TYPE=[<build type>] \
           -DLLVM_ENABLE_PROJECTS=clang \
+          -DCMAKE_BUILD_TYPE=Release \
           [<more cmake options>] /path/to/llvm-project/llvm
   $ ninja
 
@@ -214,6 +230,7 @@ build directory for Clang, remember to pass its module path via ``Clang_DIR``
 ::
 
   $ cmake -B /path/to/lldb-build -G Ninja \
+          -DCMAKE_BUILD_TYPE=Release \
           -DLLVM_DIR=/path/to/llvm-build/lib/cmake/llvm \
           [<more cmake options>] /path/to/llvm-project/lldb
   $ ninja lldb lldb-server
@@ -226,6 +243,8 @@ remove it from the Ninja command.
    #. The ``-B`` argument was undocumented for a while and is only officially
       supported since `CMake version 3.14
       <https://cmake.org/cmake/help/v3.14/release/3.14.html#command-line>`_
+   #. If you want to have a standalone LLDB build with tests enabled, you also
+      need to pass in ``-DLLVM_ENABLE_RUNTIME='libcxx;libcxxabi;libunwind'`` to your CMake invocation when configuring your LLVM standalone build.
 
 .. _CommonCMakeOptions:
 
@@ -278,12 +297,12 @@ are commonly used on Windows.
   crash, rather than having to reproduce a failure or use a crash dump.
 * ``PYTHON_HOME`` (Required): Path to the folder where the Python distribution
   is installed. For example, ``C:\Python35``.
-* ``LLDB_RELOCATABLE_PYTHON`` (Default=0): When this is 0, LLDB will bind
+* ``LLDB_EMBED_PYTHON_HOME`` (Default=1 on Windows): When this is 1, LLDB will bind
   statically to the location specified in the ``PYTHON_HOME`` CMake variable,
   ignoring any value of ``PYTHONHOME`` set in the environment. This is most
   useful for developers who simply want to run LLDB after they build it. If you
   wish to move a build of LLDB to a different machine where Python will be in a
-  different location, setting ``LLDB_RELOCATABLE_PYTHON`` to 1 will cause
+  different location, setting ``LLDB_EMBED_PYTHON_HOME`` to 0 will cause
   Python to use its default mechanism for finding the python installation at
   runtime (looking for installed Pythons, or using the ``PYTHONHOME``
   environment variable if it is specified).
@@ -321,7 +340,7 @@ macOS
 ^^^^^
 
 On macOS the LLDB test suite requires libc++. Either add
-``LLVM_ENABLE_RUNTIMES="libcxx;libcxxabi"`` or disable the test suite with
+``LLVM_ENABLE_RUNTIMES="libcxx;libcxxabi;libunwind"`` or disable the test suite with
 ``LLDB_INCLUDE_TESTS=OFF``. Further useful options:
 
 * ``LLDB_BUILD_FRAMEWORK:BOOL``: Builds the LLDB.framework.
@@ -330,7 +349,7 @@ On macOS the LLDB test suite requires libc++. Either add
   code-signed with identity ``lldb_codesign`` (see :ref:`CodeSigning`).
 * ``LLDB_USE_SYSTEM_DEBUGSERVER:BOOL``: Use the system's debugserver, so lldb is
   functional without setting up code-signing.
-
+* ``LLDB_ENFORCE_STRICT_TEST_REQUIREMENTS:BOOL``: Detect missing packages or modules at configuration time.
 
 .. _CMakeCaches:
 
@@ -360,7 +379,7 @@ LLVM <https://llvm.org/docs/BuildingADistribution.html>`_):
   $ cmake -B /path/to/lldb-build -G Ninja \
           -C /path/to/llvm-project/lldb/cmake/caches/Apple-lldb-macOS.cmake \
           -DLLVM_ENABLE_PROJECTS="clang;lldb" \
-          -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi" \
+          -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi;libunwind" \
           llvm-project/llvm
 
   $ DESTDIR=/path/to/lldb-install ninja -C /path/to/lldb-build check-lldb install-distribution
@@ -376,7 +395,7 @@ Build LLDB standalone for development with Xcode:
   $ cmake -B /path/to/llvm-build -G Ninja \
           -C /path/to/llvm-project/lldb/cmake/caches/Apple-lldb-base.cmake \
           -DLLVM_ENABLE_PROJECTS="clang" \
-          -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi" \
+          -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi;libunwind" \
           llvm-project/llvm
   $ ninja -C /path/to/llvm-build
 
@@ -403,13 +422,21 @@ dependencies are required:
 * Sphinx (for the website and the Python API reference)
 * Graphviz (for the 'dot' tool)
 * doxygen (if you wish to build the C++ API reference)
+* SWIG (for generating Python bindings)
 
-To install the prerequisites for building the documentation (on Debian/Ubuntu)
+To install the system prerequisites for building the documentation (on Debian/Ubuntu)
 do:
 
 ::
 
-  $ sudo apt-get install doxygen graphviz python3-sphinx
+  $ sudo apt-get install doxygen graphviz swig
+
+To install Sphinx and its dependencies, use the ``requirements.txt`` available within LLVM
+to ensure you get a working configuration:
+
+::
+
+  $ pip3 install -r /path/to/llvm-project/llvm/docs/requirements.txt
 
 To build the documentation, configure with ``LLVM_ENABLE_SPHINX=ON`` and build the desired target(s).
 
@@ -459,7 +486,6 @@ further by passing the appropriate cmake options, such as:
   -DLLDB_ENABLE_PYTHON=0
   -DLLDB_ENABLE_LIBEDIT=0
   -DLLDB_ENABLE_CURSES=0
-  -DLLVM_ENABLE_TERMINFO=0
 
 (see :ref:`Optional Dependencies` for more)
 

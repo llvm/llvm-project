@@ -29,6 +29,7 @@ enum class ScopedLongLongEnum : long long {
 struct A {
   const static int int_val = 1;
   const static int int_val_with_address = 2;
+  inline const static int inline_int_val = 3;
   const static bool bool_val = true;
 
   const static auto char_max = std::numeric_limits<char>::max();
@@ -89,6 +90,25 @@ struct ClassWithEnumAlias {
       ScopedEnum::scoped_enum_case1;
 };
 
+namespace ns {
+struct Foo {
+  constexpr static int mem = 10;
+
+  void bar() { return; }
+};
+} // namespace ns
+
+struct Foo {
+  constexpr static int mem = -29;
+};
+
+int func() {
+  Foo f1;
+  ns::Foo f2;
+  f2.bar();
+  return ns::Foo::mem + Foo::mem;
+}
+
 int main() {
   A a;
 
@@ -124,6 +144,7 @@ int main() {
 
   auto enum_alias_val = ClassWithEnumAlias::enum_alias;
   auto enum_alias_alias_val = ClassWithEnumAlias::enum_alias_alias;
+  auto ret = func();
 
   return 0; // break here
 }

@@ -10,7 +10,6 @@
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/IR/AsmState.h"
-#include "mlir/IR/Matchers.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/IR/Value.h"
@@ -36,10 +35,10 @@ using namespace bufferization;
 //===----------------------------------------------------------------------===//
 
 static Value buildBoolValue(OpBuilder &builder, Location loc, bool value) {
-  return builder.create<arith::ConstantOp>(loc, builder.getBoolAttr(value));
+  return arith::ConstantOp::create(builder, loc, builder.getBoolAttr(value));
 }
 
-static bool isMemref(Value v) { return v.getType().isa<BaseMemRefType>(); }
+static bool isMemref(Value v) { return isa<BaseMemRefType>(v.getType()); }
 
 //===----------------------------------------------------------------------===//
 // Ownership
@@ -94,7 +93,9 @@ void Ownership::combine(Ownership other) { *this = getCombined(other); }
 // DeallocationState
 //===----------------------------------------------------------------------===//
 
-DeallocationState::DeallocationState(Operation *op) : liveness(op) {}
+DeallocationState::DeallocationState(Operation *op,
+                                     SymbolTableCollection &symbolTables)
+    : symbolTable(symbolTables), liveness(op) {}
 
 void DeallocationState::updateOwnership(Value memref, Ownership ownership,
                                         Block *block) {
@@ -120,7 +121,7 @@ void DeallocationState::addMemrefToDeallocate(Value memref, Block *block) {
 }
 
 void DeallocationState::dropMemrefToDeallocate(Value memref, Block *block) {
-  llvm::erase_value(memrefsToDeallocatePerBlock[block], memref);
+  llvm::erase(memrefsToDeallocatePerBlock[block], memref);
 }
 
 void DeallocationState::getLiveMemrefsIn(Block *block,
@@ -149,7 +150,7 @@ DeallocationState::getMemrefWithUniqueOwnership(OpBuilder &builder,
   // ownerships more intelligently to not end up with an 'Unknown' ownership in
   // the first place.
   auto cloneOp =
-      builder.create<bufferization::CloneOp>(memref.getLoc(), memref);
+      bufferization::CloneOp::create(builder, memref.getLoc(), memref);
   Value condition = buildBoolValue(builder, memref.getLoc(), true);
   Value newMemref = cloneOp.getResult();
   updateOwnership(newMemref, condition);
@@ -177,8 +178,7 @@ void DeallocationState::getMemrefsToRetain(
   // liveOut has non-deterministic order because it was constructed by iterating
   // over a hash-set.
   SmallVector<Value> retainedByLiveness(liveOut.begin(), liveOut.end());
-  std::sort(retainedByLiveness.begin(), retainedByLiveness.end(),
-            ValueComparator());
+  llvm::sort(retainedByLiveness, ValueComparator());
   toRetain.append(retainedByLiveness);
 }
 
@@ -196,16 +196,18 @@ LogicalResult DeallocationState::getMemrefsAndConditionsToDeallocate(
     // Simply cast unranked MemRefs to ranked memrefs with 0 dimensions such
     // that we can call extract_strided_metadata on it.
     if (auto unrankedMemRefTy = dyn_cast<UnrankedMemRefType>(memref.getType()))
-      memref = builder.create<memref::ReinterpretCastOp>(
-          loc, MemRefType::get({}, unrankedMemRefTy.getElementType()), memref,
-          0, SmallVector<int64_t>{}, SmallVector<int64_t>{});
+      memref = memref::ReinterpretCastOp::create(
+          builder, loc, memref,
+          /*offset=*/builder.getIndexAttr(0),
+          /*sizes=*/ArrayRef<OpFoldResult>{},
+          /*strides=*/ArrayRef<OpFoldResult>{});
 
     // Use the `memref.extract_strided_metadata` operation to get the base
     // memref. This is needed because the same MemRef that was produced by the
     // alloc operation has to be passed to the dealloc operation. Passing
     // subviews, etc. to a dealloc operation is not allowed.
     memrefs.push_back(
-        builder.create<memref::ExtractStridedMetadataOp>(loc, memref)
+        memref::ExtractStridedMetadataOp::create(builder, loc, memref)
             .getResult(0));
     conditions.push_back(ownership.getIndicator());
   }
@@ -222,8 +224,8 @@ bool ValueComparator::operator()(const Value &lhs, const Value &rhs) const {
     return false;
 
   // Block arguments are less than results.
-  bool lhsIsBBArg = lhs.isa<BlockArgument>();
-  if (lhsIsBBArg != rhs.isa<BlockArgument>()) {
+  bool lhsIsBBArg = isa<BlockArgument>(lhs);
+  if (lhsIsBBArg != isa<BlockArgument>(rhs)) {
     return lhsIsBBArg;
   }
 
@@ -294,8 +296,8 @@ FailureOr<Operation *> deallocation_impl::insertDeallocOpForReturnLike(
   if (memrefs.empty() && toRetain.empty())
     return op;
 
-  auto deallocOp = builder.create<bufferization::DeallocOp>(
-      op->getLoc(), memrefs, conditions, toRetain);
+  auto deallocOp = bufferization::DeallocOp::create(
+      builder, op->getLoc(), memrefs, conditions, toRetain);
 
   // We want to replace the current ownership of the retained values with the
   // result values of the dealloc operation as they are always unique.

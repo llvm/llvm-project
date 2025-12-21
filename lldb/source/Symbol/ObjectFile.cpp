@@ -49,10 +49,12 @@ CreateObjectFromContainer(const lldb::ModuleSP &module_sp, const FileSpec *file,
   return {};
 }
 
-ObjectFileSP
-ObjectFile::FindPlugin(const lldb::ModuleSP &module_sp, const FileSpec *file,
-                       lldb::offset_t file_offset, lldb::offset_t file_size,
-                       DataBufferSP &data_sp, lldb::offset_t &data_offset) {
+ObjectFileSP ObjectFile::FindPlugin(const lldb::ModuleSP &module_sp,
+                                    const FileSpec *file,
+                                    lldb::offset_t file_offset,
+                                    lldb::offset_t file_size,
+                                    DataExtractorSP extractor_sp,
+                                    lldb::offset_t &data_offset) {
   LLDB_SCOPED_TIMERF(
       "ObjectFile::FindPlugin (module = %s, file = %p, file_offset = "
       "0x%8.8" PRIx64 ", file_size = 0x%8.8" PRIx64 ")",
@@ -66,14 +68,14 @@ ObjectFile::FindPlugin(const lldb::ModuleSP &module_sp, const FileSpec *file,
   if (!file)
     return {};
 
-  if (!data_sp) {
+  if (!extractor_sp || !extractor_sp->HasData()) {
     const bool file_exists = FileSystem::Instance().Exists(*file);
     // We have an object name which most likely means we have a .o file in
     // a static archive (.a file). Try and see if we have a cached archive
     // first without reading any data first
     if (file_exists && module_sp->GetObjectName()) {
       ObjectFileSP object_file_sp = CreateObjectFromContainer(
-          module_sp, file, file_offset, file_size, data_sp, data_offset);
+          module_sp, file, file_offset, file_size, DataBufferSP(), data_offset);
       if (object_file_sp)
         return object_file_sp;
     }
@@ -82,13 +84,15 @@ ObjectFile::FindPlugin(const lldb::ModuleSP &module_sp, const FileSpec *file,
     // container plug-ins can use these bytes to see if they can parse this
     // file.
     if (file_size > 0) {
-      data_sp = FileSystem::Instance().CreateDataBuffer(
+      DataBufferSP buffer_sp = FileSystem::Instance().CreateDataBuffer(
           file->GetPath(), g_initial_bytes_to_read, file_offset);
+      extractor_sp = std::make_shared<DataExtractor>();
+      extractor_sp->SetData(buffer_sp, data_offset, buffer_sp->GetByteSize());
       data_offset = 0;
     }
   }
 
-  if (!data_sp || data_sp->GetByteSize() == 0) {
+  if (!extractor_sp || !extractor_sp->HasData()) {
     // Check for archive file with format "/path/to/archive.a(object.o)"
     llvm::SmallString<256> path_with_object;
     module_sp->GetFileSpec().GetPath(path_with_object);
@@ -110,18 +114,20 @@ ObjectFile::FindPlugin(const lldb::ModuleSP &module_sp, const FileSpec *file,
         // (like BSD archives caching the contained objects within an
         // file).
         ObjectFileSP object_file_sp = CreateObjectFromContainer(
-            module_sp, file, file_offset, file_size, data_sp, data_offset);
+            module_sp, file, file_offset, file_size,
+            extractor_sp->GetSharedDataBuffer(), data_offset);
         if (object_file_sp)
           return object_file_sp;
         // We failed to find any cached object files in the container plug-
         // ins, so lets read the first 512 bytes and try again below...
-        data_sp = FileSystem::Instance().CreateDataBuffer(
+        DataBufferSP buffer_sp = FileSystem::Instance().CreateDataBuffer(
             archive_file.GetPath(), g_initial_bytes_to_read, file_offset);
+        extractor_sp = std::make_shared<DataExtractor>(buffer_sp);
       }
     }
   }
 
-  if (data_sp && data_sp->GetByteSize() > 0) {
+  if (extractor_sp && extractor_sp->HasData()) {
     // Check if this is a normal object file by iterating through all
     // object file plugin instances.
     ObjectFileCreateInstance callback;
@@ -129,7 +135,7 @@ ObjectFile::FindPlugin(const lldb::ModuleSP &module_sp, const FileSpec *file,
          (callback = PluginManager::GetObjectFileCreateCallbackAtIndex(idx)) !=
          nullptr;
          ++idx) {
-      ObjectFileSP object_file_sp(callback(module_sp, data_sp, data_offset,
+      ObjectFileSP object_file_sp(callback(module_sp, extractor_sp, data_offset,
                                            file, file_offset, file_size));
       if (object_file_sp.get())
         return object_file_sp;
@@ -138,8 +144,9 @@ ObjectFile::FindPlugin(const lldb::ModuleSP &module_sp, const FileSpec *file,
     // Check if this is a object container by iterating through all object
     // container plugin instances and then trying to get an object file
     // from the container.
+    DataBufferSP buffer_sp = extractor_sp->GetSharedDataBuffer();
     ObjectFileSP object_file_sp = CreateObjectFromContainer(
-        module_sp, file, file_offset, file_size, data_sp, data_offset);
+        module_sp, file, file_offset, file_size, buffer_sp, data_offset);
     if (object_file_sp)
       return object_file_sp;
   }
@@ -182,6 +189,15 @@ ObjectFileSP ObjectFile::FindPlugin(const lldb::ModuleSP &module_sp,
   // anything and return an empty shared pointer
   object_file_sp.reset();
   return object_file_sp;
+}
+
+bool ObjectFile::IsObjectFile(lldb_private::FileSpec file_spec) {
+  DataExtractorSP extractor_sp;
+  offset_t data_offset = 0;
+  ModuleSP module_sp = std::make_shared<Module>(file_spec);
+  return static_cast<bool>(ObjectFile::FindPlugin(
+      module_sp, &file_spec, 0, FileSystem::Instance().GetByteSize(file_spec),
+      extractor_sp, data_offset));
 }
 
 size_t ObjectFile::GetModuleSpecifications(const FileSpec &file,
@@ -241,17 +257,24 @@ size_t ObjectFile::GetModuleSpecifications(
 ObjectFile::ObjectFile(const lldb::ModuleSP &module_sp,
                        const FileSpec *file_spec_ptr,
                        lldb::offset_t file_offset, lldb::offset_t length,
-                       lldb::DataBufferSP data_sp, lldb::offset_t data_offset)
+                       lldb::DataExtractorSP extractor_sp,
+                       lldb::offset_t data_offset)
     : ModuleChild(module_sp),
       m_file(), // This file could be different from the original module's file
       m_type(eTypeInvalid), m_strata(eStrataInvalid),
-      m_file_offset(file_offset), m_length(length), m_data(), m_process_wp(),
+      m_file_offset(file_offset), m_length(length),
+      m_data_nsp(std::make_shared<DataExtractor>()), m_process_wp(),
       m_memory_addr(LLDB_INVALID_ADDRESS), m_sections_up(), m_symtab_up(),
       m_symtab_once_up(new llvm::once_flag()) {
   if (file_spec_ptr)
     m_file = *file_spec_ptr;
-  if (data_sp)
-    m_data.SetData(data_sp, data_offset, length);
+  if (extractor_sp && extractor_sp->HasData()) {
+    m_data_nsp = extractor_sp;
+    // The offset & length fields may be specifying a subset of the
+    // total data buffer.
+    m_data_nsp->SetData(extractor_sp->GetSharedDataBuffer(), data_offset,
+                        length);
+  }
   Log *log = GetLog(LLDBLog::Object);
   LLDB_LOGF(log,
             "%p ObjectFile::ObjectFile() module = %p (%s), file = %s, "
@@ -264,13 +287,14 @@ ObjectFile::ObjectFile(const lldb::ModuleSP &module_sp,
 
 ObjectFile::ObjectFile(const lldb::ModuleSP &module_sp,
                        const ProcessSP &process_sp, lldb::addr_t header_addr,
-                       DataBufferSP header_data_sp)
+                       DataExtractorSP header_extractor_sp)
     : ModuleChild(module_sp), m_file(), m_type(eTypeInvalid),
-      m_strata(eStrataInvalid), m_file_offset(0), m_length(0), m_data(),
-      m_process_wp(process_sp), m_memory_addr(header_addr), m_sections_up(),
-      m_symtab_up(), m_symtab_once_up(new llvm::once_flag()) {
-  if (header_data_sp)
-    m_data.SetData(header_data_sp, 0, header_data_sp->GetByteSize());
+      m_strata(eStrataInvalid), m_file_offset(0), m_length(0),
+      m_data_nsp(std::make_shared<DataExtractor>()), m_process_wp(process_sp),
+      m_memory_addr(header_addr), m_sections_up(), m_symtab_up(),
+      m_symtab_once_up(new llvm::once_flag()) {
+  if (header_extractor_sp && header_extractor_sp->HasData())
+    m_data_nsp = header_extractor_sp;
   Log *log = GetLog(LLDBLog::Object);
   LLDB_LOGF(log,
             "%p ObjectFile::ObjectFile() module = %p (%s), process = %p, "
@@ -357,6 +381,8 @@ AddressClass ObjectFile::GetAddressClass(addr_t file_addr) {
           case eSectionTypeDWARFAppleObjC:
           case eSectionTypeDWARFGNUDebugAltLink:
           case eSectionTypeCTF:
+          case eSectionTypeLLDBFormatters:
+          case eSectionTypeLLDBTypeSummaries:
           case eSectionTypeSwiftModules:
             return AddressClass::eDebug;
           case eSectionTypeEHFrame:
@@ -368,6 +394,7 @@ AddressClass ObjectFile::GetAddressClass(addr_t file_addr) {
           case eSectionTypeELFDynamicSymbols:
           case eSectionTypeELFRelocationEntries:
           case eSectionTypeELFDynamicLinkInfo:
+          case eSectionTypeWasmName:
           case eSectionTypeOther:
             return AddressClass::eUnknown;
           case eSectionTypeAbsoluteAddress:
@@ -445,9 +472,10 @@ AddressClass ObjectFile::GetAddressClass(addr_t file_addr) {
   return AddressClass::eUnknown;
 }
 
-DataBufferSP ObjectFile::ReadMemory(const ProcessSP &process_sp,
-                                    lldb::addr_t addr, size_t byte_size) {
-  DataBufferSP data_sp;
+WritableDataBufferSP ObjectFile::ReadMemory(const ProcessSP &process_sp,
+                                            lldb::addr_t addr,
+                                            size_t byte_size) {
+  WritableDataBufferSP data_sp;
   if (process_sp) {
     std::unique_ptr<DataBufferHeap> data_up(new DataBufferHeap(byte_size, 0));
     Status error;
@@ -461,16 +489,16 @@ DataBufferSP ObjectFile::ReadMemory(const ProcessSP &process_sp,
 
 size_t ObjectFile::GetData(lldb::offset_t offset, size_t length,
                            DataExtractor &data) const {
-  // The entire file has already been mmap'ed into m_data, so just copy from
+  // The entire file has already been mmap'ed into m_data_nsp, so just copy from
   // there as the back mmap buffer will be shared with shared pointers.
-  return data.SetData(m_data, offset, length);
+  return data.SetData(*m_data_nsp.get(), offset, length);
 }
 
 size_t ObjectFile::CopyData(lldb::offset_t offset, size_t length,
                             void *dst) const {
-  // The entire file has already been mmap'ed into m_data, so just copy from
+  // The entire file has already been mmap'ed into m_data_nsp, so just copy from
   // there Note that the data remains in target byte order.
-  return m_data.CopyData(offset, length, dst);
+  return m_data_nsp->CopyData(offset, length, dst);
 }
 
 size_t ObjectFile::ReadSectionData(Section *section,
@@ -607,20 +635,55 @@ lldb::SymbolType
 ObjectFile::GetSymbolTypeFromName(llvm::StringRef name,
                                   lldb::SymbolType symbol_type_hint) {
   if (!name.empty()) {
-    if (name.startswith("_OBJC_")) {
+    if (name.starts_with("_OBJC_")) {
       // ObjC
-      if (name.startswith("_OBJC_CLASS_$_"))
+      if (name.starts_with("_OBJC_CLASS_$_"))
         return lldb::eSymbolTypeObjCClass;
-      if (name.startswith("_OBJC_METACLASS_$_"))
+      if (name.starts_with("_OBJC_METACLASS_$_"))
         return lldb::eSymbolTypeObjCMetaClass;
-      if (name.startswith("_OBJC_IVAR_$_"))
+      if (name.starts_with("_OBJC_IVAR_$_"))
         return lldb::eSymbolTypeObjCIVar;
-    } else if (name.startswith(".objc_class_name_")) {
+    } else if (name.starts_with(".objc_class_name_")) {
       // ObjC v1
       return lldb::eSymbolTypeObjCClass;
     }
   }
   return symbol_type_hint;
+}
+
+lldb::SectionType
+ObjectFile::GetDWARFSectionTypeFromName(llvm::StringRef name) {
+  return llvm::StringSwitch<SectionType>(name)
+      .Case("abbrev", eSectionTypeDWARFDebugAbbrev)
+      .Case("abbrev.dwo", eSectionTypeDWARFDebugAbbrevDwo)
+      .Case("addr", eSectionTypeDWARFDebugAddr)
+      .Case("aranges", eSectionTypeDWARFDebugAranges)
+      .Case("cu_index", eSectionTypeDWARFDebugCuIndex)
+      .Case("frame", eSectionTypeDWARFDebugFrame)
+      .Case("info", eSectionTypeDWARFDebugInfo)
+      .Case("info.dwo", eSectionTypeDWARFDebugInfoDwo)
+      .Cases({"line", "line.dwo"}, eSectionTypeDWARFDebugLine)
+      .Cases({"line_str", "line_str.dwo"}, eSectionTypeDWARFDebugLineStr)
+      .Case("loc", eSectionTypeDWARFDebugLoc)
+      .Case("loc.dwo", eSectionTypeDWARFDebugLocDwo)
+      .Case("loclists", eSectionTypeDWARFDebugLocLists)
+      .Case("loclists.dwo", eSectionTypeDWARFDebugLocListsDwo)
+      .Case("macinfo", eSectionTypeDWARFDebugMacInfo)
+      .Cases({"macro", "macro.dwo"}, eSectionTypeDWARFDebugMacro)
+      .Case("names", eSectionTypeDWARFDebugNames)
+      .Case("pubnames", eSectionTypeDWARFDebugPubNames)
+      .Case("pubtypes", eSectionTypeDWARFDebugPubTypes)
+      .Case("ranges", eSectionTypeDWARFDebugRanges)
+      .Case("rnglists", eSectionTypeDWARFDebugRngLists)
+      .Case("rnglists.dwo", eSectionTypeDWARFDebugRngListsDwo)
+      .Case("str", eSectionTypeDWARFDebugStr)
+      .Case("str.dwo", eSectionTypeDWARFDebugStrDwo)
+      .Cases({"str_offsets", "str_offs"}, eSectionTypeDWARFDebugStrOffsets)
+      .Case("str_offsets.dwo", eSectionTypeDWARFDebugStrOffsetsDwo)
+      .Case("tu_index", eSectionTypeDWARFDebugTuIndex)
+      .Case("types", eSectionTypeDWARFDebugTypes)
+      .Case("types.dwo", eSectionTypeDWARFDebugTypesDwo)
+      .Default(eSectionTypeOther);
 }
 
 std::vector<ObjectFile::LoadableData>
@@ -634,8 +697,7 @@ ObjectFile::GetLoadableData(Target &target) {
   for (size_t i = 0; i < section_count; ++i) {
     LoadableData loadable;
     SectionSP section_sp = section_list->GetSectionAtIndex(i);
-    loadable.Dest =
-        target.GetSectionLoadList().GetSectionLoadAddress(section_sp);
+    loadable.Dest = target.GetSectionLoadAddress(section_sp);
     if (loadable.Dest == LLDB_INVALID_ADDRESS)
       continue;
     // We can skip sections like bss
@@ -723,10 +785,9 @@ void llvm::format_provider<ObjectFile::Strata>::format(
   }
 }
 
-
-Symtab *ObjectFile::GetSymtab() {
+Symtab *ObjectFile::GetSymtab(bool can_create) {
   ModuleSP module_sp(GetModule());
-  if (module_sp) {
+  if (module_sp && can_create) {
     // We can't take the module lock in ObjectFile::GetSymtab() or we can
     // deadlock in DWARF indexing when any file asks for the symbol table from
     // an object file. This currently happens in the preloading of symbols in
@@ -762,6 +823,15 @@ uint32_t ObjectFile::GetCacheHash() {
   strm.Format("{0}-{1}-{2}", m_file, GetType(), GetStrata());
   m_cache_hash = llvm::djbHash(strm.GetString());
   return *m_cache_hash;
+}
+
+std::string ObjectFile::GetObjectName() const {
+  if (ModuleSP module_sp = GetModule())
+    if (ConstString object_name = module_sp->GetObjectName())
+      return llvm::formatv("{0}({1})", GetFileSpec().GetFilename().GetString(),
+                           object_name.GetString())
+          .str();
+  return GetFileSpec().GetFilename().GetString();
 }
 
 namespace llvm {

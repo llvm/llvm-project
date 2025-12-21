@@ -7,7 +7,6 @@ from lldbsuite.test.lldbtest import TestBase
 class ConcurrentManyBreakpoints(ConcurrentEventsBase):
     # Atomic sequences are not supported yet for MIPS in LLDB.
     @skipIf(triple="^mips")
-    @skipIfOutOfTreeDebugserver
     @expectedFailureAll(
         archs=["aarch64"], oslist=["freebsd"], bugnumber="llvm.org/pr49433"
     )

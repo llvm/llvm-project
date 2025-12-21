@@ -19,6 +19,7 @@
 #include "llvm/ExecutionEngine/JITSymbol.h"
 #include "llvm/ExecutionEngine/Orc/Shared/AllocationActions.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ExecutorAddress.h"
+#include "llvm/ExecutionEngine/Orc/Shared/ExecutorSymbolDef.h"
 #include "llvm/ExecutionEngine/Orc/Shared/MemoryFlags.h"
 #include "llvm/ExecutionEngine/Orc/Shared/SimplePackedSerialization.h"
 #include "llvm/ExecutionEngine/Orc/Shared/WrapperFunctionUtils.h"
@@ -92,11 +93,11 @@ using UInt64Write = UIntWrite<uint64_t>;
 /// For use with TargetProcessControl::MemoryAccess objects.
 struct BufferWrite {
   BufferWrite() = default;
-  BufferWrite(ExecutorAddr Addr, StringRef Buffer)
+  BufferWrite(ExecutorAddr Addr, ArrayRef<char> Buffer)
       : Addr(Addr), Buffer(Buffer) {}
 
   ExecutorAddr Addr;
-  StringRef Buffer;
+  ArrayRef<char> Buffer;
 };
 
 /// Describes a write to a pointer.
@@ -113,7 +114,11 @@ struct PointerWrite {
 /// A handle used to represent a loaded dylib in the target process.
 using DylibHandle = ExecutorAddr;
 
-using LookupResult = std::vector<ExecutorAddr>;
+/// A handle used to reference the resolver associated with a loaded
+///  dylib in the target process.
+using ResolverHandle = ExecutorAddr;
+
+using LookupResult = std::vector<std::optional<ExecutorSymbolDef>>;
 
 } // end namespace tpctypes
 

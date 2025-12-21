@@ -37,6 +37,10 @@ RangeSelector enclose(RangeSelector Begin, RangeSelector End);
 /// Convenience version of \c range where end-points are bound nodes.
 RangeSelector encloseNodes(std::string BeginID, std::string EndID);
 
+/// Selects the merge of the two ranges, i.e. from min(First.begin,
+/// Second.begin) to max(First.end, Second.end).
+RangeSelector merge(RangeSelector First, RangeSelector Second);
+
 /// DEPRECATED. Use `enclose`.
 inline RangeSelector range(RangeSelector Begin, RangeSelector End) {
   return enclose(std::move(Begin), std::move(End));
@@ -85,6 +89,11 @@ RangeSelector name(std::string ID);
 // Given a \c CallExpr (bound to \p ID), selects the arguments' source text (all
 // source between the call's parentheses).
 RangeSelector callArgs(std::string ID);
+
+// Given a \c CXXConstructExpr (bound to \p ID), selects the
+// arguments' source text. Depending on the syntactic form of the construct,
+// this is the range between parentheses or braces.
+RangeSelector constructExprArgs(std::string ID);
 
 // Given a \c CompoundStmt (bound to \p ID), selects the source of the
 // statements (all source between the braces).

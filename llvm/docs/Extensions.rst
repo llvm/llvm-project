@@ -157,8 +157,8 @@ is usually the associated section's comdat.
    1. It must be a COMDAT section.
    2. It cannot be another associative COMDAT section.
 
-In the following example the symbol ``sym`` is the comdat symbol of ``.foo``
-and ``.bar`` is associated to ``.foo``.
+In the following example, the symbol ``sym`` is the comdat symbol of ``.foo``,
+and ``.bar`` is associated with ``.foo``.
 
 .. code-block:: gas
 
@@ -177,9 +177,9 @@ MC supports these flags in the COFF ``.section`` directive:
   - ``y``: Not readable
   - ``D``: Discardable (``IMAGE_SCN_MEM_DISCARDABLE``)
 
-These flags are all compatible with gas, with the exception of the ``D`` flag,
-which gnu as does not support. For gas compatibility, sections with a name
-starting with ".debug" are implicitly discardable.
+These flags are all compatible with GNU as, with the exception of the ``D`` flag,
+which GNU as does not support. For compatibility with GNU as, sections with a name
+starting with ``.debug`` are implicitly discardable.
 
 
 ARM64/COFF-Dependent
@@ -213,7 +213,7 @@ ELF-Dependent
 ^^^^^^^^^^^^^^^^^^^^^^
 
 In order to support creating multiple sections with the same name and comdat,
-it is possible to add an unique number at the end of the ``.section`` directive.
+it is possible to add a unique number at the end of the ``.section`` directive.
 For example, the following code creates two sections named ``.text``.
 
 .. code-block:: gas
@@ -228,9 +228,9 @@ For example, the following code creates two sections named ``.text``.
 The unique number is not present in the resulting object at all. It is just used
 in the assembler to differentiate the sections.
 
-The 'o' flag is mapped to SHF_LINK_ORDER. If it is present, a symbol
-must be given that identifies the section to be placed is the
-.sh_link.
+The 'o' flag is mapped to ``SHF_LINK_ORDER``. If it is present, a symbol
+must be given that identifies the section to be placed in the
+``.sh_link``.
 
 .. code-block:: gas
 
@@ -238,7 +238,7 @@ must be given that identifies the section to be placed is the
         .Ltmp:
         .section .bar,"ao",@progbits,.Ltmp
 
-which is equivalent to just
+which is equivalent to:
 
 .. code-block:: gas
 
@@ -251,7 +251,7 @@ which is equivalent to just
 In order to support passing linker options from the frontend to the linker, a
 special section of type ``SHT_LLVM_LINKER_OPTIONS`` (usually named
 ``.linker-options`` though the name is not significant as it is identified by
-the type).  The contents of this section is a simple pair-wise encoding of
+the type).  The contents of this section are a simple pair-wise encoding of
 directives for consideration by the linker.  The strings are encoded as standard
 null-terminated UTF-8 strings.  They are emitted inline to avoid having the
 linker traverse the object file for retrieving the value.  The linker is
@@ -262,7 +262,7 @@ The section has type ``SHT_LLVM_LINKER_OPTIONS`` and has the ``SHF_EXCLUDE``
 flag to ensure that the section is treated as opaque by linkers which do not
 support the feature and will not be emitted into the final linked binary.
 
-This would be equivalent to the follow raw assembly:
+This would be equivalent to the following raw assembly:
 
 .. code-block:: gas
 
@@ -274,13 +274,13 @@ This would be equivalent to the follow raw assembly:
 
 The following directives are specified:
 
-  - lib
+  - ``lib``
 
     The parameter identifies a library to be linked against.  The library will
     be looked up in the default and any specified library search paths
     (specified to this point).
 
-  - libpath
+  - ``libpath``
 
     The parameter identifies an additional library search path to be considered
     when looking up libraries after the inclusion of this option.
@@ -327,13 +327,13 @@ The contents of the section shall be a sequence of ``Elf_CGProfile`` entries.
     Elf_Xword cgp_weight;
   } Elf_CGProfile;
 
-cgp_from
+``cgp_from``
   The symbol index of the source of the edge.
 
-cgp_to
+``cgp_to``
   The symbol index of the destination of the edge.
 
-cgp_weight
+``cgp_weight``
   The weight of the edge.
 
 This is represented in assembly as:
@@ -352,7 +352,7 @@ table.
 ``SHT_LLVM_ADDRSIG`` Section (address-significance table)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-This section is used to mark symbols as address-significant, i.e. the address
+This section is used to mark symbols as address-significant, i.e., the address
 of the symbol is used in a comparison or leaks outside the translation unit. It
 has the same meaning as the absence of the LLVM attributes ``unnamed_addr``
 and ``local_unnamed_addr``.
@@ -398,58 +398,205 @@ the symbol that belongs to the partition. It may be constructed as follows:
 
 ``SHT_LLVM_BB_ADDR_MAP`` Section (basic block address map)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-This section stores the binary address of basic blocks along with other related
+This section stores the binary addresses of basic blocks along with other related
 metadata. This information can be used to map binary profiles (like perf
 profiles) directly to machine basic blocks.
-This section is emitted with ``-basic-block-sections=labels`` and will contain
+This section is emitted with ``-basic-block-address-map`` and will contain
 a BB address map table for every function.
 
 The ``SHT_LLVM_BB_ADDR_MAP`` type provides backward compatibility to allow
-reading older versions of the BB address map generated by older compilers. Each
-function entry starts with a version byte which specifies the encoding version
-to use. The following versioning schemes are currently supported.
+reading older versions of the BB address map generated by older compilers (up to
+two years old). Each function entry starts with a version byte which specifies
+the encoding version to use. This is followed by a feature byte which specifies
+the features specific to this particular entry. The function base address is
+stored as a full address. Other addresses in the entry (block begin and end
+addresses and callsite end addresses) are stored in a running-offset fashion,
+as offsets relative to prior addresses.
 
-Version 1 (newest): basic block address offsets are computed relative to the end
-of previous blocks.
+The following versioning schemes are currently supported (newer versions support
+features of the older versions).
+
+Version 5 (newest): Capable of encoding Post-Link CFG information, which
+provides basic block and edge frequencies obtained from a post-link tool like
+Propeller, reflecting the final binary layout. This feature is enabled by the 8th
+bit of the feature entry.
+The feature data will be two bytes long to accommodate future extensions.
+
+Version 4: Capable of encoding basic block hashes. This feature is
+enabled by the 7th bit of the feature byte.
 
 Example:
 
 .. code-block:: gas
 
   .section  ".llvm_bb_addr_map","",@llvm_bb_addr_map
-  .byte     1                             # version number
-  .byte     0                             # feature byte (reserved for future use)
+  .byte     4                             # version number
+  .byte     96                            # feature byte
   .quad     .Lfunc_begin0                 # address of the function
   .byte     2                             # number of basic blocks
   # BB record for BB_0
-   .uleb128  .Lfunc_beign0-.Lfunc_begin0  # BB_0 offset relative to function entry (always zero)
+   .byte     0                            # BB_0 ID
+   .uleb128  .Lfunc_begin0-.Lfunc_begin0  # BB_0 offset relative to function entry (always zero)
+   .byte     0                            # number of callsites in this block
    .uleb128  .LBB_END0_0-.Lfunc_begin0    # BB_0 size
    .byte     x                            # BB_0 metadata
+   .quad     9080480745856761856          # BB_0 hash
   # BB record for BB_1
+   .byte     1                            # BB_1 ID
    .uleb128  .LBB0_1-.LBB_END0_0          # BB_1 offset relative to the end of last block (BB_0).
-   .uleb128  .LBB_END0_1-.LBB0_1          # BB_1 size
+   .byte     2                            # number of callsites in this block
+   .uleb128  .LBB0_1_CS0-.LBB0_1          # offset of callsite end relative to the previous offset (.LBB0_1)
+   .uleb128  .LBB0_1_CS1-.LBB0_1_CS0      # offset of callsite end relative to the previous offset (.LBB0_1_CS0)
+   .uleb128  .LBB_END0_1-.LBB0_1_CS1      # BB_1 size offset (Offset of the block end relative to the previous offset).
    .byte     y                            # BB_1 metadata
+   .quad     2363478788702666771          # BB_1 hash
 
-Version 0: basic block address offsets are computed relative to the function
-address. This uses the unversioned ``SHT_LLVM_BB_ADDR_MAP_V0`` section type and
-is semantically equivalent to using ``SHT_LLVM_BB_ADDR_MAP`` with a zero
-version field.
+Version 3: Capable of encoding callsite offsets. Enabled by the 6th bit
+of the feature byte.
 
 Example:
 
 .. code-block:: gas
 
-  .section  ".llvm_bb_addr_map","",@llvm_bb_addr_map_v0
+  .section  ".llvm_bb_addr_map","",@llvm_bb_addr_map
+  .byte     3                             # version number
+  .byte     32                            # feature byte
   .quad     .Lfunc_begin0                 # address of the function
   .byte     2                             # number of basic blocks
   # BB record for BB_0
-   .uleb128  .Lfunc_beign0-.Lfunc_begin0  # BB_0 offset relative to the function entry (always zero)
+   .byte     0                            # BB_0 ID
+   .uleb128  .Lfunc_begin0-.Lfunc_begin0  # BB_0 offset relative to function entry (always zero)
+   .byte     0                            # number of callsites in this block
    .uleb128  .LBB_END0_0-.Lfunc_begin0    # BB_0 size
    .byte     x                            # BB_0 metadata
   # BB record for BB_1
-   .uleb128  .LBB0_1-.Lfunc_begin0        # BB_1 offset relative to the function entry
-   .uleb128  .LBB_END0_1-.LBB0_1          # BB_1 size
+   .byte     1                            # BB_1 ID
+   .uleb128  .LBB0_1-.LBB_END0_0          # BB_1 offset relative to the end of last block (BB_0).
+   .byte     2                            # number of callsites in this block
+   .uleb128  .LBB0_1_CS0-.LBB0_1          # offset of callsite end relative to the previous offset (.LBB0_1)
+   .uleb128  .LBB0_1_CS1-.LBB0_1_CS0      # offset of callsite end relative to the previous offset (.LBB0_1_CS0)
+   .uleb128  .LBB_END0_1-.LBB0_1_CS1      # BB_1 size offset (Offset of the block end relative to the previous offset).
    .byte     y                            # BB_1 metadata
+
+Version 2: Capable of encoding split functions. Enabled by the 4th bit of the
+feature byte. The base address of each split range is stored as a full address.
+The first range corresponds to the function entry.
+
+Example:
+
+.. code-block:: gas
+
+  .section  ".llvm_bb_addr_map","",@llvm_bb_addr_map
+  .byte     2                             # version number
+  .byte     8                             # feature byte
+  .byte     2                             # number of basic block ranges
+  # 1st BB range (corresponding to the function entry)
+   .quad     .Lfunc_begin0                 # base address
+   .byte     1                             # number of basic blocks in this range
+    # BB record for BB_0
+    .byte     0                            # BB_0 ID
+    .uleb128  .Lfunc_begin0-.Lfunc_begin0  # BB_0 offset relative to function entry (always zero)
+    .uleb128  .LBB_END0_0-.Lfunc_begin0    # BB_0 size
+    .byte     x                            # BB_0 metadata
+  # 2nd BB range
+   .quad     func.part.1
+   .byte     1                             # number of basic blocks in this range
+    # BB record for BB_1
+    .byte     1                            # BB_1 ID
+    .uleb128  func.part.1-func.part.1      # BB_1 offset relative to the range begin (always zero)
+    .uleb128  .LBB_END0_1-func.part.1      # BB_1 size
+    .byte     1                            # BB_1 metadata
+
+PGO Analysis Map
+""""""""""""""""
+
+PGO related analysis data can be emitted after each function within the
+``SHT_LLVM_BB_ADDR_MAP`` through the optional ``pgo-analysis-map`` flag.
+Supported analyses currently are Function Entry Count, Basic Block Frequencies,
+and Branch Probabilities.
+
+Each analysis is enabled or disabled via a bit in the feature byte. Currently,
+those bits are:
+
+#. Function Entry Count - Number of times the function was called as taken
+   from a PGO profile. This will always be zero if PGO was not used or the
+   function was not encountered in the profile.
+
+#. Basic Block Frequencies - Encoded as raw block frequency value taken from
+   MBFI analysis. This value is an integer that encodes the relative frequency
+   compared to the entry block. More information can be found in
+   ``llvm/Support/BlockFrequency.h``.
+
+#. Branch Probabilities - Encoded as raw numerator for branch probability
+   taken from MBPI analysis. This value is the numerator for a fixed point ratio
+   defined in ``llvm/Support/BranchProbability.h``. It indicates the probability
+   that the block is followed by a given successor block during execution.
+
+#. Post-Link CFG - When enabled, the PGO Analysis Map will include CFG
+   information obtained from a post-link tool, such as Propeller. This feature
+   is enabled with the ``-pgo-analysis-map-emit-bb-sections-cfg`` flag. When
+   this option is active, the map will contain basic block and edge frequencies
+   from the basic block sections profile. This provides more accurate profiling
+   information that reflects the final binary layout.
+
+This extra data requires version 2 or above. This is necessary since successors
+of basic blocks won't know their index but will know their BB ID.
+
+Example of BBAddrMap with PGO data:
+
+.. code-block:: gas
+
+  .section  ".llvm_bb_addr_map","",@llvm_bb_addr_map
+  .byte     2                             # version number
+  .byte     7                             # feature byte - PGO analyses enabled mask
+  .quad     .Lfunc_begin0                 # address of the function
+  .uleb128  4                             # number of basic blocks
+  # BB record for BB_0
+   .uleb128  0                            # BB_0 BB ID
+   .uleb128  .Lfunc_begin0-.Lfunc_begin0  # BB_0 offset relative to function entry (always zero)
+   .uleb128  .LBB_END0_0-.Lfunc_begin0    # BB_0 size
+   .byte     0x18                         # BB_0 metadata (multiple successors)
+  # BB record for BB_1
+   .uleb128  1                            # BB_1 BB ID
+   .uleb128  .LBB0_1-.LBB_END0_0          # BB_1 offset relative to the end of last block (BB_0).
+   .uleb128  .LBB_END0_1-.LBB0_1          # BB_1 size
+   .byte     0x0                          # BB_1 metadata (two successors)
+  # BB record for BB_2
+   .uleb128  2                            # BB_2 BB ID
+   .uleb128  .LBB0_2-.LBB_END1_0          # BB_2 offset relative to the end of last block (BB_1).
+   .uleb128  .LBB_END0_2-.LBB0_2          # BB_2 size
+   .byte     0x0                          # BB_2 metadata (one successor)
+  # BB record for BB_3
+   .uleb128  3                            # BB_3 BB ID
+   .uleb128  .LBB0_3-.LBB_END0_2          # BB_3 offset relative to the end of last block (BB_2).
+   .uleb128  .LBB_END0_3-.LBB0_3          # BB_3 size
+   .byte     0x0                          # BB_3 metadata (zero successors)
+  # PGO Analysis Map
+  .uleb128  1000                          # function entry count (only when enabled)
+  # PGO data record for BB_0
+   .uleb128  1000                         # BB_0 basic block frequency (only when enabled)
+   .uleb128  3                            # BB_0 successors count (only enabled with branch probabilities)
+   .uleb128  1                            # BB_0 successor 1 BB ID (only enabled with branch probabilities)
+   .uleb128  0x22222222                   # BB_0 successor 1 branch probability (only enabled with branch probabilities)
+   .uleb128  2                            # BB_0 successor 2 BB ID (only enabled with branch probabilities)
+   .uleb128  0x33333333                   # BB_0 successor 2 branch probability (only enabled with branch probabilities)
+   .uleb128  3                            # BB_0 successor 3 BB ID (only enabled with branch probabilities)
+   .uleb128  0xaaaaaaaa                   # BB_0 successor 3 branch probability (only enabled with branch probabilities)
+  # PGO data record for BB_1
+   .uleb128  133                          # BB_1 basic block frequency (only when enabled)
+   .uleb128  2                            # BB_1 successors count (only enabled with branch probabilities)
+   .uleb128  2                            # BB_1 successor 1 BB ID (only enabled with branch probabilities)
+   .uleb128  0x11111111                   # BB_1 successor 1 branch probability (only enabled with branch probabilities)
+   .uleb128  3                            # BB_1 successor 2 BB ID (only enabled with branch probabilities)
+   .uleb128  0x11111111                   # BB_1 successor 2 branch probability (only enabled with branch probabilities)
+  # PGO data record for BB_2
+   .uleb128  18                           # BB_2 basic block frequency (only when enabled)
+   .uleb128  1                            # BB_2 successors count (only enabled with branch probabilities)
+   .uleb128  3                            # BB_2 successor 1 BB ID (only enabled with branch probabilities)
+   .uleb128  0xffffffff                   # BB_2 successor 1 branch probability (only enabled with branch probabilities)
+  # PGO data record for BB_3
+   .uleb128  1000                         # BB_3 basic block frequency (only when enabled)
+   .uleb128  0                            # BB_3 successors count (only enabled with branch probabilities)
 
 ``SHT_LLVM_OFFLOADING`` Section (offloading data)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -469,6 +616,61 @@ This section stores LLVM bitcode used to perform regular LTO or ThinLTO at link
 time. This section is generated when the compiler enables fat LTO. This section
 has the ``SHF_EXCLUDE`` flag so that it is stripped from the final executable
 or shared library.
+
+``SHT_LLVM_JT_SIZES`` Section (Jump table addresses and sizes)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+This section stores pairs of (jump table address, number of entries).
+This information is useful for tools that need to statically reconstruct
+the control flow of executables.
+
+``SHT_LLVM_CFI_JUMP_TABLE`` Section (CFI jump table)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+This section contains the instructions that make up a `CFI jump table`_.
+It is expected to be ``SHF_ALLOC`` and may be laid out like a normal
+section. The ``SHT_LLVM_CFI_JUMP_TABLE`` section type gives the linker
+permission to modify the section in ways that would not normally be
+permitted, in order to optimize calls via the jump table.
+
+Each ``sh_entsize`` sized slice of a section of this type containing
+exactly one relocation may be considered to be a jump table entry
+that branches to the target of the relocation. This allows the linker
+to replace the jump table entry with the function body if it is small
+enough, or if the function is the last function in the jump table.
+
+A section of this type does not have to be placed according to its
+name. The linker may place the section in whichever output section it
+sees fit (generally the section that would provide the best locality).
+
+.. _CFI jump table: https://clang.llvm.org/docs/ControlFlowIntegrityDesign.html#forward-edge-cfi-for-indirect-function-calls
+
+``SHT_LLVM_CALL_GRAPH`` Section (Call Graph)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This section is used to store the call graph. It has a type of
+``SHT_LLVM_CALL_GRAPH`` (0x6fff4c0f). Details of call graph section layout
+are described in :doc:`CallGraphSection`.
+
+For example:
+
+.. code-block:: gas
+
+  .section  ".llvm.callgraph","",@llvm_call_graph
+  .byte   0
+  .byte   7
+  .quad   .Lball
+  .quad   0
+  .byte   3
+  .quad   foo
+  .quad   bar
+  .quad   baz
+  .byte   3
+  .quad   4524972987496481828
+  .quad   3498816979441845844
+  .quad   8646233951371320954
+
+This indicates that ``ball`` calls ``foo``, ``bar`` and ``baz`` directly;
+``ball`` indirectly calls functions whose types are ``4524972987496481828``,
+``3498816979441845844`` and ``8646233951371320954``.
 
 CodeView-Dependent
 ------------------
@@ -496,9 +698,9 @@ Syntax:
 
 ``.cv_loc`` Directive
 ^^^^^^^^^^^^^^^^^^^^^
-The first number is a file number, must have been previously assigned with a
-``.file`` directive, the second number is the line number and optionally the
-third number is a column position (zero if not specified).  The remaining
+The first number is a file number, which must have been previously assigned with a
+``.file`` directive. The second number is the line number, and the
+optional third number is a column position (zero if not specified).  The remaining
 optional items are ``.loc`` sub-directives.
 
 Syntax:
@@ -537,7 +739,7 @@ Syntax:
 Syntax:
   ``.cv_fpo_data`` *procsym*
 
-Target Specific Behaviour
+Target-Specific Behaviour
 =========================
 
 X86
@@ -603,7 +805,7 @@ emission of Variable Length Arrays (VLAs).
 The Windows ARM Itanium ABI extends the base ABI by adding support for emitting
 a dynamic stack allocation.  When emitting a variable stack allocation, a call
 to ``__chkstk`` is emitted unconditionally to ensure that guard pages are setup
-properly.  The emission of this stack probe emission is handled similar to the
+properly.  The emission of this stack probe emission is handled similarly to the
 standard stack probe emission.
 
 The MSVC environment does not emit code for VLAs currently.
@@ -624,7 +826,7 @@ in the following fashion:
   sub sp, sp, x15, lsl #4
 
 However, this has the limitation of 256 MiB (±128MiB).  In order to accommodate
-larger binaries, LLVM supports the use of ``-mcmodel=large`` to allow a 8GiB
+larger binaries, LLVM supports the use of ``-mcmodel=large`` to allow an 8GiB
 (±4GiB) range via a slight deviation.  It will generate an indirect jump as
 follows:
 

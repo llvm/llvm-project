@@ -10,8 +10,10 @@
 
 #include "src/__support/CPP/type_traits/add_rvalue_reference.h"
 #include "src/__support/CPP/type_traits/always_false.h"
+#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE::cpp {
+namespace LIBC_NAMESPACE_DECL {
+namespace cpp {
 
 // declval
 template <typename T> cpp::add_rvalue_reference_t<T> declval() {
@@ -19,6 +21,7 @@ template <typename T> cpp::add_rvalue_reference_t<T> declval() {
                 "declval not allowed in an evaluated context");
 }
 
-} // namespace LIBC_NAMESPACE::cpp
+} // namespace cpp
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_CPP_UTILITY_DECLVAL_H

@@ -17,9 +17,6 @@
 #include <memory>
 #include <unordered_set>
 
-using namespace llvm;
-using namespace sampleprof;
-
 namespace llvm {
 namespace sampleprof {
 
@@ -108,16 +105,25 @@ protected:
 
   void updateCallsiteSamples();
 
+  void filterAmbiguousProfile(SampleProfileMap &Profiles);
+
+  bool filterAmbiguousProfile(FunctionSamples &FS);
+
   StringRef getCalleeNameForAddress(uint64_t TargetAddress);
 
   void computeSummaryAndThreshold(SampleProfileMap &ProfileMap);
 
+  void calculateBodySamplesAndSize(const FunctionSamples &FSamples,
+                                   uint64_t &TotalBodySamples,
+                                   uint64_t &FuncBodySize);
+
+  double calculateDensity(const SampleProfileMap &Profiles);
+
   void calculateAndShowDensity(const SampleProfileMap &Profiles);
 
-  double calculateDensity(const SampleProfileMap &Profiles,
-                          uint64_t HotCntThreshold);
-
   void showDensitySuggestion(double Density);
+
+  void markAllContextPreinlined(SampleProfileMap &ProfileMap);
 
   void collectProfiledFunctions();
 
@@ -127,6 +133,10 @@ protected:
   // Collect profiled Functions for llvm sample profile input.
   virtual bool collectFunctionsFromLLVMProfile(
       std::unordered_set<const BinaryFunction *> &ProfiledFunctions) = 0;
+
+  // List of function prefix to filter out.
+  static constexpr const char *FuncPrefixsToFilter[] = {"__cxx_global_var_init",
+                                                        "__tls_init"};
 
   // Thresholds from profile summary to answer isHotCount/isColdCount queries.
   uint64_t HotCountThreshold;
@@ -171,6 +181,8 @@ private:
   populateBodySamplesWithProbesForAllFunctions(const RangeSample &RangeCounter);
   void populateBoundarySamplesWithProbesForAllFunctions(
       const BranchSample &BranchCounters);
+  void
+  populateTypeSamplesForAllFunctions(const DataAccessSample &DataAccessSamples);
   void postProcessProfiles();
   void trimColdProfiles(const SampleProfileMap &Profiles,
                         uint64_t ColdCntThreshold);

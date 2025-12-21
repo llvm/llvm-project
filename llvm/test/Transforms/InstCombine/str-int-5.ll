@@ -46,40 +46,40 @@ declare i64 @strtoull(ptr, ptr, i32)
 
 define void @fold_strtoul(ptr %ps) {
 ; CHECK-LABEL: @fold_strtoul(
-; CHECK-NEXT:    store ptr getelementptr inbounds ([11 x i8], ptr @ws_im123, i64 0, i64 10), ptr @endptr, align 8
+; CHECK-NEXT:    store ptr getelementptr inbounds nuw (i8, ptr @ws_im123, i64 10), ptr @endptr, align 8
 ; CHECK-NEXT:    store i32 -123, ptr [[PS:%.*]], align 4
-; CHECK-NEXT:    store ptr getelementptr inbounds ([11 x i8], ptr @ws_ip234, i64 0, i64 10), ptr @endptr, align 8
-; CHECK-NEXT:    [[PS1:%.*]] = getelementptr i32, ptr [[PS]], i64 1
+; CHECK-NEXT:    store ptr getelementptr inbounds nuw (i8, ptr @ws_ip234, i64 10), ptr @endptr, align 8
+; CHECK-NEXT:    [[PS1:%.*]] = getelementptr i8, ptr [[PS]], i64 4
 ; CHECK-NEXT:    store i32 234, ptr [[PS1]], align 4
-; CHECK-NEXT:    store ptr getelementptr inbounds ([13 x i8], ptr @i32min_m1, i64 0, i64 12), ptr @endptr, align 8
-; CHECK-NEXT:    [[PS2:%.*]] = getelementptr i32, ptr [[PS]], i64 2
+; CHECK-NEXT:    store ptr getelementptr inbounds nuw (i8, ptr @i32min_m1, i64 12), ptr @endptr, align 8
+; CHECK-NEXT:    [[PS2:%.*]] = getelementptr i8, ptr [[PS]], i64 8
 ; CHECK-NEXT:    store i32 2147483647, ptr [[PS2]], align 4
-; CHECK-NEXT:    store ptr getelementptr inbounds ([13 x i8], ptr @i32min, i64 0, i64 12), ptr @endptr, align 8
-; CHECK-NEXT:    [[PS3:%.*]] = getelementptr i32, ptr [[PS]], i64 3
+; CHECK-NEXT:    store ptr getelementptr inbounds nuw (i8, ptr @i32min, i64 12), ptr @endptr, align 8
+; CHECK-NEXT:    [[PS3:%.*]] = getelementptr i8, ptr [[PS]], i64 12
 ; CHECK-NEXT:    store i32 -2147483648, ptr [[PS3]], align 4
-; CHECK-NEXT:    store ptr getelementptr inbounds ([15 x i8], ptr @o32min, i64 0, i64 14), ptr @endptr, align 8
-; CHECK-NEXT:    [[PS4:%.*]] = getelementptr i32, ptr [[PS]], i64 4
+; CHECK-NEXT:    store ptr getelementptr inbounds nuw (i8, ptr @o32min, i64 14), ptr @endptr, align 8
+; CHECK-NEXT:    [[PS4:%.*]] = getelementptr i8, ptr [[PS]], i64 16
 ; CHECK-NEXT:    store i32 -2147483648, ptr [[PS4]], align 4
-; CHECK-NEXT:    store ptr getelementptr inbounds ([15 x i8], ptr @mo32min, i64 0, i64 14), ptr @endptr, align 8
-; CHECK-NEXT:    [[PS5:%.*]] = getelementptr i32, ptr [[PS]], i64 5
+; CHECK-NEXT:    store ptr getelementptr inbounds nuw (i8, ptr @mo32min, i64 14), ptr @endptr, align 8
+; CHECK-NEXT:    [[PS5:%.*]] = getelementptr i8, ptr [[PS]], i64 20
 ; CHECK-NEXT:    store i32 -2147483648, ptr [[PS5]], align 4
-; CHECK-NEXT:    store ptr getelementptr inbounds ([13 x i8], ptr @x32min, i64 0, i64 12), ptr @endptr, align 8
-; CHECK-NEXT:    [[PS6:%.*]] = getelementptr i32, ptr [[PS]], i64 6
+; CHECK-NEXT:    store ptr getelementptr inbounds nuw (i8, ptr @x32min, i64 12), ptr @endptr, align 8
+; CHECK-NEXT:    [[PS6:%.*]] = getelementptr i8, ptr [[PS]], i64 24
 ; CHECK-NEXT:    store i32 -2147483648, ptr [[PS6]], align 4
-; CHECK-NEXT:    store ptr getelementptr inbounds ([13 x i8], ptr @mx32min, i64 0, i64 12), ptr @endptr, align 8
-; CHECK-NEXT:    [[PS7:%.*]] = getelementptr i32, ptr [[PS]], i64 7
+; CHECK-NEXT:    store ptr getelementptr inbounds nuw (i8, ptr @mx32min, i64 12), ptr @endptr, align 8
+; CHECK-NEXT:    [[PS7:%.*]] = getelementptr i8, ptr [[PS]], i64 28
 ; CHECK-NEXT:    store i32 -2147483648, ptr [[PS7]], align 4
-; CHECK-NEXT:    store ptr getelementptr inbounds ([12 x i8], ptr @i32max, i64 0, i64 11), ptr @endptr, align 8
-; CHECK-NEXT:    [[PS8:%.*]] = getelementptr i32, ptr [[PS]], i64 8
+; CHECK-NEXT:    store ptr getelementptr inbounds nuw (i8, ptr @i32max, i64 11), ptr @endptr, align 8
+; CHECK-NEXT:    [[PS8:%.*]] = getelementptr i8, ptr [[PS]], i64 32
 ; CHECK-NEXT:    store i32 2147483647, ptr [[PS8]], align 4
-; CHECK-NEXT:    store ptr getelementptr inbounds ([6 x i8], ptr @mX01, i64 0, i64 5), ptr @endptr, align 8
-; CHECK-NEXT:    [[PS9:%.*]] = getelementptr i32, ptr [[PS]], i64 9
+; CHECK-NEXT:    store ptr getelementptr inbounds nuw (i8, ptr @mX01, i64 5), ptr @endptr, align 8
+; CHECK-NEXT:    [[PS9:%.*]] = getelementptr i8, ptr [[PS]], i64 36
 ; CHECK-NEXT:    store i32 -1, ptr [[PS9]], align 4
-; CHECK-NEXT:    store ptr getelementptr inbounds ([12 x i8], ptr @i32max_p1, i64 0, i64 11), ptr @endptr, align 8
-; CHECK-NEXT:    [[PS10:%.*]] = getelementptr i32, ptr [[PS]], i64 10
+; CHECK-NEXT:    store ptr getelementptr inbounds nuw (i8, ptr @i32max_p1, i64 11), ptr @endptr, align 8
+; CHECK-NEXT:    [[PS10:%.*]] = getelementptr i8, ptr [[PS]], i64 40
 ; CHECK-NEXT:    store i32 -2147483648, ptr [[PS10]], align 4
-; CHECK-NEXT:    store ptr getelementptr inbounds ([12 x i8], ptr @ui32max, i64 0, i64 11), ptr @endptr, align 8
-; CHECK-NEXT:    [[PS11:%.*]] = getelementptr i32, ptr [[PS]], i64 11
+; CHECK-NEXT:    store ptr getelementptr inbounds nuw (i8, ptr @ui32max, i64 11), ptr @endptr, align 8
+; CHECK-NEXT:    [[PS11:%.*]] = getelementptr i8, ptr [[PS]], i64 44
 ; CHECK-NEXT:    store i32 -1, ptr [[PS11]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -154,13 +154,13 @@ define void @call_strtoul(ptr %ps) {
 ; CHECK-NEXT:    [[MINM1:%.*]] = call i32 @strtoul(ptr nonnull @i64min_m1, ptr nonnull @endptr, i32 10)
 ; CHECK-NEXT:    store i32 [[MINM1]], ptr [[PS:%.*]], align 4
 ; CHECK-NEXT:    [[MAXP1:%.*]] = call i32 @strtoul(ptr nonnull @ui32max_p1, ptr nonnull @endptr, i32 10)
-; CHECK-NEXT:    [[PS1:%.*]] = getelementptr i32, ptr [[PS]], i64 1
+; CHECK-NEXT:    [[PS1:%.*]] = getelementptr i8, ptr [[PS]], i64 4
 ; CHECK-NEXT:    store i32 [[MAXP1]], ptr [[PS1]], align 4
 ; CHECK-NEXT:    [[NWS:%.*]] = call i32 @strtoul(ptr nonnull @ws, ptr nonnull @endptr, i32 10)
-; CHECK-NEXT:    [[PS2:%.*]] = getelementptr i32, ptr [[PS]], i64 2
+; CHECK-NEXT:    [[PS2:%.*]] = getelementptr i8, ptr [[PS]], i64 8
 ; CHECK-NEXT:    store i32 [[NWS]], ptr [[PS2]], align 4
-; CHECK-NEXT:    [[NWSP6:%.*]] = call i32 @strtoul(ptr nonnull getelementptr inbounds ([7 x i8], ptr @ws, i64 0, i64 6), ptr nonnull @endptr, i32 10)
-; CHECK-NEXT:    [[PS3:%.*]] = getelementptr i32, ptr [[PS]], i64 3
+; CHECK-NEXT:    [[NWSP6:%.*]] = call i32 @strtoul(ptr nonnull getelementptr inbounds nuw (i8, ptr @ws, i64 6), ptr nonnull @endptr, i32 10)
+; CHECK-NEXT:    [[PS3:%.*]] = getelementptr i8, ptr [[PS]], i64 12
 ; CHECK-NEXT:    store i32 [[NWSP6]], ptr [[PS3]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -195,37 +195,37 @@ define void @call_strtoul(ptr %ps) {
 
 define void @fold_strtoull(ptr %ps) {
 ; CHECK-LABEL: @fold_strtoull(
-; CHECK-NEXT:    store ptr getelementptr inbounds ([11 x i8], ptr @ws_im123, i64 0, i64 10), ptr @endptr, align 8
+; CHECK-NEXT:    store ptr getelementptr inbounds nuw (i8, ptr @ws_im123, i64 10), ptr @endptr, align 8
 ; CHECK-NEXT:    store i64 -123, ptr [[PS:%.*]], align 4
-; CHECK-NEXT:    store ptr getelementptr inbounds ([11 x i8], ptr @ws_ip234, i64 0, i64 10), ptr @endptr, align 8
-; CHECK-NEXT:    [[PS1:%.*]] = getelementptr i64, ptr [[PS]], i64 1
+; CHECK-NEXT:    store ptr getelementptr inbounds nuw (i8, ptr @ws_ip234, i64 10), ptr @endptr, align 8
+; CHECK-NEXT:    [[PS1:%.*]] = getelementptr i8, ptr [[PS]], i64 8
 ; CHECK-NEXT:    store i64 234, ptr [[PS1]], align 4
-; CHECK-NEXT:    store ptr getelementptr inbounds ([22 x i8], ptr @i64min_m1, i64 0, i64 21), ptr @endptr, align 8
-; CHECK-NEXT:    [[PS2:%.*]] = getelementptr i64, ptr [[PS]], i64 2
+; CHECK-NEXT:    store ptr getelementptr inbounds nuw (i8, ptr @i64min_m1, i64 21), ptr @endptr, align 8
+; CHECK-NEXT:    [[PS2:%.*]] = getelementptr i8, ptr [[PS]], i64 16
 ; CHECK-NEXT:    store i64 9223372036854775807, ptr [[PS2]], align 4
-; CHECK-NEXT:    store ptr getelementptr inbounds ([13 x i8], ptr @i32min, i64 0, i64 12), ptr @endptr, align 8
-; CHECK-NEXT:    [[PS3:%.*]] = getelementptr i64, ptr [[PS]], i64 3
+; CHECK-NEXT:    store ptr getelementptr inbounds nuw (i8, ptr @i32min, i64 12), ptr @endptr, align 8
+; CHECK-NEXT:    [[PS3:%.*]] = getelementptr i8, ptr [[PS]], i64 24
 ; CHECK-NEXT:    store i64 -2147483648, ptr [[PS3]], align 4
-; CHECK-NEXT:    store ptr getelementptr inbounds ([15 x i8], ptr @o32min, i64 0, i64 14), ptr @endptr, align 8
-; CHECK-NEXT:    [[PS4:%.*]] = getelementptr i64, ptr [[PS]], i64 4
+; CHECK-NEXT:    store ptr getelementptr inbounds nuw (i8, ptr @o32min, i64 14), ptr @endptr, align 8
+; CHECK-NEXT:    [[PS4:%.*]] = getelementptr i8, ptr [[PS]], i64 32
 ; CHECK-NEXT:    store i64 2147483648, ptr [[PS4]], align 4
-; CHECK-NEXT:    store ptr getelementptr inbounds ([13 x i8], ptr @x32min, i64 0, i64 12), ptr @endptr, align 8
-; CHECK-NEXT:    [[PS5:%.*]] = getelementptr i64, ptr [[PS]], i64 5
+; CHECK-NEXT:    store ptr getelementptr inbounds nuw (i8, ptr @x32min, i64 12), ptr @endptr, align 8
+; CHECK-NEXT:    [[PS5:%.*]] = getelementptr i8, ptr [[PS]], i64 40
 ; CHECK-NEXT:    store i64 2147483648, ptr [[PS5]], align 4
-; CHECK-NEXT:    store ptr getelementptr inbounds ([22 x i8], ptr @i64min, i64 0, i64 21), ptr @endptr, align 8
-; CHECK-NEXT:    [[PS6:%.*]] = getelementptr i64, ptr [[PS]], i64 6
+; CHECK-NEXT:    store ptr getelementptr inbounds nuw (i8, ptr @i64min, i64 21), ptr @endptr, align 8
+; CHECK-NEXT:    [[PS6:%.*]] = getelementptr i8, ptr [[PS]], i64 48
 ; CHECK-NEXT:    store i64 -9223372036854775808, ptr [[PS6]], align 4
-; CHECK-NEXT:    store ptr getelementptr inbounds ([21 x i8], ptr @i64max, i64 0, i64 20), ptr @endptr, align 8
-; CHECK-NEXT:    [[PS7:%.*]] = getelementptr i64, ptr [[PS]], i64 7
+; CHECK-NEXT:    store ptr getelementptr inbounds nuw (i8, ptr @i64max, i64 20), ptr @endptr, align 8
+; CHECK-NEXT:    [[PS7:%.*]] = getelementptr i8, ptr [[PS]], i64 56
 ; CHECK-NEXT:    store i64 9223372036854775807, ptr [[PS7]], align 4
-; CHECK-NEXT:    store ptr getelementptr inbounds ([21 x i8], ptr @i64max_p1, i64 0, i64 20), ptr @endptr, align 8
-; CHECK-NEXT:    [[PS8:%.*]] = getelementptr i64, ptr [[PS]], i64 8
+; CHECK-NEXT:    store ptr getelementptr inbounds nuw (i8, ptr @i64max_p1, i64 20), ptr @endptr, align 8
+; CHECK-NEXT:    [[PS8:%.*]] = getelementptr i8, ptr [[PS]], i64 64
 ; CHECK-NEXT:    store i64 -9223372036854775808, ptr [[PS8]], align 4
-; CHECK-NEXT:    store ptr getelementptr inbounds ([22 x i8], ptr @ui64max, i64 0, i64 21), ptr @endptr, align 8
-; CHECK-NEXT:    [[PS9:%.*]] = getelementptr i64, ptr [[PS]], i64 9
+; CHECK-NEXT:    store ptr getelementptr inbounds nuw (i8, ptr @ui64max, i64 21), ptr @endptr, align 8
+; CHECK-NEXT:    [[PS9:%.*]] = getelementptr i8, ptr [[PS]], i64 72
 ; CHECK-NEXT:    store i64 -1, ptr [[PS9]], align 4
-; CHECK-NEXT:    store ptr getelementptr inbounds ([20 x i8], ptr @x64max, i64 0, i64 19), ptr @endptr, align 8
-; CHECK-NEXT:    [[PS10:%.*]] = getelementptr i64, ptr [[PS]], i64 10
+; CHECK-NEXT:    store ptr getelementptr inbounds nuw (i8, ptr @x64max, i64 19), ptr @endptr, align 8
+; CHECK-NEXT:    [[PS10:%.*]] = getelementptr i8, ptr [[PS]], i64 80
 ; CHECK-NEXT:    store i64 -1, ptr [[PS10]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -293,13 +293,13 @@ define void @fold_strtoull(ptr %ps) {
 define void @call_strtoull(ptr %ps) {
 ; CHECK-LABEL: @call_strtoull(
 ; CHECK-NEXT:    [[MAXP1:%.*]] = call i64 @strtoull(ptr nonnull @ui64max_p1, ptr nonnull @endptr, i32 10)
-; CHECK-NEXT:    [[PS1:%.*]] = getelementptr i64, ptr [[PS:%.*]], i64 1
+; CHECK-NEXT:    [[PS1:%.*]] = getelementptr i8, ptr [[PS:%.*]], i64 8
 ; CHECK-NEXT:    store i64 [[MAXP1]], ptr [[PS1]], align 4
 ; CHECK-NEXT:    [[NWS:%.*]] = call i64 @strtoull(ptr nonnull @ws, ptr nonnull @endptr, i32 10)
-; CHECK-NEXT:    [[PS2:%.*]] = getelementptr i64, ptr [[PS]], i64 2
+; CHECK-NEXT:    [[PS2:%.*]] = getelementptr i8, ptr [[PS]], i64 16
 ; CHECK-NEXT:    store i64 [[NWS]], ptr [[PS2]], align 4
-; CHECK-NEXT:    [[NWSP6:%.*]] = call i64 @strtoull(ptr nonnull getelementptr inbounds ([7 x i8], ptr @ws, i64 0, i64 6), ptr nonnull @endptr, i32 10)
-; CHECK-NEXT:    [[PS3:%.*]] = getelementptr i64, ptr [[PS]], i64 3
+; CHECK-NEXT:    [[NWSP6:%.*]] = call i64 @strtoull(ptr nonnull getelementptr inbounds nuw (i8, ptr @ws, i64 6), ptr nonnull @endptr, i32 10)
+; CHECK-NEXT:    [[PS3:%.*]] = getelementptr i8, ptr [[PS]], i64 24
 ; CHECK-NEXT:    store i64 [[NWSP6]], ptr [[PS3]], align 4
 ; CHECK-NEXT:    ret void
 ;

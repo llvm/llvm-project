@@ -50,9 +50,7 @@ void test() {
   auto x = make();
 
   // error: R and R::f are not visible here
-  R::f(x); // expected-error {{declaration of 'R' must be imported from module 'N' before it is required}}
-  // expected-note@N.cpp:4 {{declaration here is not visible}}
-  // expected-error@-2 {{no type named 'f' in namespace 'R'}}
+  R::f(x); // expected-error {{no type named 'f' in namespace 'R'}}
 
   f(x); // Found by [basic.lookup.argdep] / p4.3
 
@@ -63,6 +61,6 @@ void test() {
 
   // error: S::f is visible in instantiation context, but  R::g has internal
   // linkage and cannot be used outside N.cpp
-  apply(x, S::Z()); // expected-error@N.cpp:10 {{no matching function for call to 'g'}}
-                    // expected-note@-1 {{in instantiation of function template specialization 'apply<R::X, S::Z>' requested here}}
+  apply(x, S::Z()); // expected-error@N.cpp:10 {{use of undeclared identifier 'g'}}
+                    // expected-note@-1 {{requested here}}
 }

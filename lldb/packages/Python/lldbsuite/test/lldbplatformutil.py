@@ -3,16 +3,22 @@ architecture and/or the platform dependent nature of the tests. """
 
 # System modules
 import itertools
+import json
 import re
 import subprocess
 import sys
 import os
+from typing import Optional
+from packaging import version
 from urllib.parse import urlparse
 
 # LLDB modules
-from . import configuration
 import lldb
+from . import configuration
+from . import lldbtest_config
 import lldbsuite.test.lldbplatform as lldbplatform
+from lldbsuite.test.builders import get_builder
+from lldbsuite.test.lldbutil import is_exe
 
 
 def check_first_register_readable(test_case):
@@ -30,6 +36,8 @@ def check_first_register_readable(test_case):
         test_case.expect("register read r0", substrs=["r0 = 0x"])
     elif arch in ["powerpc64le"]:
         test_case.expect("register read r0", substrs=["r0 = 0x"])
+    elif arch in ["riscv64", "riscv32"]:
+        test_case.expect("register read zero", substrs=["zero = 0x"])
     else:
         # TODO: Add check for other architectures
         test_case.fail(
@@ -88,11 +96,28 @@ def match_android_device(device_arch, valid_archs=None, valid_api_levels=None):
 
 
 def finalize_build_dictionary(dictionary):
+    # Provide uname-like platform name
+    platform_name_to_uname = {
+        "linux": "Linux",
+        "netbsd": "NetBSD",
+        "freebsd": "FreeBSD",
+        "windows": "Windows_NT",
+        "macosx": "Darwin",
+        "darwin": "Darwin",
+    }
+
+    if dictionary is None:
+        dictionary = {}
     if target_is_android():
-        if dictionary is None:
-            dictionary = {}
         dictionary["OS"] = "Android"
         dictionary["PIE"] = 1
+    elif platformIsDarwin():
+        dictionary["OS"] = "Darwin"
+    else:
+        dictionary["OS"] = platform_name_to_uname[getPlatform()]
+
+    dictionary["HOST_OS"] = platform_name_to_uname[getHostPlatform()]
+
     return dictionary
 
 
@@ -105,6 +130,8 @@ def _get_platform_os(p):
             platform = "freebsd"
         elif platform.startswith("netbsd"):
             platform = "netbsd"
+        elif platform.startswith("openbsd"):
+            platform = "openbsd"
         return platform
 
     return ""
@@ -155,6 +182,22 @@ def findMainThreadCheckerDylib():
     return ""
 
 
+def findBacktraceRecordingDylib():
+    if not platformIsDarwin():
+        return ""
+
+    if getPlatform() in lldbplatform.translate(lldbplatform.darwin_embedded):
+        return "/Developer/usr/lib/libBacktraceRecording.dylib"
+
+    with os.popen("xcode-select -p") as output:
+        xcode_developer_path = output.read().strip()
+        mtc_dylib_path = "%s/usr/lib/libBacktraceRecording.dylib" % xcode_developer_path
+        if os.path.isfile(mtc_dylib_path):
+            return mtc_dylib_path
+
+    return ""
+
+
 class _PlatformContext(object):
     """Value object class which contains platform-specific options."""
 
@@ -170,7 +213,7 @@ class _PlatformContext(object):
 def createPlatformContext():
     if platformIsDarwin():
         return _PlatformContext("DYLD_LIBRARY_PATH", ":", "lib", "dylib")
-    elif getPlatform() in ("freebsd", "linux", "netbsd"):
+    elif getPlatform() in ("linux", "freebsd", "netbsd", "openbsd"):
         return _PlatformContext("LD_LIBRARY_PATH", ":", "lib", "so")
     else:
         return _PlatformContext("PATH", ";", "", "dll")
@@ -183,4 +226,210 @@ def hasChattyStderr(test_case):
         test_case.getArchitecture(), ["aarch64"], range(22, 25 + 1)
     ):
         return True  # The dynamic linker on the device will complain about unknown DT entries
+    return False
+
+
+def builder_module():
+    """Return the builder for the target platform."""
+    return get_builder(getPlatform())
+
+
+def getArchitecture():
+    """Returns the architecture in effect the test suite is running with."""
+    module = builder_module()
+    arch = module.getArchitecture()
+    if arch == "amd64":
+        arch = "x86_64"
+    if arch in ["armv7l", "armv8l"]:
+        arch = "arm"
+    if re.match("rv64*", arch):
+        arch = "riscv64"
+    if re.match("rv32*", arch):
+        arch = "riscv32"
+    return arch
+
+
+lldbArchitecture = None
+
+
+def getLLDBArchitecture():
+    """Returns the architecture of the lldb binary."""
+    global lldbArchitecture
+    if not lldbArchitecture:
+        # These two target settings prevent lldb from doing setup that does
+        # nothing but slow down the end goal of printing the architecture.
+        command = [
+            lldbtest_config.lldbExec,
+            "-x",
+            "-b",
+            "-o",
+            "settings set target.preload-symbols false",
+            "-o",
+            "settings set target.load-script-from-symbol-file false",
+            "-o",
+            "file " + lldbtest_config.lldbExec,
+        ]
+
+        output = subprocess.check_output(command)
+        str = output.decode()
+
+        for line in str.splitlines():
+            m = re.search(r"Current executable set to '.*' \((.*)\)\.", line)
+            if m:
+                lldbArchitecture = m.group(1)
+                break
+
+    return lldbArchitecture
+
+
+def getCompiler():
+    """Returns the compiler in effect the test suite is running with."""
+    module = builder_module()
+    return module.getCompiler()
+
+
+def getCompilerVersion():
+    """Returns a string that represents the compiler version.
+    Supports: llvm, clang.
+    """
+    version_output = subprocess.check_output(
+        [getCompiler(), "--version"], errors="replace"
+    )
+    m = re.search("version ([0-9.]+)", version_output)
+    if m:
+        return m.group(1)
+    return "unknown"
+
+
+def getWindowsVersion():
+    """Returns a string that represents the Windows version.
+
+    The string is a concatenation of the following, separated by a dot:
+      - The major version number.
+      - The build number.
+
+    Example:
+      - Windows 11 version 24H2 -> "10.0.26100"
+      - Windows 10 version 1809 -> "10.0.17763"
+    """
+    import sys
+
+    if sys.platform != "win32":
+        return "unknown"
+    windows_version = sys.getwindowsversion()
+    return f"{windows_version.major}.{windows_version.minor}.{windows_version.build}"
+
+
+def getDwarfVersion():
+    """Returns the dwarf version generated by clang or '0'."""
+    if configuration.dwarf_version:
+        return str(configuration.dwarf_version)
+    if "clang" in getCompiler():
+        try:
+            triple = builder_module().getTriple(getArchitecture())
+            target = ["-target", triple] if triple else []
+            driver_output = subprocess.check_output(
+                [getCompiler()] + target + "-g -c -x c - -o - -###".split(),
+                stderr=subprocess.STDOUT,
+            )
+            driver_output = driver_output.decode("utf-8")
+            for line in driver_output.split(os.linesep):
+                m = re.search("dwarf-version=([0-9])", line)
+                if m:
+                    return m.group(1)
+        except subprocess.CalledProcessError:
+            pass
+    return "0"
+
+
+def isExpectedVersion(
+    actual_version: str, required_version: str, operator: str
+) -> bool:
+    """Returns True iff actual_version matches the required_version given the operator.
+    Any operator other than the following defaults to an equality test:
+        '>', '>=', "=>", '<', '<=', '=<', '!=', "!" or 'not'
+
+    Example:
+      - actual_version='1.2.0', required_version='1.0.0', operator='>=' returns True
+    """
+    actual_version_ = version.parse(actual_version)
+    required_version_ = version.parse(required_version)
+
+    if operator == ">":
+        return actual_version_ > required_version_
+    if operator == ">=" or operator == "=>":
+        return actual_version_ >= required_version_
+    if operator == "<":
+        return actual_version_ < required_version_
+    if operator == "<=" or operator == "=<":
+        return actual_version_ <= required_version_
+    if operator == "!=" or operator == "!" or operator == "not":
+        return actual_version not in required_version
+    return actual_version in required_version
+
+
+def expectedCompilerVersion(compiler_version):
+    """Returns True if compiler_version[1] matches the current compiler version.
+    Use compiler_version[0] to specify the operator used to determine if a match has occurred.
+    Any operator other than the following defaults to an equality test:
+        '>', '>=', "=>", '<', '<=', '=<', '!=', "!" or 'not'
+
+    If the current compiler version cannot be determined, we assume it is close to the top
+    of trunk, so any less-than or equal-to comparisons will return False, and any
+    greater-than or not-equal-to comparisons will return True.
+    """
+    if compiler_version is None:
+        return True
+    operator = str(compiler_version[0])
+    version_str = str(compiler_version[1])
+
+    if not version_str:
+        return True
+
+    test_compiler_version_str = getCompilerVersion()
+    if test_compiler_version_str == "unknown":
+        # Assume the version is at or near the top of trunk.
+        return operator in [">", ">=", "!", "!=", "not"]
+
+    return isExpectedVersion(
+        actual_version=test_compiler_version_str,
+        required_version=version_str,
+        operator=operator,
+    )
+
+
+def expectedCompiler(compilers):
+    """Returns True iff any element of compilers is a sub-string of the current compiler."""
+    if compilers is None:
+        return True
+
+    for compiler in compilers:
+        if compiler in getCompiler():
+            return True
+
+    return False
+
+
+# This is a helper function to determine if a specific version of Xcode's linker
+# contains a TLS bug. We want to skip TLS tests if they contain this bug, but
+# adding a linker/linker_version conditions to a decorator is challenging due to
+# the number of ways linkers can enter the build process.
+def xcode15LinkerBug():
+    """Returns true iff a test is running on a darwin platform and the host linker is between versions 1000 and 1109."""
+    darwin_platforms = lldbplatform.translate(lldbplatform.darwin_all)
+    if getPlatform() not in darwin_platforms:
+        return False
+
+    try:
+        raw_version_details = subprocess.check_output(
+            ("xcrun", "ld", "-version_details")
+        )
+        version_details = json.loads(raw_version_details)
+        version = version_details.get("version", "0")
+        version_tuple = tuple(int(x) for x in version.split("."))
+        if (1000,) <= version_tuple <= (1109,):
+            return True
+    except:
+        pass
+
     return False

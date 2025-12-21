@@ -13,6 +13,7 @@
 
 #include "llvm/CodeGen/GlobalISel/InlineAsmLowering.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
+#include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetLowering.h"
@@ -223,7 +224,7 @@ bool InlineAsmLowering::lowerInlineAsm(
 
   MachineFunction &MF = MIRBuilder.getMF();
   const Function &F = MF.getFunction();
-  const DataLayout &DL = F.getParent()->getDataLayout();
+  const DataLayout &DL = F.getDataLayout();
   const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
 
   MachineRegisterInfo *MRI = MIRBuilder.getMRI();
@@ -240,7 +241,7 @@ bool InlineAsmLowering::lowerInlineAsm(
 
     // Compute the value type for each operand.
     if (OpInfo.hasArg()) {
-      OpInfo.CallOperandVal = const_cast<Value *>(Call.getArgOperand(ArgNo));
+      OpInfo.CallOperandVal = Call.getArgOperand(ArgNo);
 
       if (isa<BasicBlock>(OpInfo.CallOperandVal)) {
         LLVM_DEBUG(dbgs() << "Basic block input operands not supported yet\n");
@@ -297,7 +298,7 @@ bool InlineAsmLowering::lowerInlineAsm(
   // Create the MachineInstr, but don't insert it yet since input
   // operands still need to insert instructions before this one
   auto Inst = MIRBuilder.buildInstrNoInsert(TargetOpcode::INLINEASM)
-                  .addExternalSymbol(IA->getAsmString().c_str())
+                  .addExternalSymbol(IA->getAsmString().data())
                   .addImm(ExtraInfo.get());
 
   // Starting from this operand: flag followed by register(s) will be added as
@@ -454,26 +455,52 @@ bool InlineAsmLowering::lowerInlineAsm(
       }
 
       if (OpInfo.ConstraintType == TargetLowering::C_Memory) {
-
-        if (!OpInfo.isIndirect) {
-          LLVM_DEBUG(dbgs()
-                     << "Cannot indirectify memory input operands yet\n");
-          return false;
-        }
-
-        assert(OpInfo.isIndirect && "Operand must be indirect to be a mem!");
-
         const InlineAsm::ConstraintCode ConstraintID =
             TLI->getInlineAsmMemConstraint(OpInfo.ConstraintCode);
         InlineAsm::Flag OpFlags(InlineAsm::Kind::Mem, 1);
         OpFlags.setMemConstraint(ConstraintID);
         Inst.addImm(OpFlags);
+
+        if (OpInfo.isIndirect) {
+          // already indirect
+          ArrayRef<Register> SourceRegs =
+              GetOrCreateVRegs(*OpInfo.CallOperandVal);
+          if (SourceRegs.size() != 1) {
+            LLVM_DEBUG(dbgs() << "Expected the memory input to fit into a "
+                                 "single virtual register "
+                                 "for constraint '"
+                              << OpInfo.ConstraintCode << "'\n");
+            return false;
+          }
+          Inst.addReg(SourceRegs[0]);
+          break;
+        }
+
+        // Needs to be made indirect. Store the value on the stack and use
+        // a pointer to it.
+        Value *OpVal = OpInfo.CallOperandVal;
+        TypeSize Bytes = DL.getTypeStoreSize(OpVal->getType());
+        Align Alignment = DL.getPrefTypeAlign(OpVal->getType());
+        int FrameIdx =
+            MF.getFrameInfo().CreateStackObject(Bytes, Alignment, false);
+
+        unsigned AddrSpace = DL.getAllocaAddrSpace();
+        LLT FramePtrTy =
+            LLT::pointer(AddrSpace, DL.getPointerSizeInBits(AddrSpace));
+        auto Ptr = MIRBuilder.buildFrameIndex(FramePtrTy, FrameIdx).getReg(0);
         ArrayRef<Register> SourceRegs =
             GetOrCreateVRegs(*OpInfo.CallOperandVal);
-        assert(
-            SourceRegs.size() == 1 &&
-            "Expected the memory input to fit into a single virtual register");
-        Inst.addReg(SourceRegs[0]);
+        if (SourceRegs.size() != 1) {
+          LLVM_DEBUG(dbgs() << "Expected the memory input to fit into a single "
+                               "virtual register "
+                               "for constraint '"
+                            << OpInfo.ConstraintCode << "'\n");
+          return false;
+        }
+        MIRBuilder.buildStore(SourceRegs[0], Ptr,
+                              MachinePointerInfo::getFixedStack(MF, FrameIdx),
+                              Alignment);
+        Inst.addReg(Ptr);
         break;
       }
 
@@ -538,8 +565,23 @@ bool InlineAsmLowering::lowerInlineAsm(
     }
   }
 
+  if (auto Bundle = Call.getOperandBundle(LLVMContext::OB_convergencectrl)) {
+    auto *Token = Bundle->Inputs[0].get();
+    ArrayRef<Register> SourceRegs = GetOrCreateVRegs(*Token);
+    assert(SourceRegs.size() == 1 &&
+           "Expected the control token to fit into a single virtual register");
+    Inst.addUse(SourceRegs[0], RegState::Implicit);
+  }
+
   if (const MDNode *SrcLoc = Call.getMetadata("srcloc"))
     Inst.addMetadata(SrcLoc);
+
+  // Add rounding control registers as implicit def for inline asm.
+  if (MF.getFunction().hasFnAttribute(Attribute::StrictFP)) {
+    ArrayRef<MCPhysReg> RCRegs = TLI->getRoundingControlRegisters();
+    for (MCPhysReg Reg : RCRegs)
+      Inst.addReg(Reg, RegState::ImplicitDefine);
+  }
 
   // All inputs are handled, insert the instruction now
   MIRBuilder.insertInstr(Inst);
@@ -615,7 +657,18 @@ bool InlineAsmLowering::lowerAsmOperandForConstraint(
   switch (ConstraintLetter) {
   default:
     return false;
+  case 's': // Integer immediate not known at compile time
+    if (const auto *GV = dyn_cast<GlobalValue>(Val)) {
+      Ops.push_back(MachineOperand::CreateGA(GV, /*Offset=*/0));
+      return true;
+    }
+    return false;
   case 'i': // Simple Integer or Relocatable Constant
+    if (const auto *GV = dyn_cast<GlobalValue>(Val)) {
+      Ops.push_back(MachineOperand::CreateGA(GV, /*Offset=*/0));
+      return true;
+    }
+    [[fallthrough]];
   case 'n': // immediate integer with a known value.
     if (ConstantInt *CI = dyn_cast<ConstantInt>(Val)) {
       assert(CI->getBitWidth() <= 64 &&

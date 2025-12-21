@@ -19,6 +19,7 @@
 #include "mlir/Target/LLVMIR/Import.h"
 #include "mlir/Target/LLVMIR/LLVMImportInterface.h"
 #include "mlir/Target/LLVMIR/TypeFromLLVM.h"
+#include "llvm/IR/Module.h"
 
 namespace llvm {
 class BasicBlock;
@@ -47,13 +48,16 @@ class LoopAnnotationImporter;
 class ModuleImport {
 public:
   ModuleImport(ModuleOp mlirModule, std::unique_ptr<llvm::Module> llvmModule,
-               bool emitExpensiveWarnings);
+               bool emitExpensiveWarnings, bool importEmptyDICompositeTypes,
+               bool preferUnregisteredIntrinsics, bool importStructsAsLiterals);
 
   /// Calls the LLVMImportInterface initialization that queries the registered
   /// dialect interfaces for the supported LLVM IR intrinsics and metadata kinds
   /// and builds the dispatch tables. Returns failure if multiple dialect
   /// interfaces translate the same LLVM IR intrinsic.
-  LogicalResult initializeImportInterface() { return iface.initializeImport(); }
+  LogicalResult initializeImportInterface() {
+    return iface.initializeImport(llvmModule->getContext());
+  }
 
   /// Converts all functions of the LLVM module to MLIR functions.
   LogicalResult convertFunctions();
@@ -65,9 +69,23 @@ public:
   /// Converts all global variables of the LLVM module to MLIR global variables.
   LogicalResult convertGlobals();
 
+  /// Converts all aliases of the LLVM module to MLIR variables.
+  LogicalResult convertAliases();
+
+  /// Converts all ifuncs of the LLVM module to MLIR variables.
+  LogicalResult convertIFuncs();
+
   /// Converts the data layout of the LLVM module to an MLIR data layout
   /// specification.
   LogicalResult convertDataLayout();
+
+  /// Converts target triple of the LLVM module to an MLIR target triple
+  /// specification.
+  void convertTargetTriple();
+
+  /// Converts the module level asm of the LLVM module to an MLIR module
+  /// level asm specification.
+  void convertModuleLevelAsm();
 
   /// Stores the mapping between an LLVM value and its MLIR counterpart.
   void mapValue(llvm::Value *llvm, Value mlir) { mapValue(llvm) = mlir; }
@@ -145,12 +163,21 @@ public:
   /// Converts `value` to a float attribute. Asserts if the matching fails.
   FloatAttr matchFloatAttr(llvm::Value *value);
 
-  /// Converts `value` to a local variable attribute. Asserts if the matching
-  /// fails.
-  DILocalVariableAttr matchLocalVariableAttr(llvm::Value *value);
+  /// Converts `valOrVariable` to a local variable attribute. Asserts if the
+  /// matching fails.
+  DILocalVariableAttr matchLocalVariableAttr(
+      llvm::PointerUnion<llvm::Value *, llvm::DILocalVariable *> valOrVariable);
 
   /// Converts `value` to a label attribute. Asserts if the matching fails.
   DILabelAttr matchLabelAttr(llvm::Value *value);
+
+  /// Converts `value` to a FP exception behavior attribute. Asserts if the
+  /// matching fails.
+  FPExceptionBehaviorAttr matchFPExceptionBehaviorAttr(llvm::Value *value);
+
+  /// Converts `value` to a rounding mode attribute. Asserts if the matching
+  /// fails.
+  RoundingModeAttr matchRoundingModeAttr(llvm::Value *value);
 
   /// Converts `value` to an array of alias scopes or returns failure if the
   /// conversion fails.
@@ -172,10 +199,48 @@ public:
   /// attributes of LLVMFuncOp `funcOp`.
   void processFunctionAttributes(llvm::Function *func, LLVMFuncOp funcOp);
 
+  /// Sets the integer overflow flags (nsw/nuw) attribute for the imported
+  /// operation `op` given the original instruction `inst`. Asserts if the
+  /// operation does not implement the integer overflow flag interface.
+  void setIntegerOverflowFlags(llvm::Instruction *inst, Operation *op) const;
+
+  /// Sets the exact flag attribute for the imported operation `op` given
+  /// the original instruction `inst`. Asserts if the operation does not
+  /// implement the exact flag interface.
+  void setExactFlag(llvm::Instruction *inst, Operation *op) const;
+
+  /// Sets the disjoint flag attribute for the imported operation `op`
+  /// given the original instruction `inst`. Asserts if the operation does
+  /// not implement the disjoint flag interface.
+  void setDisjointFlag(llvm::Instruction *inst, Operation *op) const;
+
+  /// Sets the nneg flag attribute for the imported operation `op` given
+  /// the original instruction `inst`. Asserts if the operation does not
+  /// implement the nneg flag interface.
+  void setNonNegFlag(llvm::Instruction *inst, Operation *op) const;
+
   /// Sets the fastmath flags attribute for the imported operation `op` given
   /// the original instruction `inst`. Asserts if the operation does not
   /// implement the fastmath interface.
   void setFastmathFlagsAttr(llvm::Instruction *inst, Operation *op) const;
+
+  /// Converts !llvm.linker.options metadata to the llvm.linker.options
+  /// LLVM dialect operation.
+  LogicalResult convertLinkerOptionsMetadata();
+
+  /// Converts !llvm.module.flags metadata.
+  LogicalResult convertModuleFlagsMetadata();
+
+  /// Converts !llvm.ident metadata to the llvm.ident LLVM ModuleOp attribute.
+  LogicalResult convertIdentMetadata();
+
+  /// Converts !llvm.commandline metadata to the llvm.commandline LLVM ModuleOp
+  /// attribute.
+  LogicalResult convertCommandlineMetadata();
+
+  /// Converts !llvm.dependent-libraries metadata to llvm.dependent_libraries
+  /// LLVM ModuleOp attribute.
+  LogicalResult convertDependentLibrariesMetadata();
 
   /// Converts all LLVM metadata nodes that translate to attributes such as
   /// alias analysis or access group metadata, and builds a map from the
@@ -200,6 +265,13 @@ public:
   LoopAnnotationAttr translateLoopAnnotationAttr(const llvm::MDNode *node,
                                                  Location loc) const;
 
+  /// Returns the dereferenceable attribute that corresponds to the given LLVM
+  /// dereferenceable or dereferenceable_or_null metadata `node`. `kindID`
+  /// specifies the kind of the metadata node (dereferenceable or
+  /// dereferenceable_or_null).
+  FailureOr<DereferenceableAttr>
+  translateDereferenceableAttr(const llvm::MDNode *node, unsigned kindID);
+
   /// Returns the alias scope attributes that map to the alias scope nodes
   /// starting from the metadata `node`. Returns failure, if any of the
   /// attributes cannot be found.
@@ -209,6 +281,37 @@ public:
   /// Adds a debug intrinsics to the list of intrinsics that should be converted
   /// after the function conversion has finished.
   void addDebugIntrinsic(llvm::CallInst *intrinsic);
+
+  /// Adds a debug record to the list of debug records that need to be imported
+  /// after the function conversion has finished.
+  void addDebugRecord(llvm::DbgVariableRecord *dbgRecord);
+
+  /// Converts the LLVM values for an intrinsic to mixed MLIR values and
+  /// attributes for LLVM_IntrOpBase. Attributes correspond to LLVM immargs. The
+  /// list `immArgPositions` contains the positions of immargs on the LLVM
+  /// intrinsic, and `immArgAttrNames` list (of the same length) contains the
+  /// corresponding MLIR attribute names.
+  LogicalResult
+  convertIntrinsicArguments(ArrayRef<llvm::Value *> values,
+                            ArrayRef<llvm::OperandBundleUse> opBundles,
+                            bool requiresOpBundles,
+                            ArrayRef<unsigned> immArgPositions,
+                            ArrayRef<StringLiteral> immArgAttrNames,
+                            SmallVectorImpl<Value> &valuesOut,
+                            SmallVectorImpl<NamedAttribute> &attrsOut);
+
+  /// Converts the argument and result attributes attached to `call` and adds
+  /// them to `attrsOp`. For intrinsic calls, filters out attributes
+  /// corresponding to immediate arguments specified by `immArgPositions`.
+  void convertArgAndResultAttrs(llvm::CallBase *call,
+                                ArgAndResultAttrsOpInterface attrsOp,
+                                ArrayRef<unsigned> immArgPositions = {});
+
+  /// Whether the importer should try to convert all intrinsics to
+  /// llvm.call_intrinsic instead of dialect supported operations.
+  bool useUnregisteredIntrinsicsOnly() const {
+    return preferUnregisteredIntrinsics;
+  }
 
 private:
   /// Clears the accumulated state before processing a new region.
@@ -229,6 +332,11 @@ private:
   LogicalResult convertGlobal(llvm::GlobalVariable *globalVar);
   /// Imports the magic globals "global_ctors" and "global_dtors".
   LogicalResult convertGlobalCtorsAndDtors(llvm::GlobalVariable *globalVar);
+  /// Converts an LLVM global alias variable into an MLIR LLVM dialect alias
+  /// operation if a conversion exists. Otherwise, returns failure.
+  LogicalResult convertAlias(llvm::GlobalAlias *alias);
+  // Converts an LLVM global ifunc into an MLIR LLVM dialect ifunc operation.
+  LogicalResult convertIFunc(llvm::GlobalIFunc *ifunc);
   /// Returns personality of `func` as a FlatSymbolRefAttr.
   FlatSymbolRefAttr getPersonalityAsAttr(llvm::Function *func);
   /// Imports `bb` into `block`, which must be initially empty.
@@ -236,9 +344,29 @@ private:
   /// Converts all debug intrinsics in `debugIntrinsics`. Assumes that the
   /// function containing the intrinsics has been fully converted to MLIR.
   LogicalResult processDebugIntrinsics();
+  /// Converts all debug records in `dbgRecords`. Assumes that the
+  /// function containing the record has been fully converted to MLIR.
+  LogicalResult processDebugRecords();
   /// Converts a single debug intrinsic.
   LogicalResult processDebugIntrinsic(llvm::DbgVariableIntrinsic *dbgIntr,
                                       DominanceInfo &domInfo);
+  /// Converts a single debug record.
+  LogicalResult processDebugRecord(llvm::DbgVariableRecord &dbgRecord,
+                                   DominanceInfo &domInfo);
+  /// Process arguments for declare/value operation insertion. `localVarAttr`
+  /// and `localExprAttr` are the attained attributes after importing the debug
+  /// variable and expressions. This also sets the builder insertion point to be
+  /// used by these operations.
+  std::tuple<DILocalVariableAttr, DIExpressionAttr, Value>
+  processDebugOpArgumentsAndInsertionPt(
+      Location loc,
+      llvm::function_ref<FailureOr<Value>()> convertArgOperandToValue,
+      llvm::Value *address,
+      llvm::PointerUnion<llvm::Value *, llvm::DILocalVariable *> variable,
+      llvm::DIExpression *expression, DominanceInfo &domInfo);
+  /// Converts LLMV IR asm inline call operand's attributes into an array of
+  /// MLIR attributes to be utilized in `llvm.inline_asm`.
+  ArrayAttr convertAsmInlineOperandAttrs(const llvm::CallBase &llvmCall);
   /// Converts an LLVM intrinsic to an MLIR LLVM dialect operation if an MLIR
   /// counterpart exists. Otherwise, returns failure.
   LogicalResult convertIntrinsic(llvm::CallInst *inst);
@@ -261,20 +389,33 @@ private:
   LogicalResult convertBranchArgs(llvm::Instruction *branch,
                                   llvm::BasicBlock *target,
                                   SmallVectorImpl<Value> &blockArguments);
-  /// Appends the converted result type and operands of `callInst` to the
-  /// `types` and `operands` arrays. For indirect calls, the method additionally
-  /// inserts the called function at the beginning of the `operands` array.
-  LogicalResult convertCallTypeAndOperands(llvm::CallBase *callInst,
-                                           SmallVectorImpl<Type> &types,
-                                           SmallVectorImpl<Value> &operands);
-  /// Converts the parameter attributes attached to `func` and adds them to the
-  /// `funcOp`.
-  void convertParameterAttributes(llvm::Function *func, LLVMFuncOp funcOp,
-                                  OpBuilder &builder);
-  /// Converts the AttributeSet of one parameter in LLVM IR to a corresponding
-  /// DictionaryAttr for the LLVM dialect.
-  DictionaryAttr convertParameterAttribute(llvm::AttributeSet llvmParamAttrs,
-                                           OpBuilder &builder);
+  /// Convert `callInst` operands. For indirect calls, the method additionally
+  /// inserts the called function at the beginning of the returned `operands`
+  /// array.  If `allowInlineAsm` is set to false (the default), it will return
+  /// failure if the called operand is an inline asm which isn't convertible to
+  /// MLIR as a value.
+  FailureOr<SmallVector<Value>>
+  convertCallOperands(llvm::CallBase *callInst, bool allowInlineAsm = false);
+  /// Converts the callee's function type. For direct calls, it converts the
+  /// actual function type, which may differ from the called operand type in
+  /// variadic functions. For indirect calls, it converts the function type
+  /// associated with the call instruction. When the call and the callee are not
+  /// compatible (or when nested type conversions failed), emit a warning and
+  /// update `isIncompatibleCall` to indicate it.
+  FailureOr<LLVMFunctionType> convertFunctionType(llvm::CallBase *callInst,
+                                                  bool &isIncompatibleCall);
+  /// Returns the callee name, or an empty symbol if the call is not direct.
+  FlatSymbolRefAttr convertCalleeName(llvm::CallBase *callInst);
+  /// Converts the argument and result attributes attached to `func` and adds
+  /// them to the `funcOp`.
+  void convertArgAndResultAttrs(llvm::Function *func, LLVMFuncOp funcOp);
+  /// Converts the argument or result attributes in `llvmAttrSet` to a
+  /// corresponding MLIR LLVM dialect attribute dictionary.
+  DictionaryAttr convertArgOrResultAttrSet(llvm::AttributeSet llvmAttrSet);
+  /// Converts the attributes attached to `inst` and adds them to the `op`.
+  LogicalResult convertCallAttributes(llvm::CallInst *inst, CallOp op);
+  /// Converts the attributes attached to `inst` and adds them to the `op`.
+  LogicalResult convertInvokeAttributes(llvm::InvokeInst *inst, InvokeOp op);
   /// Returns the builtin type equivalent to the given LLVM dialect type or
   /// nullptr if there is no equivalent. The returned type can be used to create
   /// an attribute for a GlobalOp or a ConstantOp.
@@ -321,6 +462,14 @@ private:
   /// and stores a mapping from the struct to the symbol pointing to the
   /// translated operation.
   void processComdat(const llvm::Comdat *comdat);
+  /// Returns a symbol name for a nameless global. MLIR, in contrast to LLVM,
+  /// always requires a symbol name.
+  FlatSymbolRefAttr
+  getOrCreateNamelessSymbolName(llvm::GlobalVariable *globalVar);
+  /// Returns the global insertion point for the next global operation. If the
+  /// `globalInsertionOp` is set, the insertion point is placed after the
+  /// specified operation. Otherwise, it defaults to the start of the module.
+  OpBuilder::InsertionGuard setGlobalInsertionPoint();
 
   /// Builder pointing at where the next instruction should be generated.
   OpBuilder builder;
@@ -338,6 +487,10 @@ private:
   ModuleOp mlirModule;
   /// The LLVM module being imported.
   std::unique_ptr<llvm::Module> llvmModule;
+  /// Nameless globals.
+  DenseMap<llvm::GlobalVariable *, FlatSymbolRefAttr> namelessGlobals;
+  /// Counter used to assign a unique ID to each nameless global.
+  unsigned namelessGlobalId = 0;
 
   /// A dialect interface collection used for dispatching the import to specific
   /// dialects.
@@ -354,6 +507,9 @@ private:
   /// Function-local list of debug intrinsics that need to be imported after the
   /// function conversion has finished.
   SetVector<llvm::Instruction *> debugIntrinsics;
+  /// Function-local list of debug records that need to be imported after the
+  /// function conversion has finished.
+  SetVector<llvm::DbgVariableRecord *> dbgRecords;
   /// Mapping between LLVM alias scope and domain metadata nodes and
   /// attributes in the LLVM dialect corresponding to these nodes.
   DenseMap<const llvm::MDNode *, Attribute> aliasScopeMapping;
@@ -374,6 +530,10 @@ private:
   /// emitted. Avoids generating warnings for unhandled debug intrinsics and
   /// metadata that otherwise dominate the translation time for large inputs.
   bool emitExpensiveWarnings;
+
+  /// An option to control whether the importer should try to convert all
+  /// intrinsics to llvm.call_intrinsic instead of dialect supported operations.
+  bool preferUnregisteredIntrinsics;
 };
 
 } // namespace LLVM

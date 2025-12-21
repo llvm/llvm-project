@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -verify-machineinstrs -o /dev/null 2>&1 %s | FileCheck -check-prefix=ERR %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -filetype=null 2>&1 %s | FileCheck -check-prefix=ERR %s
 
 ; ERR: warning: inline asm clobber list contains reserved registers: v42
 ; ERR: note: Reserved registers on the clobber list may not be preserved across the asm statement, and clobbering them may lead to undefined behaviour.
@@ -41,7 +41,7 @@ entry:
 }
 
 ; FIXME: This should warn too
-; ERR-NOT: warning
+; ERR-NOT: warning: inline asm clobber list contains reserved registers
 define amdgpu_kernel void @def_exec(ptr addrspace(1) %ptr) {
 entry:
   %exec = call i64 asm sideeffect "; def $0", "={exec}"()

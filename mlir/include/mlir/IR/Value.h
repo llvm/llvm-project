@@ -90,29 +90,12 @@ protected:
 /// class has value-type semantics and is just a simple wrapper around a
 /// ValueImpl that is either owner by a block(in the case of a BlockArgument) or
 /// an Operation(in the case of an OpResult).
+/// As most IR constructs, this isn't const-correct, but we keep method
+/// consistent and as such method that immediately modify this Value aren't
+/// marked `const` (include modifying the Value use-list).
 class Value {
 public:
   constexpr Value(detail::ValueImpl *impl = nullptr) : impl(impl) {}
-
-  template <typename U>
-  bool isa() const {
-    return llvm::isa<U>(*this);
-  }
-
-  template <typename U>
-  U dyn_cast() const {
-    return llvm::dyn_cast<U>(*this);
-  }
-
-  template <typename U>
-  U dyn_cast_or_null() const {
-    return llvm::dyn_cast_if_present<U>(*this);
-  }
-
-  template <typename U>
-  U cast() const {
-    return llvm::cast<U>(*this);
-  }
 
   explicit operator bool() const { return impl; }
   bool operator==(const Value &other) const { return impl == other.impl; }
@@ -158,26 +141,25 @@ public:
   //===--------------------------------------------------------------------===//
 
   /// Drop all uses of this object from their respective owners.
-  void dropAllUses() const { return impl->dropAllUses(); }
+  void dropAllUses() { return impl->dropAllUses(); }
 
   /// Replace all uses of 'this' value with the new value, updating anything in
   /// the IR that uses 'this' to use the other value instead.  When this returns
   /// there are zero uses of 'this'.
-  void replaceAllUsesWith(Value newValue) const {
+  void replaceAllUsesWith(Value newValue) {
     impl->replaceAllUsesWith(newValue);
   }
 
   /// Replace all uses of 'this' value with 'newValue', updating anything in the
   /// IR that uses 'this' to use the other value instead except if the user is
   /// listed in 'exceptions' .
-  void
-  replaceAllUsesExcept(Value newValue,
-                       const SmallPtrSetImpl<Operation *> &exceptions) const;
+  void replaceAllUsesExcept(Value newValue,
+                            const SmallPtrSetImpl<Operation *> &exceptions);
 
   /// Replace all uses of 'this' value with 'newValue', updating anything in the
   /// IR that uses 'this' to use the other value instead except if the user is
   /// 'exceptedUser'.
-  void replaceAllUsesExcept(Value newValue, Operation *exceptedUser) const;
+  void replaceAllUsesExcept(Value newValue, Operation *exceptedUser);
 
   /// Replace all uses of 'this' value with 'newValue' if the given callback
   /// returns true.
@@ -185,7 +167,7 @@ public:
                          function_ref<bool(OpOperand &)> shouldReplace);
 
   /// Returns true if the value is used outside of the given block.
-  bool isUsedOutsideOfBlock(Block *block);
+  bool isUsedOutsideOfBlock(Block *block) const;
 
   /// Shuffle the use list order according to the provided indices. It is
   /// responsibility of the caller to make sure that the indices map the current
@@ -205,8 +187,22 @@ public:
   /// Returns a range of all uses, which is useful for iterating over all uses.
   use_range getUses() const { return {use_begin(), use_end()}; }
 
+  /// This method computes the number of uses of this Value.
+  ///
+  /// This is a linear time operation.  Use hasOneUse, hasNUses, or
+  /// hasNUsesOrMore to check for specific values.
+  unsigned getNumUses() const;
+
   /// Returns true if this value has exactly one use.
   bool hasOneUse() const { return impl->hasOneUse(); }
+
+  /// Return true if this Value has exactly n uses.
+  bool hasNUses(unsigned n) const;
+
+  /// Return true if this value has n uses or more.
+  ///
+  /// This is logically equivalent to getNumUses() >= N.
+  bool hasNUsesOrMore(unsigned n) const;
 
   /// Returns true if this value has no uses.
   bool use_empty() const { return impl->use_empty(); }
@@ -224,14 +220,14 @@ public:
   //===--------------------------------------------------------------------===//
   // Utilities
 
-  void print(raw_ostream &os);
-  void print(raw_ostream &os, const OpPrintingFlags &flags);
-  void print(raw_ostream &os, AsmState &state);
-  void dump();
+  void print(raw_ostream &os) const;
+  void print(raw_ostream &os, const OpPrintingFlags &flags) const;
+  void print(raw_ostream &os, AsmState &state) const;
+  void dump() const;
 
   /// Print this value as if it were an operand.
-  void printAsOperand(raw_ostream &os, AsmState &state);
-  void printAsOperand(raw_ostream &os, const OpPrintingFlags &flags);
+  void printAsOperand(raw_ostream &os, AsmState &state) const;
+  void printAsOperand(raw_ostream &os, const OpPrintingFlags &flags) const;
 
   /// Methods for supporting PointerLikeTypeTraits.
   void *getAsOpaquePointer() const { return impl; }
@@ -437,11 +433,21 @@ inline unsigned OpResultImpl::getResultNumber() const {
 template <typename Ty>
 struct TypedValue : Value {
   using Value::Value;
+  using ValueType = Ty;
 
   static bool classof(Value value) { return llvm::isa<Ty>(value.getType()); }
 
+  /// TypedValue<B> can implicitly convert to TypedValue<A> if B is assignable
+  /// to A.
+  template <typename ToTy,
+            typename = typename std::enable_if<std::is_assignable<
+                typename ToTy::ValueType &, Ty>::value>::type>
+  operator ToTy() const {
+    return llvm::cast<ToTy>(*this);
+  }
+
   /// Return the known Type
-  Ty getType() { return llvm::cast<Ty>(Value::getType()); }
+  Ty getType() const { return llvm::cast<Ty>(Value::getType()); }
   void setType(Ty ty) { Value::setType(ty); }
 };
 
@@ -605,7 +611,6 @@ struct CastInfo<
     /// Return a constant true instead of a dynamic true when casting to self or
     /// up the hierarchy.
     if constexpr (std::is_base_of_v<To, From>) {
-      (void)ty;
       return true;
     } else {
       return To::classof(ty);

@@ -51,20 +51,20 @@
 //          to the header list file directory.  Use -prefix to specify a
 //          different directory.
 //    -module-map-path=(module map)
-//          Skip the checks, and instead act as a module.map generation
+//          Skip the checks, and instead act as a module.modulemap generation
 //          assistant, generating a module map file based on the header list.
 //          An optional "-root-module=(rootName)" argument can specify a root
-//          module to be created in the generated module.map file.  Note that
-//          you will likely need to edit this file to suit the needs of your
-//          headers.
+//          module to be created in the generated module.modulemap file.  Note
+//          that you will likely need to edit this file to suit the needs of
+//          your headers.
 //    -problem-files-list=(problem files list file name)
 //          For use only with module map assistant.  Input list of files that
 //          have problems with respect to modules.  These will still be
 //          included in the generated module map, but will be marked as
 //          "excluded" headers.
 //    -root-module=(root module name)
-//          Specifies a root module to be created in the generated module.map
-//          file.
+//          Specifies a root module to be created in the generated
+//          module.modulemap file.
 //    -block-check-header-list-only
 //          Only warn if #include directives are inside extern or namespace
 //          blocks if the included header is in the header list.
@@ -231,11 +231,11 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/Basic/SourceManager.h"
-#include "clang/Driver/Options.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendAction.h"
 #include "clang/Frontend/FrontendActions.h"
 #include "clang/Lex/Preprocessor.h"
+#include "clang/Options/Options.h"
 #include "clang/Tooling/CompilationDatabase.h"
 #include "clang/Tooling/Tooling.h"
 #include "llvm/Option/Arg.h"
@@ -254,7 +254,7 @@
 
 using namespace clang;
 using namespace clang::driver;
-using namespace clang::driver::options;
+using namespace clang::options;
 using namespace clang::tooling;
 using namespace llvm;
 using namespace llvm::opt;
@@ -339,8 +339,8 @@ static std::string findInputFile(const CommandLineArguments &CLArgs) {
   llvm::opt::Visibility VisibilityMask(options::CC1Option);
   unsigned MissingArgIndex, MissingArgCount;
   SmallVector<const char *, 256> Argv;
-  for (auto I = CLArgs.begin(), E = CLArgs.end(); I != E; ++I)
-    Argv.push_back(I->c_str());
+  for (const std::string &CLArg : CLArgs)
+    Argv.push_back(CLArg.c_str());
   InputArgList Args = getDriverOptTable().ParseArgs(
       Argv, MissingArgIndex, MissingArgCount, VisibilityMask);
   std::vector<std::string> Inputs = Args.getAllArgValues(OPT_INPUT);
@@ -357,13 +357,9 @@ getModularizeArgumentsAdjuster(DependencyMap &Dependencies) {
     std::string InputFile = findInputFile(Args);
     DependentsVector &FileDependents = Dependencies[InputFile];
     CommandLineArguments NewArgs(Args);
-    if (int Count = FileDependents.size()) {
-      for (int Index = 0; Index < Count; ++Index) {
-        NewArgs.push_back("-include");
-        std::string File(std::string("\"") + FileDependents[Index] +
-                         std::string("\""));
-        NewArgs.push_back(FileDependents[Index]);
-      }
+    for (const std::string &Dep : FileDependents) {
+      NewArgs.push_back("-include");
+      NewArgs.push_back(Dep);
     }
     // Ignore warnings.  (Insert after "clang_tool" at beginning.)
     NewArgs.insert(NewArgs.begin() + 1, "-w");
@@ -381,11 +377,11 @@ getModularizeArgumentsAdjuster(DependencyMap &Dependencies) {
 // somewhere into Tooling/ in mainline
 struct Location {
   OptionalFileEntryRef File;
-  unsigned Line, Column;
+  unsigned Line = 0, Column = 0;
 
-  Location() : File(), Line(), Column() {}
+  Location() = default;
 
-  Location(SourceManager &SM, SourceLocation Loc) : File(), Line(), Column() {
+  Location(SourceManager &SM, SourceLocation Loc) {
     Loc = SM.getExpansionLoc(Loc);
     if (Loc.isInvalid())
       return;
@@ -399,7 +395,7 @@ struct Location {
     Column = SM.getColumnNumber(Decomposed.first, Decomposed.second);
   }
 
-  operator bool() const { return File != nullptr; }
+  explicit operator bool() const { return File != nullptr; }
 
   friend bool operator==(const Location &X, const Location &Y) {
     return X.File == Y.File && X.Line == Y.Line && X.Column == Y.Column;
@@ -410,11 +406,8 @@ struct Location {
   }
 
   friend bool operator<(const Location &X, const Location &Y) {
-    if (X.File != Y.File)
-      return X.File < Y.File;
-    if (X.Line != Y.Line)
-      return X.Line < Y.Line;
-    return X.Column < Y.Column;
+    return std::tie(X.File, X.Line, X.Column) <
+           std::tie(Y.File, Y.Line, Y.Column);
   }
   friend bool operator>(const Location &X, const Location &Y) { return Y < X; }
   friend bool operator<=(const Location &X, const Location &Y) {
@@ -466,7 +459,7 @@ struct HeaderEntry {
     return !(X == Y);
   }
   friend bool operator<(const HeaderEntry &X, const HeaderEntry &Y) {
-    return X.Loc < Y.Loc || (X.Loc == Y.Loc && X.Name < Y.Name);
+    return std::tie(X.Loc, X.Name) < std::tie(Y.Loc, Y.Name);
   }
   friend bool operator>(const HeaderEntry &X, const HeaderEntry &Y) {
     return Y < X;
@@ -508,13 +501,10 @@ public:
       // Sort contents.
       llvm::sort(H->second);
 
-      // Check whether we've seen this header before.
-      auto KnownH = AllHeaderContents.find(H->first);
-      if (KnownH == AllHeaderContents.end()) {
-        // We haven't seen this header before; record its contents.
-        AllHeaderContents.insert(*H);
+      // Record this header and its contents if we haven't seen it before.
+      auto [KnownH, Inserted] = AllHeaderContents.insert(*H);
+      if (Inserted)
         continue;
-      }
 
       // If the header contents are the same, we're done.
       if (H->second == KnownH->second)
@@ -574,10 +564,10 @@ public:
     SourceRange BlockRange = D->getSourceRange();
     const char *LinkageLabel;
     switch (D->getLanguage()) {
-    case LinkageSpecDecl::lang_c:
+    case LinkageSpecLanguageIDs::C:
       LinkageLabel = "extern \"C\" {}";
       break;
-    case LinkageSpecDecl::lang_cxx:
+    case LinkageSpecLanguageIDs::CXX:
       LinkageLabel = "extern \"C++\" {}";
       break;
     }
@@ -624,7 +614,6 @@ public:
     std::string Name;
     llvm::raw_string_ostream OS(Name);
     ND->printQualifiedName(OS);
-    OS.flush();
     if (Name.empty())
       return true;
 

@@ -31,14 +31,18 @@ declare void @_Z7CapturePi(ptr)
 
 ; WINDOWS-AARCH64: adrp x8, __security_cookie
 ; WINDOWS-AARCH64: ldr x8, [x8, :lo12:__security_cookie]
+; WINDOWS-AARCH64: sub x8, sp, x8
 ; WINDOWS-AARCH64: str x8, [sp, #8]
 ; WINDOWS-AARCH64: bl  _Z7CapturePi
-; WINDOWS-AARCH64: ldr x0, [sp, #8]
+; WINDOWS-AARCH64: ldr x8, [sp, #8]
+; WINDOWS-AARCH64: add x0, sp, x8
 ; WINDOWS-AARCH64: bl  __security_check_cookie
 
 ; WINDOWS-ARM64EC: adrp x8, __security_cookie
 ; WINDOWS-ARM64EC: ldr x8, [x8, :lo12:__security_cookie]
+; WINDOWS-ARM64EC: sub x8, sp, x8
 ; WINDOWS-ARM64EC: str x8, [sp, #8]
-; WINDOWS-ARM64EC: bl  _Z7CapturePi
-; WINDOWS-ARM64EC: ldr x0, [sp, #8]
-; WINDOWS-ARM64EC: bl  __security_check_cookie_arm64ec
+; WINDOWS-ARM64EC: bl "#_Z7CapturePi"
+; WINDOWS-ARM64EC: ldr x8, [sp, #8]
+; WINDOWS-ARM64EC: add x0, sp, x8
+; WINDOWS-ARM64EC: bl "#__security_check_cookie_arm64ec"

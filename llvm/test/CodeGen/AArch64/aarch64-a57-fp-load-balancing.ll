@@ -6,8 +6,8 @@
 ; The following tests use the balance-fp-ops feature, and should be independent of
 ; the target cpu.
 
-; RUN: llc < %s -mtriple=aarch64-linux-gnueabi -mattr=+balance-fp-ops -aarch64-a57-fp-load-balancing-override=1 -aarch64-a57-fp-load-balancing-force-all -enable-misched=false -enable-post-misched=false | FileCheck %s --check-prefix CHECK --check-prefix CHECK-EVEN
-; RUN: llc < %s -mtriple=aarch64-linux-gnueabi -mattr=+balance-fp-ops  -aarch64-a57-fp-load-balancing-override=2 -aarch64-a57-fp-load-balancing-force-all -enable-misched=false -enable-post-misched=false | FileCheck %s --check-prefix CHECK --check-prefix CHECK-ODD
+; RUN: llc < %s -mtriple=aarch64 -mattr=+balance-fp-ops -aarch64-a57-fp-load-balancing-override=1 -aarch64-a57-fp-load-balancing-force-all -enable-misched=false -enable-post-misched=false | FileCheck %s --check-prefix CHECK --check-prefix CHECK-EVEN
+; RUN: llc < %s -mtriple=aarch64 -mattr=+balance-fp-ops  -aarch64-a57-fp-load-balancing-override=2 -aarch64-a57-fp-load-balancing-force-all -enable-misched=false -enable-post-misched=false | FileCheck %s --check-prefix CHECK --check-prefix CHECK-ODD
 
 ; Test the AArch64A57FPLoadBalancing pass. This pass relies heavily on register allocation, so
 ; our test strategy is to:
@@ -325,7 +325,7 @@ entry:
 
 declare void @hhh(double, double)
 
-attributes #0 = { nounwind "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="true" "no-nans-fp-math"="true" "stack-protector-buffer-size"="8" "unsafe-fp-math"="true" "use-soft-float"="false" }
-attributes #1 = { "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="true" "no-nans-fp-math"="true" "stack-protector-buffer-size"="8" "unsafe-fp-math"="true" "use-soft-float"="false" }
+attributes #0 = { nounwind "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="true" "no-nans-fp-math"="true" "stack-protector-buffer-size"="8" "use-soft-float"="false" }
+attributes #1 = { "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="true" "no-nans-fp-math"="true" "stack-protector-buffer-size"="8" "use-soft-float"="false" }
 attributes #2 = { nounwind }
 

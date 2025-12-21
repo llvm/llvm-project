@@ -222,6 +222,11 @@ OPTIONS
  Show coverage for branch conditions in terms of either count or percentage.
  The supported views are: "count", "percent".
 
+.. option:: -show-mcdc
+
+ Show modified condition/decision coverage (MC/DC) for each applicable boolean
+ expression.
+
 .. option:: -show-line-counts
 
  Show the execution counts for each line. Defaults to true, unless another
@@ -375,6 +380,11 @@ OPTIONS
  Fail if an object file cannot be found for a binary ID present in the profile,
  neither on the command line nor via binary ID lookup.
 
+.. option:: -empty-profile
+
+ Display the baseline coverage of the binaries with all zero execution counts.
+ Mutually exclusive with -instr-profile.
+
 .. program:: llvm-cov report
 
 .. _llvm-cov-report:
@@ -426,6 +436,10 @@ OPTIONS
 
  Show statistics for all branch conditions. Defaults to true.
 
+.. option:: -show-mcdc-summary
+
+ Show MC/DC statistics. Defaults to false.
+
 .. option:: -show-functions
 
  Show coverage summaries for each function. Defaults to false.
@@ -460,6 +474,11 @@ OPTIONS
 
  Fail if an object file cannot be found for a binary ID present in the profile,
  neither on the command line nor via binary ID lookup.
+
+.. option:: -empty-profile
+
+ Display the baseline coverage of the binaries with all zero execution counts.
+ Mutually exclusive with -instr-profile.
 
 .. program:: llvm-cov export
 
@@ -552,6 +571,11 @@ OPTIONS
 
  Fail if an object file cannot be found for a binary ID present in the profile,
  neither on the command line nor via binary ID lookup.
+
+.. option:: -empty-profile
+
+ Export the baseline coverage of the binaries with all zero execution counts.
+ Mutually exclusive with -instr-profile.
 
 CONVERT-FOR-TESTING COMMAND
 ---------------------------

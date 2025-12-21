@@ -8,6 +8,7 @@ static_library("Symbol") {
 
     #"//lldb/source/Target", # FIXME: Dependency cycle.
     "//lldb/source/Utility",
+    "//lldb/source/ValueObject",
     "//llvm/lib/Support",
   ]
   include_dirs = [ ".." ]  # FIXME: Reaches into Utility and Host internals.
@@ -26,14 +27,15 @@ static_library("Symbol") {
     "Function.cpp",
     "LineEntry.cpp",
     "LineTable.cpp",
-    "LocateSymbolFile.cpp",
     "ObjectContainer.cpp",
     "ObjectFile.cpp",
     "PostfixExpression.cpp",
+    "SaveCoreOptions.cpp",
     "Symbol.cpp",
     "SymbolContext.cpp",
     "SymbolFile.cpp",
     "SymbolFileOnDemand.cpp",
+    "SymbolLocator.cpp",
     "SymbolVendor.cpp",
     "Symtab.cpp",
     "Type.cpp",
@@ -45,7 +47,4 @@ static_library("Symbol") {
     "Variable.cpp",
     "VariableList.cpp",
   ]
-  if (current_os == "mac") {
-    sources += [ "LocateSymbolFileMacOSX.cpp" ]
-  }
 }

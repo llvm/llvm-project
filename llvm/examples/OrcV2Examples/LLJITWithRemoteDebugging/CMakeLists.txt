@@ -3,6 +3,7 @@ set(LLVM_LINK_COMPONENTS
   ExecutionEngine
   IRReader
   JITLink
+  OrcDebugging
   OrcJIT
   OrcShared
   OrcTargetProcess
@@ -11,7 +12,7 @@ set(LLVM_LINK_COMPONENTS
   nativecodegen
   )
 
-if (LLVM_INCLUDE_UTILS)
+if (LLVM_INCLUDE_UTILS AND LLVM_ENABLE_THREADS)
   add_llvm_example(LLJITWithRemoteDebugging
     LLJITWithRemoteDebugging.cpp
     RemoteJITUtils.cpp
@@ -19,6 +20,4 @@ if (LLVM_INCLUDE_UTILS)
     DEPENDS
       llvm-jitlink-executor
   )
-
-  export_executable_symbols(LLJITWithRemoteDebugging)
 endif()

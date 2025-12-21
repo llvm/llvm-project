@@ -7,16 +7,19 @@
 //===----------------------------------------------------------------------===//
 //
 /// \file
-/// The AMDGPU-R600 target machine contains all of the hardware specific
-/// information  needed to emit code for R600 GPUs.
+/// This file contains both AMDGPU-R600 target machine and the CodeGen pass
+/// builder. The target machine contains all of the hardware specific
+/// information needed to emit code for R600 GPUs and the CodeGen pass builder
+/// handles the pass pipeline for new pass manager.
 //
 //===----------------------------------------------------------------------===//
 
 #include "R600TargetMachine.h"
-#include "AMDGPUTargetMachine.h"
 #include "R600.h"
+#include "R600MachineFunctionInfo.h"
 #include "R600MachineScheduler.h"
 #include "R600TargetTransformInfo.h"
+#include "llvm/Passes/CodeGenPassBuilder.h"
 #include "llvm/Transforms/Scalar.h"
 #include <optional>
 
@@ -45,12 +48,27 @@ static MachineSchedRegistry R600SchedRegistry("r600",
                                               createR600MachineScheduler);
 
 //===----------------------------------------------------------------------===//
+// R600 CodeGen Pass Builder interface.
+//===----------------------------------------------------------------------===//
+
+class R600CodeGenPassBuilder
+    : public CodeGenPassBuilder<R600CodeGenPassBuilder, R600TargetMachine> {
+public:
+  R600CodeGenPassBuilder(R600TargetMachine &TM, const CGPassBuilderOption &Opts,
+                         PassInstrumentationCallbacks *PIC);
+
+  void addPreISel(PassManagerWrapper &PMW) const;
+  void addAsmPrinter(PassManagerWrapper &PMW, CreateMCStreamer) const;
+  Error addInstSelector(PassManagerWrapper &PMW) const;
+};
+
+//===----------------------------------------------------------------------===//
 // R600 Target Machine (R600 -> Cayman)
 //===----------------------------------------------------------------------===//
 
 R600TargetMachine::R600TargetMachine(const Target &T, const Triple &TT,
                                      StringRef CPU, StringRef FS,
-                                     TargetOptions Options,
+                                     const TargetOptions &Options,
                                      std::optional<Reloc::Model> RM,
                                      std::optional<CodeModel::Model> CM,
                                      CodeGenOptLevel OL, bool JIT)
@@ -85,19 +103,19 @@ R600TargetMachine::getSubtargetImpl(const Function &F) const {
 
 TargetTransformInfo
 R600TargetMachine::getTargetTransformInfo(const Function &F) const {
-  return TargetTransformInfo(R600TTIImpl(this, F));
+  return TargetTransformInfo(std::make_unique<R600TTIImpl>(this, F));
+}
+
+ScheduleDAGInstrs *
+R600TargetMachine::createMachineScheduler(MachineSchedContext *C) const {
+  return createR600MachineScheduler(C);
 }
 
 namespace {
 class R600PassConfig final : public AMDGPUPassConfig {
 public:
-  R600PassConfig(LLVMTargetMachine &TM, PassManagerBase &PM)
+  R600PassConfig(TargetMachine &TM, PassManagerBase &PM)
       : AMDGPUPassConfig(TM, PM) {}
-
-  ScheduleDAGInstrs *
-  createMachineScheduler(MachineSchedContext *C) const override {
-    return createR600MachineScheduler(C);
-  }
 
   bool addPreISel() override;
   bool addInstSelector() override;
@@ -136,11 +154,50 @@ void R600PassConfig::addPreSched2() {
 void R600PassConfig::addPreEmitPass() {
   addPass(createR600MachineCFGStructurizerPass());
   addPass(createR600ExpandSpecialInstrsPass());
-  addPass(&FinalizeMachineBundlesID);
   addPass(createR600Packetizer());
   addPass(createR600ControlFlowFinalizer());
 }
 
 TargetPassConfig *R600TargetMachine::createPassConfig(PassManagerBase &PM) {
   return new R600PassConfig(*this, PM);
+}
+
+Error R600TargetMachine::buildCodeGenPipeline(
+    ModulePassManager &MPM, raw_pwrite_stream &Out, raw_pwrite_stream *DwoOut,
+    CodeGenFileType FileType, const CGPassBuilderOption &Opts,
+    PassInstrumentationCallbacks *PIC) {
+  R600CodeGenPassBuilder CGPB(*this, Opts, PIC);
+  return CGPB.buildPipeline(MPM, Out, DwoOut, FileType);
+}
+
+MachineFunctionInfo *R600TargetMachine::createMachineFunctionInfo(
+    BumpPtrAllocator &Allocator, const Function &F,
+    const TargetSubtargetInfo *STI) const {
+  return R600MachineFunctionInfo::create<R600MachineFunctionInfo>(
+      Allocator, F, static_cast<const R600Subtarget *>(STI));
+}
+
+//===----------------------------------------------------------------------===//
+// R600 CodeGen Pass Builder interface.
+//===----------------------------------------------------------------------===//
+
+R600CodeGenPassBuilder::R600CodeGenPassBuilder(
+    R600TargetMachine &TM, const CGPassBuilderOption &Opts,
+    PassInstrumentationCallbacks *PIC)
+    : CodeGenPassBuilder(TM, Opts, PIC) {
+  Opt.RequiresCodeGenSCCOrder = true;
+}
+
+void R600CodeGenPassBuilder::addPreISel(PassManagerWrapper &PMW) const {
+  // TODO: Add passes pre instruction selection.
+}
+
+void R600CodeGenPassBuilder::addAsmPrinter(PassManagerWrapper &PMW,
+                                           CreateMCStreamer) const {
+  // TODO: Add AsmPrinter.
+}
+
+Error R600CodeGenPassBuilder::addInstSelector(PassManagerWrapper &PMW) const {
+  // TODO: Add instruction selector.
+  return Error::success();
 }

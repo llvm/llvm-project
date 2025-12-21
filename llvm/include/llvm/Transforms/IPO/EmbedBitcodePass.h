@@ -19,10 +19,10 @@
 #define LLVM_TRANSFORMS_IPO_EMBEDBITCODEPASS_H
 
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 class Module;
-class ModulePass;
 class Pass;
 
 struct EmbedBitcodeOptions {
@@ -38,17 +38,14 @@ struct EmbedBitcodeOptions {
 class EmbedBitcodePass : public PassInfoMixin<EmbedBitcodePass> {
   bool IsThinLTO;
   bool EmitLTOSummary;
-  ModulePassManager MPM;
 
 public:
   EmbedBitcodePass(EmbedBitcodeOptions Opts)
-      : EmbedBitcodePass(Opts.IsThinLTO, Opts.EmitLTOSummary,
-                         ModulePassManager()) {}
-  EmbedBitcodePass(bool IsThinLTO, bool EmitLTOSummary, ModulePassManager &&MPM)
-      : IsThinLTO(IsThinLTO), EmitLTOSummary(EmitLTOSummary),
-        MPM(std::move(MPM)) {}
+      : EmbedBitcodePass(Opts.IsThinLTO, Opts.EmitLTOSummary) {}
+  EmbedBitcodePass(bool IsThinLTO, bool EmitLTOSummary)
+      : IsThinLTO(IsThinLTO), EmitLTOSummary(EmitLTOSummary) {}
 
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &);
+  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &);
 
   static bool isRequired() { return true; }
 };

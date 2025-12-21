@@ -13,10 +13,14 @@ static_library("TargetParser") {
     "CSKYTargetParser.cpp",
     "Host.cpp",
     "LoongArchTargetParser.cpp",
+    "PPCTargetParser.cpp",
+    "RISCVISAInfo.cpp",
     "RISCVTargetParser.cpp",
     "SubtargetFeature.cpp",
+    "TargetDataLayout.cpp",
     "TargetParser.cpp",
     "Triple.cpp",
     "X86TargetParser.cpp",
+    "XtensaTargetParser.cpp",
   ]
 }

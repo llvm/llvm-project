@@ -17,30 +17,41 @@
 #include "NVPTX.h"
 #include "NVPTXISelLowering.h"
 #include "NVPTXRegisterInfo.h"
+#include "NVPTXSelectionDAGInfo.h"
 #include "NVPTXTargetMachine.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/CodeGen/SelectionDAGISel.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/LLVMContext.h"
 #include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
+struct NVPTXScopes {
+  NVPTXScopes() = default;
+  NVPTXScopes(LLVMContext &C);
+  NVPTX::Scope operator[](SyncScope::ID ID) const;
+  bool empty() const;
+
+private:
+  SmallMapVector<SyncScope::ID, NVPTX::Scope, 8> Scopes{};
+  LLVMContext *Context = nullptr;
+};
+
 class LLVM_LIBRARY_VISIBILITY NVPTXDAGToDAGISel : public SelectionDAGISel {
   const NVPTXTargetMachine &TM;
 
-  // If true, generate mul.wide from sext and mul
-  bool doMulWide;
-
-  int getDivF32Level() const;
-  bool usePrecSqrtF32() const;
+  NVPTX::DivPrecisionLevel getDivF32Level(const SDNode *N) const;
+  bool usePrecSqrtF32(const SDNode *N) const;
   bool useF32FTZ() const;
   bool allowFMA() const;
-  bool allowUnsafeFPMath() const;
-  bool useShortPointers() const;
+  bool doRsqrtOpt() const;
+  bool doMADWideOpt() const;
+
+  NVPTXScopes Scopes{};
 
 public:
-  static char ID;
-
   NVPTXDAGToDAGISel() = delete;
 
   explicit NVPTXDAGToDAGISel(NVPTXTargetMachine &tm, CodeGenOptLevel OptLevel);
@@ -57,48 +68,61 @@ private:
 #include "NVPTXGenDAGISel.inc"
 
   void Select(SDNode *N) override;
-  bool tryIntrinsicNoChain(SDNode *N);
   bool tryIntrinsicChain(SDNode *N);
+  bool tryIntrinsicVoid(SDNode *N);
   void SelectTexSurfHandle(SDNode *N);
   bool tryLoad(SDNode *N);
   bool tryLoadVector(SDNode *N);
-  bool tryLDGLDU(SDNode *N);
+  bool tryLDU(SDNode *N);
+  bool tryLDG(MemSDNode *N);
   bool tryStore(SDNode *N);
   bool tryStoreVector(SDNode *N);
-  bool tryLoadParam(SDNode *N);
-  bool tryStoreRetval(SDNode *N);
-  bool tryStoreParam(SDNode *N);
+  bool tryFence(SDNode *N);
   void SelectAddrSpaceCast(SDNode *N);
-  bool tryTextureIntrinsic(SDNode *N);
-  bool trySurfaceIntrinsic(SDNode *N);
   bool tryBFE(SDNode *N);
+  bool tryBF16ArithToFMA(SDNode *N);
   bool tryConstantFP(SDNode *N);
   bool SelectSETP_F16X2(SDNode *N);
+  bool SelectSETP_BF16X2(SDNode *N);
+  bool tryUNPACK_VECTOR(SDNode *N);
   bool tryEXTRACT_VECTOR_ELEMENT(SDNode *N);
+  void SelectV2I64toI128(SDNode *N);
+  void SelectI128toV2I64(SDNode *N);
+  void SelectCpAsyncBulkTensorReduceCommon(SDNode *N, unsigned RedOp,
+                                           bool IsIm2Col = false);
+  void SelectTcgen05Ld(SDNode *N, bool hasOffset = false);
+  void SelectTcgen05St(SDNode *N, bool hasOffset = false);
+  void selectAtomicSwap128(SDNode *N);
+  void selectBR_JT(SDNode *N);
 
   inline SDValue getI32Imm(unsigned Imm, const SDLoc &DL) {
     return CurDAG->getTargetConstant(Imm, DL, MVT::i32);
   }
+  NVPTX::Ordering getMemOrder(const MemSDNode *N) const;
+  NVPTX::Scope getAtomicScope(const MemSDNode *N) const;
 
-  // Match direct address complex pattern.
-  bool SelectDirectAddr(SDValue N, SDValue &Address);
+  bool SelectADDR(SDValue Addr, SDValue &Base, SDValue &Offset);
+  SDValue getPTXCmpMode(const CondCodeSDNode &CondCode);
+  SDValue selectPossiblyImm(SDValue V);
 
-  bool SelectADDRri_imp(SDNode *OpNode, SDValue Addr, SDValue &Base,
-                        SDValue &Offset, MVT mvt);
-  bool SelectADDRri(SDNode *OpNode, SDValue Addr, SDValue &Base,
-                    SDValue &Offset);
-  bool SelectADDRri64(SDNode *OpNode, SDValue Addr, SDValue &Base,
-                      SDValue &Offset);
-  bool SelectADDRsi_imp(SDNode *OpNode, SDValue Addr, SDValue &Base,
-                        SDValue &Offset, MVT mvt);
-  bool SelectADDRsi(SDNode *OpNode, SDValue Addr, SDValue &Base,
-                    SDValue &Offset);
-  bool SelectADDRsi64(SDNode *OpNode, SDValue Addr, SDValue &Base,
-                      SDValue &Offset);
+  // Returns the Memory Order and Scope that the PTX memory instruction should
+  // use, and inserts appropriate fence instruction before the memory
+  // instruction, if needed to implement the instructions memory order. Required
+  // fences after the instruction need to be handled elsewhere.
+  std::pair<NVPTX::Ordering, NVPTX::Scope>
+  insertMemoryInstructionFence(SDLoc DL, SDValue &Chain, MemSDNode *N);
+  NVPTX::Scope getOperationScope(MemSDNode *N, NVPTX::Ordering O) const;
 
-  bool ChkMemSDNodeAddressSpace(SDNode *N, unsigned int spN) const;
+public:
+  static NVPTX::AddressSpace getAddrSpace(const MemSDNode *N);
+  static unsigned getFromTypeWidthForLoad(const MemSDNode *Mem);
+};
 
-  static unsigned GetConvertOpcode(MVT DestTy, MVT SrcTy, LoadSDNode *N);
+class NVPTXDAGToDAGISelLegacy : public SelectionDAGISelLegacy {
+public:
+  static char ID;
+  explicit NVPTXDAGToDAGISelLegacy(NVPTXTargetMachine &tm,
+                                   CodeGenOptLevel OptLevel);
 };
 } // end namespace llvm
 

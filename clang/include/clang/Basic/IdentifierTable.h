@@ -15,10 +15,15 @@
 #ifndef LLVM_CLANG_BASIC_IDENTIFIERTABLE_H
 #define LLVM_CLANG_BASIC_IDENTIFIERTABLE_H
 
+#include "clang/Basic/Builtins.h"
 #include "clang/Basic/DiagnosticIDs.h"
 #include "clang/Basic/LLVM.h"
+#include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/TokenKinds.h"
 #include "llvm/ADT/DenseMapInfo.h"
+#include "llvm/ADT/FoldingSet.h"
+#include "llvm/ADT/PointerIntPair.h"
+#include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
@@ -40,6 +45,58 @@ class IdentifierInfo;
 class LangOptions;
 class MultiKeywordSelector;
 class SourceLocation;
+
+/// Constants for TokenKinds.def
+enum TokenKey : unsigned {
+  KEYC99 = 0x1,
+  KEYCXX = 0x2,
+  KEYCXX11 = 0x4,
+  KEYGNU = 0x8,
+  KEYMS = 0x10,
+  BOOLSUPPORT = 0x20,
+  KEYALTIVEC = 0x40,
+  KEYNOCXX = 0x80,
+  KEYBORLAND = 0x100,
+  KEYOPENCLC = 0x200,
+  KEYC23 = 0x400,
+  KEYNOMS18 = 0x800,
+  KEYNOOPENCL = 0x1000,
+  WCHARSUPPORT = 0x2000,
+  HALFSUPPORT = 0x4000,
+  CHAR8SUPPORT = 0x8000,
+  KEYOBJC = 0x10000,
+  KEYZVECTOR = 0x20000,
+  KEYCOROUTINES = 0x40000,
+  KEYMODULES = 0x80000,
+  KEYCXX20 = 0x100000,
+  KEYOPENCLCXX = 0x200000,
+  KEYMSCOMPAT = 0x400000,
+  KEYSYCL = 0x800000,
+  KEYCUDA = 0x1000000,
+  KEYZOS = 0x2000000,
+  KEYNOZOS = 0x4000000,
+  KEYHLSL = 0x8000000,
+  KEYFIXEDPOINT = 0x10000000,
+  KEYDEFERTS = 0x20000000,
+  KEYMAX = KEYDEFERTS, // The maximum key
+  KEYALLCXX = KEYCXX | KEYCXX11 | KEYCXX20,
+  KEYALL = (KEYMAX | (KEYMAX - 1)) & ~KEYNOMS18 & ~KEYNOOPENCL &
+           ~KEYNOZOS // KEYNOMS18, KEYNOOPENCL, KEYNOZOS are excluded.
+};
+
+/// How a keyword is treated in the selected standard. This enum is ordered
+/// intentionally so that the value that 'wins' is the most 'permissive'.
+enum KeywordStatus {
+  KS_Unknown,   // Not yet calculated. Used when figuring out the status.
+  KS_Disabled,  // Disabled
+  KS_Future,    // Is a keyword in future standard
+  KS_Extension, // Is an extension
+  KS_Enabled,   // Enabled
+};
+
+/// Translates flags as specified in TokenKinds.def into keyword status
+/// in the given language standard.
+KeywordStatus getKeywordStatus(const LangOptions &LangOpts, unsigned Flags);
 
 enum class ReservedIdentifierStatus {
   NotReserved = 0,
@@ -72,30 +129,35 @@ inline bool isReservedInAllContexts(ReservedIdentifierStatus Status) {
          Status != ReservedIdentifierStatus::StartsWithUnderscoreAndIsExternC;
 }
 
-/// A simple pair of identifier info and location.
-using IdentifierLocPair = std::pair<IdentifierInfo *, SourceLocation>;
-
 /// IdentifierInfo and other related classes are aligned to
 /// 8 bytes so that DeclarationName can use the lower 3 bits
 /// of a pointer to one of these classes.
 enum { IdentifierInfoAlignment = 8 };
 
-static constexpr int ObjCOrBuiltinIDBits = 16;
+static constexpr int InterestingIdentifierBits = 16;
 
-/// The "layout" of ObjCOrBuiltinID is:
-///  - The first value (0) represents "not a special identifier".
-///  - The next (NUM_OBJC_KEYWORDS - 1) values represent ObjCKeywordKinds (not
-///    including objc_not_keyword).
-///  - The next (NUM_INTERESTING_IDENTIFIERS - 1) values represent
-///    InterestingIdentifierKinds (not including not_interesting).
-///  - The rest of the values represent builtin IDs (not including NotBuiltin).
-static constexpr int FirstObjCKeywordID = 1;
-static constexpr int LastObjCKeywordID =
-    FirstObjCKeywordID + tok::NUM_OBJC_KEYWORDS - 2;
-static constexpr int FirstInterestingIdentifierID = LastObjCKeywordID + 1;
-static constexpr int LastInterestingIdentifierID =
-    FirstInterestingIdentifierID + tok::NUM_INTERESTING_IDENTIFIERS - 2;
-static constexpr int FirstBuiltinID = LastInterestingIdentifierID + 1;
+/// The "layout" of InterestingIdentifier is:
+///  - ObjCKeywordKind enumerators
+///  - NotableIdentifierKind enumerators
+///  - Builtin::ID enumerators
+///  - NotInterestingIdentifier
+enum class InterestingIdentifier {
+#define OBJC_AT_KEYWORD(X) objc_##X,
+#include "clang/Basic/TokenKinds.def"
+  NUM_OBJC_KEYWORDS,
+
+#define NOTABLE_IDENTIFIER(X) X,
+#include "clang/Basic/TokenKinds.def"
+  NUM_OBJC_KEYWORDS_AND_NOTABLE_IDENTIFIERS,
+
+  NotBuiltin,
+#define GET_BUILTIN_ENUMERATORS
+#include "clang/Basic/Builtins.inc"
+#undef GET_BUILTIN_ENUMERATORS
+  FirstTSBuiltin,
+
+  NotInterestingIdentifier = 65534
+};
 
 /// One of these records is kept for each identifier that
 /// is lexed.  This contains information about whether the token was \#define'd,
@@ -107,69 +169,89 @@ class alignas(IdentifierInfoAlignment) IdentifierInfo {
   friend class IdentifierTable;
 
   // Front-end token ID or tok::identifier.
+  LLVM_PREFERRED_TYPE(tok::TokenKind)
   unsigned TokenID : 9;
 
-  // ObjC keyword ('protocol' in '@protocol') or builtin (__builtin_inf).
-  // First NUM_OBJC_KEYWORDS values are for Objective-C,
-  // the remaining values are for builtins.
-  unsigned ObjCOrBuiltinID : ObjCOrBuiltinIDBits;
+  LLVM_PREFERRED_TYPE(InterestingIdentifier)
+  unsigned InterestingIdentifierID : InterestingIdentifierBits;
 
   // True if there is a #define for this.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned HasMacro : 1;
 
   // True if there was a #define for this.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned HadMacro : 1;
 
   // True if the identifier is a language extension.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsExtension : 1;
 
   // True if the identifier is a keyword in a newer or proposed Standard.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsFutureCompatKeyword : 1;
 
   // True if the identifier is poisoned.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsPoisoned : 1;
 
   // True if the identifier is a C++ operator keyword.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsCPPOperatorKeyword : 1;
 
   // Internal bit set by the member function RecomputeNeedsHandleIdentifier.
   // See comment about RecomputeNeedsHandleIdentifier for more info.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned NeedsHandleIdentifier : 1;
 
   // True if the identifier was loaded (at least partially) from an AST file.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsFromAST : 1;
 
   // True if the identifier has changed from the definition
   // loaded from an AST file.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned ChangedAfterLoad : 1;
 
   // True if the identifier's frontend information has changed from the
   // definition loaded from an AST file.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned FEChangedAfterLoad : 1;
 
   // True if revertTokenIDToIdentifier was called.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned RevertedTokenID : 1;
 
   // True if there may be additional information about
   // this identifier stored externally.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned OutOfDate : 1;
 
   // True if this is the 'import' contextual keyword.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsModulesImport : 1;
 
   // True if this is a mangled OpenMP variant name.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsMangledOpenMPVariantName : 1;
 
   // True if this is a deprecated macro.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsDeprecatedMacro : 1;
 
   // True if this macro is unsafe in headers.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsRestrictExpansion : 1;
 
   // True if this macro is final.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsFinal : 1;
 
-  // 22 bits left in a 64-bit word.
+  // True if this identifier would be a keyword in C++ mode.
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned IsKeywordInCpp : 1;
+
+  // 21 bits left in a 64-bit word.
 
   // Managed by the language front-end.
   void *FETokenInfo = nullptr;
@@ -177,13 +259,16 @@ class alignas(IdentifierInfoAlignment) IdentifierInfo {
   llvm::StringMapEntry<IdentifierInfo *> *Entry = nullptr;
 
   IdentifierInfo()
-      : TokenID(tok::identifier), ObjCOrBuiltinID(0), HasMacro(false),
-        HadMacro(false), IsExtension(false), IsFutureCompatKeyword(false),
-        IsPoisoned(false), IsCPPOperatorKeyword(false),
-        NeedsHandleIdentifier(false), IsFromAST(false), ChangedAfterLoad(false),
-        FEChangedAfterLoad(false), RevertedTokenID(false), OutOfDate(false),
-        IsModulesImport(false), IsMangledOpenMPVariantName(false),
-        IsDeprecatedMacro(false), IsRestrictExpansion(false), IsFinal(false) {}
+      : TokenID(tok::identifier),
+        InterestingIdentifierID(llvm::to_underlying(
+            InterestingIdentifier::NotInterestingIdentifier)),
+        HasMacro(false), HadMacro(false), IsExtension(false),
+        IsFutureCompatKeyword(false), IsPoisoned(false),
+        IsCPPOperatorKeyword(false), NeedsHandleIdentifier(false),
+        IsFromAST(false), ChangedAfterLoad(false), FEChangedAfterLoad(false),
+        RevertedTokenID(false), OutOfDate(false), IsModulesImport(false),
+        IsMangledOpenMPVariantName(false), IsDeprecatedMacro(false),
+        IsRestrictExpansion(false), IsFinal(false), IsKeywordInCpp(false) {}
 
 public:
   IdentifierInfo(const IdentifierInfo &) = delete;
@@ -311,47 +396,63 @@ public:
   ///
   /// For example, 'class' will return tok::objc_class if ObjC is enabled.
   tok::ObjCKeywordKind getObjCKeywordID() const {
-    static_assert(FirstObjCKeywordID == 1,
-                  "hard-coding this assumption to simplify code");
-    if (ObjCOrBuiltinID <= LastObjCKeywordID)
-      return tok::ObjCKeywordKind(ObjCOrBuiltinID);
-    else
-      return tok::objc_not_keyword;
+    assert(0 == llvm::to_underlying(InterestingIdentifier::objc_not_keyword));
+    auto Value = static_cast<InterestingIdentifier>(InterestingIdentifierID);
+    if (Value < InterestingIdentifier::NUM_OBJC_KEYWORDS)
+      return static_cast<tok::ObjCKeywordKind>(InterestingIdentifierID);
+    return tok::objc_not_keyword;
   }
-  void setObjCKeywordID(tok::ObjCKeywordKind ID) { ObjCOrBuiltinID = ID; }
+  void setObjCKeywordID(tok::ObjCKeywordKind ID) {
+    assert(0 == llvm::to_underlying(InterestingIdentifier::objc_not_keyword));
+    InterestingIdentifierID = ID;
+    assert(getObjCKeywordID() == ID && "ID too large for field!");
+  }
 
   /// Return a value indicating whether this is a builtin function.
-  ///
-  /// 0 is not-built-in. 1+ are specific builtin functions.
   unsigned getBuiltinID() const {
-    if (ObjCOrBuiltinID >= FirstBuiltinID)
-      return 1 + (ObjCOrBuiltinID - FirstBuiltinID);
-    else
-      return 0;
+    auto Value = static_cast<InterestingIdentifier>(InterestingIdentifierID);
+    if (Value >
+            InterestingIdentifier::NUM_OBJC_KEYWORDS_AND_NOTABLE_IDENTIFIERS &&
+        Value != InterestingIdentifier::NotInterestingIdentifier) {
+      auto FirstBuiltin =
+          llvm::to_underlying(InterestingIdentifier::NotBuiltin);
+      return static_cast<Builtin::ID>(InterestingIdentifierID - FirstBuiltin);
+    }
+    return Builtin::ID::NotBuiltin;
   }
   void setBuiltinID(unsigned ID) {
-    assert(ID != 0);
-    ObjCOrBuiltinID = FirstBuiltinID + (ID - 1);
+    assert(ID != Builtin::ID::NotBuiltin);
+    auto FirstBuiltin = llvm::to_underlying(InterestingIdentifier::NotBuiltin);
+    InterestingIdentifierID = ID + FirstBuiltin;
     assert(getBuiltinID() == ID && "ID too large for field!");
   }
-  void clearBuiltinID() { ObjCOrBuiltinID = 0; }
-
-  tok::InterestingIdentifierKind getInterestingIdentifierID() const {
-    if (ObjCOrBuiltinID >= FirstInterestingIdentifierID &&
-        ObjCOrBuiltinID <= LastInterestingIdentifierID)
-      return tok::InterestingIdentifierKind(
-          1 + (ObjCOrBuiltinID - FirstInterestingIdentifierID));
-    else
-      return tok::not_interesting;
-  }
-  void setInterestingIdentifierID(unsigned ID) {
-    assert(ID != tok::not_interesting);
-    ObjCOrBuiltinID = FirstInterestingIdentifierID + (ID - 1);
-    assert(getInterestingIdentifierID() == ID && "ID too large for field!");
+  void clearBuiltinID() {
+    InterestingIdentifierID =
+        llvm::to_underlying(InterestingIdentifier::NotInterestingIdentifier);
   }
 
-  unsigned getObjCOrBuiltinID() const { return ObjCOrBuiltinID; }
-  void setObjCOrBuiltinID(unsigned ID) { ObjCOrBuiltinID = ID; }
+  tok::NotableIdentifierKind getNotableIdentifierID() const {
+    auto Value = static_cast<InterestingIdentifier>(InterestingIdentifierID);
+    if (Value > InterestingIdentifier::NUM_OBJC_KEYWORDS &&
+        Value <
+            InterestingIdentifier::NUM_OBJC_KEYWORDS_AND_NOTABLE_IDENTIFIERS) {
+      auto FirstNotableIdentifier =
+          1 + llvm::to_underlying(InterestingIdentifier::NUM_OBJC_KEYWORDS);
+      return static_cast<tok::NotableIdentifierKind>(InterestingIdentifierID -
+                                                     FirstNotableIdentifier);
+    }
+    return tok::not_notable;
+  }
+  void setNotableIdentifierID(unsigned ID) {
+    assert(ID != tok::not_notable);
+    auto FirstNotableIdentifier =
+        1 + llvm::to_underlying(InterestingIdentifier::NUM_OBJC_KEYWORDS);
+    InterestingIdentifierID = ID + FirstNotableIdentifier;
+    assert(getNotableIdentifierID() == ID && "ID too large for field!");
+  }
+
+  unsigned getObjCOrBuiltinID() const { return InterestingIdentifierID; }
+  void setObjCOrBuiltinID(unsigned ID) { InterestingIdentifierID = ID; }
 
   /// get/setExtension - Initialize information about whether or not this
   /// language token is an extension.  This controls extension warnings, and is
@@ -399,6 +500,10 @@ public:
   }
   bool isCPlusPlusOperatorKeyword() const { return IsCPPOperatorKeyword; }
 
+  /// Return true if this identifier would be a keyword in C++ mode.
+  bool IsKeywordInCPlusPlus() const { return IsKeywordInCpp; }
+  void setIsKeywordInCPlusPlus(bool Val = true) { IsKeywordInCpp = Val; }
+
   /// Return true if this token is a keyword in the specified language.
   bool isKeyword(const LangOptions &LangOpts) const;
 
@@ -417,6 +522,7 @@ public:
   /// If this returns false, we know that HandleIdentifier will not affect
   /// the token.
   bool isHandleIdentifierCase() const { return NeedsHandleIdentifier; }
+  void setHandleIdentifierCase(bool Val = true) { NeedsHandleIdentifier = Val; }
 
   /// Return true if the identifier in its current state was loaded
   /// from an AST file.
@@ -490,7 +596,7 @@ public:
   ///   function(<#int x#>);
   /// \endcode
   bool isEditorPlaceholder() const {
-    return getName().startswith("<#") && getName().endswith("#>");
+    return getName().starts_with("<#") && getName().ends_with("#>");
   }
 
   /// Determine whether \p this is a name reserved for the implementation (C99
@@ -677,7 +783,7 @@ public:
   /// introduce or modify an identifier. If they called get(), they would
   /// likely end up in a recursion.
   IdentifierInfo &getOwn(StringRef Name) {
-    auto &Entry = *HashTable.insert(std::make_pair(Name, nullptr)).first;
+    auto &Entry = *HashTable.try_emplace(Name).first;
 
     IdentifierInfo *&II = Entry.second;
     if (II)
@@ -692,7 +798,7 @@ public:
     II->Entry = &Entry;
 
     // If this is the 'import' contextual keyword, mark it as such.
-    if (Name.equals("import"))
+    if (Name == "import")
       II->setModulesImport(true);
 
     return *II;
@@ -794,203 +900,6 @@ enum ObjCStringFormatFamily {
   SFF_CFString
 };
 
-/// Smart pointer class that efficiently represents Objective-C method
-/// names.
-///
-/// This class will either point to an IdentifierInfo or a
-/// MultiKeywordSelector (which is private). This enables us to optimize
-/// selectors that take no arguments and selectors that take 1 argument, which
-/// accounts for 78% of all selectors in Cocoa.h.
-class Selector {
-  friend class Diagnostic;
-  friend class SelectorTable; // only the SelectorTable can create these
-  friend class DeclarationName; // and the AST's DeclarationName.
-
-  enum IdentifierInfoFlag {
-    // Empty selector = 0. Note that these enumeration values must
-    // correspond to the enumeration values of DeclarationName::StoredNameKind
-    ZeroArg  = 0x01,
-    OneArg   = 0x02,
-    MultiArg = 0x07,
-    ArgFlags = 0x07
-  };
-
-  /// A pointer to the MultiKeywordSelector or IdentifierInfo. We use the low
-  /// three bits of InfoPtr to store an IdentifierInfoFlag. Note that in any
-  /// case IdentifierInfo and MultiKeywordSelector are already aligned to
-  /// 8 bytes even on 32 bits archs because of DeclarationName.
-  uintptr_t InfoPtr = 0;
-
-  Selector(IdentifierInfo *II, unsigned nArgs) {
-    InfoPtr = reinterpret_cast<uintptr_t>(II);
-    assert((InfoPtr & ArgFlags) == 0 &&"Insufficiently aligned IdentifierInfo");
-    assert(nArgs < 2 && "nArgs not equal to 0/1");
-    InfoPtr |= nArgs+1;
-  }
-
-  Selector(MultiKeywordSelector *SI) {
-    InfoPtr = reinterpret_cast<uintptr_t>(SI);
-    assert((InfoPtr & ArgFlags) == 0 &&"Insufficiently aligned IdentifierInfo");
-    InfoPtr |= MultiArg;
-  }
-
-  IdentifierInfo *getAsIdentifierInfo() const {
-    if (getIdentifierInfoFlag() < MultiArg)
-      return reinterpret_cast<IdentifierInfo *>(InfoPtr & ~ArgFlags);
-    return nullptr;
-  }
-
-  MultiKeywordSelector *getMultiKeywordSelector() const {
-    return reinterpret_cast<MultiKeywordSelector *>(InfoPtr & ~ArgFlags);
-  }
-
-  unsigned getIdentifierInfoFlag() const {
-    return InfoPtr & ArgFlags;
-  }
-
-  static ObjCMethodFamily getMethodFamilyImpl(Selector sel);
-
-  static ObjCStringFormatFamily getStringFormatFamilyImpl(Selector sel);
-
-public:
-  /// The default ctor should only be used when creating data structures that
-  ///  will contain selectors.
-  Selector() = default;
-  explicit Selector(uintptr_t V) : InfoPtr(V) {}
-
-  /// operator==/!= - Indicate whether the specified selectors are identical.
-  bool operator==(Selector RHS) const {
-    return InfoPtr == RHS.InfoPtr;
-  }
-  bool operator!=(Selector RHS) const {
-    return InfoPtr != RHS.InfoPtr;
-  }
-
-  void *getAsOpaquePtr() const {
-    return reinterpret_cast<void*>(InfoPtr);
-  }
-
-  /// Determine whether this is the empty selector.
-  bool isNull() const { return InfoPtr == 0; }
-
-  // Predicates to identify the selector type.
-  bool isKeywordSelector() const {
-    return getIdentifierInfoFlag() != ZeroArg;
-  }
-
-  bool isUnarySelector() const {
-    return getIdentifierInfoFlag() == ZeroArg;
-  }
-
-  /// If this selector is the specific keyword selector described by Names.
-  bool isKeywordSelector(ArrayRef<StringRef> Names) const;
-
-  /// If this selector is the specific unary selector described by Name.
-  bool isUnarySelector(StringRef Name) const;
-
-  unsigned getNumArgs() const;
-
-  /// Retrieve the identifier at a given position in the selector.
-  ///
-  /// Note that the identifier pointer returned may be NULL. Clients that only
-  /// care about the text of the identifier string, and not the specific,
-  /// uniqued identifier pointer, should use \c getNameForSlot(), which returns
-  /// an empty string when the identifier pointer would be NULL.
-  ///
-  /// \param argIndex The index for which we want to retrieve the identifier.
-  /// This index shall be less than \c getNumArgs() unless this is a keyword
-  /// selector, in which case 0 is the only permissible value.
-  ///
-  /// \returns the uniqued identifier for this slot, or NULL if this slot has
-  /// no corresponding identifier.
-  IdentifierInfo *getIdentifierInfoForSlot(unsigned argIndex) const;
-
-  /// Retrieve the name at a given position in the selector.
-  ///
-  /// \param argIndex The index for which we want to retrieve the name.
-  /// This index shall be less than \c getNumArgs() unless this is a keyword
-  /// selector, in which case 0 is the only permissible value.
-  ///
-  /// \returns the name for this slot, which may be the empty string if no
-  /// name was supplied.
-  StringRef getNameForSlot(unsigned argIndex) const;
-
-  /// Derive the full selector name (e.g. "foo:bar:") and return
-  /// it as an std::string.
-  std::string getAsString() const;
-
-  /// Prints the full selector name (e.g. "foo:bar:").
-  void print(llvm::raw_ostream &OS) const;
-
-  void dump() const;
-
-  /// Derive the conventional family of this method.
-  ObjCMethodFamily getMethodFamily() const {
-    return getMethodFamilyImpl(*this);
-  }
-
-  ObjCStringFormatFamily getStringFormatFamily() const {
-    return getStringFormatFamilyImpl(*this);
-  }
-
-  static Selector getEmptyMarker() {
-    return Selector(uintptr_t(-1));
-  }
-
-  static Selector getTombstoneMarker() {
-    return Selector(uintptr_t(-2));
-  }
-
-  static ObjCInstanceTypeFamily getInstTypeMethodFamily(Selector sel);
-};
-
-/// This table allows us to fully hide how we implement
-/// multi-keyword caching.
-class SelectorTable {
-  // Actually a SelectorTableImpl
-  void *Impl;
-
-public:
-  SelectorTable();
-  SelectorTable(const SelectorTable &) = delete;
-  SelectorTable &operator=(const SelectorTable &) = delete;
-  ~SelectorTable();
-
-  /// Can create any sort of selector.
-  ///
-  /// \p NumArgs indicates whether this is a no argument selector "foo", a
-  /// single argument selector "foo:" or multi-argument "foo:bar:".
-  Selector getSelector(unsigned NumArgs, IdentifierInfo **IIV);
-
-  Selector getUnarySelector(IdentifierInfo *ID) {
-    return Selector(ID, 1);
-  }
-
-  Selector getNullarySelector(IdentifierInfo *ID) {
-    return Selector(ID, 0);
-  }
-
-  /// Return the total amount of memory allocated for managing selectors.
-  size_t getTotalMemory() const;
-
-  /// Return the default setter name for the given identifier.
-  ///
-  /// This is "set" + \p Name where the initial character of \p Name
-  /// has been capitalized.
-  static SmallString<64> constructSetterName(StringRef Name);
-
-  /// Return the default setter selector for the given identifier.
-  ///
-  /// This is "set" + \p Name where the initial character of \p Name
-  /// has been capitalized.
-  static Selector constructSetterSelector(IdentifierTable &Idents,
-                                          SelectorTable &SelTable,
-                                          const IdentifierInfo *Name);
-
-  /// Return the property name for the given setter selector.
-  static std::string getPropertyNameFromSetterSelector(Selector Sel);
-};
-
 namespace detail {
 
 /// DeclarationNameExtra is used as a base of various uncommon special names.
@@ -1053,6 +962,290 @@ protected:
 
 } // namespace detail
 
+/// One of these variable length records is kept for each
+/// selector containing more than one keyword. We use a folding set
+/// to unique aggregate names (keyword selectors in ObjC parlance). Access to
+/// this class is provided strictly through Selector.
+class alignas(IdentifierInfoAlignment) MultiKeywordSelector
+    : public detail::DeclarationNameExtra,
+      public llvm::FoldingSetNode {
+  MultiKeywordSelector(unsigned nKeys) : DeclarationNameExtra(nKeys) {}
+
+public:
+  // Constructor for keyword selectors.
+  MultiKeywordSelector(unsigned nKeys, const IdentifierInfo **IIV)
+      : DeclarationNameExtra(nKeys) {
+    assert((nKeys > 1) && "not a multi-keyword selector");
+
+    // Fill in the trailing keyword array.
+    const IdentifierInfo **KeyInfo =
+        reinterpret_cast<const IdentifierInfo **>(this + 1);
+    for (unsigned i = 0; i != nKeys; ++i)
+      KeyInfo[i] = IIV[i];
+  }
+
+  // getName - Derive the full selector name and return it.
+  std::string getName() const;
+
+  using DeclarationNameExtra::getNumArgs;
+
+  using keyword_iterator = const IdentifierInfo *const *;
+
+  keyword_iterator keyword_begin() const {
+    return reinterpret_cast<keyword_iterator>(this + 1);
+  }
+
+  keyword_iterator keyword_end() const {
+    return keyword_begin() + getNumArgs();
+  }
+
+  const IdentifierInfo *getIdentifierInfoForSlot(unsigned i) const {
+    assert(i < getNumArgs() && "getIdentifierInfoForSlot(): illegal index");
+    return keyword_begin()[i];
+  }
+
+  static void Profile(llvm::FoldingSetNodeID &ID, keyword_iterator ArgTys,
+                      unsigned NumArgs) {
+    ID.AddInteger(NumArgs);
+    for (unsigned i = 0; i != NumArgs; ++i)
+      ID.AddPointer(ArgTys[i]);
+  }
+
+  void Profile(llvm::FoldingSetNodeID &ID) {
+    Profile(ID, keyword_begin(), getNumArgs());
+  }
+};
+
+/// Smart pointer class that efficiently represents Objective-C method
+/// names.
+///
+/// This class will either point to an IdentifierInfo or a
+/// MultiKeywordSelector (which is private). This enables us to optimize
+/// selectors that take no arguments and selectors that take 1 argument, which
+/// accounts for 78% of all selectors in Cocoa.h.
+class Selector {
+  friend class Diagnostic;
+  friend class SelectorTable; // only the SelectorTable can create these
+  friend class DeclarationName; // and the AST's DeclarationName.
+
+  enum IdentifierInfoFlag {
+    // Empty selector = 0. Note that these enumeration values must
+    // correspond to the enumeration values of DeclarationName::StoredNameKind
+    ZeroArg = 0x01,
+    OneArg = 0x02,
+    // IMPORTANT NOTE: see comments in InfoPtr (below) about this enumerator
+    // value.
+    MultiArg = 0x07,
+  };
+
+  /// IMPORTANT NOTE: the order of the types in this PointerUnion are
+  /// important! The DeclarationName class has bidirectional conversion
+  /// to/from Selector through an opaque pointer (void *) which corresponds
+  /// to this PointerIntPair. The discriminator bit from the PointerUnion
+  /// corresponds to the high bit in the MultiArg enumerator. So while this
+  /// PointerIntPair only has two bits for the integer (and we mask off the
+  /// high bit in `MultiArg` when it is used), that discrimator bit is
+  /// still necessary for the opaque conversion. The discriminator bit
+  /// from the PointerUnion and the two integer bits from the
+  /// PointerIntPair are also exposed via the DeclarationName::StoredNameKind
+  /// enumeration; see the comments in DeclarationName.h for more details.
+  /// Do not reorder or add any arguments to this template
+  /// without thoroughly understanding how tightly coupled these classes are.
+  llvm::PointerIntPair<
+      llvm::PointerUnion<const IdentifierInfo *, MultiKeywordSelector *>, 2>
+      InfoPtr;
+
+  Selector(const IdentifierInfo *II, unsigned nArgs) {
+    assert(nArgs < 2 && "nArgs not equal to 0/1");
+    InfoPtr.setPointerAndInt(II, nArgs + 1);
+  }
+
+  Selector(MultiKeywordSelector *SI) {
+    // IMPORTANT NOTE: we mask off the upper bit of this value because we only
+    // reserve two bits for the integer in the PointerIntPair. See the comments
+    // in `InfoPtr` for more details.
+    InfoPtr.setPointerAndInt(SI, MultiArg & 0b11);
+  }
+
+  const IdentifierInfo *getAsIdentifierInfo() const {
+    return dyn_cast_if_present<const IdentifierInfo *>(InfoPtr.getPointer());
+  }
+
+  MultiKeywordSelector *getMultiKeywordSelector() const {
+    return cast<MultiKeywordSelector *>(InfoPtr.getPointer());
+  }
+
+  unsigned getIdentifierInfoFlag() const {
+    unsigned new_flags = InfoPtr.getInt();
+    // IMPORTANT NOTE: We have to reconstitute this data rather than use the
+    // value directly from the PointerIntPair. See the comments in `InfoPtr`
+    // for more details.
+    if (isa<MultiKeywordSelector *>(InfoPtr.getPointer()))
+      new_flags |= MultiArg;
+    return new_flags;
+  }
+
+  static ObjCMethodFamily getMethodFamilyImpl(Selector sel);
+
+  static ObjCStringFormatFamily getStringFormatFamilyImpl(Selector sel);
+
+public:
+  /// The default ctor should only be used when creating data structures that
+  ///  will contain selectors.
+  Selector() = default;
+  explicit Selector(uintptr_t V) {
+    InfoPtr.setFromOpaqueValue(reinterpret_cast<void *>(V));
+  }
+
+  /// operator==/!= - Indicate whether the specified selectors are identical.
+  bool operator==(Selector RHS) const {
+    return InfoPtr.getOpaqueValue() == RHS.InfoPtr.getOpaqueValue();
+  }
+  bool operator!=(Selector RHS) const {
+    return InfoPtr.getOpaqueValue() != RHS.InfoPtr.getOpaqueValue();
+  }
+
+  void *getAsOpaquePtr() const { return InfoPtr.getOpaqueValue(); }
+
+  /// Determine whether this is the empty selector.
+  bool isNull() const { return InfoPtr.getOpaqueValue() == nullptr; }
+
+  // Predicates to identify the selector type.
+  bool isKeywordSelector() const { return InfoPtr.getInt() != ZeroArg; }
+
+  bool isUnarySelector() const { return InfoPtr.getInt() == ZeroArg; }
+
+  /// If this selector is the specific keyword selector described by Names.
+  bool isKeywordSelector(ArrayRef<StringRef> Names) const;
+
+  /// If this selector is the specific unary selector described by Name.
+  bool isUnarySelector(StringRef Name) const;
+
+  unsigned getNumArgs() const;
+
+  /// Retrieve the identifier at a given position in the selector.
+  ///
+  /// Note that the identifier pointer returned may be NULL. Clients that only
+  /// care about the text of the identifier string, and not the specific,
+  /// uniqued identifier pointer, should use \c getNameForSlot(), which returns
+  /// an empty string when the identifier pointer would be NULL.
+  ///
+  /// \param argIndex The index for which we want to retrieve the identifier.
+  /// This index shall be less than \c getNumArgs() unless this is a keyword
+  /// selector, in which case 0 is the only permissible value.
+  ///
+  /// \returns the uniqued identifier for this slot, or NULL if this slot has
+  /// no corresponding identifier.
+  const IdentifierInfo *getIdentifierInfoForSlot(unsigned argIndex) const;
+
+  /// Retrieve the name at a given position in the selector.
+  ///
+  /// \param argIndex The index for which we want to retrieve the name.
+  /// This index shall be less than \c getNumArgs() unless this is a keyword
+  /// selector, in which case 0 is the only permissible value.
+  ///
+  /// \returns the name for this slot, which may be the empty string if no
+  /// name was supplied.
+  StringRef getNameForSlot(unsigned argIndex) const;
+
+  /// Derive the full selector name (e.g. "foo:bar:") and return
+  /// it as an std::string.
+  std::string getAsString() const;
+
+  /// Prints the full selector name (e.g. "foo:bar:").
+  void print(llvm::raw_ostream &OS) const;
+
+  void dump() const;
+
+  /// Derive the conventional family of this method.
+  ObjCMethodFamily getMethodFamily() const {
+    return getMethodFamilyImpl(*this);
+  }
+
+  ObjCStringFormatFamily getStringFormatFamily() const {
+    return getStringFormatFamilyImpl(*this);
+  }
+
+  static Selector getEmptyMarker() {
+    return Selector(uintptr_t(-1));
+  }
+
+  static Selector getTombstoneMarker() {
+    return Selector(uintptr_t(-2));
+  }
+
+  static ObjCInstanceTypeFamily getInstTypeMethodFamily(Selector sel);
+};
+
+/// This table allows us to fully hide how we implement
+/// multi-keyword caching.
+class SelectorTable {
+  // Actually a SelectorTableImpl
+  void *Impl;
+
+public:
+  SelectorTable();
+  SelectorTable(const SelectorTable &) = delete;
+  SelectorTable &operator=(const SelectorTable &) = delete;
+  ~SelectorTable();
+
+  /// Can create any sort of selector.
+  ///
+  /// \p NumArgs indicates whether this is a no argument selector "foo", a
+  /// single argument selector "foo:" or multi-argument "foo:bar:".
+  Selector getSelector(unsigned NumArgs, const IdentifierInfo **IIV);
+
+  Selector getUnarySelector(const IdentifierInfo *ID) {
+    return Selector(ID, 1);
+  }
+
+  Selector getNullarySelector(const IdentifierInfo *ID) {
+    return Selector(ID, 0);
+  }
+
+  /// Return the total amount of memory allocated for managing selectors.
+  size_t getTotalMemory() const;
+
+  /// Return the default setter name for the given identifier.
+  ///
+  /// This is "set" + \p Name where the initial character of \p Name
+  /// has been capitalized.
+  static SmallString<64> constructSetterName(StringRef Name);
+
+  /// Return the default setter selector for the given identifier.
+  ///
+  /// This is "set" + \p Name where the initial character of \p Name
+  /// has been capitalized.
+  static Selector constructSetterSelector(IdentifierTable &Idents,
+                                          SelectorTable &SelTable,
+                                          const IdentifierInfo *Name);
+
+  /// Return the property name for the given setter selector.
+  static std::string getPropertyNameFromSetterSelector(Selector Sel);
+};
+
+/// A simple pair of identifier info and location.
+class IdentifierLoc {
+  SourceLocation Loc;
+  IdentifierInfo *II = nullptr;
+
+public:
+  IdentifierLoc() = default;
+  IdentifierLoc(SourceLocation L, IdentifierInfo *Ident) : Loc(L), II(Ident) {}
+
+  void setLoc(SourceLocation L) { Loc = L; }
+  void setIdentifierInfo(IdentifierInfo *Ident) { II = Ident; }
+  SourceLocation getLoc() const { return Loc; }
+  IdentifierInfo *getIdentifierInfo() const { return II; }
+
+  bool operator==(const IdentifierLoc &X) const {
+    return Loc == X.Loc && II == X.II;
+  }
+
+  bool operator!=(const IdentifierLoc &X) const {
+    return Loc != X.Loc || II != X.II;
+  }
+};
 }  // namespace clang
 
 namespace llvm {
@@ -1087,34 +1280,6 @@ struct PointerLikeTypeTraits<clang::Selector> {
   }
 
   static constexpr int NumLowBitsAvailable = 0;
-};
-
-// Provide PointerLikeTypeTraits for IdentifierInfo pointers, which
-// are not guaranteed to be 8-byte aligned.
-template<>
-struct PointerLikeTypeTraits<clang::IdentifierInfo*> {
-  static void *getAsVoidPointer(clang::IdentifierInfo* P) {
-    return P;
-  }
-
-  static clang::IdentifierInfo *getFromVoidPointer(void *P) {
-    return static_cast<clang::IdentifierInfo*>(P);
-  }
-
-  static constexpr int NumLowBitsAvailable = 1;
-};
-
-template<>
-struct PointerLikeTypeTraits<const clang::IdentifierInfo*> {
-  static const void *getAsVoidPointer(const clang::IdentifierInfo* P) {
-    return P;
-  }
-
-  static const clang::IdentifierInfo *getFromVoidPointer(const void *P) {
-    return static_cast<const clang::IdentifierInfo*>(P);
-  }
-
-  static constexpr int NumLowBitsAvailable = 1;
 };
 
 } // namespace llvm

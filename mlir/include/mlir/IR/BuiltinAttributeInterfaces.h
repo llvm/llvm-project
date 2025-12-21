@@ -13,8 +13,6 @@
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/BuiltinTypeInterfaces.h"
 #include "mlir/IR/Types.h"
-#include "mlir/Support/LogicalResult.h"
-#include "llvm/ADT/Any.h"
 #include "llvm/Support/raw_ostream.h"
 #include <complex>
 #include <optional>
@@ -272,6 +270,12 @@ LogicalResult
 verifyAffineMapAsLayout(AffineMap m, ArrayRef<int64_t> shape,
                         function_ref<InFlightDiagnostic()> emitError);
 
+// Return the strides and offsets that can be inferred from the given affine
+// layout map given the map and a memref shape.
+LogicalResult getAffineMapStridesAndOffset(AffineMap map,
+                                           ArrayRef<int64_t> shape,
+                                           SmallVectorImpl<int64_t> &strides,
+                                           int64_t &offset);
 } // namespace detail
 
 } // namespace mlir
@@ -281,6 +285,7 @@ verifyAffineMapAsLayout(AffineMap m, ArrayRef<int64_t> shape,
 //===----------------------------------------------------------------------===//
 
 #include "mlir/IR/BuiltinAttributeInterfaces.h.inc"
+#include "mlir/IR/OpAsmAttrInterface.h.inc"
 
 //===----------------------------------------------------------------------===//
 // ElementsAttr

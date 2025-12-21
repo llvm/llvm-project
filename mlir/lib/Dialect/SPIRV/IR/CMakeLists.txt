@@ -3,14 +3,16 @@ mlir_tablegen(SPIRVCanonicalization.inc -gen-rewriters)
 add_public_tablegen_target(MLIRSPIRVCanonicalizationIncGen)
 
 add_mlir_dialect_library(MLIRSPIRVDialect
+  ArmGraphOps.cpp
   AtomicOps.cpp
   CastOps.cpp
   ControlFlowOps.cpp
   CooperativeMatrixOps.cpp
+  DotProductOps.cpp
   GroupOps.cpp
-  IntegerDotProductOps.cpp
-  JointMatrixOps.cpp
+  ImageOps.cpp
   MemoryOps.cpp
+  MeshOps.cpp
   SPIRVAttributes.cpp
   SPIRVCanonicalization.cpp
   SPIRVGLCanonicalization.cpp
@@ -27,12 +29,14 @@ add_mlir_dialect_library(MLIRSPIRVDialect
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/SPIRV
 
   DEPENDS
+  MLIRGPUDialect
   MLIRSPIRVAttributeIncGen
   MLIRSPIRVAttrUtilsGen
   MLIRSPIRVAvailabilityIncGen
   MLIRSPIRVCanonicalizationIncGen
   MLIRSPIRVEnumAvailabilityIncGen
   MLIRSPIRVEnumsIncGen
+  MLIRSPIRVImageInterfacesIncGen
   MLIRSPIRVOpsIncGen
 
   LINK_LIBS PUBLIC
@@ -41,6 +45,7 @@ add_mlir_dialect_library(MLIRSPIRVDialect
   MLIRIR
   MLIRParser
   MLIRSideEffectInterfaces
+  MLIRSPIRVImageInterfaces
   MLIRSupport
   MLIRTransforms
   MLIRUBDialect

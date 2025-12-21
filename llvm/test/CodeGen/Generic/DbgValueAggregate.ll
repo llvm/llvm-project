@@ -4,7 +4,7 @@ target triple = "aarch64-unknown-linux-gnu"
 
 define void @MAIN_() #0 {
 L.entry:
-  %0 = load <{ float, float }>, <{ float, float }>* undef, align 1
+  %0 = load <{ float, float }>, ptr undef, align 1
   ; CHECK: DEBUG_VALUE: localvar
   ; CHECK: DEBUG_VALUE: localvar
   call void @llvm.dbg.value(metadata <{ float, float }> %0, metadata !10, metadata !DIExpression()), !dbg !13

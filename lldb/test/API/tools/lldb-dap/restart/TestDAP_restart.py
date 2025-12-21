@@ -9,7 +9,6 @@ import lldbdap_testcase
 
 class TestDAP_restart(lldbdap_testcase.DAPTestCaseBase):
     @skipIfWindows
-    @skipIfRemote
     def test_basic_functionality(self):
         """
         Tests the basic restarting functionality: set two breakpoints in
@@ -23,29 +22,27 @@ class TestDAP_restart(lldbdap_testcase.DAPTestCaseBase):
         [bp_A, bp_B] = self.set_source_breakpoints("main.c", [line_A, line_B])
 
         # Verify we hit A, then B.
-        self.dap_server.request_configurationDone()
-        self.verify_breakpoint_hit([bp_A])
-        self.dap_server.request_continue()
-        self.verify_breakpoint_hit([bp_B])
+        self.continue_to_breakpoints([bp_A])
+        self.continue_to_breakpoints([bp_B])
 
         # Make sure i has been modified from its initial value of 0.
-        self.assertEquals(
+        self.assertEqual(
             int(self.dap_server.get_local_variable_value("i")),
             1234,
             "i != 1234 after hitting breakpoint B",
         )
 
         # Restart then check we stop back at A and program state has been reset.
-        self.dap_server.request_restart()
+        resp = self.dap_server.request_restart()
+        self.assertTrue(resp["success"])
         self.verify_breakpoint_hit([bp_A])
-        self.assertEquals(
+        self.assertEqual(
             int(self.dap_server.get_local_variable_value("i")),
             0,
             "i != 0 after hitting breakpoint A on restart",
         )
 
     @skipIfWindows
-    @skipIfRemote
     def test_stopOnEntry(self):
         """
         Check that the stopOnEntry setting is still honored after a restart.
@@ -53,41 +50,20 @@ class TestDAP_restart(lldbdap_testcase.DAPTestCaseBase):
         program = self.getBuildArtifact("a.out")
         self.build_and_launch(program, stopOnEntry=True)
         [bp_main] = self.set_function_breakpoints(["main"])
-        self.dap_server.request_configurationDone()
 
-        # Once the "configuration done" event is sent, we should get a stopped
-        # event immediately because of stopOnEntry.
-        stopped_events = self.dap_server.wait_for_stopped()
-        for stopped_event in stopped_events:
-            if "body" in stopped_event:
-                body = stopped_event["body"]
-                if "reason" in body:
-                    reason = body["reason"]
-                    self.assertNotEqual(
-                        reason, "breakpoint", 'verify stop isn\'t "main" breakpoint'
-                    )
+        self.continue_to_next_stop()
+        self.verify_stop_on_entry()
 
         # Then, if we continue, we should hit the breakpoint at main.
-        self.dap_server.request_continue()
-        self.verify_breakpoint_hit([bp_main])
+        self.continue_to_breakpoints([bp_main])
 
         # Restart and check that we still get a stopped event before reaching
         # main.
-        self.dap_server.request_restart()
-        stopped_events = self.dap_server.wait_for_stopped()
-        for stopped_event in stopped_events:
-            if "body" in stopped_event:
-                body = stopped_event["body"]
-                if "reason" in body:
-                    reason = body["reason"]
-                    self.assertNotEqual(
-                        reason,
-                        "breakpoint",
-                        'verify stop after restart isn\'t "main" breakpoint',
-                    )
+        resp = self.dap_server.request_restart()
+        self.assertTrue(resp["success"])
+        self.verify_stop_on_entry()
 
     @skipIfWindows
-    @skipIfRemote
     def test_arguments(self):
         """
         Tests that lldb-dap will use updated launch arguments included
@@ -100,12 +76,11 @@ class TestDAP_restart(lldbdap_testcase.DAPTestCaseBase):
         [bp_A] = self.set_source_breakpoints("main.c", [line_A])
 
         # Verify we hit A, then B.
-        self.dap_server.request_configurationDone()
-        self.verify_breakpoint_hit([bp_A])
+        self.continue_to_breakpoints([bp_A])
 
         # We don't set any arguments in the initial launch request, so argc
         # should be 1.
-        self.assertEquals(
+        self.assertEqual(
             int(self.dap_server.get_local_variable_value("argc")),
             1,
             "argc != 1 before restart",
@@ -113,7 +88,7 @@ class TestDAP_restart(lldbdap_testcase.DAPTestCaseBase):
 
         # Restart with some extra 'args' and check that the new argc reflects
         # the updated launch config.
-        self.dap_server.request_restart(
+        resp = self.dap_server.request_restart(
             restartArguments={
                 "arguments": {
                     "program": program,
@@ -121,8 +96,9 @@ class TestDAP_restart(lldbdap_testcase.DAPTestCaseBase):
                 }
             }
         )
+        self.assertTrue(resp["success"])
         self.verify_breakpoint_hit([bp_A])
-        self.assertEquals(
+        self.assertEqual(
             int(self.dap_server.get_local_variable_value("argc")),
             5,
             "argc != 5 after restart",

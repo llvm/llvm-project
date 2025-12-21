@@ -104,8 +104,8 @@ define i8 @testmergesome(i32 %u, ptr %A) {
 ; CHECK-LABEL: @testmergesome(
 ; CHECK-NEXT:  V:
 ; CHECK-NEXT:    switch i32 [[U:%.*]], label [[Y:%.*]] [
-; CHECK-NEXT:    i32 0, label [[W:%.*]]
-; CHECK-NEXT:    i32 3, label [[Z:%.*]]
+; CHECK-NEXT:      i32 0, label [[W:%.*]]
+; CHECK-NEXT:      i32 3, label [[Z:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       W:
 ; CHECK-NEXT:    store i32 1, ptr [[A:%.*]], align 4
@@ -114,7 +114,7 @@ define i8 @testmergesome(i32 %u, ptr %A) {
 ; CHECK-NEXT:    store i32 0, ptr [[A]], align 4
 ; CHECK-NEXT:    br label [[Y]]
 ; CHECK:       Y:
-; CHECK-NEXT:    [[VAL_0:%.*]] = phi i8 [ 2, [[W]] ], [ 1, [[Z]] ], [ 1, [[V:%.*]] ]
+; CHECK-NEXT:    [[VAL_0:%.*]] = phi i8 [ 1, [[V:%.*]] ], [ 2, [[W]] ], [ 1, [[Z]] ]
 ; CHECK-NEXT:    ret i8 [[VAL_0]]
 ;
 V:
@@ -148,15 +148,15 @@ define i8 @testmergesome2(i32 %u, ptr %A) {
 ; CHECK-LABEL: @testmergesome2(
 ; CHECK-NEXT:  V:
 ; CHECK-NEXT:    switch i32 [[U:%.*]], label [[W:%.*]] [
-; CHECK-NEXT:    i32 4, label [[Y:%.*]]
-; CHECK-NEXT:    i32 1, label [[Y]]
-; CHECK-NEXT:    i32 2, label [[Y]]
+; CHECK-NEXT:      i32 4, label [[Y:%.*]]
+; CHECK-NEXT:      i32 1, label [[Y]]
+; CHECK-NEXT:      i32 2, label [[Y]]
 ; CHECK-NEXT:    ]
 ; CHECK:       W:
 ; CHECK-NEXT:    store i32 1, ptr [[A:%.*]], align 4
 ; CHECK-NEXT:    br label [[Y]]
 ; CHECK:       Y:
-; CHECK-NEXT:    [[VAL_0:%.*]] = phi i8 [ 1, [[V:%.*]] ], [ 2, [[W]] ], [ 1, [[V]] ], [ 1, [[V]] ]
+; CHECK-NEXT:    [[VAL_0:%.*]] = phi i8 [ 1, [[V:%.*]] ], [ 1, [[V]] ], [ 2, [[W]] ], [ 1, [[V]] ]
 ; CHECK-NEXT:    ret i8 [[VAL_0]]
 ;
 V:

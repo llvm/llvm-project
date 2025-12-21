@@ -20,9 +20,9 @@ program openacc_init_validity
   !$acc init if(ifInt)
   !$acc init device_num(1)
   !$acc init device_num(i)
-  !$acc init device_type(i)
-  !$acc init device_type(2, i, j)
-  !$acc init device_num(i) device_type(i, j) if(ifCondition)
+  !$acc init device_type(default)
+  !$acc init device_type(nvidia, radeon)
+  !$acc init device_num(i) device_type(host, multicore) if(ifCondition)
 
   !$acc parallel
   !ERROR: Directive INIT may not be called within a compute region
@@ -44,7 +44,7 @@ program openacc_init_validity
   do i = 1, N
     !ERROR: Directive INIT may not be called within a compute region
     !$acc init
-    a(i) = 3.14
+    a(i) = 3.14d0
   end do
   !$acc end parallel
 
@@ -53,7 +53,7 @@ program openacc_init_validity
   do i = 1, N
     !ERROR: Directive INIT may not be called within a compute region
     !$acc init
-    a(i) = 3.14
+    a(i) = 3.14d0
   end do
   !$acc end serial
 
@@ -62,7 +62,7 @@ program openacc_init_validity
   do i = 1, N
     !ERROR: Directive INIT may not be called within a compute region
     !$acc init
-    a(i) = 3.14
+    a(i) = 3.14d0
   end do
   !$acc end kernels
 
@@ -70,21 +70,21 @@ program openacc_init_validity
   do i = 1, N
     !ERROR: Directive INIT may not be called within a compute region
     !$acc init
-    a(i) = 3.14
+    a(i) = 3.14d0
   end do
 
   !$acc serial loop
   do i = 1, N
     !ERROR: Directive INIT may not be called within a compute region
     !$acc init
-    a(i) = 3.14
+    a(i) = 3.14d0
   end do
 
   !$acc kernels loop
   do i = 1, N
     !ERROR: Directive INIT may not be called within a compute region
     !$acc init
-    a(i) = 3.14
+    a(i) = 3.14d0
   end do
 
   !ERROR: At most one IF clause can appear on the INIT directive
@@ -93,8 +93,8 @@ program openacc_init_validity
   !ERROR: At most one DEVICE_NUM clause can appear on the INIT directive
   !$acc init device_num(1) device_num(i)
 
-  !ERROR: At most one DEVICE_TYPE clause can appear on the INIT directive
-  !$acc init device_type(2) device_type(i, j)
+  ! OK
+  !$acc init device_type(nvidia) device_type(default, *)
 
   !ERROR: Must have LOGICAL or INTEGER type
   !$acc init if(ifReal)

@@ -15,23 +15,22 @@
 #include "clang/AST/ASTTypeTraits.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclTemplate.h"
+#include "clang/AST/ExprConcepts.h"
 #include "clang/AST/ParentMapContext.h"
 #include "clang/AST/PrettyPrinter.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Lex/Lexer.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
-#include <algorithm>
 #include <cassert>
 #include <cstddef>
 #include <optional>
@@ -480,11 +479,11 @@ HasNameMatcher::HasNameMatcher(std::vector<std::string> N)
 
 static bool consumeNameSuffix(StringRef &FullName, StringRef Suffix) {
   StringRef Name = FullName;
-  if (!Name.endswith(Suffix))
+  if (!Name.ends_with(Suffix))
     return false;
   Name = Name.drop_back(Suffix.size());
   if (!Name.empty()) {
-    if (!Name.endswith("::"))
+    if (!Name.ends_with("::"))
       return false;
     Name = Name.drop_back(2);
   }
@@ -530,21 +529,30 @@ public:
   PatternSet(ArrayRef<std::string> Names) {
     Patterns.reserve(Names.size());
     for (StringRef Name : Names)
-      Patterns.push_back({Name, Name.startswith("::")});
+      Patterns.push_back({Name, Name.starts_with("::")});
   }
 
   /// Consumes the name suffix from each pattern in the set and removes the ones
   /// that didn't match.
   /// Return true if there are still any patterns left.
   bool consumeNameSuffix(StringRef NodeName, bool CanSkip) {
-    for (size_t I = 0; I < Patterns.size();) {
-      if (::clang::ast_matchers::internal::consumeNameSuffix(Patterns[I].P,
-                                                             NodeName) ||
-          CanSkip) {
-        ++I;
-      } else {
-        Patterns.erase(Patterns.begin() + I);
+    if (CanSkip) {
+      // If we can skip the node, then we need to handle the case where a
+      // skipped node has the same name as its parent.
+      // namespace a { inline namespace a { class A; } }
+      // cxxRecordDecl(hasName("::a::A"))
+      // To do this, any patterns that match should be duplicated in our set,
+      // one of them with the tail removed.
+      for (size_t I = 0, E = Patterns.size(); I != E; ++I) {
+        StringRef Pattern = Patterns[I].P;
+        if (ast_matchers::internal::consumeNameSuffix(Patterns[I].P, NodeName))
+          Patterns.push_back({Pattern, Patterns[I].IsFullyQualified});
       }
+    } else {
+      llvm::erase_if(Patterns, [&NodeName](auto &Pattern) {
+        return !::clang::ast_matchers::internal::consumeNameSuffix(Pattern.P,
+                                                                   NodeName);
+      });
     }
     return !Patterns.empty();
   }
@@ -646,17 +654,19 @@ bool HasNameMatcher::matchesNodeFullSlow(const NamedDecl &Node) const {
 
     PrintingPolicy Policy = Node.getASTContext().getPrintingPolicy();
     Policy.SuppressUnwrittenScope = SkipUnwritten;
-    Policy.SuppressInlineNamespace = SkipUnwritten;
+    Policy.SuppressInlineNamespace = llvm::to_underlying(
+        SkipUnwritten ? PrintingPolicy::SuppressInlineNamespaceMode::All
+                      : PrintingPolicy::SuppressInlineNamespaceMode::None);
     Node.printQualifiedName(OS, Policy);
 
     const StringRef FullName = OS.str();
 
     for (const StringRef Pattern : Names) {
-      if (Pattern.startswith("::")) {
+      if (Pattern.starts_with("::")) {
         if (FullName == Pattern)
           return true;
-      } else if (FullName.endswith(Pattern) &&
-                 FullName.drop_back(Pattern.size()).endswith("::")) {
+      } else if (FullName.ends_with(Pattern) &&
+                 FullName.drop_back(Pattern.size()).ends_with("::")) {
         return true;
       }
     }
@@ -686,25 +696,40 @@ static bool isTokenAtLoc(const SourceManager &SM, const LangOptions &LangOpts,
   return !Invalid && Text == TokenText;
 }
 
-std::optional<SourceLocation>
-getExpansionLocOfMacro(StringRef MacroName, SourceLocation Loc,
-                       const ASTContext &Context) {
+static std::optional<SourceLocation> getExpansionLocOfMacroRecursive(
+    StringRef MacroName, SourceLocation Loc, const ASTContext &Context,
+    llvm::DenseSet<SourceLocation> &CheckedLocations) {
   auto &SM = Context.getSourceManager();
   const LangOptions &LangOpts = Context.getLangOpts();
   while (Loc.isMacroID()) {
+    if (CheckedLocations.count(Loc))
+      return std::nullopt;
+    CheckedLocations.insert(Loc);
     SrcMgr::ExpansionInfo Expansion =
         SM.getSLocEntry(SM.getFileID(Loc)).getExpansion();
-    if (Expansion.isMacroArgExpansion())
+    if (Expansion.isMacroArgExpansion()) {
       // Check macro argument for an expansion of the given macro. For example,
       // `F(G(3))`, where `MacroName` is `G`.
-      if (std::optional<SourceLocation> ArgLoc = getExpansionLocOfMacro(
-              MacroName, Expansion.getSpellingLoc(), Context))
+      if (std::optional<SourceLocation> ArgLoc =
+              getExpansionLocOfMacroRecursive(MacroName,
+                                              Expansion.getSpellingLoc(),
+                                              Context, CheckedLocations)) {
         return ArgLoc;
+      }
+    }
     Loc = Expansion.getExpansionLocStart();
     if (isTokenAtLoc(SM, LangOpts, MacroName, Loc))
       return Loc;
   }
   return std::nullopt;
+}
+
+std::optional<SourceLocation>
+getExpansionLocOfMacro(StringRef MacroName, SourceLocation Loc,
+                       const ASTContext &Context) {
+  llvm::DenseSet<SourceLocation> CheckedLocations;
+  return getExpansionLocOfMacroRecursive(MacroName, Loc, Context,
+                                         CheckedLocations);
 }
 
 std::shared_ptr<llvm::Regex> createAndVerifyRegex(StringRef Regex,
@@ -730,6 +755,8 @@ const internal::VariadicDynCastAllOfMatcher<Decl, TypedefDecl> typedefDecl;
 const internal::VariadicDynCastAllOfMatcher<Decl, TypedefNameDecl>
     typedefNameDecl;
 const internal::VariadicDynCastAllOfMatcher<Decl, TypeAliasDecl> typeAliasDecl;
+const internal::VariadicDynCastAllOfMatcher<Decl, UsingShadowDecl>
+    usingShadowDecl;
 const internal::VariadicDynCastAllOfMatcher<Decl, TypeAliasTemplateDecl>
     typeAliasTemplateDecl;
 const internal::VariadicAllOfMatcher<Decl> decl;
@@ -780,14 +807,14 @@ const internal::VariadicDynCastAllOfMatcher<TypeLoc, PointerTypeLoc>
     pointerTypeLoc;
 const internal::VariadicDynCastAllOfMatcher<TypeLoc, ReferenceTypeLoc>
     referenceTypeLoc;
+const internal::VariadicDynCastAllOfMatcher<TypeLoc, ArrayTypeLoc> arrayTypeLoc;
 const internal::VariadicDynCastAllOfMatcher<TypeLoc,
                                             TemplateSpecializationTypeLoc>
     templateSpecializationTypeLoc;
-const internal::VariadicDynCastAllOfMatcher<TypeLoc, ElaboratedTypeLoc>
-    elaboratedTypeLoc;
 
 const internal::VariadicDynCastAllOfMatcher<Stmt, UnaryExprOrTypeTraitExpr>
     unaryExprOrTypeTraitExpr;
+const internal::VariadicDynCastAllOfMatcher<Decl, ExportDecl> exportDecl;
 const internal::VariadicDynCastAllOfMatcher<Decl, ValueDecl> valueDecl;
 const internal::VariadicDynCastAllOfMatcher<Decl, CXXConstructorDecl>
     cxxConstructorDecl;
@@ -801,6 +828,9 @@ const internal::VariadicDynCastAllOfMatcher<Decl, CXXMethodDecl> cxxMethodDecl;
 const internal::VariadicDynCastAllOfMatcher<Decl, CXXConversionDecl>
     cxxConversionDecl;
 const internal::VariadicDynCastAllOfMatcher<Decl, ConceptDecl> conceptDecl;
+const internal::VariadicDynCastAllOfMatcher<Expr, RequiresExpr> requiresExpr;
+const internal::VariadicDynCastAllOfMatcher<Decl, RequiresExprBodyDecl>
+    requiresExprBodyDecl;
 const internal::VariadicDynCastAllOfMatcher<Decl, VarDecl> varDecl;
 const internal::VariadicDynCastAllOfMatcher<Decl, FieldDecl> fieldDecl;
 const internal::VariadicDynCastAllOfMatcher<Decl, IndirectFieldDecl>
@@ -893,8 +923,11 @@ const internal::VariadicDynCastAllOfMatcher<Stmt, CXXOperatorCallExpr>
     cxxOperatorCallExpr;
 const internal::VariadicDynCastAllOfMatcher<Stmt, CXXRewrittenBinaryOperator>
     cxxRewrittenBinaryOperator;
+const internal::VariadicDynCastAllOfMatcher<Stmt, CXXFoldExpr> cxxFoldExpr;
 const internal::VariadicDynCastAllOfMatcher<Stmt, Expr> expr;
 const internal::VariadicDynCastAllOfMatcher<Stmt, DeclRefExpr> declRefExpr;
+const internal::VariadicDynCastAllOfMatcher<Stmt, DependentScopeDeclRefExpr>
+    dependentScopeDeclRefExpr;
 const internal::VariadicDynCastAllOfMatcher<Stmt, ObjCIvarRefExpr> objcIvarRefExpr;
 const internal::VariadicDynCastAllOfMatcher<Stmt, BlockExpr> blockExpr;
 const internal::VariadicDynCastAllOfMatcher<Stmt, IfStmt> ifStmt;
@@ -922,6 +955,8 @@ const internal::VariadicDynCastAllOfMatcher<Stmt, CXXTryStmt> cxxTryStmt;
 const internal::VariadicDynCastAllOfMatcher<Stmt, CXXThrowExpr> cxxThrowExpr;
 const internal::VariadicDynCastAllOfMatcher<Stmt, NullStmt> nullStmt;
 const internal::VariadicDynCastAllOfMatcher<Stmt, AsmStmt> asmStmt;
+const internal::VariadicDynCastAllOfMatcher<Decl, FileScopeAsmDecl>
+    fileScopeAsmDecl;
 const internal::VariadicDynCastAllOfMatcher<Stmt, CXXBoolLiteralExpr>
     cxxBoolLiteral;
 const internal::VariadicDynCastAllOfMatcher<Stmt, StringLiteral> stringLiteral;
@@ -977,6 +1012,8 @@ const internal::VariadicDynCastAllOfMatcher<Stmt, CXXDynamicCastExpr>
     cxxDynamicCastExpr;
 const internal::VariadicDynCastAllOfMatcher<Stmt, CXXConstCastExpr>
     cxxConstCastExpr;
+const internal::VariadicDynCastAllOfMatcher<Stmt, CXXNamedCastExpr>
+    cxxNamedCastExpr;
 const internal::VariadicDynCastAllOfMatcher<Stmt, CStyleCastExpr>
     cStyleCastExpr;
 const internal::VariadicDynCastAllOfMatcher<Stmt, ExplicitCastExpr>
@@ -1071,12 +1108,12 @@ const AstTypeMatcher<TemplateSpecializationType> templateSpecializationType;
 const AstTypeMatcher<UnaryTransformType> unaryTransformType;
 const AstTypeMatcher<RecordType> recordType;
 const AstTypeMatcher<TagType> tagType;
-const AstTypeMatcher<ElaboratedType> elaboratedType;
 const AstTypeMatcher<UsingType> usingType;
 const AstTypeMatcher<SubstTemplateTypeParmType> substTemplateTypeParmType;
 const AstTypeMatcher<TemplateTypeParmType> templateTypeParmType;
 const AstTypeMatcher<InjectedClassNameType> injectedClassNameType;
 const AstTypeMatcher<DecayedType> decayedType;
+const AstTypeMatcher<DependentNameType> dependentNameType;
 AST_TYPELOC_TRAVERSE_MATCHER_DEF(hasElementType,
                                  AST_POLYMORPHIC_SUPPORTED_TYPES(ArrayType,
                                                                  ComplexType));
@@ -1085,7 +1122,8 @@ AST_TYPELOC_TRAVERSE_MATCHER_DEF(hasValueType,
 AST_TYPELOC_TRAVERSE_MATCHER_DEF(
     pointee,
     AST_POLYMORPHIC_SUPPORTED_TYPES(BlockPointerType, MemberPointerType,
-                                    PointerType, ReferenceType));
+                                    PointerType, ReferenceType,
+                                    ObjCObjectPointerType));
 
 const internal::VariadicDynCastAllOfMatcher<Stmt, OMPExecutableDirective>
     ompExecutableDirective;

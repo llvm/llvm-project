@@ -33,10 +33,7 @@
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/DynamicType.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/ProgramStateTrait.h"
 
 using namespace clang;
 using namespace ento;
@@ -65,7 +62,8 @@ public:
 };
 
 class DeleteWithNonVirtualDtorChecker : public CXXDeleteChecker {
-  mutable std::unique_ptr<BugType> BT;
+  const BugType BT{
+      this, "Destruction of a polymorphic object with no virtual destructor"};
 
   void
   checkTypedDeleteExpr(const CXXDeleteExpr *DE, CheckerContext &C,
@@ -74,7 +72,8 @@ class DeleteWithNonVirtualDtorChecker : public CXXDeleteChecker {
 };
 
 class CXXArrayDeleteChecker : public CXXDeleteChecker {
-  mutable std::unique_ptr<BugType> BT;
+  const BugType BT{this,
+                   "Deleting an array of polymorphic objects is undefined"};
 
   void
   checkTypedDeleteExpr(const CXXDeleteExpr *DE, CheckerContext &C,
@@ -114,23 +113,19 @@ void DeleteWithNonVirtualDtorChecker::checkTypedDeleteExpr(
   if (!BaseClass || !DerivedClass)
     return;
 
+  if (!BaseClass->hasDefinition() || !DerivedClass->hasDefinition())
+    return;
+
   if (BaseClass->getDestructor()->isVirtual())
     return;
 
   if (!DerivedClass->isDerivedFrom(BaseClass))
     return;
 
-  if (!BT)
-    BT.reset(new BugType(this,
-                         "Destruction of a polymorphic object with no "
-                         "virtual destructor",
-                         "Logic error"));
-
   ExplodedNode *N = C.generateNonFatalErrorNode();
   if (!N)
     return;
-  auto R =
-      std::make_unique<PathSensitiveBugReport>(*BT, BT->getDescription(), N);
+  auto R = std::make_unique<PathSensitiveBugReport>(BT, BT.getDescription(), N);
 
   // Mark region of problematic base class for later use in the BugVisitor.
   R->markInteresting(BaseClassRegion);
@@ -148,17 +143,14 @@ void CXXArrayDeleteChecker::checkTypedDeleteExpr(
   if (!BaseClass || !DerivedClass)
     return;
 
+  if (!BaseClass->hasDefinition() || !DerivedClass->hasDefinition())
+    return;
+
   if (DE->getOperatorDelete()->getOverloadedOperator() != OO_Array_Delete)
     return;
 
   if (!DerivedClass->isDerivedFrom(BaseClass))
     return;
-
-  if (!BT)
-    BT.reset(new BugType(this,
-                         "Deleting an array of polymorphic objects "
-                         "is undefined",
-                         "Logic error"));
 
   ExplodedNode *N = C.generateNonFatalErrorNode();
   if (!N)
@@ -176,7 +168,7 @@ void CXXArrayDeleteChecker::checkTypedDeleteExpr(
      << SourceType.getAsString(C.getASTContext().getPrintingPolicy())
      << "' is undefined";
 
-  auto R = std::make_unique<PathSensitiveBugReport>(*BT, OS.str(), N);
+  auto R = std::make_unique<PathSensitiveBugReport>(BT, OS.str(), N);
 
   // Mark region of problematic base class for later use in the BugVisitor.
   R->markInteresting(BaseClassRegion);
@@ -224,11 +216,11 @@ CXXDeleteChecker::PtrCastVisitor::VisitNode(const ExplodedNode *N,
                                                     /*addPosRange=*/true);
 }
 
-void ento::registerCXXArrayDeleteChecker(CheckerManager &mgr) {
+void ento::registerArrayDeleteChecker(CheckerManager &mgr) {
   mgr.registerChecker<CXXArrayDeleteChecker>();
 }
 
-bool ento::shouldRegisterCXXArrayDeleteChecker(const CheckerManager &mgr) {
+bool ento::shouldRegisterArrayDeleteChecker(const CheckerManager &mgr) {
   return true;
 }
 

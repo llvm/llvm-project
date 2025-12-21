@@ -17,6 +17,7 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/Type.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Debug.h"
 #include <cassert>
 
@@ -73,7 +74,13 @@ public:
 ///
 /// Contains storage locations for all modeled fields of the record (also
 /// referred to as "children"). The child map is flat, so accessible members of
-/// the base class are directly accesible as children of this location.
+/// the base class are directly accessible as children of this location.
+///
+/// Record storage locations may also contain so-called synthetic fields. These
+/// are typically used to model the internal state of a class (e.g. the value
+/// stored in a `std::optional`) without having to depend on that class's
+/// implementation details. All `RecordStorageLocation`s of a given type should
+/// have the same synthetic fields.
 ///
 /// The storage location for a field of reference type may be null. This
 /// typically occurs in one of two situations:
@@ -88,12 +95,12 @@ public:
 class RecordStorageLocation final : public StorageLocation {
 public:
   using FieldToLoc = llvm::DenseMap<const ValueDecl *, StorageLocation *>;
+  using SyntheticFieldMap = llvm::StringMap<StorageLocation *>;
 
-  explicit RecordStorageLocation(QualType Type)
-      : RecordStorageLocation(Type, FieldToLoc()) {}
-
-  RecordStorageLocation(QualType Type, FieldToLoc TheChildren)
-      : StorageLocation(Kind::Record, Type), Children(std::move(TheChildren)) {
+  RecordStorageLocation(QualType Type, FieldToLoc TheChildren,
+                        SyntheticFieldMap TheSyntheticFields)
+      : StorageLocation(Kind::Record, Type), Children(std::move(TheChildren)),
+        SyntheticFields(std::move(TheSyntheticFields)) {
     assert(!Type.isNull());
     assert(Type->isRecordType());
     assert([this] {
@@ -124,13 +131,42 @@ public:
                      << " on StorageLocation " << this << " of type "
                      << getType() << "\n";
         llvm::dbgs() << "Existing children:\n";
-        for ([[maybe_unused]] auto [Field, Loc] : Children) {
+        for (const auto &Field : Children.keys()) {
           llvm::dbgs() << Field->getNameAsString() << "\n";
         }
       }
     });
     assert(It != Children.end());
     return It->second;
+  }
+
+  /// Returns the storage location for the synthetic field `Name`.
+  /// The synthetic field must exist.
+  StorageLocation &getSyntheticField(llvm::StringRef Name) const {
+    StorageLocation *Loc = SyntheticFields.lookup(Name);
+    LLVM_DEBUG({
+      if (Loc == nullptr) {
+        llvm::dbgs() << "Couldn't find synthetic field " << Name
+                     << " on StorageLocation " << this << " of type "
+                     << getType() << "\n";
+        llvm::dbgs() << "Existing synthetic fields:\n";
+        for ([[maybe_unused]] const auto &[Name, Loc] : SyntheticFields) {
+          llvm::dbgs() << Name << "\n";
+        }
+      }
+    });
+    assert(Loc != nullptr);
+    return *Loc;
+  }
+
+  llvm::iterator_range<SyntheticFieldMap::const_iterator>
+  synthetic_fields() const {
+    return {SyntheticFields.begin(), SyntheticFields.end()};
+  }
+
+  /// Add a synthetic field, if none by that name is already present.
+  void addSyntheticField(llvm::StringRef Name, StorageLocation &Loc) {
+    SyntheticFields.insert({Name, &Loc});
   }
 
   /// Changes the child storage location for a field `D` of reference type.
@@ -145,12 +181,18 @@ public:
     Children[&D] = Loc;
   }
 
+  /// Add a child storage location for a field `D`, if not already present.
+  void addChild(const ValueDecl &D, StorageLocation *Loc) {
+    Children.insert({&D, Loc});
+  }
+
   llvm::iterator_range<FieldToLoc::const_iterator> children() const {
     return {Children.begin(), Children.end()};
   }
 
 private:
   FieldToLoc Children;
+  SyntheticFieldMap SyntheticFields;
 };
 
 } // namespace dataflow

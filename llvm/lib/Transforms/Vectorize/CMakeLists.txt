@@ -1,20 +1,42 @@
 add_llvm_component_library(LLVMVectorize
   LoadStoreVectorizer.cpp
+  LoopIdiomVectorize.cpp
   LoopVectorizationLegality.cpp
   LoopVectorize.cpp
+  SandboxVectorizer/DependencyGraph.cpp
+  SandboxVectorizer/InstrMaps.cpp
+  SandboxVectorizer/Interval.cpp
+  SandboxVectorizer/Legality.cpp
+  SandboxVectorizer/Passes/BottomUpVec.cpp
+  SandboxVectorizer/Passes/PackReuse.cpp
+  SandboxVectorizer/Passes/RegionsFromBBs.cpp
+  SandboxVectorizer/Passes/RegionsFromMetadata.cpp
+  SandboxVectorizer/Passes/SeedCollection.cpp
+  SandboxVectorizer/Passes/TransactionAcceptOrRevert.cpp
+  SandboxVectorizer/Passes/TransactionSave.cpp
+  SandboxVectorizer/SandboxVectorizer.cpp
+  SandboxVectorizer/SandboxVectorizerPassBuilder.cpp
+  SandboxVectorizer/Scheduler.cpp
+  SandboxVectorizer/SeedCollector.cpp
+  SandboxVectorizer/VecUtils.cpp
   SLPVectorizer.cpp
   Vectorize.cpp
   VectorCombine.cpp
   VPlan.cpp
-  VPlanHCFGBuilder.cpp
+  VPlanAnalysis.cpp
+  VPlanConstruction.cpp
+  VPlanPredicator.cpp
   VPlanRecipes.cpp
   VPlanSLP.cpp
   VPlanTransforms.cpp
+  VPlanUnroll.cpp
   VPlanVerifier.cpp
+  VPlanUtils.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/Transforms
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/Transforms/Vectorize
+  ${LLVM_MAIN_INCLUDE_DIR}/llvm/Transforms/Vectorize/SandboxVectorizer
 
   DEPENDS
   intrinsics_gen
@@ -24,4 +46,5 @@ add_llvm_component_library(LLVMVectorize
   Core
   Support
   TransformUtils
+  SandboxIR
   )

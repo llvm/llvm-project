@@ -20,11 +20,11 @@
 #ifndef LLVM_TRANSFORMS_VECTORIZE_VPLAN_VALUE_H
 #define LLVM_TRANSFORMS_VECTORIZE_VPLAN_VALUE_H
 
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/TinyPtrVector.h"
 #include "llvm/ADT/iterator_range.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -32,32 +32,30 @@ namespace llvm {
 class raw_ostream;
 class Value;
 class VPDef;
+struct VPDoubleValueDef;
 class VPSlotTracker;
 class VPUser;
 class VPRecipeBase;
-class VPWidenMemoryInstructionRecipe;
+class VPInterleaveBase;
+class VPPhiAccessors;
 
-// This is the base class of the VPlan Def/Use graph, used for modeling the data
-// flow into, within and out of the VPlan. VPValues can stand for live-ins
-// coming from the input IR, instructions which VPlan will generate if executed
-// and live-outs which the VPlan will need to fix accordingly.
-class VPValue {
-  friend class VPBuilder;
+/// This is the base class of the VPlan Def/Use graph, used for modeling the
+/// data flow into, within and out of the VPlan. VPValues can stand for live-ins
+/// coming from the input IR and instructions which VPlan will generate if
+/// executed.
+class LLVM_ABI_FOR_TEST VPValue {
   friend class VPDef;
-  friend class VPInstruction;
-  friend struct VPlanTransforms;
-  friend class VPBasicBlock;
-  friend class VPInterleavedAccessInfo;
-  friend class VPSlotTracker;
-  friend class VPRecipeBase;
-  friend class VPWidenMemoryInstructionRecipe;
+  friend struct VPDoubleValueDef;
+  friend class VPInterleaveBase;
+  friend class VPlan;
+  friend class VPExpressionRecipe;
 
   const unsigned char SubclassID; ///< Subclass identifier (for isa/dyn_cast).
 
   SmallVector<VPUser *, 1> Users;
 
 protected:
-  // Hold the underlying Value, if any, attached to this VPValue.
+  /// Hold the underlying Value, if any, attached to this VPValue.
   Value *UnderlyingVal;
 
   /// Pointer to the VPDef that defines this VPValue. If it is nullptr, the
@@ -66,6 +64,13 @@ protected:
 
   VPValue(const unsigned char SC, Value *UV = nullptr, VPDef *Def = nullptr);
 
+  /// Create a live-in VPValue.
+  VPValue(Value *UV = nullptr) : VPValue(VPValueSC, UV, nullptr) {}
+  /// Create a VPValue for a \p Def which is a subclass of VPValue.
+  VPValue(VPDef *Def, Value *UV = nullptr) : VPValue(VPVRecipeSC, UV, Def) {}
+  /// Create a VPValue for a \p Def which defines multiple values.
+  VPValue(Value *UV, VPDef *Def) : VPValue(VPValueSC, UV, Def) {}
+
   // DESIGN PRINCIPLE: Access to the underlying IR must be strictly limited to
   // the front-end and back-end of VPlan so that the middle-end is as
   // independent as possible of the underlying IR. We grant access to the
@@ -73,16 +78,9 @@ protected:
   // for multiple underlying IRs (Polly?) by providing a new VPlan front-end,
   // back-end and analysis information for the new IR.
 
-  // Set \p Val as the underlying Value of this VPValue.
-  void setUnderlyingValue(Value *Val) {
-    assert(!UnderlyingVal && "Underlying Value is already set.");
-    UnderlyingVal = Val;
-  }
-
 public:
   /// Return the underlying Value attached to this VPValue.
-  Value *getUnderlyingValue() { return UnderlyingVal; }
-  const Value *getUnderlyingValue() const { return UnderlyingVal; }
+  Value *getUnderlyingValue() const { return UnderlyingVal; }
 
   /// An enumeration for keeping track of the concrete subclass of VPValue that
   /// are actually instantiated.
@@ -92,12 +90,6 @@ public:
     VPVRecipeSC /// A VPValue sub-class that is a VPRecipeBase.
   };
 
-  /// Create a live-in VPValue.
-  VPValue(Value *UV = nullptr) : VPValue(VPValueSC, UV, nullptr) {}
-  /// Create a VPValue for a \p Def which is a subclass of VPValue.
-  VPValue(VPDef *Def, Value *UV = nullptr) : VPValue(VPVRecipeSC, UV, Def) {}
-  /// Create a VPValue for a \p Def which defines multiple values.
-  VPValue(Value *UV, VPDef *Def) : VPValue(VPValueSC, UV, Def) {}
   VPValue(const VPValue &) = delete;
   VPValue &operator=(const VPValue &) = delete;
 
@@ -121,18 +113,11 @@ public:
 
   /// Remove a single \p User from the list of users.
   void removeUser(VPUser &User) {
-    bool Found = false;
     // The same user can be added multiple times, e.g. because the same VPValue
     // is used twice by the same VPUser. Remove a single one.
-    erase_if(Users, [&User, &Found](VPUser *Other) {
-      if (Found)
-        return false;
-      if (Other == &User) {
-        Found = true;
-        return true;
-      }
-      return false;
-    });
+    auto *I = find(Users, &User);
+    if (I != Users.end())
+      Users.erase(I);
   }
 
   typedef SmallVectorImpl<VPUser *>::iterator user_iterator;
@@ -150,7 +135,7 @@ public:
   }
 
   /// Returns true if the value has more than one unique user.
-  bool hasMoreThanOneUniqueUser() {
+  bool hasMoreThanOneUniqueUser() const {
     if (getNumUsers() == 0)
       return false;
 
@@ -161,7 +146,23 @@ public:
     return Current != user_end();
   }
 
+  bool hasOneUse() const { return getNumUsers() == 1; }
+
+  /// Return the single user of this value, or nullptr if there is not exactly
+  /// one user.
+  VPUser *getSingleUser() { return hasOneUse() ? *user_begin() : nullptr; }
+  const VPUser *getSingleUser() const {
+    return hasOneUse() ? *user_begin() : nullptr;
+  }
+
   void replaceAllUsesWith(VPValue *New);
+
+  /// Go through the uses list for this VPValue and make each use point to \p
+  /// New if the callback ShouldReplace returns true for the given use specified
+  /// by a pair of (VPUser, the use index).
+  void replaceUsesWithIf(
+      VPValue *New,
+      llvm::function_ref<bool(VPUser &U, unsigned Idx)> ShouldReplace);
 
   /// Returns the recipe defining this VPValue or nullptr if it is not defined
   /// by a recipe, i.e. is a live-in.
@@ -177,42 +178,39 @@ public:
   /// Returns the underlying IR value, if this VPValue is defined outside the
   /// scope of VPlan. Returns nullptr if the VPValue is defined by a VPDef
   /// inside a VPlan.
-  Value *getLiveInIRValue() {
-    assert(isLiveIn() &&
-           "VPValue is not a live-in; it is defined by a VPDef inside a VPlan");
-    return getUnderlyingValue();
-  }
-  const Value *getLiveInIRValue() const {
+  Value *getLiveInIRValue() const {
     assert(isLiveIn() &&
            "VPValue is not a live-in; it is defined by a VPDef inside a VPlan");
     return getUnderlyingValue();
   }
 
-  /// Returns true if the VPValue is defined outside any vector regions, i.e. it
-  /// is a live-in value.
-  /// TODO: Also handle recipes defined in pre-header blocks.
-  bool isDefinedOutsideVectorRegions() const { return !hasDefiningRecipe(); }
+  /// Returns true if the VPValue is defined outside any loop.
+  bool isDefinedOutsideLoopRegions() const;
+
+  // Set \p Val as the underlying Value of this VPValue.
+  void setUnderlyingValue(Value *Val) {
+    assert(!UnderlyingVal && "Underlying Value is already set.");
+    UnderlyingVal = Val;
+  }
 };
 
-typedef DenseMap<Value *, VPValue *> Value2VPValueTy;
-typedef DenseMap<VPValue *, Value *> VPValue2ValueTy;
-
-raw_ostream &operator<<(raw_ostream &OS, const VPValue &V);
+LLVM_ABI_FOR_TEST raw_ostream &operator<<(raw_ostream &OS,
+                                          const VPRecipeBase &R);
 
 /// This class augments VPValue with operands which provide the inverse def-use
 /// edges from VPValue's users to their defs.
 class VPUser {
-public:
-  /// Subclass identifier (for isa/dyn_cast).
-  enum class VPUserID {
-    Recipe,
-    LiveOut,
-  };
+  /// Grant access to removeOperand for VPPhiAccessors, the only supported user.
+  friend class VPPhiAccessors;
 
-private:
   SmallVector<VPValue *, 2> Operands;
 
-  VPUserID ID;
+  /// Removes the operand at index \p Idx. This also removes the VPUser from the
+  /// use-list of the operand.
+  void removeOperand(unsigned Idx) {
+    getOperand(Idx)->removeUser(*this);
+    Operands.erase(Operands.begin() + Idx);
+  }
 
 protected:
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -220,16 +218,7 @@ protected:
   void printOperands(raw_ostream &O, VPSlotTracker &SlotTracker) const;
 #endif
 
-  VPUser(ArrayRef<VPValue *> Operands, VPUserID ID) : ID(ID) {
-    for (VPValue *Operand : Operands)
-      addOperand(Operand);
-  }
-
-  VPUser(std::initializer_list<VPValue *> Operands, VPUserID ID)
-      : VPUser(ArrayRef<VPValue *>(Operands), ID) {}
-
-  template <typename IterT>
-  VPUser(iterator_range<IterT> Operands, VPUserID ID) : ID(ID) {
+  VPUser(ArrayRef<VPValue *> Operands) {
     for (VPValue *Operand : Operands)
       addOperand(Operand);
   }
@@ -242,8 +231,6 @@ public:
     for (VPValue *Op : operands())
       Op->removeUser(*this);
   }
-
-  VPUserID getVPUserID() const { return ID; }
 
   void addOperand(VPValue *Operand) {
     Operands.push_back(Operand);
@@ -262,10 +249,14 @@ public:
     New->addUser(*this);
   }
 
-  void removeLastOperand() {
-    VPValue *Op = Operands.pop_back_val();
-    Op->removeUser(*this);
+  /// Swap operands of the VPUser. It must have exactly 2 operands.
+  void swapOperands() {
+    assert(Operands.size() == 2 && "must have 2 operands to swap");
+    std::swap(Operands[0], Operands[1]);
   }
+
+  /// Replaces all uses of \p From in the VPUser with \p To.
+  void replaceUsesOfWith(VPValue *From, VPValue *To);
 
   typedef SmallVectorImpl<VPValue *>::iterator operand_iterator;
   typedef SmallVectorImpl<VPValue *>::const_iterator const_operand_iterator;
@@ -286,12 +277,20 @@ public:
   virtual bool usesScalars(const VPValue *Op) const {
     assert(is_contained(operands(), Op) &&
            "Op must be an operand of the recipe");
-    return onlyFirstLaneUsed(Op);
+    return usesFirstLaneOnly(Op);
   }
 
   /// Returns true if the VPUser only uses the first lane of operand \p Op.
   /// Conservatively returns false.
-  virtual bool onlyFirstLaneUsed(const VPValue *Op) const {
+  virtual bool usesFirstLaneOnly(const VPValue *Op) const {
+    assert(is_contained(operands(), Op) &&
+           "Op must be an operand of the recipe");
+    return false;
+  }
+
+  /// Returns true if the VPUser only uses the first part of operand \p Op.
+  /// Conservatively returns false.
+  virtual bool usesFirstPartOnly(const VPValue *Op) const {
     assert(is_contained(operands(), Op) &&
            "Op must be an operand of the recipe");
     return false;
@@ -325,7 +324,7 @@ class VPDef {
     assert(V->Def == this && "can only remove VPValue linked with this VPDef");
     assert(is_contained(DefinedValues, V) &&
            "VPValue to remove must be in DefinedValues");
-    erase_value(DefinedValues, V);
+    llvm::erase(DefinedValues, V);
     V->Def = nullptr;
   }
 
@@ -338,33 +337,45 @@ public:
     VPBranchOnMaskSC,
     VPDerivedIVSC,
     VPExpandSCEVSC,
+    VPExpressionSC,
+    VPIRInstructionSC,
     VPInstructionSC,
+    VPInterleaveEVLSC,
     VPInterleaveSC,
+    VPReductionEVLSC,
     VPReductionSC,
     VPReplicateSC,
     VPScalarIVStepsSC,
+    VPVectorPointerSC,
+    VPVectorEndPointerSC,
     VPWidenCallSC,
     VPWidenCanonicalIVSC,
     VPWidenCastSC,
     VPWidenGEPSC,
-    VPWidenMemoryInstructionSC,
+    VPWidenIntrinsicSC,
+    VPWidenLoadEVLSC,
+    VPWidenLoadSC,
+    VPWidenStoreEVLSC,
+    VPWidenStoreSC,
     VPWidenSC,
     VPWidenSelectSC,
-    // START: Phi-like recipes. Need to be kept together.
     VPBlendSC,
+    VPHistogramSC,
+    // START: Phi-like recipes. Need to be kept together.
+    VPWidenPHISC,
     VPPredInstPHISC,
     // START: SubclassID for recipes that inherit VPHeaderPHIRecipe.
     // VPHeaderPHIRecipe need to be kept together.
     VPCanonicalIVPHISC,
     VPActiveLaneMaskPHISC,
+    VPEVLBasedIVPHISC,
     VPFirstOrderRecurrencePHISC,
-    VPWidenPHISC,
     VPWidenIntOrFpInductionSC,
     VPWidenPointerInductionSC,
     VPReductionPHISC,
     // END: SubclassID for recipes that inherit VPHeaderPHIRecipe
     // END: Phi-like recipes
-    VPFirstPHISC = VPBlendSC,
+    VPFirstPHISC = VPWidenPHISC,
     VPFirstHeaderPHISC = VPCanonicalIVPHISC,
     VPLastHeaderPHISC = VPReductionPHISC,
     VPLastPHISC = VPReductionPHISC,
@@ -421,40 +432,12 @@ public:
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Dump the VPDef to stderr (for debugging).
-  void dump() const;
+  LLVM_ABI_FOR_TEST void dump() const;
 
   /// Each concrete VPDef prints itself.
   virtual void print(raw_ostream &O, const Twine &Indent,
                      VPSlotTracker &SlotTracker) const = 0;
 #endif
-};
-
-class VPlan;
-class VPBasicBlock;
-
-/// This class can be used to assign consecutive numbers to all VPValues in a
-/// VPlan and allows querying the numbering for printing, similar to the
-/// ModuleSlotTracker for IR values.
-class VPSlotTracker {
-  DenseMap<const VPValue *, unsigned> Slots;
-  unsigned NextSlot = 0;
-
-  void assignSlot(const VPValue *V);
-  void assignSlots(const VPlan &Plan);
-  void assignSlots(const VPBasicBlock *VPBB);
-
-public:
-  VPSlotTracker(const VPlan *Plan = nullptr) {
-    if (Plan)
-      assignSlots(*Plan);
-  }
-
-  unsigned getSlot(const VPValue *V) const {
-    auto I = Slots.find(V);
-    if (I == Slots.end())
-      return -1;
-    return I->second;
-  }
 };
 
 } // namespace llvm

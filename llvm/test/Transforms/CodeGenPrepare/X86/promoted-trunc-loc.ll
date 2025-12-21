@@ -1,7 +1,7 @@
 ; RUN: opt < %s -codegenprepare -S -mtriple=x86_64-unknown-unknown | FileCheck %s --match-full-lines
 
 ; Make sure the promoted trunc doesn't get a debug location associated.
-; CHECK: %promoted = trunc i32 %or to i16
+; CHECK: %promoted3 = trunc i32 %or to i16
 
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.13.0"

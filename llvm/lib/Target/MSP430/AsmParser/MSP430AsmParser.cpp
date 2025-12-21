@@ -6,18 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "MCTargetDesc/MSP430MCAsmInfo.h"
+#include "MCTargetDesc/MSP430MCTargetDesc.h"
 #include "MSP430.h"
 #include "MSP430RegisterInfo.h"
-#include "MCTargetDesc/MSP430MCTargetDesc.h"
 #include "TargetInfo/MSP430TargetInfo.h"
 
 #include "llvm/ADT/APInt.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
-#include "llvm/MC/MCInstBuilder.h"
 #include "llvm/MC/MCInstrInfo.h"
-#include "llvm/MC/MCParser/MCAsmLexer.h"
+#include "llvm/MC/MCParser/AsmLexer.h"
 #include "llvm/MC/MCParser/MCParsedAsmOperand.h"
 #include "llvm/MC/MCParser/MCTargetAsmParser.h"
 #include "llvm/MC/MCStreamer.h"
@@ -25,8 +25,8 @@
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCValue.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/MathExtras.h"
 
 #define DEBUG_TYPE "msp430-asm-parser"
 
@@ -36,11 +36,10 @@ namespace {
 
 /// Parses MSP430 assembly from a stream.
 class MSP430AsmParser : public MCTargetAsmParser {
-  const MCSubtargetInfo &STI;
   MCAsmParser &Parser;
   const MCRegisterInfo *MRI;
 
-  bool MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
+  bool matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
                                OperandVector &Operands, MCStreamer &Out,
                                uint64_t &ErrorInfo,
                                bool MatchingInlineAsm) override;
@@ -49,7 +48,7 @@ class MSP430AsmParser : public MCTargetAsmParser {
   ParseStatus tryParseRegister(MCRegister &Reg, SMLoc &StartLoc,
                                SMLoc &EndLoc) override;
 
-  bool ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
+  bool parseInstruction(ParseInstructionInfo &Info, StringRef Name,
                         SMLoc NameLoc, OperandVector &Operands) override;
 
   ParseStatus parseDirective(AsmToken DirectiveID) override;
@@ -66,7 +65,7 @@ class MSP430AsmParser : public MCTargetAsmParser {
   bool ParseLiteralValues(unsigned Size, SMLoc L);
 
   MCAsmParser &getParser() const { return Parser; }
-  MCAsmLexer &getLexer() const { return Parser.getLexer(); }
+  AsmLexer &getLexer() const { return Parser.getLexer(); }
 
   /// @name Auto-generated Matcher Functions
   /// {
@@ -79,7 +78,7 @@ class MSP430AsmParser : public MCTargetAsmParser {
 public:
   MSP430AsmParser(const MCSubtargetInfo &STI, MCAsmParser &Parser,
                   const MCInstrInfo &MII, const MCTargetOptions &Options)
-      : MCTargetAsmParser(Options, STI, MII), STI(STI), Parser(Parser) {
+      : MCTargetAsmParser(Options, STI, MII), Parser(Parser) {
     MCAsmParserExtension::Initialize(Parser);
     MRI = getContext().getRegisterInfo();
 
@@ -101,12 +100,12 @@ class MSP430Operand : public MCParsedAsmOperand {
   } Kind;
 
   struct Memory {
-    unsigned Reg;
+    MCRegister Reg;
     const MCExpr *Offset;
   };
   union {
     const MCExpr *Imm;
-    unsigned      Reg;
+    MCRegister    Reg;
     StringRef     Tok;
     Memory        Mem;
   };
@@ -116,11 +115,11 @@ class MSP430Operand : public MCParsedAsmOperand {
 public:
   MSP430Operand(StringRef Tok, SMLoc const &S)
       : Kind(k_Tok), Tok(Tok), Start(S), End(S) {}
-  MSP430Operand(KindTy Kind, unsigned Reg, SMLoc const &S, SMLoc const &E)
+  MSP430Operand(KindTy Kind, MCRegister Reg, SMLoc const &S, SMLoc const &E)
       : Kind(Kind), Reg(Reg), Start(S), End(E) {}
   MSP430Operand(MCExpr const *Imm, SMLoc const &S, SMLoc const &E)
       : Kind(k_Imm), Imm(Imm), Start(S), End(E) {}
-  MSP430Operand(unsigned Reg, MCExpr const *Expr, SMLoc const &S,
+  MSP430Operand(MCRegister Reg, MCExpr const *Expr, SMLoc const &S,
                 SMLoc const &E)
       : Kind(k_Mem), Mem({Reg, Expr}), Start(S), End(E) {}
 
@@ -183,12 +182,12 @@ public:
     return Tok;
   }
 
-  unsigned getReg() const override {
+  MCRegister getReg() const override {
     assert(Kind == k_Reg && "Invalid access!");
     return Reg;
   }
 
-  void setReg(unsigned RegNo) {
+  void setReg(MCRegister RegNo) {
     assert(Kind == k_Reg && "Invalid access!");
     Reg = RegNo;
   }
@@ -197,9 +196,9 @@ public:
     return std::make_unique<MSP430Operand>(Str, S);
   }
 
-  static std::unique_ptr<MSP430Operand> CreateReg(unsigned RegNum, SMLoc S,
+  static std::unique_ptr<MSP430Operand> CreateReg(MCRegister Reg, SMLoc S,
                                                   SMLoc E) {
-    return std::make_unique<MSP430Operand>(k_Reg, RegNum, S, E);
+    return std::make_unique<MSP430Operand>(k_Reg, Reg, S, E);
   }
 
   static std::unique_ptr<MSP430Operand> CreateImm(const MCExpr *Val, SMLoc S,
@@ -207,52 +206,52 @@ public:
     return std::make_unique<MSP430Operand>(Val, S, E);
   }
 
-  static std::unique_ptr<MSP430Operand> CreateMem(unsigned RegNum,
-                                                  const MCExpr *Val,
-                                                  SMLoc S, SMLoc E) {
-    return std::make_unique<MSP430Operand>(RegNum, Val, S, E);
+  static std::unique_ptr<MSP430Operand>
+  CreateMem(MCRegister Reg, const MCExpr *Val, SMLoc S, SMLoc E) {
+    return std::make_unique<MSP430Operand>(Reg, Val, S, E);
   }
 
-  static std::unique_ptr<MSP430Operand> CreateIndReg(unsigned RegNum, SMLoc S,
-                                                  SMLoc E) {
-    return std::make_unique<MSP430Operand>(k_IndReg, RegNum, S, E);
+  static std::unique_ptr<MSP430Operand> CreateIndReg(MCRegister Reg, SMLoc S,
+                                                     SMLoc E) {
+    return std::make_unique<MSP430Operand>(k_IndReg, Reg, S, E);
   }
 
-  static std::unique_ptr<MSP430Operand> CreatePostIndReg(unsigned RegNum, SMLoc S,
-                                                  SMLoc E) {
-    return std::make_unique<MSP430Operand>(k_PostIndReg, RegNum, S, E);
+  static std::unique_ptr<MSP430Operand> CreatePostIndReg(MCRegister Reg,
+                                                         SMLoc S, SMLoc E) {
+    return std::make_unique<MSP430Operand>(k_PostIndReg, Reg, S, E);
   }
 
   SMLoc getStartLoc() const override { return Start; }
   SMLoc getEndLoc() const override { return End; }
 
-  void print(raw_ostream &O) const override {
+  void print(raw_ostream &O, const MCAsmInfo &MAI) const override {
     switch (Kind) {
     case k_Tok:
       O << "Token " << Tok;
       break;
     case k_Reg:
-      O << "Register " << Reg;
+      O << "Register " << Reg.id();
       break;
     case k_Imm:
-      O << "Immediate " << *Imm;
+      O << "Immediate ";
+      MAI.printExpr(O, *Imm);
       break;
     case k_Mem:
       O << "Memory ";
-      O << *Mem.Offset << "(" << Reg << ")";
+      MAI.printExpr(O, *Mem.Offset);
       break;
     case k_IndReg:
-      O << "RegInd " << Reg;
+      O << "RegInd " << Reg.id();
       break;
     case k_PostIndReg:
-      O << "PostInc " << Reg;
+      O << "PostInc " << Reg.id();
       break;
     }
   }
 };
 } // end anonymous namespace
 
-bool MSP430AsmParser::MatchAndEmitInstruction(SMLoc Loc, unsigned &Opcode,
+bool MSP430AsmParser::matchAndEmitInstruction(SMLoc Loc, unsigned &Opcode,
                                               OperandVector &Operands,
                                               MCStreamer &Out,
                                               uint64_t &ErrorInfo,
@@ -264,7 +263,7 @@ bool MSP430AsmParser::MatchAndEmitInstruction(SMLoc Loc, unsigned &Opcode,
   switch (MatchResult) {
   case Match_Success:
     Inst.setLoc(Loc);
-    Out.emitInstruction(Inst, STI);
+    Out.emitInstruction(Inst, *STI);
     return false;
   case Match_MnemonicFail:
     return Error(Loc, "invalid instruction mnemonic");
@@ -286,8 +285,8 @@ bool MSP430AsmParser::MatchAndEmitInstruction(SMLoc Loc, unsigned &Opcode,
 }
 
 // Auto-generated by TableGen
-static unsigned MatchRegisterName(StringRef Name);
-static unsigned MatchRegisterAltName(StringRef Name);
+static MCRegister MatchRegisterName(StringRef Name);
+static MCRegister MatchRegisterAltName(StringRef Name);
 
 bool MSP430AsmParser::parseRegister(MCRegister &Reg, SMLoc &StartLoc,
                                     SMLoc &EndLoc) {
@@ -385,7 +384,7 @@ bool MSP430AsmParser::parseJccInstruction(ParseInstructionInfo &Info,
   return false;
 }
 
-bool MSP430AsmParser::ParseInstruction(ParseInstructionInfo &Info,
+bool MSP430AsmParser::parseInstruction(ParseInstructionInfo &Info,
                                        StringRef Name, SMLoc NameLoc,
                                        OperandVector &Operands) {
   // Drop .w suffix
@@ -537,7 +536,8 @@ bool MSP430AsmParser::ParseLiteralValues(unsigned Size, SMLoc L) {
   return (parseMany(parseOne));
 }
 
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeMSP430AsmParser() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializeMSP430AsmParser() {
   RegisterMCAsmParser<MSP430AsmParser> X(getTheMSP430Target());
 }
 
@@ -545,8 +545,8 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeMSP430AsmParser() {
 #define GET_MATCHER_IMPLEMENTATION
 #include "MSP430GenAsmMatcher.inc"
 
-static unsigned convertGR16ToGR8(unsigned Reg) {
-  switch (Reg) {
+static MCRegister convertGR16ToGR8(MCRegister Reg) {
+  switch (Reg.id()) {
   default:
     llvm_unreachable("Unknown GR16 register");
   case MSP430::PC:  return MSP430::PCB;
@@ -575,7 +575,7 @@ unsigned MSP430AsmParser::validateTargetOperandClass(MCParsedAsmOperand &AsmOp,
   if (!Op.isReg())
     return Match_InvalidOperand;
 
-  unsigned Reg = Op.getReg();
+  MCRegister Reg = Op.getReg();
   bool isGR16 =
       MSP430MCRegisterClasses[MSP430::GR16RegClassID].contains(Reg);
 

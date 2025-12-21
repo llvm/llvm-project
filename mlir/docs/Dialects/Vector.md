@@ -1,5 +1,8 @@
 # 'vector' Dialect
 
+**Please post an RFC on the [forum](https://llvm.discourse.group/c/mlir/31)
+before adding  any operation in this dialect.**
+
 [TOC]
 
 MLIR supports multi-dimensional `vector` types and custom operations on those
@@ -73,12 +76,31 @@ following top-down rewrites and conversions:
 
 ### LLVM level
 
-On CPU, the `n-D` `vector` type currently lowers to `!llvm<array<vector>>`. More
-concretely, `vector<4x8x128xf32>` lowers to `!llvm<[4 x [ 8 x [ 128 x float
-]]]>`. There are tradeoffs involved related to how one can access subvectors and
-how one uses `llvm.extractelement`, `llvm.insertelement` and
-`llvm.shufflevector`. A [deeper dive section](#DeeperDive) discusses the current
-lowering choices and tradeoffs.
+On CPU, the `n-D` `vector` type currently lowers to `!llvm<array<vector>>`.
+More concretely,
+* `vector<4x8x128xf32>` lowers to `!llvm<[4 x [ 8 x < 128
+x float >]]>` (fixed-width vector), and
+* `vector<4x8x[128]xf32>` lowers to `!llvm<[4 x [ 8 x < vscale x 128
+x float >]]>` (scalable vector).
+
+There are tradeoffs involved related to how one can access subvectors and how
+one uses `llvm.extractelement`, `llvm.insertelement` and `llvm.shufflevector`.
+The section on [LLVM Lowering Tradeoffs](#llvm-lowering-tradeoffs) offers a
+deeper dive into the current design choices and tradeoffs.
+
+Note, while LLVM supports arrarys of scalable vectors, these are required to be
+fixed-width arrays of 1-D scalable vectors. This means scalable vectors with a
+non-trailing scalable dimension (e.g. `vector<4x[8]x128xf32`) are not
+convertible to LLVM.
+
+Finally, MLIR takes the same view on scalable Vectors as LLVM (c.f.
+[VectorType](https://llvm.org/docs/LangRef.html#vector-type)):
+> For scalable vectors, the total number of elements is a constant multiple
+> (called vscale) of the specified number of elements; vscale is a positive
+> integer that is unknown at compile time and the same hardware-dependent
+> constant for all scalable vectors at run time.  The size of a specific
+> scalable vector type is thus constant within IR, even if the exact size in
+> bytes cannot be determined until run time.
 
 ### Hardware Vector Ops
 
@@ -103,7 +125,7 @@ Some existing Arith and Vector Dialect on `n-D` `vector` types comprise:
 // Produces a vector<3x7x8xf32>
 %b = arith.mulf %0, %1 : vector<3x7x8xf32>
 // Produces a vector<3x7x8xf32>
-%c = vector.splat %1 : vector<3x7x8xf32>
+%c = vector.broadcast %1 : f32 to vector<3x7x8xf32>
 
 %d = vector.extract %0[1]: vector<7x8xf32> from vector<3x7x8xf32>
 %e = vector.extract %0[1, 5]: vector<8xf32> from vector<3x7x8xf32>
@@ -154,8 +176,6 @@ infrastructure can apply iteratively.
 ### Virtual Vector to Hardware Vector Lowering
 
 For now, `VV -> HWV` are specified in C++ (see for instance the
-[SplatOpLowering for n-D vectors](https://github.com/tensorflow/mlir/commit/0a0c4867c6a6fcb0a2f17ef26a791c1d551fe33d)
-or the
 [VectorOuterProductOp lowering](https://github.com/tensorflow/mlir/commit/957b1ca9680b4aacabb3a480fbc4ebd2506334b8)).
 
 Simple
@@ -247,7 +267,19 @@ which conveys higher-D meaning. But it also is one of the most overloaded terms
 in compilers and hardware. For now, we generally use the `n-D` `vector` name and
 are open to better suggestions.
 
-## DeeperDive
+## 0D Vectors
+
+Vectors of dimension 0 (or _0-D vectors_ or _0D vectors_) are allowed inside
+MLIR. For instance, a `f32` vector containing one scalar can be denoted as
+`vector<f32>`. This is similar to the `tensor<f32>` type that is available in
+TensorFlow or the `memref<f32>` type that is available in MLIR.
+
+Generally, a 0D `vector` can be interpreted as a scalar. The benefit of 0D
+`vector`s, `tensor`s, and `memref`s is that they make it easier to lower code
+from various frontends such as TensorFlow and make it easier to handle corner
+cases such as unrolling a loop from 1D to 0D.
+
+## LLVM Lowering Tradeoffs
 
 This section describes the tradeoffs involved in lowering the MLIR n-D vector
 type and operations on it to LLVM-IR. Putting aside the
@@ -256,16 +288,11 @@ proposal for now, this assumes LLVM only has built-in support for 1-D vector.
 The relationship with the LLVM Matrix proposal is discussed at the end of this
 document.
 
-MLIR does not currently support dynamic vector sizes (i.e. SVE style) so the
-discussion is limited to static rank and static vector sizes (e.g.
-`vector<4x8x16x32xf32>`). This section discusses operations on vectors in LLVM
-and MLIR.
-
 LLVM instructions are prefixed by the `llvm.` dialect prefix (e.g.
 `llvm.insertvalue`). Such ops operate exclusively on 1-D vectors and aggregates
 following the [LLVM LangRef](https://llvm.org/docs/LangRef.html). MLIR
 operations are prefixed by the `vector.` dialect prefix (e.g.
-`vector.insertelement`). Such ops operate exclusively on MLIR `n-D` `vector`
+`vector.insert`). Such ops operate exclusively on MLIR `n-D` `vector`
 types.
 
 ### Alternatives For Lowering an n-D Vector Type to LLVM
@@ -274,10 +301,11 @@ Consider a vector of rank n with static sizes `{s_0, ... s_{n-1}}` (i.e. an MLIR
 `vector<s_0x...s_{n-1}xf32>`). Lowering such an `n-D` MLIR vector type to an
 LLVM descriptor can be done by either:
 
-1.  Flattening to a `1-D` vector: `!llvm<"(s_0*...*s_{n-1})xfloat">` in the MLIR
+1.  Nested aggregate type of `1-D` vector:
+    `!llvm."[s_0x[s_1x[...<s_{n-1}xf32>]]]">` in the MLIR LLVM dialect (current
+    lowering in MLIR).
+2.  Flattening to a `1-D` vector: `!llvm<"(s_0*...*s_{n-1})xfloat">` in the MLIR
     LLVM dialect.
-2.  Nested aggregate type of `1-D` vector:
-    `!llvm."[s_0x[s_1x[...<s_{n-1}xf32>]]]">` in the MLIR LLVM dialect.
 3.  A mix of both.
 
 There are multiple tradeoffs involved in choosing one or the other that we
@@ -290,9 +318,11 @@ vector<4x8x16x32xf32> to vector<4x4096xf32>` operation, that flattens the most
 
 The first constraint was already mentioned: LLVM only supports `1-D` `vector`
 types natively. Additional constraints are related to the difference in LLVM
-between vector and aggregate types: `“Aggregate Types are a subset of derived
-types that can contain multiple member types. Arrays and structs are aggregate
-types. Vectors are not considered to be aggregate types.”.`
+between vector and
+[aggregate types](https://llvm.org/docs/LangRef.html#aggregate-types):
+> Aggregate Types are a subset of derived types that can contain multiple
+> member types. Arrays and structs are aggregate types. Vectors are not
+> considered to be aggregate types.
 
 This distinction is also reflected in some of the operations. For `1-D` vectors,
 the operations `llvm.extractelement`, `llvm.insertelement`, and
@@ -301,12 +331,15 @@ vectors with `n>1`, and thus aggregate types at LLVM level, the more restrictive
 operations `llvm.extractvalue` and `llvm.insertvalue` apply, which only accept
 static indices. There is no direct shuffling support for aggregate types.
 
-The next sentence illustrates a recurrent tradeoff, also found in MLIR, between
+The next sentence (cf. LangRef [structure
+type](https://llvm.org/docs/LangRef.html#structure-type)) illustrates a
+recurrent tradeoff, also found in MLIR, between
 “value types” (subject to SSA use-def chains) and “memory types” (subject to
-aliasing and side-effects): `“Structures in memory are accessed using ‘load’ and
-‘store’ by getting a pointer to a field with the llvm.getelementptr instruction.
-Structures in registers are accessed using the llvm.extractvalue and
-llvm.insertvalue instructions.”`
+aliasing and side-effects):
+> Structures in memory are accessed using ‘load’ and ‘store’ by getting a
+> pointer to a field with the llvm.getelementptr instruction. Structures in
+> registers are accessed using the llvm.extractvalue and llvm.insertvalue
+> instructions.
 
 When transposing this to MLIR, `llvm.getelementptr` works on pointers to `n-D`
 vectors in memory. For `n-D`, vectors values that live in registers we can use

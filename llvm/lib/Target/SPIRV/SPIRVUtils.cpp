@@ -13,16 +13,84 @@
 #include "SPIRVUtils.h"
 #include "MCTargetDesc/SPIRVBaseInfo.h"
 #include "SPIRV.h"
+#include "SPIRVGlobalRegistry.h"
 #include "SPIRVInstrInfo.h"
+#include "SPIRVSubtarget.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/Demangle/Demangle.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IntrinsicsSPIRV.h"
+#include <queue>
+#include <vector>
 
 namespace llvm {
+namespace SPIRV {
+// This code restores function args/retvalue types for composite cases
+// because the final types should still be aggregate whereas they're i32
+// during the translation to cope with aggregate flattening etc.
+// TODO: should these just return nullptr when there's no metadata?
+static FunctionType *extractFunctionTypeFromMetadata(NamedMDNode *NMD,
+                                                     FunctionType *FTy,
+                                                     StringRef Name) {
+  if (!NMD)
+    return FTy;
+
+  constexpr auto getConstInt = [](MDNode *MD, unsigned OpId) -> ConstantInt * {
+    if (MD->getNumOperands() <= OpId)
+      return nullptr;
+    if (auto *CMeta = dyn_cast<ConstantAsMetadata>(MD->getOperand(OpId)))
+      return dyn_cast<ConstantInt>(CMeta->getValue());
+    return nullptr;
+  };
+
+  auto It = find_if(NMD->operands(), [Name](MDNode *N) {
+    if (auto *MDS = dyn_cast_or_null<MDString>(N->getOperand(0)))
+      return MDS->getString() == Name;
+    return false;
+  });
+
+  if (It == NMD->op_end())
+    return FTy;
+
+  Type *RetTy = FTy->getReturnType();
+  SmallVector<Type *, 4> PTys(FTy->params());
+
+  for (unsigned I = 1; I != (*It)->getNumOperands(); ++I) {
+    MDNode *MD = dyn_cast<MDNode>((*It)->getOperand(I));
+    assert(MD && "MDNode operand is expected");
+
+    if (auto *Const = getConstInt(MD, 0)) {
+      auto *CMeta = dyn_cast<ConstantAsMetadata>(MD->getOperand(1));
+      assert(CMeta && "ConstantAsMetadata operand is expected");
+      assert(Const->getSExtValue() >= -1);
+      // Currently -1 indicates return value, greater values mean
+      // argument numbers.
+      if (Const->getSExtValue() == -1)
+        RetTy = CMeta->getType();
+      else
+        PTys[Const->getSExtValue()] = CMeta->getType();
+    }
+  }
+
+  return FunctionType::get(RetTy, PTys, FTy->isVarArg());
+}
+
+FunctionType *getOriginalFunctionType(const Function &F) {
+  return extractFunctionTypeFromMetadata(
+      F.getParent()->getNamedMetadata("spv.cloned_funcs"), F.getFunctionType(),
+      F.getName());
+}
+
+FunctionType *getOriginalFunctionType(const CallBase &CB) {
+  return extractFunctionTypeFromMetadata(
+      CB.getModule()->getNamedMetadata("spv.mutated_callsites"),
+      CB.getFunctionType(), CB.getName());
+}
+} // Namespace SPIRV
 
 // The following functions are used to add these string literals as a series of
 // 32-bit integer operands with the correct format, and unpack them if necessary
@@ -43,8 +111,7 @@ static uint32_t convertCharsToWord(const StringRef &Str, unsigned i) {
 
 // Get length including padding and null terminator.
 static size_t getPaddedLen(const StringRef &Str) {
-  const size_t Len = Str.size() + 1;
-  return (Len % 4 == 0) ? Len : Len + (4 - (Len % 4));
+  return (Str.size() + 4) & ~3;
 }
 
 void addStringImm(const StringRef &Str, MCInst &Inst) {
@@ -76,18 +143,40 @@ std::string getStringImm(const MachineInstr &MI, unsigned StartIndex) {
   return getSPIRVStringOperand(MI, StartIndex);
 }
 
+std::string getStringValueFromReg(Register Reg, MachineRegisterInfo &MRI) {
+  MachineInstr *Def = getVRegDef(MRI, Reg);
+  assert(Def && Def->getOpcode() == TargetOpcode::G_GLOBAL_VALUE &&
+         "Expected G_GLOBAL_VALUE");
+  const GlobalValue *GV = Def->getOperand(1).getGlobal();
+  Value *V = GV->getOperand(0);
+  const ConstantDataArray *CDA = cast<ConstantDataArray>(V);
+  return CDA->getAsCString().str();
+}
+
 void addNumImm(const APInt &Imm, MachineInstrBuilder &MIB) {
   const auto Bitwidth = Imm.getBitWidth();
   if (Bitwidth == 1)
     return; // Already handled
   else if (Bitwidth <= 32) {
     MIB.addImm(Imm.getZExtValue());
+    // Asm Printer needs this info to print floating-type correctly
+    if (Bitwidth == 16)
+      MIB.getInstr()->setAsmPrinterFlag(SPIRV::ASM_PRINTER_WIDTH16);
     return;
   } else if (Bitwidth <= 64) {
     uint64_t FullImm = Imm.getZExtValue();
     uint32_t LowBits = FullImm & 0xffffffff;
     uint32_t HighBits = (FullImm >> 32) & 0xffffffff;
     MIB.addImm(LowBits).addImm(HighBits);
+    // Asm Printer needs this info to print 64-bit operands correctly
+    MIB.getInstr()->setAsmPrinterFlag(SPIRV::ASM_PRINTER_WIDTH64);
+    return;
+  } else if (Bitwidth <= 128) {
+    uint32_t LowBits = Imm.getRawData()[0] & 0xffffffff;
+    uint32_t MidBits0 = (Imm.getRawData()[0] >> 32) & 0xffffffff;
+    uint32_t MidBits1 = Imm.getRawData()[1] & 0xffffffff;
+    uint32_t HighBits = (Imm.getRawData()[1] >> 32) & 0xffffffff;
+    MIB.addImm(LowBits).addImm(MidBits0).addImm(MidBits1).addImm(HighBits);
     return;
   }
   report_fatal_error("Unsupported constant bitwidth");
@@ -97,6 +186,16 @@ void buildOpName(Register Target, const StringRef &Name,
                  MachineIRBuilder &MIRBuilder) {
   if (!Name.empty()) {
     auto MIB = MIRBuilder.buildInstr(SPIRV::OpName).addUse(Target);
+    addStringImm(Name, MIB);
+  }
+}
+
+void buildOpName(Register Target, const StringRef &Name, MachineInstr &I,
+                 const SPIRVInstrInfo &TII) {
+  if (!Name.empty()) {
+    auto MIB =
+        BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(SPIRV::OpName))
+            .addUse(Target);
     addStringImm(Name, MIB);
   }
 }
@@ -129,29 +228,107 @@ void buildOpDecorate(Register Reg, MachineInstr &I, const SPIRVInstrInfo &TII,
   finishBuildOpDecorate(MIB, DecArgs, StrImm);
 }
 
-// TODO: maybe the following two functions should be handled in the subtarget
-// to allow for different OpenCL vs Vulkan handling.
-unsigned storageClassToAddressSpace(SPIRV::StorageClass::StorageClass SC) {
-  switch (SC) {
-  case SPIRV::StorageClass::Function:
-    return 0;
-  case SPIRV::StorageClass::CrossWorkgroup:
-    return 1;
-  case SPIRV::StorageClass::UniformConstant:
-    return 2;
-  case SPIRV::StorageClass::Workgroup:
-    return 3;
-  case SPIRV::StorageClass::Generic:
-    return 4;
-  case SPIRV::StorageClass::Input:
-    return 7;
-  default:
-    llvm_unreachable("Unable to get address space id");
+void buildOpMemberDecorate(Register Reg, MachineIRBuilder &MIRBuilder,
+                           SPIRV::Decoration::Decoration Dec, uint32_t Member,
+                           const std::vector<uint32_t> &DecArgs,
+                           StringRef StrImm) {
+  auto MIB = MIRBuilder.buildInstr(SPIRV::OpMemberDecorate)
+                 .addUse(Reg)
+                 .addImm(Member)
+                 .addImm(static_cast<uint32_t>(Dec));
+  finishBuildOpDecorate(MIB, DecArgs, StrImm);
+}
+
+void buildOpMemberDecorate(Register Reg, MachineInstr &I,
+                           const SPIRVInstrInfo &TII,
+                           SPIRV::Decoration::Decoration Dec, uint32_t Member,
+                           const std::vector<uint32_t> &DecArgs,
+                           StringRef StrImm) {
+  MachineBasicBlock &MBB = *I.getParent();
+  auto MIB = BuildMI(MBB, I, I.getDebugLoc(), TII.get(SPIRV::OpMemberDecorate))
+                 .addUse(Reg)
+                 .addImm(Member)
+                 .addImm(static_cast<uint32_t>(Dec));
+  finishBuildOpDecorate(MIB, DecArgs, StrImm);
+}
+
+void buildOpSpirvDecorations(Register Reg, MachineIRBuilder &MIRBuilder,
+                             const MDNode *GVarMD, const SPIRVSubtarget &ST) {
+  for (unsigned I = 0, E = GVarMD->getNumOperands(); I != E; ++I) {
+    auto *OpMD = dyn_cast<MDNode>(GVarMD->getOperand(I));
+    if (!OpMD)
+      report_fatal_error("Invalid decoration");
+    if (OpMD->getNumOperands() == 0)
+      report_fatal_error("Expect operand(s) of the decoration");
+    ConstantInt *DecorationId =
+        mdconst::dyn_extract<ConstantInt>(OpMD->getOperand(0));
+    if (!DecorationId)
+      report_fatal_error("Expect SPIR-V <Decoration> operand to be the first "
+                         "element of the decoration");
+
+    // The goal of `spirv.Decorations` metadata is to provide a way to
+    // represent SPIR-V entities that do not map to LLVM in an obvious way.
+    // FP flags do have obvious matches between LLVM IR and SPIR-V.
+    // Additionally, we have no guarantee at this point that the flags passed
+    // through the decoration are not violated already in the optimizer passes.
+    // Therefore, we simply ignore FP flags, including NoContraction, and
+    // FPFastMathMode.
+    if (DecorationId->getZExtValue() ==
+            static_cast<uint32_t>(SPIRV::Decoration::NoContraction) ||
+        DecorationId->getZExtValue() ==
+            static_cast<uint32_t>(SPIRV::Decoration::FPFastMathMode)) {
+      continue; // Ignored.
+    }
+    auto MIB = MIRBuilder.buildInstr(SPIRV::OpDecorate)
+                   .addUse(Reg)
+                   .addImm(static_cast<uint32_t>(DecorationId->getZExtValue()));
+    for (unsigned OpI = 1, OpE = OpMD->getNumOperands(); OpI != OpE; ++OpI) {
+      if (ConstantInt *OpV =
+              mdconst::dyn_extract<ConstantInt>(OpMD->getOperand(OpI)))
+        MIB.addImm(static_cast<uint32_t>(OpV->getZExtValue()));
+      else if (MDString *OpV = dyn_cast<MDString>(OpMD->getOperand(OpI)))
+        addStringImm(OpV->getString(), MIB);
+      else
+        report_fatal_error("Unexpected operand of the decoration");
+    }
   }
 }
 
+MachineBasicBlock::iterator getOpVariableMBBIt(MachineInstr &I) {
+  MachineFunction *MF = I.getParent()->getParent();
+  MachineBasicBlock *MBB = &MF->front();
+  MachineBasicBlock::iterator It = MBB->SkipPHIsAndLabels(MBB->begin()),
+                              E = MBB->end();
+  bool IsHeader = false;
+  unsigned Opcode;
+  for (; It != E && It != I; ++It) {
+    Opcode = It->getOpcode();
+    if (Opcode == SPIRV::OpFunction || Opcode == SPIRV::OpFunctionParameter) {
+      IsHeader = true;
+    } else if (IsHeader &&
+               !(Opcode == SPIRV::ASSIGN_TYPE || Opcode == SPIRV::OpLabel)) {
+      ++It;
+      break;
+    }
+  }
+  return It;
+}
+
+MachineBasicBlock::iterator getInsertPtValidEnd(MachineBasicBlock *MBB) {
+  MachineBasicBlock::iterator I = MBB->end();
+  if (I == MBB->begin())
+    return I;
+  --I;
+  while (I->isTerminator() || I->isDebugValue()) {
+    if (I == MBB->begin())
+      break;
+    --I;
+  }
+  return I;
+}
+
 SPIRV::StorageClass::StorageClass
-addressSpaceToStorageClass(unsigned AddrSpace) {
+addressSpaceToStorageClass(unsigned AddrSpace, const SPIRVSubtarget &STI) {
   switch (AddrSpace) {
   case 0:
     return SPIRV::StorageClass::Function;
@@ -163,10 +340,30 @@ addressSpaceToStorageClass(unsigned AddrSpace) {
     return SPIRV::StorageClass::Workgroup;
   case 4:
     return SPIRV::StorageClass::Generic;
+  case 5:
+    return STI.canUseExtension(SPIRV::Extension::SPV_INTEL_usm_storage_classes)
+               ? SPIRV::StorageClass::DeviceOnlyINTEL
+               : SPIRV::StorageClass::CrossWorkgroup;
+  case 6:
+    return STI.canUseExtension(SPIRV::Extension::SPV_INTEL_usm_storage_classes)
+               ? SPIRV::StorageClass::HostOnlyINTEL
+               : SPIRV::StorageClass::CrossWorkgroup;
   case 7:
     return SPIRV::StorageClass::Input;
+  case 8:
+    return SPIRV::StorageClass::Output;
+  case 9:
+    return SPIRV::StorageClass::CodeSectionINTEL;
+  case 10:
+    return SPIRV::StorageClass::Private;
+  case 11:
+    return SPIRV::StorageClass::StorageBuffer;
+  case 12:
+    return SPIRV::StorageClass::Uniform;
+  case 13:
+    return SPIRV::StorageClass::PushConstant;
   default:
-    llvm_unreachable("Unknown address space");
+    report_fatal_error("Unknown address space");
   }
 }
 
@@ -207,9 +404,39 @@ SPIRV::MemorySemantics::MemorySemantics getMemSemantics(AtomicOrdering Ord) {
   llvm_unreachable(nullptr);
 }
 
+SPIRV::Scope::Scope getMemScope(LLVMContext &Ctx, SyncScope::ID Id) {
+  // Named by
+  // https://registry.khronos.org/SPIR-V/specs/unified1/SPIRV.html#_scope_id.
+  // We don't need aliases for Invocation and CrossDevice, as we already have
+  // them covered by "singlethread" and "" strings respectively (see
+  // implementation of LLVMContext::LLVMContext()).
+  static const llvm::SyncScope::ID SubGroup =
+      Ctx.getOrInsertSyncScopeID("subgroup");
+  static const llvm::SyncScope::ID WorkGroup =
+      Ctx.getOrInsertSyncScopeID("workgroup");
+  static const llvm::SyncScope::ID Device =
+      Ctx.getOrInsertSyncScopeID("device");
+
+  if (Id == llvm::SyncScope::SingleThread)
+    return SPIRV::Scope::Invocation;
+  else if (Id == llvm::SyncScope::System)
+    return SPIRV::Scope::CrossDevice;
+  else if (Id == SubGroup)
+    return SPIRV::Scope::Subgroup;
+  else if (Id == WorkGroup)
+    return SPIRV::Scope::Workgroup;
+  else if (Id == Device)
+    return SPIRV::Scope::Device;
+  return SPIRV::Scope::CrossDevice;
+}
+
 MachineInstr *getDefInstrMaybeConstant(Register &ConstReg,
                                        const MachineRegisterInfo *MRI) {
-  MachineInstr *ConstInstr = MRI->getVRegDef(ConstReg);
+  MachineInstr *MI = MRI->getVRegDef(ConstReg);
+  MachineInstr *ConstInstr =
+      MI->getOpcode() == SPIRV::G_TRUNC || MI->getOpcode() == SPIRV::G_ZEXT
+          ? MRI->getVRegDef(MI->getOperand(1).getReg())
+          : MI;
   if (auto *GI = dyn_cast<GIntrinsic>(ConstInstr)) {
     if (GI->is(Intrinsic::spv_track_constant)) {
       ConstReg = ConstInstr->getOperand(2).getReg();
@@ -218,6 +445,10 @@ MachineInstr *getDefInstrMaybeConstant(Register &ConstReg,
   } else if (ConstInstr->getOpcode() == SPIRV::ASSIGN_TYPE) {
     ConstReg = ConstInstr->getOperand(1).getReg();
     return MRI->getVRegDef(ConstReg);
+  } else if (ConstInstr->getOpcode() == TargetOpcode::G_CONSTANT ||
+             ConstInstr->getOpcode() == TargetOpcode::G_FCONSTANT) {
+    ConstReg = ConstInstr->getOperand(0).getReg();
+    return ConstInstr;
   }
   return MRI->getVRegDef(ConstReg);
 }
@@ -228,14 +459,21 @@ uint64_t getIConstVal(Register ConstReg, const MachineRegisterInfo *MRI) {
   return MI->getOperand(1).getCImm()->getValue().getZExtValue();
 }
 
-bool isSpvIntrinsic(MachineInstr &MI, Intrinsic::ID IntrinsicID) {
-  if (auto *GI = dyn_cast<GIntrinsic>(&MI))
+int64_t getIConstValSext(Register ConstReg, const MachineRegisterInfo *MRI) {
+  const MachineInstr *MI = getDefInstrMaybeConstant(ConstReg, MRI);
+  assert(MI && MI->getOpcode() == TargetOpcode::G_CONSTANT);
+  return MI->getOperand(1).getCImm()->getSExtValue();
+}
+
+bool isSpvIntrinsic(const MachineInstr &MI, Intrinsic::ID IntrinsicID) {
+  if (const auto *GI = dyn_cast<GIntrinsic>(&MI))
     return GI->is(IntrinsicID);
   return false;
 }
 
 Type *getMDOperandAsType(const MDNode *N, unsigned I) {
-  return cast<ValueAsMetadata>(N->getOperand(I))->getType();
+  Type *ElementTy = cast<ValueAsMetadata>(N->getOperand(I))->getType();
+  return toTypedPointer(ElementTy);
 }
 
 // The set of names is borrowed from the SPIR-V translator.
@@ -279,7 +517,7 @@ static bool isKernelQueryBI(const StringRef MangledName) {
 }
 
 static bool isNonMangledOCLBuiltin(StringRef Name) {
-  if (!Name.startswith("__"))
+  if (!Name.starts_with("__"))
     return false;
 
   return isEnqueueKernelBI(Name) || isKernelQueryBI(Name) ||
@@ -289,11 +527,13 @@ static bool isNonMangledOCLBuiltin(StringRef Name) {
 
 std::string getOclOrSpirvBuiltinDemangledName(StringRef Name) {
   bool IsNonMangledOCL = isNonMangledOCLBuiltin(Name);
-  bool IsNonMangledSPIRV = Name.startswith("__spirv_");
-  bool IsMangled = Name.startswith("_Z");
+  bool IsNonMangledSPIRV = Name.starts_with("__spirv_");
+  bool IsNonMangledHLSL = Name.starts_with("__hlsl_");
+  bool IsMangled = Name.starts_with("_Z");
 
-  if (!IsNonMangledOCL && !IsNonMangledSPIRV && !IsMangled)
-    return std::string();
+  // Otherwise use simple demangling to return the function name.
+  if (IsNonMangledOCL || IsNonMangledSPIRV || IsNonMangledHLSL || !IsMangled)
+    return Name.str();
 
   // Try to use the itanium demangler.
   if (char *DemangledName = itaniumDemangle(Name.data())) {
@@ -301,9 +541,6 @@ std::string getOclOrSpirvBuiltinDemangledName(StringRef Name) {
     free(DemangledName);
     return Result;
   }
-  // Otherwise use simple demangling to return the function name.
-  if (IsNonMangledOCL || IsNonMangledSPIRV)
-    return Name.str();
 
   // Autocheck C++, maybe need to do explicit check of the source language.
   // OpenCL C++ built-ins are declared in cl namespace.
@@ -311,7 +548,7 @@ std::string getOclOrSpirvBuiltinDemangledName(StringRef Name) {
   // Similar to ::std:: in C++.
   size_t Start, Len = 0;
   size_t DemangledNameLenStart = 2;
-  if (Name.startswith("_ZN")) {
+  if (Name.starts_with("_ZN")) {
     // Skip CV and ref qualifiers.
     size_t NameSpaceStart = Name.find_first_not_of("rVKRO", 3);
     // All built-ins are in the ::cl:: namespace.
@@ -320,33 +557,645 @@ std::string getOclOrSpirvBuiltinDemangledName(StringRef Name) {
     DemangledNameLenStart = NameSpaceStart + 11;
   }
   Start = Name.find_first_not_of("0123456789", DemangledNameLenStart);
-  Name.substr(DemangledNameLenStart, Start - DemangledNameLenStart)
-      .getAsInteger(10, Len);
+  [[maybe_unused]] bool Error =
+      Name.substr(DemangledNameLenStart, Start - DemangledNameLenStart)
+          .getAsInteger(10, Len);
+  assert(!Error && "Failed to parse demangled name length");
   return Name.substr(Start, Len).str();
 }
 
-const Type *getTypedPtrEltType(const Type *Ty) {
-  auto PType = dyn_cast<PointerType>(Ty);
-  if (!PType || PType->isOpaque())
-    return Ty;
-  return PType->getNonOpaquePointerElementType();
-}
-
 bool hasBuiltinTypePrefix(StringRef Name) {
-  if (Name.starts_with("opencl.") || Name.starts_with("spirv."))
+  if (Name.starts_with("opencl.") || Name.starts_with("ocl_") ||
+      Name.starts_with("spirv."))
     return true;
   return false;
 }
 
 bool isSpecialOpaqueType(const Type *Ty) {
-  const StructType *SType = dyn_cast<StructType>(getTypedPtrEltType(Ty));
-  if (SType && SType->hasName())
-    return hasBuiltinTypePrefix(SType->getName());
-
-  if (const TargetExtType *EType =
-          dyn_cast<TargetExtType>(getTypedPtrEltType(Ty)))
-    return hasBuiltinTypePrefix(EType->getName());
+  if (const TargetExtType *ExtTy = dyn_cast<TargetExtType>(Ty))
+    return isTypedPointerWrapper(ExtTy)
+               ? false
+               : hasBuiltinTypePrefix(ExtTy->getName());
 
   return false;
 }
+
+bool isEntryPoint(const Function &F) {
+  // OpenCL handling: any function with the SPIR_KERNEL
+  // calling convention will be a potential entry point.
+  if (F.getCallingConv() == CallingConv::SPIR_KERNEL)
+    return true;
+
+  // HLSL handling: special attribute are emitted from the
+  // front-end.
+  if (F.getFnAttribute("hlsl.shader").isValid())
+    return true;
+
+  return false;
+}
+
+Type *parseBasicTypeName(StringRef &TypeName, LLVMContext &Ctx) {
+  TypeName.consume_front("atomic_");
+  if (TypeName.consume_front("void"))
+    return Type::getVoidTy(Ctx);
+  else if (TypeName.consume_front("bool") || TypeName.consume_front("_Bool"))
+    return Type::getIntNTy(Ctx, 1);
+  else if (TypeName.consume_front("char") ||
+           TypeName.consume_front("signed char") ||
+           TypeName.consume_front("unsigned char") ||
+           TypeName.consume_front("uchar"))
+    return Type::getInt8Ty(Ctx);
+  else if (TypeName.consume_front("short") ||
+           TypeName.consume_front("signed short") ||
+           TypeName.consume_front("unsigned short") ||
+           TypeName.consume_front("ushort"))
+    return Type::getInt16Ty(Ctx);
+  else if (TypeName.consume_front("int") ||
+           TypeName.consume_front("signed int") ||
+           TypeName.consume_front("unsigned int") ||
+           TypeName.consume_front("uint"))
+    return Type::getInt32Ty(Ctx);
+  else if (TypeName.consume_front("long") ||
+           TypeName.consume_front("signed long") ||
+           TypeName.consume_front("unsigned long") ||
+           TypeName.consume_front("ulong"))
+    return Type::getInt64Ty(Ctx);
+  else if (TypeName.consume_front("half") ||
+           TypeName.consume_front("_Float16") ||
+           TypeName.consume_front("__fp16"))
+    return Type::getHalfTy(Ctx);
+  else if (TypeName.consume_front("float"))
+    return Type::getFloatTy(Ctx);
+  else if (TypeName.consume_front("double"))
+    return Type::getDoubleTy(Ctx);
+
+  // Unable to recognize SPIRV type name
+  return nullptr;
+}
+
+std::unordered_set<BasicBlock *>
+PartialOrderingVisitor::getReachableFrom(BasicBlock *Start) {
+  std::queue<BasicBlock *> ToVisit;
+  ToVisit.push(Start);
+
+  std::unordered_set<BasicBlock *> Output;
+  while (ToVisit.size() != 0) {
+    BasicBlock *BB = ToVisit.front();
+    ToVisit.pop();
+
+    if (Output.count(BB) != 0)
+      continue;
+    Output.insert(BB);
+
+    for (BasicBlock *Successor : successors(BB)) {
+      if (DT.dominates(Successor, BB))
+        continue;
+      ToVisit.push(Successor);
+    }
+  }
+
+  return Output;
+}
+
+bool PartialOrderingVisitor::CanBeVisited(BasicBlock *BB) const {
+  for (BasicBlock *P : predecessors(BB)) {
+    // Ignore back-edges.
+    if (DT.dominates(BB, P))
+      continue;
+
+    // One of the predecessor hasn't been visited. Not ready yet.
+    if (BlockToOrder.count(P) == 0)
+      return false;
+
+    // If the block is a loop exit, the loop must be finished before
+    // we can continue.
+    Loop *L = LI.getLoopFor(P);
+    if (L == nullptr || L->contains(BB))
+      continue;
+
+    // SPIR-V requires a single back-edge. And the backend first
+    // step transforms loops into the simplified format. If we have
+    // more than 1 back-edge, something is wrong.
+    assert(L->getNumBackEdges() <= 1);
+
+    // If the loop has no latch, loop's rank won't matter, so we can
+    // proceed.
+    BasicBlock *Latch = L->getLoopLatch();
+    assert(Latch);
+    if (Latch == nullptr)
+      continue;
+
+    // The latch is not ready yet, let's wait.
+    if (BlockToOrder.count(Latch) == 0)
+      return false;
+  }
+
+  return true;
+}
+
+size_t PartialOrderingVisitor::GetNodeRank(BasicBlock *BB) const {
+  auto It = BlockToOrder.find(BB);
+  if (It != BlockToOrder.end())
+    return It->second.Rank;
+
+  size_t result = 0;
+  for (BasicBlock *P : predecessors(BB)) {
+    // Ignore back-edges.
+    if (DT.dominates(BB, P))
+      continue;
+
+    auto Iterator = BlockToOrder.end();
+    Loop *L = LI.getLoopFor(P);
+    BasicBlock *Latch = L ? L->getLoopLatch() : nullptr;
+
+    // If the predecessor is either outside a loop, or part of
+    // the same loop, simply take its rank + 1.
+    if (L == nullptr || L->contains(BB) || Latch == nullptr) {
+      Iterator = BlockToOrder.find(P);
+    } else {
+      // Otherwise, take the loop's rank (highest rank in the loop) as base.
+      // Since loops have a single latch, highest rank is easy to find.
+      // If the loop has no latch, then it doesn't matter.
+      Iterator = BlockToOrder.find(Latch);
+    }
+
+    assert(Iterator != BlockToOrder.end());
+    result = std::max(result, Iterator->second.Rank + 1);
+  }
+
+  return result;
+}
+
+size_t PartialOrderingVisitor::visit(BasicBlock *BB, size_t Unused) {
+  ToVisit.push(BB);
+  Queued.insert(BB);
+
+  size_t QueueIndex = 0;
+  while (ToVisit.size() != 0) {
+    BasicBlock *BB = ToVisit.front();
+    ToVisit.pop();
+
+    if (!CanBeVisited(BB)) {
+      ToVisit.push(BB);
+      if (QueueIndex >= ToVisit.size())
+        llvm::report_fatal_error(
+            "No valid candidate in the queue. Is the graph reducible?");
+      QueueIndex++;
+      continue;
+    }
+
+    QueueIndex = 0;
+    size_t Rank = GetNodeRank(BB);
+    OrderInfo Info = {Rank, BlockToOrder.size()};
+    BlockToOrder.emplace(BB, Info);
+
+    for (BasicBlock *S : successors(BB)) {
+      if (Queued.count(S) != 0)
+        continue;
+      ToVisit.push(S);
+      Queued.insert(S);
+    }
+  }
+
+  return 0;
+}
+
+PartialOrderingVisitor::PartialOrderingVisitor(Function &F) {
+  DT.recalculate(F);
+  LI = LoopInfo(DT);
+
+  visit(&*F.begin(), 0);
+
+  Order.reserve(F.size());
+  for (auto &[BB, Info] : BlockToOrder)
+    Order.emplace_back(BB);
+
+  std::sort(Order.begin(), Order.end(), [&](const auto &LHS, const auto &RHS) {
+    return compare(LHS, RHS);
+  });
+}
+
+bool PartialOrderingVisitor::compare(const BasicBlock *LHS,
+                                     const BasicBlock *RHS) const {
+  const OrderInfo &InfoLHS = BlockToOrder.at(const_cast<BasicBlock *>(LHS));
+  const OrderInfo &InfoRHS = BlockToOrder.at(const_cast<BasicBlock *>(RHS));
+  if (InfoLHS.Rank != InfoRHS.Rank)
+    return InfoLHS.Rank < InfoRHS.Rank;
+  return InfoLHS.TraversalIndex < InfoRHS.TraversalIndex;
+}
+
+void PartialOrderingVisitor::partialOrderVisit(
+    BasicBlock &Start, std::function<bool(BasicBlock *)> Op) {
+  std::unordered_set<BasicBlock *> Reachable = getReachableFrom(&Start);
+  assert(BlockToOrder.count(&Start) != 0);
+
+  // Skipping blocks with a rank inferior to |Start|'s rank.
+  auto It = Order.begin();
+  while (It != Order.end() && *It != &Start)
+    ++It;
+
+  // This is unexpected. Worst case |Start| is the last block,
+  // so It should point to the last block, not past-end.
+  assert(It != Order.end());
+
+  // By default, there is no rank limit. Setting it to the maximum value.
+  std::optional<size_t> EndRank = std::nullopt;
+  for (; It != Order.end(); ++It) {
+    if (EndRank.has_value() && BlockToOrder[*It].Rank > *EndRank)
+      break;
+
+    if (Reachable.count(*It) == 0) {
+      continue;
+    }
+
+    if (!Op(*It)) {
+      EndRank = BlockToOrder[*It].Rank;
+    }
+  }
+}
+
+bool sortBlocks(Function &F) {
+  if (F.size() == 0)
+    return false;
+
+  bool Modified = false;
+  std::vector<BasicBlock *> Order;
+  Order.reserve(F.size());
+
+  ReversePostOrderTraversal<Function *> RPOT(&F);
+  llvm::append_range(Order, RPOT);
+
+  assert(&*F.begin() == Order[0]);
+  BasicBlock *LastBlock = &*F.begin();
+  for (BasicBlock *BB : Order) {
+    if (BB != LastBlock && &*LastBlock->getNextNode() != BB) {
+      Modified = true;
+      BB->moveAfter(LastBlock);
+    }
+    LastBlock = BB;
+  }
+
+  return Modified;
+}
+
+MachineInstr *getVRegDef(MachineRegisterInfo &MRI, Register Reg) {
+  MachineInstr *MaybeDef = MRI.getVRegDef(Reg);
+  if (MaybeDef && MaybeDef->getOpcode() == SPIRV::ASSIGN_TYPE)
+    MaybeDef = MRI.getVRegDef(MaybeDef->getOperand(1).getReg());
+  return MaybeDef;
+}
+
+bool getVacantFunctionName(Module &M, std::string &Name) {
+  // It's a bit of paranoia, but still we don't want to have even a chance that
+  // the loop will work for too long.
+  constexpr unsigned MaxIters = 1024;
+  for (unsigned I = 0; I < MaxIters; ++I) {
+    std::string OrdName = Name + Twine(I).str();
+    if (!M.getFunction(OrdName)) {
+      Name = std::move(OrdName);
+      return true;
+    }
+  }
+  return false;
+}
+
+// Assign SPIR-V type to the register. If the register has no valid assigned
+// class, set register LLT type and class according to the SPIR-V type.
+void setRegClassType(Register Reg, SPIRVType *SpvType, SPIRVGlobalRegistry *GR,
+                     MachineRegisterInfo *MRI, const MachineFunction &MF,
+                     bool Force) {
+  GR->assignSPIRVTypeToVReg(SpvType, Reg, MF);
+  if (!MRI->getRegClassOrNull(Reg) || Force) {
+    MRI->setRegClass(Reg, GR->getRegClass(SpvType));
+    MRI->setType(Reg, GR->getRegType(SpvType));
+  }
+}
+
+// Create a SPIR-V type, assign SPIR-V type to the register. If the register has
+// no valid assigned class, set register LLT type and class according to the
+// SPIR-V type.
+void setRegClassType(Register Reg, const Type *Ty, SPIRVGlobalRegistry *GR,
+                     MachineIRBuilder &MIRBuilder,
+                     SPIRV::AccessQualifier::AccessQualifier AccessQual,
+                     bool EmitIR, bool Force) {
+  setRegClassType(Reg,
+                  GR->getOrCreateSPIRVType(Ty, MIRBuilder, AccessQual, EmitIR),
+                  GR, MIRBuilder.getMRI(), MIRBuilder.getMF(), Force);
+}
+
+// Create a virtual register and assign SPIR-V type to the register. Set
+// register LLT type and class according to the SPIR-V type.
+Register createVirtualRegister(SPIRVType *SpvType, SPIRVGlobalRegistry *GR,
+                               MachineRegisterInfo *MRI,
+                               const MachineFunction &MF) {
+  Register Reg = MRI->createVirtualRegister(GR->getRegClass(SpvType));
+  MRI->setType(Reg, GR->getRegType(SpvType));
+  GR->assignSPIRVTypeToVReg(SpvType, Reg, MF);
+  return Reg;
+}
+
+// Create a virtual register and assign SPIR-V type to the register. Set
+// register LLT type and class according to the SPIR-V type.
+Register createVirtualRegister(SPIRVType *SpvType, SPIRVGlobalRegistry *GR,
+                               MachineIRBuilder &MIRBuilder) {
+  return createVirtualRegister(SpvType, GR, MIRBuilder.getMRI(),
+                               MIRBuilder.getMF());
+}
+
+// Create a SPIR-V type, virtual register and assign SPIR-V type to the
+// register. Set register LLT type and class according to the SPIR-V type.
+Register createVirtualRegister(
+    const Type *Ty, SPIRVGlobalRegistry *GR, MachineIRBuilder &MIRBuilder,
+    SPIRV::AccessQualifier::AccessQualifier AccessQual, bool EmitIR) {
+  return createVirtualRegister(
+      GR->getOrCreateSPIRVType(Ty, MIRBuilder, AccessQual, EmitIR), GR,
+      MIRBuilder);
+}
+
+CallInst *buildIntrWithMD(Intrinsic::ID IntrID, ArrayRef<Type *> Types,
+                          Value *Arg, Value *Arg2, ArrayRef<Constant *> Imms,
+                          IRBuilder<> &B) {
+  SmallVector<Value *, 4> Args;
+  Args.push_back(Arg2);
+  Args.push_back(buildMD(Arg));
+  llvm::append_range(Args, Imms);
+  return B.CreateIntrinsic(IntrID, {Types}, Args);
+}
+
+// Return true if there is an opaque pointer type nested in the argument.
+bool isNestedPointer(const Type *Ty) {
+  if (Ty->isPtrOrPtrVectorTy())
+    return true;
+  if (const FunctionType *RefTy = dyn_cast<FunctionType>(Ty)) {
+    if (isNestedPointer(RefTy->getReturnType()))
+      return true;
+    for (const Type *ArgTy : RefTy->params())
+      if (isNestedPointer(ArgTy))
+        return true;
+    return false;
+  }
+  if (const ArrayType *RefTy = dyn_cast<ArrayType>(Ty))
+    return isNestedPointer(RefTy->getElementType());
+  return false;
+}
+
+bool isSpvIntrinsic(const Value *Arg) {
+  if (const auto *II = dyn_cast<IntrinsicInst>(Arg))
+    if (Function *F = II->getCalledFunction())
+      if (F->getName().starts_with("llvm.spv."))
+        return true;
+  return false;
+}
+
+// Function to create continued instructions for SPV_INTEL_long_composites
+// extension
+SmallVector<MachineInstr *, 4>
+createContinuedInstructions(MachineIRBuilder &MIRBuilder, unsigned Opcode,
+                            unsigned MinWC, unsigned ContinuedOpcode,
+                            ArrayRef<Register> Args, Register ReturnRegister,
+                            Register TypeID) {
+
+  SmallVector<MachineInstr *, 4> Instructions;
+  constexpr unsigned MaxWordCount = UINT16_MAX;
+  const size_t NumElements = Args.size();
+  size_t MaxNumElements = MaxWordCount - MinWC;
+  size_t SPIRVStructNumElements = NumElements;
+
+  if (NumElements > MaxNumElements) {
+    // Do adjustments for continued instructions which always had only one
+    // minumum word count.
+    SPIRVStructNumElements = MaxNumElements;
+    MaxNumElements = MaxWordCount - 1;
+  }
+
+  auto MIB =
+      MIRBuilder.buildInstr(Opcode).addDef(ReturnRegister).addUse(TypeID);
+
+  for (size_t I = 0; I < SPIRVStructNumElements; ++I)
+    MIB.addUse(Args[I]);
+
+  Instructions.push_back(MIB.getInstr());
+
+  for (size_t I = SPIRVStructNumElements; I < NumElements;
+       I += MaxNumElements) {
+    auto MIB = MIRBuilder.buildInstr(ContinuedOpcode);
+    for (size_t J = I; J < std::min(I + MaxNumElements, NumElements); ++J)
+      MIB.addUse(Args[J]);
+    Instructions.push_back(MIB.getInstr());
+  }
+  return Instructions;
+}
+
+SmallVector<unsigned, 1> getSpirvLoopControlOperandsFromLoopMetadata(Loop *L) {
+  unsigned LC = SPIRV::LoopControl::None;
+  // Currently used only to store PartialCount value. Later when other
+  // LoopControls are added - this map should be sorted before making
+  // them loop_merge operands to satisfy 3.23. Loop Control requirements.
+  std::vector<std::pair<unsigned, unsigned>> MaskToValueMap;
+  if (getBooleanLoopAttribute(L, "llvm.loop.unroll.disable")) {
+    LC |= SPIRV::LoopControl::DontUnroll;
+  } else {
+    if (getBooleanLoopAttribute(L, "llvm.loop.unroll.enable") ||
+        getBooleanLoopAttribute(L, "llvm.loop.unroll.full")) {
+      LC |= SPIRV::LoopControl::Unroll;
+    }
+    std::optional<int> Count =
+        getOptionalIntLoopAttribute(L, "llvm.loop.unroll.count");
+    if (Count && Count != 1) {
+      LC |= SPIRV::LoopControl::PartialCount;
+      MaskToValueMap.emplace_back(
+          std::make_pair(SPIRV::LoopControl::PartialCount, *Count));
+    }
+  }
+  SmallVector<unsigned, 1> Result = {LC};
+  for (auto &[Mask, Val] : MaskToValueMap)
+    Result.push_back(Val);
+  return Result;
+}
+
+const std::set<unsigned> &getTypeFoldingSupportedOpcodes() {
+  // clang-format off
+  static const std::set<unsigned> TypeFoldingSupportingOpcs = {
+    TargetOpcode::G_ADD,
+    TargetOpcode::G_FADD,
+    TargetOpcode::G_STRICT_FADD,
+    TargetOpcode::G_SUB,
+    TargetOpcode::G_FSUB,
+    TargetOpcode::G_STRICT_FSUB,
+    TargetOpcode::G_MUL,
+    TargetOpcode::G_FMUL,
+    TargetOpcode::G_STRICT_FMUL,
+    TargetOpcode::G_SDIV,
+    TargetOpcode::G_UDIV,
+    TargetOpcode::G_FDIV,
+    TargetOpcode::G_STRICT_FDIV,
+    TargetOpcode::G_SREM,
+    TargetOpcode::G_UREM,
+    TargetOpcode::G_FREM,
+    TargetOpcode::G_STRICT_FREM,
+    TargetOpcode::G_FNEG,
+    TargetOpcode::G_CONSTANT,
+    TargetOpcode::G_FCONSTANT,
+    TargetOpcode::G_AND,
+    TargetOpcode::G_OR,
+    TargetOpcode::G_XOR,
+    TargetOpcode::G_SHL,
+    TargetOpcode::G_ASHR,
+    TargetOpcode::G_LSHR,
+    TargetOpcode::G_SELECT,
+    TargetOpcode::G_EXTRACT_VECTOR_ELT,
+  };
+  // clang-format on
+  return TypeFoldingSupportingOpcs;
+}
+
+bool isTypeFoldingSupported(unsigned Opcode) {
+  return getTypeFoldingSupportedOpcodes().count(Opcode) > 0;
+}
+
+// Traversing [g]MIR accounting for pseudo-instructions.
+MachineInstr *passCopy(MachineInstr *Def, const MachineRegisterInfo *MRI) {
+  return (Def->getOpcode() == SPIRV::ASSIGN_TYPE ||
+          Def->getOpcode() == TargetOpcode::COPY)
+             ? MRI->getVRegDef(Def->getOperand(1).getReg())
+             : Def;
+}
+
+MachineInstr *getDef(const MachineOperand &MO, const MachineRegisterInfo *MRI) {
+  if (MachineInstr *Def = MRI->getVRegDef(MO.getReg()))
+    return passCopy(Def, MRI);
+  return nullptr;
+}
+
+MachineInstr *getImm(const MachineOperand &MO, const MachineRegisterInfo *MRI) {
+  if (MachineInstr *Def = getDef(MO, MRI)) {
+    if (Def->getOpcode() == TargetOpcode::G_CONSTANT ||
+        Def->getOpcode() == SPIRV::OpConstantI)
+      return Def;
+  }
+  return nullptr;
+}
+
+int64_t foldImm(const MachineOperand &MO, const MachineRegisterInfo *MRI) {
+  if (MachineInstr *Def = getImm(MO, MRI)) {
+    if (Def->getOpcode() == SPIRV::OpConstantI)
+      return Def->getOperand(2).getImm();
+    if (Def->getOpcode() == TargetOpcode::G_CONSTANT)
+      return Def->getOperand(1).getCImm()->getZExtValue();
+  }
+  llvm_unreachable("Unexpected integer constant pattern");
+}
+
+unsigned getArrayComponentCount(const MachineRegisterInfo *MRI,
+                                const MachineInstr *ResType) {
+  return foldImm(ResType->getOperand(2), MRI);
+}
+
+MachineBasicBlock::iterator
+getFirstValidInstructionInsertPoint(MachineBasicBlock &BB) {
+  // Find the position to insert the OpVariable instruction.
+  // We will insert it after the last OpFunctionParameter, if any, or
+  // after OpFunction otherwise.
+  MachineBasicBlock::iterator VarPos = BB.begin();
+  while (VarPos != BB.end() && VarPos->getOpcode() != SPIRV::OpFunction) {
+    ++VarPos;
+  }
+  // Advance VarPos to the next instruction after OpFunction, it will either
+  // be an OpFunctionParameter, so that we can start the next loop, or the
+  // position to insert the OpVariable instruction.
+  ++VarPos;
+  while (VarPos != BB.end() &&
+         VarPos->getOpcode() == SPIRV::OpFunctionParameter) {
+    ++VarPos;
+  }
+  // VarPos is now pointing at after the last OpFunctionParameter, if any,
+  // or after OpFunction, if no parameters.
+  return VarPos != BB.end() && VarPos->getOpcode() == SPIRV::OpLabel ? ++VarPos
+                                                                     : VarPos;
+}
+
+bool matchPeeledArrayPattern(const StructType *Ty, Type *&OriginalElementType,
+                             uint64_t &TotalSize) {
+  // An array of N padded structs is represented as {[N-1 x <{T, pad}>], T}.
+  if (Ty->getStructNumElements() != 2)
+    return false;
+
+  Type *FirstElement = Ty->getStructElementType(0);
+  Type *SecondElement = Ty->getStructElementType(1);
+
+  if (!FirstElement->isArrayTy())
+    return false;
+
+  Type *ArrayElementType = FirstElement->getArrayElementType();
+  if (!ArrayElementType->isStructTy() ||
+      ArrayElementType->getStructNumElements() != 2)
+    return false;
+
+  Type *T_in_struct = ArrayElementType->getStructElementType(0);
+  if (T_in_struct != SecondElement)
+    return false;
+
+  auto *Padding_in_struct =
+      dyn_cast<TargetExtType>(ArrayElementType->getStructElementType(1));
+  if (!Padding_in_struct || Padding_in_struct->getName() != "spirv.Padding")
+    return false;
+
+  const uint64_t ArraySize = FirstElement->getArrayNumElements();
+  TotalSize = ArraySize + 1;
+  OriginalElementType = ArrayElementType;
+  return true;
+}
+
+Type *reconstitutePeeledArrayType(Type *Ty) {
+  if (!Ty->isStructTy())
+    return Ty;
+
+  auto *STy = cast<StructType>(Ty);
+  Type *OriginalElementType = nullptr;
+  uint64_t TotalSize = 0;
+  if (matchPeeledArrayPattern(STy, OriginalElementType, TotalSize)) {
+    Type *ResultTy = ArrayType::get(
+        reconstitutePeeledArrayType(OriginalElementType), TotalSize);
+    return ResultTy;
+  }
+
+  SmallVector<Type *, 4> NewElementTypes;
+  bool Changed = false;
+  for (Type *ElementTy : STy->elements()) {
+    Type *NewElementTy = reconstitutePeeledArrayType(ElementTy);
+    if (NewElementTy != ElementTy)
+      Changed = true;
+    NewElementTypes.push_back(NewElementTy);
+  }
+
+  if (!Changed)
+    return Ty;
+
+  Type *ResultTy;
+  if (STy->isLiteral())
+    ResultTy =
+        StructType::get(STy->getContext(), NewElementTypes, STy->isPacked());
+  else {
+    auto *NewTy = StructType::create(STy->getContext(), STy->getName());
+    NewTy->setBody(NewElementTypes, STy->isPacked());
+    ResultTy = NewTy;
+  }
+  return ResultTy;
+}
+
+std::optional<SPIRV::LinkageType::LinkageType>
+getSpirvLinkageTypeFor(const SPIRVSubtarget &ST, const GlobalValue &GV) {
+  if (GV.hasLocalLinkage() || GV.hasHiddenVisibility())
+    return std::nullopt;
+
+  if (GV.isDeclarationForLinker())
+    return SPIRV::LinkageType::Import;
+
+  if (GV.hasLinkOnceODRLinkage() &&
+      ST.canUseExtension(SPIRV::Extension::SPV_KHR_linkonce_odr))
+    return SPIRV::LinkageType::LinkOnceODR;
+
+  return SPIRV::LinkageType::Export;
+}
+
 } // namespace llvm

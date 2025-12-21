@@ -1,4 +1,4 @@
-// RUN: mlir-opt -convert-vector-to-llvm="enable-arm-sve" -convert-func-to-llvm -reconcile-unrealized-casts -split-input-file %s | FileCheck %s
+// RUN: mlir-opt -convert-vector-to-llvm="enable-arm-sve" -convert-func-to-llvm -convert-arith-to-llvm -cse -reconcile-unrealized-casts -split-input-file %s | FileCheck %s
 
 func.func @arm_sve_sdot(%a: vector<[16]xi8>,
                    %b: vector<[16]xi8>,
@@ -42,6 +42,18 @@ func.func @arm_sve_ummla(%a: vector<[16]xi8>,
     -> vector<[4]xi32> {
   // CHECK: arm_sve.intr.ummla
   %0 = arm_sve.ummla %c, %a, %b :
+               vector<[16]xi8> to vector<[4]xi32>
+  return %0 : vector<[4]xi32>
+}
+
+// -----
+
+func.func @arm_sve_usmmla(%a: vector<[16]xi8>,
+                    %b: vector<[16]xi8>,
+                    %c: vector<[4]xi32>)
+    -> vector<[4]xi32> {
+  // CHECK: arm_sve.intr.usmmla
+  %0 = arm_sve.usmmla %c, %a, %b :
                vector<[16]xi8> to vector<[4]xi32>
   return %0 : vector<[4]xi32>
 }
@@ -186,4 +198,129 @@ func.func @convert_2d_mask_from_svbool(%svbool: vector<3x[16]xi1>) -> vector<3x[
   %mask = arm_sve.convert_from_svbool %svbool : vector<3x[1]xi1>
   // CHECK-NEXT: llvm.return %[[MASK]] : !llvm.array<3 x vector<[1]xi1>>
   return %mask : vector<3x[1]xi1>
+}
+
+// -----
+
+func.func @arm_sve_zip_x2(%a: vector<[8]xi16>, %b: vector<[8]xi16>)
+  -> (vector<[8]xi16>, vector<[8]xi16>)
+{
+  // CHECK: arm_sve.intr.zip.x2
+  %0, %1 = arm_sve.zip.x2 %a, %b : vector<[8]xi16>
+  return %0, %1 : vector<[8]xi16>, vector<[8]xi16>
+}
+
+// -----
+
+func.func @arm_sve_zip_x4(
+  %a: vector<[16]xi8>,
+  %b: vector<[16]xi8>,
+  %c: vector<[16]xi8>,
+  %d: vector<[16]xi8>
+) -> (vector<[16]xi8>, vector<[16]xi8>, vector<[16]xi8>, vector<[16]xi8>)
+{
+  // CHECK: arm_sve.intr.zip.x4
+  %0, %1, %2, %3 = arm_sve.zip.x4 %a, %b, %c, %d : vector<[16]xi8>
+  return %0, %1, %2, %3 : vector<[16]xi8>, vector<[16]xi8>, vector<[16]xi8>, vector<[16]xi8>
+}
+
+// -----
+
+// CHECK-LABEL: @arm_sve_predicate_sized_create_masks(
+// CHECK-SAME:                                        %[[INDEX:.*]]: i64
+func.func @arm_sve_predicate_sized_create_masks(%index: index) -> (vector<[2]xi1>, vector<[4]xi1>, vector<[8]xi1>, vector<[16]xi1>) {
+  // CHECK: %[[ZERO:.*]] = llvm.mlir.zero : i64
+  // CHECK: %[[P2:.*]] = "arm_sve.intr.whilelt"(%[[ZERO]], %[[INDEX]]) : (i64, i64) -> vector<[2]xi1>
+  %0 = vector.create_mask %index : vector<[2]xi1>
+  // CHECK: %[[P4:.*]] = "arm_sve.intr.whilelt"(%[[ZERO]], %[[INDEX]]) : (i64, i64) -> vector<[4]xi1>
+  %1 = vector.create_mask %index : vector<[4]xi1>
+  // CHECK: %[[P8:.*]] = "arm_sve.intr.whilelt"(%[[ZERO]], %[[INDEX]]) : (i64, i64) -> vector<[8]xi1>
+  %2 = vector.create_mask %index : vector<[8]xi1>
+  // CHECK: %[[P16:.*]] = "arm_sve.intr.whilelt"(%[[ZERO]], %[[INDEX]]) : (i64, i64) -> vector<[16]xi1>
+  %3 = vector.create_mask %index : vector<[16]xi1>
+  return %0, %1, %2, %3 : vector<[2]xi1>, vector<[4]xi1>, vector<[8]xi1>, vector<[16]xi1>
+}
+
+// -----
+
+// CHECK-LABEL: @arm_sve_unsupported_create_masks
+func.func @arm_sve_unsupported_create_masks(%index: index) -> (vector<[1]xi1>, vector<[7]xi1>, vector<[32]xi1>)  {
+  // CHECK-NOT: arm_sve.intr.whilelt
+  %0 = vector.create_mask %index : vector<[1]xi1>
+  %1 = vector.create_mask %index : vector<[7]xi1>
+  %2 = vector.create_mask %index : vector<[32]xi1>
+  return %0, %1, %2 : vector<[1]xi1>, vector<[7]xi1>, vector<[32]xi1>
+}
+
+// -----
+
+// CHECK-LABEL: @arm_sve_psel_matching_predicate_types(
+// CHECK-SAME:                                         %[[P0:[a-z0-9]+]]: vector<[4]xi1>,
+// CHECK-SAME:                                         %[[P1:[a-z0-9]+]]: vector<[4]xi1>,
+// CHECK-SAME:                                         %[[INDEX:[a-z0-9]+]]: i64
+func.func @arm_sve_psel_matching_predicate_types(%p0: vector<[4]xi1>, %p1: vector<[4]xi1>, %index: index) -> vector<[4]xi1>
+{
+  //  CHECK-DAG: %[[INDEX_I32:.*]] = llvm.trunc %[[INDEX]] : i64 to i32
+  //  CHECK-DAG: %[[P0_IN:.*]] = "arm_sve.intr.convert.to.svbool"(%[[P0]]) : (vector<[4]xi1>) -> vector<[16]xi1>
+  // CHECK-NEXT: %[[PSEL:.*]] = "arm_sve.intr.psel"(%[[P0_IN]], %[[P1]], %[[INDEX_I32]]) : (vector<[16]xi1>, vector<[4]xi1>, i32) -> vector<[16]xi1>
+  // CHECK-NEXT: %[[RES:.*]] = "arm_sve.intr.convert.from.svbool"(%[[PSEL]]) : (vector<[16]xi1>) -> vector<[4]xi1>
+  %0 = arm_sve.psel %p0, %p1[%index] : vector<[4]xi1>, vector<[4]xi1>
+  return %0 : vector<[4]xi1>
+}
+
+// -----
+
+// CHECK-LABEL: @arm_sve_psel_mixed_predicate_types(
+// CHECK-SAME:                                      %[[P0:[a-z0-9]+]]: vector<[8]xi1>,
+// CHECK-SAME:                                      %[[P1:[a-z0-9]+]]: vector<[16]xi1>,
+// CHECK-SAME:                                      %[[INDEX:[a-z0-9]+]]: i64
+func.func @arm_sve_psel_mixed_predicate_types(%p0: vector<[8]xi1>, %p1: vector<[16]xi1>, %index: index) -> vector<[8]xi1>
+{
+  //  CHECK-DAG: %[[INDEX_I32:.*]] = llvm.trunc %[[INDEX]] : i64 to i32
+  //  CHECK-DAG: %[[P0_IN:.*]] = "arm_sve.intr.convert.to.svbool"(%[[P0]]) : (vector<[8]xi1>) -> vector<[16]xi1>
+  // CHECK-NEXT: %[[PSEL:.*]] = "arm_sve.intr.psel"(%[[P0_IN]], %[[P1]], %[[INDEX_I32]]) : (vector<[16]xi1>, vector<[16]xi1>, i32) -> vector<[16]xi1>
+  // CHECK-NEXT: %[[RES:.*]] = "arm_sve.intr.convert.from.svbool"(%[[PSEL]]) : (vector<[16]xi1>) -> vector<[8]xi1>
+  %0 = arm_sve.psel %p0, %p1[%index] : vector<[8]xi1>, vector<[16]xi1>
+  return %0 : vector<[8]xi1>
+}
+
+// -----
+
+// CHECK-LABEL: @arm_sve_dupq_lane(
+// CHECK-SAME:                     %[[A0:[a-z0-9]+]]: vector<[16]xi8>
+// CHECK-SAME:                     %[[A1:[a-z0-9]+]]: vector<[8]xi16>
+// CHECK-SAME:                     %[[A2:[a-z0-9]+]]: vector<[8]xf16>
+// CHECK-SAME:                     %[[A3:[a-z0-9]+]]: vector<[8]xbf16>
+// CHECK-SAME:                     %[[A4:[a-z0-9]+]]: vector<[4]xi32>
+// CHECK-SAME:                     %[[A5:[a-z0-9]+]]: vector<[4]xf32>
+// CHECK-SAME:                     %[[A6:[a-z0-9]+]]: vector<[2]xi64>
+// CHECK-SAME:                     %[[A7:[a-z0-9]+]]: vector<[2]xf64>
+// CHECK-SAME: -> !llvm.struct<(vector<[16]xi8>, vector<[8]xi16>, vector<[8]xf16>, vector<[8]xbf16>, vector<[4]xi32>, vector<[4]xf32>, vector<[2]xi64>, vector<[2]xf64>)> {
+func.func @arm_sve_dupq_lane(
+  %v16i8: vector<[16]xi8>, %v8i16: vector<[8]xi16>,
+  %v8f16: vector<[8]xf16>, %v8bf16: vector<[8]xbf16>,
+  %v4i32: vector<[4]xi32>, %v4f32: vector<[4]xf32>,
+  %v2i64: vector<[2]xi64>, %v2f64: vector<[2]xf64>)
+  -> (vector<[16]xi8>, vector<[8]xi16>, vector<[8]xf16>, vector<[8]xbf16>,
+      vector<[4]xi32>, vector<[4]xf32>, vector<[2]xi64>, vector<[2]xf64>) {
+// CHECK: "arm_sve.intr.dupq_lane"(%[[A0]]) <{lane = 0 : i64}> : (vector<[16]xi8>) -> vector<[16]xi8>
+  %0 = arm_sve.dupq_lane %v16i8[0]  : vector<[16]xi8>
+// CHECK: "arm_sve.intr.dupq_lane"(%[[A1]]) <{lane = 1 : i64}> : (vector<[8]xi16>) -> vector<[8]xi16>
+  %1 = arm_sve.dupq_lane %v8i16[1]  : vector<[8]xi16>
+// CHECK: "arm_sve.intr.dupq_lane"(%[[A2]]) <{lane = 2 : i64}> : (vector<[8]xf16>) -> vector<[8]xf16>
+  %2 = arm_sve.dupq_lane %v8f16[2]  : vector<[8]xf16>
+// CHECK: "arm_sve.intr.dupq_lane"(%[[A3]]) <{lane = 3 : i64}> : (vector<[8]xbf16>) -> vector<[8]xbf16>
+  %3 = arm_sve.dupq_lane %v8bf16[3] : vector<[8]xbf16>
+// CHECK: "arm_sve.intr.dupq_lane"(%[[A4]]) <{lane = 4 : i64}> : (vector<[4]xi32>) -> vector<[4]xi32>
+  %4 = arm_sve.dupq_lane %v4i32[4]  : vector<[4]xi32>
+// CHECK: "arm_sve.intr.dupq_lane"(%[[A5]]) <{lane = 5 : i64}> : (vector<[4]xf32>) -> vector<[4]xf32>
+  %5 = arm_sve.dupq_lane %v4f32[5]  : vector<[4]xf32>
+// CHECK: "arm_sve.intr.dupq_lane"(%[[A6]]) <{lane = 6 : i64}> : (vector<[2]xi64>) -> vector<[2]xi64>
+  %6 = arm_sve.dupq_lane %v2i64[6]  : vector<[2]xi64>
+// CHECK: "arm_sve.intr.dupq_lane"(%[[A7]]) <{lane = 7 : i64}> : (vector<[2]xf64>) -> vector<[2]xf64>
+  %7 = arm_sve.dupq_lane %v2f64[7]  : vector<[2]xf64>
+
+  return %0, %1, %2, %3, %4, %5, %6, %7
+    : vector<[16]xi8>, vector<[8]xi16>, vector<[8]xf16>, vector<[8]xbf16>,
+      vector<[4]xi32>, vector<[4]xf32>, vector<[2]xi64>, vector<[2]xf64>
 }

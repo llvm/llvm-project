@@ -225,7 +225,7 @@ lldb::ProcessSP PlatformQemuUser::DebugProcess(ProcessLaunchInfo &launch_info,
       process_gdb_remote::ProcessGDBRemote::GetPluginNameStatic(), nullptr,
       true);
   if (!process_sp) {
-    error.SetErrorString("Failed to create GDB process");
+    error = Status::FromErrorString("Failed to create GDB process");
     return nullptr;
   }
 
@@ -235,10 +235,12 @@ lldb::ProcessSP PlatformQemuUser::DebugProcess(ProcessLaunchInfo &launch_info,
   if (error.Fail())
     return nullptr;
 
+#ifndef _WIN32 // TODO: Implement on Windows
   if (launch_info.GetPTY().GetPrimaryFileDescriptor() !=
       PseudoTerminal::invalid_fd)
     process_sp->SetSTDIOFileDescriptor(
         launch_info.GetPTY().ReleasePrimaryFileDescriptor());
+#endif
 
   return process_sp;
 }

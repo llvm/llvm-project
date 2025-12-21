@@ -11,6 +11,7 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/TinyPtrVector.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 class BasicBlock;
@@ -32,17 +33,18 @@ enum class EHPersonality {
   CoreCLR,
   Rust,
   Wasm_CXX,
-  XL_CXX
+  XL_CXX,
+  ZOS_CXX,
 };
 
 /// See if the given exception handling personality function is one
 /// that we understand.  If so, return a description of it; otherwise return
 /// Unknown.
-EHPersonality classifyEHPersonality(const Value *Pers);
+LLVM_ABI EHPersonality classifyEHPersonality(const Value *Pers);
 
-StringRef getEHPersonalityName(EHPersonality Pers);
+LLVM_ABI StringRef getEHPersonalityName(EHPersonality Pers);
 
-EHPersonality getDefaultEHPersonality(const Triple &T);
+LLVM_ABI EHPersonality getDefaultEHPersonality(const Triple &T);
 
 /// Returns true if this personality function catches asynchronous
 /// exceptions.
@@ -103,7 +105,7 @@ inline bool isNoOpWithoutInvoke(EHPersonality Pers) {
   llvm_unreachable("invalid enum");
 }
 
-bool canSimplifyInvokeNoUnwind(const Function *F);
+LLVM_ABI bool canSimplifyInvokeNoUnwind(const Function *F);
 
 typedef TinyPtrVector<BasicBlock *> ColorVector;
 
@@ -111,7 +113,7 @@ typedef TinyPtrVector<BasicBlock *> ColorVector;
 /// this will recompute which blocks are in which funclet. It is possible that
 /// some blocks are in multiple funclets. Consider this analysis to be
 /// expensive.
-DenseMap<BasicBlock *, ColorVector> colorEHFunclets(Function &F);
+LLVM_ABI DenseMap<BasicBlock *, ColorVector> colorEHFunclets(Function &F);
 
 } // end namespace llvm
 

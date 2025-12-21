@@ -7,10 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "DragonFly.h"
-#include "CommonArgs.h"
+#include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
-#include "clang/Driver/Options.h"
+#include "clang/Options/Options.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/Path.h"
 
@@ -57,11 +57,11 @@ void dragonfly::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   const auto &ToolChain = static_cast<const DragonFly &>(getToolChain());
   const Driver &D = ToolChain.getDriver();
   const llvm::Triple::ArchType Arch = ToolChain.getArch();
+  const bool Static = Args.hasArg(options::OPT_static);
+  const bool Shared = Args.hasArg(options::OPT_shared);
+  const bool Profiling = Args.hasArg(options::OPT_pg);
+  const bool Pie = Args.hasArg(options::OPT_pie);
   ArgStringList CmdArgs;
-  bool Static = Args.hasArg(options::OPT_static);
-  bool Shared = Args.hasArg(options::OPT_shared);
-  bool Profiling = Args.hasArg(options::OPT_pg);
-  bool Pie = Args.hasArg(options::OPT_pie);
 
   if (!D.SysRoot.empty())
     CmdArgs.push_back(Args.MakeArgString("--sysroot=" + D.SysRoot));
@@ -122,7 +122,7 @@ void dragonfly::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   }
 
   Args.addAllArgs(CmdArgs, {options::OPT_L, options::OPT_T_Group,
-                            options::OPT_s, options::OPT_t, options::OPT_r});
+                            options::OPT_s, options::OPT_t});
   ToolChain.AddFilePathLibArgs(Args, CmdArgs);
 
   AddLinkerInputs(ToolChain, Inputs, Args, CmdArgs, JA);
@@ -136,11 +136,25 @@ void dragonfly::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
     // Use the static OpenMP runtime with -static-openmp
     bool StaticOpenMP = Args.hasArg(options::OPT_static_openmp) && !Static;
-    addOpenMPRuntime(CmdArgs, ToolChain, Args, StaticOpenMP);
+    addOpenMPRuntime(C, CmdArgs, ToolChain, Args, StaticOpenMP);
 
     if (D.CCCIsCXX()) {
       if (ToolChain.ShouldLinkCXXStdlib(Args))
         ToolChain.AddCXXStdlibLibArgs(Args, CmdArgs);
+      CmdArgs.push_back("-lm");
+    }
+
+    // Silence warnings when linking C code with a C++ '-stdlib' argument.
+    Args.ClaimAllArgs(options::OPT_stdlib_EQ);
+
+    // Additional linker set-up and flags for Fortran. This is required in order
+    // to generate executables. As Fortran runtime depends on the C runtime,
+    // these dependencies need to be listed before the C runtime below (i.e.
+    // AddRunTimeLibs).
+    if (D.IsFlangMode() &&
+        !Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs)) {
+      ToolChain.addFortranRuntimeLibraryPath(Args, CmdArgs);
+      ToolChain.addFortranRuntimeLibs(Args, CmdArgs);
       CmdArgs.push_back("-lm");
     }
 
@@ -192,11 +206,8 @@ void dragonfly::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 DragonFly::DragonFly(const Driver &D, const llvm::Triple &Triple,
                      const ArgList &Args)
     : Generic_ELF(D, Triple, Args) {
-
   // Path mangling to find libexec
-  getProgramPaths().push_back(getDriver().getInstalledDir());
-  if (getDriver().getInstalledDir() != getDriver().Dir)
-    getProgramPaths().push_back(getDriver().Dir);
+  getProgramPaths().push_back(getDriver().Dir);
 
   getFilePaths().push_back(getDriver().Dir + "/../lib");
   getFilePaths().push_back(concat(getDriver().SysRoot, "/usr/lib"));
@@ -208,7 +219,7 @@ void DragonFly::AddClangSystemIncludeArgs(
     llvm::opt::ArgStringList &CC1Args) const {
   const Driver &D = getDriver();
 
-  if (DriverArgs.hasArg(clang::driver::options::OPT_nostdinc))
+  if (DriverArgs.hasArg(options::OPT_nostdinc))
     return;
 
   if (!DriverArgs.hasArg(options::OPT_nobuiltininc)) {

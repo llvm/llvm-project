@@ -241,6 +241,38 @@ define <8 x half> @test_cvtnp_v8i16_bt(<8 x half> %a, <8 x half> %b, <4 x float>
   ret <8 x half> %z
 }
 
+define <4 x i32> @test_vshrn_const(<8 x i16> %a) {
+; CHECK-LABEL: @test_vshrn_const(
+; CHECK-NEXT:    [[Y:%.*]] = call <8 x i16> @llvm.arm.mve.vshrn.v8i16.v4i32(<8 x i16> poison, <4 x i32> <i32 512, i32 0, i32 0, i32 0>, i32 3, i32 0, i32 0, i32 0, i32 0, i32 1)
+; CHECK-NEXT:    [[Z:%.*]] = shufflevector <8 x i16> [[Y]], <8 x i16> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
+; CHECK-NEXT:    [[ZA:%.*]] = zext <4 x i16> [[Z]] to <4 x i32>
+; CHECK-NEXT:    ret <4 x i32> [[ZA]]
+;
+  %y = call <8 x i16> @llvm.arm.mve.vshrn.v8i16.v4i32(<8 x i16> %a, <4 x i32> <i32 512, i32 0, i32 0, i32 0>, i32 3, i32 0, i32 0, i32 0, i32 0, i32 1)
+  %z = shufflevector <8 x i16> %y, <8 x i16> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
+  %za = zext <4 x i16> %z to <4 x i32>
+  ret <4 x i32> %za
+}
+
+define zeroext i16 @test_undef_bits() {
+; CHECK-LABEL: @test_undef_bits(
+; CHECK-NEXT:  e:
+; CHECK-NEXT:    [[TMP0:%.*]] = call <8 x i16> @llvm.arm.mve.vshrn.v8i16.v4i32(<8 x i16> poison, <4 x i32> <i32 256, i32 0, i32 0, i32 0>, i32 8, i32 1, i32 1, i32 1, i32 0, i32 1)
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i16> [[TMP0]], <8 x i16> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
+; CHECK-NEXT:    [[TMP2:%.*]] = zext <4 x i16> [[TMP1]] to <4 x i32>
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <4 x i32> [[TMP2]] to <8 x i16>
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <8 x i16> [[TMP3]], i64 0
+; CHECK-NEXT:    ret i16 [[TMP4]]
+;
+e:
+  %0 = call <8 x i16> @llvm.arm.mve.vshrn.v8i16.v4i32(<8 x i16> zeroinitializer, <4 x i32> <i32 256, i32 0, i32 0, i32 0>, i32 8, i32 1, i32 1, i32 1, i32 0, i32 1)
+  %1 = shufflevector <8 x i16> %0, <8 x i16> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
+  %2 = zext <4 x i16> %1 to <4 x i32>
+  %3 = bitcast <4 x i32> %2 to <8 x i16>
+  %4 = extractelement <8 x i16> %3, i32 0
+  ret i16 %4
+}
+
 declare <8 x i16> @llvm.arm.mve.vshrn.v8i16.v4i32(<8 x i16>, <4 x i32>, i32, i32, i32, i32, i32, i32)
 declare <8 x i16> @llvm.arm.mve.vshrn.predicated.v8i16.v4i32.v4i1(<8 x i16>, <4 x i32>, i32, i32, i32, i32, i32, i32, <4 x i1>)
 declare <16 x i8> @llvm.arm.mve.vshrn.v16i8.v8i16(<16 x i8>, <8 x i16>, i32, i32, i32, i32, i32, i32)

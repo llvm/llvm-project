@@ -1,9 +1,9 @@
 ; RUN: llvm-as < %s | llvm-bcanalyzer -dump | FileCheck %s -check-prefix=BC
 ; PR23436: Actually emit DEBUG_LOC_AGAIN records.
 
-; BC: <DEBUG_LOC op
+; BC: <DEBUG_LOC abbrevid
 ; BC: <DEBUG_LOC_AGAIN/>
-; BC: <DEBUG_LOC op
+; BC: <DEBUG_LOC abbrevid
 ; BC: <DEBUG_LOC_AGAIN/>
 
 ; RUN: llvm-as < %s | llvm-dis | FileCheck %s

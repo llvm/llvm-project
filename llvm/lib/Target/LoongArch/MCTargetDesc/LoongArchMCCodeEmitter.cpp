@@ -11,14 +11,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "LoongArchFixupKinds.h"
-#include "MCTargetDesc/LoongArchBaseInfo.h"
-#include "MCTargetDesc/LoongArchMCExpr.h"
+#include "MCTargetDesc/LoongArchMCAsmInfo.h"
 #include "MCTargetDesc/LoongArchMCTargetDesc.h"
+#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCInstBuilder.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
+#include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/EndianStream.h"
 
@@ -37,7 +38,7 @@ public:
   LoongArchMCCodeEmitter(MCContext &ctx, MCInstrInfo const &MCII)
       : Ctx(ctx), MCII(MCII) {}
 
-  ~LoongArchMCCodeEmitter() override {}
+  ~LoongArchMCCodeEmitter() override = default;
 
   void encodeInstruction(const MCInst &MI, SmallVectorImpl<char> &CB,
                          SmallVectorImpl<MCFixup> &Fixups,
@@ -47,6 +48,10 @@ public:
   void expandToVectorLDI(const MCInst &MI, SmallVectorImpl<char> &CB,
                          SmallVectorImpl<MCFixup> &Fixups,
                          const MCSubtargetInfo &STI) const;
+
+  void expandAddTPRel(const MCInst &MI, SmallVectorImpl<char> &CB,
+                      SmallVectorImpl<MCFixup> &Fixups,
+                      const MCSubtargetInfo &STI) const;
 
   /// TableGen'erated function for getting the binary encoding for an
   /// instruction.
@@ -92,6 +97,18 @@ public:
 };
 } // end namespace
 
+static void addFixup(SmallVectorImpl<MCFixup> &Fixups, uint32_t Offset,
+                     const MCExpr *Value, uint16_t Kind) {
+  bool PCRel = false;
+  switch (Kind) {
+  case LoongArch::fixup_loongarch_b16:
+  case LoongArch::fixup_loongarch_b21:
+  case LoongArch::fixup_loongarch_b26:
+    PCRel = true;
+  }
+  Fixups.push_back(MCFixup::create(Offset, Value, Kind, PCRel));
+}
+
 unsigned
 LoongArchMCCodeEmitter::getMachineOpValue(const MCInst &MI, const MCOperand &MO,
                                           SmallVectorImpl<MCFixup> &Fixups,
@@ -120,127 +137,56 @@ LoongArchMCCodeEmitter::getExprOpValue(const MCInst &MI, const MCOperand &MO,
                                        SmallVectorImpl<MCFixup> &Fixups,
                                        const MCSubtargetInfo &STI) const {
   assert(MO.isExpr() && "getExprOpValue expects only expressions");
+  bool RelaxCandidate = false;
+  bool EnableRelax = STI.hasFeature(LoongArch::FeatureRelax);
   const MCExpr *Expr = MO.getExpr();
   MCExpr::ExprKind Kind = Expr->getKind();
-  LoongArch::Fixups FixupKind = LoongArch::fixup_loongarch_invalid;
-  if (Kind == MCExpr::Target) {
+  unsigned FixupKind = LoongArch::fixup_loongarch_invalid;
+  if (Kind == MCExpr::Specifier) {
     const LoongArchMCExpr *LAExpr = cast<LoongArchMCExpr>(Expr);
-
-    switch (LAExpr->getKind()) {
-    case LoongArchMCExpr::VK_LoongArch_None:
-    case LoongArchMCExpr::VK_LoongArch_Invalid:
+    FixupKind = LAExpr->getSpecifier();
+    RelaxCandidate = LAExpr->getRelaxHint();
+    switch (uint16_t(LAExpr->getSpecifier())) {
+    case LoongArchMCExpr::VK_None:
       llvm_unreachable("Unhandled fixup kind!");
-    case LoongArchMCExpr::VK_LoongArch_B16:
+    case ELF::R_LARCH_TLS_LE_ADD_R:
+      llvm_unreachable("ELF::R_LARCH_TLS_LE_ADD_R should not represent an "
+                       "instruction operand");
+    case ELF::R_LARCH_B16:
       FixupKind = LoongArch::fixup_loongarch_b16;
       break;
-    case LoongArchMCExpr::VK_LoongArch_B21:
+    case ELF::R_LARCH_B21:
       FixupKind = LoongArch::fixup_loongarch_b21;
       break;
-    case LoongArchMCExpr::VK_LoongArch_B26:
-    case LoongArchMCExpr::VK_LoongArch_CALL:
-    case LoongArchMCExpr::VK_LoongArch_CALL_PLT:
+    case ELF::R_LARCH_B26:
       FixupKind = LoongArch::fixup_loongarch_b26;
       break;
-    case LoongArchMCExpr::VK_LoongArch_ABS_HI20:
+    case ELF::R_LARCH_MARK_LA:
+      // Match gas behavior: generate `R_LARCH_MARK_LA` relocation when using
+      // `la.abs`.
+      Fixups.push_back(
+          MCFixup::create(0, MCConstantExpr::create(0, Ctx),
+                          FirstLiteralRelocationKind + ELF::R_LARCH_MARK_LA));
+      [[fallthrough]];
+    case ELF::R_LARCH_ABS_HI20:
       FixupKind = LoongArch::fixup_loongarch_abs_hi20;
       break;
-    case LoongArchMCExpr::VK_LoongArch_ABS_LO12:
+    case ELF::R_LARCH_ABS_LO12:
       FixupKind = LoongArch::fixup_loongarch_abs_lo12;
       break;
-    case LoongArchMCExpr::VK_LoongArch_ABS64_LO20:
+    case ELF::R_LARCH_ABS64_LO20:
       FixupKind = LoongArch::fixup_loongarch_abs64_lo20;
       break;
-    case LoongArchMCExpr::VK_LoongArch_ABS64_HI12:
+    case ELF::R_LARCH_ABS64_HI12:
       FixupKind = LoongArch::fixup_loongarch_abs64_hi12;
       break;
-    case LoongArchMCExpr::VK_LoongArch_PCALA_HI20:
-      FixupKind = LoongArch::fixup_loongarch_pcala_hi20;
-      break;
-    case LoongArchMCExpr::VK_LoongArch_PCALA_LO12:
-      FixupKind = LoongArch::fixup_loongarch_pcala_lo12;
-      break;
-    case LoongArchMCExpr::VK_LoongArch_PCALA64_LO20:
-      FixupKind = LoongArch::fixup_loongarch_pcala64_lo20;
-      break;
-    case LoongArchMCExpr::VK_LoongArch_PCALA64_HI12:
-      FixupKind = LoongArch::fixup_loongarch_pcala64_hi12;
-      break;
-    case LoongArchMCExpr::VK_LoongArch_GOT_PC_HI20:
-      FixupKind = LoongArch::fixup_loongarch_got_pc_hi20;
-      break;
-    case LoongArchMCExpr::VK_LoongArch_GOT_PC_LO12:
-      FixupKind = LoongArch::fixup_loongarch_got_pc_lo12;
-      break;
-    case LoongArchMCExpr::VK_LoongArch_GOT64_PC_LO20:
-      FixupKind = LoongArch::fixup_loongarch_got64_pc_lo20;
-      break;
-    case LoongArchMCExpr::VK_LoongArch_GOT64_PC_HI12:
-      FixupKind = LoongArch::fixup_loongarch_got64_pc_hi12;
-      break;
-    case LoongArchMCExpr::VK_LoongArch_GOT_HI20:
-      FixupKind = LoongArch::fixup_loongarch_got_hi20;
-      break;
-    case LoongArchMCExpr::VK_LoongArch_GOT_LO12:
-      FixupKind = LoongArch::fixup_loongarch_got_lo12;
-      break;
-    case LoongArchMCExpr::VK_LoongArch_GOT64_LO20:
-      FixupKind = LoongArch::fixup_loongarch_got64_lo20;
-      break;
-    case LoongArchMCExpr::VK_LoongArch_GOT64_HI12:
-      FixupKind = LoongArch::fixup_loongarch_got64_hi12;
-      break;
-    case LoongArchMCExpr::VK_LoongArch_TLS_LE_HI20:
-      FixupKind = LoongArch::fixup_loongarch_tls_le_hi20;
-      break;
-    case LoongArchMCExpr::VK_LoongArch_TLS_LE_LO12:
-      FixupKind = LoongArch::fixup_loongarch_tls_le_lo12;
-      break;
-    case LoongArchMCExpr::VK_LoongArch_TLS_LE64_LO20:
-      FixupKind = LoongArch::fixup_loongarch_tls_le64_lo20;
-      break;
-    case LoongArchMCExpr::VK_LoongArch_TLS_LE64_HI12:
-      FixupKind = LoongArch::fixup_loongarch_tls_le64_hi12;
-      break;
-    case LoongArchMCExpr::VK_LoongArch_TLS_IE_PC_HI20:
-      FixupKind = LoongArch::fixup_loongarch_tls_ie_pc_hi20;
-      break;
-    case LoongArchMCExpr::VK_LoongArch_TLS_IE_PC_LO12:
-      FixupKind = LoongArch::fixup_loongarch_tls_ie_pc_lo12;
-      break;
-    case LoongArchMCExpr::VK_LoongArch_TLS_IE64_PC_LO20:
-      FixupKind = LoongArch::fixup_loongarch_tls_ie64_pc_lo20;
-      break;
-    case LoongArchMCExpr::VK_LoongArch_TLS_IE64_PC_HI12:
-      FixupKind = LoongArch::fixup_loongarch_tls_ie64_pc_hi12;
-      break;
-    case LoongArchMCExpr::VK_LoongArch_TLS_IE_HI20:
-      FixupKind = LoongArch::fixup_loongarch_tls_ie_hi20;
-      break;
-    case LoongArchMCExpr::VK_LoongArch_TLS_IE_LO12:
-      FixupKind = LoongArch::fixup_loongarch_tls_ie_lo12;
-      break;
-    case LoongArchMCExpr::VK_LoongArch_TLS_IE64_LO20:
-      FixupKind = LoongArch::fixup_loongarch_tls_ie64_lo20;
-      break;
-    case LoongArchMCExpr::VK_LoongArch_TLS_IE64_HI12:
-      FixupKind = LoongArch::fixup_loongarch_tls_ie64_hi12;
-      break;
-    case LoongArchMCExpr::VK_LoongArch_TLS_LD_PC_HI20:
-      FixupKind = LoongArch::fixup_loongarch_tls_ld_pc_hi20;
-      break;
-    case LoongArchMCExpr::VK_LoongArch_TLS_LD_HI20:
-      FixupKind = LoongArch::fixup_loongarch_tls_ld_hi20;
-      break;
-    case LoongArchMCExpr::VK_LoongArch_TLS_GD_PC_HI20:
-      FixupKind = LoongArch::fixup_loongarch_tls_gd_pc_hi20;
-      break;
-    case LoongArchMCExpr::VK_LoongArch_TLS_GD_HI20:
-      FixupKind = LoongArch::fixup_loongarch_tls_gd_hi20;
+    case ELF::R_LARCH_CALL36:
+    case ELF::R_LARCH_TLS_LE_HI20_R:
+    case ELF::R_LARCH_TLS_LE_LO12_R:
+      RelaxCandidate = true;
       break;
     }
-  } else if (Kind == MCExpr::SymbolRef &&
-             cast<MCSymbolRefExpr>(Expr)->getKind() ==
-                 MCSymbolRefExpr::VK_None) {
+  } else if (Kind == MCExpr::SymbolRef) {
     switch (MI.getOpcode()) {
     default:
       break;
@@ -259,6 +205,7 @@ LoongArchMCCodeEmitter::getExprOpValue(const MCInst &MI, const MCOperand &MO,
       FixupKind = LoongArch::fixup_loongarch_b21;
       break;
     case LoongArch::B:
+    case LoongArch::BL:
       FixupKind = LoongArch::fixup_loongarch_b26;
       break;
     }
@@ -267,8 +214,13 @@ LoongArchMCCodeEmitter::getExprOpValue(const MCInst &MI, const MCOperand &MO,
   assert(FixupKind != LoongArch::fixup_loongarch_invalid &&
          "Unhandled expression!");
 
-  Fixups.push_back(
-      MCFixup::create(0, Expr, MCFixupKind(FixupKind), MI.getLoc()));
+  addFixup(Fixups, 0, Expr, FixupKind);
+  // If linker relaxation is enabled and supported by this relocation, set
+  // a bit so that if fixup is unresolved, a R_LARCH_RELAX relocation will be
+  // appended.
+  if (EnableRelax && RelaxCandidate)
+    Fixups.back().setLinkerRelaxable();
+
   return 0;
 }
 
@@ -299,6 +251,36 @@ void LoongArchMCCodeEmitter::expandToVectorLDI(
   support::endian::write(CB, Binary, llvm::endianness::little);
 }
 
+void LoongArchMCCodeEmitter::expandAddTPRel(const MCInst &MI,
+                                            SmallVectorImpl<char> &CB,
+                                            SmallVectorImpl<MCFixup> &Fixups,
+                                            const MCSubtargetInfo &STI) const {
+  MCOperand Rd = MI.getOperand(0);
+  MCOperand Rj = MI.getOperand(1);
+  MCOperand Rk = MI.getOperand(2);
+  MCOperand Symbol = MI.getOperand(3);
+  assert(Symbol.isExpr() &&
+         "Expected expression as third input to TP-relative add");
+
+  const LoongArchMCExpr *Expr = dyn_cast<LoongArchMCExpr>(Symbol.getExpr());
+  assert(Expr && Expr->getSpecifier() == ELF::R_LARCH_TLS_LE_ADD_R &&
+         "Expected %le_add_r relocation on TP-relative symbol");
+
+  // Emit the correct %le_add_r relocation for the symbol.
+  addFixup(Fixups, 0, Expr, ELF::R_LARCH_TLS_LE_ADD_R);
+  if (STI.hasFeature(LoongArch::FeatureRelax))
+    Fixups.back().setLinkerRelaxable();
+
+  // Emit a normal ADD instruction with the given operands.
+  unsigned ADD = MI.getOpcode() == LoongArch::PseudoAddTPRel_D
+                     ? LoongArch::ADD_D
+                     : LoongArch::ADD_W;
+  MCInst TmpInst =
+      MCInstBuilder(ADD).addOperand(Rd).addOperand(Rj).addOperand(Rk);
+  uint32_t Binary = getBinaryCodeForInstr(TmpInst, Fixups, STI);
+  support::endian::write(CB, Binary, llvm::endianness::little);
+}
+
 void LoongArchMCCodeEmitter::encodeInstruction(
     const MCInst &MI, SmallVectorImpl<char> &CB,
     SmallVectorImpl<MCFixup> &Fixups, const MCSubtargetInfo &STI) const {
@@ -319,6 +301,9 @@ void LoongArchMCCodeEmitter::encodeInstruction(
   case LoongArch::PseudoXVREPLI_W:
   case LoongArch::PseudoXVREPLI_D:
     return expandToVectorLDI<LoongArch::XVLDI>(MI, CB, Fixups, STI);
+  case LoongArch::PseudoAddTPRel_W:
+  case LoongArch::PseudoAddTPRel_D:
+    return expandAddTPRel(MI, CB, Fixups, STI);
   }
 
   switch (Size) {

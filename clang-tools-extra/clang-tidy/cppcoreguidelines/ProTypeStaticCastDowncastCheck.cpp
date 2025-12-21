@@ -1,4 +1,4 @@
-//===--- ProTypeStaticCastDowncastCheck.cpp - clang-tidy-------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -14,34 +14,46 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::cppcoreguidelines {
 
+ProTypeStaticCastDowncastCheck::ProTypeStaticCastDowncastCheck(
+    StringRef Name, ClangTidyContext *Context)
+    : ClangTidyCheck(Name, Context),
+      StrictMode(Options.get("StrictMode", true)) {}
+
+void ProTypeStaticCastDowncastCheck::storeOptions(
+    ClangTidyOptions::OptionMap &Opts) {
+  Options.store(Opts, "StrictMode", StrictMode);
+}
+
 void ProTypeStaticCastDowncastCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
-      cxxStaticCastExpr(unless(isInTemplateInstantiation())).bind("cast"),
-      this);
+      cxxStaticCastExpr(hasCastKind(CK_BaseToDerived)).bind("cast"), this);
 }
 
 void ProTypeStaticCastDowncastCheck::check(
     const MatchFinder::MatchResult &Result) {
   const auto *MatchedCast = Result.Nodes.getNodeAs<CXXStaticCastExpr>("cast");
-  if (MatchedCast->getCastKind() != CK_BaseToDerived)
-    return;
 
-  QualType SourceType = MatchedCast->getSubExpr()->getType();
+  const QualType SourceType = MatchedCast->getSubExpr()->getType();
   const auto *SourceDecl = SourceType->getPointeeCXXRecordDecl();
   if (!SourceDecl) // The cast is from object to reference
     SourceDecl = SourceType->getAsCXXRecordDecl();
   if (!SourceDecl)
     return;
 
-  if (SourceDecl->isPolymorphic())
+  if (SourceDecl->isPolymorphic()) {
     diag(MatchedCast->getOperatorLoc(),
          "do not use static_cast to downcast from a base to a derived class; "
          "use dynamic_cast instead")
         << FixItHint::CreateReplacement(MatchedCast->getOperatorLoc(),
                                         "dynamic_cast");
-  else
-    diag(MatchedCast->getOperatorLoc(),
-         "do not use static_cast to downcast from a base to a derived class");
+    return;
+  }
+
+  if (!StrictMode)
+    return;
+
+  diag(MatchedCast->getOperatorLoc(),
+       "do not use static_cast to downcast from a base to a derived class");
 }
 
 } // namespace clang::tidy::cppcoreguidelines

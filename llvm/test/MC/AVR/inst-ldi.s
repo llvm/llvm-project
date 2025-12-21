@@ -1,6 +1,5 @@
 ; RUN: llvm-mc -triple avr -show-encoding < %s | FileCheck %s
-; RUN: llvm-mc -filetype=obj -triple avr -mattr=sram < %s | llvm-objdump --no-print-imm-hex -d --mattr=sram - | FileCheck --check-prefix=CHECK-INST %s
-
+; RUN: llvm-mc -filetype=obj -triple avr -mattr=sram < %s | llvm-objdump --no-print-imm-hex -dr --mattr=sram - | FileCheck --check-prefix=CHECK-INST %s
 
 foo:
   ldi r16, 241
@@ -15,7 +14,6 @@ foo:
 ; CHECK: ldi r27, 92                  ; encoding: [0xbc,0xe5]
 
 ; CHECK: ldi r21, SYMBOL+3            ; encoding: [0x50'A',0xe0]
-; CHECK:                              ;   fixup A - offset: 0, value: SYMBOL+3, kind: fixup_ldi
 
 ; CHECK-INST: ldi r16, 241
 ; CHECK-INST: ldi r29, 190

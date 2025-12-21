@@ -19,7 +19,7 @@ define i1 @test_no_known_facts(ptr %dst) {
 entry:
   %dst.0 = getelementptr inbounds ptr, ptr %dst, i64 0
   %upper = getelementptr inbounds ptr, ptr %dst, i64 2
-  %c = icmp ult i32* %dst.0, %upper
+  %c = icmp ult ptr %dst.0, %upper
   ret i1 %c
 }
 
@@ -183,14 +183,14 @@ else:
 define i32 @test_branch(i32 %a) {
 ; CHECK-LABEL: define i1 @"{{.+}}test_branchrepro"(i32 %a) {
 ; CHECK-NEXT: entry:
-; CHECK-NEXT:   %0 = icmp ult i32 %a, 0
+; CHECK-NEXT:   %0 = icmp ult i32 %a, 4
 ; CHECK-NEXT:   call void @llvm.assume(i1 %0)
 ; CHECK-NEXT:   %c.2 = icmp ugt i32 0, 0
 ; CHECK-NEXT:   ret i1 %c.2
 ; CHECK-NEXT: }
 ;
 entry:
-  %c.1 = icmp ult i32 %a, 0
+  %c.1 = icmp ult i32 %a, 4
   br i1 %c.1, label %then, label %exit
 
 then:

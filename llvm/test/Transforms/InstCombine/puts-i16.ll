@@ -2,6 +2,7 @@
 ;
 ; RUN: opt < %s -mtriple=avr-linux -passes=instcombine -S | FileCheck %s --check-prefix=AVR
 ; RUN: opt < %s -mtriple=msp430-freebsd -passes=instcombine -S | FileCheck %s --check-prefix=MSP430
+; REQUIRES: avr-registered-target,msp430-registered-target
 ;
 ; Test that the puts to putchar transformation works correctly even for
 ; targets with 16-bit int.
@@ -14,7 +15,7 @@ declare i16 @puts(ptr)
 define void @xform_puts(i16 %c) {
 ; Transform puts("") to putchar("\n").
 ; AVR-LABEL: @xform_puts(
-; AVR-NEXT:    [[PUTCHAR:%.*]] = call i16 @putchar(i16 10)
+; AVR-NEXT:    [[PUTCHAR:%.*]] = call addrspace(1) i16 @putchar(i16 10)
 ; AVR-NEXT:    ret void
 ;
 ; MSP430-LABEL: @xform_puts(

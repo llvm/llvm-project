@@ -9,10 +9,10 @@
 #ifndef FORTRAN_SEMANTICS_DATA_TO_INITS_H_
 #define FORTRAN_SEMANTICS_DATA_TO_INITS_H_
 
-#include "flang/Common/default-kinds.h"
 #include "flang/Common/interval.h"
 #include "flang/Evaluate/fold-designator.h"
 #include "flang/Evaluate/initial-image.h"
+#include "flang/Support/default-kinds.h"
 #include <list>
 #include <map>
 
@@ -62,8 +62,8 @@ void AccumulateDataInitializations(DataInitializations &,
     evaluate::ExpressionAnalyzer &, const Symbol &,
     const std::list<common::Indirection<parser::DataStmtValue>> &);
 
-void ConvertToInitializers(
-    DataInitializations &, evaluate::ExpressionAnalyzer &);
+void ConvertToInitializers(DataInitializations &,
+    evaluate::ExpressionAnalyzer &, bool forDerivedTypes = true);
 
 } // namespace Fortran::semantics
 #endif // FORTRAN_SEMANTICS_DATA_TO_INITS_H_

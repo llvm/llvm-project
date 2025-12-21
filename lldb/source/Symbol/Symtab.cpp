@@ -124,17 +124,29 @@ void Symtab::Dump(Stream *s, Target *target, SortOrder sort_order,
       DumpSymbolHeader(s);
 
       std::multimap<llvm::StringRef, const Symbol *> name_map;
-      for (const_iterator pos = m_symbols.begin(), end = m_symbols.end();
-           pos != end; ++pos) {
-        const char *name = pos->GetName().AsCString();
-        if (name && name[0])
-          name_map.insert(std::make_pair(name, &(*pos)));
-      }
+      for (const Symbol &symbol : m_symbols)
+        name_map.emplace(symbol.GetName().GetStringRef(), &symbol);
 
       for (const auto &name_to_symbol : name_map) {
         const Symbol *symbol = name_to_symbol.second;
         s->Indent();
         symbol->Dump(s, target, symbol - &m_symbols[0], name_preference);
+      }
+    } break;
+
+    case eSortOrderBySize: {
+      s->PutCString(" (sorted by size):\n");
+      DumpSymbolHeader(s);
+
+      std::multimap<size_t, const Symbol *, std::greater<size_t>> size_map;
+      for (const Symbol &symbol : m_symbols)
+        size_map.emplace(symbol.GetByteSize(), &symbol);
+
+      size_t idx = 0;
+      for (const auto &size_to_symbol : size_map) {
+        const Symbol *symbol = size_to_symbol.second;
+        s->Indent();
+        symbol->Dump(s, target, idx++, name_preference);
       }
     } break;
 
@@ -233,7 +245,7 @@ static bool lldb_skip_name(llvm::StringRef mangled,
                            Mangled::ManglingScheme scheme) {
   switch (scheme) {
   case Mangled::eManglingSchemeItanium: {
-    if (mangled.size() < 3 || !mangled.startswith("_Z"))
+    if (mangled.size() < 3 || !mangled.starts_with("_Z"))
       return true;
 
     // Avoid the following types of symbols in the index.
@@ -277,7 +289,7 @@ void Symtab::InitNameIndexes() {
     std::vector<Language *> languages;
     Language::ForEach([&languages](Language *l) {
       languages.push_back(l);
-      return true;
+      return IterationAction::Continue;
     });
 
     auto &name_to_index = GetNameToSymbolIndexMap(lldb::eFunctionNameTypeNone);
@@ -626,11 +638,11 @@ void Symtab::SortSymbolIndexesByValue(std::vector<uint32_t> &indexes,
   std::vector<lldb::addr_t> addr_cache(m_symbols.size(), LLDB_INVALID_ADDRESS);
 
   SymbolIndexComparator comparator(m_symbols, addr_cache);
-  std::stable_sort(indexes.begin(), indexes.end(), comparator);
+  llvm::stable_sort(indexes, comparator);
 
   // Remove any duplicates if requested
   if (remove_duplicates) {
-    auto last = std::unique(indexes.begin(), indexes.end());
+    auto last = llvm::unique(indexes);
     indexes.erase(last, indexes.end());
   }
 }
@@ -642,8 +654,8 @@ uint32_t Symtab::GetNameIndexes(ConstString symbol_name,
   if (count)
     return count;
   // Synthetic symbol names are not added to the name indexes, but they start
-  // with a prefix and end with a the symbol UserID. This allows users to find
-  // these symbols without having to add them to the name indexes. These
+  // with a prefix and end with the symbol file address. This allows users to
+  // find these symbols without having to add them to the name indexes. These
   // queries will not happen very often since the names don't mean anything, so
   // performance is not paramount in this case.
   llvm::StringRef name = symbol_name.GetStringRef();
@@ -651,11 +663,12 @@ uint32_t Symtab::GetNameIndexes(ConstString symbol_name,
   if (!name.consume_front(Symbol::GetSyntheticSymbolPrefix()))
     return 0; // Not a synthetic symbol name
 
-  // Extract the user ID from the symbol name
-  unsigned long long uid = 0;
-  if (getAsUnsignedInteger(name, /*Radix=*/10, uid))
+  // Extract the file address from the symbol name
+  unsigned long long file_address = 0;
+  if (getAsUnsignedInteger(name, /*Radix=*/16, file_address))
     return 0; // Failed to extract the user ID as an integer
-  Symbol *symbol = FindSymbolByID(uid);
+
+  Symbol *symbol = FindSymbolAtFileAddress(static_cast<addr_t>(file_address));
   if (symbol == nullptr)
     return 0;
   const uint32_t symbol_idx = GetIndexForSymbol(symbol);
@@ -709,15 +722,11 @@ Symtab::AppendSymbolIndexesWithNameAndType(ConstString symbol_name,
                                            std::vector<uint32_t> &indexes) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
 
-  if (AppendSymbolIndexesWithName(symbol_name, indexes) > 0) {
-    std::vector<uint32_t>::iterator pos = indexes.begin();
-    while (pos != indexes.end()) {
-      if (symbol_type == eSymbolTypeAny ||
-          m_symbols[*pos].GetType() == symbol_type)
-        ++pos;
-      else
-        pos = indexes.erase(pos);
-    }
+  if (AppendSymbolIndexesWithName(symbol_name, indexes) > 0 &&
+      symbol_type != eSymbolTypeAny) {
+    llvm::erase_if(indexes, [this, symbol_type](uint32_t index) {
+      return m_symbols[index].GetType() != symbol_type;
+    });
   }
   return indexes.size();
 }
@@ -729,15 +738,11 @@ uint32_t Symtab::AppendSymbolIndexesWithNameAndType(
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
 
   if (AppendSymbolIndexesWithName(symbol_name, symbol_debug_type,
-                                  symbol_visibility, indexes) > 0) {
-    std::vector<uint32_t>::iterator pos = indexes.begin();
-    while (pos != indexes.end()) {
-      if (symbol_type == eSymbolTypeAny ||
-          m_symbols[*pos].GetType() == symbol_type)
-        ++pos;
-      else
-        pos = indexes.erase(pos);
-    }
+                                  symbol_visibility, indexes) > 0 &&
+      symbol_type != eSymbolTypeAny) {
+    llvm::erase_if(indexes, [this, symbol_type](uint32_t index) {
+      return m_symbols[index].GetType() != symbol_type;
+    });
   }
   return indexes.size();
 }
@@ -1010,10 +1015,7 @@ void Symtab::Finalize() {
   // Calculate the size of symbols inside InitAddressIndexes.
   InitAddressIndexes();
   // Shrink to fit the symbols so we don't waste memory
-  if (m_symbols.capacity() > m_symbols.size()) {
-    collection new_symbols(m_symbols.begin(), m_symbols.end());
-    m_symbols.swap(new_symbols);
-  }
+  m_symbols.shrink_to_fit();
   SaveToCache();
 }
 
@@ -1142,9 +1144,7 @@ void Symtab::FindFunctionSymbols(ConstString name, uint32_t name_type_mask,
 
   if (!symbol_indexes.empty()) {
     llvm::sort(symbol_indexes);
-    symbol_indexes.erase(
-        std::unique(symbol_indexes.begin(), symbol_indexes.end()),
-        symbol_indexes.end());
+    symbol_indexes.erase(llvm::unique(symbol_indexes), symbol_indexes.end());
     SymbolIndicesToSymbolContextList(symbol_indexes, sc_list);
   }
 }
@@ -1170,7 +1170,7 @@ std::string Symtab::GetCacheKey() {
   // another object file in a separate symbol file.
   strm << m_objfile->GetModule()->GetCacheKey() << "-symtab-"
       << llvm::format_hex(m_objfile->GetCacheHash(), 10);
-  return strm.str();
+  return key;
 }
 
 void Symtab::SaveToCache() {

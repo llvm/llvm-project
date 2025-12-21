@@ -55,4 +55,4 @@ void f() {
 //   CHECK: alloca %"struct.Task::promise_type"
 //   CHECK: call token @llvm.coro.id(
 //   CHECK: call i8 @llvm.coro.suspend(
-//   CHECK: call i1 @llvm.coro.end(
+//   CHECK: call void @llvm.coro.end(

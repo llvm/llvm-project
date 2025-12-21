@@ -1,5 +1,5 @@
 ! Test loop variables increment
-! RUN: bbc -emit-fir -o - %s | FileCheck %s
+! RUN: bbc -emit-fir -hlfir=false -o - %s | FileCheck %s
 
 module test_loop_var
   implicit none
@@ -15,10 +15,10 @@ contains
 ! CHECK:         %[[VAL_0:.*]] = fir.address_of(@_QMtest_loop_varEi_pointer) : !fir.ref<!fir.box<!fir.ptr<i32>>>
 ! CHECK:         %[[VAL_1:.*]] = fir.load %[[VAL_0]] : !fir.ref<!fir.box<!fir.ptr<i32>>>
 ! CHECK:         %[[VAL_2:.*]] = fir.box_addr %[[VAL_1]] : (!fir.box<!fir.ptr<i32>>) -> !fir.ptr<i32>
-! CHECK:         %[[VAL_9:.*]]:2 = fir.do_loop{{.*}}iter_args(%[[IV:.*]] = {{.*}})
+! CHECK:         %[[VAL_9:.*]] = fir.do_loop{{.*}}iter_args(%[[IV:.*]] = {{.*}})
 ! CHECK:           fir.store %[[IV]] to %[[VAL_2]] : !fir.ptr<i32>
 ! CHECK:         }
-! CHECK:         fir.store %[[VAL_9]]#1 to %[[VAL_2]] : !fir.ptr<i32>
+! CHECK:         fir.store %[[VAL_9]] to %[[VAL_2]] : !fir.ptr<i32>
   end subroutine
 
 ! CHECK-LABEL: func @_QMtest_loop_varPtest_allocatable
@@ -28,10 +28,10 @@ contains
 ! CHECK:         %[[VAL_0:.*]] = fir.address_of(@_QMtest_loop_varEi_allocatable) : !fir.ref<!fir.box<!fir.heap<i32>>>
 ! CHECK:         %[[VAL_1:.*]] = fir.load %[[VAL_0]] : !fir.ref<!fir.box<!fir.heap<i32>>>
 ! CHECK:         %[[VAL_2:.*]] = fir.box_addr %[[VAL_1]] : (!fir.box<!fir.heap<i32>>) -> !fir.heap<i32>
-! CHECK:         %[[VAL_9:.*]]:2 = fir.do_loop{{.*}}iter_args(%[[IV:.*]] = {{.*}})
+! CHECK:         %[[VAL_9:.*]] = fir.do_loop{{.*}}iter_args(%[[IV:.*]] = {{.*}})
 ! CHECK:           fir.store %[[IV]] to %[[VAL_2]] : !fir.heap<i32>
 ! CHECK:         }
-! CHECK:         fir.store %[[VAL_9]]#1 to %[[VAL_2]] : !fir.heap<i32>
+! CHECK:         fir.store %[[VAL_9]] to %[[VAL_2]] : !fir.heap<i32>
   end subroutine
 
 ! CHECK-LABEL: func @_QMtest_loop_varPtest_real_pointer
@@ -107,7 +107,7 @@ contains
 ! CHECK:       ^bb4:
 ! CHECK:         %[[VAL_20:.*]] = fir.load %[[VAL_3]] : !fir.ptr<i32>
 ! CHECK:         %[[VAL_21:.*]] = arith.constant 1 : i32
-! CHECK:         %[[VAL_22:.*]] = arith.addi %[[VAL_20]], %[[VAL_21]] : i32
+! CHECK:         %[[VAL_22:.*]] = arith.addi %[[VAL_20]], %[[VAL_21]] overflow<nsw> : i32
 ! CHECK:         fir.store %[[VAL_22]] to %[[VAL_3]] : !fir.ptr<i32>
 ! CHECK:         br ^bb1
 ! CHECK:       ^bb5:

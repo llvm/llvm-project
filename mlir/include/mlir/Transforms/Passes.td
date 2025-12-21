@@ -32,9 +32,17 @@ def Canonicalizer : Pass<"canonicalize"> {
     Option<"topDownProcessingEnabled", "top-down", "bool",
            /*default=*/"true",
            "Seed the worklist in general top-down order">,
-    Option<"enableRegionSimplification", "region-simplify", "bool",
-           /*default=*/"true",
-           "Perform control flow optimizations to the region tree">,
+    Option<"regionSimplifyLevel", "region-simplify", "mlir::GreedySimplifyRegionLevel",
+           /*default=*/"mlir::GreedySimplifyRegionLevel::Normal",
+           "Perform control flow optimizations to the region tree",
+             [{::llvm::cl::values(
+               clEnumValN(mlir::GreedySimplifyRegionLevel::Disabled, "disabled",
+                "Don't run any control-flow simplification."),
+               clEnumValN(mlir::GreedySimplifyRegionLevel::Normal, "normal",
+                "Perform simple control-flow simplifications (e.g. dead args elimination)."),
+               clEnumValN(mlir::GreedySimplifyRegionLevel::Aggressive, "aggressive",
+                "Perform aggressive control-flow simplification (e.g. block merging).")
+              )}]>,
     Option<"maxIterations", "max-iterations", "int64_t",
            /*default=*/"10",
            "Max. iterations between applying patterns / simplifying regions">,
@@ -240,6 +248,7 @@ def RemoveDeadValues : Pass<"remove-dead-values"> {
     ```
   }];
   let constructor = "mlir::createRemoveDeadValuesPass()";
+  let dependentDialects = ["ub::UBDialect"];
 }
 
 def PrintIRPass : Pass<"print-ir"> {
@@ -262,20 +271,36 @@ def GenerateRuntimeVerification : Pass<"generate-runtime-verification"> {
     passes that are suspected to introduce faulty IR.
   }];
   let constructor = "mlir::createGenerateRuntimeVerificationPass()";
+  let options = [
+    Option<"verboseLevel", "verbose-level", "unsigned", /*default=*/"1",
+           "Verbosity level for runtime verification messages: "
+           "0 = Minimum (only source location), "
+           "1 = Detailed (include full operation details, names, types, shapes, etc.)">
+  ];
 }
+
 
 def Inliner : Pass<"inline"> {
   let summary = "Inline function calls";
   let constructor = "mlir::createInlinerPass()";
   let options = [
     Option<"defaultPipelineStr", "default-pipeline", "std::string",
-           /*default=*/"\"canonicalize\"", "The default optimizer pipeline used for callables">,
+           /*default=*/"\"canonicalize\"",
+           "The optimizer pipeline used for callables that do not have "
+           "a dedicated optimizer pipeline in opPipelineList">,
     ListOption<"opPipelineList", "op-pipelines", "OpPassManager",
                "Callable operation specific optimizer pipelines (in the form "
                "of `dialect.op(pipeline)`)">,
     Option<"maxInliningIterations", "max-iterations", "unsigned",
            /*default=*/"4",
            "Maximum number of iterations when inlining within an SCC">,
+    Option<"inliningThreshold", "inlining-threshold", "unsigned",
+           /*default=*/"-1U",
+           "If the ratio between the number of the operations "
+           "in the callee and the number of the operations "
+           "in the caller exceeds this value (in percentage), "
+           "then the callee is not inlined even if it is legal "
+           "to inline it">,
   ];
 }
 
@@ -314,13 +339,21 @@ def LocationSnapshot : Pass<"snapshot-op-locations"> {
     ... loc(fused["original_source.cpp":1:1, "snapshot"("snapshot_source.mlir":10:10)])
     ```
   }];
-  let constructor = "mlir::createLocationSnapshotPass()";
   let options = [
     Option<"fileName", "filename", "std::string", /*default=*/"",
            "The filename to print the generated IR">,
     Option<"tag", "tag", "std::string", /*default=*/"",
            "A tag to use when fusing the new locations with the "
            "original. If unset, the locations are replaced.">,
+    Option<"enableDebugInfo", "print-debuginfo", "bool", /*default=*/"false",
+           "Print debug info in MLIR output">,
+    Option<"printGenericOpForm", "print-op-generic", "bool", /*default=*/"false",
+           "Print the generic op form">,
+    Option<"useLocalScope", "print-local-scope", "bool", /*default=*/"false",
+           "Print with local scope and inline information (eliding "
+           "aliases for attributes, types, and locations">,
+    Option<"printPrettyDebugInfo", "pretty-debuginfo", "bool", /*default=*/"false",
+           "Print pretty debug info in MLIR output">,
   ];
 }
 
@@ -329,13 +362,18 @@ def LoopInvariantCodeMotion : Pass<"loop-invariant-code-motion"> {
   let constructor = "mlir::createLoopInvariantCodeMotionPass()";
 }
 
+def LoopInvariantSubsetHoisting : Pass<"loop-invariant-subset-hoisting"> {
+  let summary = "Hoist loop invariant subset ops outside of the loop";
+  let constructor = "mlir::createLoopInvariantSubsetHoistingPass()";
+}
+
 def Mem2Reg : Pass<"mem2reg"> {
   let summary = "Promotes memory slots into values.";
   let description = [{
     This pass removes loads out of and stores into a memory slot, and turns
     them into direct uses of SSA values. This is done generically using the
-    `PromoteAllocationOpInterface`, `PromoteOpInterface` and
-    `PromoteMemOpInterface` interfaces.
+    `PromotableAllocationOpInterface`, `PromotableOpInterface` and
+    `PromotableMemOpInterface` interfaces.
 
     This pass will attempt to compute which definitions of the content of
     the memory slot reach operations that use the memory slot pointer. It
@@ -536,6 +574,67 @@ def TopologicalSort : Pass<"topological-sort"> {
   }];
 
   let constructor = "mlir::createTopologicalSortPass()";
+}
+
+def CompositeFixedPointPass : Pass<"composite-fixed-point-pass"> {
+  let summary = "Composite fixed point pass";
+  let description = [{
+    Composite pass runs provided set of passes until fixed point or maximum
+    number of iterations reached.
+  }];
+
+  let options = [
+    Option<"name", "name", "std::string", /*default=*/"\"CompositeFixedPointPass\"",
+      "Composite pass display name">,
+    Option<"pipelineStr", "pipeline", "std::string", /*default=*/"",
+      "Composite pass inner pipeline">,
+    Option<"maxIter", "max-iterations", "int", /*default=*/"10",
+      "Maximum number of iterations if inner pipeline">,
+  ];
+}
+
+def BubbleDownMemorySpaceCasts :
+    Pass<"bubble-down-memory-space-casts"> {
+  let summary = "Bubbles down memory-space cast operations.";
+  let description = [{
+    This pass tries to iteratively bubble down all possible memory-space cast
+    operations. It is important to note that the determination of which casts
+    are bubbled down is based on the interfaces
+    `MemorySpaceCastConsumerOpInterface`, and `MemorySpaceCastOpInterface`, and
+    not the pass. The pass only looks for operations implementing the
+    `MemorySpaceCastConsumerOpInterface` interface, and invoking the interface
+    methods to perform the bubbling down.
+
+    Example:
+
+    ```mlir
+    func.func @op_with_cast_sequence(%arg0: memref<4x4xf32, 1>, %arg1: index, %arg2: f32) -> memref<16xf32> {
+      %memspacecast = memref.memory_space_cast %arg0 : memref<4x4xf32, 1> to memref<4x4xf32>
+      %c0 = arith.constant 0 : index
+      %c4 = arith.constant 4 : index
+      %expanded = memref.expand_shape %memspacecast [[0], [1, 2]] output_shape [4, 2, 2] : memref<4x4xf32> into memref<4x2x2xf32>
+      %collapsed = memref.collapse_shape %expanded [[0, 1, 2]] : memref<4x2x2xf32> into memref<16xf32>
+      %loaded = memref.load %collapsed[%c0] : memref<16xf32>
+      %added = arith.addf %loaded, %arg2 : f32
+      memref.store %added, %collapsed[%c0] : memref<16xf32>
+      %atomic_result = memref.atomic_rmw addf %arg2, %collapsed[%c4] : (f32, memref<16xf32>) -> f32
+      return %collapsed : memref<16xf32>
+    }
+    // mlir-opt --bubble-down-memory-space-casts
+    func.func @op_with_cast_sequence(%arg0: memref<4x4xf32, 1>, %arg1: index, %arg2: f32) -> memref<16xf32> {
+      %c4 = arith.constant 4 : index
+      %c0 = arith.constant 0 : index
+      %expand_shape = memref.expand_shape %arg0 [[0], [1, 2]] output_shape [4, 2, 2] : memref<4x4xf32, 1> into memref<4x2x2xf32, 1>
+      %collapse_shape = memref.collapse_shape %expand_shape [[0, 1, 2]] : memref<4x2x2xf32, 1> into memref<16xf32, 1>
+      %memspacecast = memref.memory_space_cast %collapse_shape : memref<16xf32, 1> to memref<16xf32>
+      %0 = memref.load %collapse_shape[%c0] : memref<16xf32, 1>
+      %1 = arith.addf %0, %arg2 : f32
+      memref.store %1, %collapse_shape[%c0] : memref<16xf32, 1>
+      %2 = memref.atomic_rmw addf %arg2, %collapse_shape[%c4] : (f32, memref<16xf32, 1>) -> f32
+      return %memspacecast : memref<16xf32>
+    }
+    ```
+  }];
 }
 
 #endif // MLIR_TRANSFORMS_PASSES

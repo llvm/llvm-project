@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Thsi file implements a generic conversion from an integer type to an
-// IEEE-754 floating point type, allowing a common implementation to be hsared
+// This file implements a generic conversion from an integer type to an
+// IEEE-754 floating point type, allowing a common implementation to be shared
 // without copy and paste.
 //
 //===----------------------------------------------------------------------===//
@@ -17,10 +17,15 @@
 static __inline dst_t __floatXiYf__(src_t a) {
   if (a == 0)
     return 0.0;
-  const int dstMantDig = dstSigBits + 1;
-  const int srcBits = sizeof(src_t) * CHAR_BIT;
-  const int srcIsSigned = ((src_t)-1) < 0;
+
+  enum {
+    dstMantDig = dstSigBits + 1,
+    srcBits = sizeof(src_t) * CHAR_BIT,
+    srcIsSigned = ((src_t)-1) < 0,
+  };
+
   const src_t s = srcIsSigned ? a >> (srcBits - 1) : 0;
+
   a = (usrc_t)(a ^ s) - s;
   int sd = srcBits - clzSrcT(a);         // number of significant digits
   int e = sd - 1;                        // exponent
@@ -44,15 +49,15 @@ static __inline dst_t __floatXiYf__(src_t a) {
     a |= (a & 4) != 0; // Or P into R
     ++a;               // round - this step may add a significant bit
     a >>= 2;           // dump Q and R
-    // a is now rounded to dstMantDig or dstMantDig+1 bits
+    // `a` is now rounded to dstMantDig or dstMantDig+1 bits
     if (a & ((usrc_t)1 << dstMantDig)) {
       a >>= 1;
       ++e;
     }
-    // a is now rounded to dstMantDig bits
+    // `a` is now rounded to dstMantDig bits
   } else {
     a <<= (dstMantDig - sd);
-    // a is now rounded to dstMantDig bits
+    // `a` is now rounded to dstMantDig bits
   }
   const int dstBits = sizeof(dst_t) * CHAR_BIT;
   const dst_rep_t dstSignMask = DST_REP_C(1) << (dstBits - 1);

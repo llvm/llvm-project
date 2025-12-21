@@ -93,6 +93,9 @@ local:
 * If a `#define` or `#undef` directive appears among continuation
   lines, it may or may not affect text in the continued statement that
   appeared before the directive.
+* A backslash at the end of a free form source line is a continuation
+  marker, with no space skipping or special handling of a leading `&`
+  on the next line.
 
 ## Behavior that few compilers properly support (or none), but should:
 
@@ -135,6 +138,18 @@ text.
 OpenMP-style directives that look like comments are not addressed by
 this scheme but are obvious extensions.
 
+## Currently implemented built-ins
+
+* `__DATE__`: Date, given as e.g. "Jun 16 1904"
+* `__TIME__`: Time in 24-hour format including seconds, e.g. "09:24:13"
+* `__TIMESTAMP__`: Date, time and year of last modification, given as e.g. "Fri May  9 09:16:17 2025"
+* `__FILE__`: Current file
+* `__LINE__`: Current line
+
+### Non-standard Extensions
+
+* `__COUNTER__`: Replaced by sequential integers on each expansion, starting from 0.
+
 ## Appendix
 `N` in the table below means "not supported"; this doesn't
 mean a bug, it just means that a particular behavior was
@@ -148,7 +163,7 @@ The first block of tests (`pp0*.F`) are all fixed-form source files;
 the second block (`pp1*.F90`) are free-form source files.
 
 ```
-f18
+flang
 | pgfortran
 | | ifort
 | | | gfortran
@@ -228,5 +243,5 @@ E . . E E .   pp125.F90  #DEFINE works in free form
 . . E . E E   pp127.F90  FLM call with closing ')' on next line (not a continuation)
 E . E . E E   pp128.F90  FLM call with '(' on next line (not a continuation)
 . . N . . N   pp129.F90  #define KWM !, then KWM works as comment line initiator
-E . E . . E   pp130.F90  #define KWM &, use for continuation w/o pasting (ifort and nag seem to continue #define)
+. . E . . E   pp130.F90  #define KWM &, use for continuation w/o pasting (ifort and nag seem to continue #define)
 ```

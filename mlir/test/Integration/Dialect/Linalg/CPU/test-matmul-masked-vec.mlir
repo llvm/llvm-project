@@ -1,5 +1,5 @@
-// RUN: mlir-opt %s -test-transform-dialect-interpreter -test-transform-dialect-erase-schedule -one-shot-bufferize -func-bufferize -lower-vector-mask --test-lower-to-llvm | \
-// RUN: mlir-cpu-runner -e main -entry-point-result=void --shared-libs=%mlir_c_runner_utils,%mlir_runner_utils | \
+// RUN: mlir-opt %s -transform-interpreter -test-transform-dialect-erase-schedule -one-shot-bufferize="bufferize-function-boundaries" -buffer-deallocation-pipeline -lower-vector-mask --test-lower-to-llvm | \
+// RUN: mlir-runner -e main -entry-point-result=void --shared-libs=%mlir_c_runner_utils,%mlir_runner_utils | \
 // RUN: FileCheck %s
 
 func.func private @printMemrefF32(%ptr : tensor<*xf32>)
@@ -27,8 +27,8 @@ func.func @main() {
   %A_dyn = tensor.cast %A : tensor<8x2xf32> to tensor<?x?xf32>
   %B_dyn = tensor.cast %B : tensor<2x4xf32> to tensor<?x?xf32>
 
-  %c0_i32 = arith.constant  0 : i32
-  %C_init = linalg.fill ins(%c0_i32 : i32) outs(%C_dyn : tensor<?x?xf32>) -> tensor<?x?xf32>
+  %c0_f32 = arith.constant 0.0 : f32
+  %C_init = linalg.fill ins(%c0_f32 : f32) outs(%C_dyn : tensor<?x?xf32>) -> tensor<?x?xf32>
 
   %res = linalg.matmul ins(%A_dyn, %B_dyn: tensor<?x?xf32>, tensor<?x?xf32>)
             outs(%C_init: tensor<?x?xf32>) -> tensor<?x?xf32>
@@ -47,12 +47,14 @@ func.func @main() {
   return
 }
 
-transform.sequence failures(propagate) {
-^bb1(%arg1: !transform.any_op):
-  %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-  %func_op = get_parent_op %0 : (!transform.any_op) -> !transform.op<"func.func">
-  transform.structured.vectorize %0 vector_sizes [4, 4, 2] : !transform.any_op
-  transform.apply_patterns to %func_op {
-    transform.apply_patterns.vector.lower_multi_reduction lowering_strategy = "innerreduction"
-  } : !transform.op<"func.func">
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %func_op = transform.get_parent_op %0 : (!transform.any_op) -> !transform.op<"func.func">
+    transform.structured.vectorize %0 vector_sizes [4, 4, 2] : !transform.any_op
+    transform.apply_patterns to %func_op {
+      transform.apply_patterns.vector.lower_multi_reduction lowering_strategy = "innerreduction"
+    } : !transform.op<"func.func">
+    transform.yield
+  }
 }

@@ -31,7 +31,7 @@
 // Ops that do not implement `BufferizableOpInterface` can be analyzed but are
 // treated conservatively. E.g., the analysis has to assume that their tensor
 // OpOperands bufferize to memory writes. While such ops can be analyzed, they
-// are not bufferized and remain in the IR. to_tensor and to_memref ops are
+// are not bufferized and remain in the IR. to_tensor and to_buffer ops are
 // inserted at the bufferization boundary.
 //
 // This analysis caters to high-performance codegen where buffer reuse is deemed
@@ -40,23 +40,23 @@
 
 #include "mlir/Dialect/Bufferization/Transforms/OneShotAnalysis.h"
 
-#include <optional>
 #include <random>
 
 #include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
-#include "mlir/Dialect/Bufferization/IR/SubsetInsertionOpInterface.h"
 #include "mlir/Dialect/Bufferization/Transforms/Bufferize.h"
 #include "mlir/Dialect/Bufferization/Transforms/Transforms.h"
-#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/IR/AsmState.h"
 #include "mlir/IR/Dominance.h"
+#include "mlir/IR/Iterators.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
+#include "mlir/Interfaces/SubsetOpInterface.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/Support/DebugLog.h"
 
 MLIR_DEFINE_EXPLICIT_TYPE_ID(mlir::bufferization::OneShotAnalysisState)
 
@@ -195,7 +195,12 @@ void OneShotAnalysisState::gatherUndefinedTensorUses(Operation *op) {
 
       // If there is no preceding definition, the tensor contents are
       // undefined.
-      if (findDefinitionsCached(opResult).empty())
+      if (opResult.getUses().empty())
+        continue;
+      // It does not really matter which use to take to search about
+      // the value's definitions.
+      OpOperand *opOperand = &(*opResult.getUses().begin());
+      if (findDefinitionsCached(opOperand).empty())
         for (OpOperand &use : opResult.getUses())
           undefinedTensorUses.insert(&use);
     }
@@ -269,26 +274,6 @@ static bool happensBefore(Operation *a, Operation *b,
     if (domInfo.properlyDominates(a, b))
       return true;
   } while ((a = a->getParentOp()));
-  return false;
-}
-
-static bool isReachable(Block *from, Block *to, ArrayRef<Block *> except) {
-  DenseSet<Block *> visited;
-  SmallVector<Block *> worklist;
-  for (Block *succ : from->getSuccessors())
-    worklist.push_back(succ);
-  while (!worklist.empty()) {
-    Block *next = worklist.pop_back_val();
-    if (llvm::find(except, next) != except.end())
-      continue;
-    if (next == to)
-      return true;
-    if (visited.contains(next))
-      continue;
-    visited.insert(next);
-    for (Block *succ : next->getSuccessors())
-      worklist.push_back(succ);
-  }
   return false;
 }
 
@@ -427,8 +412,8 @@ static bool canUseOpDominanceDueToBlocks(OpOperand *uRead, OpOperand *uWrite,
   Block *writeBlock = uWrite->getOwner()->getBlock();
   for (Value def : definitions) {
     Block *defBlock = def.getParentBlock();
-    if (isReachable(readBlock, writeBlock, {defBlock}) &&
-        isReachable(writeBlock, readBlock, {defBlock}))
+    if (readBlock->isReachable(writeBlock, {defBlock}) &&
+        writeBlock->isReachable(readBlock, {defBlock}))
       return false;
   }
 
@@ -483,7 +468,8 @@ static void annotateConflict(OpOperand *uRead, OpOperand *uConflictingWrite,
 /// indexing. I.e., the tensor types do not change along the use-def chain,
 /// apart from static <-> dynamic dim casts.
 static bool hasEquivalentValueInReverseUseDefChain(AnalysisState &state,
-                                                   Value start, Value other) {
+                                                   OpOperand *start,
+                                                   Value other) {
   TraversalConfig config;
   config.followEquivalentOnly = true;
   config.alwaysIncludeLeaves = false;
@@ -494,9 +480,10 @@ static bool hasEquivalentValueInReverseUseDefChain(AnalysisState &state,
               .empty();
 }
 
-/// Return "true" if `value` is originating from a subset that is equivalent to
-/// the subset that `subsetOp` inserts into.
-static bool matchesInsertDestination(const AnalysisState &state, Value value,
+/// Return "true" if the given operand's value is originating from a subset
+/// that is equivalent to the subset that `subsetOp` inserts into.
+static bool matchesInsertDestination(const AnalysisState &state,
+                                     OpOperand *opOperand,
                                      SubsetInsertionOpInterface subsetOp) {
   auto matchingSubset = [&](Value val) {
     if (auto opResult = dyn_cast<OpResult>(val))
@@ -509,8 +496,8 @@ static bool matchesInsertDestination(const AnalysisState &state, Value value,
   // There may be multiple leaves at which the reverse SSA use-def chain lookup
   // terminates. All of them must be equivalent subsets.
   SetVector<Value> backwardSlice =
-      state.findValueInReverseUseDefChain(value, matchingSubset);
-  return static_cast<bool>(llvm::all_of(backwardSlice, matchingSubset));
+      state.findValueInReverseUseDefChain(opOperand, matchingSubset);
+  return llvm::all_of(backwardSlice, matchingSubset);
 }
 
 /// Return "true" if the given "read" and potentially conflicting "write" are
@@ -535,7 +522,7 @@ static bool areNonConflictingSubsets(OpOperand *uRead,
     //     {inplace= [true] }
 
     if (uRead == &subsetOp.getDestinationOperand() &&
-        matchesInsertDestination(state, uConflictingWrite->get(), subsetOp))
+        matchesInsertDestination(state, uConflictingWrite, subsetOp))
       // Case 1: The main insight is that InsertSliceOp reads only part of
       // the destination tensor. The overwritten area is not read. If
       // uConflictingWrite writes into exactly the memory location that is
@@ -552,7 +539,7 @@ static bool areNonConflictingSubsets(OpOperand *uRead,
 
     if (uRead == &subsetOp.getSourceOperand() &&
         uConflictingWrite == &subsetOp.getDestinationOperand() &&
-        matchesInsertDestination(state, uRead->get(), subsetOp))
+        matchesInsertDestination(state, uRead, subsetOp))
       // Case 2: The read of the source tensor and the write to the dest
       // tensor via an InsertSliceOp is not a conflict if the read is
       // reading exactly that part of an equivalent tensor that the
@@ -586,8 +573,7 @@ static bool areNonConflictingSubsets(OpOperand *uRead,
     if (uConflictingWrite == &subsetOp.getDestinationOperand() &&
         state.areEquivalentBufferizedValues(
             uRead->get(), subsetOp.getSourceOperand().get()) &&
-        matchesInsertDestination(state, subsetOp.getSourceOperand().get(),
-                                 subsetOp))
+        matchesInsertDestination(state, &subsetOp.getSourceOperand(), subsetOp))
       return true;
 
   return false;
@@ -610,7 +596,7 @@ hasReadAfterWriteInterference(const DenseSet<OpOperand *> &usesRead,
   // Before going through the main RaW analysis, find cases where a buffer must
   // be privatized due to parallelism. If the result of a write is never read,
   // privatization is not necessary (and large parts of the IR are likely dead).
-  if (!usesRead.empty()) {
+  if (options.checkParallelRegions && !usesRead.empty()) {
     for (OpOperand *uConflictingWrite : usesWrite) {
       // Find the allocation point or last write (definition) of the buffer.
       // Note: In contrast to `findDefinitions`, this also returns results of
@@ -619,9 +605,9 @@ hasReadAfterWriteInterference(const DenseSet<OpOperand *> &usesRead,
       // even though that op just bufferizes to an allocation but does define
       // the contents of the buffer.
       SetVector<Value> definitionsOrLeaves =
-          state.findValueInReverseUseDefChain(
-              uConflictingWrite->get(),
-              [&](Value v) { return state.bufferizesToMemoryWrite(v); });
+          state.findValueInReverseUseDefChain(uConflictingWrite, [&](Value v) {
+            return state.bufferizesToMemoryWrite(v);
+          });
       assert(!definitionsOrLeaves.empty() &&
              "expected at least one definition or leaf");
 
@@ -631,13 +617,11 @@ hasReadAfterWriteInterference(const DenseSet<OpOperand *> &usesRead,
         if (getParallelRegion(def.getParentRegion(), options) !=
             getParallelRegion(uConflictingWrite->getOwner()->getParentRegion(),
                               options)) {
-          LLVM_DEBUG(
-              llvm::dbgs()
-              << "\n- bufferizes out-of-place due to parallel region:\n");
-          LLVM_DEBUG(llvm::dbgs()
-                     << "  unConflictingWrite = operand "
-                     << uConflictingWrite->getOperandNumber() << " of "
-                     << *uConflictingWrite->getOwner() << "\n");
+          LDBG() << "\n- bufferizes out-of-place due to parallel region:\n"
+                 << "  unConflictingWrite = operand "
+                 << uConflictingWrite->getOperandNumber() << " of "
+                 << OpWithFlags(uConflictingWrite->getOwner(),
+                                OpPrintingFlags().skipRegions());
           return true;
         }
       }
@@ -646,9 +630,9 @@ hasReadAfterWriteInterference(const DenseSet<OpOperand *> &usesRead,
 
   for (OpOperand *uRead : usesRead) {
     Operation *readingOp = uRead->getOwner();
-    LLVM_DEBUG(llvm::dbgs() << "\n- check conflict:\n");
-    LLVM_DEBUG(llvm::dbgs() << "  uRead = operand " << uRead->getOperandNumber()
-                            << " of " << *readingOp << "\n");
+    LDBG() << "\n- check conflict:\n"
+           << "  uRead = operand " << uRead->getOperandNumber() << " of "
+           << OpWithFlags(readingOp, OpPrintingFlags().skipRegions());
 
     // Find the definition of uRead by following the SSA use-def chain.
     // E.g.:
@@ -660,27 +644,26 @@ hasReadAfterWriteInterference(const DenseSet<OpOperand *> &usesRead,
     // In the above example, if uRead is the OpOperand of reading_op, the
     // definition is %0. Note that operations that create an alias but do not
     // bufferize to a memory write (such as ExtractSliceOp) are skipped.
-    const SetVector<Value> &definitions =
-        state.findDefinitionsCached(uRead->get());
+    const SetVector<Value> &definitions = state.findDefinitionsCached(uRead);
     if (definitions.empty()) {
       // Fast path: No conflict if there are no definitions.
-      LLVM_DEBUG(llvm::dbgs()
-                 << "  no conflict: read value has no definitions\n");
+      LDBG() << "  no conflict: read value has no definitions";
       continue;
     }
 
     // Look for conflicting memory writes. Potential conflicts are writes to an
     // alias that have been decided to bufferize inplace.
     for (OpOperand *uConflictingWrite : usesWrite) {
-      LLVM_DEBUG(llvm::dbgs() << "  unConflictingWrite = operand "
-                              << uConflictingWrite->getOperandNumber() << " of "
-                              << *uConflictingWrite->getOwner() << "\n");
+      LDBG() << "  unConflictingWrite = operand "
+             << uConflictingWrite->getOperandNumber() << " of "
+             << OpWithFlags(uConflictingWrite->getOwner(),
+                            OpPrintingFlags().skipRegions());
 
       // Check if op dominance can be used to rule out read-after-write
       // conflicts.
       bool useDominance =
           canUseOpDominance(uRead, uConflictingWrite, definitions, state);
-      LLVM_DEBUG(llvm::dbgs() << "\n- useDominance = " << useDominance << "\n");
+      LDBG() << "\n- useDominance = " << useDominance;
 
       // Throughout this loop, check for multiple requirements that have to be
       // met for uConflictingWrite to be an actual conflict.
@@ -696,8 +679,7 @@ hasReadAfterWriteInterference(const DenseSet<OpOperand *> &usesRead,
         //       inside a loop), there may be no meaningful `happensBefore`
         //       relationship.
         if (happensBefore(readingOp, conflictingWritingOp, domInfo)) {
-          LLVM_DEBUG(llvm::dbgs()
-                     << "  no conflict: read happens before write\n");
+          LDBG() << "  no conflict: read happens before write";
           continue;
         }
 
@@ -709,8 +691,7 @@ hasReadAfterWriteInterference(const DenseSet<OpOperand *> &usesRead,
         // Note: If the op is executed multiple times (e.g., because it is
         //       inside a loop), it may be conflicting with itself.
         if (uConflictingWrite == uRead) {
-          LLVM_DEBUG(llvm::dbgs()
-                     << "  no conflict: read and write are same use\n");
+          LDBG() << "  no conflict: read and write are same use";
           continue;
         }
 
@@ -719,28 +700,27 @@ hasReadAfterWriteInterference(const DenseSet<OpOperand *> &usesRead,
         // Note: If ops are executed multiple times (e.g., because they are
         //       inside a loop), mutually exclusive regions may be executed
         //       multiple times.
-        if (insideMutuallyExclusiveRegions(readingOp, conflictingWritingOp)) {
-          LLVM_DEBUG(llvm::dbgs() << "  no conflict: read and write are in "
-                                     "mutually exclusive regions\n");
+        if (state.insideMutuallyExclusiveRegions(readingOp,
+                                                 conflictingWritingOp)) {
+          LDBG() << "  no conflict: read and write are in "
+                    "mutually exclusive regions";
           continue;
         }
-      }
 
-      // Two equivalent operands of the same op are not conflicting if the op
-      // bufferizes to element-wise access. I.e., all loads at a position happen
-      // before all stores to the same position.
-      if (conflictingWritingOp == readingOp) {
-        if (auto bufferizableOp = options.dynCastBufferizableOp(readingOp)) {
-          if (bufferizableOp.bufferizesToElementwiseAccess(
-                  state, {uRead, uConflictingWrite})) {
-            if (hasEquivalentValueInReverseUseDefChain(
-                    state, uRead->get(), uConflictingWrite->get()) ||
-                hasEquivalentValueInReverseUseDefChain(
-                    state, uConflictingWrite->get(), uRead->get())) {
-              LLVM_DEBUG(
-                  llvm::dbgs()
-                  << "  no conflict: op bufferizes to element-wise access\n");
-              continue;
+        // Two equivalent operands of the same op are not conflicting if the op
+        // bufferizes to element-wise access. I.e., all loads at a position
+        // happen before all stores to the same position.
+        if (conflictingWritingOp == readingOp) {
+          if (auto bufferizableOp = options.dynCastBufferizableOp(readingOp)) {
+            if (bufferizableOp.bufferizesToElementwiseAccess(
+                    state, {uRead, uConflictingWrite})) {
+              if (hasEquivalentValueInReverseUseDefChain(
+                      state, uRead, uConflictingWrite->get()) ||
+                  hasEquivalentValueInReverseUseDefChain(
+                      state, uConflictingWrite, uRead->get())) {
+                LDBG() << "  no conflict: op bufferizes to element-wise access";
+                continue;
+              }
             }
           }
         }
@@ -748,15 +728,14 @@ hasReadAfterWriteInterference(const DenseSet<OpOperand *> &usesRead,
 
       // No conflict if the operands are non-conflicting subsets.
       if (areNonConflictingSubsets(uRead, uConflictingWrite, state)) {
-        LLVM_DEBUG(llvm::dbgs() << "  no conflict: non-conflicting subsets\n");
+        LDBG() << "  no conflict: non-conflicting subsets";
         continue;
       }
 
       // No conflict if the op interface says so.
       if (auto bufferizableOp = options.dynCastBufferizableOp(readingOp)) {
         if (bufferizableOp.isNotConflicting(uRead, uConflictingWrite, state)) {
-          LLVM_DEBUG(llvm::dbgs()
-                     << "  no conflict: op interace of reading op says 'no'\n");
+          LDBG() << "  no conflict: op interace of reading op says 'no'";
           continue;
         }
       }
@@ -766,9 +745,7 @@ hasReadAfterWriteInterference(const DenseSet<OpOperand *> &usesRead,
                 options.dynCastBufferizableOp(conflictingWritingOp)) {
           if (bufferizableOp.isNotConflicting(uRead, uConflictingWrite,
                                               state)) {
-            LLVM_DEBUG(
-                llvm::dbgs()
-                << "  no conflict: op interace of writing op says 'no'\n");
+            LDBG() << "  no conflict: op interace of writing op says 'no'";
             continue;
           }
         }
@@ -776,29 +753,26 @@ hasReadAfterWriteInterference(const DenseSet<OpOperand *> &usesRead,
 
       // Check all possible definitions.
       for (Value definition : definitions) {
-        LLVM_DEBUG(llvm::dbgs() << "  * definition = " << definition << "\n");
+        LDBG() << "  * definition = " << definition;
 
         // No conflict if the conflicting write happens before the definition.
         if (Operation *defOp = definition.getDefiningOp()) {
           if (happensBefore(conflictingWritingOp, defOp, domInfo)) {
             // conflictingWritingOp happens before defOp. No conflict.
-            LLVM_DEBUG(llvm::dbgs()
-                       << "    no conflict: write happens before definition\n");
+            LDBG() << "    no conflict: write happens before definition";
             continue;
           }
           // No conflict if conflictingWritingOp is contained in defOp.
           if (defOp->isProperAncestor(conflictingWritingOp)) {
-            LLVM_DEBUG(
-                llvm::dbgs()
-                << "    no conflict: write is contained in definition\n");
+            LDBG() << "    no conflict: write is contained in definition";
             continue;
           }
         } else {
           auto bbArg = cast<BlockArgument>(definition);
           Block *block = bbArg.getOwner();
           if (!block->findAncestorOpInBlock(*conflictingWritingOp)) {
-            LLVM_DEBUG(llvm::dbgs() << "    no conflict: definition is bbArg "
-                                       "and write happens outside of block\n");
+            LDBG() << "    no conflict: definition is bbArg "
+                      "and write happens outside of block";
             // conflictingWritingOp happens outside of the block. No
             // conflict.
             continue;
@@ -810,8 +784,7 @@ hasReadAfterWriteInterference(const DenseSet<OpOperand *> &usesRead,
         AliasingValueList aliases = state.getAliasingValues(*uConflictingWrite);
         if (aliases.getNumAliases() == 1 &&
             aliases.getAliases()[0].value == definition) {
-          LLVM_DEBUG(llvm::dbgs()
-                     << "    no conflict: definition and write are same\n");
+          LDBG() << "    no conflict: definition and write are same";
           continue;
         }
 
@@ -819,7 +792,7 @@ hasReadAfterWriteInterference(const DenseSet<OpOperand *> &usesRead,
 
         if (options.printConflicts)
           annotateConflict(uRead, uConflictingWrite, definition);
-        LLVM_DEBUG(llvm::dbgs() << "  => RaW CONFLICT FOUND\n");
+        LDBG() << "  => RaW CONFLICT FOUND";
         return true;
       }
     }
@@ -973,7 +946,7 @@ wouldCreateWriteToNonWritableBuffer(OpOperand &operand,
   for (AliasingValue alias : state.getAliasingValues(operand))
     state.applyOnAliases(alias.value, checkReadOnly);
   if (foundReadOnly) {
-    LLVM_DEBUG(llvm::dbgs() << "=> NOT WRITABLE\n");
+    LDBG() << "=> NOT WRITABLE";
     return true;
   }
 
@@ -984,11 +957,12 @@ wouldCreateWriteToNonWritableBuffer(OpOperand &operand,
 // Bufferization analyses.
 //===----------------------------------------------------------------------===//
 
-// Find the values that define the contents of the given value.
+// Find the values that define the contents of the given operand's value.
 const llvm::SetVector<Value> &
-OneShotAnalysisState::findDefinitionsCached(Value value) {
+OneShotAnalysisState::findDefinitionsCached(OpOperand *opOperand) {
+  Value value = opOperand->get();
   if (!cachedDefinitions.count(value))
-    cachedDefinitions[value] = findDefinitions(value);
+    cachedDefinitions[value] = findDefinitions(opOperand);
   return cachedDefinitions[value];
 }
 
@@ -1001,10 +975,9 @@ void OneShotAnalysisState::resetCache() {
 static LogicalResult
 bufferizableInPlaceAnalysisImpl(OpOperand &operand, OneShotAnalysisState &state,
                                 const DominanceInfo &domInfo) {
-  LLVM_DEBUG(
-      llvm::dbgs() << "//===-------------------------------------------===//\n"
-                   << "Analyzing operand #" << operand.getOperandNumber()
-                   << " of " << *operand.getOwner() << "\n");
+  LDBG() << "//===-------------------------------------------===//\n"
+         << "Analyzing operand #" << operand.getOperandNumber() << " of "
+         << OpWithFlags(operand.getOwner(), OpPrintingFlags().skipRegions());
 
   bool foundInterference =
       wouldCreateWriteToNonWritableBuffer(operand, state) ||
@@ -1015,8 +988,7 @@ bufferizableInPlaceAnalysisImpl(OpOperand &operand, OneShotAnalysisState &state,
   else
     state.bufferizeInPlace(operand);
 
-  LLVM_DEBUG(llvm::dbgs()
-             << "//===-------------------------------------------===//\n");
+  LDBG() << "//===-------------------------------------------===//";
   return success();
 }
 
@@ -1028,13 +1000,6 @@ OneShotAnalysisState::analyzeSingleOp(Operation *op,
       if (failed(bufferizableInPlaceAnalysisImpl(opOperand, *this, domInfo)))
         return failure();
   return success();
-}
-
-/// Return true if the given op has a tensor result or a tensor operand.
-static bool hasTensorSemantics(Operation *op) {
-  bool hasTensorResult = any_of(op->getResultTypes(), isaTensor);
-  bool hasTensorOperand = any_of(op->getOperandTypes(), isaTensor);
-  return hasTensorResult || hasTensorOperand;
 }
 
 /// Analyze equivalence of tied OpResult/OpOperand pairs of the given ops.
@@ -1101,40 +1066,103 @@ static void equivalenceAnalysis(Operation *op, OneShotAnalysisState &state) {
   equivalenceAnalysis(ops, state);
 }
 
-LogicalResult OneShotAnalysisState::analyzeOp(Operation *op,
-                                              const DominanceInfo &domInfo) {
-  // Collect ops so we can build our own reverse traversal.
-  SmallVector<Operation *> ops;
-  op->walk([&](Operation *op) {
-    // No tensors => no buffers.
-    if (!hasTensorSemantics(op))
+/// "Bottom-up from terminators" heuristic.
+static SmallVector<Operation *>
+bottomUpFromTerminatorsHeuristic(Operation *op,
+                                 const OneShotAnalysisState &state) {
+  SetVector<Operation *> traversedOps;
+
+  // Find region terminators.
+  op->walk<WalkOrder::PostOrder>([&](RegionBranchTerminatorOpInterface term) {
+    if (!traversedOps.insert(term))
       return;
-    ops.push_back(op);
+    // Follow the reverse SSA use-def chain from each yielded value as long as
+    // we stay within the same region.
+    SmallVector<OpResult> worklist;
+    for (Value v : term->getOperands()) {
+      if (!isa<TensorType>(v.getType()))
+        continue;
+      auto opResult = dyn_cast<OpResult>(v);
+      if (!opResult)
+        continue;
+      worklist.push_back(opResult);
+    }
+    while (!worklist.empty()) {
+      OpResult opResult = worklist.pop_back_val();
+      Operation *defOp = opResult.getDefiningOp();
+      if (!traversedOps.insert(defOp))
+        continue;
+      if (!term->getParentRegion()->findAncestorOpInRegion(*defOp))
+        continue;
+      AliasingOpOperandList aliases = state.getAliasingOpOperands(opResult);
+      for (auto alias : aliases) {
+        Value v = alias.opOperand->get();
+        if (!isa<TensorType>(v.getType()))
+          continue;
+        auto opResult = dyn_cast<OpResult>(v);
+        if (!opResult)
+          continue;
+        worklist.push_back(opResult);
+      }
+    }
   });
 
-  if (getOptions().analysisFuzzerSeed) {
-    // This is a fuzzer. For testing purposes only. Randomize the order in which
-    // operations are analyzed. The bufferization quality is likely worse, but
-    // we want to make sure that no assertions are triggered anywhere.
-    std::mt19937 g(getOptions().analysisFuzzerSeed);
-    llvm::shuffle(ops.begin(), ops.end(), g);
-  }
+  // Analyze traversed ops, then all remaining ops.
+  SmallVector<Operation *> result(traversedOps.begin(), traversedOps.end());
+  op->walk<WalkOrder::PostOrder, ReverseIterator>([&](Operation *op) {
+    if (!traversedOps.contains(op) && hasTensorSemantics(op))
+      result.push_back(op);
+  });
+  return result;
+}
 
+LogicalResult OneShotAnalysisState::analyzeOp(Operation *op,
+                                              const DominanceInfo &domInfo) {
   OneShotBufferizationOptions::AnalysisHeuristic heuristic =
       getOptions().analysisHeuristic;
-  if (heuristic == OneShotBufferizationOptions::AnalysisHeuristic::BottomUp) {
-    // Default: Walk ops in reverse for better interference analysis.
-    for (Operation *op : reverse(ops))
-      if (failed(analyzeSingleOp(op, domInfo)))
-        return failure();
-  } else if (heuristic ==
-             OneShotBufferizationOptions::AnalysisHeuristic::TopDown) {
-    for (Operation *op : ops)
-      if (failed(analyzeSingleOp(op, domInfo)))
-        return failure();
+
+  SmallVector<Operation *> orderedOps;
+  if (heuristic ==
+      OneShotBufferizationOptions::AnalysisHeuristic::BottomUpFromTerminators) {
+    orderedOps = bottomUpFromTerminatorsHeuristic(op, *this);
   } else {
-    llvm_unreachable("unsupported heuristic");
+    op->walk([&](Operation *op) {
+      // No tensors => no buffers.
+      if (!hasTensorSemantics(op))
+        return;
+      orderedOps.push_back(op);
+    });
+    switch (heuristic) {
+    case OneShotBufferizationOptions::AnalysisHeuristic::BottomUp: {
+      // Default: Walk ops in reverse for better interference analysis.
+      std::reverse(orderedOps.begin(), orderedOps.end());
+      break;
+    }
+    case OneShotBufferizationOptions::AnalysisHeuristic::TopDown: {
+      // Ops are already sorted top-down in `orderedOps`.
+      break;
+    }
+    case OneShotBufferizationOptions::AnalysisHeuristic::Fuzzer: {
+      assert(getOptions().analysisFuzzerSeed &&
+             "expected that fuzzer seed it set");
+      // This is a fuzzer. For testing purposes only. Randomize the order in
+      // which operations are analyzed. The bufferization quality is likely
+      // worse, but we want to make sure that no assertions are triggered
+      // anywhere.
+      std::mt19937 g(getOptions().analysisFuzzerSeed);
+      llvm::shuffle(orderedOps.begin(), orderedOps.end(), g);
+      break;
+    }
+    default: {
+      llvm_unreachable("unsupported heuristic");
+    }
+    }
   }
+
+  // Analyze ops in the computed order.
+  for (Operation *op : orderedOps)
+    if (failed(analyzeSingleOp(op, domInfo)))
+      return failure();
 
   equivalenceAnalysis(op, *this);
   return success();
@@ -1242,7 +1270,7 @@ static void annotateOpsWithAliasSets(Operation *op,
       std::string buffer;
       llvm::raw_string_ostream stream(buffer);
       alias.printAsOperand(stream, asmState);
-      aliases.push_back(b.getStringAttr(stream.str()));
+      aliases.push_back(b.getStringAttr(buffer));
     });
     return b.getArrayAttr(aliases);
   };
@@ -1321,18 +1349,30 @@ LogicalResult bufferization::analyzeOp(Operation *op,
   return success(!failedAnalysis);
 }
 
-LogicalResult
-bufferization::runOneShotBufferize(Operation *op,
-                                   const OneShotBufferizationOptions &options,
-                                   BufferizationStatistics *statistics) {
+LogicalResult bufferization::runOneShotBufferize(
+    Operation *op, const OneShotBufferizationOptions &options,
+    BufferizationState &state, BufferizationStatistics *statistics) {
+  // copy-before-write deactivates the analysis. It cannot be used together with
+  // test-analysis-only.
   assert(!(options.copyBeforeWrite && options.testAnalysisOnly) &&
          "invalid combination of bufferization flags");
-  if (!options.copyBeforeWrite) {
-    // If a buffer is copied before every write, no analysis is needed.
-    if (failed(insertTensorCopies(op, options, statistics)))
+
+  if (options.copyBeforeWrite) {
+    // Copy buffer before each write. No analysis is needed.
+  } else {
+    // Run One-Shot Analysis and insert buffer copies (on the tensor level)
+    // only where needed. This is the default and much more efficient than
+    // copy-before-write.
+    if (failed(insertTensorCopies(op, options, state, statistics)))
       return failure();
+
+    // If test-analysis-only is set, the IR was annotated with RaW conflict
+    // markers (attributes) during One-Shot Analysis.
+    if (options.testAnalysisOnly)
+      return success();
   }
-  if (options.testAnalysisOnly)
-    return success();
-  return bufferizeOp(op, options, statistics);
+
+  // Bufferize the op and its nested ops. If options.copyBeforeWrite is set,
+  // a new buffer copy is allocated every time a buffer is written to.
+  return bufferizeOp(op, options, state, statistics);
 }

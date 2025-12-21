@@ -36,6 +36,7 @@ enum Kind {
   exclaim, // !
   bar,     // |
   colon,   // :
+  hash,    // #
 
   kw_vscale,
   kw_x,
@@ -108,12 +109,17 @@ enum Kind {
   kw_fast,
   kw_nuw,
   kw_nsw,
+  kw_nusw,
   kw_exact,
+  kw_disjoint,
   kw_inbounds,
+  kw_nneg,
+  kw_samesign,
   kw_inrange,
   kw_addrspace,
   kw_section,
   kw_partition,
+  kw_code_model,
   kw_alias,
   kw_ifunc,
   kw_module,
@@ -142,6 +148,7 @@ enum Kind {
   kw_aarch64_vector_pcs,
   kw_aarch64_sve_vector_pcs,
   kw_aarch64_sme_preservemost_from_x0,
+  kw_aarch64_sme_preservemost_from_x1,
   kw_aarch64_sme_preservemost_from_x2,
   kw_msp430_intrcc,
   kw_avr_intrcc,
@@ -152,12 +159,12 @@ enum Kind {
   kw_spir_func,
   kw_x86_64_sysvcc,
   kw_win64cc,
-  kw_webkit_jscc,
   kw_anyregcc,
   kw_swiftcc,
   kw_swifttailcc,
   kw_preserve_mostcc,
   kw_preserve_allcc,
+  kw_preserve_nonecc,
   kw_ghccc,
   kw_x86_intrcc,
   kw_hhvmcc,
@@ -174,8 +181,15 @@ enum Kind {
   kw_amdgpu_cs_chain_preserve,
   kw_amdgpu_kernel,
   kw_amdgpu_gfx,
+  kw_amdgpu_gfx_whole_wave,
   kw_tailcc,
   kw_m68k_rtdcc,
+  kw_graalcc,
+  kw_riscv_vector_cc,
+  kw_riscv_vls_cc,
+  kw_cheriot_compartmentcallcc,
+  kw_cheriot_compartmentcalleecc,
+  kw_cheriot_librarycallcc,
 
   // Attributes:
   kw_attributes,
@@ -192,11 +206,21 @@ enum Kind {
   kw_readwrite,
   kw_argmem,
   kw_inaccessiblemem,
+  kw_target_mem0,
+  kw_target_mem1,
+  kw_errnomem,
 
-  // Legacy memory attributes:
+  // Legacy attributes:
   kw_argmemonly,
   kw_inaccessiblememonly,
   kw_inaccessiblemem_or_argmemonly,
+  kw_nocapture,
+
+  // Captures attribute:
+  kw_address,
+  kw_address_is_null,
+  kw_provenance,
+  kw_read_provenance,
 
   // nofpclass attribute:
   kw_all,
@@ -258,8 +282,12 @@ enum Kind {
   kw_umin,
   kw_fmax,
   kw_fmin,
+  kw_fmaximum,
+  kw_fminimum,
   kw_uinc_wrap,
   kw_udec_wrap,
+  kw_usub_cond,
+  kw_usub_sat,
 
   // Instruction Opcodes (Opcode in UIntVal).
   kw_fneg,
@@ -296,6 +324,7 @@ enum Kind {
   kw_fptoui,
   kw_fptosi,
   kw_inttoptr,
+  kw_ptrtoaddr,
   kw_ptrtoint,
   kw_bitcast,
   kw_addrspacecast,
@@ -333,11 +362,13 @@ enum Kind {
   kw_extractelement,
   kw_insertelement,
   kw_shufflevector,
+  kw_splat,
   kw_extractvalue,
   kw_insertvalue,
   kw_blockaddress,
   kw_dso_local_equivalent,
   kw_no_cfi,
+  kw_ptrauth,
 
   kw_freeze,
 
@@ -363,6 +394,9 @@ enum Kind {
   kw_live,
   kw_dsoLocal,
   kw_canAutoHide,
+  kw_importType,
+  kw_definition,
+  kw_declaration,
   kw_function,
   kw_insts,
   kw_funcFlags,
@@ -456,24 +490,28 @@ enum Kind {
   SummaryID,  // ^42
 
   // String valued tokens (StrVal).
-  LabelStr,         // foo:
-  GlobalVar,        // @foo @"foo"
-  ComdatVar,        // $foo
-  LocalVar,         // %foo %"foo"
-  MetadataVar,      // !foo
-  StringConstant,   // "foo"
-  DwarfTag,         // DW_TAG_foo
-  DwarfAttEncoding, // DW_ATE_foo
-  DwarfVirtuality,  // DW_VIRTUALITY_foo
-  DwarfLang,        // DW_LANG_foo
-  DwarfCC,          // DW_CC_foo
-  EmissionKind,     // lineTablesOnly
-  NameTableKind,    // GNU
-  DwarfOp,          // DW_OP_foo
-  DIFlag,           // DIFlagFoo
-  DISPFlag,         // DISPFlagFoo
-  DwarfMacinfo,     // DW_MACINFO_foo
-  ChecksumKind,     // CSK_foo
+  LabelStr,            // foo:
+  GlobalVar,           // @foo @"foo"
+  ComdatVar,           // $foo
+  LocalVar,            // %foo %"foo"
+  MetadataVar,         // !foo
+  StringConstant,      // "foo"
+  DwarfTag,            // DW_TAG_foo
+  DwarfAttEncoding,    // DW_ATE_foo
+  DwarfVirtuality,     // DW_VIRTUALITY_foo
+  DwarfLang,           // DW_LANG_foo
+  DwarfSourceLangName, // DW_LNAME_foo
+  DwarfCC,             // DW_CC_foo
+  EmissionKind,        // lineTablesOnly
+  NameTableKind,       // GNU
+  FixedPointKind,      // Fixed point
+  DwarfOp,             // DW_OP_foo
+  DIFlag,              // DIFlagFoo
+  DISPFlag,            // DISPFlagFoo
+  DwarfMacinfo,        // DW_MACINFO_foo
+  ChecksumKind,        // CSK_foo
+  DbgRecordType,       // dbg_foo
+  DwarfEnumKind,       // DW_APPLE_ENUM_KIND_foo
 
   // Type valued tokens (TyVal).
   Type,

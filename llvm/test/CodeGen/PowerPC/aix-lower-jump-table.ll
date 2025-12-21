@@ -51,8 +51,8 @@ sw.epilog:
 ; 32SMALL-ASM: 	    bgt	0, L..BB0_3
 ; 32SMALL-ASM: 	    lwz 4, L..C0(2)
 ; 32SMALL-ASM: 	    slwi 3, 3, 2
-; 32SMALL-ASM: 	    lwzx 3, 3, 4
-; 32SMALL-ASM: 	    add 3, 3, 4
+; 32SMALL-ASM: 	    lwzx 3, 4, 3
+; 32SMALL-ASM: 	    add 3, 4, 3
 ; 32SMALL-ASM: 	    mtctr 3
 ; 32SMALL-ASM: 	    bctr
 ; 32SMALL-ASM: L..BB0_2:
@@ -66,9 +66,9 @@ sw.epilog:
 ; 32SMALL-ASM: 	    .align  2
 ; 32SMALL-ASM: L..JTI0_0:
 ; 32SMALL-ASM: 	    .vbyte	4, L..BB0_2-L..JTI0_0
+; 32SMALL-ASM: 	    .vbyte	4, L..BB0_6-L..JTI0_0
 ; 32SMALL-ASM: 	    .vbyte	4, L..BB0_4-L..JTI0_0
 ; 32SMALL-ASM: 	    .vbyte	4, L..BB0_5-L..JTI0_0
-; 32SMALL-ASM: 	    .vbyte	4, L..BB0_6-L..JTI0_0
 
 ; 32LARGE-ASM-LABEL: jump_table
 ; 32LARGE-ASM: .jump_table:
@@ -78,8 +78,8 @@ sw.epilog:
 ; 32LARGE-ASM: 	    addis 4, L..C0@u(2)
 ; 32LARGE-ASM: 	    slwi 3, 3, 2
 ; 32LARGE-ASM:      lwz 4, L..C0@l(4)
-; 32LARGE-ASM:      lwzx 3, 3, 4
-; 32LARGE-ASM:      add 3, 3, 4
+; 32LARGE-ASM:      lwzx 3, 4, 3
+; 32LARGE-ASM:      add 3, 4, 3
 ; 32LARGE-ASM:      mtctr 3
 ; 32LARGE-ASM:      bctr
 ; 32LARGE-ASM: L..BB0_2:
@@ -93,9 +93,9 @@ sw.epilog:
 ; 32LARGE-ASM:      .align  2
 ; 32LARGE-ASM: L..JTI0_0:
 ; 32LARGE-ASM:      .vbyte	4, L..BB0_2-L..JTI0_0
+; 32LARGE-ASM:      .vbyte	4, L..BB0_6-L..JTI0_0
 ; 32LARGE-ASM:      .vbyte	4, L..BB0_4-L..JTI0_0
 ; 32LARGE-ASM:      .vbyte	4, L..BB0_5-L..JTI0_0
-; 32LARGE-ASM:      .vbyte	4, L..BB0_6-L..JTI0_0
 
 ; 64SMALL-ASM-LABEL: jump_table
 ; 64SMALL-ASM: .jump_table:
@@ -104,8 +104,8 @@ sw.epilog:
 ; 64SMALL-ASM:      bgt     0, L..BB0_3
 ; 64SMALL-ASM:      ld 4, L..C0(2)
 ; 64SMALL-ASM:      rldic 3, 3, 2, 30
-; 64SMALL-ASM:      lwax 3, 3, 4
-; 64SMALL-ASM:      add 3, 3, 4
+; 64SMALL-ASM:      lwax 3, 4, 3
+; 64SMALL-ASM:      add 3, 4, 3
 ; 64SMALL-ASM:      mtctr 3
 ; 64SMALL-ASM:      bctr
 ; 64SMALL-ASM: L..BB0_2:
@@ -119,9 +119,9 @@ sw.epilog:
 ; 64SMALL-ASM:      .align  2
 ; 64SMALL-ASM: L..JTI0_0:
 ; 64SMALL-ASM:      .vbyte	4, L..BB0_2-L..JTI0_0
+; 64SMALL-ASM:      .vbyte	4, L..BB0_6-L..JTI0_0
 ; 64SMALL-ASM:      .vbyte	4, L..BB0_4-L..JTI0_0
 ; 64SMALL-ASM:      .vbyte	4, L..BB0_5-L..JTI0_0
-; 64SMALL-ASM:      .vbyte	4, L..BB0_6-L..JTI0_0
 
 ; 64LARGE-ASM-LABEL: jump_table
 ; 64LARGE-ASM: .jump_table:
@@ -131,8 +131,8 @@ sw.epilog:
 ; 64LARGE-ASM:      addis 4, L..C0@u(2)
 ; 64LARGE-ASM:      rldic 3, 3, 2, 30
 ; 64LARGE-ASM:      ld 4, L..C0@l(4)
-; 64LARGE-ASM:      lwax 3, 3, 4
-; 64LARGE-ASM:      add 3, 3, 4
+; 64LARGE-ASM:      lwax 3, 4, 3
+; 64LARGE-ASM:      add 3, 4, 3
 ; 64LARGE-ASM:      mtctr 3
 ; 64LARGE-ASM:      bctr
 ; 64LARGE-ASM: L..BB0_2:
@@ -146,9 +146,9 @@ sw.epilog:
 ; 64LARGE-ASM:      .align  2
 ; 64LARGE-ASM: L..JTI0_0:
 ; 64LARGE-ASM:      .vbyte	4, L..BB0_2-L..JTI0_0
+; 64LARGE-ASM:      .vbyte	4, L..BB0_6-L..JTI0_0
 ; 64LARGE-ASM:      .vbyte	4, L..BB0_4-L..JTI0_0
 ; 64LARGE-ASM:      .vbyte	4, L..BB0_5-L..JTI0_0
-; 64LARGE-ASM:      .vbyte	4, L..BB0_6-L..JTI0_0
 
 ; FUNC-ASM:         .csect .jump_table[PR],5
 ; FUNC-ASM: L..BB0_2:
@@ -162,9 +162,9 @@ sw.epilog:
 ; FUNC-ASM:         .align  2
 ; FUNC-ASM: L..JTI0_0:
 ; FUNC-ASM:         .vbyte  4, L..BB0_2-L..JTI0_0
+; FUNC-ASM:         .vbyte  4, L..BB0_6-L..JTI0_0
 ; FUNC-ASM:         .vbyte  4, L..BB0_4-L..JTI0_0
 ; FUNC-ASM:         .vbyte  4, L..BB0_5-L..JTI0_0
-; FUNC-ASM:         .vbyte  4, L..BB0_6-L..JTI0_0
 
 ; SMALL-ASM: .toc
 ; SMALL-ASM: .tc L..JTI0_0[TC],L..JTI0_0

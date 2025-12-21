@@ -1,10 +1,22 @@
 # RUN: %PYTHON %s | FileCheck %s
+import sys
+import typing
+from typing import Union, Optional
 
 from mlir.ir import *
 import mlir.dialects.func as func
 import mlir.dialects.python_test as test
 import mlir.dialects.tensor as tensor
 import mlir.dialects.arith as arith
+
+from mlir._mlir_libs._mlirPythonTestNanobind import (
+    TestAttr,
+    TestType,
+    TestTensorValue,
+    TestIntegerRankedTensorType,
+)
+
+test.register_python_test_dialect(get_dialect_registry())
 
 
 def run(f):
@@ -17,8 +29,6 @@ def run(f):
 @run
 def testAttributes():
     with Context() as ctx, Location.unknown():
-        ctx.allow_unregistered_dialects = True
-
         #
         # Check op construction with attributes.
         #
@@ -28,7 +38,7 @@ def testAttributes():
         two = IntegerAttr.get(i32, 2)
         unit = UnitAttr.get()
 
-        # CHECK: "python_test.attributed_op"() {
+        # CHECK: python_test.attributed_op  {
         # CHECK-DAG: mandatory_i32 = 1 : i32
         # CHECK-DAG: optional_i32 = 2 : i32
         # CHECK-DAG: unit
@@ -36,7 +46,7 @@ def testAttributes():
         op = test.AttributedOp(one, optional_i32=two, unit=unit)
         print(f"{op}")
 
-        # CHECK: "python_test.attributed_op"() {
+        # CHECK: python_test.attributed_op  {
         # CHECK: mandatory_i32 = 2 : i32
         # CHECK: }
         op2 = test.AttributedOp(two)
@@ -48,21 +58,21 @@ def testAttributes():
 
         assert "additional" not in op.attributes
 
-        # CHECK: "python_test.attributed_op"() {
+        # CHECK: python_test.attributed_op  {
         # CHECK-DAG: additional = 1 : i32
         # CHECK-DAG: mandatory_i32 = 2 : i32
         # CHECK: }
         op2.attributes["additional"] = one
         print(f"{op2}")
 
-        # CHECK: "python_test.attributed_op"() {
+        # CHECK: python_test.attributed_op  {
         # CHECK-DAG: additional = 2 : i32
         # CHECK-DAG: mandatory_i32 = 2 : i32
         # CHECK: }
         op2.attributes["additional"] = two
         print(f"{op2}")
 
-        # CHECK: "python_test.attributed_op"() {
+        # CHECK: python_test.attributed_op  {
         # CHECK-NOT: additional = 2 : i32
         # CHECK:     mandatory_i32 = 2 : i32
         # CHECK: }
@@ -139,7 +149,6 @@ def testAttributes():
 @run
 def attrBuilder():
     with Context() as ctx, Location.unknown():
-        ctx.allow_unregistered_dialects = True
         # CHECK: python_test.attributes_op
         op = test.AttributesOp(
             # CHECK-DAG: x_affinemap = affine_map<() -> (2)>
@@ -168,7 +177,7 @@ def attrBuilder():
             x_f32arr=[2.0, 3.0],
             x_f64=4.25,  # CHECK-DAG: x_f64 = 4.250000e+00 : f64
             x_f64arr=[4.0, 8.0],  # CHECK-DAG: x_f64arr = [4.000000e+00, 8.000000e+00]
-            # CHECK-DAG: x_f64elems = dense<[3.952530e-323, 7.905050e-323]> : tensor<2xf64>
+            # CHECK-DAG: x_f64elems = dense<[8.000000e+00, 1.600000e+01]> : tensor<2xf64>
             x_f64elems=[8.0, 16.0],
             # CHECK-DAG: x_flatsymrefarr = [@symbol1, @symbol2]
             x_flatsymrefarr=["symbol1", "symbol2"],
@@ -177,10 +186,10 @@ def attrBuilder():
             x_i16=42,  # CHECK-DAG: x_i16 = 42 : i16
             x_i32=6,  # CHECK-DAG: x_i32 = 6 : i32
             x_i32arr=[4, 5],  # CHECK-DAG: x_i32arr = [4 : i32, 5 : i32]
-            x_i32elems=[5, 6],  # CHECK-DAG: x_i32elems = dense<[5, 6]> : tensor<2xsi32>
+            x_i32elems=[5, 6],  # CHECK-DAG: x_i32elems = dense<[5, 6]> : tensor<2xi32>
             x_i64=9,  # CHECK-DAG: x_i64 = 9 : i64
             x_i64arr=[7, 8],  # CHECK-DAG: x_i64arr = [7, 8]
-            x_i64elems=[8, 9],  # CHECK-DAG: x_i64elems = dense<[8, 9]> : tensor<2xsi64>
+            x_i64elems=[8, 9],  # CHECK-DAG: x_i64elems = dense<[8, 9]> : tensor<2xi64>
             x_i64svecarr=[10, 11],  # CHECK-DAG: x_i64svecarr = [10, 11]
             x_i8=11,  # CHECK-DAG: x_i8 = 11 : i8
             x_idx=10,  # CHECK-DAG: x_idx = 10 : index
@@ -211,12 +220,217 @@ def attrBuilder():
         op.verify()
         op.print(use_local_scope=True)
 
+    # fmt: off
+    assert typing.get_type_hints(test.AttributesOp.x_affinemaparr.fset)["value"] is ArrayAttr
+    assert typing.get_type_hints(test.AttributesOp.x_affinemaparr.fget)["return"] is ArrayAttr
+    assert type(op.x_affinemaparr) is typing.get_type_hints(test.AttributesOp.x_affinemaparr.fget)["return"]
+
+    assert typing.get_type_hints(test.AttributesOp.x_affinemap.fset)["value"] is AffineMapAttr
+    assert typing.get_type_hints(test.AttributesOp.x_affinemap.fget)["return"] is AffineMapAttr
+    assert type(op.x_affinemap) is typing.get_type_hints(test.AttributesOp.x_affinemap.fget)["return"]
+
+    assert typing.get_type_hints(test.AttributesOp.x_arr.fset)["value"] is ArrayAttr
+    assert typing.get_type_hints(test.AttributesOp.x_arr.fget)["return"] is ArrayAttr
+    assert type(op.x_arr) is typing.get_type_hints(test.AttributesOp.x_arr.fget)["return"]
+
+    assert typing.get_type_hints(test.AttributesOp.x_boolarr.fset)["value"] is ArrayAttr
+    assert typing.get_type_hints(test.AttributesOp.x_boolarr.fget)["return"] is ArrayAttr
+    assert type(op.x_boolarr) is typing.get_type_hints(test.AttributesOp.x_boolarr.fget)["return"]
+
+    assert typing.get_type_hints(test.AttributesOp.x_bool.fset)["value"] is BoolAttr
+    assert typing.get_type_hints(test.AttributesOp.x_bool.fget)["return"] is BoolAttr
+    assert type(op.x_bool) is typing.get_type_hints(test.AttributesOp.x_bool.fget)["return"]
+
+    assert typing.get_type_hints(test.AttributesOp.x_dboolarr.fset)["value"] is DenseBoolArrayAttr
+    assert typing.get_type_hints(test.AttributesOp.x_dboolarr.fget)["return"] is DenseBoolArrayAttr
+    assert type(op.x_dboolarr) is typing.get_type_hints(test.AttributesOp.x_dboolarr.fget)["return"]
+
+    assert typing.get_type_hints(test.AttributesOp.x_df32arr.fset)["value"] is DenseF32ArrayAttr
+    assert typing.get_type_hints(test.AttributesOp.x_df32arr.fget)["return"] is DenseF32ArrayAttr
+    assert type(op.x_df32arr) is typing.get_type_hints(test.AttributesOp.x_df32arr.fget)["return"]
+
+    assert typing.get_type_hints(test.AttributesOp.x_df64arr.fset)["value"] is DenseF64ArrayAttr
+    assert typing.get_type_hints(test.AttributesOp.x_df64arr.fget)["return"] is DenseF64ArrayAttr
+    assert type(op.x_df64arr) is typing.get_type_hints(test.AttributesOp.x_df64arr.fget)["return"]
+
+    assert typing.get_type_hints(test.AttributesOp.x_df16arr.fset)["value"] is DenseI16ArrayAttr
+    assert typing.get_type_hints(test.AttributesOp.x_df16arr.fget)["return"] is DenseI16ArrayAttr
+    assert type(op.x_df16arr) is typing.get_type_hints(test.AttributesOp.x_df16arr.fget)["return"]
+
+    assert typing.get_type_hints(test.AttributesOp.x_di32arr.fset)["value"] is DenseI32ArrayAttr
+    assert typing.get_type_hints(test.AttributesOp.x_di32arr.fget)["return"] is DenseI32ArrayAttr
+    assert type(op.x_di32arr) is typing.get_type_hints(test.AttributesOp.x_di32arr.fget)["return"]
+
+    assert typing.get_type_hints(test.AttributesOp.x_di64arr.fset)["value"] is DenseI64ArrayAttr
+    assert typing.get_type_hints(test.AttributesOp.x_di64arr.fget)["return"] is DenseI64ArrayAttr
+    assert type(op.x_di64arr) is typing.get_type_hints(test.AttributesOp.x_di64arr.fget)["return"]
+
+    assert typing.get_type_hints(test.AttributesOp.x_di8arr.fset)["value"] is DenseI8ArrayAttr
+    assert typing.get_type_hints(test.AttributesOp.x_di8arr.fget)["return"] is DenseI8ArrayAttr
+    assert type(op.x_di8arr) is typing.get_type_hints(test.AttributesOp.x_di8arr.fget)["return"]
+
+    assert typing.get_type_hints(test.AttributesOp.x_dictarr.fset)["value"] is ArrayAttr
+    assert typing.get_type_hints(test.AttributesOp.x_dictarr.fget)["return"] is ArrayAttr
+    assert type(op.x_dictarr) is typing.get_type_hints(test.AttributesOp.x_dictarr.fget)["return"]
+
+    assert typing.get_type_hints(test.AttributesOp.x_dict.fset)["value"] is DictAttr
+    assert typing.get_type_hints(test.AttributesOp.x_dict.fget)["return"] is DictAttr
+    assert type(op.x_dict) is typing.get_type_hints(test.AttributesOp.x_dict.fget)["return"]
+
+    assert typing.get_type_hints(test.AttributesOp.x_f32arr.fset)["value"] is ArrayAttr
+    assert typing.get_type_hints(test.AttributesOp.x_f32arr.fget)["return"] is ArrayAttr
+    assert type(op.x_f32arr) is typing.get_type_hints(test.AttributesOp.x_f32arr.fget)["return"]
+
+    assert typing.get_type_hints(test.AttributesOp.x_f32.fset)["value"] is FloatAttr
+    assert typing.get_type_hints(test.AttributesOp.x_f32.fget)["return"] is FloatAttr
+    assert type(op.x_f32) is typing.get_type_hints(test.AttributesOp.x_f32.fget)["return"]
+
+    assert typing.get_type_hints(test.AttributesOp.x_f64arr.fset)["value"] is ArrayAttr
+    assert typing.get_type_hints(test.AttributesOp.x_f64arr.fget)["return"] is ArrayAttr
+    assert type(op.x_f64arr) is typing.get_type_hints(test.AttributesOp.x_f64arr.fget)["return"]
+
+    assert typing.get_type_hints(test.AttributesOp.x_f64.fset)["value"] is FloatAttr
+    assert typing.get_type_hints(test.AttributesOp.x_f64.fget)["return"] is FloatAttr
+    assert type(op.x_f64) is typing.get_type_hints(test.AttributesOp.x_f64.fget)["return"]
+
+    assert typing.get_type_hints(test.AttributesOp.x_f64elems.fset)["value"] is DenseFPElementsAttr
+    assert typing.get_type_hints(test.AttributesOp.x_f64elems.fget)["return"] is DenseFPElementsAttr
+    assert type(op.x_f64elems) is typing.get_type_hints(test.AttributesOp.x_f64elems.fget)["return"]
+
+    assert typing.get_type_hints(test.AttributesOp.x_flatsymrefarr.fset)["value"] is ArrayAttr
+    assert typing.get_type_hints(test.AttributesOp.x_flatsymrefarr.fget)["return"] is ArrayAttr
+    assert type(op.x_flatsymrefarr) is typing.get_type_hints(test.AttributesOp.x_flatsymrefarr.fget)["return"]
+
+    assert typing.get_type_hints(test.AttributesOp.x_flatsymref.fset)["value"] is FlatSymbolRefAttr
+    assert typing.get_type_hints(test.AttributesOp.x_flatsymref.fget)["return"] is FlatSymbolRefAttr
+    assert type(op.x_flatsymref) is typing.get_type_hints(test.AttributesOp.x_flatsymref.fget)["return"]
+
+    assert typing.get_type_hints(test.AttributesOp.x_i16.fset)["value"] is IntegerAttr
+    assert typing.get_type_hints(test.AttributesOp.x_i16.fget)["return"] is IntegerAttr
+    assert type(op.x_i16) is typing.get_type_hints(test.AttributesOp.x_i16.fget)["return"]
+
+    assert typing.get_type_hints(test.AttributesOp.x_i1.fset)["value"] is BoolAttr
+    assert typing.get_type_hints(test.AttributesOp.x_i1.fget)["return"] is BoolAttr
+    assert type(op.x_i1) is typing.get_type_hints(test.AttributesOp.x_i1.fget)["return"]
+
+    assert typing.get_type_hints(test.AttributesOp.x_i32arr.fset)["value"] is ArrayAttr
+    assert typing.get_type_hints(test.AttributesOp.x_i32arr.fget)["return"] is ArrayAttr
+    assert type(op.x_i32arr) is typing.get_type_hints(test.AttributesOp.x_i32arr.fget)["return"]
+
+    assert typing.get_type_hints(test.AttributesOp.x_i32.fset)["value"] is IntegerAttr
+    assert typing.get_type_hints(test.AttributesOp.x_i32.fget)["return"] is IntegerAttr
+    assert type(op.x_i32) is typing.get_type_hints(test.AttributesOp.x_i32.fget)["return"]
+
+    assert typing.get_type_hints(test.AttributesOp.x_i32elems.fset)["value"] is DenseIntElementsAttr
+    assert typing.get_type_hints(test.AttributesOp.x_i32elems.fget)["return"] is DenseIntElementsAttr
+    assert type(op.x_i32elems) is typing.get_type_hints(test.AttributesOp.x_i32elems.fget)["return"]
+
+    assert typing.get_type_hints(test.AttributesOp.x_i64arr.fset)["value"] is ArrayAttr
+    assert typing.get_type_hints(test.AttributesOp.x_i64arr.fget)["return"] is ArrayAttr
+    assert type(op.x_i64arr) is typing.get_type_hints(test.AttributesOp.x_i64arr.fget)["return"]
+
+    assert typing.get_type_hints(test.AttributesOp.x_i64.fset)["value"] is IntegerAttr
+    assert typing.get_type_hints(test.AttributesOp.x_i64.fget)["return"] is IntegerAttr
+    assert type(op.x_i64) is typing.get_type_hints(test.AttributesOp.x_i64.fget)["return"]
+
+    assert typing.get_type_hints(test.AttributesOp.x_i64elems.fset)["value"] is DenseIntElementsAttr
+    assert typing.get_type_hints(test.AttributesOp.x_i64elems.fget)["return"] is DenseIntElementsAttr
+    assert type(op.x_i64elems) is typing.get_type_hints(test.AttributesOp.x_i64elems.fget)["return"]
+
+    assert typing.get_type_hints(test.AttributesOp.x_i64svecarr.fset)["value"] is ArrayAttr
+    assert typing.get_type_hints(test.AttributesOp.x_i64svecarr.fget)["return"] is ArrayAttr
+    assert type(op.x_i64svecarr) is typing.get_type_hints(test.AttributesOp.x_i64svecarr.fget)["return"]
+
+    assert typing.get_type_hints(test.AttributesOp.x_i8.fset)["value"] is IntegerAttr
+    assert typing.get_type_hints(test.AttributesOp.x_i8.fget)["return"] is IntegerAttr
+    assert type(op.x_i8) is typing.get_type_hints(test.AttributesOp.x_i8.fget)["return"]
+
+    assert typing.get_type_hints(test.AttributesOp.x_idx.fset)["value"] is IntegerAttr
+    assert typing.get_type_hints(test.AttributesOp.x_idx.fget)["return"] is IntegerAttr
+    assert type(op.x_idx) is typing.get_type_hints(test.AttributesOp.x_idx.fget)["return"]
+
+    assert typing.get_type_hints(test.AttributesOp.x_idxelems.fset)["value"] is DenseIntElementsAttr
+    assert typing.get_type_hints(test.AttributesOp.x_idxelems.fget)["return"] is DenseIntElementsAttr
+    assert type(op.x_idxelems) is typing.get_type_hints(test.AttributesOp.x_idxelems.fget)["return"]
+
+    assert typing.get_type_hints(test.AttributesOp.x_idxlistarr.fset)["value"] is ArrayAttr
+    assert typing.get_type_hints(test.AttributesOp.x_idxlistarr.fget)["return"] is ArrayAttr
+    assert type(op.x_idxlistarr) is typing.get_type_hints(test.AttributesOp.x_idxlistarr.fget)["return"]
+
+    assert typing.get_type_hints(test.AttributesOp.x_si16.fset)["value"] is IntegerAttr
+    assert typing.get_type_hints(test.AttributesOp.x_si16.fget)["return"] is IntegerAttr
+    assert type(op.x_si16) is typing.get_type_hints(test.AttributesOp.x_si16.fget)["return"]
+
+    assert typing.get_type_hints(test.AttributesOp.x_si1.fset)["value"] is IntegerAttr
+    assert typing.get_type_hints(test.AttributesOp.x_si1.fget)["return"] is IntegerAttr
+    assert type(op.x_si1) is typing.get_type_hints(test.AttributesOp.x_si1.fget)["return"]
+
+    assert typing.get_type_hints(test.AttributesOp.x_si32.fset)["value"] is IntegerAttr
+    assert typing.get_type_hints(test.AttributesOp.x_si32.fget)["return"] is IntegerAttr
+    assert type(op.x_si32) is typing.get_type_hints(test.AttributesOp.x_si32.fget)["return"]
+
+    assert typing.get_type_hints(test.AttributesOp.x_si64.fset)["value"] is IntegerAttr
+    assert typing.get_type_hints(test.AttributesOp.x_si64.fget)["return"] is IntegerAttr
+    assert type(op.x_si64) is typing.get_type_hints(test.AttributesOp.x_si64.fget)["return"]
+
+    assert typing.get_type_hints(test.AttributesOp.x_si8.fset)["value"] is IntegerAttr
+    assert typing.get_type_hints(test.AttributesOp.x_si8.fget)["return"] is IntegerAttr
+    assert type(op.x_si8) is typing.get_type_hints(test.AttributesOp.x_si8.fget)["return"]
+
+    assert typing.get_type_hints(test.AttributesOp.x_strarr.fset)["value"] is ArrayAttr
+    assert typing.get_type_hints(test.AttributesOp.x_strarr.fget)["return"] is ArrayAttr
+    assert type(op.x_strarr) is typing.get_type_hints(test.AttributesOp.x_strarr.fget)["return"]
+
+    assert typing.get_type_hints(test.AttributesOp.x_str.fset)["value"] is StringAttr
+    assert typing.get_type_hints(test.AttributesOp.x_str.fget)["return"] is StringAttr
+    assert type(op.x_str) is typing.get_type_hints(test.AttributesOp.x_str.fget)["return"]
+
+    assert typing.get_type_hints(test.AttributesOp.x_sym.fset)["value"] is StringAttr
+    assert typing.get_type_hints(test.AttributesOp.x_sym.fget)["return"] is StringAttr
+    assert type(op.x_sym) is typing.get_type_hints(test.AttributesOp.x_sym.fget)["return"]
+
+    assert typing.get_type_hints(test.AttributesOp.x_symrefarr.fset)["value"] is ArrayAttr
+    assert typing.get_type_hints(test.AttributesOp.x_symrefarr.fget)["return"] is ArrayAttr
+    assert type(op.x_symrefarr) is typing.get_type_hints(test.AttributesOp.x_symrefarr.fget)["return"]
+
+    assert typing.get_type_hints(test.AttributesOp.x_symref.fset)["value"] is SymbolRefAttr
+    assert typing.get_type_hints(test.AttributesOp.x_symref.fget)["return"] is SymbolRefAttr
+    assert type(op.x_symref) is typing.get_type_hints(test.AttributesOp.x_symref.fget)["return"]
+
+    assert typing.get_type_hints(test.AttributesOp.x_typearr.fset)["value"] is ArrayAttr
+    assert typing.get_type_hints(test.AttributesOp.x_typearr.fget)["return"] is ArrayAttr
+    assert type(op.x_typearr) is typing.get_type_hints(test.AttributesOp.x_typearr.fget)["return"]
+
+    assert typing.get_type_hints(test.AttributesOp.x_type.fset)["value"] is TypeAttr
+    assert typing.get_type_hints(test.AttributesOp.x_type.fget)["return"] is TypeAttr
+    assert type(op.x_type) is typing.get_type_hints(test.AttributesOp.x_type.fget)["return"]
+
+    assert typing.get_type_hints(test.AttributesOp.x_ui16.fset)["value"] is IntegerAttr
+    assert typing.get_type_hints(test.AttributesOp.x_ui16.fget)["return"] is IntegerAttr
+    assert type(op.x_ui16) is typing.get_type_hints(test.AttributesOp.x_ui16.fget)["return"]
+
+    assert typing.get_type_hints(test.AttributesOp.x_ui1.fset)["value"] is IntegerAttr
+    assert typing.get_type_hints(test.AttributesOp.x_ui1.fget)["return"] is IntegerAttr
+    assert type(op.x_ui1) is typing.get_type_hints(test.AttributesOp.x_ui1.fget)["return"]
+
+    assert typing.get_type_hints(test.AttributesOp.x_ui32.fset)["value"] is IntegerAttr
+    assert typing.get_type_hints(test.AttributesOp.x_ui32.fget)["return"] is IntegerAttr
+    assert type(op.x_ui32) is typing.get_type_hints(test.AttributesOp.x_ui32.fget)["return"]
+
+    assert typing.get_type_hints(test.AttributesOp.x_ui64.fset)["value"] is IntegerAttr
+    assert typing.get_type_hints(test.AttributesOp.x_ui64.fget)["return"] is IntegerAttr
+    assert type(op.x_ui64) is typing.get_type_hints(test.AttributesOp.x_ui64.fget)["return"]
+
+    assert typing.get_type_hints(test.AttributesOp.x_ui8.fset)["value"] is IntegerAttr
+    assert typing.get_type_hints(test.AttributesOp.x_ui8.fget)["return"] is IntegerAttr
+    assert type(op.x_ui8) is typing.get_type_hints(test.AttributesOp.x_ui8.fget)["return"]
+    # fmt: on
+
 
 # CHECK-LABEL: TEST: inferReturnTypes
 @run
 def inferReturnTypes():
     with Context() as ctx, Location.unknown(ctx):
-        test.register_python_test_dialect(ctx)
         module = Module.create()
         with InsertionPoint(module.body):
             op = test.InferResultsOp()
@@ -261,14 +475,24 @@ def inferReturnTypes():
 @run
 def resultTypesDefinedByTraits():
     with Context() as ctx, Location.unknown(ctx):
-        test.register_python_test_dialect(ctx)
         module = Module.create()
         with InsertionPoint(module.body):
             inferred = test.InferResultsOp()
+
+            # CHECK: i32 i64
+            print(inferred.single.type, inferred.doubled.type)
+
             same = test.SameOperandAndResultTypeOp([inferred.results[0]])
             # CHECK-COUNT-2: i32
             print(same.one.type)
             print(same.two.type)
+            assert (
+                typing.get_type_hints(test.SameOperandAndResultTypeOp.one.fget)[
+                    "return"
+                ]
+                is OpResult
+            )
+            assert type(same.one) is OpResult
 
             first_type_attr = test.FirstAttrDeriveTypeAttrOp(
                 inferred.results[1], TypeAttr.get(IndexType.get())
@@ -291,18 +515,35 @@ def resultTypesDefinedByTraits():
             # CHECK: index
             print(implied.index.type)
 
+            # provide the result types to avoid inferring them
+            f64 = F64Type.get()
+            no_imply = test.InferResultsImpliedOp(results=[f64, f64, f64])
+            # CHECK-COUNT-3: f64
+            print(no_imply.integer.type, no_imply.flt.type, no_imply.index.type)
+
+            no_infer = test.InferResultsOp(results=[F32Type.get(), IndexType.get()])
+            # CHECK: f32 index
+            print(no_infer.single.type, no_infer.doubled.type)
+
 
 # CHECK-LABEL: TEST: testOptionalOperandOp
 @run
 def testOptionalOperandOp():
     with Context() as ctx, Location.unknown():
-        test.register_python_test_dialect(ctx)
-
         module = Module.create()
         with InsertionPoint(module.body):
             op1 = test.OptionalOperandOp()
             # CHECK: op1.input is None: True
             print(f"op1.input is None: {op1.input is None}")
+            assert (
+                typing.get_type_hints(test.OptionalOperandOp.input.fget)["return"]
+                is Optional[Value]
+            )
+            assert (
+                typing.get_type_hints(test.OptionalOperandOp.result.fget)["return"]
+                == OpResult[IntegerType]
+            )
+            assert type(op1.result) is OpResult
 
             op2 = test.OptionalOperandOp(input=op1)
             # CHECK: op2.input is None: False
@@ -312,18 +553,29 @@ def testOptionalOperandOp():
 # CHECK-LABEL: TEST: testCustomAttribute
 @run
 def testCustomAttribute():
-    with Context() as ctx:
-        test.register_python_test_dialect(ctx)
-        a = test.TestAttr.get()
+    with Context() as ctx, Location.unknown():
+        a = TestAttr.get()
         # CHECK: #python_test.test_attr
         print(a)
 
+        # CHECK: python_test.custom_attributed_op  {
+        # CHECK: #python_test.test_attr
+        # CHECK: }
+        op2 = test.CustomAttributedOp(a)
+        print(f"{op2}")
+
+        # CHECK: #python_test.test_attr
+        print(f"{op2.test_attr}")
+
+        # CHECK: TestAttr(#python_test.test_attr)
+        print(repr(op2.test_attr))
+
         # The following cast must not assert.
-        b = test.TestAttr(a)
+        b = TestAttr(a)
 
         unit = UnitAttr.get()
         try:
-            test.TestAttr(unit)
+            TestAttr(unit)
         except ValueError as e:
             assert "Cannot cast attribute to TestAttr" in str(e)
         else:
@@ -332,16 +584,18 @@ def testCustomAttribute():
         # The following must trigger a TypeError from our adaptors and must not
         # crash.
         try:
-            test.TestAttr(42)
+            TestAttr(42)
         except TypeError as e:
-            assert "Expected an MLIR object" in str(e)
+            assert "Expected an MLIR object (got 42)" in str(e)
+        except ValueError as e:
+            assert "Cannot cast attribute to TestAttr (from 42)" in str(e)
         else:
             raise
 
         # The following must trigger a TypeError from pybind (therefore, not
         # checking its message) and must not crash.
         try:
-            test.TestAttr(42, 56)
+            TestAttr(42, 56)
         except TypeError:
             pass
         else:
@@ -351,13 +605,12 @@ def testCustomAttribute():
 @run
 def testCustomType():
     with Context() as ctx:
-        test.register_python_test_dialect(ctx)
-        a = test.TestType.get()
+        a = TestType.get()
         # CHECK: !python_test.test_type
         print(a)
 
         # The following cast must not assert.
-        b = test.TestType(a)
+        b = TestType(a)
         # Instance custom types should have typeids
         assert isinstance(b.typeid, TypeID)
         # Subclasses of ir.Type should not have a static_typeid
@@ -369,7 +622,7 @@ def testCustomType():
 
         i8 = IntegerType.get_signless(8)
         try:
-            test.TestType(i8)
+            TestType(i8)
         except ValueError as e:
             assert "Cannot cast type to TestType" in str(e)
         else:
@@ -378,16 +631,18 @@ def testCustomType():
         # The following must trigger a TypeError from our adaptors and must not
         # crash.
         try:
-            test.TestType(42)
+            TestType(42)
         except TypeError as e:
-            assert "Expected an MLIR object" in str(e)
+            assert "Expected an MLIR object (got 42)" in str(e)
+        except ValueError as e:
+            assert "Cannot cast type to TestType (from 42)" in str(e)
         else:
             raise
 
         # The following must trigger a TypeError from pybind (therefore, not
         # checking its message) and must not crash.
         try:
-            test.TestType(42, 56)
+            TestType(42, 56)
         except TypeError:
             pass
         else:
@@ -395,14 +650,19 @@ def testCustomType():
 
 
 @run
+# CHECK-LABEL: TEST: testValue
+def testValue():
+    # Check that Value is a generic class at runtime.
+    assert hasattr(Value, "__class_getitem__")
+
+
+@run
 # CHECK-LABEL: TEST: testTensorValue
 def testTensorValue():
     with Context() as ctx, Location.unknown():
-        test.register_python_test_dialect(ctx)
-
         i8 = IntegerType.get_signless(8)
 
-        class Tensor(test.TestTensorValue):
+        class Tensor(TestTensorValue):
             def __str__(self):
                 return super().__str__().replace("Value", "Tensor")
 
@@ -422,16 +682,21 @@ def testTensorValue():
 
             # Classes of custom types that inherit from concrete types should have
             # static_typeid
-            assert isinstance(test.TestIntegerRankedTensorType.static_typeid, TypeID)
+            assert isinstance(TestIntegerRankedTensorType.static_typeid, TypeID)
             # And it should be equal to the in-tree concrete type
-            assert test.TestIntegerRankedTensorType.static_typeid == t.type.typeid
+            assert TestIntegerRankedTensorType.static_typeid == t.type.typeid
+
+            d = tensor.EmptyOp([1, 2, 3], IntegerType.get_signless(5)).result
+            # CHECK: Value(%{{.*}} = tensor.empty() : tensor<1x2x3xi5>)
+            print(d)
+            # CHECK: TestTensorValue
+            print(repr(d))
 
 
 # CHECK-LABEL: TEST: inferReturnTypeComponents
 @run
 def inferReturnTypeComponents():
     with Context() as ctx, Location.unknown(ctx):
-        test.register_python_test_dialect(ctx)
         module = Module.create()
         i32 = IntegerType.get_signless(32)
         with InsertionPoint(module.body):
@@ -483,9 +748,7 @@ def inferReturnTypeComponents():
 @run
 def testCustomTypeTypeCaster():
     with Context() as ctx, Location.unknown():
-        test.register_python_test_dialect(ctx)
-
-        a = test.TestType.get()
+        a = TestType.get()
         assert a.typeid is not None
 
         b = Type.parse("!python_test.test_type")
@@ -494,7 +757,7 @@ def testCustomTypeTypeCaster():
         # CHECK: TestType(!python_test.test_type)
         print(repr(b))
 
-        c = test.TestIntegerRankedTensorType.get([10, 10], 5)
+        c = TestIntegerRankedTensorType.get([10, 10], 5)
         # CHECK: tensor<10x10xi5>
         print(c)
         # CHECK: TestIntegerRankedTensorType(tensor<10x10xi5>)
@@ -503,17 +766,28 @@ def testCustomTypeTypeCaster():
         # CHECK: Type caster is already registered
         try:
 
+            @register_type_caster(c.typeid)
             def type_caster(pytype):
-                return test.TestIntegerRankedTensorType(pytype)
+                return TestIntegerRankedTensorType(pytype)
 
-            register_type_caster(c.typeid, type_caster)
         except RuntimeError as e:
             print(e)
 
+        # python_test dialect registers a caster for RankedTensorType in its extension (pybind) module.
+        # So this one replaces that one (successfully). And then just to be sure we restore the original caster below.
+        @register_type_caster(c.typeid, replace=True)
         def type_caster(pytype):
-            return test.TestIntegerRankedTensorType(pytype)
+            return RankedTensorType(pytype)
 
-        register_type_caster(c.typeid, type_caster, replace=True)
+        d = tensor.EmptyOp([10, 10], IntegerType.get_signless(5)).result
+        # CHECK: tensor<10x10xi5>
+        print(d.type)
+        # CHECK: ranked tensor type RankedTensorType(tensor<10x10xi5>)
+        print("ranked tensor type", repr(d.type))
+
+        @register_type_caster(c.typeid, replace=True)
+        def type_caster(pytype):
+            return TestIntegerRankedTensorType(pytype)
 
         d = tensor.EmptyOp([10, 10], IntegerType.get_signless(5)).result
         # CHECK: tensor<10x10xi5>
@@ -526,7 +800,6 @@ def testCustomTypeTypeCaster():
 @run
 def testInferTypeOpInterface():
     with Context() as ctx, Location.unknown(ctx):
-        test.register_python_test_dialect(ctx)
         module = Module.create()
         with InsertionPoint(module.body):
             i64 = IntegerType.get_signless(64)
@@ -539,3 +812,212 @@ def testInferTypeOpInterface():
             two_operands = test.InferResultsVariadicInputsOp(single=zero, doubled=zero)
             # CHECK: f32
             print(two_operands.result.type)
+
+            assert (
+                typing.get_type_hints(test.infer_results_variadic_inputs_op)["return"]
+                is OpResult
+            )
+            assert (
+                type(test.infer_results_variadic_inputs_op(single=zero, doubled=zero))
+                is OpResult
+            )
+
+
+# CHECK-LABEL: TEST: testVariadicOperandAccess
+@run
+def testVariadicOperandAccess():
+    def values(lst):
+        return [str(e) for e in lst]
+
+    with Context() as ctx, Location.unknown(ctx):
+        module = Module.create()
+        with InsertionPoint(module.body):
+            i32 = IntegerType.get_signless(32)
+            zero = arith.ConstantOp(i32, 0)
+            one = arith.ConstantOp(i32, 1)
+            two = arith.ConstantOp(i32, 2)
+            three = arith.ConstantOp(i32, 3)
+            four = arith.ConstantOp(i32, 4)
+
+            variadic_operands = test.SameVariadicOperandSizeOp(
+                [zero, one], two, [three, four]
+            )
+            # CHECK: Value(%{{.*}} = arith.constant 2 : i32)
+            print(variadic_operands.non_variadic)
+            assert (
+                typing.get_type_hints(test.SameVariadicOperandSizeOp.non_variadic.fget)[
+                    "return"
+                ]
+                is Value
+            )
+            assert type(variadic_operands.non_variadic) is Value
+
+            # CHECK: ['Value(%{{.*}} = arith.constant 0 : i32)', 'Value(%{{.*}} = arith.constant 1 : i32)']
+            print(values(variadic_operands.variadic1))
+            assert (
+                typing.get_type_hints(test.SameVariadicOperandSizeOp.variadic1.fget)[
+                    "return"
+                ]
+                is OpOperandList
+            )
+            assert type(variadic_operands.variadic1) is OpOperandList
+
+            # CHECK: ['Value(%{{.*}} = arith.constant 3 : i32)', 'Value(%{{.*}} = arith.constant 4 : i32)']
+            print(values(variadic_operands.variadic2))
+            assert type(variadic_operands.variadic2) is OpOperandList
+
+            assert (
+                typing.get_type_hints(test.same_variadic_operand)["return"]
+                is test.SameVariadicOperandSizeOp
+            )
+            assert (
+                type(test.same_variadic_operand([zero, one], two, [three, four]))
+                is test.SameVariadicOperandSizeOp
+            )
+
+
+# CHECK-LABEL: TEST: testVariadicResultAccess
+@run
+def testVariadicResultAccess():
+    def types(lst):
+        return [e.type for e in lst]
+
+    with Context() as ctx, Location.unknown(ctx):
+        module = Module.create()
+        with InsertionPoint(module.body):
+            i = [IntegerType.get_signless(k) for k in range(7)]
+
+            # Test Variadic-Fixed-Variadic
+            op = test.SameVariadicResultSizeOpVFV([i[0], i[1]], i[2], [i[3], i[4]])
+            # CHECK: i2
+            print(op.non_variadic.type)
+            # CHECK: [IntegerType(i0), IntegerType(i1)]
+            print(types(op.variadic1))
+            # CHECK: [IntegerType(i3), IntegerType(i4)]
+            print(types(op.variadic2))
+
+            assert (
+                typing.get_type_hints(test.same_variadic_result_vfv)["return"]
+                == Union[OpResult, OpResultList, test.SameVariadicResultSizeOpVFV]
+            )
+            assert (
+                type(test.same_variadic_result_vfv([i[0], i[1]], i[2], [i[3], i[4]]))
+                is OpResultList
+            )
+
+            #  Test Variadic-Variadic-Variadic
+            op = test.SameVariadicResultSizeOpVVV(
+                [i[0], i[1]], [i[2], i[3]], [i[4], i[5]]
+            )
+            # CHECK: [IntegerType(i0), IntegerType(i1)]
+            print(types(op.variadic1))
+            # CHECK: [IntegerType(i2), IntegerType(i3)]
+            print(types(op.variadic2))
+            # CHECK: [IntegerType(i4), IntegerType(i5)]
+            print(types(op.variadic3))
+
+            #  Test Fixed-Fixed-Variadic
+            op = test.SameVariadicResultSizeOpFFV(i[0], i[1], [i[2], i[3], i[4]])
+            # CHECK: i0
+            print(op.non_variadic1.type)
+            # CHECK: i1
+            print(op.non_variadic2.type)
+            # CHECK: [IntegerType(i2), IntegerType(i3), IntegerType(i4)]
+            print(types(op.variadic))
+            assert (
+                typing.get_type_hints(test.SameVariadicResultSizeOpFFV.variadic.fget)[
+                    "return"
+                ]
+                is OpResultList
+            )
+            assert type(op.variadic) is OpResultList
+
+            #  Test Variadic-Variadic-Fixed
+            op = test.SameVariadicResultSizeOpVVF(
+                [i[0], i[1], i[2]], [i[3], i[4], i[5]], i[6]
+            )
+            # CHECK: [IntegerType(i0), IntegerType(i1), IntegerType(i2)]
+            print(types(op.variadic1))
+            # CHECK: [IntegerType(i3), IntegerType(i4), IntegerType(i5)]
+            print(types(op.variadic2))
+            # CHECK: i6
+            print(op.non_variadic.type)
+
+            # Test Fixed-Variadic-Fixed-Variadic-Fixed
+            op = test.SameVariadicResultSizeOpFVFVF(
+                i[0], [i[1], i[2]], i[3], [i[4], i[5]], i[6]
+            )
+            # CHECK: i0
+            print(op.non_variadic1.type)
+            # CHECK: [IntegerType(i1), IntegerType(i2)]
+            print(types(op.variadic1))
+            # CHECK: i3
+            print(op.non_variadic2.type)
+            # CHECK: [IntegerType(i4), IntegerType(i5)]
+            print(types(op.variadic2))
+            # CHECK: i6
+            print(op.non_variadic3.type)
+
+            # Test Fixed-Variadic-Fixed-Variadic-Fixed - Variadic group size 0
+            op = test.SameVariadicResultSizeOpFVFVF(i[0], [], i[1], [], i[2])
+            # CHECK: i0
+            print(op.non_variadic1.type)
+            # CHECK: []
+            print(types(op.variadic1))
+            # CHECK: i1
+            print(op.non_variadic2.type)
+            # CHECK: []
+            print(types(op.variadic2))
+            # CHECK: i2
+            print(op.non_variadic3.type)
+
+            # Test Fixed-Variadic-Fixed-Variadic-Fixed - Variadic group size 1
+            op = test.SameVariadicResultSizeOpFVFVF(i[0], [i[1]], i[2], [i[3]], i[4])
+            # CHECK: i0
+            print(op.non_variadic1.type)
+            # CHECK: [IntegerType(i1)]
+            print(types(op.variadic1))
+            # CHECK: i2
+            print(op.non_variadic2.type)
+            # CHECK: [IntegerType(i3)]
+            print(types(op.variadic2))
+            # CHECK: i4
+            print(op.non_variadic3.type)
+
+            assert (
+                typing.get_type_hints(test.results_variadic)["return"]
+                == Union[OpResult, OpResultList, test.ResultsVariadicOp]
+            )
+            assert type(test.results_variadic([i[0]])) is OpResult
+            op_res_variadic = test.ResultsVariadicOp([i[0]])
+            assert (
+                typing.get_type_hints(test.ResultsVariadicOp.res.fget)["return"]
+                is OpResultList
+            )
+            assert type(op_res_variadic.res) is OpResultList
+
+
+# CHECK-LABEL: TEST: testVariadicAndNormalRegionOp
+@run
+def testVariadicAndNormalRegionOp():
+    with Context() as ctx, Location.unknown(ctx):
+        module = Module.create()
+        with InsertionPoint(module.body):
+            region_op = test.VariadicAndNormalRegionOp(2)
+            assert (
+                typing.get_type_hints(test.VariadicAndNormalRegionOp.region.fget)[
+                    "return"
+                ]
+                is Region
+            )
+            assert type(region_op.region) is Region
+            assert (
+                typing.get_type_hints(test.VariadicAndNormalRegionOp.variadic.fget)[
+                    "return"
+                ]
+                is RegionSequence
+            )
+            assert type(region_op.variadic) is RegionSequence
+
+            assert isinstance(region_op.opview, OpView)
+            assert isinstance(region_op.operation.opview, OpView)

@@ -6,18 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03
-// UNSUPPORTED: availability-filesystem-missing
+// UNSUPPORTED: c++03, c++11, c++14
 
 // <filesystem>
 
 // path operator/(path const&, path const&);
 
-#include "filesystem_include.h"
+#include <filesystem>
 #include <type_traits>
 #include <cassert>
 
 #include "test_macros.h"
+namespace fs = std::filesystem;
 
 // This is mainly tested via the member append functions.
 int main(int, char**) {

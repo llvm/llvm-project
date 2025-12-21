@@ -7,9 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "Haiku.h"
-#include "CommonArgs.h"
 #include "clang/Config/config.h"
+#include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Compilation.h"
+#include "clang/Driver/SanitizerArgs.h"
 #include "llvm/Support/Path.h"
 
 using namespace clang::driver;
@@ -23,10 +24,9 @@ void haiku::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                                    const InputInfoList &Inputs,
                                    const ArgList &Args,
                                    const char *LinkingOutput) const {
-  const toolchains::Haiku &ToolChain =
-      static_cast<const toolchains::Haiku &>(getToolChain());
+  const auto &ToolChain = static_cast<const Haiku &>(getToolChain());
   const Driver &D = ToolChain.getDriver();
-  const llvm::Triple::ArchType Arch = ToolChain.getArch();
+  const llvm::Triple &Triple = ToolChain.getTriple();
   const bool Static = Args.hasArg(options::OPT_static);
   const bool Shared = Args.hasArg(options::OPT_shared);
   ArgStringList CmdArgs;
@@ -62,8 +62,11 @@ void haiku::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   if (!Shared)
     CmdArgs.push_back("--no-undefined");
 
-  if (Arch == llvm::Triple::riscv64)
+  if (Triple.isRISCV64()) {
     CmdArgs.push_back("-X");
+    if (Args.hasArg(options::OPT_mno_relax))
+      CmdArgs.push_back("--no-relax");
+  }
 
   assert((Output.isFilename() || Output.isNothing()) && "Invalid output.");
   if (Output.isFilename()) {
@@ -81,9 +84,14 @@ void haiku::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   }
 
   Args.addAllArgs(CmdArgs, {options::OPT_L, options::OPT_T_Group,
-                            options::OPT_s, options::OPT_t, options::OPT_r});
+                            options::OPT_s, options::OPT_t});
   ToolChain.AddFilePathLibArgs(Args, CmdArgs);
 
+  if (D.isUsingLTO())
+    addLTOOptions(ToolChain, Args, CmdArgs, Output, Inputs,
+                  D.getLTOMode() == LTOK_Thin);
+
+  bool NeedsSanitizerDeps = addSanitizerRuntimes(ToolChain, Args, CmdArgs);
   addLinkerCompressDebugSectionsOption(ToolChain, Args, CmdArgs);
   AddLinkerInputs(ToolChain, Inputs, Args, CmdArgs, JA);
 
@@ -91,10 +99,26 @@ void haiku::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                    options::OPT_r)) {
     // Use the static OpenMP runtime with -static-openmp
     bool StaticOpenMP = Args.hasArg(options::OPT_static_openmp) && !Static;
-    addOpenMPRuntime(CmdArgs, ToolChain, Args, StaticOpenMP);
+    addOpenMPRuntime(C, CmdArgs, ToolChain, Args, StaticOpenMP);
 
     if (D.CCCIsCXX() && ToolChain.ShouldLinkCXXStdlib(Args))
       ToolChain.AddCXXStdlibLibArgs(Args, CmdArgs);
+
+    // Silence warnings when linking C code with a C++ '-stdlib' argument.
+    Args.ClaimAllArgs(options::OPT_stdlib_EQ);
+
+    // Additional linker set-up and flags for Fortran. This is required in order
+    // to generate executables. As Fortran runtime depends on the C runtime,
+    // these dependencies need to be listed before the C runtime below (i.e.
+    // AddRunTimeLibs).
+    if (D.IsFlangMode() &&
+        !Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs)) {
+      ToolChain.addFortranRuntimeLibraryPath(Args, CmdArgs);
+      ToolChain.addFortranRuntimeLibs(Args, CmdArgs);
+    }
+
+    if (NeedsSanitizerDeps)
+      linkSanitizerRuntimeDeps(ToolChain, Args, CmdArgs);
 
     CmdArgs.push_back("-lgcc");
 
@@ -240,6 +264,8 @@ void Haiku::AddClangSystemIncludeArgs(const llvm::opt::ArgList &DriverArgs,
   addSystemInclude(DriverArgs, CC1Args, concat(D.SysRoot,
                    "/boot/system/develop/headers/posix"));
   addSystemInclude(DriverArgs, CC1Args, concat(D.SysRoot,
+                   "/boot/system/develop/headers/gcc/include"));
+  addSystemInclude(DriverArgs, CC1Args, concat(D.SysRoot,
                    "/boot/system/develop/headers"));
 }
 
@@ -252,3 +278,11 @@ void Haiku::addLibCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
 Tool *Haiku::buildLinker() const { return new tools::haiku::Linker(*this); }
 
 bool Haiku::HasNativeLLVMSupport() const { return true; }
+
+SanitizerMask Haiku::getSupportedSanitizers() const {
+  SanitizerMask Res = ToolChain::getSupportedSanitizers();
+
+  Res |= SanitizerKind::Address;
+
+  return Res;
+}

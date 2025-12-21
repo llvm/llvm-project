@@ -40,6 +40,7 @@ def patch_gn_file(gn_file, add, remove):
             gn_contents = gn_contents[:tokloc] + ('"%s",' % a) + gn_contents[tokloc:]
     for r in remove:
         gn_contents = gn_contents.replace('"%s",' % r, "")
+        gn_contents = gn_contents.replace('"%s"' % r, "")
     with open(gn_file, "w") as f:
         f.write(gn_contents)
 
@@ -61,13 +62,13 @@ def sync_source_lists(write):
     gn_files = git_out(["ls-files", "*BUILD.gn"]).splitlines()
 
     # Matches e.g. |   "foo.cpp",|, captures |foo| in group 1.
-    gn_cpp_re = re.compile(r'^\s*"([^$"]+\.(?:cpp|c|h|S))",$', re.MULTILINE)
+    gn_cpp_re = re.compile(r'^\s*"([^$"]+\.(?:cpp|c|h|mm|S))",$', re.MULTILINE)
     # Matches e.g. |   bar_sources = [ "foo.cpp" ]|, captures |foo| in group 1.
     gn_cpp_re2 = re.compile(
-        r'^\s*(?:.*_)?sources \+?= \[ "([^$"]+\.(?:cpp|c|h|S))" ]$', re.MULTILINE
+        r'^\s*(?:.*_)?sources \+?= \[ "([^$"]+\.(?:cpp|c|h|mm|S))" ]$', re.MULTILINE
     )
     # Matches e.g. |   foo.cpp|, captures |foo| in group 1.
-    cmake_cpp_re = re.compile(r"^\s*([A-Za-z_0-9./-]+\.(?:cpp|c|h|S))$", re.MULTILINE)
+    cmake_cpp_re = re.compile(r"^\s*([A-Za-z_0-9./-]+\.(?:cpp|c|h|mm|S))$", re.MULTILINE)
 
     changes_by_rev = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
 
@@ -108,6 +109,12 @@ def sync_source_lists(write):
 
         gn_cpp = get_sources(gn_cpp_re, open(gn_file).read())
         gn_cpp |= get_sources(gn_cpp_re2, open(gn_file).read())
+
+        sources_file = os.path.join(os.path.dirname(gn_file), "sources.gni")
+        if os.path.exists(sources_file):
+            gn_cpp |= get_sources(gn_cpp_re, open(sources_file).read())
+            gn_cpp |= get_sources(gn_cpp_re2, open(sources_file).read())
+
         cmake_cpp = get_sources(cmake_cpp_re, open(cmake_file).read())
 
         if gn_cpp == cmake_cpp:
@@ -123,7 +130,8 @@ def sync_source_lists(write):
 
     # Output necessary changes grouped by revision.
     for rev in sorted(changes_by_rev):
-        print("[gn build] Port {0} -- https://reviews.llvm.org/rG{0}".format(rev))
+        commit_url = 'https://github.com/llvm/llvm-project/commit'
+        print("[gn build] Port {0} -- {1}/{0}".format(rev, commit_url))
         for gn_file, data in sorted(changes_by_rev[rev].items()):
             add = data.get("add", [])
             remove = data.get("remove", [])

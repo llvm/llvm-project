@@ -15,8 +15,8 @@
 
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/LLVM.h"
-#include "clang/Driver/OptionUtils.h"
 #include "clang/Frontend/DependencyOutputOptions.h"
+#include "clang/Options/OptionUtils.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/StringMap.h"
@@ -41,15 +41,16 @@ class ExternalSemaSource;
 class FrontendOptions;
 class PCHContainerReader;
 class Preprocessor;
-class FileManager;
 class PreprocessorOptions;
 class PreprocessorOutputOptions;
+class CodeGenOptions;
 
 /// InitializePreprocessor - Initialize the preprocessor getting it and the
 /// environment ready to process a single file.
 void InitializePreprocessor(Preprocessor &PP, const PreprocessorOptions &PPOpts,
                             const PCHContainerReader &PCHContainerRdr,
-                            const FrontendOptions &FEOpts);
+                            const FrontendOptions &FEOpts,
+                            const CodeGenOptions &CodeGenOpts);
 
 /// DoPrintPreprocessedInput - Implement -E mode.
 void DoPrintPreprocessedInput(Preprocessor &PP, raw_ostream *OS,
@@ -80,14 +81,11 @@ public:
   /// Return true if system files should be passed to sawDependency().
   virtual bool needSystemDependencies() { return false; }
 
-  /// Return true if system files should be canonicalized.
-  virtual bool shouldCanonicalizeSystemDependencies() { return false; }
-
   /// Add a dependency \p Filename if it has not been seen before and
   /// sawDependency() returns true.
   virtual void maybeAddDependency(StringRef Filename, bool FromModule,
                                   bool IsSystem, bool IsModuleFile,
-                                  FileManager *FileMgr, bool IsMissing);
+                                  bool IsMissing);
 
 protected:
   /// Return true if the filename was added to the list of dependencies, false
@@ -116,10 +114,6 @@ public:
   bool sawDependency(StringRef Filename, bool FromModule, bool IsSystem,
                      bool IsModuleFile, bool IsMissing) final;
 
-  bool shouldCanonicalizeSystemDependencies() override {
-    return CanonicalSystemHeaders;
-  }
-
 protected:
   void outputDependencyFile(llvm::raw_ostream &OS);
 
@@ -129,7 +123,6 @@ private:
   std::string OutputFile;
   std::vector<std::string> Targets;
   bool IncludeSystemHeaders;
-  bool CanonicalSystemHeaders;
   bool PhonyTarget;
   bool AddMissingHeaderDeps;
   bool SeenMissingHeader;
@@ -150,8 +143,9 @@ class ModuleDependencyCollector : public DependencyCollector {
   std::error_code copyToRoot(StringRef Src, StringRef Dst = {});
 
 public:
-  ModuleDependencyCollector(std::string DestDir)
-      : DestDir(std::move(DestDir)) {}
+  ModuleDependencyCollector(std::string DestDir,
+                            IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS)
+      : DestDir(std::move(DestDir)), Canonicalizer(std::move(VFS)) {}
   ~ModuleDependencyCollector() override { writeFileMap(); }
 
   StringRef getDest() { return DestDir; }
@@ -196,52 +190,7 @@ void AttachHeaderIncludeGen(Preprocessor &PP,
 /// memory, mainly for testing.
 IntrusiveRefCntPtr<ExternalSemaSource>
 createChainedIncludesSource(CompilerInstance &CI,
-                            IntrusiveRefCntPtr<ExternalSemaSource> &Reader);
-
-/// Optional inputs to createInvocation.
-struct CreateInvocationOptions {
-  /// Receives diagnostics encountered while parsing command-line flags.
-  /// If not provided, these are printed to stderr.
-  IntrusiveRefCntPtr<DiagnosticsEngine> Diags = nullptr;
-  /// Used e.g. to probe for system headers locations.
-  /// If not provided, the real filesystem is used.
-  /// FIXME: the driver does perform some non-virtualized IO.
-  IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS = nullptr;
-  /// Whether to attempt to produce a non-null (possibly incorrect) invocation
-  /// if any errors were encountered.
-  /// By default, always return null on errors.
-  bool RecoverOnError = false;
-  /// Allow the driver to probe the filesystem for PCH files.
-  /// This is used to replace -include with -include-pch in the cc1 args.
-  /// FIXME: ProbePrecompiled=true is a poor, historical default.
-  /// It misbehaves if the PCH file is from GCC, has the wrong version, etc.
-  bool ProbePrecompiled = false;
-  /// If set, the target is populated with the cc1 args produced by the driver.
-  /// This may be populated even if createInvocation returns nullptr.
-  std::vector<std::string> *CC1Args = nullptr;
-};
-
-/// Interpret clang arguments in preparation to parse a file.
-///
-/// This simulates a number of steps Clang takes when its driver is invoked:
-/// - choosing actions (e.g compile + link) to run
-/// - probing the system for settings like standard library locations
-/// - spawning a cc1 subprocess to compile code, with more explicit arguments
-/// - in the cc1 process, assembling those arguments into a CompilerInvocation
-///   which is used to configure the parser
-///
-/// This simulation is lossy, e.g. in some situations one driver run would
-/// result in multiple parses. (Multi-arch, CUDA, ...).
-/// This function tries to select a reasonable invocation that tools should use.
-///
-/// Args[0] should be the driver name, such as "clang" or "/usr/bin/g++".
-/// Absolute path is preferred - this affects searching for system headers.
-///
-/// May return nullptr if an invocation could not be determined.
-/// See CreateInvocationOptions::ShouldRecoverOnErrors to try harder!
-std::unique_ptr<CompilerInvocation>
-createInvocation(ArrayRef<const char *> Args,
-                 CreateInvocationOptions Opts = {});
+                            IntrusiveRefCntPtr<ASTReader> &OutReader);
 
 } // namespace clang
 

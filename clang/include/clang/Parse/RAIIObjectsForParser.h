@@ -14,7 +14,7 @@
 #ifndef LLVM_CLANG_PARSE_RAIIOBJECTSFORPARSER_H
 #define LLVM_CLANG_PARSE_RAIIOBJECTSFORPARSER_H
 
-#include "clang/Parse/ParseDiagnostic.h"
+#include "clang/Basic/DiagnosticParse.h"
 #include "clang/Parse/Parser.h"
 #include "clang/Sema/DelayedDiagnostic.h"
 #include "clang/Sema/ParsedTemplate.h"
@@ -309,6 +309,25 @@ namespace clang {
     ~ParsingOpenMPDirectiveRAII() { restore(); }
   };
 
+  /// Activates OpenACC parsing mode to preseve OpenACC specific annotation
+  /// tokens.
+  class ParsingOpenACCDirectiveRAII {
+    Parser &P;
+    bool OldVal;
+
+  public:
+    ParsingOpenACCDirectiveRAII(Parser &P, bool Value = true)
+        : P(P), OldVal(P.OpenACCDirectiveParsing) {
+      P.OpenACCDirectiveParsing = Value;
+    }
+
+    /// This can be used to restore the state early, before the dtor
+    /// is run.
+    void restore() { P.OpenACCDirectiveParsing = OldVal; }
+
+    ~ParsingOpenACCDirectiveRAII() { restore(); }
+  };
+
   /// RAII object that makes '>' behave either as an operator
   /// or as the closing angle bracket for a template argument list.
   class GreaterThanIsOperatorScope {
@@ -342,11 +361,11 @@ namespace clang {
   };
 
   class OffsetOfStateRAIIObject {
-    Sema::OffsetOfKind &OffsetOfState;
-    Sema::OffsetOfKind OldValue;
+    OffsetOfKind &OffsetOfState;
+    OffsetOfKind OldValue;
 
   public:
-    OffsetOfStateRAIIObject(Parser &P, Sema::OffsetOfKind Value)
+    OffsetOfStateRAIIObject(Parser &P, OffsetOfKind Value)
         : OffsetOfState(P.OffsetOfState), OldValue(P.OffsetOfState) {
       OffsetOfState = Value;
     }

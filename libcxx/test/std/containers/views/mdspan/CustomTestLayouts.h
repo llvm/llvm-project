@@ -29,13 +29,13 @@
 #include <utility>
 
 // Layout that wraps indices to test some idiosyncratic behavior
-// - basically it is a layout_left where indicies are first wrapped i.e. i%Wrap
+// - basically it is a layout_left where indices are first wrapped i.e. i%Wrap
 // - only accepts integers as indices
 // - is_always_strided and is_always_unique are false
 // - is_strided and is_unique are true if all extents are smaller than Wrap
 // - not default constructible
 // - not extents constructible
-// - not trivally copyable
+// - not trivially copyable
 // - does not check dynamic to static extent conversion in converting ctor
 // - check via side-effects that mdspan::swap calls mappings swap via ADL
 
@@ -76,7 +76,7 @@ private:
 
 public:
   constexpr mapping() noexcept = delete;
-  constexpr mapping(const mapping& other) noexcept : extents_(other.extents()){};
+  constexpr mapping(const mapping& other) noexcept : extents_(other.extents()) {}
   constexpr mapping(extents_type&& ext) noexcept
     requires(Wrap == 8)
       : extents_(ext) {}
@@ -176,7 +176,7 @@ public:
 
   friend constexpr void swap(mapping& x, mapping& y) noexcept {
     swap(x.extents_, y.extents_);
-    if !consteval {
+    if (!std::is_constant_evaluated()) {
       swap_counter()++;
     }
   }
@@ -240,9 +240,9 @@ private:
 public:
   constexpr mapping() noexcept = delete;
   constexpr mapping(const mapping& other) noexcept
-      : extents_(other.extents_), offset_(other.offset_), scaling_(other.scaling_){};
+      : extents_(other.extents_), offset_(other.offset_), scaling_(other.scaling_) {}
   constexpr mapping(const extents_type& ext, index_type offset = 0, index_type scaling = 1) noexcept
-      : extents_(ext), offset_(offset), scaling_(scaling){};
+      : extents_(ext), offset_(offset), scaling_(scaling) {}
 
   template <class OtherExtents>
   constexpr mapping(const mapping<OtherExtents>& other) noexcept {
@@ -317,7 +317,7 @@ public:
 
   friend constexpr void swap(mapping& x, mapping& y) noexcept {
     swap(x.extents_, y.extents_);
-    if !consteval {
+    if (!std::is_constant_evaluated()) {
       swap_counter()++;
     }
   }

@@ -31,6 +31,7 @@ import argparse
 import concurrent.futures
 import contextlib
 import datetime
+import enum
 import json
 import os
 import platform
@@ -44,7 +45,6 @@ import tempfile
 import threading
 import time
 import uuid
-
 
 print_lock = threading.RLock()
 
@@ -166,7 +166,7 @@ class CrashLog(symbolication.Symbolicator):
             this_thread_crashed = self.app_specific_backtrace
             if not this_thread_crashed:
                 this_thread_crashed = self.did_crash()
-                if options.crashed_only and this_thread_crashed == False:
+                if options.crashed_only and not this_thread_crashed:
                     return
 
             print("%s" % self)
@@ -252,7 +252,7 @@ class CrashLog(symbolication.Symbolicator):
                 self.idents.append(ident)
 
         def did_crash(self):
-            return self.reason is not None
+            return self.crashed
 
         def __str__(self):
             if self.app_specific_backtrace:
@@ -284,7 +284,9 @@ class CrashLog(symbolication.Symbolicator):
         """Class that represents a binary images in a darwin crash log"""
 
         dsymForUUIDBinary = "/usr/local/bin/dsymForUUID"
-        if not os.path.exists(dsymForUUIDBinary):
+        if "LLDB_APPLE_DSYMFORUUID_EXECUTABLE" in os.environ:
+            dsymForUUIDBinary = os.environ["LLDB_APPLE_DSYMFORUUID_EXECUTABLE"]
+        elif not os.path.exists(dsymForUUIDBinary):
             try:
                 dsymForUUIDBinary = (
                     subprocess.check_output("which dsymForUUID", shell=True)
@@ -294,7 +296,7 @@ class CrashLog(symbolication.Symbolicator):
             except:
                 dsymForUUIDBinary = ""
 
-        dwarfdump_uuid_regex = re.compile("UUID: ([-0-9a-fA-F]+) \(([^\(]+)\) .*")
+        dwarfdump_uuid_regex = re.compile(r"UUID: ([-0-9a-fA-F]+) \(([^\(]+)\) .*")
 
         def __init__(
             self, text_addr_lo, text_addr_hi, identifier, version, uuid, path, verbose
@@ -356,7 +358,11 @@ class CrashLog(symbolication.Symbolicator):
             # Keep track of unresolved source paths.
             unavailable_source_paths = set()
             if os.path.exists(self.dsymForUUIDBinary):
-                dsym_for_uuid_command = "%s %s" % (self.dsymForUUIDBinary, uuid_str)
+                dsym_for_uuid_command = (
+                    "{} --copyExecutable --ignoreNegativeCache {}".format(
+                        self.dsymForUUIDBinary, uuid_str
+                    )
+                )
                 s = subprocess.check_output(dsym_for_uuid_command, shell=True)
                 if s:
                     try:
@@ -414,9 +420,20 @@ class CrashLog(symbolication.Symbolicator):
                         with print_lock:
                             print('falling back to binary inside "%s"' % dsym)
                         self.symfile = dsym
-                        for filename in os.listdir(dwarf_dir):
-                            self.path = os.path.join(dwarf_dir, filename)
-                            if self.find_matching_slice():
+                        # Look for the executable next to the dSYM bundle.
+                        parent_dir = os.path.dirname(dsym)
+                        executables = []
+                        for root, _, files in os.walk(parent_dir):
+                            for file in files:
+                                abs_path = os.path.join(root, file)
+                                if os.path.isfile(abs_path) and os.access(
+                                    abs_path, os.X_OK
+                                ):
+                                    executables.append(abs_path)
+                        for binary in executables:
+                            basename = os.path.basename(binary)
+                            if basename == self.identifier:
+                                self.path = binary
                                 found_matching_slice = True
                                 break
                         if found_matching_slice:
@@ -484,7 +501,7 @@ class CrashLog(symbolication.Symbolicator):
         for image in self.images:
             if image.identifier == identifier:
                 return image
-        regex_text = "^.*\.%s$" % (re.escape(identifier))
+        regex_text = r"^.*\.%s$" % (re.escape(identifier))
         regex = re.compile(regex_text)
         for image in self.images:
             if regex.match(image.identifier):
@@ -521,6 +538,53 @@ class CrashLog(symbolication.Symbolicator):
 
     def get_target(self):
         return self.target
+
+    def load_images(self, options, loaded_images=None):
+        if not loaded_images:
+            loaded_images = []
+        images_to_load = self.images
+        if options.load_all_images:
+            for image in self.images:
+                image.resolve = True
+        elif options.crashed_only:
+            images_to_load = []
+            for thread in self.threads:
+                if thread.did_crash() or thread.app_specific_backtrace:
+                    for ident in thread.idents:
+                        for image in self.find_images_with_identifier(ident):
+                            image.resolve = True
+                            images_to_load.append(image)
+
+        futures = []
+        with tempfile.TemporaryDirectory() as obj_dir:
+
+            def add_module(image, target, obj_dir):
+                return image, image.add_module(target, obj_dir)
+
+            max_worker = None
+            if options.no_parallel_image_loading:
+                max_worker = 1
+
+            with concurrent.futures.ThreadPoolExecutor(max_worker) as executor:
+                for image in images_to_load:
+                    if image not in loaded_images:
+                        if image.uuid == uuid.UUID(int=0):
+                            continue
+                        futures.append(
+                            executor.submit(
+                                add_module,
+                                image=image,
+                                target=self.target,
+                                obj_dir=obj_dir,
+                            )
+                        )
+
+                for future in concurrent.futures.as_completed(futures):
+                    image, err = future.result()
+                    if err:
+                        print(err)
+                    else:
+                        loaded_images.append(image)
 
 
 class CrashLogFormatException(Exception):
@@ -713,10 +777,10 @@ class JSONCrashLogParser(CrashLogParser):
             if json_thread.get("triggered", False):
                 self.crashlog.crashed_thread_idx = idx
                 thread.crashed = True
-                if "threadState" in json_thread:
-                    thread.registers = self.parse_thread_registers(
-                        json_thread["threadState"]
-                    )
+            if "threadState" in json_thread:
+                thread.registers = self.parse_thread_registers(
+                    json_thread["threadState"]
+                )
             if "queue" in json_thread:
                 thread.queue = json_thread.get("queue")
             self.parse_frames(thread, json_thread.get("frames", []))
@@ -800,7 +864,7 @@ class JSONCrashLogParser(CrashLogParser):
         thread = self.crashlog.Thread(
             len(self.crashlog.threads), True, self.crashlog.process_arch
         )
-        thread.queue = "Application Specific Backtrace"
+        thread.name = "Application Specific Backtrace"
         if self.parse_asi_backtrace(thread, json_app_specific_bts[0]):
             self.crashlog.threads.append(thread)
         else:
@@ -810,7 +874,7 @@ class JSONCrashLogParser(CrashLogParser):
         thread = self.crashlog.Thread(
             len(self.crashlog.threads), True, self.crashlog.process_arch
         )
-        thread.queue = "Last Exception Backtrace"
+        thread.name = "Last Exception Backtrace"
         self.parse_frames(thread, json_last_exc_bts)
         self.crashlog.threads.append(thread)
 
@@ -845,10 +909,10 @@ class JSONCrashLogParser(CrashLogParser):
 
 class TextCrashLogParser(CrashLogParser):
     parent_process_regex = re.compile(r"^Parent Process:\s*(.*)\[(\d+)\]")
-    thread_state_regex = re.compile(r"^Thread \d+ crashed with")
+    thread_state_regex = re.compile(r"^Thread (\d+ crashed with|State)")
     thread_instrs_regex = re.compile(r"^Thread \d+ instruction stream")
-    thread_regex = re.compile(r"^Thread (\d+).*:")
-    app_backtrace_regex = re.compile(r"^Application Specific Backtrace (\d+).*:")
+    thread_regex = re.compile(r"^Thread (\d+).*")
+    app_backtrace_regex = re.compile(r"^Application Specific Backtrace (\d+).*")
 
     class VersionRegex:
         version = r"\(.+\)|(?:arm|x86_)[0-9a-z]+"
@@ -861,7 +925,7 @@ class TextCrashLogParser(CrashLogParser):
             version = r"(?:" + super().version + r"\s+)?"
             address = r"(0x[0-9a-fA-F]{4,})"  # 4 digits or more
 
-            symbol = """
+            symbol = r"""
                         (?:
                             [ ]+
                             (?P<symbol>.+)
@@ -1031,7 +1095,7 @@ class TextCrashLogParser(CrashLogParser):
             self.crashlog.process_identifier = line[11:].strip()
         elif line.startswith("Version:"):
             version_string = line[8:].strip()
-            matched_pair = re.search("(.+)\((.+)\)", version_string)
+            matched_pair = re.search(r"(.+)\((.+)\)", version_string)
             if matched_pair:
                 self.crashlog.process_version = matched_pair.group(1)
                 self.crashlog.process_compatability_version = matched_pair.group(2)
@@ -1077,7 +1141,10 @@ class TextCrashLogParser(CrashLogParser):
             if thread_state_match:
                 self.app_specific_backtrace = False
                 thread_state_match = self.thread_regex.search(line)
-                thread_idx = int(thread_state_match.group(1))
+                if thread_state_match:
+                    thread_idx = int(thread_state_match.group(1))
+                else:
+                    thread_idx = self.crashlog.crashed_thread_idx
                 self.parse_mode = self.CrashLogParseMode.THREGS
                 self.thread = self.crashlog.threads[thread_idx]
                 return
@@ -1107,11 +1174,13 @@ class TextCrashLogParser(CrashLogParser):
                 self.thread = self.crashlog.Thread(
                     idx, True, self.crashlog.process_arch
                 )
+                self.thread.name = "Application Specific Backtrace"
         elif line.startswith("Last Exception Backtrace:"):  # iOS
             self.parse_mode = self.CrashLogParseMode.THREAD
             self.app_specific_backtrace = True
             idx = 1
             self.thread = self.crashlog.Thread(idx, True, self.crashlog.process_arch)
+            self.thread.name = "Last Exception Backtrace"
         self.crashlog.info_lines.append(line.strip())
 
     def parse_thread(self, line):
@@ -1401,36 +1470,7 @@ def SymbolicateCrashLog(crash_log, options):
     if not target:
         return
 
-    if options.load_all_images:
-        for image in crash_log.images:
-            image.resolve = True
-    elif options.crashed_only:
-        for thread in crash_log.threads:
-            if thread.did_crash():
-                for ident in thread.idents:
-                    for image in crash_log.find_images_with_identifier(ident):
-                        image.resolve = True
-
-    futures = []
-    loaded_images = []
-    with tempfile.TemporaryDirectory() as obj_dir:
-        with concurrent.futures.ThreadPoolExecutor() as executor:
-
-            def add_module(image, target, obj_dir):
-                return image, image.add_module(target, obj_dir)
-
-            for image in crash_log.images:
-                futures.append(
-                    executor.submit(
-                        add_module, image=image, target=target, obj_dir=obj_dir
-                    )
-                )
-            for future in concurrent.futures.as_completed(futures):
-                image, err = future.result()
-                if err:
-                    print(err)
-                else:
-                    loaded_images.append(image)
+    crash_log.load_images(options)
 
     if crash_log.backtraces:
         for thread in crash_log.backtraces:
@@ -1462,6 +1502,7 @@ def load_crashlog_in_scripted_process(debugger, crashlog_path, options, result):
             raise InteractiveCrashLogException(
                 "couldn't create target provided by the user (%s)" % options.target_path
             )
+        crashlog.target = target
 
     # 2. If the user didn't provide a target, try to create a target using the symbolicator
     if not target or not target.IsValid():
@@ -1471,7 +1512,7 @@ def load_crashlog_in_scripted_process(debugger, crashlog_path, options, result):
         arch = crashlog.process_arch
         if not arch:
             raise InteractiveCrashLogException(
-                "couldn't create find the architecture to create the target"
+                "couldn't find the architecture to create the target"
             )
         target = debugger.CreateTargetWithFileAndArch(None, arch)
     # 4. Fail
@@ -1491,25 +1532,33 @@ def load_crashlog_in_scripted_process(debugger, crashlog_path, options, result):
     structured_data = lldb.SBStructuredData()
     structured_data.SetFromJSON(
         json.dumps(
-            {"file_path": crashlog_path, "load_all_images": options.load_all_images}
+            {
+                "file_path": crashlog_path,
+                "load_all_images": options.load_all_images,
+                "crashed_only": options.crashed_only,
+                "no_parallel_image_loading": options.no_parallel_image_loading,
+            }
         )
     )
+
+    crashlog_sd = lldb.SBStructuredData()
+    crashlog_sd.SetGenericValue(
+        lldb.SBScriptObject(crashlog, lldb.eScriptLanguagePython)
+    )
+    structured_data.SetValueForKey("crashlog", crashlog_sd)
+
     launch_info = lldb.SBLaunchInfo(None)
     launch_info.SetProcessPluginName("ScriptedProcess")
     launch_info.SetScriptedProcessClassName(
         "crashlog_scripted_process.CrashLogScriptedProcess"
     )
     launch_info.SetScriptedProcessDictionary(structured_data)
-    launch_info.SetLaunchFlags(lldb.eLaunchFlagStopAtEntry)
 
     error = lldb.SBError()
     process = target.Launch(launch_info, error)
 
     if not process or error.Fail():
         raise InteractiveCrashLogException("couldn't launch Scripted Process", error)
-
-    process.GetScriptedImplementation().set_crashlog(crashlog)
-    process.Continue()
 
     if not options.skip_status:
 
@@ -1536,9 +1585,12 @@ def load_crashlog_in_scripted_process(debugger, crashlog_path, options, result):
                 debugger.RunCommandInterpreter(True, False, run_options, 0, False, True)
 
 
-def CreateSymbolicateCrashLogOptions(
-    command_name, description, add_interactive_options
-):
+class CrashLogLoadingMode(str, enum.Enum):
+    batch = "batch"
+    interactive = "interactive"
+
+
+def CreateSymbolicateCrashLogOptions(command_name, description):
     usage = "crashlog [options] <FILE> [FILE ...]"
     arg_parser = argparse.ArgumentParser(
         description=description,
@@ -1554,6 +1606,12 @@ def CreateSymbolicateCrashLogOptions(
         help="crash report(s) to symbolicate",
     )
 
+    arg_parser.add_argument(
+        "-m",
+        "--mode",
+        choices=[mode.value for mode in CrashLogLoadingMode],
+        help="change how the symbolicated process and threads are displayed to the user (default: interactive)",
+    )
     arg_parser.add_argument(
         "--version",
         "-V",
@@ -1624,7 +1682,8 @@ def CreateSymbolicateCrashLogOptions(
         "--no-crashed-only",
         action="store_false",
         dest="crashed_only",
-        help="do not symbolicate the crashed thread",
+        help="in batch mode, symbolicate all threads, not only the crashed one",
+        default=False,
     )
     arg_parser.add_argument(
         "--disasm-depth",
@@ -1682,36 +1741,42 @@ def CreateSymbolicateCrashLogOptions(
         help="show source for all threads, not just the crashed thread",
         default=False,
     )
-    if add_interactive_options:
-        arg_parser.add_argument(
-            "-i",
-            "--interactive",
-            action="store_true",
-            help="parse a crash log and load it in a ScriptedProcess",
-            default=False,
-        )
-        arg_parser.add_argument(
-            "-b",
-            "--batch",
-            action="store_true",
-            help="dump symbolicated stackframes without creating a debug session",
-            default=True,
-        )
-        arg_parser.add_argument(
-            "--target",
-            "-t",
-            dest="target_path",
-            help="the target binary path that should be used for interactive crashlog (optional)",
-            default=None,
-        )
-        arg_parser.add_argument(
-            "--skip-status",
-            "-s",
-            dest="skip_status",
-            action="store_true",
-            help="prevent the interactive crashlog to dump the process status and thread backtrace at launch",
-            default=False,
-        )
+    arg_parser.add_argument(
+        "--no-parallel-image-loading",
+        dest="no_parallel_image_loading",
+        action="store_true",
+        help=argparse.SUPPRESS,
+        default=False,
+    )
+    arg_parser.add_argument(
+        "--target",
+        "-t",
+        dest="target_path",
+        help="the target binary path that should be used for interactive crashlog (optional)",
+        default=None,
+    )
+    arg_parser.add_argument(
+        "--skip-status",
+        "-s",
+        dest="skip_status",
+        action="store_true",
+        help="prevent the interactive crashlog to dump the process status and thread backtrace at launch",
+        default=False,
+    )
+    legacy_group = arg_parser.add_mutually_exclusive_group()
+    legacy_group.add_argument(
+        "-i",
+        "--interactive",
+        action="store_true",
+        help=argparse.SUPPRESS,
+    )
+    legacy_group.add_argument(
+        "-b",
+        "--batch",
+        action="store_true",
+        help=argparse.SUPPRESS,
+    )
+
     return arg_parser
 
 
@@ -1724,7 +1789,7 @@ for use at the LLDB command line. After a crash log has been parsed and symbolic
 created that has all of the shared libraries loaded at the load addresses found in the crash log file. This allows
 you to explore the program as if it were stopped at the locations described in the crash log and functions can
 be disassembled and lookups can be performed using the addresses found in the crash log."""
-    return CreateSymbolicateCrashLogOptions("crashlog", description, True)
+    return CreateSymbolicateCrashLogOptions("crashlog", description)
 
 
 def SymbolicateCrashLogs(debugger, command_args, result, is_command):
@@ -1740,8 +1805,35 @@ def SymbolicateCrashLogs(debugger, command_args, result, is_command):
         result.SetError(str(e))
         return
 
+    # To avoid breaking existing users, we should keep supporting legacy flags
+    # even if we don't use them / advertise them anymore.
+    if not options.mode:
+        if options.batch:
+            options.mode = CrashLogLoadingMode.batch
+        else:
+            options.mode = CrashLogLoadingMode.interactive
+
+    if options.mode != CrashLogLoadingMode.interactive and (
+        options.target_path or options.skip_status
+    ):
+        print(
+            "Target path (-t) and skipping process status (-s) options can only used in interactive mode (-m=interactive)."
+        )
+        print("Aborting symbolication.")
+        arg_parser.print_help()
+        return
+
+    if options.version:
+        print(debugger.GetVersionString())
+        return
+
+    if options.debug:
+        print("command_args = %s" % command_args)
+        print("options", options)
+        print("args", options.reports)
+
     # Interactive mode requires running the crashlog command from inside lldb.
-    if options.interactive and not is_command:
+    if options.mode == CrashLogLoadingMode.interactive and not is_command:
         lldb_exec = (
             subprocess.check_output(["/usr/bin/xcrun", "-f", "lldb"])
             .decode("utf-8")
@@ -1760,14 +1852,12 @@ def SymbolicateCrashLogs(debugger, command_args, result, is_command):
             )
         )
 
+    if "NO_PARALLEL_IMG_LOADING" in os.environ:
+        options.no_parallel_image_loading = True
+
     if options.version:
         print(debugger.GetVersionString())
         return
-
-    if options.debug:
-        print("command_args = %s" % command_args)
-        print("options", options)
-        print("args", options.reports)
 
     if options.debug_delay > 0:
         print("Waiting %u seconds for debugger to attach..." % options.debug_delay)
@@ -1775,20 +1865,20 @@ def SymbolicateCrashLogs(debugger, command_args, result, is_command):
     error = lldb.SBError()
 
     def should_run_in_interactive_mode(options, ci):
-        if options.interactive:
+        if options.mode == CrashLogLoadingMode.batch:
+            return False
+        elif options.mode == CrashLogLoadingMode.interactive or (
+            ci and ci.IsInteractive()
+        ):
             return True
-        elif options.batch:
-            return False
-        # elif ci and ci.IsInteractive():
-        #     return True
         else:
-            return False
+            return sys.stdout.isatty()
 
     ci = debugger.GetCommandInterpreter()
 
     if options.reports:
         for crashlog_file in options.reports:
-            crashlog_path = os.path.expanduser(crashlog_file)
+            crashlog_path = os.path.normpath(os.path.expanduser(crashlog_file))
             if not os.path.exists(crashlog_path):
                 raise FileNotFoundError(
                     "crashlog file %s does not exist" % crashlog_path

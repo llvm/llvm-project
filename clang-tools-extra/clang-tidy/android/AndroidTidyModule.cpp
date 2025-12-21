@@ -1,4 +1,4 @@
-//===--- AndroidTidyModule.cpp - clang-tidy--------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -29,12 +29,14 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy {
 namespace android {
+namespace {
 
 /// This module is for Android specific checks.
 class AndroidModule : public ClangTidyModule {
 public:
   void addCheckFactories(ClangTidyCheckFactories &CheckFactories) override {
-    CheckFactories.registerCheck<CloexecAccept4Check>("android-cloexec-accept4");
+    CheckFactories.registerCheck<CloexecAccept4Check>(
+        "android-cloexec-accept4");
     CheckFactories.registerCheck<CloexecAcceptCheck>("android-cloexec-accept");
     CheckFactories.registerCheck<CloexecCreatCheck>("android-cloexec-creat");
     CheckFactories.registerCheck<CloexecDupCheck>("android-cloexec-dup");
@@ -58,6 +60,8 @@ public:
   }
 };
 
+} // namespace
+
 // Register the AndroidTidyModule using this statically initialized variable.
 static ClangTidyModuleRegistry::Add<AndroidModule>
     X("android-module", "Adds Android platform checks.");
@@ -66,6 +70,6 @@ static ClangTidyModuleRegistry::Add<AndroidModule>
 
 // This anchor is used to force the linker to link in the generated object file
 // and thus register the AndroidModule.
-volatile int AndroidModuleAnchorSource = 0;
+volatile int AndroidModuleAnchorSource = 0; // NOLINT(misc-use-internal-linkage)
 
 } // namespace clang::tidy

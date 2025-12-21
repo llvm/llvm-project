@@ -17,9 +17,6 @@
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/BinaryFormat/MsgPackDocument.h"
 
-#include <map>
-#include <utility>
-
 namespace llvm {
 namespace AMDGPU {
 namespace HSAMD {
@@ -78,9 +75,10 @@ bool MetadataVerifier::verifyScalarEntry(
     msgpack::MapDocNode &MapNode, StringRef Key, bool Required,
     msgpack::Type SKind,
     function_ref<bool(msgpack::DocNode &)> verifyValue) {
-  return verifyEntry(MapNode, Key, Required, [=](msgpack::DocNode &Node) {
-    return verifyScalar(Node, SKind, verifyValue);
-  });
+  return verifyEntry(MapNode, Key, Required,
+                     [this, SKind, verifyValue](msgpack::DocNode &Node) {
+                       return verifyScalar(Node, SKind, verifyValue);
+                     });
 }
 
 bool MetadataVerifier::verifyIntegerEntry(msgpack::MapDocNode &MapNode,
@@ -135,6 +133,7 @@ bool MetadataVerifier::verifyKernelArgs(msgpack::DocNode &Node) {
                                .Case("hidden_default_queue", true)
                                .Case("hidden_completion_action", true)
                                .Case("hidden_multigrid_sync_arg", true)
+                               .Case("hidden_dynamic_lds_size", true)
                                .Case("hidden_private_base", true)
                                .Case("hidden_shared_base", true)
                                .Case("hidden_queue_ptr", true)
@@ -280,7 +279,14 @@ bool MetadataVerifier::verifyKernel(msgpack::DocNode &Node) {
     return false;
   if (!verifyIntegerEntry(KernelMap, ".uniform_work_group_size", false))
     return false;
-
+  if (!verifyEntry(
+          KernelMap, ".cluster_dims", false, [this](msgpack::DocNode &Node) {
+            return verifyArray(
+                Node,
+                [this](msgpack::DocNode &Node) { return verifyInteger(Node); },
+                3);
+          }))
+    return false;
 
   return true;
 }

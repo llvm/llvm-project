@@ -24,7 +24,7 @@ program openacc_parallel_validity
   !$acc parallel device_type(*) num_gangs(2)
   !$acc loop
   do i = 1, N
-    a(i) = 3.14
+    a(i) = 3.14d0
   end do
   !$acc end parallel
 
@@ -32,6 +32,17 @@ program openacc_parallel_validity
   !$acc end parallel
 
   !$acc parallel async(1)
+  !$acc end parallel
+
+  !ERROR: At most one ASYNC clause can appear on the PARALLEL directive or in group separated by the DEVICE_TYPE clause
+  !$acc parallel async(1) async(2)
+  !$acc end parallel
+
+  !$acc parallel async(1) device_type(nvidia) async(3)
+  !$acc end parallel
+
+  !ERROR: At most one ASYNC clause can appear on the PARALLEL directive or in group separated by the DEVICE_TYPE clause
+  !$acc parallel async(1) device_type(nvidia) async(2) async(3)
   !$acc end parallel
 
   !$acc parallel async(async1)
@@ -111,10 +122,10 @@ program openacc_parallel_validity
   !$acc parallel device_type(*)
   !$acc end parallel
 
-  !$acc parallel device_type(1)
+  !$acc parallel device_type(default)
   !$acc end parallel
 
-  !$acc parallel device_type(1, 3)
+  !$acc parallel device_type(default, host)
   !$acc end parallel
 
   !ERROR: Clause PRIVATE is not allowed after clause DEVICE_TYPE on the PARALLEL directive
@@ -131,15 +142,83 @@ program openacc_parallel_validity
   !$acc parallel device_type(*) num_gangs(8)
   !$acc end parallel
 
-  !$acc parallel device_type(1) async device_type(2) wait
+  !$acc parallel device_type(*) async device_type(host) wait
   !$acc end parallel
 
   !ERROR: Clause IF is not allowed after clause DEVICE_TYPE on the PARALLEL directive
   !$acc parallel device_type(*) if(.TRUE.)
   !$acc loop
   do i = 1, N
-    a(i) = 3.14
+    a(i) = 3.14d0
   end do
   !$acc end parallel
 
+  do i = 1, 100
+    !$acc parallel
+    !ERROR: CYCLE to construct outside of PARALLEL construct is not allowed
+    if (i == 10) cycle
+    !$acc end parallel
+  end do
+
+  !$acc parallel
+  do i = 1, 100
+    if (i == 10) cycle
+  end do
+  !$acc end parallel
+
+  !ERROR: At most one NUM_GANGS clause can appear on the PARALLEL directive or in group separated by the DEVICE_TYPE clause
+  !$acc parallel num_gangs(400) num_gangs(400)
+  !$acc end parallel
+
+  !ERROR: At most one NUM_GANGS clause can appear on the PARALLEL directive or in group separated by the DEVICE_TYPE clause
+  !$acc parallel device_type(nvidia) num_gangs(400) num_gangs(200)
+  !$acc end parallel
+
+  !$acc parallel device_type(nvidia) num_gangs(400) device_type(radeon) num_gangs(200)
+  !$acc end parallel
+
+  !ERROR: At most one NUM_WORKERS clause can appear on the PARALLEL directive or in group separated by the DEVICE_TYPE clause
+  !$acc parallel num_workers(8) num_workers(4)
+  !$acc end parallel
+
+  !ERROR: At most one NUM_WORKERS clause can appear on the PARALLEL directive or in group separated by the DEVICE_TYPE clause
+  !$acc parallel device_type(nvidia) num_workers(8) num_workers(4)
+  !$acc end parallel
+
+  !$acc parallel device_type(nvidia) num_workers(8) device_type(radeon) num_workers(4)
+  !$acc end parallel
+
+  !ERROR: At most one VECTOR_LENGTH clause can appear on the PARALLEL directive or in group separated by the DEVICE_TYPE clause
+  !$acc parallel vector_length(128) vector_length(124)
+  !$acc end parallel
+
+  !ERROR: At most one VECTOR_LENGTH clause can appear on the PARALLEL directive or in group separated by the DEVICE_TYPE clause
+  !$acc parallel device_type(nvidia) vector_length(256) vector_length(128)
+  !$acc end parallel
+
+  !$acc parallel device_type(nvidia) vector_length(256) device_type(radeon) vector_length(128)
+  !$acc end parallel
+
 end program openacc_parallel_validity
+
+subroutine acc_parallel_default_none
+  integer :: i, l
+  real :: a(10,10)
+  l = 10
+  !$acc parallel default(none)
+  !$acc loop
+  !ERROR: The DEFAULT(NONE) clause requires that 'l' must be listed in a data-mapping clause
+  do i = 1, l
+    !ERROR: The DEFAULT(NONE) clause requires that 'a' must be listed in a data-mapping clause
+    a(1,i) = 1
+  end do
+  !$acc end parallel
+
+  !$acc data copy(a)
+  !$acc parallel loop firstprivate(l) default(none)
+  do i = 1, l
+    a(1,i) = 1
+  end do
+  !$acc end parallel
+  !$acc end data
+end subroutine acc_parallel_default_none

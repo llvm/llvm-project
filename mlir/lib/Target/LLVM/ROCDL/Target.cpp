@@ -17,9 +17,6 @@
 #include "mlir/Dialect/LLVMIR/ROCDLDialect.h"
 #include "mlir/Support/FileUtilities.h"
 #include "mlir/Target/LLVM/ROCDL/Utils.h"
-#include "mlir/Target/LLVMIR/Dialect/GPU/GPUToLLVMIRTranslation.h"
-#include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
-#include "mlir/Target/LLVMIR/Dialect/ROCDL/ROCDLToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Export.h"
 
 #include "llvm/IR/Constants.h"
@@ -44,6 +41,7 @@
 #include "llvm/TargetParser/TargetParser.h"
 
 #include <cstdlib>
+#include <optional>
 
 using namespace mlir;
 using namespace mlir::ROCDL;
@@ -61,7 +59,7 @@ public:
   serializeToObject(Attribute attribute, Operation *module,
                     const gpu::TargetOptions &options) const;
 
-  Attribute createObject(Attribute attribute,
+  Attribute createObject(Attribute attribute, Operation *module,
                          const SmallVector<char, 0> &object,
                          const gpu::TargetOptions &options) const;
 };
@@ -99,27 +97,22 @@ SerializeGPUModuleBase::SerializeGPUModuleBase(
     : ModuleToObject(module, target.getTriple(), target.getChip(),
                      target.getFeatures(), target.getO()),
       target(target), toolkitPath(targetOptions.getToolkitPath()),
-      fileList(targetOptions.getLinkFiles()) {
+      librariesToLink(targetOptions.getLibrariesToLink()) {
 
   // If `targetOptions` has an empty toolkitPath use `getROCMPath`
   if (toolkitPath.empty())
     toolkitPath = getROCMPath();
 
   // Append the files in the target attribute.
-  if (ArrayAttr files = target.getLink())
-    for (Attribute attr : files.getValue())
-      if (auto file = dyn_cast<StringAttr>(attr))
-        fileList.push_back(file.str());
-
-  // Append standard ROCm device bitcode libraries to the files to be loaded.
-  (void)appendStandardLibs();
+  if (target.getLink())
+    librariesToLink.append(target.getLink().begin(), target.getLink().end());
 }
 
 void SerializeGPUModuleBase::init() {
   static llvm::once_flag initializeBackendOnce;
   llvm::call_once(initializeBackendOnce, []() {
   // If the `AMDGPU` LLVM target was built, initialize it.
-#if MLIR_ROCM_CONVERSIONS_ENABLED == 1
+#if MLIR_ENABLE_ROCM_CONVERSIONS
     LLVMInitializeAMDGPUTarget();
     LLVMInitializeAMDGPUTargetInfo();
     LLVMInitializeAMDGPUTargetMC();
@@ -133,152 +126,181 @@ ROCDLTargetAttr SerializeGPUModuleBase::getTarget() const { return target; }
 
 StringRef SerializeGPUModuleBase::getToolkitPath() const { return toolkitPath; }
 
-ArrayRef<std::string> SerializeGPUModuleBase::getFileList() const {
-  return fileList;
+ArrayRef<Attribute> SerializeGPUModuleBase::getLibrariesToLink() const {
+  return librariesToLink;
 }
 
-LogicalResult SerializeGPUModuleBase::appendStandardLibs() {
+LogicalResult SerializeGPUModuleBase::appendStandardLibs(AMDGCNLibraries libs) {
+  if (libs == AMDGCNLibraries::None)
+    return success();
   StringRef pathRef = getToolkitPath();
-  if (!pathRef.empty()) {
-    SmallVector<char, 256> path;
-    path.insert(path.begin(), pathRef.begin(), pathRef.end());
-    llvm::sys::path::append(path, "amdgcn", "bitcode");
-    pathRef = StringRef(path.data(), path.size());
-    if (!llvm::sys::fs::is_directory(pathRef)) {
-      getOperation().emitRemark() << "ROCm amdgcn bitcode path: " << pathRef
-                                  << " does not exist or is not a directory.";
-      return failure();
-    }
-    StringRef isaVersion =
-        llvm::AMDGPU::getArchNameAMDGCN(llvm::AMDGPU::parseArchAMDGCN(chip));
-    isaVersion.consume_front("gfx");
-    return getCommonBitcodeLibs(fileList, path, isaVersion);
+
+  // Get the path for the device libraries
+  SmallString<256> path;
+  path.insert(path.begin(), pathRef.begin(), pathRef.end());
+  llvm::sys::path::append(path, "amdgcn", "bitcode");
+  pathRef = StringRef(path.data(), path.size());
+
+  // Fail if the path is invalid.
+  if (!llvm::sys::fs::is_directory(pathRef)) {
+    getOperation().emitError() << "ROCm amdgcn bitcode path: " << pathRef
+                               << " does not exist or is not a directory";
+    return failure();
   }
+
+  // Helper function for adding a library.
+  auto addLib = [&](const Twine &lib) -> bool {
+    auto baseSize = path.size();
+    llvm::sys::path::append(path, lib);
+    StringRef pathRef(path.data(), path.size());
+    if (!llvm::sys::fs::is_regular_file(pathRef)) {
+      getOperation().emitRemark() << "bitcode library path: " << pathRef
+                                  << " does not exist or is not a file";
+      return true;
+    }
+    librariesToLink.push_back(StringAttr::get(target.getContext(), pathRef));
+    path.truncate(baseSize);
+    return false;
+  };
+
+  // Add ROCm device libraries. Fail if any of the libraries is not found, ie.
+  // if any of the `addLib` failed.
+  if ((any(libs & AMDGCNLibraries::Ocml) && addLib("ocml.bc")) ||
+      (any(libs & AMDGCNLibraries::Ockl) && addLib("ockl.bc")) ||
+      (any(libs & AMDGCNLibraries::Hip) && addLib("hip.bc")) ||
+      (any(libs & AMDGCNLibraries::OpenCL) && addLib("opencl.bc")))
+    return failure();
   return success();
 }
 
 std::optional<SmallVector<std::unique_ptr<llvm::Module>>>
-SerializeGPUModuleBase::loadBitcodeFiles(llvm::Module &module,
-                                         llvm::TargetMachine &targetMachine) {
+SerializeGPUModuleBase::loadBitcodeFiles(llvm::Module &module) {
+  // Return if there are no libs to load.
+  if (deviceLibs == AMDGCNLibraries::None && librariesToLink.empty())
+    return SmallVector<std::unique_ptr<llvm::Module>>();
+  if (failed(appendStandardLibs(deviceLibs)))
+    return std::nullopt;
   SmallVector<std::unique_ptr<llvm::Module>> bcFiles;
-  if (failed(loadBitcodeFilesFromList(module.getContext(), targetMachine,
-                                      fileList, bcFiles, true)))
+  if (failed(loadBitcodeFilesFromList(module.getContext(), librariesToLink,
+                                      bcFiles, true)))
     return std::nullopt;
   return std::move(bcFiles);
 }
 
-LogicalResult
-SerializeGPUModuleBase::handleBitcodeFile(llvm::Module &module,
-                                          llvm::TargetMachine &targetMachine) {
+LogicalResult SerializeGPUModuleBase::handleBitcodeFile(llvm::Module &module) {
   // Some ROCM builds don't strip this like they should
   if (auto *openclVersion = module.getNamedMetadata("opencl.ocl.version"))
     module.eraseNamedMetadata(openclVersion);
   // Stop spamming us with clang version numbers
   if (auto *ident = module.getNamedMetadata("llvm.ident"))
     module.eraseNamedMetadata(ident);
+  // Override the libModules datalayout and target triple with the compiler's
+  // data layout should there be a discrepency.
+  setDataLayoutAndTriple(module);
   return success();
 }
 
-void SerializeGPUModuleBase::handleModulePreLink(
-    llvm::Module &module, llvm::TargetMachine &targetMachine) {
-  addControlVariables(module, target.hasWave64(), target.hasDaz(),
+void SerializeGPUModuleBase::handleModulePreLink(llvm::Module &module) {
+  // If all libraries are not set, traverse the module to determine which
+  // libraries are required.
+  if (deviceLibs != AMDGCNLibraries::All) {
+    for (llvm::Function &f : module.functions()) {
+      if (f.hasExternalLinkage() && f.hasName() && !f.hasExactDefinition()) {
+        StringRef funcName = f.getName();
+        if ("printf" == funcName)
+          deviceLibs |= AMDGCNLibraries::OpenCL | AMDGCNLibraries::Ockl |
+                        AMDGCNLibraries::Ocml;
+        if (funcName.starts_with("__ockl_"))
+          deviceLibs |= AMDGCNLibraries::Ockl;
+        if (funcName.starts_with("__ocml_"))
+          deviceLibs |= AMDGCNLibraries::Ocml;
+        if (funcName == "__atomic_work_item_fence")
+          deviceLibs |= AMDGCNLibraries::Hip;
+      }
+    }
+  }
+  addControlVariables(module, deviceLibs, target.hasWave64(), target.hasDaz(),
                       target.hasFiniteOnly(), target.hasUnsafeMath(),
                       target.hasFastMath(), target.hasCorrectSqrt(),
                       target.getAbi());
 }
 
-// Get the paths of ROCm device libraries.
-LogicalResult SerializeGPUModuleBase::getCommonBitcodeLibs(
-    llvm::SmallVector<std::string> &libs, SmallVector<char, 256> &libPath,
-    StringRef isaVersion) {
-  auto addLib = [&](StringRef path) -> bool {
-    if (!llvm::sys::fs::is_regular_file(path)) {
-      getOperation().emitRemark() << "Bitcode library path: " << path
-                                  << " does not exist or is not a file.\n";
-      return true;
-    }
-    libs.push_back(path.str());
-    return false;
-  };
-  auto getLibPath = [&libPath](Twine lib) {
-    auto baseSize = libPath.size();
-    llvm::sys::path::append(libPath, lib + ".bc");
-    std::string path(StringRef(libPath.data(), libPath.size()).str());
-    libPath.truncate(baseSize);
-    return path;
-  };
-
-  // Add ROCm device libraries. Fail if any of the libraries is not found.
-  if (addLib(getLibPath("ocml")) || addLib(getLibPath("ockl")) ||
-      addLib(getLibPath("hip")) || addLib(getLibPath("opencl")) ||
-      addLib(getLibPath("oclc_isa_version_" + isaVersion)))
-    return failure();
-  return success();
-}
-
 void SerializeGPUModuleBase::addControlVariables(
-    llvm::Module &module, bool wave64, bool daz, bool finiteOnly,
-    bool unsafeMath, bool fastMath, bool correctSqrt, StringRef abiVer) {
-  llvm::Type *i8Ty = llvm::Type::getInt8Ty(module.getContext());
-  auto addControlVariable = [i8Ty, &module](StringRef name, bool enable) {
+    llvm::Module &module, AMDGCNLibraries libs, bool wave64, bool daz,
+    bool finiteOnly, bool unsafeMath, bool fastMath, bool correctSqrt,
+    StringRef abiVer) {
+  // Helper function for adding control variables.
+  auto addControlVariable = [&module](StringRef name, uint32_t value,
+                                      uint32_t bitwidth) {
+    if (module.getNamedGlobal(name))
+      return;
+    llvm::IntegerType *type =
+        llvm::IntegerType::getIntNTy(module.getContext(), bitwidth);
     llvm::GlobalVariable *controlVariable = new llvm::GlobalVariable(
-        module, i8Ty, true, llvm::GlobalValue::LinkageTypes::LinkOnceODRLinkage,
-        llvm::ConstantInt::get(i8Ty, enable), name, nullptr,
-        llvm::GlobalValue::ThreadLocalMode::NotThreadLocal, 4);
+        module, /*isConstant=*/type, true,
+        llvm::GlobalValue::LinkageTypes::LinkOnceODRLinkage,
+        llvm::ConstantInt::get(type, value), name, /*before=*/nullptr,
+        /*threadLocalMode=*/llvm::GlobalValue::ThreadLocalMode::NotThreadLocal,
+        /*addressSpace=*/4);
     controlVariable->setVisibility(
         llvm::GlobalValue::VisibilityTypes::ProtectedVisibility);
-    controlVariable->setAlignment(llvm::MaybeAlign(1));
+    controlVariable->setAlignment(llvm::MaybeAlign(bitwidth / 8));
     controlVariable->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Local);
   };
-  addControlVariable("__oclc_finite_only_opt", finiteOnly || fastMath);
-  addControlVariable("__oclc_unsafe_math_opt", unsafeMath || fastMath);
-  addControlVariable("__oclc_daz_opt", daz || fastMath);
-  addControlVariable("__oclc_correctly_rounded_sqrt32",
-                     correctSqrt && !fastMath);
-  addControlVariable("__oclc_wavefrontsize64", wave64);
 
-  llvm::Type *i32Ty = llvm::Type::getInt32Ty(module.getContext());
-  int abi = 400;
+  // Note that COV6 requires ROCm 6.3+.
+  int abi = 600;
   abiVer.getAsInteger(0, abi);
-  llvm::GlobalVariable *abiVersion = new llvm::GlobalVariable(
-      module, i32Ty, true, llvm::GlobalValue::LinkageTypes::LinkOnceODRLinkage,
-      llvm::ConstantInt::get(i32Ty, abi), "__oclc_ABI_version", nullptr,
-      llvm::GlobalValue::ThreadLocalMode::NotThreadLocal, 4);
-  abiVersion->setVisibility(
-      llvm::GlobalValue::VisibilityTypes::ProtectedVisibility);
-  abiVersion->setAlignment(llvm::MaybeAlign(4));
-  abiVersion->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Local);
+  module.addModuleFlag(llvm::Module::Error, "amdhsa_code_object_version", abi);
+  // Return if no device libraries are required.
+  if (libs == AMDGCNLibraries::None)
+    return;
+  // Add ocml related control variables.
+  if (any(libs & AMDGCNLibraries::Ocml)) {
+    addControlVariable("__oclc_finite_only_opt", finiteOnly || fastMath, 8);
+    addControlVariable("__oclc_daz_opt", daz || fastMath, 8);
+    addControlVariable("__oclc_correctly_rounded_sqrt32",
+                       correctSqrt && !fastMath, 8);
+    addControlVariable("__oclc_unsafe_math_opt", unsafeMath || fastMath, 8);
+  }
+  // Add ocml or ockl related control variables.
+  if (any(libs & (AMDGCNLibraries::Ocml | AMDGCNLibraries::Ockl))) {
+    addControlVariable("__oclc_wavefrontsize64", wave64, 8);
+    // Get the ISA version.
+    llvm::AMDGPU::IsaVersion isaVersion = llvm::AMDGPU::getIsaVersion(chip);
+    // Add the ISA control variable.
+    addControlVariable("__oclc_ISA_version",
+                       isaVersion.Minor + 100 * isaVersion.Stepping +
+                           1000 * isaVersion.Major,
+                       32);
+    addControlVariable("__oclc_ABI_version", abi, 32);
+  }
 }
 
-std::optional<SmallVector<char, 0>>
-SerializeGPUModuleBase::assembleIsa(StringRef isa) {
-  auto loc = getOperation().getLoc();
-
-  StringRef targetTriple = this->triple;
-
+FailureOr<SmallVector<char, 0>>
+mlir::ROCDL::assembleIsa(StringRef isa, StringRef targetTriple, StringRef chip,
+                         StringRef features,
+                         function_ref<InFlightDiagnostic()> emitError) {
   SmallVector<char, 0> result;
   llvm::raw_svector_ostream os(result);
 
   llvm::Triple triple(llvm::Triple::normalize(targetTriple));
   std::string error;
   const llvm::Target *target =
-      llvm::TargetRegistry::lookupTarget(triple.normalize(), error);
-  if (!target) {
-    emitError(loc, Twine("failed to lookup target: ") + error);
-    return std::nullopt;
-  }
+      llvm::TargetRegistry::lookupTarget(triple, error);
+  if (!target)
+    return emitError() << "failed to lookup target: " << error;
 
   llvm::SourceMgr srcMgr;
-  srcMgr.AddNewSourceBuffer(llvm::MemoryBuffer::getMemBuffer(isa), SMLoc());
+  // Copy buffer to ensure it's null terminated.
+  srcMgr.AddNewSourceBuffer(llvm::MemoryBuffer::getMemBufferCopy(isa), SMLoc());
 
   const llvm::MCTargetOptions mcOptions;
-  std::unique_ptr<llvm::MCRegisterInfo> mri(
-      target->createMCRegInfo(targetTriple));
+  std::unique_ptr<llvm::MCRegisterInfo> mri(target->createMCRegInfo(triple));
   std::unique_ptr<llvm::MCAsmInfo> mai(
-      target->createMCAsmInfo(*mri, targetTriple, mcOptions));
-  mai->setRelaxELFRelocations(true);
+      target->createMCAsmInfo(*mri, triple, mcOptions));
   std::unique_ptr<llvm::MCSubtargetInfo> sti(
-      target->createMCSubtargetInfo(targetTriple, chip, features));
+      target->createMCSubtargetInfo(triple, chip, features));
 
   llvm::MCContext ctx(triple, mai.get(), mri.get(), sti.get(), &srcMgr,
                       &mcOptions);
@@ -298,42 +320,141 @@ SerializeGPUModuleBase::assembleIsa(StringRef isa) {
   mcStreamer.reset(target->createMCObjectStreamer(
       triple, ctx, std::unique_ptr<llvm::MCAsmBackend>(mab),
       mab->createObjectWriter(os), std::unique_ptr<llvm::MCCodeEmitter>(ce),
-      *sti, mcOptions.MCRelaxAll, mcOptions.MCIncrementalLinkerCompatible,
-      /*DWARFMustBeAtTheEnd*/ false));
-  mcStreamer->setUseAssemblerInfoForParsing(true);
+      *sti));
 
   std::unique_ptr<llvm::MCAsmParser> parser(
       createMCAsmParser(srcMgr, ctx, *mcStreamer, *mai));
   std::unique_ptr<llvm::MCTargetAsmParser> tap(
       target->createMCAsmParser(*sti, *parser, *mcii, mcOptions));
 
-  if (!tap) {
-    emitError(loc, "assembler initialization error");
-    return {};
-  }
+  if (!tap)
+    return emitError() << "assembler initialization error";
 
   parser->setTargetParser(*tap);
   parser->Run(false);
-
-  return result;
+  return std::move(result);
 }
 
-#if MLIR_ROCM_CONVERSIONS_ENABLED == 1
+FailureOr<SmallVector<char, 0>>
+mlir::ROCDL::linkObjectCode(ArrayRef<char> objectCode, StringRef toolkitPath,
+                            function_ref<InFlightDiagnostic()> emitError) {
+  // Save the ISA binary to a temp file.
+  int tempIsaBinaryFd = -1;
+  SmallString<128> tempIsaBinaryFilename;
+  if (llvm::sys::fs::createTemporaryFile("kernel%%", "o", tempIsaBinaryFd,
+                                         tempIsaBinaryFilename))
+    return emitError()
+           << "failed to create a temporary file for dumping the ISA binary";
+
+  llvm::FileRemover cleanupIsaBinary(tempIsaBinaryFilename);
+  {
+    llvm::raw_fd_ostream tempIsaBinaryOs(tempIsaBinaryFd, true);
+    tempIsaBinaryOs << StringRef(objectCode.data(), objectCode.size());
+    tempIsaBinaryOs.flush();
+  }
+
+  // Create a temp file for HSA code object.
+  SmallString<128> tempHsacoFilename;
+  if (llvm::sys::fs::createTemporaryFile("kernel", "hsaco", tempHsacoFilename))
+    return emitError()
+           << "failed to create a temporary file for the HSA code object";
+
+  llvm::FileRemover cleanupHsaco(tempHsacoFilename);
+
+  llvm::SmallString<128> lldPath(toolkitPath);
+  llvm::sys::path::append(lldPath, "llvm", "bin", "ld.lld");
+  int lldResult = llvm::sys::ExecuteAndWait(
+      lldPath,
+      {"ld.lld", "-shared", tempIsaBinaryFilename, "-o", tempHsacoFilename});
+  if (lldResult != 0)
+    return emitError() << "lld invocation failed";
+
+  // Load the HSA code object.
+  auto hsacoFile =
+      llvm::MemoryBuffer::getFile(tempHsacoFilename, /*IsText=*/false);
+  if (!hsacoFile)
+    return emitError()
+           << "failed to read the HSA code object from the temp file";
+
+  StringRef buffer = (*hsacoFile)->getBuffer();
+
+  return SmallVector<char, 0>(buffer.begin(), buffer.end());
+}
+
+FailureOr<SmallVector<char, 0>>
+SerializeGPUModuleBase::compileToBinary(StringRef serializedISA) {
+  auto errCallback = [&]() { return getOperation().emitError(); };
+  // Assemble the ISA.
+  FailureOr<SmallVector<char, 0>> isaBinary = ROCDL::assembleIsa(
+      serializedISA, this->triple, this->chip, this->features, errCallback);
+
+  if (failed(isaBinary))
+    return failure();
+
+  // Link the object code.
+  FailureOr<SmallVector<char, 0>> linkedCode =
+      ROCDL::linkObjectCode(*isaBinary, toolkitPath, errCallback);
+  if (failed(linkedCode))
+    return failure();
+
+  return linkedCode;
+}
+
+FailureOr<SmallVector<char, 0>> SerializeGPUModuleBase::moduleToObjectImpl(
+    const gpu::TargetOptions &targetOptions, llvm::Module &llvmModule) {
+  // Return LLVM IR if the compilation target is offload.
+#define DEBUG_TYPE "serialize-to-llvm"
+  LLVM_DEBUG({
+    llvm::dbgs() << "LLVM IR for module: "
+                 << cast<gpu::GPUModuleOp>(getOperation()).getNameAttr() << "\n"
+                 << llvmModule << "\n";
+  });
+#undef DEBUG_TYPE
+  if (targetOptions.getCompilationTarget() == gpu::CompilationTarget::Offload)
+    return SerializeGPUModuleBase::moduleToObject(llvmModule);
+
+  FailureOr<llvm::TargetMachine *> targetMachine = getOrCreateTargetMachine();
+  if (failed(targetMachine))
+    return getOperation().emitError()
+           << "target Machine unavailable for triple " << triple
+           << ", can't compile with LLVM";
+
+  // Translate the Module to ISA.
+  FailureOr<SmallString<0>> serializedISA =
+      translateModuleToISA(llvmModule, **targetMachine,
+                           [&]() { return getOperation().emitError(); });
+  if (failed(serializedISA))
+    return getOperation().emitError() << "failed translating the module to ISA";
+
+#define DEBUG_TYPE "serialize-to-isa"
+  LLVM_DEBUG({
+    llvm::dbgs() << "ISA for module: "
+                 << cast<gpu::GPUModuleOp>(getOperation()).getNameAttr() << "\n"
+                 << *serializedISA << "\n";
+  });
+#undef DEBUG_TYPE
+  // Return ISA assembly code if the compilation target is assembly.
+  if (targetOptions.getCompilationTarget() == gpu::CompilationTarget::Assembly)
+    return SmallVector<char, 0>(serializedISA->begin(), serializedISA->end());
+
+  // Compiling to binary requires a valid ROCm path, fail if it's not found.
+  if (getToolkitPath().empty())
+    return getOperation().emitError()
+           << "invalid ROCm path, please set a valid path";
+
+  // Compile to binary.
+  return compileToBinary(*serializedISA);
+}
+
+#if MLIR_ENABLE_ROCM_CONVERSIONS
 namespace {
 class AMDGPUSerializer : public SerializeGPUModuleBase {
 public:
   AMDGPUSerializer(Operation &module, ROCDLTargetAttr target,
                    const gpu::TargetOptions &targetOptions);
 
-  gpu::GPUModuleOp getOperation();
-
-  // Compile to HSA.
-  std::optional<SmallVector<char, 0>>
-  compileToBinary(const std::string &serializedISA);
-
-  std::optional<SmallVector<char, 0>>
-  moduleToObject(llvm::Module &llvmModule,
-                 llvm::TargetMachine &targetMachine) override;
+  FailureOr<SmallVector<char, 0>>
+  moduleToObject(llvm::Module &llvmModule) override;
 
 private:
   // Target options.
@@ -346,105 +467,11 @@ AMDGPUSerializer::AMDGPUSerializer(Operation &module, ROCDLTargetAttr target,
     : SerializeGPUModuleBase(module, target, targetOptions),
       targetOptions(targetOptions) {}
 
-gpu::GPUModuleOp AMDGPUSerializer::getOperation() {
-  return dyn_cast<gpu::GPUModuleOp>(&SerializeGPUModuleBase::getOperation());
+FailureOr<SmallVector<char, 0>>
+AMDGPUSerializer::moduleToObject(llvm::Module &llvmModule) {
+  return moduleToObjectImpl(targetOptions, llvmModule);
 }
-
-std::optional<SmallVector<char, 0>>
-AMDGPUSerializer::compileToBinary(const std::string &serializedISA) {
-  // Assemble the ISA.
-  std::optional<SmallVector<char, 0>> isaBinary = assembleIsa(serializedISA);
-
-  if (!isaBinary) {
-    getOperation().emitError() << "Failed during ISA assembling.";
-    return std::nullopt;
-  }
-
-  // Save the ISA binary to a temp file.
-  int tempIsaBinaryFd = -1;
-  SmallString<128> tempIsaBinaryFilename;
-  if (llvm::sys::fs::createTemporaryFile("kernel%%", "o", tempIsaBinaryFd,
-                                         tempIsaBinaryFilename)) {
-    getOperation().emitError()
-        << "Failed to create a temporary file for dumping the ISA binary.";
-    return std::nullopt;
-  }
-  llvm::FileRemover cleanupIsaBinary(tempIsaBinaryFilename);
-  {
-    llvm::raw_fd_ostream tempIsaBinaryOs(tempIsaBinaryFd, true);
-    tempIsaBinaryOs << StringRef(isaBinary->data(), isaBinary->size());
-    tempIsaBinaryOs.flush();
-  }
-
-  // Create a temp file for HSA code object.
-  SmallString<128> tempHsacoFilename;
-  if (llvm::sys::fs::createTemporaryFile("kernel", "hsaco",
-                                         tempHsacoFilename)) {
-    getOperation().emitError()
-        << "Failed to create a temporary file for the HSA code object.";
-    return std::nullopt;
-  }
-  llvm::FileRemover cleanupHsaco(tempHsacoFilename);
-
-  llvm::SmallString<128> lldPath(toolkitPath);
-  llvm::sys::path::append(lldPath, "llvm", "bin", "ld.lld");
-  int lldResult = llvm::sys::ExecuteAndWait(
-      lldPath,
-      {"ld.lld", "-shared", tempIsaBinaryFilename, "-o", tempHsacoFilename});
-  if (lldResult != 0) {
-    getOperation().emitError() << "lld invocation failed.";
-    return std::nullopt;
-  }
-
-  // Load the HSA code object.
-  auto hsacoFile =
-      llvm::MemoryBuffer::getFile(tempHsacoFilename, /*IsText=*/false);
-  if (!hsacoFile) {
-    getOperation().emitError()
-        << "Failed to read the HSA code object from the temp file.";
-    return std::nullopt;
-  }
-
-  StringRef buffer = (*hsacoFile)->getBuffer();
-
-  return SmallVector<char, 0>(buffer.begin(), buffer.end());
-}
-
-std::optional<SmallVector<char, 0>>
-AMDGPUSerializer::moduleToObject(llvm::Module &llvmModule,
-                                 llvm::TargetMachine &targetMachine) {
-  // Return LLVM IR if the compilation target is offload.
-#define DEBUG_TYPE "serialize-to-llvm"
-  LLVM_DEBUG({
-    llvm::dbgs() << "LLVM IR for module: " << getOperation().getNameAttr()
-                 << "\n"
-                 << llvmModule << "\n";
-  });
-#undef DEBUG_TYPE
-  if (targetOptions.getCompilationTarget() == gpu::CompilationTarget::Offload)
-    return SerializeGPUModuleBase::moduleToObject(llvmModule, targetMachine);
-
-  // Translate the Module to ISA.
-  std::optional<std::string> serializedISA =
-      translateToISA(llvmModule, targetMachine);
-  if (!serializedISA) {
-    getOperation().emitError() << "Failed translating the module to ISA.";
-    return std::nullopt;
-  }
-#define DEBUG_TYPE "serialize-to-isa"
-  LLVM_DEBUG({
-    llvm::dbgs() << "ISA for module: " << getOperation().getNameAttr() << "\n"
-                 << *serializedISA << "\n";
-  });
-#undef DEBUG_TYPE
-  // Return ISA assembly code if the compilation target is assembly.
-  if (targetOptions.getCompilationTarget() == gpu::CompilationTarget::Assembly)
-    return SmallVector<char, 0>(serializedISA->begin(), serializedISA->end());
-
-  // Compile to binary.
-  return compileToBinary(*serializedISA);
-}
-#endif // MLIR_ROCM_CONVERSIONS_ENABLED
+#endif // MLIR_ENABLE_ROCM_CONVERSIONS
 
 std::optional<SmallVector<char, 0>> ROCDLTargetAttrImpl::serializeToObject(
     Attribute attribute, Operation *module,
@@ -453,30 +480,37 @@ std::optional<SmallVector<char, 0>> ROCDLTargetAttrImpl::serializeToObject(
   if (!module)
     return std::nullopt;
   if (!mlir::isa<gpu::GPUModuleOp>(module)) {
-    module->emitError("Module must be a GPU module.");
+    module->emitError("module must be a GPU module");
     return std::nullopt;
   }
-#if MLIR_ROCM_CONVERSIONS_ENABLED == 1
+#if MLIR_ENABLE_ROCM_CONVERSIONS
   AMDGPUSerializer serializer(*module, cast<ROCDLTargetAttr>(attribute),
                               options);
   serializer.init();
   return serializer.run();
 #else
-  module->emitError("The `AMDGPU` target was not built. Please enable it when "
-                    "building LLVM.");
+  module->emitError("the `AMDGPU` target was not built. Please enable it when "
+                    "building LLVM");
   return std::nullopt;
-#endif // MLIR_ROCM_CONVERSIONS_ENABLED == 1
+#endif // MLIR_ENABLE_ROCM_CONVERSIONS
 }
 
 Attribute
-ROCDLTargetAttrImpl::createObject(Attribute attribute,
+ROCDLTargetAttrImpl::createObject(Attribute attribute, Operation *module,
                                   const SmallVector<char, 0> &object,
                                   const gpu::TargetOptions &options) const {
   gpu::CompilationTarget format = options.getCompilationTarget();
+  // If format is `fatbin` transform it to binary as `fatbin` is not yet
+  // supported.
+  gpu::KernelTableAttr kernels;
+  if (format > gpu::CompilationTarget::Binary) {
+    format = gpu::CompilationTarget::Binary;
+    kernels = ROCDL::getKernelMetadata(module, object);
+  }
+  DictionaryAttr properties{};
   Builder builder(attribute.getContext());
-  return builder.getAttr<gpu::ObjectAttr>(
-      attribute,
-      format > gpu::CompilationTarget::Binary ? gpu::CompilationTarget::Binary
-                                              : format,
-      builder.getStringAttr(StringRef(object.data(), object.size())), nullptr);
+  StringAttr objectStr =
+      builder.getStringAttr(StringRef(object.data(), object.size()));
+  return builder.getAttr<gpu::ObjectAttr>(attribute, format, objectStr,
+                                          properties, kernels);
 }

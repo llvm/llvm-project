@@ -49,11 +49,11 @@ static RTLIB::Libcall GetFPLibCall(EVT VT,
 //===----------------------------------------------------------------------===//
 
 void DAGTypeLegalizer::SoftenFloatResult(SDNode *N, unsigned ResNo) {
-  LLVM_DEBUG(dbgs() << "Soften float result " << ResNo << ": "; N->dump(&DAG);
-             dbgs() << "\n");
+  LLVM_DEBUG(dbgs() << "Soften float result " << ResNo << ": "; N->dump(&DAG));
   SDValue R = SDValue();
 
   switch (N->getOpcode()) {
+    // clang-format off
   default:
 #ifndef NDEBUG
     dbgs() << "SoftenFloatResult #" << ResNo << ": ";
@@ -61,7 +61,7 @@ void DAGTypeLegalizer::SoftenFloatResult(SDNode *N, unsigned ResNo) {
 #endif
     report_fatal_error("Do not know how to soften the result of this "
                        "operator!");
-
+    case ISD::EXTRACT_ELEMENT: R = SoftenFloatRes_EXTRACT_ELEMENT(N); break;
     case ISD::ARITH_FENCE: R = SoftenFloatRes_ARITH_FENCE(N); break;
     case ISD::MERGE_VALUES:R = SoftenFloatRes_MERGE_VALUES(N, ResNo); break;
     case ISD::BITCAST:     R = SoftenFloatRes_BITCAST(N); break;
@@ -70,18 +70,34 @@ void DAGTypeLegalizer::SoftenFloatResult(SDNode *N, unsigned ResNo) {
     case ISD::EXTRACT_VECTOR_ELT:
       R = SoftenFloatRes_EXTRACT_VECTOR_ELT(N, ResNo); break;
     case ISD::FABS:        R = SoftenFloatRes_FABS(N); break;
+    case ISD::FCANONICALIZE:
+      R = SoftenFloatRes_FCANONICALIZE(N); break;
     case ISD::STRICT_FMINNUM:
     case ISD::FMINNUM:     R = SoftenFloatRes_FMINNUM(N); break;
     case ISD::STRICT_FMAXNUM:
     case ISD::FMAXNUM:     R = SoftenFloatRes_FMAXNUM(N); break;
+    case ISD::FMINIMUMNUM:    R = SoftenFloatRes_FMINIMUMNUM(N); break;
+    case ISD::FMAXIMUMNUM:    R = SoftenFloatRes_FMAXIMUMNUM(N); break;
+    case ISD::FMINIMUM:    R = SoftenFloatRes_FMINIMUM(N); break;
+    case ISD::FMAXIMUM:    R = SoftenFloatRes_FMAXIMUM(N); break;
     case ISD::STRICT_FADD:
     case ISD::FADD:        R = SoftenFloatRes_FADD(N); break;
+    case ISD::STRICT_FACOS:
+    case ISD::FACOS:       R = SoftenFloatRes_FACOS(N); break;
+    case ISD::STRICT_FASIN:
+    case ISD::FASIN:       R = SoftenFloatRes_FASIN(N); break;
+    case ISD::STRICT_FATAN:
+    case ISD::FATAN:       R = SoftenFloatRes_FATAN(N); break;
+    case ISD::STRICT_FATAN2:
+    case ISD::FATAN2:      R = SoftenFloatRes_FATAN2(N); break;
     case ISD::FCBRT:       R = SoftenFloatRes_FCBRT(N); break;
     case ISD::STRICT_FCEIL:
     case ISD::FCEIL:       R = SoftenFloatRes_FCEIL(N); break;
     case ISD::FCOPYSIGN:   R = SoftenFloatRes_FCOPYSIGN(N); break;
     case ISD::STRICT_FCOS:
     case ISD::FCOS:        R = SoftenFloatRes_FCOS(N); break;
+    case ISD::STRICT_FCOSH:
+    case ISD::FCOSH:       R = SoftenFloatRes_FCOSH(N); break;
     case ISD::STRICT_FDIV:
     case ISD::FDIV:        R = SoftenFloatRes_FDIV(N); break;
     case ISD::STRICT_FEXP:
@@ -116,9 +132,9 @@ void DAGTypeLegalizer::SoftenFloatResult(SDNode *N, unsigned ResNo) {
     case ISD::FPOWI:
     case ISD::FLDEXP:
     case ISD::STRICT_FLDEXP: R = SoftenFloatRes_ExpOp(N); break;
-    case ISD::FFREXP:
-      R = SoftenFloatRes_FFREXP(N);
-      break;
+    case ISD::FFREXP:        R = SoftenFloatRes_FFREXP(N); break;
+    case ISD::FSINCOS:       R = SoftenFloatRes_FSINCOS(N); break;
+    case ISD::FMODF:         R = SoftenFloatRes_FMODF(N); break;
     case ISD::STRICT_FREM:
     case ISD::FREM:        R = SoftenFloatRes_FREM(N); break;
     case ISD::STRICT_FRINT:
@@ -129,13 +145,20 @@ void DAGTypeLegalizer::SoftenFloatResult(SDNode *N, unsigned ResNo) {
     case ISD::FROUNDEVEN:  R = SoftenFloatRes_FROUNDEVEN(N); break;
     case ISD::STRICT_FSIN:
     case ISD::FSIN:        R = SoftenFloatRes_FSIN(N); break;
+    case ISD::STRICT_FSINH:
+    case ISD::FSINH:       R = SoftenFloatRes_FSINH(N); break;
     case ISD::STRICT_FSQRT:
     case ISD::FSQRT:       R = SoftenFloatRes_FSQRT(N); break;
     case ISD::STRICT_FSUB:
     case ISD::FSUB:        R = SoftenFloatRes_FSUB(N); break;
+    case ISD::STRICT_FTAN:
+    case ISD::FTAN:        R = SoftenFloatRes_FTAN(N); break;
+    case ISD::STRICT_FTANH:
+    case ISD::FTANH:       R = SoftenFloatRes_FTANH(N); break;
     case ISD::STRICT_FTRUNC:
     case ISD::FTRUNC:      R = SoftenFloatRes_FTRUNC(N); break;
     case ISD::LOAD:        R = SoftenFloatRes_LOAD(N); break;
+    case ISD::ATOMIC_LOAD: R = SoftenFloatRes_ATOMIC_LOAD(N); break;
     case ISD::ATOMIC_SWAP: R = BitcastToInt_ATOMIC_SWAP(N); break;
     case ISD::SELECT:      R = SoftenFloatRes_SELECT(N); break;
     case ISD::SELECT_CC:   R = SoftenFloatRes_SELECT_CC(N); break;
@@ -144,21 +167,20 @@ void DAGTypeLegalizer::SoftenFloatResult(SDNode *N, unsigned ResNo) {
     case ISD::STRICT_UINT_TO_FP:
     case ISD::SINT_TO_FP:
     case ISD::UINT_TO_FP:  R = SoftenFloatRes_XINT_TO_FP(N); break;
+    case ISD::POISON:
     case ISD::UNDEF:       R = SoftenFloatRes_UNDEF(N); break;
     case ISD::VAARG:       R = SoftenFloatRes_VAARG(N); break;
+    case ISD::AssertNoFPClass:       R = GetSoftenedFloat(N->getOperand(0)); break;
     case ISD::VECREDUCE_FADD:
     case ISD::VECREDUCE_FMUL:
     case ISD::VECREDUCE_FMIN:
     case ISD::VECREDUCE_FMAX:
     case ISD::VECREDUCE_FMAXIMUM:
-    case ISD::VECREDUCE_FMINIMUM:
-      R = SoftenFloatRes_VECREDUCE(N);
-      break;
+    case ISD::VECREDUCE_FMINIMUM: R = SoftenFloatRes_VECREDUCE(N); break;
     case ISD::VECREDUCE_SEQ_FADD:
-    case ISD::VECREDUCE_SEQ_FMUL:
-      R = SoftenFloatRes_VECREDUCE_SEQ(N);
-      break;
-  }
+    case ISD::VECREDUCE_SEQ_FMUL: R = SoftenFloatRes_VECREDUCE_SEQ(N); break;
+      // clang-format on
+    }
 
   // If R is null, the sub-method took care of registering the result.
   if (R.getNode()) {
@@ -177,7 +199,7 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_Unary(SDNode *N, RTLIB::Libcall LC) {
   SDValue Chain = IsStrict ? N->getOperand(0) : SDValue();
   TargetLowering::MakeLibCallOptions CallOptions;
   EVT OpVT = N->getOperand(0 + Offset).getValueType();
-  CallOptions.setTypeListBeforeSoften(OpVT, N->getValueType(0), true);
+  CallOptions.setTypeListBeforeSoften(OpVT, N->getValueType(0));
   std::pair<SDValue, SDValue> Tmp = TLI.makeLibCall(DAG, LC, NVT, Op,
                                                     CallOptions, SDLoc(N),
                                                     Chain);
@@ -198,7 +220,7 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_Binary(SDNode *N, RTLIB::Libcall LC) {
   TargetLowering::MakeLibCallOptions CallOptions;
   EVT OpsVT[2] = { N->getOperand(0 + Offset).getValueType(),
                    N->getOperand(1 + Offset).getValueType() };
-  CallOptions.setTypeListBeforeSoften(OpsVT, N->getValueType(0), true);
+  CallOptions.setTypeListBeforeSoften(OpsVT, N->getValueType(0));
   std::pair<SDValue, SDValue> Tmp = TLI.makeLibCall(DAG, LC, NVT, Ops,
                                                     CallOptions, SDLoc(N),
                                                     Chain);
@@ -263,6 +285,15 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_ConstantFP(SDNode *N) {
   }
 }
 
+SDValue DAGTypeLegalizer::SoftenFloatRes_EXTRACT_ELEMENT(SDNode *N) {
+  SDValue Src = N->getOperand(0);
+  assert(Src.getValueType() == MVT::ppcf128 &&
+         "In floats only ppcf128 can be extracted by element!");
+  return DAG.getNode(ISD::EXTRACT_ELEMENT, SDLoc(N),
+                     N->getValueType(0).changeTypeToInteger(),
+                     DAG.getBitcast(MVT::i128, Src), N->getOperand(1));
+}
+
 SDValue DAGTypeLegalizer::SoftenFloatRes_EXTRACT_VECTOR_ELT(SDNode *N, unsigned ResNo) {
   SDValue NewOp = BitConvertVectorToIntegerVector(N->getOperand(0));
   return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SDLoc(N),
@@ -280,6 +311,31 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_FABS(SDNode *N) {
   SDValue Mask = DAG.getConstant(API, SDLoc(N), NVT);
   SDValue Op = GetSoftenedFloat(N->getOperand(0));
   return DAG.getNode(ISD::AND, SDLoc(N), NVT, Op, Mask);
+}
+
+SDValue DAGTypeLegalizer::SoftenFloatRes_FCANONICALIZE(SDNode *N) {
+  SDLoc dl(N);
+
+  // This implements llvm.canonicalize.f* by multiplication with 1.0, as
+  // suggested in
+  // https://llvm.org/docs/LangRef.html#llvm-canonicalize-intrinsic.
+  // It uses strict_fp operations even outside a strict_fp context in order
+  // to guarantee that the canonicalization is not optimized away by later
+  // passes. The result chain introduced by that is intentionally ignored
+  // since no ordering requirement is intended here.
+
+  // Create strict multiplication by 1.0.
+  SDValue Operand = N->getOperand(0);
+  EVT VT = Operand.getValueType();
+  SDValue One = DAG.getConstantFP(1.0, dl, VT);
+  SDValue Chain = DAG.getEntryNode();
+  // Propagate existing flags on canonicalize, and additionally set
+  // NoFPExcept.
+  SDNodeFlags CanonicalizeFlags = N->getFlags();
+  CanonicalizeFlags.setNoFPExcept(true);
+  SDValue Mul = DAG.getNode(ISD::STRICT_FMUL, dl, {VT, MVT::Other},
+                            {Chain, Operand, One}, CanonicalizeFlags);
+  return BitConvertToInteger(Mul);
 }
 
 SDValue DAGTypeLegalizer::SoftenFloatRes_FMINNUM(SDNode *N) {
@@ -304,6 +360,34 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_FMAXNUM(SDNode *N) {
                                                RTLIB::FMAX_PPCF128));
 }
 
+SDValue DAGTypeLegalizer::SoftenFloatRes_FMINIMUMNUM(SDNode *N) {
+  return SoftenFloatRes_Binary(
+      N, GetFPLibCall(N->getValueType(0), RTLIB::FMINIMUM_NUM_F32,
+                      RTLIB::FMINIMUM_NUM_F64, RTLIB::FMINIMUM_NUM_F80,
+                      RTLIB::FMINIMUM_NUM_F128, RTLIB::FMINIMUM_NUM_PPCF128));
+}
+
+SDValue DAGTypeLegalizer::SoftenFloatRes_FMAXIMUMNUM(SDNode *N) {
+  return SoftenFloatRes_Binary(
+      N, GetFPLibCall(N->getValueType(0), RTLIB::FMAXIMUM_NUM_F32,
+                      RTLIB::FMAXIMUM_NUM_F64, RTLIB::FMAXIMUM_NUM_F80,
+                      RTLIB::FMAXIMUM_NUM_F128, RTLIB::FMAXIMUM_NUM_PPCF128));
+}
+
+SDValue DAGTypeLegalizer::SoftenFloatRes_FMINIMUM(SDNode *N) {
+  return SoftenFloatRes_Binary(
+      N, GetFPLibCall(N->getValueType(0), RTLIB::FMINIMUM_F32,
+                      RTLIB::FMINIMUM_F64, RTLIB::FMINIMUM_F80,
+                      RTLIB::FMINIMUM_F128, RTLIB::FMINIMUM_PPCF128));
+}
+
+SDValue DAGTypeLegalizer::SoftenFloatRes_FMAXIMUM(SDNode *N) {
+  return SoftenFloatRes_Binary(
+      N, GetFPLibCall(N->getValueType(0), RTLIB::FMAXIMUM_F32,
+                      RTLIB::FMAXIMUM_F64, RTLIB::FMAXIMUM_F80,
+                      RTLIB::FMAXIMUM_F128, RTLIB::FMAXIMUM_PPCF128));
+}
+
 SDValue DAGTypeLegalizer::SoftenFloatRes_FADD(SDNode *N) {
   return SoftenFloatRes_Binary(N, GetFPLibCall(N->getValueType(0),
                                                RTLIB::ADD_F32,
@@ -311,6 +395,31 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_FADD(SDNode *N) {
                                                RTLIB::ADD_F80,
                                                RTLIB::ADD_F128,
                                                RTLIB::ADD_PPCF128));
+}
+
+SDValue DAGTypeLegalizer::SoftenFloatRes_FACOS(SDNode *N) {
+  return SoftenFloatRes_Unary(
+      N, GetFPLibCall(N->getValueType(0), RTLIB::ACOS_F32, RTLIB::ACOS_F64,
+                      RTLIB::ACOS_F80, RTLIB::ACOS_F128, RTLIB::ACOS_PPCF128));
+}
+
+SDValue DAGTypeLegalizer::SoftenFloatRes_FASIN(SDNode *N) {
+  return SoftenFloatRes_Unary(
+      N, GetFPLibCall(N->getValueType(0), RTLIB::ASIN_F32, RTLIB::ASIN_F64,
+                      RTLIB::ASIN_F80, RTLIB::ASIN_F128, RTLIB::ASIN_PPCF128));
+}
+
+SDValue DAGTypeLegalizer::SoftenFloatRes_FATAN(SDNode *N) {
+  return SoftenFloatRes_Unary(
+      N, GetFPLibCall(N->getValueType(0), RTLIB::ATAN_F32, RTLIB::ATAN_F64,
+                      RTLIB::ATAN_F80, RTLIB::ATAN_F128, RTLIB::ATAN_PPCF128));
+}
+
+SDValue DAGTypeLegalizer::SoftenFloatRes_FATAN2(SDNode *N) {
+  return SoftenFloatRes_Binary(
+      N,
+      GetFPLibCall(N->getValueType(0), RTLIB::ATAN2_F32, RTLIB::ATAN2_F64,
+                   RTLIB::ATAN2_F80, RTLIB::ATAN2_F128, RTLIB::ATAN2_PPCF128));
 }
 
 SDValue DAGTypeLegalizer::SoftenFloatRes_FCBRT(SDNode *N) {
@@ -386,6 +495,12 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_FCOS(SDNode *N) {
                                               RTLIB::COS_F80,
                                               RTLIB::COS_F128,
                                               RTLIB::COS_PPCF128));
+}
+
+SDValue DAGTypeLegalizer::SoftenFloatRes_FCOSH(SDNode *N) {
+  return SoftenFloatRes_Unary(
+      N, GetFPLibCall(N->getValueType(0), RTLIB::COSH_F32, RTLIB::COSH_F64,
+                      RTLIB::COSH_F80, RTLIB::COSH_F128, RTLIB::COSH_PPCF128));
 }
 
 SDValue DAGTypeLegalizer::SoftenFloatRes_FDIV(SDNode *N) {
@@ -470,7 +585,7 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_FMA(SDNode *N) {
   EVT OpsVT[3] = { N->getOperand(0 + Offset).getValueType(),
                    N->getOperand(1 + Offset).getValueType(),
                    N->getOperand(2 + Offset).getValueType() };
-  CallOptions.setTypeListBeforeSoften(OpsVT, N->getValueType(0), true);
+  CallOptions.setTypeListBeforeSoften(OpsVT, N->getValueType(0));
   std::pair<SDValue, SDValue> Tmp = TLI.makeLibCall(DAG,
                                                     GetFPLibCall(N->getValueType(0),
                                                                  RTLIB::FMA_F32,
@@ -523,8 +638,11 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_FP_EXTEND(SDNode *N) {
     Op = GetPromotedFloat(Op);
     // If the promotion did the FP_EXTEND to the destination type for us,
     // there's nothing left to do here.
-    if (Op.getValueType() == N->getValueType(0))
+    if (Op.getValueType() == N->getValueType(0)) {
+      if (IsStrict)
+        ReplaceValueWith(SDValue(N, 1), Chain);
       return BitConvertToInteger(Op);
+    }
   }
 
   // There's only a libcall for f16 -> f32 and shifting is only valid for bf16
@@ -542,14 +660,16 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_FP_EXTEND(SDNode *N) {
     }
   }
 
-  if (Op.getValueType() == MVT::bf16)
+  if (Op.getValueType() == MVT::bf16) {
+    // FIXME: Need ReplaceValueWith on chain in strict case
     return SoftenFloatRes_BF16_TO_FP(N);
+  }
 
   RTLIB::Libcall LC = RTLIB::getFPEXT(Op.getValueType(), N->getValueType(0));
   assert(LC != RTLIB::UNKNOWN_LIBCALL && "Unsupported FP_EXTEND!");
   TargetLowering::MakeLibCallOptions CallOptions;
   EVT OpVT = N->getOperand(IsStrict ? 1 : 0).getValueType();
-  CallOptions.setTypeListBeforeSoften(OpVT, N->getValueType(0), true);
+  CallOptions.setTypeListBeforeSoften(OpVT, N->getValueType(0));
   std::pair<SDValue, SDValue> Tmp = TLI.makeLibCall(DAG, LC, NVT, Op,
                                                     CallOptions, SDLoc(N),
                                                     Chain);
@@ -565,7 +685,7 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_FP16_TO_FP(SDNode *N) {
   SDValue Op = N->getOperand(0);
   TargetLowering::MakeLibCallOptions CallOptions;
   EVT OpsVT[1] = { N->getOperand(0).getValueType() };
-  CallOptions.setTypeListBeforeSoften(OpsVT, N->getValueType(0), true);
+  CallOptions.setTypeListBeforeSoften(OpsVT, N->getValueType(0));
   SDValue Res32 = TLI.makeLibCall(DAG, RTLIB::FPEXT_F16_F32, MidVT, Op,
                                   CallOptions, SDLoc(N)).first;
   if (N->getValueType(0) == MVT::f32)
@@ -601,7 +721,7 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_FP_ROUND(SDNode *N) {
   assert(LC != RTLIB::UNKNOWN_LIBCALL && "Unsupported FP_ROUND!");
   TargetLowering::MakeLibCallOptions CallOptions;
   EVT OpVT = N->getOperand(IsStrict ? 1 : 0).getValueType();
-  CallOptions.setTypeListBeforeSoften(OpVT, N->getValueType(0), true);
+  CallOptions.setTypeListBeforeSoften(OpVT, N->getValueType(0));
   std::pair<SDValue, SDValue> Tmp = TLI.makeLibCall(DAG, LC, NVT, Op,
                                                     CallOptions, SDLoc(N),
                                                     Chain);
@@ -611,49 +731,45 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_FP_ROUND(SDNode *N) {
 }
 
 SDValue DAGTypeLegalizer::SoftenFloatRes_FPOW(SDNode *N) {
-  return SoftenFloatRes_Binary(N, GetFPLibCall(N->getValueType(0),
-                                               RTLIB::POW_F32,
-                                               RTLIB::POW_F64,
-                                               RTLIB::POW_F80,
-                                               RTLIB::POW_F128,
-                                               RTLIB::POW_PPCF128));
+  return SoftenFloatRes_Binary(N, RTLIB::getPOW(N->getValueType(0)));
 }
 
 SDValue DAGTypeLegalizer::SoftenFloatRes_ExpOp(SDNode *N) {
   bool IsStrict = N->isStrictFPOpcode();
   unsigned Offset = IsStrict ? 1 : 0;
-  assert((N->getOperand(1 + Offset).getValueType() == MVT::i16 ||
-          N->getOperand(1 + Offset).getValueType() == MVT::i32) &&
-         "Unsupported power type!");
   bool IsPowI =
       N->getOpcode() == ISD::FPOWI || N->getOpcode() == ISD::STRICT_FPOWI;
+  EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
 
   RTLIB::Libcall LC = IsPowI ? RTLIB::getPOWI(N->getValueType(0))
                              : RTLIB::getLDEXP(N->getValueType(0));
   assert(LC != RTLIB::UNKNOWN_LIBCALL && "Unexpected fpowi.");
-  if (!TLI.getLibcallName(LC)) {
+  if (TLI.getLibcallImpl(LC) == RTLIB::Unsupported) {
     // Some targets don't have a powi libcall; use pow instead.
     // FIXME: Implement this if some target needs it.
-    DAG.getContext()->emitError("Don't know how to soften fpowi to fpow");
-    return DAG.getUNDEF(N->getValueType(0));
+    DAG.getContext()->emitError("do not know how to soften fpowi to fpow");
+    if (IsStrict)
+      ReplaceValueWith(SDValue(N, 1), N->getOperand(0));
+    return DAG.getPOISON(NVT);
   }
 
   if (DAG.getLibInfo().getIntSize() !=
       N->getOperand(1 + Offset).getValueType().getSizeInBits()) {
     // If the exponent does not match with sizeof(int) a libcall to RTLIB::POWI
     // would use the wrong type for the argument.
-    DAG.getContext()->emitError("POWI exponent does not match sizeof(int)");
-    return DAG.getUNDEF(N->getValueType(0));
+    DAG.getContext()->emitError("powi exponent does not match sizeof(int)");
+    if (IsStrict)
+      ReplaceValueWith(SDValue(N, 1), N->getOperand(0));
+    return DAG.getPOISON(NVT);
   }
 
-  EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
   SDValue Ops[2] = { GetSoftenedFloat(N->getOperand(0 + Offset)),
                      N->getOperand(1 + Offset) };
   SDValue Chain = IsStrict ? N->getOperand(0) : SDValue();
   TargetLowering::MakeLibCallOptions CallOptions;
   EVT OpsVT[2] = { N->getOperand(0 + Offset).getValueType(),
                    N->getOperand(1 + Offset).getValueType() };
-  CallOptions.setTypeListBeforeSoften(OpsVT, N->getValueType(0), true);
+  CallOptions.setTypeListBeforeSoften(OpsVT, N->getValueType(0));
   std::pair<SDValue, SDValue> Tmp = TLI.makeLibCall(DAG, LC, NVT, Ops,
                                                     CallOptions, SDLoc(N),
                                                     Chain);
@@ -667,27 +783,31 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_FFREXP(SDNode *N) {
   EVT VT0 = N->getValueType(0);
   EVT VT1 = N->getValueType(1);
   RTLIB::Libcall LC = RTLIB::getFREXP(VT0);
+  EVT NVT0 = TLI.getTypeToTransformTo(*DAG.getContext(), VT0);
+  SDLoc DL(N);
 
   if (DAG.getLibInfo().getIntSize() != VT1.getSizeInBits()) {
     // If the exponent does not match with sizeof(int) a libcall would use the
     // wrong type for the argument.
     // TODO: Should be able to handle mismatches.
     DAG.getContext()->emitError("ffrexp exponent does not match sizeof(int)");
-    return DAG.getUNDEF(N->getValueType(0));
+    SDValue PoisonExp = DAG.getPOISON(VT1);
+    ReplaceValueWith(SDValue(N, 1), PoisonExp);
+    return DAG.getMergeValues({DAG.getPOISON(NVT0), PoisonExp}, DL);
   }
 
-  EVT NVT0 = TLI.getTypeToTransformTo(*DAG.getContext(), VT0);
   SDValue StackSlot = DAG.CreateStackTemporary(VT1);
 
-  SDLoc DL(N);
-
+  auto PointerTy = PointerType::getUnqual(*DAG.getContext());
   TargetLowering::MakeLibCallOptions CallOptions;
   SDValue Ops[2] = {GetSoftenedFloat(N->getOperand(0)), StackSlot};
   EVT OpsVT[2] = {VT0, StackSlot.getValueType()};
+  Type *CallOpsTypeOverrides[2] = {nullptr, PointerTy};
 
   // TODO: setTypeListBeforeSoften can't properly express multiple return types,
   // but we only really need to handle the 0th one for softening anyway.
-  CallOptions.setTypeListBeforeSoften({OpsVT}, VT0, true);
+  CallOptions.setTypeListBeforeSoften({OpsVT}, VT0)
+      .setOpsTypeOverrides(CallOpsTypeOverrides);
 
   auto [ReturnVal, Chain] = TLI.makeLibCall(DAG, LC, NVT0, Ops, CallOptions, DL,
                                             /*Chain=*/SDValue());
@@ -699,6 +819,106 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_FFREXP(SDNode *N) {
 
   ReplaceValueWith(SDValue(N, 1), LoadExp);
   return ReturnVal;
+}
+
+bool DAGTypeLegalizer::SoftenFloatRes_UnaryWithTwoFPResults(
+    SDNode *N, RTLIB::Libcall LC, std::optional<unsigned> CallRetResNo) {
+  assert(!N->isStrictFPOpcode() && "strictfp not implemented");
+  EVT VT = N->getValueType(0);
+
+  assert(VT == N->getValueType(1) &&
+         "expected both return values to have the same type");
+
+  RTLIB::LibcallImpl LCImpl = TLI.getLibcallImpl(LC);
+  if (LCImpl == RTLIB::Unsupported)
+    return false;
+
+  EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), VT);
+
+  SDLoc DL(N);
+
+  SmallVector<SDValue, 3> Ops = {GetSoftenedFloat(N->getOperand(0))};
+  SmallVector<EVT, 3> OpsVT = {VT};
+
+  std::array<SDValue, 2> StackSlots;
+  SmallVector<Type *, 3> CallOpsTypeOverrides = {nullptr};
+  auto PointerTy = PointerType::getUnqual(*DAG.getContext());
+  for (unsigned ResNum = 0; ResNum < N->getNumValues(); ++ResNum) {
+    if (ResNum == CallRetResNo)
+      continue;
+    SDValue StackSlot = DAG.CreateStackTemporary(NVT);
+    Ops.push_back(StackSlot);
+    OpsVT.push_back(StackSlot.getValueType());
+    StackSlots[ResNum] = StackSlot;
+    CallOpsTypeOverrides.push_back(PointerTy);
+  }
+
+  TargetLowering::MakeLibCallOptions CallOptions;
+  // TODO: setTypeListBeforeSoften can't properly express multiple return types,
+  // but since both returns have the same type it should be okay.
+  CallOptions.setTypeListBeforeSoften({OpsVT}, VT)
+      .setOpsTypeOverrides(CallOpsTypeOverrides);
+
+  auto [ReturnVal, Chain] =
+      TLI.makeLibCall(DAG, LCImpl, NVT, Ops, CallOptions, DL,
+                      /*Chain=*/SDValue());
+
+  auto CreateStackLoad = [&, Chain = Chain](SDValue StackSlot) {
+    int FrameIdx = cast<FrameIndexSDNode>(StackSlot)->getIndex();
+    auto PtrInfo =
+        MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), FrameIdx);
+    return DAG.getLoad(NVT, DL, Chain, StackSlot, PtrInfo);
+  };
+
+  for (auto [ResNum, SlackSlot] : enumerate(StackSlots)) {
+    if (CallRetResNo == ResNum) {
+      SetSoftenedFloat(SDValue(N, ResNum), ReturnVal);
+      continue;
+    }
+    SetSoftenedFloat(SDValue(N, ResNum), CreateStackLoad(SlackSlot));
+  }
+
+  return true;
+}
+
+SDValue DAGTypeLegalizer::SoftenFloatRes_FSINCOS(SDNode *N) {
+  EVT VT = N->getValueType(0);
+  if (SoftenFloatRes_UnaryWithTwoFPResults(N, RTLIB::getSINCOS(VT)))
+    return SDValue();
+
+  // Fall back on softening the separate sin and cos calls if available.
+  RTLIB::Libcall SinLC = RTLIB::getSIN(VT);
+  RTLIB::Libcall CosLC = RTLIB::getCOS(VT);
+
+  SDValue SoftSin, SoftCos;
+  if (TLI.getLibcallImpl(SinLC) == RTLIB::Unsupported ||
+      TLI.getLibcallImpl(CosLC) == RTLIB::Unsupported) {
+    DAG.getContext()->emitError("do not know how to soften fsincos");
+
+    EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), VT);
+    SoftSin = SoftCos = DAG.getPOISON(NVT);
+  } else {
+    SoftSin = SoftenFloatRes_Unary(N, SinLC);
+    SoftCos = SoftenFloatRes_Unary(N, CosLC);
+  }
+
+  SetSoftenedFloat(SDValue(N, 0), SoftSin);
+  SetSoftenedFloat(SDValue(N, 1), SoftCos);
+  return SDValue();
+}
+
+SDValue DAGTypeLegalizer::SoftenFloatRes_FMODF(SDNode *N) {
+  EVT VT = N->getValueType(0);
+  if (SoftenFloatRes_UnaryWithTwoFPResults(N, RTLIB::getMODF(VT),
+                                           /*CallRetResNo=*/0))
+    return SDValue();
+
+  EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), VT);
+  DAG.getContext()->emitError("do not know how to soften fmodf");
+  SDValue Poison = DAG.getPOISON(NVT);
+  SetSoftenedFloat(SDValue(N, 0), Poison);
+  SetSoftenedFloat(SDValue(N, 1), Poison);
+  return SDValue();
 }
 
 SDValue DAGTypeLegalizer::SoftenFloatRes_FREM(SDNode *N) {
@@ -746,6 +966,12 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_FSIN(SDNode *N) {
                                               RTLIB::SIN_PPCF128));
 }
 
+SDValue DAGTypeLegalizer::SoftenFloatRes_FSINH(SDNode *N) {
+  return SoftenFloatRes_Unary(
+      N, GetFPLibCall(N->getValueType(0), RTLIB::SINH_F32, RTLIB::SINH_F64,
+                      RTLIB::SINH_F80, RTLIB::SINH_F128, RTLIB::SINH_PPCF128));
+}
+
 SDValue DAGTypeLegalizer::SoftenFloatRes_FSQRT(SDNode *N) {
   return SoftenFloatRes_Unary(N, GetFPLibCall(N->getValueType(0),
                                               RTLIB::SQRT_F32,
@@ -762,6 +988,18 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_FSUB(SDNode *N) {
                                                RTLIB::SUB_F80,
                                                RTLIB::SUB_F128,
                                                RTLIB::SUB_PPCF128));
+}
+
+SDValue DAGTypeLegalizer::SoftenFloatRes_FTAN(SDNode *N) {
+  return SoftenFloatRes_Unary(
+      N, GetFPLibCall(N->getValueType(0), RTLIB::TAN_F32, RTLIB::TAN_F64,
+                      RTLIB::TAN_F80, RTLIB::TAN_F128, RTLIB::TAN_PPCF128));
+}
+
+SDValue DAGTypeLegalizer::SoftenFloatRes_FTANH(SDNode *N) {
+  return SoftenFloatRes_Unary(
+      N, GetFPLibCall(N->getValueType(0), RTLIB::TANH_F32, RTLIB::TANH_F64,
+                      RTLIB::TANH_F80, RTLIB::TANH_F128, RTLIB::TANH_PPCF128));
 }
 
 SDValue DAGTypeLegalizer::SoftenFloatRes_FTRUNC(SDNode *N) {
@@ -786,8 +1024,8 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_LOAD(SDNode *N) {
   if (L->getExtensionType() == ISD::NON_EXTLOAD) {
     NewL = DAG.getLoad(L->getAddressingMode(), L->getExtensionType(), NVT, dl,
                        L->getChain(), L->getBasePtr(), L->getOffset(),
-                       L->getPointerInfo(), NVT, L->getOriginalAlign(),
-                       MMOFlags, L->getAAInfo());
+                       L->getPointerInfo(), NVT, L->getBaseAlign(), MMOFlags,
+                       L->getAAInfo());
     // Legalized the chain result - switch anything that used the old chain to
     // use the new one.
     ReplaceValueWith(SDValue(N, 1), NewL.getValue(1));
@@ -797,13 +1035,33 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_LOAD(SDNode *N) {
   // Do a non-extending load followed by FP_EXTEND.
   NewL = DAG.getLoad(L->getAddressingMode(), ISD::NON_EXTLOAD, L->getMemoryVT(),
                      dl, L->getChain(), L->getBasePtr(), L->getOffset(),
-                     L->getPointerInfo(), L->getMemoryVT(),
-                     L->getOriginalAlign(), MMOFlags, L->getAAInfo());
+                     L->getPointerInfo(), L->getMemoryVT(), L->getBaseAlign(),
+                     MMOFlags, L->getAAInfo());
   // Legalized the chain result - switch anything that used the old chain to
   // use the new one.
   ReplaceValueWith(SDValue(N, 1), NewL.getValue(1));
   auto ExtendNode = DAG.getNode(ISD::FP_EXTEND, dl, VT, NewL);
   return BitConvertToInteger(ExtendNode);
+}
+
+SDValue DAGTypeLegalizer::SoftenFloatRes_ATOMIC_LOAD(SDNode *N) {
+  AtomicSDNode *L = cast<AtomicSDNode>(N);
+  EVT VT = N->getValueType(0);
+  EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), VT);
+  SDLoc dl(N);
+
+  if (L->getExtensionType() == ISD::NON_EXTLOAD) {
+    SDValue NewL =
+        DAG.getAtomic(ISD::ATOMIC_LOAD, dl, NVT, DAG.getVTList(NVT, MVT::Other),
+                      {L->getChain(), L->getBasePtr()}, L->getMemOperand());
+
+    // Legalized the chain result - switch anything that used the old chain to
+    // use the new one.
+    ReplaceValueWith(SDValue(N, 1), NewL.getValue(1));
+    return NewL;
+  }
+
+  report_fatal_error("softening fp extending atomic load not handled");
 }
 
 SDValue DAGTypeLegalizer::SoftenFloatRes_SELECT(SDNode *N) {
@@ -871,8 +1129,8 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_XINT_TO_FP(SDNode *N) {
   SDValue Op = DAG.getNode(Signed ? ISD::SIGN_EXTEND : ISD::ZERO_EXTEND, dl,
                            NVT, N->getOperand(IsStrict ? 1 : 0));
   TargetLowering::MakeLibCallOptions CallOptions;
-  CallOptions.setSExt(Signed);
-  CallOptions.setTypeListBeforeSoften(SVT, RVT, true);
+  CallOptions.setIsSigned(Signed);
+  CallOptions.setTypeListBeforeSoften(SVT, RVT);
   std::pair<SDValue, SDValue> Tmp =
       TLI.makeLibCall(DAG, LC, TLI.getTypeToTransformTo(*DAG.getContext(), RVT),
                       Op, CallOptions, dl, Chain);
@@ -898,8 +1156,7 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_VECREDUCE_SEQ(SDNode *N) {
 //===----------------------------------------------------------------------===//
 
 bool DAGTypeLegalizer::SoftenFloatOperand(SDNode *N, unsigned OpNo) {
-  LLVM_DEBUG(dbgs() << "Soften float operand " << OpNo << ": "; N->dump(&DAG);
-             dbgs() << "\n");
+  LLVM_DEBUG(dbgs() << "Soften float operand " << OpNo << ": "; N->dump(&DAG));
   SDValue Res = SDValue();
 
   switch (N->getOpcode()) {
@@ -915,6 +1172,7 @@ bool DAGTypeLegalizer::SoftenFloatOperand(SDNode *N, unsigned OpNo) {
   case ISD::STRICT_FP_TO_FP16:
   case ISD::FP_TO_FP16:  // Same as FP_ROUND for softening purposes
   case ISD::FP_TO_BF16:
+  case ISD::STRICT_FP_TO_BF16:
   case ISD::STRICT_FP_ROUND:
   case ISD::FP_ROUND:    Res = SoftenFloatOp_FP_ROUND(N); break;
   case ISD::STRICT_FP_TO_SINT:
@@ -937,7 +1195,19 @@ bool DAGTypeLegalizer::SoftenFloatOperand(SDNode *N, unsigned OpNo) {
   case ISD::STRICT_FSETCCS:
   case ISD::SETCC:       Res = SoftenFloatOp_SETCC(N); break;
   case ISD::STORE:       Res = SoftenFloatOp_STORE(N, OpNo); break;
+  case ISD::ATOMIC_STORE:
+    Res = SoftenFloatOp_ATOMIC_STORE(N, OpNo);
+    break;
   case ISD::FCOPYSIGN:   Res = SoftenFloatOp_FCOPYSIGN(N); break;
+  case ISD::FAKE_USE:
+    Res = SoftenFloatOp_FAKE_USE(N);
+    break;
+  case ISD::STACKMAP:
+    Res = SoftenFloatOp_STACKMAP(N, OpNo);
+    break;
+  case ISD::PATCHPOINT:
+    Res = SoftenFloatOp_PATCHPOINT(N, OpNo);
+    break;
   }
 
   // If the result is null, the sub-method took care of registering results etc.
@@ -967,6 +1237,7 @@ SDValue DAGTypeLegalizer::SoftenFloatOp_FP_ROUND(SDNode *N) {
   assert(N->getOpcode() == ISD::FP_ROUND || N->getOpcode() == ISD::FP_TO_FP16 ||
          N->getOpcode() == ISD::STRICT_FP_TO_FP16 ||
          N->getOpcode() == ISD::FP_TO_BF16 ||
+         N->getOpcode() == ISD::STRICT_FP_TO_BF16 ||
          N->getOpcode() == ISD::STRICT_FP_ROUND);
 
   bool IsStrict = N->isStrictFPOpcode();
@@ -977,7 +1248,8 @@ SDValue DAGTypeLegalizer::SoftenFloatOp_FP_ROUND(SDNode *N) {
   if (N->getOpcode() == ISD::FP_TO_FP16 ||
       N->getOpcode() == ISD::STRICT_FP_TO_FP16)
     FloatRVT = MVT::f16;
-  else if (N->getOpcode() == ISD::FP_TO_BF16)
+  else if (N->getOpcode() == ISD::FP_TO_BF16 ||
+           N->getOpcode() == ISD::STRICT_FP_TO_BF16)
     FloatRVT = MVT::bf16;
 
   RTLIB::Libcall LC = RTLIB::getFPROUND(SVT, FloatRVT);
@@ -986,7 +1258,7 @@ SDValue DAGTypeLegalizer::SoftenFloatOp_FP_ROUND(SDNode *N) {
   SDValue Chain = IsStrict ? N->getOperand(0) : SDValue();
   Op = GetSoftenedFloat(Op);
   TargetLowering::MakeLibCallOptions CallOptions;
-  CallOptions.setTypeListBeforeSoften(SVT, RVT, true);
+  CallOptions.setTypeListBeforeSoften(SVT, RVT);
   std::pair<SDValue, SDValue> Tmp = TLI.makeLibCall(DAG, LC, RVT, Op,
                                                     CallOptions, SDLoc(N),
                                                     Chain);
@@ -1062,7 +1334,7 @@ SDValue DAGTypeLegalizer::SoftenFloatOp_FP_TO_XINT(SDNode *N) {
   Op = GetSoftenedFloat(Op);
   SDValue Chain = IsStrict ? N->getOperand(0) : SDValue();
   TargetLowering::MakeLibCallOptions CallOptions;
-  CallOptions.setTypeListBeforeSoften(SVT, RVT, true);
+  CallOptions.setTypeListBeforeSoften(SVT, RVT);
   std::pair<SDValue, SDValue> Tmp = TLI.makeLibCall(DAG, LC, NVT, Op,
                                                     CallOptions, dl, Chain);
 
@@ -1161,6 +1433,20 @@ SDValue DAGTypeLegalizer::SoftenFloatOp_STORE(SDNode *N, unsigned OpNo) {
                       ST->getMemOperand());
 }
 
+SDValue DAGTypeLegalizer::SoftenFloatOp_ATOMIC_STORE(SDNode *N, unsigned OpNo) {
+  assert(OpNo == 1 && "Can only soften the stored value!");
+  AtomicSDNode *ST = cast<AtomicSDNode>(N);
+  SDValue Val = ST->getVal();
+  EVT VT = Val.getValueType();
+  SDLoc dl(N);
+
+  assert(ST->getMemoryVT() == VT && "truncating atomic store not handled");
+
+  SDValue NewVal = GetSoftenedFloat(Val);
+  return DAG.getAtomic(ISD::ATOMIC_STORE, dl, VT, ST->getChain(), NewVal,
+                       ST->getBasePtr(), ST->getMemOperand());
+}
+
 SDValue DAGTypeLegalizer::SoftenFloatOp_FCOPYSIGN(SDNode *N) {
   SDValue LHS = N->getOperand(0);
   SDValue RHS = BitConvertToInteger(N->getOperand(1));
@@ -1203,7 +1489,7 @@ SDValue DAGTypeLegalizer::SoftenFloatOp_Unary(SDNode *N, RTLIB::Libcall LC) {
   SDValue Chain = IsStrict ? N->getOperand(0) : SDValue();
   TargetLowering::MakeLibCallOptions CallOptions;
   EVT OpVT = N->getOperand(0 + Offset).getValueType();
-  CallOptions.setTypeListBeforeSoften(OpVT, N->getValueType(0), true);
+  CallOptions.setTypeListBeforeSoften(OpVT, N->getValueType(0));
   std::pair<SDValue, SDValue> Tmp = TLI.makeLibCall(DAG, LC, NVT, Op,
                                                     CallOptions, SDLoc(N),
                                                     Chain);
@@ -1256,6 +1542,26 @@ SDValue DAGTypeLegalizer::SoftenFloatOp_LLRINT(SDNode *N) {
                                              RTLIB::LLRINT_PPCF128));
 }
 
+SDValue DAGTypeLegalizer::SoftenFloatOp_FAKE_USE(SDNode *N) {
+  SDValue Op1 = BitConvertToInteger(N->getOperand(1));
+  return DAG.getNode(N->getOpcode(), SDLoc(N), N->getValueType(0),
+                     N->getOperand(0), Op1);
+}
+
+SDValue DAGTypeLegalizer::SoftenFloatOp_STACKMAP(SDNode *N, unsigned OpNo) {
+  assert(OpNo > 1); // Because the first two arguments are guaranteed legal.
+  SmallVector<SDValue> NewOps(N->ops());
+  NewOps[OpNo] = GetSoftenedFloat(NewOps[OpNo]);
+  return SDValue(DAG.UpdateNodeOperands(N, NewOps), 0);
+}
+
+SDValue DAGTypeLegalizer::SoftenFloatOp_PATCHPOINT(SDNode *N, unsigned OpNo) {
+  assert(OpNo >= 7);
+  SmallVector<SDValue> NewOps(N->ops());
+  NewOps[OpNo] = GetSoftenedFloat(NewOps[OpNo]);
+  return SDValue(DAG.UpdateNodeOperands(N, NewOps), 0);
+}
+
 //===----------------------------------------------------------------------===//
 //  Float Result Expansion
 //===----------------------------------------------------------------------===//
@@ -1265,7 +1571,7 @@ SDValue DAGTypeLegalizer::SoftenFloatOp_LLRINT(SDNode *N) {
 /// have invalid operands or may have other results that need promotion, we just
 /// know that (at least) one result needs expansion.
 void DAGTypeLegalizer::ExpandFloatResult(SDNode *N, unsigned ResNo) {
-  LLVM_DEBUG(dbgs() << "Expand float result: "; N->dump(&DAG); dbgs() << "\n");
+  LLVM_DEBUG(dbgs() << "Expand float result: "; N->dump(&DAG));
   SDValue Lo, Hi;
   Lo = Hi = SDValue();
 
@@ -1281,7 +1587,8 @@ void DAGTypeLegalizer::ExpandFloatResult(SDNode *N, unsigned ResNo) {
 #endif
     report_fatal_error("Do not know how to expand the result of this "
                        "operator!");
-
+    // clang-format off
+  case ISD::POISON:
   case ISD::UNDEF:        SplitRes_UNDEF(N, Lo, Hi); break;
   case ISD::SELECT:       SplitRes_Select(N, Lo, Hi); break;
   case ISD::SELECT_CC:    SplitRes_SELECT_CC(N, Lo, Hi); break;
@@ -1294,19 +1601,32 @@ void DAGTypeLegalizer::ExpandFloatResult(SDNode *N, unsigned ResNo) {
   case ISD::VAARG:              ExpandRes_VAARG(N, Lo, Hi); break;
 
   case ISD::ConstantFP: ExpandFloatRes_ConstantFP(N, Lo, Hi); break;
+  case ISD::AssertNoFPClass: ExpandFloatRes_AssertNoFPClass(N, Lo, Hi); break;
   case ISD::FABS:       ExpandFloatRes_FABS(N, Lo, Hi); break;
   case ISD::STRICT_FMINNUM:
   case ISD::FMINNUM:    ExpandFloatRes_FMINNUM(N, Lo, Hi); break;
   case ISD::STRICT_FMAXNUM:
   case ISD::FMAXNUM:    ExpandFloatRes_FMAXNUM(N, Lo, Hi); break;
+  case ISD::FMINIMUMNUM: ExpandFloatRes_FMINIMUMNUM(N, Lo, Hi); break;
+  case ISD::FMAXIMUMNUM: ExpandFloatRes_FMAXIMUMNUM(N, Lo, Hi); break;
   case ISD::STRICT_FADD:
   case ISD::FADD:       ExpandFloatRes_FADD(N, Lo, Hi); break;
+  case ISD::STRICT_FACOS:
+  case ISD::FACOS:      ExpandFloatRes_FACOS(N, Lo, Hi); break;
+  case ISD::STRICT_FASIN:
+  case ISD::FASIN:      ExpandFloatRes_FASIN(N, Lo, Hi); break;
+  case ISD::STRICT_FATAN:
+  case ISD::FATAN:      ExpandFloatRes_FATAN(N, Lo, Hi); break;
+  case ISD::STRICT_FATAN2:
+  case ISD::FATAN2:     ExpandFloatRes_FATAN2(N, Lo, Hi); break;
   case ISD::FCBRT:      ExpandFloatRes_FCBRT(N, Lo, Hi); break;
   case ISD::STRICT_FCEIL:
   case ISD::FCEIL:      ExpandFloatRes_FCEIL(N, Lo, Hi); break;
   case ISD::FCOPYSIGN:  ExpandFloatRes_FCOPYSIGN(N, Lo, Hi); break;
   case ISD::STRICT_FCOS:
   case ISD::FCOS:       ExpandFloatRes_FCOS(N, Lo, Hi); break;
+  case ISD::STRICT_FCOSH:
+  case ISD::FCOSH:       ExpandFloatRes_FCOSH(N, Lo, Hi); break;
   case ISD::STRICT_FDIV:
   case ISD::FDIV:       ExpandFloatRes_FDIV(N, Lo, Hi); break;
   case ISD::STRICT_FEXP:
@@ -1346,10 +1666,16 @@ void DAGTypeLegalizer::ExpandFloatResult(SDNode *N, unsigned ResNo) {
   case ISD::FROUNDEVEN: ExpandFloatRes_FROUNDEVEN(N, Lo, Hi); break;
   case ISD::STRICT_FSIN:
   case ISD::FSIN:       ExpandFloatRes_FSIN(N, Lo, Hi); break;
+  case ISD::STRICT_FSINH:
+  case ISD::FSINH:       ExpandFloatRes_FSINH(N, Lo, Hi); break;
   case ISD::STRICT_FSQRT:
   case ISD::FSQRT:      ExpandFloatRes_FSQRT(N, Lo, Hi); break;
   case ISD::STRICT_FSUB:
   case ISD::FSUB:       ExpandFloatRes_FSUB(N, Lo, Hi); break;
+  case ISD::STRICT_FTAN:
+  case ISD::FTAN:       ExpandFloatRes_FTAN(N, Lo, Hi); break;
+  case ISD::STRICT_FTANH:
+  case ISD::FTANH:       ExpandFloatRes_FTANH(N, Lo, Hi); break;
   case ISD::STRICT_FTRUNC:
   case ISD::FTRUNC:     ExpandFloatRes_FTRUNC(N, Lo, Hi); break;
   case ISD::LOAD:       ExpandFloatRes_LOAD(N, Lo, Hi); break;
@@ -1359,6 +1685,10 @@ void DAGTypeLegalizer::ExpandFloatResult(SDNode *N, unsigned ResNo) {
   case ISD::UINT_TO_FP: ExpandFloatRes_XINT_TO_FP(N, Lo, Hi); break;
   case ISD::STRICT_FREM:
   case ISD::FREM:       ExpandFloatRes_FREM(N, Lo, Hi); break;
+  case ISD::FMODF:   ExpandFloatRes_FMODF(N); break;
+  case ISD::FSINCOS: ExpandFloatRes_FSINCOS(N); break;
+  case ISD::FSINCOSPI: ExpandFloatRes_FSINCOSPI(N); break;
+    // clang-format on
   }
 
   // If Lo/Hi is null, the sub-method took care of registering results etc.
@@ -1373,12 +1703,9 @@ void DAGTypeLegalizer::ExpandFloatRes_ConstantFP(SDNode *N, SDValue &Lo,
          "Do not know how to expand this float constant!");
   APInt C = cast<ConstantFPSDNode>(N)->getValueAPF().bitcastToAPInt();
   SDLoc dl(N);
-  Lo = DAG.getConstantFP(APFloat(DAG.EVTToAPFloatSemantics(NVT),
-                                 APInt(64, C.getRawData()[1])),
-                         dl, NVT);
-  Hi = DAG.getConstantFP(APFloat(DAG.EVTToAPFloatSemantics(NVT),
-                                 APInt(64, C.getRawData()[0])),
-                         dl, NVT);
+  const fltSemantics &Sem = NVT.getFltSemantics();
+  Lo = DAG.getConstantFP(APFloat(Sem, C.extractBits(64, 64)), dl, NVT);
+  Hi = DAG.getConstantFP(APFloat(Sem, C.extractBits(64, 0)), dl, NVT);
 }
 
 void DAGTypeLegalizer::ExpandFloatRes_Unary(SDNode *N, RTLIB::Libcall LC,
@@ -1411,6 +1738,32 @@ void DAGTypeLegalizer::ExpandFloatRes_Binary(SDNode *N, RTLIB::Libcall LC,
   GetPairElements(Tmp.first, Lo, Hi);
 }
 
+void DAGTypeLegalizer::ExpandFloatRes_FMODF(SDNode *N) {
+  ExpandFloatRes_UnaryWithTwoFPResults(N, RTLIB::getMODF(N->getValueType(0)),
+                                       /*CallRetResNo=*/0);
+}
+
+void DAGTypeLegalizer::ExpandFloatRes_FSINCOS(SDNode *N) {
+  ExpandFloatRes_UnaryWithTwoFPResults(N, RTLIB::getSINCOS(N->getValueType(0)));
+}
+
+void DAGTypeLegalizer::ExpandFloatRes_FSINCOSPI(SDNode *N) {
+  ExpandFloatRes_UnaryWithTwoFPResults(N,
+                                       RTLIB::getSINCOSPI(N->getValueType(0)));
+}
+
+void DAGTypeLegalizer::ExpandFloatRes_UnaryWithTwoFPResults(
+    SDNode *N, RTLIB::Libcall LC, std::optional<unsigned> CallRetResNo) {
+  assert(!N->isStrictFPOpcode() && "strictfp not implemented");
+  SmallVector<SDValue> Results;
+  TLI.expandMultipleResultFPLibCall(DAG, LC, N, Results, CallRetResNo);
+  for (auto [ResNo, Res] : enumerate(Results)) {
+    SDValue Lo, Hi;
+    GetPairElements(Res, Lo, Hi);
+    SetExpandedFloat(SDValue(N, ResNo), Lo, Hi);
+  }
+}
+
 void DAGTypeLegalizer::ExpandFloatRes_FABS(SDNode *N, SDValue &Lo,
                                            SDValue &Hi) {
   assert(N->getValueType(0) == MVT::ppcf128 &&
@@ -1441,12 +1794,68 @@ void DAGTypeLegalizer::ExpandFloatRes_FMAXNUM(SDNode *N, SDValue &Lo,
                                         RTLIB::FMAX_PPCF128), Lo, Hi);
 }
 
+void DAGTypeLegalizer::ExpandFloatRes_FMINIMUMNUM(SDNode *N, SDValue &Lo,
+                                                  SDValue &Hi) {
+  ExpandFloatRes_Binary(
+      N,
+      GetFPLibCall(N->getValueType(0), RTLIB::FMINIMUM_NUM_F32,
+                   RTLIB::FMINIMUM_NUM_F64, RTLIB::FMINIMUM_NUM_F80,
+                   RTLIB::FMINIMUM_NUM_F128, RTLIB::FMINIMUM_NUM_PPCF128),
+      Lo, Hi);
+}
+
+void DAGTypeLegalizer::ExpandFloatRes_FMAXIMUMNUM(SDNode *N, SDValue &Lo,
+                                                  SDValue &Hi) {
+  ExpandFloatRes_Binary(
+      N,
+      GetFPLibCall(N->getValueType(0), RTLIB::FMAXIMUM_NUM_F32,
+                   RTLIB::FMAXIMUM_NUM_F64, RTLIB::FMAXIMUM_NUM_F80,
+                   RTLIB::FMAXIMUM_NUM_F128, RTLIB::FMAXIMUM_NUM_PPCF128),
+      Lo, Hi);
+}
+
 void DAGTypeLegalizer::ExpandFloatRes_FADD(SDNode *N, SDValue &Lo,
                                            SDValue &Hi) {
   ExpandFloatRes_Binary(N, GetFPLibCall(N->getValueType(0),
                                         RTLIB::ADD_F32, RTLIB::ADD_F64,
                                         RTLIB::ADD_F80, RTLIB::ADD_F128,
                                         RTLIB::ADD_PPCF128), Lo, Hi);
+}
+
+void DAGTypeLegalizer::ExpandFloatRes_FACOS(SDNode *N, SDValue &Lo,
+                                            SDValue &Hi) {
+  ExpandFloatRes_Unary(N,
+                       GetFPLibCall(N->getValueType(0), RTLIB::ACOS_F32,
+                                    RTLIB::ACOS_F64, RTLIB::ACOS_F80,
+                                    RTLIB::ACOS_F128, RTLIB::ACOS_PPCF128),
+                       Lo, Hi);
+}
+
+void DAGTypeLegalizer::ExpandFloatRes_FASIN(SDNode *N, SDValue &Lo,
+                                            SDValue &Hi) {
+  ExpandFloatRes_Unary(N,
+                       GetFPLibCall(N->getValueType(0), RTLIB::ASIN_F32,
+                                    RTLIB::ASIN_F64, RTLIB::ASIN_F80,
+                                    RTLIB::ASIN_F128, RTLIB::ASIN_PPCF128),
+                       Lo, Hi);
+}
+
+void DAGTypeLegalizer::ExpandFloatRes_FATAN(SDNode *N, SDValue &Lo,
+                                            SDValue &Hi) {
+  ExpandFloatRes_Unary(N,
+                       GetFPLibCall(N->getValueType(0), RTLIB::ATAN_F32,
+                                    RTLIB::ATAN_F64, RTLIB::ATAN_F80,
+                                    RTLIB::ATAN_F128, RTLIB::ATAN_PPCF128),
+                       Lo, Hi);
+}
+
+void DAGTypeLegalizer::ExpandFloatRes_FATAN2(SDNode *N, SDValue &Lo,
+                                             SDValue &Hi) {
+  ExpandFloatRes_Binary(N,
+                        GetFPLibCall(N->getValueType(0), RTLIB::ATAN2_F32,
+                                     RTLIB::ATAN2_F64, RTLIB::ATAN2_F80,
+                                     RTLIB::ATAN2_F128, RTLIB::ATAN2_PPCF128),
+                        Lo, Hi);
 }
 
 void DAGTypeLegalizer::ExpandFloatRes_FCBRT(SDNode *N, SDValue &Lo,
@@ -1481,6 +1890,15 @@ void DAGTypeLegalizer::ExpandFloatRes_FCOS(SDNode *N,
                                        RTLIB::COS_F32, RTLIB::COS_F64,
                                        RTLIB::COS_F80, RTLIB::COS_F128,
                                        RTLIB::COS_PPCF128), Lo, Hi);
+}
+
+void DAGTypeLegalizer::ExpandFloatRes_FCOSH(SDNode *N, SDValue &Lo,
+                                            SDValue &Hi) {
+  ExpandFloatRes_Unary(N,
+                       GetFPLibCall(N->getValueType(0), RTLIB::COSH_F32,
+                                    RTLIB::COSH_F64, RTLIB::COSH_F80,
+                                    RTLIB::COSH_F128, RTLIB::COSH_PPCF128),
+                       Lo, Hi);
 }
 
 void DAGTypeLegalizer::ExpandFloatRes_FDIV(SDNode *N, SDValue &Lo,
@@ -1599,6 +2017,13 @@ void DAGTypeLegalizer::ExpandFloatRes_FNEG(SDNode *N, SDValue &Lo,
   Hi = DAG.getNode(ISD::FNEG, dl, Hi.getValueType(), Hi);
 }
 
+void DAGTypeLegalizer::ExpandFloatRes_AssertNoFPClass(SDNode *N, SDValue &Lo,
+                                                      SDValue &Hi) {
+  // TODO: Handle ppcf128 by preserving AssertNoFPClass for one of the halves.
+  SDLoc dl(N);
+  GetExpandedFloat(N->getOperand(0), Lo, Hi);
+}
+
 void DAGTypeLegalizer::ExpandFloatRes_FP_EXTEND(SDNode *N, SDValue &Lo,
                                                 SDValue &Hi) {
   EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
@@ -1621,8 +2046,7 @@ void DAGTypeLegalizer::ExpandFloatRes_FP_EXTEND(SDNode *N, SDValue &Lo,
     Hi = DAG.getNode(ISD::FP_EXTEND, dl, NVT, N->getOperand(0));
   }
 
-  Lo = DAG.getConstantFP(APFloat(DAG.EVTToAPFloatSemantics(NVT),
-                                 APInt(NVT.getSizeInBits(), 0)), dl, NVT);
+  Lo = DAG.getConstantFP(APFloat::getZero(NVT.getFltSemantics()), dl, NVT);
 
   if (IsStrict)
     ReplaceValueWith(SDValue(N, 1), Chain);
@@ -1701,6 +2125,15 @@ void DAGTypeLegalizer::ExpandFloatRes_FSIN(SDNode *N,
                                        RTLIB::SIN_PPCF128), Lo, Hi);
 }
 
+void DAGTypeLegalizer::ExpandFloatRes_FSINH(SDNode *N, SDValue &Lo,
+                                            SDValue &Hi) {
+  ExpandFloatRes_Unary(N,
+                       GetFPLibCall(N->getValueType(0), RTLIB::SINH_F32,
+                                    RTLIB::SINH_F64, RTLIB::SINH_F80,
+                                    RTLIB::SINH_F128, RTLIB::SINH_PPCF128),
+                       Lo, Hi);
+}
+
 void DAGTypeLegalizer::ExpandFloatRes_FSQRT(SDNode *N,
                                             SDValue &Lo, SDValue &Hi) {
   ExpandFloatRes_Unary(N, GetFPLibCall(N->getValueType(0),
@@ -1717,6 +2150,24 @@ void DAGTypeLegalizer::ExpandFloatRes_FSUB(SDNode *N, SDValue &Lo,
                                         RTLIB::SUB_F80,
                                         RTLIB::SUB_F128,
                                         RTLIB::SUB_PPCF128), Lo, Hi);
+}
+
+void DAGTypeLegalizer::ExpandFloatRes_FTAN(SDNode *N, SDValue &Lo,
+                                           SDValue &Hi) {
+  ExpandFloatRes_Unary(N,
+                       GetFPLibCall(N->getValueType(0), RTLIB::TAN_F32,
+                                    RTLIB::TAN_F64, RTLIB::TAN_F80,
+                                    RTLIB::TAN_F128, RTLIB::TAN_PPCF128),
+                       Lo, Hi);
+}
+
+void DAGTypeLegalizer::ExpandFloatRes_FTANH(SDNode *N, SDValue &Lo,
+                                            SDValue &Hi) {
+  ExpandFloatRes_Unary(N,
+                       GetFPLibCall(N->getValueType(0), RTLIB::TANH_F32,
+                                    RTLIB::TANH_F64, RTLIB::TANH_F80,
+                                    RTLIB::TANH_F128, RTLIB::TANH_PPCF128),
+                       Lo, Hi);
 }
 
 void DAGTypeLegalizer::ExpandFloatRes_FTRUNC(SDNode *N,
@@ -1751,8 +2202,7 @@ void DAGTypeLegalizer::ExpandFloatRes_LOAD(SDNode *N, SDValue &Lo,
   Chain = Hi.getValue(1);
 
   // The low part is zero.
-  Lo = DAG.getConstantFP(APFloat(DAG.EVTToAPFloatSemantics(NVT),
-                                 APInt(NVT.getSizeInBits(), 0)), dl, NVT);
+  Lo = DAG.getConstantFP(APFloat::getZero(NVT.getFltSemantics()), dl, NVT);
 
   // Modified the chain - switch anything that used the old chain to use the
   // new one.
@@ -1781,8 +2231,7 @@ void DAGTypeLegalizer::ExpandFloatRes_XINT_TO_FP(SDNode *N, SDValue &Lo,
   // though.
   if (SrcVT.bitsLE(MVT::i32)) {
     // The integer can be represented exactly in an f64.
-    Lo = DAG.getConstantFP(APFloat(DAG.EVTToAPFloatSemantics(NVT),
-                                   APInt(NVT.getSizeInBits(), 0)), dl, NVT);
+    Lo = DAG.getConstantFP(APFloat::getZero(NVT.getFltSemantics()), dl, NVT);
     if (Strict) {
       Hi = DAG.getNode(N->getOpcode(), dl, DAG.getVTList(NVT, MVT::Other),
                        {Chain, Src}, Flags);
@@ -1802,7 +2251,7 @@ void DAGTypeLegalizer::ExpandFloatRes_XINT_TO_FP(SDNode *N, SDValue &Lo,
     assert(LC != RTLIB::UNKNOWN_LIBCALL && "Unsupported XINT_TO_FP!");
 
     TargetLowering::MakeLibCallOptions CallOptions;
-    CallOptions.setSExt(true);
+    CallOptions.setIsSigned(true);
     std::pair<SDValue, SDValue> Tmp =
         TLI.makeLibCall(DAG, LC, VT, Src, CallOptions, dl, Chain);
     if (Strict)
@@ -1870,7 +2319,7 @@ void DAGTypeLegalizer::ExpandFloatRes_XINT_TO_FP(SDNode *N, SDValue &Lo,
 /// types of the node are known to be legal, but other operands of the node may
 /// need promotion or expansion as well as the specified one.
 bool DAGTypeLegalizer::ExpandFloatOperand(SDNode *N, unsigned OpNo) {
-  LLVM_DEBUG(dbgs() << "Expand float operand: "; N->dump(&DAG); dbgs() << "\n");
+  LLVM_DEBUG(dbgs() << "Expand float operand: "; N->dump(&DAG));
   SDValue Res = SDValue();
 
   // See if the target wants to custom expand this node.
@@ -2170,22 +2619,31 @@ SDValue DAGTypeLegalizer::ExpandFloatOp_LLRINT(SDNode *N) {
 //
 
 static ISD::NodeType GetPromotionOpcode(EVT OpVT, EVT RetVT) {
-  if (OpVT == MVT::f16) {
+  if (OpVT == MVT::f16)
     return ISD::FP16_TO_FP;
-  } else if (RetVT == MVT::f16) {
+  if (RetVT == MVT::f16)
     return ISD::FP_TO_FP16;
-  } else if (OpVT == MVT::bf16) {
+  if (OpVT == MVT::bf16)
     return ISD::BF16_TO_FP;
-  } else if (RetVT == MVT::bf16) {
+  if (RetVT == MVT::bf16)
     return ISD::FP_TO_BF16;
-  }
+  report_fatal_error("Attempt at an invalid promotion-related conversion");
+}
 
+static ISD::NodeType GetPromotionOpcodeStrict(EVT OpVT, EVT RetVT) {
+  if (OpVT == MVT::f16)
+    return ISD::STRICT_FP16_TO_FP;
+  if (RetVT == MVT::f16)
+    return ISD::STRICT_FP_TO_FP16;
+  if (OpVT == MVT::bf16)
+    return ISD::STRICT_BF16_TO_FP;
+  if (RetVT == MVT::bf16)
+    return ISD::STRICT_FP_TO_BF16;
   report_fatal_error("Attempt at an invalid promotion-related conversion");
 }
 
 bool DAGTypeLegalizer::PromoteFloatOperand(SDNode *N, unsigned OpNo) {
-  LLVM_DEBUG(dbgs() << "Promote float operand " << OpNo << ": "; N->dump(&DAG);
-             dbgs() << "\n");
+  LLVM_DEBUG(dbgs() << "Promote float operand " << OpNo << ": "; N->dump(&DAG));
   SDValue R = SDValue();
 
   if (CustomLowerNode(N, N->getOperand(OpNo).getValueType(), false)) {
@@ -2208,18 +2666,28 @@ bool DAGTypeLegalizer::PromoteFloatOperand(SDNode *N, unsigned OpNo) {
       report_fatal_error("Do not know how to promote this operator's operand!");
 
     case ISD::BITCAST:    R = PromoteFloatOp_BITCAST(N, OpNo); break;
+    case ISD::FAKE_USE:
+      R = PromoteFloatOp_FAKE_USE(N, OpNo);
+      break;
     case ISD::FCOPYSIGN:  R = PromoteFloatOp_FCOPYSIGN(N, OpNo); break;
     case ISD::FP_TO_SINT:
     case ISD::FP_TO_UINT:
+    case ISD::LROUND:
+    case ISD::LLROUND:
     case ISD::LRINT:
     case ISD::LLRINT:     R = PromoteFloatOp_UnaryOp(N, OpNo); break;
+    case ISD::AssertNoFPClass:     R = PromoteFloatOp_AssertNoFPClass(N, OpNo); break;
     case ISD::FP_TO_SINT_SAT:
     case ISD::FP_TO_UINT_SAT:
                           R = PromoteFloatOp_FP_TO_XINT_SAT(N, OpNo); break;
     case ISD::FP_EXTEND:  R = PromoteFloatOp_FP_EXTEND(N, OpNo); break;
+    case ISD::STRICT_FP_EXTEND:
+      R = PromoteFloatOp_STRICT_FP_EXTEND(N, OpNo);
+      break;
     case ISD::SELECT_CC:  R = PromoteFloatOp_SELECT_CC(N, OpNo); break;
     case ISD::SETCC:      R = PromoteFloatOp_SETCC(N, OpNo); break;
     case ISD::STORE:      R = PromoteFloatOp_STORE(N, OpNo); break;
+    case ISD::ATOMIC_STORE: R = PromoteFloatOp_ATOMIC_STORE(N, OpNo); break;
   }
   // clang-format on
 
@@ -2244,6 +2712,13 @@ SDValue DAGTypeLegalizer::PromoteFloatOp_BITCAST(SDNode *N, unsigned OpNo) {
   return DAG.getBitcast(N->getValueType(0), Convert);
 }
 
+SDValue DAGTypeLegalizer::PromoteFloatOp_FAKE_USE(SDNode *N, unsigned OpNo) {
+  assert(OpNo == 1 && "Only Operand 1 must need promotion here");
+  SDValue Op = GetPromotedFloat(N->getOperand(OpNo));
+  return DAG.getNode(N->getOpcode(), SDLoc(N), MVT::Other, N->getOperand(0),
+                     Op);
+}
+
 // Promote Operand 1 of FCOPYSIGN.  Operand 0 ought to be handled by
 // PromoteFloatRes_FCOPYSIGN.
 SDValue DAGTypeLegalizer::PromoteFloatOp_FCOPYSIGN(SDNode *N, unsigned OpNo) {
@@ -2258,6 +2733,12 @@ SDValue DAGTypeLegalizer::PromoteFloatOp_FCOPYSIGN(SDNode *N, unsigned OpNo) {
 SDValue DAGTypeLegalizer::PromoteFloatOp_UnaryOp(SDNode *N, unsigned OpNo) {
   SDValue Op = GetPromotedFloat(N->getOperand(0));
   return DAG.getNode(N->getOpcode(), SDLoc(N), N->getValueType(0), Op);
+}
+
+// Convert the promoted float value to the desired integer type
+SDValue DAGTypeLegalizer::PromoteFloatOp_AssertNoFPClass(SDNode *N,
+                                                         unsigned OpNo) {
+  return GetPromotedFloat(N->getOperand(0));
 }
 
 SDValue DAGTypeLegalizer::PromoteFloatOp_FP_TO_XINT_SAT(SDNode *N,
@@ -2277,6 +2758,26 @@ SDValue DAGTypeLegalizer::PromoteFloatOp_FP_EXTEND(SDNode *N, unsigned OpNo) {
 
   // Else, extend the promoted float value to the desired VT.
   return DAG.getNode(ISD::FP_EXTEND, SDLoc(N), VT, Op);
+}
+
+SDValue DAGTypeLegalizer::PromoteFloatOp_STRICT_FP_EXTEND(SDNode *N,
+                                                          unsigned OpNo) {
+  assert(OpNo == 1 && "Promoting unpromotable operand");
+
+  SDValue Op = GetPromotedFloat(N->getOperand(1));
+  EVT VT = N->getValueType(0);
+
+  // Desired VT is same as promoted type.  Use promoted float directly.
+  if (VT == Op->getValueType(0)) {
+    ReplaceValueWith(SDValue(N, 1), N->getOperand(0));
+    return Op;
+  }
+
+  // Else, extend the promoted float value to the desired VT.
+  SDValue Res = DAG.getNode(ISD::STRICT_FP_EXTEND, SDLoc(N), N->getVTList(),
+                            N->getOperand(0), Op);
+  ReplaceValueWith(SDValue(N, 1), Res.getValue(1));
+  return Res;
 }
 
 // Promote the float operands used for comparison.  The true- and false-
@@ -2322,13 +2823,29 @@ SDValue DAGTypeLegalizer::PromoteFloatOp_STORE(SDNode *N, unsigned OpNo) {
                       ST->getMemOperand());
 }
 
+SDValue DAGTypeLegalizer::PromoteFloatOp_ATOMIC_STORE(SDNode *N,
+                                                      unsigned OpNo) {
+  AtomicSDNode *ST = cast<AtomicSDNode>(N);
+  SDValue Val = ST->getVal();
+  SDLoc DL(N);
+
+  SDValue Promoted = GetPromotedFloat(Val);
+  EVT VT = ST->getOperand(1).getValueType();
+  EVT IVT = EVT::getIntegerVT(*DAG.getContext(), VT.getSizeInBits());
+
+  SDValue NewVal = DAG.getNode(GetPromotionOpcode(Promoted.getValueType(), VT),
+                               DL, IVT, Promoted);
+
+  return DAG.getAtomic(ISD::ATOMIC_STORE, DL, IVT, ST->getChain(), NewVal,
+                       ST->getBasePtr(), ST->getMemOperand());
+}
+
 //===----------------------------------------------------------------------===//
 //  Float Result Promotion
 //===----------------------------------------------------------------------===//
 
 void DAGTypeLegalizer::PromoteFloatResult(SDNode *N, unsigned ResNo) {
-  LLVM_DEBUG(dbgs() << "Promote float result " << ResNo << ": "; N->dump(&DAG);
-             dbgs() << "\n");
+  LLVM_DEBUG(dbgs() << "Promote float result " << ResNo << ": "; N->dump(&DAG));
   SDValue R = SDValue();
 
   // See if the target wants to custom expand this node.
@@ -2349,7 +2866,12 @@ void DAGTypeLegalizer::PromoteFloatResult(SDNode *N, unsigned ResNo) {
 #endif
       report_fatal_error("Do not know how to promote this operator's result!");
 
-    case ISD::BITCAST:    R = PromoteFloatRes_BITCAST(N); break;
+    case ISD::BITCAST:
+      R = PromoteFloatRes_BITCAST(N);
+      break;
+    case ISD::FREEZE:
+      R = PromoteFloatRes_FREEZE(N);
+      break;
     case ISD::ConstantFP: R = PromoteFloatRes_ConstantFP(N); break;
     case ISD::EXTRACT_VECTOR_ELT:
                           R = PromoteFloatRes_EXTRACT_VECTOR_ELT(N); break;
@@ -2357,9 +2879,13 @@ void DAGTypeLegalizer::PromoteFloatResult(SDNode *N, unsigned ResNo) {
 
     // Unary FP Operations
     case ISD::FABS:
+    case ISD::FACOS:
+    case ISD::FASIN:
+    case ISD::FATAN:
     case ISD::FCBRT:
     case ISD::FCEIL:
     case ISD::FCOS:
+    case ISD::FCOSH:
     case ISD::FEXP:
     case ISD::FEXP2:
     case ISD::FEXP10:
@@ -2373,19 +2899,30 @@ void DAGTypeLegalizer::PromoteFloatResult(SDNode *N, unsigned ResNo) {
     case ISD::FROUND:
     case ISD::FROUNDEVEN:
     case ISD::FSIN:
+    case ISD::FSINH:
     case ISD::FSQRT:
     case ISD::FTRUNC:
+    case ISD::FTAN:
+    case ISD::FTANH:
     case ISD::FCANONICALIZE: R = PromoteFloatRes_UnaryOp(N); break;
+    case ISD::AssertNoFPClass:
+      R = PromoteFloatRes_AssertNoFPClass(N);
+      break;
 
     // Binary FP Operations
     case ISD::FADD:
     case ISD::FDIV:
     case ISD::FMAXIMUM:
     case ISD::FMINIMUM:
+    case ISD::FMAXIMUMNUM:
+    case ISD::FMINIMUMNUM:
     case ISD::FMAXNUM:
     case ISD::FMINNUM:
+    case ISD::FMAXNUM_IEEE:
+    case ISD::FMINNUM_IEEE:
     case ISD::FMUL:
     case ISD::FPOW:
+    case ISD::FATAN2:
     case ISD::FREM:
     case ISD::FSUB:       R = PromoteFloatRes_BinOp(N); break;
 
@@ -2396,13 +2933,25 @@ void DAGTypeLegalizer::PromoteFloatResult(SDNode *N, unsigned ResNo) {
     case ISD::FLDEXP:     R = PromoteFloatRes_ExpOp(N); break;
     case ISD::FFREXP:     R = PromoteFloatRes_FFREXP(N); break;
 
+    case ISD::FMODF:
+    case ISD::FSINCOS:
+    case ISD::FSINCOSPI:
+      R = PromoteFloatRes_UnaryWithTwoFPResults(N);
+      break;
     case ISD::FP_ROUND:   R = PromoteFloatRes_FP_ROUND(N); break;
+    case ISD::STRICT_FP_ROUND:
+      R = PromoteFloatRes_STRICT_FP_ROUND(N);
+      break;
     case ISD::LOAD:       R = PromoteFloatRes_LOAD(N); break;
+    case ISD::ATOMIC_LOAD:
+      R = PromoteFloatRes_ATOMIC_LOAD(N);
+      break;
     case ISD::SELECT:     R = PromoteFloatRes_SELECT(N); break;
     case ISD::SELECT_CC:  R = PromoteFloatRes_SELECT_CC(N); break;
 
     case ISD::SINT_TO_FP:
     case ISD::UINT_TO_FP: R = PromoteFloatRes_XINT_TO_FP(N); break;
+    case ISD::POISON:
     case ISD::UNDEF:      R = PromoteFloatRes_UNDEF(N); break;
     case ISD::ATOMIC_SWAP: R = BitcastToInt_ATOMIC_SWAP(N); break;
     case ISD::VECREDUCE_FADD:
@@ -2439,6 +2988,18 @@ SDValue DAGTypeLegalizer::PromoteFloatRes_BITCAST(SDNode *N) {
   return DAG.getNode(GetPromotionOpcode(VT, NVT), SDLoc(N), NVT, Cast);
 }
 
+SDValue DAGTypeLegalizer::PromoteFloatRes_FREEZE(SDNode *N) {
+  EVT VT = N->getValueType(0);
+  EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), VT);
+  // Input type isn't guaranteed to be a scalar int so bitcast if not. The
+  // bitcast will be legalized further if necessary.
+  EVT IVT = EVT::getIntegerVT(*DAG.getContext(),
+                              N->getOperand(0).getValueType().getSizeInBits());
+  SDValue Cast = DAG.getBitcast(IVT, N->getOperand(0));
+  return DAG.getNode(GetPromotionOpcode(VT, NVT), SDLoc(N), NVT,
+                     DAG.getFreeze(Cast));
+}
+
 SDValue DAGTypeLegalizer::PromoteFloatRes_ConstantFP(SDNode *N) {
   ConstantFPSDNode *CFPNode = cast<ConstantFPSDNode>(N);
   EVT VT = N->getValueType(0);
@@ -2471,7 +3032,7 @@ SDValue DAGTypeLegalizer::PromoteFloatRes_EXTRACT_VECTOR_ELT(SDNode *N) {
     EVT VecVT = Vec->getValueType(0);
     EVT EltVT = VecVT.getVectorElementType();
 
-    uint64_t IdxVal = cast<ConstantSDNode>(Idx)->getZExtValue();
+    uint64_t IdxVal = Idx->getAsZExtVal();
 
     switch (getTypeAction(VecVT)) {
     default: break;
@@ -2539,8 +3100,14 @@ SDValue DAGTypeLegalizer::PromoteFloatRes_UnaryOp(SDNode *N) {
   EVT VT = N->getValueType(0);
   EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), VT);
   SDValue Op = GetPromotedFloat(N->getOperand(0));
-
   return DAG.getNode(N->getOpcode(), SDLoc(N), NVT, Op);
+}
+
+// Unary operation with a more non-float operand where the result and the
+// operand have PromoteFloat type action.  Construct a new SDNode with the
+// promoted float value of the old operand.
+SDValue DAGTypeLegalizer::PromoteFloatRes_AssertNoFPClass(SDNode *N) {
+  return GetPromotedFloat(N->getOperand(0));
 }
 
 // Binary operations where the result and both operands have PromoteFloat type
@@ -2585,6 +3152,20 @@ SDValue DAGTypeLegalizer::PromoteFloatRes_FFREXP(SDNode *N) {
   return Res;
 }
 
+SDValue DAGTypeLegalizer::PromoteFloatRes_UnaryWithTwoFPResults(SDNode *N) {
+  EVT VT = N->getValueType(0);
+  EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), VT);
+  SDValue Op = GetPromotedFloat(N->getOperand(0));
+  SDValue Res = DAG.getNode(N->getOpcode(), SDLoc(N), {NVT, NVT}, Op);
+
+  for (unsigned ResNum = 0, NumValues = N->getNumValues(); ResNum < NumValues;
+       ++ResNum) {
+    SetPromotedFloat(SDValue(N, ResNum), Res.getValue(ResNum));
+  }
+
+  return SDValue();
+}
+
 // Explicit operation to reduce precision.  Reduce the value to half precision
 // and promote it back to the legal type.
 SDValue DAGTypeLegalizer::PromoteFloatRes_FP_ROUND(SDNode *N) {
@@ -2602,6 +3183,29 @@ SDValue DAGTypeLegalizer::PromoteFloatRes_FP_ROUND(SDNode *N) {
   return DAG.getNode(GetPromotionOpcode(VT, NVT), DL, NVT, Round);
 }
 
+// Explicit operation to reduce precision.  Reduce the value to half precision
+// and promote it back to the legal type.
+SDValue DAGTypeLegalizer::PromoteFloatRes_STRICT_FP_ROUND(SDNode *N) {
+  SDLoc DL(N);
+
+  SDValue Chain = N->getOperand(0);
+  SDValue Op = N->getOperand(1);
+  EVT VT = N->getValueType(0);
+  EVT OpVT = Op->getValueType(0);
+  EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
+  EVT IVT = EVT::getIntegerVT(*DAG.getContext(), VT.getSizeInBits());
+
+  // Round promoted float to desired precision
+  SDValue Round = DAG.getNode(GetPromotionOpcodeStrict(OpVT, VT), DL,
+                              DAG.getVTList(IVT, MVT::Other), Chain, Op);
+  // Promote it back to the legal output type
+  SDValue Res =
+      DAG.getNode(GetPromotionOpcodeStrict(VT, NVT), DL,
+                  DAG.getVTList(NVT, MVT::Other), Round.getValue(1), Round);
+  ReplaceValueWith(SDValue(N, 1), Res.getValue(1));
+  return Res;
+}
+
 SDValue DAGTypeLegalizer::PromoteFloatRes_LOAD(SDNode *N) {
   LoadSDNode *L = cast<LoadSDNode>(N);
   EVT VT = N->getValueType(0);
@@ -2611,7 +3215,7 @@ SDValue DAGTypeLegalizer::PromoteFloatRes_LOAD(SDNode *N) {
   SDValue newL = DAG.getLoad(
       L->getAddressingMode(), L->getExtensionType(), IVT, SDLoc(N),
       L->getChain(), L->getBasePtr(), L->getOffset(), L->getPointerInfo(), IVT,
-      L->getOriginalAlign(), L->getMemOperand()->getFlags(), L->getAAInfo());
+      L->getBaseAlign(), L->getMemOperand()->getFlags(), L->getAAInfo());
   // Legalize the chain result by replacing uses of the old value chain with the
   // new one
   ReplaceValueWith(SDValue(N, 1), newL.getValue(1));
@@ -2619,6 +3223,25 @@ SDValue DAGTypeLegalizer::PromoteFloatRes_LOAD(SDNode *N) {
   // Convert the integer value to the desired FP type
   EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), VT);
   return DAG.getNode(GetPromotionOpcode(VT, NVT), SDLoc(N), NVT, newL);
+}
+
+SDValue DAGTypeLegalizer::PromoteFloatRes_ATOMIC_LOAD(SDNode *N) {
+  AtomicSDNode *AM = cast<AtomicSDNode>(N);
+  EVT VT = AM->getValueType(0);
+
+  // Load the value as an integer value with the same number of bits.
+  EVT IVT = EVT::getIntegerVT(*DAG.getContext(), VT.getSizeInBits());
+  SDValue newL = DAG.getAtomic(
+      ISD::ATOMIC_LOAD, SDLoc(N), IVT, DAG.getVTList(IVT, MVT::Other),
+      {AM->getChain(), AM->getBasePtr()}, AM->getMemOperand());
+
+  // Legalize the chain result by replacing uses of the old value chain with the
+  // new one
+  ReplaceValueWith(SDValue(N, 1), newL.getValue(1));
+
+  // Convert the integer value to the desired FP type
+  EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), VT);
+  return DAG.getNode(GetPromotionOpcode(VT, IVT), SDLoc(N), NVT, newL);
 }
 
 // Construct a new SELECT node with the promoted true- and false- values.
@@ -2711,7 +3334,7 @@ SDValue DAGTypeLegalizer::BitcastToInt_ATOMIC_SWAP(SDNode *N) {
 
 void DAGTypeLegalizer::SoftPromoteHalfResult(SDNode *N, unsigned ResNo) {
   LLVM_DEBUG(dbgs() << "Soft promote half result " << ResNo << ": ";
-             N->dump(&DAG); dbgs() << "\n");
+             N->dump(&DAG));
   SDValue R = SDValue();
 
   // See if the target wants to custom expand this node.
@@ -2729,6 +3352,8 @@ void DAGTypeLegalizer::SoftPromoteHalfResult(SDNode *N, unsigned ResNo) {
     report_fatal_error("Do not know how to soft promote this operator's "
                        "result!");
 
+  case ISD::ARITH_FENCE:
+    R = SoftPromoteHalfRes_ARITH_FENCE(N); break;
   case ISD::BITCAST:    R = SoftPromoteHalfRes_BITCAST(N); break;
   case ISD::ConstantFP: R = SoftPromoteHalfRes_ConstantFP(N); break;
   case ISD::EXTRACT_VECTOR_ELT:
@@ -2738,10 +3363,13 @@ void DAGTypeLegalizer::SoftPromoteHalfResult(SDNode *N, unsigned ResNo) {
   case ISD::FP_ROUND:   R = SoftPromoteHalfRes_FP_ROUND(N); break;
 
   // Unary FP Operations
-  case ISD::FABS:
+  case ISD::FACOS:
+  case ISD::FASIN:
+  case ISD::FATAN:
   case ISD::FCBRT:
   case ISD::FCEIL:
   case ISD::FCOS:
+  case ISD::FCOSH:
   case ISD::FEXP:
   case ISD::FEXP2:
   case ISD::FEXP10:
@@ -2750,25 +3378,39 @@ void DAGTypeLegalizer::SoftPromoteHalfResult(SDNode *N, unsigned ResNo) {
   case ISD::FLOG2:
   case ISD::FLOG10:
   case ISD::FNEARBYINT:
-  case ISD::FNEG:
   case ISD::FREEZE:
   case ISD::FRINT:
   case ISD::FROUND:
   case ISD::FROUNDEVEN:
   case ISD::FSIN:
+  case ISD::FSINH:
   case ISD::FSQRT:
   case ISD::FTRUNC:
+  case ISD::FTAN:
+  case ISD::FTANH:
   case ISD::FCANONICALIZE: R = SoftPromoteHalfRes_UnaryOp(N); break;
+  case ISD::FABS:
+    R = SoftPromoteHalfRes_FABS(N);
+    break;
+  case ISD::FNEG:
+    R = SoftPromoteHalfRes_FNEG(N);
+    break;
+  case ISD::AssertNoFPClass:
+    R = SoftPromoteHalfRes_AssertNoFPClass(N);
+    break;
 
   // Binary FP Operations
   case ISD::FADD:
   case ISD::FDIV:
   case ISD::FMAXIMUM:
   case ISD::FMINIMUM:
+  case ISD::FMAXIMUMNUM:
+  case ISD::FMINIMUMNUM:
   case ISD::FMAXNUM:
   case ISD::FMINNUM:
   case ISD::FMUL:
   case ISD::FPOW:
+  case ISD::FATAN2:
   case ISD::FREM:
   case ISD::FSUB:        R = SoftPromoteHalfRes_BinOp(N); break;
 
@@ -2778,11 +3420,25 @@ void DAGTypeLegalizer::SoftPromoteHalfResult(SDNode *N, unsigned ResNo) {
   case ISD::FPOWI:
   case ISD::FLDEXP:      R = SoftPromoteHalfRes_ExpOp(N); break;
 
+  case ISD::FFREXP:      R = SoftPromoteHalfRes_FFREXP(N); break;
+
+  case ISD::FMODF:
+  case ISD::FSINCOS:
+  case ISD::FSINCOSPI:
+    R = SoftPromoteHalfRes_UnaryWithTwoFPResults(N);
+    break;
+
   case ISD::LOAD:        R = SoftPromoteHalfRes_LOAD(N); break;
+  case ISD::ATOMIC_LOAD:
+    R = SoftPromoteHalfRes_ATOMIC_LOAD(N);
+    break;
   case ISD::SELECT:      R = SoftPromoteHalfRes_SELECT(N); break;
   case ISD::SELECT_CC:   R = SoftPromoteHalfRes_SELECT_CC(N); break;
+  case ISD::STRICT_SINT_TO_FP:
+  case ISD::STRICT_UINT_TO_FP:
   case ISD::SINT_TO_FP:
   case ISD::UINT_TO_FP:  R = SoftPromoteHalfRes_XINT_TO_FP(N); break;
+  case ISD::POISON:
   case ISD::UNDEF:       R = SoftPromoteHalfRes_UNDEF(N); break;
   case ISD::ATOMIC_SWAP: R = BitcastToInt_ATOMIC_SWAP(N); break;
   case ISD::VECREDUCE_FADD:
@@ -2801,6 +3457,11 @@ void DAGTypeLegalizer::SoftPromoteHalfResult(SDNode *N, unsigned ResNo) {
 
   if (R.getNode())
     SetSoftPromotedHalf(SDValue(N, ResNo), R);
+}
+
+SDValue DAGTypeLegalizer::SoftPromoteHalfRes_ARITH_FENCE(SDNode *N) {
+  return DAG.getNode(ISD::ARITH_FENCE, SDLoc(N), MVT::i16,
+                     BitConvertToInteger(N->getOperand(0)));
 }
 
 SDValue DAGTypeLegalizer::SoftPromoteHalfRes_BITCAST(SDNode *N) {
@@ -2876,6 +3537,7 @@ SDValue DAGTypeLegalizer::SoftPromoteHalfRes_FMAD(SDNode *N) {
   SDValue Op0 = GetSoftPromotedHalf(N->getOperand(0));
   SDValue Op1 = GetSoftPromotedHalf(N->getOperand(1));
   SDValue Op2 = GetSoftPromotedHalf(N->getOperand(2));
+  SDNodeFlags Flags = N->getFlags();
   SDLoc dl(N);
 
   // Promote to the larger FP type.
@@ -2884,9 +3546,28 @@ SDValue DAGTypeLegalizer::SoftPromoteHalfRes_FMAD(SDNode *N) {
   Op1 = DAG.getNode(PromotionOpcode, dl, NVT, Op1);
   Op2 = DAG.getNode(PromotionOpcode, dl, NVT, Op2);
 
-  SDValue Res = DAG.getNode(N->getOpcode(), dl, NVT, Op0, Op1, Op2);
+  SDValue Res;
+  if (OVT == MVT::f16) {
+    // If f16 fma is not natively supported, the value must be promoted to an
+    // f64 (and not to f32!) to prevent double rounding issues.
+    SDValue A64 = DAG.getNode(ISD::FP_EXTEND, dl, MVT::f64, Op0, Flags);
+    SDValue B64 = DAG.getNode(ISD::FP_EXTEND, dl, MVT::f64, Op1, Flags);
+    SDValue C64 = DAG.getNode(ISD::FP_EXTEND, dl, MVT::f64, Op2, Flags);
 
-  // Convert back to FP16 as an integer.
+    // Prefer a wide FMA node if available; otherwise expand to mul+add.
+    SDValue WideRes;
+    if (TLI.isFMAFasterThanFMulAndFAdd(DAG.getMachineFunction(), MVT::f64)) {
+      WideRes = DAG.getNode(ISD::FMA, dl, MVT::f64, A64, B64, C64, Flags);
+    } else {
+      SDValue Mul = DAG.getNode(ISD::FMUL, dl, MVT::f64, A64, B64, Flags);
+      WideRes = DAG.getNode(ISD::FADD, dl, MVT::f64, Mul, C64, Flags);
+    }
+
+    return DAG.getNode(GetPromotionOpcode(MVT::f64, OVT), dl, MVT::i16,
+                       WideRes);
+  }
+
+  Res = DAG.getNode(N->getOpcode(), dl, NVT, Op0, Op1, Op2, Flags);
   return DAG.getNode(GetPromotionOpcode(NVT, OVT), dl, MVT::i16, Res);
 }
 
@@ -2906,15 +3587,71 @@ SDValue DAGTypeLegalizer::SoftPromoteHalfRes_ExpOp(SDNode *N) {
   return DAG.getNode(GetPromotionOpcode(NVT, OVT), dl, MVT::i16, Res);
 }
 
+SDValue DAGTypeLegalizer::SoftPromoteHalfRes_FFREXP(SDNode *N) {
+  EVT OVT = N->getValueType(0);
+  EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), OVT);
+  SDValue Op = GetSoftPromotedHalf(N->getOperand(0));
+  SDLoc dl(N);
+
+  // Promote to the larger FP type.
+  Op = DAG.getNode(GetPromotionOpcode(OVT, NVT), dl, NVT, Op);
+
+  SDValue Res = DAG.getNode(N->getOpcode(), dl,
+                            DAG.getVTList(NVT, N->getValueType(1)), Op);
+
+  ReplaceValueWith(SDValue(N, 1), Res.getValue(1));
+
+  // Convert back to FP16 as an integer.
+  return DAG.getNode(GetPromotionOpcode(NVT, OVT), dl, MVT::i16, Res);
+}
+
+SDValue DAGTypeLegalizer::SoftPromoteHalfRes_UnaryWithTwoFPResults(SDNode *N) {
+  EVT OVT = N->getValueType(0);
+  EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), OVT);
+  SDValue Op = GetSoftPromotedHalf(N->getOperand(0));
+  SDLoc dl(N);
+
+  // Promote to the larger FP type.
+  Op = DAG.getNode(GetPromotionOpcode(OVT, NVT), dl, NVT, Op);
+  SDValue Res = DAG.getNode(N->getOpcode(), dl, DAG.getVTList(NVT, NVT), Op);
+
+  // Convert back to FP16 as an integer.
+  ISD::NodeType Truncate = GetPromotionOpcode(NVT, OVT);
+  for (unsigned ResNum = 0, NumValues = N->getNumValues(); ResNum < NumValues;
+       ++ResNum) {
+    SDValue Trunc = DAG.getNode(Truncate, dl, MVT::i16, Res.getValue(ResNum));
+    SetSoftPromotedHalf(SDValue(N, ResNum), Trunc);
+  }
+
+  return SDValue();
+}
+
 SDValue DAGTypeLegalizer::SoftPromoteHalfRes_FP_ROUND(SDNode *N) {
   EVT RVT = N->getValueType(0);
-  EVT SVT = N->getOperand(0).getValueType();
+  bool IsStrict = N->isStrictFPOpcode();
+  SDValue Op = N->getOperand(IsStrict ? 1 : 0);
+  EVT SVT = Op.getValueType();
 
-  if (N->isStrictFPOpcode()) {
-    assert(RVT == MVT::f16);
-    SDValue Res =
-        DAG.getNode(ISD::STRICT_FP_TO_FP16, SDLoc(N), {MVT::i16, MVT::Other},
-                    {N->getOperand(0), N->getOperand(1)});
+  // If the input type needs to be softened, do that now so that call lowering
+  // will see the f16 type.
+  if (getTypeAction(SVT) == TargetLowering::TypeSoftenFloat) {
+    RTLIB::Libcall LC = RTLIB::getFPROUND(SVT, RVT);
+    assert(LC != RTLIB::UNKNOWN_LIBCALL && "Unsupported FP_ROUND libcall");
+
+    SDValue Chain = IsStrict ? N->getOperand(0) : SDValue();
+    Op = GetSoftenedFloat(Op);
+    TargetLowering::MakeLibCallOptions CallOptions;
+    CallOptions.setTypeListBeforeSoften(SVT, RVT);
+    std::pair<SDValue, SDValue> Tmp =
+        TLI.makeLibCall(DAG, LC, RVT, Op, CallOptions, SDLoc(N), Chain);
+    if (IsStrict)
+      ReplaceValueWith(SDValue(N, 1), Tmp.second);
+    return DAG.getNode(ISD::BITCAST, SDLoc(N), MVT::i16, Tmp.first);
+  }
+
+  if (IsStrict) {
+    SDValue Res = DAG.getNode(GetPromotionOpcodeStrict(SVT, RVT), SDLoc(N),
+                              {MVT::i16, MVT::Other}, {N->getOperand(0), Op});
     ReplaceValueWith(SDValue(N, 1), Res.getValue(1));
     return Res;
   }
@@ -2931,8 +3668,22 @@ SDValue DAGTypeLegalizer::SoftPromoteHalfRes_LOAD(SDNode *N) {
   SDValue NewL =
       DAG.getLoad(L->getAddressingMode(), L->getExtensionType(), MVT::i16,
                   SDLoc(N), L->getChain(), L->getBasePtr(), L->getOffset(),
-                  L->getPointerInfo(), MVT::i16, L->getOriginalAlign(),
+                  L->getPointerInfo(), MVT::i16, L->getBaseAlign(),
                   L->getMemOperand()->getFlags(), L->getAAInfo());
+  // Legalize the chain result by replacing uses of the old value chain with the
+  // new one
+  ReplaceValueWith(SDValue(N, 1), NewL.getValue(1));
+  return NewL;
+}
+
+SDValue DAGTypeLegalizer::SoftPromoteHalfRes_ATOMIC_LOAD(SDNode *N) {
+  AtomicSDNode *AM = cast<AtomicSDNode>(N);
+
+  // Load the value as an integer value with the same number of bits.
+  SDValue NewL = DAG.getAtomic(
+      ISD::ATOMIC_LOAD, SDLoc(N), MVT::i16, DAG.getVTList(MVT::i16, MVT::Other),
+      {AM->getChain(), AM->getBasePtr()}, AM->getMemOperand());
+
   // Legalize the chain result by replacing uses of the old value chain with the
   // new one
   ReplaceValueWith(SDValue(N, 1), NewL.getValue(1));
@@ -2959,6 +3710,15 @@ SDValue DAGTypeLegalizer::SoftPromoteHalfRes_XINT_TO_FP(SDNode *N) {
   EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), OVT);
   SDLoc dl(N);
 
+  if (N->isStrictFPOpcode()) {
+    SDValue Op = DAG.getNode(N->getOpcode(), dl, {NVT, MVT::Other},
+                             {N->getOperand(0), N->getOperand(1)});
+    Op = DAG.getNode(GetPromotionOpcodeStrict(NVT, OVT), dl,
+                     {MVT::i16, MVT::Other}, {Op.getValue(1), Op});
+    ReplaceValueWith(SDValue(N, 1), Op.getValue(1));
+    return Op;
+  }
+
   SDValue Res = DAG.getNode(N->getOpcode(), dl, NVT, N->getOperand(0));
 
   // Round the value to the softened type.
@@ -2982,6 +3742,28 @@ SDValue DAGTypeLegalizer::SoftPromoteHalfRes_UnaryOp(SDNode *N) {
 
   // Convert back to FP16 as an integer.
   return DAG.getNode(GetPromotionOpcode(NVT, OVT), dl, MVT::i16, Res);
+}
+
+SDValue DAGTypeLegalizer::SoftPromoteHalfRes_FABS(SDNode *N) {
+  SDValue Op = GetSoftPromotedHalf(N->getOperand(0));
+  SDLoc dl(N);
+
+  // Clear the sign bit.
+  return DAG.getNode(ISD::AND, dl, MVT::i16, Op,
+                     DAG.getConstant(0x7fff, dl, MVT::i16));
+}
+
+SDValue DAGTypeLegalizer::SoftPromoteHalfRes_FNEG(SDNode *N) {
+  SDValue Op = GetSoftPromotedHalf(N->getOperand(0));
+  SDLoc dl(N);
+
+  // Invert the sign bit.
+  return DAG.getNode(ISD::XOR, dl, MVT::i16, Op,
+                     DAG.getConstant(0x8000, dl, MVT::i16));
+}
+
+SDValue DAGTypeLegalizer::SoftPromoteHalfRes_AssertNoFPClass(SDNode *N) {
+  return GetSoftPromotedHalf(N->getOperand(0));
 }
 
 SDValue DAGTypeLegalizer::SoftPromoteHalfRes_BinOp(SDNode *N) {
@@ -3020,7 +3802,7 @@ SDValue DAGTypeLegalizer::SoftPromoteHalfRes_VECREDUCE_SEQ(SDNode *N) {
 
 bool DAGTypeLegalizer::SoftPromoteHalfOperand(SDNode *N, unsigned OpNo) {
   LLVM_DEBUG(dbgs() << "Soft promote half operand " << OpNo << ": ";
-             N->dump(&DAG); dbgs() << "\n");
+             N->dump(&DAG));
   SDValue Res = SDValue();
 
   if (CustomLowerNode(N, N->getOperand(OpNo).getValueType(), false)) {
@@ -3043,9 +3825,20 @@ bool DAGTypeLegalizer::SoftPromoteHalfOperand(SDNode *N, unsigned OpNo) {
                        "operand!");
 
   case ISD::BITCAST:    Res = SoftPromoteHalfOp_BITCAST(N); break;
+  case ISD::FAKE_USE:
+    Res = SoftPromoteHalfOp_FAKE_USE(N, OpNo);
+    break;
   case ISD::FCOPYSIGN:  Res = SoftPromoteHalfOp_FCOPYSIGN(N, OpNo); break;
+  case ISD::STRICT_FP_TO_SINT:
+  case ISD::STRICT_FP_TO_UINT:
   case ISD::FP_TO_SINT:
-  case ISD::FP_TO_UINT: Res = SoftPromoteHalfOp_FP_TO_XINT(N); break;
+  case ISD::FP_TO_UINT:
+  case ISD::LRINT:
+  case ISD::LLRINT:
+  case ISD::LROUND:
+  case ISD::LLROUND:
+    Res = SoftPromoteHalfOp_Op0WithStrict(N);
+    break;
   case ISD::FP_TO_SINT_SAT:
   case ISD::FP_TO_UINT_SAT:
                         Res = SoftPromoteHalfOp_FP_TO_XINT_SAT(N); break;
@@ -3054,6 +3847,9 @@ bool DAGTypeLegalizer::SoftPromoteHalfOperand(SDNode *N, unsigned OpNo) {
   case ISD::SELECT_CC:  Res = SoftPromoteHalfOp_SELECT_CC(N, OpNo); break;
   case ISD::SETCC:      Res = SoftPromoteHalfOp_SETCC(N); break;
   case ISD::STORE:      Res = SoftPromoteHalfOp_STORE(N, OpNo); break;
+  case ISD::ATOMIC_STORE:
+    Res = SoftPromoteHalfOp_ATOMIC_STORE(N, OpNo);
+    break;
   case ISD::STACKMAP:
     Res = SoftPromoteHalfOp_STACKMAP(N, OpNo);
     break;
@@ -3080,6 +3876,13 @@ SDValue DAGTypeLegalizer::SoftPromoteHalfOp_BITCAST(SDNode *N) {
   return DAG.getNode(ISD::BITCAST, SDLoc(N), N->getValueType(0), Op0);
 }
 
+SDValue DAGTypeLegalizer::SoftPromoteHalfOp_FAKE_USE(SDNode *N, unsigned OpNo) {
+  assert(OpNo == 1 && "Only Operand 1 must need promotion here");
+  SDValue Op = GetSoftPromotedHalf(N->getOperand(OpNo));
+  return DAG.getNode(N->getOpcode(), SDLoc(N), MVT::Other, N->getOperand(0),
+                     Op);
+}
+
 SDValue DAGTypeLegalizer::SoftPromoteHalfOp_FCOPYSIGN(SDNode *N,
                                                       unsigned OpNo) {
   assert(OpNo == 1 && "Only Operand 1 must need promotion here");
@@ -3104,10 +3907,8 @@ SDValue DAGTypeLegalizer::SoftPromoteHalfOp_FP_EXTEND(SDNode *N) {
   Op = GetSoftPromotedHalf(N->getOperand(IsStrict ? 1 : 0));
 
   if (IsStrict) {
-    assert(SVT == MVT::f16);
-    SDValue Res =
-        DAG.getNode(ISD::STRICT_FP16_TO_FP, SDLoc(N),
-                    {N->getValueType(0), MVT::Other}, {N->getOperand(0), Op});
+    SDValue Res = DAG.getNode(GetPromotionOpcodeStrict(SVT, RVT), SDLoc(N),
+                              {RVT, MVT::Other}, {N->getOperand(0), Op});
     ReplaceValueWith(SDValue(N, 1), Res.getValue(1));
     ReplaceValueWith(SDValue(N, 0), Res);
     return SDValue();
@@ -3116,19 +3917,28 @@ SDValue DAGTypeLegalizer::SoftPromoteHalfOp_FP_EXTEND(SDNode *N) {
   return DAG.getNode(GetPromotionOpcode(SVT, RVT), SDLoc(N), RVT, Op);
 }
 
-SDValue DAGTypeLegalizer::SoftPromoteHalfOp_FP_TO_XINT(SDNode *N) {
+SDValue DAGTypeLegalizer::SoftPromoteHalfOp_Op0WithStrict(SDNode *N) {
   EVT RVT = N->getValueType(0);
-  SDValue Op = N->getOperand(0);
+  bool IsStrict = N->isStrictFPOpcode();
+  SDValue Op = N->getOperand(IsStrict ? 1 : 0);
   EVT SVT = Op.getValueType();
   SDLoc dl(N);
 
-  EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), Op.getValueType());
-
+  EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), SVT);
   Op = GetSoftPromotedHalf(Op);
 
-  SDValue Res = DAG.getNode(GetPromotionOpcode(SVT, RVT), dl, NVT, Op);
+  if (IsStrict) {
+    Op = DAG.getNode(GetPromotionOpcodeStrict(SVT, RVT), dl, {NVT, MVT::Other},
+                     {N->getOperand(0), Op});
+    Op = DAG.getNode(N->getOpcode(), dl, {RVT, MVT::Other},
+                     {Op.getValue(1), Op});
+    ReplaceValueWith(SDValue(N, 1), Op.getValue(1));
+    ReplaceValueWith(SDValue(N, 0), Op);
+    return SDValue();
+  }
 
-  return DAG.getNode(N->getOpcode(), dl, N->getValueType(0), Res);
+  SDValue Res = DAG.getNode(GetPromotionOpcode(SVT, RVT), dl, NVT, Op);
+  return DAG.getNode(N->getOpcode(), dl, RVT, Res);
 }
 
 SDValue DAGTypeLegalizer::SoftPromoteHalfOp_FP_TO_XINT_SAT(SDNode *N) {
@@ -3201,9 +4011,22 @@ SDValue DAGTypeLegalizer::SoftPromoteHalfOp_STORE(SDNode *N, unsigned OpNo) {
                       ST->getMemOperand());
 }
 
+SDValue DAGTypeLegalizer::SoftPromoteHalfOp_ATOMIC_STORE(SDNode *N,
+                                                         unsigned OpNo) {
+  assert(OpNo == 1 && "Can only soften the stored value!");
+  AtomicSDNode *ST = cast<AtomicSDNode>(N);
+  SDValue Val = ST->getVal();
+  SDLoc dl(N);
+
+  SDValue Promoted = GetSoftPromotedHalf(Val);
+  return DAG.getAtomic(ISD::ATOMIC_STORE, dl, Promoted.getValueType(),
+                       ST->getChain(), Promoted, ST->getBasePtr(),
+                       ST->getMemOperand());
+}
+
 SDValue DAGTypeLegalizer::SoftPromoteHalfOp_STACKMAP(SDNode *N, unsigned OpNo) {
   assert(OpNo > 1); // Because the first two arguments are guaranteed legal.
-  SmallVector<SDValue> NewOps(N->ops().begin(), N->ops().end());
+  SmallVector<SDValue> NewOps(N->ops());
   SDValue Op = N->getOperand(OpNo);
   NewOps[OpNo] = GetSoftPromotedHalf(Op);
   SDValue NewNode =
@@ -3218,7 +4041,7 @@ SDValue DAGTypeLegalizer::SoftPromoteHalfOp_STACKMAP(SDNode *N, unsigned OpNo) {
 SDValue DAGTypeLegalizer::SoftPromoteHalfOp_PATCHPOINT(SDNode *N,
                                                        unsigned OpNo) {
   assert(OpNo >= 7);
-  SmallVector<SDValue> NewOps(N->ops().begin(), N->ops().end());
+  SmallVector<SDValue> NewOps(N->ops());
   SDValue Op = N->getOperand(OpNo);
   NewOps[OpNo] = GetSoftPromotedHalf(Op);
   SDValue NewNode =

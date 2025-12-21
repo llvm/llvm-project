@@ -36,6 +36,17 @@ framework module FW {
       ],
       "name": "DIR/frameworks/FW.framework/Headers",
       "type": "directory"
+    },
+    {
+      "contents": [
+        {
+          "external-contents": "DIR/frameworks/FW.framework/Modules/module.modulemap",
+          "name": "module.modulemap",
+          "type": "file"
+        }
+      ],
+      "name": "DIR/frameworks/FW.framework/Modules",
+      "type": "directory"
     }
   ]
 }
@@ -65,6 +76,12 @@ framework module FW {
 // CHECK-NEXT:       "context-hash": "{{.*}}",
 // CHECK-NEXT:       "file-deps": [
 // CHECK:            ],
+// CHECK-NEXT:       "link-libraries": [
+// CHECK-NEXT:         {
+// CHECK-NEXT:           "isFramework": true,
+// CHECK-NEXT:           "link-name": "FW"
+// CHECK-NEXT:         }
+// CHECK-NEXT:       ],
 // CHECK-NEXT:       "name": "FW"
 // CHECK-NEXT:     }
 // CHECK-NEXT:   ]

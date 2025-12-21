@@ -1,7 +1,4 @@
-; RUN: opt %loadPolly -polly-import-jscop \
-; RUN: -polly-import-jscop-postfix=transformed -polly-codegen \
-; RUN: -verify-dom-info -polly-allow-nonaffine-loops \
-; RUN: -S < %s | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=polly-custom<import-jscop;codegen>' -polly-import-jscop-postfix=transformed -verify-dom-info -polly-allow-nonaffine-loops -S < %s | FileCheck %s
 
 ; This test verifies that partial writes within non-affine loops are code
 ; generated correctly.
@@ -9,7 +6,7 @@
 ; CHECK:polly.stmt.bb3:
 ; CHECK-NEXT:  %polly.subregion.iv = phi i32 [ %polly.subregion.iv.inc, %polly.stmt.bb5.cont ], [ 0, %polly.stmt.bb3.entry ]
 ; CHECK-NEXT:  %polly.j.0 = phi i64 [ %j.0.phiops.reload, %polly.stmt.bb3.entry ], [ %p_tmp10, %polly.stmt.bb5.cont ]
-; CHECK-NEXT:  %8 = zext i64 %polly.indvar to i65
+; CHECK-NEXT:  %8 = zext nneg i64 %polly.indvar to i65
 ; CHECK-NEXT:  %9 = add nsw i64 %polly.indvar, -1
 ; CHECK-NEXT:  %10 = zext i64 %9 to i65
 ; CHECK-NEXT:  %11 = mul i65 %8, %10

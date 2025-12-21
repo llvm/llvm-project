@@ -1,5 +1,5 @@
-; RUN: opt %loadPolly -polly-print-ast -disable-output < %s | FileCheck %s
-; RUN: opt %loadPolly -polly-codegen < %s
+; RUN: opt %loadNPMPolly '-passes=polly-custom<ast>' -polly-print-ast -disable-output < %s | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=polly<no-default-opts>' < %s
 
 ;#define N 20
 ;#include "limits.h"

@@ -138,7 +138,7 @@ public:
   }
 
   static bool GetFormatFromCString(const char *format_cstr,
-                                   bool partial_match_ok, lldb::Format &format);
+                                   lldb::Format &format);
 
   static char GetFormatAsFormatChar(lldb::Format format);
 
@@ -180,7 +180,8 @@ private:
                                  lldb::DynamicValueType use_dynamic,
                                  FormattersMatchVector &entries,
                                  FormattersMatchCandidate::Flags current_flags,
-                                 bool root_level = false);
+                                 bool root_level = false,
+                                 uint32_t ptr_stripped_depth = 0);
 
   std::atomic<uint32_t> m_last_revision;
   FormatCache m_format_cache;

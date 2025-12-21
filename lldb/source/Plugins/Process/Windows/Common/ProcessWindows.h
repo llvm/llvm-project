@@ -9,6 +9,7 @@
 #ifndef liblldb_Plugins_Process_Windows_Common_ProcessWindows_H_
 #define liblldb_Plugins_Process_Windows_Common_ProcessWindows_H_
 
+#include "lldb/Host/windows/PseudoConsole.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/lldb-forward.h"
@@ -38,10 +39,6 @@ public:
 
   ~ProcessWindows();
 
-  size_t GetSTDOUT(char *buf, size_t buf_size, Status &error) override;
-  size_t GetSTDERR(char *buf, size_t buf_size, Status &error) override;
-  size_t PutSTDIN(const char *buf, size_t buf_size, Status &error) override;
-
   llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
 
   Status EnableBreakpointSite(BreakpointSite *bp_site) override;
@@ -52,7 +49,7 @@ public:
   Status DoAttachToProcessWithID(
       lldb::pid_t pid,
       const lldb_private::ProcessAttachInfo &attach_info) override;
-  Status DoResume() override;
+  Status DoResume(lldb::RunDirection direction) override;
   Status DoDestroy() override;
   Status DoHalt(bool &caused_stop) override;
 
@@ -96,8 +93,13 @@ public:
   void OnDebuggerError(const Status &error, uint32_t type) override;
 
   std::optional<uint32_t> GetWatchpointSlotCount() override;
-  Status EnableWatchpoint(Watchpoint *wp, bool notify = true) override;
-  Status DisableWatchpoint(Watchpoint *wp, bool notify = true) override;
+  Status EnableWatchpoint(lldb::WatchpointSP wp_sp,
+                          bool notify = true) override;
+  Status DisableWatchpoint(lldb::WatchpointSP wp_sp,
+                           bool notify = true) override;
+
+  void
+  SetPseudoConsoleHandle(const std::shared_ptr<PseudoConsole> &pty) override;
 
 protected:
   ProcessWindows(lldb::TargetSP target_sp, lldb::ListenerSP listener_sp);

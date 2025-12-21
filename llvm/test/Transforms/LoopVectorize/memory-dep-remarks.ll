@@ -1,5 +1,5 @@
 ; RUN: opt -passes='function(loop-vectorize,require<access-info>)' -disable-output -pass-remarks-analysis=loop-vectorize < %s 2>&1 | FileCheck %s
-; RUN: opt < %s -passes='function(require<access-info>,loop-vectorize)' -o /dev/null -pass-remarks-output=%t.yaml
+; RUN: opt < %s -passes='function(require<access-info>,loop-vectorize)' -disable-output -pass-remarks-output=%t.yaml
 ; RUN: cat %t.yaml | FileCheck -check-prefix=YAML %s
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
@@ -17,23 +17,23 @@ target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 define void @test_unknown_bounds(i64 %n, ptr nocapture %A, ptr nocapture readonly %B) !dbg !13 {
 entry:
   %cmp10 = icmp sgt i64 %n, 0
-  br i1 %cmp10, label %for.body, label %for.cond.cleanup
+  br i1 %cmp10, label %loop, label %exit
 
-for.body:                                         ; preds = %entry, %for.body
-  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
-  %arrayidx = getelementptr inbounds i32, ptr %B, i64 %indvars.iv
-  %0 = load i32, ptr %arrayidx, align 4
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %gep.B = getelementptr inbounds i32, ptr %B, i64 %iv
+  %0 = load i32, ptr %gep.B, align 4
   %idxprom1 = sext i32 %0 to i64, !dbg !35
   %arrayidx2 = getelementptr inbounds i32, ptr %A, i64 %idxprom1, !dbg !35
   %1 = load i32, ptr %arrayidx2, align 4, !dbg !35
   %add = add nsw i32 %1, 1
-  %arrayidx4 = getelementptr inbounds i32, ptr %A, i64 %indvars.iv
-  store i32 %add, ptr %arrayidx4, align 4
-  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
-  %exitcond.not = icmp eq i64 %indvars.iv.next, %n
-  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body, !dbg !28
+  %gep.A = getelementptr inbounds i32, ptr %A, i64 %iv
+  store i32 %add, ptr %gep.A, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, %n
+  br i1 %ec, label %exit, label %loop, !dbg !28
 
-for.cond.cleanup:                                 ; preds = %for.body, %entry
+exit:
   ret void
 }
 
@@ -50,24 +50,24 @@ for.cond.cleanup:                                 ; preds = %for.body, %entry
 define void @test_nodep(i64 %n, ptr nocapture readonly %A, ptr nocapture %B) !dbg !44 {
 entry:
   %cmp12 = icmp sgt i64 %n, 1
-  br i1 %cmp12, label %for.body, label %for.cond.cleanup
+  br i1 %cmp12, label %loop, label %exit
 
-for.body:                                         ; preds = %entry, %for.body
-  %indvars.iv = phi i64 [ 1, %entry ], [ %indvars.iv.next, %for.body ]
-  %0 = add nsw i64 %indvars.iv, -1
+loop:
+  %iv = phi i64 [ 1, %entry ], [ %iv.next, %loop ]
+  %0 = add nsw i64 %iv, -1
   %arrayidx = getelementptr inbounds i32, ptr %A, i64 %0, !dbg !61
   %1 = load i32, ptr %arrayidx, align 4, !dbg !61
-  %2 = add nuw nsw i64 %indvars.iv, 2
+  %2 = add nuw nsw i64 %iv, 2
   %arrayidx2 = getelementptr inbounds i32, ptr %A, i64 %2, !dbg !63
   %3 = load i32, ptr %arrayidx2, align 4, !dbg !63
   %add3 = add nsw i32 %3, %1
-  %arrayidx5 = getelementptr inbounds i32, ptr %B, i64 %indvars.iv
+  %arrayidx5 = getelementptr inbounds i32, ptr %B, i64 %iv
   store i32 %add3, ptr %arrayidx5, align 4
-  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
-  %exitcond.not = icmp eq i64 %indvars.iv.next, %n
-  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, %n
+  br i1 %ec, label %exit, label %loop
 
-for.cond.cleanup:                                 ; preds = %for.body, %entry
+exit:
   ret void
 }
 
@@ -86,22 +86,22 @@ for.cond.cleanup:                                 ; preds = %for.body, %entry
 define dso_local void @test_forward(i64 %n, ptr nocapture %A, ptr nocapture %B) !dbg !70 {
 entry:
   %cmp11 = icmp sgt i64 %n, 1
-  br i1 %cmp11, label %for.body, label %for.cond.cleanup, !dbg !81
+  br i1 %cmp11, label %loop, label %exit, !dbg !81
 
-for.body:                                         ; preds = %entry, %for.body
-  %indvars.iv = phi i64 [ 1, %entry ], [ %indvars.iv.next, %for.body ]
-  %arrayidx = getelementptr inbounds i32, ptr %A, i64 %indvars.iv, !dbg !83
+loop:
+  %iv = phi i64 [ 1, %entry ], [ %iv.next, %loop ]
+  %arrayidx = getelementptr inbounds i32, ptr %A, i64 %iv, !dbg !83
   store i32 10, ptr %arrayidx, align 4
-  %0 = add nsw i64 %indvars.iv, -2
+  %0 = add nsw i64 %iv, -2
   %arrayidx2 = getelementptr inbounds i32, ptr %A, i64 %0, !dbg !87
   %1 = load i32, ptr %arrayidx2, align 4, !dbg !87
-  %arrayidx4 = getelementptr inbounds i32, ptr %B, i64 %indvars.iv, !dbg !88
-  store i32 %1, ptr %arrayidx4, align 4, !dbg !89
-  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
-  %exitcond.not = icmp eq i64 %indvars.iv.next, %n
-  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body, !dbg !81
+  %gep.B = getelementptr inbounds i32, ptr %B, i64 %iv, !dbg !88
+  store i32 %1, ptr %gep.B, align 4, !dbg !89
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, %n
+  br i1 %ec, label %exit, label %loop, !dbg !81
 
-  for.cond.cleanup:                                 ; preds = %for.body, %entry
+  exit:
     ret void
 }
 
@@ -121,21 +121,21 @@ for.body:                                         ; preds = %entry, %for.body
 define dso_local void @test_backwardVectorizable(i64 %n, ptr nocapture %A) !dbg !93 {
 entry:
   %cmp8 = icmp sgt i64 %n, 4
-  br i1 %cmp8, label %for.body, label %for.cond.cleanup
+  br i1 %cmp8, label %loop, label %exit
 
-for.body:                                         ; preds = %entry, %for.body
-  %indvars.iv = phi i64 [ 4, %entry ], [ %indvars.iv.next, %for.body ]
-  %0 = add nsw i64 %indvars.iv, -4, !dbg !106
+loop:
+  %iv = phi i64 [ 4, %entry ], [ %iv.next, %loop ]
+  %0 = add nsw i64 %iv, -4, !dbg !106
   %arrayidx = getelementptr inbounds i32, ptr %A, i64 %0, !dbg !108
   %1 = load i32, ptr %arrayidx, align 4, !dbg !108
   %add = add nsw i32 %1, 1
-  %arrayidx2 = getelementptr inbounds i32, ptr %A, i64 %indvars.iv, !dbg !110
+  %arrayidx2 = getelementptr inbounds i32, ptr %A, i64 %iv, !dbg !110
   store i32 %add, ptr %arrayidx2, align 4, !dbg !111
-  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
-  %exitcond.not = icmp eq i64 %indvars.iv.next, %n
-  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, %n
+  br i1 %ec, label %exit, label %loop
 
-  for.cond.cleanup:                                 ; preds = %for.body, %entry
+  exit:
     ret void
 }
 
@@ -149,35 +149,35 @@ for.body:                                         ; preds = %entry, %for.body
 ;   }
 ; }
 
-; CHECK: remark: source.c:48:14: loop not vectorized: unsafe dependent memory operations in loop. Use #pragma loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
+; CHECK: remark: source.c:48:14: loop not vectorized: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
 ; CHECK-NEXT: Backward loop carried data dependence. Memory location is the same as accessed at source.c:47:5
 
 define void @test_backward_dep(i64 %n, ptr nocapture %A) {
 entry:
   %cmp.not19 = icmp slt i64 %n, 4
-  br i1 %cmp.not19, label %for.cond.cleanup, label %for.body.preheader
+  br i1 %cmp.not19, label %exit, label %loop.preheader
 
-for.body.preheader:                               ; preds = %entry
+loop.preheader:                               ; preds = %entry
   %sub = add nsw i64 %n, -3
-  br label %for.body
+  br label %loop
 
-for.body:                                         ; preds = %for.body.preheader, %for.body
-  %indvars.iv = phi i64 [ 1, %for.body.preheader ], [ %indvars.iv.next, %for.body ]
-  %0 = add nsw i64 %indvars.iv, -1
+loop:                                         ; preds = %loop.preheader, %loop
+  %iv = phi i64 [ 1, %loop.preheader ], [ %iv.next, %loop ]
+  %0 = add nsw i64 %iv, -1
   %arrayidx = getelementptr inbounds i32, ptr %A, i64 %0
   %1 = load i32, ptr %arrayidx, align 8
-  %arrayidx3 = getelementptr inbounds i32, ptr %A, i64 %indvars.iv, !dbg !157
+  %arrayidx3 = getelementptr inbounds i32, ptr %A, i64 %iv, !dbg !157
   store i32 %1, ptr %arrayidx3, align 8
-  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 3
-  %arrayidx5 = getelementptr inbounds i32, ptr %A, i64 %indvars.iv.next, !dbg !160
+  %iv.next = add nuw nsw i64 %iv, 3
+  %arrayidx5 = getelementptr inbounds i32, ptr %A, i64 %iv.next, !dbg !160
   %2 = load i32, ptr %arrayidx5, align 8, !dbg !160
-  %3 = add nuw nsw i64 %indvars.iv, 1
+  %3 = add nuw nsw i64 %iv, 1
   %arrayidx8 = getelementptr inbounds i32, ptr %A, i64 %3
   store i32 %2, ptr %arrayidx8, align 8
-  %cmp.not = icmp ugt i64 %indvars.iv.next, %n
-  br i1 %cmp.not, label %for.cond.cleanup, label %for.body
+  %cmp.not = icmp ugt i64 %iv.next, %n
+  br i1 %cmp.not, label %exit, label %loop
 
-  for.cond.cleanup:                                 ; preds = %for.body, %entry
+  exit:
     ret void
 }
 
@@ -194,28 +194,28 @@ for.body:                                         ; preds = %for.body.preheader,
 ;   }
 ; }
 
-; CHECK: remark: source.c:61:12: loop not vectorized: unsafe dependent memory operations in loop. Use #pragma loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
+; CHECK: remark: source.c:61:12: loop not vectorized: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
 ; CHECK-NEXT: Forward loop carried data dependence that prevents store-to-load forwarding. Memory location is the same as accessed at source.c:60:5
 
 define void @test_forwardButPreventsForwarding_dep(i64 %n, ptr nocapture %A, ptr nocapture %B) !dbg !166 {
 entry:
   %cmp11 = icmp sgt i64 %n, 3
-  br i1 %cmp11, label %for.body, label %for.cond.cleanup
+  br i1 %cmp11, label %loop, label %exit
 
-for.body:                                         ; preds = %entry, %for.body
-  %indvars.iv = phi i64 [ 3, %entry ], [ %indvars.iv.next, %for.body ]
-  %arrayidx = getelementptr inbounds i32, ptr %A, i64 %indvars.iv, !dbg !179
+loop:
+  %iv = phi i64 [ 3, %entry ], [ %iv.next, %loop ]
+  %arrayidx = getelementptr inbounds i32, ptr %A, i64 %iv, !dbg !179
   store i32 10, ptr %arrayidx, align 4
-  %0 = add nsw i64 %indvars.iv, -3
+  %0 = add nsw i64 %iv, -3
   %arrayidx2 = getelementptr inbounds i32, ptr %A, i64 %0, !dbg !183
   %1 = load i32, ptr %arrayidx2, align 4, !dbg !183
-  %arrayidx4 = getelementptr inbounds i32, ptr %B, i64 %indvars.iv
-  store i32 %1, ptr %arrayidx4, align 4
-  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
-  %exitcond.not = icmp eq i64 %indvars.iv.next, %n
-  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+  %gep.B = getelementptr inbounds i32, ptr %B, i64 %iv
+  store i32 %1, ptr %gep.B, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, %n
+  br i1 %ec, label %exit, label %loop
 
-  for.cond.cleanup:                                 ; preds = %for.body, %entry
+  exit:
     ret void
 }
 
@@ -232,30 +232,30 @@ for.body:                                         ; preds = %entry, %for.body
 ;   }
 ; }
 
-; CHECK: remark: source.c:74:5: loop not vectorized: unsafe dependent memory operations in loop. Use #pragma loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
+; CHECK: remark: source.c:74:5: loop not vectorized: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
 ; CHECK: Backward loop carried data dependence that prevents store-to-load forwarding. Memory location is the same as accessed at source.c:74:21
 
 define void @test_backwardVectorizableButPreventsForwarding(i64 %n, ptr nocapture %A) !dbg !189 {
 entry:
   %cmp13 = icmp sgt i64 %n, 15
-  br i1 %cmp13, label %for.body, label %for.cond.cleanup
+  br i1 %cmp13, label %loop, label %exit
 
-for.body:                                         ; preds = %entry, %for.body
-  %indvars.iv = phi i64 [ 15, %entry ], [ %indvars.iv.next, %for.body ]
-  %0 = add nsw i64 %indvars.iv, -2
+loop:
+  %iv = phi i64 [ 15, %entry ], [ %iv.next, %loop ]
+  %0 = add nsw i64 %iv, -2
   %arrayidx = getelementptr inbounds i32, ptr %A, i64 %0
   %1 = load i32, ptr %arrayidx, align 4
-  %2 = add nsw i64 %indvars.iv, -15
+  %2 = add nsw i64 %iv, -15
   %arrayidx3 = getelementptr inbounds i32, ptr %A, i64 %2, !dbg !207
   %3 = load i32, ptr %arrayidx3, align 4
   %add = add nsw i32 %3, %1
-  %arrayidx5 = getelementptr inbounds i32, ptr %A, i64 %indvars.iv, !dbg !209
+  %arrayidx5 = getelementptr inbounds i32, ptr %A, i64 %iv, !dbg !209
   store i32 %add, ptr %arrayidx5, align 4, !dbg !209
-  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
-  %exitcond.not = icmp eq i64 %indvars.iv.next, %n
-  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, %n
+  br i1 %ec, label %exit, label %loop
 
-  for.cond.cleanup:                                 ; preds = %for.body, %entry
+  exit:
     ret void
 }
 
@@ -268,26 +268,26 @@ for.body:                                         ; preds = %entry, %for.body
 ;   }
 ; }
 
-; CHECK: remark: source.c:83:7: loop not vectorized: unsafe dependent memory operations in loop. Use #pragma loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
+; CHECK: remark: source.c:83:7: loop not vectorized: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
 ; CHECK: Unknown data dependence. Memory location is the same as accessed at source.c:82:7
 
 define void @test_unknown_dep(i64 %n, ptr nocapture %A) !dbg !214 {
 entry:
   %cmp8 = icmp sgt i64 %n, 0
-  br i1 %cmp8, label %for.body, label %for.cond.cleanup
+  br i1 %cmp8, label %loop, label %exit
 
-for.body:                                         ; preds = %entry, %for.body
-  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
-  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
-  %0 = shl nsw i64 %indvars.iv.next, 2
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %iv.next = add nuw nsw i64 %iv, 1
+  %0 = shl nsw i64 %iv.next, 2
   %arrayidx = getelementptr inbounds i32, ptr %A, i64 %0, !dbg !229
   store i32 10, ptr %arrayidx, align 4
-  %arrayidx2 = getelementptr inbounds i32, ptr %A, i64 %indvars.iv, !dbg !231
+  %arrayidx2 = getelementptr inbounds i32, ptr %A, i64 %iv, !dbg !231
   store i32 100, ptr %arrayidx2, align 4, !dbg !231
-  %exitcond.not = icmp eq i64 %indvars.iv.next, %n
-  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+  %ec = icmp eq i64 %iv.next, %n
+  br i1 %ec, label %exit, label %loop
 
-  for.cond.cleanup:                                 ; preds = %for.body, %entry
+  exit:
     ret void
 }
 
@@ -315,7 +315,7 @@ for.body:                                         ; preds = %entry, %for.body
 ; YAML-NEXT: Function:        test_backward_dep
 ; YAML-NEXT: Args:
 ; YAML-NEXT:   - String:          'loop not vectorized: '
-; YAML-NEXT:   - String:          'unsafe dependent memory operations in loop. Use #pragma loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop'
+; YAML-NEXT:   - String:          'unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop'
 ; YAML-NEXT:   - String:          "\nBackward loop carried data dependence."
 ; YAML-NEXT:   - String:          ' Memory location is the same as accessed at '
 ; YAML-NEXT:   - Location:        'source.c:47:5'
@@ -335,7 +335,7 @@ for.body:                                         ; preds = %entry, %for.body
 ; YAML-NEXT: Function:        test_forwardButPreventsForwarding_dep
 ; YAML-NEXT: Args:
 ; YAML-NEXT:   - String:          'loop not vectorized: '
-; YAML-NEXT:   - String:          'unsafe dependent memory operations in loop. Use #pragma loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop'
+; YAML-NEXT:   - String:          'unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop'
 ; YAML-NEXT:   - String:          "\nForward loop carried data dependence that prevents store-to-load forwarding."
 ; YAML-NEXT:   - String:          ' Memory location is the same as accessed at '
 ; YAML-NEXT:   - Location:        'source.c:60:5'
@@ -355,7 +355,7 @@ for.body:                                         ; preds = %entry, %for.body
 ; YAML-NEXT: Function:        test_backwardVectorizableButPreventsForwarding
 ; YAML-NEXT: Args:
 ; YAML-NEXT:   - String:          'loop not vectorized: '
-; YAML-NEXT:   - String:          'unsafe dependent memory operations in loop. Use #pragma loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop'
+; YAML-NEXT:   - String:          'unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop'
 ; YAML-NEXT:   - String:          "\nBackward loop carried data dependence that prevents store-to-load forwarding."
 ; YAML-NEXT:   - String:          ' Memory location is the same as accessed at '
 ; YAML-NEXT:   - Location:        'source.c:74:21'
@@ -375,7 +375,7 @@ for.body:                                         ; preds = %entry, %for.body
 ; YAML-NEXT: Function:        test_unknown_dep
 ; YAML-NEXT: Args:
 ; YAML-NEXT:   - String:          'loop not vectorized: '
-; YAML-NEXT:   - String:          'unsafe dependent memory operations in loop. Use #pragma loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop'
+; YAML-NEXT:   - String:          'unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop'
 ; YAML-NEXT:   - String:          "\nUnknown data dependence."
 ; YAML-NEXT:   - String:          ' Memory location is the same as accessed at '
 ; YAML-NEXT:   - Location:        'source.c:82:7'

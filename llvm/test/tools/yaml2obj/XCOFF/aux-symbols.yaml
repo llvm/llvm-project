@@ -69,7 +69,7 @@
 # DEFAULT32-NEXT:     Value (SymbolTableIndex): 0x0
 # DEFAULT32-NEXT:     Section: N_UNDEF
 # DEFAULT32-NEXT:     Source Language ID: TB_C (0x0)
-# DEFAULT32-NEXT:     CPU Version ID: 0x0
+# DEFAULT32-NEXT:     CPU Version ID: TCPU_INVALID (0x0)
 # DEFAULT32-NEXT:     StorageClass: C_FILE (0x67)
 # DEFAULT32-NEXT:     NumberOfAuxEntries: 1
 # DEFAULT32-NEXT:     File Auxiliary Entry {
@@ -213,7 +213,7 @@ Symbols:
 # NON-DEFAULT32-NEXT:     Value (SymbolTableIndex): 0x0
 # NON-DEFAULT32-NEXT:     Section: N_UNDEF
 # NON-DEFAULT32-NEXT:     Source Language ID: TB_C (0x0)
-# NON-DEFAULT32-NEXT:     CPU Version ID: 0x0
+# NON-DEFAULT32-NEXT:     CPU Version ID: TCPU_INVALID (0x0)
 # NON-DEFAULT32-NEXT:     StorageClass: C_FILE (0x67)
 # NON-DEFAULT32-NEXT:     NumberOfAuxEntries: 1
 # NON-DEFAULT32-NEXT:     File Auxiliary Entry {
@@ -296,7 +296,7 @@ Symbols:
 # DEFAULT64-NEXT:     Value (SymbolTableIndex): 0x0
 # DEFAULT64-NEXT:     Section: N_UNDEF
 # DEFAULT64-NEXT:     Source Language ID: TB_C (0x0)
-# DEFAULT64-NEXT:     CPU Version ID: 0x0
+# DEFAULT64-NEXT:     CPU Version ID: TCPU_INVALID (0x0)
 # DEFAULT64-NEXT:     StorageClass: C_FILE (0x67)
 # DEFAULT64-NEXT:     NumberOfAuxEntries: 1
 # DEFAULT64-NEXT:     File Auxiliary Entry {
@@ -426,7 +426,7 @@ Symbols:
 # NON-DEFAULT64-NEXT:     Value (SymbolTableIndex): 0x0
 # NON-DEFAULT64-NEXT:     Section: N_UNDEF
 # NON-DEFAULT64-NEXT:     Source Language ID: TB_C (0x0)
-# NON-DEFAULT64-NEXT:     CPU Version ID: 0x0
+# NON-DEFAULT64-NEXT:     CPU Version ID: TCPU_INVALID (0x0)
 # NON-DEFAULT64-NEXT:     StorageClass: C_FILE (0x67)
 # NON-DEFAULT64-NEXT:     NumberOfAuxEntries: 1
 # NON-DEFAULT64-NEXT:     File Auxiliary Entry {
@@ -466,7 +466,7 @@ Symbols:
 # FILENAME-NEXT:     Value (SymbolTableIndex): 0x0
 # FILENAME-NEXT:     Section: N_UNDEF
 # FILENAME-NEXT:     Source Language ID: TB_C (0x0)
-# FILENAME-NEXT:     CPU Version ID: 0x0
+# FILENAME-NEXT:     CPU Version ID: TCPU_INVALID (0x0)
 # FILENAME-NEXT:     StorageClass: C_FILE (0x67)
 # FILENAME-NEXT:     NumberOfAuxEntries: 1
 # FILENAME-NEXT:     File Auxiliary Entry {
@@ -554,7 +554,7 @@ Symbols:
 # AUXNUM-NEXT:     Value (SymbolTableIndex): 0x0
 # AUXNUM-NEXT:     Section: N_UNDEF
 # AUXNUM-NEXT:     Source Language ID: TB_C (0x0)
-# AUXNUM-NEXT:     CPU Version ID: 0x0
+# AUXNUM-NEXT:     CPU Version ID: TCPU_INVALID (0x0)
 # AUXNUM-NEXT:     StorageClass: C_FILE (0x67)
 # AUXNUM-NEXT:     NumberOfAuxEntries: 2
 # AUXNUM-NEXT:     File Auxiliary Entry {
@@ -579,3 +579,28 @@ Symbols:
     AuxEntries:
       - Type: AUX_FILE
         FileNameOrString: foo
+
+## Case10: Specify a SymbolType outside the range of field definition.
+# RUN: not yaml2obj %s -DSYMTYPE=8 --docnum=8 -o %t10 2>&1 | \ 
+# RUN:   FileCheck %s --check-prefix BADSYMTYPE
+
+# BADSYMTYPE: error: symbol type must be less than 8
+
+## Case11: Specify a SymbolType outside the range of its enumeration.
+# RUN: yaml2obj %s -DSYMTYPE=7 --docnum=8 -o %t11
+# RUN: llvm-readobj --syms %t11 | FileCheck %s --check-prefix=STYPE
+
+--- !XCOFF
+FileHeader:
+  MagicNumber: 0x1DF
+Symbols:
+  - Name:               aux_fcn_csect
+    StorageClass:       C_EXT
+    Type:               0x20
+    AuxEntries:
+      - Type:                   AUX_CSECT
+        SymbolAlignment: 4
+        SymbolType: [[SYMTYPE=<none>]]
+
+# STYPE:      SymbolAlignmentLog2: 4
+# STYPE-NEXT:   SymbolType: 0x7

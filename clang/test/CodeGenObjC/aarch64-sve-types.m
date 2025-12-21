@@ -28,8 +28,11 @@ const char f32[] = @encode(__SVFloat32_t);
 // CHECK: error: cannot yet @encode type __SVFloat64_t
 const char f64[] = @encode(__SVFloat64_t);
 
-// CHECK: error: cannot yet @encode type __SVBFloat16_t
-const char bf16[] = @encode(__SVBFloat16_t);
+// CHECK: error: cannot yet @encode type __SVBfloat16_t
+const char bf16[] = @encode(__SVBfloat16_t);
+
+// CHECK: error: cannot yet @encode type __SVMfloat8_t
+const char mf8[] = @encode(__SVMfloat8_t);
 
 // CHECK: error: cannot yet @encode type __SVBool_t
 const char b8[] = @encode(__SVBool_t);

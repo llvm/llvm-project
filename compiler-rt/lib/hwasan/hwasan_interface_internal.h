@@ -161,6 +161,9 @@ SANITIZER_INTERFACE_ATTRIBUTE
 uptr __hwasan_tag_pointer(uptr p, u8 tag);
 
 SANITIZER_INTERFACE_ATTRIBUTE
+u8 __hwasan_get_tag_from_pointer(uptr p);
+
+SANITIZER_INTERFACE_ATTRIBUTE
 void __hwasan_tag_mismatch(uptr addr, u8 ts);
 
 SANITIZER_INTERFACE_ATTRIBUTE
@@ -244,6 +247,13 @@ void *__hwasan_memmove_match_all(void *dest, const void *src, uptr n, u8);
 
 SANITIZER_INTERFACE_ATTRIBUTE
 void __hwasan_set_error_report_callback(void (*callback)(const char *));
+
+// hwasan does not need fake stack, so we leave it empty here.
+SANITIZER_INTERFACE_ATTRIBUTE
+void __sanitizer_start_switch_fiber(void **, const void *bottom, uptr size);
+SANITIZER_INTERFACE_ATTRIBUTE
+void __sanitizer_finish_switch_fiber(void *, const void **bottom_old,
+                                     uptr *size_old);
 }  // extern "C"
 
 #endif  // HWASAN_INTERFACE_INTERNAL_H

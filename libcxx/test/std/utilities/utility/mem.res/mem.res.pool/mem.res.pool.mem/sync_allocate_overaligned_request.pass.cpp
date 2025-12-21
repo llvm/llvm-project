@@ -7,16 +7,17 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14
-// TODO: Change to XFAIL once https://github.com/llvm/llvm-project/issues/40340 is fixed
+// TODO: Change to XFAIL once https://llvm.org/PR40995 is fixed
 // UNSUPPORTED: availability-pmr-missing
 
 // <memory_resource>
 
 // class synchronized_pool_resource
 
-#include <memory_resource>
 #include <cassert>
+#include <cstddef>
 #include <memory> // std::align
+#include <memory_resource>
 
 #include "count_new.h"
 #include "test_macros.h"

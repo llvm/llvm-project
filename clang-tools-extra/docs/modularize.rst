@@ -20,7 +20,7 @@ map.
 :program:`modularize` also has an assistant mode option for generating
 a module map file based on the provided header list. The generated file
 is a functional module map that can be used as a starting point for a
-module.map file.
+module.modulemap file.
 
 Getting Started
 ===============
@@ -254,8 +254,8 @@ For example, with the same header list from above::
   }
 
 Note that headers with dependents will be ignored with a warning, as the
-Clang module mechanism doesn't support headers the rely on other headers
-to be included first.
+Clang module mechanism doesn't support headers that rely on other headers
+being included first.
 
 The module map format defines some keywords which can't be used in module
 names. If a header has one of these names, an underscore ('_') will be

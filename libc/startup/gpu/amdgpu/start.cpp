@@ -6,20 +6,25 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "config/gpu/app.h"
 #include "src/__support/GPU/utils.h"
 #include "src/__support/RPC/rpc_client.h"
+#include "src/__support/macros/config.h"
 #include "src/stdlib/atexit.h"
 #include "src/stdlib/exit.h"
 
 extern "C" int main(int argc, char **argv, char **envp);
+extern "C" void __cxa_finalize(void *dso);
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
-// The AMDGPU architecture provides a fixed frequency clock used for obtaining
-// real time. However, the frequency of this clock varies between cards and can
-// only be obtained via the driver. The loader will set this so we can use it.
-extern "C" [[gnu::visibility("protected")]] uint64_t
-    [[clang::address_space(4)]] __llvm_libc_clock_freq = 0;
+// FIXME: Factor this out into common logic so we don't need to stub it here.
+void teardown_main_tls() {}
+
+// FIXME: Touch this symbol to force this to be linked in statically.
+volatile void *dummy = &LIBC_NAMESPACE::rpc::client;
+
+DataEnvironment app;
 
 extern "C" uintptr_t __init_array_start[];
 extern "C" uintptr_t __init_array_end[];
@@ -37,14 +42,18 @@ static void call_init_array_callbacks(int argc, char **argv, char **env) {
 
 static void call_fini_array_callbacks() {
   size_t fini_array_size = __fini_array_end - __fini_array_start;
-  for (size_t i = 0; i < fini_array_size; ++i)
-    reinterpret_cast<FiniCallback *>(__fini_array_start[i])();
+  for (size_t i = fini_array_size; i > 0; --i)
+    reinterpret_cast<FiniCallback *>(__fini_array_start[i - 1])();
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
-extern "C" [[gnu::visibility("protected"), clang::amdgpu_kernel]] void
+extern "C" [[gnu::visibility("protected"), clang::amdgpu_kernel,
+             clang::amdgpu_flat_work_group_size(1, 1),
+             clang::amdgpu_max_num_work_groups(1)]] void
 _begin(int argc, char **argv, char **env) {
+  __atomic_store_n(&LIBC_NAMESPACE::app.env_ptr,
+                   reinterpret_cast<uintptr_t *>(env), __ATOMIC_RELAXED);
   // We want the fini array callbacks to be run after other atexit
   // callbacks are run. So, we register them before running the init
   // array callbacks as they can potentially register their own atexit
@@ -60,10 +69,11 @@ _start(int argc, char **argv, char **envp, int *ret) {
   __atomic_fetch_or(ret, main(argc, argv, envp), __ATOMIC_RELAXED);
 }
 
-extern "C" [[gnu::visibility("protected"), clang::amdgpu_kernel]] void
-_end(int retval) {
-  // Only a single thread should call `exit` here, the rest should gracefully
-  // return from the kernel. This is so only one thread calls the destructors
-  // registred with 'atexit' above.
-  LIBC_NAMESPACE::exit(retval);
+extern "C" [[gnu::visibility("protected"), clang::amdgpu_kernel,
+             clang::amdgpu_flat_work_group_size(1, 1),
+             clang::amdgpu_max_num_work_groups(1)]] void
+_end() {
+  // Only a single thread should call the destructors registred with 'atexit'.
+  // The loader utility will handle the actual exit and return code cleanly.
+  __cxa_finalize(nullptr);
 }

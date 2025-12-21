@@ -19,6 +19,10 @@
 #include "SIMachineFunctionInfo.h"
 #include "SIProgramInfo.h"
 #include "llvm/IR/Module.h"
+#include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCExpr.h"
+#include "llvm/Target/TargetLoweringObjectFile.h"
+
 using namespace llvm;
 
 static std::pair<Type *, Align> getArgumentTypeAlign(const Argument &Arg,
@@ -36,6 +40,27 @@ static std::pair<Type *, Align> getArgumentTypeAlign(const Argument &Arg,
   return std::pair(Ty, *ArgAlign);
 }
 
+/// Find the mangled symbol name for the runtime handle for \p EnqueuedBlock
+static std::string getEnqueuedBlockSymbolName(const AMDGPUTargetMachine &TM,
+                                              const Function &EnqueuedBlock) {
+  const MDNode *Associated =
+      EnqueuedBlock.getMetadata(LLVMContext::MD_associated);
+  if (!Associated)
+    return "";
+
+  auto *VM = cast<ValueAsMetadata>(Associated->getOperand(0));
+  auto *RuntimeHandle =
+      dyn_cast<GlobalVariable>(VM->getValue()->stripPointerCasts());
+  if (!RuntimeHandle ||
+      RuntimeHandle->getSection() != ".amdgpu.kernel.runtime.handle")
+    return "";
+
+  SmallString<128> Name;
+  TM.getNameWithPrefix(Name, RuntimeHandle,
+                       TM.getObjFileLowering()->getMangler());
+  return Name.str().str();
+}
+
 namespace llvm {
 
 static cl::opt<bool> DumpHSAMetadata(
@@ -45,18 +70,17 @@ static cl::opt<bool> VerifyHSAMetadata(
     "amdgpu-verify-hsa-metadata",
     cl::desc("Verify AMDGPU HSA Metadata"));
 
-namespace AMDGPU {
-namespace HSAMD {
+namespace AMDGPU::HSAMD {
 
 //===----------------------------------------------------------------------===//
-// HSAMetadataStreamerV3
+// HSAMetadataStreamerV4
 //===----------------------------------------------------------------------===//
 
-void MetadataStreamerMsgPackV3::dump(StringRef HSAMetadataString) const {
+void MetadataStreamerMsgPackV4::dump(StringRef HSAMetadataString) const {
   errs() << "AMDGPU HSA Metadata:\n" << HSAMetadataString << '\n';
 }
 
-void MetadataStreamerMsgPackV3::verify(StringRef HSAMetadataString) const {
+void MetadataStreamerMsgPackV4::verify(StringRef HSAMetadataString) const {
   errs() << "AMDGPU HSA Metadata Parser Test: ";
 
   msgpack::Document FromHSAMetadataString;
@@ -78,7 +102,7 @@ void MetadataStreamerMsgPackV3::verify(StringRef HSAMetadataString) const {
 }
 
 std::optional<StringRef>
-MetadataStreamerMsgPackV3::getAccessQualifier(StringRef AccQual) const {
+MetadataStreamerMsgPackV4::getAccessQualifier(StringRef AccQual) const {
   return StringSwitch<std::optional<StringRef>>(AccQual)
       .Case("read_only", StringRef("read_only"))
       .Case("write_only", StringRef("write_only"))
@@ -86,7 +110,7 @@ MetadataStreamerMsgPackV3::getAccessQualifier(StringRef AccQual) const {
       .Default(std::nullopt);
 }
 
-std::optional<StringRef> MetadataStreamerMsgPackV3::getAddressSpaceQualifier(
+std::optional<StringRef> MetadataStreamerMsgPackV4::getAddressSpaceQualifier(
     unsigned AddressSpace) const {
   switch (AddressSpace) {
   case AMDGPUAS::PRIVATE_ADDRESS:
@@ -107,7 +131,7 @@ std::optional<StringRef> MetadataStreamerMsgPackV3::getAddressSpaceQualifier(
 }
 
 StringRef
-MetadataStreamerMsgPackV3::getValueKind(Type *Ty, StringRef TypeQual,
+MetadataStreamerMsgPackV4::getValueKind(Type *Ty, StringRef TypeQual,
                                         StringRef BaseTypeName) const {
   if (TypeQual.contains("pipe"))
     return "pipe";
@@ -134,7 +158,7 @@ MetadataStreamerMsgPackV3::getValueKind(Type *Ty, StringRef TypeQual,
                    : "by_value");
 }
 
-std::string MetadataStreamerMsgPackV3::getTypeName(Type *Ty,
+std::string MetadataStreamerMsgPackV4::getTypeName(Type *Ty,
                                                    bool Signed) const {
   switch (Ty->getTypeID()) {
   case Type::IntegerTyID: {
@@ -162,8 +186,8 @@ std::string MetadataStreamerMsgPackV3::getTypeName(Type *Ty,
   case Type::DoubleTyID:
     return "double";
   case Type::FixedVectorTyID: {
-    auto VecTy = cast<FixedVectorType>(Ty);
-    auto ElTy = VecTy->getElementType();
+    auto *VecTy = cast<FixedVectorType>(Ty);
+    auto *ElTy = VecTy->getElementType();
     auto NumElements = VecTy->getNumElements();
     return (Twine(getTypeName(ElTy, Signed)) + Twine(NumElements)).str();
   }
@@ -173,26 +197,32 @@ std::string MetadataStreamerMsgPackV3::getTypeName(Type *Ty,
 }
 
 msgpack::ArrayDocNode
-MetadataStreamerMsgPackV3::getWorkGroupDimensions(MDNode *Node) const {
+MetadataStreamerMsgPackV4::getWorkGroupDimensions(MDNode *Node) const {
   auto Dims = HSAMetadataDoc->getArrayNode();
   if (Node->getNumOperands() != 3)
     return Dims;
 
   for (auto &Op : Node->operands())
     Dims.push_back(Dims.getDocument()->getNode(
-        uint64_t(mdconst::extract<ConstantInt>(Op)->getZExtValue())));
+        mdconst::extract<ConstantInt>(Op)->getZExtValue()));
   return Dims;
 }
 
-void MetadataStreamerMsgPackV3::emitVersion() {
+void MetadataStreamerMsgPackV4::emitVersion() {
   auto Version = HSAMetadataDoc->getArrayNode();
-  Version.push_back(Version.getDocument()->getNode(VersionMajorV3));
-  Version.push_back(Version.getDocument()->getNode(VersionMinorV3));
+  Version.push_back(Version.getDocument()->getNode(VersionMajorV4));
+  Version.push_back(Version.getDocument()->getNode(VersionMinorV4));
   getRootMetadata("amdhsa.version") = Version;
 }
 
-void MetadataStreamerMsgPackV3::emitPrintf(const Module &Mod) {
-  auto Node = Mod.getNamedMetadata("llvm.printf.fmts");
+void MetadataStreamerMsgPackV4::emitTargetID(
+    const IsaInfo::AMDGPUTargetID &TargetID) {
+  getRootMetadata("amdhsa.target") =
+      HSAMetadataDoc->getNode(TargetID.toString(), /*Copy=*/true);
+}
+
+void MetadataStreamerMsgPackV4::emitPrintf(const Module &Mod) {
+  auto *Node = Mod.getNamedMetadata("llvm.printf.fmts");
   if (!Node)
     return;
 
@@ -204,13 +234,13 @@ void MetadataStreamerMsgPackV3::emitPrintf(const Module &Mod) {
   getRootMetadata("amdhsa.printf") = Printf;
 }
 
-void MetadataStreamerMsgPackV3::emitKernelLanguage(const Function &Func,
+void MetadataStreamerMsgPackV4::emitKernelLanguage(const Function &Func,
                                                    msgpack::MapDocNode Kern) {
   // TODO: What about other languages?
-  auto Node = Func.getParent()->getNamedMetadata("opencl.ocl.version");
+  auto *Node = Func.getParent()->getNamedMetadata("opencl.ocl.version");
   if (!Node || !Node->getNumOperands())
     return;
-  auto Op0 = Node->getOperand(0);
+  auto *Op0 = Node->getOperand(0);
   if (Op0->getNumOperands() <= 1)
     return;
 
@@ -223,48 +253,55 @@ void MetadataStreamerMsgPackV3::emitKernelLanguage(const Function &Func,
   Kern[".language_version"] = LanguageVersion;
 }
 
-void MetadataStreamerMsgPackV3::emitKernelAttrs(const Function &Func,
+void MetadataStreamerMsgPackV4::emitKernelAttrs(const AMDGPUTargetMachine &TM,
+                                                const MachineFunction &MF,
                                                 msgpack::MapDocNode Kern) {
-
-  if (auto Node = Func.getMetadata("reqd_work_group_size"))
+  const Function &Func = MF.getFunction();
+  if (auto *Node = Func.getMetadata("reqd_work_group_size"))
     Kern[".reqd_workgroup_size"] = getWorkGroupDimensions(Node);
-  if (auto Node = Func.getMetadata("work_group_size_hint"))
+  if (auto *Node = Func.getMetadata("work_group_size_hint"))
     Kern[".workgroup_size_hint"] = getWorkGroupDimensions(Node);
-  if (auto Node = Func.getMetadata("vec_type_hint")) {
+  if (auto *Node = Func.getMetadata("vec_type_hint")) {
     Kern[".vec_type_hint"] = Kern.getDocument()->getNode(
         getTypeName(
             cast<ValueAsMetadata>(Node->getOperand(0))->getType(),
             mdconst::extract<ConstantInt>(Node->getOperand(1))->getZExtValue()),
         /*Copy=*/true);
   }
-  if (Func.hasFnAttribute("runtime-handle")) {
-    Kern[".device_enqueue_symbol"] = Kern.getDocument()->getNode(
-        Func.getFnAttribute("runtime-handle").getValueAsString().str(),
-        /*Copy=*/true);
+
+  std::string HandleName = getEnqueuedBlockSymbolName(TM, Func);
+  if (!HandleName.empty()) {
+    Kern[".device_enqueue_symbol"] =
+        Kern.getDocument()->getNode(std::move(HandleName), /*Copy=*/true);
   }
+
   if (Func.hasFnAttribute("device-init"))
     Kern[".kind"] = Kern.getDocument()->getNode("init");
   else if (Func.hasFnAttribute("device-fini"))
     Kern[".kind"] = Kern.getDocument()->getNode("fini");
 }
 
-void MetadataStreamerMsgPackV3::emitKernelArgs(const MachineFunction &MF,
+void MetadataStreamerMsgPackV4::emitKernelArgs(const MachineFunction &MF,
                                                msgpack::MapDocNode Kern) {
   auto &Func = MF.getFunction();
   unsigned Offset = 0;
   auto Args = HSAMetadataDoc->getArrayNode();
-  for (auto &Arg : Func.args())
+  for (auto &Arg : Func.args()) {
+    if (Arg.hasAttribute("amdgpu-hidden-argument"))
+      continue;
+
     emitKernelArg(Arg, Offset, Args);
+  }
 
   emitHiddenKernelArgs(MF, Offset, Args);
 
   Kern[".args"] = Args;
 }
 
-void MetadataStreamerMsgPackV3::emitKernelArg(const Argument &Arg,
+void MetadataStreamerMsgPackV4::emitKernelArg(const Argument &Arg,
                                               unsigned &Offset,
                                               msgpack::ArrayDocNode Args) {
-  auto Func = Arg.getParent();
+  const auto *Func = Arg.getParent();
   auto ArgNo = Arg.getArgNo();
   const MDNode *Node;
 
@@ -304,13 +341,13 @@ void MetadataStreamerMsgPackV3::emitKernelArg(const Argument &Arg,
   if (Node && ArgNo < Node->getNumOperands())
     TypeQual = cast<MDString>(Node->getOperand(ArgNo))->getString();
 
-  const DataLayout &DL = Func->getParent()->getDataLayout();
+  const DataLayout &DL = Func->getDataLayout();
 
   MaybeAlign PointeeAlign;
   Type *Ty = Arg.hasByRefAttr() ? Arg.getParamByRefType() : Arg.getType();
 
   // FIXME: Need to distinguish in memory alignment from pointer alignment.
-  if (auto PtrTy = dyn_cast<PointerType>(Ty)) {
+  if (auto *PtrTy = dyn_cast<PointerType>(Ty)) {
     if (PtrTy->getAddressSpace() == AMDGPUAS::LOCAL_ADDRESS)
       PointeeAlign = Arg.getParamAlign().valueOrOne();
   }
@@ -326,7 +363,7 @@ void MetadataStreamerMsgPackV3::emitKernelArg(const Argument &Arg,
                 AccQual, TypeQual);
 }
 
-void MetadataStreamerMsgPackV3::emitKernelArg(
+void MetadataStreamerMsgPackV4::emitKernelArg(
     const DataLayout &DL, Type *Ty, Align Alignment, StringRef ValueKind,
     unsigned &Offset, msgpack::ArrayDocNode Args, MaybeAlign PointeeAlign,
     StringRef Name, StringRef TypeName, StringRef BaseTypeName,
@@ -346,7 +383,7 @@ void MetadataStreamerMsgPackV3::emitKernelArg(
   if (PointeeAlign)
     Arg[".pointee_align"] = Arg.getDocument()->getNode(PointeeAlign->value());
 
-  if (auto PtrTy = dyn_cast<PointerType>(Ty))
+  if (auto *PtrTy = dyn_cast<PointerType>(Ty))
     if (auto Qualifier = getAddressSpaceQualifier(PtrTy->getAddressSpace()))
       // Limiting address space to emit only for a certain ValueKind.
       if (ValueKind == "global_buffer" || ValueKind == "dynamic_shared_pointer")
@@ -375,7 +412,7 @@ void MetadataStreamerMsgPackV3::emitKernelArg(
   Args.push_back(Arg);
 }
 
-void MetadataStreamerMsgPackV3::emitHiddenKernelArgs(
+void MetadataStreamerMsgPackV4::emitHiddenKernelArgs(
     const MachineFunction &MF, unsigned &Offset, msgpack::ArrayDocNode Args) {
   auto &Func = MF.getFunction();
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
@@ -386,7 +423,7 @@ void MetadataStreamerMsgPackV3::emitHiddenKernelArgs(
 
   const Module *M = Func.getParent();
   auto &DL = M->getDataLayout();
-  auto Int64Ty = Type::getInt64Ty(Func.getContext());
+  auto *Int64Ty = Type::getInt64Ty(Func.getContext());
 
   Offset = alignTo(Offset, ST.getAlignmentForImplicitArgPtr());
 
@@ -400,7 +437,7 @@ void MetadataStreamerMsgPackV3::emitHiddenKernelArgs(
     emitKernelArg(DL, Int64Ty, Align(8), "hidden_global_offset_z", Offset,
                   Args);
 
-  auto Int8PtrTy =
+  auto *Int8PtrTy =
       PointerType::get(Func.getContext(), AMDGPUAS::GLOBAL_ADDRESS);
 
   if (HiddenArgNumBytes >= 32) {
@@ -448,9 +485,10 @@ void MetadataStreamerMsgPackV3::emitHiddenKernelArgs(
   }
 }
 
-msgpack::MapDocNode MetadataStreamerMsgPackV3::getHSAKernelProps(
-    const MachineFunction &MF, const SIProgramInfo &ProgramInfo,
-    unsigned CodeObjectVersion) const {
+msgpack::MapDocNode
+MetadataStreamerMsgPackV4::getHSAKernelProps(const MachineFunction &MF,
+                                             const SIProgramInfo &ProgramInfo,
+                                             unsigned CodeObjectVersion) const {
   const GCNSubtarget &STM = MF.getSubtarget<GCNSubtarget>();
   const SIMachineFunctionInfo &MFI = *MF.getInfo<SIMachineFunctionInfo>();
   const Function &F = MF.getFunction();
@@ -462,11 +500,13 @@ msgpack::MapDocNode MetadataStreamerMsgPackV3::getHSAKernelProps(
       STM.getKernArgSegmentSize(F, MaxKernArgAlign));
   Kern[".group_segment_fixed_size"] =
       Kern.getDocument()->getNode(ProgramInfo.LDSSize);
-  Kern[".private_segment_fixed_size"] =
-      Kern.getDocument()->getNode(ProgramInfo.ScratchSize);
-  if (CodeObjectVersion >= AMDGPU::AMDHSA_COV5)
-    Kern[".uses_dynamic_stack"] =
-        Kern.getDocument()->getNode(ProgramInfo.DynamicCallStack);
+  DelayedExprs->assignDocNode(Kern[".private_segment_fixed_size"],
+                              msgpack::Type::UInt, ProgramInfo.ScratchSize);
+  if (CodeObjectVersion >= AMDGPU::AMDHSA_COV5) {
+    DelayedExprs->assignDocNode(Kern[".uses_dynamic_stack"],
+                                msgpack::Type::Boolean,
+                                ProgramInfo.DynamicCallStack);
+  }
 
   if (CodeObjectVersion >= AMDGPU::AMDHSA_COV5 && STM.supportsWGP())
     Kern[".workgroup_processor_mode"] =
@@ -477,16 +517,34 @@ msgpack::MapDocNode MetadataStreamerMsgPackV3::getHSAKernelProps(
       Kern.getDocument()->getNode(std::max(Align(4), MaxKernArgAlign).value());
   Kern[".wavefront_size"] =
       Kern.getDocument()->getNode(STM.getWavefrontSize());
-  Kern[".sgpr_count"] = Kern.getDocument()->getNode(ProgramInfo.NumSGPR);
-  Kern[".vgpr_count"] = Kern.getDocument()->getNode(ProgramInfo.NumVGPR);
+  DelayedExprs->assignDocNode(Kern[".sgpr_count"], msgpack::Type::UInt,
+                              ProgramInfo.NumSGPR);
+  DelayedExprs->assignDocNode(Kern[".vgpr_count"], msgpack::Type::UInt,
+                              ProgramInfo.NumVGPR);
 
   // Only add AGPR count to metadata for supported devices
   if (STM.hasMAIInsts()) {
-    Kern[".agpr_count"] = Kern.getDocument()->getNode(ProgramInfo.NumAccVGPR);
+    DelayedExprs->assignDocNode(Kern[".agpr_count"], msgpack::Type::UInt,
+                                ProgramInfo.NumAccVGPR);
   }
 
   Kern[".max_flat_workgroup_size"] =
       Kern.getDocument()->getNode(MFI.getMaxFlatWorkGroupSize());
+
+  uint32_t NumWGY = MFI.getMaxNumWorkGroupsY();
+  uint32_t NumWGZ = MFI.getMaxNumWorkGroupsZ();
+  uint32_t NumWGX = MFI.getMaxNumWorkGroupsX();
+
+  // TODO: Should consider 0 invalid and reject in IR verifier.
+  if (NumWGX != std::numeric_limits<uint32_t>::max() && NumWGX != 0)
+    Kern[".max_num_workgroups_x"] = Kern.getDocument()->getNode(NumWGX);
+
+  if (NumWGY != std::numeric_limits<uint32_t>::max() && NumWGY != 0)
+    Kern[".max_num_workgroups_y"] = Kern.getDocument()->getNode(NumWGY);
+
+  if (NumWGZ != std::numeric_limits<uint32_t>::max() && NumWGZ != 0)
+    Kern[".max_num_workgroups_z"] = Kern.getDocument()->getNode(NumWGZ);
+
   Kern[".sgpr_spill_count"] =
       Kern.getDocument()->getNode(MFI.getNumSpilledSGPRs());
   Kern[".vgpr_spill_count"] =
@@ -495,18 +553,22 @@ msgpack::MapDocNode MetadataStreamerMsgPackV3::getHSAKernelProps(
   return Kern;
 }
 
-bool MetadataStreamerMsgPackV3::emitTo(AMDGPUTargetStreamer &TargetStreamer) {
+bool MetadataStreamerMsgPackV4::emitTo(AMDGPUTargetStreamer &TargetStreamer) {
+  DelayedExprs->resolveDelayedExpressions();
   return TargetStreamer.EmitHSAMetadata(*HSAMetadataDoc, true);
 }
 
-void MetadataStreamerMsgPackV3::begin(const Module &Mod,
+void MetadataStreamerMsgPackV4::begin(const Module &Mod,
                                       const IsaInfo::AMDGPUTargetID &TargetID) {
   emitVersion();
+  emitTargetID(TargetID);
   emitPrintf(Mod);
   getRootMetadata("amdhsa.kernels") = HSAMetadataDoc->getArrayNode();
+  DelayedExprs->clear();
 }
 
-void MetadataStreamerMsgPackV3::end() {
+void MetadataStreamerMsgPackV4::end() {
+  DelayedExprs->resolveDelayedExpressions();
   std::string HSAMetadataString;
   raw_string_ostream StrOS(HSAMetadataString);
   HSAMetadataDoc->toYAML(StrOS);
@@ -517,54 +579,31 @@ void MetadataStreamerMsgPackV3::end() {
     verify(StrOS.str());
 }
 
-void MetadataStreamerMsgPackV3::emitKernel(const MachineFunction &MF,
+void MetadataStreamerMsgPackV4::emitKernel(const MachineFunction &MF,
                                            const SIProgramInfo &ProgramInfo) {
   auto &Func = MF.getFunction();
   if (Func.getCallingConv() != CallingConv::AMDGPU_KERNEL &&
       Func.getCallingConv() != CallingConv::SPIR_KERNEL)
     return;
 
-  auto CodeObjectVersion = AMDGPU::getCodeObjectVersion(*Func.getParent());
+  auto CodeObjectVersion =
+      AMDGPU::getAMDHSACodeObjectVersion(*Func.getParent());
   auto Kern = getHSAKernelProps(MF, ProgramInfo, CodeObjectVersion);
 
   auto Kernels =
       getRootMetadata("amdhsa.kernels").getArray(/*Convert=*/true);
 
+  auto &TM = static_cast<const AMDGPUTargetMachine &>(MF.getTarget());
   {
     Kern[".name"] = Kern.getDocument()->getNode(Func.getName());
     Kern[".symbol"] = Kern.getDocument()->getNode(
         (Twine(Func.getName()) + Twine(".kd")).str(), /*Copy=*/true);
     emitKernelLanguage(Func, Kern);
-    emitKernelAttrs(Func, Kern);
+    emitKernelAttrs(TM, MF, Kern);
     emitKernelArgs(MF, Kern);
   }
 
   Kernels.push_back(Kern);
-}
-
-//===----------------------------------------------------------------------===//
-// HSAMetadataStreamerV4
-//===----------------------------------------------------------------------===//
-
-void MetadataStreamerMsgPackV4::emitVersion() {
-  auto Version = HSAMetadataDoc->getArrayNode();
-  Version.push_back(Version.getDocument()->getNode(VersionMajorV4));
-  Version.push_back(Version.getDocument()->getNode(VersionMinorV4));
-  getRootMetadata("amdhsa.version") = Version;
-}
-
-void MetadataStreamerMsgPackV4::emitTargetID(
-    const IsaInfo::AMDGPUTargetID &TargetID) {
-  getRootMetadata("amdhsa.target") =
-      HSAMetadataDoc->getNode(TargetID.toString(), /*Copy=*/true);
-}
-
-void MetadataStreamerMsgPackV4::begin(const Module &Mod,
-                                      const IsaInfo::AMDGPUTargetID &TargetID) {
-  emitVersion();
-  emitTargetID(TargetID);
-  emitPrintf(Mod);
-  getRootMetadata("amdhsa.kernels") = HSAMetadataDoc->getArrayNode();
 }
 
 //===----------------------------------------------------------------------===//
@@ -591,9 +630,9 @@ void MetadataStreamerMsgPackV5::emitHiddenKernelArgs(
   auto &DL = M->getDataLayout();
   const SIMachineFunctionInfo &MFI = *MF.getInfo<SIMachineFunctionInfo>();
 
-  auto Int64Ty = Type::getInt64Ty(Func.getContext());
-  auto Int32Ty = Type::getInt32Ty(Func.getContext());
-  auto Int16Ty = Type::getInt16Ty(Func.getContext());
+  auto *Int64Ty = Type::getInt64Ty(Func.getContext());
+  auto *Int32Ty = Type::getInt32Ty(Func.getContext());
+  auto *Int16Ty = Type::getInt16Ty(Func.getContext());
 
   Offset = alignTo(Offset, ST.getAlignmentForImplicitArgPtr());
   emitKernelArg(DL, Int32Ty, Align(4), "hidden_block_count_x", Offset, Args);
@@ -620,7 +659,7 @@ void MetadataStreamerMsgPackV5::emitHiddenKernelArgs(
   emitKernelArg(DL, Int16Ty, Align(2), "hidden_grid_dims", Offset, Args);
 
   Offset += 6; // Reserved.
-  auto Int8PtrTy =
+  auto *Int8PtrTy =
       PointerType::get(Func.getContext(), AMDGPUAS::GLOBAL_ADDRESS);
 
   if (M->getNamedMetadata("llvm.printf.fmts")) {
@@ -663,7 +702,15 @@ void MetadataStreamerMsgPackV5::emitHiddenKernelArgs(
     Offset += 8; // Skipped.
   }
 
-  Offset += 72; // Reserved.
+  // Emit argument for hidden dynamic lds size
+  if (MFI.isDynamicLDSUsed()) {
+    emitKernelArg(DL, Int32Ty, Align(4), "hidden_dynamic_lds_size", Offset,
+                  Args);
+  } else {
+    Offset += 4; // skipped
+  }
+
+  Offset += 68; // Reserved.
 
   // hidden_private_base and hidden_shared_base are only when the subtarget has
   // ApertureRegs.
@@ -678,15 +725,42 @@ void MetadataStreamerMsgPackV5::emitHiddenKernelArgs(
     emitKernelArg(DL, Int8PtrTy, Align(8), "hidden_queue_ptr", Offset, Args);
 }
 
-void MetadataStreamerMsgPackV5::emitKernelAttrs(const Function &Func,
+void MetadataStreamerMsgPackV5::emitKernelAttrs(const AMDGPUTargetMachine &TM,
+                                                const MachineFunction &MF,
                                                 msgpack::MapDocNode Kern) {
-  MetadataStreamerMsgPackV3::emitKernelAttrs(Func, Kern);
+  MetadataStreamerMsgPackV4::emitKernelAttrs(TM, MF, Kern);
 
+  const Function &Func = MF.getFunction();
   if (Func.getFnAttribute("uniform-work-group-size").getValueAsBool())
     Kern[".uniform_work_group_size"] = Kern.getDocument()->getNode(1);
 }
 
+//===----------------------------------------------------------------------===//
+// HSAMetadataStreamerV6
+//===----------------------------------------------------------------------===//
 
-} // end namespace HSAMD
-} // end namespace AMDGPU
+void MetadataStreamerMsgPackV6::emitVersion() {
+  auto Version = HSAMetadataDoc->getArrayNode();
+  Version.push_back(Version.getDocument()->getNode(VersionMajorV6));
+  Version.push_back(Version.getDocument()->getNode(VersionMinorV6));
+  getRootMetadata("amdhsa.version") = Version;
+}
+
+void MetadataStreamerMsgPackV6::emitKernelAttrs(const AMDGPUTargetMachine &TM,
+                                                const MachineFunction &MF,
+                                                msgpack::MapDocNode Kern) {
+  MetadataStreamerMsgPackV5::emitKernelAttrs(TM, MF, Kern);
+
+  const SIMachineFunctionInfo &MFI = *MF.getInfo<SIMachineFunctionInfo>();
+  ClusterDimsAttr Attr = MFI.getClusterDims();
+  if (Attr.isFixedDims()) {
+    msgpack::ArrayDocNode ClusterDimsNode = HSAMetadataDoc->getArrayNode();
+    ClusterDimsNode.push_back(HSAMetadataDoc->getNode(Attr.getDims()[0]));
+    ClusterDimsNode.push_back(HSAMetadataDoc->getNode(Attr.getDims()[1]));
+    ClusterDimsNode.push_back(HSAMetadataDoc->getNode(Attr.getDims()[2]));
+    Kern[".cluster_dims"] = ClusterDimsNode;
+  }
+}
+
+} // end namespace AMDGPU::HSAMD
 } // end namespace llvm

@@ -1,4 +1,4 @@
-! RUN: bbc -emit-fir -outline-intrinsics %s -o - | FileCheck %s
+! RUN: bbc -emit-fir -hlfir=false -outline-intrinsics %s -o - | FileCheck %s
 
 ! Test statement function lowering
 
@@ -21,7 +21,7 @@ end function
 
 ! Check this is not lowered as a simple macro: e.g. argument is only
 ! evaluated once even if it appears in several placed inside the
-! statement function expression 
+! statement function expression
 ! CHECK-LABEL: func @_QPtest_stmt_only_eval_arg_once() -> f32
 real(4) function test_stmt_only_eval_arg_once()
   real(4) :: only_once, x1
@@ -129,7 +129,6 @@ integer function test_stmt_character_with_different_length_2(c, n)
   character(n) :: argc
   character(*) :: c
   ! CHECK: %[[unboxed:.*]]:2 = fir.unboxchar %[[arg0]] :
-  ! CHECK: fir.load %[[arg1]] : !fir.ref<i32>
   ! CHECK: %[[n:.*]] = fir.load %[[arg1]] : !fir.ref<i32>
   ! CHECK: %[[n_is_positive:.*]] = arith.cmpi sgt, %[[n]], %c0{{.*}} : i32
   ! CHECK: %[[len:.*]] = arith.select %[[n_is_positive]], %[[n]], %c0{{.*}} : i32
@@ -159,7 +158,7 @@ end subroutine
 
 ! CHECK-LABEL: @_QPtruncate_arg
 ! CHECK: %[[c4:.*]] = arith.constant 4 : i32
-! CHECK: %[[arg:.*]] = fir.address_of(@_QQcl.{{.*}}) : !fir.ref<!fir.char<1,10>>
+! CHECK: %[[arg:.*]] = fir.address_of(@_QQclX{{.*}}) : !fir.ref<!fir.char<1,10>>
 ! CHECK: %[[cast_arg:.*]] = fir.convert %[[arg]] : (!fir.ref<!fir.char<1,10>>) -> !fir.ref<!fir.char<1,?>>
 ! CHECK: %[[c10:.*]] = arith.constant 10 : i64
 ! CHECK: %[[temp:.*]] = fir.alloca !fir.char<1,10> {bindc_name = ".chrtmp"}
@@ -170,9 +169,9 @@ end subroutine
 ! CHECK: %[[c1:.*]] = arith.constant 1 : i64
 ! CHECK: %[[select_i64:.*]] = fir.convert %[[select]] : (index) -> i64
 ! CHECK: %[[length:.*]] = arith.muli %[[c1]], %[[select_i64]] : i64
-! CHECK: %[[cast_temp_i8:.*]] = fir.convert %[[temp]] : (!fir.ref<!fir.char<1,10>>) -> !fir.ref<i8>
-! CHECK: %[[cast_arg_i8:.*]] = fir.convert %[[cast_arg]] : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<i8>
-! CHECK: fir.call @llvm.memmove.p0.p0.i64(%[[cast_temp_i8]], %[[cast_arg_i8]], %[[length]], %{{.*}}) {{.*}}: (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
+! CHECK: %[[cast_temp_i8:.*]] = fir.convert %[[temp]] : (!fir.ref<!fir.char<1,10>>) -> !llvm.ptr
+! CHECK: %[[cast_arg_i8:.*]] = fir.convert %[[cast_arg]] : (!fir.ref<!fir.char<1,?>>) -> !llvm.ptr
+! CHECK: "llvm.intr.memmove"(%[[cast_temp_i8]], %[[cast_arg_i8]], %[[length]]) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i64) -> ()
 ! CHECK: %[[c1_i64:.*]] = arith.constant 1 : i64
 ! CHECK: %[[ub:.*]] = arith.subi %[[c10]], %[[c1_i64]] : i64
 ! CHECK: %[[ub_index:.*]] = fir.convert %[[ub]] : (i64) -> index

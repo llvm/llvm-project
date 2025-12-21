@@ -4,10 +4,10 @@ auto check1() {
   return s; // expected-error {{use of undeclared identifier 's'}}
 }
 
-int test = 11; // expected-note 2 {{'test' declared here}}
+int test = 11; // expected-note 3 {{'test' declared here}}
 auto check2() {
   return "s";
-  return tes; // expected-error {{use of undeclared identifier 'tes'; did you mean 'test'?}}
+  return tes; // expected-error {{use of undeclared identifier 'tes'}}
               // expected-error@-1 {{deduced as 'int' here but deduced as 'const char *' in earlier}}
 }
 
@@ -16,9 +16,8 @@ template <class A> struct is_same<A,A> { static constexpr bool value = true; };
 
 auto L1 = [] { return s; }; // expected-error {{use of undeclared identifier 's'}}
 using T1 = decltype(L1());
-// FIXME: Suppress the 'undeclared identifier T1' diagnostic, the UsingDecl T1 is discarded because of an invalid L1().
-static_assert(is_same<T1, void>::value, "Return statement should be discarded"); // expected-error {{use of undeclared identifier 'T1'}}
-auto L2 = [] { return tes; }; // expected-error {{use of undeclared identifier 'tes'; did you mean 'test'?}}
+static_assert(is_same<T1, void>::value, "Return statement should be discarded");
+auto L2 = [] { return tes; }; // expected-error {{use of undeclared identifier 'tes'}}
 using T2 = decltype(L2());
 static_assert(is_same<T2, int>::value, "Return statement was corrected");
 
@@ -32,13 +31,13 @@ FooRecord::NestedNamespace::type x; // expected-error {{no member named 'NestedN
 
 void cast_expr(int g) { +int(n)(g); } // expected-error {{undeclared identifier 'n'}}
 
-void bind() { for (const auto& [test,_] : _test_) { }; } // expected-error {{undeclared identifier '_test_'}}
+void bind() { for (const auto& [test,_] : _test_) { }; } // expected-error {{undeclared identifier '_test_'}} \
+                                                            expected-error {{invalid range expression of type 'int'; no viable 'begin' function available}}
 
 namespace NoCrash {
 class S {
   void Function(int a) {
-    unknown1(unknown2, Function, unknown3); // expected-error 2{{use of undeclared identifier}} \
-                                               expected-error {{reference to non-static member function must be called}}
+    unknown1(unknown2, Function, unknown3); // expected-error 2{{use of undeclared identifier}}
   }
 };
 }
@@ -46,8 +45,6 @@ class S {
 namespace NoCrashOnCheckArgAlignment {
 template <typename a> void b(a &);
 void test() {
-  for (auto file_data :b(files_db_data)); // expected-error {{use of undeclared identifier 'files_db_data'; did you mean 'file_data'?}} \
-                                          // expected-note {{'file_data' declared here}} \
-                                          // expected-error {{cannot use type 'void' as a range}}
+  for (auto file_data :b(files_db_data)); // expected-error {{use of undeclared identifier 'files_db_data'}}
 }
 }

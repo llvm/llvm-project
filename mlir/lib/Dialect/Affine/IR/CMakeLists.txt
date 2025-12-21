@@ -15,9 +15,11 @@ add_mlir_dialect_library(MLIRAffineDialect
   MLIRArithDialect
   MLIRDialectUtils
   MLIRIR
+  MLIRInferTypeOpInterface
   MLIRLoopLikeInterface
   MLIRMemRefDialect
   MLIRShapedOpInterfaces
   MLIRSideEffectInterfaces
+  MLIRUBDialect
   MLIRValueBoundsOpInterface
   )

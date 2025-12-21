@@ -14,7 +14,6 @@
 
 #include "X86.h"
 #include "X86FrameLowering.h"
-#include "X86InstrBuilder.h"
 #include "X86InstrInfo.h"
 #include "X86MachineFunctionInfo.h"
 #include "X86Subtarget.h"
@@ -52,8 +51,7 @@ public:
   bool runOnMachineFunction(MachineFunction &MF) override;
 
   MachineFunctionProperties getRequiredProperties() const override {
-    return MachineFunctionProperties().set(
-        MachineFunctionProperties::Property::NoVRegs);
+    return MachineFunctionProperties().setNoVRegs();
   }
 
   StringRef getPassName() const override {
@@ -61,22 +59,22 @@ public:
   }
 
 private:
-  void ExpandICallBranchFunnel(MachineBasicBlock *MBB,
+  void expandICallBranchFunnel(MachineBasicBlock *MBB,
                                MachineBasicBlock::iterator MBBI);
   void expandCALL_RVMARKER(MachineBasicBlock &MBB,
                            MachineBasicBlock::iterator MBBI);
-  bool ExpandMI(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI);
-  bool ExpandMBB(MachineBasicBlock &MBB);
+  bool expandMI(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI);
+  bool expandMBB(MachineBasicBlock &MBB);
 
   /// This function expands pseudos which affects control flow.
   /// It is done in separate pass to simplify blocks navigation in main
-  /// pass(calling ExpandMBB).
-  bool ExpandPseudosWhichAffectControlFlow(MachineFunction &MF);
+  /// pass(calling expandMBB).
+  bool expandPseudosWhichAffectControlFlow(MachineFunction &MF);
 
   /// Expand X86::VASTART_SAVE_XMM_REGS into set of xmm copying instructions,
   /// placed into separate block guarded by check for al register(for SystemV
   /// abi).
-  void ExpandVastartSaveXmmRegs(
+  void expandVastartSaveXmmRegs(
       MachineBasicBlock *EntryBlk,
       MachineBasicBlock::iterator VAStartPseudoInstr) const;
 };
@@ -87,7 +85,7 @@ char X86ExpandPseudo::ID = 0;
 INITIALIZE_PASS(X86ExpandPseudo, DEBUG_TYPE, X86_EXPAND_PSEUDO_NAME, false,
                 false)
 
-void X86ExpandPseudo::ExpandICallBranchFunnel(
+void X86ExpandPseudo::expandICallBranchFunnel(
     MachineBasicBlock *MBB, MachineBasicBlock::iterator MBBI) {
   MachineBasicBlock *JTMBB = MBB;
   MachineInstr *JTInst = &*MBBI;
@@ -231,8 +229,8 @@ void X86ExpandPseudo::expandCALL_RVMARKER(MachineBasicBlock &MBB,
                      .addReg(TargetReg, RegState::Define)
                      .addReg(X86::RAX)
                      .getInstr();
-  if (MI.shouldUpdateCallSiteInfo())
-    MBB.getParent()->moveCallSiteInfo(&MI, Marker);
+  if (MI.shouldUpdateAdditionalCallInfo())
+    MBB.getParent()->moveAdditionalCallInfo(&MI, Marker);
 
   // Emit call to ObjC runtime.
   const uint32_t *RegMask =
@@ -259,23 +257,29 @@ void X86ExpandPseudo::expandCALL_RVMARKER(MachineBasicBlock &MBB,
 /// If \p MBBI is a pseudo instruction, this method expands
 /// it to the corresponding (sequence of) actual instruction(s).
 /// \returns true if \p MBBI has been expanded.
-bool X86ExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
+bool X86ExpandPseudo::expandMI(MachineBasicBlock &MBB,
                                MachineBasicBlock::iterator MBBI) {
   MachineInstr &MI = *MBBI;
   unsigned Opcode = MI.getOpcode();
   const DebugLoc &DL = MBBI->getDebugLoc();
+#define GET_EGPR_IF_ENABLED(OPC) (STI->hasEGPR() ? OPC##_EVEX : OPC)
   switch (Opcode) {
   default:
     return false;
   case X86::TCRETURNdi:
   case X86::TCRETURNdicc:
   case X86::TCRETURNri:
+  case X86::TCRETURN_WIN64ri:
+  case X86::TCRETURN_HIPE32ri:
   case X86::TCRETURNmi:
   case X86::TCRETURNdi64:
   case X86::TCRETURNdi64cc:
   case X86::TCRETURNri64:
-  case X86::TCRETURNmi64: {
-    bool isMem = Opcode == X86::TCRETURNmi || Opcode == X86::TCRETURNmi64;
+  case X86::TCRETURNri64_ImpCall:
+  case X86::TCRETURNmi64:
+  case X86::TCRETURN_WINmi64: {
+    bool isMem = Opcode == X86::TCRETURNmi || Opcode == X86::TCRETURNmi64 ||
+                 Opcode == X86::TCRETURN_WINmi64;
     MachineOperand &JumpTarget = MBBI->getOperand(0);
     MachineOperand &StackAdjust = MBBI->getOperand(isMem ? X86::AddrNumOperands
                                                          : 1);
@@ -284,7 +288,7 @@ bool X86ExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
     // Adjust stack pointer.
     int StackAdj = StackAdjust.getImm();
     int MaxTCDelta = X86FI->getTCReturnAddrDelta();
-    int Offset = 0;
+    int64_t Offset = 0;
     assert(MaxTCDelta <= 0 && "MaxTCDelta should never be positive");
 
     // Incoporate the retaddr area.
@@ -297,12 +301,13 @@ bool X86ExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
 
     if (Offset) {
       // Check for possible merge with preceding ADD instruction.
-      Offset += X86FL->mergeSPUpdates(MBB, MBBI, true);
+      Offset = X86FL->mergeSPAdd(MBB, MBBI, Offset, true);
       X86FL->emitSPUpdate(MBB, MBBI, DL, Offset, /*InEpilogue=*/true);
     }
 
+    // Use this predicate to set REX prefix for X86_64 targets.
+    bool IsX64 = STI->isTargetWin64() || STI->isTargetUEFI64();
     // Jump to label or value in register.
-    bool IsWin64 = STI->isTargetWin64();
     if (Opcode == X86::TCRETURNdi || Opcode == X86::TCRETURNdicc ||
         Opcode == X86::TCRETURNdi64 || Opcode == X86::TCRETURNdi64cc) {
       unsigned Op;
@@ -338,19 +343,23 @@ bool X86ExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
         MIB.addImm(MBBI->getOperand(2).getImm());
       }
 
-    } else if (Opcode == X86::TCRETURNmi || Opcode == X86::TCRETURNmi64) {
+    } else if (Opcode == X86::TCRETURNmi || Opcode == X86::TCRETURNmi64 ||
+               Opcode == X86::TCRETURN_WINmi64) {
       unsigned Op = (Opcode == X86::TCRETURNmi)
                         ? X86::TAILJMPm
-                        : (IsWin64 ? X86::TAILJMPm64_REX : X86::TAILJMPm64);
+                        : (IsX64 ? X86::TAILJMPm64_REX : X86::TAILJMPm64);
       MachineInstrBuilder MIB = BuildMI(MBB, MBBI, DL, TII->get(Op));
       for (unsigned i = 0; i != X86::AddrNumOperands; ++i)
         MIB.add(MBBI->getOperand(i));
-    } else if (Opcode == X86::TCRETURNri64) {
+    } else if (Opcode == X86::TCRETURNri64 ||
+               Opcode == X86::TCRETURNri64_ImpCall ||
+               Opcode == X86::TCRETURN_WIN64ri) {
       JumpTarget.setIsKill();
       BuildMI(MBB, MBBI, DL,
-              TII->get(IsWin64 ? X86::TAILJMPr64_REX : X86::TAILJMPr64))
+              TII->get(IsX64 ? X86::TAILJMPr64_REX : X86::TAILJMPr64))
           .add(JumpTarget);
     } else {
+      assert(!IsX64 && "Win64 and UEFI64 require REX for indirect jumps.");
       JumpTarget.setIsKill();
       BuildMI(MBB, MBBI, DL, TII->get(X86::TAILJMPr))
           .add(JumpTarget);
@@ -360,9 +369,9 @@ bool X86ExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
     NewMI.copyImplicitOps(*MBBI->getParent()->getParent(), *MBBI);
     NewMI.setCFIType(*MBB.getParent(), MI.getCFIType());
 
-    // Update the call site info.
-    if (MBBI->isCandidateForCallSiteEntry())
-      MBB.getParent()->moveCallSiteInfo(&*MBBI, &NewMI);
+    // Update the call info.
+    if (MBBI->isCandidateForAdditionalCallInfo())
+      MBB.getParent()->moveAdditionalCallInfo(&*MBBI, &NewMI);
 
     // Delete the pseudo instruction TCRETURN.
     MBB.erase(MBBI);
@@ -373,8 +382,7 @@ bool X86ExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
   case X86::EH_RETURN64: {
     MachineOperand &DestAddr = MBBI->getOperand(0);
     assert(DestAddr.isReg() && "Offset should be in register!");
-    const bool Uses64BitFramePtr =
-        STI->isTarget64BitLP64() || STI->isTargetNaCl64();
+    const bool Uses64BitFramePtr = STI->isTarget64BitLP64();
     Register StackPtr = TRI->getStackRegister();
     BuildMI(MBB, MBBI, DL,
             TII->get(Uses64BitFramePtr ? X86::MOV64rr : X86::MOV32rr), StackPtr)
@@ -439,8 +447,18 @@ bool X86ExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
     TII->copyPhysReg(MBB, MBBI, DL, X86::RBX, InArg.getReg(), false);
     // Create the actual instruction.
     MachineInstr *NewInstr = BuildMI(MBB, MBBI, DL, TII->get(X86::LCMPXCHG16B));
-    // Copy the operands related to the address.
-    for (unsigned Idx = 1; Idx < 6; ++Idx)
+    // Copy the operands related to the address. If we access a frame variable,
+    // we need to replace the RBX base with SaveRbx, as RBX has another value.
+    const MachineOperand &Base = MBBI->getOperand(1);
+    if (Base.getReg() == X86::RBX || Base.getReg() == X86::EBX)
+      NewInstr->addOperand(MachineOperand::CreateReg(
+          Base.getReg() == X86::RBX
+              ? SaveRbx
+              : Register(TRI->getSubReg(SaveRbx, X86::sub_32bit)),
+          /*IsDef=*/false));
+    else
+      NewInstr->addOperand(Base);
+    for (unsigned Idx = 1 + 1; Idx < 1 + X86::AddrNumOperands; ++Idx)
       NewInstr->addOperand(MBBI->getOperand(Idx));
     // Finally, restore the value of RBX.
     TII->copyPhysReg(MBB, MBBI, DL, X86::RBX, SaveRbx,
@@ -466,10 +484,12 @@ bool X86ExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
     Register Reg0 = TRI->getSubReg(Reg, X86::sub_mask_0);
     Register Reg1 = TRI->getSubReg(Reg, X86::sub_mask_1);
 
-    auto MIBLo = BuildMI(MBB, MBBI, DL, TII->get(X86::KMOVWkm))
-      .addReg(Reg0, RegState::Define | getDeadRegState(DstIsDead));
-    auto MIBHi = BuildMI(MBB, MBBI, DL, TII->get(X86::KMOVWkm))
-      .addReg(Reg1, RegState::Define | getDeadRegState(DstIsDead));
+    auto MIBLo =
+        BuildMI(MBB, MBBI, DL, TII->get(GET_EGPR_IF_ENABLED(X86::KMOVWkm)))
+            .addReg(Reg0, RegState::Define | getDeadRegState(DstIsDead));
+    auto MIBHi =
+        BuildMI(MBB, MBBI, DL, TII->get(GET_EGPR_IF_ENABLED(X86::KMOVWkm)))
+            .addReg(Reg1, RegState::Define | getDeadRegState(DstIsDead));
 
     for (int i = 0; i < X86::AddrNumOperands; ++i) {
       MIBLo.add(MBBI->getOperand(1 + i));
@@ -500,8 +520,10 @@ bool X86ExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
     Register Reg0 = TRI->getSubReg(Reg, X86::sub_mask_0);
     Register Reg1 = TRI->getSubReg(Reg, X86::sub_mask_1);
 
-    auto MIBLo = BuildMI(MBB, MBBI, DL, TII->get(X86::KMOVWmk));
-    auto MIBHi = BuildMI(MBB, MBBI, DL, TII->get(X86::KMOVWmk));
+    auto MIBLo =
+        BuildMI(MBB, MBBI, DL, TII->get(GET_EGPR_IF_ENABLED(X86::KMOVWmk)));
+    auto MIBHi =
+        BuildMI(MBB, MBBI, DL, TII->get(GET_EGPR_IF_ENABLED(X86::KMOVWmk)));
 
     for (int i = 0; i < X86::AddrNumOperands; ++i) {
       MIBLo.add(MBBI->getOperand(i));
@@ -547,18 +569,83 @@ bool X86ExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
     return true;
   }
   case TargetOpcode::ICALL_BRANCH_FUNNEL:
-    ExpandICallBranchFunnel(&MBB, MBBI);
+    expandICallBranchFunnel(&MBB, MBBI);
     return true;
   case X86::PLDTILECFGV: {
-    MI.setDesc(TII->get(X86::LDTILECFG));
+    MI.setDesc(TII->get(GET_EGPR_IF_ENABLED(X86::LDTILECFG)));
     return true;
   }
   case X86::PTILELOADDV:
-  case X86::PTILELOADDT1V: {
+  case X86::PTILELOADDT1V:
+  case X86::PTILELOADDRSV:
+  case X86::PTILELOADDRST1V:
+  case X86::PTCVTROWD2PSrreV:
+  case X86::PTCVTROWD2PSrriV:
+  case X86::PTCVTROWPS2BF16HrreV:
+  case X86::PTCVTROWPS2BF16HrriV:
+  case X86::PTCVTROWPS2BF16LrreV:
+  case X86::PTCVTROWPS2BF16LrriV:
+  case X86::PTCVTROWPS2PHHrreV:
+  case X86::PTCVTROWPS2PHHrriV:
+  case X86::PTCVTROWPS2PHLrreV:
+  case X86::PTCVTROWPS2PHLrriV:
+  case X86::PTILEMOVROWrreV:
+  case X86::PTILEMOVROWrriV: {
     for (unsigned i = 2; i > 0; --i)
       MI.removeOperand(i);
-    unsigned Opc =
-        Opcode == X86::PTILELOADDV ? X86::TILELOADD : X86::TILELOADDT1;
+    unsigned Opc;
+    switch (Opcode) {
+    case X86::PTILELOADDRSV:
+      Opc = GET_EGPR_IF_ENABLED(X86::TILELOADDRS);
+      break;
+    case X86::PTILELOADDRST1V:
+      Opc = GET_EGPR_IF_ENABLED(X86::TILELOADDRST1);
+      break;
+    case X86::PTILELOADDV:
+      Opc = GET_EGPR_IF_ENABLED(X86::TILELOADD);
+      break;
+    case X86::PTILELOADDT1V:
+      Opc = GET_EGPR_IF_ENABLED(X86::TILELOADDT1);
+      break;
+    case X86::PTCVTROWD2PSrreV:
+      Opc = X86::TCVTROWD2PSrte;
+      break;
+    case X86::PTCVTROWD2PSrriV:
+      Opc = X86::TCVTROWD2PSrti;
+      break;
+    case X86::PTCVTROWPS2BF16HrreV:
+      Opc = X86::TCVTROWPS2BF16Hrte;
+      break;
+    case X86::PTCVTROWPS2BF16HrriV:
+      Opc = X86::TCVTROWPS2BF16Hrti;
+      break;
+    case X86::PTCVTROWPS2BF16LrreV:
+      Opc = X86::TCVTROWPS2BF16Lrte;
+      break;
+    case X86::PTCVTROWPS2BF16LrriV:
+      Opc = X86::TCVTROWPS2BF16Lrti;
+      break;
+    case X86::PTCVTROWPS2PHHrreV:
+      Opc = X86::TCVTROWPS2PHHrte;
+      break;
+    case X86::PTCVTROWPS2PHHrriV:
+      Opc = X86::TCVTROWPS2PHHrti;
+      break;
+    case X86::PTCVTROWPS2PHLrreV:
+      Opc = X86::TCVTROWPS2PHLrte;
+      break;
+    case X86::PTCVTROWPS2PHLrriV:
+      Opc = X86::TCVTROWPS2PHLrti;
+      break;
+    case X86::PTILEMOVROWrreV:
+      Opc = X86::TILEMOVROWrte;
+      break;
+    case X86::PTILEMOVROWrriV:
+      Opc = X86::TILEMOVROWrti;
+      break;
+    default:
+      llvm_unreachable("Unexpected Opcode");
+    }
     MI.setDesc(TII->get(Opc));
     return true;
   }
@@ -569,12 +656,18 @@ bool X86ExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
   case X86::PTDPBUSDV:
   case X86::PTDPBUUDV:
   case X86::PTDPBF16PSV:
-  case X86::PTDPFP16PSV: {
+  case X86::PTDPFP16PSV:
+  case X86::PTMMULTF32PSV:
+  case X86::PTDPBF8PSV:
+  case X86::PTDPBHF8PSV:
+  case X86::PTDPHBF8PSV:
+  case X86::PTDPHF8PSV: {
     MI.untieRegOperand(4);
     for (unsigned i = 3; i > 0; --i)
       MI.removeOperand(i);
     unsigned Opc;
     switch (Opcode) {
+      // clang-format off
     case X86::PTCMMIMFP16PSV:  Opc = X86::TCMMIMFP16PS; break;
     case X86::PTCMMRLFP16PSV:  Opc = X86::TCMMRLFP16PS; break;
     case X86::PTDPBSSDV:   Opc = X86::TDPBSSD; break;
@@ -583,7 +676,14 @@ bool X86ExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
     case X86::PTDPBUUDV:   Opc = X86::TDPBUUD; break;
     case X86::PTDPBF16PSV: Opc = X86::TDPBF16PS; break;
     case X86::PTDPFP16PSV: Opc = X86::TDPFP16PS; break;
-    default: llvm_unreachable("Impossible Opcode!");
+    case X86::PTMMULTF32PSV: Opc = X86::TMMULTF32PS; break;
+    case X86::PTDPBF8PSV: Opc = X86::TDPBF8PS; break;
+    case X86::PTDPBHF8PSV: Opc = X86::TDPBHF8PS; break;
+    case X86::PTDPHBF8PSV: Opc = X86::TDPHBF8PS; break;
+    case X86::PTDPHF8PSV: Opc = X86::TDPHF8PS; break;
+    // clang-format on
+    default:
+      llvm_unreachable("Unexpected Opcode");
     }
     MI.setDesc(TII->get(Opc));
     MI.tieOperands(0, 1);
@@ -592,9 +692,10 @@ bool X86ExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
   case X86::PTILESTOREDV: {
     for (int i = 1; i >= 0; --i)
       MI.removeOperand(i);
-    MI.setDesc(TII->get(X86::TILESTORED));
+    MI.setDesc(TII->get(GET_EGPR_IF_ENABLED(X86::TILESTORED)));
     return true;
   }
+#undef GET_EGPR_IF_ENABLED
   case X86::PTILEZEROV: {
     for (int i = 2; i > 0; --i) // Remove row, col
       MI.removeOperand(i);
@@ -606,6 +707,94 @@ bool X86ExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
   case X86::CALL64m_RVMARKER:
     expandCALL_RVMARKER(MBB, MBBI);
     return true;
+  case X86::CALL64r_ImpCall:
+    MI.setDesc(TII->get(X86::CALL64r));
+    return true;
+  case X86::ADD32mi_ND:
+  case X86::ADD64mi32_ND:
+  case X86::SUB32mi_ND:
+  case X86::SUB64mi32_ND:
+  case X86::AND32mi_ND:
+  case X86::AND64mi32_ND:
+  case X86::OR32mi_ND:
+  case X86::OR64mi32_ND:
+  case X86::XOR32mi_ND:
+  case X86::XOR64mi32_ND:
+  case X86::ADC32mi_ND:
+  case X86::ADC64mi32_ND:
+  case X86::SBB32mi_ND:
+  case X86::SBB64mi32_ND: {
+    // It's possible for an EVEX-encoded legacy instruction to reach the 15-byte
+    // instruction length limit: 4 bytes of EVEX prefix + 1 byte of opcode + 1
+    // byte of ModRM + 1 byte of SIB + 4 bytes of displacement + 4 bytes of
+    // immediate = 15 bytes in total, e.g.
+    //
+    //  subq    $184, %fs:257(%rbx, %rcx), %rax
+    //
+    // In such a case, no additional (ADSIZE or segment override) prefix can be
+    // used. To resolve the issue, we split the “long” instruction into 2
+    // instructions:
+    //
+    //  movq %fs:257(%rbx, %rcx)，%rax
+    //  subq $184, %rax
+    //
+    //  Therefore we consider the OPmi_ND to be a pseudo instruction to some
+    //  extent.
+    const MachineOperand &ImmOp =
+        MI.getOperand(MI.getNumExplicitOperands() - 1);
+    // If the immediate is a expr, conservatively estimate 4 bytes.
+    if (ImmOp.isImm() && isInt<8>(ImmOp.getImm()))
+      return false;
+    int MemOpNo = X86::getFirstAddrOperandIdx(MI);
+    const MachineOperand &DispOp = MI.getOperand(MemOpNo + X86::AddrDisp);
+    Register Base = MI.getOperand(MemOpNo + X86::AddrBaseReg).getReg();
+    // If the displacement is a expr, conservatively estimate 4 bytes.
+    if (Base && DispOp.isImm() && isInt<8>(DispOp.getImm()))
+      return false;
+    // There can only be one of three: SIB, segment override register, ADSIZE
+    Register Index = MI.getOperand(MemOpNo + X86::AddrIndexReg).getReg();
+    unsigned Count = !!MI.getOperand(MemOpNo + X86::AddrSegmentReg).getReg();
+    if (X86II::needSIB(Base, Index, /*In64BitMode=*/true))
+      ++Count;
+    if (X86MCRegisterClasses[X86::GR32RegClassID].contains(Base) ||
+        X86MCRegisterClasses[X86::GR32RegClassID].contains(Index))
+      ++Count;
+    if (Count < 2)
+      return false;
+    unsigned Opc, LoadOpc;
+    switch (Opcode) {
+#define MI_TO_RI(OP)                                                           \
+  case X86::OP##32mi_ND:                                                       \
+    Opc = X86::OP##32ri;                                                       \
+    LoadOpc = X86::MOV32rm;                                                    \
+    break;                                                                     \
+  case X86::OP##64mi32_ND:                                                     \
+    Opc = X86::OP##64ri32;                                                     \
+    LoadOpc = X86::MOV64rm;                                                    \
+    break;
+
+    default:
+      llvm_unreachable("Unexpected Opcode");
+      MI_TO_RI(ADD);
+      MI_TO_RI(SUB);
+      MI_TO_RI(AND);
+      MI_TO_RI(OR);
+      MI_TO_RI(XOR);
+      MI_TO_RI(ADC);
+      MI_TO_RI(SBB);
+#undef MI_TO_RI
+    }
+    // Insert OPri.
+    Register DestReg = MI.getOperand(0).getReg();
+    BuildMI(MBB, std::next(MBBI), DL, TII->get(Opc), DestReg)
+        .addReg(DestReg)
+        .add(ImmOp);
+    // Change OPmi_ND to MOVrm.
+    for (unsigned I = MI.getNumImplicitOperands() + 1; I != 0; --I)
+      MI.removeOperand(MI.getNumOperands() - 1);
+    MI.setDesc(TII->get(LoadOpc));
+    return true;
+  }
   }
   llvm_unreachable("Previous switch has a fallthrough?");
 }
@@ -624,7 +813,7 @@ bool X86ExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
 //        |                              |
 //        |                              |
 //
-void X86ExpandPseudo::ExpandVastartSaveXmmRegs(
+void X86ExpandPseudo::expandVastartSaveXmmRegs(
     MachineBasicBlock *EntryBlk,
     MachineBasicBlock::iterator VAStartPseudoInstr) const {
   assert(VAStartPseudoInstr->getOpcode() == X86::VASTART_SAVE_XMM_REGS);
@@ -709,27 +898,27 @@ void X86ExpandPseudo::ExpandVastartSaveXmmRegs(
 
 /// Expand all pseudo instructions contained in \p MBB.
 /// \returns true if any expansion occurred for \p MBB.
-bool X86ExpandPseudo::ExpandMBB(MachineBasicBlock &MBB) {
+bool X86ExpandPseudo::expandMBB(MachineBasicBlock &MBB) {
   bool Modified = false;
 
   // MBBI may be invalidated by the expansion.
   MachineBasicBlock::iterator MBBI = MBB.begin(), E = MBB.end();
   while (MBBI != E) {
     MachineBasicBlock::iterator NMBBI = std::next(MBBI);
-    Modified |= ExpandMI(MBB, MBBI);
+    Modified |= expandMI(MBB, MBBI);
     MBBI = NMBBI;
   }
 
   return Modified;
 }
 
-bool X86ExpandPseudo::ExpandPseudosWhichAffectControlFlow(MachineFunction &MF) {
+bool X86ExpandPseudo::expandPseudosWhichAffectControlFlow(MachineFunction &MF) {
   // Currently pseudo which affects control flow is only
   // X86::VASTART_SAVE_XMM_REGS which is located in Entry block.
   // So we do not need to evaluate other blocks.
   for (MachineInstr &Instr : MF.front().instrs()) {
     if (Instr.getOpcode() == X86::VASTART_SAVE_XMM_REGS) {
-      ExpandVastartSaveXmmRegs(&(MF.front()), Instr);
+      expandVastartSaveXmmRegs(&(MF.front()), Instr);
       return true;
     }
   }
@@ -744,10 +933,10 @@ bool X86ExpandPseudo::runOnMachineFunction(MachineFunction &MF) {
   X86FI = MF.getInfo<X86MachineFunctionInfo>();
   X86FL = STI->getFrameLowering();
 
-  bool Modified = ExpandPseudosWhichAffectControlFlow(MF);
+  bool Modified = expandPseudosWhichAffectControlFlow(MF);
 
   for (MachineBasicBlock &MBB : MF)
-    Modified |= ExpandMBB(MBB);
+    Modified |= expandMBB(MBB);
   return Modified;
 }
 

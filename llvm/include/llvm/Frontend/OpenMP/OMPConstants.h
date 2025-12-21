@@ -15,9 +15,8 @@
 #define LLVM_FRONTEND_OPENMP_OMPCONSTANTS_H
 
 #include "llvm/ADT/BitmaskEnum.h"
-
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Frontend/OpenMP/OMP.h.inc"
+#include "llvm/Frontend/OpenMP/OMP.h"
 
 namespace llvm {
 namespace omp {
@@ -73,7 +72,10 @@ enum class IdentFlag {
 #include "llvm/Frontend/OpenMP/OMPKinds.def"
 
 // Version of the kernel argument format used by the omp runtime.
-#define OMP_KERNEL_ARG_VERSION 2
+#define OMP_KERNEL_ARG_VERSION 3
+
+// Minimum version of the compiler that generates a kernel dynamic pointer.
+#define OMP_KERNEL_ARG_MIN_VERSION_WITH_DYN_PTR 3
 
 /// \note This needs to be kept in sync with kmp.h enum sched_type.
 /// Todo: Update kmp.h to include this file, and remove the enums in kmp.h
@@ -188,6 +190,19 @@ enum class OMPScheduleType {
   LLVM_MARK_AS_BITMASK_ENUM(/* LargestValue */ ModifierMask)
 };
 
+/// The fallback types for the dyn_groupprivate clause.
+enum class OMPDynGroupprivateFallbackType : uint64_t {
+  /// Abort the execution.
+  Abort = 0,
+  /// Return null pointer.
+  Null = 1,
+  /// Allocate from a implementation defined memory space.
+  DefaultMem = 2
+};
+
+// Default OpenMP mapper name suffix.
+inline constexpr const char *OmpDefaultMapperName = "_omp_default_mapper";
+
 /// Values for bit flags used to specify the mapping type for
 /// offloading.
 enum class OpenMPOffloadMappingFlags : uint64_t {
@@ -234,6 +249,9 @@ enum class OpenMPOffloadMappingFlags : uint64_t {
   // dynamic.
   // This is an OpenMP extension for the sake of OpenACC support.
   OMP_MAP_OMPX_HOLD = 0x2000,
+  // Attach pointer and pointee, after processing all other maps.
+  // Applicable to map-entering directives. Does not change ref-count.
+  OMP_MAP_ATTACH = 0x4000,
   /// Signal that the runtime library should use args as an array of
   /// descriptor_dim pointers and use args_size as dims. Used when we have
   /// non-contiguous list items in target update directive
@@ -275,6 +293,16 @@ enum class RTLDependenceKindTy {
   DepMutexInOutSet = 0x4,
   DepInOutSet = 0x8,
   DepOmpAllMem = 0x80,
+};
+
+/// A type of worksharing loop construct
+enum class WorksharingLoopType {
+  // Worksharing `for`-loop
+  ForStaticLoop,
+  // Worksharing `distrbute`-loop
+  DistributeStaticLoop,
+  // Worksharing `distrbute parallel for`-loop
+  DistributeForStaticLoop
 };
 
 } // end namespace omp

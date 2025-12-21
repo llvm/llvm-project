@@ -1,5 +1,6 @@
 ; RUN: llc %s -stop-after=finalize-isel -o - \
 ; RUN: | FileCheck %s --implicit-check-not=DBG --check-prefixes=AT-DISABLED,BOTH
+
 ;; Check that dbg.values with empty metadata are treated as kills (i.e. become
 ;; DBG_VALUE $noreg, ...). dbg.declares with empty metadata location operands
 ;; should be ignored.

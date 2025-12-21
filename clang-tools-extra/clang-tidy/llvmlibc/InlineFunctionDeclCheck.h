@@ -1,4 +1,4 @@
-//===-- InlineFunctionDeclCheck.h -------------------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -21,7 +21,7 @@ namespace clang::tidy::llvm_libc {
 /// https://libc.llvm.org/dev/code_style.html.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/llvmlibc/inline-function-decl-check.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/llvmlibc/inline-function-decl-check.html
 class InlineFunctionDeclCheck : public ClangTidyCheck {
 public:
   InlineFunctionDeclCheck(StringRef Name, ClangTidyContext *Context);
@@ -32,6 +32,11 @@ public:
 
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
+
+  // Ignore implicit functions (e.g. implicit constructors or destructors)
+  std::optional<TraversalKind> getCheckTraversalKind() const override {
+    return TK_IgnoreUnlessSpelledInSource;
+  }
 
 private:
   FileExtensionsSet HeaderFileExtensions;

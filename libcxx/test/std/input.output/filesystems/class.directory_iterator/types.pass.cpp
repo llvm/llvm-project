@@ -6,9 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03
+// UNSUPPORTED: c++03, c++11, c++14
 // UNSUPPORTED: no-filesystem
-// UNSUPPORTED: availability-filesystem-missing
 
 // <filesystem>
 
@@ -20,12 +19,13 @@
 // typedef ... reference;
 // typedef ... iterator_category
 
-#include "filesystem_include.h"
+#include <filesystem>
 #include <cassert>
 #include <iterator>
 #include <type_traits>
 
 #include "test_macros.h"
+namespace fs = std::filesystem;
 
 
 int main(int, char**) {

@@ -10,7 +10,6 @@
 
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/Config/config.h"
-#include "llvm/ExecutionEngine/JITLink/DWARFRecordSectionSplitter.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/RegisterEHFrames.h"
 #include "llvm/Support/DynamicLibrary.h"
 
@@ -71,8 +70,7 @@ Error EHFrameEdgeFixer::operator()(LinkGraph &G) {
   // Sort eh-frame blocks into address order to ensure we visit CIEs before
   // their child FDEs.
   std::vector<Block *> EHFrameBlocks;
-  for (auto *B : EHFrame->blocks())
-    EHFrameBlocks.push_back(B);
+  llvm::append_range(EHFrameBlocks, EHFrame->blocks());
   llvm::sort(EHFrameBlocks, [](const Block *LHS, const Block *RHS) {
     return LHS->getAddress() < RHS->getAddress();
   });
@@ -126,16 +124,21 @@ Error EHFrameEdgeFixer::processBlock(ParseContext &PC, Block &B) {
   }
 
   // Find the offsets of any existing edges from this block.
-  BlockEdgeMap BlockEdges;
+  BlockEdgesInfo BlockEdges;
   for (auto &E : B.edges())
     if (E.isRelocation()) {
-      if (BlockEdges.count(E.getOffset()))
-        return make_error<JITLinkError>(
-            "Multiple relocations at offset " +
-            formatv("{0:x16}", E.getOffset()) + " in " + EHFrameSectionName +
-            " block at address " + formatv("{0:x16}", B.getAddress()));
+      // Check if we already saw more than one relocation at this offset.
+      if (BlockEdges.Multiple.contains(E.getOffset()))
+        continue;
 
-      BlockEdges[E.getOffset()] = EdgeTarget(E);
+      // Otherwise check if we previously had exactly one relocation at this
+      // offset. If so, we now have a second one and move it from the TargetMap
+      // into the Multiple set.
+      auto [It, Inserted] = BlockEdges.TargetMap.try_emplace(E.getOffset(), E);
+      if (!Inserted) {
+        BlockEdges.TargetMap.erase(It);
+        BlockEdges.Multiple.insert(E.getOffset());
+      }
     }
 
   BinaryStreamReader BlockReader(
@@ -172,7 +175,7 @@ Error EHFrameEdgeFixer::processBlock(ParseContext &PC, Block &B) {
 
 Error EHFrameEdgeFixer::processCIE(ParseContext &PC, Block &B,
                                    size_t CIEDeltaFieldOffset,
-                                   const BlockEdgeMap &BlockEdges) {
+                                   const BlockEdgesInfo &BlockEdges) {
 
   LLVM_DEBUG(dbgs() << "    Record is CIE\n");
 
@@ -285,7 +288,7 @@ Error EHFrameEdgeFixer::processCIE(ParseContext &PC, Block &B,
 Error EHFrameEdgeFixer::processFDE(ParseContext &PC, Block &B,
                                    size_t CIEDeltaFieldOffset,
                                    uint32_t CIEDelta,
-                                   const BlockEdgeMap &BlockEdges) {
+                                   const BlockEdgesInfo &BlockEdges) {
   LLVM_DEBUG(dbgs() << "    Record is FDE\n");
 
   orc::ExecutorAddr RecordAddress = B.getAddress();
@@ -303,12 +306,17 @@ Error EHFrameEdgeFixer::processFDE(ParseContext &PC, Block &B,
 
   {
     // Process the CIE pointer field.
-    auto CIEEdgeItr = BlockEdges.find(CIEDeltaFieldOffset);
+    if (BlockEdges.Multiple.contains(CIEDeltaFieldOffset))
+      return make_error<JITLinkError>(
+          "CIE pointer field already has multiple edges at " +
+          formatv("{0:x16}", RecordAddress + CIEDeltaFieldOffset));
+
+    auto CIEEdgeItr = BlockEdges.TargetMap.find(CIEDeltaFieldOffset);
 
     orc::ExecutorAddr CIEAddress =
         RecordAddress + orc::ExecutorAddrDiff(CIEDeltaFieldOffset) -
         orc::ExecutorAddrDiff(CIEDelta);
-    if (CIEEdgeItr == BlockEdges.end()) {
+    if (CIEEdgeItr == BlockEdges.TargetMap.end()) {
       LLVM_DEBUG({
         dbgs() << "        Adding edge at "
                << (RecordAddress + CIEDeltaFieldOffset)
@@ -352,14 +360,14 @@ Error EHFrameEdgeFixer::processFDE(ParseContext &PC, Block &B,
       // Add a keep-alive edge from the FDE target to the FDE to ensure that the
       // FDE is kept alive if its target is.
       LLVM_DEBUG({
-        dbgs() << "      Adding keep-alive edge from target at "
+        dbgs() << "        Adding keep-alive edge from target at "
                << (*PCBegin)->getBlock().getAddress() << " to FDE at "
                << RecordAddress << "\n";
       });
       (*PCBegin)->getBlock().addEdge(Edge::KeepAlive, 0, FDESymbol, 0);
     } else {
       LLVM_DEBUG({
-        dbgs() << "      WARNING: Not adding keep-alive edge to FDE at "
+        dbgs() << "        WARNING: Not adding keep-alive edge to FDE at "
                << RecordAddress << ", which points to "
                << ((*PCBegin)->isExternal() ? "external" : "absolute")
                << " symbol \"" << (*PCBegin)->getName()
@@ -386,7 +394,7 @@ Error EHFrameEdgeFixer::processFDE(ParseContext &PC, Block &B,
                          .takeError())
         return Err;
   } else {
-    LLVM_DEBUG(dbgs() << "      Record does not have LSDA field.\n");
+    LLVM_DEBUG(dbgs() << "        Record does not have LSDA field.\n");
   }
 
   return Error::success();
@@ -497,7 +505,7 @@ Error EHFrameEdgeFixer::skipEncodedPointer(uint8_t PointerEncoding,
 }
 
 Expected<Symbol *> EHFrameEdgeFixer::getOrCreateEncodedPointerEdge(
-    ParseContext &PC, const BlockEdgeMap &BlockEdges, uint8_t PointerEncoding,
+    ParseContext &PC, const BlockEdgesInfo &BlockEdges, uint8_t PointerEncoding,
     BinaryStreamReader &RecordReader, Block &BlockToFix,
     size_t PointerFieldOffset, const char *FieldName) {
   using namespace dwarf;
@@ -508,8 +516,8 @@ Expected<Symbol *> EHFrameEdgeFixer::getOrCreateEncodedPointerEdge(
   // If there's already an edge here then just skip the encoded pointer and
   // return the edge's target.
   {
-    auto EdgeI = BlockEdges.find(PointerFieldOffset);
-    if (EdgeI != BlockEdges.end()) {
+    auto EdgeI = BlockEdges.TargetMap.find(PointerFieldOffset);
+    if (EdgeI != BlockEdges.TargetMap.end()) {
       LLVM_DEBUG({
         dbgs() << "      Existing edge at "
                << (BlockToFix.getAddress() + PointerFieldOffset) << " to "
@@ -522,6 +530,10 @@ Expected<Symbol *> EHFrameEdgeFixer::getOrCreateEncodedPointerEdge(
         return std::move(Err);
       return EdgeI->second.Target;
     }
+
+    if (BlockEdges.Multiple.contains(PointerFieldOffset))
+      return make_error<JITLinkError>("Multiple relocations at offset " +
+                                      formatv("{0:x16}", PointerFieldOffset));
   }
 
   // Switch absptr to corresponding udata encoding.
@@ -626,28 +638,12 @@ Error EHFrameNullTerminator::operator()(LinkGraph &G) {
   return Error::success();
 }
 
-EHFrameRegistrar::~EHFrameRegistrar() = default;
-
-Error InProcessEHFrameRegistrar::registerEHFrames(
-    orc::ExecutorAddrRange EHFrameSection) {
-  return orc::registerEHFrameSection(EHFrameSection.Start.toPtr<void *>(),
-                                     EHFrameSection.size());
-}
-
-Error InProcessEHFrameRegistrar::deregisterEHFrames(
-    orc::ExecutorAddrRange EHFrameSection) {
-  return orc::deregisterEHFrameSection(EHFrameSection.Start.toPtr<void *>(),
-                                       EHFrameSection.size());
-}
-
 EHFrameCFIBlockInspector EHFrameCFIBlockInspector::FromEdgeScan(Block &B) {
   if (B.edges_empty())
     return EHFrameCFIBlockInspector(nullptr);
   if (B.edges_size() == 1)
     return EHFrameCFIBlockInspector(&*B.edges().begin());
-  SmallVector<Edge *, 3> Es;
-  for (auto &E : B.edges())
-    Es.push_back(&E);
+  SmallVector<Edge *, 3> Es(llvm::make_pointer_range(B.edges()));
   assert(Es.size() >= 2 && Es.size() <= 3 && "Unexpected number of edges");
   llvm::sort(Es, [](const Edge *LHS, const Edge *RHS) {
     return LHS->getOffset() < RHS->getOffset();
@@ -665,36 +661,24 @@ EHFrameCFIBlockInspector::EHFrameCFIBlockInspector(Edge &CIEEdge,
                                                    Edge *LSDAEdge)
     : CIEEdge(&CIEEdge), PCBeginEdge(&PCBeginEdge), LSDAEdge(LSDAEdge) {}
 
-LinkGraphPassFunction
-createEHFrameRecorderPass(const Triple &TT,
-                          StoreFrameRangeFunction StoreRangeAddress) {
+Section *getEHFrameSection(LinkGraph &G) {
   const char *EHFrameSectionName = nullptr;
-  if (TT.getObjectFormat() == Triple::MachO)
+  switch (G.getTargetTriple().getObjectFormat()) {
+  case Triple::MachO:
     EHFrameSectionName = "__TEXT,__eh_frame";
-  else
+    break;
+  case Triple::ELF:
     EHFrameSectionName = ".eh_frame";
+    break;
+  default:
+    return nullptr;
+  }
 
-  auto RecordEHFrame =
-      [EHFrameSectionName,
-       StoreFrameRange = std::move(StoreRangeAddress)](LinkGraph &G) -> Error {
-    // Search for a non-empty eh-frame and record the address of the first
-    // symbol in it.
-    orc::ExecutorAddr Addr;
-    size_t Size = 0;
-    if (auto *S = G.findSectionByName(EHFrameSectionName)) {
-      auto R = SectionRange(*S);
-      Addr = R.getStart();
-      Size = R.getSize();
-    }
-    if (!Addr && Size != 0)
-      return make_error<JITLinkError>(
-          StringRef(EHFrameSectionName) +
-          " section can not have zero address with non-zero size");
-    StoreFrameRange(Addr, Size);
-    return Error::success();
-  };
+  if (auto *S = G.findSectionByName(EHFrameSectionName))
+    if (!S->empty())
+      return S;
 
-  return RecordEHFrame;
+  return nullptr;
 }
 
 } // end namespace jitlink

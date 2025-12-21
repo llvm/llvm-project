@@ -1,3 +1,6 @@
+__cxa_guard_acquire
+__cxa_guard_abort
+__cxa_guard_release
 __tsan_init
 __tsan_flush_memory
 __tsan_read*
@@ -22,6 +25,7 @@ __tsan_mutex_pre_signal
 __tsan_mutex_post_signal
 __tsan_mutex_pre_divert
 __tsan_mutex_post_divert
+__tsan_check_no_mutexes_held
 __tsan_get_current_fiber
 __tsan_create_fiber
 __tsan_destroy_fiber

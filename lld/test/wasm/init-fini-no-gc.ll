@@ -25,7 +25,7 @@ entry:
 }
 
 define hidden i32 @__cxa_atexit(i32 %func, i32 %arg, i32 %dso_handle) {
-  ret i32 0
+  ret i32 %func
 }
 
 @llvm.global_ctors = appending global [1 x { i32, ptr, ptr }] [

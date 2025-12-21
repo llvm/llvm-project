@@ -1,0 +1,125 @@
+name: Release Sources
+
+permissions:
+  contents: read
+
+on:
+  workflow_dispatch:
+    inputs:
+      release-version:
+        description: Release Version
+        required: true
+        type: string
+  workflow_call:
+    inputs:
+      release-version:
+        description: Release Version
+        required: true
+        type: string
+    secrets:
+      RELEASE_TASKS_USER_TOKEN:
+        description: "Secret used to check user permissions."
+        required: false
+  # Run on pull_requests for testing purposes.
+  pull_request:
+    paths:
+      - '.github/workflows/release-sources.yml'
+    types:
+      - opened
+      - synchronize
+      - reopened
+      # When a PR is closed, we still start this workflow, but then skip
+      # all the jobs, which makes it effectively a no-op.  The reason to
+      # do this is that it allows us to take advantage of concurrency groups
+      # to cancel in progress CI jobs whenever the PR is closed.
+      - closed
+
+concurrency:
+  group: ${{ github.workflow }}-${{ inputs.release-version || github.event.pull_request.number }}
+  cancel-in-progress: True
+
+jobs:
+  inputs:
+    name: Collect Job Inputs
+    if: >-
+      github.repository_owner == 'llvm' &&
+      github.event.action != 'closed'
+    outputs:
+      ref: ${{ steps.inputs.outputs.ref }}
+      export-args: ${{ steps.inputs.outputs.export-args }}
+    runs-on: ubuntu-24.04
+    steps:
+      - id: inputs
+        run: |
+          ref=${{ (inputs.release-version && format('llvmorg-{0}', inputs.release-version)) || github.sha }}
+          if [ -n "${{ inputs.release-version }}" ]; then
+            export_args="-release ${{ inputs.release-version }} -final"
+          else
+            export_args="-git-ref ${{ github.sha }}"
+          fi
+          echo "ref=$ref" >> $GITHUB_OUTPUT
+          echo "export-args=$export_args" >> $GITHUB_OUTPUT
+
+  release-sources:
+    name: Package Release Sources
+    if: github.repository_owner == 'llvm'
+    runs-on: ubuntu-24.04
+    outputs:
+      digest: ${{ steps.digest.outputs.digest }}
+      artifact-id: ${{ steps.artifact-upload.outputs.artifact-id }}
+    needs:
+      - inputs
+    steps:
+      - name: Checkout LLVM
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          ref: ${{ needs.inputs.outputs.ref }}
+          fetch-tags: true
+      - name: Install Dependencies
+        run: |
+          pip install --require-hashes -r ./llvm/utils/git/requirements.txt
+
+      - name: Create Tarballs
+        run: |
+          ./llvm/utils/release/export.sh ${{ needs.inputs.outputs.export-args }}
+
+      - name: Generate sha256 digest for sources
+        id: digest
+        run: |
+          echo "digest=$(cat *.xz | sha256sum | cut -d ' ' -f 1)" >> $GITHUB_OUTPUT
+    
+      - name: Release Sources Artifact
+        id: artifact-upload
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        with:
+          name: ${{ needs.inputs.outputs.ref }}-sources
+          path: |
+            *.xz
+
+  attest-release-sources:
+    name: Attest Release Sources
+    runs-on: ubuntu-24.04
+    if: github.event_name != 'pull_request'
+    needs:
+      - inputs
+      - release-sources
+    permissions:
+      id-token: write
+      attestations: write
+    steps:
+      - name: Checkout Release Scripts
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          sparse-checkout: |
+            .github/workflows/upload-release-artifact
+            llvm/utils/release/github-upload-release.py
+            llvm/utils/git/requirements.txt
+          sparse-checkout-cone-mode: false
+
+      - name: Upload Artifacts
+        uses: ./.github/workflows/upload-release-artifact
+        with:
+          artifact-id: ${{ needs.release-sources.outputs.artifact-id }}
+          attestation-name: ${{ needs.inputs.outputs.ref }}-sources-attestation
+          digest: ${{ needs.release-sources.outputs.digest }}
+          upload: false

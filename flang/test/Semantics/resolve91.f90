@@ -4,14 +4,14 @@ module m
   procedure(real), pointer :: p
   !ERROR: EXTERNAL attribute was already specified on 'p'
   !ERROR: POINTER attribute was already specified on 'p'
-  !ERROR: The interface for procedure 'p' has already been declared
+  !ERROR: The type of 'p' has already been declared as REAL(4)
   procedure(integer), pointer :: p
 end
 
 module m1
     real, dimension(:), pointer :: realArray => null()
     !ERROR: POINTER attribute was already specified on 'realarray'
-    !ERROR: The type of 'realarray' has already been declared
+    !ERROR: The type of 'realarray' has already been declared as REAL(4)
     real, dimension(:), pointer :: realArray => localArray
 end module m1
 
@@ -55,7 +55,7 @@ end module m4
 module m5
   !ERROR: Actual argument for 'string=' has bad type 'REAL(4)'
   character(len=len(a)) :: b
-  !ERROR: The type of 'a' has already been implicitly declared
+  !ERROR: The type of 'a' has already been implicitly declared as REAL(4)
   character(len=len(b)) :: a
 end module m5
 
@@ -73,12 +73,19 @@ end module m7
 
 module m8
   integer :: iVar = 3
-  !ERROR: The type of 'ivar' has already been declared
+  !ERROR: The type of 'ivar' has already been declared as INTEGER(4)
   integer :: iVar = 4
   integer, target :: jVar = 5
   integer, target :: kVar = 5
   integer, pointer :: pVar => jVar
   !ERROR: POINTER attribute was already specified on 'pvar'
-  !ERROR: The type of 'pvar' has already been declared
+  !ERROR: The type of 'pvar' has already been declared as INTEGER(4)
   integer, pointer :: pVar => kVar
 end module m8
+
+module m9
+  integer :: p, q
+  procedure() p ! ok
+  !ERROR: The type of 'q' has already been declared as INTEGER(4)
+  procedure(real) q
+end module m9

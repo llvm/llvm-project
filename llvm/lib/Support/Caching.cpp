@@ -37,8 +37,8 @@ Expected<FileCache> llvm::localCache(const Twine &CacheNameRef,
   TempFilePrefixRef.toVector(TempFilePrefix);
   CacheDirectoryPathRef.toVector(CacheDirectoryPath);
 
-  return [=](unsigned Task, StringRef Key,
-             const Twine &ModuleName) -> Expected<AddStreamFn> {
+  auto Func = [=](unsigned Task, StringRef Key,
+                  const Twine &ModuleName) -> Expected<AddStreamFn> {
     // This choice of file name allows the cache to be pruned (see pruneCache()
     // in include/llvm/Support/CachePruning.h).
     SmallString<64> EntryPath;
@@ -88,9 +88,10 @@ Expected<FileCache> llvm::localCache(const Twine &CacheNameRef,
             AddBuffer(std::move(AddBuffer)), TempFile(std::move(TempFile)),
             ModuleName(ModuleName), Task(Task) {}
 
-      ~CacheStream() {
-        // TODO: Manually commit rather than using non-trivial destructor,
-        // allowing to replace report_fatal_errors with a return Error.
+      Error commit() override {
+        Error E = CachedFileStream::commit();
+        if (E)
+          return E;
 
         // Make sure the stream is closed before committing it.
         OS.reset();
@@ -100,10 +101,12 @@ Expected<FileCache> llvm::localCache(const Twine &CacheNameRef,
             MemoryBuffer::getOpenFile(
                 sys::fs::convertFDToNativeFile(TempFile.FD), ObjectPathName,
                 /*FileSize=*/-1, /*RequiresNullTerminator=*/false);
-        if (!MBOrErr)
-          report_fatal_error(Twine("Failed to open new cache file ") +
-                             TempFile.TmpName + ": " +
-                             MBOrErr.getError().message() + "\n");
+        if (!MBOrErr) {
+          std::error_code EC = MBOrErr.getError();
+          return createStringError(EC, Twine("Failed to open new cache file ") +
+                                           TempFile.TmpName + ": " +
+                                           EC.message() + "\n");
+        }
 
         // On POSIX systems, this will atomically replace the destination if
         // it already exists. We try to emulate this on Windows, but this may
@@ -114,11 +117,14 @@ Expected<FileCache> llvm::localCache(const Twine &CacheNameRef,
         // AddBuffer a copy of the bytes we wrote in that case. We do this
         // instead of just using the existing file, because the pruner might
         // delete the file before we get a chance to use it.
-        Error E = TempFile.keep(ObjectPathName);
+        E = TempFile.keep(ObjectPathName);
         E = handleErrors(std::move(E), [&](const ECError &E) -> Error {
           std::error_code EC = E.convertToErrorCode();
           if (EC != errc::permission_denied)
-            return errorCodeToError(EC);
+            return createStringError(
+                EC, Twine("Failed to rename temporary file ") +
+                        TempFile.TmpName + " to " + ObjectPathName + ": " +
+                        EC.message() + "\n");
 
           auto MBCopy = MemoryBuffer::getMemBufferCopy((*MBOrErr)->getBuffer(),
                                                        ObjectPathName);
@@ -131,11 +137,10 @@ Expected<FileCache> llvm::localCache(const Twine &CacheNameRef,
         });
 
         if (E)
-          report_fatal_error(Twine("Failed to rename temporary file ") +
-                             TempFile.TmpName + " to " + ObjectPathName + ": " +
-                             toString(std::move(E)) + "\n");
+          return E;
 
         AddBuffer(Task, ModuleName, std::move(*MBOrErr));
+        return Error::success();
       }
     };
 
@@ -145,7 +150,9 @@ Expected<FileCache> llvm::localCache(const Twine &CacheNameRef,
       // ensures the filesystem isn't mutated until the cache is.
       if (std::error_code EC = sys::fs::create_directories(
               CacheDirectoryPath, /*IgnoreExisting=*/true))
-        return errorCodeToError(EC);
+        return createStringError(EC, Twine("can't create cache directory ") +
+                                         CacheDirectoryPath + ": " +
+                                         EC.message());
 
       // Write to a temporary to avoid race condition
       SmallString<64> TempFilenameModel;
@@ -161,8 +168,9 @@ Expected<FileCache> llvm::localCache(const Twine &CacheNameRef,
       // This CacheStream will move the temporary file into the cache when done.
       return std::make_unique<CacheStream>(
           std::make_unique<raw_fd_ostream>(Temp->FD, /* ShouldClose */ false),
-          AddBuffer, std::move(*Temp), std::string(EntryPath.str()),
-          ModuleName.str(), Task);
+          AddBuffer, std::move(*Temp), std::string(EntryPath), ModuleName.str(),
+          Task);
     };
   };
+  return FileCache(Func, CacheDirectoryPathRef.str());
 }

@@ -128,10 +128,10 @@ define void @test5(i32 %n) {
 ; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP:%.*]], label [[EXIT:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[A:%.*]] = phi i32 [ [[N]], [[ENTRY:%.*]] ], [ [[DIV1:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[COND:%.*]] = icmp ugt i32 [[A]], 4
+; CHECK-NEXT:    [[COND:%.*]] = icmp samesign ugt i32 [[A]], 4
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[COND]])
 ; CHECK-NEXT:    [[DIV1]] = udiv i32 [[A]], 6
-; CHECK-NEXT:    [[LOOPCOND:%.*]] = icmp ugt i32 [[DIV1]], 8
+; CHECK-NEXT:    [[LOOPCOND:%.*]] = icmp samesign ugt i32 [[DIV1]], 8
 ; CHECK-NEXT:    br i1 [[LOOPCOND]], label [[LOOP]], label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
@@ -631,4 +631,71 @@ entry:
 
   %div = sdiv exact i64 %x, %y
   ret i64 %div
+}
+
+define void @sdiv_zero(ptr %p, i32 %arg) {
+; CHECK-LABEL: @sdiv_zero(
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[ARG:%.*]], 5
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[ADD]], 11
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    store i32 0, ptr [[P:%.*]], align 4
+; CHECK-NEXT:    ret void
+;
+  %add = add i32 %arg, 5
+  %cmp = icmp ult i32 %add, 11
+  call void @llvm.assume(i1 %cmp)
+  %div = sdiv i32 %arg, 6
+  store i32 %div, ptr %p
+  ret void
+}
+
+define void @sdiv_not_zero(ptr %p, i32 %arg) {
+; CHECK-LABEL: @sdiv_not_zero(
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[ARG:%.*]], 5
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[ADD]], 12
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    [[DIV_LHS_TRUNC:%.*]] = trunc i32 [[ARG]] to i8
+; CHECK-NEXT:    [[DIV1:%.*]] = sdiv i8 [[DIV_LHS_TRUNC]], 6
+; CHECK-NEXT:    [[DIV_SEXT:%.*]] = sext i8 [[DIV1]] to i32
+; CHECK-NEXT:    store i32 [[DIV_SEXT]], ptr [[P:%.*]], align 4
+; CHECK-NEXT:    ret void
+;
+  %add = add i32 %arg, 5
+  %cmp = icmp ult i32 %add, 12
+  call void @llvm.assume(i1 %cmp)
+  %div = sdiv i32 %arg, 6
+  store i32 %div, ptr %p
+  ret void
+}
+
+define void @sdiv_pos(ptr %p, i32 %arg) {
+; CHECK-LABEL: @sdiv_pos(
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[ARG:%.*]], -12
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[ADD]], 6
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    store i32 2, ptr [[P:%.*]], align 4
+; CHECK-NEXT:    ret void
+;
+  %add = add i32 %arg, -12
+  %cmp = icmp ult i32 %add, 6
+  call void @llvm.assume(i1 %cmp)
+  %div = sdiv i32 %arg, 6
+  store i32 %div, ptr %p
+  ret void
+}
+
+define void @sdiv_neg(ptr %p, i32 %arg) {
+; CHECK-LABEL: @sdiv_neg(
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[ARG:%.*]], 17
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[ADD]], 6
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    store i32 -2, ptr [[P:%.*]], align 4
+; CHECK-NEXT:    ret void
+;
+  %add = add i32 %arg, 17
+  %cmp = icmp ult i32 %add, 6
+  call void @llvm.assume(i1 %cmp)
+  %div = sdiv i32 %arg, 6
+  store i32 %div, ptr %p
+  ret void
 }

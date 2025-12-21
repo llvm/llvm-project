@@ -1,4 +1,4 @@
-//===--- DefinitionsInHeadersCheck.cpp - clang-tidy------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -28,45 +28,16 @@ AST_MATCHER_P(NamedDecl, usesHeaderFileExtension, FileExtensionsSet,
 DefinitionsInHeadersCheck::DefinitionsInHeadersCheck(StringRef Name,
                                                      ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      UseHeaderFileExtension(Options.get("UseHeaderFileExtension", true)) {
-  std::optional<StringRef> HeaderFileExtensionsOption =
-      Options.get("HeaderFileExtensions");
-  RawStringHeaderFileExtensions =
-      HeaderFileExtensionsOption.value_or(utils::defaultHeaderFileExtensions());
-  if (HeaderFileExtensionsOption) {
-    if (!utils::parseFileExtensions(RawStringHeaderFileExtensions,
-                                    HeaderFileExtensions,
-                                    utils::defaultFileExtensionDelimiters())) {
-      this->configurationDiag("Invalid header file extension: '%0'")
-          << RawStringHeaderFileExtensions;
-    }
-  } else
-    HeaderFileExtensions = Context->getHeaderFileExtensions();
-}
-
-void DefinitionsInHeadersCheck::storeOptions(
-    ClangTidyOptions::OptionMap &Opts) {
-  Options.store(Opts, "UseHeaderFileExtension", UseHeaderFileExtension);
-  Options.store(Opts, "HeaderFileExtensions", RawStringHeaderFileExtensions);
-}
+      HeaderFileExtensions(Context->getHeaderFileExtensions()) {}
 
 void DefinitionsInHeadersCheck::registerMatchers(MatchFinder *Finder) {
   auto DefinitionMatcher =
       anyOf(functionDecl(isDefinition(), unless(isDeleted())),
             varDecl(isDefinition()));
-  if (UseHeaderFileExtension) {
-    Finder->addMatcher(namedDecl(DefinitionMatcher,
-                                 usesHeaderFileExtension(HeaderFileExtensions))
-                           .bind("name-decl"),
-                       this);
-  } else {
-    Finder->addMatcher(
-        namedDecl(DefinitionMatcher,
-                  anyOf(usesHeaderFileExtension(HeaderFileExtensions),
-                        unless(isExpansionInMainFile())))
-            .bind("name-decl"),
-        this);
-  }
+  Finder->addMatcher(namedDecl(DefinitionMatcher,
+                               usesHeaderFileExtension(HeaderFileExtensions))
+                         .bind("name-decl"),
+                     this);
 }
 
 void DefinitionsInHeadersCheck::check(const MatchFinder::MatchResult &Result) {
@@ -122,7 +93,8 @@ void DefinitionsInHeadersCheck::check(const MatchFinder::MatchResult &Result) {
       }
     }
 
-    bool IsFullSpec = FD->getTemplateSpecializationKind() != TSK_Undeclared;
+    const bool IsFullSpec =
+        FD->getTemplateSpecializationKind() != TSK_Undeclared;
     diag(FD->getLocation(),
          "%select{function|full function template specialization}0 %1 defined "
          "in a header file; function definitions in header files can lead to "
@@ -131,7 +103,7 @@ void DefinitionsInHeadersCheck::check(const MatchFinder::MatchResult &Result) {
     // inline is not allowed for main function.
     if (FD->isMain())
       return;
-    diag(FD->getLocation(), /*Description=*/"make as 'inline'",
+    diag(FD->getLocation(), "mark the definition as 'inline'",
          DiagnosticIDs::Note)
         << FixItHint::CreateInsertion(FD->getInnerLocStart(), "inline ");
   } else if (const auto *VD = dyn_cast<VarDecl>(ND)) {

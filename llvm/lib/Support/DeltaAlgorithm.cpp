@@ -8,7 +8,6 @@
 #include "llvm/ADT/DeltaAlgorithm.h"
 #include <algorithm>
 #include <iterator>
-#include <set>
 using namespace llvm;
 
 DeltaAlgorithm::~DeltaAlgorithm() = default;
@@ -83,9 +82,9 @@ bool DeltaAlgorithm::Search(const changeset_ty &Changes,
     if (Sets.size() > 2) {
       // FIXME: This is really slow.
       changeset_ty Complement;
-      std::set_difference(
-        Changes.begin(), Changes.end(), it->begin(), it->end(),
-        std::insert_iterator<changeset_ty>(Complement, Complement.begin()));
+      std::set_difference(Changes.begin(), Changes.end(), it->begin(),
+                          it->end(),
+                          std::inserter(Complement, Complement.begin()));
       if (GetTestResult(Complement)) {
         changesetlist_ty ComplementSets;
         ComplementSets.insert(ComplementSets.end(), Sets.begin(), it);

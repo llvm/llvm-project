@@ -41,6 +41,7 @@
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/UnimplementedError.h"
 #include "lldb/Utility/UriParser.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/TargetParser/Triple.h"
@@ -145,6 +146,9 @@ void GDBRemoteCommunicationServerLLGS::RegisterPacketHandlers() {
   RegisterMemberFunctionHandler(
       StringExtractorGDBRemote::eServerPacketType_QSetWorkingDir,
       &GDBRemoteCommunicationServerLLGS::Handle_QSetWorkingDir);
+  RegisterMemberFunctionHandler(
+      StringExtractorGDBRemote::eServerPacketType_qStructuredDataPlugins,
+      &GDBRemoteCommunicationServerLLGS::Handle_qStructuredDataPlugins);
   RegisterMemberFunctionHandler(
       StringExtractorGDBRemote::eServerPacketType_qsThreadInfo,
       &GDBRemoteCommunicationServerLLGS::Handle_qsThreadInfo);
@@ -261,8 +265,8 @@ Status GDBRemoteCommunicationServerLLGS::LaunchProcess() {
   Log *log = GetLog(LLDBLog::Process);
 
   if (!m_process_launch_info.GetArguments().GetArgumentCount())
-    return Status("%s: no process command line specified to launch",
-                  __FUNCTION__);
+    return Status::FromErrorStringWithFormat(
+        "%s: no process command line specified to launch", __FUNCTION__);
 
   const bool should_forward_stdio =
       m_process_launch_info.GetFileActionForFD(STDIN_FILENO) == nullptr ||
@@ -277,7 +281,7 @@ Status GDBRemoteCommunicationServerLLGS::LaunchProcess() {
     // lldb-server on Windows.
 #if !defined(_WIN32)
     if (llvm::Error Err = m_process_launch_info.SetUpPtyRedirection())
-      return Status(std::move(Err));
+      return Status::FromError(std::move(Err));
 #endif
   }
 
@@ -287,7 +291,7 @@ Status GDBRemoteCommunicationServerLLGS::LaunchProcess() {
                                            "process but one already exists");
     auto process_or = m_process_manager.Launch(m_process_launch_info, *this);
     if (!process_or)
-      return Status(process_or.takeError());
+      return Status::FromError(process_or.takeError());
     m_continue_process = m_current_process = process_or->get();
     m_debugged_processes.emplace(
         m_current_process->GetID(),
@@ -348,15 +352,15 @@ Status GDBRemoteCommunicationServerLLGS::AttachToProcess(lldb::pid_t pid) {
   // Before we try to attach, make sure we aren't already monitoring something
   // else.
   if (!m_debugged_processes.empty())
-    return Status("cannot attach to process %" PRIu64
-                  " when another process with pid %" PRIu64
-                  " is being debugged.",
-                  pid, m_current_process->GetID());
+    return Status::FromErrorStringWithFormat(
+        "cannot attach to process %" PRIu64
+        " when another process with pid %" PRIu64 " is being debugged.",
+        pid, m_current_process->GetID());
 
   // Try to attach.
   auto process_or = m_process_manager.Attach(pid, *this);
   if (!process_or) {
-    Status status(process_or.takeError());
+    Status status = Status::FromError(process_or.takeError());
     llvm::errs() << llvm::formatv("failed to attach to process {0}: {1}\n", pid,
                                   status);
     return status;
@@ -447,7 +451,7 @@ Status GDBRemoteCommunicationServerLLGS::AttachWaitProcess(
         error_stream.Format("{0}.", loop_process_list.back().GetProcessID());
 
         Status error;
-        error.SetErrorString(error_stream.GetString());
+        error = Status(error_stream.GetString().str());
         return error;
       }
     }
@@ -536,14 +540,54 @@ static llvm::StringRef GetEncodingNameOrEmpty(const RegisterInfo &reg_info) {
 
 static llvm::StringRef GetFormatNameOrEmpty(const RegisterInfo &reg_info) {
   switch (reg_info.format) {
+  case eFormatDefault:
+    return "";
+  case eFormatBoolean:
+    return "boolean";
   case eFormatBinary:
     return "binary";
+  case eFormatBytes:
+    return "bytes";
+  case eFormatBytesWithASCII:
+    return "bytes-with-ascii";
+  case eFormatChar:
+    return "char";
+  case eFormatCharPrintable:
+    return "char-printable";
+  case eFormatComplex:
+    return "complex";
+  case eFormatCString:
+    return "cstring";
   case eFormatDecimal:
     return "decimal";
+  case eFormatEnum:
+    return "enum";
   case eFormatHex:
     return "hex";
+  case eFormatHexUppercase:
+    return "hex-uppercase";
   case eFormatFloat:
     return "float";
+  case eFormatOctal:
+    return "octal";
+  case eFormatOSType:
+    return "ostype";
+  case eFormatUnicode16:
+    return "unicode16";
+  case eFormatUnicode32:
+    return "unicode32";
+  case eFormatUnsigned:
+    return "unsigned";
+  case eFormatPointer:
+    return "pointer";
+  case eFormatVectorOfChar:
+    return "vector-char";
+  case eFormatVectorOfSInt64:
+    return "vector-sint64";
+  case eFormatVectorOfFloat16:
+    return "vector-float16";
+  case eFormatVectorOfFloat64:
+    return "vector-float64";
   case eFormatVectorOfSInt8:
     return "vector-sint8";
   case eFormatVectorOfUInt8:
@@ -562,8 +606,24 @@ static llvm::StringRef GetFormatNameOrEmpty(const RegisterInfo &reg_info) {
     return "vector-uint64";
   case eFormatVectorOfUInt128:
     return "vector-uint128";
+  case eFormatComplexInteger:
+    return "complex-integer";
+  case eFormatCharArray:
+    return "char-array";
+  case eFormatAddressInfo:
+    return "address-info";
+  case eFormatHexFloat:
+    return "hex-float";
+  case eFormatInstruction:
+    return "instruction";
+  case eFormatVoid:
+    return "void";
+  case eFormatUnicode8:
+    return "unicode8";
+  case eFormatFloat128:
+    return "float128";
   default:
-    return "";
+    llvm_unreachable("Unknown register format");
   };
 }
 
@@ -714,6 +774,9 @@ static const char *GetStopReasonString(StopReason stop_reason) {
     return "vfork";
   case eStopReasonVForkDone:
     return "vforkdone";
+  case eStopReasonInterrupt:
+    return "async interrupt";
+  case eStopReasonHistoryBoundary:
   case eStopReasonInstrumentation:
   case eStopReasonInvalid:
   case eStopReasonPlanComplete:
@@ -1186,6 +1249,19 @@ Status GDBRemoteCommunicationServerLLGS::InitializeConnection(
 }
 
 GDBRemoteCommunication::PacketResult
+GDBRemoteCommunicationServerLLGS::SendStructuredDataPacket(
+    const llvm::json::Value &value) {
+  std::string json_string;
+  raw_string_ostream os(json_string);
+  os << value;
+
+  StreamGDBRemote escaped_response;
+  escaped_response.PutCString("JSON-async:");
+  escaped_response.PutEscapedBytes(json_string.c_str(), json_string.size());
+  return SendPacketNoLock(escaped_response.GetString());
+}
+
+GDBRemoteCommunication::PacketResult
 GDBRemoteCommunicationServerLLGS::SendONotification(const char *buffer,
                                                     uint32_t len) {
   if ((buffer == nullptr) || (len == 0)) {
@@ -1210,14 +1286,15 @@ Status GDBRemoteCommunicationServerLLGS::SetSTDIOFileDescriptor(int fd) {
   std::unique_ptr<ConnectionFileDescriptor> conn_up(
       new ConnectionFileDescriptor(fd, true));
   if (!conn_up) {
-    error.SetErrorString("failed to create ConnectionFileDescriptor");
+    error =
+        Status::FromErrorString("failed to create ConnectionFileDescriptor");
     return error;
   }
 
   m_stdio_communication.SetCloseOnEOF(false);
   m_stdio_communication.SetConnection(std::move(conn_up));
   if (!m_stdio_communication.IsConnected()) {
-    error.SetErrorString(
+    error = Status::FromErrorString(
         "failed to set connection for inferior I/O communication");
     return error;
   }
@@ -1286,7 +1363,7 @@ GDBRemoteCommunicationServerLLGS::Handle_jLLDBTraceSupported(
   // Fail if we don't have a current process.
   if (!m_current_process ||
       (m_current_process->GetID() == LLDB_INVALID_PROCESS_ID))
-    return SendErrorResponse(Status("Process not running."));
+    return SendErrorResponse(Status::FromErrorString("Process not running."));
 
   return SendJSONResponse(m_current_process->TraceSupported());
 }
@@ -1297,7 +1374,7 @@ GDBRemoteCommunicationServerLLGS::Handle_jLLDBTraceStop(
   // Fail if we don't have a current process.
   if (!m_current_process ||
       (m_current_process->GetID() == LLDB_INVALID_PROCESS_ID))
-    return SendErrorResponse(Status("Process not running."));
+    return SendErrorResponse(Status::FromErrorString("Process not running."));
 
   packet.ConsumeFront("jLLDBTraceStop:");
   Expected<TraceStopRequest> stop_request =
@@ -1318,7 +1395,7 @@ GDBRemoteCommunicationServerLLGS::Handle_jLLDBTraceStart(
   // Fail if we don't have a current process.
   if (!m_current_process ||
       (m_current_process->GetID() == LLDB_INVALID_PROCESS_ID))
-    return SendErrorResponse(Status("Process not running."));
+    return SendErrorResponse(Status::FromErrorString("Process not running."));
 
   packet.ConsumeFront("jLLDBTraceStart:");
   Expected<TraceStartRequest> request =
@@ -1339,7 +1416,7 @@ GDBRemoteCommunicationServerLLGS::Handle_jLLDBTraceGetState(
   // Fail if we don't have a current process.
   if (!m_current_process ||
       (m_current_process->GetID() == LLDB_INVALID_PROCESS_ID))
-    return SendErrorResponse(Status("Process not running."));
+    return SendErrorResponse(Status::FromErrorString("Process not running."));
 
   packet.ConsumeFront("jLLDBTraceGetState:");
   Expected<TraceGetStateRequest> request =
@@ -1357,14 +1434,14 @@ GDBRemoteCommunicationServerLLGS::Handle_jLLDBTraceGetBinaryData(
   // Fail if we don't have a current process.
   if (!m_current_process ||
       (m_current_process->GetID() == LLDB_INVALID_PROCESS_ID))
-    return SendErrorResponse(Status("Process not running."));
+    return SendErrorResponse(Status::FromErrorString("Process not running."));
 
   packet.ConsumeFront("jLLDBTraceGetBinaryData:");
   llvm::Expected<TraceGetBinaryDataRequest> request =
       llvm::json::parse<TraceGetBinaryDataRequest>(packet.Peek(),
                                                    "TraceGetBinaryDataRequest");
   if (!request)
-    return SendErrorResponse(Status(request.takeError()));
+    return SendErrorResponse(Status::FromError(request.takeError()));
 
   if (Expected<std::vector<uint8_t>> bytes =
           m_current_process->TraceGetBinaryData(*request)) {
@@ -1373,6 +1450,21 @@ GDBRemoteCommunicationServerLLGS::Handle_jLLDBTraceGetBinaryData(
     return SendPacketNoLock(response.GetString());
   } else
     return SendErrorResponse(bytes.takeError());
+}
+
+GDBRemoteCommunication::PacketResult
+GDBRemoteCommunicationServerLLGS::Handle_qStructuredDataPlugins(
+    StringExtractorGDBRemote &packet) {
+  // Fail if we don't have a current process.
+  if (!m_current_process ||
+      (m_current_process->GetID() == LLDB_INVALID_PROCESS_ID))
+    return SendErrorResponse(68);
+
+  std::vector<std::string> structured_data_plugins =
+      m_current_process->GetStructuredDataPlugins();
+
+  return SendJSONResponse(
+      llvm::json::Value(llvm::json::Array(structured_data_plugins)));
 }
 
 GDBRemoteCommunication::PacketResult
@@ -2087,7 +2179,7 @@ void GDBRemoteCommunicationServerLLGS::AddProcessThreads(
 GDBRemoteCommunication::PacketResult
 GDBRemoteCommunicationServerLLGS::Handle_qfThreadInfo(
     StringExtractorGDBRemote &packet) {
-  assert(m_debugged_processes.size() == 1 ||
+  assert(m_debugged_processes.size() <= 1 ||
          bool(m_extensions_supported &
               NativeProcessProtocol::Extension::multiprocess));
 
@@ -2523,28 +2615,18 @@ GDBRemoteCommunicationServerLLGS::Handle_memory_read(
   size_t bytes_read = 0;
   Status error = m_current_process->ReadMemoryWithoutTrap(
       read_addr, &buf[0], byte_count, bytes_read);
-  if (error.Fail()) {
-    LLDB_LOGF(log,
-              "GDBRemoteCommunicationServerLLGS::%s pid %" PRIu64
-              " mem 0x%" PRIx64 ": failed to read. Error: %s",
-              __FUNCTION__, m_current_process->GetID(), read_addr,
-              error.AsCString());
+  LLDB_LOG(
+      log,
+      "ReadMemoryWithoutTrap({0}) read {1} of {2} requested bytes (error: {3})",
+      read_addr, byte_count, bytes_read, error);
+  if (bytes_read == 0)
     return SendErrorResponse(0x08);
-  }
-
-  if (bytes_read == 0) {
-    LLDB_LOGF(log,
-              "GDBRemoteCommunicationServerLLGS::%s pid %" PRIu64
-              " mem 0x%" PRIx64 ": read 0 of %" PRIu64 " requested bytes",
-              __FUNCTION__, m_current_process->GetID(), read_addr, byte_count);
-    return SendErrorResponse(0x08);
-  }
 
   StreamGDBRemote response;
   packet.SetFilePos(0);
   char kind = packet.GetChar('?');
   if (kind == 'x')
-    response.PutEscapedBytes(buf.data(), byte_count);
+    response.PutEscapedBytes(buf.data(), bytes_read);
   else {
     assert(kind == 'm');
     for (size_t i = 0; i < bytes_read; ++i)
@@ -2803,11 +2885,18 @@ GDBRemoteCommunicationServerLLGS::Handle_qMemoryRegionInfo(
     // Flags
     MemoryRegionInfo::OptionalBool memory_tagged =
         region_info.GetMemoryTagged();
-    if (memory_tagged != MemoryRegionInfo::eDontKnow) {
+    MemoryRegionInfo::OptionalBool is_shadow_stack =
+        region_info.IsShadowStack();
+
+    if (memory_tagged != MemoryRegionInfo::eDontKnow ||
+        is_shadow_stack != MemoryRegionInfo::eDontKnow) {
       response.PutCString("flags:");
-      if (memory_tagged == MemoryRegionInfo::eYes) {
-        response.PutCString("mt");
-      }
+      // Space is the separator.
+      if (memory_tagged == MemoryRegionInfo::eYes)
+        response.PutCString("mt ");
+      if (is_shadow_stack == MemoryRegionInfo::eYes)
+        response.PutCString("ss ");
+
       response.PutChar(';');
     }
 
@@ -3083,6 +3172,7 @@ GDBRemoteCommunicationServerLLGS::BuildTargetXml() {
   if (registers_count)
     response.IndentMore();
 
+  llvm::StringSet<> field_enums_seen;
   for (int reg_index = 0; reg_index < registers_count; reg_index++) {
     const RegisterInfo *reg_info =
         reg_context.GetRegisterInfoAtIndex(reg_index);
@@ -3092,6 +3182,13 @@ GDBRemoteCommunicationServerLLGS::BuildTargetXml() {
                 "%s failed to get register info for register index %" PRIu32,
                 "target.xml", reg_index);
       continue;
+    }
+
+    if (reg_info->flags_type) {
+      response.IndentMore();
+      reg_info->flags_type->EnumsToXML(response, field_enums_seen);
+      reg_info->flags_type->ToXML(response);
+      response.IndentLess();
     }
 
     response.Indent();
@@ -3112,6 +3209,9 @@ GDBRemoteCommunicationServerLLGS::BuildTargetXml() {
     llvm::StringRef format = GetFormatNameOrEmpty(*reg_info);
     if (!format.empty())
       response << "format=\"" << format << "\" ";
+
+    if (reg_info->flags_type)
+      response << "type=\"" << reg_info->flags_type->GetID() << "\" ";
 
     const char *const register_set_name =
         reg_context.GetRegisterSetNameForRegisterAtIndex(reg_index);
@@ -3526,7 +3626,7 @@ GDBRemoteCommunicationServerLLGS::Handle_vRun(
   }
 
   if (argv.empty())
-    return SendErrorResponse(Status("No arguments"));
+    return SendErrorResponse(Status::FromErrorString("No arguments"));
   m_process_launch_info.GetExecutableFile().SetFile(
       m_process_launch_info.GetArguments()[0].ref(), FileSpec::Style::native);
   m_process_launch_error = LaunchProcess();
@@ -3586,7 +3686,8 @@ GDBRemoteCommunicationServerLLGS::Handle_D(StringExtractorGDBRemote &packet) {
   if (detach_error)
     return SendErrorResponse(std::move(detach_error));
   if (!detached)
-    return SendErrorResponse(Status("PID %" PRIu64 " not traced", pid));
+    return SendErrorResponse(
+        Status::FromErrorStringWithFormat("PID %" PRIu64 " not traced", pid));
   return SendOKResponse();
 }
 
@@ -3907,18 +4008,19 @@ GDBRemoteCommunicationServerLLGS::Handle_qSaveCore(
   // Fail if we don't have a current process.
   if (!m_current_process ||
       (m_current_process->GetID() == LLDB_INVALID_PROCESS_ID))
-    return SendErrorResponse(Status("Process not running."));
+    return SendErrorResponse(Status::FromErrorString("Process not running."));
 
   std::string path_hint;
 
   StringRef packet_str{packet.GetStringRef()};
-  assert(packet_str.startswith("qSaveCore"));
+  assert(packet_str.starts_with("qSaveCore"));
   if (packet_str.consume_front("qSaveCore;")) {
     for (auto x : llvm::split(packet_str, ';')) {
       if (x.consume_front("path-hint:"))
         StringExtractor(x).GetHexByteString(path_hint);
       else
-        return SendErrorResponse(Status("Unsupported qSaveCore option"));
+        return SendErrorResponse(
+            Status::FromErrorString("Unsupported qSaveCore option"));
     }
   }
 
@@ -3938,7 +4040,7 @@ GDBRemoteCommunicationServerLLGS::Handle_QNonStop(
   Log *log = GetLog(LLDBLog::Process);
 
   StringRef packet_str{packet.GetStringRef()};
-  assert(packet_str.startswith("QNonStop:"));
+  assert(packet_str.starts_with("QNonStop:"));
   packet_str.consume_front("QNonStop:");
   if (packet_str == "0") {
     if (m_non_stop)
@@ -3969,7 +4071,8 @@ GDBRemoteCommunicationServerLLGS::Handle_QNonStop(
       StartSTDIOForwarding();
     m_non_stop = true;
   } else
-    return SendErrorResponse(Status("Invalid QNonStop packet"));
+    return SendErrorResponse(
+        Status::FromErrorString("Invalid QNonStop packet"));
   return SendOKResponse();
 }
 
@@ -3982,7 +4085,8 @@ GDBRemoteCommunicationServerLLGS::HandleNotificationAck(
   // the last message in the queue is ACK-ed, in which case the packet sends
   // an OK response.
   if (queue.empty())
-    return SendErrorResponse(Status("No pending notification to ack"));
+    return SendErrorResponse(
+        Status::FromErrorString("No pending notification to ack"));
   queue.pop_front();
   if (!queue.empty())
     return SendPacketNoLock(queue.front());
@@ -4012,7 +4116,8 @@ GDBRemoteCommunication::PacketResult
 GDBRemoteCommunicationServerLLGS::Handle_vCtrlC(
     StringExtractorGDBRemote &packet) {
   if (!m_non_stop)
-    return SendErrorResponse(Status("vCtrl is only valid in non-stop mode"));
+    return SendErrorResponse(
+        Status::FromErrorString("vCtrl is only valid in non-stop mode"));
 
   PacketResult interrupt_res = Handle_interrupt(packet);
   // If interrupting the process failed, pass the result through.
@@ -4232,6 +4337,10 @@ std::vector<std::string> GDBRemoteCommunicationServerLLGS::HandleFeatures(
             .Case("vfork-events+", Extension::vfork)
             .Default({});
 
+  // We consume lldb's swbreak/hwbreak feature, but it doesn't change the
+  // behaviour of lldb-server. We always adjust the program counter for targets
+  // like x86
+
   m_extensions_supported &= plugin_features;
 
   // fork & vfork require multiprocess
@@ -4297,7 +4406,7 @@ lldb_private::process_gdb_remote::LLGSArgToURL(llvm::StringRef url_arg,
   std::string host_port = url_arg.str();
   // If host_and_port starts with ':', default the host to be "localhost" and
   // expect the remainder to be the port.
-  if (url_arg.startswith(":"))
+  if (url_arg.starts_with(":"))
     host_port.insert(0, "localhost");
 
   // Try parsing the (preprocessed) argument as host:port pair.

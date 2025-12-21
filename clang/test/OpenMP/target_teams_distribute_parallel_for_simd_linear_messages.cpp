@@ -1,6 +1,8 @@
 // RUN: %clang_cc1 -verify -fopenmp %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp52 -fopenmp -fopenmp-version=52 -DOMP52 %s -Wuninitialized
 
 // RUN: %clang_cc1 -verify -fopenmp-simd %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp52 -fopenmp-simd -fopenmp-version=52 -DOMP52 %s -Wuninitialized
 
 typedef void **omp_allocator_handle_t;
 extern const omp_allocator_handle_t omp_default_mem_alloc;
@@ -13,8 +15,8 @@ extern const omp_allocator_handle_t omp_pteam_mem_alloc;
 extern const omp_allocator_handle_t omp_thread_mem_alloc;
 
 void xxx(int argc) {
-  int i, step; // expected-note {{initialize the variable 'step' to silence this warning}}
-#pragma omp target teams distribute parallel for simd linear(i : step) // expected-warning {{variable 'step' is uninitialized when used here}}
+  int i, step_sz; // expected-note {{initialize the variable 'step_sz' to silence this warning}}
+#pragma omp target teams distribute parallel for simd linear(i : step_sz) // expected-warning {{variable 'step_sz' is uninitialized when used here}}
   for (i = 0; i < 10; ++i)
     ;
 }
@@ -94,7 +96,7 @@ template<int L, class T, class N> T test_template(T* arr, N num) {
 template<int LEN> int test_warn() {
   int ind2 = 0;
 // expected-error@+1 {{only loop iteration variables are allowed in 'linear' clause in distribute directives}}
-  #pragma omp target teams distribute parallel for simd linear(ind2:LEN) // expected-warning {{zero linear step (ind2 should probably be const)}}
+  #pragma omp target teams distribute parallel for simd linear(ind2:LEN) // expected-warning {{zero linear step ('ind2' should probably be const)}}
   for (int i = 0; i < 100; i++) {
     ind2 += LEN;
   }

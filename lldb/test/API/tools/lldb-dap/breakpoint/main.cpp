@@ -28,16 +28,18 @@ int main(int argc, char const *argv[]) {
     exit(1);
   }
 
+  const char *message = "Hello from main!";
   int (*foo)(int) = (int (*)(int))dlsym(handle, "foo");
   if (foo == nullptr) {
     fprintf(stderr, "%s\n", dlerror());
     exit(2);
-  }
+  } // break non-breakpointable line
   foo(12); // before loop
 
   for (int i = 0; i < 10; ++i) {
     int x = twelve(i) + thirteen(i) + a::fourteen(i); // break loop
   }
+  printf("%s\n", message);
   try {
     throw std::invalid_argument("throwing exception for testing");
   } catch (...) {

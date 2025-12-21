@@ -32,10 +32,25 @@ OPTIONS
  architectures will be linked by default and any architectures that can't be
  properly linked will cause :program:`dsymutil` to return an error.
 
+.. option:: --build-variant-suffix <suffix=buildvariant>
+
+ Specify the build variant suffix used to build the executable file.
+ There can be multiple variants for the binary of a product, each built
+ slightly differently. The most common build variants are 'debug' and
+ 'profile'. Setting the DYLD_IMAGE_SUFFIX environment variable will
+ cause dyld to load the specified variant at runtime.
+
 .. option:: --dump-debug-map
 
  Dump the *executable*'s debug-map (the list of the object files containing the
  debug information) in YAML format and exit. No DWARF link will take place.
+
+ .. option:: -D <path>
+
+ Specify a directory that contain dSYM files to search for.
+ This is used for mergeable libraries, so dsymutil knows where to look
+ for dSYM files with  debug information about symbols present in those
+ libraries.
 
 .. option:: --fat64
 
@@ -55,18 +70,22 @@ OPTIONS
 
  Print this help output.
 
+.. option:: --include-swiftmodules-from-interface
+
+ Whether or not to copy binary swiftmodules built from textual .swiftinterface
+ files into the dSYM bundle. These typically come only from the SDK (since
+ textual interfaces require library evolution) and thus are a waste of space to
+ copy into the bundle. Turn this on if the swiftmodules are different from
+ those in the SDK.
+
 .. option:: --keep-function-for-static
 
  Make a static variable keep the enclosing function even if it would have been
  omitted otherwise.
 
-.. option:: --minimize, -z
+.. option:: --no-object-timestamp
 
- When used when creating a dSYM file, this option will suppress the emission of
- the .debug_inlines, .debug_pubnames, and .debug_pubtypes sections since
- dsymutil currently has better equivalents: .apple_names and .apple_types. When
- used in conjunction with ``--update`` option, this option will cause redundant
- accelerator tables to be removed.
+ Don't check timestamp for object files.
 
 .. option:: --no-odr
 
@@ -100,6 +119,10 @@ OPTIONS
  Specifies an alternate ``path`` to place the dSYM bundle. The default dSYM
  bundle path is created by appending ``.dSYM`` to the executable name.
 
+.. option:: -q, --quiet
+
+ Enable quiet mode and limit output.
+
 .. option:: --remarks-drop-without-debug
 
  Drop remarks without valid debug locations. Without this flags, all remarks are kept.
@@ -124,10 +147,6 @@ OPTIONS
  size of the debug info in the object file (in bytes) and the size contributed
  (in bytes) to the linked dSYM. The table is sorted by the output size listing
  the object files with the largest contribution first.
-
-.. option:: --symbol-map <bcsymbolmap>
-
- Update the existing dSYMs inplace using symbol map specified.
 
 .. option:: -s, --symtab
 

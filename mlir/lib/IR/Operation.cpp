@@ -18,8 +18,9 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Interfaces/FoldInterfaces.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringExtras.h"
+#include "llvm/Support/ErrorHandling.h"
 #include <numeric>
 #include <optional>
 
@@ -321,8 +322,8 @@ void Operation::setAttrs(DictionaryAttr newAttrs) {
 }
 void Operation::setAttrs(ArrayRef<NamedAttribute> newAttrs) {
   if (getPropertiesStorageSize()) {
-    // We're spliting the providing array of attributes by removing the inherentAttr
-    // which will be stored in the properties.
+    // We're spliting the providing array of attributes by removing the
+    // inherentAttr which will be stored in the properties.
     SmallVector<NamedAttribute> discardableAttrs;
     discardableAttrs.reserve(newAttrs.size());
     for (NamedAttribute attr : newAttrs) {
@@ -374,9 +375,6 @@ llvm::hash_code Operation::hashProperties() {
 // Operation Ordering
 //===----------------------------------------------------------------------===//
 
-constexpr unsigned Operation::kInvalidOrderIdx;
-constexpr unsigned Operation::kOrderStride;
-
 /// Given an operation 'other' that is within the same parent block, return
 /// whether the current operation is before 'other' in the operation list
 /// of the parent block.
@@ -405,7 +403,7 @@ void Operation::updateOrderIfNecessary() {
   assert(block && "expected valid parent");
 
   // If the order is valid for this operation there is nothing to do.
-  if (hasValidOrder())
+  if (hasValidOrder() || llvm::hasSingleElement(*block))
     return;
   Operation *blockFront = &block->front();
   Operation *blockBack = &block->back();
@@ -462,28 +460,26 @@ void Operation::updateOrderIfNecessary() {
 //===----------------------------------------------------------------------===//
 
 auto llvm::ilist_detail::SpecificNodeAccess<
-    typename llvm::ilist_detail::compute_node_options<
-        ::mlir::Operation>::type>::getNodePtr(pointer n) -> node_type * {
+    llvm::ilist_detail::compute_node_options<::mlir::Operation>::type>::
+    getNodePtr(pointer n) -> node_type * {
   return NodeAccess::getNodePtr<OptionsT>(n);
 }
 
 auto llvm::ilist_detail::SpecificNodeAccess<
-    typename llvm::ilist_detail::compute_node_options<
-        ::mlir::Operation>::type>::getNodePtr(const_pointer n)
-    -> const node_type * {
+    llvm::ilist_detail::compute_node_options<::mlir::Operation>::type>::
+    getNodePtr(const_pointer n) -> const node_type * {
   return NodeAccess::getNodePtr<OptionsT>(n);
 }
 
 auto llvm::ilist_detail::SpecificNodeAccess<
-    typename llvm::ilist_detail::compute_node_options<
-        ::mlir::Operation>::type>::getValuePtr(node_type *n) -> pointer {
+    llvm::ilist_detail::compute_node_options<::mlir::Operation>::type>::
+    getValuePtr(node_type *n) -> pointer {
   return NodeAccess::getValuePtr<OptionsT>(n);
 }
 
 auto llvm::ilist_detail::SpecificNodeAccess<
-    typename llvm::ilist_detail::compute_node_options<
-        ::mlir::Operation>::type>::getValuePtr(const node_type *n)
-    -> const_pointer {
+    llvm::ilist_detail::compute_node_options<::mlir::Operation>::type>::
+    getValuePtr(const node_type *n) -> const_pointer {
   return NodeAccess::getValuePtr<OptionsT>(n);
 }
 
@@ -559,6 +555,8 @@ void Operation::moveBefore(Operation *existingOp) {
 /// before `iterator` in the specified basic block.
 void Operation::moveBefore(Block *block,
                            llvm::iplist<Operation>::iterator iterator) {
+  assert(getBlock() &&
+         "cannot move an operation that isn't contained in a block");
   block->getOperations().splice(iterator, getBlock()->getOperations(),
                                 getIterator());
 }
@@ -606,13 +604,38 @@ void Operation::setSuccessor(Block *block, unsigned index) {
   getBlockOperands()[index].set(block);
 }
 
+#ifndef NDEBUG
+/// Assert that the folded results (in case of values) have the same type as
+/// the results of the given op.
+static void checkFoldResultTypes(Operation *op,
+                                 SmallVectorImpl<OpFoldResult> &results) {
+  if (results.empty())
+    return;
+
+  for (auto [ofr, opResult] : llvm::zip_equal(results, op->getResults())) {
+    if (auto value = dyn_cast<Value>(ofr)) {
+      if (value.getType() != opResult.getType()) {
+        op->emitOpError() << "folder produced a value of incorrect type: "
+                          << value.getType()
+                          << ", expected: " << opResult.getType();
+        assert(false && "incorrect fold result type");
+      }
+    }
+  }
+}
+#endif // NDEBUG
+
 /// Attempt to fold this operation using the Op's registered foldHook.
 LogicalResult Operation::fold(ArrayRef<Attribute> operands,
                               SmallVectorImpl<OpFoldResult> &results) {
   // If we have a registered operation definition matching this one, use it to
   // try to constant fold the operation.
-  if (succeeded(name.foldHook(this, operands, results)))
+  if (succeeded(name.foldHook(this, operands, results))) {
+#ifndef NDEBUG
+    checkFoldResultTypes(this, results);
+#endif // NDEBUG
     return success();
+  }
 
   // Otherwise, fall back on the dialect hook to handle it.
   Dialect *dialect = getDialect();
@@ -623,7 +646,12 @@ LogicalResult Operation::fold(ArrayRef<Attribute> operands,
   if (!interface)
     return failure();
 
-  return interface->fold(this, operands, results);
+  LogicalResult status = interface->fold(this, operands, results);
+#ifndef NDEBUG
+  if (succeeded(status))
+    checkFoldResultTypes(this, results);
+#endif // NDEBUG
+  return status;
 }
 
 LogicalResult Operation::fold(SmallVectorImpl<OpFoldResult> &results) {
@@ -751,7 +779,7 @@ void OpState::print(Operation *op, OpAsmPrinter &p, StringRef defaultDialect) {
 void OpState::printOpName(Operation *op, OpAsmPrinter &p,
                           StringRef defaultDialect) {
   StringRef name = op->getName().getStringRef();
-  if (name.startswith((defaultDialect + ".").str()) && name.count('.') == 1)
+  if (name.starts_with((defaultDialect + ".").str()) && name.count('.') == 1)
     name = name.drop_front(defaultDialect.size() + 1);
   p.getStream() << name;
 }
@@ -759,15 +787,38 @@ void OpState::printOpName(Operation *op, OpAsmPrinter &p,
 /// Parse properties as a Attribute.
 ParseResult OpState::genericParseProperties(OpAsmParser &parser,
                                             Attribute &result) {
-  if (parser.parseLess() || parser.parseAttribute(result) ||
-      parser.parseGreater())
-    return failure();
+  if (succeeded(parser.parseOptionalLess())) { // The less is optional.
+    if (parser.parseAttribute(result) || parser.parseGreater())
+      return failure();
+  }
   return success();
 }
 
-/// Print the properties as a Attribute.
-void OpState::genericPrintProperties(OpAsmPrinter &p, Attribute properties) {
-  p << "<" << properties << ">";
+/// Print the properties as a Attribute with names not included within
+/// 'elidedProps'
+void OpState::genericPrintProperties(OpAsmPrinter &p, Attribute properties,
+                                     ArrayRef<StringRef> elidedProps) {
+  if (!properties)
+    return;
+  auto dictAttr = dyn_cast_or_null<::mlir::DictionaryAttr>(properties);
+  if (dictAttr && !elidedProps.empty()) {
+    ArrayRef<NamedAttribute> attrs = dictAttr.getValue();
+    llvm::SmallDenseSet<StringRef> elidedAttrsSet(elidedProps.begin(),
+                                                  elidedProps.end());
+    auto filteredAttrs =
+        llvm::make_filter_range(attrs, [&](NamedAttribute attr) {
+          return !elidedAttrsSet.contains(attr.getName().strref());
+        });
+    if (!filteredAttrs.empty()) {
+      p << "<{";
+      interleaveComma(filteredAttrs, p, [&](NamedAttribute attr) {
+        p.printNamedAttribute(attr);
+      });
+      p << "}>";
+    }
+  } else {
+    p << "<" << properties << ">";
+  }
 }
 
 /// Emit an error about fatal conditions with this operation, reporting up to
@@ -1088,8 +1139,8 @@ LogicalResult OpTrait::impl::verifySameOperandsAndResultRank(Operation *op) {
   // delegate function that returns true if type is a shaped type with known
   // rank
   auto hasRank = [](const Type type) {
-    if (auto shaped_type = dyn_cast<ShapedType>(type))
-      return shaped_type.hasRank();
+    if (auto shapedType = dyn_cast<ShapedType>(type))
+      return shapedType.hasRank();
 
     return false;
   };
@@ -1105,7 +1156,7 @@ LogicalResult OpTrait::impl::verifySameOperandsAndResultRank(Operation *op) {
 
   // delegate function that returns rank of shaped type with known rank
   auto getRank = [](const Type type) {
-    return type.cast<ShapedType>().getRank();
+    return cast<ShapedType>(type).getRank();
   };
 
   auto rank = !rankedOperandTypes.empty() ? getRank(*rankedOperandTypes.begin())
@@ -1219,10 +1270,7 @@ LogicalResult OpTrait::impl::verifyValueSizeAttr(Operation *op,
     return op->emitOpError("'")
            << attrName << "' attribute cannot have negative elements";
 
-  size_t totalCount =
-      std::accumulate(sizes.begin(), sizes.end(), 0,
-                      [](unsigned all, int32_t one) { return all + one; });
-
+  size_t totalCount = llvm::sum_of(sizes, size_t(0));
   if (totalCount != expectedCount)
     return op->emitOpError()
            << valueGroupName << " count (" << expectedCount
@@ -1257,13 +1305,11 @@ LogicalResult OpTrait::impl::verifyNoRegionArguments(Operation *op) {
 }
 
 LogicalResult OpTrait::impl::verifyElementwise(Operation *op) {
-  auto isMappableType = [](Type type) {
-    return llvm::isa<VectorType, TensorType>(type);
-  };
-  auto resultMappableTypes = llvm::to_vector<1>(
-      llvm::make_filter_range(op->getResultTypes(), isMappableType));
-  auto operandMappableTypes = llvm::to_vector<2>(
-      llvm::make_filter_range(op->getOperandTypes(), isMappableType));
+  auto isMappableType = llvm::IsaPred<VectorType, TensorType>;
+  auto resultMappableTypes =
+      llvm::filter_to_vector<1>(op->getResultTypes(), isMappableType);
+  auto operandMappableTypes =
+      llvm::filter_to_vector<2>(op->getOperandTypes(), isMappableType);
 
   // If the op only has scalar operand/result types, then we have nothing to
   // check.

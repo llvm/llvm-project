@@ -16,8 +16,9 @@ define half @loadfpimm1() {
 ;
 ; ZFHMIN-LABEL: loadfpimm1:
 ; ZFHMIN:       # %bb.0:
-; ZFHMIN-NEXT:    lui a0, %hi(.LCPI0_0)
-; ZFHMIN-NEXT:    flh fa0, %lo(.LCPI0_0)(a0)
+; ZFHMIN-NEXT:    li a0, 11
+; ZFHMIN-NEXT:    slli a0, a0, 10
+; ZFHMIN-NEXT:    fmv.h.x fa0, a0
 ; ZFHMIN-NEXT:    ret
   ret half 0.0625
 }
@@ -30,8 +31,9 @@ define half @loadfpimm2() {
 ;
 ; ZFHMIN-LABEL: loadfpimm2:
 ; ZFHMIN:       # %bb.0:
-; ZFHMIN-NEXT:    lui a0, %hi(.LCPI1_0)
-; ZFHMIN-NEXT:    flh fa0, %lo(.LCPI1_0)(a0)
+; ZFHMIN-NEXT:    li a0, 29
+; ZFHMIN-NEXT:    slli a0, a0, 9
+; ZFHMIN-NEXT:    fmv.h.x fa0, a0
 ; ZFHMIN-NEXT:    ret
   ret half 0.75
 }
@@ -44,8 +46,9 @@ define half @loadfpimm3() {
 ;
 ; ZFHMIN-LABEL: loadfpimm3:
 ; ZFHMIN:       # %bb.0:
-; ZFHMIN-NEXT:    lui a0, %hi(.LCPI2_0)
-; ZFHMIN-NEXT:    flh fa0, %lo(.LCPI2_0)(a0)
+; ZFHMIN-NEXT:    lui a0, 4
+; ZFHMIN-NEXT:    addi a0, a0, -768
+; ZFHMIN-NEXT:    fmv.h.x fa0, a0
 ; ZFHMIN-NEXT:    ret
   ret half 1.25
 }
@@ -58,8 +61,9 @@ define half @loadfpimm4() {
 ;
 ; ZFHMIN-LABEL: loadfpimm4:
 ; ZFHMIN:       # %bb.0:
-; ZFHMIN-NEXT:    lui a0, %hi(.LCPI3_0)
-; ZFHMIN-NEXT:    flh fa0, %lo(.LCPI3_0)(a0)
+; ZFHMIN-NEXT:    lui a0, 4
+; ZFHMIN-NEXT:    addi a0, a0, 512
+; ZFHMIN-NEXT:    fmv.h.x fa0, a0
 ; ZFHMIN-NEXT:    ret
   ret half 3.0
 }
@@ -72,8 +76,9 @@ define half @loadfpimm5() {
 ;
 ; ZFHMIN-LABEL: loadfpimm5:
 ; ZFHMIN:       # %bb.0:
-; ZFHMIN-NEXT:    lui a0, %hi(.LCPI4_0)
-; ZFHMIN-NEXT:    flh fa0, %lo(.LCPI4_0)(a0)
+; ZFHMIN-NEXT:    li a0, 23
+; ZFHMIN-NEXT:    slli a0, a0, 10
+; ZFHMIN-NEXT:    fmv.h.x fa0, a0
 ; ZFHMIN-NEXT:    ret
   ret half 256.0
 }
@@ -86,8 +91,9 @@ define half @loadfpimm6() {
 ;
 ; ZFHMIN-LABEL: loadfpimm6:
 ; ZFHMIN:       # %bb.0:
-; ZFHMIN-NEXT:    lui a0, %hi(.LCPI5_0)
-; ZFHMIN-NEXT:    flh fa0, %lo(.LCPI5_0)(a0)
+; ZFHMIN-NEXT:    li a0, 31
+; ZFHMIN-NEXT:    slli a0, a0, 10
+; ZFHMIN-NEXT:    fmv.h.x fa0, a0
 ; ZFHMIN-NEXT:    ret
   ret half 0xH7C00
 }
@@ -100,8 +106,9 @@ define half @loadfpimm7() {
 ;
 ; ZFHMIN-LABEL: loadfpimm7:
 ; ZFHMIN:       # %bb.0:
-; ZFHMIN-NEXT:    lui a0, %hi(.LCPI6_0)
-; ZFHMIN-NEXT:    flh fa0, %lo(.LCPI6_0)(a0)
+; ZFHMIN-NEXT:    lui a0, 8
+; ZFHMIN-NEXT:    addi a0, a0, -512
+; ZFHMIN-NEXT:    fmv.h.x fa0, a0
 ; ZFHMIN-NEXT:    ret
   ret half 0xH7E00
 }
@@ -123,14 +130,16 @@ define half @loadfpimm8() {
 define half @loadfpimm9() {
 ; CHECK-LABEL: loadfpimm9:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a0, %hi(.LCPI8_0)
-; CHECK-NEXT:    flh fa0, %lo(.LCPI8_0)(a0)
+; CHECK-NEXT:    lui a0, 6
+; CHECK-NEXT:    addi a0, a0, -1032
+; CHECK-NEXT:    fmv.h.x fa0, a0
 ; CHECK-NEXT:    ret
 ;
 ; ZFHMIN-LABEL: loadfpimm9:
 ; ZFHMIN:       # %bb.0:
-; ZFHMIN-NEXT:    lui a0, %hi(.LCPI8_0)
-; ZFHMIN-NEXT:    flh fa0, %lo(.LCPI8_0)(a0)
+; ZFHMIN-NEXT:    lui a0, 6
+; ZFHMIN-NEXT:    addi a0, a0, -1032
+; ZFHMIN-NEXT:    fmv.h.x fa0, a0
 ; ZFHMIN-NEXT:    ret
   ret half 255.0
 }
@@ -169,14 +178,16 @@ define half @loadfpimm11() {
 define half @loadfpimm12() {
 ; CHECK-LABEL: loadfpimm12:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a0, %hi(.LCPI11_0)
-; CHECK-NEXT:    flh fa0, %lo(.LCPI11_0)(a0)
+; CHECK-NEXT:    lui a0, 8
+; CHECK-NEXT:    addi a0, a0, -1023
+; CHECK-NEXT:    fmv.h.x fa0, a0
 ; CHECK-NEXT:    ret
 ;
 ; ZFHMIN-LABEL: loadfpimm12:
 ; ZFHMIN:       # %bb.0:
-; ZFHMIN-NEXT:    lui a0, %hi(.LCPI11_0)
-; ZFHMIN-NEXT:    flh fa0, %lo(.LCPI11_0)(a0)
+; ZFHMIN-NEXT:    lui a0, 8
+; ZFHMIN-NEXT:    addi a0, a0, -1023
+; ZFHMIN-NEXT:    fmv.h.x fa0, a0
 ; ZFHMIN-NEXT:    ret
   ret half 0xH7c01
 }
@@ -189,19 +200,20 @@ define half @loadfpimm13() {
 ;
 ; ZFHMIN-LABEL: loadfpimm13:
 ; ZFHMIN:       # %bb.0:
-; ZFHMIN-NEXT:    lui a0, %hi(.LCPI12_0)
-; ZFHMIN-NEXT:    flh fa0, %lo(.LCPI12_0)(a0)
+; ZFHMIN-NEXT:    li a0, -17
+; ZFHMIN-NEXT:    slli a0, a0, 10
+; ZFHMIN-NEXT:    fmv.h.x fa0, a0
 ; ZFHMIN-NEXT:    ret
   ret half -1.0
 }
 
-; Ensure fli isn't incorrectly used for negated versions of numbers in the fli
+; Ensure fli isn't directly used for negated versions of numbers in the fli
 ; table.
 define half @loadfpimm14() {
 ; CHECK-LABEL: loadfpimm14:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a0, 1048572
-; CHECK-NEXT:    fmv.h.x fa0, a0
+; CHECK-NEXT:    fli.h fa5, 2.0
+; CHECK-NEXT:    fneg.h fa0, fa5
 ; CHECK-NEXT:    ret
 ;
 ; ZFHMIN-LABEL: loadfpimm14:
@@ -210,4 +222,21 @@ define half @loadfpimm14() {
 ; ZFHMIN-NEXT:    fmv.h.x fa0, a0
 ; ZFHMIN-NEXT:    ret
   ret half -2.0
+}
+
+; Ensure fli isn't directly used for negative min normal value.
+define half @loadfpimm15() {
+; CHECK-LABEL: loadfpimm15:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    fli.h fa5, min
+; CHECK-NEXT:    fneg.h fa0, fa5
+; CHECK-NEXT:    ret
+;
+; ZFHMIN-LABEL: loadfpimm15:
+; ZFHMIN:       # %bb.0:
+; ZFHMIN-NEXT:    li a0, -31
+; ZFHMIN-NEXT:    slli a0, a0, 10
+; ZFHMIN-NEXT:    fmv.h.x fa0, a0
+; ZFHMIN-NEXT:    ret
+  ret half 0xH8400
 }

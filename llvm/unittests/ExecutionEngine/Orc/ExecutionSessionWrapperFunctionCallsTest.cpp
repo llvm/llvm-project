@@ -6,8 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ExecutionEngine/Orc/AbsoluteSymbols.h"
 #include "llvm/ExecutionEngine/Orc/Core.h"
 #include "llvm/ExecutionEngine/Orc/ExecutorProcessControl.h"
+#include "llvm/ExecutionEngine/Orc/SelfExecutorProcessControl.h"
 #include "llvm/Support/MSVCErrorWorkarounds.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
@@ -18,8 +20,7 @@ using namespace llvm;
 using namespace llvm::orc;
 using namespace llvm::orc::shared;
 
-static llvm::orc::shared::CWrapperFunctionResult addWrapper(const char *ArgData,
-                                                            size_t ArgSize) {
+static CWrapperFunctionBuffer addWrapper(const char *ArgData, size_t ArgSize) {
   return WrapperFunction<int32_t(int32_t, int32_t)>::handle(
              ArgData, ArgSize, [](int32_t X, int32_t Y) { return X + Y; })
       .release();
@@ -30,8 +31,7 @@ static void addAsyncWrapper(unique_function<void(int32_t)> SendResult,
   SendResult(X + Y);
 }
 
-static llvm::orc::shared::CWrapperFunctionResult
-voidWrapper(const char *ArgData, size_t ArgSize) {
+static CWrapperFunctionBuffer voidWrapper(const char *ArgData, size_t ArgSize) {
   return WrapperFunction<void()>::handle(ArgData, ArgSize, []() {}).release();
 }
 
@@ -99,18 +99,18 @@ TEST(ExecutionSessionWrapperFunctionCalls, RegisterAsyncHandlerAndRun) {
 
   using ArgSerialization = SPSArgList<int32_t, int32_t>;
   size_t ArgBufferSize = ArgSerialization::size(1, 2);
-  auto ArgBuffer = WrapperFunctionResult::allocate(ArgBufferSize);
+  auto ArgBuffer = WrapperFunctionBuffer::allocate(ArgBufferSize);
   SPSOutputBuffer OB(ArgBuffer.data(), ArgBuffer.size());
   EXPECT_TRUE(ArgSerialization::serialize(OB, 1, 2));
 
   ES.runJITDispatchHandler(
-      [&](WrapperFunctionResult ResultBuffer) {
+      [&](WrapperFunctionBuffer ResultBuffer) {
         int32_t Result;
         SPSInputBuffer IB(ResultBuffer.data(), ResultBuffer.size());
         EXPECT_TRUE(SPSArgList<int32_t>::deserialize(IB, Result));
         RP.set_value(Result);
       },
-      AddAsyncTagAddr, ArrayRef<char>(ArgBuffer.data(), ArgBuffer.size()));
+      AddAsyncTagAddr, ArrayRef<char>(ArgBuffer));
 
   EXPECT_EQ(RF.get(), (int32_t)3);
 

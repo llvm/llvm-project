@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "Hexagon.h"
 #include "HexagonInstrInfo.h"
 #include "HexagonSubtarget.h"
 #include "MCTargetDesc/HexagonBaseInfo.h"
@@ -33,23 +34,18 @@
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <limits>
-#include <utility>
 
 using namespace llvm;
 using namespace rdf;
-
-namespace llvm {
-
-  void initializeHexagonRDFOptPass(PassRegistry&);
-  FunctionPass *createHexagonRDFOpt();
-
-} // end namespace llvm
 
 static unsigned RDFCount = 0;
 
 static cl::opt<unsigned>
     RDFLimit("hexagon-rdf-limit",
              cl::init(std::numeric_limits<unsigned>::max()));
+
+extern cl::opt<unsigned> RDFFuncBlockLimit;
+
 static cl::opt<bool> RDFDump("hexagon-rdf-dump", cl::Hidden);
 static cl::opt<bool> RDFTrackReserved("hexagon-rdf-track-reserved", cl::Hidden);
 
@@ -60,7 +56,7 @@ namespace {
     HexagonRDFOpt() : MachineFunctionPass(ID) {}
 
     void getAnalysisUsage(AnalysisUsage &AU) const override {
-      AU.addRequired<MachineDominatorTree>();
+      AU.addRequired<MachineDominatorTreeWrapperPass>();
       AU.addRequired<MachineDominanceFrontier>();
       AU.setPreservesAll();
       MachineFunctionPass::getAnalysisUsage(AU);
@@ -73,8 +69,7 @@ namespace {
     bool runOnMachineFunction(MachineFunction &MF) override;
 
     MachineFunctionProperties getRequiredProperties() const override {
-      return MachineFunctionProperties().set(
-          MachineFunctionProperties::Property::NoVRegs);
+      return MachineFunctionProperties().setNoVRegs();
     }
 
     static char ID;
@@ -106,7 +101,7 @@ char HexagonRDFOpt::ID = 0;
 
 INITIALIZE_PASS_BEGIN(HexagonRDFOpt, "hexagon-rdf-opt",
       "Hexagon RDF optimizations", false, false)
-INITIALIZE_PASS_DEPENDENCY(MachineDominatorTree)
+INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineDominanceFrontier)
 INITIALIZE_PASS_END(HexagonRDFOpt, "hexagon-rdf-opt",
       "Hexagon RDF optimizations", false, false)
@@ -285,13 +280,21 @@ bool HexagonRDFOpt::runOnMachineFunction(MachineFunction &MF) {
   if (skipFunction(MF.getFunction()))
     return false;
 
+  // Perform RDF optimizations only if number of basic blocks in the
+  // function is less than the limit
+  if (MF.size() > RDFFuncBlockLimit) {
+    if (RDFDump)
+      dbgs() << "Skipping " << getPassName() << ": too many basic blocks\n";
+    return false;
+  }
+
   if (RDFLimit.getPosition()) {
     if (RDFCount >= RDFLimit)
       return false;
     RDFCount++;
   }
 
-  MDT = &getAnalysis<MachineDominatorTree>();
+  MDT = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
   const auto &MDF = getAnalysis<MachineDominanceFrontier>();
   const auto &HII = *MF.getSubtarget<HexagonSubtarget>().getInstrInfo();
   const auto &HRI = *MF.getSubtarget<HexagonSubtarget>().getRegisterInfo();

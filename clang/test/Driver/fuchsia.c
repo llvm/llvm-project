@@ -2,6 +2,10 @@
 // RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
 // RUN:     --sysroot=%S/platform -fuse-ld=ld 2>&1 \
 // RUN:     | FileCheck -check-prefixes=CHECK,CHECK-X86_64 %s
+// RUN: %clang -### %s --target=arm-unknown-fuchsia \
+// RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
+// RUN:     --sysroot=%S/platform -fuse-ld=ld 2>&1 \
+// RUN:     | FileCheck -check-prefixes=CHECK,CHECK-ARMV8A %s
 // RUN: %clang -### %s --target=aarch64-unknown-fuchsia \
 // RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
 // RUN:     --sysroot=%S/platform -fuse-ld=ld 2>&1 \
@@ -14,6 +18,10 @@
 // RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
 // RUN:     --sysroot=%S/platform -fuse-ld=ld 2>&1 \
 // RUN:     | FileCheck -check-prefixes=CHECK,CHECK-X86_64 %s
+// RUN: %clang -### %s --target=arm-fuchsia \
+// RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
+// RUN:     --sysroot=%S/platform -fuse-ld=ld 2>&1 \
+// RUN:     | FileCheck -check-prefixes=CHECK,CHECK-ARMV8A %s
 // RUN: %clang -### %s --target=aarch64-fuchsia \
 // RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
 // RUN:     --sysroot=%S/platform -fuse-ld=ld 2>&1 \
@@ -24,16 +32,17 @@
 // RUN:     | FileCheck -check-prefixes=CHECK,CHECK-RISCV64 %s
 // CHECK: "-cc1"
 // CHECK-X86_64: "-triple" "x86_64-unknown-fuchsia"
+// CHECK-ARMV8A: "-triple" "thumbv8a-unknown-fuchsia"
 // CHECK-AARCH64: "-triple" "aarch64-unknown-fuchsia"
 // CHECK-RISCV64: "-triple" "riscv64-unknown-fuchsia"
 // CHECK: "-funwind-tables=2"
 // CHECK: "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
 // CHECK: "-isysroot" "[[SYSROOT:[^"]+]]"
 // CHECK: "-internal-externc-isystem" "[[SYSROOT]]{{/|\\\\}}include"
+// CHECK: "-stack-protector" "2"
 // CHECK-AARCH64: "-fsanitize=shadow-call-stack"
 // CHECK-RISCV64: "-fsanitize=shadow-call-stack"
 // CHECK-X86_64: "-fsanitize=safe-stack"
-// CHECK: "-stack-protector" "2"
 // CHECK-AARCH64: "-target-feature" "+outline-atomics"
 // CHECK-NOT: "-fcommon"
 // CHECK: {{.*}}ld.lld{{.*}}" "-z" "max-page-size=4096" "-z" "now" "-z" "start-stop-visibility=hidden" "-z" "rodynamic" "-z" "separate-loadable-segments" "-z" "rel" "--pack-dyn-relocs=relr"
@@ -68,7 +77,7 @@
 // RUN: %clang -### %s --target=aarch64-unknown-fuchsia -O3 2>&1 \
 // RUN:     | FileCheck %s -check-prefix=CHECK-FP-NONE
 // CHECK-FP-ALL: "-mframe-pointer=all"
-// CHECK-FP-NONLEAF: "-mframe-pointer=non-leaf"
+// CHECK-FP-NONLEAF: "-mframe-pointer=non-leaf-no-reserve"
 // CHECK-FP-NONE: "-mframe-pointer=none"
 
 // RUN: not %clang -### %s --target=x86_64-unknown-fuchsia -rtlib=libgcc 2>&1 \
@@ -117,6 +126,11 @@
 // CHECK-NOLIBC-NOT: "-lc"
 
 // RUN: %clang -### %s --target=x86_64-unknown-fuchsia \
+// RUN:     -fsanitize=safe-stack 2>&1 \
+// RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
+// RUN:     -fuse-ld=ld \
+// RUN:     | FileCheck %s -check-prefix=CHECK-SAFESTACK
+// RUN: %clang -### %s --target=x86_64-unknown-fuchsia -m32 \
 // RUN:     -fsanitize=safe-stack 2>&1 \
 // RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
 // RUN:     -fuse-ld=ld \
@@ -187,7 +201,7 @@
 // CHECK-SCUDO-X86: "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
 // CHECK-SCUDO-X86: "-fsanitize=safe-stack,scudo"
 // CHECK-SCUDO-X86: "-pie"
-// CHECK-SCUDO-X86: "[[RESOURCE_DIR]]{{/|\\\\}}lib{{/|\\\\}}fuchsia{{/|\\\\}}libclang_rt.scudo_standalone-x86_64.so"
+// CHECK-SCUDO-X86: "[[RESOURCE_DIR]]{{/|\\\\}}lib{{.*}}fuchsia{{.*}}libclang_rt.scudo_standalone.so"
 
 // RUN: %clang -### %s --target=aarch64-unknown-fuchsia \
 // RUN:     -fsanitize=scudo 2>&1 \
@@ -197,7 +211,7 @@
 // CHECK-SCUDO-AARCH64: "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
 // CHECK-SCUDO-AARCH64: "-fsanitize=shadow-call-stack,scudo"
 // CHECK-SCUDO-AARCH64: "-pie"
-// CHECK-SCUDO-AARCH64: "[[RESOURCE_DIR]]{{/|\\\\}}lib{{/|\\\\}}fuchsia{{/|\\\\}}libclang_rt.scudo_standalone-aarch64.so"
+// CHECK-SCUDO-AARCH64: "[[RESOURCE_DIR]]{{/|\\\\}}lib{{.*}}fuchsia{{.*}}libclang_rt.scudo_standalone.so"
 
 // RUN: %clang -### %s --target=x86_64-unknown-fuchsia \
 // RUN:     -fsanitize=scudo -fPIC -shared 2>&1 \
@@ -206,7 +220,7 @@
 // RUN:     | FileCheck %s -check-prefix=CHECK-SCUDO-SHARED
 // CHECK-SCUDO-SHARED: "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
 // CHECK-SCUDO-SHARED: "-fsanitize=safe-stack,scudo"
-// CHECK-SCUDO-SHARED: "[[RESOURCE_DIR]]{{/|\\\\}}lib{{/|\\\\}}fuchsia{{/|\\\\}}libclang_rt.scudo_standalone-x86_64.so"
+// CHECK-SCUDO-SHARED: "[[RESOURCE_DIR]]{{/|\\\\}}lib{{.*}}fuchsia{{.*}}libclang_rt.scudo_standalone.so"
 
 // RUN: %clang -### %s --target=aarch64-unknown-fuchsia \
 // RUN:     -fsanitize=leak 2>&1 \
@@ -292,3 +306,24 @@
 // RUN:     | FileCheck %s -check-prefix=CHECK-PROFRT-X86_64
 // CHECK-PROFRT-X86_64: "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
 // CHECK-PROFRT-X86_64: "[[RESOURCE_DIR]]{{/|\\\\}}lib{{/|\\\\}}x86_64-unknown-fuchsia{{/|\\\\}}libclang_rt.profile.a"
+
+// Check that the -X and --no-relax flags are passed to the linker on riscv64
+// RUN: %clang --target=riscv64-unknown-fuchsia -mno-relax -### %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=RISCV64-FLAGS %s
+// RISCV64-FLAGS: "-X" "--no-relax"
+
+// RUN: %clang -### %s --target=x86_64-unknown-fuchsia 2>&1 \
+// RUN:     -nostdlib -nolibc \
+// RUN:     | FileCheck %s -check-prefix=CHECK-NOSTDLIB-NOLIBC
+// CHECK-NOSTDLIB-NOLIBC-NOT: "warning:"
+// CHECK-NOSTDLIB-NOLIBC-NOT: "error:"
+
+// RUN: not %clang -### %s --target=aarch64-unknown-fuchsia \
+// RUN:     -fsanitize=safe-stack 2>&1 \
+// RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
+// RUN:     | FileCheck %s -check-prefix=CHECK-NONX86-SAFESTACK
+// RUN: not %clang -### %s --target=riscv64-unknown-fuchsia \
+// RUN:     -fsanitize=safe-stack 2>&1 \
+// RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
+// RUN:     | FileCheck %s -check-prefix=CHECK-NONX86-SAFESTACK
+// CHECK-NONX86-SAFESTACK: error: unsupported option '-fsanitize=safe-stack' for target '{{.*}}'

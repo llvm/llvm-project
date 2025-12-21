@@ -33,7 +33,7 @@ define i32 @test2() nounwind readnone ssp {
 ; CHECK:       control.outer.outer.split.us:
 ; CHECK-NEXT:    br label [[CONTROL_OUTER_US:%.*]]
 ; CHECK:       control.outer.us:
-; CHECK-NEXT:    [[A_0_PH_US:%.*]] = phi i32 [ [[SWITCHCOND_0_US:%.*]], [[BB3_US:%.*]] ], [ 4, [[CONTROL_OUTER_OUTER_SPLIT_US]] ]
+; CHECK-NEXT:    [[A_0_PH_US:%.*]] = phi i32 [ 3, [[BB3_US:%.*]] ], [ 4, [[CONTROL_OUTER_OUTER_SPLIT_US]] ]
 ; CHECK-NEXT:    [[SWITCHCOND_0_PH_US:%.*]] = phi i32 [ [[A_0_PH_US]], [[BB3_US]] ], [ [[SWITCHCOND_0_PH_PH]], [[CONTROL_OUTER_OUTER_SPLIT_US]] ]
 ; CHECK-NEXT:    br label [[CONTROL_US:%.*]]
 ; CHECK:       bb3.us:
@@ -41,12 +41,12 @@ define i32 @test2() nounwind readnone ssp {
 ; CHECK:       bb0.us:
 ; CHECK-NEXT:    br label [[CONTROL_US]]
 ; CHECK:       control.us:
-; CHECK-NEXT:    [[SWITCHCOND_0_US]] = phi i32 [ [[A_0_PH_US]], [[BB0_US:%.*]] ], [ [[SWITCHCOND_0_PH_US]], [[CONTROL_OUTER_US]] ]
+; CHECK-NEXT:    [[SWITCHCOND_0_US:%.*]] = phi i32 [ [[A_0_PH_US]], [[BB0_US:%.*]] ], [ [[SWITCHCOND_0_PH_US]], [[CONTROL_OUTER_US]] ]
 ; CHECK-NEXT:    switch i32 [[SWITCHCOND_0_US]], label [[CONTROL_OUTER_LOOPEXIT_US_LCSSA_US:%.*]] [
-; CHECK-NEXT:    i32 0, label [[BB0_US]]
-; CHECK-NEXT:    i32 1, label [[BB1_US_LCSSA_US:%.*]]
-; CHECK-NEXT:    i32 3, label [[BB3_US]]
-; CHECK-NEXT:    i32 4, label [[BB4_US_LCSSA_US:%.*]]
+; CHECK-NEXT:      i32 0, label [[BB0_US]]
+; CHECK-NEXT:      i32 1, label [[BB1_US_LCSSA_US:%.*]]
+; CHECK-NEXT:      i32 3, label [[BB3_US]]
+; CHECK-NEXT:      i32 4, label [[BB4_US_LCSSA_US:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       control.outer.loopexit.us-lcssa.us:
 ; CHECK-NEXT:    br label [[CONTROL_OUTER_LOOPEXIT]]
@@ -55,16 +55,16 @@ define i32 @test2() nounwind readnone ssp {
 ; CHECK:       bb4.us-lcssa.us:
 ; CHECK-NEXT:    br label [[BB4:%.*]]
 ; CHECK:       control.outer:
-; CHECK-NEXT:    [[A_0_PH:%.*]] = phi i32 [ [[NEXTID17:%.*]], [[BB3:%.*]] ], [ 4, [[CONTROL_OUTER_OUTER_CONTROL_OUTER_OUTER_SPLIT_CRIT_EDGE]] ]
+; CHECK-NEXT:    [[A_0_PH:%.*]] = phi i32 [ 1, [[BB3:%.*]] ], [ 4, [[CONTROL_OUTER_OUTER_CONTROL_OUTER_OUTER_SPLIT_CRIT_EDGE]] ]
 ; CHECK-NEXT:    [[SWITCHCOND_0_PH:%.*]] = phi i32 [ 0, [[BB3]] ], [ [[SWITCHCOND_0_PH_PH]], [[CONTROL_OUTER_OUTER_CONTROL_OUTER_OUTER_SPLIT_CRIT_EDGE]] ]
 ; CHECK-NEXT:    br label [[CONTROL:%.*]]
 ; CHECK:       control:
 ; CHECK-NEXT:    [[SWITCHCOND_0:%.*]] = phi i32 [ [[A_0_PH]], [[BB0:%.*]] ], [ [[SWITCHCOND_0_PH]], [[CONTROL_OUTER]] ]
 ; CHECK-NEXT:    switch i32 [[SWITCHCOND_0]], label [[CONTROL_OUTER_LOOPEXIT_US_LCSSA:%.*]] [
-; CHECK-NEXT:    i32 0, label [[BB0]]
-; CHECK-NEXT:    i32 1, label [[BB1_US_LCSSA:%.*]]
-; CHECK-NEXT:    i32 3, label [[BB3]]
-; CHECK-NEXT:    i32 4, label [[BB4_US_LCSSA:%.*]]
+; CHECK-NEXT:      i32 0, label [[BB0]]
+; CHECK-NEXT:      i32 1, label [[BB1_US_LCSSA:%.*]]
+; CHECK-NEXT:      i32 3, label [[BB3]]
+; CHECK-NEXT:      i32 4, label [[BB4_US_LCSSA:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       bb4.us-lcssa:
 ; CHECK-NEXT:    br label [[BB4]]
@@ -74,7 +74,6 @@ define i32 @test2() nounwind readnone ssp {
 ; CHECK-NEXT:    [[I_0_PH_PH_BE]] = phi i32 [ 1, [[BB4]] ], [ 0, [[CONTROL_OUTER_LOOPEXIT]] ]
 ; CHECK-NEXT:    br label [[CONTROL_OUTER_OUTER]]
 ; CHECK:       bb3:
-; CHECK-NEXT:    [[NEXTID17]] = add i32 [[SWITCHCOND_0]], -2
 ; CHECK-NEXT:    br label [[CONTROL_OUTER]]
 ; CHECK:       bb0:
 ; CHECK-NEXT:    br label [[CONTROL]]
@@ -258,11 +257,15 @@ entry:
 define i32 @test11(i1 %tobool) {
 ; CHECK-LABEL: @test11(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[SHR4:%.*]] = ashr i32 undef, zext (i1 icmp eq (ptr @test11, ptr @GV) to i32)
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr @test11, @GV
+; CHECK-NEXT:    [[EXT:%.*]] = zext i1 [[CMP]] to i32
+; CHECK-NEXT:    [[SHR4:%.*]] = ashr i32 undef, [[EXT]]
 ; CHECK-NEXT:    ret i32 [[SHR4]]
 ;
 entry:
-  %shr4 = ashr i32 undef, zext (i1 icmp eq (ptr @test11, ptr @GV) to i32)
+  %cmp = icmp eq ptr @test11, @GV
+  %ext = zext i1 %cmp to i32
+  %shr4 = ashr i32 undef, %ext
   ret i32 %shr4
 }
 

@@ -75,6 +75,17 @@ define <vscale x 2 x double> @fabs_d(<vscale x 2 x double> %a, <vscale x 2 x i1>
   ret <vscale x 2 x double> %out
 }
 
+define <vscale x 8 x bfloat> @fabs_bf(<vscale x 8 x bfloat> %a, <vscale x 8 x i1> %pg, <vscale x 8 x bfloat> %b) {
+; CHECK-LABEL: fabs_bf:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fabs z0.h, p0/m, z1.h
+; CHECK-NEXT:    ret
+  %out = call <vscale x 8 x bfloat> @llvm.aarch64.sve.fabs.nxv8bf16(<vscale x 8 x bfloat> %a,
+                                                                    <vscale x 8 x i1> %pg,
+                                                                    <vscale x 8 x bfloat> %b)
+  ret <vscale x 8 x bfloat> %out
+}
+
 ;
 ; FADD
 ;
@@ -296,37 +307,6 @@ define <vscale x 2 x double> @fdivr_d(<vscale x 2 x i1> %pg, <vscale x 2 x doubl
   %out = call <vscale x 2 x double> @llvm.aarch64.sve.fdivr.nxv2f64(<vscale x 2 x i1> %pg,
                                                                     <vscale x 2 x double> %a,
                                                                     <vscale x 2 x double> %b)
-  ret <vscale x 2 x double> %out
-}
-
-;
-; FEXPA
-;
-
-define <vscale x 8 x half> @fexpa_h(<vscale x 8 x i16> %a) {
-; CHECK-LABEL: fexpa_h:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    fexpa z0.h, z0.h
-; CHECK-NEXT:    ret
-  %out = call <vscale x 8 x half> @llvm.aarch64.sve.fexpa.x.nxv8f16(<vscale x 8 x i16> %a)
-  ret <vscale x 8 x half> %out
-}
-
-define <vscale x 4 x float> @fexpa_s(<vscale x 4 x i32> %a) {
-; CHECK-LABEL: fexpa_s:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    fexpa z0.s, z0.s
-; CHECK-NEXT:    ret
-  %out = call <vscale x 4 x float> @llvm.aarch64.sve.fexpa.x.nxv4f32(<vscale x 4 x i32> %a)
-  ret <vscale x 4 x float> %out
-}
-
-define <vscale x 2 x double> @fexpa_d(<vscale x 2 x i1> %pg, <vscale x 2 x i64> %a) {
-; CHECK-LABEL: fexpa_d:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    fexpa z0.d, z0.d
-; CHECK-NEXT:    ret
-  %out = call <vscale x 2 x double> @llvm.aarch64.sve.fexpa.x.nxv2f64(<vscale x 2 x i64> %a)
   ret <vscale x 2 x double> %out
 }
 
@@ -864,6 +844,17 @@ define <vscale x 2 x double> @fneg_d(<vscale x 2 x double> %a, <vscale x 2 x i1>
                                                                    <vscale x 2 x i1> %pg,
                                                                    <vscale x 2 x double> %b)
   ret <vscale x 2 x double> %out
+}
+
+define <vscale x 8 x bfloat> @fneg_bf(<vscale x 8 x bfloat> %a, <vscale x 8 x i1> %pg, <vscale x 8 x bfloat> %b) {
+; CHECK-LABEL: fneg_bf:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fneg z0.h, p0/m, z1.h
+; CHECK-NEXT:    ret
+  %out = call <vscale x 8 x bfloat> @llvm.aarch64.sve.fneg.nxv8bf16(<vscale x 8 x bfloat> %a,
+                                                                    <vscale x 8 x i1> %pg,
+                                                                    <vscale x 8 x bfloat> %b)
+  ret <vscale x 8 x bfloat> %out
 }
 
 ;
@@ -1644,6 +1635,7 @@ declare <vscale x 2 x double> @llvm.aarch64.sve.fabd.nxv2f64(<vscale x 2 x i1>, 
 declare <vscale x 8 x half> @llvm.aarch64.sve.fabs.nxv8f16(<vscale x 8 x half>, <vscale x 8 x i1>, <vscale x 8 x half>)
 declare <vscale x 4 x float> @llvm.aarch64.sve.fabs.nxv4f32(<vscale x 4 x float>, <vscale x 4 x i1>, <vscale x 4 x float>)
 declare <vscale x 2 x double> @llvm.aarch64.sve.fabs.nxv2f64(<vscale x 2 x double>, <vscale x 2 x i1>, <vscale x 2 x double>)
+declare <vscale x 8 x bfloat> @llvm.aarch64.sve.fabs.nxv8bf16(<vscale x 8 x bfloat>, <vscale x 8 x i1>, <vscale x 8 x bfloat>)
 
 declare <vscale x 8 x half> @llvm.aarch64.sve.fadd.nxv8f16(<vscale x 8 x i1>, <vscale x 8 x half>, <vscale x 8 x half>)
 declare <vscale x 4 x float> @llvm.aarch64.sve.fadd.nxv4f32(<vscale x 4 x i1>, <vscale x 4 x float>, <vscale x 4 x float>)
@@ -1667,10 +1659,6 @@ declare <vscale x 2 x double> @llvm.aarch64.sve.fdiv.nxv2f64(<vscale x 2 x i1>, 
 declare <vscale x 8 x half> @llvm.aarch64.sve.fdivr.nxv8f16(<vscale x 8 x i1>, <vscale x 8 x half>, <vscale x 8 x half>)
 declare <vscale x 4 x float> @llvm.aarch64.sve.fdivr.nxv4f32(<vscale x 4 x i1>, <vscale x 4 x float>, <vscale x 4 x float>)
 declare <vscale x 2 x double> @llvm.aarch64.sve.fdivr.nxv2f64(<vscale x 2 x i1>, <vscale x 2 x double>, <vscale x 2 x double>)
-
-declare <vscale x 8 x half> @llvm.aarch64.sve.fexpa.x.nxv8f16(<vscale x 8 x i16>)
-declare <vscale x 4 x float> @llvm.aarch64.sve.fexpa.x.nxv4f32(<vscale x 4 x i32>)
-declare <vscale x 2 x double> @llvm.aarch64.sve.fexpa.x.nxv2f64(<vscale x 2 x i64>)
 
 declare <vscale x 8 x half> @llvm.aarch64.sve.fmad.nxv8f16(<vscale x 8 x i1>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>)
 declare <vscale x 4 x float> @llvm.aarch64.sve.fmad.nxv4f32(<vscale x 4 x i1>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>)
@@ -1727,6 +1715,7 @@ declare <vscale x 2 x double> @llvm.aarch64.sve.fmulx.nxv2f64(<vscale x 2 x i1>,
 declare <vscale x 8 x half> @llvm.aarch64.sve.fneg.nxv8f16(<vscale x 8 x half>, <vscale x 8 x i1>, <vscale x 8 x half>)
 declare <vscale x 4 x float> @llvm.aarch64.sve.fneg.nxv4f32(<vscale x 4 x float>, <vscale x 4 x i1>, <vscale x 4 x float>)
 declare <vscale x 2 x double> @llvm.aarch64.sve.fneg.nxv2f64(<vscale x 2 x double>, <vscale x 2 x i1>, <vscale x 2 x double>)
+declare <vscale x 8 x bfloat> @llvm.aarch64.sve.fneg.nxv8bf16(<vscale x 8 x bfloat>, <vscale x 8 x i1>, <vscale x 8 x bfloat>)
 
 declare <vscale x 8 x half> @llvm.aarch64.sve.fnmad.nxv8f16(<vscale x 8 x i1>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>)
 declare <vscale x 4 x float> @llvm.aarch64.sve.fnmad.nxv4f32(<vscale x 4 x i1>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>)

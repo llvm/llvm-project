@@ -117,7 +117,7 @@ def BranchOpInterface : OpInterface<"BranchOpInterface"> {
 
 def RegionBranchOpInterface : OpInterface<"RegionBranchOpInterface"> {
   let description = [{
-    This interface provides information for region operations that exhibit
+    This interface provides information for region-holding operations that exhibit
     branching behavior between held regions. I.e., this interface allows for
     expressing control flow information for region holding operations.
 
@@ -126,12 +126,12 @@ def RegionBranchOpInterface : OpInterface<"RegionBranchOpInterface"> {
     be side-effect free.
 
     A "region branch point" indicates a point from which a branch originates. It
-    can indicate either a region of this op or `RegionBranchPoint::parent()`. In
-    the latter case, the branch originates from outside of the op, i.e., when
-    first executing this op.
+    can indicate either a terminator in any of the immediately nested region of
+    this op or `RegionBranchPoint::parent()`. In the latter case, the branch
+    originates from outside of the op, i.e., when first executing this op.
 
     A "region successor" indicates the target of a branch. It can indicate
-    either a region of this op or this op. In the former case, the region
+    either a region of this op or this op itself. In the former case, the region
     successor is a region pointer and a range of block arguments to which the
     "successor operands" are forwarded to. In the latter case, the control flow
     leaves this op and the region successor is a range of results of this op to
@@ -151,10 +151,10 @@ def RegionBranchOpInterface : OpInterface<"RegionBranchOpInterface"> {
     }
     ```
 
-    `scf.for` has one region. The region has two region successors: the region
-    itself and the `scf.for` op. %b is an entry successor operand. %c is a
-    successor operand. %a is a successor block argument. %r is a successor
-    result.
+    `scf.for` has one region. The `scf.yield` has two region successors: the
+    region body itself and the `scf.for` op. `%b` is an entry successor
+    operand. `%c` is a successor operand. `%a` is a successor block argument.
+    `%r` is a successor result.
   }];
   let cppNamespace = "::mlir";
 
@@ -162,16 +162,16 @@ def RegionBranchOpInterface : OpInterface<"RegionBranchOpInterface"> {
     InterfaceMethod<[{
         Returns the operands of this operation that are forwarded to the region
         successor's block arguments or this operation's results when branching
-        to `point`. `point` is guaranteed to be among the successors that are
+        to `successor`. `successor` is guaranteed to be among the successors that are
         returned by `getEntrySuccessorRegions`/`getSuccessorRegions(parent())`.
 
         Example: In the above example, this method returns the operand %b of the
-        `scf.for` op, regardless of the value of `point`. I.e., this op always
+        `scf.for` op, regardless of the value of `successor`. I.e., this op always
         forwards the same operands, regardless of whether the loop has 0 or more
         iterations.
       }],
       "::mlir::OperandRange", "getEntrySuccessorOperands",
-      (ins "::mlir::RegionBranchPoint":$point), [{}],
+      (ins "::mlir::RegionSuccessor":$successor), [{}],
       /*defaultImplementation=*/[{
         auto operandEnd = this->getOperation()->operand_end();
         return ::mlir::OperandRange(operandEnd, operandEnd);
@@ -225,6 +225,80 @@ def RegionBranchOpInterface : OpInterface<"RegionBranchOpInterface"> {
            "::llvm::SmallVectorImpl<::mlir::RegionSuccessor> &":$regions)
     >,
     InterfaceMethod<[{
+        Returns the potential region successors when branching from any
+        terminator in `region`.
+        These are the regions that may be selected during the flow of control.
+      }],
+      "void", "getSuccessorRegions",
+      (ins "::mlir::Region&":$region,
+           "::llvm::SmallVectorImpl<::mlir::RegionSuccessor> &":$regions),
+      [{}],
+      /*defaultImplementation=*/[{
+        for (::mlir::Block &block : region) {
+          if (block.empty())
+            continue;
+          if (auto terminator =
+                  dyn_cast<RegionBranchTerminatorOpInterface>(block.back()))
+            $_op.getSuccessorRegions(RegionBranchPoint(terminator),
+                                     regions);
+        }
+      }]>,
+    InterfaceMethod<[{
+        Returns the potential branching point (predecessors) for a given successor.
+      }],
+      "void", "getPredecessors",
+      (ins "::mlir::RegionSuccessor":$successor,
+           "::llvm::SmallVectorImpl<::mlir::RegionBranchPoint> &":$predecessors),
+      [{}],
+      /*defaultImplementation=*/[{
+        ::llvm::SmallVector<::mlir::RegionSuccessor> successors;
+        $_op.getSuccessorRegions(RegionBranchPoint::parent(),
+                                 successors);
+        if (llvm::any_of(successors, [&] (const RegionSuccessor & succ) {
+            return succ.getSuccessor() == successor.getSuccessor() ||
+              (succ.isParent() && successor.isParent());
+          }))
+          predecessors.push_back(RegionBranchPoint::parent());
+        for (Region &region : $_op->getRegions()) {
+          for (::mlir::Block &block : region) {
+            if (block.empty())
+              continue;
+            if (auto terminator =
+                    dyn_cast<RegionBranchTerminatorOpInterface>(block.back())) {
+              ::llvm::SmallVector<::mlir::RegionSuccessor> successors;
+              $_op.getSuccessorRegions(RegionBranchPoint(terminator),
+                                       successors);
+              if (llvm::any_of(successors, [&] (const RegionSuccessor & succ) {
+                  return succ.getSuccessor() == successor.getSuccessor() ||
+                    (succ.isParent() && successor.isParent());
+                }))
+                predecessors.push_back(terminator);
+            }
+          }
+        }
+      }]>,
+    InterfaceMethod<[{
+        Returns the potential values across all (predecessors) for a given successor
+        input, modeled by its index (its position in the list of values).
+      }],
+      "void", "getPredecessorValues",
+      (ins "::mlir::RegionSuccessor":$successor,
+           "int":$index,
+           "::llvm::SmallVectorImpl<::mlir::Value> &":$predecessorValues),
+      [{}],
+      /*defaultImplementation=*/[{
+        ::llvm::SmallVector<::mlir::RegionBranchPoint> predecessors;
+        $_op.getPredecessors(successor, predecessors);
+        for (auto predecessor : predecessors) {
+          if (predecessor.isParent()) {
+            predecessorValues.push_back($_op.getEntrySuccessorOperands(successor)[index]);
+            continue;
+          }
+          auto terminator = cast<RegionBranchTerminatorOpInterface>(predecessor.getTerminatorPredecessorOrNull());
+          predecessorValues.push_back(terminator.getSuccessorOperands(successor)[index]);
+        }
+      }]>,
+    InterfaceMethod<[{
         Populates `invocationBounds` with the minimum and maximum number of
         times this operation will invoke the attached regions (assuming the
         regions yield normally, i.e. do not abort or invoke an infinite loop).
@@ -272,6 +346,10 @@ def RegionBranchOpInterface : OpInterface<"RegionBranchOpInterface"> {
     /// eventually branch back to the same region. (Maybe after passing through
     /// other regions.)
     bool isRepetitiveRegion(unsigned index);
+
+    /// Return `true` if there is a loop in the region branching graph. Only
+    /// reachable regions (starting from the entry regions) are considered.
+    bool hasLoop();
   }];
 }
 
@@ -294,7 +372,7 @@ def RegionBranchTerminatorOpInterface :
         passing them to the region successor indicated by `point`.
       }],
       "::mlir::MutableOperandRange", "getMutableSuccessorOperands",
-      (ins "::mlir::RegionBranchPoint":$point)
+      (ins "::mlir::RegionSuccessor":$point)
     >,
     InterfaceMethod<[{
         Returns the potential region successors that are branched to after this
@@ -313,7 +391,7 @@ def RegionBranchTerminatorOpInterface :
       /*defaultImplementation=*/[{
         ::mlir::Operation *op = $_op;
         ::llvm::cast<::mlir::RegionBranchOpInterface>(op->getParentOp())
-          .getSuccessorRegions(op->getParentRegion(), regions);
+          .getSuccessorRegions(::llvm::cast<::mlir::RegionBranchTerminatorOpInterface>(op), regions);
       }]
     >,
   ];
@@ -333,9 +411,157 @@ def RegionBranchTerminatorOpInterface :
     // them to the region successor given by `index`.  If `index` is None, this
     // function returns the operands that are passed as a result to the parent
     // operation.
-    ::mlir::OperandRange getSuccessorOperands(::mlir::RegionBranchPoint point) {
-      return getMutableSuccessorOperands(point);
+    ::mlir::OperandRange getSuccessorOperands(::mlir::RegionSuccessor successor) {
+      return getMutableSuccessorOperands(successor);
     }
+  }];
+}
+
+def SelectLikeOpInterface : OpInterface<"SelectLikeOpInterface"> {
+  let description = [{
+    This interface provides information for select-like operations, i.e.,
+    operations that forward specific operands to the output, depending on a
+    binary condition.
+
+    If the value of the condition is 1, then the `true` operand is returned,
+    and the third operand is ignored, even if it was poison.
+
+    If the value of the condition is 0, then the `false` operand is returned,
+    and the second operand is ignored, even if it was poison.
+
+    If the condition is poison, then poison is returned.
+
+    Implementing operations can also accept shaped conditions, in which case
+    the operation works element-wise.
+  }];
+  let cppNamespace = "::mlir";
+
+  let methods = [
+    InterfaceMethod<[{
+        Returns the operand that would be chosen for a false condition.
+      }], "::mlir::Value", "getFalseValue", (ins)>,
+    InterfaceMethod<[{
+        Returns the operand that would be chosen for a true condition.
+      }], "::mlir::Value", "getTrueValue", (ins)>,
+    InterfaceMethod<[{
+        Returns the condition operand.
+      }], "::mlir::Value", "getCondition", (ins)>
+  ];
+}
+
+//===----------------------------------------------------------------------===//
+// WeightedBranchOpInterface
+//===----------------------------------------------------------------------===//
+
+def WeightedBranchOpInterface : OpInterface<"WeightedBranchOpInterface"> {
+  let description = [{
+    This interface provides weight information for branching terminator
+    operations, i.e. terminator operations with successors.
+
+    This interface provides methods for getting/setting integer weights of each
+    branch. The probability of executing a branch is computed as the ratio
+    between the branch's weight and the total sum of the weights (which cannot
+    be zero). The weights are optional. If they are provided, then their number
+    must match the number of successors of the operation.
+
+    Note that the branch weight use an i32 representation but they are to be
+    interpreted as unsigned integers.
+
+    The default implementations of the methods expect the operation
+    to have an attribute of type DenseI32ArrayAttr named branch_weights.
+  }];
+  let cppNamespace = "::mlir";
+
+  let methods = [InterfaceMethod<
+                     /*desc=*/"Returns the branch weights",
+                     /*returnType=*/"::llvm::ArrayRef<int32_t>",
+                     /*methodName=*/"getWeights",
+                     /*args=*/(ins),
+                     /*methodBody=*/[{}],
+                     /*defaultImpl=*/[{
+        auto op = cast<ConcreteOp>(this->getOperation());
+        if (auto attr = op.getBranchWeightsAttr())
+          return attr.asArrayRef();
+        return {};
+      }]>,
+                 InterfaceMethod<
+                     /*desc=*/"Sets the branch weights",
+                     /*returnType=*/"void",
+                     /*methodName=*/"setWeights",
+                     /*args=*/(ins "::llvm::ArrayRef<int32_t>":$weights),
+                     /*methodBody=*/[{}],
+                     /*defaultImpl=*/[{
+        auto op = cast<ConcreteOp>(this->getOperation());
+        op.setBranchWeightsAttr(::mlir::DenseI32ArrayAttr::get(op->getContext(), weights));
+      }]>,
+  ];
+
+  let verify = [{
+    return ::mlir::detail::verifyBranchWeights($_op);
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// WeightedRegionBranchOpInterface
+//===----------------------------------------------------------------------===//
+
+// TODO: the probabilities of entering a particular region seem
+// to correlate with the values returned by
+// RegionBranchOpInterface::invocationBounds(), and we should probably
+// verify that the values are consistent. In that case, should
+// WeightedRegionBranchOpInterface extend RegionBranchOpInterface?
+def WeightedRegionBranchOpInterface
+    : OpInterface<"WeightedRegionBranchOpInterface"> {
+  let description = [{
+    This interface provides weight information for region operations
+    that exhibit branching behavior between held regions.
+
+    This interface provides methods for getting/setting integer weights of each
+    branch. The probability of executing a region is computed as the ratio
+    between the region branch's weight and the total sum of the weights (which
+    cannot be zero). The weights are optional. If they are provided, then their
+    number must match the number of regions held by the operation (including
+    empty regions).
+
+    The weights specify the probability of branching to a particular
+    region when first executing the operation.
+    For example, for loop-like operations with a single region
+    the weight specifies the probability of entering the loop.
+
+    Note that the branch weight use an i32 representation but they are to be
+    interpreted as unsigned integers.
+
+    The default implementations of the methods expect the operation
+    to have an attribute of type DenseI32ArrayAttr named branch_weights.
+  }];
+  let cppNamespace = "::mlir";
+
+  let methods = [InterfaceMethod<
+                     /*desc=*/"Returns the region weights",
+                     /*returnType=*/"::llvm::ArrayRef<int32_t>",
+                     /*methodName=*/"getWeights",
+                     /*args=*/(ins),
+                     /*methodBody=*/[{}],
+                     /*defaultImpl=*/[{
+        auto op = cast<ConcreteOp>(this->getOperation());
+        if (auto attr = op.getRegionWeightsAttr())
+          return attr.asArrayRef();
+        return {};
+      }]>,
+                 InterfaceMethod<
+                     /*desc=*/"Sets the region weights",
+                     /*returnType=*/"void",
+                     /*methodName=*/"setWeights",
+                     /*args=*/(ins "::llvm::ArrayRef<int32_t>":$weights),
+                     /*methodBody=*/[{}],
+                     /*defaultImpl=*/[{
+        auto op = cast<ConcreteOp>(this->getOperation());
+        op.setRegionWeightsAttr(::mlir::DenseI32ArrayAttr::get(op->getContext(), weights));
+      }]>,
+  ];
+
+  let verify = [{
+    return ::mlir::detail::verifyRegionBranchWeights($_op);
   }];
 }
 
@@ -352,7 +578,7 @@ def ReturnLike : TraitList<[
         /*extraOpDeclaration=*/"",
         /*extraOpDefinition=*/[{
           ::mlir::MutableOperandRange $cppClass::getMutableSuccessorOperands(
-            ::mlir::RegionBranchPoint point) {
+            ::mlir::RegionSuccessor successor) {
             return ::mlir::MutableOperandRange(*this);
           }
         }]

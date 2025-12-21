@@ -18,10 +18,10 @@
 #include "MCTargetDesc/HexagonMCTargetDesc.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
-#include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/ValueTypes.h"
+#include "llvm/CodeGenTypes/MachineValueType.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/InlineAsm.h"
 #include <cstdint>
@@ -31,6 +31,7 @@ namespace llvm {
 
 namespace HexagonISD {
 
+// clang-format off
 enum NodeType : unsigned {
   OP_BEGIN = ISD::BUILTIN_OP_END,
 
@@ -77,6 +78,8 @@ enum NodeType : unsigned {
   EH_RETURN,
   DCFETCH,
   READCYCLE,
+  READTIMER,
+  THREAD_POINTER,
   PTRUE,
   PFALSE,
   D2P,         // Convert 8-byte value to 8-bit predicate register. [*]
@@ -120,6 +123,7 @@ enum NodeType : unsigned {
 };
 
 } // end namespace HexagonISD
+// clang-format on
 
 class HexagonSubtarget;
 
@@ -141,7 +145,7 @@ public:
       const SmallVectorImpl<SDValue> &OutVals,
       const SmallVectorImpl<ISD::InputArg> &Ins, SelectionDAG& DAG) const;
 
-  bool getTgtMemIntrinsic(IntrinsicInfo &Info, const CallInst &I,
+  bool getTgtMemIntrinsic(IntrinsicInfo &Info, const CallBase &I,
                           MachineFunction &MF,
                           unsigned Intrinsic) const override;
 
@@ -155,6 +159,10 @@ public:
   bool hasBitTest(SDValue X, SDValue Y) const override;
 
   bool allowTruncateForTailCall(Type *Ty1, Type *Ty2) const override;
+
+  bool isMaskAndCmp0FoldingBeneficial(const Instruction &AndI) const override;
+
+  bool isUsedByReturnOnly(SDNode *N, SDValue &Chain) const override;
 
   /// Return true if an FMA operation is faster than a pair of mul and add
   /// instructions. fmuladd intrinsics will be expanded to FMAs when this
@@ -182,6 +190,9 @@ public:
                           SelectionDAG &DAG) const override;
 
   const char *getTargetNodeName(unsigned Opcode) const override;
+  std::pair<MVT, unsigned>
+  handleMaskRegisterForCallingConv(const HexagonSubtarget &Subtarget,
+                                   EVT VT) const;
 
   SDValue LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerCONCAT_VECTORS(SDValue Op, SelectionDAG &DAG) const;
@@ -204,8 +215,10 @@ public:
 
   SDValue LowerDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerINLINEASM(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerFDIV(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerPREFETCH(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerREADCYCLECOUNTER(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerREADSTEADYCOUNTER(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerEH_LABEL(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerEH_RETURN(SDValue Op, SelectionDAG &DAG) const;
   SDValue
@@ -246,7 +259,7 @@ public:
   bool CanLowerReturn(CallingConv::ID CallConv,
                       MachineFunction &MF, bool isVarArg,
                       const SmallVectorImpl<ISD::OutputArg> &Outs,
-                      LLVMContext &Context) const override;
+                      LLVMContext &Context, const Type *RetTy) const override;
 
   SDValue LowerReturn(SDValue Chain, CallingConv::ID CallConv, bool isVarArg,
                       const SmallVectorImpl<ISD::OutputArg> &Outs,
@@ -260,6 +273,14 @@ public:
   Register getRegisterByName(const char* RegName, LLT VT,
                              const MachineFunction &MF) const override;
 
+  unsigned getVectorTypeBreakdownForCallingConv(LLVMContext &Context,
+                                                CallingConv::ID CC, EVT VT,
+                                                EVT &IntermediateVT,
+                                                unsigned &NumIntermediates,
+                                                MVT &RegisterVT) const override;
+
+  MVT getRegisterTypeForCallingConv(LLVMContext &Context, CallingConv::ID CC,
+                                    EVT VT) const override;
   /// If a physical register, this returns the register that receives the
   /// exception address on entry to an EH pad.
   Register
@@ -322,7 +343,7 @@ public:
   /// the immediate into a register.
   bool isLegalICmpImmediate(int64_t Imm) const override;
 
-  EVT getOptimalMemOpType(const MemOp &Op,
+  EVT getOptimalMemOpType(LLVMContext &Context, const MemOp &Op,
                           const AttributeList &FuncAttributes) const override;
 
   bool allowsMemoryAccess(LLVMContext &Context, const DataLayout &DL, EVT VT,
@@ -339,8 +360,13 @@ public:
   SDValue getPICJumpTableRelocBase(SDValue Table, SelectionDAG &DAG)
                                    const override;
 
-  bool shouldReduceLoadWidth(SDNode *Load, ISD::LoadExtType ExtTy,
-                             EVT NewVT) const override;
+  /// Returns true if it is beneficial to convert a load of a constant
+  /// to just the constant itself.
+  bool shouldConvertConstantLoadToIntImm(const APInt &Imm,
+                                         Type *Ty) const override;
+
+  bool shouldReduceLoadWidth(SDNode *Load, ISD::LoadExtType ExtTy, EVT NewVT,
+                             std::optional<unsigned> ByteOffset) const override;
 
   void AdjustInstrPostInstrSelection(MachineInstr &MI,
                                      SDNode *Node) const override;
@@ -359,6 +385,7 @@ public:
   shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const override {
     return AtomicExpansionKind::LLSC;
   }
+  bool softPromoteHalfType() const override { return true; }
 
 private:
   void initializeHVXLowering();
@@ -554,6 +581,8 @@ private:
   SDValue LowerHvxFpExtend(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerHvxFpToInt(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerHvxIntToFp(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerHvxPred32ToFp(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerHvxPred64ToFp(SDValue Op, SelectionDAG &DAG) const;
   SDValue ExpandHvxFpToInt(SDValue Op, SelectionDAG &DAG) const;
   SDValue ExpandHvxIntToFp(SDValue Op, SelectionDAG &DAG) const;
 

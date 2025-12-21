@@ -192,7 +192,6 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/ProfDataUtils.h"
-#include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -327,48 +326,7 @@ public:
   bool runOnLoop(Loop *L);
 };
 
-class LoopPredicationLegacyPass : public LoopPass {
-public:
-  static char ID;
-  LoopPredicationLegacyPass() : LoopPass(ID) {
-    initializeLoopPredicationLegacyPassPass(*PassRegistry::getPassRegistry());
-  }
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<BranchProbabilityInfoWrapperPass>();
-    getLoopAnalysisUsage(AU);
-    AU.addPreserved<MemorySSAWrapperPass>();
-  }
-
-  bool runOnLoop(Loop *L, LPPassManager &LPM) override {
-    if (skipLoop(L))
-      return false;
-    auto *SE = &getAnalysis<ScalarEvolutionWrapperPass>().getSE();
-    auto *LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
-    auto *DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-    auto *MSSAWP = getAnalysisIfAvailable<MemorySSAWrapperPass>();
-    std::unique_ptr<MemorySSAUpdater> MSSAU;
-    if (MSSAWP)
-      MSSAU = std::make_unique<MemorySSAUpdater>(&MSSAWP->getMSSA());
-    auto *AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
-    LoopPredication LP(AA, DT, SE, LI, MSSAU ? MSSAU.get() : nullptr);
-    return LP.runOnLoop(L);
-  }
-};
-
-char LoopPredicationLegacyPass::ID = 0;
 } // end namespace
-
-INITIALIZE_PASS_BEGIN(LoopPredicationLegacyPass, "loop-predication",
-                      "Loop predication", false, false)
-INITIALIZE_PASS_DEPENDENCY(BranchProbabilityInfoWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(LoopPass)
-INITIALIZE_PASS_END(LoopPredicationLegacyPass, "loop-predication",
-                    "Loop predication", false, false)
-
-Pass *llvm::createLoopPredicationPass() {
-  return new LoopPredicationLegacyPass();
-}
 
 PreservedAnalyses LoopPredicationPass::run(Loop &L, LoopAnalysisManager &AM,
                                            LoopStandardAnalysisResults &AR,
@@ -718,7 +676,7 @@ LoopPredication::widenICmpRangeCheck(ICmpInst *ICI, SCEVExpander &Expander,
     LLVM_DEBUG(dbgs() << "Range check IV is not affine!\n");
     return std::nullopt;
   }
-  auto *Step = RangeCheckIV->getStepRecurrence(*SE);
+  const SCEV *Step = RangeCheckIV->getStepRecurrence(*SE);
   // We cannot just compare with latch IV step because the latch and range IVs
   // may have different types.
   if (!isSupportedStep(Step)) {
@@ -886,7 +844,7 @@ std::optional<LoopICmp> LoopPredication::parseLoopLatchICmp() {
     return std::nullopt;
   }
 
-  auto *Step = Result->IV->getStepRecurrence(*SE);
+  const SCEV *Step = Result->IV->getStepRecurrence(*SE);
   if (!isSupportedStep(Step)) {
     LLVM_DEBUG(dbgs() << "Unsupported loop stride(" << *Step << ")!\n");
     return std::nullopt;
@@ -1234,10 +1192,10 @@ bool LoopPredication::runOnLoop(Loop *Loop) {
 
   // There is nothing to do if the module doesn't use guards
   auto *GuardDecl =
-      M->getFunction(Intrinsic::getName(Intrinsic::experimental_guard));
+      Intrinsic::getDeclarationIfExists(M, Intrinsic::experimental_guard);
   bool HasIntrinsicGuards = GuardDecl && !GuardDecl->use_empty();
-  auto *WCDecl = M->getFunction(
-      Intrinsic::getName(Intrinsic::experimental_widenable_condition));
+  auto *WCDecl = Intrinsic::getDeclarationIfExists(
+      M, Intrinsic::experimental_widenable_condition);
   bool HasWidenableConditions =
       PredicateWidenableBranchGuards && WCDecl && !WCDecl->use_empty();
   if (!HasIntrinsicGuards && !HasWidenableConditions)
@@ -1275,7 +1233,7 @@ bool LoopPredication::runOnLoop(Loop *Loop) {
           cast<BranchInst>(BB->getTerminator()));
   }
 
-  SCEVExpander Expander(*SE, *DL, "loop-predication");
+  SCEVExpander Expander(*SE, "loop-predication");
   bool Changed = false;
   for (auto *Guard : Guards)
     Changed |= widenGuardConditions(Guard, Expander);

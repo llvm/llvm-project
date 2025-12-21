@@ -36,6 +36,9 @@ type lltype
     This type covers a wide range of subclasses. *)
 type llvalue
 
+(** Non-instruction debug info record. See the [llvm::DbgRecord] class.*)
+type lldbgrecord
+
 (** Used to store users and usees of values. See the [llvm::Use] class. *)
 type lluse
 
@@ -328,6 +331,14 @@ module AtomicRMWBinOp : sig
   | UMin
   | FAdd
   | FSub
+  | FMax
+  | FMin
+  | UInc_Wrap
+  | UDec_Wrap
+  | USub_Cond
+  | USub_Sat
+  | FMaximum
+  | FMinimum
 end
 
 (** The kind of an [llvalue], the result of [classify_value v].
@@ -687,7 +698,7 @@ val named_struct_type : llcontext -> string -> lltype
 
 (** [struct_set_body ty elts ispacked] sets the body of the named struct [ty]
     to the [elts] elements.
-    See the moethd [llvm::StructType::setBody]. *)
+    See the method [llvm::StructType::setBody]. *)
 val struct_set_body : lltype -> lltype array -> bool -> unit
 
 (** [struct_element_types sty] returns the constituent types of the struct type
@@ -757,9 +768,17 @@ val void_type : llcontext -> lltype
     [llvm::Type::LabelTy]. *)
 val label_type : llcontext -> lltype
 
-(** [x86_mmx_type c] returns the x86 64-bit MMX register type in the
-    context [c]. See [llvm::Type::X86_MMXTy]. *)
-val x86_mmx_type : llcontext -> lltype
+(** [x86_amx_type c] creates an X86 AMX type in the context [c]. See
+    [llvm::Type::getX86_AMXTy]. *)
+val x86_amx_type : llcontext -> lltype
+
+(** [token_type c] creates a token type in the context [c]. See
+    [llvm::Type::getTokenTy]. *)
+val token_type : llcontext -> lltype
+
+(** [metadata_type c] creates a metadata type in the context [c]. See
+    [llvm::Type::getMetadataTy]. *)
+val metadata_type : llcontext -> lltype
 
 (** [type_by_name m name] returns the specified type from the current module
     if it exists.
@@ -792,6 +811,9 @@ val dump_value : llvalue -> unit
 
 (** [string_of_llvalue v] returns a string describing the value [v]. *)
 val string_of_llvalue : llvalue -> string
+
+(** [string_of_lldbgrecord r] returns a string describing the DbgRecord [r]. *)
+val string_of_lldbgrecord : lldbgrecord -> string
 
 (** [replace_all_uses_with old new] replaces all uses of the value [old]
     with the value [new]. See the method [llvm::Value::replaceAllUsesWith]. *)
@@ -1074,11 +1096,6 @@ val const_neg : llvalue -> llvalue
     See the method [llvm::ConstantExpr::getNSWNeg]. *)
 val const_nsw_neg : llvalue -> llvalue
 
-(** [const_nuw_neg c] returns the arithmetic negation of the constant [c] with
-    no unsigned wrapping. The result is undefined if the negation overflows.
-    See the method [llvm::ConstantExpr::getNUWNeg]. *)
-val const_nuw_neg : llvalue -> llvalue
-
 (** [const_not c] returns the bitwise inverse of the constant [c].
     See the method [llvm::ConstantExpr::getNot]. *)
 val const_not : llvalue -> llvalue
@@ -1111,49 +1128,10 @@ val const_nsw_sub : llvalue -> llvalue -> llvalue
     See the method [llvm::ConstantExpr::getNSWSub]. *)
 val const_nuw_sub : llvalue -> llvalue -> llvalue
 
-(** [const_mul c1 c2] returns the constant product of two constants.
-    See the method [llvm::ConstantExpr::getMul]. *)
-val const_mul : llvalue -> llvalue -> llvalue
-
-(** [const_nsw_mul c1 c2] returns the constant product of two constants with
-    no signed wrapping. The result is undefined if the sum overflows.
-    See the method [llvm::ConstantExpr::getNSWMul]. *)
-val const_nsw_mul : llvalue -> llvalue -> llvalue
-
-(** [const_nuw_mul c1 c2] returns the constant product of two constants with
-    no unsigned wrapping. The result is undefined if the sum overflows.
-    See the method [llvm::ConstantExpr::getNSWMul]. *)
-val const_nuw_mul : llvalue -> llvalue -> llvalue
-
 (** [const_xor c1 c2] returns the constant bitwise [XOR] of two integer
     constants.
     See the method [llvm::ConstantExpr::getXor]. *)
 val const_xor : llvalue -> llvalue -> llvalue
-
-(** [const_icmp pred c1 c2] returns the constant comparison of two integer
-    constants, [c1 pred c2].
-    See the method [llvm::ConstantExpr::getICmp]. *)
-val const_icmp : Icmp.t -> llvalue -> llvalue -> llvalue
-
-(** [const_fcmp pred c1 c2] returns the constant comparison of two floating
-    point constants, [c1 pred c2].
-    See the method [llvm::ConstantExpr::getFCmp]. *)
-val const_fcmp : Fcmp.t -> llvalue -> llvalue -> llvalue
-
-(** [const_shl c1 c2] returns the constant integer [c1] left-shifted by the
-    constant integer [c2].
-    See the method [llvm::ConstantExpr::getShl]. *)
-val const_shl : llvalue -> llvalue -> llvalue
-
-(** [const_lshr c1 c2] returns the constant integer [c1] right-shifted by the
-    constant integer [c2] with zero extension.
-    See the method [llvm::ConstantExpr::getLShr]. *)
-val const_lshr : llvalue -> llvalue -> llvalue
-
-(** [const_ashr c1 c2] returns the constant integer [c1] right-shifted by the
-    constant integer [c2] with sign extension.
-    See the method [llvm::ConstantExpr::getAShr]. *)
-val const_ashr : llvalue -> llvalue -> llvalue
 
 (** [const_gep srcty pc indices] returns the constant [getElementPtr] of [pc]
     with source element type [srcty] and the constant integers indices from the
@@ -1171,46 +1149,6 @@ val const_in_bounds_gep : lltype -> llvalue -> llvalue array -> llvalue
     See the method [llvm::ConstantExpr::getTrunc]. *)
 val const_trunc : llvalue -> lltype -> llvalue
 
-(** [const_sext c ty] returns the constant sign extension of integer constant
-    [c] to the larger integer type [ty].
-    See the method [llvm::ConstantExpr::getSExt]. *)
-val const_sext : llvalue -> lltype -> llvalue
-
-(** [const_zext c ty] returns the constant zero extension of integer constant
-    [c] to the larger integer type [ty].
-    See the method [llvm::ConstantExpr::getZExt]. *)
-val const_zext : llvalue -> lltype -> llvalue
-
-(** [const_fptrunc c ty] returns the constant truncation of floating point
-    constant [c] to the smaller floating point type [ty].
-    See the method [llvm::ConstantExpr::getFPTrunc]. *)
-val const_fptrunc : llvalue -> lltype -> llvalue
-
-(** [const_fpext c ty] returns the constant extension of floating point constant
-    [c] to the larger floating point type [ty].
-    See the method [llvm::ConstantExpr::getFPExt]. *)
-val const_fpext : llvalue -> lltype -> llvalue
-
-(** [const_uitofp c ty] returns the constant floating point conversion of
-    unsigned integer constant [c] to the floating point type [ty].
-    See the method [llvm::ConstantExpr::getUIToFP]. *)
-val const_uitofp : llvalue -> lltype -> llvalue
-
-(** [const_sitofp c ty] returns the constant floating point conversion of
-    signed integer constant [c] to the floating point type [ty].
-    See the method [llvm::ConstantExpr::getSIToFP]. *)
-val const_sitofp : llvalue -> lltype -> llvalue
-
-(** [const_fptoui c ty] returns the constant unsigned integer conversion of
-    floating point constant [c] to integer type [ty].
-    See the method [llvm::ConstantExpr::getFPToUI]. *)
-val const_fptoui : llvalue -> lltype -> llvalue
-
-(** [const_fptoui c ty] returns the constant unsigned integer conversion of
-    floating point constant [c] to integer type [ty].
-    See the method [llvm::ConstantExpr::getFPToSI]. *)
-val const_fptosi : llvalue -> lltype -> llvalue
-
 (** [const_ptrtoint c ty] returns the constant integer conversion of
     pointer constant [c] to integer type [ty].
     See the method [llvm::ConstantExpr::getPtrToInt]. *)
@@ -1226,16 +1164,6 @@ val const_inttoptr : llvalue -> lltype -> llvalue
     See the method [llvm::ConstantExpr::getBitCast]. *)
 val const_bitcast : llvalue -> lltype -> llvalue
 
-(** [const_zext_or_bitcast c ty] returns a constant zext or bitwise cast
-    conversion of constant [c] to type [ty].
-    See the method [llvm::ConstantExpr::getZExtOrBitCast]. *)
-val const_zext_or_bitcast : llvalue -> lltype -> llvalue
-
-(** [const_sext_or_bitcast c ty] returns a constant sext or bitwise cast
-    conversion of constant [c] to type [ty].
-    See the method [llvm::ConstantExpr::getSExtOrBitCast]. *)
-val const_sext_or_bitcast : llvalue -> lltype -> llvalue
-
 (** [const_trunc_or_bitcast c ty] returns a constant trunc or bitwise cast
     conversion of constant [c] to type [ty].
     See the method [llvm::ConstantExpr::getTruncOrBitCast]. *)
@@ -1245,18 +1173,6 @@ val const_trunc_or_bitcast : llvalue -> lltype -> llvalue
     cast conversion of constant [c] to type [ty] of equal size.
     See the method [llvm::ConstantExpr::getPointerCast]. *)
 val const_pointercast : llvalue -> lltype -> llvalue
-
-(** [const_intcast c ty ~is_signed] returns a constant sext/zext, bitcast,
-    or trunc for integer -> integer casts of constant [c] to type [ty].
-    When converting a narrower value to a wider one, whether sext or zext
-    will be used is controlled by [is_signed].
-    See the method [llvm::ConstantExpr::getIntegerCast]. *)
-val const_intcast : llvalue -> lltype -> is_signed:bool -> llvalue
-
-(** [const_fpcast c ty] returns a constant fpext, bitcast, or fptrunc for fp ->
-    fp casts of constant [c] to type [ty].
-    See the method [llvm::ConstantExpr::getFPCast]. *)
-val const_fpcast : llvalue -> lltype -> llvalue
 
 (** [const_extractelement vec i] returns the constant [i]th element of
     constant vector [vec]. [i] must be a constant [i32] value unsigned less than
@@ -1438,6 +1354,12 @@ val is_global_constant : llvalue -> bool
     [c] is [true] and not if [c] is [false].
     See the method [llvm::GlobalVariable::setConstant]. *)
 val set_global_constant : bool -> llvalue -> unit
+
+(** [global_set_metadata g k md] sets the metadata attachment of the global
+    value [g] to the metadata [md] for the given kind [k], erasing the existing
+    metadata attachment if it already exists for the given kind.
+    See the method [llvm::GlobalObject::setMetadata]. *)
+val global_set_metadata : llvalue -> llmdkind -> llmetadata -> unit
 
 (** [global_initializer gv] If global variable [gv] has an initializer it is returned,
     otherwise returns [None]. See the method [llvm::GlobalVariable::getInitializer]. *)
@@ -1950,9 +1872,21 @@ val builder_at_end : llcontext -> llbasicblock -> llbuilder
     See the constructor for [llvm::LLVMBuilder]. *)
 val position_builder : (llbasicblock, llvalue) llpos -> llbuilder -> unit
 
+(** [position_builder_before_dbg_records ip bb before_dbg_records] moves the
+    instruction builder [bb] to the position [ip], before any debug records
+    there.
+    See the constructor for [llvm::LLVMBuilder]. *)
+val position_builder_before_dbg_records : (llbasicblock, llvalue) llpos ->
+                                          llbuilder -> unit
+
 (** [position_before ins b] moves the instruction builder [b] to before the
     instruction [isn]. See the method [llvm::LLVMBuilder::SetInsertPoint]. *)
 val position_before : llvalue -> llbuilder -> unit
+
+(** [position_before_dbg_records ins b] moves the instruction builder [b]
+    to before the instruction [isn] and any debug records attached to it.
+    See the method [llvm::LLVMBuilder::SetInsertPoint]. *)
+val position_before_dbg_records : llvalue -> llbuilder -> unit
 
 (** [position_at_end bb b] moves the instruction builder [b] to the end of the
     basic block [bb]. See the method [llvm::LLVMBuilder::SetInsertPoint]. *)
@@ -2272,13 +2206,6 @@ val build_neg : llvalue -> string -> llbuilder -> llvalue
     [-0.0] is used for floating point types to compute the correct sign.
     See the method [llvm::LLVMBuilder::CreateNeg]. *)
 val build_nsw_neg : llvalue -> string -> llbuilder -> llvalue
-
-(** [build_nuw_neg x name b] creates a
-    [%name = nuw sub 0, %x]
-    instruction at the position specified by the instruction builder [b].
-    [-0.0] is used for floating point types to compute the correct sign.
-    See the method [llvm::LLVMBuilder::CreateNeg]. *)
-val build_nuw_neg : llvalue -> string -> llbuilder -> llvalue
 
 (** [build_fneg x name b] creates a
     [%name = fsub 0, %x]

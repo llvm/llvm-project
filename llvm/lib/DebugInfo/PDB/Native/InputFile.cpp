@@ -561,7 +561,7 @@ static bool isMyCode(const SymbolGroup &Group) {
     return true;
 
   StringRef Name = Group.name();
-  if (Name.startswith("Import:"))
+  if (Name.starts_with("Import:"))
     return false;
   if (Name.ends_with_insensitive(".dll"))
     return false;
@@ -586,3 +586,8 @@ bool llvm::pdb::shouldDumpSymbolGroup(uint32_t Idx, const SymbolGroup &Group,
   // Otherwise, only dump if this is the same module specified.
   return (Filters.DumpModi == Idx);
 }
+llvm::pdb::InputFile::InputFile(PDBFile *Pdb) { PdbOrObj = Pdb; }
+
+llvm::pdb::InputFile::InputFile(object::COFFObjectFile *Obj) { PdbOrObj = Obj; }
+
+llvm::pdb::InputFile::InputFile(MemoryBuffer *Buffer) { PdbOrObj = Buffer; }

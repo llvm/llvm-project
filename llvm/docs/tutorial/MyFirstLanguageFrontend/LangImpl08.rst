@@ -105,8 +105,8 @@ To see which features and CPUs that LLVM knows about, we can use
       3dnowa                - Enable 3DNow! Athlon instructions.
       ...
 
-For our example, we'll use the generic CPU without any additional
-features, options or relocation model.
+For our example, we'll use the generic CPU without any additional feature or
+target option.
 
 .. code-block:: c++
 
@@ -114,8 +114,7 @@ features, options or relocation model.
   auto Features = "";
 
   TargetOptions opt;
-  auto RM = std::optional<Reloc::Model>();
-  auto TargetMachine = Target->createTargetMachine(TargetTriple, CPU, Features, opt, RM);
+  auto TargetMachine = Target->createTargetMachine(TargetTriple, CPU, Features, opt, Reloc::PIC_);
 
 
 Configuring the Module
@@ -123,7 +122,7 @@ Configuring the Module
 
 We're now ready to configure our module, to specify the target and
 data layout. This isn't strictly necessary, but the `frontend
-performance guide <../Frontend/PerformanceTips.html>`_ recommends
+performance guide <../../Frontend/PerformanceTips.html>`_ recommends
 this. Optimizations benefit from knowing about the target and data
 layout.
 

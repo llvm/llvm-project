@@ -1,6 +1,6 @@
 # Note we are NOT using the normal register allocator pipeline. We are
 # forcing allocating VGPRs and SGPRs at the same time.
-# RUN: llc -march=amdgcn -mcpu=fiji -verify-machineinstrs -stress-regalloc=1 -run-pass=greedy,virtregrewriter,stack-slot-coloring -o - %s | FileCheck  %s
+# RUN: llc -mtriple=amdgcn -mcpu=fiji -verify-machineinstrs -stress-regalloc=1 -run-pass=greedy,virtregrewriter,stack-slot-coloring -o - %s | FileCheck  %s
 
 ---
 

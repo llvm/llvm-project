@@ -35,14 +35,20 @@ static const int srcSigFracBits = 52;
 // srcBits - srcSigFracBits - 1
 static const int srcExpBits = 11;
 
+#elif defined SRC_80
+typedef xf_float src_t;
+typedef __uint128_t src_rep_t;
+#define SRC_REP_C (__uint128_t)
+// sign bit, exponent and significand occupy the lower 80 bits.
+static const int srcBits = 80;
+static const int srcSigFracBits = 63;
+// -1 accounts for the sign bit.
+// -1 accounts for the explicitly stored integer bit.
+// srcBits - srcSigFracBits - 1 - 1
+static const int srcExpBits = 15;
+
 #elif defined SRC_QUAD
-// TODO: use fp_lib.h once QUAD_PRECISION is available on x86_64.
-#if __LDBL_MANT_DIG__ == 113
-typedef long double src_t;
-#elif defined(__x86_64__) &&                                                   \
-    (defined(__FLOAT128__) || defined(__SIZEOF_FLOAT128__))
-typedef __float128 src_t;
-#endif
+typedef tf_float src_t;
 typedef __uint128_t src_rep_t;
 #define SRC_REP_C (__uint128_t)
 static const int srcBits = sizeof(src_t) * CHAR_BIT;
@@ -66,7 +72,7 @@ static const int dstSigFracBits = 52;
 static const int dstExpBits = 11;
 
 #elif defined DST_80
-typedef long double dst_t;
+typedef xf_float dst_t;
 typedef __uint128_t dst_rep_t;
 #define DST_REP_C (__uint128_t)
 static const int dstBits = 80;

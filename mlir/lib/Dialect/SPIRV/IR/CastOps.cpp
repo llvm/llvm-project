@@ -36,8 +36,7 @@ static LogicalResult verifyCastOp(Operation *op,
   using TypePair = std::pair<Type, Type>;
   auto [operandElemTy, resultElemTy] =
       TypeSwitch<Type, TypePair>(operandType)
-          .Case<VectorType, spirv::CooperativeMatrixType,
-                spirv::CooperativeMatrixNVType, spirv::JointMatrixINTELType>(
+          .Case<VectorType, spirv::CooperativeMatrixType>(
               [resultType](auto concreteOperandTy) -> TypePair {
                 if (auto concreteResultTy =
                         dyn_cast<decltype(concreteOperandTy)>(resultType)) {
@@ -268,48 +267,6 @@ LogicalResult ConvertSToFOp::verify() {
 LogicalResult ConvertUToFOp::verify() {
   return verifyCastOp(*this, /*requireSameBitWidth=*/false,
                       /*skipBitWidthCheck=*/true);
-}
-
-//===----------------------------------------------------------------------===//
-// spirv.INTELConvertBF16ToFOp
-//===----------------------------------------------------------------------===//
-
-LogicalResult INTELConvertBF16ToFOp::verify() {
-  auto operandType = getOperand().getType();
-  auto resultType = getResult().getType();
-  // ODS checks that vector result type and vector operand type have the same
-  // shape.
-  if (auto vectorType = llvm::dyn_cast<VectorType>(operandType)) {
-    unsigned operandNumElements = vectorType.getNumElements();
-    unsigned resultNumElements =
-        llvm::cast<VectorType>(resultType).getNumElements();
-    if (operandNumElements != resultNumElements) {
-      return emitOpError(
-          "operand and result must have same number of elements");
-    }
-  }
-  return success();
-}
-
-//===----------------------------------------------------------------------===//
-// spirv.INTELConvertFToBF16Op
-//===----------------------------------------------------------------------===//
-
-LogicalResult INTELConvertFToBF16Op::verify() {
-  auto operandType = getOperand().getType();
-  auto resultType = getResult().getType();
-  // ODS checks that vector result type and vector operand type have the same
-  // shape.
-  if (auto vectorType = llvm::dyn_cast<VectorType>(operandType)) {
-    unsigned operandNumElements = vectorType.getNumElements();
-    unsigned resultNumElements =
-        llvm::cast<VectorType>(resultType).getNumElements();
-    if (operandNumElements != resultNumElements) {
-      return emitOpError(
-          "operand and result must have same number of elements");
-    }
-  }
-  return success();
 }
 
 //===----------------------------------------------------------------------===//

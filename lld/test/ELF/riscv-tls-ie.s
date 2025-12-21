@@ -36,15 +36,15 @@
 
 ## rv32: &.got[0] - . = 0x2218 - . = 4096*1+116
 ## rv64: &.got[0] - . = 0x2378 - . = 4096*1+208
-# IE:              auipc a4, 1
-# IE32-NEXT:       lw a4, 116(a4)
-# IE64-NEXT:       ld a4, 208(a4)
+# IE:              auipc a4, 0x1
+# IE32-NEXT:       lw a4, 0x74(a4)
+# IE64-NEXT:       ld a4, 0xd0(a4)
 # IE-NEXT:         add a4, a4, tp
 ## rv32: &.got[1] - . = 0x221c - . = 4096*1+108
 ## rv64: &.got[1] - . = 0x2378 - . = 4096*1+204
-# IE:              auipc a5, 1
-# IE32-NEXT:       lw a5, 108(a5)
-# IE64-NEXT:       ld a5, 204(a5)
+# IE:              auipc a5, 0x1
+# IE32-NEXT:       lw a5, 0x6c(a5)
+# IE64-NEXT:       ld a5, 0xcc(a5)
 # IE-NEXT:         add a5, a5, tp
 
 # NOREL: no relocations
@@ -59,17 +59,17 @@
 
 ## rv32: &.got[0] - . = 0x12130 - 0x11114 = 4096*1+28
 ## rv64: &.got[0] - . = 0x121e8 - 0x111c8 = 4096*1+32
-# LE32:      11114: auipc a4, 1
-# LE32-NEXT:        lw a4, 28(a4)
-# LE64:      111c8: auipc a4, 1
-# LE64-NEXT:        ld a4, 32(a4)
+# LE32:      11114: auipc a4, 0x1
+# LE32-NEXT:        lw a4, 0x1c(a4)
+# LE64:      111c8: auipc a4, 0x1
+# LE64-NEXT:        ld a4, 0x20(a4)
 # LE-NEXT:          add a4, a4, tp
 ## rv32: &.got[1] - . = 0x12134 - 0x11120 = 4096*1+20
 ## rv64: &.got[1] - . = 0x121f0 - 0x111d4 = 4096*1+28
-# LE32:      11120: auipc a5, 1
-# LE32-NEXT:        lw a5, 20(a5)
-# LE64:      111d4: auipc a5, 1
-# LE64-NEXT:        ld a5, 28(a5)
+# LE32:      11120: auipc a5, 0x1
+# LE32-NEXT:        lw a5, 0x14(a5)
+# LE64:      111d4: auipc a5, 0x1
+# LE64-NEXT:        ld a5, 0x1c(a5)
 # LE-NEXT:          add a5, a5, tp
 
 la.tls.ie a4,a

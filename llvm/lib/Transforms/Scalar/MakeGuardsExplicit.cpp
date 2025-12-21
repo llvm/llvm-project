@@ -36,22 +36,10 @@
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
-#include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Transforms/Utils/GuardUtils.h"
 
 using namespace llvm;
-
-namespace {
-struct MakeGuardsExplicitLegacyPass : public FunctionPass {
-  static char ID;
-  MakeGuardsExplicitLegacyPass() : FunctionPass(ID) {
-    initializeMakeGuardsExplicitLegacyPassPass(*PassRegistry::getPassRegistry());
-  }
-
-  bool runOnFunction(Function &F) override;
-};
-}
 
 static void turnToExplicitForm(CallInst *Guard, Function *DeoptIntrinsic) {
   // Replace the guard with an explicit branch (just like in GuardWidening).
@@ -66,8 +54,8 @@ static void turnToExplicitForm(CallInst *Guard, Function *DeoptIntrinsic) {
 static bool explicifyGuards(Function &F) {
   // Check if we can cheaply rule out the possibility of not having any work to
   // do.
-  auto *GuardDecl = F.getParent()->getFunction(
-      Intrinsic::getName(Intrinsic::experimental_guard));
+  auto *GuardDecl = Intrinsic::getDeclarationIfExists(
+      F.getParent(), Intrinsic::experimental_guard);
   if (!GuardDecl || GuardDecl->use_empty())
     return false;
 
@@ -79,7 +67,7 @@ static bool explicifyGuards(Function &F) {
   if (GuardIntrinsics.empty())
     return false;
 
-  auto *DeoptIntrinsic = Intrinsic::getDeclaration(
+  auto *DeoptIntrinsic = Intrinsic::getOrInsertDeclaration(
       F.getParent(), Intrinsic::experimental_deoptimize, {F.getReturnType()});
   DeoptIntrinsic->setCallingConv(GuardDecl->getCallingConv());
 
@@ -88,15 +76,6 @@ static bool explicifyGuards(Function &F) {
 
   return true;
 }
-
-bool MakeGuardsExplicitLegacyPass::runOnFunction(Function &F) {
-  return explicifyGuards(F);
-}
-
-char MakeGuardsExplicitLegacyPass::ID = 0;
-INITIALIZE_PASS(MakeGuardsExplicitLegacyPass, "make-guards-explicit",
-                "Lower the guard intrinsic to explicit control flow form",
-                false, false)
 
 PreservedAnalyses MakeGuardsExplicitPass::run(Function &F,
                                            FunctionAnalysisManager &) {

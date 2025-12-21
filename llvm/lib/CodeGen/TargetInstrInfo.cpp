@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/TargetInstrInfo.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/CodeGen/MachineCombinerPattern.h"
@@ -34,6 +35,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Target/TargetMachine.h"
 
 using namespace llvm;
 
@@ -41,25 +43,35 @@ static cl::opt<bool> DisableHazardRecognizer(
   "disable-sched-hazard", cl::Hidden, cl::init(false),
   cl::desc("Disable hazard detection during preRA scheduling"));
 
+static cl::opt<bool> EnableAccReassociation(
+    "acc-reassoc", cl::Hidden, cl::init(true),
+    cl::desc("Enable reassociation of accumulation chains"));
+
+static cl::opt<unsigned int>
+    MinAccumulatorDepth("acc-min-depth", cl::Hidden, cl::init(8),
+                        cl::desc("Minimum length of accumulator chains "
+                                 "required for the optimization to kick in"));
+
+static cl::opt<unsigned int> MaxAccumulatorWidth(
+    "acc-max-width", cl::Hidden, cl::init(3),
+    cl::desc("Maximum number of branches in the accumulator tree"));
+
 TargetInstrInfo::~TargetInstrInfo() = default;
 
-const TargetRegisterClass*
-TargetInstrInfo::getRegClass(const MCInstrDesc &MCID, unsigned OpNum,
-                             const TargetRegisterInfo *TRI,
-                             const MachineFunction &MF) const {
+const TargetRegisterClass *TargetInstrInfo::getRegClass(const MCInstrDesc &MCID,
+                                                        unsigned OpNum) const {
   if (OpNum >= MCID.getNumOperands())
     return nullptr;
 
-  short RegClass = MCID.operands()[OpNum].RegClass;
-  if (MCID.operands()[OpNum].isLookupPtrRegClass())
-    return TRI->getPointerRegClass(MF, RegClass);
+  const MCOperandInfo &OpInfo = MCID.operands()[OpNum];
+  int16_t RegClass = getOpRegClassID(OpInfo);
 
   // Instructions like INSERT_SUBREG do not have fixed register classes.
   if (RegClass < 0)
     return nullptr;
 
   // Otherwise just look it up normally.
-  return TRI->getRegClass(RegClass);
+  return TRI.getRegClass(RegClass);
 }
 
 /// insertNoop - Insert a noop into the instruction stream at the specified
@@ -149,12 +161,12 @@ TargetInstrInfo::ReplaceTailWithBranchTo(MachineBasicBlock::iterator Tail,
   // Save off the debug loc before erasing the instruction.
   DebugLoc DL = Tail->getDebugLoc();
 
-  // Update call site info and remove all the dead instructions
+  // Update call info and remove all the dead instructions
   // from the end of MBB.
   while (Tail != MBB->end()) {
     auto MI = Tail++;
-    if (MI->shouldUpdateCallSiteInfo())
-      MBB->getParent()->eraseCallSiteInfo(&*MI);
+    if (MI->shouldUpdateAdditionalCallInfo())
+      MBB->getParent()->eraseAdditionalCallInfo(&*MI);
     MBB->erase(MI);
   }
 
@@ -199,6 +211,22 @@ MachineInstr *TargetInstrInfo::commuteInstructionImpl(MachineInstr &MI,
       Reg1.isPhysical() ? MI.getOperand(Idx1).isRenamable() : false;
   bool Reg2IsRenamable =
       Reg2.isPhysical() ? MI.getOperand(Idx2).isRenamable() : false;
+
+  // For a case like this:
+  //   %0.sub = INST %0.sub(tied), %1.sub, implicit-def %0
+  // we need to update the implicit-def after commuting to result in:
+  //   %1.sub = INST %1.sub(tied), %0.sub, implicit-def %1
+  SmallVector<unsigned> UpdateImplicitDefIdx;
+  if (HasDef && MI.hasImplicitDef()) {
+    for (auto [OpNo, MO] : llvm::enumerate(MI.implicit_operands())) {
+      Register ImplReg = MO.getReg();
+      if ((ImplReg.isVirtual() && ImplReg == Reg0) ||
+          (ImplReg.isPhysical() && Reg0.isPhysical() &&
+           TRI.isSubRegisterEq(ImplReg, Reg0)))
+        UpdateImplicitDefIdx.push_back(OpNo + MI.getNumExplicitOperands());
+    }
+  }
+
   // If destination is tied to either of the commuted source register, then
   // it must be updated.
   if (HasDef && Reg0 == Reg1 &&
@@ -225,6 +253,8 @@ MachineInstr *TargetInstrInfo::commuteInstructionImpl(MachineInstr &MI,
   if (HasDef) {
     CommutedMI->getOperand(0).setReg(Reg0);
     CommutedMI->getOperand(0).setSubReg(SubReg0);
+    for (unsigned Idx : UpdateImplicitDefIdx)
+      CommutedMI->getOperand(Idx).setReg(Reg0);
   }
   CommutedMI->getOperand(Idx2).setReg(Reg1);
   CommutedMI->getOperand(Idx1).setReg(Reg2);
@@ -388,28 +418,27 @@ bool TargetInstrInfo::getStackSlotRange(const TargetRegisterClass *RC,
                                         unsigned SubIdx, unsigned &Size,
                                         unsigned &Offset,
                                         const MachineFunction &MF) const {
-  const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
   if (!SubIdx) {
-    Size = TRI->getSpillSize(*RC);
+    Size = TRI.getSpillSize(*RC);
     Offset = 0;
     return true;
   }
-  unsigned BitSize = TRI->getSubRegIdxSize(SubIdx);
+  unsigned BitSize = TRI.getSubRegIdxSize(SubIdx);
   // Convert bit size to byte size.
   if (BitSize % 8)
     return false;
 
-  int BitOffset = TRI->getSubRegIdxOffset(SubIdx);
+  int BitOffset = TRI.getSubRegIdxOffset(SubIdx);
   if (BitOffset < 0 || BitOffset % 8)
     return false;
 
   Size = BitSize / 8;
   Offset = (unsigned)BitOffset / 8;
 
-  assert(TRI->getSpillSize(*RC) >= (Offset + Size) && "bad subregister range");
+  assert(TRI.getSpillSize(*RC) >= (Offset + Size) && "bad subregister range");
 
   if (!MF.getDataLayout().isLittleEndian()) {
-    Offset = TRI->getSpillSize(*RC) - (Offset + Size);
+    Offset = TRI.getSpillSize(*RC) - (Offset + Size);
   }
   return true;
 }
@@ -417,8 +446,7 @@ bool TargetInstrInfo::getStackSlotRange(const TargetRegisterClass *RC,
 void TargetInstrInfo::reMaterialize(MachineBasicBlock &MBB,
                                     MachineBasicBlock::iterator I,
                                     Register DestReg, unsigned SubIdx,
-                                    const MachineInstr &Orig,
-                                    const TargetRegisterInfo &TRI) const {
+                                    const MachineInstr &Orig) const {
   MachineInstr *MI = MBB.getParent()->CloneMachineInstr(&Orig);
   MI->substituteRegister(MI->getOperand(0).getReg(), DestReg, SubIdx, TRI);
   MBB.insert(I, MI);
@@ -430,10 +458,18 @@ bool TargetInstrInfo::produceSameValue(const MachineInstr &MI0,
   return MI0.isIdenticalTo(MI1, MachineInstr::IgnoreVRegDefs);
 }
 
-MachineInstr &TargetInstrInfo::duplicate(MachineBasicBlock &MBB,
-    MachineBasicBlock::iterator InsertBefore, const MachineInstr &Orig) const {
-  assert(!Orig.isNotDuplicable() && "Instruction cannot be duplicated");
+MachineInstr &
+TargetInstrInfo::duplicate(MachineBasicBlock &MBB,
+                           MachineBasicBlock::iterator InsertBefore,
+                           const MachineInstr &Orig) const {
   MachineFunction &MF = *MBB.getParent();
+  // CFI instructions are marked as non-duplicable, because Darwin compact
+  // unwind info emission can't handle multiple prologue setups.
+  assert((!Orig.isNotDuplicable() ||
+          (!MF.getTarget().getTargetTriple().isOSDarwin() &&
+           Orig.isCFIInstruction())) &&
+         "Instruction cannot be duplicated");
+
   return MF.cloneMachineInstrBundle(MBB, InsertBefore, Orig);
 }
 
@@ -472,6 +508,47 @@ static const TargetRegisterClass *canFoldCopy(const MachineInstr &MI,
 }
 
 MCInst TargetInstrInfo::getNop() const { llvm_unreachable("Not implemented"); }
+
+/// Try to remove the load by folding it to a register
+/// operand at the use. We fold the load instructions if load defines a virtual
+/// register, the virtual register is used once in the same BB, and the
+/// instructions in-between do not load or store, and have no side effects.
+MachineInstr *TargetInstrInfo::optimizeLoadInstr(MachineInstr &MI,
+                                                 const MachineRegisterInfo *MRI,
+                                                 Register &FoldAsLoadDefReg,
+                                                 MachineInstr *&DefMI) const {
+  // Check whether we can move DefMI here.
+  DefMI = MRI->getVRegDef(FoldAsLoadDefReg);
+  assert(DefMI);
+  bool SawStore = false;
+  if (!DefMI->isSafeToMove(SawStore))
+    return nullptr;
+
+  // Collect information about virtual register operands of MI.
+  SmallVector<unsigned, 1> SrcOperandIds;
+  for (unsigned i = 0, e = MI.getNumOperands(); i != e; ++i) {
+    MachineOperand &MO = MI.getOperand(i);
+    if (!MO.isReg())
+      continue;
+    Register Reg = MO.getReg();
+    if (Reg != FoldAsLoadDefReg)
+      continue;
+    // Do not fold if we have a subreg use or a def.
+    if (MO.getSubReg() || MO.isDef())
+      return nullptr;
+    SrcOperandIds.push_back(i);
+  }
+  if (SrcOperandIds.empty())
+    return nullptr;
+
+  // Check whether we can fold the def into SrcOperandId.
+  if (MachineInstr *FoldMI = foldMemoryOperand(MI, SrcOperandIds, *DefMI)) {
+    FoldAsLoadDefReg = 0;
+    return FoldMI;
+  }
+
+  return nullptr;
+}
 
 std::pair<unsigned, unsigned>
 TargetInstrInfo::getPatchpointUnfoldableRange(const MachineInstr &MI) const {
@@ -556,6 +633,72 @@ static MachineInstr *foldPatchpoint(MachineFunction &MF, MachineInstr &MI,
   return NewMI;
 }
 
+static void foldInlineAsmMemOperand(MachineInstr *MI, unsigned OpNo, int FI,
+                                    const TargetInstrInfo &TII) {
+  // If the machine operand is tied, untie it first.
+  if (MI->getOperand(OpNo).isTied()) {
+    unsigned TiedTo = MI->findTiedOperandIdx(OpNo);
+    MI->untieRegOperand(OpNo);
+    // Intentional recursion!
+    foldInlineAsmMemOperand(MI, TiedTo, FI, TII);
+  }
+
+  SmallVector<MachineOperand, 5> NewOps;
+  TII.getFrameIndexOperands(NewOps, FI);
+  assert(!NewOps.empty() && "getFrameIndexOperands didn't create any operands");
+  MI->removeOperand(OpNo);
+  MI->insert(MI->operands_begin() + OpNo, NewOps);
+
+  // Change the previous operand to a MemKind InlineAsm::Flag. The second param
+  // is the per-target number of operands that represent the memory operand
+  // excluding this one (MD). This includes MO.
+  InlineAsm::Flag F(InlineAsm::Kind::Mem, NewOps.size());
+  F.setMemConstraint(InlineAsm::ConstraintCode::m);
+  MachineOperand &MD = MI->getOperand(OpNo - 1);
+  MD.setImm(F);
+}
+
+// Returns nullptr if not possible to fold.
+static MachineInstr *foldInlineAsmMemOperand(MachineInstr &MI,
+                                             ArrayRef<unsigned> Ops, int FI,
+                                             const TargetInstrInfo &TII) {
+  assert(MI.isInlineAsm() && "wrong opcode");
+  if (Ops.size() > 1)
+    return nullptr;
+  unsigned Op = Ops[0];
+  assert(Op && "should never be first operand");
+  assert(MI.getOperand(Op).isReg() && "shouldn't be folding non-reg operands");
+
+  if (!MI.mayFoldInlineAsmRegOp(Op))
+    return nullptr;
+
+  MachineInstr &NewMI = TII.duplicate(*MI.getParent(), MI.getIterator(), MI);
+
+  foldInlineAsmMemOperand(&NewMI, Op, FI, TII);
+
+  // Update mayload/maystore metadata, and memoperands.
+  const VirtRegInfo &RI =
+      AnalyzeVirtRegInBundle(MI, MI.getOperand(Op).getReg());
+  MachineOperand &ExtraMO = NewMI.getOperand(InlineAsm::MIOp_ExtraInfo);
+  MachineMemOperand::Flags Flags = MachineMemOperand::MONone;
+  if (RI.Reads) {
+    ExtraMO.setImm(ExtraMO.getImm() | InlineAsm::Extra_MayLoad);
+    Flags |= MachineMemOperand::MOLoad;
+  }
+  if (RI.Writes) {
+    ExtraMO.setImm(ExtraMO.getImm() | InlineAsm::Extra_MayStore);
+    Flags |= MachineMemOperand::MOStore;
+  }
+  MachineFunction *MF = NewMI.getMF();
+  const MachineFrameInfo &MFI = MF->getFrameInfo();
+  MachineMemOperand *MMO = MF->getMachineMemOperand(
+      MachinePointerInfo::getFixedStack(*MF, FI), Flags, MFI.getObjectSize(FI),
+      MFI.getObjectAlign(FI));
+  NewMI.addMemOperand(*MF, MMO);
+
+  return &NewMI;
+}
+
 MachineInstr *TargetInstrInfo::foldMemoryOperand(MachineInstr &MI,
                                                  ArrayRef<unsigned> Ops, int FI,
                                                  LiveIntervals *LIS,
@@ -574,7 +717,6 @@ MachineInstr *TargetInstrInfo::foldMemoryOperand(MachineInstr &MI,
   // actual load size is.
   int64_t MemSize = 0;
   const MachineFrameInfo &MFI = MF.getFrameInfo();
-  const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
 
   if (Flags & MachineMemOperand::MOStore) {
     MemSize = MFI.getObjectSize(FI);
@@ -583,7 +725,7 @@ MachineInstr *TargetInstrInfo::foldMemoryOperand(MachineInstr &MI,
       int64_t OpSize = MFI.getObjectSize(FI);
 
       if (auto SubReg = MI.getOperand(OpIdx).getSubReg()) {
-        unsigned SubRegSize = TRI->getSubRegIdxSize(SubReg);
+        unsigned SubRegSize = TRI.getSubRegIdxSize(SubReg);
         if (SubRegSize > 0 && !(SubRegSize % 8))
           OpSize = SubRegSize / 8;
       }
@@ -603,6 +745,8 @@ MachineInstr *TargetInstrInfo::foldMemoryOperand(MachineInstr &MI,
     NewMI = foldPatchpoint(MF, MI, Ops, FI, *this);
     if (NewMI)
       MBB->insert(MI, NewMI);
+  } else if (MI.isInlineAsm()) {
+    return foldInlineAsmMemOperand(MI, Ops, FI, *this);
   } else {
     // Ask the target to do the actual folding.
     NewMI = foldMemoryOperandImpl(MF, MI, Ops, MI, FI, LIS, VRM);
@@ -640,12 +784,18 @@ MachineInstr *TargetInstrInfo::foldMemoryOperand(MachineInstr &MI,
 
   const MachineOperand &MO = MI.getOperand(1 - Ops[0]);
   MachineBasicBlock::iterator Pos = MI;
+  if (Flags == MachineMemOperand::MOStore) {
+    if (MO.isUndef()) {
+      // If this is an undef copy, we do not need to bother we inserting spill
+      // code.
+      BuildMI(*MBB, Pos, MI.getDebugLoc(), get(TargetOpcode::KILL)).add(MO);
+    } else {
+      storeRegToStackSlot(*MBB, Pos, MO.getReg(), MO.isKill(), FI, RC,
+                          Register());
+    }
+  } else
+    loadRegFromStackSlot(*MBB, Pos, MO.getReg(), FI, RC, Register());
 
-  if (Flags == MachineMemOperand::MOStore)
-    storeRegToStackSlot(*MBB, Pos, MO.getReg(), MO.isKill(), FI, RC, TRI,
-                        Register());
-  else
-    loadRegFromStackSlot(*MBB, Pos, MO.getReg(), FI, RC, TRI, Register());
   return &*--Pos;
 }
 
@@ -674,6 +824,8 @@ MachineInstr *TargetInstrInfo::foldMemoryOperand(MachineInstr &MI,
     NewMI = foldPatchpoint(MF, MI, Ops, FrameIndex, *this);
     if (NewMI)
       NewMI = &*MBB.insert(MI, NewMI);
+  } else if (MI.isInlineAsm() && isLoadFromStackSlot(LoadMI, FrameIndex)) {
+    return foldInlineAsmMemOperand(MI, Ops, FrameIndex, *this);
   } else {
     // Ask the target to do the actual folding.
     NewMI = foldMemoryOperandImpl(MF, MI, Ops, MI, LoadMI, LIS);
@@ -718,8 +870,8 @@ static void transferImplicitOperands(MachineInstr *MI,
   }
 }
 
-void TargetInstrInfo::lowerCopy(MachineInstr *MI,
-                                const TargetRegisterInfo *TRI) const {
+void TargetInstrInfo::lowerCopy(
+    MachineInstr *MI, const TargetRegisterInfo * /*Remove me*/) const {
   if (MI->allDefsAreDead()) {
     MI->setDesc(get(TargetOpcode::KILL));
     return;
@@ -744,10 +896,12 @@ void TargetInstrInfo::lowerCopy(MachineInstr *MI,
   }
 
   copyPhysReg(*MI->getParent(), MI, MI->getDebugLoc(), DstMO.getReg(),
-              SrcMO.getReg(), SrcMO.isKill());
+              SrcMO.getReg(), SrcMO.isKill(),
+              DstMO.getReg().isPhysical() ? DstMO.isRenamable() : false,
+              SrcMO.getReg().isPhysical() ? SrcMO.isRenamable() : false);
 
   if (MI->getNumOperands() > 2)
-    transferImplicitOperands(MI, TRI);
+    transferImplicitOperands(MI, &TRI);
   MI->eraseFromParent();
 }
 
@@ -818,6 +972,154 @@ bool TargetInstrInfo::isReassociationCandidate(const MachineInstr &Inst,
          hasReassociableSibling(Inst, Commuted);
 }
 
+// Utility routine that checks if \param MO is defined by an
+// \param CombineOpc instruction in the basic block \param MBB.
+// If \param CombineOpc is not provided, the OpCode check will
+// be skipped.
+static bool canCombine(MachineBasicBlock &MBB, MachineOperand &MO,
+                       unsigned CombineOpc = 0) {
+  MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
+  MachineInstr *MI = nullptr;
+
+  if (MO.isReg() && MO.getReg().isVirtual())
+    MI = MRI.getUniqueVRegDef(MO.getReg());
+  // And it needs to be in the trace (otherwise, it won't have a depth).
+  if (!MI || MI->getParent() != &MBB ||
+      (MI->getOpcode() != CombineOpc && CombineOpc != 0))
+    return false;
+  // Must only used by the user we combine with.
+  if (!MRI.hasOneNonDBGUse(MO.getReg()))
+    return false;
+
+  return true;
+}
+
+// A chain of accumulation instructions will be selected IFF:
+//    1. All the accumulation instructions in the chain have the same opcode,
+//       besides the first that has a slightly different opcode because it does
+//       not accumulate into a register.
+//    2. All the instructions in the chain are combinable (have a single use
+//       which itself is part of the chain).
+//    3. Meets the required minimum length.
+void TargetInstrInfo::getAccumulatorChain(
+    MachineInstr *CurrentInstr, SmallVectorImpl<Register> &Chain) const {
+  // Walk up the chain of accumulation instructions and collect them in the
+  // vector.
+  MachineBasicBlock &MBB = *CurrentInstr->getParent();
+  const MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
+  unsigned AccumulatorOpcode = CurrentInstr->getOpcode();
+  std::optional<unsigned> ChainStartOpCode =
+      getAccumulationStartOpcode(AccumulatorOpcode);
+
+  if (!ChainStartOpCode.has_value())
+    return;
+
+  // Push the first accumulator result to the start of the chain.
+  Chain.push_back(CurrentInstr->getOperand(0).getReg());
+
+  // Collect the accumulator input register from all instructions in the chain.
+  while (CurrentInstr &&
+         canCombine(MBB, CurrentInstr->getOperand(1), AccumulatorOpcode)) {
+    Chain.push_back(CurrentInstr->getOperand(1).getReg());
+    CurrentInstr = MRI.getUniqueVRegDef(CurrentInstr->getOperand(1).getReg());
+  }
+
+  // Add the instruction at the top of the chain.
+  if (CurrentInstr->getOpcode() == AccumulatorOpcode &&
+      canCombine(MBB, CurrentInstr->getOperand(1)))
+    Chain.push_back(CurrentInstr->getOperand(1).getReg());
+}
+
+/// Find chains of accumulations that can be rewritten as a tree for increased
+/// ILP.
+bool TargetInstrInfo::getAccumulatorReassociationPatterns(
+    MachineInstr &Root, SmallVectorImpl<unsigned> &Patterns) const {
+  if (!EnableAccReassociation)
+    return false;
+
+  unsigned Opc = Root.getOpcode();
+  if (!isAccumulationOpcode(Opc))
+    return false;
+
+  // Verify that this is the end of the chain.
+  MachineBasicBlock &MBB = *Root.getParent();
+  MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
+  if (!MRI.hasOneNonDBGUser(Root.getOperand(0).getReg()))
+    return false;
+
+  auto User = MRI.use_instr_begin(Root.getOperand(0).getReg());
+  if (User->getOpcode() == Opc)
+    return false;
+
+  // Walk up the use chain and collect the reduction chain.
+  SmallVector<Register, 32> Chain;
+  getAccumulatorChain(&Root, Chain);
+
+  // Reject chains which are too short to be worth modifying.
+  if (Chain.size() < MinAccumulatorDepth)
+    return false;
+
+  // Check if the MBB this instruction is a part of contains any other chains.
+  // If so, don't apply it.
+  SmallSet<Register, 32> ReductionChain(llvm::from_range, Chain);
+  for (const auto &I : MBB) {
+    if (I.getOpcode() == Opc &&
+        !ReductionChain.contains(I.getOperand(0).getReg()))
+      return false;
+  }
+
+  Patterns.push_back(MachineCombinerPattern::ACC_CHAIN);
+  return true;
+}
+
+// Reduce branches of the accumulator tree by adding them together.
+void TargetInstrInfo::reduceAccumulatorTree(
+    SmallVectorImpl<Register> &RegistersToReduce,
+    SmallVectorImpl<MachineInstr *> &InsInstrs, MachineFunction &MF,
+    MachineInstr &Root, MachineRegisterInfo &MRI,
+    DenseMap<Register, unsigned> &InstrIdxForVirtReg,
+    Register ResultReg) const {
+  const TargetInstrInfo *TII = MF.getSubtarget().getInstrInfo();
+  SmallVector<Register, 8> NewRegs;
+
+  // Get the opcode for the reduction instruction we will need to build.
+  // If for some reason it is not defined, early exit and don't apply this.
+  unsigned ReduceOpCode = getReduceOpcodeForAccumulator(Root.getOpcode());
+
+  for (unsigned int i = 1; i <= (RegistersToReduce.size() / 2); i += 2) {
+    auto RHS = RegistersToReduce[i - 1];
+    auto LHS = RegistersToReduce[i];
+    Register Dest;
+    // If we are reducing 2 registers, reuse the original result register.
+    if (RegistersToReduce.size() == 2)
+      Dest = ResultReg;
+    // Otherwise, create a new virtual register to hold the partial sum.
+    else {
+      auto NewVR = MRI.createVirtualRegister(
+          MRI.getRegClass(Root.getOperand(0).getReg()));
+      Dest = NewVR;
+      NewRegs.push_back(Dest);
+      InstrIdxForVirtReg.insert(std::make_pair(Dest, InsInstrs.size()));
+    }
+
+    // Create the new reduction instruction.
+    MachineInstrBuilder MIB =
+        BuildMI(MF, MIMetadata(Root), TII->get(ReduceOpCode), Dest)
+            .addReg(RHS, getKillRegState(true))
+            .addReg(LHS, getKillRegState(true));
+    // Copy any flags needed from the original instruction.
+    MIB->setFlags(Root.getFlags());
+    InsInstrs.push_back(MIB);
+  }
+
+  // If the number of registers to reduce is odd, add the remaining register to
+  // the vector of registers to reduce.
+  if (RegistersToReduce.size() % 2 != 0)
+    NewRegs.push_back(RegistersToReduce[RegistersToReduce.size() - 1]);
+
+  RegistersToReduce = NewRegs;
+}
+
 // The concept of the reassociation pass is that these operations can benefit
 // from this kind of transformation:
 //
@@ -840,7 +1142,7 @@ bool TargetInstrInfo::isReassociationCandidate(const MachineInstr &Inst,
 //    instruction is known to not increase the critical path, then don't match
 //    that pattern.
 bool TargetInstrInfo::getMachineCombinerPatterns(
-    MachineInstr &Root, SmallVectorImpl<MachineCombinerPattern> &Patterns,
+    MachineInstr &Root, SmallVectorImpl<unsigned> &Patterns,
     bool DoRegPressureReduce) const {
   bool Commute;
   if (isReassociationCandidate(Root, Commute)) {
@@ -857,18 +1159,29 @@ bool TargetInstrInfo::getMachineCombinerPatterns(
     }
     return true;
   }
+  if (getAccumulatorReassociationPatterns(Root, Patterns))
+    return true;
 
   return false;
 }
 
 /// Return true when a code sequence can improve loop throughput.
-bool
-TargetInstrInfo::isThroughputPattern(MachineCombinerPattern Pattern) const {
+bool TargetInstrInfo::isThroughputPattern(unsigned Pattern) const {
   return false;
 }
 
+CombinerObjective
+TargetInstrInfo::getCombinerObjective(unsigned Pattern) const {
+  switch (Pattern) {
+  case MachineCombinerPattern::ACC_CHAIN:
+    return CombinerObjective::MustReduceDepth;
+  default:
+    return CombinerObjective::Default;
+  }
+}
+
 std::pair<unsigned, unsigned>
-TargetInstrInfo::getReassociationOpcodes(MachineCombinerPattern Pattern,
+TargetInstrInfo::getReassociationOpcodes(unsigned Pattern,
                                          const MachineInstr &Root,
                                          const MachineInstr &Prev) const {
   bool AssocCommutRoot = isAssociativeAndCommutative(Root);
@@ -957,7 +1270,7 @@ TargetInstrInfo::getReassociationOpcodes(MachineCombinerPattern Pattern,
 // Return a pair of boolean flags showing if the new root and new prev operands
 // must be swapped. See visual example of the rule in
 // TargetInstrInfo::getReassociationOpcodes.
-static std::pair<bool, bool> mustSwapOperands(MachineCombinerPattern Pattern) {
+static std::pair<bool, bool> mustSwapOperands(unsigned Pattern) {
   switch (Pattern) {
   default:
     llvm_unreachable("Unexpected pattern");
@@ -972,49 +1285,53 @@ static std::pair<bool, bool> mustSwapOperands(MachineCombinerPattern Pattern) {
   }
 }
 
+void TargetInstrInfo::getReassociateOperandIndices(
+    const MachineInstr &Root, unsigned Pattern,
+    std::array<unsigned, 5> &OperandIndices) const {
+  switch (Pattern) {
+  case MachineCombinerPattern::REASSOC_AX_BY:
+    OperandIndices = {1, 1, 1, 2, 2};
+    break;
+  case MachineCombinerPattern::REASSOC_AX_YB:
+    OperandIndices = {2, 1, 2, 2, 1};
+    break;
+  case MachineCombinerPattern::REASSOC_XA_BY:
+    OperandIndices = {1, 2, 1, 1, 2};
+    break;
+  case MachineCombinerPattern::REASSOC_XA_YB:
+    OperandIndices = {2, 2, 2, 1, 1};
+    break;
+  default:
+    llvm_unreachable("unexpected MachineCombinerPattern");
+  }
+}
+
 /// Attempt the reassociation transformation to reduce critical path length.
 /// See the above comments before getMachineCombinerPatterns().
 void TargetInstrInfo::reassociateOps(
-    MachineInstr &Root, MachineInstr &Prev,
-    MachineCombinerPattern Pattern,
+    MachineInstr &Root, MachineInstr &Prev, unsigned Pattern,
     SmallVectorImpl<MachineInstr *> &InsInstrs,
     SmallVectorImpl<MachineInstr *> &DelInstrs,
-    DenseMap<unsigned, unsigned> &InstrIdxForVirtReg) const {
+    ArrayRef<unsigned> OperandIndices,
+    DenseMap<Register, unsigned> &InstrIdxForVirtReg) const {
   MachineFunction *MF = Root.getMF();
   MachineRegisterInfo &MRI = MF->getRegInfo();
   const TargetInstrInfo *TII = MF->getSubtarget().getInstrInfo();
-  const TargetRegisterInfo *TRI = MF->getSubtarget().getRegisterInfo();
-  const TargetRegisterClass *RC = Root.getRegClassConstraint(0, TII, TRI);
+  const TargetRegisterClass *RC = Root.getRegClassConstraint(0, TII, &TRI);
 
-  // This array encodes the operand index for each parameter because the
-  // operands may be commuted. Each row corresponds to a pattern value,
-  // and each column specifies the index of A, B, X, Y.
-  unsigned OpIdx[4][4] = {
-    { 1, 1, 2, 2 },
-    { 1, 2, 2, 1 },
-    { 2, 1, 1, 2 },
-    { 2, 2, 1, 1 }
-  };
-
-  int Row;
-  switch (Pattern) {
-  case MachineCombinerPattern::REASSOC_AX_BY: Row = 0; break;
-  case MachineCombinerPattern::REASSOC_AX_YB: Row = 1; break;
-  case MachineCombinerPattern::REASSOC_XA_BY: Row = 2; break;
-  case MachineCombinerPattern::REASSOC_XA_YB: Row = 3; break;
-  default: llvm_unreachable("unexpected MachineCombinerPattern");
-  }
-
-  MachineOperand &OpA = Prev.getOperand(OpIdx[Row][0]);
-  MachineOperand &OpB = Root.getOperand(OpIdx[Row][1]);
-  MachineOperand &OpX = Prev.getOperand(OpIdx[Row][2]);
-  MachineOperand &OpY = Root.getOperand(OpIdx[Row][3]);
+  MachineOperand &OpA = Prev.getOperand(OperandIndices[1]);
+  MachineOperand &OpB = Root.getOperand(OperandIndices[2]);
+  MachineOperand &OpX = Prev.getOperand(OperandIndices[3]);
+  MachineOperand &OpY = Root.getOperand(OperandIndices[4]);
   MachineOperand &OpC = Root.getOperand(0);
 
   Register RegA = OpA.getReg();
+  unsigned SubRegA = OpA.getSubReg();
   Register RegB = OpB.getReg();
   Register RegX = OpX.getReg();
+  unsigned SubRegX = OpX.getSubReg();
   Register RegY = OpY.getReg();
+  unsigned SubRegY = OpY.getSubReg();
   Register RegC = OpC.getReg();
 
   if (RegA.isVirtual())
@@ -1032,6 +1349,7 @@ void TargetInstrInfo::reassociateOps(
   // recycling RegB because the MachineCombiner's computation of the critical
   // path requires a new register definition rather than an existing one.
   Register NewVR = MRI.createVirtualRegister(RC);
+  unsigned SubRegNewVR = 0;
   InstrIdxForVirtReg.insert(std::make_pair(NewVR, 0));
 
   auto [NewRootOpc, NewPrevOpc] = getReassociationOpcodes(Pattern, Root, Prev);
@@ -1044,26 +1362,104 @@ void TargetInstrInfo::reassociateOps(
 
   if (SwapPrevOperands) {
     std::swap(RegX, RegY);
+    std::swap(SubRegX, SubRegY);
     std::swap(KillX, KillY);
   }
 
+  unsigned PrevFirstOpIdx, PrevSecondOpIdx;
+  unsigned RootFirstOpIdx, RootSecondOpIdx;
+  switch (Pattern) {
+  case MachineCombinerPattern::REASSOC_AX_BY:
+    PrevFirstOpIdx = OperandIndices[1];
+    PrevSecondOpIdx = OperandIndices[3];
+    RootFirstOpIdx = OperandIndices[2];
+    RootSecondOpIdx = OperandIndices[4];
+    break;
+  case MachineCombinerPattern::REASSOC_AX_YB:
+    PrevFirstOpIdx = OperandIndices[1];
+    PrevSecondOpIdx = OperandIndices[3];
+    RootFirstOpIdx = OperandIndices[4];
+    RootSecondOpIdx = OperandIndices[2];
+    break;
+  case MachineCombinerPattern::REASSOC_XA_BY:
+    PrevFirstOpIdx = OperandIndices[3];
+    PrevSecondOpIdx = OperandIndices[1];
+    RootFirstOpIdx = OperandIndices[2];
+    RootSecondOpIdx = OperandIndices[4];
+    break;
+  case MachineCombinerPattern::REASSOC_XA_YB:
+    PrevFirstOpIdx = OperandIndices[3];
+    PrevSecondOpIdx = OperandIndices[1];
+    RootFirstOpIdx = OperandIndices[4];
+    RootSecondOpIdx = OperandIndices[2];
+    break;
+  default:
+    llvm_unreachable("unexpected MachineCombinerPattern");
+  }
+
+  // Basically BuildMI but doesn't add implicit operands by default.
+  auto buildMINoImplicit = [](MachineFunction &MF, const MIMetadata &MIMD,
+                              const MCInstrDesc &MCID, Register DestReg) {
+    return MachineInstrBuilder(
+               MF, MF.CreateMachineInstr(MCID, MIMD.getDL(), /*NoImpl=*/true))
+        .copyMIMetadata(MIMD)
+        .addReg(DestReg, RegState::Define);
+  };
+
   // Create new instructions for insertion.
   MachineInstrBuilder MIB1 =
-      BuildMI(*MF, MIMetadata(Prev), TII->get(NewPrevOpc), NewVR)
-          .addReg(RegX, getKillRegState(KillX))
-          .addReg(RegY, getKillRegState(KillY))
-          .setMIFlags(Prev.getFlags());
+      buildMINoImplicit(*MF, MIMetadata(Prev), TII->get(NewPrevOpc), NewVR);
+  for (const auto &MO : Prev.explicit_operands()) {
+    unsigned Idx = MO.getOperandNo();
+    // Skip the result operand we'd already added.
+    if (Idx == 0)
+      continue;
+    if (Idx == PrevFirstOpIdx)
+      MIB1.addReg(RegX, getKillRegState(KillX), SubRegX);
+    else if (Idx == PrevSecondOpIdx)
+      MIB1.addReg(RegY, getKillRegState(KillY), SubRegY);
+    else
+      MIB1.add(MO);
+  }
+  MIB1.copyImplicitOps(Prev);
 
   if (SwapRootOperands) {
     std::swap(RegA, NewVR);
+    std::swap(SubRegA, SubRegNewVR);
     std::swap(KillA, KillNewVR);
   }
 
   MachineInstrBuilder MIB2 =
-      BuildMI(*MF, MIMetadata(Root), TII->get(NewRootOpc), RegC)
-          .addReg(RegA, getKillRegState(KillA))
-          .addReg(NewVR, getKillRegState(KillNewVR))
-          .setMIFlags(Root.getFlags());
+      buildMINoImplicit(*MF, MIMetadata(Root), TII->get(NewRootOpc), RegC);
+  for (const auto &MO : Root.explicit_operands()) {
+    unsigned Idx = MO.getOperandNo();
+    // Skip the result operand.
+    if (Idx == 0)
+      continue;
+    if (Idx == RootFirstOpIdx)
+      MIB2 = MIB2.addReg(RegA, getKillRegState(KillA), SubRegA);
+    else if (Idx == RootSecondOpIdx)
+      MIB2 = MIB2.addReg(NewVR, getKillRegState(KillNewVR), SubRegNewVR);
+    else
+      MIB2 = MIB2.add(MO);
+  }
+  MIB2.copyImplicitOps(Root);
+
+  // Propagate FP flags from the original instructions.
+  // But clear poison-generating flags because those may not be valid now.
+  // TODO: There should be a helper function for copying only fast-math-flags.
+  uint32_t IntersectedFlags = Root.getFlags() & Prev.getFlags();
+  MIB1->setFlags(IntersectedFlags);
+  MIB1->clearFlag(MachineInstr::MIFlag::NoSWrap);
+  MIB1->clearFlag(MachineInstr::MIFlag::NoUWrap);
+  MIB1->clearFlag(MachineInstr::MIFlag::IsExact);
+  MIB1->clearFlag(MachineInstr::MIFlag::Disjoint);
+
+  MIB2->setFlags(IntersectedFlags);
+  MIB2->clearFlag(MachineInstr::MIFlag::NoSWrap);
+  MIB2->clearFlag(MachineInstr::MIFlag::NoUWrap);
+  MIB2->clearFlag(MachineInstr::MIFlag::IsExact);
+  MIB2->clearFlag(MachineInstr::MIFlag::Disjoint);
 
   setSpecialOperandAttr(Root, Prev, *MIB1, *MIB2);
 
@@ -1086,39 +1482,111 @@ void TargetInstrInfo::reassociateOps(
 }
 
 void TargetInstrInfo::genAlternativeCodeSequence(
-    MachineInstr &Root, MachineCombinerPattern Pattern,
+    MachineInstr &Root, unsigned Pattern,
     SmallVectorImpl<MachineInstr *> &InsInstrs,
     SmallVectorImpl<MachineInstr *> &DelInstrs,
-    DenseMap<unsigned, unsigned> &InstIdxForVirtReg) const {
+    DenseMap<Register, unsigned> &InstIdxForVirtReg) const {
   MachineRegisterInfo &MRI = Root.getMF()->getRegInfo();
+  MachineBasicBlock &MBB = *Root.getParent();
+  MachineFunction &MF = *MBB.getParent();
+  const TargetInstrInfo *TII = MF.getSubtarget().getInstrInfo();
 
-  // Select the previous instruction in the sequence based on the input pattern.
-  MachineInstr *Prev = nullptr;
   switch (Pattern) {
   case MachineCombinerPattern::REASSOC_AX_BY:
-  case MachineCombinerPattern::REASSOC_XA_BY:
-    Prev = MRI.getUniqueVRegDef(Root.getOperand(1).getReg());
-    break;
   case MachineCombinerPattern::REASSOC_AX_YB:
-  case MachineCombinerPattern::REASSOC_XA_YB:
-    Prev = MRI.getUniqueVRegDef(Root.getOperand(2).getReg());
+  case MachineCombinerPattern::REASSOC_XA_BY:
+  case MachineCombinerPattern::REASSOC_XA_YB: {
+    // Select the previous instruction in the sequence based on the input
+    // pattern.
+    std::array<unsigned, 5> OperandIndices;
+    getReassociateOperandIndices(Root, Pattern, OperandIndices);
+    MachineInstr *Prev =
+        MRI.getUniqueVRegDef(Root.getOperand(OperandIndices[0]).getReg());
+
+    // Don't reassociate if Prev and Root are in different blocks.
+    if (Prev->getParent() != Root.getParent())
+      return;
+
+    reassociateOps(Root, *Prev, Pattern, InsInstrs, DelInstrs, OperandIndices,
+                   InstIdxForVirtReg);
     break;
-  default:
-    llvm_unreachable("Unknown pattern for machine combiner");
   }
+  case MachineCombinerPattern::ACC_CHAIN: {
+    SmallVector<Register, 32> ChainRegs;
+    getAccumulatorChain(&Root, ChainRegs);
+    unsigned int Depth = ChainRegs.size();
+    assert(MaxAccumulatorWidth > 1 &&
+           "Max accumulator width set to illegal value");
+    unsigned int MaxWidth = Log2_32(Depth) < MaxAccumulatorWidth
+                                ? Log2_32(Depth)
+                                : MaxAccumulatorWidth;
 
-  // Don't reassociate if Prev and Root are in different blocks.
-  if (Prev->getParent() != Root.getParent())
-    return;
+    // Walk down the chain and rewrite it as a tree.
+    for (auto IndexedReg : llvm::enumerate(llvm::reverse(ChainRegs))) {
+      // No need to rewrite the first node, it is already perfect as it is.
+      if (IndexedReg.index() == 0)
+        continue;
 
-  reassociateOps(Root, *Prev, Pattern, InsInstrs, DelInstrs, InstIdxForVirtReg);
+      // FIXME: Losing subregisters
+      MachineInstr *Instr = MRI.getUniqueVRegDef(IndexedReg.value());
+      MachineInstrBuilder MIB;
+      Register AccReg;
+      if (IndexedReg.index() < MaxWidth) {
+        // Now we need to create new instructions for the first row.
+        AccReg = Instr->getOperand(0).getReg();
+        unsigned OpCode = getAccumulationStartOpcode(Root.getOpcode());
+
+        MIB = BuildMI(MF, MIMetadata(*Instr), TII->get(OpCode), AccReg)
+                  .addReg(Instr->getOperand(2).getReg(),
+                          getKillRegState(Instr->getOperand(2).isKill()))
+                  .addReg(Instr->getOperand(3).getReg(),
+                          getKillRegState(Instr->getOperand(3).isKill()));
+      } else {
+        // For the remaining cases, we need to use an output register of one of
+        // the newly inserted instuctions as operand 1
+        AccReg = Instr->getOperand(0).getReg() == Root.getOperand(0).getReg()
+                     ? MRI.createVirtualRegister(
+                           MRI.getRegClass(Root.getOperand(0).getReg()))
+                     : Instr->getOperand(0).getReg();
+        assert(IndexedReg.index() >= MaxWidth);
+        auto AccumulatorInput =
+            ChainRegs[Depth - (IndexedReg.index() - MaxWidth) - 1];
+        MIB = BuildMI(MF, MIMetadata(*Instr), TII->get(Instr->getOpcode()),
+                      AccReg)
+                  .addReg(AccumulatorInput, getKillRegState(true))
+                  .addReg(Instr->getOperand(2).getReg(),
+                          getKillRegState(Instr->getOperand(2).isKill()))
+                  .addReg(Instr->getOperand(3).getReg(),
+                          getKillRegState(Instr->getOperand(3).isKill()));
+      }
+
+      MIB->setFlags(Instr->getFlags());
+      InstIdxForVirtReg.insert(std::make_pair(AccReg, InsInstrs.size()));
+      InsInstrs.push_back(MIB);
+      DelInstrs.push_back(Instr);
+    }
+
+    SmallVector<Register, 8> RegistersToReduce;
+    for (unsigned i = (InsInstrs.size() - MaxWidth); i < InsInstrs.size();
+         ++i) {
+      auto Reg = InsInstrs[i]->getOperand(0).getReg();
+      RegistersToReduce.push_back(Reg);
+    }
+
+    while (RegistersToReduce.size() > 1)
+      reduceAccumulatorTree(RegistersToReduce, InsInstrs, MF, Root, MRI,
+                            InstIdxForVirtReg, Root.getOperand(0).getReg());
+
+    break;
+  }
+  }
 }
 
 MachineTraceStrategy TargetInstrInfo::getMachineCombinerTraceStrategy() const {
   return MachineTraceStrategy::TS_MinInstrCount;
 }
 
-bool TargetInstrInfo::isReallyTriviallyReMaterializable(
+bool TargetInstrInfo::isReMaterializableImpl(
     const MachineInstr &MI) const {
   const MachineFunction &MF = *MI.getMF();
   const MachineRegisterInfo &MRI = MF.getRegInfo();
@@ -1185,12 +1653,6 @@ bool TargetInstrInfo::isReallyTriviallyReMaterializable(
     // same virtual register, though.
     if (MO.isDef() && Reg != DefReg)
       return false;
-
-    // Don't allow any virtual-register uses. Rematting an instruction with
-    // virtual register uses would length the live ranges of the uses, which
-    // is not necessarily a good idea, certainly not "trivial".
-    if (MO.isUse())
-      return false;
   }
 
   // Everything checked out.
@@ -1238,8 +1700,7 @@ bool TargetInstrInfo::isSchedulingBoundary(const MachineInstr &MI,
   // stack slot reference to depend on the instruction that does the
   // modification.
   const TargetLowering &TLI = *MF.getSubtarget().getTargetLowering();
-  const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
-  return MI.modifiesRegister(TLI.getStackPointerRegisterToSaveRestore(), TRI);
+  return MI.modifiesRegister(TLI.getStackPointerRegisterToSaveRestore(), &TRI);
 }
 
 // Provide a global flag for disabling the PreRA hazard recognizer that targets
@@ -1272,11 +1733,11 @@ CreateTargetPostRAHazardRecognizer(const InstrItineraryData *II,
 // Default implementation of getMemOperandWithOffset.
 bool TargetInstrInfo::getMemOperandWithOffset(
     const MachineInstr &MI, const MachineOperand *&BaseOp, int64_t &Offset,
-    bool &OffsetIsScalable, const TargetRegisterInfo *TRI) const {
+    bool &OffsetIsScalable, const TargetRegisterInfo * /*RemoveMe*/) const {
   SmallVector<const MachineOperand *, 4> BaseOps;
-  unsigned Width;
+  LocationSize Width = LocationSize::precise(0);
   if (!getMemOperandsWithOffsetWidth(MI, BaseOps, Offset, OffsetIsScalable,
-                                     Width, TRI) ||
+                                     Width, &TRI) ||
       BaseOps.size() != 1)
     return false;
   BaseOp = BaseOps.front();
@@ -1287,15 +1748,15 @@ bool TargetInstrInfo::getMemOperandWithOffset(
 //  SelectionDAG latency interface.
 //===----------------------------------------------------------------------===//
 
-int
+std::optional<unsigned>
 TargetInstrInfo::getOperandLatency(const InstrItineraryData *ItinData,
                                    SDNode *DefNode, unsigned DefIdx,
                                    SDNode *UseNode, unsigned UseIdx) const {
   if (!ItinData || ItinData->isEmpty())
-    return -1;
+    return std::nullopt;
 
   if (!DefNode->isMachineOpcode())
-    return -1;
+    return std::nullopt;
 
   unsigned DefClass = get(DefNode->getMachineOpcode()).getSchedClass();
   if (!UseNode->isMachineOpcode())
@@ -1304,8 +1765,8 @@ TargetInstrInfo::getOperandLatency(const InstrItineraryData *ItinData,
   return ItinData->getOperandLatency(DefClass, DefIdx, UseClass, UseIdx);
 }
 
-int TargetInstrInfo::getInstrLatency(const InstrItineraryData *ItinData,
-                                     SDNode *N) const {
+unsigned TargetInstrInfo::getInstrLatency(const InstrItineraryData *ItinData,
+                                          SDNode *N) const {
   if (!ItinData || ItinData->isEmpty())
     return 1;
 
@@ -1369,8 +1830,9 @@ bool TargetInstrInfo::hasLowDefLatency(const TargetSchedModel &SchedModel,
     return false;
 
   unsigned DefClass = DefMI.getDesc().getSchedClass();
-  int DefCycle = ItinData->getOperandCycle(DefClass, DefIdx);
-  return (DefCycle != -1 && DefCycle <= 1);
+  std::optional<unsigned> DefCycle =
+      ItinData->getOperandCycle(DefClass, DefIdx);
+  return DefCycle && DefCycle <= 1U;
 }
 
 bool TargetInstrInfo::isFunctionSafeToSplit(const MachineFunction &MF) const {
@@ -1378,8 +1840,7 @@ bool TargetInstrInfo::isFunctionSafeToSplit(const MachineFunction &MF) const {
   // since the split part may not be placed in a contiguous region. It may also
   // be more beneficial to augment the linker to ensure contiguous layout of
   // split functions within the same section as specified by the attribute.
-  if (MF.getFunction().hasSection() ||
-      MF.getFunction().hasFnAttribute("implicit-section-name"))
+  if (MF.getFunction().hasSection())
     return false;
 
   // We don't want to proceed further for cold functions
@@ -1397,15 +1858,13 @@ std::optional<ParamLoadedValue>
 TargetInstrInfo::describeLoadedValue(const MachineInstr &MI,
                                      Register Reg) const {
   const MachineFunction *MF = MI.getMF();
-  const TargetRegisterInfo *TRI = MF->getSubtarget().getRegisterInfo();
   DIExpression *Expr = DIExpression::get(MF->getFunction().getContext(), {});
   int64_t Offset;
   bool OffsetIsScalable;
 
   // To simplify the sub-register handling, verify that we only need to
   // consider physical registers.
-  assert(MF->getProperties().hasProperty(
-      MachineFunctionProperties::Property::NoVRegs));
+  assert(MF->getProperties().hasNoVRegs());
 
   if (auto DestSrc = isCopyInstr(MI)) {
     Register DestReg = DestSrc->Destination->getReg();
@@ -1429,7 +1888,6 @@ TargetInstrInfo::describeLoadedValue(const MachineInstr &MI,
     // Only describe memory which provably does not escape the function. As
     // described in llvm.org/PR43343, escaped memory may be clobbered by the
     // callee (or by another thread).
-    const auto &TII = MF->getSubtarget().getInstrInfo();
     const MachineFrameInfo &MFI = MF->getFrameInfo();
     const MachineMemOperand *MMO = MI.memoperands()[0];
     const PseudoSourceValue *PSV = MMO->getPseudoValue();
@@ -1440,8 +1898,7 @@ TargetInstrInfo::describeLoadedValue(const MachineInstr &MI,
       return std::nullopt;
 
     const MachineOperand *BaseOp;
-    if (!TII->getMemOperandWithOffset(MI, BaseOp, Offset, OffsetIsScalable,
-                                      TRI))
+    if (!getMemOperandWithOffset(MI, BaseOp, Offset, OffsetIsScalable, &TRI))
       return std::nullopt;
 
     // FIXME: Scalable offsets are not yet handled in the offset code below.
@@ -1462,7 +1919,8 @@ TargetInstrInfo::describeLoadedValue(const MachineInstr &MI,
     SmallVector<uint64_t, 8> Ops;
     DIExpression::appendOffset(Ops, Offset);
     Ops.push_back(dwarf::DW_OP_deref_size);
-    Ops.push_back(MMO->getSize());
+    Ops.push_back(MMO->getSize().hasValue() ? MMO->getSize().getValue()
+                                            : ~UINT64_C(0));
     Expr = DIExpression::prependOpcodes(Expr, Ops);
     return ParamLoadedValue(*BaseOp, Expr);
   }
@@ -1488,11 +1946,9 @@ unsigned TargetInstrInfo::getCallFrameSizeAt(MachineInstr &MI) const {
 
 /// Both DefMI and UseMI must be valid.  By default, call directly to the
 /// itinerary. This may be overriden by the target.
-int TargetInstrInfo::getOperandLatency(const InstrItineraryData *ItinData,
-                                       const MachineInstr &DefMI,
-                                       unsigned DefIdx,
-                                       const MachineInstr &UseMI,
-                                       unsigned UseIdx) const {
+std::optional<unsigned> TargetInstrInfo::getOperandLatency(
+    const InstrItineraryData *ItinData, const MachineInstr &DefMI,
+    unsigned DefIdx, const MachineInstr &UseMI, unsigned UseIdx) const {
   unsigned DefClass = DefMI.getDesc().getSchedClass();
   unsigned UseClass = UseMI.getDesc().getSchedClass();
   return ItinData->getOperandLatency(DefClass, DefIdx, UseClass, UseIdx);
@@ -1581,7 +2037,7 @@ bool TargetInstrInfo::getInsertSubregInputs(
 // Returns a MIRPrinter comment for this machine operand.
 std::string TargetInstrInfo::createMIROperandComment(
     const MachineInstr &MI, const MachineOperand &Op, unsigned OpIdx,
-    const TargetRegisterInfo *TRI) const {
+    const TargetRegisterInfo * /*RemoveMe*/) const {
 
   if (!MI.isInlineAsm())
     return "";
@@ -1600,7 +2056,7 @@ std::string TargetInstrInfo::createMIROperandComment(
       OS << Info;
     }
 
-    return OS.str();
+    return Flags;
   }
 
   int FlagIdx = MI.findInlineAsmFlagIdx(OpIdx);
@@ -1614,12 +2070,8 @@ std::string TargetInstrInfo::createMIROperandComment(
   OS << F.getKindName();
 
   unsigned RCID;
-  if (!F.isImmKind() && !F.isMemKind() && F.hasRegClassConstraint(RCID)) {
-    if (TRI) {
-      OS << ':' << TRI->getRegClassName(TRI->getRegClass(RCID));
-    } else
-      OS << ":RC" << RCID;
-  }
+  if (!F.isImmKind() && !F.isMemKind() && F.hasRegClassConstraint(RCID))
+    OS << ':' << TRI.getRegClassName(TRI.getRegClass(RCID));
 
   if (F.isMemKind()) {
     InlineAsm::ConstraintCode MCID = F.getMemoryConstraintID();
@@ -1630,7 +2082,11 @@ std::string TargetInstrInfo::createMIROperandComment(
   if (F.isUseOperandTiedToDef(TiedTo))
     OS << " tiedto:$" << TiedTo;
 
-  return OS.str();
+  if ((F.isRegDefKind() || F.isRegDefEarlyClobberKind() || F.isRegUseKind()) &&
+      F.getRegMayBeFolded())
+    OS << " foldable";
+
+  return Flags;
 }
 
 TargetInstrInfo::PipelinerLoopInfo::~PipelinerLoopInfo() = default;
@@ -1655,15 +2111,17 @@ void TargetInstrInfo::mergeOutliningCandidateAttributes(
     F.addFnAttr(Attribute::NoUnwind);
 }
 
-outliner::InstrType TargetInstrInfo::getOutliningType(
-    MachineBasicBlock::iterator &MIT, unsigned Flags) const {
+outliner::InstrType
+TargetInstrInfo::getOutliningType(const MachineModuleInfo &MMI,
+                                  MachineBasicBlock::iterator &MIT,
+                                  unsigned Flags) const {
   MachineInstr &MI = *MIT;
 
   // NOTE: MI.isMetaInstruction() will match CFI_INSTRUCTION, but some targets
   // have support for outlining those. Special-case that here.
   if (MI.isCFIInstruction())
     // Just go right to the target implementation.
-    return getOutliningTypeImpl(MIT, Flags);
+    return getOutliningTypeImpl(MMI, MIT, Flags);
 
   // Be conservative about inline assembly.
   if (MI.isInlineAsm())
@@ -1729,7 +2187,7 @@ outliner::InstrType TargetInstrInfo::getOutliningType(
   }
 
   // If we don't know, delegate to the target-specific hook.
-  return getOutliningTypeImpl(MIT, Flags);
+  return getOutliningTypeImpl(MMI, MIT, Flags);
 }
 
 bool TargetInstrInfo::isMBBSafeToOutlineFrom(MachineBasicBlock &MBB,
@@ -1758,4 +2216,9 @@ bool TargetInstrInfo::isMBBSafeToOutlineFrom(MachineBasicBlock &MBB,
       return false;
   }
   return true;
+}
+
+bool TargetInstrInfo::isGlobalMemoryObject(const MachineInstr *MI) const {
+  return MI->isCall() || MI->hasUnmodeledSideEffects() ||
+         (MI->hasOrderedMemoryRef() && !MI->isDereferenceableInvariantLoad());
 }

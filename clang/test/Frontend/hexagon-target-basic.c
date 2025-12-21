@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -emit-llvm -triple hexagon-unknown-unknown %s -S -o /dev/null
+// RUN: %clang_cc1 -emit-llvm -triple hexagon-unknown-unknown %s -o /dev/null
 // REQUIRES: hexagon-registered-target
 
 // Testcase for bug 14744.  Empty file is sufficient, since the problem

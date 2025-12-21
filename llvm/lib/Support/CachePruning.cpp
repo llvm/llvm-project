@@ -218,7 +218,7 @@ bool llvm::pruneCache(StringRef Path, CachePruningPolicy Policy,
     // This acts as a safeguard against data loss if the user specifies the
     // wrong directory as their cache directory.
     StringRef filename = sys::path::filename(File->path());
-    if (!filename.startswith("llvmcache-") && !filename.startswith("Thin-"))
+    if (!filename.starts_with("llvmcache-") && !filename.starts_with("Thin-"))
       continue;
 
     // Look at this file. If we can't stat it, there's nothing interesting
@@ -280,7 +280,9 @@ bool llvm::pruneCache(StringRef Path, CachePruningPolicy Policy,
   if (Policy.MaxSizePercentageOfAvailableSpace > 0 || Policy.MaxSizeBytes > 0) {
     auto ErrOrSpaceInfo = sys::fs::disk_space(Path);
     if (!ErrOrSpaceInfo) {
-      report_fatal_error("Can't get available size");
+      auto EC = ErrOrSpaceInfo.getError();
+      report_fatal_error(Twine("Can't get available size for '") + Path.str() +
+                         "': " + EC.message());
     }
     sys::fs::space_info SpaceInfo = ErrOrSpaceInfo.get();
     auto AvailableSpace = TotalSize + SpaceInfo.free;

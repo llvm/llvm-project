@@ -16,14 +16,18 @@
 
 #include <version>
 
-#ifdef _LIBCPP_HAS_NO_INCOMPLETE_PSTL
+#if !_LIBCPP_HAS_EXPERIMENTAL_PSTL
 #  error "-fexperimental-library should enable the PSTL"
 #endif
 
-#ifdef _LIBCPP_HAS_NO_EXPERIMENTAL_STOP_TOKEN
-#  error "-fexperimental-library should enable the stop_token"
+#if !_LIBCPP_HAS_EXPERIMENTAL_TZDB
+#  error "-fexperimental-library should enable the chrono TZDB"
 #endif
 
-#ifdef _LIBCPP_HAS_NO_INCOMPLETE_TZDB
-#  error "-fexperimental-library should enable the chrono TZDB"
+#if !_LIBCPP_HAS_EXPERIMENTAL_SYNCSTREAM
+#  error "-fexperimental-library should enable the syncstream header"
+#endif
+
+#if !_LIBCPP_HAS_EXPERIMENTAL_HARDENING_OBSERVE_SEMANTIC
+#  error "-fexperimental-library should allow using the Hardening observe semantic"
 #endif

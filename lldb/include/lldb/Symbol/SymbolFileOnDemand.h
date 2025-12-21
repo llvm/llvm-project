@@ -81,7 +81,7 @@ public:
       llvm::function_ref<bool(lldb_private::Module &)>) override;
 
   bool ParseSupportFiles(lldb_private::CompileUnit &comp_unit,
-                         lldb_private::FileSpecList &support_files) override;
+                         lldb_private::SupportFileList &support_files) override;
 
   bool ParseIsOptimized(lldb_private::CompileUnit &comp_unit) override;
 
@@ -127,7 +127,8 @@ public:
       lldb_private::SymbolContextList &sc_list) override;
 
   void Dump(lldb_private::Stream &s) override;
-  void DumpClangAST(lldb_private::Stream &s) override;
+  void DumpClangAST(lldb_private::Stream &s, llvm::StringRef filter,
+                    bool show_color) override;
 
   void
   FindGlobalVariables(lldb_private::ConstString name,
@@ -152,17 +153,8 @@ public:
       const std::string &scope_qualified_name,
       std::vector<lldb_private::ConstString> &mangled_names) override;
 
-  void
-  FindTypes(lldb_private::ConstString name,
-            const lldb_private::CompilerDeclContext &parent_decl_ctx,
-            uint32_t max_matches,
-            llvm::DenseSet<lldb_private::SymbolFile *> &searched_symbol_files,
-            lldb_private::TypeMap &types) override;
-
-  void FindTypes(llvm::ArrayRef<lldb_private::CompilerContext> pattern,
-                 lldb_private::LanguageSet languages,
-                 llvm::DenseSet<SymbolFile *> &searched_symbol_files,
-                 lldb_private::TypeMap &types) override;
+  void FindTypes(const lldb_private::TypeQuery &query,
+                 lldb_private::TypeResults &results) override;
 
   void GetTypes(lldb_private::SymbolContextScope *sc_scope,
                 lldb::TypeClass type_mask,
@@ -187,13 +179,17 @@ public:
 
   void PreloadSymbols() override;
 
-  uint64_t GetDebugInfoSize() override;
+  uint64_t GetDebugInfoSize(bool load_all_debug_info = false) override;
   lldb_private::StatsDuration::Duration GetDebugInfoParseTime() override;
   lldb_private::StatsDuration::Duration GetDebugInfoIndexTime() override;
 
+  void ResetStatistics() override;
+
   uint32_t GetAbilities() override;
 
-  Symtab *GetSymtab() override { return m_sym_file_impl->GetSymtab(); }
+  Symtab *GetSymtab(bool can_create = true) override {
+    return m_sym_file_impl->GetSymtab(can_create);
+  }
 
   ObjectFile *GetObjectFile() override {
     return m_sym_file_impl->GetObjectFile();
@@ -226,6 +222,12 @@ public:
   }
   void SetDebugInfoHadFrameVariableErrors() override {
     return m_sym_file_impl->SetDebugInfoHadFrameVariableErrors();
+  }
+
+  bool GetSeparateDebugInfo(StructuredData::Dictionary &d, bool errors_only,
+                            bool load_all_debug_info = false) override {
+    return m_sym_file_impl->GetSeparateDebugInfo(d, errors_only,
+                                                 load_all_debug_info);
   }
 
   lldb::TypeSP MakeType(lldb::user_id_t uid, ConstString name,

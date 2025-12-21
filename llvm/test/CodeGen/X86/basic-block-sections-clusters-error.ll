@@ -5,10 +5,6 @@
 ; RUN: echo '!!1' >> %t1
 ; RUN: not --crash llc < %s -O0 -mtriple=x86_64-pc-linux -function-sections -basic-block-sections=%t1 2>&1 | FileCheck %s --check-prefix=CHECK-ERROR1
 ; CHECK-ERROR1: LLVM ERROR: invalid profile {{.*}} at line 3: duplicate basic block id found '1'
-; RUN: echo '!dummy1' > %t2
-; RUN: echo '!!4 0' >> %t2
-; RUN: not --crash llc < %s -O0 -mtriple=x86_64-pc-linux -function-sections -basic-block-sections=%t2 2>&1 | FileCheck %s --check-prefix=CHECK-ERROR2
-; CHECK-ERROR2: LLVM ERROR: invalid profile {{.*}} at line 2: entry BB (0) does not begin a cluster
 ; RUN: echo '!dummy1' > %t3
 ; RUN: echo '!!-1' >> %t3
 ; RUN: not --crash llc < %s -O0 -mtriple=x86_64-pc-linux -function-sections -basic-block-sections=%t3 2>&1 | FileCheck %s --check-prefix=CHECK-ERROR3
@@ -48,7 +44,7 @@
 ; RUN: echo 'f dummy1' >> %t11
 ; RUN: echo 'c 0 1.a' >> %t11
 ; RUN: not --crash llc < %s -O0 -mtriple=x86_64 -function-sections -basic-block-sections=%t11 2>&1 | FileCheck %s --check-prefix=CHECK-ERROR11
-; CHECK-ERROR11: LLVM ERROR: invalid profile {{.*}} at line 3: unable to parse clone id: 'a' 
+; CHECK-ERROR11: LLVM ERROR: invalid profile {{.*}} at line 3: unable to parse clone id: 'a'
 ; RUN: echo 'v1' > %t12
 ; RUN: echo 'f dummy1' >> %t12
 ; RUN: echo 'c 0 1' >> %t12
@@ -61,6 +57,33 @@
 ; RUN: echo 'p 1 2 3 2' >> %t13
 ; RUN: not --crash llc < %s -O0 -mtriple=x86_64 -function-sections -basic-block-sections=%t13 2>&1 | FileCheck %s --check-prefix=CHECK-ERROR13
 ; CHECK-ERROR13: LLVM ERROR: invalid profile {{.*}} at line 4: duplicate cloned block in path: '2'
+; RUN: echo 'v1' > %t14
+; RUN: echo 'f dummy1' >> %t14
+; RUN: echo 'c 0 1' >> %t14
+; RUN: echo 'g 0,1:2' >> %t14
+; RUN: not --crash llc < %s -O0 -mtriple=x86_64 -function-sections -basic-block-sections=%t14 2>&1 | FileCheck %s --check-prefix=CHECK-ERROR14
+; CHECK-ERROR14: LLVM ERROR: invalid profile {{.*}} at line 4: unsigned integer expected: ''
+; RUN: echo 'v1' > %t15
+; RUN: echo 'f dummy1' >> %t15
+; RUN: echo 'c 0 1' >> %t15
+; RUN: echo 'g 0:4,1:2:3' >> %t15
+; RUN: not --crash llc < %s -O0 -mtriple=x86_64 -function-sections -basic-block-sections=%t15 2>&1 | FileCheck %s --check-prefix=CHECK-ERROR15
+; CHECK-ERROR15: LLVM ERROR: invalid profile {{.*}} at line 4: unsigned integer expected: '2:3'
+; RUN: echo 'v1' > %t16
+; RUN: echo 'f dummy1' >> %t16
+; RUN: echo 'c 0 1' >> %t16
+; RUN: echo 'g 0:4,1:2' >> %t16
+; RUN: echo 'h a:1111111111111111 1:ffffffffffffffff' >> %t16
+; RUN: not --crash llc < %s -O0 -mtriple=x86_64 -function-sections -basic-block-sections=%t16 2>&1 | FileCheck %s --check-prefix=CHECK-ERROR16
+; CHECK-ERROR16: LLVM ERROR: invalid profile {{.*}} at line 5: unsigned integer expected: 'a'
+; RUN: echo 'v1' > %t17
+; RUN: echo 'f dummy1' >> %t17
+; RUN: echo 'c 0 1' >> %t17
+; RUN: echo 'g 0:4,1:2' >> %t17
+; RUN: echo 'h 0:111111111111111g 1:ffffffffffffffff' >> %t17
+; RUN: not --crash llc < %s -O0 -mtriple=x86_64 -function-sections -basic-block-sections=%t17 2>&1 | FileCheck %s --check-prefix=CHECK-ERROR17
+; CHECK-ERROR17: LLVM ERROR: invalid profile {{.*}} at line 5: unsigned integer expected in hex format: '111111111111111g'
+
 
 define i32 @dummy1(i32 %x, i32 %y, i32 %z) {
   entry:

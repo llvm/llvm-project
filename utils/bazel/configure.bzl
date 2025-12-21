@@ -4,11 +4,6 @@
 
 """Helper macros to configure the LLVM overlay project."""
 
-load("@bazel_tools//tools/build_defs/repo:utils.bzl", "maybe")
-
-# Directory of overlay files relative to WORKSPACE
-DEFAULT_OVERLAY_PATH = "llvm-project-overlay"
-
 DEFAULT_TARGETS = [
     "AArch64",
     "AMDGPU",
@@ -24,50 +19,64 @@ DEFAULT_TARGETS = [
     "PowerPC",
     "RISCV",
     "Sparc",
+    "SPIRV",
     "SystemZ",
     "VE",
     "WebAssembly",
     "X86",
     "XCore",
+    "Xtensa",
 ]
 
+MAX_TRAVERSAL_STEPS = 1000000  # "big number" upper bound on total visited dirs
+
 def _overlay_directories(repository_ctx):
-    src_path = repository_ctx.path(Label("@llvm-raw//:WORKSPACE")).dirname
-    bazel_path = src_path.get_child("utils").get_child("bazel")
-    overlay_path = bazel_path.get_child("llvm-project-overlay")
-    script_path = bazel_path.get_child("overlay_directories.py")
+    src_root = repository_ctx.path(Label("@llvm-raw//:WORKSPACE")).dirname
+    overlay_root = src_root.get_child("utils/bazel/llvm-project-overlay")
+    target_root = repository_ctx.path(".")
 
-    python_bin = repository_ctx.which("python3")
-    if not python_bin:
-        # Windows typically just defines "python" as python3. The script itself
-        # contains a check to ensure python3.
-        python_bin = repository_ctx.which("python")
+    # Tries to minimize the number of symlinks created (that is, does not symlink
+    # every single file). Symlinks every file in the overlay directory. Only symlinks
+    # individual files in the source directory if their parent directory is also
+    # contained in the overlay directory tree.
 
-    if not python_bin:
-        fail("Failed to find python3 binary")
+    stack = ["."]
+    for _ in range(MAX_TRAVERSAL_STEPS):
+        rel_dir = stack.pop()
 
-    cmd = [
-        python_bin,
-        script_path,
-        "--src",
-        src_path,
-        "--overlay",
-        overlay_path,
-        "--target",
-        ".",
-    ]
-    exec_result = repository_ctx.execute(cmd, timeout = 20)
+        # TODO: `set()` is only available in bazel 8.1.
+        # Use `set()` after downstream users are on more recent versions.
+        overlay_dirs = {}
 
-    if exec_result.return_code != 0:
-        fail(("Failed to execute overlay script: '{cmd}'\n" +
-              "Exited with code {return_code}\n" +
-              "stdout:\n{stdout}\n" +
-              "stderr:\n{stderr}\n").format(
-            cmd = " ".join([str(arg) for arg in cmd]),
-            return_code = exec_result.return_code,
-            stdout = exec_result.stdout,
-            stderr = exec_result.stderr,
-        ))
+        # Symlink overlay files, overlay dirs will be handled in future iterations.
+        for entry in overlay_root.get_child(rel_dir).readdir():
+            name = entry.basename
+            full_rel_path = rel_dir + "/" + name
+
+            if entry.is_dir:
+                stack.append(full_rel_path)
+                overlay_dirs[name] = None
+            else:
+                src_path = overlay_root.get_child(full_rel_path)
+                dst_path = target_root.get_child(full_rel_path)
+                repository_ctx.symlink(src_path, dst_path)
+
+        # Symlink source dirs (if not themselves overlaid) and files.
+        for src_entry in src_root.get_child(rel_dir).readdir():
+            name = src_entry.basename
+            if name in overlay_dirs.keys():
+                # Skip: overlay has a directory with this name
+                continue
+
+            repository_ctx.symlink(src_entry, target_root.get_child(rel_dir + "/" + name))
+
+        if not stack:
+            return
+
+    fail("overlay_directories: exceeded MAX_TRAVERSAL_STEPS ({}). " +
+         "Tree too large or a cycle in the filesystem?".format(
+             MAX_TRAVERSAL_STEPS,
+         ))
 
 def _extract_cmake_settings(repository_ctx, llvm_cmake):
     # The list to be written to vars.bzl
@@ -77,6 +86,7 @@ def _extract_cmake_settings(repository_ctx, llvm_cmake):
         "LLVM_VERSION_MAJOR": None,
         "LLVM_VERSION_MINOR": None,
         "LLVM_VERSION_PATCH": None,
+        "LLVM_VERSION_SUFFIX": None,
     }
 
     # It would be easier to use external commands like sed(1) and python.
@@ -126,6 +136,13 @@ def _extract_cmake_settings(repository_ctx, llvm_cmake):
         c["LLVM_VERSION_PATCH"],
     )
 
+    c["PACKAGE_VERSION"] = "{}.{}.{}{}".format(
+        c["LLVM_VERSION_MAJOR"],
+        c["LLVM_VERSION_MINOR"],
+        c["LLVM_VERSION_PATCH"],
+        c["LLVM_VERSION_SUFFIX"],
+    )
+
     return c
 
 def _write_dict_to_file(repository_ctx, filepath, header, vars):
@@ -149,6 +166,14 @@ def _llvm_configure_impl(repository_ctx):
         llvm_cmake,
     )
 
+    # Grab version info and merge it with the other vars
+    version = _extract_cmake_settings(
+        repository_ctx,
+        "cmake/Modules/LLVMVersion.cmake",
+    )
+    version = {k: v for k, v in version.items() if v != None}
+    vars.update(version)
+
     _write_dict_to_file(
         repository_ctx,
         filepath = "vars.bzl",
@@ -157,10 +182,19 @@ def _llvm_configure_impl(repository_ctx):
     )
 
     # Create a starlark file with the requested LLVM targets.
-    targets = repository_ctx.attr.targets
+    llvm_targets = repository_ctx.attr.targets
     repository_ctx.file(
         "llvm/targets.bzl",
-        content = "llvm_targets = " + str(targets),
+        content = "llvm_targets = " + str(llvm_targets),
+        executable = False,
+    )
+
+    # Create a starlark file with the requested BOLT targets.
+    bolt_targets = ["AArch64", "X86", "RISCV"]  # Supported targets.
+    bolt_targets = [t for t in llvm_targets if t in bolt_targets]
+    repository_ctx.file(
+        "bolt/targets.bzl",
+        content = "bolt_targets = " + str(bolt_targets),
         executable = False,
     )
 

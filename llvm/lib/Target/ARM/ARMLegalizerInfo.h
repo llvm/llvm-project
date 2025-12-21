@@ -16,19 +16,19 @@
 #include "llvm/ADT/IndexedMap.h"
 #include "llvm/CodeGen/GlobalISel/GISelChangeObserver.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
-#include "llvm/CodeGen/RuntimeLibcalls.h"
+#include "llvm/CodeGen/RuntimeLibcallUtil.h"
 #include "llvm/IR/Instructions.h"
 
 namespace llvm {
 
 class ARMSubtarget;
 
-/// This class provides the information for the target register banks.
 class ARMLegalizerInfo : public LegalizerInfo {
 public:
   ARMLegalizerInfo(const ARMSubtarget &ST);
 
-  bool legalizeCustom(LegalizerHelper &Helper, MachineInstr &MI) const override;
+  bool legalizeCustom(LegalizerHelper &Helper, MachineInstr &MI,
+                      LostDebugLocObserver &LocObserver) const override;
 
 private:
   void setFCmpLibcallsGNU();
@@ -59,6 +59,8 @@ private:
   // Get the libcall(s) corresponding to \p Predicate for operands of \p Size
   // bits.
   FCmpLibcallsList getFCmpLibcalls(CmpInst::Predicate, unsigned Size) const;
+
+  const ARMSubtarget &ST;
 };
 } // End llvm namespace.
 #endif

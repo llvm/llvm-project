@@ -13,21 +13,21 @@
 #include "mlir/Pass/Pass.h"
 #include "PassDetail.h"
 #include "mlir/IR/Diagnostics.h"
-#include "mlir/IR/Dialect.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/Threading.h"
 #include "mlir/IR/Verifier.h"
 #include "mlir/Support/FileUtilities.h"
+#include "mlir/Support/IndentedOstream.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
-#include "llvm/Support/CommandLine.h"
-#include "llvm/Support/CrashRecoveryContext.h"
+#include "llvm/Support/DebugLog.h"
 #include "llvm/Support/Mutex.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/Threading.h"
-#include "llvm/Support/ToolOutputFile.h"
 #include <optional>
+
+#define DEBUG_TYPE "pass-manager"
 
 using namespace mlir;
 using namespace mlir::detail;
@@ -36,10 +36,22 @@ using namespace mlir::detail;
 // PassExecutionAction
 //===----------------------------------------------------------------------===//
 
+PassExecutionAction::PassExecutionAction(ArrayRef<IRUnit> irUnits,
+                                         const Pass &pass)
+    : Base(irUnits), pass(pass) {}
+
 void PassExecutionAction::print(raw_ostream &os) const {
   os << llvm::formatv("`{0}` running `{1}` on Operation `{2}`", tag,
                       pass.getName(), getOp()->getName());
 }
+
+Operation *PassExecutionAction::getOp() const {
+  ArrayRef<IRUnit> irUnits = getContextIRUnits();
+  return irUnits.empty() ? nullptr
+                         : llvm::dyn_cast_if_present<Operation *>(irUnits[0]);
+}
+
+MLIR_DEFINE_EXPLICIT_TYPE_ID(::mlir::PassExecutionAction)
 
 //===----------------------------------------------------------------------===//
 // Pass
@@ -50,8 +62,15 @@ void PassExecutionAction::print(raw_ostream &os) const {
 void Pass::anchor() {}
 
 /// Attempt to initialize the options of this pass from the given string.
-LogicalResult Pass::initializeOptions(StringRef options) {
-  return passOptions.parseFromString(options);
+LogicalResult Pass::initializeOptions(
+    StringRef options,
+    function_ref<LogicalResult(const Twine &)> errorHandler) {
+  std::string errStr;
+  llvm::raw_string_ostream os(errStr);
+  if (failed(passOptions.parseFromString(options, os))) {
+    return errorHandler(errStr);
+  }
+  return success();
 }
 
 /// Copy the option values from 'other', which is another instance of this
@@ -61,14 +80,19 @@ void Pass::copyOptionValuesFrom(const Pass *other) {
 }
 
 /// Prints out the pass in the textual representation of pipelines. If this is
-/// an adaptor pass, print its pass managers.
-void Pass::printAsTextualPipeline(raw_ostream &os) {
+/// an adaptor pass, print its pass managers. When `pretty` is true, the
+/// printed pipeline is formatted for readability.
+void Pass::printAsTextualPipeline(raw_ostream &os, bool pretty) {
   // Special case for adaptors to print its pass managers.
   if (auto *adaptor = dyn_cast<OpToOpPassAdaptor>(this)) {
     llvm::interleave(
         adaptor->getPassManagers(),
-        [&](OpPassManager &pm) { pm.printAsTextualPipeline(os); },
-        [&] { os << ","; });
+        [&](OpPassManager &pm) { pm.printAsTextualPipeline(os, pretty); },
+        [&] {
+          os << ",";
+          if (pretty)
+            os << "\n";
+        });
     return;
   }
   // Otherwise, print the pass argument followed by its options. If the pass
@@ -221,6 +245,7 @@ LogicalResult OpPassManagerImpl::finalizePassList(MLIRContext *ctx) {
   };
 
   // Walk the pass list and merge adjacent adaptors.
+  LDBG(3) << "Merging adjacent adaptors in pass list";
   OpToOpPassAdaptor *lastAdaptor = nullptr;
   for (auto &pass : passes) {
     // Check to see if this pass is an adaptor.
@@ -228,18 +253,26 @@ LogicalResult OpPassManagerImpl::finalizePassList(MLIRContext *ctx) {
       // If it is the first adaptor in a possible chain, remember it and
       // continue.
       if (!lastAdaptor) {
+        LDBG(3) << "Found first adaptor in chain";
         lastAdaptor = currentAdaptor;
         continue;
       }
 
       // Otherwise, try to merge into the existing adaptor and delete the
       // current one. If merging fails, just remember this as the last adaptor.
-      if (succeeded(currentAdaptor->tryMergeInto(ctx, *lastAdaptor)))
+      LDBG(3) << "Attempting to merge adaptor with "
+              << currentAdaptor->getPassManagers().size()
+              << " managers into previous adaptor";
+      if (succeeded(currentAdaptor->tryMergeInto(ctx, *lastAdaptor))) {
+        LDBG(3) << "Successfully merged adaptors, removing current one";
         pass.reset();
-      else
+      } else {
+        LDBG(3) << "Failed to merge adaptors, keeping current as last";
         lastAdaptor = currentAdaptor;
+      }
     } else if (lastAdaptor) {
       // If this pass isn't an adaptor, finalize it and forget the last adaptor.
+      LDBG(3) << "Finalizing adaptor chain before non-adaptor pass";
       if (failed(finalizeAdaptor(lastAdaptor)))
         return failure();
       lastAdaptor = nullptr;
@@ -252,15 +285,26 @@ LogicalResult OpPassManagerImpl::finalizePassList(MLIRContext *ctx) {
 
   // Now that the adaptors have been merged, erase any empty slots corresponding
   // to the merged adaptors that were nulled-out in the loop above.
+  size_t beforeErase = passes.size();
   llvm::erase_if(passes, std::logical_not<std::unique_ptr<Pass>>());
+  if (beforeErase != passes.size()) {
+    LDBG(3) << "Removed " << (beforeErase - passes.size())
+            << " merged adaptor slots from pass list";
+  }
 
   // If this is a op-agnostic pass manager, there is nothing left to do.
   std::optional<OperationName> rawOpName = getOpName(*ctx);
-  if (!rawOpName)
+  if (!rawOpName) {
+    LDBG(3)
+        << "Op-agnostic pass manager, skipping operation-specific verification";
     return success();
+  }
 
   // Otherwise, verify that all of the passes are valid for the current
   // operation anchor.
+  LDBG(3) << "Verifying " << passes.size() << " passes for operation '"
+          << getOpAnchorName() << "'";
+
   std::optional<RegisteredOperationName> opName =
       rawOpName->getRegisteredInfo();
   for (std::unique_ptr<Pass> &pass : passes) {
@@ -271,6 +315,8 @@ LogicalResult OpPassManagerImpl::finalizePassList(MLIRContext *ctx) {
              << "'!";
     }
   }
+
+  LDBG(3) << "Pass list finalization completed successfully";
   return success();
 }
 
@@ -371,21 +417,51 @@ StringRef OpPassManager::getOpAnchorName() const {
 }
 
 /// Prints out the passes of the pass manager as the textual representation
-/// of pipelines.
-void OpPassManager::printAsTextualPipeline(raw_ostream &os) const {
-  os << getOpAnchorName() << "(";
+/// of pipelines. When `pretty` is true, the printed pipeline is formatted for
+/// readability.
+void printAsTextualPipeline(
+    raw_indented_ostream &os, StringRef anchorName,
+    const llvm::iterator_range<OpPassManager::pass_iterator> &passes,
+    bool pretty = false) {
+  os << anchorName << "(";
+  if (pretty) {
+    os << "\n";
+    os.indent();
+  }
   llvm::interleave(
-      impl->passes,
-      [&](const std::unique_ptr<Pass> &pass) {
-        pass->printAsTextualPipeline(os);
-      },
-      [&]() { os << ","; });
+      passes,
+      [&](mlir::Pass &pass) { pass.printAsTextualPipeline(os, pretty); },
+      [&]() {
+        os << ",";
+        if (pretty)
+          os << "\n";
+      });
+  if (pretty) {
+    os << "\n";
+    os.unindent();
+  }
   os << ")";
+}
+void printAsTextualPipeline(
+    raw_ostream &os, StringRef anchorName,
+    const llvm::iterator_range<OpPassManager::pass_iterator> &passes,
+    bool pretty) {
+  raw_indented_ostream indentedOS(os);
+  printAsTextualPipeline(indentedOS, anchorName, passes, pretty);
+}
+void OpPassManager::printAsTextualPipeline(raw_ostream &os, bool pretty) const {
+  StringRef anchorName = getOpAnchorName();
+  raw_indented_ostream indentedOS(os);
+  ::printAsTextualPipeline(
+      indentedOS, anchorName,
+      {MutableArrayRef<std::unique_ptr<Pass>>{impl->passes}.begin(),
+       MutableArrayRef<std::unique_ptr<Pass>>{impl->passes}.end()},
+      pretty);
 }
 
 void OpPassManager::dump() {
   llvm::errs() << "Pass Manager with " << impl->passes.size() << " passes:\n";
-  printAsTextualPipeline(llvm::errs());
+  printAsTextualPipeline(llvm::errs(), /*pretty=*/true);
   llvm::errs() << "\n";
 }
 
@@ -405,23 +481,45 @@ OpPassManager::Nesting OpPassManager::getNesting() { return impl->nesting; }
 
 LogicalResult OpPassManager::initialize(MLIRContext *context,
                                         unsigned newInitGeneration) {
-  if (impl->initializationGeneration == newInitGeneration)
+
+  if (impl->initializationGeneration == newInitGeneration) {
+    LDBG(2) << "Pass manager already initialized "
+            << "' (generation " << newInitGeneration << ") with " << size()
+            << " passes";
     return success();
+  }
+
+  LDBG(2) << "Initializing pass manager '" << getOpAnchorName()
+          << "' (generation " << newInitGeneration << ") with " << size()
+          << " passes";
   impl->initializationGeneration = newInitGeneration;
+
   for (Pass &pass : getPasses()) {
     // If this pass isn't an adaptor, directly initialize it.
     auto *adaptor = dyn_cast<OpToOpPassAdaptor>(&pass);
     if (!adaptor) {
-      if (failed(pass.initialize(context)))
+      LDBG(2) << "Initializing pass '" << pass.getName() << "'";
+      if (failed(pass.initialize(context))) {
+        LDBG(2) << "Failed to initialize pass '" << pass.getName() << "'";
         return failure();
+      }
       continue;
     }
 
     // Otherwise, initialize each of the adaptors pass managers.
+    LDBG(3) << "Initializing adaptor pass with "
+            << adaptor->getPassManagers().size() << " nested managers";
     for (OpPassManager &adaptorPM : adaptor->getPassManagers())
-      if (failed(adaptorPM.initialize(context, newInitGeneration)))
+      if (failed(adaptorPM.initialize(context, newInitGeneration))) {
+        LDBG(2) << "Failed to initialize nested pass manager";
         return failure();
+      }
   }
+
+  LDBG_OS([&](raw_ostream &os) {
+    os << "Pass manager initialization completed successfully: ";
+    printAsTextualPipeline(os, /*pretty=*/false);
+  });
   return success();
 }
 
@@ -441,7 +539,6 @@ llvm::hash_code OpPassManager::hash() {
   return hashCode;
 }
 
-
 //===----------------------------------------------------------------------===//
 // OpToOpPassAdaptor
 //===----------------------------------------------------------------------===//
@@ -449,16 +546,23 @@ llvm::hash_code OpPassManager::hash() {
 LogicalResult OpToOpPassAdaptor::run(Pass *pass, Operation *op,
                                      AnalysisManager am, bool verifyPasses,
                                      unsigned parentInitGeneration) {
+  LDBG() << "Running pass '" << pass->getName() << "' on operation '"
+         << OpWithFlags(op, OpPrintingFlags().skipRegions()) << "' at "
+         << op->getLoc();
+
   std::optional<RegisteredOperationName> opInfo = op->getRegisteredInfo();
-  if (!opInfo)
+  if (!opInfo) {
     return op->emitOpError()
            << "trying to schedule a pass on an unregistered operation";
-  if (!opInfo->hasTrait<OpTrait::IsIsolatedFromAbove>())
+  }
+  if (!opInfo->hasTrait<OpTrait::IsIsolatedFromAbove>()) {
     return op->emitOpError() << "trying to schedule a pass on an operation not "
                                 "marked as 'IsolatedFromAbove'";
-  if (!pass->canScheduleOn(*op->getName().getRegisteredInfo()))
-    return op->emitOpError()
-           << "trying to schedule a pass on an unsupported operation";
+  }
+  if (!pass->canScheduleOn(op)) {
+    return op->emitOpError() << "trying to schedule pass '" << pass->getName()
+                             << "' on an unsupported operation";
+  }
 
   // Initialize the pass state with a callback for the pass to dynamically
   // execute a pipeline on the currently visited operation.
@@ -476,8 +580,10 @@ LogicalResult OpToOpPassAdaptor::run(Pass *pass, Operation *op,
         pipeline.getImpl().canScheduleOn(*op->getContext(), root->getName()));
 
     // Before running, finalize the passes held by the pipeline.
-    if (failed(pipeline.getImpl().finalizePassList(root->getContext())))
+    if (failed(pipeline.getImpl().finalizePassList(root->getContext()))) {
+      LDBG() << "Failed to finalize pass list for pipeline";
       return failure();
+    }
 
     // Initialize the user provided pipeline and execute the pipeline.
     if (failed(pipeline.initialize(root->getContext(), parentInitGeneration)))
@@ -493,17 +599,21 @@ LogicalResult OpToOpPassAdaptor::run(Pass *pass, Operation *op,
   if (pi)
     pi->runBeforePass(pass, op);
 
-  bool passFailed = false;
-  op->getContext()->executeAction<PassExecutionAction>(
-      [&]() {
-        // Invoke the virtual runOnOperation method.
-        if (auto *adaptor = dyn_cast<OpToOpPassAdaptor>(pass))
-          adaptor->runOnOperation(verifyPasses);
-        else
-          pass->runOnOperation();
-        passFailed = pass->passState->irAndPassFailed.getInt();
-      },
-      {op}, *pass);
+  // Pass instrumentation can use pass failure to flag unmet invariants
+  // (preconditions) of the pass. Skip running pass if in failure state.
+  bool passFailed = pass->passState->irAndPassFailed.getInt();
+  if (!passFailed) {
+    op->getContext()->executeAction<PassExecutionAction>(
+        [&]() {
+          // Invoke the virtual runOnOperation method.
+          if (auto *adaptor = dyn_cast<OpToOpPassAdaptor>(pass))
+            adaptor->runOnOperation(verifyPasses);
+          else
+            pass->runOnOperation();
+          passFailed = pass->passState->irAndPassFailed.getInt();
+        },
+        {op}, *pass);
+  }
 
   // Invalidate any non preserved analyses.
   am.invalidate(pass->passState->preservedAnalyses);
@@ -534,10 +644,12 @@ LogicalResult OpToOpPassAdaptor::run(Pass *pass, Operation *op,
 
   // Instrument after the pass has run.
   if (pi) {
-    if (passFailed)
+    if (passFailed) {
       pi->runAfterPassFailed(pass, op);
-    else
+    } else {
       pi->runAfterPass(pass, op);
+      passFailed = passFailed || pass->passState->irAndPassFailed.getInt();
+    }
   }
 
   // Return if the pass signaled a failure.
@@ -549,6 +661,13 @@ LogicalResult OpToOpPassAdaptor::runPipeline(
     OpPassManager &pm, Operation *op, AnalysisManager am, bool verifyPasses,
     unsigned parentInitGeneration, PassInstrumentor *instrumentor,
     const PassInstrumentation::PipelineParentInfo *parentInfo) {
+  LDBG_OS([&](raw_ostream &os) {
+    os << "Running pipeline on operation '"
+       << OpWithFlags(op, OpPrintingFlags().skipRegions()) << "' with "
+       << pm.size() << " passes, verifyPasses=" << verifyPasses
+       << " pipeline: ";
+    pm.printAsTextualPipeline(os, /*pretty=*/false);
+  });
   assert((!instrumentor || parentInfo) &&
          "expected parent info if instrumentor is provided");
   auto scopeExit = llvm::make_scope_exit([&] {
@@ -565,9 +684,14 @@ LogicalResult OpToOpPassAdaptor::runPipeline(
                                     *parentInfo);
   }
 
-  for (Pass &pass : pm.getPasses())
-    if (failed(run(&pass, op, am, verifyPasses, parentInitGeneration)))
+  for (Pass &pass : pm.getPasses()) {
+    if (failed(run(&pass, op, am, verifyPasses, parentInitGeneration))) {
+      LDBG() << "Pipeline failed for pass '" << pass.getName()
+             << "' on operation '"
+             << OpWithFlags(op, OpPrintingFlags().skipRegions()) << "'";
       return failure();
+    }
+  }
 
   if (instrumentor) {
     instrumentor->runAfterPipeline(pm.getOpName(*op->getContext()),
@@ -580,9 +704,19 @@ LogicalResult OpToOpPassAdaptor::runPipeline(
 /// does not exist.
 static OpPassManager *
 findPassManagerWithAnchor(MutableArrayRef<OpPassManager> mgrs, StringRef name) {
+  LDBG(3) << "Looking for pass manager with anchor name '" << name << "' among "
+          << mgrs.size() << " managers";
+
   auto *it = llvm::find_if(
       mgrs, [&](OpPassManager &mgr) { return mgr.getOpAnchorName() == name; });
-  return it == mgrs.end() ? nullptr : &*it;
+
+  if (it == mgrs.end()) {
+    LDBG(2) << "No pass manager found with anchor name '" << name << "'";
+    return nullptr;
+  }
+
+  LDBG(2) << "Found pass manager with anchor name '" << name << "'";
+  return &*it;
 }
 
 /// Find an operation pass manager that can operate on an operation of the given
@@ -590,10 +724,22 @@ findPassManagerWithAnchor(MutableArrayRef<OpPassManager> mgrs, StringRef name) {
 static OpPassManager *findPassManagerFor(MutableArrayRef<OpPassManager> mgrs,
                                          OperationName name,
                                          MLIRContext &context) {
+  LDBG(4) << "Looking for pass manager that can handle operation '" << name
+          << "' among " << mgrs.size() << " managers";
+
   auto *it = llvm::find_if(mgrs, [&](OpPassManager &mgr) {
     return mgr.getImpl().canScheduleOn(context, name);
   });
-  return it == mgrs.end() ? nullptr : &*it;
+
+  if (it == mgrs.end()) {
+    LDBG(4) << "No pass manager found that can handle operation '" << name
+            << "'";
+    return nullptr;
+  }
+
+  LDBG(4) << "Found pass manager '" << it->getOpAnchorName()
+          << "' that can handle operation '" << name << "'";
+  return &*it;
 }
 
 OpToOpPassAdaptor::OpToOpPassAdaptor(OpPassManager &&mgr) {
@@ -607,6 +753,9 @@ void OpToOpPassAdaptor::getDependentDialects(DialectRegistry &dialects) const {
 
 LogicalResult OpToOpPassAdaptor::tryMergeInto(MLIRContext *ctx,
                                               OpToOpPassAdaptor &rhs) {
+  LDBG(3) << "Attempting to merge pass adaptor with " << mgrs.size()
+          << " managers into rhs with " << rhs.mgrs.size() << " managers";
+
   // Functor used to check if a pass manager is generic, i.e. op-agnostic.
   auto isGenericPM = [&](OpPassManager &pm) { return !pm.getOpName(); };
 
@@ -632,14 +781,24 @@ LogicalResult OpToOpPassAdaptor::tryMergeInto(MLIRContext *ctx,
   //
   // Check the current adaptor.
   auto *lhsGenericPMIt = llvm::find_if(mgrs, isGenericPM);
-  if (lhsGenericPMIt != mgrs.end() &&
-      hasScheduleConflictWith(*lhsGenericPMIt, rhs.mgrs))
-    return failure();
+  if (lhsGenericPMIt != mgrs.end()) {
+    LDBG(4) << "Found generic pass manager on LHS, checking for conflicts";
+    if (hasScheduleConflictWith(*lhsGenericPMIt, rhs.mgrs)) {
+      LDBG(4)
+          << "Merge failed: LHS generic pass manager has conflicts with RHS";
+      return failure();
+    }
+  }
   // Check the rhs adaptor.
   auto *rhsGenericPMIt = llvm::find_if(rhs.mgrs, isGenericPM);
-  if (rhsGenericPMIt != rhs.mgrs.end() &&
-      hasScheduleConflictWith(*rhsGenericPMIt, mgrs))
-    return failure();
+  if (rhsGenericPMIt != rhs.mgrs.end()) {
+    LDBG(4) << "Found generic pass manager on RHS, checking for conflicts";
+    if (hasScheduleConflictWith(*rhsGenericPMIt, mgrs)) {
+      LDBG(4)
+          << "Merge failed: RHS generic pass manager has conflicts with LHS";
+      return failure();
+    }
+  }
 
   for (auto &pm : mgrs) {
     // If an existing pass manager exists, then merge the given pass manager
@@ -655,16 +814,16 @@ LogicalResult OpToOpPassAdaptor::tryMergeInto(MLIRContext *ctx,
   mgrs.clear();
 
   // After coalescing, sort the pass managers within rhs by name.
-  auto compareFn = [](const OpPassManager *lhs, const OpPassManager *rhs) {
+  auto compareFn = [](const OpPassManager &lhs, const OpPassManager &rhs) {
     // Order op-specific pass managers first and op-agnostic pass managers last.
-    if (std::optional<StringRef> lhsName = lhs->getOpName()) {
-      if (std::optional<StringRef> rhsName = rhs->getOpName())
-        return lhsName->compare(*rhsName);
-      return -1; // lhs(op-specific) < rhs(op-agnostic)
+    if (std::optional<StringRef> lhsName = lhs.getOpName()) {
+      if (std::optional<StringRef> rhsName = rhs.getOpName())
+        return *lhsName < *rhsName;
+      return true; // lhs(op-specific) < rhs(op-agnostic)
     }
-    return 1; // lhs(op-agnostic) > rhs(op-specific)
+    return false; // lhs(op-agnostic) > rhs(op-specific)
   };
-  llvm::array_pod_sort(rhs.mgrs.begin(), rhs.mgrs.end(), compareFn);
+  llvm::sort(rhs.mgrs, compareFn);
   return success();
 }
 
@@ -676,7 +835,7 @@ std::string OpToOpPassAdaptor::getAdaptorName() {
     os << '\'' << pm.getOpAnchorName() << '\'';
   });
   os << ']';
-  return os.str();
+  return name;
 }
 
 void OpToOpPassAdaptor::runOnOperation() {
@@ -694,25 +853,51 @@ void OpToOpPassAdaptor::runOnOperation(bool verifyPasses) {
 
 /// Run this pass adaptor synchronously.
 void OpToOpPassAdaptor::runOnOperationImpl(bool verifyPasses) {
+  LDBG_OS([&](raw_ostream &os) {
+    os << "Running pass adaptor synchronously on operation '"
+       << OpWithFlags(getOperation(), OpPrintingFlags().skipRegions())
+       << "' with " << mgrs.size()
+       << " pass managers, verifyPasses=" << verifyPasses << " pipeline: ";
+    printAsTextualPipeline(os, /*pretty=*/false);
+  });
+
   auto am = getAnalysisManager();
   PassInstrumentation::PipelineParentInfo parentInfo = {llvm::get_threadid(),
                                                         this};
   auto *instrumentor = am.getPassInstrumentor();
+
+  unsigned processedOps = 0;
   for (auto &region : getOperation()->getRegions()) {
     for (auto &block : region) {
       for (auto &op : block) {
         auto *mgr = findPassManagerFor(mgrs, op.getName(), *op.getContext());
-        if (!mgr)
+        if (!mgr) {
+          LDBG(2) << "Skipping operation '"
+                  << OpWithFlags(&op, OpPrintingFlags().skipRegions())
+                  << "': no suitable pass manager found";
           continue;
+        }
 
         // Run the held pipeline over the current operation.
+        LDBG(2) << "Processing operation '"
+                << OpWithFlags(&op, OpPrintingFlags().skipRegions())
+                << "' with pass manager '" << mgr->getOpAnchorName() << "'";
+
         unsigned initGeneration = mgr->impl->initializationGeneration;
         if (failed(runPipeline(*mgr, &op, am.nest(&op), verifyPasses,
-                               initGeneration, instrumentor, &parentInfo)))
-          return signalPassFailure();
+                               initGeneration, instrumentor, &parentInfo))) {
+          LDBG(2) << "Pipeline failed for operation '"
+                  << OpWithFlags(&op, OpPrintingFlags().skipRegions()) << "'";
+          signalPassFailure();
+        } else {
+          processedOps++;
+        }
       }
     }
   }
+
+  LDBG() << "Completed synchronous pass adaptor run, processed " << processedOps
+         << " operations";
 }
 
 /// Utility functor that checks if the two ranges of pass managers have a size
@@ -726,13 +911,24 @@ static bool hasSizeMismatch(ArrayRef<OpPassManager> lhs,
 
 /// Run this pass adaptor synchronously.
 void OpToOpPassAdaptor::runOnOperationAsyncImpl(bool verifyPasses) {
+  LDBG_OS([&](raw_ostream &os) {
+    os << "Running pass adaptor asynchronously on operation '"
+       << OpWithFlags(getOperation(), OpPrintingFlags().skipRegions())
+       << "' with " << mgrs.size()
+       << " pass managers, verifyPasses=" << verifyPasses << " pipeline: ";
+    printAsTextualPipeline(os, /*pretty=*/false);
+  });
+
   AnalysisManager am = getAnalysisManager();
   MLIRContext *context = &getContext();
 
   // Create the async executors if they haven't been created, or if the main
   // pipeline has changed.
-  if (asyncExecutors.empty() || hasSizeMismatch(asyncExecutors.front(), mgrs))
-    asyncExecutors.assign(context->getThreadPool().getThreadCount(), mgrs);
+  if (asyncExecutors.empty() || hasSizeMismatch(asyncExecutors.front(), mgrs)) {
+    LDBG(2) << "Creating " << context->getThreadPool().getMaxConcurrency()
+            << " async executors";
+    asyncExecutors.assign(context->getThreadPool().getMaxConcurrency(), mgrs);
+  }
 
   // This struct represents the information for a single operation to be
   // scheduled on a pass manager.
@@ -753,20 +949,35 @@ void OpToOpPassAdaptor::runOnOperationAsyncImpl(bool verifyPasses) {
   // operation, as well as providing a queue of operations to execute over.
   std::vector<OpPMInfo> opInfos;
   DenseMap<OperationName, std::optional<unsigned>> knownOpPMIdx;
+
+  LDBG(2) << "Collecting operations for async execution";
   for (auto &region : getOperation()->getRegions()) {
     for (Operation &op : region.getOps()) {
       // Get the pass manager index for this operation type.
       auto pmIdxIt = knownOpPMIdx.try_emplace(op.getName(), std::nullopt);
       if (pmIdxIt.second) {
-        if (auto *mgr = findPassManagerFor(mgrs, op.getName(), *context))
+        if (auto *mgr = findPassManagerFor(mgrs, op.getName(), *context)) {
           pmIdxIt.first->second = std::distance(mgrs.begin(), mgr);
+          LDBG(2) << "Operation '"
+                  << OpWithFlags(&op, OpPrintingFlags().skipRegions())
+                  << "' will use pass manager '" << mgr->getOpAnchorName()
+                  << "'";
+        }
       }
 
       // If this operation can be scheduled, add it to the list.
-      if (pmIdxIt.first->second)
+      if (pmIdxIt.first->second) {
         opInfos.emplace_back(*pmIdxIt.first->second, &op, am.nest(&op));
+      } else {
+        LDBG(2) << "Operation '"
+                << OpWithFlags(&op, OpPrintingFlags().skipRegions())
+                << "' skipped: no suitable pass manager";
+      }
     }
   }
+
+  LDBG(2) << "Collected " << opInfos.size()
+          << " operations for async execution";
 
   // Get the current thread for this adaptor.
   PassInstrumentation::PipelineParentInfo parentInfo = {llvm::get_threadid(),
@@ -775,8 +986,9 @@ void OpToOpPassAdaptor::runOnOperationAsyncImpl(bool verifyPasses) {
 
   // An atomic failure variable for the async executors.
   std::vector<std::atomic<bool>> activePMs(asyncExecutors.size());
-  std::fill(activePMs.begin(), activePMs.end(), false);
-  auto processFn = [&](OpPMInfo &opInfo) {
+  llvm::fill(activePMs, false);
+  std::atomic<bool> hasFailure = false;
+  parallelForEach(context, opInfos, [&](OpPMInfo &opInfo) {
     // Find an executor for this operation.
     auto it = llvm::find_if(activePMs, [](std::atomic<bool> &isActive) {
       bool expectedInactive = false;
@@ -789,14 +1001,15 @@ void OpToOpPassAdaptor::runOnOperationAsyncImpl(bool verifyPasses) {
     LogicalResult pipelineResult = runPipeline(
         pm, opInfo.op, opInfo.am, verifyPasses,
         pm.impl->initializationGeneration, instrumentor, &parentInfo);
+    if (failed(pipelineResult))
+      hasFailure.store(true);
 
     // Reset the active bit for this pass manager.
     activePMs[pmIndex].store(false);
-    return pipelineResult;
-  };
+  });
 
   // Signal a failure if any of the executors failed.
-  if (failed(failableParallelForEach(context, opInfos, processFn)))
+  if (hasFailure)
     signalPassFailure();
 }
 
@@ -820,23 +1033,36 @@ void PassManager::enableVerifier(bool enabled) { verifyPasses = enabled; }
 
 /// Run the passes within this manager on the provided operation.
 LogicalResult PassManager::run(Operation *op) {
+  LDBG_OS([&](raw_ostream &os) {
+    os << "Starting PassManager run on operation '"
+       << OpWithFlags(op, OpPrintingFlags().skipRegions()) << "' with "
+       << size() << " passes, verifyPasses=" << verifyPasses << " pipeline: ";
+    printAsTextualPipeline(os, /*pretty=*/false);
+  });
+
   MLIRContext *context = getContext();
   std::optional<OperationName> anchorOp = getOpName(*context);
-  if (anchorOp && anchorOp != op->getName())
+  if (anchorOp && anchorOp != op->getName()) {
     return emitError(op->getLoc())
            << "can't run '" << getOpAnchorName() << "' pass manager on '"
            << op->getName() << "' op";
+  }
 
   // Register all dialects for the current pipeline.
+  LDBG(2) << "Registering dependent dialects for pipeline";
   DialectRegistry dependentDialects;
   getDependentDialects(dependentDialects);
   context->appendDialectRegistry(dependentDialects);
-  for (StringRef name : dependentDialects.getDialectNames())
+  for (StringRef name : dependentDialects.getDialectNames()) {
+    LDBG(2) << "Loading dialect: " << name;
     context->getOrLoadDialect(name);
+  }
 
   // Before running, make sure to finalize the pipeline pass list.
-  if (failed(getImpl().finalizePassList(context)))
+  if (failed(getImpl().finalizePassList(context))) {
+    LDBG(2) << "Pass list finalization failed";
     return failure();
+  }
 
   // Notify the context that we start running a pipeline for bookkeeping.
   context->enterMultiThreadedExecution();
@@ -844,18 +1070,29 @@ LogicalResult PassManager::run(Operation *op) {
   // Initialize all of the passes within the pass manager with a new generation.
   llvm::hash_code newInitKey = context->getRegistryHash();
   llvm::hash_code pipelineKey = hash();
-  if (newInitKey != initializationKey || pipelineKey != pipelineInitializationKey) {
-    if (failed(initialize(context, impl->initializationGeneration + 1)))
+  if (newInitKey != initializationKey ||
+      pipelineKey != pipelineInitializationKey) {
+    LDBG(2) << "Initializing passes with new generation: "
+            << (impl->initializationGeneration + 1);
+    if (failed(initialize(context, impl->initializationGeneration + 1))) {
+      LDBG(2) << "Pass initialization failed";
       return failure();
+    }
     initializationKey = newInitKey;
-    pipelineKey = pipelineInitializationKey;
+    pipelineInitializationKey = pipelineKey;
+  } else {
+    LDBG(2) << "Using existing pass initialization (generation: "
+            << impl->initializationGeneration << ")";
   }
 
   // Construct a top level analysis manager for the pipeline.
+  LDBG(2) << "Constructing analysis manager for pipeline execution";
   ModuleAnalysisManager am(op, instrumentor.get());
 
   // If reproducer generation is enabled, run the pass manager with crash
   // handling enabled.
+  LDBG(2) << "Executing pipeline with "
+          << (crashReproGenerator ? "crash recovery" : "normal execution");
   LogicalResult result =
       crashReproGenerator ? runWithCrashRecovery(op, am) : runPasses(op, am);
 
@@ -863,8 +1100,13 @@ LogicalResult PassManager::run(Operation *op) {
   context->exitMultiThreadedExecution();
 
   // Dump all of the pass statistics if necessary.
-  if (passStatisticsMode)
+  if (passStatisticsMode) {
+    LDBG(2) << "Dumping pass statistics";
     dumpStatistics();
+  }
+
+  LDBG(2) << "PassManager run completed with result: "
+          << (succeeded(result) ? "success" : "failure");
   return result;
 }
 
@@ -877,6 +1119,7 @@ void PassManager::addInstrumentation(std::unique_ptr<PassInstrumentation> pi) {
 }
 
 LogicalResult PassManager::runPasses(Operation *op, AnalysisManager am) {
+  LDBG(2) << "Executing passes using OpToOpPassAdaptor pipeline";
   return OpToOpPassAdaptor::runPipeline(*this, op, am, verifyPasses,
                                         impl->initializationGeneration);
 }
@@ -914,11 +1157,9 @@ AnalysisManager AnalysisManager::nestImmediate(Operation *op) {
   assert(impl->getOperation() == op->getParentOp() &&
          "expected immediate child operation");
 
-  auto it = impl->childAnalyses.find(op);
-  if (it == impl->childAnalyses.end())
-    it = impl->childAnalyses
-             .try_emplace(op, std::make_unique<NestedAnalysisMap>(op, impl))
-             .first;
+  auto [it, inserted] = impl->childAnalyses.try_emplace(op);
+  if (inserted)
+    it->second = std::make_unique<NestedAnalysisMap>(op, impl);
   return {it->second.get()};
 }
 
@@ -962,6 +1203,10 @@ void PassInstrumentation::runBeforePipeline(
 
 void PassInstrumentation::runAfterPipeline(
     std::optional<OperationName> name, const PipelineParentInfo &parentInfo) {}
+
+void PassInstrumentation::signalPassFailure(Pass *pass) {
+  pass->signalPassFailure();
+}
 
 //===----------------------------------------------------------------------===//
 // PassInstrumentor

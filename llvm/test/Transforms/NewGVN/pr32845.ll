@@ -3,7 +3,7 @@
 
 @b = external global i32, align 4
 @a = external global i32, align 4
-define void @tinkywinky() {
+define void @tinkywinky(i1 %arg, i1 %arg2) {
 ; CHECK-LABEL: @tinkywinky(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[L1:%.*]]
@@ -13,16 +13,16 @@ define void @tinkywinky() {
 ; CHECK-NEXT:    [[F_0:%.*]] = phi ptr [ @b, [[ENTRY:%.*]] ], [ @a, [[L1_LOOPEXIT:%.*]] ]
 ; CHECK-NEXT:    br label [[FOR_COND:%.*]]
 ; CHECK:       for.cond.loopexit:
-; CHECK-NEXT:    store i8 poison, ptr null
+; CHECK-NEXT:    store i8 poison, ptr null, align 1
 ; CHECK-NEXT:    br label [[FOR_COND]]
 ; CHECK:       for.cond:
-; CHECK-NEXT:    br i1 undef, label [[FOR_END14:%.*]], label [[FOR_COND1_PREHEADER:%.*]]
+; CHECK-NEXT:    br i1 [[ARG:%.*]], label [[FOR_END14:%.*]], label [[FOR_COND1_PREHEADER:%.*]]
 ; CHECK:       for.cond1.preheader:
 ; CHECK-NEXT:    br label [[FOR_BODY3:%.*]]
 ; CHECK:       for.cond1:
 ; CHECK-NEXT:    br label [[L2:%.*]]
 ; CHECK:       for.body3:
-; CHECK-NEXT:    br i1 undef, label [[FOR_COND1:%.*]], label [[L1_LOOPEXIT]]
+; CHECK-NEXT:    br i1 [[ARG2:%.*]], label [[FOR_COND1:%.*]], label [[L1_LOOPEXIT]]
 ; CHECK:       l2:
 ; CHECK-NEXT:    [[G_4:%.*]] = phi ptr [ @b, [[FOR_END14]] ], [ @a, [[FOR_COND1]] ]
 ; CHECK-NEXT:    [[F_2:%.*]] = phi ptr [ [[F_0]], [[FOR_END14]] ], [ @a, [[FOR_COND1]] ]
@@ -46,13 +46,13 @@ for.cond.loopexit:
 for.cond:
   %g.1 = phi ptr [ %g.0, %l1 ], [ %g.4, %for.cond.loopexit ]
   %f.1 = phi ptr [ %f.0, %l1 ], [ %f.2, %for.cond.loopexit ]
-  br i1 undef, label %for.end14, label %for.cond1.preheader
+  br i1 %arg, label %for.end14, label %for.cond1.preheader
 for.cond1.preheader:
   br label %for.body3
 for.cond1:
   br label %l2
 for.body3:
-  br i1 undef, label %for.cond1, label %l1.loopexit
+  br i1 %arg2, label %for.cond1, label %l1.loopexit
 l2:
   %g.4 = phi ptr [ %g.1, %for.end14 ], [ @a, %for.cond1 ]
   %f.2 = phi ptr [ %f.1, %for.end14 ], [ @a, %for.cond1 ]

@@ -395,7 +395,12 @@ template <class _Tp> struct __numeric_type {
   // No support for long double, use double instead.
   static double __test(long double);
 
-  typedef decltype(__test(declval<_Tp>())) type;
+  template <typename _U>
+  static auto __test_impl(int) -> decltype(__test(declval<_U>()));
+
+  template <typename _U> static void __test_impl(...);
+
+  typedef decltype(__test_impl<_Tp>(0)) type;
   static const bool value = !is_same<type, void>::value;
 };
 
@@ -443,7 +448,7 @@ class __promote : public __promote_imp<_A1, _A2, _A3> {};
 } // namespace __hip
 
 // __HIP_OVERLOAD1 is used to resolve function calls with integer argument to
-// avoid compilation error due to ambibuity. e.g. floor(5) is resolved with
+// avoid compilation error due to ambiguity. e.g. floor(5) is resolved with
 // floor(double).
 #define __HIP_OVERLOAD1(__retty, __fn)                                         \
   template <typename __T>                                                      \
@@ -454,17 +459,18 @@ class __promote : public __promote_imp<_A1, _A2, _A3> {};
   }
 
 // __HIP_OVERLOAD2 is used to resolve function calls with mixed float/double
-// or integer argument to avoid compilation error due to ambibuity. e.g.
+// or integer argument to avoid compilation error due to ambiguity. e.g.
 // max(5.0f, 6.0) is resolved with max(double, double).
 #if __cplusplus >= 201103L
 #define __HIP_OVERLOAD2(__retty, __fn)                                         \
   template <typename __T1, typename __T2>                                      \
-  __DEVICE__ __CONSTEXPR__ typename __hip_enable_if<                           \
-      __hip::is_arithmetic<__T1>::value && __hip::is_arithmetic<__T2>::value,  \
-      typename __hip::__promote<__T1, __T2>::type>::type                       \
-  __fn(__T1 __x, __T2 __y) {                                                   \
-    typedef typename __hip::__promote<__T1, __T2>::type __result_type;         \
-    return __fn((__result_type)__x, (__result_type)__y);                       \
+  __DEVICE__ __CONSTEXPR__                                                     \
+      typename __hip_enable_if<__hip::is_arithmetic<__T1>::value &&            \
+                                   __hip::is_arithmetic<__T2>::value,          \
+                               __retty>::type                                  \
+      __fn(__T1 __x, __T2 __y) {                                               \
+    typedef typename __hip::__promote<__T1, __T2>::type __arg_type;            \
+    return __fn((__arg_type)__x, (__arg_type)__y);                             \
   }
 #else
 #define __HIP_OVERLOAD2(__retty, __fn)                                         \

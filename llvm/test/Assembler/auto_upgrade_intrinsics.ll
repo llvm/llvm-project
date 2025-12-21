@@ -8,7 +8,8 @@ declare i8 @llvm.ctlz.i8(i8)
 declare i16 @llvm.ctlz.i16(i16)
 declare i32 @llvm.ctlz.i32(i32)
 declare i42 @llvm.ctlz.i42(i42)  ; Not a power-of-2
-
+declare i32 @llvm.ctlz.i32.p0(i32, i1 immarg)
+declare i32 @llvm.cttz.i32.p0(i32, i1 immarg)
 
 define void @test.ctlz(i8 %a, i16 %b, i32 %c, i42 %d) {
 ; CHECK: @test.ctlz
@@ -47,11 +48,11 @@ entry:
   ret void
 }
 
-declare i1 @llvm.coro.end(ptr, i1)
+declare void @llvm.coro.end(ptr, i1)
 define void @test.coro.end(ptr %ptr) {
 ; CHECK-LABEL: @test.coro.end(
-; CHECK: call i1 @llvm.coro.end(ptr %ptr, i1 false, token none)
-  call i1 @llvm.coro.end(ptr %ptr, i1 false)
+; CHECK: call void @llvm.coro.end(ptr %ptr, i1 false, token none)
+  call void @llvm.coro.end(ptr %ptr, i1 false)
   ret void
 }
 
@@ -171,10 +172,10 @@ define void @tests.lifetime.start.end() {
   ; CHECK-LABEL: @tests.lifetime.start.end(
   %a = alloca i8
   call void @llvm.lifetime.start(i64 1, ptr %a)
-  ; CHECK: call void @llvm.lifetime.start.p0(i64 1, ptr %a)
+  ; CHECK: call void @llvm.lifetime.start.p0(ptr %a)
   store i8 0, ptr %a
   call void @llvm.lifetime.end(i64 1, ptr %a)
-  ; CHECK: call void @llvm.lifetime.end.p0(i64 1, ptr %a)
+  ; CHECK: call void @llvm.lifetime.end.p0(ptr %a)
   ret void
 }
 
@@ -185,10 +186,10 @@ define void @tests.lifetime.start.end.unnamed() {
   ; CHECK-LABEL: @tests.lifetime.start.end.unnamed(
   %a = alloca ptr
   call void @llvm.lifetime.start.unnamed(i64 1, ptr %a)
-  ; CHECK: call void @llvm.lifetime.start.p0(i64 1, ptr %a)
+  ; CHECK: call void @llvm.lifetime.start.p0(ptr %a)
   store ptr null, ptr %a
   call void @llvm.lifetime.end.unnamed(i64 1, ptr %a)
-  ; CHECK: call void @llvm.lifetime.end.p0(i64 1, ptr %a)
+  ; CHECK: call void @llvm.lifetime.end.p0(ptr %a)
   ret void
 }
 
@@ -216,9 +217,33 @@ define void @test.prefetch.unnamed(ptr %ptr) {
   ret void
 }
 
+define i32 @ctlz(i32 %A) {
+; CHECK: %for.body.i = call i32 @llvm.ctlz.i32(i32 %A, i1 false)
+  %for.body.i = call i32 @llvm.ctlz.i32.p0(i32 %A)
+  ret i32 %for.body.i
+}
+
+define i32 @ctlz_with_isZeroPoison(i32 %A) {
+; CHECK: %for.body.i = call i32 @llvm.ctlz.i32(i32 %A, i1 false)
+  %for.body.i = call i32 @llvm.ctlz.i32.p0(i32 %A, i1 false)
+  ret i32 %for.body.i
+}
+
+define i32 @cttz(i32 %A) {
+; CHECK: %for.body.i = call i32 @llvm.cttz.i32(i32 %A, i1 false)
+  %for.body.i = call i32 @llvm.cttz.i32.p0(i32 %A)
+  ret i32 %for.body.i
+}
+
+define i32 @cttz_with_isZeroPoison(i32 %A) {
+; CHECK: %for.body.i = call i32 @llvm.cttz.i32(i32 %A, i1 false)
+  %for.body.i = call i32 @llvm.cttz.i32.p0(i32 %A, i1 false)
+  ret i32 %for.body.i
+}
+
 ; This is part of @test.objectsize(), since llvm.objectsize declaration gets
 ; emitted at the end.
 ; CHECK: declare i32 @llvm.objectsize.i32.p0
 
-; CHECK: declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture)
-; CHECK: declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)
+; CHECK: declare void @llvm.lifetime.start.p0(ptr captures(none))
+; CHECK: declare void @llvm.lifetime.end.p0(ptr captures(none))

@@ -55,7 +55,7 @@ static bool isShapePreserving(ForOp forOp, int64_t arg) {
                              ? forOp.getInitArgs()[opResult.getResultNumber()]
                              : Value();
                 })
-                .Default([&](auto op) { return Value(); });
+                .Default(nullptr);
   }
   return false;
 }
@@ -98,8 +98,8 @@ struct DimOfIterArgFolder : public OpRewritePattern<OpTy> {
     if (!isShapePreserving(forOp, blockArg.getArgNumber() - 1))
       return failure();
 
-    Value initArg = forOp.getOpOperandForRegionIterArg(blockArg).get();
-    rewriter.updateRootInPlace(
+    Value initArg = forOp.getTiedLoopInit(blockArg)->get();
+    rewriter.modifyOpInPlace(
         dimOp, [&]() { dimOp.getSourceMutable().assign(initArg); });
 
     return success();
@@ -141,7 +141,7 @@ struct DimOfLoopResultFolder : public OpRewritePattern<OpTy> {
     unsigned resultNumber = opResult.getResultNumber();
     if (!isShapePreserving(forOp, resultNumber))
       return failure();
-    rewriter.updateRootInPlace(dimOp, [&]() {
+    rewriter.modifyOpInPlace(dimOp, [&]() {
       dimOp.getSourceMutable().assign(forOp.getInitArgs()[resultNumber]);
     });
     return success();
@@ -167,7 +167,7 @@ struct SCFForLoopCanonicalization
     MLIRContext *ctx = parentOp->getContext();
     RewritePatternSet patterns(ctx);
     scf::populateSCFForLoopCanonicalizationPatterns(patterns);
-    if (failed(applyPatternsAndFoldGreedily(parentOp, std::move(patterns))))
+    if (failed(applyPatternsGreedily(parentOp, std::move(patterns))))
       signalPassFailure();
   }
 };

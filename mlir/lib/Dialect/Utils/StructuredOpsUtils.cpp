@@ -120,6 +120,31 @@ bool mlir::isVecmat(ArrayAttr indexingMaps) {
   return indexingMaps == maps;
 }
 
+bool mlir::isBatchVecmat(ArrayAttr indexingMaps) {
+  if (indexingMaps.size() != 3)
+    return false;
+  AffineMap map0 = cast<AffineMapAttr>(indexingMaps[0]).getValue();
+  AffineMap map1 = cast<AffineMapAttr>(indexingMaps[1]).getValue();
+  AffineMap map2 = cast<AffineMapAttr>(indexingMaps[2]).getValue();
+
+  if (map0.getNumResults() != 2 || map1.getNumResults() != 3 ||
+      map2.getNumResults() != 2 || map0.getNumInputs() != 3 ||
+      map1.getNumInputs() != 3 || map2.getNumInputs() != 3) {
+    return false;
+  }
+
+  // Extract dimensions for B*K * B*K*N -> B*N
+  AffineExpr b = map0.getResult(0);
+  AffineExpr k = map0.getResult(1);
+  AffineExpr n = map2.getResult(1);
+  auto *context = indexingMaps.getContext();
+  auto mapA = AffineMapAttr::get(AffineMap::get(3, 0, {b, k}, context));
+  auto mapB = AffineMapAttr::get(AffineMap::get(3, 0, {b, k, n}, context));
+  auto mapC = AffineMapAttr::get(AffineMap::get(3, 0, {b, n}, context));
+  auto maps = ArrayAttr::get(context, {mapA, mapB, mapC});
+  return indexingMaps == maps;
+}
+
 bool mlir::isMatvec(ArrayAttr indexingMaps) {
   if (indexingMaps.size() != 3)
     return false;
@@ -174,8 +199,10 @@ Operation *mlir::clone(OpBuilder &b, Operation *op, TypeRange newResultTypes,
   IRMapping bvm;
   OperationState state(op->getLoc(), op->getName(), newOperands, newResultTypes,
                        op->getAttrs());
-  for (Region &r : op->getRegions())
-    r.cloneInto(state.addRegion(), bvm);
+  for (Region &r : op->getRegions()) {
+    Region *newRegion = state.addRegion();
+    b.cloneRegionBefore(r, *newRegion, newRegion->begin(), bvm);
+  }
   return b.create(state);
 }
 
@@ -192,7 +219,7 @@ Operation *mlir::cloneWithoutRegions(OpBuilder &b, Operation *op,
 SmallVector<NamedAttribute>
 mlir::getPrunedAttributeList(Operation *op, ArrayRef<StringRef> elidedAttrs) {
   llvm::StringSet<> elidedAttrsSet;
-  elidedAttrsSet.insert(elidedAttrs.begin(), elidedAttrs.end());
+  elidedAttrsSet.insert_range(elidedAttrs);
   SmallVector<NamedAttribute> attrs;
   for (auto attr : op->getAttrs()) {
     if (elidedAttrsSet.count(attr.getName()))

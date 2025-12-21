@@ -13,11 +13,12 @@
 #ifndef LLVM_MC_MCSYMBOL_H
 #define LLVM_MC_MCSYMBOL_H
 
-#include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/StringMapEntry.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCExpr.h"
-#include "llvm/MC/MCFragment.h"
+#include "llvm/MC/MCSection.h"
+#include "llvm/MC/MCSymbolTableEntry.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
 #include <cassert>
@@ -40,30 +41,15 @@ class raw_ostream;
 /// it is a reference to an external entity, it has a null section.
 class MCSymbol {
 protected:
-  /// The kind of the symbol.  If it is any value other than unset then this
-  /// class is actually one of the appropriate subclasses of MCSymbol.
-  enum SymbolKind {
-    SymbolKindUnset,
-    SymbolKindCOFF,
-    SymbolKindELF,
-    SymbolKindGOFF,
-    SymbolKindMachO,
-    SymbolKindWasm,
-    SymbolKindXCOFF,
+  // A symbol can be regular, equated to an expression, or a common symbol.
+  enum Kind : uint8_t {
+    Regular,
+    Equated,
+    Common,
   };
 
-  /// A symbol can contain an Offset, or Value, or be Common, but never more
-  /// than one of these.
-  enum Contents : uint8_t {
-    SymContentsUnset,
-    SymContentsOffset,
-    SymContentsVariable,
-    SymContentsCommon,
-    SymContentsTargetCommon, // Index stores the section index
-  };
-
-  // Special sentinal value for the absolute pseudo fragment.
-  static MCFragment *AbsolutePseudoFragment;
+  // Special sentinel value for the absolute pseudo fragment.
+  LLVM_ABI static MCFragment *AbsolutePseudoFragment;
 
   /// If a symbol has a Fragment, the section is implied, so we only need
   /// one pointer.
@@ -78,6 +64,10 @@ protected:
   /// relative to, if any.
   mutable MCFragment *Fragment = nullptr;
 
+  /// The symbol kind. Use an unsigned bitfield to achieve better bitpacking
+  /// with MSVC.
+  unsigned kind : 2;
+
   /// True if this symbol is named.  A named symbol will have a pointer to the
   /// name allocated in the bytes immediately prior to the MCSymbol.
   unsigned HasName : 1;
@@ -90,31 +80,23 @@ protected:
   /// True if this symbol can be redefined.
   unsigned IsRedefinable : 1;
 
-  /// IsUsed - True if this symbol has been used.
-  mutable unsigned IsUsed : 1;
-
   mutable unsigned IsRegistered : 1;
 
   /// True if this symbol is visible outside this translation unit. Note: ELF
   /// uses binding instead of this bit.
   mutable unsigned IsExternal : 1;
 
-  /// This symbol is private extern.
+  /// Mach-O specific: This symbol is private extern.
   mutable unsigned IsPrivateExtern : 1;
 
   /// This symbol is weak external.
   mutable unsigned IsWeakExternal : 1;
 
-  /// LLVM RTTI discriminator. This is actually a SymbolKind enumerator, but is
-  /// unsigned to avoid sign extension and achieve better bitpacking with MSVC.
-  unsigned Kind : 3;
-
   /// True if we have created a relocation that uses this symbol.
   mutable unsigned IsUsedInReloc : 1;
 
-  /// This is actually a Contents enumerator, but is unsigned to avoid sign
-  /// extension and achieve better bitpacking with MSVC.
-  unsigned SymbolContents : 3;
+  /// Used to detect cyclic dependency like `a = a + 1` and `a = b; b = a`.
+  unsigned IsResolving : 1;
 
   /// The alignment of the symbol if it is 'common'.
   ///
@@ -157,25 +139,28 @@ protected:
   /// system, the name is a pointer so isn't going to satisfy the 8 byte
   /// alignment of uint64_t.  Account for that here.
   using NameEntryStorageTy = union {
-    const StringMapEntry<bool> *NameEntry;
+    const MCSymbolTableEntry *NameEntry;
     uint64_t AlignmentPadding;
   };
 
-  MCSymbol(SymbolKind Kind, const StringMapEntry<bool> *Name, bool isTemporary)
-      : IsTemporary(isTemporary), IsRedefinable(false), IsUsed(false),
+  MCSymbol(const MCSymbolTableEntry *Name, bool isTemporary)
+      : kind(Kind::Regular), IsTemporary(isTemporary), IsRedefinable(false),
         IsRegistered(false), IsExternal(false), IsPrivateExtern(false),
-        IsWeakExternal(false), Kind(Kind), IsUsedInReloc(false),
-        SymbolContents(SymContentsUnset), CommonAlignLog2(0), Flags(0) {
+        IsWeakExternal(false), IsUsedInReloc(false), IsResolving(0),
+        CommonAlignLog2(0), Flags(0) {
     Offset = 0;
     HasName = !!Name;
     if (Name)
       getNameEntryPtr() = Name;
   }
 
+  MCSymbol(const MCSymbol &) = default;
+  MCSymbol &operator=(const MCSymbol &) = delete;
+
   // Provide custom new/delete as we will only allocate space for a name
   // if we need one.
-  void *operator new(size_t s, const StringMapEntry<bool> *Name,
-                     MCContext &Ctx);
+  LLVM_ABI void *operator new(size_t s, const MCSymbolTableEntry *Name,
+                              MCContext &Ctx);
 
 private:
   void operator delete(void *);
@@ -189,19 +174,16 @@ private:
   }
 
   /// Get a reference to the name field.  Requires that we have a name
-  const StringMapEntry<bool> *&getNameEntryPtr() {
+  const MCSymbolTableEntry *&getNameEntryPtr() {
     assert(HasName && "Name is required");
     NameEntryStorageTy *Name = reinterpret_cast<NameEntryStorageTy *>(this);
     return (*(Name - 1)).NameEntry;
   }
-  const StringMapEntry<bool> *&getNameEntryPtr() const {
+  const MCSymbolTableEntry *&getNameEntryPtr() const {
     return const_cast<MCSymbol*>(this)->getNameEntryPtr();
   }
 
 public:
-  MCSymbol(const MCSymbol &) = delete;
-  MCSymbol &operator=(const MCSymbol &) = delete;
-
   /// getName - Get the symbol name.
   StringRef getName() const {
     if (!HasName)
@@ -222,9 +204,6 @@ public:
   /// isTemporary - Check if this is an assembler temporary symbol.
   bool isTemporary() const { return IsTemporary; }
 
-  /// isUsed - Check if this is used.
-  bool isUsed() const { return IsUsed; }
-
   /// Check if this symbol is redefinable.
   bool isRedefinable() const { return IsRedefinable; }
   /// Mark this symbol as redefinable.
@@ -232,14 +211,17 @@ public:
   /// Prepare this symbol to be redefined.
   void redefineIfPossible() {
     if (IsRedefinable) {
-      if (SymbolContents == SymContentsVariable) {
+      if (kind == Kind::Equated) {
         Value = nullptr;
-        SymbolContents = SymContentsUnset;
+        kind = Kind::Regular;
       }
-      setUndefined();
+      Fragment = nullptr;
       IsRedefinable = false;
     }
   }
+
+  bool isResolving() const { return IsResolving; }
+  void setIsResolving(bool V) { IsResolving = V; }
 
   /// @}
   /// \name Associated Sections
@@ -253,13 +235,12 @@ public:
   /// isInSection - Check if this symbol is defined in some section (i.e., it
   /// is defined but not absolute).
   bool isInSection() const {
-    return isDefined() && !isAbsolute();
+    auto *F = getFragment();
+    return F && F != AbsolutePseudoFragment;
   }
 
   /// isUndefined - Check if this symbol undefined (i.e., implicitly defined).
-  bool isUndefined(bool SetUsed = true) const {
-    return getFragment(SetUsed) == nullptr;
-  }
+  bool isUndefined() const { return getFragment() == nullptr; }
 
   /// isAbsolute - Check if this is an absolute symbol.
   bool isAbsolute() const {
@@ -278,38 +259,20 @@ public:
     Fragment = F;
   }
 
-  /// Mark the symbol as undefined.
-  void setUndefined() { Fragment = nullptr; }
-
-  bool isELF() const { return Kind == SymbolKindELF; }
-
-  bool isCOFF() const { return Kind == SymbolKindCOFF; }
-
-  bool isGOFF() const { return Kind == SymbolKindGOFF; }
-
-  bool isMachO() const { return Kind == SymbolKindMachO; }
-
-  bool isWasm() const { return Kind == SymbolKindWasm; }
-
-  bool isXCOFF() const { return Kind == SymbolKindXCOFF; }
-
   /// @}
   /// \name Variable Symbols
   /// @{
 
   /// isVariable - Check if this is a variable symbol.
-  bool isVariable() const {
-    return SymbolContents == SymContentsVariable;
-  }
+  bool isVariable() const { return kind == Equated; }
 
-  /// getVariableValue - Get the value for variable symbols.
-  const MCExpr *getVariableValue(bool SetUsed = true) const {
+  /// Get the expression of the variable symbol.
+  const MCExpr *getVariableValue() const {
     assert(isVariable() && "Invalid accessor!");
-    IsUsed |= SetUsed;
     return Value;
   }
 
-  void setVariableValue(const MCExpr *Value);
+  LLVM_ABI void setVariableValue(const MCExpr *Value);
 
   /// @}
 
@@ -323,20 +286,15 @@ public:
     Index = Value;
   }
 
-  bool isUnset() const { return SymbolContents == SymContentsUnset; }
-
   uint64_t getOffset() const {
-    assert((SymbolContents == SymContentsUnset ||
-            SymbolContents == SymContentsOffset) &&
+    assert(kind == Kind::Regular &&
            "Cannot get offset for a common/variable symbol");
     return Offset;
   }
   void setOffset(uint64_t Value) {
-    assert((SymbolContents == SymContentsUnset ||
-            SymbolContents == SymContentsOffset) &&
+    assert(kind == Kind::Regular &&
            "Cannot set offset for a common/variable symbol");
     Offset = Value;
-    SymbolContents = SymContentsOffset;
   }
 
   /// Return the size of a 'common' symbol.
@@ -350,10 +308,10 @@ public:
   /// \param Size - The size of the symbol.
   /// \param Alignment - The alignment of the symbol.
   /// \param Target - Is the symbol a target-specific common-like symbol.
-  void setCommon(uint64_t Size, Align Alignment, bool Target = false) {
+  void setCommon(uint64_t Size, Align Alignment) {
     assert(getOffset() == 0);
     CommonSize = Size;
-    SymbolContents = Target ? SymContentsTargetCommon : SymContentsCommon;
+    kind = Kind::Common;
 
     unsigned Log2Align = encode(Alignment);
     assert(Log2Align < (1U << NumCommonAlignmentBits) &&
@@ -371,52 +329,37 @@ public:
   ///
   /// \param Size - The size of the symbol.
   /// \param Alignment - The alignment of the symbol.
-  /// \param Target - Is the symbol a target-specific common-like symbol.
   /// \return True if symbol was already declared as a different type
-  bool declareCommon(uint64_t Size, Align Alignment, bool Target = false) {
+  bool declareCommon(uint64_t Size, Align Alignment) {
     assert(isCommon() || getOffset() == 0);
     if(isCommon()) {
-      if (CommonSize != Size || getCommonAlignment() != Alignment ||
-          isTargetCommon() != Target)
+      if (CommonSize != Size || getCommonAlignment() != Alignment)
         return true;
     } else
-      setCommon(Size, Alignment, Target);
+      setCommon(Size, Alignment);
     return false;
   }
 
   /// Is this a 'common' symbol.
-  bool isCommon() const {
-    return SymbolContents == SymContentsCommon ||
-           SymbolContents == SymContentsTargetCommon;
-  }
+  bool isCommon() const { return kind == Kind::Common; }
 
-  /// Is this a target-specific common-like symbol.
-  bool isTargetCommon() const {
-    return SymbolContents == SymContentsTargetCommon;
-  }
-
-  MCFragment *getFragment(bool SetUsed = true) const {
+  MCFragment *getFragment() const {
     if (Fragment || !isVariable() || isWeakExternal())
       return Fragment;
     // If the symbol is a non-weak alias, get information about
     // the aliasee. (Don't try to resolve weak aliases.)
-    Fragment = getVariableValue(SetUsed)->findAssociatedFragment();
+    Fragment = getVariableValue()->findAssociatedFragment();
     return Fragment;
   }
 
-  bool isExternal() const { return IsExternal; }
-  void setExternal(bool Value) const { IsExternal = Value; }
-
-  bool isPrivateExtern() const { return IsPrivateExtern; }
-  void setPrivateExtern(bool Value) { IsPrivateExtern = Value; }
-
+  // COFF-specific
   bool isWeakExternal() const { return IsWeakExternal; }
 
   /// print - Print the value to the stream \p OS.
-  void print(raw_ostream &OS, const MCAsmInfo *MAI) const;
+  LLVM_ABI void print(raw_ostream &OS, const MCAsmInfo *MAI) const;
 
   /// dump - Print the value to stderr.
-  void dump() const;
+  LLVM_ABI void dump() const;
 
 protected:
   /// Get the (implementation defined) symbol flags.
@@ -439,6 +382,8 @@ inline raw_ostream &operator<<(raw_ostream &OS, const MCSymbol &Sym) {
   Sym.print(OS, nullptr);
   return OS;
 }
+
+bool isRangeRelaxable(const MCSymbol *Begin, const MCSymbol *End);
 
 } // end namespace llvm
 

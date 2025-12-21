@@ -34,10 +34,11 @@ static_assert(std::is_trivially_destructible_v<DeclInfo>,
 
 const char *Comment::getCommentKindName() const {
   switch (getCommentKind()) {
-  case NoCommentKind: return "NoCommentKind";
+  case CommentKind::None:
+    return "None";
 #define ABSTRACT_COMMENT(COMMENT)
-#define COMMENT(CLASS, PARENT) \
-  case CLASS##Kind: \
+#define COMMENT(CLASS, PARENT)                                                 \
+  case CommentKind::CLASS:                                                     \
     return #CLASS;
 #include "clang/AST/CommentNodes.inc"
 #undef COMMENT
@@ -55,16 +56,16 @@ good implements_child_begin_end(Comment::child_iterator (T::*)() const) {
   return good();
 }
 
-LLVM_ATTRIBUTE_UNUSED
-static inline bad implements_child_begin_end(
-                      Comment::child_iterator (Comment::*)() const) {
+[[maybe_unused]]
+static inline bad
+implements_child_begin_end(Comment::child_iterator (Comment::*)() const) {
   return bad();
 }
 
 #define ASSERT_IMPLEMENTS_child_begin(function) \
   (void) good(implements_child_begin_end(function))
 
-LLVM_ATTRIBUTE_UNUSED
+[[maybe_unused]]
 static inline void CheckCommentASTNodes() {
 #define ABSTRACT_COMMENT(COMMENT)
 #define COMMENT(CLASS, PARENT) \
@@ -81,10 +82,11 @@ static inline void CheckCommentASTNodes() {
 
 Comment::child_iterator Comment::child_begin() const {
   switch (getCommentKind()) {
-  case NoCommentKind: llvm_unreachable("comment without a kind");
+  case CommentKind::None:
+    llvm_unreachable("comment without a kind");
 #define ABSTRACT_COMMENT(COMMENT)
-#define COMMENT(CLASS, PARENT) \
-  case CLASS##Kind: \
+#define COMMENT(CLASS, PARENT)                                                 \
+  case CommentKind::CLASS:                                                     \
     return static_cast<const CLASS *>(this)->child_begin();
 #include "clang/AST/CommentNodes.inc"
 #undef COMMENT
@@ -95,10 +97,11 @@ Comment::child_iterator Comment::child_begin() const {
 
 Comment::child_iterator Comment::child_end() const {
   switch (getCommentKind()) {
-  case NoCommentKind: llvm_unreachable("comment without a kind");
+  case CommentKind::None:
+    llvm_unreachable("comment without a kind");
 #define ABSTRACT_COMMENT(COMMENT)
-#define COMMENT(CLASS, PARENT) \
-  case CLASS##Kind: \
+#define COMMENT(CLASS, PARENT)                                                 \
+  case CommentKind::CLASS:                                                     \
     return static_cast<const CLASS *>(this)->child_end();
 #include "clang/AST/CommentNodes.inc"
 #undef COMMENT
@@ -144,8 +147,6 @@ static TypeLoc lookThroughTypedefOrTypeAliasLocs(TypeLoc &SrcTL) {
     return BlockPointerTL.getPointeeLoc().getUnqualifiedLoc();
   if (MemberPointerTypeLoc MemberPointerTL = TL.getAs<MemberPointerTypeLoc>())
     return MemberPointerTL.getPointeeLoc().getUnqualifiedLoc();
-  if (ElaboratedTypeLoc ETL = TL.getAs<ElaboratedTypeLoc>())
-    return ETL.getNamedTypeLoc();
 
   return TL;
 }
@@ -184,13 +185,14 @@ static bool getFunctionTypeLoc(TypeLoc TL, FunctionTypeLoc &ResFTL) {
   return false;
 }
 
-const char *ParamCommandComment::getDirectionAsString(PassDirection D) {
+const char *
+ParamCommandComment::getDirectionAsString(ParamCommandPassDirection D) {
   switch (D) {
-  case ParamCommandComment::In:
+  case ParamCommandPassDirection::In:
     return "[in]";
-  case ParamCommandComment::Out:
+  case ParamCommandPassDirection::Out:
     return "[out]";
-  case ParamCommandComment::InOut:
+  case ParamCommandPassDirection::InOut:
     return "[in,out]";
   }
   llvm_unreachable("unknown PassDirection");
@@ -206,7 +208,7 @@ void DeclInfo::fill() {
   IsInstanceMethod = false;
   IsClassMethod = false;
   IsVariadic = false;
-  ParamVars = std::nullopt;
+  ParamVars = {};
   TemplateParameters = nullptr;
 
   if (!CommentDecl) {
@@ -285,6 +287,13 @@ void DeclInfo::fill() {
     Kind = ClassKind;
     TemplateKind = TemplatePartialSpecialization;
     TemplateParameters = CTPSD->getTemplateParameters();
+    break;
+  }
+  case Decl::VarTemplatePartialSpecialization: {
+    const auto *VTPSD = cast<VarTemplatePartialSpecializationDecl>(CommentDecl);
+    Kind = VariableKind;
+    TemplateKind = TemplatePartialSpecialization;
+    TemplateParameters = VTPSD->getTemplateParameters();
     break;
   }
   case Decl::ClassTemplateSpecialization:

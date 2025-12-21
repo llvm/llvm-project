@@ -73,7 +73,7 @@ phi.1:
 }
 
 ; CHECK-LABEL: define void @cross_phi
-define void @cross_phi(ptr noalias %p1, ptr noalias %p2) {
+define void @cross_phi(ptr noalias %p1, ptr noalias %p2, i1 %arg) {
 ; CHECK: 1 = MemoryDef(liveOnEntry)
 ; CHECK-NEXT: store i8 0, ptr %p1
   store i8 0, ptr %p1
@@ -82,19 +82,19 @@ define void @cross_phi(ptr noalias %p1, ptr noalias %p2) {
 ; LIMIT: MemoryUse(1)
 ; LIMIT-NEXT: load i8, ptr %p1
   load i8, ptr %p1
-  br i1 undef, label %a, label %b
+  br i1 %arg, label %a, label %b
 
 a:
 ; CHECK: 2 = MemoryDef(1)
 ; CHECK-NEXT: store i8 0, ptr %p2
   store i8 0, ptr %p2
-  br i1 undef, label %c, label %d
+  br i1 %arg, label %c, label %d
 
 b:
 ; CHECK: 3 = MemoryDef(1)
 ; CHECK-NEXT: store i8 1, ptr %p2
   store i8 1, ptr %p2
-  br i1 undef, label %c, label %d
+  br i1 %arg, label %c, label %d
 
 c:
 ; CHECK: 6 = MemoryPhi({a,2},{b,3})
@@ -121,7 +121,7 @@ e:
 }
 
 ; CHECK-LABEL: define void @looped
-define void @looped(ptr noalias %p1, ptr noalias %p2) {
+define void @looped(ptr noalias %p1, ptr noalias %p2, i1 %arg) {
 ; CHECK: 1 = MemoryDef(liveOnEntry)
 ; CHECK-NEXT: store i8 0, ptr %p1
   store i8 0, ptr %p1
@@ -132,7 +132,7 @@ loop.1:
 ; CHECK: 2 = MemoryDef(6)
 ; CHECK-NEXT: store i8 0, ptr %p2
   store i8 0, ptr %p2
-  br i1 undef, label %loop.2, label %loop.3
+  br i1 %arg, label %loop.2, label %loop.3
 
 loop.2:
 ; CHECK: 5 = MemoryPhi({loop.1,2},{loop.3,4})
@@ -151,23 +151,23 @@ loop.3:
 ; LIMIT: MemoryUse(4)
 ; LIMIT-NEXT: load i8, ptr %p1
   load i8, ptr %p1
-  br i1 undef, label %loop.2, label %loop.1
+  br i1 %arg, label %loop.2, label %loop.1
 }
 
 ; CHECK-LABEL: define void @looped_visitedonlyonce
-define void @looped_visitedonlyonce(ptr noalias %p1, ptr noalias %p2) {
+define void @looped_visitedonlyonce(ptr noalias %p1, ptr noalias %p2, i1 %arg) {
   br label %while.cond
 
 while.cond:
 ; CHECK: 5 = MemoryPhi({%0,liveOnEntry},{if.end,3})
-; CHECK-NEXT: br i1 undef, label %if.then, label %if.end
-  br i1 undef, label %if.then, label %if.end
+; CHECK-NEXT: br i1 %arg, label %if.then, label %if.end
+  br i1 %arg, label %if.then, label %if.end
 
 if.then:
 ; CHECK: 1 = MemoryDef(5)
 ; CHECK-NEXT: store i8 0, ptr %p1
   store i8 0, ptr %p1
-  br i1 undef, label %if.end, label %if.then2
+  br i1 %arg, label %if.end, label %if.then2
 
 if.then2:
 ; CHECK: 2 = MemoryDef(1)
@@ -465,7 +465,7 @@ end:                                          ; preds = %for.body
 define void @use_clobbered_by_def_in_loop() {
 entry:
   %nodeStack = alloca [12 x i32], align 4
-  call void @llvm.lifetime.start.p0(i64 48, ptr nonnull %nodeStack)
+  call void @llvm.lifetime.start.p0(ptr nonnull %nodeStack)
   br i1 false, label %cleanup, label %while.cond
 
 ; CHECK-LABEL: while.cond:
@@ -502,12 +502,12 @@ while.end:                                        ; preds = %while.cond, %land.r
   br i1 true, label %cleanup, label %while.cond.backedge
 
 cleanup:                                          ; preds = %while.body, %while.end, %entry
-  call void @llvm.lifetime.end.p0(i64 48, ptr nonnull %nodeStack)
+  call void @llvm.lifetime.end.p0(ptr nonnull %nodeStack)
   ret void
 }
 
-declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture)
-declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)
+declare void @llvm.lifetime.start.p0(ptr nocapture)
+declare void @llvm.lifetime.end.p0(ptr nocapture)
 
 define void @another_loop_clobber_inc() {
 ; CHECK-LABEL: void @another_loop_clobber_inc

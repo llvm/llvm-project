@@ -49,6 +49,7 @@ TEST(CommandLineOptionsTest, attributeOptions) {
     EXPECT_EQ(Options.getAttributeQualified(), 1);
     EXPECT_EQ(Options.getAttributeQualifier(), 1);
     EXPECT_EQ(Options.getAttributeRegister(), Value);
+    EXPECT_EQ(Options.getAttributeSize(), 1);
     EXPECT_EQ(Options.getAttributeSubrange(), 1);
     EXPECT_EQ(Options.getAttributeSystem(), 1);
     EXPECT_EQ(Options.getAttributeTypename(), 1);

@@ -21,7 +21,9 @@ f:                                      # @f
         .seh_endprologue
         callq   g
         nop
+        .seh_startepilogue
         addq    $40, %rsp
+        .seh_endepilogue
         retq
         .seh_handlerdata
         .section        .text,"xr",discard,f

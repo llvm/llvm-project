@@ -28,25 +28,14 @@ define i1 @is_pow2_non_zero(i32 %xin) {
 }
 
 define i1 @is_pow2_non_zero_x_maybe_z(i32 %x) {
-; CHECK-NOBMI-LABEL: is_pow2_non_zero_x_maybe_z:
-; CHECK-NOBMI:       # %bb.0:
-; CHECK-NOBMI-NEXT:    # kill: def $edi killed $edi def $rdi
-; CHECK-NOBMI-NEXT:    leal -1(%rdi), %eax
-; CHECK-NOBMI-NEXT:    testl %eax, %edi
-; CHECK-NOBMI-NEXT:    sete %cl
-; CHECK-NOBMI-NEXT:    testl %edi, %edi
-; CHECK-NOBMI-NEXT:    setne %al
-; CHECK-NOBMI-NEXT:    andb %cl, %al
-; CHECK-NOBMI-NEXT:    retq
-;
-; CHECK-BMI2-LABEL: is_pow2_non_zero_x_maybe_z:
-; CHECK-BMI2:       # %bb.0:
-; CHECK-BMI2-NEXT:    testl %edi, %edi
-; CHECK-BMI2-NEXT:    setne %cl
-; CHECK-BMI2-NEXT:    blsrl %edi, %eax
-; CHECK-BMI2-NEXT:    sete %al
-; CHECK-BMI2-NEXT:    andb %cl, %al
-; CHECK-BMI2-NEXT:    retq
+; CHECK-LABEL: is_pow2_non_zero_x_maybe_z:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
+; CHECK-NEXT:    leal -1(%rdi), %eax
+; CHECK-NEXT:    xorl %eax, %edi
+; CHECK-NEXT:    cmpl %eax, %edi
+; CHECK-NEXT:    seta %al
+; CHECK-NEXT:    retq
   %cnt = call i32 @llvm.ctpop.i32(i32 %x)
   %r = icmp eq i32 %cnt, 1
   ret i1 %r
@@ -83,11 +72,11 @@ define <4 x i1> @is_pow2_non_zero_4xv64(<4 x i64> %xin) {
 ; CHECK-NOBMI-NEXT:    pcmpeqd %xmm2, %xmm2
 ; CHECK-NOBMI-NEXT:    movdqa %xmm1, %xmm3
 ; CHECK-NOBMI-NEXT:    paddq %xmm2, %xmm3
+; CHECK-NOBMI-NEXT:    paddq %xmm0, %xmm2
+; CHECK-NOBMI-NEXT:    pand %xmm2, %xmm0
 ; CHECK-NOBMI-NEXT:    pand %xmm1, %xmm3
 ; CHECK-NOBMI-NEXT:    pxor %xmm1, %xmm1
 ; CHECK-NOBMI-NEXT:    pcmpeqd %xmm1, %xmm3
-; CHECK-NOBMI-NEXT:    paddq %xmm0, %xmm2
-; CHECK-NOBMI-NEXT:    pand %xmm2, %xmm0
 ; CHECK-NOBMI-NEXT:    pcmpeqd %xmm1, %xmm0
 ; CHECK-NOBMI-NEXT:    movdqa %xmm0, %xmm1
 ; CHECK-NOBMI-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,3],xmm3[1,3]
@@ -113,7 +102,7 @@ define <4 x i1> @is_pow2_non_zero_4xv64(<4 x i64> %xin) {
 ; CHECK-AVX512:       # %bb.0:
 ; CHECK-AVX512-NEXT:    vporq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %ymm0, %ymm0
 ; CHECK-AVX512-NEXT:    vpopcntq %ymm0, %ymm0
-; CHECK-AVX512-NEXT:    vpcmpeqq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %ymm0, %k1
+; CHECK-AVX512-NEXT:    vpcmpltq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %ymm0, %k1
 ; CHECK-AVX512-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
 ; CHECK-AVX512-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
 ; CHECK-AVX512-NEXT:    vzeroupper
@@ -133,12 +122,12 @@ define <4 x i1> @neither_pow2_non_zero_4xv64(<4 x i64> %xin) {
 ; CHECK-NOBMI-NEXT:    pcmpeqd %xmm2, %xmm2
 ; CHECK-NOBMI-NEXT:    movdqa %xmm1, %xmm3
 ; CHECK-NOBMI-NEXT:    paddq %xmm2, %xmm3
-; CHECK-NOBMI-NEXT:    pand %xmm1, %xmm3
-; CHECK-NOBMI-NEXT:    pxor %xmm1, %xmm1
-; CHECK-NOBMI-NEXT:    pcmpeqd %xmm1, %xmm3
 ; CHECK-NOBMI-NEXT:    movdqa %xmm0, %xmm4
 ; CHECK-NOBMI-NEXT:    paddq %xmm2, %xmm4
 ; CHECK-NOBMI-NEXT:    pand %xmm4, %xmm0
+; CHECK-NOBMI-NEXT:    pand %xmm1, %xmm3
+; CHECK-NOBMI-NEXT:    pxor %xmm1, %xmm1
+; CHECK-NOBMI-NEXT:    pcmpeqd %xmm1, %xmm3
 ; CHECK-NOBMI-NEXT:    pcmpeqd %xmm1, %xmm0
 ; CHECK-NOBMI-NEXT:    movdqa %xmm0, %xmm1
 ; CHECK-NOBMI-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,3],xmm3[1,3]
@@ -166,7 +155,7 @@ define <4 x i1> @neither_pow2_non_zero_4xv64(<4 x i64> %xin) {
 ; CHECK-AVX512:       # %bb.0:
 ; CHECK-AVX512-NEXT:    vporq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %ymm0, %ymm0
 ; CHECK-AVX512-NEXT:    vpopcntq %ymm0, %ymm0
-; CHECK-AVX512-NEXT:    vpcmpneqq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %ymm0, %k1
+; CHECK-AVX512-NEXT:    vpcmpgtq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %ymm0, %k1
 ; CHECK-AVX512-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
 ; CHECK-AVX512-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
 ; CHECK-AVX512-NEXT:    vzeroupper
@@ -180,44 +169,40 @@ define <4 x i1> @neither_pow2_non_zero_4xv64(<4 x i64> %xin) {
 define <4 x i1> @neither_pow2_non_zero_4xv64_x_maybe_z(<4 x i64> %x) {
 ; CHECK-NOBMI-LABEL: neither_pow2_non_zero_4xv64_x_maybe_z:
 ; CHECK-NOBMI:       # %bb.0:
-; CHECK-NOBMI-NEXT:    pxor %xmm2, %xmm2
-; CHECK-NOBMI-NEXT:    pcmpeqd %xmm3, %xmm3
+; CHECK-NOBMI-NEXT:    pcmpeqd %xmm2, %xmm2
+; CHECK-NOBMI-NEXT:    movdqa %xmm0, %xmm3
+; CHECK-NOBMI-NEXT:    paddq %xmm2, %xmm3
 ; CHECK-NOBMI-NEXT:    movdqa %xmm1, %xmm4
-; CHECK-NOBMI-NEXT:    paddq %xmm3, %xmm4
-; CHECK-NOBMI-NEXT:    pand %xmm1, %xmm4
-; CHECK-NOBMI-NEXT:    pcmpeqd %xmm2, %xmm1
-; CHECK-NOBMI-NEXT:    pshufd {{.*#+}} xmm5 = xmm1[1,0,3,2]
-; CHECK-NOBMI-NEXT:    pand %xmm1, %xmm5
-; CHECK-NOBMI-NEXT:    pcmpeqd %xmm2, %xmm4
-; CHECK-NOBMI-NEXT:    pshufd {{.*#+}} xmm1 = xmm4[1,0,3,2]
-; CHECK-NOBMI-NEXT:    pand %xmm4, %xmm1
-; CHECK-NOBMI-NEXT:    pxor %xmm3, %xmm1
-; CHECK-NOBMI-NEXT:    por %xmm5, %xmm1
-; CHECK-NOBMI-NEXT:    movdqa %xmm0, %xmm4
-; CHECK-NOBMI-NEXT:    pcmpeqd %xmm2, %xmm4
-; CHECK-NOBMI-NEXT:    pshufd {{.*#+}} xmm5 = xmm4[1,0,3,2]
-; CHECK-NOBMI-NEXT:    pand %xmm4, %xmm5
-; CHECK-NOBMI-NEXT:    movdqa %xmm0, %xmm4
-; CHECK-NOBMI-NEXT:    paddq %xmm3, %xmm4
-; CHECK-NOBMI-NEXT:    pand %xmm4, %xmm0
-; CHECK-NOBMI-NEXT:    pcmpeqd %xmm2, %xmm0
-; CHECK-NOBMI-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[1,0,3,2]
-; CHECK-NOBMI-NEXT:    pand %xmm2, %xmm0
+; CHECK-NOBMI-NEXT:    paddq %xmm2, %xmm4
+; CHECK-NOBMI-NEXT:    movdqa {{.*#+}} xmm5 = [9223372039002259456,9223372039002259456]
+; CHECK-NOBMI-NEXT:    pxor %xmm5, %xmm4
+; CHECK-NOBMI-NEXT:    pxor %xmm4, %xmm1
+; CHECK-NOBMI-NEXT:    movdqa %xmm1, %xmm6
+; CHECK-NOBMI-NEXT:    pcmpgtd %xmm4, %xmm6
+; CHECK-NOBMI-NEXT:    pxor %xmm5, %xmm3
 ; CHECK-NOBMI-NEXT:    pxor %xmm3, %xmm0
-; CHECK-NOBMI-NEXT:    por %xmm5, %xmm0
-; CHECK-NOBMI-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[0,2]
+; CHECK-NOBMI-NEXT:    movdqa %xmm0, %xmm5
+; CHECK-NOBMI-NEXT:    pcmpgtd %xmm3, %xmm5
+; CHECK-NOBMI-NEXT:    movdqa %xmm5, %xmm7
+; CHECK-NOBMI-NEXT:    shufps {{.*#+}} xmm7 = xmm7[0,2],xmm6[0,2]
+; CHECK-NOBMI-NEXT:    pcmpeqd %xmm4, %xmm1
+; CHECK-NOBMI-NEXT:    pcmpeqd %xmm3, %xmm0
+; CHECK-NOBMI-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,3],xmm1[1,3]
+; CHECK-NOBMI-NEXT:    andps %xmm7, %xmm0
+; CHECK-NOBMI-NEXT:    shufps {{.*#+}} xmm5 = xmm5[1,3],xmm6[1,3]
+; CHECK-NOBMI-NEXT:    orps %xmm5, %xmm0
+; CHECK-NOBMI-NEXT:    xorps %xmm2, %xmm0
 ; CHECK-NOBMI-NEXT:    retq
 ;
 ; CHECK-AVX2-LABEL: neither_pow2_non_zero_4xv64_x_maybe_z:
 ; CHECK-AVX2:       # %bb.0:
-; CHECK-AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; CHECK-AVX2-NEXT:    vpcmpeqq %ymm1, %ymm0, %ymm2
-; CHECK-AVX2-NEXT:    vpcmpeqd %ymm3, %ymm3, %ymm3
-; CHECK-AVX2-NEXT:    vpaddq %ymm3, %ymm0, %ymm4
-; CHECK-AVX2-NEXT:    vpand %ymm4, %ymm0, %ymm0
-; CHECK-AVX2-NEXT:    vpcmpeqq %ymm1, %ymm0, %ymm0
-; CHECK-AVX2-NEXT:    vpxor %ymm3, %ymm0, %ymm0
-; CHECK-AVX2-NEXT:    vpor %ymm0, %ymm2, %ymm0
+; CHECK-AVX2-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
+; CHECK-AVX2-NEXT:    vpaddq %ymm1, %ymm0, %ymm2
+; CHECK-AVX2-NEXT:    vpbroadcastq {{.*#+}} ymm3 = [9223372036854775808,9223372036854775808,9223372036854775808,9223372036854775808]
+; CHECK-AVX2-NEXT:    vpxor %ymm3, %ymm2, %ymm2
+; CHECK-AVX2-NEXT:    vpxor %ymm0, %ymm2, %ymm0
+; CHECK-AVX2-NEXT:    vpcmpgtq %ymm2, %ymm0, %ymm0
+; CHECK-AVX2-NEXT:    vpxor %ymm1, %ymm0, %ymm0
 ; CHECK-AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; CHECK-AVX2-NEXT:    vpackssdw %xmm1, %xmm0, %xmm0
 ; CHECK-AVX2-NEXT:    vzeroupper
@@ -235,5 +220,44 @@ define <4 x i1> @neither_pow2_non_zero_4xv64_x_maybe_z(<4 x i64> %x) {
   %r = icmp ne <4 x i64> %cnt, <i64 1, i64 1, i64 1, i64 1>
   ret <4 x i1> %r
 }
-;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
-; CHECK: {{.*}}
+
+
+define i1 @ctpop32_eq_one_nonzero(i32 %x) {
+; CHECK-NOBMI-LABEL: ctpop32_eq_one_nonzero:
+; CHECK-NOBMI:       # %bb.0: # %entry
+; CHECK-NOBMI-NEXT:    # kill: def $edi killed $edi def $rdi
+; CHECK-NOBMI-NEXT:    leal -1(%rdi), %eax
+; CHECK-NOBMI-NEXT:    testl %eax, %edi
+; CHECK-NOBMI-NEXT:    sete %al
+; CHECK-NOBMI-NEXT:    retq
+;
+; CHECK-BMI2-LABEL: ctpop32_eq_one_nonzero:
+; CHECK-BMI2:       # %bb.0: # %entry
+; CHECK-BMI2-NEXT:    blsrl %edi, %eax
+; CHECK-BMI2-NEXT:    sete %al
+; CHECK-BMI2-NEXT:    retq
+entry:
+  %popcnt = call range(i32 1, 33) i32 @llvm.ctpop.i32(i32 %x)
+  %cmp = icmp eq i32 %popcnt, 1
+  ret i1 %cmp
+}
+
+define i1 @ctpop32_ne_one_nonzero(i32 %x) {
+; CHECK-NOBMI-LABEL: ctpop32_ne_one_nonzero:
+; CHECK-NOBMI:       # %bb.0: # %entry
+; CHECK-NOBMI-NEXT:    # kill: def $edi killed $edi def $rdi
+; CHECK-NOBMI-NEXT:    leal -1(%rdi), %eax
+; CHECK-NOBMI-NEXT:    testl %eax, %edi
+; CHECK-NOBMI-NEXT:    setne %al
+; CHECK-NOBMI-NEXT:    retq
+;
+; CHECK-BMI2-LABEL: ctpop32_ne_one_nonzero:
+; CHECK-BMI2:       # %bb.0: # %entry
+; CHECK-BMI2-NEXT:    blsrl %edi, %eax
+; CHECK-BMI2-NEXT:    setne %al
+; CHECK-BMI2-NEXT:    retq
+entry:
+  %popcnt = tail call range(i32 1, 33) i32 @llvm.ctpop.i32(i32 %x)
+  %cmp = icmp ne i32 %popcnt, 1
+  ret i1 %cmp
+}

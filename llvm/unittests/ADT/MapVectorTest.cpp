@@ -7,12 +7,42 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/iterator_range.h"
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include <memory>
 #include <utility>
 
 using namespace llvm;
 
+namespace {
+struct CountCopyAndMove {
+  CountCopyAndMove() = default;
+  CountCopyAndMove(const CountCopyAndMove &) { copy = 1; }
+  CountCopyAndMove(CountCopyAndMove &&) { move = 1; }
+  void operator=(const CountCopyAndMove &) { ++copy; }
+  void operator=(CountCopyAndMove &&) { ++move; }
+  int copy = 0;
+  int move = 0;
+};
+
+struct A : CountCopyAndMove {
+  A(int v) : v(v) {}
+  int v;
+};
+} // namespace
+
+namespace llvm {
+template <> struct DenseMapInfo<A> {
+  static inline A getEmptyKey() { return 0x7fffffff; }
+  static inline A getTombstoneKey() { return -0x7fffffff - 1; }
+  static unsigned getHashValue(const A &Val) { return (unsigned)(Val.v * 37U); }
+  static bool isEqual(const A &LHS, const A &RHS) { return LHS.v == RHS.v; }
+};
+} // namespace llvm
+
+namespace {
 TEST(MapVectorTest, swap) {
   MapVector<int, int> MV1, MV2;
   std::pair<MapVector<int, int>::iterator, bool> R;
@@ -77,6 +107,87 @@ TEST(MapVectorTest, insert_pop) {
   EXPECT_EQ(MV.size(), 2u);
   EXPECT_EQ(MV[1], 2);
   EXPECT_EQ(MV[4], 7);
+}
+
+TEST(MapVectorTest, try_emplace) {
+  struct AAndU {
+    A a;
+    std::unique_ptr<int> b;
+    AAndU(A a, std::unique_ptr<int> b) : a(a), b(std::move(b)) {}
+  };
+  MapVector<A, AAndU> mv;
+
+  A zero(0);
+  auto try0 = mv.try_emplace(zero, zero, nullptr);
+  EXPECT_TRUE(try0.second);
+  EXPECT_EQ(0, try0.first->second.a.v);
+  EXPECT_EQ(1, try0.first->second.a.copy);
+  EXPECT_EQ(0, try0.first->second.a.move);
+
+  auto try1 = mv.try_emplace(zero, zero, nullptr);
+  EXPECT_FALSE(try1.second);
+  EXPECT_EQ(0, try1.first->second.a.v);
+  EXPECT_EQ(1, try1.first->second.a.copy);
+  EXPECT_EQ(0, try1.first->second.a.move);
+
+  EXPECT_EQ(try0.first, try1.first);
+  EXPECT_EQ(1, try1.first->first.copy);
+  EXPECT_EQ(0, try1.first->first.move);
+
+  A two(2);
+  auto try2 = mv.try_emplace(2, std::move(two), std::make_unique<int>(2));
+  EXPECT_TRUE(try2.second);
+  EXPECT_EQ(2, try2.first->second.a.v);
+  EXPECT_EQ(0, try2.first->second.a.move);
+
+  std::unique_ptr<int> p(new int(3));
+  auto try3 = mv.try_emplace(std::move(two), 3, std::move(p));
+  EXPECT_FALSE(try3.second);
+  EXPECT_EQ(2, try3.first->second.a.v);
+  EXPECT_EQ(1, try3.first->second.a.copy);
+  EXPECT_EQ(0, try3.first->second.a.move);
+
+  EXPECT_EQ(try2.first, try3.first);
+  EXPECT_EQ(0, try3.first->first.copy);
+  EXPECT_EQ(1, try3.first->first.move);
+  EXPECT_NE(nullptr, p);
+}
+
+TEST(MapVectorTest, insert_or_assign) {
+  MapVector<A, A> mv;
+
+  A zero(0);
+  auto try0 = mv.insert_or_assign(zero, zero);
+  EXPECT_TRUE(try0.second);
+  EXPECT_EQ(0, try0.first->second.v);
+  EXPECT_EQ(1, try0.first->second.copy);
+  EXPECT_EQ(0, try0.first->second.move);
+
+  auto try1 = mv.insert_or_assign(zero, zero);
+  EXPECT_FALSE(try1.second);
+  EXPECT_EQ(0, try1.first->second.v);
+  EXPECT_EQ(2, try1.first->second.copy);
+  EXPECT_EQ(0, try1.first->second.move);
+
+  EXPECT_EQ(try0.first, try1.first);
+  EXPECT_EQ(1, try1.first->first.copy);
+  EXPECT_EQ(0, try1.first->first.move);
+
+  A two(2);
+  auto try2 = mv.try_emplace(2, std::move(two));
+  EXPECT_TRUE(try2.second);
+  EXPECT_EQ(2, try2.first->second.v);
+  EXPECT_EQ(1, try2.first->second.move);
+
+  auto try3 = mv.insert_or_assign(std::move(two), 3);
+  EXPECT_FALSE(try3.second);
+  EXPECT_EQ(3, try3.first->second.v);
+  EXPECT_EQ(0, try3.first->second.copy);
+  EXPECT_EQ(2, try3.first->second.move);
+
+  EXPECT_EQ(try2.first, try3.first);
+  EXPECT_EQ(0, try3.first->first.copy);
+  EXPECT_EQ(1, try3.first->first.move);
 }
 
 TEST(MapVectorTest, erase) {
@@ -156,6 +267,62 @@ TEST(MapVectorTest, NonCopyable) {
 
   ASSERT_EQ(MV.count(1), 1u);
   ASSERT_EQ(*MV.find(2)->second, 2);
+}
+
+TEST(MapVectorTest, GetArrayRef) {
+  MapVector<int, int> MV;
+
+  // The underlying vector is empty to begin with.
+  EXPECT_TRUE(MV.getArrayRef().empty());
+
+  // Test inserted element.
+  MV.insert(std::make_pair(100, 99));
+  EXPECT_TRUE(MV.getArrayRef().equals({std::pair(100, 99)}));
+
+  // Inserting a different element for an existing key won't change the
+  // underlying vector.
+  auto [Iter, Inserted] = MV.try_emplace(100, 98);
+  EXPECT_FALSE(Inserted);
+  EXPECT_EQ(Iter->second, 99);
+  EXPECT_TRUE(MV.getArrayRef().equals({std::pair(100, 99)}));
+
+  // Inserting a new element. Tests that elements are in order in the underlying
+  // array.
+  MV.insert(std::make_pair(99, 98));
+  EXPECT_TRUE(MV.getArrayRef().equals({std::pair(100, 99), std::pair(99, 98)}));
+}
+
+TEST(MapVectorTest, AtTest) {
+  MapVector<int, int> MV;
+  MV[0] = 10;
+  MV[1] = 11;
+  EXPECT_EQ(MV.at(0), 10);
+  EXPECT_EQ(MV.at(1), 11);
+
+  MV.at(1) = 12;
+  EXPECT_EQ(MV.at(1), 12);
+
+  const auto &ConstMV = MV;
+  EXPECT_EQ(ConstMV.at(0), 10);
+  EXPECT_EQ(ConstMV.at(1), 12);
+}
+
+TEST(MapVectorTest, KeysValuesIterator) {
+  MapVector<int, int> MV;
+
+  MV.insert(std::make_pair(1, 11));
+  MV.insert(std::make_pair(2, 12));
+  MV.insert(std::make_pair(3, 13));
+  MV.insert(std::make_pair(4, 14));
+  MV.insert(std::make_pair(5, 15));
+  MV.insert(std::make_pair(6, 16));
+
+  EXPECT_THAT(MV.keys(), testing::ElementsAre(1, 2, 3, 4, 5, 6));
+  EXPECT_THAT(MV.values(), testing::ElementsAre(11, 12, 13, 14, 15, 16));
+
+  const MapVector<int, int> &ConstMV = MV;
+  EXPECT_THAT(ConstMV.keys(), testing::ElementsAre(1, 2, 3, 4, 5, 6));
+  EXPECT_THAT(ConstMV.values(), testing::ElementsAre(11, 12, 13, 14, 15, 16));
 }
 
 template <class IntType> struct MapVectorMappedTypeTest : ::testing::Test {
@@ -423,3 +590,4 @@ TEST(SmallMapVectorLargeTest, iteration_test) {
     count--;
   }
 }
+} // namespace

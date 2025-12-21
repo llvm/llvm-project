@@ -23,9 +23,9 @@ class ObjCLanguage : public Language {
   ClangHighlighter m_highlighter;
 
 public:
-  class MethodName {
+  class ObjCMethodName {
   public:
-    /// The static factory method for creating a MethodName.
+    /// The static factory method for creating a ObjCMethodName.
     ///
     /// \param[in] name
     ///   The name of the method.
@@ -35,9 +35,9 @@ public:
     ///   front of the name.
     ///
     /// \return If the name failed to parse as a valid Objective-C method name,
-    /// returns std::nullopt. Otherwise returns a const MethodName.
-    static std::optional<const MethodName> Create(llvm::StringRef name,
-                                                  bool strict);
+    /// returns std::nullopt. Otherwise returns a const ObjCMethodName.
+    static std::optional<const ObjCMethodName> Create(llvm::StringRef name,
+                                                      bool strict);
 
     /// Determines if this method is a class method
     ///
@@ -112,7 +112,7 @@ public:
   protected:
     enum Type { eTypeUnspecified, eTypeClassMethod, eTypeInstanceMethod };
 
-    MethodName(llvm::StringRef name, Type type)
+    ObjCMethodName(llvm::StringRef name, Type type)
         : m_full(name.str()), m_type(type) {}
 
     const std::string m_full;
@@ -142,7 +142,10 @@ public:
   std::vector<Language::MethodNameVariant>
   GetMethodNameVariants(ConstString method_name) const override;
 
-  bool SymbolNameFitsToLanguage(Mangled mangled) const override;
+  std::pair<lldb::FunctionNameType, std::optional<ConstString>>
+  GetFunctionNameInfo(ConstString name) const override;
+
+  bool SymbolNameFitsToLanguage(const Mangled &mangled) const override;
 
   lldb::TypeCategoryImplSP GetFormatters() override;
 
@@ -172,13 +175,7 @@ public:
 
   static llvm::StringRef GetPluginNameStatic() { return "objc"; }
 
-  static bool IsPossibleObjCMethodName(const char *name) {
-    if (!name)
-      return false;
-    bool starts_right = (name[0] == '+' || name[0] == '-') && name[1] == '[';
-    bool ends_right = (name[strlen(name) - 1] == ']');
-    return (starts_right && ends_right);
-  }
+  static bool IsPossibleObjCMethodName(llvm::StringRef name);
 
   static bool IsPossibleObjCSelector(const char *name) {
     if (!name)
@@ -193,6 +190,11 @@ public:
   }
 
   llvm::StringRef GetInstanceVariableName() override { return "self"; }
+
+  virtual std::optional<bool>
+  GetBooleanFromString(llvm::StringRef str) const override;
+
+  bool SupportsExceptionBreakpointsOnThrow() const override { return true; }
 
   // PluginInterface protocol
   llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }

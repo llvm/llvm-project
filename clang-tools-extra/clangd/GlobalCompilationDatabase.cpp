@@ -9,6 +9,8 @@
 #include "GlobalCompilationDatabase.h"
 #include "Config.h"
 #include "FS.h"
+#include "ProjectModules.h"
+#include "ScanningProjectModules.h"
 #include "SourceCode.h"
 #include "support/Logger.h"
 #include "support/Path.h"
@@ -18,6 +20,7 @@
 #include "clang/Tooling/CompilationDatabase.h"
 #include "clang/Tooling/CompilationDatabasePluginRegistry.h"
 #include "clang/Tooling/JSONCompilationDatabase.h"
+#include "clang/Tooling/Tooling.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
@@ -25,9 +28,11 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/VirtualFileSystem.h"
+#include "llvm/TargetParser/Host.h"
 #include <atomic>
 #include <chrono>
 #include <condition_variable>
+#include <deque>
 #include <mutex>
 #include <optional>
 #include <string>
@@ -59,7 +64,9 @@ GlobalCompilationDatabase::getFallbackCommand(PathRef File) const {
   if (FileExtension.empty() || FileExtension == ".h")
     Argv.push_back("-xobjective-c++-header");
   Argv.push_back(std::string(File));
-  tooling::CompileCommand Cmd(llvm::sys::path::parent_path(File),
+  tooling::CompileCommand Cmd(FallbackWorkingDirectory
+                                  ? *FallbackWorkingDirectory
+                                  : llvm::sys::path::parent_path(File),
                               llvm::sys::path::filename(File), std::move(Argv),
                               /*Output=*/"");
   Cmd.Heuristic = "clangd fallback";
@@ -244,7 +251,16 @@ static std::unique_ptr<tooling::CompilationDatabase>
 parseJSON(PathRef Path, llvm::StringRef Data, std::string &Error) {
   if (auto CDB = tooling::JSONCompilationDatabase::loadFromBuffer(
           Data, Error, tooling::JSONCommandLineSyntax::AutoDetect)) {
-    return tooling::inferMissingCompileCommands(std::move(CDB));
+    // FS used for expanding response files.
+    // FIXME: ExpandResponseFilesDatabase appears not to provide the usual
+    // thread-safety guarantees, as the access to FS is not locked!
+    // For now, use the real FS, which is known to be threadsafe (if we don't
+    // use/change working directory, which ExpandResponseFilesDatabase doesn't).
+    // NOTE: response files have to be expanded before inference because
+    // inference needs full command line to check/fix driver mode and file type.
+    auto FS = llvm::vfs::getRealFileSystem();
+    return tooling::inferMissingCompileCommands(
+        expandResponseFiles(std::move(CDB), std::move(FS)));
   }
   return nullptr;
 }
@@ -335,7 +351,8 @@ bool DirectoryBasedGlobalCompilationDatabase::DirectoryCache::load(
 
 DirectoryBasedGlobalCompilationDatabase::
     DirectoryBasedGlobalCompilationDatabase(const Options &Opts)
-    : Opts(Opts), Broadcaster(std::make_unique<BroadcastThread>(*this)) {
+    : GlobalCompilationDatabase(Opts.FallbackWorkingDirectory), Opts(Opts),
+      Broadcaster(std::make_unique<BroadcastThread>(*this)) {
   if (!this->Opts.ContextProvider)
     this->Opts.ContextProvider = [](llvm::StringRef) {
       return Context::current().clone();
@@ -444,6 +461,21 @@ DirectoryBasedGlobalCompilationDatabase::lookupCDB(
   if (ShouldBroadcast)
     broadcastCDB(Result);
   return Result;
+}
+
+void DirectoryBasedGlobalCompilationDatabase::Options::
+    applyFallbackWorkingDirectory(
+        std::optional<std::string> FallbackWorkingDirectory) {
+  if (FallbackWorkingDirectory)
+    this->FallbackWorkingDirectory = *FallbackWorkingDirectory;
+  else {
+    // Clangd is running in strong workspace mode but the client didn't
+    // specify a workspace path in the `initialize` request.
+    // Fallback to current working directory.
+    SmallString<256> CWD;
+    llvm::sys::fs::current_path(CWD);
+    this->FallbackWorkingDirectory = std::string(CWD);
+  }
 }
 
 // The broadcast thread announces files with new compile commands to the world.
@@ -729,11 +761,26 @@ DirectoryBasedGlobalCompilationDatabase::getProjectInfo(PathRef File) const {
   return Res->PI;
 }
 
+std::unique_ptr<ProjectModules>
+DirectoryBasedGlobalCompilationDatabase::getProjectModules(PathRef File) const {
+  CDBLookupRequest Req;
+  Req.FileName = File;
+  Req.ShouldBroadcast = false;
+  Req.FreshTime = Req.FreshTimeMissing =
+      std::chrono::steady_clock::time_point::min();
+  auto Res = lookupCDB(Req);
+  if (!Res)
+    return {};
+
+  return scanningProjectModules(Res->CDB, Opts.TFS);
+}
+
 OverlayCDB::OverlayCDB(const GlobalCompilationDatabase *Base,
                        std::vector<std::string> FallbackFlags,
-                       CommandMangler Mangler)
-    : DelegatingCDB(Base), Mangler(std::move(Mangler)),
-      FallbackFlags(std::move(FallbackFlags)) {}
+                       CommandMangler Mangler,
+                       std::optional<std::string> FallbackWorkingDirectory)
+    : DelegatingCDB(Base, FallbackWorkingDirectory),
+      Mangler(std::move(Mangler)), FallbackFlags(std::move(FallbackFlags)) {}
 
 std::optional<tooling::CompileCommand>
 OverlayCDB::getCompileCommand(PathRef File) const {
@@ -743,6 +790,22 @@ OverlayCDB::getCompileCommand(PathRef File) const {
     auto It = Commands.find(removeDots(File));
     if (It != Commands.end())
       Cmd = It->second;
+  }
+  if (Cmd) {
+    // FS used for expanding response files.
+    // FIXME: ExpandResponseFiles appears not to provide the usual
+    // thread-safety guarantees, as the access to FS is not locked!
+    // For now, use the real FS, which is known to be threadsafe (if we don't
+    // use/change working directory, which ExpandResponseFiles doesn't).
+    auto FS = llvm::vfs::getRealFileSystem();
+    auto Tokenizer = llvm::Triple(llvm::sys::getProcessTriple()).isOSWindows()
+                         ? llvm::cl::TokenizeWindowsCommandLine
+                         : llvm::cl::TokenizeGNUCommandLine;
+    // Compile command pushed via LSP protocol may have response files that need
+    // to be expanded before further processing. For CDB for files it happens in
+    // the main CDB when reading it from the JSON file.
+    tooling::addExpandedResponseFiles(Cmd->CommandLine, Cmd->Directory,
+                                      Tokenizer, *FS);
   }
   if (!Cmd)
     Cmd = DelegatingCDB::getCompileCommand(File);
@@ -763,7 +826,7 @@ tooling::CompileCommand OverlayCDB::getFallbackCommand(PathRef File) const {
   return Cmd;
 }
 
-void OverlayCDB::setCompileCommand(PathRef File,
+bool OverlayCDB::setCompileCommand(PathRef File,
                                    std::optional<tooling::CompileCommand> Cmd) {
   // We store a canonical version internally to prevent mismatches between set
   // and get compile commands. Also it assures clients listening to broadcasts
@@ -771,24 +834,49 @@ void OverlayCDB::setCompileCommand(PathRef File,
   std::string CanonPath = removeDots(File);
   {
     std::unique_lock<std::mutex> Lock(Mutex);
-    if (Cmd)
-      Commands[CanonPath] = std::move(*Cmd);
-    else
+    if (Cmd) {
+      if (auto [It, Inserted] =
+              Commands.try_emplace(CanonPath, std::move(*Cmd));
+          !Inserted) {
+        if (It->second == *Cmd)
+          return false;
+        It->second = *Cmd;
+      }
+    } else
       Commands.erase(CanonPath);
   }
   OnCommandChanged.broadcast({CanonPath});
+  return true;
 }
 
-DelegatingCDB::DelegatingCDB(const GlobalCompilationDatabase *Base)
-    : Base(Base) {
+std::unique_ptr<ProjectModules>
+OverlayCDB::getProjectModules(PathRef File) const {
+  auto MDB = DelegatingCDB::getProjectModules(File);
+  if (!MDB) {
+    log("Failed to get compilation Database for {0}", File);
+    return {};
+  }
+  MDB->setCommandMangler([&Mangler = Mangler](tooling::CompileCommand &Command,
+                                              PathRef CommandPath) {
+    Mangler(Command, CommandPath);
+  });
+  return MDB;
+}
+
+DelegatingCDB::DelegatingCDB(
+    const GlobalCompilationDatabase *Base,
+    std::optional<std::string> FallbackWorkingDirectory)
+    : GlobalCompilationDatabase(FallbackWorkingDirectory), Base(Base) {
   if (Base)
     BaseChanged = Base->watch([this](const std::vector<std::string> Changes) {
       OnCommandChanged.broadcast(Changes);
     });
 }
 
-DelegatingCDB::DelegatingCDB(std::unique_ptr<GlobalCompilationDatabase> Base)
-    : DelegatingCDB(Base.get()) {
+DelegatingCDB::DelegatingCDB(
+    std::unique_ptr<GlobalCompilationDatabase> Base,
+    std::optional<std::string> FallbackWorkingDirectory)
+    : DelegatingCDB(Base.get(), FallbackWorkingDirectory) {
   BaseOwner = std::move(Base);
 }
 
@@ -803,6 +891,13 @@ std::optional<ProjectInfo> DelegatingCDB::getProjectInfo(PathRef File) const {
   if (!Base)
     return std::nullopt;
   return Base->getProjectInfo(File);
+}
+
+std::unique_ptr<ProjectModules>
+DelegatingCDB::getProjectModules(PathRef File) const {
+  if (!Base)
+    return nullptr;
+  return Base->getProjectModules(File);
 }
 
 tooling::CompileCommand DelegatingCDB::getFallbackCommand(PathRef File) const {

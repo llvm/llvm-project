@@ -9,14 +9,15 @@
 #include "pthread_attr_setstack.h"
 #include "pthread_attr_setstacksize.h"
 
+#include "hdr/stdint_proxy.h"
 #include "src/__support/common.h"
+#include "src/__support/libc_errno.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/threads/thread.h" // For STACK_ALIGNMENT
 
-#include <errno.h>
 #include <pthread.h>
-#include <stdint.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, pthread_attr_setstack,
                    (pthread_attr_t *__restrict attr, void *stack,
@@ -35,4 +36,4 @@ LLVM_LIBC_FUNCTION(int, pthread_attr_setstack,
   return 0;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

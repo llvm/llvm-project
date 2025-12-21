@@ -12,18 +12,21 @@ add_llvm_unittest(ADTTests
   BitFieldsTest.cpp
   BitmaskEnumTest.cpp
   BitTest.cpp
+  BitsetTest.cpp
   BitVectorTest.cpp
   BreadthFirstIteratorTest.cpp
   BumpPtrListTest.cpp
   CoalescingBitVectorTest.cpp
   CombinationGeneratorTest.cpp
   ConcurrentHashtableTest.cpp
+  CountCopyAndMove.cpp
   DAGDeltaAlgorithmTest.cpp
   DeltaAlgorithmTest.cpp
   DenseMapTest.cpp
   DenseSetTest.cpp
   DepthFirstIteratorTest.cpp
   DirectedGraphTest.cpp
+  DynamicAPIntTest.cpp
   EditDistanceTest.cpp
   EnumeratedArrayTest.cpp
   EquivalenceClassesTest.cpp
@@ -44,6 +47,7 @@ add_llvm_unittest(ADTTests
   ImmutableMapTest.cpp
   ImmutableSetTest.cpp
   IntEqClassesTest.cpp
+  Interleave.cpp
   IntervalMapTest.cpp
   IntervalTreeTest.cpp
   IntrusiveRefCntPtrTest.cpp
@@ -51,7 +55,6 @@ add_llvm_unittest(ADTTests
   LazyAtomicPointerTest.cpp
   MappedIteratorTest.cpp
   MapVectorTest.cpp
-  MoveOnly.cpp
   PackedVectorTest.cpp
   PagedVectorTest.cpp
   PointerEmbeddedIntTest.cpp
@@ -60,10 +63,13 @@ add_llvm_unittest(ADTTests
   PointerUnionTest.cpp
   PostOrderIteratorTest.cpp
   PriorityWorklistTest.cpp
+  RadixTreeTest.cpp
   RangeAdapterTest.cpp
+  RewriteBufferTest.cpp
   SCCIteratorTest.cpp
   STLExtrasTest.cpp
   STLForwardCompatTest.cpp
+  ScopedHashTableTest.cpp
   ScopeExitTest.cpp
   SequenceTest.cpp
   SetOperationsTest.cpp
@@ -72,6 +78,7 @@ add_llvm_unittest(ADTTests
   SmallPtrSetTest.cpp
   SmallSetTest.cpp
   SmallStringTest.cpp
+  SmallVectorExtrasTest.cpp
   SmallVectorTest.cpp
   SparseBitVectorTest.cpp
   SparseMultiSetTest.cpp
@@ -82,7 +89,9 @@ add_llvm_unittest(ADTTests
   StringRefTest.cpp
   StringSetTest.cpp
   StringSwitchTest.cpp
+  StringTableTest.cpp
   TinyPtrVectorTest.cpp
+  TrieRawHashMapTest.cpp
   TwineTest.cpp
   TypeSwitchTest.cpp
   TypeTraitsTest.cpp

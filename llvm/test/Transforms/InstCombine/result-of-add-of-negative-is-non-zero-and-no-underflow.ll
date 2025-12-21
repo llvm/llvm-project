@@ -49,7 +49,7 @@ define i1 @t1(i8 %base, i8 %offset) {
 ; CHECK-NEXT:    [[ADJUSTED:%.*]] = add i8 [[BASE]], [[OFFSET:%.*]]
 ; CHECK-NEXT:    call void @use8(i8 [[ADJUSTED]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i8 0, [[BASE]]
-; CHECK-NEXT:    [[R:%.*]] = icmp ult i8 [[TMP1]], [[OFFSET]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ugt i8 [[OFFSET]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %cmp = icmp slt i8 %base, 0
@@ -70,7 +70,7 @@ define i1 @t1_logical(i8 %base, i8 %offset) {
 ; CHECK-NEXT:    [[ADJUSTED:%.*]] = add i8 [[BASE]], [[OFFSET:%.*]]
 ; CHECK-NEXT:    call void @use8(i8 [[ADJUSTED]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i8 0, [[BASE]]
-; CHECK-NEXT:    [[R:%.*]] = icmp ult i8 [[TMP1]], [[OFFSET]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ugt i8 [[OFFSET]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %cmp = icmp slt i8 %base, 0
@@ -92,7 +92,7 @@ define i1 @t2(i8 %base, i8 %offset) {
 ; CHECK-NEXT:    [[ADJUSTED:%.*]] = add i8 [[BASE:%.*]], [[OFFSET]]
 ; CHECK-NEXT:    call void @use8(i8 [[ADJUSTED]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i8 0, [[OFFSET]]
-; CHECK-NEXT:    [[R:%.*]] = icmp ult i8 [[TMP1]], [[BASE]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ugt i8 [[BASE]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %cmp = icmp slt i8 %offset, 0
@@ -113,7 +113,7 @@ define i1 @t2_logical(i8 %base, i8 %offset) {
 ; CHECK-NEXT:    [[ADJUSTED:%.*]] = add i8 [[BASE:%.*]], [[OFFSET]]
 ; CHECK-NEXT:    call void @use8(i8 [[ADJUSTED]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i8 0, [[OFFSET]]
-; CHECK-NEXT:    [[R:%.*]] = icmp ult i8 [[TMP1]], [[BASE]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ugt i8 [[BASE]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %cmp = icmp slt i8 %offset, 0
@@ -137,7 +137,7 @@ define i1 @t3_oneuse0(i8 %base, i8 %offset) {
 ; CHECK-NEXT:    [[NOT_NULL:%.*]] = icmp ne i8 [[ADJUSTED]], 0
 ; CHECK-NEXT:    call void @use1(i1 [[NOT_NULL]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i8 0, [[BASE]]
-; CHECK-NEXT:    [[R:%.*]] = icmp ult i8 [[TMP1]], [[OFFSET]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ugt i8 [[OFFSET]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %cmp = icmp slt i8 %base, 0
@@ -161,7 +161,7 @@ define i1 @t3_oneuse0_logical(i8 %base, i8 %offset) {
 ; CHECK-NEXT:    [[NOT_NULL:%.*]] = icmp ne i8 [[ADJUSTED]], 0
 ; CHECK-NEXT:    call void @use1(i1 [[NOT_NULL]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i8 0, [[BASE]]
-; CHECK-NEXT:    [[R:%.*]] = icmp ult i8 [[TMP1]], [[OFFSET]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ugt i8 [[OFFSET]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %cmp = icmp slt i8 %base, 0
@@ -184,7 +184,7 @@ define i1 @t4_oneuse1(i8 %base, i8 %offset) {
 ; CHECK-NEXT:    [[NO_UNDERFLOW:%.*]] = icmp ult i8 [[ADJUSTED]], [[BASE]]
 ; CHECK-NEXT:    call void @use1(i1 [[NO_UNDERFLOW]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i8 0, [[BASE]]
-; CHECK-NEXT:    [[R:%.*]] = icmp ult i8 [[TMP1]], [[OFFSET]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ugt i8 [[OFFSET]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %cmp = icmp slt i8 %base, 0
@@ -208,7 +208,7 @@ define i1 @t4_oneuse1_logical(i8 %base, i8 %offset) {
 ; CHECK-NEXT:    [[NO_UNDERFLOW:%.*]] = icmp ult i8 [[ADJUSTED]], [[BASE]]
 ; CHECK-NEXT:    call void @use1(i1 [[NO_UNDERFLOW]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i8 0, [[BASE]]
-; CHECK-NEXT:    [[R:%.*]] = icmp ult i8 [[TMP1]], [[OFFSET]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ugt i8 [[OFFSET]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %cmp = icmp slt i8 %base, 0
@@ -281,7 +281,7 @@ define i1 @t6_commutativity0(i8 %base, i8 %offset) {
 ; CHECK-NEXT:    [[ADJUSTED:%.*]] = add i8 [[BASE]], [[OFFSET:%.*]]
 ; CHECK-NEXT:    call void @use8(i8 [[ADJUSTED]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i8 0, [[BASE]]
-; CHECK-NEXT:    [[R:%.*]] = icmp ult i8 [[TMP1]], [[OFFSET]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ugt i8 [[OFFSET]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %cmp = icmp slt i8 %base, 0
@@ -302,7 +302,7 @@ define i1 @t6_commutativity0_logical(i8 %base, i8 %offset) {
 ; CHECK-NEXT:    [[ADJUSTED:%.*]] = add i8 [[BASE]], [[OFFSET:%.*]]
 ; CHECK-NEXT:    call void @use8(i8 [[ADJUSTED]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i8 0, [[BASE]]
-; CHECK-NEXT:    [[R:%.*]] = icmp ult i8 [[TMP1]], [[OFFSET]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ugt i8 [[OFFSET]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %cmp = icmp slt i8 %base, 0
@@ -322,7 +322,7 @@ define i1 @t7_commutativity1(i8 %base, i8 %offset) {
 ; CHECK-NEXT:    [[ADJUSTED:%.*]] = add i8 [[BASE]], [[OFFSET:%.*]]
 ; CHECK-NEXT:    call void @use8(i8 [[ADJUSTED]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i8 0, [[BASE]]
-; CHECK-NEXT:    [[R:%.*]] = icmp ult i8 [[TMP1]], [[OFFSET]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ugt i8 [[OFFSET]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %cmp = icmp slt i8 %base, 0
@@ -343,7 +343,7 @@ define i1 @t7_commutativity1_logical(i8 %base, i8 %offset) {
 ; CHECK-NEXT:    [[ADJUSTED:%.*]] = add i8 [[BASE]], [[OFFSET:%.*]]
 ; CHECK-NEXT:    call void @use8(i8 [[ADJUSTED]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i8 0, [[BASE]]
-; CHECK-NEXT:    [[R:%.*]] = icmp ult i8 [[TMP1]], [[OFFSET]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ugt i8 [[OFFSET]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %cmp = icmp slt i8 %base, 0
@@ -363,7 +363,7 @@ define i1 @t7_commutativity3(i8 %base, i8 %offset) {
 ; CHECK-NEXT:    [[ADJUSTED:%.*]] = add i8 [[BASE]], [[OFFSET:%.*]]
 ; CHECK-NEXT:    call void @use8(i8 [[ADJUSTED]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i8 0, [[BASE]]
-; CHECK-NEXT:    [[R:%.*]] = icmp ult i8 [[TMP1]], [[OFFSET]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ugt i8 [[OFFSET]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %cmp = icmp slt i8 %base, 0
@@ -384,7 +384,7 @@ define i1 @t7_commutativity3_logical(i8 %base, i8 %offset) {
 ; CHECK-NEXT:    [[ADJUSTED:%.*]] = add i8 [[BASE]], [[OFFSET:%.*]]
 ; CHECK-NEXT:    call void @use8(i8 [[ADJUSTED]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i8 0, [[BASE]]
-; CHECK-NEXT:    [[R:%.*]] = icmp ult i8 [[TMP1]], [[OFFSET]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ugt i8 [[OFFSET]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %cmp = icmp slt i8 %base, 0
@@ -406,7 +406,7 @@ define i1 @t8(i8 %base, i8 %offset) {
 ; CHECK-NEXT:    [[ADJUSTED:%.*]] = add i8 [[BASE]], [[OFFSET:%.*]]
 ; CHECK-NEXT:    call void @use8(i8 [[ADJUSTED]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i8 0, [[BASE]]
-; CHECK-NEXT:    [[R:%.*]] = icmp uge i8 [[TMP1]], [[OFFSET]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ule i8 [[OFFSET]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %cmp = icmp slt i8 %base, 0
@@ -427,7 +427,7 @@ define i1 @t8_logical(i8 %base, i8 %offset) {
 ; CHECK-NEXT:    [[ADJUSTED:%.*]] = add i8 [[BASE]], [[OFFSET:%.*]]
 ; CHECK-NEXT:    call void @use8(i8 [[ADJUSTED]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i8 0, [[BASE]]
-; CHECK-NEXT:    [[R:%.*]] = icmp uge i8 [[TMP1]], [[OFFSET]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ule i8 [[OFFSET]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %cmp = icmp slt i8 %base, 0
@@ -449,7 +449,7 @@ define i1 @t9(i8 %base, i8 %offset) {
 ; CHECK-NEXT:    [[ADJUSTED:%.*]] = add i8 [[BASE]], [[OFFSET:%.*]]
 ; CHECK-NEXT:    call void @use8(i8 [[ADJUSTED]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i8 0, [[BASE]]
-; CHECK-NEXT:    [[R:%.*]] = icmp ult i8 [[TMP1]], [[OFFSET]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ugt i8 [[OFFSET]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %cmp = icmp slt i8 %base, 0
@@ -470,7 +470,7 @@ define i1 @t9_logical(i8 %base, i8 %offset) {
 ; CHECK-NEXT:    [[ADJUSTED:%.*]] = add i8 [[BASE]], [[OFFSET:%.*]]
 ; CHECK-NEXT:    call void @use8(i8 [[ADJUSTED]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i8 0, [[BASE]]
-; CHECK-NEXT:    [[R:%.*]] = icmp ult i8 [[TMP1]], [[OFFSET]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ugt i8 [[OFFSET]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %cmp = icmp slt i8 %base, 0

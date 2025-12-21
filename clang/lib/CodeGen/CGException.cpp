@@ -12,6 +12,7 @@
 
 #include "CGCXXABI.h"
 #include "CGCleanup.h"
+#include "CGDebugInfo.h"
 #include "CGObjCRuntime.h"
 #include "CodeGenFunction.h"
 #include "ConstantEmitter.h"
@@ -21,7 +22,6 @@
 #include "clang/AST/StmtObjC.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/Basic/DiagnosticSema.h"
-#include "clang/Basic/TargetBuiltins.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsWebAssembly.h"
@@ -127,22 +127,25 @@ const EHPersonality
 EHPersonality::GNU_Wasm_CPlusPlus = { "__gxx_wasm_personality_v0", nullptr };
 const EHPersonality EHPersonality::XL_CPlusPlus = {"__xlcxx_personality_v1",
                                                    nullptr};
+const EHPersonality EHPersonality::ZOS_CPlusPlus = {"__zos_cxx_personality_v2",
+                                                    nullptr};
 
 static const EHPersonality &getCPersonality(const TargetInfo &Target,
-                                            const LangOptions &L) {
+                                            const CodeGenOptions &CGOpts) {
   const llvm::Triple &T = Target.getTriple();
   if (T.isWindowsMSVCEnvironment())
     return EHPersonality::MSVC_CxxFrameHandler3;
-  if (L.hasSjLjExceptions())
+  if (CGOpts.hasSjLjExceptions())
     return EHPersonality::GNU_C_SJLJ;
-  if (L.hasDWARFExceptions())
+  if (CGOpts.hasDWARFExceptions())
     return EHPersonality::GNU_C;
-  if (L.hasSEHExceptions())
+  if (CGOpts.hasSEHExceptions())
     return EHPersonality::GNU_C_SEH;
   return EHPersonality::GNU_C;
 }
 
 static const EHPersonality &getObjCPersonality(const TargetInfo &Target,
+                                               const CodeGenOptions &CGOpts,
                                                const LangOptions &L) {
   const llvm::Triple &T = Target.getTriple();
   if (T.isWindowsMSVCEnvironment())
@@ -150,20 +153,22 @@ static const EHPersonality &getObjCPersonality(const TargetInfo &Target,
 
   switch (L.ObjCRuntime.getKind()) {
   case ObjCRuntime::FragileMacOSX:
-    return getCPersonality(Target, L);
+    return getCPersonality(Target, CGOpts);
   case ObjCRuntime::MacOSX:
   case ObjCRuntime::iOS:
   case ObjCRuntime::WatchOS:
     return EHPersonality::NeXT_ObjC;
   case ObjCRuntime::GNUstep:
-    if (L.ObjCRuntime.getVersion() >= VersionTuple(1, 7))
+    if (T.isOSCygMing())
+      return EHPersonality::GNU_CPlusPlus_SEH;
+    else if (L.ObjCRuntime.getVersion() >= VersionTuple(1, 7))
       return EHPersonality::GNUstep_ObjC;
     [[fallthrough]];
   case ObjCRuntime::GCC:
   case ObjCRuntime::ObjFW:
-    if (L.hasSjLjExceptions())
+    if (CGOpts.hasSjLjExceptions())
       return EHPersonality::GNU_ObjC_SJLJ;
-    if (L.hasSEHExceptions())
+    if (CGOpts.hasSEHExceptions())
       return EHPersonality::GNU_ObjC_SEH;
     return EHPersonality::GNU_ObjC;
   }
@@ -171,26 +176,29 @@ static const EHPersonality &getObjCPersonality(const TargetInfo &Target,
 }
 
 static const EHPersonality &getCXXPersonality(const TargetInfo &Target,
-                                              const LangOptions &L) {
+                                              const CodeGenOptions &CGOpts) {
   const llvm::Triple &T = Target.getTriple();
   if (T.isWindowsMSVCEnvironment())
     return EHPersonality::MSVC_CxxFrameHandler3;
   if (T.isOSAIX())
     return EHPersonality::XL_CPlusPlus;
-  if (L.hasSjLjExceptions())
+  if (CGOpts.hasSjLjExceptions())
     return EHPersonality::GNU_CPlusPlus_SJLJ;
-  if (L.hasDWARFExceptions())
+  if (CGOpts.hasDWARFExceptions())
     return EHPersonality::GNU_CPlusPlus;
-  if (L.hasSEHExceptions())
+  if (CGOpts.hasSEHExceptions())
     return EHPersonality::GNU_CPlusPlus_SEH;
-  if (L.hasWasmExceptions())
+  if (CGOpts.hasWasmExceptions())
     return EHPersonality::GNU_Wasm_CPlusPlus;
+  if (T.isOSzOS())
+    return EHPersonality::ZOS_CPlusPlus;
   return EHPersonality::GNU_CPlusPlus;
 }
 
 /// Determines the personality function to use when both C++
 /// and Objective-C exceptions are being caught.
 static const EHPersonality &getObjCXXPersonality(const TargetInfo &Target,
+                                                 const CodeGenOptions &CGOpts,
                                                  const LangOptions &L) {
   if (Target.getTriple().isWindowsMSVCEnvironment())
     return EHPersonality::MSVC_CxxFrameHandler3;
@@ -199,7 +207,7 @@ static const EHPersonality &getObjCXXPersonality(const TargetInfo &Target,
   // In the fragile ABI, just use C++ exception handling and hope
   // they're not doing crazy exception mixing.
   case ObjCRuntime::FragileMacOSX:
-    return getCXXPersonality(Target, L);
+    return getCXXPersonality(Target, CGOpts);
 
   // The ObjC personality defers to the C++ personality for non-ObjC
   // handlers.  Unlike the C++ case, we use the same personality
@@ -207,16 +215,17 @@ static const EHPersonality &getObjCXXPersonality(const TargetInfo &Target,
   case ObjCRuntime::MacOSX:
   case ObjCRuntime::iOS:
   case ObjCRuntime::WatchOS:
-    return getObjCPersonality(Target, L);
+    return getObjCPersonality(Target, CGOpts, L);
 
   case ObjCRuntime::GNUstep:
-    return EHPersonality::GNU_ObjCXX;
+    return Target.getTriple().isOSCygMing() ? EHPersonality::GNU_CPlusPlus_SEH
+                                            : EHPersonality::GNU_ObjCXX;
 
   // The GCC runtime's personality function inherently doesn't support
   // mixed EH.  Use the ObjC personality just to avoid returning null.
   case ObjCRuntime::GCC:
   case ObjCRuntime::ObjFW:
-    return getObjCPersonality(Target, L);
+    return getObjCPersonality(Target, CGOpts, L);
   }
   llvm_unreachable("bad runtime kind");
 }
@@ -230,6 +239,7 @@ static const EHPersonality &getSEHPersonalityMSVC(const llvm::Triple &T) {
 const EHPersonality &EHPersonality::get(CodeGenModule &CGM,
                                         const FunctionDecl *FD) {
   const llvm::Triple &T = CGM.getTarget().getTriple();
+  const CodeGenOptions &CGOpts = CGM.getCodeGenOpts();
   const LangOptions &L = CGM.getLangOpts();
   const TargetInfo &Target = CGM.getTarget();
 
@@ -238,10 +248,10 @@ const EHPersonality &EHPersonality::get(CodeGenModule &CGM,
     return getSEHPersonalityMSVC(T);
 
   if (L.ObjC)
-    return L.CPlusPlus ? getObjCXXPersonality(Target, L)
-                       : getObjCPersonality(Target, L);
-  return L.CPlusPlus ? getCXXPersonality(Target, L)
-                     : getCPersonality(Target, L);
+    return L.CPlusPlus ? getObjCXXPersonality(Target, CGOpts, L)
+                       : getObjCPersonality(Target, CGOpts, L);
+  return L.CPlusPlus ? getCXXPersonality(Target, CGOpts)
+                     : getCPersonality(Target, CGOpts);
 }
 
 const EHPersonality &EHPersonality::get(CodeGenFunction &CGF) {
@@ -263,12 +273,7 @@ static llvm::FunctionCallee getPersonalityFn(CodeGenModule &CGM,
 static llvm::Constant *getOpaquePersonalityFn(CodeGenModule &CGM,
                                         const EHPersonality &Personality) {
   llvm::FunctionCallee Fn = getPersonalityFn(CGM, Personality);
-  llvm::PointerType* Int8PtrTy = llvm::PointerType::get(
-      llvm::Type::getInt8Ty(CGM.getLLVMContext()),
-      CGM.getDataLayout().getProgramAddressSpace());
-
-  return llvm::ConstantExpr::getBitCast(cast<llvm::Constant>(Fn.getCallee()),
-                                        Int8PtrTy);
+  return cast<llvm::Constant>(Fn.getCallee());
 }
 
 /// Check whether a landingpad instruction only uses C++ features.
@@ -282,7 +287,7 @@ static bool LandingPadHasOnlyCXXUses(llvm::LandingPadInst *LPI) {
       if (llvm::GlobalVariable *GV = dyn_cast<llvm::GlobalVariable>(Val))
         // ObjC EH selector entries are always global variables with
         // names starting like this.
-        if (GV->getName().startswith("OBJC_EHTYPE"))
+        if (GV->getName().starts_with("OBJC_EHTYPE"))
           return false;
     } else {
       // Check if any of the filter values have the ObjC prefix.
@@ -293,7 +298,7 @@ static bool LandingPadHasOnlyCXXUses(llvm::LandingPadInst *LPI) {
             cast<llvm::GlobalVariable>((*II)->stripPointerCasts()))
           // ObjC EH selector entries are always global variables with
           // names starting like this.
-          if (GV->getName().startswith("OBJC_EHTYPE"))
+          if (GV->getName().starts_with("OBJC_EHTYPE"))
             return false;
       }
     }
@@ -317,9 +322,9 @@ static bool PersonalityHasOnlyCXXUses(llvm::Constant *Fn) {
     llvm::Function *F = dyn_cast<llvm::Function>(U);
     if (!F) return false;
 
-    for (auto BB = F->begin(), E = F->end(); BB != E; ++BB) {
-      if (BB->isLandingPad())
-        if (!LandingPadHasOnlyCXXUses(BB->getLandingPadInst()))
+    for (llvm::BasicBlock &BB : *F) {
+      if (BB.isLandingPad())
+        if (!LandingPadHasOnlyCXXUses(BB.getLandingPadInst()))
           return false;
     }
   }
@@ -342,7 +347,7 @@ void CodeGenModule::SimplifyPersonality() {
     return;
 
   const EHPersonality &ObjCXX = EHPersonality::get(*this, /*FD=*/nullptr);
-  const EHPersonality &CXX = getCXXPersonality(getTarget(), LangOpts);
+  const EHPersonality &CXX = getCXXPersonality(getTarget(), CodeGenOpts);
   if (&ObjCXX == &CXX)
     return;
 
@@ -395,7 +400,7 @@ namespace {
 void CodeGenFunction::EmitAnyExprToExn(const Expr *e, Address addr) {
   // Make sure the exception object is cleaned up if there's an
   // exception during initialization.
-  pushFullExprCleanup<FreeException>(EHCleanup, addr.getPointer());
+  pushFullExprCleanup<FreeException>(EHCleanup, addr.emitRawPointer(*this));
   EHScopeStack::stable_iterator cleanup = EHStack.stable_begin();
 
   // __cxa_allocate_exception returns a void*;  we need to cast this
@@ -414,8 +419,8 @@ void CodeGenFunction::EmitAnyExprToExn(const Expr *e, Address addr) {
                    /*IsInit*/ true);
 
   // Deactivate the cleanup block.
-  DeactivateCleanupBlock(cleanup,
-                         cast<llvm::Instruction>(typedAddr.getPointer()));
+  DeactivateCleanupBlock(
+      cleanup, cast<llvm::Instruction>(typedAddr.emitRawPointer(*this)));
 }
 
 Address CodeGenFunction::getExceptionSlot() {
@@ -445,7 +450,7 @@ void CodeGenFunction::EmitCXXThrowExpr(const CXXThrowExpr *E,
   // Therefore, we emit a trap which will abort the program, and
   // prompt a warning indicating that a trap will be emitted.
   const llvm::Triple &T = Target.getTriple();
-  if (CGM.getLangOpts().OpenMPIsTargetDevice && (T.isNVPTX() || T.isAMDGCN())) {
+  if (CGM.getLangOpts().OpenMPIsTargetDevice && T.isGPU()) {
     EmitTrapCall(llvm::Intrinsic::trap);
     return;
   }
@@ -498,7 +503,7 @@ void CodeGenFunction::EmitStartEHSpec(const Decl *D) {
     // In Wasm EH we currently treat 'throw()' in the same way as 'noexcept'. In
     // case of throw with types, we ignore it and print a warning for now.
     // TODO Correctly handle exception specification in Wasm EH
-    if (CGM.getLangOpts().hasWasmExceptions()) {
+    if (CGM.getCodeGenOpts().hasWasmExceptions()) {
       if (EST == EST_DynamicNone)
         EHStack.pushTerminate();
       else
@@ -513,8 +518,8 @@ void CodeGenFunction::EmitStartEHSpec(const Decl *D) {
     // throw with types.
     // TODO Correctly handle exception specification in Emscripten EH
     if (getTarget().getCXXABI() == TargetCXXABI::WebAssembly &&
-        CGM.getLangOpts().getExceptionHandling() ==
-            LangOptions::ExceptionHandlingKind::None &&
+        CGM.getCodeGenOpts().getExceptionHandling() ==
+            CodeGenOptions::ExceptionHandlingKind::None &&
         EST == EST_Dynamic)
       CGM.getDiags().Report(D->getLocation(),
                             diag::warn_wasm_dynamic_exception_spec_ignored)
@@ -602,7 +607,7 @@ void CodeGenFunction::EmitEndEHSpec(const Decl *D) {
     // In wasm we currently treat 'throw()' in the same way as 'noexcept'. In
     // case of throw with types, we ignore it and print a warning for now.
     // TODO Correctly handle exception specification in wasm
-    if (CGM.getLangOpts().hasWasmExceptions()) {
+    if (CGM.getCodeGenOpts().hasWasmExceptions()) {
       if (EST == EST_DynamicNone)
         EHStack.popTerminate();
       return;
@@ -622,7 +627,7 @@ void CodeGenFunction::EmitCXXTryStmt(const CXXTryStmt &S) {
   // If we encounter a try statement on in an OpenMP target region offloaded to
   // a GPU, we treat it as a basic block.
   const bool IsTargetDevice =
-      (CGM.getLangOpts().OpenMPIsTargetDevice && (T.isNVPTX() || T.isAMDGCN()));
+      (CGM.getLangOpts().OpenMPIsTargetDevice && T.isGPU());
   if (!IsTargetDevice)
     EnterCXXTryStmt(S);
   EmitStmt(S.getTryBlock());
@@ -935,8 +940,8 @@ llvm::BasicBlock *CodeGenFunction::EmitLandingPad() {
                              filterTypes[0]->getType() : Int8PtrTy,
                            filterTypes.size());
 
-    for (unsigned i = 0, e = filterTypes.size(); i != e; ++i)
-      Filters.push_back(cast<llvm::Constant>(filterTypes[i]));
+    for (llvm::Value *filterType : filterTypes)
+      Filters.push_back(cast<llvm::Constant>(filterType));
     llvm::Constant *FilterArray = llvm::ConstantArray::get(AType, Filters);
     LPadInst->addClause(FilterArray);
 
@@ -1050,7 +1055,8 @@ static void emitWasmCatchPadBlock(CodeGenFunction &CGF,
   CGF.Builder.CreateStore(Exn, CGF.getExceptionSlot());
   llvm::CallInst *Selector = CGF.Builder.CreateCall(GetSelectorFn, CPI);
 
-  llvm::Function *TypeIDFn = CGF.CGM.getIntrinsic(llvm::Intrinsic::eh_typeid_for);
+  llvm::Function *TypeIDFn =
+      CGF.CGM.getIntrinsic(llvm::Intrinsic::eh_typeid_for, {CGF.VoidPtrTy});
 
   // If there's only a single catch-all, branch directly to its handler.
   if (CatchScope.getNumHandlers() == 1 &&
@@ -1135,7 +1141,7 @@ static void emitCatchDispatchBlock(CodeGenFunction &CGF,
 
   // Select the right handler.
   llvm::Function *llvm_eh_typeid_for =
-    CGF.CGM.getIntrinsic(llvm::Intrinsic::eh_typeid_for);
+      CGF.CGM.getIntrinsic(llvm::Intrinsic::eh_typeid_for, {CGF.VoidPtrTy});
   llvm::Type *argTy = llvm_eh_typeid_for->getArg(0)->getType();
   LangAS globAS = CGF.CGM.GetGlobalVarAddressSpace(nullptr);
 
@@ -1153,9 +1159,8 @@ static void emitCatchDispatchBlock(CodeGenFunction &CGF,
     assert(typeValue && "fell into catch-all case!");
     // With opaque ptrs, only the address space can be a mismatch.
     if (typeValue->getType() != argTy)
-      typeValue =
-        CGF.getTargetHooks().performAddrSpaceCast(CGF, typeValue, globAS,
-                                                  LangAS::Default, argTy);
+      typeValue = CGF.getTargetHooks().performAddrSpaceCast(CGF, typeValue,
+                                                            globAS, argTy);
 
     // Figure out the next block.
     bool nextIsEnd;
@@ -1249,11 +1254,12 @@ void CodeGenFunction::ExitCXXTryStmt(const CXXTryStmt &S, bool IsFnTryBlock) {
   llvm::BasicBlock *WasmCatchStartBlock = nullptr;
   if (EHPersonality::get(*this).isWasmPersonality()) {
     auto *CatchSwitch =
-        cast<llvm::CatchSwitchInst>(DispatchBlock->getFirstNonPHI());
+        cast<llvm::CatchSwitchInst>(DispatchBlock->getFirstNonPHIIt());
     WasmCatchStartBlock = CatchSwitch->hasUnwindDest()
                               ? CatchSwitch->getSuccessor(1)
                               : CatchSwitch->getSuccessor(0);
-    auto *CPI = cast<llvm::CatchPadInst>(WasmCatchStartBlock->getFirstNonPHI());
+    auto *CPI =
+        cast<llvm::CatchPadInst>(WasmCatchStartBlock->getFirstNonPHIIt());
     CurrentFuncletPad = CPI;
   }
 
@@ -1832,32 +1838,31 @@ Address CodeGenFunction::recoverAddrOfEscapedLocal(CodeGenFunction &ParentCGF,
                                                    llvm::Value *ParentFP) {
   llvm::CallInst *RecoverCall = nullptr;
   CGBuilderTy Builder(*this, AllocaInsertPt);
-  if (auto *ParentAlloca = dyn_cast<llvm::AllocaInst>(ParentVar.getPointer())) {
+  if (auto *ParentAlloca =
+          dyn_cast_or_null<llvm::AllocaInst>(ParentVar.getBasePointer())) {
     // Mark the variable escaped if nobody else referenced it and compute the
     // localescape index.
     auto InsertPair = ParentCGF.EscapedLocals.insert(
         std::make_pair(ParentAlloca, ParentCGF.EscapedLocals.size()));
     int FrameEscapeIdx = InsertPair.first->second;
-    // call i8* @llvm.localrecover(i8* bitcast(@parentFn), i8* %fp, i32 N)
-    llvm::Function *FrameRecoverFn = llvm::Intrinsic::getDeclaration(
+    // call ptr @llvm.localrecover(ptr @parentFn, ptr %fp, i32 N)
+    llvm::Function *FrameRecoverFn = llvm::Intrinsic::getOrInsertDeclaration(
         &CGM.getModule(), llvm::Intrinsic::localrecover);
-    llvm::Constant *ParentI8Fn =
-        llvm::ConstantExpr::getBitCast(ParentCGF.CurFn, Int8PtrTy);
     RecoverCall = Builder.CreateCall(
-        FrameRecoverFn, {ParentI8Fn, ParentFP,
+        FrameRecoverFn, {ParentCGF.CurFn, ParentFP,
                          llvm::ConstantInt::get(Int32Ty, FrameEscapeIdx)});
 
   } else {
     // If the parent didn't have an alloca, we're doing some nested outlining.
     // Just clone the existing localrecover call, but tweak the FP argument to
     // use our FP value. All other arguments are constants.
-    auto *ParentRecover =
-        cast<llvm::IntrinsicInst>(ParentVar.getPointer()->stripPointerCasts());
+    auto *ParentRecover = cast<llvm::IntrinsicInst>(
+        ParentVar.emitRawPointer(*this)->stripPointerCasts());
     assert(ParentRecover->getIntrinsicID() == llvm::Intrinsic::localrecover &&
            "expected alloca or localrecover in parent LocalDeclMap");
     RecoverCall = cast<llvm::CallInst>(ParentRecover->clone());
     RecoverCall->setArgOperand(1, ParentFP);
-    RecoverCall->insertBefore(AllocaInsertPt);
+    RecoverCall->insertBefore(AllocaInsertPt->getIterator());
   }
 
   // Bitcast the variable, rename it, and insert it in the local decl map.
@@ -1907,9 +1912,7 @@ void CodeGenFunction::EmitCapturedLocals(CodeGenFunction &ParentCGF,
     // since finally funclets recover the parent FP for us.
     llvm::Function *RecoverFPIntrin =
         CGM.getIntrinsic(llvm::Intrinsic::eh_recoverfp);
-    llvm::Constant *ParentI8Fn =
-        llvm::ConstantExpr::getBitCast(ParentCGF.CurFn, Int8PtrTy);
-    ParentFP = Builder.CreateCall(RecoverFPIntrin, {ParentI8Fn, EntryFP});
+    ParentFP = Builder.CreateCall(RecoverFPIntrin, {ParentCGF.CurFn, EntryFP});
 
     // if the parent is a _finally, the passed-in ParentFP is the FP
     // of parent _finally, not Establisher's FP (FP of outermost function).
@@ -1926,8 +1929,9 @@ void CodeGenFunction::EmitCapturedLocals(CodeGenFunction &ParentCGF,
         const VarDecl *D = cast<VarDecl>(I.first);
         if (isa<ImplicitParamDecl>(D) &&
             D->getType() == getContext().VoidPtrTy) {
-          assert(D->getName().startswith("frame_pointer"));
-          FramePtrAddrAlloca = cast<llvm::AllocaInst>(I.second.getPointer());
+          assert(D->getName().starts_with("frame_pointer"));
+          FramePtrAddrAlloca =
+              cast<llvm::AllocaInst>(I.second.getBasePointer());
           break;
         }
       }
@@ -1937,19 +1941,15 @@ void CodeGenFunction::EmitCapturedLocals(CodeGenFunction &ParentCGF,
       int FrameEscapeIdx = InsertPair.first->second;
 
       // an example of a filter's prolog::
-      // %0 = call i8* @llvm.eh.recoverfp(bitcast(@"?fin$0@0@main@@"),..)
-      // %1 = call i8* @llvm.localrecover(bitcast(@"?fin$0@0@main@@"),..)
-      // %2 = bitcast i8* %1 to i8**
-      // %3 = load i8*, i8* *%2, align 8
-      //   ==> %3 is the frame-pointer of outermost host function
-      llvm::Function *FrameRecoverFn = llvm::Intrinsic::getDeclaration(
+      // %0 = call ptr @llvm.eh.recoverfp(@"?fin$0@0@main@@",..)
+      // %1 = call ptr @llvm.localrecover(@"?fin$0@0@main@@",..)
+      // %2 = load ptr, ptr %1, align 8
+      //   ==> %2 is the frame-pointer of outermost host function
+      llvm::Function *FrameRecoverFn = llvm::Intrinsic::getOrInsertDeclaration(
           &CGM.getModule(), llvm::Intrinsic::localrecover);
-      llvm::Constant *ParentI8Fn =
-          llvm::ConstantExpr::getBitCast(ParentCGF.CurFn, Int8PtrTy);
       ParentFP = Builder.CreateCall(
-          FrameRecoverFn, {ParentI8Fn, ParentFP,
+          FrameRecoverFn, {ParentCGF.CurFn, ParentFP,
                            llvm::ConstantInt::get(Int32Ty, FrameEscapeIdx)});
-      ParentFP = Builder.CreateBitCast(ParentFP, CGM.VoidPtrPtrTy);
       ParentFP = Builder.CreateLoad(
           Address(ParentFP, CGM.VoidPtrTy, getPointerAlign()));
     }
@@ -1992,7 +1992,7 @@ void CodeGenFunction::EmitCapturedLocals(CodeGenFunction &ParentCGF,
         LValue ThisFieldLValue =
             EmitLValueForLambdaField(LambdaThisCaptureField);
         if (!LambdaThisCaptureField->getType()->isPointerType()) {
-          CXXThisValue = ThisFieldLValue.getAddress(*this).getPointer();
+          CXXThisValue = ThisFieldLValue.getAddress().emitRawPointer(*this);
         } else {
           CXXThisValue = EmitLoadOfLValue(ThisFieldLValue, SourceLocation())
                              .getScalarVal();
@@ -2041,17 +2041,17 @@ void CodeGenFunction::startOutlinedSEHHelper(CodeGenFunction &ParentCGF,
       Args.push_back(ImplicitParamDecl::Create(
           getContext(), /*DC=*/nullptr, StartLoc,
           &getContext().Idents.get("exception_pointers"),
-          getContext().VoidPtrTy, ImplicitParamDecl::Other));
+          getContext().VoidPtrTy, ImplicitParamKind::Other));
     } else {
       Args.push_back(ImplicitParamDecl::Create(
           getContext(), /*DC=*/nullptr, StartLoc,
           &getContext().Idents.get("abnormal_termination"),
-          getContext().UnsignedCharTy, ImplicitParamDecl::Other));
+          getContext().UnsignedCharTy, ImplicitParamKind::Other));
     }
     Args.push_back(ImplicitParamDecl::Create(
         getContext(), /*DC=*/nullptr, StartLoc,
         &getContext().Idents.get("frame_pointer"), getContext().VoidPtrTy,
-        ImplicitParamDecl::Other));
+        ImplicitParamKind::Other));
   }
 
   QualType RetTy = IsFilter ? getContext().LongTy : getContext().VoidTy;
@@ -2148,7 +2148,7 @@ llvm::Value *CodeGenFunction::EmitSEHExceptionInfo() {
   // Sema should diagnose calling this builtin outside of a filter context, but
   // don't crash if we screw up.
   if (!SEHInfo)
-    return llvm::UndefValue::get(Int8PtrTy);
+    return llvm::PoisonValue::get(Int8PtrTy);
   assert(SEHInfo->getType() == Int8PtrTy);
   return SEHInfo;
 }
@@ -2206,9 +2206,7 @@ void CodeGenFunction::EnterSEHTryStmt(const SEHTryStmt &S) {
   // in place of the RTTI typeinfo global that C++ EH uses.
   llvm::Function *FilterFunc =
       HelperCGF.GenerateSEHFilterFunction(*this, *Except);
-  llvm::Constant *OpaqueFunc =
-      llvm::ConstantExpr::getBitCast(FilterFunc, Int8PtrTy);
-  CatchScope->setHandler(0, OpaqueFunc, createBasicBlock("__except.ret"));
+  CatchScope->setHandler(0, FilterFunc, createBasicBlock("__except.ret"));
 }
 
 void CodeGenFunction::ExitSEHTryStmt(const SEHTryStmt &S) {
@@ -2258,7 +2256,7 @@ void CodeGenFunction::ExitSEHTryStmt(const SEHTryStmt &S) {
   // __except blocks don't get outlined into funclets, so immediately do a
   // catchret.
   llvm::CatchPadInst *CPI =
-      cast<llvm::CatchPadInst>(CatchPadBB->getFirstNonPHI());
+      cast<llvm::CatchPadInst>(CatchPadBB->getFirstNonPHIIt());
   llvm::BasicBlock *ExceptBB = createBasicBlock("__except");
   Builder.CreateCatchRet(CPI, ExceptBB);
   EmitBlock(ExceptBB);

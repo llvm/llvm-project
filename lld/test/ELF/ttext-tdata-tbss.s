@@ -16,8 +16,10 @@
 ## If -Ttext is smaller than the image base (which defaults to 0x200000 for -no-pie),
 ## the headers will still be allocated, but mapped at a higher address,
 ## which may look strange.
-# RUN: ld.lld -Ttext 0x0 -Tdata 0x4000 -Tbss 0x8000 %t.o -o %t2
+# RUN: ld.lld -Ttext 0x0 -Tdata 0x4000 -Tbss 0x8000 %t.o --noinhibit-exec -o %t2 2>&1 | FileCheck %s --check-prefix=LINK1
 # RUN: llvm-readelf -S -l %t2 | FileCheck %s --check-prefix=USER1
+# LINK1:      warning: section '.text' address (0x0) is smaller than image base (0x200000); specify --image-base
+# LINK1-NEXT: warning: section '.data' address (0x4000) is smaller than image base (0x200000); specify --image-base
 # USER1:      .text   PROGBITS 0000000000000000 001000 000001
 # USER1-NEXT: .data   PROGBITS 0000000000004000 002000 000008
 # USER1-NEXT: .bss    NOBITS   0000000000008000 002008 000008
@@ -42,13 +44,13 @@
 # USER2-NEXT: LOAD 0x001000 0x0000000000001000
 
 ## With .text well above 200000 we don't need to change the image base
-# RUN: ld.lld -Ttext 0x201000 %t.o -o %t4
+# RUN: ld.lld -Ttext 0x201000 -z separate-loadable-segments %t.o -o %t4
 # RUN: llvm-readelf -S -l %t4 | FileCheck %s --check-prefix=USER3
-# USER3:     .text   PROGBITS 0000000000201000 001000 000001
-# USER3-NEX: .rodata PROGBITS 0000000000202000 002000 000008
-# USER3-NEX: .aw     PROGBITS 0000000000203000 003000 000008
-# USER3-NEX: .data   PROGBITS 0000000000203008 003008 000008
-# USER3-NEX: .bss    NOBITS   0000000000203010 003010 000008
+# USER3:      .text   PROGBITS 0000000000201000 001000 000001
+# USER3-NEXT: .rodata PROGBITS 0000000000202000 002000 000008
+# USER3-NEXT: .aw     PROGBITS 0000000000203000 003000 000008
+# USER3-NEXT: .data   PROGBITS 0000000000203008 003008 000008
+# USER3-NEXT: .bss    NOBITS   0000000000203010 003010 000008
 # USER3:      Type
 # USER3-NEXT: PHDR 0x000040 0x0000000000200040
 # USER3-NEXT: LOAD 0x000000 0x0000000000200000

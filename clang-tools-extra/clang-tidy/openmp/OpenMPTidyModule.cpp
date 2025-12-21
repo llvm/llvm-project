@@ -1,4 +1,4 @@
-//===--- OpenMPTidyModule.cpp - clang-tidy--------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -14,6 +14,7 @@
 
 namespace clang::tidy {
 namespace openmp {
+namespace {
 
 /// This module is for OpenMP-specific checks.
 class OpenMPModule : public ClangTidyModule {
@@ -26,6 +27,8 @@ public:
   }
 };
 
+} // namespace
+
 // Register the OpenMPTidyModule using this statically initialized variable.
 static ClangTidyModuleRegistry::Add<OpenMPModule>
     X("openmp-module", "Adds OpenMP-specific checks.");
@@ -34,6 +37,6 @@ static ClangTidyModuleRegistry::Add<OpenMPModule>
 
 // This anchor is used to force the linker to link in the generated object file
 // and thus register the OpenMPModule.
-volatile int OpenMPModuleAnchorSource = 0;
+volatile int OpenMPModuleAnchorSource = 0; // NOLINT(misc-use-internal-linkage)
 
 } // namespace clang::tidy

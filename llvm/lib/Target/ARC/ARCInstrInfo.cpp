@@ -44,7 +44,8 @@ enum TSFlagsConstants {
 void ARCInstrInfo::anchor() {}
 
 ARCInstrInfo::ARCInstrInfo(const ARCSubtarget &ST)
-    : ARCGenInstrInfo(ARC::ADJCALLSTACKDOWN, ARC::ADJCALLSTACKUP), RI(ST) {}
+    : ARCGenInstrInfo(ST, RI, ARC::ADJCALLSTACKDOWN, ARC::ADJCALLSTACKUP),
+      RI(ST) {}
 
 static bool isZeroImm(const MachineOperand &Op) {
   return Op.isImm() && Op.getImm() == 0;
@@ -65,7 +66,7 @@ static bool isStore(int Opcode) {
 /// the destination along with the FrameIndex of the loaded stack slot.  If
 /// not, return 0.  This predicate must return 0 if the instruction has
 /// any side effects other than loading from the stack slot.
-unsigned ARCInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
+Register ARCInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
                                            int &FrameIndex) const {
   int Opcode = MI.getOpcode();
   if (isLoad(Opcode)) {
@@ -84,7 +85,7 @@ unsigned ARCInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
 /// the source reg along with the FrameIndex of the loaded stack slot.  If
 /// not, return 0.  This predicate must return 0 if the instruction has
 /// any side effects other than storing to the stack slot.
-unsigned ARCInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
+Register ARCInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
                                           int &FrameIndex) const {
   int Opcode = MI.getOpcode();
   if (isStore(Opcode)) {
@@ -280,8 +281,9 @@ unsigned ARCInstrInfo::removeBranch(MachineBasicBlock &MBB,
 
 void ARCInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                MachineBasicBlock::iterator I,
-                               const DebugLoc &DL, MCRegister DestReg,
-                               MCRegister SrcReg, bool KillSrc) const {
+                               const DebugLoc &DL, Register DestReg,
+                               Register SrcReg, bool KillSrc,
+                               bool RenamableDest, bool RenamableSrc) const {
   assert(ARC::GPR32RegClass.contains(SrcReg) &&
          "Only GPR32 src copy supported.");
   assert(ARC::GPR32RegClass.contains(DestReg) &&
@@ -292,8 +294,8 @@ void ARCInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
 
 void ARCInstrInfo::storeRegToStackSlot(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator I, Register SrcReg,
-    bool IsKill, int FrameIndex, const TargetRegisterClass *RC,
-    const TargetRegisterInfo *TRI, Register VReg) const {
+    bool IsKill, int FrameIndex, const TargetRegisterClass *RC, Register VReg,
+    MachineInstr::MIFlag Flags) const {
   DebugLoc DL = MBB.findDebugLoc(I);
   MachineFunction &MF = *MBB.getParent();
   MachineFrameInfo &MFI = MF.getFrameInfo();
@@ -304,11 +306,11 @@ void ARCInstrInfo::storeRegToStackSlot(
       MFI.getObjectAlign(FrameIndex));
 
   assert(MMO && "Couldn't get MachineMemOperand for store to stack.");
-  assert(TRI->getSpillSize(*RC) == 4 &&
+  assert(TRI.getSpillSize(*RC) == 4 &&
          "Only support 4-byte stores to stack now.");
   assert(ARC::GPR32RegClass.hasSubClassEq(RC) &&
          "Only support GPR32 stores to stack now.");
-  LLVM_DEBUG(dbgs() << "Created store reg=" << printReg(SrcReg, TRI)
+  LLVM_DEBUG(dbgs() << "Created store reg=" << printReg(SrcReg, &TRI)
                     << " to FrameIndex=" << FrameIndex << "\n");
   BuildMI(MBB, I, DL, get(ARC::ST_rs9))
       .addReg(SrcReg, getKillRegState(IsKill))
@@ -321,8 +323,8 @@ void ARCInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
                                         MachineBasicBlock::iterator I,
                                         Register DestReg, int FrameIndex,
                                         const TargetRegisterClass *RC,
-                                        const TargetRegisterInfo *TRI,
-                                        Register VReg) const {
+                                        Register VReg,
+                                        MachineInstr::MIFlag Flags) const {
   DebugLoc DL = MBB.findDebugLoc(I);
   MachineFunction &MF = *MBB.getParent();
   MachineFrameInfo &MFI = MF.getFrameInfo();
@@ -332,11 +334,11 @@ void ARCInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
       MFI.getObjectAlign(FrameIndex));
 
   assert(MMO && "Couldn't get MachineMemOperand for store to stack.");
-  assert(TRI->getSpillSize(*RC) == 4 &&
+  assert(TRI.getSpillSize(*RC) == 4 &&
          "Only support 4-byte loads from stack now.");
   assert(ARC::GPR32RegClass.hasSubClassEq(RC) &&
          "Only support GPR32 stores to stack now.");
-  LLVM_DEBUG(dbgs() << "Created load reg=" << printReg(DestReg, TRI)
+  LLVM_DEBUG(dbgs() << "Created load reg=" << printReg(DestReg, &TRI)
                     << " from FrameIndex=" << FrameIndex << "\n");
   BuildMI(MBB, I, DL, get(ARC::LD_rs9))
       .addReg(DestReg, RegState::Define)

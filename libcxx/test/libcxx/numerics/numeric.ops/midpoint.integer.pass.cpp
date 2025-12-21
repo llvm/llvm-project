@@ -22,14 +22,14 @@
 
 //  Users are not supposed to provide template argument lists for
 //  functions in the standard library (there's an exception for min and max)
-//  However, libc++ protects against this for pointers, so we check to make
-//  sure that our protection is working here.
-//  In some cases midpoint<int>(0,0) might get deduced as the pointer overload.
+//  However, libc++ protects against this for pointers. The use of T(0)
+//  in the test cases resolves potential ambiguity in template argument deduction
+//  for the std::midpoint function.
 
 template <typename T>
 void test()
 {
-    ASSERT_SAME_TYPE(T, decltype(std::midpoint<T>(0, 0)));
+  ASSERT_SAME_TYPE(T, decltype(std::midpoint<T>(T(0), T(0))));
 }
 
 int main(int, char**)

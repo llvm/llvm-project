@@ -45,7 +45,8 @@ int foo(int n) {
   {
   }
 
-  // TCHECK:  define weak_odr protected void @__omp_offloading_{{.+}}()
+  // TCHECK:  define weak_odr protected void @__omp_offloading_{{.+}}(ptr {{[^,]+}})
+  // TCHECK:  [[DYN_PTR:%.+]] = alloca ptr
   // TCHECK:  [[A:%.+]] = alloca i{{[0-9]+}},
   // TCHECK-NOT: store {{.+}}, {{.+}} [[A]],
   // TCHECK:  ret void
@@ -55,7 +56,8 @@ int foo(int n) {
     a = 1;
   }
 
-  // TCHECK:  define weak_odr protected void @__omp_offloading_{{.+}}()
+  // TCHECK:  define weak_odr protected void @__omp_offloading_{{.+}}(ptr {{[^,]+}})
+  // TCHECK:  [[DYN_PTR:%.+]] = alloca ptr
   // TCHECK:  [[A:%.+]] = alloca i{{[0-9]+}},
   // TCHECK:  store i{{[0-9]+}} 1, ptr [[A]],
   // TCHECK:  ret void
@@ -66,7 +68,8 @@ int foo(int n) {
     aa = 1;
   }
 
-  // TCHECK:  define weak_odr protected void @__omp_offloading_{{.+}}()
+  // TCHECK:  define weak_odr protected void @__omp_offloading_{{.+}}(ptr {{[^,]+}})
+  // TCHECK:   [[DYN_PTR:%.+]] = alloca ptr
   // TCHECK:  [[A:%.+]] = alloca i{{[0-9]+}},
   // TCHECK:  [[A2:%.+]] = alloca i{{[0-9]+}},
   // TCHECK:  store i{{[0-9]+}} 1, ptr [[A]],
@@ -85,7 +88,8 @@ int foo(int n) {
   }
   // make sure that private variables are generated in all cases and that we use those instances for operations inside the
   // target region
-  // TCHECK:  define weak_odr protected void @__omp_offloading_{{.+}}(i{{[0-9]+}} noundef [[VLA:%.+]], i{{[0-9]+}} noundef [[VLA1:%.+]], i{{[0-9]+}} noundef [[VLA3:%.+]])
+  // TCHECK:  define weak_odr protected void @__omp_offloading_{{.+}}(ptr {{[^,]+}}, i{{[0-9]+}} noundef [[VLA:%.+]], i{{[0-9]+}} noundef [[VLA1:%.+]], i{{[0-9]+}} noundef [[VLA3:%.+]])
+  // TCHECK:  [[DYN_PTR:%.+]] = alloca ptr
   // TCHECK:  [[VLA_ADDR:%.+]] = alloca i{{[0-9]+}},
   // TCHECK:  [[VLA_ADDR2:%.+]] = alloca i{{[0-9]+}},
   // TCHECK:  [[VLA_ADDR4:%.+]] = alloca i{{[0-9]+}},
@@ -129,11 +133,11 @@ int foo(int n) {
   // TCHECK:  store double 1.0{{.*}}, ptr [[CN_GEP_3]],
 
   // d.X = 1
-  // [[X_FIELD:%.+]] = getelementptr inbounds [[TT]] ptr [[D]], i{{[0-9]+}} 0, i{{[0-9]+}} 0
+  // [[X_FIELD:%.+]] = getelementptr inbounds nuw [[TT]] ptr [[D]], i{{[0-9]+}} 0, i{{[0-9]+}} 0
   // store i{{[0-9]+}} 1, ptr [[X_FIELD]],
 
   // d.Y = 1
-  // [[Y_FIELD:%.+]] = getelementptr inbounds [[TT]] ptr [[D]], i{{[0-9]+}} 0, i{{[0-9]+}} 1
+  // [[Y_FIELD:%.+]] = getelementptr inbounds nuw [[TT]] ptr [[D]], i{{[0-9]+}} 0, i{{[0-9]+}} 1
   // store i{{[0-9]+}} 1, ptr [[Y_FIELD]],
 
   // finish
@@ -179,7 +183,8 @@ int fstatic(int n) {
   return a;
 }
 
-// TCHECK: define weak_odr protected void @__omp_offloading_{{.+}}()
+// TCHECK: define weak_odr protected void @__omp_offloading_{{.+}}(ptr {{[^,]+}})
+// TCHECK:  [[DYN_PTR:%.+]] = alloca ptr
 // TCHECK:  [[A:%.+]] = alloca i{{[0-9]+}},
 // TCHECK:  [[A2:%.+]] = alloca i{{[0-9]+}},
 // TCHECK:  [[A3:%.+]] = alloca i{{[0-9]+}},
@@ -207,7 +212,8 @@ struct S1 {
     return c[1][1] + (int)b;
   }
 
-  // TCHECK: define weak_odr protected void @__omp_offloading_{{.+}}(ptr noundef [[TH:%.+]], i{{[0-9]+}} noundef [[VLA:%.+]], i{{[0-9]+}} noundef [[VLA1:%.+]])
+  // TCHECK: define weak_odr protected void @__omp_offloading_{{.+}}(ptr {{[^,]+}}, ptr noundef [[TH:%.+]], i{{[0-9]+}} noundef [[VLA:%.+]], i{{[0-9]+}} noundef [[VLA1:%.+]])
+  // TCHECK:  [[DYN_PTR:%.+]] = alloca ptr
   // TCHECK: [[TH_ADDR:%.+]] = alloca ptr,
   // TCHECK: [[VLA_ADDR:%.+]] = alloca i{{[0-9]+}},
   // TCHECK: [[VLA_ADDR2:%.+]] = alloca i{{[0-9]+}},
@@ -228,11 +234,11 @@ struct S1 {
   // TCHECK: [[B_VAL:%.+]] = load i{{[0-9]+}}, ptr [[B]],
   // TCHECK: [[B_CONV:%.+]] = sitofp i{{[0-9]+}} [[B_VAL]] to double
   // TCHECK: [[NEW_A_VAL:%.+]] = fadd double [[B_CONV]], 1.5{{.+}}+00
-  // TCHECK: [[A_FIELD:%.+]] = getelementptr inbounds [[S1]], ptr [[TH_ADDR_REF]], i{{[0-9]+}} 0, i{{[0-9]+}} 0
+  // TCHECK: [[A_FIELD:%.+]] = getelementptr inbounds nuw [[S1]], ptr [[TH_ADDR_REF]], i{{[0-9]+}} 0, i{{[0-9]+}} 0
   // TCHECK: store double [[NEW_A_VAL]], ptr [[A_FIELD]],
 
   // c[1][1] = ++a;
-  // TCHECK: [[A_FIELD4:%.+]] = getelementptr inbounds [[S1]], ptr [[TH_ADDR_REF]], i{{[0-9]+}} 0, i{{[0-9]+}} 0
+  // TCHECK: [[A_FIELD4:%.+]] = getelementptr inbounds nuw [[S1]], ptr [[TH_ADDR_REF]], i{{[0-9]+}} 0, i{{[0-9]+}} 0
   // TCHECK: [[A_FIELD4_VAL:%.+]] = load double, ptr [[A_FIELD4]],
   // TCHECK: [[A_FIELD_INC:%.+]] = fadd double [[A_FIELD4_VAL]], 1.0{{.+}}+00
   // TCHECK: store double [[A_FIELD_INC]], ptr [[A_FIELD4]],
@@ -261,7 +267,8 @@ int bar(int n){
 }
 
 // template
-// TCHECK: define weak_odr protected void @__omp_offloading_{{.+}}()
+// TCHECK: define weak_odr protected void @__omp_offloading_{{.+}}(ptr {{[^,]+}})
+// TCHECK: [[DYN_PTR:%.+]] = alloca ptr
 // TCHECK: [[A:%.+]] = alloca i{{[0-9]+}},
 // TCHECK: [[A2:%.+]] = alloca i{{[0-9]+}},
 // TCHECK: [[B:%.+]] = alloca [10 x i{{[0-9]+}}],

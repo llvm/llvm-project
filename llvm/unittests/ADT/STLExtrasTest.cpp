@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -14,16 +15,21 @@
 #include <array>
 #include <climits>
 #include <cstddef>
+#include <functional>
 #include <initializer_list>
+#include <iterator>
 #include <list>
 #include <tuple>
 #include <type_traits>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
 using namespace llvm;
 
 using testing::ElementsAre;
+using testing::ElementsAreArray;
+using testing::UnorderedElementsAre;
 
 namespace {
 
@@ -54,7 +60,7 @@ TEST(STLExtrasTest, EnumerateLValue) {
   // Test that a simple LValue can be enumerated and gives correct results with
   // multiple types, including the empty container.
   std::vector<char> foo = {'a', 'b', 'c'};
-  typedef std::pair<std::size_t, char> CharPairType;
+  using CharPairType = std::pair<std::size_t, char>;
   std::vector<CharPairType> CharResults;
 
   for (auto [index, value] : llvm::enumerate(foo)) {
@@ -66,7 +72,7 @@ TEST(STLExtrasTest, EnumerateLValue) {
                           CharPairType(2u, 'c')));
 
   // Test a const range of a different type.
-  typedef std::pair<std::size_t, int> IntPairType;
+  using IntPairType = std::pair<std::size_t, int>;
   std::vector<IntPairType> IntResults;
   const std::vector<int> bar = {1, 2, 3};
   for (auto [index, value] : llvm::enumerate(bar)) {
@@ -105,7 +111,7 @@ TEST(STLExtrasTest, EnumerateModifyLValue) {
 
 TEST(STLExtrasTest, EnumerateRValueRef) {
   // Test that an rvalue can be enumerated.
-  typedef std::pair<std::size_t, int> PairType;
+  using PairType = std::pair<std::size_t, int>;
   std::vector<PairType> Results;
 
   auto Enumerator = llvm::enumerate(std::vector<int>{1, 2, 3});
@@ -132,7 +138,7 @@ TEST(STLExtrasTest, EnumerateModifyRValue) {
   // Test that when enumerating an rvalue, modification still works (even if
   // this isn't terribly useful, it at least shows that we haven't snuck an
   // extra const in there somewhere.
-  typedef std::pair<std::size_t, char> PairType;
+  using PairType = std::pair<std::size_t, char>;
   std::vector<PairType> Results;
 
   for (auto X : llvm::enumerate(std::vector<char>{'1', '2', '3'})) {
@@ -395,6 +401,8 @@ struct some_struct {
   std::string swap_val;
 };
 
+struct derives_from_some_struct : some_struct {};
+
 std::vector<int>::const_iterator begin(const some_struct &s) {
   return s.data.begin();
 }
@@ -403,12 +411,38 @@ std::vector<int>::const_iterator end(const some_struct &s) {
   return s.data.end();
 }
 
+std::vector<int>::const_reverse_iterator rbegin(const some_struct &s) {
+  return s.data.rbegin();
+}
+
+std::vector<int>::const_reverse_iterator rend(const some_struct &s) {
+  return s.data.rend();
+}
+
 void swap(some_struct &lhs, some_struct &rhs) {
   // make swap visible as non-adl swap would even seem to
   // work with std::swap which defaults to moving
   lhs.swap_val = "lhs";
   rhs.swap_val = "rhs";
 }
+
+struct List {
+  std::list<int> data;
+};
+
+std::list<int>::const_iterator begin(const List &list) {
+  return list.data.begin();
+}
+std::list<int>::const_iterator end(const List &list) { return list.data.end(); }
+
+struct Pairs {
+  std::vector<std::pair<std::string, int>> data;
+  using const_iterator =
+      std::vector<std::pair<std::string, int>>::const_iterator;
+};
+
+Pairs::const_iterator begin(const Pairs &p) { return p.data.begin(); }
+Pairs::const_iterator end(const Pairs &p) { return p.data.end(); }
 
 struct requires_move {};
 int *begin(requires_move &&) { return nullptr; }
@@ -471,6 +505,15 @@ TEST(STLExtrasTest, ToVector) {
   }
 }
 
+TEST(STLExtrasTest, AllTypesEqual) {
+  static_assert(all_types_equal_v<>);
+  static_assert(all_types_equal_v<int>);
+  static_assert(all_types_equal_v<int, int, int>);
+
+  static_assert(!all_types_equal_v<int, int, unsigned int>);
+  static_assert(!all_types_equal_v<int, int, float>);
+}
+
 TEST(STLExtrasTest, ConcatRange) {
   std::vector<int> Expected = {1, 2, 3, 4, 5, 6, 7, 8};
   std::vector<int> Test;
@@ -491,6 +534,99 @@ TEST(STLExtrasTest, ConcatRange) {
   for (int &i : concat<int>(std::vector<int>(V1234), L56, std::move(SV78)))
     Test.push_back(i);
   EXPECT_EQ(Expected, Test);
+}
+
+TEST(STLExtrasTest, ConcatRangeADL) {
+  // Make sure that we use the `begin`/`end` functions from `some_namespace`,
+  // using ADL.
+  some_namespace::some_struct S0;
+  S0.data = {1, 2};
+  some_namespace::some_struct S1;
+  S1.data = {3, 4};
+  EXPECT_THAT(concat<const int>(S0, S1), ElementsAre(1, 2, 3, 4));
+}
+
+TEST(STLExtrasTest, ConcatRangePtrToSameClass) {
+  some_namespace::some_struct S0{};
+  some_namespace::some_struct S1{};
+  SmallVector<some_namespace::some_struct *> V0{&S0};
+  SmallVector<some_namespace::some_struct *> V1{&S1, &S1};
+
+  // Dereferencing all iterators yields `some_namespace::some_struct *&`; no
+  // conversion takes place, `reference_type` is
+  // `some_namespace::some_struct *&`.
+  auto C = concat<some_namespace::some_struct *>(V0, V1);
+  static_assert(
+      std::is_same_v<decltype(*C.begin()), some_namespace::some_struct *&>);
+  EXPECT_THAT(C, ElementsAre(&S0, &S1, &S1));
+  // `reference_type` should still allow container modification.
+  for (auto &i : C)
+    if (i == &S0)
+      i = nullptr;
+  EXPECT_THAT(C, ElementsAre(nullptr, &S1, &S1));
+}
+
+TEST(STLExtrasTest, ConcatRangePtrToDerivedClass) {
+  some_namespace::some_struct S0{};
+  some_namespace::derives_from_some_struct S1{};
+  SmallVector<some_namespace::some_struct *> V0{&S0};
+  SmallVector<some_namespace::derives_from_some_struct *> V1{&S1, &S1};
+
+  // Dereferencing all iterators yields different (but convertible types);
+  // conversion takes place, `reference_type` is
+  // `some_namespace::some_struct *`.
+  auto C = concat<some_namespace::some_struct *>(V0, V1);
+  static_assert(
+      std::is_same_v<decltype(*C.begin()), some_namespace::some_struct *>);
+  EXPECT_THAT(C,
+              ElementsAre(&S0, static_cast<some_namespace::some_struct *>(&S1),
+                          static_cast<some_namespace::some_struct *>(&S1)));
+}
+
+TEST(STLExtrasTest, MakeFirstSecondRangeADL) {
+  // Make sure that we use the `begin`/`end` functions from `some_namespace`,
+  // using ADL.
+  some_namespace::Pairs Pairs;
+  Pairs.data = {{"foo", 1}, {"bar", 2}};
+  EXPECT_THAT(make_first_range(Pairs), ElementsAre("foo", "bar"));
+  EXPECT_THAT(make_second_range(Pairs), ElementsAre(1, 2));
+}
+
+template <typename T> struct Iterator {
+  int i = 0;
+  T operator*() const { return i; }
+  Iterator &operator++() {
+    ++i;
+    return *this;
+  }
+  bool operator==(Iterator RHS) const { return i == RHS.i; }
+};
+
+template <typename T> struct RangeWithValueType {
+  int i;
+  RangeWithValueType(int i) : i(i) {}
+  Iterator<T> begin() { return Iterator<T>{0}; }
+  Iterator<T> end() { return Iterator<T>{i}; }
+};
+
+TEST(STLExtrasTest, ValueReturn) {
+  RangeWithValueType<int> R(1);
+  auto C = concat<int>(R, R);
+  auto I = C.begin();
+  ASSERT_NE(I, C.end());
+  static_assert(std::is_same_v<decltype((*I)), int>);
+  auto V = *I;
+  ASSERT_EQ(V, 0);
+}
+
+TEST(STLExtrasTest, ReferenceReturn) {
+  RangeWithValueType<const int&> R(1);
+  auto C = concat<const int>(R, R);
+  auto I = C.begin();
+  ASSERT_NE(I, C.end());
+  static_assert(std::is_same_v<decltype((*I)), const int &>);
+  auto V = *I;
+  ASSERT_EQ(V, 0);
 }
 
 TEST(STLExtrasTest, PartitionAdaptor) {
@@ -541,12 +677,73 @@ TEST(STLExtrasTest, AppendRange) {
   EXPECT_THAT(Str, ElementsAre('a', 'b', 'c', '\0', 'd', 'e', 'f', '\0'));
 }
 
+TEST(STLExtrasTest, AppendValues) {
+  std::vector<int> Vals = {1, 2};
+  append_values(Vals, 3);
+  EXPECT_THAT(Vals, ElementsAre(1, 2, 3));
+
+  append_values(Vals, 4, 5);
+  EXPECT_THAT(Vals, ElementsAre(1, 2, 3, 4, 5));
+
+  std::vector<StringRef> Strs;
+  std::string A = "A";
+  std::string B = "B";
+  std::string C = "C";
+  append_values(Strs, A, B);
+  EXPECT_THAT(Strs, ElementsAre(A, B));
+  append_values(Strs, C);
+  EXPECT_THAT(Strs, ElementsAre(A, B, C));
+
+  std::unordered_set<int> Set;
+  append_values(Set, 1, 2);
+  EXPECT_THAT(Set, UnorderedElementsAre(1, 2));
+  append_values(Set, 3, 1);
+  EXPECT_THAT(Set, UnorderedElementsAre(1, 2, 3));
+}
+
+TEST(STLExtrasTest, AppendValuesReserve) {
+  // A vector wrapper that tracks reserve() calls.
+  struct TrackedVector : std::vector<int> {
+    using std::vector<int>::vector;
+    size_t LastReservedSize = 0;
+    unsigned ReserveCallCount = 0;
+
+    void reserve(size_t N) {
+      LastReservedSize = N;
+      ++ReserveCallCount;
+      std::vector<int>::reserve(N);
+    }
+  };
+
+  // When empty, reserve should be called.
+  TrackedVector Empty;
+  append_values(Empty, 1, 2, 3);
+  EXPECT_EQ(Empty.ReserveCallCount, 1u);
+  EXPECT_EQ(Empty.LastReservedSize, 3u);
+  EXPECT_THAT(Empty, ElementsAre(1, 2, 3));
+
+  // Appending more values to a now non-empty container should still not
+  // reserve.
+  append_values(Empty, 4, 5);
+  EXPECT_EQ(Empty.ReserveCallCount, 1u);
+  EXPECT_THAT(Empty, ElementsAre(1, 2, 3, 4, 5));
+
+  // When non-empty, reserve should NOT be called to avoid preventing
+  // exponential growth.
+  TrackedVector NonEmpty = {1, 2};
+  append_values(NonEmpty, 3, 4);
+  EXPECT_EQ(NonEmpty.ReserveCallCount, 0u);
+  EXPECT_THAT(NonEmpty, ElementsAre(1, 2, 3, 4));
+}
+
 TEST(STLExtrasTest, ADLTest) {
   some_namespace::some_struct s{{1, 2, 3, 4, 5}, ""};
   some_namespace::some_struct s2{{2, 4, 6, 8, 10}, ""};
 
   EXPECT_EQ(*adl_begin(s), 1);
   EXPECT_EQ(*(adl_end(s) - 1), 5);
+  EXPECT_EQ(*adl_rbegin(s), 5);
+  EXPECT_EQ(*(adl_rend(s) - 1), 1);
 
   adl_swap(s, s2);
   EXPECT_EQ(s.swap_val, "lhs");
@@ -612,48 +809,42 @@ TEST(STLExtrasTest, DropBeginTest) {
   SmallVector<int, 5> vec{0, 1, 2, 3, 4};
 
   for (int n = 0; n < 5; ++n) {
-    int i = n;
-    for (auto &v : drop_begin(vec, n)) {
-      EXPECT_EQ(v, i);
-      i += 1;
-    }
-    EXPECT_EQ(i, 5);
+    EXPECT_THAT(drop_begin(vec, n),
+                ElementsAreArray(ArrayRef(&vec[n], vec.size() - n)));
   }
 }
 
 TEST(STLExtrasTest, DropBeginDefaultTest) {
   SmallVector<int, 5> vec{0, 1, 2, 3, 4};
 
-  int i = 1;
-  for (auto &v : drop_begin(vec)) {
-    EXPECT_EQ(v, i);
-    i += 1;
-  }
-  EXPECT_EQ(i, 5);
+  EXPECT_THAT(drop_begin(vec), ElementsAre(1, 2, 3, 4));
 }
 
 TEST(STLExtrasTest, DropEndTest) {
   SmallVector<int, 5> vec{0, 1, 2, 3, 4};
 
   for (int n = 0; n < 5; ++n) {
-    int i = 0;
-    for (auto &v : drop_end(vec, n)) {
-      EXPECT_EQ(v, i);
-      i += 1;
-    }
-    EXPECT_EQ(i, 5 - n);
+    EXPECT_THAT(drop_end(vec, n),
+                ElementsAreArray(ArrayRef(vec.data(), vec.size() - n)));
   }
 }
 
 TEST(STLExtrasTest, DropEndDefaultTest) {
   SmallVector<int, 5> vec{0, 1, 2, 3, 4};
 
-  int i = 0;
-  for (auto &v : drop_end(vec)) {
-    EXPECT_EQ(v, i);
-    i += 1;
-  }
-  EXPECT_EQ(i, 4);
+  EXPECT_THAT(drop_end(vec), ElementsAre(0, 1, 2, 3));
+}
+
+TEST(STLExtrasTest, MapRangeTest) {
+  SmallVector<int, 5> Vec{0, 1, 2};
+  EXPECT_THAT(map_range(Vec, [](int V) { return V + 1; }),
+              ElementsAre(1, 2, 3));
+
+  // Make sure that we use the `begin`/`end` functions
+  // from `some_namespace`, using ADL.
+  some_namespace::some_struct S;
+  S.data = {3, 4, 5};
+  EXPECT_THAT(map_range(S, [](int V) { return V * 2; }), ElementsAre(6, 8, 10));
 }
 
 TEST(STLExtrasTest, EarlyIncrementTest) {
@@ -693,7 +884,7 @@ TEST(STLExtrasTest, EarlyIncrementTest) {
 #endif
 
   // Inserting shouldn't break anything. We should be able to keep dereferencing
-  // the currrent iterator and increment. The increment to go to the "next"
+  // the current iterator and increment. The increment to go to the "next"
   // iterator from before we inserted.
   L.insert(std::next(L.begin(), 2), -1);
   ++I;
@@ -705,6 +896,14 @@ TEST(STLExtrasTest, EarlyIncrementTest) {
   EXPECT_EQ(4, *I);
   ++I;
   EXPECT_EQ(EIR.end(), I);
+}
+
+TEST(STLExtrasTest, EarlyIncADLTest) {
+  // Make sure that we use the `begin`/`end` functions from `some_namespace`,
+  // using ADL.
+  some_namespace::some_struct S;
+  S.data = {1, 2, 3};
+  EXPECT_THAT(make_early_inc_range(S), ElementsAre(1, 2, 3));
 }
 
 // A custom iterator that returns a pointer when dereferenced. This is used to
@@ -780,8 +979,38 @@ TEST(STLExtrasTest, EarlyIncrementTestCustomPointerIterator) {
   EXPECT_EQ(EIR.end(), I);
 }
 
+TEST(STLExtrasTest, ReplaceADL) {
+  // Make sure that we use the `begin`/`end` functions from `some_namespace`,
+  // using ADL.
+  std::vector<int> Cont = {0, 1, 2, 3, 4, 5};
+  some_namespace::some_struct S;
+  S.data = {42, 43, 44};
+  replace(Cont, Cont.begin() + 2, Cont.begin() + 5, S);
+  EXPECT_THAT(Cont, ElementsAre(0, 1, 42, 43, 44, 5));
+}
+
 TEST(STLExtrasTest, AllEqual) {
   std::vector<int> V;
+  EXPECT_TRUE(all_equal(V));
+
+  V.push_back(1);
+  EXPECT_TRUE(all_equal(V));
+
+  V.push_back(1);
+  V.push_back(1);
+  EXPECT_TRUE(all_equal(V));
+
+  V.push_back(2);
+  EXPECT_FALSE(all_equal(V));
+}
+
+// Test to verify that all_equal works with a container that does not
+// model the random access iterator concept.
+TEST(STLExtrasTest, AllEqualNonRandomAccess) {
+  std::list<int> V;
+  static_assert(!std::is_convertible_v<
+                std::iterator_traits<decltype(V)::iterator>::iterator_category,
+                std::random_access_iterator_tag>);
   EXPECT_TRUE(all_equal(V));
 
   V.push_back(1);
@@ -840,10 +1069,55 @@ TEST(STLExtrasTest, hasSingleElement) {
   const std::vector<int> V0 = {}, V1 = {1}, V2 = {1, 2};
   const std::vector<int> V10(10);
 
-  EXPECT_EQ(hasSingleElement(V0), false);
-  EXPECT_EQ(hasSingleElement(V1), true);
-  EXPECT_EQ(hasSingleElement(V2), false);
-  EXPECT_EQ(hasSingleElement(V10), false);
+  EXPECT_FALSE(hasSingleElement(V0));
+  EXPECT_TRUE(hasSingleElement(V1));
+  EXPECT_FALSE(hasSingleElement(V2));
+  EXPECT_FALSE(hasSingleElement(V10));
+
+  // Make sure that we use the `begin`/`end` functions
+  // from `some_namespace`, using ADL.
+  some_namespace::some_struct S;
+  EXPECT_FALSE(hasSingleElement(S));
+  S.data = V1;
+  EXPECT_TRUE(hasSingleElement(S));
+  S.data = V2;
+  EXPECT_FALSE(hasSingleElement(S));
+}
+
+TEST(STLExtrasTest, getSingleElement) {
+  // Test const and non-const containers.
+  const std::vector<int> V1 = {7};
+  EXPECT_EQ(getSingleElement(V1), 7);
+  std::vector<int> V2 = {8};
+  EXPECT_EQ(getSingleElement(V2), 8);
+
+  // Test LLVM container.
+  SmallVector<int> V3{9};
+  EXPECT_EQ(getSingleElement(V3), 9);
+
+  // Test that the returned element is a reference.
+  getSingleElement(V3) = 11;
+  EXPECT_EQ(V3[0], 11);
+
+  // Test non-random access container.
+  std::list<int> L1 = {10};
+  EXPECT_EQ(getSingleElement(L1), 10);
+
+  // Make sure that we use the `begin`/`end` functions from `some_namespace`,
+  // using ADL.
+  some_namespace::some_struct S;
+  S.data = V2;
+  EXPECT_EQ(getSingleElement(S), 8);
+
+#if defined(GTEST_HAS_DEATH_TEST) && !defined(NDEBUG)
+  // Make sure that we crash on empty or too many elements.
+  SmallVector<int> V4;
+  EXPECT_DEATH(getSingleElement(V4), "expected container with single element");
+  SmallVector<int> V5{12, 13, 14};
+  EXPECT_DEATH(getSingleElement(V5), "expected container with single element");
+  std::list<int> L2;
+  EXPECT_DEATH(getSingleElement(L2), "expected container with single element");
+#endif
 }
 
 TEST(STLExtrasTest, hasNItems) {
@@ -858,6 +1132,13 @@ TEST(STLExtrasTest, hasNItems) {
   EXPECT_TRUE(hasNItems(V3.begin(), V3.end(), 3, [](int x) { return x < 10; }));
   EXPECT_TRUE(hasNItems(V3.begin(), V3.end(), 0, [](int x) { return x > 10; }));
   EXPECT_TRUE(hasNItems(V3.begin(), V3.end(), 2, [](int x) { return x < 5; }));
+
+  // Make sure that we use the `begin`/`end` functions from `some_namespace`,
+  // using ADL.
+  some_namespace::List L;
+  L.data = {0, 1, 2};
+  EXPECT_FALSE(hasNItems(L, 2));
+  EXPECT_TRUE(hasNItems(L, 3));
 }
 
 TEST(STLExtras, hasNItemsOrMore) {
@@ -880,6 +1161,13 @@ TEST(STLExtras, hasNItemsOrMore) {
       hasNItemsOrMore(V3.begin(), V3.end(), 3, [](int x) { return x > 10; }));
   EXPECT_TRUE(
       hasNItemsOrMore(V3.begin(), V3.end(), 2, [](int x) { return x < 5; }));
+
+  // Make sure that we use the `begin`/`end` functions from `some_namespace`,
+  // using ADL.
+  some_namespace::List L;
+  L.data = {0, 1, 2};
+  EXPECT_TRUE(hasNItemsOrMore(L, 1));
+  EXPECT_FALSE(hasNItems(L, 4));
 }
 
 TEST(STLExtras, hasNItemsOrLess) {
@@ -913,6 +1201,13 @@ TEST(STLExtras, hasNItemsOrLess) {
       hasNItemsOrLess(V3.begin(), V3.end(), 5, [](int x) { return x < 5; }));
   EXPECT_FALSE(
       hasNItemsOrLess(V3.begin(), V3.end(), 2, [](int x) { return x < 10; }));
+
+  // Make sure that we use the `begin`/`end` functions from `some_namespace`,
+  // using ADL.
+  some_namespace::List L;
+  L.data = {0, 1, 2};
+  EXPECT_FALSE(hasNItemsOrLess(L, 1));
+  EXPECT_TRUE(hasNItemsOrLess(L, 4));
 }
 
 TEST(STLExtras, MoveRange) {
@@ -969,6 +1264,19 @@ TEST(STLExtras, Unique) {
   std::vector<int> V = {1, 5, 5, 4, 3, 3, 3};
 
   auto I = llvm::unique(V, [](int a, int b) { return a == b; });
+
+  EXPECT_EQ(I, V.begin() + 4);
+
+  EXPECT_EQ(1, V[0]);
+  EXPECT_EQ(5, V[1]);
+  EXPECT_EQ(4, V[2]);
+  EXPECT_EQ(3, V[3]);
+}
+
+TEST(STLExtras, UniqueNoPred) {
+  std::vector<int> V = {1, 5, 5, 4, 3, 3, 3};
+
+  auto I = llvm::unique(V);
 
   EXPECT_EQ(I, V.begin() + 4);
 
@@ -1298,6 +1606,150 @@ TEST(STLExtrasTest, LessSecond) {
     EXPECT_FALSE(less_second()(A, B));
     EXPECT_TRUE(less_second()(B, A));
   }
+}
+
+TEST(STLExtrasTest, Mismatch) {
+  {
+    const int MMIndex = 5;
+    StringRef First = "FooBar";
+    StringRef Second = "FooBaz";
+    auto [MMFirst, MMSecond] = mismatch(First, Second);
+    EXPECT_EQ(MMFirst, First.begin() + MMIndex);
+    EXPECT_EQ(MMSecond, Second.begin() + MMIndex);
+  }
+
+  {
+    SmallVector<int> First = {0, 1, 2};
+    SmallVector<int> Second = {0, 1, 2, 3};
+    auto [MMFirst, MMSecond] = mismatch(First, Second);
+    EXPECT_EQ(MMFirst, First.end());
+    EXPECT_EQ(MMSecond, Second.begin() + 3);
+  }
+
+  {
+    SmallVector<int> First = {0, 1};
+    SmallVector<int> Empty;
+    auto [MMFirst, MMEmpty] = mismatch(First, Empty);
+    EXPECT_EQ(MMFirst, First.begin());
+    EXPECT_EQ(MMEmpty, Empty.begin());
+  }
+}
+
+TEST(STLExtrasTest, Includes) {
+  {
+    std::vector<int> V1 = {1, 2};
+    std::vector<int> V2;
+    EXPECT_TRUE(includes(V1, V2));
+    EXPECT_FALSE(includes(V2, V1));
+    V2.push_back(1);
+    EXPECT_TRUE(includes(V1, V2));
+    V2.push_back(3);
+    EXPECT_FALSE(includes(V1, V2));
+  }
+
+  {
+    std::vector<int> V1 = {3, 2, 1};
+    std::vector<int> V2;
+    EXPECT_TRUE(includes(V1, V2, std::greater<>()));
+    EXPECT_FALSE(includes(V2, V1, std::greater<>()));
+    V2.push_back(3);
+    EXPECT_TRUE(includes(V1, V2, std::greater<>()));
+    V2.push_back(0);
+    EXPECT_FALSE(includes(V1, V2, std::greater<>()));
+  }
+}
+
+TEST(STLExtrasTest, Fill) {
+  std::vector<int> V1 = {1, 2, 3};
+  std::vector<int> V2;
+  int Val = 4;
+  fill(V1, Val);
+  EXPECT_THAT(V1, ElementsAre(Val, Val, Val));
+  V2.resize(4);
+  fill(V2, Val);
+  EXPECT_THAT(V2, ElementsAre(Val, Val, Val, Val));
+}
+
+TEST(STLExtrasTest, Accumulate) {
+  EXPECT_EQ(accumulate(std::vector<int>(), 0), 0);
+  EXPECT_EQ(accumulate(std::vector<int>(), 3), 3);
+  std::vector<int> V1 = {1, 2, 3, 4, 5};
+  EXPECT_EQ(accumulate(V1, 0), std::accumulate(V1.begin(), V1.end(), 0));
+  EXPECT_EQ(accumulate(V1, 10), std::accumulate(V1.begin(), V1.end(), 10));
+  EXPECT_EQ(accumulate(drop_begin(V1), 7),
+            std::accumulate(V1.begin() + 1, V1.end(), 7));
+
+  EXPECT_EQ(accumulate(V1, 2, std::multiplies<>{}), 240);
+}
+
+TEST(STLExtrasTest, SumOf) {
+  EXPECT_EQ(sum_of(std::vector<int>()), 0);
+  EXPECT_EQ(sum_of(std::vector<int>(), 1), 1);
+  std::vector<int> V1 = {1, 2, 3, 4, 5};
+  static_assert(std::is_same_v<decltype(sum_of(V1)), int>);
+  static_assert(std::is_same_v<decltype(sum_of(V1, 1)), int>);
+  EXPECT_EQ(sum_of(V1), 15);
+  EXPECT_EQ(sum_of(V1, 1), 16);
+
+  std::vector<float> V2 = {1.0f, 2.0f, 4.0f};
+  static_assert(std::is_same_v<decltype(sum_of(V2)), float>);
+  static_assert(std::is_same_v<decltype(sum_of(V2), 1.0f), float>);
+  static_assert(std::is_same_v<decltype(sum_of(V2), 1.0), double>);
+  EXPECT_EQ(sum_of(V2), 7.0f);
+  EXPECT_EQ(sum_of(V2, 1.0f), 8.0f);
+
+  // Make sure that for a const argument the return value is non-const.
+  const std::vector<float> V3 = {1.0f, 2.0f};
+  static_assert(std::is_same_v<decltype(sum_of(V3)), float>);
+  EXPECT_EQ(sum_of(V3), 3.0f);
+}
+
+TEST(STLExtrasTest, ProductOf) {
+  EXPECT_EQ(product_of(std::vector<int>()), 1);
+  EXPECT_EQ(product_of(std::vector<int>(), 0), 0);
+  EXPECT_EQ(product_of(std::vector<int>(), 1), 1);
+  std::vector<int> V1 = {1, 2, 3, 4, 5};
+  static_assert(std::is_same_v<decltype(product_of(V1)), int>);
+  static_assert(std::is_same_v<decltype(product_of(V1, 1)), int>);
+  EXPECT_EQ(product_of(V1), 120);
+  EXPECT_EQ(product_of(V1, 1), 120);
+  EXPECT_EQ(product_of(V1, 2), 240);
+
+  std::vector<float> V2 = {1.0f, 2.0f, 4.0f};
+  static_assert(std::is_same_v<decltype(product_of(V2)), float>);
+  static_assert(std::is_same_v<decltype(product_of(V2), 1.0f), float>);
+  static_assert(std::is_same_v<decltype(product_of(V2), 1.0), double>);
+  EXPECT_EQ(product_of(V2), 8.0f);
+  EXPECT_EQ(product_of(V2, 4.0f), 32.0f);
+
+  // Make sure that for a const argument the return value is non-const.
+  const std::vector<float> V3 = {1.0f, 2.0f};
+  static_assert(std::is_same_v<decltype(product_of(V3)), float>);
+  EXPECT_EQ(product_of(V3), 2.0f);
+}
+
+TEST(STLExtrasTest, ReverseConditionally) {
+  std::vector<char> foo = {'a', 'b', 'c'};
+
+  // Test backwards.
+  std::vector<char> ReverseResults;
+  for (char Value : llvm::reverse_conditionally(foo, /*ShouldReverse=*/true)) {
+    ReverseResults.emplace_back(Value);
+  }
+  EXPECT_THAT(ReverseResults, ElementsAre('c', 'b', 'a'));
+
+  // Test forwards.
+  std::vector<char> ForwardResults;
+  for (char Value : llvm::reverse_conditionally(foo, /*ShouldReverse=*/false)) {
+    ForwardResults.emplace_back(Value);
+  }
+  EXPECT_THAT(ForwardResults, ElementsAre('a', 'b', 'c'));
+
+  // Test modifying collection.
+  for (char &Value : llvm::reverse_conditionally(foo, /*ShouldReverse=*/true)) {
+    ++Value;
+  }
+  EXPECT_THAT(foo, ElementsAre('b', 'c', 'd'));
 }
 
 struct Foo;

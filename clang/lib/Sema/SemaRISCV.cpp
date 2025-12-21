@@ -1,0 +1,1865 @@
+//===------ SemaRISCV.cpp ------- RISC-V target-specific routines ---------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+//  This file implements semantic analysis functions specific to RISC-V.
+//
+//===----------------------------------------------------------------------===//
+
+#include "clang/Sema/SemaRISCV.h"
+#include "clang/AST/ASTContext.h"
+#include "clang/AST/Attr.h"
+#include "clang/AST/Attrs.inc"
+#include "clang/AST/Decl.h"
+#include "clang/Basic/Builtins.h"
+#include "clang/Basic/TargetBuiltins.h"
+#include "clang/Basic/TargetInfo.h"
+#include "clang/Lex/Preprocessor.h"
+#include "clang/Sema/Attr.h"
+#include "clang/Sema/Initialization.h"
+#include "clang/Sema/Lookup.h"
+#include "clang/Sema/ParsedAttr.h"
+#include "clang/Sema/RISCVIntrinsicManager.h"
+#include "clang/Sema/Sema.h"
+#include "clang/Support/RISCVVIntrinsicUtils.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/TargetParser/RISCVISAInfo.h"
+#include "llvm/TargetParser/RISCVTargetParser.h"
+#include <optional>
+#include <string>
+#include <vector>
+
+using namespace llvm;
+using namespace clang;
+using namespace clang::RISCV;
+
+using IntrinsicKind = sema::RISCVIntrinsicManager::IntrinsicKind;
+
+namespace {
+
+// Function definition of a RVV intrinsic.
+struct RVVIntrinsicDef {
+  /// Mapping to which clang built-in function, e.g. __builtin_rvv_vadd.
+  std::string BuiltinName;
+
+  /// Mapping to RequiredFeatures in riscv_vector.td
+  StringRef RequiredExtensions;
+
+  /// Function signature, first element is return type.
+  RVVTypes Signature;
+};
+
+struct RVVOverloadIntrinsicDef {
+  // Indexes of RISCVIntrinsicManagerImpl::IntrinsicList.
+  SmallVector<uint32_t, 8> Indexes;
+};
+
+} // namespace
+
+static const PrototypeDescriptor RVVSignatureTable[] = {
+#define DECL_SIGNATURE_TABLE
+#include "clang/Basic/riscv_vector_builtin_sema.inc"
+#undef DECL_SIGNATURE_TABLE
+};
+
+static const PrototypeDescriptor RVSiFiveVectorSignatureTable[] = {
+#define DECL_SIGNATURE_TABLE
+#include "clang/Basic/riscv_sifive_vector_builtin_sema.inc"
+#undef DECL_SIGNATURE_TABLE
+};
+
+static const PrototypeDescriptor RVAndesVectorSignatureTable[] = {
+#define DECL_SIGNATURE_TABLE
+#include "clang/Basic/riscv_andes_vector_builtin_sema.inc"
+#undef DECL_SIGNATURE_TABLE
+};
+
+static const RVVIntrinsicRecord RVVIntrinsicRecords[] = {
+#define DECL_INTRINSIC_RECORDS
+#include "clang/Basic/riscv_vector_builtin_sema.inc"
+#undef DECL_INTRINSIC_RECORDS
+};
+
+static const RVVIntrinsicRecord RVSiFiveVectorIntrinsicRecords[] = {
+#define DECL_INTRINSIC_RECORDS
+#include "clang/Basic/riscv_sifive_vector_builtin_sema.inc"
+#undef DECL_INTRINSIC_RECORDS
+};
+
+static const RVVIntrinsicRecord RVAndesVectorIntrinsicRecords[] = {
+#define DECL_INTRINSIC_RECORDS
+#include "clang/Basic/riscv_andes_vector_builtin_sema.inc"
+#undef DECL_INTRINSIC_RECORDS
+};
+
+// Get subsequence of signature table.
+static ArrayRef<PrototypeDescriptor>
+ProtoSeq2ArrayRef(IntrinsicKind K, uint16_t Index, uint8_t Length) {
+  switch (K) {
+  case IntrinsicKind::RVV:
+    return ArrayRef(&RVVSignatureTable[Index], Length);
+  case IntrinsicKind::SIFIVE_VECTOR:
+    return ArrayRef(&RVSiFiveVectorSignatureTable[Index], Length);
+  case IntrinsicKind::ANDES_VECTOR:
+    return ArrayRef(&RVAndesVectorSignatureTable[Index], Length);
+  }
+  llvm_unreachable("Unhandled IntrinsicKind");
+}
+
+static QualType RVVType2Qual(ASTContext &Context, const RVVType *Type) {
+  QualType QT;
+  switch (Type->getScalarType()) {
+  case ScalarTypeKind::Void:
+    QT = Context.VoidTy;
+    break;
+  case ScalarTypeKind::Size_t:
+    QT = Context.getSizeType();
+    break;
+  case ScalarTypeKind::Ptrdiff_t:
+    QT = Context.getPointerDiffType();
+    break;
+  case ScalarTypeKind::UnsignedLong:
+    QT = Context.UnsignedLongTy;
+    break;
+  case ScalarTypeKind::SignedLong:
+    QT = Context.LongTy;
+    break;
+  case ScalarTypeKind::Boolean:
+    QT = Context.BoolTy;
+    break;
+  case ScalarTypeKind::SignedInteger:
+    QT = Context.getIntTypeForBitwidth(Type->getElementBitwidth(), true);
+    break;
+  case ScalarTypeKind::UnsignedInteger:
+    QT = Context.getIntTypeForBitwidth(Type->getElementBitwidth(), false);
+    break;
+  case ScalarTypeKind::BFloat:
+    QT = Context.BFloat16Ty;
+    break;
+  case ScalarTypeKind::Float:
+    switch (Type->getElementBitwidth()) {
+    case 64:
+      QT = Context.DoubleTy;
+      break;
+    case 32:
+      QT = Context.FloatTy;
+      break;
+    case 16:
+      QT = Context.Float16Ty;
+      break;
+    default:
+      llvm_unreachable("Unsupported floating point width.");
+    }
+    break;
+  case Invalid:
+  case Undefined:
+    llvm_unreachable("Unhandled type.");
+  }
+  if (Type->isVector()) {
+    if (Type->isTuple())
+      QT = Context.getScalableVectorType(QT, *Type->getScale(), Type->getNF());
+    else
+      QT = Context.getScalableVectorType(QT, *Type->getScale());
+  }
+
+  if (Type->isConstant())
+    QT = Context.getConstType(QT);
+
+  // Transform the type to a pointer as the last step, if necessary.
+  if (Type->isPointer())
+    QT = Context.getPointerType(QT);
+
+  return QT;
+}
+
+namespace {
+class RISCVIntrinsicManagerImpl : public sema::RISCVIntrinsicManager {
+private:
+  Sema &S;
+  RVVTypeCache TypeCache;
+  bool ConstructedRISCVVBuiltins;
+  bool ConstructedRISCVSiFiveVectorBuiltins;
+  bool ConstructedRISCVAndesVectorBuiltins;
+
+  // List of all RVV intrinsic.
+  std::vector<RVVIntrinsicDef> IntrinsicList;
+  // Mapping function name to index of IntrinsicList.
+  StringMap<uint32_t> Intrinsics;
+  // Mapping function name to RVVOverloadIntrinsicDef.
+  StringMap<RVVOverloadIntrinsicDef> OverloadIntrinsics;
+
+  // Create RVVIntrinsicDef.
+  void InitRVVIntrinsic(const RVVIntrinsicRecord &Record, StringRef SuffixStr,
+                        StringRef OverloadedSuffixStr, bool IsMask,
+                        RVVTypes &Types, bool HasPolicy, Policy PolicyAttrs);
+
+  // Create FunctionDecl for a vector intrinsic.
+  void CreateRVVIntrinsicDecl(LookupResult &LR, IdentifierInfo *II,
+                              Preprocessor &PP, uint32_t Index,
+                              bool IsOverload);
+
+  void ConstructRVVIntrinsics(ArrayRef<RVVIntrinsicRecord> Recs,
+                              IntrinsicKind K);
+
+public:
+  RISCVIntrinsicManagerImpl(clang::Sema &S) : S(S) {
+    ConstructedRISCVVBuiltins = false;
+    ConstructedRISCVSiFiveVectorBuiltins = false;
+    ConstructedRISCVAndesVectorBuiltins = false;
+  }
+
+  // Initialize IntrinsicList
+  void InitIntrinsicList() override;
+
+  // Create RISC-V vector intrinsic and insert into symbol table if found, and
+  // return true, otherwise return false.
+  bool CreateIntrinsicIfFound(LookupResult &LR, IdentifierInfo *II,
+                              Preprocessor &PP) override;
+};
+} // namespace
+
+void RISCVIntrinsicManagerImpl::ConstructRVVIntrinsics(
+    ArrayRef<RVVIntrinsicRecord> Recs, IntrinsicKind K) {
+  // Construction of RVVIntrinsicRecords need to sync with createRVVIntrinsics
+  // in RISCVVEmitter.cpp.
+  for (auto &Record : Recs) {
+    // Create Intrinsics for each type and LMUL.
+    BasicType BaseType = BasicType::Unknown;
+    ArrayRef<PrototypeDescriptor> BasicProtoSeq =
+        ProtoSeq2ArrayRef(K, Record.PrototypeIndex, Record.PrototypeLength);
+    ArrayRef<PrototypeDescriptor> SuffixProto =
+        ProtoSeq2ArrayRef(K, Record.SuffixIndex, Record.SuffixLength);
+    ArrayRef<PrototypeDescriptor> OverloadedSuffixProto = ProtoSeq2ArrayRef(
+        K, Record.OverloadedSuffixIndex, Record.OverloadedSuffixSize);
+
+    PolicyScheme UnMaskedPolicyScheme =
+        static_cast<PolicyScheme>(Record.UnMaskedPolicyScheme);
+    PolicyScheme MaskedPolicyScheme =
+        static_cast<PolicyScheme>(Record.MaskedPolicyScheme);
+
+    const Policy DefaultPolicy;
+
+    llvm::SmallVector<PrototypeDescriptor> ProtoSeq =
+        RVVIntrinsic::computeBuiltinTypes(
+            BasicProtoSeq, /*IsMasked=*/false,
+            /*HasMaskedOffOperand=*/false, Record.HasVL, Record.NF,
+            UnMaskedPolicyScheme, DefaultPolicy, Record.IsTuple);
+
+    llvm::SmallVector<PrototypeDescriptor> ProtoMaskSeq;
+    if (Record.HasMasked)
+      ProtoMaskSeq = RVVIntrinsic::computeBuiltinTypes(
+          BasicProtoSeq, /*IsMasked=*/true, Record.HasMaskedOffOperand,
+          Record.HasVL, Record.NF, MaskedPolicyScheme, DefaultPolicy,
+          Record.IsTuple);
+
+    bool UnMaskedHasPolicy = UnMaskedPolicyScheme != PolicyScheme::SchemeNone;
+    bool MaskedHasPolicy = MaskedPolicyScheme != PolicyScheme::SchemeNone;
+    SmallVector<Policy> SupportedUnMaskedPolicies =
+        RVVIntrinsic::getSupportedUnMaskedPolicies();
+    SmallVector<Policy> SupportedMaskedPolicies =
+        RVVIntrinsic::getSupportedMaskedPolicies(Record.HasTailPolicy,
+                                                 Record.HasMaskPolicy);
+
+    for (unsigned int TypeRangeMaskShift = 0;
+         TypeRangeMaskShift <= static_cast<unsigned int>(BasicType::MaxOffset);
+         ++TypeRangeMaskShift) {
+      unsigned int BaseTypeI = 1 << TypeRangeMaskShift;
+      BaseType = static_cast<BasicType>(BaseTypeI);
+
+      if ((BaseTypeI & Record.TypeRangeMask) != BaseTypeI)
+        continue;
+
+      // Expanded with different LMUL.
+      for (int Log2LMUL = -3; Log2LMUL <= 3; Log2LMUL++) {
+        if (!(Record.Log2LMULMask & (1 << (Log2LMUL + 3))))
+          continue;
+
+        std::optional<RVVTypes> Types =
+            TypeCache.computeTypes(BaseType, Log2LMUL, Record.NF, ProtoSeq);
+
+        // Ignored to create new intrinsic if there are any illegal types.
+        if (!Types.has_value())
+          continue;
+
+        std::string SuffixStr = RVVIntrinsic::getSuffixStr(
+            TypeCache, BaseType, Log2LMUL, SuffixProto);
+        std::string OverloadedSuffixStr = RVVIntrinsic::getSuffixStr(
+            TypeCache, BaseType, Log2LMUL, OverloadedSuffixProto);
+
+        // Create non-masked intrinsic.
+        InitRVVIntrinsic(Record, SuffixStr, OverloadedSuffixStr, false, *Types,
+                         UnMaskedHasPolicy, DefaultPolicy);
+
+        // Create non-masked policy intrinsic.
+        if (Record.UnMaskedPolicyScheme != PolicyScheme::SchemeNone) {
+          for (auto P : SupportedUnMaskedPolicies) {
+            llvm::SmallVector<PrototypeDescriptor> PolicyPrototype =
+                RVVIntrinsic::computeBuiltinTypes(
+                    BasicProtoSeq, /*IsMasked=*/false,
+                    /*HasMaskedOffOperand=*/false, Record.HasVL, Record.NF,
+                    UnMaskedPolicyScheme, P, Record.IsTuple);
+            std::optional<RVVTypes> PolicyTypes = TypeCache.computeTypes(
+                BaseType, Log2LMUL, Record.NF, PolicyPrototype);
+            InitRVVIntrinsic(Record, SuffixStr, OverloadedSuffixStr,
+                             /*IsMask=*/false, *PolicyTypes, UnMaskedHasPolicy,
+                             P);
+          }
+        }
+        if (!Record.HasMasked)
+          continue;
+        // Create masked intrinsic.
+        std::optional<RVVTypes> MaskTypes =
+            TypeCache.computeTypes(BaseType, Log2LMUL, Record.NF, ProtoMaskSeq);
+        InitRVVIntrinsic(Record, SuffixStr, OverloadedSuffixStr, true,
+                         *MaskTypes, MaskedHasPolicy, DefaultPolicy);
+        if (Record.MaskedPolicyScheme == PolicyScheme::SchemeNone)
+          continue;
+        // Create masked policy intrinsic.
+        for (auto P : SupportedMaskedPolicies) {
+          llvm::SmallVector<PrototypeDescriptor> PolicyPrototype =
+              RVVIntrinsic::computeBuiltinTypes(
+                  BasicProtoSeq, /*IsMasked=*/true, Record.HasMaskedOffOperand,
+                  Record.HasVL, Record.NF, MaskedPolicyScheme, P,
+                  Record.IsTuple);
+          std::optional<RVVTypes> PolicyTypes = TypeCache.computeTypes(
+              BaseType, Log2LMUL, Record.NF, PolicyPrototype);
+          InitRVVIntrinsic(Record, SuffixStr, OverloadedSuffixStr,
+                           /*IsMask=*/true, *PolicyTypes, MaskedHasPolicy, P);
+        }
+      } // End for different LMUL
+    } // End for different TypeRange
+  }
+}
+
+void RISCVIntrinsicManagerImpl::InitIntrinsicList() {
+
+  if (S.RISCV().DeclareRVVBuiltins && !ConstructedRISCVVBuiltins) {
+    ConstructedRISCVVBuiltins = true;
+    ConstructRVVIntrinsics(RVVIntrinsicRecords, IntrinsicKind::RVV);
+  }
+  if (S.RISCV().DeclareSiFiveVectorBuiltins &&
+      !ConstructedRISCVSiFiveVectorBuiltins) {
+    ConstructedRISCVSiFiveVectorBuiltins = true;
+    ConstructRVVIntrinsics(RVSiFiveVectorIntrinsicRecords,
+                           IntrinsicKind::SIFIVE_VECTOR);
+  }
+  if (S.RISCV().DeclareAndesVectorBuiltins &&
+      !ConstructedRISCVAndesVectorBuiltins) {
+    ConstructedRISCVAndesVectorBuiltins = true;
+    ConstructRVVIntrinsics(RVAndesVectorIntrinsicRecords,
+                           IntrinsicKind::ANDES_VECTOR);
+  }
+}
+
+// Compute name and signatures for intrinsic with practical types.
+void RISCVIntrinsicManagerImpl::InitRVVIntrinsic(
+    const RVVIntrinsicRecord &Record, StringRef SuffixStr,
+    StringRef OverloadedSuffixStr, bool IsMasked, RVVTypes &Signature,
+    bool HasPolicy, Policy PolicyAttrs) {
+  // Function name, e.g. vadd_vv_i32m1.
+  std::string Name = Record.Name;
+  if (!SuffixStr.empty())
+    Name += "_" + SuffixStr.str();
+
+  // Overloaded function name, e.g. vadd.
+  std::string OverloadedName;
+  if (!Record.OverloadedName)
+    OverloadedName = StringRef(Record.Name).split("_").first.str();
+  else
+    OverloadedName = Record.OverloadedName;
+  if (!OverloadedSuffixStr.empty())
+    OverloadedName += "_" + OverloadedSuffixStr.str();
+
+  // clang built-in function name, e.g. __builtin_rvv_vadd.
+  std::string BuiltinName = std::string(Record.Name);
+
+  RVVIntrinsic::updateNamesAndPolicy(IsMasked, HasPolicy, Name, BuiltinName,
+                                     OverloadedName, PolicyAttrs,
+                                     Record.HasFRMRoundModeOp);
+
+  // Put into IntrinsicList.
+  uint32_t Index = IntrinsicList.size();
+  assert(IntrinsicList.size() == (size_t)Index &&
+         "Intrinsics indices overflow.");
+  IntrinsicList.push_back({BuiltinName, Record.RequiredExtensions, Signature});
+
+  // Creating mapping to Intrinsics.
+  Intrinsics.insert({Name, Index});
+
+  // Get the RVVOverloadIntrinsicDef.
+  RVVOverloadIntrinsicDef &OverloadIntrinsicDef =
+      OverloadIntrinsics[OverloadedName];
+
+  // And added the index.
+  OverloadIntrinsicDef.Indexes.push_back(Index);
+}
+
+void RISCVIntrinsicManagerImpl::CreateRVVIntrinsicDecl(LookupResult &LR,
+                                                       IdentifierInfo *II,
+                                                       Preprocessor &PP,
+                                                       uint32_t Index,
+                                                       bool IsOverload) {
+  ASTContext &Context = S.Context;
+  RVVIntrinsicDef &IDef = IntrinsicList[Index];
+  RVVTypes Sigs = IDef.Signature;
+  size_t SigLength = Sigs.size();
+  RVVType *ReturnType = Sigs[0];
+  QualType RetType = RVVType2Qual(Context, ReturnType);
+  SmallVector<QualType, 8> ArgTypes;
+  QualType BuiltinFuncType;
+
+  // Skip return type, and convert RVVType to QualType for arguments.
+  for (size_t i = 1; i < SigLength; ++i)
+    ArgTypes.push_back(RVVType2Qual(Context, Sigs[i]));
+
+  FunctionProtoType::ExtProtoInfo PI(
+      Context.getTargetInfo().getDefaultCallingConv());
+
+  PI.Variadic = false;
+
+  SourceLocation Loc = LR.getNameLoc();
+  BuiltinFuncType = Context.getFunctionType(RetType, ArgTypes, PI);
+  DeclContext *Parent = Context.getTranslationUnitDecl();
+
+  FunctionDecl *RVVIntrinsicDecl = FunctionDecl::Create(
+      Context, Parent, Loc, Loc, II, BuiltinFuncType, /*TInfo=*/nullptr,
+      SC_Extern, S.getCurFPFeatures().isFPConstrained(),
+      /*isInlineSpecified*/ false,
+      /*hasWrittenPrototype*/ true);
+
+  // Create Decl objects for each parameter, adding them to the
+  // FunctionDecl.
+  const auto *FP = cast<FunctionProtoType>(BuiltinFuncType);
+  SmallVector<ParmVarDecl *, 8> ParmList;
+  for (unsigned IParm = 0, E = FP->getNumParams(); IParm != E; ++IParm) {
+    ParmVarDecl *Parm =
+        ParmVarDecl::Create(Context, RVVIntrinsicDecl, Loc, Loc, nullptr,
+                            FP->getParamType(IParm), nullptr, SC_None, nullptr);
+    Parm->setScopeInfo(0, IParm);
+    ParmList.push_back(Parm);
+  }
+  RVVIntrinsicDecl->setParams(ParmList);
+
+  // Add function attributes.
+  if (IsOverload)
+    RVVIntrinsicDecl->addAttr(OverloadableAttr::CreateImplicit(Context));
+
+  if (IDef.RequiredExtensions != "")
+    RVVIntrinsicDecl->addAttr(
+        TargetAttr::CreateImplicit(Context, IDef.RequiredExtensions));
+  // Setup alias to __builtin_rvv_*
+  IdentifierInfo &IntrinsicII =
+      PP.getIdentifierTable().get("__builtin_rvv_" + IDef.BuiltinName);
+  RVVIntrinsicDecl->addAttr(
+      BuiltinAliasAttr::CreateImplicit(S.Context, &IntrinsicII));
+
+  // Add to symbol table.
+  LR.addDecl(RVVIntrinsicDecl);
+}
+
+bool RISCVIntrinsicManagerImpl::CreateIntrinsicIfFound(LookupResult &LR,
+                                                       IdentifierInfo *II,
+                                                       Preprocessor &PP) {
+  StringRef Name = II->getName();
+  if (!Name.consume_front("__riscv_"))
+    return false;
+
+  // Lookup the function name from the overload intrinsics first.
+  auto OvIItr = OverloadIntrinsics.find(Name);
+  if (OvIItr != OverloadIntrinsics.end()) {
+    const RVVOverloadIntrinsicDef &OvIntrinsicDef = OvIItr->second;
+    for (auto Index : OvIntrinsicDef.Indexes)
+      CreateRVVIntrinsicDecl(LR, II, PP, Index,
+                             /*IsOverload*/ true);
+
+    // If we added overloads, need to resolve the lookup result.
+    LR.resolveKind();
+    return true;
+  }
+
+  // Lookup the function name from the intrinsics.
+  auto Itr = Intrinsics.find(Name);
+  if (Itr != Intrinsics.end()) {
+    CreateRVVIntrinsicDecl(LR, II, PP, Itr->second,
+                           /*IsOverload*/ false);
+    return true;
+  }
+
+  // It's not an RVV intrinsics.
+  return false;
+}
+
+namespace clang {
+std::unique_ptr<clang::sema::RISCVIntrinsicManager>
+CreateRISCVIntrinsicManager(Sema &S) {
+  return std::make_unique<RISCVIntrinsicManagerImpl>(S);
+}
+
+bool SemaRISCV::CheckLMUL(CallExpr *TheCall, unsigned ArgNum) {
+  llvm::APSInt Result;
+
+  // We can't check the value of a dependent argument.
+  Expr *Arg = TheCall->getArg(ArgNum);
+  if (Arg->isTypeDependent() || Arg->isValueDependent())
+    return false;
+
+  // Check constant-ness first.
+  if (SemaRef.BuiltinConstantArg(TheCall, ArgNum, Result))
+    return true;
+
+  int64_t Val = Result.getSExtValue();
+  if ((Val >= 0 && Val <= 3) || (Val >= 5 && Val <= 7))
+    return false;
+
+  return Diag(TheCall->getBeginLoc(), diag::err_riscv_builtin_invalid_lmul)
+         << Arg->getSourceRange();
+}
+
+static bool CheckInvalidVLENandLMUL(const TargetInfo &TI,
+                                    llvm::StringMap<bool> &FunctionFeatureMap,
+                                    CallExpr *TheCall, Sema &S, QualType Type,
+                                    int EGW) {
+  assert((EGW == 128 || EGW == 256) && "EGW can only be 128 or 256 bits");
+
+  // LMUL * VLEN >= EGW
+  ASTContext::BuiltinVectorTypeInfo Info =
+      S.Context.getBuiltinVectorTypeInfo(Type->castAs<BuiltinType>());
+  unsigned ElemSize = S.Context.getTypeSize(Info.ElementType);
+  unsigned MinElemCount = Info.EC.getKnownMinValue();
+
+  unsigned EGS = EGW / ElemSize;
+  // If EGS is less than or equal to the minimum number of elements, then the
+  // type is valid.
+  if (EGS <= MinElemCount)
+    return false;
+
+  // Otherwise, we need vscale to be at least EGS / MinElemCont.
+  assert(EGS % MinElemCount == 0);
+  unsigned VScaleFactor = EGS / MinElemCount;
+  // Vscale is VLEN/RVVBitsPerBlock.
+  unsigned MinRequiredVLEN = VScaleFactor * llvm::RISCV::RVVBitsPerBlock;
+  std::string RequiredExt = "zvl" + std::to_string(MinRequiredVLEN) + "b";
+  if (!TI.hasFeature(RequiredExt) && !FunctionFeatureMap.lookup(RequiredExt))
+    return S.Diag(TheCall->getBeginLoc(),
+                  diag::err_riscv_type_requires_extension)
+           << Type << RequiredExt;
+
+  return false;
+}
+
+bool SemaRISCV::CheckBuiltinFunctionCall(const TargetInfo &TI,
+                                         unsigned BuiltinID,
+                                         CallExpr *TheCall) {
+  ASTContext &Context = getASTContext();
+  const FunctionDecl *FD = SemaRef.getCurFunctionDecl();
+  llvm::StringMap<bool> FunctionFeatureMap;
+  Context.getFunctionFeatureMap(FunctionFeatureMap, FD);
+
+  if (const auto *A = TheCall->getCalleeDecl()->getAttr<TargetAttr>()) {
+    StringRef FeaturesStr = A->getFeaturesStr();
+    llvm::SmallVector<StringRef> RequiredFeatures;
+    FeaturesStr.split(RequiredFeatures, ',');
+    for (auto RF : RequiredFeatures)
+      if (!TI.hasFeature(RF) && !FunctionFeatureMap.lookup(RF))
+        return Diag(TheCall->getBeginLoc(),
+                    diag::err_riscv_builtin_requires_extension)
+               << /* IsExtension */ true << TheCall->getSourceRange() << RF;
+  }
+
+  // vmulh.vv, vmulh.vx, vmulhu.vv, vmulhu.vx, vmulhsu.vv, vmulhsu.vx,
+  // vsmul.vv, vsmul.vx are not included for EEW=64 in Zve64*.
+  switch (BuiltinID) {
+  default:
+    break;
+  case RISCVVector::BI__builtin_rvv_vmulhsu_vv:
+  case RISCVVector::BI__builtin_rvv_vmulhsu_vx:
+  case RISCVVector::BI__builtin_rvv_vmulhsu_vv_tu:
+  case RISCVVector::BI__builtin_rvv_vmulhsu_vx_tu:
+  case RISCVVector::BI__builtin_rvv_vmulhsu_vv_m:
+  case RISCVVector::BI__builtin_rvv_vmulhsu_vx_m:
+  case RISCVVector::BI__builtin_rvv_vmulhsu_vv_mu:
+  case RISCVVector::BI__builtin_rvv_vmulhsu_vx_mu:
+  case RISCVVector::BI__builtin_rvv_vmulhsu_vv_tum:
+  case RISCVVector::BI__builtin_rvv_vmulhsu_vx_tum:
+  case RISCVVector::BI__builtin_rvv_vmulhsu_vv_tumu:
+  case RISCVVector::BI__builtin_rvv_vmulhsu_vx_tumu:
+  case RISCVVector::BI__builtin_rvv_vmulhu_vv:
+  case RISCVVector::BI__builtin_rvv_vmulhu_vx:
+  case RISCVVector::BI__builtin_rvv_vmulhu_vv_tu:
+  case RISCVVector::BI__builtin_rvv_vmulhu_vx_tu:
+  case RISCVVector::BI__builtin_rvv_vmulhu_vv_m:
+  case RISCVVector::BI__builtin_rvv_vmulhu_vx_m:
+  case RISCVVector::BI__builtin_rvv_vmulhu_vv_mu:
+  case RISCVVector::BI__builtin_rvv_vmulhu_vx_mu:
+  case RISCVVector::BI__builtin_rvv_vmulhu_vv_tum:
+  case RISCVVector::BI__builtin_rvv_vmulhu_vx_tum:
+  case RISCVVector::BI__builtin_rvv_vmulhu_vv_tumu:
+  case RISCVVector::BI__builtin_rvv_vmulhu_vx_tumu:
+  case RISCVVector::BI__builtin_rvv_vmulh_vv:
+  case RISCVVector::BI__builtin_rvv_vmulh_vx:
+  case RISCVVector::BI__builtin_rvv_vmulh_vv_tu:
+  case RISCVVector::BI__builtin_rvv_vmulh_vx_tu:
+  case RISCVVector::BI__builtin_rvv_vmulh_vv_m:
+  case RISCVVector::BI__builtin_rvv_vmulh_vx_m:
+  case RISCVVector::BI__builtin_rvv_vmulh_vv_mu:
+  case RISCVVector::BI__builtin_rvv_vmulh_vx_mu:
+  case RISCVVector::BI__builtin_rvv_vmulh_vv_tum:
+  case RISCVVector::BI__builtin_rvv_vmulh_vx_tum:
+  case RISCVVector::BI__builtin_rvv_vmulh_vv_tumu:
+  case RISCVVector::BI__builtin_rvv_vmulh_vx_tumu:
+  case RISCVVector::BI__builtin_rvv_vsmul_vv:
+  case RISCVVector::BI__builtin_rvv_vsmul_vx:
+  case RISCVVector::BI__builtin_rvv_vsmul_vv_tu:
+  case RISCVVector::BI__builtin_rvv_vsmul_vx_tu:
+  case RISCVVector::BI__builtin_rvv_vsmul_vv_m:
+  case RISCVVector::BI__builtin_rvv_vsmul_vx_m:
+  case RISCVVector::BI__builtin_rvv_vsmul_vv_mu:
+  case RISCVVector::BI__builtin_rvv_vsmul_vx_mu:
+  case RISCVVector::BI__builtin_rvv_vsmul_vv_tum:
+  case RISCVVector::BI__builtin_rvv_vsmul_vx_tum:
+  case RISCVVector::BI__builtin_rvv_vsmul_vv_tumu:
+  case RISCVVector::BI__builtin_rvv_vsmul_vx_tumu: {
+    ASTContext::BuiltinVectorTypeInfo Info = Context.getBuiltinVectorTypeInfo(
+        TheCall->getType()->castAs<BuiltinType>());
+
+    if (Context.getTypeSize(Info.ElementType) == 64 && !TI.hasFeature("v") &&
+        !FunctionFeatureMap.lookup("v"))
+      return Diag(TheCall->getBeginLoc(),
+                  diag::err_riscv_builtin_requires_extension)
+             << /* IsExtension */ true << TheCall->getSourceRange() << "v";
+
+    break;
+  }
+  }
+
+  auto CheckVSetVL = [&](unsigned SEWOffset, unsigned LMULOffset) -> bool {
+    const FunctionDecl *FD = SemaRef.getCurFunctionDecl();
+    llvm::StringMap<bool> FunctionFeatureMap;
+    Context.getFunctionFeatureMap(FunctionFeatureMap, FD);
+    llvm::APSInt SEWResult;
+    llvm::APSInt LMULResult;
+    if (SemaRef.BuiltinConstantArg(TheCall, SEWOffset, SEWResult) ||
+        SemaRef.BuiltinConstantArg(TheCall, LMULOffset, LMULResult))
+      return true;
+    int SEWValue = SEWResult.getSExtValue();
+    int LMULValue = LMULResult.getSExtValue();
+    if (((SEWValue == 0 && LMULValue == 5) || // e8mf8
+         (SEWValue == 1 && LMULValue == 6) || // e16mf4
+         (SEWValue == 2 && LMULValue == 7) || // e32mf2
+         SEWValue == 3) &&                    // e64
+        !TI.hasFeature("zve64x") &&
+        !FunctionFeatureMap.lookup("zve64x"))
+      return Diag(TheCall->getBeginLoc(),
+                  diag::err_riscv_builtin_requires_extension)
+             << /* IsExtension */ true << TheCall->getSourceRange() << "zve64x";
+    return SemaRef.BuiltinConstantArgRange(TheCall, SEWOffset, 0, 3) ||
+           CheckLMUL(TheCall, LMULOffset);
+  };
+  switch (BuiltinID) {
+  case RISCVVector::BI__builtin_rvv_vsetvli:
+    return CheckVSetVL(1, 2);
+  case RISCVVector::BI__builtin_rvv_vsetvlimax:
+    return CheckVSetVL(0, 1);
+  case RISCVVector::BI__builtin_rvv_sf_vsettnt:
+  case RISCVVector::BI__builtin_rvv_sf_vsettm:
+  case RISCVVector::BI__builtin_rvv_sf_vsettn:
+  case RISCVVector::BI__builtin_rvv_sf_vsettk:
+    return SemaRef.BuiltinConstantArgRange(TheCall, 1, 0, 3) ||
+           SemaRef.BuiltinConstantArgRange(TheCall, 2, 1, 3);
+  case RISCVVector::BI__builtin_rvv_sf_mm_f_f_w1:
+  case RISCVVector::BI__builtin_rvv_sf_mm_f_f_w2:
+  case RISCVVector::BI__builtin_rvv_sf_mm_e5m2_e4m3_w4:
+  case RISCVVector::BI__builtin_rvv_sf_mm_e5m2_e5m2_w4:
+  case RISCVVector::BI__builtin_rvv_sf_mm_e4m3_e4m3_w4:
+  case RISCVVector::BI__builtin_rvv_sf_mm_e4m3_e5m2_w4:
+  case RISCVVector::BI__builtin_rvv_sf_mm_u_u_w4:
+  case RISCVVector::BI__builtin_rvv_sf_mm_u_s_w4:
+  case RISCVVector::BI__builtin_rvv_sf_mm_s_u_w4:
+  case RISCVVector::BI__builtin_rvv_sf_mm_s_s_w4: {
+    QualType Arg1Type = TheCall->getArg(1)->getType();
+    ASTContext::BuiltinVectorTypeInfo Info =
+        SemaRef.Context.getBuiltinVectorTypeInfo(
+            Arg1Type->castAs<BuiltinType>());
+    unsigned EltSize = SemaRef.Context.getTypeSize(Info.ElementType);
+    llvm::APSInt Result;
+
+    // We can't check the value of a dependent argument.
+    Expr *Arg = TheCall->getArg(0);
+    if (Arg->isTypeDependent() || Arg->isValueDependent())
+      return false;
+
+    // Check constant-ness first.
+    if (SemaRef.BuiltinConstantArg(TheCall, 0, Result))
+      return true;
+
+    // For TEW = 32, mtd can only be 0, 4, 8, 12.
+    // For TEW = 64, mtd can only be 0, 2, 4, 6, 8, 10, 12, 14.
+    // Only `sf_mm_f_f_w1` and `sf_mm_f_f_w2` might have TEW = 64.
+    if ((BuiltinID == RISCVVector::BI__builtin_rvv_sf_mm_f_f_w1 &&
+         EltSize == 64) ||
+        (BuiltinID == RISCVVector::BI__builtin_rvv_sf_mm_f_f_w2 &&
+         EltSize == 32))
+      return SemaRef.BuiltinConstantArgRange(TheCall, 0, 0, 15) ||
+             SemaRef.BuiltinConstantArgMultiple(TheCall, 0, 2);
+    return SemaRef.BuiltinConstantArgRange(TheCall, 0, 0, 15) ||
+           SemaRef.BuiltinConstantArgMultiple(TheCall, 0, 4);
+  }
+  case RISCVVector::BI__builtin_rvv_sf_vtzero_t: {
+    llvm::APSInt Log2SEWResult;
+    llvm::APSInt TWidenResult;
+    if (SemaRef.BuiltinConstantArg(TheCall, 3, Log2SEWResult) ||
+        SemaRef.BuiltinConstantArg(TheCall, 4, TWidenResult))
+      return true;
+
+    int Log2SEW = Log2SEWResult.getSExtValue();
+    int TWiden = TWidenResult.getSExtValue();
+
+    // 3 <= LogSEW <= 6
+    if (SemaRef.BuiltinConstantArgRange(TheCall, 3, 3, 6))
+      return true;
+
+    // TWiden
+    if (TWiden != 1 && TWiden != 2 && TWiden != 4)
+      return Diag(TheCall->getBeginLoc(),
+                  diag::err_riscv_builtin_invalid_twiden);
+
+    int TEW = (1 << Log2SEW) * TWiden;
+
+    // For TEW = 8, mtd can be 0~15.
+    // For TEW = 16 or 64, mtd can only be 0, 2, 4, 6, 8, 10, 12, 14.
+    // For TEW = 32, mtd can only be 0, 4, 8, 12.
+    if (SemaRef.BuiltinConstantArgRange(TheCall, 0, 0, 15))
+      return true;
+    if (TEW == 16 || TEW == 64)
+      return SemaRef.BuiltinConstantArgMultiple(TheCall, 0, 2);
+    return SemaRef.BuiltinConstantArgMultiple(TheCall, 0, 4);
+  }
+  case RISCVVector::BI__builtin_rvv_vget_v: {
+    ASTContext::BuiltinVectorTypeInfo ResVecInfo =
+        Context.getBuiltinVectorTypeInfo(cast<BuiltinType>(
+            TheCall->getType().getCanonicalType().getTypePtr()));
+    ASTContext::BuiltinVectorTypeInfo VecInfo =
+        Context.getBuiltinVectorTypeInfo(cast<BuiltinType>(
+            TheCall->getArg(0)->getType().getCanonicalType().getTypePtr()));
+    unsigned MaxIndex;
+    if (VecInfo.NumVectors != 1) // vget for tuple type
+      MaxIndex = VecInfo.NumVectors;
+    else // vget for non-tuple type
+      MaxIndex = (VecInfo.EC.getKnownMinValue() * VecInfo.NumVectors) /
+                 (ResVecInfo.EC.getKnownMinValue() * ResVecInfo.NumVectors);
+    return SemaRef.BuiltinConstantArgRange(TheCall, 1, 0, MaxIndex - 1);
+  }
+  case RISCVVector::BI__builtin_rvv_vset_v: {
+    ASTContext::BuiltinVectorTypeInfo ResVecInfo =
+        Context.getBuiltinVectorTypeInfo(cast<BuiltinType>(
+            TheCall->getType().getCanonicalType().getTypePtr()));
+    ASTContext::BuiltinVectorTypeInfo VecInfo =
+        Context.getBuiltinVectorTypeInfo(cast<BuiltinType>(
+            TheCall->getArg(2)->getType().getCanonicalType().getTypePtr()));
+    unsigned MaxIndex;
+    if (ResVecInfo.NumVectors != 1) // vset for tuple type
+      MaxIndex = ResVecInfo.NumVectors;
+    else // vset fo non-tuple type
+      MaxIndex = (ResVecInfo.EC.getKnownMinValue() * ResVecInfo.NumVectors) /
+                 (VecInfo.EC.getKnownMinValue() * VecInfo.NumVectors);
+    return SemaRef.BuiltinConstantArgRange(TheCall, 1, 0, MaxIndex - 1);
+  }
+  // Vector Crypto
+  case RISCVVector::BI__builtin_rvv_vaeskf1_vi_tu:
+  case RISCVVector::BI__builtin_rvv_vaeskf2_vi_tu:
+  case RISCVVector::BI__builtin_rvv_vaeskf2_vi:
+  case RISCVVector::BI__builtin_rvv_vsm4k_vi_tu: {
+    QualType Arg0Type = TheCall->getArg(0)->getType();
+    QualType Arg1Type = TheCall->getArg(1)->getType();
+    return CheckInvalidVLENandLMUL(TI, FunctionFeatureMap, TheCall, SemaRef,
+                                   Arg0Type, 128) ||
+           CheckInvalidVLENandLMUL(TI, FunctionFeatureMap, TheCall, SemaRef,
+                                   Arg1Type, 128) ||
+           SemaRef.BuiltinConstantArgRange(TheCall, 2, 0, 31);
+  }
+  case RISCVVector::BI__builtin_rvv_vsm3c_vi_tu:
+  case RISCVVector::BI__builtin_rvv_vsm3c_vi: {
+    QualType Arg0Type = TheCall->getArg(0)->getType();
+    return CheckInvalidVLENandLMUL(TI, FunctionFeatureMap, TheCall, SemaRef,
+                                   Arg0Type, 256) ||
+           SemaRef.BuiltinConstantArgRange(TheCall, 2, 0, 31);
+  }
+  case RISCVVector::BI__builtin_rvv_vaeskf1_vi:
+  case RISCVVector::BI__builtin_rvv_vsm4k_vi: {
+    QualType Arg0Type = TheCall->getArg(0)->getType();
+    return CheckInvalidVLENandLMUL(TI, FunctionFeatureMap, TheCall, SemaRef,
+                                   Arg0Type, 128) ||
+           SemaRef.BuiltinConstantArgRange(TheCall, 1, 0, 31);
+  }
+  case RISCVVector::BI__builtin_rvv_vaesdf_vv:
+  case RISCVVector::BI__builtin_rvv_vaesdf_vs:
+  case RISCVVector::BI__builtin_rvv_vaesdm_vv:
+  case RISCVVector::BI__builtin_rvv_vaesdm_vs:
+  case RISCVVector::BI__builtin_rvv_vaesef_vv:
+  case RISCVVector::BI__builtin_rvv_vaesef_vs:
+  case RISCVVector::BI__builtin_rvv_vaesem_vv:
+  case RISCVVector::BI__builtin_rvv_vaesem_vs:
+  case RISCVVector::BI__builtin_rvv_vaesz_vs:
+  case RISCVVector::BI__builtin_rvv_vsm4r_vv:
+  case RISCVVector::BI__builtin_rvv_vsm4r_vs:
+  case RISCVVector::BI__builtin_rvv_vaesdf_vv_tu:
+  case RISCVVector::BI__builtin_rvv_vaesdf_vs_tu:
+  case RISCVVector::BI__builtin_rvv_vaesdm_vv_tu:
+  case RISCVVector::BI__builtin_rvv_vaesdm_vs_tu:
+  case RISCVVector::BI__builtin_rvv_vaesef_vv_tu:
+  case RISCVVector::BI__builtin_rvv_vaesef_vs_tu:
+  case RISCVVector::BI__builtin_rvv_vaesem_vv_tu:
+  case RISCVVector::BI__builtin_rvv_vaesem_vs_tu:
+  case RISCVVector::BI__builtin_rvv_vaesz_vs_tu:
+  case RISCVVector::BI__builtin_rvv_vsm4r_vv_tu:
+  case RISCVVector::BI__builtin_rvv_vsm4r_vs_tu: {
+    QualType Arg0Type = TheCall->getArg(0)->getType();
+    QualType Arg1Type = TheCall->getArg(1)->getType();
+    return CheckInvalidVLENandLMUL(TI, FunctionFeatureMap, TheCall, SemaRef,
+                                   Arg0Type, 128) ||
+           CheckInvalidVLENandLMUL(TI, FunctionFeatureMap, TheCall, SemaRef,
+                                   Arg1Type, 128);
+  }
+  case RISCVVector::BI__builtin_rvv_vsha2ch_vv:
+  case RISCVVector::BI__builtin_rvv_vsha2cl_vv:
+  case RISCVVector::BI__builtin_rvv_vsha2ms_vv:
+  case RISCVVector::BI__builtin_rvv_vsha2ch_vv_tu:
+  case RISCVVector::BI__builtin_rvv_vsha2cl_vv_tu:
+  case RISCVVector::BI__builtin_rvv_vsha2ms_vv_tu: {
+    QualType Arg0Type = TheCall->getArg(0)->getType();
+    QualType Arg1Type = TheCall->getArg(1)->getType();
+    QualType Arg2Type = TheCall->getArg(2)->getType();
+    ASTContext::BuiltinVectorTypeInfo Info =
+        Context.getBuiltinVectorTypeInfo(Arg0Type->castAs<BuiltinType>());
+    uint64_t ElemSize = Context.getTypeSize(Info.ElementType);
+    if (ElemSize == 64 && !TI.hasFeature("zvknhb") &&
+        !FunctionFeatureMap.lookup("zvknhb"))
+      return Diag(TheCall->getBeginLoc(),
+                  diag::err_riscv_builtin_requires_extension)
+             << /* IsExtension */ true << TheCall->getSourceRange() << "zvknhb";
+    // If ElemSize is 32, check at least zvknha or zvknhb is enabled.
+    if (!TI.hasFeature("zvknha") && !FunctionFeatureMap.lookup("zvknha") &&
+        !TI.hasFeature("zvknhb") && !FunctionFeatureMap.lookup("zvknhb"))
+      return Diag(TheCall->getBeginLoc(),
+                  diag::err_riscv_builtin_requires_extension)
+             << /* IsExtension */ true << TheCall->getSourceRange()
+             << "zvknha or zvknhb";
+
+    return CheckInvalidVLENandLMUL(TI, FunctionFeatureMap, TheCall, SemaRef,
+                                   Arg0Type, ElemSize * 4) ||
+           CheckInvalidVLENandLMUL(TI, FunctionFeatureMap, TheCall, SemaRef,
+                                   Arg1Type, ElemSize * 4) ||
+           CheckInvalidVLENandLMUL(TI, FunctionFeatureMap, TheCall, SemaRef,
+                                   Arg2Type, ElemSize * 4);
+  }
+
+  case RISCVVector::BI__builtin_rvv_sf_vc_i_se:
+    // bit_27_26, bit_24_20, bit_11_7, simm5, sew, log2lmul
+    return SemaRef.BuiltinConstantArgRange(TheCall, 0, 0, 3) ||
+           SemaRef.BuiltinConstantArgRange(TheCall, 1, 0, 31) ||
+           SemaRef.BuiltinConstantArgRange(TheCall, 2, 0, 31) ||
+           SemaRef.BuiltinConstantArgRange(TheCall, 3, -16, 15) ||
+           CheckLMUL(TheCall, 5);
+  case RISCVVector::BI__builtin_rvv_sf_vc_iv_se:
+    // bit_27_26, bit_11_7, vs2, simm5
+    return SemaRef.BuiltinConstantArgRange(TheCall, 0, 0, 3) ||
+           SemaRef.BuiltinConstantArgRange(TheCall, 1, 0, 31) ||
+           SemaRef.BuiltinConstantArgRange(TheCall, 3, -16, 15);
+  case RISCVVector::BI__builtin_rvv_sf_vc_v_i:
+  case RISCVVector::BI__builtin_rvv_sf_vc_v_i_se:
+    // bit_27_26, bit_24_20, simm5
+    return SemaRef.BuiltinConstantArgRange(TheCall, 0, 0, 3) ||
+           SemaRef.BuiltinConstantArgRange(TheCall, 1, 0, 31) ||
+           SemaRef.BuiltinConstantArgRange(TheCall, 2, -16, 15);
+  case RISCVVector::BI__builtin_rvv_sf_vc_v_iv:
+  case RISCVVector::BI__builtin_rvv_sf_vc_v_iv_se:
+    // bit_27_26, vs2, simm5
+    return SemaRef.BuiltinConstantArgRange(TheCall, 0, 0, 3) ||
+           SemaRef.BuiltinConstantArgRange(TheCall, 2, -16, 15);
+  case RISCVVector::BI__builtin_rvv_sf_vc_ivv_se:
+  case RISCVVector::BI__builtin_rvv_sf_vc_ivw_se:
+  case RISCVVector::BI__builtin_rvv_sf_vc_v_ivv:
+  case RISCVVector::BI__builtin_rvv_sf_vc_v_ivw:
+  case RISCVVector::BI__builtin_rvv_sf_vc_v_ivv_se:
+  case RISCVVector::BI__builtin_rvv_sf_vc_v_ivw_se:
+    // bit_27_26, vd, vs2, simm5
+    return SemaRef.BuiltinConstantArgRange(TheCall, 0, 0, 3) ||
+           SemaRef.BuiltinConstantArgRange(TheCall, 3, -16, 15);
+  case RISCVVector::BI__builtin_rvv_sf_vc_x_se:
+    // bit_27_26, bit_24_20, bit_11_7, xs1, sew, log2lmul
+    return SemaRef.BuiltinConstantArgRange(TheCall, 0, 0, 3) ||
+           SemaRef.BuiltinConstantArgRange(TheCall, 1, 0, 31) ||
+           SemaRef.BuiltinConstantArgRange(TheCall, 2, 0, 31) ||
+           CheckLMUL(TheCall, 5);
+  case RISCVVector::BI__builtin_rvv_sf_vc_xv_se:
+  case RISCVVector::BI__builtin_rvv_sf_vc_vv_se:
+    // bit_27_26, bit_11_7, vs2, xs1/vs1
+  case RISCVVector::BI__builtin_rvv_sf_vc_v_x:
+  case RISCVVector::BI__builtin_rvv_sf_vc_v_x_se:
+    // bit_27_26, bit_24-20, xs1
+    return SemaRef.BuiltinConstantArgRange(TheCall, 0, 0, 3) ||
+           SemaRef.BuiltinConstantArgRange(TheCall, 1, 0, 31);
+  case RISCVVector::BI__builtin_rvv_sf_vc_vvv_se:
+  case RISCVVector::BI__builtin_rvv_sf_vc_xvv_se:
+  case RISCVVector::BI__builtin_rvv_sf_vc_vvw_se:
+  case RISCVVector::BI__builtin_rvv_sf_vc_xvw_se:
+    // bit_27_26, vd, vs2, xs1
+  case RISCVVector::BI__builtin_rvv_sf_vc_v_xv:
+  case RISCVVector::BI__builtin_rvv_sf_vc_v_vv:
+  case RISCVVector::BI__builtin_rvv_sf_vc_v_xv_se:
+  case RISCVVector::BI__builtin_rvv_sf_vc_v_vv_se:
+    // bit_27_26, vs2, xs1/vs1
+  case RISCVVector::BI__builtin_rvv_sf_vc_v_xvv:
+  case RISCVVector::BI__builtin_rvv_sf_vc_v_vvv:
+  case RISCVVector::BI__builtin_rvv_sf_vc_v_xvw:
+  case RISCVVector::BI__builtin_rvv_sf_vc_v_vvw:
+  case RISCVVector::BI__builtin_rvv_sf_vc_v_xvv_se:
+  case RISCVVector::BI__builtin_rvv_sf_vc_v_vvv_se:
+  case RISCVVector::BI__builtin_rvv_sf_vc_v_xvw_se:
+  case RISCVVector::BI__builtin_rvv_sf_vc_v_vvw_se:
+    // bit_27_26, vd, vs2, xs1/vs1
+    return SemaRef.BuiltinConstantArgRange(TheCall, 0, 0, 3);
+  case RISCVVector::BI__builtin_rvv_sf_vc_fv_se:
+    // bit_26, bit_11_7, vs2, fs1
+    return SemaRef.BuiltinConstantArgRange(TheCall, 0, 0, 1) ||
+           SemaRef.BuiltinConstantArgRange(TheCall, 1, 0, 31);
+  case RISCVVector::BI__builtin_rvv_sf_vc_fvv_se:
+  case RISCVVector::BI__builtin_rvv_sf_vc_fvw_se:
+  case RISCVVector::BI__builtin_rvv_sf_vc_v_fvv:
+  case RISCVVector::BI__builtin_rvv_sf_vc_v_fvw:
+  case RISCVVector::BI__builtin_rvv_sf_vc_v_fvv_se:
+  case RISCVVector::BI__builtin_rvv_sf_vc_v_fvw_se:
+    // bit_26, vd, vs2, fs1
+  case RISCVVector::BI__builtin_rvv_sf_vc_v_fv:
+  case RISCVVector::BI__builtin_rvv_sf_vc_v_fv_se:
+    // bit_26, vs2, fs1
+    return SemaRef.BuiltinConstantArgRange(TheCall, 0, 0, 1);
+  // Check if byteselect is in [0, 3]
+  case RISCV::BI__builtin_riscv_aes32dsi:
+  case RISCV::BI__builtin_riscv_aes32dsmi:
+  case RISCV::BI__builtin_riscv_aes32esi:
+  case RISCV::BI__builtin_riscv_aes32esmi:
+  case RISCV::BI__builtin_riscv_sm4ks:
+  case RISCV::BI__builtin_riscv_sm4ed:
+    return SemaRef.BuiltinConstantArgRange(TheCall, 2, 0, 3);
+  // Check if rnum is in [0, 10]
+  case RISCV::BI__builtin_riscv_aes64ks1i:
+    return SemaRef.BuiltinConstantArgRange(TheCall, 1, 0, 10);
+  // Check if value range for vxrm is in [0, 3]
+  case RISCVVector::BI__builtin_rvv_vaaddu_vv:
+  case RISCVVector::BI__builtin_rvv_vaaddu_vx:
+  case RISCVVector::BI__builtin_rvv_vaadd_vv:
+  case RISCVVector::BI__builtin_rvv_vaadd_vx:
+  case RISCVVector::BI__builtin_rvv_vasubu_vv:
+  case RISCVVector::BI__builtin_rvv_vasubu_vx:
+  case RISCVVector::BI__builtin_rvv_vasub_vv:
+  case RISCVVector::BI__builtin_rvv_vasub_vx:
+  case RISCVVector::BI__builtin_rvv_vsmul_vv:
+  case RISCVVector::BI__builtin_rvv_vsmul_vx:
+  case RISCVVector::BI__builtin_rvv_vssra_vv:
+  case RISCVVector::BI__builtin_rvv_vssra_vx:
+  case RISCVVector::BI__builtin_rvv_vssrl_vv:
+  case RISCVVector::BI__builtin_rvv_vssrl_vx:
+  case RISCVVector::BI__builtin_rvv_vnclip_wv:
+  case RISCVVector::BI__builtin_rvv_vnclip_wx:
+  case RISCVVector::BI__builtin_rvv_vnclipu_wv:
+  case RISCVVector::BI__builtin_rvv_vnclipu_wx:
+    return SemaRef.BuiltinConstantArgRange(TheCall, 2, 0, 3);
+  case RISCVVector::BI__builtin_rvv_vaaddu_vv_tu:
+  case RISCVVector::BI__builtin_rvv_vaaddu_vx_tu:
+  case RISCVVector::BI__builtin_rvv_vaadd_vv_tu:
+  case RISCVVector::BI__builtin_rvv_vaadd_vx_tu:
+  case RISCVVector::BI__builtin_rvv_vasubu_vv_tu:
+  case RISCVVector::BI__builtin_rvv_vasubu_vx_tu:
+  case RISCVVector::BI__builtin_rvv_vasub_vv_tu:
+  case RISCVVector::BI__builtin_rvv_vasub_vx_tu:
+  case RISCVVector::BI__builtin_rvv_vsmul_vv_tu:
+  case RISCVVector::BI__builtin_rvv_vsmul_vx_tu:
+  case RISCVVector::BI__builtin_rvv_vssra_vv_tu:
+  case RISCVVector::BI__builtin_rvv_vssra_vx_tu:
+  case RISCVVector::BI__builtin_rvv_vssrl_vv_tu:
+  case RISCVVector::BI__builtin_rvv_vssrl_vx_tu:
+  case RISCVVector::BI__builtin_rvv_vnclip_wv_tu:
+  case RISCVVector::BI__builtin_rvv_vnclip_wx_tu:
+  case RISCVVector::BI__builtin_rvv_vnclipu_wv_tu:
+  case RISCVVector::BI__builtin_rvv_vnclipu_wx_tu:
+  case RISCVVector::BI__builtin_rvv_vaaddu_vv_m:
+  case RISCVVector::BI__builtin_rvv_vaaddu_vx_m:
+  case RISCVVector::BI__builtin_rvv_vaadd_vv_m:
+  case RISCVVector::BI__builtin_rvv_vaadd_vx_m:
+  case RISCVVector::BI__builtin_rvv_vasubu_vv_m:
+  case RISCVVector::BI__builtin_rvv_vasubu_vx_m:
+  case RISCVVector::BI__builtin_rvv_vasub_vv_m:
+  case RISCVVector::BI__builtin_rvv_vasub_vx_m:
+  case RISCVVector::BI__builtin_rvv_vsmul_vv_m:
+  case RISCVVector::BI__builtin_rvv_vsmul_vx_m:
+  case RISCVVector::BI__builtin_rvv_vssra_vv_m:
+  case RISCVVector::BI__builtin_rvv_vssra_vx_m:
+  case RISCVVector::BI__builtin_rvv_vssrl_vv_m:
+  case RISCVVector::BI__builtin_rvv_vssrl_vx_m:
+  case RISCVVector::BI__builtin_rvv_vnclip_wv_m:
+  case RISCVVector::BI__builtin_rvv_vnclip_wx_m:
+  case RISCVVector::BI__builtin_rvv_vnclipu_wv_m:
+  case RISCVVector::BI__builtin_rvv_vnclipu_wx_m:
+    return SemaRef.BuiltinConstantArgRange(TheCall, 3, 0, 3);
+  case RISCVVector::BI__builtin_rvv_vaaddu_vv_tum:
+  case RISCVVector::BI__builtin_rvv_vaaddu_vv_tumu:
+  case RISCVVector::BI__builtin_rvv_vaaddu_vv_mu:
+  case RISCVVector::BI__builtin_rvv_vaaddu_vx_tum:
+  case RISCVVector::BI__builtin_rvv_vaaddu_vx_tumu:
+  case RISCVVector::BI__builtin_rvv_vaaddu_vx_mu:
+  case RISCVVector::BI__builtin_rvv_vaadd_vv_tum:
+  case RISCVVector::BI__builtin_rvv_vaadd_vv_tumu:
+  case RISCVVector::BI__builtin_rvv_vaadd_vv_mu:
+  case RISCVVector::BI__builtin_rvv_vaadd_vx_tum:
+  case RISCVVector::BI__builtin_rvv_vaadd_vx_tumu:
+  case RISCVVector::BI__builtin_rvv_vaadd_vx_mu:
+  case RISCVVector::BI__builtin_rvv_vasubu_vv_tum:
+  case RISCVVector::BI__builtin_rvv_vasubu_vv_tumu:
+  case RISCVVector::BI__builtin_rvv_vasubu_vv_mu:
+  case RISCVVector::BI__builtin_rvv_vasubu_vx_tum:
+  case RISCVVector::BI__builtin_rvv_vasubu_vx_tumu:
+  case RISCVVector::BI__builtin_rvv_vasubu_vx_mu:
+  case RISCVVector::BI__builtin_rvv_vasub_vv_tum:
+  case RISCVVector::BI__builtin_rvv_vasub_vv_tumu:
+  case RISCVVector::BI__builtin_rvv_vasub_vv_mu:
+  case RISCVVector::BI__builtin_rvv_vasub_vx_tum:
+  case RISCVVector::BI__builtin_rvv_vasub_vx_tumu:
+  case RISCVVector::BI__builtin_rvv_vasub_vx_mu:
+  case RISCVVector::BI__builtin_rvv_vsmul_vv_mu:
+  case RISCVVector::BI__builtin_rvv_vsmul_vx_mu:
+  case RISCVVector::BI__builtin_rvv_vssra_vv_mu:
+  case RISCVVector::BI__builtin_rvv_vssra_vx_mu:
+  case RISCVVector::BI__builtin_rvv_vssrl_vv_mu:
+  case RISCVVector::BI__builtin_rvv_vssrl_vx_mu:
+  case RISCVVector::BI__builtin_rvv_vnclip_wv_mu:
+  case RISCVVector::BI__builtin_rvv_vnclip_wx_mu:
+  case RISCVVector::BI__builtin_rvv_vnclipu_wv_mu:
+  case RISCVVector::BI__builtin_rvv_vnclipu_wx_mu:
+  case RISCVVector::BI__builtin_rvv_vsmul_vv_tum:
+  case RISCVVector::BI__builtin_rvv_vsmul_vx_tum:
+  case RISCVVector::BI__builtin_rvv_vssra_vv_tum:
+  case RISCVVector::BI__builtin_rvv_vssra_vx_tum:
+  case RISCVVector::BI__builtin_rvv_vssrl_vv_tum:
+  case RISCVVector::BI__builtin_rvv_vssrl_vx_tum:
+  case RISCVVector::BI__builtin_rvv_vnclip_wv_tum:
+  case RISCVVector::BI__builtin_rvv_vnclip_wx_tum:
+  case RISCVVector::BI__builtin_rvv_vnclipu_wv_tum:
+  case RISCVVector::BI__builtin_rvv_vnclipu_wx_tum:
+  case RISCVVector::BI__builtin_rvv_vsmul_vv_tumu:
+  case RISCVVector::BI__builtin_rvv_vsmul_vx_tumu:
+  case RISCVVector::BI__builtin_rvv_vssra_vv_tumu:
+  case RISCVVector::BI__builtin_rvv_vssra_vx_tumu:
+  case RISCVVector::BI__builtin_rvv_vssrl_vv_tumu:
+  case RISCVVector::BI__builtin_rvv_vssrl_vx_tumu:
+  case RISCVVector::BI__builtin_rvv_vnclip_wv_tumu:
+  case RISCVVector::BI__builtin_rvv_vnclip_wx_tumu:
+  case RISCVVector::BI__builtin_rvv_vnclipu_wv_tumu:
+  case RISCVVector::BI__builtin_rvv_vnclipu_wx_tumu:
+    return SemaRef.BuiltinConstantArgRange(TheCall, 4, 0, 3);
+  case RISCVVector::BI__builtin_rvv_vfsqrt_v_rm:
+  case RISCVVector::BI__builtin_rvv_vfrec7_v_rm:
+  case RISCVVector::BI__builtin_rvv_vfcvt_x_f_v_rm:
+  case RISCVVector::BI__builtin_rvv_vfcvt_xu_f_v_rm:
+  case RISCVVector::BI__builtin_rvv_vfcvt_f_x_v_rm:
+  case RISCVVector::BI__builtin_rvv_vfcvt_f_xu_v_rm:
+  case RISCVVector::BI__builtin_rvv_vfwcvt_x_f_v_rm:
+  case RISCVVector::BI__builtin_rvv_vfwcvt_xu_f_v_rm:
+  case RISCVVector::BI__builtin_rvv_vfncvt_x_f_w_rm:
+  case RISCVVector::BI__builtin_rvv_vfncvt_xu_f_w_rm:
+  case RISCVVector::BI__builtin_rvv_vfncvt_f_x_w_rm:
+  case RISCVVector::BI__builtin_rvv_vfncvt_f_xu_w_rm:
+  case RISCVVector::BI__builtin_rvv_vfncvt_f_f_w_rm:
+  case RISCVVector::BI__builtin_rvv_vfncvtbf16_f_f_w_rm:
+    return SemaRef.BuiltinConstantArgRange(TheCall, 1, 0, 4);
+  case RISCVVector::BI__builtin_rvv_vfadd_vv_rm:
+  case RISCVVector::BI__builtin_rvv_vfadd_vf_rm:
+  case RISCVVector::BI__builtin_rvv_vfsub_vv_rm:
+  case RISCVVector::BI__builtin_rvv_vfsub_vf_rm:
+  case RISCVVector::BI__builtin_rvv_vfrsub_vf_rm:
+  case RISCVVector::BI__builtin_rvv_vfwadd_vv_rm:
+  case RISCVVector::BI__builtin_rvv_vfwadd_vf_rm:
+  case RISCVVector::BI__builtin_rvv_vfwsub_vv_rm:
+  case RISCVVector::BI__builtin_rvv_vfwsub_vf_rm:
+  case RISCVVector::BI__builtin_rvv_vfwadd_wv_rm:
+  case RISCVVector::BI__builtin_rvv_vfwadd_wf_rm:
+  case RISCVVector::BI__builtin_rvv_vfwsub_wv_rm:
+  case RISCVVector::BI__builtin_rvv_vfwsub_wf_rm:
+  case RISCVVector::BI__builtin_rvv_vfmul_vv_rm:
+  case RISCVVector::BI__builtin_rvv_vfmul_vf_rm:
+  case RISCVVector::BI__builtin_rvv_vfdiv_vv_rm:
+  case RISCVVector::BI__builtin_rvv_vfdiv_vf_rm:
+  case RISCVVector::BI__builtin_rvv_vfrdiv_vf_rm:
+  case RISCVVector::BI__builtin_rvv_vfwmul_vv_rm:
+  case RISCVVector::BI__builtin_rvv_vfwmul_vf_rm:
+  case RISCVVector::BI__builtin_rvv_vfredosum_vs_rm:
+  case RISCVVector::BI__builtin_rvv_vfredusum_vs_rm:
+  case RISCVVector::BI__builtin_rvv_vfwredosum_vs_rm:
+  case RISCVVector::BI__builtin_rvv_vfwredusum_vs_rm:
+  case RISCVVector::BI__builtin_rvv_sf_vfnrclip_x_f_qf_rm:
+  case RISCVVector::BI__builtin_rvv_sf_vfnrclip_xu_f_qf_rm:
+  case RISCVVector::BI__builtin_rvv_vfsqrt_v_rm_tu:
+  case RISCVVector::BI__builtin_rvv_vfrec7_v_rm_tu:
+  case RISCVVector::BI__builtin_rvv_vfcvt_x_f_v_rm_tu:
+  case RISCVVector::BI__builtin_rvv_vfcvt_xu_f_v_rm_tu:
+  case RISCVVector::BI__builtin_rvv_vfcvt_f_x_v_rm_tu:
+  case RISCVVector::BI__builtin_rvv_vfcvt_f_xu_v_rm_tu:
+  case RISCVVector::BI__builtin_rvv_vfwcvt_x_f_v_rm_tu:
+  case RISCVVector::BI__builtin_rvv_vfwcvt_xu_f_v_rm_tu:
+  case RISCVVector::BI__builtin_rvv_vfncvt_x_f_w_rm_tu:
+  case RISCVVector::BI__builtin_rvv_vfncvt_xu_f_w_rm_tu:
+  case RISCVVector::BI__builtin_rvv_vfncvt_f_x_w_rm_tu:
+  case RISCVVector::BI__builtin_rvv_vfncvt_f_xu_w_rm_tu:
+  case RISCVVector::BI__builtin_rvv_vfncvt_f_f_w_rm_tu:
+  case RISCVVector::BI__builtin_rvv_vfncvtbf16_f_f_w_rm_tu:
+  case RISCVVector::BI__builtin_rvv_vfsqrt_v_rm_m:
+  case RISCVVector::BI__builtin_rvv_vfrec7_v_rm_m:
+  case RISCVVector::BI__builtin_rvv_vfcvt_x_f_v_rm_m:
+  case RISCVVector::BI__builtin_rvv_vfcvt_xu_f_v_rm_m:
+  case RISCVVector::BI__builtin_rvv_vfcvt_f_x_v_rm_m:
+  case RISCVVector::BI__builtin_rvv_vfcvt_f_xu_v_rm_m:
+  case RISCVVector::BI__builtin_rvv_vfwcvt_x_f_v_rm_m:
+  case RISCVVector::BI__builtin_rvv_vfwcvt_xu_f_v_rm_m:
+  case RISCVVector::BI__builtin_rvv_vfncvt_x_f_w_rm_m:
+  case RISCVVector::BI__builtin_rvv_vfncvt_xu_f_w_rm_m:
+  case RISCVVector::BI__builtin_rvv_vfncvt_f_x_w_rm_m:
+  case RISCVVector::BI__builtin_rvv_vfncvt_f_xu_w_rm_m:
+  case RISCVVector::BI__builtin_rvv_vfncvt_f_f_w_rm_m:
+  case RISCVVector::BI__builtin_rvv_vfncvtbf16_f_f_w_rm_m:
+    return SemaRef.BuiltinConstantArgRange(TheCall, 2, 0, 4);
+  case RISCVVector::BI__builtin_rvv_vfadd_vv_rm_tu:
+  case RISCVVector::BI__builtin_rvv_vfadd_vf_rm_tu:
+  case RISCVVector::BI__builtin_rvv_vfsub_vv_rm_tu:
+  case RISCVVector::BI__builtin_rvv_vfsub_vf_rm_tu:
+  case RISCVVector::BI__builtin_rvv_vfrsub_vf_rm_tu:
+  case RISCVVector::BI__builtin_rvv_vfwadd_vv_rm_tu:
+  case RISCVVector::BI__builtin_rvv_vfwadd_vf_rm_tu:
+  case RISCVVector::BI__builtin_rvv_vfwsub_vv_rm_tu:
+  case RISCVVector::BI__builtin_rvv_vfwsub_vf_rm_tu:
+  case RISCVVector::BI__builtin_rvv_vfwadd_wv_rm_tu:
+  case RISCVVector::BI__builtin_rvv_vfwadd_wf_rm_tu:
+  case RISCVVector::BI__builtin_rvv_vfwsub_wv_rm_tu:
+  case RISCVVector::BI__builtin_rvv_vfwsub_wf_rm_tu:
+  case RISCVVector::BI__builtin_rvv_vfmul_vv_rm_tu:
+  case RISCVVector::BI__builtin_rvv_vfmul_vf_rm_tu:
+  case RISCVVector::BI__builtin_rvv_vfdiv_vv_rm_tu:
+  case RISCVVector::BI__builtin_rvv_vfdiv_vf_rm_tu:
+  case RISCVVector::BI__builtin_rvv_vfrdiv_vf_rm_tu:
+  case RISCVVector::BI__builtin_rvv_vfwmul_vv_rm_tu:
+  case RISCVVector::BI__builtin_rvv_vfwmul_vf_rm_tu:
+  case RISCVVector::BI__builtin_rvv_vfredosum_vs_rm_tu:
+  case RISCVVector::BI__builtin_rvv_vfredusum_vs_rm_tu:
+  case RISCVVector::BI__builtin_rvv_vfwredosum_vs_rm_tu:
+  case RISCVVector::BI__builtin_rvv_vfwredusum_vs_rm_tu:
+  case RISCVVector::BI__builtin_rvv_vfmacc_vv_rm:
+  case RISCVVector::BI__builtin_rvv_vfmacc_vf_rm:
+  case RISCVVector::BI__builtin_rvv_vfnmacc_vv_rm:
+  case RISCVVector::BI__builtin_rvv_vfnmacc_vf_rm:
+  case RISCVVector::BI__builtin_rvv_vfmsac_vv_rm:
+  case RISCVVector::BI__builtin_rvv_vfmsac_vf_rm:
+  case RISCVVector::BI__builtin_rvv_vfnmsac_vv_rm:
+  case RISCVVector::BI__builtin_rvv_vfnmsac_vf_rm:
+  case RISCVVector::BI__builtin_rvv_vfmadd_vv_rm:
+  case RISCVVector::BI__builtin_rvv_vfmadd_vf_rm:
+  case RISCVVector::BI__builtin_rvv_vfnmadd_vv_rm:
+  case RISCVVector::BI__builtin_rvv_vfnmadd_vf_rm:
+  case RISCVVector::BI__builtin_rvv_vfmsub_vv_rm:
+  case RISCVVector::BI__builtin_rvv_vfmsub_vf_rm:
+  case RISCVVector::BI__builtin_rvv_vfnmsub_vv_rm:
+  case RISCVVector::BI__builtin_rvv_vfnmsub_vf_rm:
+  case RISCVVector::BI__builtin_rvv_vfwmacc_vv_rm:
+  case RISCVVector::BI__builtin_rvv_vfwmacc_vf_rm:
+  case RISCVVector::BI__builtin_rvv_vfwnmacc_vv_rm:
+  case RISCVVector::BI__builtin_rvv_vfwnmacc_vf_rm:
+  case RISCVVector::BI__builtin_rvv_vfwmsac_vv_rm:
+  case RISCVVector::BI__builtin_rvv_vfwmsac_vf_rm:
+  case RISCVVector::BI__builtin_rvv_vfwnmsac_vv_rm:
+  case RISCVVector::BI__builtin_rvv_vfwnmsac_vf_rm:
+  case RISCVVector::BI__builtin_rvv_vfwmaccbf16_vv_rm:
+  case RISCVVector::BI__builtin_rvv_vfwmaccbf16_vf_rm:
+  case RISCVVector::BI__builtin_rvv_vfmacc_vv_rm_tu:
+  case RISCVVector::BI__builtin_rvv_vfmacc_vf_rm_tu:
+  case RISCVVector::BI__builtin_rvv_vfnmacc_vv_rm_tu:
+  case RISCVVector::BI__builtin_rvv_vfnmacc_vf_rm_tu:
+  case RISCVVector::BI__builtin_rvv_vfmsac_vv_rm_tu:
+  case RISCVVector::BI__builtin_rvv_vfmsac_vf_rm_tu:
+  case RISCVVector::BI__builtin_rvv_vfnmsac_vv_rm_tu:
+  case RISCVVector::BI__builtin_rvv_vfnmsac_vf_rm_tu:
+  case RISCVVector::BI__builtin_rvv_vfmadd_vv_rm_tu:
+  case RISCVVector::BI__builtin_rvv_vfmadd_vf_rm_tu:
+  case RISCVVector::BI__builtin_rvv_vfnmadd_vv_rm_tu:
+  case RISCVVector::BI__builtin_rvv_vfnmadd_vf_rm_tu:
+  case RISCVVector::BI__builtin_rvv_vfmsub_vv_rm_tu:
+  case RISCVVector::BI__builtin_rvv_vfmsub_vf_rm_tu:
+  case RISCVVector::BI__builtin_rvv_vfnmsub_vv_rm_tu:
+  case RISCVVector::BI__builtin_rvv_vfnmsub_vf_rm_tu:
+  case RISCVVector::BI__builtin_rvv_vfwmacc_vv_rm_tu:
+  case RISCVVector::BI__builtin_rvv_vfwmacc_vf_rm_tu:
+  case RISCVVector::BI__builtin_rvv_vfwnmacc_vv_rm_tu:
+  case RISCVVector::BI__builtin_rvv_vfwnmacc_vf_rm_tu:
+  case RISCVVector::BI__builtin_rvv_vfwmsac_vv_rm_tu:
+  case RISCVVector::BI__builtin_rvv_vfwmsac_vf_rm_tu:
+  case RISCVVector::BI__builtin_rvv_vfwnmsac_vv_rm_tu:
+  case RISCVVector::BI__builtin_rvv_vfwnmsac_vf_rm_tu:
+  case RISCVVector::BI__builtin_rvv_vfwmaccbf16_vv_rm_tu:
+  case RISCVVector::BI__builtin_rvv_vfwmaccbf16_vf_rm_tu:
+  case RISCVVector::BI__builtin_rvv_sf_vfnrclip_x_f_qf_rm_tu:
+  case RISCVVector::BI__builtin_rvv_sf_vfnrclip_xu_f_qf_rm_tu:
+  case RISCVVector::BI__builtin_rvv_vfadd_vv_rm_m:
+  case RISCVVector::BI__builtin_rvv_vfadd_vf_rm_m:
+  case RISCVVector::BI__builtin_rvv_vfsub_vv_rm_m:
+  case RISCVVector::BI__builtin_rvv_vfsub_vf_rm_m:
+  case RISCVVector::BI__builtin_rvv_vfrsub_vf_rm_m:
+  case RISCVVector::BI__builtin_rvv_vfwadd_vv_rm_m:
+  case RISCVVector::BI__builtin_rvv_vfwadd_vf_rm_m:
+  case RISCVVector::BI__builtin_rvv_vfwsub_vv_rm_m:
+  case RISCVVector::BI__builtin_rvv_vfwsub_vf_rm_m:
+  case RISCVVector::BI__builtin_rvv_vfwadd_wv_rm_m:
+  case RISCVVector::BI__builtin_rvv_vfwadd_wf_rm_m:
+  case RISCVVector::BI__builtin_rvv_vfwsub_wv_rm_m:
+  case RISCVVector::BI__builtin_rvv_vfwsub_wf_rm_m:
+  case RISCVVector::BI__builtin_rvv_vfmul_vv_rm_m:
+  case RISCVVector::BI__builtin_rvv_vfmul_vf_rm_m:
+  case RISCVVector::BI__builtin_rvv_vfdiv_vv_rm_m:
+  case RISCVVector::BI__builtin_rvv_vfdiv_vf_rm_m:
+  case RISCVVector::BI__builtin_rvv_vfrdiv_vf_rm_m:
+  case RISCVVector::BI__builtin_rvv_vfwmul_vv_rm_m:
+  case RISCVVector::BI__builtin_rvv_vfwmul_vf_rm_m:
+  case RISCVVector::BI__builtin_rvv_vfredosum_vs_rm_m:
+  case RISCVVector::BI__builtin_rvv_vfredusum_vs_rm_m:
+  case RISCVVector::BI__builtin_rvv_vfwredosum_vs_rm_m:
+  case RISCVVector::BI__builtin_rvv_vfwredusum_vs_rm_m:
+  case RISCVVector::BI__builtin_rvv_vfsqrt_v_rm_tum:
+  case RISCVVector::BI__builtin_rvv_vfrec7_v_rm_tum:
+  case RISCVVector::BI__builtin_rvv_vfcvt_x_f_v_rm_tum:
+  case RISCVVector::BI__builtin_rvv_vfcvt_xu_f_v_rm_tum:
+  case RISCVVector::BI__builtin_rvv_vfcvt_f_x_v_rm_tum:
+  case RISCVVector::BI__builtin_rvv_vfcvt_f_xu_v_rm_tum:
+  case RISCVVector::BI__builtin_rvv_vfwcvt_x_f_v_rm_tum:
+  case RISCVVector::BI__builtin_rvv_vfwcvt_xu_f_v_rm_tum:
+  case RISCVVector::BI__builtin_rvv_vfncvt_x_f_w_rm_tum:
+  case RISCVVector::BI__builtin_rvv_vfncvt_xu_f_w_rm_tum:
+  case RISCVVector::BI__builtin_rvv_vfncvt_f_x_w_rm_tum:
+  case RISCVVector::BI__builtin_rvv_vfncvt_f_xu_w_rm_tum:
+  case RISCVVector::BI__builtin_rvv_vfncvt_f_f_w_rm_tum:
+  case RISCVVector::BI__builtin_rvv_vfncvtbf16_f_f_w_rm_tum:
+  case RISCVVector::BI__builtin_rvv_vfsqrt_v_rm_tumu:
+  case RISCVVector::BI__builtin_rvv_vfrec7_v_rm_tumu:
+  case RISCVVector::BI__builtin_rvv_vfcvt_x_f_v_rm_tumu:
+  case RISCVVector::BI__builtin_rvv_vfcvt_xu_f_v_rm_tumu:
+  case RISCVVector::BI__builtin_rvv_vfcvt_f_x_v_rm_tumu:
+  case RISCVVector::BI__builtin_rvv_vfcvt_f_xu_v_rm_tumu:
+  case RISCVVector::BI__builtin_rvv_vfwcvt_x_f_v_rm_tumu:
+  case RISCVVector::BI__builtin_rvv_vfwcvt_xu_f_v_rm_tumu:
+  case RISCVVector::BI__builtin_rvv_vfncvt_x_f_w_rm_tumu:
+  case RISCVVector::BI__builtin_rvv_vfncvt_xu_f_w_rm_tumu:
+  case RISCVVector::BI__builtin_rvv_vfncvt_f_x_w_rm_tumu:
+  case RISCVVector::BI__builtin_rvv_vfncvt_f_xu_w_rm_tumu:
+  case RISCVVector::BI__builtin_rvv_vfncvt_f_f_w_rm_tumu:
+  case RISCVVector::BI__builtin_rvv_vfncvtbf16_f_f_w_rm_tumu:
+  case RISCVVector::BI__builtin_rvv_vfsqrt_v_rm_mu:
+  case RISCVVector::BI__builtin_rvv_vfrec7_v_rm_mu:
+  case RISCVVector::BI__builtin_rvv_vfcvt_x_f_v_rm_mu:
+  case RISCVVector::BI__builtin_rvv_vfcvt_xu_f_v_rm_mu:
+  case RISCVVector::BI__builtin_rvv_vfcvt_f_x_v_rm_mu:
+  case RISCVVector::BI__builtin_rvv_vfcvt_f_xu_v_rm_mu:
+  case RISCVVector::BI__builtin_rvv_vfwcvt_x_f_v_rm_mu:
+  case RISCVVector::BI__builtin_rvv_vfwcvt_xu_f_v_rm_mu:
+  case RISCVVector::BI__builtin_rvv_vfncvt_x_f_w_rm_mu:
+  case RISCVVector::BI__builtin_rvv_vfncvt_xu_f_w_rm_mu:
+  case RISCVVector::BI__builtin_rvv_vfncvt_f_x_w_rm_mu:
+  case RISCVVector::BI__builtin_rvv_vfncvt_f_xu_w_rm_mu:
+  case RISCVVector::BI__builtin_rvv_vfncvt_f_f_w_rm_mu:
+  case RISCVVector::BI__builtin_rvv_vfncvtbf16_f_f_w_rm_mu:
+    return SemaRef.BuiltinConstantArgRange(TheCall, 3, 0, 4);
+  case RISCVVector::BI__builtin_rvv_vfmacc_vv_rm_m:
+  case RISCVVector::BI__builtin_rvv_vfmacc_vf_rm_m:
+  case RISCVVector::BI__builtin_rvv_vfnmacc_vv_rm_m:
+  case RISCVVector::BI__builtin_rvv_vfnmacc_vf_rm_m:
+  case RISCVVector::BI__builtin_rvv_vfmsac_vv_rm_m:
+  case RISCVVector::BI__builtin_rvv_vfmsac_vf_rm_m:
+  case RISCVVector::BI__builtin_rvv_vfnmsac_vv_rm_m:
+  case RISCVVector::BI__builtin_rvv_vfnmsac_vf_rm_m:
+  case RISCVVector::BI__builtin_rvv_vfmadd_vv_rm_m:
+  case RISCVVector::BI__builtin_rvv_vfmadd_vf_rm_m:
+  case RISCVVector::BI__builtin_rvv_vfnmadd_vv_rm_m:
+  case RISCVVector::BI__builtin_rvv_vfnmadd_vf_rm_m:
+  case RISCVVector::BI__builtin_rvv_vfmsub_vv_rm_m:
+  case RISCVVector::BI__builtin_rvv_vfmsub_vf_rm_m:
+  case RISCVVector::BI__builtin_rvv_vfnmsub_vv_rm_m:
+  case RISCVVector::BI__builtin_rvv_vfnmsub_vf_rm_m:
+  case RISCVVector::BI__builtin_rvv_vfwmacc_vv_rm_m:
+  case RISCVVector::BI__builtin_rvv_vfwmacc_vf_rm_m:
+  case RISCVVector::BI__builtin_rvv_vfwnmacc_vv_rm_m:
+  case RISCVVector::BI__builtin_rvv_vfwnmacc_vf_rm_m:
+  case RISCVVector::BI__builtin_rvv_vfwmsac_vv_rm_m:
+  case RISCVVector::BI__builtin_rvv_vfwmsac_vf_rm_m:
+  case RISCVVector::BI__builtin_rvv_vfwnmsac_vv_rm_m:
+  case RISCVVector::BI__builtin_rvv_vfwnmsac_vf_rm_m:
+  case RISCVVector::BI__builtin_rvv_vfwmaccbf16_vv_rm_m:
+  case RISCVVector::BI__builtin_rvv_vfwmaccbf16_vf_rm_m:
+  case RISCVVector::BI__builtin_rvv_vfadd_vv_rm_tum:
+  case RISCVVector::BI__builtin_rvv_vfadd_vf_rm_tum:
+  case RISCVVector::BI__builtin_rvv_vfsub_vv_rm_tum:
+  case RISCVVector::BI__builtin_rvv_vfsub_vf_rm_tum:
+  case RISCVVector::BI__builtin_rvv_vfrsub_vf_rm_tum:
+  case RISCVVector::BI__builtin_rvv_vfwadd_vv_rm_tum:
+  case RISCVVector::BI__builtin_rvv_vfwadd_vf_rm_tum:
+  case RISCVVector::BI__builtin_rvv_vfwsub_vv_rm_tum:
+  case RISCVVector::BI__builtin_rvv_vfwsub_vf_rm_tum:
+  case RISCVVector::BI__builtin_rvv_vfwadd_wv_rm_tum:
+  case RISCVVector::BI__builtin_rvv_vfwadd_wf_rm_tum:
+  case RISCVVector::BI__builtin_rvv_vfwsub_wv_rm_tum:
+  case RISCVVector::BI__builtin_rvv_vfwsub_wf_rm_tum:
+  case RISCVVector::BI__builtin_rvv_vfmul_vv_rm_tum:
+  case RISCVVector::BI__builtin_rvv_vfmul_vf_rm_tum:
+  case RISCVVector::BI__builtin_rvv_vfdiv_vv_rm_tum:
+  case RISCVVector::BI__builtin_rvv_vfdiv_vf_rm_tum:
+  case RISCVVector::BI__builtin_rvv_vfrdiv_vf_rm_tum:
+  case RISCVVector::BI__builtin_rvv_vfwmul_vv_rm_tum:
+  case RISCVVector::BI__builtin_rvv_vfwmul_vf_rm_tum:
+  case RISCVVector::BI__builtin_rvv_vfmacc_vv_rm_tum:
+  case RISCVVector::BI__builtin_rvv_vfmacc_vf_rm_tum:
+  case RISCVVector::BI__builtin_rvv_vfnmacc_vv_rm_tum:
+  case RISCVVector::BI__builtin_rvv_vfnmacc_vf_rm_tum:
+  case RISCVVector::BI__builtin_rvv_vfmsac_vv_rm_tum:
+  case RISCVVector::BI__builtin_rvv_vfmsac_vf_rm_tum:
+  case RISCVVector::BI__builtin_rvv_vfnmsac_vv_rm_tum:
+  case RISCVVector::BI__builtin_rvv_vfnmsac_vf_rm_tum:
+  case RISCVVector::BI__builtin_rvv_vfmadd_vv_rm_tum:
+  case RISCVVector::BI__builtin_rvv_vfmadd_vf_rm_tum:
+  case RISCVVector::BI__builtin_rvv_vfnmadd_vv_rm_tum:
+  case RISCVVector::BI__builtin_rvv_vfnmadd_vf_rm_tum:
+  case RISCVVector::BI__builtin_rvv_vfmsub_vv_rm_tum:
+  case RISCVVector::BI__builtin_rvv_vfmsub_vf_rm_tum:
+  case RISCVVector::BI__builtin_rvv_vfnmsub_vv_rm_tum:
+  case RISCVVector::BI__builtin_rvv_vfnmsub_vf_rm_tum:
+  case RISCVVector::BI__builtin_rvv_vfwmacc_vv_rm_tum:
+  case RISCVVector::BI__builtin_rvv_vfwmacc_vf_rm_tum:
+  case RISCVVector::BI__builtin_rvv_vfwnmacc_vv_rm_tum:
+  case RISCVVector::BI__builtin_rvv_vfwnmacc_vf_rm_tum:
+  case RISCVVector::BI__builtin_rvv_vfwmsac_vv_rm_tum:
+  case RISCVVector::BI__builtin_rvv_vfwmsac_vf_rm_tum:
+  case RISCVVector::BI__builtin_rvv_vfwnmsac_vv_rm_tum:
+  case RISCVVector::BI__builtin_rvv_vfwnmsac_vf_rm_tum:
+  case RISCVVector::BI__builtin_rvv_vfwmaccbf16_vv_rm_tum:
+  case RISCVVector::BI__builtin_rvv_vfwmaccbf16_vf_rm_tum:
+  case RISCVVector::BI__builtin_rvv_vfredosum_vs_rm_tum:
+  case RISCVVector::BI__builtin_rvv_vfredusum_vs_rm_tum:
+  case RISCVVector::BI__builtin_rvv_vfwredosum_vs_rm_tum:
+  case RISCVVector::BI__builtin_rvv_vfwredusum_vs_rm_tum:
+  case RISCVVector::BI__builtin_rvv_sf_vfnrclip_x_f_qf_rm_tum:
+  case RISCVVector::BI__builtin_rvv_sf_vfnrclip_xu_f_qf_rm_tum:
+  case RISCVVector::BI__builtin_rvv_vfadd_vv_rm_tumu:
+  case RISCVVector::BI__builtin_rvv_vfadd_vf_rm_tumu:
+  case RISCVVector::BI__builtin_rvv_vfsub_vv_rm_tumu:
+  case RISCVVector::BI__builtin_rvv_vfsub_vf_rm_tumu:
+  case RISCVVector::BI__builtin_rvv_vfrsub_vf_rm_tumu:
+  case RISCVVector::BI__builtin_rvv_vfwadd_vv_rm_tumu:
+  case RISCVVector::BI__builtin_rvv_vfwadd_vf_rm_tumu:
+  case RISCVVector::BI__builtin_rvv_vfwsub_vv_rm_tumu:
+  case RISCVVector::BI__builtin_rvv_vfwsub_vf_rm_tumu:
+  case RISCVVector::BI__builtin_rvv_vfwadd_wv_rm_tumu:
+  case RISCVVector::BI__builtin_rvv_vfwadd_wf_rm_tumu:
+  case RISCVVector::BI__builtin_rvv_vfwsub_wv_rm_tumu:
+  case RISCVVector::BI__builtin_rvv_vfwsub_wf_rm_tumu:
+  case RISCVVector::BI__builtin_rvv_vfmul_vv_rm_tumu:
+  case RISCVVector::BI__builtin_rvv_vfmul_vf_rm_tumu:
+  case RISCVVector::BI__builtin_rvv_vfdiv_vv_rm_tumu:
+  case RISCVVector::BI__builtin_rvv_vfdiv_vf_rm_tumu:
+  case RISCVVector::BI__builtin_rvv_vfrdiv_vf_rm_tumu:
+  case RISCVVector::BI__builtin_rvv_vfwmul_vv_rm_tumu:
+  case RISCVVector::BI__builtin_rvv_vfwmul_vf_rm_tumu:
+  case RISCVVector::BI__builtin_rvv_vfmacc_vv_rm_tumu:
+  case RISCVVector::BI__builtin_rvv_vfmacc_vf_rm_tumu:
+  case RISCVVector::BI__builtin_rvv_vfnmacc_vv_rm_tumu:
+  case RISCVVector::BI__builtin_rvv_vfnmacc_vf_rm_tumu:
+  case RISCVVector::BI__builtin_rvv_vfmsac_vv_rm_tumu:
+  case RISCVVector::BI__builtin_rvv_vfmsac_vf_rm_tumu:
+  case RISCVVector::BI__builtin_rvv_vfnmsac_vv_rm_tumu:
+  case RISCVVector::BI__builtin_rvv_vfnmsac_vf_rm_tumu:
+  case RISCVVector::BI__builtin_rvv_vfmadd_vv_rm_tumu:
+  case RISCVVector::BI__builtin_rvv_vfmadd_vf_rm_tumu:
+  case RISCVVector::BI__builtin_rvv_vfnmadd_vv_rm_tumu:
+  case RISCVVector::BI__builtin_rvv_vfnmadd_vf_rm_tumu:
+  case RISCVVector::BI__builtin_rvv_vfmsub_vv_rm_tumu:
+  case RISCVVector::BI__builtin_rvv_vfmsub_vf_rm_tumu:
+  case RISCVVector::BI__builtin_rvv_vfnmsub_vv_rm_tumu:
+  case RISCVVector::BI__builtin_rvv_vfnmsub_vf_rm_tumu:
+  case RISCVVector::BI__builtin_rvv_vfwmacc_vv_rm_tumu:
+  case RISCVVector::BI__builtin_rvv_vfwmacc_vf_rm_tumu:
+  case RISCVVector::BI__builtin_rvv_vfwnmacc_vv_rm_tumu:
+  case RISCVVector::BI__builtin_rvv_vfwnmacc_vf_rm_tumu:
+  case RISCVVector::BI__builtin_rvv_vfwmsac_vv_rm_tumu:
+  case RISCVVector::BI__builtin_rvv_vfwmsac_vf_rm_tumu:
+  case RISCVVector::BI__builtin_rvv_vfwnmsac_vv_rm_tumu:
+  case RISCVVector::BI__builtin_rvv_vfwnmsac_vf_rm_tumu:
+  case RISCVVector::BI__builtin_rvv_vfwmaccbf16_vv_rm_tumu:
+  case RISCVVector::BI__builtin_rvv_vfwmaccbf16_vf_rm_tumu:
+  case RISCVVector::BI__builtin_rvv_sf_vfnrclip_x_f_qf_rm_tumu:
+  case RISCVVector::BI__builtin_rvv_sf_vfnrclip_xu_f_qf_rm_tumu:
+  case RISCVVector::BI__builtin_rvv_vfadd_vv_rm_mu:
+  case RISCVVector::BI__builtin_rvv_vfadd_vf_rm_mu:
+  case RISCVVector::BI__builtin_rvv_vfsub_vv_rm_mu:
+  case RISCVVector::BI__builtin_rvv_vfsub_vf_rm_mu:
+  case RISCVVector::BI__builtin_rvv_vfrsub_vf_rm_mu:
+  case RISCVVector::BI__builtin_rvv_vfwadd_vv_rm_mu:
+  case RISCVVector::BI__builtin_rvv_vfwadd_vf_rm_mu:
+  case RISCVVector::BI__builtin_rvv_vfwsub_vv_rm_mu:
+  case RISCVVector::BI__builtin_rvv_vfwsub_vf_rm_mu:
+  case RISCVVector::BI__builtin_rvv_vfwadd_wv_rm_mu:
+  case RISCVVector::BI__builtin_rvv_vfwadd_wf_rm_mu:
+  case RISCVVector::BI__builtin_rvv_vfwsub_wv_rm_mu:
+  case RISCVVector::BI__builtin_rvv_vfwsub_wf_rm_mu:
+  case RISCVVector::BI__builtin_rvv_vfmul_vv_rm_mu:
+  case RISCVVector::BI__builtin_rvv_vfmul_vf_rm_mu:
+  case RISCVVector::BI__builtin_rvv_vfdiv_vv_rm_mu:
+  case RISCVVector::BI__builtin_rvv_vfdiv_vf_rm_mu:
+  case RISCVVector::BI__builtin_rvv_vfrdiv_vf_rm_mu:
+  case RISCVVector::BI__builtin_rvv_vfwmul_vv_rm_mu:
+  case RISCVVector::BI__builtin_rvv_vfwmul_vf_rm_mu:
+  case RISCVVector::BI__builtin_rvv_vfmacc_vv_rm_mu:
+  case RISCVVector::BI__builtin_rvv_vfmacc_vf_rm_mu:
+  case RISCVVector::BI__builtin_rvv_vfnmacc_vv_rm_mu:
+  case RISCVVector::BI__builtin_rvv_vfnmacc_vf_rm_mu:
+  case RISCVVector::BI__builtin_rvv_vfmsac_vv_rm_mu:
+  case RISCVVector::BI__builtin_rvv_vfmsac_vf_rm_mu:
+  case RISCVVector::BI__builtin_rvv_vfnmsac_vv_rm_mu:
+  case RISCVVector::BI__builtin_rvv_vfnmsac_vf_rm_mu:
+  case RISCVVector::BI__builtin_rvv_vfmadd_vv_rm_mu:
+  case RISCVVector::BI__builtin_rvv_vfmadd_vf_rm_mu:
+  case RISCVVector::BI__builtin_rvv_vfnmadd_vv_rm_mu:
+  case RISCVVector::BI__builtin_rvv_vfnmadd_vf_rm_mu:
+  case RISCVVector::BI__builtin_rvv_vfmsub_vv_rm_mu:
+  case RISCVVector::BI__builtin_rvv_vfmsub_vf_rm_mu:
+  case RISCVVector::BI__builtin_rvv_vfnmsub_vv_rm_mu:
+  case RISCVVector::BI__builtin_rvv_vfnmsub_vf_rm_mu:
+  case RISCVVector::BI__builtin_rvv_vfwmacc_vv_rm_mu:
+  case RISCVVector::BI__builtin_rvv_vfwmacc_vf_rm_mu:
+  case RISCVVector::BI__builtin_rvv_vfwnmacc_vv_rm_mu:
+  case RISCVVector::BI__builtin_rvv_vfwnmacc_vf_rm_mu:
+  case RISCVVector::BI__builtin_rvv_vfwmsac_vv_rm_mu:
+  case RISCVVector::BI__builtin_rvv_vfwmsac_vf_rm_mu:
+  case RISCVVector::BI__builtin_rvv_vfwnmsac_vv_rm_mu:
+  case RISCVVector::BI__builtin_rvv_vfwnmsac_vf_rm_mu:
+  case RISCVVector::BI__builtin_rvv_vfwmaccbf16_vv_rm_mu:
+  case RISCVVector::BI__builtin_rvv_vfwmaccbf16_vf_rm_mu:
+  case RISCVVector::BI__builtin_rvv_sf_vfnrclip_x_f_qf_rm_mu:
+  case RISCVVector::BI__builtin_rvv_sf_vfnrclip_xu_f_qf_rm_mu:
+    return SemaRef.BuiltinConstantArgRange(TheCall, 4, 0, 4);
+  case RISCV::BI__builtin_riscv_ntl_load:
+  case RISCV::BI__builtin_riscv_ntl_store:
+    DeclRefExpr *DRE =
+        cast<DeclRefExpr>(TheCall->getCallee()->IgnoreParenCasts());
+    assert((BuiltinID == RISCV::BI__builtin_riscv_ntl_store ||
+            BuiltinID == RISCV::BI__builtin_riscv_ntl_load) &&
+           "Unexpected RISC-V nontemporal load/store builtin!");
+    bool IsStore = BuiltinID == RISCV::BI__builtin_riscv_ntl_store;
+    unsigned NumArgs = IsStore ? 3 : 2;
+
+    if (SemaRef.checkArgCountAtLeast(TheCall, NumArgs - 1))
+      return true;
+
+    if (SemaRef.checkArgCountAtMost(TheCall, NumArgs))
+      return true;
+
+    // Domain value should be compile-time constant.
+    // 2 <= domain <= 5
+    if (TheCall->getNumArgs() == NumArgs &&
+        SemaRef.BuiltinConstantArgRange(TheCall, NumArgs - 1, 2, 5))
+      return true;
+
+    Expr *PointerArg = TheCall->getArg(0);
+    ExprResult PointerArgResult =
+        SemaRef.DefaultFunctionArrayLvalueConversion(PointerArg);
+
+    if (PointerArgResult.isInvalid())
+      return true;
+    PointerArg = PointerArgResult.get();
+
+    const PointerType *PtrType = PointerArg->getType()->getAs<PointerType>();
+    if (!PtrType) {
+      Diag(DRE->getBeginLoc(), diag::err_nontemporal_builtin_must_be_pointer)
+          << PointerArg->getType() << PointerArg->getSourceRange();
+      return true;
+    }
+
+    QualType ValType = PtrType->getPointeeType();
+    ValType = ValType.getUnqualifiedType();
+    if (!ValType->isIntegerType() && !ValType->isAnyPointerType() &&
+        !ValType->isBlockPointerType() && !ValType->isFloatingType() &&
+        !ValType->isVectorType() && !ValType->isRVVSizelessBuiltinType()) {
+      Diag(DRE->getBeginLoc(),
+           diag::err_nontemporal_builtin_must_be_pointer_intfltptr_or_vector)
+          << PointerArg->getType() << PointerArg->getSourceRange();
+      return true;
+    }
+
+    if (!IsStore) {
+      TheCall->setType(ValType);
+      return false;
+    }
+
+    ExprResult ValArg = TheCall->getArg(1);
+    InitializedEntity Entity = InitializedEntity::InitializeParameter(
+        Context, ValType, /*consume*/ false);
+    ValArg =
+        SemaRef.PerformCopyInitialization(Entity, SourceLocation(), ValArg);
+    if (ValArg.isInvalid())
+      return true;
+
+    TheCall->setArg(1, ValArg.get());
+    TheCall->setType(Context.VoidTy);
+    return false;
+  }
+
+  return false;
+}
+
+void SemaRISCV::checkRVVTypeSupport(QualType Ty, SourceLocation Loc, Decl *D,
+                                    const llvm::StringMap<bool> &FeatureMap) {
+  ASTContext::BuiltinVectorTypeInfo Info =
+      SemaRef.Context.getBuiltinVectorTypeInfo(Ty->castAs<BuiltinType>());
+  unsigned EltSize = SemaRef.Context.getTypeSize(Info.ElementType);
+  unsigned MinElts = Info.EC.getKnownMinValue();
+
+  if (Info.ElementType->isSpecificBuiltinType(BuiltinType::Double) &&
+      !FeatureMap.lookup("zve64d"))
+    Diag(Loc, diag::err_riscv_type_requires_extension) << Ty << "zve64d";
+  // (ELEN, LMUL) pairs of (8, mf8), (16, mf4), (32, mf2), (64, m1) requires at
+  // least zve64x
+  else if (((EltSize == 64 && Info.ElementType->isIntegerType()) ||
+            MinElts == 1) &&
+           !FeatureMap.lookup("zve64x"))
+    Diag(Loc, diag::err_riscv_type_requires_extension) << Ty << "zve64x";
+  else if (Info.ElementType->isFloat16Type() && !FeatureMap.lookup("zvfh") &&
+           !FeatureMap.lookup("zvfhmin") &&
+           !FeatureMap.lookup("xandesvpackfph"))
+    if (DeclareAndesVectorBuiltins) {
+      Diag(Loc, diag::err_riscv_type_requires_extension)
+          << Ty << "zvfh, zvfhmin or xandesvpackfph";
+    } else {
+      Diag(Loc, diag::err_riscv_type_requires_extension)
+          << Ty << "zvfh or zvfhmin";
+    }
+  else if (Info.ElementType->isBFloat16Type() &&
+           !FeatureMap.lookup("zvfbfmin") &&
+           !FeatureMap.lookup("xandesvbfhcvt") &&
+           !FeatureMap.lookup("experimental-zvfbfa"))
+    if (DeclareAndesVectorBuiltins) {
+      Diag(Loc, diag::err_riscv_type_requires_extension)
+          << Ty << "zvfbfmin or xandesvbfhcvt";
+    } else {
+      Diag(Loc, diag::err_riscv_type_requires_extension) << Ty << "zvfbfmin";
+    }
+  else if (Info.ElementType->isSpecificBuiltinType(BuiltinType::Float) &&
+           !FeatureMap.lookup("zve32f"))
+    Diag(Loc, diag::err_riscv_type_requires_extension) << Ty << "zve32f";
+  // Given that caller already checked isRVVType() before calling this function,
+  // if we don't have at least zve32x supported, then we need to emit error.
+  else if (!FeatureMap.lookup("zve32x"))
+    Diag(Loc, diag::err_riscv_type_requires_extension) << Ty << "zve32x";
+}
+
+/// Are the two types RVV-bitcast-compatible types? I.e. is bitcasting from the
+/// first RVV type (e.g. an RVV scalable type) to the second type (e.g. an RVV
+/// VLS type) allowed?
+///
+/// This will also return false if the two given types do not make sense from
+/// the perspective of RVV bitcasts.
+bool SemaRISCV::isValidRVVBitcast(QualType srcTy, QualType destTy) {
+  assert(srcTy->isVectorType() || destTy->isVectorType());
+
+  auto ValidScalableConversion = [](QualType FirstType, QualType SecondType) {
+    if (!FirstType->isRVVSizelessBuiltinType())
+      return false;
+
+    const auto *VecTy = SecondType->getAs<VectorType>();
+    return VecTy && VecTy->getVectorKind() == VectorKind::RVVFixedLengthData;
+  };
+
+  return ValidScalableConversion(srcTy, destTy) ||
+         ValidScalableConversion(destTy, srcTy);
+}
+
+void SemaRISCV::handleInterruptAttr(Decl *D, const ParsedAttr &AL) {
+  // Warn about repeated attributes.
+  if (const auto *A = D->getAttr<RISCVInterruptAttr>()) {
+    Diag(AL.getRange().getBegin(),
+         diag::warn_riscv_repeated_interrupt_attribute);
+    Diag(A->getLocation(), diag::note_riscv_repeated_interrupt_attribute);
+    return;
+  }
+
+  // Semantic checks for a function with the 'interrupt' attribute:
+  // - Must be a function.
+  // - Must have no parameters.
+  // - Must have the 'void' return type.
+  // - The attribute itself must have at most 2 arguments
+  // - The attribute arguments must be string literals, and valid choices.
+  // - The attribute arguments must be a valid combination
+  // - The current target must support the right extensions for the combination.
+
+  if (D->getFunctionType() == nullptr) {
+    Diag(D->getLocation(), diag::warn_attribute_wrong_decl_type)
+        << AL << AL.isRegularKeywordAttribute() << ExpectedFunction;
+    return;
+  }
+
+  if (hasFunctionProto(D) && getFunctionOrMethodNumParams(D) != 0) {
+    Diag(D->getLocation(), diag::warn_interrupt_signal_attribute_invalid)
+        << /*RISC-V*/ 2 << /*interrupt*/ 0 << 0;
+    return;
+  }
+
+  if (!getFunctionOrMethodResultType(D)->isVoidType()) {
+    Diag(D->getLocation(), diag::warn_interrupt_signal_attribute_invalid)
+        << /*RISC-V*/ 2 << /*interrupt*/ 0 << 1;
+    return;
+  }
+
+  if (!AL.checkAtMostNumArgs(SemaRef, 2))
+    return;
+
+  bool HasSiFiveCLICType = false;
+  bool HasUnaryType = false;
+
+  SmallSet<RISCVInterruptAttr::InterruptType, 2> Types;
+  for (unsigned ArgIndex = 0; ArgIndex < AL.getNumArgs(); ++ArgIndex) {
+    RISCVInterruptAttr::InterruptType Type;
+    StringRef TypeString;
+    SourceLocation Loc;
+
+    if (!SemaRef.checkStringLiteralArgumentAttr(AL, ArgIndex, TypeString, &Loc))
+      return;
+
+    if (!RISCVInterruptAttr::ConvertStrToInterruptType(TypeString, Type)) {
+      std::string TypeLiteral = ("\"" + TypeString + "\"").str();
+      Diag(AL.getLoc(), diag::warn_attribute_type_not_supported)
+          << AL << TypeLiteral << Loc;
+      return;
+    }
+
+    switch (Type) {
+    case RISCVInterruptAttr::machine:
+      // "machine" could be combined with the SiFive CLIC types, or could be
+      // just "machine".
+      break;
+    case RISCVInterruptAttr::SiFiveCLICPreemptible:
+    case RISCVInterruptAttr::SiFiveCLICStackSwap:
+      // SiFive-CLIC types can be combined with each other and "machine"
+      HasSiFiveCLICType = true;
+      break;
+    case RISCVInterruptAttr::supervisor:
+    case RISCVInterruptAttr::rnmi:
+    case RISCVInterruptAttr::qcinest:
+    case RISCVInterruptAttr::qcinonest:
+      // "supervisor", "rnmi" and "qci-(no)nest" cannot be combined with any
+      // other types
+      HasUnaryType = true;
+      break;
+    }
+
+    Types.insert(Type);
+  }
+
+  if (HasUnaryType && Types.size() > 1) {
+    Diag(AL.getLoc(), diag::err_riscv_attribute_interrupt_invalid_combination);
+    return;
+  }
+
+  if (HasUnaryType && HasSiFiveCLICType) {
+    Diag(AL.getLoc(), diag::err_riscv_attribute_interrupt_invalid_combination);
+    return;
+  }
+
+  // "machine" is the default, if nothing is specified.
+  if (AL.getNumArgs() == 0)
+    Types.insert(RISCVInterruptAttr::machine);
+
+  const TargetInfo &TI = getASTContext().getTargetInfo();
+  llvm::StringMap<bool> FunctionFeatureMap;
+  getASTContext().getFunctionFeatureMap(FunctionFeatureMap,
+                                        dyn_cast<FunctionDecl>(D));
+
+  auto HasFeature = [&](StringRef FeatureName) -> bool {
+    return TI.hasFeature(FeatureName) || FunctionFeatureMap.lookup(FeatureName);
+  };
+
+  for (RISCVInterruptAttr::InterruptType Type : Types) {
+    switch (Type) {
+    // The QCI interrupt types require Xqciint
+    case RISCVInterruptAttr::qcinest:
+    case RISCVInterruptAttr::qcinonest: {
+      if (!HasFeature("experimental-xqciint")) {
+        Diag(AL.getLoc(),
+             diag::err_riscv_attribute_interrupt_requires_extension)
+            << RISCVInterruptAttr::ConvertInterruptTypeToStr(Type) << "Xqciint";
+        return;
+      }
+    } break;
+    // The SiFive CLIC interrupt types require Xsfmclic
+    case RISCVInterruptAttr::SiFiveCLICPreemptible:
+    case RISCVInterruptAttr::SiFiveCLICStackSwap: {
+      if (!HasFeature("experimental-xsfmclic")) {
+        Diag(AL.getLoc(),
+             diag::err_riscv_attribute_interrupt_requires_extension)
+            << RISCVInterruptAttr::ConvertInterruptTypeToStr(Type)
+            << "XSfmclic";
+        return;
+      }
+    } break;
+    case RISCVInterruptAttr::rnmi: {
+      if (!HasFeature("smrnmi")) {
+        Diag(AL.getLoc(),
+             diag::err_riscv_attribute_interrupt_requires_extension)
+            << RISCVInterruptAttr::ConvertInterruptTypeToStr(Type) << "Smrnmi";
+        return;
+      }
+    } break;
+    default:
+      break;
+    }
+  }
+
+  SmallVector<RISCVInterruptAttr::InterruptType, 2> TypesVec(Types.begin(),
+                                                             Types.end());
+
+  D->addAttr(::new (getASTContext()) RISCVInterruptAttr(
+      getASTContext(), AL, TypesVec.data(), TypesVec.size()));
+}
+
+bool SemaRISCV::isAliasValid(unsigned BuiltinID, StringRef AliasName) {
+  return BuiltinID >= RISCV::FirstRVVBuiltin &&
+         BuiltinID <= RISCV::LastRVVBuiltin;
+}
+
+bool SemaRISCV::isValidFMVExtension(StringRef Ext) {
+  if (Ext.empty())
+    return false;
+
+  if (!Ext.consume_front("+"))
+    return false;
+
+  return -1 != RISCVISAInfo::getRISCVFeaturesBitsInfo(Ext).second;
+}
+
+bool SemaRISCV::checkTargetVersionAttr(const StringRef Param,
+                                       const SourceLocation Loc,
+                                       SmallString<64> &NewParam) {
+  using namespace DiagAttrParams;
+
+  llvm::SmallVector<StringRef, 8> AttrStrs;
+  Param.split(AttrStrs, ';');
+
+  bool HasArch = false;
+  bool HasPriority = false;
+  bool HasDefault = false;
+  bool DuplicateAttr = false;
+  for (StringRef AttrStr : AttrStrs) {
+    AttrStr = AttrStr.trim();
+    // Only support arch=+ext,... syntax.
+    if (AttrStr.starts_with("arch=+")) {
+      DuplicateAttr = HasArch;
+      HasArch = true;
+      ParsedTargetAttr TargetAttr =
+          getASTContext().getTargetInfo().parseTargetAttr(AttrStr);
+
+      if (TargetAttr.Features.empty() ||
+          llvm::any_of(TargetAttr.Features, [&](const StringRef Ext) {
+            return !isValidFMVExtension(Ext);
+          }))
+        return Diag(Loc, diag::warn_unsupported_target_attribute)
+               << Unsupported << None << AttrStr << TargetVersion;
+    } else if (AttrStr == "default") {
+      DuplicateAttr = HasDefault;
+      HasDefault = true;
+    } else if (AttrStr.consume_front("priority=")) {
+      DuplicateAttr = HasPriority;
+      HasPriority = true;
+      unsigned Digit;
+      if (AttrStr.getAsInteger(0, Digit))
+        return Diag(Loc, diag::warn_unsupported_target_attribute)
+               << Unsupported << None << AttrStr << TargetVersion;
+    } else {
+      return Diag(Loc, diag::warn_unsupported_target_attribute)
+             << Unsupported << None << AttrStr << TargetVersion;
+    }
+  }
+
+  if (((HasPriority || HasArch) && HasDefault) || DuplicateAttr ||
+      (HasPriority && !HasArch))
+    return Diag(Loc, diag::warn_unsupported_target_attribute)
+           << Unsupported << None << Param << TargetVersion;
+
+  NewParam = Param;
+  return false;
+}
+
+bool SemaRISCV::checkTargetClonesAttr(
+    SmallVectorImpl<StringRef> &Params, SmallVectorImpl<SourceLocation> &Locs,
+    SmallVectorImpl<SmallString<64>> &NewParams) {
+  using namespace DiagAttrParams;
+
+  assert(Params.size() == Locs.size() &&
+         "Mismatch between number of string parameters and locations");
+
+  bool HasDefault = false;
+  for (unsigned I = 0, E = Params.size(); I < E; ++I) {
+    const StringRef Param = Params[I].trim();
+    const SourceLocation &Loc = Locs[I];
+
+    llvm::SmallVector<StringRef, 8> AttrStrs;
+    Param.split(AttrStrs, ';');
+
+    bool IsPriority = false;
+    bool IsDefault = false;
+    for (StringRef AttrStr : AttrStrs) {
+      AttrStr = AttrStr.trim();
+      // Only support arch=+ext,... syntax.
+      if (AttrStr.starts_with("arch=+")) {
+        ParsedTargetAttr TargetAttr =
+            getASTContext().getTargetInfo().parseTargetAttr(AttrStr);
+
+        if (TargetAttr.Features.empty() ||
+            llvm::any_of(TargetAttr.Features, [&](const StringRef Ext) {
+              return !isValidFMVExtension(Ext);
+            }))
+          return Diag(Loc, diag::warn_unsupported_target_attribute)
+                 << Unsupported << None << Param << TargetClones;
+      } else if (AttrStr == "default") {
+        IsDefault = true;
+        HasDefault = true;
+      } else if (AttrStr.consume_front("priority=")) {
+        IsPriority = true;
+        unsigned Digit;
+        if (AttrStr.getAsInteger(0, Digit))
+          return Diag(Loc, diag::warn_unsupported_target_attribute)
+                 << Unsupported << None << Param << TargetClones;
+      } else {
+        return Diag(Loc, diag::warn_unsupported_target_attribute)
+               << Unsupported << None << Param << TargetClones;
+      }
+    }
+
+    if (IsPriority && IsDefault)
+      return Diag(Loc, diag::warn_unsupported_target_attribute)
+             << Unsupported << None << Param << TargetClones;
+
+    if (llvm::is_contained(NewParams, Param))
+      Diag(Loc, diag::warn_target_clone_duplicate_options);
+    NewParams.push_back(Param);
+  }
+  if (!HasDefault)
+    return Diag(Locs[0], diag::err_target_clone_must_have_default);
+
+  return false;
+}
+
+SemaRISCV::SemaRISCV(Sema &S) : SemaBase(S) {}
+
+} // namespace clang

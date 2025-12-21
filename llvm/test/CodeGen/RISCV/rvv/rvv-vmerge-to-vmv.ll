@@ -7,9 +7,7 @@ define <vscale x 1 x i8> @vpmerge_mf8(<vscale x 1 x i8> %x, <vscale x 1 x i8> %y
 ; CHECK-NEXT:    vsetvli zero, a0, e8, mf8, tu, ma
 ; CHECK-NEXT:    vmv.v.v v8, v9
 ; CHECK-NEXT:    ret
-  %splat = insertelement <vscale x 1 x i1> poison, i1 -1, i8 0
-  %allones = shufflevector <vscale x 1 x i1> %splat, <vscale x 1 x i1> poison, <vscale x 1 x i32> zeroinitializer
-  %1 = call <vscale x 1 x i8> @llvm.vp.merge.nxv1i8(<vscale x 1 x i1> %allones, <vscale x 1 x i8> %y, <vscale x 1 x i8> %x, i32 %vl)
+  %1 = call <vscale x 1 x i8> @llvm.vp.merge.nxv1i8(<vscale x 1 x i1> splat (i1 -1), <vscale x 1 x i8> %y, <vscale x 1 x i8> %x, i32 %vl)
   ret <vscale x 1 x i8> %1
 }
 
@@ -19,9 +17,7 @@ define <vscale x 2 x i8> @vpmerge_mf4(<vscale x 2 x i8> %x, <vscale x 2 x i8> %y
 ; CHECK-NEXT:    vsetvli zero, a0, e8, mf4, tu, ma
 ; CHECK-NEXT:    vmv.v.v v8, v9
 ; CHECK-NEXT:    ret
-  %splat = insertelement <vscale x 2 x i1> poison, i1 -1, i8 0
-  %allones = shufflevector <vscale x 2 x i1> %splat, <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer
-  %1 = call <vscale x 2 x i8> @llvm.vp.merge.nxv2i8(<vscale x 2 x i1> %allones, <vscale x 2 x i8> %y, <vscale x 2 x i8> %x, i32 %vl)
+  %1 = call <vscale x 2 x i8> @llvm.vp.merge.nxv2i8(<vscale x 2 x i1> splat (i1 -1), <vscale x 2 x i8> %y, <vscale x 2 x i8> %x, i32 %vl)
   ret <vscale x 2 x i8> %1
 }
 
@@ -31,9 +27,7 @@ define <vscale x 4 x i8> @vpmerge_mf2(<vscale x 4 x i8> %x, <vscale x 4 x i8> %y
 ; CHECK-NEXT:    vsetvli zero, a0, e8, mf2, tu, ma
 ; CHECK-NEXT:    vmv.v.v v8, v9
 ; CHECK-NEXT:    ret
-  %splat = insertelement <vscale x 4 x i1> poison, i1 -1, i8 0
-  %allones = shufflevector <vscale x 4 x i1> %splat, <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer
-  %1 = call <vscale x 4 x i8> @llvm.vp.merge.nxv4i8(<vscale x 4 x i1> %allones, <vscale x 4 x i8> %y, <vscale x 4 x i8> %x, i32 %vl)
+  %1 = call <vscale x 4 x i8> @llvm.vp.merge.nxv4i8(<vscale x 4 x i1> splat (i1 -1), <vscale x 4 x i8> %y, <vscale x 4 x i8> %x, i32 %vl)
   ret <vscale x 4 x i8> %1
 }
 
@@ -43,9 +37,7 @@ define <vscale x 8 x i8> @vpmerge_m1(<vscale x 8 x i8> %x, <vscale x 8 x i8> %y,
 ; CHECK-NEXT:    vsetvli zero, a0, e8, m1, tu, ma
 ; CHECK-NEXT:    vmv.v.v v8, v9
 ; CHECK-NEXT:    ret
-  %splat = insertelement <vscale x 8 x i1> poison, i1 -1, i8 0
-  %allones = shufflevector <vscale x 8 x i1> %splat, <vscale x 8 x i1> poison, <vscale x 8 x i32> zeroinitializer
-  %1 = call <vscale x 8 x i8> @llvm.vp.merge.nxv8i8(<vscale x 8 x i1> %allones, <vscale x 8 x i8> %y, <vscale x 8 x i8> %x, i32 %vl)
+  %1 = call <vscale x 8 x i8> @llvm.vp.merge.nxv8i8(<vscale x 8 x i1> splat (i1 -1), <vscale x 8 x i8> %y, <vscale x 8 x i8> %x, i32 %vl)
   ret <vscale x 8 x i8> %1
 }
 
@@ -55,9 +47,7 @@ define <vscale x 8 x i16> @vpmerge_m2(<vscale x 8 x i16> %x, <vscale x 8 x i16> 
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m2, tu, ma
 ; CHECK-NEXT:    vmv.v.v v8, v10
 ; CHECK-NEXT:    ret
-  %splat = insertelement <vscale x 8 x i1> poison, i1 -1, i16 0
-  %allones = shufflevector <vscale x 8 x i1> %splat, <vscale x 8 x i1> poison, <vscale x 8 x i32> zeroinitializer
-  %1 = call <vscale x 8 x i16> @llvm.vp.merge.nxv8i16(<vscale x 8 x i1> %allones, <vscale x 8 x i16> %y, <vscale x 8 x i16> %x, i32 %vl)
+  %1 = call <vscale x 8 x i16> @llvm.vp.merge.nxv8i16(<vscale x 8 x i1> splat (i1 -1), <vscale x 8 x i16> %y, <vscale x 8 x i16> %x, i32 %vl)
   ret <vscale x 8 x i16> %1
 }
 
@@ -67,9 +57,7 @@ define <vscale x 8 x i32> @vpmerge_m4(<vscale x 8 x i32> %x, <vscale x 8 x i32> 
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m4, tu, ma
 ; CHECK-NEXT:    vmv.v.v v8, v12
 ; CHECK-NEXT:    ret
-  %splat = insertelement <vscale x 8 x i1> poison, i1 -1, i32 0
-  %allones = shufflevector <vscale x 8 x i1> %splat, <vscale x 8 x i1> poison, <vscale x 8 x i32> zeroinitializer
-  %1 = call <vscale x 8 x i32> @llvm.vp.merge.nxv8i32(<vscale x 8 x i1> %allones, <vscale x 8 x i32> %y, <vscale x 8 x i32> %x, i32 %vl)
+  %1 = call <vscale x 8 x i32> @llvm.vp.merge.nxv8i32(<vscale x 8 x i1> splat (i1 -1), <vscale x 8 x i32> %y, <vscale x 8 x i32> %x, i32 %vl)
   ret <vscale x 8 x i32> %1
 }
 
@@ -79,16 +67,58 @@ define <vscale x 8 x i64> @vpmerge_m8(<vscale x 8 x i64> %x, <vscale x 8 x i64> 
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m8, tu, ma
 ; CHECK-NEXT:    vmv.v.v v8, v16
 ; CHECK-NEXT:    ret
-  %splat = insertelement <vscale x 8 x i1> poison, i1 -1, i64 0
-  %allones = shufflevector <vscale x 8 x i1> %splat, <vscale x 8 x i1> poison, <vscale x 8 x i32> zeroinitializer
-  %1 = call <vscale x 8 x i64> @llvm.vp.merge.nxv8i64(<vscale x 8 x i1> %allones, <vscale x 8 x i64> %y, <vscale x 8 x i64> %x, i32 %vl)
+  %1 = call <vscale x 8 x i64> @llvm.vp.merge.nxv8i64(<vscale x 8 x i1> splat (i1 -1), <vscale x 8 x i64> %y, <vscale x 8 x i64> %x, i32 %vl)
   ret <vscale x 8 x i64> %1
 }
 
-declare <vscale x 1 x i8> @llvm.vp.merge.nxv1i8(<vscale x 1 x i1>, <vscale x 1 x i8>, <vscale x 1 x i8>, i32)
-declare <vscale x 2 x i8> @llvm.vp.merge.nxv2i8(<vscale x 2 x i1>, <vscale x 2 x i8>, <vscale x 2 x i8>, i32)
-declare <vscale x 4 x i8> @llvm.vp.merge.nxv4i8(<vscale x 4 x i1>, <vscale x 4 x i8>, <vscale x 4 x i8>, i32)
-declare <vscale x 8 x i8> @llvm.vp.merge.nxv8i8(<vscale x 8 x i1>, <vscale x 8 x i8>, <vscale x 8 x i8>, i32)
-declare <vscale x 8 x i16> @llvm.vp.merge.nxv8i16(<vscale x 8 x i1>, <vscale x 8 x i16>, <vscale x 8 x i16>, i32)
-declare <vscale x 8 x i32> @llvm.vp.merge.nxv8i32(<vscale x 8 x i1>, <vscale x 8 x i32>, <vscale x 8 x i32>, i32)
-declare <vscale x 8 x i64> @llvm.vp.merge.nxv8i64(<vscale x 8 x i1>, <vscale x 8 x i64>, <vscale x 8 x i64>, i32)
+; Shouldn't be converted because vmerge adds back in elements from false past avl that would be lost if we converted to vmv.v.v
+define <vscale x 2 x i32> @preserve_false(ptr %p, <vscale x 2 x i32> %pt, <vscale x 2 x i32> %false, <vscale x 2 x i1> %mask, i64 %avl1, i64 %avl2) {
+; CHECK-LABEL: preserve_false:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
+; CHECK-NEXT:    vmv1r.v v10, v9
+; CHECK-NEXT:    vle32.v v10, (a0), v0.t
+; CHECK-NEXT:    vsetvli zero, a2, e32, m1, tu, ma
+; CHECK-NEXT:    vmerge.vvm v8, v9, v10, v0
+; CHECK-NEXT:    ret
+  %true = call <vscale x 2 x i32> @llvm.riscv.vle.mask(<vscale x 2 x i32> %false, ptr %p, <vscale x 2 x i1> %mask, i64 %avl1, i64 3)
+  %res = call <vscale x 2 x i32> @llvm.riscv.vmerge(<vscale x 2 x i32> %pt, <vscale x 2 x i32> %false, <vscale x 2 x i32> %true, <vscale x 2 x i1> %mask, i64 %avl2)
+  ret <vscale x 2 x i32> %res
+}
+
+; Can fold this because its avl is known to be <= than true, so no elements from false need to be introduced past avl.
+define <vscale x 2 x i32> @preserve_false_avl_known_le(ptr %p, <vscale x 2 x i32> %pt, <vscale x 2 x i32> %false, <vscale x 2 x i1> %mask) {
+; CHECK-LABEL: preserve_false_avl_known_le:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
+; CHECK-NEXT:    vle32.v v9, (a0), v0.t
+; CHECK-NEXT:    vsetvli zero, zero, e32, m1, tu, ma
+; CHECK-NEXT:    vmv.v.v v8, v9
+; CHECK-NEXT:    ret
+  %true = call <vscale x 2 x i32> @llvm.riscv.vle.mask(<vscale x 2 x i32> %false, ptr %p, <vscale x 2 x i1> %mask, i64 2, i64 3)
+  %res = call <vscale x 2 x i32> @llvm.riscv.vmerge(<vscale x 2 x i32> %pt, <vscale x 2 x i32> %false, <vscale x 2 x i32> %true, <vscale x 2 x i1> %mask, i64 1)
+  ret <vscale x 2 x i32> %res
+}
+
+define <4 x i16> @pr173141(i1 %0, <2 x i16> %conv33) {
+; CHECK-LABEL: pr173141:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
+; CHECK-NEXT:    vslidedown.vi v8, v8, 1
+; CHECK-NEXT:    vmv.x.s a0, v8
+; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
+; CHECK-NEXT:    vmv.v.x v8, a0
+; CHECK-NEXT:    ret
+entry:
+  %1 = tail call i32 @llvm.riscv.orc.b.i32(i32 1)
+  %sub.i = add i32 %1, 1
+  %2 = and i32 %sub.i, 1
+  %and.i = zext i32 %2 to i64
+  %3 = select i1 %0, i64 0, i64 %and.i
+  %tobool.not128 = icmp sgt i64 %3, -1
+  %4 = insertelement <4 x i1> zeroinitializer, i1 %tobool.not128, i64 0
+  %5 = shufflevector <4 x i1> %4, <4 x i1> zeroinitializer, <4 x i32> zeroinitializer
+  %6 = shufflevector <2 x i16> %conv33, <2 x i16> zeroinitializer, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
+  %7 = select <4 x i1> %5, <4 x i16> %6, <4 x i16> zeroinitializer
+  ret <4 x i16> %7
+}

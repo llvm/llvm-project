@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn < %s | FileCheck --check-prefixes=GCN,GCN-FMF,GCN-SAFE %s
+; RUN: llc -mtriple=amdgcn < %s | FileCheck --check-prefixes=GCN,GCN-FMF,GCN-SAFE %s
 
 declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
 

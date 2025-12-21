@@ -1,4 +1,4 @@
-; REQUIRES: x86
+; REQUIRES: x86, non-root-user
 ; RUN: rm -rf %t; split-file %s %t
 
 ; Generate summary sections and test lld handling.
@@ -33,7 +33,7 @@
 ; RUN: chmod 400 %t3.o.imports
 ; RUN: not %lld --thinlto-index-only --thinlto-emit-imports-files -dylib %t1.o %t2.o %t3.o -o /dev/null 2>&1 \
 ; RUN:     | FileCheck -DMSG=%errc_EACCES %s --check-prefix=ERR
-; ERR: cannot open {{.*}}3.o.imports: [[MSG]]
+; ERR: 'cannot open {{.*}}3.o.imports': [[MSG]]
 
 ; Ensure lld doesn't generate import files when thinlto-index-only is not enabled
 ; RUN: rm -f %t1.o.imports

@@ -7,7 +7,7 @@ define i32 @test1(i32 %x) {
 ; CHECK-NEXT:  ; %bb.0:
 ; CHECK-NEXT:    move.l (4,%sp), %d1
 ; CHECK-NEXT:    eori.l #31, %d1
-; CHECK-NEXT:    move.l #32, %d0
+; CHECK-NEXT:    moveq #32, %d0
 ; CHECK-NEXT:    sub.l %d1, %d0
 ; CHECK-NEXT:    rts
   %xor = xor i32 %x, 31

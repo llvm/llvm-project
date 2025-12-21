@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-print-dependences -disable-output < %s | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=polly-custom<deps>' -polly-print-deps -disable-output < %s | FileCheck %s
 ;
 ; CHECK:      RAW dependences:
 ; CHECK-NEXT:     {  }

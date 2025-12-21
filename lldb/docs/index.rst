@@ -81,6 +81,13 @@ are welcome:
 expected to work, with functionality improving rapidly. ARM and AArch64 support
 is more experimental, with more known issues than the others.
 
+Support for the following architectures is in active development. For their
+current state, follow the links to their respective issues:
+
+* `RISC-V <https://github.com/llvm/llvm-project/issues/55383>`_
+* `LoongArch <https://github.com/llvm/llvm-project/issues/112693>`_
+* `WebAssembly <https://github.com/llvm/llvm-project/issues/150449>`_
+
 Get Involved
 ------------
 
@@ -102,10 +109,13 @@ Additionally it builds:
 See the :doc:`LLDB Build Page <resources/build>` for build instructions.
 
 Discussions about LLDB should go to the `LLDB forum
-<https://discourse.llvm.org/c/subprojects/lldb>`__. Commit
+<https://discourse.llvm.org/c/subprojects/lldb>`__ or the ``lldb`` channel on
+the `LLVM Discord server <https://discord.com/invite/xS7Z362>`__.
+
+For contributions follow the
+`LLVM contribution process <https://llvm.org/docs/Contributing.html>`__. Commit
 messages are automatically sent to the `lldb-commits
-<http://lists.llvm.org/mailman/listinfo/lldb-commits>`__ mailing list, and
-this is also the preferred mailing list for patch submissions.
+<http://lists.llvm.org/mailman/listinfo/lldb-commits>`__ mailing list.
 
 See the :doc:`Projects page <resources/projects>` if you are looking for some
 interesting areas to contribute to lldb.
@@ -122,10 +132,11 @@ interesting areas to contribute to lldb.
    use/symbolication
    use/symbols
    use/remote
-   use/qemu-testing
    use/intel_pt
    use/ondemand
    use/aarch64-linux
+   use/symbolfilejson
+   use/mcp
    use/troubleshooting
    use/links
    Man Page <man/lldb>
@@ -135,9 +146,9 @@ interesting areas to contribute to lldb.
    :maxdepth: 1
    :caption: Scripting LLDB
 
-   use/python
    use/python-reference
    Python API <python_api>
+   Python Extensions <python_extensions>
 
 
 .. toctree::
@@ -149,13 +160,19 @@ interesting areas to contribute to lldb.
    resources/contributing
    resources/build
    resources/test
+   resources/qemu-testing
    resources/debugging
    resources/fuzzing
    resources/sbapi
    resources/dataformatters
+   resources/formatterbytecode
    resources/extensions
+   resources/lldbgdbremote
+   resources/lldbplatformpackets
    resources/caveats
    resources/projects
+   resources/lldbdap
+   resources/addinglanguagesupport
    Public C++ API <https://lldb.llvm.org/cpp_reference/namespacelldb.html>
    Private C++ API <https://lldb.llvm.org/cpp_reference/index.html>
 
@@ -166,6 +183,8 @@ interesting areas to contribute to lldb.
 
    Source Code <https://github.com/llvm/llvm-project>
    Releases <https://github.com/llvm/llvm-project/releases>
+   Join the Discord <https://discord.gg/xS7Z362>
+   Discord Channel <https://discord.com/channels/636084430946959380/636732809708306432>
    Discussion Forums <https://discourse.llvm.org/c/subprojects/lldb/8>
    Developer Policy <https://llvm.org/docs/DeveloperPolicy.html>
    Bug Reports <https://github.com/llvm/llvm-project/issues?q=is%3Aissue+label%3Alldb+is%3Aopen>

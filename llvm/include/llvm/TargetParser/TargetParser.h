@@ -14,8 +14,11 @@
 #ifndef LLVM_TARGETPARSER_TARGETPARSER_H
 #define LLVM_TARGETPARSER_TARGETPARSER_H
 
+#include "SubtargetFeature.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -37,77 +40,93 @@ enum GPUKind : uint32_t {
   GK_NONE = 0,
 
   // R600-based processors.
-  GK_R600 = 1,
-  GK_R630 = 2,
-  GK_RS880 = 3,
-  GK_RV670 = 4,
-  GK_RV710 = 5,
-  GK_RV730 = 6,
-  GK_RV770 = 7,
-  GK_CEDAR = 8,
-  GK_CYPRESS = 9,
-  GK_JUNIPER = 10,
-  GK_REDWOOD = 11,
-  GK_SUMO = 12,
-  GK_BARTS = 13,
-  GK_CAICOS = 14,
-  GK_CAYMAN = 15,
-  GK_TURKS = 16,
+  GK_R600,
+  GK_R630,
+  GK_RS880,
+  GK_RV670,
+  GK_RV710,
+  GK_RV730,
+  GK_RV770,
+  GK_CEDAR,
+  GK_CYPRESS,
+  GK_JUNIPER,
+  GK_REDWOOD,
+  GK_SUMO,
+  GK_BARTS,
+  GK_CAICOS,
+  GK_CAYMAN,
+  GK_TURKS,
 
   GK_R600_FIRST = GK_R600,
   GK_R600_LAST = GK_TURKS,
 
   // AMDGCN-based processors.
-  GK_GFX600 = 32,
-  GK_GFX601 = 33,
-  GK_GFX602 = 34,
+  GK_GFX600,
+  GK_GFX601,
+  GK_GFX602,
 
-  GK_GFX700 = 40,
-  GK_GFX701 = 41,
-  GK_GFX702 = 42,
-  GK_GFX703 = 43,
-  GK_GFX704 = 44,
-  GK_GFX705 = 45,
+  GK_GFX700,
+  GK_GFX701,
+  GK_GFX702,
+  GK_GFX703,
+  GK_GFX704,
+  GK_GFX705,
 
-  GK_GFX801 = 50,
-  GK_GFX802 = 51,
-  GK_GFX803 = 52,
-  GK_GFX805 = 53,
-  GK_GFX810 = 54,
+  GK_GFX801,
+  GK_GFX802,
+  GK_GFX803,
+  GK_GFX805,
+  GK_GFX810,
 
-  GK_GFX900 = 60,
-  GK_GFX902 = 61,
-  GK_GFX904 = 62,
-  GK_GFX906 = 63,
-  GK_GFX908 = 64,
-  GK_GFX909 = 65,
-  GK_GFX90A = 66,
-  GK_GFX90C = 67,
-  GK_GFX940 = 68,
-  GK_GFX941 = 69,
-  GK_GFX942 = 70,
+  GK_GFX900,
+  GK_GFX902,
+  GK_GFX904,
+  GK_GFX906,
+  GK_GFX908,
+  GK_GFX909,
+  GK_GFX90A,
+  GK_GFX90C,
+  GK_GFX942,
+  GK_GFX950,
 
-  GK_GFX1010 = 71,
-  GK_GFX1011 = 72,
-  GK_GFX1012 = 73,
-  GK_GFX1013 = 74,
-  GK_GFX1030 = 75,
-  GK_GFX1031 = 76,
-  GK_GFX1032 = 77,
-  GK_GFX1033 = 78,
-  GK_GFX1034 = 79,
-  GK_GFX1035 = 80,
-  GK_GFX1036 = 81,
+  GK_GFX1010,
+  GK_GFX1011,
+  GK_GFX1012,
+  GK_GFX1013,
+  GK_GFX1030,
+  GK_GFX1031,
+  GK_GFX1032,
+  GK_GFX1033,
+  GK_GFX1034,
+  GK_GFX1035,
+  GK_GFX1036,
 
-  GK_GFX1100 = 90,
-  GK_GFX1101 = 91,
-  GK_GFX1102 = 92,
-  GK_GFX1103 = 93,
-  GK_GFX1150 = 94,
-  GK_GFX1151 = 95,
+  GK_GFX1100,
+  GK_GFX1101,
+  GK_GFX1102,
+  GK_GFX1103,
+  GK_GFX1150,
+  GK_GFX1151,
+  GK_GFX1152,
+  GK_GFX1153,
+
+  GK_GFX1200,
+  GK_GFX1201,
+  GK_GFX1250,
+  GK_GFX1251,
 
   GK_AMDGCN_FIRST = GK_GFX600,
-  GK_AMDGCN_LAST = GK_GFX1151,
+  GK_AMDGCN_LAST = GK_GFX1251,
+
+  GK_GFX9_GENERIC,
+  GK_GFX10_1_GENERIC,
+  GK_GFX10_3_GENERIC,
+  GK_GFX11_GENERIC,
+  GK_GFX12_GENERIC,
+  GK_GFX9_4_GENERIC,
+
+  GK_AMDGCN_GENERIC_FIRST = GK_GFX9_GENERIC,
+  GK_AMDGCN_GENERIC_LAST = GK_GFX9_4_GENERIC,
 };
 
 /// Instruction set architecture version.
@@ -142,30 +161,63 @@ enum ArchFeatureKind : uint32_t {
 
   // WGP mode is supported.
   FEATURE_WGP = 1 << 9,
+
+  // Xnack is available by default
+  FEATURE_XNACK_ALWAYS = 1 << 10
 };
 
-StringRef getArchNameAMDGCN(GPUKind AK);
-StringRef getArchNameR600(GPUKind AK);
-StringRef getCanonicalArchName(const Triple &T, StringRef Arch);
-GPUKind parseArchAMDGCN(StringRef CPU);
-GPUKind parseArchR600(StringRef CPU);
-unsigned getArchAttrAMDGCN(GPUKind AK);
-unsigned getArchAttrR600(GPUKind AK);
+enum FeatureError : uint32_t {
+  NO_ERROR = 0,
+  INVALID_FEATURE_COMBINATION,
+  UNSUPPORTED_TARGET_FEATURE
+};
 
-void fillValidArchListAMDGCN(SmallVectorImpl<StringRef> &Values);
-void fillValidArchListR600(SmallVectorImpl<StringRef> &Values);
+LLVM_ABI StringRef getArchFamilyNameAMDGCN(GPUKind AK);
 
-IsaVersion getIsaVersion(StringRef GPU);
+LLVM_ABI StringRef getArchNameAMDGCN(GPUKind AK);
+LLVM_ABI StringRef getArchNameR600(GPUKind AK);
+LLVM_ABI StringRef getCanonicalArchName(const Triple &T, StringRef Arch);
+LLVM_ABI GPUKind parseArchAMDGCN(StringRef CPU);
+LLVM_ABI GPUKind parseArchR600(StringRef CPU);
+LLVM_ABI unsigned getArchAttrAMDGCN(GPUKind AK);
+LLVM_ABI unsigned getArchAttrR600(GPUKind AK);
 
-/// Fills Features map with default values for given target GPU
-void fillAMDGPUFeatureMap(StringRef GPU, const Triple &T,
-                          StringMap<bool> &Features);
+LLVM_ABI void fillValidArchListAMDGCN(SmallVectorImpl<StringRef> &Values);
+LLVM_ABI void fillValidArchListR600(SmallVectorImpl<StringRef> &Values);
 
-/// Inserts wave size feature for given GPU into features map
-bool insertWaveSizeFeature(StringRef GPU, const Triple &T,
-                           StringMap<bool> &Features, std::string &ErrorMsg);
+LLVM_ABI IsaVersion getIsaVersion(StringRef GPU);
 
+/// Fills Features map with default values for given target GPU.
+/// \p Features contains overriding target features and this function returns
+/// default target features with entries overridden by \p Features.
+LLVM_ABI std::pair<FeatureError, StringRef>
+fillAMDGPUFeatureMap(StringRef GPU, const Triple &T, StringMap<bool> &Features);
 } // namespace AMDGPU
+
+struct BasicSubtargetFeatureKV {
+  const char *Key;         ///< K-V key string
+  unsigned Value;          ///< K-V integer value
+  FeatureBitArray Implies; ///< K-V bit mask
+};
+
+/// Used to provide key value pairs for feature and CPU bit flags.
+struct BasicSubtargetSubTypeKV {
+  const char *Key;         ///< K-V key string
+  FeatureBitArray Implies; ///< K-V bit mask
+
+  /// Compare routine for std::lower_bound
+  bool operator<(StringRef S) const { return StringRef(Key) < S; }
+
+  /// Compare routine for std::is_sorted.
+  bool operator<(const BasicSubtargetSubTypeKV &Other) const {
+    return StringRef(Key) < StringRef(Other.Key);
+  }
+};
+
+LLVM_ABI std::optional<llvm::StringMap<bool>>
+getCPUDefaultTargetFeatures(StringRef CPU,
+                            ArrayRef<BasicSubtargetSubTypeKV> ProcDesc,
+                            ArrayRef<BasicSubtargetFeatureKV> ProcFeatures);
 } // namespace llvm
 
 #endif

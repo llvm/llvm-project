@@ -1,18 +1,44 @@
-; REQUIRES: asserts
-; RUN: opt < %s -passes=loop-interchange -cache-line-size=64 -verify-dom-info -verify-loop-info \
-; RUN:     -S -debug 2>&1 | FileCheck %s
+; Remove 'S' Scalar Dependencies #119345
+; Scalar dependencies are not handled correctly, so they were removed to avoid
+; miscompiles. The loop nest in this test case used to be interchanged, but it's
+; no longer triggering. XFAIL'ing this test to indicate that this test should
+; interchanged if scalar deps are handled correctly.
+;
+; XFAIL: *
+
+; RUN: opt < %s -passes=loop-interchange -verify-dom-info -verify-loop-info -pass-remarks-output=%t -disable-output
+; RUN: FileCheck -input-file %t %s
 
 @a = common global i32 0, align 4
 @d = common dso_local local_unnamed_addr global [1 x [6 x i32]] zeroinitializer, align 4
 
-;; After interchanging the innermost and the middle loop, we should not continue
-;; doing interchange for the (new) middle loop and the outermost loop, because of
-;; values defined in the new innermost loop not available in the exiting block of
-;; the entire loop nest.
-; CHECK: Loops are legal to interchange
-; CHECK: Loops interchanged.
-; CHECK: Found unsupported PHI nodes in inner loop latch.
-; CHECK: Not interchanging loops. Cannot prove legality.
+; After interchanging the innermost and the middle loop, we should not continue
+; doing interchange for the (new) middle loop and the outermost loop, because of
+; values defined in the new innermost loop not available in the exiting block of
+; the entire loop nest.
+;
+; CHECK:  --- !Passed
+; CHECK:  Pass:            loop-interchange
+; CHECK:  Name:            Interchanged
+; CHECK:  Function:        innermost_latch_uses_values_in_middle_header
+; CHECK:  Args:
+; CHECK:    - String:          Loop interchanged with enclosing loop.
+; CHECK:  ...
+; CHECK:  --- !Missed
+; CHECK:  Pass:            loop-interchange
+; CHECK:  Name:            UnsupportedInnerLatchPHI
+; CHECK:  Function:        innermost_latch_uses_values_in_middle_header
+; CHECK:  Args:
+; CHECK:    - String:          Cannot interchange loops because unsupported PHI nodes found in inner loop latch.
+; CHECK:  ...
+; CHECK:  --- !Missed
+; CHECK:  Pass:            loop-interchange
+; CHECK:  Name:            UnsupportedExitPHI
+; CHECK:  Function:        innermost_latch_uses_values_in_middle_header
+; CHECK:  Args:
+; CHECK:    - String:          Found unsupported PHI node in loop exit.
+; CHECK:  ...
+;
 define void @innermost_latch_uses_values_in_middle_header() {
 entry:
   %0 = load i32, ptr @a, align 4

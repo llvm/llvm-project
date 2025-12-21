@@ -149,7 +149,7 @@ class JSONNodeDumper
   void writeIncludeStack(PresumedLoc Loc, bool JustFirst = false);
 
   // Writes the attributes of a SourceLocation object without.
-  void writeBareSourceLocation(SourceLocation Loc, bool IsSpelling);
+  void writeBareSourceLocation(SourceLocation Loc);
 
   // Writes the attributes of a SourceLocation to JSON based on its presumed
   // spelling location. If the given location represents a macro invocation,
@@ -197,16 +197,19 @@ public:
   void Visit(const Type *T);
   void Visit(QualType T);
   void Visit(const Decl *D);
+  void Visit(TypeLoc TL);
 
   void Visit(const comments::Comment *C, const comments::FullComment *FC);
   void Visit(const TemplateArgument &TA, SourceRange R = {},
              const Decl *From = nullptr, StringRef Label = {});
   void Visit(const CXXCtorInitializer *Init);
+  void Visit(const OpenACCClause *C);
   void Visit(const OMPClause *C);
   void Visit(const BlockDecl::Capture &C);
   void Visit(const GenericSelectionExpr::ConstAssociation &A);
   void Visit(const concepts::Requirement *R);
   void Visit(const APValue &Value, QualType Ty);
+  void Visit(const ConceptReference *);
 
   void VisitAliasAttr(const AliasAttr *AA);
   void VisitCleanupAttr(const CleanupAttr *CA);
@@ -237,7 +240,6 @@ public:
   void VisitInjectedClassNameType(const InjectedClassNameType *ICNT);
   void VisitObjCInterfaceType(const ObjCInterfaceType *OIT);
   void VisitPackExpansionType(const PackExpansionType *PET);
-  void VisitElaboratedType(const ElaboratedType *ET);
   void VisitMacroQualifiedType(const MacroQualifiedType *MQT);
   void VisitMemberPointerType(const MemberPointerType *MPT);
 
@@ -278,8 +280,12 @@ public:
   void VisitObjCPropertyImplDecl(const ObjCPropertyImplDecl *D);
   void VisitBlockDecl(const BlockDecl *D);
 
+  void VisitOpenACCDeclareDecl(const OpenACCDeclareDecl *D);
+  void VisitOpenACCRoutineDecl(const OpenACCRoutineDecl *D);
+
   void VisitDeclRefExpr(const DeclRefExpr *DRE);
   void VisitSYCLUniqueStableNameExpr(const SYCLUniqueStableNameExpr *E);
+  void VisitOpenACCAsteriskSizeExpr(const OpenACCAsteriskSizeExpr *E);
   void VisitPredefinedExpr(const PredefinedExpr *PE);
   void VisitUnaryOperator(const UnaryOperator *UO);
   void VisitBinaryOperator(const BinaryOperator *BO);
@@ -307,6 +313,9 @@ public:
   void VisitMaterializeTemporaryExpr(const MaterializeTemporaryExpr *MTE);
   void VisitCXXDependentScopeMemberExpr(const CXXDependentScopeMemberExpr *ME);
   void VisitRequiresExpr(const RequiresExpr *RE);
+  void VisitCXXDefaultArgExpr(const CXXDefaultArgExpr *Node);
+  void VisitCXXDefaultInitExpr(const CXXDefaultInitExpr *Node);
+  void VisitLambdaExpr(const LambdaExpr *LE);
 
   void VisitObjCEncodeExpr(const ObjCEncodeExpr *OEE);
   void VisitObjCMessageExpr(const ObjCMessageExpr *OME);
@@ -325,6 +334,7 @@ public:
   void VisitStringLiteral(const StringLiteral *SL);
   void VisitCXXBoolLiteralExpr(const CXXBoolLiteralExpr *BLE);
 
+  void VisitLoopControlStmt(const LoopControlStmt *LS);
   void VisitIfStmt(const IfStmt *IS);
   void VisitSwitchStmt(const SwitchStmt *SS);
   void VisitCaseStmt(const CaseStmt *CS);
@@ -339,6 +349,7 @@ public:
   void VisitDeclarationTemplateArgument(const TemplateArgument &TA);
   void VisitNullPtrTemplateArgument(const TemplateArgument &TA);
   void VisitIntegralTemplateArgument(const TemplateArgument &TA);
+  void VisitStructuralValueTemplateArgument(const TemplateArgument &TA);
   void VisitTemplateTemplateArgument(const TemplateArgument &TA);
   void VisitTemplateExpansionTemplateArgument(const TemplateArgument &TA);
   void VisitExpressionTemplateArgument(const TemplateArgument &TA);

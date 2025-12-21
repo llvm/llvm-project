@@ -10,7 +10,7 @@
 # RUN: ld.lld -Ttext=0x10000 --no-relax 32.o -o 32.norelax
 # RUN: llvm-objdump -td --no-show-raw-insn -M no-aliases 32.norelax | FileCheck %s
 
-# RUN: llvm-mc -filetype=obj -triple=riscv64 -mattr=+relax %s -o 64.o
+# RUN: llvm-mc -filetype=obj -triple=riscv64 -mattr=+relax %s -riscv-align-rvc=0 -o 64.o
 # RUN: ld.lld -Ttext=0x10000 64.o -o 64
 # RUN: llvm-objdump -td --no-show-raw-insn -M no-aliases 64 | FileCheck %s
 # RUN: ld.lld -Ttext=0x10000 --no-relax 64.o -o 64.norelax
@@ -29,49 +29,49 @@
 # CHECK-DAG: 00010000 g       .text  {{0*}}38 _start
 
 # CHECK:       <_start>:
-# CHECK-NEXT:            addi    a0, a0, 1
+# CHECK-NEXT:            lui     a0, 0x10
 # CHECK-EMPTY:
 # CHECK-NEXT:  <a>:
-# CHECK-NEXT:            addi    a0, a0, 2
+# CHECK-NEXT:            addi    a0, a0, 0x2
 # CHECK-EMPTY:
 # CHECK-NEXT:  <b>:
-# CHECK-NEXT:            addi    zero, zero, 0
-# CHECK-NEXT:            addi    zero, zero, 0
-# CHECK-NEXT:    10010:  addi    a0, a0, 3
+# CHECK-NEXT:            addi    zero, zero, 0x0
+# CHECK-NEXT:            addi    zero, zero, 0x0
+# CHECK-NEXT:    10010:  addi    a0, a0, 0x3
 # CHECK-EMPTY:
 # CHECK-NEXT:  <c>:
-# CHECK-NEXT:            addi    a0, a0, 4
-# CHECK-NEXT:            addi    a0, a0, 5
-# CHECK-NEXT:            addi    zero, zero, 0
-# CHECK-NEXT:    10020:  addi    a0, a0, 6
-# CHECK-NEXT:            addi    a0, a0, 7
-# CHECK-NEXT:            addi    zero, zero, 0
-# CHECK-NEXT:            addi    zero, zero, 0
-# CHECK-NEXT:    10030:  addi    a0, a0, 8
-# CHECK-NEXT:            addi    a0, a0, 9
+# CHECK-NEXT:            addi    a0, a0, 0x4
+# CHECK-NEXT:            addi    a0, a0, 0x5
+# CHECK-NEXT:            addi    zero, zero, 0x0
+# CHECK-NEXT:    10020:  addi    a0, a0, 0x6
+# CHECK-NEXT:            addi    a0, a0, 0x7
+# CHECK-NEXT:            addi    zero, zero, 0x0
+# CHECK-NEXT:            addi    zero, zero, 0x0
+# CHECK-NEXT:    10030:  addi    a0, a0, 0x8
+# CHECK-NEXT:            addi    a0, a0, 0x9
 # CHECK-EMPTY:
 # CHECK:       <e>:
-# CHECK-NEXT:            addi    a0, a0, 1
+# CHECK-NEXT:            addi    a0, a0, 0x1
 # CHECK-EMPTY:
 # CHECK-NEXT:  <f>:
-# CHECK-NEXT:    10044:  addi    a0, a0, 2
-# CHECK-NEXT:            addi    zero, zero, 0
-# CHECK-NEXT:            addi    zero, zero, 0
-# CHECK-NEXT:            addi    zero, zero, 0
-# CHECK-NEXT:            addi    zero, zero, 0
-# CHECK-NEXT:            addi    zero, zero, 0
-# CHECK-NEXT:            addi    zero, zero, 0
-# CHECK-NEXT:    10060:  addi    a0, a0, 3
+# CHECK-NEXT:    10044:  addi    a0, a0, 0x2
+# CHECK-NEXT:            addi    zero, zero, 0x0
+# CHECK-NEXT:            addi    zero, zero, 0x0
+# CHECK-NEXT:            addi    zero, zero, 0x0
+# CHECK-NEXT:            addi    zero, zero, 0x0
+# CHECK-NEXT:            addi    zero, zero, 0x0
+# CHECK-NEXT:            addi    zero, zero, 0x0
+# CHECK-NEXT:    10060:  addi    a0, a0, 0x3
 # CHECK-EMPTY:
 
 ## _start-0x10070 = 0x10000-0x10070 = -112
 # CHECK:      <.L1>:
-# CHECK-NEXT:   10070:  auipc   a0, 0
-# CHECK-NEXT:           addi    a0, a0, -112
-# CHECK-NEXT:           addi    zero, zero, 0
-# CHECK-NEXT:           addi    zero, zero, 0
-# CHECK-NEXT:           auipc   a0, 0
-# CHECK-NEXT:           addi    a0, a0, -112
+# CHECK-NEXT:   10070:  auipc   a0, 0x0
+# CHECK-NEXT:           addi    a0, a0, -0x70
+# CHECK-NEXT:           addi    zero, zero, 0x0
+# CHECK-NEXT:           addi    zero, zero, 0x0
+# CHECK-NEXT:           auipc   a0, 0x0
+# CHECK-NEXT:           addi    a0, a0, -0x70
 # CHECK-EMPTY:
 
 # GC-DAG:       00010004 l       .text  {{0*}}1c a
@@ -82,58 +82,60 @@
 # GC-NOT:       <d>:
 
 # CHECKR:       <_start>:
-# CHECKR-NEXT:          addi    a0, a0, 1
+# CHECKR-NEXT:          lui     a0, 0x0
+# CHECKR-NEXT:          0000000000000000:  R_RISCV_HI20         _start
+# CHECKR-NEXT:          0000000000000000:  R_RISCV_RELAX        *ABS*
 # CHECKR-EMPTY:
 # CHECKR-NEXT:  <a>:
-# CHECKR-NEXT:          addi    a0, a0, 2
+# CHECKR-NEXT:          addi    a0, a0, 0x2
 # CHECKR-EMPTY:
 # CHECKR-NEXT:  <b>:
-# CHECKR-NEXT:          addi    zero, zero, 0
+# CHECKR-NEXT:          addi    zero, zero, 0x0
 # CHECKR-NEXT:          0000000000000008:  R_RISCV_ALIGN        *ABS*+0xc
-# CHECKR-NEXT:          addi    zero, zero, 0
-# CHECKR-NEXT:          addi    zero, zero, 0
-# CHECKR-NEXT:          addi    a0, a0, 3
+# CHECKR-NEXT:          addi    zero, zero, 0x0
+# CHECKR-NEXT:          addi    zero, zero, 0x0
+# CHECKR-NEXT:          addi    a0, a0, 0x3
 # CHECKR-EMPTY:
 # CHECKR-NEXT:  <c>:
-# CHECKR-NEXT:          addi    a0, a0, 4
-# CHECKR-NEXT:          addi    a0, a0, 5
-# CHECKR-NEXT:          addi    zero, zero, 0
+# CHECKR-NEXT:          addi    a0, a0, 0x4
+# CHECKR-NEXT:          addi    a0, a0, 0x5
+# CHECKR-NEXT:          addi    zero, zero, 0x0
 # CHECKR-NEXT:          0000000000000020:  R_RISCV_ALIGN        *ABS*+0x1c
-# CHECKR-NEXT:          addi    zero, zero, 0
-# CHECKR-NEXT:          addi    zero, zero, 0
-# CHECKR-NEXT:          addi    zero, zero, 0
-# CHECKR-NEXT:          addi    zero, zero, 0
-# CHECKR-NEXT:          addi    zero, zero, 0
-# CHECKR-NEXT:          addi    zero, zero, 0
-# CHECKR-NEXT:          addi    a0, a0, 6
-# CHECKR-NEXT:          addi    a0, a0, 7
-# CHECKR-NEXT:          addi    zero, zero, 0
+# CHECKR-NEXT:          addi    zero, zero, 0x0
+# CHECKR-NEXT:          addi    zero, zero, 0x0
+# CHECKR-NEXT:          addi    zero, zero, 0x0
+# CHECKR-NEXT:          addi    zero, zero, 0x0
+# CHECKR-NEXT:          addi    zero, zero, 0x0
+# CHECKR-NEXT:          addi    zero, zero, 0x0
+# CHECKR-NEXT:          addi    a0, a0, 0x6
+# CHECKR-NEXT:          addi    a0, a0, 0x7
+# CHECKR-NEXT:          addi    zero, zero, 0x0
 # CHECKR-NEXT:          0000000000000044:  R_RISCV_ALIGN        *ABS*+0xc
-# CHECKR-NEXT:          addi    zero, zero, 0
-# CHECKR-NEXT:          addi    zero, zero, 0
-# CHECKR-NEXT:          addi    a0, a0, 8
-# CHECKR-NEXT:          addi    a0, a0, 9
+# CHECKR-NEXT:          addi    zero, zero, 0x0
+# CHECKR-NEXT:          addi    zero, zero, 0x0
+# CHECKR-NEXT:          addi    a0, a0, 0x8
+# CHECKR-NEXT:          addi    a0, a0, 0x9
 
 .global _start
 _start:
-  addi a0, a0, 1
+  lui a0, %hi(_start)
 a:
-  addi a0, a0, 2
+  addi a0, a0, 0x2
 b:
 .balign 16
-  addi a0, a0, 3
+  addi a0, a0, 0x3
 c:
-  addi a0, a0, 4
-  addi a0, a0, 5
+  addi a0, a0, 0x4
+  addi a0, a0, 0x5
 .balign 32
 .size a, . - a
-  addi a0, a0, 6
-  addi a0, a0, 7
+  addi a0, a0, 0x6
+  addi a0, a0, 0x7
 .balign 16
 .size b, . - b
-  addi a0, a0, 8
+  addi a0, a0, 0x8
 .size c, . - c
-  addi a0, a0, 9
+  addi a0, a0, 0x9
 .size _start, . - _start
 
 ## Test another text section.
@@ -141,12 +143,12 @@ c:
 d:
 e:
 .balign 8
-  addi a0, a0, 1
+  addi a0, a0, 0x1
 f:
-  addi a0, a0, 2
+  addi a0, a0, 0x2
 .balign 32
 .size d, . - d
-  addi a0, a0, 3
+  addi a0, a0, 0x3
 .size e, . - e
 .size f, . - f
 

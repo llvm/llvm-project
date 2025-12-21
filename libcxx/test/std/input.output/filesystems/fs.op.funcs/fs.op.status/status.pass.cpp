@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03
+// REQUIRES: can-create-symlinks
+// UNSUPPORTED: c++03, c++11, c++14
 // UNSUPPORTED: no-filesystem
-// UNSUPPORTED: availability-filesystem-missing
 
 // Starting in Android N (API 24), SELinux policy prevents the shell user from
 // creating a FIFO file.
@@ -19,12 +19,12 @@
 // file_status status(const path& p);
 // file_status status(const path& p, error_code& ec) noexcept;
 
-#include "filesystem_include.h"
+#include <filesystem>
 
 #include "assert_macros.h"
 #include "test_macros.h"
 #include "filesystem_test_helper.h"
-
+namespace fs = std::filesystem;
 using namespace fs;
 
 static void signature_test()
@@ -96,7 +96,7 @@ static void test_status_cannot_resolve()
 #ifndef TEST_HAS_NO_EXCEPTIONS
         { // test throwing case
             try {
-                status(TC.p);
+              (void)status(TC.p);
             } catch (filesystem_error const& err) {
                 assert(err.path1() == TC.p);
                 assert(err.path2() == "");

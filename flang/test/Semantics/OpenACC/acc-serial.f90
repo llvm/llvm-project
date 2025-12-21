@@ -1,4 +1,4 @@
-! RUN: %python %S/../test_errors.py %s %flang -fopenacc
+! RUN: %python %S/../test_errors.py %s %flang -fopenacc -pedantic
 
 ! Check OpenACC clause validity for the following construct and directive:
 !   2.5.2 Serial
@@ -39,7 +39,7 @@ program openacc_serial_validity
   do i = 1, N
     !ERROR: Directive SET may not be called within a compute region
     !$acc set default_async(i)
-    a(i) = 3.14
+    a(i) = 3.14d0
   end do
   !$acc end serial
 
@@ -52,8 +52,15 @@ program openacc_serial_validity
   !$acc serial async(1)
   !$acc end serial
 
-  !ERROR: At most one ASYNC clause can appear on the SERIAL directive
+  !ERROR: At most one ASYNC clause can appear on the SERIAL directive or in group separated by the DEVICE_TYPE clause
   !$acc serial async(1) async(2)
+  !$acc end serial
+
+  !ERROR: At most one ASYNC clause can appear on the SERIAL directive or in group separated by the DEVICE_TYPE clause
+  !$acc serial async(1) device_type(nvidia) async(2) async(4)
+  !$acc end serial
+
+  !$acc serial async(1) device_type(nvidia) async(2)
   !$acc end serial
 
   !$acc serial async(async1)
@@ -77,15 +84,15 @@ program openacc_serial_validity
   !$acc serial wait(wait1) wait(wait2)
   !$acc end serial
 
-  !PORTABILITY: NUM_GANGS clause is not allowed on the SERIAL directive and will be ignored
+  !PORTABILITY: NUM_GANGS clause is not allowed on the SERIAL directive and will be ignored [-Wportability]
   !$acc serial num_gangs(8)
   !$acc end serial
 
-  !PORTABILITY: NUM_WORKERS clause is not allowed on the SERIAL directive and will be ignored
+  !PORTABILITY: NUM_WORKERS clause is not allowed on the SERIAL directive and will be ignored [-Wportability]
   !$acc serial num_workers(8)
   !$acc end serial
 
-  !PORTABILITY: VECTOR_LENGTH clause is not allowed on the SERIAL directive and will be ignored
+  !PORTABILITY: VECTOR_LENGTH clause is not allowed on the SERIAL directive and will be ignored [-Wportability]
   !$acc serial vector_length(128)
   !$acc end serial
 
@@ -155,14 +162,27 @@ program openacc_serial_validity
 
   !$acc serial device_type(*) async
   do i = 1, N
-    a(i) = 3.14
+    a(i) = 3.14d0
   end do
   !$acc end serial
 
   !ERROR: Clause IF is not allowed after clause DEVICE_TYPE on the SERIAL directive
   !$acc serial device_type(*) if(.TRUE.)
   do i = 1, N
-    a(i) = 3.14
+    a(i) = 3.14d0
+  end do
+  !$acc end serial
+
+  do i = 1, 100
+    !$acc serial
+    !ERROR: CYCLE to construct outside of SERIAL construct is not allowed
+    if (i == 10) cycle
+    !$acc end serial
+  end do
+
+  !$acc serial
+  do i = 1, 100
+    if (i == 10) cycle
   end do
   !$acc end serial
 

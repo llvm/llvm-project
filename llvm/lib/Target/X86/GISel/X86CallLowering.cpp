@@ -16,6 +16,7 @@
 #include "X86CallingConv.h"
 #include "X86ISelLowering.h"
 #include "X86InstrInfo.h"
+#include "X86MachineFunctionInfo.h"
 #include "X86RegisterInfo.h"
 #include "X86Subtarget.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -25,7 +26,6 @@
 #include "llvm/CodeGen/FunctionLoweringInfo.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
-#include "llvm/CodeGen/LowLevelType.h"
 #include "llvm/CodeGen/LowLevelTypeUtils.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -34,15 +34,15 @@
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/CodeGen/ValueTypes.h"
+#include "llvm/CodeGenTypes/LowLevelType.h"
+#include "llvm/CodeGenTypes/MachineValueType.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Value.h"
-#include "llvm/MC/MCRegisterInfo.h"
 #include <cassert>
 #include <cstdint>
 
@@ -69,13 +69,13 @@ public:
                  CCValAssign::LocInfo LocInfo,
                  const CallLowering::ArgInfo &Info, ISD::ArgFlagsTy Flags,
                  CCState &State) override {
-    bool Res = AssignFn(ValNo, ValVT, LocVT, LocInfo, Flags, State);
+    bool Res = AssignFn(ValNo, ValVT, LocVT, LocInfo, Flags, Info.Ty, State);
     StackSize = State.getStackSize();
 
     static const MCPhysReg XMMArgRegs[] = {X86::XMM0, X86::XMM1, X86::XMM2,
                                            X86::XMM3, X86::XMM4, X86::XMM5,
                                            X86::XMM6, X86::XMM7};
-    if (!Info.IsFixed)
+    if (Flags.isVarArg())
       NumXMMRegs = State.getFirstUnallocated(XMMArgRegs);
 
     return Res;
@@ -106,14 +106,15 @@ struct X86OutgoingValueHandler : public CallLowering::OutgoingValueHandler {
   }
 
   void assignValueToReg(Register ValVReg, Register PhysReg,
-                        CCValAssign VA) override {
+                        const CCValAssign &VA) override {
     MIB.addUse(PhysReg, RegState::Implicit);
     Register ExtReg = extendRegister(ValVReg, VA);
     MIRBuilder.buildCopy(PhysReg, ExtReg);
   }
 
   void assignValueToAddress(Register ValVReg, Register Addr, LLT MemTy,
-                            MachinePointerInfo &MPO, CCValAssign &VA) override {
+                            const MachinePointerInfo &MPO,
+                            const CCValAssign &VA) override {
     MachineFunction &MF = MIRBuilder.getMF();
     Register ExtReg = extendRegister(ValVReg, VA);
 
@@ -146,12 +147,17 @@ bool X86CallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
          "Return value without a vreg");
   MachineFunction &MF = MIRBuilder.getMF();
   auto MIB = MIRBuilder.buildInstrNoInsert(X86::RET).addImm(0);
-  const X86Subtarget &STI = MF.getSubtarget<X86Subtarget>();
-  bool Is64Bit = STI.is64Bit();
+  auto FuncInfo = MF.getInfo<X86MachineFunctionInfo>();
+  const auto &STI = MF.getSubtarget<X86Subtarget>();
+  Register RetReg = STI.is64Bit() ? X86::RAX : X86::EAX;
 
   if (!FLI.CanLowerReturn) {
     insertSRetStores(MIRBuilder, Val->getType(), VRegs, FLI.DemoteRegister);
-    MIRBuilder.buildCopy(Is64Bit ? X86::RAX : X86::EAX, FLI.DemoteRegister);
+    MIRBuilder.buildCopy(RetReg, FLI.DemoteRegister);
+    MIB.addReg(RetReg);
+  } else if (Register Reg = FuncInfo->getSRetReturnReg()) {
+    MIRBuilder.buildCopy(RetReg, Reg);
+    MIB.addReg(RetReg);
   } else if (!VRegs.empty()) {
     const Function &F = MF.getFunction();
     MachineRegisterInfo &MRI = MF.getRegInfo();
@@ -201,7 +207,8 @@ struct X86IncomingValueHandler : public CallLowering::IncomingValueHandler {
   }
 
   void assignValueToAddress(Register ValVReg, Register Addr, LLT MemTy,
-                            MachinePointerInfo &MPO, CCValAssign &VA) override {
+                            const MachinePointerInfo &MPO,
+                            const CCValAssign &VA) override {
     MachineFunction &MF = MIRBuilder.getMF();
     auto *MMO = MF.getMachineMemOperand(
         MPO, MachineMemOperand::MOLoad | MachineMemOperand::MOInvariant, MemTy,
@@ -210,15 +217,15 @@ struct X86IncomingValueHandler : public CallLowering::IncomingValueHandler {
   }
 
   void assignValueToReg(Register ValVReg, Register PhysReg,
-                        CCValAssign VA) override {
-    markPhysRegUsed(PhysReg);
+                        const CCValAssign &VA) override {
+    markPhysRegUsed(PhysReg.asMCReg());
     IncomingValueHandler::assignValueToReg(ValVReg, PhysReg, VA);
   }
 
   /// How the physical register gets marked varies between formal
   /// parameters (it's a basic-block live-in), and a call instruction
   /// (it's an implicit-def of the BL).
-  virtual void markPhysRegUsed(unsigned PhysReg) = 0;
+  virtual void markPhysRegUsed(MCRegister PhysReg) = 0;
 
 protected:
   const DataLayout &DL;
@@ -228,7 +235,7 @@ struct FormalArgHandler : public X86IncomingValueHandler {
   FormalArgHandler(MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI)
       : X86IncomingValueHandler(MIRBuilder, MRI) {}
 
-  void markPhysRegUsed(unsigned PhysReg) override {
+  void markPhysRegUsed(MCRegister PhysReg) override {
     MIRBuilder.getMRI()->addLiveIn(PhysReg);
     MIRBuilder.getMBB().addLiveIn(PhysReg);
   }
@@ -239,7 +246,7 @@ struct CallReturnHandler : public X86IncomingValueHandler {
                     MachineInstrBuilder &MIB)
       : X86IncomingValueHandler(MIRBuilder, MRI), MIB(MIB) {}
 
-  void markPhysRegUsed(unsigned PhysReg) override {
+  void markPhysRegUsed(MCRegister PhysReg) override {
     MIB.addDef(PhysReg, RegState::Implicit);
   }
 
@@ -256,6 +263,7 @@ bool X86CallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
   MachineFunction &MF = MIRBuilder.getMF();
   MachineRegisterInfo &MRI = MF.getRegInfo();
   auto DL = MF.getDataLayout();
+  auto FuncInfo = MF.getInfo<X86MachineFunctionInfo>();
 
   SmallVector<ArgInfo, 8> SplitArgs;
 
@@ -271,11 +279,15 @@ bool X86CallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
     // TODO: handle not simple cases.
     if (Arg.hasAttribute(Attribute::ByVal) ||
         Arg.hasAttribute(Attribute::InReg) ||
-        Arg.hasAttribute(Attribute::StructRet) ||
         Arg.hasAttribute(Attribute::SwiftSelf) ||
-        Arg.hasAttribute(Attribute::SwiftError) ||
-        Arg.hasAttribute(Attribute::Nest) || VRegs[Idx].size() > 1)
+        Arg.hasAttribute(Attribute::SwiftError) || VRegs[Idx].size() > 1)
       return false;
+
+    if (Arg.hasAttribute(Attribute::StructRet)) {
+      assert(VRegs[Idx].size() == 1 &&
+             "Unexpected amount of registers for sret argument.");
+      FuncInfo->setSRetReturnReg(VRegs[Idx][0]);
+    }
 
     ArgInfo OrigArg(VRegs[Idx], Arg.getType(), Idx);
     setArgFlags(OrigArg, Idx + AttributeList::FirstArgIndex, DL, F);
@@ -307,7 +319,7 @@ bool X86CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   MachineFunction &MF = MIRBuilder.getMF();
   const Function &F = MF.getFunction();
   MachineRegisterInfo &MRI = MF.getRegInfo();
-  const DataLayout &DL = F.getParent()->getDataLayout();
+  const DataLayout &DL = F.getDataLayout();
   const X86Subtarget &STI = MF.getSubtarget<X86Subtarget>();
   const TargetInstrInfo &TII = *STI.getInstrInfo();
   const X86RegisterInfo *TRI = STI.getRegisterInfo();
@@ -350,7 +362,8 @@ bool X86CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
                                      Info.CallConv, Info.IsVarArg))
     return false;
 
-  bool IsFixed = Info.OrigArgs.empty() ? true : Info.OrigArgs.back().IsFixed;
+  bool IsFixed =
+      Info.OrigArgs.empty() ? true : !Info.OrigArgs.back().Flags[0].isVarArg();
   if (STI.is64Bit() && !IsFixed && !STI.isCallingConvWin64(Info.CallConv)) {
     // From AMD64 ABI document:
     // For calls that may call functions that use varargs or stdargs

@@ -1,12 +1,10 @@
-// RUN: %clang --target=x86_64-pc-dragonfly -### %s 2> %t.log
-// RUN: FileCheck -input-file %t.log %s
+// RUN: %clang --target=x86_64-pc-dragonfly --sysroot= -### %s 2>&1 | FileCheck %s
 
 // CHECK: "-cc1" "-triple" "x86_64-pc-dragonfly"
 // CHECK: ld{{.*}}" "--eh-frame-hdr" "-dynamic-linker" "/usr/libexec/ld-elf.so.{{.*}}" "--hash-style=gnu" "--enable-new-dtags" "-o" "a.out" "{{.*}}crt1.o" "{{.*}}crti.o" "{{.*}}crtbegin.o" "-L{{.*}}/../lib" "-L/usr/lib" "-L/usr/lib/gcc80" "{{.*}}.o" "-rpath" "{{.*}}gcc80{{.*}}" "-lc" "-lgcc" "{{.*}}crtend.o" "{{.*}}crtn.o"
 
 // Check x86_64-unknown-dragonfly, X86_64
 // RUN: %clang -### %s 2>&1 --target=x86_64-unknown-dragonfly \
-// RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/basic_dragonfly_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-LD-X86_64 %s
 // CHECK-LD-X86_64: "-cc1" "-triple" "x86_64-unknown-dragonfly"

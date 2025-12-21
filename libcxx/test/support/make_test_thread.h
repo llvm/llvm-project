@@ -28,24 +28,18 @@ namespace support {
 // but any other test that only creates threads as a side effect of testing should
 // work if they use the utilities in this file.
 
-template <class F, class ...Args>
-std::thread make_test_thread(F&& f, Args&& ...args) {
-    return std::thread(std::forward<F>(f), std::forward<Args>(args)...);
+template <class F, class... Args>
+std::thread make_test_thread(F&& f, Args&&... args) {
+  return std::thread(std::forward<F>(f), std::forward<Args>(args)...);
 }
 
-#if TEST_STD_VER >= 20 && !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_STOP_TOKEN)
-#  ifdef _LIBCPP_VERSION
-#    define TEST_AVAILABILITY_SYNC _LIBCPP_AVAILABILITY_SYNC
-#  else
-#    define TEST_AVAILABILITY_SYNC
-#  endif
-
+#if TEST_STD_VER >= 20
 template <class F, class... Args>
-TEST_AVAILABILITY_SYNC std::jthread make_test_jthread(F&& f, Args&&... args) {
+std::jthread make_test_jthread(F&& f, Args&&... args) {
   return std::jthread(std::forward<F>(f), std::forward<Args>(args)...);
 }
 #endif
 
-} // end namespace support
+} // namespace support
 
 #endif // TEST_SUPPORT_MAKE_TEST_THREAD_H

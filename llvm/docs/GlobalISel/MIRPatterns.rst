@@ -36,8 +36,8 @@ MIR patterns use the DAG datatype in TableGen.
 
   (inst operand0, operand1, ...)
 
-``inst`` must be a def which inherits from ``Instruction`` (e.g. ``G_FADD``)
-or ``GICombinePatFrag``.
+``inst`` must be a def which inherits from ``Instruction`` (e.g. ``G_FADD``),
+``Intrinsic`` or ``GICombinePatFrag``.
 
 Operands essentially fall into one of two categories:
 
@@ -74,7 +74,7 @@ Operands are ordered just like they would be in a MachineInstr: the defs (outs)
 come first, then the uses (ins).
 
 Patterns are generally grouped into another DAG datatype with a dummy operator
-such as ``match``, ``apply`` or ``pattern``.
+such as ``match``, ``apply``, ``combine`` or ``pattern``.
 
 Finally, any DAG datatype in TableGen can be named. This also holds for
 patterns. e.g. the following is valid: ``(G_FOO $root, (i32 0):$cst):$mypat``.
@@ -100,6 +100,101 @@ pattern, you can try naming your patterns to see exactly where the issue is.
   (match (G_AND $root, $x, $x))
   // using $x again here copies operand 1 from G_AND into the new inst.
   (apply (COPY $root, $x))
+
+Types
+-----
+
+ValueType
+~~~~~~~~~
+
+Subclasses of ``ValueType`` are valid types, e.g. ``i32``.
+
+GITypeOf
+~~~~~~~~
+
+``GITypeOf<"$x">`` is a ``GISpecialType`` that allows for the creation of a
+register or immediate with the same type as another (register) operand.
+
+Type Parameters:
+
+* An operand name as a string, prefixed by ``$``.
+
+Semantics:
+
+* Can only appear in an 'apply' pattern.
+* The operand name used must appear in the 'match' pattern of the
+  same ``GICombineRule``.
+
+.. code-block:: text
+  :caption: Example: Immediate
+
+  def mul_by_neg_one: GICombineRule <
+    (defs root:$root),
+    (match (G_MUL $dst, $x, -1)),
+    (apply (G_SUB $dst, (GITypeOf<"$x"> 0), $x))
+  >;
+
+.. code-block:: text
+  :caption: Example: Temp Reg
+
+  def Test0 : GICombineRule<
+    (defs root:$dst),
+    (match (G_FMUL $dst, $src, -1)),
+    (apply (G_FSUB $dst, $src, $tmp),
+           (G_FNEG GITypeOf<"$dst">:$tmp, $src))>;
+
+GIVariadic
+~~~~~~~~~~
+
+``GIVariadic<>`` is a ``GISpecialType`` that allows for matching 1 or
+more operands remaining on an instruction.
+
+Type Parameters:
+
+* The minimum number of additional operands to match. Must be greater than zero.
+
+  * Default is 1.
+
+* The maximum number of additional operands to match. Must be strictly greater
+  than the minimum.
+
+  * 0 can be used to indicate there is no upper limit.
+  * Default is 0.
+
+Semantics:
+
+* ``GIVariadic<>`` operands can only appear on variadic instructions.
+* ``GIVariadic<>`` operands cannot be defs.
+* ``GIVariadic<>`` operands can only appear as the last operand in a 'match' pattern.
+* Each instance within a 'match' pattern must be uniquely named.
+* Re-using a ``GIVariadic<>`` operand in an 'apply' pattern will result in all
+  the matched operands being copied from the original instruction.
+* The min/max operands will result in the matcher checking that the number of operands
+  falls within that range.
+* ``GIVariadic<>`` operands can be used in C++ code within a rule, which will
+  result in the operand name being expanded to a value of type ``ArrayRef<MachineOperand>``.
+
+.. code-block:: text
+
+  // bool checkBuildVectorToUnmerge(ArrayRef<MachineOperand>);
+
+  def build_vector_to_unmerge: GICombineRule <
+    (defs root:$root),
+    (match (G_BUILD_VECTOR $root, GIVariadic<>:$args),
+           [{ return checkBuildVectorToUnmerge(${args}); }]),
+    (apply (G_UNMERGE_VALUES $root, $args))
+  >;
+
+.. code-block:: text
+
+  // Will additionally check the number of operands is >= 3 and <= 5.
+  // ($root is one operand, then 2 to 4 variadic operands).
+  def build_vector_to_unmerge: GICombineRule <
+    (defs root:$root),
+    (match (G_BUILD_VECTOR $root, GIVariadic<2, 4>:$two_to_four),
+           [{ return checkBuildVectorToUnmerge(${two_to_four}); }]),
+    (apply (G_UNMERGE_VALUES $root, $two_to_four))
+  >;
 
 Builtin Operations
 ------------------
@@ -141,13 +236,50 @@ Semantics:
 * The root cannot have any output operands.
 * The root must be a CodeGenInstruction
 
+Instruction Flags
+-----------------
+
+MIR Patterns support both matching & writing ``MIFlags``.
+
+.. code-block:: text
+  :caption: Example
+
+  def Test : GICombineRule<
+    (defs root:$dst),
+    (match (G_FOO $dst, $src, (MIFlags FmNoNans, FmNoInfs))),
+    (apply (G_BAR $dst, $src, (MIFlags FmReassoc)))>;
+
+In ``apply`` patterns, we also support referring to a matched instruction to
+"take" its MIFlags.
+
+.. code-block:: text
+  :caption: Example
+
+  ; We match NoNans/NoInfs, but $zext may have more flags.
+  ; Copy them all into the output instruction, and set Reassoc on the output inst.
+  def TestCpyFlags : GICombineRule<
+    (defs root:$dst),
+    (match (G_FOO $dst, $src, (MIFlags FmNoNans, FmNoInfs)):$zext),
+    (apply (G_BAR $dst, $src, (MIFlags $zext, FmReassoc)))>;
+
+The ``not`` operator can be used to check that a flag is NOT present
+on a matched instruction, and to remove a flag from a generated instruction.
+
+.. code-block:: text
+  :caption: Example
+
+  ; We match NoInfs but we don't want NoNans/Reassoc to be set. $zext may have more flags.
+  ; Copy them all into the output instruction but remove NoInfs on the output inst.
+  def TestNot : GICombineRule<
+    (defs root:$dst),
+    (match (G_FOO $dst, $src, (MIFlags FmNoInfs, (not FmNoNans, FmReassoc))):$zext),
+    (apply (G_BAR $dst, $src, (MIFlags $zext, (not FmNoInfs))))>;
 
 Limitations
 -----------
 
 This a non-exhaustive list of known issues with MIR patterns at this time.
 
-* Matching intrinsics is not yet possible.
 * Using ``GICombinePatFrag`` within another ``GICombinePatFrag`` is not
   supported.
 * ``GICombinePatFrag`` can only have a single root.
@@ -161,6 +293,8 @@ This a non-exhaustive list of known issues with MIR patterns at this time.
   match. e.g. if a pattern needs to work on both i32 and i64, you either
   need to leave it untyped and check the type in C++, or duplicate the
   pattern.
+* ``GISpecialType`` operands are not allowed within a ``GICombinePatFrag``.
+* ``GIVariadic<>`` matched operands must each have a unique name.
 
 GICombineRule
 -------------
@@ -195,8 +329,32 @@ it's less verbose.
 
 
 Combine Rules also allow mixing C++ code with MIR patterns, so that you
-may perform additional checks when matching, or run additional code after
-rewriting a pattern.
+may perform additional checks when matching, or run a C++ action after
+matching.
+
+Note that C++ code in ``apply`` pattern is mutually exclusive with
+other patterns. However, you can freely mix C++ code with other
+types of patterns in ``match`` patterns.
+C++ code in ``match`` patterns is always run last, after all other
+patterns matched.
+
+.. code-block:: text
+  :caption: Apply Pattern Examples with C++ code
+
+  // Valid
+  def Foo : GICombineRule<
+    (defs root:$root),
+    (match (G_ZEXT $tmp, (i32 0)),
+           (G_STORE $tmp, $ptr):$root,
+           "return myFinalCheck()"),
+    (apply "runMyAction(${root})")>;
+
+  // error: 'apply' patterns cannot mix C++ code with other types of patterns
+  def Bar : GICombineRule<
+    (defs root:$dst),
+    (match (G_ZEXT $dst, $src):$mi),
+    (apply (G_MUL $dst, $src, $src),
+           "runMyAction(${root})")>;
 
 The following expansions are available for MIR patterns:
 
@@ -211,6 +369,42 @@ The following expansions are available for MIR patterns:
     (defs root:$root),
     (match (G_ZEXT $root, $src):$mi),
     (apply "foobar(${root}.getReg(), ${src}.getReg(), ${mi}->hasImplicitDef())")>;
+
+``combine`` Operator
+~~~~~~~~~~~~~~~~~~~~
+
+``GICombineRule`` also supports a single ``combine`` pattern, which is a shorter way to
+declare patterns that just match one or more instructions, then defer all remaining matching
+and rewriting logic to C++ code.
+
+.. code-block:: text
+  :caption: Example usage of the combine operator.
+
+  // match + apply
+  def FooLong : GICombineRule<
+    (defs root:$root),
+    (match (G_ZEXT $root, $src):$mi, "return matchFoo(${mi});"),
+    (apply "applyFoo(${mi});")>;
+
+  // combine
+  def FooShort : GICombineRule<
+    (defs root:$root),
+    (combine (G_ZEXT $root, $src):$mi, "return combineFoo(${mi});")>;
+
+This has a couple of advantages:
+
+* We only need one C++ function, not two.
+* We no longer need to use ``GIDefMatchData`` to pass information between the match/apply functions.
+
+As described above, this is syntactic sugar for the match+apply form. In a ``combine`` pattern:
+
+* Everything except C++ code is considered the ``match`` part.
+* The C++ code is the ``apply`` part. C++ code is emitted in order of appearance.
+
+.. note::
+
+  The C++ code **must** return true if it changed any instruction. Returning false when changing
+  instructions is undefined behavior.
 
 Common Pattern #1: Replace a Register with Another
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -435,3 +629,57 @@ of operands.
     (match (does_not_bind $tmp, $x)
            (G_MUL $dst, $x, $tmp)),
     (apply (COPY $dst, $x))>;
+
+
+
+
+Gallery
+=======
+
+We should use precise patterns that state our intentions. Please avoid
+using wip_match_opcode in patterns. It can lead to imprecise patterns.
+
+.. code-block:: text
+  :caption: Example fold zext(trunc:nuw)
+
+  // Imprecise: matches any G_ZEXT
+  def zext : GICombineRule<
+    (defs root:$root),
+    (match (wip_match_opcode G_ZEXT):$root,
+    [{ return Helper.matchZextOfTrunc(*${root}, ${matchinfo}); }]),
+    (apply [{ Helper.applyBuildFn(*${root}, ${matchinfo}); }])>;
+
+
+  // Imprecise: matches G_ZEXT of G_TRUNC
+  def zext_of_trunc : GICombineRule<
+    (defs root:$root),
+    (match (G_TRUNC $src, $x),
+           (G_ZEXT $root, $src),
+    [{ return Helper.matchZextOfTrunc(${root}, ${matchinfo}); }]),
+    (apply [{ Helper.applyBuildFnMO(${root}, ${matchinfo}); }])>;
+
+
+  // Precise: matches G_ZEXT of G_TRUNC with nuw flag
+  def zext_of_trunc_nuw : GICombineRule<
+    (defs root:$root),
+    (match (G_TRUNC $src, $x, (MIFlags NoUWrap)),
+           (G_ZEXT $root, $src),
+    [{ return Helper.matchZextOfTrunc(${root}, ${matchinfo}); }]),
+    (apply [{ Helper.applyBuildFnMO(${root}, ${matchinfo}); }])>;
+
+
+  // Precise: lists all combine combinations
+  class ext_of_ext_opcodes<Instruction ext1Opcode, Instruction ext2Opcode> : GICombineRule <
+    (defs root:$root, build_fn_matchinfo:$matchinfo),
+    (match (ext2Opcode $second, $src):$Second,
+           (ext1Opcode $root, $second):$First,
+           [{ return Helper.matchExtOfExt(*${First}, *${Second}, ${matchinfo}); }]),
+    (apply [{ Helper.applyBuildFn(*${First}, ${matchinfo}); }])>;
+
+  def zext_of_zext : ext_of_ext_opcodes<G_ZEXT, G_ZEXT>;
+  def zext_of_anyext : ext_of_ext_opcodes<G_ZEXT, G_ANYEXT>;
+  def sext_of_sext : ext_of_ext_opcodes<G_SEXT, G_SEXT>;
+  def sext_of_anyext : ext_of_ext_opcodes<G_SEXT, G_ANYEXT>;
+  def anyext_of_anyext : ext_of_ext_opcodes<G_ANYEXT, G_ANYEXT>;
+  def anyext_of_zext : ext_of_ext_opcodes<G_ANYEXT, G_ZEXT>;
+  def anyext_of_sext : ext_of_ext_opcodes<G_ANYEXT, G_SEXT>;

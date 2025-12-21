@@ -9,256 +9,256 @@
 #ifndef LLVM_LIBC_TEST_SRC_MATH_FMODTEST_H
 #define LLVM_LIBC_TEST_SRC_MATH_FMODTEST_H
 
-#include "src/__support/FPUtil/BasicOperations.h"
-#include "src/__support/FPUtil/NearestIntegerOperations.h"
+#include "hdr/errno_macros.h"
+#include "hdr/fenv_macros.h"
+#include "src/__support/FPUtil/FEnvImpl.h"
+#include "test/UnitTest/FEnvSafeTest.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 
-#include <limits>
-#include <math.h>
+#ifdef FE_DENORM
+#define DENORM_EXCEPT FE_DENORM
+#elif defined(__FE_DENORM)
+#define DENORM_EXCEPT __FE_DENORM
+#else
+#define DENORM_EXCEPT 0
+#endif // FE_DENORM
 
 #define TEST_SPECIAL(x, y, expected, dom_err, expected_exception)              \
-  EXPECT_FP_EQ(expected, f(x, y));                                             \
-  EXPECT_MATH_ERRNO((dom_err) ? EDOM : 0);                                     \
-  EXPECT_FP_EXCEPTION(expected_exception);                                     \
-  LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT)
+  do {                                                                         \
+    LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);                       \
+    EXPECT_FP_EQ(expected, f(x, y));                                           \
+    EXPECT_MATH_ERRNO((dom_err) ? EDOM : 0);                                   \
+    LIBC_NAMESPACE::fputil::clear_except(DENORM_EXCEPT);                       \
+    EXPECT_FP_EXCEPTION(expected_exception);                                   \
+  } while (0)
 
 #define TEST_REGULAR(x, y, expected) TEST_SPECIAL(x, y, expected, false, 0)
 
-template <typename T> class FmodTest : public LIBC_NAMESPACE::testing::Test {
+template <typename T>
+class FmodTest : public LIBC_NAMESPACE::testing::FEnvSafeTest {
 
   DECLARE_SPECIAL_CONSTANTS(T)
+
+  static constexpr T one = T(1.0);
+  static constexpr T two = T(2.0);
+  static constexpr T neg_two = T(-2.0);
+  static constexpr T three = T(3.0);
+  static constexpr T val_neg_1_1 = T(-1.1);
+  static constexpr T val_6_5 = T(6.5);
+  static constexpr T val_neg_6_5 = T(-6.5);
+  static constexpr T val_2_25 = T(2.25);
+  static constexpr T val_neg_2_25 = T(-2.25);
 
 public:
   typedef T (*FModFunc)(T, T);
 
   void testSpecialNumbers(FModFunc f) {
-    using nl = std::numeric_limits<T>;
-
     // fmod (+0, y) == +0 for y != 0.
-    TEST_SPECIAL(0.0, 3.0, 0.0, false, 0);
-    TEST_SPECIAL(0.0, nl::denorm_min(), 0.0, false, 0);
-    TEST_SPECIAL(0.0, -nl::denorm_min(), 0.0, false, 0);
-    TEST_SPECIAL(0.0, nl::min(), 0.0, false, 0);
-    TEST_SPECIAL(0.0, -nl::min(), 0.0, false, 0);
-    TEST_SPECIAL(0.0, nl::max(), 0.0, false, 0);
-    TEST_SPECIAL(0.0, -nl::max(), 0.0, false, 0);
+    TEST_SPECIAL(zero, three, zero, false, 0);
+    TEST_SPECIAL(zero, min_denormal, zero, false, 0);
+    TEST_SPECIAL(zero, -min_denormal, zero, false, 0);
+    TEST_SPECIAL(zero, min_normal, zero, false, 0);
+    TEST_SPECIAL(zero, -min_normal, zero, false, 0);
+    TEST_SPECIAL(zero, max_normal, zero, false, 0);
+    TEST_SPECIAL(zero, -max_normal, zero, false, 0);
 
     // fmod (-0, y) == -0 for y != 0.
-    TEST_SPECIAL(neg_zero, 3.0, neg_zero, false, 0);
-    TEST_SPECIAL(neg_zero, nl::denorm_min(), neg_zero, false, 0);
-    TEST_SPECIAL(neg_zero, -nl::denorm_min(), neg_zero, false, 0);
-    TEST_SPECIAL(neg_zero, nl::min(), neg_zero, false, 0);
-    TEST_SPECIAL(neg_zero, -nl::min(), neg_zero, false, 0);
-    TEST_SPECIAL(neg_zero, nl::max(), neg_zero, false, 0);
-    TEST_SPECIAL(neg_zero, -nl::max(), neg_zero, false, 0);
+    TEST_SPECIAL(neg_zero, three, neg_zero, false, 0);
+    TEST_SPECIAL(neg_zero, min_denormal, neg_zero, false, 0);
+    TEST_SPECIAL(neg_zero, -min_denormal, neg_zero, false, 0);
+    TEST_SPECIAL(neg_zero, min_normal, neg_zero, false, 0);
+    TEST_SPECIAL(neg_zero, -min_normal, neg_zero, false, 0);
+    TEST_SPECIAL(neg_zero, max_normal, neg_zero, false, 0);
+    TEST_SPECIAL(neg_zero, -max_normal, neg_zero, false, 0);
 
-    // fmod (+inf, y) == nl::quiet_NaN() plus invalid exception.
-    TEST_SPECIAL(inf, 3.0, nl::quiet_NaN(), true, FE_INVALID);
-    TEST_SPECIAL(inf, -1.1L, nl::quiet_NaN(), true, FE_INVALID);
-    TEST_SPECIAL(inf, 0.0, nl::quiet_NaN(), true, FE_INVALID);
-    TEST_SPECIAL(inf, neg_zero, nl::quiet_NaN(), true, FE_INVALID);
-    TEST_SPECIAL(inf, nl::denorm_min(), nl::quiet_NaN(), true, FE_INVALID);
-    TEST_SPECIAL(inf, nl::min(), nl::quiet_NaN(), true, FE_INVALID);
-    TEST_SPECIAL(inf, nl::max(), nl::quiet_NaN(), true, FE_INVALID);
-    TEST_SPECIAL(inf, inf, nl::quiet_NaN(), true, FE_INVALID);
-    TEST_SPECIAL(inf, neg_inf, nl::quiet_NaN(), true, FE_INVALID);
+    // fmod (+inf, y) == aNaN plus invalid exception.
+    TEST_SPECIAL(inf, three, aNaN, true, FE_INVALID);
+    TEST_SPECIAL(inf, val_neg_1_1, aNaN, true, FE_INVALID);
+    TEST_SPECIAL(inf, zero, aNaN, true, FE_INVALID);
+    TEST_SPECIAL(inf, neg_zero, aNaN, true, FE_INVALID);
+    TEST_SPECIAL(inf, min_denormal, aNaN, true, FE_INVALID);
+    TEST_SPECIAL(inf, min_normal, aNaN, true, FE_INVALID);
+    TEST_SPECIAL(inf, max_normal, aNaN, true, FE_INVALID);
+    TEST_SPECIAL(inf, inf, aNaN, true, FE_INVALID);
+    TEST_SPECIAL(inf, neg_inf, aNaN, true, FE_INVALID);
 
-    // fmod (-inf, y) == nl::quiet_NaN() plus invalid exception.
-    TEST_SPECIAL(neg_inf, 3.0, nl::quiet_NaN(), true, FE_INVALID);
-    TEST_SPECIAL(neg_inf, -1.1L, nl::quiet_NaN(), true, FE_INVALID);
-    TEST_SPECIAL(neg_inf, 0.0, nl::quiet_NaN(), true, FE_INVALID);
-    TEST_SPECIAL(neg_inf, neg_zero, nl::quiet_NaN(), true, FE_INVALID);
-    TEST_SPECIAL(neg_inf, nl::denorm_min(), nl::quiet_NaN(), true, FE_INVALID);
-    TEST_SPECIAL(neg_inf, nl::min(), nl::quiet_NaN(), true, FE_INVALID);
-    TEST_SPECIAL(neg_inf, nl::max(), nl::quiet_NaN(), true, FE_INVALID);
-    TEST_SPECIAL(neg_inf, inf, nl::quiet_NaN(), true, FE_INVALID);
-    TEST_SPECIAL(neg_inf, neg_inf, nl::quiet_NaN(), true, FE_INVALID);
+    // fmod (-inf, y) == aNaN plus invalid exception.
+    TEST_SPECIAL(neg_inf, three, aNaN, true, FE_INVALID);
+    TEST_SPECIAL(neg_inf, val_neg_1_1, aNaN, true, FE_INVALID);
+    TEST_SPECIAL(neg_inf, zero, aNaN, true, FE_INVALID);
+    TEST_SPECIAL(neg_inf, neg_zero, aNaN, true, FE_INVALID);
+    TEST_SPECIAL(neg_inf, min_denormal, aNaN, true, FE_INVALID);
+    TEST_SPECIAL(neg_inf, min_normal, aNaN, true, FE_INVALID);
+    TEST_SPECIAL(neg_inf, max_normal, aNaN, true, FE_INVALID);
+    TEST_SPECIAL(neg_inf, inf, aNaN, true, FE_INVALID);
+    TEST_SPECIAL(neg_inf, neg_inf, aNaN, true, FE_INVALID);
 
-    // fmod (x, +0) == nl::quiet_NaN() plus invalid exception.
-    TEST_SPECIAL(3.0, 0.0, nl::quiet_NaN(), true, FE_INVALID);
-    TEST_SPECIAL(-1.1L, 0.0, nl::quiet_NaN(), true, FE_INVALID);
-    TEST_SPECIAL(0.0, 0.0, nl::quiet_NaN(), true, FE_INVALID);
-    TEST_SPECIAL(neg_zero, 0.0, nl::quiet_NaN(), true, FE_INVALID);
-    TEST_SPECIAL(nl::denorm_min(), 0.0, nl::quiet_NaN(), true, FE_INVALID);
-    TEST_SPECIAL(nl::min(), 0.0, nl::quiet_NaN(), true, FE_INVALID);
-    TEST_SPECIAL(nl::max(), 0.0, nl::quiet_NaN(), true, FE_INVALID);
+    // fmod (x, +0) == aNaN plus invalid exception.
+    TEST_SPECIAL(three, zero, aNaN, true, FE_INVALID);
+    TEST_SPECIAL(val_neg_1_1, zero, aNaN, true, FE_INVALID);
+    TEST_SPECIAL(zero, zero, aNaN, true, FE_INVALID);
+    TEST_SPECIAL(neg_zero, zero, aNaN, true, FE_INVALID);
+    TEST_SPECIAL(min_denormal, zero, aNaN, true, FE_INVALID);
+    TEST_SPECIAL(min_normal, zero, aNaN, true, FE_INVALID);
+    TEST_SPECIAL(max_normal, zero, aNaN, true, FE_INVALID);
 
-    // fmod (x, -0) == nl::quiet_NaN() plus invalid exception.
-    TEST_SPECIAL(3.0, neg_zero, nl::quiet_NaN(), true, FE_INVALID);
-    TEST_SPECIAL(-1.1L, neg_zero, nl::quiet_NaN(), true, FE_INVALID);
-    TEST_SPECIAL(0.0, neg_zero, nl::quiet_NaN(), true, FE_INVALID);
-    TEST_SPECIAL(neg_zero, neg_zero, nl::quiet_NaN(), true, FE_INVALID);
-    TEST_SPECIAL(nl::denorm_min(), neg_zero, nl::quiet_NaN(), true, FE_INVALID);
-    TEST_SPECIAL(nl::min(), neg_zero, nl::quiet_NaN(), true, FE_INVALID);
-    TEST_SPECIAL(nl::max(), neg_zero, nl::quiet_NaN(), true, FE_INVALID);
+    // fmod (x, -0) == aNaN plus invalid exception.
+    TEST_SPECIAL(three, neg_zero, aNaN, true, FE_INVALID);
+    TEST_SPECIAL(val_neg_1_1, neg_zero, aNaN, true, FE_INVALID);
+    TEST_SPECIAL(zero, neg_zero, aNaN, true, FE_INVALID);
+    TEST_SPECIAL(neg_zero, neg_zero, aNaN, true, FE_INVALID);
+    TEST_SPECIAL(min_denormal, neg_zero, aNaN, true, FE_INVALID);
+    TEST_SPECIAL(min_normal, neg_zero, aNaN, true, FE_INVALID);
+    TEST_SPECIAL(max_normal, neg_zero, aNaN, true, FE_INVALID);
 
     // fmod (x, +inf) == x for x not infinite.
-    TEST_SPECIAL(0.0, inf, 0.0, false, 0);
+    TEST_SPECIAL(zero, inf, zero, false, 0);
     TEST_SPECIAL(neg_zero, inf, neg_zero, false, 0);
-    TEST_SPECIAL(nl::denorm_min(), inf, nl::denorm_min(), false, 0);
-    TEST_SPECIAL(nl::min(), inf, nl::min(), false, 0);
-    TEST_SPECIAL(nl::max(), inf, nl::max(), false, 0);
-    TEST_SPECIAL(3.0, inf, 3.0, false, 0);
+    TEST_SPECIAL(min_denormal, inf, min_denormal, false, 0);
+    TEST_SPECIAL(min_normal, inf, min_normal, false, 0);
+    TEST_SPECIAL(max_normal, inf, max_normal, false, 0);
+    TEST_SPECIAL(three, inf, three, false, 0);
     // fmod (x, -inf) == x for x not infinite.
-    TEST_SPECIAL(0.0, neg_inf, 0.0, false, 0);
+    TEST_SPECIAL(zero, neg_inf, zero, false, 0);
     TEST_SPECIAL(neg_zero, neg_inf, neg_zero, false, 0);
-    TEST_SPECIAL(nl::denorm_min(), neg_inf, nl::denorm_min(), false, 0);
-    TEST_SPECIAL(nl::min(), neg_inf, nl::min(), false, 0);
-    TEST_SPECIAL(nl::max(), neg_inf, nl::max(), false, 0);
-    TEST_SPECIAL(3.0, neg_inf, 3.0, false, 0);
+    TEST_SPECIAL(min_denormal, neg_inf, min_denormal, false, 0);
+    TEST_SPECIAL(min_normal, neg_inf, min_normal, false, 0);
+    TEST_SPECIAL(max_normal, neg_inf, max_normal, false, 0);
+    TEST_SPECIAL(three, neg_inf, three, false, 0);
 
-    TEST_SPECIAL(0.0, nl::quiet_NaN(), nl::quiet_NaN(), false, 0);
-    TEST_SPECIAL(0.0, -nl::quiet_NaN(), nl::quiet_NaN(), false, 0);
-    TEST_SPECIAL(neg_zero, nl::quiet_NaN(), nl::quiet_NaN(), false, 0);
-    TEST_SPECIAL(neg_zero, -nl::quiet_NaN(), nl::quiet_NaN(), false, 0);
-    TEST_SPECIAL(1.0, nl::quiet_NaN(), nl::quiet_NaN(), false, 0);
-    TEST_SPECIAL(1.0, -nl::quiet_NaN(), nl::quiet_NaN(), false, 0);
-    TEST_SPECIAL(inf, nl::quiet_NaN(), nl::quiet_NaN(), false, 0);
-    TEST_SPECIAL(inf, -nl::quiet_NaN(), nl::quiet_NaN(), false, 0);
-    TEST_SPECIAL(neg_inf, nl::quiet_NaN(), nl::quiet_NaN(), false, 0);
-    TEST_SPECIAL(neg_inf, -nl::quiet_NaN(), nl::quiet_NaN(), false, 0);
-    TEST_SPECIAL(0.0, nl::signaling_NaN(), nl::quiet_NaN(), false, FE_INVALID);
-    TEST_SPECIAL(0.0, -nl::signaling_NaN(), nl::quiet_NaN(), false, FE_INVALID);
-    TEST_SPECIAL(neg_zero, nl::signaling_NaN(), nl::quiet_NaN(), false,
-                 FE_INVALID);
-    TEST_SPECIAL(neg_zero, -nl::signaling_NaN(), nl::quiet_NaN(), false,
-                 FE_INVALID);
-    TEST_SPECIAL(1.0, nl::signaling_NaN(), nl::quiet_NaN(), false, FE_INVALID);
-    TEST_SPECIAL(1.0, -nl::signaling_NaN(), nl::quiet_NaN(), false, FE_INVALID);
-    TEST_SPECIAL(inf, nl::signaling_NaN(), nl::quiet_NaN(), false, FE_INVALID);
-    TEST_SPECIAL(inf, -nl::signaling_NaN(), nl::quiet_NaN(), false, FE_INVALID);
-    TEST_SPECIAL(neg_inf, nl::signaling_NaN(), nl::quiet_NaN(), false,
-                 FE_INVALID);
-    TEST_SPECIAL(neg_inf, -nl::signaling_NaN(), nl::quiet_NaN(), false,
-                 FE_INVALID);
-    TEST_SPECIAL(nl::quiet_NaN(), 0.0, nl::quiet_NaN(), false, 0);
-    TEST_SPECIAL(-nl::quiet_NaN(), 0.0, nl::quiet_NaN(), false, 0);
-    TEST_SPECIAL(nl::quiet_NaN(), neg_zero, nl::quiet_NaN(), false, 0);
-    TEST_SPECIAL(-nl::quiet_NaN(), neg_zero, nl::quiet_NaN(), false, 0);
-    TEST_SPECIAL(nl::quiet_NaN(), 1.0, nl::quiet_NaN(), false, 0);
-    TEST_SPECIAL(-nl::quiet_NaN(), 1.0, nl::quiet_NaN(), false, 0);
-    TEST_SPECIAL(nl::quiet_NaN(), inf, nl::quiet_NaN(), false, 0);
-    TEST_SPECIAL(-nl::quiet_NaN(), inf, nl::quiet_NaN(), false, 0);
-    TEST_SPECIAL(nl::quiet_NaN(), neg_inf, nl::quiet_NaN(), false, 0);
-    TEST_SPECIAL(-nl::quiet_NaN(), neg_inf, nl::quiet_NaN(), false, 0);
-    TEST_SPECIAL(nl::signaling_NaN(), 0.0, nl::quiet_NaN(), false, FE_INVALID);
-    TEST_SPECIAL(-nl::signaling_NaN(), 0.0, nl::quiet_NaN(), false, FE_INVALID);
-    TEST_SPECIAL(nl::signaling_NaN(), neg_zero, nl::quiet_NaN(), false,
-                 FE_INVALID);
-    TEST_SPECIAL(-nl::signaling_NaN(), neg_zero, nl::quiet_NaN(), false,
-                 FE_INVALID);
-    TEST_SPECIAL(nl::signaling_NaN(), 1.0, nl::quiet_NaN(), false, FE_INVALID);
-    TEST_SPECIAL(-nl::signaling_NaN(), 1.0, nl::quiet_NaN(), false, FE_INVALID);
-    TEST_SPECIAL(nl::signaling_NaN(), inf, nl::quiet_NaN(), false, FE_INVALID);
-    TEST_SPECIAL(-nl::signaling_NaN(), inf, nl::quiet_NaN(), false, FE_INVALID);
-    TEST_SPECIAL(nl::signaling_NaN(), neg_inf, nl::quiet_NaN(), false,
-                 FE_INVALID);
-    TEST_SPECIAL(-nl::signaling_NaN(), neg_inf, nl::quiet_NaN(), false,
-                 FE_INVALID);
-    TEST_SPECIAL(nl::quiet_NaN(), nl::quiet_NaN(), nl::quiet_NaN(), false, 0);
-    TEST_SPECIAL(nl::quiet_NaN(), -nl::quiet_NaN(), nl::quiet_NaN(), false, 0);
-    TEST_SPECIAL(-nl::quiet_NaN(), nl::quiet_NaN(), nl::quiet_NaN(), false, 0);
-    TEST_SPECIAL(-nl::quiet_NaN(), -nl::quiet_NaN(), nl::quiet_NaN(), false, 0);
-    TEST_SPECIAL(nl::quiet_NaN(), nl::signaling_NaN(), nl::quiet_NaN(), false,
-                 FE_INVALID);
-    TEST_SPECIAL(nl::quiet_NaN(), -nl::signaling_NaN(), nl::quiet_NaN(), false,
-                 FE_INVALID);
-    TEST_SPECIAL(-nl::quiet_NaN(), nl::signaling_NaN(), nl::quiet_NaN(), false,
-                 FE_INVALID);
-    TEST_SPECIAL(-nl::quiet_NaN(), -nl::signaling_NaN(), nl::quiet_NaN(), false,
-                 FE_INVALID);
-    TEST_SPECIAL(nl::signaling_NaN(), nl::quiet_NaN(), nl::quiet_NaN(), false,
-                 FE_INVALID);
-    TEST_SPECIAL(nl::signaling_NaN(), -nl::quiet_NaN(), nl::quiet_NaN(), false,
-                 FE_INVALID);
-    TEST_SPECIAL(-nl::signaling_NaN(), nl::quiet_NaN(), nl::quiet_NaN(), false,
-                 FE_INVALID);
-    TEST_SPECIAL(-nl::signaling_NaN(), -nl::quiet_NaN(), nl::quiet_NaN(), false,
-                 FE_INVALID);
-    TEST_SPECIAL(nl::signaling_NaN(), nl::signaling_NaN(), nl::quiet_NaN(),
-                 false, FE_INVALID);
-    TEST_SPECIAL(nl::signaling_NaN(), -nl::signaling_NaN(), nl::quiet_NaN(),
-                 false, FE_INVALID);
-    TEST_SPECIAL(-nl::signaling_NaN(), nl::signaling_NaN(), nl::quiet_NaN(),
-                 false, FE_INVALID);
-    TEST_SPECIAL(-nl::signaling_NaN(), -nl::signaling_NaN(), nl::quiet_NaN(),
-                 false, FE_INVALID);
+    TEST_SPECIAL(zero, aNaN, aNaN, false, 0);
+    TEST_SPECIAL(zero, neg_aNaN, aNaN, false, 0);
+    TEST_SPECIAL(neg_zero, aNaN, aNaN, false, 0);
+    TEST_SPECIAL(neg_zero, neg_aNaN, aNaN, false, 0);
+    TEST_SPECIAL(one, aNaN, aNaN, false, 0);
+    TEST_SPECIAL(one, neg_aNaN, aNaN, false, 0);
+    TEST_SPECIAL(inf, aNaN, aNaN, false, 0);
+    TEST_SPECIAL(inf, neg_aNaN, aNaN, false, 0);
+    TEST_SPECIAL(neg_inf, aNaN, aNaN, false, 0);
+    TEST_SPECIAL(neg_inf, neg_aNaN, aNaN, false, 0);
+    TEST_SPECIAL(zero, sNaN, aNaN, false, FE_INVALID);
+    TEST_SPECIAL(zero, neg_sNaN, aNaN, false, FE_INVALID);
+    TEST_SPECIAL(neg_zero, sNaN, aNaN, false, FE_INVALID);
+    TEST_SPECIAL(neg_zero, neg_sNaN, aNaN, false, FE_INVALID);
+    TEST_SPECIAL(one, sNaN, aNaN, false, FE_INVALID);
+    TEST_SPECIAL(one, neg_sNaN, aNaN, false, FE_INVALID);
+    TEST_SPECIAL(inf, sNaN, aNaN, false, FE_INVALID);
+    TEST_SPECIAL(inf, neg_sNaN, aNaN, false, FE_INVALID);
+    TEST_SPECIAL(neg_inf, sNaN, aNaN, false, FE_INVALID);
+    TEST_SPECIAL(neg_inf, neg_sNaN, aNaN, false, FE_INVALID);
+    TEST_SPECIAL(aNaN, zero, aNaN, false, 0);
+    TEST_SPECIAL(neg_aNaN, zero, aNaN, false, 0);
+    TEST_SPECIAL(aNaN, neg_zero, aNaN, false, 0);
+    TEST_SPECIAL(neg_aNaN, neg_zero, aNaN, false, 0);
+    TEST_SPECIAL(aNaN, one, aNaN, false, 0);
+    TEST_SPECIAL(neg_aNaN, one, aNaN, false, 0);
+    TEST_SPECIAL(aNaN, inf, aNaN, false, 0);
+    TEST_SPECIAL(neg_aNaN, inf, aNaN, false, 0);
+    TEST_SPECIAL(aNaN, neg_inf, aNaN, false, 0);
+    TEST_SPECIAL(neg_aNaN, neg_inf, aNaN, false, 0);
+    TEST_SPECIAL(sNaN, zero, aNaN, false, FE_INVALID);
+    TEST_SPECIAL(neg_sNaN, zero, aNaN, false, FE_INVALID);
+    TEST_SPECIAL(sNaN, neg_zero, aNaN, false, FE_INVALID);
+    TEST_SPECIAL(neg_sNaN, neg_zero, aNaN, false, FE_INVALID);
+    TEST_SPECIAL(sNaN, one, aNaN, false, FE_INVALID);
+    TEST_SPECIAL(neg_sNaN, one, aNaN, false, FE_INVALID);
+    TEST_SPECIAL(sNaN, inf, aNaN, false, FE_INVALID);
+    TEST_SPECIAL(neg_sNaN, inf, aNaN, false, FE_INVALID);
+    TEST_SPECIAL(sNaN, neg_inf, aNaN, false, FE_INVALID);
+    TEST_SPECIAL(neg_sNaN, neg_inf, aNaN, false, FE_INVALID);
+    TEST_SPECIAL(aNaN, aNaN, aNaN, false, 0);
+    TEST_SPECIAL(aNaN, neg_aNaN, aNaN, false, 0);
+    TEST_SPECIAL(neg_aNaN, aNaN, aNaN, false, 0);
+    TEST_SPECIAL(neg_aNaN, neg_aNaN, aNaN, false, 0);
+    TEST_SPECIAL(aNaN, sNaN, aNaN, false, FE_INVALID);
+    TEST_SPECIAL(aNaN, neg_sNaN, aNaN, false, FE_INVALID);
+    TEST_SPECIAL(neg_aNaN, sNaN, aNaN, false, FE_INVALID);
+    TEST_SPECIAL(neg_aNaN, neg_sNaN, aNaN, false, FE_INVALID);
+    TEST_SPECIAL(sNaN, aNaN, aNaN, false, FE_INVALID);
+    TEST_SPECIAL(sNaN, neg_aNaN, aNaN, false, FE_INVALID);
+    TEST_SPECIAL(neg_sNaN, aNaN, aNaN, false, FE_INVALID);
+    TEST_SPECIAL(neg_sNaN, neg_aNaN, aNaN, false, FE_INVALID);
+    TEST_SPECIAL(sNaN, sNaN, aNaN, false, FE_INVALID);
+    TEST_SPECIAL(sNaN, neg_sNaN, aNaN, false, FE_INVALID);
+    TEST_SPECIAL(neg_sNaN, sNaN, aNaN, false, FE_INVALID);
+    TEST_SPECIAL(neg_sNaN, neg_sNaN, aNaN, false, FE_INVALID);
 
-    TEST_SPECIAL(6.5, 2.25L, 2.0L, false, 0);
-    TEST_SPECIAL(-6.5, 2.25L, -2.0L, false, 0);
-    TEST_SPECIAL(6.5, -2.25L, 2.0L, false, 0);
-    TEST_SPECIAL(-6.5, -2.25L, -2.0L, false, 0);
+    TEST_SPECIAL(val_6_5, val_2_25, two, false, 0);
+    TEST_SPECIAL(val_neg_6_5, val_2_25, neg_two, false, 0);
+    TEST_SPECIAL(val_6_5, val_neg_2_25, two, false, 0);
+    TEST_SPECIAL(val_neg_6_5, val_neg_2_25, neg_two, false, 0);
 
-    TEST_SPECIAL(nl::max(), nl::max(), 0.0, false, 0);
-    TEST_SPECIAL(nl::max(), -nl::max(), 0.0, false, 0);
-    TEST_SPECIAL(nl::max(), nl::min(), 0.0, false, 0);
-    TEST_SPECIAL(nl::max(), -nl::min(), 0.0, false, 0);
-    TEST_SPECIAL(nl::max(), nl::denorm_min(), 0.0, false, 0);
-    TEST_SPECIAL(nl::max(), -nl::denorm_min(), 0.0, false, 0);
-    TEST_SPECIAL(-nl::max(), nl::max(), neg_zero, false, 0);
-    TEST_SPECIAL(-nl::max(), -nl::max(), neg_zero, false, 0);
-    TEST_SPECIAL(-nl::max(), nl::min(), neg_zero, false, 0);
-    TEST_SPECIAL(-nl::max(), -nl::min(), neg_zero, false, 0);
-    TEST_SPECIAL(-nl::max(), nl::denorm_min(), neg_zero, false, 0);
-    TEST_SPECIAL(-nl::max(), -nl::denorm_min(), neg_zero, false, 0);
+    TEST_SPECIAL(max_normal, max_normal, zero, false, 0);
+    TEST_SPECIAL(max_normal, -max_normal, zero, false, 0);
+    TEST_SPECIAL(max_normal, min_normal, zero, false, 0);
+    TEST_SPECIAL(max_normal, -min_normal, zero, false, 0);
+    TEST_SPECIAL(max_normal, min_denormal, zero, false, 0);
+    TEST_SPECIAL(max_normal, -min_denormal, zero, false, 0);
+    TEST_SPECIAL(-max_normal, max_normal, neg_zero, false, 0);
+    TEST_SPECIAL(-max_normal, -max_normal, neg_zero, false, 0);
+    TEST_SPECIAL(-max_normal, min_normal, neg_zero, false, 0);
+    TEST_SPECIAL(-max_normal, -min_normal, neg_zero, false, 0);
+    TEST_SPECIAL(-max_normal, min_denormal, neg_zero, false, 0);
+    TEST_SPECIAL(-max_normal, -min_denormal, neg_zero, false, 0);
 
-    TEST_SPECIAL(nl::min(), nl::max(), nl::min(), false, 0);
-    TEST_SPECIAL(nl::min(), -nl::max(), nl::min(), false, 0);
-    TEST_SPECIAL(nl::min(), nl::min(), 0.0, false, 0);
-    TEST_SPECIAL(nl::min(), -nl::min(), 0.0, false, 0);
-    TEST_SPECIAL(nl::min(), nl::denorm_min(), 0.0, false, 0);
-    TEST_SPECIAL(nl::min(), -nl::denorm_min(), 0.0, false, 0);
-    TEST_SPECIAL(-nl::min(), nl::max(), -nl::min(), false, 0);
-    TEST_SPECIAL(-nl::min(), -nl::max(), -nl::min(), false, 0);
-    TEST_SPECIAL(-nl::min(), nl::min(), neg_zero, false, 0);
-    TEST_SPECIAL(-nl::min(), -nl::min(), neg_zero, false, 0);
-    TEST_SPECIAL(-nl::min(), nl::denorm_min(), neg_zero, false, 0);
-    TEST_SPECIAL(-nl::min(), -nl::denorm_min(), neg_zero, false, 0);
+    TEST_SPECIAL(min_normal, max_normal, min_normal, false, 0);
+    TEST_SPECIAL(min_normal, -max_normal, min_normal, false, 0);
+    TEST_SPECIAL(min_normal, min_normal, zero, false, 0);
+    TEST_SPECIAL(min_normal, -min_normal, zero, false, 0);
+    TEST_SPECIAL(min_normal, min_denormal, zero, false, 0);
+    TEST_SPECIAL(min_normal, -min_denormal, zero, false, 0);
+    TEST_SPECIAL(-min_normal, max_normal, -min_normal, false, 0);
+    TEST_SPECIAL(-min_normal, -max_normal, -min_normal, false, 0);
+    TEST_SPECIAL(-min_normal, min_normal, neg_zero, false, 0);
+    TEST_SPECIAL(-min_normal, -min_normal, neg_zero, false, 0);
+    TEST_SPECIAL(-min_normal, min_denormal, neg_zero, false, 0);
+    TEST_SPECIAL(-min_normal, -min_denormal, neg_zero, false, 0);
 
-    TEST_SPECIAL(nl::denorm_min(), nl::max(), nl::denorm_min(), false, 0);
-    TEST_SPECIAL(nl::denorm_min(), -nl::max(), nl::denorm_min(), false, 0);
-    TEST_SPECIAL(nl::denorm_min(), nl::min(), nl::denorm_min(), false, 0);
-    TEST_SPECIAL(nl::denorm_min(), -nl::min(), nl::denorm_min(), false, 0);
-    TEST_SPECIAL(nl::denorm_min(), nl::denorm_min(), 0.0, false, 0);
-    TEST_SPECIAL(nl::denorm_min(), -nl::denorm_min(), 0.0, false, 0);
-    TEST_SPECIAL(-nl::denorm_min(), nl::max(), -nl::denorm_min(), false, 0);
-    TEST_SPECIAL(-nl::denorm_min(), -nl::max(), -nl::denorm_min(), false, 0);
-    TEST_SPECIAL(-nl::denorm_min(), nl::min(), -nl::denorm_min(), false, 0);
-    TEST_SPECIAL(-nl::denorm_min(), -nl::min(), -nl::denorm_min(), false, 0);
-    TEST_SPECIAL(-nl::denorm_min(), nl::denorm_min(), neg_zero, false, 0);
-    TEST_SPECIAL(-nl::denorm_min(), -nl::denorm_min(), neg_zero, false, 0);
+    TEST_SPECIAL(min_denormal, max_normal, min_denormal, false, 0);
+    TEST_SPECIAL(min_denormal, -max_normal, min_denormal, false, 0);
+    TEST_SPECIAL(min_denormal, min_normal, min_denormal, false, 0);
+    TEST_SPECIAL(min_denormal, -min_normal, min_denormal, false, 0);
+    TEST_SPECIAL(min_denormal, min_denormal, zero, false, 0);
+    TEST_SPECIAL(min_denormal, -min_denormal, zero, false, 0);
+    TEST_SPECIAL(-min_denormal, max_normal, -min_denormal, false, 0);
+    TEST_SPECIAL(-min_denormal, -max_normal, -min_denormal, false, 0);
+    TEST_SPECIAL(-min_denormal, min_normal, -min_denormal, false, 0);
+    TEST_SPECIAL(-min_denormal, -min_normal, -min_denormal, false, 0);
+    TEST_SPECIAL(-min_denormal, min_denormal, neg_zero, false, 0);
+    TEST_SPECIAL(-min_denormal, -min_denormal, neg_zero, false, 0);
   }
 
   void testRegularExtreme(FModFunc f) {
+    if constexpr (sizeof(T) < sizeof(float))
+      return;
+    TEST_REGULAR(T(0x1p127), T(0x3p-149), T(0x1p-149));
+    TEST_REGULAR(T(0x1p127), T(-0x3p-149), T(0x1p-149));
+    TEST_REGULAR(T(0x1p127), T(0x3p-148), T(0x1p-147));
+    TEST_REGULAR(T(0x1p127), T(-0x3p-148), T(0x1p-147));
+    TEST_REGULAR(T(0x1p127), T(0x3p-126), T(0x1p-125));
+    TEST_REGULAR(T(0x1p127), T(-0x3p-126), T(0x1p-125));
+    TEST_REGULAR(T(-0x1p127), T(0x3p-149), T(-0x1p-149));
+    TEST_REGULAR(T(-0x1p127), T(-0x3p-149), T(-0x1p-149));
+    TEST_REGULAR(T(-0x1p127), T(0x3p-148), T(-0x1p-147));
+    TEST_REGULAR(T(-0x1p127), T(-0x3p-148), T(-0x1p-147));
+    TEST_REGULAR(T(-0x1p127), T(0x3p-126), T(-0x1p-125));
+    TEST_REGULAR(T(-0x1p127), T(-0x3p-126), T(-0x1p-125));
 
-    TEST_REGULAR(0x1p127L, 0x3p-149L, 0x1p-149L);
-    TEST_REGULAR(0x1p127L, -0x3p-149L, 0x1p-149L);
-    TEST_REGULAR(0x1p127L, 0x3p-148L, 0x1p-147L);
-    TEST_REGULAR(0x1p127L, -0x3p-148L, 0x1p-147L);
-    TEST_REGULAR(0x1p127L, 0x3p-126L, 0x1p-125L);
-    TEST_REGULAR(0x1p127L, -0x3p-126L, 0x1p-125L);
-    TEST_REGULAR(-0x1p127L, 0x3p-149L, -0x1p-149L);
-    TEST_REGULAR(-0x1p127L, -0x3p-149L, -0x1p-149L);
-    TEST_REGULAR(-0x1p127L, 0x3p-148L, -0x1p-147L);
-    TEST_REGULAR(-0x1p127L, -0x3p-148L, -0x1p-147L);
-    TEST_REGULAR(-0x1p127L, 0x3p-126L, -0x1p-125L);
-    TEST_REGULAR(-0x1p127L, -0x3p-126L, -0x1p-125L);
-
-    if constexpr (sizeof(T) >= sizeof(double)) {
-      TEST_REGULAR(0x1p1023L, 0x3p-1074L, 0x1p-1073L);
-      TEST_REGULAR(0x1p1023L, -0x3p-1074L, 0x1p-1073L);
-      TEST_REGULAR(0x1p1023L, 0x3p-1073L, 0x1p-1073L);
-      TEST_REGULAR(0x1p1023L, -0x3p-1073L, 0x1p-1073L);
-      TEST_REGULAR(0x1p1023L, 0x3p-1022L, 0x1p-1021L);
-      TEST_REGULAR(0x1p1023L, -0x3p-1022L, 0x1p-1021L);
-      TEST_REGULAR(-0x1p1023L, 0x3p-1074L, -0x1p-1073L);
-      TEST_REGULAR(-0x1p1023L, -0x3p-1074L, -0x1p-1073L);
-      TEST_REGULAR(-0x1p1023L, 0x3p-1073L, -0x1p-1073L);
-      TEST_REGULAR(-0x1p1023L, -0x3p-1073L, -0x1p-1073L);
-      TEST_REGULAR(-0x1p1023L, 0x3p-1022L, -0x1p-1021L);
-      TEST_REGULAR(-0x1p1023L, -0x3p-1022L, -0x1p-1021L);
-    }
+    if constexpr (sizeof(T) < sizeof(double))
+      return;
+    TEST_REGULAR(T(0x1p1023), T(0x3p-1074), T(0x1p-1073));
+    TEST_REGULAR(T(0x1p1023), T(-0x3p-1074), T(0x1p-1073));
+    TEST_REGULAR(T(0x1p1023), T(0x3p-1073), T(0x1p-1073));
+    TEST_REGULAR(T(0x1p1023), T(-0x3p-1073), T(0x1p-1073));
+    TEST_REGULAR(T(0x1p1023), T(0x3p-1022), T(0x1p-1021));
+    TEST_REGULAR(T(0x1p1023), T(-0x3p-1022), T(0x1p-1021));
+    TEST_REGULAR(T(-0x1p1023), T(0x3p-1074), T(-0x1p-1073));
+    TEST_REGULAR(T(-0x1p1023), T(-0x3p-1074), T(-0x1p-1073));
+    TEST_REGULAR(T(-0x1p1023), T(0x3p-1073), T(-0x1p-1073));
+    TEST_REGULAR(T(-0x1p1023), T(-0x3p-1073), T(-0x1p-1073));
+    TEST_REGULAR(T(-0x1p1023), T(0x3p-1022), T(-0x1p-1021));
+    TEST_REGULAR(T(-0x1p1023), T(-0x3p-1022), T(-0x1p-1021));
   }
 };
 

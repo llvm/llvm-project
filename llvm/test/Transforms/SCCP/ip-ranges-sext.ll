@@ -6,7 +6,7 @@ define i64 @test1(i32 %x) {
 ; CHECK-NEXT:    [[C:%.*]] = icmp sgt i32 [[X:%.*]], 0
 ; CHECK-NEXT:    br i1 [[C]], label [[TRUE:%.*]], label [[FALSE:%.*]]
 ; CHECK:       true:
-; CHECK-NEXT:    [[EXT_1:%.*]] = zext i32 [[X]] to i64
+; CHECK-NEXT:    [[EXT_1:%.*]] = zext nneg i32 [[X]] to i64
 ; CHECK-NEXT:    ret i64 [[EXT_1]]
 ; CHECK:       false:
 ; CHECK-NEXT:    [[EXT_2:%.*]] = sext i32 [[X]] to i64
@@ -29,7 +29,7 @@ define i64 @test2(i32 %x) {
 ; CHECK-NEXT:    [[C:%.*]] = icmp sge i32 [[X:%.*]], 0
 ; CHECK-NEXT:    br i1 [[C]], label [[TRUE:%.*]], label [[FALSE:%.*]]
 ; CHECK:       true:
-; CHECK-NEXT:    [[EXT_1:%.*]] = zext i32 [[X]] to i64
+; CHECK-NEXT:    [[EXT_1:%.*]] = zext nneg i32 [[X]] to i64
 ; CHECK-NEXT:    ret i64 [[EXT_1]]
 ; CHECK:       false:
 ; CHECK-NEXT:    [[EXT_2:%.*]] = sext i32 [[X]] to i64
@@ -105,7 +105,7 @@ exit:
 define i64 @test5(i32 %x) {
 ; CHECK-LABEL: @test5(
 ; CHECK-NEXT:    [[P:%.*]] = and i32 [[X:%.*]], 15
-; CHECK-NEXT:    [[EXT:%.*]] = zext i32 [[P]] to i64
+; CHECK-NEXT:    [[EXT:%.*]] = zext nneg i32 [[P]] to i64
 ; CHECK-NEXT:    ret i64 [[EXT]]
 ;
   %p = and i32 %x, 15
@@ -126,7 +126,7 @@ define i64 @test6(i32 %x) {
 define i64 @test7(i16 %x) {
 ; CHECK-LABEL: @test7(
 ; CHECK-NEXT:    [[P:%.*]] = and i16 [[X:%.*]], 15
-; CHECK-NEXT:    [[EXT_1:%.*]] = zext i16 [[P]] to i32
+; CHECK-NEXT:    [[EXT_1:%.*]] = zext nneg i16 [[P]] to i32
 ; CHECK-NEXT:    [[EXT_2:%.*]] = sext i32 [[EXT_1]] to i64
 ; CHECK-NEXT:    ret i64 [[EXT_2]]
 ;

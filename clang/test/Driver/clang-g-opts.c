@@ -7,8 +7,8 @@
 // RUN:             | FileCheck --check-prefix=CHECK-WITH-G-DWARF2 %s
 // RUN: %clang -### -S %s -g -target i686-pc-openbsd 2>&1 \
 // RUN:             | FileCheck --check-prefix=CHECK-WITH-G-DWARF2 %s
-// RUN: %clang -### -S %s -g -target x86_64-pc-freebsd10.0 2>&1 \
-// RUN:             | FileCheck --check-prefix=CHECK-WITH-G-DWARF2 %s
+// RUN: %clang -### -S %s -g -target x86_64-pc-freebsd 2>&1 \
+// RUN:             | FileCheck --check-prefix=CHECK-WITH-G-DWARF4 %s
 // RUN: %clang -### -S %s -g --target=x86_64-unknown-haiku 2>&1 \
 // RUN:             | FileCheck --check-prefix=CHECK-WITH-G-DWARF4 %s
 
@@ -27,8 +27,8 @@
 // RUN:             | FileCheck --check-prefix=CHECK-WITH-G-STANDALONE %s
 // RUN: %clang -### -S %s -g0 -g -target i686-pc-openbsd 2>&1 \
 // RUN:             | FileCheck --check-prefix=CHECK-WITH-G-DWARF2 %s
-// RUN: %clang -### -S %s -g0 -g -target x86_64-pc-freebsd10.0 2>&1 \
-// RUN:             | FileCheck --check-prefix=CHECK-WITH-G-DWARF2 %s
+// RUN: %clang -### -S %s -g0 -g -target x86_64-pc-freebsd 2>&1 \
+// RUN:             | FileCheck --check-prefix=CHECK-WITH-G-DWARF4 %s
 // RUN: %clang -### -S %s -g0 -g --target=x86_64-unknown-haiku 2>&1 \
 // RUN:             | FileCheck --check-prefix=CHECK-WITH-G-DWARF4 %s
 // RUN: %clang -### -S %s -g0 -g --target=i386-pc-solaris 2>&1 \
@@ -42,8 +42,3 @@
 
 // CHECK-WITH-G-STANDALONE: "-debug-info-kind=standalone"
 // CHECK-WITH-G-STANDALONE: "-dwarf-version=2"
-
-/// TODO: Special case before R_RISCV_SET_ULEB128 linker support becomes more widely available.
-// RUN: %clang -### -S %s -g --target=riscv64-linux-gnu 2>&1 | FileCheck --check-prefix=VERSION4 %s
-// RUN: %clang -### -S %s -g --target=riscv64-unknown-elf 2>&1 | FileCheck --check-prefix=VERSION4 %s
-// VERSION4: "-dwarf-version=4"

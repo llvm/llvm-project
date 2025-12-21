@@ -75,7 +75,7 @@
 
 define float @float_load(ptr %a) #0 {
 ; RV32IFDC-LABEL: <float_load>:
-; RV32IFDC:         c.flw fa0, 0(a0)
+; RV32IFDC:         c.flw fa0, 0x0(a0)
 ; RV32IFDC-NEXT:    c.jr ra
   %1 = load volatile float, ptr %a
   ret float %1

@@ -13,7 +13,11 @@
 
 #include "sanitizer_common/sanitizer_platform.h"
 #if SANITIZER_FREEBSD || SANITIZER_LINUX || SANITIZER_NETBSD || \
-    SANITIZER_SOLARIS
+    SANITIZER_SOLARIS || SANITIZER_HAIKU
+
+#  if SANITIZER_HAIKU
+#    define _DEFAULT_SOURCE
+#  endif
 
 #  include <dlfcn.h>
 #  include <fcntl.h>
@@ -22,7 +26,9 @@
 #  include <stdio.h>
 #  include <sys/mman.h>
 #  include <sys/resource.h>
-#  include <sys/syscall.h>
+#  if !SANITIZER_HAIKU
+#    include <sys/syscall.h>
+#  endif
 #  include <sys/time.h>
 #  include <sys/types.h>
 #  include <unistd.h>
@@ -33,13 +39,16 @@
 #  include "asan_premap_shadow.h"
 #  include "asan_thread.h"
 #  include "sanitizer_common/sanitizer_flags.h"
-#  include "sanitizer_common/sanitizer_freebsd.h"
 #  include "sanitizer_common/sanitizer_hash.h"
 #  include "sanitizer_common/sanitizer_libc.h"
 #  include "sanitizer_common/sanitizer_procmaps.h"
 
-#  if SANITIZER_FREEBSD
+#  if SANITIZER_FREEBSD || SANITIZER_HAIKU
 #    include <sys/link_elf.h>
+#  endif
+
+#  if SANITIZER_LINUX
+#    include <sys/personality.h>
 #  endif
 
 #  if SANITIZER_SOLARIS
@@ -48,22 +57,14 @@
 
 #  if SANITIZER_ANDROID || SANITIZER_FREEBSD || SANITIZER_SOLARIS
 #    include <ucontext.h>
-extern "C" void *_DYNAMIC;
 #  elif SANITIZER_NETBSD
 #    include <link_elf.h>
 #    include <ucontext.h>
-extern Elf_Dyn _DYNAMIC;
+#  elif SANITIZER_HAIKU
+extern "C" void *_DYNAMIC;
 #  else
 #    include <link.h>
 #    include <sys/ucontext.h>
-extern ElfW(Dyn) _DYNAMIC[];
-#  endif
-
-// x86-64 FreeBSD 9.2 and older define 'ucontext_t' incorrectly in
-// 32-bit mode.
-#  if SANITIZER_FREEBSD && (SANITIZER_WORDSIZE == 32) && \
-      __FreeBSD_version <= 902001  // v9.2
-#    define ucontext_t xucontext_t
 #  endif
 
 typedef enum {
@@ -83,11 +84,6 @@ namespace __asan {
 void InitializePlatformInterceptors() {}
 void InitializePlatformExceptionHandlers() {}
 bool IsSystemHeapAddress(uptr addr) { return false; }
-
-void *AsanDoesNotSupportStaticLinkage() {
-  // This will fail to link with -static.
-  return &_DYNAMIC;
-}
 
 #  if ASAN_PREMAP_SHADOW
 uptr FindPremappedShadowStart(uptr shadow_size_bytes) {
@@ -109,7 +105,8 @@ uptr FindDynamicShadowStart() {
 #  endif
 
   return MapDynamicShadow(shadow_size_bytes, ASAN_SHADOW_SCALE,
-                          /*min_shadow_base_alignment*/ 0, kHighMemEnd);
+                          /*min_shadow_base_alignment*/ 0, kHighMemEnd,
+                          GetMmapGranularity());
 }
 
 void AsanApplyToGlobals(globals_op_fptr op, const void *needle) {
@@ -120,6 +117,39 @@ void FlushUnneededASanShadowMemory(uptr p, uptr size) {
   // Since asan's mapping is compacting, the shadow chunk may be
   // not page-aligned, so we only flush the page-aligned portion.
   ReleaseMemoryPagesToOS(MemToShadow(p), MemToShadow(p + size));
+}
+
+void TryReExecWithoutASLR() {
+#    if SANITIZER_LINUX
+  // ASLR personality check.
+  // Caution: 'personality' is sometimes forbidden by sandboxes, so only call
+  // this function as a last resort (when the memory mapping is incompatible
+  // and ASan would fail anyway).
+  int old_personality = personality(0xffffffff);
+  if (old_personality == -1) {
+    VReport(1, "WARNING: unable to run personality check.\n");
+    return;
+  }
+
+  bool aslr_on = (old_personality & ADDR_NO_RANDOMIZE) == 0;
+
+  if (aslr_on) {
+    // Disable ASLR if the memory layout was incompatible.
+    // Alternatively, we could just keep re-execing until we get lucky
+    // with a compatible randomized layout, but the risk is that if it's
+    // not an ASLR-related issue, we will be stuck in an infinite loop of
+    // re-execing (unless we change ReExec to pass a parameter of the
+    // number of retries allowed.)
+    VReport(1,
+            "WARNING: AddressSanitizer: memory layout is incompatible, "
+            "possibly due to high-entropy ASLR.\n"
+            "Re-execing with fixed virtual address space.\n"
+            "N.B. reducing ASLR entropy is preferable.\n");
+    CHECK_NE(personality(old_personality | ADDR_NO_RANDOMIZE), -1);
+
+    ReExec();
+  }
+#    endif
 }
 
 #  if SANITIZER_ANDROID
@@ -140,12 +170,23 @@ static int FindFirstDSOCallback(struct dl_phdr_info *info, size_t size,
     return 0;
   }
 
+#    if SANITIZER_HAIKU
+  if (!info->dlpi_name[0] ||
+      internal_strncmp(info->dlpi_name, "/boot/system/runtime_loader",
+                       sizeof("/boot/system/runtime_loader") - 1) == 0)
+    return 0;
+#    endif
 #    if SANITIZER_LINUX
   // Ignore vDSO. glibc versions earlier than 2.15 (and some patched
   // by distributors) return an empty name for the vDSO entry, so
   // detect this as well.
   if (!info->dlpi_name[0] ||
       internal_strncmp(info->dlpi_name, "linux-", sizeof("linux-") - 1) == 0)
+    return 0;
+#    endif
+#    if SANITIZER_FREEBSD
+  // Ignore vDSO.
+  if (internal_strcmp(info->dlpi_name, "[vdso]") == 0)
     return 0;
 #    endif
 
@@ -197,10 +238,7 @@ void AsanCheckIncompatibleRT() {
       MemoryMappedSegment segment(filename, sizeof(filename));
       while (proc_maps.Next(&segment)) {
         if (IsDynamicRTName(segment.filename)) {
-          Report(
-              "Your application is linked against "
-              "incompatible ASan runtimes.\n");
-          Die();
+          ReportIncompatibleRT();
         }
       }
       __asan_rt_version = ASAN_RT_VERSION_STATIC;
@@ -250,4 +288,4 @@ bool HandleDlopenInit() {
 }  // namespace __asan
 
 #endif  // SANITIZER_FREEBSD || SANITIZER_LINUX || SANITIZER_NETBSD ||
-        // SANITIZER_SOLARIS
+        // SANITIZER_SOLARIS || SANITIZER_HAIKU

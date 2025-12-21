@@ -1,4 +1,4 @@
-// RUN: mlir-opt -test-int-range-inference -canonicalize %s | FileCheck %s
+// RUN: mlir-opt -int-range-optimizations -canonicalize %s | FileCheck %s
 
 // Most operations are covered by the `arith` tests, which use the same code
 // Here, we add a few tests to ensure the "index can be 32- or 64-bit" handling

@@ -1,0 +1,30 @@
+name: HLSL Tests
+
+permissions:
+  contents: read
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - llvm/**/DirectX/**
+      - .github/workflows/hlsl*
+      - clang/*HLSL*/**/*
+      - clang/**/*HLSL*
+      - llvm/**/Frontend/HLSL/**/*
+
+jobs:
+  HLSL-Tests:
+    strategy:
+      fail-fast: false
+      matrix:
+        runs-on:
+          - hlsl-macos
+
+    uses: ./.github/workflows/hlsl-test-all.yaml
+    with:
+      SKU: hlsl-macos
+      TestTarget: check-hlsl-clang-mtl # TODO: This target changes based on SKU
+      LLVM-ref: ${{ github.ref }}

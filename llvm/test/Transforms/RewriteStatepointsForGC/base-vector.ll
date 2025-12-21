@@ -352,3 +352,36 @@ entry:
   call void @use_vec(<4 x ptr addrspace(1)> %vec)
   ret void
 }
+
+define i32 @test13() gc "statepoint-example" {
+; CHECK-LABEL: define i32 @test13() gc "statepoint-example" {
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    [[GETELEMENTPTR:%.*]] = getelementptr i8, <2 x ptr addrspace(1)> zeroinitializer, <2 x i64> <i64 948, i64 896>
+; CHECK-NEXT:    [[SHUFFLEVECTOR_BASE:%.*]] = shufflevector <2 x ptr addrspace(1)> zeroinitializer, <2 x ptr addrspace(1)> zeroinitializer, <4 x i32> <i32 0, i32 3, i32 1, i32 2>, !is_base_value !0
+; CHECK-NEXT:    [[SHUFFLEVECTOR:%.*]] = shufflevector <2 x ptr addrspace(1)> zeroinitializer, <2 x ptr addrspace(1)> [[GETELEMENTPTR]], <4 x i32> <i32 0, i32 3, i32 1, i32 2>
+; CHECK-NEXT:    br label [[BB1:%.*]]
+; CHECK:       bb1:
+; CHECK-NEXT:    [[PHI_BASE:%.*]] = phi <4 x ptr addrspace(1)> [ [[SHUFFLEVECTOR_BASE]], [[BB:%.*]] ], [ zeroinitializer, [[BB1]] ], !is_base_value !0
+; CHECK-NEXT:    [[PHI:%.*]] = phi <4 x ptr addrspace(1)> [ [[SHUFFLEVECTOR]], [[BB]] ], [ zeroinitializer, [[BB1]] ]
+; CHECK-NEXT:    [[EXTRACTELEMENT_BASE:%.*]] = extractelement <4 x ptr addrspace(1)> [[PHI_BASE]], i32 0, !is_base_value !0
+; CHECK-NEXT:    [[EXTRACTELEMENT:%.*]] = extractelement <4 x ptr addrspace(1)> [[PHI]], i32 0
+; CHECK-NEXT:    [[STATEPOINT_TOKEN:%.*]] = call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 2882400000, i32 0, ptr elementtype(i32 ()) @spam, i32 0, i32 0, i32 0, i32 0) [ "gc-live"(ptr addrspace(1) [[EXTRACTELEMENT]], ptr addrspace(1) [[EXTRACTELEMENT_BASE]]) ]
+; CHECK-NEXT:    [[EXTRACTELEMENT_RELOCATED:%.*]] = call coldcc ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token [[STATEPOINT_TOKEN]], i32 1, i32 0)
+; CHECK-NEXT:    [[EXTRACTELEMENT_BASE_RELOCATED:%.*]] = call coldcc ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token [[STATEPOINT_TOKEN]], i32 1, i32 1)
+; CHECK-NEXT:    [[LOAD:%.*]] = load i32, ptr addrspace(1) [[EXTRACTELEMENT_RELOCATED]], align 4
+; CHECK-NEXT:    br label [[BB1]]
+;
+bb:
+  %getelementptr = getelementptr i8, <2 x ptr addrspace(1)> zeroinitializer, <2 x i64> <i64 948, i64 896>
+  %shufflevector = shufflevector <2 x ptr addrspace(1)> zeroinitializer, <2 x ptr addrspace(1)> %getelementptr, <4 x i32> <i32 0, i32 3, i32 1, i32 2>
+  br label %bb1
+
+bb1:                                              ; preds = %bb1, %bb
+  %phi = phi <4 x ptr addrspace(1)> [ %shufflevector, %bb ], [ zeroinitializer, %bb1 ]
+  %extractelement = extractelement <4 x ptr addrspace(1)> %phi, i32 0
+  %call = call i32 @spam()
+  %load = load i32, ptr addrspace(1) %extractelement, align 4
+  br label %bb1
+}
+
+declare i32 @spam() gc "statepoint-example"

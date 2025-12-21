@@ -69,7 +69,7 @@ define void @write_src_between_call_and_memcpy() {
   ret void
 }
 
-define void @throw_between_call_and_mempy(ptr dereferenceable(16) %dest.i8) {
+define void @throw_between_call_and_mempy(ptr writable dereferenceable(16) %dest.i8) {
 ; CHECK-LABEL: @throw_between_call_and_mempy(
 ; CHECK-NEXT:    [[SRC:%.*]] = alloca [16 x i8], align 1
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr [[SRC]], i8 0, i64 16, i1 false)
@@ -137,7 +137,7 @@ define void @capture_before_call_argmemonly() {
 ; CHECK-NEXT:    [[DEST:%.*]] = alloca [16 x i8], align 1
 ; CHECK-NEXT:    [[SRC:%.*]] = alloca [16 x i8], align 1
 ; CHECK-NEXT:    call void @accept_ptr(ptr [[DEST]])
-; CHECK-NEXT:    call void @accept_ptr(ptr nocapture [[DEST]]) #[[ATTR4:[0-9]+]]
+; CHECK-NEXT:    call void @accept_ptr(ptr captures(none) [[DEST]]) #[[ATTR4:[0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
   %dest = alloca [16 x i8]
@@ -153,7 +153,7 @@ define void @capture_before_call_argmemonly_nounwind() {
 ; CHECK-NEXT:    [[DEST:%.*]] = alloca [16 x i8], align 1
 ; CHECK-NEXT:    [[SRC:%.*]] = alloca [16 x i8], align 1
 ; CHECK-NEXT:    call void @accept_ptr(ptr [[DEST]])
-; CHECK-NEXT:    call void @accept_ptr(ptr nocapture [[DEST]]) #[[ATTR5:[0-9]+]]
+; CHECK-NEXT:    call void @accept_ptr(ptr captures(none) [[DEST]]) #[[ATTR5:[0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
   %dest = alloca [16 x i8]
@@ -170,7 +170,7 @@ define void @capture_before_call_argmemonly_nounwind_willreturn() {
 ; CHECK-NEXT:    [[DEST:%.*]] = alloca [16 x i8], align 1
 ; CHECK-NEXT:    [[SRC:%.*]] = alloca [16 x i8], align 1
 ; CHECK-NEXT:    call void @accept_ptr(ptr [[DEST]])
-; CHECK-NEXT:    call void @accept_ptr(ptr nocapture [[DEST]]) #[[ATTR6:[0-9]+]]
+; CHECK-NEXT:    call void @accept_ptr(ptr captures(none) [[DEST]]) #[[ATTR6:[0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
   %dest = alloca [16 x i8]
@@ -209,10 +209,23 @@ nocaptures:
   ret void
 }
 
-define void @source_alignment(ptr noalias dereferenceable(128) %dst) {
+define void @source_alignment(ptr noalias writable dereferenceable(128) %dst) {
 ; CHECK-LABEL: @source_alignment(
 ; CHECK-NEXT:    [[SRC:%.*]] = alloca [128 x i8], align 4
-; CHECK-NEXT:    call void @accept_ptr(ptr nocapture [[DST:%.*]]) #[[ATTR3]]
+; CHECK-NEXT:    call void @accept_ptr(ptr captures(none) [[DST:%.*]]) #[[ATTR3]]
+; CHECK-NEXT:    ret void
+;
+  %src = alloca [128 x i8], align 4
+  call void @accept_ptr(ptr nocapture %src) nounwind
+  call void @llvm.memcpy.p0.p0.i64(ptr align 4 %dst, ptr %src, i64 128, i1 false)
+  ret void
+}
+
+define void @dest_not_writable(ptr noalias dereferenceable(128) %dst) {
+; CHECK-LABEL: @dest_not_writable(
+; CHECK-NEXT:    [[SRC:%.*]] = alloca [128 x i8], align 4
+; CHECK-NEXT:    call void @accept_ptr(ptr captures(none) [[SRC]]) #[[ATTR3]]
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[DST:%.*]], ptr [[SRC]], i64 128, i1 false)
 ; CHECK-NEXT:    ret void
 ;
   %src = alloca [128 x i8], align 4

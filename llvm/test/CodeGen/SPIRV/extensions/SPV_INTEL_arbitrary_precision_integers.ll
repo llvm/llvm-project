@@ -1,4 +1,4 @@
-; RUN: llc -O0 -mtriple=spirv32-unknown-unknown --spirv-extensions=SPV_INTEL_arbitrary_precision_integers %s -o - | FileCheck %s
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv32-unknown-unknown --spirv-ext=+SPV_ALTERA_arbitrary_precision_integers %s -o - | FileCheck %s
 
 define i6 @getConstantI6() {
   ret i6 2
@@ -9,8 +9,8 @@ define i13 @getConstantI13() {
 }
 
 ;; Capabilities:
-; CHECK-DAG: OpExtension "SPV_INTEL_arbitrary_precision_integers"
-; CHECK-DAG: OpCapability ArbitraryPrecisionIntegersINTEL
+; CHECK-DAG: OpExtension "SPV_ALTERA_arbitrary_precision_integers"
+; CHECK-DAG: OpCapability ArbitraryPrecisionIntegersALTERA
 
 ; CHECK-NOT: DAG-FENCE
 

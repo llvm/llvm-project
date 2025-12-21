@@ -43,7 +43,7 @@ llvm::StringRef unwrap(Context Ctx, llvm::StringRef Outer) {
   auto Wrapping = wrapping(Ctx);
   // Unwrap only if the code matches the expected wrapping.
   // Don't allow the begin/end wrapping to overlap!
-  if (Outer.startswith(Wrapping.first) && Outer.endswith(Wrapping.second) &&
+  if (Outer.starts_with(Wrapping.first) && Outer.ends_with(Wrapping.second) &&
       Outer.size() >= Wrapping.first.size() + Wrapping.second.size())
     return Outer.drop_front(Wrapping.first.size())
         .drop_back(Wrapping.second.size());
@@ -162,5 +162,37 @@ std::string TweakTest::decorate(llvm::StringRef Code,
       .str();
 }
 
+// TODO: Reuse more code between TweakTest::apply() and
+// TweakWorkspaceTest::apply().
+TweakResult
+TweakWorkspaceTest::apply(StringRef InvocationFile,
+                          llvm::Annotations::Range InvocationRange) {
+  auto AST = Workspace.openFile(InvocationFile);
+  if (!AST) {
+    ADD_FAILURE() << "No file '" << InvocationFile << "' in workspace";
+    return TweakResult{"failed to setup"};
+  }
+
+  auto Index = Workspace.index();
+  auto Result = applyTweak(
+      *AST, InvocationRange, TweakID, Index.get(),
+      &AST->getSourceManager().getFileManager().getVirtualFileSystem());
+  if (!Result)
+    return TweakResult{"unavailable"};
+  if (!*Result)
+    return TweakResult{"fail: " + llvm::toString(Result->takeError())};
+  const auto &Effect = **Result;
+  if ((*Result)->ShowMessage)
+    return TweakResult{"message:\n" + *Effect.ShowMessage};
+
+  TweakResult Retval{"success"};
+  for (auto &It : Effect.ApplyEdits) {
+    auto NewText = It.second.apply();
+    if (!NewText)
+      return TweakResult{"bad edits: " + llvm::toString(NewText.takeError())};
+    Retval.EditedFiles.insert_or_assign(It.first(), *NewText);
+  }
+  return Retval;
+}
 } // namespace clangd
 } // namespace clang

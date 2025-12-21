@@ -48,10 +48,21 @@ let test_contained_types () =
   insist ([| i32_type; i8_type |] = struct_element_types ar)
 
 (*===-- Pointer types  ----------------------------------------------------===*)
+
 let test_pointer_types () =
+  insist (TypeKind.Pointer = classify_type (pointer_type context));
   insist (0 = address_space (pointer_type context));
   insist (0 = address_space (qualified_pointer_type context 0));
   insist (1 = address_space (qualified_pointer_type context 1))
+
+(*===-- Other types  ------------------------------------------------------===*)
+
+let test_other_types () =
+  insist (TypeKind.Void = classify_type void_type);
+  insist (TypeKind.Label = classify_type (label_type context));
+  insist (TypeKind.X86_amx = classify_type (x86_amx_type context));
+  insist (TypeKind.Token = classify_type (token_type context));
+  insist (TypeKind.Metadata = classify_type (metadata_type context))
 
 (*===-- Conversion --------------------------------------------------------===*)
 
@@ -252,7 +263,6 @@ let test_constants () =
   group "constant arithmetic";
   (* CHECK: @const_neg = global i64 sub
    * CHECK: @const_nsw_neg = global i64 sub nsw
-   * CHECK: @const_nuw_neg = global i64 sub nuw
    * CHECK: @const_not = global i64 xor
    * CHECK: @const_add = global i64 add
    * CHECK: @const_nsw_add = global i64 add nsw
@@ -260,22 +270,14 @@ let test_constants () =
    * CHECK: @const_sub = global i64 sub
    * CHECK: @const_nsw_sub = global i64 sub nsw
    * CHECK: @const_nuw_sub = global i64 sub nuw
-   * CHECK: @const_mul = global i64 mul
-   * CHECK: @const_nsw_mul = global i64 mul nsw
-   * CHECK: @const_nuw_mul = global i64 mul nuw
    * CHECK: @const_xor = global i64 xor
-   * CHECK: @const_icmp = global i1 icmp sle
-   * CHECK: @const_fcmp = global i1 fcmp ole
    *)
   let void_ptr = pointer_type context in
   let five = const_int i64_type 5 in
-  let ffive = const_uitofp five double_type in
   let foldbomb_gv = define_global "FoldBomb" (const_null i8_type) m in
   let foldbomb = const_ptrtoint foldbomb_gv i64_type in
-  let ffoldbomb = const_uitofp foldbomb double_type in
   ignore (define_global "const_neg" (const_neg foldbomb) m);
   ignore (define_global "const_nsw_neg" (const_nsw_neg foldbomb) m);
-  ignore (define_global "const_nuw_neg" (const_nuw_neg foldbomb) m);
   ignore (define_global "const_not" (const_not foldbomb) m);
   ignore (define_global "const_add" (const_add foldbomb five) m);
   ignore (define_global "const_nsw_add" (const_nsw_add foldbomb five) m);
@@ -283,48 +285,24 @@ let test_constants () =
   ignore (define_global "const_sub" (const_sub foldbomb five) m);
   ignore (define_global "const_nsw_sub" (const_nsw_sub foldbomb five) m);
   ignore (define_global "const_nuw_sub" (const_nuw_sub foldbomb five) m);
-  ignore (define_global "const_mul" (const_mul foldbomb five) m);
-  ignore (define_global "const_nsw_mul" (const_nsw_mul foldbomb five) m);
-  ignore (define_global "const_nuw_mul" (const_nuw_mul foldbomb five) m);
   ignore (define_global "const_xor" (const_xor foldbomb five) m);
-  ignore (define_global "const_icmp" (const_icmp Icmp.Sle foldbomb five) m);
-  ignore (define_global "const_fcmp" (const_fcmp Fcmp.Ole ffoldbomb ffive) m);
 
   group "constant casts";
   (* CHECK: const_trunc{{.*}}trunc
-   * CHECK: const_sext{{.*}}sext
-   * CHECK: const_zext{{.*}}zext
-   * CHECK: const_fptrunc{{.*}}fptrunc
-   * CHECK: const_fpext{{.*}}fpext
-   * CHECK: const_uitofp{{.*}}uitofp
-   * CHECK: const_sitofp{{.*}}sitofp
-   * CHECK: const_fptoui{{.*}}fptoui
-   * CHECK: const_fptosi{{.*}}fptosi
    * CHECK: const_ptrtoint{{.*}}ptrtoint
    * CHECK: const_inttoptr{{.*}}inttoptr
    * CHECK: const_bitcast{{.*}}bitcast
-   * CHECK: const_intcast{{.*}}zext
    *)
   let i128_type = integer_type context 128 in
   ignore (define_global "const_trunc" (const_trunc (const_add foldbomb five)
                                                i8_type) m);
-  ignore (define_global "const_sext" (const_sext foldbomb i128_type) m);
-  ignore (define_global "const_zext" (const_zext foldbomb i128_type) m);
-  ignore (define_global "const_fptrunc" (const_fptrunc ffoldbomb float_type) m);
-  ignore (define_global "const_fpext" (const_fpext ffoldbomb fp128_type) m);
-  ignore (define_global "const_uitofp" (const_uitofp foldbomb double_type) m);
-  ignore (define_global "const_sitofp" (const_sitofp foldbomb double_type) m);
-  ignore (define_global "const_fptoui" (const_fptoui ffoldbomb i32_type) m);
-  ignore (define_global "const_fptosi" (const_fptosi ffoldbomb i32_type) m);
   ignore (define_global "const_ptrtoint" (const_ptrtoint
     (const_gep i8_type (const_null (pointer_type context))
                [| const_int i32_type 1 |])
     i32_type) m);
   ignore (define_global "const_inttoptr" (const_inttoptr (const_add foldbomb five)
                                                   void_ptr) m);
-  ignore (define_global "const_bitcast" (const_bitcast ffoldbomb i64_type) m);
-  ignore (define_global "const_intcast"
-          (const_intcast foldbomb i128_type ~is_signed:false) m);
+  ignore (define_global "const_bitcast" (const_bitcast foldbomb double_type) m);
 
   group "misc constants";
   (* CHECK: const_size_of{{.*}}getelementptr{{.*}}null
@@ -454,8 +432,19 @@ let test_global_values () =
   group "dll_storage_class";
   let g = define_global "GVal06" zero32 m ++
           set_dll_storage_class DLLStorageClass.DLLExport in
-  insist (DLLStorageClass.DLLExport = dll_storage_class g)
+  insist (DLLStorageClass.DLLExport = dll_storage_class g);
 
+  (* CHECK: GVal07{{.*}}!test !0
+   * See metadata check at the end of the file.
+   *)
+  group "metadata";
+  let g = define_global "GVal07" zero32 m in
+  let md_string = mdstring context "global test metadata" in
+  let md_node = mdnode context [| zero32; md_string |] |> value_as_metadata in
+  let mdkind_test = mdkind_id context "test" in
+  global_set_metadata g mdkind_test md_node;
+  let md' = global_copy_all_metadata g in
+  insist (md' = [| mdkind_test, md_node |])
 
 (*===-- Global Variables --------------------------------------------------===*)
 
@@ -1135,8 +1124,8 @@ let test_builder () =
   end;
 
   group "metadata"; begin
-    (* CHECK: %metadata = add i32 %P1, %P2, !test !1
-     * !1 is metadata emitted at EOF.
+    (* CHECK: %metadata = add i32 %P1, %P2, !test !2
+     * !2 is metadata emitted at EOF.
      *)
     let i = build_add p1 p2 "metadata" atentry in
     insist ((has_metadata i) = false);
@@ -1175,7 +1164,7 @@ let test_builder () =
     (* CHECK: ret{{.*}}P1
      *)
     let ret = build_ret p1 atentry in
-    position_before ret atentry
+    position_before_dbg_records ret atentry
   end;
 
   (* see test/Feature/exception.ll *)
@@ -1327,7 +1316,6 @@ let test_builder () =
      * CHECK: %build_xor = xor i32 %P1, %P2
      * CHECK: %build_neg = sub i32 0, %P1
      * CHECK: %build_nsw_neg = sub nsw i32 0, %P1
-     * CHECK: %build_nuw_neg = sub nuw i32 0, %P1
      * CHECK: %build_fneg = fneg float %F1
      * CHECK: %build_not = xor i32 %P1, -1
      * CHECK: %build_freeze = freeze i32 %P1
@@ -1359,7 +1347,6 @@ let test_builder () =
     ignore (build_xor p1 p2 "build_xor" b);
     ignore (build_neg p1 "build_neg" b);
     ignore (build_nsw_neg p1 "build_nsw_neg" b);
-    ignore (build_nuw_neg p1 "build_nuw_neg" b);
     ignore (build_fneg f1 "build_fneg" b);
     ignore (build_not p1 "build_not" b);
     ignore (build_freeze p1 "build_freeze" b);
@@ -1452,9 +1439,10 @@ let test_builder () =
   end
 
 (* End-of-file checks for things like metdata and attributes.
- * CHECK: !llvm.module.flags = !{!0}
- * CHECK: !0 = !{i32 1, !"Debug Info Version", i32 3}
- * CHECK: !1 = !{i32 1, !"metadata test"}
+ * CHECK: !llvm.module.flags = !{!1}
+ * CHECK: !0 = !{i32 0, !"global test metadata"}
+ * CHECK: !1 = !{i32 1, !"Debug Info Version", i32 3}
+ * CHECK: !2 = !{i32 1, !"metadata test"}
  *)
 
 
@@ -1486,6 +1474,7 @@ let _ =
   suite "modules"          test_modules;
   suite "contained types"  test_contained_types;
   suite "pointer types"    test_pointer_types;
+  suite "other types"      test_other_types;
   suite "conversion"       test_conversion;
   suite "target"           test_target;
   suite "constants"        test_constants;

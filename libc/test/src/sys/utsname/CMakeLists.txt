@@ -7,9 +7,9 @@ add_libc_unittest(
   SRCS
     uname_test.cpp
   DEPENDS
-    libc.include.errno
     libc.include.sys_utsname
+    libc.src.errno.errno
     libc.src.__support.common
     libc.src.sys.utsname.uname
-    libc.test.errno_setter_matcher
+    libc.test.UnitTest.ErrnoSetterMatcher
 )

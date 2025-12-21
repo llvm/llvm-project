@@ -20,7 +20,7 @@ namespace tools {
 
 /// Directly call GNU Binutils assembler and linker
 namespace openbsd {
-class LLVM_LIBRARY_VISIBILITY Assembler : public Tool {
+class LLVM_LIBRARY_VISIBILITY Assembler final : public Tool {
 public:
   Assembler(const ToolChain &TC)
       : Tool("openbsd::Assembler", "assembler", TC) {}
@@ -33,7 +33,7 @@ public:
                     const char *LinkingOutput) const override;
 };
 
-class LLVM_LIBRARY_VISIBILITY Linker : public Tool {
+class LLVM_LIBRARY_VISIBILITY Linker final : public Tool {
 public:
   Linker(const ToolChain &TC) : Tool("openbsd::Linker", "linker", TC) {}
 
@@ -79,8 +79,14 @@ public:
   void AddCXXStdlibLibArgs(const llvm::opt::ArgList &Args,
                            llvm::opt::ArgStringList &CmdArgs) const override;
 
+  bool IsAArch64OutlineAtomicsDefault(
+      const llvm::opt::ArgList &Args) const override {
+    return true;
+  }
+
   std::string getCompilerRT(const llvm::opt::ArgList &Args, StringRef Component,
-                            FileType Type = ToolChain::FT_Static) const override;
+                            FileType Type = ToolChain::FT_Static,
+                            bool IsFortran = false) const override;
 
   UnwindTableLevel
   getDefaultUnwindTableLevel(const llvm::opt::ArgList &Args) const override;

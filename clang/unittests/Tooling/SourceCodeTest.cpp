@@ -8,6 +8,7 @@
 
 #include "clang/Tooling/Transformer/SourceCode.h"
 #include "TestVisitor.h"
+#include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Lex/Lexer.h"
@@ -18,10 +19,12 @@
 #include <gtest/gtest.h>
 
 using namespace clang;
+using namespace clang::ast_matchers;
 
 using llvm::Failed;
 using llvm::Succeeded;
 using llvm::ValueIs;
+using testing::Optional;
 using tooling::getAssociatedRange;
 using tooling::getExtendedRange;
 using tooling::getExtendedText;
@@ -32,8 +35,8 @@ using tooling::validateEditRange;
 
 namespace {
 
-struct IntLitVisitor : TestVisitor<IntLitVisitor> {
-  bool VisitIntegerLiteral(IntegerLiteral *Expr) {
+struct IntLitVisitor : TestVisitor {
+  bool VisitIntegerLiteral(IntegerLiteral *Expr) override {
     OnIntLit(Expr, Context);
     return true;
   }
@@ -41,13 +44,22 @@ struct IntLitVisitor : TestVisitor<IntLitVisitor> {
   std::function<void(IntegerLiteral *, ASTContext *Context)> OnIntLit;
 };
 
-struct CallsVisitor : TestVisitor<CallsVisitor> {
-  bool VisitCallExpr(CallExpr *Expr) {
+struct CallsVisitor : TestVisitor {
+  bool VisitCallExpr(CallExpr *Expr) override {
     OnCall(Expr, Context);
     return true;
   }
 
   std::function<void(CallExpr *, ASTContext *Context)> OnCall;
+};
+
+struct TypeLocVisitor : TestVisitor {
+  bool VisitTypeLoc(TypeLoc TL) override {
+    OnTypeLoc(TL, Context);
+    return true;
+  }
+
+  std::function<void(TypeLoc, ASTContext *Context)> OnTypeLoc;
 };
 
 // Equality matcher for `clang::CharSourceRange`, which lacks `operator==`.
@@ -85,7 +97,7 @@ static ::testing::Matcher<CharSourceRange> AsRange(const SourceManager &SM,
 
 // Base class for visitors that expect a single match corresponding to a
 // specific annotated range.
-template <typename T> class AnnotatedCodeVisitor : public TestVisitor<T> {
+class AnnotatedCodeVisitor : public TestVisitor {
 protected:
   int MatchCount = 0;
   llvm::Annotations Code;
@@ -187,9 +199,8 @@ TEST(SourceCodeTest, getExtendedText) {
 }
 
 TEST(SourceCodeTest, maybeExtendRange_TokenRange) {
-  struct ExtendTokenRangeVisitor
-      : AnnotatedCodeVisitor<ExtendTokenRangeVisitor> {
-    bool VisitCallExpr(CallExpr *CE) {
+  struct ExtendTokenRangeVisitor : AnnotatedCodeVisitor {
+    bool VisitCallExpr(CallExpr *CE) override {
       ++MatchCount;
       EXPECT_THAT(getExtendedRange(*CE, tok::TokenKind::semi, *Context),
                   EqualsAnnotatedRange(Context, Code.range("r")));
@@ -206,8 +217,8 @@ TEST(SourceCodeTest, maybeExtendRange_TokenRange) {
 }
 
 TEST(SourceCodeTest, maybeExtendRange_CharRange) {
-  struct ExtendCharRangeVisitor : AnnotatedCodeVisitor<ExtendCharRangeVisitor> {
-    bool VisitCallExpr(CallExpr *CE) {
+  struct ExtendCharRangeVisitor : AnnotatedCodeVisitor {
+    bool VisitCallExpr(CallExpr *CE) override {
       ++MatchCount;
       CharSourceRange Call = Lexer::getAsCharRange(CE->getSourceRange(),
                                                    Context->getSourceManager(),
@@ -226,8 +237,8 @@ TEST(SourceCodeTest, maybeExtendRange_CharRange) {
 }
 
 TEST(SourceCodeTest, getAssociatedRange) {
-  struct VarDeclsVisitor : AnnotatedCodeVisitor<VarDeclsVisitor> {
-    bool VisitVarDecl(VarDecl *Decl) { return VisitDeclHelper(Decl); }
+  struct VarDeclsVisitor : AnnotatedCodeVisitor {
+    bool VisitVarDecl(VarDecl *Decl) override { return VisitDeclHelper(Decl); }
   };
   VarDeclsVisitor Visitor;
 
@@ -271,8 +282,10 @@ TEST(SourceCodeTest, getAssociatedRange) {
 }
 
 TEST(SourceCodeTest, getAssociatedRangeClasses) {
-  struct RecordDeclsVisitor : AnnotatedCodeVisitor<RecordDeclsVisitor> {
-    bool VisitRecordDecl(RecordDecl *Decl) { return VisitDeclHelper(Decl); }
+  struct RecordDeclsVisitor : AnnotatedCodeVisitor {
+    bool VisitRecordDecl(RecordDecl *Decl) override {
+      return VisitDeclHelper(Decl);
+    }
   };
   RecordDeclsVisitor Visitor;
 
@@ -285,8 +298,8 @@ TEST(SourceCodeTest, getAssociatedRangeClasses) {
 }
 
 TEST(SourceCodeTest, getAssociatedRangeClassTemplateSpecializations) {
-  struct CXXRecordDeclsVisitor : AnnotatedCodeVisitor<CXXRecordDeclsVisitor> {
-    bool VisitCXXRecordDecl(CXXRecordDecl *Decl) {
+  struct CXXRecordDeclsVisitor : AnnotatedCodeVisitor {
+    bool VisitCXXRecordDecl(CXXRecordDecl *Decl) override {
       return Decl->getTemplateSpecializationKind() !=
                  TSK_ExplicitSpecialization ||
              VisitDeclHelper(Decl);
@@ -303,8 +316,10 @@ TEST(SourceCodeTest, getAssociatedRangeClassTemplateSpecializations) {
 }
 
 TEST(SourceCodeTest, getAssociatedRangeFunctions) {
-  struct FunctionDeclsVisitor : AnnotatedCodeVisitor<FunctionDeclsVisitor> {
-    bool VisitFunctionDecl(FunctionDecl *Decl) { return VisitDeclHelper(Decl); }
+  struct FunctionDeclsVisitor : AnnotatedCodeVisitor {
+    bool VisitFunctionDecl(FunctionDecl *Decl) override {
+      return VisitDeclHelper(Decl);
+    }
   };
   FunctionDeclsVisitor Visitor;
 
@@ -316,8 +331,8 @@ TEST(SourceCodeTest, getAssociatedRangeFunctions) {
 }
 
 TEST(SourceCodeTest, getAssociatedRangeMemberTemplates) {
-  struct CXXMethodDeclsVisitor : AnnotatedCodeVisitor<CXXMethodDeclsVisitor> {
-    bool VisitCXXMethodDecl(CXXMethodDecl *Decl) {
+  struct CXXMethodDeclsVisitor : AnnotatedCodeVisitor {
+    bool VisitCXXMethodDecl(CXXMethodDecl *Decl) override {
       // Only consider the definition of the template.
       return !Decl->doesThisDeclarationHaveABody() || VisitDeclHelper(Decl);
     }
@@ -334,8 +349,8 @@ TEST(SourceCodeTest, getAssociatedRangeMemberTemplates) {
 }
 
 TEST(SourceCodeTest, getAssociatedRangeWithComments) {
-  struct VarDeclsVisitor : AnnotatedCodeVisitor<VarDeclsVisitor> {
-    bool VisitVarDecl(VarDecl *Decl) { return VisitDeclHelper(Decl); }
+  struct VarDeclsVisitor : AnnotatedCodeVisitor {
+    bool VisitVarDecl(VarDecl *Decl) override { return VisitDeclHelper(Decl); }
   };
 
   VarDeclsVisitor Visitor;
@@ -372,13 +387,11 @@ TEST(SourceCodeTest, getAssociatedRangeWithComments) {
       #define DECL /* Comment */ int x
       $r[[DECL;]])cpp");
 
-  // Does not include comments when only the decl or the comment come from a
-  // macro.
-  // FIXME: Change code to allow this.
   Visit(R"cpp(
       #define DECL int x
-      // Comment
-      $r[[DECL;]])cpp");
+      $r[[// Comment
+      DECL;]])cpp");
+  // Does not include comments when only the comment come from a macro.
   Visit(R"cpp(
       #define COMMENT /* Comment */
       COMMENT
@@ -437,9 +450,9 @@ TEST(SourceCodeTest, getAssociatedRangeWithComments) {
 }
 
 TEST(SourceCodeTest, getAssociatedRangeInvalidForPartialExpansions) {
-  struct FailingVarDeclsVisitor : TestVisitor<FailingVarDeclsVisitor> {
+  struct FailingVarDeclsVisitor : TestVisitor {
     FailingVarDeclsVisitor() {}
-    bool VisitVarDecl(VarDecl *Decl) {
+    bool VisitVarDecl(VarDecl *Decl) override {
       EXPECT_TRUE(getAssociatedRange(*Decl, *Context).isInvalid());
       return true;
     }
@@ -494,13 +507,21 @@ TEST(SourceCodeTest, EditInvolvingExpansionIgnoringExpansionShouldFail) {
   // If we specify to ignore macro expansions, none of these call expressions
   // should have an editable range.
   llvm::Annotations Code(R"cpp(
+#define NOOP(x) x
 #define M1(x) x(1)
-#define M2(x, y) x ## y
+#define M2(x, y) NOOP(M2_IMPL(x, y))
+#define M2_IMPL(x, y) x ## y
 #define M3(x) foobar(x)
+#define M4(x, y) NOOP(x y)
+#define M5(x) x
+#define M6(...) M4(__VA_ARGS__)
 int foobar(int);
 int a = M1(foobar);
 int b = M2(foo, bar(2));
 int c = M3(3);
+int d = M4(foobar, (4));
+int e = M5(foobar) (5);
+int f = M6(foobar, (6));
 )cpp");
 
   CallsVisitor Visitor;
@@ -510,6 +531,54 @@ int c = M3(3);
         getFileRangeForEdit(Range, *Context, /*IncludeMacroExpansion=*/false));
   };
   Visitor.runOver(Code.code());
+}
+
+TEST(SourceCodeTest, InnerNestedTemplate) {
+  llvm::Annotations Code(R"cpp(
+    template <typename T>
+    struct A {};
+    template <typename T>
+    struct B {};
+    template <typename T>
+    struct C {};
+
+    void f(A<B<C<int>$r[[>>]]);
+  )cpp");
+
+  TypeLocVisitor Visitor;
+  Visitor.OnTypeLoc = [&](TypeLoc TL, ASTContext *Context) {
+    if (TL.getSourceRange().isInvalid())
+      return;
+
+    // There are no macros, so every TypeLoc's range should be valid.
+    auto Range = CharSourceRange::getTokenRange(TL.getSourceRange());
+    auto LastTokenRange = CharSourceRange::getTokenRange(TL.getEndLoc());
+    EXPECT_TRUE(getFileRangeForEdit(Range, *Context,
+                                    /*IncludeMacroExpansion=*/false))
+        << TL.getSourceRange().printToString(Context->getSourceManager());
+    EXPECT_TRUE(getFileRangeForEdit(LastTokenRange, *Context,
+                                    /*IncludeMacroExpansion=*/false))
+        << TL.getEndLoc().printToString(Context->getSourceManager());
+
+    if (auto matches = match(
+            templateSpecializationTypeLoc(
+                loc(templateSpecializationType(
+                    hasDeclaration(cxxRecordDecl(hasName("A"))))),
+                hasTemplateArgumentLoc(
+                    0, templateArgumentLoc(hasTypeLoc(typeLoc().bind("b"))))),
+            TL, *Context);
+        !matches.empty()) {
+      // A range where the start token is split, but the end token is not.
+      auto OuterTL = TL;
+      auto MiddleTL = *matches[0].getNodeAs<TypeLoc>("b");
+      EXPECT_THAT(
+          getFileRangeForEdit(CharSourceRange::getTokenRange(
+                                  MiddleTL.getEndLoc(), OuterTL.getEndLoc()),
+                              *Context, /*IncludeMacroExpansion=*/false),
+          Optional(EqualsAnnotatedRange(Context, Code.range("r"))));
+    }
+  };
+  Visitor.runOver(Code.code(), TypeLocVisitor::Lang_CXX11);
 }
 
 TEST_P(GetFileRangeForEditTest, EditPartialMacroExpansionShouldFail) {
@@ -527,18 +596,39 @@ int c = BAR 3.0;
 }
 
 TEST_P(GetFileRangeForEditTest, EditWholeMacroArgShouldSucceed) {
-  llvm::Annotations Code(R"cpp(
-#define FOO(a) a + 7.0;
-int a = FOO($r[[10]]);
-)cpp");
+  {
+    llvm::Annotations Code(R"cpp(
+      #define FOO(a) a + 7.0;
+      int a = FOO($r[[10]]);
+    )cpp");
 
-  IntLitVisitor Visitor;
-  Visitor.OnIntLit = [&Code](IntegerLiteral *Expr, ASTContext *Context) {
-    auto Range = CharSourceRange::getTokenRange(Expr->getSourceRange());
-    EXPECT_THAT(getFileRangeForEdit(Range, *Context, GetParam()),
-                ValueIs(AsRange(Context->getSourceManager(), Code.range("r"))));
-  };
-  Visitor.runOver(Code.code());
+    IntLitVisitor Visitor;
+    Visitor.OnIntLit = [&Code](IntegerLiteral *Expr, ASTContext *Context) {
+      auto Range = CharSourceRange::getTokenRange(Expr->getSourceRange());
+      EXPECT_THAT(
+          getFileRangeForEdit(Range, *Context, GetParam()),
+          ValueIs(AsRange(Context->getSourceManager(), Code.range("r"))));
+    };
+    Visitor.runOver(Code.code());
+  }
+
+  {
+    llvm::Annotations Code(R"cpp(
+      #define FOO(a) a + 7.0;
+      #define DO_NOTHING(x) x
+      int Frob(int x);
+      int a = FOO($r[[Frob(DO_NOTHING(40))]]);
+    )cpp");
+
+    CallsVisitor Visitor;
+    Visitor.OnCall = [&Code](CallExpr *Expr, ASTContext *Context) {
+      auto Range = CharSourceRange::getTokenRange(Expr->getSourceRange());
+      EXPECT_THAT(
+          getFileRangeForEdit(Range, *Context, GetParam()),
+          ValueIs(AsRange(Context->getSourceManager(), Code.range("r"))));
+    };
+    Visitor.runOver(Code.code());
+  }
 }
 
 TEST_P(GetFileRangeForEditTest, EditPartialMacroArgShouldSucceed) {

@@ -159,6 +159,10 @@ private:
   /// NumThroughBlocks - Number of live-through blocks.
   unsigned NumThroughBlocks = 0u;
 
+  /// LooksLikeLoopIV - The variable defines what looks like it could be a loop
+  /// IV, where it defs a variable in the latch.
+  bool LooksLikeLoopIV = false;
+
   // Sumarize statistics by counting instructions using CurLI.
   void analyzeUses();
 
@@ -208,6 +212,8 @@ public:
   unsigned getNumLiveBlocks() const {
     return getUseBlocks().size() - NumGapBlocks + getNumThroughBlocks();
   }
+
+  bool looksLikeLoopIV() const { return LooksLikeLoopIV; }
 
   /// countLiveBlocks - Return the number of blocks where li is live. This is
   /// guaranteed to return the same number as getNumLiveBlocks() after calling
@@ -372,6 +378,12 @@ private:
   /// Calls forceRecompute() on any affected regidx and on ParentVNI
   /// predecessors in case of a phi definition.
   void forceRecomputeVNI(const VNInfo &ParentVNI);
+
+  /// \return true if rematerializing \p DefMI at \p UseIdx will make the
+  /// register class requirements stricter at the use.
+  bool rematWillIncreaseRestriction(const MachineInstr *DefMI,
+                                    MachineBasicBlock &MBB,
+                                    SlotIndex UseIdx) const;
 
   /// defFromParent - Define Reg from ParentVNI at UseIdx using either
   /// rematerialization or a COPY from parent. Return the new value.

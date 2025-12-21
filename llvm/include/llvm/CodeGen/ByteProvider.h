@@ -17,6 +17,8 @@
 #ifndef LLVM_CODEGEN_BYTEPROVIDER_H
 #define LLVM_CODEGEN_BYTEPROVIDER_H
 
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/Support/DataTypes.h"
 #include <optional>
 #include <type_traits>
 
@@ -32,29 +34,16 @@ private:
   ByteProvider(std::optional<ISelOp> Src, int64_t DestOffset, int64_t SrcOffset)
       : Src(Src), DestOffset(DestOffset), SrcOffset(SrcOffset) {}
 
-  ByteProvider(std::optional<ISelOp> Src, int64_t DestOffset, int64_t SrcOffset,
-               std::optional<bool> IsSigned)
-      : Src(Src), DestOffset(DestOffset), SrcOffset(SrcOffset),
-        IsSigned(IsSigned) {}
-
   // TODO -- use constraint in c++20
   // Does this type correspond with an operation in selection DAG
-  template <typename T> class is_op {
-  private:
-    using yes = std::true_type;
-    using no = std::false_type;
+  // Only allow classes with member function getOpcode
+  template <typename U>
+  using check_has_getOpcode =
+      decltype(std::declval<std::remove_pointer_t<U> &>().getOpcode());
 
-    // Only allow classes with member function getOpcode
-    template <typename U>
-    static auto test(int) -> decltype(std::declval<U>().getOpcode(), yes());
-
-    template <typename> static no test(...);
-
-  public:
-    using remove_pointer_t = typename std::remove_pointer<T>::type;
-    static constexpr bool value =
-        std::is_same<decltype(test<remove_pointer_t>(0)), yes>::value;
-  };
+  template <typename U>
+  static constexpr bool has_getOpcode =
+      is_detected<check_has_getOpcode, U>::value;
 
 public:
   // For constant zero providers Src is set to nullopt. For actual providers
@@ -66,24 +55,13 @@ public:
   // DestOffset
   int64_t SrcOffset = 0;
 
-  // Whether or not the path to this Src involved signed extensions
-  std::optional<bool> IsSigned;
-
   ByteProvider() = default;
 
   static ByteProvider getSrc(std::optional<ISelOp> Val, int64_t ByteOffset,
                              int64_t VectorOffset) {
-    static_assert(is_op<ISelOp>().value,
+    static_assert(has_getOpcode<ISelOp>,
                   "ByteProviders must contain an operation in selection DAG.");
     return ByteProvider(Val, ByteOffset, VectorOffset);
-  }
-
-  static ByteProvider getSrc(std::optional<ISelOp> Val, int64_t ByteOffset,
-                             int64_t VectorOffset,
-                             std::optional<bool> IsSigned) {
-    static_assert(is_op<ISelOp>().value,
-                  "ByteProviders must contain an operation in selection DAG.");
-    return ByteProvider(Val, ByteOffset, VectorOffset, IsSigned);
   }
 
   static ByteProvider getConstantZero() {

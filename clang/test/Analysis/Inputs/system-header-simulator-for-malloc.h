@@ -9,6 +9,7 @@ typedef __typeof(sizeof(int)) size_t;
 void *malloc(size_t);
 void *calloc(size_t, size_t);
 void free(void *);
+void *alloca(size_t);
 
 
 #if __OBJC__

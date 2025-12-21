@@ -17,7 +17,6 @@
 
 #include "mlir/IR/Block.h"
 #include "mlir/Support/LLVM.h"
-#include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/RegionUtils.h"
 #include <optional>
 
@@ -62,7 +61,7 @@ LogicalResult loopUnrollUpToFactor(AffineForOp forOp, uint64_t unrollFactor);
 
 /// Returns true if `loops` is a perfectly nested loop nest, where loops appear
 /// in it from outermost to innermost.
-bool LLVM_ATTRIBUTE_UNUSED isPerfectlyNested(ArrayRef<AffineForOp> loops);
+[[maybe_unused]] bool isPerfectlyNested(ArrayRef<AffineForOp> loops);
 
 /// Get perfectly nested sequence of loops starting at root of loop nest
 /// (the first op being another AffineFor, and the second op - a terminator).
@@ -99,12 +98,6 @@ void promoteSingleIterationLoops(func::FuncOp f);
 LogicalResult affineForOpBodySkew(AffineForOp forOp, ArrayRef<uint64_t> shifts,
                                   bool unrollPrologueEpilogue = false);
 
-/// Identify valid and profitable bands of loops to tile. This is currently just
-/// a temporary placeholder to test the mechanics of tiled code generation.
-/// Returns all maximal outermost perfect loop nests to tile.
-void getTileableBands(func::FuncOp f,
-                      std::vector<SmallVector<AffineForOp, 6>> *bands);
-
 /// Tiles the specified band of perfectly nested loops creating tile-space loops
 /// and intra-tile loops. A band is a contiguous set of loops. This utility
 /// doesn't check for the validity of tiling itself, but just performs it.
@@ -137,7 +130,7 @@ bool isValidLoopInterchangePermutation(ArrayRef<AffineForOp> loops,
 /// to inner. Returns the position in `inputNest` of the AffineForOp that
 /// becomes the new outermost loop of this nest. This method always succeeds,
 /// asserts out on invalid input / specifications.
-unsigned permuteLoops(MutableArrayRef<AffineForOp> inputNest,
+unsigned permuteLoops(ArrayRef<AffineForOp> inputNest,
                       ArrayRef<unsigned> permMap);
 
 // Sinks all sequential loops to the innermost levels (while preserving
@@ -299,54 +292,14 @@ LogicalResult
 separateFullTiles(MutableArrayRef<AffineForOp> nest,
                   SmallVectorImpl<AffineForOp> *fullTileNest = nullptr);
 
-/// Walk either an scf.for or an affine.for to find a band to coalesce.
-template <typename LoopOpTy>
-LogicalResult coalescePerfectlyNestedLoops(LoopOpTy op) {
-  LogicalResult result(failure());
-  SmallVector<LoopOpTy> loops;
-  getPerfectlyNestedLoops(loops, op);
+/// Walk an affine.for to find a band to coalesce.
+LogicalResult coalescePerfectlyNestedAffineLoops(AffineForOp op);
 
-  // Look for a band of loops that can be coalesced, i.e. perfectly nested
-  // loops with bounds defined above some loop.
-  // 1. For each loop, find above which parent loop its operands are
-  // defined.
-  SmallVector<unsigned, 4> operandsDefinedAbove(loops.size());
-  for (unsigned i = 0, e = loops.size(); i < e; ++i) {
-    operandsDefinedAbove[i] = i;
-    for (unsigned j = 0; j < i; ++j) {
-      if (areValuesDefinedAbove(loops[i].getOperands(), loops[j].getRegion())) {
-        operandsDefinedAbove[i] = j;
-        break;
-      }
-    }
-  }
-
-  // 2. Identify bands of loops such that the operands of all of them are
-  // defined above the first loop in the band.  Traverse the nest bottom-up
-  // so that modifications don't invalidate the inner loops.
-  for (unsigned end = loops.size(); end > 0; --end) {
-    unsigned start = 0;
-    for (; start < end - 1; ++start) {
-      auto maxPos =
-          *std::max_element(std::next(operandsDefinedAbove.begin(), start),
-                            std::next(operandsDefinedAbove.begin(), end));
-      if (maxPos > start)
-        continue;
-      assert(maxPos == start &&
-             "expected loop bounds to be known at the start of the band");
-      auto band = llvm::MutableArrayRef(loops.data() + start, end - start);
-      if (succeeded(coalesceLoops(band)))
-        result = success();
-      break;
-    }
-    // If a band was found and transformed, keep looking at the loops above
-    // the outermost transformed loop.
-    if (start != end - 1)
-      end = start + 1;
-  }
-  return result;
-}
-
+/// Count the number of loops surrounding `operand` such that operand could be
+/// hoisted above.
+/// Stop counting at the first loop over which the operand cannot be hoisted.
+/// This counts any LoopLikeOpInterface, not just affine.for.
+int64_t numEnclosingInvariantLoops(OpOperand &operand);
 } // namespace affine
 } // namespace mlir
 

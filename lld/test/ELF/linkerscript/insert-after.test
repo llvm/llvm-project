@@ -41,7 +41,7 @@
 
 SECTIONS { .byte : { BYTE(0) } } INSERT AFTER .data;
 
-SECTIONS { .foo.data : { *(.foo.data) } } INSERT AFTER .data;
+SECTIONS { .foo.data : { *(.foo.data) } } INSERT AFTER ".data";
 
 ## The input section .foo.text is an orphan. It will be placed in .foo.text
 SECTIONS { .foo.text : {} } INSERT AFTER .text;

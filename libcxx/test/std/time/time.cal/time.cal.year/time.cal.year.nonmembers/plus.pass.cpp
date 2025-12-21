@@ -16,45 +16,38 @@
 // constexpr year operator+(const years& x, const year& y) noexcept;
 //   Returns: y + x
 
-
 #include <chrono>
-#include <type_traits>
 #include <cassert>
+#include <type_traits>
+#include <utility>
 
 #include "test_macros.h"
 
-template <typename Y, typename Ys>
-constexpr bool testConstexpr()
-{
-    Y y{1001};
-    Ys offset{23};
-    if (y + offset != Y{1024}) return false;
-    if (offset + y != Y{1024}) return false;
-    return true;
+using year  = std::chrono::year;
+using years = std::chrono::years;
+
+constexpr bool test() {
+  year y{1223};
+  for (int i = 1100; i <= 1110; ++i) {
+    year y1 = y + years{i};
+    year y2 = years{i} + y;
+    assert(y1 == y2);
+    assert(static_cast<int>(y1) == i + 1223);
+    assert(static_cast<int>(y2) == i + 1223);
+  }
+
+  return true;
 }
 
-int main(int, char**)
-{
-    using year  = std::chrono::year;
-    using years = std::chrono::years;
+int main(int, char**) {
+  ASSERT_NOEXCEPT(std::declval<year>() + std::declval<years>());
+  ASSERT_SAME_TYPE(year, decltype(std::declval<year>() + std::declval<years>()));
 
-    ASSERT_NOEXCEPT(                std::declval<year>() + std::declval<years>());
-    ASSERT_SAME_TYPE(year, decltype(std::declval<year>() + std::declval<years>()));
+  ASSERT_NOEXCEPT(std::declval<years>() + std::declval<year>());
+  ASSERT_SAME_TYPE(year, decltype(std::declval<years>() + std::declval<year>()));
 
-    ASSERT_NOEXCEPT(                std::declval<years>() + std::declval<year>());
-    ASSERT_SAME_TYPE(year, decltype(std::declval<years>() + std::declval<year>()));
-
-    static_assert(testConstexpr<year, years>(), "");
-
-    year y{1223};
-    for (int i = 1100; i <= 1110; ++i)
-    {
-        year y1 = y + years{i};
-        year y2 = years{i} + y;
-        assert(y1 == y2);
-        assert(static_cast<int>(y1) == i + 1223);
-        assert(static_cast<int>(y2) == i + 1223);
-    }
+  test();
+  static_assert(test());
 
   return 0;
 }

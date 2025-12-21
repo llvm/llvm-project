@@ -1,10 +1,12 @@
 # REQUIRES: x86-registered-target
 
 # RUN: llvm-mc -filetype=obj -triple x86_64 %s -o %t.o
-# RUN: llvm-readobj -x .a -x .b %t.o | FileCheck %s
+# RUN: llvm-readobj -x .a -x .b %t.o | FileCheck %s --check-prefixes=HEADER,CHECK
 # RUN: llvm-readelf -x .a -x .b %t.o | FileCheck %s
 
-# CHECK:      Hex dump of section '.a':
+# HEADER:     LoadName:
+# CHECK:      {{^$}}
+# CHECK-NEXT: Hex dump of section '.a':
 # CHECK-NEXT: 0x00000000 00
 # CHECK-EMPTY:
 # CHECK-NEXT: Hex dump of section '.b':

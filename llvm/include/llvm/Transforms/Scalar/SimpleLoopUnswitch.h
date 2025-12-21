@@ -12,12 +12,13 @@
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/Analysis/LoopAnalysisManager.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/Transforms/Scalar/LoopPassManager.h"
+#include "llvm/Transforms/Utils/ExtraPassManager.h"
 
 namespace llvm {
 
 class LPMUpdater;
 class Loop;
-class Pass;
 class StringRef;
 class raw_ostream;
 
@@ -79,10 +80,13 @@ public:
                      function_ref<StringRef(StringRef)> MapClassName2PassName);
 };
 
-/// Create the legacy pass object for the simple loop unswitcher.
-///
-/// See the documentaion for `SimpleLoopUnswitchPass` for details.
-Pass *createSimpleLoopUnswitchLegacyPass(bool NonTrivial = false);
+/// A marker analysis to determine if SimpleLoopUnswitch should run again on a
+/// given loop.
+struct ShouldRunExtraSimpleLoopUnswitch
+    : public ShouldRunExtraPasses<ShouldRunExtraSimpleLoopUnswitch>,
+      public AnalysisInfoMixin<ShouldRunExtraSimpleLoopUnswitch> {
+  static AnalysisKey Key;
+};
 
 } // end namespace llvm
 

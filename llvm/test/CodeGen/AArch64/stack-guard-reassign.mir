@@ -1,9 +1,9 @@
 # RUN: llc -mtriple=arm64-apple-ios -start-before=localstackalloc -stop-after=prologepilog -o - %s | FileCheck %s
 
 --- |
-  @__stack_chk_guard = external global i8*
-  define i32 @main(i32, i8**) {
-    %StackGuardSlot = alloca i8*
+  @__stack_chk_guard = external global ptr
+  define i32 @main(i32, ptr) {
+    %StackGuardSlot = alloca ptr
     unreachable
   }
 ...

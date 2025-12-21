@@ -45,38 +45,133 @@ string.h
 Function Name  Available  RPC Required
 =============  =========  ============
 bcmp           |check|
+bcopy          |check|
 bzero          |check|
 memccpy        |check|
-memchr         
+memchr         |check|
 memcmp         |check|
 memcpy         |check|
+memmem         |check|
 memmove        |check|
 mempcpy        |check|
-memrchr
+memrchr        |check|
 memset         |check|
 stpcpy         |check|
 stpncpy        |check|
 strcat         |check|
-strchr         
+strchr         |check|
+strchrnul      |check|
 strcmp         |check|
+strcoll        |check|
 strcpy         |check|
 strcspn        |check|
+strdup         |check|
+strerror       |check|
 strlcat        |check|
 strlcpy        |check|
 strlen         |check|
 strncat        |check|
 strncmp        |check|
 strncpy        |check|
+strndup        |check|
 strnlen        |check|
-strpbrk        
-strrchr        
+strpbrk        |check|
+strrchr        |check|
+strsep         |check|
 strspn         |check|
-strstr         
+strstr         |check|
 strtok         |check|
 strtok_r       |check|
-strdup
-strndup
+strxfrm        |check|
 =============  =========  ============
+
+strings.h
+---------
+
+=============  =========  ============
+Function Name  Available  RPC Required
+=============  =========  ============
+bcmp           |check|
+bcopy          |check|
+bzero          |check|
+strcasecmp     |check|
+strcasestr     |check|
+index          |check|
+rindex         |check|
+=============  =========  ============
+
+stdbit.h
+--------
+
+============================  =========  ============
+Function Name                 Available  RPC Required
+============================  =========  ============
+stdc_leading_zeros_uc         |check|
+stdc_leading_zeros_us         |check|
+stdc_leading_zeros_ui         |check|
+stdc_leading_zeros_ul         |check|
+stdc_leading_zeros_ull        |check|
+stdc_trailing_zeros_uc        |check|
+stdc_trailing_zeros_us        |check|
+stdc_trailing_zeros_ui        |check|
+stdc_trailing_zeros_ul        |check|
+stdc_trailing_zeros_ull       |check|
+stdc_trailing_ones_uc         |check|
+stdc_trailing_ones_us         |check|
+stdc_trailing_ones_ui         |check|
+stdc_trailing_ones_ul         |check|
+stdc_trailing_ones_ull        |check|
+stdc_first_leading_zero_uc    |check|
+stdc_first_leading_zero_us    |check|
+stdc_first_leading_zero_ui    |check|
+stdc_first_leading_zero_ul    |check|
+stdc_first_leading_zero_ull   |check|
+stdc_first_leading_one_uc     |check|
+stdc_first_leading_one_us     |check|
+stdc_first_leading_one_ui     |check|
+stdc_first_leading_one_ul     |check|
+stdc_first_leading_one_ull    |check|
+stdc_first_trailing_zero_uc   |check|
+stdc_first_trailing_zero_us   |check|
+stdc_first_trailing_zero_ui   |check|
+stdc_first_trailing_zero_ul   |check|
+stdc_first_trailing_zero_ull  |check|
+stdc_first_trailing_one_uc    |check|
+stdc_first_trailing_one_us    |check|
+stdc_first_trailing_one_ui    |check|
+stdc_first_trailing_one_ul    |check|
+stdc_first_trailing_one_ull   |check|
+stdc_count_zeros_uc           |check|
+stdc_count_zeros_us           |check|
+stdc_count_zeros_ui           |check|
+stdc_count_zeros_ul           |check|
+stdc_count_zeros_ull          |check|
+stdc_count_ones_uc            |check|
+stdc_count_ones_us            |check|
+stdc_count_ones_ui            |check|
+stdc_count_ones_ul            |check|
+stdc_count_ones_ull           |check|
+stdc_has_single_bit_uc        |check|
+stdc_has_single_bit_us        |check|
+stdc_has_single_bit_ui        |check|
+stdc_has_single_bit_ul        |check|
+stdc_has_single_bit_ull       |check|
+stdc_bit_width_uc             |check|
+stdc_bit_width_us             |check|
+stdc_bit_width_ui             |check|
+stdc_bit_width_ul             |check|
+stdc_bit_width_ull            |check|
+stdc_bit_floor_uc             |check|
+stdc_bit_floor_us             |check|
+stdc_bit_floor_ui             |check|
+stdc_bit_floor_ul             |check|
+stdc_bit_floor_ull            |check|
+stdc_bit_ceil_uc              |check|
+stdc_bit_ceil_us              |check|
+stdc_bit_ceil_ui              |check|
+stdc_bit_ceil_ul              |check|
+stdc_bit_ceil_ull             |check|
+============================  =========  ============
 
 stdlib.h
 --------
@@ -91,6 +186,7 @@ atol           |check|
 atoll          |check|
 exit           |check|    |check|
 abort          |check|    |check|
+system         |check|    |check|
 labs           |check|
 llabs          |check|
 div            |check|
@@ -106,6 +202,8 @@ strtold        |check|
 strtoll        |check|
 strtoul        |check|
 strtoull       |check|
+srand          |check|
+rand           |check|
 =============  =========  ============
 
 inttypes.h
@@ -141,7 +239,20 @@ puts           |check|    |check|
 fputs          |check|    |check|
 fputc          |check|    |check|
 fwrite         |check|    |check|
+remove         |check|    |check|
+rename         |check|    |check|
 putc           |check|    |check|
+printf         |check|    |check|
+vprintf        |check|    |check|
+fprintf        |check|    |check|
+vfprintf       |check|    |check|
+sprintf        |check|
+snprintf       |check|
+vsprintf       |check|
+vsnprintf      |check|
+sscanf         |check|
+scanf          |check|    |check|
+fscanf         |check|    |check|
 putchar        |check|    |check|
 fclose         |check|    |check|
 fopen          |check|    |check|
@@ -155,7 +266,10 @@ time.h
 Function Name  Available  RPC Required
 =============  =========  ============
 clock          |check|
+clock_gettime  |check|
 nanosleep      |check|
+strftime       |check|
+strftime_l     |check|
 =============  =========  ============
 
 assert.h

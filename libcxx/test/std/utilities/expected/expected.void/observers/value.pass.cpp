@@ -1,4 +1,5 @@
 //===----------------------------------------------------------------------===//
+//
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
@@ -61,17 +62,6 @@ void testException() {
       e.value();
       assert(false);
     } catch (const std::bad_expected_access<int>& ex) {
-      assert(ex.error() == 5);
-    }
-  }
-
-  // MoveOnly
-  {
-    std::expected<void, MoveOnly> e(std::unexpect, 5);
-    try {
-      std::move(e).value();
-      assert(false);
-    } catch (const std::bad_expected_access<MoveOnly>& ex) {
       assert(ex.error() == 5);
     }
   }

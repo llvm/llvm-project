@@ -12,59 +12,32 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPU.h"
+#include "AMDGPUAsanInstrumentation.h"
 #include "GCNSubtarget.h"
+#include "llvm/Analysis/AliasAnalysis.h"
+#include "llvm/Analysis/CaptureTracking.h"
+#include "llvm/Analysis/ScopedNoAliasAA.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
+#include "llvm/IR/Argument.h"
+#include "llvm/IR/Attributes.h"
+#include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/InstIterator.h"
+#include "llvm/IR/Instruction.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
+#include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/Target/TargetMachine.h"
+#include <optional>
+#include <string>
 
 #define DEBUG_TYPE "amdgpu-lower-kernel-arguments"
 
 using namespace llvm;
 
 namespace {
-
-class PreloadKernelArgInfo {
-private:
-  Function &F;
-  const GCNSubtarget &ST;
-  unsigned NumFreeUserSGPRs;
-
-public:
-  SmallVector<llvm::Metadata *, 8> KernelArgMetadata;
-
-  PreloadKernelArgInfo(Function &F, const GCNSubtarget &ST) : F(F), ST(ST) {
-    setInitialFreeUserSGPRsCount();
-  }
-
-  // Returns the maximum number of user SGPRs that we have available to preload
-  // arguments.
-  void setInitialFreeUserSGPRsCount() {
-    const unsigned MaxUserSGPRs = ST.getMaxNumUserSGPRs();
-    GCNUserSGPRUsageInfo UserSGPRInfo(F, ST);
-
-    NumFreeUserSGPRs = MaxUserSGPRs - UserSGPRInfo.getNumUsedUserSGPRs();
-  }
-
-  bool tryAllocPreloadSGPRs(unsigned AllocSize, uint64_t ArgOffset,
-                            uint64_t LastExplicitArgOffset) {
-    //  Check if this argument may be loaded into the same register as the
-    //  previous argument.
-    if (!isAligned(Align(4), ArgOffset) && AllocSize < 4)
-      return true;
-
-    // Pad SGPRs for kernarg alignment.
-    unsigned Padding = ArgOffset - LastExplicitArgOffset;
-    unsigned PaddingSGPRs = alignTo(Padding, 4) / 4;
-    unsigned NumPreloadSGPRs = alignTo(AllocSize, 4) / 4;
-    if (NumPreloadSGPRs + PaddingSGPRs > NumFreeUserSGPRs)
-      return false;
-
-    NumFreeUserSGPRs -= (NumPreloadSGPRs + PaddingSGPRs);
-    return true;
-  }
-};
 
 class AMDGPULowerKernelArguments : public FunctionPass {
 public:
@@ -76,6 +49,7 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<TargetPassConfig>();
+    AU.addRequired<DominatorTreeWrapperPass>();
     AU.setPreservesAll();
  }
 };
@@ -97,16 +71,134 @@ static BasicBlock::iterator getInsertPt(BasicBlock &BB) {
   return InsPt;
 }
 
-static bool lowerKernelArguments(Function &F, const TargetMachine &TM) {
+static void addAliasScopeMetadata(Function &F, const DataLayout &DL,
+                                  DominatorTree &DT) {
+  // Collect noalias arguments.
+  SmallVector<const Argument *, 4u> NoAliasArgs;
+
+  for (Argument &Arg : F.args())
+    if (Arg.hasNoAliasAttr() && !Arg.use_empty())
+      NoAliasArgs.push_back(&Arg);
+
+  if (NoAliasArgs.empty())
+    return;
+
+  // Add alias scopes for each noalias argument.
+  MDBuilder MDB(F.getContext());
+  DenseMap<const Argument *, MDNode *> NewScopes;
+  MDNode *NewDomain = MDB.createAnonymousAliasScopeDomain(F.getName());
+
+  for (unsigned I = 0u; I < NoAliasArgs.size(); ++I) {
+    const Argument *Arg = NoAliasArgs[I];
+    MDNode *NewScope = MDB.createAnonymousAliasScope(NewDomain, Arg->getName());
+    NewScopes.insert({Arg, NewScope});
+  }
+
+  // Iterate over all instructions.
+  for (inst_iterator Inst = inst_begin(F), InstEnd = inst_end(F);
+       Inst != InstEnd; ++Inst) {
+    // If instruction accesses memory, collect its pointer arguments.
+    Instruction *I = &(*Inst);
+    SmallVector<const Value *, 2u> PtrArgs;
+
+    if (std::optional<MemoryLocation> MO = MemoryLocation::getOrNone(I))
+      PtrArgs.push_back(MO->Ptr);
+    else if (const CallBase *Call = dyn_cast<CallBase>(I)) {
+      if (Call->doesNotAccessMemory())
+        continue;
+
+      for (Value *Arg : Call->args()) {
+        if (!Arg->getType()->isPointerTy())
+          continue;
+
+        PtrArgs.push_back(Arg);
+      }
+    }
+
+    if (PtrArgs.empty())
+      continue;
+
+    // Collect underlying objects of pointer arguments.
+    SmallVector<Metadata *, 4u> Scopes;
+    SmallPtrSet<const Value *, 4u> ObjSet;
+    SmallVector<Metadata *, 4u> NoAliases;
+
+    for (const Value *Val : PtrArgs) {
+      SmallVector<const Value *, 4u> Objects;
+      getUnderlyingObjects(Val, Objects);
+      ObjSet.insert_range(Objects);
+    }
+
+    bool RequiresNoCaptureBefore = false;
+    bool UsesUnknownObject = false;
+    bool UsesAliasingPtr = false;
+
+    for (const Value *Val : ObjSet) {
+      if (isa<ConstantData>(Val))
+        continue;
+
+      if (const Argument *Arg = dyn_cast<Argument>(Val)) {
+        if (!Arg->hasAttribute(Attribute::NoAlias))
+          UsesAliasingPtr = true;
+      } else
+        UsesAliasingPtr = true;
+
+      if (isEscapeSource(Val))
+        RequiresNoCaptureBefore = true;
+      else if (!isa<Argument>(Val) && isIdentifiedObject(Val))
+        UsesUnknownObject = true;
+    }
+
+    if (UsesUnknownObject)
+      continue;
+
+    // Collect noalias scopes for instruction.
+    for (const Argument *Arg : NoAliasArgs) {
+      if (ObjSet.contains(Arg))
+        continue;
+
+      if (!RequiresNoCaptureBefore ||
+          !capturesAnything(PointerMayBeCapturedBefore(
+              Arg, false, I, &DT, false, CaptureComponents::Provenance)))
+        NoAliases.push_back(NewScopes[Arg]);
+    }
+
+    // Add noalias metadata to instruction.
+    if (!NoAliases.empty()) {
+      MDNode *NewMD =
+          MDNode::concatenate(Inst->getMetadata(LLVMContext::MD_noalias),
+                              MDNode::get(F.getContext(), NoAliases));
+      Inst->setMetadata(LLVMContext::MD_noalias, NewMD);
+    }
+
+    // Collect scopes for alias.scope metadata.
+    if (!UsesAliasingPtr)
+      for (const Argument *Arg : NoAliasArgs) {
+        if (ObjSet.count(Arg))
+          Scopes.push_back(NewScopes[Arg]);
+      }
+
+    // Add alias.scope metadata to instruction.
+    if (!Scopes.empty()) {
+      MDNode *NewMD =
+          MDNode::concatenate(Inst->getMetadata(LLVMContext::MD_alias_scope),
+                              MDNode::get(F.getContext(), Scopes));
+      Inst->setMetadata(LLVMContext::MD_alias_scope, NewMD);
+    }
+  }
+}
+
+static bool lowerKernelArguments(Function &F, const TargetMachine &TM,
+                                 DominatorTree &DT) {
   CallingConv::ID CC = F.getCallingConv();
   if (CC != CallingConv::AMDGPU_KERNEL || F.arg_empty())
     return false;
 
   const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(F);
-  LLVMContext &Ctx = F.getParent()->getContext();
-  const DataLayout &DL = F.getParent()->getDataLayout();
+  LLVMContext &Ctx = F.getContext();
+  const DataLayout &DL = F.getDataLayout();
   BasicBlock &EntryBlock = *F.begin();
-  IRBuilder<> Builder(&*getInsertPt(EntryBlock));
+  IRBuilder<> Builder(&EntryBlock, getInsertPt(EntryBlock));
 
   const Align KernArgBaseAlign(16); // FIXME: Increase if necessary
   const uint64_t BaseOffset = ST.getExplicitKernelArgOffset();
@@ -118,17 +210,15 @@ static bool lowerKernelArguments(Function &F, const TargetMachine &TM) {
     return false;
 
   CallInst *KernArgSegment =
-      Builder.CreateIntrinsic(Intrinsic::amdgcn_kernarg_segment_ptr, {}, {},
+      Builder.CreateIntrinsic(Intrinsic::amdgcn_kernarg_segment_ptr, {},
                               nullptr, F.getName() + ".kernarg.segment");
-
   KernArgSegment->addRetAttr(Attribute::NonNull);
   KernArgSegment->addRetAttr(
       Attribute::getWithDereferenceableBytes(Ctx, TotalKernArgSize));
 
   uint64_t ExplicitArgOffset = 0;
-  // Preloaded kernel arguments must be sequential.
-  bool InPreloadSequence = true;
-  PreloadKernelArgInfo PreloadInfo(F, ST);
+
+  addAliasScopeMetadata(F, F.getParent()->getDataLayout(), DT);
 
   for (Argument &Arg : F.args()) {
     const bool IsByRef = Arg.hasByRefAttr();
@@ -140,20 +230,10 @@ static bool lowerKernelArguments(Function &F, const TargetMachine &TM) {
     uint64_t AllocSize = DL.getTypeAllocSize(ArgTy);
 
     uint64_t EltOffset = alignTo(ExplicitArgOffset, ABITypeAlign) + BaseOffset;
-    uint64_t LastExplicitArgOffset = ExplicitArgOffset;
     ExplicitArgOffset = alignTo(ExplicitArgOffset, ABITypeAlign) + AllocSize;
 
-    // Try to preload this argument into user SGPRs.
-    if (Arg.hasInRegAttr() && InPreloadSequence && ST.hasKernargPreload() &&
-        !ST.needsKernargPreloadBackwardsCompatibility() &&
-        !Arg.getType()->isAggregateType())
-      if (PreloadInfo.tryAllocPreloadSGPRs(AllocSize, EltOffset,
-                                           LastExplicitArgOffset))
-        continue;
-
-    InPreloadSequence = false;
-
-    if (Arg.use_empty())
+    // Skip inreg arguments which should be preloaded.
+    if (Arg.use_empty() || Arg.hasInRegAttr())
       continue;
 
     // If this is byval, the loads are already explicit in the function. We just
@@ -178,11 +258,6 @@ static bool lowerKernelArguments(Function &F, const TargetMachine &TM) {
            PT->getAddressSpace() == AMDGPUAS::REGION_ADDRESS) &&
           !ST.hasUsableDSOffset())
         continue;
-
-      // FIXME: We can replace this with equivalent alias.scope/noalias
-      // metadata, but this appears to be a lot of work.
-      if (Arg.hasNoAliasAttr())
-        continue;
     }
 
     auto *VT = dyn_cast<FixedVectorType>(ArgTy);
@@ -202,6 +277,7 @@ static bool lowerKernelArguments(Function &F, const TargetMachine &TM) {
       // Since we don't have sub-dword scalar loads, avoid doing an extload by
       // loading earlier than the argument address, and extracting the relevant
       // bits.
+      // TODO: Update this for GFX12 which does have scalar sub-dword loads.
       //
       // Additionally widen any sub-dword load to i32 even if suitably aligned,
       // so that CSE between different argument loads works easily.
@@ -227,6 +303,16 @@ static bool lowerKernelArguments(Function &F, const TargetMachine &TM) {
     Load->setMetadata(LLVMContext::MD_invariant_load, MDNode::get(Ctx, {}));
 
     MDBuilder MDB(Ctx);
+
+    if (Arg.hasAttribute(Attribute::NoUndef))
+      Load->setMetadata(LLVMContext::MD_noundef, MDNode::get(Ctx, {}));
+
+    if (Arg.hasAttribute(Attribute::Range)) {
+      const ConstantRange &Range =
+          Arg.getAttribute(Attribute::Range).getValueAsConstantRange();
+      Load->setMetadata(LLVMContext::MD_range,
+                        MDB.createRange(Range.getLower(), Range.getUpper()));
+    }
 
     if (isa<PointerType>(ArgTy)) {
       if (Arg.hasNonNullAttr())
@@ -258,8 +344,6 @@ static bool lowerKernelArguments(Function &F, const TargetMachine &TM) {
       }
     }
 
-    // TODO: Convert noalias arg to !noalias
-
     if (DoShiftOpt) {
       Value *ExtractBits = OffsetDiff == 0 ?
         Load : Builder.CreateLShr(Load, OffsetDiff * 8);
@@ -288,7 +372,8 @@ static bool lowerKernelArguments(Function &F, const TargetMachine &TM) {
 bool AMDGPULowerKernelArguments::runOnFunction(Function &F) {
   auto &TPC = getAnalysis<TargetPassConfig>();
   const TargetMachine &TM = TPC.getTM<TargetMachine>();
-  return lowerKernelArguments(F, TM);
+  DominatorTree &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
+  return lowerKernelArguments(F, TM, DT);
 }
 
 INITIALIZE_PASS_BEGIN(AMDGPULowerKernelArguments, DEBUG_TYPE,
@@ -304,7 +389,8 @@ FunctionPass *llvm::createAMDGPULowerKernelArgumentsPass() {
 
 PreservedAnalyses
 AMDGPULowerKernelArgumentsPass::run(Function &F, FunctionAnalysisManager &AM) {
-  bool Changed = lowerKernelArguments(F, TM);
+  DominatorTree &DT = *AM.getCachedResult<DominatorTreeAnalysis>(F);
+  bool Changed = lowerKernelArguments(F, TM, DT);
   if (Changed) {
     // TODO: Preserves a lot more.
     PreservedAnalyses PA;

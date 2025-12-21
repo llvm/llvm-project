@@ -1,6 +1,6 @@
 // RUN: mlir-opt -split-input-file -verify-diagnostics %s | mlir-opt | FileCheck %s
 // RUN: mlir-opt -split-input-file -verify-diagnostics -mlir-print-op-generic %s | FileCheck %s --check-prefix=GENERIC
-// RUN: mlir-opt -split-input-file -verify-diagnostics %s -mlir-print-debuginfo | mlir-opt -mlir-print-debuginfo | FileCheck %s --check-prefix=LOCINFO
+// RUN: mlir-opt -split-input-file -verify-diagnostics -mlir-print-debuginfo %s | mlir-opt -split-input-file -mlir-print-debuginfo | FileCheck %s --check-prefix=LOCINFO
 // RUN: mlir-translate -mlir-to-llvmir -split-input-file -verify-diagnostics %s | FileCheck %s --check-prefix=CHECK-LLVM
 
 module {
@@ -184,14 +184,34 @@ module {
     llvm.return
   }
 
+  // CHECK: llvm.func cc_10 @cconv4
+  llvm.func cc_10 @cconv4() {
+    llvm.return
+  }
+
+  // CHECK: llvm.func @test_ccs
+  llvm.func @test_ccs() {
+    // CHECK-NEXT: %[[PTR:.*]] = llvm.mlir.addressof @cconv4 : !llvm.ptr
+    %ptr = llvm.mlir.addressof @cconv4 : !llvm.ptr
+    // CHECK-NEXT: llvm.call        @cconv1() : () -> ()
+    // CHECK-NEXT: llvm.call        @cconv2() : () -> ()
+    // CHECK-NEXT: llvm.call fastcc @cconv3() : () -> ()
+    // CHECK-NEXT: llvm.call cc_10  %[[PTR]]() : !llvm.ptr, () -> ()
+    llvm.call        @cconv1() : () -> ()
+    llvm.call ccc    @cconv2() : () -> ()
+    llvm.call fastcc @cconv3() : () -> ()
+    llvm.call cc_10  %ptr() : !llvm.ptr, () -> ()
+    llvm.return
+  }
+
   // CHECK-LABEL: llvm.func @variadic_def
   llvm.func @variadic_def(...) {
     llvm.return
   }
 
   // CHECK-LABEL: llvm.func @memory_attr
-  // CHECK-SAME: attributes {memory = #llvm.memory_effects<other = none, argMem = read, inaccessibleMem = readwrite>} {
-  llvm.func @memory_attr() attributes {memory = #llvm.memory_effects<other = none, argMem = read, inaccessibleMem = readwrite>} {
+  // CHECK-SAME: attributes {memory = #llvm.memory_effects<other = none, argMem = read, inaccessibleMem = readwrite, errnoMem = none, targetMem0 = none, targetMem1 = none>} {
+  llvm.func @memory_attr() attributes {memory = #llvm.memory_effects<other = none, argMem = read, inaccessibleMem = readwrite, errnoMem = none, targetMem0 = none, targetMem1 = none>} {
     llvm.return
   }
 
@@ -231,6 +251,80 @@ module {
     // CHECK-SAME: vscale_range(1, 2)
     llvm.return
   }
+
+  // CHECK-LABEL: @frame_pointer_roundtrip()
+  // CHECK-SAME: attributes {frame_pointer = #llvm.framePointerKind<"non-leaf">}
+  llvm.func @frame_pointer_roundtrip() attributes {frame_pointer = #llvm.framePointerKind<"non-leaf">} {
+    llvm.return
+  }
+
+  llvm.func @no_infs_fp_math_roundtrip() attributes {no_infs_fp_math = true} {
+    // CHECK: @no_infs_fp_math_roundtrip
+    // CHECK-SAME: attributes {no_infs_fp_math = true}
+    llvm.return
+  }
+
+  llvm.func @no_nans_fp_math_roundtrip() attributes {no_nans_fp_math = true} {
+    // CHECK: @no_nans_fp_math_roundtrip
+    // CHECK-SAME: attributes {no_nans_fp_math = true}
+    llvm.return
+  }
+
+  llvm.func @no_signed_zeros_fp_math_roundtrip() attributes {no_signed_zeros_fp_math = true} {
+    // CHECK: @no_signed_zeros_fp_math_roundtrip
+    // CHECK-SAME: attributes {no_signed_zeros_fp_math = true}
+    llvm.return
+  }
+
+  llvm.func @convergent_function() attributes {convergent} {
+    // CHECK: @convergent_function
+    // CHECK-SAME: attributes {convergent}
+    llvm.return
+  }
+
+  llvm.func @denormal_fp_math_roundtrip() attributes {denormal_fp_math = "preserve-sign"} {
+    // CHECK: @denormal_fp_math_roundtrip
+    // CHECK-SAME: attributes {denormal_fp_math = "preserve-sign"}
+    llvm.return
+  }
+
+  llvm.func @denormal_fp_math_f32_roundtrip() attributes {denormal_fp_math_f32 = "preserve-sign"} {
+    // CHECK: @denormal_fp_math_f32_roundtrip
+    // CHECK-SAME: attributes {denormal_fp_math_f32 = "preserve-sign"}
+    llvm.return
+  }
+
+  llvm.func @fp_contract_roundtrip() attributes {fp_contract = "fast"} {
+    // CHECK: @fp_contract_roundtrip
+    // CHECK-SAME: attributes {fp_contract = "fast"}
+    llvm.return
+  }
+
+  llvm.func @instrument_function_entry_function() attributes {instrument_function_entry = "__cyg_profile_func_enter"} {
+    // CHECK: @instrument_function_entry_function
+    // CHECK-SAME: attributes {instrument_function_entry = "__cyg_profile_func_enter"}
+    llvm.return
+  }
+
+  llvm.func @instrument_function_exit_function() attributes {instrument_function_exit = "__cyg_profile_func_exit"} {
+    // CHECK: @instrument_function_exit_function
+    // CHECK-SAME: attributes {instrument_function_exit = "__cyg_profile_func_exit"}
+    llvm.return
+  }
+
+  llvm.func @nounwind_function() attributes {no_unwind} {
+    // CHECK: @nounwind_function
+    // CHECK-SAME: attributes {no_unwind}
+    llvm.return
+  }
+
+  llvm.func @willreturn_function() attributes {will_return} {
+    // CHECK: @willreturn_function
+    // CHECK-SAME: attributes {will_return}
+    llvm.return
+  }
+
+
 }
 
 // -----
@@ -334,7 +428,60 @@ module {
 
 module {
   "llvm.func"() ({
-  // expected-error @below {{invalid Calling Conventions specification: cc_12}}
+  // expected-error @below {{expected one of [ccc, fastcc, coldcc, cc_10, cc_11, anyregcc, preserve_mostcc, preserve_allcc, swiftcc, cxx_fast_tlscc, tailcc, cfguard_checkcc, swifttailcc, x86_stdcallcc, x86_fastcallcc, arm_apcscc, arm_aapcscc, arm_aapcs_vfpcc, msp430_intrcc, x86_thiscallcc, ptx_kernelcc, ptx_devicecc, spir_funccc, spir_kernelcc, intel_ocl_bicc, x86_64_sysvcc, win64cc, x86_vectorcallcc, hhvmcc, hhvm_ccc, x86_intrcc, avr_intrcc, avr_builtincc, amdgpu_vscc, amdgpu_gscc, amdgpu_cscc, amdgpu_kernelcc, x86_regcallcc, amdgpu_hscc, msp430_builtincc, amdgpu_lscc, amdgpu_escc, aarch64_vectorcallcc, aarch64_sve_vectorcallcc, wasm_emscripten_invokecc, amdgpu_gfxcc, m68k_intrcc] for Calling Conventions, got: cc_12}}
   // expected-error @below {{failed to parse CConvAttr parameter 'CallingConv' which is to be a `CConv`}}
   }) {sym_name = "generic_unknown_calling_convention", CConv = #llvm.cconv<cc_12>, function_type = !llvm.func<i64 (i64, i64)>} : () -> ()
 }
+
+// -----
+
+// CHECK: @vec_type_hint()
+// CHECK-SAME: vec_type_hint = #llvm.vec_type_hint<hint = i32>
+llvm.func @vec_type_hint() attributes {vec_type_hint = #llvm.vec_type_hint<hint = i32>}
+
+// CHECK: @vec_type_hint_signed()
+// CHECK-SAME: vec_type_hint = #llvm.vec_type_hint<hint = i32, is_signed = true>
+llvm.func @vec_type_hint_signed() attributes {vec_type_hint = #llvm.vec_type_hint<hint = i32, is_signed = true>}
+
+// CHECK: @vec_type_hint_signed_vec()
+// CHECK-SAME: vec_type_hint = #llvm.vec_type_hint<hint = vector<2xi32>, is_signed = true>
+llvm.func @vec_type_hint_signed_vec() attributes {vec_type_hint = #llvm.vec_type_hint<hint = vector<2xi32>, is_signed = true>}
+
+// CHECK: @vec_type_hint_float_vec()
+// CHECK-SAME: vec_type_hint = #llvm.vec_type_hint<hint = vector<3xf32>>
+llvm.func @vec_type_hint_float_vec() attributes {vec_type_hint = #llvm.vec_type_hint<hint = vector<3xf32>>}
+
+// CHECK: @vec_type_hint_bfloat_vec()
+// CHECK-SAME: vec_type_hint = #llvm.vec_type_hint<hint = vector<8xbf16>>
+llvm.func @vec_type_hint_bfloat_vec() attributes {vec_type_hint = #llvm.vec_type_hint<hint = vector<8xbf16>>}
+
+// -----
+
+// CHECK: @work_group_size_hint()
+// CHECK-SAME: work_group_size_hint = array<i32: 128, 128, 128>
+llvm.func @work_group_size_hint() attributes {work_group_size_hint = array<i32: 128, 128, 128>}
+
+// -----
+
+// CHECK: @reqd_work_group_size_hint()
+// CHECK-SAME: reqd_work_group_size = array<i32: 128, 256, 128>
+llvm.func @reqd_work_group_size_hint() attributes {reqd_work_group_size = array<i32: 128, 256, 128>}
+
+// -----
+
+// CHECK: @intel_reqd_sub_group_size_hint()
+// CHECK-SAME: intel_reqd_sub_group_size = 32 : i32
+llvm.func @intel_reqd_sub_group_size_hint() attributes {llvm.intel_reqd_sub_group_size = 32 : i32}
+
+// -----
+
+// CHECK: @workgroup_attribution
+// CHECK-SAME: llvm.workgroup_attribution = #llvm.mlir.workgroup_attribution<512 : i64, i32>
+// CHECK-SAME: llvm.workgroup_attribution = #llvm.mlir.workgroup_attribution<128 : i64, !llvm.struct<(i32, i64, f32)>
+llvm.func @workgroup_attribution(%arg0: !llvm.ptr {llvm.workgroup_attribution = #llvm.mlir.workgroup_attribution<512 : i64, i32>}, %arg1: !llvm.ptr {llvm.workgroup_attribution = #llvm.mlir.workgroup_attribution<128 : i64, !llvm.struct<(i32, i64, f32)>>})
+
+// -----
+
+// CHECK: @constant_range_negative
+// CHECK-SAME: llvm.range = #llvm.constant_range<i32, 0, -2147483648>
+llvm.func @constant_range_negative() -> (i32 {llvm.range = #llvm.constant_range<i32, 0, -2147483648>})

@@ -13,12 +13,14 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Config/config.h"
+#include "llvm/Support/AutoConvert.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Duration.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/IOSandbox.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/NativeFormatting.h"
 #include "llvm/Support/Process.h"
@@ -29,9 +31,7 @@
 #include <sys/stat.h>
 
 // <fcntl.h> may provide O_BINARY.
-#if defined(HAVE_FCNTL_H)
 # include <fcntl.h>
-#endif
 
 #if defined(HAVE_UNISTD_H)
 # include <unistd.h>
@@ -61,17 +61,6 @@
 #endif
 
 using namespace llvm;
-
-constexpr raw_ostream::Colors raw_ostream::BLACK;
-constexpr raw_ostream::Colors raw_ostream::RED;
-constexpr raw_ostream::Colors raw_ostream::GREEN;
-constexpr raw_ostream::Colors raw_ostream::YELLOW;
-constexpr raw_ostream::Colors raw_ostream::BLUE;
-constexpr raw_ostream::Colors raw_ostream::MAGENTA;
-constexpr raw_ostream::Colors raw_ostream::CYAN;
-constexpr raw_ostream::Colors raw_ostream::WHITE;
-constexpr raw_ostream::Colors raw_ostream::SAVEDCOLOR;
-constexpr raw_ostream::Colors raw_ostream::RESET;
 
 raw_ostream::~raw_ostream() {
   // raw_ostream's subclasses should take care to flush the buffer
@@ -220,7 +209,7 @@ void raw_ostream::flush_nonempty() {
   assert(OutBufCur > OutBufStart && "Invalid call to flush_nonempty.");
   size_t Length = OutBufCur - OutBufStart;
   OutBufCur = OutBufStart;
-  flush_tied_then_write(OutBufStart, Length);
+  write_impl(OutBufStart, Length);
 }
 
 raw_ostream &raw_ostream::write(unsigned char C) {
@@ -228,7 +217,7 @@ raw_ostream &raw_ostream::write(unsigned char C) {
   if (LLVM_UNLIKELY(OutBufCur >= OutBufEnd)) {
     if (LLVM_UNLIKELY(!OutBufStart)) {
       if (BufferMode == BufferKind::Unbuffered) {
-        flush_tied_then_write(reinterpret_cast<char *>(&C), 1);
+        write_impl(reinterpret_cast<char *>(&C), 1);
         return *this;
       }
       // Set up a buffer and start over.
@@ -248,7 +237,7 @@ raw_ostream &raw_ostream::write(const char *Ptr, size_t Size) {
   if (LLVM_UNLIKELY(size_t(OutBufEnd - OutBufCur) < Size)) {
     if (LLVM_UNLIKELY(!OutBufStart)) {
       if (BufferMode == BufferKind::Unbuffered) {
-        flush_tied_then_write(Ptr, Size);
+        write_impl(Ptr, Size);
         return *this;
       }
       // Set up a buffer and start over.
@@ -264,7 +253,7 @@ raw_ostream &raw_ostream::write(const char *Ptr, size_t Size) {
     if (LLVM_UNLIKELY(OutBufCur == OutBufStart)) {
       assert(NumBytes != 0 && "undefined behavior");
       size_t BytesToWrite = Size - (Size % NumBytes);
-      flush_tied_then_write(Ptr, BytesToWrite);
+      write_impl(Ptr, BytesToWrite);
       size_t BytesRemaining = Size - BytesToWrite;
       if (BytesRemaining > size_t(OutBufEnd - OutBufCur)) {
         // Too much left over to copy into our buffer.
@@ -303,12 +292,6 @@ void raw_ostream::copy_to_buffer(const char *Ptr, size_t Size) {
   }
 
   OutBufCur += Size;
-}
-
-void raw_ostream::flush_tied_then_write(const char *Ptr, size_t Size) {
-  if (TiedStream)
-    TiedStream->flush();
-  write_impl(Ptr, Size);
 }
 
 // Formatted output.
@@ -572,6 +555,9 @@ void format_object_base::home() {
 static int getFD(StringRef Filename, std::error_code &EC,
                  sys::fs::CreationDisposition Disp, sys::fs::FileAccess Access,
                  sys::fs::OpenFlags Flags) {
+  // FIXME(sandboxing): Remove this by adopting `llvm::vfs::OutputBackend`.
+  auto BypassSandbox = sys::sandbox::scopedDisable();
+
   assert((Access & sys::fs::FA_Write) &&
          "Cannot make a raw_ostream from a read-only descriptor!");
 
@@ -624,6 +610,9 @@ raw_fd_ostream::raw_fd_ostream(StringRef Filename, std::error_code &EC,
 raw_fd_ostream::raw_fd_ostream(int fd, bool shouldClose, bool unbuffered,
                                OStreamKind K)
     : raw_pwrite_stream(unbuffered, K), FD(fd), ShouldClose(shouldClose) {
+  // FIXME(sandboxing): Remove this by adopting `llvm::vfs::OutputBackend`.
+  auto BypassSandbox = sys::sandbox::scopedDisable();
+
   if (FD < 0 ) {
     ShouldClose = false;
     return;
@@ -685,9 +674,8 @@ raw_fd_ostream::~raw_fd_ostream() {
   // has_error() and clear the error flag with clear_error() before
   // destructing raw_ostream objects which may have errors.
   if (has_error())
-    report_fatal_error(Twine("IO failure on output stream: ") +
-                           error().message(),
-                       /*gen_crash_diag=*/false);
+    reportFatalUsageError(Twine("IO failure on output stream: ") +
+                          error().message());
 }
 
 #if defined(_WIN32)
@@ -741,6 +729,9 @@ static bool write_console_impl(int FD, StringRef Data) {
 #endif
 
 void raw_fd_ostream::write_impl(const char *Ptr, size_t Size) {
+  if (TiedStream)
+    TiedStream->flush();
+
   assert(FD >= 0 && "File already closed.");
   pos += Size;
 
@@ -793,7 +784,7 @@ void raw_fd_ostream::write_impl(const char *Ptr, size_t Size) {
       }
 #endif
       // Otherwise it's a non-recoverable error. Note it and quit.
-      error_detected(std::error_code(errno, std::generic_category()));
+      error_detected(errnoAsErrorCode());
       break;
     }
 
@@ -823,7 +814,7 @@ uint64_t raw_fd_ostream::seek(uint64_t off) {
   pos = ::lseek(FD, off, SEEK_SET);
 #endif
   if (pos == (uint64_t)-1)
-    error_detected(std::error_code(errno, std::generic_category()));
+    error_detected(errnoAsErrorCode());
   return pos;
 }
 
@@ -844,6 +835,10 @@ size_t raw_fd_ostream::preferred_buffer_size() const {
   // complexity.
   if (IsWindowsConsole)
     return 0;
+  return raw_ostream::preferred_buffer_size();
+#elif defined(__MVS__)
+  // The buffer size on z/OS is defined with macro BUFSIZ, which can be
+  // retrieved by invoking function raw_ostream::preferred_buffer_size().
   return raw_ostream::preferred_buffer_size();
 #else
   assert(FD >= 0 && "File not yet open!");
@@ -895,13 +890,24 @@ void raw_fd_ostream::anchor() {}
 raw_fd_ostream &llvm::outs() {
   // Set buffer settings to model stdout behavior.
   std::error_code EC;
+
+  // On z/OS we need to enable auto conversion
+  static std::error_code EC1 = enableAutoConversion(STDOUT_FILENO);
+  assert(!EC1);
+  (void)EC1;
+
   static raw_fd_ostream S("-", EC, sys::fs::OF_None);
   assert(!EC);
   return S;
 }
 
 raw_fd_ostream &llvm::errs() {
-  // Set standard error to be unbuffered and tied to outs() by default.
+  // On z/OS we need to enable auto conversion
+  static std::error_code EC = enableAutoConversion(STDERR_FILENO);
+  assert(!EC);
+  (void)EC;
+
+  // Set standard error to be unbuffered.
   static raw_fd_ostream S(STDERR_FILENO, false, true);
   return S;
 }
@@ -928,13 +934,16 @@ raw_fd_stream::raw_fd_stream(StringRef Filename, std::error_code &EC)
     EC = std::make_error_code(std::errc::invalid_argument);
 }
 
+raw_fd_stream::raw_fd_stream(int fd, bool shouldClose)
+    : raw_fd_ostream(fd, shouldClose, false, OStreamKind::OK_FDStream) {}
+
 ssize_t raw_fd_stream::read(char *Ptr, size_t Size) {
   assert(get_fd() >= 0 && "File already closed.");
   ssize_t Ret = ::read(get_fd(), (void *)Ptr, Size);
   if (Ret >= 0)
     inc_pos(Ret);
   else
-    error_detected(std::error_code(errno, std::generic_category()));
+    error_detected(errnoAsErrorCode());
   return Ret;
 }
 
@@ -963,6 +972,10 @@ void raw_svector_ostream::write_impl(const char *Ptr, size_t Size) {
 void raw_svector_ostream::pwrite_impl(const char *Ptr, size_t Size,
                                       uint64_t Offset) {
   memcpy(OS.data() + Offset, Ptr, Size);
+}
+
+bool raw_svector_ostream::classof(const raw_ostream *OS) {
+  return OS->get_kind() == OStreamKind::OK_SVecStream;
 }
 
 //===----------------------------------------------------------------------===//
