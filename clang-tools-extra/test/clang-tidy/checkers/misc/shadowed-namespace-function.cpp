@@ -111,6 +111,20 @@ static void f1_static() {}
 
 //////////////////////////////////////////////////////////////////////////////////////////
 
+void f1_static2();
+namespace foo_static2 {
+  void f0_static2();
+  void f1_static2();
+}
+void f0_static2() {}
+// CHECK-MESSAGES: :[[@LINE-1]]:6: warning: free function 'f0_static2' shadows 'foo_static2::f0_static2' [misc-shadowed-namespace-function]
+// CHECK-FIXES: void foo_static2::f0_static2() {}
+void f1_static2() {}
+// CHECK-MESSAGES: :[[@LINE-1]]:6: warning: free function 'f1_static2' shadows 'foo_static2::f1_static2' [misc-shadowed-namespace-function]
+// CHECK-MESSAGES-NOT: :[[@LINE-2]]:{{.*}}: note: FIX-IT applied suggested code changes
+
+//////////////////////////////////////////////////////////////////////////////////////////
+
 void f1_nested();
 namespace foo_nested::foo2::foo3 {
   void f0_nested();
