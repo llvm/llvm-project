@@ -390,6 +390,5 @@ CUresult cuMemGetAllocationGranularity(size_t *granularity,
                                        CUmemAllocationGranularity_flags option);
 CUresult cuOccupancyMaxPotentialBlockSize(int *, int *, CUfunction,
                                           CUoccupancyB2DSize, size_t, int);
-CUresult cuFuncGetParamInfo(CUfunction, size_t, size_t *, size_t *);
 
 #endif
