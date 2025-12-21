@@ -8,10 +8,8 @@
 
 #include "UseAfterMoveCheck.h"
 
-#include "clang/AST/DeclCXX.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
-#include "clang/AST/LambdaCapture.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Analysis/Analyses/CFGReachabilityAnalysis.h"
 #include "clang/Analysis/CFG.h"
