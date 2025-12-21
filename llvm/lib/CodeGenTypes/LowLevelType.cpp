@@ -18,7 +18,6 @@ using namespace llvm;
 
 bool LLT::ExtendedLLT = false;
 
-// Repeat logic of MVT::getFltSemantics to exclude CodeGen dependency
 static LLT::FpSemantics getFpSemanticsForMVT(MVT VT) {
   switch (VT.getScalarType().SimpleTy) {
   default:
@@ -46,11 +45,9 @@ LLT::LLT(MVT VT) {
       bool AsVector = VT.getVectorMinNumElements() > 1 || VT.isScalableVector();
       Kind Info = AsVector ? Kind::VECTOR_ANY : Kind::ANY_SCALAR;
       init(Info, VT.getVectorElementCount(),
-           VT.getVectorElementType().getSizeInBits(), 0,
-           static_cast<FpSemantics>(0));
+           VT.getVectorElementType().getSizeInBits());
     } else if (VT.isValid() && !VT.isScalableTargetExtVT()) {
-      init(Kind::ANY_SCALAR, ElementCount::getFixed(0), VT.getSizeInBits(), 0,
-           static_cast<FpSemantics>(0));
+      init(Kind::ANY_SCALAR, ElementCount::getFixed(0), VT.getSizeInBits());
     } else {
       this->Info = Kind::INVALID;
       this->RawData = 0;
@@ -59,23 +56,24 @@ LLT::LLT(MVT VT) {
   }
 
   bool IsFloatingPoint = VT.isFloatingPoint();
-  FpSemantics FpSem =
-      IsFloatingPoint ? getFpSemanticsForMVT(VT) : static_cast<FpSemantics>(0);
   bool AsVector = VT.isVector() &&
                   (VT.getVectorMinNumElements() > 1 || VT.isScalableVector());
-  LLT::Kind Info;
-  if (IsFloatingPoint)
-    Info = AsVector ? LLT::Kind::VECTOR_FLOAT : LLT::Kind::FLOAT;
-  else
-    Info = AsVector ? LLT::Kind::VECTOR_INTEGER : LLT::Kind::INTEGER;
 
-  if (VT.isVector()) {
-    init(Info, VT.getVectorElementCount(),
-         VT.getVectorElementType().getSizeInBits(), 0, FpSem);
+  if (AsVector) {
+    if (IsFloatingPoint)
+      init(LLT::Kind::VECTOR_FLOAT, VT.getVectorElementCount(),
+           VT.getVectorElementType().getSizeInBits(), getFpSemanticsForMVT(VT));
+    else
+      init(LLT::Kind::VECTOR_INTEGER, VT.getVectorElementCount(),
+           VT.getVectorElementType().getSizeInBits());
   } else if (VT.isValid() && !VT.isScalableTargetExtVT()) {
     // Aggregates are no different from real scalars as far as GlobalISel is
     // concerned.
-    init(Info, ElementCount::getFixed(0), VT.getSizeInBits(), 0, FpSem);
+    if (IsFloatingPoint)
+      init(LLT::Kind::FLOAT, ElementCount::getFixed(0), VT.getSizeInBits(),
+           getFpSemanticsForMVT(VT));
+    else
+      init(LLT::Kind::INTEGER, ElementCount::getFixed(0), VT.getSizeInBits());
   } else {
     this->Info = Kind::INVALID;
     this->RawData = 0;

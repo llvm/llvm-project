@@ -87,7 +87,7 @@ void ComputeValueVTs(const TargetLowering &TLI, const DataLayout &DL, Type *Ty,
 /// If Offsets is non-null, it points to a vector to be filled in
 /// with the in-memory offsets of each of the individual values.
 ///
-void computeValueLLTs(const TargetLowering &TLI, const DataLayout &DL, Type &Ty,
+void computeValueLLTs(const DataLayout &DL, Type &Ty,
                       SmallVectorImpl<LLT> &ValueTys,
                       SmallVectorImpl<uint64_t> *Offsets = nullptr,
                       uint64_t StartingOffset = 0);

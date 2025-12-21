@@ -193,7 +193,7 @@ IRTranslator::allocateVRegs(const Value &Val) {
   auto *Regs = VMap.getVRegs(Val);
   auto *Offsets = VMap.getOffsets(Val);
   SmallVector<LLT, 4> SplitTys;
-  computeValueLLTs(*TLI, *DL, *Val.getType(), SplitTys,
+  computeValueLLTs(*DL, *Val.getType(), SplitTys,
                    Offsets->empty() ? Offsets : nullptr);
   for (unsigned i = 0; i < SplitTys.size(); ++i)
     Regs->push_back(0);
@@ -217,7 +217,7 @@ ArrayRef<Register> IRTranslator::getOrCreateVRegs(const Value &Val) {
            "Don't know how to create an empty vreg");
 
   SmallVector<LLT, 4> SplitTys;
-  computeValueLLTs(*TLI, *DL, *Val.getType(), SplitTys,
+  computeValueLLTs(*DL, *Val.getType(), SplitTys,
                    Offsets->empty() ? Offsets : nullptr);
 
   if (!isa<Constant>(Val)) {

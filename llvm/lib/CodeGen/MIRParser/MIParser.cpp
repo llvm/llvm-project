@@ -1952,8 +1952,8 @@ bool MIParser::parseLowLevelType(StringRef::iterator Loc, LLT &Ty) {
           "expected integers after 's'/'i'/'f'/'bf'/'p' type identifier");
   }
 
-  if (Token.range().starts_with("s") || Token.range().starts_with("i")) {
-    bool ScalarOrInt = Token.range().starts_with("s");
+  bool Scalar = Token.range().starts_with("s");
+  if (Scalar || Token.range().starts_with("i")) {
     auto ScalarSize = APSInt(TypeDigits).getZExtValue();
     if (!ScalarSize) {
       Ty = LLT::token();
@@ -1964,7 +1964,7 @@ bool MIParser::parseLowLevelType(StringRef::iterator Loc, LLT &Ty) {
     if (!verifyScalarSize(ScalarSize))
       return error("invalid size for scalar type");
 
-    Ty = ScalarOrInt ? LLT::scalar(ScalarSize) : LLT::integer(ScalarSize);
+    Ty = Scalar ? LLT::scalar(ScalarSize) : LLT::integer(ScalarSize);
     lex();
     return false;
   }
@@ -2042,12 +2042,12 @@ bool MIParser::parseLowLevelType(StringRef::iterator Loc, LLT &Ty) {
     return error(
         "expected integers after 's'/'i'/'f'/'bf'/'p' type identifier");
 
-  if (Token.range().starts_with("s") || Token.range().starts_with("i")) {
-    bool ScalarOrInt = Token.range().starts_with("s");
+  Scalar = Token.range().starts_with("s");
+  if (Scalar || Token.range().starts_with("i")) {
     auto ScalarSize = APSInt(VectorTyDigits).getZExtValue();
     if (!verifyScalarSize(ScalarSize))
       return error("invalid size for scalar element in vector");
-    Ty = ScalarOrInt ? LLT::scalar(ScalarSize) : LLT::integer(ScalarSize);
+    Ty = Scalar ? LLT::scalar(ScalarSize) : LLT::integer(ScalarSize);
   } else if (Token.range().starts_with("p")) {
     const DataLayout &DL = MF.getDataLayout();
     uint64_t AS = APSInt(VectorTyDigits).getZExtValue();
