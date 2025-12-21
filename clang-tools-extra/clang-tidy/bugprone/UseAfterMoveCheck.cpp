@@ -94,6 +94,8 @@ AST_MATCHER_P(CXXRecordDecl, hasCaptureByReference, const ValueDecl *,
   return false;
 }
 
+} // namespace
+
 static auto getNameMatcher(llvm::ArrayRef<StringRef> InvalidationFunctions) {
   return anyOf(hasAnyName("::std::move", "::std::forward"),
                matchers::matchesAnyListedName(InvalidationFunctions));
@@ -184,8 +186,6 @@ isVariableResetInLambda(const Stmt *Body, const ValueDecl *MovedVariable,
 
   return !match(findAll(ReinitMatcher), *Body, *Context).empty();
 }
-
-} // namespace
 
 // Matches nodes that are
 // - Part of a decltype argument or class template argument (we check this by
