@@ -397,6 +397,7 @@ template <class R, class Alloc> struct uses_allocator<packaged_task<R>, Alloc>; 
 #    include <__type_traits/decay.h>
 #    include <__type_traits/enable_if.h>
 #    include <__type_traits/invoke.h>
+#    include <__type_traits/is_constructible.h>
 #    include <__type_traits/is_same.h>
 #    include <__type_traits/remove_cvref.h>
 #    include <__type_traits/remove_reference.h>
@@ -1847,6 +1848,12 @@ inline _LIBCPP_HIDE_FROM_ABI bool __does_policy_contain(launch __policy, launch 
 template <class _Fp, class... _Args>
 [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI future<__invoke_result_t<__decay_t<_Fp>, __decay_t<_Args>...> >
 async(launch __policy, _Fp&& __f, _Args&&... __args) {
+#      if _LIBCPP_STD_VER >= 17
+  static_assert(is_constructible_v<__decay_t<_Fp>, _Fp>);
+  static_assert((is_constructible_v<__decay_t<_Args>, _Args> && ...));
+  static_assert(is_invocable_v<__decay_t<_Fp>, __decay_t<_Args>...>);
+#      endif
+
   typedef __async_func<__decay_t<_Fp>, __decay_t<_Args>...> _BF;
   typedef typename _BF::_Rp _Rp;
 

@@ -27,4 +27,19 @@ int foo (int x) { return x; }
 void f() {
     std::async(                    foo, 3); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
     std::async(std::launch::async, foo, 3); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+
+    { // Mandates: is_constructible_v<decay_t<F>, F>
+      struct F {
+        F()         = default;
+        F(const F&) = default;
+        F(F&&)      = delete;
+
+        void operator()() {}
+      };
+
+      static_cast<void>(std::async(F{}));
+      // expected-error@*:* {{static assertion failed}}
+      // expected-error@*:* {{call to deleted constructor}}
+      // expected-error@*:* 1+ {{uses deleted function}}
+    }
 }
