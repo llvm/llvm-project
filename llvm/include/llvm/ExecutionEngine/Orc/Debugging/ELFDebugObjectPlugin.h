@@ -55,10 +55,6 @@ public:
                        bool AutoRegisterCode, Error &Err);
   ~ELFDebugObjectPlugin() override;
 
-  void notifyMaterializing(MaterializationResponsibility &MR,
-                           jitlink::LinkGraph &G, jitlink::JITLinkContext &Ctx,
-                           MemoryBufferRef InputObj) override;
-
   Error notifyFailed(MaterializationResponsibility &MR) override;
   Error notifyRemovingResources(JITDylib &JD, ResourceKey K) override;
 
