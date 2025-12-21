@@ -1,6 +1,10 @@
 ## The function `bar` is declared in stub.so and depends on `foo` which is
 ## defined in an LTO object.  We also test the case where the LTO object is
 ## with an archive file.
+## The function `baz` is declared in stub.so and depends on `quux`, and both
+## `baz` and `quux` are defined in an LTO object. When `baz` and `quux` are
+## DCE'd and become undefined in the LTO process, wasm-ld should not try to
+## export the (nonexistent) `quux`.
 ## This verifies that stub library dependencies (which are required exports) can
 ## be defined in LTO objects, even when they are within archive files.
 
@@ -40,3 +44,5 @@ _start:
 # CHECK-NEXT:       - Name:            foo
 # CHECK-NEXT:         Kind:            FUNCTION
 # CHECK-NEXT:         Index:           2
+
+# CHECK-NOT:        - Name:            quux
