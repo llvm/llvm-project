@@ -15,13 +15,9 @@
 #ifndef LLVM_ADT_SCOPEEXIT_H
 #define LLVM_ADT_SCOPEEXIT_H
 
-#include "llvm/Support/Compiler.h"
-
-#include <type_traits>
 #include <utility>
 
 namespace llvm {
-namespace detail {
 
 template <typename Callable> class scope_exit {
   Callable ExitFunction;
@@ -47,17 +43,15 @@ public:
   }
 };
 
-} // end namespace detail
+template <typename Callable> scope_exit(Callable) -> scope_exit<Callable>;
 
 // Keeps the callable object that is passed in, and execute it at the
 // destruction of the returned object (usually at the scope exit where the
 // returned object is kept).
 //
 // Interface is specified by p0052r2.
-template <typename Callable>
-[[nodiscard]] detail::scope_exit<std::decay_t<Callable>>
-make_scope_exit(Callable &&F) {
-  return detail::scope_exit<std::decay_t<Callable>>(std::forward<Callable>(F));
+template <typename Callable> [[nodiscard]] auto make_scope_exit(Callable &&F) {
+  return scope_exit(std::forward<Callable>(F));
 }
 
 } // end namespace llvm
