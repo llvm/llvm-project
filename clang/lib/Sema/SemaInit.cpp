@@ -3095,7 +3095,7 @@ InitListChecker::CheckDesignatedInitializer(const InitializedEntity &Entity,
       }
 
       const auto GenerateDesignatedInitReorderingFixit =
-          [&](SemaBase::SemaDiagnosticBuilder &Diags) {
+          [&](SemaBase::SemaDiagnosticBuilder &Diag) {
             struct ReorderInfo {
               int Pos{};
               const Expr *InitExpr{};
@@ -3107,18 +3107,17 @@ InitListChecker::CheckDesignatedInitializer(const InitializedEntity &Entity,
             const auto *CxxRecord =
                 IList->getSemanticForm()->getType()->getAsCXXRecordDecl();
 
-            for (const auto &Field : CxxRecord->fields()) {
+            for (const FieldDecl *Field : CxxRecord->fields())
               MemberNameInx[Field->getIdentifier()] = Field->getFieldIndex();
-            }
 
-            for (const auto *Init : IList->inits()) {
+            for (const Expr *Init : IList->inits()) {
               if (const auto *DI =
                       dyn_cast_if_present<DesignatedInitExpr>(Init)) {
                 // We expect only one Designator
                 if (DI->size() != 1)
                   return;
 
-                const auto *const FieldName =
+                const IdentifierInfo *const FieldName =
                     DI->getDesignator(0)->getFieldName();
                 // In case we have an unknown initializer in the source, not in
                 // the record
@@ -3128,9 +3127,10 @@ InitListChecker::CheckDesignatedInitializer(const InitializedEntity &Entity,
               }
             }
 
-            llvm::sort(ReorderedInitExprs, [](const auto &A, const auto &B) {
-              return A.Pos < B.Pos;
-            });
+            llvm::sort(ReorderedInitExprs,
+                       [](const ReorderInfo &A, const ReorderInfo &B) {
+                         return A.Pos < B.Pos;
+                       });
 
             llvm::SmallString<128> FixedInitList{};
             SourceManager &SM = SemaRef.getSourceManager();
@@ -3138,18 +3138,18 @@ InitListChecker::CheckDesignatedInitializer(const InitializedEntity &Entity,
 
             // In a derived Record, first n base-classes are initialized first.
             // They do not use designated init, so skip them
-            const auto IListInits =
+            const ArrayRef<clang::Expr *> IListInits =
                 IList->inits().drop_front(CxxRecord->getNumBases());
             // loop over each existing expressions and apply replacement
             for (const auto &[OrigExpr, Repl] :
                  llvm::zip(IListInits, ReorderedInitExprs)) {
               CharSourceRange CharRange = CharSourceRange::getTokenRange(
                   Repl.InitExpr->getSourceRange());
-              const auto InitText =
+              const StringRef InitText =
                   Lexer::getSourceText(CharRange, SM, LangOpts);
 
-              Diags << FixItHint::CreateReplacement(OrigExpr->getSourceRange(),
-                                                    InitText.str());
+              Diag << FixItHint::CreateReplacement(OrigExpr->getSourceRange(),
+                                                   InitText.str());
             }
           };
 
@@ -3162,10 +3162,10 @@ InitListChecker::CheckDesignatedInitializer(const InitializedEntity &Entity,
         unsigned OldIndex = StructuredIndex - 1;
         if (StructuredList && OldIndex <= StructuredList->getNumInits()) {
           if (Expr *PrevInit = StructuredList->getInit(OldIndex)) {
-            auto Diags = SemaRef.Diag(PrevInit->getBeginLoc(),
-                                      diag::note_previous_field_init)
-                         << PrevField << PrevInit->getSourceRange();
-            GenerateDesignatedInitReorderingFixit(Diags);
+            auto Diag = SemaRef.Diag(PrevInit->getBeginLoc(),
+                                     diag::note_previous_field_init)
+                        << PrevField << PrevInit->getSourceRange();
+            GenerateDesignatedInitReorderingFixit(Diag);
           }
         }
       }
