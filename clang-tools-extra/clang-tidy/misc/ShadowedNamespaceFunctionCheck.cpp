@@ -65,7 +65,7 @@ public:
 
     const NamespaceDecl *CurrentNS = CurrentNamespaceStack.back();
 
-    if (Func != GlobalFunc && Func->getName() == GlobalFuncName &&
+    if (Func != GlobalFunc && Func->getNameAsString() == GlobalFuncName &&
         hasSameSignature(Func, GlobalFunc)) {
       AllShadowedFuncs.insert(Func);
       if (!ShadowedFunc) {
@@ -133,7 +133,7 @@ void ShadowedNamespaceFunctionCheck::check(
   const auto *Func = Result.Nodes.getNodeAs<FunctionDecl>("func");
   assert(Func);
 
-  const StringRef FuncName = Func->getName();
+  const std::string FuncName = Func->getNameAsString();
   if (FuncName.empty() || sholdBeIgnored(Func, IgnoreTemplated))
     return;
 

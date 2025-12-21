@@ -14,6 +14,65 @@ void f1_general() {}
 
 //////////////////////////////////////////////////////////////////////////////////////////
 
+namespace foo_op_general {
+struct S1_general {};
+}
+
+void operator-(foo_op_general::S1_general, foo_op_general::S1_general);
+
+namespace foo_op_general {
+  void operator+(S1_general, S1_general);
+  void operator-(S1_general, S1_general);
+}
+void operator+(foo_op_general::S1_general, foo_op_general::S1_general) {}
+// CHECK-MESSAGES: :[[@LINE-1]]:6: warning: free function 'operator+' shadows 'foo_op_general::operator+' [misc-shadowed-namespace-function]
+// CHECK-FIXES: void foo_op_general::operator+(foo_op_general::S1_general, foo_op_general::S1_general) {}
+void operator-(foo_op_general::S1_general, foo_op_general::S1_general) {}
+// CHECK-MESSAGES: :[[@LINE-1]]:6: warning: free function 'operator-' shadows 'foo_op_general::operator-' [misc-shadowed-namespace-function]
+// CHECK-MESSAGES-NOT: :[[@LINE-2]]:{{.*}}: note: FIX-IT applied suggested code changes
+
+//////////////////////////////////////////////////////////////////////////////////////////
+
+namespace foo_op_lshift_general {
+struct S1_lshift_general {};
+struct S2_lshift_general {};
+}
+
+void operator<<(foo_op_lshift_general::S2_lshift_general, foo_op_lshift_general::S2_lshift_general);
+
+namespace foo_op_lshift_general {
+  void operator<<(S1_lshift_general, S1_lshift_general);
+  void operator<<(S2_lshift_general, S2_lshift_general);
+}
+void operator<<(foo_op_lshift_general::S1_lshift_general, foo_op_lshift_general::S1_lshift_general) {}
+// CHECK-MESSAGES: :[[@LINE-1]]:6: warning: free function 'operator<<' shadows 'foo_op_lshift_general::operator<<' [misc-shadowed-namespace-function]
+// CHECK-FIXES: void foo_op_lshift_general::operator<<(foo_op_lshift_general::S1_lshift_general, foo_op_lshift_general::S1_lshift_general) {}
+void operator<<(foo_op_lshift_general::S2_lshift_general, foo_op_lshift_general::S2_lshift_general) {}
+// CHECK-MESSAGES: :[[@LINE-1]]:6: warning: free function 'operator<<' shadows 'foo_op_lshift_general::operator<<' [misc-shadowed-namespace-function]
+// CHECK-MESSAGES-NOT: :[[@LINE-2]]:{{.*}}: note: FIX-IT applied suggested code changes
+
+//////////////////////////////////////////////////////////////////////////////////////////
+
+namespace foo_op_eq_general {
+struct S1_eq_general {};
+struct S2_eq_general {};
+}
+
+void operator==(foo_op_eq_general::S2_eq_general, foo_op_eq_general::S2_eq_general);
+
+namespace foo_op_eq_general {
+  void operator==(S1_eq_general, S1_eq_general);
+  void operator==(S2_eq_general, S2_eq_general);
+}
+void operator==(foo_op_eq_general::S1_eq_general, foo_op_eq_general::S1_eq_general) {}
+// CHECK-MESSAGES: :[[@LINE-1]]:6: warning: free function 'operator==' shadows 'foo_op_eq_general::operator==' [misc-shadowed-namespace-function]
+// CHECK-FIXES: void foo_op_eq_general::operator==(foo_op_eq_general::S1_eq_general, foo_op_eq_general::S1_eq_general) {}
+void operator==(foo_op_eq_general::S2_eq_general, foo_op_eq_general::S2_eq_general) {}
+// CHECK-MESSAGES: :[[@LINE-1]]:6: warning: free function 'operator==' shadows 'foo_op_eq_general::operator==' [misc-shadowed-namespace-function]
+// CHECK-MESSAGES-NOT: :[[@LINE-2]]:{{.*}}: note: FIX-IT applied suggested code changes
+
+//////////////////////////////////////////////////////////////////////////////////////////
+
 void f1_ambiguous();
 namespace foo_ambiguous {
   void f0_ambiguous();
@@ -220,6 +279,25 @@ void f0_friend(foo_friend::A) {}
 // CHECK-MESSAGES-NOT: :[[@LINE-2]]:{{.*}}: note: FIX-IT applied suggested code changes
 void f1_friend(foo_friend::A) {}
 // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: free function 'f1_friend' shadows 'foo_friend::f1_friend' [misc-shadowed-namespace-function]
+// CHECK-MESSAGES-NOT: :[[@LINE-2]]:{{.*}}: note: FIX-IT applied suggested code changes
+
+//////////////////////////////////////////////////////////////////////////////////////////
+
+namespace foo_friend_op { struct A; }
+void operator+(foo_friend_op::A, foo_friend_op::A);
+
+namespace foo_friend_op {
+  struct A{
+    friend void operator+(A, A);
+    friend void operator-(A, A);
+  };
+}
+
+void operator+(foo_friend_op::A, foo_friend_op::A) {}
+// CHECK-MESSAGES: :[[@LINE-1]]:6: warning: free function 'operator+' shadows 'foo_friend_op::operator+' [misc-shadowed-namespace-function]
+// CHECK-MESSAGES-NOT: :[[@LINE-2]]:{{.*}}: note: FIX-IT applied suggested code changes
+void operator-(foo_friend_op::A, foo_friend_op::A) {}
+// CHECK-MESSAGES: :[[@LINE-1]]:6: warning: free function 'operator-' shadows 'foo_friend_op::operator-' [misc-shadowed-namespace-function]
 // CHECK-MESSAGES-NOT: :[[@LINE-2]]:{{.*}}: note: FIX-IT applied suggested code changes
 
 //////////////////////////////////////////////////////////////////////////////////////////
