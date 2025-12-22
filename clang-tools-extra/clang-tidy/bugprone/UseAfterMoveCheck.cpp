@@ -81,17 +81,12 @@ private:
 
 AST_MATCHER_P(CXXRecordDecl, hasCaptureByReference, const ValueDecl *,
               TargetDecl) {
-  if (!Node.isLambda())
-    return false;
-
-  if (llvm::any_of(Node.captures(), [&](const auto &Capture) {
-        return Capture.capturesVariable() &&
-               Capture.getCaptureKind() == LCK_ByRef &&
-               Capture.getCapturedVar() == TargetDecl;
-      })) {
-    return true;
-  }
-  return false;
+  return Node.isLambda() &&
+         llvm::any_of(Node.captures(), [&](const auto &Capture) {
+           return Capture.capturesVariable() &&
+                  Capture.getCaptureKind() == LCK_ByRef &&
+                  Capture.getCapturedVar() == TargetDecl;
+         });
 }
 
 } // namespace
@@ -173,9 +168,9 @@ isVariableResetInLambda(const Stmt *Body, const ValueDecl *MovedVariable,
 
   // If the variable is not mentioned at all in the lambda body,
   // it cannot be reinitialized.
-  const auto VariableMentionMatcher = stmt(anyOf(
-      hasDescendant(declRefExpr(hasDeclaration(equalsNode(MovedVariable)))),
-      hasDescendant(memberExpr(hasDeclaration(equalsNode(MovedVariable))))));
+  const auto VariableMentionMatcher =
+      stmt(hasDescendant(mapAnyOf(declRefExpr, memberExpr)
+                             .with(hasDeclaration(equalsNode(MovedVariable)))));
 
   if (match(VariableMentionMatcher, *Body, *Context).empty())
     return false;
@@ -186,7 +181,7 @@ isVariableResetInLambda(const Stmt *Body, const ValueDecl *MovedVariable,
   Options.PruneTriviallyFalseEdges = true;
 
   std::unique_ptr<CFG> TheCFG =
-      CFG::buildCFG(nullptr, const_cast<Stmt *>(Body), Context, Options);
+      CFG::buildCFG(/*D=*/nullptr, const_cast<Stmt *>(Body), Context, Options);
   if (!TheCFG)
     return false;
 
@@ -484,15 +479,15 @@ void UseAfterMoveFinder::getReinits(
       const auto *Operator =
           Match.getNodeAs<CXXOperatorCallExpr>("lambda-call");
 
-      if (Operator && BlockMap->blockContainingStmt(Operator) == Block) {
-        const auto *MD =
-            dyn_cast_or_null<CXXMethodDecl>(Operator->getDirectCallee());
-        if (!MD)
-          continue;
+      assert(Operator && "The lambda call should be a CXXOperatorCallExpr");
+
+      if (BlockMap->blockContainingStmt(Operator) == Block) {
+        const auto *MD = cast<CXXMethodDecl>(Operator->getDirectCallee());
 
         const auto *RD = MD->getParent();
         const auto *LambdaBody = MD->getBody();
-        if (RD && RD->isLambda() && LambdaBody &&
+        assert(RD && RD->isLambda());
+        if (LambdaBody &&
             isVariableResetInLambda(LambdaBody, MovedVariable, Context,
                                     InvalidationFunctions))
           Stmts->insert(Operator);
