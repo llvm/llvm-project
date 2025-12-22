@@ -104,7 +104,7 @@ struct SMCoords {
 static int preprocessInput(raw_ostream &OS) {
   TGLexer Lex(SrcMgr, MacroNames);
   SMCoords Last;
-  bool Any = false;
+  bool EmptyOutput = true;
   while (true) {
     Lex.Lex();
     if (Lex.getCode() == tgtok::Eof || Lex.getCode() == tgtok::Error)
@@ -127,11 +127,11 @@ static int preprocessInput(raw_ostream &OS) {
     const char *Start = Lex.getLoc().getPointer();
     const char *End = Lex.getLocRange().End.getPointer();
     OS << StringRef(Start, End - Start);
-    Any = true;
+    EmptyOutput = false;
 
     Last = This;
   }
-  if (Any)
+  if (!EmptyOutput)
     OS << '\n';
   return Lex.getCode() == tgtok::Error;
 }
