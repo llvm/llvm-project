@@ -519,7 +519,9 @@ Changes in existing checks
 
 - Improved :doc:`misc-use-internal-linkage
   <clang-tidy/checks/misc/use-internal-linkage>` to suggest giving
-  structs, classes, unions, and enums internal linkage.
+  user-defined types (structs, classes, unions, and enums) internal
+  linkage. Added fine-grained options to control whether the check
+  should diagnose functions, variables, and/or user-defined types.
 
 - Improved :doc:`modernize-avoid-c-arrays
   <clang-tidy/checks/modernize/avoid-c-arrays>` to not diagnose array types

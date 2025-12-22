@@ -17,7 +17,7 @@ Example:
   int v1; // can be marked as static
 
   void fn1() {} // can be marked as static
-  
+
   struct S1 {}; // can be moved into anonymous namespace
 
   namespace {
@@ -50,3 +50,16 @@ Options
 
   - `UseStatic`
     Add ``static`` for internal linkage variable and function.
+
+.. option:: AnalyzeFunctions
+
+  Whether to suggest giving functions internal linkage. Default is `true`.
+
+.. option:: AnalyzeVariables
+
+  Whether to suggest giving variables internal linkage. Default is `true`.
+
+.. option:: AnalyzeTypes
+
+  (C++-only) Whether to suggest giving user-defined types (structs,
+  classes, unions, and enums) internal linkage. Default is `true`.

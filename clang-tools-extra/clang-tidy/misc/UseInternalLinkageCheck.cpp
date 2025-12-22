@@ -109,10 +109,22 @@ UseInternalLinkageCheck::UseInternalLinkageCheck(StringRef Name,
                                                  ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
       HeaderFileExtensions(Context->getHeaderFileExtensions()),
-      FixMode(Options.get("FixMode", FixModeKind::UseStatic)) {}
+      FixMode(Options.get("FixMode", FixModeKind::UseStatic)),
+      AnalyzeFunctions(Options.get("AnalyzeFunctions", true)),
+      AnalyzeVariables(Options.get("AnalyzeVariables", true)),
+      AnalyzeTypes(Options.get("AnalyzeTypes", true)) {
+  if (!AnalyzeFunctions && !AnalyzeVariables && !AnalyzeTypes)
+    configurationDiag(
+        "the 'misc-use-internal-linkage' check will not perform any "
+        "analysis because its 'AnalyzeFunctions', 'AnalyzeVariables', "
+        "and 'AnalyzeTypes' options have all been set to false");
+}
 
 void UseInternalLinkageCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "FixMode", FixMode);
+  Options.store(Opts, "AnalyzeFunctions", AnalyzeFunctions);
+  Options.store(Opts, "AnalyzeVariables", AnalyzeVariables);
+  Options.store(Opts, "AnalyzeTypes", AnalyzeTypes);
 }
 
 void UseInternalLinkageCheck::registerMatchers(MatchFinder *Finder) {
@@ -125,24 +137,26 @@ void UseInternalLinkageCheck::registerMatchers(MatchFinder *Finder) {
                                               friendDecl(),
                                               // 3. module export decl
                                               exportDecl()))))));
-  Finder->addMatcher(
-      functionDecl(Common, hasBody(),
-                   unless(anyOf(isExternC(), isStaticStorageClass(),
-                                isExternStorageClass(),
-                                isExplicitTemplateSpecialization(),
-                                cxxMethodDecl(), isConsteval(),
-                                isAllocationOrDeallocationOverloadedFunction(),
-                                isMain())))
-          .bind("fn"),
-      this);
-  Finder->addMatcher(varDecl(Common, hasGlobalStorage(),
-                             unless(anyOf(isExternC(), isStaticStorageClass(),
-                                          isExternStorageClass(),
-                                          isExplicitTemplateSpecialization(),
-                                          hasThreadStorageDuration())))
-                         .bind("var"),
-                     this);
-  if (getLangOpts().CPlusPlus)
+  if (AnalyzeFunctions)
+    Finder->addMatcher(
+        functionDecl(
+            Common, hasBody(),
+            unless(anyOf(
+                isExternC(), isStaticStorageClass(), isExternStorageClass(),
+                isExplicitTemplateSpecialization(), cxxMethodDecl(),
+                isConsteval(), isAllocationOrDeallocationOverloadedFunction(),
+                isMain())))
+            .bind("fn"),
+        this);
+  if (AnalyzeVariables)
+    Finder->addMatcher(varDecl(Common, hasGlobalStorage(),
+                               unless(anyOf(isExternC(), isStaticStorageClass(),
+                                            isExternStorageClass(),
+                                            isExplicitTemplateSpecialization(),
+                                            hasThreadStorageDuration())))
+                           .bind("var"),
+                       this);
+  if (getLangOpts().CPlusPlus && AnalyzeTypes)
     Finder->addMatcher(
         tagDecl(Common, isDefinition(), hasNameForLinkage(),
                 hasDeclContext(anyOf(translationUnitDecl(), namespaceDecl())),
