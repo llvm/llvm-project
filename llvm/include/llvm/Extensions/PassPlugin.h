@@ -139,4 +139,4 @@ llvmGetPassPluginInfo();
 #pragma clang diagnostic pop
 #endif
 
-#endif /* LLVM_PASSES_PASSPLUGIN_H */
+#endif /* LLVM_EXTENSIONS_PASSPLUGIN_H */
