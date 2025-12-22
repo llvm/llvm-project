@@ -1291,7 +1291,9 @@ void SelectionDAGLegalize::LegalizeOp(SDNode *Node) {
     case ISD::SRL:
     case ISD::SRA:
     case ISD::ROTL:
-    case ISD::ROTR: {
+    case ISD::ROTR:
+    case ISD::SSHLSAT:
+    case ISD::USHLSAT: {
       // Legalizing shifts/rotates requires adjusting the shift amount
       // to the appropriate width.
       SDValue Op0 = Node->getOperand(0);

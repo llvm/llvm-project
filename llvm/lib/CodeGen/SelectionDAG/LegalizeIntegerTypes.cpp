@@ -1144,7 +1144,8 @@ SDValue DAGTypeLegalizer::PromoteIntRes_ADDSUBSHLSAT(SDNode *N) {
   // FIXME: We need vp-aware PromotedInteger functions.
   if (IsShift) {
     Op1 = GetPromotedInteger(Op1);
-    Op2 = ZExtPromotedInteger(Op2);
+    if (getTypeAction(Op2.getValueType()) == TargetLowering::TypePromoteInteger)
+      Op2 = ZExtPromotedInteger(Op2);
   } else {
     Op1 = SExtPromotedInteger(Op1);
     Op2 = SExtPromotedInteger(Op2);
@@ -2052,7 +2053,9 @@ bool DAGTypeLegalizer::PromoteIntegerOperand(SDNode *N, unsigned OpNo) {
   case ISD::SRA:
   case ISD::SRL:
   case ISD::ROTL:
-  case ISD::ROTR: Res = PromoteIntOp_Shift(N); break;
+  case ISD::ROTR:
+  case ISD::SSHLSAT:
+  case ISD::USHLSAT: Res = PromoteIntOp_Shift(N); break;
 
   case ISD::SCMP:
   case ISD::UCMP: Res = PromoteIntOp_CMP(N); break;
