@@ -205,6 +205,38 @@ define <4 x i32> @test_compress_v4i32_with_sve(<4 x i32> %vec, <4 x i1> %mask) {
     ret <4 x i32> %out
 }
 
+define <4 x i16> @test_compress_v4i16_with_sve(<4 x i16> %vec, <4 x i1> %mask) {
+; CHECK-LABEL: test_compress_v4i16_with_sve:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    shl v1.4h, v1.4h, #15
+; CHECK-NEXT:    ptrue p0.s, vl4
+; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-NEXT:    cmlt v1.4h, v1.4h, #0
+; CHECK-NEXT:    sshll v1.4s, v1.4h, #0
+; CHECK-NEXT:    cmpne p0.s, p0/z, z1.s, #0
+; CHECK-NEXT:    compact z0.s, p0, z0.s
+; CHECK-NEXT:    xtn v0.4h, v0.4s
+; CHECK-NEXT:    ret
+    %out = call <4 x i16> @llvm.experimental.vector.compress(<4 x i16> %vec, <4 x i1> %mask, <4 x i16> poison)
+    ret <4 x i16> %out
+}
+
+define <4 x half> @test_compress_v4f16_with_sve(<4 x half> %vec, <4 x i1> %mask) {
+; CHECK-LABEL: test_compress_v4f16_with_sve:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    shl v1.4h, v1.4h, #15
+; CHECK-NEXT:    ptrue p0.s, vl4
+; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-NEXT:    cmlt v1.4h, v1.4h, #0
+; CHECK-NEXT:    sshll v1.4s, v1.4h, #0
+; CHECK-NEXT:    cmpne p0.s, p0/z, z1.s, #0
+; CHECK-NEXT:    compact z0.s, p0, z0.s
+; CHECK-NEXT:    xtn v0.4h, v0.4s
+; CHECK-NEXT:    ret
+    %out = call <4 x half> @llvm.experimental.vector.compress(<4 x half> %vec, <4 x i1> %mask, <4 x half> poison)
+    ret <4 x half> %out
+}
+
 define <1 x i32> @test_compress_v1i32_with_sve(<1 x i32> %vec, <1 x i1> %mask) {
 ; CHECK-LABEL: test_compress_v1i32_with_sve:
 ; CHECK:       // %bb.0:

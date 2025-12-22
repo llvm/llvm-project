@@ -2003,6 +2003,11 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
                     MVT::v2f64})
       setOperationAction(ISD::VECTOR_COMPRESS, VT, Custom);
 
+    // Promote v4i16/f16 to v4i32/f32 as the SVE container for v4i16 is nxv8,
+    // which is not supported with for compact (with only +sve).
+    setOperationPromotedToType(ISD::VECTOR_COMPRESS, MVT::v4i16, MVT::v4i32);
+    setOperationPromotedToType(ISD::VECTOR_COMPRESS, MVT::v4f16, MVT::v4i32);
+
     for (auto VT : {MVT::nxv2i8, MVT::nxv2i16, MVT::nxv2i32, MVT::nxv2i64,
                     MVT::nxv2f32, MVT::nxv2f64, MVT::nxv4i8, MVT::nxv4i16,
                     MVT::nxv4i32, MVT::nxv4f32}) {

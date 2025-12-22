@@ -191,6 +191,8 @@ class VectorLegalizer {
   void PromoteFloatVECREDUCE(SDNode *Node, SmallVectorImpl<SDValue> &Results,
                              bool NonArithmetic);
 
+  void PromoteVECTOR_COMPRESS(SDNode *Node, SmallVectorImpl<SDValue> &Results);
+
 public:
   VectorLegalizer(SelectionDAG& dag) :
       DAG(dag), TLI(dag.getTargetLoweringInfo()) {}
@@ -705,6 +707,33 @@ void VectorLegalizer::PromoteFloatVECREDUCE(SDNode *Node,
   Results.push_back(Res);
 }
 
+void VectorLegalizer::PromoteVECTOR_COMPRESS(
+    SDNode *Node, SmallVectorImpl<SDValue> &Results) {
+  SDLoc DL(Node);
+  EVT VT = Node->getValueType(0);
+  EVT IntVT = VT.changeVectorElementTypeToInteger();
+  MVT PromotedVT = TLI.getTypeToPromoteTo(Node->getOpcode(), VT.getSimpleVT());
+  assert(PromotedVT.isInteger() && "Only promotion to integers supported");
+
+  SDValue Vec = Node->getOperand(0);
+  SDValue Mask = TLI.promoteTargetBoolean(DAG, Node->getOperand(1), PromotedVT);
+  SDValue Passthru = Node->getOperand(2);
+  if (VT.isFloatingPoint()) {
+    Vec = DAG.getBitcast(IntVT, Vec);
+    Passthru = DAG.getBitcast(IntVT, Passthru);
+  }
+  Vec = DAG.getNode(ISD::ANY_EXTEND, DL, PromotedVT, Vec);
+  Passthru = DAG.getNode(ISD::ANY_EXTEND, DL, PromotedVT, Passthru);
+
+  SDValue Result =
+      DAG.getNode(ISD::VECTOR_COMPRESS, DL, PromotedVT, Vec, Mask, Passthru);
+  Result = DAG.getNode(ISD::TRUNCATE, DL, IntVT, Result);
+
+  if (VT.isFloatingPoint())
+    Result = DAG.getBitcast(VT, Result);
+  Results.push_back(Result);
+}
+
 void VectorLegalizer::Promote(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
   // For a few operations there is a specific concept for promotion based on
   // the operand's type.
@@ -745,6 +774,10 @@ void VectorLegalizer::Promote(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
   case ISD::VECREDUCE_FMINIMUM:
     PromoteFloatVECREDUCE(Node, Results, /*NonArithmetic=*/true);
     return;
+  case ISD::VECTOR_COMPRESS:
+    PromoteVECTOR_COMPRESS(Node, Results);
+    return;
+
   case ISD::FP_ROUND:
   case ISD::FP_EXTEND:
     // These operations are used to do promotion so they can't be promoted
