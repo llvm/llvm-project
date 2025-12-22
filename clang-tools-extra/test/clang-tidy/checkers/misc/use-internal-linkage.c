@@ -4,15 +4,15 @@
 
 #include "func.h"
 
-void func() {}
+void func(void) {}
 // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: function 'func' can be made static to enforce internal linkage
-// CHECK-FIXES: static void func() {}
+// CHECK-FIXES: static void func(void) {}
 
-void func_header() {}
-extern void func_extern() {}
-static void func_static() {}
+void func_header(void) {}
+extern void func_extern(void) {}
+static void func_static(void) {}
 
-int main() {}
+int main(void) {}
 
 
 #include "var.h"
