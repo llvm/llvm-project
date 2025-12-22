@@ -1842,13 +1842,15 @@ Currently, only the following parameter attributes are defined:
 
     This attribute cannot be applied to return values.
 
-``dead_on_return(<n>)``
+``dead_on_return`` or ``dead_on_return(<n>)``
     This attribute indicates that the memory pointed to by the argument is dead
     upon function return, both upon normal return and if the calls unwinds, meaning
     that the caller will not depend on its contents. Stores that would be observable
     either on the return path or on the unwind path may be elided. The number of
-    bytes known to be dead must be provided in parentheses. It is legal for the
-    number of bytes to be less than the size of the pointee type.
+    bytes known to be dead can optionally be provided in parentheses. It is legal
+    for the number of bytes to be less than the size of the pointee type. If a number
+    of bytes is not specified, all memory rechable through the pointer is marked as
+    dead on return.
 
     Specifically, the behavior is as-if any memory written through the pointer
     during the execution of the function is overwritten with a poison value
@@ -1857,7 +1859,9 @@ Currently, only the following parameter attributes are defined:
 
     This attribute does not imply aliasing properties. For pointer arguments that
     do not alias other memory locations, ``noalias`` attribute may be used in
-    conjunction. Conversely, this attribute always implies ``dead_on_unwind``.
+    conjunction. Conversely, this attribute always implies ``dead_on_unwind``. If
+    a number of bytes is specified, then only those bytes are implied to be
+    ``dead_on_unwind``.
 
     This attribute cannot be applied to return values.
 

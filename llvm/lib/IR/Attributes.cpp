@@ -454,7 +454,7 @@ uint64_t Attribute::getDereferenceableBytes() const {
 std::optional<uint64_t> Attribute::getDeadOnReturnBytes() const {
   assert(hasAttribute(Attribute::DeadOnReturn) &&
          "Trying to get dead_on_return bytes from"
-         "from a parameter without such an attribute!");
+         "a parameter without such an attribute!");
   uint64_t DeadBytes = pImpl->getValueAsInt();
   if (DeadBytes == std::numeric_limits<uint64_t>::max())
     return std::nullopt;
