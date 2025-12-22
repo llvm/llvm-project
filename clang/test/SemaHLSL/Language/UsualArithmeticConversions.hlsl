@@ -360,6 +360,28 @@ export bool4 b4f4i4Logical(float4 A, int4 B) {
 }
 
 #if __HLSL_VERSION >= 2021
+// expected-error@#b4x4f4x4i4x4LogicalOR{{invalid operands to binary expression ('float4x4' (aka 'matrix<float, 4, 4>') and 'int4x4' (aka 'matrix<int, 4, 4>')}}
+// expected-note@#b4x4f4x4i4x4LogicalOR{{did you mean or?}}
+#else
+// expected-error@#b4x4f4x4i4x4LogicalOR{{support for HLSL language version 2018 is incomplete}}
+#endif
+
+export bool4x4 b4x4f4x4i4x4LogicalOR(float4x4 A, int4x4 B) {
+  return A || B; // #b4x4f4x4i4x4LogicalOR
+}
+
+#if __HLSL_VERSION >= 2021
+// expected-error@#b4x4f4x4i4x4LogicalAND{{invalid operands to binary expression ('float4x4' (aka 'matrix<float, 4, 4>') and 'int4x4' (aka 'matrix<int, 4, 4>')}}
+// expected-note@#b4x4f4x4i4x4LogicalAND{{did you mean and?}}
+#else
+// expected-error@#b4x4f4x4i4x4LogicalAND{{support for HLSL language version 2018 is incomplete}}
+#endif
+
+export bool4x4 b4x4f4x4i4x4LogicalAND(float4x4 A, int4x4 B) {
+  return A && B; // #b4x4f4x4i4x4LogicalAND
+}
+
+#if __HLSL_VERSION >= 2021
 // expected-error@#b2f2i4Logical{{invalid operands to binary expression ('float2' (aka 'vector<float, 2>') and 'int4' (aka 'vector<int, 4>'))}}
 // expected-note@#b2f2i4Logical{{did you mean and?}}
 #else

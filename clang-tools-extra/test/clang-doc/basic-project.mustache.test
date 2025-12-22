@@ -1,7 +1,7 @@
 // RUN: rm -rf %t && mkdir -p %t/docs %t/build
 // RUN: sed 's|$test_dir|%/S|g' %S/Inputs/basic-project/database_template.json > %t/build/compile_commands.json
 
-// RUN: clang-doc --format=mustache --output=%t/docs --executor=all-TUs %t/build/compile_commands.json
+// RUN: clang-doc --format=html --output=%t/docs --executor=all-TUs %t/build/compile_commands.json
 // RUN: FileCheck %s -input-file=%t/docs/html/GlobalNamespace/_ZTV5Shape.html -check-prefix=HTML-SHAPE
 // RUN: FileCheck %s -input-file=%t/docs/html/GlobalNamespace/_ZTV10Calculator.html -check-prefix=HTML-CALC
 // RUN: FileCheck %s -input-file=%t/docs/html/GlobalNamespace/_ZTV9Rectangle.html -check-prefix=HTML-RECTANGLE
@@ -25,10 +25,7 @@ HTML-SHAPE:             </div>
 HTML-SHAPE:         <div class="navbar__menu">
 HTML-SHAPE:             <ul class="navbar__links">
 HTML-SHAPE:                 <li class="navbar__item">
-HTML-SHAPE:                     <a href="/" class="navbar__link">Namespace</a>
-HTML-SHAPE:                 </li>
-HTML-SHAPE:                 <li class="navbar__item">
-HTML-SHAPE:                     <a href="/" class="navbar__link">Class</a>
+HTML-SHAPE:                     <a href="../index.html" class="navbar__link">Home</a>
 HTML-SHAPE:                 </li>
 HTML-SHAPE:             </ul>
 HTML-SHAPE:         </div>
@@ -65,9 +62,6 @@ HTML-SHAPE:                         <div>
 HTML-SHAPE:                             <p> Abstract base class for shapes.</p>
 HTML-SHAPE:                         </div>
 HTML-SHAPE:                         <div>
-HTML-SHAPE:                             <p></p>
-HTML-SHAPE:                         </div>
-HTML-SHAPE:                         <div>
 HTML-SHAPE:                             <p> Provides a common interface for different types of shapes.</p>
 HTML-SHAPE:                         </div>
 HTML-SHAPE:                     </div>
@@ -83,12 +77,6 @@ HTML-SHAPE:                             <div>
 HTML-SHAPE:                                 <div>
 HTML-SHAPE:                                     <p> Calculates the area of the shape.</p>
 HTML-SHAPE:                                 </div>
-HTML-SHAPE:                                 <div>
-HTML-SHAPE:                                     <p></p>
-HTML-SHAPE:                                 </div>
-HTML-SHAPE:                                 <div>
-HTML-SHAPE:                                     <p></p>
-HTML-SHAPE:                                 </div>
 HTML-SHAPE:                                 <h3>Returns</h3>
 HTML-SHAPE:                                 <p> double The area of the shape.</p>
 HTML-SHAPE:                             </div>
@@ -101,12 +89,6 @@ HTML-SHAPE:                             <div>
 HTML-SHAPE:                                 <div>
 HTML-SHAPE:                                     <p> Calculates the perimeter of the shape.</p>
 HTML-SHAPE:                                 </div>
-HTML-SHAPE:                                 <div>
-HTML-SHAPE:                                     <p></p>
-HTML-SHAPE:                                 </div>
-HTML-SHAPE:                                 <div>
-HTML-SHAPE:                                     <p></p>
-HTML-SHAPE:                                 </div>
 HTML-SHAPE:                                 <h3>Returns</h3>
 HTML-SHAPE:                                 <p> double The perimeter of the shape.</p>
 HTML-SHAPE:                             </div>
@@ -118,9 +100,6 @@ HTML-SHAPE:                             <pre><code class="language-cpp code-clan
 HTML-SHAPE:                             <div>
 HTML-SHAPE:                                 <div>
 HTML-SHAPE:                                     <p> Virtual destructor.</p>
-HTML-SHAPE:                                 </div>
-HTML-SHAPE:                                 <div>
-HTML-SHAPE:                                     <p></p>
 HTML-SHAPE:                                 </div>
 HTML-SHAPE:                             </div>
 HTML-SHAPE:                         </div>
@@ -153,10 +132,7 @@ HTML-CALC:             </div>
 HTML-CALC:         <div class="navbar__menu">
 HTML-CALC:             <ul class="navbar__links">
 HTML-CALC:                 <li class="navbar__item">
-HTML-CALC:                     <a href="/" class="navbar__link">Namespace</a>
-HTML-CALC:                 </li>
-HTML-CALC:                 <li class="navbar__item">
-HTML-CALC:                     <a href="/" class="navbar__link">Class</a>
+HTML-CALC:                     <a href="../index.html" class="navbar__link">Home</a>
 HTML-CALC:                 </li>
 HTML-CALC:             </ul>
 HTML-CALC:         </div>
@@ -210,9 +186,6 @@ HTML-CALC:                         <div>
 HTML-CALC:                             <p> A simple calculator class.</p>
 HTML-CALC:                         </div>
 HTML-CALC:                         <div>
-HTML-CALC:                             <p></p>
-HTML-CALC:                         </div>
-HTML-CALC:                         <div>
 HTML-CALC:                             <p> Provides basic arithmetic operations.</p>
 HTML-CALC:                         </div>
 HTML-CALC:                     </div>
@@ -225,7 +198,7 @@ HTML-CALC:                     <div id="public_val" class="delimiter-container">
 HTML-CALC:                         <pre><code class="language-cpp code-clang-doc" >int public_val</code></pre>
 HTML-CALC:                     </div>
 HTML-CALC:                     <div id="static_val" class="delimiter-container">
-HTML-CALC:                         <pre><code class="language-cpp code-clang-doc" >const int static_val</code></pre>
+HTML-CALC:                         <pre><code class="language-cpp code-clang-doc" >static const int static_val</code></pre>
 HTML-CALC:                     </div>
 HTML-CALC:                 </div>
 HTML-CALC:             </section>
@@ -238,12 +211,6 @@ HTML-CALC:                             <pre><code class="language-cpp code-clang
 HTML-CALC:                             <div>
 HTML-CALC:                                 <div>
 HTML-CALC:                                     <p> Adds two integers.</p>
-HTML-CALC:                                 </div>
-HTML-CALC:                                 <div>
-HTML-CALC:                                     <p></p>
-HTML-CALC:                                 </div>
-HTML-CALC:                                 <div>
-HTML-CALC:                                     <p></p>
 HTML-CALC:                                 </div>
 HTML-CALC:                                 <h3>Parameters</h3>
 HTML-CALC:                                 <div>
@@ -264,12 +231,6 @@ HTML-CALC:                             <div>
 HTML-CALC:                                 <div>
 HTML-CALC:                                     <p> Subtracts the second integer from the first.</p>
 HTML-CALC:                                 </div>
-HTML-CALC:                                 <div>
-HTML-CALC:                                     <p></p>
-HTML-CALC:                                 </div>
-HTML-CALC:                                 <div>
-HTML-CALC:                                     <p></p>
-HTML-CALC:                                 </div>
 HTML-CALC:                                 <h3>Parameters</h3>
 HTML-CALC:                                 <div>
 HTML-CALC:                                     <b>a</b>   First integer.
@@ -288,12 +249,6 @@ HTML-CALC:                             <pre><code class="language-cpp code-clang
 HTML-CALC:                             <div>
 HTML-CALC:                                 <div>
 HTML-CALC:                                     <p> Multiplies two integers.</p>
-HTML-CALC:                                 </div>
-HTML-CALC:                                 <div>
-HTML-CALC:                                     <p></p>
-HTML-CALC:                                 </div>
-HTML-CALC:                                 <div>
-HTML-CALC:                                     <p></p>
 HTML-CALC:                                 </div>
 HTML-CALC:                                 <h3>Parameters</h3>
 HTML-CALC:                                 <div>
@@ -314,12 +269,6 @@ HTML-CALC:                             <div>
 HTML-CALC:                                 <div>
 HTML-CALC:                                     <p> Divides the first integer by the second.</p>
 HTML-CALC:                                 </div>
-HTML-CALC:                                 <div>
-HTML-CALC:                                     <p></p>
-HTML-CALC:                                 </div>
-HTML-CALC:                                 <div>
-HTML-CALC:                                     <p></p>
-HTML-CALC:                                 </div>
 HTML-CALC:                                 <h3>Parameters</h3>
 HTML-CALC:                                 <div>
 HTML-CALC:                                     <b>a</b>   First integer.
@@ -329,7 +278,6 @@ HTML-CALC:                                     <b>b</b>   Second integer.
 HTML-CALC:                                 </div>
 HTML-CALC:                                 <h3>Returns</h3>
 HTML-CALC:                                 <p> double The result of a / b.</p>
-HTML-CALC:                                 <p></p>
 HTML-CALC:                                 <h3>Throws</h3>
 HTML-CALC:                                 <div>
 HTML-CALC:                                     <b>std::invalid_argument</b> if b is zero.
@@ -343,12 +291,6 @@ HTML-CALC:                             <pre><code class="language-cpp code-clang
 HTML-CALC:                             <div>
 HTML-CALC:                                 <div>
 HTML-CALC:                                     <p> Performs the mod operation on integers.</p>
-HTML-CALC:                                 </div>
-HTML-CALC:                                 <div>
-HTML-CALC:                                     <p></p>
-HTML-CALC:                                 </div>
-HTML-CALC:                                 <div>
-HTML-CALC:                                     <p></p>
 HTML-CALC:                                 </div>
 HTML-CALC:                                 <h3>Parameters</h3>
 HTML-CALC:                                 <div>
@@ -391,10 +333,7 @@ HTML-RECTANGLE:             </div>
 HTML-RECTANGLE:         <div class="navbar__menu">
 HTML-RECTANGLE:             <ul class="navbar__links">
 HTML-RECTANGLE:                 <li class="navbar__item">
-HTML-RECTANGLE:                     <a href="/" class="navbar__link">Namespace</a>
-HTML-RECTANGLE:                 </li>
-HTML-RECTANGLE:                 <li class="navbar__item">
-HTML-RECTANGLE:                     <a href="/" class="navbar__link">Class</a>
+HTML-RECTANGLE:                     <a href="../index.html" class="navbar__link">Home</a>
 HTML-RECTANGLE:                 </li>
 HTML-RECTANGLE:             </ul>
 HTML-RECTANGLE:         </div>
@@ -431,9 +370,6 @@ HTML-RECTANGLE:                         <div>
 HTML-RECTANGLE:                             <p> Rectangle class derived from Shape.</p>
 HTML-RECTANGLE:                         </div>
 HTML-RECTANGLE:                         <div>
-HTML-RECTANGLE:                             <p></p>
-HTML-RECTANGLE:                         </div>
-HTML-RECTANGLE:                         <div>
 HTML-RECTANGLE:                             <p> Represents a rectangle with a given width and height.</p>
 HTML-RECTANGLE:                         </div>
 HTML-RECTANGLE:                     </div>
@@ -448,12 +384,6 @@ HTML-RECTANGLE:                             <pre><code class="language-cpp code-
 HTML-RECTANGLE:                             <div>
 HTML-RECTANGLE:                                 <div>
 HTML-RECTANGLE:                                     <p> Constructs a new Rectangle object.</p>
-HTML-RECTANGLE:                                 </div>
-HTML-RECTANGLE:                                 <div>
-HTML-RECTANGLE:                                     <p></p>
-HTML-RECTANGLE:                                 </div>
-HTML-RECTANGLE:                                 <div>
-HTML-RECTANGLE:                                     <p></p>
 HTML-RECTANGLE:                                 </div>
 HTML-RECTANGLE:                                 <h3>Parameters</h3>
 HTML-RECTANGLE:                                 <div>
@@ -472,12 +402,6 @@ HTML-RECTANGLE:                             <div>
 HTML-RECTANGLE:                                 <div>
 HTML-RECTANGLE:                                     <p> Calculates the area of the rectangle.</p>
 HTML-RECTANGLE:                                 </div>
-HTML-RECTANGLE:                                 <div>
-HTML-RECTANGLE:                                     <p></p>
-HTML-RECTANGLE:                                 </div>
-HTML-RECTANGLE:                                 <div>
-HTML-RECTANGLE:                                     <p></p>
-HTML-RECTANGLE:                                 </div>
 HTML-RECTANGLE:                                 <h3>Returns</h3>
 HTML-RECTANGLE:                                 <p> double The area of the rectangle.</p>
 HTML-RECTANGLE:                             </div>
@@ -489,12 +413,6 @@ HTML-RECTANGLE:                             <pre><code class="language-cpp code-
 HTML-RECTANGLE:                             <div>
 HTML-RECTANGLE:                                 <div>
 HTML-RECTANGLE:                                     <p> Calculates the perimeter of the rectangle.</p>
-HTML-RECTANGLE:                                 </div>
-HTML-RECTANGLE:                                 <div>
-HTML-RECTANGLE:                                     <p></p>
-HTML-RECTANGLE:                                 </div>
-HTML-RECTANGLE:                                 <div>
-HTML-RECTANGLE:                                     <p></p>
 HTML-RECTANGLE:                                 </div>
 HTML-RECTANGLE:                                 <h3>Returns</h3>
 HTML-RECTANGLE:                                 <p> double The perimeter of the rectangle.</p>
@@ -530,10 +448,7 @@ HTML-CIRCLE:             </div>
 HTML-CIRCLE:         <div class="navbar__menu">
 HTML-CIRCLE:             <ul class="navbar__links">
 HTML-CIRCLE:                 <li class="navbar__item">
-HTML-CIRCLE:                     <a href="/" class="navbar__link">Namespace</a>
-HTML-CIRCLE:                 </li>
-HTML-CIRCLE:                 <li class="navbar__item">
-HTML-CIRCLE:                     <a href="/" class="navbar__link">Class</a>
+HTML-CIRCLE:                     <a href="../index.html" class="navbar__link">Home</a>
 HTML-CIRCLE:                 </li>
 HTML-CIRCLE:             </ul>
 HTML-CIRCLE:         </div>
@@ -570,9 +485,6 @@ HTML-CIRCLE:                         <div>
 HTML-CIRCLE:                             <p> Circle class derived from Shape.</p>
 HTML-CIRCLE:                         </div>
 HTML-CIRCLE:                         <div>
-HTML-CIRCLE:                             <p></p>
-HTML-CIRCLE:                         </div>
-HTML-CIRCLE:                         <div>
 HTML-CIRCLE:                             <p> Represents a circle with a given radius.</p>
 HTML-CIRCLE:                         </div>
 HTML-CIRCLE:                     </div>
@@ -588,12 +500,6 @@ HTML-CIRCLE:                             <div>
 HTML-CIRCLE:                                 <div>
 HTML-CIRCLE:                                     <p> Constructs a new Circle object.</p>
 HTML-CIRCLE:                                 </div>
-HTML-CIRCLE:                                 <div>
-HTML-CIRCLE:                                     <p></p>
-HTML-CIRCLE:                                 </div>
-HTML-CIRCLE:                                 <div>
-HTML-CIRCLE:                                     <p></p>
-HTML-CIRCLE:                                 </div>
 HTML-CIRCLE:                                 <h3>Parameters</h3>
 HTML-CIRCLE:                                 <div>
 HTML-CIRCLE:                                     <b>radius</b>   Radius of the circle.
@@ -608,12 +514,6 @@ HTML-CIRCLE:                             <div>
 HTML-CIRCLE:                                 <div>
 HTML-CIRCLE:                                     <p> Calculates the area of the circle.</p>
 HTML-CIRCLE:                                 </div>
-HTML-CIRCLE:                                 <div>
-HTML-CIRCLE:                                     <p></p>
-HTML-CIRCLE:                                 </div>
-HTML-CIRCLE:                                 <div>
-HTML-CIRCLE:                                     <p></p>
-HTML-CIRCLE:                                 </div>
 HTML-CIRCLE:                                 <h3>Returns</h3>
 HTML-CIRCLE:                                 <p> double The area of the circle.</p>
 HTML-CIRCLE:                             </div>
@@ -625,15 +525,6 @@ HTML-CIRCLE:                             <pre><code class="language-cpp code-cla
 HTML-CIRCLE:                             <div>
 HTML-CIRCLE:                                 <div>
 HTML-CIRCLE:                                     <p> Calculates the perimeter of the circle.</p>
-HTML-CIRCLE:                                 </div>
-HTML-CIRCLE:                                 <div>
-HTML-CIRCLE:                                     <p></p>
-HTML-CIRCLE:                                 </div>
-HTML-CIRCLE:                                 <div>
-HTML-CIRCLE:                                     <p></p>
-HTML-CIRCLE:                                 </div>
-HTML-CIRCLE:                                 <div>
-HTML-CIRCLE:                                     <p></p>
 HTML-CIRCLE:                                 </div>
 HTML-CIRCLE:                                 <h3>Returns</h3>
 HTML-CIRCLE:                                 <p> double The perimeter of the circle.</p>

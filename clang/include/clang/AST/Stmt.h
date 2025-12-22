@@ -317,6 +317,16 @@ protected:
     SourceLocation KeywordLoc;
   };
 
+  class DeferStmtBitfields {
+    friend class DeferStmt;
+
+    LLVM_PREFERRED_TYPE(StmtBitfields)
+    unsigned : NumStmtBits;
+
+    /// The location of the "defer".
+    SourceLocation DeferLoc;
+  };
+
   //===--- Expression bitfields classes ---===//
 
   class ExprBitfields {
@@ -530,6 +540,7 @@ protected:
   class ArrayOrMatrixSubscriptExprBitfields {
     friend class ArraySubscriptExpr;
     friend class MatrixSubscriptExpr;
+    friend class MatrixSingleSubscriptExpr;
 
     LLVM_PREFERRED_TYPE(ExprBitfields)
     unsigned : NumExprBits;
@@ -1318,6 +1329,7 @@ protected:
     LoopControlStmtBitfields LoopControlStmtBits;
     ReturnStmtBitfields ReturnStmtBits;
     SwitchCaseBitfields SwitchCaseBits;
+    DeferStmtBitfields DeferStmtBits;
 
     // Expressions
     ExprBitfields ExprBits;
@@ -3208,6 +3220,47 @@ public:
     if (RetExpr)
       return const_child_range(&RetExpr, &RetExpr + 1);
     return const_child_range(const_child_iterator(), const_child_iterator());
+  }
+};
+
+/// DeferStmt - This represents a deferred statement.
+class DeferStmt : public Stmt {
+  friend class ASTStmtReader;
+
+  /// The deferred statement.
+  Stmt *Body;
+
+  DeferStmt(EmptyShell Empty);
+  DeferStmt(SourceLocation DeferLoc, Stmt *Body);
+
+public:
+  static DeferStmt *CreateEmpty(ASTContext &Context, EmptyShell Empty);
+  static DeferStmt *Create(ASTContext &Context, SourceLocation DeferLoc,
+                           Stmt *Body);
+
+  SourceLocation getDeferLoc() const { return DeferStmtBits.DeferLoc; }
+  void setDeferLoc(SourceLocation DeferLoc) {
+    DeferStmtBits.DeferLoc = DeferLoc;
+  }
+
+  Stmt *getBody() { return Body; }
+  const Stmt *getBody() const { return Body; }
+  void setBody(Stmt *S) {
+    assert(S && "defer body must not be null");
+    Body = S;
+  }
+
+  SourceLocation getBeginLoc() const { return getDeferLoc(); }
+  SourceLocation getEndLoc() const { return Body->getEndLoc(); }
+
+  child_range children() { return child_range(&Body, &Body + 1); }
+
+  const_child_range children() const {
+    return const_child_range(&Body, &Body + 1);
+  }
+
+  static bool classof(const Stmt *S) {
+    return S->getStmtClass() == DeferStmtClass;
   }
 };
 
