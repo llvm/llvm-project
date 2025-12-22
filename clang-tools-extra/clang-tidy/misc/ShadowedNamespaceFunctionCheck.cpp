@@ -9,6 +9,7 @@
 #include "ShadowedNamespaceFunctionCheck.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
+#include "clang/AST/DeclCXX.h"
 #include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "llvm/ADT/STLExtras.h"
@@ -58,6 +59,9 @@ public:
   bool VisitFunctionDecl(FunctionDecl *Func) override {
     // Only process functions that are inside a namespace (not in global scope)
     if (CurrentNamespaceStack.empty())
+      return true;
+
+    if (isa<CXXMethodDecl>(Func))
       return true;
 
     if (Func->getDefinition() || sholdBeIgnored(Func, IgnoreTemplated))
