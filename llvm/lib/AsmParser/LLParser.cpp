@@ -1607,14 +1607,21 @@ bool LLParser::parseEnumAttribute(Attribute::AttrKind Attr, AttrBuilder &B,
   }
   case Attribute::Dereferenceable: {
     uint64_t Bytes;
-    if (parseOptionalDerefAttrBytes(lltok::kw_dereferenceable, Bytes))
+    if (parseOptionalAttrBytes(lltok::kw_dereferenceable, Bytes))
       return true;
     B.addDereferenceableAttr(Bytes);
     return false;
   }
+  case Attribute::DeadOnReturn: {
+    uint64_t Bytes;
+    if (parseOptionalAttrBytes(lltok::kw_dead_on_return, Bytes))
+      return true;
+    B.addDeadOnReturnAttr(Bytes);
+    return false;
+  }
   case Attribute::DereferenceableOrNull: {
     uint64_t Bytes;
-    if (parseOptionalDerefAttrBytes(lltok::kw_dereferenceable_or_null, Bytes))
+    if (parseOptionalAttrBytes(lltok::kw_dereferenceable_or_null, Bytes))
       return true;
     B.addDereferenceableOrNullAttr(Bytes);
     return false;
@@ -2468,15 +2475,16 @@ bool LLParser::parseOptionalCodeModel(CodeModel::Model &model) {
   return false;
 }
 
-/// parseOptionalDerefAttrBytes
+/// parseOptionalAttrBytes
 ///   ::= /* empty */
 ///   ::= AttrKind '(' 4 ')'
 ///
-/// where AttrKind is either 'dereferenceable' or 'dereferenceable_or_null'.
-bool LLParser::parseOptionalDerefAttrBytes(lltok::Kind AttrKind,
-                                           uint64_t &Bytes) {
+/// where AttrKind is either 'dereferenceable', 'dereferenceable_or_null', or
+/// 'dead_on_return'
+bool LLParser::parseOptionalAttrBytes(lltok::Kind AttrKind, uint64_t &Bytes) {
   assert((AttrKind == lltok::kw_dereferenceable ||
-          AttrKind == lltok::kw_dereferenceable_or_null) &&
+          AttrKind == lltok::kw_dereferenceable_or_null ||
+          AttrKind == lltok::kw_dead_on_return) &&
          "contract!");
 
   Bytes = 0;
