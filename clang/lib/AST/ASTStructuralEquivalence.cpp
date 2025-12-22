@@ -88,12 +88,12 @@
 #include "clang/Basic/SourceLocation.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/APSInt.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cassert>
 #include <optional>
-#include <set>
 #include <utility>
 
 using namespace clang;
@@ -453,116 +453,58 @@ public:
 } // namespace
 
 namespace {
-enum class AttrComparisonKind { Equal, NotEqual };
-
 /// Represents the result of comparing the attribute sets on two decls. If the
 /// sets are incompatible, A1/A2 point to the offending attributes.
 struct AttrComparisonResult {
-  AttrComparisonKind Kind = AttrComparisonKind::Equal;
+  bool Kind = false;
   const Attr *A1 = nullptr, *A2 = nullptr;
 };
 } // namespace
 
-static AttrComparisonResult
-areAvailabilityAttrsEqual(const AvailabilityAttr *A1,
-                          const AvailabilityAttr *A2) {
-  if (A1->getPlatform() == A2->getPlatform() &&
-      A1->getIntroduced() == A2->getIntroduced() &&
-      A1->getDeprecated() == A2->getDeprecated() &&
-      A1->getObsoleted() == A2->getObsoleted() &&
-      A1->getUnavailable() == A2->getUnavailable() &&
-      A1->getMessage() == A2->getMessage() &&
-      A1->getReplacement() == A2->getReplacement() &&
-      A1->getStrict() == A2->getStrict() &&
-      A1->getPriority() == A2->getPriority() &&
-      A1->getEnvironment() == A2->getEnvironment())
-    return {AttrComparisonKind::Equal};
-  return {AttrComparisonKind::NotEqual, A1, A2};
-}
-
-static AttrComparisonResult
-areEnumExtensibilityAttrsEqual(const EnumExtensibilityAttr *A1,
-                               const EnumExtensibilityAttr *A2) {
-  if (A1->getExtensibility() == A2->getExtensibility())
-    return {AttrComparisonKind::Equal};
-  return {AttrComparisonKind::NotEqual, A1, A2};
-}
-
-static AttrComparisonResult areAttrsEqual(const Attr *A1, const Attr *A2) {
-  auto Kind1 = A1->getKind(), Kind2 = A2->getKind();
-  if (Kind1 != Kind2)
-    return {AttrComparisonKind::NotEqual, A1, A2};
-
-  switch (Kind1) {
-  case attr::Availability:
-    return areAvailabilityAttrsEqual(cast<AvailabilityAttr>(A1),
-                                     cast<AvailabilityAttr>(A2));
-  case attr::EnumExtensibility:
-    return areEnumExtensibilityAttrsEqual(cast<EnumExtensibilityAttr>(A1),
-                                          cast<EnumExtensibilityAttr>(A2));
-  case attr::Unused:
-    return {AttrComparisonKind::Equal};
-  default:
-    llvm_unreachable("unexpected attr kind");
-  }
-}
-
-static bool compareAttrKind(const Attr *A1, const Attr *A2) {
-  return A1->getKind() < A2->getKind();
-}
-
 namespace {
-using AttrSet = std::multiset<const Attr *, decltype(&compareAttrKind)>;
+using AttrSet = llvm::SmallVector<const Attr *, 2>;
 }
 
-/// Collects all supported, non-inherited attributes from the given decl.
-/// If the decl doesn't contain any unsupported attributes, returns a nullptr,
-/// otherwise returns the first unsupported attribute.
-static const Attr *collectComparableAttrs(const Decl *D, AttrSet &Attrs) {
-  for (const Attr *A : D->attrs()) {
-    switch (A->getKind()) {
-    case attr::Availability:
-    case attr::EnumExtensibility:
-    case attr::Unused:
-      if (!A->isInherited())
-        Attrs.insert(A);
-      break;
-    default:
-      return A; // unsupported attribute
-    }
-  }
-
-  return nullptr;
+StructuralEquivalenceContext::AttrScopedAttrEquivalenceContext::
+    ~AttrScopedAttrEquivalenceContext() {
+  Ctx.CurDeclsToCheck = OldDeclsToCheck;
+  Ctx.CurVisitedDecls = OldVisitedDecls;
+  Ctx.Complain = OldComplain;
 }
 
 /// Determines whether D1 and D2 have compatible sets of attributes for the
 /// purposes of structural equivalence checking.
-static AttrComparisonResult areDeclAttrsEquivalent(const Decl *D1,
-                                                   const Decl *D2) {
+static AttrComparisonResult
+areDeclAttrsEquivalent(const Decl *D1, const Decl *D2,
+                       StructuralEquivalenceContext &Context) {
   if (D1->isImplicit() || D2->isImplicit())
-    return {AttrComparisonKind::Equal};
+    return {true};
 
-  AttrSet A1(&compareAttrKind), A2(&compareAttrKind);
+  AttrSet A1, A2;
 
-  const Attr *UnsupportedAttr1 = collectComparableAttrs(D1, A1);
-  const Attr *UnsupportedAttr2 = collectComparableAttrs(D2, A2);
+  // Ignore inherited attributes.
+  auto RemoveInherited = [](const Attr *A) { return !A->isInherited(); };
 
-  if (UnsupportedAttr1 || UnsupportedAttr2)
-    return {AttrComparisonKind::NotEqual, UnsupportedAttr1, UnsupportedAttr2};
+  llvm::copy_if(D1->attrs(), std::back_inserter(A1), RemoveInherited);
+  llvm::copy_if(D2->attrs(), std::back_inserter(A2), RemoveInherited);
 
   auto I1 = A1.begin(), E1 = A1.end(), I2 = A2.begin(), E2 = A2.end();
   for (; I1 != E1 && I2 != E2; ++I1, ++I2) {
-    AttrComparisonResult R = areAttrsEqual(*I1, *I2);
-    if (R.Kind != AttrComparisonKind::Equal)
-      return R;
+    StructuralEquivalenceContext::AttrScopedAttrEquivalenceContext AttrCtx(
+        Context);
+    bool R = (*I1)->isEquivalent(**I2, Context);
+    if (R)
+      R = !Context.checkDeclQueue();
+    if (!R)
+      return {false, *I1, *I2};
   }
 
   if (I1 != E1)
-    return {AttrComparisonKind::NotEqual, *I1};
+    return {false, *I1};
   if (I2 != E2)
-    return {AttrComparisonKind::NotEqual, nullptr, *I2};
+    return {false, nullptr, *I2};
 
-  return {AttrComparisonKind::Equal};
+  return {true};
 }
 
 static bool
@@ -579,8 +521,8 @@ CheckStructurallyEquivalentAttributes(StructuralEquivalenceContext &Context,
   // the same semantic attribute, differences in attribute arguments, order
   // in which attributes are applied, how to merge attributes if the types are
   // structurally equivalent, etc.
-  AttrComparisonResult R = areDeclAttrsEquivalent(D1, D2);
-  if (R.Kind != AttrComparisonKind::Equal) {
+  AttrComparisonResult R = areDeclAttrsEquivalent(D1, D2, Context);
+  if (!R.Kind) {
     const auto *DiagnoseDecl = cast<TypeDecl>(PrimaryDecl ? PrimaryDecl : D2);
     Context.Diag2(DiagnoseDecl->getLocation(),
                   diag::warn_odr_tag_type_with_attributes)
@@ -589,7 +531,7 @@ CheckStructurallyEquivalentAttributes(StructuralEquivalenceContext &Context,
     if (R.A1)
       Context.Diag1(R.A1->getLoc(), diag::note_odr_attr_here) << R.A1;
     if (R.A2)
-      Context.Diag1(R.A2->getLoc(), diag::note_odr_attr_here) << R.A2;
+      Context.Diag2(R.A2->getLoc(), diag::note_odr_attr_here) << R.A2;
   }
 
   // The above diagnostic is a warning which defaults to an error. If treated
@@ -633,8 +575,8 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
 }
 
 /// Determine structural equivalence of two statements.
-static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
-                                     const Stmt *S1, const Stmt *S2) {
+bool ASTStructuralEquivalence::isEquivalent(
+    StructuralEquivalenceContext &Context, const Stmt *S1, const Stmt *S2) {
   if (!S1 || !S2)
     return S1 == S2;
 
@@ -678,13 +620,23 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
   return true;
 }
 
+static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
+                                     const Stmt *S1, const Stmt *S2) {
+  return ASTStructuralEquivalence::isEquivalent(Context, S1, S2);
+}
+
 /// Determine whether two identifiers are equivalent.
-static bool IsStructurallyEquivalent(const IdentifierInfo *Name1,
-                                     const IdentifierInfo *Name2) {
+bool ASTStructuralEquivalence::isEquivalent(const IdentifierInfo *Name1,
+                                            const IdentifierInfo *Name2) {
   if (!Name1 || !Name2)
     return Name1 == Name2;
 
   return Name1->getName() == Name2->getName();
+}
+
+static bool IsStructurallyEquivalent(const IdentifierInfo *Name1,
+                                     const IdentifierInfo *Name2) {
+  return ASTStructuralEquivalence::isEquivalent(Name1, Name2);
 }
 
 /// Determine whether two nested-name-specifiers are equivalent.
@@ -946,8 +898,8 @@ static bool IsEquivalentExceptionSpec(StructuralEquivalenceContext &Context,
 }
 
 /// Determine structural equivalence of two types.
-static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
-                                     QualType T1, QualType T2) {
+bool ASTStructuralEquivalence::isEquivalent(
+    StructuralEquivalenceContext &Context, QualType T1, QualType T2) {
   if (T1.isNull() || T2.isNull())
     return T1.isNull() && T2.isNull();
 
@@ -1603,6 +1555,11 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
 }
 
 static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
+                                     QualType T1, QualType T2) {
+  return ASTStructuralEquivalence::isEquivalent(Context, T1, T2);
+}
+
+static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
                                      VarDecl *D1, VarDecl *D2) {
   IdentifierInfo *Name1 = D1->getIdentifier();
   IdentifierInfo *Name2 = D2->getIdentifier();
@@ -1720,6 +1677,14 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
   const auto *Owner2 = cast<RecordDecl>(Field2->getDeclContext());
   return IsStructurallyEquivalent(Context, Field1, Field2,
                                   Context.ToCtx.getCanonicalTagType(Owner2));
+}
+
+/// Determine structural equivalence of two IndirectFields.
+static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
+                                     IndirectFieldDecl *ID1,
+                                     IndirectFieldDecl *ID2) {
+  return IsStructurallyEquivalent(Context, ID1->getAnonField(),
+                                  ID2->getAnonField());
 }
 
 /// Determine structural equivalence of two methods.
@@ -2632,6 +2597,10 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
 
   D1 = D1->getCanonicalDecl();
   D2 = D2->getCanonicalDecl();
+
+  if (D1 == D2)
+    return true;
+
   std::pair<Decl *, Decl *> P{D1, D2};
 
   // Check whether we already know that these two declarations are not
@@ -2641,13 +2610,18 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
     return false;
 
   // Check if a check for these declarations is already pending.
-  // If yes D1 and D2 will be checked later (from DeclsToCheck),
+  // If yes D1 and D2 will be checked later (from CurDeclsToCheck),
   // or these are already checked (and equivalent).
-  bool Inserted = Context.VisitedDecls.insert(P).second;
+  bool Inserted = Context.CurVisitedDecls->insert(P).second;
   if (!Inserted)
     return true;
 
-  Context.DeclsToCheck.push(P);
+  // We can also check if the pair is in VisitedDecls if we are currently
+  // checking attribute equivalence.
+  if (Context.isInAttrEquivalenceCheck() && Context.VisitedDecls.count(P))
+    return true;
+
+  Context.CurDeclsToCheck->push(P);
 
   return true;
 }
@@ -2826,11 +2800,11 @@ bool StructuralEquivalenceContext::CheckKindSpecificEquivalence(
   return true;
 }
 
-bool StructuralEquivalenceContext::Finish() {
-  while (!DeclsToCheck.empty()) {
+bool StructuralEquivalenceContext::checkDeclQueue() {
+  while (!CurDeclsToCheck->empty()) {
     // Check the next declaration.
-    std::pair<Decl *, Decl *> P = DeclsToCheck.front();
-    DeclsToCheck.pop();
+    std::pair<Decl *, Decl *> P = CurDeclsToCheck->front();
+    CurDeclsToCheck->pop();
 
     Decl *D1 = P.first;
     Decl *D2 = P.second;
@@ -2850,3 +2824,5 @@ bool StructuralEquivalenceContext::Finish() {
 
   return false;
 }
+
+bool StructuralEquivalenceContext::Finish() { return checkDeclQueue(); }

@@ -1938,7 +1938,7 @@ static void handleCPUSpecificAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   if (!AL.checkAtLeastNumArgs(S, 1))
     return;
 
-  SmallVector<IdentifierInfo *, 8> CPUs;
+  SmallVector<const IdentifierInfo *, 8> CPUs;
   for (unsigned ArgNo = 0; ArgNo < getNumAttributeArgs(AL); ++ArgNo) {
     if (!AL.isArgIdent(ArgNo)) {
       S.Diag(AL.getLoc(), diag::err_attribute_argument_type)
@@ -2292,7 +2292,7 @@ static void handleAttrWithMessage(Sema &S, Decl *D, const ParsedAttr &AL) {
 }
 
 static bool checkAvailabilityAttr(Sema &S, SourceRange Range,
-                                  IdentifierInfo *Platform,
+                                  const IdentifierInfo *Platform,
                                   VersionTuple Introduced,
                                   VersionTuple Deprecated,
                                   VersionTuple Obsoleted) {
@@ -2349,11 +2349,11 @@ static bool versionsMatch(const VersionTuple &X, const VersionTuple &Y,
 }
 
 AvailabilityAttr *Sema::mergeAvailabilityAttr(
-    NamedDecl *D, const AttributeCommonInfo &CI, IdentifierInfo *Platform,
+    NamedDecl *D, const AttributeCommonInfo &CI, const IdentifierInfo *Platform,
     bool Implicit, VersionTuple Introduced, VersionTuple Deprecated,
     VersionTuple Obsoleted, bool IsUnavailable, StringRef Message,
     bool IsStrict, StringRef Replacement, AvailabilityMergeKind AMK,
-    int Priority, IdentifierInfo *Environment) {
+    int Priority, const IdentifierInfo *Environment) {
   VersionTuple MergedIntroduced = Introduced;
   VersionTuple MergedDeprecated = Deprecated;
   VersionTuple MergedObsoleted = Obsoleted;
@@ -2381,13 +2381,13 @@ AvailabilityAttr *Sema::mergeAvailabilityAttr(
         continue;
       }
 
-      IdentifierInfo *OldPlatform = OldAA->getPlatform();
+      const IdentifierInfo *OldPlatform = OldAA->getPlatform();
       if (OldPlatform != Platform) {
         ++i;
         continue;
       }
 
-      IdentifierInfo *OldEnvironment = OldAA->getEnvironment();
+      const IdentifierInfo *OldEnvironment = OldAA->getEnvironment();
       if (OldEnvironment != Environment) {
         ++i;
         continue;
@@ -3783,7 +3783,7 @@ ErrorAttr *Sema::mergeErrorAttr(Decl *D, const AttributeCommonInfo &CI,
 }
 
 FormatAttr *Sema::mergeFormatAttr(Decl *D, const AttributeCommonInfo &CI,
-                                  IdentifierInfo *Format, int FormatIdx,
+                                  const IdentifierInfo *Format, int FormatIdx,
                                   int FirstArg) {
   // Check whether we already have an equivalent format attribute.
   for (auto *F : D->specific_attrs<FormatAttr>()) {
@@ -3803,7 +3803,7 @@ FormatAttr *Sema::mergeFormatAttr(Decl *D, const AttributeCommonInfo &CI,
 
 FormatMatchesAttr *Sema::mergeFormatMatchesAttr(Decl *D,
                                                 const AttributeCommonInfo &CI,
-                                                IdentifierInfo *Format,
+                                                const IdentifierInfo *Format,
                                                 int FormatIdx,
                                                 StringLiteral *FormatStr) {
   // Check whether we already have an equivalent FormatMatches attribute.
@@ -4757,7 +4757,7 @@ static void handleModeAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 }
 
 void Sema::AddModeAttr(Decl *D, const AttributeCommonInfo &CI,
-                       IdentifierInfo *Name, bool InInstantiation) {
+                       const IdentifierInfo *Name, bool InInstantiation) {
   StringRef Str = Name->getName();
   normalizeName(Str);
   SourceLocation AttrLoc = CI.getLoc();
