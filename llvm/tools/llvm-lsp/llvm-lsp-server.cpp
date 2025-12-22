@@ -23,10 +23,6 @@
 using namespace llvm;
 
 static cl::OptionCategory LlvmLspServerCategory("llvm-lsp-server options");
-static cl::opt<std::string> LogFilePath("log-file",
-                                        cl::desc("Path to log file"),
-                                        cl::init("/tmp/llvm-lsp-server.log"),
-                                        cl::cat(LlvmLspServerCategory));
 
 static cl::opt<lsp::Logger::Level> LogLevel(
     "log-level", cl::desc("Log level"), cl::init(lsp::Logger::Level::Info),
@@ -60,8 +56,6 @@ void LspServer::sendError(const std::string &Message) {
 void LspServer::handleRequestInitialize(
     const lsp::InitializeParams &Params,
     lsp::Callback<llvm::json::Value> Reply) {
-  lsp::Logger::info("Received Initialize Message!");
-  sendInfo("Hello! Welcome to LLVM IR Language Server!");
 
   // clang-format off
   json::Object ResponseParams{
@@ -84,9 +78,7 @@ void LspServer::handleRequestInitialize(
 
 void LspServer::handleNotificationTextDocumentDidOpen(
     const lsp::DidOpenTextDocumentParams &Params) {
-  lsp::Logger::info("Received didOpen Message!");
   StringRef Filepath = Params.textDocument.uri.file();
-  sendInfo("LLVM Language Server Recognized that you opened " + Filepath.str());
 
   // Prepare IRDocument for Queries
   lsp::Logger::info("Creating IRDocument for {}", Filepath.str());
