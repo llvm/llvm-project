@@ -135,6 +135,8 @@ Objective-C
 Miscellaneous
 ^^^^^^^^^^^^^
 
+- Add wildcard ``.gitignore`` file to the clangd index directory.
+
 Improvements to clang-doc
 -------------------------
 
@@ -197,6 +199,11 @@ Improvements to clang-tidy
   From now on, users should specify explicitly that they want CSA checks to run
   in :program:`clang-tidy`.
 
+- Improved :program:`clang-tidy` by adding the `--removed-arg` option to remove
+  arguments sent to the compiler when invoking Clang-Tidy. This option was also
+  added to :program:`run-clang-tidy.py` and :program:`clang-tidy-diff.py` and 
+  can be configured in the config file through the `RemovedArgs` option.
+
 - Deprecated the :program:`clang-tidy` ``zircon`` module. All checks have been
   moved to the ``fuchsia`` module instead. The ``zircon`` module will be removed
   in the 24th release.
@@ -206,6 +213,11 @@ Improvements to clang-tidy
 
 New checks
 ^^^^^^^^^^
+
+- New :doc:`abseil-unchecked-statusor-access
+  <clang-tidy/checks/abseil/unchecked-statusor-access>` check.
+
+  Finds uses of ``absl::StatusOr`` without checking if a value is present.
 
 - New :doc:`bugprone-derived-method-shadowing-base-method
   <clang-tidy/checks/bugprone/derived-method-shadowing-base-method>` check.
@@ -415,8 +427,9 @@ Changes in existing checks
 - Improved :doc:`bugprone-unchecked-optional-access
   <clang-tidy/checks/bugprone/unchecked-optional-access>` check by supporting
   ``NullableValue::makeValue`` and ``NullableValue::makeValueInplace`` to
-  prevent false-positives for ``BloombergLP::bdlb::NullableValue`` type, and by
-  adding the `IgnoreValueCalls` option to suppress diagnostics for
+  prevent false-positives for ``BloombergLP::bdlb::NullableValue``. Fixed
+  false-positives for ``bsl::optional`` containing allocator-aware type.
+  Added the `IgnoreValueCalls` option to suppress diagnostics for
   ``optional::value()`` and the `IgnoreSmartPointerDereference` option to
   ignore optionals reached via smart-pointer-like dereference, while still
   diagnosing UB-prone dereferences via ``operator*`` and ``operator->``.
@@ -504,6 +517,10 @@ Changes in existing checks
 - Improved :doc:`misc-header-include-cycle
   <clang-tidy/checks/misc/header-include-cycle>` check performance.
 
+- Improved :doc:`misc-use-internal-linkage
+  <clang-tidy/checks/misc/use-internal-linkage>` to suggest giving
+  structs, classes, unions, and enums internal linkage.
+
 - Improved :doc:`modernize-avoid-c-arrays
   <clang-tidy/checks/modernize/avoid-c-arrays>` to not diagnose array types
   which are part of an implicit instantiation of a template.
@@ -530,6 +547,16 @@ Changes in existing checks
   <clang-tidy/checks/modernize/use-nullptr>` check by fixing a crash
   on Windows when the check was enabled with a 32-bit :program:`clang-tidy`
   binary.
+
+- Improved :doc:`modernize-use-override
+  <clang-tidy/checks/modernize/use-override>` by fixing an issue where
+  the check would sometimes suggest inserting ``override`` in an invalid
+  place.
+
+- Improved :doc:`modernize-use-ranges
+  <clang-tidy/checks/modernize/use-ranges>` check to suggest using
+  the more idiomatic ``std::views::reverse`` where it used to suggest
+  ``std::ranges::reverse_view``.
 
 - Improved :doc:`modernize-use-scoped-lock
   <clang-tidy/checks/modernize/use-scoped-lock>` check by fixing a crash
@@ -584,7 +611,9 @@ Changes in existing checks
   <clang-tidy/checks/readability/identifier-naming>` check by ignoring
   declarations and macros in system headers. The documentation is also improved
   to differentiate the general options from the specific ones. Options for
-  fine-grained control over ``constexpr`` variables were added.
+  fine-grained control over ``constexpr`` variables were added. Added default
+  options which simplify configs by removing the need to specify each
+  identifier kind separately.
 
 - Improved :doc:`readability-implicit-bool-conversion
   <clang-tidy/checks/readability/implicit-bool-conversion>` check by correctly
@@ -595,6 +624,10 @@ Changes in existing checks
   <clang-tidy/checks/readability/inconsistent-declaration-parameter-name>` check
   by not enforcing parameter name consistency between a variadic parameter pack
   in the primary template and specific parameters in its specializations.
+
+- Improved :doc:`readability-math-missing-parentheses
+  <clang-tidy/checks/readability/math-missing-parentheses>` check by correctly
+  diagnosing operator precedence issues inside parenthesized expressions.
 
 - Improved :doc:`readability-qualified-auto
   <clang-tidy/checks/readability/qualified-auto>` check by adding the option

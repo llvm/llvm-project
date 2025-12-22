@@ -491,6 +491,14 @@ public:
                               cir::FuncOp func, SourceLocation pragmaLoc,
                               ArrayRef<const OpenACCClause *> clauses);
 
+  void emitOMPThreadPrivateDecl(const OMPThreadPrivateDecl *d);
+  void emitOMPGroupPrivateDecl(const OMPGroupPrivateDecl *d);
+  void emitOMPCapturedExpr(const OMPCapturedExprDecl *d);
+  void emitOMPAllocateDecl(const OMPAllocateDecl *d);
+  void emitOMPDeclareReduction(const OMPDeclareReductionDecl *d);
+  void emitOMPDeclareMapper(const OMPDeclareMapperDecl *d);
+  void emitOMPRequiresDecl(const OMPRequiresDecl *d);
+
   // C++ related functions.
   void emitDeclContext(const DeclContext *dc);
 

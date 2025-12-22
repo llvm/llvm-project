@@ -87,8 +87,8 @@ def create_chart(data, metric, subtitle=None, series_names=None):
     return figure
 
 def produce_kpis(data, noise, extrema, series, series_names, meta_candidate, title):
-    addendum = f"{noise}% noise threshold, based on {len(data)} benchmarks"
-    top_addendum = f"by >= {extrema}%, {noise}% noise threshold, based on {len(data)} benchmarks"
+    addendum = f"{noise:.0%} noise threshold, based on {len(data)} benchmarks"
+    top_addendum = f"by >= {extrema:.0%}, {noise:.0%} noise threshold, based on {len(data)} benchmarks"
     headers = [title if title else '']
     columns = [[
         f'Benchmarks where {meta_candidate} is faster than {series_names[0]} ({addendum})',
@@ -112,13 +112,6 @@ def produce_kpis(data, noise, extrema, series, series_names, meta_candidate, tit
     baseline = series[0]
     for (i, candidate) in enumerate(series[1:], start=1):
         kpis = compute_kpis(baseline, candidate)
-        if i > 1: # after the first series, also generate a relative difference
-            previous_kpis = columns[-1]
-            rel_deltas = [(kpis[k] - previous_kpis[k]) / previous_kpis[k] for k in range(len(kpis))]
-            headers.append('rel Δ')
-            columns.append(rel_deltas)
-            fmt.append('+.2%')
-
         headers.append(series_names[i])
         columns.append(kpis)
         fmt.append('.2%')
@@ -144,6 +137,10 @@ def main(argv):
     parser.add_argument('--filter', type=str, required=False,
         help='An optional regular expression used to filter the benchmarks included in the comparison. '
              'Only benchmarks whose names match the regular expression will be included.')
+    parser.add_argument('--ignore-under', type=float, required=False,
+        help='Ignore benchmarks whose value (in absolute terms) is less than the provided float for all '
+             'the data sets being compared. This allows ignoring benchmarks that are likely to contain '
+             'a significant amount of noise.')
     parser.add_argument('--sort', type=str, required=False, default='benchmark',
                         choices=['benchmark', 'baseline', 'candidate', 'percent_diff'],
         help='Optional sorting criteria for displaying results. By default, results are displayed in '
@@ -220,7 +217,8 @@ def main(argv):
 
     # Parse the raw LNT data and store each input in a dataframe
     lnt_inputs = [parse_lnt(file.readlines()) for file in args.files]
-    inputs = [pandas.DataFrame(lnt).rename(columns={args.metric: f'{args.metric}_{i}'}) for (i, lnt) in enumerate(lnt_inputs)]
+    series = [f'{args.metric}_{i}' for (i, _) in enumerate(lnt_inputs)]
+    inputs = [pandas.DataFrame(lnt).rename(columns={args.metric: s}) for (s, lnt) in zip(series, lnt_inputs)]
 
     # Join the inputs into a single dataframe
     data = functools.reduce(lambda a, b: a.merge(b, how='outer', on='benchmark'), inputs)
@@ -233,6 +231,9 @@ def main(argv):
     if args.filter is not None:
         keeplist = [b for b in data['benchmark'] if re.search(args.filter, b) is not None]
         data = data[data['benchmark'].isin(keeplist)]
+
+    if args.ignore_under is not None:
+        data = data[~(data[series] < args.ignore_under).all(axis=1)]
 
     # Sort the data by the appropriate criteria
     if args.sort == 'benchmark':
@@ -252,13 +253,12 @@ def main(argv):
     elif args.format == 'kpi':
         if args.discard_benchmarks_introduced_after is not None:
             index = args.series_names.index(args.discard_benchmarks_introduced_after)
-            series_to_filter = [f'{args.metric}_{i}' for i in range(index+1, len(lnt_inputs))]
-            for candidate in series_to_filter:
+            for candidate in series[index+1:]:
                 first_candidate = f'{args.metric}_1'
                 data = data[~(data[first_candidate].isna() & data[candidate].notna())]
         produce_kpis(data, noise=args.noise_threshold,
                            extrema=args.top_performer_threshold,
-                           series=[f'{args.metric}_{i}' for i in range(len(lnt_inputs))],
+                           series=series,
                            series_names=args.series_names,
                            meta_candidate=args.meta_candidate,
                            title=args.subtitle)

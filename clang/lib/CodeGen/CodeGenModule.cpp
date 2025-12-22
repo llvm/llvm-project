@@ -490,10 +490,8 @@ CodeGenModule::CodeGenModule(ASTContext &C,
         CodeGenOpts.ProfileInstrumentUsePath, *FS,
         CodeGenOpts.ProfileRemappingFile);
     if (auto E = ReaderOrErr.takeError()) {
-      unsigned DiagID = Diags.getCustomDiagID(
-          DiagnosticsEngine::Error, "Error in reading profile %0: %1");
       llvm::handleAllErrors(std::move(E), [&](const llvm::ErrorInfoBase &EI) {
-        Diags.Report(DiagID)
+        Diags.Report(diag::err_reading_profile)
             << CodeGenOpts.ProfileInstrumentUsePath << EI.message();
       });
       return;
@@ -537,12 +535,9 @@ CodeGenModule::CodeGenModule(ASTContext &C,
           this->MSHotPatchFunctions.push_back(std::string{*I});
       } else {
         auto &DE = Context.getDiagnostics();
-        unsigned DiagID =
-            DE.getCustomDiagID(DiagnosticsEngine::Error,
-                               "failed to open hotpatch functions file "
-                               "(-fms-hotpatch-functions-file): %0 : %1");
-        DE.Report(DiagID) << CGO.MSSecureHotPatchFunctionsFile
-                          << BufOrErr.getError().message();
+        DE.Report(diag::err_open_hotpatch_file_failed)
+            << CGO.MSSecureHotPatchFunctionsFile
+            << BufOrErr.getError().message();
       }
     }
 
@@ -1759,20 +1754,19 @@ void CodeGenModule::Error(SourceLocation loc, StringRef message) {
 /// ErrorUnsupported - Print out an error that codegen doesn't support the
 /// specified stmt yet.
 void CodeGenModule::ErrorUnsupported(const Stmt *S, const char *Type) {
-  unsigned DiagID = getDiags().getCustomDiagID(DiagnosticsEngine::Error,
-                                               "cannot compile this %0 yet");
   std::string Msg = Type;
-  getDiags().Report(Context.getFullLoc(S->getBeginLoc()), DiagID)
+  getDiags().Report(Context.getFullLoc(S->getBeginLoc()),
+                    diag::err_codegen_unsupported)
       << Msg << S->getSourceRange();
 }
 
 /// ErrorUnsupported - Print out an error that codegen doesn't support the
 /// specified decl yet.
 void CodeGenModule::ErrorUnsupported(const Decl *D, const char *Type) {
-  unsigned DiagID = getDiags().getCustomDiagID(DiagnosticsEngine::Error,
-                                               "cannot compile this %0 yet");
   std::string Msg = Type;
-  getDiags().Report(Context.getFullLoc(D->getLocation()), DiagID) << Msg;
+  getDiags().Report(Context.getFullLoc(D->getLocation()),
+                    diag::err_codegen_unsupported)
+      << Msg;
 }
 
 void CodeGenModule::runWithSufficientStackSpace(SourceLocation Loc,
@@ -6105,9 +6099,11 @@ void CodeGenModule::EmitGlobalVarDefinition(const VarDecl *D,
     getCUDARuntime().handleVarRegistration(D, *GV);
   }
 
-  if (LangOpts.HLSL && GetGlobalVarAddressSpace(D) == LangAS::hlsl_input) {
+  if (LangOpts.HLSL &&
+      hlsl::isInitializedByPipeline(GetGlobalVarAddressSpace(D))) {
     // HLSL Input variables are considered to be set by the driver/pipeline, but
-    // only visible to a single thread/wave.
+    // only visible to a single thread/wave. Push constants are also externally
+    // initialized, but constant, hence cross-wave visibility is not relevant.
     GV->setExternallyInitialized(true);
   } else {
     GV->setInitializer(Init);
@@ -6158,10 +6154,11 @@ void CodeGenModule::EmitGlobalVarDefinition(const VarDecl *D,
       !D->hasAttr<ConstInitAttr>())
     Linkage = llvm::GlobalValue::InternalLinkage;
 
-  // HLSL variables in the input address space maps like memory-mapped
-  // variables. Even if they are 'static', they are externally initialized and
-  // read/write by the hardware/driver/pipeline.
-  if (LangOpts.HLSL && GetGlobalVarAddressSpace(D) == LangAS::hlsl_input)
+  // HLSL variables in the input or push-constant address space maps are like
+  // memory-mapped variables. Even if they are 'static', they are externally
+  // initialized and read/write by the hardware/driver/pipeline.
+  if (LangOpts.HLSL &&
+      hlsl::isInitializedByPipeline(GetGlobalVarAddressSpace(D)))
     Linkage = llvm::GlobalValue::ExternalLinkage;
 
   GV->setLinkage(Linkage);
@@ -8262,11 +8259,7 @@ bool CodeGenModule::stopAutoInit() {
       return true;
     }
     if (!NumAutoVarInit) {
-      unsigned DiagID = getDiags().getCustomDiagID(
-          DiagnosticsEngine::Warning,
-          "-ftrivial-auto-var-init-stop-after=%0 has been enabled to limit the "
-          "number of times ftrivial-auto-var-init=%1 gets applied.");
-      getDiags().Report(DiagID)
+      getDiags().Report(diag::warn_trivial_auto_var_limit)
           << StopAfter
           << (getContext().getLangOpts().getTrivialAutoVarInit() ==
                       LangOptions::TrivialAutoVarInitKind::Zero

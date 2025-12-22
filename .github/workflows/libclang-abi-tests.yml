@@ -109,7 +109,7 @@ jobs:
       - name: Configure
         run: |
           mkdir install
-          cmake -B build -S llvm -G Ninja -DLLVM_ENABLE_PROJECTS=clang -DCMAKE_BUILD_TYPE=Debug -DLLVM_TARGETS_TO_BUILD="" -DLLVM_BUILD_LLVM_DYLIB=ON -DLLVM_LINK_LLVM_DYLIB=ON -DCMAKE_C_FLAGS_DEBUG="-g1 -Og" -DCMAKE_CXX_FLAGS_DEBUG="-g1 -Og" -DCMAKE_INSTALL_PREFIX="$(pwd)"/install llvm
+          cmake -B build -S llvm -G Ninja -DLLVM_ENABLE_PROJECTS=clang -DCMAKE_BUILD_TYPE=Debug -DLLVM_TARGETS_TO_BUILD="" -DLLVM_BUILD_LLVM_DYLIB=ON -DLLVM_LINK_LLVM_DYLIB=ON -DCMAKE_INSTALL_PREFIX="$(pwd)"/install llvm
       - name: Build
         run: ninja -C build/ ${{ needs.abi-dump-setup.outputs.ABI_LIBS }} install-clang-headers
       - name: Dump ABI
