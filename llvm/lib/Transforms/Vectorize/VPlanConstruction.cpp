@@ -1205,7 +1205,8 @@ static bool handleFirstArgMinArgMax(VPlan &Plan,
   //  vp<%final.min.idx> = select vp<%final.min.cmp>, ir<%min.idx.next>,
   //  ir<MaxUInt> vp<%13> = compute-reduction-result ir<%min.idx>,
   //  vp<%final.min.idx> vp<%scaled.result.iv> = DERIVED-IV ir<20> + vp<%13> *
-  //        ir<1> vp<%always.false> = icmp eq vp<%min.result>, ir<%original.min.start>
+  //                                                        ir<1>
+  //  vp<%always.false> = icmp eq vp<%min.result>, ir<%original.min.start>
   //  vp<%final.result> = select vp<%always.false>, vp<%scaled.result.iv>,
   //                             ir<%original.start>
 
