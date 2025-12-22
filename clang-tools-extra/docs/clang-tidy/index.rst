@@ -17,9 +17,9 @@ See also:
 
 :program:`clang-tidy` is a clang-based C++ "linter" tool. Its purpose is to
 provide an extensible framework for diagnosing and fixing typical programming
-errors, like style violations, interface misuse, or bugs that can be deduced via
-static analysis. :program:`clang-tidy` is modular and provides a convenient
-interface for writing new checks.
+errors, like style violations, interface misuse, or bugs that can be deduced
+via static analysis. :program:`clang-tidy` is modular and provides a
+convenient interface for writing new checks.
 
 
 Using Clang-Tidy
@@ -57,16 +57,16 @@ checks except for ``clang-analyzer-cplusplus*`` ones.
 
 The ``-list-checks`` option lists all the enabled checks. When used without
 ``-checks=``, it shows checks enabled by default. Use ``-checks=*`` to see all
-available checks or with any other value of ``-checks=`` to see which checks are
-enabled by this value.
+available checks or with any other value of ``-checks=`` to see which checks
+are enabled by this value.
 
 .. _checks-groups-table:
 
 There are currently the following groups of checks:
 
-====================== =========================================================
+====================== ========================================================
 Name prefix            Description
-====================== =========================================================
+====================== ========================================================
 ``abseil-``            Checks related to Abseil library.
 ``altera-``            Checks related to OpenCL programming for FPGAs.
 ``android-``           Checks related to Android.
@@ -85,24 +85,24 @@ Name prefix            Description
 ``llvm-``              Checks related to the LLVM coding conventions.
 ``llvmlibc-``          Checks related to the LLVM-libc coding standards.
 ``misc-``              Checks that we didn't have a better category for.
-``modernize-``         Checks that advocate usage of modern (currently "modern"
-                       means "C++11") language constructs.
+``modernize-``         Checks that advocate usage of modern (currently
+                       "modern" means "C++11") language constructs.
 ``mpi-``               Checks related to MPI (Message Passing Interface).
 ``objc-``              Checks related to Objective-C coding conventions.
 ``openmp-``            Checks related to OpenMP API.
 ``performance-``       Checks that target performance-related issues.
-``portability-``       Checks that target portability-related issues that don't
-                       relate to any particular coding style.
-``readability-``       Checks that target readability-related issues that don't
-                       relate to any particular coding style.
+``portability-``       Checks that target portability-related issues that
+                       don't relate to any particular coding style.
+``readability-``       Checks that target readability-related issues that
+                       don't relate to any particular coding style.
 ``zircon-``            Checks related to Zircon kernel coding conventions.
-====================== =========================================================
+====================== ========================================================
 
 Clang diagnostics are treated in a similar way as check diagnostics. Clang
-diagnostics are displayed by :program:`clang-tidy` and can be filtered out using
-the ``-checks=`` option. However, the ``-checks=`` option does not affect
-compilation arguments, so it cannot turn on Clang warnings which are not
-already turned on in the build configuration. The ``-warnings-as-errors=``
+diagnostics are displayed by :program:`clang-tidy` and can be filtered out
+using the ``-checks=`` option. However, the ``-checks=`` option does not
+affect compilation arguments, so it cannot turn on Clang warnings which are
+not already turned on in the build configuration. The ``-warnings-as-errors=``
 option upgrades any warnings emitted under the ``-checks=`` flag to errors (but
 it does not enable any checks itself).
 
@@ -112,12 +112,12 @@ Diagnostics which have a corresponding warning option, are named
 ``-Wliteral-conversion`` will be reported with check name
 ``clang-diagnostic-literal-conversion``.
 
-Clang compiler errors (such as syntax errors, semantic errors, or other failures
-that prevent Clang from compiling the code) are reported with the check name
-``clang-diagnostic-error``. These represent fundamental compilation failures that
-must be fixed before :program:`clang-tidy` can perform its analysis. Unlike other
-diagnostics, ``clang-diagnostic-error`` cannot be disabled, as :program:`clang-tidy`
-requires valid code to function.
+Clang compiler errors (such as syntax errors, semantic errors, or other
+failures that prevent Clang from compiling the code) are reported with the
+check name ``clang-diagnostic-error``. These represent fundamental compilation
+failures that must be fixed before :program:`clang-tidy` can perform its
+analysis. Unlike other diagnostics, ``clang-diagnostic-error`` cannot be
+disabled, as :program:`clang-tidy` requires valid code to function.
 
 The ``-fix`` flag instructs :program:`clang-tidy` to fix found errors if
 supported by corresponding checks.
@@ -473,12 +473,12 @@ its use is not desired for some reason, :program:`clang-tidy` has a generic
 mechanism to suppress diagnostics using ``NOLINT``, ``NOLINTNEXTLINE``, and
 ``NOLINTBEGIN`` ... ``NOLINTEND`` comments.
 
-The ``NOLINT`` comment instructs :program:`clang-tidy` to ignore warnings on the
-*same line* (it doesn't apply to a function, a block of code or any other
-language construct; it applies to the line of code it is on). If introducing the
-comment on the same line would change the formatting in an undesired way, the
-``NOLINTNEXTLINE`` comment allows suppressing clang-tidy warnings on the *next
-line*. The ``NOLINTBEGIN`` and ``NOLINTEND`` comments allow suppressing
+The ``NOLINT`` comment instructs :program:`clang-tidy` to ignore warnings on
+the *same line* (it doesn't apply to a function, a block of code or any other
+language construct; it applies to the line of code it is on). If introducing
+the comment on the same line would change the formatting in an undesired way,
+the ``NOLINTNEXTLINE`` comment allows suppressing clang-tidy warnings on the
+*next line*. The ``NOLINTBEGIN`` and ``NOLINTEND`` comments allow suppressing
 clang-tidy warnings on *multiple lines* (affecting all lines between the two
 comments).
 
