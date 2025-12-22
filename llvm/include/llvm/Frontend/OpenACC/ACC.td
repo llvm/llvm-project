@@ -419,7 +419,7 @@ def ACC_Loop : Directive<[Spelling<"loop">]> {
     VersionedClause<ACCC_Independent>,
     VersionedClause<ACCC_Seq>
   ];
-  let association = AS_Loop;
+  let association = AS_LoopNest;
   let category = CA_Executable;
 }
 

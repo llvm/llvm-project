@@ -508,7 +508,7 @@ def TargetMicrosoftRecordLayout : TargetArch<["x86", "x86_64", "arm", "thumb",
   let CustomCode = [{ Target.hasMicrosoftRecordLayout() }];
 }
 
-def TargetMustTailAvaiable:  TargetSpec {
+def TargetMustTailAvailable:  TargetSpec {
   let CustomCode = [{ Target.hasMustTail() }];
 }
 
@@ -1919,7 +1919,7 @@ def NoMerge : DeclOrStmtAttr {
                              "functions, statements and variables">;
 }
 
-def MustTail : StmtAttr, TargetSpecificAttr<TargetMustTailAvaiable> {
+def MustTail : StmtAttr, TargetSpecificAttr<TargetMustTailAvailable> {
   let Spellings = [Clang<"musttail">];
   let Documentation = [MustTailDocs];
   let Subjects = SubjectList<[ReturnStmt], ErrorDiag, "return statements">;
@@ -1948,14 +1948,6 @@ def Final : InheritableAttr {
 
 def TriviallyRelocatable : InheritableAttr {
   let Spellings = [CustomKeyword<"trivially_relocatable_if_eligible">];
-  let SemaHandler = 0;
-  // Omitted from docs, since this is language syntax, not an attribute, as far
-  // as users are concerned.
-  let Documentation = [InternalOnly];
-}
-
-def Replaceable : InheritableAttr {
-  let Spellings = [CustomKeyword<"replaceable_if_eligible">];
   let SemaHandler = 0;
   // Omitted from docs, since this is language syntax, not an attribute, as far
   // as users are concerned.
@@ -4389,14 +4381,27 @@ def CFGuard : InheritableAttr, TargetSpecificAttr<TargetWindows> {
 def MSStruct : InheritableAttr {
   let Spellings = [GCC<"ms_struct">];
   let Subjects = SubjectList<[Record]>;
-  let Documentation = [Undocumented];
-  let SimpleHandler = 1;
+  let Documentation = [MSStructDocs];
+}
+
+def GCCStruct : InheritableAttr {
+  let Spellings = [GCC<"gcc_struct">];
+  let Subjects = SubjectList<[Record]>;
+  let Documentation = [MSStructDocs]; // Covers this attribute too.
 }
 
 def DLLExport : InheritableAttr, TargetSpecificAttr<TargetHasDLLImportExport> {
   let Spellings = [Declspec<"dllexport">, GCC<"dllexport">];
   let Subjects = SubjectList<[Function, Var, CXXRecord, ObjCInterface]>;
   let Documentation = [DLLExportDocs];
+}
+
+def DLLExportOnDecl : InheritableAttr, TargetSpecificAttr<TargetHasDLLImportExport> {
+  // This attribute is only used to warn if there was a `__declspec(dllexport)`
+  // on a declaration, but not on the defintion of an explicit instantiation
+  let Spellings = [];
+  let Subjects = SubjectList<[CXXRecord]>;
+  let Documentation = [InternalOnly];
 }
 
 def DLLExportStaticLocal : InheritableAttr, TargetSpecificAttr<TargetHasDLLImportExport> {
@@ -5166,12 +5171,28 @@ def HLSLVkExtBuiltinInput : InheritableAttr {
   let Documentation = [HLSLVkExtBuiltinInputDocs];
 }
 
+def HLSLVkPushConstant : InheritableAttr {
+  let Spellings = [CXX11<"vk", "push_constant">];
+  let Args = [];
+  let Subjects = SubjectList<[GlobalVar], ErrorDiag>;
+  let LangOpts = [HLSL];
+  let Documentation = [HLSLVkPushConstantDocs];
+}
+
 def HLSLVkConstantId : InheritableAttr {
   let Spellings = [CXX11<"vk", "constant_id">];
   let Args = [IntArgument<"Id">];
   let Subjects = SubjectList<[ExternalGlobalVar]>;
   let LangOpts = [HLSL];
   let Documentation = [VkConstantIdDocs];
+}
+
+def HLSLVkLocation : HLSLAnnotationAttr {
+  let Spellings = [CXX11<"vk", "location">];
+  let Args = [IntArgument<"Location">];
+  let Subjects = SubjectList<[ParmVar, Field, Function], ErrorDiag>;
+  let LangOpts = [HLSL];
+  let Documentation = [HLSLVkLocationDocs];
 }
 
 def RandomizeLayout : InheritableAttr {
@@ -5324,4 +5345,12 @@ def NonString : InheritableAttr {
   let Spellings = [GCC<"nonstring">];
   let Subjects = SubjectList<[Var, Field]>;
   let Documentation = [NonStringDocs];
+}
+
+def ModularFormat : InheritableAttr {
+  let Spellings = [Clang<"modular_format">];
+  let Args = [IdentifierArgument<"ModularImplFn">, StringArgument<"ImplName">,
+              VariadicStringArgument<"Aspects">];
+  let Subjects = SubjectList<[Function]>;
+  let Documentation = [ModularFormatDocs];
 }

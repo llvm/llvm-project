@@ -90,8 +90,7 @@ void Fortran::lower::genStopStatement(
           operands.push_back(cast);
         },
         [&](auto) {
-          mlir::emitError(loc, "unhandled expression in STOP");
-          std::exit(1);
+          fir::emitFatalError(loc, "unhandled expression in STOP");
         });
   } else {
     callee = fir::runtime::getRuntimeFunc<mkRTKey(StopStatement)>(loc, builder);
@@ -170,12 +169,55 @@ void Fortran::lower::genUnlockStatement(
 
 void Fortran::lower::genPauseStatement(
     Fortran::lower::AbstractConverter &converter,
-    const Fortran::parser::PauseStmt &) {
+    const Fortran::parser::PauseStmt &stmt) {
+
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   mlir::Location loc = converter.getCurrentLocation();
-  mlir::func::FuncOp callee =
-      fir::runtime::getRuntimeFunc<mkRTKey(PauseStatement)>(loc, builder);
-  fir::CallOp::create(builder, loc, callee, mlir::ValueRange{});
+  Fortran::lower::StatementContext stmtCtx;
+
+  llvm::SmallVector<mlir::Value> operands;
+  mlir::func::FuncOp callee;
+  mlir::FunctionType calleeType;
+
+  if (stmt.v.has_value()) {
+    const auto &code = stmt.v.value();
+    auto expr =
+        converter.genExprValue(*Fortran::semantics::GetExpr(code), stmtCtx);
+    expr.match(
+        // Character-valued expression -> call PauseStatementText (CHAR, LEN)
+        [&](const fir::CharBoxValue &x) {
+          callee = fir::runtime::getRuntimeFunc<mkRTKey(PauseStatementText)>(
+              loc, builder);
+          calleeType = callee.getFunctionType();
+
+          operands.push_back(
+              builder.createConvert(loc, calleeType.getInput(0), x.getAddr()));
+          operands.push_back(
+              builder.createConvert(loc, calleeType.getInput(1), x.getLen()));
+        },
+        // Unboxed value -> call PauseStatementInt which accepts an integer.
+        [&](fir::UnboxedValue x) {
+          callee = fir::runtime::getRuntimeFunc<mkRTKey(PauseStatementInt)>(
+              loc, builder);
+          calleeType = callee.getFunctionType();
+          assert(calleeType.getNumInputs() >= 1);
+          mlir::Value cast =
+              builder.createConvert(loc, calleeType.getInput(0), x);
+          operands.push_back(cast);
+        },
+        [&](auto) {
+          fir::emitFatalError(loc, "unhandled expression in PAUSE");
+        });
+  } else {
+    callee =
+        fir::runtime::getRuntimeFunc<mkRTKey(PauseStatement)>(loc, builder);
+    calleeType = callee.getFunctionType();
+  }
+
+  fir::CallOp::create(builder, loc, callee, operands);
+
+  // NOTE: PAUSE does not terminate the current block. The program may resume
+  // and continue normal execution, so we do not emit control-flow terminators.
 }
 
 void Fortran::lower::genPointerAssociate(fir::FirOpBuilder &builder,

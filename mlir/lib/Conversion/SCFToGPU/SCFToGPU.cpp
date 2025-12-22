@@ -421,9 +421,9 @@ static LogicalResult processParallelLoop(
                                   launchIndependent](Value val) -> Value {
     if (launchIndependent(val))
       return val;
-    if (auto constOp = val.getDefiningOp<arith::ConstantOp>())
-      return arith::ConstantOp::create(rewriter, constOp.getLoc(),
-                                       constOp.getValue());
+    if (std::optional<int64_t> constOp = getConstantIntValue(val))
+      return arith::ConstantIndexOp::create(rewriter, val.getLoc(),
+                                            constOp.value());
     return {};
   };
 
@@ -453,10 +453,24 @@ static LogicalResult processParallelLoop(
           1, 2,
           rewriter.getAffineDimExpr(0) * rewriter.getAffineSymbolExpr(0) +
               rewriter.getAffineSymbolExpr(1));
+      // Map through cloningMap first so we use values valid at the launch
+      // scope, then ensure they are launch-independent (or cloned constants).
+      Value mappedStep = cloningMap.lookupOrDefault(step);
+      Value mappedLowerBound = cloningMap.lookupOrDefault(lowerBound);
+
+      mappedStep = ensureLaunchIndependent(mappedStep);
+      mappedLowerBound = ensureLaunchIndependent(mappedLowerBound);
+
+      // If either cannot be made available above the launch, fail gracefully.
+      if (!mappedStep || !mappedLowerBound) {
+        return rewriter.notifyMatchFailure(
+            parallelOp, "lower bound / step must be constant or defined above "
+                        "the gpu.launch");
+      }
+
       newIndex = AffineApplyOp::create(
           rewriter, loc, annotation.getMap().compose(lowerAndStep),
-          ValueRange{operand, ensureLaunchIndependent(step),
-                     ensureLaunchIndependent(lowerBound)});
+          ValueRange{operand, mappedStep, mappedLowerBound});
       // If there was also a bound, insert that, too.
       // TODO: Check that we do not assign bounds twice.
       if (annotation.getBound()) {
@@ -468,17 +482,15 @@ static LogicalResult processParallelLoop(
         // conditional. If the lower-bound is constant or defined before the
         // launch, we can use it in the launch bounds. Otherwise fail.
         if (!launchIndependent(lowerBound) &&
-            !isa_and_nonnull<arith::ConstantOp>(lowerBound.getDefiningOp()))
+            !getConstantIntValue(lowerBound).has_value())
           return failure();
         // The step must also be constant or defined outside of the loop nest.
-        if (!launchIndependent(step) &&
-            !isa_and_nonnull<arith::ConstantOp>(step.getDefiningOp()))
+        if (!launchIndependent(step) && !getConstantIntValue(step).has_value())
           return failure();
         // If the upper-bound is constant or defined before the launch, we can
         // use it in the launch bounds directly. Otherwise try derive a bound.
-        bool boundIsPrecise =
-            launchIndependent(upperBound) ||
-            isa_and_nonnull<arith::ConstantOp>(upperBound.getDefiningOp());
+        bool boundIsPrecise = launchIndependent(upperBound) ||
+                              getConstantIntValue(upperBound).has_value();
         {
           PatternRewriter::InsertionGuard guard(rewriter);
           rewriter.setInsertionPoint(launchOp);
@@ -607,11 +619,10 @@ ParallelToGpuLaunchLowering::matchAndRewrite(ParallelOp parallelOp,
   // Create a launch operation. We start with bound one for all grid/block
   // sizes. Those will be refined later as we discover them from mappings.
   Location loc = parallelOp.getLoc();
-  Value constantOne =
-      arith::ConstantIndexOp::create(rewriter, parallelOp.getLoc(), 1);
-  gpu::LaunchOp launchOp = gpu::LaunchOp::create(
-      rewriter, parallelOp.getLoc(), constantOne, constantOne, constantOne,
-      constantOne, constantOne, constantOne);
+  Value constantOne = arith::ConstantIndexOp::create(rewriter, loc, 1);
+  gpu::LaunchOp launchOp =
+      gpu::LaunchOp::create(rewriter, loc, constantOne, constantOne,
+                            constantOne, constantOne, constantOne, constantOne);
   rewriter.setInsertionPointToEnd(&launchOp.getBody().front());
   gpu::TerminatorOp::create(rewriter, loc);
   rewriter.setInsertionPointToStart(&launchOp.getBody().front());

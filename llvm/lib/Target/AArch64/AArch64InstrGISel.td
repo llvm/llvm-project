@@ -149,6 +149,13 @@ def G_VLSHR : AArch64GenericInstruction {
   let hasSideEffects = 0;
 }
 
+// Float truncation using round to odd
+def G_FPTRUNC_ODD : AArch64GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type1:$src);
+  let hasSideEffects = false;
+}
+
 // Represents an integer to FP conversion on the FPR bank.
 def G_SITOF : AArch64GenericInstruction {
   let OutOperandList = (outs type0:$dst);
@@ -245,6 +252,24 @@ def G_USDOT : AArch64GenericInstruction {
   let hasSideEffects = 0;
 }
 
+def G_SQSHLU_I : AArch64GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1, type0:$src2);
+  let hasSideEffects = 0;
+}
+
+def G_SRSHR_I: AArch64GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1, type0:$src2);
+  let hasSideEffects = 0;
+}
+
+def G_URSHR_I: AArch64GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1, type0:$src2);
+  let hasSideEffects = 0;
+}
+
 // Generic instruction for the BSP pseudo. It is expanded into BSP, which
 // expands into BSL/BIT/BIF after register allocation.
 def G_BSP : AArch64GenericInstruction {
@@ -293,9 +318,15 @@ def : GINodeEquiv<G_UDOT, AArch64udot>;
 def : GINodeEquiv<G_SDOT, AArch64sdot>;
 def : GINodeEquiv<G_USDOT, AArch64usdot>;
 
+def : GINodeEquiv<G_SQSHLU_I, AArch64sqshlui>;
+def : GINodeEquiv<G_SRSHR_I, AArch64srshri>;
+def : GINodeEquiv<G_URSHR_I, AArch64urshri>;
+
 def : GINodeEquiv<G_EXTRACT_VECTOR_ELT, vector_extract>;
 
 def : GINodeEquiv<G_AARCH64_PREFETCH, AArch64Prefetch>;
+
+def : GINodeEquiv<G_FPTRUNC_ODD, AArch64fcvtxn_n>;
 
 // These are patterns that we only use for GlobalISel via the importer.
 def : Pat<(f32 (fadd (vector_extract (v2f32 FPR64:$Rn), (i64 0)),

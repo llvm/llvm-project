@@ -65,6 +65,16 @@ struct GlobalVariableModel
     : public mlir::acc::GlobalVariableOpInterface::ExternalModel<
           GlobalVariableModel, fir::GlobalOp> {
   bool isConstant(mlir::Operation *op) const;
+  mlir::Region *getInitRegion(mlir::Operation *op) const;
+};
+
+template <typename Op>
+struct IndirectGlobalAccessModel
+    : public mlir::acc::IndirectGlobalAccessOpInterface::ExternalModel<
+          IndirectGlobalAccessModel<Op>, Op> {
+  void getReferencedSymbols(mlir::Operation *op,
+                            llvm::SmallVectorImpl<mlir::SymbolRefAttr> &symbols,
+                            mlir::SymbolTable *symbolTable) const;
 };
 
 } // namespace fir::acc

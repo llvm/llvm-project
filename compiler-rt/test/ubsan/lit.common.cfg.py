@@ -39,6 +39,9 @@ elif ubsan_lit_test_mode == "MemorySanitizer":
 elif ubsan_lit_test_mode == "ThreadSanitizer":
     config.available_features.add("ubsan-tsan")
     clang_ubsan_cflags = ["-fsanitize=thread"]
+elif ubsan_lit_test_mode == "TypeSanitizer":
+    config.available_features.add("ubsan-tysan")
+    clang_ubsan_cflags = ["-fsanitize=type"]
 else:
     lit_config.fatal("Unknown UBSan test mode: %r" % ubsan_lit_test_mode)
 

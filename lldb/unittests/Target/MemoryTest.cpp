@@ -48,6 +48,8 @@ public:
   }
   Status DoDestroy() override { return {}; }
   void RefreshStateAfterStop() override {}
+  // Required by Target::ReadMemory() to call Process::ReadMemory()
+  bool IsAlive() override { return true; }
   size_t DoReadMemory(lldb::addr_t vm_addr, void *buf, size_t size,
                       Status &error) override {
     if (m_bytes_left == 0)
@@ -61,7 +63,7 @@ public:
       m_bytes_left -= size;
     }
 
-    memset(buf, 'B', num_bytes_to_write);
+    memset(buf, m_filler, num_bytes_to_write);
     return num_bytes_to_write;
   }
   bool DoUpdateThreadList(ThreadList &old_thread_list,
@@ -72,8 +74,10 @@ public:
 
   // Test-specific additions
   size_t m_bytes_left;
+  int m_filler = 'B';
   MemoryCache &GetMemoryCache() { return m_memory_cache; }
   void SetMaxReadSize(size_t size) { m_bytes_left = size; }
+  void SetFiller(int filler) { m_filler = filler; }
 };
 } // namespace
 
@@ -83,6 +87,18 @@ TargetSP CreateTarget(DebuggerSP &debugger_sp, ArchSpec &arch) {
   debugger_sp->GetTargetList().CreateTarget(
       *debugger_sp, "", arch, eLoadDependentsNo, platform_sp, target_sp);
   return target_sp;
+}
+
+static ProcessSP CreateProcess(lldb::TargetSP target_sp) {
+  ListenerSP listener_sp(Listener::MakeListener("dummy"));
+  ProcessSP process_sp = std::make_shared<DummyProcess>(target_sp, listener_sp);
+
+  struct TargetHack : public Target {
+    void SetProcess(ProcessSP process) { m_process_sp = process; }
+  };
+  static_cast<TargetHack *>(target_sp.get())->SetProcess(process_sp);
+
+  return process_sp;
 }
 
 TEST_F(MemoryTest, TesetMemoryCacheRead) {
@@ -96,8 +112,7 @@ TEST_F(MemoryTest, TesetMemoryCacheRead) {
   TargetSP target_sp = CreateTarget(debugger_sp, arch);
   ASSERT_TRUE(target_sp);
 
-  ListenerSP listener_sp(Listener::MakeListener("dummy"));
-  ProcessSP process_sp = std::make_shared<DummyProcess>(target_sp, listener_sp);
+  ProcessSP process_sp = CreateProcess(target_sp);
   ASSERT_TRUE(process_sp);
 
   DummyProcess *process = static_cast<DummyProcess *>(process_sp.get());
@@ -225,6 +240,58 @@ TEST_F(MemoryTest, TesetMemoryCacheRead) {
   ASSERT_TRUE(process->m_bytes_left == l2_cache_size); // Verify that we re-read
                                                        // instead of using an
                                                        // old cache
+}
+
+TEST_F(MemoryTest, TestReadInteger) {
+  ArchSpec arch("x86_64-apple-macosx-");
+
+  Platform::SetHostPlatform(PlatformRemoteMacOSX::CreateInstance(true, &arch));
+
+  DebuggerSP debugger_sp = Debugger::CreateInstance();
+  ASSERT_TRUE(debugger_sp);
+
+  TargetSP target_sp = CreateTarget(debugger_sp, arch);
+  ASSERT_TRUE(target_sp);
+
+  ProcessSP process_sp = CreateProcess(target_sp);
+  ASSERT_TRUE(process_sp);
+
+  DummyProcess *process = static_cast<DummyProcess *>(process_sp.get());
+  Status error;
+
+  process->SetFiller(0xff);
+  process->SetMaxReadSize(256);
+  // The ReadSignedIntegerFromMemory() methods return int64_t. Check that they
+  // extend the sign correctly when reading 32-bit values.
+  EXPECT_EQ(-1,
+            target_sp->ReadSignedIntegerFromMemory(Address(0), 4, 0, error));
+  EXPECT_EQ(-1, process->ReadSignedIntegerFromMemory(0, 4, 0, error));
+  // Check reading 64-bit values as well.
+  EXPECT_EQ(-1,
+            target_sp->ReadSignedIntegerFromMemory(Address(0), 8, 0, error));
+  EXPECT_EQ(-1, process->ReadSignedIntegerFromMemory(0, 8, 0, error));
+
+  // ReadUnsignedIntegerFromMemory() should not extend the sign.
+  EXPECT_EQ(0xffffffffULL,
+            target_sp->ReadUnsignedIntegerFromMemory(Address(0), 4, 0, error));
+  EXPECT_EQ(0xffffffffULL,
+            process->ReadUnsignedIntegerFromMemory(0, 4, 0, error));
+  EXPECT_EQ(0xffffffffffffffffULL,
+            target_sp->ReadUnsignedIntegerFromMemory(Address(0), 8, 0, error));
+  EXPECT_EQ(0xffffffffffffffffULL,
+            process->ReadUnsignedIntegerFromMemory(0, 8, 0, error));
+
+  // Check reading positive values.
+  process->GetMemoryCache().Clear();
+  process->SetFiller(0x7f);
+  process->SetMaxReadSize(256);
+  EXPECT_EQ(0x7f7f7f7fLL,
+            target_sp->ReadSignedIntegerFromMemory(Address(0), 4, 0, error));
+  EXPECT_EQ(0x7f7f7f7fLL, process->ReadSignedIntegerFromMemory(0, 4, 0, error));
+  EXPECT_EQ(0x7f7f7f7f7f7f7f7fLL,
+            target_sp->ReadSignedIntegerFromMemory(Address(0), 8, 0, error));
+  EXPECT_EQ(0x7f7f7f7f7f7f7f7fLL,
+            process->ReadSignedIntegerFromMemory(0, 8, 0, error));
 }
 
 /// A process class that, when asked to read memory from some address X, returns
@@ -366,4 +433,77 @@ TEST_F(MemoryDeathTest, TestReadMemoryRangesWithShortBuffer) {
   for (llvm::MutableArrayRef<uint8_t> result : read_results)
     ASSERT_TRUE(result.empty());
 #endif
+}
+
+/// A process class whose memory contains the following map of addresses to
+/// strings:
+///   100 -> "hello\0"
+///   200 -> "\0"
+///   201 -> "goodbye"
+///   300 -> a string composed of 500 'c' characters, followed by '\0'.
+///   addresses >= 1024 -> error
+class StringReaderProcess : public Process {
+public:
+  char memory[1024];
+  void initialize_memory() {
+    // Use some easily identifiable character for the areas of memory we're not
+    // intending to read.
+    memset(memory, '?', 1024);
+    strcpy(&memory[100], "hello");
+    strcpy(&memory[200], "");
+    strcpy(&memory[201], "goodbye");
+    std::vector<char> long_str(500, 'c');
+    long_str.push_back('\0');
+    strcpy(&memory[300], long_str.data());
+  }
+
+  size_t DoReadMemory(lldb::addr_t vm_addr, void *buf, size_t size,
+                      Status &error) override {
+    if (vm_addr >= 1024) {
+      error = Status::FromErrorString("out of bounds!");
+      return 0;
+    }
+    memcpy(buf, memory + vm_addr, size);
+    return size;
+  }
+  StringReaderProcess(lldb::TargetSP target_sp, lldb::ListenerSP listener_sp)
+      : Process(target_sp, listener_sp) {
+    initialize_memory();
+  }
+  // Boilerplate, nothing interesting below.
+  bool CanDebug(lldb::TargetSP, bool) override { return true; }
+  Status DoDestroy() override { return {}; }
+  void RefreshStateAfterStop() override {}
+  bool DoUpdateThreadList(ThreadList &, ThreadList &) override { return false; }
+  llvm::StringRef GetPluginName() override { return "Dummy"; }
+};
+
+TEST_F(MemoryTest, TestReadCStringsFromMemory) {
+  ArchSpec arch("x86_64-apple-macosx-");
+  Platform::SetHostPlatform(PlatformRemoteMacOSX::CreateInstance(true, &arch));
+  DebuggerSP debugger_sp = Debugger::CreateInstance();
+  ASSERT_TRUE(debugger_sp);
+  TargetSP target_sp = CreateTarget(debugger_sp, arch);
+  ASSERT_TRUE(target_sp);
+  ListenerSP listener_sp(Listener::MakeListener("dummy"));
+  ProcessSP process_sp =
+      std::make_shared<StringReaderProcess>(target_sp, listener_sp);
+  ASSERT_TRUE(process_sp);
+
+  // See the docs for StringReaderProcess above for an explanation of these
+  // addresses.
+  llvm::SmallVector<std::optional<std::string>> maybe_strings =
+      process_sp->ReadCStringsFromMemory({100, 200, 201, 300, 0xffffff});
+  ASSERT_EQ(maybe_strings.size(), 5ull);
+  auto expected_valid_strings = llvm::ArrayRef(maybe_strings).take_front(4);
+
+  std::vector<char> long_str(500, 'c');
+  long_str.push_back('\0');
+  std::string big_str(long_str.data());
+
+  const std::vector<std::optional<std::string>> expected_answers = {
+      "hello", "", "goodbye", big_str, std::nullopt};
+  for (auto [maybe_str, expected_answer] :
+       llvm::zip(expected_valid_strings, expected_answers))
+    EXPECT_EQ(maybe_str, expected_answer);
 }

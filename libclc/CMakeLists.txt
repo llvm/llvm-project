@@ -248,31 +248,6 @@ if( ENABLE_RUNTIME_SUBNORMAL )
   endforeach()
 endif()
 
-find_package( Python3 REQUIRED COMPONENTS Interpreter )
-file( TO_CMAKE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/utils/gen_convert.py script_loc )
-add_custom_command(
-  OUTPUT convert.cl
-  COMMAND ${Python3_EXECUTABLE} ${script_loc} > convert.cl
-  DEPENDS ${script_loc} )
-add_custom_target( generate-convert.cl DEPENDS convert.cl )
-set_target_properties( generate-convert.cl PROPERTIES FOLDER "libclc/Sourcegenning" )
-
-add_custom_command(
-  OUTPUT clc-convert.cl
-  COMMAND ${Python3_EXECUTABLE} ${script_loc} --clc > clc-convert.cl
-  DEPENDS ${script_loc} )
-add_custom_target( generate-clc-convert.cl DEPENDS clc-convert.cl )
-set_target_properties( generate-clc-convert.cl PROPERTIES FOLDER "libclc/Sourcegenning" )
-
-if ( clspv-- IN_LIST LIBCLC_TARGETS_TO_BUILD OR clspv64-- IN_LIST LIBCLC_TARGETS_TO_BUILD )
-  add_custom_command(
-    OUTPUT clspv-convert.cl
-    COMMAND ${Python3_EXECUTABLE} ${script_loc} --clspv > clspv-convert.cl
-    DEPENDS ${script_loc} )
-  add_custom_target( generate-clspv-convert.cl DEPENDS clspv-convert.cl )
-  set_target_properties( generate-clspv-convert.cl PROPERTIES FOLDER "libclc/Sourcegenning" )
-endif()
-
 set_source_files_properties(
   # CLC builtins
   ${CMAKE_CURRENT_SOURCE_DIR}/clc/lib/generic/math/clc_native_cos.cl
@@ -359,7 +334,6 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
   endif()
 
   set( clc_lib_files )
-  set( clc_gen_files clc-convert.cl )
 
   libclc_configure_lib_source(
     clc_lib_files
@@ -368,17 +342,11 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
   )
 
   set( opencl_lib_files )
-  set( opencl_gen_files )
 
-  if( NOT ARCH STREQUAL spirv AND NOT ARCH STREQUAL spirv64 )
-    if( ARCH STREQUAL clspv OR ARCH STREQUAL clspv64 )
-      list( APPEND opencl_gen_files clspv-convert.cl )
-    else()
-      list( APPEND opencl_gen_files convert.cl )
-      if ( NOT ENABLE_RUNTIME_SUBNORMAL )
-        list( APPEND opencl_lib_files opencl/lib/generic/subnormal_use_default.ll )
-      endif()
-    endif()
+  if( NOT ARCH STREQUAL spirv AND NOT ARCH STREQUAL spirv64 AND
+      NOT ARCH STREQUAL clspv AND NOT ARCH STREQUAL clspv64 AND
+      NOT ENABLE_RUNTIME_SUBNORMAL )
+    list( APPEND opencl_lib_files opencl/lib/generic/subnormal_use_default.ll )
   endif()
 
   libclc_configure_lib_source(
@@ -473,10 +441,10 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
       COMPILE_FLAGS ${build_flags}
       OPT_FLAGS ${opt_flags}
       LIB_FILES ${clc_lib_files}
-      GEN_FILES ${clc_gen_files}
     )
 
     list( APPEND build_flags
+      -Xclang -fdeclare-opencl-builtins -Xclang -finclude-default-header
       -I${CMAKE_CURRENT_SOURCE_DIR}/opencl/include
     )
 
@@ -487,7 +455,6 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
       COMPILE_FLAGS ${build_flags}
       OPT_FLAGS ${opt_flags}
       LIB_FILES ${opencl_lib_files}
-      GEN_FILES ${opencl_gen_files}
       ALIASES ${${d}_aliases}
       PARENT_TARGET libclc-opencl-builtins
       # Link in the CLC builtins and internalize their symbols

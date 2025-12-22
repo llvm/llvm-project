@@ -708,6 +708,53 @@ unsigned AArch64InstrInfo::insertBranch(
   return 2;
 }
 
+bool llvm::optimizeTerminators(MachineBasicBlock *MBB,
+                               const TargetInstrInfo &TII) {
+  for (MachineInstr &MI : MBB->terminators()) {
+    unsigned Opc = MI.getOpcode();
+    switch (Opc) {
+    case AArch64::CBZW:
+    case AArch64::CBZX:
+    case AArch64::TBZW:
+    case AArch64::TBZX:
+      // CBZ/TBZ with WZR/XZR -> unconditional B
+      if (MI.getOperand(0).getReg() == AArch64::WZR ||
+          MI.getOperand(0).getReg() == AArch64::XZR) {
+        DEBUG_WITH_TYPE("optimizeTerminators",
+                        dbgs() << "Removing always taken branch: " << MI);
+        MachineBasicBlock *Target = TII.getBranchDestBlock(MI);
+        SmallVector<MachineBasicBlock *> Succs(MBB->successors());
+        for (auto *S : Succs)
+          if (S != Target)
+            MBB->removeSuccessor(S);
+        DebugLoc DL = MI.getDebugLoc();
+        while (MBB->rbegin() != &MI)
+          MBB->rbegin()->eraseFromParent();
+        MI.eraseFromParent();
+        BuildMI(MBB, DL, TII.get(AArch64::B)).addMBB(Target);
+        return true;
+      }
+      break;
+    case AArch64::CBNZW:
+    case AArch64::CBNZX:
+    case AArch64::TBNZW:
+    case AArch64::TBNZX:
+      // CBNZ/TBNZ with WZR/XZR -> never taken, remove branch and successor
+      if (MI.getOperand(0).getReg() == AArch64::WZR ||
+          MI.getOperand(0).getReg() == AArch64::XZR) {
+        DEBUG_WITH_TYPE("optimizeTerminators",
+                        dbgs() << "Removing never taken branch: " << MI);
+        MachineBasicBlock *Target = TII.getBranchDestBlock(MI);
+        MI.getParent()->removeSuccessor(Target);
+        MI.eraseFromParent();
+        return true;
+      }
+      break;
+    }
+  }
+  return false;
+}
+
 // Find the original register that VReg is copied from.
 static unsigned removeCopies(const MachineRegisterInfo &MRI, unsigned VReg) {
   while (Register::isVirtualRegister(VReg)) {
@@ -2496,6 +2543,18 @@ bool AArch64InstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
           .addGlobalAddress(GV, 0, LoFlags)
           .addMemOperand(*MI.memoperands_begin());
     }
+  }
+  // To match MSVC. Unlike x86_64 which uses xor instruction to mix the cookie,
+  // we use sub instruction to mix the cookie on aarch64 for keeping the
+  // existing inlining logic intact.
+  if (Subtarget.getTargetTriple().isOSMSVCRT() &&
+      !Subtarget.getTargetLowering()
+           ->getTargetMachine()
+           .Options.EnableGlobalISel) {
+    BuildMI(MBB, MI, DL, get(AArch64::SUBXrx64), Reg)
+        .addReg(AArch64::SP)
+        .addReg(Reg, RegState::Kill)
+        .addImm(AArch64_AM::getArithExtendImm(AArch64_AM::UXTX, 0));
   }
 
   MBB.erase(MI);
@@ -6901,12 +6960,10 @@ bool llvm::rewriteAArch64FrameIndex(MachineInstr &MI, unsigned FrameRegIdx,
 void AArch64InstrInfo::insertNoop(MachineBasicBlock &MBB,
                                   MachineBasicBlock::iterator MI) const {
   DebugLoc DL;
-  BuildMI(MBB, MI, DL, get(AArch64::HINT)).addImm(0);
+  BuildMI(MBB, MI, DL, get(AArch64::NOP));
 }
 
-MCInst AArch64InstrInfo::getNop() const {
-  return MCInstBuilder(AArch64::HINT).addImm(0);
-}
+MCInst AArch64InstrInfo::getNop() const { return MCInstBuilder(AArch64::NOP); }
 
 // AArch64 supports MachineCombiner.
 bool AArch64InstrInfo::useMachineCombiner() const { return true; }
@@ -9796,8 +9853,8 @@ outliningCandidatesSigningScopeConsensus(const outliner::Candidate &a,
   const auto &MFIa = a.getMF()->getInfo<AArch64FunctionInfo>();
   const auto &MFIb = b.getMF()->getInfo<AArch64FunctionInfo>();
 
-  return MFIa->shouldSignReturnAddress(false) == MFIb->shouldSignReturnAddress(false) &&
-         MFIa->shouldSignReturnAddress(true) == MFIb->shouldSignReturnAddress(true);
+  return MFIa->getSignReturnAddressCondition() ==
+         MFIb->getSignReturnAddressCondition();
 }
 
 static bool
@@ -9888,10 +9945,11 @@ AArch64InstrInfo::getOutliningCandidateInfo(
   // Performing a tail call may require extra checks when PAuth is enabled.
   // If PAuth is disabled, set it to zero for uniformity.
   unsigned NumBytesToCheckLRInTCEpilogue = 0;
-  if (RepeatedSequenceLocs[0]
-          .getMF()
-          ->getInfo<AArch64FunctionInfo>()
-          ->shouldSignReturnAddress(true)) {
+  const auto RASignCondition = RepeatedSequenceLocs[0]
+                                   .getMF()
+                                   ->getInfo<AArch64FunctionInfo>()
+                                   ->getSignReturnAddressCondition();
+  if (RASignCondition != SignReturnAddress::None) {
     // One PAC and one AUT instructions
     NumBytesToCreateFrame += 8;
 
@@ -10695,7 +10753,9 @@ void AArch64InstrInfo::buildOutlinedFrame(
     Et = MBB.insert(Et, LDRXpost);
   }
 
-  bool ShouldSignReturnAddr = FI->shouldSignReturnAddress(!IsLeafFunction);
+  auto RASignCondition = FI->getSignReturnAddressCondition();
+  bool ShouldSignReturnAddr = AArch64FunctionInfo::shouldSignReturnAddress(
+      RASignCondition, !IsLeafFunction);
 
   // If this is a tail call outlined function, then there's already a return.
   if (OF.FrameConstructionID == MachineOutlinerTailCall ||

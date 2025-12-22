@@ -2671,3 +2671,19 @@ define i8 @neg_neg_constant(i8 %x, i8 %y) {
   %s = select i1 %cmp, i8 127, i8 %d
   ret i8 %s
 }
+
+; Make sure we don't crash in this case.
+define i32 @pr153053_strict_pred_with_nonconstant_rhs(i32 %x, i32 %y) {
+; CHECK-LABEL: @pr153053_strict_pred_with_nonconstant_rhs(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[X]], 1
+; CHECK-NEXT:    [[RES:%.*]] = select i1 [[CMP]], i32 [[ADD]], i32 2147483647
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+entry:
+  %cmp = icmp slt i32 %x, %y
+  %add = add i32 %x, 1
+  %res = select i1 %cmp, i32 %add, i32 2147483647
+  ret i32 %res
+}

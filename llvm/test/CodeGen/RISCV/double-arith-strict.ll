@@ -52,7 +52,6 @@ define double @fadd_d(double %a, double %b) nounwind strictfp {
   %1 = call double @llvm.experimental.constrained.fadd.f64(double %a, double %b, metadata !"round.dynamic", metadata !"fpexcept.strict") strictfp
   ret double %1
 }
-declare double @llvm.experimental.constrained.fadd.f64(double, double, metadata, metadata)
 
 define double @fsub_d(double %a, double %b) nounwind strictfp {
 ; CHECKIFD-LABEL: fsub_d:
@@ -90,7 +89,6 @@ define double @fsub_d(double %a, double %b) nounwind strictfp {
   %1 = call double @llvm.experimental.constrained.fsub.f64(double %a, double %b, metadata !"round.dynamic", metadata !"fpexcept.strict") strictfp
   ret double %1
 }
-declare double @llvm.experimental.constrained.fsub.f64(double, double, metadata, metadata)
 
 define double @fmul_d(double %a, double %b) nounwind strictfp {
 ; CHECKIFD-LABEL: fmul_d:
@@ -128,7 +126,6 @@ define double @fmul_d(double %a, double %b) nounwind strictfp {
   %1 = call double @llvm.experimental.constrained.fmul.f64(double %a, double %b, metadata !"round.dynamic", metadata !"fpexcept.strict") strictfp
   ret double %1
 }
-declare double @llvm.experimental.constrained.fmul.f64(double, double, metadata, metadata)
 
 define double @fdiv_d(double %a, double %b) nounwind strictfp {
 ; CHECKIFD-LABEL: fdiv_d:
@@ -166,7 +163,6 @@ define double @fdiv_d(double %a, double %b) nounwind strictfp {
   %1 = call double @llvm.experimental.constrained.fdiv.f64(double %a, double %b, metadata !"round.dynamic", metadata !"fpexcept.strict") strictfp
   ret double %1
 }
-declare double @llvm.experimental.constrained.fdiv.f64(double, double, metadata, metadata)
 
 define double @fsqrt_d(double %a) nounwind strictfp {
 ; CHECKIFD-LABEL: fsqrt_d:
@@ -204,7 +200,6 @@ define double @fsqrt_d(double %a) nounwind strictfp {
   %1 = call double @llvm.experimental.constrained.sqrt.f64(double %a, metadata !"round.dynamic", metadata !"fpexcept.strict") strictfp
   ret double %1
 }
-declare double @llvm.experimental.constrained.sqrt.f64(double, metadata, metadata)
 
 define double @fmin_d(double %a, double %b) nounwind strictfp {
 ; RV32IFD-LABEL: fmin_d:
@@ -263,7 +258,6 @@ define double @fmin_d(double %a, double %b) nounwind strictfp {
   %1 = call double @llvm.experimental.constrained.minnum.f64(double %a, double %b, metadata !"fpexcept.strict") strictfp
   ret double %1
 }
-declare double @llvm.experimental.constrained.minnum.f64(double, double, metadata) strictfp
 
 define double @fmax_d(double %a, double %b) nounwind strictfp {
 ; RV32IFD-LABEL: fmax_d:
@@ -322,7 +316,6 @@ define double @fmax_d(double %a, double %b) nounwind strictfp {
   %1 = call double @llvm.experimental.constrained.maxnum.f64(double %a, double %b, metadata !"fpexcept.strict") strictfp
   ret double %1
 }
-declare double @llvm.experimental.constrained.maxnum.f64(double, double, metadata) strictfp
 
 define double @fmadd_d(double %a, double %b, double %c) nounwind strictfp {
 ; CHECKIFD-LABEL: fmadd_d:
@@ -360,7 +353,6 @@ define double @fmadd_d(double %a, double %b, double %c) nounwind strictfp {
   %1 = call double @llvm.experimental.constrained.fma.f64(double %a, double %b, double %c, metadata !"round.dynamic", metadata !"fpexcept.strict") strictfp
   ret double %1
 }
-declare double @llvm.experimental.constrained.fma.f64(double, double, double, metadata, metadata) strictfp
 
 define double @fmsub_d(double %a, double %b, double %c) nounwind strictfp {
 ; RV32IFD-LABEL: fmsub_d:

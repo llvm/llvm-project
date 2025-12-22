@@ -13,7 +13,7 @@ common --enable_bzlmod --noenable_workspace
 common --legacy_external_runfiles
 
 # Prevent invalid caching if input files are modified during a build.
-build --experimental_guard_against_concurrent_changes
+build --guard_against_concurrent_changes
 
 # Automatically enable --config=(linux|macos|windows) based on the host
 build --enable_platform_specific_config
@@ -45,9 +45,6 @@ build --incompatible_no_implicit_file_export
 # Enable so downstream users can flip this flag globally, this should
 # eventually become the default
 common --incompatible_disallow_empty_glob
-
-# TODO: Remove once we move to bazel 7.x
-build --experimental_cc_shared_library
 
 # Disabling runfiles links drastically increases performance in slow disk IO
 # situations Do not build runfile trees by default. If an execution strategy
