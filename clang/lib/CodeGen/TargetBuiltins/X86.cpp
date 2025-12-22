@@ -12,7 +12,6 @@
 
 #include "CGBuiltin.h"
 #include "clang/Basic/TargetBuiltins.h"
-#include "clang/Basic/UnsignedOrNone.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/IntrinsicsX86.h"
 #include "llvm/TargetParser/X86TargetParser.h"
