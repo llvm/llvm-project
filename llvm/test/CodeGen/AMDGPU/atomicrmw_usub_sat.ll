@@ -62,7 +62,6 @@ define i32 @global_atomic_usub_sat(ptr addrspace(1) %ptr, i32 %data) {
 ; GFX12-GISEL-NEXT:    global_atomic_sub_clamp_u32 v0, v[0:1], v2, off th:TH_ATOMIC_RETURN scope:SCOPE_DEV
 ; GFX12-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-GISEL-NEXT:    global_inv scope:SCOPE_DEV
-; GFX12-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-SDAG-LABEL: global_atomic_usub_sat:
@@ -118,7 +117,6 @@ define i32 @global_atomic_usub_sat(ptr addrspace(1) %ptr, i32 %data) {
 ; GFX12-SDAG-NEXT:    global_atomic_sub_clamp_u32 v0, v[0:1], v2, off th:TH_ATOMIC_RETURN scope:SCOPE_DEV
 ; GFX12-SDAG-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-SDAG-NEXT:    global_inv scope:SCOPE_DEV
-; GFX12-SDAG-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-SDAG-NEXT:    s_setpc_b64 s[30:31]
   %ret = atomicrmw usub_sat ptr addrspace(1) %ptr, i32 %data syncscope("agent") seq_cst, align 4, !amdgpu.no.remote.memory !0
   ret i32 %ret
@@ -184,7 +182,6 @@ define i32 @global_atomic_usub_sat_offset(ptr addrspace(1) %ptr, i32 %data) {
 ; GFX12-GISEL-NEXT:    global_atomic_sub_clamp_u32 v0, v[0:1], v2, off offset:4096 th:TH_ATOMIC_RETURN scope:SCOPE_DEV
 ; GFX12-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-GISEL-NEXT:    global_inv scope:SCOPE_DEV
-; GFX12-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-SDAG-LABEL: global_atomic_usub_sat_offset:
@@ -249,7 +246,6 @@ define i32 @global_atomic_usub_sat_offset(ptr addrspace(1) %ptr, i32 %data) {
 ; GFX12-SDAG-NEXT:    global_atomic_sub_clamp_u32 v0, v[0:1], v2, off offset:4096 th:TH_ATOMIC_RETURN scope:SCOPE_DEV
 ; GFX12-SDAG-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-SDAG-NEXT:    global_inv scope:SCOPE_DEV
-; GFX12-SDAG-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-SDAG-NEXT:    s_setpc_b64 s[30:31]
   %gep = getelementptr i32, ptr addrspace(1) %ptr, i64 1024
   %ret = atomicrmw usub_sat ptr addrspace(1) %gep, i32 %data syncscope("agent") seq_cst, align 4, !amdgpu.no.remote.memory !0
@@ -309,7 +305,6 @@ define void @global_atomic_usub_sat_nortn(ptr addrspace(1) %ptr, i32 %data) {
 ; GFX12-GISEL-NEXT:    global_atomic_sub_clamp_u32 v0, v[0:1], v2, off th:TH_ATOMIC_RETURN scope:SCOPE_DEV
 ; GFX12-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-GISEL-NEXT:    global_inv scope:SCOPE_DEV
-; GFX12-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-SDAG-LABEL: global_atomic_usub_sat_nortn:
@@ -364,7 +359,6 @@ define void @global_atomic_usub_sat_nortn(ptr addrspace(1) %ptr, i32 %data) {
 ; GFX12-SDAG-NEXT:    global_atomic_sub_clamp_u32 v0, v[0:1], v2, off th:TH_ATOMIC_RETURN scope:SCOPE_DEV
 ; GFX12-SDAG-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-SDAG-NEXT:    global_inv scope:SCOPE_DEV
-; GFX12-SDAG-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-SDAG-NEXT:    s_setpc_b64 s[30:31]
   %ret = atomicrmw usub_sat ptr addrspace(1) %ptr, i32 %data syncscope("agent") seq_cst, align 4, !amdgpu.no.remote.memory !0
   ret void
@@ -430,7 +424,6 @@ define void @global_atomic_usub_sat_offset_nortn(ptr addrspace(1) %ptr, i32 %dat
 ; GFX12-GISEL-NEXT:    global_atomic_sub_clamp_u32 v0, v[0:1], v2, off offset:4096 th:TH_ATOMIC_RETURN scope:SCOPE_DEV
 ; GFX12-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-GISEL-NEXT:    global_inv scope:SCOPE_DEV
-; GFX12-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-SDAG-LABEL: global_atomic_usub_sat_offset_nortn:
@@ -495,7 +488,6 @@ define void @global_atomic_usub_sat_offset_nortn(ptr addrspace(1) %ptr, i32 %dat
 ; GFX12-SDAG-NEXT:    global_atomic_sub_clamp_u32 v0, v[0:1], v2, off offset:4096 th:TH_ATOMIC_RETURN scope:SCOPE_DEV
 ; GFX12-SDAG-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-SDAG-NEXT:    global_inv scope:SCOPE_DEV
-; GFX12-SDAG-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-SDAG-NEXT:    s_setpc_b64 s[30:31]
   %gep = getelementptr i32, ptr addrspace(1) %ptr, i64 1024
   %ret = atomicrmw usub_sat ptr addrspace(1) %gep, i32 %data syncscope("agent") seq_cst, align 4, !amdgpu.no.remote.memory !0
@@ -899,7 +891,6 @@ define i16 @global_atomic_usub_sat_16(ptr addrspace(1) %ptr, i16 %data) {
 ; GFX12-GISEL-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-GISEL-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX12-GISEL-NEXT:    v_mov_b32_e32 v0, v3
-; GFX12-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-SDAG-LABEL: global_atomic_usub_sat_16:
@@ -1011,7 +1002,6 @@ define i16 @global_atomic_usub_sat_16(ptr addrspace(1) %ptr, i16 %data) {
 ; GFX12-SDAG-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-SDAG-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX12-SDAG-NEXT:    v_mov_b32_e32 v0, v3
-; GFX12-SDAG-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-SDAG-NEXT:    s_setpc_b64 s[30:31]
   %ret = atomicrmw usub_sat ptr addrspace(1) %ptr, i16 %data syncscope("agent") seq_cst, align 4, !amdgpu.no.remote.memory !0
   ret i16 %ret
@@ -1128,7 +1118,6 @@ define i16 @global_atomic_usub_sat_offset_16(ptr addrspace(1) %ptr, i16 %data) {
 ; GFX12-GISEL-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-GISEL-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX12-GISEL-NEXT:    v_mov_b32_e32 v0, v3
-; GFX12-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-SDAG-LABEL: global_atomic_usub_sat_offset_16:
@@ -1241,7 +1230,6 @@ define i16 @global_atomic_usub_sat_offset_16(ptr addrspace(1) %ptr, i16 %data) {
 ; GFX12-SDAG-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-SDAG-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX12-SDAG-NEXT:    v_mov_b32_e32 v0, v3
-; GFX12-SDAG-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-SDAG-NEXT:    s_setpc_b64 s[30:31]
   %gep = getelementptr i16, ptr addrspace(1) %ptr, i64 1024
   %ret = atomicrmw usub_sat ptr addrspace(1) %gep, i16 %data syncscope("agent") seq_cst, align 4, !amdgpu.no.remote.memory !0
@@ -1353,7 +1341,6 @@ define void @global_atomic_usub_sat_nortn_16(ptr addrspace(1) %ptr, i16 %data) {
 ; GFX12-GISEL-NEXT:    s_cbranch_execnz .LBB8_1
 ; GFX12-GISEL-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-GISEL-NEXT:    s_or_b32 exec_lo, exec_lo, s0
-; GFX12-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-SDAG-LABEL: global_atomic_usub_sat_nortn_16:
@@ -1460,7 +1447,6 @@ define void @global_atomic_usub_sat_nortn_16(ptr addrspace(1) %ptr, i16 %data) {
 ; GFX12-SDAG-NEXT:    s_cbranch_execnz .LBB8_1
 ; GFX12-SDAG-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-SDAG-NEXT:    s_or_b32 exec_lo, exec_lo, s0
-; GFX12-SDAG-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-SDAG-NEXT:    s_setpc_b64 s[30:31]
   %ret = atomicrmw usub_sat ptr addrspace(1) %ptr, i16 %data syncscope("agent") seq_cst, align 4, !amdgpu.no.remote.memory !0
   ret void
@@ -1573,7 +1559,6 @@ define void @global_atomic_usub_sat_offset_nortn_16(ptr addrspace(1) %ptr, i16 %
 ; GFX12-GISEL-NEXT:    s_cbranch_execnz .LBB9_1
 ; GFX12-GISEL-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-GISEL-NEXT:    s_or_b32 exec_lo, exec_lo, s0
-; GFX12-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-SDAG-LABEL: global_atomic_usub_sat_offset_nortn_16:
@@ -1682,7 +1667,6 @@ define void @global_atomic_usub_sat_offset_nortn_16(ptr addrspace(1) %ptr, i16 %
 ; GFX12-SDAG-NEXT:    s_cbranch_execnz .LBB9_1
 ; GFX12-SDAG-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-SDAG-NEXT:    s_or_b32 exec_lo, exec_lo, s0
-; GFX12-SDAG-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-SDAG-NEXT:    s_setpc_b64 s[30:31]
   %gep = getelementptr i16, ptr addrspace(1) %ptr, i64 1024
   %ret = atomicrmw usub_sat ptr addrspace(1) %gep, i16 %data syncscope("agent") seq_cst, align 4, !amdgpu.no.remote.memory !0
@@ -2322,7 +2306,6 @@ define i8 @global_atomic_usub_sat_8(ptr addrspace(1) %ptr, i8 %data) {
 ; GFX12-GISEL-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-GISEL-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX12-GISEL-NEXT:    v_mov_b32_e32 v0, v3
-; GFX12-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-SDAG-LABEL: global_atomic_usub_sat_8:
@@ -2441,7 +2424,6 @@ define i8 @global_atomic_usub_sat_8(ptr addrspace(1) %ptr, i8 %data) {
 ; GFX12-SDAG-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-SDAG-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX12-SDAG-NEXT:    v_mov_b32_e32 v0, v3
-; GFX12-SDAG-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-SDAG-NEXT:    s_setpc_b64 s[30:31]
   %ret = atomicrmw usub_sat ptr addrspace(1) %ptr, i8 %data syncscope("agent") seq_cst, align 4, !amdgpu.no.remote.memory !0
   ret i8 %ret
@@ -2574,7 +2556,6 @@ define i8 @global_atomic_usub_sat_offset_8(ptr addrspace(1) %ptr, i8 %data) {
 ; GFX12-GISEL-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-GISEL-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX12-GISEL-NEXT:    v_mov_b32_e32 v0, v3
-; GFX12-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-SDAG-LABEL: global_atomic_usub_sat_offset_8:
@@ -2693,7 +2674,6 @@ define i8 @global_atomic_usub_sat_offset_8(ptr addrspace(1) %ptr, i8 %data) {
 ; GFX12-SDAG-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-SDAG-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX12-SDAG-NEXT:    v_mov_b32_e32 v0, v3
-; GFX12-SDAG-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-SDAG-NEXT:    s_setpc_b64 s[30:31]
   %gep = getelementptr i8, ptr addrspace(1) %ptr, i64 1024
   %ret = atomicrmw usub_sat ptr addrspace(1) %gep, i8 %data syncscope("agent") seq_cst, align 4, !amdgpu.no.remote.memory !0
@@ -2821,7 +2801,6 @@ define void @global_atomic_usub_sat_nortn_8(ptr addrspace(1) %ptr, i8 %data) {
 ; GFX12-GISEL-NEXT:    s_cbranch_execnz .LBB14_1
 ; GFX12-GISEL-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-GISEL-NEXT:    s_or_b32 exec_lo, exec_lo, s0
-; GFX12-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-SDAG-LABEL: global_atomic_usub_sat_nortn_8:
@@ -2935,7 +2914,6 @@ define void @global_atomic_usub_sat_nortn_8(ptr addrspace(1) %ptr, i8 %data) {
 ; GFX12-SDAG-NEXT:    s_cbranch_execnz .LBB14_1
 ; GFX12-SDAG-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-SDAG-NEXT:    s_or_b32 exec_lo, exec_lo, s0
-; GFX12-SDAG-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-SDAG-NEXT:    s_setpc_b64 s[30:31]
   %ret = atomicrmw usub_sat ptr addrspace(1) %ptr, i8 %data syncscope("agent") seq_cst, align 4, !amdgpu.no.remote.memory !0
   ret void
@@ -3062,7 +3040,6 @@ define void @global_atomic_usub_sat_offset_nortn_8(ptr addrspace(1) %ptr, i8 %da
 ; GFX12-GISEL-NEXT:    s_cbranch_execnz .LBB15_1
 ; GFX12-GISEL-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-GISEL-NEXT:    s_or_b32 exec_lo, exec_lo, s0
-; GFX12-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-SDAG-LABEL: global_atomic_usub_sat_offset_nortn_8:
@@ -3176,7 +3153,6 @@ define void @global_atomic_usub_sat_offset_nortn_8(ptr addrspace(1) %ptr, i8 %da
 ; GFX12-SDAG-NEXT:    s_cbranch_execnz .LBB15_1
 ; GFX12-SDAG-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-SDAG-NEXT:    s_or_b32 exec_lo, exec_lo, s0
-; GFX12-SDAG-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-SDAG-NEXT:    s_setpc_b64 s[30:31]
   %gep = getelementptr i8, ptr addrspace(1) %ptr, i64 1024
   %ret = atomicrmw usub_sat ptr addrspace(1) %gep, i8 %data syncscope("agent") seq_cst, align 4, !amdgpu.no.remote.memory !0
@@ -3791,7 +3767,6 @@ define i32 @global_atomic_usub_sat__amdgpu_no_remote_memory(ptr addrspace(1) %pt
 ; GFX12-GISEL-NEXT:    global_atomic_sub_clamp_u32 v0, v[0:1], v2, off th:TH_ATOMIC_RETURN scope:SCOPE_DEV
 ; GFX12-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-GISEL-NEXT:    global_inv scope:SCOPE_DEV
-; GFX12-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-SDAG-LABEL: global_atomic_usub_sat__amdgpu_no_remote_memory:
@@ -3847,7 +3822,6 @@ define i32 @global_atomic_usub_sat__amdgpu_no_remote_memory(ptr addrspace(1) %pt
 ; GFX12-SDAG-NEXT:    global_atomic_sub_clamp_u32 v0, v[0:1], v2, off th:TH_ATOMIC_RETURN scope:SCOPE_DEV
 ; GFX12-SDAG-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-SDAG-NEXT:    global_inv scope:SCOPE_DEV
-; GFX12-SDAG-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-SDAG-NEXT:    s_setpc_b64 s[30:31]
   %ret = atomicrmw usub_sat ptr addrspace(1) %ptr, i32 %data syncscope("agent") seq_cst, align 4, !amdgpu.no.remote.memory !0
   ret i32 %ret
@@ -3907,7 +3881,6 @@ define i32 @global_atomic_usub_sat__amdgpu_no_fine_grained_memory(ptr addrspace(
 ; GFX12-GISEL-NEXT:    global_atomic_sub_clamp_u32 v0, v[0:1], v2, off th:TH_ATOMIC_RETURN scope:SCOPE_DEV
 ; GFX12-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-GISEL-NEXT:    global_inv scope:SCOPE_DEV
-; GFX12-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-SDAG-LABEL: global_atomic_usub_sat__amdgpu_no_fine_grained_memory:
@@ -3963,7 +3936,6 @@ define i32 @global_atomic_usub_sat__amdgpu_no_fine_grained_memory(ptr addrspace(
 ; GFX12-SDAG-NEXT:    global_atomic_sub_clamp_u32 v0, v[0:1], v2, off th:TH_ATOMIC_RETURN scope:SCOPE_DEV
 ; GFX12-SDAG-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-SDAG-NEXT:    global_inv scope:SCOPE_DEV
-; GFX12-SDAG-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-SDAG-NEXT:    s_setpc_b64 s[30:31]
   %ret = atomicrmw usub_sat ptr addrspace(1) %ptr, i32 %data syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory !0
   ret i32 %ret
@@ -4023,7 +3995,6 @@ define i32 @global_atomic_usub_sat__amdgpu_no_fine_grained_memory__amdgpu_no_rem
 ; GFX12-GISEL-NEXT:    global_atomic_sub_clamp_u32 v0, v[0:1], v2, off th:TH_ATOMIC_RETURN scope:SCOPE_DEV
 ; GFX12-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-GISEL-NEXT:    global_inv scope:SCOPE_DEV
-; GFX12-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-SDAG-LABEL: global_atomic_usub_sat__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory:
@@ -4079,7 +4050,6 @@ define i32 @global_atomic_usub_sat__amdgpu_no_fine_grained_memory__amdgpu_no_rem
 ; GFX12-SDAG-NEXT:    global_atomic_sub_clamp_u32 v0, v[0:1], v2, off th:TH_ATOMIC_RETURN scope:SCOPE_DEV
 ; GFX12-SDAG-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-SDAG-NEXT:    global_inv scope:SCOPE_DEV
-; GFX12-SDAG-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-SDAG-NEXT:    s_setpc_b64 s[30:31]
   %ret = atomicrmw usub_sat ptr addrspace(1) %ptr, i32 %data syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0
   ret i32 %ret
