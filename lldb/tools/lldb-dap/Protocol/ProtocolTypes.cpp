@@ -1205,7 +1205,6 @@ llvm::json::Value toJSON(const StackFrame &SF) {
     result.insert({"source", *SF.source});
     assert(SF.line != LLDB_INVALID_LINE_NUMBER);
     result.insert({"line", SF.line});
-    assert(SF.column != LLDB_INVALID_COLUMN_NUMBER);
     result.insert({"column", SF.column});
     if (SF.endLine != 0 && SF.endLine != LLDB_INVALID_LINE_NUMBER)
       result.insert({"endLine", SF.endLine});
