@@ -1578,6 +1578,8 @@ def ConvertVectorToLLVMPass : Pass<"convert-vector-to-llvm"> {
            clEnumValN(::mlir::vector::VectorTransposeLowering::Shuffle16x16, "shuffle16x16",
             "Lower 2-D transpose to `vector.shuffle` on 16x16 vector.")
           )}]>,
+    Option<"enableOneToNConversion", "enable-one-to-n-conversion",
+           "bool", /*default=*/"false", "1:N conversion">,
   ];
 }
 

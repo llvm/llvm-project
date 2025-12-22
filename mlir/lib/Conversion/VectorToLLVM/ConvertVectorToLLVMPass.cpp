@@ -114,6 +114,71 @@ void ConvertVectorToLLVMPass::runOnOperation() {
   // Convert to the LLVM IR dialect.
   LowerToLLVMOptions options(&getContext());
   LLVMTypeConverter converter(&getContext(), options);
+
+  if (enableOneToNConversion) {
+
+    converter.addConversion(
+        [&](VectorType type,
+            SmallVectorImpl<Type> &result) -> std::optional<LogicalResult> {
+          auto elementType = converter.convertType(type.getElementType());
+          if (!elementType)
+            return failure();
+          if (type.getShape().empty()) {
+            result.push_back(VectorType::get({1}, elementType));
+            return success();
+          }
+          Type vectorType = VectorType::get(type.getShape().back(), elementType,
+                                            type.getScalableDims().back());
+          assert(LLVM::isCompatibleVectorType(vectorType) &&
+                 "expected vector type compatible with the LLVM dialect");
+          // For n-D vector types for which a _non-trailing_ dim is scalable,
+          // return a failure. Supporting such cases would require LLVM
+          // to support something akin "scalable arrays" of vectors.
+          if (llvm::is_contained(type.getScalableDims().drop_back(), true))
+            return failure();
+
+          ArrayRef<int64_t> shapeLeadingDims = type.getShape().drop_back();
+          int64_t numVectors = ShapedType::getNumElements(shapeLeadingDims);
+          for (int64_t i = 0; i < numVectors; i++)
+            result.push_back(vectorType);
+
+          return success();
+        });
+
+    converter.addTargetMaterialization(
+        [&](OpBuilder &builder, TypeRange resultTypes, ValueRange inputs,
+            Location loc) -> SmallVector<Value> {
+          // from ('vector<4x4xf32>')
+          // to ('vector<4xf32>', 'vector<4xf32>', 'vector<4xf32>',
+          // 'vector<4xf32>')
+          Type ty = resultTypes[0];
+          for (Type ithTy : resultTypes)
+            if (ithTy != ty)
+              return {};
+
+          if (!isa<VectorType>(ty))
+            return {};
+
+          if (inputs.size() != 1)
+            return {};
+
+          Type inputTy = inputs[0].getType();
+          if (!isa<VectorType>(inputTy))
+            return {};
+
+          VectorType inputVectorTy = cast<VectorType>(inputTy);
+          ArrayRef<int64_t> inputShape = inputVectorTy.getShape();
+          size_t numElements =
+              ShapedType::getNumElements(inputShape.drop_back());
+          if (numElements != resultTypes.size())
+            return {};
+
+          return UnrealizedConversionCastOp::create(builder, loc, resultTypes,
+                                                    inputs)
+              .getResults();
+        });
+  }
+
   RewritePatternSet patterns(&getContext());
   populateVectorTransferLoweringPatterns(patterns);
   populateVectorToLLVMConversionPatterns(
