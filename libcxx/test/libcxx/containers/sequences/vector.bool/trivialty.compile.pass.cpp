@@ -38,19 +38,13 @@ using IsTrivialForCall = std::integral_constant<
     // Ignore the all-deleted case, it shouldn't occur here.
     >;
 
-void test_const_iterator() {
-  using It = std::vector<bool>::const_iterator;
-  static_assert(IsTrivialForCall<It>::value, "");
-}
+static_assert(IsTrivialForCall<std::vector<bool>::const_iterator>::value, "");
+static_assert(std::is_trivially_copyable<std::vector<bool>::const_iterator>::value, "");
 
-void test_non_const_iterator() {
-  using It = std::vector<bool>::iterator;
-  static_assert(!IsTrivialForCall<It>::value, "");
-}
-
-int main(int, char**) {
-  test_const_iterator();
-  test_non_const_iterator();
-
-  return 0;
-}
+#ifndef _LIBCPP_ABI_TRIVIALLY_COPYABLE_BIT_ITERATOR
+static_assert(!IsTrivialForCall<std::vector<bool>::iterator>::value, "");
+static_assert(!std::is_trivially_copyable<std::vector<bool>::iterator>::value, "");
+#else
+static_assert(IsTrivialForCall<std::vector<bool>::iterator>::value, "");
+static_assert(std::is_trivially_copyable<std::vector<bool>::iterator>::value, "");
+#endif
