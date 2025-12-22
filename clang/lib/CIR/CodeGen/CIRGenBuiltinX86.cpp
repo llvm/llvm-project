@@ -1858,8 +1858,6 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
     cir::VectorType resTy = cast<cir::VectorType>(convertType(expr->getType()));
     cir::VectorType inputTy = cast<cir::VectorType>(ops[0].getType());
     unsigned numElts = inputTy.getSize();
-
-    llvm::errs() << "DEBUG: Number of elements is: " << numElts << "\n";
     StringRef intrinsicName;
     if (builtinID == X86::BI__builtin_ia32_cvtneps2bf16_256_mask)
       intrinsicName = "x86.avx512bf16.cvtneps2bf16.256";
