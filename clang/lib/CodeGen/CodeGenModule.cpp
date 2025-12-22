@@ -71,6 +71,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Hash.h"
 #include "llvm/Support/TimeProfiler.h"
+#include "llvm/TargetParser/AArch64TargetParser.h"
 #include "llvm/TargetParser/RISCVISAInfo.h"
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/TargetParser/X86TargetParser.h"
@@ -4671,6 +4672,7 @@ void CodeGenModule::emitMultiVersionFunctions() {
     // in this TU. For other architectures it is always emitted.
     bool ShouldEmitResolver = !getTarget().getTriple().isAArch64();
     SmallVector<CodeGenFunction::FMVResolverOption, 10> Options;
+    llvm::DenseMap<llvm::Function *, const FunctionDecl *> DeclMap;
 
     getContext().forEachMultiversionedFunctionVersion(
         FD, [&](const FunctionDecl *CurFD) {
@@ -4681,11 +4683,13 @@ void CodeGenModule::emitMultiVersionFunctions() {
             assert(getTarget().getTriple().isX86() && "Unsupported target");
             TA->getX86AddedFeatures(Feats);
             llvm::Function *Func = createFunction(CurFD);
+            DeclMap.insert({Func, CurFD});
             Options.emplace_back(Func, Feats, TA->getX86Architecture());
           } else if (const auto *TVA = CurFD->getAttr<TargetVersionAttr>()) {
             if (TVA->isDefaultVersion() && IsDefined)
               ShouldEmitResolver = true;
             llvm::Function *Func = createFunction(CurFD);
+            DeclMap.insert({Func, CurFD});
             char Delim = getTarget().getTriple().isAArch64() ? '+' : ',';
             TVA->getFeatures(Feats, Delim);
             Options.emplace_back(Func, Feats);
@@ -4696,6 +4700,7 @@ void CodeGenModule::emitMultiVersionFunctions() {
               if (TC->isDefaultVersion(I) && IsDefined)
                 ShouldEmitResolver = true;
               llvm::Function *Func = createFunction(CurFD, I);
+              DeclMap.insert({Func, CurFD});
               Feats.clear();
               if (getTarget().getTriple().isX86()) {
                 TC->getX86Feature(Feats, I);
@@ -4741,6 +4746,24 @@ void CodeGenModule::emitMultiVersionFunctions() {
                        const CodeGenFunction::FMVResolverOption &RHS) {
           return getFMVPriority(TI, LHS).ugt(getFMVPriority(TI, RHS));
         });
+
+    // Diagnose unreachable function versions.
+    if (getTarget().getTriple().isAArch64()) {
+      for (auto I = Options.begin() + 1, E = Options.end(); I != E; ++I) {
+        llvm::APInt RHS = llvm::AArch64::getCpuSupportsMask(I->Features);
+        if (std::any_of(Options.begin(), I, [RHS](auto RO) {
+              llvm::APInt LHS = llvm::AArch64::getCpuSupportsMask(RO.Features);
+              return LHS.isSubsetOf(RHS);
+            })) {
+          Diags.Report(DeclMap[I->Function]->getLocation(),
+                       diag::warn_unreachable_version)
+              << I->Function->getName();
+          assert(I->Function->user_empty() && "unexpected users");
+          I->Function->eraseFromParent();
+          I->Function = nullptr;
+        }
+      }
+    }
     CodeGenFunction CGF(*this);
     CGF.EmitMultiVersionResolver(ResolverFunc, Options);
 
