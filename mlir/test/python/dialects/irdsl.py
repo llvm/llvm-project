@@ -14,15 +14,17 @@ def run(f):
 # CHECK: TEST: testMyInt
 @run
 def testMyInt():
-    myint = irdsl.Dialect("myint")
+    class MyInt(irdsl.Dialect, name="myint"):
+        pass
+
     iattr = irdsl.BaseName("#builtin.integer")
     i32 = irdsl.Is[IntegerType.get_signless](32)
 
-    class ConstantOp(myint.Operation, name="constant"):
+    class ConstantOp(MyInt.Operation, name="constant"):
         value = irdsl.Attribute(iattr)
         cst = irdsl.Result(i32)
 
-    class AddOp(myint.Operation, name="add"):
+    class AddOp(MyInt.Operation, name="add"):
         lhs = irdsl.Operand(i32)
         rhs = irdsl.Operand(i32)
         res = irdsl.Result(i32)
@@ -41,12 +43,11 @@ def testMyInt():
     # CHECK:   }
     # CHECK: }
     with Context(), Location.unknown():
-        myint.load()
-        print(myint.mlir_module)
+        MyInt.load()
+        print(MyInt.mlir_module)
 
         # CHECK: ['constant', 'add']
-        print([i._op_name for i in myint.operations])
-
+        print([i._op_name for i in MyInt.operations])
         i32 = IntegerType.get_signless(32)
 
         module = Module.create()
@@ -91,7 +92,9 @@ def testMyInt():
 
 @run
 def testIRDSL():
-    test = irdsl.Dialect("irdsl_test")
+    class Test(irdsl.Dialect, name="irdsl_test"):
+        pass
+
     i32 = irdsl.Is[IntegerType.get_signless](32)
     i64 = irdsl.Is[IntegerType.get_signless](64)
     i32or64 = i32 | i64
@@ -100,7 +103,7 @@ def testIRDSL():
     iattr = irdsl.BaseName("#builtin.integer")
     fattr = irdsl.BaseName("#builtin.float")
 
-    class ConstraintOp(test.Operation, name="constraint"):
+    class ConstraintOp(Test.Operation, name="constraint"):
         a = irdsl.Operand(i32or64)
         b = irdsl.Operand(any)
         c = irdsl.Operand(f32 | i32)
@@ -108,18 +111,18 @@ def testIRDSL():
         x = irdsl.Attribute(iattr)
         y = irdsl.Attribute(fattr)
 
-    class OptionalOp(test.Operation, name="optional"):
+    class OptionalOp(Test.Operation, name="optional"):
         a = irdsl.Operand(i32)
         b = irdsl.Operand(i32, irdsl.Variadicity.optional)
         out1 = irdsl.Result(i32)
         out2 = irdsl.Result(i32, irdsl.Variadicity.optional)
         out3 = irdsl.Result(i32)
 
-    class Optional2Op(test.Operation, name="optional2"):
+    class Optional2Op(Test.Operation, name="optional2"):
         a = irdsl.Operand(i32, irdsl.Variadicity.optional)
         b = irdsl.Result(i32, irdsl.Variadicity.optional)
 
-    class VariadicOp(test.Operation, name="variadic"):
+    class VariadicOp(Test.Operation, name="variadic"):
         a = irdsl.Operand(i32)
         b = irdsl.Operand(i32, irdsl.Variadicity.optional)
         c = irdsl.Operand(i32, irdsl.Variadicity.variadic)
@@ -128,11 +131,11 @@ def testIRDSL():
         out3 = irdsl.Result(i32, irdsl.Variadicity.optional)
         out4 = irdsl.Result(i32)
 
-    class Variadic2Op(test.Operation, name="variadic2"):
+    class Variadic2Op(Test.Operation, name="variadic2"):
         a = irdsl.Operand(i32, irdsl.Variadicity.variadic)
         b = irdsl.Result(i32, irdsl.Variadicity.variadic)
 
-    class MixedOp(test.Operation, name="mixed"):
+    class MixedOp(Test.Operation, name="mixed"):
         out = irdsl.Result(i32)
         in1 = irdsl.Operand(i32)
         in2 = irdsl.Attribute(iattr)
@@ -182,8 +185,8 @@ def testIRDSL():
     # CHECK:   }
     # CHECK: }
     with Context(), Location.unknown():
-        test.load()
-        print(test.mlir_module)
+        Test.load()
+        print(Test.mlir_module)
 
         # CHECK: (self, /, a, b, c, d, x, y, *, loc=None, ip=None)
         print(ConstraintOp.__init__.__signature__)

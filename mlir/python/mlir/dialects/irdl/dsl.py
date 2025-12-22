@@ -361,44 +361,44 @@ class Operation(ir.OpView):
                 )
 
 
-class Dialect:
-    def __init__(self, name: str):
-        self.name = name
-        self.operations = []
-        self.Operation = type(
+class Dialect(ir.Dialect):
+    @classmethod
+    def __init_subclass__(cls, name: str, **kwargs):
+        cls.name = name
+        cls.DIALECT_NAMESPACE = name
+        cls.operations = []
+        cls.Operation = type(
             "Operation",
             (Operation,),
-            {"_dialect_obj": self, "_dialect_name": name},
+            {"_dialect_obj": cls, "_dialect_name": name},
         )
 
-    def _emit_dialect(self) -> None:
-        d = irdl.dialect(self.name)
+    @classmethod
+    def _emit_dialect(cls) -> None:
+        d = irdl.dialect(cls.name)
         with ir.InsertionPoint(d.body):
-            for op in self.operations:
+            for op in cls.operations:
                 op._emit_operation()
 
-    def _emit_module(self) -> ir.Module:
+    @classmethod
+    def _emit_module(cls) -> ir.Module:
         m = ir.Module.create()
         with ir.InsertionPoint(m.body):
-            self._emit_dialect()
+            cls._emit_dialect()
 
         return m
 
-    def _make_dialect_class(self) -> type:
-        return type("Dialect", (ir.Dialect,), {"DIALECT_NAMESPACE": self.name})
+    @classmethod
+    def load(cls) -> None:
+        if hasattr(cls, "mlir_module"):
+            raise RuntimeError(f"Dialect {cls.name} is already loaded.")
 
-    def load(self) -> None:
-        if hasattr(self, "mlir_module"):
-            raise RuntimeError(f"Dialect {self.name} is already loaded.")
-
-        mlir_module = self._emit_module()
+        mlir_module = cls._emit_module()
         irdl.load_dialects(mlir_module)
 
-        dialect_class = self._make_dialect_class()
-        _cext.register_dialect(dialect_class)
+        _cext.register_dialect(cls)
 
-        for op in self.operations:
-            _cext.register_operation(dialect_class)(op)
+        for op in cls.operations:
+            _cext.register_operation(cls)(op)
 
-        self.mlir_module = mlir_module
-        self.dialect_class = dialect_class
+        cls.mlir_module = mlir_module
