@@ -375,9 +375,10 @@ class LLVMPRAutomator:
 
         git_env = self._get_git_env()
 
-        upstream_url = self._get_url_for_remote(self.config.upstream_remote)
         refspec = f"refs/heads/{self.config.base_branch}:refs/remotes/{self.config.upstream_remote}/{self.config.base_branch}"
-        self.runner.run_command(["git", "fetch", upstream_url, refspec], env=git_env)
+        self.runner.run_command(
+            ["git", "fetch", self.config.upstream_remote, refspec], env=git_env
+        )
 
         try:
             self.runner.run_command(["git", "rebase", target], env=git_env)
@@ -408,23 +409,6 @@ class LLVMPRAutomator:
                     ["git", "rebase", "--abort"], check=False, env=git_env
                 )
             raise LlvmPrError("rebase operation failed.") from e
-
-    def _get_url_for_remote(self, remote_name: str) -> str:
-        """Gets the URL for a remote."""
-        remote_url_result = self.runner.run_command(
-            ["git", "remote", "get-url", remote_name],
-            capture_output=True,
-            text=True,
-            read_only=True,
-        )
-        remote_url = remote_url_result.stdout.strip()
-        if remote_url.startswith("git@github.com:"):
-            return remote_url
-        if remote_url.startswith("https://github.com/"):
-            return remote_url
-        raise LlvmPrError(
-            f"Unsupported remote URL format for {remote_name}: {remote_url}"
-        )
 
     def _get_commit_stack(self) -> List[str]:
         target = f"{self.config.upstream_remote}/{self.config.base_branch}"
@@ -479,12 +463,10 @@ class LLVMPRAutomator:
 
         git_env = self._get_git_env()
 
-        remote_url = self._get_url_for_remote(self.remote)
-
         push_command = [
             "git",
             "push",
-            remote_url,
+            self.remote,
             f"{commit_hash}:refs/heads/{branch_name}",
         ]
         self.runner.run_command(push_command, env=git_env)
