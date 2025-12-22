@@ -59,6 +59,7 @@ class TestDAP_attach(lldbdap_testcase.DAPTestCaseBase):
         self.attach(program=program)
         self.continue_and_verify_pid()
 
+    @expectedFailureWindows
     def test_by_name_waitFor(self):
         """
         Tests waiting for, and attaching to a process by process name that
@@ -87,7 +88,7 @@ class TestDAP_attach(lldbdap_testcase.DAPTestCaseBase):
         resp = self.attach(targetId=99999, expectFailure=True)
         self.assertFalse(resp["success"])
         self.assertIn(
-            "Both debuggerId and targetId must be specified together",
+            "Both 'debuggerId' and 'targetId' must be specified together",
             resp["body"]["error"]["format"],
         )
 

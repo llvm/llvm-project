@@ -3440,3 +3440,79 @@ define i1 @val_is_aligend_pred_mismatch(i32 %num) {
   %_0 = icmp sge i32 %num.masked, %num
   ret i1 %_0
 }
+
+define i1 @icmp_samesign_with_nsw_add(i32 %arg0) {
+; CHECK-LABEL: @icmp_samesign_with_nsw_add(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[V1:%.*]] = icmp sgt i32 [[ARG0:%.*]], 25
+; CHECK-NEXT:    ret i1 [[V1]]
+;
+entry:
+  %v0 = add nsw i32 %arg0, -18
+  %v1 = icmp samesign ugt i32 %v0, 7
+  ret i1 %v1
+}
+
+; Negative test; Fold shouldn't fire since -124 - 12 causes signed overflow
+define i1 @icmp_samesign_with_nsw_add_neg(i8 %arg0) {
+; CHECK-LABEL: @icmp_samesign_with_nsw_add_neg(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = add i8 [[ARG0:%.*]], -121
+; CHECK-NEXT:    [[V1:%.*]] = icmp ult i8 [[TMP0]], 123
+; CHECK-NEXT:    ret i1 [[V1]]
+;
+entry:
+  %v0 = add nsw i8 %arg0, 12
+  %v1 = icmp samesign ugt i8 %v0, -124
+  ret i1 %v1
+}
+
+define i1 @icmp_with_nuw_add(i32 %arg0) {
+; CHECK-LABEL: @icmp_with_nuw_add(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[V1:%.*]] = icmp ult i32 [[ARG0:%.*]], 11
+; CHECK-NEXT:    ret i1 [[V1]]
+;
+entry:
+  %v0 = add nuw i32 %arg0, 7
+  %v1 = icmp ult i32 %v0, 18
+  ret i1 %v1
+}
+
+define i1 @icmp_partial_negative_samesign_ult_to_slt(i8 range(i8 -1, 5) %x) {
+; CHECK-LABEL: @icmp_partial_negative_samesign_ult_to_slt(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[X:%.*]], 2
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+entry:
+  %add = add nsw i8 %x, -5
+  %cmp = icmp samesign ult i8 %add, -3
+  ret i1 %cmp
+}
+
+define i1 @icmp_pos_samesign_slt_to_ult(i8 range(i8 1, 5) %x) {
+; CHECK-LABEL: @icmp_pos_samesign_slt_to_ult(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ult i8 [[X:%.*]], 2
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+entry:
+  %add = add nsw i8 %x, 1
+  %cmp = icmp samesign slt i8 %add, 3
+  ret i1 %cmp
+}
+
+; Since higher priority is given to unsigned predicates, the predicate should
+; not change
+define i1 @icmp_nuw_nsw_samesign(i32 %arg0) {
+; CHECK-LABEL: @icmp_nuw_nsw_samesign(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[ARG0:%.*]], 9
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+entry:
+  %v0 = add nuw nsw i32 %arg0, 1
+  %cmp = icmp samesign ult i32 %v0, 10
+  ret i1 %cmp
+}

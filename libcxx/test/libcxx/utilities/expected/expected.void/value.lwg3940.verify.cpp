@@ -30,11 +30,12 @@ void test() {
   // MoveOnly type as error_type
   std::expected<void, MoveOnly> e(std::unexpect, 5);
 
-  e.value(); // expected-note {{in instantiation of member function 'std::expected<void, MoveOnly>::value' requested here}}
+  // expected-note@+1 {{in instantiation of member function 'std::expected<void, MoveOnly>::value' requested here}}
+  (void)e.value();
   // expected-error@*:* {{static assertion failed due to requirement 'is_copy_constructible_v<MoveOnly>'}}
   // expected-error@*:* {{call to deleted constructor of 'MoveOnly'}}
 
-  std::move(e)
+  (void)std::move(e)
       .value(); // expected-note {{in instantiation of member function 'std::expected<void, MoveOnly>::value' requested here}}
   // expected-error@*:* {{static assertion failed due to requirement 'is_copy_constructible_v<MoveOnly>'}}
 
@@ -42,9 +43,9 @@ void test() {
   std::expected<void, CopyOnly> e2(std::unexpect);
   // expected-error@*:* {{call to deleted constructor of 'CopyOnly'}}
 
-  e2.value();
+  (void)e2.value();
 
-  std::move(e2)
+  (void)std::move(e2)
       .value(); // expected-note {{in instantiation of member function 'std::expected<void, CopyOnly>::value' requested here}}
   // expected-error@*:* {{static assertion failed due to requirement 'is_move_constructible_v<CopyOnly>'}}
   // expected-error@*:* {{call to deleted constructor of 'CopyOnly'}}
