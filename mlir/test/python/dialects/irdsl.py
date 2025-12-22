@@ -135,9 +135,11 @@ def testIRDSL():
         a = irdsl.Operand(i32, irdsl.Variadicity.variadic)
         b = irdsl.Result(i32, irdsl.Variadicity.variadic)
 
-    class MixedOp(Test.Operation, name="mixed"):
+    class MixedOpBase(Test.Operation):
         out = irdsl.Result(i32)
         in1 = irdsl.Operand(i32)
+
+    class MixedOp(MixedOpBase, name="mixed"):
         in2 = irdsl.Attribute(iattr)
         in3 = irdsl.Operand(i32, irdsl.Variadicity.optional)
         in4 = irdsl.Attribute(iattr)

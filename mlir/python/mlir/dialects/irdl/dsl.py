@@ -186,10 +186,11 @@ class Operation(ir.OpView):
         fields = []
         cls._fields = fields
 
-        for key, value in cls.__dict__.items():
-            if isinstance(value, FieldDef):
-                setattr(value, "name", key)
-                fields.append(value)
+        for base in reversed(cls.__mro__):
+            for key, value in base.__dict__.items():
+                if isinstance(value, FieldDef):
+                    setattr(value, "name", key)
+                    fields.append(value)
 
         cls._generate_class_attributes(dialect_name, op_name, fields)
         cls._generate_init_method(fields)
