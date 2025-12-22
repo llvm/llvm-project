@@ -717,7 +717,7 @@ static void addRelativeReloc(Ctx &ctx, InputSectionBase &isec,
     // field. This is described in further detail in:
     // https://github.com/ARM-software/abi-aa/blob/main/memtagabielf64/memtagabielf64.rst#841extended-semantics-of-r_aarch64_relative
     if (addend < 0 || static_cast<uint64_t>(addend) >= sym.getSize())
-      isec.relocations.push_back({expr, type, offsetInSec, addend, &sym});
+      isec.relocations.push_back({R_ADDEND_NEG, type, offsetInSec, addend, &sym});
     return;
   }
 
