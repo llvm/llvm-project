@@ -9,6 +9,7 @@
 // RUN: %clang -### --target=x86_64-linux -flto -fpartition-static-data-sections -fno-partition-static-data-sections %s 2>&1 | FileCheck %s --implicit-check-not="-plugin-opt=-fpartition-static-data-sections"
 
 // OPT: "-fpartition-static-data-sections"
+// OPT: "-mllvm" "-memprof-annotate-static-data-prefix"
 
 // ERR: error: unsupported option '-fpartition-static-data-sections' for target
 

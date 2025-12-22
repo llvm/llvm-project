@@ -6188,9 +6188,15 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     if (!A->getOption().matches(
             options::OPT_fno_partition_static_data_sections)) {
       // This codegen pass is only available on x86 and AArch64 ELF targets.
-      if ((Triple.isX86() || Triple.isAArch64()) && Triple.isOSBinFormatELF())
+      if ((Triple.isX86() || Triple.isAArch64()) && Triple.isOSBinFormatELF()) {
         A->render(Args, CmdArgs);
-      else
+        // Turn on -memprof-annotate-static-data-prefix.
+        // When the memory profile (specified by --fmemory-profile-use) has
+        // static data access profiles, global variable hotness are inferrred
+        // from the profile. Otherwise this option is no-op.
+        CmdArgs.push_back("-mllvm");
+        CmdArgs.push_back("-memprof-annotate-static-data-prefix");
+      } else
         D.Diag(diag::err_drv_unsupported_opt_for_target)
             << A->getAsString(Args) << TripleStr;
     }

@@ -1244,9 +1244,10 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
   if (auto *A =
           Args.getLastArg(options::OPT_fpartition_static_data_sections,
                           options::OPT_fno_partition_static_data_sections)) {
-    if (A->getOption().matches(options::OPT_fpartition_static_data_sections))
+    if (A->getOption().matches(options::OPT_fpartition_static_data_sections)) {
       CmdArgs.push_back(Args.MakeArgString(Twine(PluginOptPrefix) +
                                            "-partition-static-data-sections"));
+    }
   }
 
   if (Arg *A = getLastProfileSampleUseArg(Args)) {
