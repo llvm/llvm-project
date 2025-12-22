@@ -1323,7 +1323,8 @@ LaunchFuncOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
 
   // Check that `launch_func` refers to a well-formed GPU kernel container.
   StringAttr kernelContainerName = launchOp.getKernelModuleName();
-  Operation *kernelContainer = module.lookupSymbol(kernelContainerName);
+  Operation *kernelContainer =
+      symbolTable.lookupNearestSymbolFrom(module, kernelContainerName);
   if (!kernelContainer)
     return launchOp.emitOpError()
            << "kernel container '" << kernelContainerName.getValue()
@@ -1340,7 +1341,8 @@ LaunchFuncOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
            << "' is undefined";
 
   // Check that `launch_func` refers to a well-formed kernel function.
-  Operation *kernelFunc = module.lookupSymbol(launchOp.getKernelAttr());
+  Operation *kernelFunc =
+      symbolTable.lookupNearestSymbolFrom(module, launchOp.getKernelAttr());
   if (!kernelFunc)
     return launchOp.emitOpError("kernel function '")
            << launchOp.getKernel() << "' is undefined";
