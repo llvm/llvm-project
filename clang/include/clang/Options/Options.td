@@ -320,7 +320,8 @@ def mno_mpx : Flag<["-"], "mno-mpx">, Group<clang_ignored_legacy_options_Group>;
 
 // Group that ignores all gcc optimizations that won't be implemented
 def clang_ignored_gcc_optimization_f_Group : OptionGroup<
-  "<clang_ignored_gcc_optimization_f_Group>">, Group<f_Group>, Flags<[Ignored]>;
+  "<clang_ignored_gcc_optimization_f_Group>">,
+  Group<f_Group>, Flags<[Ignored]>, Visibility<[ClangOption, FlangOption]>;
 
 class DiagnosticOpts<string base>
   : KeyPathAndMacro<"DiagnosticOpts->", base, "DIAG_"> {}
@@ -1670,6 +1671,14 @@ defm named_loops
           PosFlag<SetTrue, [], [CC1Option], "Enable support for named loops">,
           NegFlag<SetFalse>>;
 
+// C '_Defer' TS
+defm defer_ts : BoolFOption<"defer-ts",
+  LangOpts<"DeferTS">, DefaultFalse,
+  PosFlag<SetTrue, [], [ClangOption, CC1Option],
+          "Enable support for the C '_Defer' Technical Specification">,
+  NegFlag<SetFalse>>,
+  ShouldParseIf<!strconcat("!", cplusplus.KeyPath)>;
+
 // C++ Coroutines
 defm coroutines : BoolFOption<"coroutines",
   LangOpts<"Coroutines">, Default<cpp20.KeyPath>,
@@ -1954,6 +1963,14 @@ defm lifetime_safety : BoolFOption<
   NegFlag<SetFalse, [], [CC1Option], "Disable">,
   BothFlags<[], [CC1Option],
           " experimental lifetime safety for C++">>;
+
+defm lifetime_safety_inference
+    : BoolFOption<"experimental-lifetime-safety-inference",
+                  LangOpts<"EnableLifetimeSafetyInference">, DefaultFalse,
+                  PosFlag<SetTrue, [], [CC1Option], "Enable">,
+                  NegFlag<SetFalse, [], [CC1Option], "Disable">,
+                  BothFlags<[], [CC1Option],
+                            " experimental lifetime safety inference for C++">>;
 
 defm addrsig : BoolFOption<"addrsig",
   CodeGenOpts<"Addrsig">, DefaultFalse,
@@ -3393,13 +3410,6 @@ defm modules_reduced_bmi : BoolOption<"f", "modules-reduced-bmi",
   PosFlag<SetTrue, [], [ClangOption, CC1Option],
           "Generate the reduced BMI">>;
 
-def fmodules_driver : Flag<["-"], "fmodules-driver">,
-  Group<f_Group>, Visibility<[ClangOption]>,
-  HelpText<"Enable support for driver managed module builds (experimental)">;
-def fno_modules_driver : Flag<["-"], "fno-modules-driver">,
-  Group<f_Group>, Visibility<[ClangOption]>,
-  HelpText<"Disable support for driver managed module builds (experimental)">;
-
 def experimental_modules_reduced_bmi : Flag<["-"], "fexperimental-modules-reduced-bmi">,
   Group<f_Group>, Visibility<[ClangOption, CC1Option]>, Alias<fmodules_reduced_bmi>;
 
@@ -3465,6 +3475,10 @@ def fno_modules_prune_non_affecting_module_map_files :
     Group<f_Group>, Flags<[]>, Visibility<[CC1Option]>,
     MarshallingInfoNegativeFlag<HeaderSearchOpts<"ModulesPruneNonAffectingModuleMaps">>,
     HelpText<"Do not prune non-affecting module map files when writing module files">;
+def fmodules_single_module_parse_mode :
+  Flag<["-"], "fmodules-single-module-parse-mode">,
+  Group<f_Group>, Flags<[]>, Visibility<[CC1Option]>,
+  MarshallingInfoFlag<PreprocessorOpts<"SingleModuleParseMode">>;
 
 def fincremental_extensions :
   Flag<["-"], "fincremental-extensions">,
@@ -4691,6 +4705,12 @@ def fenable_matrix : Flag<["-"], "fenable-matrix">, Group<f_Group>,
     HelpText<"Enable matrix data type and related builtin functions">,
     MarshallingInfoFlag<LangOpts<"MatrixTypes">, hlsl.KeyPath>;
 
+def fmatrix_memory_layout_EQ : Joined<["-"], "fmatrix-memory-layout=">,
+    Visibility<[ClangOption, CC1Option]>,
+    HelpText<"Sets the matrix memory layout (row-major or column-major)">,
+    Values<"row-major,column-major">,
+    Group<f_Group>;
+
 defm raw_string_literals : BoolFOption<"raw-string-literals",
     LangOpts<"RawStringLiterals">, Default<std#".hasRawStringLiterals()">,
     PosFlag<SetTrue, [], [], "Enable">,
@@ -5196,9 +5216,7 @@ def : Joined<["-"], "mmacosx-version-min=">,
   Visibility<[ClangOption, CC1Option, FC1Option, FlangOption]>,
   Group<m_Group>, Alias<mmacos_version_min_EQ>;
 def mms_bitfields : Flag<["-"], "mms-bitfields">, Group<m_Group>,
-  Visibility<[ClangOption, CC1Option]>,
-  HelpText<"Set the default structure layout to be compatible with the Microsoft compiler standard">,
-  MarshallingInfoFlag<LangOpts<"MSBitfields">>;
+  HelpText<"Set the default structure layout to be compatible with the Microsoft compiler standard">;
 def moutline : Flag<["-"], "moutline">, Group<f_clang_Group>,
   Visibility<[ClangOption, CC1Option]>,
     HelpText<"Enable function outlining (AArch64 only)">;
@@ -5207,6 +5225,12 @@ def mno_outline : Flag<["-"], "mno-outline">, Group<f_clang_Group>,
     HelpText<"Disable function outlining (AArch64 only)">;
 def mno_ms_bitfields : Flag<["-"], "mno-ms-bitfields">, Group<m_Group>,
   HelpText<"Do not set the default structure layout to be compatible with the Microsoft compiler standard">;
+def fms_layout_compatibility_EQ : Joined<["-"], "fms-layout-compatibility=">,
+  Visibility<[CC1Option]>,
+  HelpText<"Structure layout compatibility with Microsoft C++ ABI">,
+  Values<"default,itanium,microsoft">,
+  NormalizedValues<["Default", "Itanium", "Microsoft"]>, NormalizedValuesScope<"LangOptions::LayoutCompatibilityKind">,
+  MarshallingInfoEnum<LangOpts<"LayoutCompatibility">, "Default">;
 def mskip_rax_setup : Flag<["-"], "mskip-rax-setup">, Group<m_Group>,
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"Skip setting up RAX register when passing variable arguments (x86 only)">,
@@ -7317,6 +7341,10 @@ def fdefault_integer_8 : Flag<["-"],"fdefault-integer-8">, Group<f_Group>,
   HelpText<"Set the default integer and logical kind to an 8 byte wide type">;
 def fdefault_real_8 : Flag<["-"],"fdefault-real-8">, Group<f_Group>,
   HelpText<"Set the default real kind to an 8 byte wide type">;
+def fdefault_integer_4 : Flag<["-"],"fdefault-integer-4">, Group<f_Group>,
+  HelpText<"Set the default integer and logical kind to a 4 byte wide type">;
+def fdefault_real_4 : Flag<["-"],"fdefault-real-4">, Group<f_Group>,
+  HelpText<"Set the default real kind to a 4 byte wide type">;
 def fdisable_real_3 : Flag<["-"],"fdisable-real-3">, Group<f_Group>,
    HelpText<"Disable real(KIND=3) from TargetCharacteristics">, Flags<[HelpHidden]>;
 def fdisable_real_10 : Flag<["-"],"fdisable-real-10">, Group<f_Group>,
@@ -7425,6 +7453,10 @@ defm stack_repack_arrays
 By default, the heap is used. Allocations of polymorphic types
 are always done on the heap, though this may change in future releases.
   }]>;
+
+defm unsafe_cray_pointers : BoolOptionWithoutMarshalling<"f", "unsafe-cray-pointers",
+  PosFlag<SetTrue, [], [FlangOption, FC1Option], "Optimizations allow for unsafe Cray pointer usages">,
+  NegFlag<SetFalse, [], [FlangOption, FC1Option], "Optimizations don't allow for unsafe Cray pointer usages (default)">>;
 
 def fhermetic_module_files : Flag<["-"], "fhermetic-module-files">, Group<f_Group>,
   HelpText<"Emit hermetic module files (no nested USE association)">;
@@ -9580,6 +9612,8 @@ class DXCJoinedOrSeparate<string name> : Option<["/", "-"], name,
   KIND_JOINED_OR_SEPARATE>, Group<dxc_Group>,
   Visibility<[DXCOption]>;
 
+def dxc_col_major : DXCFlag<"Zpc">, HelpText<"Pack matrices in column-major order">;
+def dxc_row_major : DXCFlag<"Zpr">, HelpText<"Pack matrices in row-major order">;
 def dxc_no_stdinc : DXCFlag<"hlsl-no-stdinc">,
   HelpText<"HLSL only. Disables all standard includes containing non-native compiler types and functions.">;
 def dxc_Fo : DXCJoinedOrSeparate<"Fo">,
