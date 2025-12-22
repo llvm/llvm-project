@@ -2374,4 +2374,56 @@ TEST(CommandLineTest, ResetOptionsToInitialValue) {
 
   cl::ResetCommandLineParser();
 }
+
+class WithEqualityComparison {
+public:
+  bool operator==(const WithEqualityComparison &Other) const {
+    return Val == Other.Val;
+  }
+
+  int Val;
+};
+
+class NoEqualityComparison {
+public:
+  int Val;
+};
+
+TEST(CommandLineTest, CompareOptionValues) {
+  // Scalar option.
+  {
+    StackOption<int> O1("opt1", cl::init(42));
+    StackOption<int> O2("opt2", cl::init(42));
+    StackOption<int> O3("opt3", cl::init(3));
+    EXPECT_TRUE(O1.Default.compare(O2.Default));
+    EXPECT_FALSE(O1.Default.compare(O3.Default));
+    cl::ResetCommandLineParser();
+  }
+
+  // Class with equality comparison operator.
+  {
+    StackOption<WithEqualityComparison> O1(
+        "opt1", cl::init(WithEqualityComparison{42}));
+    StackOption<WithEqualityComparison> O2(
+        "opt2", cl::init(WithEqualityComparison{42}));
+    StackOption<WithEqualityComparison> O3("opt3",
+                                           cl::init(WithEqualityComparison{3}));
+    EXPECT_TRUE(O1.Default.compare(O2.Default));
+    EXPECT_FALSE(O1.Default.compare(O3.Default));
+    cl::ResetCommandLineParser();
+  }
+
+  // Class with no equality comparison operator.
+  {
+    StackOption<NoEqualityComparison> O1("opt1",
+                                         cl::init(NoEqualityComparison{42}));
+    StackOption<NoEqualityComparison> O2("opt2",
+                                         cl::init(NoEqualityComparison{42}));
+    StackOption<NoEqualityComparison> O3("opt3",
+                                         cl::init(NoEqualityComparison{3}));
+    EXPECT_FALSE(O1.Default.compare(O2.Default));
+    EXPECT_FALSE(O1.Default.compare(O3.Default));
+    cl::ResetCommandLineParser();
+  }
+}
 } // anonymous namespace

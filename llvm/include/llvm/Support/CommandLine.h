@@ -590,8 +590,8 @@ public:
     return Value;
   }
 
-  template <class DT, std::enable_if_t<std::is_assignable_v<DataType &, DT>,
-                                       std::nullptr_t> = nullptr>
+  template <class DT,
+            class = std::enable_if_t<std::is_assignable_v<DataType &, DT>>>
   void setValue(const DT &V) {
     Valid = true;
     Value = V;
@@ -599,13 +599,10 @@ public:
 
   // Returns whether this instance matches V.
   bool compare(const DataType &V) const {
-    // FIXME: With C++23, use `std::equality_comparable` to see if `DataType`
-    // may be a class with `operator==` and, if so, use it instead of silently
-    // returning false.
-    if constexpr (std::is_class_v<DataType>) {
-      return false;
-    } else {
+    if constexpr (has_equality_comparison_v<DataType>) {
       return Valid && (Value == V);
+    } else {
+      return false;
     }
   }
 
