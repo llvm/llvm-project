@@ -533,17 +533,11 @@ void AArch64::relocate(uint8_t *loc, const Relocation &rel,
     write64(ctx, loc, val);
     break;
   case R_AARCH64_AUTH_ABS64:
-    // If val is wider than 32 bits, the relocation must have been moved from
-    // .relr.auth.dyn to .rela.dyn, and the addend write is not needed.
-    //
-    // If val fits in 32 bits, we have two potential scenarios:
-    // * True RELR: Write the 32-bit `val`.
-    // * RELA: Even if the value now fits in 32 bits, it might have been
-    //   converted from RELR during an iteration in
-    //   finalizeAddressDependentContent(). Writing the value is harmless
-    //   because dynamic linking ignores it.
-    if (isInt<32>(val))
-      write32(ctx, loc, val);
+    // This is used for the addend of a .relr.auth.dyn entry,
+    // which is a 32-bit value; the upper 32 bits are used to
+    // encode the schema.
+    checkInt(ctx, loc, val, 32, rel);
+    write32(ctx, loc, val);
     break;
   case R_AARCH64_ADD_ABS_LO12_NC:
   case R_AARCH64_AUTH_GOT_ADD_LO12_NC:
@@ -935,6 +929,8 @@ void AArch64::relocateAlloc(InputSection &sec, uint8_t *buf) const {
   AArch64Relaxer relaxer(ctx, sec.relocs());
   for (size_t i = 0, size = sec.relocs().size(); i != size; ++i) {
     const Relocation &rel = sec.relocs()[i];
+    if (rel.expr == R_NONE) // See finalizeAddressDependentContent()
+      continue;
     uint8_t *loc = buf + rel.offset;
     const uint64_t val = sec.getRelocTargetVA(ctx, rel, secAddr + rel.offset);
 
