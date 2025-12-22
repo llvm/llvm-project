@@ -4960,7 +4960,7 @@ public:
                                             StringLiteral *FormatStr);
   ModularFormatAttr *mergeModularFormatAttr(Decl *D,
                                             const AttributeCommonInfo &CI,
-                                            IdentifierInfo *ModularImplFn,
+                                            const IdentifierInfo *ModularImplFn,
                                             StringRef ImplName,
                                             MutableArrayRef<StringRef> Aspects);
 

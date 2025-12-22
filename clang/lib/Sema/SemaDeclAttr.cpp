@@ -7004,7 +7004,7 @@ static void handleVTablePointerAuthentication(Sema &S, Decl *D,
 }
 
 static bool modularFormatAttrsEquiv(const ModularFormatAttr *Existing,
-                                    IdentifierInfo *ModularImplFn,
+                                    const IdentifierInfo *ModularImplFn,
                                     StringRef ImplName,
                                     ArrayRef<StringRef> Aspects) {
   return Existing->getModularImplFn() == ModularImplFn &&
@@ -7013,10 +7013,9 @@ static bool modularFormatAttrsEquiv(const ModularFormatAttr *Existing,
          llvm::equal(Existing->aspects(), Aspects);
 }
 
-ModularFormatAttr *
-Sema::mergeModularFormatAttr(Decl *D, const AttributeCommonInfo &CI,
-                             IdentifierInfo *ModularImplFn, StringRef ImplName,
-                             MutableArrayRef<StringRef> Aspects) {
+ModularFormatAttr *Sema::mergeModularFormatAttr(
+    Decl *D, const AttributeCommonInfo &CI, const IdentifierInfo *ModularImplFn,
+    StringRef ImplName, MutableArrayRef<StringRef> Aspects) {
   if (const auto *Existing = D->getAttr<ModularFormatAttr>()) {
     if (!modularFormatAttrsEquiv(Existing, ModularImplFn, ImplName, Aspects)) {
       Diag(Existing->getLocation(), diag::err_duplicate_attribute) << *Existing;
