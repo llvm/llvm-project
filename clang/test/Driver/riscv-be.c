@@ -1,3 +1,4 @@
+// UNSUPPORTED: system-windows
 // REQUIRES: riscv-registered-target
 // RUN: %clang -target riscv64be-unknown-elf -### %s 2>&1 \
 // RUN:   | FileCheck %s
