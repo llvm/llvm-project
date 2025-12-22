@@ -29,11 +29,12 @@ static StackFrame CreateStackFrame(DAP &dap, lldb::SBFrame &frame,
 
   lldb::SBStream stream;
   if (format && frame.GetDescriptionWithFormat(format, stream).Success()) {
-    stack_frame.name = stream.GetData();
+    stack_frame.name = llvm::StringRef(stream.GetData(), stream.GetSize());
 
     // `function_name` can be a nullptr, which throws an error when assigned to
     // an `std::string`.
-  } else if (const char *name = frame.GetDisplayFunctionName()) {
+  } else if (llvm::StringRef name = frame.GetDisplayFunctionName();
+             !name.empty()) {
     stack_frame.name = name;
   }
 
@@ -76,8 +77,8 @@ static StackFrame CreateStackFrame(DAP &dap, lldb::SBFrame &frame,
   if (frame.IsArtificial() || frame.IsHidden())
     stack_frame.presentationHint = StackFrame::ePresentationHintSubtle;
   if (const lldb::SBModule module = frame.GetModule()) {
-    if (const llvm::StringRef uuid = module.GetUUIDString(); !uuid.empty())
-      stack_frame.moduleId = uuid;
+    if (llvm::StringRef uuid = module.GetUUIDString(); !uuid.empty())
+      stack_frame.moduleId = uuid.str();
   }
 
   return stack_frame;
@@ -89,11 +90,11 @@ static StackFrame CreateExtendedStackFrameLabel(lldb::SBThread &thread,
   StackFrame stack_frame;
   lldb::SBStream stream;
   if (format && thread.GetDescriptionWithFormat(format, stream).Success()) {
-    stack_frame.name = stream.GetData();
+    stack_frame.name = llvm::StringRef(stream.GetData(), stream.GetSize());
   } else {
     const uint32_t thread_idx = thread.GetExtendedBacktraceOriginatingIndexID();
-    const char *queue_name = thread.GetQueueName();
-    if (queue_name != nullptr) {
+    if (llvm::StringRef queue_name = thread.GetQueueName();
+        !queue_name.empty()) {
       stack_frame.name = llvm::formatv("Enqueued from {0} (Thread {1})",
                                        queue_name, thread_idx);
     } else {
