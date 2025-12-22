@@ -20,14 +20,16 @@ void printStats(const LifetimeSafetyStats &Stats) {
   llvm::errs() << "\n*** LifetimeSafety Missing Origin per QualType: "
                   "(QualType : count) :\n\n";
   unsigned TotalMissingOrigins = 0;
-  for (const auto &[ExprType, MissingOriginCount] : Stats.ExprTypeToMissingOriginCount) {
+  for (const auto &[ExprType, MissingOriginCount] :
+       Stats.ExprTypeToMissingOriginCount) {
     QualType QT = QualType(ExprType, 0);
     llvm::errs() << QT.getAsString() << " : " << MissingOriginCount << '\n';
     TotalMissingOrigins += MissingOriginCount;
   }
   llvm::errs() << "\n\n*** LifetimeSafety Missing Origin per StmtClassName: "
                   "(StmtClassName : count) :\n\n";
-  for (const auto &[ExprStmtClassName, MissingOriginCount] : Stats.ExprStmtClassToMissingOriginCount) {
+  for (const auto &[ExprStmtClassName, MissingOriginCount] :
+       Stats.ExprStmtClassToMissingOriginCount) {
     llvm::errs() << ExprStmtClassName << " : " << MissingOriginCount << '\n';
   }
   llvm::errs() << "\nTotal missing origins: " << TotalMissingOrigins << "\n";
