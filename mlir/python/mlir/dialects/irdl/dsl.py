@@ -56,13 +56,33 @@ class ConstraintLoweringContext:
 
 
 class Is(ConstraintExpr):
-    def __init__(self, val: Union[ir.Attribute, ir.Type]):
+    def __init__(self, val: Callable[..., Union[ir.Attribute, ir.Type]]):
         self.val = val
+        self.args = []
+        self.kwargs = {}
+
+    def __call__(self, *args, **kwargs) -> "Is":
+        self.args.extend(args)
+        self.kwargs.update(kwargs)
+        return self
+
+    def __class_getitem__(
+        cls, val: Callable[..., Union[ir.Attribute, ir.Type]]
+    ) -> "Is":
+        return cls(val)
 
     def _lower(self, ctx: ConstraintLoweringContext) -> ir.Value:
-        return irdl.is_(
-            ir.TypeAttr.get(self.val) if isinstance(self.val, ir.Type) else self.val
-        )
+        # for most attributes and types, they are created via `.get` method,
+        # here we can just omit the `.get`
+        if isinstance(self.val, type) and hasattr(self.val, "get"):
+            self.val = self.val.get
+
+        val = self.val(*self.args, **self.kwargs)
+
+        if isinstance(val, ir.Type):
+            val = ir.TypeAttr.get(val)
+
+        return irdl.is_(val)
 
 
 class AnyOf(ConstraintExpr):

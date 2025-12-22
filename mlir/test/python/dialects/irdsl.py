@@ -8,8 +8,7 @@ import sys
 
 def run(f):
     print("\nTEST:", f.__name__, file=sys.stderr)
-    with Context():
-        f()
+    f()
 
 
 # CHECK: TEST: testMyInt
@@ -17,7 +16,7 @@ def run(f):
 def testMyInt():
     myint = irdsl.Dialect("myint")
     iattr = irdsl.BaseName("#builtin.integer")
-    i32 = irdsl.Is(IntegerType.get_signless(32))
+    i32 = irdsl.Is[IntegerType.get_signless](32)
 
     class ConstantOp(myint.Operation, name="constant"):
         value = irdsl.Attribute(iattr)
@@ -41,15 +40,15 @@ def testMyInt():
     # CHECK:     irdl.results(res: %0)
     # CHECK:   }
     # CHECK: }
-    with Location.unknown():
+    with Context(), Location.unknown():
         myint.load()
-    print(myint.mlir_module)
+        print(myint.mlir_module)
 
-    # CHECK: ['constant', 'add']
-    print([i._op_name for i in myint.operations])
+        # CHECK: ['constant', 'add']
+        print([i._op_name for i in myint.operations])
 
-    i32 = IntegerType.get_signless(32)
-    with Location.unknown():
+        i32 = IntegerType.get_signless(32)
+
         module = Module.create()
         with InsertionPoint(module.body):
             two = ConstantOp(i32, IntegerAttr.get(i32, 2))
@@ -58,46 +57,46 @@ def testMyInt():
             add2 = AddOp(i32, add1, two)
             add3 = AddOp(i32, add2, three)
 
-    # CHECK: %0 = "myint.constant"() {value = 2 : i32} : () -> i32
-    # CHECK: %1 = "myint.constant"() {value = 3 : i32} : () -> i32
-    # CHECK: %2 = "myint.add"(%0, %1) : (i32, i32) -> i32
-    # CHECK: %3 = "myint.add"(%2, %0) : (i32, i32) -> i32
-    # CHECK: %4 = "myint.add"(%3, %1) : (i32, i32) -> i32
-    print(module)
-    assert module.operation.verify()
+        # CHECK: %0 = "myint.constant"() {value = 2 : i32} : () -> i32
+        # CHECK: %1 = "myint.constant"() {value = 3 : i32} : () -> i32
+        # CHECK: %2 = "myint.add"(%0, %1) : (i32, i32) -> i32
+        # CHECK: %3 = "myint.add"(%2, %0) : (i32, i32) -> i32
+        # CHECK: %4 = "myint.add"(%3, %1) : (i32, i32) -> i32
+        print(module)
+        assert module.operation.verify()
 
-    # CHECK: AddOp
-    print(type(add1).__name__)
-    # CHECK: ConstantOp
-    print(type(two).__name__)
-    # CHECK: myint.add
-    print(add1.OPERATION_NAME)
-    # CHECK: None
-    print(add1._ODS_OPERAND_SEGMENTS)
-    # CHECK: None
-    print(add1._ODS_RESULT_SEGMENTS)
-    # CHECK: %0 = "myint.constant"() {value = 2 : i32} : () -> i32
-    print(add1.lhs.owner)
-    # CHECK: %1 = "myint.constant"() {value = 3 : i32} : () -> i32
-    print(add1.rhs.owner)
-    # CHECK: 2 : i32
-    print(two.value)
-    # CHECK: Value(%0
-    print(two.cst)
-    # CHECK: (self, /, res, lhs, rhs, *, loc=None, ip=None)
-    print(AddOp.__init__.__signature__)
-    # CHECK: (self, /, cst, value, *, loc=None, ip=None)
-    print(ConstantOp.__init__.__signature__)
+        # CHECK: AddOp
+        print(type(add1).__name__)
+        # CHECK: ConstantOp
+        print(type(two).__name__)
+        # CHECK: myint.add
+        print(add1.OPERATION_NAME)
+        # CHECK: None
+        print(add1._ODS_OPERAND_SEGMENTS)
+        # CHECK: None
+        print(add1._ODS_RESULT_SEGMENTS)
+        # CHECK: %0 = "myint.constant"() {value = 2 : i32} : () -> i32
+        print(add1.lhs.owner)
+        # CHECK: %1 = "myint.constant"() {value = 3 : i32} : () -> i32
+        print(add1.rhs.owner)
+        # CHECK: 2 : i32
+        print(two.value)
+        # CHECK: Value(%0
+        print(two.cst)
+        # CHECK: (self, /, res, lhs, rhs, *, loc=None, ip=None)
+        print(AddOp.__init__.__signature__)
+        # CHECK: (self, /, cst, value, *, loc=None, ip=None)
+        print(ConstantOp.__init__.__signature__)
 
 
 @run
 def testIRDSL():
     test = irdsl.Dialect("irdsl_test")
-    i32 = irdsl.Is(IntegerType.get_signless(32))
-    i64 = irdsl.Is(IntegerType.get_signless(64))
+    i32 = irdsl.Is[IntegerType.get_signless](32)
+    i64 = irdsl.Is[IntegerType.get_signless](64)
     i32or64 = i32 | i64
     any = irdsl.Any()
-    f32 = irdsl.Is(F32Type.get())
+    f32 = irdsl.Is[F32Type]
     iattr = irdsl.BaseName("#builtin.integer")
     fattr = irdsl.BaseName("#builtin.float")
 
@@ -182,39 +181,38 @@ def testIRDSL():
     # CHECK:     irdl.results(out: %0)
     # CHECK:   }
     # CHECK: }
-    with Location.unknown():
+    with Context(), Location.unknown():
         test.load()
-    print(test.mlir_module)
+        print(test.mlir_module)
 
-    # CHECK: (self, /, a, b, c, d, x, y, *, loc=None, ip=None)
-    print(ConstraintOp.__init__.__signature__)
-    # CHECK: (self, /, out1, out3, a, *, out2=None, b=None, loc=None, ip=None)
-    print(OptionalOp.__init__.__signature__)
-    # CHECK: (self, /, *, b=None, a=None, loc=None, ip=None)
-    print(Optional2Op.__init__.__signature__)
-    # CHECK: (self, /, out1, out2, out4, a, c, *, out3=None, b=None, loc=None, ip=None)
-    print(VariadicOp.__init__.__signature__)
-    # CHECK: (self, /, b, a, *, loc=None, ip=None)
-    print(Variadic2Op.__init__.__signature__)
-    # CHECK: (self, /, out, in1, in2, in4, in5, *, in3=None, loc=None, ip=None)
-    print(MixedOp.__init__.__signature__)
+        # CHECK: (self, /, a, b, c, d, x, y, *, loc=None, ip=None)
+        print(ConstraintOp.__init__.__signature__)
+        # CHECK: (self, /, out1, out3, a, *, out2=None, b=None, loc=None, ip=None)
+        print(OptionalOp.__init__.__signature__)
+        # CHECK: (self, /, *, b=None, a=None, loc=None, ip=None)
+        print(Optional2Op.__init__.__signature__)
+        # CHECK: (self, /, out1, out2, out4, a, c, *, out3=None, b=None, loc=None, ip=None)
+        print(VariadicOp.__init__.__signature__)
+        # CHECK: (self, /, b, a, *, loc=None, ip=None)
+        print(Variadic2Op.__init__.__signature__)
+        # CHECK: (self, /, out, in1, in2, in4, in5, *, in3=None, loc=None, ip=None)
+        print(MixedOp.__init__.__signature__)
 
-    # CHECK: None None
-    print(ConstraintOp._ODS_OPERAND_SEGMENTS, ConstraintOp._ODS_RESULT_SEGMENTS)
-    # CHECK: [1, 0] [1, 0, 1]
-    print(OptionalOp._ODS_OPERAND_SEGMENTS, OptionalOp._ODS_RESULT_SEGMENTS)
-    # CHECK: [0] [0]
-    print(Optional2Op._ODS_OPERAND_SEGMENTS, Optional2Op._ODS_RESULT_SEGMENTS)
-    # CHECK: [1, 0, -1] [-1, -1, 0, 1]
-    print(VariadicOp._ODS_OPERAND_SEGMENTS, VariadicOp._ODS_RESULT_SEGMENTS)
-    # CHECK: [-1] [-1]
-    print(Variadic2Op._ODS_OPERAND_SEGMENTS, Variadic2Op._ODS_RESULT_SEGMENTS)
+        # CHECK: None None
+        print(ConstraintOp._ODS_OPERAND_SEGMENTS, ConstraintOp._ODS_RESULT_SEGMENTS)
+        # CHECK: [1, 0] [1, 0, 1]
+        print(OptionalOp._ODS_OPERAND_SEGMENTS, OptionalOp._ODS_RESULT_SEGMENTS)
+        # CHECK: [0] [0]
+        print(Optional2Op._ODS_OPERAND_SEGMENTS, Optional2Op._ODS_RESULT_SEGMENTS)
+        # CHECK: [1, 0, -1] [-1, -1, 0, 1]
+        print(VariadicOp._ODS_OPERAND_SEGMENTS, VariadicOp._ODS_RESULT_SEGMENTS)
+        # CHECK: [-1] [-1]
+        print(Variadic2Op._ODS_OPERAND_SEGMENTS, Variadic2Op._ODS_RESULT_SEGMENTS)
 
-    i32 = IntegerType.get_signless(32)
-    i64 = IntegerType.get_signless(64)
-    f32 = F32Type.get()
+        i32 = IntegerType.get_signless(32)
+        i64 = IntegerType.get_signless(64)
+        f32 = F32Type.get()
 
-    with Location.unknown():
         iattr = IntegerAttr.get(i32, 2)
         fattr = FloatAttr.get_f32(2.3)
 
@@ -261,40 +259,40 @@ def testIRDSL():
             # CHECK: %9 = "irdsl_test.mixed"(%c1_i32, %c1_i32, %c1_i32) {in2 = 2 : i32, in4 = 2 : i32, operandSegmentSizes = array<i32: 1, 1, 1>} : (i32, i32, i32) -> i32
             m2 = MixedOp(i32, ione, iattr, iattr, ione, in3=ione)
 
-    print(module)
-    assert module.operation.verify()
+        print(module)
+        assert module.operation.verify()
 
-    # CHECK: Value(%c1_i32
-    print(c1.a)
-    # CHECK: 2 : i32
-    print(c1.x)
-    # CHECK: Value(%c1_i32
-    print(o1.a)
-    # CHECK: None
-    print(o1.b)
-    # CHECK: Value(%c1_i32
-    print(o2.b)
-    # CHECK: 0
-    print(o1.out1.result_number)
-    # CHECK: None
-    print(o1.out2)
-    # CHECK: 0
-    print(o2.out1.result_number)
-    # CHECK: 1
-    print(o2.out2.result_number)
-    # CHECK: None
-    print(o3.a)
-    # CHECK: Value(%c1_i32
-    print(o5.a)
-    # CHECK: ['Value(%c1_i32 = arith.constant 1 : i32)', 'Value(%c1_i32 = arith.constant 1 : i32)']
-    print([str(i) for i in v1.c])
-    # CHECK: ['Value(%c1_i32 = arith.constant 1 : i32)']
-    print([str(i) for i in v2.c])
-    # CHECK: []
-    print([str(i) for i in v3.c])
-    # CHECK: 0 0
-    print(len(v4.a), len(v4.b))
-    # CHECK: 3 0
-    print(len(v5.a), len(v5.b))
-    # CHECK: 1 2
-    print(len(v6.a), len(v6.b))
+        # CHECK: Value(%c1_i32
+        print(c1.a)
+        # CHECK: 2 : i32
+        print(c1.x)
+        # CHECK: Value(%c1_i32
+        print(o1.a)
+        # CHECK: None
+        print(o1.b)
+        # CHECK: Value(%c1_i32
+        print(o2.b)
+        # CHECK: 0
+        print(o1.out1.result_number)
+        # CHECK: None
+        print(o1.out2)
+        # CHECK: 0
+        print(o2.out1.result_number)
+        # CHECK: 1
+        print(o2.out2.result_number)
+        # CHECK: None
+        print(o3.a)
+        # CHECK: Value(%c1_i32
+        print(o5.a)
+        # CHECK: ['Value(%c1_i32 = arith.constant 1 : i32)', 'Value(%c1_i32 = arith.constant 1 : i32)']
+        print([str(i) for i in v1.c])
+        # CHECK: ['Value(%c1_i32 = arith.constant 1 : i32)']
+        print([str(i) for i in v2.c])
+        # CHECK: []
+        print([str(i) for i in v3.c])
+        # CHECK: 0 0
+        print(len(v4.a), len(v4.b))
+        # CHECK: 3 0
+        print(len(v5.a), len(v5.b))
+        # CHECK: 1 2
+        print(len(v6.a), len(v6.b))
