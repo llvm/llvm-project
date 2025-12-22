@@ -2386,7 +2386,7 @@ Error BitcodeReader::parseAttributeGroupBlock() {
           else if (Kind == Attribute::UWTable)
             B.addUWTableAttr(UWTableKind::Default);
           else if (Kind == Attribute::DeadOnReturn)
-            B.addDeadOnReturnAttr(std::numeric_limits<uint64_t>::max());
+            B.addDeadOnReturnAttr(DeadOnReturnInfo());
           else if (Attribute::isEnumAttrKind(Kind))
             B.addAttribute(Kind);
           else
@@ -2406,7 +2406,7 @@ Error BitcodeReader::parseAttributeGroupBlock() {
           else if (Kind == Attribute::DereferenceableOrNull)
             B.addDereferenceableOrNullAttr(Record[++i]);
           else if (Kind == Attribute::DeadOnReturn)
-            B.addDeadOnReturnAttr(Record[++i]);
+            B.addDeadOnReturnAttr(DeadOnReturnInfo(Record[++i]));
           else if (Kind == Attribute::AllocSize)
             B.addAllocSizeAttrFromRawRepr(Record[++i]);
           else if (Kind == Attribute::VScaleRange)

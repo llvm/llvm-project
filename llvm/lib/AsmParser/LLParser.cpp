@@ -20,6 +20,7 @@
 #include "llvm/AsmParser/SlotMapping.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/IR/Argument.h"
+#include "llvm/IR/Attributes.h"
 #include "llvm/IR/AutoUpgrade.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CallingConv.h"
@@ -1617,7 +1618,11 @@ bool LLParser::parseEnumAttribute(Attribute::AttrKind Attr, AttrBuilder &B,
     std::optional<uint64_t> Bytes;
     if (parseOptionalAttrBytes(lltok::kw_dead_on_return, Bytes))
       return true;
-    B.addDeadOnReturnAttr(Bytes);
+    if (Bytes.has_value()) {
+      B.addDeadOnReturnAttr(DeadOnReturnInfo(Bytes.value()));
+    } else {
+      B.addDeadOnReturnAttr(DeadOnReturnInfo());
+    }
     return false;
   }
   case Attribute::DereferenceableOrNull: {

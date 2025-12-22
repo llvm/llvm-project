@@ -86,6 +86,10 @@ public:
     return std::numeric_limits<uint64_t>::max();
   }
 
+  bool isZeroSized() const {
+    return DeadBytes.has_value() && DeadBytes.value() == 0;
+  }
+
 private:
   std::optional<uint64_t> DeadBytes;
 };
@@ -1283,7 +1287,7 @@ public:
 
   /// This turns the number of dead_on_return bytes into the form used
   /// internally in Attribute.
-  LLVM_ABI AttrBuilder &addDeadOnReturnAttr(std::optional<uint64_t> Bytes);
+  LLVM_ABI AttrBuilder &addDeadOnReturnAttr(DeadOnReturnInfo Info);
 
   /// This turns the number of dereferenceable_or_null bytes into the
   /// form used internally in Attribute.

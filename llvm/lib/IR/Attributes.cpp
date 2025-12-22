@@ -2233,15 +2233,11 @@ AttrBuilder &AttrBuilder::addDereferenceableAttr(uint64_t Bytes) {
   return addRawIntAttr(Attribute::Dereferenceable, Bytes);
 }
 
-AttrBuilder &AttrBuilder::addDeadOnReturnAttr(std::optional<uint64_t> Bytes) {
-  if (!Bytes.has_value())
-    return addRawIntAttr(Attribute::DeadOnReturn,
-                         std::numeric_limits<uint64_t>::max());
-
-  if (Bytes.value() == 0)
+AttrBuilder &AttrBuilder::addDeadOnReturnAttr(DeadOnReturnInfo Info) {
+  if (Info.isZeroSized())
     return *this;
 
-  return addRawIntAttr(Attribute::DeadOnReturn, Bytes.value());
+  return addRawIntAttr(Attribute::DeadOnReturn, Info.toIntValue());
 }
 
 AttrBuilder &AttrBuilder::addDereferenceableOrNullAttr(uint64_t Bytes) {
