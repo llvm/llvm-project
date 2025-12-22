@@ -14,7 +14,6 @@
 #include "wrapper_function_utils.h"
 
 using namespace orc_rt;
-using namespace orc_rt::elfnix;
 
 ORC_RT_JIT_DISPATCH_TAG(__orc_rt_reoptimize_tag)
 
