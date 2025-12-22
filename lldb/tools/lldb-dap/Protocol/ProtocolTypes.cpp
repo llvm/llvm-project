@@ -1214,9 +1214,7 @@ llvm::json::Value toJSON(const StackFrame &SF) {
     if (SF.endColumn != 0 && SF.endColumn != LLDB_INVALID_COLUMN_NUMBER)
       result.insert({"endColumn", SF.endColumn});
   } else {
-    assert(SF.line == 0);
     result.insert({"line", 0});
-    assert(SF.column == 0);
     result.insert({"column", 0});
   }
   if (SF.canRestart)
