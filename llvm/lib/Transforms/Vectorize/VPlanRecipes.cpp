@@ -1964,9 +1964,11 @@ InstructionCost VPWidenSelectRecipe::computeCost(ElementCount VF,
   if (!ScalarCond)
     CondTy = VectorType::get(CondTy, VF);
 
-  CmpInst::Predicate Pred = CmpInst::BAD_ICMP_PREDICATE;
-  if (auto *Cmp = dyn_cast<CmpInst>(SI->getCondition()))
-    Pred = Cmp->getPredicate();
+  llvm::CmpPredicate Pred;
+  if (!match(getOperand(0), m_Cmp(Pred, m_VPValue(), m_VPValue())))
+    if (getOperand(0)->isLiveIn())
+      if (auto *Cmp = dyn_cast<CmpInst>(getOperand(0)->getLiveInIRValue()))
+        Pred = Cmp->getPredicate();
   return Ctx.TTI.getCmpSelInstrCost(
       Instruction::Select, VectorTy, CondTy, Pred, Ctx.CostKind,
       {TTI::OK_AnyValue, TTI::OP_None}, {TTI::OK_AnyValue, TTI::OP_None}, SI);
