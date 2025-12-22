@@ -3126,8 +3126,8 @@ void SelectionDAGBuilder::visitSPDescriptorParent(StackProtectorDescriptor &SPD,
       MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), FI), Align,
       MachineMemOperand::MOVolatile);
 
-  if (TLI.useStackGuardXorFP())
-    GuardVal = TLI.emitStackGuardXorFP(DAG, GuardVal, dl);
+  if (TLI.useStackGuardMixCookie())
+    GuardVal = TLI.emitStackGuardMixCookie(DAG, GuardVal, dl, false);
 
   // If we're using function-based instrumentation, call the guard check
   // function
@@ -3235,8 +3235,8 @@ void SelectionDAGBuilder::visitSPDescriptorFailure(
         MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), FI), Align,
         MachineMemOperand::MOVolatile);
 
-    if (TLI.useStackGuardXorFP())
-      GuardVal = TLI.emitStackGuardXorFP(DAG, GuardVal, dl);
+    if (TLI.useStackGuardMixCookie())
+      GuardVal = TLI.emitStackGuardMixCookie(DAG, GuardVal, dl, true);
 
     // The target provides a guard check function to validate the guard value.
     // Generate a call to that function with the content of the guard slot as
@@ -7464,8 +7464,8 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
                         MachinePointerInfo(Global, 0), Align,
                         MachineMemOperand::MOVolatile);
     }
-    if (TLI.useStackGuardXorFP())
-      Res = TLI.emitStackGuardXorFP(DAG, Res, sdl);
+    if (TLI.useStackGuardMixCookie())
+      Res = TLI.emitStackGuardMixCookie(DAG, Res, sdl, false);
     DAG.setRoot(Chain);
     setValue(&I, Res);
     return;
@@ -8427,13 +8427,15 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     setValue(&I,
              DAG.getNode(ISD::LOOP_DEPENDENCE_WAR_MASK, sdl,
                          EVT::getEVT(I.getType()), getValue(I.getOperand(0)),
-                         getValue(I.getOperand(1)), getValue(I.getOperand(2))));
+                         getValue(I.getOperand(1)), getValue(I.getOperand(2)),
+                         DAG.getConstant(0, sdl, MVT::i64)));
     return;
   case Intrinsic::loop_dependence_raw_mask:
     setValue(&I,
              DAG.getNode(ISD::LOOP_DEPENDENCE_RAW_MASK, sdl,
                          EVT::getEVT(I.getType()), getValue(I.getOperand(0)),
-                         getValue(I.getOperand(1)), getValue(I.getOperand(2))));
+                         getValue(I.getOperand(1)), getValue(I.getOperand(2)),
+                         DAG.getConstant(0, sdl, MVT::i64)));
     return;
   }
 }
@@ -9590,34 +9592,6 @@ void SelectionDAGBuilder::visitCall(const CallInst &I) {
         if (visitUnaryFloatCall(I, ISD::FABS))
           return;
         break;
-      case LibFunc_fmin:
-      case LibFunc_fminf:
-      case LibFunc_fminl:
-        // TODO: Remove this, already canonicalized by the middle-end.
-        if (visitBinaryFloatCall(I, ISD::FMINNUM))
-          return;
-        break;
-      case LibFunc_fmax:
-      case LibFunc_fmaxf:
-      case LibFunc_fmaxl:
-        // TODO: Remove this, already canonicalized by the middle-end.
-        if (visitBinaryFloatCall(I, ISD::FMAXNUM))
-          return;
-        break;
-      case LibFunc_fminimum_num:
-      case LibFunc_fminimum_numf:
-      case LibFunc_fminimum_numl:
-        // TODO: Remove this, already canonicalized by the middle-end.
-        if (visitBinaryFloatCall(I, ISD::FMINIMUMNUM))
-          return;
-        break;
-      case LibFunc_fmaximum_num:
-      case LibFunc_fmaximum_numf:
-      case LibFunc_fmaximum_numl:
-        // TODO: Remove this, already canonicalized by the middle-end.
-        if (visitBinaryFloatCall(I, ISD::FMAXIMUMNUM))
-          return;
-        break;
       case LibFunc_sin:
       case LibFunc_sinf:
       case LibFunc_sinl:
@@ -9685,41 +9659,6 @@ void SelectionDAGBuilder::visitCall(const CallInst &I) {
       case LibFunc_sqrtf_finite:
       case LibFunc_sqrtl_finite:
         if (visitUnaryFloatCall(I, ISD::FSQRT))
-          return;
-        break;
-      case LibFunc_floor:
-      case LibFunc_floorf:
-      case LibFunc_floorl:
-        // TODO: Remove this, already canonicalized by the middle-end.
-        if (visitUnaryFloatCall(I, ISD::FFLOOR))
-          return;
-        break;
-      case LibFunc_ceil:
-      case LibFunc_ceilf:
-      case LibFunc_ceill:
-        // TODO: Remove this, already canonicalized by the middle-end.
-        if (visitUnaryFloatCall(I, ISD::FCEIL))
-          return;
-        break;
-      case LibFunc_rint:
-      case LibFunc_rintf:
-      case LibFunc_rintl:
-        // TODO: Remove this, already canonicalized by the middle-end.
-        if (visitUnaryFloatCall(I, ISD::FRINT))
-          return;
-        break;
-      case LibFunc_round:
-      case LibFunc_roundf:
-      case LibFunc_roundl:
-        // TODO: Remove this, already canonicalized by the middle-end.
-        if (visitUnaryFloatCall(I, ISD::FROUND))
-          return;
-        break;
-      case LibFunc_trunc:
-      case LibFunc_truncf:
-      case LibFunc_truncl:
-        // TODO: Remove this, already canonicalized by the middle-end.
-        if (visitUnaryFloatCall(I, ISD::FTRUNC))
           return;
         break;
       case LibFunc_log2:
@@ -11854,7 +11793,6 @@ void SelectionDAGISel::LowerArguments(const Function &F) {
     SmallVector<Type *, 4> Types;
     ComputeValueTypes(DAG.getDataLayout(), Arg.getType(), Types);
     bool isArgValueUsed = !Arg.use_empty();
-    unsigned PartBase = 0;
     Type *FinalType = Arg.getType();
     if (Arg.hasAttribute(Attribute::ByVal))
       FinalType = Arg.getParamByValType();
@@ -11973,7 +11911,7 @@ void SelectionDAGISel::LowerArguments(const Function &F) {
         // return values.
         ISD::InputArg MyFlags(
             Flags, RegisterVT, VT, ArgTy, isArgValueUsed, ArgNo,
-            PartBase + i * RegisterVT.getStoreSize().getKnownMinValue());
+            i * RegisterVT.getStoreSize().getKnownMinValue());
         if (NumRegs > 1 && i == 0)
           MyFlags.Flags.setSplit();
         // if it isn't first piece, alignment must be 1
@@ -11986,7 +11924,6 @@ void SelectionDAGISel::LowerArguments(const Function &F) {
       }
       if (NeedsRegBlock && Value == NumValues - 1)
         Ins[Ins.size() - 1].Flags.setInConsecutiveRegsLast();
-      PartBase += VT.getStoreSize().getKnownMinValue();
     }
   }
 

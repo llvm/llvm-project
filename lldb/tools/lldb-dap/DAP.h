@@ -270,7 +270,7 @@ struct DAP final : public DAPTransport::MessageHandler {
   ///     either an expression or a statement, depending on the rest of
   ///     the expression.
   /// \return the expression mode
-  ReplMode DetectReplMode(lldb::SBFrame frame, std::string &expression,
+  ReplMode DetectReplMode(lldb::SBFrame &frame, std::string &expression,
                           bool partial_expression);
 
   /// Create a `protocol::Source` object as described in the debug adapter
