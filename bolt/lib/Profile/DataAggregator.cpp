@@ -2387,11 +2387,9 @@ std::error_code DataAggregator::writeBATYAML(BinaryContext &BC,
       if (PseudoProbeDecoder) {
         DenseMap<const MCDecodedPseudoProbeInlineTree *, uint32_t>
             InlineTreeNodeId;
-        if (BF->getGUID()) {
-          std::tie(YamlBF.InlineTree, InlineTreeNodeId) =
-              YAMLProfileWriter::convertBFInlineTree(*PseudoProbeDecoder,
-                                                     InlineTree, BF->getGUID());
-        }
+        std::tie(YamlBF.InlineTree, InlineTreeNodeId) =
+            YAMLProfileWriter::convertBFInlineTree(*PseudoProbeDecoder,
+                                                   InlineTree, *BF);
         // Fetch probes belonging to all fragments
         const AddressProbesMap &ProbeMap =
             PseudoProbeDecoder->getAddress2ProbesMap();
