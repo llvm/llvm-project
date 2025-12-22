@@ -34,3 +34,29 @@ define i32 @li_imm() {
 ; CHECK-NEXT:    ret
   ret i32 -1
 }
+
+define i32 @pli_b_i32(ptr %p) {
+; CHECK-LABEL: pli_b_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pli.b a0, 5
+; CHECK-NEXT:    ret
+  ret i32 u0x05050505
+}
+
+define i32 @pli_h_i32(ptr %p) {
+; CHECK-LABEL: pli_h_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pli.h a0, -64
+; CHECK-NEXT:    ret
+  ret i32 u0xffc0ffc0
+}
+
+define void @pli_b_store_i32(ptr %p) {
+; CHECK-LABEL: pli_b_store_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pli.b a1, 65
+; CHECK-NEXT:    sw a1, 0(a0)
+; CHECK-NEXT:    ret
+  store i32 u0x41414141, ptr %p
+  ret void
+}

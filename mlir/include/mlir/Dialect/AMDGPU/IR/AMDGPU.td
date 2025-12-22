@@ -24,6 +24,90 @@ def AMDGPU_Dialect : Dialect {
     and LLVM intrinsics. These wrappers should be used in conjunction with
     more generic dialects, such as `gpu` and `vector`, when generating LLVM IR
     that will eventually be executed on AMD hardware.
+
+    # What goes here?
+    In many cases, AMD GPU functionality can be accessed either though generic
+    operations (such as those in the `gpu`, `vector`, or `math`) or through
+    the `rocdl` dialect's intrinsic wrappers. However, there are instances where
+    AMD-specific functionally benefits from a wrapper around the underlying
+    LLVM intrinsics.
+
+    In general terms, operations or types should be added to this dialect when they
+    wrap some AMD-specific functionality in a way that makes it work better with the
+    MLIR ecosystem and its types or when those buitins would be needlessly
+    complex to work with (such as if they features magic constants at the LLVM level).
+
+    An additional set of operations that belong in this dialect are those that
+    have chipset-specific differences that can be abstracted over in a useful way.
+
+    To give some concrete examples:
+ 
+    - `amdgpu.mfma` and `amdgpu.wmma` exist in order to make a large set of
+      intrinsics more compatible with the MLIR type system (such as by allowing
+      8-bit float vectors to be passed as `vector<N x f8E4M3FN>` or
+      `vector<N x f8E4M2>` instead of as packed 32-bit integers whose element type
+      is controlled by separate operator-level constants. These operations also
+      allow the same `amdgpu.mfma` operation to be used regardless of the target
+      chip.
+    - `amdgpu.swizzle_bitmode` provides a wrapper around the `ds.swizzle` intrinsic,
+      allowing a wider range of types (such as `vector<2xf16>`) to be used natively
+      and eliminating the need to pack the and, or, and xor components using opaque
+      shifts.
+    - Operations like `amdgpu.gather_to_lds` provide `memref`-ized wrappers around
+      intrinsics that take a pointer, and are nontrivial enough to justify inclusion
+      in this dialect.
+
+
+    Note that simple intrinsics like `rocdl.sin` or `rocdl.s.barrier` should not
+    receive wrapper operations, as nothing is gained from the duplicate operation.
+    As a rule of thumb, if an operation's rewrite in AMDGPUToROCDL would be only
+    a `replaceOpWithNewOp` call, no AMDGPU dialect operation is needed.
+
+    # Design guidelines
+
+    Operations should leverage MLIR's "standard" types where possible. MLIR has
+    a more extensible type system than LLVM (especially in the area of small floats)
+    and those types should be used to create more ergonomic wrappers. In particular,
+    intrinsics that take pointers should have wrappers in this dialect that take
+    `memref` arguments and indices.
+
+    Operations should use properties or attributes in cases where the underlying
+    intrinsic uses `immarg`s (except in cases where that attribute can be represented
+    in the type system).
+
+    If it is possible to generalize the types of an operation, it should be done.
+    For example, the underlying operations for permutations and swizzles always
+    take 32-bit operands. Their AMDGPU wrappers can take any type, and will apply
+    padding and expansion to multiple instructions as needed. This makes these
+    operations easier to target because it hides the bitcasts and extracts
+    until the final lowering.
+
+    When the underlying operation uses magic constants, those should be presented
+    in a more programmer-friendly fashion, such as through enums or though
+    using separate arguments that are later combined. (For example, see the
+    design of the `amdgpu.dpp` and `amdgpu.fat_raw_buffer_cast` operations.)
+
+    If sufficiently similar functionality on multiple hardware generations can be
+    encapsulated into a single operation, it should be done. The lowering to
+    intrinsics should either throw an error when an unsupported capability is
+    used or ignore it. Which of these is two failure modes is more appropriate
+    depends on the nature of the feature, but errors are a safe default choice.
+
+    # Documentation guidelines
+
+    AMDGPU dialect operations should document how any abstractions they introduce
+    translate to LLVM intrinsics or hardware operations.
+
+    While documenting the semantics of the underlying operations is not required,
+    is preferred to provide an overview of the operation's functionality,
+    especially in cases where the documentation is widely distributed. Someone
+    looking at an AMDGPU dialect operation should be able to generally understand
+    what it does and have found the keywords they'll need for more detail.
+
+    Operation documentation should include usage examples.
+    
+    Note that this dialect uses LLVM's gfx numbers to refer to individual
+    architectures/chipsets and not product names or codenames.
   }];
 
 
@@ -990,6 +1074,34 @@ def MFMAOutTypes : AnyTypeOf<[F64,
                               VectorOfLengthAndType<[4, 16, 32], [F32]>,
                               VectorOfLengthAndType<[4, 16, 32], [I32]>,
                               VectorOfLengthAndType<[4], [F64]>]>;
+
+// sparse_mfma (smfmac)
+def SMFMACSparseInTypes : AnyTypeOf<[
+    VectorOfLengthAndType<[4, 8], [F16]>,
+    VectorOfLengthAndType<[4, 8], [BF16]>,
+    VectorOfLengthAndType<[8, 16], [I8]>,
+    VectorOfLengthAndType<[8, 16], [F8E4M3FN, F8E5M2]>,
+    VectorOfLengthAndType<[8, 16], [F8E4M3FNUZ, F8E5M2FNUZ]>
+]>;
+
+def SMFMACDenseInTypes : AnyTypeOf<[
+    VectorOfLengthAndType<[8, 16], [F16]>,
+    VectorOfLengthAndType<[8, 16], [BF16]>,
+    VectorOfLengthAndType<[16, 32], [I8]>,
+    VectorOfLengthAndType<[16, 32], [F8E4M3FN, F8E5M2]>,
+    VectorOfLengthAndType<[16, 32], [F8E4M3FNUZ, F8E5M2FNUZ]>
+]>;
+
+def SMFMACOutTypes : AnyTypeOf<[
+    VectorOfLengthAndType<[4, 16], [F32]>,
+    VectorOfLengthAndType<[4, 16], [I32]>
+]>;
+
+def SMFMACIdxTypes : AnyTypeOf<[
+    FixedVectorOfLengthAndType<[4], [I8]>,
+    FixedVectorOfLengthAndType<[2], [I16]>
+]>;
+
 // scaled_mfma
 def ScaledMFMAInTypes : AnyTypeOf<[VectorOfLengthAndType<[32], [F8E5M2, F8E4M3FN]>,
                                    VectorOfLengthAndType<[32], [F6E2M3FN, F6E3M2FN, F4E2M1FN]>]>;
@@ -1132,6 +1244,66 @@ def AMDGPU_WMMAOp :
   }];
   let assemblyFormat = [{
     custom<MNKDimensionList>($m, $n, $k) $sourceA `*` $sourceB `+` $destC
+    attr-dict
+    `:` type($sourceA) `,` type($sourceB) `,` type($destC)
+  }];
+  let hasVerifier = 1;
+}
+
+def AMDGPU_SparseMFMAOp :
+    AMDGPU_Op<"sparse_mfma", [AllTypesMatch<["destC", "destD"]>,
+                              Pure]>,
+    Arguments<(ins
+                   ConfinedAttr<I32Attr, [IntIsOneOf<[16, 32]>]>:$m,
+                   ConfinedAttr<I32Attr, [IntIsOneOf<[16, 32]>]>:$n,
+                   ConfinedAttr<I32Attr, [IntIsOneOf<[16, 32, 64, 128]>]>:$k,
+                   SMFMACSparseInTypes:$sourceA,
+                   SMFMACDenseInTypes:$sourceB,
+                   SMFMACOutTypes:$destC,
+                   SMFMACIdxTypes:$sparseIdx,
+                   DefaultValuedAttr<I32Attr, "0">:$cbsz,
+                   DefaultValuedAttr<I32Attr, "0">:$abid)>,
+    Results<(outs SMFMACOutTypes: $destD)> {
+  let summary = "MLIR wrapper for CDNA sparse mfma (smfmac) instructions";
+  let description = [{
+    The `amdgpu.sparse_mfma` op is an MLIR wrapper around intrinsics for various
+    `smfmac` instructions in the AMDGPU architecture, which perform matrix
+    multiply-accumulate operations using 2:4 structured sparsity on matrix A
+    with dense matrices B, C, and D.
+
+    On gfx942, smfmac intrinsics support:
+      - M=N=16, K=32 and M=N=32, K=16 for f16 and bf16 sources
+      - M=N=16, K=64 and M=N=32, K=32 for i8 and fp8 sources
+
+    On gfx950, smfmac intrinsics additionally support:
+      - M=N=16, K=64 and M=N=32, K=32 for f16 and bf16 sources
+      - M=N=16, K=128 and M=N=32, K=64 for i8 and fp8 sources
+
+    The `sparseIdx` parameter contains packed indices identifying the positions
+    of non-zero elements in the 2:4 sparse matrix A. For 16-bit source data,
+    use `vector<4xi8>` (four 8-bit indices). For 8-bit source data, use
+    `vector<2xi16>` (two 16-bit indices).
+
+    The `cbsz` and `abid` parameters are repurposed to select the index set.
+    If `cbsz == 0`, then `abid[1:0]` selects which index set to use. 
+    If `cbsz != 0`, then the very first is selected.
+
+    Example:
+    ```mlir
+      %0 = amdgpu.sparse_mfma 16x16x32 %matA * %matB + %matC sparse(%idx : vector<4xi8>)
+        : vector<4xf16>, vector<8xf16>, vector<4xf32>
+
+      %1 = amdgpu.sparse_mfma 16x16x64 %matA * %matB + %matC sparse(%idx : vector<2xi16>)
+        : vector<8xi8>, vector<16xi8>, vector<4xi32>
+
+      %2 = amdgpu.sparse_mfma 16x16x64 %matA * %matB + %matC sparse(%idx : vector<2xi16>)
+        { cbsz = 0 : i32, abid = 1 : i32 }
+        : vector<8xf8E4M3FNUZ>, vector<16xf8E4M3FNUZ>, vector<4xf32>
+    ```
+  }];
+  let assemblyFormat = [{
+    custom<MNKDimensionList>($m, $n, $k) $sourceA `*` $sourceB `+` $destC
+    `sparse` `(` $sparseIdx `:` type($sparseIdx) `)`
     attr-dict
     `:` type($sourceA) `,` type($sourceB) `,` type($destC)
   }];
