@@ -570,9 +570,10 @@ static void addInitialSkeleton(VPlan &Plan, Type *InductionTy, DebugLoc IVDL,
 
 /// Check \p Plan's live-in and replace them with constants, if they can be
 /// simplified via SCEV.
-static void simplifyLiveInsWithSCEV(VPlan &Plan, ScalarEvolution &SE) {
+static void simplifyLiveInsWithSCEV(VPlan &Plan,
+                                    PredicatedScalarEvolution &PSE) {
   auto GetSimplifiedLiveInViaSCEV = [&](VPValue *VPV) -> VPValue * {
-    const SCEV *Expr = vputils::getSCEVExprForVPValue(VPV, SE);
+    const SCEV *Expr = vputils::getSCEVExprForVPValue(VPV, PSE);
     if (auto *C = dyn_cast<SCEVConstant>(Expr))
       return Plan.getOrAddLiveIn(C->getValue());
     return nullptr;
@@ -591,7 +592,7 @@ VPlanTransforms::buildVPlan0(Loop *TheLoop, LoopInfo &LI, Type *InductionTy,
   PlainCFGBuilder Builder(TheLoop, &LI, LVer);
   std::unique_ptr<VPlan> VPlan0 = Builder.buildPlainCFG();
   addInitialSkeleton(*VPlan0, InductionTy, IVDL, PSE, TheLoop);
-  simplifyLiveInsWithSCEV(*VPlan0, *PSE.getSE());
+  simplifyLiveInsWithSCEV(*VPlan0, PSE);
   return VPlan0;
 }
 
@@ -600,13 +601,15 @@ VPlanTransforms::buildVPlan0(Loop *TheLoop, LoopInfo &LI, Type *InductionTy,
 static VPHeaderPHIRecipe *
 createWidenInductionRecipe(PHINode *Phi, VPPhi *PhiR, VPValue *Start,
                            const InductionDescriptor &IndDesc, VPlan &Plan,
-                           ScalarEvolution &SE, Loop &OrigLoop, DebugLoc DL) {
+                           PredicatedScalarEvolution &PSE, Loop &OrigLoop,
+                           DebugLoc DL) {
+  [[maybe_unused]] ScalarEvolution &SE = *PSE.getSE();
   assert(SE.isLoopInvariant(IndDesc.getStep(), &OrigLoop) &&
          "step must be loop invariant");
   assert((Plan.getLiveIn(IndDesc.getStartValue()) == Start ||
           (SE.isSCEVable(IndDesc.getStartValue()->getType()) &&
            SE.getSCEV(IndDesc.getStartValue()) ==
-               vputils::getSCEVExprForVPValue(Start, SE))) &&
+               vputils::getSCEVExprForVPValue(Start, PSE))) &&
          "Start VPValue must match IndDesc's start value");
 
   VPValue *Step =
@@ -637,7 +640,7 @@ createWidenInductionRecipe(PHINode *Phi, VPPhi *PhiR, VPValue *Start,
 }
 
 void VPlanTransforms::createHeaderPhiRecipes(
-    VPlan &Plan, ScalarEvolution &SE, Loop &OrigLoop,
+    VPlan &Plan, PredicatedScalarEvolution &PSE, Loop &OrigLoop,
     const MapVector<PHINode *, InductionDescriptor> &Inductions,
     const MapVector<PHINode *, RecurrenceDescriptor> &Reductions,
     const SmallPtrSetImpl<const PHINode *> &FixedOrderRecurrences,
@@ -671,7 +674,7 @@ void VPlanTransforms::createHeaderPhiRecipes(
     auto InductionIt = Inductions.find(Phi);
     if (InductionIt != Inductions.end())
       return createWidenInductionRecipe(Phi, PhiR, Start, InductionIt->second,
-                                        Plan, SE, OrigLoop,
+                                        Plan, PSE, OrigLoop,
                                         PhiR->getDebugLoc());
 
     assert(Reductions.contains(Phi) && "only reductions are expected now");
@@ -994,7 +997,8 @@ void VPlanTransforms::addMinimumIterationCheck(
     VPlan &Plan, ElementCount VF, unsigned UF,
     ElementCount MinProfitableTripCount, bool RequiresScalarEpilogue,
     bool TailFolded, bool CheckNeededWithTailFolding, Loop *OrigLoop,
-    const uint32_t *MinItersBypassWeights, DebugLoc DL, ScalarEvolution &SE) {
+    const uint32_t *MinItersBypassWeights, DebugLoc DL,
+    PredicatedScalarEvolution &PSE) {
   // Generate code to check if the loop's trip count is less than VF * UF, or
   // equal to it in case a scalar epilogue is required; this implies that the
   // vector trip count is zero. This check also covers the case where adding one
@@ -1004,8 +1008,9 @@ void VPlanTransforms::addMinimumIterationCheck(
       RequiresScalarEpilogue ? ICmpInst::ICMP_ULE : ICmpInst::ICMP_ULT;
   // If tail is to be folded, vector loop takes care of all iterations.
   VPValue *TripCountVPV = Plan.getTripCount();
-  const SCEV *TripCount = vputils::getSCEVExprForVPValue(TripCountVPV, SE);
+  const SCEV *TripCount = vputils::getSCEVExprForVPValue(TripCountVPV, PSE);
   Type *TripCountTy = TripCount->getType();
+  ScalarEvolution &SE = *PSE.getSE();
   auto GetMinTripCount = [&]() -> const SCEV * {
     // Compute max(MinProfitableTripCount, UF * VF) and return it.
     const SCEV *VFxUF =
