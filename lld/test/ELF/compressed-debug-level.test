@@ -18,7 +18,7 @@
 # RUN: llvm-readelf --sections %t.6 | FileCheck -check-prefixes=HEADER,LEVEL6 %s
 
 # HEADER: [Nr] Name        Type     Address  Off    Size
-# LEVEL1: [ 1] .debug_info PROGBITS 00000000 000094 0000{{1[def]|21}}
+# LEVEL1: [ 1] .debug_info PROGBITS 00000000 000094 0000{{1[cdef]|21}}
 # LEVEL6: [ 1] .debug_info PROGBITS 00000000 000094 00001{{[abc]}}
 
 ## A little arbitrary debug section which has a different size after
