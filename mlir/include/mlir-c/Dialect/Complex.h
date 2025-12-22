@@ -24,9 +24,9 @@ MLIR_CAPI_EXPORTED bool mlirAttributeIsAComplex(MlirAttribute attr);
 /// Creates a complex attribute in the given context with the given
 /// double real and imaginary values and double-precision FP semantics.
 MLIR_CAPI_EXPORTED MlirAttribute mlirComplexAttrDoubleGet(MlirContext ctx,
-                                                        MlirType type,
-                                                        double real,
-                                                        double imag);
+                                                          MlirType type,
+                                                          double real,
+                                                          double imag);
 
 /// Same as "mlirComplexAttrDoubleGet", but if the type is not valid for a
 /// construction of a ComplexAttr, returns a null MlirAttribute.
