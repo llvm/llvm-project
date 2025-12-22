@@ -780,12 +780,9 @@ IndirectCallPromotion::rewriteCall(
       TailInsts.push_back(*++TailInst);
 
   InstructionListType MovedInst = IndCallBlock.splitInstructions(&CallInst);
-  // Link new BBs to the original input offset of the indirect call site or its
-  // containing BB, so we can map samples recorded in new BBs back to the
-  // original BB seen in the input binary (if using BAT).
-  const uint32_t OrigOffset = IndirectInstrOffset
-                                  ? *IndirectInstrOffset
-                                  : IndCallBlock.getInputOffset();
+  // Link new BBs to its containing BB, so we can map samples recorded in new
+  // BBs back to the original BB seen in the input binary (if using BAT).
+  const uint32_t OrigOffset = IndCallBlock.getInputOffset();
 
   IndCallBlock.eraseInstructions(MethodFetchInsns.begin(),
                                  MethodFetchInsns.end());

@@ -36,6 +36,17 @@
 # CHECK-ICP-INLINE:     callq *(%rcx,%rax,8)
 # CHECK-ICP-INLINE-NOT: callq bar
 # CHECK-ICP-INLINE:     End of Function "main"
+
+# Checks BB hash has been updated correctly after ICP optimization
+# RUN: llvm-bolt %t.exe --icp=calls --icp-calls-topn=1 --inline-small-functions\
+# RUN:   -o %t.null --lite=0 \
+# RUN:   --inline-small-functions-bytes=4 --icp-inline --print-icp \
+# RUN:   --data %t.fdata --enable-bat
+# RUN: llvm-bat-dump --dump-all %t.null | FileCheck %s --check-prefix=CHECK-BB-HASH
+# CHECK-BB-HASH: 0x17 -> 0x0 hash: 0x5b24d9a60000
+# CHECK-BB-HASH: 0x1d -> 0x0 hash: 0x5b24d9a60000
+# CHECK-BB-HASH: 0x1f -> 0x0 hash: 0x5b24d9a60000
+
   .globl bar
 bar:
 	.cfi_startproc
