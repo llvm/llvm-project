@@ -9,6 +9,7 @@ executable("bugpoint") {
     "//llvm/lib/IR",
     "//llvm/lib/IRReader",
     "//llvm/lib/Linker",
+    "//llvm/lib/Plugins",
     "//llvm/lib/Support",
     "//llvm/lib/Target",
     "//llvm/lib/Target:TargetsToBuild",

@@ -4,9 +4,9 @@ unittest("AnalysisTests") {
   deps = [
     "//llvm/lib/Analysis",
     "//llvm/lib/AsmParser",
-    "//llvm/lib/Extensions",
     "//llvm/lib/IR",
     "//llvm/lib/Passes",
+    "//llvm/lib/Plugins",
     "//llvm/lib/Support",
     "//llvm/lib/TargetParser",
     "//llvm/lib/Testing/Support",
