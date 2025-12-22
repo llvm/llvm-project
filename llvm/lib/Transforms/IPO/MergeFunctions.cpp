@@ -1027,12 +1027,16 @@ bool MergeFunctions::insert(Function *NewFunction) {
     assert(OldF.getFunc() != F && "Must have swapped the functions.");
   }
 
-  LLVM_DEBUG(dbgs() << "  " << OldF.getFunc()->getName()
+  // Capture the Function pointer before mergeTwoFunctions, which may invalidate
+  // OldF by erasing it from FnTree via removeUsers().
+  Function *OldFunc = OldF.getFunc();
+
+  LLVM_DEBUG(dbgs() << "  " << OldFunc->getName()
                     << " == " << NewFunction->getName() << '\n');
 
   Function *DeleteF = NewFunction;
-  mergeTwoFunctions(OldF.getFunc(), DeleteF);
-  this->DelToNewMap.insert({DeleteF, OldF.getFunc()});
+  mergeTwoFunctions(OldFunc, DeleteF);
+  this->DelToNewMap.insert({DeleteF, OldFunc});
   return true;
 }
 

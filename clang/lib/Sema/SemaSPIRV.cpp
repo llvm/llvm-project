@@ -360,6 +360,8 @@ bool SemaSPIRV::CheckSPIRVBuiltinFunctionCall(const TargetInfo &TI,
   case SPIRV::BI__builtin_spirv_generic_cast_to_ptr_explicit: {
     return checkGenericCastToPtr(SemaRef, TheCall);
   }
+  case SPIRV::BI__builtin_spirv_ddx:
+  case SPIRV::BI__builtin_spirv_ddy:
   case SPIRV::BI__builtin_spirv_fwidth: {
     if (SemaRef.checkArgCount(TheCall, 1))
       return true;

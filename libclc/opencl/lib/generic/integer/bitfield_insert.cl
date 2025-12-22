@@ -9,7 +9,6 @@
 #ifdef cl_khr_extended_bit_ops
 
 #include <clc/integer/clc_bitfield_insert.h>
-#include <clc/opencl/integer/bitfield_insert.h>
 
 #define __CLC_FUNCTION bitfield_insert
 #define __CLC_BODY <bitfield_insert.inc>

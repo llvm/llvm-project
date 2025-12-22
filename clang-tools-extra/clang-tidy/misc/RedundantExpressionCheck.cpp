@@ -31,7 +31,7 @@ using namespace clang::tidy::matchers;
 namespace clang::tidy::misc {
 using llvm::APSInt;
 
-static constexpr llvm::StringLiteral KnownBannedMacroNames[] = {
+static constexpr StringRef KnownBannedMacroNames[] = {
     "EAGAIN",
     "EWOULDBLOCK",
     "SIGCLD",
@@ -458,7 +458,7 @@ AST_MATCHER(ConditionalOperator, conditionalOperatorIsInMacro) {
 
 AST_MATCHER(Expr, isMacro) { return Node.getExprLoc().isMacroID(); }
 
-AST_MATCHER_P(Expr, expandedByMacro, ArrayRef<llvm::StringLiteral>, Names) {
+AST_MATCHER_P(Expr, expandedByMacro, ArrayRef<StringRef>, Names) {
   const SourceManager &SM = Finder->getASTContext().getSourceManager();
   const LangOptions &LO = Finder->getASTContext().getLangOpts();
   SourceLocation Loc = Node.getExprLoc();
@@ -1398,10 +1398,9 @@ void RedundantExpressionCheck::check(const MatchFinder::MatchResult &Result) {
              : "operator has equivalent nested operands";
 
     const auto Diag = diag(Op->getExprLoc(), Message);
-    for (const auto &KeyValue : Result.Nodes.getMap()) {
+    for (const auto &KeyValue : Result.Nodes.getMap())
       if (StringRef(KeyValue.first).starts_with("duplicate"))
         Diag << KeyValue.second.getSourceRange();
-    }
   }
 
   if (const auto *NegateOperator =
