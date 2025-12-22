@@ -6,29 +6,35 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements a pass that looks for instructions which are expected
-// to be protected by Pointer Authentication, but the protection is missing
-// or insufficient. While the existing implementation only applies to AArch64,
-// it is intended to keep this file reasonably target-neutral, and place
-// AArch64-specific hooks in AArch64MCPlusBuilder.
+// This file implements a pass that analyzes code hardened using Pointer
+// Authentication and looks for non-protected or insufficiently protected parts.
+// While the existing implementation only applies to AArch64, it is intended
+// to keep this file reasonably target-neutral, and place AArch64-specific
+// hooks in AArch64MCPlusBuilder.
 //
 // Various gadget kinds (patterns of unsafe instruction usage) can be detected.
 // Gadgets of the particular kind are detected by inspecting the susceptible
 // instructions (such as "all return instructions" or "all indirect branches
 // and calls") and validating properties of their operands. This is achieved
-// by first running a dataflow analysis (or its simplified counterpart, if CFG
-// information is not available for the particular function) to compute the
-// properties of registers before or after each instruction is executed and
-// then passing each instruction together with the computed state to a number
-// of gadget detectors that consume the results of this particular analysis.
+// by first running a dataflow analysis on the entire function to compute the
+// properties of registers before or after each instruction is executed. Then,
+// each instruction together with the computed state is passed to a number of
+// gadget detectors, which consume the results of this particular analysis.
+// If CFG information is not available for a particular function, a simplified
+// analysis is run instead of a dataflow analysis.
 //
-// There are two broad groups of gadgets: those being detected by inspecting
-// the input operands of the susceptible instructions and those being detected
-// by analyzing their outputs. The former detectors consume SrcState computed
-// by iterating forwards over the instructions - normally by
-// DataflowSrcSafetyAnalysis (or if BOLT was unable to reconstruct CFG for the
-// function, by CFGUnawareSrcSafetyAnalysis). The latter consume DstState which
-// is computed in a similar way by iterating backwards over the instructions.
+// There are two broad groups of gadget detectors:
+// * Those analyzing the input operands of the instructions. They consume
+//   SrcState holding properties of the registers prior to execution of the
+//   instruction. SrcState is computed by iterating forwards over the
+//   instructions, by DataflowSrcSafetyAnalysis class. If BOLT was unable to
+//   reconstruct the CFG for a particular function, CFGUnawareSrcSafetyAnalysis
+//   class is used instead.
+// * Those analyzing the output operands of the instructions. They mirror the
+//   former group by consuming DstState corresponding to the state *after*
+//   execution of the instruction. Such state is computed by iterating
+//   *backwards* over the instructions by DataflowDstSafetyAnalysis or its
+//   CFG-unaware counterpart.
 //
 // Furthermore, when producing a diagnostic for a found gadget, this tool tries
 // to provide the clues on which instructions made the operands unsafe (such as
@@ -40,6 +46,36 @@
 // issues to be reported, the second analysis run which is more time- and
 // memory-consuming is skipped for most functions. Please note that unlike
 // the reports themselves, these clues are provided on a best-effort basis.
+//
+// Hierarchy of the analysis classes:
+//
+//   SrcSafetyAnalysis                                    DstSafetyAnalysis
+// (computes `SrcState`s)                               (computes `DstState`s)
+//      |    |                                                    |   |
+//      |    |                  DataflowAnalysis                  |   |
+//      |    |                 (provided by BOLT)                 |   |
+//      |    |                   |            |                   |   |
+//      |    v                   v            v                   v   |
+//      |   DataflowSrcSafetyAnalysis      DataflowDstSafetyAnalysis  |
+//      |                                                             |
+//      |                                                             |
+//      |                      CFGUnawareAnalysis                     |
+//      |                  (implemented in this file)                 |
+//      |                    |                   |                    |
+//      v                    v                   v                    v
+//   CFGUnawareSrcSafetyAnalysis               CFGUnawareDstSafetyAnalysis
+//
+// Detector functions:
+//
+// shouldReportReturnGadget                   shouldReportAuthOracle
+// shouldReportCallGadget
+// ...
+//
+// Dispatched by (member functions of FunctionAnalysisContext):
+//
+// findUnsafeUses                             findUnsafeDefs
+// handleSimpleReports                        handleSimpleReports
+// augmentUnsafeUseReports                    augmentUnsafeDefReports
 //
 //===----------------------------------------------------------------------===//
 
