@@ -1,5 +1,5 @@
 set(LLVM_TARGET_DEFINITIONS Passes.td)
-mlir_tablegen(Passes.h.inc -gen-pass-decls -name TosaOpt)
+mlir_tablegen(Passes.h.inc -gen-pass-decls -name Tosa)
 mlir_tablegen(PassesEnums.h.inc -gen-enum-decls)
 mlir_tablegen(PassesEnums.cpp.inc -gen-enum-defs)
 mlir_tablegen(Passes.capi.h.inc -gen-pass-capi-header --prefix Tosa)
