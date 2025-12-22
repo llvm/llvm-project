@@ -139,18 +139,21 @@ void LspServer::handleRequestTextDocumentDocumentSymbol(
     if (!MaybeLoc)
       continue;
     Func.range = llvmFileLocRangeToLspRange(*MaybeLoc);
+    // FIXME: Should set the range of the function name in the definition, but
+    // we currently don't know where it is
     Func.selectionRange = Func.range;
     for (const auto &BB : Fn) {
       lsp::DocumentSymbol Block;
       Block.name = BB.getNameOrAsOperand();
-      Block.kind =
-          lsp::SymbolKind::Namespace; // Using namespace as there is no block
-                                      // kind, and namespace is the closest
+      // Using namespace as there is no block kind, and namespace is the closest
+      Block.kind = lsp::SymbolKind::Namespace;
       Block.detail = "basic block";
       auto MaybeLoc = Doc->ParserContext.getBlockLocation(&BB);
       if (!MaybeLoc)
         continue;
       Block.range = llvmFileLocRangeToLspRange(*MaybeLoc);
+      // FIXME: Should set the range of the basic block label, but we currently
+      // don't know where it is
       Block.selectionRange = Block.range;
       for (const auto &I : BB) {
         lsp::DocumentSymbol Inst;
@@ -178,6 +181,7 @@ bool LspServer::registerMessageHandlers() {
   MessageHandler.method("initialize", this,
                         &LspServer::handleRequestInitialize);
 
+  // Handle recieving messages
   MessageHandler.notification(
       "textDocument/didOpen", this,
       &LspServer::handleNotificationTextDocumentDidOpen);
@@ -186,6 +190,7 @@ bool LspServer::registerMessageHandlers() {
   MessageHandler.method("textDocument/documentSymbol", this,
                         &LspServer::handleRequestTextDocumentDocumentSymbol);
 
+  // Setup posting of messages
   ShowMessageSender =
       MessageHandler.outgoingNotification<lsp::ShowMessageParams>(
           "window/showMessage");
