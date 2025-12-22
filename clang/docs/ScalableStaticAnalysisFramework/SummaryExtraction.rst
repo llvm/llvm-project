@@ -20,12 +20,11 @@ Implementation details
 Global Registries
 =================
 
-The framework uses *registries* as an extension point for adding new summary analyses or serialization formats.
-
-A *registry* is basically a global function returning some local static storage housing objects that contain some function pointers.
-Think of some cookbook that holds recipes, and the recipe refers to the instructions of how to cook (or *construct*) the *thing*.
-Adding to the *registry* (or *cookbook*) can be achieved by creating a translation-unit local static object with a constructor that does this by inserting the given function pointers (*recipe*) to the ``vector/set/map`` of the *registry*.
-When the executable starts, it will construct the global objects, thus also applying the side effect of populating the registries with the entries.
+The framework uses `llvm::Registry\<\> <https://llvm.org/doxygen/classllvm_1_1Registry.html>`_
+as an extension point for adding new summary analyses or serialization formats.
+In short, a static object constructor will insert a note into the linked-list of the *registry*.
+Each entry in the *registry* holds a name, a description and a pointer to a constructor.
+In plain terms, a *registry* is a list of *recipes* and the *registry* is the *cookbook* if you will.
 
 **Pros**:
 
@@ -38,46 +37,20 @@ When the executable starts, it will construct the global objects, thus also appl
   - Registration slows down all ``clang`` users by a tiny amount, even if they don't invoke the summary extraction framework.
   - As the registration is now decoupled, it's now a global program property; and potentially more difficult to reason about.
   - Complicates testing.
-  - We have to deal with function pointers, as a layer of indirection, making it harder to debug where the indirect function calls go in an IDE, while statically inspecting the code.
 
-The general idea
-----------------
+Example for adding a custom summary extraction
+----------------------------------------------
 
 .. code-block:: c++
 
-  //--- SomeRegistry.h
-  struct Registrar {
-    Registrar(std::string Name, void (*Printer)());
-  };
-  struct Info {
-    void (*Printer)();
-    // Place more function pointers if needed.
-  };
-  std::map<std::string, Info>& getRegistry();
-
-  //--- SomeRegistry.cpp
-  std::map<std::string, Info>& getRegistry() {
-    static std::map<std::string, Info> Storage;
-    return Storage;
-  }
-  Registrar::Registrar(std::string Name, void (*Printer)()) {
-    bool Inserted = getRegistry().try_emplace(std::move(Name), Info{Printer}).second;
-    assert(Inserted && "Name was already present in the registry");
-    (void)Inserted;
-  }
-
   //--- MyAnalysis.cpp
-  extern void MyAnalysisPrinter() {
-    printf("MyAnalysisPrinter");
-  }
-  static Registrar MyAnalysis("awesome-analysis", &MyAnalysisPrinter);
+  class MyAnalysis : public TUSummaryExtractor {
+    using TUSummaryExtractor::TUSummaryExtractor;
+    // Implementation...
+  };
 
-  //--- Framework.cpp
-  void print_all() {
-    for (const auto &[Name, Entry] : getRegistry()) {
-      (*Entry.Printer)(); // Invoke the customized printer.
-    }
-  }
+  static TUSummaryExtractorRegistry::Add<MyAnalysis>
+    RegisterExtractor("MyAwesomeAnalysis", "The analysis produces some awesome results");
 
 Details of ``BeingInvocation()``
 ================================
