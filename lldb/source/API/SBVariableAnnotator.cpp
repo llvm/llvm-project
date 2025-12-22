@@ -9,6 +9,7 @@
 
 #include "lldb/API/SBVariableAnnotator.h"
 #include "SBVariableAnnotator.h"
+#include "lldb/API/SBStructuredData.h"
 #include "lldb/Utility/Instrumentation.h"
 
 using namespace lldb;
@@ -38,6 +39,15 @@ SBVariableAnnotator::operator bool() const {
 }
 
 bool lldb::SBVariableAnnotator::IsValid() const { return false; }
+
+lldb::SBStructuredData
+lldb::SBVariableAnnotator::AnnotateStructured(SBInstruction &inst) {
+  LLDB_INSTRUMENT_VA(this, inst);
+
+  // TODO: implement
+  lldb::SBStructuredData result;
+  return result;
+}
 
 lldb::SBVariableAnnotator::SBVariableAnnotator(
     const lldb::VariableAnnotatorSP &annotator_sp)
