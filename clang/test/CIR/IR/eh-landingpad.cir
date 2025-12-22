@@ -1,0 +1,15 @@
+// RUN: cir-opt %s --verify-roundtrip | FileCheck %s
+
+module {
+
+cir.func dso_local @exception_landingpad() {
+  %eh_token = cir.eh.landingpad
+  cir.return
+}
+
+// CHECK: cir.func dso_local @exception_landingpad() {
+// CHECK:   %[[EH_TOKEN:.*]] = cir.eh.landingpad
+// CHECK:   cir.return
+// CHECK: }
+
+}
