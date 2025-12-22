@@ -213,19 +213,18 @@ declare double @za_shared_callee(double) "aarch64_inout_za"
 
 define double  @za_new_caller_to_za_shared_callee(double %x) nounwind noinline optnone "aarch64_new_za"{
 ; CHECK-COMMON-LABEL: za_new_caller_to_za_shared_callee:
-; CHECK-COMMON:       // %bb.0: // %prelude
+; CHECK-COMMON:       // %bb.0: // %entry
 ; CHECK-COMMON-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-COMMON-NEXT:    rdsvl x8, #1
 ; CHECK-COMMON-NEXT:    mrs x8, TPIDR2_EL0
-; CHECK-COMMON-NEXT:    cbz x8, .LBB6_2
-; CHECK-COMMON-NEXT:    b .LBB6_1
-; CHECK-COMMON-NEXT:  .LBB6_1: // %save.za
+; CHECK-COMMON-NEXT:    cbnz x8, .LBB6_1
+; CHECK-COMMON-NEXT:    b .LBB6_2
+; CHECK-COMMON-NEXT:  .LBB6_1: // %entry
 ; CHECK-COMMON-NEXT:    bl __arm_tpidr2_save
 ; CHECK-COMMON-NEXT:    msr TPIDR2_EL0, xzr
+; CHECK-COMMON-NEXT:    zero {za}
 ; CHECK-COMMON-NEXT:    b .LBB6_2
 ; CHECK-COMMON-NEXT:  .LBB6_2: // %entry
 ; CHECK-COMMON-NEXT:    smstart za
-; CHECK-COMMON-NEXT:    zero {za}
 ; CHECK-COMMON-NEXT:    bl za_shared_callee
 ; CHECK-COMMON-NEXT:    mov x8, #4631107791820423168 // =0x4045000000000000
 ; CHECK-COMMON-NEXT:    fmov d1, x8
@@ -254,6 +253,9 @@ define double  @za_shared_caller_to_za_none_callee(double %x) nounwind noinline 
 ; CHECK-COMMON-NEXT:    sub x8, x29, #16
 ; CHECK-COMMON-NEXT:    msr TPIDR2_EL0, x8
 ; CHECK-COMMON-NEXT:    bl normal_callee
+; CHECK-COMMON-NEXT:    mov x8, #4631107791820423168 // =0x4045000000000000
+; CHECK-COMMON-NEXT:    fmov d1, x8
+; CHECK-COMMON-NEXT:    fadd d0, d0, d1
 ; CHECK-COMMON-NEXT:    smstart za
 ; CHECK-COMMON-NEXT:    mrs x8, TPIDR2_EL0
 ; CHECK-COMMON-NEXT:    sub x0, x29, #16
@@ -264,9 +266,6 @@ define double  @za_shared_caller_to_za_none_callee(double %x) nounwind noinline 
 ; CHECK-COMMON-NEXT:    b .LBB7_2
 ; CHECK-COMMON-NEXT:  .LBB7_2: // %entry
 ; CHECK-COMMON-NEXT:    msr TPIDR2_EL0, xzr
-; CHECK-COMMON-NEXT:    mov x8, #4631107791820423168 // =0x4045000000000000
-; CHECK-COMMON-NEXT:    fmov d1, x8
-; CHECK-COMMON-NEXT:    fadd d0, d0, d1
 ; CHECK-COMMON-NEXT:    mov sp, x29
 ; CHECK-COMMON-NEXT:    ldr x19, [sp, #16] // 8-byte Reload
 ; CHECK-COMMON-NEXT:    ldp x29, x30, [sp], #32 // 16-byte Folded Reload
@@ -441,18 +440,18 @@ declare double @zt0_shared_callee(double) "aarch64_inout_zt0"
 
 define double  @zt0_new_caller_to_zt0_shared_callee(double %x) nounwind noinline optnone "aarch64_new_zt0" {
 ; CHECK-COMMON-LABEL: zt0_new_caller_to_zt0_shared_callee:
-; CHECK-COMMON:       // %bb.0: // %prelude
+; CHECK-COMMON:       // %bb.0: // %entry
 ; CHECK-COMMON-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-COMMON-NEXT:    mrs x8, TPIDR2_EL0
-; CHECK-COMMON-NEXT:    cbz x8, .LBB13_2
-; CHECK-COMMON-NEXT:    b .LBB13_1
-; CHECK-COMMON-NEXT:  .LBB13_1: // %save.za
+; CHECK-COMMON-NEXT:    cbnz x8, .LBB13_1
+; CHECK-COMMON-NEXT:    b .LBB13_2
+; CHECK-COMMON-NEXT:  .LBB13_1: // %entry
 ; CHECK-COMMON-NEXT:    bl __arm_tpidr2_save
 ; CHECK-COMMON-NEXT:    msr TPIDR2_EL0, xzr
+; CHECK-COMMON-NEXT:    zero { zt0 }
 ; CHECK-COMMON-NEXT:    b .LBB13_2
 ; CHECK-COMMON-NEXT:  .LBB13_2: // %entry
 ; CHECK-COMMON-NEXT:    smstart za
-; CHECK-COMMON-NEXT:    zero { zt0 }
 ; CHECK-COMMON-NEXT:    bl zt0_shared_callee
 ; CHECK-COMMON-NEXT:    mov x8, #4631107791820423168 // =0x4045000000000000
 ; CHECK-COMMON-NEXT:    fmov d1, x8
@@ -470,17 +469,18 @@ define double  @zt0_shared_caller_to_normal_callee(double %x) nounwind noinline 
 ; CHECK-COMMON-LABEL: zt0_shared_caller_to_normal_callee:
 ; CHECK-COMMON:       // %bb.0: // %entry
 ; CHECK-COMMON-NEXT:    sub sp, sp, #80
-; CHECK-COMMON-NEXT:    stp x30, x19, [sp, #64] // 16-byte Folded Spill
-; CHECK-COMMON-NEXT:    mov x19, sp
-; CHECK-COMMON-NEXT:    str zt0, [x19]
+; CHECK-COMMON-NEXT:    str x30, [sp, #64] // 8-byte Spill
+; CHECK-COMMON-NEXT:    mov x8, sp
+; CHECK-COMMON-NEXT:    str zt0, [x8]
 ; CHECK-COMMON-NEXT:    smstop za
 ; CHECK-COMMON-NEXT:    bl normal_callee
-; CHECK-COMMON-NEXT:    smstart za
-; CHECK-COMMON-NEXT:    ldr zt0, [x19]
 ; CHECK-COMMON-NEXT:    mov x8, #4631107791820423168 // =0x4045000000000000
 ; CHECK-COMMON-NEXT:    fmov d1, x8
 ; CHECK-COMMON-NEXT:    fadd d0, d0, d1
-; CHECK-COMMON-NEXT:    ldp x30, x19, [sp, #64] // 16-byte Folded Reload
+; CHECK-COMMON-NEXT:    smstart za
+; CHECK-COMMON-NEXT:    mov x8, sp
+; CHECK-COMMON-NEXT:    ldr zt0, [x8]
+; CHECK-COMMON-NEXT:    ldr x30, [sp, #64] // 8-byte Reload
 ; CHECK-COMMON-NEXT:    add sp, sp, #80
 ; CHECK-COMMON-NEXT:    ret
 entry:
@@ -511,4 +511,3 @@ define void @agnostic_za_function(ptr %ptr) nounwind "aarch64_za_state_agnostic"
   call void %ptr()
   ret void
 }
-

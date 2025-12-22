@@ -224,6 +224,25 @@ LogicalResult TestCopyCountAttr::verify(
 }
 
 //===----------------------------------------------------------------------===//
+// TestSymbolRefAttr
+//===----------------------------------------------------------------------===//
+
+LogicalResult
+TestSymbolRefAttr::verifySymbolUses(Operation *op,
+                                    SymbolTableCollection &symbolTable) const {
+  // Verify that the referenced symbol exists
+  if (!symbolTable.lookupNearestSymbolFrom<SymbolOpInterface>(op, getSymbol()))
+    return op->emitOpError()
+           << "TestSymbolRefAttr::verifySymbolUses: '" << getSymbol()
+           << "' does not reference a valid symbol";
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// Generated Attribute Definitions
+//===----------------------------------------------------------------------===//
+
+//===----------------------------------------------------------------------===//
 // CopyCountAttr Implementation
 //===----------------------------------------------------------------------===//
 

@@ -5,6 +5,7 @@ executable("bugpoint") {
     "//llvm/lib/Analysis",
     "//llvm/lib/Bitcode/Writer",
     "//llvm/lib/CodeGen",
+    "//llvm/lib/Extensions",
     "//llvm/lib/IR",
     "//llvm/lib/IRReader",
     "//llvm/lib/Linker",

@@ -717,7 +717,7 @@ static void addRelativeReloc(Ctx &ctx, InputSectionBase &isec,
     // field. This is described in further detail in:
     // https://github.com/ARM-software/abi-aa/blob/main/memtagabielf64/memtagabielf64.rst#841extended-semantics-of-r_aarch64_relative
     if (addend < 0 || static_cast<uint64_t>(addend) >= sym.getSize())
-      isec.addReloc({expr, type, offsetInSec, addend, &sym});
+      isec.addReloc({R_ADDEND_NEG, type, offsetInSec, addend, &sym});
     return;
   }
 
@@ -1001,13 +1001,12 @@ void RelocScan::process(RelExpr expr, RelType type, uint64_t offset,
         rel = ctx.target->relativeRel;
       std::lock_guard<std::mutex> lock(ctx.relocMutex);
       Partition &part = sec->getPartition(ctx);
-      if (ctx.arg.emachine == EM_AARCH64 && type == R_AARCH64_AUTH_ABS64) {
-        // For a preemptible symbol, we can't use a relative relocation. For an
-        // undefined symbol, we can't compute offset at link-time and use a
-        // relative relocation. Use a symbolic relocation instead.
-        if (sym.isPreemptible) {
-          part.relaDyn->addSymbolReloc(type, *sec, offset, sym, addend, type);
-        } else if (part.relrAuthDyn && sec->addralign >= 2 && offset % 2 == 0) {
+      // For a preemptible symbol, we can't use a relative relocation. For an
+      // undefined symbol, we can't compute offset at link-time and use a
+      // relative relocation. Use a symbolic relocation instead.
+      if (ctx.arg.emachine == EM_AARCH64 && type == R_AARCH64_AUTH_ABS64 &&
+          !sym.isPreemptible) {
+        if (part.relrAuthDyn && sec->addralign >= 2 && offset % 2 == 0) {
           // When symbol values are determined in
           // finalizeAddressDependentContent, some .relr.auth.dyn relocations
           // may be moved to .rela.dyn.
@@ -1291,7 +1290,7 @@ unsigned RelocScan::handleTlsRelocation(RelExpr expr, RelType type,
     // label, so TLSDESC=>IE will be categorized as R_RELAX_TLS_GD_TO_LE. We fix
     // the categorization in RISCV::relocateAllosec->
     if (sym.isPreemptible) {
-      sym.setFlags(NEEDS_TLSGD_TO_IE);
+      sym.setFlags(NEEDS_TLSIE);
       sec->addReloc({ctx.target->adjustTlsExpr(type, R_RELAX_TLS_GD_TO_IE),
                      type, offset, addend, &sym});
     } else {
@@ -1631,18 +1630,13 @@ void elf::postScanRelocations(Ctx &ctx) {
       else
         got->addConstant({R_ABS, ctx.target->tlsOffsetRel, offsetOff, 0, &sym});
     }
-    if (flags & NEEDS_TLSGD_TO_IE) {
-      got->addEntry(sym);
-      ctx.mainPart->relaDyn->addSymbolReloc(ctx.target->tlsGotRel, *got,
-                                            sym.getGotOffset(ctx), sym);
-    }
     if (flags & NEEDS_GOT_DTPREL) {
       got->addEntry(sym);
       got->addConstant(
           {R_ABS, ctx.target->tlsOffsetRel, sym.getGotOffset(ctx), 0, &sym});
     }
 
-    if ((flags & NEEDS_TLSIE) && !(flags & NEEDS_TLSGD_TO_IE))
+    if (flags & NEEDS_TLSIE)
       addTpOffsetGotEntry(ctx, sym);
   };
 
