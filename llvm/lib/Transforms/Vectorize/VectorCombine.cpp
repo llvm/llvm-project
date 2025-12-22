@@ -2352,7 +2352,7 @@ bool VectorCombine::foldPermuteOfBinops(Instruction &I) {
         TargetTransformInfo::SK_PermuteTwoSrc, BinOpTy, Op0Ty, Mask0, CostKind,
         0, nullptr, {Op00, Op01}, cast<Instruction>(BinOp->getOperand(0)));
     OldCost += Shuf0Cost;
-    if (!BinOp->getOperand(0)->hasOneUse())
+    if (!BinOp->hasOneUse() || !BinOp->getOperand(0)->hasOneUse())
       NewCost += Shuf0Cost;
   }
   if (Match1) {
@@ -2360,7 +2360,7 @@ bool VectorCombine::foldPermuteOfBinops(Instruction &I) {
         TargetTransformInfo::SK_PermuteTwoSrc, BinOpTy, Op0Ty, Mask0, CostKind,
         0, nullptr, {Op10, Op11}, cast<Instruction>(BinOp->getOperand(1)));
     OldCost += Shuf1Cost;
-    if (!BinOp->getOperand(1)->hasOneUse())
+    if (!BinOp->hasOneUse() || !BinOp->getOperand(1)->hasOneUse())
       NewCost += Shuf1Cost;
   }
 
