@@ -15,7 +15,7 @@ MLIR_DEFINE_CAPI_DIALECT_REGISTRATION(Complex, complex,
                                       mlir::complex::ComplexDialect)
 
 bool mlirAttributeIsAComplex(MlirAttribute attr) {
-  return llvm::isa<ComplexAttr>(unwrap(attr));
+  return isa<ComplexAttr>(unwrap(attr));
 }
 
 MlirAttribute mlirComplexAttrDoubleGet(MlirContext ctx, MlirType type,
