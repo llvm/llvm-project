@@ -11,16 +11,41 @@
 
 #include "Standalone-c/Dialects.h"
 #include "mlir-c/Dialect/Arith.h"
+#include "mlir/Bindings/Python/IRCore.h"
 #include "mlir/Bindings/Python/Nanobind.h"
 #include "mlir/Bindings/Python/NanobindAdaptors.h"
 
 namespace nb = nanobind;
+
+struct PyCustomType : mlir::python::PyConcreteType<PyCustomType> {
+  static constexpr IsAFunctionTy isaFunction = mlirStandaloneTypeIsACustomType;
+  static constexpr GetTypeIDFunctionTy getTypeIdFunction =
+      mlirStandaloneCustomTypeGetTypeID;
+  static constexpr const char *pyClassName = "CustomType";
+  using PyConcreteType::PyConcreteType;
+
+  static void bindDerived(ClassTy &c) {
+    c.def_static(
+        "get",
+        [](const std::string &value,
+           mlir::python::DefaultingPyMlirContext context) {
+          return PyCustomType(
+              context->getRef(),
+              mlirStandaloneCustomTypeGet(
+                  context.get()->get(),
+                  mlirStringRefCreateFromCString(value.c_str())));
+        },
+        nb::arg("value"), nb::arg("context").none() = nb::none());
+  }
+};
 
 NB_MODULE(_standaloneDialectsNanobind, m) {
   //===--------------------------------------------------------------------===//
   // standalone dialect
   //===--------------------------------------------------------------------===//
   auto standaloneM = m.def_submodule("standalone");
+
+  PyCustomType::bind(standaloneM);
 
   standaloneM.def(
       "register_dialects",

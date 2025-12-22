@@ -15,7 +15,6 @@
 #include <unordered_set>
 #include <vector>
 
-#include "mlir-c/Debug.h"
 #include "mlir-c/IR.h"
 #include "mlir-c/Support.h"
 #include "mlir/Bindings/Python/NanobindUtils.h"

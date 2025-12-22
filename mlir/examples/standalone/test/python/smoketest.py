@@ -14,3 +14,7 @@ with Context():
     # CHECK: %[[C:.*]] = arith.constant 2 : i32
     # CHECK: standalone.foo %[[C]] : i32
     print(str(module))
+
+    custom_type = standalone_d.CustomType.get("foo")
+    # CHECK: !standalone.custom<"foo">
+    print(custom_type)
