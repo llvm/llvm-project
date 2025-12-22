@@ -387,7 +387,7 @@ def FeatureStdExtZca
                      "part of the C extension, excluding compressed "
                      "floating point loads/stores">,
       RISCVExtensionBitmask<1, 2>;
-// FIXME: Update this message - Zca always implies C.
+// Note: Zca conditionally implies C (see RISCVISAInfo::updateImplication).
 def HasStdExtZca
     : Predicate<"Subtarget->hasStdExtZca()">,
       AssemblerPredicate<(any_of FeatureStdExtZca),
@@ -908,6 +908,7 @@ def HasVInstructionsF16Minimal : Predicate<"Subtarget->hasVInstructionsF16Minima
 
 def HasVInstructionsBF16Minimal : Predicate<"Subtarget->hasVInstructionsBF16Minimal()">;
 def HasVInstructionsF16 : Predicate<"Subtarget->hasVInstructionsF16()">;
+def HasVInstructionsBF16 : Predicate<"Subtarget->hasVInstructionsBF16()">;
 def HasVInstructionsF64 : Predicate<"Subtarget->hasVInstructionsF64()">;
 
 def HasVInstructionsFullMultiply : Predicate<"Subtarget->hasVInstructionsFullMultiply()">;
@@ -1106,35 +1107,15 @@ def HasStdExtSmctrOrSsctr : Predicate<"Subtarget->hasStdExtSmctrOrSsctr()">,
 
 // Packed SIMD Extensions
 def FeatureStdExtP
-    : RISCVExperimentalExtension<0, 15,
+    : RISCVExperimentalExtension<0, 18,
                                  "'Base P' (Packed SIMD)">;
 def HasStdExtP : Predicate<"Subtarget->hasStdExtP()">,
                  AssemblerPredicate<(all_of FeatureStdExtP),
                                     "'Base P' (Packed SIMD)">;
 
-def HasStdExtZbaOrP
-    : Predicate<"Subtarget->hasStdExtZba() || Subtarget->hasStdExtP()">,
-      AssemblerPredicate<(any_of FeatureStdExtZba, FeatureStdExtP),
-                         "'Zba' (Address Generation Instructions) or "
-                         "'Base P' (Packed-SIMD)">;
-
-def HasStdExtZbbOrP
-    : Predicate<"Subtarget->hasStdExtZbb() || Subtarget->hasStdExtP()">,
-      AssemblerPredicate<(any_of FeatureStdExtZbb, FeatureStdExtP),
-                         "'Zbb' (Basic Bit-Manipulation) or "
-                         "'Base P' (Packed-SIMD)">;
-
 def HasStdExtZbkbOrP
     : Predicate<"Subtarget->hasStdExtZbkb() || Subtarget->hasStdExtP()">,
       AssemblerPredicate<(any_of FeatureStdExtZbkb, FeatureStdExtP),
-                         "'Zbkb' (Bitmanip instructions for Cryptography) or "
-                         "'Base P' (Packed-SIMD)">;
-
-def HasStdExtZbbOrZbkbOrP
-    : Predicate<"Subtarget->hasStdExtZbb() || Subtarget->hasStdExtZbkb() || "
-                "Subtarget->hasStdExtP()">,
-      AssemblerPredicate<(any_of FeatureStdExtZbb, FeatureStdExtZbkb, FeatureStdExtP),
-                         "'Zbb' (Basic Bit-Manipulation) or "
                          "'Zbkb' (Bitmanip instructions for Cryptography) or "
                          "'Base P' (Packed-SIMD)">;
 
@@ -1659,6 +1640,18 @@ def HasVendorXqcisync
       AssemblerPredicate<(all_of FeatureVendorXqcisync),
                          "'Xqcisync' (Qualcomm uC Sync Delay Extension)">;
 
+def FeatureVendorXqci
+    : RISCVExperimentalExtension<0, 13, "Qualcomm uC Extension",
+                                 [FeatureVendorXqcia, FeatureVendorXqciac,
+                                 FeatureVendorXqcibi, FeatureVendorXqcibm,
+                                 FeatureVendorXqcicli, FeatureVendorXqcicm,
+                                 FeatureVendorXqcics, FeatureVendorXqcicsr,
+                                 FeatureVendorXqciint, FeatureVendorXqciio,
+                                 FeatureVendorXqcilb, FeatureVendorXqcili,
+                                 FeatureVendorXqcilia, FeatureVendorXqcilo,
+                                 FeatureVendorXqcilsm, FeatureVendorXqcisim,
+                                 FeatureVendorXqcisls, FeatureVendorXqcisync]>;
+
 // Rivos Extension(s)
 
 def FeatureVendorXRivosVisni
@@ -1898,6 +1891,7 @@ def TuneNoDefaultUnroll
 // - IALU: RVI Integer instructions, plus ANDN/ORN/XNOR (Zbb/Zbkb)
 // - IMinMax: Zbb MIN(U)/MAX(U)
 // - IMul: MUL
+// - ILoad: LB(U)/LH(U)/LW(U)/LD
 //
 // We make the simplifying assumption that any microarches that implement
 // any "short forward branches" can do the IALU fusions, and can opt into
@@ -1927,6 +1921,11 @@ def TuneShortForwardBranchIMul
                        [TuneShortForwardBranchIALU]>;
 def HasShortForwardBranchIMul : Predicate<"Subtarget->hasShortForwardBranchIMul()">;
 
+def TuneShortForwardBranchILoad
+    : SubtargetFeature<"short-forward-branch-iload", "HasShortForwardBranchILoad",
+                       "true", "Enable short forward branch optimization for load instructions",
+                       [TuneShortForwardBranchIALU]>;
+def HasShortForwardBranchILoad : Predicate<"Subtarget->hasShortForwardBranchILoad()">;
 
 // Some subtargets require a S2V transfer buffer to move scalars into vectors.
 // FIXME: Forming .vx/.vf/.wx/.wf can reduce register pressure.

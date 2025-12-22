@@ -2503,6 +2503,15 @@ bool Compiler<Emitter>::VisitAbstractConditionalOperator(
   const Expr *TrueExpr = E->getTrueExpr();
   const Expr *FalseExpr = E->getFalseExpr();
 
+  if (std::optional<bool> BoolValue = getBoolValue(Condition)) {
+    if (*BoolValue)
+      return this->delegate(TrueExpr);
+    return this->delegate(FalseExpr);
+  }
+
+  // Force-init the scope, which creates a InitScope op. This is necessary so
+  // the scope is not only initialized in one arm of the conditional operator.
+  this->VarScope->forceInit();
   // The TrueExpr and FalseExpr of a conditional operator do _not_ create a
   // scope, which means the local variables created within them unconditionally
   // always exist. However, we need to later differentiate which branch was
@@ -2510,13 +2519,6 @@ bool Compiler<Emitter>::VisitAbstractConditionalOperator(
   // "enabled" flags on local variables are used for.
   llvm::SaveAndRestore LAAA(this->VarScope->LocalsAlwaysEnabled,
                             /*NewValue=*/false);
-
-  if (std::optional<bool> BoolValue = getBoolValue(Condition)) {
-    if (*BoolValue)
-      return this->delegate(TrueExpr);
-    return this->delegate(FalseExpr);
-  }
-
   bool IsBcpCall = false;
   if (const auto *CE = dyn_cast<CallExpr>(Condition->IgnoreParenCasts());
       CE && CE->getBuiltinCallee() == Builtin::BI__builtin_constant_p) {
@@ -4796,8 +4798,7 @@ VarCreationState Compiler<Emitter>::visitDecl(const VarDecl *VD,
   if (!R && Context::shouldBeGloballyIndexed(VD)) {
     if (auto GlobalIndex = P.getGlobal(VD)) {
       Block *GlobalBlock = P.getGlobal(*GlobalIndex);
-      GlobalInlineDescriptor &GD =
-          *reinterpret_cast<GlobalInlineDescriptor *>(GlobalBlock->rawData());
+      auto &GD = GlobalBlock->getBlockDesc<GlobalInlineDescriptor>();
 
       GD.InitState = GlobalInitState::InitializerFailed;
       GlobalBlock->invokeDtor();
@@ -4858,8 +4859,7 @@ bool Compiler<Emitter>::visitDeclAndReturn(const VarDecl *VD, const Expr *Init,
       auto GlobalIndex = P.getGlobal(VD);
       assert(GlobalIndex);
       Block *GlobalBlock = P.getGlobal(*GlobalIndex);
-      GlobalInlineDescriptor &GD =
-          *reinterpret_cast<GlobalInlineDescriptor *>(GlobalBlock->rawData());
+      auto &GD = GlobalBlock->getBlockDesc<GlobalInlineDescriptor>();
 
       GD.InitState = GlobalInitState::InitializerFailed;
       GlobalBlock->invokeDtor();
