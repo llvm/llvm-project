@@ -298,21 +298,22 @@ Sema::getCurrentMangleNumberContext(const DeclContext *DC) {
   // definition, as well as the initializers of data members, receive special
   // treatment. Identify them.
   Kind = [&]() {
-    if (!ManglingContextDecl)
-      return Normal;
-
-    if (auto *ND = dyn_cast<NamedDecl>(ManglingContextDecl)) {
+    if (auto *ND = dyn_cast<NamedDecl>(ManglingContextDecl ? ManglingContextDecl
+                                                           : cast<Decl>(DC))) {
       // See discussion in https://github.com/itanium-cxx-abi/cxx-abi/issues/186
       //
       // zygoloid:
       //    Yeah, I think the only cases left where lambdas don't need a
       //    mangling are when they have (effectively) internal linkage or appear
       //    in a non-inline function in a non-module translation unit.
-      Module *M = ManglingContextDecl->getOwningModule();
+      Module *M = ND->getOwningModule();
       if (M && M->getTopLevelModule()->isNamedModuleUnit() &&
           ND->isExternallyVisible())
         return NonInlineInModulePurview;
     }
+
+    if (!ManglingContextDecl)
+      return Normal;
 
     if (ParmVarDecl *Param = dyn_cast<ParmVarDecl>(ManglingContextDecl)) {
       if (const DeclContext *LexicalDC

@@ -3089,6 +3089,22 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     // exponent. Also could broaden sign check to cover == 0 case.
     Value *Src = II->getArgOperand(0);
     Value *Exp = II->getArgOperand(1);
+
+    uint64_t ConstExp;
+    if (match(Exp, m_ConstantInt(ConstExp))) {
+      // ldexp(x, K) -> fmul x, 2^K
+      const fltSemantics &FPTy =
+          Src->getType()->getScalarType()->getFltSemantics();
+
+      APFloat Scaled = scalbn(APFloat::getOne(FPTy), static_cast<int>(ConstExp),
+                              APFloat::rmNearestTiesToEven);
+      if (!Scaled.isZero() && !Scaled.isInfinity()) {
+        // Skip overflow and underflow cases.
+        Constant *FPConst = ConstantFP::get(Src->getType(), Scaled);
+        return BinaryOperator::CreateFMulFMF(Src, FPConst, II);
+      }
+    }
+
     Value *InnerSrc;
     Value *InnerExp;
     if (match(Src, m_OneUse(m_Intrinsic<Intrinsic::ldexp>(
@@ -4148,7 +4164,8 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     for (Value *Op : II->args()) {
       if (auto *Sel = dyn_cast<SelectInst>(Op)) {
         bool IsVectorCond = Sel->getCondition()->getType()->isVectorTy();
-        if (IsVectorCond && !isNotCrossLaneOperation(II))
+        if (IsVectorCond &&
+            (!isNotCrossLaneOperation(II) || !II->getType()->isVectorTy()))
           continue;
         // Don't replace a scalar select with a more expensive vector select if
         // we can't simplify both arms of the select.

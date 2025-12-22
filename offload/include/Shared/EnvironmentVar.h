@@ -19,6 +19,8 @@
 #include <sstream>
 #include <string>
 
+using namespace llvm::omp::target::debug;
+
 /// Utility class for parsing strings to other types.
 struct StringParser {
   /// Parse a string to another type.
@@ -61,7 +63,8 @@ public:
       IsPresent = StringParser::parse<Ty>(EnvStr, Data);
 
       if (!IsPresent) {
-        DP("Ignoring invalid value %s for envar %s\n", EnvStr, Name.data());
+        ODBG(ODT_Init) << "Ignoring invalid value " << EnvStr << " for envar "
+                       << Name;
         Data = Default;
       }
     }
@@ -180,12 +183,13 @@ inline llvm::Error Envar<Ty>::init(llvm::StringRef Name, GetterFunctor Getter,
         // not present and reset to the getter value (default).
         IsPresent = false;
         Data = Default;
-        DP("Setter of envar %s failed, resetting to %s\n", Name.data(),
-           std::to_string(Data).data());
+        ODBG(ODT_Init) << "Setter of envar " << Name << " failed, resetting to "
+                       << std::to_string(Data);
         consumeError(std::move(Err));
       }
     } else {
-      DP("Ignoring invalid value %s for envar %s\n", EnvStr, Name.data());
+      ODBG(ODT_Init) << "Ignoring invalid value " << EnvStr << " for envar "
+                     << Name;
       Data = Default;
     }
   } else {

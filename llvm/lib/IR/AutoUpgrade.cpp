@@ -1619,6 +1619,9 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
                      .Case("barrier.sync", true)
                      .Case("barrier", true)
                      .Case("bar.sync", true)
+                     .Case("barrier0.popc", true)
+                     .Case("barrier0.and", true)
+                     .Case("barrier0.or", true)
                      .Case("clz.ll", true)
                      .Case("popc.ll", true)
                      .Case("h2f", true)
@@ -2743,6 +2746,21 @@ static Value *upgradeNVVMIntrinsicCall(StringRef Name, CallBase *CI,
   } else if (Name == "barrier.sync.cnt") {
     Rep = Builder.CreateIntrinsic(Intrinsic::nvvm_barrier_cta_sync_count, {},
                                   {CI->getArgOperand(0), CI->getArgOperand(1)});
+  } else if (Name == "barrier0.popc" || Name == "barrier0.and" ||
+             Name == "barrier0.or") {
+    Value *C = CI->getArgOperand(0);
+    C = Builder.CreateICmpNE(C, Builder.getInt32(0));
+
+    Intrinsic::ID IID =
+        StringSwitch<Intrinsic::ID>(Name)
+            .Case("barrier0.popc",
+                  Intrinsic::nvvm_barrier_cta_red_popc_aligned_all)
+            .Case("barrier0.and",
+                  Intrinsic::nvvm_barrier_cta_red_and_aligned_all)
+            .Case("barrier0.or",
+                  Intrinsic::nvvm_barrier_cta_red_or_aligned_all);
+    Value *Bar = Builder.CreateIntrinsic(IID, {}, {Builder.getInt32(0), C});
+    Rep = Builder.CreateZExt(Bar, CI->getType());
   } else {
     Intrinsic::ID IID = shouldUpgradeNVPTXBF16Intrinsic(Name);
     if (IID != Intrinsic::not_intrinsic &&
@@ -4995,12 +5013,16 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
     break;
 
   case Intrinsic::ctlz:
-  case Intrinsic::cttz:
-    assert(CI->arg_size() == 1 &&
-           "Mismatch between function args and call args");
+  case Intrinsic::cttz: {
+    if (CI->arg_size() != 1) {
+      DefaultCase();
+      return;
+    }
+
     NewCall =
         Builder.CreateCall(NewFn, {CI->getArgOperand(0), Builder.getFalse()});
     break;
+  }
 
   case Intrinsic::objectsize: {
     Value *NullIsUnknownSize =
@@ -6468,7 +6490,13 @@ std::string llvm::UpgradeDataLayoutString(StringRef DL, StringRef TT) {
       if (Pos != size_t(-1))
         Res.insert(Pos + I64.size(), I128);
     }
-    return Res;
+  }
+
+  if (T.isPPC() && T.isOSAIX() && !DL.contains("f64:32:64") && !DL.empty()) {
+    size_t Pos = Res.find("-S128");
+    if (Pos == StringRef::npos)
+      Pos = Res.size();
+    Res.insert(Pos, "-f64:32:64");
   }
 
   if (!T.isX86())

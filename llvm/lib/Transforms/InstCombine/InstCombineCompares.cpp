@@ -337,7 +337,7 @@ Instruction *InstCombinerImpl::foldCmpLoadFromIndexedGlobal(
 
     // Generate (i-FirstTrue) <u (TrueRangeEnd-FirstTrue+1).
     if (FirstTrueElement) {
-      Value *Offs = ConstantInt::get(Idx->getType(), -FirstTrueElement);
+      Value *Offs = ConstantInt::getSigned(Idx->getType(), -FirstTrueElement);
       Idx = Builder.CreateAdd(Idx, Offs);
     }
 
@@ -352,7 +352,7 @@ Instruction *InstCombinerImpl::foldCmpLoadFromIndexedGlobal(
     Idx = MaskIdx(Idx);
     // Generate (i-FirstFalse) >u (FalseRangeEnd-FirstFalse).
     if (FirstFalseElement) {
-      Value *Offs = ConstantInt::get(Idx->getType(), -FirstFalseElement);
+      Value *Offs = ConstantInt::getSigned(Idx->getType(), -FirstFalseElement);
       Idx = Builder.CreateAdd(Idx, Offs);
     }
 
@@ -3093,7 +3093,7 @@ Instruction *InstCombinerImpl::foldICmpBinOpWithConstantViaTruthTable(
               m_Select(m_Value(A), m_Constant(C1), m_Constant(C2)))) ||
       !match(BO->getOperand(1),
              m_Select(m_Value(B), m_Constant(C3), m_Constant(C4))) ||
-      Cmp.getType() != A->getType())
+      Cmp.getType() != A->getType() || Cmp.getType() != B->getType())
     return nullptr;
 
   std::bitset<4> Table;
@@ -6290,7 +6290,7 @@ Instruction *InstCombinerImpl::foldICmpWithTrunc(ICmpInst &ICmp) {
 
   // This matches patterns corresponding to tests of the signbit as well as:
   // (trunc X) pred C2 --> (X & Mask) == C
-  if (auto Res = decomposeBitTestICmp(Op0, Op1, Pred, /*WithTrunc=*/true,
+  if (auto Res = decomposeBitTestICmp(Op0, Op1, Pred, /*LookThroughTrunc=*/true,
                                       /*AllowNonZeroC=*/true)) {
     Value *And = Builder.CreateAnd(Res->X, Res->Mask);
     Constant *C = ConstantInt::get(Res->X->getType(), Res->C);
