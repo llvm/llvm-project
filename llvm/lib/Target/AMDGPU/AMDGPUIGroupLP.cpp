@@ -2404,10 +2404,10 @@ bool SchedGroup::canAddMI(const MachineInstr &MI) const {
           if (Operand.isUse() && TRI.getRegSizeInBits(RegClass) == 32)
             VReg32_used = true;
         }
-        // >= 128 bit registers are usually only used by MFMA instructions, so
+        // > 128 bit registers are usually only used by MFMA instructions, so
         // we're using that as a heuristic to guess the schedule group mask of
         // the inline asm.
-        if (TRI.hasAGPRs(&RegClass) || TRI.getRegSizeInBits(RegClass) >= 128)
+        if (TRI.hasAGPRs(&RegClass) || TRI.getRegSizeInBits(RegClass) > 128)
           VMFMA_used = true;
         if (TRI.hasSGPRs(&RegClass))
           SGPR_used = true;
