@@ -8224,6 +8224,11 @@ bool SimplifyCFGOpt::simplifyDuplicatePredecessors(BasicBlock *BB,
   if (!BB || pred_empty(BB))
     return false;
 
+  // Compilation time consideration: retain the canonical loop, otherwise, we
+  // require more time in the later loop canonicalization.
+  if (Options.NeedCanonicalLoop && is_contained(LoopHeaders, BB))
+    return false;
+
   // Collect candidate predecessors bottom-up with:
   // - terminator unconditional br to Succ,
   // - does not have address taken / weird control.
