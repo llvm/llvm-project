@@ -326,7 +326,12 @@ class Doc8LintHelper(LintHelper):
         if not files_to_lint:
             return ""
 
-        doc8_cmd = [args.doc8_binary, "-q", "--config", "clang-tools-extra/clang-tidy/doc8.ini"]
+        doc8_cmd = [
+            args.doc8_binary,
+            "-q",
+            "--config",
+            "clang-tools-extra/clang-tidy/doc8.ini",
+        ]
         doc8_cmd.extend(files_to_lint)
 
         if args.verbose:
