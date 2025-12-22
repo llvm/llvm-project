@@ -137,14 +137,12 @@ PHINode::PHINode(const PHINode &PN)
 // predecessor basic block is deleted.
 Value *PHINode::removeIncomingValue(unsigned Idx, bool DeletePHIIfEmpty) {
   Value *Removed = getIncomingValue(Idx);
-
-  // Move everything after this operand down.
-  //
-  // FIXME: we could just swap with the end of the list, then erase.  However,
-  // clients might not expect this to happen.  The code as it is thrashes the
-  // use/def lists, which is kinda lame.
-  std::copy(op_begin() + Idx + 1, op_end(), op_begin() + Idx);
-  copyIncomingBlocks(drop_begin(blocks(), Idx + 1), Idx);
+  // Swap with the end of the list.
+  unsigned Last = getNumOperands() - 1;
+  if (Idx != Last) {
+    setIncomingValue(Idx, getIncomingValue(Last));
+    setIncomingBlock(Idx, getIncomingBlock(Last));
+  }
 
   // Nuke the last value.
   Op<-1>().set(nullptr);
@@ -161,28 +159,23 @@ Value *PHINode::removeIncomingValue(unsigned Idx, bool DeletePHIIfEmpty) {
 
 void PHINode::removeIncomingValueIf(function_ref<bool(unsigned)> Predicate,
                                     bool DeletePHIIfEmpty) {
-  SmallDenseSet<unsigned> RemoveIndices;
-  for (unsigned Idx = 0; Idx < getNumIncomingValues(); ++Idx)
-    if (Predicate(Idx))
-      RemoveIndices.insert(Idx);
+  unsigned NumOps = getNumIncomingValues();
+  unsigned Idx = 0;
+  while (Idx < NumOps) {
+    if (Predicate(Idx)) {
+      unsigned LastIdx = NumOps - 1;
+      if (Idx != LastIdx) {
+        setIncomingValue(Idx, getIncomingValue(LastIdx));
+        setIncomingBlock(Idx, getIncomingBlock(LastIdx));
+      }
+      getOperandUse(LastIdx).set(nullptr);
+      NumOps--;
+    } else {
+      Idx++;
+    }
+  }
 
-  if (RemoveIndices.empty())
-    return;
-
-  // Remove operands.
-  auto NewOpEnd = remove_if(operands(), [&](Use &U) {
-    return RemoveIndices.contains(U.getOperandNo());
-  });
-  for (Use &U : make_range(NewOpEnd, op_end()))
-    U.set(nullptr);
-
-  // Remove incoming blocks.
-  (void)std::remove_if(const_cast<block_iterator>(block_begin()),
-                 const_cast<block_iterator>(block_end()), [&](BasicBlock *&BB) {
-                   return RemoveIndices.contains(&BB - block_begin());
-                 });
-
-  setNumHungOffUseOperands(getNumOperands() - RemoveIndices.size());
+  setNumHungOffUseOperands(NumOps);
 
   // If the PHI node is dead, because it has zero entries, nuke it now.
   if (getNumOperands() == 0 && DeletePHIIfEmpty) {

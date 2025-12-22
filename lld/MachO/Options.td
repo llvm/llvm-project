@@ -188,6 +188,8 @@ def lto_debug_pass_manager: Flag<["--"], "lto-debug-pass-manager">,
     HelpText<"Debug new pass manager">, Group<grp_lld>;
 def lto_newpm_passes: Joined<["--"], "lto-newpm-passes=">,
     HelpText<"Passes to run during LTO">, Group<grp_lld>;
+def lto_emit_llvm: Flag<["--"], "lto-emit-llvm">,
+    HelpText<"Emit LLVM-IR bitcode">, Group<grp_lld>;
 def load_pass_plugins : Separate<["--"], "load-pass-plugin">, Group<grp_lld>;
 def load_pass_plugins_eq : Joined<["--"], "load-pass-plugin=">,
     Alias<!cast<Separate>(load_pass_plugins)>,

@@ -354,6 +354,12 @@ def NVVM_ClusterId : NVVM_PureSpecialRangeableRegisterOp<"read.ptx.sreg.cluster.
 def NVVM_ClusterDim : NVVM_PureSpecialRangeableRegisterOp<"read.ptx.sreg.cluster.nctarank">;
 
 //===----------------------------------------------------------------------===//
+// Various configurations of Shared memory sizes
+def NVVM_TotalSmemSize   : NVVM_PureSpecialRegisterOp<"read.ptx.sreg.total.smem.size">;
+def NVVM_DynamicSmemSize : NVVM_PureSpecialRegisterOp<"read.ptx.sreg.dynamic.smem.size">;
+def NVVM_AggrSmemSize    : NVVM_PureSpecialRegisterOp<"read.ptx.sreg.aggr.smem.size", [NVVMRequiresSM<90>]>;
+
+//===----------------------------------------------------------------------===//
 // Clock registers
 def NVVM_ClockOp : NVVM_SpecialRegisterOp<"read.ptx.sreg.clock">;
 def NVVM_Clock64Op : NVVM_SpecialRegisterOp<"read.ptx.sreg.clock64">;
@@ -785,8 +791,7 @@ def NVVM_MBarrierArriveOp : NVVM_Op<"mbarrier.arrive"> {
     auto [id, args] = NVVM::MBarrierArriveOp::getIntrinsicIDAndArgs(
                       *op, moduleTranslation, builder);
 
-    int addrSpace = llvm::cast<LLVMPointerType>(op.getAddr().getType()).getAddressSpace();
-    if (addrSpace != static_cast<unsigned>(NVVM::NVVMMemorySpace::SharedCluster))
+    if (op.getNumResults() > 0)
       $res = createIntrinsicCall(builder, id, args);
     else
       createIntrinsicCall(builder, id, args);
@@ -827,8 +832,7 @@ def NVVM_MBarrierArriveDropOp : NVVM_Op<"mbarrier.arrive_drop"> {
     auto [id, args] = NVVM::MBarrierArriveDropOp::getIntrinsicIDAndArgs(
                       *op, moduleTranslation, builder);
 
-    int addrSpace = llvm::cast<LLVMPointerType>(op.getAddr().getType()).getAddressSpace();
-    if (addrSpace != static_cast<unsigned>(NVVM::NVVMMemorySpace::SharedCluster))
+    if (op.getNumResults() > 0)
       $res = createIntrinsicCall(builder, id, args);
     else
       createIntrinsicCall(builder, id, args);
@@ -1274,7 +1278,8 @@ def NVVM_BarrierOp : NVVM_Op<"barrier", [AttrSizedOperandSegments]> {
     auto [id, args] = NVVM::BarrierOp::getIntrinsicIDAndArgs(
                         *op, moduleTranslation, builder);
     if ($reductionOp)
-      $res = createIntrinsicCall(builder, id, args);
+      $res = builder.CreateZExt(createIntrinsicCall(builder, id, args),
+                                builder.getInt32Ty());
     else 
       createIntrinsicCall(builder, id, args);
   }];

@@ -263,8 +263,11 @@ public:
     return {};
   }
   mlir::Value VisitEmbedExpr(EmbedExpr *e) {
-    cgf.cgm.errorNYI(e->getSourceRange(), "ScalarExprEmitter: embed");
-    return {};
+    assert(e->getDataElementCount() == 1);
+    auto it = e->begin();
+    llvm::APInt value = (*it)->getValue();
+    return builder.getConstInt(cgf.getLoc(e->getExprLoc()), value,
+                               e->getType()->isUnsignedIntegerType());
   }
   mlir::Value VisitOpaqueValueExpr(OpaqueValueExpr *e) {
     if (e->isGLValue())
@@ -840,23 +843,24 @@ public:
     return {};
   }
   mlir::Value VisitTypeTraitExpr(const TypeTraitExpr *e) {
-    cgf.cgm.errorNYI(e->getSourceRange(), "ScalarExprEmitter: type trait");
+    mlir::Location loc = cgf.getLoc(e->getExprLoc());
+    if (e->isStoredAsBoolean())
+      return builder.getBool(e->getBoolValue(), loc);
+    cgf.cgm.errorNYI(e->getSourceRange(),
+                     "ScalarExprEmitter: TypeTraitExpr stored as int");
     return {};
   }
   mlir::Value
   VisitConceptSpecializationExpr(const ConceptSpecializationExpr *e) {
-    cgf.cgm.errorNYI(e->getSourceRange(),
-                     "ScalarExprEmitter: concept specialization");
-    return {};
+    return builder.getBool(e->isSatisfied(), cgf.getLoc(e->getExprLoc()));
   }
   mlir::Value VisitRequiresExpr(const RequiresExpr *e) {
-    cgf.cgm.errorNYI(e->getSourceRange(), "ScalarExprEmitter: requires");
-    return {};
+    return builder.getBool(e->isSatisfied(), cgf.getLoc(e->getExprLoc()));
   }
   mlir::Value VisitArrayTypeTraitExpr(const ArrayTypeTraitExpr *e) {
-    cgf.cgm.errorNYI(e->getSourceRange(),
-                     "ScalarExprEmitter: array type trait");
-    return {};
+    mlir::Type type = cgf.convertType(e->getType());
+    mlir::Location loc = cgf.getLoc(e->getExprLoc());
+    return builder.getConstInt(loc, type, e->getValue());
   }
   mlir::Value VisitExpressionTraitExpr(const ExpressionTraitExpr *e) {
     return builder.getBool(e->getValue(), cgf.getLoc(e->getExprLoc()));
@@ -1352,8 +1356,7 @@ public:
   }
 
   mlir::Value VisitChooseExpr(ChooseExpr *e) {
-    cgf.cgm.errorNYI(e->getSourceRange(), "ScalarExprEmitter: choose");
-    return {};
+    return Visit(e->getChosenSubExpr());
   }
 
   mlir::Value VisitObjCStringLiteral(const ObjCStringLiteral *e) {
@@ -2207,6 +2210,23 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *ce) {
     return builder.getNullPtr(ty, cgf.getLoc(subExpr->getExprLoc()));
   }
 
+  case CK_NullToMemberPointer: {
+    if (mustVisitNullValue(subExpr))
+      cgf.emitIgnoredExpr(subExpr);
+
+    assert(!cir::MissingFeatures::cxxABI());
+
+    const MemberPointerType *mpt = ce->getType()->getAs<MemberPointerType>();
+    if (mpt->isMemberFunctionPointerType()) {
+      cgf.cgm.errorNYI(subExpr->getSourceRange(),
+                       "CK_NullToMemberPointer: member function pointer");
+      return {};
+    }
+
+    auto ty = mlir::cast<cir::DataMemberType>(cgf.convertType(destTy));
+    return builder.getNullDataMemberPtr(ty, cgf.getLoc(subExpr->getExprLoc()));
+  }
+
   case CK_LValueToRValue:
     assert(cgf.getContext().hasSameUnqualifiedType(subExpr->getType(), destTy));
     assert(subExpr->isGLValue() && "lvalue-to-rvalue applied to r-value!");
@@ -2556,6 +2576,19 @@ mlir::Value ScalarExprEmitter::VisitUnaryExprOrTypeTraitExpr(
     return builder.getConstant(
         loc, cir::IntAttr::get(cgf.cgm.uInt64Ty,
                                llvm::APSInt(llvm::APInt(64, 1), true)));
+  } else if (e->getKind() == UETT_VectorElements) {
+    auto vecTy = cast<cir::VectorType>(convertType(e->getTypeOfArgument()));
+    if (vecTy.getIsScalable()) {
+      cgf.getCIRGenModule().errorNYI(
+          e->getSourceRange(),
+          "VisitUnaryExprOrTypeTraitExpr: sizeOf scalable vector");
+      return builder.getConstant(
+          loc, cir::IntAttr::get(cgf.cgm.uInt64Ty,
+                                 e->EvaluateKnownConstInt(cgf.getContext())));
+    }
+
+    return builder.getConstant(
+        loc, cir::IntAttr::get(cgf.cgm.uInt64Ty, vecTy.getSize()));
   }
 
   return builder.getConstant(

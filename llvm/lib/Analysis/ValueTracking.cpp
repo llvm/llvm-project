@@ -5308,6 +5308,14 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       if (DenormMode.inputsAreZero() || DenormMode.outputsAreZero())
         Known.knownNot(fcSubnormal);
 
+      if (DenormMode == DenormalMode::getPreserveSign()) {
+        if (KnownSrc.isKnownNever(fcPosZero | fcPosSubnormal))
+          Known.knownNot(fcPosZero);
+        if (KnownSrc.isKnownNever(fcNegZero | fcNegSubnormal))
+          Known.knownNot(fcNegZero);
+        break;
+      }
+
       if (DenormMode.Input == DenormalMode::PositiveZero ||
           (DenormMode.Output == DenormalMode::PositiveZero &&
            DenormMode.Input == DenormalMode::IEEE))
@@ -5374,8 +5382,14 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     }
     case Intrinsic::exp:
     case Intrinsic::exp2:
-    case Intrinsic::exp10: {
+    case Intrinsic::exp10:
+    case Intrinsic::amdgcn_exp2: {
       Known.knownNot(fcNegative);
+
+      Type *EltTy = II->getType()->getScalarType();
+      if (IID == Intrinsic::amdgcn_exp2 && EltTy->isFloatTy())
+        Known.knownNot(fcSubnormal);
+
       if ((InterestedClasses & fcNan) == fcNone)
         break;
 
@@ -5399,7 +5413,12 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     case Intrinsic::log2:
     case Intrinsic::experimental_constrained_log:
     case Intrinsic::experimental_constrained_log10:
-    case Intrinsic::experimental_constrained_log2: {
+    case Intrinsic::experimental_constrained_log2:
+    case Intrinsic::amdgcn_log: {
+      Type *EltTy = II->getType()->getScalarType();
+      if (IID == Intrinsic::amdgcn_log && EltTy->isFloatTy())
+        Known.knownNot(fcSubnormal);
+
       // log(+inf) -> +inf
       // log([+-]0.0) -> -inf
       // log(-inf) -> nan
@@ -5424,12 +5443,10 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
         Known.knownNot(fcNan);
 
       const Function *F = II->getFunction();
-
       if (!F)
         break;
 
-      const fltSemantics &FltSem =
-          II->getType()->getScalarType()->getFltSemantics();
+      const fltSemantics &FltSem = EltTy->getFltSemantics();
       DenormalMode Mode = F->getDenormalMode(FltSem);
 
       if (KnownSrc.isKnownNeverLogicalZero(Mode))
@@ -5553,6 +5570,74 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
 
       // TODO: Copy inf handling from instructions
       break;
+    case Intrinsic::amdgcn_rcp: {
+      KnownFPClass KnownSrc;
+      computeKnownFPClass(II->getArgOperand(0), DemandedElts, InterestedClasses,
+                          KnownSrc, Q, Depth + 1);
+
+      Known.propagateNaN(KnownSrc);
+
+      Type *EltTy = II->getType()->getScalarType();
+
+      // f32 denormal always flushed.
+      if (EltTy->isFloatTy()) {
+        Known.knownNot(fcSubnormal);
+        KnownSrc.knownNot(fcSubnormal);
+      }
+
+      if (KnownSrc.isKnownNever(fcNegative))
+        Known.knownNot(fcNegative);
+      if (KnownSrc.isKnownNever(fcPositive))
+        Known.knownNot(fcPositive);
+
+      if (const Function *F = II->getFunction()) {
+        DenormalMode Mode = F->getDenormalMode(EltTy->getFltSemantics());
+        if (KnownSrc.isKnownNeverLogicalPosZero(Mode))
+          Known.knownNot(fcPosInf);
+        if (KnownSrc.isKnownNeverLogicalNegZero(Mode))
+          Known.knownNot(fcNegInf);
+      }
+
+      break;
+    }
+    case Intrinsic::amdgcn_rsq: {
+      KnownFPClass KnownSrc;
+      // The only negative value that can be returned is -inf for -0 inputs.
+      Known.knownNot(fcNegZero | fcNegSubnormal | fcNegNormal);
+
+      computeKnownFPClass(II->getArgOperand(0), DemandedElts, InterestedClasses,
+                          KnownSrc, Q, Depth + 1);
+
+      // Negative -> nan
+      if (KnownSrc.isKnownNeverNaN() && KnownSrc.cannotBeOrderedLessThanZero())
+        Known.knownNot(fcNan);
+      else if (KnownSrc.isKnownNever(fcSNan))
+        Known.knownNot(fcSNan);
+
+      // +inf -> +0
+      if (KnownSrc.isKnownNeverPosInfinity())
+        Known.knownNot(fcPosZero);
+
+      Type *EltTy = II->getType()->getScalarType();
+
+      // f32 denormal always flushed.
+      if (EltTy->isFloatTy())
+        Known.knownNot(fcPosSubnormal);
+
+      if (const Function *F = II->getFunction()) {
+        DenormalMode Mode = F->getDenormalMode(EltTy->getFltSemantics());
+
+        // -0 -> -inf
+        if (KnownSrc.isKnownNeverLogicalNegZero(Mode))
+          Known.knownNot(fcNegInf);
+
+        // +0 -> +inf
+        if (KnownSrc.isKnownNeverLogicalPosZero(Mode))
+          Known.knownNot(fcPosInf);
+      }
+
+      break;
+    }
     default:
       break;
     }
@@ -8109,6 +8194,8 @@ bool llvm::intrinsicPropagatesPoison(Intrinsic::ID IID) {
   case Intrinsic::roundeven:
   case Intrinsic::lrint:
   case Intrinsic::llrint:
+  case Intrinsic::fshl:
+  case Intrinsic::fshr:
     return true;
   default:
     return false;

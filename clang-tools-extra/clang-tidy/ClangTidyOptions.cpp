@@ -52,10 +52,9 @@ template <> struct MappingTraits<FileFilter> {
   static std::string validate(IO &Io, FileFilter &File) {
     if (File.Name.empty())
       return "No file name specified";
-    for (const FileFilter::LineRange &Range : File.LineRanges) {
+    for (const FileFilter::LineRange &Range : File.LineRanges)
       if (Range.first <= 0 || Range.second <= 0)
         return "Invalid line range";
-    }
     return "";
   }
 };
@@ -66,6 +65,8 @@ template <> struct MappingTraits<ClangTidyOptions::StringPair> {
     IO.mapRequired("value", KeyValue.second);
   }
 };
+
+namespace {
 
 struct NOptionMap {
   NOptionMap(IO &) {}
@@ -84,6 +85,8 @@ struct NOptionMap {
   std::vector<ClangTidyOptions::StringPair> Options;
 };
 
+} // namespace
+
 template <>
 void yamlize(IO &IO, ClangTidyOptions::OptionMap &Val, bool,
              EmptyContext &Ctx) {
@@ -91,9 +94,8 @@ void yamlize(IO &IO, ClangTidyOptions::OptionMap &Val, bool,
     // Ensure check options are sorted
     std::vector<std::pair<StringRef, StringRef>> SortedOptions;
     SortedOptions.reserve(Val.size());
-    for (auto &Key : Val) {
+    for (auto &Key : Val)
       SortedOptions.emplace_back(Key.getKey(), Key.getValue().Value);
-    }
     std::sort(SortedOptions.begin(), SortedOptions.end());
 
     IO.beginMapping();
@@ -178,10 +180,14 @@ template <> struct MappingTraits<ClangTidyOptions::CustomCheckValue> {
   }
 };
 
+namespace {
+
 struct GlobListVariant {
   std::optional<std::string> AsString;
   std::optional<std::vector<std::string>> AsVector;
 };
+
+} // namespace
 
 template <>
 void yamlize(IO &IO, GlobListVariant &Val, bool, EmptyContext &Ctx) {
@@ -232,6 +238,7 @@ template <> struct MappingTraits<ClangTidyOptions> {
     IO.mapOptional("CheckOptions", Options.CheckOptions);
     IO.mapOptional("ExtraArgs", Options.ExtraArgs);
     IO.mapOptional("ExtraArgsBefore", Options.ExtraArgsBefore);
+    IO.mapOptional("RemovedArgs", Options.RemovedArgs);
     IO.mapOptional("InheritParentConfig", Options.InheritParentConfig);
     IO.mapOptional("UseColor", Options.UseColor);
     IO.mapOptional("SystemHeaders", Options.SystemHeaders);
@@ -254,6 +261,7 @@ ClangTidyOptions ClangTidyOptions::getDefaults() {
   Options.SystemHeaders = false;
   Options.FormatStyle = "none";
   Options.User = std::nullopt;
+  Options.RemovedArgs = std::nullopt;
   for (const ClangTidyModuleRegistry::entry &Module :
        ClangTidyModuleRegistry::entries())
     Options.mergeWith(Module.instantiate()->getModuleOptions(), 0);
@@ -297,6 +305,7 @@ ClangTidyOptions &ClangTidyOptions::mergeWith(const ClangTidyOptions &Other,
   overrideValue(UseColor, Other.UseColor);
   mergeVectors(ExtraArgs, Other.ExtraArgs);
   mergeVectors(ExtraArgsBefore, Other.ExtraArgsBefore);
+  mergeVectors(RemovedArgs, Other.RemovedArgs);
   // FIXME: how to handle duplicate names check?
   mergeVectors(CustomChecks, Other.CustomChecks);
   for (const auto &KeyValue : Other.CheckOptions) {
@@ -358,9 +367,8 @@ ConfigOptionsProvider::getRawOptions(llvm::StringRef FileName) {
 
     llvm::ErrorOr<llvm::SmallString<128>> AbsoluteFilePath =
         getNormalizedAbsolutePath(FileName);
-    if (AbsoluteFilePath) {
+    if (AbsoluteFilePath)
       addRawFileOptions(AbsoluteFilePath->str(), RawOptions);
-    }
   }
   RawOptions.emplace_back(ConfigOptions,
                           OptionsSourceTypeConfigCommandLineOption);
