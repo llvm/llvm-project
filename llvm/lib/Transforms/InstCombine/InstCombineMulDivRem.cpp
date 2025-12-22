@@ -51,6 +51,16 @@ static Value *simplifyValueKnownNonZero(Value *V, InstCombinerImpl &IC,
   // code.
   if (!V->hasOneUse()) return nullptr;
 
+  // This helper can rewrite an instruction (including its operands) even when
+  // IC.Builder is currently set to the instruction being visited (e.g. a
+  // divide/remainder using V as a non-zero divisor). Ensure that any IR we
+  // create is inserted before the value we are about to rewrite, so it
+  // dominates all uses.
+  IRBuilderBase::InsertPointGuard Guard(IC.Builder);
+  if (auto *VI = dyn_cast<Instruction>(V))
+    if (VI->getParent())
+      IC.Builder.SetInsertPoint(VI);
+
   bool MadeChange = false;
 
   // ((1 << A) >>u B) --> (1 << (A-B))
