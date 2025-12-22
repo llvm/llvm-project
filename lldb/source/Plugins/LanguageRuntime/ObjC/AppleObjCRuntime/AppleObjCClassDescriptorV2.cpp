@@ -265,6 +265,28 @@ bool ClassDescriptorV2::method_list_t::Read(Process *process,
   return true;
 }
 
+void ClassDescriptorV2::method_t::ReadNames(
+    llvm::MutableArrayRef<method_t> methods, Process &process) {
+  std::vector<lldb::addr_t> str_addresses;
+  str_addresses.reserve(2 * methods.size());
+  for (auto &method : methods)
+    str_addresses.push_back(method.m_name_ptr);
+  for (auto &method : methods)
+    str_addresses.push_back(method.m_types_ptr);
+
+  llvm::SmallVector<std::optional<std::string>> read_result =
+      process.ReadCStringsFromMemory(str_addresses);
+  auto names = llvm::MutableArrayRef(read_result).take_front(methods.size());
+  auto types = llvm::MutableArrayRef(read_result).take_back(methods.size());
+
+  for (auto [name_str, type_str, method] : llvm::zip(names, types, methods)) {
+    if (name_str)
+      method.m_name = std::move(*name_str);
+    if (type_str)
+      method.m_types = std::move(*type_str);
+  }
+}
+
 llvm::SmallVector<ClassDescriptorV2::method_t, 0>
 ClassDescriptorV2::ReadMethods(llvm::ArrayRef<lldb::addr_t> addresses,
                                lldb::addr_t relative_string_base_addr,
@@ -301,6 +323,7 @@ ClassDescriptorV2::ReadMethods(llvm::ArrayRef<lldb::addr_t> addresses,
                         is_small, has_direct_sel, has_relative_types);
   }
 
+  method_t::ReadNames(methods, *process);
   return methods;
 }
 
@@ -338,13 +361,7 @@ bool ClassDescriptorV2::method_t::Read(DataExtractor &extractor,
     m_imp_ptr = extractor.GetAddress_unchecked(&cursor);
   }
 
-  Status error;
-  process->ReadCStringFromMemory(m_name_ptr, m_name, error);
-  if (error.Fail())
-    return false;
-
-  process->ReadCStringFromMemory(m_types_ptr, m_types, error);
-  return error.Success();
+  return true;
 }
 
 bool ClassDescriptorV2::ivar_list_t::Read(Process *process, lldb::addr_t addr) {
