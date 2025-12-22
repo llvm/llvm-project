@@ -107,6 +107,18 @@ class TestSwiftClosureVarNotCaptured(TestBase):
         check_no_enhanced_diagnostic(self, thread.frames[0], "dont_find_me")
 
     @swiftTest
+    # Async variable inspection on Linux/Windows are still problematic.
+    @skipIf(oslist=["windows", "linux"])
+    def test_task_inside_non_async_func(self):
+        self.build()
+        (target, process, thread) = self.get_to_bkpt(
+            "break_task_inside_non_async_function"
+        )
+        check_not_captured_error(
+            self, thread.frames[0], "x", "task_inside_non_async_function()"
+        )
+
+    @swiftTest
     def test_ctor_class_closure(self):
         self.build()
         (target, process, thread) = self.get_to_bkpt("break_ctor_class")
