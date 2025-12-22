@@ -59,6 +59,7 @@ public:
   PointerAssignmentChecker &set_isBoundsRemapping(bool);
   PointerAssignmentChecker &set_isAssumedRank(bool);
   PointerAssignmentChecker &set_pointerComponentLHS(const Symbol *);
+  PointerAssignmentChecker &set_isRHSPointerActualArgument(bool);
   bool CheckLeftHandSide(const SomeExpr &);
   bool Check(const SomeExpr &);
 
@@ -94,6 +95,7 @@ private:
   bool isVolatile_{false};
   bool isBoundsRemapping_{false};
   bool isAssumedRank_{false};
+  bool isRHSPointerActualArgument_{false};
   const Symbol *pointerComponentLHS_{nullptr};
 };
 
@@ -133,6 +135,12 @@ PointerAssignmentChecker &PointerAssignmentChecker::set_pointerComponentLHS(
   return *this;
 }
 
+PointerAssignmentChecker &
+PointerAssignmentChecker::set_isRHSPointerActualArgument(bool isPointerActual) {
+  isRHSPointerActualArgument_ = isPointerActual;
+  return *this;
+}
+
 bool PointerAssignmentChecker::CharacterizeProcedure() {
   if (!characterizedProcedure_) {
     characterizedProcedure_ = true;
@@ -151,8 +159,11 @@ bool PointerAssignmentChecker::CheckLeftHandSide(const SomeExpr &lhs) {
       msg->Attach(std::move(whyNot->set_severity(parser::Severity::Because)));
     }
     return false;
-  } else if (evaluate::IsAssumedRank(lhs)) {
+  } else if (IsAssumedRank(lhs)) {
     Say("The left-hand side of a pointer assignment must not be an assumed-rank dummy argument"_err_en_US);
+    return false;
+  } else if (evaluate::ExtractCoarrayRef(lhs)) { // F'2023 C1027
+    Say("The left-hand side of a pointer assignment must not be coindexed"_err_en_US);
     return false;
   } else {
     return true;
@@ -177,21 +188,21 @@ bool PointerAssignmentChecker::Check(const SomeExpr &rhs) {
     Say("An array section with a vector subscript may not be a pointer target"_err_en_US);
     return false;
   }
-  if (ExtractCoarrayRef(rhs)) { // C1026
+  if (ExtractCoarrayRef(rhs)) { // F'2023 C1029
     Say("A coindexed object may not be a pointer target"_err_en_US);
     return false;
   }
   if (!common::visit([&](const auto &x) { return Check(x); }, rhs.u)) {
     return false;
   }
-  if (IsNullPointer(rhs)) {
+  if (IsNullPointer(&rhs)) {
     return true;
   }
   if (lhs_ && IsProcedure(*lhs_)) {
     return true;
   }
   if (const auto *pureProc{FindPureProcedureContaining(scope_)}) {
-    if (pointerComponentLHS_) { // C1594(4) is a hard error
+    if (pointerComponentLHS_) { // F'2023 C15104(4) is a hard error
       if (const Symbol * object{FindExternallyVisibleObject(rhs, *pureProc)}) {
         if (auto *msg{Say(
                 "Externally visible object '%s' may not be associated with pointer component '%s' in a pure procedure"_err_en_US,
@@ -218,6 +229,9 @@ bool PointerAssignmentChecker::Check(const SomeExpr &rhs) {
         Say("CONTIGUOUS pointer may not be associated with a discontiguous target"_err_en_US);
         return false;
       }
+    } else if (isRHSPointerActualArgument_) {
+      Say("CONTIGUOUS pointer dummy argument may not be associated with non-CONTIGUOUS pointer actual argument"_err_en_US);
+      return false;
     } else {
       Warn(common::UsageWarning::PointerToPossibleNoncontiguous,
           "Target of CONTIGUOUS pointer association is not known to be contiguous"_warn_en_US);
@@ -256,18 +270,18 @@ bool PointerAssignmentChecker::Check(const evaluate::FunctionRef<T> &f) {
   std::optional<MessageFixedText> msg;
   const auto &funcResult{proc->functionResult}; // C1025
   if (!funcResult) {
-    msg = "%s is associated with the non-existent result of reference to"
-          " procedure"_err_en_US;
+    msg =
+        "%s is associated with the non-existent result of reference to procedure"_err_en_US;
   } else if (CharacterizeProcedure()) {
     // Shouldn't be here in this function unless lhs is an object pointer.
-    msg = "Procedure %s is associated with the result of a reference to"
-          " function '%s' that does not return a procedure pointer"_err_en_US;
+    msg =
+        "Procedure %s is associated with the result of a reference to function '%s' that does not return a procedure pointer"_err_en_US;
   } else if (funcResult->IsProcedurePointer()) {
-    msg = "Object %s is associated with the result of a reference to"
-          " function '%s' that is a procedure pointer"_err_en_US;
+    msg =
+        "Object %s is associated with the result of a reference to function '%s' that is a procedure pointer"_err_en_US;
   } else if (!funcResult->attrs.test(FunctionResult::Attr::Pointer)) {
-    msg = "%s is associated with the result of a reference to function '%s'"
-          " that is a not a pointer"_err_en_US;
+    msg =
+        "%s is associated with the result of a reference to function '%s' that is not a pointer"_err_en_US;
   } else if (isContiguous_ &&
       !funcResult->attrs.test(FunctionResult::Attr::Contiguous)) {
     auto restorer{common::ScopedSet(lhs_, symbol)};
@@ -326,7 +340,6 @@ bool PointerAssignmentChecker::Check(const evaluate::Designator<T> &d) {
             " shape"_err_en_US;
     } else if (rhsType->corank() > 0 &&
         (isVolatile_ != last->attrs().test(Attr::VOLATILE))) { // C1020
-      // TODO: what if A is VOLATILE in A%B%C?  need a better test here
       if (isVolatile_) {
         msg = "Pointer may not be VOLATILE when target is a"
               " non-VOLATILE coarray"_err_en_US;
@@ -357,6 +370,20 @@ bool PointerAssignmentChecker::Check(const evaluate::Designator<T> &d) {
     } else {
       Say(std::get<MessageFormattedText>(*msg));
     }
+  }
+
+  // Show warnings after errors
+
+  // 8.5.20(3) A pointer should have the VOLATILE attribute if its target has
+  // the VOLATILE attribute
+  // 8.5.20(4) If an object has the VOLATILE attribute, then all of its
+  // subobjects also have the VOLATILE attribute.
+  if (!isVolatile_ && base->attrs().test(Attr::VOLATILE)) {
+    Warn(common::UsageWarning::NonVolatilePointerToVolatile,
+        "VOLATILE target associated with non-VOLATILE pointer"_warn_en_US);
+  }
+
+  if (msg) {
     return false;
   } else {
     context_.NoteDefinedSymbol(*base);
@@ -552,6 +579,12 @@ bool CheckPointerAssignment(SemanticsContext &context, const SomeExpr &lhs,
     return false; // error was reported
   }
   PointerAssignmentChecker checker{context, scope, *pointer};
+  const Symbol *base{GetFirstSymbol(lhs)};
+  if (base) {
+    // 8.5.20(4) If an object has the VOLATILE attribute, then all of its
+    // subobjects also have the VOLATILE attribute.
+    checker.set_isVolatile(base->attrs().test(Attr::VOLATILE));
+  }
   checker.set_isBoundsRemapping(isBoundsRemapping);
   checker.set_isAssumedRank(isAssumedRank);
   bool lhsOk{checker.CheckLeftHandSide(lhs)};
@@ -568,12 +601,14 @@ bool CheckStructConstructorPointerComponent(SemanticsContext &context,
 
 bool CheckPointerAssignment(SemanticsContext &context, parser::CharBlock source,
     const std::string &description, const DummyDataObject &lhs,
-    const SomeExpr &rhs, const Scope &scope, bool isAssumedRank) {
+    const SomeExpr &rhs, const Scope &scope, bool isAssumedRank,
+    bool isPointerActualArgument) {
   return PointerAssignmentChecker{context, scope, source, description}
       .set_lhsType(common::Clone(lhs.type))
       .set_isContiguous(lhs.attrs.test(DummyDataObject::Attr::Contiguous))
       .set_isVolatile(lhs.attrs.test(DummyDataObject::Attr::Volatile))
       .set_isAssumedRank(isAssumedRank)
+      .set_isRHSPointerActualArgument(isPointerActualArgument)
       .Check(rhs);
 }
 

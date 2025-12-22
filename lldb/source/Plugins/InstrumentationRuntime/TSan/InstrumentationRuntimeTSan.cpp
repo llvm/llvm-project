@@ -319,7 +319,7 @@ StructuredData::ObjectSP InstrumentationRuntimeTSan::RetrieveReportData(
   options.SetTimeout(process_sp->GetUtilityExpressionTimeout());
   options.SetPrefix(thread_sanitizer_retrieve_report_data_prefix);
   options.SetAutoApplyFixIts(false);
-  options.SetLanguage(eLanguageTypeObjC_plus_plus);
+  options.SetLanguage(eLanguageTypeC);
 
   ValueObjectSP main_value;
   ExecutionContext exe_ctx;
@@ -864,13 +864,14 @@ bool InstrumentationRuntimeTSan::NotifyBreakpointHit(
               CreateStopReasonWithInstrumentationData(
                   *thread_sp, stop_reason_description, report));
 
-    StreamFile &s = process_sp->GetTarget().GetDebugger().GetOutputStream();
-    s.Printf("ThreadSanitizer report breakpoint hit. Use 'thread "
-             "info -s' to get extended information about the "
-             "report.\n");
+    lldb::StreamSP s =
+        process_sp->GetTarget().GetDebugger().GetAsyncOutputStream();
+    s->Printf("ThreadSanitizer report breakpoint hit. Use 'thread "
+              "info -s' to get extended information about the "
+              "report.\n");
 
     return true; // Return true to stop the target
-  } else
+  }
     return false; // Let target run
 }
 

@@ -1,5 +1,4 @@
-//===------ ELFNixPlatform.cpp - Utilities for executing ELFNix in Orc
-//-----===//
+//===----- ELFNixPlatform.cpp - Utilities for executing ELFNix in Orc -----===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -12,6 +11,7 @@
 #include "llvm/ExecutionEngine/JITLink/aarch64.h"
 #include "llvm/ExecutionEngine/JITLink/loongarch.h"
 #include "llvm/ExecutionEngine/JITLink/ppc64.h"
+#include "llvm/ExecutionEngine/JITLink/systemz.h"
 #include "llvm/ExecutionEngine/JITLink/x86_64.h"
 #include "llvm/ExecutionEngine/Orc/AbsoluteSymbols.h"
 #include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
@@ -153,6 +153,9 @@ public:
       break;
     case Triple::loongarch64:
       EdgeKind = jitlink::loongarch::Pointer64;
+      break;
+    case Triple::systemz:
+      EdgeKind = jitlink::systemz::Pointer64;
       break;
     default:
       llvm_unreachable("Unrecognized architecture");
@@ -368,6 +371,7 @@ bool ELFNixPlatform::supportedTarget(const Triple &TT) {
   // right now.
   case Triple::ppc64le:
   case Triple::loongarch64:
+  case Triple::systemz:
     return true;
   default:
     return false;
@@ -470,11 +474,12 @@ void ELFNixPlatform::pushInitializersLoop(
       Worklist.pop_back();
 
       // If we've already visited this JITDylib on this iteration then continue.
-      if (JDDepMap.count(DepJD))
+      auto [It, Inserted] = JDDepMap.try_emplace(DepJD);
+      if (!Inserted)
         continue;
 
       // Add dep info.
-      auto &DM = JDDepMap[DepJD];
+      auto &DM = It->second;
       DepJD->withLinkOrderDo([&](const JITDylibSearchOrder &O) {
         for (auto &KV : O) {
           if (KV.first == DepJD)
@@ -983,6 +988,7 @@ Error ELFNixPlatform::ELFNixPlatformPlugin::fixTLVSectionsAndEdges(
     jitlink::LinkGraph &G, JITDylib &JD) {
   auto TLSGetAddrSymbolName = G.intern("__tls_get_addr");
   auto TLSDescResolveSymbolName = G.intern("__tlsdesc_resolver");
+  auto TLSGetOffsetSymbolName = G.intern("__tls_get_offset");
   for (auto *Sym : G.external_symbols()) {
     if (Sym->getName() == TLSGetAddrSymbolName) {
       auto TLSGetAddr =
@@ -991,6 +997,10 @@ Error ELFNixPlatform::ELFNixPlatformPlugin::fixTLVSectionsAndEdges(
     } else if (Sym->getName() == TLSDescResolveSymbolName) {
       auto TLSGetAddr =
           MP.getExecutionSession().intern("___orc_rt_elfnix_tlsdesc_resolver");
+      Sym->setName(std::move(TLSGetAddr));
+    } else if (Sym->getName() == TLSGetOffsetSymbolName) {
+      auto TLSGetAddr =
+          MP.getExecutionSession().intern("___orc_rt_elfnix_tls_get_offset");
       Sym->setName(std::move(TLSGetAddr));
     }
   }

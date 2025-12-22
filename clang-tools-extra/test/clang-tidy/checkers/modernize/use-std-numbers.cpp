@@ -9,12 +9,17 @@ namespace bar {
     template <typename T>
     auto sqrt(T val) { return sqrt(static_cast<double>(val)); }
 
+    float sqrtf(float Arg);
+    long double sqrtl(long double Arg);
+
     static constexpr double e = 2.718281828459045235360287471352662497757247093;
     // CHECK-MESSAGES-ALL: :[[@LINE-1]]:33: warning: prefer 'std::numbers::e' to this literal, differs by '0.00e+00' [modernize-use-std-numbers]
     // CHECK-FIXES-ALL: static constexpr double e = std::numbers::e;
 }
 
+float expf(float Arg);
 double exp(double Arg);
+long double expl(long double Arg);
 double log(double Arg);
 
 double log2(double Arg);
@@ -110,6 +115,14 @@ void foo(){
     // CHECK-MESSAGES-ALL: :[[@LINE-1]]:5: warning: prefer 'std::numbers::sqrt2_v<float>'  to this formula [modernize-use-std-numbers]
     // CHECK-FIXES-ALL: std::numbers::sqrt2_v<float>;
 
+    bar::sqrtf(2.0F);
+    // CHECK-MESSAGES-ALL: :[[@LINE-1]]:5: warning: prefer 'std::numbers::sqrt2_v<float>'  to this formula [modernize-use-std-numbers]
+    // CHECK-FIXES-ALL: std::numbers::sqrt2_v<float>;
+
+    bar::sqrtl(2.0);
+    // CHECK-MESSAGES-ALL: :[[@LINE-1]]:5: warning: prefer 'std::numbers::sqrt2_v<long double>'  to this formula [modernize-use-std-numbers]
+    // CHECK-FIXES-ALL: std::numbers::sqrt2_v<long double>;
+
     sink(MY_PI);
     // CHECK-MESSAGES-ALL: :[[@LINE-1]]:10: warning: prefer 'std::numbers::pi' to this macro, differs by '5.36e-08' [modernize-use-std-numbers]
     // CHECK-FIXES-ALL: sink(std::numbers::pi);
@@ -154,6 +167,14 @@ void foo(){
     exp(1.00000000000001);
     // CHECK-MESSAGES-ALL: :[[@LINE-1]]:5: warning: prefer 'std::numbers::e' to this formula [modernize-use-std-numbers]
     // CHECK-FIXES-ALL: std::numbers::e;
+
+    expf(1);
+    // CHECK-MESSAGES-ALL: :[[@LINE-1]]:5: warning: prefer 'std::numbers::e_v<float>' to this formula [modernize-use-std-numbers]
+    // CHECK-FIXES-ALL: std::numbers::e_v<float>;
+
+    expl(1);
+    // CHECK-MESSAGES-ALL: :[[@LINE-1]]:5: warning: prefer 'std::numbers::e_v<long double>' to this formula [modernize-use-std-numbers]
+    // CHECK-FIXES-ALL: std::numbers::e_v<long double>;
 
     log2(exp(1));
     // CHECK-MESSAGES-ALL: :[[@LINE-1]]:5: warning: prefer 'std::numbers::log2e' to this formula [modernize-use-std-numbers]

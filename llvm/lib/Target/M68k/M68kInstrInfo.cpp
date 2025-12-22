@@ -43,7 +43,7 @@ using namespace llvm;
 void M68kInstrInfo::anchor() {}
 
 M68kInstrInfo::M68kInstrInfo(const M68kSubtarget &STI)
-    : M68kGenInstrInfo(M68k::ADJCALLSTACKDOWN, M68k::ADJCALLSTACKUP, 0,
+    : M68kGenInstrInfo(STI, RI, M68k::ADJCALLSTACKDOWN, M68k::ADJCALLSTACKUP, 0,
                        M68k::RET),
       Subtarget(STI), RI(STI) {}
 
@@ -95,8 +95,8 @@ bool M68kInstrInfo::AnalyzeBranchImpl(MachineBasicBlock &MBB,
   // Erase any instructions if allowed at the end of the scope.
   std::vector<std::reference_wrapper<llvm::MachineInstr>> EraseList;
   auto FinalizeOnReturn = llvm::make_scope_exit([&EraseList] {
-    std::for_each(EraseList.begin(), EraseList.end(),
-                  [](auto &ref) { ref.get().eraseFromParent(); });
+    for (auto &Ref : EraseList)
+      Ref.get().eraseFromParent();
   });
 
   // Start from the bottom of the block and work up, examining the
@@ -572,28 +572,9 @@ bool M68kInstrInfo::ExpandPUSH_POP(MachineInstrBuilder &MIB,
   return true;
 }
 
-bool M68kInstrInfo::ExpandCCR(MachineInstrBuilder &MIB, bool IsToCCR) const {
-  if (MIB->getOpcode() == M68k::MOV8cd) {
-    // Promote used register to the next class
-    MachineOperand &Opd = MIB->getOperand(1);
-    Opd.setReg(getRegisterInfo().getMatchingSuperReg(
-        Opd.getReg(), M68k::MxSubRegIndex8Lo, &M68k::DR16RegClass));
-  }
-
-  // Replace the pseudo instruction with the real one
-  if (IsToCCR)
-    MIB->setDesc(get(M68k::MOV16cd));
-  else
-    // FIXME M68010 or later is required
-    MIB->setDesc(get(M68k::MOV16dc));
-
-  return true;
-}
-
 bool M68kInstrInfo::ExpandMOVEM(MachineInstrBuilder &MIB,
                                 const MCInstrDesc &Desc, bool IsRM) const {
   int Reg = 0, Offset = 0, Base = 0;
-  auto XR32 = RI.getRegClass(M68k::XR32RegClassID);
   auto DL = MIB->getDebugLoc();
   auto MI = MIB.getInstr();
   auto &MBB = *MIB->getParent();
@@ -606,13 +587,6 @@ bool M68kInstrInfo::ExpandMOVEM(MachineInstrBuilder &MIB,
     Offset = MIB->getOperand(0).getImm();
     Base = MIB->getOperand(1).getReg();
     Reg = MIB->getOperand(2).getReg();
-  }
-
-  // If the register is not in XR32 then it is smaller than 32 bit, we
-  // implicitly promote it to 32
-  if (!XR32->contains(Reg)) {
-    Reg = RI.getMatchingMegaReg(Reg, XR32);
-    assert(Reg && "Has not meaningful MEGA register");
   }
 
   unsigned Mask = 1 << RI.getSpillRegisterOrder(Reg);
@@ -713,9 +687,10 @@ bool M68kInstrInfo::isPCRelRegisterOperandLegal(
 
 void M68kInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                 MachineBasicBlock::iterator MI,
-                                const DebugLoc &DL, MCRegister DstReg,
-                                MCRegister SrcReg, bool KillSrc,
+                                const DebugLoc &DL, Register DstReg,
+                                Register SrcReg, bool KillSrc,
                                 bool RenamableDest, bool RenamableSrc) const {
+  const auto &Subtarget = MBB.getParent()->getSubtarget<M68kSubtarget>();
   unsigned Opc = 0;
 
   // First deal with the normal symmetric copies.
@@ -760,29 +735,31 @@ void M68kInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   bool ToSR = DstReg == M68k::SR;
 
   if (FromCCR) {
-    if (M68k::DR8RegClass.contains(DstReg)) {
-      Opc = M68k::MOV8dc;
-    } else if (M68k::DR16RegClass.contains(DstReg)) {
-      Opc = M68k::MOV16dc;
-    } else if (M68k::DR32RegClass.contains(DstReg)) {
-      Opc = M68k::MOV16dc;
-    } else {
+    Opc = M68k::MOV16dc;
+    if (!Subtarget.atLeastM68010()) {
+      Opc = M68k::MOV16ds;
+      SrcReg = M68k::SR;
+    }
+    if (!M68k::DR8RegClass.contains(DstReg) &&
+        !M68k::DR16RegClass.contains(DstReg) &&
+        !M68k::DR32RegClass.contains(DstReg)) {
       LLVM_DEBUG(dbgs() << "Cannot copy CCR to " << RI.getName(DstReg) << '\n');
       llvm_unreachable("Invalid register for MOVE from CCR");
     }
   } else if (ToCCR) {
+    Opc = M68k::MOV16cd;
     if (M68k::DR8RegClass.contains(SrcReg)) {
-      Opc = M68k::MOV8cd;
-    } else if (M68k::DR16RegClass.contains(SrcReg)) {
-      Opc = M68k::MOV16cd;
-    } else if (M68k::DR32RegClass.contains(SrcReg)) {
-      Opc = M68k::MOV16cd;
-    } else {
+      // Promote used register to the next class
+      SrcReg = getRegisterInfo().getMatchingSuperReg(
+          SrcReg, M68k::MxSubRegIndex8Lo, &M68k::DR16RegClass);
+    } else if (!M68k::DR16RegClass.contains(SrcReg) &&
+               !M68k::DR32RegClass.contains(SrcReg)) {
       LLVM_DEBUG(dbgs() << "Cannot copy " << RI.getName(SrcReg) << " to CCR\n");
       llvm_unreachable("Invalid register for MOVE to CCR");
     }
-  } else if (FromSR || ToSR)
+  } else if (FromSR || ToSR) {
     llvm_unreachable("Cannot emit SR copy instruction");
+  }
 
   if (Opc) {
     BuildMI(MBB, MI, DL, get(Opc), DstReg)
@@ -799,22 +776,25 @@ namespace {
 unsigned getLoadStoreRegOpcode(unsigned Reg, const TargetRegisterClass *RC,
                                const TargetRegisterInfo *TRI,
                                const M68kSubtarget &STI, bool load) {
-  switch (TRI->getRegSizeInBits(*RC)) {
+  switch (TRI->getSpillSize(*RC)) {
   default:
+    LLVM_DEBUG(
+        dbgs() << "Cannot determine appropriate opcode for load/store to/from "
+               << TRI->getName(Reg) << " of class " << TRI->getRegClassName(RC)
+               << " with spill size " << TRI->getSpillSize(*RC) << '\n');
     llvm_unreachable("Unknown spill size");
-  case 8:
+  case 2:
+    if (M68k::XR16RegClass.hasSubClassEq(RC))
+      return load ? M68k::MOVM16mp_P : M68k::MOVM16pm_P;
     if (M68k::DR8RegClass.hasSubClassEq(RC))
-      return load ? M68k::MOV8dp : M68k::MOV8pd;
+      return load ? M68k::MOVM16mp_P : M68k::MOVM16pm_P;
     if (M68k::CCRCRegClass.hasSubClassEq(RC))
-      return load ? M68k::MOV16cp : M68k::MOV16pc;
-
-    llvm_unreachable("Unknown 1-byte regclass");
-  case 16:
-    assert(M68k::XR16RegClass.hasSubClassEq(RC) && "Unknown 2-byte regclass");
-    return load ? M68k::MOVM16mp_P : M68k::MOVM16pm_P;
-  case 32:
-    assert(M68k::XR32RegClass.hasSubClassEq(RC) && "Unknown 4-byte regclass");
-    return load ? M68k::MOVM32mp_P : M68k::MOVM32pm_P;
+      return load ? M68k::MOVM16mp_P : M68k::MOVM16pm_P;
+    llvm_unreachable("Unknown 2-byte regclass");
+  case 4:
+    if (M68k::XR32RegClass.hasSubClassEq(RC))
+      return load ? M68k::MOVM32mp_P : M68k::MOVM32pm_P;
+    llvm_unreachable("Unknown 4-byte regclass");
   }
 }
 
@@ -843,15 +823,14 @@ bool M68kInstrInfo::getStackSlotRange(const TargetRegisterClass *RC,
 
 void M68kInstrInfo::storeRegToStackSlot(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, Register SrcReg,
-    bool IsKill, int FrameIndex, const TargetRegisterClass *RC,
-    const TargetRegisterInfo *TRI, Register VReg,
+    bool IsKill, int FrameIndex, const TargetRegisterClass *RC, Register VReg,
     MachineInstr::MIFlag Flags) const {
   const MachineFrameInfo &MFI = MBB.getParent()->getFrameInfo();
-  assert(MFI.getObjectSize(FrameIndex) >= TRI->getSpillSize(*RC) &&
+  assert(MFI.getObjectSize(FrameIndex) >= TRI.getSpillSize(*RC) &&
          "Stack slot is too small to store");
   (void)MFI;
 
-  unsigned Opc = getStoreRegOpcode(SrcReg, RC, TRI, Subtarget);
+  unsigned Opc = getStoreRegOpcode(SrcReg, RC, &TRI, Subtarget);
   DebugLoc DL = MBB.findDebugLoc(MI);
   // (0,FrameIndex) <- $reg
   M68k::addFrameReference(BuildMI(MBB, MI, DL, get(Opc)), FrameIndex)
@@ -862,15 +841,14 @@ void M68kInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
                                          MachineBasicBlock::iterator MI,
                                          Register DstReg, int FrameIndex,
                                          const TargetRegisterClass *RC,
-                                         const TargetRegisterInfo *TRI,
                                          Register VReg,
                                          MachineInstr::MIFlag Flags) const {
   const MachineFrameInfo &MFI = MBB.getParent()->getFrameInfo();
-  assert(MFI.getObjectSize(FrameIndex) >= TRI->getSpillSize(*RC) &&
+  assert(MFI.getObjectSize(FrameIndex) >= TRI.getSpillSize(*RC) &&
          "Stack slot is too small to load");
   (void)MFI;
 
-  unsigned Opc = getLoadRegOpcode(DstReg, RC, TRI, Subtarget);
+  unsigned Opc = getLoadRegOpcode(DstReg, RC, &TRI, Subtarget);
   DebugLoc DL = MBB.findDebugLoc(MI);
   M68k::addFrameReference(BuildMI(MBB, MI, DL, get(Opc), DstReg), FrameIndex);
 }

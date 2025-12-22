@@ -520,7 +520,7 @@ TEST(RandomIRBuilderTest, sinkToIntrinsic) {
   ASSERT_TRUE(Modified);
 
   Modified = false;
-  I = I->getNextNonDebugInstruction();
+  I = I->getNextNode();
   for (int i = 0; i < 20; i++) {
     Value *OldOperand = I->getOperand(0);
     Value *Src = F.getArg(5);
@@ -589,7 +589,8 @@ TEST(RandomIRBuilderTest, SrcAndSinkWOrphanBlock) {
   std::vector<Value *> Constants;
   for (Type *IntTy : IntTys) {
     for (size_t v : {1, 42}) {
-      Constants.push_back(ConstantInt::get(IntTy, v));
+      Constants.push_back(ConstantInt::get(IntTy, v, /*IsSigned=*/false,
+                                           /*ImplicitTrunc=*/true));
     }
   }
   for (int i = 0; i < 10; i++) {
@@ -597,10 +598,7 @@ TEST(RandomIRBuilderTest, SrcAndSinkWOrphanBlock) {
     std::unique_ptr<Module> M = parseAssembly(Source, Ctx);
     Function &F = *M->getFunction("test");
     for (BasicBlock &BB : F) {
-      SmallVector<Instruction *, 4> Insts;
-      for (Instruction &I : BB) {
-        Insts.push_back(&I);
-      }
+      SmallVector<Instruction *, 4> Insts(llvm::make_pointer_range(BB));
       for (int j = 0; j < 10; j++) {
         IB.findOrCreateSource(BB, Insts);
       }

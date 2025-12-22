@@ -1,17 +1,10 @@
-#ifdef __CLC_SCALAR
-#define __CLC_VECSIZE
-#endif
-
-#if __CLC_FPSIZE == 64
-#define __CLC_S_GENTYPE __CLC_XCONCAT(long, __CLC_VECSIZE)
-#define __CLC_U_GENTYPE __CLC_XCONCAT(ulong, __CLC_VECSIZE)
-#elif __CLC_FPSIZE == 32
-#define __CLC_S_GENTYPE __CLC_XCONCAT(int, __CLC_VECSIZE)
-#define __CLC_U_GENTYPE __CLC_XCONCAT(uint, __CLC_VECSIZE)
-#elif __CLC_FPSIZE == 16
-#define __CLC_S_GENTYPE __CLC_XCONCAT(short, __CLC_VECSIZE)
-#define __CLC_U_GENTYPE __CLC_XCONCAT(ushort, __CLC_VECSIZE)
-#endif
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
 
 _CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE __CLC_SELECT_FN(__CLC_GENTYPE x,
                                                      __CLC_GENTYPE y,
@@ -24,12 +17,3 @@ _CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE __CLC_SELECT_FN(__CLC_GENTYPE x,
                                                      __CLC_U_GENTYPE z) {
   __CLC_SELECT_DEF(x, y, z);
 }
-
-#ifdef __CLC_FPSIZE
-#undef __CLC_S_GENTYPE
-#undef __CLC_U_GENTYPE
-#endif
-
-#ifdef __CLC_SCALAR
-#undef __CLC_VECSIZE
-#endif

@@ -6,7 +6,7 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   cmake_minimum_required(VERSION 3.20.0)
 
   set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
-  project(CompilerRTBuiltins C ASM)
+  project(CompilerRTBuiltins C CXX ASM)
   set(COMPILER_RT_STANDALONE_BUILD TRUE)
   set(COMPILER_RT_BUILTINS_STANDALONE_BUILD TRUE)
 
@@ -60,9 +60,12 @@ endif()
 include(builtin-config-ix)
 include(CMakeDependentOption)
 include(CMakePushCheckState)
+include(CheckAssemblerFlag)
 
 option(COMPILER_RT_BUILTINS_HIDE_SYMBOLS
   "Do not export any symbols from the static library." ON)
+
+include_directories(../../../third-party/siphash/include)
 
 # TODO: Need to add a mechanism for logging errors when builtin source files are
 # added to a sub-directory and not this CMakeLists file.
@@ -104,6 +107,7 @@ set(GENERIC_SOURCES
   divti3.c
   extendsfdf2.c
   extendhfsf2.c
+  extendhfdf2.c
   ffsdi2.c
   ffssi2.c
   ffsti2.c
@@ -229,6 +233,9 @@ set(GENERIC_TF_SOURCES
 option(COMPILER_RT_EXCLUDE_ATOMIC_BUILTIN
   "Skip the atomic builtin (these should normally be provided by a shared library)"
   On)
+option(COMPILER_RT_EXCLUDE_LIBC_PROVIDED_ARM_AEABI_BUILTINS
+  "Skip the standard C library provided arm aeabi builtins from compiler-rt)"
+  Off)
 
 if(NOT FUCHSIA AND NOT COMPILER_RT_BAREMETAL_BUILD AND NOT COMPILER_RT_GPU_BUILD)
   set(GENERIC_SOURCES
@@ -383,6 +390,7 @@ if (NOT MSVC)
     set(i386_SOURCES
       ${i386_SOURCES}
       i386/chkstk.S
+      i386/chkstk2.S
     )
   endif()
 else () # MSVC
@@ -415,6 +423,41 @@ set(arm_or_thumb2_base_SOURCES
   arm/umodsi3.S
   ${GENERIC_SOURCES}
 )
+
+option(COMPILER_RT_ARM_OPTIMIZED_FP
+  "On 32-bit Arm, use optimized assembly implementations of FP arithmetic. Likely to increase code size, but be faster." ON)
+
+set(arm_or_thumb2_optimized_fp_SOURCES)
+if(COMPILER_RT_ARM_OPTIMIZED_FP AND BUILTIN_SUPPORTED_ARCH MATCHES "arm")
+  check_assembler_flag(COMPILER_RT_HAS_MIMPLICIT_IT -mimplicit-it=always)
+  if(COMPILER_RT_HAS_MIMPLICIT_IT)
+    set(implicit_it_flag -mimplicit-it=always)
+  else()
+    check_assembler_flag(
+      COMPILER_RT_HAS_WA_MIMPLICIT_IT -Wa,-mimplicit-it=always)
+    if(COMPILER_RT_HAS_WA_MIMPLICIT_IT)
+      set(implicit_it_flag -Wa,-mimplicit-it=always)
+    else()
+      message(WARNING "Don't know how to set the -mimplicit-it=always flag in this assembler; not including Arm optimized implementations")
+      set(implicit_it_flag "")
+    endif()
+  endif()
+
+  if(implicit_it_flag)
+    set(assembly_files
+      arm/mulsf3.S
+      arm/divsf3.S
+      )
+    set_source_files_properties(${assembly_files}
+      PROPERTIES COMPILE_OPTIONS ${implicit_it_flag})
+    set(arm_or_thumb2_optimized_fp_SOURCES
+      ${assembly_files}
+      arm/fnan2.c
+      arm/fnorm2.c
+      arm/funder.c
+      )
+  endif()
+endif()
 
 set(arm_sync_SOURCES
   arm/sync_fetch_and_add_4.S
@@ -449,7 +492,17 @@ set(thumb1_base_SOURCES
   ${GENERIC_SOURCES}
 )
 
-set(arm_EABI_SOURCES
+if(COMPILER_RT_ARM_OPTIMIZED_FP)
+  set(thumb1_base_SOURCES
+    arm/thumb1/mulsf3.S
+    arm/fnan2.c
+    arm/fnorm2.c
+    arm/funder.c
+    ${thumb1_base_SOURCES}
+  )
+endif()
+
+set(arm_EABI_RT_SOURCES
   arm/aeabi_cdcmp.S
   arm/aeabi_cdcmpeq_check_nan.c
   arm/aeabi_cfcmp.S
@@ -461,13 +514,28 @@ set(arm_EABI_SOURCES
   arm/aeabi_frsub.c
   arm/aeabi_idivmod.S
   arm/aeabi_ldivmod.S
+  arm/aeabi_uidivmod.S
+  arm/aeabi_uldivmod.S
+)
+
+set(arm_EABI_CLIB_SOURCES
   arm/aeabi_memcmp.S
   arm/aeabi_memcpy.S
   arm/aeabi_memmove.S
   arm/aeabi_memset.S
-  arm/aeabi_uidivmod.S
-  arm/aeabi_uldivmod.S
 )
+
+if(NOT COMPILER_RT_EXCLUDE_LIBC_PROVIDED_ARM_AEABI_BUILTINS)
+  set(arm_EABI_SOURCES
+    ${arm_EABI_RT_SOURCES}
+    ${arm_EABI_CLIB_SOURCES}
+  )
+else()
+  message(STATUS "COMPILER_RT_EXCLUDE_LIBC_PROVIDED_ARM_AEABI_BUILTINS is ON, so skipping __aeabi_memcmp, __aeabi_memcpy, __aeabi_memmove and __aeabi_memset Sources")
+  set(arm_EABI_SOURCES
+    ${arm_EABI_RT_SOURCES}
+  )
+endif()
 
 set(arm_Thumb1_JT_SOURCES
   arm/switch16.S
@@ -545,6 +613,7 @@ if(MINGW)
     arm/aeabi_uldivmod.S
     arm/chkstk.S
     ${arm_or_thumb2_base_SOURCES}
+    ${arm_or_thumb2_optimized_fp_SOURCES}
     ${arm_sync_SOURCES}
   )
 
@@ -555,6 +624,7 @@ elseif(NOT WIN32)
   # TODO the EABI sources should only be added to EABI targets
   set(arm_SOURCES
     ${arm_or_thumb2_base_SOURCES}
+    ${arm_or_thumb2_optimized_fp_SOURCES}
     ${arm_sync_SOURCES}
     ${arm_EABI_SOURCES}
     ${arm_Thumb1_SOURCES}
@@ -573,6 +643,13 @@ set(aarch64_SOURCES
   aarch64/fp_mode.c
 )
 
+# Append sources specific to AArch64 targets that aren't supported by cl.exe
+if(CLANG_CL OR NOT MSVC)
+  list(APPEND aarch64_SOURCES
+    aarch64/emupac.cpp
+  )
+endif()
+
 set(COMPILER_RT_AARCH64_FMV_USES_GLOBAL_CONSTRUCTOR NOT(FUCHSIA OR APPLE))
 
 if (COMPILER_RT_HAS_AARCH64_SME)
@@ -581,9 +658,18 @@ if (COMPILER_RT_HAS_AARCH64_SME)
     set_source_files_properties(aarch64/arm_apple_sme_abi.s PROPERTIES COMPILE_FLAGS -march=armv8a+sme)
     message(STATUS "AArch64 Apple SME ABI routines enabled")
   elseif (NOT COMPILER_RT_DISABLE_AARCH64_FMV AND COMPILER_RT_HAS_FNO_BUILTIN_FLAG AND COMPILER_RT_AARCH64_FMV_USES_GLOBAL_CONSTRUCTOR)
-    list(APPEND aarch64_SOURCES aarch64/sme-abi.S aarch64/sme-libc-mem-routines.S aarch64/sme-abi-assert.c aarch64/sme-libc-routines.c)
+    list(APPEND aarch64_SOURCES aarch64/sme-abi.S aarch64/sme-abi-assert.c)
+    if(COMPILER_RT_HAS_ARM_UNALIGNED AND COMPILER_RT_HAS_ARM_FP)
+      list(APPEND aarch64_SOURCES aarch64/sme-libc-opt-memset-memchr.S aarch64/sme-libc-opt-memcpy-memmove.S)
+    elseif(COMPILER_RT_HAS_ARM_UNALIGNED)
+      list(APPEND aarch64_SOURCES aarch64/sme-libc-memset-memchr.c aarch64/sme-libc-opt-memcpy-memmove.S)
+      message(WARNING "AArch64 SME ABI assembly-optimized memset/memchr disabled: target does not have hardware floating-point support.")
+    else()
+      list(APPEND aarch64_SOURCES aarch64/sme-libc-memset-memchr.c aarch64/sme-libc-memcpy-memmove.c)
+      message(WARNING "AArch64 SME ABI assembly-optimized routines disabled: target does not support unaligned accesses.")
+    endif()
     message(STATUS "AArch64 SME ABI routines enabled")
-    set_source_files_properties(aarch64/sme-libc-routines.c PROPERTIES COMPILE_FLAGS "-fno-builtin")
+    set_source_files_properties(aarch64/sme-libc-memset-memchr.c aarch64/sme-libc-memcpy-memmove.c PROPERTIES COMPILE_FLAGS "-fno-builtin")
   else()
     if(COMPILER_RT_DISABLE_AARCH64_FMV)
       message(WARNING "AArch64 SME ABI routines require function multiversioning support.")
@@ -637,6 +723,11 @@ if (MINGW)
   )
 endif()
 
+# Don't build enable_execute_stack on arm64 darwin.
+if (APPLE)
+  list(REMOVE_ITEM aarch64_SOURCES enable_execute_stack.c)
+endif()
+
 set(amdgcn_SOURCES ${GENERIC_SOURCES})
 
 set(armv4t_SOURCES ${arm_min_SOURCES})
@@ -649,6 +740,8 @@ set(armv7k_SOURCES ${arm_SOURCES})
 set(arm64_SOURCES ${aarch64_SOURCES})
 set(arm64e_SOURCES ${aarch64_SOURCES})
 set(arm64_32_SOURCES ${aarch64_SOURCES})
+set(arm64ec_SOURCES ${aarch64_SOURCES})
+set(aarch64_lfi_SOURCES ${aarch64_SOURCES})
 
 # macho_embedded archs
 set(armv6m_SOURCES ${thumb1_SOURCES})
@@ -768,20 +861,28 @@ set(riscv64_SOURCES
 set(sparc_SOURCES ${GENERIC_SOURCES} ${GENERIC_TF_SOURCES})
 set(sparcv9_SOURCES ${GENERIC_SOURCES} ${GENERIC_TF_SOURCES})
 
-set(wasm32_SOURCES
+set(s390x_SOURCES
+  ${GENERIC_SOURCES}
+  ${GENERIC_TF_SOURCES}
+)
+
+
+set(wasm_SOURCES
+  wasm/__c_longjmp.S
+  wasm/__cpp_exception.S
   ${GENERIC_TF_SOURCES}
   ${GENERIC_SOURCES}
 )
-set(wasm64_SOURCES
-  ${GENERIC_TF_SOURCES}
-  ${GENERIC_SOURCES}
-)
+set(wasm32_SOURCES ${wasm_SOURCES})
+set(wasm64_SOURCES ${wasm_SOURCES})
 
 set(ve_SOURCES
   ve/grow_stack.S
   ve/grow_stack_align.S
   ${GENERIC_TF_SOURCES}
   ${GENERIC_SOURCES})
+
+set(m68k_SOURCES ${GENERIC_SOURCES})
 
 add_custom_target(builtins)
 set_target_properties(builtins PROPERTIES FOLDER "Compiler-RT/Metatargets")
@@ -802,7 +903,7 @@ else ()
     append_list_if(COMPILER_RT_ENABLE_CET -fcf-protection=full BUILTIN_CFLAGS)
   endif()
 
-  append_list_if(COMPILER_RT_HAS_STD_C11_FLAG -std=c11 BUILTIN_CFLAGS)
+  append_list_if(COMPILER_RT_HAS_NOSTDINCXX_FLAG -nostdinc++ BUILTIN_CFLAGS)
   append_list_if(COMPILER_RT_HAS_WBUILTIN_DECLARATION_MISMATCH_FLAG -Werror=builtin-declaration-mismatch BUILTIN_CFLAGS)
 
   # Don't embed directives for picking any specific CRT
@@ -850,7 +951,11 @@ else ()
   if(COMPILER_RT_DISABLE_AARCH64_FMV)
     list(APPEND BUILTIN_DEFS DISABLE_AARCH64_FMV)
   elseif(COMPILER_RT_BAREMETAL_BUILD)
-    list(APPEND BUILTIN_DEFS ENABLE_BAREMETAL_AARCH64_FMV)
+    foreach (arch ${BUILTIN_SUPPORTED_ARCH})
+      if("${arch}" MATCHES "arm64|aarch64")
+        list(APPEND BUILTIN_DEFS ENABLE_BAREMETAL_AARCH64_FMV)
+      endif()
+    endforeach ()
   endif()
 
   append_list_if(COMPILER_RT_HAS_ASM_LSE HAS_ASM_LSE BUILTIN_DEFS)
@@ -860,15 +965,18 @@ else ()
       cmake_push_check_state()
       # TODO: we should probably make most of the checks in builtin-config depend on the target flags.
       set(BUILTIN_CFLAGS_${arch} ${BUILTIN_CFLAGS})
-      # CMAKE_REQUIRED_FLAGS must be a space separated string but unlike TARGET_${arch}_CFLAGS,
-      # BUILTIN_CFLAGS_${arch} is a CMake list, so we have to join it to create a valid command line.
-      list(JOIN BUILTIN_CFLAGS " " CMAKE_REQUIRED_FLAGS)
-      set(CMAKE_REQUIRED_FLAGS "${TARGET_${arch}_CFLAGS} ${BUILTIN_CFLAGS_${arch}}")
+      # CMAKE_REQUIRED_FLAGS must be a space separated string
+      # Join BUILTIN_CFLAGS_${arch} and TARGET_${arch}_CFLAGS as a
+      # space-separated string.
+      list(APPEND CMAKE_REQUIRED_FLAGS
+        ${BUILTIN_CFLAGS_${arch}}
+        ${TARGET_${arch}_CFLAGS})
+      list(JOIN CMAKE_REQUIRED_FLAGS " " CMAKE_REQUIRED_FLAGS)
       message(STATUS "Performing additional configure checks with target flags: ${CMAKE_REQUIRED_FLAGS}")
       # For ARM archs, exclude any VFP builtins if VFP is not supported
       if (${arch} MATCHES "^(arm|armhf|armv7|armv7s|armv7k|armv7m|armv7em|armv8m.main|armv8.1m.main)$")
-        string(REPLACE ";" " " _TARGET_${arch}_CFLAGS "${TARGET_${arch}_CFLAGS}")
-        check_compile_definition(__ARM_FP "${CMAKE_C_FLAGS} ${_TARGET_${arch}_CFLAGS}" COMPILER_RT_HAS_${arch}_VFP)
+        check_compile_definition(__ARM_FP "${CMAKE_C_FLAGS}" COMPILER_RT_HAS_${arch}_VFP)
+        check_compile_definition(__ARM_PCS_VFP "${CMAKE_C_FLAGS}" COMPILER_RT_HAS_${arch}_ARMHF)
         if(NOT COMPILER_RT_HAS_${arch}_VFP)
           list(REMOVE_ITEM ${arch}_SOURCES ${arm_Thumb1_VFPv2_DP_SOURCES} ${arm_Thumb1_VFPv2_SP_SOURCES} ${arm_Thumb1_SjLj_EH_SOURCES})
         else()
@@ -900,13 +1008,14 @@ else ()
 
       # Needed for clear_cache on debug mode, due to r7's usage in inline asm.
       # Release mode already sets it via -O2/3, Debug mode doesn't.
-      if (${arch} STREQUAL "armhf")
+      if (COMPILER_RT_HAS_${arch}_ARMHF)
         list(APPEND BUILTIN_CFLAGS_${arch} -fomit-frame-pointer -DCOMPILER_RT_ARMHF_TARGET)
       endif()
 
-      # For RISCV32, we must force enable int128 for compiling long
+      # For RISCV32 and 32-bit SPARC, we must force enable int128 for compiling long
       # double routines.
-      if(COMPILER_RT_ENABLE_SOFTWARE_INT128 OR "${arch}" STREQUAL "riscv32")
+      if (COMPILER_RT_ENABLE_SOFTWARE_INT128 OR ("${arch}" MATCHES "riscv32|sparc$"
+        AND NOT CMAKE_COMPILER_IS_GNUCC))
         list(APPEND BUILTIN_CFLAGS_${arch} -fforce-enable-int128)
       endif()
 
@@ -917,6 +1026,8 @@ else ()
                               SOURCES ${${arch}_SOURCES}
                               DEFS ${BUILTIN_DEFS}
                               CFLAGS ${BUILTIN_CFLAGS_${arch}}
+                              C_STANDARD 11
+                              CXX_STANDARD 17
                               PARENT_TARGET builtins)
       cmake_pop_check_state()
     endif ()

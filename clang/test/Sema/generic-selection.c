@@ -5,7 +5,7 @@ void g(void);
 
 void foo(int n) {
   (void) _Generic(0, // ext-warning {{'_Generic' is a C11 extension}}
-      struct A: 0, // expected-error {{type 'struct A' in generic association incomplete}}
+      struct A: 0, // ext-warning {{incomplete type 'struct A' in a '_Generic' association is a C2y extension}}
       void(): 0,   // expected-error {{type 'void ()' in generic association not an object type}}
       int[n]: 0);  // expected-error {{type 'int[n]' in generic association is a variably modified type}}
 

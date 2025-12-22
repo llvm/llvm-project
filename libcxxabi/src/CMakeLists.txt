@@ -37,7 +37,7 @@ else()
 endif()
 
 if (LIBCXXABI_ENABLE_THREADS AND (UNIX OR FUCHSIA) AND NOT (APPLE OR CYGWIN)
-    AND NOT (${CMAKE_SYSTEM_NAME} MATCHES "AIX"))
+    AND NOT ("${CMAKE_SYSTEM_NAME}" MATCHES "AIX"))
   list(APPEND LIBCXXABI_SOURCES
     cxa_thread_atexit.cpp
   )
@@ -172,11 +172,12 @@ if (LIBCXXABI_USE_LLVM_UNWINDER)
     target_link_libraries(cxxabi_shared_objects PUBLIC unwind_shared)
   endif()
 endif()
-target_link_libraries(cxxabi_shared_objects PRIVATE cxx-headers ${LIBCXXABI_LIBRARIES})
+target_link_libraries(cxxabi_shared_objects
+  PUBLIC cxxabi-headers
+  PRIVATE cxx-headers runtimes-libc-headers ${LIBCXXABI_LIBRARIES})
 if (NOT CXX_SUPPORTS_NOSTDLIBXX_FLAG)
   target_link_libraries(cxxabi_shared_objects PRIVATE ${LIBCXXABI_BUILTINS_LIBRARY})
 endif()
-target_link_libraries(cxxabi_shared_objects PUBLIC cxxabi-headers)
 set_target_properties(cxxabi_shared_objects
   PROPERTIES
     CXX_EXTENSIONS OFF
@@ -215,15 +216,8 @@ if (ZOS)
 endif ()
 
 target_link_libraries(cxxabi_shared
-  PUBLIC cxxabi_shared_objects
+  PUBLIC cxxabi_shared_objects runtimes-libc-shared
   PRIVATE ${LIBCXXABI_LIBRARIES})
-
-if (LIBCXXABI_ENABLE_SHARED)
-list(APPEND LIBCXXABI_BUILD_TARGETS "cxxabi_shared")
-endif()
-if (LIBCXXABI_INSTALL_SHARED_LIBRARY)
-list(APPEND LIBCXXABI_INSTALL_TARGETS "cxxabi_shared")
-endif()
 
 # TODO: Move this to libc++'s HandleLibCXXABI.cmake since this is effectively trying to control
 #       what libc++ re-exports.
@@ -274,8 +268,9 @@ if (LIBCXXABI_USE_LLVM_UNWINDER AND LIBCXXABI_STATICALLY_LINK_UNWINDER_IN_STATIC
   target_link_libraries(cxxabi_static_objects PUBLIC unwind_static_objects) # propagate usage requirements
   target_sources(cxxabi_static_objects PUBLIC $<TARGET_OBJECTS:unwind_static_objects>)
 endif()
-target_link_libraries(cxxabi_static_objects PRIVATE cxx-headers ${LIBCXXABI_STATIC_LIBRARIES} ${LIBCXXABI_LIBRARIES})
-target_link_libraries(cxxabi_static_objects PUBLIC cxxabi-headers)
+target_link_libraries(cxxabi_static_objects
+  PUBLIC cxxabi-headers
+  PRIVATE cxx-headers runtimes-libc-headers ${LIBCXXABI_STATIC_LIBRARIES} ${LIBCXXABI_LIBRARIES})
 set_target_properties(cxxabi_static_objects
   PROPERTIES
     CXX_EXTENSIONS OFF
@@ -311,7 +306,7 @@ endif()
 
 add_library(cxxabi_static STATIC)
 if (LIBCXXABI_USE_LLVM_UNWINDER AND NOT LIBCXXABI_STATICALLY_LINK_UNWINDER_IN_STATIC_LIBRARY)
-  target_link_libraries(cxxabi_static PUBLIC unwind_static)
+  target_link_libraries(cxxabi_static PUBLIC unwind_static runtimes-libc-static)
 endif()
 set_target_properties(cxxabi_static
   PROPERTIES
@@ -323,34 +318,42 @@ target_link_libraries(cxxabi_static
   PUBLIC cxxabi_static_objects
   PRIVATE ${LIBCXXABI_STATIC_LIBRARIES} ${LIBCXXABI_LIBRARIES})
 
-if (LIBCXXABI_ENABLE_STATIC)
-  list(APPEND LIBCXXABI_BUILD_TARGETS "cxxabi_static")
-endif()
-if (LIBCXXABI_INSTALL_STATIC_LIBRARY)
-  list(APPEND LIBCXXABI_INSTALL_TARGETS "cxxabi_static")
-endif()
-
 # Add a meta-target for both libraries.
-add_custom_target(cxxabi DEPENDS ${LIBCXXABI_BUILD_TARGETS})
-
-if (LIBCXXABI_INSTALL_LIBRARY)
-  install(TARGETS ${LIBCXXABI_INSTALL_TARGETS}
-    LIBRARY DESTINATION ${LIBCXXABI_INSTALL_LIBRARY_DIR} COMPONENT cxxabi
-    ARCHIVE DESTINATION ${LIBCXXABI_INSTALL_LIBRARY_DIR} COMPONENT cxxabi
-    RUNTIME DESTINATION ${LIBCXXABI_INSTALL_RUNTIME_DIR} COMPONENT cxxabi
-    )
+add_custom_target(cxxabi)
+if (LIBCXXABI_ENABLE_SHARED)
+  add_dependencies(cxxabi cxxabi_shared)
+endif()
+if (LIBCXXABI_ENABLE_STATIC)
+  add_dependencies(cxxabi cxxabi_static)
 endif()
 
-if (NOT CMAKE_CONFIGURATION_TYPES AND LIBCXXABI_INSTALL_LIBRARY)
+if (LIBCXXABI_INSTALL_SHARED_LIBRARY)
+  install(TARGETS cxxabi_shared
+    ARCHIVE DESTINATION ${LIBCXXABI_INSTALL_LIBRARY_DIR} COMPONENT cxxabi
+    LIBRARY DESTINATION ${LIBCXXABI_INSTALL_LIBRARY_DIR} COMPONENT cxxabi
+    RUNTIME DESTINATION ${LIBCXXABI_INSTALL_RUNTIME_DIR} COMPONENT cxxabi)
+endif()
+
+if (LIBCXXABI_INSTALL_STATIC_LIBRARY)
+  install(TARGETS cxxabi_static
+    ARCHIVE DESTINATION ${LIBCXXABI_INSTALL_LIBRARY_DIR} COMPONENT cxxabi
+    LIBRARY DESTINATION ${LIBCXXABI_INSTALL_LIBRARY_DIR} COMPONENT cxxabi
+    RUNTIME DESTINATION ${LIBCXXABI_INSTALL_RUNTIME_DIR} COMPONENT cxxabi)
+endif()
+
+if (NOT CMAKE_CONFIGURATION_TYPES)
   add_custom_target(install-cxxabi
-    DEPENDS cxxabi install-cxxabi-headers
-    COMMAND "${CMAKE_COMMAND}"
-            -DCMAKE_INSTALL_COMPONENT=cxxabi
-            -P "${LIBCXXABI_BINARY_DIR}/cmake_install.cmake")
+    COMMAND "${CMAKE_COMMAND}" --install "${CMAKE_BINARY_DIR}" --component cxxabi)
   add_custom_target(install-cxxabi-stripped
-    DEPENDS cxxabi
-    COMMAND "${CMAKE_COMMAND}"
-            -DCMAKE_INSTALL_COMPONENT=cxxabi
-            -DCMAKE_INSTALL_DO_STRIP=1
-            -P "${LIBCXXABI_BINARY_DIR}/cmake_install.cmake")
+    COMMAND "${CMAKE_COMMAND}" --install "${CMAKE_BINARY_DIR}" --component cxxabi --strip)
+
+  if (LIBCXXABI_INSTALL_LIBRARY)
+    add_dependencies(install-cxxabi cxxabi)
+    add_dependencies(install-cxxabi-stripped cxxabi)
+  endif()
+
+  if(LIBCXXABI_INSTALL_HEADERS)
+    add_dependencies(install-cxxabi install-cxxabi-headers)
+    add_dependencies(install-cxxabi-stripped install-cxxabi-headers-stripped)
+  endif()
 endif()

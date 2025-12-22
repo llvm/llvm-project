@@ -12,6 +12,7 @@
 
 #include "lldb/Breakpoint/Breakpoint.h"
 #include "lldb/Breakpoint/BreakpointLocation.h"
+#include "lldb/Target/Thread.h"
 #include "lldb/Utility/Stream.h"
 
 using namespace lldb;
@@ -32,9 +33,8 @@ BreakpointSite::BreakpointSite(const BreakpointLocationSP &constituent,
 BreakpointSite::~BreakpointSite() {
   BreakpointLocationSP bp_loc_sp;
   const size_t constituent_count = m_constituents.GetSize();
-  for (size_t i = 0; i < constituent_count; i++) {
-    m_constituents.GetByIndex(i)->ClearBreakpointSite();
-  }
+  for (size_t i = 0; i < constituent_count; i++)
+    llvm::consumeError(m_constituents.GetByIndex(i)->ClearBreakpointSite());
 }
 
 break_id_t BreakpointSite::GetNextID() {
@@ -45,7 +45,9 @@ break_id_t BreakpointSite::GetNextID() {
 // RETURNS - true if we should stop at this breakpoint, false if we
 // should continue.
 
-bool BreakpointSite::ShouldStop(StoppointCallbackContext *context) {
+bool BreakpointSite::ShouldStop(
+    StoppointCallbackContext *context,
+    BreakpointLocationCollection &stopping_bp_locs) {
   m_hit_counter.Increment();
   // ShouldStop can do a lot of work, and might even come back and hit
   // this breakpoint site again.  So don't hold the m_constituents_mutex the
@@ -56,7 +58,7 @@ bool BreakpointSite::ShouldStop(StoppointCallbackContext *context) {
     std::lock_guard<std::recursive_mutex> guard(m_constituents_mutex);
     constituents_copy = m_constituents;
   }
-  return constituents_copy.ShouldStop(context);
+  return constituents_copy.ShouldStop(context, stopping_bp_locs);
 }
 
 bool BreakpointSite::IsBreakpointAtThisSite(lldb::break_id_t bp_id) {
@@ -161,7 +163,25 @@ BreakpointLocationSP BreakpointSite::GetConstituentAtIndex(size_t index) {
 
 bool BreakpointSite::ValidForThisThread(Thread &thread) {
   std::lock_guard<std::recursive_mutex> guard(m_constituents_mutex);
+  if (ThreadSP backed_thread = thread.GetBackedThread())
+    return m_constituents.ValidForThisThread(*backed_thread);
   return m_constituents.ValidForThisThread(thread);
+}
+
+bool BreakpointSite::ContainsUserBreakpointForThread(Thread &thread) {
+  if (ThreadSP backed_thread = thread.GetBackedThread())
+    return ContainsUserBreakpointForThread(*backed_thread);
+
+  std::lock_guard<std::recursive_mutex> guard(m_constituents_mutex);
+  for (const BreakpointLocationSP &bp_loc :
+       m_constituents.BreakpointLocations()) {
+    const Breakpoint &bp = bp_loc->GetBreakpoint();
+    if (bp.IsInternal())
+      continue;
+    if (bp_loc->ValidForThisThread(thread))
+      return true;
+  }
+  return false;
 }
 
 void BreakpointSite::BumpHitCounts() {

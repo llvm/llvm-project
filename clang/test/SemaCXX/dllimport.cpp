@@ -3,6 +3,9 @@
 // RUN: %clang_cc1 -triple i686-mingw32           -fsyntax-only -fms-extensions -verify -std=c++1y -Wunsupported-dll-base-class-template -DGNU %s
 // RUN: %clang_cc1 -triple x86_64-mingw32         -fsyntax-only -fms-extensions -verify -std=c++11 -Wunsupported-dll-base-class-template -DGNU %s
 // RUN: %clang_cc1 -triple x86_64-mingw32         -fsyntax-only -fms-extensions -verify -std=c++17 -Wunsupported-dll-base-class-template -DGNU %s
+// RUN: %clang_cc1 -triple i686-pc-cygwin         -fsyntax-only -fms-extensions -verify -std=c++1y -Wunsupported-dll-base-class-template -DGNU %s
+// RUN: %clang_cc1 -triple x86_64-pc-cygwin       -fsyntax-only -fms-extensions -verify -std=c++11 -Wunsupported-dll-base-class-template -DGNU %s
+// RUN: %clang_cc1 -triple x86_64-pc-cygwin       -fsyntax-only -fms-extensions -verify -std=c++17 -Wunsupported-dll-base-class-template -DGNU %s
 // RUN: %clang_cc1 -triple i686-windows-itanium   -fsyntax-only -fms-extensions -verify -std=c++11 -Wunsupported-dll-base-class-template -DWI %s
 // RUN: %clang_cc1 -triple x86_64-windows-itanium -fsyntax-only -fms-extensions -verify -std=c++17 -Wunsupported-dll-base-class-template -DWI %s
 // RUN: %clang_cc1 -triple x86_64-scei-ps4        -fsyntax-only -fdeclspec      -verify -std=c++11 -Wunsupported-dll-base-class-template -DPS %s
@@ -1523,6 +1526,36 @@ template <typename T> struct __declspec(dllimport) PartiallySpecializedClassTemp
 template <typename T> struct ExpliciallySpecializedClassTemplate {};
 template <> struct __declspec(dllimport) ExpliciallySpecializedClassTemplate<int> { void f() {} };
 
+// Function-local static constexpr in dllimport function (or class).
+#if defined(GNU)
+// expected-warning@+2{{'dllimport' attribute ignored on inline function}}
+#endif
+__declspec(dllimport) inline const int *dLLImportFuncWithConstexprStatic() {
+  static constexpr int value = 42;
+  static constexpr const int *p = &value;
+  static_assert(*p == 42, "");
+  return p;
+}
+const int* (*pFunc)() = &dLLImportFuncWithConstexprStatic;
+bool UsedDLLImportFuncWithConstexprStatic() {
+  return pFunc() == dLLImportFuncWithConstexprStatic();
+}
+
+#if !defined(PS)
+#if defined(GNU)
+  // expected-warning@+2{{'dllimport' attribute ignored on inline function}}
+#endif
+__declspec(dllimport) __forceinline const int* dLLImportInlineFuncWithConstexprStatic() {
+  static constexpr int value = 42;
+  static constexpr const int* p = &value;
+  static_assert(*p == 42, "");
+  return p;
+}
+const int* (*pFuncForceInline)() = &dLLImportInlineFuncWithConstexprStatic;
+bool UsedDLLImportInlineFuncWithConstexprStatic() {
+  return pFuncForceInline() == dLLImportInlineFuncWithConstexprStatic();
+}
+#endif // !PS
 
 //===----------------------------------------------------------------------===//
 // Classes with template base classes

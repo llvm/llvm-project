@@ -52,7 +52,7 @@ define internal i32 @test2(ptr %p, i32 %p2) {
 ; CHECK-NEXT:    [[A:%.*]] = load i32, ptr [[A_GEP]], align 4
 ; CHECK-NEXT:    [[B:%.*]] = load i32, ptr [[B_GEP]], align 4
 ; CHECK-NEXT:    [[V:%.*]] = add i32 [[A]], [[B]]
-; CHECK-NEXT:    [[CA:%.*]] = musttail call i32 @foo(ptr undef, i32 [[V]])
+; CHECK-NEXT:    [[CA:%.*]] = musttail call i32 @foo(ptr poison, i32 [[V]])
 ; CHECK-NEXT:    ret i32 [[CA]]
 ;
   %a.gep = getelementptr %T, ptr %p, i64 0, i32 3
@@ -60,7 +60,7 @@ define internal i32 @test2(ptr %p, i32 %p2) {
   %a = load i32, ptr %a.gep
   %b = load i32, ptr %b.gep
   %v = add i32 %a, %b
-  %ca = musttail call i32 @foo(ptr undef, i32 %v)
+  %ca = musttail call i32 @foo(ptr poison, i32 %v)
   ret i32 %ca
 }
 

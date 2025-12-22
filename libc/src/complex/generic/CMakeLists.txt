@@ -4,8 +4,6 @@ add_entrypoint_object(
     cproj.cpp
   HDRS
     ../cproj.h
-  COMPILE_OPTIONS
-    ${libc_opt_high_flag}
   DEPENDS
     libc.src.__support.complex_basic_ops
 )
@@ -16,8 +14,6 @@ add_entrypoint_object(
     cprojf.cpp
   HDRS
     ../cprojf.h
-  COMPILE_OPTIONS
-    ${libc_opt_high_flag}
   DEPENDS
     libc.src.__support.complex_basic_ops
 )
@@ -28,8 +24,6 @@ add_entrypoint_object(
     cprojl.cpp
   HDRS
     ../cprojl.h
-  COMPILE_OPTIONS
-    ${libc_opt_high_flag}
   DEPENDS
     libc.src.__support.complex_basic_ops
 )
@@ -40,8 +34,6 @@ add_entrypoint_object(
     cprojf16.cpp
   HDRS
     ../cprojf16.h
-  COMPILE_OPTIONS
-    ${libc_opt_high_flag}
   DEPENDS
     libc.src.__support.complex_basic_ops
     libc.src.__support.macros.properties.types
@@ -54,8 +46,6 @@ add_entrypoint_object(
     cprojf128.cpp
   HDRS
     ../cprojf128.h
-  COMPILE_OPTIONS
-    ${libc_opt_high_flag}
   DEPENDS
     libc.src.__support.complex_basic_ops
     libc.src.__support.macros.properties.types
@@ -68,8 +58,6 @@ add_entrypoint_object(
     conj.cpp
   HDRS
     ../conj.h
-  COMPILE_OPTIONS
-    ${libc_opt_high_flag}
   DEPENDS
     libc.src.__support.complex_basic_ops
 )
@@ -80,8 +68,6 @@ add_entrypoint_object(
     conjf.cpp
   HDRS
     ../conjf.h
-  COMPILE_OPTIONS
-    ${libc_opt_high_flag}
   DEPENDS
     libc.src.__support.complex_basic_ops
 )
@@ -92,8 +78,6 @@ add_entrypoint_object(
     conjl.cpp
   HDRS
     ../conjl.h
-  COMPILE_OPTIONS
-    ${libc_opt_high_flag}
   DEPENDS
     libc.src.__support.complex_basic_ops
 )
@@ -104,8 +88,6 @@ add_entrypoint_object(
     conjf16.cpp
   HDRS
     ../conjf16.h
-  COMPILE_OPTIONS
-    ${libc_opt_high_flag}
   DEPENDS
     libc.src.__support.complex_basic_ops
     libc.src.__support.macros.properties.types
@@ -118,8 +100,6 @@ add_entrypoint_object(
     conjf128.cpp
   HDRS
     ../conjf128.h
-  COMPILE_OPTIONS
-    ${libc_opt_high_flag}
   DEPENDS
     libc.src.__support.complex_basic_ops
     libc.src.__support.macros.properties.types
@@ -132,8 +112,6 @@ add_entrypoint_object(
     creal.cpp
   HDRS
     ../creal.h
-  COMPILE_OPTIONS
-    ${libc_opt_high_flag}
   DEPENDS
     libc.src.__support.CPP.bit
     libc.src.__support.complex_type
@@ -145,8 +123,6 @@ add_entrypoint_object(
     crealf.cpp
   HDRS
     ../crealf.h
-  COMPILE_OPTIONS
-    ${libc_opt_high_flag}
   DEPENDS
     libc.src.__support.CPP.bit
     libc.src.__support.complex_type
@@ -158,8 +134,6 @@ add_entrypoint_object(
     creall.cpp
   HDRS
     ../creall.h
-  COMPILE_OPTIONS
-    ${libc_opt_high_flag}
   DEPENDS
     libc.src.__support.CPP.bit
     libc.src.__support.complex_type
@@ -171,8 +145,6 @@ add_entrypoint_object(
     crealf16.cpp
   HDRS
     ../crealf16.h
-  COMPILE_OPTIONS
-    ${libc_opt_high_flag}
   DEPENDS
     libc.src.__support.CPP.bit
     libc.src.__support.complex_type
@@ -186,8 +158,6 @@ add_entrypoint_object(
     crealf128.cpp
   HDRS
     ../crealf128.h
-  COMPILE_OPTIONS
-    ${libc_opt_high_flag}
   DEPENDS
     libc.src.__support.CPP.bit
     libc.src.__support.complex_type
@@ -201,8 +171,6 @@ add_entrypoint_object(
     cimag.cpp
   HDRS
     ../cimag.h
-  COMPILE_OPTIONS
-    ${libc_opt_high_flag}
   DEPENDS
     libc.src.__support.CPP.bit
     libc.src.__support.complex_type
@@ -214,8 +182,6 @@ add_entrypoint_object(
     cimagf.cpp
   HDRS
     ../cimagf.h
-  COMPILE_OPTIONS
-    ${libc_opt_high_flag}
   DEPENDS
     libc.src.__support.CPP.bit
     libc.src.__support.complex_type
@@ -227,8 +193,6 @@ add_entrypoint_object(
     cimagl.cpp
   HDRS
     ../cimagl.h
-  COMPILE_OPTIONS
-    ${libc_opt_high_flag}
   DEPENDS
     libc.src.__support.CPP.bit
     libc.src.__support.complex_type
@@ -240,8 +204,6 @@ add_entrypoint_object(
     cimagf16.cpp
   HDRS
     ../cimagf16.h
-  COMPILE_OPTIONS
-    ${libc_opt_high_flag}
   DEPENDS
     libc.src.__support.CPP.bit
     libc.src.__support.complex_type
@@ -255,8 +217,6 @@ add_entrypoint_object(
     cimagf128.cpp
   HDRS
     ../cimagf128.h
-  COMPILE_OPTIONS
-    ${libc_opt_high_flag}
   DEPENDS
     libc.src.__support.CPP.bit
     libc.src.__support.complex_type

@@ -238,4 +238,60 @@ static_assert(bar<int, float>()(123));
 // expected-note@#C {{evaluated to false}}
 // expected-note@#same_as 2{{evaluated to false}}
 
+template <class T, auto U>
+concept same_as_v = __is_same(T, decltype(U));  // #same_as_v
+
+template <auto... Vs> constexpr auto baz() {
+  return Overloaded{[](same_as_v<Vs> auto value) { return value; }...}; // #baz
+}
+
+static_assert(baz<1, 1.>()(123) == 123);
+static_assert(baz<1, 1.>()(2.718) == 2.718);
+
+static_assert(baz<1, 1.>()('c'));
+// expected-error@-1 {{no matching function}}
+
+// expected-note@#baz {{constraints not satisfied}}
+// expected-note@#baz {{'same_as_v<char, 1>' evaluated to false}}
+// expected-note@#same_as_v {{evaluated to false}}
+
+// expected-note@#baz {{constraints not satisfied}}
+// expected-note@#baz {{'same_as_v<char, 1.>' evaluated to false}}
+// expected-note@#same_as_v {{evaluated to false}}
+
+template <auto... Ts> constexpr auto bazz() {
+  return Overloaded{[](same_as_v<Ts> auto value) { return Ts; }...}; // #bazz
+}
+
+static_assert(bazz<1, 2>()(1));
+// expected-error@-1 {{is ambiguous}}
+// expected-note@#bazz 2{{candidate function [with value:auto = int]}}
+
+template <class T> concept C2 = sizeof(T) >= sizeof(int);
+template <class... Ts> static constexpr auto trailing() {
+  return Overloaded{[](auto) requires (C2<Ts> && C2<int>) { return 0; }...}; // #trailing
+}
+static_assert(trailing<int, long>()(0));
+// expected-error@-1 {{is ambiguous}}
+// expected-note@#trailing 2{{candidate function [with auto:1 = int]}}
+
+
 } // namespace GH101754
+
+namespace GH131798 {
+  template <class T0>
+  struct tuple { T0 elem0; };
+
+  template <class, class>
+  concept C = true;
+
+  template <int>
+  struct Foo {};
+
+  template <int... Vals>
+  constexpr tuple fs{[] (C<Foo<Vals>> auto) {}...};
+
+  int main() {
+    fs<0>.elem0(1);
+  }
+} // namspace GH131798

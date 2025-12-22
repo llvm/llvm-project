@@ -17,24 +17,25 @@ body:             |
 
     ; CHECK-LABEL: name: shuffle_undef_mask_elt
     ; CHECK: liveins: $d0
-    ; CHECK: [[COPY:%[0-9]+]]:fpr64 = COPY $d0
-    ; CHECK: [[DEF:%[0-9]+]]:gpr32 = IMPLICIT_DEF
-    ; CHECK: [[DEF1:%[0-9]+]]:fpr128 = IMPLICIT_DEF
-    ; CHECK: [[INSERT_SUBREG:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF1]], [[DEF]], %subreg.ssub
-    ; CHECK: [[COPY1:%[0-9]+]]:fpr64 = COPY [[INSERT_SUBREG]].dsub
-    ; CHECK: [[ADRP:%[0-9]+]]:gpr64common = ADRP target-flags(aarch64-page) %const.0
-    ; CHECK: [[LDRDui:%[0-9]+]]:fpr64 = LDRDui [[ADRP]], target-flags(aarch64-pageoff, aarch64-nc) %const.0
-    ; CHECK: [[DEF2:%[0-9]+]]:fpr128 = IMPLICIT_DEF
-    ; CHECK: [[INSERT_SUBREG1:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF2]], [[COPY]], %subreg.dsub
-    ; CHECK: [[DEF3:%[0-9]+]]:fpr128 = IMPLICIT_DEF
-    ; CHECK: [[INSERT_SUBREG2:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF3]], [[COPY1]], %subreg.dsub
-    ; CHECK: [[INSvi64lane:%[0-9]+]]:fpr128 = INSvi64lane [[INSERT_SUBREG1]], 1, [[INSERT_SUBREG2]], 0
-    ; CHECK: [[DEF4:%[0-9]+]]:fpr128 = IMPLICIT_DEF
-    ; CHECK: [[INSERT_SUBREG3:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF4]], [[LDRDui]], %subreg.dsub
-    ; CHECK: [[TBLv16i8One:%[0-9]+]]:fpr128 = TBLv16i8One [[INSvi64lane]], [[INSERT_SUBREG3]]
-    ; CHECK: [[COPY2:%[0-9]+]]:fpr64 = COPY [[TBLv16i8One]].dsub
-    ; CHECK: $d0 = COPY [[COPY2]]
-    ; CHECK: RET_ReallyLR implicit $d0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr64 = COPY $d0
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:gpr32 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[DEF1:%[0-9]+]]:fpr128 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF1]], [[DEF]], %subreg.ssub
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr64 = COPY [[INSERT_SUBREG]].dsub
+    ; CHECK-NEXT: [[ADRP:%[0-9]+]]:gpr64common = ADRP target-flags(aarch64-page) %const.0
+    ; CHECK-NEXT: [[LDRDui:%[0-9]+]]:fpr64 = LDRDui [[ADRP]], target-flags(aarch64-pageoff, aarch64-nc) %const.0 :: (load (s64) from constant-pool)
+    ; CHECK-NEXT: [[DEF2:%[0-9]+]]:fpr128 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[INSERT_SUBREG1:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF2]], [[COPY]], %subreg.dsub
+    ; CHECK-NEXT: [[DEF3:%[0-9]+]]:fpr128 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[INSERT_SUBREG2:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF3]], [[COPY1]], %subreg.dsub
+    ; CHECK-NEXT: [[INSvi64lane:%[0-9]+]]:fpr128 = INSvi64lane [[INSERT_SUBREG1]], 1, [[INSERT_SUBREG2]], 0
+    ; CHECK-NEXT: [[DEF4:%[0-9]+]]:fpr128 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[INSERT_SUBREG3:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF4]], [[LDRDui]], %subreg.dsub
+    ; CHECK-NEXT: [[TBLv16i8One:%[0-9]+]]:fpr128 = TBLv16i8One [[INSvi64lane]], [[INSERT_SUBREG3]]
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:fpr64 = COPY [[TBLv16i8One]].dsub
+    ; CHECK-NEXT: $d0 = COPY [[COPY2]]
+    ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %0:fpr(<2 x s32>) = COPY $d0
     %6:gpr(s32) = G_IMPLICIT_DEF
     %7:gpr(s32) = G_IMPLICIT_DEF

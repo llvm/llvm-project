@@ -43,8 +43,17 @@ raw_ostream &llvm::operator<<(raw_ostream &OS, MemoryEffects ME) {
     case IRMemLocation::InaccessibleMem:
       OS << "InaccessibleMem: ";
       break;
+    case IRMemLocation::ErrnoMem:
+      OS << "ErrnoMem: ";
+      break;
     case IRMemLocation::Other:
       OS << "Other: ";
+      break;
+    case IRMemLocation::TargetMem0:
+      OS << "TargetMem0: ";
+      break;
+    case IRMemLocation::TargetMem1:
+      OS << "TargetMem1: ";
       break;
     }
     OS << ME.getModRef(Loc);

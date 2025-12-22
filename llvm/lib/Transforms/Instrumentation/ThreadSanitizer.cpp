@@ -80,6 +80,10 @@ static cl::opt<bool> ClCompoundReadBeforeWrite(
     "tsan-compound-read-before-write", cl::init(false),
     cl::desc("Emit special compound instrumentation for reads-before-writes"),
     cl::Hidden);
+static cl::opt<bool>
+    ClOmitNonCaptured("tsan-omit-by-pointer-capturing", cl::init(true),
+                      cl::desc("Omit accesses due to pointer capturing"),
+                      cl::Hidden);
 
 STATISTIC(NumInstrumentedReads, "Number of instrumented reads");
 STATISTIC(NumInstrumentedWrites, "Number of instrumented writes");
@@ -351,7 +355,7 @@ static bool isVtableAccess(Instruction *I) {
 }
 
 // Do not instrument known races/"benign races" that come from compiler
-// instrumentatin. The user has no way of suppressing them.
+// instrumentation. The user has no way of suppressing them.
 static bool shouldInstrumentReadWriteFromAddress(const Module *M, Value *Addr) {
   // Peel off GEPs and BitCasts.
   Addr = Addr->stripInBoundsOffsets();
@@ -360,7 +364,7 @@ static bool shouldInstrumentReadWriteFromAddress(const Module *M, Value *Addr) {
     if (GV->hasSection()) {
       StringRef SectionName = GV->getSection();
       // Check if the global is in the PGO counters section.
-      auto OF = Triple(M->getTargetTriple()).getObjectFormat();
+      auto OF = M->getTargetTriple().getObjectFormat();
       if (SectionName.ends_with(
               getInstrProfSectionName(IPSK_cnts, OF, /*AddSegmentInfo=*/false)))
         return false;
@@ -448,8 +452,10 @@ void ThreadSanitizer::chooseInstructionsToInstrument(
       }
     }
 
-    if (isa<AllocaInst>(getUnderlyingObject(Addr)) &&
-        !PointerMayBeCaptured(Addr, true, true)) {
+    const AllocaInst *AI = findAllocaForValue(Addr);
+    // Instead of Addr, we should check whether its base pointer is captured.
+    if (AI && !PointerMayBeCaptured(AI, /*ReturnCaptures=*/true) &&
+        ClOmitNonCaptured) {
       // The variable is addressable but not captured, so it cannot be
       // referenced from a different thread and participate in a data race
       // (see llvm/Analysis/CaptureTracking.h for details).
@@ -526,8 +532,7 @@ bool ThreadSanitizer::sanitizeFunction(Function &F,
         AtomicAccesses.push_back(&Inst);
       else if (isa<LoadInst>(Inst) || isa<StoreInst>(Inst))
         LocalLoadsAndStores.push_back(&Inst);
-      else if ((isa<CallInst>(Inst) && !isa<DbgInfoIntrinsic>(Inst)) ||
-               isa<InvokeInst>(Inst)) {
+      else if (isa<CallInst>(Inst) || isa<InvokeInst>(Inst)) {
         if (CallInst *CI = dyn_cast<CallInst>(&Inst))
           maybeMarkSanitizerLibraryCallNoBuiltin(CI, &TLI);
         if (isa<MemIntrinsic>(Inst))
@@ -573,7 +578,7 @@ bool ThreadSanitizer::sanitizeFunction(Function &F,
     InstrumentationIRBuilder IRB(&F.getEntryBlock(),
                                  F.getEntryBlock().getFirstNonPHIIt());
     Value *ReturnAddress =
-        IRB.CreateIntrinsic(Intrinsic::returnaddress, {}, IRB.getInt32(0));
+        IRB.CreateIntrinsic(Intrinsic::returnaddress, IRB.getInt32(0));
     IRB.CreateCall(TsanFuncEntry, ReturnAddress);
 
     EscapeEnumerator EE(F, "tsan_cleanup", ClHandleCxxExceptions);
@@ -728,6 +733,7 @@ bool ThreadSanitizer::instrumentAtomic(Instruction *I, const DataLayout &DL) {
     Value *C = IRB.CreateCall(TsanAtomicLoad[Idx], Args);
     Value *Cast = IRB.CreateBitOrPointerCast(C, OrigTy);
     I->replaceAllUsesWith(Cast);
+    I->eraseFromParent();
   } else if (StoreInst *SI = dyn_cast<StoreInst>(I)) {
     Value *Addr = SI->getPointerOperand();
     int Idx =

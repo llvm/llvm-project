@@ -21,6 +21,7 @@
 #include "llvm/ExecutionEngine/Orc/Shared/WrapperFunctionUtils.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/ExecutorBootstrapService.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/SimpleExecutorDylibManager.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/Error.h"
 
@@ -33,12 +34,12 @@ namespace llvm {
 namespace orc {
 
 /// A simple EPC server implementation.
-class SimpleRemoteEPCServer : public SimpleRemoteEPCTransportClient {
+class LLVM_ABI SimpleRemoteEPCServer : public SimpleRemoteEPCTransportClient {
 public:
   using ReportErrorFunction = unique_function<void(Error)>;
 
   /// Dispatches calls to runWrapper.
-  class Dispatcher {
+  class LLVM_ABI Dispatcher {
   public:
     virtual ~Dispatcher();
     virtual void dispatch(unique_function<void()> Work) = 0;
@@ -46,7 +47,7 @@ public:
   };
 
 #if LLVM_ENABLE_THREADS
-  class ThreadDispatcher : public Dispatcher {
+  class LLVM_ABI ThreadDispatcher : public Dispatcher {
   public:
     void dispatch(unique_function<void()> Work) override;
     void shutdown() override;
@@ -162,10 +163,10 @@ private:
   void handleCallWrapper(uint64_t RemoteSeqNo, ExecutorAddr TagAddr,
                          SimpleRemoteEPCArgBytesVector ArgBytes);
 
-  shared::WrapperFunctionResult
+  shared::WrapperFunctionBuffer
   doJITDispatch(const void *FnTag, const char *ArgData, size_t ArgSize);
 
-  static shared::CWrapperFunctionResult jitDispatchEntry(void *DispatchCtx,
+  static shared::CWrapperFunctionBuffer jitDispatchEntry(void *DispatchCtx,
                                                          const void *FnTag,
                                                          const char *ArgData,
                                                          size_t ArgSize);
@@ -174,7 +175,7 @@ private:
   void releaseSeqNo(uint64_t) {}
 
   using PendingJITDispatchResultsMap =
-      DenseMap<uint64_t, std::promise<shared::WrapperFunctionResult> *>;
+      DenseMap<uint64_t, std::promise<shared::WrapperFunctionBuffer> *>;
 
   std::mutex ServerStateMutex;
   std::condition_variable ShutdownCV;

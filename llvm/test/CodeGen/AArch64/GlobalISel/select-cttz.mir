@@ -19,6 +19,7 @@ body:             |
     ; CHECK-NEXT: [[CLZWr:%[0-9]+]]:gpr32 = CLZWr [[RBITWr]]
     ; CHECK-NEXT: $w0 = COPY [[CLZWr]]
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
+    ;
     ; CHECK-CSSC-LABEL: name: s32
     ; CHECK-CSSC: liveins: $w0
     ; CHECK-CSSC-NEXT: {{  $}}
@@ -49,6 +50,7 @@ body:             |
     ; CHECK-NEXT: [[CLZXr:%[0-9]+]]:gpr64 = CLZXr [[RBITXr]]
     ; CHECK-NEXT: $x0 = COPY [[CLZXr]]
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
+    ;
     ; CHECK-CSSC-LABEL: name: s64
     ; CHECK-CSSC: liveins: $x0
     ; CHECK-CSSC-NEXT: {{  $}}

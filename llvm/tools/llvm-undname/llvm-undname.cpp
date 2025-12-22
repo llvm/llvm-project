@@ -28,35 +28,39 @@
 
 using namespace llvm;
 
-cl::OptionCategory UndNameCategory("UndName Options");
+static cl::OptionCategory UndNameCategory("UndName Options");
 
-cl::opt<bool> DumpBackReferences("backrefs", cl::Optional,
-                                 cl::desc("dump backreferences"), cl::Hidden,
-                                 cl::init(false), cl::cat(UndNameCategory));
-cl::opt<bool> NoAccessSpecifier("no-access-specifier", cl::Optional,
-                                cl::desc("skip access specifiers"), cl::Hidden,
-                                cl::init(false), cl::cat(UndNameCategory));
-cl::opt<bool> NoCallingConvention("no-calling-convention", cl::Optional,
-                                  cl::desc("skip calling convention"),
+static cl::opt<bool> DumpBackReferences("backrefs", cl::Optional,
+                                        cl::desc("dump backreferences"),
+                                        cl::Hidden, cl::init(false),
+                                        cl::cat(UndNameCategory));
+static cl::opt<bool> NoAccessSpecifier("no-access-specifier", cl::Optional,
+                                       cl::desc("skip access specifiers"),
+                                       cl::Hidden, cl::init(false),
+                                       cl::cat(UndNameCategory));
+static cl::opt<bool> NoCallingConvention("no-calling-convention", cl::Optional,
+                                         cl::desc("skip calling convention"),
+                                         cl::Hidden, cl::init(false),
+                                         cl::cat(UndNameCategory));
+static cl::opt<bool> NoReturnType("no-return-type", cl::Optional,
+                                  cl::desc("skip return types"), cl::Hidden,
+                                  cl::init(false), cl::cat(UndNameCategory));
+static cl::opt<bool> NoMemberType("no-member-type", cl::Optional,
+                                  cl::desc("skip member types"), cl::Hidden,
+                                  cl::init(false), cl::cat(UndNameCategory));
+static cl::opt<bool> NoVariableType("no-variable-type", cl::Optional,
+                                    cl::desc("skip variable types"), cl::Hidden,
+                                    cl::init(false), cl::cat(UndNameCategory));
+static cl::opt<std::string> RawFile("raw-file", cl::Optional,
+                                    cl::desc("for fuzzer data"), cl::Hidden,
+                                    cl::cat(UndNameCategory));
+static cl::opt<bool> WarnTrailing("warn-trailing", cl::Optional,
+                                  cl::desc("warn on trailing characters"),
                                   cl::Hidden, cl::init(false),
                                   cl::cat(UndNameCategory));
-cl::opt<bool> NoReturnType("no-return-type", cl::Optional,
-                           cl::desc("skip return types"), cl::Hidden,
-                           cl::init(false), cl::cat(UndNameCategory));
-cl::opt<bool> NoMemberType("no-member-type", cl::Optional,
-                           cl::desc("skip member types"), cl::Hidden,
-                           cl::init(false), cl::cat(UndNameCategory));
-cl::opt<bool> NoVariableType("no-variable-type", cl::Optional,
-                             cl::desc("skip variable types"), cl::Hidden,
-                             cl::init(false), cl::cat(UndNameCategory));
-cl::opt<std::string> RawFile("raw-file", cl::Optional,
-                             cl::desc("for fuzzer data"), cl::Hidden,
-                             cl::cat(UndNameCategory));
-cl::opt<bool> WarnTrailing("warn-trailing", cl::Optional,
-                           cl::desc("warn on trailing characters"), cl::Hidden,
-                           cl::init(false), cl::cat(UndNameCategory));
-cl::list<std::string> Symbols(cl::Positional, cl::desc("<input symbols>"),
-                              cl::cat(UndNameCategory));
+static cl::list<std::string> Symbols(cl::Positional,
+                                     cl::desc("<input symbols>"),
+                                     cl::cat(UndNameCategory));
 
 static bool msDemangle(const std::string &S) {
   int Status;

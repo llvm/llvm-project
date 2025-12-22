@@ -28,6 +28,10 @@
 # RUN: not ld.lld a.o data.o -T 3.t 2>&1 | FileCheck %s --check-prefix=CHECK3 --implicit-check-not=error:
 # CHECK3:      error: a.o:(.nonalloc+0x0): prohibited cross reference from '.nonalloc' to '.text' in '.text'
 
+# RUN: not ld.lld a.o data.o -T overlay.t 2>&1 | FileCheck %s --check-prefix=OVERLAY --implicit-check-not=error:
+# OVERLAY: error: a.o:(.text.start+0x11): prohibited cross reference from '.text' to 'data' in '.data'
+# OVERLAY-NEXT: error: a.o:(.text.start+0x17): prohibited cross reference from '.text' to 'str1' in '.rodata'
+
 #--- 0.t
 ## Some cases that do not cause errors.
 abs = 42;
@@ -49,6 +53,17 @@ NOCROSSREFS(.text .text1 .text2 .data .rodata .data .nonalloc)
 #--- 3.t
 abs = 42;
 NOCROSSREFS_TO(.text .text .text1 .text2 .data .nonalloc)
+
+#--- overlay.t
+abs = 42;
+_edata = 43;
+SECTIONS {
+  OVERLAY : NOCROSSREFS {
+    .text { *(.text*) }
+    .data { *(.data*) }
+    .rodata { *(.rodata*) }
+  }
+}
 
 #--- err1.t
 NOCROSSREFS )

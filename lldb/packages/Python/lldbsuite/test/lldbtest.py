@@ -36,6 +36,7 @@ import json
 import os.path
 import re
 import shutil
+import shlex
 import signal
 from subprocess import *
 import sys
@@ -48,6 +49,7 @@ import unittest
 # LLDB modules
 import lldb
 from . import configuration
+from . import cpu_feature
 from . import decorators
 from . import lldbplatformutil
 from . import lldbtest_config
@@ -55,7 +57,6 @@ from . import lldbutil
 from . import test_categories
 from lldbsuite.support import encoded_file
 from lldbsuite.support import funcutils
-from lldbsuite.support import seven
 from lldbsuite.test_event import build_exception
 
 # See also dotest.parseOptionsAndInitTestdirs(), where the environment variables
@@ -142,6 +143,8 @@ STOPPED_DUE_TO_SIGNAL = "Process state is stopped due to signal"
 STOPPED_DUE_TO_STEP_IN = "Process state is stopped due to step in"
 
 STOPPED_DUE_TO_WATCHPOINT = "Process should be stopped due to watchpoint"
+
+STOPPED_DUE_TO_HISTORY_BOUNDARY = "Process should be stopped due to history boundary"
 
 DATA_TYPES_DISPLAYED_CORRECTLY = "Data type(s) displayed correctly"
 
@@ -747,11 +750,15 @@ class Base(unittest.TestCase):
         """Return absolute path to a file in the test's source directory."""
         return os.path.join(self.getSourceDir(), name)
 
+    def getPlatformAvailablePorts(self):
+        """Return ports available for connection to a lldb server on the remote platform."""
+        return configuration.lldb_platform_available_ports
+
     @classmethod
     def setUpCommands(cls):
         commands = [
             # First of all, clear all settings to have clean state of global properties.
-            "settings clear -all",
+            "settings clear --all",
             # Disable Spotlight lookup. The testsuite creates
             # different binaries with the same UUID, because they only
             # differ in the debug info, which is not being hashed.
@@ -770,7 +777,10 @@ class Base(unittest.TestCase):
             'settings set symbols.clang-modules-cache-path "{}"'.format(
                 configuration.lldb_module_cache_dir
             ),
+            # Disable colors by default.
             "settings set use-color false",
+            # Disable the statusline by default.
+            "settings set show-statusline false",
         ]
 
         # Set any user-overridden settings.
@@ -1306,74 +1316,59 @@ class Base(unittest.TestCase):
             return True
         return False
 
-    def getCPUInfo(self):
-        triple = self.dbg.GetSelectedPlatform().GetTriple()
-
-        # TODO other platforms, please implement this function
-        if not re.match(".*-.*-linux", triple):
-            return ""
-
-        # Need to do something different for non-Linux/Android targets
-        cpuinfo_path = self.getBuildArtifact("cpuinfo")
-        if configuration.lldb_platform_name:
-            self.runCmd(
-                'platform get-file "/proc/cpuinfo" ' + cpuinfo_path, check=False
-            )
-            if not self.res.Succeeded():
-                if self.TraceOn():
-                    print(
-                        'Failed to get /proc/cpuinfo from remote: "{}"'.format(
-                            self.res.GetOutput().strip()
-                        )
-                    )
-                    print("All cpuinfo feature checks will fail.")
-                return ""
-        else:
-            cpuinfo_path = "/proc/cpuinfo"
-
-        try:
-            with open(cpuinfo_path, "r") as f:
-                cpuinfo = f.read()
-        except:
-            return ""
-
-        return cpuinfo
-
     def isAArch64(self):
         """Returns true if the architecture is AArch64."""
         arch = self.getArchitecture().lower()
         return arch in ["aarch64", "arm64", "arm64e"]
 
+    def isARM(self):
+        """Returns true if the architecture is ARM, meaning 32-bit ARM. Which could
+        be M profile, A profile Armv7-a, or the AArch32 mode of Armv8-a."""
+        return not self.isAArch64() and (
+            self.getArchitecture().lower().startswith("arm")
+        )
+
+    def isSupported(self, cpu_feature: cpu_feature.CPUFeature):
+        triple = self.dbg.GetSelectedPlatform().GetTriple()
+        cmd_runner = self.run_platform_command
+        return cpu_feature.is_supported(triple, cmd_runner)
+
     def isAArch64SVE(self):
-        return self.isAArch64() and "sve" in self.getCPUInfo()
+        return self.isAArch64() and self.isSupported(cpu_feature.AArch64.SVE)
 
     def isAArch64SME(self):
-        return self.isAArch64() and "sme" in self.getCPUInfo()
+        return self.isAArch64() and self.isSupported(cpu_feature.AArch64.SME)
 
     def isAArch64SME2(self):
         # If you have sme2, you also have sme.
-        return self.isAArch64() and "sme2" in self.getCPUInfo()
+        return self.isAArch64() and self.isSupported(cpu_feature.AArch64.SME2)
 
     def isAArch64SMEFA64(self):
         # smefa64 allows the use of the full A64 instruction set in streaming
         # mode. This is required by certain test programs to setup register
         # state.
-        cpuinfo = self.getCPUInfo()
-        return self.isAArch64() and "sme" in cpuinfo and "smefa64" in cpuinfo
+        return (
+            self.isAArch64()
+            and self.isSupported(cpu_feature.AArch64.SME)
+            and self.isSupported(cpu_feature.AArch64.SME_FA64)
+        )
 
     def isAArch64MTE(self):
-        return self.isAArch64() and "mte" in self.getCPUInfo()
+        return self.isAArch64() and self.isSupported(cpu_feature.AArch64.MTE)
+
+    def isAArch64MTEStoreOnly(self):
+        return self.isAArch64() and self.isSupported(cpu_feature.AArch64.MTE_STORE_ONLY)
 
     def isAArch64GCS(self):
-        return self.isAArch64() and "gcs" in self.getCPUInfo()
+        return self.isAArch64() and self.isSupported(cpu_feature.AArch64.GCS)
 
     def isAArch64PAuth(self):
         if self.getArchitecture() == "arm64e":
             return True
-        return self.isAArch64() and "paca" in self.getCPUInfo()
+        return self.isAArch64() and self.isSupported(cpu_feature.AArch64.PTR_AUTH)
 
     def isAArch64FPMR(self):
-        return self.isAArch64() and "fpmr" in self.getCPUInfo()
+        return self.isAArch64() and self.isSupported(cpu_feature.AArch64.FPMR)
 
     def isAArch64Windows(self):
         """Returns true if the architecture is AArch64 and platform windows."""
@@ -1388,10 +1383,14 @@ class Base(unittest.TestCase):
         return arch in ["loongarch64", "loongarch32"]
 
     def isLoongArchLSX(self):
-        return self.isLoongArch() and "lsx" in self.getCPUInfo()
+        return self.isLoongArch() and self.isSupported(cpu_feature.Loong.LSX)
 
     def isLoongArchLASX(self):
-        return self.isLoongArch() and "lasx" in self.getCPUInfo()
+        return self.isLoongArch() and self.isSupported(cpu_feature.Loong.LASX)
+
+    def isRISCV(self):
+        """Returns true if the architecture is RISCV64 or RISCV32."""
+        return self.getArchitecture() in ["riscv64", "riscv32"]
 
     def getArchitecture(self):
         """Returns the architecture in effect the test suite is running with."""
@@ -1494,7 +1493,7 @@ class Base(unittest.TestCase):
         testname = self.getBuildDirBasename()
 
         module = builder_module()
-        command = builder_module().getBuildCommand(
+        command = module.getBuildCommand(
             debug_info,
             architecture,
             compiler,
@@ -1509,7 +1508,7 @@ class Base(unittest.TestCase):
         self.runBuildCommand(command)
 
     def runBuildCommand(self, command):
-        self.trace(seven.join_for_shell(command))
+        self.trace(shlex.join(command))
         try:
             output = check_output(command, stderr=STDOUT, errors="replace")
         except CalledProcessError as cpe:
@@ -1679,6 +1678,29 @@ class Base(unittest.TestCase):
             command += ["--max-size=%d" % max_size]
         self.runBuildCommand(command)
 
+    def yaml2macho_core(self, yaml_path, obj_path, uuids=None):
+        """
+        Create a Mach-O corefile at the given path from a yaml file.
+
+        Throws subprocess.CalledProcessError if the object could not be created.
+        """
+        yaml2macho_core_bin = configuration.get_yaml2macho_core_path()
+        if not yaml2macho_core_bin:
+            self.assertTrue(False, "No valid yaml2macho-core executable specified")
+        if uuids != None:
+            command = [
+                yaml2macho_core_bin,
+                "-i",
+                yaml_path,
+                "-o",
+                obj_path,
+                "-u",
+                uuids,
+            ]
+        else:
+            command = [yaml2macho_core_bin, "-i", yaml_path, "-o", obj_path]
+        self.runBuildCommand(command)
+
     def cleanup(self, dictionary=None):
         """Platform specific way to do cleanup after build."""
         module = builder_module()
@@ -1755,20 +1777,24 @@ class LLDBTestCaseFactory(type):
                 attrvalue, "__no_debug_info_test__", False
             ):
                 # If any debug info categories were explicitly tagged, assume that list to be
-                # authoritative.  If none were specified, try with all debug
-                # info formats.
+                # authoritative.  If none were specified, try with all debug info formats.
+                test_method_categories = set(getattr(attrvalue, "categories", []))
                 all_dbginfo_categories = set(
                     test_categories.debug_info_categories.keys()
                 )
-                categories = (
-                    set(getattr(attrvalue, "categories", [])) & all_dbginfo_categories
-                )
-                if not categories:
-                    categories = [
+                dbginfo_categories = test_method_categories & all_dbginfo_categories
+                other_categories = list(test_method_categories - all_dbginfo_categories)
+                if not dbginfo_categories:
+                    dbginfo_categories = [
                         category
                         for category, can_replicate in test_categories.debug_info_categories.items()
                         if can_replicate
                     ]
+
+                    # PDB is off by default, because it has a lot of failures right now.
+                    # See llvm.org/pr149498
+                    if original_testcase.TEST_WITH_PDB_DEBUG_INFO:
+                        dbginfo_categories.append("pdb")
 
                 xfail_for_debug_info_cat_fn = getattr(
                     attrvalue, "__xfail_for_debug_info_cat_fn__", no_reason
@@ -1776,9 +1802,8 @@ class LLDBTestCaseFactory(type):
                 skip_for_debug_info_cat_fn = getattr(
                     attrvalue, "__skip_for_debug_info_cat_fn__", no_reason
                 )
-                for cat in categories:
+                for cat in dbginfo_categories:
 
-                    @decorators.add_test_categories([cat])
                     @wraps(attrvalue)
                     def test_method(self, attrvalue=attrvalue):
                         return attrvalue(self)
@@ -1786,6 +1811,7 @@ class LLDBTestCaseFactory(type):
                     method_name = attrname + "_" + cat
                     test_method.__name__ = method_name
                     test_method.debug_info = cat
+                    test_method.categories = other_categories + [cat]
 
                     xfail_reason = xfail_for_debug_info_cat_fn(cat)
                     if xfail_reason:
@@ -1856,6 +1882,13 @@ class TestBase(Base, metaclass=LLDBTestCaseFactory):
     # Subclasses can set this to true (if they don't depend on debug info) to avoid running the
     # test multiple times with various debug info types.
     NO_DEBUG_INFO_TESTCASE = False
+
+    TEST_WITH_PDB_DEBUG_INFO = False
+    """
+    Subclasses can set this to True to test with PDB in addition to the other debug info
+    types. This id off by default because many tests will fail due to missing functionality in PDB.
+    See llvm.org/pr149498.
+    """
 
     def generateSource(self, source):
         template = source + ".template"
@@ -2011,7 +2044,7 @@ class TestBase(Base, metaclass=LLDBTestCaseFactory):
         """Get the working directory that should be used when launching processes for local or remote processes."""
         if lldb.remote_platform:
             # Remote tests set the platform working directory up in
-            # TestBase.setUp()
+            # Base.setUp()
             return lldb.remote_platform.GetWorkingDirectory()
         else:
             # local tests change directory into each test subdirectory
@@ -2237,18 +2270,20 @@ class TestBase(Base, metaclass=LLDBTestCaseFactory):
                 substrs=[p],
             )
 
-    def completions_match(self, command, completions):
+    def completions_match(self, command, completions, max_completions=-1):
         """Checks that the completions for the given command are equal to the
         given list of completions"""
         interp = self.dbg.GetCommandInterpreter()
         match_strings = lldb.SBStringList()
-        interp.HandleCompletion(command, len(command), 0, -1, match_strings)
+        interp.HandleCompletion(
+            command, len(command), 0, max_completions, match_strings
+        )
         # match_strings is a 1-indexed list, so we have to slice...
         self.assertCountEqual(
             completions, list(match_strings)[1:], "List of returned completion is wrong"
         )
 
-    def completions_contain(self, command, completions):
+    def completions_contain(self, command, completions, match=True):
         """Checks that the completions for the given command contain the given
         list of completions."""
         interp = self.dbg.GetCommandInterpreter()
@@ -2256,9 +2291,16 @@ class TestBase(Base, metaclass=LLDBTestCaseFactory):
         interp.HandleCompletion(command, len(command), 0, -1, match_strings)
         for completion in completions:
             # match_strings is a 1-indexed list, so we have to slice...
-            self.assertIn(
-                completion, list(match_strings)[1:], "Couldn't find expected completion"
-            )
+            if match:
+                self.assertIn(
+                    completion,
+                    list(match_strings)[1:],
+                    "Couldn't find expected completion",
+                )
+            else:
+                self.assertNotIn(
+                    completion, list(match_strings)[1:], "Found unexpected completion"
+                )
 
     def filecheck(
         self, command, check_file, filecheck_options="", expect_cmd_failure=False
@@ -2345,8 +2387,9 @@ FileCheck output:
         matches the patterns contained in 'patterns'.
 
         When matching is true and ordered is true, which are both the default,
-        the strings in the substrs array have to appear in the command output
-        in the order in which they appear in the array.
+        the strings in the substrs array, and regex in the patterns array, have
+        to appear in the command output in the order in which they appear in
+        their respective array.
 
         If the keyword argument error is set to True, it signifies that the API
         client is expecting the command to fail.  In this case, the error stream
@@ -2449,9 +2492,9 @@ FileCheck output:
         if substrs and matched == matching:
             start = 0
             for substr in substrs:
-                index = output[start:].find(substr)
-                start = start + index + len(substr) if ordered and matching else 0
+                index = output.find(substr, start)
                 matched = index != -1
+                start = index + len(substr) if ordered and matched else 0
                 log_lines.append(
                     '{} sub string: "{}" ({})'.format(
                         expecting_str, substr, found_str(matched)
@@ -2462,20 +2505,21 @@ FileCheck output:
                     break
 
         if patterns and matched == matching:
+            start = 0
             for pattern in patterns:
-                matched = re.search(pattern, output)
+                pat = re.compile(pattern)
+                match = pat.search(output, start)
+                matched = bool(match)
+                start = match.end() if ordered and matched else 0
 
                 pattern_line = '{} regex pattern: "{}" ({}'.format(
                     expecting_str, pattern, found_str(matched)
                 )
-                if matched:
-                    pattern_line += ', matched "{}"'.format(matched.group(0))
+                if match:
+                    pattern_line += ', matched "{}"'.format(match.group(0))
                 pattern_line += ")"
                 log_lines.append(pattern_line)
 
-                # Convert to bool because match objects
-                # are True-ish but is not True itself
-                matched = bool(matched)
                 if matched != matching:
                     break
 

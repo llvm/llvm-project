@@ -180,3 +180,33 @@ define <2 x i64> @f16(<16 x i32> %val) {
   %vec1 = insertelement <2 x i64> %vec0, i64 %ext1, i32 1
   ret <2 x i64> %vec1
 }
+
+; Test a shufflevector-based v2i8->v2i64 extension.
+define <2 x i64> @f17(<16 x i8> %val) {
+; CHECK-LABEL: f17:
+; CHECK: vsegb %v24, %v24
+; CHECK: br %r14
+  %shuf = shufflevector <16 x i8> %val, <16 x i8> poison, <2 x i32> <i32 7, i32 15>
+  %ret = sext <2 x i8> %shuf to <2 x i64>
+  ret <2 x i64> %ret
+}
+
+; Test a shufflevector-based v2i16->v2i64 extension.
+define <2 x i64> @f18(<8 x i16> %val) {
+; CHECK-LABEL: f18:
+; CHECK: vsegh %v24, %v24
+; CHECK: br %r14
+  %shuf = shufflevector <8 x i16> %val, <8 x i16> poison, <2 x i32> <i32 3, i32 7>
+  %ret = sext <2 x i16> %shuf to <2 x i64>
+  ret <2 x i64> %ret
+}
+
+; Test a shufflevector-based v2i32->v2i64 extension.
+define <2 x i64> @f19(<4 x i32> %val) {
+; CHECK-LABEL: f19:
+; CHECK: vsegf %v24, %v24
+; CHECK: br %r14
+  %shuf = shufflevector <4 x i32> %val, <4 x i32> poison, <2 x i32> <i32 1, i32 3>
+  %ret = sext <2 x i32> %shuf to <2 x i64>
+  ret <2 x i64> %ret
+}

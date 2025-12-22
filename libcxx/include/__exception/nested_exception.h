@@ -27,7 +27,7 @@
 #  pragma GCC system_header
 #endif
 
-namespace std { // purposefully not using versioning namespace
+_LIBCPP_BEGIN_UNVERSIONED_NAMESPACE_STD
 
 class _LIBCPP_EXPORTED_FROM_ABI nested_exception {
   exception_ptr __ptr_;
@@ -40,7 +40,7 @@ public:
 
   // access functions
   [[__noreturn__]] void rethrow_nested() const;
-  _LIBCPP_HIDE_FROM_ABI exception_ptr nested_ptr() const _NOEXCEPT { return __ptr_; }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI exception_ptr nested_ptr() const _NOEXCEPT { return __ptr_; }
 };
 
 template <class _Tp>
@@ -73,7 +73,7 @@ template <class _Tp>
   __throw_with_nested<_Tp,
                       _Up,
                       is_class<_Up>::value && !is_base_of<nested_exception, _Up>::value &&
-                          !__libcpp_is_final<_Up>::value>::__do_throw(std::forward<_Tp>(__t));
+                          !__is_final_v<_Up> >::__do_throw(std::forward<_Tp>(__t));
 #else
   ((void)__t);
   // FIXME: Make this abort
@@ -95,6 +95,6 @@ inline _LIBCPP_HIDE_FROM_ABI void rethrow_if_nested(const _Ep& __e) {
 template <class _Ep, __enable_if_t<!__can_dynamic_cast<_Ep, nested_exception>::value, int> = 0>
 inline _LIBCPP_HIDE_FROM_ABI void rethrow_if_nested(const _Ep&) {}
 
-} // namespace std
+_LIBCPP_END_UNVERSIONED_NAMESPACE_STD
 
 #endif // _LIBCPP___EXCEPTION_NESTED_EXCEPTION_H

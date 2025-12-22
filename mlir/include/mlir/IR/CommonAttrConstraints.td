@@ -23,6 +23,7 @@ include "mlir/IR/DialectBase.td"
 
 //===----------------------------------------------------------------------===//
 // Base attribute definition
+//===----------------------------------------------------------------------===//
 
 // Base class for all attributes.
 class Attr<Pred condition, string summary = ""> :
@@ -50,6 +51,9 @@ class Attr<Pred condition, string summary = ""> :
 
   // Default value for attribute.
   // Requires a constBuilderCall defined.
+  //
+  // Format: `$_builder` will be expanded to the relevant builder, e.g. to allow
+  //         access to the current context.
   string defaultValue = ?;
 
   // The value type of this attribute. This corresponds to the mlir::Type that
@@ -88,6 +92,7 @@ class DialectAttr<Dialect d, Pred condition, string summary = ""> :
 
 //===----------------------------------------------------------------------===//
 // Attribute modifier definition
+//===----------------------------------------------------------------------===//
 
 // Decorates an attribute to have an (unvalidated) default value if not present.
 class DefaultValuedAttr<Attr attr, string val> :
@@ -147,6 +152,7 @@ class DefaultValuedOptionalStrAttr<Attr attr, string val>
 
 //===----------------------------------------------------------------------===//
 // Primitive attribute kinds
+//===----------------------------------------------------------------------===//
 
 // A generic attribute that must be constructed around a specific buildable type
 // `attrValType`. Backed by MLIR attribute kind `attrKind`.
@@ -182,7 +188,12 @@ class AnyAttrOf<list<Attr> allowedAttrs, string summary = "",
 }
 
 def LocationAttr : Attr<CPred<"::llvm::isa<::mlir::LocationAttr>($_self)">,
-                        "location attribute">;
+                        "location attribute"> {
+  let storageType = [{ ::mlir::LocationAttr }];
+  let returnType = [{ ::mlir::Location }];
+  let convertFromStorage = "::mlir::Location($_self)";
+  let constBuilderCall = "(::mlir::LocationAttr)$0";
+}
 
 def BoolAttr : Attr<CPred<"::llvm::isa<::mlir::BoolAttr>($_self)">, "bool attribute"> {
   let storageType = [{ ::mlir::BoolAttr }];
@@ -392,6 +403,7 @@ def UnitAttr : Attr<CPred<"::llvm::isa<::mlir::UnitAttr>($_self)">, "unit attrib
 
 //===----------------------------------------------------------------------===//
 // Composite attribute kinds
+//===----------------------------------------------------------------------===//
 
 class DictionaryAttrBase<Pred condition, string summary> :
     Attr<condition, summary> {
@@ -678,6 +690,7 @@ def FlatSymbolRefArrayAttr :
 
 //===----------------------------------------------------------------------===//
 // Derive attribute kinds
+//===----------------------------------------------------------------------===//
 
 // DerivedAttr are attributes whose value is computed from properties
 // of the operation. They do not require additional storage and are
@@ -711,6 +724,7 @@ class DerivedTypeAttr<code body> : DerivedAttr<"::mlir::Type", body> {
 
 //===----------------------------------------------------------------------===//
 // Constant attribute kinds
+//===----------------------------------------------------------------------===//
 
 // Represents a constant attribute of specific Attr type. A constant
 // attribute can be specified only of attributes that have a constant
@@ -786,6 +800,19 @@ def IntNonNegative : AttrConstraint<
 def IntPositive : AttrConstraint<
     CPred<"::llvm::cast<::mlir::IntegerAttr>($_self).getValue().isStrictlyPositive()">,
     "whose value is positive">;
+
+def IntPowerOf2 : AttrConstraint<
+    CPred<"::llvm::cast<::mlir::IntegerAttr>($_self).getValue().isPowerOf2()">,
+    "whose value is a power of two > 0">;
+
+def IntPositivePowerOf2 : AllAttrOf<[IntPositive, IntPowerOf2]>;
+
+class IntValidAlignment<Attr attr>: ConfinedAttr<attr, [IntPositivePowerOf2]>;
+
+class IntIsOneOf<list<int> values> : AttrConstraint<
+    CPred<"::llvm::is_contained({" # !interleave(!foreach(val, values, val), ", ") #
+                                "}, ::llvm::cast<::mlir::IntegerAttr>($_self).getInt())">,
+    "whose value is one of {" # !interleave(!foreach(val, values, val), ", ") # "}">;
 
 class ArrayMaxCount<int n> : AttrConstraint<
     CPred<"::llvm::cast<::mlir::ArrayAttr>($_self).size() <= " # n>,

@@ -23,7 +23,7 @@ using namespace llvm;
 namespace {
 
 std::unique_ptr<TargetMachine> createTargetMachine() {
-  auto TT(Triple::normalize("wasm32-unknown-unknown"));
+  Triple TT("wasm32-unknown-unknown");
   std::string CPU;
   std::string FS;
 
@@ -75,7 +75,7 @@ TEST(WebAssemblyExceptionInfoTest, TEST0) {
 
   declare i32 @__gxx_wasm_personality_v0(...)
 
-  define void @test0() personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
+  define void @test0() personality ptr @__gxx_wasm_personality_v0 {
     unreachable
   }
 
@@ -237,7 +237,7 @@ TEST(WebAssemblyExceptionInfoTest, TEST1) {
 
   declare i32 @__gxx_wasm_personality_v0(...)
 
-  define void @test1() personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
+  define void @test1() personality ptr @__gxx_wasm_personality_v0 {
     unreachable
   }
 

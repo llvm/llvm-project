@@ -534,3 +534,278 @@ else:
   %cmp1 = icmp eq i32 %and1, 0
   ret i1 %cmp1
 }
+
+define i1 @or_nonzero_from_nonequal(i8 %x, i8 %y) {
+; CHECK-LABEL: @or_nonzero_from_nonequal(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[COND:%.*]] = icmp eq i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    br i1 [[COND]], label [[IF_ELSE:%.*]], label [[IF_THEN:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    ret i1 false
+; CHECK:       if.else:
+; CHECK-NEXT:    ret i1 false
+;
+entry:
+  %cond = icmp eq i8 %x, %y
+  br i1 %cond, label %if.else, label %if.then
+
+if.then:
+  %or = or i8 %x, %y
+  %cmp = icmp eq i8 %or, 0
+  ret i1 %cmp
+
+if.else:
+  ret i1 false
+}
+
+define i1 @test_nonequal_domcond1(i64 %x, i64 %y, i64 %z, i64 %w) {
+; CHECK-LABEL: @test_nonequal_domcond1(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[COND1:%.*]] = icmp eq i64 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[COND2:%.*]] = icmp eq i64 [[W:%.*]], [[Z:%.*]]
+; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[COND1]], i1 true, i1 [[COND2]]
+; CHECK-NEXT:    br i1 [[OR_COND]], label [[IF_END:%.*]], label [[IF_THEN:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    ret i1 false
+; CHECK:       if.end:
+; CHECK-NEXT:    ret i1 false
+;
+entry:
+  %cond1 = icmp eq i64 %y, %x
+  %cond2 = icmp eq i64 %w, %z
+  %or.cond = select i1 %cond1, i1 true, i1 %cond2
+  br i1 %or.cond, label %if.end, label %if.then
+
+if.then:
+  %sub1 = sub i64 %w, %z
+  %sub2 = sub i64 %y, %x
+  %umin = call i64 @llvm.umin.i64(i64 %sub1, i64 %sub2)
+  %cmp = icmp eq i64 %umin, 0
+  ret i1 %cmp
+
+if.end:
+  ret i1 false
+}
+
+define i1 @test_nonequal_domcond2(i64 %x, i64 %y, i64 %z, i64 %w) {
+; CHECK-LABEL: @test_nonequal_domcond2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[COND1:%.*]] = icmp ne i64 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[COND2:%.*]] = icmp ne i64 [[W:%.*]], [[Z:%.*]]
+; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[COND1]], i1 [[COND2]], i1 false
+; CHECK-NEXT:    br i1 [[OR_COND]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    ret i1 false
+; CHECK:       if.end:
+; CHECK-NEXT:    ret i1 false
+;
+entry:
+  %cond1 = icmp ne i64 %y, %x
+  %cond2 = icmp ne i64 %w, %z
+  %or.cond = select i1 %cond1, i1 %cond2, i1 false
+  br i1 %or.cond, label %if.then, label %if.end
+
+if.then:
+  %sub1 = sub i64 %w, %z
+  %sub2 = sub i64 %y, %x
+  %umin = call i64 @llvm.umin.i64(i64 %sub1, i64 %sub2)
+  %cmp = icmp eq i64 %umin, 0
+  ret i1 %cmp
+
+if.end:
+  ret i1 false
+}
+
+define i1 @test_nonequal_assume(i64 %x, i64 %y, i64 %z, i64 %w) {
+; CHECK-LABEL: @test_nonequal_assume(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[COND1:%.*]] = icmp ne i64 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[COND1]])
+; CHECK-NEXT:    [[COND2:%.*]] = icmp ne i64 [[W:%.*]], [[Z:%.*]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[COND2]])
+; CHECK-NEXT:    ret i1 false
+;
+entry:
+  %cond1 = icmp ne i64 %y, %x
+  call void @llvm.assume(i1 %cond1)
+  %cond2 = icmp ne i64 %w, %z
+  call void @llvm.assume(i1 %cond2)
+
+  %sub1 = sub i64 %w, %z
+  %sub2 = sub i64 %y, %x
+  %umin = call i64 @llvm.umin.i64(i64 %sub1, i64 %sub2)
+  %cmp = icmp eq i64 %umin, 0
+  ret i1 %cmp
+}
+
+; Negative tests
+
+define i1 @test_nonequal_invalid_domcond1(i64 %x, i64 %y, i64 %z, i64 %w) {
+; CHECK-LABEL: @test_nonequal_invalid_domcond1(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[COND1:%.*]] = icmp ne i64 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[COND2:%.*]] = icmp eq i64 [[W:%.*]], [[Z:%.*]]
+; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[COND1]], i1 true, i1 [[COND2]]
+; CHECK-NEXT:    br i1 [[OR_COND]], label [[IF_END:%.*]], label [[IF_THEN:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    ret i1 true
+; CHECK:       if.end:
+; CHECK-NEXT:    ret i1 false
+;
+entry:
+  %cond1 = icmp ne i64 %y, %x
+  %cond2 = icmp eq i64 %w, %z
+  %or.cond = select i1 %cond1, i1 true, i1 %cond2
+  br i1 %or.cond, label %if.end, label %if.then
+
+if.then:
+  %sub1 = sub i64 %w, %z
+  %sub2 = sub i64 %y, %x
+  %umin = call i64 @llvm.umin.i64(i64 %sub1, i64 %sub2)
+  %cmp = icmp eq i64 %umin, 0
+  ret i1 %cmp
+
+if.end:
+  ret i1 false
+}
+
+define i1 @test_nonequal_invalid_domcond2(i64 %x, i64 %y, i64 %z, i64 %w) {
+; CHECK-LABEL: @test_nonequal_invalid_domcond2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[COND1:%.*]] = icmp eq i64 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[COND2:%.*]] = icmp eq i64 [[W:%.*]], [[Z:%.*]]
+; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[COND1]], i1 true, i1 [[COND2]]
+; CHECK-NEXT:    br i1 [[OR_COND]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    br label [[IF_END]]
+; CHECK:       if.end:
+; CHECK-NEXT:    [[SUB1:%.*]] = sub i64 [[W]], [[Z]]
+; CHECK-NEXT:    [[SUB2:%.*]] = sub i64 [[Y]], [[X]]
+; CHECK-NEXT:    [[UMIN:%.*]] = call i64 @llvm.umin.i64(i64 [[SUB1]], i64 [[SUB2]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[UMIN]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+entry:
+  %cond1 = icmp eq i64 %y, %x
+  %cond2 = icmp eq i64 %w, %z
+  %or.cond = select i1 %cond1, i1 true, i1 %cond2
+  br i1 %or.cond, label %if.then, label %if.end
+
+if.then:
+  br label %if.end
+
+if.end:
+  %sub1 = sub i64 %w, %z
+  %sub2 = sub i64 %y, %x
+  %umin = call i64 @llvm.umin.i64(i64 %sub1, i64 %sub2)
+  %cmp = icmp eq i64 %umin, 0
+  ret i1 %cmp
+}
+
+define i1 @test_nonequal_invalid_assume(i64 %x, i64 %y, i64 %z, i64 %w) {
+; CHECK-LABEL: @test_nonequal_invalid_assume(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SUB1:%.*]] = sub i64 [[W:%.*]], [[Z:%.*]]
+; CHECK-NEXT:    [[SUB2:%.*]] = sub i64 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[UMIN:%.*]] = call i64 @llvm.umin.i64(i64 [[SUB1]], i64 [[SUB2]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[UMIN]], 0
+; CHECK-NEXT:    call void @side_effect()
+; CHECK-NEXT:    [[COND1:%.*]] = icmp ne i64 [[Y]], [[X]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[COND1]])
+; CHECK-NEXT:    [[COND2:%.*]] = icmp ne i64 [[W]], [[Z]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[COND2]])
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+entry:
+  %sub1 = sub i64 %w, %z
+  %sub2 = sub i64 %y, %x
+  %umin = call i64 @llvm.umin.i64(i64 %sub1, i64 %sub2)
+  %cmp = icmp eq i64 %umin, 0
+
+  call void @side_effect()
+  %cond1 = icmp ne i64 %y, %x
+  call void @llvm.assume(i1 %cond1)
+  %cond2 = icmp ne i64 %w, %z
+  call void @llvm.assume(i1 %cond2)
+  ret i1 %cmp
+}
+
+; TODO: We can prove `%cond2` is always false
+define void @test_nonequal_domcond_loop1(i32 %x0, i1 %x1) {
+; CHECK-LABEL: @test_nonequal_domcond_loop1(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
+; CHECK:       loop.header:
+; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[X0:%.*]], [[LATCH:%.*]] ]
+; CHECK-NEXT:    br label [[LATCH]]
+; CHECK:       latch:
+; CHECK-NEXT:    br i1 [[X1:%.*]], label [[IF_THEN:%.*]], label [[LOOP_HEADER]]
+; CHECK:       if.then:
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X0]], 1
+; CHECK-NEXT:    [[COND1:%.*]] = icmp eq i32 [[AND]], [[PHI]]
+; CHECK-NEXT:    br i1 [[COND1]], label [[IF_THEN2:%.*]], label [[LATCH]]
+; CHECK:       if.then2:
+; CHECK-NEXT:    br label [[BB:%.*]]
+; CHECK:       indirectbb:
+; CHECK-NEXT:    [[COND2:%.*]] = icmp eq i32 [[PHI]], 31
+; CHECK-NEXT:    br i1 [[COND2]], label [[EXIT:%.*]], label [[LATCH]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop.header
+
+loop.header:
+  %phi = phi i32 [ 0, %entry ], [ %x0, %latch ]
+  br label %latch
+
+latch:
+  br i1 %x1, label %if.then, label %loop.header
+
+if.then:
+  %and = and i32 %x0, 1
+  %cond1 = icmp eq i32 %and, %phi
+  br i1 %cond1, label %if.then2, label %latch
+
+if.then2:
+  br label %indirectbb
+
+indirectbb:
+  %cond2 = icmp eq i32 %phi, 31
+  br i1 %cond2, label %exit, label %latch
+
+exit:
+  ret void
+}
+
+define void @test_nonequal_domcond_loop2(ptr %p) {
+; CHECK-LABEL: @test_nonequal_domcond_loop2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[LOAD1:%.*]] = load volatile i8, ptr [[P:%.*]], align 1
+; CHECK-NEXT:    br label [[WHILE_COND:%.*]]
+; CHECK:       while.cond:
+; CHECK-NEXT:    [[LOAD2:%.*]] = load volatile i8, ptr [[P]], align 1
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i8 [[LOAD2]], 0
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp uge i8 [[LOAD2]], [[LOAD1]]
+; CHECK-NEXT:    [[OR:%.*]] = select i1 [[CMP1]], i1 true, i1 [[CMP2]]
+; CHECK-NEXT:    br i1 [[OR]], label [[WHILE_COND]], label [[FOR_BODY:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    br i1 false, label [[WHILE_COND]], label [[FOR_BODY]]
+;
+entry:
+  %load1 = load volatile i8, ptr %p, align 1
+  br label %while.cond
+
+while.cond:
+  %load2 = load volatile i8, ptr %p, align 1
+  %cmp1 = icmp eq i8 %load2, 0
+  %cmp2 = icmp uge i8 %load2, %load1
+  %or = select i1 %cmp1, i1 true, i1 %cmp2
+  br i1 %or, label %while.cond, label %for.body
+
+for.body:
+  %cond = icmp eq i8 %load1, %load2
+  br i1 %cond, label %while.cond, label %for.body
+}
+
+declare void @side_effect()

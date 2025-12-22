@@ -6,12 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 #include "SPIRV.h"
-#include "CommonArgs.h"
-#include "clang/Basic/Version.h"
+#include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/InputInfo.h"
-#include "clang/Driver/Options.h"
+#include "clang/Options/Options.h"
 
 using namespace clang::driver;
 using namespace clang::driver::toolchains;
@@ -66,6 +65,11 @@ void SPIRV::constructAssembleCommand(Compilation &C, const Tool &T,
   if (!llvm::sys::fs::can_execute(ExeCand))
     ExeCand = T.getToolChain().GetProgramPath("spirv-as");
 
+  if (!llvm::sys::fs::can_execute(ExeCand) &&
+      !C.getArgs().hasArg(clang::options::OPT__HASH_HASH_HASH)) {
+    C.getDriver().Diag(clang::diag::err_drv_no_spv_tools) << "spirv-as";
+    return;
+  }
   const char *Exec = C.getArgs().MakeArgString(ExeCand);
   C.addCommand(std::make_unique<Command>(JA, T, ResponseFileSupport::None(),
                                          Exec, CmdArgs, Input, Output));
@@ -93,12 +97,6 @@ void SPIRV::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
   constructAssembleCommand(C, *this, JA, Output, Inputs[0], {});
 }
 
-clang::driver::Tool *SPIRVToolChain::getTranslator() const {
-  if (!Translator)
-    Translator = std::make_unique<SPIRV::Translator>(*this);
-  return Translator.get();
-}
-
 clang::driver::Tool *SPIRVToolChain::getAssembler() const {
   if (!Assembler)
     Assembler = std::make_unique<SPIRV::Assembler>(*this);
@@ -114,8 +112,6 @@ clang::driver::Tool *SPIRVToolChain::getTool(Action::ActionClass AC) const {
   switch (AC) {
   default:
     break;
-  case Action::BackendJobClass:
-    return SPIRVToolChain::getTranslator();
   case Action::AssembleJobClass:
     return SPIRVToolChain::getAssembler();
   }
@@ -142,6 +138,11 @@ void SPIRV::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   // the default linker (spirv-link).
   if (Args.hasArg(options::OPT_sycl_link))
     Linker = ToolChain.GetProgramPath("clang-sycl-linker");
+  else if (!llvm::sys::fs::can_execute(Linker) &&
+           !C.getArgs().hasArg(clang::options::OPT__HASH_HASH_HASH)) {
+    C.getDriver().Diag(clang::diag::err_drv_no_spv_tools) << getShortName();
+    return;
+  }
   C.addCommand(std::make_unique<Command>(JA, *this, ResponseFileSupport::None(),
                                          Args.MakeArgString(Linker), CmdArgs,
                                          Inputs, Output));

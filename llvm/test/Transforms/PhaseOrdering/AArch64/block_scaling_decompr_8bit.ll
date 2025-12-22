@@ -9,7 +9,7 @@ target triple = "aarch64"
 
 define dso_local noundef i32 @_Z33block_scaling_decompr_8bitjPK27compressed_data_8bitP20cmplx_int16_tPKS2_(i32 noundef %n_prb, ptr noundef %src, ptr noundef %dst, ptr noundef %scale) #0 {
 ; CHECK-LABEL: define dso_local noundef i32 @_Z33block_scaling_decompr_8bitjPK27compressed_data_8bitP20cmplx_int16_tPKS2_(
-; CHECK-SAME: i32 noundef [[N_PRB:%.*]], ptr noundef readonly captures(none) [[SRC:%.*]], ptr noundef writeonly captures(none) [[DST:%.*]], ptr noundef readonly [[SCALE:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: i32 noundef [[N_PRB:%.*]], ptr noundef readonly captures(none) [[SRC:%.*]], ptr noundef writeonly captures(none) [[DST:%.*]], ptr noundef readonly captures(address_is_null) [[SCALE:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[CMP47_NOT:%.*]] = icmp eq i32 [[N_PRB]], 0
 ; CHECK-NEXT:    br i1 [[CMP47_NOT]], label %[[FOR_END:.*]], label %[[FOR_BODY_LR_PH:.*]]

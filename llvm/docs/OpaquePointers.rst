@@ -71,7 +71,7 @@ Pointee types provide some value to frontends because the IR verifier uses types
 to detect straightforward type confusion bugs. However, frontends also have to
 deal with the complexity of inserting bitcasts everywhere that they might be
 required. The community consensus is that the costs of pointee types
-outweight the benefits, and that they should be removed.
+outweigh the benefits, and that they should be removed.
 
 Many operations do not actually care about the underlying type. These
 operations, typically intrinsics, usually end up taking an arbitrary pointer

@@ -50,14 +50,14 @@ public:
     WIntType = UnsignedInt;
     UseZeroLengthBitfieldAlignment = true;
     MaxAtomicPromoteWidth = MaxAtomicInlineWidth = 32;
-    resetDataLayout("e-m:e-p:32:32-i8:8:32-i16:16:32-i64:64-n32");
+    resetDataLayout();
   }
 
   void getTargetDefines(const LangOptions &Opts,
                         MacroBuilder &Builder) const override;
 
-  ArrayRef<Builtin::Info> getTargetBuiltins() const override {
-    return std::nullopt;
+  llvm::SmallVector<Builtin::InfosShard> getTargetBuiltins() const override {
+    return {};
   }
 
   BuiltinVaListKind getBuiltinVaListKind() const override {
@@ -77,7 +77,7 @@ public:
   }
 
   ArrayRef<TargetInfo::GCCRegAlias> getGCCRegAliases() const override {
-    return std::nullopt;
+    return {};
   }
 
   bool validateAsmConstraint(const char *&Name,

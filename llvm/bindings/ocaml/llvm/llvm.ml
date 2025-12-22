@@ -302,6 +302,8 @@ module AtomicRMWBinOp = struct
   | UDec_Wrap
   | USub_Cond
   | USub_Sat
+  | FMaximum
+  | FMinimum
 end
 
 module ValueKind = struct
@@ -647,7 +649,6 @@ external align_of : lltype -> llvalue = "llvm_align_of"
 external size_of : lltype -> llvalue = "llvm_size_of"
 external const_neg : llvalue -> llvalue = "llvm_const_neg"
 external const_nsw_neg : llvalue -> llvalue = "llvm_const_nsw_neg"
-external const_nuw_neg : llvalue -> llvalue = "llvm_const_nuw_neg"
 external const_not : llvalue -> llvalue = "llvm_const_not"
 external const_add : llvalue -> llvalue -> llvalue = "llvm_const_add"
 external const_nsw_add : llvalue -> llvalue -> llvalue = "llvm_const_nsw_add"
@@ -655,9 +656,6 @@ external const_nuw_add : llvalue -> llvalue -> llvalue = "llvm_const_nuw_add"
 external const_sub : llvalue -> llvalue -> llvalue = "llvm_const_sub"
 external const_nsw_sub : llvalue -> llvalue -> llvalue = "llvm_const_nsw_sub"
 external const_nuw_sub : llvalue -> llvalue -> llvalue = "llvm_const_nuw_sub"
-external const_mul : llvalue -> llvalue -> llvalue = "llvm_const_mul"
-external const_nsw_mul : llvalue -> llvalue -> llvalue = "llvm_const_nsw_mul"
-external const_nuw_mul : llvalue -> llvalue -> llvalue = "llvm_const_nuw_mul"
 external const_xor : llvalue -> llvalue -> llvalue = "llvm_const_xor"
 external const_gep : lltype -> llvalue -> llvalue array -> llvalue
                    = "llvm_const_gep"
@@ -703,6 +701,8 @@ external global_copy_all_metadata : llvalue -> (llmdkind * llmetadata) array
 external is_global_constant : llvalue -> bool = "llvm_is_global_constant"
 external set_global_constant : bool -> llvalue -> unit
                              = "llvm_set_global_constant"
+external global_set_metadata : llvalue -> llmdkind -> llmetadata -> unit
+                             = "llvm_global_set_metadata"
 
 (*--... Operations on global variables .....................................--*)
 external declare_global : lltype -> string -> llmodule -> llvalue
@@ -1263,8 +1263,6 @@ external build_neg : llvalue -> string -> llbuilder -> llvalue
                    = "llvm_build_neg"
 external build_nsw_neg : llvalue -> string -> llbuilder -> llvalue
                        = "llvm_build_nsw_neg"
-external build_nuw_neg : llvalue -> string -> llbuilder -> llvalue
-                       = "llvm_build_nuw_neg"
 external build_fneg : llvalue -> string -> llbuilder -> llvalue
                     = "llvm_build_fneg"
 external build_not : llvalue -> string -> llbuilder -> llvalue

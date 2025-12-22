@@ -17,14 +17,18 @@
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/ExpandVectorPredication.h"
+#include "llvm/CodeGen/LibcallLoweringInfo.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/RuntimeLibcalls.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Use.h"
 #include "llvm/InitializePasses.h"
@@ -32,6 +36,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/Scalar/LowerConstantIntrinsics.h"
+#include "llvm/Transforms/Utils/BuildLibCalls.h"
 #include "llvm/Transforms/Utils/LowerMemIntrinsics.h"
 #include "llvm/Transforms/Utils/LowerVectorIntrinsics.h"
 
@@ -49,6 +54,7 @@ namespace {
 
 struct PreISelIntrinsicLowering {
   const TargetMachine *TM;
+  const LibcallLoweringModuleAnalysisResult &ModuleLibcalls;
   const function_ref<TargetTransformInfo &(Function &)> LookupTTI;
   const function_ref<TargetLibraryInfo &(Function &)> LookupTLI;
 
@@ -59,15 +65,19 @@ struct PreISelIntrinsicLowering {
 
   explicit PreISelIntrinsicLowering(
       const TargetMachine *TM_,
+      const LibcallLoweringModuleAnalysisResult &ModuleLibcalls_,
       function_ref<TargetTransformInfo &(Function &)> LookupTTI_,
       function_ref<TargetLibraryInfo &(Function &)> LookupTLI_,
       bool UseMemIntrinsicLibFunc_ = true)
-      : TM(TM_), LookupTTI(LookupTTI_), LookupTLI(LookupTLI_),
-        UseMemIntrinsicLibFunc(UseMemIntrinsicLibFunc_) {}
+      : TM(TM_), ModuleLibcalls(ModuleLibcalls_), LookupTTI(LookupTTI_),
+        LookupTLI(LookupTLI_), UseMemIntrinsicLibFunc(UseMemIntrinsicLibFunc_) {
+  }
 
   static bool shouldExpandMemIntrinsicWithSize(Value *Size,
                                                const TargetTransformInfo &TTI);
-  bool expandMemIntrinsicUses(Function &F) const;
+  bool
+  expandMemIntrinsicUses(Function &F,
+                         DenseMap<Constant *, GlobalVariable *> &CMap) const;
   bool lowerIntrinsics(Module &M) const;
 };
 
@@ -132,17 +142,22 @@ static CallInst::TailCallKind getOverridingTailCallKind(const Function &F) {
   return CallInst::TCK_None;
 }
 
-static bool lowerObjCCall(Function &F, const char *NewFn,
+static bool lowerObjCCall(Function &F, RTLIB::LibcallImpl NewFn,
                           bool setNonLazyBind = false) {
   assert(IntrinsicInst::mayLowerToFunctionCall(F.getIntrinsicID()) &&
          "Pre-ISel intrinsics do lower into regular function calls");
   if (F.use_empty())
     return false;
 
+  // FIXME: When RuntimeLibcalls is an analysis, check if the function is really
+  // supported, and go through RTLIB::Libcall.
+  StringRef NewFnName = RTLIB::RuntimeLibcallsInfo::getLibcallImplName(NewFn);
+
   // If we haven't already looked up this function, check to see if the
   // program already contains a function with this name.
   Module *M = F.getParent();
-  FunctionCallee FCache = M->getOrInsertFunction(NewFn, F.getFunctionType());
+  FunctionCallee FCache =
+      M->getOrInsertFunction(NewFnName, F.getFunctionType());
 
   if (Function *Fn = dyn_cast<Function>(FCache.getCallee())) {
     Fn->setLinkage(F.getLinkage());
@@ -159,10 +174,7 @@ static bool lowerObjCCall(Function &F, const char *NewFn,
     auto *CB = cast<CallBase>(U.getUser());
 
     if (CB->getCalledFunction() != &F) {
-      objcarc::ARCInstKind Kind = objcarc::getAttachedARCFunctionKind(CB);
-      (void)Kind;
-      assert((Kind == objcarc::ARCInstKind::RetainRV ||
-              Kind == objcarc::ARCInstKind::UnsafeClaimRV) &&
+      assert(objcarc::getAttachedARCFunction(CB) == &F &&
              "use expected to be the argument of operand bundle "
              "\"clang.arc.attachedcall\"");
       U.set(FCache.getCallee());
@@ -224,18 +236,86 @@ bool PreISelIntrinsicLowering::shouldExpandMemIntrinsicWithSize(
   return SizeVal > Threshold || Threshold == 0;
 }
 
-static bool canEmitLibcall(const TargetMachine *TM, Function *F,
-                           RTLIB::Libcall LC) {
+static bool
+canEmitLibcall(const LibcallLoweringModuleAnalysisResult &ModuleLowering,
+               const TargetMachine *TM, Function *F, RTLIB::Libcall LC) {
   // TODO: Should this consider the address space of the memcpy?
   if (!TM)
     return true;
-  const TargetLowering *TLI = TM->getSubtargetImpl(*F)->getTargetLowering();
-  return TLI->getLibcallName(LC) != nullptr;
+  const LibcallLoweringInfo &Lowering =
+      ModuleLowering.getLibcallLowering(*TM->getSubtargetImpl(*F));
+  return Lowering.getLibcallImpl(LC) != RTLIB::Unsupported;
+}
+
+static bool
+canEmitMemcpy(const LibcallLoweringModuleAnalysisResult &ModuleLowering,
+              const TargetMachine *TM, Function *F) {
+  // TODO: Should this consider the address space of the memcpy?
+  if (!TM)
+    return true;
+  const LibcallLoweringInfo &Lowering =
+      ModuleLowering.getLibcallLowering(*TM->getSubtargetImpl(*F));
+  return Lowering.getMemcpyImpl() != RTLIB::Unsupported;
+}
+
+// Return a value appropriate for use with the memset_pattern16 libcall, if
+// possible and if we know how. (Adapted from equivalent helper in
+// LoopIdiomRecognize).
+static Constant *getMemSetPattern16Value(MemSetPatternInst *Inst,
+                                         const TargetLibraryInfo &TLI) {
+  // TODO: This could check for UndefValue because it can be merged into any
+  // other valid pattern.
+
+  // Don't emit libcalls if a non-default address space is being used.
+  if (Inst->getRawDest()->getType()->getPointerAddressSpace() != 0)
+    return nullptr;
+
+  Value *V = Inst->getValue();
+  Type *VTy = V->getType();
+  const DataLayout &DL = Inst->getDataLayout();
+  Module *M = Inst->getModule();
+
+  if (!isLibFuncEmittable(M, &TLI, LibFunc_memset_pattern16))
+    return nullptr;
+
+  // If the value isn't a constant, we can't promote it to being in a constant
+  // array.  We could theoretically do a store to an alloca or something, but
+  // that doesn't seem worthwhile.
+  Constant *C = dyn_cast<Constant>(V);
+  if (!C || isa<ConstantExpr>(C))
+    return nullptr;
+
+  // Only handle simple values that are a power of two bytes in size.
+  uint64_t Size = DL.getTypeSizeInBits(VTy);
+  if (!DL.typeSizeEqualsStoreSize(VTy) || !isPowerOf2_64(Size))
+    return nullptr;
+
+  // Don't care enough about darwin/ppc to implement this.
+  if (DL.isBigEndian())
+    return nullptr;
+
+  // Convert to size in bytes.
+  Size /= 8;
+
+  // TODO: If CI is larger than 16-bytes, we can try slicing it in half to see
+  // if the top and bottom are the same (e.g. for vectors and large integers).
+  if (Size > 16)
+    return nullptr;
+
+  // If the constant is exactly 16 bytes, just use it.
+  if (Size == 16)
+    return C;
+
+  // Otherwise, we'll use an array of the constants.
+  uint64_t ArraySize = 16 / Size;
+  ArrayType *AT = ArrayType::get(V->getType(), ArraySize);
+  return ConstantArray::get(AT, std::vector<Constant *>(ArraySize, C));
 }
 
 // TODO: Handle atomic memcpy and memcpy.inline
 // TODO: Pass ScalarEvolution
-bool PreISelIntrinsicLowering::expandMemIntrinsicUses(Function &F) const {
+bool PreISelIntrinsicLowering::expandMemIntrinsicUses(
+    Function &F, DenseMap<Constant *, GlobalVariable *> &CMap) const {
   Intrinsic::ID ID = F.getIntrinsicID();
   bool Changed = false;
 
@@ -249,7 +329,7 @@ bool PreISelIntrinsicLowering::expandMemIntrinsicUses(Function &F) const {
       const TargetTransformInfo &TTI = LookupTTI(*ParentFunc);
       if (shouldExpandMemIntrinsicWithSize(Memcpy->getLength(), TTI)) {
         if (UseMemIntrinsicLibFunc &&
-            canEmitLibcall(TM, ParentFunc, RTLIB::MEMCPY))
+            canEmitMemcpy(ModuleLibcalls, TM, ParentFunc))
           break;
 
         // TODO: For optsize, emit the loop into a separate function
@@ -264,7 +344,7 @@ bool PreISelIntrinsicLowering::expandMemIntrinsicUses(Function &F) const {
       // Only expand llvm.memcpy.inline with non-constant length in this
       // codepath, leaving the current SelectionDAG expansion for constant
       // length memcpy intrinsics undisturbed.
-      auto *Memcpy = cast<MemCpyInlineInst>(Inst);
+      auto *Memcpy = cast<MemCpyInst>(Inst);
       if (isa<ConstantInt>(Memcpy->getLength()))
         break;
 
@@ -281,7 +361,7 @@ bool PreISelIntrinsicLowering::expandMemIntrinsicUses(Function &F) const {
       const TargetTransformInfo &TTI = LookupTTI(*ParentFunc);
       if (shouldExpandMemIntrinsicWithSize(Memmove->getLength(), TTI)) {
         if (UseMemIntrinsicLibFunc &&
-            canEmitLibcall(TM, ParentFunc, RTLIB::MEMMOVE))
+            canEmitLibcall(ModuleLibcalls, TM, ParentFunc, RTLIB::MEMMOVE))
           break;
 
         if (expandMemMoveAsLoop(Memmove, TTI)) {
@@ -298,7 +378,7 @@ bool PreISelIntrinsicLowering::expandMemIntrinsicUses(Function &F) const {
       const TargetTransformInfo &TTI = LookupTTI(*ParentFunc);
       if (shouldExpandMemIntrinsicWithSize(Memset->getLength(), TTI)) {
         if (UseMemIntrinsicLibFunc &&
-            canEmitLibcall(TM, ParentFunc, RTLIB::MEMSET))
+            canEmitLibcall(ModuleLibcalls, TM, ParentFunc, RTLIB::MEMSET))
           break;
 
         expandMemSetAsLoop(Memset);
@@ -312,7 +392,7 @@ bool PreISelIntrinsicLowering::expandMemIntrinsicUses(Function &F) const {
       // Only expand llvm.memset.inline with non-constant length in this
       // codepath, leaving the current SelectionDAG expansion for constant
       // length memset intrinsics undisturbed.
-      auto *Memset = cast<MemSetInlineInst>(Inst);
+      auto *Memset = cast<MemSetInst>(Inst);
       if (isa<ConstantInt>(Memset->getLength()))
         break;
 
@@ -323,7 +403,64 @@ bool PreISelIntrinsicLowering::expandMemIntrinsicUses(Function &F) const {
     }
     case Intrinsic::experimental_memset_pattern: {
       auto *Memset = cast<MemSetPatternInst>(Inst);
-      expandMemSetPatternAsLoop(Memset);
+      const TargetLibraryInfo &TLI = LookupTLI(*Memset->getFunction());
+      Constant *PatternValue = getMemSetPattern16Value(Memset, TLI);
+      if (!PatternValue) {
+        // If it isn't possible to emit a memset_pattern16 libcall, expand to
+        // a loop instead.
+        expandMemSetPatternAsLoop(Memset);
+        Changed = true;
+        Memset->eraseFromParent();
+        break;
+      }
+      // FIXME: There is currently no profitability calculation for emitting
+      // the libcall vs expanding the memset.pattern directly.
+      IRBuilder<> Builder(Inst);
+      Module *M = Memset->getModule();
+      const DataLayout &DL = Memset->getDataLayout();
+
+      Type *DestPtrTy = Memset->getRawDest()->getType();
+      Type *SizeTTy = TLI.getSizeTType(*M);
+      StringRef FuncName = "memset_pattern16";
+      FunctionCallee MSP = getOrInsertLibFunc(M, TLI, LibFunc_memset_pattern16,
+                                              Builder.getVoidTy(), DestPtrTy,
+                                              Builder.getPtrTy(), SizeTTy);
+      inferNonMandatoryLibFuncAttrs(M, FuncName, TLI);
+
+      // Otherwise we should form a memset_pattern16.  PatternValue is known
+      // to be an constant array of 16-bytes. Put the value into a mergable
+      // global.
+      assert(Memset->getRawDest()->getType()->getPointerAddressSpace() == 0 &&
+             "Should have skipped if non-zero AS");
+      GlobalVariable *GV;
+      auto It = CMap.find(PatternValue);
+      if (It != CMap.end()) {
+        GV = It->second;
+      } else {
+        GV = new GlobalVariable(
+            *M, PatternValue->getType(), /*isConstant=*/true,
+            GlobalValue::PrivateLinkage, PatternValue, ".memset_pattern");
+        GV->setUnnamedAddr(
+            GlobalValue::UnnamedAddr::Global); // Ok to merge these.
+        // TODO: Consider relaxing alignment requirement.
+        GV->setAlignment(Align(16));
+        CMap[PatternValue] = GV;
+      }
+      Value *PatternPtr = GV;
+      Value *NumBytes = Builder.CreateMul(
+          TLI.getAsSizeT(DL.getTypeAllocSize(Memset->getValue()->getType()),
+                         *M),
+          Builder.CreateZExtOrTrunc(Memset->getLength(), SizeTTy));
+      CallInst *MemsetPattern16Call =
+          Builder.CreateCall(MSP, {Memset->getRawDest(), PatternPtr, NumBytes});
+      MemsetPattern16Call->setAAMetadata(Memset->getAAMetadata());
+      // Preserve any call site attributes on the destination pointer
+      // argument (e.g. alignment).
+      AttrBuilder ArgAttrs(Memset->getContext(),
+                           Memset->getAttributes().getParamAttrs(0));
+      MemsetPattern16Call->setAttributes(
+          MemsetPattern16Call->getAttributes().addParamAttributes(
+              Memset->getContext(), 0, ArgAttrs));
       Changed = true;
       Memset->eraseFromParent();
       break;
@@ -336,7 +473,147 @@ bool PreISelIntrinsicLowering::expandMemIntrinsicUses(Function &F) const {
   return Changed;
 }
 
+static bool expandProtectedFieldPtr(Function &Intr) {
+  Module &M = *Intr.getParent();
+
+  SmallPtrSet<GlobalValue *, 2> DSsToDeactivate;
+
+  Type *Int8Ty = Type::getInt8Ty(M.getContext());
+  Type *Int64Ty = Type::getInt64Ty(M.getContext());
+  PointerType *PtrTy = PointerType::get(M.getContext(), 0);
+
+  Function *SignIntr =
+      Intrinsic::getOrInsertDeclaration(&M, Intrinsic::ptrauth_sign, {});
+  Function *AuthIntr =
+      Intrinsic::getOrInsertDeclaration(&M, Intrinsic::ptrauth_auth, {});
+
+  auto *EmuFnTy = FunctionType::get(Int64Ty, {Int64Ty, Int64Ty}, false);
+
+  auto CreateSign = [&](IRBuilder<> &B, Value *Val, Value *Disc,
+                        OperandBundleDef DSBundle) {
+    Function *F = B.GetInsertBlock()->getParent();
+    Attribute FSAttr = F->getFnAttribute("target-features");
+    if (FSAttr.isValid() && FSAttr.getValueAsString().contains("+pauth"))
+      return B.CreateCall(
+          SignIntr, {Val, B.getInt32(/*AArch64PACKey::DA*/ 2), Disc}, DSBundle);
+    FunctionCallee EmuSignIntr =
+        M.getOrInsertFunction("__emupac_pacda", EmuFnTy);
+    return B.CreateCall(EmuSignIntr, {Val, Disc}, DSBundle);
+  };
+
+  auto CreateAuth = [&](IRBuilder<> &B, Value *Val, Value *Disc,
+                        OperandBundleDef DSBundle) {
+    Function *F = B.GetInsertBlock()->getParent();
+    Attribute FSAttr = F->getFnAttribute("target-features");
+    if (FSAttr.isValid() && FSAttr.getValueAsString().contains("+pauth"))
+      return B.CreateCall(
+          AuthIntr, {Val, B.getInt32(/*AArch64PACKey::DA*/ 2), Disc}, DSBundle);
+    FunctionCallee EmuAuthIntr =
+        M.getOrInsertFunction("__emupac_autda", EmuFnTy);
+    return B.CreateCall(EmuAuthIntr, {Val, Disc}, DSBundle);
+  };
+
+  auto GetDeactivationSymbol = [&](CallInst *Call) -> GlobalValue * {
+    if (auto Bundle =
+            Call->getOperandBundle(LLVMContext::OB_deactivation_symbol))
+      return cast<GlobalValue>(Bundle->Inputs[0]);
+    return nullptr;
+  };
+
+  for (User *U : llvm::make_early_inc_range(Intr.users())) {
+    auto *Call = cast<CallInst>(U);
+
+    auto *Pointer = Call->getArgOperand(0);
+    auto *Disc = Call->getArgOperand(1);
+    bool UseHWEncoding =
+        cast<ConstantInt>(Call->getArgOperand(2))->getZExtValue();
+    if (!UseHWEncoding)
+      reportFatalUsageError("software encoding currently unsupported");
+
+    auto *DS = GetDeactivationSymbol(Call);
+    OperandBundleDef DSBundle("deactivation-symbol", DS);
+
+    for (Use &U : llvm::make_early_inc_range(Call->uses())) {
+      // Insert code to encode each pointer stored to the pointer returned by
+      // the intrinsic.
+      if (auto *SI = dyn_cast<StoreInst>(U.getUser())) {
+        if (U.getOperandNo() == 1 &&
+            isa<PointerType>(SI->getValueOperand()->getType())) {
+          IRBuilder<> B(SI);
+          auto *SIValInt =
+              B.CreatePtrToInt(SI->getValueOperand(), B.getInt64Ty());
+          Value *Sign = CreateSign(B, SIValInt, Disc, DSBundle);
+          SI->setOperand(0, B.CreateIntToPtr(Sign, B.getPtrTy()));
+          SI->setOperand(1, Pointer);
+          continue;
+        }
+      }
+
+      // Insert code to decode each pointer loaded from the pointer returned by
+      // the intrinsic. This is the inverse of the encode operation implemented
+      // above.
+      if (auto *LI = dyn_cast<LoadInst>(U.getUser())) {
+        if (isa<PointerType>(LI->getType())) {
+          IRBuilder<> B(LI);
+          auto *NewLI = cast<LoadInst>(LI->clone());
+          NewLI->setOperand(0, Pointer);
+          B.Insert(NewLI);
+          auto *LIInt = B.CreatePtrToInt(NewLI, B.getInt64Ty());
+          Value *Auth = CreateAuth(B, LIInt, Disc, DSBundle);
+          LI->replaceAllUsesWith(B.CreateIntToPtr(Auth, B.getPtrTy()));
+          LI->eraseFromParent();
+          continue;
+        }
+      }
+      // Comparisons against null cannot be used to recover the original
+      // pointer so we replace them with comparisons against the original
+      // pointer.
+      if (auto *CI = dyn_cast<ICmpInst>(U.getUser())) {
+        if (auto *Op = dyn_cast<Constant>(CI->getOperand(0))) {
+          if (Op->isNullValue()) {
+            CI->setOperand(1, Pointer);
+            continue;
+          }
+        }
+        if (auto *Op = dyn_cast<Constant>(CI->getOperand(1))) {
+          if (Op->isNullValue()) {
+            CI->setOperand(0, Pointer);
+            continue;
+          }
+        }
+      }
+
+      // We couldn't rewrite away this use of the intrinsic. Replace it with the
+      // pointer operand, and arrange to define a deactivation symbol.
+      U.set(Pointer);
+      if (DS)
+        DSsToDeactivate.insert(DS);
+    }
+
+    Call->eraseFromParent();
+  }
+
+  if (!DSsToDeactivate.empty()) {
+    // This is an AArch64 NOP instruction. When the deactivation symbol support
+    // is expanded to more architectures, there will likely need to be an API
+    // for retrieving this constant.
+    Constant *Nop =
+        ConstantExpr::getIntToPtr(ConstantInt::get(Int64Ty, 0xd503201f), PtrTy);
+    for (GlobalValue *OldDS : DSsToDeactivate) {
+      GlobalValue *DS = GlobalAlias::create(
+          Int8Ty, 0, GlobalValue::ExternalLinkage, OldDS->getName(), Nop, &M);
+      DS->setVisibility(GlobalValue::HiddenVisibility);
+      DS->takeName(OldDS);
+      OldDS->replaceAllUsesWith(DS);
+      OldDS->eraseFromParent();
+    }
+  }
+  return true;
+}
+
 bool PreISelIntrinsicLowering::lowerIntrinsics(Module &M) const {
+  // Map unique constants to globals.
+  DenseMap<Constant *, GlobalVariable *> CMap;
   bool Changed = false;
   for (Function &F : M) {
     switch (F.getIntrinsicID()) {
@@ -348,7 +625,7 @@ bool PreISelIntrinsicLowering::lowerIntrinsics(Module &M) const {
     case Intrinsic::memset:
     case Intrinsic::memset_inline:
     case Intrinsic::experimental_memset_pattern:
-      Changed |= expandMemIntrinsicUses(F);
+      Changed |= expandMemIntrinsicUses(F, CMap);
       break;
     case Intrinsic::load_relative:
       Changed |= lowerLoadRelative(F);
@@ -380,92 +657,104 @@ bool PreISelIntrinsicLowering::lowerIntrinsics(Module &M) const {
       });
       break;
     case Intrinsic::objc_autorelease:
-      Changed |= lowerObjCCall(F, "objc_autorelease");
+      Changed |= lowerObjCCall(F, RTLIB::impl_objc_autorelease);
       break;
     case Intrinsic::objc_autoreleasePoolPop:
-      Changed |= lowerObjCCall(F, "objc_autoreleasePoolPop");
+      Changed |= lowerObjCCall(F, RTLIB::impl_objc_autoreleasePoolPop);
       break;
     case Intrinsic::objc_autoreleasePoolPush:
-      Changed |= lowerObjCCall(F, "objc_autoreleasePoolPush");
+      Changed |= lowerObjCCall(F, RTLIB::impl_objc_autoreleasePoolPush);
       break;
     case Intrinsic::objc_autoreleaseReturnValue:
-      Changed |= lowerObjCCall(F, "objc_autoreleaseReturnValue");
+      Changed |= lowerObjCCall(F, RTLIB::impl_objc_autoreleaseReturnValue);
       break;
     case Intrinsic::objc_copyWeak:
-      Changed |= lowerObjCCall(F, "objc_copyWeak");
+      Changed |= lowerObjCCall(F, RTLIB::impl_objc_copyWeak);
       break;
     case Intrinsic::objc_destroyWeak:
-      Changed |= lowerObjCCall(F, "objc_destroyWeak");
+      Changed |= lowerObjCCall(F, RTLIB::impl_objc_destroyWeak);
       break;
     case Intrinsic::objc_initWeak:
-      Changed |= lowerObjCCall(F, "objc_initWeak");
+      Changed |= lowerObjCCall(F, RTLIB::impl_objc_initWeak);
       break;
     case Intrinsic::objc_loadWeak:
-      Changed |= lowerObjCCall(F, "objc_loadWeak");
+      Changed |= lowerObjCCall(F, RTLIB::impl_objc_loadWeak);
       break;
     case Intrinsic::objc_loadWeakRetained:
-      Changed |= lowerObjCCall(F, "objc_loadWeakRetained");
+      Changed |= lowerObjCCall(F, RTLIB::impl_objc_loadWeakRetained);
       break;
     case Intrinsic::objc_moveWeak:
-      Changed |= lowerObjCCall(F, "objc_moveWeak");
+      Changed |= lowerObjCCall(F, RTLIB::impl_objc_moveWeak);
       break;
     case Intrinsic::objc_release:
-      Changed |= lowerObjCCall(F, "objc_release", true);
+      Changed |= lowerObjCCall(F, RTLIB::impl_objc_release, true);
       break;
     case Intrinsic::objc_retain:
-      Changed |= lowerObjCCall(F, "objc_retain", true);
+      Changed |= lowerObjCCall(F, RTLIB::impl_objc_retain, true);
       break;
     case Intrinsic::objc_retainAutorelease:
-      Changed |= lowerObjCCall(F, "objc_retainAutorelease");
+      Changed |= lowerObjCCall(F, RTLIB::impl_objc_retainAutorelease);
       break;
     case Intrinsic::objc_retainAutoreleaseReturnValue:
-      Changed |= lowerObjCCall(F, "objc_retainAutoreleaseReturnValue");
+      Changed |=
+          lowerObjCCall(F, RTLIB::impl_objc_retainAutoreleaseReturnValue);
       break;
     case Intrinsic::objc_retainAutoreleasedReturnValue:
-      Changed |= lowerObjCCall(F, "objc_retainAutoreleasedReturnValue");
+      Changed |=
+          lowerObjCCall(F, RTLIB::impl_objc_retainAutoreleasedReturnValue);
+      break;
+    case Intrinsic::objc_claimAutoreleasedReturnValue:
+      Changed |=
+          lowerObjCCall(F, RTLIB::impl_objc_claimAutoreleasedReturnValue);
       break;
     case Intrinsic::objc_retainBlock:
-      Changed |= lowerObjCCall(F, "objc_retainBlock");
+      Changed |= lowerObjCCall(F, RTLIB::impl_objc_retainBlock);
       break;
     case Intrinsic::objc_storeStrong:
-      Changed |= lowerObjCCall(F, "objc_storeStrong");
+      Changed |= lowerObjCCall(F, RTLIB::impl_objc_storeStrong);
       break;
     case Intrinsic::objc_storeWeak:
-      Changed |= lowerObjCCall(F, "objc_storeWeak");
+      Changed |= lowerObjCCall(F, RTLIB::impl_objc_storeWeak);
       break;
     case Intrinsic::objc_unsafeClaimAutoreleasedReturnValue:
-      Changed |= lowerObjCCall(F, "objc_unsafeClaimAutoreleasedReturnValue");
+      Changed |=
+          lowerObjCCall(F, RTLIB::impl_objc_unsafeClaimAutoreleasedReturnValue);
       break;
     case Intrinsic::objc_retainedObject:
-      Changed |= lowerObjCCall(F, "objc_retainedObject");
+      Changed |= lowerObjCCall(F, RTLIB::impl_objc_retainedObject);
       break;
     case Intrinsic::objc_unretainedObject:
-      Changed |= lowerObjCCall(F, "objc_unretainedObject");
+      Changed |= lowerObjCCall(F, RTLIB::impl_objc_unretainedObject);
       break;
     case Intrinsic::objc_unretainedPointer:
-      Changed |= lowerObjCCall(F, "objc_unretainedPointer");
+      Changed |= lowerObjCCall(F, RTLIB::impl_objc_unretainedPointer);
       break;
     case Intrinsic::objc_retain_autorelease:
-      Changed |= lowerObjCCall(F, "objc_retain_autorelease");
+      Changed |= lowerObjCCall(F, RTLIB::impl_objc_retain_autorelease);
       break;
     case Intrinsic::objc_sync_enter:
-      Changed |= lowerObjCCall(F, "objc_sync_enter");
+      Changed |= lowerObjCCall(F, RTLIB::impl_objc_sync_enter);
       break;
     case Intrinsic::objc_sync_exit:
-      Changed |= lowerObjCCall(F, "objc_sync_exit");
+      Changed |= lowerObjCCall(F, RTLIB::impl_objc_sync_exit);
       break;
     case Intrinsic::exp:
     case Intrinsic::exp2:
+    case Intrinsic::log:
       Changed |= forEachCall(F, [&](CallInst *CI) {
         Type *Ty = CI->getArgOperand(0)->getType();
-        if (!isa<ScalableVectorType>(Ty))
+        if (!TM || !isa<ScalableVectorType>(Ty))
           return false;
         const TargetLowering *TL = TM->getSubtargetImpl(F)->getTargetLowering();
         unsigned Op = TL->IntrinsicIDToISD(F.getIntrinsicID());
+        assert(Op != ISD::DELETED_NODE && "unsupported intrinsic");
         if (!TL->isOperationExpand(Op, EVT::getEVT(Ty)))
           return false;
         return lowerUnaryVectorIntrinsicAsLoop(M, CI);
       });
+      break;
+    case Intrinsic::protected_field_ptr:
+      Changed |= expandProtectedFieldPtr(F);
       break;
     }
   }
@@ -483,10 +772,14 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<TargetTransformInfoWrapperPass>();
     AU.addRequired<TargetLibraryInfoWrapperPass>();
+    AU.addRequired<LibcallLoweringInfoWrapper>();
     AU.addRequired<TargetPassConfig>();
   }
 
   bool runOnModule(Module &M) override {
+    const LibcallLoweringModuleAnalysisResult &ModuleLibcalls =
+        getAnalysis<LibcallLoweringInfoWrapper>().getResult();
+
     auto LookupTTI = [this](Function &F) -> TargetTransformInfo & {
       return this->getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
     };
@@ -495,7 +788,7 @@ public:
     };
 
     const auto *TM = &getAnalysis<TargetPassConfig>().getTM<TargetMachine>();
-    PreISelIntrinsicLowering Lowering(TM, LookupTTI, LookupTLI);
+    PreISelIntrinsicLowering Lowering(TM, ModuleLibcalls, LookupTTI, LookupTLI);
     return Lowering.lowerIntrinsics(M);
   }
 };
@@ -507,6 +800,8 @@ char PreISelIntrinsicLoweringLegacyPass::ID;
 INITIALIZE_PASS_BEGIN(PreISelIntrinsicLoweringLegacyPass,
                       "pre-isel-intrinsic-lowering",
                       "Pre-ISel Intrinsic Lowering", false, false)
+INITIALIZE_PASS_DEPENDENCY(LibcallLoweringInfoWrapper)
+INITIALIZE_PASS_DEPENDENCY(RuntimeLibraryInfoWrapper)
 INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
 INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
@@ -518,9 +813,12 @@ ModulePass *llvm::createPreISelIntrinsicLoweringPass() {
   return new PreISelIntrinsicLoweringLegacyPass();
 }
 
-PreservedAnalyses PreISelIntrinsicLoweringPass::run(Module &M,
-                                                    ModuleAnalysisManager &AM) {
-  auto &FAM = AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
+PreservedAnalyses
+PreISelIntrinsicLoweringPass::run(Module &M, ModuleAnalysisManager &MAM) {
+  const LibcallLoweringModuleAnalysisResult &LibcallLowering =
+      MAM.getResult<LibcallLoweringModuleAnalysis>(M);
+
+  auto &FAM = MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
 
   auto LookupTTI = [&FAM](Function &F) -> TargetTransformInfo & {
     return FAM.getResult<TargetIRAnalysis>(F);
@@ -529,7 +827,7 @@ PreservedAnalyses PreISelIntrinsicLoweringPass::run(Module &M,
     return FAM.getResult<TargetLibraryAnalysis>(F);
   };
 
-  PreISelIntrinsicLowering Lowering(TM, LookupTTI, LookupTLI);
+  PreISelIntrinsicLowering Lowering(TM, LibcallLowering, LookupTTI, LookupTLI);
   if (!Lowering.lowerIntrinsics(M))
     return PreservedAnalyses::all();
   else

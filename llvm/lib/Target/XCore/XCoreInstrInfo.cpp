@@ -12,6 +12,7 @@
 
 #include "XCoreInstrInfo.h"
 #include "XCore.h"
+#include "XCoreSubtarget.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
@@ -41,10 +42,9 @@ namespace XCore {
 // Pin the vtable to this file.
 void XCoreInstrInfo::anchor() {}
 
-XCoreInstrInfo::XCoreInstrInfo()
-  : XCoreGenInstrInfo(XCore::ADJCALLSTACKDOWN, XCore::ADJCALLSTACKUP),
-    RI() {
-}
+XCoreInstrInfo::XCoreInstrInfo(const XCoreSubtarget &ST)
+    : XCoreGenInstrInfo(ST, RI, XCore::ADJCALLSTACKDOWN, XCore::ADJCALLSTACKUP),
+      RI() {}
 
 static bool isZeroImm(const MachineOperand &op) {
   return op.isImm() && op.getImm() == 0;
@@ -326,8 +326,8 @@ XCoreInstrInfo::removeBranch(MachineBasicBlock &MBB, int *BytesRemoved) const {
 
 void XCoreInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                  MachineBasicBlock::iterator I,
-                                 const DebugLoc &DL, MCRegister DestReg,
-                                 MCRegister SrcReg, bool KillSrc,
+                                 const DebugLoc &DL, Register DestReg,
+                                 Register SrcReg, bool KillSrc,
                                  bool RenamableDest, bool RenamableSrc) const {
   bool GRDest = XCore::GRRegsRegClass.contains(DestReg);
   bool GRSrc  = XCore::GRRegsRegClass.contains(SrcReg);
@@ -355,8 +355,8 @@ void XCoreInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
 void XCoreInstrInfo::storeRegToStackSlot(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator I, Register SrcReg,
     bool isKill, int FrameIndex, const TargetRegisterClass *RC,
-    const TargetRegisterInfo *TRI, Register VReg,
-    MachineInstr::MIFlag Flags) const {
+
+    Register VReg, MachineInstr::MIFlag Flags) const {
   DebugLoc DL;
   if (I != MBB.end() && !I->isDebugInstr())
     DL = I->getDebugLoc();
@@ -377,7 +377,6 @@ void XCoreInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
                                           MachineBasicBlock::iterator I,
                                           Register DestReg, int FrameIndex,
                                           const TargetRegisterClass *RC,
-                                          const TargetRegisterInfo *TRI,
                                           Register VReg,
                                           MachineInstr::MIFlag Flags) const {
   DebugLoc DL;

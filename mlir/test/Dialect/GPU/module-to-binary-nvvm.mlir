@@ -16,7 +16,7 @@ module attributes {gpu.container_module} {
   }
 
   // CHECK-LABEL:gpu.binary @kernel_module2
-  // CHECK-ISA:[#gpu.object<#nvvm.target<flags = {fast}>, properties = {O = 2 : i32}, assembly = "{{.*}}">, #gpu.object<#nvvm.target, properties = {O = 2 : i32}, assembly = "{{.*}}">]
+  // CHECK-ISA:[#gpu.object<#nvvm.target<flags = {fast}>, properties = {LLVMIRToISATimeInMs = {{[0-9]+}} : i64, O = 2 : i32}, assembly = "{{.*}}">, #gpu.object<#nvvm.target, properties = {LLVMIRToISATimeInMs = {{[0-9]+}} : i64, O = 2 : i32}, assembly = "{{.*}}">]
   gpu.module @kernel_module2 [#nvvm.target<flags = {fast}>, #nvvm.target] {
     llvm.func @kernel(%arg0: i32, %arg1: !llvm.ptr,
         %arg2: !llvm.ptr, %arg3: i64, %arg4: i64,

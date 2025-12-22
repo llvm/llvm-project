@@ -356,7 +356,6 @@ define amdgpu_ps void @and_i1_scc(i32 inreg %a, i32 inreg %b, ptr addrspace(1) %
 ; OLD_RBS-NEXT:    s_cmp_ge_u32 s1, 20
 ; OLD_RBS-NEXT:    s_cselect_b32 s3, 1, 0
 ; OLD_RBS-NEXT:    s_and_b32 s2, s2, s3
-; OLD_RBS-NEXT:    s_and_b32 s2, s2, 1
 ; OLD_RBS-NEXT:    s_cmp_lg_u32 s2, 0
 ; OLD_RBS-NEXT:    s_cselect_b32 s0, s0, s1
 ; OLD_RBS-NEXT:    v_mov_b32_e32 v2, s0
@@ -387,8 +386,8 @@ define amdgpu_ps void @and_i1_scc(i32 inreg %a, i32 inreg %b, ptr addrspace(1) %
 define amdgpu_ps void @divergent_phi_with_uniform_inputs(i32 %a, ptr addrspace(1) %out) {
 ; OLD_RBS-LABEL: divergent_phi_with_uniform_inputs:
 ; OLD_RBS:       ; %bb.0: ; %A
-; OLD_RBS-NEXT:    s_mov_b32 s0, 0
 ; OLD_RBS-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v0
+; OLD_RBS-NEXT:    s_mov_b32 s0, 0
 ; OLD_RBS-NEXT:    s_and_saveexec_b32 s1, vcc_lo
 ; OLD_RBS-NEXT:  ; %bb.1: ; %B
 ; OLD_RBS-NEXT:    s_mov_b32 s0, 1
@@ -450,20 +449,20 @@ define amdgpu_ps void @divergent_because_of_temporal_divergent_use(float %val, p
 ;
 ; NEW_RBS-LABEL: divergent_because_of_temporal_divergent_use:
 ; NEW_RBS:       ; %bb.0: ; %entry
-; NEW_RBS-NEXT:    s_mov_b32 s0, -1
-; NEW_RBS-NEXT:    s_mov_b32 s1, 0
+; NEW_RBS-NEXT:    s_mov_b32 s1, -1
+; NEW_RBS-NEXT:    s_mov_b32 s0, 0
 ; NEW_RBS-NEXT:  .LBB15_1: ; %loop
 ; NEW_RBS-NEXT:    ; =>This Inner Loop Header: Depth=1
-; NEW_RBS-NEXT:    s_add_i32 s0, s0, 1
-; NEW_RBS-NEXT:    v_cvt_f32_u32_e32 v3, s0
+; NEW_RBS-NEXT:    s_add_i32 s1, s1, 1
+; NEW_RBS-NEXT:    v_cvt_f32_u32_e32 v3, s1
 ; NEW_RBS-NEXT:    v_cmp_gt_f32_e32 vcc_lo, v3, v0
-; NEW_RBS-NEXT:    s_or_b32 s1, vcc_lo, s1
-; NEW_RBS-NEXT:    s_andn2_b32 exec_lo, exec_lo, s1
+; NEW_RBS-NEXT:    v_mov_b32_e32 v3, s1
+; NEW_RBS-NEXT:    s_or_b32 s0, vcc_lo, s0
+; NEW_RBS-NEXT:    s_andn2_b32 exec_lo, exec_lo, s0
 ; NEW_RBS-NEXT:    s_cbranch_execnz .LBB15_1
 ; NEW_RBS-NEXT:  ; %bb.2: ; %exit
-; NEW_RBS-NEXT:    s_or_b32 exec_lo, exec_lo, s1
-; NEW_RBS-NEXT:    v_mov_b32_e32 v0, s0
-; NEW_RBS-NEXT:    v_mul_lo_u32 v0, v0, 10
+; NEW_RBS-NEXT:    s_or_b32 exec_lo, exec_lo, s0
+; NEW_RBS-NEXT:    v_mul_lo_u32 v0, v3, 10
 ; NEW_RBS-NEXT:    global_store_dword v[1:2], v0, off
 ; NEW_RBS-NEXT:    s_endpgm
 entry:
@@ -492,7 +491,7 @@ define amdgpu_cs void @loop_with_2breaks(ptr addrspace(1) %x, ptr addrspace(1) %
 ; OLD_RBS-NEXT:    s_branch .LBB16_3
 ; OLD_RBS-NEXT:  .LBB16_1: ; %Flow3
 ; OLD_RBS-NEXT:    ; in Loop: Header=BB16_3 Depth=1
-; OLD_RBS-NEXT:    s_waitcnt_depctr 0xffe3
+; OLD_RBS-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
 ; OLD_RBS-NEXT:    s_or_b32 exec_lo, exec_lo, s3
 ; OLD_RBS-NEXT:    s_andn2_b32 s1, s1, exec_lo
 ; OLD_RBS-NEXT:    s_and_b32 s3, exec_lo, s4
@@ -548,13 +547,13 @@ define amdgpu_cs void @loop_with_2breaks(ptr addrspace(1) %x, ptr addrspace(1) %
 ;
 ; NEW_RBS-LABEL: loop_with_2breaks:
 ; NEW_RBS:       ; %bb.0: ; %entry
-; NEW_RBS-NEXT:    s_mov_b32 s4, 0
 ; NEW_RBS-NEXT:    s_mov_b32 s0, 0
+; NEW_RBS-NEXT:    s_mov_b32 s4, 0
 ; NEW_RBS-NEXT:    ; implicit-def: $sgpr5
 ; NEW_RBS-NEXT:    s_branch .LBB16_3
 ; NEW_RBS-NEXT:  .LBB16_1: ; %Flow3
 ; NEW_RBS-NEXT:    ; in Loop: Header=BB16_3 Depth=1
-; NEW_RBS-NEXT:    s_waitcnt_depctr 0xffe3
+; NEW_RBS-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
 ; NEW_RBS-NEXT:    s_or_b32 exec_lo, exec_lo, s7
 ; NEW_RBS-NEXT:    s_andn2_b32 s2, s5, exec_lo
 ; NEW_RBS-NEXT:    s_and_b32 s3, exec_lo, s6

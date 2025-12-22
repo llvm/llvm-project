@@ -191,3 +191,14 @@ func.func @log_fixed(%a: vector<8 x f32>, %rvl: i64) -> vector<8 x f32> {
   %res = math.log %a : vector<8 x f32>
   return %res : vector<8 x f32>
 }
+
+// -----
+
+// Ensure this case exit gracefully
+
+// CHECK-LABEL:   func.func @no_vector_type
+// CHECK:           math.cos
+func.func @no_vector_type(%arg0: f32) -> f32 {
+  %0 = math.cos %arg0 : f32
+  return %0 : f32
+}

@@ -104,7 +104,7 @@ class RAIIMutexDescriptor {
       // this function is called instead of early returning it. To avoid this, a
       // bool variable (IdentifierInfoInitialized) is used and the function will
       // be run only once.
-      const auto &ASTCtx = Call.getState()->getStateManager().getContext();
+      const auto &ASTCtx = Call.getASTContext();
       Guard = &ASTCtx.Idents.get(GuardName);
     }
   }
@@ -115,7 +115,23 @@ class RAIIMutexDescriptor {
       return false;
     const IdentifierInfo *II =
         cast<CXXRecordDecl>(C->getDecl()->getParent())->getIdentifier();
-    return II == Guard;
+    if (II != Guard)
+      return false;
+
+    // For unique_lock, check if it's constructed with a ctor that takes the tag
+    // type defer_lock_t. In this case, the lock is not acquired.
+    if constexpr (std::is_same_v<T, CXXConstructorCall>) {
+      if (GuardName == "unique_lock" && C->getNumArgs() >= 2) {
+        const Expr *SecondArg = C->getArgExpr(1);
+        QualType ArgType = SecondArg->getType().getNonReferenceType();
+        if (const auto *RD = ArgType->getAsRecordDecl();
+            RD && RD->getName() == "defer_lock_t" && RD->isInStdNamespace()) {
+          return false;
+        }
+      }
+    }
+
+    return true;
   }
 
 public:
@@ -144,6 +160,57 @@ public:
 using MutexDescriptor =
     std::variant<FirstArgMutexDescriptor, MemberMutexDescriptor,
                  RAIIMutexDescriptor>;
+
+class SuppressNonBlockingStreams : public BugReporterVisitor {
+private:
+  const CallDescription OpenFunction{CDM::CLibrary, {"open"}, 2};
+  SymbolRef StreamSym;
+  const int NonBlockMacroVal;
+  bool Satisfied = false;
+
+public:
+  SuppressNonBlockingStreams(SymbolRef StreamSym, int NonBlockMacroVal)
+      : StreamSym(StreamSym), NonBlockMacroVal(NonBlockMacroVal) {}
+
+  static void *getTag() {
+    static bool Tag;
+    return &Tag;
+  }
+
+  void Profile(llvm::FoldingSetNodeID &ID) const override {
+    ID.AddPointer(getTag());
+  }
+
+  PathDiagnosticPieceRef VisitNode(const ExplodedNode *N,
+                                   BugReporterContext &BRC,
+                                   PathSensitiveBugReport &BR) override {
+    if (Satisfied)
+      return nullptr;
+
+    std::optional<StmtPoint> Point = N->getLocationAs<StmtPoint>();
+    if (!Point)
+      return nullptr;
+
+    const auto *CE = Point->getStmtAs<CallExpr>();
+    if (!CE || !OpenFunction.matchesAsWritten(*CE))
+      return nullptr;
+
+    if (N->getSVal(CE).getAsSymbol() != StreamSym)
+      return nullptr;
+
+    Satisfied = true;
+
+    // Check if open's second argument contains O_NONBLOCK
+    const llvm::APSInt *FlagVal = N->getSVal(CE->getArg(1)).getAsInteger();
+    if (!FlagVal)
+      return nullptr;
+
+    if ((*FlagVal & NonBlockMacroVal) != 0)
+      BR.markInvalid(getTag(), nullptr);
+
+    return nullptr;
+  }
+};
 
 class BlockInCriticalSectionChecker : public Checker<check::PostCall> {
 private:
@@ -182,6 +249,9 @@ private:
   const BugType BlockInCritSectionBugType{
       this, "Call to blocking function in critical section", "Blocking Error"};
 
+  using O_NONBLOCKValueTy = std::optional<int>;
+  mutable std::optional<O_NONBLOCKValueTy> O_NONBLOCKValue;
+
   void reportBlockInCritSection(const CallEvent &call, CheckerContext &C) const;
 
   [[nodiscard]] const NoteTag *createCritSectionNote(CritSectionMarker M,
@@ -216,8 +286,7 @@ REGISTER_LIST_WITH_PROGRAMSTATE(ActiveCritSections, CritSectionMarker)
 // TODO: Move these to llvm::ImmutableList when overhauling immutable data
 // structures for proper iterator concept support.
 template <>
-struct std::iterator_traits<
-    typename llvm::ImmutableList<CritSectionMarker>::iterator> {
+struct std::iterator_traits<llvm::ImmutableList<CritSectionMarker>::iterator> {
   using iterator_category = std::forward_iterator_tag;
   using value_type = CritSectionMarker;
   using difference_type = std::ptrdiff_t;
@@ -337,6 +406,28 @@ void BlockInCriticalSectionChecker::reportBlockInCritSection(
      << "' inside of critical section";
   auto R = std::make_unique<PathSensitiveBugReport>(BlockInCritSectionBugType,
                                                     os.str(), ErrNode);
+  // for 'read' and 'recv' call, check whether it's file descriptor(first
+  // argument) is
+  // created by 'open' API with O_NONBLOCK flag or is equal to -1, they will
+  // not cause block in these situations, don't report
+  StringRef FuncName = Call.getCalleeIdentifier()->getName();
+  if (FuncName == "read" || FuncName == "recv") {
+    SVal SV = Call.getArgSVal(0);
+    SValBuilder &SVB = C.getSValBuilder();
+    ProgramStateRef state = C.getState();
+    ConditionTruthVal CTV =
+        state->areEqual(SV, SVB.makeIntVal(-1, C.getASTContext().IntTy));
+    if (CTV.isConstrainedTrue())
+      return;
+
+    if (SymbolRef SR = SV.getAsSymbol()) {
+      if (!O_NONBLOCKValue)
+        O_NONBLOCKValue = tryExpandAsInteger(
+            "O_NONBLOCK", C.getBugReporter().getPreprocessor());
+      if (*O_NONBLOCKValue)
+        R->addVisitor<SuppressNonBlockingStreams>(SR, **O_NONBLOCKValue);
+    }
+  }
   R->addRange(Call.getSourceRange());
   R->markInteresting(Call.getReturnValue());
   C.emitReport(std::move(R));

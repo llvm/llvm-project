@@ -18,13 +18,14 @@
 #include "llvm/ExecutionEngine/Orc/RedirectionManager.h"
 #include "llvm/ExecutionEngine/Orc/ThreadSafeModule.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 
 namespace llvm {
 namespace orc {
 
-class ReOptimizeLayer : public IRLayer, public ResourceManager {
+class LLVM_ABI ReOptimizeLayer : public IRLayer, public ResourceManager {
 public:
   using ReOptMaterializationUnitID = uint64_t;
 
@@ -62,7 +63,7 @@ public:
   /// Registers reoptimize runtime dispatch handlers to given PlatformJD. The
   /// reoptimization request will not be handled if dispatch handler is not
   /// registered by using this function.
-  Error reigsterRuntimeFunctions(JITDylib &PlatformJD);
+  Error registerRuntimeFunctions(JITDylib &PlatformJD);
 
   /// Emits the given module. This should not be called by clients: it will be
   /// called by the JIT when a definition added via the add method is requested.
@@ -123,9 +124,9 @@ private:
       return CurVersion;
     }
 
-    bool tryStartReoptimize();
-    void reoptimizeSucceeded();
-    void reoptimizeFailed();
+    LLVM_ABI bool tryStartReoptimize();
+    LLVM_ABI void reoptimizeSucceeded();
+    LLVM_ABI void reoptimizeFailed();
 
   private:
     std::mutex Mutex;

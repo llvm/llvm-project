@@ -322,6 +322,9 @@ image_sample_cd_o v252, v[1:4], s[8:15], s[12:15] dmask:0x1
 image_sample_cd_o_g16 v[5:6], v[1:4], s[8:15], s[12:15] dmask:0x3
 // CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
+s_alloc_vgpr s0
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
 s_atomic_add flat_scratch_hi, s[2:3], s0
 // CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
 

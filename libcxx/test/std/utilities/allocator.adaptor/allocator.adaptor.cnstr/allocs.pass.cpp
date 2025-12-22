@@ -112,7 +112,7 @@ int main(int, char**) {
         "");
   }
   {
-    // Test construction from convertible-to-allocator types (https://github.com/llvm/llvm-project/issues/78754)
+    // Test construction from convertible-to-allocator types (https://llvm.org/PR78754)
     typedef std::scoped_allocator_adaptor<A1<int>, A1<int>> A;
     A a(A1<char>(4), A1<char>(5));
     assert(a.outer_allocator() == A1<int>(4));

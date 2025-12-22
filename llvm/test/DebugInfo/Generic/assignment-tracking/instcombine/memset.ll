@@ -1,7 +1,5 @@
 ; RUN: opt %s -S -passes=instcombine -o - \
 ; RUN: | FileCheck %s
-; RUN: opt --try-experimental-debuginfo-iterators %s -S -passes=instcombine -o - \
-; RUN: | FileCheck %s
 
 ;; $ cat test.cpp
 ;; void esc(int*);

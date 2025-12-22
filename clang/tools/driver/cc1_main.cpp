@@ -12,19 +12,20 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/Stack.h"
 #include "clang/Basic/TargetOptions.h"
 #include "clang/CodeGen/ObjectFilePCHContainerWriter.h"
 #include "clang/Config/config.h"
+#include "clang/Driver/Driver.h"
 #include "clang/Driver/DriverDiagnostic.h"
-#include "clang/Driver/Options.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/CompilerInvocation.h"
-#include "clang/Frontend/FrontendDiagnostic.h"
 #include "clang/Frontend/TextDiagnosticBuffer.h"
 #include "clang/Frontend/TextDiagnosticPrinter.h"
 #include "clang/Frontend/Utils.h"
 #include "clang/FrontendTool/Utils.h"
+#include "clang/Options/Options.h"
 #include "clang/Serialization/ObjectFilePCHContainerReader.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringExtras.h"
@@ -38,6 +39,7 @@
 #include "llvm/Support/BuryPointer.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/IOSandbox.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
@@ -111,9 +113,10 @@ static void ensureSufficientStack() {}
 
 /// Print supported cpus of the given target.
 static int PrintSupportedCPUs(std::string TargetStr) {
+  llvm::Triple Triple(TargetStr);
   std::string Error;
   const llvm::Target *TheTarget =
-      llvm::TargetRegistry::lookupTarget(TargetStr, Error);
+      llvm::TargetRegistry::lookupTarget(Triple, Error);
   if (!TheTarget) {
     llvm::errs() << Error;
     return 1;
@@ -122,15 +125,16 @@ static int PrintSupportedCPUs(std::string TargetStr) {
   // the target machine will handle the mcpu printing
   llvm::TargetOptions Options;
   std::unique_ptr<llvm::TargetMachine> TheTargetMachine(
-      TheTarget->createTargetMachine(TargetStr, "", "+cpuhelp", Options,
+      TheTarget->createTargetMachine(Triple, "", "+cpuhelp", Options,
                                      std::nullopt));
   return 0;
 }
 
 static int PrintSupportedExtensions(std::string TargetStr) {
+  llvm::Triple Triple(TargetStr);
   std::string Error;
   const llvm::Target *TheTarget =
-      llvm::TargetRegistry::lookupTarget(TargetStr, Error);
+      llvm::TargetRegistry::lookupTarget(Triple, Error);
   if (!TheTarget) {
     llvm::errs() << Error;
     return 1;
@@ -138,7 +142,7 @@ static int PrintSupportedExtensions(std::string TargetStr) {
 
   llvm::TargetOptions Options;
   std::unique_ptr<llvm::TargetMachine> TheTargetMachine(
-      TheTarget->createTargetMachine(TargetStr, "", "", Options, std::nullopt));
+      TheTarget->createTargetMachine(Triple, "", "", Options, std::nullopt));
   const llvm::Triple &MachineTriple = TheTargetMachine->getTargetTriple();
   const llvm::MCSubtargetInfo *MCInfo = TheTargetMachine->getMCSubtargetInfo();
   const llvm::ArrayRef<llvm::SubtargetFeatureKV> Features =
@@ -165,9 +169,10 @@ static int PrintSupportedExtensions(std::string TargetStr) {
 }
 
 static int PrintEnabledExtensions(const TargetOptions& TargetOpts) {
+  llvm::Triple Triple(TargetOpts.Triple);
   std::string Error;
   const llvm::Target *TheTarget =
-      llvm::TargetRegistry::lookupTarget(TargetOpts.Triple, Error);
+      llvm::TargetRegistry::lookupTarget(Triple, Error);
   if (!TheTarget) {
     llvm::errs() << Error;
     return 1;
@@ -179,7 +184,8 @@ static int PrintEnabledExtensions(const TargetOptions& TargetOpts) {
   llvm::TargetOptions BackendOptions;
   std::string FeaturesStr = llvm::join(TargetOpts.FeaturesAsWritten, ",");
   std::unique_ptr<llvm::TargetMachine> TheTargetMachine(
-      TheTarget->createTargetMachine(TargetOpts.Triple, TargetOpts.CPU, FeaturesStr, BackendOptions, std::nullopt));
+      TheTarget->createTargetMachine(Triple, TargetOpts.CPU, FeaturesStr,
+                                     BackendOptions, std::nullopt));
   const llvm::Triple &MachineTriple = TheTargetMachine->getTargetTriple();
   const llvm::MCSubtargetInfo *MCInfo = TheTargetMachine->getMCSubtargetInfo();
 
@@ -213,11 +219,10 @@ static int PrintEnabledExtensions(const TargetOptions& TargetOpts) {
 int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
   ensureSufficientStack();
 
-  std::unique_ptr<CompilerInstance> Clang(new CompilerInstance());
-  IntrusiveRefCntPtr<DiagnosticIDs> DiagID(new DiagnosticIDs());
+  IntrusiveRefCntPtr<DiagnosticIDs> DiagID = DiagnosticIDs::create();
 
   // Register the support for object-file-wrapped Clang modules.
-  auto PCHOps = Clang->getPCHContainerOperations();
+  auto PCHOps = std::make_shared<PCHContainerOperations>();
   PCHOps->registerWriter(std::make_unique<ObjectFilePCHContainerWriter>());
   PCHOps->registerReader(std::make_unique<ObjectFilePCHContainerReader>());
 
@@ -229,17 +234,21 @@ int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
 
   // Buffer diagnostics from argument parsing so that we can output them using a
   // well formed diagnostic object.
-  IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts = new DiagnosticOptions();
+  DiagnosticOptions DiagOpts;
   TextDiagnosticBuffer *DiagsBuffer = new TextDiagnosticBuffer;
-  DiagnosticsEngine Diags(DiagID, &*DiagOpts, DiagsBuffer);
+  DiagnosticsEngine Diags(DiagID, DiagOpts, DiagsBuffer);
 
   // Setup round-trip remarks for the DiagnosticsEngine used in CreateFromArgs.
   if (find(Argv, StringRef("-Rround-trip-cc1-args")) != Argv.end())
     Diags.setSeverity(diag::remark_cc1_round_trip_generated,
                       diag::Severity::Remark, {});
 
-  bool Success = CompilerInvocation::CreateFromArgs(Clang->getInvocation(),
-                                                    Argv, Diags, Argv0);
+  auto Invocation = std::make_shared<CompilerInvocation>();
+  bool Success =
+      CompilerInvocation::CreateFromArgs(*Invocation, Argv, Diags, Argv0);
+
+  auto Clang = std::make_unique<CompilerInstance>(std::move(Invocation),
+                                                  std::move(PCHOps));
 
   if (!Clang->getFrontendOpts().TimeTracePath.empty()) {
     llvm::timeTraceProfilerInitialize(
@@ -262,12 +271,17 @@ int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
   if (Clang->getHeaderSearchOpts().UseBuiltinIncludes &&
       Clang->getHeaderSearchOpts().ResourceDir.empty())
     Clang->getHeaderSearchOpts().ResourceDir =
-      CompilerInvocation::GetResourcesPath(Argv0, MainAddr);
+        GetResourcesPath(Argv0, MainAddr);
+
+  /// Create the actual file system.
+  auto VFS = [] {
+    auto BypassSandbox = llvm::sys::sandbox::scopedDisable();
+    return llvm::vfs::getRealFileSystem();
+  }();
+  Clang->createVirtualFileSystem(std::move(VFS), DiagsBuffer);
 
   // Create the actual diagnostics engine.
-  Clang->createDiagnostics(*llvm::vfs::getRealFileSystem());
-  if (!Clang->hasDiagnostics())
-    return 1;
+  Clang->createDiagnostics();
 
   // Set an error handler, so that any LLVM backend diagnostics go through our
   // error handler.
@@ -292,22 +306,21 @@ int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
 
   // If any timers were active but haven't been destroyed yet, print their
   // results now.  This happens in -disable-free mode.
-  llvm::TimerGroup::printAll(llvm::errs());
-  llvm::TimerGroup::clearAll();
+  {
+    // This isn't a formal input or output of the compiler.
+    auto BypassSandbox = llvm::sys::sandbox::scopedDisable();
+    std::unique_ptr<raw_ostream> IOFile = llvm::CreateInfoOutputFile();
+    if (Clang->getCodeGenOpts().TimePassesJson) {
+      *IOFile << "{\n";
+      llvm::TimerGroup::printAllJSONValues(*IOFile, "");
+      *IOFile << "\n}\n";
+    } else if (!Clang->getCodeGenOpts().TimePassesStatsFile) {
+      llvm::TimerGroup::printAll(*IOFile);
+    }
+    llvm::TimerGroup::clearAll();
+  }
 
   if (llvm::timeTraceProfilerEnabled()) {
-    // It is possible that the compiler instance doesn't own a file manager here
-    // if we're compiling a module unit. Since the file manager are owned by AST
-    // when we're compiling a module unit. So the file manager may be invalid
-    // here.
-    //
-    // It should be fine to create file manager here since the file system
-    // options are stored in the compiler invocation and we can recreate the VFS
-    // from the compiler invocation.
-    if (!Clang->hasFileManager())
-      Clang->createFileManager(createVFSFromCompilerInvocation(
-          Clang->getInvocation(), Clang->getDiagnostics()));
-
     if (auto profilerOutput = Clang->createOutputFile(
             Clang->getFrontendOpts().TimeTracePath, /*Binary=*/false,
             /*RemoveFileOnSignal=*/false,

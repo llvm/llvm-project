@@ -66,7 +66,6 @@
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/CommandLine.h"
@@ -150,8 +149,6 @@ bool SpeculativeExecutionLegacyPass::runOnFunction(Function &F) {
   return Impl.runImpl(F, TTI);
 }
 
-namespace llvm {
-
 bool SpeculativeExecutionPass::runImpl(Function &F, TargetTransformInfo *TTI) {
   if (OnlyIfDivergentTarget && !TTI->hasBranchDivergence(&F)) {
     LLVM_DEBUG(dbgs() << "Not running SpeculativeExecution because "
@@ -230,6 +227,7 @@ static InstructionCost ComputeSpeculationCost(const Instruction *I,
     case Instruction::Call:
     case Instruction::BitCast:
     case Instruction::PtrToInt:
+    case Instruction::PtrToAddr:
     case Instruction::IntToPtr:
     case Instruction::AddrSpaceCast:
     case Instruction::FPToUI:
@@ -296,10 +294,6 @@ bool SpeculativeExecutionPass::considerHoistingFromTo(
   };
   auto AllPrecedingUsesFromBlockHoisted =
       [&HasNoUnhoistedInstr](const User *U) {
-        // Do not hoist any debug info intrinsics.
-        if (isa<DbgInfoIntrinsic>(U))
-          return false;
-
         return HasNoUnhoistedInstr(U->operand_values());
       };
 
@@ -313,9 +307,7 @@ bool SpeculativeExecutionPass::considerHoistingFromTo(
       if (TotalSpeculationCost > SpecExecMaxSpeculationCost)
         return false;  // too much to hoist
     } else {
-      // Debug info intrinsics should not be counted for threshold.
-      if (!isa<DbgInfoIntrinsic>(I))
-        NotHoistedInstCount++;
+      NotHoistedInstCount++;
       if (NotHoistedInstCount > SpecExecMaxNotHoisted)
         return false; // too much left behind
       NotHoisted.insert(&I);
@@ -335,11 +327,11 @@ bool SpeculativeExecutionPass::considerHoistingFromTo(
   return true;
 }
 
-FunctionPass *createSpeculativeExecutionPass() {
+FunctionPass *llvm::createSpeculativeExecutionPass() {
   return new SpeculativeExecutionLegacyPass();
 }
 
-FunctionPass *createSpeculativeExecutionIfHasBranchDivergencePass() {
+FunctionPass *llvm::createSpeculativeExecutionIfHasBranchDivergencePass() {
   return new SpeculativeExecutionLegacyPass(/* OnlyIfDivergentTarget = */ true);
 }
 
@@ -369,4 +361,3 @@ void SpeculativeExecutionPass::printPipeline(
     OS << "only-if-divergent-target";
   OS << '>';
 }
-}  // namespace llvm

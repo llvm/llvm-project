@@ -1,7 +1,5 @@
 ; RUN: opt -safe-stack -S -mtriple=i386-pc-linux-gnu < %s -o - | FileCheck %s
-; RUN: opt -safe-stack -S -mtriple=i386-pc-linux-gnu < %s -o - --try-experimental-debuginfo-iterators | FileCheck %s
 ; RUN: opt -passes=safe-stack -S -mtriple=i386-pc-linux-gnu < %s -o - | FileCheck %s
-; RUN: opt -passes=safe-stack -S -mtriple=i386-pc-linux-gnu < %s -o - --try-experimental-debuginfo-iterators | FileCheck %s
 
 ; Test llvm.dbg.value for the local variables moved onto the unsafe stack.
 ; SafeStack rewrites them relative to the unsafe stack pointer (base address of
@@ -18,11 +16,11 @@ entry:
   %x2 = alloca i32, align 4
 
 ; Unhandled dbg.value: expression does not start with OP_DW_deref
-; CHECK: #dbg_value(ptr undef, !{{.*}}, !{{.*}})
+; CHECK: #dbg_value(ptr poison, !{{.*}}, !{{.*}})
   tail call void @llvm.dbg.value(metadata ptr %x1, metadata !10, metadata !23), !dbg !16
 
 ; Unhandled dbg.value: expression does not start with OP_DW_deref
-; CHECK: #dbg_value(ptr undef, !{{.*}}, !{{.*}})
+; CHECK: #dbg_value(ptr poison, !{{.*}}, !{{.*}})
   tail call void @llvm.dbg.value(metadata ptr %x1, metadata !10, metadata !24), !dbg !16
 
 ; Supported dbg.value: rewritted based on the [[USP]] value.
@@ -34,8 +32,8 @@ entry:
   tail call void @llvm.dbg.value(metadata ptr %x1, metadata !10, metadata !15), !dbg !16
   call void @capture(ptr nonnull %x1), !dbg !17
 
-; An extra non-dbg.value metadata use of %x2. Replaced with undef.
-; CHECK: call void @llvm.random.metadata.use(metadata ptr undef
+; An extra non-dbg.value metadata use of %x2. Replaced with poison.
+; CHECK: call void @llvm.random.metadata.use(metadata ptr poison
   call void @llvm.random.metadata.use(metadata ptr %x2)
 
 ; CHECK: #dbg_value(ptr %[[USP]], ![[X2:.*]], !DIExpression(DW_OP_constu, 8, DW_OP_minus, DW_OP_deref),
@@ -45,21 +43,20 @@ entry:
 }
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.start.p0(i64, ptr nocapture) #1
+declare void @llvm.lifetime.start.p0(ptr nocapture) #1
 
-declare void @capture(ptr) #2
+declare void @capture(ptr)
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.end.p0(i64, ptr nocapture) #1
+declare void @llvm.lifetime.end.p0(ptr nocapture) #1
 
 ; Function Attrs: nounwind readnone
 declare void @llvm.dbg.value(metadata, metadata, metadata) #3
 
 declare void @llvm.random.metadata.use(metadata)
 
-attributes #0 = { noinline safestack uwtable "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #0 = { noinline safestack uwtable }
 attributes #1 = { argmemonly nounwind }
-attributes #2 = { "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #3 = { nounwind readnone }
 attributes #4 = { nounwind }
 

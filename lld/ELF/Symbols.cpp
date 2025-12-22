@@ -15,7 +15,6 @@
 #include "SyntheticSections.h"
 #include "Target.h"
 #include "Writer.h"
-#include "lld/Common/ErrorHandler.h"
 #include "llvm/Demangle/Demangle.h"
 #include "llvm/Support/Compiler.h"
 #include <cstring>
@@ -36,7 +35,7 @@ template <typename T> struct AssertSymbol {
                 "SymbolUnion not aligned enough");
 };
 
-LLVM_ATTRIBUTE_UNUSED static inline void assertSymbols() {
+[[maybe_unused]] static inline void assertSymbols() {
   AssertSymbol<Defined>();
   AssertSymbol<CommonSymbol>();
   AssertSymbol<Undefined>();
@@ -268,16 +267,6 @@ uint8_t Symbol::computeBinding(Ctx &ctx) const {
   return binding;
 }
 
-bool Symbol::includeInDynsym(Ctx &ctx) const {
-  if (computeBinding(ctx) == STB_LOCAL)
-    return false;
-  if (!isDefined() && !isCommon())
-    return true;
-
-  return exportDynamic ||
-         (ctx.arg.exportDynamic && (isUsedInRegularObj || !ltoCanOmit));
-}
-
 // Print out a log message for --trace-symbol.
 void elf::printTraceSymbol(const Symbol &sym, StringRef name) {
   std::string s;
@@ -344,10 +333,13 @@ bool elf::computeIsPreemptible(Ctx &ctx, const Symbol &sym) {
   if (sym.visibility() != STV_DEFAULT)
     return false;
 
-  // At this point copy relocations have not been created yet, so any
-  // symbol that is not defined locally is preemptible.
+  // At this point copy relocations have not been created yet.
+  // Shared symbols are preemptible. Undefined symbols are preemptible
+  // when zDynamicUndefined (default in dynamic linking). Weakness is not
+  // checked, though undefined non-weak would typically trigger relocation
+  // errors unless options like -z undefs are used.
   if (!sym.isDefined())
-    return true;
+    return !sym.isUndefined() || ctx.arg.zDynamicUndefined;
 
   if (!ctx.arg.shared)
     return false;
@@ -370,13 +362,20 @@ void elf::parseVersionAndComputeIsPreemptible(Ctx &ctx) {
   // Symbol themselves might know their versions because symbols
   // can contain versions in the form of <name>@<version>.
   // Let them parse and update their names to exclude version suffix.
-  bool hasDynsym = ctx.hasDynsym;
+  // In addition, compute isExported and isPreemptible.
   for (Symbol *sym : ctx.symtab->getSymbols()) {
     if (sym->hasVersionSuffix)
       sym->parseSymbolVersion(ctx);
-    if (hasDynsym) {
-      sym->isExported = sym->includeInDynsym(ctx);
-      sym->isPreemptible = sym->isExported && computeIsPreemptible(ctx, *sym);
+    if (sym->computeBinding(ctx) == STB_LOCAL) {
+      sym->isExported = false;
+      continue;
+    }
+    if (!sym->isDefined() && !sym->isCommon()) {
+      sym->isPreemptible = computeIsPreemptible(ctx, *sym);
+    } else if (ctx.arg.exportDynamic &&
+               (sym->isUsedInRegularObj || !sym->ltoCanOmit)) {
+      sym->isExported = true;
+      sym->isPreemptible = computeIsPreemptible(ctx, *sym);
     }
   }
 }
@@ -655,7 +654,7 @@ void Symbol::resolve(Ctx &ctx, const LazySymbol &other) {
 }
 
 void Symbol::resolve(Ctx &ctx, const SharedSymbol &other) {
-  exportDynamic = true;
+  isExported = true;
   if (isPlaceholder()) {
     other.overwrite(*this);
     return;

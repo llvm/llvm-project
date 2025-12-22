@@ -215,6 +215,8 @@ TEST_F(QualifierFixerTest, RightQualifier) {
                Style);
   verifyFormat("void foo() const override;", Style);
   verifyFormat("void foo() const override LLVM_READONLY;", Style);
+  verifyFormat("MOCK_METHOD(ReturnType, myMethod, (int), (const override));",
+               Style);
   verifyFormat("void foo() const final;", Style);
   verifyFormat("void foo() const final LLVM_READONLY;", Style);
   verifyFormat("void foo() const LLVM_READONLY;", Style);
@@ -1122,14 +1124,17 @@ TEST_F(QualifierFixerTest, IsQualifierType) {
 }
 
 TEST_F(QualifierFixerTest, IsMacro) {
-
   auto Tokens = annotate("INT INTPR Foo int");
   ASSERT_EQ(Tokens.size(), 5u) << Tokens;
-
   EXPECT_TRUE(isPossibleMacro(Tokens[0]));
   EXPECT_TRUE(isPossibleMacro(Tokens[1]));
   EXPECT_FALSE(isPossibleMacro(Tokens[2]));
   EXPECT_FALSE(isPossibleMacro(Tokens[3]));
+
+  Tokens = annotate("FOO::BAR");
+  ASSERT_EQ(Tokens.size(), 4u) << Tokens;
+  EXPECT_FALSE(isPossibleMacro(Tokens[0]));
+  EXPECT_FALSE(isPossibleMacro(Tokens[2]));
 }
 
 TEST_F(QualifierFixerTest, OverlappingQualifier) {
@@ -1189,6 +1194,41 @@ TEST_F(QualifierFixerTest, QualifiersBrokenUpByPPDirectives) {
                "    constexpr\n"
                "#endif\n"
                "    int i = 0;",
+               Style);
+}
+
+TEST_F(QualifierFixerTest, QualifierOrderingAfterPreprocessorDirectives) {
+  auto Style = getLLVMStyle();
+  Style.QualifierAlignment = FormatStyle::QAS_Custom;
+  Style.QualifierOrder = {"static", "inline", "const", "type"};
+
+  verifyFormat("#if 1\n"
+               "void foo(const int par);\n"
+               "const int var1;\n"
+               "#endif\n"
+               "\n"
+               "const int var2;\n"
+               "const int var3;",
+               "#if 1\n"
+               "void foo(int const par);\n"
+               "int const var1;\n"
+               "#endif\n"
+               "\n"
+               "int const var2;\n"
+               "int const var3;",
+               Style);
+  verifyFormat("#if defined(FOO)\n"
+               "static const int x = 1;\n"
+               "#else\n"
+               "static const int x = 2;\n"
+               "#endif\n"
+               "static const int y = 3;",
+               "#if defined(FOO)\n"
+               "const static int x = 1;\n"
+               "#else\n"
+               "const static int x = 2;\n"
+               "#endif\n"
+               "const static int y = 3;",
                Style);
 }
 
@@ -1289,6 +1329,21 @@ TEST_F(QualifierFixerTest, WithCpp11Attribute) {
                Style);
   verifyFormat("[[maybe_unused]] static constexpr int A",
                "[[maybe_unused]] constexpr static int A", Style);
+}
+
+TEST_F(QualifierFixerTest, WithQualifiedTypeName) {
+  auto Style = getLLVMStyle();
+  Style.QualifierAlignment = FormatStyle::QAS_Custom;
+  Style.QualifierOrder = {"constexpr", "type", "const"};
+
+  verifyFormat("constexpr ::int64_t x{1};", "::int64_t constexpr x{1};", Style);
+  verifyFormat("constexpr std::int64_t x{123};",
+               "std::int64_t constexpr x{123};", Style);
+  verifyFormat("constexpr ::std::int64_t x{123};",
+               "::std::int64_t constexpr x{123};", Style);
+
+  Style.TypeNames.push_back("bar");
+  verifyFormat("constexpr foo::bar x{12};", "foo::bar constexpr x{12};", Style);
 }
 
 TEST_F(QualifierFixerTest, DisableRegions) {

@@ -293,6 +293,28 @@ def testValuePrintAsOperand():
         print(value2.get_name())
 
 
+# CHECK-LABEL: TEST: testValuePrintAsOperandNamedLocPrefix
+@run
+def testValuePrintAsOperandNamedLocPrefix():
+    ctx = Context()
+    ctx.allow_unregistered_dialects = True
+    with Location.unknown(ctx):
+        i32 = IntegerType.get_signless(32)
+
+        module = Module.create()
+        with InsertionPoint(module.body):
+            named_value = Operation.create(
+                "custom.op5", results=[i32], loc=Location.name("apple")
+            ).results[0]
+            # CHECK: Value(%[[VAL5:.*]] = "custom.op5"() : () -> i32)
+            print(named_value)
+
+        # CHECK: With use_name_loc_as_prefix
+        # CHECK: %apple
+        print("With use_name_loc_as_prefix")
+        print(named_value.get_name(use_name_loc_as_prefix=True))
+
+
 # CHECK-LABEL: TEST: testValueSetType
 @run
 def testValueSetType():

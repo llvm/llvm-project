@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=amdgcn -mattr=+mad-mac-f32-insts -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=SI %s
-; XUN: llc -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=VI %s
+; RUN: llc -mtriple=amdgcn -mattr=+mad-mac-f32-insts < %s | FileCheck -check-prefix=GCN -check-prefix=SI %s
+; XUN: llc -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global < %s | FileCheck -check-prefix=GCN -check-prefix=VI %s
 
  ; FIXME: None of these trigger madmk emission anymore. It is still
  ; possible, but requires the correct registers to be used which is
@@ -199,7 +199,7 @@ bb1:                                              ; preds = %bb2
   ret void
 
 bb2:                                              ; preds = %bb6, %bb
-  %tmp = phi float [ undef, %bb ], [ %tmp8, %bb6 ]
+  %tmp = phi float [ poison, %bb ], [ %tmp8, %bb6 ]
   %tid = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) #1
   %f_tid = bitcast i32 %tid to float
   %tmp3 = fsub float %f_tid, %tmp

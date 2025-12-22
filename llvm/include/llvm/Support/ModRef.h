@@ -16,6 +16,7 @@
 
 #include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/Sequence.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/raw_ostream.h"
 
 namespace llvm {
@@ -53,7 +54,7 @@ enum class ModRefInfo : uint8_t {
 }
 
 /// Debug print ModRefInfo.
-raw_ostream &operator<<(raw_ostream &OS, ModRefInfo MR);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, ModRefInfo MR);
 
 /// The locations at which a function might access memory.
 enum class IRMemLocation {
@@ -61,12 +62,19 @@ enum class IRMemLocation {
   ArgMem = 0,
   /// Memory that is inaccessible via LLVM IR.
   InaccessibleMem = 1,
+  /// Errno memory.
+  ErrnoMem = 2,
   /// Any other memory.
-  Other = 2,
+  Other = 3,
+  /// Represents target specific state.
+  TargetMem0 = 4,
+  TargetMem1 = 5,
 
   /// Helpers to iterate all locations in the MemoryEffectsBase class.
   First = ArgMem,
-  Last = Other,
+  FirstTarget = TargetMem0,
+  // TargetMem IDs must be at the end of the list.
+  Last = TargetMem1,
 };
 
 template <typename LocationEnum> class MemoryEffectsBase {
@@ -139,6 +147,16 @@ public:
     return MemoryEffectsBase(Location::InaccessibleMem, MR);
   }
 
+  /// Create MemoryEffectsBase that can only access errno memory.
+  static MemoryEffectsBase errnoMemOnly(ModRefInfo MR = ModRefInfo::ModRef) {
+    return MemoryEffectsBase(Location::ErrnoMem, MR);
+  }
+
+  /// Create MemoryEffectsBase that can only access other memory.
+  static MemoryEffectsBase otherMemOnly(ModRefInfo MR = ModRefInfo::ModRef) {
+    return MemoryEffectsBase(Location::Other, MR);
+  }
+
   /// Create MemoryEffectsBase that can only access inaccessible or argument
   /// memory.
   static MemoryEffectsBase
@@ -146,6 +164,16 @@ public:
     MemoryEffectsBase FRMB = none();
     FRMB.setModRef(Location::ArgMem, MR);
     FRMB.setModRef(Location::InaccessibleMem, MR);
+    return FRMB;
+  }
+
+  /// Create MemoryEffectsBase that can only access argument or errno memory.
+  static MemoryEffectsBase
+  argumentOrErrnoMemOnly(ModRefInfo ArgMR = ModRefInfo::ModRef,
+                         ModRefInfo ErrnoMR = ModRefInfo::ModRef) {
+    MemoryEffectsBase FRMB = none();
+    FRMB.setModRef(Location::ArgMem, ArgMR);
+    FRMB.setModRef(Location::ErrnoMem, ErrnoMR);
     return FRMB;
   }
 
@@ -212,6 +240,11 @@ public:
     return getWithoutLoc(Location::InaccessibleMem).doesNotAccessMemory();
   }
 
+  /// Whether this function only (at most) accesses errno memory.
+  bool onlyAccessesErrnoMem() const {
+    return getWithoutLoc(Location::ErrnoMem).doesNotAccessMemory();
+  }
+
   /// Whether this function only (at most) accesses argument and inaccessible
   /// memory.
   bool onlyAccessesInaccessibleOrArgMem() const {
@@ -268,7 +301,7 @@ public:
 using MemoryEffects = MemoryEffectsBase<IRMemLocation>;
 
 /// Debug print MemoryEffects.
-raw_ostream &operator<<(raw_ostream &OS, MemoryEffects RMRB);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, MemoryEffects RMRB);
 
 // Legacy alias.
 using FunctionModRefBehavior = MemoryEffects;
@@ -309,7 +342,15 @@ inline bool capturesFullProvenance(CaptureComponents CC) {
   return (CC & CaptureComponents::Provenance) == CaptureComponents::Provenance;
 }
 
-raw_ostream &operator<<(raw_ostream &OS, CaptureComponents CC);
+inline bool capturesAnyProvenance(CaptureComponents CC) {
+  return (CC & CaptureComponents::Provenance) != CaptureComponents::None;
+}
+
+inline bool capturesAll(CaptureComponents CC) {
+  return CC == CaptureComponents::All;
+}
+
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, CaptureComponents CC);
 
 /// Represents which components of the pointer may be captured in which
 /// location. This represents the captures(...) attribute in IR.
@@ -332,6 +373,15 @@ public:
 
   /// Create CaptureInfo that may capture all components of the pointer.
   static CaptureInfo all() { return CaptureInfo(CaptureComponents::All); }
+
+  /// Create CaptureInfo that may only capture via the return value.
+  static CaptureInfo
+  retOnly(CaptureComponents RetComponents = CaptureComponents::All) {
+    return CaptureInfo(CaptureComponents::None, RetComponents);
+  }
+
+  /// Whether the pointer is only captured via the return value.
+  bool isRetOnly() const { return capturesNothing(OtherComponents); }
 
   /// Get components potentially captured by the return value.
   CaptureComponents getRetComponents() const { return RetComponents; }
@@ -389,7 +439,7 @@ public:
   }
 };
 
-raw_ostream &operator<<(raw_ostream &OS, CaptureInfo Info);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, CaptureInfo Info);
 
 } // namespace llvm
 

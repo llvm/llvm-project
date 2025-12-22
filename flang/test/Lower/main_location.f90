@@ -12,6 +12,7 @@ endif
 end
 
 ! TEST1: func.func @_QQmain() {
+! TEST1-NEXT: fir.dummy_scope : !fir.dscope loc("{{.*}}test1.f90":1:1)
 ! TEST1-NEXT: return loc("{{.*}}test1.f90":3:1)
 ! TEST1-NEXT: } loc("{{.*}}test1.f90":1:1)
 
@@ -22,5 +23,6 @@ endif
 end program
 
 ! TEST2: func.func @_QQmain() {
+! TEST2-NEXT: fir.dummy_scope : !fir.dscope loc("{{.*}}test2.f90":2:1)
 ! TEST2-NEXT: return loc("{{.*}}test2.f90":4:1)
 ! TEST2-NEXT: } loc("{{.*}}test2.f90":2:1)

@@ -9,6 +9,6 @@ void uses() {
 #pragma acc shutdown device_type(*) device_num(Int)
 // CHECK: #pragma acc shutdown device_type(*) if(Int == 5)
 #pragma acc shutdown device_type(*) if (Int == 5)
-// CHECK: #pragma acc shutdown device_type(SomeName)
-#pragma acc shutdown device_type(SomeName)
+// CHECK: #pragma acc shutdown device_type(radeon)
+#pragma acc shutdown device_type(radeon)
 }

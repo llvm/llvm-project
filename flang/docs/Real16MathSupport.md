@@ -12,9 +12,9 @@ To support most `REAL(16)` (i.e. 128-bit float) math intrinsics Flang relies
 on third-party libraries providing the implementation.
 
 `-DFLANG_RUNTIME_F128_MATH_LIB=libquadmath` CMake option can be used
-to build `FortranFloat128Math` library that has unresolved references
+to build `libflang_rt.quadmath` library that has unresolved references
 to GCC `libquadmath` library. A Flang driver built with this option
-will automatically link `FortranFloat128Math` and `libquadmath` libraries
+will automatically link `libflang_rt.quadmath` and `libquadmath` libraries
 to any Fortran program. This implies that `libquadmath` library
 has to be available in the standard library paths, so that linker
 can find it. The `libquadmath` library installation into Flang project

@@ -2,8 +2,8 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=tonga < %s | FileCheck -check-prefix=ASM %s
 
 
-@global_array0 = internal unnamed_addr addrspace(3) global [750 x [10 x i32]] undef, align 4
-@global_array1 = internal unnamed_addr addrspace(3) global [750 x [10 x i32]] undef, align 4
+@global_array0 = internal unnamed_addr addrspace(3) global [750 x [10 x i32]] poison, align 4
+@global_array1 = internal unnamed_addr addrspace(3) global [750 x [10 x i32]] poison, align 4
 
 ; IR-LABEL: define amdgpu_kernel void @promote_alloca_size_256(ptr addrspace(1) captures(none) %out, ptr addrspace(1) captures(none) %in) {
 ; IR-NOT: alloca [10 x i32]

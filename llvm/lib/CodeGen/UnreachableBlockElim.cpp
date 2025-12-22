@@ -22,10 +22,12 @@
 #include "llvm/CodeGen/UnreachableBlockElim.h"
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
+#include "llvm/CodeGen/MachinePostDominators.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
@@ -72,38 +74,81 @@ PreservedAnalyses UnreachableBlockElimPass::run(Function &F,
 }
 
 namespace {
-  class UnreachableMachineBlockElim : public MachineFunctionPass {
-    bool runOnMachineFunction(MachineFunction &F) override;
-    void getAnalysisUsage(AnalysisUsage &AU) const override;
+class UnreachableMachineBlockElim {
+  MachineDominatorTree *MDT;
+  MachinePostDominatorTree *MPDT;
+  MachineLoopInfo *MLI;
 
-  public:
-    static char ID; // Pass identification, replacement for typeid
-    UnreachableMachineBlockElim() : MachineFunctionPass(ID) {}
-  };
-}
-char UnreachableMachineBlockElim::ID = 0;
+public:
+  UnreachableMachineBlockElim(MachineDominatorTree *MDT,
+                              MachinePostDominatorTree *MPDT,
+                              MachineLoopInfo *MLI)
+      : MDT(MDT), MPDT(MPDT), MLI(MLI) {}
+  bool run(MachineFunction &MF);
+};
 
-INITIALIZE_PASS(UnreachableMachineBlockElim, "unreachable-mbb-elimination",
-  "Remove unreachable machine basic blocks", false, false)
+class UnreachableMachineBlockElimLegacy : public MachineFunctionPass {
+  bool runOnMachineFunction(MachineFunction &F) override;
+  void getAnalysisUsage(AnalysisUsage &AU) const override;
 
-char &llvm::UnreachableMachineBlockElimID = UnreachableMachineBlockElim::ID;
+public:
+  static char ID; // Pass identification, replacement for typeid
+  UnreachableMachineBlockElimLegacy() : MachineFunctionPass(ID) {}
+};
+} // namespace
 
-void UnreachableMachineBlockElim::getAnalysisUsage(AnalysisUsage &AU) const {
+char UnreachableMachineBlockElimLegacy::ID = 0;
+
+INITIALIZE_PASS(UnreachableMachineBlockElimLegacy,
+                "unreachable-mbb-elimination",
+                "Remove unreachable machine basic blocks", false, false)
+
+char &llvm::UnreachableMachineBlockElimID =
+    UnreachableMachineBlockElimLegacy::ID;
+
+void UnreachableMachineBlockElimLegacy::getAnalysisUsage(
+    AnalysisUsage &AU) const {
   AU.addPreserved<MachineLoopInfoWrapperPass>();
   AU.addPreserved<MachineDominatorTreeWrapperPass>();
+  AU.addPreserved<MachinePostDominatorTreeWrapperPass>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
-bool UnreachableMachineBlockElim::runOnMachineFunction(MachineFunction &F) {
-  df_iterator_default_set<MachineBasicBlock*> Reachable;
-  bool ModifiedPHI = false;
+PreservedAnalyses
+UnreachableMachineBlockElimPass::run(MachineFunction &MF,
+                                     MachineFunctionAnalysisManager &AM) {
+  auto *MDT = AM.getCachedResult<MachineDominatorTreeAnalysis>(MF);
+  auto *MPDT = AM.getCachedResult<MachinePostDominatorTreeAnalysis>(MF);
+  auto *MLI = AM.getCachedResult<MachineLoopAnalysis>(MF);
 
+  if (!UnreachableMachineBlockElim(MDT, MPDT, MLI).run(MF))
+    return PreservedAnalyses::all();
+
+  return getMachineFunctionPassPreservedAnalyses()
+      .preserve<MachineLoopAnalysis>()
+      .preserve<MachineDominatorTreeAnalysis>()
+      .preserve<MachinePostDominatorTreeAnalysis>();
+}
+
+bool UnreachableMachineBlockElimLegacy::runOnMachineFunction(
+    MachineFunction &MF) {
   MachineDominatorTreeWrapperPass *MDTWrapper =
       getAnalysisIfAvailable<MachineDominatorTreeWrapperPass>();
+  MachinePostDominatorTreeWrapperPass *MPDTWrapper =
+      getAnalysisIfAvailable<MachinePostDominatorTreeWrapperPass>();
   MachineDominatorTree *MDT = MDTWrapper ? &MDTWrapper->getDomTree() : nullptr;
+  MachinePostDominatorTree *MPDT =
+      MPDTWrapper ? &MPDTWrapper->getPostDomTree() : nullptr;
   MachineLoopInfoWrapperPass *MLIWrapper =
       getAnalysisIfAvailable<MachineLoopInfoWrapperPass>();
   MachineLoopInfo *MLI = MLIWrapper ? &MLIWrapper->getLI() : nullptr;
+
+  return UnreachableMachineBlockElim(MDT, MPDT, MLI).run(MF);
+}
+
+bool UnreachableMachineBlockElim::run(MachineFunction &F) {
+  df_iterator_default_set<MachineBasicBlock *> Reachable;
+  bool ModifiedPHI = false;
 
   // Mark all reachable blocks.
   for (MachineBasicBlock *BB : depth_first_ext(&F, Reachable))
@@ -120,20 +165,11 @@ bool UnreachableMachineBlockElim::runOnMachineFunction(MachineFunction &F) {
       // Update dominator and loop info.
       if (MLI) MLI->removeBlock(&BB);
       if (MDT && MDT->getNode(&BB)) MDT->eraseNode(&BB);
+      if (MPDT && MPDT->getNode(&BB))
+        MPDT->eraseNode(&BB);
 
       while (!BB.succ_empty()) {
-        MachineBasicBlock* succ = *BB.succ_begin();
-
-        for (MachineInstr &Phi : succ->phis()) {
-          for (unsigned i = Phi.getNumOperands() - 1; i >= 2; i -= 2) {
-            if (Phi.getOperand(i).isMBB() &&
-                Phi.getOperand(i).getMBB() == &BB) {
-              Phi.removeOperand(i);
-              Phi.removeOperand(i - 1);
-            }
-          }
-        }
-
+        (*BB.succ_begin())->removePHIsIncomingValuesForPredecessor(BB);
         BB.removeSuccessor(BB.succ_begin());
       }
     }
@@ -152,8 +188,8 @@ bool UnreachableMachineBlockElim::runOnMachineFunction(MachineFunction &F) {
   // Cleanup PHI nodes.
   for (MachineBasicBlock &BB : F) {
     // Prune unneeded PHI entries.
-    SmallPtrSet<MachineBasicBlock*, 8> preds(BB.pred_begin(),
-                                             BB.pred_end());
+    SmallPtrSet<MachineBasicBlock *, 8> preds(llvm::from_range,
+                                              BB.predecessors());
     for (MachineInstr &Phi : make_early_inc_range(BB.phis())) {
       for (unsigned i = Phi.getNumOperands() - 1; i >= 2; i -= 2) {
         if (!preds.count(Phi.getOperand(i).getMBB())) {
@@ -197,6 +233,9 @@ bool UnreachableMachineBlockElim::runOnMachineFunction(MachineFunction &F) {
   F.RenumberBlocks();
   if (MDT)
     MDT->updateBlockNumbers();
+
+  if (MPDT)
+    MPDT->updateBlockNumbers();
 
   return (!DeadBlocks.empty() || ModifiedPHI);
 }

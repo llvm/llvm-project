@@ -1,4 +1,4 @@
-// RUN: mlir-opt -test-lower-to-arm-neon -verify-diagnostics -split-input-file %s | FileCheck %s
+// RUN: mlir-opt -transform-interpreter  %s | FileCheck %s
 
 // CHECK-LABEL: vector_arm_neon_mixed_types
 // CHECK-SAME:    %[[A0:.*]]: vector<2x8xi8>, %[[A1:.*]]: vector<2x8xi4>, %[[A2:.*]]: vector<2x2xi32>
@@ -17,14 +17,28 @@ func.func @vector_arm_neon_mixed_types(%lhs: vector<2x8xi8>, %rhs: vector<2x8xi4
 
 // -----
 
-// CHECK-LABEL: vector_arm_neon_same_types
-// CHECK-SAME:    %[[A0:.*]]: vector<2x8xi8>, %[[A1:.*]]: vector<2x8xi8>, %[[A2:.*]]: vector<2x2xi32>
-// CHECK-DAG: %[[D0:.*]] = vector.shape_cast %[[A0]] : vector<2x8xi8> to vector<16xi8>
-// CHECK-DAG: %[[D1:.*]] = vector.shape_cast %[[A1]] : vector<2x8xi8> to vector<16xi8>
-// CHECK-DAG: %[[D2:.*]] = vector.shape_cast %[[A2]] : vector<2x2xi32> to vector<4xi32>
-// CHECK-DAG: %[[D3:.*]] = arm_neon.intr.smmla %[[D2]], %[[D0]], %[[D1]] : vector<16xi8> to vector<4xi32>
-// CHECK-DAG: %[[D4:.*]] = vector.shape_cast %[[D3]] : vector<4xi32> to vector<2x2xi32>
-func.func @vector_arm_neon_same_types(%lhs: vector<2x8xi8>, %rhs: vector<2x8xi8>, %acc : vector<2x2xi32>) -> vector<2x2xi32> {
+// CHECK-LABEL: vector_arm_neon_implicit_extsi
+// CHECK-SAME:    %[[LHS:.+]]: vector<2x8xi8>, %[[RHS:.+]]: vector<2x8xi8>, %[[ACC:.+]]: vector<2x2xi32>
+// CHECK:       %[[L:.+]] = vector.shape_cast %[[LHS]] : vector<2x8xi8> to vector<16xi8>
+// CHECK:       %[[R:.+]] = vector.shape_cast %[[RHS]] : vector<2x8xi8> to vector<16xi8>
+// CHECK:       %[[A:.+]] = vector.shape_cast %[[ACC]] : vector<2x2xi32> to vector<4xi32>
+// CHECK:       %[[M:.+]] = arm_neon.intr.smmla %[[A]], %[[L]], %[[R]] : vector<16xi8> to vector<4xi32>
+// CHECK:       %{{.+}} = vector.shape_cast %[[M]] : vector<4xi32> to vector<2x2xi32>
+func.func @vector_arm_neon_implicit_extsi(%lhs: vector<2x8xi8>, %rhs: vector<2x8xi8>, %acc : vector<2x2xi32>) -> vector<2x2xi32> {
+  %res = vector.contract {indexing_maps = [affine_map<(d0, d1, d2) -> (d0, d2)>, affine_map<(d0, d1, d2) -> (d1, d2)>, affine_map<(d0, d1, d2) -> (d0, d1)>], iterator_types = ["parallel", "parallel", "reduction"], kind = #vector.kind<add>} %lhs, %rhs, %acc : vector<2x8xi8>, vector<2x8xi8> into vector<2x2xi32>
+  return %res : vector<2x2xi32>
+}
+
+// -----
+
+// CHECK-LABEL: vector_arm_neon_signed_signed
+// CHECK-SAME:    %[[LHS:.+]]: vector<2x8xi8>, %[[RHS:.+]]: vector<2x8xi8>, %[[ACC:.+]]: vector<2x2xi32>
+// CHECK:       %[[L:.+]] = vector.shape_cast %[[LHS]] : vector<2x8xi8> to vector<16xi8>
+// CHECK:       %[[R:.+]] = vector.shape_cast %[[RHS]] : vector<2x8xi8> to vector<16xi8>
+// CHECK:       %[[A:.+]] = vector.shape_cast %[[ACC]] : vector<2x2xi32> to vector<4xi32>
+// CHECK:       %[[M:.+]] = arm_neon.intr.smmla %[[A]], %[[L]], %[[R]] : vector<16xi8> to vector<4xi32>
+// CHECK:       %{{.+}} = vector.shape_cast %[[M]] : vector<4xi32> to vector<2x2xi32>
+func.func @vector_arm_neon_signed_signed(%lhs: vector<2x8xi8>, %rhs: vector<2x8xi8>, %acc : vector<2x2xi32>) -> vector<2x2xi32> {
   %lhs_extsi = arith.extsi %lhs : vector<2x8xi8> to vector<2x8xi32>
   %rhs_extsi = arith.extsi %rhs : vector<2x8xi8> to vector<2x8xi32>
   %res = vector.contract {indexing_maps = [affine_map<(d0, d1, d2) -> (d0, d2)>, affine_map<(d0, d1, d2) -> (d1, d2)>, affine_map<(d0, d1, d2) -> (d0, d1)>], iterator_types = ["parallel", "parallel", "reduction"], kind = #vector.kind<add>} %lhs_extsi, %rhs_extsi, %acc : vector<2x8xi32>, vector<2x8xi32> into vector<2x2xi32>
@@ -33,11 +47,51 @@ func.func @vector_arm_neon_same_types(%lhs: vector<2x8xi8>, %rhs: vector<2x8xi8>
 
 // -----
 
-// CHECK-LABEL: vector_arm_neon_without_extsi
-// CHECK-SAME:    %[[A0:.*]]: vector<2x8xi32>, %[[A1:.*]]: vector<2x8xi32>, %[[A2:.*]]: vector<2x2xi32>
-// CHECK-DAG: %[[D0:.*]] = vector.contract
-func.func @vector_arm_neon_without_extsi(%lhs: vector<2x8xi32>, %rhs: vector<2x8xi32>, %acc : vector<2x2xi32>) -> vector<2x2xi32> {
-  %res = vector.contract {indexing_maps = [affine_map<(d0, d1, d2) -> (d0, d2)>, affine_map<(d0, d1, d2) -> (d1, d2)>, affine_map<(d0, d1, d2) -> (d0, d1)>], iterator_types = ["parallel", "parallel", "reduction"], kind = #vector.kind<add>} %lhs, %rhs, %acc : vector<2x8xi32>, vector<2x8xi32> into vector<2x2xi32>
+// CHECK-LABEL: vector_arm_neon_unsigned_signed
+// CHECK-SAME:    %[[LHS:.+]]: vector<2x8xi8>, %[[RHS:.+]]: vector<2x8xi8>, %[[ACC:.+]]: vector<2x2xi32>
+// CHECK:       %[[L:.+]] = vector.shape_cast %[[LHS]] : vector<2x8xi8> to vector<16xi8>
+// CHECK:       %[[R:.+]] = vector.shape_cast %[[RHS]] : vector<2x8xi8> to vector<16xi8>
+// CHECK:       %[[A:.+]] = vector.shape_cast %[[ACC]] : vector<2x2xi32> to vector<4xi32>
+// CHECK:       %[[M:.+]] = arm_neon.intr.usmmla %[[A]], %[[L]], %[[R]] : vector<16xi8> to vector<4xi32>
+// CHECK:       %{{.+}} = vector.shape_cast %[[M]] : vector<4xi32> to vector<2x2xi32>
+func.func @vector_arm_neon_unsigned_signed(%lhs: vector<2x8xi8>, %rhs: vector<2x8xi8>, %acc : vector<2x2xi32>) -> vector<2x2xi32> {
+  %lhs_extsi = arith.extui %lhs : vector<2x8xi8> to vector<2x8xi32>
+  %rhs_extsi = arith.extsi %rhs : vector<2x8xi8> to vector<2x8xi32>
+  %res = vector.contract {indexing_maps = [affine_map<(d0, d1, d2) -> (d0, d2)>, affine_map<(d0, d1, d2) -> (d1, d2)>, affine_map<(d0, d1, d2) -> (d0, d1)>], iterator_types = ["parallel", "parallel", "reduction"], kind = #vector.kind<add>} %lhs_extsi, %rhs_extsi, %acc : vector<2x8xi32>, vector<2x8xi32> into vector<2x2xi32>
+  return %res : vector<2x2xi32>
+}
+
+// -----
+
+// CHECK-LABEL: vector_arm_neon_unsigned_unsigned
+// CHECK-SAME:    %[[LHS:.+]]: vector<2x8xi8>, %[[RHS:.+]]: vector<2x8xi8>, %[[ACC:.+]]: vector<2x2xi32>
+// CHECK:       %[[L:.+]] = vector.shape_cast %[[LHS]] : vector<2x8xi8> to vector<16xi8>
+// CHECK:       %[[R:.+]] = vector.shape_cast %[[RHS]] : vector<2x8xi8> to vector<16xi8>
+// CHECK:       %[[A:.+]] = vector.shape_cast %[[ACC]] : vector<2x2xi32> to vector<4xi32>
+// CHECK:       %[[M:.+]] = arm_neon.intr.ummla %[[A]], %[[L]], %[[R]] : vector<16xi8> to vector<4xi32>
+// CHECK:       %{{.+}} = vector.shape_cast %[[M]] : vector<4xi32> to vector<2x2xi32>
+func.func @vector_arm_neon_unsigned_unsigned(%lhs: vector<2x8xi8>, %rhs: vector<2x8xi8>, %acc : vector<2x2xi32>) -> vector<2x2xi32> {
+  %lhs_extsi = arith.extui %lhs : vector<2x8xi8> to vector<2x8xi32>
+  %rhs_extsi = arith.extui %rhs : vector<2x8xi8> to vector<2x8xi32>
+  %res = vector.contract {indexing_maps = [affine_map<(d0, d1, d2) -> (d0, d2)>, affine_map<(d0, d1, d2) -> (d1, d2)>, affine_map<(d0, d1, d2) -> (d0, d1)>], iterator_types = ["parallel", "parallel", "reduction"], kind = #vector.kind<add>} %lhs_extsi, %rhs_extsi, %acc : vector<2x8xi32>, vector<2x8xi32> into vector<2x2xi32>
+  return %res : vector<2x2xi32>
+}
+
+// -----
+
+// CHECK-LABEL: vector_arm_neon_signed_unsigned
+// CHECK-SAME:    %[[LHS:.+]]: vector<2x8xi8>, %[[RHS:.+]]: vector<2x8xi8>, %[[ACC:.+]]: vector<2x2xi32>
+// CHECK:       %[[ACC_T:.+]] = vector.transpose %[[ACC]], [1, 0] : vector<2x2xi32> to vector<2x2xi32>
+// CHECK:       %[[L:.+]] = vector.shape_cast %[[LHS]] : vector<2x8xi8> to vector<16xi8>
+// CHECK:       %[[R:.+]] = vector.shape_cast %[[RHS]] : vector<2x8xi8> to vector<16xi8>
+// CHECK:       %[[A:.+]] = vector.shape_cast %[[ACC_T]] : vector<2x2xi32> to vector<4xi32>
+// CHECK:       %[[M:.+]] = arm_neon.intr.usmmla %[[A]], %[[R]], %[[L]] : vector<16xi8> to vector<4xi32>
+// CHECK:       %[[OUT_T:.+]] = vector.shape_cast %[[M]] : vector<4xi32> to vector<2x2xi32>
+// CHECK:       %{{.+}} = vector.transpose %[[OUT_T]], [1, 0] : vector<2x2xi32> to vector<2x2xi32>
+func.func @vector_arm_neon_signed_unsigned(%lhs: vector<2x8xi8>, %rhs: vector<2x8xi8>, %acc : vector<2x2xi32>) -> vector<2x2xi32> {
+  %lhs_extsi = arith.extsi %lhs : vector<2x8xi8> to vector<2x8xi32>
+  %rhs_extsi = arith.extui %rhs : vector<2x8xi8> to vector<2x8xi32>
+  %res = vector.contract {indexing_maps = [affine_map<(d0, d1, d2) -> (d0, d2)>, affine_map<(d0, d1, d2) -> (d1, d2)>, affine_map<(d0, d1, d2) -> (d0, d1)>], iterator_types = ["parallel", "parallel", "reduction"], kind = #vector.kind<add>} %lhs_extsi, %rhs_extsi, %acc : vector<2x8xi32>, vector<2x8xi32> into vector<2x2xi32>
   return %res : vector<2x2xi32>
 }
 
@@ -353,4 +407,122 @@ func.func @vector_arm_neon_k_unroll_vecmat(%lhs: vector<1x32xi8>, %rhs: vector<2
   %rhs_extsi = arith.extsi %rhs : vector<2x32xi4> to vector<2x32xi32>
   %res = vector.contract {indexing_maps = [affine_map<(d0, d1, d2) -> (d0, d2)>, affine_map<(d0, d1, d2) -> (d1, d2)>, affine_map<(d0, d1, d2) -> (d0, d1)>], iterator_types = ["parallel", "parallel", "reduction"], kind = #vector.kind<add>} %lhs_extsi, %rhs_extsi, %acc : vector<1x32xi32>, vector<2x32xi32> into vector<1x2xi32>
   return %res : vector<1x2xi32>
+}
+
+// -----
+
+// Test with more than one iteration across all of the M, N and K dimensions.
+// Shows multiple independent accumulators as well as accumulator reuse.
+// For each iterarion [I, J, K] sub-tiles are extracted from offsets as follows:
+//   LHS: [2*I, 8*K]
+//   RHS: [2*J, 8*K]
+//   ACC: [2*I, 2*J]
+// Sub-tile insert offsets for the result are as like ACC (there are redundant
+// inserts).
+
+// CHECK-LABEL: @vector_arm_neon_mnk_unroll
+// CHECK-SAME:    %[[LHS:arg0]]: vector<4x16xi8>
+// CHECK-SAME:    %[[RHS:arg1]]: vector<4x16xi8>
+// CHECK-SAME:    %[[ACC:arg2]]: vector<4x4xi32>
+// CHECK-SAME:    -> vector<4x4xi32> {
+// CHECK-NEXT:  %cst = arith.constant dense<0> : vector<4x4xi32>
+
+// Iteration: [0, 0, 0]
+// CHECK-NEXT:  %[[VAL_0:[0-9]+]] = vector.extract_strided_slice %[[LHS]] {offsets = [0, 0], sizes = [2, 8], strides = [1, 1]} : vector<4x16xi8> to vector<2x8xi8>
+// CHECK-NEXT:  %[[VAL_1:[0-9]+]] = vector.extract_strided_slice %[[RHS]] {offsets = [0, 0], sizes = [2, 8], strides = [1, 1]} : vector<4x16xi8> to vector<2x8xi8>
+// CHECK-NEXT:  %[[VAL_2:[0-9]+]] = vector.extract_strided_slice %[[ACC]] {offsets = [0, 0], sizes = [2, 2], strides = [1, 1]} : vector<4x4xi32> to vector<2x2xi32>
+// CHECK-NEXT:  %[[VAL_3:[0-9]+]] = vector.shape_cast %[[VAL_0]] : vector<2x8xi8> to vector<16xi8>
+// CHECK-NEXT:  %[[VAL_4:[0-9]+]] = vector.shape_cast %[[VAL_1]] : vector<2x8xi8> to vector<16xi8>
+// CHECK-NEXT:  %[[VAL_5:[0-9]+]] = vector.shape_cast %[[VAL_2]] : vector<2x2xi32> to vector<4xi32>
+// CHECK-NEXT:  %[[KACC_0_v0:[0-9]+]] = arm_neon.intr.smmla %[[VAL_5]], %[[VAL_3]], %[[VAL_4]] : vector<16xi8> to vector<4xi32>
+// CHECK-NEXT:  %[[VAL_7:[0-9]+]] = vector.shape_cast %[[KACC_0_v0]] : vector<4xi32> to vector<2x2xi32>
+// CHECK-NEXT:  %[[VAL_8:[0-9]+]] = vector.insert_strided_slice %[[VAL_7]], %cst {offsets = [0, 0], strides = [1, 1]} : vector<2x2xi32> into vector<4x4xi32>
+
+// Iteration: [0, 0, 1]
+// CHECK-NEXT:  %[[VAL_9:[0-9]+]] = vector.extract_strided_slice %[[LHS]] {offsets = [0, 8], sizes = [2, 8], strides = [1, 1]} : vector<4x16xi8> to vector<2x8xi8>
+// CHECK-NEXT:  %[[VAL_10:[0-9]+]] = vector.extract_strided_slice %[[RHS]] {offsets = [0, 8], sizes = [2, 8], strides = [1, 1]} : vector<4x16xi8> to vector<2x8xi8>
+// CHECK-NEXT:  %[[VAL_11:[0-9]+]] = vector.shape_cast %[[VAL_9]] : vector<2x8xi8> to vector<16xi8>
+// CHECK-NEXT:  %[[VAL_12:[0-9]+]] = vector.shape_cast %[[VAL_10]] : vector<2x8xi8> to vector<16xi8>
+// CHECK-NEXT:  %[[KACC_0_v1:[0-9]+]] = arm_neon.intr.smmla %[[KACC_0_v0]], %[[VAL_11]], %[[VAL_12]] : vector<16xi8> to vector<4xi32>
+// CHECK-NEXT:  %[[VAL_14:[0-9]+]] = vector.shape_cast %[[KACC_0_v1]] : vector<4xi32> to vector<2x2xi32>
+// CHECK-NEXT:  %[[VAL_15:[0-9]+]] = vector.insert_strided_slice %[[VAL_14]], %[[VAL_8]] {offsets = [0, 0], strides = [1, 1]} : vector<2x2xi32> into vector<4x4xi32>
+
+// Iteration: [0, 1, 0]
+// CHECK-NEXT:  %[[VAL_16:[0-9]+]] = vector.extract_strided_slice %[[LHS]] {offsets = [0, 0], sizes = [2, 8], strides = [1, 1]} : vector<4x16xi8> to vector<2x8xi8>
+// CHECK-NEXT:  %[[VAL_17:[0-9]+]] = vector.extract_strided_slice %[[RHS]] {offsets = [2, 0], sizes = [2, 8], strides = [1, 1]} : vector<4x16xi8> to vector<2x8xi8>
+// CHECK-NEXT:  %[[VAL_18:[0-9]+]] = vector.extract_strided_slice %[[ACC]] {offsets = [0, 2], sizes = [2, 2], strides = [1, 1]} : vector<4x4xi32> to vector<2x2xi32>
+// CHECK-NEXT:  %[[VAL_19:[0-9]+]] = vector.shape_cast %[[VAL_16]] : vector<2x8xi8> to vector<16xi8>
+// CHECK-NEXT:  %[[VAL_20:[0-9]+]] = vector.shape_cast %[[VAL_17]] : vector<2x8xi8> to vector<16xi8>
+// CHECK-NEXT:  %[[VAL_21:[0-9]+]] = vector.shape_cast %[[VAL_18]] : vector<2x2xi32> to vector<4xi32>
+// CHECK-NEXT:  %[[KACC_1_v0:[0-9]+]] = arm_neon.intr.smmla %[[VAL_21]], %[[VAL_19]], %[[VAL_20]] : vector<16xi8> to vector<4xi32>
+// CHECK-NEXT:  %[[VAL_23:[0-9]+]] = vector.shape_cast %[[KACC_1_v0]] : vector<4xi32> to vector<2x2xi32>
+// CHECK-NEXT:  %[[VAL_24:[0-9]+]] = vector.insert_strided_slice %[[VAL_23]], %[[VAL_15]] {offsets = [0, 2], strides = [1, 1]} : vector<2x2xi32> into vector<4x4xi32>
+
+// Iteration: [0, 1, 1]
+// CHECK-NEXT:  %[[VAL_25:[0-9]+]] = vector.extract_strided_slice %[[LHS]] {offsets = [0, 8], sizes = [2, 8], strides = [1, 1]} : vector<4x16xi8> to vector<2x8xi8>
+// CHECK-NEXT:  %[[VAL_26:[0-9]+]] = vector.extract_strided_slice %[[RHS]] {offsets = [2, 8], sizes = [2, 8], strides = [1, 1]} : vector<4x16xi8> to vector<2x8xi8>
+// CHECK-NEXT:  %[[VAL_27:[0-9]+]] = vector.shape_cast %[[VAL_25]] : vector<2x8xi8> to vector<16xi8>
+// CHECK-NEXT:  %[[VAL_28:[0-9]+]] = vector.shape_cast %[[VAL_26]] : vector<2x8xi8> to vector<16xi8>
+// CHECK-NEXT:  %[[KACC_1_v1:[0-9]+]] = arm_neon.intr.smmla %[[KACC_1_v0]], %[[VAL_27]], %[[VAL_28]] : vector<16xi8> to vector<4xi32>
+// CHECK-NEXT:  %[[VAL_30:[0-9]+]] = vector.shape_cast %[[KACC_1_v1]] : vector<4xi32> to vector<2x2xi32>
+// CHECK-NEXT:  %[[VAL_31:[0-9]+]] = vector.insert_strided_slice %[[VAL_30]], %[[VAL_24]] {offsets = [0, 2], strides = [1, 1]} : vector<2x2xi32> into vector<4x4xi32>
+
+// Iteration: [1, 0, 0]
+// CHECK-NEXT:  %[[VAL_32:[0-9]+]] = vector.extract_strided_slice %[[LHS]] {offsets = [2, 0], sizes = [2, 8], strides = [1, 1]} : vector<4x16xi8> to vector<2x8xi8>
+// CHECK-NEXT:  %[[VAL_33:[0-9]+]] = vector.extract_strided_slice %[[RHS]] {offsets = [0, 0], sizes = [2, 8], strides = [1, 1]} : vector<4x16xi8> to vector<2x8xi8>
+// CHECK-NEXT:  %[[VAL_34:[0-9]+]] = vector.extract_strided_slice %[[ACC]] {offsets = [2, 0], sizes = [2, 2], strides = [1, 1]} : vector<4x4xi32> to vector<2x2xi32>
+// CHECK-NEXT:  %[[VAL_35:[0-9]+]] = vector.shape_cast %[[VAL_32]] : vector<2x8xi8> to vector<16xi8>
+// CHECK-NEXT:  %[[VAL_36:[0-9]+]] = vector.shape_cast %[[VAL_33]] : vector<2x8xi8> to vector<16xi8>
+// CHECK-NEXT:  %[[VAL_37:[0-9]+]] = vector.shape_cast %[[VAL_34]] : vector<2x2xi32> to vector<4xi32>
+// CHECK-NEXT:  %[[KACC_2_v0:[0-9]+]] = arm_neon.intr.smmla %[[VAL_37]], %[[VAL_35]], %[[VAL_36]] : vector<16xi8> to vector<4xi32>
+// CHECK-NEXT:  %[[VAL_39:[0-9]+]] = vector.shape_cast %[[KACC_2_v0]] : vector<4xi32> to vector<2x2xi32>
+// CHECK-NEXT:  %[[VAL_40:[0-9]+]] = vector.insert_strided_slice %[[VAL_39]], %[[VAL_31]] {offsets = [2, 0], strides = [1, 1]} : vector<2x2xi32> into vector<4x4xi32>
+
+// Iteration: [1, 0, 1]
+// CHECK-NEXT:  %[[VAL_41:[0-9]+]] = vector.extract_strided_slice %[[LHS]] {offsets = [2, 8], sizes = [2, 8], strides = [1, 1]} : vector<4x16xi8> to vector<2x8xi8>
+// CHECK-NEXT:  %[[VAL_42:[0-9]+]] = vector.extract_strided_slice %[[RHS]] {offsets = [0, 8], sizes = [2, 8], strides = [1, 1]} : vector<4x16xi8> to vector<2x8xi8>
+// CHECK-NEXT:  %[[VAL_43:[0-9]+]] = vector.shape_cast %[[VAL_41]] : vector<2x8xi8> to vector<16xi8>
+// CHECK-NEXT:  %[[VAL_44:[0-9]+]] = vector.shape_cast %[[VAL_42]] : vector<2x8xi8> to vector<16xi8>
+// CHECK-NEXT:  %[[KACC_2_v1:[0-9]+]] = arm_neon.intr.smmla %[[KACC_2_v0]], %[[VAL_43]], %[[VAL_44]] : vector<16xi8> to vector<4xi32>
+// CHECK-NEXT:  %[[VAL_46:[0-9]+]] = vector.shape_cast %[[KACC_2_v1]] : vector<4xi32> to vector<2x2xi32>
+// CHECK-NEXT:  %[[VAL_47:[0-9]+]] = vector.insert_strided_slice %[[VAL_46]], %[[VAL_40]] {offsets = [2, 0], strides = [1, 1]} : vector<2x2xi32> into vector<4x4xi32>
+
+// Iteration: [1, 1, 0]
+// CHECK-NEXT:  %[[VAL_48:[0-9]+]] = vector.extract_strided_slice %[[LHS]] {offsets = [2, 0], sizes = [2, 8], strides = [1, 1]} : vector<4x16xi8> to vector<2x8xi8>
+// CHECK-NEXT:  %[[VAL_49:[0-9]+]] = vector.extract_strided_slice %[[RHS]] {offsets = [2, 0], sizes = [2, 8], strides = [1, 1]} : vector<4x16xi8> to vector<2x8xi8>
+// CHECK-NEXT:  %[[VAL_50:[0-9]+]] = vector.extract_strided_slice %[[ACC]] {offsets = [2, 2], sizes = [2, 2], strides = [1, 1]} : vector<4x4xi32> to vector<2x2xi32>
+// CHECK-NEXT:  %[[VAL_51:[0-9]+]] = vector.shape_cast %[[VAL_48]] : vector<2x8xi8> to vector<16xi8>
+// CHECK-NEXT:  %[[VAL_52:[0-9]+]] = vector.shape_cast %[[VAL_49]] : vector<2x8xi8> to vector<16xi8>
+// CHECK-NEXT:  %[[VAL_53:[0-9]+]] = vector.shape_cast %[[VAL_50]] : vector<2x2xi32> to vector<4xi32>
+// CHECK-NEXT:  %[[KACC_3_v0:[0-9]+]] = arm_neon.intr.smmla %[[VAL_53]], %[[VAL_51]], %[[VAL_52]] : vector<16xi8> to vector<4xi32>
+// CHECK-NEXT:  %[[VAL_55:[0-9]+]] = vector.shape_cast %[[KACC_3_v0]] : vector<4xi32> to vector<2x2xi32>
+// CHECK-NEXT:  %[[VAL_56:[0-9]+]] = vector.insert_strided_slice %[[VAL_55]], %[[VAL_47]] {offsets = [2, 2], strides = [1, 1]} : vector<2x2xi32> into vector<4x4xi32>
+
+// Iteration: [1, 1, 1]
+// CHECK-NEXT:  %[[VAL_57:[0-9]+]] = vector.extract_strided_slice %[[LHS]] {offsets = [2, 8], sizes = [2, 8], strides = [1, 1]} : vector<4x16xi8> to vector<2x8xi8>
+// CHECK-NEXT:  %[[VAL_58:[0-9]+]] = vector.extract_strided_slice %[[RHS]] {offsets = [2, 8], sizes = [2, 8], strides = [1, 1]} : vector<4x16xi8> to vector<2x8xi8>
+// CHECK-NEXT:  %[[VAL_59:[0-9]+]] = vector.shape_cast %[[VAL_57]] : vector<2x8xi8> to vector<16xi8>
+// CHECK-NEXT:  %[[VAL_60:[0-9]+]] = vector.shape_cast %[[VAL_58]] : vector<2x8xi8> to vector<16xi8>
+// CHECK-NEXT:  %[[KACC_3_v1:[0-9]+]] = arm_neon.intr.smmla %[[KACC_3_v0]], %[[VAL_59]], %[[VAL_60]] : vector<16xi8> to vector<4xi32>
+// CHECK-NEXT:  %[[VAL_62:[0-9]+]] = vector.shape_cast %[[KACC_3_v1]] : vector<4xi32> to vector<2x2xi32>
+// CHECK-NEXT:  %[[VAL_63:[0-9]+]] = vector.insert_strided_slice %[[VAL_62]], %[[VAL_56]] {offsets = [2, 2], strides = [1, 1]} : vector<2x2xi32> into vector<4x4xi32>
+
+// CHECK-NEXT:  return %[[VAL_63]] : vector<4x4xi32>
+func.func @vector_arm_neon_mnk_unroll(%lhs: vector<4x16xi8>, %rhs: vector<4x16xi8>, %acc : vector<4x4xi32>) -> vector<4x4xi32> {
+  %lhs_extsi = arith.extsi %lhs : vector<4x16xi8> to vector<4x16xi32>
+  %rhs_extsi = arith.extsi %rhs : vector<4x16xi8> to vector<4x16xi32>
+  %res = vector.contract {indexing_maps = [affine_map<(d0, d1, d2) -> (d0, d2)>, affine_map<(d0, d1, d2) -> (d1, d2)>, affine_map<(d0, d1, d2) -> (d0, d1)>], iterator_types = ["parallel", "parallel", "reduction"], kind = #vector.kind<add>} %lhs_extsi, %rhs_extsi, %acc : vector<4x16xi32>, vector<4x16xi32> into vector<4x4xi32>
+  return %res : vector<4x4xi32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%module: !transform.any_op {transform.readonly}) {
+    %func = transform.structured.match ops{["func.func"]} in %module : (!transform.any_op) -> !transform.op<"func.func">
+
+    transform.apply_patterns to %func {
+      transform.apply_patterns.arm_neon.vector_contract_to_i8mm
+    } : !transform.op<"func.func">
+
+    transform.yield
+  }
 }

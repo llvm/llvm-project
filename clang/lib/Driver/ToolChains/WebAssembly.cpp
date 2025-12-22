@@ -7,14 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "WebAssembly.h"
-#include "CommonArgs.h"
 #include "Gnu.h"
-#include "clang/Basic/Version.h"
 #include "clang/Config/config.h"
+#include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
-#include "clang/Driver/DriverDiagnostic.h"
-#include "clang/Driver/Options.h"
+#include "clang/Options/Options.h"
 #include "llvm/Config/llvm-config.h" // for LLVM_VERSION_STRING
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/FileSystem.h"
@@ -67,6 +65,18 @@ static bool TargetBuildsComponents(const llvm::Triple &TargetTriple) {
   // the original `wasi` target in addition to the `wasip1` name.
   return TargetTriple.isOSWASI() && TargetTriple.getOSName() != "wasip1" &&
          TargetTriple.getOSName() != "wasi";
+}
+
+static bool WantsPthread(const llvm::Triple &Triple, const ArgList &Args) {
+  bool WantsPthread =
+      Args.hasFlag(options::OPT_pthread, options::OPT_no_pthread, false);
+
+  // If the WASI environment is "threads" then enable pthreads support
+  // without requiring -pthread, in order to prevent user error
+  if (Triple.isOSWASI() && Triple.getEnvironmentName() == "threads")
+    WantsPthread = true;
+
+  return WantsPthread;
 }
 
 void wasm::Linker::ConstructJob(Compilation &C, const JobAction &JA,
@@ -150,14 +160,15 @@ void wasm::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   AddLinkerInputs(ToolChain, Inputs, Args, CmdArgs, JA);
 
+  if (WantsPthread(ToolChain.getTriple(), Args))
+    CmdArgs.push_back("--shared-memory");
+
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs)) {
     if (ToolChain.ShouldLinkCXXStdlib(Args))
       ToolChain.AddCXXStdlibLibArgs(Args, CmdArgs);
 
-    if (Args.hasArg(options::OPT_pthread)) {
+    if (WantsPthread(ToolChain.getTriple(), Args))
       CmdArgs.push_back("-lpthread");
-      CmdArgs.push_back("--shared-memory");
-    }
 
     CmdArgs.push_back("-lc");
     AddRunTimeLibs(ToolChain, ToolChain.getDriver(), CmdArgs, Args);
@@ -286,13 +297,12 @@ bool WebAssembly::HasNativeLLVMSupport() const { return true; }
 void WebAssembly::addClangTargetOptions(const ArgList &DriverArgs,
                                         ArgStringList &CC1Args,
                                         Action::OffloadKind) const {
-  if (!DriverArgs.hasFlag(clang::driver::options::OPT_fuse_init_array,
+  if (!DriverArgs.hasFlag(options::OPT_fuse_init_array,
                           options::OPT_fno_use_init_array, true))
     CC1Args.push_back("-fno-use-init-array");
 
   // '-pthread' implies atomics, bulk-memory, mutable-globals, and sign-ext
-  if (DriverArgs.hasFlag(options::OPT_pthread, options::OPT_no_pthread,
-                         false)) {
+  if (WantsPthread(getTriple(), DriverArgs)) {
     if (DriverArgs.hasFlag(options::OPT_mno_atomics, options::OPT_matomics,
                            false))
       getDriver().Diag(diag::err_drv_argument_not_allowed_with)
@@ -462,7 +472,7 @@ WebAssembly::GetCXXStdlibType(const ArgList &Args) const {
 
 void WebAssembly::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
                                             ArgStringList &CC1Args) const {
-  if (DriverArgs.hasArg(clang::driver::options::OPT_nostdinc))
+  if (DriverArgs.hasArg(options::OPT_nostdinc))
     return;
 
   const Driver &D = getDriver();
@@ -533,8 +543,13 @@ void WebAssembly::AddCXXStdlibLibArgs(const llvm::opt::ArgList &Args,
 SanitizerMask WebAssembly::getSupportedSanitizers() const {
   SanitizerMask Res = ToolChain::getSupportedSanitizers();
   if (getTriple().isOSEmscripten()) {
-    Res |= SanitizerKind::Vptr | SanitizerKind::Leak | SanitizerKind::Address;
+    Res |= SanitizerKind::Vptr | SanitizerKind::Leak;
   }
+
+  if (getTriple().isOSEmscripten() || getTriple().isOSWASI()) {
+    Res |= SanitizerKind::Address;
+  }
+
   // -fsanitize=function places two words before the function label, which are
   // -unsupported.
   Res &= ~SanitizerKind::Function;

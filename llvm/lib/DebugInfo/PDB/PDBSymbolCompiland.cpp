@@ -63,7 +63,7 @@ std::string PDBSymbolCompiland::getSourceFileFullPath() const {
         auto Len = EnvWorkingDir.length();
         if (EnvWorkingDir[Len - 1] != '/' && EnvWorkingDir[Len - 1] != '\\') {
           std::string Path = EnvWorkingDir + "\\" + EnvSrc;
-          std::replace(Path.begin(), Path.end(), '/', '\\');
+          llvm::replace(Path, '/', '\\');
           // We will return it as full path if we can't find a better one.
           if (sys::path::is_absolute(Path))
             SourceFileFullPath = Path;

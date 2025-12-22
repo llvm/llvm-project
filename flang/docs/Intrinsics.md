@@ -1,9 +1,9 @@
-<!--===- docs/Intrinsics.md 
-  
+<!--===- docs/Intrinsics.md
+
    Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
    See https://llvm.org/LICENSE.txt for license information.
    SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-  
+
 -->
 
 # A categorization of standard (2018) and extended Fortran intrinsic procedures
@@ -19,7 +19,7 @@ of functions or subroutines with similar interfaces as an aid to
 comprehension beyond that which might be gained from the standard's
 alphabetical list.
 
-A brief status of intrinsic procedure support in f18 is also given at the end.
+A brief status of intrinsic procedure support in Flang is also given at the end.
 
 Few procedures are actually described here apart from their interfaces; see the
 Fortran 2018 standard (section 16) for the complete story.
@@ -241,8 +241,14 @@ BESSEL_Y0(REAL(k) X) -> REAL(k)
 BESSEL_Y1(REAL(k) X) -> REAL(k)
 BESSEL_YN(INTEGER(n) N, REAL(k) X) -> REAL(k)
 ERF(REAL(k) X) -> REAL(k)
+DERF(REAL(8) X) -> REAL(8)
+QERF(REAL(16) X) -> REAL(16)
 ERFC(REAL(k) X) -> REAL(k)
+DERFC(REAL(8) X) -> REAL(8)
+QERFC(REAL(16) X) -> REAL(16)
 ERFC_SCALED(REAL(k) X) -> REAL(k)
+DERFC_SCALED(REAL(8) X) -> REAL(8)
+QERFC_SCALED(REAL(16) X) -> REAL(16)
 FRACTION(REAL(k) X) -> REAL(k)
 GAMMA(REAL(k) X) -> REAL(k)
 HYPOT(REAL(k) X, REAL(k) Y) -> REAL(k) = SQRT(X*X+Y*Y) without spurious overflow
@@ -703,12 +709,14 @@ CACHESIZE, EOF, FP_CLASS, INT_PTR_KIND, ISNAN, LOC
 MALLOC, FREE
 ```
 
-### Library subroutine 
+### Library subroutines and functions
 ```
+ticks = MCLOCK()
 CALL BACKTRACE()
 CALL FDATE(TIME)
 CALL GETLOG(USRNAME)
 CALL GETENV(NAME [, VALUE, LENGTH, STATUS, TRIM_NAME, ERRMSG ])
+unixFD = FNUM(FORTRAN_UNIT)
 ```
 
 ## Intrinsic Procedure Name Resolution
@@ -725,20 +733,20 @@ In case the invocation would be an error if the procedure were the intrinsic
 leaves two choices to the compiler: emit an error about the intrinsic invocation,
 or consider this is an external procedure and emit no error.
 
-f18 will always consider this case to be the intrinsic and emit errors, unless the procedure
+Flang will always consider this case to be the intrinsic and emit errors, unless the procedure
 is used as a function (resp. subroutine) and the intrinsic is a subroutine (resp. function).
 The table below gives some examples of decisions made by Fortran compilers in such case.
 
 | What is ACOS ?     | Bad intrinsic call       | External with warning |  External no warning | Other error |
 | --- | --- | --- | --- | --- |
-| `print*, ACOS()`     | gfortran, nag, xlf, f18  |  ifort                |  nvfortran           | |
-| `print*, ACOS(I)`    | gfortran, nag, xlf, f18  |  ifort                |  nvfortran           | |
-| `print*, ACOS(X=I)`  | gfortran, nag, xlf, f18  |  ifort                |                      | nvfortran (keyword on implicit extrenal )|
-| `print*, ACOS(X, X)` | gfortran, nag, xlf, f18  |  ifort                |  nvfortran           | |
-| `CALL ACOS(X)`       |                          |                       |  gfortran, nag, xlf, nvfortran, ifort, f18  | |
+| `print*, ACOS()`     | gfortran, nag, xlf, flang  |  ifort                |  nvfortran           | |
+| `print*, ACOS(I)`    | gfortran, nag, xlf, flang  |  ifort                |  nvfortran           | |
+| `print*, ACOS(X=I)`  | gfortran, nag, xlf, flang  |  ifort                |                      | nvfortran (keyword on implicit extrenal )|
+| `print*, ACOS(X, X)` | gfortran, nag, xlf, flang  |  ifort                |  nvfortran           | |
+| `CALL ACOS(X)`       |                          |                       |  gfortran, nag, xlf, nvfortran, ifort, flang  | |
 
 
-The rationale for f18 behavior is that when referring to a procedure with an
+The rationale for Flang behavior is that when referring to a procedure with an
 argument number or type that does not match the intrinsic specification, it seems safer to block
 the rather likely case where the user is using the intrinsic the wrong way.
 In case the user wanted to refer to an external function, he can add an explicit EXTERNAL
@@ -751,13 +759,13 @@ Also note that in general, the standard gives the compiler the right to consider
 any procedure that is not explicitly external as a non standard intrinsic (section 4.2 point 4).
 So it is highly advised for the programmer to use EXTERNAL statements to prevent any ambiguity.
 
-## Intrinsic Procedure Support in f18
-This section gives an overview of the support inside f18 libraries for the
+## Intrinsic Procedure Support in Flang
+This section gives an overview of the support inside Flang libraries for the
 intrinsic procedures listed above.
-It may be outdated, refer to f18 code base for the actual support status.
+It may be outdated, refer to Flang code base for the actual support status.
 
 ### Semantic Analysis
-F18 semantic expression analysis phase detects intrinsic procedure references,
+Flang semantic expression analysis phase detects intrinsic procedure references,
 validates the argument types and deduces the return types.
 This phase currently supports all the intrinsic procedures listed above but the ones in the table below.
 
@@ -771,6 +779,7 @@ This phase currently supports all the intrinsic procedures listed above but the 
 | Atomic intrinsic subroutines | ATOMIC_ADD |
 | Collective intrinsic subroutines | CO_REDUCE |
 | Library subroutines | BACKTRACE, FDATE, GETLOG, GETENV |
+| Library functions | FNUM |
 
 
 ### Intrinsic Function Folding
@@ -780,17 +789,17 @@ Constant Expressions may be used to define kind arguments. Therefore, the semant
 expression analysis phase must be able to fold references to intrinsic functions
 listed in section 10.1.12.
 
-F18 intrinsic function folding is either performed by implementations directly
-operating on f18 scalar types or by using host runtime functions and
-host hardware types. F18 supports folding elemental intrinsic functions over
+Flang intrinsic function folding is either performed by implementations directly
+operating on Flang scalar types or by using host runtime functions and
+host hardware types. Flang supports folding elemental intrinsic functions over
 arrays when an implementation is provided for the scalars (regardless of whether
 it is using host hardware types or not).
 The status of intrinsic function folding support is given in the sub-sections below.
 
 #### Intrinsic Functions with Host Independent Folding Support
-Implementations using f18 scalar types enables folding intrinsic functions
-on any host and with any possible type kind supported by f18. The intrinsic functions
-listed below are folded using host independent implementations.
+Implementations using Flang scalar types enables folding intrinsic functions
+on any host and with any possible type kind supported by Flang. The intrinsic
+functions listed below are folded using host independent implementations.
 
 | Return Type | Intrinsic Functions with Host Independent Folding Support|
 | --- | --- |
@@ -801,41 +810,41 @@ listed below are folded using host independent implementations.
 
 #### Intrinsic Functions with Host Dependent Folding Support
 Implementations using the host runtime may not be available for all supported
-f18 types depending on the host hardware types and the libraries available on the host.
+Flang types depending on the hardware type of the host and the libraries available on it.
 The actual support on a host depends on what the host hardware types are.
 The list below gives the functions that are folded using host runtime and the related C/C++ types.
-F18 automatically detects if these types match an f18 scalar type. If so,
-folding of the intrinsic functions will be possible for the related f18 scalar type,
-otherwise an error message will be produced by f18 when attempting to fold related intrinsic functions.
+Flang automatically detects if these types match an Flang scalar type. If so,
+folding of the intrinsic functions will be possible for the related Flang scalar type,
+otherwise an error message will be produced by Flang when attempting to fold related intrinsic functions.
 
 | C/C++ Host Type | Intrinsic Functions with Host Standard C++ Library Based Folding Support |
 | --- | --- |
-| float, double and long double | ACOS, ACOSH, ASINH, ATAN, ATAN2, ATANH, COS, COSH, ERF, ERFC, EXP, GAMMA, HYPOT, LOG, LOG10, LOG_GAMMA, MOD, SIN, SQRT, SINH, SQRT, TAN, TANH |
+| float, double and long double | ACOS, ACOSH, ASINH, ATAN, ATAN2, ATANH, COS, COSH, DERF, DERFC, ERF, ERFC, EXP, GAMMA, HYPOT, LOG, LOG10, LOG_GAMMA, MOD, QERF, QERFC, SIN, SQRT, SINH, SQRT, TAN, TANH |
 | std::complex for float, double and long double| ACOS, ACOSH, ASIN, ASINH, ATAN, ATANH, COS, COSH, EXP, LOG, SIN, SINH, SQRT, TAN, TANH |
 
 On top of the default usage of C++ standard library functions for folding described
-in the table above, it is possible to compile f18 evaluate library with
+in the table above, it is possible to compile Flang evaluate library with
 [libpgmath](https://github.com/flang-compiler/flang/tree/master/runtime/libpgmath)
 so that it can be used for folding. To do so, one must have a compiled version
 of the libpgmath library available on the host and add
-`-DLIBPGMATH_DIR=<path to the compiled shared libpgmath library>` to the f18 cmake command.
+`-DLIBPGMATH_DIR=<path to the compiled shared libpgmath library>` to the Flang cmake command.
 
 Libpgmath comes with real and complex functions that replace C++ standard library
 float and double functions to fold all the intrinsic functions listed in the table above.
-It has no long double versions. If the host long double matches an f18 scalar type,
+It has no long double versions. If the host long double matches a Flang scalar type,
 C++ standard library functions will still be used for folding expressions with this scalar type.
-Libpgmath adds the possibility to fold the following functions for f18 real scalar
+Libpgmath adds the possibility to fold the following functions for Flang's real scalar
 types related to host float and double types.
 
 | C/C++ Host Type | Additional Intrinsic Function Folding Support with Libpgmath (Optional) |
 | --- | --- |
-|float and double| BESSEL_J0, BESSEL_J1, BESSEL_JN (elemental only), BESSEL_Y0, BESSEL_Y1, BESSEL_Yn (elemental only), ERFC_SCALED |
+|float and double| BESSEL_J0, BESSEL_J1, BESSEL_JN (elemental only), BESSEL_Y0, BESSEL_Y1, BESSEL_Yn (elemental only), DERFC_SCALED, ERFC_SCALED, QERFC_SCALED |
 
 Libpgmath comes in three variants (precise, relaxed and fast). So far, only the
-precise version is used for intrinsic function folding in f18. It guarantees the greatest numerical precision.
+precise version is used for intrinsic function folding in Flang. It guarantees the greatest numerical precision.
 
 ### Intrinsic Functions with Missing Folding Support
-The following intrinsic functions are allowed in constant expressions but f18
+The following intrinsic functions are allowed in constant expressions but Flang
 is not yet able to fold them. Note that there might be constraints on the arguments
 so that these intrinsics can be used in constant expressions (see section 10.1.12 of Fortran 2018 standard).
 
@@ -961,7 +970,7 @@ program test_etime
     call ETIME(tarray, result)
     print *, result
     print *, tarray(1)
-    print *, tarray(2)   
+    print *, tarray(2)
     do i=1,100000000    ! Just a delay
         j = i * i - i
     end do
@@ -1002,6 +1011,73 @@ PROGRAM example_getcwd
   PRINT *, status
 END PROGRAM
 ```
+
+### Non-Standard Intrinsics: HOSTNM
+
+#### Description
+`HOSTNM(C, STATUS)` returns the host name of the system.
+
+This intrinsic is provided in both subroutine and function forms; however, only one form can be used in any given program unit.
+
+*C* and *STATUS* are `INTENT(OUT)` and provide the following:
+
+|            |                                                                                                   |
+|------------|---------------------------------------------------------------------------------------------------|
+| `C`        | The host name of the system. The type shall be `CHARACTER` and of default kind.       |
+| `STATUS`   | (Optional) Status flag. Returns 0 on success, a system specific and nonzero error code otherwise. The type shall be `INTEGER` and of a kind greater or equal to 4. |
+
+#### Usage and Info
+
+- **Standard:** GNU extension
+- **Class:** Subroutine, function
+- **Syntax:** `CALL HOSTNM(C, STATUS)`, `STATUS = HOSTNM(C)`
+
+#### Example
+```Fortran
+PROGRAM example_hostnm
+  CHARACTER(len=255) :: hnam
+  INTEGER :: status
+  CALL hostnm(hnam, status)
+  PRINT *, hnam
+  PRINT *, status
+END PROGRAM
+```
+
+### Non-Standard Intrinsics: PUTENV
+
+#### Description
+`PUTENV(STR [, STATUS])` sets or deletes environment variable.
+
+This intrinsic is provided in both subroutine and function forms; however, only
+one form can be used in any given program unit.
+
+| ARGUMENT | INTENT | TYPE        |  KIND   | Description                     |
+|----------|--------|-------------|---------|---------------------------------|
+| `STR`    | `IN`   | `CHARACTER` | default | String in the form "name=value" (see below) |
+| `STATUS` | `OUT`  | `INTEGER`   | default | Optional. Returns 0 on success, C's `errno` on failure. |
+
+#### Usage and Info
+
+- **Standard:** extension
+- **Class:** Subroutine, function
+- **Syntax:** `CALL PUTENV(STR [, STATUS])`, `STATUS = PUTENV(STR)`
+
+The passed string can be in the form "name=value" to set environment variable "name" to value "value". It can also be of the form "name=" to delete environment variable "name".
+
+The environment variables set by PUTENV can be read by GET_ENVIRONMENT_VARIABLE.
+
+#### Example
+```Fortran
+  integer :: status
+
+  ! Set variable my_var to value my_value
+  putenv("my_var=my_value", status)
+
+  ! Delete variable my_var
+  putenv("my_var=")
+  end
+```
+
 
 ### Non-standard Intrinsics: RENAME
 `RENAME(OLD, NEW[, STATUS])` renames/moves a file on the filesystem.
@@ -1049,9 +1125,125 @@ program rename_proc
 end program rename_proc
 ```
 
+### Non-Standard Intrinsics: SECNDS
+#### Description
+`SECNDS(refTime)` returns the number of seconds since midnight minus a user-supplied reference time `refTime`. If the difference is negative (i.e., the current time is past midnight and refTime was from the previous day), the result wraps around midnight to yield a positive value.
+
+#### Usage and Info
+- **Standard:**  GNU extension
+- **Class:**     function
+- **Syntax:**    result = `SECNDS(refTime)`
+- **Arguments:**
+
+| ARGUMENT  | INTENT |      TYPE     |          KIND           |           Description                    |
+|-----------|--------|---------------|-------------------------|------------------------------------------|
+| `refTime` | `IN`   | `REAL, scalar`| REAL(KIND=4), required  | Reference time in seconds since midnight |
+
+- **Return Value:** REAL(KIND=4), scalar — seconds elapsed since `refTime`.
+- **Purity:**       Impure. SECNDS references the system clock and may not be invoked from a PURE procedure.
+
+#### Example
+```Fortran
+PROGRAM example_secnds
+  REAL :: refTime, elapsed
+  refTime = SECNDS(0.0)
+  elapsed = SECNDS(refTime)
+  PRINT *, "Elapsed seconds:", elapsed
+END PROGRAM example_secnds
+```
+### Non-Standard Intrinsics: DSECNDS
+#### Description
+`DSECNDS(refTime)` is the double precision variant of `SECNDS`. It returns the number of seconds
+since midnight minus a user-supplied reference time `refTime`. Uses `REAL(KIND=8)` for higher precision.
+
+#### Usage and Info
+- **Standard:** PGI extension
+- **Class:**     function
+- **Syntax:**    result = `DSECNDS(refTime)`
+- **Arguments:**
+
+| ARGUMENT  | INTENT |      TYPE     |          KIND           |           Description                    |
+|-----------|--------|---------------|-------------------------|------------------------------------------|
+| `refTime` | `IN`   | `REAL, scalar`| REAL(KIND=8), required  | Reference time in seconds since midnight |
+
+- **Return Value:** REAL(KIND=8), scalar — seconds elapsed since `refTime`.
+- **Purity:** Impure
+
+#### Example
+```fortran
+PROGRAM example_dsecnds
+  DOUBLE PRECISION :: refTime
+  refTime = 0.0D0
+  PRINT '(F24.15)', DSECNDS(refTime)
+END PROGRAM example_dsecnds
+```
+
 ### Non-standard Intrinsics: SECOND
 This intrinsic is an alias for `CPU_TIME`: supporting both a subroutine and a
 function form.
+
+### Non-Standard Intrinsics: TIME
+
+#### Description
+`TIME()` returns the current time of the system as a INTEGER(8).
+
+#### Usage and Info
+
+- **Standard:** GNU extension
+- **Class:** function
+- **Syntax:** `RESULT = TIME()`
+
+#### Example
+```Fortran
+PROGRAM example_time
+  print *, TIME()
+  print *, TIME()
+  call SLEEP(10)
+  print *, TIME()
+END PROGRAM
+```
+
+### Non-Standard Intrinsics: UNLINK
+
+#### Description
+`UNLINK(PATH [, STATUS])` deletes a link to a file.
+
+This intrinsic is provided in both subroutine and function forms; however, only
+one form can be used in any given program unit.
+
+| ARGUMENT | INTENT | TYPE        |  KIND   | Description                     |
+|----------|--------|-------------|---------|---------------------------------|
+| `PATH`   | `IN`   | `CHARACTER` | default | The path of the file to unlink. |
+| `STATUS` | `OUT`  | `INTEGER`   | default | Optional. Returns 0 on success, C's `errno` on failure. |
+
+#### Usage and Info
+
+- **Standard:** GNU extension
+- **Class:** Subroutine, function
+- **Syntax:** `CALL UNLINK(PATH [, STATUS])`, `STATUS = UNLINK(PATH)`
+
+#### Example
+The following example just prints "hello.txt doesn't exist".
+```Fortran
+SUBROUTINE try_unlink_hello_again()
+  INTEGER :: status
+  CALL UNLINK("hello.txt", status)
+  IF (status .NE. 0) PRINT *, "hello.txt doesn't exist"
+END SUBROUTINE
+
+PROGRAM example_unlink
+  INTEGER :: hello
+  ! Create ./hello.txt
+  OPEN(newunit=hello, file="hello.txt")
+  WRITE (hello, *), "Hello!"
+  CLOSE(hello)
+
+  ! Delete ./hello.txt
+  IF (UNLINK("hello.txt") .NE. 0) PRINT *, "didn't create a file"
+
+  CALL try_unlink_hello_again()
+END PROGRAM
+```
 
 ### Non-standard Intrinsics: LNBLNK
 This intrinsic is an alias for `LEN_TRIM`, without the optional KIND argument.
@@ -1088,13 +1280,85 @@ This intrinsic is provided in both subroutine and function forms; however, only 
 ```Fortran
 program chdir_func
   character(len=) :: path
-  integer :: status 
+  integer :: status
 
   call chdir("/tmp")
   status = chdir("..")
   print *, "status: ", status
 end program chdir_func
 ```
+
+### Non-Standard Intrinsics: FLUSH
+
+#### Description
+`FLUSH(UNIT)` causes all pending I/O operations for the file connected to the
+specified unit to be completed. If `UNIT` is omitted, all units are flushed.
+
+#### Arguments
+
+|            |                                                                                                   |
+|------------|---------------------------------------------------------------------------------------------------|
+| `UNIT`     | (Optional) The unit number of an open file. If omitted, all open units are flushed. The type shall be `INTEGER`. |
+
+#### Usage and Info
+
+- **Standard:** GNU extension
+- **Class:** Subroutine
+- **Syntax:** `CALL FLUSH([UNIT])`
+
+#### Example
+```Fortran
+program demo_flush
+  integer :: unit
+
+  ! Flush all units
+  call flush()
+
+  ! Flush specific unit
+  open(unit=10, file='output.dat')
+  write(10, *) 'Data'
+  call flush(10)
+  close(10)
+end program demo_flush
+```
+
+### Non-Standard Intrinsics: FSEEK and FTELL
+
+#### Description
+`FSEEK(UNIT, OFFSET, WHENCE)` Sets position in file opened as `UNIT`, returns status.
+
+`CALL FSEEK(UNIT, OFFSET, WHENCE[, STATUS])` Sets position, returns any error in `STATUS` if present.
+
+`FTELL(UNIT)` Returns current absolute byte offset.
+
+`CALL FTELL(UNIT, OFFSET)` Set `OFFSET` to current byte offset in file.
+
+These intrinsic procedures are available as both functions and subroutines,
+but both forms cannot be used in the same scope.
+
+These arguments must all be integers.
+The value returned from the function form of `FTELL` is `INTEGER(8)`.
+
+|            |                                                 |
+|------------|-------------------------------------------------|
+| `UNIT`     | An open unit number                             |
+| `OFFSET`   | A byte offset; set to -1 by `FTELL` on error    |
+| `WHENCE`   | 0: `OFFSET` is an absolute position             |
+|            | 1: `OFFSET` is relative to the current position |
+|            | 2: `OFFSET` is relative to the end of the file  |
+| `STATUS`   | Set to a nonzero value if an error occurs       |
+|------------|-------------------------------------------------|
+
+The aliases `FSEEK64`, `FSEEKO64`, `FSEEKI8`, `FTELL64`, `FTELLO64`, and
+`FTELLI8` are also accepted for further compatibility.
+
+Avoid using these intrinsics in new code when the standard `ACCESS="STREAM"`
+feature meets your needs.
+
+#### Usage and Info
+
+- **Standard:** Extensions to GNU, Intel, and SUN (at least)
+- **Class:** Subroutine, function
 
 ### Non-Standard Intrinsics: IERRNO
 
@@ -1106,3 +1370,131 @@ end program chdir_func
 - **Standard:** GNU extension
 - **Class:** function
 - **Syntax:** `RESULT = IERRNO()`
+
+### Non-Standard Intrinsics: QSORT
+
+#### Description
+
+```
+SUBROUTINE QSORT(ARRAY, LEN, ISIZE, COMPAR)
+  TYPE(*) :: ARRAY(*)
+  INTEGER(4) :: LEN, ISIZE
+  INTERFACE
+    INTEGER(4) FUNCTION COMPAR(A, B)
+      TYPE(*) :: A, B
+    END FUNCTION
+  END INTERFACE
+END SUBROUTINE
+```
+
+Sort `ARRAY` in place in ascending order given the comparison function `COMPAR`.
+The array number of elements is given by `LEN` and the element byte size is given
+by `ISIZE`.
+
+`COMPAR` function takes the addresses of element `A` and `B` and must return:
+- a negative value if `A` < `B`
+- zero if `A` == `B`
+- a positive value otherwise.
+
+#### Usage and Info
+
+- **Standard:** lib3f (section 3f of old man pages).
+- **Class:** subroutine
+- **Syntax:** `CALL QSORT(ARRAY, LEN, ISIZE, COMPAR)`
+
+### Non-Standard Intrinsics: PERROR
+
+#### Description
+`PERROR(STRING)` prints (on the C stderr stream) a newline-terminated error message corresponding to the last system error.
+This is prefixed by `STRING`, a colon and a space.
+
+#### Usage and Info
+
+- **Standard:** GNU extension
+- **Class:** subroutine
+- **Syntax:** `CALL PERROR(STRING)`
+
+<<<<<<< HEAD
+### Non-Standard Intrinsics: SRAND
+
+#### Description
+`SRAND` reinitializes the pseudo-random number generator called by `RAND` and `IRAND`.
+The new seed used by the generator is specified by the required argument `SEED`.
+
+#### Usage and Info
+
+- **Standard:** GNU extension
+- **Class:** Subroutine
+- **Syntax:** `CALL SRAND(SEED)`
+
+### Non-Standard Intrinsics: IRAND
+
+#### Description
+`IRAND(FLAG)` returns a pseudo-random number from a uniform distribution between 0 and a system-dependent limit.
+If `FLAG` is 0, the next number in the current sequence is returned;
+If `FLAG` is 1, the generator is restarted by `CALL SRAND(0)`;
+If `FLAG` has any other value, it is used as a new seed with `SRAND`.
+The return value is of `INTEGER` type of kind 4.
+
+#### Usage and Info
+
+- **Standard:** GNU extension
+- **Class:** function
+- **Syntax:** `RESULT = IRAND(I)`
+
+### Non-Standard Intrinsics: RAND
+
+#### Description
+`RAND(FLAG)` returns a pseudo-random number from a uniform distribution between 0 and 1.
+If `FLAG` is 0, the next number in the current sequence is returned;
+If `FLAG` is 1, the generator is restarted by `CALL SRAND(0)`;
+If `FLAG` has any other value, it is used as a new seed with `SRAND`.
+The return value is of `REAL` type with the default kind.
+
+#### Usage and Info
+
+- **Standard:** GNU extension
+- **Class:** function
+- **Syntax:** `RESULT = RAND(I)`
+
+### Non-Standard Intrinsics: SHOW_DESCRIPTOR
+
+#### Description
+`SHOW_DESCRIPTOR(VAR)` prints (on the C stderr stream) a contents of a descriptor for the variable VAR,
+which can be of any type and rank, including scalars.
+Requires use of flang_debug module.
+
+Here is an example of its output:
+```
+Descriptor @ 0x7ffe506fc368:
+  base_addr 0x55944caef0f0
+  elem_len  4
+  version   20240719
+  rank      1
+  type      9 "INTEGER(kind=4)"
+  attribute 2 (allocatable)
+  extra     0
+    addendum  0
+    alloc_idx 0
+  dim[0] lower_bound 1
+         extent      5
+         sm          4
+```
+
+#### Usage and Info
+- **Standard:** flang extension
+- **Class:** subroutine
+- **Syntax:** `CALL show_descriptor(VAR)`
+
+#### Example
+```Fortran
+subroutine test
+  use flang_debug
+  implicit none
+  character(len=9) :: c = 'Hey buddy'
+  integer :: a(5)
+  call show_descriptor(c)
+  call show_descriptor(c(1:3))
+  call show_descriptor(a)
+end subroutine test
+```

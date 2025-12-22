@@ -1,9 +1,23 @@
 ; Test the Test Data Class instruction logic operation conversion from
 ; signbit extraction.
 ;
-; RUN: llc < %s -mtriple=s390x-linux-gnu | FileCheck %s
-; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=z13 | FileCheck %s
+; RUN: llc < %s -mtriple=s390x-linux-gnu | FileCheck %s --check-prefixes=CHECK,Z10
+; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=z13 | FileCheck %s \
+; RUN:   --check-prefixes=CHECK,Z13
 ;
+
+; Extract sign bit.
+define i32 @f0(half %x) {
+; CHECK-LABEL: f0
+; Z10: lgdr %r0, %f0
+; Z10: srlg %r2, %r0, 63
+; Z13: vlgvh %r0, %v0, 0
+; Z13: risblg %r2, %r0, 31, 159, 49
+  %cast = bitcast half %x to i16
+  %res = icmp slt i16 %cast, 0
+  %xres = zext i1 %res to i32
+  ret i32 %xres
+}
 
 ; Extract sign bit.
 define i32 @f1(float %x) {

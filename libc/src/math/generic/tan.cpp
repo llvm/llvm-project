@@ -20,13 +20,13 @@
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h"            // LIBC_UNLIKELY
 #include "src/__support/macros/properties/cpu_features.h" // LIBC_TARGET_CPU_HAS_FMA
-#include "src/math/generic/range_reduction_double_common.h"
+#include "src/__support/math/range_reduction_double_common.h"
 
-#ifdef LIBC_TARGET_CPU_HAS_FMA
-#include "range_reduction_double_fma.h"
+#ifdef LIBC_TARGET_CPU_HAS_FMA_DOUBLE
+#include "src/__support/math/range_reduction_double_fma.h"
 #else
-#include "range_reduction_double_nofma.h"
-#endif // LIBC_TARGET_CPU_HAS_FMA
+#include "src/__support/math/range_reduction_double_nofma.h"
+#endif // LIBC_TARGET_CPU_HAS_FMA_DOUBLE
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -121,6 +121,7 @@ LIBC_INLINE double tan_eval(const DoubleDouble &u, DoubleDouble &result) {
 } // anonymous namespace
 
 LLVM_LIBC_FUNCTION(double, tan, (double x)) {
+  using namespace math::range_reduction_double_internal;
   using FPBits = typename fputil::FPBits<double>;
   FPBits xbits(x);
 
@@ -140,7 +141,7 @@ LLVM_LIBC_FUNCTION(double, tan, (double x)) {
         if (LIBC_UNLIKELY(x == 0.0))
           return x + x; // Make sure it works with FTZ/DAZ.
 
-#ifdef LIBC_TARGET_CPU_HAS_FMA
+#ifdef LIBC_TARGET_CPU_HAS_FMA_DOUBLE
         return fputil::multiply_add(x, 0x1.0p-54, x);
 #else
         if (LIBC_UNLIKELY(x_e < 4)) {
@@ -150,7 +151,7 @@ LLVM_LIBC_FUNCTION(double, tan, (double x)) {
             return FPBits(xbits.uintval() + 1).get_val();
         }
         return fputil::multiply_add(x, 0x1.0p-54, x);
-#endif // LIBC_TARGET_CPU_HAS_FMA
+#endif // LIBC_TARGET_CPU_HAS_FMA_DOUBLE
       }
       // No range reduction needed.
       k = 0;
@@ -163,6 +164,10 @@ LLVM_LIBC_FUNCTION(double, tan, (double x)) {
   } else {
     // Inf or NaN
     if (LIBC_UNLIKELY(x_e > 2 * FPBits::EXP_BIAS)) {
+      if (xbits.is_signaling_nan()) {
+        fputil::raise_except_if_required(FE_INVALID);
+        return FPBits::quiet_nan().get_val();
+      }
       // tan(+-Inf) = NaN
       if (xbits.get_mantissa() == 0) {
         fputil::set_errno_if_required(EDOM);

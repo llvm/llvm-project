@@ -179,7 +179,7 @@ define <16 x i8> @signOf_neon(ptr nocapture noundef readonly %a, ptr nocapture n
 ; CHECK-NEXT:    uzp1 v3.16b, v5.16b, v6.16b
 ; CHECK-NEXT:    uzp1 v1.16b, v1.16b, v2.16b
 ; CHECK-NEXT:    and v0.16b, v3.16b, v0.16b
-; CHECK-NEXT:    orr v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    orr v0.16b, v1.16b, v0.16b
 ; CHECK-NEXT:    ret
 entry:
   %0 = load <8 x i16>, ptr %a, align 2

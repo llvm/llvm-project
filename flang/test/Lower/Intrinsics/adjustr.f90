@@ -1,6 +1,6 @@
 ! RUN: bbc -emit-fir -hlfir=false %s -o - | FileCheck %s
 
-! CHECK-LABLE: adjustr_test
+! CHECK-LABEL: adjustr_test
 subroutine adjustr_test
     character(len=12) :: adjust_str = '0123456789  '
   ! CHECK: %[[strBox:.*]] = fir.alloca !fir.box<!fir.heap<!fir.char<1,?>>>
@@ -16,4 +16,3 @@ subroutine adjustr_test
   ! CHECK: fir.call @_FortranAAdjustr(%[[r3]], %[[r4]], %[[r5]], %{{.*}}) {{.*}}: (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.ref<i8>, i32) -> ()
     adjust_str = adjustr(adjust_str)
   end subroutine
-  

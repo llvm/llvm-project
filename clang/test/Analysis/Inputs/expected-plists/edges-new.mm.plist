@@ -2578,17 +2578,17 @@
      </array>
      <key>depth</key><integer>0</integer>
      <key>extended_message</key>
-     <string>The left expression of the compound assignment is an uninitialized value. The computed value will also be garbage</string>
+     <string>The left expression of the compound assignment uses uninitialized memory</string>
      <key>message</key>
-     <string>The left expression of the compound assignment is an uninitialized value. The computed value will also be garbage</string>
+     <string>The left expression of the compound assignment uses uninitialized memory</string>
     </dict>
    </array>
-   <key>description</key><string>The left expression of the compound assignment is an uninitialized value. The computed value will also be garbage</string>
+   <key>description</key><string>The left expression of the compound assignment uses uninitialized memory</string>
    <key>category</key><string>Logic error</string>
-   <key>type</key><string>Assigned value is garbage or undefined</string>
+   <key>type</key><string>Assigned value is uninitialized</string>
    <key>check_name</key><string>core.uninitialized.Assign</string>
    <!-- This hash is experimental and going to change! -->
-   <key>issue_hash_content_of_line_in_context</key><string>025372576cd3ba6716044f93a51c978c</string>
+   <key>issue_hash_content_of_line_in_context</key><string>324827600c298776167cd9562f71bda6</string>
   <key>issue_context_kind</key><string>function</string>
   <key>issue_context</key><string>test_objc_fast_enumeration_2</string>
   <key>issue_hash_function_offset</key><string>5</string>

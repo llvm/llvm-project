@@ -295,9 +295,13 @@ Attribute Attribute::getWithCaptureInfo(LLVMContext &Context, CaptureInfo CI) {
 Attribute
 Attribute::getWithAllocSizeArgs(LLVMContext &Context, unsigned ElemSizeArg,
                                 const std::optional<unsigned> &NumElemsArg) {
-  assert(!(ElemSizeArg == 0 && NumElemsArg && *NumElemsArg == 0) &&
+  assert(!(ElemSizeArg == 0 && NumElemsArg == 0) &&
          "Invalid allocsize arguments -- given allocsize(0, 0)");
   return get(Context, AllocSize, packAllocSizeArgs(ElemSizeArg, NumElemsArg));
+}
+
+Attribute Attribute::getWithAllocKind(LLVMContext &Context, AllocFnKind Kind) {
+  return get(Context, AllocKind, static_cast<uint64_t>(Kind));
 }
 
 Attribute Attribute::getWithVScaleRangeArgs(LLVMContext &Context,
@@ -647,8 +651,17 @@ std::string Attribute::getAsString(bool InAttrGrp) const {
       case IRMemLocation::InaccessibleMem:
         OS << "inaccessiblemem: ";
         break;
+      case IRMemLocation::ErrnoMem:
+        OS << "errnomem: ";
+        break;
       case IRMemLocation::Other:
         llvm_unreachable("This is represented as the default access kind");
+      case IRMemLocation::TargetMem0:
+        OS << "target_mem0: ";
+        break;
+      case IRMemLocation::TargetMem1:
+        OS << "target_mem1: ";
+        break;
       }
       OS << getModRefStr(MR);
     }
@@ -947,6 +960,19 @@ AttributeSet AttributeSet::addAttributes(LLVMContext &C,
   return get(C, B);
 }
 
+AttributeSet AttributeSet::addAttributes(LLVMContext &C,
+                                         const AttrBuilder &B) const {
+  if (!hasAttributes())
+    return get(C, B);
+
+  if (!B.hasAttributes())
+    return *this;
+
+  AttrBuilder Merged(C, *this);
+  Merged.merge(B);
+  return get(C, Merged);
+}
+
 AttributeSet AttributeSet::removeAttribute(LLVMContext &C,
                                              Attribute::AttrKind Kind) const {
   if (!hasAttribute(Kind)) return *this;
@@ -1234,7 +1260,7 @@ LLVM_DUMP_METHOD void AttributeSet::dump() const {
 AttributeSetNode::AttributeSetNode(ArrayRef<Attribute> Attrs)
     : NumAttrs(Attrs.size()) {
   // There's memory after the node where we can store the entries in.
-  llvm::copy(Attrs, getTrailingObjects<Attribute>());
+  llvm::copy(Attrs, getTrailingObjects());
 
   for (const auto &I : *this) {
     if (I.isStringAttribute())
@@ -1420,7 +1446,7 @@ AttributeListImpl::AttributeListImpl(ArrayRef<AttributeSet> Sets)
   assert(!Sets.empty() && "pointless AttributeListImpl");
 
   // There's memory after the node where we can store the entries in.
-  llvm::copy(Sets, getTrailingObjects<AttributeSet>());
+  llvm::copy(Sets, getTrailingObjects());
 
   // Initialize AvailableFunctionAttrs and AvailableSomewhereAttrs
   // summary bitsets.
@@ -2288,6 +2314,38 @@ AttrBuilder &AttrBuilder::addInitializesAttr(const ConstantRangeList &CRL) {
   return addConstantRangeListAttr(Attribute::Initializes, CRL.rangesRef());
 }
 
+AttrBuilder &AttrBuilder::addFromEquivalentMetadata(const Instruction &I) {
+  if (I.hasMetadata(LLVMContext::MD_nonnull))
+    addAttribute(Attribute::NonNull);
+
+  if (I.hasMetadata(LLVMContext::MD_noundef))
+    addAttribute(Attribute::NoUndef);
+
+  if (const MDNode *Align = I.getMetadata(LLVMContext::MD_align)) {
+    ConstantInt *CI = mdconst::extract<ConstantInt>(Align->getOperand(0));
+    addAlignmentAttr(CI->getZExtValue());
+  }
+
+  if (const MDNode *Dereferenceable =
+          I.getMetadata(LLVMContext::MD_dereferenceable)) {
+    ConstantInt *CI =
+        mdconst::extract<ConstantInt>(Dereferenceable->getOperand(0));
+    addDereferenceableAttr(CI->getZExtValue());
+  }
+
+  if (const MDNode *DereferenceableOrNull =
+          I.getMetadata(LLVMContext::MD_dereferenceable_or_null)) {
+    ConstantInt *CI =
+        mdconst::extract<ConstantInt>(DereferenceableOrNull->getOperand(0));
+    addDereferenceableAttr(CI->getZExtValue());
+  }
+
+  if (const MDNode *Range = I.getMetadata(LLVMContext::MD_range))
+    addRangeAttr(getConstantRangeFromMetadata(*Range));
+
+  return *this;
+}
+
 AttrBuilder &AttrBuilder::merge(const AttrBuilder &B) {
   // TODO: Could make this O(n) as we're merging two sorted lists.
   for (const auto &I : B.attrs())
@@ -2385,7 +2443,8 @@ AttributeMask AttributeFuncs::typeIncompatible(Type *Ty, AttributeSet AS,
           .addAttribute(Attribute::Writable)
           .addAttribute(Attribute::DeadOnUnwind)
           .addAttribute(Attribute::Initializes)
-          .addAttribute(Attribute::Captures);
+          .addAttribute(Attribute::Captures)
+          .addAttribute(Attribute::DeadOnReturn);
     if (ASK & ASK_UNSAFE_TO_DROP)
       Incompatible.addAttribute(Attribute::Nest)
           .addAttribute(Attribute::SwiftError)

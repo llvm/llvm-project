@@ -8,8 +8,6 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+d,+zvfhmin,+zvfbfmin,+v \
 ; RUN:     -verify-machineinstrs < %s | FileCheck %s
 
-declare void @llvm.vp.store.nxv1i8.p0(<vscale x 1 x i8>, ptr, <vscale x 1 x i1>, i32)
-
 define void @vpstore_nxv1i8(<vscale x 1 x i8> %val, ptr %ptr, <vscale x 1 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpstore_nxv1i8:
 ; CHECK:       # %bb.0:
@@ -19,8 +17,6 @@ define void @vpstore_nxv1i8(<vscale x 1 x i8> %val, ptr %ptr, <vscale x 1 x i1> 
   call void @llvm.vp.store.nxv1i8.p0(<vscale x 1 x i8> %val, ptr %ptr, <vscale x 1 x i1> %m, i32 %evl)
   ret void
 }
-
-declare void @llvm.vp.store.nxv2i8.p0(<vscale x 2 x i8>, ptr, <vscale x 2 x i1>, i32)
 
 define void @vpstore_nxv2i8(<vscale x 2 x i8> %val, ptr %ptr, <vscale x 2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpstore_nxv2i8:
@@ -32,8 +28,6 @@ define void @vpstore_nxv2i8(<vscale x 2 x i8> %val, ptr %ptr, <vscale x 2 x i1> 
   ret void
 }
 
-declare void @llvm.vp.store.nxv3i8.p0(<vscale x 3 x i8>, ptr, <vscale x 3 x i1>, i32)
-
 define void @vpstore_nxv3i8(<vscale x 3 x i8> %val, ptr %ptr, <vscale x 3 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpstore_nxv3i8:
 ; CHECK:       # %bb.0:
@@ -43,8 +37,6 @@ define void @vpstore_nxv3i8(<vscale x 3 x i8> %val, ptr %ptr, <vscale x 3 x i1> 
   call void @llvm.vp.store.nxv3i8.p0(<vscale x 3 x i8> %val, ptr %ptr, <vscale x 3 x i1> %m, i32 %evl)
   ret void
 }
-
-declare void @llvm.vp.store.nxv4i8.p0(<vscale x 4 x i8>, ptr, <vscale x 4 x i1>, i32)
 
 define void @vpstore_nxv4i8(<vscale x 4 x i8> %val, ptr %ptr, <vscale x 4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpstore_nxv4i8:
@@ -56,8 +48,6 @@ define void @vpstore_nxv4i8(<vscale x 4 x i8> %val, ptr %ptr, <vscale x 4 x i1> 
   ret void
 }
 
-declare void @llvm.vp.store.nxv8i8.p0(<vscale x 8 x i8>, ptr, <vscale x 8 x i1>, i32)
-
 define void @vpstore_nxv8i8(<vscale x 8 x i8> %val, ptr %ptr, <vscale x 8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpstore_nxv8i8:
 ; CHECK:       # %bb.0:
@@ -67,8 +57,6 @@ define void @vpstore_nxv8i8(<vscale x 8 x i8> %val, ptr %ptr, <vscale x 8 x i1> 
   call void @llvm.vp.store.nxv8i8.p0(<vscale x 8 x i8> %val, ptr %ptr, <vscale x 8 x i1> %m, i32 %evl)
   ret void
 }
-
-declare void @llvm.vp.store.nxv1i16.p0(<vscale x 1 x i16>, ptr, <vscale x 1 x i1>, i32)
 
 define void @vpstore_nxv1i16(<vscale x 1 x i16> %val, ptr %ptr, <vscale x 1 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpstore_nxv1i16:
@@ -80,8 +68,6 @@ define void @vpstore_nxv1i16(<vscale x 1 x i16> %val, ptr %ptr, <vscale x 1 x i1
   ret void
 }
 
-declare void @llvm.vp.store.nxv2i16.p0(<vscale x 2 x i16>, ptr, <vscale x 2 x i1>, i32)
-
 define void @vpstore_nxv2i16(<vscale x 2 x i16> %val, ptr %ptr, <vscale x 2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpstore_nxv2i16:
 ; CHECK:       # %bb.0:
@@ -91,8 +77,6 @@ define void @vpstore_nxv2i16(<vscale x 2 x i16> %val, ptr %ptr, <vscale x 2 x i1
   call void @llvm.vp.store.nxv2i16.p0(<vscale x 2 x i16> %val, ptr %ptr, <vscale x 2 x i1> %m, i32 %evl)
   ret void
 }
-
-declare void @llvm.vp.store.nxv4i16.p0(<vscale x 4 x i16>, ptr, <vscale x 4 x i1>, i32)
 
 define void @vpstore_nxv4i16(<vscale x 4 x i16> %val, ptr %ptr, <vscale x 4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpstore_nxv4i16:
@@ -104,8 +88,6 @@ define void @vpstore_nxv4i16(<vscale x 4 x i16> %val, ptr %ptr, <vscale x 4 x i1
   ret void
 }
 
-declare void @llvm.vp.store.nxv8i12.nxv8i12.p0(<vscale x 8 x i12>, <vscale x 8 x i12>*, <vscale x 8 x i1>, i32)
-
 define void @vpstore_nxv8i12(<vscale x 8 x i12> %val, <vscale x 8 x i12>* %ptr, <vscale x 8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpstore_nxv8i12:
 ; CHECK:       # %bb.0:
@@ -115,8 +97,6 @@ define void @vpstore_nxv8i12(<vscale x 8 x i12> %val, <vscale x 8 x i12>* %ptr, 
   call void @llvm.vp.store.nxv8i12.nxv8i12.p0(<vscale x 8 x i12> %val, <vscale x 8 x i12>* %ptr, <vscale x 8 x i1> %m, i32 %evl)
   ret void
 }
-
-declare void @llvm.vp.store.nxv8i16.p0(<vscale x 8 x i16>, ptr, <vscale x 8 x i1>, i32)
 
 define void @vpstore_nxv8i16(<vscale x 8 x i16> %val, ptr %ptr, <vscale x 8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpstore_nxv8i16:
@@ -128,8 +108,6 @@ define void @vpstore_nxv8i16(<vscale x 8 x i16> %val, ptr %ptr, <vscale x 8 x i1
   ret void
 }
 
-declare void @llvm.vp.store.nxv1i32.p0(<vscale x 1 x i32>, ptr, <vscale x 1 x i1>, i32)
-
 define void @vpstore_nxv1i32(<vscale x 1 x i32> %val, ptr %ptr, <vscale x 1 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpstore_nxv1i32:
 ; CHECK:       # %bb.0:
@@ -139,8 +117,6 @@ define void @vpstore_nxv1i32(<vscale x 1 x i32> %val, ptr %ptr, <vscale x 1 x i1
   call void @llvm.vp.store.nxv1i32.p0(<vscale x 1 x i32> %val, ptr %ptr, <vscale x 1 x i1> %m, i32 %evl)
   ret void
 }
-
-declare void @llvm.vp.store.nxv2i32.p0(<vscale x 2 x i32>, ptr, <vscale x 2 x i1>, i32)
 
 define void @vpstore_nxv2i32(<vscale x 2 x i32> %val, ptr %ptr, <vscale x 2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpstore_nxv2i32:
@@ -152,8 +128,6 @@ define void @vpstore_nxv2i32(<vscale x 2 x i32> %val, ptr %ptr, <vscale x 2 x i1
   ret void
 }
 
-declare void @llvm.vp.store.nxv4i32.p0(<vscale x 4 x i32>, ptr, <vscale x 4 x i1>, i32)
-
 define void @vpstore_nxv4i32(<vscale x 4 x i32> %val, ptr %ptr, <vscale x 4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpstore_nxv4i32:
 ; CHECK:       # %bb.0:
@@ -163,8 +137,6 @@ define void @vpstore_nxv4i32(<vscale x 4 x i32> %val, ptr %ptr, <vscale x 4 x i1
   call void @llvm.vp.store.nxv4i32.p0(<vscale x 4 x i32> %val, ptr %ptr, <vscale x 4 x i1> %m, i32 %evl)
   ret void
 }
-
-declare void @llvm.vp.store.nxv8i32.p0(<vscale x 8 x i32>, ptr, <vscale x 8 x i1>, i32)
 
 define void @vpstore_nxv8i32(<vscale x 8 x i32> %val, ptr %ptr, <vscale x 8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpstore_nxv8i32:
@@ -176,8 +148,6 @@ define void @vpstore_nxv8i32(<vscale x 8 x i32> %val, ptr %ptr, <vscale x 8 x i1
   ret void
 }
 
-declare void @llvm.vp.store.nxv1i64.p0(<vscale x 1 x i64>, ptr, <vscale x 1 x i1>, i32)
-
 define void @vpstore_nxv1i64(<vscale x 1 x i64> %val, ptr %ptr, <vscale x 1 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpstore_nxv1i64:
 ; CHECK:       # %bb.0:
@@ -187,8 +157,6 @@ define void @vpstore_nxv1i64(<vscale x 1 x i64> %val, ptr %ptr, <vscale x 1 x i1
   call void @llvm.vp.store.nxv1i64.p0(<vscale x 1 x i64> %val, ptr %ptr, <vscale x 1 x i1> %m, i32 %evl)
   ret void
 }
-
-declare void @llvm.vp.store.nxv2i64.p0(<vscale x 2 x i64>, ptr, <vscale x 2 x i1>, i32)
 
 define void @vpstore_nxv2i64(<vscale x 2 x i64> %val, ptr %ptr, <vscale x 2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpstore_nxv2i64:
@@ -200,8 +168,6 @@ define void @vpstore_nxv2i64(<vscale x 2 x i64> %val, ptr %ptr, <vscale x 2 x i1
   ret void
 }
 
-declare void @llvm.vp.store.nxv4i64.p0(<vscale x 4 x i64>, ptr, <vscale x 4 x i1>, i32)
-
 define void @vpstore_nxv4i64(<vscale x 4 x i64> %val, ptr %ptr, <vscale x 4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpstore_nxv4i64:
 ; CHECK:       # %bb.0:
@@ -211,8 +177,6 @@ define void @vpstore_nxv4i64(<vscale x 4 x i64> %val, ptr %ptr, <vscale x 4 x i1
   call void @llvm.vp.store.nxv4i64.p0(<vscale x 4 x i64> %val, ptr %ptr, <vscale x 4 x i1> %m, i32 %evl)
   ret void
 }
-
-declare void @llvm.vp.store.nxv8i64.p0(<vscale x 8 x i64>, ptr, <vscale x 8 x i1>, i32)
 
 define void @vpstore_nxv8i64(<vscale x 8 x i64> %val, ptr %ptr, <vscale x 8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpstore_nxv8i64:
@@ -224,8 +188,6 @@ define void @vpstore_nxv8i64(<vscale x 8 x i64> %val, ptr %ptr, <vscale x 8 x i1
   ret void
 }
 
-declare void @llvm.vp.store.nxv1bf16.p0(<vscale x 1 x bfloat>, ptr, <vscale x 1 x i1>, i32)
-
 define void @vpstore_nxv1bf16(<vscale x 1 x bfloat> %val, ptr %ptr, <vscale x 1 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpstore_nxv1bf16:
 ; CHECK:       # %bb.0:
@@ -235,8 +197,6 @@ define void @vpstore_nxv1bf16(<vscale x 1 x bfloat> %val, ptr %ptr, <vscale x 1 
   call void @llvm.vp.store.nxv1bf16.p0(<vscale x 1 x bfloat> %val, ptr %ptr, <vscale x 1 x i1> %m, i32 %evl)
   ret void
 }
-
-declare void @llvm.vp.store.nxv2bf16.p0(<vscale x 2 x bfloat>, ptr, <vscale x 2 x i1>, i32)
 
 define void @vpstore_nxv2bf16(<vscale x 2 x bfloat> %val, ptr %ptr, <vscale x 2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpstore_nxv2bf16:
@@ -248,8 +208,6 @@ define void @vpstore_nxv2bf16(<vscale x 2 x bfloat> %val, ptr %ptr, <vscale x 2 
   ret void
 }
 
-declare void @llvm.vp.store.nxv4bf16.p0(<vscale x 4 x bfloat>, ptr, <vscale x 4 x i1>, i32)
-
 define void @vpstore_nxv4bf16(<vscale x 4 x bfloat> %val, ptr %ptr, <vscale x 4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpstore_nxv4bf16:
 ; CHECK:       # %bb.0:
@@ -259,8 +217,6 @@ define void @vpstore_nxv4bf16(<vscale x 4 x bfloat> %val, ptr %ptr, <vscale x 4 
   call void @llvm.vp.store.nxv4bf16.p0(<vscale x 4 x bfloat> %val, ptr %ptr, <vscale x 4 x i1> %m, i32 %evl)
   ret void
 }
-
-declare void @llvm.vp.store.nxv8bf16.p0(<vscale x 8 x bfloat>, ptr, <vscale x 8 x i1>, i32)
 
 define void @vpstore_nxv8bf16(<vscale x 8 x bfloat> %val, ptr %ptr, <vscale x 8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpstore_nxv8bf16:
@@ -272,8 +228,6 @@ define void @vpstore_nxv8bf16(<vscale x 8 x bfloat> %val, ptr %ptr, <vscale x 8 
   ret void
 }
 
-declare void @llvm.vp.store.nxv1f16.p0(<vscale x 1 x half>, ptr, <vscale x 1 x i1>, i32)
-
 define void @vpstore_nxv1f16(<vscale x 1 x half> %val, ptr %ptr, <vscale x 1 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpstore_nxv1f16:
 ; CHECK:       # %bb.0:
@@ -283,8 +237,6 @@ define void @vpstore_nxv1f16(<vscale x 1 x half> %val, ptr %ptr, <vscale x 1 x i
   call void @llvm.vp.store.nxv1f16.p0(<vscale x 1 x half> %val, ptr %ptr, <vscale x 1 x i1> %m, i32 %evl)
   ret void
 }
-
-declare void @llvm.vp.store.nxv2f16.p0(<vscale x 2 x half>, ptr, <vscale x 2 x i1>, i32)
 
 define void @vpstore_nxv2f16(<vscale x 2 x half> %val, ptr %ptr, <vscale x 2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpstore_nxv2f16:
@@ -296,8 +248,6 @@ define void @vpstore_nxv2f16(<vscale x 2 x half> %val, ptr %ptr, <vscale x 2 x i
   ret void
 }
 
-declare void @llvm.vp.store.nxv4f16.p0(<vscale x 4 x half>, ptr, <vscale x 4 x i1>, i32)
-
 define void @vpstore_nxv4f16(<vscale x 4 x half> %val, ptr %ptr, <vscale x 4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpstore_nxv4f16:
 ; CHECK:       # %bb.0:
@@ -307,8 +257,6 @@ define void @vpstore_nxv4f16(<vscale x 4 x half> %val, ptr %ptr, <vscale x 4 x i
   call void @llvm.vp.store.nxv4f16.p0(<vscale x 4 x half> %val, ptr %ptr, <vscale x 4 x i1> %m, i32 %evl)
   ret void
 }
-
-declare void @llvm.vp.store.nxv8f16.p0(<vscale x 8 x half>, ptr, <vscale x 8 x i1>, i32)
 
 define void @vpstore_nxv8f16(<vscale x 8 x half> %val, ptr %ptr, <vscale x 8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpstore_nxv8f16:
@@ -320,8 +268,6 @@ define void @vpstore_nxv8f16(<vscale x 8 x half> %val, ptr %ptr, <vscale x 8 x i
   ret void
 }
 
-declare void @llvm.vp.store.nxv1f32.p0(<vscale x 1 x float>, ptr, <vscale x 1 x i1>, i32)
-
 define void @vpstore_nxv1f32(<vscale x 1 x float> %val, ptr %ptr, <vscale x 1 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpstore_nxv1f32:
 ; CHECK:       # %bb.0:
@@ -331,8 +277,6 @@ define void @vpstore_nxv1f32(<vscale x 1 x float> %val, ptr %ptr, <vscale x 1 x 
   call void @llvm.vp.store.nxv1f32.p0(<vscale x 1 x float> %val, ptr %ptr, <vscale x 1 x i1> %m, i32 %evl)
   ret void
 }
-
-declare void @llvm.vp.store.nxv2f32.p0(<vscale x 2 x float>, ptr, <vscale x 2 x i1>, i32)
 
 define void @vpstore_nxv2f32(<vscale x 2 x float> %val, ptr %ptr, <vscale x 2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpstore_nxv2f32:
@@ -344,8 +288,6 @@ define void @vpstore_nxv2f32(<vscale x 2 x float> %val, ptr %ptr, <vscale x 2 x 
   ret void
 }
 
-declare void @llvm.vp.store.nxv4f32.p0(<vscale x 4 x float>, ptr, <vscale x 4 x i1>, i32)
-
 define void @vpstore_nxv4f32(<vscale x 4 x float> %val, ptr %ptr, <vscale x 4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpstore_nxv4f32:
 ; CHECK:       # %bb.0:
@@ -355,8 +297,6 @@ define void @vpstore_nxv4f32(<vscale x 4 x float> %val, ptr %ptr, <vscale x 4 x 
   call void @llvm.vp.store.nxv4f32.p0(<vscale x 4 x float> %val, ptr %ptr, <vscale x 4 x i1> %m, i32 %evl)
   ret void
 }
-
-declare void @llvm.vp.store.nxv8f32.p0(<vscale x 8 x float>, ptr, <vscale x 8 x i1>, i32)
 
 define void @vpstore_nxv8f32(<vscale x 8 x float> %val, ptr %ptr, <vscale x 8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpstore_nxv8f32:
@@ -368,8 +308,6 @@ define void @vpstore_nxv8f32(<vscale x 8 x float> %val, ptr %ptr, <vscale x 8 x 
   ret void
 }
 
-declare void @llvm.vp.store.nxv1f64.p0(<vscale x 1 x double>, ptr, <vscale x 1 x i1>, i32)
-
 define void @vpstore_nxv1f64(<vscale x 1 x double> %val, ptr %ptr, <vscale x 1 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpstore_nxv1f64:
 ; CHECK:       # %bb.0:
@@ -379,8 +317,6 @@ define void @vpstore_nxv1f64(<vscale x 1 x double> %val, ptr %ptr, <vscale x 1 x
   call void @llvm.vp.store.nxv1f64.p0(<vscale x 1 x double> %val, ptr %ptr, <vscale x 1 x i1> %m, i32 %evl)
   ret void
 }
-
-declare void @llvm.vp.store.nxv2f64.p0(<vscale x 2 x double>, ptr, <vscale x 2 x i1>, i32)
 
 define void @vpstore_nxv2f64(<vscale x 2 x double> %val, ptr %ptr, <vscale x 2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpstore_nxv2f64:
@@ -392,8 +328,6 @@ define void @vpstore_nxv2f64(<vscale x 2 x double> %val, ptr %ptr, <vscale x 2 x
   ret void
 }
 
-declare void @llvm.vp.store.nxv4f64.p0(<vscale x 4 x double>, ptr, <vscale x 4 x i1>, i32)
-
 define void @vpstore_nxv4f64(<vscale x 4 x double> %val, ptr %ptr, <vscale x 4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpstore_nxv4f64:
 ; CHECK:       # %bb.0:
@@ -403,8 +337,6 @@ define void @vpstore_nxv4f64(<vscale x 4 x double> %val, ptr %ptr, <vscale x 4 x
   call void @llvm.vp.store.nxv4f64.p0(<vscale x 4 x double> %val, ptr %ptr, <vscale x 4 x i1> %m, i32 %evl)
   ret void
 }
-
-declare void @llvm.vp.store.nxv8f64.p0(<vscale x 8 x double>, ptr, <vscale x 8 x i1>, i32)
 
 define void @vpstore_nxv8f64(<vscale x 8 x double> %val, ptr %ptr, <vscale x 8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpstore_nxv8f64:
@@ -425,8 +357,6 @@ define void @vpstore_nxv1i8_allones_mask(<vscale x 1 x i8> %val, ptr %ptr, i32 z
   call void @llvm.vp.store.nxv1i8.p0(<vscale x 1 x i8> %val, ptr %ptr, <vscale x 1 x i1> splat (i1 true), i32 %evl)
   ret void
 }
-
-declare void @llvm.vp.store.nxv16f64.p0(<vscale x 16 x double>, ptr, <vscale x 16 x i1>, i32)
 
 define void @vpstore_nxv16f64(<vscale x 16 x double> %val, ptr %ptr, <vscale x 16 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpstore_nxv16f64:
@@ -455,23 +385,13 @@ define void @vpstore_nxv16f64(<vscale x 16 x double> %val, ptr %ptr, <vscale x 1
   ret void
 }
 
-declare void @llvm.vp.store.nxv17f64.p0(<vscale x 17 x double>, ptr, <vscale x 17 x i1>, i32)
-
 ; Widen to nxv32f64 then split into 4 x nxv8f64, of which 1 is empty.
 
 define void @vpstore_nxv17f64(<vscale x 17 x double> %val, ptr %ptr, <vscale x 17 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpstore_nxv17f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    csrr a3, vlenb
-; CHECK-NEXT:    slli a3, a3, 3
-; CHECK-NEXT:    sub sp, sp, a3
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 8 * vlenb
 ; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
-; CHECK-NEXT:    vmv1r.v v24, v0
-; CHECK-NEXT:    addi a3, sp, 16
-; CHECK-NEXT:    vs8r.v v16, (a3) # Unknown-size Folded Spill
+; CHECK-NEXT:    vmv1r.v v7, v0
 ; CHECK-NEXT:    csrr a3, vlenb
 ; CHECK-NEXT:    slli a4, a3, 1
 ; CHECK-NEXT:    mv a5, a2
@@ -484,14 +404,14 @@ define void @vpstore_nxv17f64(<vscale x 17 x double> %val, ptr %ptr, <vscale x 1
 ; CHECK-NEXT:  # %bb.3:
 ; CHECK-NEXT:    mv a6, a3
 ; CHECK-NEXT:  .LBB36_4:
-; CHECK-NEXT:    vmv1r.v v0, v24
-; CHECK-NEXT:    vl8re64.v v16, (a0)
+; CHECK-NEXT:    vmv1r.v v0, v7
+; CHECK-NEXT:    vl8re64.v v24, (a0)
 ; CHECK-NEXT:    vsetvli zero, a6, e64, m8, ta, ma
 ; CHECK-NEXT:    vse64.v v8, (a1), v0.t
 ; CHECK-NEXT:    sub a0, a5, a3
 ; CHECK-NEXT:    srli a6, a3, 3
 ; CHECK-NEXT:    vsetvli a7, zero, e8, mf4, ta, ma
-; CHECK-NEXT:    vslidedown.vx v0, v24, a6
+; CHECK-NEXT:    vslidedown.vx v0, v7, a6
 ; CHECK-NEXT:    slli a6, a3, 3
 ; CHECK-NEXT:    sub a4, a2, a4
 ; CHECK-NEXT:    sltu a5, a5, a0
@@ -501,10 +421,8 @@ define void @vpstore_nxv17f64(<vscale x 17 x double> %val, ptr %ptr, <vscale x 1
 ; CHECK-NEXT:    addi a2, a2, -1
 ; CHECK-NEXT:    and a5, a5, a0
 ; CHECK-NEXT:    and a0, a2, a4
-; CHECK-NEXT:    addi a2, sp, 16
-; CHECK-NEXT:    vl8r.v v8, (a2) # Unknown-size Folded Reload
 ; CHECK-NEXT:    vsetvli zero, a5, e64, m8, ta, ma
-; CHECK-NEXT:    vse64.v v8, (a6), v0.t
+; CHECK-NEXT:    vse64.v v16, (a6), v0.t
 ; CHECK-NEXT:    bltu a0, a3, .LBB36_6
 ; CHECK-NEXT:  # %bb.5:
 ; CHECK-NEXT:    mv a0, a3
@@ -512,18 +430,25 @@ define void @vpstore_nxv17f64(<vscale x 17 x double> %val, ptr %ptr, <vscale x 1
 ; CHECK-NEXT:    slli a2, a3, 4
 ; CHECK-NEXT:    srli a3, a3, 2
 ; CHECK-NEXT:    vsetvli a4, zero, e8, mf2, ta, ma
-; CHECK-NEXT:    vslidedown.vx v0, v24, a3
+; CHECK-NEXT:    vslidedown.vx v0, v7, a3
 ; CHECK-NEXT:    add a1, a1, a2
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
-; CHECK-NEXT:    vse64.v v16, (a1), v0.t
-; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    slli a0, a0, 3
-; CHECK-NEXT:    add sp, sp, a0
-; CHECK-NEXT:    .cfi_def_cfa sp, 16
-; CHECK-NEXT:    addi sp, sp, 16
-; CHECK-NEXT:    .cfi_def_cfa_offset 0
+; CHECK-NEXT:    vse64.v v24, (a1), v0.t
 ; CHECK-NEXT:    ret
   call void @llvm.vp.store.nxv17f64.p0(<vscale x 17 x double> %val, ptr %ptr, <vscale x 17 x i1> %m, i32 %evl)
+  ret void
+}
+
+define void @unaligned_vpstore_nxv1i64_allones_mask(<vscale x 1 x i64> %val, <vscale x 1 x i64>* %ptr, i32 zeroext %evl) {
+; CHECK-LABEL: unaligned_vpstore_nxv1i64_allones_mask:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    slli a1, a1, 3
+; CHECK-NEXT:    vsetvli zero, a1, e8, m1, ta, ma
+; CHECK-NEXT:    vse8.v v8, (a0)
+; CHECK-NEXT:    ret
+  %a = insertelement <vscale x 1 x i1> poison, i1 true, i32 0
+  %b = shufflevector <vscale x 1 x i1> %a, <vscale x 1 x i1> poison, <vscale x 1 x i32> zeroinitializer
+  call void @llvm.vp.store.nxv1i64.p0(<vscale x 1 x i64> %val, <vscale x 1 x i64>* align 1 %ptr, <vscale x 1 x i1> %b, i32 %evl)
   ret void
 }
 

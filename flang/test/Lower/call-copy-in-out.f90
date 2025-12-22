@@ -120,7 +120,7 @@ subroutine test_intent_out(x)
 ! CHECK:  %[[cast:.*]] = fir.convert %[[addr]] : (!fir.heap<!fir.array<?xf32>>) -> !fir.ref<!fir.array<100xf32>>
 ! CHECK:  fir.call @_QPbar_intent_out(%[[cast]]) {{.*}}: (!fir.ref<!fir.array<100xf32>>) -> ()
   call bar_intent_out(x)
-  
+
 ! CHECK: fir.if %[[not_contiguous]]
 ! CHECK: fir.call @_FortranACopyOutAssign
 ! CHECK: return
@@ -224,7 +224,7 @@ subroutine test_char(x)
 ! CHECK:             %[[VAL_32:.*]] = fir.convert %[[TMP_BOX_REF]] : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,10>>>>>) -> !fir.ref<!fir.box<none>>
 ! CHECK:             fir.call @_FortranACopyOutAssign(%[[VAL_31]], %[[VAL_32]], %{{.*}}, %{{.*}}) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.ref<!fir.box<none>>, !fir.ref<i8>, i32) -> ()
 ! CHECK:           }
-  
+
   character(10) :: x(:)
   call bar_char(x)
   ! CHECK:         return
@@ -283,8 +283,7 @@ subroutine whole_components()
   end type
   ! CHECK: %[[a:.*]] = fir.alloca !fir.type<_QFwhole_componentsTt{i:!fir.array<100xi32>}>
   type(t) :: a
-  ! CHECK: %[[field:.*]] = fir.field_index i, !fir.type<_QFwhole_componentsTt{i:!fir.array<100xi32>}>
-  ! CHECK: %[[addr:.*]] = fir.coordinate_of %[[a]], %[[field]] : (!fir.ref<!fir.type<_QFwhole_componentsTt{i:!fir.array<100xi32>}>>, !fir.field) -> !fir.ref<!fir.array<100xi32>>
+  ! CHECK: %[[addr:.*]] = fir.coordinate_of %[[a]], i : (!fir.ref<!fir.type<_QFwhole_componentsTt{i:!fir.array<100xi32>}>>) -> !fir.ref<!fir.array<100xi32>>
   ! CHECK: fir.call @_QPbar_integer(%[[addr]]) {{.*}}: (!fir.ref<!fir.array<100xi32>>) -> ()
   call bar_integer(a%i)
 end subroutine
@@ -297,8 +296,7 @@ subroutine whole_component_contiguous_pointer()
   end type
   ! CHECK: %[[a:.*]] = fir.alloca !fir.type<_QFwhole_component_contiguous_pointerTt{i:!fir.box<!fir.ptr<!fir.array<?xi32>>>}>
   type(t) :: a
-  ! CHECK: %[[field:.*]] = fir.field_index i, !fir.type<_QFwhole_component_contiguous_pointerTt{i:!fir.box<!fir.ptr<!fir.array<?xi32>>>}>
-  ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[a]], %[[field]] : (!fir.ref<!fir.type<_QFwhole_component_contiguous_pointerTt{i:!fir.box<!fir.ptr<!fir.array<?xi32>>>}>>, !fir.field) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
+  ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[a]], i : (!fir.ref<!fir.type<_QFwhole_component_contiguous_pointerTt{i:!fir.box<!fir.ptr<!fir.array<?xi32>>>}>>) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
   ! CHECK: %[[box_load:.*]] = fir.load %[[coor]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
   ! CHECK: %[[addr:.*]] = fir.box_addr %[[box_load]] : (!fir.box<!fir.ptr<!fir.array<?xi32>>>) -> !fir.ptr<!fir.array<?xi32>>
   ! CHECK: %[[cast:.*]] = fir.convert %[[addr]] : (!fir.ptr<!fir.array<?xi32>>) -> !fir.ref<!fir.array<100xi32>>
@@ -314,8 +312,7 @@ subroutine whole_component_contiguous_char_pointer()
   end type
   ! CHECK: %[[a:.*]] = fir.alloca !fir.type<_QFwhole_component_contiguous_char_pointerTt{i:!fir.box<!fir.ptr<!fir.array<?x!fir.char<1,?>>>>}>
   type(t) :: a
-  ! CHECK: %[[field:.*]] = fir.field_index i, !fir.type<_QFwhole_component_contiguous_char_pointerTt{i:!fir.box<!fir.ptr<!fir.array<?x!fir.char<1,?>>>>}>
-  ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[a]], %[[field]] : (!fir.ref<!fir.type<_QFwhole_component_contiguous_char_pointerTt{i:!fir.box<!fir.ptr<!fir.array<?x!fir.char<1,?>>>>}>>, !fir.field) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.char<1,?>>>>>
+  ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[a]], i : (!fir.ref<!fir.type<_QFwhole_component_contiguous_char_pointerTt{i:!fir.box<!fir.ptr<!fir.array<?x!fir.char<1,?>>>>}>>) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.char<1,?>>>>>
   ! CHECK: %[[box_load:.*]] = fir.load %[[coor]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.char<1,?>>>>>
   ! CHECK: %[[addr:.*]] = fir.box_addr %[[box_load]] : (!fir.box<!fir.ptr<!fir.array<?x!fir.char<1,?>>>>) -> !fir.ptr<!fir.array<?x!fir.char<1,?>>>
   ! CHECK: %[[len:.*]] = fir.box_elesize %[[box_load]] : (!fir.box<!fir.ptr<!fir.array<?x!fir.char<1,?>>>>) -> index

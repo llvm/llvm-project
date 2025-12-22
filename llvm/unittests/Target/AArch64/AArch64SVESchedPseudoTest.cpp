@@ -16,7 +16,7 @@
 using namespace llvm;
 namespace {
 std::unique_ptr<TargetMachine> createTargetMachine(const std::string &CPU) {
-  auto TT(Triple::normalize("aarch64--"));
+  Triple TT("aarch64--");
 
   LLVMInitializeAArch64TargetInfo();
   LLVMInitializeAArch64Target();
@@ -103,11 +103,15 @@ void runSVEPseudoTestForCPU(const std::string &CPU) {
 }
 
 // TODO : Add more CPUs that support SVE/SVE2
+TEST(AArch64SVESchedPseudoTesta320, IsCorrect) {
+  runSVEPseudoTestForCPU("cortex-a320");
+}
+
 TEST(AArch64SVESchedPseudoTesta510, IsCorrect) {
   runSVEPseudoTestForCPU("cortex-a510");
 }
 
-TEST(AArch64SVESchedPseudoTestn1, IsCorrect) {
+TEST(AArch64SVESchedPseudoTestn2, IsCorrect) {
   runSVEPseudoTestForCPU("neoverse-n2");
 }
 
@@ -121,6 +125,14 @@ TEST(AArch64SVESchedPseudoTestv1, IsCorrect) {
 
 TEST(AArch64SVESchedPseudoTestv2, IsCorrect) {
   runSVEPseudoTestForCPU("neoverse-v2");
+}
+
+TEST(AArch64SVESchedPseudoTestv3, IsCorrect) {
+  runSVEPseudoTestForCPU("neoverse-v3");
+}
+
+TEST(AArch64SVESchedPseudoTestv3ae, IsCorrect) {
+  runSVEPseudoTestForCPU("neoverse-v3ae");
 }
 
 } // namespace

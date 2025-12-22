@@ -337,6 +337,8 @@ module AtomicRMWBinOp : sig
   | UDec_Wrap
   | USub_Cond
   | USub_Sat
+  | FMaximum
+  | FMinimum
 end
 
 (** The kind of an [llvalue], the result of [classify_value v].
@@ -1094,11 +1096,6 @@ val const_neg : llvalue -> llvalue
     See the method [llvm::ConstantExpr::getNSWNeg]. *)
 val const_nsw_neg : llvalue -> llvalue
 
-(** [const_nuw_neg c] returns the arithmetic negation of the constant [c] with
-    no unsigned wrapping. The result is undefined if the negation overflows.
-    See the method [llvm::ConstantExpr::getNUWNeg]. *)
-val const_nuw_neg : llvalue -> llvalue
-
 (** [const_not c] returns the bitwise inverse of the constant [c].
     See the method [llvm::ConstantExpr::getNot]. *)
 val const_not : llvalue -> llvalue
@@ -1130,20 +1127,6 @@ val const_nsw_sub : llvalue -> llvalue -> llvalue
     no unsigned wrapping. The result is undefined if the sum overflows.
     See the method [llvm::ConstantExpr::getNSWSub]. *)
 val const_nuw_sub : llvalue -> llvalue -> llvalue
-
-(** [const_mul c1 c2] returns the constant product of two constants.
-    See the method [llvm::ConstantExpr::getMul]. *)
-val const_mul : llvalue -> llvalue -> llvalue
-
-(** [const_nsw_mul c1 c2] returns the constant product of two constants with
-    no signed wrapping. The result is undefined if the sum overflows.
-    See the method [llvm::ConstantExpr::getNSWMul]. *)
-val const_nsw_mul : llvalue -> llvalue -> llvalue
-
-(** [const_nuw_mul c1 c2] returns the constant product of two constants with
-    no unsigned wrapping. The result is undefined if the sum overflows.
-    See the method [llvm::ConstantExpr::getNSWMul]. *)
-val const_nuw_mul : llvalue -> llvalue -> llvalue
 
 (** [const_xor c1 c2] returns the constant bitwise [XOR] of two integer
     constants.
@@ -1371,6 +1354,12 @@ val is_global_constant : llvalue -> bool
     [c] is [true] and not if [c] is [false].
     See the method [llvm::GlobalVariable::setConstant]. *)
 val set_global_constant : bool -> llvalue -> unit
+
+(** [global_set_metadata g k md] sets the metadata attachment of the global
+    value [g] to the metadata [md] for the given kind [k], erasing the existing
+    metadata attachment if it already exists for the given kind.
+    See the method [llvm::GlobalObject::setMetadata]. *)
+val global_set_metadata : llvalue -> llmdkind -> llmetadata -> unit
 
 (** [global_initializer gv] If global variable [gv] has an initializer it is returned,
     otherwise returns [None]. See the method [llvm::GlobalVariable::getInitializer]. *)
@@ -2217,13 +2206,6 @@ val build_neg : llvalue -> string -> llbuilder -> llvalue
     [-0.0] is used for floating point types to compute the correct sign.
     See the method [llvm::LLVMBuilder::CreateNeg]. *)
 val build_nsw_neg : llvalue -> string -> llbuilder -> llvalue
-
-(** [build_nuw_neg x name b] creates a
-    [%name = nuw sub 0, %x]
-    instruction at the position specified by the instruction builder [b].
-    [-0.0] is used for floating point types to compute the correct sign.
-    See the method [llvm::LLVMBuilder::CreateNeg]. *)
-val build_nuw_neg : llvalue -> string -> llbuilder -> llvalue
 
 (** [build_fneg x name b] creates a
     [%name = fsub 0, %x]

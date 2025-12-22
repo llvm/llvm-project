@@ -68,6 +68,10 @@ if(CLANG_BUILT_STANDALONE)
   option(CLANG_ENABLE_BOOTSTRAP "Generate the clang bootstrap target" OFF)
   option(LLVM_ENABLE_LIBXML2 "Use libxml2 if available." ON)
 
+  separate_arguments(LLVM_DEFINITIONS_LIST NATIVE_COMMAND ${LLVM_DEFINITIONS})
+  add_definitions(${LLVM_DEFINITIONS_LIST})
+  list(APPEND CMAKE_REQUIRED_DEFINITIONS ${LLVM_DEFINITIONS_LIST})
+
   include(AddLLVM)
   include(TableGen)
   include(HandleLLVMOptions)
@@ -75,6 +79,12 @@ if(CLANG_BUILT_STANDALONE)
   include(CheckAtomic)
   include(GetErrcMessages)
   include(LLVMDistributionSupport)
+
+  if(CMAKE_CROSSCOMPILING)
+    set(LLVM_USE_HOST_TOOLS ON)
+    include(CrossCompile)
+    llvm_create_cross_target(Clang NATIVE "" Release)
+  endif()
 
   set(PACKAGE_VERSION "${LLVM_PACKAGE_VERSION}")
   set(BUG_REPORT_URL "${LLVM_PACKAGE_BUGREPORT}" CACHE STRING
@@ -146,6 +156,12 @@ if(CLANG_BUILT_STANDALONE)
     endif()
 
     umbrella_lit_testsuite_begin(check-all)
+
+    # If LLVM was built with Z3, check if we still have the headers around.
+    # They are used by a few tests.
+    if (LLVM_WITH_Z3)
+      find_package(Z3 4.8.9)
+    endif()
   endif() # LLVM_INCLUDE_TESTS
 endif() # standalone
 
@@ -183,18 +199,17 @@ check_include_file(sys/resource.h CLANG_HAVE_RLIMITS)
 # This check requires _GNU_SOURCE on linux
 check_include_file(dlfcn.h CLANG_HAVE_DLFCN_H)
 if( CLANG_HAVE_DLFCN_H )
+  include(CMakePushCheckState)
   include(CheckLibraryExists)
   include(CheckSymbolExists)
   check_library_exists(dl dlopen "" HAVE_LIBDL)
+  cmake_push_check_state()
   if( HAVE_LIBDL )
     list(APPEND CMAKE_REQUIRED_LIBRARIES dl)
   endif()
   list(APPEND CMAKE_REQUIRED_DEFINITIONS -D_GNU_SOURCE)
   check_symbol_exists(dladdr dlfcn.h CLANG_HAVE_DLADDR)
-  list(REMOVE_ITEM CMAKE_REQUIRED_DEFINITIONS -D_GNU_SOURCE)
-  if( HAVE_LIBDL )
-    list(REMOVE_ITEM CMAKE_REQUIRED_LIBRARIES dl)
-  endif()
+  cmake_pop_check_state()
 endif()
 
 set(CLANG_RESOURCE_DIR "" CACHE STRING
@@ -342,9 +357,6 @@ configure_file(
 # Add appropriate flags for GCC
 if (LLVM_COMPILER_IS_GCC_COMPATIBLE)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-common -Woverloaded-virtual")
-  if (NOT "${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-strict-aliasing")
-  endif ()
 
   # Enable -pedantic for Clang even if it's not enabled for LLVM.
   if (NOT LLVM_ENABLE_PEDANTIC)
@@ -432,18 +444,16 @@ if(NOT LLVM_STATIC_LINK_CXX_STDLIB)
   set(HAVE_CLANG_REPL_SUPPORT ON)
 endif()
 
-option(CLANG_ENABLE_ARCMT "Build ARCMT." ON)
+option(CLANG_ENABLE_OBJC_REWRITER "Build the Objective-C rewriter tool" OFF)
+
 option(CLANG_ENABLE_STATIC_ANALYZER
   "Include static analyzer in clang binary." ON)
 
 option(CLANG_ENABLE_PROTO_FUZZER "Build Clang protobuf fuzzer." OFF)
 
-if(NOT CLANG_ENABLE_STATIC_ANALYZER AND CLANG_ENABLE_ARCMT)
-  message(FATAL_ERROR "Cannot disable static analyzer while enabling ARCMT or Z3")
-endif()
-
-if(CLANG_ENABLE_ARCMT)
-  set(CLANG_ENABLE_OBJC_REWRITER ON)
+if (DEFINED CLANG_ENABLE_ARCMT)
+  set(CLANG_ENABLE_OBJC_REWRITER ${CLANG_ENABLE_ARCMT})
+  message(DEPRECATION "'CLANG_ENABLE_ARCMT' is deprecated as ARCMigrate has been removed from Clang. Please use 'CLANG_ENABLE_OBJC_REWRITER' instead to enable or disable the Objective-C rewriter.")
 endif()
 
 # This option is a stop-gap, we should commit to removing this as
@@ -744,11 +754,22 @@ if (CLANG_ENABLE_BOOTSTRAP)
   if(BOOTSTRAP_LLVM_BUILD_INSTRUMENTED)
     add_dependencies(clang-bootstrap-deps llvm-profdata)
     set(PGO_OPT -DLLVM_PROFDATA=${LLVM_RUNTIME_OUTPUT_INTDIR}/llvm-profdata)
+    string(TOUPPER "${BOOTSTRAP_LLVM_BUILD_INSTRUMENTED}" BOOTSTRAP_LLVM_BUILD_INSTRUMENTED)
+    if (BOOTSTRAP_LLVM_BUILD_INSTRUMENTED STREQUAL "CSSPGO")
+      add_dependencies(clang-bootstrap-deps llvm-profgen)
+      list(APPEND PGO_OPT -DLLVM_PROFGEN=${LLVM_RUNTIME_OUTPUT_INTDIR}/llvm-profgen)
+    endif()
   endif()
 
   if(LLVM_BUILD_INSTRUMENTED)
-    add_dependencies(clang-bootstrap-deps generate-profdata)
-    set(PGO_OPT -DLLVM_PROFDATA_FILE=${CMAKE_CURRENT_BINARY_DIR}/utils/perf-training/clang.profdata)
+    string(TOUPPER "${LLVM_BUILD_INSTRUMENTED}" LLVM_BUILD_INSTRUMENTED)
+    if (LLVM_BUILD_INSTRUMENTED STREQUAL "CSSPGO")
+      add_dependencies(clang-bootstrap-deps generate-sprofdata)
+      set(PGO_OPT -DLLVM_SPROFDATA_FILE=${CMAKE_CURRENT_BINARY_DIR}/utils/perf-training/clang.sprofdata)
+    else()
+      add_dependencies(clang-bootstrap-deps generate-profdata)
+      set(PGO_OPT -DLLVM_PROFDATA_FILE=${CMAKE_CURRENT_BINARY_DIR}/utils/perf-training/clang.profdata)
+    endif()
     # Use the current tools for LTO instead of the instrumented ones
     list(APPEND _BOOTSTRAP_DEFAULT_PASSTHROUGH
       CMAKE_CXX_COMPILER

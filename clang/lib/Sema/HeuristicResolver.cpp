@@ -11,6 +11,7 @@
 #include "clang/AST/CXXInheritance.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/AST/TemplateBase.h"
 #include "clang/AST/Type.h"
 
 namespace clang {
@@ -34,22 +35,28 @@ public:
   resolveMemberExpr(const CXXDependentScopeMemberExpr *ME);
   std::vector<const NamedDecl *>
   resolveDeclRefExpr(const DependentScopeDeclRefExpr *RE);
-  std::vector<const NamedDecl *> resolveTypeOfCallExpr(const CallExpr *CE);
   std::vector<const NamedDecl *> resolveCalleeOfCallExpr(const CallExpr *CE);
   std::vector<const NamedDecl *>
   resolveUsingValueDecl(const UnresolvedUsingValueDecl *UUVD);
   std::vector<const NamedDecl *>
   resolveDependentNameType(const DependentNameType *DNT);
-  std::vector<const NamedDecl *> resolveTemplateSpecializationType(
-      const DependentTemplateSpecializationType *DTST);
-  QualType resolveNestedNameSpecifierToType(const NestedNameSpecifier *NNS);
+  std::vector<const NamedDecl *>
+  resolveTemplateSpecializationType(const TemplateSpecializationType *TST);
+  QualType resolveNestedNameSpecifierToType(NestedNameSpecifier NNS);
   QualType getPointeeType(QualType T);
+  std::vector<const NamedDecl *>
+  lookupDependentName(CXXRecordDecl *RD, DeclarationName Name,
+                      llvm::function_ref<bool(const NamedDecl *ND)> Filter);
+  TagDecl *resolveTypeToTagDecl(QualType T);
+  QualType simplifyType(QualType Type, const Expr *E, bool UnwrapPointer);
+  QualType resolveExprToType(const Expr *E);
+  FunctionProtoTypeLoc getFunctionProtoTypeLoc(const Expr *Fn);
 
 private:
   ASTContext &Ctx;
 
   // Recursion protection sets
-  llvm::SmallSet<const DependentNameType *, 4> SeenDependentNameTypes;
+  llvm::SmallPtrSet<const DependentNameType *, 4> SeenDependentNameTypes;
 
   // Given a tag-decl type and a member name, heuristically resolve the
   // name to one or more declarations.
@@ -64,26 +71,9 @@ private:
   resolveDependentMember(QualType T, DeclarationName Name,
                          llvm::function_ref<bool(const NamedDecl *ND)> Filter);
 
-  // Try to heuristically resolve the type of a possibly-dependent expression
-  // `E`.
-  QualType resolveExprToType(const Expr *E);
   std::vector<const NamedDecl *> resolveExprToDecls(const Expr *E);
+  QualType resolveTypeOfCallExpr(const CallExpr *CE);
 
-  // Helper function for HeuristicResolver::resolveDependentMember()
-  // which takes a possibly-dependent type `T` and heuristically
-  // resolves it to a TagDecl in which we can try name lookup.
-  TagDecl *resolveTypeToTagDecl(const Type *T);
-
-  // This is a reimplementation of CXXRecordDecl::lookupDependentName()
-  // so that the implementation can call into other HeuristicResolver helpers.
-  // FIXME: Once HeuristicResolver is upstreamed to the clang libraries
-  // (https://github.com/clangd/clangd/discussions/1662),
-  // CXXRecordDecl::lookupDepenedentName() can be removed, and its call sites
-  // can be modified to benefit from the more comprehensive heuristics offered
-  // by HeuristicResolver instead.
-  std::vector<const NamedDecl *>
-  lookupDependentName(CXXRecordDecl *RD, DeclarationName Name,
-                      llvm::function_ref<bool(const NamedDecl *ND)> Filter);
   bool findOrdinaryMemberInDependentClasses(const CXXBaseSpecifier *Specifier,
                                             CXXBasePath &Path,
                                             DeclarationName Name);
@@ -104,17 +94,23 @@ const auto TemplateFilter = [](const NamedDecl *D) {
   return isa<TemplateDecl>(D);
 };
 
+QualType resolveDeclToType(const NamedDecl *D, ASTContext &Ctx) {
+  if (const auto *TempD = dyn_cast<TemplateDecl>(D)) {
+    D = TempD->getTemplatedDecl();
+  }
+  if (const auto *TD = dyn_cast<TypeDecl>(D))
+    return Ctx.getCanonicalTypeDeclType(TD);
+  if (const auto *VD = dyn_cast<ValueDecl>(D)) {
+    return VD->getType();
+  }
+  return QualType();
+}
+
 QualType resolveDeclsToType(const std::vector<const NamedDecl *> &Decls,
                             ASTContext &Ctx) {
   if (Decls.size() != 1) // Names an overload set -- just bail.
     return QualType();
-  if (const auto *TD = dyn_cast<TypeDecl>(Decls[0])) {
-    return Ctx.getTypeDeclType(TD);
-  }
-  if (const auto *VD = dyn_cast<ValueDecl>(Decls[0])) {
-    return VD->getType();
-  }
-  return QualType();
+  return resolveDeclToType(Decls[0], Ctx);
 }
 
 TemplateName getReferencedTemplateName(const Type *T) {
@@ -130,8 +126,10 @@ TemplateName getReferencedTemplateName(const Type *T) {
 // Helper function for HeuristicResolver::resolveDependentMember()
 // which takes a possibly-dependent type `T` and heuristically
 // resolves it to a CXXRecordDecl in which we can try name lookup.
-TagDecl *HeuristicResolverImpl::resolveTypeToTagDecl(const Type *T) {
-  assert(T);
+TagDecl *HeuristicResolverImpl::resolveTypeToTagDecl(QualType QT) {
+  const Type *T = QT.getTypePtrOrNull();
+  if (!T)
+    return nullptr;
 
   // Unwrap type sugar such as type aliases.
   T = T->getCanonicalTypeInternal().getTypePtr();
@@ -144,14 +142,16 @@ TagDecl *HeuristicResolverImpl::resolveTypeToTagDecl(const Type *T) {
     T = T->getCanonicalTypeInternal().getTypePtr();
   }
 
-  if (auto *TT = T->getAs<TagType>()) {
-    return TT->getDecl();
+  if (auto *TD = T->getAsTagDecl()) {
+    // Template might not be instantiated yet, fall back to primary template
+    // in such cases.
+    if (const auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(TD)) {
+      if (CTSD->getTemplateSpecializationKind() == TSK_Undeclared) {
+        return CTSD->getSpecializedTemplate()->getTemplatedDecl();
+      }
+    }
+    return TD;
   }
-
-  if (const auto *ICNT = T->getAs<InjectedClassNameType>())
-    T = ICNT->getInjectedSpecializationType().getTypePtrOrNull();
-  if (!T)
-    return nullptr;
 
   TemplateName TN = getReferencedTemplateName(T);
   if (TN.isNull())
@@ -198,6 +198,118 @@ QualType HeuristicResolverImpl::getPointeeType(QualType T) {
   return FirstArg.getAsType();
 }
 
+QualType HeuristicResolverImpl::simplifyType(QualType Type, const Expr *E,
+                                             bool UnwrapPointer) {
+  bool DidUnwrapPointer = false;
+  // A type, together with an optional expression whose type it represents
+  // which may have additional information about the expression's type
+  // not stored in the QualType itself.
+  struct TypeExprPair {
+    QualType Type;
+    const Expr *E = nullptr;
+  };
+  TypeExprPair Current{Type, E};
+  auto SimplifyOneStep = [UnwrapPointer, &DidUnwrapPointer,
+                          this](TypeExprPair T) -> TypeExprPair {
+    if (UnwrapPointer) {
+      if (QualType Pointee = getPointeeType(T.Type); !Pointee.isNull()) {
+        DidUnwrapPointer = true;
+        return {Pointee};
+      }
+    }
+    if (const auto *RT = T.Type->getAs<ReferenceType>()) {
+      // Does not count as "unwrap pointer".
+      return {RT->getPointeeType()};
+    }
+    if (const auto *BT = T.Type->getAs<BuiltinType>()) {
+      // If BaseType is the type of a dependent expression, it's just
+      // represented as BuiltinType::Dependent which gives us no information. We
+      // can get further by analyzing the dependent expression.
+      if (T.E && BT->getKind() == BuiltinType::Dependent) {
+        return {resolveExprToType(T.E), T.E};
+      }
+    }
+    if (const auto *AT = T.Type->getContainedAutoType()) {
+      // If T contains a dependent `auto` type, deduction will not have
+      // been performed on it yet. In simple cases (e.g. `auto` variable with
+      // initializer), get the approximate type that would result from
+      // deduction.
+      // FIXME: A more accurate implementation would propagate things like the
+      // `const` in `const auto`.
+      if (T.E && AT->isUndeducedAutoType()) {
+        if (const auto *DRE = dyn_cast<DeclRefExpr>(T.E)) {
+          if (const auto *VD = dyn_cast<VarDecl>(DRE->getDecl())) {
+            if (auto *Init = VD->getInit())
+              return {resolveExprToType(Init), Init};
+          }
+        }
+      }
+    }
+    if (const auto *TTPT = dyn_cast_if_present<TemplateTypeParmType>(T.Type)) {
+      // We can't do much useful with a template parameter (e.g. we cannot look
+      // up member names inside it). However, if the template parameter has a
+      // default argument, as a heuristic we can replace T with the default
+      // argument type.
+      if (const auto *TTPD = TTPT->getDecl()) {
+        if (TTPD->hasDefaultArgument()) {
+          const auto &DefaultArg = TTPD->getDefaultArgument().getArgument();
+          if (DefaultArg.getKind() == TemplateArgument::Type) {
+            return {DefaultArg.getAsType()};
+          }
+        }
+      }
+    }
+
+    // Similarly, heuristically replace a template template parameter with its
+    // default argument if it has one.
+    if (const auto *TST =
+            dyn_cast_if_present<TemplateSpecializationType>(T.Type)) {
+      if (const auto *TTPD = dyn_cast_if_present<TemplateTemplateParmDecl>(
+              TST->getTemplateName().getAsTemplateDecl())) {
+        if (TTPD->hasDefaultArgument()) {
+          const auto &DefaultArg = TTPD->getDefaultArgument().getArgument();
+          if (DefaultArg.getKind() == TemplateArgument::Template) {
+            if (const auto *CTD = dyn_cast_if_present<ClassTemplateDecl>(
+                    DefaultArg.getAsTemplate().getAsTemplateDecl())) {
+              return {Ctx.getCanonicalTagType(CTD->getTemplatedDecl())};
+            }
+          }
+        }
+      }
+    }
+
+    // Check if the expression refers to an explicit object parameter of
+    // templated type. If so, heuristically treat it as having the type of the
+    // enclosing class.
+    if (!T.Type.isNull() &&
+        (T.Type->isUndeducedAutoType() || T.Type->isTemplateTypeParmType())) {
+      if (auto *DRE = dyn_cast_if_present<DeclRefExpr>(T.E)) {
+        auto *PrDecl = dyn_cast<ParmVarDecl>(DRE->getDecl());
+        if (PrDecl && PrDecl->isExplicitObjectParameter()) {
+          const auto *Parent =
+              dyn_cast<TagDecl>(PrDecl->getDeclContext()->getParent());
+          return {Ctx.getCanonicalTagType(Parent)};
+        }
+      }
+    }
+
+    return T;
+  };
+  // As an additional protection against infinite loops, bound the number of
+  // simplification steps.
+  size_t StepCount = 0;
+  const size_t MaxSteps = 64;
+  while (!Current.Type.isNull() && StepCount++ < MaxSteps) {
+    TypeExprPair New = SimplifyOneStep(Current);
+    if (New.Type == Current.Type)
+      break;
+    Current = New;
+  }
+  if (UnwrapPointer && !DidUnwrapPointer)
+    return QualType();
+  return Current.Type;
+}
+
 std::vector<const NamedDecl *> HeuristicResolverImpl::resolveMemberExpr(
     const CXXDependentScopeMemberExpr *ME) {
   // If the expression has a qualifier, try resolving the member inside the
@@ -211,7 +323,7 @@ std::vector<const NamedDecl *> HeuristicResolverImpl::resolveMemberExpr(
   //      an instance method, it's represented as a CXXDependentScopeMemberExpr
   //      with `this` as the base expression as `X` as the qualifier
   //      (which could be valid if `X` names a base class after instantiation).
-  if (NestedNameSpecifier *NNS = ME->getQualifier()) {
+  if (NestedNameSpecifier NNS = ME->getQualifier()) {
     if (QualType QualifierType = resolveNestedNameSpecifierToType(NNS);
         !QualifierType.isNull()) {
       auto Decls =
@@ -230,60 +342,40 @@ std::vector<const NamedDecl *> HeuristicResolverImpl::resolveMemberExpr(
   // Try resolving the member inside the expression's base type.
   Expr *Base = ME->isImplicitAccess() ? nullptr : ME->getBase();
   QualType BaseType = ME->getBaseType();
-  if (ME->isArrow()) {
-    BaseType = getPointeeType(BaseType);
-    if (BaseType.isNull())
-      return {};
-  }
-  if (const auto *BT = BaseType->getAs<BuiltinType>()) {
-    // If BaseType is the type of a dependent expression, it's just
-    // represented as BuiltinType::Dependent which gives us no information. We
-    // can get further by analyzing the dependent expression.
-    if (Base && BT->getKind() == BuiltinType::Dependent) {
-      BaseType = resolveExprToType(Base);
-      if (BaseType.isNull())
-        return {};
-    }
-  }
-  if (const auto *AT = BaseType->getContainedAutoType()) {
-    // If BaseType contains a dependent `auto` type, deduction will not have
-    // been performed on it yet. In simple cases (e.g. `auto` variable with
-    // initializer), get the approximate type that would result from deduction.
-    // FIXME: A more accurate implementation would propagate things like the
-    // `const` in `const auto`.
-    if (AT->isUndeducedAutoType()) {
-      if (const auto *DRE = dyn_cast<DeclRefExpr>(Base)) {
-        if (const auto *VD = dyn_cast<VarDecl>(DRE->getDecl())) {
-          if (VD->hasInit())
-            BaseType = resolveExprToType(VD->getInit());
-        }
-      }
-    }
-  }
+  BaseType = simplifyType(BaseType, Base, ME->isArrow());
   return resolveDependentMember(BaseType, ME->getMember(), NoFilter);
 }
 
 std::vector<const NamedDecl *>
 HeuristicResolverImpl::resolveDeclRefExpr(const DependentScopeDeclRefExpr *RE) {
-  return resolveDependentMember(
-      resolveNestedNameSpecifierToType(RE->getQualifier()), RE->getDeclName(),
-      StaticFilter);
+  QualType Qualifier = resolveNestedNameSpecifierToType(RE->getQualifier());
+  Qualifier = simplifyType(Qualifier, nullptr, /*UnwrapPointer=*/false);
+  return resolveDependentMember(Qualifier, RE->getDeclName(), StaticFilter);
 }
 
-std::vector<const NamedDecl *>
-HeuristicResolverImpl::resolveTypeOfCallExpr(const CallExpr *CE) {
-  QualType CalleeType = resolveExprToType(CE->getCallee());
-  if (CalleeType.isNull())
-    return {};
-  if (const auto *FnTypePtr = CalleeType->getAs<PointerType>())
-    CalleeType = FnTypePtr->getPointeeType();
-  if (const FunctionType *FnType = CalleeType->getAs<FunctionType>()) {
-    if (const auto *D =
-            resolveTypeToTagDecl(FnType->getReturnType().getTypePtr())) {
-      return {D};
+QualType HeuristicResolverImpl::resolveTypeOfCallExpr(const CallExpr *CE) {
+  // resolveExprToType(CE->getCallee()) would bail in the case of multiple
+  // overloads, as it can't produce a single type for them. We can be more
+  // permissive here, and allow multiple overloads with a common return type.
+  std::vector<const NamedDecl *> CalleeDecls =
+      resolveExprToDecls(CE->getCallee());
+  QualType CommonReturnType;
+  for (const NamedDecl *CalleeDecl : CalleeDecls) {
+    QualType CalleeType = resolveDeclToType(CalleeDecl, Ctx);
+    if (CalleeType.isNull())
+      continue;
+    if (const auto *FnTypePtr = CalleeType->getAs<PointerType>())
+      CalleeType = FnTypePtr->getPointeeType();
+    if (const FunctionType *FnType = CalleeType->getAs<FunctionType>()) {
+      QualType ReturnType =
+          simplifyType(FnType->getReturnType(), nullptr, false);
+      if (!CommonReturnType.isNull() && CommonReturnType != ReturnType) {
+        return {}; // conflicting return types
+      }
+      CommonReturnType = ReturnType;
     }
   }
-  return {};
+  return CommonReturnType;
 }
 
 std::vector<const NamedDecl *>
@@ -297,7 +389,10 @@ HeuristicResolverImpl::resolveCalleeOfCallExpr(const CallExpr *CE) {
 
 std::vector<const NamedDecl *> HeuristicResolverImpl::resolveUsingValueDecl(
     const UnresolvedUsingValueDecl *UUVD) {
-  return resolveDependentMember(QualType(UUVD->getQualifier()->getAsType(), 0),
+  NestedNameSpecifier Qualifier = UUVD->getQualifier();
+  if (Qualifier.getKind() != NestedNameSpecifier::Kind::Type)
+    return {};
+  return resolveDependentMember(QualType(Qualifier.getAsType(), 0),
                                 UUVD->getNameInfo().getName(), ValueFilter);
 }
 
@@ -312,10 +407,12 @@ HeuristicResolverImpl::resolveDependentNameType(const DependentNameType *DNT) {
 
 std::vector<const NamedDecl *>
 HeuristicResolverImpl::resolveTemplateSpecializationType(
-    const DependentTemplateSpecializationType *DTST) {
+    const TemplateSpecializationType *TST) {
+  const DependentTemplateStorage &DTN =
+      *TST->getTemplateName().getAsDependentTemplateName();
   return resolveDependentMember(
-      resolveNestedNameSpecifierToType(DTST->getQualifier()),
-      DTST->getIdentifier(), TemplateFilter);
+      resolveNestedNameSpecifierToType(DTN.getQualifier()),
+      DTN.getName().getIdentifier(), TemplateFilter);
 }
 
 std::vector<const NamedDecl *>
@@ -330,15 +427,46 @@ HeuristicResolverImpl::resolveExprToDecls(const Expr *E) {
     return {OE->decls_begin(), OE->decls_end()};
   }
   if (const auto *CE = dyn_cast<CallExpr>(E)) {
-    return resolveTypeOfCallExpr(CE);
+    QualType T = resolveTypeOfCallExpr(CE);
+    if (const auto *D = resolveTypeToTagDecl(T)) {
+      return {D};
+    }
+    return {};
   }
   if (const auto *ME = dyn_cast<MemberExpr>(E))
     return {ME->getMemberDecl()};
+  if (const auto *DRE = dyn_cast<DeclRefExpr>(E))
+    return {DRE->getDecl()};
 
   return {};
 }
 
 QualType HeuristicResolverImpl::resolveExprToType(const Expr *E) {
+  // resolveExprToDecls on a CallExpr only succeeds if the return type is
+  // a TagDecl, but we may want the type of a call in other cases as well.
+  // (FIXME: There are probably other cases where we can do something more
+  // flexible than resoveExprToDecls + resolveDeclsToType, e.g. in the case
+  // of OverloadExpr we can probably accept overloads with a common type).
+  if (const auto *CE = dyn_cast<CallExpr>(E)) {
+    if (QualType Resolved = resolveTypeOfCallExpr(CE); !Resolved.isNull())
+      return Resolved;
+
+    // Don't proceed to try resolveExprToDecls(), it would just call
+    // resolveTypeOfCallExpr() again.
+    return E->getType();
+  }
+
+  // Similarly, unwrapping a unary dereference operation does not work via
+  // resolveExprToDecls.
+  if (const auto *UO = dyn_cast<UnaryOperator>(E->IgnoreParenCasts())) {
+    if (UO->getOpcode() == UnaryOperatorKind::UO_Deref) {
+      if (auto Pointee = getPointeeType(resolveExprToType(UO->getSubExpr()));
+          !Pointee.isNull()) {
+        return Pointee;
+      }
+    }
+  }
+
   std::vector<const NamedDecl *> Decls = resolveExprToDecls(E);
   if (!Decls.empty())
     return resolveDeclsToType(Decls, Ctx);
@@ -347,24 +475,23 @@ QualType HeuristicResolverImpl::resolveExprToType(const Expr *E) {
 }
 
 QualType HeuristicResolverImpl::resolveNestedNameSpecifierToType(
-    const NestedNameSpecifier *NNS) {
-  if (!NNS)
-    return QualType();
-
+    NestedNameSpecifier NNS) {
   // The purpose of this function is to handle the dependent (Kind ==
   // Identifier) case, but we need to recurse on the prefix because
   // that may be dependent as well, so for convenience handle
   // the TypeSpec cases too.
-  switch (NNS->getKind()) {
-  case NestedNameSpecifier::TypeSpec:
-  case NestedNameSpecifier::TypeSpecWithTemplate:
-    return QualType(NNS->getAsType(), 0);
-  case NestedNameSpecifier::Identifier: {
-    return resolveDeclsToType(
-        resolveDependentMember(
-            resolveNestedNameSpecifierToType(NNS->getPrefix()),
-            NNS->getAsIdentifier(), TypeFilter),
-        Ctx);
+  switch (NNS.getKind()) {
+  case NestedNameSpecifier::Kind::Type: {
+    const auto *T = NNS.getAsType();
+    // FIXME: Should this handle the DependentTemplateSpecializationType as
+    // well?
+    if (const auto *DTN = dyn_cast<DependentNameType>(T))
+      return resolveDeclsToType(
+          resolveDependentMember(
+              resolveNestedNameSpecifierToType(DTN->getQualifier()),
+              DTN->getIdentifier(), TypeFilter),
+          Ctx);
+    return QualType(T, 0);
   }
   default:
     break;
@@ -390,7 +517,7 @@ bool findOrdinaryMember(const CXXRecordDecl *RD, CXXBasePath &Path,
 bool HeuristicResolverImpl::findOrdinaryMemberInDependentClasses(
     const CXXBaseSpecifier *Specifier, CXXBasePath &Path,
     DeclarationName Name) {
-  TagDecl *TD = resolveTypeToTagDecl(Specifier->getType().getTypePtr());
+  TagDecl *TD = resolveTypeToTagDecl(Specifier->getType());
   if (const auto *RD = dyn_cast_if_present<CXXRecordDecl>(TD)) {
     return findOrdinaryMember(RD, Path, Name);
   }
@@ -433,10 +560,7 @@ std::vector<const NamedDecl *> HeuristicResolverImpl::lookupDependentName(
 std::vector<const NamedDecl *> HeuristicResolverImpl::resolveDependentMember(
     QualType QT, DeclarationName Name,
     llvm::function_ref<bool(const NamedDecl *ND)> Filter) {
-  const Type *T = QT.getTypePtrOrNull();
-  if (!T)
-    return {};
-  TagDecl *TD = resolveTypeToTagDecl(T);
+  TagDecl *TD = resolveTypeToTagDecl(QT);
   if (!TD)
     return {};
   if (auto *ED = dyn_cast<EnumDecl>(TD)) {
@@ -451,7 +575,8 @@ std::vector<const NamedDecl *> HeuristicResolverImpl::resolveDependentMember(
       if (!Filter(ND))
         return false;
       if (const auto *MD = dyn_cast<CXXMethodDecl>(ND)) {
-        return MD->getMethodQualifiers().compatiblyIncludes(QT.getQualifiers(),
+        return !MD->isInstance() ||
+               MD->getMethodQualifiers().compatiblyIncludes(QT.getQualifiers(),
                                                             Ctx);
       }
       return true;
@@ -459,6 +584,56 @@ std::vector<const NamedDecl *> HeuristicResolverImpl::resolveDependentMember(
   }
   return {};
 }
+
+FunctionProtoTypeLoc
+HeuristicResolverImpl::getFunctionProtoTypeLoc(const Expr *Fn) {
+  TypeLoc Target;
+  const Expr *NakedFn = Fn->IgnoreParenCasts();
+  if (const auto *T = NakedFn->getType().getTypePtr()->getAs<TypedefType>()) {
+    Target = T->getDecl()->getTypeSourceInfo()->getTypeLoc();
+  } else if (const auto *DR = dyn_cast<DeclRefExpr>(NakedFn)) {
+    const auto *D = DR->getDecl();
+    if (const auto *const VD = dyn_cast<VarDecl>(D)) {
+      Target = VD->getTypeSourceInfo()->getTypeLoc();
+    }
+  } else if (const auto *ME = dyn_cast<MemberExpr>(NakedFn)) {
+    const auto *MD = ME->getMemberDecl();
+    if (const auto *FD = dyn_cast<FieldDecl>(MD)) {
+      Target = FD->getTypeSourceInfo()->getTypeLoc();
+    }
+  }
+
+  if (!Target)
+    return {};
+
+  // Unwrap types that may be wrapping the function type
+  while (true) {
+    if (auto P = Target.getAs<PointerTypeLoc>()) {
+      Target = P.getPointeeLoc();
+      continue;
+    }
+    if (auto A = Target.getAs<AttributedTypeLoc>()) {
+      Target = A.getModifiedLoc();
+      continue;
+    }
+    if (auto P = Target.getAs<ParenTypeLoc>()) {
+      Target = P.getInnerLoc();
+      continue;
+    }
+    break;
+  }
+
+  if (auto F = Target.getAs<FunctionProtoTypeLoc>()) {
+    // In some edge cases the AST can contain a "trivial" FunctionProtoTypeLoc
+    // which has null parameters. Avoid these as they don't contain useful
+    // information.
+    if (!llvm::is_contained(F.getParams(), nullptr))
+      return F;
+  }
+
+  return {};
+}
+
 } // namespace
 
 std::vector<const NamedDecl *> HeuristicResolver::resolveMemberExpr(
@@ -468,10 +643,6 @@ std::vector<const NamedDecl *> HeuristicResolver::resolveMemberExpr(
 std::vector<const NamedDecl *> HeuristicResolver::resolveDeclRefExpr(
     const DependentScopeDeclRefExpr *RE) const {
   return HeuristicResolverImpl(Ctx).resolveDeclRefExpr(RE);
-}
-std::vector<const NamedDecl *>
-HeuristicResolver::resolveTypeOfCallExpr(const CallExpr *CE) const {
-  return HeuristicResolverImpl(Ctx).resolveTypeOfCallExpr(CE);
 }
 std::vector<const NamedDecl *>
 HeuristicResolver::resolveCalleeOfCallExpr(const CallExpr *CE) const {
@@ -487,15 +658,34 @@ std::vector<const NamedDecl *> HeuristicResolver::resolveDependentNameType(
 }
 std::vector<const NamedDecl *>
 HeuristicResolver::resolveTemplateSpecializationType(
-    const DependentTemplateSpecializationType *DTST) const {
-  return HeuristicResolverImpl(Ctx).resolveTemplateSpecializationType(DTST);
+    const TemplateSpecializationType *TST) const {
+  return HeuristicResolverImpl(Ctx).resolveTemplateSpecializationType(TST);
 }
 QualType HeuristicResolver::resolveNestedNameSpecifierToType(
-    const NestedNameSpecifier *NNS) const {
+    NestedNameSpecifier NNS) const {
   return HeuristicResolverImpl(Ctx).resolveNestedNameSpecifierToType(NNS);
+}
+std::vector<const NamedDecl *> HeuristicResolver::lookupDependentName(
+    CXXRecordDecl *RD, DeclarationName Name,
+    llvm::function_ref<bool(const NamedDecl *ND)> Filter) {
+  return HeuristicResolverImpl(Ctx).lookupDependentName(RD, Name, Filter);
 }
 const QualType HeuristicResolver::getPointeeType(QualType T) const {
   return HeuristicResolverImpl(Ctx).getPointeeType(T);
+}
+TagDecl *HeuristicResolver::resolveTypeToTagDecl(QualType T) const {
+  return HeuristicResolverImpl(Ctx).resolveTypeToTagDecl(T);
+}
+QualType HeuristicResolver::simplifyType(QualType Type, const Expr *E,
+                                         bool UnwrapPointer) {
+  return HeuristicResolverImpl(Ctx).simplifyType(Type, E, UnwrapPointer);
+}
+QualType HeuristicResolver::resolveExprToType(const Expr *E) const {
+  return HeuristicResolverImpl(Ctx).resolveExprToType(E);
+}
+FunctionProtoTypeLoc
+HeuristicResolver::getFunctionProtoTypeLoc(const Expr *Fn) const {
+  return HeuristicResolverImpl(Ctx).getFunctionProtoTypeLoc(Fn);
 }
 
 } // namespace clang

@@ -7,6 +7,8 @@
 // RUN: llvm-objdump -s %t.obj | FileCheck %s --check-prefix=DATA
 // RUN: llvm-objdump -s %t-ec.obj | FileCheck %s --check-prefix=DATA
 
+# RUN: not llvm-mc -triple=aarch64-windows -filetype=obj %s --defsym ERR=1 -o /dev/null 2>&1 | FileCheck %s --check-prefix=ERR --implicit-check-not=error:
+
 // IMAGE_REL_ARM64_ADDR32
 .Linfo_foo:
   .asciz "foo"
@@ -121,3 +123,8 @@ tbz x0, #0, target
 
 // DATA: Contents of section .rdata:
 // DATA-NEXT:  0000 30000000 08000000
+
+.ifdef ERR
+# ERR: [[#@LINE+1]]:12: error: invalid variant 'plt'
+.long func@plt
+.endif

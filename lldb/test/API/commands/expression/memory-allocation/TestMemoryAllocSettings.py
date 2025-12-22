@@ -30,7 +30,7 @@ class TestMemoryAllocSettings(TestBase):
         alloc0 = re.search("^.*IRMemoryMap::Malloc.+?0xdead0000.*$", log, re.MULTILINE)
         # Malloc adds additional bytes to allocation size, hence 10007
         alloc1 = re.search(
-            "^.*IRMemoryMap::Malloc\s*?\(10007.+?0xdead1000.*$", log, re.MULTILINE
+            r"^.*IRMemoryMap::Malloc\s*?\(10007.+?0xdead1000.*$", log, re.MULTILINE
         )
         self.assertTrue(alloc0, "Couldn't find an allocation at a given address.")
         self.assertTrue(

@@ -815,13 +815,13 @@ void StackColoring::calculateLocalLiveness() {
       LocalLiveOut |= BlockInfo.Begin;
 
       // Update block LiveIn set, noting whether it has changed.
-      if (LocalLiveIn.test(BlockInfo.LiveIn)) {
+      if (!LocalLiveIn.subsetOf(BlockInfo.LiveIn)) {
         changed = true;
         BlockInfo.LiveIn |= LocalLiveIn;
       }
 
       // Update block LiveOut set, noting whether it has changed.
-      if (LocalLiveOut.test(BlockInfo.LiveOut)) {
+      if (!LocalLiveOut.subsetOf(BlockInfo.LiveOut)) {
         changed = true;
         BlockInfo.LiveOut |= LocalLiveOut;
       }
@@ -914,10 +914,10 @@ void StackColoring::remapInstructions(DenseMap<int, int> &SlotRemap) {
     if (!VI.Var || !VI.inStackSlot())
       continue;
     int Slot = VI.getStackSlot();
-    if (SlotRemap.count(Slot)) {
+    if (auto It = SlotRemap.find(Slot); It != SlotRemap.end()) {
       LLVM_DEBUG(dbgs() << "Remapping debug info for ["
                         << cast<DILocalVariable>(VI.Var)->getName() << "].\n");
-      VI.updateStackSlot(SlotRemap[Slot]);
+      VI.updateStackSlot(It->second);
       FixedDbg++;
     }
   }
@@ -1004,10 +1004,11 @@ void StackColoring::remapInstructions(DenseMap<int, int> &SlotRemap) {
         if (!AI)
           continue;
 
-        if (!Allocas.count(AI))
+        auto It = Allocas.find(AI);
+        if (It == Allocas.end())
           continue;
 
-        MMO->setValue(Allocas[AI]);
+        MMO->setValue(It->second);
         FixedMemOp++;
       }
 
@@ -1114,9 +1115,10 @@ void StackColoring::remapInstructions(DenseMap<int, int> &SlotRemap) {
   if (WinEHFuncInfo *EHInfo = MF->getWinEHFuncInfo())
     for (WinEHTryBlockMapEntry &TBME : EHInfo->TryBlockMap)
       for (WinEHHandlerType &H : TBME.HandlerArray)
-        if (H.CatchObj.FrameIndex != std::numeric_limits<int>::max() &&
-            SlotRemap.count(H.CatchObj.FrameIndex))
-          H.CatchObj.FrameIndex = SlotRemap[H.CatchObj.FrameIndex];
+        if (H.CatchObj.FrameIndex != std::numeric_limits<int>::max())
+          if (auto It = SlotRemap.find(H.CatchObj.FrameIndex);
+              It != SlotRemap.end())
+            H.CatchObj.FrameIndex = It->second;
 
   LLVM_DEBUG(dbgs() << "Fixed " << FixedMemOp << " machine memory operands.\n");
   LLVM_DEBUG(dbgs() << "Fixed " << FixedDbg << " debug locations.\n");
@@ -1173,11 +1175,14 @@ void StackColoring::expungeSlotMap(DenseMap<int, int> &SlotRemap,
   // Expunge slot remap map.
   for (unsigned i=0; i < NumSlots; ++i) {
     // If we are remapping i
-    if (SlotRemap.count(i)) {
-      int Target = SlotRemap[i];
+    if (auto It = SlotRemap.find(i); It != SlotRemap.end()) {
+      int Target = It->second;
       // As long as our target is mapped to something else, follow it.
-      while (SlotRemap.count(Target)) {
-        Target = SlotRemap[Target];
+      while (true) {
+        auto It = SlotRemap.find(Target);
+        if (It == SlotRemap.end())
+          break;
+        Target = It->second;
         SlotRemap[i] = Target;
       }
     }
@@ -1196,7 +1201,7 @@ PreservedAnalyses StackColoringPass::run(MachineFunction &MF,
                                          MachineFunctionAnalysisManager &MFAM) {
   StackColoring SC(&MFAM.getResult<SlotIndexesAnalysis>(MF));
   if (SC.run(MF))
-    return PreservedAnalyses::none();
+    return getMachineFunctionPassPreservedAnalyses();
   return PreservedAnalyses::all();
 }
 

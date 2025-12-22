@@ -18,7 +18,7 @@ program use_device_test
       integer(c_int) function check_result(host, dev) BIND(C)
          USE, intrinsic :: iso_c_binding
          implicit none
-         type(c_ptr), intent(in) :: host, dev
+         type(c_ptr), value, intent(in) :: host, dev
       end function check_result
    end interface
 

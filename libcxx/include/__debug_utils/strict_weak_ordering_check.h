@@ -27,7 +27,7 @@ template <class _RandomAccessIterator, class _Comp>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 void
 __check_strict_weak_ordering_sorted(_RandomAccessIterator __first, _RandomAccessIterator __last, _Comp& __comp) {
 #if _LIBCPP_HARDENING_MODE == _LIBCPP_HARDENING_MODE_DEBUG
-  using __diff_t  = __iter_diff_t<_RandomAccessIterator>;
+  using __diff_t  = __iterator_difference_type<_RandomAccessIterator>;
   using _Comp_ref = __comp_ref_type<_Comp>;
   if (!__libcpp_is_constant_evaluated()) {
     // Check if the range is actually sorted.

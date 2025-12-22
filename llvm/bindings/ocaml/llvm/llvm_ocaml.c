@@ -15,16 +15,16 @@
 |*                                                                            *|
 \*===----------------------------------------------------------------------===*/
 
-#include <assert.h>
-#include <stdlib.h>
-#include <string.h>
+#include "llvm_ocaml.h"
+#include "caml/callback.h"
+#include "caml/fail.h"
+#include "caml/memory.h"
 #include "llvm-c/Core.h"
 #include "llvm-c/Support.h"
 #include "llvm/Config/llvm-config.h"
-#include "caml/memory.h"
-#include "caml/fail.h"
-#include "caml/callback.h"
-#include "llvm_ocaml.h"
+#include <assert.h>
+#include <stdlib.h>
+#include <string.h>
 
 #if OCAML_VERSION < 41200
 value caml_alloc_some(value v) {
@@ -239,7 +239,9 @@ value llvm_dispose_context(value C) {
 }
 
 /* unit -> llcontext */
-value llvm_global_context(value Unit) { return to_val(LLVMGetGlobalContext()); }
+value llvm_global_context(value Unit) {
+  return to_val(LLVMGetGlobalContext());
+}
 
 /* llcontext -> string -> int */
 value llvm_mdkind_id(value C, value Name) {
@@ -1163,12 +1165,6 @@ value llvm_const_nsw_neg(value Value) {
 }
 
 /* llvalue -> llvalue */
-value llvm_const_nuw_neg(value Value) {
-  LLVMValueRef NegValue = LLVMConstNUWNeg(Value_val(Value));
-  return to_val(NegValue);
-}
-
-/* llvalue -> llvalue */
 value llvm_const_not(value Value) {
   LLVMValueRef NotValue = LLVMConstNot(Value_val(Value));
   return to_val(NotValue);
@@ -1207,24 +1203,6 @@ value llvm_const_nsw_sub(value LHS, value RHS) {
 /* llvalue -> llvalue -> llvalue */
 value llvm_const_nuw_sub(value LHS, value RHS) {
   LLVMValueRef Value = LLVMConstNUWSub(Value_val(LHS), Value_val(RHS));
-  return to_val(Value);
-}
-
-/* llvalue -> llvalue -> llvalue */
-value llvm_const_mul(value LHS, value RHS) {
-  LLVMValueRef Value = LLVMConstMul(Value_val(LHS), Value_val(RHS));
-  return to_val(Value);
-}
-
-/* llvalue -> llvalue -> llvalue */
-value llvm_const_nsw_mul(value LHS, value RHS) {
-  LLVMValueRef Value = LLVMConstNSWMul(Value_val(LHS), Value_val(RHS));
-  return to_val(Value);
-}
-
-/* llvalue -> llvalue -> llvalue */
-value llvm_const_nuw_mul(value LHS, value RHS) {
-  LLVMValueRef Value = LLVMConstNUWMul(Value_val(LHS), Value_val(RHS));
   return to_val(Value);
 }
 
@@ -1561,6 +1539,14 @@ value llvm_is_global_constant(value GlobalVar) {
 /* bool -> llvalue -> unit */
 value llvm_set_global_constant(value Flag, value GlobalVar) {
   LLVMSetGlobalConstant(Value_val(GlobalVar), Bool_val(Flag));
+  return Val_unit;
+}
+
+/* llvalue -> llmdkind -> llmetadata -> unit */
+value llvm_global_set_metadata(value Value, value MetadataKind,
+                               value Metadata) {
+  LLVMGlobalSetMetadata(Value_val(Value), (unsigned int)Int_val(MetadataKind),
+                        Metadata_val(Metadata));
   return Val_unit;
 }
 
@@ -2366,12 +2352,6 @@ value llvm_build_neg(value X, value Name, value B) {
 value llvm_build_nsw_neg(value X, value Name, value B) {
   return to_val(
       LLVMBuildNSWNeg(Builder_val(B), Value_val(X), String_val(Name)));
-}
-
-/* llvalue -> string -> llbuilder -> llvalue */
-value llvm_build_nuw_neg(value X, value Name, value B) {
-  return to_val(
-      LLVMBuildNUWNeg(Builder_val(B), Value_val(X), String_val(Name)));
 }
 
 /* llvalue -> string -> llbuilder -> llvalue */

@@ -18,6 +18,7 @@
 #include "clang/AST/TypeLoc.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/SourceManager.h"
+#include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/SemaInternal.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include <optional>
@@ -44,6 +45,8 @@ static const FunctionProtoType *GetUnderlyingFunction(QualType T)
 bool Sema::isLibstdcxxEagerExceptionSpecHack(const Declarator &D) {
   auto *RD = dyn_cast<CXXRecordDecl>(CurContext);
 
+  if (!getPreprocessor().NeedsStdLibCxxWorkaroundBefore(2016'04'27))
+    return false;
   // All the problem cases are member functions named "swap" within class
   // templates declared directly within namespace std or std::__debug or
   // std::__profile.
@@ -89,7 +92,7 @@ ExprResult Sema::ActOnNoexceptSpec(Expr *NoexceptExpr,
 
   llvm::APSInt Result;
   ExprResult Converted = CheckConvertedConstantExpression(
-      NoexceptExpr, Context.BoolTy, Result, CCEK_Noexcept);
+      NoexceptExpr, Context.BoolTy, Result, CCEKind::Noexcept);
 
   if (Converted.isInvalid()) {
     EST = EST_NoexceptFalse;
@@ -160,8 +163,8 @@ bool Sema::CheckSpecifiedExceptionType(QualType &T, SourceRange Range) {
     DiagID = diag::ext_incomplete_in_exception_spec;
     ReturnValueOnError = false;
   }
-  if (!(PointeeT->isRecordType() &&
-        PointeeT->castAs<RecordType>()->isBeingDefined()) &&
+  if (auto *RD = PointeeT->getAsRecordDecl();
+      !(RD && RD->isBeingDefined()) &&
       RequireCompleteType(Range.getBegin(), PointeeT, DiagID, Kind, Range))
     return ReturnValueOnError;
 
@@ -700,12 +703,11 @@ bool Sema::handlerCanCatch(QualType HandlerType, QualType ExceptionType) {
     //    -- a qualification conversion
     //    -- a function pointer conversion
     bool LifetimeConv;
-    QualType Result;
     // FIXME: Should we treat the exception as catchable if a lifetime
     // conversion is required?
     if (IsQualificationConversion(ExceptionType, HandlerType, false,
                                   LifetimeConv) ||
-        IsFunctionConversion(ExceptionType, HandlerType, Result))
+        IsFunctionConversion(ExceptionType, HandlerType))
       return true;
 
     //    -- a standard pointer conversion [...]
@@ -1068,7 +1070,7 @@ static CanThrowResult canVarDeclThrow(Sema &Self, const VarDecl *VD) {
 
   // If this is a decomposition declaration, bindings might throw.
   if (auto *DD = dyn_cast<DecompositionDecl>(VD))
-    for (auto *B : DD->bindings())
+    for (auto *B : DD->flat_bindings())
       if (auto *HD = B->getHoldingVar())
         CT = mergeCanThrow(CT, canVarDeclThrow(Self, HD));
 
@@ -1301,6 +1303,7 @@ CanThrowResult Sema::canThrow(const Stmt *S) {
     // Some might be dependent for other reasons.
   case Expr::ArraySubscriptExprClass:
   case Expr::MatrixSubscriptExprClass:
+  case Expr::MatrixSingleSubscriptExprClass:
   case Expr::ArraySectionExprClass:
   case Expr::OMPArrayShapingExprClass:
   case Expr::OMPIteratorExprClass:
@@ -1366,7 +1369,6 @@ CanThrowResult Sema::canThrow(const Stmt *S) {
   case Expr::UnaryExprOrTypeTraitExprClass:
   case Expr::UnresolvedLookupExprClass:
   case Expr::UnresolvedMemberExprClass:
-  case Expr::TypoExprClass:
     // FIXME: Many of the above can throw.
     return CT_Cannot;
 
@@ -1407,6 +1409,7 @@ CanThrowResult Sema::canThrow(const Stmt *S) {
   case Stmt::OpenACCEnterDataConstructClass:
   case Stmt::OpenACCExitDataConstructClass:
   case Stmt::OpenACCWaitConstructClass:
+  case Stmt::OpenACCCacheConstructClass:
   case Stmt::OpenACCInitConstructClass:
   case Stmt::OpenACCShutdownConstructClass:
   case Stmt::OpenACCSetConstructClass:
@@ -1424,6 +1427,7 @@ CanThrowResult Sema::canThrow(const Stmt *S) {
   case Stmt::OpenACCCombinedConstructClass:
   case Stmt::OpenACCDataConstructClass:
   case Stmt::OpenACCHostDataConstructClass:
+  case Stmt::OpenACCAtomicConstructClass:
   case Stmt::AttributedStmtClass:
   case Stmt::BreakStmtClass:
   case Stmt::CapturedStmtClass:
@@ -1486,9 +1490,11 @@ CanThrowResult Sema::canThrow(const Stmt *S) {
   case Stmt::OMPSectionsDirectiveClass:
   case Stmt::OMPSimdDirectiveClass:
   case Stmt::OMPTileDirectiveClass:
+  case Stmt::OMPStripeDirectiveClass:
   case Stmt::OMPUnrollDirectiveClass:
   case Stmt::OMPReverseDirectiveClass:
   case Stmt::OMPInterchangeDirectiveClass:
+  case Stmt::OMPFuseDirectiveClass:
   case Stmt::OMPSingleDirectiveClass:
   case Stmt::OMPTargetDataDirectiveClass:
   case Stmt::OMPTargetDirectiveClass:
@@ -1533,6 +1539,7 @@ CanThrowResult Sema::canThrow(const Stmt *S) {
   case Stmt::SEHTryStmtClass:
   case Stmt::SwitchStmtClass:
   case Stmt::WhileStmtClass:
+  case Stmt::DeferStmtClass:
     return canSubStmtsThrow(*this, S);
 
   case Stmt::DeclStmtClass: {

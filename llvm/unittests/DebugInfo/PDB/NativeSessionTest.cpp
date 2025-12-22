@@ -19,8 +19,6 @@
 
 #include "gtest/gtest.h"
 
-#include <vector>
-
 using namespace llvm;
 using namespace llvm::pdb;
 
@@ -40,6 +38,18 @@ TEST(NativeSessionTest, TestCreateFromExe) {
 
   Error E = NativeSession::createFromPdbPath(PdbPath.get(), S);
   ASSERT_THAT_ERROR(std::move(E), Succeeded());
+}
+
+TEST(NativeSessionTest, TestInvalidPdbMagicError) {
+  SmallString<128> InputsDir = unittest::getInputFileDirectory(TestMainArgv0);
+  llvm::sys::path::append(InputsDir, "SimpleTest.cpp");
+  std::string CppPath{InputsDir};
+  std::unique_ptr<IPDBSession> S;
+
+  Error E = NativeSession::createFromPdbPath(CppPath, S);
+  const char *FormatErr = "The record is in an unexpected format. "
+                          "The input file did not contain the pdb file magic.";
+  ASSERT_THAT_ERROR(std::move(E), FailedWithMessage(FormatErr));
 }
 
 TEST(NativeSessionTest, TestSetLoadAddress) {

@@ -1,8 +1,8 @@
 ! FIXME: https://github.com/llvm/llvm-project/issues/123668
 !
 ! DEFINE: %{triple} =
-! DEFINE: %{check-unroll} = %flang_fc1 -emit-llvm -O1 -funroll-loops -mllvm -force-vector-width=2 -triple %{triple} -o- %s | FileCheck %s --check-prefixes=CHECK,UNROLL
-! DEFINE: %{check-nounroll} = %flang_fc1 -emit-llvm -O1 -mllvm -force-vector-width=2 -triple %{triple} -o- %s | FileCheck %s --check-prefixes=CHECK,NO-UNROLL
+! DEFINE: %{check-unroll} = %flang_fc1 -emit-llvm -O1 -vectorize-loops -funroll-loops -mllvm -force-vector-width=2 -triple %{triple} -o- %s | FileCheck %s --check-prefixes=CHECK,UNROLL
+! DEFINE: %{check-nounroll} = %flang_fc1 -emit-llvm -O1 -vectorize-loops -mllvm -force-vector-width=2 -triple %{triple} -o- %s | FileCheck %s --check-prefixes=CHECK,NO-UNROLL
 !
 ! REDEFINE: %{triple} = aarch64-unknown-linux-gnu
 ! RUN: %if aarch64-registered-target %{ %{check-unroll} %}
@@ -13,7 +13,7 @@
 ! RUN: %if x86-registered-target %{ %{check-nounroll} %}
 !
 ! CHECK-LABEL: @unroll
-! CHECK-SAME: (ptr writeonly captures(none) %[[ARG0:.*]])
+! CHECK-SAME: (ptr {{[^%]*}}%[[ARG0:.*]])
 subroutine unroll(a)
   integer(kind=8), intent(out) :: a(1000)
   integer(kind=8) :: i
@@ -25,7 +25,7 @@ subroutine unroll(a)
     ! NO-UNROLL-NEXT: %[[GEP:.*]] = getelementptr i64, ptr %[[ARG0]], i64 %[[IND]]
     ! NO-UNROLL-NEXT: store <2 x i64> %[[VIND]], ptr %[[GEP]]
     ! NO-UNROLL-NEXT: %[[NIV:.*]] = add nuw i64 %{{.*}}, 2
-    ! NO-UNROLL-NEXT: %[[NVIND]] = add <2 x i64> %[[VIND]], splat (i64 2)
+    ! NO-UNROLL-NEXT: %[[NVIND]] = add nuw nsw <2 x i64> %[[VIND]], splat (i64 2)
     !
     ! UNROLL-NEXT: %[[VIND1:.*]] = add <2 x i64> %[[VIND]], splat (i64 2)
     ! UNROLL-NEXT: %[[GEP0:.*]] = getelementptr i64, ptr %[[ARG0]], i64 %[[IND]]

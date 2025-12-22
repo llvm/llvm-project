@@ -12,6 +12,7 @@
 #include <memory>
 
 #include "CPPLanguageRuntime.h"
+#include "VerboseTrapFrameRecognizer.h"
 
 #include "llvm/ADT/StringRef.h"
 
@@ -107,12 +108,15 @@ public:
 
 CPPLanguageRuntime::CPPLanguageRuntime(Process *process)
     : LanguageRuntime(process) {
-  if (process)
+  if (process) {
     process->GetTarget().GetFrameRecognizerManager().AddRecognizer(
         StackFrameRecognizerSP(new LibCXXFrameRecognizer()), {},
         std::make_shared<RegularExpression>("^std::__[^:]*::"),
         /*mangling_preference=*/Mangled::ePreferDemangledWithoutArguments,
         /*first_instruction_only=*/false);
+
+    RegisterVerboseTrapFrameRecognizer(*process);
+  }
 }
 
 bool CPPLanguageRuntime::IsAllowedRuntimeValue(ConstString name) {
@@ -142,10 +146,7 @@ line_entry_helper(Target &target, const SymbolContext &sc, Symbol *symbol,
 
   CPPLanguageRuntime::LibCppStdFunctionCallableInfo optional_info;
 
-  AddressRange range;
-  sc.GetAddressRange(eSymbolContextEverything, 0, false, range);
-
-  Address address = range.GetBaseAddress();
+  Address address = sc.GetFunctionOrSymbolAddress();
 
   Address addr;
   if (target.ResolveLoadAddress(address.GetCallableLoadAddress(&target),
@@ -478,4 +479,15 @@ CPPLanguageRuntime::GetStepThroughTrampolinePlan(Thread &thread,
   }
 
   return ret_plan_sp;
+}
+
+bool CPPLanguageRuntime::IsSymbolARuntimeThunk(const Symbol &symbol) {
+  llvm::StringRef mangled_name =
+      symbol.GetMangled().GetMangledName().GetStringRef();
+  // Virtual function overriding from a non-virtual base use a "Th" prefix.
+  // Virtual function overriding from a virtual base must use a "Tv" prefix.
+  // Virtual function overriding thunks with covariant returns use a "Tc"
+  // prefix.
+  return mangled_name.starts_with("_ZTh") || mangled_name.starts_with("_ZTv") ||
+         mangled_name.starts_with("_ZTc");
 }

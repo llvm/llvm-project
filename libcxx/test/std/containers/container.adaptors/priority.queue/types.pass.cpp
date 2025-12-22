@@ -34,38 +34,37 @@
 
 #include "test_macros.h"
 
-struct test
-    : private std::priority_queue<int>
-{
-    test()
-    {
-        c.push_back(1);
-        assert(comp(1, 2));
-    }
+struct test : private std::priority_queue<int> {
+  test() {
+    c.push_back(1);
+    assert(comp(1, 2));
+  }
 };
 
-struct C
-{
-    typedef int value_type;
-    typedef int& reference;
-    typedef const int& const_reference;
-    typedef int size_type;
+struct C {
+  typedef int value_type;
+  typedef int& reference;
+  typedef const int& const_reference;
+  typedef int size_type;
 };
 
-int main(int, char**)
-{
-    static_assert(( std::is_same<std::priority_queue<int>::container_type, std::vector<int> >::value), "");
-    static_assert(( std::is_same<std::priority_queue<int, std::deque<int> >::container_type, std::deque<int> >::value), "");
-    static_assert(( std::is_same<std::priority_queue<int, std::deque<int> >::value_type, int>::value), "");
-    static_assert(( std::is_same<std::priority_queue<int>::reference, std::vector<int>::reference>::value), "");
-    static_assert(( std::is_same<std::priority_queue<int>::const_reference, std::vector<int>::const_reference>::value), "");
-    static_assert(( std::is_same<std::priority_queue<int>::size_type, std::vector<int>::size_type>::value), "");
-    static_assert(( std::is_same<std::priority_queue<int>::value_compare, std::less<int> >::value), "");
-    static_assert(( std::is_same<std::priority_queue<int, std::deque<int> >::value_compare, std::less<int> >::value), "");
-    static_assert(( std::is_same<std::priority_queue<int, std::deque<int>, std::greater<int> >::value_compare, std::greater<int> >::value), "");
-    static_assert(( std::uses_allocator<std::priority_queue<int>, std::allocator<int> >::value), "");
-    static_assert((!std::uses_allocator<std::priority_queue<int, C>, std::allocator<int> >::value), "");
-    test t;
+int main(int, char**) {
+  static_assert((std::is_same<std::priority_queue<int>::container_type, std::vector<int> >::value), "");
+  static_assert(
+      (std::is_same<std::priority_queue<int, std::deque<int> >::container_type, std::deque<int> >::value), "");
+  static_assert((std::is_same<std::priority_queue<int, std::deque<int> >::value_type, int>::value), "");
+  static_assert((std::is_same<std::priority_queue<int>::reference, std::vector<int>::reference>::value), "");
+  static_assert(
+      (std::is_same<std::priority_queue<int>::const_reference, std::vector<int>::const_reference>::value), "");
+  static_assert((std::is_same<std::priority_queue<int>::size_type, std::vector<int>::size_type>::value), "");
+  static_assert((std::is_same<std::priority_queue<int>::value_compare, std::less<int> >::value), "");
+  static_assert((std::is_same<std::priority_queue<int, std::deque<int> >::value_compare, std::less<int> >::value), "");
+  static_assert((std::is_same<std::priority_queue<int, std::deque<int>, std::greater<int> >::value_compare,
+                              std::greater<int> >::value),
+                "");
+  static_assert((std::uses_allocator<std::priority_queue<int>, std::allocator<int> >::value), "");
+  static_assert((!std::uses_allocator<std::priority_queue<int, C>, std::allocator<int> >::value), "");
+  test t;
 
   return 0;
 }

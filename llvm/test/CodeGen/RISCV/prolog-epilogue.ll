@@ -257,13 +257,13 @@ define void @frame_4kb_offset_128() {
 ; RV64I-NEXT:    sd ra, 2024(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    .cfi_offset ra, -8
 ; RV64I-NEXT:    lui a0, 1
-; RV64I-NEXT:    addiw a0, a0, 128
+; RV64I-NEXT:    addi a0, a0, 128
 ; RV64I-NEXT:    sub sp, sp, a0
 ; RV64I-NEXT:    .cfi_def_cfa_offset 6256
 ; RV64I-NEXT:    addi a0, sp, 8
 ; RV64I-NEXT:    call callee
 ; RV64I-NEXT:    lui a0, 1
-; RV64I-NEXT:    addiw a0, a0, 128
+; RV64I-NEXT:    addi a0, a0, 128
 ; RV64I-NEXT:    add sp, sp, a0
 ; RV64I-NEXT:    .cfi_def_cfa_offset 2032
 ; RV64I-NEXT:    ld ra, 2024(sp) # 8-byte Folded Reload
@@ -393,13 +393,13 @@ define void @frame_8kb_offset_128() {
 ; RV64I-NEXT:    sd ra, 2024(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    .cfi_offset ra, -8
 ; RV64I-NEXT:    lui a0, 2
-; RV64I-NEXT:    addiw a0, a0, 128
+; RV64I-NEXT:    addi a0, a0, 128
 ; RV64I-NEXT:    sub sp, sp, a0
 ; RV64I-NEXT:    .cfi_def_cfa_offset 10352
 ; RV64I-NEXT:    addi a0, sp, 8
 ; RV64I-NEXT:    call callee
 ; RV64I-NEXT:    lui a0, 2
-; RV64I-NEXT:    addiw a0, a0, 128
+; RV64I-NEXT:    addi a0, a0, 128
 ; RV64I-NEXT:    add sp, sp, a0
 ; RV64I-NEXT:    .cfi_def_cfa_offset 2032
 ; RV64I-NEXT:    ld ra, 2024(sp) # 8-byte Folded Reload
@@ -482,13 +482,13 @@ define void @frame_16kb_minus_80() {
 ; RV64I-NEXT:    sd ra, 2024(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    .cfi_offset ra, -8
 ; RV64I-NEXT:    lui a0, 4
-; RV64I-NEXT:    addiw a0, a0, -80
+; RV64I-NEXT:    addi a0, a0, -80
 ; RV64I-NEXT:    sub sp, sp, a0
 ; RV64I-NEXT:    .cfi_def_cfa_offset 18336
 ; RV64I-NEXT:    addi a0, sp, 8
 ; RV64I-NEXT:    call callee
 ; RV64I-NEXT:    lui a0, 4
-; RV64I-NEXT:    addiw a0, a0, -80
+; RV64I-NEXT:    addi a0, a0, -80
 ; RV64I-NEXT:    add sp, sp, a0
 ; RV64I-NEXT:    .cfi_def_cfa_offset 2032
 ; RV64I-NEXT:    ld ra, 2024(sp) # 8-byte Folded Reload

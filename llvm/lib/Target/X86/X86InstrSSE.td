@@ -267,6 +267,18 @@ multiclass sse12_move_rm<RegisterClass RC, ValueType vt, X86MemOperand x86memop,
   }
 }
 
+// pseudo instruction for fp16 spilling.
+let isPseudo = 1, Predicates = [HasSSE2] in {
+  let mayStore = 1 in
+  def MOVSHPmr : I<0, Pseudo, (outs), (ins f32mem:$dst, FR16X:$src), "",
+                   [], SSEPackedSingle>,
+                   Sched<[WriteFStore]>;
+  let  mayLoad = 1 in
+  def MOVSHPrm : I<0, Pseudo, (outs FR16X:$dst), (ins f32mem:$src), "",
+                   [], SSEPackedSingle>,
+                   Sched<[WriteFLoad]>;
+}
+
 defm MOVSS : sse12_move<FR32, X86Movss, v4f32, f32mem, "movss",
                         SSEPackedSingle, UseSSE1>, TB, XS;
 defm MOVSD : sse12_move<FR64, X86Movsd, v2f64, f64mem, "movsd",
@@ -4852,12 +4864,12 @@ let isCommutable = 0 in {
   defm VPSIGND    : SS3I_binop_rm_int<0x0A, "vpsignd",
                                       int_x86_ssse3_psign_d_128,
                                       SchedWriteVecALU.XMM, load, 0>, VEX, VVVV, WIG;
-  defm VPHADDSW   : SS3I_binop_rm_int<0x03, "vphaddsw",
-                                      int_x86_ssse3_phadd_sw_128,
-                                      SchedWritePHAdd.XMM, load, 0>, VEX, VVVV, WIG;
-  defm VPHSUBSW   : SS3I_binop_rm_int<0x07, "vphsubsw",
-                                      int_x86_ssse3_phsub_sw_128,
-                                      SchedWritePHAdd.XMM, load, 0>, VEX, VVVV, WIG;
+  defm VPHADDSW    : SS3I_binop_rm<0x03, "vphaddsw", X86hadds, v8i16, v8i16, VR128,
+                                  load, i128mem,
+                                  SchedWritePHAdd.XMM, 0>, VEX, VVVV, WIG;
+  defm VPHSUBSW    : SS3I_binop_rm<0x07, "vphsubsw", X86hsubs, v8i16, v8i16, VR128,
+                                  load, i128mem,
+                                  SchedWritePHAdd.XMM, 0>, VEX, VVVV, WIG;
 }
 }
 
@@ -4895,12 +4907,12 @@ let isCommutable = 0 in {
                                        SchedWriteVecALU.YMM>, VEX, VVVV, VEX_L, WIG;
   defm VPSIGND   : SS3I_binop_rm_int_y<0x0A, "vpsignd", int_x86_avx2_psign_d,
                                        SchedWriteVecALU.YMM>, VEX, VVVV, VEX_L, WIG;
-  defm VPHADDSW  : SS3I_binop_rm_int_y<0x03, "vphaddsw",
-                                       int_x86_avx2_phadd_sw,
-                                       SchedWritePHAdd.YMM>, VEX, VVVV, VEX_L, WIG;
-  defm VPHSUBSW  : SS3I_binop_rm_int_y<0x07, "vphsubsw",
-                                       int_x86_avx2_phsub_sw,
-                                       SchedWritePHAdd.YMM>, VEX, VVVV, VEX_L, WIG;
+  defm VPHADDSWY  : SS3I_binop_rm<0x03, "vphaddsw", X86hadds, v16i16, v16i16,
+                                  VR256, load, i256mem,
+                                  SchedWritePHAdd.YMM, 0>, VEX, VVVV, VEX_L, WIG;
+  defm VPHSUBSWY  : SS3I_binop_rm<0x07, "vphsubsw", X86hsubs, v16i16, v16i16,
+                                  VR256, load, i256mem,
+                                  SchedWritePHAdd.YMM, 0>, VEX, VVVV, VEX_L, WIG;
 }
 }
 
@@ -4923,12 +4935,10 @@ let isCommutable = 0 in {
                                      SchedWriteVecALU.XMM, memop>;
   defm PSHUFB    : SS3I_binop_rm<0x00, "pshufb", X86pshufb, v16i8, v16i8, VR128,
                                  memop, i128mem, SchedWriteVarShuffle.XMM>;
-  defm PHADDSW   : SS3I_binop_rm_int<0x03, "phaddsw",
-                                     int_x86_ssse3_phadd_sw_128,
-                                     SchedWritePHAdd.XMM, memop>;
-  defm PHSUBSW   : SS3I_binop_rm_int<0x07, "phsubsw",
-                                     int_x86_ssse3_phsub_sw_128,
-                                     SchedWritePHAdd.XMM, memop>;
+  defm PHADDSW   : SS3I_binop_rm<0x03, "phaddsw", X86hadds, v8i16, v8i16, VR128,
+                                 memop, i128mem, SchedWritePHAdd.XMM>;
+  defm PHSUBSW   : SS3I_binop_rm<0x07, "phsubsw", X86hsubs, v8i16, v8i16, VR128,
+                                 memop, i128mem, SchedWritePHAdd.XMM>;
   defm PMADDUBSW : SS3I_binop_rm<0x04, "pmaddubsw", X86vpmaddubsw, v8i16,
                                  v16i8, VR128, memop, i128mem,
                                  SchedWriteVecIMul.XMM>;
@@ -5705,7 +5715,7 @@ let Predicates = [UseSSE41, OptForSize] in {
 // commuting would change which operand is inverted.
 def X86ptest_commutable : PatFrag<(ops node:$src1, node:$src2),
                                   (X86ptest node:$src1, node:$src2), [{
-  return onlyUsesZeroFlag(SDValue(Node, 0));
+  return onlyUsesZeroFlag(SDValue(N, 0));
 }]>;
 
 // ptest instruction we'll lower to this in X86ISelLowering primarily from
@@ -5772,7 +5782,7 @@ multiclass avx_bittest<bits<8> opc, string OpcodeStr, RegisterClass RC,
 // used, commuting would change which operand is inverted.
 def X86testp_commutable : PatFrag<(ops node:$src1, node:$src2),
                                   (X86testp node:$src1, node:$src2), [{
-  return onlyUsesZeroFlag(SDValue(Node, 0));
+  return onlyUsesZeroFlag(SDValue(N, 0));
 }]>;
 
 let Defs = [EFLAGS], Predicates = [HasAVX] in {
@@ -6121,8 +6131,9 @@ let Predicates = [HasAVX, NoAVX10_2] in {
                                     v8i16, VR128, load, i128mem, 0,
                                     SchedWriteMPSAD.XMM>, VEX, VVVV, WIG;
   }
+}
 
-let Uses = [MXCSR], mayRaiseFPException = 1 in {
+let Predicates = [HasAVX], Uses = [MXCSR], mayRaiseFPException = 1 in {
   let ExeDomain = SSEPackedSingle in
   defm VDPPS : SS41I_binop_rmi_int<0x40, "vdpps", int_x86_sse41_dpps,
                                    VR128, load, f128mem, 0,
@@ -6135,7 +6146,6 @@ let Uses = [MXCSR], mayRaiseFPException = 1 in {
   defm VDPPSY : SS41I_binop_rmi_int<0x40, "vdpps", int_x86_avx_dp_ps_256,
                                     VR256, load, i256mem, 0,
                                     SchedWriteDPPS.YMM>, VEX, VVVV, VEX_L, WIG;
-}
 }
 
 let Predicates = [HasAVX2, NoAVX10_2] in {
@@ -6886,26 +6896,26 @@ def AESIMCrm : AES8I<0xDB, MRMSrcMem, (outs VR128:$dst),
 
 // AES Round Key Generation Assist
 let Predicates = [HasAVX, HasAES] in {
-  def VAESKEYGENASSIST128rr : AESAI<0xDF, MRMSrcReg, (outs VR128:$dst),
+  def VAESKEYGENASSISTrri : AESAI<0xDF, MRMSrcReg, (outs VR128:$dst),
       (ins VR128:$src1, u8imm:$src2),
       "vaeskeygenassist\t{$src2, $src1, $dst|$dst, $src1, $src2}",
       [(set VR128:$dst,
         (int_x86_aesni_aeskeygenassist VR128:$src1, timm:$src2))]>,
       Sched<[WriteAESKeyGen]>, VEX, WIG;
-  def VAESKEYGENASSIST128rm : AESAI<0xDF, MRMSrcMem, (outs VR128:$dst),
+  def VAESKEYGENASSISTrmi : AESAI<0xDF, MRMSrcMem, (outs VR128:$dst),
       (ins i128mem:$src1, u8imm:$src2),
       "vaeskeygenassist\t{$src2, $src1, $dst|$dst, $src1, $src2}",
       [(set VR128:$dst,
         (int_x86_aesni_aeskeygenassist (load addr:$src1), timm:$src2))]>,
       Sched<[WriteAESKeyGen.Folded]>, VEX, WIG;
 }
-def AESKEYGENASSIST128rr : AESAI<0xDF, MRMSrcReg, (outs VR128:$dst),
+def AESKEYGENASSISTrri : AESAI<0xDF, MRMSrcReg, (outs VR128:$dst),
   (ins VR128:$src1, u8imm:$src2),
   "aeskeygenassist\t{$src2, $src1, $dst|$dst, $src1, $src2}",
   [(set VR128:$dst,
     (int_x86_aesni_aeskeygenassist VR128:$src1, timm:$src2))]>,
   Sched<[WriteAESKeyGen]>;
-def AESKEYGENASSIST128rm : AESAI<0xDF, MRMSrcMem, (outs VR128:$dst),
+def AESKEYGENASSISTrmi : AESAI<0xDF, MRMSrcMem, (outs VR128:$dst),
   (ins i128mem:$src1, u8imm:$src2),
   "aeskeygenassist\t{$src2, $src1, $dst|$dst, $src1, $src2}",
   [(set VR128:$dst,
@@ -8384,14 +8394,14 @@ let Predicates = [HasSM3], Constraints = "$src1 = $dst" in {
   }
 
   multiclass VSM3RNDS2_Base {
-    def rr : Ii8<0xde, MRMSrcReg, (outs VR128:$dst),
+    def rri : Ii8<0xde, MRMSrcReg, (outs VR128:$dst),
               (ins VR128:$src1, VR128:$src2, VR128:$src3, i32u8imm:$src4),
               "vsm3rnds2\t{$src4, $src3, $src2, $dst|$dst, $src2, $src3, $src4}",
               [(set VR128:$dst,
                (int_x86_vsm3rnds2 VR128:$src1,
                 VR128:$src2, VR128:$src3, timm:$src4))]>,
               Sched<[WriteVecIMul]>;
-    def rm : Ii8<0xde, MRMSrcMem, (outs VR128:$dst),
+    def rmi : Ii8<0xde, MRMSrcMem, (outs VR128:$dst),
               (ins VR128:$src1, VR128:$src2, i128mem:$src3, i32u8imm:$src4),
               "vsm3rnds2\t{$src4, $src3, $src2, $dst|$dst, $src2, $src3, $src4}",
               [(set VR128:$dst,

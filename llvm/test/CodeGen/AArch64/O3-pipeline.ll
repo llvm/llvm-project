@@ -5,9 +5,11 @@
 
 ; CHECK-LABEL: Pass Arguments:
 ; CHECK-NEXT: Target Library Information
+; CHECK-NEXT: Runtime Library Function Analysis
 ; CHECK-NEXT: Target Pass Configuration
 ; CHECK-NEXT: Machine Module Information
 ; CHECK-NEXT: Target Transform Information
+; CHECK-NEXT: Library Function Lowering Analysis
 ; CHECK-NEXT: Assumption Cache Tracker
 ; CHECK-NEXT: Profile summary info
 ; CHECK-NEXT: Type-Based Alias Analysis
@@ -19,8 +21,7 @@
 ; CHECK-NEXT:   ModulePass Manager
 ; CHECK-NEXT:     Pre-ISel Intrinsic Lowering
 ; CHECK-NEXT:     FunctionPass Manager
-; CHECK-NEXT:       Expand large div/rem
-; CHECK-NEXT:       Expand large fp convert
+; CHECK-NEXT:       Expand IR instructions
 ; CHECK-NEXT:       Expand Atomic instructions
 ; CHECK-NEXT:     SVE intrinsics optimizations
 ; CHECK-NEXT:       FunctionPass Manager
@@ -95,8 +96,6 @@
 ; CHECK-NEXT:       Interleaved Load Combine Pass
 ; CHECK-NEXT:       Dominator Tree Construction
 ; CHECK-NEXT:       Interleaved Access Pass
-; CHECK-NEXT:       SME ABI Pass
-; CHECK-NEXT:       Dominator Tree Construction
 ; CHECK-NEXT:       Natural Loop Information
 ; CHECK-NEXT:       Type Promotion
 ; CHECK-NEXT:       CodeGen Prepare
@@ -127,8 +126,11 @@
 ; CHECK-NEXT:       MachineDominator Tree Construction
 ; CHECK-NEXT:       AArch64 Local Dynamic TLS Access Clean-up
 ; CHECK-NEXT:       Finalize ISel and expand pseudo-instructions
-; CHECK-NEXT:       SME Peephole Optimization pass
+; CHECK-NEXT:       Bundle Machine CFG Edges
 ; CHECK-NEXT:       Lazy Machine Block Frequency Analysis
+; CHECK-NEXT:       Machine Optimization Remark Emitter
+; CHECK-NEXT:       Machine SME ABI pass
+; CHECK-NEXT:       SME Peephole Optimization pass
 ; CHECK-NEXT:       Early Tail Duplication
 ; CHECK-NEXT:       Optimize machine instruction PHIs
 ; CHECK-NEXT:       Slot index numbering
@@ -227,6 +229,7 @@
 ; CHECK-NEXT:       Implement the 'patchable-function' attribute
 ; CHECK-NEXT:       AArch64 load / store optimization pass
 ; CHECK-NEXT:       Machine Copy Propagation Pass
+; CHECK-NEXT:       AArch64 Redundant Conditional Branch Elimination
 ; CHECK-NEXT:       Workaround A53 erratum 835769 pass
 ; CHECK-NEXT:       Contiguously Lay Out Funclets
 ; CHECK-NEXT:       Remove Loads Into Fake Uses

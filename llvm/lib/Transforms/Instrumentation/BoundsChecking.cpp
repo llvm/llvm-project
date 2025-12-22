@@ -111,10 +111,10 @@ static Value *getBoundsCheckCond(Value *Ptr, Value *InstVal,
 static CallInst *InsertTrap(BuilderTy &IRB, bool DebugTrapBB,
                             std::optional<int8_t> GuardKind) {
   if (!DebugTrapBB)
-    return IRB.CreateIntrinsic(Intrinsic::trap, {}, {});
+    return IRB.CreateIntrinsic(Intrinsic::trap, {});
 
   return IRB.CreateIntrinsic(
-      Intrinsic::ubsantrap, {},
+      Intrinsic::ubsantrap,
       ConstantInt::get(IRB.getInt8Ty(),
                        GuardKind.has_value()
                            ? GuardKind.value()
@@ -178,6 +178,8 @@ getRuntimeCallName(const BoundsCheckingPass::Options::Runtime &Opts) {
     Name += "_minimal";
   if (!Opts.MayReturn)
     Name += "_abort";
+  else if (Opts.HandlerPreserveAllRegs)
+    Name += "_preserve";
   return Name;
 }
 
@@ -267,7 +269,10 @@ static bool addBoundsChecking(Function &F, TargetLibraryInfo &TLI,
       TrapCall->setDoesNotReturn();
       IRB.CreateUnreachable();
     }
-
+    // The preserve-all logic is somewhat duplicated in CGExpr.cpp for
+    // local-bounds. Make sure to change that too.
+    if (Opts.Rt && Opts.Rt->HandlerPreserveAllRegs && MayReturn)
+      TrapCall->setCallingConv(CallingConv::PreserveAll);
     if (!MayReturn && SingleTrapBB && !DebugTrapBB)
       ReuseTrapBB = TrapBB;
 

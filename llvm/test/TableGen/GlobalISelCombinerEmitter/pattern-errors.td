@@ -283,6 +283,33 @@ def matchdata_without_cxx_apply : GICombineRule<
   (match (G_ZEXT $dst, $src):$mi),
   (apply (G_MUL $dst, $src, $src))>;
 
+// CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: expected both a 'match' and 'apply' action in combine rule, or a single 'combine' action
+def missing_apply : GICombineRule<
+  (defs root:$dst),
+  (match (G_ZEXT $dst, $src))>;
+
+// CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: 'combine' action needs at least one pattern to match, and C++ code to apply
+def combineop_missing_cxx : GICombineRule<
+  (defs root:$d),
+  (combine (wip_match_opcode G_TRUNC):$d)>;
+
+// CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: 'combine' action needs at least one pattern to match, and C++ code to apply
+def combineop_missing_mir : GICombineRule<
+  (defs root:$d),
+  (combine "return APPLY;")>;
+
+// CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: expected both a 'match' and 'apply' action in combine rule, or a single 'combine' action
+def mixed_combine_match : GICombineRule<
+  (defs root:$d),
+  (combine (G_ZEXT $d, $y), "return APPLY;"),
+  (match (G_ZEXT $d, $y))>;
+
+// CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: expected both a 'match' and 'apply' action in combine rule, or a single 'combine' action
+def mixed_combine_apply : GICombineRule<
+  (defs root:$d),
+  (combine "return APPLY;"),
+  (apply (G_ZEXT $d, $y))>;
+
 // CHECK: error: Failed to parse one or more rules
 
 def MyCombiner: GICombiner<"GenMyCombiner", [
@@ -326,5 +353,10 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
   using_flagref_in_match,
   badflagref_in_apply,
   mixed_cxx_apply,
-  matchdata_without_cxx_apply
+  matchdata_without_cxx_apply,
+  missing_apply,
+  combineop_missing_cxx,
+  combineop_missing_mir,
+  mixed_combine_match,
+  mixed_combine_apply
 ]>;

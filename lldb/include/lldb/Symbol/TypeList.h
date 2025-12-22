@@ -39,8 +39,7 @@ public:
   lldb::TypeSP GetTypeAtIndex(uint32_t idx);
 
   typedef std::vector<lldb::TypeSP> collection;
-  typedef AdaptedIterable<collection, lldb::TypeSP, vector_adapter>
-      TypeIterable;
+  typedef llvm::iterator_range<collection::const_iterator> TypeIterable;
 
   TypeIterable Types() { return TypeIterable(m_types); }
 

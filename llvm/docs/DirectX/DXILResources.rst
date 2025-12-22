@@ -277,7 +277,7 @@ Examples:
 Accessing Resources as Memory
 -----------------------------
 
-*relevant types: Buffers, CBuffer, and Textures*
+*relevant types: Buffers, Textures, and CBuffers*
 
 Loading and storing from resources is generally represented in LLVM using
 operations on memory that is only accessible via a handle object. Given a
@@ -302,14 +302,14 @@ stores are described later in this document.
      -
      - Pointer
      - A pointer to an object in the buffer
-   * - ``%buffer``
+   * - ``%resource``
      - 0
-     - ``target(dx.TypedBuffer, ...)``
-     - The buffer to access
+     - Any buffer, texture, or cbuffer type
+     - The resource to access
    * - ``%index``
      - 1
      - ``i32``
-     - Index into the buffer
+     - Index into the resource
 
 Examples:
 
@@ -321,12 +321,11 @@ Examples:
 Loads, Samples, and Gathers
 ---------------------------
 
-*relevant types: Buffers, CBuffers, and Textures*
+*relevant types: Buffers and Textures*
 
-All load, sample, and gather operations in DXIL return a `ResRet`_ type, and
-CBuffer loads return a similar `CBufRet`_ type. These types are structs
-containing 4 elements of some basic type, and in the case of `ResRet` a 5th
-element that is used by the `CheckAccessFullyMapped`_ operation. Some of these
+All load, sample, and gather operations in DXIL return a `ResRet`_ type. These
+types are structs containing 4 elements of some basic type, and a 5th element
+that is used by the `CheckAccessFullyMapped`_ operation. Some of these
 operations, like `RawBufferLoad`_ include a mask and/or alignment that tell us
 some information about how to interpret those four values.
 
@@ -632,3 +631,207 @@ Examples:
        target("dx.RawBuffer", i8, 1, 0, 0) %buffer,
        i32 %index, i32 0, <4 x double> %data)
 
+Constant Buffer Loads
+---------------------
+
+*relevant types: CBuffers*
+
+The `CBufferLoadLegacy`_ operation, which despite the name is the only
+supported way to load from a cbuffer in any DXIL version, loads a single "row"
+of a cbuffer, which is exactly 16 bytes. The return value of the operation is
+represented by a `CBufRet`_ type, which has variants for 2 64-bit values, 4
+32-bit values, and 8 16-bit values.
+
+We represent these in LLVM IR with 3 separate operations, which return a
+2-element, 4-element, or 8-element struct respectively.
+
+.. _CBufferLoadLegacy: https://github.com/microsoft/DirectXShaderCompiler/blob/main/docs/DXIL.rst#cbufferLoadLegacy
+.. _CBufRet: https://github.com/microsoft/DirectXShaderCompiler/blob/main/docs/DXIL.rst#cbufferloadlegacy
+
+.. list-table:: ``@llvm.dx.resource.load.cbufferrow.4``
+   :header-rows: 1
+
+   * - Argument
+     -
+     - Type
+     - Description
+   * - Return value
+     -
+     - A struct of 4 32-bit values
+     - A single row of a cbuffer, interpreted as 4 32-bit values
+   * - ``%buffer``
+     - 0
+     - ``target(dx.CBuffer, ...)``
+     - The buffer to load from
+   * - ``%index``
+     - 1
+     - ``i32``
+     - Index into the buffer
+
+Examples:
+
+.. code-block:: llvm
+
+   %ret = call {float, float, float, float}
+       @llvm.dx.resource.load.cbufferrow.4(
+           target("dx.CBuffer", target("dx.Layout", {float}, 4, 0)) %buffer,
+           i32 %index)
+   %ret = call {i32, i32, i32, i32}
+       @llvm.dx.resource.load.cbufferrow.4(
+           target("dx.CBuffer", target("dx.Layout", {i32}, 4, 0)) %buffer,
+           i32 %index)
+
+.. list-table:: ``@llvm.dx.resource.load.cbufferrow.2``
+   :header-rows: 1
+
+   * - Argument
+     -
+     - Type
+     - Description
+   * - Return value
+     -
+     - A struct of 2 64-bit values
+     - A single row of a cbuffer, interpreted as 2 64-bit values
+   * - ``%buffer``
+     - 0
+     - ``target(dx.CBuffer, ...)``
+     - The buffer to load from
+   * - ``%index``
+     - 1
+     - ``i32``
+     - Index into the buffer
+
+Examples:
+
+.. code-block:: llvm
+
+   %ret = call {double, double}
+       @llvm.dx.resource.load.cbufferrow.2(
+           target("dx.CBuffer", target("dx.Layout", {double}, 8, 0)) %buffer,
+           i32 %index)
+   %ret = call {i64, i64}
+       @llvm.dx.resource.load.cbufferrow.2(
+           target("dx.CBuffer", target("dx.Layout", {i64}, 4, 0)) %buffer,
+           i32 %index)
+
+.. list-table:: ``@llvm.dx.resource.load.cbufferrow.8``
+   :header-rows: 1
+
+   * - Argument
+     -
+     - Type
+     - Description
+   * - Return value
+     -
+     - A struct of 8 16-bit values
+     - A single row of a cbuffer, interpreted as 8 16-bit values
+   * - ``%buffer``
+     - 0
+     - ``target(dx.CBuffer, ...)``
+     - The buffer to load from
+   * - ``%index``
+     - 1
+     - ``i32``
+     - Index into the buffer
+
+Examples:
+
+.. code-block:: llvm
+
+   %ret = call {half, half, half, half, half, half, half, half}
+       @llvm.dx.resource.load.cbufferrow.8(
+           target("dx.CBuffer", target("dx.Layout", {half}, 2, 0)) %buffer,
+           i32 %index)
+   %ret = call {i16, i16, i16, i16, i16, i16, i16, i16}
+       @llvm.dx.resource.load.cbufferrow.8(
+           target("dx.CBuffer", target("dx.Layout", {i16}, 2, 0)) %buffer,
+           i32 %index)
+
+Resource dimensions
+-------------------
+
+*relevant types: Textures and Buffer*
+
+The `getDimensions`_ DXIL operation returns the dimensions of a texture or
+buffer resource. It returns a `Dimensions`_ type, which is a struct
+containing four ``i32`` values. The values in the struct represent the size
+of each dimension of the resource, and when aplicable the number of array
+elements or number of samples. The mapping is defined in the
+`getDimensions`_ documentation.
+
+The LLVM IR representation of this operation has several forms
+depending on the resource type and the specific ``getDimensions`` query.
+The intrinsics return a scalar or anonymous struct with up to 4 `i32`
+elements. The intrinsic names include suffixes to indicate the number of
+elements in the return value. The suffix `.x` indicates a single `i32`
+return value, `.xy` indicates a struct with two `i32` values, and `.xyz`
+indicates a struct with three `i32` values.
+
+Intrinsics representing queries on multisampled texture resources include
+`.ms.` in their name and their return value includes an additional `i32` for
+the number of samples.
+
+Intrinsics with `mip_level` argument and `.levels.` in their name are used
+for texture resources with multiple MIP levels. Their return
+struct includes an additional `i32` for the number of levels the resource has.
+
+.. code-block:: llvm
+
+   i32 @llvm.dx.resource.getdimensions.x( target("dx.*") handle )
+   {i32, i32} @llvm.dx.resource.getdimensions.xy( target("dx.*") handle )
+   {i32, i32, i32} @llvm.dx.resource.getdimensions.xyz( target("dx.*") handle )
+   {i32, i32} @llvm.dx.resource.getdimensions.levels.x( target("dx.*") handle, i32 mip_level )
+   {i32, i32, i32} @llvm.dx.resource.getdimensions.levels.xy( target("dx.*") handle, i32 mip_level )
+   {i32, i32, i32, i32} @llvm.dx.resource.getdimensions.levels.xyz( target("dx.*") handle, i32 mip_level )
+   {i32, i32, i32} @llvm.dx.resource.getdimensions.ms.xy( target("dx.*") handle )
+   {i32, i32, i32, i32} @llvm.dx.resource.getdimensions.ms.xyz( target("dx.*") handle )
+
+.. list-table:: ``@llvm.dx.resource.getdimensions.*``
+   :header-rows: 1
+
+   * - Argument
+     -
+     - Type
+     - Description
+   * - Return value
+     -
+     - `i32`, `{i32, i32}`, `{i32, i32, i32}`, or `{i32, i32, i32, i32}`
+     - Width, height, and depth of the resource (based on the specific suffix), and a number of levels or samples where aplicable.
+   * - ``%handle``
+     - 0
+     - ``target(dx.*)``
+     - Resource handle
+   * - ``%mip_level``
+     - 1
+     - ``i32``
+     - MIP level for the requested dimensions.
+
+Examples:
+
+.. code-block:: llvm
+
+  ; RWBuffer<float4>
+  %dim = call i32 @llvm.dx.resource.getdimensions.x(target("dx.TypedBuffer", <4 x float>, 1, 0, 0) %handle)
+
+  ; Texture2D
+  %0 = call {i32, i32} @llvm.dx.resource.getdimensions.xy(target("dx.Texture", ...) %tex2d)
+  %tex2d_width = extractvalue {i32, i32} %0, 0
+  %tex2d_height = extractvalue {i32, i32} %0, 1
+
+  ; Texture2DArray with levels
+  %1 = call {i32, i32, i32, i32} @llvm.dx.resource.getdimensions.levels.xyz(
+     target("dx.Texture", ...) %tex2darray, i32 1)
+  %tex2darray_width = extractvalue {i32, i32, i32, i32} %1, 0
+  %tex2darray_height = extractvalue {i32, i32, i32, i32} %1, 1
+  %tex2darray_elem_count = extractvalue {i32, i32, i32, i32} %1, 2
+  %tex2darray_levels_count = extractvalue {i32, i32, i32, i32} %1, 3
+
+  ; Texture2DMS
+  %2 = call {i32, i32, i32} @llvm.dx.resource.getdimensions.ms.xy(
+     target("dx.Texture", ...) %tex2dms)
+  %tex2dms_width = extractvalue {i32, i32, i32} %2, 0
+  %tex2dms_height = extractvalue {i32, i32, i32} %2, 1
+  %tex2dms_samples_count = extractvalue {i32, i32, i32} %2, 2
+
+.. _Dimensions: https://github.com/microsoft/DirectXShaderCompiler/blob/main/docs/DXIL.rst#resource-operation-return-types
+.. _getDimensions: https://github.com/microsoft/DirectXShaderCompiler/blob/main/docs/DXIL.rst#getdimensions

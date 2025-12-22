@@ -50,6 +50,9 @@ public:
   void writeHeaderTo(uint8_t *buf, bool isDebug);
   void addContributingPartialSection(PartialSection *sec);
 
+  // Sort chunks to split native and EC sections on hybrid targets.
+  void splitECChunks();
+
   // Returns the size of this section in an executable memory image.
   // This may be smaller than the raw size (the raw size is multiple
   // of disk sector size, so there may be padding at end), or may be
