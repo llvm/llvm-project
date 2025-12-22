@@ -9,7 +9,7 @@
 // RUN: -no-pie %t/bti-plt.c -o %t.exe -Wl,-q -fuse-ld=lld \
 // RUN: -Wl,-T,%t/link.ld  -Wl,-z,force-bti
 // RUN: not llvm-bolt %t.exe -o %t.bolt 2>&1 | FileCheck %s
-// CHECK: BOLT-INFO: binary is using BTI.
+// CHECK: BOLT-INFO: binary is using BTI
 // CHECK: BOLT-ERROR: Cannot add BTI landing pad to ignored function abort@PLT
 
 #--- link.ld
