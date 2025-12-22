@@ -36,8 +36,8 @@ static bool validateX86OpsHasOneUser(Value op) {
 // Validates the vector.fma operation on the following conditions:
 // (i) one of the lhs or rhs defining operation should be
 // CvtPackedEvenIndexedToF32Op, (ii) the lhs or rhs defining operation should be
-// an x86vector operation and has only one consumer, (iii) all oerations in same
-// block, and (iv) ths FMA has only one user.
+// an x86vector operation and has only one consumer, (iii) all operations
+// are in the same block, and (iv) ths FMA has only one user.
 static bool validateVectorFMAOp(vector::FMAOp fmaOp) {
   Value lhs = fmaOp.getLhs();
   Value rhs = fmaOp.getRhs();
@@ -65,7 +65,7 @@ static bool validateVectorFMAOp(vector::FMAOp fmaOp) {
   return true;
 }
 
-// Moves vector.fma along with the lhs and rhs defining operation before it's
+// Moves vector.fma along with the lhs and rhs defining operation before its
 // comsumer. If the consumer is vector.ShapeCastOp and has only one user then
 // move before the consumer of vector.ShapeCastOp.
 // TODO: Move before first consumer, if there are multiple.
