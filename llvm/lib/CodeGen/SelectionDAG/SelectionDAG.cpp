@@ -2090,6 +2090,12 @@ SDValue SelectionDAG::getTargetExternalSymbol(const char *Sym, EVT VT,
   return SDValue(N, 0);
 }
 
+SDValue SelectionDAG::getTargetExternalSymbol(RTLIB::LibcallImpl Libcall,
+                                              EVT VT, unsigned TargetFlags) {
+  StringRef SymName = TLI->getLibcallImplName(Libcall);
+  return getTargetExternalSymbol(SymName.data(), VT, TargetFlags);
+}
+
 SDValue SelectionDAG::getCondCode(ISD::CondCode Cond) {
   if ((unsigned)Cond >= CondCodeNodes.size())
     CondCodeNodes.resize(Cond+1);
@@ -2785,6 +2791,7 @@ bool SelectionDAG::SignBitIsZero(SDValue Op, unsigned Depth) const {
   return MaskedValueIsZero(Op, APInt::getSignMask(BitWidth), Depth);
 }
 
+// TODO: Should have argument to specify if sign bit of nan is ignorable.
 bool SelectionDAG::SignBitIsZeroFP(SDValue Op, unsigned Depth) const {
   if (Depth >= MaxRecursionDepth)
     return false; // Limit search depth.
@@ -2801,11 +2808,25 @@ bool SelectionDAG::SignBitIsZeroFP(SDValue Op, unsigned Depth) const {
     return (NoFPClass & TestMask) == TestMask;
   }
   case ISD::ARITH_FENCE:
-    return SignBitIsZeroFP(Op, Depth + 1);
+    return SignBitIsZeroFP(Op.getOperand(0), Depth + 1);
   case ISD::FEXP:
   case ISD::FEXP2:
   case ISD::FEXP10:
     return Op->getFlags().hasNoNaNs();
+  case ISD::FMINNUM:
+  case ISD::FMINNUM_IEEE:
+  case ISD::FMINIMUM:
+  case ISD::FMINIMUMNUM:
+    return SignBitIsZeroFP(Op.getOperand(1), Depth + 1) &&
+           SignBitIsZeroFP(Op.getOperand(0), Depth + 1);
+  case ISD::FMAXNUM:
+  case ISD::FMAXNUM_IEEE:
+  case ISD::FMAXIMUM:
+  case ISD::FMAXIMUMNUM:
+    // TODO: If we can ignore the sign bit of nans, only one side being known 0
+    // is sufficient.
+    return SignBitIsZeroFP(Op.getOperand(1), Depth + 1) &&
+           SignBitIsZeroFP(Op.getOperand(0), Depth + 1);
   default:
     return false;
   }
@@ -6160,6 +6181,46 @@ bool SelectionDAG::cannotBeOrderedNegativeFP(SDValue Op) const {
   llvm_unreachable("covered opcode switch");
 }
 
+bool SelectionDAG::canIgnoreSignBitOfZero(const SDUse &Use) const {
+  assert(Use.getValueType().isFloatingPoint());
+  const SDNode *User = Use.getUser();
+  unsigned OperandNo = Use.getOperandNo();
+  // Check if this use is insensitive to the sign of zero
+  switch (User->getOpcode()) {
+  case ISD::SETCC:
+    // Comparisons: IEEE-754 specifies +0.0 == -0.0.
+  case ISD::FABS:
+    // fabs always produces +0.0.
+    return true;
+  case ISD::FCOPYSIGN:
+    // copysign overwrites the sign bit of the first operand.
+    return OperandNo == 0;
+  case ISD::FADD:
+  case ISD::FSUB: {
+    // Arithmetic with non-zero constants fixes the uncertainty around the
+    // sign bit.
+    SDValue Other = User->getOperand(1 - OperandNo);
+    return isKnownNeverZeroFloat(Other);
+  }
+  case ISD::FP_TO_SINT:
+  case ISD::FP_TO_UINT:
+    // fp-to-int conversions normalize signed zeros.
+    return true;
+  default:
+    return false;
+  }
+}
+
+bool SelectionDAG::canIgnoreSignBitOfZero(SDValue Op) const {
+  // FIXME: Limit the amount of checked uses to not introduce a compile-time
+  // regression. Ideally, this should be implemented as a demanded-bits
+  // optimization that stems from the users.
+  if (Op->use_size() > 2)
+    return false;
+  return all_of(Op->uses(),
+                [&](const SDUse &Use) { return canIgnoreSignBitOfZero(Use); });
+}
+
 bool SelectionDAG::isEqualTo(SDValue A, SDValue B) const {
   // Check the obvious case.
   if (A == B) return true;
@@ -9082,14 +9143,13 @@ SelectionDAG::getMemcmp(SDValue Chain, const SDLoc &dl, SDValue Mem0,
   bool IsTailCall =
       isInTailCallPositionWrapper(CI, this, /*AllowReturnsFirstArg*/ true);
 
-  StringRef LibCallName = TLI->getLibcallImplName(MemcmpImpl);
   CLI.setDebugLoc(dl)
       .setChain(Chain)
-      .setLibCallee(TLI->getLibcallImplCallingConv(MemcmpImpl),
-                    Type::getInt32Ty(*getContext()),
-                    getExternalSymbol(LibCallName.data(),
-                                      TLI->getPointerTy(getDataLayout())),
-                    std::move(Args))
+      .setLibCallee(
+          TLI->getLibcallImplCallingConv(MemcmpImpl),
+          Type::getInt32Ty(*getContext()),
+          getExternalSymbol(MemcmpImpl, TLI->getPointerTy(getDataLayout())),
+          std::move(Args))
       .setTailCall(IsTailCall);
 
   return TLI->LowerCallTo(CLI);
@@ -9110,15 +9170,13 @@ std::pair<SDValue, SDValue> SelectionDAG::getStrlen(SDValue Chain,
   TargetLowering::CallLoweringInfo CLI(*this);
   bool IsTailCall =
       isInTailCallPositionWrapper(CI, this, /*AllowReturnsFirstArg*/ true);
-  StringRef LibcallName = TLI->getLibcallImplName(StrlenImpl);
 
   CLI.setDebugLoc(dl)
       .setChain(Chain)
-      .setLibCallee(
-          TLI->getLibcallImplCallingConv(StrlenImpl), CI->getType(),
-          getExternalSymbol(LibcallName.data(),
-                            TLI->getProgramPointerTy(getDataLayout())),
-          std::move(Args))
+      .setLibCallee(TLI->getLibcallImplCallingConv(StrlenImpl), CI->getType(),
+                    getExternalSymbol(
+                        StrlenImpl, TLI->getProgramPointerTy(getDataLayout())),
+                    std::move(Args))
       .setTailCall(IsTailCall);
 
   return TLI->LowerCallTo(CLI);
@@ -9196,8 +9254,7 @@ SDValue SelectionDAG::getMemcpy(
       .setLibCallee(
           TLI->getLibcallImplCallingConv(MemCpyImpl),
           Dst.getValueType().getTypeForEVT(*getContext()),
-          getExternalSymbol(TLI->getLibcallImplName(MemCpyImpl).data(),
-                            TLI->getPointerTy(getDataLayout())),
+          getExternalSymbol(MemCpyImpl, TLI->getPointerTy(getDataLayout())),
           std::move(Args))
       .setDiscardResult()
       .setTailCall(IsTailCall);
@@ -9231,8 +9288,7 @@ SDValue SelectionDAG::getAtomicMemcpy(SDValue Chain, const SDLoc &dl,
       .setLibCallee(
           TLI->getLibcallImplCallingConv(LibcallImpl),
           Type::getVoidTy(*getContext()),
-          getExternalSymbol(TLI->getLibcallImplName(LibcallImpl).data(),
-                            TLI->getPointerTy(getDataLayout())),
+          getExternalSymbol(LibcallImpl, TLI->getPointerTy(getDataLayout())),
           std::move(Args))
       .setDiscardResult()
       .setTailCall(isTailCall);
@@ -9304,8 +9360,7 @@ SDValue SelectionDAG::getMemmove(SDValue Chain, const SDLoc &dl, SDValue Dst,
       .setLibCallee(
           TLI->getLibcallImplCallingConv(MemmoveImpl),
           Dst.getValueType().getTypeForEVT(*getContext()),
-          getExternalSymbol(TLI->getLibcallImplName(MemmoveImpl).data(),
-                            TLI->getPointerTy(getDataLayout())),
+          getExternalSymbol(MemmoveImpl, TLI->getPointerTy(getDataLayout())),
           std::move(Args))
       .setDiscardResult()
       .setTailCall(IsTailCall);
@@ -9339,8 +9394,7 @@ SDValue SelectionDAG::getAtomicMemmove(SDValue Chain, const SDLoc &dl,
       .setLibCallee(
           TLI->getLibcallImplCallingConv(LibcallImpl),
           Type::getVoidTy(*getContext()),
-          getExternalSymbol(TLI->getLibcallImplName(LibcallImpl).data(),
-                            TLI->getPointerTy(getDataLayout())),
+          getExternalSymbol(LibcallImpl, TLI->getPointerTy(getDataLayout())),
           std::move(Args))
       .setDiscardResult()
       .setTailCall(isTailCall);
@@ -9412,9 +9466,7 @@ SDValue SelectionDAG::getMemset(SDValue Chain, const SDLoc &dl, SDValue Dst,
     Args.emplace_back(Size, DL.getIntPtrType(Ctx));
     CLI.setLibCallee(
         TLI->getLibcallImplCallingConv(BzeroImpl), Type::getVoidTy(Ctx),
-        getExternalSymbol(TLI->getLibcallImplName(BzeroImpl).data(),
-                          TLI->getPointerTy(DL)),
-        std::move(Args));
+        getExternalSymbol(BzeroImpl, TLI->getPointerTy(DL)), std::move(Args));
   } else {
     RTLIB::LibcallImpl MemsetImpl = TLI->getLibcallImpl(RTLIB::MEMSET);
 
@@ -9422,12 +9474,10 @@ SDValue SelectionDAG::getMemset(SDValue Chain, const SDLoc &dl, SDValue Dst,
     Args.emplace_back(Dst, PointerType::getUnqual(Ctx));
     Args.emplace_back(Src, Src.getValueType().getTypeForEVT(Ctx));
     Args.emplace_back(Size, DL.getIntPtrType(Ctx));
-    CLI.setLibCallee(
-        TLI->getLibcallImplCallingConv(MemsetImpl),
-        Dst.getValueType().getTypeForEVT(Ctx),
-        getExternalSymbol(TLI->getLibcallImplName(MemsetImpl).data(),
-                          TLI->getPointerTy(DL)),
-        std::move(Args));
+    CLI.setLibCallee(TLI->getLibcallImplCallingConv(MemsetImpl),
+                     Dst.getValueType().getTypeForEVT(Ctx),
+                     getExternalSymbol(MemsetImpl, TLI->getPointerTy(DL)),
+                     std::move(Args));
   }
 
   RTLIB::LibcallImpl MemsetImpl = TLI->getLibcallImpl(RTLIB::MEMSET);
@@ -9469,8 +9519,7 @@ SDValue SelectionDAG::getAtomicMemset(SDValue Chain, const SDLoc &dl,
       .setLibCallee(
           TLI->getLibcallImplCallingConv(LibcallImpl),
           Type::getVoidTy(*getContext()),
-          getExternalSymbol(TLI->getLibcallImplName(LibcallImpl).data(),
-                            TLI->getPointerTy(getDataLayout())),
+          getExternalSymbol(LibcallImpl, TLI->getPointerTy(getDataLayout())),
           std::move(Args))
       .setDiscardResult()
       .setTailCall(isTailCall);
@@ -14204,8 +14253,7 @@ SDValue SelectionDAG::makeStateFunctionCall(unsigned LibFunc, SDValue Ptr,
     reportFatalUsageError("emitting call to unsupported libcall");
 
   SDValue Callee =
-      getExternalSymbol(TLI->getLibcallImplName(LibcallImpl).data(),
-                        TLI->getPointerTy(getDataLayout()));
+      getExternalSymbol(LibcallImpl, TLI->getPointerTy(getDataLayout()));
   TargetLowering::CallLoweringInfo CLI(*this);
   CLI.setDebugLoc(DLoc).setChain(InChain).setLibCallee(
       TLI->getLibcallImplCallingConv(LibcallImpl),

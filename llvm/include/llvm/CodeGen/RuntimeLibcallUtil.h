@@ -132,6 +132,10 @@ LLVM_ABI Libcall getSINCOS_STRET(EVT RetVT);
 /// UNKNOWN_LIBCALL if there is none.
 LLVM_ABI Libcall getMODF(EVT VT);
 
+/// \return the REM_* value for the given types, or UNKNOWN_LIBCALL if there is
+/// none.
+LLVM_ABI Libcall getREM(EVT VT);
+
 /// \return the LROUND_* value for the given types, or UNKNOWN_LIBCALL if there
 /// is none.
 LLVM_ABI Libcall getLROUND(EVT VT);

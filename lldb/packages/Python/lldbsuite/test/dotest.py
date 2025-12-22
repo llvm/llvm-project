@@ -290,15 +290,25 @@ def parseOptionsAndInitTestdirs():
             logging.warning(
                 "Custom libc++ is not supported for remote runs: ignoring --libcxx arguments"
             )
+            # Don't set libcxx paths for remote platforms - use SDK's libc++ instead
+            configuration.libcxx_include_dir = None
+            configuration.libcxx_include_target_dir = None
+            configuration.libcxx_library_dir = None
         elif not (args.libcxx_include_dir and args.libcxx_library_dir):
             logging.error(
                 "Custom libc++ requires both --libcxx-include-dir and --libcxx-library-dir"
             )
             sys.exit(-1)
         else:
+            # Use custom libcxx for local runs
             configuration.libcxx_include_dir = args.libcxx_include_dir
             configuration.libcxx_include_target_dir = args.libcxx_include_target_dir
             configuration.libcxx_library_dir = args.libcxx_library_dir
+    else:
+        # No custom libcxx specified
+        configuration.libcxx_include_dir = None
+        configuration.libcxx_include_target_dir = None
+        configuration.libcxx_library_dir = None
 
     configuration.cmake_build_type = args.cmake_build_type.lower()
 
@@ -312,7 +322,7 @@ def parseOptionsAndInitTestdirs():
         lldbtest_config.out_of_tree_debugserver = args.out_of_tree_debugserver
 
     # Set SDKROOT if we are using an Apple SDK
-    if args.sysroot is not None:
+    if args.sysroot:
         configuration.sdkroot = args.sysroot
     elif platform_system == "Darwin" and args.apple_sdk:
         configuration.sdkroot = seven.get_command_output(

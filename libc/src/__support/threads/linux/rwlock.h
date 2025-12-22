@@ -22,7 +22,7 @@
 #include "src/__support/threads/identifier.h"
 #include "src/__support/threads/linux/futex_utils.h"
 #include "src/__support/threads/linux/futex_word.h"
-#include "src/__support/threads/linux/raw_mutex.h"
+#include "src/__support/threads/raw_mutex.h"
 #include "src/__support/threads/sleep.h"
 
 #ifndef LIBC_COPT_RWLOCK_DEFAULT_SPIN_COUNT
@@ -35,7 +35,7 @@
 #endif
 
 #if LIBC_COPT_TIMEOUT_ENSURE_MONOTONICITY
-#include "src/__support/time/linux/monotonicity.h"
+#include "src/__support/time/monotonicity.h"
 #endif
 
 namespace LIBC_NAMESPACE_DECL {
