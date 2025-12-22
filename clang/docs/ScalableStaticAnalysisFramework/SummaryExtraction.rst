@@ -2,6 +2,11 @@
 Summary Extraction
 ==================
 
+.. WARNING:: The framework is rapidly evolving.
+  The documentation might be out-of-sync of the implementation.
+  The purpose of this documentation to give context for upcoming reviews.
+
+
 The simplest way to think about the lifetime of a summary extraction is by following the handlers of the ``FrontendAction`` implementing it.
 There are 3 APIs that are important for us, that are invoked in this order:
 
