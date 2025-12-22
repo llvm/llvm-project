@@ -703,7 +703,7 @@ void VPlanTransforms::createHeaderPhiRecipes(
   }
 }
 
-void VPlanTransforms::createVPReductionRecipesForInLoopReductions(
+void VPlanTransforms::createInLoopReductionRecipes(
     VPlan &Plan, const DenseMap<VPBasicBlock *, VPValue *> &BlockMaskCache,
     const DenseSet<BasicBlock *> &BlocksNeedingPredication,
     ElementCount MinVF) {
@@ -753,7 +753,7 @@ void VPlanTransforms::createVPReductionRecipesForInLoopReductions(
     // the phi until LoopExitValue. We keep track of the previous item
     // (PreviousLink) to tell which of the two operands of a Link will remain
     // scalar and which will be reduced. For minmax by select(cmp), Link will be
-    // the select instructions. Blend recipes of in-loop reduction phi's  will
+    // the select instructions. Blend recipes of in-loop reduction phi's will
     // get folded to their non-phi operand, as the reduction recipe handles the
     // condition directly.
     VPSingleDefRecipe *PreviousLink = PhiR; // Aka Worklist[0].
@@ -761,10 +761,10 @@ void VPlanTransforms::createVPReductionRecipesForInLoopReductions(
       if (auto *Blend = dyn_cast<VPBlendRecipe>(CurrentLink)) {
         assert(Blend->getNumIncomingValues() == 2 &&
                "Blend must have 2 incoming values");
-        unsigned Idx = Blend->getIncomingValue(0) == PhiR ? 1 : 0;
-        assert(Blend->getIncomingValue(1 - Idx) == PhiR &&
+        unsigned PhiRIdx = Blend->getIncomingValue(0) == PhiR ? 1 : 0;
+        assert(Blend->getIncomingValue(1 - PhiRIdx) == PhiR &&
                "PhiR must be an operand of the blend");
-        Blend->replaceAllUsesWith(Blend->getIncomingValue(Idx));
+        Blend->replaceAllUsesWith(Blend->getIncomingValue(PhiRIdx));
         continue;
       }
 
@@ -780,11 +780,13 @@ void VPlanTransforms::createVPReductionRecipesForInLoopReductions(
       Instruction *CurrentLinkI = CurrentLink->getUnderlyingInstr();
 
       // Recognize a call to the llvm.fmuladd intrinsic.
-      bool IsFMulAdd = Kind == RecurKind::FMulAdd &&
-                       RecurrenceDescriptor::isFMulAddIntrinsic(CurrentLinkI);
+      bool IsFMulAdd = Kind == RecurKind::FMulAdd;
       VPValue *VecOp;
       VPBasicBlock *LinkVPBB = CurrentLink->getParent();
       if (IsFMulAdd) {
+        assert(RecurrenceDescriptor::isFMulAddIntrinsic(CurrentLinkI) &&
+               "Expected current VPInstruction to be a call to the "
+               "llvm.fmuladd intrinsic");
         assert(CurrentLink->getOperand(2) == PreviousLink &&
                "expected a call where the previous link is the added operand");
 
@@ -838,6 +840,8 @@ void VPlanTransforms::createVPReductionRecipesForInLoopReductions(
       if (BlocksNeedingPredication.contains(CurrentLinkI->getParent()))
         CondOp = BlockMaskCache.lookup(LinkVPBB);
 
+      assert(PhiR->getVFScaleFactor() == 1 &&
+             "inloop reductions must be unscaled");
       auto *RedRecipe = new VPReductionRecipe(
           Kind, FMFs, CurrentLinkI, PreviousLink, VecOp, CondOp,
           getReductionStyle(/*IsInLoop=*/true, PhiR->isOrdered(), 1),

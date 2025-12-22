@@ -8451,7 +8451,7 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
     if (CM.blockNeedsPredicationForAnyReason(BB))
       BlocksNeedingPredication.insert(BB);
 
-  VPlanTransforms::createVPReductionRecipesForInLoopReductions(
+  VPlanTransforms::createInLoopReductionRecipes(
       *Plan, BlockMaskCache, BlocksNeedingPredication, Range.Start);
 
   // Now process all other blocks and instructions.

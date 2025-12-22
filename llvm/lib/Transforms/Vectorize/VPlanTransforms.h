@@ -117,7 +117,7 @@ struct VPlanTransforms {
   /// of operations contributing to in-loop reductions and creates appropriate
   /// VPReductionRecipe instances. Block masks from \p BlockMaskCache are used
   /// to add predication for blocks in \p BlocksNeedingPredication.
-  static void createVPReductionRecipesForInLoopReductions(
+  static void createInLoopReductionRecipes(
       VPlan &Plan, const DenseMap<VPBasicBlock *, VPValue *> &BlockMaskCache,
       const DenseSet<BasicBlock *> &BlocksNeedingPredication,
       ElementCount MinVF);
