@@ -45,24 +45,24 @@ static Value calculateTripCount(OpBuilder &b, Location loc, Value lb, Value ub,
 }
 
 /// Get exclusive upper bound from acc.loop (add 1 if inclusive).
-static Value getExclusiveUpperBound(acc::LoopOp loopOp, size_t ivPos,
-                                    OpBuilder &b) {
+/// The result is always in index type.
+static Value getExclusiveUpperBoundAsIndex(acc::LoopOp loopOp, size_t ivPos,
+                                           OpBuilder &b) {
   bool isInclusive = false;
   if (loopOp.getInclusiveUpperbound().has_value())
     isInclusive = loopOp.getInclusiveUpperboundAttr().asArrayRef()[ivPos];
 
   Value origUB = loopOp.getUpperbound()[ivPos];
+  Location loc = origUB.getLoc();
+  Type indexType = b.getIndexType();
+
+  // Cast to index first, then add if inclusive
+  Value ub = getValueOrCreateCastToIndexLike(b, loc, indexType, origUB);
   if (isInclusive) {
-    Location loc = origUB.getLoc();
-    Value one;
-    Type ubType = origUB.getType();
-    if (ubType.isIndex())
-      one = arith::ConstantIndexOp::create(b, loc, 1);
-    else
-      one = arith::ConstantIntOp::create(b, loc, ubType, 1);
-    return b.createOrFold<arith::AddIOp>(loc, origUB, one);
+    Value one = arith::ConstantIndexOp::create(b, loc, 1);
+    ub = b.createOrFold<arith::AddIOp>(loc, ub, one);
   }
-  return origUB;
+  return ub;
 }
 
 /// Handle differing types between SCF (index) and ACC loops.
@@ -189,8 +189,7 @@ scf::ForOp convertACCLoopToSCFFor(LoopOp loopOp, bool enableCollapse) {
 
     Value newLowerBound = getValueOrCreateCastToIndexLike(
         b, loc, indexType, accLoopOp.getLowerbound()[idx]);
-    Value newUpperBound = getValueOrCreateCastToIndexLike(
-        b, loc, indexType, getExclusiveUpperBound(accLoopOp, idx, b));
+    Value newUpperBound = getExclusiveUpperBoundAsIndex(accLoopOp, idx, b);
     Value newStep = getValueOrCreateCastToIndexLike(b, loc, indexType,
                                                     accLoopOp.getStep()[idx]);
 
