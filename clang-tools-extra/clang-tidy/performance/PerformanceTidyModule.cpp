@@ -31,6 +31,7 @@
 
 namespace clang::tidy {
 namespace performance {
+namespace {
 
 class PerformanceModule : public ClangTidyModule {
 public:
@@ -72,6 +73,8 @@ public:
         "performance-unnecessary-value-param");
   }
 };
+
+} // namespace
 
 // Register the PerformanceModule using this statically initialized variable.
 static ClangTidyModuleRegistry::Add<PerformanceModule>

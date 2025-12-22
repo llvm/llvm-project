@@ -102,6 +102,17 @@ struct VPlanTransforms {
   buildVPlan0(Loop *TheLoop, LoopInfo &LI, Type *InductionTy, DebugLoc IVDL,
               PredicatedScalarEvolution &PSE, LoopVersioning *LVer = nullptr);
 
+  /// Replace VPPhi recipes in \p Plan's header with corresponding
+  /// VPHeaderPHIRecipe subclasses for inductions, reductions, and
+  /// fixed-order recurrences. This processes all header phis and creates
+  /// the appropriate widened recipe for each one.
+  static void createHeaderPhiRecipes(
+      VPlan &Plan, PredicatedScalarEvolution &PSE, Loop &OrigLoop,
+      const MapVector<PHINode *, InductionDescriptor> &Inductions,
+      const MapVector<PHINode *, RecurrenceDescriptor> &Reductions,
+      const SmallPtrSetImpl<const PHINode *> &FixedOrderRecurrences,
+      const SmallPtrSetImpl<PHINode *> &InLoopReductions, bool AllowReordering);
+
   /// Update \p Plan to account for all early exits.
   LLVM_ABI_FOR_TEST static void handleEarlyExits(VPlan &Plan,
                                                  bool HasUncountableExit);
@@ -113,11 +124,13 @@ struct VPlanTransforms {
                                                bool TailFolded);
 
   // Create a check to \p Plan to see if the vector loop should be executed.
-  static void addMinimumIterationCheck(
-      VPlan &Plan, ElementCount VF, unsigned UF,
-      ElementCount MinProfitableTripCount, bool RequiresScalarEpilogue,
-      bool TailFolded, bool CheckNeededWithTailFolding, Loop *OrigLoop,
-      const uint32_t *MinItersBypassWeights, DebugLoc DL, ScalarEvolution &SE);
+  static void
+  addMinimumIterationCheck(VPlan &Plan, ElementCount VF, unsigned UF,
+                           ElementCount MinProfitableTripCount,
+                           bool RequiresScalarEpilogue, bool TailFolded,
+                           bool CheckNeededWithTailFolding, Loop *OrigLoop,
+                           const uint32_t *MinItersBypassWeights, DebugLoc DL,
+                           PredicatedScalarEvolution &PSE);
 
   /// Add a check to \p Plan to see if the epilogue vector loop should be
   /// executed.
@@ -309,7 +322,7 @@ struct VPlanTransforms {
   static void
   optimizeInductionExitUsers(VPlan &Plan,
                              DenseMap<VPValue *, VPValue *> &EndValues,
-                             ScalarEvolution &SE);
+                             PredicatedScalarEvolution &PSE);
 
   /// Add explicit broadcasts for live-ins and VPValues defined in \p Plan's entry block if they are used as vectors.
   static void materializeBroadcasts(VPlan &Plan);
@@ -322,14 +335,14 @@ struct VPlanTransforms {
   /// Hoist predicated loads from the same address to the loop entry block, if
   /// they are guaranteed to execute on both paths (i.e., in replicate regions
   /// with complementary masks P and NOT P).
-  static void hoistPredicatedLoads(VPlan &Plan, ScalarEvolution &SE,
+  static void hoistPredicatedLoads(VPlan &Plan, PredicatedScalarEvolution &PSE,
                                    const Loop *L);
 
   /// Sink predicated stores to the same address with complementary predicates
   /// (P and NOT P) to an unconditional store with select recipes for the
   /// stored values. This eliminates branching overhead when all paths
   /// unconditionally store to the same location.
-  static void sinkPredicatedStores(VPlan &Plan, ScalarEvolution &SE,
+  static void sinkPredicatedStores(VPlan &Plan, PredicatedScalarEvolution &PSE,
                                    const Loop *L);
 
   // Materialize vector trip counts for constants early if it can simply be
