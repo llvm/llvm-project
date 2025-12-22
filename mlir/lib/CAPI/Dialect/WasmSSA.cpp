@@ -10,5 +10,5 @@
 #include "mlir/CAPI/Registration.h"
 #include "mlir/Dialect/WasmSSA/IR/WasmSSA.h"
 
-MLIR_DEFINE_CAPI_DIALECT_REGISTRATION(WasmSSA, wasmssa, 
+MLIR_DEFINE_CAPI_DIALECT_REGISTRATION(WasmSSA, wasmssa,
                                       mlir::wasmssa::WasmSSADialect)
