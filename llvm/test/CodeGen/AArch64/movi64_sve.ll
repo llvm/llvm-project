@@ -116,11 +116,20 @@ define <4 x i32> @movi_v4i32_2() {
   ret <4 x i32> <i32 32512, i32 0, i32 32512, i32 0>
 }
 
+define <4 x i32> @movi_v4i32_4092() {
+; COMMON-LABEL: movi_v4i32_4092:
+; COMMON:       // %bb.0:
+; COMMON-NEXT:    mov w8, #4092 // =0xffc
+; COMMON-NEXT:    dup v0.4s, w8
+; COMMON-NEXT:    ret
+  ret <4 x i32> splat (i32 4092)
+}
+
 define <8 x i16> @movi_v8i16_1() {
 ; NEON-LABEL: movi_v8i16_1:
 ; NEON:       // %bb.0:
-; NEON-NEXT:    adrp x8, .LCPI8_0
-; NEON-NEXT:    ldr q0, [x8, :lo12:.LCPI8_0]
+; NEON-NEXT:    adrp x8, .LCPI9_0
+; NEON-NEXT:    ldr q0, [x8, :lo12:.LCPI9_0]
 ; NEON-NEXT:    ret
 ;
 ; SVE-LABEL: movi_v8i16_1:
@@ -133,8 +142,8 @@ define <8 x i16> @movi_v8i16_1() {
 define <8 x i16> @movi_v8i16_2() {
 ; NEON-LABEL: movi_v8i16_2:
 ; NEON:       // %bb.0:
-; NEON-NEXT:    adrp x8, .LCPI9_0
-; NEON-NEXT:    ldr q0, [x8, :lo12:.LCPI9_0]
+; NEON-NEXT:    adrp x8, .LCPI10_0
+; NEON-NEXT:    ldr q0, [x8, :lo12:.LCPI10_0]
 ; NEON-NEXT:    ret
 ;
 ; SVE-LABEL: movi_v8i16_2:
@@ -144,11 +153,20 @@ define <8 x i16> @movi_v8i16_2() {
   ret <8 x i16> <i16 32512, i16 0, i16 0, i16 0, i16 32512, i16 0, i16 0, i16 0>
 }
 
+define <8 x i16> @movi_v8i16_510() {
+; COMMON-LABEL: movi_v8i16_510:
+; COMMON:       // %bb.0:
+; COMMON-NEXT:    mov w8, #510 // =0x1fe
+; COMMON-NEXT:    dup v0.8h, w8
+; COMMON-NEXT:    ret
+  ret <8 x i16> splat (i16 510)
+}
+
 define <16 x i8> @movi_v16i8_1() {
 ; NEON-LABEL: movi_v16i8_1:
 ; NEON:       // %bb.0:
-; NEON-NEXT:    adrp x8, .LCPI10_0
-; NEON-NEXT:    ldr q0, [x8, :lo12:.LCPI10_0]
+; NEON-NEXT:    adrp x8, .LCPI12_0
+; NEON-NEXT:    ldr q0, [x8, :lo12:.LCPI12_0]
 ; NEON-NEXT:    ret
 ;
 ; SVE-LABEL: movi_v16i8_1:
@@ -161,8 +179,8 @@ define <16 x i8> @movi_v16i8_1() {
 define <16 x i8> @movi_v16i8_2() {
 ; NEON-LABEL: movi_v16i8_2:
 ; NEON:       // %bb.0:
-; NEON-NEXT:    adrp x8, .LCPI11_0
-; NEON-NEXT:    ldr q0, [x8, :lo12:.LCPI11_0]
+; NEON-NEXT:    adrp x8, .LCPI13_0
+; NEON-NEXT:    ldr q0, [x8, :lo12:.LCPI13_0]
 ; NEON-NEXT:    ret
 ;
 ; SVE-LABEL: movi_v16i8_2:
@@ -222,8 +240,8 @@ define <2 x i64> @movi_257_v2i64() {
 define <4 x i32> @movi_v4i32_3() {
 ; COMMON-LABEL: movi_v4i32_3:
 ; COMMON:       // %bb.0:
-; COMMON-NEXT:    adrp x8, .LCPI17_0
-; COMMON-NEXT:    ldr q0, [x8, :lo12:.LCPI17_0]
+; COMMON-NEXT:    adrp x8, .LCPI19_0
+; COMMON-NEXT:    ldr q0, [x8, :lo12:.LCPI19_0]
 ; COMMON-NEXT:    ret
   ret <4 x i32> <i32 -128, i32 0, i32 -128, i32 0>
 }
@@ -231,8 +249,8 @@ define <4 x i32> @movi_v4i32_3() {
 define <16 x i8> @movi_v16i8_3() {
 ; COMMON-LABEL: movi_v16i8_3:
 ; COMMON:       // %bb.0:
-; COMMON-NEXT:    adrp x8, .LCPI18_0
-; COMMON-NEXT:    ldr q0, [x8, :lo12:.LCPI18_0]
+; COMMON-NEXT:    adrp x8, .LCPI20_0
+; COMMON-NEXT:    ldr q0, [x8, :lo12:.LCPI20_0]
 ; COMMON-NEXT:    ret
   ret <16 x i8> <i8 0, i8 0, i8 127, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 127, i8 0, i8 0, i8 0, i8 0, i8 0>
 }
