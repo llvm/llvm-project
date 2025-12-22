@@ -1032,7 +1032,7 @@ static void processStubLibrariesPreLTO() {
       // become undefined, so mark the dependent symbols as used by a regular
       // object as well.
       if (!sym || sym->isUndefined() ||
-          (sym->isDefined() && isa_and_nonnull<BitcodeFile>(sym->getFile()))) {
+          (sym->isDefined() && isa<BitcodeFile>(sym->getFile()))) {
         for (const auto dep : deps) {
           auto* needed = symtab->find(dep);
           if (needed ) {
