@@ -233,7 +233,7 @@ and `clang-tidy/google/ExplicitConstructorCheck.cpp
 <https://reviews.llvm.org/diffusion/L/browse/clang-tools-extra/trunk/clang-tidy/google/ExplicitConstructorCheck.cpp>`_).
 
 If you need to interact with macros or preprocessor directives, you will want
-to override the method ``registerPPCallbacks``.  The ``add_new_check.py``
+to override the method ``registerPPCallbacks``. The ``add_new_check.py``
 script does not generate an override for this method in the starting point for
 your new check.
 
@@ -403,7 +403,7 @@ ensure your check is robust. Running your check on a large code base, such as
 Clang/LLVM, is a good way to catch things you forgot to account for in your
 matchers. However, the LLVM code base may be insufficient for testing purposes
 as it was developed against a particular set of coding styles and quality
-measures.  The larger the corpus of code the check is tested against, the
+measures. The larger the corpus of code the check is tested against, the
 higher confidence the community will have in the check's efficacy and
 false-positive rate.
 
