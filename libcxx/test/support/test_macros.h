@@ -230,10 +230,6 @@
 #  define TEST_HAS_NO_ALIGNED_ALLOCATION
 #endif
 
-#if !defined(_LIBCPP_ABI_VCRUNTIME)
-#  define TEST_HAS_NO_ABI_VCRUNTIME
-#endif
-
 #if TEST_STD_VER > 17
 #  define TEST_CONSTINIT constinit
 #elif __has_cpp_attribute(clang::require_constant_initialization)
