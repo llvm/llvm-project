@@ -1735,6 +1735,7 @@ cc_library(
         "//llvm:Linker",
         "//llvm:MC",
         "//llvm:Option",
+        "//llvm:Plugins",
         "//llvm:ProfileData",
         "//llvm:Remarks",
         "//llvm:Support",
