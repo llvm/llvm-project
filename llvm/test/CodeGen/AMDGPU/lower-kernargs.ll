@@ -1119,21 +1119,44 @@ define amdgpu_kernel void @kern_align32_global_ptr(ptr addrspace(1) align 1024 %
 }
 
 define amdgpu_kernel void @kern_noalias_global_ptr(ptr addrspace(1) noalias %ptr) #0 {
-; GCN-LABEL: @kern_noalias_global_ptr(
-; GCN-NEXT:    [[KERN_NOALIAS_GLOBAL_PTR_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(264) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
-; GCN-NEXT:    store volatile ptr addrspace(1) [[PTR:%.*]], ptr addrspace(1) poison, align 8
-; GCN-NEXT:    ret void
+; HSA-LABEL: @kern_noalias_global_ptr(
+; HSA-NEXT:    [[KERN_NOALIAS_GLOBAL_PTR_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(264) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
+; HSA-NEXT:    [[PTR_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[KERN_NOALIAS_GLOBAL_PTR_KERNARG_SEGMENT]], i64 0
+; HSA-NEXT:    [[PTR_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[PTR_KERNARG_OFFSET]], align 16, !invariant.load [[META0]]
+; HSA-NEXT:    store volatile ptr addrspace(1) [[PTR_LOAD]], ptr addrspace(1) poison, align 8, !noalias [[META5:![0-9]+]]
+; HSA-NEXT:    ret void
+;
+; MESA-LABEL: @kern_noalias_global_ptr(
+; MESA-NEXT:    [[KERN_NOALIAS_GLOBAL_PTR_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(264) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
+; MESA-NEXT:    [[PTR_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[KERN_NOALIAS_GLOBAL_PTR_KERNARG_SEGMENT]], i64 36
+; MESA-NEXT:    [[PTR_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[PTR_KERNARG_OFFSET]], align 4, !invariant.load [[META0]]
+; MESA-NEXT:    store volatile ptr addrspace(1) [[PTR_LOAD]], ptr addrspace(1) poison, align 8, !noalias [[META5:![0-9]+]]
+; MESA-NEXT:    ret void
 ;
   store volatile ptr addrspace(1) %ptr, ptr addrspace(1) poison
   ret void
 }
 
 define amdgpu_kernel void @kern_noalias_global_ptr_x2(ptr addrspace(1) noalias %ptr0, ptr addrspace(1) noalias %ptr1) #0 {
-; GCN-LABEL: @kern_noalias_global_ptr_x2(
-; GCN-NEXT:    [[KERN_NOALIAS_GLOBAL_PTR_X2_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(272) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
-; GCN-NEXT:    store volatile ptr addrspace(1) [[PTR0:%.*]], ptr addrspace(1) poison, align 8
-; GCN-NEXT:    store volatile ptr addrspace(1) [[PTR1:%.*]], ptr addrspace(1) poison, align 8
-; GCN-NEXT:    ret void
+; HSA-LABEL: @kern_noalias_global_ptr_x2(
+; HSA-NEXT:    [[KERN_NOALIAS_GLOBAL_PTR_X2_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(272) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
+; HSA-NEXT:    [[PTR0_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[KERN_NOALIAS_GLOBAL_PTR_X2_KERNARG_SEGMENT]], i64 0
+; HSA-NEXT:    [[PTR0_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[PTR0_KERNARG_OFFSET]], align 16, !invariant.load [[META0]]
+; HSA-NEXT:    [[PTR1_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[KERN_NOALIAS_GLOBAL_PTR_X2_KERNARG_SEGMENT]], i64 8
+; HSA-NEXT:    [[PTR1_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[PTR1_KERNARG_OFFSET]], align 8, !invariant.load [[META0]]
+; HSA-NEXT:    store volatile ptr addrspace(1) [[PTR0_LOAD]], ptr addrspace(1) poison, align 8, !noalias [[META8:![0-9]+]]
+; HSA-NEXT:    store volatile ptr addrspace(1) [[PTR1_LOAD]], ptr addrspace(1) poison, align 8, !noalias [[META8]]
+; HSA-NEXT:    ret void
+;
+; MESA-LABEL: @kern_noalias_global_ptr_x2(
+; MESA-NEXT:    [[KERN_NOALIAS_GLOBAL_PTR_X2_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(272) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
+; MESA-NEXT:    [[PTR0_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[KERN_NOALIAS_GLOBAL_PTR_X2_KERNARG_SEGMENT]], i64 36
+; MESA-NEXT:    [[PTR0_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[PTR0_KERNARG_OFFSET]], align 4, !invariant.load [[META0]]
+; MESA-NEXT:    [[PTR1_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[KERN_NOALIAS_GLOBAL_PTR_X2_KERNARG_SEGMENT]], i64 44
+; MESA-NEXT:    [[PTR1_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[PTR1_KERNARG_OFFSET]], align 4, !invariant.load [[META0]]
+; MESA-NEXT:    store volatile ptr addrspace(1) [[PTR0_LOAD]], ptr addrspace(1) poison, align 8, !noalias [[META8:![0-9]+]]
+; MESA-NEXT:    store volatile ptr addrspace(1) [[PTR1_LOAD]], ptr addrspace(1) poison, align 8, !noalias [[META8]]
+; MESA-NEXT:    ret void
 ;
   store volatile ptr addrspace(1) %ptr0, ptr addrspace(1) poison
   store volatile ptr addrspace(1) %ptr1, ptr addrspace(1) poison
@@ -1855,10 +1878,24 @@ attributes #2 = { nounwind "target-cpu"="tahiti" }
 ; HSA: [[META2]] = !{i64 42}
 ; HSA: [[META3]] = !{i64 128}
 ; HSA: [[META4]] = !{i64 1024}
+; HSA: [[META5]] = !{[[META6:![0-9]+]]}
+; HSA: [[META6]] = distinct !{[[META6]], [[META7:![0-9]+]], !"ptr"}
+; HSA: [[META7]] = distinct !{[[META7]], !"kern_noalias_global_ptr"}
+; HSA: [[META8]] = !{[[META9:![0-9]+]], [[META11:![0-9]+]]}
+; HSA: [[META9]] = distinct !{[[META9]], [[META10:![0-9]+]], !"ptr0"}
+; HSA: [[META10]] = distinct !{[[META10]], !"kern_noalias_global_ptr_x2"}
+; HSA: [[META11]] = distinct !{[[META11]], [[META10]], !"ptr1"}
 ;.
 ; MESA: [[META0]] = !{}
 ; MESA: [[RNG1]] = !{i32 0, i32 8}
 ; MESA: [[META2]] = !{i64 42}
 ; MESA: [[META3]] = !{i64 128}
 ; MESA: [[META4]] = !{i64 1024}
+; MESA: [[META5]] = !{[[META6:![0-9]+]]}
+; MESA: [[META6]] = distinct !{[[META6]], [[META7:![0-9]+]], !"ptr"}
+; MESA: [[META7]] = distinct !{[[META7]], !"kern_noalias_global_ptr"}
+; MESA: [[META8]] = !{[[META9:![0-9]+]], [[META11:![0-9]+]]}
+; MESA: [[META9]] = distinct !{[[META9]], [[META10:![0-9]+]], !"ptr0"}
+; MESA: [[META10]] = distinct !{[[META10]], !"kern_noalias_global_ptr_x2"}
+; MESA: [[META11]] = distinct !{[[META11]], [[META10]], !"ptr1"}
 ;.

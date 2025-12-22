@@ -624,11 +624,13 @@ public:
   }
 
   static bool isLDSDMA(const MachineInstr &MI) {
-    return isVALU(MI) && (isMUBUF(MI) || isFLAT(MI));
+    return (isVALU(MI) && (isMUBUF(MI) || isFLAT(MI))) ||
+           (MI.getDesc().TSFlags & SIInstrFlags::TENSOR_CNT);
   }
 
   bool isLDSDMA(uint16_t Opcode) {
-    return isVALU(Opcode) && (isMUBUF(Opcode) || isFLAT(Opcode));
+    return (isVALU(Opcode) && (isMUBUF(Opcode) || isFLAT(Opcode))) ||
+           (get(Opcode).TSFlags & SIInstrFlags::TENSOR_CNT);
   }
 
   static bool isGWS(const MachineInstr &MI) {
@@ -825,7 +827,11 @@ public:
   }
 
   static bool mayWriteLDSThroughDMA(const MachineInstr &MI) {
-    return isLDSDMA(MI) && MI.getOpcode() != AMDGPU::BUFFER_STORE_LDS_DWORD;
+    unsigned Opc = MI.getOpcode();
+    // Exclude instructions that read FROM LDS (not write to it)
+    return isLDSDMA(MI) && Opc != AMDGPU::BUFFER_STORE_LDS_DWORD &&
+           Opc != AMDGPU::TENSOR_STORE_FROM_LDS &&
+           Opc != AMDGPU::TENSOR_STORE_FROM_LDS_D2;
   }
 
   static bool isSBarrierSCCWrite(unsigned Opcode) {
