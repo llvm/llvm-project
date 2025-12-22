@@ -3,7 +3,7 @@
 misc-shadowed-namespace-function
 ================================
 
-Detects free functions in the global namespace that shadow functions declared 
+Detects free functions in the global namespace that shadow functions declared
 in other namespaces.
 
 This check helps prevent accidental shadowing of namespace functions, which can
@@ -21,7 +21,7 @@ Examples
   }
 
   // Warning: free function shadows utils::process
-  void process() {} 
+  void process() {}
 
   // No warning - static function
   static void calculate() {}
