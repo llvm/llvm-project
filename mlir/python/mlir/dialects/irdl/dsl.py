@@ -2,7 +2,7 @@
 #  See https://llvm.org/LICENSE.txt for license information.
 #  SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
-from typing import Dict, List, Union, Callable, Tuple
+from typing import Dict, List, Union, Callable, Tuple, ClassVar
 from dataclasses import dataclass
 from inspect import Parameter, Signature
 from types import SimpleNamespace
@@ -141,7 +141,7 @@ class Result(FieldDef):
 @dataclass
 class Attribute(FieldDef):
     constraint: ConstraintExpr
-    variadicity: typing.ClassVar[Variadicity] = Variadicity.single
+    variadicity: ClassVar[Variadicity] = Variadicity.single
 
 
 def partition_fields(
