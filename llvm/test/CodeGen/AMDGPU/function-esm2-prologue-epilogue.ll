@@ -2,7 +2,8 @@
 ; RUN: llc < %s -mtriple=amdgcn-- -mcpu=gfx1200 -amdgpu-expert-scheduling-mode=0 | FileCheck %s --check-prefix=GFX12
 ; RUN: llc < %s -mtriple=amdgcn-- -mcpu=gfx1200 -amdgpu-expert-scheduling-mode=1 | FileCheck %s --check-prefix=GFX12-ESM
 
-declare i16 @llvm.bswap.i16(i16) nounwind readnone
+; Check for s_setreg_imm32_b32 on function entry and return and around calls.
+; Check for s_wait_alu on non-kernel function entry and return.
 
 define float @missing_truncate_promote_bswap(i32 %arg) {
 ; GFX12-LABEL: missing_truncate_promote_bswap:
@@ -40,88 +41,47 @@ bb:
   ret float %tmp3
 }
 
-define float @main(i32 %arg) {
+define amdgpu_kernel void @main(i32 %arg) {
 ; GFX12-LABEL: main:
 ; GFX12:       ; %bb.0:
-; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX12-NEXT:    s_wait_expcnt 0x0
-; GFX12-NEXT:    s_wait_samplecnt 0x0
-; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_load_b32 s14, s[4:5], 0x24
+; GFX12-NEXT:    s_mov_b64 s[10:11], s[6:7]
+; GFX12-NEXT:    s_getpc_b64 s[6:7]
+; GFX12-NEXT:    s_sext_i32_i16 s7, s7
+; GFX12-NEXT:    s_add_co_u32 s6, s6, missing_truncate_promote_bswap@gotpcrel32@lo+8
+; GFX12-NEXT:    s_add_co_ci_u32 s7, s7, missing_truncate_promote_bswap@gotpcrel32@hi+16
+; GFX12-NEXT:    v_mov_b32_e32 v31, v0
+; GFX12-NEXT:    s_load_b64 s[12:13], s[6:7], 0x0
+; GFX12-NEXT:    s_add_nc_u64 s[8:9], s[4:5], 40
+; GFX12-NEXT:    s_mov_b64 s[4:5], s[0:1]
+; GFX12-NEXT:    s_mov_b64 s[6:7], s[2:3]
+; GFX12-NEXT:    s_mov_b32 s32, 0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    s_mov_b32 s2, s33
-; GFX12-NEXT:    s_mov_b32 s33, s32
-; GFX12-NEXT:    s_xor_saveexec_b32 s0, -1
-; GFX12-NEXT:    scratch_store_b32 off, v1, s33 ; 4-byte Folded Spill
-; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-NEXT:    s_mov_b32 exec_lo, s0
-; GFX12-NEXT:    s_add_co_i32 s32, s32, 16
-; GFX12-NEXT:    s_getpc_b64 s[0:1]
-; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-NEXT:    s_sext_i32_i16 s1, s1
-; GFX12-NEXT:    s_add_co_u32 s0, s0, missing_truncate_promote_bswap@gotpcrel32@lo+12
-; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-NEXT:    s_add_co_ci_u32 s1, s1, missing_truncate_promote_bswap@gotpcrel32@hi+24
-; GFX12-NEXT:    v_writelane_b32 v1, s30, 0
-; GFX12-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
-; GFX12-NEXT:    v_writelane_b32 v1, s31, 1
-; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    s_swappc_b64 s[30:31], s[0:1]
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-NEXT:    v_readlane_b32 s31, v1, 1
-; GFX12-NEXT:    v_readlane_b32 s30, v1, 0
-; GFX12-NEXT:    s_mov_b32 s32, s33
-; GFX12-NEXT:    s_xor_saveexec_b32 s0, -1
-; GFX12-NEXT:    scratch_load_b32 v1, off, s33 ; 4-byte Folded Reload
-; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-NEXT:    s_mov_b32 exec_lo, s0
-; GFX12-NEXT:    s_mov_b32 s33, s2
-; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-NEXT:    s_setpc_b64 s[30:31]
+; GFX12-NEXT:    v_mov_b32_e32 v0, s14
+; GFX12-NEXT:    s_swappc_b64 s[30:31], s[12:13]
+; GFX12-NEXT:    s_endpgm
 ;
 ; GFX12-ESM-LABEL: main:
 ; GFX12-ESM:       ; %bb.0:
 ; GFX12-ESM-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_SCHED_MODE, 0, 2), 2
-; GFX12-ESM-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX12-ESM-NEXT:    s_wait_expcnt 0x0
-; GFX12-ESM-NEXT:    s_wait_samplecnt 0x0
-; GFX12-ESM-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-ESM-NEXT:    s_load_b32 s14, s[4:5], 0x24
+; GFX12-ESM-NEXT:    s_mov_b64 s[10:11], s[6:7]
+; GFX12-ESM-NEXT:    s_getpc_b64 s[6:7]
+; GFX12-ESM-NEXT:    s_sext_i32_i16 s7, s7
+; GFX12-ESM-NEXT:    s_add_co_u32 s6, s6, missing_truncate_promote_bswap@gotpcrel32@lo+8
+; GFX12-ESM-NEXT:    s_add_co_ci_u32 s7, s7, missing_truncate_promote_bswap@gotpcrel32@hi+16
+; GFX12-ESM-NEXT:    v_mov_b32_e32 v31, v0
+; GFX12-ESM-NEXT:    s_load_b64 s[12:13], s[6:7], 0x0
+; GFX12-ESM-NEXT:    s_add_nc_u64 s[8:9], s[4:5], 40
+; GFX12-ESM-NEXT:    s_mov_b64 s[4:5], s[0:1]
+; GFX12-ESM-NEXT:    s_mov_b64 s[6:7], s[2:3]
+; GFX12-ESM-NEXT:    s_mov_b32 s32, 0
 ; GFX12-ESM-NEXT:    s_wait_kmcnt 0x0
-; GFX12-ESM-NEXT:    s_wait_alu depctr_va_vdst(0) depctr_vm_vsrc(0)
-; GFX12-ESM-NEXT:    s_mov_b32 s2, s33
-; GFX12-ESM-NEXT:    s_mov_b32 s33, s32
-; GFX12-ESM-NEXT:    s_xor_saveexec_b32 s0, -1
-; GFX12-ESM-NEXT:    scratch_store_b32 off, v1, s33 ; 4-byte Folded Spill
-; GFX12-ESM-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-ESM-NEXT:    s_mov_b32 exec_lo, s0
-; GFX12-ESM-NEXT:    s_add_co_i32 s32, s32, 16
-; GFX12-ESM-NEXT:    s_getpc_b64 s[0:1]
-; GFX12-ESM-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-ESM-NEXT:    s_sext_i32_i16 s1, s1
-; GFX12-ESM-NEXT:    s_add_co_u32 s0, s0, missing_truncate_promote_bswap@gotpcrel32@lo+12
-; GFX12-ESM-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-ESM-NEXT:    s_add_co_ci_u32 s1, s1, missing_truncate_promote_bswap@gotpcrel32@hi+24
-; GFX12-ESM-NEXT:    s_wait_alu depctr_vm_vsrc(0)
-; GFX12-ESM-NEXT:    v_writelane_b32 v1, s30, 0
-; GFX12-ESM-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
-; GFX12-ESM-NEXT:    v_writelane_b32 v1, s31, 1
-; GFX12-ESM-NEXT:    s_wait_kmcnt 0x0
+; GFX12-ESM-NEXT:    v_mov_b32_e32 v0, s14
 ; GFX12-ESM-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_SCHED_MODE, 0, 2), 0
-; GFX12-ESM-NEXT:    s_swappc_b64 s[30:31], s[0:1]
+; GFX12-ESM-NEXT:    s_swappc_b64 s[30:31], s[12:13]
 ; GFX12-ESM-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_SCHED_MODE, 0, 2), 2
-; GFX12-ESM-NEXT:    v_readlane_b32 s31, v1, 1
-; GFX12-ESM-NEXT:    v_readlane_b32 s30, v1, 0
-; GFX12-ESM-NEXT:    s_mov_b32 s32, s33
-; GFX12-ESM-NEXT:    s_xor_saveexec_b32 s0, -1
-; GFX12-ESM-NEXT:    scratch_load_b32 v1, off, s33 ; 4-byte Folded Reload
-; GFX12-ESM-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-ESM-NEXT:    s_mov_b32 exec_lo, s0
-; GFX12-ESM-NEXT:    s_mov_b32 s33, s2
-; GFX12-ESM-NEXT:    s_wait_loadcnt 0x0
-; GFX12-ESM-NEXT:    s_wait_alu depctr_va_vdst(0)
-; GFX12-ESM-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_SCHED_MODE, 0, 2), 0
-; GFX12-ESM-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-ESM-NEXT:    s_setpc_b64 s[30:31]
+; GFX12-ESM-NEXT:    s_endpgm
   %tmp = call float @missing_truncate_promote_bswap(i32 %arg)
-  ret float %tmp
+  ret void
 }
