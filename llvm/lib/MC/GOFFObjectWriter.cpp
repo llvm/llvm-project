@@ -735,8 +735,8 @@ void GOFFObjectWriter::recordRelocation(const MCFragment &F,
        RelocType == MCGOFFObjectTargetWriter::Reloc_Type_VCon)
           ? GOFF::RLDFetchStore::RLD_FS_Store
           : GOFF::RLDFetchStore::RLD_FS_Fetch;
-  assert(FetchStore == GOFF::RLDFetchStore::RLD_FS_Fetch ||
-         B == nullptr && "No dependent relocations expected");
+  assert((FetchStore == GOFF::RLDFetchStore::RLD_FS_Fetch || B == nullptr) &&
+         "No dependent relocations expected");
 
   enum GOFF::RLDReferenceType ReferenceType = GOFF::RLD_RT_RAddress;
   enum GOFF::RLDReferentType ReferentType = GOFF::RLD_RO_Label;

@@ -57,6 +57,7 @@ NNDS void func_nnds() {}
 void func_h_inc() {}
 
 struct S {
+// CHECK-MESSAGES: :[[@LINE-1]]:8: warning: struct 'S' can be moved into an anonymous namespace to enforce internal linkage
   void method();
 };
 void S::method() {}

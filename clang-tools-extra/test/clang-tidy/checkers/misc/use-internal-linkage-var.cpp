@@ -47,6 +47,7 @@ static void f(int para) {
 }
 
 struct S {
+// CHECK-MESSAGES: :[[@LINE-1]]:8: warning: struct 'S' can be moved into an anonymous namespace to enforce internal linkage
   int m1;
   static int m2;
 };
