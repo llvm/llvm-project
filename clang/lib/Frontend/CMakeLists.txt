@@ -3,6 +3,7 @@ add_subdirectory(Rewrite)
 set(LLVM_LINK_COMPONENTS
   BitReader
   BitstreamReader
+  Extensions
   Option
   ProfileData
   Support

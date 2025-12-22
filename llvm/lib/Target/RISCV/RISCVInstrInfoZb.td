@@ -648,10 +648,11 @@ def : Pat<(shl (and GPR:$rs2, 0xFF), (XLenVT 8)),
           (PACKH (XLenVT X0), GPR:$rs2)>;
 } // Predicates = [HasStdExtZbkb]
 
-let Predicates = [HasStdExtZbkb, IsRV32] in {
+let Predicates = [HasStdExtZbkbOrP, IsRV32] in
 def : Pat<(i32 (or zexti16:$rs1, (shl GPR:$rs2, (i32 16)))),
           (PACK zexti16:$rs1, GPR:$rs2)>;
 
+let Predicates = [HasStdExtZbkb, IsRV32] in {
 def : Pat<(i32 (or (shl GPR:$rs2, (XLenVT 24)),
                    (shl zexti8:$rs1, (XLenVT 16)))),
           (SLLI (XLenVT (PACKH zexti8:$rs1, GPR:$rs2)), (XLenVT 16))>;
@@ -667,10 +668,11 @@ def : Pat<(i32 (or (or (shl GPR:$op1rs2, (XLenVT 24)),
                 (XLenVT (PACKH zexti8:$op1rs1, GPR:$op1rs2)))>;
 }
 
-let Predicates = [HasStdExtZbkb, IsRV64] in {
+let Predicates = [HasStdExtZbkbOrP, IsRV64] in
 def : Pat<(i64 (or zexti32:$rs1, (shl GPR:$rs2, (i64 32)))),
           (PACK zexti32:$rs1, GPR:$rs2)>;
 
+let Predicates = [HasStdExtZbkb, IsRV64] in {
 def : Pat<(i64 (or (shl zexti8:$rs2, (XLenVT 24)),
                    (shl zexti8:$rs1, (XLenVT 16)))),
           (SLLI (XLenVT (PACKH zexti8:$rs1, zexti8:$rs2)), (XLenVT 16))>;

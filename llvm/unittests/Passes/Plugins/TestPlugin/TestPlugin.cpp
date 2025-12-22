@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/Extensions/PassPlugin.h"
 #include "llvm/Passes/PassBuilder.h"
-#include "llvm/Passes/PassPlugin.h"
 
 #include "../TestPlugin.h"
 
