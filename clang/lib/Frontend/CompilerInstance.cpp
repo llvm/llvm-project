@@ -46,7 +46,6 @@
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Config/llvm-config.h"
-#include "llvm/Extensions/PassPlugin.h"
 #include "llvm/Support/AdvisoryLock.h"
 #include "llvm/Support/BuryPointer.h"
 #include "llvm/Support/CrashRecoveryContext.h"
@@ -1075,16 +1074,6 @@ void CompilerInstance::LoadRequestedPlugins() {
     if (llvm::sys::DynamicLibrary::LoadLibraryPermanently(Path.c_str(), &Error))
       getDiagnostics().Report(diag::err_fe_unable_to_load_plugin)
           << Path << Error;
-  }
-
-  // Load and store pass plugins for the back-end.
-  for (const std::string &Path : getCodeGenOpts().PassPlugins) {
-    if (auto PassPlugin = llvm::PassPlugin::Load(Path)) {
-      PassPlugins.emplace_back(std::make_unique<llvm::PassPlugin>(*PassPlugin));
-    } else {
-      getDiagnostics().Report(diag::err_fe_unable_to_load_plugin)
-          << Path << toString(PassPlugin.takeError());
-    }
   }
 
   // Check if any of the loaded plugins replaces the main AST action

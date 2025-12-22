@@ -585,7 +585,7 @@ struct RelativeReloc {
     return inputSec->getVA(inputSec->relocs()[relocIdx].offset);
   }
 
-  const InputSectionBase *inputSec;
+  InputSectionBase *inputSec;
   size_t relocIdx;
 };
 
