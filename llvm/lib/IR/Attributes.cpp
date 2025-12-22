@@ -451,14 +451,11 @@ uint64_t Attribute::getDereferenceableBytes() const {
   return pImpl->getValueAsInt();
 }
 
-std::optional<uint64_t> Attribute::getDeadOnReturnBytes() const {
+DeadOnReturnInfo Attribute::getDeadOnReturnInfo() const {
   assert(hasAttribute(Attribute::DeadOnReturn) &&
          "Trying to get dead_on_return bytes from"
          "a parameter without such an attribute!");
-  uint64_t DeadBytes = pImpl->getValueAsInt();
-  if (DeadBytes == std::numeric_limits<uint64_t>::max())
-    return std::nullopt;
-  return DeadBytes;
+  return DeadOnReturnInfo::createFromintValue(pImpl->getValueAsInt());
 }
 
 uint64_t Attribute::getDereferenceableOrNullBytes() const {
@@ -1179,8 +1176,8 @@ uint64_t AttributeSet::getDereferenceableBytes() const {
   return SetNode ? SetNode->getDereferenceableBytes() : 0;
 }
 
-std::optional<uint64_t> AttributeSet::getDeadOnReturnBytes() const {
-  return SetNode ? SetNode->getDeadOnReturnBytes() : 0;
+DeadOnReturnInfo AttributeSet::getDeadOnReturnInfo() const {
+  return SetNode ? SetNode->getDeadOnReturnInfo() : DeadOnReturnInfo(0);
 }
 
 uint64_t AttributeSet::getDereferenceableOrNullBytes() const {
@@ -1387,9 +1384,9 @@ uint64_t AttributeSetNode::getDereferenceableBytes() const {
   return 0;
 }
 
-std::optional<uint64_t> AttributeSetNode::getDeadOnReturnBytes() const {
+DeadOnReturnInfo AttributeSetNode::getDeadOnReturnInfo() const {
   if (auto A = findEnumAttribute(Attribute::DeadOnReturn))
-    return A->getDeadOnReturnBytes();
+    return A->getDeadOnReturnInfo();
   return 0;
 }
 
@@ -2010,9 +2007,8 @@ uint64_t AttributeList::getRetDereferenceableOrNullBytes() const {
   return getRetAttrs().getDereferenceableOrNullBytes();
 }
 
-std::optional<uint64_t>
-AttributeList::getDeadOnReturnBytes(unsigned Index) const {
-  return getParamAttrs(Index).getDeadOnReturnBytes();
+DeadOnReturnInfo AttributeList::getDeadOnReturnInfo(unsigned Index) const {
+  return getParamAttrs(Index).getDeadOnReturnInfo();
 }
 
 uint64_t
