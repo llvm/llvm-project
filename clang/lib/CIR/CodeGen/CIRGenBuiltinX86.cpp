@@ -1848,7 +1848,7 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
     args.push_back(mask);
 
     return emitIntrinsicCallOp(
-        builder, loc, "x86.avx512bf16.mask.cvtneps2bf16.128", resTy, args)
+        builder, loc, "x86.avx512bf16.mask.cvtneps2bf16.128", resTy, args);
   }
   case X86::BI__builtin_ia32_cvtneps2bf16_256_mask:
   case X86::BI__builtin_ia32_cvtneps2bf16_512_mask: {
