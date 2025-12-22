@@ -319,9 +319,9 @@ bool mlir::wouldOpBeTriviallyDead(Operation *op) {
   return wouldOpBeTriviallyDeadImpl(op);
 }
 
-llvm::SmallVector<MemoryEffects::EffectInstance>
+SmallVector<MemoryEffects::EffectInstance>
 mlir::MemoryEffects::getMemoryEffectsSorted(Operation *op) {
-  llvm::SmallVector<MemoryEffects::EffectInstance> effectsSorted;
+  SmallVector<MemoryEffects::EffectInstance> effectsSorted;
 
   auto memInterface = dyn_cast<MemoryEffectOpInterface>(op);
 
@@ -331,16 +331,16 @@ mlir::MemoryEffects::getMemoryEffectsSorted(Operation *op) {
   memInterface.getEffects(effectsSorted);
 
   auto sortEffects =
-      [](llvm::SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+      [](SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
         llvm::stable_sort(effects, [](const MemoryEffects::EffectInstance &a,
                                       const MemoryEffects::EffectInstance &b) {
           if (a.getStage() < b.getStage())
             return true;
 
           if (a.getStage() == b.getStage())
-            return a.getEffect()->getPriority() < b.getEffect()->getPriority();
+            return a.getEffect()->getPriority() > b.getEffect()->getPriority();
 
-          return false; // b before a
+          return false; // b should be placed before a.
         });
       };
   sortEffects(effectsSorted);
@@ -376,7 +376,7 @@ bool mlir::isMemoryEffectFree(Operation *op) {
 }
 
 // the returned vector may contain duplicate effects
-std::optional<llvm::SmallVector<MemoryEffects::EffectInstance>>
+std::optional<SmallVector<MemoryEffects::EffectInstance>>
 mlir::getEffectsRecursively(Operation *rootOp) {
   SmallVector<MemoryEffects::EffectInstance> effects;
   SmallVector<Operation *> effectingOps(1, rootOp);

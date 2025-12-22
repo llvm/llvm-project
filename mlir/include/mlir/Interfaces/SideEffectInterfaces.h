@@ -347,18 +347,39 @@ struct AlwaysSpeculatableImplTrait
 //===----------------------------------------------------------------------===//
 
 namespace MemoryEffects {
-/// Defines the priority of the different memory effects.
+/// Defines the expected evaluation priority/order of the different Memory
+/// Effects for when two Effect instances on the same op are defined with the
+/// same Stage.
 ///
-/// Sorting/ordering memory effects of an operation is done based on
-/// their defined stage and priority, in that order. If stage values for two
-/// effect instances are equal, they are then sorted by priority. Lower priority
-/// values indicate higher precedence.
+/// This adds a concrete evaluation priority to the Effect instances to allow us
+/// to analyze potential Memory Effect conflicts in a transparent, predictable,
+/// and deterministic manner AND creates a better defined contract with users.
+/// i.e., a set of Memory Effect instances on an op could look like the
+/// following: [MemRead<rA, 0>, MemFree<rA, 0>] where the evaluation order is
+/// ambiguous based on how the user defined both effects with the same Stage 0.
+/// If we Read then Free, we are safe. If we Free first, then we'll Read
+/// garbage. Reordering the effects based on priority removes this ambiguity.
+/// Stage values can be leveraged by users to define the exact order that the
+/// Effect instances take place.
+///
+/// When sorting an op's MemoryEffects, we first sort the effect instances
+/// in increasing Stage order. If Stage values for two Effect instances are
+/// equal, they are then sorted in order of decreasing priority, as defined
+/// by this enum. Higher priority values indicate higher precedence.
+///
+/// Example:
+/// Op's Effects = [MemFree<rC, 2>, MemWrite<rC, 1>, MemWrite<rB, 1>,
+/// MemRead<rA, 0>, MemAlloc<rC, 1].
+///  Sort by Stage --> [MemRead<rA, 0>, MemWrite<rC, 1>, MemWrite<rB, 1>,
+///  MemAlloc<rC, 1>,  MemFree<rC, 2].
+/// Subsort by Priority --> [MemRead<rA, 0>, MemAlloc<rC, 1>, MemWrite<rC, 1>,
+/// MemWrite<rB, 1>, MemFree<rC, 2>].
 enum Priority {
-  DefaultPriority = 0,
-  AllocPriority = 1,
-  FreePriority = 2,
-  ReadPriority = 3,
-  WritePriority = 4
+  DefaultPriority = 4,
+  AllocPriority = 3,
+  ReadPriority = 2,
+  WritePriority = 1,
+  FreePriority = 0
 };
 
 /// This class represents the base class used for memory effects.
@@ -384,8 +405,11 @@ protected:
 };
 using EffectInstance = SideEffects::EffectInstance<Effect>;
 
-/// Returns vector of the op's memory effects sorted in increasing stage order
-/// and in increasing priority order within each stage.
+/// Returns a sorted vector of the op's memory effect instances.
+///
+/// We first sort the effect instances based on their stage value
+/// in increasing order. If Stage values for two Effect instances are
+/// equal, they are then sorted in order of decreasing priority.
 llvm::SmallVector<MemoryEffects::EffectInstance>
 getMemoryEffectsSorted(Operation *op);
 

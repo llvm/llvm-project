@@ -136,7 +136,9 @@ static bool mayHaveMemoryEffectConflict(Operation *op,
 
   auto condSpecInterface = dyn_cast<ConditionallySpeculatable>(op);
 
-  // if op implements ConditionallySpeculatable interface, must be speculatable!
+  // If op implements the ConditionallySpeculatable interface, it must be
+  // speculatable for us to continue evaluating if it has Memory Effect
+  // Conflicts.
   if (condSpecInterface && !isSpeculatable(op))
     return true;
 
@@ -153,17 +155,16 @@ static bool mayHaveMemoryEffectConflict(Operation *op,
   // A potential solution is to recursively gather all resources on all
   // contained ops and then run the for-loop further below. Requires discussions
   // re: obscure corner cases.
-  if (op->hasTrait<OpTrait::HasRecursiveMemoryEffects>()) {
+  if (op->hasTrait<OpTrait::HasRecursiveMemoryEffects>())
     return !isMemoryEffectFree(op);
-  }
 
   // gather all effects on op
   llvm::SmallVector<MemoryEffects::EffectInstance> effects;
   memInterface.getEffects(effects);
 
-  // op has interface but no effects, be conservative
+  // Op has interface but no effects --> no conflicts.
   if (effects.empty())
-    return true;
+    return false;
 
   // op has no conflicts IFF all resources are flagged as having no conflicts
   for (const MemoryEffects::EffectInstance &effect : effects) {
@@ -393,33 +394,38 @@ size_t mlir::moveLoopInvariantCode(
         if (op->getParentRegion() != region)
           continue;
 
-        bool isHoistable = canBeHoisted(op, definedOutside);
-        bool movableUnderSpeculabilityPath = shouldMoveSpeculatable(op, region);
-        bool movableUnderMemoryEffectsPath =
-            loopIsLive && shouldMoveMemoryEffect(op, &resourceConflicts);
-        bool isNotMovable = !isHoistable || (!movableUnderSpeculabilityPath &&
-                                             !movableUnderMemoryEffectsPath);
-
         LDBG() << ". . . . "
                << "<Checking Op> : "
                << OpWithFlags(op, OpPrintingFlags().skipRegions());
+
+        bool isHoistable = canBeHoisted(op, definedOutside);
         LDBG() << ". . . . "
                << ". . . . "
                << "isHoistable = " << isHoistable << "\n";
+
+        if (!isHoistable)
+          continue;
+
+        // Check Speculability Path first since it's cheapeer.
+        bool movableUnderSpeculabilityPath = shouldMoveSpeculatable(op, region);
         LDBG() << ". . . . "
                << ". . . . "
                << "movableUnderSpeculabilityPath = "
                << movableUnderSpeculabilityPath << "\n";
-        LDBG() << ". . . . "
-               << ". . . . "
-               << "movableUnderMemoryEffectsPath = "
-               << movableUnderMemoryEffectsPath << "\n";
-        LDBG() << ". . . . "
-               << ". . . . "
-               << "isNotMovable = " << isNotMovable << "\n";
 
-        if (isNotMovable)
-          continue;
+        // Check other path if first one fails.
+        if (!movableUnderSpeculabilityPath) {
+          bool movableUnderMemoryEffectsPath =
+              loopIsLive && shouldMoveMemoryEffect(op, &resourceConflicts);
+          LDBG() << ". . . . "
+                 << ". . . . "
+                 << "movableUnderMemoryEffectsPath = "
+                 << movableUnderMemoryEffectsPath << "\n";
+
+          // Cannot be moved.
+          if (!movableUnderMemoryEffectsPath)
+            continue;
+        }
 
         moveOutOfRegion(op, region);
         ++numMoved;

@@ -339,10 +339,13 @@ def LoopLikeOpInterface : OpInterface<"LoopLikeOpInterface"> {
       if (!lbs || !ubs || !steps)
         return ::std::nullopt;
 
+      // Check that all 3 vectors are of equal size. Ensures that
+      // complete bound and step information is available so we can 
+      // correctly calculate the number of loop iterations.
       if (lbs->size() != ubs->size() || ubs->size() != steps->size())
         return ::std::nullopt;
 
-      for (size_t i = 0; i < steps->size(); ++i) {
+      for (size_t i = 0, e = steps->size(); i < e; ++i) {
         auto lb = ::mlir::getConstantIntValue((*lbs)[i]);
         auto ub = ::mlir::getConstantIntValue((*ubs)[i]);
         auto st = ::mlir::getConstantIntValue((*steps)[i]);
