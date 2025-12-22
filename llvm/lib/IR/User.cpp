@@ -8,6 +8,7 @@
 
 #include "llvm/IR/User.h"
 #include "llvm/IR/Constant.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/IntrinsicInst.h"
 
@@ -224,9 +225,12 @@ User::~User() {
 
   // Operator delete needs to know where the allocation started. To avoid
   // use-after-destroy, we have to store the allocation start outside the User
-  // object memory. We always have at least one Use* before the User, so we can
-  // use that to store the allocation start.
-  ((void **)this)[-1] = AllocStart;
+  // object memory. The `User` new operator always allocates least one pointer
+  // before the User, so we can use that to store the allocation start. As a
+  // special case, we avoid this extra prefix allocation for ConstantData
+  // instances, since those are extremely common.
+  if (!isa<ConstantData>(this))
+    ((void **)this)[-1] = AllocStart;
 }
 
 void User::operator delete(void *Usr) { ::operator delete(((void **)Usr)[-1]); }
