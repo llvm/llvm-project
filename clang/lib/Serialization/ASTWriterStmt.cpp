@@ -460,6 +460,7 @@ void ASTStmtWriter::VisitCoroutineSuspendExpr(CoroutineSuspendExpr *E) {
   for (Stmt *S : E->children())
     Record.AddStmt(S);
   Record.AddStmt(E->getOpaqueValue());
+  Record.push_back(E->useAwaitSuspendDestroy());
 }
 
 void ASTStmtWriter::VisitCoawaitExpr(CoawaitExpr *E) {

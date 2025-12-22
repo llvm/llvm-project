@@ -1259,11 +1259,22 @@ protected:
 
   //===--- C++ Coroutines bitfields classes ---===//
 
-  class CoawaitExprBitfields {
-    friend class CoawaitExpr;
+  class CoroutineSuspendExprBitfields {
+    friend class CoroutineSuspendExpr;
 
     LLVM_PREFERRED_TYPE(ExprBitfields)
     unsigned : NumExprBits;
+
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned UseAwaitSuspendDestroy : 1;
+  };
+  enum { NumCoroutineSuspendExprBits = NumExprBits + 1 };
+
+  class CoawaitExprBitfields {
+    friend class CoawaitExpr;
+
+    LLVM_PREFERRED_TYPE(CoroutineSuspendExprBitfields)
+    unsigned : NumCoroutineSuspendExprBits;
 
     LLVM_PREFERRED_TYPE(bool)
     unsigned IsImplicit : 1;
@@ -1389,6 +1400,7 @@ protected:
     PackIndexingExprBitfields PackIndexingExprBits;
 
     // C++ Coroutines expressions
+    CoroutineSuspendExprBitfields CoroutineSuspendExprBits;
     CoawaitExprBitfields CoawaitBits;
 
     // Obj-C Expressions

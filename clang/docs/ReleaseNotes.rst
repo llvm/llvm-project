@@ -391,6 +391,14 @@ Attribute Changes in Clang
   structure layout is default on the target), ``[[gnu::gcc_struct]]`` requests
   the compiler to follow Itanium rules for the layout of an annotated structure.
 
+- Introduced a new attribute ``[[clang::coro_await_suspend_destroy]]``.  When
+  applied to an ``await_suspend(std::coroutine_handle<Promise>)`` member of a
+  coroutine awaiter, it causes suspensions into this awaiter to use a new
+  ``await_suspend_destroy(Promise&)`` method.  The coroutine is then immediately
+  destroyed.  This flow bypasses the original ``await_suspend()`` (though it
+  must contain a compatibility stub), and omits suspend intrinsics.  The net
+  effect is improved code speed & size for "short-circuiting" coroutines.
+
 Improvements to Clang's diagnostics
 -----------------------------------
 - Diagnostics messages now refer to ``structured binding`` instead of ``decomposition``,
