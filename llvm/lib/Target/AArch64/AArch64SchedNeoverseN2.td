@@ -784,7 +784,6 @@ def : InstRW<[N2Write_2c_1M0], (instrs XPACD, XPACI, XPACLRI)>;
 // Bitfield extract, one reg
 // Bitfield extract, two regs
 def : SchedAlias<WriteExtr, N2Write_Extr>;
-def : InstRW<[N2Write_Extr], (instrs EXTRWrri, EXTRXrri)>;
 
 // Bitfield move, basic
 def : SchedAlias<WriteIS, N2Write_1c_1I>;
