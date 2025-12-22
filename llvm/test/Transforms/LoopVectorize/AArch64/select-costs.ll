@@ -92,10 +92,10 @@ exit:
 
 define i32 @select_xor_cond(ptr %src, i1 %c.0) {
 ; CHECK: LV: Checking a loop in 'select_xor_cond'
-; CHECK: Cost of 6 for VF 2: WIDEN-SELECT ir<%sel> = select ir<%c>, ir<false>, ir<%c.0>
-; CHECK: Cost of 12 for VF 4: WIDEN-SELECT ir<%sel> = select ir<%c>, ir<false>, ir<%c.0>
-; CHECK: Cost of 24 for VF 8: WIDEN-SELECT ir<%sel> = select ir<%c>, ir<false>, ir<%c.0>
-; CHECK: Cost of 48 for VF 16: WIDEN-SELECT ir<%sel> = select ir<%c>, ir<false>, ir<%c.0>
+; CHECK: Cost of 1 for VF 2: WIDEN-SELECT ir<%sel> = select ir<%c>, ir<false>, ir<%c.0>
+; CHECK: Cost of 1 for VF 4: WIDEN-SELECT ir<%sel> = select ir<%c>, ir<false>, ir<%c.0>
+; CHECK: Cost of 1 for VF 8: WIDEN-SELECT ir<%sel> = select ir<%c>, ir<false>, ir<%c.0>
+; CHECK: Cost of 1 for VF 16: WIDEN-SELECT ir<%sel> = select ir<%c>, ir<false>, ir<%c.0>
 ; CHECK: LV: Selecting VF: 4.
 
 entry:
@@ -118,4 +118,31 @@ exit:
   %ext.c = zext i1 %c to i32
   %res = add i32 %ext.c, %p
   ret i32 %res
+}
+
+define void @select_invariant_cmp_cond(ptr %dst, ptr %src, i32 %a, i32 %b, i64 %n) "target-cpu"="neoverse-v2" {
+; CHECK: LV: Checking a loop in 'select_invariant_cmp_cond'
+; CHECK: Cost of 1 for VF 2: WIDEN-SELECT ir<%sel> = select ir<%cmp>, ir<%trunc>, ir<0> (condition is single-scalar)
+; CHECK: Cost of 1 for VF 4: WIDEN-SELECT ir<%sel> = select ir<%cmp>, ir<%trunc>, ir<0> (condition is single-scalar)
+; CHECK: LV: Selecting VF: 4.
+entry:
+  %cmp = icmp ugt i32 %a, %b
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %gep.src = getelementptr inbounds i32, ptr %src, i64 %iv
+  %load = load i32, ptr %gep.src, align 4
+  %conv = sext i32 %load to i64
+  %or = or i64 %conv, 1
+  %trunc = trunc i64 %or to i32
+  %sel = select i1 %cmp, i32 %trunc, i32 0
+  %gep.dst = getelementptr inbounds i32, ptr %dst, i64 %iv
+  store i32 %sel, ptr %gep.dst, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, %n
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
 }

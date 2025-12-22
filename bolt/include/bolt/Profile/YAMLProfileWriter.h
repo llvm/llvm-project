@@ -36,16 +36,15 @@ public:
       DenseMap<const MCDecodedPseudoProbeInlineTree *, uint32_t>;
   struct InlineTreeDesc {
     template <typename T> using GUIDMapTy = std::unordered_map<uint64_t, T>;
-    using GUIDNodeMap = GUIDMapTy<const MCDecodedPseudoProbeInlineTree *>;
     using GUIDNumMap = GUIDMapTy<uint32_t>;
-    GUIDNodeMap TopLevelGUIDToInlineTree;
     GUIDNumMap GUIDIdxMap;
     GUIDNumMap HashIdxMap;
   };
 
   static std::tuple<std::vector<yaml::bolt::InlineTreeNode>, InlineTreeMapTy>
   convertBFInlineTree(const MCPseudoProbeDecoder &Decoder,
-                      const InlineTreeDesc &InlineTree, uint64_t GUID);
+                      const InlineTreeDesc &InlineTree,
+                      const BinaryFunction &BF);
 
   static std::tuple<yaml::bolt::ProfilePseudoProbeDesc, InlineTreeDesc>
   convertPseudoProbeDesc(const MCPseudoProbeDecoder &PseudoProbeDecoder);
