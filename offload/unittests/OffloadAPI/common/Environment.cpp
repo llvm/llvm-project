@@ -41,9 +41,9 @@ raw_ostream &operator<<(raw_ostream &Out,
 
 raw_ostream &operator<<(raw_ostream &Out, const ol_device_handle_t &Device) {
   size_t Size;
-  olGetDeviceInfoSize(Device, OL_DEVICE_INFO_NAME, &Size);
+  olGetDeviceInfoSize(Device, OL_DEVICE_INFO_PRODUCT_NAME, &Size);
   std::vector<char> Name(Size);
-  olGetDeviceInfo(Device, OL_DEVICE_INFO_NAME, Size, Name.data());
+  olGetDeviceInfo(Device, OL_DEVICE_INFO_PRODUCT_NAME, Size, Name.data());
   Out << Name.data();
   return Out;
 }
@@ -97,11 +97,11 @@ const std::vector<TestEnvironment::Device> &TestEnvironment::getDevices() {
             S << Platform;
             if (PlatformName == SelectedPlatform &&
                 Backend != OL_PLATFORM_BACKEND_HOST) {
+              auto *OutDevices = static_cast<decltype(Devices) *>(Data);
               std::string Name;
               raw_string_ostream NameStr(Name);
-              NameStr << PlatformName << "_" << D;
-              static_cast<std::vector<TestEnvironment::Device> *>(Data)
-                  ->push_back({D, Name});
+              NameStr << PlatformName << "_" << D << OutDevices->size();
+              OutDevices->push_back({D, Name});
             }
             return true;
           },
@@ -117,17 +117,20 @@ const std::vector<TestEnvironment::Device> &TestEnvironment::getDevices() {
             olGetPlatformInfo(Platform, OL_PLATFORM_INFO_BACKEND,
                               sizeof(Backend), &Backend);
             if (Backend != OL_PLATFORM_BACKEND_HOST) {
+              auto *OutDevices = static_cast<decltype(Devices) *>(Data);
               std::string Name;
               raw_string_ostream NameStr(Name);
-              NameStr << Platform << "_" << D;
-              static_cast<std::vector<TestEnvironment::Device> *>(Data)
-                  ->push_back({D, Name});
+              NameStr << Platform << "_" << D << "_" << OutDevices->size();
+              OutDevices->push_back({D, Name});
             }
             return true;
           },
           &Devices);
     }
   }
+
+  if (Devices.size() == 0)
+    errs() << "Warning: No devices found for OffloadAPI tests.\n";
 
   return Devices;
 }

@@ -63,7 +63,7 @@ end
 
 subroutine s8
   data x/1.0/
-  !ERROR: The type of 'x' has already been implicitly declared
+  !ERROR: The type of 'x' has already been implicitly declared as REAL(4)
   integer x
 end
 
@@ -95,4 +95,11 @@ subroutine s12(x)
   !ERROR: NAMELIST input group must not contain undefinable item 'x'
   !BECAUSE: 'x' is an INTENT(IN) dummy argument
   read(*,nml=nl)
+end
+
+subroutine s13()
+  implicit none
+  !ERROR: No explicit type declared for 'i'
+  !ERROR: No explicit type declared for 'i'
+  print *, (i, i = 1, 2)
 end

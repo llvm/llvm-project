@@ -1,4 +1,4 @@
-//===--- SwitchMissingDefaultCaseCheck.cpp - clang-tidy -------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -17,7 +17,7 @@ namespace {
 AST_MATCHER(SwitchStmt, hasDefaultCase) {
   const SwitchCase *Case = Node.getSwitchCaseList();
   while (Case) {
-    if (DefaultStmt::classof(Case))
+    if (isa<DefaultStmt>(Case))
       return true;
 
     Case = Case->getNextSwitchCase();

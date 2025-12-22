@@ -66,9 +66,8 @@ define i32 @test(i8 zeroext %var_2, i16 signext %var_15, ptr %arr_60) {
 ; CHECK-NEXT:    cset r6, ne
 ; CHECK-NEXT:    strb r6, [r5]
 ; CHECK-NEXT:    add.w r2, r2, #792
-; CHECK-NEXT:    ldrb r6, [r3]
+; CHECK-NEXT:    ldrb r6, [r3], #2
 ; CHECK-NEXT:    adds r4, #8
-; CHECK-NEXT:    adds r3, #2
 ; CHECK-NEXT:    cmp r6, #0
 ; CHECK-NEXT:    ite ne
 ; CHECK-NEXT:    sxthne r6, r1
@@ -101,8 +100,7 @@ define i32 @test(i8 zeroext %var_2, i16 signext %var_15, ptr %arr_60) {
 ; CHECK-NEXT:    cset r6, ne
 ; CHECK-NEXT:    adds r4, #8
 ; CHECK-NEXT:    strb r6, [r5]
-; CHECK-NEXT:    ldrb r6, [r3]
-; CHECK-NEXT:    adds r3, #2
+; CHECK-NEXT:    ldrb r6, [r3], #2
 ; CHECK-NEXT:    cmp r6, #0
 ; CHECK-NEXT:    ite ne
 ; CHECK-NEXT:    sxthne r6, r1
@@ -134,8 +132,7 @@ define i32 @test(i8 zeroext %var_2, i16 signext %var_15, ptr %arr_60) {
 ; CHECK-NEXT:    cset r4, ne
 ; CHECK-NEXT:    add.w r11, r11, #8
 ; CHECK-NEXT:    strb r4, [r5]
-; CHECK-NEXT:    ldrb r4, [r3]
-; CHECK-NEXT:    adds r3, #2
+; CHECK-NEXT:    ldrb r4, [r3], #2
 ; CHECK-NEXT:    cmp r4, #0
 ; CHECK-NEXT:    ite ne
 ; CHECK-NEXT:    sxthne r4, r1

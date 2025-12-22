@@ -451,9 +451,6 @@ class Neon_3Arg_Long_Intrinsic
                            LLVMTruncatedType<0>],
                           [IntrNoMem]>;
 
-class Neon_1FloatArg_Intrinsic
-  : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>], [IntrNoMem]>;
-
 class Neon_CvtFxToFP_Intrinsic
   : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [llvm_anyint_ty, llvm_i32_ty],
                           [IntrNoMem]>;
@@ -676,9 +673,6 @@ def int_arm_neon_vtbx1 : Neon_Tbl3Arg_Intrinsic;
 def int_arm_neon_vtbx2 : Neon_Tbl4Arg_Intrinsic;
 def int_arm_neon_vtbx3 : Neon_Tbl5Arg_Intrinsic;
 def int_arm_neon_vtbx4 : Neon_Tbl6Arg_Intrinsic;
-
-// Vector and Scalar Rounding.
-def int_arm_neon_vrintn : Neon_1FloatArg_Intrinsic;
 
 // De-interleaving vector loads from N-element structures.
 // Source operands are the address and alignment.
@@ -978,6 +972,13 @@ def int_arm_mve_vmaxnma_predicated: DefaultAttrsIntrinsic<[llvm_anyvector_ty],
    [LLVMMatchType<0>, LLVMMatchType<0>, llvm_anyvector_ty],
     [IntrNoMem]>;
 
+def int_arm_mve_vminnm: DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+   [LLVMMatchType<0>, LLVMMatchType<0>],
+    [IntrNoMem]>;
+def int_arm_mve_vmaxnm: DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+   [LLVMMatchType<0>, LLVMMatchType<0>],
+    [IntrNoMem]>;
+
 multiclass MVEPredicated<list<LLVMType> rets, list<LLVMType> params,
                          LLVMType pred = llvm_anyvector_ty,
                          list<IntrinsicProperty> props = [IntrNoMem],
@@ -1144,6 +1145,18 @@ def int_arm_mve_vshlc_predicated: DefaultAttrsIntrinsic<
    [llvm_i32_ty /* bits shifted out */, llvm_anyvector_ty],
    [LLVMMatchType<0>, llvm_i32_ty /* bits shifted in */,
     llvm_i32_ty /* shift count */, llvm_anyvector_ty], [IntrNoMem]>;
+def int_arm_mve_vadd: DefaultAttrsIntrinsic<
+   [llvm_anyvector_ty],
+   [LLVMMatchType<0>, LLVMMatchType<0>],
+   [IntrNoMem]>;
+def int_arm_mve_vsub: DefaultAttrsIntrinsic<
+   [llvm_anyvector_ty],
+   [LLVMMatchType<0>, LLVMMatchType<0>],
+   [IntrNoMem]>;
+def int_arm_mve_vmul: DefaultAttrsIntrinsic<
+   [llvm_anyvector_ty],
+   [LLVMMatchType<0>, LLVMMatchType<0>],
+   [IntrNoMem]>;
 def int_arm_mve_vmulh: DefaultAttrsIntrinsic<
    [llvm_anyvector_ty],
    [LLVMMatchType<0>, LLVMMatchType<0>, llvm_i32_ty /* unsigned */],
@@ -1291,6 +1304,12 @@ defm int_arm_mve_vcvt_fix: MVEMXPredicated<
   [llvm_anyvector_ty /* input vector */, llvm_i32_ty /* scale */],
   LLVMMatchType<0>, llvm_anyvector_ty>;
 
+def int_arm_mve_vcvt_fp_int: DefaultAttrsIntrinsic<
+  [llvm_anyvector_ty], [llvm_anyvector_ty, llvm_i32_ty /* unsigned */],
+  [IntrNoMem]>;
+def int_arm_mve_vcvt_int_fp: DefaultAttrsIntrinsic<
+  [llvm_anyvector_ty], [llvm_anyvector_ty, llvm_i32_ty /* unsigned */],
+  [IntrNoMem]>;
 def int_arm_mve_vcvt_fp_int_predicated: DefaultAttrsIntrinsic<
   [llvm_anyvector_ty], [llvm_anyvector_ty, llvm_i32_ty /* unsigned */,
    llvm_anyvector_ty /* predicate */, LLVMMatchType<0> /* inactive */],
@@ -1319,6 +1338,8 @@ def int_arm_mve_vqdmull_predicated: DefaultAttrsIntrinsic<
    LLVMMatchType<0>],
   [IntrNoMem]>;
 
+class MVESimpleUnary: DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+   [LLVMMatchType<0>], [IntrNoMem]>;
 class MVESimpleUnaryPredicated: DefaultAttrsIntrinsic<[llvm_anyvector_ty],
    [LLVMMatchType<0>, llvm_anyvector_ty, LLVMMatchType<0>], [IntrNoMem]>;
 
@@ -1329,6 +1350,12 @@ def int_arm_mve_qabs_predicated: MVESimpleUnaryPredicated;
 def int_arm_mve_qneg_predicated: MVESimpleUnaryPredicated;
 def int_arm_mve_clz_predicated: MVESimpleUnaryPredicated;
 def int_arm_mve_cls_predicated: MVESimpleUnaryPredicated;
+def int_arm_mve_vrintz: MVESimpleUnary;
+def int_arm_mve_vrintm: MVESimpleUnary;
+def int_arm_mve_vrintp: MVESimpleUnary;
+def int_arm_mve_vrinta: MVESimpleUnary;
+def int_arm_mve_vrintx: MVESimpleUnary;
+def int_arm_mve_vrintn: MVESimpleUnary;
 def int_arm_mve_vrintz_predicated: MVESimpleUnaryPredicated;
 def int_arm_mve_vrintm_predicated: MVESimpleUnaryPredicated;
 def int_arm_mve_vrintp_predicated: MVESimpleUnaryPredicated;
@@ -1356,6 +1383,9 @@ def int_arm_mve_vqmovn_predicated: DefaultAttrsIntrinsic<[llvm_anyvector_ty],
     llvm_i32_ty /* unsigned output */, llvm_i32_ty /* unsigned input */,
     llvm_i32_ty /* top half */, llvm_anyvector_ty /* pred */], [IntrNoMem]>;
 
+def int_arm_mve_fma: DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+   [LLVMMatchType<0> /* mult op #1 */, LLVMMatchType<0> /* mult op #2 */,
+    LLVMMatchType<0> /* addend */], [IntrNoMem]>;
 // fma_predicated returns the add operand for disabled lanes.
 def int_arm_mve_fma_predicated: DefaultAttrsIntrinsic<[llvm_anyvector_ty],
    [LLVMMatchType<0> /* mult op #1 */, LLVMMatchType<0> /* mult op #2 */,
@@ -1386,6 +1416,15 @@ defm int_arm_mve_vqdmlad: MVEPredicated<[llvm_anyvector_ty],
   [LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>,
    llvm_i32_ty /* exchange */, llvm_i32_ty /* round */,
    llvm_i32_ty /* subtract */]>;
+
+class MVE_cmp : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+    [llvm_anyvector_ty, LLVMMatchType<1>], [IntrNoMem]>;
+def int_arm_mve_cmp_eq: MVE_cmp;
+def int_arm_mve_cmp_ne: MVE_cmp;
+def int_arm_mve_cmp_gt: MVE_cmp;
+def int_arm_mve_cmp_ge: MVE_cmp;
+def int_arm_mve_cmp_lt: MVE_cmp;
+def int_arm_mve_cmp_le: MVE_cmp;
 
 // CDE (Custom Datapath Extension)
 

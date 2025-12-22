@@ -29,9 +29,17 @@ bool LibStdcppUniquePointerSummaryProvider(
     ValueObject &valobj, Stream &stream,
     const TypeSummaryOptions &options); // libstdc++ std::unique_ptr<>
 
+bool LibStdcppVariantSummaryProvider(
+    ValueObject &valobj, Stream &stream,
+    const TypeSummaryOptions &options); // libstdc++ std::variant<>
+
 SyntheticChildrenFrontEnd *
 LibstdcppMapIteratorSyntheticFrontEndCreator(CXXSyntheticChildren *,
                                              lldb::ValueObjectSP);
+
+SyntheticChildrenFrontEnd *
+LibStdcppSpanSyntheticFrontEndCreator(CXXSyntheticChildren *,
+                                      lldb::ValueObjectSP);
 
 SyntheticChildrenFrontEnd *
 LibStdcppTupleSyntheticFrontEndCreator(CXXSyntheticChildren *,
@@ -56,6 +64,9 @@ LibStdcppSharedPtrSyntheticFrontEndCreator(CXXSyntheticChildren *,
 SyntheticChildrenFrontEnd *
 LibStdcppUniquePtrSyntheticFrontEndCreator(CXXSyntheticChildren *,
                                            lldb::ValueObjectSP);
+
+bool LibStdcppVariantSummaryProvider(ValueObject &valobj, Stream &stream,
+                                     const TypeSummaryOptions &options);
 
 } // namespace formatters
 } // namespace lldb_private

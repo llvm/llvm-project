@@ -283,8 +283,7 @@ define <vscale x 4 x i32> @uabd_non_matching_promotion(<vscale x 4 x i8> %a, <vs
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    and z0.s, z0.s, #0xff
 ; CHECK-NEXT:    sxtb z1.s, p0/m, z1.s
-; CHECK-NEXT:    sub z0.s, z0.s, z1.s
-; CHECK-NEXT:    abs z0.s, p0/m, z0.s
+; CHECK-NEXT:    sabd z0.s, p0/m, z0.s, z1.s
 ; CHECK-NEXT:    ret
   %a.zext = zext <vscale x 4 x i8> %a to <vscale x 4 x i32>
   %b.zext = sext <vscale x 4 x i8> %b to <vscale x 4 x i32>

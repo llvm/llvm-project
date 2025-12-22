@@ -17,6 +17,7 @@
 #include "flang/Common/float128.h"
 #include "flang/Runtime/entry-names.h"
 #include <complex.h>
+#include <stdbool.h>
 
 struct CppDescriptor; /* dummy type name for Fortran::runtime::Descriptor */
 

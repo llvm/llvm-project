@@ -20,6 +20,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/IOSandbox.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/SmallVectorMemoryBuffer.h"
@@ -161,6 +162,8 @@ ErrorOr<std::unique_ptr<MemoryBuffer>>
 MemoryBuffer::getFileOrSTDIN(const Twine &Filename, bool IsText,
                              bool RequiresNullTerminator,
                              std::optional<Align> Alignment) {
+  sys::sandbox::violationIfEnabled();
+
   SmallString<256> NameBuf;
   StringRef NameRef = Filename.toStringRef(NameBuf);
 
@@ -174,6 +177,8 @@ ErrorOr<std::unique_ptr<MemoryBuffer>>
 MemoryBuffer::getFileSlice(const Twine &FilePath, uint64_t MapSize,
                            uint64_t Offset, bool IsVolatile,
                            std::optional<Align> Alignment) {
+  sys::sandbox::violationIfEnabled();
+
   return getFileAux<MemoryBuffer>(FilePath, MapSize, Offset, /*IsText=*/false,
                                   /*RequiresNullTerminator=*/false, IsVolatile,
                                   Alignment);
@@ -258,6 +263,8 @@ ErrorOr<std::unique_ptr<MemoryBuffer>>
 MemoryBuffer::getFile(const Twine &Filename, bool IsText,
                       bool RequiresNullTerminator, bool IsVolatile,
                       std::optional<Align> Alignment) {
+  sys::sandbox::violationIfEnabled();
+
   return getFileAux<MemoryBuffer>(Filename, /*MapSize=*/-1, /*Offset=*/0,
                                   IsText, RequiresNullTerminator, IsVolatile,
                                   Alignment);
@@ -288,6 +295,8 @@ getFileAux(const Twine &Filename, uint64_t MapSize, uint64_t Offset,
 ErrorOr<std::unique_ptr<WritableMemoryBuffer>>
 WritableMemoryBuffer::getFile(const Twine &Filename, bool IsVolatile,
                               std::optional<Align> Alignment) {
+  sys::sandbox::violationIfEnabled();
+
   return getFileAux<WritableMemoryBuffer>(
       Filename, /*MapSize=*/-1, /*Offset=*/0, /*IsText=*/false,
       /*RequiresNullTerminator=*/false, IsVolatile, Alignment);
@@ -297,6 +306,8 @@ ErrorOr<std::unique_ptr<WritableMemoryBuffer>>
 WritableMemoryBuffer::getFileSlice(const Twine &Filename, uint64_t MapSize,
                                    uint64_t Offset, bool IsVolatile,
                                    std::optional<Align> Alignment) {
+  sys::sandbox::violationIfEnabled();
+
   return getFileAux<WritableMemoryBuffer>(
       Filename, MapSize, Offset, /*IsText=*/false,
       /*RequiresNullTerminator=*/false, IsVolatile, Alignment);
@@ -455,6 +466,8 @@ getReadWriteFile(const Twine &Filename, uint64_t FileSize, uint64_t MapSize,
 
 ErrorOr<std::unique_ptr<WriteThroughMemoryBuffer>>
 WriteThroughMemoryBuffer::getFile(const Twine &Filename, int64_t FileSize) {
+  sys::sandbox::violationIfEnabled();
+
   return getReadWriteFile(Filename, FileSize, FileSize, 0);
 }
 
@@ -462,6 +475,8 @@ WriteThroughMemoryBuffer::getFile(const Twine &Filename, int64_t FileSize) {
 ErrorOr<std::unique_ptr<WriteThroughMemoryBuffer>>
 WriteThroughMemoryBuffer::getFileSlice(const Twine &Filename, uint64_t MapSize,
                                        uint64_t Offset) {
+  sys::sandbox::violationIfEnabled();
+
   return getReadWriteFile(Filename, -1, MapSize, Offset);
 }
 
@@ -501,12 +516,18 @@ getOpenFileImpl(sys::fs::file_t FD, const Twine &Filename, uint64_t FileSize,
     std::unique_ptr<MB> Result(
         new (NamedBufferAlloc(Filename)) MemoryBufferMMapFile<MB>(
             RequiresNullTerminator, FD, MapSize, Offset, EC));
-    if (!EC)
-      return std::move(Result);
+    if (!EC) {
+      // On at least Linux, and possibly on other systems, mmap may return pages
+      // from the page cache that are not properly filled with trailing zeroes,
+      // if some prior user of the page wrote non-zero bytes. Detect this and
+      // don't use mmap in that case.
+      if (!RequiresNullTerminator || *Result->getBufferEnd() == '\0')
+        return std::move(Result);
+    }
   }
 
 #ifdef __MVS__
-  ErrorOr<bool> NeedsConversion = needConversion(Filename.str().c_str(), FD);
+  ErrorOr<bool> NeedsConversion = needConversion(Filename, FD);
   if (std::error_code EC = NeedsConversion.getError())
     return EC;
   // File size may increase due to EBCDIC -> UTF-8 conversion, therefore we
@@ -548,6 +569,8 @@ ErrorOr<std::unique_ptr<MemoryBuffer>>
 MemoryBuffer::getOpenFile(sys::fs::file_t FD, const Twine &Filename,
                           uint64_t FileSize, bool RequiresNullTerminator,
                           bool IsVolatile, std::optional<Align> Alignment) {
+  sys::sandbox::violationIfEnabled();
+
   return getOpenFileImpl<MemoryBuffer>(FD, Filename, FileSize, FileSize, 0,
                                        RequiresNullTerminator, IsVolatile,
                                        Alignment);
@@ -557,11 +580,16 @@ ErrorOr<std::unique_ptr<MemoryBuffer>> MemoryBuffer::getOpenFileSlice(
     sys::fs::file_t FD, const Twine &Filename, uint64_t MapSize, int64_t Offset,
     bool IsVolatile, std::optional<Align> Alignment) {
   assert(MapSize != uint64_t(-1));
+
+  sys::sandbox::violationIfEnabled();
+
   return getOpenFileImpl<MemoryBuffer>(FD, Filename, -1, MapSize, Offset, false,
                                        IsVolatile, Alignment);
 }
 
 ErrorOr<std::unique_ptr<MemoryBuffer>> MemoryBuffer::getSTDIN() {
+  sys::sandbox::violationIfEnabled();
+
   // Read in all of the data from stdin, we cannot mmap stdin.
   //
   // FIXME: That isn't necessarily true, we should try to mmap stdin and
@@ -573,6 +601,8 @@ ErrorOr<std::unique_ptr<MemoryBuffer>> MemoryBuffer::getSTDIN() {
 
 ErrorOr<std::unique_ptr<MemoryBuffer>>
 MemoryBuffer::getFileAsStream(const Twine &Filename) {
+  sys::sandbox::violationIfEnabled();
+
   Expected<sys::fs::file_t> FDOrErr =
       sys::fs::openNativeFileForRead(Filename, sys::fs::OF_None);
   if (!FDOrErr)

@@ -20,7 +20,7 @@
 using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::plugin::dwarf;
-using namespace lldb_private::dwarf;
+using namespace llvm::dwarf;
 
 TEST(DWARFDIETest, ChildIteration) {
   // Tests DWARFDIE::child_iterator.

@@ -18,11 +18,9 @@
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Verifier.h"
 #include "mlir/IR/Visitors.h"
-#include "mlir/Interfaces/FunctionInterfaces.h"
 #include "mlir/Parser/Parser.h"
 #include "mlir/Support/FileUtilities.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/SourceMgr.h"
@@ -123,6 +121,80 @@ ModuleOp transform::detail::getPreloadedTransformModule(MLIRContext *context) {
       ->getLibraryModule();
 }
 
+static transform::TransformOpInterface
+findTransformEntryPointNonRecursive(Operation *op, StringRef entryPoint) {
+  for (Region &region : op->getRegions()) {
+    for (Block &block : region.getBlocks()) {
+      for (auto namedSequenceOp : block.getOps<transform::NamedSequenceOp>()) {
+        if (namedSequenceOp.getSymName() == entryPoint) {
+          return cast<transform::TransformOpInterface>(
+              namedSequenceOp.getOperation());
+        }
+      }
+    }
+  }
+  return nullptr;
+}
+
+static transform::TransformOpInterface
+findTransformEntryPointRecursive(Operation *op, StringRef entryPoint) {
+  transform::TransformOpInterface transform = nullptr;
+  op->walk<WalkOrder::PreOrder>(
+      [&](transform::NamedSequenceOp namedSequenceOp) {
+        if (namedSequenceOp.getSymName() == entryPoint) {
+          transform = cast<transform::TransformOpInterface>(
+              namedSequenceOp.getOperation());
+          return WalkResult::interrupt();
+        }
+        return WalkResult::advance();
+      });
+  return transform;
+}
+
+// Will look for the transform's entry point favouring NamedSequenceOps
+// ops that exist within the operation without the need for nesting.
+// If no operation exists in the blocks owned by op, then it will recursively
+// walk the op in preorder and find the first NamedSequenceOp that matches
+// the entry point's name.
+//
+// This allows for the following two use cases:
+// 1. op is a module annotated with the transform.with_named_sequence attribute
+//    that has an entry point in its block. E.g.,
+//
+//    ```mlir
+//    module {transform.with_named_sequence} {
+//      transform.named_sequence @__transform_main(%arg0 : !transform.any_op) ->
+//      () {
+//        transform.yield
+//      }
+//    }
+//    ```
+//
+// 2. op is a program which contains a nested module annotated with the
+//    transform.with_named_sequence attribute. E.g.,
+//
+//    ```mlir
+//    module {
+//      func.func @foo () {
+//      }
+//
+//      module {transform.with_named_sequence} {
+//        transform.named_sequence @__transform_main(%arg0 : !transform.any_op)
+//        -> () {
+//          transform.yield
+//        }
+//      }
+//    }
+//    ```
+static transform::TransformOpInterface
+findTransformEntryPointInOp(Operation *op, StringRef entryPoint) {
+  transform::TransformOpInterface transform =
+      findTransformEntryPointNonRecursive(op, entryPoint);
+  if (!transform)
+    transform = findTransformEntryPointRecursive(op, entryPoint);
+  return transform;
+}
+
 transform::TransformOpInterface
 transform::detail::findTransformEntryPoint(Operation *root, ModuleOp module,
                                            StringRef entryPoint) {
@@ -130,16 +202,8 @@ transform::detail::findTransformEntryPoint(Operation *root, ModuleOp module,
   if (module)
     l.push_back(module);
   for (Operation *op : l) {
-    transform::TransformOpInterface transform = nullptr;
-    op->walk<WalkOrder::PreOrder>(
-        [&](transform::NamedSequenceOp namedSequenceOp) {
-          if (namedSequenceOp.getSymName() == entryPoint) {
-            transform = cast<transform::TransformOpInterface>(
-                namedSequenceOp.getOperation());
-            return WalkResult::interrupt();
-          }
-          return WalkResult::advance();
-        });
+    TransformOpInterface transform =
+        findTransformEntryPointInOp(op, entryPoint);
     if (transform)
       return transform;
   }

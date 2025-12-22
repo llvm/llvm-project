@@ -17,7 +17,6 @@
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCELFObjectWriter.h"
-#include "llvm/MC/MCFixupKindInfo.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSubtargetInfo.h"
@@ -41,22 +40,21 @@ class HexagonAsmBackend : public MCAsmBackend {
   uint8_t OSABI;
   StringRef CPU;
   mutable uint64_t relaxedCnt;
-  mutable const MCInst *RelaxedMCB = nullptr;
+  mutable MCInst RelaxedMCB;
   std::unique_ptr <MCInstrInfo> MCII;
   std::unique_ptr <MCInst *> RelaxTarget;
   MCInst * Extender;
   unsigned MaxPacketSize;
 
-  void ReplaceInstruction(MCCodeEmitter &E, MCRelaxableFragment &RF,
-                          MCInst &HMB) const {
+  void ReplaceInstruction(MCCodeEmitter &E, MCFragment &RF, MCInst &HMB) const {
     SmallVector<MCFixup, 4> Fixups;
     SmallString<256> Code;
     E.encodeInstruction(HMB, Code, Fixups, *RF.getSubtargetInfo());
 
     // Update the fragment.
     RF.setInst(HMB);
-    RF.setContents(Code);
-    RF.getFixups() = Fixups;
+    RF.setVarContents(Code);
+    RF.setVarFixups(Fixups);
   }
 
 public:
@@ -84,14 +82,15 @@ public:
   }
 
   MCFixupKindInfo getFixupKindInfo(MCFixupKind Kind) const override {
+    // clang-format off
     const static MCFixupKindInfo Infos[Hexagon::NumTargetFixupKinds] = {
       // This table *must* be in same the order of fixup_* kinds in
       // HexagonFixupKinds.h.
       //
       // namei                          offset  bits    flags
-      { "fixup_Hexagon_B22_PCREL",      0,      32,     MCFixupKindInfo::FKF_IsPCRel },
-      { "fixup_Hexagon_B15_PCREL",      0,      32,     MCFixupKindInfo::FKF_IsPCRel },
-      { "fixup_Hexagon_B7_PCREL",       0,      32,     MCFixupKindInfo::FKF_IsPCRel },
+      { "fixup_Hexagon_B22_PCREL",      0,      32,     0 },
+      { "fixup_Hexagon_B15_PCREL",      0,      32,     0 },
+      { "fixup_Hexagon_B7_PCREL",       0,      32,     0 },
       { "fixup_Hexagon_LO16",           0,      32,     0 },
       { "fixup_Hexagon_HI16",           0,      32,     0 },
       { "fixup_Hexagon_32",             0,      32,     0 },
@@ -102,15 +101,15 @@ public:
       { "fixup_Hexagon_GPREL16_2",      0,      32,     0 },
       { "fixup_Hexagon_GPREL16_3",      0,      32,     0 },
       { "fixup_Hexagon_HL16",           0,      32,     0 },
-      { "fixup_Hexagon_B13_PCREL",      0,      32,     MCFixupKindInfo::FKF_IsPCRel },
-      { "fixup_Hexagon_B9_PCREL",       0,      32,     MCFixupKindInfo::FKF_IsPCRel },
-      { "fixup_Hexagon_B32_PCREL_X",    0,      32,     MCFixupKindInfo::FKF_IsPCRel },
+      { "fixup_Hexagon_B13_PCREL",      0,      32,     0 },
+      { "fixup_Hexagon_B9_PCREL",       0,      32,     0 },
+      { "fixup_Hexagon_B32_PCREL_X",    0,      32,     0 },
       { "fixup_Hexagon_32_6_X",         0,      32,     0 },
-      { "fixup_Hexagon_B22_PCREL_X",    0,      32,     MCFixupKindInfo::FKF_IsPCRel },
-      { "fixup_Hexagon_B15_PCREL_X",    0,      32,     MCFixupKindInfo::FKF_IsPCRel },
-      { "fixup_Hexagon_B13_PCREL_X",    0,      32,     MCFixupKindInfo::FKF_IsPCRel },
-      { "fixup_Hexagon_B9_PCREL_X",     0,      32,     MCFixupKindInfo::FKF_IsPCRel },
-      { "fixup_Hexagon_B7_PCREL_X",     0,      32,     MCFixupKindInfo::FKF_IsPCRel },
+      { "fixup_Hexagon_B22_PCREL_X",    0,      32,     0 },
+      { "fixup_Hexagon_B15_PCREL_X",    0,      32,     0 },
+      { "fixup_Hexagon_B13_PCREL_X",    0,      32,     0 },
+      { "fixup_Hexagon_B9_PCREL_X",     0,      32,     0 },
+      { "fixup_Hexagon_B7_PCREL_X",     0,      32,     0 },
       { "fixup_Hexagon_16_X",           0,      32,     0 },
       { "fixup_Hexagon_12_X",           0,      32,     0 },
       { "fixup_Hexagon_11_X",           0,      32,     0 },
@@ -119,12 +118,12 @@ public:
       { "fixup_Hexagon_8_X",            0,      32,     0 },
       { "fixup_Hexagon_7_X",            0,      32,     0 },
       { "fixup_Hexagon_6_X",            0,      32,     0 },
-      { "fixup_Hexagon_32_PCREL",       0,      32,     MCFixupKindInfo::FKF_IsPCRel },
+      { "fixup_Hexagon_32_PCREL",       0,      32,     0 },
       { "fixup_Hexagon_COPY",           0,      32,     0 },
       { "fixup_Hexagon_GLOB_DAT",       0,      32,     0 },
       { "fixup_Hexagon_JMP_SLOT",       0,      32,     0 },
       { "fixup_Hexagon_RELATIVE",       0,      32,     0 },
-      { "fixup_Hexagon_PLT_B22_PCREL",  0,      32,     MCFixupKindInfo::FKF_IsPCRel },
+      { "fixup_Hexagon_PLT_B22_PCREL",  0,      32,     0 },
       { "fixup_Hexagon_GOTREL_LO16",    0,      32,     0 },
       { "fixup_Hexagon_GOTREL_HI16",    0,      32,     0 },
       { "fixup_Hexagon_GOTREL_32",      0,      32,     0 },
@@ -137,8 +136,8 @@ public:
       { "fixup_Hexagon_DTPREL_HI16",    0,      32,     0 },
       { "fixup_Hexagon_DTPREL_32",      0,      32,     0 },
       { "fixup_Hexagon_DTPREL_16",      0,      32,     0 },
-      { "fixup_Hexagon_GD_PLT_B22_PCREL",0,     32,     MCFixupKindInfo::FKF_IsPCRel },
-      { "fixup_Hexagon_LD_PLT_B22_PCREL",0,     32,     MCFixupKindInfo::FKF_IsPCRel },
+      { "fixup_Hexagon_GD_PLT_B22_PCREL",0,     32,     0 },
+      { "fixup_Hexagon_LD_PLT_B22_PCREL",0,     32,     0 },
       { "fixup_Hexagon_GD_GOT_LO16",    0,      32,     0 },
       { "fixup_Hexagon_GD_GOT_HI16",    0,      32,     0 },
       { "fixup_Hexagon_GD_GOT_32",      0,      32,     0 },
@@ -159,7 +158,7 @@ public:
       { "fixup_Hexagon_TPREL_HI16",     0,      32,     0 },
       { "fixup_Hexagon_TPREL_32",       0,      32,     0 },
       { "fixup_Hexagon_TPREL_16",       0,      32,     0 },
-      { "fixup_Hexagon_6_PCREL_X",      0,      32,     MCFixupKindInfo::FKF_IsPCRel },
+      { "fixup_Hexagon_6_PCREL_X",      0,      32,     0 },
       { "fixup_Hexagon_GOTREL_32_6_X",  0,      32,     0 },
       { "fixup_Hexagon_GOTREL_16_X",    0,      32,     0 },
       { "fixup_Hexagon_GOTREL_11_X",    0,      32,     0 },
@@ -183,11 +182,12 @@ public:
       { "fixup_Hexagon_TPREL_32_6_X",   0,      32,     0 },
       { "fixup_Hexagon_TPREL_16_X",     0,      32,     0 },
       { "fixup_Hexagon_TPREL_11_X",     0,      32,     0 },
-      { "fixup_Hexagon_GD_PLT_B22_PCREL_X",0,     32,     MCFixupKindInfo::FKF_IsPCRel },
-      { "fixup_Hexagon_GD_PLT_B32_PCREL_X",0,     32,     MCFixupKindInfo::FKF_IsPCRel },
-      { "fixup_Hexagon_LD_PLT_B22_PCREL_X",0,     32,     MCFixupKindInfo::FKF_IsPCRel },
-      { "fixup_Hexagon_LD_PLT_B32_PCREL_X",0,     32,     MCFixupKindInfo::FKF_IsPCRel }
+      { "fixup_Hexagon_GD_PLT_B22_PCREL_X", 0,  32,     0 },
+      { "fixup_Hexagon_GD_PLT_B32_PCREL_X", 0,  32,     0 },
+      { "fixup_Hexagon_LD_PLT_B22_PCREL_X", 0,  32,     0 },
+      { "fixup_Hexagon_LD_PLT_B32_PCREL_X", 0,  32,     0 },
     };
+    // clang-format on
 
     if (Kind < FirstTargetFixupKind)
       return MCAsmBackend::getFixupKindInfo(Kind);
@@ -199,7 +199,7 @@ public:
   }
 
   bool shouldForceRelocation(const MCFixup &Fixup) {
-    switch(Fixup.getTargetKind()) {
+    switch(Fixup.getKind()) {
       default:
         llvm_unreachable("Unknown Fixup Kind!");
 
@@ -315,7 +315,6 @@ public:
       case FK_Data_1:
       case FK_Data_2:
       case FK_Data_4:
-      case FK_PCRel_4:
       case fixup_Hexagon_32:
         // Leave these relocations alone as they are used for EH.
         return false;
@@ -333,8 +332,7 @@ public:
         return 1;
       case FK_Data_2:
         return 2;
-      case FK_Data_4:         // this later gets mapped to R_HEX_32
-      case FK_PCRel_4:        // this later gets mapped to R_HEX_32_PCREL
+      case FK_Data_4: // this later gets mapped to R_HEX_32 or R_HEX_32_PCREL
       case fixup_Hexagon_32:
       case fixup_Hexagon_B32_PCREL_X:
       case fixup_Hexagon_B22_PCREL:
@@ -404,8 +402,7 @@ public:
   }
 
   void applyFixup(const MCFragment &, const MCFixup &, const MCValue &,
-                  MutableArrayRef<char> Data, uint64_t FixupValue,
-                  bool IsResolved) override;
+                  uint8_t *Data, uint64_t FixupValue, bool IsResolved) override;
 
   bool isInstRelaxable(MCInst const &HMI) const {
     const MCInstrDesc &MCID = HexagonMCInstrInfo::getDesc(*MCII, HMI);
@@ -429,33 +426,31 @@ public:
     return Relaxable;
   }
 
-  /// MayNeedRelaxation - Check whether the given instruction may need
-  /// relaxation.
-  ///
-  /// \param Inst - The instruction to test.
-  bool mayNeedRelaxation(MCInst const &Inst,
+  bool mayNeedRelaxation(unsigned Opcode, ArrayRef<MCOperand> Operands,
                          const MCSubtargetInfo &STI) const override {
-    RelaxedMCB = &Inst;
+    RelaxedMCB.clear();
+    RelaxedMCB.setOpcode(Opcode);
+    RelaxedMCB.setOperands(Operands);
     return true;
   }
 
   /// fixupNeedsRelaxation - Target specific predicate for whether a given
   /// fixup requires the associated instruction to be relaxed.
-  bool fixupNeedsRelaxationAdvanced(const MCFixup &Fixup, const MCValue &,
-                                    uint64_t Value,
+  bool fixupNeedsRelaxationAdvanced(const MCFragment &F, const MCFixup &Fixup,
+                                    const MCValue &, uint64_t Value,
                                     bool Resolved) const override {
-    MCInst const &MCB = *RelaxedMCB;
+    MCInst const &MCB = RelaxedMCB;
     assert(HexagonMCInstrInfo::isBundle(MCB));
 
     *RelaxTarget = nullptr;
     MCInst &MCI = const_cast<MCInst &>(HexagonMCInstrInfo::instruction(
-        MCB, Fixup.getOffset() / HEXAGON_INSTR_SIZE));
+        MCB, (Fixup.getOffset() - F.getFixedSize()) / HEXAGON_INSTR_SIZE));
     bool Relaxable = isInstRelaxable(MCI);
     if (Relaxable == false)
       return false;
     // If we cannot resolve the fixup value, it requires relaxation.
     if (!Resolved) {
-      switch (Fixup.getTargetKind()) {
+      switch (Fixup.getKind()) {
       case fixup_Hexagon_B22_PCREL:
         // GetFixupCount assumes B22 won't relax
         [[fallthrough]];
@@ -574,9 +569,9 @@ public:
     return true;
   }
 
-  bool finishLayout(const MCAssembler &Asm) const override {
+  bool finishLayout() const override {
     SmallVector<MCFragment *> Frags;
-    for (MCSection &Sec : Asm) {
+    for (MCSection &Sec : *Asm) {
       Frags.clear();
       for (MCFragment &F : Sec)
         Frags.push_back(&F);
@@ -585,7 +580,7 @@ public:
         default:
           break;
         case MCFragment::FT_Align: {
-          auto Size = Asm.computeFragmentSize(*Frags[J]);
+          auto Size = Asm->computeFragmentSize(*Frags[J]);
           for (auto K = J; K != 0 && Size >= HEXAGON_PACKET_SIZE;) {
             --K;
             switch (Frags[K]->getKind()) {
@@ -598,18 +593,18 @@ public:
             }
             case MCFragment::FT_Relaxable: {
               MCContext &Context = getContext();
-              auto &RF = cast<MCRelaxableFragment>(*Frags[K]);
-              auto &Inst = const_cast<MCInst &>(RF.getInst());
+              auto &RF = *Frags[K];
+              MCInst Inst = RF.getInst();
 
               const bool WouldTraverseLabel = llvm::any_of(
-                  Asm.symbols(), [&Asm, &RF, &Inst](MCSymbol const &sym) {
+                  Asm->symbols(), [&RF, &Inst, Asm = Asm](MCSymbol const &sym) {
                     uint64_t Offset = 0;
-                    const bool HasOffset = Asm.getSymbolOffset(sym, Offset);
+                    const bool HasOffset = Asm->getSymbolOffset(sym, Offset);
                     const unsigned PacketSizeBytes =
                         HexagonMCInstrInfo::bundleSize(Inst) *
                         HEXAGON_INSTR_SIZE;
                     const bool OffsetPastSym =
-                        Offset <= (Asm.getFragmentOffset(RF) + PacketSizeBytes);
+                        Offset <= Asm->getFragmentOffset(RF) + PacketSizeBytes;
                     return !sym.isVariable() && Offset != 0 && HasOffset &&
                            OffsetPastSym;
                   });
@@ -636,7 +631,7 @@ public:
                                             *RF.getSubtargetInfo(), Inst);
               //assert(!Error);
               (void)Error;
-              ReplaceInstruction(Asm.getEmitter(), RF, Inst);
+              ReplaceInstruction(Asm->getEmitter(), RF, Inst);
               Size = 0; // Only look back one instruction
               break;
             }
@@ -653,8 +648,7 @@ public:
 } // namespace
 
 void HexagonAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
-                                   const MCValue &Target,
-                                   MutableArrayRef<char> Data,
+                                   const MCValue &Target, uint8_t *InstAddr,
                                    uint64_t FixupValue, bool IsResolved) {
   if (IsResolved && shouldForceRelocation(Fixup))
     IsResolved = false;
@@ -671,10 +665,9 @@ void HexagonAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
 
   // LLVM gives us an encoded value, we have to convert it back
   // to a real offset before we can use it.
-  uint32_t Offset = Fixup.getOffset();
   unsigned NumBytes = getFixupKindNumBytes(Kind);
-  assert(Offset + NumBytes <= Data.size() && "Invalid fixup offset!");
-  char *InstAddr = Data.data() + Offset;
+  assert(Fixup.getOffset() + NumBytes <= F.getSize() &&
+         "Invalid fixup offset!");
 
   Value = adjustFixupValue(Kind, FixupValue);
   if (!Value)
@@ -761,8 +754,8 @@ void HexagonAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
       uint32_t OldData = 0; for (unsigned i = 0; i < NumBytes; i++) OldData |=
                             (InstAddr[i] << (i * 8)) & (0xff << (i * 8));
       dbgs() << "\tBValue=0x"; dbgs().write_hex(Value) << ": AValue=0x";
-      dbgs().write_hex(FixupValue)
-      << ": Offset=" << Offset << ": Size=" << Data.size() << ": OInst=0x";
+      dbgs().write_hex(FixupValue) << ": Offset=" << Fixup.getOffset()
+                                   << ": Size=" << F.getSize() << ": OInst=0x";
       dbgs().write_hex(OldData) << ": Reloc=0x"; dbgs().write_hex(Reloc););
 
   // For each byte of the fragment that the fixup touches, mask in the

@@ -247,7 +247,6 @@ namespace std {
 #  include <__type_traits/is_nothrow_assignable.h>
 #  include <__type_traits/is_nothrow_constructible.h>
 #  include <__type_traits/is_reference.h>
-#  include <__type_traits/is_replaceable.h>
 #  include <__type_traits/is_same.h>
 #  include <__type_traits/is_swappable.h>
 #  include <__type_traits/is_trivially_assignable.h>
@@ -289,7 +288,7 @@ _LIBCPP_BEGIN_UNVERSIONED_NAMESPACE_STD
 
 class _LIBCPP_EXPORTED_FROM_ABI bad_variant_access : public exception {
 public:
-  const char* what() const _NOEXCEPT override;
+  [[__nodiscard__]] const char* what() const _NOEXCEPT override;
 };
 
 _LIBCPP_END_UNVERSIONED_NAMESPACE_STD
@@ -1127,14 +1126,14 @@ template <class _IdxSeq>
 struct __make_overloads_imp;
 
 template <size_t... _Idx>
-struct __make_overloads_imp<__tuple_indices<_Idx...> > {
+struct __make_overloads_imp<index_sequence<_Idx...> > {
   template <class... _Types>
   using _Apply _LIBCPP_NODEBUG = __all_overloads<__overload<_Types, _Idx>...>;
 };
 
 template <class... _Types>
 using _MakeOverloads _LIBCPP_NODEBUG =
-    typename __make_overloads_imp< __make_indices_imp<sizeof...(_Types), 0> >::template _Apply<_Types...>;
+    typename __make_overloads_imp<make_index_sequence<sizeof...(_Types)>>::template _Apply<_Types...>;
 
 template <class _Tp, class... _Types>
 using __best_match_t _LIBCPP_NODEBUG = typename invoke_result_t<_MakeOverloads<_Types...>, _Tp, _Tp>::type;
@@ -1172,7 +1171,6 @@ class _LIBCPP_DECLSPEC_EMPTY_BASES _LIBCPP_NO_SPECIALIZATIONS variant
 public:
   using __trivially_relocatable _LIBCPP_NODEBUG =
       conditional_t<_And<__libcpp_is_trivially_relocatable<_Types>...>::value, variant, void>;
-  using __replaceable _LIBCPP_NODEBUG = conditional_t<_And<__is_replaceable<_Types>...>::value, variant, void>;
 
   template <bool _Dummy                                                                               = true,
             enable_if_t<__dependent_type<is_default_constructible<__first_type>, _Dummy>::value, int> = 0>
@@ -1284,11 +1282,11 @@ public:
     return __impl_.template __emplace<_Ip>(__il, std::forward<_Args>(__args)...);
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr bool valueless_by_exception() const noexcept {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr bool valueless_by_exception() const noexcept {
     return __impl_.valueless_by_exception();
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr size_t index() const noexcept { return __impl_.index(); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr size_t index() const noexcept { return __impl_.index(); }
 
   template < bool _Dummy       = true,
              enable_if_t< __all<(__dependent_type<is_move_constructible<_Types>, _Dummy>::value &&
@@ -1299,7 +1297,7 @@ public:
     __impl_.__swap(__that.__impl_);
   }
 
-#    if _LIBCPP_STD_VER >= 26 && _LIBCPP_HAS_EXPLICIT_THIS_PARAMETER
+#    if _LIBCPP_STD_VER >= 26
   // Helper class to implement [variant.visit]/10
   //   Constraints: The call to visit does not use an explicit template-argument-list
   //   that begins with a type template-argument.
@@ -1331,7 +1329,7 @@ _LIBCPP_HIDE_FROM_ABI constexpr bool __holds_alternative(const variant<_Types...
 }
 
 template <class _Tp, class... _Types>
-_LIBCPP_HIDE_FROM_ABI constexpr bool holds_alternative(const variant<_Types...>& __v) noexcept {
+[[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr bool holds_alternative(const variant<_Types...>& __v) noexcept {
   return std::__holds_alternative<__find_exactly_one_t<_Tp, _Types...>::value>(__v);
 }
 
@@ -1345,21 +1343,23 @@ _LIBCPP_HIDE_FROM_ABI constexpr auto&& __generic_get(_Vp&& __v) {
 }
 
 template <size_t _Ip, class... _Types>
-_LIBCPP_HIDE_FROM_ABI constexpr variant_alternative_t<_Ip, variant<_Types...>>& get(variant<_Types...>& __v) {
+[[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr variant_alternative_t<_Ip, variant<_Types...>>&
+get(variant<_Types...>& __v) {
   static_assert(_Ip < sizeof...(_Types));
   static_assert(!is_void_v<variant_alternative_t<_Ip, variant<_Types...>>>);
   return std::__generic_get<_Ip>(__v);
 }
 
 template <size_t _Ip, class... _Types>
-_LIBCPP_HIDE_FROM_ABI constexpr variant_alternative_t<_Ip, variant<_Types...>>&& get(variant<_Types...>&& __v) {
+[[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr variant_alternative_t<_Ip, variant<_Types...>>&&
+get(variant<_Types...>&& __v) {
   static_assert(_Ip < sizeof...(_Types));
   static_assert(!is_void_v<variant_alternative_t<_Ip, variant<_Types...>>>);
   return std::__generic_get<_Ip>(std::move(__v));
 }
 
 template <size_t _Ip, class... _Types>
-_LIBCPP_HIDE_FROM_ABI constexpr const variant_alternative_t<_Ip, variant<_Types...>>&
+[[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr const variant_alternative_t<_Ip, variant<_Types...>>&
 get(const variant<_Types...>& __v) {
   static_assert(_Ip < sizeof...(_Types));
   static_assert(!is_void_v<variant_alternative_t<_Ip, variant<_Types...>>>);
@@ -1367,7 +1367,7 @@ get(const variant<_Types...>& __v) {
 }
 
 template <size_t _Ip, class... _Types>
-_LIBCPP_HIDE_FROM_ABI constexpr const variant_alternative_t<_Ip, variant<_Types...>>&&
+[[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr const variant_alternative_t<_Ip, variant<_Types...>>&&
 get(const variant<_Types...>&& __v) {
   static_assert(_Ip < sizeof...(_Types));
   static_assert(!is_void_v<variant_alternative_t<_Ip, variant<_Types...>>>);
@@ -1375,25 +1375,25 @@ get(const variant<_Types...>&& __v) {
 }
 
 template <class _Tp, class... _Types>
-_LIBCPP_HIDE_FROM_ABI constexpr _Tp& get(variant<_Types...>& __v) {
+[[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Tp& get(variant<_Types...>& __v) {
   static_assert(!is_void_v<_Tp>);
   return std::get<__find_exactly_one_t<_Tp, _Types...>::value>(__v);
 }
 
 template <class _Tp, class... _Types>
-_LIBCPP_HIDE_FROM_ABI constexpr _Tp&& get(variant<_Types...>&& __v) {
+[[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Tp&& get(variant<_Types...>&& __v) {
   static_assert(!is_void_v<_Tp>);
   return std::get<__find_exactly_one_t<_Tp, _Types...>::value>(std::move(__v));
 }
 
 template <class _Tp, class... _Types>
-_LIBCPP_HIDE_FROM_ABI constexpr const _Tp& get(const variant<_Types...>& __v) {
+[[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr const _Tp& get(const variant<_Types...>& __v) {
   static_assert(!is_void_v<_Tp>);
   return std::get<__find_exactly_one_t<_Tp, _Types...>::value>(__v);
 }
 
 template <class _Tp, class... _Types>
-_LIBCPP_HIDE_FROM_ABI constexpr const _Tp&& get(const variant<_Types...>&& __v) {
+[[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr const _Tp&& get(const variant<_Types...>&& __v) {
   static_assert(!is_void_v<_Tp>);
   return std::get<__find_exactly_one_t<_Tp, _Types...>::value>(std::move(__v));
 }
@@ -1405,7 +1405,7 @@ _LIBCPP_HIDE_FROM_ABI constexpr auto* __generic_get_if(_Vp* __v) noexcept {
 }
 
 template <size_t _Ip, class... _Types>
-_LIBCPP_HIDE_FROM_ABI constexpr add_pointer_t<variant_alternative_t<_Ip, variant<_Types...>>>
+[[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr add_pointer_t<variant_alternative_t<_Ip, variant<_Types...>>>
 get_if(variant<_Types...>* __v) noexcept {
   static_assert(_Ip < sizeof...(_Types));
   static_assert(!is_void_v<variant_alternative_t<_Ip, variant<_Types...>>>);
@@ -1413,7 +1413,7 @@ get_if(variant<_Types...>* __v) noexcept {
 }
 
 template <size_t _Ip, class... _Types>
-_LIBCPP_HIDE_FROM_ABI constexpr add_pointer_t<const variant_alternative_t<_Ip, variant<_Types...>>>
+[[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr add_pointer_t<const variant_alternative_t<_Ip, variant<_Types...>>>
 get_if(const variant<_Types...>* __v) noexcept {
   static_assert(_Ip < sizeof...(_Types));
   static_assert(!is_void_v<variant_alternative_t<_Ip, variant<_Types...>>>);
@@ -1421,13 +1421,13 @@ get_if(const variant<_Types...>* __v) noexcept {
 }
 
 template <class _Tp, class... _Types>
-_LIBCPP_HIDE_FROM_ABI constexpr add_pointer_t<_Tp> get_if(variant<_Types...>* __v) noexcept {
+[[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr add_pointer_t<_Tp> get_if(variant<_Types...>* __v) noexcept {
   static_assert(!is_void_v<_Tp>);
   return std::get_if<__find_exactly_one_t<_Tp, _Types...>::value>(__v);
 }
 
 template <class _Tp, class... _Types>
-_LIBCPP_HIDE_FROM_ABI constexpr add_pointer_t<const _Tp> get_if(const variant<_Types...>* __v) noexcept {
+[[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr add_pointer_t<const _Tp> get_if(const variant<_Types...>* __v) noexcept {
   static_assert(!is_void_v<_Tp>);
   return std::get_if<__find_exactly_one_t<_Tp, _Types...>::value>(__v);
 }
@@ -1608,7 +1608,7 @@ struct hash< __enable_hash_helper<variant<_Types...>, remove_const_t<_Types>...>
   using result_type _LIBCPP_DEPRECATED_IN_CXX17   = size_t;
 #    endif
 
-  _LIBCPP_HIDE_FROM_ABI size_t operator()(const variant<_Types...>& __v) const {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI size_t operator()(const variant<_Types...>& __v) const {
     using __variant_detail::__visitation::__variant;
     size_t __res =
         __v.valueless_by_exception()

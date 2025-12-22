@@ -3683,3 +3683,125 @@ define {<vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vs
   %res = call {<vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>} @llvm.vector.deinterleave8.nxv16f64(<vscale x 16 x double> %arg)
   ret {<vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>} %res
 }
+
+define <vscale x 16 x i8> @vector_deinterleave_nxv16i8_nxv32i8_oneactive(<vscale x 32 x i8> %vec) {
+; V-LABEL: vector_deinterleave_nxv16i8_nxv32i8_oneactive:
+; V:       # %bb.0:
+; V-NEXT:    vsetvli a0, zero, e8, m2, ta, ma
+; V-NEXT:    vnsrl.wi v12, v8, 0
+; V-NEXT:    vmv.v.v v8, v12
+; V-NEXT:    ret
+;
+; ZIP-LABEL: vector_deinterleave_nxv16i8_nxv32i8_oneactive:
+; ZIP:       # %bb.0:
+; ZIP-NEXT:    vsetvli a0, zero, e8, m2, ta, ma
+; ZIP-NEXT:    ri.vunzip2a.vv v12, v8, v10
+; ZIP-NEXT:    vmv.v.v v8, v12
+; ZIP-NEXT:    ret
+  %retval = call {<vscale x 16 x i8>, <vscale x 16 x i8>} @llvm.vector.deinterleave2.nxv32i8(<vscale x 32 x i8> %vec)
+  %ext = extractvalue {<vscale x 16 x i8>, <vscale x 16 x i8>} %retval, 0
+  ret <vscale x 16 x i8> %ext
+}
+
+define <vscale x 1 x float> @vector_deinterleave_nxv1f32_nxv8f32_oneactive(<vscale x 8 x float> %arg) nounwind {
+; CHECK-LABEL: vector_deinterleave_nxv1f32_nxv8f32_oneactive:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi sp, sp, -16
+; CHECK-NEXT:    csrr a0, vlenb
+; CHECK-NEXT:    slli a0, a0, 2
+; CHECK-NEXT:    sub sp, sp, a0
+; CHECK-NEXT:    addi a0, sp, 16
+; CHECK-NEXT:    vs4r.v v8, (a0)
+; CHECK-NEXT:    li a1, 32
+; CHECK-NEXT:    vsetvli a2, zero, e32, mf2, ta, ma
+; CHECK-NEXT:    vlse32.v v8, (a0), a1
+; CHECK-NEXT:    csrr a0, vlenb
+; CHECK-NEXT:    slli a0, a0, 2
+; CHECK-NEXT:    add sp, sp, a0
+; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    ret
+  %res = call {<vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>} @llvm.vector.deinterleave8.nxv8f32(<vscale x 8 x float> %arg)
+  %ext = extractvalue {<vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>} %res, 0
+  ret <vscale x 1 x float> %ext
+}
+
+define <vscale x 1 x float> @vector_deinterleave_nxv1f32_nxv8f32_oneactive2(<vscale x 8 x float> %arg) nounwind {
+; CHECK-LABEL: vector_deinterleave_nxv1f32_nxv8f32_oneactive2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi sp, sp, -16
+; CHECK-NEXT:    csrr a0, vlenb
+; CHECK-NEXT:    slli a0, a0, 2
+; CHECK-NEXT:    sub sp, sp, a0
+; CHECK-NEXT:    addi a0, sp, 16
+; CHECK-NEXT:    addi a1, sp, 36
+; CHECK-NEXT:    vs4r.v v8, (a0)
+; CHECK-NEXT:    li a0, 32
+; CHECK-NEXT:    vsetvli a2, zero, e32, mf2, ta, ma
+; CHECK-NEXT:    vlse32.v v8, (a1), a0
+; CHECK-NEXT:    csrr a0, vlenb
+; CHECK-NEXT:    slli a0, a0, 2
+; CHECK-NEXT:    add sp, sp, a0
+; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    ret
+  %res = call {<vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>} @llvm.vector.deinterleave8.nxv8f32(<vscale x 8 x float> %arg)
+  %ext = extractvalue {<vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>} %res, 5
+  ret <vscale x 1 x float> %ext
+}
+
+
+define { <8 x float>, <8 x float> } @interleave_deinterleave2(<8 x float> %a, <8 x float> %b) {
+; V-LABEL: interleave_deinterleave2:
+; V:       # %bb.0: # %entry
+; V-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; V-NEXT:    vwaddu.vv v12, v8, v10
+; V-NEXT:    li a0, -1
+; V-NEXT:    vwmaccu.vx v12, a0, v10
+; V-NEXT:    li a0, 32
+; V-NEXT:    vnsrl.wx v10, v12, a0
+; V-NEXT:    vnsrl.wi v8, v12, 0
+; V-NEXT:    ret
+;
+; ZIP-LABEL: interleave_deinterleave2:
+; ZIP:       # %bb.0: # %entry
+; ZIP-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
+; ZIP-NEXT:    vmv2r.v v12, v10
+; ZIP-NEXT:    li a0, 32
+; ZIP-NEXT:    ri.vzip2a.vv v16, v8, v12
+; ZIP-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; ZIP-NEXT:    vnsrl.wx v10, v16, a0
+; ZIP-NEXT:    vnsrl.wi v8, v16, 0
+; ZIP-NEXT:    ret
+entry:
+  %0 = call <16 x float> @llvm.vector.interleave2.v16f32(<8 x float> %a, <8 x float> %b)
+  %1 = call { <8 x float>, <8 x float> } @llvm.vector.deinterleave2.v16f32(<16 x float> %0)
+  ret { <8 x float>, <8 x float> } %1
+}
+
+define <16 x float> @deinterleave_interleave2(<16 x float> %arg) {
+; V-LABEL: deinterleave_interleave2:
+; V:       # %bb.0: # %entry
+; V-NEXT:    li a0, 32
+; V-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; V-NEXT:    vnsrl.wi v12, v8, 0
+; V-NEXT:    vnsrl.wx v14, v8, a0
+; V-NEXT:    vwaddu.vv v8, v12, v14
+; V-NEXT:    li a0, -1
+; V-NEXT:    vwmaccu.vx v8, a0, v14
+; V-NEXT:    ret
+;
+; ZIP-LABEL: deinterleave_interleave2:
+; ZIP:       # %bb.0: # %entry
+; ZIP-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; ZIP-NEXT:    vnsrl.wi v12, v8, 0
+; ZIP-NEXT:    li a0, 32
+; ZIP-NEXT:    vnsrl.wx v16, v8, a0
+; ZIP-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
+; ZIP-NEXT:    ri.vzip2a.vv v8, v12, v16
+; ZIP-NEXT:    ret
+entry:
+  %0 = call { <8 x float>, <8 x float> } @llvm.vector.deinterleave2.v16f32(<16 x float> %arg)
+  %a = extractvalue { <8 x float>, <8 x float> } %0, 0
+  %b = extractvalue { <8 x float>, <8 x float> } %0, 1
+  %res = call <16 x float> @llvm.vector.interleave2.v16f32(<8 x float> %a, <8 x float> %b)
+  ret <16 x float> %res
+}

@@ -71,8 +71,8 @@ void replaceOpWithUnrealizedConversion(PatternRewriter &rewriter, TOp op,
                                        TLegalizerCallback callback) {
   replaceOpWithLegalizedOp(rewriter, op, [&](TOp newOp) {
     // Mark our `unrealized_conversion_casts` with a pass label.
-    return rewriter.create<UnrealizedConversionCastOp>(
-        op.getLoc(), TypeRange{op.getResult().getType()},
+    return UnrealizedConversionCastOp::create(
+        rewriter, op.getLoc(), TypeRange{op.getResult().getType()},
         ValueRange{callback(newOp)},
         NamedAttribute(rewriter.getStringAttr(kSVELegalizerTag),
                        rewriter.getUnitAttr()));
@@ -239,8 +239,8 @@ struct LegalizeSVEMaskStoreConversion
 
     auto legalMaskType = widenScalableMaskTypeToSvbool(
         llvm::cast<VectorType>(valueToStore.getType()));
-    auto convertToSvbool = rewriter.create<arm_sve::ConvertToSvboolOp>(
-        loc, legalMaskType, valueToStore);
+    auto convertToSvbool = arm_sve::ConvertToSvboolOp::create(
+        rewriter, loc, legalMaskType, valueToStore);
     // Replace this store with a conversion to a storable svbool mask [1],
     // followed by a wider store.
     replaceOpWithLegalizedOp(rewriter, storeOp,
@@ -290,8 +290,8 @@ struct LegalizeSVEMaskLoadConversion : public OpRewritePattern<memref::LoadOp> {
     replaceOpWithLegalizedOp(rewriter, loadOp, [&](memref::LoadOp newLoadOp) {
       newLoadOp.setMemRef(*legalMemref);
       newLoadOp.getResult().setType(legalMaskType);
-      return rewriter.create<arm_sve::ConvertFromSvboolOp>(
-          loc, loadedMask.getType(), newLoadOp);
+      return arm_sve::ConvertFromSvboolOp::create(
+          rewriter, loc, loadedMask.getType(), newLoadOp);
     });
 
     return success();
@@ -408,8 +408,8 @@ struct LegalizeTransferRead : public OpRewritePattern<vector::TransferReadOp> {
       reassoc.back().push_back(i);
     if (!memref::CollapseShapeOp::isGuaranteedCollapsible(memTy, reassoc))
       return failure();
-    Value collapsedMem = rewriter.create<memref::CollapseShapeOp>(
-        readOp.getLoc(), readOp.getBase(), reassoc);
+    Value collapsedMem = memref::CollapseShapeOp::create(
+        rewriter, readOp.getLoc(), readOp.getBase(), reassoc);
 
     // Get a vector type with collapsed trailing dimensions.
     SmallVector<int64_t> shape(origVT.getShape());
@@ -424,14 +424,14 @@ struct LegalizeTransferRead : public OpRewritePattern<vector::TransferReadOp> {
     auto indices = readOp.getIndices().drop_back(numCollapseDims - 1);
 
     // Create the new `transfer_read`.
-    auto newReadOp = rewriter.create<vector::TransferReadOp>(
-        readOp.getLoc(), collapsedVT, collapsedMem, indices,
+    auto newReadOp = vector::TransferReadOp::create(
+        rewriter, readOp.getLoc(), collapsedVT, collapsedMem, indices,
         readOp.getPadding(),
         ArrayRef<bool>(origInBounds).drop_back(numCollapseDims - 1));
 
     // Cast back to the original vector type.
-    auto toOrigShape = rewriter.create<vector::ShapeCastOp>(readOp.getLoc(),
-                                                            origVT, newReadOp);
+    auto toOrigShape = vector::ShapeCastOp::create(rewriter, readOp.getLoc(),
+                                                   origVT, newReadOp);
 
     rewriter.replaceOp(readOp, toOrigShape);
     return success();

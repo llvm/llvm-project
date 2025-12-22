@@ -114,3 +114,56 @@ func.func @transfer_scalar(%mem : memref<8x8xf32, #amdgpu.address_space<fat_raw_
 // CHECK: %[[IF:.*]] = scf.if
 // CHECK: %[[LOAD:.*]] = vector.load %[[ARG0]][%[[ARG1]], %[[ARG1]]]
 // CHECK: %[[SELECT:.*]] = arith.select %arg2, %[[LOAD]], %[[ARG3]]
+
+// -----
+
+func.func @transfer_to_maskedload_fatrawbuffer(%mem : memref<8x8xf32, #amdgpu.address_space<fat_raw_buffer>>, %idx : index, %mask : vector<4xi1>, %passthru : vector<4xf32>) -> vector<4xf32> {
+  %res = vector.maskedload %mem[%idx, %idx], %mask, %passthru : memref<8x8xf32, #amdgpu.address_space<fat_raw_buffer>>, vector<4xi1>, vector<4xf32> into vector<4xf32>
+  return %res : vector<4xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @full_select_maskedload_fatrawbuffer_to_load
+func.func @full_select_maskedload_fatrawbuffer_to_load(%arg0: memref<8x8xf16, #amdgpu.address_space<fat_raw_buffer>>, %arg1: index, %arg2: i1, %arg3: vector<4xf16>) -> vector<4xf16> {
+  %0 = vector.broadcast %arg2 : i1 to vector<4xi1>
+  %1 = vector.maskedload %arg0[%arg1, %arg1], %0, %arg3 : memref<8x8xf16, #amdgpu.address_space<fat_raw_buffer>>, vector<4xi1>, vector<4xf16> into vector<4xf16>
+  return %1 : vector<4xf16>
+}
+// CHECK-NOT: vector.maskedload
+// CHECK: vector.load
+// CHECK: arith.select
+
+// -----
+
+// CHECK-LABEL: func.func @full_select_maskedload_to_load
+// CHECK-SAME: %[[MEM:.+]]: memref<8x8xf16>,
+// CHECK-SAME: %[[IDX:.+]]: index,
+// CHECK-SAME: %[[PRED:.+]]: i1,
+// CHECK-SAME: %[[PASSTHRU:.+]]: vector<4xf16>)
+func.func @full_select_maskedload_to_load(%arg0: memref<8x8xf16>, %arg1: index, %arg2: i1, %arg3: vector<4xf16>) -> vector<4xf16> {
+  %0 = vector.broadcast %arg2 : i1 to vector<4xi1>
+  %1 = vector.maskedload %arg0[%arg1, %arg1], %0, %arg3 : memref<8x8xf16>, vector<4xi1>, vector<4xf16> into vector<4xf16>
+  return %1 : vector<4xf16>
+}
+// CHECK-NOT: vector.maskedload
+// CHECK: scf.if %[[PRED]]
+// CHECK:   %[[LOAD:.+]] = vector.load
+// CHECK:   scf.yield %[[LOAD]]
+// CHECK: else
+// CHECK:   scf.yield %[[PASSTHRU]]
+
+// -----
+
+// CHECK-LABEL: func.func @full_mask_maskedstore_to_store
+// CHECK-SAME: %[[MEM:.+]]: memref<8x8xf16>,
+// CHECK-SAME: %[[IDX:.+]]: index,
+// CHECK-SAME: %[[PRED:.+]]: i1,
+func.func @full_mask_maskedstore_to_store(%arg0: memref<8x8xf16>, %arg1: index, %arg2: i1, %arg3: vector<4xf16>) {
+  %0 = vector.broadcast %arg2 : i1 to vector<4xi1>
+  vector.maskedstore %arg0[%arg1, %arg1], %0, %arg3 : memref<8x8xf16>, vector<4xi1>, vector<4xf16>
+  return
+}
+// CHECK-NOT: vector.maskedstore
+// CHECK: scf.if %[[PRED]]
+// CHECK:   vector.store

@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/opencl/clc.h>
 #include <clc/shared/clc_min.h>
 
 #define __CLC_BODY <min.inc>

@@ -12,8 +12,6 @@
 #include <cstddef>
 #include <cstdint>
 
-#include "include/llvm-libc-types/test_rpc_opcodes_t.h"
-
 #include "shared/rpc.h"
 #include "shared/rpc_opcodes.h"
 #include "shared/rpc_server.h"
@@ -28,59 +26,6 @@ inline uint32_t handle_server(rpc::Server &server, uint32_t index,
 
   int status = rpc::RPC_SUCCESS;
   switch (port->get_opcode()) {
-  case RPC_TEST_INCREMENT: {
-    port->recv_and_send([](rpc::Buffer *buffer, uint32_t) {
-      reinterpret_cast<uint64_t *>(buffer->data)[0] += 1;
-    });
-    break;
-  }
-  case RPC_TEST_INTERFACE: {
-    bool end_with_recv;
-    uint64_t cnt;
-    port->recv([&](rpc::Buffer *buffer, uint32_t) {
-      end_with_recv = buffer->data[0];
-    });
-    port->recv([&](rpc::Buffer *buffer, uint32_t) { cnt = buffer->data[0]; });
-    port->send([&](rpc::Buffer *buffer, uint32_t) {
-      buffer->data[0] = cnt = cnt + 1;
-    });
-    port->recv([&](rpc::Buffer *buffer, uint32_t) { cnt = buffer->data[0]; });
-    port->send([&](rpc::Buffer *buffer, uint32_t) {
-      buffer->data[0] = cnt = cnt + 1;
-    });
-    port->recv([&](rpc::Buffer *buffer, uint32_t) { cnt = buffer->data[0]; });
-    port->recv([&](rpc::Buffer *buffer, uint32_t) { cnt = buffer->data[0]; });
-    port->send([&](rpc::Buffer *buffer, uint32_t) {
-      buffer->data[0] = cnt = cnt + 1;
-    });
-    port->send([&](rpc::Buffer *buffer, uint32_t) {
-      buffer->data[0] = cnt = cnt + 1;
-    });
-    if (end_with_recv)
-      port->recv([&](rpc::Buffer *buffer, uint32_t) { cnt = buffer->data[0]; });
-    else
-      port->send([&](rpc::Buffer *buffer, uint32_t) {
-        buffer->data[0] = cnt = cnt + 1;
-      });
-
-    break;
-  }
-  case RPC_TEST_STREAM: {
-    uint64_t sizes[num_lanes] = {0};
-    void *dst[num_lanes] = {nullptr};
-    port->recv_n(dst, sizes,
-                 [](uint64_t size) -> void * { return new char[size]; });
-    port->send_n(dst, sizes);
-    for (uint64_t i = 0; i < num_lanes; ++i) {
-      if (dst[i])
-        delete[] reinterpret_cast<uint8_t *>(dst[i]);
-    }
-    break;
-  }
-  case RPC_TEST_NOOP: {
-    port->recv([&](rpc::Buffer *, uint32_t) {});
-    break;
-  }
   case LIBC_MALLOC: {
     port->recv_and_send([&](rpc::Buffer *buffer, uint32_t) {
       buffer->data[0] = reinterpret_cast<uintptr_t>(alloc(buffer->data[0]));

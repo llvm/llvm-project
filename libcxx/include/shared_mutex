@@ -138,6 +138,7 @@ template <class Mutex>
 #    include <__mutex/tag_types.h>
 #    include <__mutex/unique_lock.h>
 #    include <__system_error/throw_system_error.h>
+#    include <__utility/move.h>
 #    include <__utility/swap.h>
 #    include <cerrno>
 #    include <version>
@@ -183,7 +184,7 @@ struct _LIBCPP_EXPORTED_FROM_ABI __shared_mutex_base {
 };
 
 #      if _LIBCPP_STD_VER >= 17
-class _LIBCPP_EXPORTED_FROM_ABI _LIBCPP_THREAD_SAFETY_ANNOTATION(__capability__("shared_mutex")) shared_mutex {
+class _LIBCPP_EXPORTED_FROM_ABI _LIBCPP_CAPABILITY("shared_mutex") shared_mutex {
   __shared_mutex_base __base_;
 
 public:
@@ -194,35 +195,23 @@ public:
   shared_mutex& operator=(const shared_mutex&) = delete;
 
   // Exclusive ownership
-  _LIBCPP_HIDE_FROM_ABI void lock() _LIBCPP_THREAD_SAFETY_ANNOTATION(__acquire_capability__()) {
-    return __base_.lock();
-  }
-  _LIBCPP_HIDE_FROM_ABI bool try_lock() _LIBCPP_THREAD_SAFETY_ANNOTATION(__try_acquire_capability__(true)) {
-    return __base_.try_lock();
-  }
-  _LIBCPP_HIDE_FROM_ABI void unlock() _LIBCPP_THREAD_SAFETY_ANNOTATION(__release_capability__()) {
-    return __base_.unlock();
-  }
+  _LIBCPP_ACQUIRE_CAPABILITY() _LIBCPP_HIDE_FROM_ABI void lock() { return __base_.lock(); }
+  _LIBCPP_TRY_ACQUIRE_CAPABILITY(true) _LIBCPP_HIDE_FROM_ABI bool try_lock() { return __base_.try_lock(); }
+  _LIBCPP_RELEASE_CAPABILITY _LIBCPP_HIDE_FROM_ABI void unlock() { return __base_.unlock(); }
 
   // Shared ownership
-  _LIBCPP_HIDE_FROM_ABI void lock_shared() _LIBCPP_THREAD_SAFETY_ANNOTATION(__acquire_shared_capability__()) {
-    return __base_.lock_shared();
-  }
-  _LIBCPP_HIDE_FROM_ABI bool try_lock_shared()
-      _LIBCPP_THREAD_SAFETY_ANNOTATION(__try_acquire_shared_capability__(true)) {
+  _LIBCPP_ACQUIRE_SHARED_CAPABILITY _LIBCPP_HIDE_FROM_ABI void lock_shared() { return __base_.lock_shared(); }
+  _LIBCPP_TRY_ACQUIRE_SHARED_CAPABILITY(true) _LIBCPP_HIDE_FROM_ABI bool try_lock_shared() {
     return __base_.try_lock_shared();
   }
-  _LIBCPP_HIDE_FROM_ABI void unlock_shared() _LIBCPP_THREAD_SAFETY_ANNOTATION(__release_shared_capability__()) {
-    return __base_.unlock_shared();
-  }
+  _LIBCPP_RELEASE_SHARED_CAPABILITY _LIBCPP_HIDE_FROM_ABI void unlock_shared() { return __base_.unlock_shared(); }
 
   //     typedef __shared_mutex_base::native_handle_type native_handle_type;
   //     _LIBCPP_HIDE_FROM_ABI native_handle_type native_handle() { return __base::unlock_shared(); }
 };
 #      endif
 
-class _LIBCPP_EXPORTED_FROM_ABI
-_LIBCPP_THREAD_SAFETY_ANNOTATION(__capability__("shared_timed_mutex")) shared_timed_mutex {
+class _LIBCPP_EXPORTED_FROM_ABI _LIBCPP_CAPABILITY("shared_timed_mutex") shared_timed_mutex {
   __shared_mutex_base __base_;
 
 public:
@@ -233,17 +222,17 @@ public:
   shared_timed_mutex& operator=(const shared_timed_mutex&) = delete;
 
   // Exclusive ownership
-  void lock() _LIBCPP_THREAD_SAFETY_ANNOTATION(__acquire_capability__());
-  bool try_lock() _LIBCPP_THREAD_SAFETY_ANNOTATION(__try_acquire_capability__(true));
+  void lock() _LIBCPP_ACQUIRE_CAPABILITY();
+  _LIBCPP_TRY_ACQUIRE_CAPABILITY(true) bool try_lock();
   template <class _Rep, class _Period>
-  _LIBCPP_HIDE_FROM_ABI bool try_lock_for(const chrono::duration<_Rep, _Period>& __rel_time)
-      _LIBCPP_THREAD_SAFETY_ANNOTATION(__try_acquire_capability__(true)) {
+  _LIBCPP_TRY_ACQUIRE_CAPABILITY(true) _LIBCPP_HIDE_FROM_ABI bool
+  try_lock_for(const chrono::duration<_Rep, _Period>& __rel_time) {
     return try_lock_until(chrono::steady_clock::now() + __rel_time);
   }
 
   template <class _Clock, class _Duration>
-  _LIBCPP_HIDE_FROM_ABI bool try_lock_until(const chrono::time_point<_Clock, _Duration>& __abs_time)
-      _LIBCPP_THREAD_SAFETY_ANNOTATION(__try_acquire_capability__(true)) {
+  _LIBCPP_TRY_ACQUIRE_CAPABILITY(true) _LIBCPP_HIDE_FROM_ABI bool
+  try_lock_until(const chrono::time_point<_Clock, _Duration>& __abs_time) {
     unique_lock<mutex> __lk(__base_.__mut_);
     if (__base_.__state_ & __base_.__write_entered_) {
       while (true) {
@@ -270,20 +259,20 @@ public:
     return true;
   }
 
-  void unlock() _LIBCPP_THREAD_SAFETY_ANNOTATION(__release_capability__());
+  _LIBCPP_RELEASE_CAPABILITY void unlock();
 
   // Shared ownership
-  void lock_shared() _LIBCPP_THREAD_SAFETY_ANNOTATION(__acquire_shared_capability__());
-  bool try_lock_shared() _LIBCPP_THREAD_SAFETY_ANNOTATION(__try_acquire_shared_capability__(true));
+  _LIBCPP_ACQUIRE_SHARED_CAPABILITY void lock_shared();
+  _LIBCPP_TRY_ACQUIRE_SHARED_CAPABILITY(true) bool try_lock_shared();
   template <class _Rep, class _Period>
-  _LIBCPP_HIDE_FROM_ABI bool try_lock_shared_for(const chrono::duration<_Rep, _Period>& __rel_time)
-      _LIBCPP_THREAD_SAFETY_ANNOTATION(__try_acquire_shared_capability__(true)) {
+  _LIBCPP_TRY_ACQUIRE_SHARED_CAPABILITY(true) _LIBCPP_HIDE_FROM_ABI bool
+  try_lock_shared_for(const chrono::duration<_Rep, _Period>& __rel_time) {
     return try_lock_shared_until(chrono::steady_clock::now() + __rel_time);
   }
 
   template <class _Clock, class _Duration>
-  _LIBCPP_HIDE_FROM_ABI bool try_lock_shared_until(const chrono::time_point<_Clock, _Duration>& __abs_time)
-      _LIBCPP_THREAD_SAFETY_ANNOTATION(__try_acquire_shared_capability__(true)) {
+  _LIBCPP_TRY_ACQUIRE_SHARED_CAPABILITY(true) _LIBCPP_HIDE_FROM_ABI bool
+  try_lock_shared_until(const chrono::time_point<_Clock, _Duration>& __abs_time) {
     unique_lock<mutex> __lk(__base_.__mut_);
     if ((__base_.__state_ & __base_.__write_entered_) ||
         (__base_.__state_ & __base_.__n_readers_) == __base_.__n_readers_) {
@@ -302,7 +291,7 @@ public:
     return true;
   }
 
-  void unlock_shared() _LIBCPP_THREAD_SAFETY_ANNOTATION(__release_shared_capability__());
+  _LIBCPP_RELEASE_SHARED_CAPABILITY void unlock_shared();
 };
 
 template <class _Mutex>
@@ -352,14 +341,8 @@ public:
   }
 
   _LIBCPP_HIDE_FROM_ABI shared_lock& operator=(shared_lock&& __u) _NOEXCEPT {
-    if (__owns_)
-      __m_->unlock_shared();
-    __m_        = nullptr;
-    __owns_     = false;
-    __m_        = __u.__m_;
-    __owns_     = __u.__owns_;
-    __u.__m_    = nullptr;
-    __u.__owns_ = false;
+    if (this != std::addressof(__u))
+      shared_lock(std::move(__u)).swap(*this);
     return *this;
   }
 

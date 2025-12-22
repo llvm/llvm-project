@@ -12,16 +12,17 @@
 #include "lldb/Host/windows/windows.h"
 #include "lldb/Utility/Status.h"
 #include "llvm/Config/llvm-config.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/WindowsError.h"
 #include <algorithm>
+#include <atomic>
 #include <cassert>
-#include <cerrno>
-#include <csignal>
 #include <ctime>
 #include <io.h>
+#include <synchapi.h>
 #include <thread>
 #include <vector>
+#include <winbase.h>
+#include <winerror.h>
 #include <winsock2.h>
 
 using namespace lldb;
@@ -42,22 +43,22 @@ namespace {
 class PipeEvent : public MainLoopWindows::IOEvent {
 public:
   explicit PipeEvent(HANDLE handle)
-      : IOEvent(CreateEventW(NULL, /*bManualReset=*/FALSE,
+      : IOEvent(CreateEventW(NULL, /*bManualReset=*/TRUE,
                              /*bInitialState=*/FALSE, NULL)),
-        m_handle(handle), m_ready(CreateEventW(NULL, /*bManualReset=*/FALSE,
+        m_handle(handle), m_ready(CreateEventW(NULL, /*bManualReset=*/TRUE,
                                                /*bInitialState=*/FALSE, NULL)) {
     assert(m_event && m_ready);
+    m_monitor_thread = std::thread(&PipeEvent::Monitor, this);
   }
 
   ~PipeEvent() override {
     if (m_monitor_thread.joinable()) {
-      m_stopped = true;
-      SetEvent(m_ready);
-      // Keep trying to cancel ReadFile() until the thread exits.
-      do {
-        CancelIoEx(m_handle, /*lpOverlapped=*/NULL);
-      } while (WaitForSingleObject(m_monitor_thread.native_handle(), 1) ==
-               WAIT_TIMEOUT);
+      {
+        std::lock_guard<std::mutex> guard(m_mutex);
+        m_stopped = true;
+        SetEvent(m_ready);
+        CancelIoEx(m_handle, &m_ov);
+      }
       m_monitor_thread.join();
     }
     CloseHandle(m_event);
@@ -65,29 +66,45 @@ public:
   }
 
   void WillPoll() override {
-    if (!m_monitor_thread.joinable())
-      m_monitor_thread = std::thread(&PipeEvent::Monitor, this);
+    std::lock_guard<std::mutex> guard(m_mutex);
+
+    HANDLE handles[2] = {m_event, m_ready};
+    if (WaitForMultipleObjects(2, handles, /*bWaitAll=*/FALSE,
+                               /*dwMilliseconds=*/0) != WAIT_TIMEOUT) {
+      // Either:
+      // - The thread has already signalled that the data is available. No need
+      //   for further polling until we consume that event.
+      // - The thread is already waiting for data to become available.
+      return;
+    }
+    // Start waiting.
+    SetEvent(m_ready);
   }
 
-  void Disarm() override { SetEvent(m_ready); }
+  void Disarm() override {
+    std::lock_guard<std::mutex> guard(m_mutex);
+    ResetEvent(m_event);
+  }
 
   /// Monitors the handle performing a zero byte read to determine when data is
   /// avaiable.
   void Monitor() {
+    // Wait until the MainLoop tells us to start.
+    WaitForSingleObject(m_ready, INFINITE);
+
     do {
       char buf[1];
       DWORD bytes_read = 0;
-      OVERLAPPED ov;
-      ZeroMemory(&ov, sizeof(ov));
+      ZeroMemory(&m_ov, sizeof(m_ov));
       // Block on a 0-byte read; this will only resume when data is
       // available in the pipe. The pipe must be PIPE_WAIT or this thread
       // will spin.
-      BOOL success =
-          ReadFile(m_handle, buf, /*nNumberOfBytesToRead=*/0, &bytes_read, &ov);
+      BOOL success = ReadFile(m_handle, buf, /*nNumberOfBytesToRead=*/0,
+                              &bytes_read, &m_ov);
       DWORD bytes_available = 0;
       DWORD err = GetLastError();
       if (!success && err == ERROR_IO_PENDING) {
-        success = GetOverlappedResult(m_handle, &ov, &bytes_read,
+        success = GetOverlappedResult(m_handle, &m_ov, &bytes_read,
                                       /*bWait=*/TRUE);
         err = GetLastError();
       }
@@ -109,8 +126,20 @@ public:
         // Read may have been cancelled, try again.
         continue;
       }
+      {
+        std::lock_guard<std::mutex> guard(m_mutex);
 
-      SetEvent(m_event);
+        // Notify that data is available on the pipe.
+        SetEvent(m_event);
+        if (m_stopped) {
+          // The destructor might have called SetEvent(m_ready) before this
+          // block. If that's the case, ResetEvent(m_ready) will cause
+          // WaitForSingleObject to wait forever unless we break early.
+          break;
+        }
+        // Stop polling until we're told to resume.
+        ResetEvent(m_ready);
+      }
 
       // Wait until the current read is consumed before doing the next read.
       WaitForSingleObject(m_ready, INFINITE);
@@ -120,8 +149,10 @@ public:
 private:
   HANDLE m_handle;
   HANDLE m_ready;
+  OVERLAPPED m_ov;
   std::thread m_monitor_thread;
   std::atomic<bool> m_stopped = false;
+  std::mutex m_mutex;
 };
 
 class SocketEvent : public MainLoopWindows::IOEvent {
@@ -205,7 +236,7 @@ MainLoopWindows::RegisterReadObject(const IOObjectSP &object_sp,
 
   if (m_read_fds.find(waitable_handle) != m_read_fds.end()) {
     error = Status::FromErrorStringWithFormat(
-        "File descriptor %d already monitored.", waitable_handle);
+        "File descriptor %p already monitored.", waitable_handle);
     return nullptr;
   }
 
@@ -217,7 +248,7 @@ MainLoopWindows::RegisterReadObject(const IOObjectSP &object_sp,
   } else {
     DWORD file_type = GetFileType(waitable_handle);
     if (file_type != FILE_TYPE_PIPE) {
-      error = Status::FromErrorStringWithFormat("Unsupported file type %d",
+      error = Status::FromErrorStringWithFormat("Unsupported file type %ld",
                                                 file_type);
       return nullptr;
     }
@@ -258,4 +289,6 @@ Status MainLoopWindows::Run() {
   return Status();
 }
 
-void MainLoopWindows::Interrupt() { WSASetEvent(m_interrupt_event); }
+bool MainLoopWindows::Interrupt() {
+  return WSASetEvent(m_interrupt_event);
+}

@@ -31,7 +31,7 @@ program openacc_clause_validity
   do i = 1, N
     !ERROR: Directive SET may not be called within a compute region
     !$acc set default_async(i)
-    a(i) = 3.14
+    a(i) = 3.14d0
   end do
   !$acc end parallel
 
@@ -40,7 +40,7 @@ program openacc_clause_validity
   do i = 1, N
     !ERROR: Directive SET may not be called within a compute region
     !$acc set default_async(i)
-    a(i) = 3.14
+    a(i) = 3.14d0
   end do
   !$acc end serial
 
@@ -49,7 +49,7 @@ program openacc_clause_validity
   do i = 1, N
     !ERROR: Directive SET may not be called within a compute region
     !$acc set default_async(i)
-    a(i) = 3.14
+    a(i) = 3.14d0
   end do
   !$acc end kernels
 
@@ -57,21 +57,21 @@ program openacc_clause_validity
   do i = 1, N
     !ERROR: Directive SET may not be called within a compute region
     !$acc set default_async(i)
-    a(i) = 3.14
+    a(i) = 3.14d0
   end do
 
   !$acc serial loop
   do i = 1, N
     !ERROR: Directive SET may not be called within a compute region
     !$acc set default_async(i)
-    a(i) = 3.14
+    a(i) = 3.14d0
   end do
 
   !$acc kernels loop
   do i = 1, N
     !ERROR: Directive SET may not be called within a compute region
     !$acc set default_async(i)
-    a(i) = 3.14
+    a(i) = 3.14d0
   end do
 
   !ERROR: At least one of DEFAULT_ASYNC, DEVICE_NUM, DEVICE_TYPE clause must appear on the SET directive

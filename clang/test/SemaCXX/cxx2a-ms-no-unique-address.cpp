@@ -1,5 +1,6 @@
 // RUN: %clang_cc1 -std=c++2a %s -verify=unsupported -triple x86_64-linux-gnu
 // RUN: %clang_cc1 -std=c++2a %s -verify -triple x86_64-windows -fms-compatibility
+// RUN: %clang_cc1 -std=c++2a %s -verify -triple x86_64-uefi -fms-compatibility
 
 [[msvc::no_unique_address]] int a; // expected-error {{only applies to non-bit-field non-static data members}} unsupported-warning {{unknown}}
 [[msvc::no_unique_address]] void f(); // expected-error {{only applies to non-bit-field non-static data members}} unsupported-warning {{unknown}}

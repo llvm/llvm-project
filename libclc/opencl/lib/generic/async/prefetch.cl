@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include <clc/async/clc_prefetch.h>
-#include <clc/opencl/clc.h>
 
 #define __CLC_BODY <prefetch.inc>
 #include <clc/integer/gentype.inc>

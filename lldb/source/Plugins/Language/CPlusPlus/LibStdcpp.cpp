@@ -9,7 +9,9 @@
 #include "LibStdcpp.h"
 #include "LibCxx.h"
 
+#include "Plugins/Language/CPlusPlus/Generic.h"
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
+#include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/DataFormatters/StringPrinter.h"
 #include "lldb/DataFormatters/VectorIterator.h"
 #include "lldb/Target/Target.h"
@@ -77,8 +79,7 @@ private:
   // objects are only destroyed when every shared pointer to any of them
   // is destroyed, so we must not store a shared pointer to any ValueObject
   // derived from our backend ValueObject (since we're in the same cluster).
-  ValueObject* m_ptr_obj = nullptr; // Underlying pointer (held, not owned)
-  ValueObject* m_obj_obj = nullptr; // Underlying object (held, not owned)
+  ValueObject *m_ptr_obj = nullptr; // Underlying pointer (held, not owned)
 };
 
 } // end of anonymous namespace
@@ -198,9 +199,6 @@ lldb::ChildCacheState VectorIteratorSyntheticFrontEnd::Update() {
   if (!valobj_sp)
     return lldb::ChildCacheState::eRefetch;
 
-  if (!valobj_sp)
-    return lldb::ChildCacheState::eRefetch;
-
   ValueObjectSP item_ptr =
       formatters::GetChildMemberWithName(*valobj_sp, m_item_names);
   if (!item_ptr)
@@ -240,10 +238,11 @@ VectorIteratorSyntheticFrontEnd::GetIndexOfChildWithName(ConstString name) {
 bool lldb_private::formatters::LibStdcppStringSummaryProvider(
     ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
   ValueObjectSP ptr = valobj.GetChildAtNamePath({"_M_dataplus", "_M_p"});
-  if (!ptr)
-    return false;
+  if (!ptr || !ptr->GetError().Success())
+    stream << "Summary Unavailable";
+  else
+    stream << ptr->GetSummaryAsCString();
 
-  stream << ptr->GetSummaryAsCString();
   return true;
 }
 
@@ -266,15 +265,16 @@ LibStdcppSharedPtrSyntheticFrontEnd::GetChildAtIndex(uint32_t idx) {
 
   if (idx == 0)
     return m_ptr_obj->GetSP();
+
   if (idx == 1) {
-    if (m_ptr_obj && !m_obj_obj) {
-      Status error;
-      ValueObjectSP obj_obj = m_ptr_obj->Dereference(error);
-      if (error.Success())
-        m_obj_obj = obj_obj->Clone(ConstString("object")).get();
-    }
-    if (m_obj_obj)
-      return m_obj_obj->GetSP();
+    ValueObjectSP valobj_sp = m_backend.GetSP();
+    if (!valobj_sp)
+      return nullptr;
+
+    Status status;
+    ValueObjectSP value_sp = m_ptr_obj->Dereference(status);
+    if (status.Success())
+      return value_sp;
   }
   return lldb::ValueObjectSP();
 }
@@ -292,8 +292,11 @@ lldb::ChildCacheState LibStdcppSharedPtrSyntheticFrontEnd::Update() {
   if (!ptr_obj_sp)
     return lldb::ChildCacheState::eRefetch;
 
-  m_ptr_obj = ptr_obj_sp->Clone(ConstString("pointer")).get();
-  m_obj_obj = nullptr;
+  auto cast_ptr_sp = GetDesugaredSmartPointerValue(*ptr_obj_sp, *valobj_sp);
+  if (!cast_ptr_sp)
+    return lldb::ChildCacheState::eRefetch;
+
+  m_ptr_obj = cast_ptr_sp->Clone(ConstString("pointer")).get();
 
   return lldb::ChildCacheState::eRefetch;
 }
@@ -302,8 +305,10 @@ llvm::Expected<size_t>
 LibStdcppSharedPtrSyntheticFrontEnd::GetIndexOfChildWithName(ConstString name) {
   if (name == "pointer")
     return 0;
+
   if (name == "object" || name == "$$dereference$$")
     return 1;
+
   return llvm::createStringError("Type has no child named '%s'",
                                  name.AsCString());
 }
@@ -325,29 +330,83 @@ bool lldb_private::formatters::LibStdcppSmartPointerSummaryProvider(
   if (!ptr_sp)
     return false;
 
-  ValueObjectSP usecount_sp(
-      valobj_sp->GetChildAtNamePath({"_M_refcount", "_M_pi", "_M_use_count"}));
-  if (!usecount_sp)
+  DumpCxxSmartPtrPointerSummary(stream, *ptr_sp, options);
+
+  ValueObjectSP pi_sp = valobj_sp->GetChildAtNamePath({"_M_refcount", "_M_pi"});
+  if (!pi_sp)
     return false;
 
-  if (ptr_sp->GetValueAsUnsigned(0) == 0 ||
-      usecount_sp->GetValueAsUnsigned(0) == 0) {
-    stream.Printf("nullptr");
+  bool success;
+  uint64_t pi_addr = pi_sp->GetValueAsUnsigned(0, &success);
+  // Empty control field. We're done.
+  if (!success || pi_addr == 0)
+    return true;
+
+  int64_t shared_count = 0;
+  if (auto count_sp = pi_sp->GetChildMemberWithName("_M_use_count")) {
+    bool success;
+    shared_count = count_sp->GetValueAsSigned(0, &success);
+    if (!success)
+      return false;
+
+    stream.Printf(" strong=%" PRId64, shared_count);
+  }
+
+  // _M_weak_count is the number of weak references + (_M_use_count != 0).
+  if (auto weak_count_sp = pi_sp->GetChildMemberWithName("_M_weak_count")) {
+    bool success;
+    int64_t count = weak_count_sp->GetValueAsUnsigned(0, &success);
+    if (!success)
+      return false;
+
+    stream.Printf(" weak=%" PRId64, count - (shared_count != 0));
+  }
+
+  return true;
+}
+
+static uint64_t LibStdcppVariantNposValue(size_t index_byte_size) {
+  switch (index_byte_size) {
+  case 1:
+    return 0xff;
+  case 2:
+    return 0xffff;
+  default:
+    return 0xffff'ffff;
+  }
+}
+
+bool formatters::LibStdcppVariantSummaryProvider(
+    ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
+  ValueObjectSP valobj_sp = valobj.GetNonSyntheticValue();
+  if (!valobj_sp)
+    return false;
+
+  ValueObjectSP index_obj = valobj_sp->GetChildMemberWithName("_M_index");
+  ValueObjectSP data_obj = valobj_sp->GetChildMemberWithName("_M_u");
+  if (!index_obj || !data_obj)
+    return false;
+
+  auto index_bytes = index_obj->GetByteSize();
+  if (!index_bytes)
+    return false;
+  auto npos_value = LibStdcppVariantNposValue(*index_bytes);
+  auto index = index_obj->GetValueAsUnsigned(0);
+  if (index == npos_value) {
+    stream.Printf(" No Value");
     return true;
   }
 
-  Status error;
-  ValueObjectSP pointee_sp = ptr_sp->Dereference(error);
-  if (pointee_sp && error.Success()) {
-    if (pointee_sp->DumpPrintableRepresentation(
-            stream, ValueObject::eValueObjectRepresentationStyleSummary,
-            lldb::eFormatInvalid,
-            ValueObject::PrintableRepresentationSpecialCases::eDisable,
-            false)) {
-      return true;
-    }
+  auto variant_type =
+      valobj_sp->GetCompilerType().GetCanonicalType().GetNonReferenceType();
+  if (!variant_type)
+    return false;
+  if (index >= variant_type.GetNumTemplateArguments(true)) {
+    stream.Printf(" <Invalid>");
+    return true;
   }
 
-  stream.Printf("ptr = 0x%" PRIx64, ptr_sp->GetValueAsUnsigned(0));
+  auto active_type = variant_type.GetTypeTemplateArgument(index, true);
+  stream << " Active Type = " << active_type.GetDisplayTypeName() << " ";
   return true;
 }

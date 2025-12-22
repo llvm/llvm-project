@@ -25,7 +25,6 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/EndianStream.h"
-#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <cstddef>
@@ -336,6 +335,35 @@ static const std::map<unsigned, std::vector<unsigned>> StdFixups = {
 // [2] The actual fixup is LO16 or HI16, depending on the instruction.
 #undef P
 #undef _
+
+static void addFixup(SmallVectorImpl<MCFixup> &Fixups, uint32_t Offset,
+                     const MCExpr *Value, uint16_t Kind) {
+  bool PCRel = false;
+  switch (Kind) {
+  case Hexagon::fixup_Hexagon_B22_PCREL:
+  case Hexagon::fixup_Hexagon_B15_PCREL:
+  case Hexagon::fixup_Hexagon_B7_PCREL:
+  case Hexagon::fixup_Hexagon_B13_PCREL:
+  case Hexagon::fixup_Hexagon_B9_PCREL:
+  case Hexagon::fixup_Hexagon_B32_PCREL_X:
+  case Hexagon::fixup_Hexagon_B22_PCREL_X:
+  case Hexagon::fixup_Hexagon_B15_PCREL_X:
+  case Hexagon::fixup_Hexagon_B13_PCREL_X:
+  case Hexagon::fixup_Hexagon_B9_PCREL_X:
+  case Hexagon::fixup_Hexagon_B7_PCREL_X:
+  case Hexagon::fixup_Hexagon_32_PCREL:
+  case Hexagon::fixup_Hexagon_PLT_B22_PCREL:
+  case Hexagon::fixup_Hexagon_GD_PLT_B22_PCREL:
+  case Hexagon::fixup_Hexagon_LD_PLT_B22_PCREL:
+  case Hexagon::fixup_Hexagon_6_PCREL_X:
+  case Hexagon::fixup_Hexagon_GD_PLT_B22_PCREL_X:
+  case Hexagon::fixup_Hexagon_GD_PLT_B32_PCREL_X:
+  case Hexagon::fixup_Hexagon_LD_PLT_B22_PCREL_X:
+  case Hexagon::fixup_Hexagon_LD_PLT_B32_PCREL_X:
+    PCRel = true;
+  }
+  Fixups.push_back(MCFixup::create(Offset, Value, Kind, PCRel));
+}
 
 uint32_t HexagonMCCodeEmitter::parseBits(size_t Last, MCInst const &MCB,
                                          MCInst const &MCI) const {
@@ -698,10 +726,7 @@ unsigned HexagonMCCodeEmitter::getExprOpValue(const MCInst &MI,
     FixupExpr = MCBinaryExpr::createAdd(FixupExpr, C, MCT);
   }
 
-  MCFixup Fixup = MCFixup::create(State.Addend, FixupExpr,
-                                  MCFixupKind(FixupKind), MI.getLoc());
-  Fixups.push_back(Fixup);
-  // All of the information is in the fixup.
+  addFixup(Fixups, State.Addend, FixupExpr, FixupKind);
   return 0;
 }
 

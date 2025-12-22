@@ -145,7 +145,7 @@ static LogicalResult testReifyValueBounds(FunctionOpInterface funcOp,
         if (reifiedScalable->map.getNumInputs() == 1) {
           // The only possible input to the bound is vscale.
           vscaleOperand.push_back(std::make_pair(
-              rewriter.create<vector::VectorScaleOp>(loc), std::nullopt));
+              vector::VectorScaleOp::create(rewriter, loc), std::nullopt));
         }
         reified = affine::materializeComputedBound(
             rewriter, loc, reifiedScalable->map, vscaleOperand);
@@ -169,8 +169,9 @@ static LogicalResult testReifyValueBounds(FunctionOpInterface funcOp,
       rewriter.replaceOp(op, val);
       return WalkResult::skip();
     }
-    Value constOp = rewriter.create<arith::ConstantIndexOp>(
-        op->getLoc(), cast<IntegerAttr>(cast<Attribute>(*reified)).getInt());
+    Value constOp = arith::ConstantIndexOp::create(
+        rewriter, op->getLoc(),
+        cast<IntegerAttr>(cast<Attribute>(*reified)).getInt());
     rewriter.replaceOp(op, constOp);
     return WalkResult::skip();
   });

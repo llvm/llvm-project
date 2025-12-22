@@ -15,8 +15,8 @@ end
 !UNPARSE: !$OMP END TASK
 !UNPARSE: END SUBROUTINE
 
-!PARSE-TREE: OmpBeginBlockDirective
-!PARSE-TREE: | OmpBlockDirective -> llvm::omp::Directive = task
+!PARSE-TREE: OmpBeginDirective
+!PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = task
 !PARSE-TREE: | OmpClauseList -> OmpClause -> Affinity -> OmpAffinityClause
 !PARSE-TREE: | | OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'x'
 
@@ -34,8 +34,8 @@ end
 !UNPARSE: !$OMP END TASK
 !UNPARSE: END SUBROUTINE
 
-!PARSE-TREE: OmpBeginBlockDirective
-!PARSE-TREE: | OmpBlockDirective -> llvm::omp::Directive = task
+!PARSE-TREE: OmpBeginDirective
+!PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = task
 !PARSE-TREE: | OmpClauseList -> OmpClause -> Affinity -> OmpAffinityClause
 !PARSE-TREE: | | OmpObjectList -> OmpObject -> Designator -> DataRef -> ArrayElement
 !PARSE-TREE: | | | DataRef -> Name = 'x'
@@ -60,8 +60,8 @@ end
 !UNPARSE: !$OMP END TASK
 !UNPARSE: END SUBROUTINE
 
-!PARSE-TREE: OmpBeginBlockDirective
-!PARSE-TREE: | OmpBlockDirective -> llvm::omp::Directive = task
+!PARSE-TREE: OmpBeginDirective
+!PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = task
 !PARSE-TREE: | OmpClauseList -> OmpClause -> Affinity -> OmpAffinityClause
 !PARSE-TREE: | | Modifier -> OmpIterator -> OmpIteratorSpecifier
 !PARSE-TREE: | | | TypeDeclarationStmt

@@ -189,7 +189,12 @@ AttributeCommonInfo::Kind
 AttributeCommonInfo::getParsedKind(const IdentifierInfo *Name,
                                    const IdentifierInfo *ScopeName,
                                    Syntax SyntaxUsed) {
-  return ::getAttrKind(normalizeName(Name, ScopeName, SyntaxUsed), SyntaxUsed);
+  AttributeCommonInfo::Kind Kind =
+      ::getAttrKind(normalizeName(Name, ScopeName, SyntaxUsed), SyntaxUsed);
+  if (SyntaxUsed == AS_HLSLAnnotation &&
+      Kind == AttributeCommonInfo::Kind::UnknownAttribute)
+    return AttributeCommonInfo::Kind::AT_HLSLUnparsedSemantic;
+  return Kind;
 }
 
 AttributeCommonInfo::AttrArgsInfo

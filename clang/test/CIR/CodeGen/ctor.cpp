@@ -49,7 +49,7 @@ void bar() {
 
 // CHECK:      cir.func{{.*}} @_ZN13VariadicStrukC1Eiz(%arg0: !cir.ptr<!rec_VariadicStruk>
 // CHECK-SAME:                                   %arg1: !s32i
-// CHECK-SAME:                                   ...) {
+// CHECK-SAME:                                   ...){{.*}} {
 // CHECK-NEXT:   %[[THIS_ADDR:.*]] = cir.alloca {{.*}} ["this", init]
 // CHECK-NEXT:   %[[N_ADDR:.*]] = cir.alloca {{.*}} ["n", init]
 // CHECK-NEXT:   cir.store %arg0, %[[THIS_ADDR]]
@@ -218,4 +218,131 @@ void init_union() {
 // CHECK: cir.func{{.*}} @_Z10init_unionv
 // CHECK-NEXT:    %[[S_ADDR:.*]] = cir.alloca {{.*}} ["s", init]
 // CHECK-NEXT:    cir.call @_ZN14UnionInitStrukC1Ev(%[[S_ADDR]])
+// CHECK-NEXT:    cir.return
+
+struct Base {
+  int a;
+  Base(int val) : a(val) {}
+};
+
+struct Derived : Base {
+  Derived(int val) : Base(val) {}
+};
+
+void test_derived() {
+  Derived d(1);
+}
+
+// CHECK: cir.func{{.*}} @_ZN4BaseC2Ei(%arg0: !cir.ptr<!rec_Base> {{.*}}, %arg1: !s32i
+// CHECK-NEXT:   %[[THIS_ADDR:.*]] = cir.alloca {{.*}} ["this", init]
+// CHECK-NEXT:   %[[VAL_ADDR:.*]] = cir.alloca {{.*}} ["val", init]
+// CHECK-NEXT:   cir.store %arg0, %[[THIS_ADDR]]
+// CHECK-NEXT:   cir.store %arg1, %[[VAL_ADDR]]
+// CHECK-NEXT:   %[[THIS:.*]] = cir.load{{.*}} %[[THIS_ADDR]]
+// CHECK-NEXT:   %[[A_ADDR:.*]] = cir.get_member %[[THIS]][0] {name = "a"}
+// CHECK-NEXT:   %[[VAL:.*]] = cir.load{{.*}} %[[VAL_ADDR]]
+// CHECK-NEXT:   cir.store{{.*}} %[[VAL]], %[[A_ADDR]]
+// CHECK-NEXT:   cir.return
+
+// CHECK:      cir.func{{.*}} @_ZN7DerivedC2Ei(%arg0: !cir.ptr<!rec_Derived> {{.*}}, %arg1: !s32i
+// CHECK-NEXT:   %[[THIS_ADDR:.*]] = cir.alloca {{.*}} ["this", init]
+// CHECK-NEXT:   %[[VAL_ADDR:.*]] = cir.alloca {{.*}} ["val", init]
+// CHECK-NEXT:   cir.store %arg0, %[[THIS_ADDR]]
+// CHECK-NEXT:   cir.store %arg1, %[[VAL_ADDR]]
+// CHECK-NEXT:   %[[THIS:.*]] = cir.load{{.*}} %[[THIS_ADDR]]
+// CHECK-NEXT:   %[[BASE:.*]] = cir.base_class_addr %[[THIS]] : !cir.ptr<!rec_Derived> nonnull [0] -> !cir.ptr<!rec_Base>
+// CHECK-NEXT:   %[[VAL:.*]] = cir.load{{.*}} %[[VAL_ADDR]]
+// CHECK-NEXT:   cir.call @_ZN4BaseC2Ei(%[[BASE]], %[[VAL]])
+// CHECK-NEXT:   cir.return
+
+// CHECK:      cir.func{{.*}} @_ZN7DerivedC1Ei(%arg0: !cir.ptr<!rec_Derived> {{.*}}, %arg1: !s32i
+// CHECK-NEXT:   %[[THIS_ADDR:.*]] = cir.alloca {{.*}} ["this", init]
+// CHECK-NEXT:   %[[VAL_ADDR:.*]] = cir.alloca {{.*}} ["val", init]
+// CHECK-NEXT:   cir.store %arg0, %[[THIS_ADDR]]
+// CHECK-NEXT:   cir.store %arg1, %[[VAL_ADDR]]
+// CHECK-NEXT:   %[[THIS:.*]] = cir.load{{.*}} %[[THIS_ADDR]]
+// CHECK-NEXT:   %[[VAL:.*]] = cir.load{{.*}} %[[VAL_ADDR]]
+// CHECK-NEXT:   cir.call @_ZN7DerivedC2Ei(%[[THIS]], %[[VAL]])
+// CHECK-NEXT:   cir.return
+
+// CHECK: cir.func{{.*}} @_Z12test_derivedv
+// CHECK-NEXT:    %[[D_ADDR:.*]] = cir.alloca {{.*}} ["d", init]
+// CHECK-NEXT:    %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
+// CHECK-NEXT:    cir.call @_ZN7DerivedC1Ei(%[[D_ADDR]], %[[ONE]])
+// CHECK-NEXT:    cir.return
+
+struct Base2 {
+  int b;
+  Base2(int val) : b(val) {}
+};
+
+struct Derived2 : Base, Base2 {
+  int c;
+  Derived2(int val1, int val2, int val3) : Base(val1), Base2(val2), c(val3) {}
+};
+
+void test_derived2() {
+  Derived2 d(1, 2, 3);
+}
+
+// CHECK: cir.func{{.*}} @_ZN5Base2C2Ei(%arg0: !cir.ptr<!rec_Base2> {{.*}}, %arg1: !s32i
+// CHECK-NEXT:   %[[THIS_ADDR:.*]] = cir.alloca {{.*}} ["this", init]
+// CHECK-NEXT:   %[[VAL_ADDR:.*]] = cir.alloca {{.*}} ["val", init]
+// CHECK-NEXT:   cir.store %arg0, %[[THIS_ADDR]]
+// CHECK-NEXT:   cir.store %arg1, %[[VAL_ADDR]]
+// CHECK-NEXT:   %[[THIS:.*]] = cir.load{{.*}} %[[THIS_ADDR]]
+// CHECK-NEXT:   %[[B_ADDR:.*]] = cir.get_member %[[THIS]][0] {name = "b"}
+// CHECK-NEXT:   %[[VAL:.*]] = cir.load{{.*}} %[[VAL_ADDR]]
+// CHECK-NEXT:   cir.store{{.*}} %[[VAL]], %[[B_ADDR]]
+// CHECK-NEXT:   cir.return
+
+// CHECK:      cir.func{{.*}} @_ZN8Derived2C2Eiii(%arg0: !cir.ptr<!rec_Derived2>
+// CHECK-SAME:                                    %arg1: !s32i
+// CHECK-SAME:                                    %arg2: !s32i
+// CHECK-SAME:                                    %arg3: !s32i
+// CHECK-NEXT:   %[[THIS_ADDR:.*]] = cir.alloca {{.*}} ["this", init]
+// CHECK-NEXT:   %[[VAL1_ADDR:.*]] = cir.alloca {{.*}} ["val1", init]
+// CHECK-NEXT:   %[[VAL2_ADDR:.*]] = cir.alloca {{.*}} ["val2", init]
+// CHECK-NEXT:   %[[VAL3_ADDR:.*]] = cir.alloca {{.*}} ["val3", init]
+// CHECK-NEXT:   cir.store %arg0, %[[THIS_ADDR]]
+// CHECK-NEXT:   cir.store %arg1, %[[VAL1_ADDR]]
+// CHECK-NEXT:   cir.store %arg2, %[[VAL2_ADDR]]
+// CHECK-NEXT:   cir.store %arg3, %[[VAL3_ADDR]]
+// CHECK-NEXT:   %[[THIS:.*]] = cir.load{{.*}} %[[THIS_ADDR]]
+// CHECK-NEXT:   %[[BASE:.*]] = cir.base_class_addr %[[THIS]] : !cir.ptr<!rec_Derived2> nonnull [0] -> !cir.ptr<!rec_Base>
+// CHECK-NEXT:   %[[VAL1:.*]] = cir.load{{.*}} %[[VAL1_ADDR]]
+// CHECK-NEXT:   cir.call @_ZN4BaseC2Ei(%[[BASE]], %[[VAL1]])
+// CHECK-NEXT:   %[[BASE2:.*]] = cir.base_class_addr %[[THIS]] : !cir.ptr<!rec_Derived2> nonnull [4] -> !cir.ptr<!rec_Base2>
+// CHECK-NEXT:   %[[VAL2:.*]] = cir.load{{.*}} %[[VAL2_ADDR]]
+// CHECK-NEXT:   cir.call @_ZN5Base2C2Ei(%[[BASE2]], %[[VAL2]])
+// CHECK-NEXT:   %[[C_ADDR:.*]] = cir.get_member %[[THIS]][2] {name = "c"}
+// CHECK-NEXT:   %[[VAL3:.*]] = cir.load{{.*}} %[[VAL3_ADDR]]
+// CHECK-NEXT:   cir.store{{.*}} %[[VAL3]], %[[C_ADDR]]
+// CHECK-NEXT:   cir.return
+
+// CHECK:      cir.func{{.*}} @_ZN8Derived2C1Eiii(%arg0: !cir.ptr<!rec_Derived2>
+// CHECK-SAME:                                    %arg1: !s32i
+// CHECK-SAME:                                    %arg2: !s32i
+// CHECK-SAME:                                    %arg3: !s32i
+// CHECK-NEXT:   %[[THIS_ADDR:.*]] = cir.alloca {{.*}} ["this", init]
+// CHECK-NEXT:   %[[VAL1_ADDR:.*]] = cir.alloca {{.*}} ["val1", init]
+// CHECK-NEXT:   %[[VAL2_ADDR:.*]] = cir.alloca {{.*}} ["val2", init]
+// CHECK-NEXT:   %[[VAL3_ADDR:.*]] = cir.alloca {{.*}} ["val3", init]
+// CHECK-NEXT:   cir.store %arg0, %[[THIS_ADDR]]
+// CHECK-NEXT:   cir.store %arg1, %[[VAL1_ADDR]]
+// CHECK-NEXT:   cir.store %arg2, %[[VAL2_ADDR]]
+// CHECK-NEXT:   cir.store %arg3, %[[VAL3_ADDR]]
+// CHECK-NEXT:   %[[THIS:.*]] = cir.load{{.*}} %[[THIS_ADDR]]
+// CHECK-NEXT:   %[[VAL1:.*]] = cir.load{{.*}} %[[VAL1_ADDR]]
+// CHECK-NEXT:   %[[VAL2:.*]] = cir.load{{.*}} %[[VAL2_ADDR]]
+// CHECK-NEXT:   %[[VAL3:.*]] = cir.load{{.*}} %[[VAL3_ADDR]]
+// CHECK-NEXT:   cir.call @_ZN8Derived2C2Eiii(%[[THIS]], %[[VAL1]], %[[VAL2]], %[[VAL3]])
+// CHECK-NEXT:   cir.return
+
+// CHECK: cir.func{{.*}} @_Z13test_derived2v
+// CHECK-NEXT:    %[[D_ADDR:.*]] = cir.alloca {{.*}} ["d", init]
+// CHECK-NEXT:    %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
+// CHECK-NEXT:    %[[TWO:.*]] = cir.const #cir.int<2> : !s32i
+// CHECK-NEXT:    %[[THREE:.*]] = cir.const #cir.int<3> : !s32i
+// CHECK-NEXT:    cir.call @_ZN8Derived2C1Eiii(%[[D_ADDR]], %[[ONE]], %[[TWO]], %[[THREE]])
 // CHECK-NEXT:    cir.return

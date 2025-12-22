@@ -13,15 +13,15 @@
 ; CHECK: Name %[[#SignedB:]] "ib"
 ; CHECK: Name %[[#UnsignedB:]] "ub"
 
-; CHECK: SDot %[[#]] %[[#SignedA]] %[[#SignedB]] 0
-; CHECK: SUDot %[[#]] %[[#SignedA]] %[[#UnsignedB]] 0
-; CHECK: SUDot %[[#]] %[[#SignedB]] %[[#UnsignedA]] 0
-; CHECK: UDot %[[#]] %[[#UnsignedA]] %[[#UnsignedB]] 0
+; CHECK: SDot %[[#]] %[[#SignedA]] %[[#SignedB]] PackedVectorFormat4x8Bit
+; CHECK: SUDot %[[#]] %[[#SignedA]] %[[#UnsignedB]] PackedVectorFormat4x8Bit
+; CHECK: SUDot %[[#]] %[[#SignedB]] %[[#UnsignedA]] PackedVectorFormat4x8Bit
+; CHECK: UDot %[[#]] %[[#UnsignedA]] %[[#UnsignedB]] PackedVectorFormat4x8Bit
 
-; CHECK: SDotAccSat %[[#]] %[[#SignedA]] %[[#SignedB]] %[[#]] 0
-; CHECK: SUDotAccSat %[[#]] %[[#SignedA]] %[[#UnsignedB]] %[[#]] 0
-; CHECK: SUDotAccSat %[[#]] %[[#SignedB]] %[[#UnsignedA]] %[[#]] 0
-; CHECK: UDotAccSat %[[#]] %[[#UnsignedA]] %[[#UnsignedB]] %[[#]] 0
+; CHECK: SDotAccSat %[[#]] %[[#SignedA]] %[[#SignedB]] %[[#]] PackedVectorFormat4x8Bit
+; CHECK: SUDotAccSat %[[#]] %[[#SignedA]] %[[#UnsignedB]] %[[#]] PackedVectorFormat4x8Bit
+; CHECK: SUDotAccSat %[[#]] %[[#SignedB]] %[[#UnsignedA]] %[[#]] PackedVectorFormat4x8Bit
+; CHECK: UDotAccSat %[[#]] %[[#UnsignedA]] %[[#UnsignedB]] %[[#]] PackedVectorFormat4x8Bit
 
 define spir_kernel void @test(i32 %ia, i32 %ua, i32 %ib, i32 %ub, i32 %ires, i32 %ures) {
 entry:

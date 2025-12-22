@@ -20,6 +20,7 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/DXContainer.h"
 #include "llvm/Object/Error.h"
+#include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
@@ -227,11 +228,11 @@ private:
   uint32_t Flags;
   ViewArray<dxbc::RTS0::v1::RootParameterHeader> ParametersHeaders;
   StringRef PartData;
-  ViewArray<dxbc::RTS0::v1::StaticSampler> StaticSamplers;
+  ViewArray<dxbc::RTS0::v3::StaticSampler> StaticSamplers;
 
   using param_header_iterator =
       ViewArray<dxbc::RTS0::v1::RootParameterHeader>::iterator;
-  using samplers_iterator = ViewArray<dxbc::RTS0::v1::StaticSampler>::iterator;
+  using samplers_iterator = ViewArray<dxbc::RTS0::v3::StaticSampler>::iterator;
 
 public:
   RootSignature(StringRef PD) : PartData(PD) {}
@@ -244,10 +245,10 @@ public:
   uint32_t getStaticSamplersOffset() const { return StaticSamplersOffset; }
   uint32_t getNumRootParameters() const { return ParametersHeaders.size(); }
   llvm::iterator_range<param_header_iterator> param_headers() const {
-    return llvm::make_range(ParametersHeaders.begin(), ParametersHeaders.end());
+    return ParametersHeaders;
   }
   llvm::iterator_range<samplers_iterator> samplers() const {
-    return llvm::make_range(StaticSamplers.begin(), StaticSamplers.end());
+    return StaticSamplers;
   }
   uint32_t getFlags() const { return Flags; }
 
@@ -499,6 +500,7 @@ public:
     } IteratorState;
 
     friend class DXContainer;
+    friend class DXContainerObjectFile;
 
     PartIterator(const DXContainer &C,
                  SmallVectorImpl<uint32_t>::const_iterator It)
@@ -582,6 +584,83 @@ public:
   const DirectX::Signature &getPatchConstantSignature() const {
     return PatchConstantSignature;
   }
+};
+
+class LLVM_ABI DXContainerObjectFile : public ObjectFile {
+private:
+  friend class ObjectFile;
+  DXContainer Container;
+
+  using PartData = DXContainer::PartIterator::PartData;
+  llvm::SmallVector<PartData> Parts;
+  using PartIterator = llvm::SmallVector<PartData>::iterator;
+
+  DXContainerObjectFile(DXContainer C)
+      : ObjectFile(ID_DXContainer, MemoryBufferRef(C.getData(), "")),
+        Container(C) {
+    for (auto &P : C)
+      Parts.push_back(P);
+  }
+
+public:
+  const DXContainer &getDXContainer() const { return Container; }
+
+  static bool classof(const Binary *v) { return v->isDXContainer(); }
+
+  const dxbc::Header &getHeader() const { return Container.getHeader(); }
+
+  Expected<StringRef> getSymbolName(DataRefImpl) const override;
+  Expected<uint64_t> getSymbolAddress(DataRefImpl Symb) const override;
+  uint64_t getSymbolValueImpl(DataRefImpl Symb) const override;
+  uint64_t getCommonSymbolSizeImpl(DataRefImpl Symb) const override;
+
+  Expected<SymbolRef::Type> getSymbolType(DataRefImpl Symb) const override;
+  Expected<section_iterator> getSymbolSection(DataRefImpl Symb) const override;
+  void moveSectionNext(DataRefImpl &Sec) const override;
+  Expected<StringRef> getSectionName(DataRefImpl Sec) const override;
+  uint64_t getSectionAddress(DataRefImpl Sec) const override;
+  uint64_t getSectionIndex(DataRefImpl Sec) const override;
+  uint64_t getSectionSize(DataRefImpl Sec) const override;
+  Expected<ArrayRef<uint8_t>>
+  getSectionContents(DataRefImpl Sec) const override;
+
+  uint64_t getSectionAlignment(DataRefImpl Sec) const override;
+  bool isSectionCompressed(DataRefImpl Sec) const override;
+  bool isSectionText(DataRefImpl Sec) const override;
+  bool isSectionData(DataRefImpl Sec) const override;
+  bool isSectionBSS(DataRefImpl Sec) const override;
+  bool isSectionVirtual(DataRefImpl Sec) const override;
+
+  relocation_iterator section_rel_begin(DataRefImpl Sec) const override;
+  relocation_iterator section_rel_end(DataRefImpl Sec) const override;
+
+  void moveRelocationNext(DataRefImpl &Rel) const override;
+  uint64_t getRelocationOffset(DataRefImpl Rel) const override;
+  symbol_iterator getRelocationSymbol(DataRefImpl Rel) const override;
+  uint64_t getRelocationType(DataRefImpl Rel) const override;
+  void getRelocationTypeName(DataRefImpl Rel,
+                             SmallVectorImpl<char> &Result) const override;
+
+  section_iterator section_begin() const override;
+  section_iterator section_end() const override;
+
+  uint8_t getBytesInAddress() const override;
+  StringRef getFileFormatName() const override;
+  Triple::ArchType getArch() const override;
+  Expected<SubtargetFeatures> getFeatures() const override;
+
+  void moveSymbolNext(DataRefImpl &Symb) const override {}
+  Error printSymbolName(raw_ostream &OS, DataRefImpl Symb) const override;
+  Expected<uint32_t> getSymbolFlags(DataRefImpl Symb) const override;
+  basic_symbol_iterator symbol_begin() const override {
+    return basic_symbol_iterator(SymbolRef());
+  }
+  basic_symbol_iterator symbol_end() const override {
+    return basic_symbol_iterator(SymbolRef());
+  }
+  bool is64Bit() const override { return false; }
+
+  bool isRelocatableObject() const override { return false; }
 };
 
 } // namespace object

@@ -13,6 +13,7 @@ add_lldb_library(lldbPluginProcessUtility
   MemoryTagManagerAArch64MTE.cpp
   NativeProcessSoftwareSingleStep.cpp
   NativeRegisterContextDBReg.cpp
+  NativeRegisterContextDBReg_arm.cpp
   NativeRegisterContextDBReg_arm64.cpp
   NativeRegisterContextDBReg_loongarch.cpp
   NativeRegisterContextDBReg_x86.cpp

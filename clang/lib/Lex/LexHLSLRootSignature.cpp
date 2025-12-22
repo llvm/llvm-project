@@ -27,10 +27,10 @@ RootSignatureToken RootSignatureLexer::lexToken() {
   advanceBuffer(Buffer.take_while(isspace).size());
 
   if (isEndOfBuffer())
-    return RootSignatureToken(TokenKind::end_of_stream, SourceLoc);
+    return RootSignatureToken(TokenKind::end_of_stream, LocOffset);
 
   // Record where this token is in the text for usage in parser diagnostics
-  RootSignatureToken Result(SourceLoc);
+  RootSignatureToken Result(LocOffset);
 
   char C = Buffer.front();
 
@@ -62,7 +62,7 @@ RootSignatureToken RootSignatureLexer::lexToken() {
 
   // All following tokens require at least one additional character
   if (Buffer.size() <= 1) {
-    Result = RootSignatureToken(TokenKind::invalid, SourceLoc);
+    Result = RootSignatureToken(TokenKind::invalid, LocOffset);
     return Result;
   }
 

@@ -14,6 +14,7 @@
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/Operation.h"
+#include "mlir/IR/Value.h"
 
 using namespace mlir;
 using namespace mlir::bufferization;
@@ -116,12 +117,60 @@ struct TransferWriteOpInterface
         getBuffer(rewriter, writeOp.getBase(), options, state);
     if (failed(resultBuffer))
       return failure();
-    rewriter.create<vector::TransferWriteOp>(
-        writeOp.getLoc(), writeOp.getVector(), *resultBuffer,
+    vector::TransferWriteOp::create(
+        rewriter, writeOp.getLoc(), writeOp.getVector(), *resultBuffer,
         writeOp.getIndices(), writeOp.getPermutationMapAttr(),
         writeOp.getMask(), writeOp.getInBoundsAttr());
     replaceOpWithBufferizedValues(rewriter, op, *resultBuffer);
 
+    return success();
+  }
+};
+
+/// Bufferization of vector.scatter. Replaced with a new vector.scatter that
+/// operates on a memref.
+struct ScatterOpInterface
+    : public BufferizableOpInterface::ExternalModel<ScatterOpInterface,
+                                                    vector::ScatterOp> {
+  bool bufferizesToMemoryRead(Operation *op, OpOperand &opOperand,
+                              const AnalysisState &state) const {
+    assert(isa<RankedTensorType>(opOperand.get().getType()) &&
+           "only tensor types expected");
+    return true;
+  }
+
+  bool bufferizesToMemoryWrite(Operation *op, OpOperand &opOperand,
+                               const AnalysisState &state) const {
+    assert(isa<RankedTensorType>(opOperand.get().getType()) &&
+           "only tensor types expected");
+    return true;
+  }
+
+  AliasingValueList getAliasingValues(Operation *op, OpOperand &opOperand,
+                                      const AnalysisState &state) const {
+    assert(isa<RankedTensorType>(opOperand.get().getType()) &&
+           "only tensor types expected");
+    auto scatterOp = cast<vector::ScatterOp>(op);
+    if (&opOperand != &scatterOp.getBaseMutable())
+      return {};
+    return {{scatterOp.getResult(), BufferRelation::Equivalent}};
+  }
+
+  LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
+                          const BufferizationOptions &options,
+                          BufferizationState &state) const {
+    auto scatterOp = cast<vector::ScatterOp>(op);
+    assert(isa<TensorType>(scatterOp.getBaseType()) &&
+           "only tensor types expected");
+    FailureOr<Value> buffer =
+        getBuffer(rewriter, scatterOp.getBase(), options, state);
+    if (failed(buffer))
+      return failure();
+    vector::ScatterOp::create(rewriter, scatterOp.getLoc(),
+                              /*resultType=*/nullptr, *buffer,
+                              scatterOp.getOffsets(), scatterOp.getIndices(),
+                              scatterOp.getMask(), scatterOp.getValueToStore());
+    replaceOpWithBufferizedValues(rewriter, op, *buffer);
     return success();
   }
 };
@@ -162,7 +211,7 @@ struct GatherOpInterface
       return failure();
     replaceOpWithNewBufferizedOp<vector::GatherOp>(
         rewriter, gatherOp, gatherOp.getVectorType(), *buffer,
-        gatherOp.getIndices(), gatherOp.getIndexVec(), gatherOp.getMask(),
+        gatherOp.getOffsets(), gatherOp.getIndices(), gatherOp.getMask(),
         gatherOp.getPassThru());
     return success();
   }
@@ -241,8 +290,9 @@ struct MaskOpInterface
     // Create a new vector.mask op.
     ValueRange newYieldedValuesRange(newYieldedValues);
     TypeRange newResultTypes(newYieldedValuesRange);
-    auto newOp = rewriter.create<vector::MaskOp>(
-        op->getLoc(), newResultTypes, maskOp.getMask(), maskOp.getPassthru(),
+    auto newOp = vector::MaskOp::create(
+        rewriter, op->getLoc(), newResultTypes, maskOp.getMask(),
+        maskOp.getPassthru(),
         /*maskableOp=*/nullptr,
         /*maskRegionBuilder=*/[](OpBuilder &b, Operation *) {});
     newOp.getRegion().takeBody(maskOp.getMaskRegion());
@@ -334,5 +384,6 @@ void mlir::vector::registerBufferizableOpInterfaceExternalModels(
     GatherOp::attachInterface<GatherOpInterface>(*ctx);
     MaskOp::attachInterface<MaskOpInterface>(*ctx);
     YieldOp::attachInterface<YieldOpInterface>(*ctx);
+    ScatterOp::attachInterface<ScatterOpInterface>(*ctx);
   });
 }

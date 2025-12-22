@@ -19,9 +19,14 @@
 
 namespace llvm {
 class MCSection;
+}
 
+using namespace llvm;
+
+namespace {
 /// MCExpr that represents the epilog unwind code in an unwind table.
 class MCUnwindV2EpilogTargetExpr final : public MCTargetExpr {
+  const MCSymbol *Function;
   const MCSymbol *FunctionEnd;
   const MCSymbol *UnwindV2Start;
   const MCSymbol *EpilogEnd;
@@ -31,7 +36,7 @@ class MCUnwindV2EpilogTargetExpr final : public MCTargetExpr {
   MCUnwindV2EpilogTargetExpr(const WinEH::FrameInfo &FrameInfo,
                              const WinEH::FrameInfo::Epilog &Epilog,
                              uint8_t EpilogSize_)
-      : FunctionEnd(FrameInfo.FuncletOrFuncEnd),
+      : Function(FrameInfo.Function), FunctionEnd(FrameInfo.FuncletOrFuncEnd),
         UnwindV2Start(Epilog.UnwindV2Start), EpilogEnd(Epilog.End),
         EpilogSize(EpilogSize_), Loc(Epilog.Loc) {}
 
@@ -59,9 +64,7 @@ public:
     return UnwindV2Start->getFragment();
   }
 };
-}
-
-using namespace llvm;
+} // namespace
 
 // NOTE: All relocations generated here are 4-byte image-relative.
 
@@ -253,13 +256,15 @@ static void EmitUnwindInfo(MCStreamer &streamer, WinEH::FrameInfo *info) {
         OS->getAssembler(), LastEpilog.End, LastEpilog.UnwindV2Start);
     if (!MaybeSize) {
       context.reportError(LastEpilog.Loc,
-                          "Failed to evaluate epilog size for Unwind v2");
+                          "Failed to evaluate epilog size for Unwind v2 in " +
+                              info->Function->getName());
       return;
     }
     assert(*MaybeSize >= 0);
     if (*MaybeSize >= (int64_t)UINT8_MAX) {
       context.reportError(LastEpilog.Loc,
-                          "Epilog size is too large for Unwind v2");
+                          "Epilog size is too large for Unwind v2 in " +
+                              info->Function->getName());
       return;
     }
     EpilogSize = *MaybeSize + 1;
@@ -282,7 +287,8 @@ static void EmitUnwindInfo(MCStreamer &streamer, WinEH::FrameInfo *info) {
     // Too many epilogs to handle.
     if ((size_t)numCodes + numEpilogCodes > UINT8_MAX) {
       context.reportError(info->FunctionLoc,
-                          "Too many unwind codes with Unwind v2 enabled");
+                          "Too many unwind codes with Unwind v2 enabled in " +
+                              info->Function->getName());
       return;
     }
 
@@ -318,15 +324,16 @@ static void EmitUnwindInfo(MCStreamer &streamer, WinEH::FrameInfo *info) {
 
   // Emit the epilog instructions.
   if (EnableUnwindV2) {
-    MCDataFragment *DF = OS->getOrCreateDataFragment();
+    // Ensure the fixups and appended content apply to the same fragment.
+    OS->ensureHeadroom(info->EpilogMap.size() * 2);
 
     bool IsLast = true;
     for (const auto &Epilog : llvm::reverse(info->EpilogMap)) {
       if (IsLast) {
         IsLast = false;
         uint8_t Flags = LastEpilogIsAtEnd ? 0x01 : 0;
-        streamer.emitInt8(EpilogSize);
-        streamer.emitInt8((Flags << 4) | Win64EH::UOP_Epilog);
+        OS->emitInt8(EpilogSize);
+        OS->emitInt8((Flags << 4) | Win64EH::UOP_Epilog);
 
         if (LastEpilogIsAtEnd)
           continue;
@@ -337,9 +344,8 @@ static void EmitUnwindInfo(MCStreamer &streamer, WinEH::FrameInfo *info) {
       // layout has been completed.
       auto *MCE = MCUnwindV2EpilogTargetExpr::create(*info, Epilog.second,
                                                      EpilogSize, context);
-      MCFixup Fixup = MCFixup::create(DF->getContents().size(), MCE, FK_Data_2);
-      DF->addFixup(Fixup);
-      DF->appendContents(2, 0);
+      OS->addFixup(MCE, FK_Data_2);
+      OS->appendContents(2, 0);
     }
   }
   if (AddPaddingEpilogCode)
@@ -383,14 +389,16 @@ bool MCUnwindV2EpilogTargetExpr::evaluateAsRelocatableImpl(
   auto Offset = GetOptionalAbsDifference(*Asm, FunctionEnd, UnwindV2Start);
   if (!Offset) {
     Asm->getContext().reportError(
-        Loc, "Failed to evaluate epilog offset for Unwind v2");
+        Loc, "Failed to evaluate epilog offset for Unwind v2 in " +
+                 Function->getName());
     return false;
   }
   assert(*Offset > 0);
   constexpr uint16_t MaxEpilogOffset = 0x0fff;
   if (*Offset > MaxEpilogOffset) {
-    Asm->getContext().reportError(Loc,
-                                  "Epilog offset is too large for Unwind v2");
+    Asm->getContext().reportError(
+        Loc,
+        "Epilog offset is too large for Unwind v2 in " + Function->getName());
     return false;
   }
 
@@ -398,8 +406,8 @@ bool MCUnwindV2EpilogTargetExpr::evaluateAsRelocatableImpl(
   auto Size = GetOptionalAbsDifference(*Asm, EpilogEnd, UnwindV2Start);
   if (Size != (EpilogSize - 1)) {
     Asm->getContext().reportError(
-        Loc,
-        "Size of this epilog does not match size of last epilog in function");
+        Loc, "Size of this epilog does not match size of last epilog in " +
+                 Function->getName());
     return false;
   }
 
@@ -665,7 +673,7 @@ static void ARM64EmitUnwindCode(MCStreamer &streamer,
     break;
   case Win64EH::UOP_SaveFPLRX:
     b = 0x80;
-    b |= ((inst.Offset - 1) >> 3) & 0x3F;
+    b |= ((inst.Offset >> 3) - 1) & 0x3F;
     streamer.emitInt8(b);
     break;
   case Win64EH::UOP_SaveFPLR:
@@ -879,7 +887,11 @@ static void simplifyARM64Opcodes(std::vector<WinEH::Instruction> &Instructions,
   unsigned PrevOffset = -1;
   unsigned PrevRegister = -1;
 
-  auto VisitInstruction = [&](WinEH::Instruction &Inst) {
+  // Iterate over instructions in a forward order (for prologues),
+  // backwards for epilogues (i.e. always reverse compared to how the
+  // opcodes are stored).
+  for (WinEH::Instruction &Inst :
+       llvm::reverse_conditionally(Instructions, Reverse)) {
     // Convert 2-byte opcodes into equivalent 1-byte ones.
     if (Inst.Operation == Win64EH::UOP_SaveRegP && Inst.Register == 29) {
       Inst.Operation = Win64EH::UOP_SaveFPLR;
@@ -922,17 +934,6 @@ static void simplifyARM64Opcodes(std::vector<WinEH::Instruction> &Instructions,
       PrevRegister = -1;
       PrevOffset = -1;
     }
-  };
-
-  // Iterate over instructions in a forward order (for prologues),
-  // backwards for epilogues (i.e. always reverse compared to how the
-  // opcodes are stored).
-  if (Reverse) {
-    for (auto It = Instructions.rbegin(); It != Instructions.rend(); It++)
-      VisitInstruction(*It);
-  } else {
-    for (WinEH::Instruction &Inst : Instructions)
-      VisitInstruction(Inst);
   }
 }
 
@@ -1043,7 +1044,9 @@ static bool tryARM64PackedUnwind(WinEH::FrameInfo *info, uint32_t FuncLength,
   // the order - that would work fine when unwinding from within
   // functions, but not be exactly right if unwinding happens within
   // prologs/epilogs.
-  for (const WinEH::Instruction &Inst : info->Instructions) {
+  for (auto It = info->Instructions.begin(), EndIt = info->Instructions.end();
+       It != EndIt; It++) {
+    const WinEH::Instruction &Inst = *It;
     switch (Inst.Operation) {
     case Win64EH::UOP_End:
       if (Location != Start)
@@ -1161,6 +1164,28 @@ static bool tryARM64PackedUnwind(WinEH::FrameInfo *info, uint32_t FuncLength,
           Location != FloatRegs && Location != InputArgs &&
           Location != StackAdjust)
         return false;
+      // Becuase there's no save_lrpair_x opcode, the case of CR=01,
+      // RegI=1 is handled as a special case with a pair of instructions; an
+      // alloc followed by a regular save_lrpair. So when encountering an
+      // alloc here, check if this is the start of such an instruction pair.
+      if (Location == Start2) { // Can't have this at Start3, after PACSignLR
+        auto NextIt = It + 1;
+        if (NextIt != EndIt) {
+          const WinEH::Instruction &NextInst = *NextIt;
+          if (NextInst.Operation == Win64EH::UOP_SaveLRPair &&
+              NextInst.Offset == 0 && NextInst.Register == 19) {
+            assert(Predecrement == 0);
+            assert(RegI == 0);
+            assert(!StandaloneLR);
+            Predecrement = Inst.Offset;
+            RegI = 1;
+            StandaloneLR = true;
+            Location = FloatRegs;
+            It++; // Consume both the Alloc and the SaveLRPair
+            continue;
+          }
+        }
+      }
       // Can have either a single decrement, or a pair of decrements with
       // 4080 and another decrement.
       if (StackOffset == 0)
@@ -1244,15 +1269,31 @@ static bool tryARM64PackedUnwind(WinEH::FrameInfo *info, uint32_t FuncLength,
   if (PAC && !FPLRPair)
     return false;
   int H = Nops == 4;
-  // There's an inconsistency regarding packed unwind info with homed
-  // parameters; according to the documentation, the epilog shouldn't have
-  // the same corresponding nops (and thus, to set the H bit, we should
-  // require an epilog which isn't exactly symmetrical - we shouldn't accept
-  // an exact mirrored epilog for those cases), but in practice,
-  // RtlVirtualUnwind behaves as if it does expect the epilogue to contain
-  // the same nops. See https://github.com/llvm/llvm-project/issues/54879.
-  // To play it safe, don't produce packed unwind info with homed parameters.
+  // For packed unwind info with the H bit set, the prolog and epilog
+  // actually shouldn't be symmetrical; the epilog shouldn't have any
+  // nop instructions/opcodes while the prolog has them. We currently
+  // require exactly symmetrical prologs/epilogs, which is wrong for this
+  // case - therefore, don't emit packed unwind info for this case.
+  // See https://github.com/llvm/llvm-project/issues/54879 for details.
+  //
+  // Additionally - older versions of Windows also deviated from the
+  // documentation here; older versions of Windows (at least up until
+  // 10.0.22000.2176) incorrectly did assume that the epilog has matching
+  // nop instructions. This is fixed at least in version 10.0.26100.6899.
+  // As long as we can't assume that the generated code always will run on
+  // a new enough version, don't emit the packed format here, even if the
+  // implementation would be fixed to match for the asymmetrical form
+  // according to the documentation.
   if (H)
+    return false;
+  // Older versions of Windows (at least in 10.0.22000.2176) incorrectly
+  // unwind packed unwind info with CR=01, RegI=1, RegF>0, see
+  // https://github.com/llvm/llvm-project/issues/169588#issuecomment-3584907886.
+  // This issue only exists in older versions; current versions
+  // (10.0.26100.6899) do handle it correctly. As long as we can't be sure
+  // that we won't run on older versions, avoid producing the packed form
+  // here.
+  if (StandaloneLR && RegI == 1 && RegF > 0)
     return false;
   int IntSZ = 8 * RegI;
   if (StandaloneLR)

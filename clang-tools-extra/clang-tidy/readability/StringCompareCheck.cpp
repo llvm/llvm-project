@@ -1,4 +1,4 @@
-//===-- StringCompareCheck.cpp - clang-tidy--------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -38,9 +38,8 @@ void StringCompareCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 }
 
 void StringCompareCheck::registerMatchers(MatchFinder *Finder) {
-  if (StringLikeClasses.empty()) {
+  if (StringLikeClasses.empty())
     return;
-  }
   const auto StrCompare = cxxMemberCallExpr(
       callee(cxxMethodDecl(hasName("compare"), ofClass(cxxRecordDecl(hasAnyName(
                                                    StringLikeClasses))))),

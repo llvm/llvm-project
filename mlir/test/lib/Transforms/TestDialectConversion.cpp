@@ -45,7 +45,7 @@ struct PDLLTypeConverter : public TypeConverter {
   /// Hook for materializing a conversion.
   static Value materializeCast(OpBuilder &builder, Type resultType,
                                ValueRange inputs, Location loc) {
-    return builder.create<UnrealizedConversionCastOp>(loc, resultType, inputs)
+    return UnrealizedConversionCastOp::create(builder, loc, resultType, inputs)
         .getResult(0);
   }
 };

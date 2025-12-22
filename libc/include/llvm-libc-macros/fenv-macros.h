@@ -14,9 +14,10 @@
 #define FE_INVALID 0x4
 #define FE_OVERFLOW 0x8
 #define FE_UNDERFLOW 0x10
-#define __FE_DENORM 0x20
+#define FE_DENORM 0x20
 #define FE_ALL_EXCEPT                                                          \
-  (FE_DIVBYZERO | FE_INEXACT | FE_INVALID | FE_OVERFLOW | FE_UNDERFLOW)
+  (FE_DIVBYZERO | FE_INEXACT | FE_INVALID | FE_OVERFLOW | FE_UNDERFLOW |       \
+   FE_DENORM)
 
 #define FE_DOWNWARD 0x400
 #define FE_TONEAREST 0

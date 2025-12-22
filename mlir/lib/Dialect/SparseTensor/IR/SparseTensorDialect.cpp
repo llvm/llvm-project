@@ -21,10 +21,8 @@
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/DialectImplementation.h"
-#include "mlir/IR/Matchers.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/PatternMatch.h"
-#include "llvm/ADT/Bitset.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/FormatVariadic.h"
 
@@ -49,7 +47,7 @@ using namespace mlir::sparse_tensor;
 // Support hashing LevelType such that SparseTensorEncodingAttr can be hashed as
 // well.
 namespace mlir::sparse_tensor {
-llvm::hash_code hash_value(LevelType lt) {
+static llvm::hash_code hash_value(LevelType lt) {
   return llvm::hash_value(static_cast<uint64_t>(lt));
 }
 } // namespace mlir::sparse_tensor
@@ -518,7 +516,7 @@ SparseTensorEncodingAttr::translateShape(ArrayRef<int64_t> srcShape,
   SmallVector<AffineExpr> dimRep;
   dimRep.reserve(srcShape.size());
   for (int64_t sz : srcShape) {
-    if (!ShapedType::isDynamic(sz)) {
+    if (ShapedType::isStatic(sz)) {
       // Push back the max coordinate for the given dimension/level size.
       dimRep.push_back(getAffineConstantExpr(sz - 1, getContext()));
     } else {
@@ -561,7 +559,8 @@ SparseTensorEncodingAttr::translateCrds(OpBuilder &builder, Location loc,
   SmallVector<Type> retType(
       dir == CrdTransDirectionKind::lvl2dim ? getDimRank() : getLvlRank(),
       builder.getIndexType());
-  auto transOp = builder.create<CrdTranslateOp>(loc, retType, crds, dir, *this);
+  auto transOp =
+      CrdTranslateOp::create(builder, loc, retType, crds, dir, *this);
   return transOp.getOutCrds();
 }
 
@@ -1483,7 +1482,7 @@ LogicalResult CrdTranslateOp::fold(FoldAdaptor adaptor,
 
 void LvlOp::build(OpBuilder &builder, OperationState &state, Value source,
                   int64_t index) {
-  Value val = builder.create<arith::ConstantIndexOp>(state.location, index);
+  Value val = arith::ConstantIndexOp::create(builder, state.location, index);
   return build(builder, state, source, val);
 }
 
@@ -1531,7 +1530,7 @@ OpFoldResult LvlOp::fold(FoldAdaptor adaptor) {
   };
 
   SmallVector<Size> lvlShape = stt.getLvlShape();
-  if (!ShapedType::isDynamic(lvlShape[lvl]))
+  if (ShapedType::isStatic(lvlShape[lvl]))
     return getIndexAttr(lvlShape[lvl]);
 
   return {};
@@ -1876,7 +1875,7 @@ LogicalResult ConcatenateOp::verify() {
   for (Dimension d = 0; d < dimRank; d++) {
     const Size dstSh = dstTp.getDimShape()[d];
     if (d == concatDim) {
-      if (!ShapedType::isDynamic(dstSh)) {
+      if (ShapedType::isStatic(dstSh)) {
         // If we reach here, then all inputs have static shapes.  So we
         // can use `getDimShape()[d]` instead of `*getDynamicDimSize(d)`
         // to avoid redundant assertions in the loop.
@@ -1894,7 +1893,7 @@ LogicalResult ConcatenateOp::verify() {
       Size prev = dstSh;
       for (const auto src : getInputs()) {
         const auto sh = getSparseTensorType(src).getDimShape()[d];
-        if (!ShapedType::isDynamic(prev) && sh != prev)
+        if (ShapedType::isStatic(prev) && sh != prev)
           return emitError("All dimensions (expect for the concatenating one) "
                            "should be equal.");
         prev = sh;
@@ -2058,7 +2057,7 @@ LogicalResult SortOp::verify() {
   const auto checkDim = [&](Value v, Size minSize,
                             const char *message) -> LogicalResult {
     const Size sh = getMemRefType(v).getShape()[0];
-    if (!ShapedType::isDynamic(sh) && sh < minSize)
+    if (ShapedType::isStatic(sh) && sh < minSize)
       return emitError(
           llvm::formatv("{0} got {1} < {2}", message, sh, minSize));
     return success();
@@ -2598,7 +2597,7 @@ std::optional<MutableArrayRef<OpOperand>> IterateOp::getYieldedValuesMutable() {
 
 std::optional<ResultRange> IterateOp::getLoopResults() { return getResults(); }
 
-OperandRange IterateOp::getEntrySuccessorOperands(RegionBranchPoint point) {
+OperandRange IterateOp::getEntrySuccessorOperands(RegionSuccessor successor) {
   return getInitArgs();
 }
 
@@ -2608,7 +2607,7 @@ void IterateOp::getSuccessorRegions(RegionBranchPoint point,
   // or back into the operation itself.
   regions.push_back(RegionSuccessor(&getRegion(), getRegionIterArgs()));
   // It is possible for loop not to enter the body.
-  regions.push_back(RegionSuccessor(getResults()));
+  regions.push_back(RegionSuccessor(getOperation(), getResults()));
 }
 
 void CoIterateOp::build(OpBuilder &builder, OperationState &odsState,

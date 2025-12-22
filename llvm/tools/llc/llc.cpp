@@ -15,6 +15,8 @@
 #include "NewPMDriver.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/ADT/Statistic.h"
+#include "llvm/Analysis/RuntimeLibcallInfo.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/CodeGen/CommandFlags.h"
 #include "llvm/CodeGen/LinkAllAsmWriterComponents.h"
@@ -24,6 +26,7 @@
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
+#include "llvm/Extensions/PassPlugin.h"
 #include "llvm/IR/AutoUpgrade.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DiagnosticInfo.h"
@@ -44,6 +47,8 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/InitLLVM.h"
+#include "llvm/Support/PGOOptions.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/PluginLoader.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/TargetSelect.h"
@@ -56,37 +61,38 @@
 #include "llvm/TargetParser/SubtargetFeature.h"
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Utils/Cloning.h"
+#include <cassert>
 #include <memory>
 #include <optional>
 using namespace llvm;
 
 static codegen::RegisterCodeGenFlags CGF;
+static codegen::RegisterSaveStatsFlag SSF;
 
 // General options for llc.  Other pass-specific options are specified
 // within the corresponding llc passes, and target-specific options
 // and back-end code generation options are specified with the target machine.
 //
 static cl::opt<std::string>
-InputFilename(cl::Positional, cl::desc("<input bitcode>"), cl::init("-"));
+    InputFilename(cl::Positional, cl::desc("<input bitcode>"), cl::init("-"));
 
 static cl::list<std::string>
     InstPrinterOptions("M", cl::desc("InstPrinter options"));
 
 static cl::opt<std::string>
-InputLanguage("x", cl::desc("Input language ('ir' or 'mir')"));
+    InputLanguage("x", cl::desc("Input language ('ir' or 'mir')"));
+
+static cl::opt<std::string> OutputFilename("o", cl::desc("Output filename"),
+                                           cl::value_desc("filename"));
 
 static cl::opt<std::string>
-OutputFilename("o", cl::desc("Output filename"), cl::value_desc("filename"));
-
-static cl::opt<std::string>
-    SplitDwarfOutputFile("split-dwarf-output",
-                         cl::desc(".dwo output filename"),
+    SplitDwarfOutputFile("split-dwarf-output", cl::desc(".dwo output filename"),
                          cl::value_desc("filename"));
 
 static cl::opt<unsigned>
-TimeCompilations("time-compilations", cl::Hidden, cl::init(1u),
-                 cl::value_desc("N"),
-                 cl::desc("Repeat compilation N times for timing"));
+    TimeCompilations("time-compilations", cl::Hidden, cl::init(1u),
+                     cl::value_desc("N"),
+                     cl::desc("Repeat compilation N times for timing"));
 
 static cl::opt<bool> TimeTrace("time-trace", cl::desc("Record time trace"));
 
@@ -123,7 +129,7 @@ static cl::opt<char>
              cl::Prefix, cl::init('2'));
 
 static cl::opt<std::string>
-TargetTriple("mtriple", cl::desc("Override target triple for module"));
+    TargetTriple("mtriple", cl::desc("Override target triple for module"));
 
 static cl::opt<std::string> SplitDwarfFile(
     "split-dwarf-file",
@@ -142,6 +148,10 @@ static cl::opt<bool>
 
 static cl::opt<bool> ShowMCEncoding("show-mc-encoding", cl::Hidden,
                                     cl::desc("Show encoding in .s output"));
+
+static cl::opt<unsigned>
+    OutputAsmVariant("output-asm-variant",
+                     cl::desc("Syntax variant to use for output printing"));
 
 static cl::opt<bool>
     DwarfDirectory("dwarf-directory", cl::Hidden,
@@ -162,6 +172,16 @@ static cl::opt<bool> DiscardValueNames(
     "discard-value-names",
     cl::desc("Discard names from Value (other than GlobalValue)."),
     cl::init(false), cl::Hidden);
+
+static cl::opt<bool>
+    PrintMIR2VecVocab("print-mir2vec-vocab", cl::Hidden,
+                      cl::desc("Print MIR2Vec vocabulary contents"),
+                      cl::init(false));
+
+static cl::opt<bool>
+    PrintMIR2Vec("print-mir2vec", cl::Hidden,
+                 cl::desc("Print MIR2Vec embeddings for functions"),
+                 cl::init(false));
 
 static cl::list<std::string> IncludeDirs("I", cl::desc("include search path"));
 
@@ -194,6 +214,9 @@ static cl::opt<std::string> RemarksFormat(
     cl::desc("The format used for serializing remarks (default: YAML)"),
     cl::value_desc("format"), cl::init("yaml"));
 
+static cl::list<std::string> PassPlugins("load-pass-plugin",
+                                         cl::desc("Load plugin library"));
+
 static cl::opt<bool> EnableNewPassManager(
     "enable-new-pm", cl::desc("Enable the new pass manager"), cl::init(false));
 
@@ -209,13 +232,12 @@ static cl::opt<std::string> PassPipeline(
 static cl::alias PassPipeline2("p", cl::aliasopt(PassPipeline),
                                cl::desc("Alias for -passes"));
 
-namespace {
-
-std::vector<std::string> &getRunPassNames() {
+static std::vector<std::string> &getRunPassNames() {
   static std::vector<std::string> RunPassNames;
   return RunPassNames;
 }
 
+namespace {
 struct RunPassOption {
   void operator=(const std::string &Val) const {
     if (Val.empty())
@@ -235,7 +257,41 @@ static cl::opt<RunPassOption, true, cl::parser<std::string>> RunPass(
     cl::desc("Run compiler only for specified passes (comma separated list)"),
     cl::value_desc("pass-name"), cl::location(RunPassOpt));
 
-static int compileModule(char **, LLVMContext &);
+// PGO command line options
+enum PGOKind {
+  NoPGO,
+  SampleUse,
+};
+
+static cl::opt<PGOKind>
+    PGOKindFlag("pgo-kind", cl::init(NoPGO), cl::Hidden,
+                cl::desc("The kind of profile guided optimization"),
+                cl::values(clEnumValN(NoPGO, "nopgo", "Do not use PGO."),
+                           clEnumValN(SampleUse, "pgo-sample-use-pipeline",
+                                      "Use sampled profile to guide PGO.")));
+
+// Function to set PGO options on TargetMachine based on command line flags.
+static void setPGOOptions(TargetMachine &TM) {
+  std::optional<PGOOptions> PGOOpt;
+
+  switch (PGOKindFlag) {
+  case SampleUse:
+    // Use default values for other PGOOptions parameters. This parameter
+    // is used to test that PGO data is preserved at -O0.
+    PGOOpt = PGOOptions("", "", "", "", PGOOptions::SampleUse,
+                        PGOOptions::NoCSAction);
+    break;
+  case NoPGO:
+    PGOOpt = std::nullopt;
+    break;
+  }
+
+  if (PGOOpt)
+    TM.setPGOOption(PGOOpt);
+}
+
+static int compileModule(char **argv, SmallVectorImpl<PassPlugin> &,
+                         LLVMContext &Context, std::string &OutputFilename);
 
 [[noreturn]] static void reportError(Twine Msg, StringRef Filename = "") {
   SmallString<256> Prefix;
@@ -255,9 +311,7 @@ static int compileModule(char **, LLVMContext &);
   llvm_unreachable("reportError() should not return");
 }
 
-static std::unique_ptr<ToolOutputFile> GetOutputStream(const char *TargetName,
-                                                       Triple::OSType OS,
-                                                       const char *ProgName) {
+static std::unique_ptr<ToolOutputFile> GetOutputStream(Triple::OSType OS) {
   // If we don't yet have an output filename, make one.
   if (OutputFilename.empty()) {
     if (InputFilename == "-")
@@ -306,11 +360,8 @@ static std::unique_ptr<ToolOutputFile> GetOutputStream(const char *TargetName,
   if (!Binary)
     OpenFlags |= sys::fs::OF_TextWithCRLF;
   auto FDOut = std::make_unique<ToolOutputFile>(OutputFilename, EC, OpenFlags);
-  if (EC) {
+  if (EC)
     reportError(EC.message());
-    return nullptr;
-  }
-
   return FDOut;
 }
 
@@ -349,6 +400,14 @@ int main(int argc, char **argv) {
   // Initialize debugging passes.
   initializeScavengerTestPass(*Registry);
 
+  SmallVector<PassPlugin, 1> PluginList;
+  PassPlugins.setCallback([&](const std::string &PluginPath) {
+    auto Plugin = PassPlugin::Load(PluginPath);
+    if (!Plugin)
+      reportFatalUsageError(Plugin.takeError());
+    PluginList.emplace_back(Plugin.get());
+  });
+
   // Register the Target and CPU printer for --version.
   cl::AddExtraVersionPrinter(sys::printDefaultTargetAndDetectedCPU);
   // Register the target printer for --version.
@@ -383,13 +442,16 @@ int main(int argc, char **argv) {
   // Set a diagnostic handler that doesn't exit on the first error
   Context.setDiagnosticHandler(std::make_unique<LLCDiagnosticHandler>());
 
-  Expected<std::unique_ptr<ToolOutputFile>> RemarksFileOrErr =
+  Expected<LLVMRemarkFileHandle> RemarksFileOrErr =
       setupLLVMOptimizationRemarks(Context, RemarksFilename, RemarksPasses,
                                    RemarksFormat, RemarksWithHotness,
                                    RemarksHotnessThreshold);
   if (Error E = RemarksFileOrErr.takeError())
     reportError(std::move(E), RemarksFilename);
-  std::unique_ptr<ToolOutputFile> RemarksFile = std::move(*RemarksFileOrErr);
+  LLVMRemarkFileHandle RemarksFile = std::move(*RemarksFileOrErr);
+
+  codegen::MaybeEnableStatistics();
+  std::string OutputFilename;
 
   if (InputLanguage != "" && InputLanguage != "ir" && InputLanguage != "mir")
     reportError("input language must be '', 'IR' or 'MIR'");
@@ -397,16 +459,17 @@ int main(int argc, char **argv) {
   // Compile the module TimeCompilations times to give better compile time
   // metrics.
   for (unsigned I = TimeCompilations; I; --I)
-    if (int RetVal = compileModule(argv, Context))
+    if (int RetVal = compileModule(argv, PluginList, Context, OutputFilename))
       return RetVal;
 
   if (RemarksFile)
     RemarksFile->keep();
-  return 0;
+
+  return codegen::MaybeSaveStatistics(OutputFilename, "llc");
 }
 
-static bool addPass(PassManagerBase &PM, const char *argv0,
-                    StringRef PassName, TargetPassConfig &TPC) {
+static bool addPass(PassManagerBase &PM, const char *argv0, StringRef PassName,
+                    TargetPassConfig &TPC) {
   if (PassName == "none")
     return false;
 
@@ -434,7 +497,8 @@ static bool addPass(PassManagerBase &PM, const char *argv0,
   return false;
 }
 
-static int compileModule(char **argv, LLVMContext &Context) {
+static int compileModule(char **argv, SmallVectorImpl<PassPlugin> &PluginList,
+                         LLVMContext &Context, std::string &OutputFilename) {
   // Load the module to be compiled...
   SMDiagnostic Err;
   std::unique_ptr<Module> M;
@@ -495,11 +559,19 @@ static int compileModule(char **argv, LLVMContext &Context) {
                     InputFilename);
     }
 
+    if (TheTriple.isX86() &&
+        codegen::getFuseFPOps() != FPOpFusion::FPOpFusionMode::Standard)
+      WithColor::warning(errs(), argv[0])
+          << "X86 backend ignores --fp-contract setting; use IR fast-math "
+             "flags instead.";
+
     Options.BinutilsVersion =
         TargetMachine::parseBinutilsVersion(BinutilsVersion);
     Options.MCOptions.ShowMCEncoding = ShowMCEncoding;
     Options.MCOptions.AsmVerbose = AsmVerbose;
     Options.MCOptions.PreserveAsmComments = PreserveComments;
+    if (OutputAsmVariant.getNumOccurrences())
+      Options.MCOptions.OutputAsmVariant = OutputAsmVariant;
     Options.MCOptions.IASSearchPaths = IncludeDirs;
     Options.MCOptions.InstPrinterOptions = InstPrinterOptions;
     Options.MCOptions.SplitDwarfFile = SplitDwarfFile;
@@ -548,6 +620,9 @@ static int compileModule(char **argv, LLVMContext &Context) {
           TheTriple, CPUStr, FeaturesStr, Options, RM, CM, OLvl));
       assert(Target && "Could not allocate target machine!");
 
+      // Set PGO options based on command line flags
+      setPGOOptions(*Target);
+
       return Target->createDataLayout().getStringRepresentation();
     };
     if (InputLanguage == "mir" ||
@@ -591,6 +666,9 @@ static int compileModule(char **argv, LLVMContext &Context) {
         TheTriple, CPUStr, FeaturesStr, Options, RM, CM, OLvl));
     assert(Target && "Could not allocate target machine!");
 
+    // Set PGO options based on command line flags
+    setPGOOptions(*Target);
+
     // If we don't have a module then just exit now. We do this down
     // here since the CPU/Feature help is underneath the target machine
     // creation.
@@ -602,12 +680,15 @@ static int compileModule(char **argv, LLVMContext &Context) {
     Target->Options.FloatABIType = codegen::getFloatABIForCalls();
 
   // Figure out where we are going to send the output.
-  std::unique_ptr<ToolOutputFile> Out =
-      GetOutputStream(TheTarget->getName(), TheTriple.getOS(), argv[0]);
-  if (!Out) return 1;
+  std::unique_ptr<ToolOutputFile> Out = GetOutputStream(TheTriple.getOS());
+  if (!Out)
+    return 1;
 
   // Ensure the filename is passed down to CodeViewDebug.
   Target->Options.ObjectFilenameForDebug = Out->outputFilename();
+
+  // Return a copy of the output filename via the output param
+  OutputFilename = Out->outputFilename();
 
   // Tell target that this tool is not necessarily used with argument ABI
   // compliance (i.e. narrow integer argument extensions).
@@ -617,13 +698,13 @@ static int compileModule(char **argv, LLVMContext &Context) {
   if (!SplitDwarfOutputFile.empty()) {
     std::error_code EC;
     DwoOut = std::make_unique<ToolOutputFile>(SplitDwarfOutputFile, EC,
-                                               sys::fs::OF_None);
+                                              sys::fs::OF_None);
     if (EC)
       reportError(EC.message(), SplitDwarfOutputFile);
   }
 
   // Add an appropriate TargetLibraryInfo pass for the module's triple.
-  TargetLibraryInfoImpl TLII(M->getTargetTriple());
+  TargetLibraryInfoImpl TLII(M->getTargetTriple(), Target->Options.VecLib);
 
   // The -disable-simplify-libcalls flag actually disables all builtin optzns.
   if (DisableSimplifyLibCalls)
@@ -637,6 +718,17 @@ static int compileModule(char **argv, LLVMContext &Context) {
   // Override function attributes based on CPUStr, FeaturesStr, and command line
   // flags.
   codegen::setFunctionAttributes(CPUStr, FeaturesStr, *M);
+
+  for (auto &Plugin : PluginList) {
+    CodeGenFileType CGFT = codegen::getFileType();
+    if (Plugin.invokePreCodeGenCallback(*M, *Target, CGFT, Out->os())) {
+      // TODO: Deduplicate code with below and the NewPMDriver.
+      if (Context.getDiagHandlerPtr()->HasErrors)
+        exit(1);
+      Out->keep();
+      return 0;
+    }
+  }
 
   if (mc::getExplicitRelaxAll() &&
       codegen::getFileType() != CodeGenFileType::ObjectFile)
@@ -659,6 +751,10 @@ static int compileModule(char **argv, LLVMContext &Context) {
   // Build up all of the passes that we want to do to the module.
   legacy::PassManager PM;
   PM.add(new TargetLibraryInfoWrapperPass(TLII));
+  PM.add(new RuntimeLibraryInfoWrapper(
+      M->getTargetTriple(), Target->Options.ExceptionModel,
+      Target->Options.FloatABIType, Target->Options.EABIVersion,
+      Options.MCOptions.ABIName, Target->Options.VecLib));
 
   {
     raw_pwrite_stream *OS = &Out->os();
@@ -719,16 +815,39 @@ static int compileModule(char **argv, LLVMContext &Context) {
       }
       TPC.setInitialized();
       PM.add(createPrintMIRPass(*OS));
+
+      // Add MIR2Vec vocabulary printer if requested
+      if (PrintMIR2VecVocab) {
+        PM.add(createMIR2VecVocabPrinterLegacyPass(errs()));
+      }
+
+      // Add MIR2Vec printer if requested
+      if (PrintMIR2Vec) {
+        PM.add(createMIR2VecPrinterLegacyPass(errs()));
+      }
+
       PM.add(createFreeMachineFunctionPass());
-    } else if (Target->addPassesToEmitFile(
-                   PM, *OS, DwoOut ? &DwoOut->os() : nullptr,
-                   codegen::getFileType(), NoVerify, MMIWP)) {
-      if (!HasMCErrors)
-        reportError("target does not support generation of this file type");
+    } else {
+      if (Target->addPassesToEmitFile(PM, *OS, DwoOut ? &DwoOut->os() : nullptr,
+                                      codegen::getFileType(), NoVerify,
+                                      MMIWP)) {
+        if (!HasMCErrors)
+          reportError("target does not support generation of this file type");
+      }
+
+      // Add MIR2Vec vocabulary printer if requested
+      if (PrintMIR2VecVocab) {
+        PM.add(createMIR2VecVocabPrinterLegacyPass(errs()));
+      }
+
+      // Add MIR2Vec printer if requested
+      if (PrintMIR2Vec) {
+        PM.add(createMIR2VecPrinterLegacyPass(errs()));
+      }
     }
 
-    const_cast<TargetLoweringObjectFile *>(Target->getObjFileLowering())
-        ->Initialize(MMIWP->getMMI().getContext(), *Target);
+    Target->getObjFileLowering()->Initialize(MMIWP->getMMI().getContext(),
+                                             *Target);
     if (MIR) {
       assert(MMIWP && "Forgot to create MMIWP?");
       if (MIR->parseMachineFunctions(*M, MMIWP->getMMI()))

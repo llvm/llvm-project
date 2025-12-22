@@ -177,6 +177,22 @@ struct TestOpAsmInterface : public OpAsmDialectInterface {
   //===------------------------------------------------------------------===//
 
   AliasResult getAlias(Attribute attr, raw_ostream &os) const final {
+    if (auto nestedAttr = dyn_cast<TestNestedAliasAttr>(attr)) {
+      std::optional<StringRef> aliasName =
+          StringSwitch<std::optional<StringRef>>(nestedAttr.getValue())
+              .Case("alias_test:trailing_digit_conflict_base",
+                    StringRef("unique_base"))
+              .Case("alias_test:trailing_digit_conflict_base_conflict",
+                    StringRef("unique_base"))
+              .Case("alias_test:trailing_digit_conflict_base1",
+                    StringRef("unique_base1"))
+              .Default(std::nullopt);
+      if (!aliasName)
+        return AliasResult::NoAlias;
+      os << *aliasName;
+      return AliasResult::FinalAlias;
+    }
+
     StringAttr strAttr = dyn_cast<StringAttr>(attr);
     if (!strAttr)
       return AliasResult::NoAlias;
@@ -354,7 +370,7 @@ struct TestInlinerInterface : public DialectInlinerInterface {
         !(input.getType().isSignlessInteger(16) ||
           input.getType().isSignlessInteger(32)))
       return nullptr;
-    return builder.create<TestCastOp>(conversionLoc, resultType, input);
+    return TestCastOp::create(builder, conversionLoc, resultType, input);
   }
 
   Value handleArgument(OpBuilder &builder, Operation *call, Operation *callable,
@@ -362,16 +378,16 @@ struct TestInlinerInterface : public DialectInlinerInterface {
                        DictionaryAttr argumentAttrs) const final {
     if (!argumentAttrs.contains("test.handle_argument"))
       return argument;
-    return builder.create<TestTypeChangerOp>(call->getLoc(), argument.getType(),
-                                             argument);
+    return TestTypeChangerOp::create(builder, call->getLoc(),
+                                     argument.getType(), argument);
   }
 
   Value handleResult(OpBuilder &builder, Operation *call, Operation *callable,
                      Value result, DictionaryAttr resultAttrs) const final {
     if (!resultAttrs.contains("test.handle_result"))
       return result;
-    return builder.create<TestTypeChangerOp>(call->getLoc(), result.getType(),
-                                             result);
+    return TestTypeChangerOp::create(builder, call->getLoc(), result.getType(),
+                                     result);
   }
 
   void processInlinedCallBlocks(

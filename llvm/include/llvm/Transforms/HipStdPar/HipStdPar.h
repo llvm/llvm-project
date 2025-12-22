@@ -41,6 +41,13 @@ public:
   static bool isRequired() { return true; }
 };
 
+class HipStdParMathFixupPass : public PassInfoMixin<HipStdParMathFixupPass> {
+public:
+  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
+
+  static bool isRequired() { return true; }
+};
+
 } // namespace llvm
 
 #endif // LLVM_TRANSFORMS_HIPSTDPAR_HIPSTDPAR_H

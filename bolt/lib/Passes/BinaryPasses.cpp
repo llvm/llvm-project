@@ -60,7 +60,12 @@ static cl::opt<DynoStatsSortOrder> DynoStatsSortOrderOpt(
     "print-sorted-by-order",
     cl::desc("use ascending or descending order when printing functions "
              "ordered by dyno stats"),
-    cl::init(DynoStatsSortOrder::Descending), cl::cat(BoltOptCategory));
+    cl::init(DynoStatsSortOrder::Descending),
+    cl::values(clEnumValN(DynoStatsSortOrder::Ascending, "ascending",
+                          "Ascending order"),
+               clEnumValN(DynoStatsSortOrder::Descending, "descending",
+                          "Descending order")),
+    cl::cat(BoltOptCategory));
 
 cl::list<std::string>
 HotTextMoveSections("hot-text-move-sections",
@@ -341,13 +346,16 @@ void EliminateUnreachableBlocks::runOnFunction(BinaryFunction &Function) {
   uint64_t Bytes;
   Function.markUnreachableBlocks();
   LLVM_DEBUG({
+    bool HasInvalidBB = false;
     for (BinaryBasicBlock &BB : Function) {
       if (!BB.isValid()) {
+        HasInvalidBB = true;
         dbgs() << "BOLT-INFO: UCE found unreachable block " << BB.getName()
                << " in function " << Function << "\n";
-        Function.dump();
       }
     }
+    if (HasInvalidBB)
+      Function.dump();
   });
   BinaryContext::IndependentCodeEmitter Emitter =
       BC.createIndependentMCCodeEmitter();
@@ -546,6 +554,41 @@ Error FixupBranches::runOnFunctions(BinaryContext &BC) {
   return Error::success();
 }
 
+Error PopulateOutputFunctions::runOnFunctions(BinaryContext &BC) {
+  BinaryFunctionListType &OutputFunctions = BC.getOutputBinaryFunctions();
+
+  assert(OutputFunctions.empty() && "Output function list already initialized");
+
+  OutputFunctions.reserve(BC.getBinaryFunctions().size() +
+                          BC.getInjectedBinaryFunctions().size());
+  llvm::transform(llvm::make_second_range(BC.getBinaryFunctions()),
+                  std::back_inserter(OutputFunctions),
+                  [](BinaryFunction &BF) { return &BF; });
+
+  llvm::erase_if(OutputFunctions,
+                 [&BC](BinaryFunction *BF) { return !BC.shouldEmit(*BF); });
+
+  llvm::stable_sort(OutputFunctions, compareBinaryFunctionByIndex);
+
+  llvm::copy(BC.getInjectedBinaryFunctions(),
+             std::back_inserter(OutputFunctions));
+
+  // Place hot text movers in front.
+  if (opts::HotText) {
+    std::stable_partition(
+        OutputFunctions.begin(), OutputFunctions.end(),
+        [](const BinaryFunction *A) { return opts::isHotTextMover(*A); });
+  }
+
+  if (opts::HotFunctionsAtEnd) {
+    std::stable_partition(
+        OutputFunctions.begin(), OutputFunctions.end(),
+        [](const BinaryFunction *A) { return !A->hasValidIndex(); });
+  }
+
+  return Error::success();
+}
+
 Error FinalizeFunctions::runOnFunctions(BinaryContext &BC) {
   std::atomic<bool> HasFatal{false};
   ParallelUtilities::WorkFuncTy WorkFun = [&](BinaryFunction &BF) {
@@ -662,7 +705,7 @@ Error CleanMCState::runOnFunctions(BinaryContext &BC) {
     if (S->isDefined()) {
       LLVM_DEBUG(dbgs() << "BOLT-DEBUG: Symbol \"" << S->getName()
                         << "\" is already defined\n");
-      const_cast<MCSymbol *>(S)->setUndefined();
+      const_cast<MCSymbol *>(S)->setFragment(nullptr);
     }
     if (S->isRegistered()) {
       LLVM_DEBUG(dbgs() << "BOLT-DEBUG: Symbol \"" << S->getName()
@@ -1268,13 +1311,6 @@ Error SimplifyRODataLoads::runOnFunctions(BinaryContext &BC) {
 }
 
 Error AssignSections::runOnFunctions(BinaryContext &BC) {
-  for (BinaryFunction *Function : BC.getInjectedBinaryFunctions()) {
-    if (!Function->isPatch()) {
-      Function->setCodeSectionName(BC.getInjectedCodeSectionName());
-      Function->setColdCodeSectionName(BC.getInjectedColdCodeSectionName());
-    }
-  }
-
   // In non-relocation mode functions have pre-assigned section names.
   if (!BC.HasRelocations)
     return Error::success();
@@ -1500,12 +1536,6 @@ Error PrintProgramStats::runOnFunctions(BinaryContext &BC) {
   if (NumAllStaleFunctions) {
     const float PctStale =
         NumAllStaleFunctions / (float)NumAllProfiledFunctions * 100.0f;
-    const float PctStaleFuncsWithEqualBlockCount =
-        (float)BC.Stats.NumStaleFuncsWithEqualBlockCount /
-        NumAllStaleFunctions * 100.0f;
-    const float PctStaleBlocksWithEqualIcount =
-        (float)BC.Stats.NumStaleBlocksWithEqualIcount /
-        BC.Stats.NumStaleBlocks * 100.0f;
     auto printErrorOrWarning = [&]() {
       if (PctStale > opts::StaleThreshold)
         BC.errs() << "BOLT-ERROR: ";
@@ -1528,17 +1558,6 @@ Error PrintProgramStats::runOnFunctions(BinaryContext &BC) {
                 << "%) belong to functions with invalid"
                    " (possibly stale) profile.\n";
     }
-    BC.outs() << "BOLT-INFO: " << BC.Stats.NumStaleFuncsWithEqualBlockCount
-              << " stale function"
-              << (BC.Stats.NumStaleFuncsWithEqualBlockCount == 1 ? "" : "s")
-              << format(" (%.1f%% of all stale)",
-                        PctStaleFuncsWithEqualBlockCount)
-              << " have matching block count.\n";
-    BC.outs() << "BOLT-INFO: " << BC.Stats.NumStaleBlocksWithEqualIcount
-              << " stale block"
-              << (BC.Stats.NumStaleBlocksWithEqualIcount == 1 ? "" : "s")
-              << format(" (%.1f%% of all stale)", PctStaleBlocksWithEqualIcount)
-              << " have matching icount.\n";
     if (PctStale > opts::StaleThreshold) {
       return createFatalBOLTError(
           Twine("BOLT-ERROR: stale functions exceed specified threshold of ") +
@@ -1625,7 +1644,7 @@ Error PrintProgramStats::runOnFunctions(BinaryContext &BC) {
   }
 
   if (!opts::PrintSortedBy.empty()) {
-    std::vector<BinaryFunction *> Functions;
+    BinaryFunctionListType Functions;
     std::map<const BinaryFunction *, DynoStats> Stats;
 
     for (auto &BFI : BC.getBinaryFunctions()) {
@@ -1716,7 +1735,7 @@ Error PrintProgramStats::runOnFunctions(BinaryContext &BC) {
 
   // Collect and print information about suboptimal code layout on input.
   if (opts::ReportBadLayout) {
-    std::vector<BinaryFunction *> SuboptimalFuncs;
+    BinaryFunctionListType SuboptimalFuncs;
     for (auto &BFI : BC.getBinaryFunctions()) {
       BinaryFunction &BF = BFI.second;
       if (!BF.hasValidProfile())
@@ -1843,7 +1862,7 @@ Error StripRepRet::runOnFunctions(BinaryContext &BC) {
 }
 
 Error InlineMemcpy::runOnFunctions(BinaryContext &BC) {
-  if (!BC.isX86())
+  if (!BC.isX86() && !BC.isAArch64())
     return Error::success();
 
   uint64_t NumInlined = 0;
@@ -1866,8 +1885,16 @@ Error InlineMemcpy::runOnFunctions(BinaryContext &BC) {
         const bool IsMemcpy8 = (CalleeSymbol->getName() == "_memcpy8");
         const bool IsTailCall = BC.MIB->isTailCall(Inst);
 
+        // Extract size from preceding instructions (AArch64 only).
+        // Pattern: MOV X2, #nb-bytes; BL memcpy src, dest, X2.
+        std::optional<uint64_t> KnownSize =
+            BC.MIB->findMemcpySizeInBytes(BB, II);
+
+        if (BC.isAArch64() && (!KnownSize.has_value() || *KnownSize > 64))
+          continue;
+
         const InstructionListType NewCode =
-            BC.MIB->createInlineMemcpy(IsMemcpy8);
+            BC.MIB->createInlineMemcpy(IsMemcpy8, KnownSize);
         II = BB.replaceInstruction(II, NewCode);
         std::advance(II, NewCode.size() - 1);
         if (IsTailCall) {

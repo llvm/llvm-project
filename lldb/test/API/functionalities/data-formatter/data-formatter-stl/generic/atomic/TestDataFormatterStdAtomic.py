@@ -10,6 +10,8 @@ from lldbsuite.test import lldbutil
 
 
 class StdAtomicTestCase(TestBase):
+    TEST_WITH_PDB_DEBUG_INFO = True
+
     def get_variable(self, name):
         var = self.frame().FindVariable(name)
         var.SetPreferDynamicValue(lldb.eDynamicCanRunTarget)
@@ -66,4 +68,10 @@ class StdAtomicTestCase(TestBase):
     @add_test_categories(["libc++"])
     def test_libcxx(self):
         self.build(dictionary={"USE_LIBCPP": 1})
+        self.do_test()
+
+    @add_test_categories(["msvcstl"])
+    def test_msvcstl(self):
+        # No flags, because the "msvcstl" category checks that the MSVC STL is used by default.
+        self.build()
         self.do_test()

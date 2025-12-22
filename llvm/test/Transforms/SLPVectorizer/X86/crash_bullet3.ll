@@ -7,7 +7,7 @@ target triple = "x86_64-apple-macosx10.8.0"
 %class.btVector3.23.221.463.485.507.573.595.683.727.749.815.837.991.1585.1607.1629.1651.1849.2047.2069.2091.2113 = type { [4 x float] }
 
 ; Function Attrs: ssp uwtable
-define void @_ZN11HullLibrary15CleanupVerticesEjPK9btVector3jRjPS0_fRS0_(ptr %vertices, i1 %arg) #0 align 2 {
+define void @_ZN11HullLibrary15CleanupVerticesEjPK9btVector3jRjPS0_fRS0_(ptr %vertices, i1 %arg) align 2 {
 ; CHECK-LABEL: @_ZN11HullLibrary15CleanupVerticesEjPK9btVector3jRjPS0_fRS0_(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[ARG:%.*]], label [[RETURN:%.*]], label [[IF_END:%.*]]
@@ -128,5 +128,3 @@ if.then17.2:                                      ; preds = %if.end22.1
 if.end22.2:                                       ; preds = %if.then17.2, %if.end22.1
   br i1 %arg, label %for.end36, label %for.body
 }
-
-attributes #0 = { ssp uwtable "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "unsafe-fp-math"="false" "use-soft-float"="false" }

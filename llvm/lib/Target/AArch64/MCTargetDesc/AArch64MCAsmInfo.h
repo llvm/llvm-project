@@ -164,6 +164,7 @@ enum {
   // ELF relocation specifiers in data directives:
   S_PLT          = 0x400,
   S_GOTPCREL,
+  S_FUNCINIT,
 
   // Mach-O @ relocation specifiers:
   S_MACHO_GOT,
@@ -181,7 +182,7 @@ enum {
 
 /// Return the string representation of the ELF relocation specifier
 /// (e.g. ":got:", ":lo12:").
-StringRef getSpecifierName(const MCSpecifierExpr &Expr);
+StringRef getSpecifierName(Specifier S);
 
 inline Specifier getSymbolLoc(Specifier S) {
   return static_cast<Specifier>(S & AArch64::S_SymLocBits);
@@ -199,15 +200,17 @@ class AArch64AuthMCExpr final : public MCSpecifierExpr {
   AArch64PACKey::ID Key;
 
   explicit AArch64AuthMCExpr(const MCExpr *Expr, uint16_t Discriminator,
-                             AArch64PACKey::ID Key, bool HasAddressDiversity)
-      : MCSpecifierExpr(Expr, HasAddressDiversity ? AArch64::S_AUTHADDR
-                                                  : AArch64::S_AUTH),
+                             AArch64PACKey::ID Key, bool HasAddressDiversity,
+                             SMLoc Loc)
+      : MCSpecifierExpr(
+            Expr, HasAddressDiversity ? AArch64::S_AUTHADDR : AArch64::S_AUTH,
+            Loc),
         Discriminator(Discriminator), Key(Key) {}
 
 public:
   static const AArch64AuthMCExpr *
   create(const MCExpr *Expr, uint16_t Discriminator, AArch64PACKey::ID Key,
-         bool HasAddressDiversity, MCContext &Ctx);
+         bool HasAddressDiversity, MCContext &Ctx, SMLoc Loc = SMLoc());
 
   AArch64PACKey::ID getKey() const { return Key; }
   uint16_t getDiscriminator() const { return Discriminator; }

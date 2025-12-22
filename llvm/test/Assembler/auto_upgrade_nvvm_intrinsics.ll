@@ -17,6 +17,8 @@ declare float @llvm.nvvm.fabs.f(float)
 declare float @llvm.nvvm.fabs.ftz.f(float)
 declare double @llvm.nvvm.fabs.d(double)
 
+declare float @llvm.nvvm.tanh.approx.f32(float)
+
 declare i16 @llvm.nvvm.max.s(i16, i16)
 declare i32 @llvm.nvvm.max.i(i32, i32)
 declare i64 @llvm.nvvm.max.ll(i64, i64)
@@ -85,6 +87,15 @@ declare void @llvm.nvvm.barrier(i32, i32)
 declare void @llvm.nvvm.barrier.sync(i32)
 declare void @llvm.nvvm.barrier.sync.cnt(i32, i32)
 
+declare i32 @llvm.nvvm.barrier0.popc(i32)
+declare i32 @llvm.nvvm.barrier0.and(i32)
+declare i32 @llvm.nvvm.barrier0.or(i32)
+
+declare float @llvm.nvvm.ex2.approx.f(float)
+declare double @llvm.nvvm.ex2.approx.d(double)
+declare <2 x half> @llvm.nvvm.ex2.approx.f16x2(<2 x half>)
+declare float @llvm.nvvm.ex2.approx.ftz.f(float)
+
 ; CHECK-LABEL: @simple_upgrade
 define void @simple_upgrade(i32 %a, i64 %b, i16 %c) {
 ; CHECK: call i32 @llvm.bitreverse.i32(i32 %a)
@@ -135,6 +146,13 @@ define void @fabs(float %a, double %b) {
   %r1 = call float @llvm.nvvm.fabs.f(float %a)
   %r2 = call float @llvm.nvvm.fabs.ftz.f(float %a)
   %r3 = call double @llvm.nvvm.fabs.d(double %b)
+  ret void
+}
+
+; CHECK-LABEL: @tanh
+define void @tanh(float %a) {
+; CHECK: call afn float @llvm.tanh.f32(float %a)
+  %r1 = call float @llvm.nvvm.tanh.approx.f32(float %a)
   ret void
 }
 
@@ -331,18 +349,44 @@ define void @nvvm_cp_async_bulk_tensor_g2s_tile(ptr addrspace(3) %d, ptr addrspa
   ret void
 }
 
-define void @cta_barriers(i32 %x, i32 %y) {
+define void @cta_barriers(i32 %x, i32 %y, i32 %z) {
 ; CHECK: call void @llvm.nvvm.barrier.cta.sync.aligned.all(i32 0)
 ; CHECK: call void @llvm.nvvm.barrier.cta.sync.aligned.all(i32 %x)
 ; CHECK: call void @llvm.nvvm.barrier.cta.sync.aligned.all(i32 %x)
 ; CHECK: call void @llvm.nvvm.barrier.cta.sync.aligned.count(i32 %x, i32 %y)
 ; CHECK: call void @llvm.nvvm.barrier.cta.sync.all(i32 %x)
 ; CHECK: call void @llvm.nvvm.barrier.cta.sync.count(i32 %x, i32 %y)
+
+; CHECK: %1 = icmp ne i32 %z, 0
+; CHECK: %2 = call i32 @llvm.nvvm.barrier.cta.red.popc.aligned.all(i32 0, i1 %1)
+; CHECK: %3 = icmp ne i32 %z, 0
+; CHECK: %4 = call i1 @llvm.nvvm.barrier.cta.red.and.aligned.all(i32 0, i1 %3)
+; CHECK: %5 = zext i1 %4 to i32
+; CHECK: %6 = icmp ne i32 %z, 0
+; CHECK: %7 = call i1 @llvm.nvvm.barrier.cta.red.or.aligned.all(i32 0, i1 %6)
+; CHECK: %8 = zext i1 %7 to i32
+
   call void @llvm.nvvm.barrier0()
   call void @llvm.nvvm.barrier.n(i32 %x)
   call void @llvm.nvvm.bar.sync(i32 %x)
   call void @llvm.nvvm.barrier(i32 %x, i32 %y)
   call void @llvm.nvvm.barrier.sync(i32 %x)
   call void @llvm.nvvm.barrier.sync.cnt(i32 %x, i32 %y)
+
+  %r1 = call i32 @llvm.nvvm.barrier0.popc(i32 %z)
+  %r2 = call i32 @llvm.nvvm.barrier0.and(i32 %z)
+  %r3 = call i32 @llvm.nvvm.barrier0.or(i32 %z)
+  ret void
+}
+
+define void @nvvm_ex2_approx(float %a, double %b, half %c, <2 x half> %d) {
+; CHECK: call float @llvm.nvvm.ex2.approx.f32(float %a)
+; CHECK: call double @llvm.nvvm.ex2.approx.f64(double %b)
+; CHECK: call <2 x half> @llvm.nvvm.ex2.approx.v2f16(<2 x half> %d)
+; CHECK: call float @llvm.nvvm.ex2.approx.ftz.f32(float %a)
+  %r1 = call float @llvm.nvvm.ex2.approx.f(float %a)
+  %r2 = call double @llvm.nvvm.ex2.approx.d(double %b)
+  %r3 = call <2 x half> @llvm.nvvm.ex2.approx.f16x2(<2 x half> %d)
+  %r4 = call float @llvm.nvvm.ex2.approx.ftz.f(float %a)
   ret void
 }

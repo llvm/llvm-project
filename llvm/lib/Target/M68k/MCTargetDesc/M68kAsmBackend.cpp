@@ -21,7 +21,6 @@
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCELFObjectWriter.h"
 #include "llvm/MC/MCExpr.h"
-#include "llvm/MC/MCFixupKindInfo.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCMachObjectWriter.h"
 #include "llvm/MC/MCObjectWriter.h"
@@ -50,14 +49,13 @@ public:
   M68kAsmBackend(const Target &T, const MCSubtargetInfo &STI)
       : MCAsmBackend(llvm::endianness::big),
         Allows32BitBranch(llvm::StringSwitch<bool>(STI.getCPU())
-                              .CasesLower("m68020", "m68030", "m68040", true)
+                              .CasesLower({"m68020", "m68030", "m68040"}, true)
                               .Default(false)) {}
 
   void applyFixup(const MCFragment &, const MCFixup &, const MCValue &,
-                  MutableArrayRef<char> Data, uint64_t Value,
-                  bool IsResolved) override;
+                  uint8_t *Data, uint64_t Value, bool IsResolved) override;
 
-  bool mayNeedRelaxation(const MCInst &Inst,
+  bool mayNeedRelaxation(unsigned Opcode, ArrayRef<MCOperand> Operands,
                          const MCSubtargetInfo &STI) const override;
 
   bool fixupNeedsRelaxation(const MCFixup &Fixup,
@@ -79,14 +77,13 @@ public:
 } // end anonymous namespace
 
 void M68kAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
-                                const MCValue &Target,
-                                MutableArrayRef<char> Data, uint64_t Value,
-                                bool IsResolved) {
+                                const MCValue &Target, uint8_t *Data,
+                                uint64_t Value, bool IsResolved) {
   if (!IsResolved)
     Asm->getWriter().recordRelocation(F, Fixup, Target, Value);
 
   unsigned Size = 1 << getFixupKindLog2Size(Fixup.getKind());
-  assert(Fixup.getOffset() + Size <= Data.size() && "Invalid fixup offset!");
+  assert(Fixup.getOffset() + Size <= F.getSize() && "Invalid fixup offset!");
   // Check that uppper bits are either all zeros or all ones.
   // Specifically ignore overflow/underflow as long as the leakage is
   // limited to the lower bits. This is to remain compatible with
@@ -96,8 +93,7 @@ void M68kAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
 
   // Write in Big Endian
   for (unsigned i = 0; i != Size; ++i)
-    Data[Fixup.getOffset() + i] =
-        uint8_t(static_cast<int64_t>(Value) >> ((Size - i - 1) * 8));
+    Data[i] = uint8_t(static_cast<int64_t>(Value) >> ((Size - i - 1) * 8));
 }
 
 /// cc—Carry clear      GE—Greater than or equal
@@ -108,8 +104,7 @@ void M68kAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
 /// MI—Minus            VC—Overflow clear
 ///                     LE—Less than or equal
 /// NE—Not equal        VS—Overflow set
-static unsigned getRelaxedOpcodeBranch(const MCInst &Inst) {
-  unsigned Op = Inst.getOpcode();
+static unsigned getRelaxedOpcodeBranch(unsigned Op) {
   switch (Op) {
   default:
     return Op;
@@ -180,37 +175,17 @@ static unsigned getRelaxedOpcodeBranch(const MCInst &Inst) {
   }
 }
 
-static unsigned getRelaxedOpcodeArith(const MCInst &Inst) {
-  unsigned Op = Inst.getOpcode();
+static unsigned getRelaxedOpcode(unsigned Opcode) {
   // NOTE there will be some relaxations for PCD and ARD mem for x20
-  return Op;
+  return getRelaxedOpcodeBranch(Opcode);
 }
 
-static unsigned getRelaxedOpcode(const MCInst &Inst) {
-  unsigned R = getRelaxedOpcodeArith(Inst);
-  if (R != Inst.getOpcode())
-    return R;
-  return getRelaxedOpcodeBranch(Inst);
-}
-
-bool M68kAsmBackend::mayNeedRelaxation(const MCInst &Inst,
+bool M68kAsmBackend::mayNeedRelaxation(unsigned Opcode, ArrayRef<MCOperand>,
                                        const MCSubtargetInfo &STI) const {
   // Branches can always be relaxed in either mode.
-  if (getRelaxedOpcodeBranch(Inst) != Inst.getOpcode())
-    return true;
+  return getRelaxedOpcode(Opcode) != Opcode;
 
-  // Check if this instruction is ever relaxable.
-  if (getRelaxedOpcodeArith(Inst) == Inst.getOpcode())
-    return false;
-
-  // Check if the relaxable operand has an expression. For the current set of
-  // relaxable instructions, the relaxable operand is always the last operand.
   // NOTE will change for x20 mem
-  unsigned RelaxableOp = Inst.getNumOperands() - 1;
-  if (Inst.getOperand(RelaxableOp).isExpr())
-    return true;
-
-  return false;
 }
 
 bool M68kAsmBackend::fixupNeedsRelaxation(const MCFixup &Fixup,
@@ -243,16 +218,8 @@ bool M68kAsmBackend::fixupNeedsRelaxation(const MCFixup &Fixup,
 // we can relax?
 void M68kAsmBackend::relaxInstruction(MCInst &Inst,
                                       const MCSubtargetInfo &STI) const {
-  unsigned RelaxedOp = getRelaxedOpcode(Inst);
-
-  if (RelaxedOp == Inst.getOpcode()) {
-    SmallString<256> Tmp;
-    raw_svector_ostream OS(Tmp);
-    Inst.dump_pretty(OS);
-    OS << "\n";
-    report_fatal_error("unexpected instruction to relax: " + OS.str());
-  }
-
+  unsigned RelaxedOp = getRelaxedOpcode(Inst.getOpcode());
+  assert(RelaxedOp != Inst.getOpcode());
   Inst.setOpcode(RelaxedOp);
 }
 

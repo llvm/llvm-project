@@ -16,27 +16,28 @@ define protected amdgpu_kernel void @_RSENC_PRInit______________________________
 ; CHECK-NEXT:    v_lshl_add_u32 v0, v0, 1, v0
 ; CHECK-NEXT:    v_cmp_ne_u32_e32 vcc, s4, v0
 ; CHECK-NEXT:    s_and_saveexec_b64 s[4:5], vcc
-; CHECK-NEXT:    s_cbranch_execz .LBB0_12
+; CHECK-NEXT:    s_cbranch_execz .LBB0_13
 ; CHECK-NEXT:  ; %bb.1: ; %if.end15
 ; CHECK-NEXT:    s_load_dword s4, s[8:9], 0x0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    s_bitcmp1_b32 s4, 0
 ; CHECK-NEXT:    s_cselect_b64 s[4:5], -1, 0
 ; CHECK-NEXT:    s_and_b64 vcc, exec, s[4:5]
-; CHECK-NEXT:    s_cbranch_vccnz .LBB0_12
-; CHECK-NEXT:  .LBB0_2: ; %while.cond.i
-; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    s_cbranch_vccnz .LBB0_13
+; CHECK-NEXT:  ; %bb.2: ; %lor.lhs.false17
 ; CHECK-NEXT:    s_cmp_eq_u32 s4, 0
-; CHECK-NEXT:    s_cbranch_scc1 .LBB0_2
-; CHECK-NEXT:  ; %bb.3: ; %if.end60
-; CHECK-NEXT:    s_cbranch_execz .LBB0_11
-; CHECK-NEXT:  ; %bb.4: ; %if.end5.i
-; CHECK-NEXT:    s_cbranch_scc0 .LBB0_11
-; CHECK-NEXT:  ; %bb.5: ; %if.end5.i314
-; CHECK-NEXT:    s_cbranch_scc0 .LBB0_11
-; CHECK-NEXT:  ; %bb.6: ; %if.end5.i338
-; CHECK-NEXT:    s_cbranch_scc0 .LBB0_11
-; CHECK-NEXT:  ; %bb.7: ; %if.end5.i362
+; CHECK-NEXT:  .LBB0_3: ; %while.cond.i
+; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    s_cbranch_scc1 .LBB0_3
+; CHECK-NEXT:  ; %bb.4: ; %if.end60
+; CHECK-NEXT:    s_cbranch_execz .LBB0_12
+; CHECK-NEXT:  ; %bb.5: ; %if.end5.i
+; CHECK-NEXT:    s_cbranch_scc0 .LBB0_12
+; CHECK-NEXT:  ; %bb.6: ; %if.end5.i314
+; CHECK-NEXT:    s_cbranch_scc0 .LBB0_12
+; CHECK-NEXT:  ; %bb.7: ; %if.end5.i338
+; CHECK-NEXT:    s_cbranch_scc0 .LBB0_12
+; CHECK-NEXT:  ; %bb.8: ; %if.end5.i362
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0
 ; CHECK-NEXT:    s_getpc_b64 s[4:5]
 ; CHECK-NEXT:    s_add_u32 s4, s4, _RSENC_gDcd_______________________________@rel32@lo+1157
@@ -46,23 +47,23 @@ define protected amdgpu_kernel void @_RSENC_PRInit______________________________
 ; CHECK-NEXT:    buffer_store_byte v0, v0, s[0:3], 0 offen
 ; CHECK-NEXT:    s_waitcnt vmcnt(1)
 ; CHECK-NEXT:    buffer_store_byte v1, off, s[0:3], 0 offset:257
-; CHECK-NEXT:    s_cbranch_scc0 .LBB0_11
-; CHECK-NEXT:  ; %bb.8: ; %if.end5.i400
+; CHECK-NEXT:    s_cbranch_scc0 .LBB0_12
+; CHECK-NEXT:  ; %bb.9: ; %if.end5.i400
 ; CHECK-NEXT:    flat_load_ubyte v0, v[0:1]
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_cmp_eq_u16_e32 vcc, 0, v0
 ; CHECK-NEXT:    s_and_b64 exec, exec, vcc
-; CHECK-NEXT:    s_cbranch_execz .LBB0_11
-; CHECK-NEXT:  ; %bb.9: ; %if.then404
+; CHECK-NEXT:    s_cbranch_execz .LBB0_12
+; CHECK-NEXT:  ; %bb.10: ; %if.then404
 ; CHECK-NEXT:    s_movk_i32 s4, 0x1000
-; CHECK-NEXT:  .LBB0_10: ; %for.body564
+; CHECK-NEXT:  .LBB0_11: ; %for.body564
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    s_sub_i32 s4, s4, 32
 ; CHECK-NEXT:    s_cmp_lg_u32 s4, 0
-; CHECK-NEXT:    s_cbranch_scc1 .LBB0_10
-; CHECK-NEXT:  .LBB0_11: ; %UnifiedUnreachableBlock
+; CHECK-NEXT:    s_cbranch_scc1 .LBB0_11
+; CHECK-NEXT:  .LBB0_12: ; %UnifiedUnreachableBlock
 ; CHECK-NEXT:    ; divergent unreachable
-; CHECK-NEXT:  .LBB0_12: ; %UnifiedReturnBlock
+; CHECK-NEXT:  .LBB0_13: ; %UnifiedReturnBlock
 ; CHECK-NEXT:    s_endpgm
 entry:
   %runtimeVersionCopy = alloca [128 x i8], align 16, addrspace(5)
