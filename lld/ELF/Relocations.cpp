@@ -717,7 +717,7 @@ static void addRelativeReloc(Ctx &ctx, InputSectionBase &isec,
     // field. This is described in further detail in:
     // https://github.com/ARM-software/abi-aa/blob/main/memtagabielf64/memtagabielf64.rst#841extended-semantics-of-r_aarch64_relative
     if (addend < 0 || static_cast<uint64_t>(addend) >= sym.getSize())
-      isec.addReloc({expr, type, offsetInSec, addend, &sym});
+      isec.relocations.push_back({expr, type, offsetInSec, addend, &sym});
     return;
   }
 
@@ -728,8 +728,12 @@ static void addRelativeReloc(Ctx &ctx, InputSectionBase &isec,
   // don't store the addend values, so we must write it to the relocated
   // address.
   if (part.relrDyn && isec.addralign >= 2 && offsetInSec % 2 == 0) {
-    part.relrDyn->addRelativeReloc<shard>(isec, offsetInSec, sym, addend, type,
-                                          expr);
+    isec.addReloc({expr, type, offsetInSec, addend, &sym});
+    if (shard)
+      part.relrDyn->relocsVec[parallel::getThreadIndex()].push_back(
+          {&isec, isec.relocs().size() - 1});
+    else
+      part.relrDyn->relocs.push_back({&isec, isec.relocs().size() - 1});
     return;
   }
   part.relaDyn->addRelativeReloc<shard>(ctx.target->relativeRel, isec,
@@ -1011,8 +1015,8 @@ void RelocScan::process(RelExpr expr, RelType type, uint64_t offset,
           // When symbol values are determined in
           // finalizeAddressDependentContent, some .relr.auth.dyn relocations
           // may be moved to .rela.dyn.
-          part.relrAuthDyn->addRelativeReloc(*sec, offset, sym, addend, type,
-                                             expr);
+          sec->addReloc({expr, type, offset, addend, &sym});
+          part.relrAuthDyn->relocs.push_back({sec, sec->relocs().size() - 1});
         } else {
           part.relaDyn->addReloc({R_AARCH64_AUTH_RELATIVE, sec, offset, false,
                                   sym, addend, R_ABS});
