@@ -3,6 +3,7 @@ set(LLVM_LINK_COMPONENTS
   AsmParser
   CodeGen
   Core
+  Extensions
   Instrumentation
   Passes
   Support
