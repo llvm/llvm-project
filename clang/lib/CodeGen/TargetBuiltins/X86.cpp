@@ -907,7 +907,7 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
     unsigned UseMXCSR = MXCSRMask & M;
     unsigned FRoundNoExc = FRoundNoExcMask & M;
 
-    if (UseMXCSR || FRoundNoExc) {
+    if (UseMXCSR || !FRoundNoExc) {
 
       Intrinsic::ID ID = Intrinsic::not_intrinsic;
 
@@ -942,7 +942,7 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
     unsigned UseMXCSR = MXCSRMask & M;
     unsigned FRoundNoExc = FRoundNoExcMask & M;
 
-    if (UseMXCSR || FRoundNoExc) {
+    if (UseMXCSR || !FRoundNoExc) {
 
       Intrinsic::ID ID = Intrinsic::not_intrinsic;
 
