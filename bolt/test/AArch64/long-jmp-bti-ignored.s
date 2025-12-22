@@ -14,9 +14,6 @@
 # CHECK: BOLT-ERROR: Cannot add BTI landing pad to ignored function far_away_func
 
   .section .text
-  .global _start
-  .global far_away_func
-
   .align 4
   .global _start
   .type _start, %function
