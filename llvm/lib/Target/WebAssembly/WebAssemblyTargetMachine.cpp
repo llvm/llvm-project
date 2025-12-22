@@ -334,6 +334,8 @@ private:
       else
         Ret += (StringRef("-") + KV.Key + ",").str();
     }
+    // remove trailing ','
+    Ret.pop_back();
     return Ret;
   }
 
