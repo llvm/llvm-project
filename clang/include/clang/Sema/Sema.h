@@ -66,6 +66,7 @@
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/SemaBase.h"
 #include "clang/Sema/SemaConcept.h"
+#include "clang/Sema/SemaRISCV.h"
 #include "clang/Sema/TypoCorrection.h"
 #include "clang/Sema/Weak.h"
 #include "llvm/ADT/APInt.h"
@@ -843,7 +844,7 @@ enum Specifier { None, CPU, Tune };
 enum AttrName { Target, TargetClones, TargetVersion };
 } // end namespace DiagAttrParams
 
-void inferNoReturnAttr(Sema &S, const Decl *D);
+void inferNoReturnAttr(Sema &S, Decl *D);
 
 #ifdef __GNUC__
 #pragma GCC diagnostic push
@@ -1069,8 +1070,7 @@ public:
   /// \param BlockType The type of the block expression, if D is a BlockDecl.
   PoppedFunctionScopePtr
   PopFunctionScopeInfo(const sema::AnalysisBasedWarnings::Policy *WP = nullptr,
-                       const Decl *D = nullptr,
-                       QualType BlockType = QualType());
+                       Decl *D = nullptr, QualType BlockType = QualType());
 
   sema::FunctionScopeInfo *getEnclosingFunction() const;
 
@@ -7405,6 +7405,9 @@ public:
   ExprResult CreateBuiltinArraySubscriptExpr(Expr *Base, SourceLocation LLoc,
                                              Expr *Idx, SourceLocation RLoc);
 
+  ExprResult CreateBuiltinMatrixSingleSubscriptExpr(Expr *Base, Expr *RowIdx,
+                                                    SourceLocation RBLoc);
+
   ExprResult CreateBuiltinMatrixSubscriptExpr(Expr *Base, Expr *RowIdx,
                                               Expr *ColumnIdx,
                                               SourceLocation RBLoc);
@@ -7865,7 +7868,9 @@ public:
   QualType CheckVectorLogicalOperands(ExprResult &LHS, ExprResult &RHS,
                                       SourceLocation Loc,
                                       BinaryOperatorKind Opc);
-
+  QualType CheckMatrixLogicalOperands(ExprResult &LHS, ExprResult &RHS,
+                                      SourceLocation Loc,
+                                      BinaryOperatorKind Opc);
   // type checking for sizeless vector binary operators.
   QualType CheckSizelessVectorOperands(ExprResult &LHS, ExprResult &RHS,
                                        SourceLocation Loc, bool IsCompAssign,
