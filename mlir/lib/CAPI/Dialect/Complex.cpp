@@ -31,11 +31,11 @@ MlirAttribute mlirComplexAttrDoubleGetChecked(MlirLocation loc, MlirType type,
 }
 
 double mlirComplexAttrGetRealDouble(MlirAttribute attr) {
-  return llvm::cast<complex::NumberAttr>(unwrap(attr)).getRealAsDouble();
+  return cast<complex::NumberAttr>(unwrap(attr)).getRealAsDouble();
 }
 
 double mlirComplexAttrGetImagDouble(MlirAttribute attr) {
-  return llvm::cast<complex::NumberAttr>(unwrap(attr)).getImagAsDouble();
+  return cast<complex::NumberAttr>(unwrap(attr)).getImagAsDouble();
 }
 
 MlirTypeID mlirComplexAttrGetTypeID(void) {
