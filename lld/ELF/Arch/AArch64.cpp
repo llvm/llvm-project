@@ -114,6 +114,7 @@ AArch64::AArch64(Ctx &ctx) : TargetInfo(ctx) {
   copyRel = R_AARCH64_COPY;
   relativeRel = R_AARCH64_RELATIVE;
   iRelativeRel = R_AARCH64_IRELATIVE;
+  iRelSymbolicRel = R_AARCH64_FUNCINIT64;
   gotRel = R_AARCH64_GLOB_DAT;
   pltRel = R_AARCH64_JUMP_SLOT;
   symbolicRel = R_AARCH64_ABS64;
@@ -137,6 +138,7 @@ RelExpr AArch64::getRelExpr(RelType type, const Symbol &s,
   case R_AARCH64_ABS16:
   case R_AARCH64_ABS32:
   case R_AARCH64_ABS64:
+  case R_AARCH64_FUNCINIT64:
   case R_AARCH64_ADD_ABS_LO12_NC:
   case R_AARCH64_LDST128_ABS_LO12_NC:
   case R_AARCH64_LDST16_ABS_LO12_NC:
@@ -267,7 +269,8 @@ bool AArch64::usesOnlyLowPageBits(RelType type) const {
 }
 
 RelType AArch64::getDynRel(RelType type) const {
-  if (type == R_AARCH64_ABS64 || type == R_AARCH64_AUTH_ABS64)
+  if (type == R_AARCH64_ABS64 || type == R_AARCH64_AUTH_ABS64 ||
+      type == R_AARCH64_FUNCINIT64)
     return type;
   return R_AARCH64_NONE;
 }
@@ -524,35 +527,17 @@ void AArch64::relocate(uint8_t *loc, const Relocation &rel,
     write32(ctx, loc, val);
     break;
   case R_AARCH64_ABS64:
-    // AArch64 relocations to tagged symbols have extended semantics, as
-    // described here:
-    // https://github.com/ARM-software/abi-aa/blob/main/memtagabielf64/memtagabielf64.rst#841extended-semantics-of-r_aarch64_relative.
-    // tl;dr: encode the symbol's special addend in the place, which is an
-    // offset to the point where the logical tag is derived from. Quick hack, if
-    // the addend is within the symbol's bounds, no need to encode the tag
-    // derivation offset.
-    if (rel.sym && rel.sym->isTagged() &&
-        (rel.addend < 0 ||
-         rel.addend >= static_cast<int64_t>(rel.sym->getSize())))
-      write64(ctx, loc, -rel.addend);
-    else
-      write64(ctx, loc, val);
+    write64(ctx, loc, val);
     break;
   case R_AARCH64_PREL64:
     write64(ctx, loc, val);
     break;
   case R_AARCH64_AUTH_ABS64:
-    // If val is wider than 32 bits, the relocation must have been moved from
-    // .relr.auth.dyn to .rela.dyn, and the addend write is not needed.
-    //
-    // If val fits in 32 bits, we have two potential scenarios:
-    // * True RELR: Write the 32-bit `val`.
-    // * RELA: Even if the value now fits in 32 bits, it might have been
-    //   converted from RELR during an iteration in
-    //   finalizeAddressDependentContent(). Writing the value is harmless
-    //   because dynamic linking ignores it.
-    if (isInt<32>(val))
-      write32(ctx, loc, val);
+    // This is used for the addend of a .relr.auth.dyn entry,
+    // which is a 32-bit value; the upper 32 bits are used to
+    // encode the schema.
+    checkInt(ctx, loc, val, 32, rel);
+    write32(ctx, loc, val);
     break;
   case R_AARCH64_ADD_ABS_LO12_NC:
   case R_AARCH64_AUTH_GOT_ADD_LO12_NC:
@@ -762,7 +747,7 @@ void AArch64::relaxTlsGdToIe(uint8_t *loc, const Relocation &rel,
     relocateNoSym(loc, R_AARCH64_TLSIE_LD64_GOTTPREL_LO12_NC, val);
     break;
   default:
-    llvm_unreachable("unsupported relocation for TLS GD to LE relaxation");
+    llvm_unreachable("unsupported relocation for TLS GD to IE relaxation");
   }
 }
 
@@ -944,6 +929,8 @@ void AArch64::relocateAlloc(InputSection &sec, uint8_t *buf) const {
   AArch64Relaxer relaxer(ctx, sec.relocs());
   for (size_t i = 0, size = sec.relocs().size(); i != size; ++i) {
     const Relocation &rel = sec.relocs()[i];
+    if (rel.expr == R_NONE) // See finalizeAddressDependentContent()
+      continue;
     uint8_t *loc = buf + rel.offset;
     const uint64_t val = sec.getRelocTargetVA(ctx, rel, secAddr + rel.offset);
 

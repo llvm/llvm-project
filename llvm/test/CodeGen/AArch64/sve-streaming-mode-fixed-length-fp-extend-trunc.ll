@@ -591,21 +591,18 @@ define void @fcvt_v16f16_v16f64(ptr %a, ptr %b) {
 ; CHECK-NEXT:    mov x8, #6 // =0x6
 ; CHECK-NEXT:    fcvt z1.d, p0/m, z1.h
 ; CHECK-NEXT:    ld1h { z5.d }, p0/z, [x0, x8, lsl #1]
-; CHECK-NEXT:    fcvt z2.d, p0/m, z2.h
 ; CHECK-NEXT:    mov x8, #2 // =0x2
-; CHECK-NEXT:    fcvt z3.d, p0/m, z3.h
+; CHECK-NEXT:    fcvt z2.d, p0/m, z2.h
 ; CHECK-NEXT:    ld1h { z7.d }, p0/z, [x0, x8, lsl #1]
+; CHECK-NEXT:    fcvt z3.d, p0/m, z3.h
+; CHECK-NEXT:    fcvt z6.d, p0/m, z6.h
 ; CHECK-NEXT:    fcvt z4.d, p0/m, z4.h
+; CHECK-NEXT:    fcvt z5.d, p0/m, z5.h
 ; CHECK-NEXT:    stp q0, q1, [x1, #96]
-; CHECK-NEXT:    movprfx z0, z5
-; CHECK-NEXT:    fcvt z0.d, p0/m, z5.h
-; CHECK-NEXT:    movprfx z1, z6
-; CHECK-NEXT:    fcvt z1.d, p0/m, z6.h
+; CHECK-NEXT:    fcvt z7.d, p0/m, z7.h
 ; CHECK-NEXT:    stp q2, q3, [x1, #64]
-; CHECK-NEXT:    movprfx z2, z7
-; CHECK-NEXT:    fcvt z2.d, p0/m, z7.h
-; CHECK-NEXT:    stp q4, q0, [x1, #32]
-; CHECK-NEXT:    stp q1, q2, [x1]
+; CHECK-NEXT:    stp q4, q5, [x1, #32]
+; CHECK-NEXT:    stp q6, q7, [x1]
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: fcvt_v16f16_v16f64:

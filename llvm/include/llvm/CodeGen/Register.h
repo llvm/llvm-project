@@ -182,12 +182,17 @@ class VirtRegOrUnit {
   unsigned VRegOrUnit;
 
 public:
-  constexpr explicit VirtRegOrUnit(MCRegUnit Unit) : VRegOrUnit(Unit) {
+  constexpr explicit VirtRegOrUnit(MCRegUnit Unit)
+      : VRegOrUnit(static_cast<unsigned>(Unit)) {
     assert(!Register::isVirtualRegister(VRegOrUnit));
   }
+
   constexpr explicit VirtRegOrUnit(Register Reg) : VRegOrUnit(Reg.id()) {
     assert(Reg.isVirtual());
   }
+
+  // Catches implicit conversions to Register.
+  template <typename T> explicit VirtRegOrUnit(T) = delete;
 
   constexpr bool isVirtualReg() const {
     return Register::isVirtualRegister(VRegOrUnit);
@@ -195,7 +200,7 @@ public:
 
   constexpr MCRegUnit asMCRegUnit() const {
     assert(!isVirtualReg() && "Not a register unit");
-    return VRegOrUnit;
+    return static_cast<MCRegUnit>(VRegOrUnit);
   }
 
   constexpr Register asVirtualReg() const {
@@ -205,6 +210,10 @@ public:
 
   constexpr bool operator==(const VirtRegOrUnit &Other) const {
     return VRegOrUnit == Other.VRegOrUnit;
+  }
+
+  constexpr bool operator<(const VirtRegOrUnit &Other) const {
+    return VRegOrUnit < Other.VRegOrUnit;
   }
 };
 

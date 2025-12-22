@@ -117,6 +117,8 @@ static constexpr OptionEnumValueElement g_follow_fork_mode_values[] = {
     },
 };
 
+static constexpr unsigned g_string_read_width = 256;
+
 #define LLDB_PROPERTIES_process
 #include "TargetProperties.inc"
 
@@ -2135,9 +2137,63 @@ lldb::addr_t Process::FindInMemory(const uint8_t *buf, uint64_t size,
   return matches[0].GetBaseAddress().GetLoadAddress(&target);
 }
 
+llvm::SmallVector<std::optional<std::string>>
+Process::ReadCStringsFromMemory(llvm::ArrayRef<lldb::addr_t> addresses) {
+  llvm::SmallVector<std::optional<std::string>> output_strs(addresses.size(),
+                                                            "");
+  llvm::SmallVector<Range<addr_t, size_t>> ranges{
+      llvm::map_range(addresses, [=](addr_t ptr) {
+        return Range<addr_t, size_t>(ptr, g_string_read_width);
+      })};
+
+  std::vector<uint8_t> buffer(g_string_read_width * addresses.size(), 0);
+  uint64_t num_completed_strings = 0;
+
+  while (num_completed_strings != addresses.size()) {
+    llvm::SmallVector<llvm::MutableArrayRef<uint8_t>> read_results =
+        ReadMemoryRanges(ranges, buffer);
+
+    // Each iteration of this loop either increments num_completed_strings or
+    // updates the base pointer of some range, guaranteeing forward progress of
+    // the outer loop.
+    for (auto [range, read_result, output_str] :
+         llvm::zip(ranges, read_results, output_strs)) {
+      // A previously completed string.
+      if (range.GetByteSize() == 0)
+        continue;
+
+      // The read failed, set the range to 0 to avoid reading it again.
+      if (read_result.empty()) {
+        output_str = std::nullopt;
+        range.SetByteSize(0);
+        num_completed_strings++;
+        continue;
+      }
+
+      // Convert ArrayRef to StringRef so the pointers work with std::string.
+      auto read_result_str = llvm::toStringRef(read_result);
+
+      const char *null_terminator_pos = llvm::find(read_result_str, '\0');
+      output_str->append(read_result_str.begin(), null_terminator_pos);
+
+      // If the terminator was found, this string is complete.
+      if (null_terminator_pos != read_result_str.end()) {
+        range.SetByteSize(0);
+        num_completed_strings++;
+      }
+      // Otherwise increment the base pointer for the next read.
+      else {
+        range.SetRangeBase(range.GetRangeBase() + read_result.size());
+      }
+    }
+  }
+
+  return output_strs;
+}
+
 size_t Process::ReadCStringFromMemory(addr_t addr, std::string &out_str,
                                       Status &error) {
-  char buf[256];
+  char buf[g_string_read_width];
   out_str.clear();
   addr_t curr_addr = addr;
   while (true) {
@@ -2452,8 +2508,10 @@ size_t Process::ReadScalarIntegerFromMemory(addr_t addr, uint32_t byte_size,
         scalar = data.GetMaxU32(&offset, byte_size);
       else
         scalar = data.GetMaxU64(&offset, byte_size);
-      if (is_signed)
+      if (is_signed) {
+        scalar.MakeSigned();
         scalar.SignExtend(byte_size * 8);
+      }
       return bytes_read;
     }
   } else {
@@ -6545,7 +6603,7 @@ Status Process::WriteMemoryTags(lldb::addr_t addr, size_t len,
 
 // Create a CoreFileMemoryRange from a MemoryRegionInfo
 static CoreFileMemoryRange
-CreateCoreFileMemoryRange(const MemoryRegionInfo &region) {
+CreateCoreFileMemoryRange(const lldb_private::MemoryRegionInfo &region) {
   const addr_t addr = region.GetRange().GetRangeBase();
   llvm::AddressRange range(addr, addr + region.GetRange().GetByteSize());
   return {range, region.GetLLDBPermissions()};
@@ -6554,7 +6612,7 @@ CreateCoreFileMemoryRange(const MemoryRegionInfo &region) {
 // Add dirty pages to the core file ranges and return true if dirty pages
 // were added. Return false if the dirty page information is not valid or in
 // the region.
-static bool AddDirtyPages(const MemoryRegionInfo &region,
+static bool AddDirtyPages(const lldb_private::MemoryRegionInfo &region,
                           CoreFileMemoryRanges &ranges) {
   const auto &dirty_page_list = region.GetDirtyPageList();
   if (!dirty_page_list)
@@ -6593,8 +6651,8 @@ static bool AddDirtyPages(const MemoryRegionInfo &region,
 // given region. If the region has dirty page information, only dirty pages
 // will be added to \a ranges, else the entire range will be added to \a
 // ranges.
-static void AddRegion(const MemoryRegionInfo &region, bool try_dirty_pages,
-                      CoreFileMemoryRanges &ranges) {
+static void AddRegion(const lldb_private::MemoryRegionInfo &region,
+                      bool try_dirty_pages, CoreFileMemoryRanges &ranges) {
   // Don't add empty ranges.
   if (region.GetRange().GetByteSize() == 0)
     return;
@@ -6617,7 +6675,7 @@ static void SaveDynamicLoaderSections(Process &process,
   if (!dyld)
     return;
 
-  std::vector<MemoryRegionInfo> dynamic_loader_mem_regions;
+  std::vector<lldb_private::MemoryRegionInfo> dynamic_loader_mem_regions;
   std::function<bool(const lldb_private::Thread &)> save_thread_predicate =
       [&](const lldb_private::Thread &t) -> bool {
     return options.ShouldThreadBeSaved(t.GetID());
@@ -6742,10 +6800,11 @@ static void GetCoreFileSaveRangesStackOnly(Process &process,
 
 // TODO: We should refactor CoreFileMemoryRanges to use the lldb range type, and
 // then add an intersect method on it, or MemoryRegionInfo.
-static MemoryRegionInfo Intersect(const MemoryRegionInfo &lhs,
-                                  const MemoryRegionInfo::RangeType &rhs) {
+static lldb_private::MemoryRegionInfo
+Intersect(const lldb_private::MemoryRegionInfo &lhs,
+          const lldb_private::MemoryRegionInfo::RangeType &rhs) {
 
-  MemoryRegionInfo region_info;
+  lldb_private::MemoryRegionInfo region_info;
   region_info.SetLLDBPermissions(lhs.GetLLDBPermissions());
   region_info.GetRange() = lhs.GetRange().Intersect(rhs);
 

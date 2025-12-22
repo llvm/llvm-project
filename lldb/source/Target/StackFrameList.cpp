@@ -20,6 +20,7 @@
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/StackFrameRecognizer.h"
 #include "lldb/Target/StopInfo.h"
+#include "lldb/Target/SyntheticFrameProvider.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Target/Unwind.h"
@@ -53,6 +54,49 @@ StackFrameList::~StackFrameList() {
   // Call clear since this takes a lock and clears the stack frame list in case
   // another thread is currently using this stack frame list
   Clear();
+}
+
+SyntheticStackFrameList::SyntheticStackFrameList(
+    Thread &thread, lldb::StackFrameListSP input_frames,
+    const lldb::StackFrameListSP &prev_frames_sp, bool show_inline_frames)
+    : StackFrameList(thread, prev_frames_sp, show_inline_frames),
+      m_input_frames(std::move(input_frames)) {}
+
+bool SyntheticStackFrameList::FetchFramesUpTo(
+    uint32_t end_idx, InterruptionControl allow_interrupt) {
+
+  size_t num_synthetic_frames = 0;
+  // Check if the thread has a synthetic frame provider.
+  if (auto provider_sp = m_thread.GetFrameProvider()) {
+    // Use the synthetic frame provider to generate frames lazily.
+    // Keep fetching until we reach end_idx or the provider returns an error.
+    for (uint32_t idx = m_frames.size(); idx <= end_idx; idx++) {
+      if (allow_interrupt &&
+          m_thread.GetProcess()->GetTarget().GetDebugger().InterruptRequested())
+        return true;
+      auto frame_or_err = provider_sp->GetFrameAtIndex(idx);
+      if (!frame_or_err) {
+        // Provider returned error - we've reached the end.
+        LLDB_LOG_ERROR(GetLog(LLDBLog::Thread), frame_or_err.takeError(),
+                       "Frame provider reached end at index {0}: {1}", idx);
+        SetAllFramesFetched();
+        break;
+      }
+      StackFrameSP frame_sp = *frame_or_err;
+      if (frame_sp->IsSynthetic())
+        frame_sp->GetStackID().SetCFA(num_synthetic_frames++,
+                                      GetThread().GetProcess().get());
+      // Set the frame list weak pointer so ExecutionContextRef can resolve
+      // the frame without calling Thread::GetStackFrameList().
+      frame_sp->m_frame_list_wp = shared_from_this();
+      m_frames.push_back(frame_sp);
+    }
+
+    return false; // Not interrupted.
+  }
+
+  // If no provider, fall back to the base implementation.
+  return StackFrameList::FetchFramesUpTo(end_idx, allow_interrupt);
 }
 
 void StackFrameList::CalculateCurrentInlinedDepth() {
@@ -330,6 +374,7 @@ void StackFrameList::SynthesizeTailCallFrames(StackFrame &next_frame) {
         m_thread.shared_from_this(), frame_idx, concrete_frame_idx, cfa,
         cfa_is_valid, pc, StackFrame::Kind::Regular, artificial,
         behaves_like_zeroth_frame, &sc);
+    synth_frame->m_frame_list_wp = shared_from_this();
     m_frames.push_back(synth_frame);
     LLDB_LOG(log, "Pushed frame {0} at {1:x}", callee->GetDisplayName(), pc);
   }
@@ -445,6 +490,7 @@ bool StackFrameList::FetchFramesUpTo(uint32_t end_idx,
           unwind_frame_sp = std::make_shared<StackFrame>(
               m_thread.shared_from_this(), m_frames.size(), idx, reg_ctx_sp,
               cfa, pc, behaves_like_zeroth_frame, nullptr);
+          unwind_frame_sp->m_frame_list_wp = shared_from_this();
           m_frames.push_back(unwind_frame_sp);
         }
       } else {
@@ -479,6 +525,7 @@ bool StackFrameList::FetchFramesUpTo(uint32_t end_idx,
       // although its concrete index will stay the same.
       SynthesizeTailCallFrames(*unwind_frame_sp.get());
 
+      unwind_frame_sp->m_frame_list_wp = shared_from_this();
       m_frames.push_back(unwind_frame_sp);
     }
 
@@ -503,6 +550,7 @@ bool StackFrameList::FetchFramesUpTo(uint32_t end_idx,
             unwind_frame_sp->GetRegisterContextSP(), cfa, next_frame_address,
             behaves_like_zeroth_frame, &next_frame_sc));
 
+        frame_sp->m_frame_list_wp = shared_from_this();
         m_frames.push_back(frame_sp);
         unwind_sc = next_frame_sc;
         curr_frame_address = next_frame_address;
@@ -559,6 +607,7 @@ bool StackFrameList::FetchFramesUpTo(uint32_t end_idx,
       prev_frame->UpdatePreviousFrameFromCurrentFrame(*curr_frame);
       // Now copy the fixed up previous frame into the current frames so the
       // pointer doesn't change.
+      prev_frame_sp->m_frame_list_wp = shared_from_this();
       m_frames[curr_frame_idx] = prev_frame_sp;
 
 #if defined(DEBUG_STACK_FRAMES)

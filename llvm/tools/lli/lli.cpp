@@ -283,7 +283,6 @@ static ExitOnError ExitOnErr;
 LLVM_ATTRIBUTE_USED static void linkComponents() {
   errs() << (void *)&llvm_orc_registerEHFrameSectionAllocAction
          << (void *)&llvm_orc_deregisterEHFrameSectionAllocAction
-         << (void *)&llvm_orc_registerJITLoaderGDBWrapper
          << (void *)&llvm_orc_registerJITLoaderGDBAllocAction;
 }
 
@@ -1021,17 +1020,26 @@ static int runOrcJIT(const char *ProgName) {
     llvm_unreachable("Unrecognized platform value");
   }
 
-  std::unique_ptr<orc::ExecutorProcessControl> EPC = nullptr;
-  if (JITLinker == JITLinkerKind::JITLink) {
-    EPC = ExitOnErr(orc::SelfExecutorProcessControl::Create(
-        std::make_shared<orc::SymbolStringPool>()));
-
+  switch (JITLinker) {
+  case JITLinkerKind::JITLink:
     Builder.getJITTargetMachineBuilder()
         ->setRelocationModel(Reloc::PIC_)
         .setCodeModel(CodeModel::Small);
     Builder.setObjectLinkingLayerCreator([&](orc::ExecutionSession &ES) {
       return std::make_unique<orc::ObjectLinkingLayer>(ES);
     });
+    break;
+  case JITLinkerKind::RuntimeDyld:
+    Builder.setObjectLinkingLayerCreator([&](orc::ExecutionSession &ES) {
+      return std::make_unique<orc::RTDyldObjectLinkingLayer>(
+          ES, [](const MemoryBuffer &) {
+            return std::make_unique<SectionMemoryManager>();
+          });
+    });
+    break;
+  case JITLinkerKind::Default:
+    // Let LLJITBuilder decide
+    break;
   }
 
   auto J = ExitOnErr(Builder.create());
@@ -1161,18 +1169,10 @@ static int runOrcJIT(const char *ProgName) {
   }
 
   // Resolve and run the main function.
+  using MainFnTy = int(int, char *[]);
   auto MainAddr = ExitOnErr(J->lookup(EntryFunc));
-  int Result;
-
-  if (EPC) {
-    // ExecutorProcessControl-based execution with JITLink.
-    Result = ExitOnErr(EPC->runAsMain(MainAddr, InputArgv));
-  } else {
-    // Manual in-process execution with RuntimeDyld.
-    using MainFnTy = int(int, char *[]);
-    auto MainFn = MainAddr.toPtr<MainFnTy *>();
-    Result = orc::runAsMain(MainFn, InputArgv, StringRef(InputFile));
-  }
+  auto MainFn = MainAddr.toPtr<MainFnTy *>();
+  int Result = orc::runAsMain(MainFn, InputArgv, StringRef(InputFile));
 
   // Wait for -entry-point threads.
   for (auto &AltEntryThread : AltEntryThreads)
@@ -1228,15 +1228,15 @@ static Expected<std::unique_ptr<orc::ExecutorProcessControl>> launchRemote() {
     std::unique_ptr<char[]> ChildPath, ChildIn, ChildOut;
     {
       ChildPath.reset(new char[ChildExecPath.size() + 1]);
-      std::copy(ChildExecPath.begin(), ChildExecPath.end(), &ChildPath[0]);
+      llvm::copy(ChildExecPath, &ChildPath[0]);
       ChildPath[ChildExecPath.size()] = '\0';
       std::string ChildInStr = utostr(PipeFD[0][0]);
       ChildIn.reset(new char[ChildInStr.size() + 1]);
-      std::copy(ChildInStr.begin(), ChildInStr.end(), &ChildIn[0]);
+      llvm::copy(ChildInStr, &ChildIn[0]);
       ChildIn[ChildInStr.size()] = '\0';
       std::string ChildOutStr = utostr(PipeFD[1][1]);
       ChildOut.reset(new char[ChildOutStr.size() + 1]);
-      std::copy(ChildOutStr.begin(), ChildOutStr.end(), &ChildOut[0]);
+      llvm::copy(ChildOutStr, &ChildOut[0]);
       ChildOut[ChildOutStr.size()] = '\0';
     }
 

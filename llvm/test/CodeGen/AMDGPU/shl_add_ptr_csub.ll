@@ -12,7 +12,7 @@ define i32 @shl_base_atomicrmw_global_atomic_csub_ptr(ptr addrspace(1) %out, ptr
   %cast = ptrtoint ptr addrspace(1) %arrayidx0 to i64
   %shl = shl i64 %cast, 2
   %castback = inttoptr i64 %shl to ptr addrspace(1)
-  %val = call i32 @llvm.amdgcn.global.atomic.csub.p1(ptr addrspace(1) %castback, i32 43)
+  %val = atomicrmw usub_sat ptr addrspace(1) %castback, i32 43 seq_cst, !amdgpu.no.remote.memory !0
   store volatile i64 %cast, ptr addrspace(1) %extra.use, align 4
   ret i32 %val
 }
@@ -20,3 +20,5 @@ define i32 @shl_base_atomicrmw_global_atomic_csub_ptr(ptr addrspace(1) %out, ptr
 declare i32 @llvm.amdgcn.global.atomic.csub.p1(ptr addrspace(1) nocapture, i32) #0
 
 attributes #0 = { argmemonly nounwind }
+
+!0 = !{}

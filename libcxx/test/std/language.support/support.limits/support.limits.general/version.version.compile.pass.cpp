@@ -3371,8 +3371,8 @@
 #  ifndef __cpp_lib_concepts
 #    error "__cpp_lib_concepts should be defined in c++20"
 #  endif
-#  if __cpp_lib_concepts != 202002L
-#    error "__cpp_lib_concepts should have the value 202002L in c++20"
+#  if __cpp_lib_concepts != 202207L
+#    error "__cpp_lib_concepts should have the value 202207L in c++20"
 #  endif
 
 #  ifndef __cpp_lib_constexpr_algorithms
@@ -4840,8 +4840,8 @@
 #  ifndef __cpp_lib_concepts
 #    error "__cpp_lib_concepts should be defined in c++23"
 #  endif
-#  if __cpp_lib_concepts != 202002L
-#    error "__cpp_lib_concepts should have the value 202002L in c++23"
+#  if __cpp_lib_concepts != 202207L
+#    error "__cpp_lib_concepts should have the value 202207L in c++23"
 #  endif
 
 #  ifndef __cpp_lib_constexpr_algorithms
@@ -5093,8 +5093,8 @@
 #  ifndef __cpp_lib_flat_map
 #    error "__cpp_lib_flat_map should be defined in c++23"
 #  endif
-#  if __cpp_lib_flat_map != 202207L
-#    error "__cpp_lib_flat_map should have the value 202207L in c++23"
+#  if __cpp_lib_flat_map != 202511L
+#    error "__cpp_lib_flat_map should have the value 202511L in c++23"
 #  endif
 
 #  ifndef __cpp_lib_flat_set
@@ -6537,8 +6537,8 @@
 #  ifndef __cpp_lib_concepts
 #    error "__cpp_lib_concepts should be defined in c++26"
 #  endif
-#  if __cpp_lib_concepts != 202002L
-#    error "__cpp_lib_concepts should have the value 202002L in c++26"
+#  if __cpp_lib_concepts != 202207L
+#    error "__cpp_lib_concepts should have the value 202207L in c++26"
 #  endif
 
 #  ifndef __cpp_lib_constexpr_algorithms
@@ -6844,8 +6844,8 @@
 #  ifndef __cpp_lib_flat_map
 #    error "__cpp_lib_flat_map should be defined in c++26"
 #  endif
-#  if __cpp_lib_flat_map != 202207L
-#    error "__cpp_lib_flat_map should have the value 202207L in c++26"
+#  if __cpp_lib_flat_map != 202511L
+#    error "__cpp_lib_flat_map should have the value 202511L in c++26"
 #  endif
 
 #  ifndef __cpp_lib_flat_set
@@ -7509,8 +7509,8 @@
 #  ifndef __cpp_lib_optional
 #    error "__cpp_lib_optional should be defined in c++26"
 #  endif
-#  if __cpp_lib_optional != 202110L
-#    error "__cpp_lib_optional should have the value 202110L in c++26"
+#  if __cpp_lib_optional != 202506L
+#    error "__cpp_lib_optional should have the value 202506L in c++26"
 #  endif
 
 #  ifndef __cpp_lib_optional_range_support

@@ -12,8 +12,8 @@
 #include "CrashHandlerFixture.h"
 #include "gtest/gtest.h"
 #include "flang/Runtime/extensions.h"
-#include "llvm/ADT/Twine.h"
 
+#include <cstring>
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -82,8 +82,9 @@ static const char *temp_directory_path() {
 
 static std::string createTemporaryFile(
     const char *name, const AccessType &accessType) {
-  std::string path =
-      (llvm::Twine{temp_directory_path()} + "/" + addPIDSuffix(name)).str();
+  std::ostringstream pathS;
+  pathS << temp_directory_path() << "/" << addPIDSuffix(name);
+  std::string path = pathS.str();
 
   // O_CREAT | O_EXCL enforces that this file is newly created by this call.
   // This feels risky. If we don't have permission to create files in the

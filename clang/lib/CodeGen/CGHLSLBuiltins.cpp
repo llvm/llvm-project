@@ -404,6 +404,49 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
         RetTy, CGM.getHLSLRuntime().getCreateResourceGetPointerIntrinsic(),
         ArrayRef<Value *>{HandleOp, IndexOp});
   }
+  case Builtin::BI__builtin_hlsl_resource_load_with_status: {
+    Value *HandleOp = EmitScalarExpr(E->getArg(0));
+    Value *IndexOp = EmitScalarExpr(E->getArg(1));
+
+    // Get the *address* of the status argument to write to it by reference
+    LValue StatusLVal = EmitLValue(E->getArg(2));
+    Address StatusAddr = StatusLVal.getAddress();
+
+    QualType HandleTy = E->getArg(0)->getType();
+    const HLSLAttributedResourceType *RT =
+        HandleTy->getAs<HLSLAttributedResourceType>();
+    assert(CGM.getTarget().getTriple().getArch() == llvm::Triple::dxil &&
+           "Only DXIL currently implements load with status");
+
+    Intrinsic::ID IntrID = RT->getAttrs().RawBuffer
+                               ? llvm::Intrinsic::dx_resource_load_rawbuffer
+                               : llvm::Intrinsic::dx_resource_load_typedbuffer;
+
+    llvm::Type *DataTy = ConvertType(E->getType());
+    llvm::Type *RetTy = llvm::StructType::get(Builder.getContext(),
+                                              {DataTy, Builder.getInt1Ty()});
+
+    SmallVector<Value *, 3> Args;
+    Args.push_back(HandleOp);
+    Args.push_back(IndexOp);
+
+    if (RT->getAttrs().RawBuffer) {
+      Value *Offset = Builder.getInt32(0);
+      Args.push_back(Offset);
+    }
+
+    // The load intrinsics give us a (T value, i1 status) pair -
+    // shepherd these into the return value and out reference respectively.
+    Value *ResRet =
+        Builder.CreateIntrinsic(RetTy, IntrID, Args, {}, "ld.struct");
+    Value *LoadedValue = Builder.CreateExtractValue(ResRet, {0}, "ld.value");
+    Value *StatusBit = Builder.CreateExtractValue(ResRet, {1}, "ld.status");
+    Value *ExtendedStatus =
+        Builder.CreateZExt(StatusBit, Builder.getInt32Ty(), "ld.status.ext");
+    Builder.CreateStore(ExtendedStatus, StatusAddr);
+
+    return LoadedValue;
+  }
   case Builtin::BI__builtin_hlsl_resource_uninitializedhandle: {
     llvm::Type *HandleTy = CGM.getTypes().ConvertType(E->getType());
     return llvm::PoisonValue::get(HandleTy);
@@ -923,6 +966,42 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
         CGM.getHLSLRuntime().getGroupMemoryBarrierWithGroupSyncIntrinsic();
     return EmitRuntimeCall(
         Intrinsic::getOrInsertDeclaration(&CGM.getModule(), ID));
+  }
+  case Builtin::BI__builtin_hlsl_elementwise_ddx_coarse: {
+    Value *Op0 = EmitScalarExpr(E->getArg(0));
+    if (!E->getArg(0)->getType()->hasFloatingRepresentation())
+      llvm_unreachable("ddx_coarse operand must have a float representation");
+    Intrinsic::ID ID = CGM.getHLSLRuntime().getDdxCoarseIntrinsic();
+    return Builder.CreateIntrinsic(/*ReturnType=*/Op0->getType(), ID,
+                                   ArrayRef<Value *>{Op0}, nullptr,
+                                   "hlsl.ddx.coarse");
+  }
+  case Builtin::BI__builtin_hlsl_elementwise_ddy_coarse: {
+    Value *Op0 = EmitScalarExpr(E->getArg(0));
+    if (!E->getArg(0)->getType()->hasFloatingRepresentation())
+      llvm_unreachable("ddy_coarse operand must have a float representation");
+    Intrinsic::ID ID = CGM.getHLSLRuntime().getDdyCoarseIntrinsic();
+    return Builder.CreateIntrinsic(/*ReturnType=*/Op0->getType(), ID,
+                                   ArrayRef<Value *>{Op0}, nullptr,
+                                   "hlsl.ddy.coarse");
+  }
+  case Builtin::BI__builtin_hlsl_elementwise_ddx_fine: {
+    Value *Op0 = EmitScalarExpr(E->getArg(0));
+    if (!E->getArg(0)->getType()->hasFloatingRepresentation())
+      llvm_unreachable("ddx_fine operand must have a float representation");
+    Intrinsic::ID ID = CGM.getHLSLRuntime().getDdxFineIntrinsic();
+    return Builder.CreateIntrinsic(/*ReturnType=*/Op0->getType(), ID,
+                                   ArrayRef<Value *>{Op0}, nullptr,
+                                   "hlsl.ddx.fine");
+  }
+  case Builtin::BI__builtin_hlsl_elementwise_ddy_fine: {
+    Value *Op0 = EmitScalarExpr(E->getArg(0));
+    if (!E->getArg(0)->getType()->hasFloatingRepresentation())
+      llvm_unreachable("ddy_fine operand must have a float representation");
+    Intrinsic::ID ID = CGM.getHLSLRuntime().getDdyFineIntrinsic();
+    return Builder.CreateIntrinsic(/*ReturnType=*/Op0->getType(), ID,
+                                   ArrayRef<Value *>{Op0}, nullptr,
+                                   "hlsl.ddy.fine");
   }
   case Builtin::BI__builtin_get_spirv_spec_constant_bool:
   case Builtin::BI__builtin_get_spirv_spec_constant_short:

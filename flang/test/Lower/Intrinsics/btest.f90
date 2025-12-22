@@ -15,4 +15,3 @@ function btest_test(i, j)
     ! CHECK: return %[[VAL_9]] : !fir.logical<4>
     btest_test = btest(i, j)
   end
-  

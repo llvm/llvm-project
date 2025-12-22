@@ -478,11 +478,10 @@ bool ClangTidyDiagnosticConsumer::passesLineFilter(StringRef FileName,
     if (FileName.ends_with(Filter.Name)) {
       if (Filter.LineRanges.empty())
         return true;
-      for (const FileFilter::LineRange &Range : Filter.LineRanges) {
-        if (Range.first <= LineNumber && LineNumber <= Range.second)
-          return true;
-      }
-      return false;
+      return llvm::any_of(
+          Filter.LineRanges, [&](const FileFilter::LineRange &Range) {
+            return Range.first <= LineNumber && LineNumber <= Range.second;
+          });
     }
   }
   return false;
@@ -527,7 +526,8 @@ void ClangTidyDiagnosticConsumer::forwardDiagnostic(const Diagnostic &Info) {
       Builder << Qualifiers::fromOpaqueValue(Info.getRawArg(Index));
       break;
     case clang::DiagnosticsEngine::ak_qualtype:
-      Builder << QualType::getFromOpaquePtr((void *)Info.getRawArg(Index));
+      Builder << QualType::getFromOpaquePtr(
+          reinterpret_cast<void *>(Info.getRawArg(Index)));
       break;
     case clang::DiagnosticsEngine::ak_declarationname:
       Builder << DeclarationName::getFromOpaqueInteger(Info.getRawArg(Index));
@@ -659,13 +659,13 @@ void ClangTidyDiagnosticConsumer::removeIncompatibleErrors() {
       //   disallowing the first one.
       switch (Type) {
       case ET_Begin:
-        Priority = std::make_tuple(Begin, Type, -End, -ErrorSize, ErrorId);
+        Priority = {Begin, Type, -End, -ErrorSize, ErrorId};
         break;
       case ET_Insert:
-        Priority = std::make_tuple(Begin, Type, -End, ErrorSize, ErrorId);
+        Priority = {Begin, Type, -End, ErrorSize, ErrorId};
         break;
       case ET_End:
-        Priority = std::make_tuple(End, Type, -Begin, ErrorSize, ErrorId);
+        Priority = {End, Type, -Begin, ErrorSize, ErrorId};
         break;
       }
     }
@@ -690,17 +690,15 @@ void ClangTidyDiagnosticConsumer::removeIncompatibleErrors() {
   std::vector<
       std::pair<ClangTidyError *, llvm::StringMap<tooling::Replacements> *>>
       ErrorFixes;
-  for (auto &Error : Errors) {
+  for (auto &Error : Errors)
     if (const auto *Fix = getFixIt(Error, GetFixesFromNotes))
       ErrorFixes.emplace_back(
           &Error, const_cast<llvm::StringMap<tooling::Replacements> *>(Fix));
-  }
   for (const auto &ErrorAndFix : ErrorFixes) {
     int Size = 0;
-    for (const auto &FileAndReplaces : *ErrorAndFix.second) {
+    for (const auto &FileAndReplaces : *ErrorAndFix.second)
       for (const auto &Replace : FileAndReplaces.second)
         Size += Replace.getLength();
-    }
     Sizes.push_back(Size);
   }
 
@@ -819,7 +817,6 @@ void ClangTidyDiagnosticConsumer::removeDuplicatedDiagnosticsOfAliasCheckers() {
           (*Inserted.first)->Message.Fix;
 
       if (CandidateFix != ExistingFix) {
-
         // In case of a conflict, don't suggest any fix-it.
         ExistingError.Message.Fix.clear();
         ExistingError.Notes.emplace_back(

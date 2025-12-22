@@ -156,6 +156,8 @@ void safe_examples(std::string s1, int *p) {
   snprintf(a, 10, "%s%d%s%p%s", __PRETTY_FUNCTION__, *p, "hello", s1.c_str());                // no warn
   snprintf(&c, 1, "%s%d%s%p%s", __PRETTY_FUNCTION__, *p, "hello", s1.c_str());                // no warn
   snprintf(nullptr, 0, "%s%d%s%p%s", __PRETTY_FUNCTION__, *p, "hello", s1.c_str());           // no warn
+
+  strlen(s1.c_str());
 }
 
 void test_sarg_precision(std::string Str, std::string_view Sv, std::wstring_view WSv,
@@ -247,4 +249,9 @@ void test(StrBuff& str)
   LibC.strcpy();
   LibC.strcpy(buff);
   LibC.memcpy(buff, buff, 64);
+}
+
+void dontCrashForInvalidFormatString() {
+  snprintf((char*)0, 0, "%");
+  snprintf((char*)0, 0, "\0");
 }
