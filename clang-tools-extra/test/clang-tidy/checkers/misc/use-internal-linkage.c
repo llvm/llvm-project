@@ -25,7 +25,7 @@ const int const_global = 123;
 // CHECK-MESSAGES: :[[@LINE-1]]:11: warning: variable 'const_global' can be made static to enforce internal linkage
 // CHECK-FIXES: static const int const_global = 123;
 
-int gloabl_header;
+int global_header;
 extern int global_extern;
 static int global_static;
 #if __STDC_VERSION__ >= 201112L

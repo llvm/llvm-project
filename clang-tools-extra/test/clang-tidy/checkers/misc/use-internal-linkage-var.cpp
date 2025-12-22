@@ -25,7 +25,7 @@ const volatile int* const_volatile_ptr_star;
 // CHECK-MESSAGES: :[[@LINE-1]]:21: warning: variable 'const_volatile_ptr_star' can be made static or moved into an anonymous namespace to enforce internal linkage
 // CHECK-FIXES: static const volatile int* const_volatile_ptr_star;
 
-int gloabl_header;
+int global_header;
 
 extern int global_extern;
 
