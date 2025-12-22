@@ -36,7 +36,7 @@ MLIR_CAPI_EXPORTED MlirAttribute mlirComplexAttrDoubleGetChecked(MlirLocation lo
                                                                double imag);
 
 /// Returns the real value stored in the given complex attribute, interpreting
-/// the value as double. 
+/// the value as double.
 MLIR_CAPI_EXPORTED double mlirComplexAttrGetRealDouble(MlirAttribute attr);
 
 /// Returns the imaginaryvalue stored in the given complex attribute,
