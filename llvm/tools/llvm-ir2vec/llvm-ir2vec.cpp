@@ -153,6 +153,26 @@ static cl::opt<EmbeddingLevel>
           cl::init(FunctionLevel), cl::sub(EmbeddingsSubCmd),
           cl::cat(CommonCategory));
 
+// Helper function to find a function by name
+// (supports both exact and demangled)
+static const Function *findFunctionByName(const Module &M,
+                                          const std::string &FunctionName) {
+  if (FunctionName.empty())
+    return nullptr;
+
+  // Try exact match first
+  if (auto *ExactMatch = M.getFunction(FunctionName))
+    return ExactMatch;
+
+  // Try demangled match
+  const auto Demangled = llvm::demangle(FunctionName);
+  auto It = llvm::find_if(M, [&](const Function &Func) {
+    return llvm::demangle(Func.getName().str()) == Demangled;
+  });
+
+  return (It != M.end()) ? &*It : nullptr;
+}
+
 namespace ir2vec {
 
 /// Relation types for triplet generation
@@ -338,16 +358,7 @@ Error processModule(Module &M, raw_ostream &OS) {
 
     if (!FunctionName.empty()) {
       // Process single function
-      const Function *F = [&]() -> const Function * {
-        if (auto *ExactMatch = M.getFunction(FunctionName))
-          return ExactMatch;
-        const auto Demangled = llvm::demangle(FunctionName);
-        auto It = llvm::find_if(M, [&](const Function &Func) {
-          return llvm::demangle(Func.getName().str()) == Demangled;
-        });
-
-        return (It != M.end()) ? &*It : nullptr;
-      }();
+      const Function *F = findFunctionByName(M, FunctionName);
       if (F)
         Tool.generateEmbeddings(*F, OS);
       else
@@ -739,19 +750,7 @@ int main(int argc, char **argv) {
     } else if (EmbeddingsSubCmd) {
       if (!FunctionName.empty()) {
         // Process single function
-        const Function *F = [&]() -> const Function * {
-          if (auto *ExactMatch = M->getFunction(FunctionName))
-            return ExactMatch;
-
-          const auto Demangled = llvm::demangle(FunctionName);
-          auto It = llvm::find_if(*M, [&](const Function &Func) {
-            return llvm::demangle(Func.getName().str()) == Demangled;
-          });
-
-          return (It != M->end()) ? &*It
-                                  : nullptr; // Change M.end() to M->end()
-        }();
-
+        const Function *F = findFunctionByName(*M, FunctionName);
         if (!F) {
           WithColor::error(errs(), ToolName)
               << "Function '" << FunctionName << "' not found\n";
