@@ -124,7 +124,7 @@ clang::createChainedIncludesSource(CompilerInstance &CI,
 
     auto Clang = std::make_unique<CompilerInstance>(
         std::move(CInvok), CI.getPCHContainerOperations());
-    Clang->createVirtualFileSystem();
+    Clang->setVirtualFileSystem(CI.getVirtualFileSystemPtr());
     Clang->setDiagnostics(Diags);
     Clang->setTarget(TargetInfo::CreateTargetInfo(
         Clang->getDiagnostics(), Clang->getInvocation().getTargetOpts()));
