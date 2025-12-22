@@ -75,6 +75,56 @@ constexpr bool test() {
     }
   }
 
+  // LWG3505
+  {
+    using namespace std::string_view_literals;
+
+    { // Motivational example
+      auto v = std::views::lazy_split("xxyx"sv, "xy"sv);
+
+      {
+        auto i = v.begin();
+        assert(std::ranges::equal(*i, "x"s));
+
+        decltype(auto) i2 = ++i;
+        static_assert(std::is_lvalue_reference_v<decltype(i2)>);
+        assert(std::ranges::equal(*i2, "x"s));
+      }
+
+      {
+        auto i = v.begin();
+        assert(std::ranges::equal(*i, "x"s));
+
+        decltype(auto) i2 = i++;
+        static_assert(!std::is_reference_v<decltype(i2)>);
+        assert(std::ranges::equal(*i2, "x"s));
+        assert(std::ranges::equal(*i, "x"s));
+      }
+    }
+    {
+      auto v = std::views::lazy_split("zzht"sv, "zh"sv);
+
+      {
+        auto i = v.begin();
+        assert(std::ranges::equal(*i, "z"s));
+
+        decltype(auto) i2 = ++i;
+        static_assert(std::is_lvalue_reference_v<decltype(i2)>);
+        assert(std::ranges::equal(*i2, "t"s));
+      }
+
+      {
+        auto i = v.begin();
+        assert(std::ranges::equal(*i, "z"s));
+
+        decltype(auto) i2 = i++;
+        static_assert(!std::is_reference_v<decltype(i2)>);
+        assert(std::ranges::equal(*i2, "z"s));
+        assert(std::ranges::equal(*i, "t"s));
+      }
+    }
+  }
+
   return true;
 }
 

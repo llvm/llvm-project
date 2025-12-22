@@ -81,9 +81,8 @@ function(_get_compile_options_from_config output_var)
     list(APPEND config_options "-DLIBC_QSORT_IMPL=${LIBC_CONF_QSORT_IMPL}")
   endif()
 
-  if(LIBC_CONF_STRING_UNSAFE_WIDE_READ)
-    list(APPEND config_options "-DLIBC_COPT_STRING_UNSAFE_WIDE_READ")
-  endif()
+  list(APPEND config_options "-DLIBC_COPT_STRING_LENGTH_IMPL=${LIBC_CONF_STRING_LENGTH_IMPL}")
+  list(APPEND config_options "-DLIBC_COPT_FIND_FIRST_CHARACTER_IMPL=${LIBC_CONF_FIND_FIRST_CHARACTER_IMPL}")
 
   if(LIBC_CONF_MEMSET_X86_USE_SOFTWARE_PREFETCHING)
     list(APPEND config_options "-DLIBC_COPT_MEMSET_X86_USE_SOFTWARE_PREFETCHING")
@@ -114,6 +113,22 @@ function(_get_compile_options_from_config output_var)
 
   if(LIBC_CONF_THREAD_MODE)
     list(APPEND config_options "-DLIBC_THREAD_MODE=${LIBC_CONF_THREAD_MODE}")
+  endif()
+
+  if(LIBC_CONF_TRAP_ON_RAISE_FP_EXCEPT)
+    list(APPEND config_options "-DLIBC_TRAP_ON_RAISE_FP_EXCEPT")
+  endif()
+
+  if(LIBC_CONF_RAW_MUTEX_DEFAULT_SPIN_COUNT)
+    list(APPEND config_options "-DLIBC_COPT_RAW_MUTEX_DEFAULT_SPIN_COUNT=${LIBC_CONF_RAW_MUTEX_DEFAULT_SPIN_COUNT}")
+  endif()
+
+  if(LIBC_CONF_MATH_USE_SYSTEM_FENV)
+    if(MSVC)
+      list(APPEND config_options "/DLIBC_MATH_USE_SYSTEM_FENV")
+    else()
+      list(APPEND config_options "-DLIBC_MATH_USE_SYSTEM_FENV")
+    endif()
   endif()
 
   set(${output_var} ${config_options} PARENT_SCOPE)

@@ -34,7 +34,7 @@ attempt to use this ABI on systems prior to SnowLeopard is undefined.
 High Level
 ==========
 
-The ABI of ``Blocks`` consist of their layout and the runtime functions required
+The ABI of ``Blocks`` consists of their layout and the runtime functions required
 by the compiler.  A ``Block`` of type ``R (^)(P...)`` consists of a structure of
 the following form:
 

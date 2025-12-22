@@ -31,8 +31,8 @@ static void populateDialectLLVMSubmodule(nanobind::module_ &m) {
   // StructType
   //===--------------------------------------------------------------------===//
 
-  auto llvmStructType =
-      mlir_type_subclass(m, "StructType", mlirTypeIsALLVMStructType);
+  auto llvmStructType = mlir_type_subclass(
+      m, "StructType", mlirTypeIsALLVMStructType, mlirLLVMStructTypeGetTypeID);
 
   llvmStructType
       .def_classmethod(
@@ -137,7 +137,8 @@ static void populateDialectLLVMSubmodule(nanobind::module_ &m) {
   // PointerType
   //===--------------------------------------------------------------------===//
 
-  mlir_type_subclass(m, "PointerType", mlirTypeIsALLVMPointerType)
+  mlir_type_subclass(m, "PointerType", mlirTypeIsALLVMPointerType,
+                     mlirLLVMPointerTypeGetTypeID)
       .def_classmethod(
           "get",
           [](const nb::object &cls, std::optional<unsigned> addressSpace,

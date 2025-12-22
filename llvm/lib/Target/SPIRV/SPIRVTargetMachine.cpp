@@ -15,6 +15,7 @@
 #include "SPIRVCBufferAccess.h"
 #include "SPIRVGlobalRegistry.h"
 #include "SPIRVLegalizerInfo.h"
+#include "SPIRVPushConstantAccess.h"
 #include "SPIRVStructurizerWrapper.h"
 #include "SPIRVTargetObjectFile.h"
 #include "SPIRVTargetTransformInfo.h"
@@ -50,6 +51,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSPIRVTarget() {
   initializeSPIRVConvergenceRegionAnalysisWrapperPassPass(PR);
   initializeSPIRVStructurizerPass(PR);
   initializeSPIRVCBufferAccessLegacyPass(PR);
+  initializeSPIRVPushConstantAccessLegacyPass(PR);
   initializeSPIRVPreLegalizerCombinerPass(PR);
   initializeSPIRVLegalizePointerCastPass(PR);
   initializeSPIRVRegularizerPass(PR);
@@ -59,6 +61,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSPIRVTarget() {
   initializeSPIRVEmitIntrinsicsPass(PR);
   initializeSPIRVEmitNonSemanticDIPass(PR);
   initializeSPIRVPrepareFunctionsPass(PR);
+  initializeSPIRVPrepareGlobalsPass(PR);
   initializeSPIRVStripConvergentIntrinsicsPass(PR);
 }
 
@@ -172,6 +175,7 @@ void SPIRVPassConfig::addIRPasses() {
 
   addPass(createSPIRVRegularizerPass());
   addPass(createSPIRVPrepareFunctionsPass(TM));
+  addPass(createSPIRVPrepareGlobalsPass());
 }
 
 void SPIRVPassConfig::addISelPrepare() {
@@ -209,6 +213,8 @@ void SPIRVPassConfig::addISelPrepare() {
   addPass(createSPIRVStripConvergenceIntrinsicsPass());
   addPass(createSPIRVLegalizeImplicitBindingPass());
   addPass(createSPIRVCBufferAccessLegacyPass());
+  addPass(
+      createSPIRVPushConstantAccessLegacyPass(&getTM<SPIRVTargetMachine>()));
   addPass(createSPIRVEmitIntrinsicsPass(&getTM<SPIRVTargetMachine>()));
   if (TM.getSubtargetImpl()->isLogicalSPIRV())
     addPass(createSPIRVLegalizePointerCastPass(&getTM<SPIRVTargetMachine>()));

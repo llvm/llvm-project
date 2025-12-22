@@ -23,6 +23,9 @@ class RISCVFrameLowering : public TargetFrameLowering {
 public:
   explicit RISCVFrameLowering(const RISCVSubtarget &STI);
 
+  int getInitialCFAOffset(const MachineFunction &MF) const override;
+  Register getInitialCFARegister(const MachineFunction &MF) const override;
+
   void emitPrologue(MachineFunction &MF, MachineBasicBlock &MBB) const override;
   void emitEpilogue(MachineFunction &MF, MachineBasicBlock &MBB) const override;
 
@@ -44,11 +47,10 @@ public:
   eliminateCallFramePseudoInstr(MachineFunction &MF, MachineBasicBlock &MBB,
                                 MachineBasicBlock::iterator MI) const override;
 
-  bool assignCalleeSavedSpillSlots(MachineFunction &MF,
-                                   const TargetRegisterInfo *TRI,
-                                   std::vector<CalleeSavedInfo> &CSI,
-                                   unsigned &MinCSFrameIndex,
-                                   unsigned &MaxCSFrameIndex) const override;
+  bool
+  assignCalleeSavedSpillSlots(MachineFunction &MF,
+                              const TargetRegisterInfo *TRI,
+                              std::vector<CalleeSavedInfo> &CSI) const override;
   bool spillCalleeSavedRegisters(MachineBasicBlock &MBB,
                                  MachineBasicBlock::iterator MI,
                                  ArrayRef<CalleeSavedInfo> CSI,

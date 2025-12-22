@@ -52,3 +52,23 @@ func.func @unreachable_code(%arg0: !fir.ref<!fir.char<1,10>>) {
 // NODECL-NOT:       uniq_name = "live_code"
 // DECL-LABEL:    func.func @unreachable_code(
 // DECL:             uniq_name = "live_code"
+
+// Test that storage and storage_offset operands are preserved during conversion
+func.func @test_storage_operands() {
+  %c0 = arith.constant 0 : index
+  %c4 = arith.constant 4 : index
+  %0 = fir.address_of(@common_block) : !fir.ref<!fir.array<8xi8>>
+  %1 = fir.coordinate_of %0, %c0 : (!fir.ref<!fir.array<8xi8>>, index) -> !fir.ref<i8>
+  %2 = fir.convert %1 : (!fir.ref<i8>) -> !fir.ref<f32>
+  %3 = fir.declare %2 storage(%0[0]) {uniq_name = "_QFEx"} : (!fir.ref<f32>, !fir.ref<!fir.array<8xi8>>) -> !fir.ref<f32>
+  %4 = fir.coordinate_of %0, %c4 : (!fir.ref<!fir.array<8xi8>>, index) -> !fir.ref<i8>
+  %5 = fir.convert %4 : (!fir.ref<i8>) -> !fir.ref<i32>
+  %6 = fir.declare %5 storage(%0[4]) {uniq_name = "_QFEy"} : (!fir.ref<i32>, !fir.ref<!fir.array<8xi8>>) -> !fir.ref<i32>
+  return
+}
+fir.global @common_block : !fir.array<8xi8>
+
+// DECL-LABEL: func.func @test_storage_operands()
+// DECL: %[[STORAGE:.*]] = fir.address_of(@common_block) : !fir.ref<!fir.array<8xi8>>
+// DECL: fircg.ext_declare {{.*}} storage(%[[STORAGE]][0]) {uniq_name = "_QFEx"}
+// DECL: fircg.ext_declare {{.*}} storage(%[[STORAGE]][4]) {uniq_name = "_QFEy"}

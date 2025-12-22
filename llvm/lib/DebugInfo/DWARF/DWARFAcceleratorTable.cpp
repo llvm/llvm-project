@@ -321,17 +321,29 @@ void AppleAcceleratorTable::Iterator::prepareNextEntryOrEnd() {
 }
 
 void AppleAcceleratorTable::Iterator::prepareNextStringOrEnd() {
-  std::optional<uint32_t> StrOffset = getTable().readStringOffsetAt(Offset);
+  const AppleAcceleratorTable &Table = getTable();
+  if (Offset == 0) {
+    // Always start looking for strings using a valid offset from the Offsets
+    // table. Entries are not always consecutive.
+    std::optional<uint64_t> OptOffset = Table.readIthOffset(OffsetIdx++);
+    if (!OptOffset)
+      return setToEnd();
+    Offset = *OptOffset;
+  }
+  std::optional<uint32_t> StrOffset = Table.readStringOffsetAt(Offset);
   if (!StrOffset)
     return setToEnd();
 
-  // A zero denotes the end of the collision list. Read the next string
-  // again.
-  if (*StrOffset == 0)
+  // A zero denotes the end of the collision list. Skip to the next offset
+  // in the offsets table by setting the Offset to zero so we will grab the
+  // next offset from the offsets table.
+  if (*StrOffset == 0) {
+    Offset = 0;
     return prepareNextStringOrEnd();
+  }
   Current.StrOffset = *StrOffset;
 
-  std::optional<uint32_t> MaybeNumEntries = getTable().readU32FromAccel(Offset);
+  std::optional<uint32_t> MaybeNumEntries = Table.readU32FromAccel(Offset);
   if (!MaybeNumEntries || *MaybeNumEntries == 0)
     return setToEnd();
   NumEntriesToCome = *MaybeNumEntries;
@@ -339,7 +351,7 @@ void AppleAcceleratorTable::Iterator::prepareNextStringOrEnd() {
 
 AppleAcceleratorTable::Iterator::Iterator(const AppleAcceleratorTable &Table,
                                           bool SetEnd)
-    : Current(Table), Offset(Table.getEntriesBase()), NumEntriesToCome(0) {
+    : Current(Table), Offset(0), NumEntriesToCome(0) {
   if (SetEnd)
     setToEnd();
   else
@@ -1138,5 +1150,8 @@ std::optional<StringRef> llvm::StripTemplateParameters(StringRef Name) {
   while (NumLeftAnglesToSkip--)
     StartOfTemplate = Name.find('<', StartOfTemplate) + 1;
 
-  return Name.substr(0, StartOfTemplate - 1);
+  StringRef Result = Name.substr(0, StartOfTemplate - 1);
+  if (Result.empty())
+    return std::nullopt;
+  return Result;
 }

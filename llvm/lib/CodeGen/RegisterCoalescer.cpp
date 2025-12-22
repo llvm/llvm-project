@@ -79,9 +79,9 @@ static cl::opt<bool> EnableJoining("join-liveintervals",
                                    cl::desc("Coalesce copies (default=true)"),
                                    cl::init(true), cl::Hidden);
 
-static cl::opt<cl::boolOrDefault>
-    EnableTerminalRule("terminal-rule", cl::desc("Apply the terminal rule"),
-                       cl::init(cl::BOU_UNSET), cl::Hidden);
+static cl::opt<bool> UseTerminalRule("terminal-rule",
+                                     cl::desc("Apply the terminal rule"),
+                                     cl::init(true), cl::Hidden);
 
 /// Temporary flag to test critical edge unsplitting.
 static cl::opt<bool> EnableJoinSplits(
@@ -134,7 +134,6 @@ class RegisterCoalescer : private LiveRangeEdit::Delegate {
   SlotIndexes *SI = nullptr;
   const MachineLoopInfo *Loops = nullptr;
   RegisterClassInfo RegClassInfo;
-  bool UseTerminalRule = false;
 
   /// Position and VReg of a PHI instruction during coalescing.
   struct PHIValPos {
@@ -868,6 +867,14 @@ RegisterCoalescer::removeCopyByCommutingDef(const CoalescerPair &CP,
   assert(DefIdx != -1);
   unsigned UseOpIdx;
   if (!DefMI->isRegTiedToUseOperand(DefIdx, &UseOpIdx))
+    return {false, false};
+
+  // If DefMI only defines the register partially, we can't replace uses of the
+  // full register with the new destination register after commuting it.
+  if (IntA.reg().isVirtual() &&
+      none_of(DefMI->all_defs(), [&](const MachineOperand &DefMO) {
+        return DefMO.getReg() == IntA.reg() && !DefMO.getSubReg();
+      }))
     return {false, false};
 
   // FIXME: The code below tries to commute 'UseOpIdx' operand with some other
@@ -4151,7 +4158,7 @@ bool RegisterCoalescer::applyTerminalRule(const MachineInstr &Copy) const {
       continue;
     Register OtherSrcReg, OtherReg;
     unsigned OtherSrcSubReg = 0, OtherSubReg = 0;
-    if (!isMoveInstr(*TRI, &Copy, OtherSrcReg, OtherReg, OtherSrcSubReg,
+    if (!isMoveInstr(*TRI, &MI, OtherSrcReg, OtherReg, OtherSrcSubReg,
                      OtherSubReg))
       return false;
     if (OtherReg == SrcReg)
@@ -4320,11 +4327,6 @@ bool RegisterCoalescer::run(MachineFunction &fn) {
     JoinGlobalCopies = STI.enableJoinGlobalCopies();
   else
     JoinGlobalCopies = (EnableGlobalCopies == cl::BOU_TRUE);
-
-  if (EnableTerminalRule == cl::BOU_UNSET)
-    UseTerminalRule = STI.enableTerminalRule();
-  else
-    UseTerminalRule = EnableTerminalRule == cl::BOU_TRUE;
 
   // If there are PHIs tracked by debug-info, they will need updating during
   // coalescing. Build an index of those PHIs to ease updating.

@@ -772,6 +772,17 @@ void SIFrameLowering::emitEntryFunctionPrologue(MachineFunction &MF,
                                          PreloadedScratchRsrcReg,
                                          ScratchRsrcReg, ScratchWaveOffsetReg);
   }
+
+  if (ST.hasWaitXCnt()) {
+    // Set REPLAY_MODE (bit 25) in MODE register to enable multi-group XNACK
+    // replay. This aligns hardware behavior with the compiler's s_wait_xcnt
+    // insertion logic, which assumes multi-group mode by default.
+    unsigned RegEncoding =
+        AMDGPU::Hwreg::HwregEncoding::encode(AMDGPU::Hwreg::ID_MODE, 25, 1);
+    BuildMI(MBB, I, DL, TII->get(AMDGPU::S_SETREG_IMM32_B32))
+        .addImm(1)
+        .addImm(RegEncoding);
+  }
 }
 
 // Emit scratch RSRC setup code, assuming `ScratchRsrcReg != AMDGPU::NoReg`
@@ -1833,9 +1844,7 @@ void SIFrameLowering::determineCalleeSavesSGPR(MachineFunction &MF,
 
 static void assignSlotsUsingVGPRBlocks(MachineFunction &MF,
                                        const GCNSubtarget &ST,
-                                       std::vector<CalleeSavedInfo> &CSI,
-                                       unsigned &MinCSFrameIndex,
-                                       unsigned &MaxCSFrameIndex) {
+                                       std::vector<CalleeSavedInfo> &CSI) {
   SIMachineFunctionInfo *FuncInfo = MF.getInfo<SIMachineFunctionInfo>();
   MachineFrameInfo &MFI = MF.getFrameInfo();
   const SIRegisterInfo *TRI = ST.getRegisterInfo();
@@ -1904,10 +1913,7 @@ static void assignSlotsUsingVGPRBlocks(MachineFunction &MF,
     int FrameIdx =
         MFI.CreateStackObject(BlockSize, TRI->getSpillAlign(*BlockRegClass),
                               /*isSpillSlot=*/true);
-    if ((unsigned)FrameIdx < MinCSFrameIndex)
-      MinCSFrameIndex = FrameIdx;
-    if ((unsigned)FrameIdx > MaxCSFrameIndex)
-      MaxCSFrameIndex = FrameIdx;
+    MFI.setIsCalleeSavedObjectIndex(FrameIdx, true);
 
     CSIt->setFrameIdx(FrameIdx);
     CSIt->setReg(RegBlock);
@@ -1917,8 +1923,7 @@ static void assignSlotsUsingVGPRBlocks(MachineFunction &MF,
 
 bool SIFrameLowering::assignCalleeSavedSpillSlots(
     MachineFunction &MF, const TargetRegisterInfo *TRI,
-    std::vector<CalleeSavedInfo> &CSI, unsigned &MinCSFrameIndex,
-    unsigned &MaxCSFrameIndex) const {
+    std::vector<CalleeSavedInfo> &CSI) const {
   if (CSI.empty())
     return true; // Early exit if no callee saved registers are modified!
 
@@ -1926,12 +1931,12 @@ bool SIFrameLowering::assignCalleeSavedSpillSlots(
   bool UseVGPRBlocks = ST.useVGPRBlockOpsForCSR();
 
   if (UseVGPRBlocks)
-    assignSlotsUsingVGPRBlocks(MF, ST, CSI, MinCSFrameIndex, MaxCSFrameIndex);
+    assignSlotsUsingVGPRBlocks(MF, ST, CSI);
 
-  return assignCalleeSavedSpillSlots(MF, TRI, CSI) || UseVGPRBlocks;
+  return assignCalleeSavedSpillSlotsImpl(MF, TRI, CSI) || UseVGPRBlocks;
 }
 
-bool SIFrameLowering::assignCalleeSavedSpillSlots(
+bool SIFrameLowering::assignCalleeSavedSpillSlotsImpl(
     MachineFunction &MF, const TargetRegisterInfo *TRI,
     std::vector<CalleeSavedInfo> &CSI) const {
   if (CSI.empty())

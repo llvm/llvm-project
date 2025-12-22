@@ -30,6 +30,7 @@
 ; CHECK-NEXT:   experimental-smpmpmt             - 'Smpmpmt' (PMP-based Memory Types Extension).
 ; CHECK-NEXT:   experimental-svukte              - 'Svukte' (Address-Independent Latency of User-Mode Faults to Supervisor Addresses).
 ; CHECK-NEXT:   experimental-xqccmp              - 'Xqccmp' (Qualcomm 16-bit Push/Pop and Double Moves).
+; CHECK-NEXT:   experimental-xqci                - 'Xqci' (Qualcomm uC Extension).
 ; CHECK-NEXT:   experimental-xqcia               - 'Xqcia' (Qualcomm uC Arithmetic Extension).
 ; CHECK-NEXT:   experimental-xqciac              - 'Xqciac' (Qualcomm uC Load-Store Address Calculation Extension).
 ; CHECK-NEXT:   experimental-xqcibi              - 'Xqcibi' (Qualcomm uC Branch Immediate Extension).
@@ -137,9 +138,10 @@
 ; CHECK-NEXT:   shgatpa                          - 'Shgatpa' (SvNNx4 mode supported for all modes supported by satp, as well as Bare).
 ; CHECK-NEXT:   shifted-zextw-fusion             - Enable SLLI+SRLI to be fused when computing (shifted) word zero extension.
 ; CHECK-NEXT:   shlcofideleg                     - 'Shlcofideleg' (Delegating LCOFI Interrupts to VS-mode).
-; CHECK-NEXT:   short-forward-branch-i-minmax    - Enable short forward branch optimization for min,max instructions in Zbb.
-; CHECK-NEXT:   short-forward-branch-i-mul       - Enable short forward branch optimization for mul instruction.
-; CHECK-NEXT:   short-forward-branch-opt         - Enable short forward branch optimization.
+; CHECK-NEXT:   short-forward-branch-ialu        - Enable short forward branch optimization for RVI base instructions.
+; CHECK-NEXT:   short-forward-branch-iload       - Enable short forward branch optimization for load instructions.
+; CHECK-NEXT:   short-forward-branch-iminmax     - Enable short forward branch optimization for MIN,MAX instructions in Zbb.
+; CHECK-NEXT:   short-forward-branch-imul        - Enable short forward branch optimization for MUL instruction.
 ; CHECK-NEXT:   shtvala                          - 'Shtvala' (htval provides all needed values).
 ; CHECK-NEXT:   shvsatpa                         - 'Shvsatpa' (vsatp supports all modes supported by satp).
 ; CHECK-NEXT:   shvstvala                        - 'Shvstvala' (vstval provides all needed values).
@@ -297,6 +299,7 @@
 ; CHECK-NEXT:   zihintpause                      - 'Zihintpause' (Pause Hint).
 ; CHECK-NEXT:   zihpm                            - 'Zihpm' (Hardware Performance Counters).
 ; CHECK-NEXT:   zilsd                            - 'Zilsd' (Load/Store Pair Instructions).
+; CHECK-NEXT:   zilsd-4byte-align                - Allow 4-byte alignment for Zilsd LD/SD instructions.
 ; CHECK-NEXT:   zimop                            - 'Zimop' (May-Be-Operations).
 ; CHECK-NEXT:   zk                               - 'Zk' (Standard scalar cryptography extension).
 ; CHECK-NEXT:   zkn                              - 'Zkn' (NIST Algorithm Suite).

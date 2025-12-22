@@ -2725,15 +2725,12 @@ static void emitAttributes(const RecordKeeper &Records, raw_ostream &OS,
     assert(!Supers.empty() && "Forgot to specify a superclass for the attr");
     std::string SuperName;
     bool Inheritable = false;
-    bool HLSLSemantic = false;
     for (const Record *R : reverse(Supers)) {
       if (R->getName() != "TargetSpecificAttr" &&
           R->getName() != "DeclOrTypeAttr" && SuperName.empty())
         SuperName = R->getName().str();
       if (R->getName() == "InheritableAttr")
         Inheritable = true;
-      if (R->getName() == "HLSLSemanticAttr")
-        HLSLSemantic = true;
     }
 
     if (Header)
@@ -3057,8 +3054,6 @@ static void emitAttributes(const RecordKeeper &Records, raw_ostream &OS,
            << (R.getValueAsBit("InheritEvenIfAlreadyPresent") ? "true"
                                                               : "false");
       }
-      if (HLSLSemantic)
-        OS << ", " << (R.getValueAsBit("SemanticIndexable") ? "true" : "false");
       OS << ")\n";
 
       for (auto const &ai : Args) {
@@ -3077,17 +3072,6 @@ static void emitAttributes(const RecordKeeper &Records, raw_ostream &OS,
       }
 
       OS << "  {\n";
-
-      // The generator puts the arguments for each attribute in the child class,
-      // even if those are set in the inherited attribute class (in the TD
-      // file). This means I cannot access those from the parent class, and have
-      // to do this weirdness. Maybe the generator should be changed to
-      // arguments are put in the class they are declared in inside the TD file?
-      if (HLSLSemantic) {
-        OS << "  if (SemanticExplicitIndex)\n";
-        OS << "    setSemanticIndex(SemanticIndex);\n";
-        OS << "  setTargetDecl(Target);\n";
-      }
 
       for (auto const &ai : Args) {
         if (!shouldEmitArg(ai))
@@ -3287,7 +3271,7 @@ static const AttrClassDescriptor AttrClassDescriptors[] = {
     {"INHERITABLE_PARAM_OR_STMT_ATTR", "InheritableParamOrStmtAttr"},
     {"PARAMETER_ABI_ATTR", "ParameterABIAttr"},
     {"HLSL_ANNOTATION_ATTR", "HLSLAnnotationAttr"},
-    {"HLSL_SEMANTIC_ATTR", "HLSLSemanticAttr"}};
+    {"HLSL_SEMANTIC_ATTR", "HLSLSemanticBaseAttr"}};
 
 static void emitDefaultDefine(raw_ostream &OS, StringRef name,
                               const char *superName) {
@@ -5059,6 +5043,26 @@ void EmitClangAttrParsedAttrKinds(const RecordKeeper &Records,
   OS << "  }\n";
   OS << "  return AttributeCommonInfo::UnknownAttribute;\n"
      << "}\n";
+}
+
+// Emits Sema calls for type dependent attributes
+void EmitClangAttrIsTypeDependent(const RecordKeeper &Records,
+                                  raw_ostream &OS) {
+  emitSourceFileHeader("Attribute is type dependent", OS, Records);
+
+  OS << "void checkAttrIsTypeDependent(Decl *D, const Attr *A) {\n";
+  OS << "  switch (A->getKind()) {\n";
+  OS << "  default:\n";
+  OS << "    break;\n";
+  for (const auto *A : Records.getAllDerivedDefinitions("Attr")) {
+    if (A->getValueAsBit("IsTypeDependent")) {
+      OS << "  case attr::" << A->getName() << ":\n";
+      OS << "    ActOn" << A->getName() << "Attr(D, A);\n";
+      OS << "    break;\n";
+    }
+  }
+  OS << "  }\n";
+  OS << "}\n";
 }
 
 // Emits the code to dump an attribute.

@@ -10,6 +10,7 @@
 #define LLDB_TOOLS_LLDB_DAP_DAP_H
 
 #include "DAPForward.h"
+#include "DAPSessionManager.h"
 #include "ExceptionBreakpoint.h"
 #include "FunctionBreakpoint.h"
 #include "InstructionBreakpoint.h"
@@ -32,11 +33,9 @@
 #include "lldb/API/SBTarget.h"
 #include "lldb/API/SBThread.h"
 #include "lldb/Host/MainLoop.h"
-#include "lldb/Utility/Status.h"
 #include "lldb/lldb-types.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
-#include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
@@ -47,6 +46,7 @@
 #include <condition_variable>
 #include <cstdint>
 #include <deque>
+#include <map>
 #include <memory>
 #include <mutex>
 #include <optional>
@@ -81,10 +81,12 @@ enum class ReplMode { Variable = 0, Command, Auto };
 using DAPTransport = lldb_private::transport::JSONTransport<ProtocolDescriptor>;
 
 struct DAP final : public DAPTransport::MessageHandler {
+  friend class DAPSessionManager;
+
   /// Path to the lldb-dap binary itself.
   static llvm::StringRef debug_adapter_path;
 
-  Log *log;
+  Log &log;
   DAPTransport &transport;
   lldb::SBFile in;
   OutputRedirector out;
@@ -157,6 +159,11 @@ struct DAP final : public DAPTransport::MessageHandler {
   /// Whether to disable sourcing .lldbinit files.
   bool no_lldbinit;
 
+  /// Stores whether the initialize request specified a value for
+  /// lldbExtSourceInitFile. Used by the test suite to prevent sourcing
+  /// `.lldbinit` and changing its behavior.
+  bool sourceInitFile = true;
+
   /// The initial thread list upon attaching.
   std::vector<protocol::Thread> initial_thread_list;
 
@@ -185,12 +192,12 @@ struct DAP final : public DAPTransport::MessageHandler {
   ///     Transport for this debug session.
   /// \param[in] loop
   ///     Main loop associated with this instance.
-  DAP(Log *log, const ReplMode default_repl_mode,
+  DAP(Log &log, const ReplMode default_repl_mode,
       std::vector<std::string> pre_init_commands, bool no_lldbinit,
       llvm::StringRef client_name, DAPTransport &transport,
       lldb_private::MainLoop &loop);
 
-  ~DAP();
+  ~DAP() override = default;
 
   /// DAP is not copyable.
   /// @{
@@ -263,7 +270,7 @@ struct DAP final : public DAPTransport::MessageHandler {
   ///     either an expression or a statement, depending on the rest of
   ///     the expression.
   /// \return the expression mode
-  ReplMode DetectReplMode(lldb::SBFrame frame, std::string &expression,
+  ReplMode DetectReplMode(lldb::SBFrame &frame, std::string &expression,
                           bool partial_expression);
 
   /// Create a `protocol::Source` object as described in the debug adapter
@@ -408,8 +415,32 @@ struct DAP final : public DAPTransport::MessageHandler {
 
   lldb::SBMutex GetAPIMutex() const { return target.GetAPIMutex(); }
 
+  /// Get the client name for this DAP session.
+  llvm::StringRef GetClientName() const { return m_client_name; }
+
   void StartEventThread();
   void StartProgressEventThread();
+
+  /// DAP debugger initialization functions.
+  /// @{
+
+  /// Perform complete DAP initialization for a new debugger.
+  llvm::Error InitializeDebugger();
+
+  /// Perform complete DAP initialization by reusing an existing debugger and
+  /// target.
+  ///
+  /// \param[in] debugger_id
+  ///     The ID of the existing debugger to reuse.
+  ///
+  /// \param[in] target_id
+  ///     The globally unique ID of the existing target to reuse.
+  llvm::Error InitializeDebugger(int debugger_id, lldb::user_id_t target_id);
+
+  /// Start event handling threads based on client capabilities.
+  void StartEventThreads();
+
+  /// @}
 
   /// Sets the given protocol `breakpoints` in the given `source`, while
   /// removing any existing breakpoints in the given source if they are not in
@@ -453,11 +484,11 @@ private:
 
   /// Event threads.
   /// @{
-  void EventThread();
-  void HandleThreadEvent(const lldb::SBEvent &event);
   void ProgressEventThread();
 
-  std::thread event_thread;
+  /// Event thread is a shared pointer in case we have a multiple
+  /// DAP instances sharing the same event thread.
+  std::shared_ptr<ManagedEventThread> event_thread_sp;
   std::thread progress_event_thread;
   /// @}
 
