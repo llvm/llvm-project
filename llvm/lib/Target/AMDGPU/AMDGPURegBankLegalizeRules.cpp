@@ -120,6 +120,8 @@ bool matchUniformityAndLLT(Register Reg, UniformityLLTOpPredicateID UniID,
     return isAnyPtr(MRI.getType(Reg), 128) && MUI.isUniform(Reg);
   case UniV2S16:
     return MRI.getType(Reg) == LLT::fixed_vector(2, 16) && MUI.isUniform(Reg);
+  case UniV2S32:
+    return MRI.getType(Reg) == LLT::fixed_vector(2, 32) && MUI.isUniform(Reg);
   case UniB32:
     return MRI.getType(Reg).getSizeInBits() == 32 && MUI.isUniform(Reg);
   case UniB64:
@@ -160,6 +162,8 @@ bool matchUniformityAndLLT(Register Reg, UniformityLLTOpPredicateID UniID,
     return isAnyPtr(MRI.getType(Reg), 128) && MUI.isDivergent(Reg);
   case DivV2S16:
     return MRI.getType(Reg) == LLT::fixed_vector(2, 16) && MUI.isDivergent(Reg);
+  case DivV2S32:
+    return MRI.getType(Reg) == LLT::fixed_vector(2, 32) && MUI.isDivergent(Reg);
   case DivB32:
     return MRI.getType(Reg).getSizeInBits() == 32 && MUI.isDivergent(Reg);
   case DivB64:
@@ -967,6 +971,30 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Uni(S16, {{UniInVgprS16}, {Vgpr16, Vgpr16}}, !hasSALUFloat)
       .Uni(S32, {{Sgpr32}, {Sgpr32, Sgpr32}}, hasSALUFloat)
       .Uni(S32, {{UniInVgprS32}, {Vgpr32, Vgpr32}}, !hasSALUFloat);
+
+  addRulesForGOpcs({G_FMAD}, Standard)
+      .Uni(S16, {{UniInVgprS16}, {Vgpr16, Vgpr16, Vgpr16}})
+      .Div(S16, {{Vgpr16}, {Vgpr16, Vgpr16, Vgpr16}})
+      .Uni(S32, {{UniInVgprS32}, {Vgpr32, Vgpr32, Vgpr32}})
+      .Div(S32, {{Vgpr32}, {Vgpr32, Vgpr32, Vgpr32}});
+
+  addRulesForGOpcs({G_FMA}, Standard)
+      .Div(S16, {{Vgpr16}, {Vgpr16, Vgpr16, Vgpr16}})
+      .Div(S32, {{Vgpr32}, {Vgpr32, Vgpr32, Vgpr32}})
+      .Uni(S64, {{UniInVgprS64}, {Vgpr64, Vgpr64, Vgpr64}})
+      .Div(S64, {{Vgpr64}, {Vgpr64, Vgpr64, Vgpr64}})
+      .Div(V2S16, {{VgprV2S16}, {VgprV2S16, VgprV2S16, VgprV2S16}})
+      .Any({{UniV2S32}, {{UniInVgprV2S32}, {VgprV2S32, VgprV2S32, VgprV2S32}}})
+      .Any({{DivV2S32}, {{VgprV2S32}, {VgprV2S32, VgprV2S32, VgprV2S32}}})
+      .Uni(S16, {{Sgpr16}, {Sgpr16, Sgpr16, Sgpr16}}, hasSALUFloat)
+      .Uni(S16, {{UniInVgprS16}, {Vgpr16, Vgpr16, Vgpr16}}, !hasSALUFloat)
+      .Uni(S32, {{Sgpr32}, {Sgpr32, Sgpr32, Sgpr32}}, hasSALUFloat)
+      .Uni(S32, {{UniInVgprS32}, {Vgpr32, Vgpr32, Vgpr32}}, !hasSALUFloat)
+      .Uni(V2S16,
+           {{SgprV2S16}, {SgprV2S16, SgprV2S16, SgprV2S16}, ScalarizeToS16},
+           hasSALUFloat)
+      .Uni(V2S16, {{UniInVgprV2S16}, {VgprV2S16, VgprV2S16, VgprV2S16}},
+           !hasSALUFloat);
 
   // FNEG and FABS are either folded as source modifiers or can be selected as
   // bitwise XOR and AND with Mask. XOR and AND are available on SALU but for

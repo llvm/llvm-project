@@ -8,9 +8,9 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+d,+zvfhmin,+zfbfmin,+zvfbfmin,+v -target-abi=lp64d \
 ; RUN:   -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,ZVFBFMIN,ZVFHMIN
 ; RUN: llc -mtriple=riscv32 -mattr=+d,+zvfhmin,+experimental-zvfbfa,+v \
-; RUN:   -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,ZVFBFA,ZVFHMIN
+; RUN:   -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,ZVFHMIN,ZVFBFA
 ; RUN: llc -mtriple=riscv64 -mattr=+d,+zvfhmin,+experimental-zvfbfa,+v \
-; RUN:   -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,ZVFBFA,ZVFHMIN
+; RUN:   -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,ZVFHMIN,ZVFBFA
 
 define <2 x bfloat> @vfmin_v2bf16_vv(<2 x bfloat> %a, <2 x bfloat> %b) {
 ; ZVFBFMIN-LABEL: vfmin_v2bf16_vv:
