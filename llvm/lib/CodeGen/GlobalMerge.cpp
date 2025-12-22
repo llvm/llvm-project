@@ -562,6 +562,7 @@ bool GlobalMergeImpl::doMerge(const SmallVectorImpl<GlobalVariable *> &Globals,
 
     MergedGV->setAlignment(MaxAlign);
     MergedGV->setSection(Globals[i]->getSection());
+    MergedGV->setComdat(Globals[i]->getComdat());
 
     LLVM_DEBUG(dbgs() << "MergedGV:  " << *MergedGV << "\n");
 
@@ -677,7 +678,8 @@ bool GlobalMergeImpl::run(Module &M) {
   IsMachO = M.getTargetTriple().isOSBinFormatMachO();
 
   auto &DL = M.getDataLayout();
-  MapVector<std::pair<unsigned, StringRef>, SmallVector<GlobalVariable *, 0>>
+  MapVector<std::tuple<unsigned, StringRef, Comdat *>,
+            SmallVector<GlobalVariable *, 0>>
       Globals, ConstGlobals, BSSGlobals;
   bool Changed = false;
   setMustKeepGlobalVariables(M);
@@ -735,11 +737,11 @@ bool GlobalMergeImpl::run(Module &M) {
     if (CanMerge) {
       if (TM &&
           TargetLoweringObjectFile::getKindForGlobal(&GV, *TM).isBSS())
-        BSSGlobals[{AddressSpace, Section}].push_back(&GV);
+        BSSGlobals[{AddressSpace, Section, GV.getComdat()}].push_back(&GV);
       else if (GV.isConstant())
-        ConstGlobals[{AddressSpace, Section}].push_back(&GV);
+        ConstGlobals[{AddressSpace, Section, GV.getComdat()}].push_back(&GV);
       else
-        Globals[{AddressSpace, Section}].push_back(&GV);
+        Globals[{AddressSpace, Section, GV.getComdat()}].push_back(&GV);
     }
     LLVM_DEBUG(dbgs() << "GV " << (CanMerge ? "" : "not ") << "to merge: " << GV
                       << "\n");
@@ -747,16 +749,16 @@ bool GlobalMergeImpl::run(Module &M) {
 
   for (auto &P : Globals)
     if (P.second.size() > 1)
-      Changed |= doMerge(P.second, M, false, P.first.first);
+      Changed |= doMerge(P.second, M, false, std::get<0>(P.first));
 
   for (auto &P : BSSGlobals)
     if (P.second.size() > 1)
-      Changed |= doMerge(P.second, M, false, P.first.first);
+      Changed |= doMerge(P.second, M, false, std::get<0>(P.first));
 
   if (Opt.MergeConstantGlobals)
     for (auto &P : ConstGlobals)
       if (P.second.size() > 1)
-        Changed |= doMerge(P.second, M, true, P.first.first);
+        Changed |= doMerge(P.second, M, true, std::get<0>(P.first));
 
   return Changed;
 }
