@@ -292,11 +292,14 @@ public:
   Run(const std::optional<protocol::DisconnectArguments> &args) const override;
 };
 
-class EvaluateRequestHandler : public LegacyRequestHandler {
+class EvaluateRequestHandler
+    : public RequestHandler<protocol::EvaluateArguments,
+                            llvm::Expected<protocol::EvaluateResponseBody>> {
 public:
-  using LegacyRequestHandler::LegacyRequestHandler;
+  using RequestHandler::RequestHandler;
   static llvm::StringLiteral GetCommand() { return "evaluate"; }
-  void operator()(const llvm::json::Object &request) const override;
+  llvm::Expected<protocol::EvaluateResponseBody>
+  Run(const protocol::EvaluateArguments &) const override;
   FeatureSet GetSupportedFeatures() const override {
     return {protocol::eAdapterFeatureEvaluateForHovers};
   }
@@ -337,11 +340,14 @@ public:
   void PostRun() const override;
 };
 
-class RestartRequestHandler : public LegacyRequestHandler {
+class RestartRequestHandler
+    : public RequestHandler<std::optional<protocol::RestartArguments>,
+                            protocol::RestartResponse> {
 public:
-  using LegacyRequestHandler::LegacyRequestHandler;
+  using RequestHandler::RequestHandler;
   static llvm::StringLiteral GetCommand() { return "restart"; }
-  void operator()(const llvm::json::Object &request) const override;
+  llvm::Error
+  Run(const std::optional<protocol::RestartArguments> &args) const override;
 };
 
 class NextRequestHandler
@@ -432,6 +438,9 @@ class DataBreakpointInfoRequestHandler
 public:
   using RequestHandler::RequestHandler;
   static llvm::StringLiteral GetCommand() { return "dataBreakpointInfo"; }
+  FeatureSet GetSupportedFeatures() const override {
+    return {protocol::eAdapterFeatureDataBreakpointBytes};
+  }
   llvm::Expected<protocol::DataBreakpointInfoResponseBody>
   Run(const protocol::DataBreakpointInfoArguments &args) const override;
 };
@@ -466,11 +475,16 @@ public:
   Run(const protocol::SetInstructionBreakpointsArguments &args) const override;
 };
 
-class CompileUnitsRequestHandler : public LegacyRequestHandler {
+class CompileUnitsRequestHandler
+    : public RequestHandler<
+          std::optional<protocol::CompileUnitsArguments>,
+          llvm::Expected<protocol::CompileUnitsResponseBody>> {
 public:
-  using LegacyRequestHandler::LegacyRequestHandler;
+  using RequestHandler::RequestHandler;
   static llvm::StringLiteral GetCommand() { return "compileUnits"; }
-  void operator()(const llvm::json::Object &request) const override;
+  llvm::Expected<protocol::CompileUnitsResponseBody>
+  Run(const std::optional<protocol::CompileUnitsArguments> &args)
+      const override;
 };
 
 class ModulesRequestHandler final
@@ -486,11 +500,12 @@ public:
   Run(const std::optional<protocol::ModulesArguments> &args) const override;
 };
 
-class PauseRequestHandler : public LegacyRequestHandler {
+class PauseRequestHandler
+    : public RequestHandler<protocol::PauseArguments, protocol::PauseResponse> {
 public:
-  using LegacyRequestHandler::LegacyRequestHandler;
+  using RequestHandler::RequestHandler;
   static llvm::StringLiteral GetCommand() { return "pause"; }
-  void operator()(const llvm::json::Object &request) const override;
+  llvm::Error Run(const protocol::PauseArguments &args) const override;
 };
 
 class ScopesRequestHandler final
@@ -557,11 +572,14 @@ public:
   Run(const protocol::VariablesArguments &) const override;
 };
 
-class LocationsRequestHandler : public LegacyRequestHandler {
+class LocationsRequestHandler
+    : public RequestHandler<protocol::LocationsArguments,
+                            llvm::Expected<protocol::LocationsResponseBody>> {
 public:
-  using LegacyRequestHandler::LegacyRequestHandler;
+  using RequestHandler::RequestHandler;
   static llvm::StringLiteral GetCommand() { return "locations"; }
-  void operator()(const llvm::json::Object &request) const override;
+  llvm::Expected<protocol::LocationsResponseBody>
+  Run(const protocol::LocationsArguments &) const override;
 };
 
 class DisassembleRequestHandler final
@@ -615,17 +633,17 @@ public:
   Run(const protocol::ModuleSymbolsArguments &args) const override;
 };
 
-/// A request used in testing to get the details on all breakpoints that are
-/// currently set in the target. This helps us to test "setBreakpoints" and
-/// "setFunctionBreakpoints" requests to verify we have the correct set of
-/// breakpoints currently set in LLDB.
-class TestGetTargetBreakpointsRequestHandler : public LegacyRequestHandler {
+class TestGetTargetBreakpointsRequestHandler
+    : public RequestHandler<
+          protocol::TestGetTargetBreakpointsArguments,
+          llvm::Expected<protocol::TestGetTargetBreakpointsResponseBody>> {
 public:
-  using LegacyRequestHandler::LegacyRequestHandler;
+  using RequestHandler::RequestHandler;
   static llvm::StringLiteral GetCommand() {
     return "_testGetTargetBreakpoints";
   }
-  void operator()(const llvm::json::Object &request) const override;
+  llvm::Expected<protocol::TestGetTargetBreakpointsResponseBody>
+  Run(const protocol::TestGetTargetBreakpointsArguments &args) const override;
 };
 
 class WriteMemoryRequestHandler final

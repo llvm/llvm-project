@@ -8,6 +8,7 @@
 
 #include "llvm/Support/ThreadPool.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Config/llvm-config.h" // for LLVM_ENABLE_THREADS
@@ -195,6 +196,42 @@ TYPED_TEST(ThreadPoolTest, AsyncMoveOnly) {
   this->setMainThreadReady();
   Pool.wait();
   ASSERT_EQ(42, f.get());
+}
+
+TYPED_TEST(ThreadPoolTest, AsyncRAIICaptures) {
+  CHECK_UNSUPPORTED();
+  DefaultThreadPool Pool(hardware_concurrency(2));
+
+  // We use a task group and a non-atomic value to stress test that the chaining
+  // of tasks via a captured RAII object in fact chains and synchronizes within
+  // a group.
+  ThreadPoolTaskGroup Group(Pool);
+  int value = 0;
+
+  // Create an RAII object that when destroyed schedules more work. This makes
+  // it easy to check that the RAII is resolved at the same point as a task runs
+  // on the thread pool.
+  auto schedule_next = llvm::make_scope_exit([&Group, &value] {
+    // We sleep before scheduling the final task to make it much more likely
+    // that an incorrect implementation actually exbitits a bug. Without the
+    // sleep, we may get "lucky" and have the second task finish before the
+    // assertion below fails even with an incorrect implementaiton. The
+    // sleep is making _failures_ more reliable, it is not needed for
+    // correctness and this test should only flakily _pass_, never flakily
+    // fail.
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    Group.async([&value] { value = 42; });
+  });
+
+  // Now schedule the initial task, moving the RAII object to schedule the final
+  // task into its captures.
+  Group.async([schedule_next = std::move(schedule_next)]() {
+    // Nothing to do here, the captured RAII object does the work.
+  });
+
+  // Both tasks should complete here, synchronizing with the read of value.
+  Group.wait();
+  ASSERT_EQ(42, value);
 }
 
 TYPED_TEST(ThreadPoolTest, GetFuture) {

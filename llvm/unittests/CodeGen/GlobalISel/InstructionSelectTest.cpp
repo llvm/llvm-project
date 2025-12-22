@@ -59,10 +59,8 @@ TEST_F(AArch64GISelMITest, TestInstructionSelectErase) {
     GTEST_SKIP();
 
   legacy::PassManager PM;
-  std::unique_ptr<TargetPassConfig> TPC(TM->createPassConfig(PM));
 
   EraseMockInstructionSelector ISel;
-  ISel.TPC = TPC.get();
   for (auto &MI : *EntryMBB) {
     ISel.MIs.push_back(&MI);
   }

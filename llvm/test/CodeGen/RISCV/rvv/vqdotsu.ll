@@ -4,13 +4,6 @@
 ; RUN: sed 's/iXLen/i64/g' %s | llc -mtriple=riscv64 -mattr=+zve64x,+experimental-zvqdotq \
 ; RUN:   -verify-machineinstrs | FileCheck %s --check-prefixes=CHECK
 
-declare <vscale x 1 x i32> @llvm.riscv.vqdotsu.nxv1i32.nxv1i32(
-  <vscale x 1 x i32>,
-  <vscale x 4 x i8>,
-  <vscale x 4 x i8>,
-  iXLen,
-  iXLen);
-
 define <vscale x 1 x i32>  @intrinsic_vqdotsu_vv_nxv1i32_nxv1i32(<vscale x 1 x i32> %0, <vscale x 4 x i8> %1, <vscale x 4 x i8> %2, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_vqdotsu_vv_nxv1i32_nxv1i32:
 ; CHECK:       # %bb.0: # %entry
@@ -26,12 +19,6 @@ entry:
 
   ret <vscale x 1 x i32> %a
 }
-declare <vscale x 2 x i32> @llvm.riscv.vqdotsu.nxv2i32.nxv2i32(
-  <vscale x 2 x i32>,
-  <vscale x 8 x i8>,
-  <vscale x 8 x i8>,
-  iXLen,
-  iXLen);
 
 define <vscale x 2 x i32>  @intrinsic_vqdotsu_vv_nxv2i32_nxv2i32(<vscale x 2 x i32> %0, <vscale x 8 x i8> %1, <vscale x 8 x i8> %2, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_vqdotsu_vv_nxv2i32_nxv2i32:
@@ -48,12 +35,6 @@ entry:
 
   ret <vscale x 2 x i32> %a
 }
-declare <vscale x 4 x i32> @llvm.riscv.vqdotsu.nxv4i32.nxv4i32(
-  <vscale x 4 x i32>,
-  <vscale x 16 x i8>,
-  <vscale x 16 x i8>,
-  iXLen,
-  iXLen);
 
 define <vscale x 4 x i32>  @intrinsic_vqdotsu_vv_nxv4i32_nxv4i32(<vscale x 4 x i32> %0, <vscale x 16 x i8> %1, <vscale x 16 x i8> %2, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_vqdotsu_vv_nxv4i32_nxv4i32:
@@ -70,12 +51,6 @@ entry:
 
   ret <vscale x 4 x i32> %a
 }
-declare <vscale x 8 x i32> @llvm.riscv.vqdotsu.nxv8i32.nxv8i32(
-  <vscale x 8 x i32>,
-  <vscale x 32 x i8>,
-  <vscale x 32 x i8>,
-  iXLen,
-  iXLen);
 
 define <vscale x 8 x i32>  @intrinsic_vqdotsu_vv_nxv8i32_nxv8i32(<vscale x 8 x i32> %0, <vscale x 32 x i8> %1, <vscale x 32 x i8> %2, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_vqdotsu_vv_nxv8i32_nxv8i32:
@@ -92,12 +67,6 @@ entry:
 
   ret <vscale x 8 x i32> %a
 }
-declare <vscale x 16 x i32> @llvm.riscv.vqdotsu.nxv16i32.nxv16i32(
-  <vscale x 16 x i32>,
-  <vscale x 64 x i8>,
-  <vscale x 64 x i8>,
-  iXLen,
-  iXLen);
 
 define <vscale x 16 x i32>  @intrinsic_vqdotsu_vv_nxv16i32_nxv16i32(<vscale x 16 x i32> %0, <vscale x 64 x i8> %1, <vscale x 64 x i8> %2, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_vqdotsu_vv_nxv16i32_nxv16i32:
@@ -115,13 +84,6 @@ entry:
 
   ret <vscale x 16 x i32> %a
 }
-declare <vscale x 1 x i32> @llvm.riscv.vqdotsu.mask.nxv1i32.nxv1i32(
-  <vscale x 1 x i32>,
-  <vscale x 4 x i8>,
-  <vscale x 4 x i8>,
-  <vscale x 1 x i1>,
-  iXLen,
-  iXLen);
 
 define <vscale x 1 x i32>  @intrinsic_vqdotsu_mask_vv_nxv1i32_nxv1i32(<vscale x 1 x i32> %0, <vscale x 4 x i8> %1, <vscale x 4 x i8> %2, <vscale x 1 x i1> %m, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_vqdotsu_mask_vv_nxv1i32_nxv1i32:
@@ -139,13 +101,6 @@ entry:
 
   ret <vscale x 1 x i32> %a
 }
-declare <vscale x 2 x i32> @llvm.riscv.vqdotsu.mask.nxv2i32.nxv2i32(
-  <vscale x 2 x i32>,
-  <vscale x 8 x i8>,
-  <vscale x 8 x i8>,
-  <vscale x 2 x i1>,
-  iXLen,
-  iXLen);
 
 define <vscale x 2 x i32>  @intrinsic_vqdotsu_mask_vv_nxv2i32_nxv2i32(<vscale x 2 x i32> %0, <vscale x 8 x i8> %1, <vscale x 8 x i8> %2, <vscale x 2 x i1> %m, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_vqdotsu_mask_vv_nxv2i32_nxv2i32:
@@ -163,13 +118,6 @@ entry:
 
   ret <vscale x 2 x i32> %a
 }
-declare <vscale x 4 x i32> @llvm.riscv.vqdotsu.mask.nxv4i32.nxv4i32(
-  <vscale x 4 x i32>,
-  <vscale x 16 x i8>,
-  <vscale x 16 x i8>,
-  <vscale x 4 x i1>,
-  iXLen,
-  iXLen);
 
 define <vscale x 4 x i32>  @intrinsic_vqdotsu_mask_vv_nxv4i32_nxv4i32(<vscale x 4 x i32> %0, <vscale x 16 x i8> %1, <vscale x 16 x i8> %2, <vscale x 4 x i1> %m, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_vqdotsu_mask_vv_nxv4i32_nxv4i32:
@@ -187,13 +135,6 @@ entry:
 
   ret <vscale x 4 x i32> %a
 }
-declare <vscale x 8 x i32> @llvm.riscv.vqdotsu.mask.nxv8i32.nxv8i32(
-  <vscale x 8 x i32>,
-  <vscale x 32 x i8>,
-  <vscale x 32 x i8>,
-  <vscale x 8 x i1>,
-  iXLen,
-  iXLen);
 
 define <vscale x 8 x i32>  @intrinsic_vqdotsu_mask_vv_nxv8i32_nxv8i32(<vscale x 8 x i32> %0, <vscale x 32 x i8> %1, <vscale x 32 x i8> %2, <vscale x 8 x i1> %m, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_vqdotsu_mask_vv_nxv8i32_nxv8i32:
@@ -211,13 +152,6 @@ entry:
 
   ret <vscale x 8 x i32> %a
 }
-declare <vscale x 16 x i32> @llvm.riscv.vqdotsu.mask.nxv16i32.nxv16i32(
-  <vscale x 16 x i32>,
-  <vscale x 64 x i8>,
-  <vscale x 64 x i8>,
-  <vscale x 16 x i1>,
-  iXLen,
-  iXLen);
 
 define <vscale x 16 x i32>  @intrinsic_vqdotsu_mask_vv_nxv16i32_nxv16i32(<vscale x 16 x i32> %0, <vscale x 64 x i8> %1, <vscale x 64 x i8> %2, <vscale x 16 x i1> %m, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_vqdotsu_mask_vv_nxv16i32_nxv16i32:
@@ -236,12 +170,6 @@ entry:
 
   ret <vscale x 16 x i32> %a
 }
-declare <vscale x 1 x i32> @llvm.riscv.vqdotsu.nxv1i32.i32(
-  <vscale x 1 x i32>,
-  <vscale x 4 x i8>,
-  i32,
-  iXLen,
-  iXLen);
 
 define <vscale x 1 x i32>  @intrinsic_vqdotsu_vx_nxv1i32_i32(<vscale x 1 x i32> %0, <vscale x 4 x i8> %1, i32 %2, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_vqdotsu_vx_nxv1i32_i32:
@@ -258,12 +186,6 @@ entry:
 
   ret <vscale x 1 x i32> %a
 }
-declare <vscale x 2 x i32> @llvm.riscv.vqdotsu.nxv2i32.i32(
-  <vscale x 2 x i32>,
-  <vscale x 8 x i8>,
-  i32,
-  iXLen,
-  iXLen);
 
 define <vscale x 2 x i32>  @intrinsic_vqdotsu_vx_nxv2i32_i32(<vscale x 2 x i32> %0, <vscale x 8 x i8> %1, i32 %2, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_vqdotsu_vx_nxv2i32_i32:
@@ -280,12 +202,6 @@ entry:
 
   ret <vscale x 2 x i32> %a
 }
-declare <vscale x 4 x i32> @llvm.riscv.vqdotsu.nxv4i32.i32(
-  <vscale x 4 x i32>,
-  <vscale x 16 x i8>,
-  i32,
-  iXLen,
-  iXLen);
 
 define <vscale x 4 x i32>  @intrinsic_vqdotsu_vx_nxv4i32_i32(<vscale x 4 x i32> %0, <vscale x 16 x i8> %1, i32 %2, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_vqdotsu_vx_nxv4i32_i32:
@@ -302,12 +218,6 @@ entry:
 
   ret <vscale x 4 x i32> %a
 }
-declare <vscale x 8 x i32> @llvm.riscv.vqdotsu.nxv8i32.i32(
-  <vscale x 8 x i32>,
-  <vscale x 32 x i8>,
-  i32,
-  iXLen,
-  iXLen);
 
 define <vscale x 8 x i32>  @intrinsic_vqdotsu_vx_nxv8i32_i32(<vscale x 8 x i32> %0, <vscale x 32 x i8> %1, i32 %2, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_vqdotsu_vx_nxv8i32_i32:
@@ -324,12 +234,6 @@ entry:
 
   ret <vscale x 8 x i32> %a
 }
-declare <vscale x 16 x i32> @llvm.riscv.vqdotsu.nxv16i32.i32(
-  <vscale x 16 x i32>,
-  <vscale x 64 x i8>,
-  i32,
-  iXLen,
-  iXLen);
 
 define <vscale x 16 x i32>  @intrinsic_vqdotsu_vx_nxv16i32_i32(<vscale x 16 x i32> %0, <vscale x 64 x i8> %1, i32 %2, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_vqdotsu_vx_nxv16i32_i32:
@@ -346,13 +250,6 @@ entry:
 
   ret <vscale x 16 x i32> %a
 }
-declare <vscale x 1 x i32> @llvm.riscv.vqdotsu.mask.nxv1i32.i32(
-  <vscale x 1 x i32>,
-  <vscale x 4 x i8>,
-  i32,
-  <vscale x 1 x i1>,
-  iXLen,
-  iXLen);
 
 define <vscale x 1 x i32>  @intrinsic_vqdotsu_mask_vx_nxv1i32_i32(<vscale x 1 x i32> %0, <vscale x 4 x i8> %1, i32 %2, <vscale x 1 x i1> %m, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_vqdotsu_mask_vx_nxv1i32_i32:
@@ -370,13 +267,6 @@ entry:
 
   ret <vscale x 1 x i32> %a
 }
-declare <vscale x 2 x i32> @llvm.riscv.vqdotsu.mask.nxv2i32.i32(
-  <vscale x 2 x i32>,
-  <vscale x 8 x i8>,
-  i32,
-  <vscale x 2 x i1>,
-  iXLen,
-  iXLen);
 
 define <vscale x 2 x i32>  @intrinsic_vqdotsu_mask_vx_nxv2i32_i32(<vscale x 2 x i32> %0, <vscale x 8 x i8> %1, i32 %2, <vscale x 2 x i1> %m, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_vqdotsu_mask_vx_nxv2i32_i32:
@@ -394,13 +284,6 @@ entry:
 
   ret <vscale x 2 x i32> %a
 }
-declare <vscale x 4 x i32> @llvm.riscv.vqdotsu.mask.nxv4i32.i32(
-  <vscale x 4 x i32>,
-  <vscale x 16 x i8>,
-  i32,
-  <vscale x 4 x i1>,
-  iXLen,
-  iXLen);
 
 define <vscale x 4 x i32>  @intrinsic_vqdotsu_mask_vx_nxv4i32_i32(<vscale x 4 x i32> %0, <vscale x 16 x i8> %1, i32 %2, <vscale x 4 x i1> %m, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_vqdotsu_mask_vx_nxv4i32_i32:
@@ -418,13 +301,6 @@ entry:
 
   ret <vscale x 4 x i32> %a
 }
-declare <vscale x 8 x i32> @llvm.riscv.vqdotsu.mask.nxv8i32.i32(
-  <vscale x 8 x i32>,
-  <vscale x 32 x i8>,
-  i32,
-  <vscale x 8 x i1>,
-  iXLen,
-  iXLen);
 
 define <vscale x 8 x i32>  @intrinsic_vqdotsu_mask_vx_nxv8i32_i32(<vscale x 8 x i32> %0, <vscale x 32 x i8> %1, i32 %2, <vscale x 8 x i1> %m, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_vqdotsu_mask_vx_nxv8i32_i32:
@@ -442,13 +318,6 @@ entry:
 
   ret <vscale x 8 x i32> %a
 }
-declare <vscale x 16 x i32> @llvm.riscv.vqdotsu.mask.nxv16i32.i32(
-  <vscale x 16 x i32>,
-  <vscale x 64 x i8>,
-  i32,
-  <vscale x 16 x i1>,
-  iXLen,
-  iXLen);
 
 define <vscale x 16 x i32>  @intrinsic_vqdotsu_mask_vx_nxv16i32_i32(<vscale x 16 x i32> %0, <vscale x 64 x i8> %1, i32 %2, <vscale x 16 x i1> %m, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_vqdotsu_mask_vx_nxv16i32_i32:

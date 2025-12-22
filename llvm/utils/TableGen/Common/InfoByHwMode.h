@@ -91,7 +91,7 @@ template <typename InfoT> struct InfoByHwMode {
   using iterator = typename MapType::iterator;
   using const_iterator = typename MapType::const_iterator;
 
-  InfoByHwMode() = default;
+  explicit InfoByHwMode(const Record *Def = nullptr) : Def(Def) {};
   InfoByHwMode(const MapType &M) : Map(M) {}
 
   LLVM_ATTRIBUTE_ALWAYS_INLINE
@@ -102,6 +102,8 @@ template <typename InfoT> struct InfoByHwMode {
   const_iterator begin() const { return Map.begin(); }
   LLVM_ATTRIBUTE_ALWAYS_INLINE
   const_iterator end() const { return Map.end(); }
+  LLVM_ATTRIBUTE_ALWAYS_INLINE
+  size_t size() const { return Map.size(); }
   LLVM_ATTRIBUTE_ALWAYS_INLINE
   bool empty() const { return Map.empty(); }
 
@@ -148,8 +150,11 @@ template <typename InfoT> struct InfoByHwMode {
     Map.try_emplace(DefaultMode, I);
   }
 
+  const Record *getRecord() const { return Def; }
+
 protected:
   MapType Map;
+  const Record *Def;
 };
 
 struct ValueTypeByHwMode : public InfoByHwMode<MVT> {

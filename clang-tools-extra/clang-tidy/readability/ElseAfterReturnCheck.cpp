@@ -53,10 +53,9 @@ static const DeclRefExpr *findUsage(const Stmt *Node, int64_t DeclIdentifier) {
     if (DeclRef->getDecl()->getID() == DeclIdentifier)
       return DeclRef;
   } else {
-    for (const Stmt *ChildNode : Node->children()) {
+    for (const Stmt *ChildNode : Node->children())
       if (const DeclRefExpr *Result = findUsage(ChildNode, DeclIdentifier))
         return Result;
-    }
   }
   return nullptr;
 }
@@ -70,11 +69,10 @@ findUsageRange(const Stmt *Node,
     if (llvm::is_contained(DeclIdentifiers, DeclRef->getDecl()->getID()))
       return DeclRef;
   } else {
-    for (const Stmt *ChildNode : Node->children()) {
+    for (const Stmt *ChildNode : Node->children())
       if (const DeclRefExpr *Result =
               findUsageRange(ChildNode, DeclIdentifiers))
         return Result;
-    }
   }
   return nullptr;
 }
@@ -185,7 +183,6 @@ void ElseAfterReturnCheck::registerMatchers(MatchFinder *Finder) {
 static bool hasPreprocessorBranchEndBetweenLocations(
     const ElseAfterReturnCheck::ConditionalBranchMap &ConditionalBranchMap,
     const SourceManager &SM, SourceLocation StartLoc, SourceLocation EndLoc) {
-
   const SourceLocation ExpandedStartLoc = SM.getExpansionLoc(StartLoc);
   const SourceLocation ExpandedEndLoc = SM.getExpansionLoc(EndLoc);
   if (!SM.isWrittenInSameFile(ExpandedStartLoc, ExpandedEndLoc))

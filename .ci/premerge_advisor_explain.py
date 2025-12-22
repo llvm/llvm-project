@@ -39,6 +39,7 @@ def get_comment(
 ) -> dict[str, str]:
     repo = github.Github(github_token).get_repo("llvm/llvm-project")
     pr = repo.get_issue(pr_number).as_pull_request()
+    body = COMMENT_TAG.format(platform=platform.system()) + "\n" + body
     comment = {"body": body}
     comment_id = get_comment_id(platform.system(), pr)
     if comment_id:
@@ -52,7 +53,7 @@ def main(
     github_token: str,
     pr_number: int,
     return_code: int,
-):
+) -> bool:
     """The main entrypoint for the script.
 
     This function parses failures from files, requests information from the
@@ -78,16 +79,6 @@ def main(
       pr_number: The number of the PR associated with this run.
       return_code: The numerical return code of ninja/CMake.
     """
-    if return_code == 0:
-        with open("comment", "w") as comment_file_handle:
-            comment = get_comment(
-                github_token,
-                pr_number,
-                ":white_check_mark: With the latest revision this PR passed "
-                "the premerge checks.",
-            )
-            if "id" in comment:
-                json.dump([comment], comment_file_handle)
     junit_objects, ninja_logs = generate_test_report_lib.load_info_from_files(
         build_log_files
     )
@@ -104,34 +95,40 @@ def main(
                 explanation_request["failures"].append(
                     {"name": name, "message": failure_messsage}
                 )
-    else:
+    elif return_code != 0:
         ninja_failures = generate_test_report_lib.find_failure_in_ninja_logs(ninja_logs)
         for name, failure_message in ninja_failures:
             explanation_request["failures"].append(
                 {"name": name, "message": failure_message}
             )
-    advisor_response = requests.get(
-        PREMERGE_ADVISOR_URL, json=explanation_request, timeout=5
+    comments = []
+    advisor_explanations = []
+    if return_code != 0:
+        advisor_response = requests.get(
+            PREMERGE_ADVISOR_URL, json=explanation_request, timeout=5
+        )
+        if advisor_response.status_code == 200:
+            print(advisor_response.json())
+            advisor_explanations = advisor_response.json()
+        else:
+            print(advisor_response.reason)
+    report, failures_explained = generate_test_report_lib.generate_report(
+        generate_test_report_lib.compute_platform_title(),
+        return_code,
+        junit_objects,
+        ninja_logs,
+        failure_explanations_list=advisor_explanations,
     )
-    if advisor_response.status_code == 200:
-        print(advisor_response.json())
-        comments = [
-            get_comment(
-                github_token,
-                pr_number,
-                generate_test_report_lib.generate_report(
-                    generate_test_report_lib.compute_platform_title(),
-                    return_code,
-                    junit_objects,
-                    ninja_logs,
-                    failure_explanations_list=advisor_response.json(),
-                ),
-            )
-        ]
-        with open("comment", "w") as comment_file_handle:
-            json.dump(comments, comment_file_handle)
-    else:
-        print(advisor_response.reason)
+    comments.append(get_comment(github_token, pr_number, report))
+    if return_code == 0 and "id" not in comments[0]:
+        # If the job succeeds and there is not an existing comment, we
+        # should not write one to reduce noise.
+        comments = []
+    comments_file_name = f"comments-{platform.system()}-{platform.machine()}"
+    with open(comments_file_name, "w") as comment_file_handle:
+        json.dump(comments, comment_file_handle)
+    print(f"Wrote comments to {comments_file_name}")
+    return failures_explained
 
 
 if __name__ == "__main__":
@@ -147,13 +144,18 @@ if __name__ == "__main__":
 
     # Skip looking for results on AArch64 for now because the premerge advisor
     # service is not available on AWS currently.
-    if platform.machine() == "arm64":
+    if platform.machine() == "arm64" or platform.machine() == "aarch64":
         sys.exit(0)
 
-    main(
+    failures_explained = main(
         args.commit_sha,
         args.build_log_files,
         args.github_token,
         args.pr_number,
         args.return_code,
     )
+
+    if failures_explained:
+        sys.exit(0)
+
+    sys.exit(args.return_code)

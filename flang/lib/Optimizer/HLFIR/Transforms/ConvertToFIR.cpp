@@ -149,13 +149,18 @@ public:
           !assignOp.isTemporaryLHS() &&
           mlir::isa<fir::RecordType>(fir::getElementTypeOf(lhsExv));
 
+      mlir::ArrayAttr accessGroups;
+      if (auto attrs = assignOp.getOperation()->getAttrOfType<mlir::ArrayAttr>(
+              "access_groups"))
+        accessGroups = attrs;
+
       // genScalarAssignment() must take care of potential overlap
       // between LHS and RHS. Note that the overlap is possible
       // also for components of LHS/RHS, and the Assign() runtime
       // must take care of it.
-      fir::factory::genScalarAssignment(builder, loc, lhsExv, rhsExv,
-                                        needFinalization,
-                                        assignOp.isTemporaryLHS());
+      fir::factory::genScalarAssignment(
+          builder, loc, lhsExv, rhsExv, needFinalization,
+          assignOp.isTemporaryLHS(), accessGroups);
     }
     rewriter.eraseOp(assignOp);
     return mlir::success();
@@ -468,7 +473,7 @@ public:
     if (designate.getComponent()) {
       mlir::Type baseRecordType = baseEntity.getFortranElementType();
       if (fir::isRecordWithTypeParameters(baseRecordType))
-        TODO(loc, "hlfir.designate with a parametrized derived type base");
+        TODO(loc, "hlfir.designate with a parameterized derived type base");
       fieldIndex = fir::FieldIndexOp::create(
           builder, loc, fir::FieldType::get(builder.getContext()),
           designate.getComponent().value(), baseRecordType,
@@ -494,7 +499,7 @@ public:
             return mlir::success();
           }
           TODO(loc,
-               "addressing parametrized derived type automatic components");
+               "addressing parameterized derived type automatic components");
         }
         baseEleTy = hlfir::getFortranElementType(componentType);
         shape = designate.getComponentShape();

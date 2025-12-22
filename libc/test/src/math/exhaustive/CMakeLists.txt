@@ -551,6 +551,21 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  atanf_float_test
+  NO_RUN_POSTBUILD
+  NEED_MPFR
+  SUITE
+    libc_math_exhaustive_tests
+  SRCS
+    atanf_float_test.cpp
+  LINK_LIBRARIES
+    -lpthread
+  DEPENDS
+    .exhaustive_test
+    libc.src.__support.math.atanf
+)
+
+add_fp_unittest(
   asinf_test
   NO_RUN_POSTBUILD
   NEED_MPFR

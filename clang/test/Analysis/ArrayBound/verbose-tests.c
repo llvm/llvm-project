@@ -381,27 +381,9 @@ int *symbolicExtent(int arg) {
     return 0;
   int *mem = (int*)malloc(arg);
 
-  // TODO: without the following reference to 'arg', the analyzer would discard
-  // the range information about (the symbolic value of) 'arg'. This is
-  // incorrect because while the variable itself is inaccessible, it becomes
-  // the symbolic extent of 'mem', so we still want to reason about its
-  // potential values.
-  (void)arg;
-
   mem[8] = -2;
   // expected-warning@-1 {{Out of bound access to memory after the end of the heap area}}
   // expected-note@-2 {{Access of 'int' element in the heap area at index 8}}
-  return mem;
-}
-
-int *symbolicExtentDiscardedRangeInfo(int arg) {
-  // This is a copy of the case 'symbolicExtent' without the '(void)arg' hack.
-  // TODO: if the analyzer can detect the out-of-bounds access within this
-  // testcase, then remove this and the `(void)arg` hack from `symbolicExtent`.
-  if (arg >= 5)
-    return 0;
-  int *mem = (int*)malloc(arg);
-  mem[8] = -2;
   return mem;
 }
 
@@ -425,10 +407,6 @@ int *nothingIsCertain(int x, int y) {
   //   {{Out of bound access to memory after the end of the heap area}}
   //   {{Access of 'int' element in the heap area at an overflowing index}}
   // but apparently the analyzer isn't smart enough to deduce this.
-
-  // Keep constraints alive. (Without this, the overeager garbage collection of
-  // constraints would _also_ prevent the intended behavior in this testcase.)
-  (void)x;
 
   return mem;
 }
