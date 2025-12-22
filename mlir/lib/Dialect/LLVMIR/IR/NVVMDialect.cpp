@@ -5537,10 +5537,6 @@ NVVMTargetAttr::verify(function_ref<InFlightDiagnostic()> emitError,
                        int optLevel, StringRef triple, StringRef chip,
                        StringRef features, DictionaryAttr flags,
                        ArrayAttr files, bool verifyTarget) {
-  if (optLevel < 0 || optLevel > 3) {
-    emitError() << "The optimization level must be a number between 0 and 3.";
-    return failure();
-  }
   if (triple.empty()) {
     emitError() << "The target triple cannot be empty.";
     return failure();
@@ -5559,6 +5555,11 @@ NVVMTargetAttr::verify(function_ref<InFlightDiagnostic()> emitError,
 }
 
 LogicalResult NVVMTargetAttr::verifyTarget(Operation *gpuModule) {
+  if (getO() < 0 || getO() > 3) {
+    return emitError(
+        gpuModule->getLoc(),
+        "The optimization level must be a number between 0 and 3.");
+  }
   if (!getVerifyTarget())
     return success();
 
