@@ -3,6 +3,8 @@
 
 ! RUN: %flang -fsyntax-only -### %s -o %t 2>&1 \
 ! RUN:     -finput-charset=utf-8 \
+! RUN:     -fdefault-integer-4 \
+! RUN:     -fdefault-real-4 \
 ! RUN:     -fdefault-double-8 \
 ! RUN:     -fdefault-integer-8 \
 ! RUN:     -fdefault-real-8 \
@@ -19,7 +21,6 @@
 ! RUN:     -fpass-plugin=Bye%pluginext \
 ! RUN:     -fversion-loops-for-stride \
 ! RUN:     -flang-experimental-hlfir \
-! RUN:     -flang-deprecated-no-hlfir \
 ! RUN:     -fno-ppc-native-vector-element-order \
 ! RUN:     -fppc-native-vector-element-order \
 ! RUN:     -mllvm -print-before-all \
@@ -36,6 +37,8 @@
 
 ! CHECK: "-P"
 ! CHECK: "-finput-charset=utf-8"
+! CHECK: "-fdefault-integer-4"
+! CHECK: "-fdefault-real-4"
 ! CHECK: "-fdefault-double-8"
 ! CHECK: "-fdefault-integer-8"
 ! CHECK: "-fdefault-real-8"
@@ -50,7 +53,6 @@
 ! CHECK: "-fpass-plugin=Bye
 ! CHECK: "-fversion-loops-for-stride"
 ! CHECK: "-flang-experimental-hlfir"
-! CHECK: "-flang-deprecated-no-hlfir"
 ! CHECK: "-fno-ppc-native-vector-element-order"
 ! CHECK: "-fppc-native-vector-element-order"
 ! CHECK: "-Rpass"

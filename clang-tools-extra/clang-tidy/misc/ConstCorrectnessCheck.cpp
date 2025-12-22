@@ -137,8 +137,12 @@ void ConstCorrectnessCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(FunctionScope, this);
 }
 
+namespace {
+
 /// Classify for a variable in what the Const-Check is interested.
 enum class VariableCategory { Value, Reference, Pointer };
+
+} // namespace
 
 void ConstCorrectnessCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *LocalScope = Result.Nodes.getNodeAs<Stmt>("scope");
@@ -249,7 +253,8 @@ void ConstCorrectnessCheck::check(const MatchFinder::MatchResult &Result) {
       CheckValue();
     if (WarnPointersAsPointers) {
       if (const auto *PT = dyn_cast<PointerType>(VT)) {
-        if (!PT->getPointeeType().isConstQualified())
+        if (!PT->getPointeeType().isConstQualified() &&
+            !PT->getPointeeType()->isFunctionType())
           CheckPointee();
       }
       if (const auto *AT = dyn_cast<ArrayType>(VT)) {

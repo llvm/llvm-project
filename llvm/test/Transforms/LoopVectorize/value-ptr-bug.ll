@@ -5,12 +5,12 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 ; PR16073
 
 ; Because we were caching value pointers across a function call that could RAUW
-; we would generate an undefined value store below:
+; we would generate an poison value store below:
 ; SCEVExpander::expandCodeFor would change a value (the start value of an
 ; induction) that we cached in the induction variable list.
 
 ; CHECK-LABEL: @test_vh(
-; CHECK-NOT: store <4 x i8> undef
+; CHECK-NOT: store <4 x i8> poison
 
 define void @test_vh(ptr %ptr265, ptr %ptr266, i32 %sub267) {
 entry:

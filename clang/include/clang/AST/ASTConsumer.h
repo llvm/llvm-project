@@ -27,6 +27,7 @@ namespace clang {
   class VarDecl;
   class FunctionDecl;
   class ImportDecl;
+  class OpenACCRoutineDecl;
 
 /// ASTConsumer - This is an abstract interface that should be implemented by
 /// clients that read ASTs.  This abstraction layer allows the client to be
@@ -115,6 +116,11 @@ public:
   /// HandleCXXStaticMemberVarInstantiation - Tell the consumer that this
   // variable has been instantiated.
   virtual void HandleCXXStaticMemberVarInstantiation(VarDecl *D) {}
+
+  /// Callback to handle the end-of-translation unit attachment of OpenACC
+  /// routine declaration information.
+  virtual void HandleOpenACCRoutineReference(const FunctionDecl *FD,
+                                             const OpenACCRoutineDecl *RD) {}
 
   /// Callback involved at the end of a translation unit to
   /// notify the consumer that a vtable for the given C++ class is

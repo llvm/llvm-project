@@ -126,7 +126,23 @@ public:
   /// the pointers are supposed to be uniqued, should be fine. Revisit this if
   /// it ends up taking too much memory.
   llvm::DenseMap<const clang::FieldDecl *, llvm::StringRef> lambdaFieldToName;
-
+  /// Map BlockAddrInfoAttr (function name, label name) to the corresponding CIR
+  /// LabelOp. This provides the main lookup table used to resolve block
+  /// addresses into their label operations.
+  llvm::DenseMap<cir::BlockAddrInfoAttr, cir::LabelOp> blockAddressInfoToLabel;
+  /// Map CIR BlockAddressOps directly to their resolved LabelOps.
+  /// Used once a block address has been successfully lowered to a label.
+  llvm::MapVector<cir::BlockAddressOp, cir::LabelOp> blockAddressToLabel;
+  /// Track CIR BlockAddressOps that cannot be resolved immediately
+  /// because their LabelOp has not yet been emitted. These entries
+  /// are solved later once the corresponding label is available.
+  llvm::DenseSet<cir::BlockAddressOp> unresolvedBlockAddressToLabel;
+  cir::LabelOp lookupBlockAddressInfo(cir::BlockAddrInfoAttr blockInfo);
+  void mapBlockAddress(cir::BlockAddrInfoAttr blockInfo, cir::LabelOp label);
+  void mapUnresolvedBlockAddress(cir::BlockAddressOp op);
+  void mapResolvedBlockAddress(cir::BlockAddressOp op, cir::LabelOp);
+  void updateResolvedBlockAddress(cir::BlockAddressOp op,
+                                  cir::LabelOp newLabel);
   /// Tell the consumer that this variable has been instantiated.
   void handleCXXStaticMemberVarInstantiation(VarDecl *vd);
 
@@ -158,6 +174,13 @@ public:
                                       llvm::StringRef name, mlir::Type t,
                                       bool isConstant = false,
                                       mlir::Operation *insertPoint = nullptr);
+
+  /// Add a global constructor or destructor to the module.
+  /// The priority is optional, if not specified, the default priority is used.
+  void addGlobalCtor(cir::FuncOp ctor,
+                     std::optional<int> priority = std::nullopt);
+  void addGlobalDtor(cir::FuncOp dtor,
+                     std::optional<int> priority = std::nullopt);
 
   bool shouldZeroInitPadding() const {
     // In C23 (N3096) $6.7.10:
@@ -274,6 +297,8 @@ public:
     llvm_unreachable("unknown visibility!");
   }
 
+  llvm::DenseMap<mlir::Attribute, cir::GlobalOp> constantStringMap;
+
   /// Return a constant array for the given string.
   mlir::Attribute getConstantArrayFromStringLiteral(const StringLiteral *e);
 
@@ -287,6 +312,12 @@ public:
   cir::GlobalViewAttr
   getAddrOfConstantStringFromLiteral(const StringLiteral *s,
                                      llvm::StringRef name = ".str");
+
+  /// Returns the address space for temporary allocations in the language. This
+  /// ensures that the allocated variable's address space matches the
+  /// expectations of the AST, rather than using the target's allocation address
+  /// space, which may lead to type mismatches in other parts of the IR.
+  LangAS getLangTempAllocaAddressSpace() const;
 
   /// Set attributes which are common to any form of a global definition (alias,
   /// Objective-C method, function, global variable).
@@ -416,9 +447,20 @@ public:
   void setGVProperties(mlir::Operation *op, const NamedDecl *d) const;
   void setGVPropertiesAux(mlir::Operation *op, const NamedDecl *d) const;
 
+  /// Set TLS mode for the given operation based on the given variable
+  /// declaration.
+  void setTLSMode(mlir::Operation *op, const VarDecl &d);
+
+  /// Get TLS mode from CodeGenOptions.
+  cir::TLS_Model getDefaultCIRTLSModel() const;
+
   /// Set function attributes for a function declaration.
   void setFunctionAttributes(GlobalDecl gd, cir::FuncOp f,
                              bool isIncompleteFunction, bool isThunk);
+
+  /// Set extra attributes (inline, etc.) for a function.
+  void setCIRFunctionAttributesForDefinition(const clang::FunctionDecl *fd,
+                                             cir::FuncOp f);
 
   void emitGlobalDefinition(clang::GlobalDecl gd,
                             mlir::Operation *op = nullptr);
@@ -434,6 +476,28 @@ public:
                                     bool performInit);
 
   void emitGlobalOpenACCDecl(const clang::OpenACCConstructDecl *cd);
+  void emitGlobalOpenACCRoutineDecl(const clang::OpenACCRoutineDecl *cd);
+  void emitGlobalOpenACCDeclareDecl(const clang::OpenACCDeclareDecl *cd);
+  template <typename BeforeOpTy, typename DataClauseTy>
+  void emitGlobalOpenACCDeclareDataOperands(const Expr *varOperand,
+                                            DataClauseTy dataClause,
+                                            OpenACCModifierKind modifiers,
+                                            bool structured, bool implicit,
+                                            bool requiresDtor);
+  // Each of the acc.routine operations must have a unique name, so we just use
+  // an integer counter.  This is how Flang does it, so it seems reasonable.
+  unsigned routineCounter = 0;
+  void emitOpenACCRoutineDecl(const clang::FunctionDecl *funcDecl,
+                              cir::FuncOp func, SourceLocation pragmaLoc,
+                              ArrayRef<const OpenACCClause *> clauses);
+
+  void emitOMPThreadPrivateDecl(const OMPThreadPrivateDecl *d);
+  void emitOMPGroupPrivateDecl(const OMPGroupPrivateDecl *d);
+  void emitOMPCapturedExpr(const OMPCapturedExprDecl *d);
+  void emitOMPAllocateDecl(const OMPAllocateDecl *d);
+  void emitOMPDeclareReduction(const OMPDeclareReductionDecl *d);
+  void emitOMPDeclareMapper(const OMPDeclareMapperDecl *d);
+  void emitOMPRequiresDecl(const OMPRequiresDecl *d);
 
   // C++ related functions.
   void emitDeclContext(const DeclContext *dc);
@@ -442,7 +506,24 @@ public:
   /// expression of the given type.
   mlir::Value emitNullConstant(QualType t, mlir::Location loc);
 
+  mlir::TypedAttr emitNullConstantAttr(QualType t);
+
+  /// Return a null constant appropriate for zero-initializing a base class with
+  /// the given type. This is usually, but not always, an LLVM null constant.
+  mlir::TypedAttr emitNullConstantForBase(const CXXRecordDecl *record);
+
+  mlir::Value emitMemberPointerConstant(const UnaryOperator *e);
+
   llvm::StringRef getMangledName(clang::GlobalDecl gd);
+  // This function is to support the OpenACC 'bind' clause, which names an
+  // alternate name for the function to be called by. This function mangles
+  // `attachedFunction` as-if its name was actually `bindName` (that is, with
+  // the same signature).  It has some additional complications, as the 'bind'
+  // target is always going to be a global function, so member functions need an
+  // explicit instead of implicit 'this' parameter, and thus gets mangled
+  // differently.
+  std::string getOpenACCBindMangledName(const IdentifierInfo *bindName,
+                                        const FunctionDecl *attachedFunction);
 
   void emitTentativeDefinition(const VarDecl *d);
 
@@ -472,6 +553,23 @@ public:
   cir::FuncOp createCIRFunction(mlir::Location loc, llvm::StringRef name,
                                 cir::FuncType funcType,
                                 const clang::FunctionDecl *funcDecl);
+
+  /// Create a CIR function with builtin attribute set.
+  cir::FuncOp createCIRBuiltinFunction(mlir::Location loc, llvm::StringRef name,
+                                       cir::FuncType ty,
+                                       const clang::FunctionDecl *fd);
+
+  /// Mark the function as a special member (e.g. constructor, destructor)
+  void setCXXSpecialMemberAttr(cir::FuncOp funcOp,
+                               const clang::FunctionDecl *funcDecl);
+
+  cir::FuncOp createRuntimeFunction(cir::FuncType ty, llvm::StringRef name,
+                                    mlir::ArrayAttr = {}, bool isLocal = false,
+                                    bool assumeConvergent = false);
+
+  static constexpr const char *builtinCoroId = "__builtin_coro_id";
+  static constexpr const char *builtinCoroAlloc = "__builtin_coro_alloc";
+  static constexpr const char *builtinCoroBegin = "__builtin_coro_begin";
 
   /// Given a builtin id for a function like "__builtin_fabsf", return a
   /// Function* for "fabsf".

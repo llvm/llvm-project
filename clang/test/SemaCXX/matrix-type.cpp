@@ -14,6 +14,7 @@ void matrix_var_dimensions(int Rows, unsigned Columns, char C) {
   using matrix7_t = int __attribute__((matrix_type(1, 0)));       // expected-error{{zero matrix size}}
   using matrix7_t = int __attribute__((matrix_type(char, 0)));    // expected-error{{expected '(' for function-style cast or type construction}}
   using matrix8_t = int __attribute__((matrix_type(1048576, 1))); // expected-error{{matrix row size too large}}
+  using matrix8_t = int __attribute__((matrix_type(1048576, 1048576))); // expected-error{{matrix row and column size too large}}
 }
 
 struct S1 {};

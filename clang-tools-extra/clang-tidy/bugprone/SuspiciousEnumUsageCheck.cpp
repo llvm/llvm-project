@@ -30,6 +30,8 @@ static const char BitmaskVarErrorMessage[] =
 
 static const char BitmaskNoteMessage[] = "used here as a bitmask";
 
+namespace {
+
 /// Stores a min and a max value which describe an interval.
 struct ValueRange {
   llvm::APSInt MinVal;
@@ -47,6 +49,8 @@ struct ValueRange {
   }
 };
 
+} // namespace
+
 /// Return the number of EnumConstantDecls in an EnumDecl.
 static int enumLength(const EnumDecl *EnumDec) {
   return std::distance(EnumDec->enumerator_begin(), EnumDec->enumerator_end());
@@ -54,7 +58,7 @@ static int enumLength(const EnumDecl *EnumDec) {
 
 static bool hasDisjointValueRange(const EnumDecl *Enum1,
                                   const EnumDecl *Enum2) {
-  ValueRange Range1(Enum1), Range2(Enum2);
+  const ValueRange Range1(Enum1), Range2(Enum2);
   return llvm::APSInt::compareValues(Range1.MaxVal, Range2.MinVal) < 0 ||
          llvm::APSInt::compareValues(Range2.MaxVal, Range1.MinVal) < 0;
 }
@@ -94,9 +98,9 @@ static int countNonPowOfTwoLiteralNum(const EnumDecl *EnumDec) {
 /// last enumerator is the sum of the lesser values (and initialized by a
 /// literal) or when it could contain consecutive values.
 static bool isPossiblyBitMask(const EnumDecl *EnumDec) {
-  ValueRange VR(EnumDec);
-  int EnumLen = enumLength(EnumDec);
-  int NonPowOfTwoCounter = countNonPowOfTwoLiteralNum(EnumDec);
+  const ValueRange VR(EnumDec);
+  const int EnumLen = enumLength(EnumDec);
+  const int NonPowOfTwoCounter = countNonPowOfTwoLiteralNum(EnumDec);
   return NonPowOfTwoCounter >= 1 && NonPowOfTwoCounter <= 2 &&
          NonPowOfTwoCounter < EnumLen / 2 &&
          (VR.MaxVal - VR.MinVal != EnumLen - 1) &&

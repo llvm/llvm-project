@@ -28,6 +28,7 @@
 #include "clang/Sema/SemaOpenMP.h"
 #include "clang/Sema/TypoCorrection.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/ScopeExit.h"
 #include <optional>
 
 using namespace clang;
@@ -312,6 +313,8 @@ Retry:
     Res = ParseReturnStatement();
     SemiError = "co_return";
     break;
+  case tok::kw__Defer: // C defer TS: defer-statement
+    return ParseDeferStatement(TrailingElseLoc);
 
   case tok::kw_asm: {
     for (const ParsedAttr &AL : CXX11Attrs)
@@ -718,7 +721,7 @@ StmtResult Parser::ParseLabeledStatement(ParsedAttributes &Attrs,
     // and followed by a semicolon, GCC will reject (it appears to parse the
     // attributes as part of a statement in that case). That looks like a bug.
     if (!getLangOpts().CPlusPlus || Tok.is(tok::semi))
-      Attrs.takeAllFrom(TempAttrs);
+      Attrs.takeAllAppendingFrom(TempAttrs);
     else {
       StmtVector Stmts;
       ParsedAttributes EmptyCXX11Attrs(AttrFactory);
@@ -813,7 +816,7 @@ StmtResult Parser::ParseCaseStatement(ParsedStmtContext StmtCtx,
           return StmtError();
       }
     } else {
-      LHS = Expr;
+      LHS = Actions.ActOnCaseExpr(CaseLoc, Expr);
       MissingCase = false;
     }
 
@@ -1079,16 +1082,10 @@ bool Parser::ConsumeNullStmt(StmtVector &Stmts) {
 StmtResult Parser::handleExprStmt(ExprResult E, ParsedStmtContext StmtCtx) {
   bool IsStmtExprResult = false;
   if ((StmtCtx & ParsedStmtContext::InStmtExpr) != ParsedStmtContext()) {
-    // For GCC compatibility we skip past NullStmts.
-    unsigned LookAhead = 0;
-    while (GetLookAheadToken(LookAhead).is(tok::semi)) {
-      ++LookAhead;
-    }
-    // Then look to see if the next two tokens close the statement expression;
-    // if so, this expression statement is the last statement in a statement
-    // expression.
-    IsStmtExprResult = GetLookAheadToken(LookAhead).is(tok::r_brace) &&
-                       GetLookAheadToken(LookAhead + 1).is(tok::r_paren);
+    // Look ahead to see if the next two tokens close the statement expression;
+    // if so, this expression statement is the last statement in a
+    // statment expression.
+    IsStmtExprResult = Tok.is(tok::r_brace) && NextToken().is(tok::r_paren);
   }
 
   if (IsStmtExprResult)
@@ -2376,6 +2373,29 @@ StmtResult Parser::ParseReturnStatement() {
   return Actions.ActOnReturnStmt(ReturnLoc, R.get(), getCurScope());
 }
 
+StmtResult Parser::ParseDeferStatement(SourceLocation *TrailingElseLoc) {
+  assert(Tok.is(tok::kw__Defer));
+  SourceLocation DeferLoc = ConsumeToken();
+
+  Actions.ActOnStartOfDeferStmt(DeferLoc, getCurScope());
+
+  auto OnError = llvm::make_scope_exit(
+      [&] { Actions.ActOnDeferStmtError(getCurScope()); });
+
+  StmtResult Res = ParseStatement(TrailingElseLoc);
+  if (!Res.isUsable())
+    return StmtError();
+
+  // The grammar specifically calls for an unlabeled-statement here.
+  if (auto *L = dyn_cast<LabelStmt>(Res.get())) {
+    Diag(L->getIdentLoc(), diag::err_defer_ts_labeled_stmt);
+    return StmtError();
+  }
+
+  OnError.release();
+  return Actions.ActOnEndOfDeferStmt(Res.get(), getCurScope());
+}
+
 StmtResult Parser::ParsePragmaLoopHint(StmtVector &Stmts,
                                        ParsedStmtContext StmtCtx,
                                        SourceLocation *TrailingElseLoc,
@@ -2407,7 +2427,7 @@ StmtResult Parser::ParsePragmaLoopHint(StmtVector &Stmts,
       Stmts, StmtCtx, TrailingElseLoc, Attrs, EmptyDeclSpecAttrs,
       PrecedingLabel);
 
-  Attrs.takeAllFrom(TempAttrs);
+  Attrs.takeAllPrependingFrom(TempAttrs);
 
   // Start of attribute range may already be set for some invalid input.
   // See PR46336.

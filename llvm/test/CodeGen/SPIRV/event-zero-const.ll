@@ -12,11 +12,15 @@
 ; CHECK: OpINotEqual %[[#]] %[[#]] %[[#LongNull]]
 ; CHECK: OpGroupAsyncCopy %[[#EventTy]] %[[#]] %[[#]] %[[#]] %[[#]] %[[#]] %[[#EventNull]]
 
+@G_r1 = global i1 0
+@G_e1 = global target("spirv.Event") poison
 
 define weak_odr dso_local spir_kernel void @foo(i64 %_arg_i, ptr addrspace(1) %_arg_ptr, ptr addrspace(3) %_arg_local) {
 entry:
   %r1 = icmp ne i64 %_arg_i, 0
+  store i1 %r1, ptr @G_r1
   %e1 = tail call spir_func target("spirv.Event") @__spirv_GroupAsyncCopy(i32 2, ptr addrspace(3) %_arg_local, ptr addrspace(1) %_arg_ptr, i64 1, i64 1, target("spirv.Event") zeroinitializer)
+  store target("spirv.Event") %e1, ptr @G_e1
   ret void
 }
 

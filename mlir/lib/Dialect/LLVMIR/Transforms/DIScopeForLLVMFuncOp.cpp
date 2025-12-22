@@ -109,8 +109,12 @@ static Location getNestedLoc(Operation *op, LLVM::DIScopeAttr scopeAttr,
   return FusedLoc::get(context, {loc}, lexicalBlockFileAttr);
 }
 
+/// Adds DILexicalBlockFileAttr for operations with CallSiteLoc and operations
+/// from different files than their containing function.
 static void setLexicalBlockFileAttr(Operation *op) {
-  if (auto callSiteLoc = dyn_cast<CallSiteLoc>(op->getLoc())) {
+  Location opLoc = op->getLoc();
+
+  if (auto callSiteLoc = dyn_cast<CallSiteLoc>(opLoc)) {
     auto callerLoc = callSiteLoc.getCaller();
     auto calleeLoc = callSiteLoc.getCallee();
     LLVM::DIScopeAttr scopeAttr;
@@ -122,6 +126,45 @@ static void setLexicalBlockFileAttr(Operation *op) {
       op->setLoc(
           CallSiteLoc::get(getNestedLoc(op, scopeAttr, calleeLoc), callerLoc));
     }
+
+    return;
+  }
+
+  auto funcOp = op->getParentOfType<LLVM::LLVMFuncOp>();
+  if (!funcOp)
+    return;
+
+  FileLineColLoc opFileLoc = extractFileLoc(opLoc);
+  if (!opFileLoc)
+    return;
+
+  FileLineColLoc funcFileLoc = extractFileLoc(funcOp.getLoc());
+  if (!funcFileLoc)
+    return;
+
+  StringRef opFile = opFileLoc.getFilename().getValue();
+  StringRef funcFile = funcFileLoc.getFilename().getValue();
+
+  // Handle cross-file operations: add DILexicalBlockFileAttr when the
+  // operation's source file differs from its containing function.
+  if (opFile != funcFile) {
+    auto funcOpLoc = llvm::dyn_cast_if_present<FusedLoc>(funcOp.getLoc());
+    if (!funcOpLoc)
+      return;
+    auto scopeAttr = dyn_cast<LLVM::DISubprogramAttr>(funcOpLoc.getMetadata());
+    if (!scopeAttr)
+      return;
+
+    auto *context = op->getContext();
+    LLVM::DIFileAttr opFileAttr =
+        LLVM::DIFileAttr::get(context, llvm::sys::path::filename(opFile),
+                              llvm::sys::path::parent_path(opFile));
+
+    LLVM::DILexicalBlockFileAttr lexicalBlockFileAttr =
+        LLVM::DILexicalBlockFileAttr::get(context, scopeAttr, opFileAttr, 0);
+
+    Location newLoc = FusedLoc::get(context, {opLoc}, lexicalBlockFileAttr);
+    op->setLoc(newLoc);
   }
 }
 

@@ -43,6 +43,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/TrailingObjects.h"
 #include "llvm/Support/raw_ostream.h"
@@ -1770,6 +1771,8 @@ public:
   }
 
   ~BuildLockset() { Analyzer->SxBuilder.setLookupLocalVarExpr(nullptr); }
+  BuildLockset(const BuildLockset &) = delete;
+  BuildLockset &operator=(const BuildLockset &) = delete;
 
   void VisitUnaryOperator(const UnaryOperator *UO);
   void VisitBinaryOperator(const BinaryOperator *BO);
@@ -2032,9 +2035,7 @@ void BuildLockset::handleCall(const Expr *Exp, const NamedDecl *D,
       assert(inserted.second && "Are we visiting the same expression again?");
       if (isa<CXXConstructExpr>(Exp))
         Self = Placeholder;
-      if (TagT->getOriginalDecl()
-              ->getMostRecentDecl()
-              ->hasAttr<ScopedLockableAttr>())
+      if (TagT->getDecl()->getMostRecentDecl()->hasAttr<ScopedLockableAttr>())
         Scp = CapabilityExpr(Placeholder, Exp->getType(), /*Neg=*/false);
     }
 
@@ -2822,7 +2823,13 @@ void ThreadSafetyAnalyzer::runAnalysis(AnalysisDeclContext &AC) {
         case CFGElement::AutomaticObjectDtor: {
           CFGAutomaticObjDtor AD = BI.castAs<CFGAutomaticObjDtor>();
           const auto *DD = AD.getDestructorDecl(AC.getASTContext());
-          if (!DD->hasAttrs())
+          // Function parameters as they are constructed in caller's context and
+          // the CFG does not contain the ctors. Ignore them as their
+          // capabilities cannot be analysed because of this missing
+          // information.
+          if (isa_and_nonnull<ParmVarDecl>(AD.getVarDecl()))
+            break;
+          if (!DD || !DD->hasAttrs())
             break;
 
           LocksetBuilder.handleCall(

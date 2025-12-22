@@ -68,11 +68,40 @@ cuf::DataAttributeAttr Fortran::lower::translateSymbolCUFDataAttribute(
   return cuf::getDataAttribute(mlirContext, cudaAttr);
 }
 
-bool Fortran::lower::isTransferWithConversion(mlir::Value rhs) {
+hlfir::ElementalOp Fortran::lower::isTransferWithConversion(mlir::Value rhs) {
+  auto isConversionElementalOp = [](hlfir::ElementalOp elOp) {
+    return llvm::hasSingleElement(
+               elOp.getBody()->getOps<hlfir::DesignateOp>()) &&
+           llvm::hasSingleElement(elOp.getBody()->getOps<fir::LoadOp>()) == 1 &&
+           llvm::hasSingleElement(elOp.getBody()->getOps<fir::ConvertOp>()) ==
+               1;
+  };
+  if (auto declOp = mlir::dyn_cast<hlfir::DeclareOp>(rhs.getDefiningOp())) {
+    if (!declOp.getMemref().getDefiningOp())
+      return {};
+    if (auto associateOp = mlir::dyn_cast<hlfir::AssociateOp>(
+            declOp.getMemref().getDefiningOp()))
+      if (auto elOp = mlir::dyn_cast<hlfir::ElementalOp>(
+              associateOp.getSource().getDefiningOp()))
+        if (isConversionElementalOp(elOp))
+          return elOp;
+  }
   if (auto elOp = mlir::dyn_cast<hlfir::ElementalOp>(rhs.getDefiningOp()))
-    if (llvm::hasSingleElement(elOp.getBody()->getOps<hlfir::DesignateOp>()) &&
-        llvm::hasSingleElement(elOp.getBody()->getOps<fir::LoadOp>()) == 1 &&
-        llvm::hasSingleElement(elOp.getBody()->getOps<fir::ConvertOp>()) == 1)
+    if (isConversionElementalOp(elOp))
+      return elOp;
+  return {};
+}
+
+bool Fortran::lower::hasDoubleDescriptor(mlir::Value addr) {
+  if (auto declareOp =
+          mlir::dyn_cast_or_null<hlfir::DeclareOp>(addr.getDefiningOp())) {
+    if (mlir::isa_and_nonnull<fir::AddrOfOp>(
+            declareOp.getMemref().getDefiningOp())) {
+      if (declareOp.getDataAttr() &&
+          *declareOp.getDataAttr() == cuf::DataAttribute::Pinned)
+        return false;
       return true;
+    }
+  }
   return false;
 }

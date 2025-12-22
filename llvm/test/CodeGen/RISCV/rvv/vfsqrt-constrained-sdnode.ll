@@ -26,7 +26,6 @@ define <vscale x 1 x bfloat> @vfsqrt_nxv1bf16(<vscale x 1 x bfloat> %v) strictfp
   ret <vscale x 1 x bfloat> %r
 }
 
-
 define <vscale x 2 x bfloat> @vfsqrt_nxv2bf16(<vscale x 2 x bfloat> %v) strictfp {
 ; CHECK-LABEL: vfsqrt_nxv2bf16:
 ; CHECK:       # %bb.0:
@@ -40,7 +39,6 @@ define <vscale x 2 x bfloat> @vfsqrt_nxv2bf16(<vscale x 2 x bfloat> %v) strictfp
   %r = call <vscale x 2 x bfloat> @llvm.experimental.constrained.sqrt.nxv2bf16(<vscale x 2 x bfloat> %v, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret <vscale x 2 x bfloat> %r
 }
-
 
 define <vscale x 4 x bfloat> @vfsqrt_nxv4bf16(<vscale x 4 x bfloat> %v) strictfp {
 ; CHECK-LABEL: vfsqrt_nxv4bf16:
@@ -56,7 +54,6 @@ define <vscale x 4 x bfloat> @vfsqrt_nxv4bf16(<vscale x 4 x bfloat> %v) strictfp
   ret <vscale x 4 x bfloat> %r
 }
 
-
 define <vscale x 8 x bfloat> @vfsqrt_nxv8bf16(<vscale x 8 x bfloat> %v) strictfp {
 ; CHECK-LABEL: vfsqrt_nxv8bf16:
 ; CHECK:       # %bb.0:
@@ -71,7 +68,6 @@ define <vscale x 8 x bfloat> @vfsqrt_nxv8bf16(<vscale x 8 x bfloat> %v) strictfp
   ret <vscale x 8 x bfloat> %r
 }
 
-
 define <vscale x 16 x bfloat> @vfsqrt_nxv16bf16(<vscale x 16 x bfloat> %v) strictfp {
 ; CHECK-LABEL: vfsqrt_nxv16bf16:
 ; CHECK:       # %bb.0:
@@ -85,7 +81,6 @@ define <vscale x 16 x bfloat> @vfsqrt_nxv16bf16(<vscale x 16 x bfloat> %v) stric
   %r = call <vscale x 16 x bfloat> @llvm.experimental.constrained.sqrt.nxv16bf16(<vscale x 16 x bfloat> %v, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret <vscale x 16 x bfloat> %r
 }
-
 
 define <vscale x 32 x bfloat> @vfsqrt_nxv32bf16(<vscale x 32 x bfloat> %v) strictfp {
 ; CHECK-LABEL: vfsqrt_nxv32bf16:
@@ -105,8 +100,6 @@ define <vscale x 32 x bfloat> @vfsqrt_nxv32bf16(<vscale x 32 x bfloat> %v) stric
   %r = call <vscale x 32 x bfloat> @llvm.experimental.constrained.sqrt.nxv32bf16(<vscale x 32 x bfloat> %v, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret <vscale x 32 x bfloat> %r
 }
-
-declare <vscale x 1 x half> @llvm.experimental.constrained.sqrt.nxv1f16(<vscale x 1 x half>, metadata, metadata)
 
 define <vscale x 1 x half> @vfsqrt_nxv1f16(<vscale x 1 x half> %v) strictfp {
 ; ZVFH-LABEL: vfsqrt_nxv1f16:
@@ -128,8 +121,6 @@ define <vscale x 1 x half> @vfsqrt_nxv1f16(<vscale x 1 x half> %v) strictfp {
   ret <vscale x 1 x half> %r
 }
 
-declare <vscale x 2 x half> @llvm.experimental.constrained.sqrt.nxv2f16(<vscale x 2 x half>, metadata, metadata)
-
 define <vscale x 2 x half> @vfsqrt_nxv2f16(<vscale x 2 x half> %v) strictfp {
 ; ZVFH-LABEL: vfsqrt_nxv2f16:
 ; ZVFH:       # %bb.0:
@@ -149,8 +140,6 @@ define <vscale x 2 x half> @vfsqrt_nxv2f16(<vscale x 2 x half> %v) strictfp {
   %r = call <vscale x 2 x half> @llvm.experimental.constrained.sqrt.nxv2f16(<vscale x 2 x half> %v, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret <vscale x 2 x half> %r
 }
-
-declare <vscale x 4 x half> @llvm.experimental.constrained.sqrt.nxv4f16(<vscale x 4 x half>, metadata, metadata)
 
 define <vscale x 4 x half> @vfsqrt_nxv4f16(<vscale x 4 x half> %v) strictfp {
 ; ZVFH-LABEL: vfsqrt_nxv4f16:
@@ -172,8 +161,6 @@ define <vscale x 4 x half> @vfsqrt_nxv4f16(<vscale x 4 x half> %v) strictfp {
   ret <vscale x 4 x half> %r
 }
 
-declare <vscale x 8 x half> @llvm.experimental.constrained.sqrt.nxv8f16(<vscale x 8 x half>, metadata, metadata)
-
 define <vscale x 8 x half> @vfsqrt_nxv8f16(<vscale x 8 x half> %v) strictfp {
 ; ZVFH-LABEL: vfsqrt_nxv8f16:
 ; ZVFH:       # %bb.0:
@@ -194,8 +181,6 @@ define <vscale x 8 x half> @vfsqrt_nxv8f16(<vscale x 8 x half> %v) strictfp {
   ret <vscale x 8 x half> %r
 }
 
-declare <vscale x 16 x half> @llvm.experimental.constrained.sqrt.nxv16f16(<vscale x 16 x half>, metadata, metadata)
-
 define <vscale x 16 x half> @vfsqrt_nxv16f16(<vscale x 16 x half> %v) strictfp {
 ; ZVFH-LABEL: vfsqrt_nxv16f16:
 ; ZVFH:       # %bb.0:
@@ -215,8 +200,6 @@ define <vscale x 16 x half> @vfsqrt_nxv16f16(<vscale x 16 x half> %v) strictfp {
   %r = call <vscale x 16 x half> @llvm.experimental.constrained.sqrt.nxv16f16(<vscale x 16 x half> %v, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret <vscale x 16 x half> %r
 }
-
-declare <vscale x 32 x half> @llvm.experimental.constrained.sqrt.nxv32f16(<vscale x 32 x half>, metadata, metadata)
 
 define <vscale x 32 x half> @vfsqrt_nxv32f16(<vscale x 32 x half> %v) strictfp {
 ; ZVFH-LABEL: vfsqrt_nxv32f16:
@@ -243,8 +226,6 @@ define <vscale x 32 x half> @vfsqrt_nxv32f16(<vscale x 32 x half> %v) strictfp {
   ret <vscale x 32 x half> %r
 }
 
-declare <vscale x 1 x float> @llvm.experimental.constrained.sqrt.nxv1f32(<vscale x 1 x float>, metadata, metadata)
-
 define <vscale x 1 x float> @vfsqrt_nxv1f32(<vscale x 1 x float> %v) strictfp {
 ; CHECK-LABEL: vfsqrt_nxv1f32:
 ; CHECK:       # %bb.0:
@@ -254,8 +235,6 @@ define <vscale x 1 x float> @vfsqrt_nxv1f32(<vscale x 1 x float> %v) strictfp {
   %r = call <vscale x 1 x float> @llvm.experimental.constrained.sqrt.nxv1f32(<vscale x 1 x float> %v, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret <vscale x 1 x float> %r
 }
-
-declare <vscale x 2 x float> @llvm.experimental.constrained.sqrt.nxv2f32(<vscale x 2 x float>, metadata, metadata)
 
 define <vscale x 2 x float> @vfsqrt_nxv2f32(<vscale x 2 x float> %v) strictfp {
 ; CHECK-LABEL: vfsqrt_nxv2f32:
@@ -267,8 +246,6 @@ define <vscale x 2 x float> @vfsqrt_nxv2f32(<vscale x 2 x float> %v) strictfp {
   ret <vscale x 2 x float> %r
 }
 
-declare <vscale x 4 x float> @llvm.experimental.constrained.sqrt.nxv4f32(<vscale x 4 x float>, metadata, metadata)
-
 define <vscale x 4 x float> @vfsqrt_nxv4f32(<vscale x 4 x float> %v) strictfp {
 ; CHECK-LABEL: vfsqrt_nxv4f32:
 ; CHECK:       # %bb.0:
@@ -278,8 +255,6 @@ define <vscale x 4 x float> @vfsqrt_nxv4f32(<vscale x 4 x float> %v) strictfp {
   %r = call <vscale x 4 x float> @llvm.experimental.constrained.sqrt.nxv4f32(<vscale x 4 x float> %v, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret <vscale x 4 x float> %r
 }
-
-declare <vscale x 8 x float> @llvm.experimental.constrained.sqrt.nxv8f32(<vscale x 8 x float>, metadata, metadata)
 
 define <vscale x 8 x float> @vfsqrt_nxv8f32(<vscale x 8 x float> %v) strictfp {
 ; CHECK-LABEL: vfsqrt_nxv8f32:
@@ -291,8 +266,6 @@ define <vscale x 8 x float> @vfsqrt_nxv8f32(<vscale x 8 x float> %v) strictfp {
   ret <vscale x 8 x float> %r
 }
 
-declare <vscale x 16 x float> @llvm.experimental.constrained.sqrt.nxv16f32(<vscale x 16 x float>, metadata, metadata)
-
 define <vscale x 16 x float> @vfsqrt_nxv16f32(<vscale x 16 x float> %v) strictfp {
 ; CHECK-LABEL: vfsqrt_nxv16f32:
 ; CHECK:       # %bb.0:
@@ -302,8 +275,6 @@ define <vscale x 16 x float> @vfsqrt_nxv16f32(<vscale x 16 x float> %v) strictfp
   %r = call <vscale x 16 x float> @llvm.experimental.constrained.sqrt.nxv16f32(<vscale x 16 x float> %v, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret <vscale x 16 x float> %r
 }
-
-declare <vscale x 1 x double> @llvm.experimental.constrained.sqrt.nxv1f64(<vscale x 1 x double>, metadata, metadata)
 
 define <vscale x 1 x double> @vfsqrt_nxv1f64(<vscale x 1 x double> %v) strictfp {
 ; CHECK-LABEL: vfsqrt_nxv1f64:
@@ -315,8 +286,6 @@ define <vscale x 1 x double> @vfsqrt_nxv1f64(<vscale x 1 x double> %v) strictfp 
   ret <vscale x 1 x double> %r
 }
 
-declare <vscale x 2 x double> @llvm.experimental.constrained.sqrt.nxv2f64(<vscale x 2 x double>, metadata, metadata)
-
 define <vscale x 2 x double> @vfsqrt_nxv2f64(<vscale x 2 x double> %v) strictfp {
 ; CHECK-LABEL: vfsqrt_nxv2f64:
 ; CHECK:       # %bb.0:
@@ -327,8 +296,6 @@ define <vscale x 2 x double> @vfsqrt_nxv2f64(<vscale x 2 x double> %v) strictfp 
   ret <vscale x 2 x double> %r
 }
 
-declare <vscale x 4 x double> @llvm.experimental.constrained.sqrt.nxv4f64(<vscale x 4 x double>, metadata, metadata)
-
 define <vscale x 4 x double> @vfsqrt_nxv4f64(<vscale x 4 x double> %v) strictfp {
 ; CHECK-LABEL: vfsqrt_nxv4f64:
 ; CHECK:       # %bb.0:
@@ -338,8 +305,6 @@ define <vscale x 4 x double> @vfsqrt_nxv4f64(<vscale x 4 x double> %v) strictfp 
   %r = call <vscale x 4 x double> @llvm.experimental.constrained.sqrt.nxv4f64(<vscale x 4 x double> %v, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret <vscale x 4 x double> %r
 }
-
-declare <vscale x 8 x double> @llvm.experimental.constrained.sqrt.nxv8f64(<vscale x 8 x double>, metadata, metadata)
 
 define <vscale x 8 x double> @vfsqrt_nxv8f64(<vscale x 8 x double> %v) strictfp {
 ; CHECK-LABEL: vfsqrt_nxv8f64:
