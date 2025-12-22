@@ -484,9 +484,8 @@ void UseAfterMoveFinder::getReinits(
       if (BlockMap->blockContainingStmt(Operator) == Block) {
         const auto *MD = cast<CXXMethodDecl>(Operator->getDirectCallee());
 
-        const auto *RD = MD->getParent();
         const auto *LambdaBody = MD->getBody();
-        assert(RD && RD->isLambda());
+        assert(MD->getParent() && MD->getParent()->isLambda());
         if (LambdaBody &&
             isVariableResetInLambda(LambdaBody, MovedVariable, Context,
                                     InvalidationFunctions))
