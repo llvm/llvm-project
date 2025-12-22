@@ -929,3 +929,146 @@ loop:
 exit:
   ret void
 }
+
+define void @unswitched_loops_with_preheader_shared_za_loop(i1 %A, i32 %N) "aarch64_inout_za" nounwind  {
+; CHECK-SDAG-LABEL: unswitched_loops_with_preheader_shared_za_loop:
+; CHECK-SDAG:       // %bb.0: // %entry
+; CHECK-SDAG-NEXT:    stp x29, x30, [sp, #-32]! // 16-byte Folded Spill
+; CHECK-SDAG-NEXT:    stp x20, x19, [sp, #16] // 16-byte Folded Spill
+; CHECK-SDAG-NEXT:    mov x29, sp
+; CHECK-SDAG-NEXT:    sub sp, sp, #16
+; CHECK-SDAG-NEXT:    rdsvl x8, #1
+; CHECK-SDAG-NEXT:    mov x9, sp
+; CHECK-SDAG-NEXT:    mov w19, w1
+; CHECK-SDAG-NEXT:    msub x9, x8, x8, x9
+; CHECK-SDAG-NEXT:    mov w20, w0
+; CHECK-SDAG-NEXT:    mov sp, x9
+; CHECK-SDAG-NEXT:    sub x10, x29, #16
+; CHECK-SDAG-NEXT:    stp x9, x8, [x29, #-16]
+; CHECK-SDAG-NEXT:    msr TPIDR2_EL0, x10
+; CHECK-SDAG-NEXT:    bl private_za_call
+; CHECK-SDAG-NEXT:    smstart za
+; CHECK-SDAG-NEXT:    mrs x8, TPIDR2_EL0
+; CHECK-SDAG-NEXT:    sub x0, x29, #16
+; CHECK-SDAG-NEXT:    cbnz x8, .LBB13_2
+; CHECK-SDAG-NEXT:  // %bb.1: // %entry
+; CHECK-SDAG-NEXT:    bl __arm_tpidr2_restore
+; CHECK-SDAG-NEXT:  .LBB13_2: // %entry
+; CHECK-SDAG-NEXT:    cmp w19, #1
+; CHECK-SDAG-NEXT:    msr TPIDR2_EL0, xzr
+; CHECK-SDAG-NEXT:    b.lt .LBB13_6
+; CHECK-SDAG-NEXT:  // %bb.3: // %for.body.lr.ph
+; CHECK-SDAG-NEXT:    tbz w20, #0, .LBB13_5
+; CHECK-SDAG-NEXT:  .LBB13_4: // %for.body.us
+; CHECK-SDAG-NEXT:    // =>This Inner Loop Header: Depth=1
+; CHECK-SDAG-NEXT:    bl shared_za_call
+; CHECK-SDAG-NEXT:    bl shared_za_call
+; CHECK-SDAG-NEXT:    bl shared_za_call
+; CHECK-SDAG-NEXT:    subs w19, w19, #1
+; CHECK-SDAG-NEXT:    b.ne .LBB13_4
+; CHECK-SDAG-NEXT:    b .LBB13_6
+; CHECK-SDAG-NEXT:  .LBB13_5: // %for.body
+; CHECK-SDAG-NEXT:    // =>This Inner Loop Header: Depth=1
+; CHECK-SDAG-NEXT:    bl shared_za_call
+; CHECK-SDAG-NEXT:    bl shared_za_call
+; CHECK-SDAG-NEXT:    subs w19, w19, #1
+; CHECK-SDAG-NEXT:    b.ne .LBB13_5
+; CHECK-SDAG-NEXT:  .LBB13_6: // %for.cond.cleanup
+; CHECK-SDAG-NEXT:    mov sp, x29
+; CHECK-SDAG-NEXT:    ldp x20, x19, [sp, #16] // 16-byte Folded Reload
+; CHECK-SDAG-NEXT:    ldp x29, x30, [sp], #32 // 16-byte Folded Reload
+; CHECK-SDAG-NEXT:    ret
+;
+; CHECK-LABEL: unswitched_loops_with_preheader_shared_za_loop:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    stp x29, x30, [sp, #-32]! // 16-byte Folded Spill
+; CHECK-NEXT:    stp x20, x19, [sp, #16] // 16-byte Folded Spill
+; CHECK-NEXT:    mov x29, sp
+; CHECK-NEXT:    sub sp, sp, #16
+; CHECK-NEXT:    rdsvl x8, #1
+; CHECK-NEXT:    mov x9, sp
+; CHECK-NEXT:    msub x9, x8, x8, x9
+; CHECK-NEXT:    mov sp, x9
+; CHECK-NEXT:    sub x10, x29, #16
+; CHECK-NEXT:    mov w19, w1
+; CHECK-NEXT:    mov w20, w0
+; CHECK-NEXT:    stp x9, x8, [x29, #-16]
+; CHECK-NEXT:    msr TPIDR2_EL0, x10
+; CHECK-NEXT:    bl private_za_call
+; CHECK-NEXT:    smstart za
+; CHECK-NEXT:    mrs x8, TPIDR2_EL0
+; CHECK-NEXT:    sub x0, x29, #16
+; CHECK-NEXT:    cbnz x8, .LBB13_2
+; CHECK-NEXT:  // %bb.1: // %entry
+; CHECK-NEXT:    bl __arm_tpidr2_restore
+; CHECK-NEXT:  .LBB13_2: // %entry
+; CHECK-NEXT:    cmp w19, #1
+; CHECK-NEXT:    msr TPIDR2_EL0, xzr
+; CHECK-NEXT:    b.lt .LBB13_12
+; CHECK-NEXT:  // %bb.3: // %for.body.lr.ph
+; CHECK-NEXT:    sub x8, x29, #16
+; CHECK-NEXT:    msr TPIDR2_EL0, x8
+; CHECK-NEXT:    tbz w20, #0, .LBB13_8
+; CHECK-NEXT:  // %bb.4: // %for.body.us.preheader
+; CHECK-NEXT:    smstart za
+; CHECK-NEXT:    mrs x8, TPIDR2_EL0
+; CHECK-NEXT:    cbnz x8, .LBB13_6
+; CHECK-NEXT:  // %bb.5: // %for.body.us.preheader
+; CHECK-NEXT:    bl __arm_tpidr2_restore
+; CHECK-NEXT:  .LBB13_6: // %for.body.us.preheader
+; CHECK-NEXT:    msr TPIDR2_EL0, xzr
+; CHECK-NEXT:  .LBB13_7: // %for.body.us
+; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    bl shared_za_call
+; CHECK-NEXT:    bl shared_za_call
+; CHECK-NEXT:    bl shared_za_call
+; CHECK-NEXT:    subs w19, w19, #1
+; CHECK-NEXT:    b.ne .LBB13_7
+; CHECK-NEXT:    b .LBB13_12
+; CHECK-NEXT:  .LBB13_8: // %for.body.preheader
+; CHECK-NEXT:    smstart za
+; CHECK-NEXT:    mrs x8, TPIDR2_EL0
+; CHECK-NEXT:    cbnz x8, .LBB13_10
+; CHECK-NEXT:  // %bb.9: // %for.body.preheader
+; CHECK-NEXT:    bl __arm_tpidr2_restore
+; CHECK-NEXT:  .LBB13_10: // %for.body.preheader
+; CHECK-NEXT:    msr TPIDR2_EL0, xzr
+; CHECK-NEXT:  .LBB13_11: // %for.body
+; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    bl shared_za_call
+; CHECK-NEXT:    bl shared_za_call
+; CHECK-NEXT:    subs w19, w19, #1
+; CHECK-NEXT:    b.ne .LBB13_11
+; CHECK-NEXT:  .LBB13_12: // %for.cond.cleanup
+; CHECK-NEXT:    mov sp, x29
+; CHECK-NEXT:    ldp x20, x19, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp x29, x30, [sp], #32 // 16-byte Folded Reload
+; CHECK-NEXT:    ret
+entry:
+  tail call void @private_za_call()
+  %cmp2 = icmp sgt i32 %N, 0
+  br i1 %cmp2, label %for.body.lr.ph, label %for.cond.cleanup
+
+for.body.lr.ph:
+  br i1 %A, label %for.body.us, label %for.body
+
+for.body.us:
+  %i.03.us = phi i32 [ %inc.us, %for.body.us ], [ 0, %for.body.lr.ph ]
+  tail call void @shared_za_call()
+  tail call void @shared_za_call()
+  tail call void @shared_za_call()
+  %inc.us = add nuw nsw i32 %i.03.us, 1
+  %exitcond5.not = icmp eq i32 %inc.us, %N
+  br i1 %exitcond5.not, label %for.cond.cleanup, label %for.body.us
+
+for.cond.cleanup:
+  ret void
+
+for.body:
+  %i.03 = phi i32 [ %inc, %for.body ], [ 0, %for.body.lr.ph ]
+  tail call void @shared_za_call()
+  tail call void @shared_za_call()
+  %inc = add nuw nsw i32 %i.03, 1
+  %exitcond.not = icmp eq i32 %inc, %N
+  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+}
