@@ -106,8 +106,8 @@ public:
 class CopyOnly {
 public:
   CopyOnly() {}
-  CopyOnly(const CopyOnly&) {}
-  CopyOnly(CopyOnly&&) = delete;
+  CopyOnly(const CopyOnly&) = default;
+  CopyOnly(CopyOnly&&)      = delete;
 
   void operator()(const CopyOnly&) const {}
 };

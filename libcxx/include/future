@@ -1829,8 +1829,9 @@ class _LIBCPP_HIDDEN __async_func {
 public:
   using _Rp _LIBCPP_NODEBUG = __invoke_result_t<_Fp, _Args...>;
 
-  _LIBCPP_HIDE_FROM_ABI explicit __async_func(_Fp&& __f, _Args&&... __args)
-      : __f_(std::move(__f), std::move(__args)...) {}
+  template <class _Gp, class... _BArgs>
+  _LIBCPP_HIDE_FROM_ABI explicit __async_func(_Gp&& __g, _BArgs&&... __bargs)
+      : __f_(std::forward<_Gp>(__g), std::forward<_BArgs>(__bargs)...) {}
 
   _LIBCPP_HIDE_FROM_ABI __async_func(__async_func&& __f) : __f_(std::move(__f.__f_)) {}
 
@@ -1861,8 +1862,7 @@ async(launch __policy, _Fp&& __f, _Args&&... __args) {
   try {
 #      endif
     if (__does_policy_contain(__policy, launch::async))
-      return std::__make_async_assoc_state<_Rp>(
-          _BF(_LIBCPP_AUTO_CAST(std::forward<_Fp>(__f)), _LIBCPP_AUTO_CAST(std::forward<_Args>(__args))...));
+      return std::__make_async_assoc_state<_Rp>(_BF(std::forward<_Fp>(__f), std::forward<_Args>(__args)...));
 #      if _LIBCPP_HAS_EXCEPTIONS
   } catch (...) {
     if (__policy == launch::async)
@@ -1871,8 +1871,7 @@ async(launch __policy, _Fp&& __f, _Args&&... __args) {
 #      endif
 
   if (__does_policy_contain(__policy, launch::deferred))
-    return std::__make_deferred_assoc_state<_Rp>(
-        _BF(_LIBCPP_AUTO_CAST(std::forward<_Fp>(__f)), _LIBCPP_AUTO_CAST(std::forward<_Args>(__args))...));
+    return std::__make_deferred_assoc_state<_Rp>(_BF(std::forward<_Fp>(__f), std::forward<_Args>(__args)...));
   return future<_Rp>{};
 }
 

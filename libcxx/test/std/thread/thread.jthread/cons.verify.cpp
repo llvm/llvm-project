@@ -7,14 +7,14 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: no-threads
-// UNSUPPORTED: c++03, c++11, c++14
+// UNSUPPORTED: c++03, c++11, c++14, c++17
 
-// <thread>
+// <jthread>
 
-// class thread
+// class jthread
 
 // template<class F, class... Args>
-// explicit thread(F&& f, Args&&... args);
+// explicit jthread(F&& f, Args&&... args);
 
 #include <thread>
 
@@ -29,9 +29,9 @@ void test() {
     };
 
     F f;
-    std::thread t(f);
-    // expected-error@*:* {{static assertion failed}}
-    // expected-error@*:* {{call to deleted constructor}}
+    std::jthread t(f);
+    // expected-error@*:* 2 {{static assertion failed}}
+    // expected-error@*:* 2 {{call to deleted constructor}}
     // expected-error@*:* {{no matching constructor for initialization}}
   }
 
@@ -44,9 +44,9 @@ void test() {
       void operator()() {}
     };
 
-    std::thread t(F{});
-    // expected-error@*:* {{static assertion failed}}
-    // expected-error@*:* {{call to deleted constructor}}
+    std::jthread t(F{});
+    // expected-error@*:* 2 {{static assertion failed}}
+    // expected-error@*:* 2 {{call to deleted constructor}}
     // expected-error@*:* {{no matching constructor for initialization}}
   }
 
@@ -62,9 +62,9 @@ void test() {
     };
 
     Arg arg;
-    std::thread t(F{}, arg);
-    // expected-error@*:* {{static assertion failed}}
-    // expected-error@*:* {{call to deleted constructor}}
+    std::jthread t(F{}, arg);
+    // expected-error@*:* 2 {{static assertion failed}}
+    // expected-error@*:* 2 {{call to deleted constructor}}
     // expected-error@*:* {{no matching constructor for initialization}}
   }
 
@@ -79,17 +79,17 @@ void test() {
       void operator()(const Arg&) const {}
     };
 
-    std::thread t(F{}, Arg{});
-    // expected-error@*:* {{static assertion failed}}
-    // expected-error@*:* {{call to deleted constructor}}
+    std::jthread t(F{}, Arg{});
+    // expected-error@*:* 2 {{static assertion failed}}
+    // expected-error@*:* 2 {{call to deleted constructor}}
     // expected-error@*:* {{no matching constructor for initialization}}
   }
 
   { // Mandates: is_invocable_v<decay_t<F>, decay_t<Args>...>
     struct F {};
 
-    std::thread t(F{});
-    // expected-error@*:* {{static assertion failed}}
+    std::jthread t(F{});
+    // expected-error@*:* 2 {{static assertion failed}}
     // expected-error@*:* {{no matching function for call to '__invoke'}}
   }
 }

@@ -31,6 +31,22 @@ void f() {
     { // Mandates: is_constructible_v<decay_t<F>, F>
       struct F {
         F()         = default;
+        F(const F&) = delete;
+        F(F&&)      = default;
+
+        void operator()() {}
+      };
+
+      F f;
+      static_cast<void>(std::async(f));
+      // expected-error@*:* {{static assertion failed}}
+      // expected-error@*:* {{no matching constructor for initialization}}
+      // expected-error@*:* {{call to deleted constructor}}
+    }
+
+    { // Mandates: is_constructible_v<decay_t<F>, F>
+      struct F {
+        F()         = default;
         F(const F&) = default;
         F(F&&)      = delete;
 
@@ -39,7 +55,47 @@ void f() {
 
       static_cast<void>(std::async(F{}));
       // expected-error@*:* {{static assertion failed}}
+      // expected-error@*:* {{no matching constructor for initialization}}
       // expected-error@*:* {{call to deleted constructor}}
-      // expected-error@*:* 1+ {{uses deleted function}}
+    }
+
+    { // Mandates: (is_constructible_v<decay_t<Args>, Args> && ...)
+      struct Arg {
+        Arg()           = default;
+        Arg(const Arg&) = delete;
+        Arg(Arg&&)      = default;
+      };
+
+      struct F {
+        void operator()(const Arg&) const {}
+      };
+
+      Arg arg;
+      static_cast<void>(std::async(F{}, arg));
+      // expected-error@*:* {{static assertion failed}}
+      // expected-error@*:* {{call to deleted constructor}}
+    }
+
+    { // Mandates: (is_constructible_v<decay_t<Args>, Args> && ...)
+      struct Arg {
+        Arg()           = default;
+        Arg(const Arg&) = default;
+        Arg(Arg&&)      = delete;
+      };
+
+      struct F {
+        void operator()(const Arg&) const {}
+      };
+
+      static_cast<void>(std::async(F{}, Arg{}));
+      // expected-error@*:* {{static assertion failed}}
+      // expected-error@*:* {{call to deleted constructor}}
+    }
+
+    { // Mandates: is_invocable_v<decay_t<F>, decay_t<Args>...>
+      struct F {};
+
+      static_cast<void>(std::async(F{}));
+      // expected-error@*:* {{no matching function}}
     }
 }
