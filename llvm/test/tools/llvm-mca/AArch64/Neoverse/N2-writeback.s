@@ -1605,11 +1605,11 @@ add x0, x27, 1
 # CHECK-NEXT: Block RThroughput: 5.7
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123
+# CHECK-NEXT:                     01234
 # CHECK-NEXT: Index     0123456789
 
-# CHECK:      [0,0]     DeeeeeeER .  .   ld1	{ v1.8b, v2.8b, v3.8b }, [x27], x28
-# CHECK-NEXT: [0,1]     D=eE----R .  .   add	x0, x27, #1
+# CHECK:      [0,0]     DeeeeeeER .   .   ld1	{ v1.8b, v2.8b, v3.8b }, [x27], x28
+# CHECK-NEXT: [0,1]     D=eE----R .   .   add	x0, x27, #1
 # CHECK-NEXT: [0,2]     .DeeeeeeER.   .   ld1	{ v1.8h, v2.8h, v3.8h }, [x27], x28
 # CHECK-NEXT: [0,3]     .D=eE----R.   .   add	x0, x27, #1
 # CHECK-NEXT: [0,4]     . DeeeeeeER   .   ld1	{ v1.16b, v2.16b, v3.16b }, [x27], x28
@@ -1651,7 +1651,7 @@ add x0, x27, 1
 # CHECK-NEXT: Block RThroughput: 6.7
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     01234
+# CHECK-NEXT:                     01234567
 # CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeeeeeeER.    . .   ld1	{ v1.2s, v2.2s, v3.2s, v4.2s }, [x27], #32
@@ -1697,7 +1697,7 @@ add x0, x27, 1
 # CHECK-NEXT: Block RThroughput: 6.7
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     01234
+# CHECK-NEXT:                     01234567
 # CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeeeeeeER.    . .   ld1	{ v1.16b, v2.16b, v3.16b, v4.16b }, [x27], #64
@@ -1744,7 +1744,7 @@ add x0, x27, 1
 
 # CHECK:      Timeline view:
 # CHECK-NEXT:                     0123456789
-# CHECK-NEXT: Index     0123456789          01
+# CHECK-NEXT: Index     0123456789          0123
 
 # CHECK:      [0,0]     DeeeeeeeER.    .    .  .   ld1	{ v1.4s, v2.4s, v3.4s, v4.4s }, [x27], x28
 # CHECK-NEXT: [0,1]     .DeE-----R.    .    .  .   add	x0, x27, #1
@@ -2114,8 +2114,8 @@ add x0, x27, 1
 # CHECK-NEXT:                     012345
 # CHECK-NEXT: Index     0123456789
 
-# CHECK:      [0,0]     DeeeeeeeeER   .   ld2	{ v1.2s, v2.2s }, [x27], x28
-# CHECK-NEXT: [0,1]     D=eE------R   .   add	x0, x27, #1
+# CHECK:      [0,0]     DeeeeeeeeER    .   ld2	{ v1.2s, v2.2s }, [x27], x28
+# CHECK-NEXT: [0,1]     D=eE------R    .   add	x0, x27, #1
 # CHECK-NEXT: [0,2]     .DeeeeeeeeER   .   ld2	{ v1.4h, v2.4h }, [x27], x28
 # CHECK-NEXT: [0,3]     .D=eE------R   .   add	x0, x27, #1
 # CHECK-NEXT: [0,4]     . DeeeeeeeeER  .   ld2	{ v1.4s, v2.4s }, [x27], x28
@@ -2480,7 +2480,7 @@ add x0, x27, 1
 
 # CHECK:      Timeline view:
 # CHECK-NEXT:                     012345678
-# CHECK-NEXT: Index     0123456789         
+# CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeeeeeeeER    .  .   ld3	{ v1.16b, v2.16b, v3.16b }, [x27], #48
 # CHECK-NEXT: [0,1]     .DeE------R    .  .   add	x0, x27, #1
@@ -2526,7 +2526,7 @@ add x0, x27, 1
 
 # CHECK:      Timeline view:
 # CHECK-NEXT:                     0123456789          0
-# CHECK-NEXT: Index     0123456789          0123456789 
+# CHECK-NEXT: Index     0123456789          0123456789
 
 # CHECK:      [0,0]     DeeeeeeeeER    .    .    .    .   ld3	{ v1.8b, v2.8b, v3.8b }, [x27], x28
 # CHECK-NEXT: [0,1]     .DeE------R    .    .    .    .   add	x0, x27, #1
@@ -2664,7 +2664,7 @@ add x0, x27, 1
 
 # CHECK:      Timeline view:
 # CHECK-NEXT:                     012345678
-# CHECK-NEXT: Index     0123456789         
+# CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeeeeeeeER    .  .   ld3r	{ v1.1d, v2.1d, v3.1d }, [x27], #24
 # CHECK-NEXT: [0,1]     .DeE------R    .  .   add	x0, x27, #1
@@ -2710,7 +2710,7 @@ add x0, x27, 1
 
 # CHECK:      Timeline view:
 # CHECK-NEXT:                     012345678
-# CHECK-NEXT: Index     0123456789         
+# CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeeeeeeeER    .  .   ld3r	{ v1.8b, v2.8b, v3.8b }, [x27], #3
 # CHECK-NEXT: [0,1]     .DeE------R    .  .   add	x0, x27, #1
@@ -2756,7 +2756,7 @@ add x0, x27, 1
 
 # CHECK:      Timeline view:
 # CHECK-NEXT:                     012345678
-# CHECK-NEXT: Index     0123456789         
+# CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeeeeeeeER    .  .   ld3r	{ v1.2s, v2.2s, v3.2s }, [x27], x28
 # CHECK-NEXT: [0,1]     .DeE------R    .  .   add	x0, x27, #1
@@ -2802,7 +2802,7 @@ add x0, x27, 1
 
 # CHECK:      Timeline view:
 # CHECK-NEXT:                     0123456789
-# CHECK-NEXT: Index     0123456789          
+# CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeeeeeeeER    .   .   ld3r	{ v1.16b, v2.16b, v3.16b }, [x27], x28
 # CHECK-NEXT: [0,1]     .DeE------R    .   .   add	x0, x27, #1
@@ -2848,7 +2848,7 @@ add x0, x27, 1
 
 # CHECK:      Timeline view:
 # CHECK-NEXT:                     012345678
-# CHECK-NEXT: Index     0123456789         
+# CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeeeeeeeER    .  .   ld4	{ v1.8b, v2.8b, v3.8b, v4.8b }, [x27], #32
 # CHECK-NEXT: [0,1]     .DeE------R    .  .   add	x0, x27, #1
@@ -2894,7 +2894,7 @@ add x0, x27, 1
 
 # CHECK:      Timeline view:
 # CHECK-NEXT:                     0123456789
-# CHECK-NEXT: Index     0123456789          
+# CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeeeeeeeER    .   .   ld4	{ v1.4h, v2.4h, v3.4h, v4.4h }, [x27], x28
 # CHECK-NEXT: [0,1]     .DeE------R    .   .   add	x0, x27, #1
@@ -3078,7 +3078,7 @@ add x0, x27, 1
 
 # CHECK:      Timeline view:
 # CHECK-NEXT:                     012345678
-# CHECK-NEXT: Index     0123456789         
+# CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeeeeeeeER    .  .   ld4r	{ v1.4h, v2.4h, v3.4h, v4.4h }, [x27], #8
 # CHECK-NEXT: [0,1]     .DeE------R    .  .   add	x0, x27, #1
@@ -3124,7 +3124,7 @@ add x0, x27, 1
 
 # CHECK:      Timeline view:
 # CHECK-NEXT:                     012345678
-# CHECK-NEXT: Index     0123456789         
+# CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeeeeeeeER    .  .   ld4r	{ v1.1d, v2.1d, v3.1d, v4.1d }, [x27], x28
 # CHECK-NEXT: [0,1]     .DeE------R    .  .   add	x0, x27, #1
@@ -3170,7 +3170,7 @@ add x0, x27, 1
 
 # CHECK:      Timeline view:
 # CHECK-NEXT:                     012345
-# CHECK-NEXT: Index     0123456789      
+# CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeeeeeeeER    .   ld4r	{ v1.8b, v2.8b, v3.8b, v4.8b }, [x27], x28
 # CHECK-NEXT: [0,1]     .DeE------R    .   add	x0, x27, #1
@@ -3216,7 +3216,7 @@ add x0, x27, 1
 
 # CHECK:      Timeline view:
 # CHECK-NEXT:                     012
-# CHECK-NEXT: Index     0123456789   
+# CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeeeeeER . .   ldp	q1, q2, [x27], #992
 # CHECK-NEXT: [0,1]     .DeE----R . .   add	x0, x27, #1
@@ -3253,10 +3253,10 @@ add x0, x27, 1
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      1000
 # CHECK-NEXT: Total Cycles:      1006
-# CHECK-NEXT: Total uOps:        2000
+# CHECK-NEXT: Total uOps:        2200
 
 # CHECK:      Dispatch Width:    5
-# CHECK-NEXT: uOps Per Cycle:    1.99
+# CHECK-NEXT: uOps Per Cycle:    2.19
 # CHECK-NEXT: IPC:               0.99
 # CHECK-NEXT: Block RThroughput: 10.0
 
@@ -3308,7 +3308,7 @@ add x0, x27, 1
 
 # CHECK:      Timeline view:
 # CHECK-NEXT:                     012
-# CHECK-NEXT: Index     0123456789   
+# CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeeeeeER . .   ldr	b1, [x27], #254
 # CHECK-NEXT: [0,1]     D=eE----R . .   add	x0, x27, #1
@@ -3354,7 +3354,7 @@ add x0, x27, 1
 
 # CHECK:      Timeline view:
 # CHECK-NEXT:                     012
-# CHECK-NEXT: Index     0123456789   
+# CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeeeeeER . .   ldr	b1, [x27, #254]!
 # CHECK-NEXT: [0,1]     D=eE----R . .   add	x0, x27, #1
@@ -3400,7 +3400,7 @@ add x0, x27, 1
 
 # CHECK:      Timeline view:
 # CHECK-NEXT:                     0
-# CHECK-NEXT: Index     0123456789 
+# CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeeeER   .   ldr	w1, [x27], #254
 # CHECK-NEXT: [0,1]     D=eE--R   .   add	x0, x27, #1
@@ -3446,7 +3446,7 @@ add x0, x27, 1
 
 # CHECK:      Timeline view:
 # CHECK-NEXT:                     0
-# CHECK-NEXT: Index     0123456789 
+# CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeeeER   .   ldrb	w1, [x27, #254]!
 # CHECK-NEXT: [0,1]     D=eE--R   .   add	x0, x27, #1
@@ -3492,7 +3492,7 @@ add x0, x27, 1
 
 # CHECK:      Timeline view:
 # CHECK-NEXT:                     0
-# CHECK-NEXT: Index     0123456789 
+# CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeeeER   .   ldrsb	w1, [x27, #254]!
 # CHECK-NEXT: [0,1]     D=eE--R   .   add	x0, x27, #1
@@ -3853,7 +3853,7 @@ add x0, x27, 1
 
 # CHECK:      Timeline view:
 # CHECK-NEXT:                     012
-# CHECK-NEXT: Index     0123456789   
+# CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeER.    . .   st1	{ v1.1d, v2.1d, v3.1d }, [x27], #24
 # CHECK-NEXT: [0,1]     .DeER.    . .   add	x0, x27, #1
@@ -3899,7 +3899,7 @@ add x0, x27, 1
 
 # CHECK:      Timeline view:
 # CHECK-NEXT:                     012
-# CHECK-NEXT: Index     0123456789   
+# CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeER.    . .   st1	{ v1.8b, v2.8b, v3.8b }, [x27], #24
 # CHECK-NEXT: [0,1]     .DeER.    . .   add	x0, x27, #1
@@ -3945,7 +3945,7 @@ add x0, x27, 1
 
 # CHECK:      Timeline view:
 # CHECK-NEXT:                     012
-# CHECK-NEXT: Index     0123456789   
+# CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeER.    . .   st1	{ v1.2s, v2.2s, v3.2s }, [x27], x28
 # CHECK-NEXT: [0,1]     .DeER.    . .   add	x0, x27, #1
@@ -3991,7 +3991,7 @@ add x0, x27, 1
 
 # CHECK:      Timeline view:
 # CHECK-NEXT:                     012
-# CHECK-NEXT: Index     0123456789   
+# CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeER.    . .   st1	{ v1.16b, v2.16b, v3.16b }, [x27], x28
 # CHECK-NEXT: [0,1]     .DeER.    . .   add	x0, x27, #1
@@ -4037,7 +4037,7 @@ add x0, x27, 1
 
 # CHECK:      Timeline view:
 # CHECK-NEXT:                     012
-# CHECK-NEXT: Index     0123456789   
+# CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeER.    . .   st1	{ v1.4s, v2.4s, v3.4s, v4.4s }, [x27], #64
 # CHECK-NEXT: [0,1]     .DeER.    . .   add	x0, x27, #1
@@ -4083,7 +4083,7 @@ add x0, x27, 1
 
 # CHECK:      Timeline view:
 # CHECK-NEXT:                     012
-# CHECK-NEXT: Index     0123456789   
+# CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeER.    . .   st1	{ v1.2d, v2.2d, v3.2d, v4.2d }, [x27], x28
 # CHECK-NEXT: [0,1]     .DeER.    . .   add	x0, x27, #1
@@ -4129,7 +4129,7 @@ add x0, x27, 1
 
 # CHECK:      Timeline view:
 # CHECK-NEXT:                     012
-# CHECK-NEXT: Index     0123456789   
+# CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeER.    . .   st1	{ v1.8h, v2.8h, v3.8h, v4.8h }, [x27], x28
 # CHECK-NEXT: [0,1]     .DeER.    . .   add	x0, x27, #1
@@ -4175,7 +4175,7 @@ add x0, x27, 1
 
 # CHECK:      Timeline view:
 # CHECK-NEXT:                     0
-# CHECK-NEXT: Index     0123456789 
+# CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeeeER   .   st1	{ v1.b }[8], [x27], x28
 # CHECK-NEXT: [0,1]     D=eE--R   .   add	x0, x27, #1
@@ -4221,7 +4221,7 @@ add x0, x27, 1
 
 # CHECK:      Timeline view:
 # CHECK-NEXT:                     0
-# CHECK-NEXT: Index     0123456789 
+# CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeeeER   .   st1	{ v1.s }[0], [x27], #4
 # CHECK-NEXT: [0,1]     D=eE--R   .   add	x0, x27, #1
@@ -4267,7 +4267,7 @@ add x0, x27, 1
 
 # CHECK:      Timeline view:
 # CHECK-NEXT:                     0
-# CHECK-NEXT: Index     0123456789 
+# CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeeeER   .   st2	{ v1.2s, v2.2s }, [x27], #16
 # CHECK-NEXT: [0,1]     D=eE--R   .   add	x0, x27, #1
@@ -4313,7 +4313,7 @@ add x0, x27, 1
 
 # CHECK:      Timeline view:
 # CHECK-NEXT:                     01
-# CHECK-NEXT: Index     0123456789  
+# CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeeeER   ..   st2	{ v1.16b, v2.16b }, [x27], #32
 # CHECK-NEXT: [0,1]     .DeE--R   ..   add	x0, x27, #1
@@ -4359,7 +4359,7 @@ add x0, x27, 1
 
 # CHECK:      Timeline view:
 # CHECK-NEXT:                     01
-# CHECK-NEXT: Index     0123456789  
+# CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeeeER   ..   st2	{ v1.8b, v2.8b }, [x27], x28
 # CHECK-NEXT: [0,1]     D=eE--R   ..   add	x0, x27, #1
@@ -4405,7 +4405,7 @@ add x0, x27, 1
 
 # CHECK:      Timeline view:
 # CHECK-NEXT:                     0
-# CHECK-NEXT: Index     0123456789 
+# CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeeeER   .   st2	{ v1.b, v2.b }[0], [x27], x28
 # CHECK-NEXT: [0,1]     D=eE--R   .   add	x0, x27, #1
@@ -4451,7 +4451,7 @@ add x0, x27, 1
 
 # CHECK:      Timeline view:
 # CHECK-NEXT:                     0
-# CHECK-NEXT: Index     0123456789 
+# CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeeeER   .   st2	{ v1.h, v2.h }[4], [x27], x28
 # CHECK-NEXT: [0,1]     D=eE--R   .   add	x0, x27, #1
@@ -4497,7 +4497,7 @@ add x0, x27, 1
 
 # CHECK:      Timeline view:
 # CHECK-NEXT:                     0123
-# CHECK-NEXT: Index     0123456789    
+# CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeER .    .  .   st2g	x26, [x27], #4064
 # CHECK-NEXT: [0,1]     D=eER.    .  .   add	x0, x27, #1
@@ -4543,7 +4543,7 @@ add x0, x27, 1
 
 # CHECK:      Timeline view:
 # CHECK-NEXT:                     0123456
-# CHECK-NEXT: Index     0123456789       
+# CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeeeeeER .    ..   st3	{ v1.4s, v2.4s, v3.4s }, [x27], #48
 # CHECK-NEXT: [0,1]     .DeE----R .    ..   add	x0, x27, #1
@@ -4589,7 +4589,7 @@ add x0, x27, 1
 
 # CHECK:      Timeline view:
 # CHECK-NEXT:                     0123456
-# CHECK-NEXT: Index     0123456789       
+# CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeeeeER  .    ..   st3	{ v1.2s, v2.2s, v3.2s }, [x27], x28
 # CHECK-NEXT: [0,1]     .DeE---R  .    ..   add	x0, x27, #1
@@ -4635,7 +4635,7 @@ add x0, x27, 1
 
 # CHECK:      Timeline view:
 # CHECK-NEXT:                     0123456
-# CHECK-NEXT: Index     0123456789       
+# CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeeeeeER .    ..   st3	{ v1.16b, v2.16b, v3.16b }, [x27], x28
 # CHECK-NEXT: [0,1]     .DeE----R .    ..   add	x0, x27, #1
@@ -4681,7 +4681,7 @@ add x0, x27, 1
 
 # CHECK:      Timeline view:
 # CHECK-NEXT:                     0123456
-# CHECK-NEXT: Index     0123456789       
+# CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeeeeeER .    ..   st3	{ v1.h, v2.h, v3.h }[0], [x27], #6
 # CHECK-NEXT: [0,1]     .DeE----R .    ..   add	x0, x27, #1
@@ -4727,7 +4727,7 @@ add x0, x27, 1
 
 # CHECK:      Timeline view:
 # CHECK-NEXT:                     0123456
-# CHECK-NEXT: Index     0123456789       
+# CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeeeeeER .    ..   st3	{ v1.s, v2.s, v3.s }[0], [x27], x28
 # CHECK-NEXT: [0,1]     .DeE----R .    ..   add	x0, x27, #1
@@ -4773,7 +4773,7 @@ add x0, x27, 1
 
 # CHECK:      Timeline view:
 # CHECK-NEXT:                     0123456789
-# CHECK-NEXT: Index     0123456789          
+# CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeeeeeER .    .   .   st4	{ v1.4h, v2.4h, v3.4h, v4.4h }, [x27], #32
 # CHECK-NEXT: [0,1]     .DeE----R .    .   .   add	x0, x27, #1
@@ -4819,7 +4819,7 @@ add x0, x27, 1
 
 # CHECK:      Timeline view:
 # CHECK-NEXT:                     01234567
-# CHECK-NEXT: Index     0123456789        
+# CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeeeeER  .    . .   st4	{ v1.2d, v2.2d, v3.2d, v4.2d }, [x27], x28
 # CHECK-NEXT: [0,1]     .DeE---R  .    . .   add	x0, x27, #1
@@ -4865,7 +4865,7 @@ add x0, x27, 1
 
 # CHECK:      Timeline view:
 # CHECK-NEXT:                     012345678
-# CHECK-NEXT: Index     0123456789         
+# CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeeeeeeER.    .  .   st4	{ v1.8h, v2.8h, v3.8h, v4.8h }, [x27], x28
 # CHECK-NEXT: [0,1]     . DeE----R.    .  .   add	x0, x27, #1
@@ -4911,7 +4911,7 @@ add x0, x27, 1
 
 # CHECK:      Timeline view:
 # CHECK-NEXT:                     0123456
-# CHECK-NEXT: Index     0123456789       
+# CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeeeeeER .    ..   st4	{ v1.b, v2.b, v3.b, v4.b }[8], [x27], x28
 # CHECK-NEXT: [0,1]     .DeE----R .    ..   add	x0, x27, #1
@@ -4957,7 +4957,7 @@ add x0, x27, 1
 
 # CHECK:      Timeline view:
 # CHECK-NEXT:                     012
-# CHECK-NEXT: Index     0123456789   
+# CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeeeeeER . .   st4	{ v1.s, v2.s, v3.s, v4.s }[0], [x27], #16
 # CHECK-NEXT: [0,1]     .DeE----R . .   add	x0, x27, #1
@@ -5048,7 +5048,7 @@ add x0, x27, 1
 
 # CHECK:      Timeline view:
 # CHECK-NEXT:                     0
-# CHECK-NEXT: Index     0123456789 
+# CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeER.    .   stp	q1, q2, [x27], #992
 # CHECK-NEXT: [0,1]     D==eER    .   add	x0, x27, #1
@@ -5319,7 +5319,7 @@ add x0, x27, 1
 
 # CHECK:      Timeline view:
 # CHECK-NEXT:                     0
-# CHECK-NEXT: Index     0123456789 
+# CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeeeER   .   ldr	x1, [x27], #254
 # CHECK-NEXT: [0,1]     D=eE--R   .   add	x0, x27, #1

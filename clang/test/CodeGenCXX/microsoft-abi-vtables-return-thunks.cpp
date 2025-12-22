@@ -213,6 +213,6 @@ struct C : virtual B { C *f(); };
 C c;
 // VFTABLES-LABEL: VFTable indices for 'pr34302::C' (2 entries).
 // VFTABLES-NEXT:  -- accessible via vbtable index 1, vfptr at offset 0 --
-// VFTABLES-NEXT:    0 | pr34302::C::~C() [scalar deleting]
+// VFTABLES-NEXT:    0 | pr34302::C::~C() [vector deleting]
 // VFTABLES-NEXT:    2 | C *pr34302::C::f()
 }
