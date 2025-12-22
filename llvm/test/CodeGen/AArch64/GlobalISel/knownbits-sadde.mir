@@ -61,3 +61,215 @@ body:             |
     %2:_(s1) = G_CONSTANT i1 1
     %3:_(s8), %4:_(s1) = G_SADDE %0, %1, %2
 ...
+---
+name:            ScalarVar
+body:             |
+  bb.1:
+  ; CHECK-LABEL: name: @ScalarVar
+  ; CHECK-NEXT: %0:_ KnownBits:???????? SignBits:1
+  ; CHECK-NEXT: %1:_ KnownBits:???????? SignBits:1
+  ; CHECK-NEXT: %2:_ KnownBits:???????? SignBits:1
+  ; CHECK-NEXT: %3:_ KnownBits:? SignBits:1
+  ; CHECK-NEXT: %4:_ KnownBits:???????? SignBits:1
+  ; CHECK-NEXT: %5:_ KnownBits:? SignBits:1
+    %0:_(s8) = COPY $b0
+    %1:_(s8) = COPY $b1
+    %2:_(s8) = COPY $b2
+    %3:_(s1) = G_TRUNC %2
+    %4:_(s8), %5:_(s1) = G_SADDE %0, %1, %3
+...
+---
+name:            ScalarPartKnown
+body:             |
+  bb.1:
+  ; CHECK-LABEL: name: @ScalarPartKnown
+  ; CHECK-NEXT: %0:_ KnownBits:???????? SignBits:1
+  ; CHECK-NEXT: %1:_ KnownBits:00001111 SignBits:4
+  ; CHECK-NEXT: %2:_ KnownBits:0000???? SignBits:4
+  ; CHECK-NEXT: %3:_ KnownBits:00000101 SignBits:5
+  ; CHECK-NEXT: %4:_ KnownBits:???????? SignBits:1
+  ; CHECK-NEXT: %5:_ KnownBits:? SignBits:1
+  ; CHECK-NEXT: %6:_ KnownBits:000????? SignBits:3
+  ; CHECK-NEXT: %7:_ KnownBits:? SignBits:1
+    %0:_(s8) = COPY $b0
+    %1:_(s8) = G_CONSTANT i8 15
+    %2:_(s8) = G_AND %0, %1
+    %3:_(s8) = G_CONSTANT i8 5
+    %4:_(s8) = COPY $b1
+    %5:_(s1) = G_TRUNC %4
+    %6:_(s8), %7:_(s1) = G_SADDE %2, %3, %5
+...
+---
+name:            VectorCstCarryInZeroOutZero
+body:             |
+  bb.1:
+  ; CHECK-LABEL: name: @VectorCstCarryInZeroOutZero
+  ; CHECK-NEXT: %0:_ KnownBits:0000000000000010 SignBits:14
+  ; CHECK-NEXT: %1:_ KnownBits:0111110100000000 SignBits:1
+  ; CHECK-NEXT: %2:_ KnownBits:0 SignBits:1
+  ; CHECK-NEXT: %3:_ KnownBits:0000000000000010 SignBits:14
+  ; CHECK-NEXT: %4:_ KnownBits:0111110100000000 SignBits:1
+  ; CHECK-NEXT: %5:_ KnownBits:0 SignBits:1
+  ; CHECK-NEXT: %6:_ KnownBits:0111110100000010 SignBits:1
+  ; CHECK-NEXT: %7:_ KnownBits:? SignBits:1
+    %0:_(s16) = G_CONSTANT i16 2
+    %1:_(s16) = G_CONSTANT i16 32000
+    %2:_(s1) = G_CONSTANT i1 0
+    %3:_(<4 x s16>) = G_BUILD_VECTOR %0, %0, %0, %0
+    %4:_(<4 x s16>) = G_BUILD_VECTOR %1, %1, %1, %1
+    %5:_(<4 x s1>) = G_BUILD_VECTOR %2, %2, %2, %2
+    %6:_(<4 x s16>), %7:_(<4 x s1>) = G_SADDE %3, %4, %5
+...
+---
+name:            VectorCstCarryInOneOutZero
+body:             |
+  bb.1:
+  ; CHECK-LABEL: name: @VectorCstCarryInOneOutZero
+  ; CHECK-NEXT: %0:_ KnownBits:0000000000000010 SignBits:14
+  ; CHECK-NEXT: %1:_ KnownBits:0111110100000000 SignBits:1
+  ; CHECK-NEXT: %2:_ KnownBits:1 SignBits:1
+  ; CHECK-NEXT: %3:_ KnownBits:0000000000000010 SignBits:14
+  ; CHECK-NEXT: %4:_ KnownBits:0111110100000000 SignBits:1
+  ; CHECK-NEXT: %5:_ KnownBits:1 SignBits:1
+  ; CHECK-NEXT: %6:_ KnownBits:0111110100000011 SignBits:1
+  ; CHECK-NEXT: %7:_ KnownBits:? SignBits:1
+    %0:_(s16) = G_CONSTANT i16 2
+    %1:_(s16) = G_CONSTANT i16 32000
+    %2:_(s1) = G_CONSTANT i1 1
+    %3:_(<4 x s16>) = G_BUILD_VECTOR %0, %0, %0, %0
+    %4:_(<4 x s16>) = G_BUILD_VECTOR %1, %1, %1, %1
+    %5:_(<4 x s1>) = G_BUILD_VECTOR %2, %2, %2, %2
+    %6:_(<4 x s16>), %7:_(<4 x s1>) = G_SADDE %3, %4, %5
+...
+---
+name:            VectorCstCarryInZeroOutOne
+body:             |
+  bb.1:
+  ; CHECK-LABEL: name: @VectorCstCarryInZeroOutOne
+  ; CHECK-NEXT: %0:_ KnownBits:0000000000000010 SignBits:14
+  ; CHECK-NEXT: %1:_ KnownBits:0111111111111111 SignBits:1
+  ; CHECK-NEXT: %2:_ KnownBits:0 SignBits:1
+  ; CHECK-NEXT: %3:_ KnownBits:0000000000000010 SignBits:14
+  ; CHECK-NEXT: %4:_ KnownBits:0111111111111111 SignBits:1
+  ; CHECK-NEXT: %5:_ KnownBits:0 SignBits:1
+  ; CHECK-NEXT: %6:_ KnownBits:1000000000000001 SignBits:1
+  ; CHECK-NEXT: %7:_ KnownBits:? SignBits:1
+    %0:_(s16) = G_CONSTANT i16 2
+    %1:_(s16) = G_CONSTANT i16 32767
+    %2:_(s1) = G_CONSTANT i1 0
+    %3:_(<4 x s16>) = G_BUILD_VECTOR %0, %0, %0, %0
+    %4:_(<4 x s16>) = G_BUILD_VECTOR %1, %1, %1, %1
+    %5:_(<4 x s1>) = G_BUILD_VECTOR %2, %2, %2, %2
+    %6:_(<4 x s16>), %7:_(<4 x s1>) = G_SADDE %3, %4, %5
+...
+---
+name:            VectorCstCarryInOneOutOne
+body:             |
+  bb.1:
+  ; CHECK-LABEL: name: @VectorCstCarryInOneOutOne
+  ; CHECK-NEXT: %0:_ KnownBits:0000000000000000 SignBits:16
+  ; CHECK-NEXT: %1:_ KnownBits:0111111111111111 SignBits:1
+  ; CHECK-NEXT: %2:_ KnownBits:1 SignBits:1
+  ; CHECK-NEXT: %3:_ KnownBits:0000000000000000 SignBits:16
+  ; CHECK-NEXT: %4:_ KnownBits:0111111111111111 SignBits:1
+  ; CHECK-NEXT: %5:_ KnownBits:1 SignBits:1
+  ; CHECK-NEXT: %6:_ KnownBits:1000000000000000 SignBits:1
+  ; CHECK-NEXT: %7:_ KnownBits:? SignBits:1
+    %0:_(s16) = G_CONSTANT i16 0
+    %1:_(s16) = G_CONSTANT i16 32767
+    %2:_(s1) = G_CONSTANT i1 1
+    %3:_(<4 x s16>) = G_BUILD_VECTOR %0, %0, %0, %0
+    %4:_(<4 x s16>) = G_BUILD_VECTOR %1, %1, %1, %1
+    %5:_(<4 x s1>) = G_BUILD_VECTOR %2, %2, %2, %2
+    %6:_(<4 x s16>), %7:_(<4 x s1>) = G_SADDE %3, %4, %5
+...
+---
+name:            VectorVar
+body:             |
+  bb.1:
+  ; CHECK-LABEL: name: @VectorVar
+  ; CHECK-NEXT: %0:_ KnownBits:???????????????? SignBits:1
+  ; CHECK-NEXT: %1:_ KnownBits:???????????????? SignBits:1
+  ; CHECK-NEXT: %2:_ KnownBits:???????????????? SignBits:1
+  ; CHECK-NEXT: %3:_ KnownBits:? SignBits:1
+  ; CHECK-NEXT: %4:_ KnownBits:???????????????? SignBits:1
+  ; CHECK-NEXT: %5:_ KnownBits:? SignBits:1
+    %0:_(<4 x s16>) = COPY $d0
+    %1:_(<4 x s16>) = COPY $d1
+    %2:_(<4 x s16>) = COPY $d2
+    %3:_(<4 x s1>) = G_TRUNC %2
+    %4:_(<4 x s16>), %5:_(<4 x s1>) = G_SADDE %0, %1, %3
+...
+---
+name:            VectorPartKnown
+body:             |
+  bb.1:
+  ; CHECK-LABEL: name: @VectorPartKnown
+  ; CHECK-NEXT: %0:_ KnownBits:???????????????? SignBits:1
+  ; CHECK-NEXT: %1:_ KnownBits:0000000011111111 SignBits:8
+  ; CHECK-NEXT: %2:_ KnownBits:0000000011111111 SignBits:8
+  ; CHECK-NEXT: %3:_ KnownBits:00000000???????? SignBits:8
+  ; CHECK-NEXT: %4:_ KnownBits:0000000000101010 SignBits:10
+  ; CHECK-NEXT: %5:_ KnownBits:0000000001001010 SignBits:9
+  ; CHECK-NEXT: %6:_ KnownBits:000000000??01010 SignBits:9
+  ; CHECK-NEXT: %7:_ KnownBits:???????????????? SignBits:1
+  ; CHECK-NEXT: %8:_ KnownBits:1 SignBits:1
+  ; CHECK-NEXT: %9:_ KnownBits:0000000????????? SignBits:7
+  ; CHECK-NEXT: %10:_ KnownBits:? SignBits:1
+    %0:_(<4 x s16>) = COPY $d0
+    %1:_(s16) = G_CONSTANT i16 255
+    %2:_(<4 x s16>) = G_BUILD_VECTOR %1, %1, %1, %1
+    %3:_(<4 x s16>) = G_AND %0, %2
+    %4:_(s16) = G_CONSTANT i16 42
+    %5:_(s16) = G_CONSTANT i16 74
+    %6:_(<4 x s16>) = G_BUILD_VECTOR %4, %5, %5, %4
+    %7:_(<4 x s16>) = COPY $d2
+    %8:_(<4 x s1>) = G_TRUNC %2
+    %9:_(<4 x s16>), %10:_(<4 x s1>) = G_SADDE %6, %3, %8
+...
+---
+name:            VectorCst36
+body:             |
+  bb.1:
+  ; CHECK-LABEL: name: @VectorCst36
+  ; CHECK-NEXT: %0:_ KnownBits:0000000000000011 SignBits:14
+  ; CHECK-NEXT: %1:_ KnownBits:0000000000000110 SignBits:13
+  ; CHECK-NEXT: %2:_ KnownBits:0 SignBits:1
+  ; CHECK-NEXT: %3:_ KnownBits:1 SignBits:1
+  ; CHECK-NEXT: %4:_ KnownBits:0000000000000?1? SignBits:13
+  ; CHECK-NEXT: %5:_ KnownBits:0000000000000?1? SignBits:13
+  ; CHECK-NEXT: %6:_ KnownBits:? SignBits:1
+  ; CHECK-NEXT: %7:_ KnownBits:000000000000???? SignBits:12
+  ; CHECK-NEXT: %8:_ KnownBits:? SignBits:1
+    %0:_(s16) = G_CONSTANT i16 3
+    %1:_(s16) = G_CONSTANT i16 6
+    %2:_(s1) = G_CONSTANT i1 0
+    %3:_(s1) = G_CONSTANT i1 1
+    %4:_(<4 x s16>) = G_BUILD_VECTOR %0, %1, %1, %0
+    %5:_(<4 x s16>) = G_BUILD_VECTOR %0, %1, %1, %0
+    %6:_(<4 x s1>) = G_BUILD_VECTOR %2, %2, %3, %3
+    %7:_(<4 x s16>), %8:_(<4 x s1>) = G_SADDE %4, %5, %6
+...
+---
+name:            VectorCst3unknown
+body:             |
+  bb.1:
+  ; CHECK-LABEL: name: @VectorCst3unknown
+  ; CHECK-NEXT: %0:_ KnownBits:???????????????? SignBits:1
+  ; CHECK-NEXT: %1:_ KnownBits:???????????????? SignBits:1
+  ; CHECK-NEXT: %2:_ KnownBits:0000000000000011 SignBits:14
+  ; CHECK-NEXT: %3:_ KnownBits:0 SignBits:1
+  ; CHECK-NEXT: %4:_ KnownBits:1 SignBits:1
+  ; CHECK-NEXT: %5:_ KnownBits:???????????????? SignBits:1
+  ; CHECK-NEXT: %6:_ KnownBits:? SignBits:1
+  ; CHECK-NEXT: %7:_ KnownBits:???????????????? SignBits:1
+  ; CHECK-NEXT: %8:_ KnownBits:? SignBits:1
+    %0:_(<4 x s16>) = COPY $d0
+    %1:_(s16) = COPY $h0
+    %2:_(s16) = G_CONSTANT i16 3
+    %3:_(s1) = G_CONSTANT i1 0
+    %4:_(s1) = G_CONSTANT i1 1
+    %5:_(<4 x s16>) = G_BUILD_VECTOR %1, %2, %2, %1
+    %6:_(<4 x s1>) = G_BUILD_VECTOR %3, %3, %4, %4
+    %7:_(<4 x s16>), %8:_(<4 x s1>) = G_SADDE %0, %5, %6
+...
