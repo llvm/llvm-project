@@ -96,6 +96,13 @@ AST_MATCHER(FunctionDecl, isAllocationOrDeallocationOverloadedFunction) {
   return OverloadedOperators.contains(Node.getOverloadedOperator());
 }
 
+AST_MATCHER(TagDecl, hasNameForLinkage) { return Node.hasNameForLinkage(); }
+
+AST_MATCHER(CXXRecordDecl, isExplicitTemplateInstantiation) {
+  return Node.getTemplateSpecializationKind() ==
+         TSK_ExplicitInstantiationDefinition;
+}
+
 } // namespace
 
 UseInternalLinkageCheck::UseInternalLinkageCheck(StringRef Name,
@@ -113,27 +120,38 @@ void UseInternalLinkageCheck::registerMatchers(MatchFinder *Finder) {
       allOf(isFirstDecl(), isAllRedeclsInMainFile(HeaderFileExtensions),
             unless(anyOf(
                 // 1. internal linkage
-                isStaticStorageClass(), isInAnonymousNamespace(),
-                // 2. explicit external linkage
-                isExternStorageClass(), isExternC(),
-                // 3. template
-                isExplicitTemplateSpecialization(),
-                hasAncestor(decl(anyOf(
-                    // 4. friend
-                    friendDecl(),
-                    // 5. module export decl
-                    exportDecl()))))));
+                isInAnonymousNamespace(), hasAncestor(decl(anyOf(
+                                              // 2. friend
+                                              friendDecl(),
+                                              // 3. module export decl
+                                              exportDecl()))))));
   Finder->addMatcher(
       functionDecl(Common, hasBody(),
-                   unless(anyOf(cxxMethodDecl(), isConsteval(),
+                   unless(anyOf(isExternC(), isStaticStorageClass(),
+                                isExternStorageClass(),
+                                isExplicitTemplateSpecialization(),
+                                cxxMethodDecl(), isConsteval(),
                                 isAllocationOrDeallocationOverloadedFunction(),
                                 isMain())))
           .bind("fn"),
       this);
-  Finder->addMatcher(
-      varDecl(Common, hasGlobalStorage(), unless(hasThreadStorageDuration()))
-          .bind("var"),
-      this);
+  Finder->addMatcher(varDecl(Common, hasGlobalStorage(),
+                             unless(anyOf(isExternC(), isStaticStorageClass(),
+                                          isExternStorageClass(),
+                                          isExplicitTemplateSpecialization(),
+                                          hasThreadStorageDuration())))
+                         .bind("var"),
+                     this);
+  if (getLangOpts().CPlusPlus)
+    Finder->addMatcher(
+        tagDecl(Common, isDefinition(), hasNameForLinkage(),
+                hasDeclContext(anyOf(translationUnitDecl(), namespaceDecl())),
+                unless(anyOf(
+                    classTemplatePartialSpecializationDecl(),
+                    cxxRecordDecl(anyOf(isExplicitTemplateSpecialization(),
+                                        isExplicitTemplateInstantiation())))))
+            .bind("tag"),
+        this);
 }
 
 static constexpr StringRef Message =
@@ -165,6 +183,12 @@ void UseInternalLinkageCheck::check(const MatchFinder::MatchResult &Result) {
       return;
     if (FixMode == FixModeKind::UseStatic)
       DB << FixItHint::CreateInsertion(FixLoc, "static ");
+    return;
+  }
+  if (const auto *TD = Result.Nodes.getNodeAs<TagDecl>("tag")) {
+    diag(TD->getLocation(), "%0 %1 can be moved into an anonymous namespace "
+                            "to enforce internal linkage")
+        << TD->getKindName() << TD;
     return;
   }
   llvm_unreachable("");
