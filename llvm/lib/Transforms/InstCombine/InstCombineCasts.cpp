@@ -56,22 +56,26 @@ static Value *EvaluateInDifferentTypeImpl(Value *V, Type *Ty, bool isSigned,
   unsigned Opc = I->getOpcode();
   switch (Opc) {
   case Instruction::And: {
-    APInt LowBitMask = APInt::getLowBitsSet(I->getType()->getScalarSizeInBits(),
-                                            Ty->getScalarSizeInBits());
-    Value *MaskedValue;
-    const APInt *AndMask;
-    if (match(I, m_And(m_Value(MaskedValue), m_APInt(AndMask)))) {
-      Res = CastInst::CreateIntegerCast(MaskedValue, Ty, isSigned);
-      // if the and operation do a standard narrowing, we can just cast the
-      // masked value otherwise, we also need to and the casted value with the
-      // low bits mask
-      if (LowBitMask != *AndMask) {
-        Value *CastedValue = IC.InsertNewInstWith(Res, I->getIterator());
-        Res = BinaryOperator::CreateAnd(
-            CastedValue,
-            ConstantInt::get(Ty, AndMask->trunc(Ty->getScalarSizeInBits())));
+    unsigned OrgiBitWidth = I->getType()->getScalarSizeInBits();
+    unsigned TargetBitWidth = Ty->getScalarSizeInBits();
+    if (OrgiBitWidth > TargetBitWidth) {
+      Value *MaskedValue;
+      const APInt *AndMask;
+      if (match(I, m_And(m_Value(MaskedValue), m_APInt(AndMask)))) {
+        Res = CastInst::CreateIntegerCast(MaskedValue, Ty, isSigned);
+        // if the and operation do a standard narrowing, we can just cast the
+        // masked value otherwise, we also need to and the casted value with the
+        // low bits mask
+        APInt LowBitMask = APInt::getLowBitsSet(OrgiBitWidth,
+                                            TargetBitWidth);
+        if (LowBitMask != *AndMask) {
+          Value *CastedValue = IC.InsertNewInstWith(Res, I->getIterator());
+          Res = BinaryOperator::CreateAnd(
+              CastedValue,
+              ConstantInt::get(Ty, AndMask->trunc(Ty->getScalarSizeInBits())));
+        }
+        break;
       }
-      break;
     }
     [[fallthrough]];
   }
