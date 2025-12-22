@@ -1838,7 +1838,9 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
   case X86::BI__builtin_ia32_cvtneps2bf16_128_mask: {
     mlir::Location loc = getLoc(expr->getExprLoc());
     cir::VectorType resTy = cast<cir::VectorType>(convertType(expr->getType()));
-    unsigned numElts = resTy.getSize();
+
+    cir::VectorType inputTy = cast<cir::VectorType>(ops[0].getType());
+    unsigned numElts = inputTy.getSize();
 
     mlir::Value mask = getMaskVecValue(builder, loc, ops[2], numElts);
 
@@ -1854,7 +1856,9 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
   case X86::BI__builtin_ia32_cvtneps2bf16_512_mask: {
     mlir::Location loc = getLoc(expr->getExprLoc());
     cir::VectorType resTy = cast<cir::VectorType>(convertType(expr->getType()));
-    unsigned numElts = resTy.getSize();
+    cir::VectorType inputTy = cast<cir::VectorType>(ops[0].getType());
+    unsigned numElts = inputTy.getSize();
+
     llvm::errs() << "DEBUG: Number of elements is: " << numElts << "\n";
     StringRef intrinsicName;
     if (builtinID == X86::BI__builtin_ia32_cvtneps2bf16_256_mask)
@@ -1865,9 +1869,7 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
     mlir::Value res = emitIntrinsicCallOp(builder, loc, intrinsicName, resTy,
                                           mlir::ValueRange{ops[0]});
 
-    mlir::Value mask = getMaskVecValue(builder, loc, ops[2], numElts);
-
-    return emitX86Select(builder, loc, mask, res, ops[1]);
+    return emitX86Select(builder, loc, ops[2], res, ops[1]);
   }
   case X86::BI__cpuid:
   case X86::BI__cpuidex:
