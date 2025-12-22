@@ -12465,6 +12465,8 @@ def err_ompx_bare_no_grid : Error<
   "'ompx_bare' clauses requires explicit grid size via 'num_teams' and 'thread_limit' clauses">;
 def err_omp_multi_expr_not_allowed: Error<"only one expression allowed in '%0' clause">;
 def err_ompx_more_than_three_expr_not_allowed: Error<"at most three expressions are allowed in '%0' clause in 'target teams ompx_bare' construct">;
+def err_omp_transparent_invalid_value : Error<"invalid value for transparent clause,"
+  " expected one of: omp_not_impex, omp_import, omp_export, omp_impex">;
 } // end of OpenMP category
 
 let CategoryName = "Related Result Type Issue" in {
