@@ -1230,6 +1230,9 @@ public:
   /// Print SSA IDs using their NameLoc, if provided, as prefix.
   OpPrintingFlags &printNameLocAsPrefix(bool enable = true);
 
+  /// Enable the use of dialect aliases when printing attributes or types.
+  OpPrintingFlags &enableDialectAliases(bool enable = true);
+
   /// Return if the given ElementsAttr should be elided.
   bool shouldElideElementsAttr(ElementsAttr attr) const;
 
@@ -1273,6 +1276,10 @@ public:
   /// IDs
   bool shouldUseNameLocAsPrefix() const;
 
+  /// Return if the printer should print dialect aliases when printing
+  /// attributes or types.
+  bool shouldPrintDialectAliases() const;
+
 private:
   /// Elide large elements attributes if the number of elements is larger than
   /// the upper limit.
@@ -1309,6 +1316,9 @@ private:
 
   /// Print SSA IDs using NameLocs as prefixes
   bool useNameLocAsPrefix : 1;
+
+  /// Print dialect attribute or type aliases.
+  bool printDialectAliasesFlag : 1;
 };
 
 //===----------------------------------------------------------------------===//

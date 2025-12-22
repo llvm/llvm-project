@@ -868,7 +868,41 @@ that are directly usable by any other dialect in MLIR. These types cover a range
 from primitive integer and floating-point values, attribute dictionaries, dense
 multi-dimensional arrays, and more.
 
-### IR Versioning
+## Type and Attribute Dialect Aliases
+
+Type and Attribute dialect aliases provide a mechanism to override the syntax of
+attributes and types in MLIR. Concretely, they allow a dialect to override the
+syntax of its own entities, or entities in the transitive set of dependent dialects.
+Dialect aliases are owned by the dialect that registers them, and only work when
+that dialect is loaded. Consequently, the syntax provided by this mechanism is
+permitted to be virtually indistinguishable from the syntax of entities owned by a
+dialect, see [dialect attributes](#dialect-attribute-values) and [dialect types](#dialect-types)
+for more details. Nevertheless, this sugaring mechanism is optional and can be disabled.
+
+Dialect aliases are particularly useful when a dialect frequently relies on an
+entity that becomes too verbose in its normal form. Benefits include:
+
+-   Readability
+-   Parsing and printing speed, as very long strings can be aliased to smaller strings
+
+Compared to attribute and type named aliases, dialect aliases are not required to be
+defined before use. Further, dialect aliases are printed with the dialect prefix
+of the dialect that registered them, even when they alias entities from other dialects.
+
+It is critical to note that dialect aliases do not modify the internal
+representation of the IR, and are only a sugaring of the textual representation.
+In particular, a dialect alias is not a construct in bytecode.
+
+Example:
+
+```mlir
+#foo.my_long_attribute<#bar.some_really_long_attribute<"a_very_long_string_value">>
+// With a dialect alias registered for `#foo.my_long_attribute`, this can be
+// sugared to:
+#foo.bar_attr<"a_very_long_string_value">
+```
+
+## IR Versioning
 
 A dialect can opt-in to handle versioning through the
 `BytecodeDialectInterface`. Few hooks are exposed to the dialect to allow

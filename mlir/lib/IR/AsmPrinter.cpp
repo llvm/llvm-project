@@ -205,6 +205,11 @@ struct AsmPrinterOptions {
   llvm::cl::opt<bool> useNameLocAsPrefix{
       "mlir-use-nameloc-as-prefix", llvm::cl::init(false),
       llvm::cl::desc("Print SSA IDs using NameLocs as prefixes")};
+
+  llvm::cl::opt<bool> disableDialectAliases{
+      "mlir-disable-dialect-aliases", llvm::cl::init(false),
+      llvm::cl::desc(
+          "Disable printing of dialect aliases for attributes and types")};
 };
 } // namespace
 
@@ -223,7 +228,7 @@ OpPrintingFlags::OpPrintingFlags()
       printGenericOpFormFlag(false), skipRegionsFlag(false),
       assumeVerifiedFlag(false), printLocalScope(false),
       printValueUsersFlag(false), printUniqueSSAIDsFlag(false),
-      useNameLocAsPrefix(false) {
+      useNameLocAsPrefix(false), printDialectAliasesFlag(true) {
   // Initialize based upon command line options, if they are available.
   if (!clOptions.isConstructed())
     return;
@@ -243,6 +248,7 @@ OpPrintingFlags::OpPrintingFlags()
   printValueUsersFlag = clOptions->printValueUsers;
   printUniqueSSAIDsFlag = clOptions->printUniqueSSAIDs;
   useNameLocAsPrefix = clOptions->useNameLocAsPrefix;
+  printDialectAliasesFlag = !clOptions->disableDialectAliases;
 }
 
 /// Enable the elision of large elements attributes, by printing a '...'
@@ -335,6 +341,11 @@ OpPrintingFlags &OpPrintingFlags::printNameLocAsPrefix(bool enable) {
   return *this;
 }
 
+OpPrintingFlags &OpPrintingFlags::enableDialectAliases(bool enable) {
+  printDialectAliasesFlag = enable;
+  return *this;
+}
+
 /// Return the size limit for printing large ElementsAttr.
 std::optional<int64_t> OpPrintingFlags::getLargeElementsAttrLimit() const {
   return elementsAttrElementLimit;
@@ -389,6 +400,12 @@ bool OpPrintingFlags::shouldPrintUniqueSSAIDs() const {
 /// Return if the printer should use NameLocs as prefixes when printing SSA IDs.
 bool OpPrintingFlags::shouldUseNameLocAsPrefix() const {
   return useNameLocAsPrefix;
+}
+
+/// Return if the printer should use dialect aliases when printing attributes or
+/// types.
+bool OpPrintingFlags::shouldPrintDialectAliases() const {
+  return printDialectAliasesFlag;
 }
 
 //===----------------------------------------------------------------------===//
@@ -2539,6 +2556,9 @@ LogicalResult AsmPrinter::Impl::printAlias(Type type) {
 
 LogicalResult AsmPrinter::Impl::printDialectAlias(Attribute attr,
                                                   bool printStripped) {
+  if (!state.getPrinterFlags().shouldPrintDialectAliases())
+    return failure();
+
   // Check to see if there is a dialect alias for this attribute.
   auto [aliasDialect, alias] =
       state.getAliasState().getAttrAlias(*this, attr, printStripped);
@@ -2555,6 +2575,9 @@ LogicalResult AsmPrinter::Impl::printDialectAlias(Attribute attr,
 
 LogicalResult AsmPrinter::Impl::printDialectAlias(Type type,
                                                   bool printStripped) {
+  if (!state.getPrinterFlags().shouldPrintDialectAliases())
+    return failure();
+
   // Check to see if there is a dialect alias for this type.
   auto [aliasDialect, alias] =
       state.getAliasState().getTypeAlias(*this, type, printStripped);

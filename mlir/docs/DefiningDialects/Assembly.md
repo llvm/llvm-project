@@ -4,6 +4,8 @@
 
 ## Generating Aliases
 
+### Named aliases for Types and Attributes
+
 `AsmPrinter` can generate aliases for frequently used types and attributes when not printing them in generic form. For example, `!my_dialect.type<a=3,b=4,c=5,d=tuple,e=another_type>` and `#my_dialect.attr<a=3>` can be aliased to `!my_dialect_type` and `#my_dialect_attr`.
 
 There are mainly two ways to hook into the `AsmPrinter`. One is the attribute/type interface and the other is the dialect interface.
@@ -28,6 +30,28 @@ enum class OpAsmAliasResult {
 
 If multiple types/attributes have the same alias from `getAlias` hooks, a number is appended to the alias to avoid conflicts.
 
+### Dialect aliases
+
+There is another mechanism to generate aliases for types and attributes called Dialect Aliases, see the LangRef section on [Dialect Aliases](../LangRef.md#type-and-attribute-dialect-aliases).
+This mechanism provides more flexibility than named aliases, as the print function has access to the full `AsmPrinter`, and their syntax is allowed to be indistinguishable from dialect types/attributes.
+In other words, a dialect alias has the same capabilities as a full custom parser/printer for types/attributes specified via the methods `MyType::print`, or `MyAttr::print`.
+
+These aliases are specified by implementing `OpAsmDialectInterface`, and registering the printers with `registerTypeAliasPrinter` and `registerAttrAliasPrinter` methods.
+These printers are invoked when printing types or attributes of the given TypeID. Printers are invoked in the order they are registered, and the first one to print an alias is used.
+Further, a dialect alias only takes effect if the dialect providing the alias is already loaded in the context.
+
+The precedence for alias resolution is:
+
+1. Type/attribute named aliases as returned by `OpAsmDialectInterface::getAlias`
+2. Dialect-specific alias printers registered via dialect aliases
+3. Default type/attribute printers
+
+Dialect aliases can be disabled globally via the `--mlir-disable-dialect-aliases` command line option, or programmatically by using `enableDialectAliases(false)` flag in `OpPrintingFlags`.
+
+NOTE: That a dialect alias does not provide a parsing mechanism. To parse a dialect alias, the dialect must implement the parsing logic in its type/attribute parser.
+
+For an example, see [`OpAsmDialectInterface`](#OpAsmDialectInterface).
+
 ### `OpAsmDialectInterface`
 
 ```cpp
@@ -37,6 +61,7 @@ struct MyDialectOpAsmDialectInterface : public OpAsmDialectInterface {
  public:
   using OpAsmDialectInterface::OpAsmDialectInterface;
 
+  // Define a named aliases for types.
   AliasResult getAlias(Type type, raw_ostream& os) const override {
     if (mlir::isa<MyType>(type)) {
       os << "my_dialect_type";
@@ -45,12 +70,43 @@ struct MyDialectOpAsmDialectInterface : public OpAsmDialectInterface {
     return AliasResult::NoAlias;
   }
 
+  // Define a named aliases for attributes.
   AliasResult getAlias(Attribute attr, raw_ostream& os) const override {
     if (mlir::isa<MyAttribute>(attr)) {
       os << "my_dialect_attr";
       return AliasResult::FinalAlias;
     }
     return AliasResult::NoAlias;
+  }
+
+  // Register a dialect alias for a type.
+  void registerTypeAliasPrinter(InsertTypeAliasPrinter insertFn) const final {
+    insertFn(TypeID::get<foo::IntStringPairType>(),
+             [](Type type, AsmPrinter &printer, bool printStripped) {
+               auto pair = cast<foo::IntStringPairType>(type);
+
+               // Don't print the alias if the value is not 42.
+               if (pair.getFirst() != 42)
+                  return;
+
+               // Print the alias.
+               printer.getStream() << "the_answer<" << pair.getSecond() << ">";
+             });
+  }
+
+  // Register a dialect alias for an attribute.
+  void registerAttrAliasPrinter(InsertAttrAliasPrinter insertFn) const final {
+    insertFn(TypeID::get<foo::IntStringPairAttr>(),
+             [](Attribute attr, AsmPrinter &printer, bool printStripped) {
+               auto pair = cast<foo::IntStringPairAttr>(attr);
+
+               // Don't print the alias if the value is not 42.
+               if (pair.getFirst() != 42)
+                  return;
+
+               // Print the alias.
+               printer.getStream() << "the_answer<" << pair.getSecond() << ">";
+             });
   }
 };
 
