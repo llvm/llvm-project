@@ -1332,7 +1332,7 @@ bool PreRARematStage::initGCNSchedStage() {
     return Printable([&, Remat](raw_ostream &OS) {
       // Concatenate all region numbers in which the register is unused and
       // live-through.
-      bool HasLiveThroughRegion = true;
+      bool HasLiveThroughRegion = false;
       OS << '[' << Remat.DefRegion << " -";
       for (unsigned I = 0; I < NumRegions; ++I) {
         if (Remat.isUnusedLiveThrough(I)) {
@@ -1347,7 +1347,7 @@ bool PreRARematStage::initGCNSchedStage() {
       }
       if (HasLiveThroughRegion)
         OS << " -";
-      OS << "> " << Remat.UseRegion << "] ";
+      OS << "-> " << Remat.UseRegion << "] ";
       Remat.DefMI->print(OS, /*IsStandalone=*/true, /*SkipOpers=*/false,
                          /*SkipDebugLoc=*/false, /*AddNewLine=*/false);
     });
@@ -2293,7 +2293,12 @@ void PreRARematStage::rematerialize(const RematReg &Remat,
   Remat.insertMI(Remat.UseRegion, RematMI, DAG);
   if (Rollback) {
     Rollback->RematMI = RematMI;
-    Rollback->OriginalSlot = DAG.LIS->getInstructionIndex(DefMI);
+    // Make the original MI a debug instruction so that it does not influence
+    // scheduling.
+    DefMI.setDesc(TII->get(TargetOpcode::DBG_VALUE));
+  } else {
+    // Just delete the original instruction if it cannot be rolled back.
+    DAG.deleteMI(Remat.DefRegion, &DefMI);
   }
 
   // Remove the register from all regions where it is a live-in or live-out
@@ -2340,48 +2345,29 @@ void PreRARematStage::rematerialize(const RematReg &Remat,
       RecomputeRP.set(I);
   }
 
-  DAG.deleteMI(Remat.DefRegion, &DefMI);
   RescheduleRegions |= Remat.Live;
 }
 
 void PreRARematStage::rollback(const RollbackInfo &Rollback,
                                BitVector &RecomputeRP) const {
-  const SIInstrInfo *TII = MF.getSubtarget<GCNSubtarget>().getInstrInfo();
-  auto &[Remat, RematMI, OriginalSlot] = Rollback;
-  MachineBasicBlock *MBB = RegionBB[Remat->DefRegion];
+  auto &[Remat, RematMI] = Rollback;
+
+  // Switch back to using the original register and delete the
+  // rematerialization.
+  Remat->DefMI->setDesc(DAG.TII->get(RematMI->getOpcode()));
   Register Reg = RematMI->getOperand(0).getReg();
-  Register NewReg = DAG.MRI.cloneVirtualRegister(Reg);
-
-  // Re-rematerialize MI in its original region. Try to re-create the original
-  // instruction at its initial position.
-  SlotIndex NextSlot =
-      DAG.LIS->getSlotIndexes()->getNextNonNullIndex(OriginalSlot);
-  MachineInstr *NextMI = DAG.LIS->getInstructionFromIndex(NextSlot);
-  MachineBasicBlock::iterator InsertPos;
-  // I think it is possible that NextMI ends up being from a different block
-  // than the rolled back MI's defining region's parent MBB if all MIs if (1)
-  // the region ends at a MBB end iterator and (2) all MIs between the original
-  // MI position and the end of the block region have been rematerialized. In
-  // that case we should simply rematerialize at the end of the region/MBB. If
-  // (1) is not true then the region ends on a region terminator which we never
-  // move. If (2) is not true then NextMI point to a valid MI inside the
-  // original region. In both latter cases rematerializing before NextMI is
-  // correct.
-  if (!NextMI || RegionBB[Remat->DefRegion] != NextMI->getParent())
-    InsertPos = DAG.Regions[Remat->DefRegion].second;
-  else
-    InsertPos = NextMI;
-  TII->reMaterialize(*MBB, InsertPos, NewReg, 0, *RematMI);
-  MachineInstr *ReRematMI = &*std::prev(InsertPos);
-  REMAT_DEBUG(dbgs() << '[' << Remat->DefRegion << "] Re-rematerialized as "
-                     << *ReRematMI);
-  Remat->UseMI->substituteRegister(Reg, NewReg, 0, *DAG.TRI);
+  Register OriginalReg = Remat->DefMI->getOperand(0).getReg();
+  Remat->UseMI->substituteRegister(Reg, OriginalReg, 0, *DAG.TRI);
   DAG.deleteMI(Remat->UseRegion, RematMI);
-  Remat->insertMI(Remat->DefRegion, ReRematMI, DAG);
+  REMAT_DEBUG(dbgs() << '[' << Remat->UseRegion
+                     << "] Deleting rematerialization " << *RematMI);
 
-  // Re-add the register as a live-in/live-out in all regions it used to be
-  // one in.
-  std::pair<Register, LaneBitmask> LiveReg(NewReg, Remat->Mask);
+  // Regenerate the original register's interval as slot indices may have
+  // changed slightly from before re-scheduling, and re-add it as a
+  // live-in/live-out in all regions it used to be one in.
+  DAG.LIS->removeInterval(OriginalReg);
+  DAG.LIS->createAndComputeVirtRegInterval(OriginalReg);
+  std::pair<Register, LaneBitmask> LiveReg(OriginalReg, Remat->Mask);
   for (unsigned I : Remat->LiveIn.set_bits())
     DAG.LiveIns[I].insert(LiveReg);
   for (unsigned I : Remat->LiveOut.set_bits())
@@ -2442,8 +2428,12 @@ void PreRARematStage::finalizeGCNSchedStage() {
   // already reverted in PreRARematStage::shouldRevertScheduling in such
   // cases).
   unsigned MaxOcc = std::max(AchievedOcc, DAG.MinOccupancy);
-  if (!TargetOcc || MaxOcc >= *TargetOcc)
+  if (!TargetOcc || MaxOcc >= *TargetOcc) {
+    // Fully delete the original MIs that were rematerialized.
+    for (const RollbackInfo &Rollback : Rollbacks)
+      DAG.deleteMI(Rollback.Remat->DefRegion, Rollback.Remat->DefMI);
     return;
+  }
 
   // Rollback, then recompute pressure in all affected regions.
   REMAT_DEBUG(dbgs() << "==== ROLLBACK ====\n");

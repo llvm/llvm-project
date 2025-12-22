@@ -599,8 +599,6 @@ private:
     const RematReg *Remat;
     /// The rematerialized MI replacing the original defining MI.
     MachineInstr *RematMI;
-    /// Slot of the deleted instruction.
-    SlotIndex OriginalSlot;
 
     RollbackInfo(const RematReg *Remat) : Remat(Remat) {}
   };
