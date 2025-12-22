@@ -3675,7 +3675,8 @@ OpFoldResult ViewOp::fold(FoldAdaptor adaptor) {
   MemRefType sourceMemrefType = getSource().getType();
   MemRefType resultMemrefType = getResult().getType();
 
-  if (resultMemrefType == sourceMemrefType && resultMemrefType.hasStaticShape())
+  if (resultMemrefType == sourceMemrefType &&
+      resultMemrefType.hasStaticShape() && isZeroInteger(getByteShift()))
     return getViewSource();
 
   return {};
@@ -3684,7 +3685,7 @@ OpFoldResult ViewOp::fold(FoldAdaptor adaptor) {
 namespace {
 
 struct ViewOpShapeFolder : public OpRewritePattern<ViewOp> {
-  using OpRewritePattern<ViewOp>::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(ViewOp viewOp,
                                 PatternRewriter &rewriter) const override {
@@ -3751,22 +3752,43 @@ struct ViewOpShapeFolder : public OpRewritePattern<ViewOp> {
   }
 };
 
+/// view(memref.cast(%source)) -> view(%source).
 struct ViewOpMemrefCastFolder : public OpRewritePattern<ViewOp> {
-  using OpRewritePattern<ViewOp>::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(ViewOp viewOp,
                                 PatternRewriter &rewriter) const override {
-    Value memrefOperand = viewOp.getOperand(0);
-    CastOp memrefCastOp = memrefOperand.getDefiningOp<CastOp>();
+    auto memrefCastOp = viewOp.getSource().getDefiningOp<CastOp>();
     if (!memrefCastOp)
       return failure();
-    Value allocOperand = memrefCastOp.getOperand();
-    AllocOp allocOp = allocOperand.getDefiningOp<AllocOp>();
-    if (!allocOp)
+
+    rewriter.replaceOpWithNewOp<ViewOp>(
+        viewOp, viewOp.getType(), memrefCastOp.getSource(),
+        viewOp.getByteShift(), viewOp.getSizes());
+    return success();
+  }
+};
+
+/// view %source[0] -> cast(%source) if static shapes.
+struct ViewOpZeroOffsetFolder : public OpRewritePattern<ViewOp> {
+  using Base::Base;
+
+  LogicalResult matchAndRewrite(ViewOp viewOp,
+                                PatternRewriter &rewriter) const override {
+    if (!isZeroInteger(viewOp.getByteShift()))
       return failure();
-    rewriter.replaceOpWithNewOp<ViewOp>(viewOp, viewOp.getType(), allocOperand,
-                                        viewOp.getByteShift(),
-                                        viewOp.getSizes());
+
+    Value source = viewOp.getSource();
+    auto sourceMemrefType = cast<MemRefType>(source.getType());
+    auto resultMemrefType = cast<MemRefType>(viewOp.getType());
+    if (sourceMemrefType == resultMemrefType)
+      return failure(); // Handled by folder
+
+    if (!resultMemrefType.hasStaticShape() ||
+        !CastOp::areCastCompatible(sourceMemrefType, resultMemrefType))
+      return failure();
+
+    rewriter.replaceOpWithNewOp<CastOp>(viewOp, resultMemrefType, source);
     return success();
   }
 };
@@ -3775,7 +3797,9 @@ struct ViewOpMemrefCastFolder : public OpRewritePattern<ViewOp> {
 
 void ViewOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                          MLIRContext *context) {
-  results.add<ViewOpShapeFolder, ViewOpMemrefCastFolder>(context);
+  results
+      .add<ViewOpShapeFolder, ViewOpMemrefCastFolder, ViewOpZeroOffsetFolder>(
+          context);
 }
 
 FailureOr<std::optional<SmallVector<Value>>>
