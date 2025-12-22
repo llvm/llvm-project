@@ -64,14 +64,15 @@ define <4 x float> @fadd_v4f32_mixed_types(<4 x float> %a0) {
   ret <4 x float> %post
 }
 
-; Negative test - multiple use of fadd
 define <4 x double> @fadd_v4f64_multiuse_op(<4 x double> %a, <4 x double> %b) {
 ; CHECK-LABEL: define <4 x double> @fadd_v4f64_multiuse_op(
 ; CHECK-SAME: <4 x double> [[A:%.*]], <4 x double> [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[A1:%.*]] = shufflevector <4 x double> [[A]], <4 x double> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    [[B1:%.*]] = shufflevector <4 x double> [[B]], <4 x double> poison, <4 x i32> <i32 1, i32 0, i32 1, i32 0>
 ; CHECK-NEXT:    [[OP:%.*]] = fadd <4 x double> [[A1]], [[B1]]
-; CHECK-NEXT:    [[POST:%.*]] = shufflevector <4 x double> [[OP]], <4 x double> poison, <4 x i32> <i32 1, i32 0, i32 3, i32 2>
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x double> [[A]], <4 x double> poison, <4 x i32> <i32 2, i32 3, i32 0, i32 1>
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x double> [[B]], <4 x double> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
+; CHECK-NEXT:    [[POST:%.*]] = fadd <4 x double> [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    call void @use_v4f64(<4 x double> [[OP]])
 ; CHECK-NEXT:    ret <4 x double> [[POST]]
 ;
@@ -97,6 +98,23 @@ define <4 x double> @fadd_v4f64_multiuse_shuffle(<4 x double> %a, <4 x double> %
   %b1 = shufflevector <4 x double> %b, <4 x double> poison, <4 x i32> <i32 1, i32 0, i32 1, i32 0>
   %op = fadd <4 x double> %a1, %b1
   %post = shufflevector <4 x double> %op, <4 x double> poison, <4 x i32> <i32 1, i32 0, i32 3, i32 2>
+  call void @use_v4f64(<4 x double> %a1)
+  ret <4 x double> %post
+}
+
+define <4 x double> @fadd_v4f64_multiuse_shuffle_triggers(<4 x double> %a, <4 x double> %b) {
+; CHECK-LABEL: define <4 x double> @fadd_v4f64_multiuse_shuffle_triggers(
+; CHECK-SAME: <4 x double> [[A:%.*]], <4 x double> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[A1:%.*]] = shufflevector <4 x double> [[A]], <4 x double> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x double> [[B]], <4 x double> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
+; CHECK-NEXT:    [[POST:%.*]] = fadd <4 x double> [[A]], [[TMP1]]
+; CHECK-NEXT:    call void @use_v4f64(<4 x double> [[A1]])
+; CHECK-NEXT:    ret <4 x double> [[POST]]
+;
+  %a1 = shufflevector <4 x double> %a, <4 x double> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+  %b1 = shufflevector <4 x double> %b, <4 x double> poison, <4 x i32> <i32 1, i32 0, i32 1, i32 0>
+  %op = fadd <4 x double> %a1, %b1
+  %post = shufflevector <4 x double> %op, <4 x double> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
   call void @use_v4f64(<4 x double> %a1)
   ret <4 x double> %post
 }

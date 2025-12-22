@@ -2336,29 +2336,35 @@ bool VectorCombine::foldPermuteOfBinops(Instruction &I) {
       all_of(NewMask1, [NumOpElts](int M) { return M < (int)NumOpElts; }) &&
       ShuffleVectorInst::isIdentityMask(NewMask1, NumOpElts);
 
-  bool WillRemoveBinOp = BinOp->hasOneUse();
+  InstructionCost NewCost = 0;
   // Try to merge shuffles across the binop if the new shuffles are not costly.
+  InstructionCost BinOpCost =
+      TTI.getArithmeticInstrCost(Opcode, BinOpTy, CostKind);
   InstructionCost OldCost =
-      TTI.getShuffleCost(TargetTransformInfo::SK_PermuteSingleSrc, ShuffleDstTy,
-                         BinOpTy, OuterMask, CostKind, 0, nullptr, {BinOp}, &I);
-  if (WillRemoveBinOp) {
-    OldCost += TTI.getArithmeticInstrCost(Opcode, BinOpTy, CostKind);
-    bool WillRemoveShuf0 = BinOp->getOperand(0)->hasOneUse();
-    bool WillRemoveShuf1 = BinOp->getOperand(1)->hasOneUse();
-    if (Match0 && WillRemoveShuf0)
-      OldCost +=
-          TTI.getShuffleCost(TargetTransformInfo::SK_PermuteTwoSrc, BinOpTy,
-                             Op0Ty, Mask0, CostKind, 0, nullptr, {Op00, Op01},
-                             cast<Instruction>(BinOp->getOperand(0)));
-    if (Match1 && WillRemoveShuf1)
-      OldCost +=
-          TTI.getShuffleCost(TargetTransformInfo::SK_PermuteTwoSrc, BinOpTy,
-                             Op1Ty, Mask1, CostKind, 0, nullptr, {Op10, Op11},
-                             cast<Instruction>(BinOp->getOperand(1)));
+      BinOpCost + TTI.getShuffleCost(TargetTransformInfo::SK_PermuteSingleSrc,
+                                     ShuffleDstTy, BinOpTy, OuterMask, CostKind,
+                                     0, nullptr, {BinOp}, &I);
+  if (!BinOp->hasOneUse())
+    NewCost += BinOpCost;
+
+  if (Match0) {
+    InstructionCost Shuf0Cost = TTI.getShuffleCost(
+        TargetTransformInfo::SK_PermuteTwoSrc, BinOpTy, Op0Ty, Mask0, CostKind,
+        0, nullptr, {Op00, Op01}, cast<Instruction>(BinOp->getOperand(0)));
+    OldCost += Shuf0Cost;
+    if (!BinOp->getOperand(0)->hasOneUse())
+      NewCost += Shuf0Cost;
+  }
+  if (Match1) {
+    InstructionCost Shuf1Cost = TTI.getShuffleCost(
+        TargetTransformInfo::SK_PermuteTwoSrc, BinOpTy, Op0Ty, Mask0, CostKind,
+        0, nullptr, {Op10, Op11}, cast<Instruction>(BinOp->getOperand(1)));
+    OldCost += Shuf1Cost;
+    if (!BinOp->getOperand(1)->hasOneUse())
+      NewCost += Shuf1Cost;
   }
 
-  InstructionCost NewCost =
-      TTI.getArithmeticInstrCost(Opcode, ShuffleDstTy, CostKind);
+  NewCost += TTI.getArithmeticInstrCost(Opcode, ShuffleDstTy, CostKind);
 
   if (!IsIdentity0)
     NewCost +=
