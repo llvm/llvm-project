@@ -1,9 +1,9 @@
-<!--===- docs/LabelResolution.md 
-  
+<!--===- docs/LabelResolution.md
+
    Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
    See https://llvm.org/LICENSE.txt for license information.
    SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-  
+
 -->
 
 # Semantics: Resolving Labels and Construct Names
@@ -31,7 +31,7 @@ This is the detailed design document on how these labels will be semantically ch
 
 ### Label generalities (6.2.5)
 
-Enforcement of the general label constraints.  There are three sorts of label usage. Labels can serve 
+Enforcement of the general label constraints.  There are three sorts of label usage. Labels can serve
    1. as a _label-do-stmt_ block range marker
    1. as branching (control flow) targets
    1. as specification annotations (`FORMAT` statements) for data transfer statements (I/O constructs)
@@ -291,4 +291,3 @@ The `EXIT` statement takes an optional _construct-name_.
 - if the `EXIT` does not have a _construct-name_, the `EXIT` statement must appear within a _do-construct_ (C1166)
 - an _exit-stmt_ must not appear in a `DO CONCURRENT` if the `EXIT` belongs to the `DO CONCURRENT` or an outer construct enclosing the `DO CONCURRENT` (C1167)
 - an _exit-stmt_ must not appear in a `CHANGE TEAM` (`CRITICAL`) if the `EXIT` belongs to an outer construct enclosing the `CHANGE TEAM` (`CRITICAL`) (C1168)
-
