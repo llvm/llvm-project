@@ -1,3 +1,6 @@
+# FIXME: remove when LLDB_MINIMUM_PYTHON_VERSION > 3.8
+from __future__ import annotations
+
 import os
 import time
 from typing import Optional, Callable, Any, List, Union, Final
