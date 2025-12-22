@@ -20,6 +20,11 @@
 #include "src/__support/macros/properties/architectures.h"
 #include "src/__support/macros/properties/compiler.h"
 
+// In full build mode we are the system fenv in libc.
+#if defined(LIBC_FULL_BUILD)
+#undef LIBC_MATH_USE_SYSTEM_FENV
+#endif // LIBC_FULL_BUILD
+
 #if defined(LIBC_MATH_USE_SYSTEM_FENV)
 
 // Simply call the system libc fenv.h functions, only for those that are used in
@@ -36,9 +41,16 @@ LIBC_INLINE int clear_except(int excepts) { return feclearexcept(excepts); }
 
 LIBC_INLINE int test_except(int excepts) { return fetestexcept(excepts); }
 
-LIBC_INLINE int get_except() { return fegetexcept(); }
+LIBC_INLINE int get_except() {
+  fexcept_t excepts = 0;
+  fegetexceptflag(&excepts, FE_ALL_EXCEPT);
+  return static_cast<int>(excepts);
+}
 
-LIBC_INLINE int set_except(int excepts) { return fesetexcept(excepts); }
+LIBC_INLINE int set_except(int excepts) {
+  fexcept_t exc = static_cast<fexcept_t>(excepts);
+  return fesetexceptflag(&excepts, FE_ALL_EXCEPT);
+}
 
 LIBC_INLINE int raise_except(int excepts) { return feraiseexcept(excepts); }
 
