@@ -3904,7 +3904,6 @@ cc_library(
     copts = llvm_copts,
     includes = ["include"],
     deps = [
-        ":Passes",
         ":Support",
     ],
 )
