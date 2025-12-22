@@ -55155,7 +55155,7 @@ static SDValue isFNEG(SelectionDAG &DAG, SDNode *N, unsigned Depth = 0) {
     break;
   }
   case ISD::CONCAT_VECTORS: {
-    // Currently limited to FNEG to ensure we don't create orphan nodes via isFNEG.
+    // Limited to FNEG to ensure we don't create orphan nodes via isFNEG.
     SmallVector<SDValue, 4> SubOps;
     if (collectConcatOps(N, SubOps, DAG) &&
         llvm::all_of(SubOps, [](SDValue SubOp) {
