@@ -252,12 +252,23 @@ static bool hasPossibleIncompatibleOps(const Function *F,
   return false;
 }
 
-APInt AArch64TTIImpl::getFeatureMask(const Function &F) const {
+static void extractAttrFeatures(const Function &F, const AArch64TTIImpl *TTI,
+                                SmallVectorImpl<StringRef> &Features) {
   StringRef AttributeStr =
-      isMultiversionedFunction(F) ? "fmv-features" : "target-features";
+      TTI->isMultiversionedFunction(F) ? "fmv-features" : "target-features";
   StringRef FeatureStr = F.getFnAttribute(AttributeStr).getValueAsString();
-  SmallVector<StringRef, 8> Features;
   FeatureStr.split(Features, ",");
+}
+
+APInt AArch64TTIImpl::getFeatureMask(const Function &F) const {
+  SmallVector<StringRef, 8> Features;
+  extractAttrFeatures(F, this, Features);
+  return AArch64::getCpuSupportsMask(Features);
+}
+
+APInt AArch64TTIImpl::getPriorityMask(const Function &F) const {
+  SmallVector<StringRef, 8> Features;
+  extractAttrFeatures(F, this, Features);
   return AArch64::getFMVPriority(Features);
 }
 
@@ -1053,6 +1064,19 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     }
     break;
   }
+  case Intrinsic::loop_dependence_raw_mask:
+  case Intrinsic::loop_dependence_war_mask: {
+    // The whilewr/rw instructions require SVE2 or SME.
+    if (ST->hasSVE2() || ST->hasSME()) {
+      EVT VecVT = getTLI()->getValueType(DL, RetTy);
+      unsigned EltSizeInBytes =
+          cast<ConstantInt>(ICA.getArgs()[2])->getZExtValue();
+      if (is_contained({1u, 2u, 4u, 8u}, EltSizeInBytes) &&
+          VecVT.getVectorMinNumElements() == (16 / EltSizeInBytes))
+        return 1;
+    }
+    break;
+  }
   case Intrinsic::experimental_vector_extract_last_active:
     if (ST->isSVEorStreamingSVEAvailable()) {
       auto [LegalCost, _] = getTypeLegalizationCost(ICA.getArgTypes()[0]);
@@ -1446,6 +1470,10 @@ static SVEIntrinsicInfo constructSVEIntrinsicInfo(IntrinsicInst &II) {
   case Intrinsic::aarch64_sve_orr:
     return SVEIntrinsicInfo::defaultMergingOp(Intrinsic::aarch64_sve_orr_u)
         .setMatchingIROpcode(Instruction::Or);
+  case Intrinsic::aarch64_sve_shsub:
+    return SVEIntrinsicInfo::defaultMergingOp(Intrinsic::aarch64_sve_shsub_u);
+  case Intrinsic::aarch64_sve_shsubr:
+    return SVEIntrinsicInfo::defaultMergingOp();
   case Intrinsic::aarch64_sve_sqrshl:
     return SVEIntrinsicInfo::defaultMergingOp(Intrinsic::aarch64_sve_sqrshl_u);
   case Intrinsic::aarch64_sve_sqshl:
@@ -1454,6 +1482,10 @@ static SVEIntrinsicInfo constructSVEIntrinsicInfo(IntrinsicInst &II) {
     return SVEIntrinsicInfo::defaultMergingOp(Intrinsic::aarch64_sve_sqsub_u);
   case Intrinsic::aarch64_sve_srshl:
     return SVEIntrinsicInfo::defaultMergingOp(Intrinsic::aarch64_sve_srshl_u);
+  case Intrinsic::aarch64_sve_uhsub:
+    return SVEIntrinsicInfo::defaultMergingOp(Intrinsic::aarch64_sve_uhsub_u);
+  case Intrinsic::aarch64_sve_uhsubr:
+    return SVEIntrinsicInfo::defaultMergingOp();
   case Intrinsic::aarch64_sve_uqrshl:
     return SVEIntrinsicInfo::defaultMergingOp(Intrinsic::aarch64_sve_uqrshl_u);
   case Intrinsic::aarch64_sve_uqshl:
@@ -6102,8 +6134,13 @@ AArch64TTIImpl::getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy,
   unsigned Unused;
   if (LT.second.isFixedLengthVector() &&
       LT.second.getVectorNumElements() == Mask.size() &&
-      (Kind == TTI::SK_PermuteTwoSrc || Kind == TTI::SK_PermuteSingleSrc) &&
+      (Kind == TTI::SK_PermuteTwoSrc || Kind == TTI::SK_PermuteSingleSrc ||
+       // Discrepancies between isTRNMask and ShuffleVectorInst::isTransposeMask
+       // mean that we can end up with shuffles that satisfy isTRNMask, but end
+       // up labelled as TTI::SK_InsertSubvector. (e.g. {2, 0}).
+       Kind == TTI::SK_InsertSubvector) &&
       (isZIPMask(Mask, LT.second.getVectorNumElements(), Unused, Unused) ||
+       isTRNMask(Mask, LT.second.getVectorNumElements(), Unused, Unused) ||
        isUZPMask(Mask, LT.second.getVectorNumElements(), Unused) ||
        isREVMask(Mask, LT.second.getScalarSizeInBits(),
                  LT.second.getVectorNumElements(), 16) ||

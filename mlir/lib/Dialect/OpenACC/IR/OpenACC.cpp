@@ -390,6 +390,80 @@ void OpenACCDialect::initialize() {
 }
 
 //===----------------------------------------------------------------------===//
+// RegionBranchOpInterface for acc.kernels / acc.parallel / acc.serial /
+// acc.kernel_environment / acc.data / acc.host_data / acc.loop
+//===----------------------------------------------------------------------===//
+
+/// Generic helper for single-region OpenACC ops that execute their body once
+/// and then return to the parent operation with their results (if any).
+static void
+getSingleRegionOpSuccessorRegions(Operation *op, Region &region,
+                                  RegionBranchPoint point,
+                                  SmallVectorImpl<RegionSuccessor> &regions) {
+  if (point.isParent()) {
+    regions.push_back(RegionSuccessor(&region));
+    return;
+  }
+
+  regions.push_back(RegionSuccessor(op, op->getResults()));
+}
+
+void KernelsOp::getSuccessorRegions(RegionBranchPoint point,
+                                    SmallVectorImpl<RegionSuccessor> &regions) {
+  getSingleRegionOpSuccessorRegions(getOperation(), getRegion(), point,
+                                    regions);
+}
+
+void ParallelOp::getSuccessorRegions(
+    RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
+  getSingleRegionOpSuccessorRegions(getOperation(), getRegion(), point,
+                                    regions);
+}
+
+void SerialOp::getSuccessorRegions(RegionBranchPoint point,
+                                   SmallVectorImpl<RegionSuccessor> &regions) {
+  getSingleRegionOpSuccessorRegions(getOperation(), getRegion(), point,
+                                    regions);
+}
+
+void KernelEnvironmentOp::getSuccessorRegions(
+    RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
+  getSingleRegionOpSuccessorRegions(getOperation(), getRegion(), point,
+                                    regions);
+}
+
+void DataOp::getSuccessorRegions(RegionBranchPoint point,
+                                 SmallVectorImpl<RegionSuccessor> &regions) {
+  getSingleRegionOpSuccessorRegions(getOperation(), getRegion(), point,
+                                    regions);
+}
+
+void HostDataOp::getSuccessorRegions(
+    RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
+  getSingleRegionOpSuccessorRegions(getOperation(), getRegion(), point,
+                                    regions);
+}
+
+void LoopOp::getSuccessorRegions(RegionBranchPoint point,
+                                 SmallVectorImpl<RegionSuccessor> &regions) {
+  // Unstructured loops: the body may contain arbitrary CFG and early exits.
+  // At the RegionBranch level, only model entry into the body and exit to the
+  // parent; any backedges are represented inside the region CFG.
+  if (getUnstructured()) {
+    if (point.isParent()) {
+      regions.push_back(RegionSuccessor(&getRegion()));
+      return;
+    }
+    regions.push_back(RegionSuccessor(getOperation(), getResults()));
+    return;
+  }
+
+  // Structured loops: model a loop-shaped region graph similar to scf.for.
+  regions.push_back(RegionSuccessor(&getRegion()));
+  regions.push_back(RegionSuccessor(getOperation(), getResults()));
+}
+
+//===----------------------------------------------------------------------===//
 // device_type support helpers
 //===----------------------------------------------------------------------===//
 

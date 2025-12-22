@@ -41,12 +41,13 @@
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Object/OffloadBinary.h"
 #include "llvm/Passes/PassBuilder.h"
-#include "llvm/Passes/PassPlugin.h"
 #include "llvm/Passes/StandardInstrumentations.h"
+#include "llvm/Plugins/PassPlugin.h"
 #include "llvm/ProfileData/InstrProfCorrelator.h"
 #include "llvm/Support/BuryPointer.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/IOSandbox.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/Program.h"
@@ -1018,16 +1019,9 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
     }
 #endif
   }
-  // Attempt to load pass plugins and register their callbacks with PB.
-  for (auto &PluginFN : CodeGenOpts.PassPlugins) {
-    auto PassPlugin = PassPlugin::Load(PluginFN);
-    if (PassPlugin) {
-      PassPlugin->registerPassBuilderCallbacks(PB);
-    } else {
-      Diags.Report(diag::err_fe_unable_to_load_plugin)
-          << PluginFN << toString(PassPlugin.takeError());
-    }
-  }
+  // Register plugin callbacks with PB.
+  for (const std::unique_ptr<PassPlugin> &Plugin : CI.getPassPlugins())
+    Plugin->registerPassBuilderCallbacks(PB);
   for (const auto &PassCallback : CodeGenOpts.PassBuilderCallbacks)
     PassCallback(PB);
 #define HANDLE_EXTENSION(Ext)                                                  \
@@ -1464,6 +1458,8 @@ void clang::emitBackendOutput(CompilerInstance &CI, CodeGenOptions &CGOpts,
 
   std::unique_ptr<llvm::Module> EmptyModule;
   if (!CGOpts.ThinLTOIndexFile.empty()) {
+    // FIXME(sandboxing): Figure out how to support distributed indexing.
+    auto BypassSandbox = sys::sandbox::scopedDisable();
     // If we are performing a ThinLTO importing compile, load the function index
     // into memory and pass it into runThinLTOBackend, which will run the
     // function importer and invoke LTO passes.
@@ -1508,10 +1504,7 @@ void clang::emitBackendOutput(CompilerInstance &CI, CodeGenOptions &CGOpts,
   if (AsmHelper.TM) {
     std::string DLDesc = M->getDataLayout().getStringRepresentation();
     if (DLDesc != TDesc) {
-      unsigned DiagID = Diags.getCustomDiagID(
-          DiagnosticsEngine::Error, "backend data layout '%0' does not match "
-                                    "expected target description '%1'");
-      Diags.Report(DiagID) << DLDesc << TDesc;
+      Diags.Report(diag::err_data_layout_mismatch) << DLDesc << TDesc;
     }
   }
 }
@@ -1537,9 +1530,7 @@ void clang::EmbedObject(llvm::Module *M, const CodeGenOptions &CGOpts,
     llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> ObjectOrErr =
         VFS.getBufferForFile(OffloadObject);
     if (ObjectOrErr.getError()) {
-      auto DiagID = Diags.getCustomDiagID(DiagnosticsEngine::Error,
-                                          "could not open '%0' for embedding");
-      Diags.Report(DiagID) << OffloadObject;
+      Diags.Report(diag::err_failed_to_open_for_embedding) << OffloadObject;
       return;
     }
 

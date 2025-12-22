@@ -18,16 +18,12 @@ define void @selects_1(ptr nocapture %dst, i32 %A, i32 %B, i32 %C, i32 %N) {
 ; CHECK: LV: Selecting VF: 4
 
 entry:
-  %cmp26 = icmp sgt i32 %N, 0
-  br i1 %cmp26, label %for.body.preheader, label %for.cond.cleanup
-
-for.body.preheader:                               ; preds = %entry
   %n = zext i32 %N to i64
-  br label %for.body
+  br label %loop
 
-for.body:                                         ; preds = %for.body.preheader, %for.body
-  %indvars.iv = phi i64 [ 0, %for.body.preheader ], [ %indvars.iv.next, %for.body ]
-  %arrayidx = getelementptr inbounds i32, ptr %dst, i64 %indvars.iv
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %arrayidx = getelementptr inbounds i32, ptr %dst, i64 %iv
   %0 = load i32, ptr %arrayidx, align 4
   %and = and i32 %0, 2047
   %cmp1 = icmp eq i32 %and, %A
@@ -37,14 +33,11 @@ for.body:                                         ; preds = %for.body.preheader,
   %cmp7 = icmp ugt i32 %cond, %C
   %cond11 = select i1 %cmp7, i32 %cond, i32 %cond6
   store i32 %cond11, ptr %arrayidx, align 4
-  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
-  %exitcond.not = icmp eq i64 %indvars.iv.next, %n
-  br i1 %exitcond.not, label %for.cond.cleanup.loopexit, label %for.body
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, %n
+  br i1 %ec, label %exit, label %loop
 
-for.cond.cleanup.loopexit:                        ; preds = %for.body
-  br label %for.cond.cleanup
-
-for.cond.cleanup:                                 ; preds = %for.cond.cleanup.loopexit, %entry
+exit:
   ret void
 }
 
@@ -53,20 +46,20 @@ define i32 @multi_user_cmp(ptr readonly %a, i64 noundef %n) {
 ; CHECK: Cost of 4 for VF 16: WIDEN ir<%cmp1> = fcmp olt ir<%load1>, ir<0.000000e+00>
 ; CHECK: LV: Selecting VF: 16.
 entry:
-  br label %for.body
+  br label %loop
 
-for.body:
-  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
-  %all.off.next = phi i1 [ true, %entry ], [ %all.off, %for.body ]
-  %any.0.off09 = phi i1 [ false, %entry ], [ %.any.0.off0, %for.body ]
-  %arrayidx = getelementptr inbounds float, ptr %a, i64 %indvars.iv
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %all.off.next = phi i1 [ true, %entry ], [ %all.off, %loop ]
+  %any.0.off09 = phi i1 [ false, %entry ], [ %.any.0.off0, %loop ]
+  %arrayidx = getelementptr inbounds float, ptr %a, i64 %iv
   %load1 = load float, ptr %arrayidx, align 4
   %cmp1 = fcmp olt float %load1, 0.000000e+00
   %.any.0.off0 = select i1 %cmp1, i1 true, i1 %any.0.off09
   %all.off = select i1 %cmp1, i1 %all.off.next, i1 false
-  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
-  %exitcond.not = icmp eq i64 %indvars.iv.next, %n
-  br i1 %exitcond.not, label %exit, label %for.body
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, %n
+  br i1 %ec, label %exit, label %loop
 
 exit:
   %0 = select i1 %.any.0.off0, i32 2, i32 3
@@ -95,4 +88,61 @@ loop:
 
 exit:
   ret i32 %red.next
+}
+
+define i32 @select_xor_cond(ptr %src, i1 %c.0) {
+; CHECK: LV: Checking a loop in 'select_xor_cond'
+; CHECK: Cost of 6 for VF 2: WIDEN-SELECT ir<%sel> = select ir<%c>, ir<false>, ir<%c.0>
+; CHECK: Cost of 12 for VF 4: WIDEN-SELECT ir<%sel> = select ir<%c>, ir<false>, ir<%c.0>
+; CHECK: Cost of 24 for VF 8: WIDEN-SELECT ir<%sel> = select ir<%c>, ir<false>, ir<%c.0>
+; CHECK: Cost of 48 for VF 16: WIDEN-SELECT ir<%sel> = select ir<%c>, ir<false>, ir<%c.0>
+; CHECK: LV: Selecting VF: 4.
+
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %p = phi i32 [ 0, %entry ], [ %ext.sel, %loop ]
+  %gep.src = getelementptr i8, ptr %src, i64 %iv
+  %0 = load i8, ptr %gep.src, align 1
+  %c = icmp eq i8 %0, 0
+  %not.c = xor i1 %c, true
+  %sel = select i1 %not.c, i1 %c.0, i1 false
+  %ext.sel = zext i1 %sel to i32
+  %iv.next = add i64 %iv, 1
+  %ec = icmp eq i64 %iv, 19
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  %ext.c = zext i1 %c to i32
+  %res = add i32 %ext.c, %p
+  ret i32 %res
+}
+
+define void @select_invariant_cmp_cond(ptr %dst, ptr %src, i32 %a, i32 %b, i64 %n) "target-cpu"="neoverse-v2" {
+; CHECK: LV: Checking a loop in 'select_invariant_cmp_cond'
+; CHECK: Cost of 1 for VF 2: WIDEN-SELECT ir<%sel> = select ir<%cmp>, ir<%trunc>, ir<0> (condition is single-scalar)
+; CHECK: Cost of 1 for VF 4: WIDEN-SELECT ir<%sel> = select ir<%cmp>, ir<%trunc>, ir<0> (condition is single-scalar)
+; CHECK: LV: Selecting VF: 4.
+entry:
+  %cmp = icmp ugt i32 %a, %b
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %gep.src = getelementptr inbounds i32, ptr %src, i64 %iv
+  %load = load i32, ptr %gep.src, align 4
+  %conv = sext i32 %load to i64
+  %or = or i64 %conv, 1
+  %trunc = trunc i64 %or to i32
+  %sel = select i1 %cmp, i32 %trunc, i32 0
+  %gep.dst = getelementptr inbounds i32, ptr %dst, i64 %iv
+  store i32 %sel, ptr %gep.dst, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, %n
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
 }

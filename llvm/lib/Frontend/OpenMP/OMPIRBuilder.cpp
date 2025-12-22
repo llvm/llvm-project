@@ -5079,7 +5079,7 @@ OpenMPIRBuilder::applyStaticChunkedWorkshareLoop(
     bool NeedsBarrier, Value *ChunkSize, OMPScheduleType SchedType,
     Value *DistScheduleChunkSize, OMPScheduleType DistScheduleSchedType) {
   assert(CLI->isValid() && "Requires a valid canonical loop");
-  assert(ChunkSize || DistScheduleChunkSize && "Chunk size is required");
+  assert((ChunkSize || DistScheduleChunkSize) && "Chunk size is required");
 
   LLVMContext &Ctx = CLI->getFunction()->getContext();
   Value *IV = CLI->getIndVar();
@@ -10707,6 +10707,12 @@ void OpenMPIRBuilder::setCorrectMemberOfFlag(
       static_cast<std::underlying_type_t<omp::OpenMPOffloadMappingFlags>>(
           (Flags & omp::OpenMPOffloadMappingFlags::OMP_MAP_MEMBER_OF) !=
           omp::OpenMPOffloadMappingFlags::OMP_MAP_MEMBER_OF))
+    return;
+
+  // Entries with ATTACH are not members-of anything. They are handled
+  // separately by the runtime after other maps have been handled.
+  if (static_cast<std::underlying_type_t<omp::OpenMPOffloadMappingFlags>>(
+          Flags & omp::OpenMPOffloadMappingFlags::OMP_MAP_ATTACH))
     return;
 
   // Reset the placeholder value to prepare the flag for the assignment of the

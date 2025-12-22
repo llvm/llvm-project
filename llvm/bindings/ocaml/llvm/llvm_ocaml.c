@@ -240,7 +240,7 @@ value llvm_dispose_context(value C) {
 
 /* unit -> llcontext */
 value llvm_global_context(value Unit) {
-  return to_val(getGlobalContextForCAPI());
+  return to_val(LLVMGetGlobalContext());
 }
 
 /* llcontext -> string -> int */
@@ -1161,12 +1161,6 @@ value llvm_const_neg(value Value) {
 /* llvalue -> llvalue */
 value llvm_const_nsw_neg(value Value) {
   LLVMValueRef NegValue = LLVMConstNSWNeg(Value_val(Value));
-  return to_val(NegValue);
-}
-
-/* llvalue -> llvalue */
-value llvm_const_nuw_neg(value Value) {
-  LLVMValueRef NegValue = LLVMConstNUWNeg(Value_val(Value));
   return to_val(NegValue);
 }
 
@@ -2358,12 +2352,6 @@ value llvm_build_neg(value X, value Name, value B) {
 value llvm_build_nsw_neg(value X, value Name, value B) {
   return to_val(
       LLVMBuildNSWNeg(Builder_val(B), Value_val(X), String_val(Name)));
-}
-
-/* llvalue -> string -> llbuilder -> llvalue */
-value llvm_build_nuw_neg(value X, value Name, value B) {
-  return to_val(
-      LLVMBuildNUWNeg(Builder_val(B), Value_val(X), String_val(Name)));
 }
 
 /* llvalue -> string -> llbuilder -> llvalue */

@@ -4457,7 +4457,7 @@ struct AAKernelInfoFunction : AAKernelInfo {
 
     Instruction *IsWorker =
         ICmpInst::Create(ICmpInst::ICmp, llvm::CmpInst::ICMP_NE, KernelInitCB,
-                         ConstantInt::get(KernelInitCB->getType(), -1),
+                         ConstantInt::getAllOnesValue(KernelInitCB->getType()),
                          "thread.is_worker", InitBB);
     IsWorker->setDebugLoc(DLoc);
     BranchInst::Create(IsWorkerCheckBB, UserCodeEntryBB, IsWorker, InitBB);
