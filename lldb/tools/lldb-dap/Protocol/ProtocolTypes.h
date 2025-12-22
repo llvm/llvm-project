@@ -22,6 +22,7 @@
 
 #include "Protocol/DAPTypes.h"
 #include "lldb/lldb-defines.h"
+#include "lldb/lldb-types.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/Support/JSON.h"
 #include <cstdint>
@@ -1081,7 +1082,7 @@ struct StackFrame {
   /// An identifier for the stack frame. It must be unique across all threads.
   /// This id can be used to retrieve the scopes of the frame with the `scopes`
   /// request or to restart the execution of a stack frame.
-  int64_t id;
+  lldb::tid_t id;
 
   /// The name of the stack frame, typically a method name.
   std::string name;
@@ -1118,7 +1119,7 @@ struct StackFrame {
   lldb::addr_t instructionPointerReference = LLDB_INVALID_ADDRESS;
 
   /// The module associated with this frame, if any.
-  std::optional<std::string> moduleId;
+  std::optional<llvm::StringRef> moduleId;
 
   /// A hint for how to present this frame in the UI. A value of `label` can be
   /// used to indicate that the frame is an artificial frame that is used as a

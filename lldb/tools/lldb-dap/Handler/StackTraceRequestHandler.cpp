@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "DAP.h"
+#include "DAPError.h"
 #include "EventHelper.h"
 #include "LLDBUtils.h"
 #include "Protocol/ProtocolRequests.h"
@@ -18,7 +19,7 @@ using namespace lldb_dap;
 using namespace lldb_dap::protocol;
 
 /// Page size used for reporting additional frames in the 'stackTrace' request.
-static constexpr int StackPageSize = 20;
+static constexpr int k_stack_page_size = 20;
 
 // Create a "StackFrame" object for a LLDB frame object.
 static StackFrame CreateStackFrame(DAP &dap, lldb::SBFrame &frame,
@@ -74,10 +75,9 @@ static StackFrame CreateStackFrame(DAP &dap, lldb::SBFrame &frame,
 
   if (frame.IsArtificial() || frame.IsHidden())
     stack_frame.presentationHint = StackFrame::ePresentationHintSubtle;
-  lldb::SBModule module = frame.GetModule();
-  if (module.IsValid()) {
+  if (const lldb::SBModule module = frame.GetModule()) {
     if (const llvm::StringRef uuid = module.GetUUIDString(); !uuid.empty())
-      stack_frame.moduleId = uuid.str();
+      stack_frame.moduleId = uuid;
   }
 
   return stack_frame;
@@ -142,11 +142,12 @@ static StackFrame CreateExtendedStackFrameLabel(lldb::SBThread &thread,
 static bool FillStackFrames(DAP &dap, lldb::SBThread &thread,
                             lldb::SBFormat &frame_format,
                             std::vector<StackFrame> &stack_frames,
-                            uint32_t &offset, const uint32_t start_frame,
-                            const uint32_t levels, const bool include_all) {
+                            int64_t &offset, const int64_t start_frame,
+                            const int64_t levels, const bool include_all) {
   bool reached_end_of_stack = false;
-  for (uint32_t i = start_frame; stack_frames.size() < levels; i++) {
-    if (i == UINT32_MAX) {
+  for (int64_t i = start_frame;
+       static_cast<int64_t>(stack_frames.size()) < levels; i++) {
+    if (i == -1) {
       stack_frames.emplace_back(
           CreateExtendedStackFrameLabel(thread, frame_format));
       continue;
@@ -173,9 +174,9 @@ static bool FillStackFrames(DAP &dap, lldb::SBThread &thread,
 
       reached_end_of_stack = FillStackFrames(
           dap, backtrace, frame_format, stack_frames, offset,
-          start_frame > offset ? start_frame - offset : UINT32_MAX, levels,
+          (start_frame - offset) > 0 ? start_frame - offset : -1, levels,
           include_all);
-      if (stack_frames.size() >= levels)
+      if (static_cast<int64_t>(stack_frames.size()) >= levels)
         break;
     }
   }
@@ -186,6 +187,8 @@ static bool FillStackFrames(DAP &dap, lldb::SBThread &thread,
 llvm::Expected<protocol::StackTraceResponseBody>
 StackTraceRequestHandler::Run(const protocol::StackTraceArguments &args) const {
   lldb::SBThread thread = dap.GetLLDBThread(args.threadId);
+  if (!thread.IsValid())
+    return llvm::make_error<DAPError>("invalid thread");
 
   lldb::SBFormat frame_format = dap.frame_format;
   bool include_all = dap.configuration.displayExtendedBacktrace;
@@ -221,15 +224,13 @@ StackTraceRequestHandler::Run(const protocol::StackTraceArguments &args) const {
   }
 
   StackTraceResponseBody body;
-  if (thread.IsValid()) {
-    const auto levels = args.levels == 0 ? UINT32_MAX : args.levels;
-    uint32_t offset = 0;
-    bool reached_end_of_stack =
-        FillStackFrames(dap, thread, frame_format, body.stackFrames, offset,
-                        args.startFrame, levels, include_all);
-    body.totalFrames = args.startFrame + body.stackFrames.size() +
-                       (reached_end_of_stack ? 0 : StackPageSize);
-  }
+  const auto levels = args.levels == 0 ? INT64_MAX : args.levels;
+  int64_t offset = 0;
+  bool reached_end_of_stack =
+      FillStackFrames(dap, thread, frame_format, body.stackFrames, offset,
+                      args.startFrame, levels, include_all);
+  body.totalFrames = args.startFrame + body.stackFrames.size() +
+                     (reached_end_of_stack ? 0 : k_stack_page_size);
 
   return body;
 }
