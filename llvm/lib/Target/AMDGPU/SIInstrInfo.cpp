@@ -1326,9 +1326,19 @@ bool SIInstrInfo::getConstValDefinedInReg(const MachineInstr &MI,
   case AMDGPU::AV_MOV_B32_IMM_PSEUDO:
   case AMDGPU::AV_MOV_B64_IMM_PSEUDO:
   case AMDGPU::S_MOV_B64_IMM_PSEUDO:
-  case AMDGPU::V_MOV_B64_PSEUDO: {
+  case AMDGPU::V_MOV_B64_PSEUDO:
+  case AMDGPU::V_MOV_B16_t16_e32: {
     const MachineOperand &Src0 = MI.getOperand(1);
     if (Src0.isImm()) {
+      ImmVal = Src0.getImm();
+      return MI.getOperand(0).getReg() == Reg;
+    }
+
+    return false;
+  }
+  case AMDGPU::V_MOV_B16_t16_e64: {
+    const MachineOperand &Src0 = MI.getOperand(2);
+    if (Src0.isImm() && !MI.getOperand(1).getImm()) {
       ImmVal = Src0.getImm();
       return MI.getOperand(0).getReg() == Reg;
     }
@@ -3545,6 +3555,8 @@ static unsigned getNewFMAAKInst(const GCNSubtarget &ST, unsigned Opc) {
   case AMDGPU::V_FMAC_F16_e64:
   case AMDGPU::V_FMAC_F16_t16_e64:
   case AMDGPU::V_FMAC_F16_fake16_e64:
+  case AMDGPU::V_FMAC_F16_t16_e32:
+  case AMDGPU::V_FMAC_F16_fake16_e32:
   case AMDGPU::V_FMA_F16_e64:
     return ST.hasTrue16BitInsts() ? ST.useRealTrue16Insts()
                                         ? AMDGPU::V_FMAAK_F16_t16
@@ -3577,6 +3589,8 @@ static unsigned getNewFMAMKInst(const GCNSubtarget &ST, unsigned Opc) {
   case AMDGPU::V_FMAC_F16_e64:
   case AMDGPU::V_FMAC_F16_t16_e64:
   case AMDGPU::V_FMAC_F16_fake16_e64:
+  case AMDGPU::V_FMAC_F16_t16_e32:
+  case AMDGPU::V_FMAC_F16_fake16_e32:
   case AMDGPU::V_FMA_F16_e64:
     return ST.hasTrue16BitInsts() ? ST.useRealTrue16Insts()
                                         ? AMDGPU::V_FMAMK_F16_t16
