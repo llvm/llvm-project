@@ -740,7 +740,7 @@ getEffectiveAtomicMemOrder(cir::MemOrder oriOrder, bool isStore, bool isLoad,
 
 static void emitAtomicExprWithDynamicMemOrder(
     CIRGenFunction &cgf, mlir::Value order, bool isStore, bool isLoad,
-    bool isFence, llvm::function_ref<void(cir::MemOrder)> emitAtomicOp) {
+    bool isFence, llvm::function_ref<void(cir::MemOrder)> emitAtomicOpFn) {
   if (!order)
     return;
   // The memory order is not known at compile-time.  The atomic operations
@@ -767,9 +767,10 @@ static void emitAtomicExprWithDynamicMemOrder(
             // There is no good way to report an unsupported memory order at
             // runtime, hence the fallback to memory_order_relaxed.
             if (!isFence)
-              emitAtomicOp(cir::MemOrder::Relaxed);
-          } else if (auto actualOrder = getEffectiveAtomicMemOrder(
-                         caseOrders[0], isStore, isLoad, isFence)) {
+              emitAtomicOpFn(cir::MemOrder::Relaxed);
+          } else if (std::optional<cir::MemOrder> actualOrder =
+                         getEffectiveAtomicMemOrder(caseOrders[0], isStore,
+                                                    isLoad, isFence)) {
             // Included in default case.
             if (!isFence && actualOrder == cir::MemOrder::Relaxed)
               return;
@@ -777,7 +778,7 @@ static void emitAtomicExprWithDynamicMemOrder(
             // multiple cases in `caseOrders`, the actual order of each case
             // must be same, this needs to be guaranteed by the caller.
             emitMemOrderCaseLabel(builder, loc, order.getType(), caseOrders);
-            emitAtomicOp(actualOrder.value());
+            emitAtomicOpFn(actualOrder.value());
           } else {
             // Do nothing if (!caseOrders.empty() && !actualOrder)
             return;
@@ -799,7 +800,7 @@ static void emitAtomicExprWithDynamicMemOrder(
 
 void CIRGenFunction::emitAtomicExprWithMemOrder(
     const Expr *memOrder, bool isStore, bool isLoad, bool isFence,
-    llvm::function_ref<void(cir::MemOrder)> emitAtomicOp) {
+    llvm::function_ref<void(cir::MemOrder)> emitAtomicOpFn) {
   // Emit the memory order operand, and try to evaluate it as a constant.
   Expr::EvalResult eval;
   if (memOrder->EvaluateAsInt(eval, getContext())) {
@@ -809,9 +810,9 @@ void CIRGenFunction::emitAtomicExprWithMemOrder(
     if (!cir::isValidCIRAtomicOrderingCABI(constOrder))
       return;
     cir::MemOrder oriOrder = static_cast<cir::MemOrder>(constOrder);
-    if (auto actualOrder =
+    if (std::optional<cir::MemOrder> actualOrder =
             getEffectiveAtomicMemOrder(oriOrder, isStore, isLoad, isFence))
-      emitAtomicOp(actualOrder.value());
+      emitAtomicOpFn(actualOrder.value());
     return;
   }
 
@@ -819,7 +820,7 @@ void CIRGenFunction::emitAtomicExprWithMemOrder(
   // dynamic value to static value.
   mlir::Value dynOrder = emitScalarExpr(memOrder);
   emitAtomicExprWithDynamicMemOrder(*this, dynOrder, isStore, isLoad, isFence,
-                                    emitAtomicOp);
+                                    emitAtomicOpFn);
 }
 
 RValue CIRGenFunction::emitAtomicExpr(AtomicExpr *e) {
