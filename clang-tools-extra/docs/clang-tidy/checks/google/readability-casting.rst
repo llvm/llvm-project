@@ -3,8 +3,8 @@
 google-readability-casting
 ==========================
 
-The `google-readability-casting` check is an alias, please see 
-:doc:`modernize-avoid-c-style-cast <../modernize/avoid-c-style-cast>` 
+The `google-readability-casting` check is an alias, please see
+:doc:`modernize-avoid-c-style-cast <../modernize/avoid-c-style-cast>`
 for more information.
 
 Finds usages of C-style casts.
