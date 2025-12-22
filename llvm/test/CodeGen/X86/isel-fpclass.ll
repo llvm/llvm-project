@@ -4,8 +4,8 @@
 ; RUN: llc < %s -mtriple=i686-linux -fast-isel -fast-isel-abort=1  | FileCheck %s -check-prefixes=X86-FASTISEL
 ; RUN: llc < %s -mtriple=x86_64-linux -fast-isel -fast-isel-abort=1  | FileCheck %s -check-prefixes=X64,X64-FASTISEL
 ; RUN: llc < %s -mtriple=x86_64-linux -global-isel -global-isel-abort=1  | FileCheck %s -check-prefixes=X64-GISEL
-; Disabling i686 global isel test due to sub_reg constraint issues.
-; llc < %s -mtriple=i686-linux -global-isel -global-isel-abort=1
+; RUN: llc < %s -mtriple=i686-linux -global-isel -global-isel-abort=2  | FileCheck %s -check-prefixes=X86
+
 define i1 @isnone_f(float %x) nounwind {
 ; X86-LABEL: isnone_f:
 ; X86:       # %bb.0: # %entry
