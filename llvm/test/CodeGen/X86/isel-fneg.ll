@@ -181,8 +181,8 @@ define void @fneg_f32_mem(ptr %x, ptr %y) nounwind {
 ; GISEL-SSE-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; GISEL-SSE-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; GISEL-SSE-X86-NEXT:    movl $-2147483648, %edx # imm = 0x80000000
-; GISEL-SSE-X86-NEXT:    xorl (%ecx), %edx
-; GISEL-SSE-X86-NEXT:    movl %edx, (%eax)
+; GISEL-SSE-X86-NEXT:    xorl (%eax), %edx
+; GISEL-SSE-X86-NEXT:    movl %edx, (%ecx)
 ; GISEL-SSE-X86-NEXT:    retl
 ;
 ; FASTISEL-SSE-X64-LABEL: fneg_f32_mem:

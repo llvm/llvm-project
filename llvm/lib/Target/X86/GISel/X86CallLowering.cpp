@@ -109,6 +109,9 @@ struct X86OutgoingValueHandler : public CallLowering::OutgoingValueHandler {
                         const CCValAssign &VA) override {
     MIB.addUse(PhysReg, RegState::Implicit);
     Register ExtReg = extendRegister(ValVReg, VA);
+    if ((VA.getLocReg() == X86::FP0 || VA.getLocReg() == X86::FP1) &&
+        STI.getTargetLowering()->isScalarFPTypeInSSEReg(VA.getValVT()))
+      ExtReg = MIRBuilder.buildFPExt(LLT::scalar(80), ExtReg).getReg(0);
     MIRBuilder.buildCopy(PhysReg, ExtReg);
   }
 
