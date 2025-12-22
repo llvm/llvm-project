@@ -60,3 +60,40 @@ define void @pli_b_store_i32(ptr %p) {
   store i32 u0x41414141, ptr %p
   ret void
 }
+
+define i32 @pack_i32(i32 %a, i32 %b) nounwind {
+; CHECK-LABEL: pack_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pack a0, a0, a1
+; CHECK-NEXT:    ret
+  %shl = and i32 %a, 65535
+  %shl1 = shl i32 %b, 16
+  %or = or i32 %shl1, %shl
+  ret i32 %or
+}
+
+define i32 @pack_i32_2(i16 zeroext %a, i16 zeroext %b) nounwind {
+; CHECK-LABEL: pack_i32_2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pack a0, a0, a1
+; CHECK-NEXT:    ret
+  %zexta = zext i16 %a to i32
+  %zextb = zext i16 %b to i32
+  %shl1 = shl i32 %zextb, 16
+  %or = or i32 %shl1, %zexta
+  ret i32 %or
+}
+
+define i32 @pack_i32_3(i16 zeroext %0, i16 zeroext %1, i32 %2) {
+; CHECK-LABEL: pack_i32_3:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pack a0, a1, a0
+; CHECK-NEXT:    add a0, a0, a2
+; CHECK-NEXT:    ret
+  %4 = zext i16 %0 to i32
+  %5 = shl nuw i32 %4, 16
+  %6 = zext i16 %1 to i32
+  %7 = or i32 %5, %6
+  %8 = add i32 %7, %2
+  ret i32 %8
+}
