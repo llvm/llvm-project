@@ -4,11 +4,11 @@ set(LLVM_LINK_COMPONENTS
   Core
   BinaryFormat
   MC
-  Extensions
   Target
   TransformUtils
   Analysis
   Passes
+  Plugins
   IRReader
   Object
   Option
