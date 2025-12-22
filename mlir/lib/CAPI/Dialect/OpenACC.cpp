@@ -10,5 +10,4 @@
 #include "mlir/CAPI/Registration.h"
 #include "mlir/Dialect/OpenACC/IR/OpenACC.h"
 
-MLIR_DEFINE_CAPI_DIALECT_REGISTRATION(OpenACC, acc,
-                                      mlir::acc::OpenACCDialect)
+MLIR_DEFINE_CAPI_DIALECT_REGISTRATION(OpenACC, acc, mlir::acc::OpenACCDialect)
