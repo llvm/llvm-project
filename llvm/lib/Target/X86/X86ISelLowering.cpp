@@ -55154,6 +55154,19 @@ static SDValue isFNEG(SelectionDAG &DAG, SDNode *N, unsigned Depth = 0) {
                                     cast<ShuffleVectorSDNode>(Op)->getMask());
     break;
   }
+  case ISD::CONCAT_VECTORS: {
+    // Currently limited to FNEG to ensure we don't create orphan nodes via isFNEG.
+    SmallVector<SDValue, 4> SubOps;
+    if (collectConcatOps(N, SubOps, DAG) &&
+        llvm::all_of(SubOps, [](SDValue SubOp) {
+          return SubOp.getOpcode() == ISD::FNEG;
+        })) {
+      for (SDValue &SubOp : SubOps)
+        SubOp = SubOp.getOperand(0);
+      return DAG.getNode(ISD::CONCAT_VECTORS, SDLoc(Op), VT, SubOps);
+    }
+    break;
+  }
   case ISD::INSERT_VECTOR_ELT: {
     // Negate of INSERT_VECTOR_ELT(UNDEF, V, INDEX) is INSERT_VECTOR_ELT(UNDEF,
     // -V, INDEX).
