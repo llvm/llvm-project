@@ -711,26 +711,25 @@ void VectorLegalizer::PromoteVECTOR_COMPRESS(
     SDNode *Node, SmallVectorImpl<SDValue> &Results) {
   SDLoc DL(Node);
   EVT VT = Node->getValueType(0);
-  EVT IntVT = VT.changeVectorElementTypeToInteger();
   MVT PromotedVT = TLI.getTypeToPromoteTo(Node->getOpcode(), VT.getSimpleVT());
-  assert(PromotedVT.isInteger() && "Only promotion to integers supported");
+  assert((VT.isInteger() || VT.getSizeInBits() == PromotedVT.getSizeInBits()) &&
+         "Only integer promotion or bitcasts between types is supported");
 
   SDValue Vec = Node->getOperand(0);
   SDValue Mask = TLI.promoteTargetBoolean(DAG, Node->getOperand(1), PromotedVT);
   SDValue Passthru = Node->getOperand(2);
-  if (VT.isFloatingPoint()) {
-    Vec = DAG.getBitcast(IntVT, Vec);
-    Passthru = DAG.getBitcast(IntVT, Passthru);
+  if (VT.isInteger()) {
+    Vec = DAG.getNode(ISD::ANY_EXTEND, DL, PromotedVT, Vec);
+    Passthru = DAG.getNode(ISD::ANY_EXTEND, DL, PromotedVT, Passthru);
+  } else {
+    Vec = DAG.getBitcast(PromotedVT, Vec);
+    Passthru = DAG.getBitcast(PromotedVT, Passthru);
   }
-  Vec = DAG.getNode(ISD::ANY_EXTEND, DL, PromotedVT, Vec);
-  Passthru = DAG.getNode(ISD::ANY_EXTEND, DL, PromotedVT, Passthru);
 
   SDValue Result =
       DAG.getNode(ISD::VECTOR_COMPRESS, DL, PromotedVT, Vec, Mask, Passthru);
-  Result = DAG.getNode(ISD::TRUNCATE, DL, IntVT, Result);
-
-  if (VT.isFloatingPoint())
-    Result = DAG.getBitcast(VT, Result);
+  Result = VT.isInteger() ? DAG.getNode(ISD::TRUNCATE, DL, VT, Result)
+                          : DAG.getBitcast(VT, Result);
   Results.push_back(Result);
 }
 
