@@ -49,7 +49,7 @@ LIBC_INLINE int get_except() {
 
 LIBC_INLINE int set_except(int excepts) {
   fexcept_t exc = static_cast<fexcept_t>(excepts);
-  return fesetexceptflag(&excepts, FE_ALL_EXCEPT);
+  return fesetexceptflag(&exc, FE_ALL_EXCEPT);
 }
 
 LIBC_INLINE int raise_except(int excepts) { return feraiseexcept(excepts); }
