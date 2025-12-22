@@ -12,11 +12,12 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/IntervalMap.h"
 #include "llvm/AsmParser/FileLoc.h"
-#include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Value.h"
 #include <optional>
 
 namespace llvm {
+class BasicBlock;
+
 /// Registry of file location information for LLVM IR constructs.
 ///
 /// This class provides access to the file location information
