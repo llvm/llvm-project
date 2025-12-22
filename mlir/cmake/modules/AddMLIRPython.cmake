@@ -389,6 +389,8 @@ endfunction()
 #     This file is where the *EnumAttrs are defined, not where the *Enums are defined.
 #     **WARNING**: This arg will shortly be removed when the just-below TODO is satisfied. Use at your
 #     risk.
+#   MLIR_PYTHON_PACKAGE: Optional name of the current main MLIR package.
+#     It can be used to build extensions against a main package.
 #
 # TODO: Right now `TD_FILE` can't be the actual dialect tablegen file, since we
 #       use its path to determine where to place the generated python file. If
@@ -397,7 +399,7 @@ endfunction()
 function(declare_mlir_dialect_python_bindings)
   cmake_parse_arguments(ARG
     "GEN_ENUM_BINDINGS"
-    "ROOT_DIR;ADD_TO_PARENT;TD_FILE;DIALECT_NAME"
+    "ROOT_DIR;ADD_TO_PARENT;TD_FILE;DIALECT_NAME;MLIR_PYTHON_PACKAGE"
     "SOURCES;SOURCES_GLOB;DEPENDS;GEN_ENUM_BINDINGS_TD_FILE"
     ${ARGN})
   # Sources.
@@ -417,8 +419,12 @@ function(declare_mlir_dialect_python_bindings)
     file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/${relative_td_directory}")
     set(dialect_filename "${relative_td_directory}/_${ARG_DIALECT_NAME}_ops_gen.py")
     set(LLVM_TARGET_DEFINITIONS ${td_file})
+    if(NOT DEFINED ARG_MLIR_PYTHON_PACKAGE)
+      set(ARG_MLIR_PYTHON_PACKAGE "mlir")
+    endif()
     mlir_tablegen("${dialect_filename}"
       -gen-python-op-bindings -bind-dialect=${ARG_DIALECT_NAME}
+      -python-package-prefix=${ARG_MLIR_PYTHON_PACKAGE}
       DEPENDS ${ARG_DEPENDS}
     )
     add_public_tablegen_target(${tblgen_target})
@@ -430,7 +436,8 @@ function(declare_mlir_dialect_python_bindings)
         set(LLVM_TARGET_DEFINITIONS ${td_file})
       endif()
       set(enum_filename "${relative_td_directory}/_${ARG_DIALECT_NAME}_enum_gen.py")
-      mlir_tablegen(${enum_filename} -gen-python-enum-bindings)
+      mlir_tablegen(${enum_filename} -gen-python-enum-bindings
+		    -python-package-prefix=${ARG_MLIR_PYTHON_PACKAGE})
       list(APPEND _sources ${enum_filename})
     endif()
 
@@ -464,10 +471,12 @@ endfunction()
 #     This file is where the *Attrs are defined, not where the *Enums are defined.
 #     **WARNING**: This arg will shortly be removed when the TODO for
 #     declare_mlir_dialect_python_bindings is satisfied. Use at your risk.
+#   MLIR_PYTHON_PACKAGE: Optional name of the current main MLIR package.
+#     It can be used to build extensions against a main package.
 function(declare_mlir_dialect_extension_python_bindings)
   cmake_parse_arguments(ARG
     "GEN_ENUM_BINDINGS"
-    "ROOT_DIR;ADD_TO_PARENT;TD_FILE;DIALECT_NAME;EXTENSION_NAME"
+    "ROOT_DIR;ADD_TO_PARENT;TD_FILE;DIALECT_NAME;EXTENSION_NAME;MLIR_PYTHON_PACKAGE"
     "SOURCES;SOURCES_GLOB;DEPENDS;GEN_ENUM_BINDINGS_TD_FILE"
     ${ARGN})
   # Source files.
@@ -487,9 +496,13 @@ function(declare_mlir_dialect_extension_python_bindings)
     file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/${relative_td_directory}")
     set(output_filename "${relative_td_directory}/_${ARG_EXTENSION_NAME}_ops_gen.py")
     set(LLVM_TARGET_DEFINITIONS ${td_file})
+    if(NOT DEFINED ARG_MLIR_PYTHON_PACKAGE)
+      set(ARG_MLIR_PYTHON_PACKAGE "mlir")
+    endif()
     mlir_tablegen("${output_filename}" -gen-python-op-bindings
                   -bind-dialect=${ARG_DIALECT_NAME}
-                  -dialect-extension=${ARG_EXTENSION_NAME})
+                  -dialect-extension=${ARG_EXTENSION_NAME}
+		  -python-package-prefix=${ARG_MLIR_PYTHON_PACKAGE})
     add_public_tablegen_target(${tblgen_target})
     if(ARG_DEPENDS)
       add_dependencies(${tblgen_target} ${ARG_DEPENDS})
@@ -502,7 +515,8 @@ function(declare_mlir_dialect_extension_python_bindings)
         set(LLVM_TARGET_DEFINITIONS ${td_file})
       endif()
       set(enum_filename "${relative_td_directory}/_${ARG_EXTENSION_NAME}_enum_gen.py")
-      mlir_tablegen(${enum_filename} -gen-python-enum-bindings)
+      mlir_tablegen(${enum_filename} -gen-python-enum-bindings
+		    -python-package-prefix=${ARG_MLIR_PYTHON_PACKAGE})
       list(APPEND _sources ${enum_filename})
     endif()
 
@@ -601,7 +615,6 @@ function(add_mlir_python_common_capi_library name)
   # Generate the aggregate .so that everything depends on.
   add_mlir_aggregate(${name}
     SHARED
-    DISABLE_INSTALL
     EMBED_LIBS ${_embed_libs}
   )
 
