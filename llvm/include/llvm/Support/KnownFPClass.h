@@ -265,6 +265,10 @@ struct KnownFPClass {
   LLVM_ABI void propagateCanonicalizingSrc(const KnownFPClass &Src,
                                            DenormalMode Mode);
 
+  /// Propagate known class for log/log2/log10
+  static LLVM_ABI KnownFPClass
+  log(const KnownFPClass &Src, DenormalMode Mode = DenormalMode::getDynamic());
+
   void resetAll() { *this = KnownFPClass(); }
 };
 
