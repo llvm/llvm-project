@@ -26,13 +26,6 @@ function(_get_compile_options_from_flags output_var)
         list(APPEND compile_options "-mavx2")
         list(APPEND compile_options "-mfma")
       endif()
-      # For clang, we will build the math functions with `-fno-math-errno` so that
-      # __builtin_fma* will generate the fused-mutliply-add instructions.  We
-      # don't put the control flag to the public config yet, and see if it makes
-      # sense to just enable this flag by default.
-      if(LIBC_ADD_FNO_MATH_ERRNO)
-        list(APPEND compile_options "-fno-math-errno")
-      endif()
     endif()
     if(ADD_ROUND_OPT_FLAG)
       if(LIBC_TARGET_ARCHITECTURE_IS_X86_64)
@@ -88,6 +81,13 @@ function(_get_compile_options_from_config output_var)
     list(APPEND config_options "-DLIBC_QSORT_IMPL=${LIBC_CONF_QSORT_IMPL}")
   endif()
 
+  list(APPEND config_options "-DLIBC_COPT_STRING_LENGTH_IMPL=${LIBC_CONF_STRING_LENGTH_IMPL}")
+  list(APPEND config_options "-DLIBC_COPT_FIND_FIRST_CHARACTER_IMPL=${LIBC_CONF_FIND_FIRST_CHARACTER_IMPL}")
+
+  if(LIBC_CONF_MEMSET_X86_USE_SOFTWARE_PREFETCHING)
+    list(APPEND config_options "-DLIBC_COPT_MEMSET_X86_USE_SOFTWARE_PREFETCHING")
+  endif()
+
   if(LIBC_TYPES_TIME_T_IS_32_BIT AND LLVM_LIBC_FULL_BUILD)
     list(APPEND config_options "-DLIBC_TYPES_TIME_T_IS_32_BIT")
   endif()
@@ -102,6 +102,9 @@ function(_get_compile_options_from_config output_var)
 
   if(LIBC_CONF_MATH_OPTIMIZATIONS)
     list(APPEND config_options "-DLIBC_MATH=${LIBC_CONF_MATH_OPTIMIZATIONS}")
+    if(LIBC_CONF_MATH_OPTIMIZATIONS MATCHES "LIBC_MATH_NO_ERRNO")
+      list(APPEND config_options "-fno-math-errno")
+    endif()
   endif()
 
   if(LIBC_CONF_ERRNO_MODE)
@@ -110,6 +113,22 @@ function(_get_compile_options_from_config output_var)
 
   if(LIBC_CONF_THREAD_MODE)
     list(APPEND config_options "-DLIBC_THREAD_MODE=${LIBC_CONF_THREAD_MODE}")
+  endif()
+
+  if(LIBC_CONF_TRAP_ON_RAISE_FP_EXCEPT)
+    list(APPEND config_options "-DLIBC_TRAP_ON_RAISE_FP_EXCEPT")
+  endif()
+
+  if(LIBC_CONF_RAW_MUTEX_DEFAULT_SPIN_COUNT)
+    list(APPEND config_options "-DLIBC_COPT_RAW_MUTEX_DEFAULT_SPIN_COUNT=${LIBC_CONF_RAW_MUTEX_DEFAULT_SPIN_COUNT}")
+  endif()
+
+  if(LIBC_CONF_MATH_USE_SYSTEM_FENV)
+    if(MSVC)
+      list(APPEND config_options "/DLIBC_MATH_USE_SYSTEM_FENV")
+    else()
+      list(APPEND config_options "-DLIBC_MATH_USE_SYSTEM_FENV")
+    endif()
   endif()
 
   set(${output_var} ${config_options} PARENT_SCOPE)

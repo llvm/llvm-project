@@ -14,9 +14,11 @@
 #include "parse-tree.h"
 #include "tools.h"
 #include "unparse.h"
+#include "flang/Common/enum-set.h"
 #include "flang/Common/idioms.h"
 #include "flang/Common/indirection.h"
 #include "flang/Support/Fortran.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Frontend/OpenMP/OMP.h"
 #include "llvm/Support/raw_ostream.h"
 #include <string>
@@ -35,6 +37,19 @@ public:
       : out_(out), asFortran_{asFortran} {}
 
   static constexpr const char *GetNodeName(const char *) { return "char *"; }
+
+  template <typename T, typename E, size_t B>
+  static std::string GetMemberNames(const common::EnumSet<E, B> &x) {
+    llvm::ListSeparator sep;
+    std::string s;
+    llvm::raw_string_ostream stream(s);
+    x.IterateOverMembers([&](E e) { stream << sep << T::EnumToString(e); });
+    return stream.str();
+  }
+#define NODE_ENUMSET(T, S) \
+  static std::string GetNodeName(const T::S &x) { \
+    return #S " = {"s + GetMemberNames<T>(x) + "}"s; \
+  }
 #define NODE_NAME(T, N) \
   static constexpr const char *GetNodeName(const T &) { return N; }
 #define NODE_ENUM(T, E) \
@@ -49,6 +64,7 @@ public:
   NODE(std, uint64_t)
   NODE_ENUM(common, CUDADataAttr)
   NODE_ENUM(common, CUDASubprogramAttrs)
+  NODE_ENUM(common, OmpDependenceKind)
   NODE_ENUM(common, OmpMemoryOrderType)
   NODE_ENUM(common, OpenACCDeviceType)
   NODE(format, ControlEditDesc)
@@ -206,15 +222,22 @@ public:
   NODE(parser, CompilerDirective)
   NODE(CompilerDirective, AssumeAligned)
   NODE(CompilerDirective, IgnoreTKR)
+  NODE(CompilerDirective, Inline)
+  NODE(CompilerDirective, IVDep)
+  NODE(CompilerDirective, ForceInline)
   NODE(CompilerDirective, LoopCount)
   NODE(CompilerDirective, NameValue)
+  NODE(CompilerDirective, NoInline)
   NODE(CompilerDirective, Unrecognized)
   NODE(CompilerDirective, VectorAlways)
+  NODE_ENUM(CompilerDirective::VectorLength, VectorLength::Kind)
+  NODE(CompilerDirective, VectorLength)
   NODE(CompilerDirective, Unroll)
   NODE(CompilerDirective, UnrollAndJam)
   NODE(CompilerDirective, NoVector)
   NODE(CompilerDirective, NoUnroll)
   NODE(CompilerDirective, NoUnrollAndJam)
+  NODE(CompilerDirective, Prefetch)
   NODE(parser, ComplexLiteralConstant)
   NODE(parser, ComplexPart)
   NODE(parser, ComponentArraySpec)
@@ -384,6 +407,7 @@ public:
   NODE(parser, TeamValue)
   NODE(parser, ImageSelector)
   NODE(parser, ImageSelectorSpec)
+  NODE(ImageSelectorSpec, Notify)
   NODE(ImageSelectorSpec, Stat)
   NODE(ImageSelectorSpec, Team_Number)
   NODE(parser, ImplicitPart)
@@ -509,6 +533,7 @@ public:
   NODE(parser, OmpAlignModifier)
   NODE(parser, OmpAllocateClause)
   NODE(OmpAllocateClause, Modifier)
+  NODE(parser, OmpAllocateDirective)
   NODE(parser, OmpAllocatorComplexModifier)
   NODE(parser, OmpAllocatorSimpleModifier)
   NODE(parser, OmpAlwaysModifier)
@@ -520,6 +545,8 @@ public:
   NODE(parser, OmpAtClause)
   NODE_ENUM(OmpAtClause, ActionTime)
   NODE(parser, OmpAtomicDefaultMemOrderClause)
+  NODE(parser, OmpAttachModifier)
+  NODE_ENUM(OmpAttachModifier, Value)
   NODE(parser, OmpAutomapModifier)
   NODE_ENUM(OmpAutomapModifier, Value)
   NODE(parser, OmpBaseVariantNames)
@@ -536,6 +563,8 @@ public:
   NODE(parser, OmpClauseList)
   NODE(parser, OmpCloseModifier)
   NODE_ENUM(OmpCloseModifier, Value)
+  NODE(parser, OmpCombinerClause)
+  NODE(parser, OmpCombinerExpression)
   NODE(parser, OmpContainsClause)
   NODE(parser, OmpContextSelectorSpecification)
   NODE(parser, OmpDeclareVariantDirective)
@@ -557,15 +586,19 @@ public:
   NODE(OmpDeviceClause, Modifier)
   NODE(parser, OmpDeviceModifier)
   NODE_ENUM(OmpDeviceModifier, Value)
+  NODE(parser, OmpDeviceSafesyncClause)
   NODE(parser, OmpDeviceTypeClause)
   NODE_ENUM(OmpDeviceTypeClause, DeviceTypeDescription)
+  NODE(parser, OmpDimsModifier)
   NODE(parser, OmpDirectiveName)
   NODE(parser, OmpDirectiveSpecification)
-  NODE_ENUM(OmpDirectiveSpecification, Flags)
+  NODE_ENUM(OmpDirectiveSpecification, Flag)
+  NODE_ENUMSET(OmpDirectiveSpecification, Flags)
   NODE(parser, OmpDoacross)
   NODE(OmpDoacross, Sink)
   NODE(OmpDoacross, Source)
   NODE(parser, OmpDoacrossClause)
+  NODE(parser, OmpDynamicAllocatorsClause)
   NODE(parser, OmpDynGroupprivateClause)
   NODE(OmpDynGroupprivateClause, Modifier)
   NODE(parser, OmpEndDirective)
@@ -577,6 +610,8 @@ public:
   NODE(parser, OmpExpectation)
   NODE_ENUM(OmpExpectation, Value)
   NODE(parser, OmpFailClause)
+  NODE(parser, OmpFallbackModifier)
+  NODE_ENUM(OmpFallbackModifier, Value)
   NODE(parser, OmpFromClause)
   NODE(OmpFromClause, Modifier)
   NODE(parser, OmpGrainsizeClause)
@@ -591,11 +626,9 @@ public:
   NODE(parser, OmpInitClause)
   NODE(OmpInitClause, Modifier)
   NODE(parser, OmpInitializerClause)
-  NODE(parser, OmpInitializerProc)
+  NODE(parser, OmpInitializerExpression)
   NODE(parser, OmpInReductionClause)
   NODE(OmpInReductionClause, Modifier)
-  NODE(parser, OmpInteropPreference)
-  NODE(parser, OmpInteropRuntimeIdentifier)
   NODE(parser, OmpInteropType)
   NODE_ENUM(OmpInteropType, Value)
   NODE(parser, OmpIteration)
@@ -613,7 +646,8 @@ public:
   NODE_ENUM(OmpLinearModifier, Value)
   NODE(parser, OmpLocator)
   NODE(parser, OmpLocatorList)
-  NODE(parser, OmpLoopRangeClause)
+  NODE(parser, OmpLooprangeClause)
+  NODE(parser, OmpLowerBound)
   NODE(parser, OmpMapClause)
   NODE(OmpMapClause, Modifier)
   NODE(parser, OmpMapper)
@@ -630,6 +664,10 @@ public:
   NODE(parser, OmpNoParallelismClause)
   NODE(parser, OmpNothingDirective)
   NODE(parser, OmpNumTasksClause)
+  NODE(parser, OmpNumTeamsClause)
+  NODE(OmpNumTeamsClause, Modifier)
+  NODE(parser, OmpNumThreadsClause)
+  NODE(OmpNumThreadsClause, Modifier)
   NODE(OmpNumTasksClause, Modifier)
   NODE(parser, OmpObject)
   NODE(OmpObject, Invalid)
@@ -643,6 +681,9 @@ public:
   NODE(parser, OmpOrderModifier)
   NODE_ENUM(OmpOrderModifier, Value)
   NODE(parser, OmpOtherwiseClause)
+  NODE(parser, OmpPreferenceSelector)
+  NODE(parser, OmpPreferenceSpecification)
+  NODE(parser, OmpPreferType)
   NODE(parser, OmpPrescriptiveness)
   NODE_ENUM(OmpPrescriptiveness, Value)
   NODE(parser, OmpPresentModifier)
@@ -651,7 +692,6 @@ public:
   NODE_ENUM(OmpProcBindClause, AffinityPolicy)
   NODE(parser, OmpReductionClause)
   NODE(OmpReductionClause, Modifier)
-  NODE(parser, OmpReductionCombiner)
   NODE(parser, OmpReductionIdentifier)
   NODE(parser, OmpReductionModifier)
   NODE_ENUM(OmpReductionModifier, Value)
@@ -659,19 +699,28 @@ public:
   NODE(parser, OmpRefModifier)
   NODE_ENUM(OmpRefModifier, Value)
   NODE(parser, OmpReplayableClause)
+  NODE(parser, OmpReverseOffloadClause)
   NODE(parser, OmpScheduleClause)
   NODE(OmpScheduleClause, Modifier)
   NODE_ENUM(OmpScheduleClause, Kind)
+  NODE(parser, OmpSelfMapsClause)
   NODE(parser, OmpSelfModifier)
   NODE_ENUM(OmpSelfModifier, Value)
   NODE(parser, OmpSeverityClause)
-  NODE_ENUM(OmpSeverityClause, Severity)
+  NODE_ENUM(OmpSeverityClause, SevLevel)
   NODE(parser, OmpStepComplexModifier)
   NODE(parser, OmpStepSimpleModifier)
+  NODE(parser, OmpStylizedDeclaration)
+  NODE(parser, OmpStylizedExpression)
+  NODE(parser, OmpStylizedInstance)
+  NODE(OmpStylizedInstance, Instance)
   NODE(parser, OmpTaskDependenceType)
-  NODE_ENUM(OmpTaskDependenceType, Value)
   NODE(parser, OmpTaskReductionClause)
   NODE(OmpTaskReductionClause, Modifier)
+  NODE(parser, OmpThreadLimitClause)
+  NODE(OmpThreadLimitClause, Modifier)
+  NODE(parser, OmpThreadsetClause)
+  NODE_ENUM(OmpThreadsetClause, ThreadsetPolicy)
   NODE(parser, OmpToClause)
   NODE(OmpToClause, Modifier)
   NODE(parser, OmpTraitProperty)
@@ -687,8 +736,10 @@ public:
   NODE(parser, OmpTraitSetSelectorName)
   NODE_ENUM(OmpTraitSetSelectorName, Value)
   NODE(parser, OmpTransparentClause)
+  NODE(parser, OmpTypeName)
   NODE(parser, OmpTypeNameList)
-  NODE(parser, OmpTypeSpecifier)
+  NODE(parser, OmpUnifiedAddressClause)
+  NODE(parser, OmpUnifiedSharedMemoryClause)
   NODE(parser, OmpUpdateClause)
   NODE(parser, OmpUseClause)
   NODE(parser, OmpVariableCategory)
@@ -722,7 +773,6 @@ public:
   NODE(parser, OpenMPCancellationPointConstruct)
   NODE(parser, OpenMPConstruct)
   NODE(parser, OpenMPCriticalConstruct)
-  NODE(parser, OpenMPDeclarativeAllocate)
   NODE(parser, OpenMPDeclarativeAssumes)
   NODE(parser, OpenMPDeclarativeConstruct)
   NODE(parser, OpenMPDeclareMapperConstruct)
@@ -731,10 +781,11 @@ public:
   NODE(parser, OpenMPDeclareTargetConstruct)
   NODE(parser, OpenMPDepobjConstruct)
   NODE(parser, OpenMPDispatchConstruct)
-  NODE(parser, OpenMPExecutableAllocate)
   NODE(parser, OpenMPFlushConstruct)
   NODE(parser, OpenMPGroupprivate)
+  NODE(parser, OpenMPInvalidDirective)
   NODE(parser, OpenMPLoopConstruct)
+  NODE(parser, OpenMPMisplacedEndDirective)
   NODE(parser, OpenMPRequiresConstruct)
   NODE(parser, OpenMPSectionConstruct)
   NODE(parser, OpenMPSectionsConstruct)

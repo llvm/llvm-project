@@ -28,6 +28,9 @@
 /llvm/lib/Transforms/Scalar/MemCpyOptimizer.cpp @nikic
 /llvm/lib/Transforms/InstCombine/ @nikic
 
+# AMDGPU buffer pointer lowerings
+/llvm/lib/Target/AMDGPU/AMDGPULowerBufferFatPointers.cpp @krzysz00
+
 /clang/test/CXX/drs/ @Endilll
 /clang/www/cxx_dr_status.html @Endilll
 /clang/www/make_cxx_dr_status @Endilll
@@ -53,6 +56,30 @@
 /mlir/include/mlir/Interfaces/DestinationStyleOpInterface.* @matthias-springer
 /mlir/lib/Interfaces/DestinationStyleOpInterface.* @matthias-springer
 
+# AMDGPU and ROCDL dialects in MLIR.
+/mlir/include/mlir/Dialect/AMDGPU @krzysz00 @kuhar
+/mlir/lib/Dialect/AMDGPU @krzysz00 @kuhar
+/mlir/lib/Conversion/*AMDGPU* @krzysz00 @kuhar
+/mlir/lib/Conversion/*ToROCDL @krzysz00 @kuhar
+/mlir/include/mlir/Dialect/LLVMIR/ROCDL* @krzysz00 @kuhar
+
+# Arith dialect in MLIR.
+/mlir/include/mlir/Dialect/Arith @kuhar
+/mlir/lib/Dialect/Arith @kuhar
+/mlir/lib/Conversion/ArithTo* @kuhar
+
+# XeGPU and XeVM dialects in MLIR.
+/mlir/include/mlir/Dialect/XeGPU @charithaintc @Jianhui-Li
+/mlir/lib/Dialect/XeGPU @charithaintc @Jianhui-Li
+/mlir/lib/Conversion/*XeGPU* @charithaintc @Jianhui-Li
+/mlir/include/mlir/Dialect/XeGPU/Transforms @charithaintc @Jianhui-Li
+/mlir/lib/Dialect/XeGPU/Transforms @charithaintc @Jianhui-Li
+/mlir/include/mlir/Dialect/XeGPU/TransformOps @charithaintc @Jianhui-Li @tkarna
+/mlir/lib/Dialect/XeGPU/TransformOps @charithaintc @Jianhui-Li @tkarna
+/mlir/include/mlir/Dialect/LLVMIR/XeVM* @silee2
+/mlir/lib/Dialect/LLVMIR/IR/XeVM @silee2
+/mlir/lib/Conversion/*XeVM* @silee2
+
 # Bufferization Dialect in MLIR.
 /mlir/include/mlir/Dialect/Bufferization @matthias-springer
 /mlir/lib/Dialect/Bufferization @matthias-springer
@@ -69,9 +96,9 @@
 /mlir/lib/Dialect/Linalg/Transforms/DecomposeLinalgOps.cpp @MaheshRavishankar @nicolasvasilache
 /mlir/lib/Dialect/Linalg/Transforms/DropUnitDims.cpp @dcaballe @MaheshRavishankar @nicolasvasilache
 /mlir/lib/Dialect/Linalg/Transforms/ElementwiseOpFusion.cpp @MaheshRavishankar @nicolasvasilache
-/mlir/lib/Dialect/Linalg/Transforms/DataLayoutPropagation.cpp @hanhanW @nicolasvasilache
-/mlir/lib/Dialect/Linalg/Transforms/Transforms.cpp @dcaballe @hanhanW @nicolasvasilache
-/mlir/lib/Dialect/Linalg/Transforms/Vectorization.cpp @banach-space @dcaballe @hanhanW @nicolasvasilache @Groverkss
+/mlir/lib/Dialect/Linalg/Transforms/DataLayoutPropagation.cpp @nicolasvasilache
+/mlir/lib/Dialect/Linalg/Transforms/Transforms.cpp @dcaballe @nicolasvasilache
+/mlir/lib/Dialect/Linalg/Transforms/Vectorization.cpp @banach-space @dcaballe @nicolasvasilache @Groverkss
 
 # MemRef Dialect in MLIR.
 /mlir/lib/Dialect/MemRef/Transforms/EmulateNarrowType.cpp @MaheshRavishankar @nicolasvasilache
@@ -88,16 +115,16 @@
 /mlir/include/mlir/Dialect/Vector @banach-space @dcaballe @nicolasvasilache @Groverkss
 /mlir/include/mlir/Dialect/Vector/IR @kuhar
 /mlir/lib/Dialect/Vector @banach-space @dcaballe @nicolasvasilache @Groverkss
-/mlir/lib/Dialect/Vector/Transforms/* @banach-space @dcaballe @hanhanW @nicolasvasilache
+/mlir/lib/Dialect/Vector/Transforms/* @banach-space @dcaballe @nicolasvasilache
 /mlir/lib/Dialect/Vector/Transforms/VectorEmulateNarrowType.cpp @banach-space @dcaballe @MaheshRavishankar @nicolasvasilache
-/mlir/**/*EmulateNarrowType* @dcaballe @hanhanW
+/mlir/**/*EmulateNarrowType* @dcaballe
 
 # Presburger library in MLIR
 /mlir/**/*Presburger* @Groverkss @Superty
 
 # Tensor Dialect in MLIR.
-/mlir/lib/Dialect/Tensor/IR/TensorTilingInterfaceImpl.cpp @hanhanW @nicolasvasilache
-/mlir/lib/Dialect/Tensor/Transforms/* @hanhanW @nicolasvasilache
+/mlir/lib/Dialect/Tensor/IR/TensorTilingInterfaceImpl.cpp @nicolasvasilache
+/mlir/lib/Dialect/Tensor/Transforms/* @nicolasvasilache
 
 # Transform Dialect in MLIR.
 /mlir/include/mlir/Dialect/Transform/* @ftynse @nicolasvasilache @rolfmorel
@@ -131,6 +158,7 @@
 /mlir/test/python/ @ftynse @makslevental @stellaraccident @rolfmorel
 /mlir/python/ @ftynse @makslevental @stellaraccident @rolfmorel
 /mlir/lib/Bindings/Python @makslevental @rolfmorel
+/mlir/include/Bindings/Python @makslevental @rolfmorel
 
 # MLIR Mem2Reg/SROA
 /mlir/**/Transforms/Mem2Reg.* @moxinilian
@@ -151,7 +179,7 @@
 /clang/tools/clang-installapi/ @cyndyishida
 
 # ExtractAPI
-/clang/**/ExtractAPI @daniel-grumberg @QuietMisdreavus
+/clang/**/ExtractAPI @QuietMisdreavus @snprajwal
 
 # DWARFLinker, dwarfutil, dsymutil
 /llvm/**/DWARFLinker/ @JDevlieghere

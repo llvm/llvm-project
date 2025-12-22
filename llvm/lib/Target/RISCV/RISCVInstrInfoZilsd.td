@@ -47,6 +47,23 @@ let Predicates = [HasStdExtZilsd, IsRV32] in {
 def PseudoLD_RV32 : PseudoLoad<"ld", GPRPairRV32>;
 def PseudoSD_RV32 : PseudoStore<"sd", GPRPairRV32>;
 
+// Pseudo instructions for load/store optimization with 2 separate registers
+def PseudoLD_RV32_OPT :
+    Pseudo<(outs GPR:$rd1, GPR:$rd2),
+           (ins GPR:$rs1, simm12_lo:$imm12), [], "", ""> {
+  let hasSideEffects = 0;
+  let mayLoad = 1;
+  let mayStore = 0;
+}
+
+def PseudoSD_RV32_OPT :
+    Pseudo<(outs),
+           (ins GPR:$rs1, GPR:$rs2, GPR:$rs3, simm12_lo:$imm12), [], "", ""> {
+  let hasSideEffects = 0;
+  let mayLoad = 0;
+  let mayStore = 1;
+}
+
 def : InstAlias<"ld $rd, (${rs1})", (LD_RV32 GPRPairRV32:$rd, GPR:$rs1, 0), 0>;
 def : InstAlias<"sd $rs2, (${rs1})", (SD_RV32 GPRPairRV32:$rs2, GPR:$rs1, 0), 0>;
 }

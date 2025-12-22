@@ -17,12 +17,14 @@
 #include <__bit/countr.h>
 #include <__bit/invert_if.h>
 #include <__config>
+#include <__cstddef/size_t.h>
 #include <__functional/identity.h>
 #include <__fwd/bit_reference.h>
 #include <__iterator/segmented_iterator.h>
 #include <__string/constexpr_c_functions.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/invoke.h>
+#include <__type_traits/is_constant_evaluated.h>
 #include <__type_traits/is_equality_comparable.h>
 #include <__type_traits/is_integral.h>
 #include <__type_traits/is_signed.h>
@@ -112,11 +114,10 @@ _LIBCPP_CONSTEXPR_SINCE_CXX14 _Tp* __find_vectorized(_Tp* __first, _Tp* __last, 
 
 #ifndef _LIBCPP_CXX03_LANG
 // trivially equality comparable implementations
-template <
-    class _Tp,
-    class _Up,
-    class _Proj,
-    __enable_if_t<__is_identity<_Proj>::value && __libcpp_is_trivially_equality_comparable<_Tp, _Up>::value, int> = 0>
+template <class _Tp,
+          class _Up,
+          class _Proj,
+          __enable_if_t<__is_identity<_Proj>::value && __is_trivially_equality_comparable_v<_Tp, _Up>, int> = 0>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _Tp* __find(_Tp* __first, _Tp* __last, const _Up& __value, _Proj&) {
   if constexpr (sizeof(_Tp) == 1) {
     if (auto __ret = std::__constexpr_memchr(__first, __value, __last - __first))
@@ -147,7 +148,7 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _Tp* __find(_Tp* __first, _T
 template <class _Tp,
           class _Up,
           class _Proj,
-          __enable_if_t<__is_identity<_Proj>::value && !__libcpp_is_trivially_equality_comparable<_Tp, _Up>::value &&
+          __enable_if_t<__is_identity<_Proj>::value && !__is_trivially_equality_comparable_v<_Tp, _Up> &&
                             is_integral<_Tp>::value && is_integral<_Up>::value &&
                             is_signed<_Tp>::value == is_signed<_Up>::value,
                         int> = 0>
@@ -228,7 +229,8 @@ struct __find_segment {
   template <class _InputIterator, class _Proj>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR _InputIterator
   operator()(_InputIterator __first, _InputIterator __last, _Proj& __proj) const {
-    return std::__find(__first, __last, __value_, __proj);
+    return std::__rewrap_iter(
+        __first, std::__find(std::__unwrap_iter(__first), std::__unwrap_iter(__last), __value_, __proj));
   }
 };
 

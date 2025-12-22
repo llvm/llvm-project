@@ -101,9 +101,9 @@ Assumed-rank dummies are also represented in the
 represent assumed-rank in procedure characteristics.
 
 ### Runtime Representation of Assumed-Ranks
-Assumed-ranks are implemented as CFI_cdesc_t (18.5.3) with the addition of an
-f18 specific addendum when required for the type. This is the usual f18
-descriptor, and no changes is required to represent assumed-ranks in this data
+Assumed-ranks are implemented as CFI_cdesc_t (18.5.3) with the addition of a
+Flang specific addendum when required for the type. This is the usual Flang
+descriptor, and no changes are required to represent assumed-ranks in this data
 structure. In fact, there is no difference between the runtime descriptor
 created for an assumed shape and the runtime descriptor created when the
 corresponding entity is passed as an assumed-rank.
@@ -143,11 +143,11 @@ SSA values for assumed-rank entities have an MLIR type containing a
 (additionally wrapped in a `!fir.ref` type for pointers and allocatables).
 
 Examples:
-`INTEGER :: x(..)`  -> `!fir.box<!fir.array<* x i32>>` 
+`INTEGER :: x(..)`  -> `!fir.box<!fir.array<* x i32>>`
 `CLASS(*) :: x(..)`  -> `!fir.class<!fir.array<* x none>>`
 `TYPE(*) :: x(..)`  -> `!fir.box<!fir.array<* x none>>`
 `REAL, ALLOCATABLE :: x(..)`  -> `!fir.ref<!fir.box<!fir.heap<!fir.array<* x f32>>>>`
-`TYPE(t), POINTER :: x(..)`  -> `!fir.ref<!fir.box<!fir.ptr<!fir.array<* x !fir.type<t>>>>>` 
+`TYPE(t), POINTER :: x(..)`  -> `!fir.ref<!fir.box<!fir.ptr<!fir.array<* x !fir.type<t>>>>>`
 
 All these FIR types are implemented as the address of a CFI_cdesc_t in code
 generation.
@@ -187,7 +187,7 @@ could still be relevant:
   support assumed-ranks, but `fir.box_tdesc` would require change since the
   position of the type descriptor pointer depends on the rank.
 - as `fir.allocmem` / `fir.global` result (assumed-ranks are never local/global
-  entities). 
+  entities).
 - as `fir.embox` result (When creating descriptor for an explicit shape, the
   descriptor can be created with the entity rank, and then casted via
 `fir.convert`).
@@ -449,7 +449,7 @@ subroutine test(x)
       real :: x(..)
     end subroutine
   end interface
-  
+
   real :: x(..)
   select rank (y => x)
   rank(*)
@@ -531,7 +531,7 @@ print *, len(x)
 
 ```
 %ele_size = fir.box_elesize %x : (!fir.box<!fir.array<*x!fir.char<?>>>) -> i64
-# .... divide by character KIND byte size if needed as usual 
+# .... divide by character KIND byte size if needed as usual
 ```
 #### PRESENT
 Implemented inline with `fir.is_present` which ends-up implemented as a check
@@ -564,7 +564,7 @@ present and is constant, `fir.box_dim` can also be used with the option to add
 a runtime check that RANK <= DIM. Pointers and allocatables are dereferenced,
 which in FIR currently creates a descriptor copy that cannot be simplified
 like for the previous inquiries by inserting a cast before the fir.load (the
-dimension info must be correctly copied). 
+dimension info must be correctly copied).
 
 #### LBOUND, SHAPE, and UBOUND
 When DIM is present an is present, the runtime can be used as it is currently

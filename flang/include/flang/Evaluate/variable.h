@@ -260,6 +260,9 @@ public:
   // it's TEAM=.
   std::optional<Expr<SomeType>> team() const;
   CoarrayRef &set_team(Expr<SomeType> &&);
+  // When notify() is Expr<Some>, it's NOTIFY=.
+  std::optional<Expr<SomeType>> notify() const;
+  CoarrayRef &set_notify(Expr<SomeType> &&);
 
   int Rank() const;
   int Corank() const { return 0; }
@@ -272,6 +275,7 @@ public:
 private:
   common::CopyableIndirection<DataRef> base_;
   std::vector<Expr<SubscriptInteger>> cosubscript_;
+  std::optional<common::CopyableIndirection<Expr<SomeType>>> notify_;
   std::optional<common::CopyableIndirection<Expr<SomeInteger>>> stat_;
   std::optional<common::CopyableIndirection<Expr<SomeType>>> team_;
 };

@@ -5,7 +5,7 @@ void f(int &n) {}
 int *t;
 
 int main() {
-  // CHECK: ubsan: type-mismatch by 0x{{[[:xdigit:]]+}} address 0x{{[[:xdigit:]]+$}}
+  // CHECK: ubsan: type-mismatch by 0x{{[[:xdigit:]]+}}
   // CHECK-NOT: type-mismatch
   f(*t);
 }
