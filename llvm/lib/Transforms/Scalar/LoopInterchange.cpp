@@ -1043,17 +1043,17 @@ findInnerReductionPhi(Loop *L, Value *V,
   return nullptr;
 }
 
-// Detect and record the simple reduction of the inner loop.
-//
-//    innerloop:
-//        Re = phi<0.0, Next>
-//        ReUser = Re op ...
-//        ...
-//        Next = ReUser op ...
-//    OuterLoopLatch:
-//        Lcssa = phi<Next>    ; lcssa phi
-//        store Lcssa, MemRef  ; LcssaStorer
-//
+/// Detect and record the simple reduction of the inner loop.
+///
+///    innerloop:
+///        Re = phi<0.0, Next>
+///        ReUser = Re op ...
+///        ...
+///        Next = ReUser op ...
+///    OuterLoopLatch:
+///        Lcssa = phi<Next>    ; lcssa phi
+///        store Lcssa, MemRef  ; LcssaStorer
+///
 bool LoopInterchangeLegality::findSimpleReduction(
     Loop *L, PHINode *Phi, SmallVectorImpl<Instruction *> &HasNoWrapInsts) {
 
