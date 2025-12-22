@@ -620,6 +620,11 @@ Value *AMDGPUCodeGenPrepareImpl::emitRsqF64(IRBuilder<> &Builder, Value *X,
   //   double e = MATH_MAD(-y0 * (x == PINF_F64 || x == 0.0 ? y0 : x), y0, 1.0);
   //   return MATH_MAD(y0*e, MATH_MAD(e, 0.375, 0.5), y0);
   //
+  // -rsq(x):
+  //   double y0 = BUILTIN_AMDGPU_RSQRT_F64(x);
+  //   double e = MATH_MAD(-y0 * (x == PINF_F64 || x == 0.0 ? y0 : x), y0, 1.0);
+  //   return MATH_MAD(-y0*e, MATH_MAD(e, 0.375, 0.5), -y0);
+  //
   // The rsq instruction handles the special cases correctly. We need to check
   // for the edge case conditions to ensure the special case propagates through
   // the later instructions.
