@@ -24,6 +24,8 @@
 #include "llvm/CodeGen/MachineScheduler.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 
+#include <type_traits>
+
 using namespace llvm;
 
 #define DEBUG_TYPE "igrouplp"
@@ -2398,7 +2400,8 @@ bool SchedGroup::canAddMI(const MachineInstr &MI) const {
          VReg32_used = false, MayLoad = MI.mayLoad(), MayStore = MI.mayStore();
     for (const MachineOperand &Operand : MI.operands())
       if (Operand.isReg()) {
-        auto &RegClass = *TRI.getRegClassForOperandReg(MRI, Operand);
+        const TargetRegisterClass &RegClass =
+            *TRI.getRegClassForOperandReg(MRI, Operand);
         if (TRI.hasVGPRs(&RegClass)) {
           VGPR_used = true;
           if (Operand.isUse() && TRI.getRegSizeInBits(RegClass) == 32)
@@ -2413,31 +2416,31 @@ bool SchedGroup::canAddMI(const MachineInstr &MI) const {
           SGPR_used = true;
       }
 
-    unsigned long InlineAsmMask = 0;
+    typedef std::underlying_type_t<SchedGroupMask> SGMask_t;
+    SGMask_t InlineAsmMask = 0;
     if (VGPR_used && !VMFMA_used && !MayLoad && !MayStore)
-      InlineAsmMask |= (unsigned long)SchedGroupMask::VALU;
+      InlineAsmMask |= (SGMask_t)SchedGroupMask::VALU;
     if (SGPR_used && !MayLoad && !MayStore)
-      InlineAsmMask |= (unsigned long)SchedGroupMask::SALU;
+      InlineAsmMask |= (SGMask_t)SchedGroupMask::SALU;
     if (VMFMA_used)
-      InlineAsmMask |= (unsigned long)SchedGroupMask::MFMA;
+      InlineAsmMask |= (SGMask_t)SchedGroupMask::MFMA;
     if (VGPR_used && MayLoad)
-      InlineAsmMask |= (unsigned long)(VReg32_used ? SchedGroupMask::DS_READ
-                                                   : SchedGroupMask::VMEM_READ);
+      InlineAsmMask |= (SGMask_t)(VReg32_used ? SchedGroupMask::DS_READ
+                                              : SchedGroupMask::VMEM_READ);
     if (VGPR_used && MayStore)
-      InlineAsmMask |=
-          (unsigned long)(VReg32_used ? SchedGroupMask::DS_WRITE
-                                      : SchedGroupMask::VMEM_WRITE);
-    if (InlineAsmMask & (unsigned long)SchedGroupMask::VALU ||
-        InlineAsmMask & (unsigned long)SchedGroupMask::SALU)
-      InlineAsmMask |= (unsigned long)SchedGroupMask::ALU;
-    if (InlineAsmMask & (unsigned long)SchedGroupMask::DS_READ ||
-        InlineAsmMask & (unsigned long)SchedGroupMask::DS_WRITE)
-      InlineAsmMask |= (unsigned long)SchedGroupMask::DS;
-    if (InlineAsmMask & (unsigned long)SchedGroupMask::VMEM_READ ||
-        InlineAsmMask & (unsigned long)SchedGroupMask::VMEM_WRITE)
-      InlineAsmMask |= (unsigned long)SchedGroupMask::VMEM;
+      InlineAsmMask |= (SGMask_t)(VReg32_used ? SchedGroupMask::DS_WRITE
+                                              : SchedGroupMask::VMEM_WRITE);
+    if (InlineAsmMask & (SGMask_t)SchedGroupMask::VALU ||
+        InlineAsmMask & (SGMask_t)SchedGroupMask::SALU)
+      InlineAsmMask |= (SGMask_t)SchedGroupMask::ALU;
+    if (InlineAsmMask & (SGMask_t)SchedGroupMask::DS_READ ||
+        InlineAsmMask & (SGMask_t)SchedGroupMask::DS_WRITE)
+      InlineAsmMask |= (SGMask_t)SchedGroupMask::DS;
+    if (InlineAsmMask & (SGMask_t)SchedGroupMask::VMEM_READ ||
+        InlineAsmMask & (SGMask_t)SchedGroupMask::VMEM_WRITE)
+      InlineAsmMask |= (SGMask_t)SchedGroupMask::VMEM;
 
-    Result = ((unsigned long)SGMask & InlineAsmMask) != 0;
+    Result = ((SGMask_t)SGMask & InlineAsmMask) != 0;
 
   }
 
