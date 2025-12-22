@@ -1,5 +1,5 @@
 ; RUN: llvm-as %s -o %t.bc
-; RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown %p/Inputs/stub-dependency-main.s -o %t.o
+; RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown %p/../Inputs/start.s -o %t.o
 ; RUN: echo "#STUB" > %t.so
 ; RUN: echo "A: B" >> %t.so
 ; RUN: wasm-ld %t.o %t.bc %t.so -o %t.wasm
