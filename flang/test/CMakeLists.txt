@@ -2,31 +2,11 @@
 # for use by Lit, and delegates to LLVM's lit test handlers.
 add_subdirectory(lib)
 
-set(FLANG_TEST_Fortran_FLAGS "" CACHE STRING "Additional Fortran flags for running tests, such as -fintrinsic-modules-path=<path>")
-
-if ("flang-rt" IN_LIST LLVM_ENABLE_RUNTIMES)
-  set(FLANG_TEST_ENABLE_MODULES_default ON)
-else ()
-  set(FLANG_TEST_ENABLE_MODULES_default OFF)
-endif ()
-option(FLANG_TEST_ENABLE_MODULES "Force-enable tests that require intrinsic modules from Flang-RT" "${FLANG_TEST_ENABLE_MODULES_default}")
-
-
-if ("openmp" IN_LIST LLVM_ENABLE_RUNTIMES AND FLANG_TEST_ENABLE_MODULES AND NOT FLANG_STANDALONE_BUILD)
-  set(FLANG_TEST_ENABLE_OPENMP_default ON)
-else ()
-  set(FLANG_TEST_ENABLE_OPENMP_default OFF)
-endif ()
-option(FLANG_TEST_ENABLE_OPENMP "Force-enable tests that require modules from OpenMP" "${FLANG_TEST_ENABLE_OPENMP_default}")
-
-
 llvm_canonicalize_cmake_booleans(
   FLANG_STANDALONE_BUILD
   LLVM_BUILD_EXAMPLES
   LLVM_BYE_LINK_INTO_TOOLS
   LLVM_ENABLE_PLUGINS
-  FLANG_TEST_ENABLE_MODULES
-  FLANG_TEST_ENABLE_OPENMP
 )
 
 set(FLANG_TOOLS_DIR ${FLANG_BINARY_DIR}/bin)
@@ -79,6 +59,7 @@ set(FLANG_TEST_PARAMS
 
 set(FLANG_TEST_DEPENDS
   flang
+  module_files
   fir-opt
   tco
   bbc
@@ -120,14 +101,8 @@ if (LLVM_BUILD_EXAMPLES)
     )
 endif ()
 
-if ("flang-rt" IN_LIST LLVM_ENABLE_RUNTIMES AND NOT FLANG_STANDALONE_BUILD)
-  # For intrinsic module files (in flang-rt/)
-  list(APPEND FLANG_TEST_DEPENDS "flang-rt-mod")
-
-  if ("openmp" IN_LIST LLVM_ENABLE_RUNTIMES)
-    # For omplib.mod and omplib_kinds.mod (in openmp/)
-    list(APPEND FLANG_TEST_DEPENDS "libomp-mod")
-  endif ()
+if ("openmp" IN_LIST LLVM_ENABLE_RUNTIMES AND NOT FLANG_STANDALONE_BUILD)
+  list(APPEND FLANG_TEST_DEPENDS "libomp-mod")
 endif ()
 
 add_custom_target(flang-test-depends DEPENDS ${FLANG_TEST_DEPENDS})

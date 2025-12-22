@@ -422,7 +422,7 @@ if(${OPENMP_STANDALONE_BUILD})
   libomp_say("Build Type           -- ${CMAKE_BUILD_TYPE}")
   libomp_say("Library Kind         -- ${LIBOMP_LIBRARY_KIND}")
   libomp_say("Library Type         -- ${LIBOMP_LIB_TYPE}")
-  libomp_say("Fortran Modules      -- ${RUNTIMES_FLANG_MODULES_ENABLED}")
+  libomp_say("Fortran Modules      -- ${LIBOMP_FORTRAN_MODULES}")
   # will say development if all zeros
   if(${LIBOMP_VERSION_BUILD} STREQUAL 00000000)
     set(LIBOMP_BUILD Development)

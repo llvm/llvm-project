@@ -51,6 +51,8 @@ void Flang::addFortranDialectOptions(const ArgList &Args,
                             options::OPT_fxor_operator,
                             options::OPT_fno_xor_operator,
                             options::OPT_falternative_parameter_statement,
+                            options::OPT_fdefault_integer_4,
+                            options::OPT_fdefault_real_4,
                             options::OPT_fdefault_real_8,
                             options::OPT_fdefault_integer_8,
                             options::OPT_fdefault_double_8,
@@ -200,6 +202,13 @@ void Flang::addCodegenOptions(const ArgList &Args,
   if (stackArrays &&
       !stackArrays->getOption().matches(options::OPT_fno_stack_arrays))
     CmdArgs.push_back("-fstack-arrays");
+
+  if (Args.hasFlag(options::OPT_funsafe_cray_pointers,
+                   options::OPT_fno_unsafe_cray_pointers, false)) {
+    // TODO: currently passed as MLIR option
+    CmdArgs.push_back("-mmlir");
+    CmdArgs.push_back("-funsafe-cray-pointers");
+  }
 
   Args.addOptInFlag(CmdArgs, options::OPT_fexperimental_loop_fusion,
                     options::OPT_fno_experimental_loop_fusion);
@@ -1068,14 +1077,6 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
   // Pass the path to compiler resource files.
   CmdArgs.push_back("-resource-dir");
   CmdArgs.push_back(D.ResourceDir.c_str());
-
-  // Default intrinsic module dirs must be added after any user-provided
-  // -fintrinsic-modules-path to have lower precedence
-  if (std::optional<std::string> IntrModPath =
-          TC.getDefaultIntrinsicModuleDir()) {
-    CmdArgs.push_back("-fintrinsic-modules-path");
-    CmdArgs.push_back(Args.MakeArgString(*IntrModPath));
-  }
 
   // Offloading related options
   addOffloadOptions(C, Inputs, JA, Args, CmdArgs);

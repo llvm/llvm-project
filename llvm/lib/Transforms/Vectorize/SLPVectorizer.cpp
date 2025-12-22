@@ -573,6 +573,27 @@ static bool isCommutative(Instruction *I, Value *ValWithUses,
   return I->isCommutative();
 }
 
+/// Checks if the operand is commutative. In commutative operations, not all
+/// operands might commutable, e.g. for fmuladd only 2 first operands are
+/// commutable.
+static bool isCommutableOperand(Instruction *I, Value *ValWithUses, unsigned Op,
+                                bool IsCopyable = false) {
+  assert(::isCommutative(I, ValWithUses, IsCopyable) &&
+         "The instruction is not commutative.");
+  if (isa<CmpInst>(I))
+    return true;
+  if (auto *BO = dyn_cast<BinaryOperator>(I)) {
+    switch (BO->getOpcode()) {
+    case Instruction::Sub:
+    case Instruction::FSub:
+      return true;
+    default:
+      break;
+    }
+  }
+  return I->isCommutableOperand(Op);
+}
+
 /// This is a helper function to check whether \p I is commutative.
 /// This is a convenience wrapper that calls the two-parameter version of
 /// isCommutative with the same instruction for both parameters. This is
@@ -5326,13 +5347,14 @@ private:
       if (ScheduleCopyableDataMap.empty())
         return false;
       SmallDenseMap<TreeEntry *, unsigned> PotentiallyReorderedEntriesCount;
-      SmallDenseMap<const TreeEntry *, unsigned> OrderedEntriesCount;
       ArrayRef<TreeEntry *> Entries = SLP.getTreeEntries(User);
       if (Entries.empty())
         return false;
+      unsigned CurNumOps = 0;
       for (const Use &U : User->operands()) {
         if (U.get() != Op)
           continue;
+        ++CurNumOps;
         // Check all tree entries, if they have operands replaced by copyable
         // data.
         for (TreeEntry *TE : Entries) {
@@ -5365,27 +5387,43 @@ private:
           // Same applies even for non-commutative cmps, because we can invert
           // their predicate potentially and, thus, reorder the operands.
           bool IsCommutativeUser =
-              ::isCommutative(User) ||
-              ::isCommutative(TE->getMatchingMainOpOrAltOp(User), User);
-          if (!IsCommutativeUser && !isa<CmpInst>(User)) {
-            unsigned &OpCnt =
-                OrderedEntriesCount.try_emplace(TE, 0).first->getSecond();
+              ::isCommutative(User) &&
+              ::isCommutableOperand(User, User, U.getOperandNo());
+          if (!IsCommutativeUser) {
+            Instruction *MainOp = TE->getMatchingMainOpOrAltOp(User);
+            IsCommutativeUser =
+                ::isCommutative(MainOp, User) &&
+                ::isCommutableOperand(MainOp, User, U.getOperandNo());
+          }
+          // The commutative user with the same operands can be safely
+          // considered as non-commutative, operands reordering does not change
+          // the semantics.
+          assert(
+              (!IsCommutativeUser ||
+               (((::isCommutative(User) &&
+                  ::isCommutableOperand(User, User, 0) &&
+                  ::isCommutableOperand(User, User, 1)) ||
+                 (::isCommutative(TE->getMatchingMainOpOrAltOp(User), User) &&
+                  ::isCommutableOperand(TE->getMatchingMainOpOrAltOp(User),
+                                        User, 0) &&
+                  ::isCommutableOperand(TE->getMatchingMainOpOrAltOp(User),
+                                        User, 1))))) &&
+              "Expected commutative user with 2 first commutable operands");
+          bool IsCommutativeWithSameOps =
+              IsCommutativeUser && User->getOperand(0) == User->getOperand(1);
+          if ((!IsCommutativeUser || IsCommutativeWithSameOps) &&
+              !isa<CmpInst>(User)) {
             EdgeInfo EI(TE, U.getOperandNo());
-            if (!getScheduleCopyableData(EI, Op))
+            if (CurNumOps != NumOps || getScheduleCopyableData(EI, Op))
               continue;
-            // Found copyable operand - continue.
-            OpCnt += Inc;
-            continue;
+            return false;
           }
           PotentiallyReorderedEntriesCount.try_emplace(TE, 0)
               .first->getSecond() += Inc;
         }
       }
       if (PotentiallyReorderedEntriesCount.empty())
-        return all_of(OrderedEntriesCount,
-                      [&](const std::pair<const TreeEntry *, unsigned> &P) {
-                        return P.second == NumOps;
-                      });
+        return true;
       // Check the commutative/cmp entries.
       for (auto &P : PotentiallyReorderedEntriesCount) {
         SmallPtrSet<Value *, 4> ParentsUniqueUsers;
@@ -5431,10 +5469,6 @@ private:
       return all_of(PotentiallyReorderedEntriesCount,
                     [&](const std::pair<const TreeEntry *, unsigned> &P) {
                       return P.second == NumOps - 1;
-                    }) &&
-             all_of(OrderedEntriesCount,
-                    [&](const std::pair<const TreeEntry *, unsigned> &P) {
-                      return P.second == NumOps;
                     });
     }
 
@@ -5656,6 +5690,7 @@ private:
                 }
               };
 
+          SmallDenseSet<std::pair<const ScheduleEntity *, unsigned>> Checked;
           for (ScheduleBundle *Bundle : Bundles) {
             if (ScheduleCopyableDataMap.empty() && TotalOpCount == 0)
               break;
@@ -5663,7 +5698,6 @@ private:
             // Need to search for the lane since the tree entry can be
             // reordered.
             auto *It = find(Bundle->getTreeEntry()->Scalars, In);
-            SmallDenseSet<std::pair<const ScheduleEntity *, unsigned>> Checked;
             bool IsNonSchedulableWithParentPhiNode =
                 Bundle->getTreeEntry()->doesNotNeedToSchedule() &&
                 Bundle->getTreeEntry()->UserTreeIndex &&
@@ -10873,7 +10907,9 @@ class InstructionsCompatibilityAnalysis {
            Opcode == Instruction::LShr || Opcode == Instruction::Shl ||
            Opcode == Instruction::SDiv || Opcode == Instruction::UDiv ||
            Opcode == Instruction::And || Opcode == Instruction::Or ||
-           Opcode == Instruction::Xor;
+           Opcode == Instruction::Xor || Opcode == Instruction::FAdd ||
+           Opcode == Instruction::FSub || Opcode == Instruction::FMul ||
+           Opcode == Instruction::FDiv;
   }
 
   /// Identifies the best candidate value, which represents main opcode
@@ -11214,6 +11250,10 @@ public:
       case Instruction::And:
       case Instruction::Or:
       case Instruction::Xor:
+      case Instruction::FAdd:
+      case Instruction::FMul:
+      case Instruction::FSub:
+      case Instruction::FDiv:
         VectorCost = TTI.getArithmeticInstrCost(MainOpcode, VecTy, Kind);
         break;
       default:
@@ -14108,6 +14148,11 @@ public:
         ArrayRef<TreeEntry *> VEs = R.getTreeEntries(V);
         if (!CheckedExtracts.insert(V).second ||
             !R.areAllUsersVectorized(cast<Instruction>(V), &VectorizedVals) ||
+            (E->UserTreeIndex && E->UserTreeIndex.EdgeIdx == UINT_MAX &&
+             !R.isVectorized(EE) &&
+             count_if(E->Scalars, [&](Value *V) { return V == EE; }) !=
+                 count_if(E->UserTreeIndex.UserTE->Scalars,
+                          [&](Value *V) { return V == EE; })) ||
             any_of(EE->users(),
                    [&](User *U) {
                      return isa<GetElementPtrInst>(U) &&
@@ -15610,6 +15655,17 @@ bool BoUpSLP::isTreeTinyAndNotFullyVectorizable(bool ForReduction) const {
       (VectorizableTree[1]->getVectorFactor() <= 2 ||
        !(isSplat(VectorizableTree[1]->Scalars) ||
          allConstant(VectorizableTree[1]->Scalars))))
+    return true;
+
+  // Buildvector with externally used scalars, which should remain as scalars,
+  // should not be vectorized, the compiler may hang.
+  if (SLPCostThreshold < 0 && VectorizableTree.size() > 1 &&
+      isa<InsertElementInst>(VectorizableTree[0]->Scalars[0]) &&
+      VectorizableTree[1]->hasState() &&
+      VectorizableTree[1]->State == TreeEntry::Vectorize &&
+      all_of(VectorizableTree[1]->Scalars, [&](Value *V) {
+        return ExternalUsesAsOriginalScalar.contains(V);
+      }))
     return true;
 
   // If the graph includes only PHI nodes and gathers, it is defnitely not
@@ -18283,6 +18339,11 @@ public:
       // If the only one use is vectorized - can delete the extractelement
       // itself.
       if (!EI->hasOneUse() || R.ExternalUsesAsOriginalScalar.contains(EI) ||
+          (E->UserTreeIndex && E->UserTreeIndex.EdgeIdx == UINT_MAX &&
+           !R.isVectorized(EI) &&
+           count_if(E->Scalars, [&](Value *V) { return V == EI; }) !=
+               count_if(E->UserTreeIndex.UserTE->Scalars,
+                        [&](Value *V) { return V == EI; })) ||
           (NumParts != 1 && count(VL, EI) > 1) ||
           any_of(EI->users(), [&](User *U) {
             ArrayRef<TreeEntry *> UTEs = R.getTreeEntries(U);
@@ -19921,7 +19982,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
         if (!Stride) {
           const SCEV *StrideSCEV = SPtrInfo.StrideSCEV;
           assert(StrideSCEV && "Neither StrideVal nor StrideSCEV were set.");
-          SCEVExpander Expander(*SE, *DL, "strided-load-vec");
+          SCEVExpander Expander(*SE, "strided-load-vec");
           Stride = Expander.expandCodeFor(StrideSCEV, StrideSCEV->getType(),
                                           &*Builder.GetInsertPoint());
         }
