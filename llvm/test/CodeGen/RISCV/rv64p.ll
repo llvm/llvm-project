@@ -103,13 +103,9 @@ define void @pli_b_store_i32(ptr %p) {
 define i128 @slx_i128(i128 %x, i128 %y) {
 ; CHECK-LABEL: slx_i128:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    sll a1, a1, a2
-; CHECK-NEXT:    srli a3, a0, 1
-; CHECK-NEXT:    andi a4, a2, 63
-; CHECK-NEXT:    xori a4, a4, 63
-; CHECK-NEXT:    srl a3, a3, a4
-; CHECK-NEXT:    or a1, a1, a3
-; CHECK-NEXT:    sll a0, a0, a2
+; CHECK-NEXT:    sll a3, a0, a2
+; CHECK-NEXT:    slx a1, a0, a2
+; CHECK-NEXT:    mv a0, a3
 ; CHECK-NEXT:    ret
   %a = and i128 %y, 63
   %b = shl i128 %x, %a
@@ -119,9 +115,8 @@ define i128 @slx_i128(i128 %x, i128 %y) {
 define i128 @slxi_i128(i128 %x) {
 ; CHECK-LABEL: slxi_i128:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    srli a2, a0, 15
-; CHECK-NEXT:    slli a1, a1, 49
-; CHECK-NEXT:    or a1, a1, a2
+; CHECK-NEXT:    li a2, 49
+; CHECK-NEXT:    slx a1, a0, a2
 ; CHECK-NEXT:    slli a0, a0, 49
 ; CHECK-NEXT:    ret
   %a = shl i128 %x, 49
@@ -131,26 +126,24 @@ define i128 @slxi_i128(i128 %x) {
 define i128 @srx_i128(i128 %x, i128 %y) {
 ; CHECK-LABEL: srx_i128:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    srl a0, a0, a2
-; CHECK-NEXT:    slli a3, a1, 1
-; CHECK-NEXT:    andi a4, a2, 63
-; CHECK-NEXT:    xori a4, a4, 63
-; CHECK-NEXT:    sll a3, a3, a4
-; CHECK-NEXT:    or a0, a0, a3
-; CHECK-NEXT:    srl a1, a1, a2
+; CHECK-NEXT:    srl a3, a1, a2
+; CHECK-NEXT:    srx a0, a1, a2
+; CHECK-NEXT:    mv a1, a3
 ; CHECK-NEXT:    ret
   %a = and i128 %y, 63
   %b = lshr i128 %x, %a
   ret i128 %b
 }
 
+; FIXME: Using srx instead of slx would avoid the mv.
 define i128 @srxi_i128(i128 %x) {
 ; CHECK-LABEL: srxi_i128:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    slli a2, a1, 15
-; CHECK-NEXT:    srli a0, a0, 49
-; CHECK-NEXT:    or a0, a0, a2
+; CHECK-NEXT:    mv a2, a1
+; CHECK-NEXT:    li a3, 15
 ; CHECK-NEXT:    srli a1, a1, 49
+; CHECK-NEXT:    slx a2, a0, a3
+; CHECK-NEXT:    mv a0, a2
 ; CHECK-NEXT:    ret
   %a = lshr i128 %x, 49
   ret i128 %a
