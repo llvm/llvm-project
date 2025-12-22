@@ -1293,13 +1293,6 @@ bool Instruction::isCommutative() const {
   return isCommutative(getOpcode());
 }
 
-bool Instruction::isCommutableOperand(unsigned Op) const {
-  if (auto *II = dyn_cast<IntrinsicInst>(this))
-    return II->isCommutableOperand(Op);
-  // TODO: Should allow icmp/fcmp?
-  return isCommutative(getOpcode());
-}
-
 unsigned Instruction::getNumSuccessors() const {
   switch (getOpcode()) {
 #define HANDLE_TERM_INST(N, OPC, CLASS)                                        \

@@ -5,6 +5,7 @@ executable("llc") {
     "//llvm/lib/CodeGen/AsmPrinter",
     "//llvm/lib/CodeGen/MIRParser",
     "//llvm/lib/CodeGen/SelectionDAG",
+    "//llvm/lib/Extensions",
     "//llvm/lib/IR",
     "//llvm/lib/IRPrinter",
     "//llvm/lib/IRReader",
