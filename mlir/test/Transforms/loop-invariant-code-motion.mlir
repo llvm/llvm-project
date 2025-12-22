@@ -906,6 +906,18 @@ func.func @no_speculate_divui(
 
 // -----
 
+func.func @no_speculate_udiv(
+// CHECK-LABEL: @no_speculate_udiv(
+    %num: i32, %denom: i32, %lb: index, %ub: index, %step: index) {
+  scf.for %i = %lb to %ub step %step {
+// CHECK: scf.for
+// CHECK: llvm.udiv
+    %val = llvm.udiv %num, %denom : i32
+  }
+
+  return
+}
+
 func.func @no_speculate_divsi(
 // CHECK-LABEL: @no_speculate_divsi(
     %num: i32, %denom: i32, %lb: index, %ub: index, %step: index) {
@@ -919,6 +931,18 @@ func.func @no_speculate_divsi(
 }
 
 // -----
+
+func.func @no_speculate_sdiv(
+// CHECK-LABEL: @no_speculate_sdiv(
+    %num: i32, %denom: i32, %lb: index, %ub: index, %step: index) {
+  scf.for %i = %lb to %ub step %step {
+// CHECK: scf.for
+// CHECK: llvm.sdiv
+    %val = llvm.sdiv %num, %denom : i32
+  }
+
+  return
+}
 
 func.func @no_speculate_ceildivui(
 // CHECK-LABEL: @no_speculate_ceildivui(
@@ -962,6 +986,18 @@ func.func @no_speculate_divui_const(%num: i32, %lb: index, %ub: index, %step: in
 
 // -----
 
+func.func @no_speculate_udiv_const(%num: i32, %lb: index, %ub: index, %step: index) {
+// CHECK-LABEL: @no_speculate_udiv_const(
+  %c0 = arith.constant 0 : i32
+  scf.for %i = %lb to %ub step %step {
+// CHECK: scf.for
+// CHECK: llvm.udiv
+    %val = llvm.udiv %num, %c0 : i32
+  }
+
+  return
+}
+
 func.func @speculate_divui_const(
 // CHECK-LABEL: @speculate_divui_const(
     %num: i32, %lb: index, %ub: index, %step: index) {
@@ -976,6 +1012,19 @@ func.func @speculate_divui_const(
 }
 
 // -----
+
+func.func @speculate_udiv_const(
+// CHECK-LABEL: @speculate_udiv_const(
+    %num: i32, %lb: index, %ub: index, %step: index) {
+  %c5 = llvm.mlir.constant(5 : i32) : i32
+// CHECK: llvm.udiv
+// CHECK: scf.for
+  scf.for %i = %lb to %ub step %step {
+    %val = llvm.udiv %num, %c5 : i32
+  }
+
+  return
+}
 
 func.func @no_speculate_ceildivui_const(%num: i32, %lb: index, %ub: index, %step: index) {
 // CHECK-LABEL: @no_speculate_ceildivui_const(
@@ -1021,6 +1070,19 @@ func.func @no_speculate_divsi_const0(
 
 // -----
 
+func.func @no_speculate_sdiv_const0(
+// CHECK-LABEL: @no_speculate_sdiv_const0(
+    %num: i32, %denom: i32, %lb: index, %ub: index, %step: index) {
+  %c0 = arith.constant 0 : i32
+  scf.for %i = %lb to %ub step %step {
+// CHECK: scf.for
+// CHECK: llvm.sdiv
+    %val = llvm.sdiv %num, %c0 : i32
+  }
+
+  return
+}
+
 func.func @no_speculate_divsi_const_minus1(
 // CHECK-LABEL: @no_speculate_divsi_const_minus1(
     %num: i32, %denom: i32, %lb: index, %ub: index, %step: index) {
@@ -1036,6 +1098,19 @@ func.func @no_speculate_divsi_const_minus1(
 
 // -----
 
+func.func @no_speculate_sdiv_const_minus1(
+// CHECK-LABEL: @no_speculate_sdiv_const_minus1(
+    %num: i32, %denom: i32, %lb: index, %ub: index, %step: index) {
+  %cm1 = arith.constant -1 : i32
+  scf.for %i = %lb to %ub step %step {
+// CHECK: scf.for
+// CHECK: llvm.sdiv
+    %val = llvm.sdiv %num, %cm1 : i32
+  }
+
+  return
+}
+
 func.func @speculate_divsi_const(
 // CHECK-LABEL: @speculate_divsi_const(
     %num: i32, %denom: i32, %lb: index, %ub: index, %step: index) {
@@ -1050,6 +1125,19 @@ func.func @speculate_divsi_const(
 }
 
 // -----
+
+func.func @speculate_sdiv_const(
+// CHECK-LABEL: @speculate_sdiv_const(
+    %num: i32, %denom: i32, %lb: index, %ub: index, %step: index) {
+  %c5 = arith.constant 5 : i32
+  scf.for %i = %lb to %ub step %step {
+// CHECK: llvm.sdiv
+// CHECK: scf.for
+    %val = llvm.sdiv %num, %c5 : i32
+  }
+
+  return
+}
 
 func.func @no_speculate_ceildivsi_const0(
 // CHECK-LABEL: @no_speculate_ceildivsi_const0(
@@ -1111,6 +1199,19 @@ func.func @no_speculate_divui_range(
 
 // -----
 
+func.func @no_speculate_udiv_range(
+// CHECK-LABEL: @no_speculate_udiv_range(
+    %num: i8, %lb: index, %ub: index, %step: index) {
+  %denom = test.with_bounds {smax = 127 : i8, smin = -128 : i8, umax = 255 : i8, umin = 0 : i8} : i8
+  scf.for %i = %lb to %ub step %step {
+// CHECK: scf.for
+// CHECK: llvm.udiv
+    %val = llvm.udiv %num, %denom : i8
+  }
+
+  return
+}
+
 func.func @no_speculate_divsi_range(
 // CHECK-LABEL: @no_speculate_divsi_range(
     %num: i8, %lb: index, %ub: index, %step: index) {
@@ -1127,6 +1228,21 @@ func.func @no_speculate_divsi_range(
 }
 
 // -----
+
+func.func @no_speculate_sdiv_range(
+// CHECK-LABEL: @no_speculate_sdiv_range(
+    %num: i8, %lb: index, %ub: index, %step: index) {
+  %denom0 = test.with_bounds {smax = -1: i8, smin = -128 : i8, umax = 255 : i8, umin = 0 : i8} : i8
+  %denom1 = test.with_bounds {smax = 127 : i8, smin = 0 : i8, umax = 255 : i8, umin = 0 : i8} : i8
+  scf.for %i = %lb to %ub step %step {
+// CHECK: scf.for
+// CHECK-COUNT-2: llvm.sdiv
+    %val0 = llvm.sdiv %num, %denom0 : i8
+    %val1 = llvm.sdiv %num, %denom1 : i8
+  }
+
+  return
+}
 
 func.func @no_speculate_ceildivui_range(
 // CHECK-LABEL: @no_speculate_ceildivui_range(
@@ -1175,6 +1291,19 @@ func.func @speculate_divui_range(
 
 // -----
 
+func.func @speculate_udiv_range(
+// CHECK-LABEL: @speculate_udiv_range(
+    %num: i8, %lb: index, %ub: index, %step: index) {
+  %denom = test.with_bounds {smax = 127 : i8, smin = -128 : i8, umax = 255 : i8, umin = 1 : i8} : i8
+  scf.for %i = %lb to %ub step %step {
+// CHECK: llvm.udiv
+// CHECK: scf.for
+    %val = llvm.udiv %num, %denom : i8
+  }
+
+  return
+}
+
 func.func @speculate_divsi_range(
 // CHECK-LABEL: @speculate_divsi_range(
     %num: i8, %lb: index, %ub: index, %step: index) {
@@ -1192,6 +1321,22 @@ func.func @speculate_divsi_range(
 }
 
 // -----
+
+func.func @speculate_sdiv_range(
+// CHECK-LABEL: @speculate_sdiv_range(
+    %num: i8, %lb: index, %ub: index, %step: index) {
+  %denom0 = test.with_bounds {smax = 127 : i8, smin = 1 : i8, umax = 255 : i8, umin = 0 : i8} : i8
+  %denom1 = test.with_bounds {smax = -2 : i8, smin = -128 : i8, umax = 255 : i8, umin = 0 : i8} : i8
+  scf.for %i = %lb to %ub step %step {
+// CHECK-COUNT-2: llvm.sdiv
+// CHECK: scf.for
+    %val0 = llvm.sdiv %num, %denom0 : i8
+    %val1 = llvm.sdiv %num, %denom1 : i8
+
+  }
+
+  return
+}
 
 func.func @speculate_ceildivui_range(
 // CHECK-LABEL: @speculate_ceildivui_range(

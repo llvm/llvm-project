@@ -17,7 +17,7 @@ namespace clang::tidy::readability {
 /// destination types, and subsequently recommend their removal.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/readability/redundant-casting.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/readability/redundant-casting.html
 class RedundantCastingCheck : public ClangTidyCheck {
 public:
   RedundantCastingCheck(StringRef Name, ClangTidyContext *Context);

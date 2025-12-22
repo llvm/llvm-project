@@ -5,7 +5,6 @@ add_flang_library(FortranLower
   Allocatable.cpp
   Bridge.cpp
   CallInterface.cpp
-  Coarray.cpp
   ComponentPath.cpp
   ConvertArrayConstructor.cpp
   ConvertCall.cpp
@@ -23,6 +22,7 @@ add_flang_library(FortranLower
   IterationSpace.cpp
   LoweringOptions.cpp
   Mangler.cpp
+  MultiImageFortran.cpp
   OpenACC.cpp
   OpenMP/Atomic.cpp
   OpenMP/ClauseProcessor.cpp
@@ -45,6 +45,7 @@ add_flang_library(FortranLower
   FIRDialect
   FIRTransforms
   HLFIRDialect
+  MIFDialect
 
   LINK_LIBS
   CUFAttrs
@@ -61,6 +62,7 @@ add_flang_library(FortranLower
   FortranEvaluate
   FortranSemantics
   FortranUtils
+  MIFDialect
 
   LINK_COMPONENTS
   Support

@@ -17,7 +17,7 @@ namespace clang::tidy::abseil {
 /// in the time domain instead of the numeric domain.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/abseil/time-subtraction.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/abseil/time-subtraction.html
 class TimeSubtractionCheck : public ClangTidyCheck {
 public:
   TimeSubtractionCheck(StringRef Name, ClangTidyContext *Context)

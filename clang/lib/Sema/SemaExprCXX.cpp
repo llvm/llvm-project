@@ -852,7 +852,7 @@ ExprResult Sema::BuildCXXThrow(SourceLocation OpLoc, Expr *Ex,
                                bool IsThrownVarInScope) {
   const llvm::Triple &T = Context.getTargetInfo().getTriple();
   const bool IsOpenMPGPUTarget =
-      getLangOpts().OpenMPIsTargetDevice && (T.isNVPTX() || T.isAMDGCN());
+      getLangOpts().OpenMPIsTargetDevice && T.isGPU();
 
   DiagnoseExceptionUse(OpLoc, /* IsTry= */ false);
 
@@ -1250,6 +1250,10 @@ Sema::CXXThisScopeRAII::CXXThisScopeRAII(Sema &S,
     Record = Template->getTemplatedDecl();
   else
     Record = cast<CXXRecordDecl>(ContextDecl);
+
+  // 'this' never refers to the lambda class itself.
+  if (Record->isLambda())
+    return;
 
   QualType T = S.Context.getCanonicalTagType(Record);
   T = S.getASTContext().getQualifiedType(T, CXXThisTypeQuals);
@@ -1984,7 +1988,7 @@ static bool doesUsualArrayDeleteWantSize(Sema &S, SourceLocation loc,
   DeclarationName deleteName =
     S.Context.DeclarationNames.getCXXOperatorName(OO_Array_Delete);
   LookupResult ops(S, deleteName, loc, Sema::LookupOrdinaryName);
-  S.LookupQualifiedName(ops, record->getOriginalDecl()->getDefinitionOrSelf());
+  S.LookupQualifiedName(ops, record->getDecl()->getDefinitionOrSelf());
 
   // We're just doing this for information.
   ops.suppressDiagnostics();
@@ -2395,7 +2399,10 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
         if (ActiveSizeBits > ConstantArrayType::getMaxSizeBits(Context))
           return ExprError(
               Diag((*ArraySize)->getBeginLoc(), diag::err_array_too_large)
-              << toString(*Value, 10) << (*ArraySize)->getSourceRange());
+              << toString(*Value, 10, Value->isSigned(),
+                          /*formatAsCLiteral=*/false, /*UpperCase=*/false,
+                          /*InsertSeparators=*/true)
+              << (*ArraySize)->getSourceRange());
       }
 
       KnownArraySize = Value->getZExtValue();
@@ -2622,6 +2629,19 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
     if (DiagnoseUseOfDecl(OperatorDelete, StartLoc))
       return ExprError();
     MarkFunctionReferenced(StartLoc, OperatorDelete);
+  }
+
+  // For MSVC vector deleting destructors support we record that for the class
+  // new[] was called. We try to optimize the code size and only emit vector
+  // deleting destructors when they are required. Vector deleting destructors
+  // are required for delete[] call but MSVC triggers emission of them
+  // whenever new[] is called for an object of the class and we do the same
+  // for compatibility.
+  if (const CXXConstructExpr *CCE =
+          dyn_cast_or_null<CXXConstructExpr>(Initializer);
+      CCE && ArraySize) {
+    Context.setClassNeedsVectorDeletingDestructor(
+        CCE->getConstructor()->getParent());
   }
 
   return CXXNewExpr::Create(Context, UseGlobal, OperatorNew, OperatorDelete,
@@ -3605,11 +3625,9 @@ Sema::FindUsualDeallocationFunction(SourceLocation StartLoc,
   return Result.FD;
 }
 
-FunctionDecl *Sema::FindDeallocationFunctionForDestructor(SourceLocation Loc,
-                                                          CXXRecordDecl *RD,
-                                                          bool Diagnose,
-                                                          bool LookForGlobal) {
-  DeclarationName Name = Context.DeclarationNames.getCXXOperatorName(OO_Delete);
+FunctionDecl *Sema::FindDeallocationFunctionForDestructor(
+    SourceLocation Loc, CXXRecordDecl *RD, bool Diagnose, bool LookForGlobal,
+    DeclarationName Name) {
 
   FunctionDecl *OperatorDelete = nullptr;
   CanQualType DeallocType = Context.getCanonicalTagType(RD);
@@ -3642,8 +3660,11 @@ bool Sema::FindDeallocationFunction(SourceLocation StartLoc, CXXRecordDecl *RD,
   // Try to find operator delete/operator delete[] in class scope.
   LookupQualifiedName(Found, RD);
 
-  if (Found.isAmbiguous())
+  if (Found.isAmbiguous()) {
+    if (!Diagnose)
+      Found.suppressDiagnostics();
     return true;
+  }
 
   Found.suppressDiagnostics();
 
@@ -5189,19 +5210,19 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
   case ICK_Incompatible_Pointer_Conversion:
   case ICK_HLSL_Array_RValue:
   case ICK_HLSL_Vector_Truncation:
+  case ICK_HLSL_Matrix_Truncation:
   case ICK_HLSL_Vector_Splat:
+  case ICK_HLSL_Matrix_Splat:
     llvm_unreachable("Improper second standard conversion");
   }
 
   if (SCS.Dimension != ICK_Identity) {
     // If SCS.Element is not ICK_Identity the To and From types must be HLSL
     // vectors or matrices.
-
-    // TODO: Support HLSL matrices.
-    assert((!From->getType()->isMatrixType() && !ToType->isMatrixType()) &&
-           "Dimension conversion for matrix types is not implemented yet.");
-    assert((ToType->isVectorType() || ToType->isBuiltinType()) &&
-           "Dimension conversion output must be vector or scalar type.");
+    assert(
+        (ToType->isVectorType() || ToType->isConstantMatrixType() ||
+         ToType->isBuiltinType()) &&
+        "Dimension conversion output must be vector, matrix, or scalar type.");
     switch (SCS.Dimension) {
     case ICK_HLSL_Vector_Splat: {
       // Vector splat from any arithmetic type to a vector.
@@ -5209,6 +5230,15 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
       From = ImpCastExprToType(Elem, ToType, CK_VectorSplat, VK_PRValue,
                                /*BasePath=*/nullptr, CCK)
                  .get();
+      break;
+    }
+    case ICK_HLSL_Matrix_Splat: {
+      // Matrix splat from any arithmetic type to a matrix.
+      Expr *Elem = prepareMatrixSplat(ToType, From).get();
+      From =
+          ImpCastExprToType(Elem, ToType, CK_HLSLAggregateSplatCast, VK_PRValue,
+                            /*BasePath=*/nullptr, CCK)
+              .get();
       break;
     }
     case ICK_HLSL_Vector_Truncation: {
@@ -5225,6 +5255,17 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
                                From->getValueKind())
                  .get();
 
+      break;
+    }
+    case ICK_HLSL_Matrix_Truncation: {
+      auto *FromMat = From->getType()->castAs<ConstantMatrixType>();
+      QualType TruncTy = FromMat->getElementType();
+      if (auto *ToMat = ToType->getAs<ConstantMatrixType>())
+        TruncTy = Context.getConstantMatrixType(TruncTy, ToMat->getNumRows(),
+                                                ToMat->getNumColumns());
+      From = ImpCastExprToType(From, TruncTy, CK_HLSLMatrixTruncation,
+                               From->getValueKind())
+                 .get();
       break;
     }
     case ICK_Identity:
@@ -5651,20 +5692,13 @@ static bool ConvertForConditional(Sema &Self, ExprResult &E, QualType T) {
 // extension.
 static bool isValidVectorForConditionalCondition(ASTContext &Ctx,
                                                  QualType CondTy) {
-  if (!CondTy->isVectorType() && !CondTy->isExtVectorType())
+  bool IsSVEVectorType = CondTy->isSveVLSBuiltinType();
+  if (!CondTy->isVectorType() && !CondTy->isExtVectorType() && !IsSVEVectorType)
     return false;
   const QualType EltTy =
-      cast<VectorType>(CondTy.getCanonicalType())->getElementType();
-  assert(!EltTy->isEnumeralType() && "Vectors cant be enum types");
-  return EltTy->isIntegralType(Ctx);
-}
-
-static bool isValidSizelessVectorForConditionalCondition(ASTContext &Ctx,
-                                                         QualType CondTy) {
-  if (!CondTy->isSveVLSBuiltinType())
-    return false;
-  const QualType EltTy =
-      cast<BuiltinType>(CondTy.getCanonicalType())->getSveEltType(Ctx);
+      IsSVEVectorType
+          ? cast<BuiltinType>(CondTy.getCanonicalType())->getSveEltType(Ctx)
+          : cast<VectorType>(CondTy.getCanonicalType())->getElementType();
   assert(!EltTy->isEnumeralType() && "Vectors cant be enum types");
   return EltTy->isIntegralType(Ctx);
 }
@@ -5676,21 +5710,31 @@ QualType Sema::CheckVectorConditionalTypes(ExprResult &Cond, ExprResult &LHS,
   RHS = DefaultFunctionArrayLvalueConversion(RHS.get());
 
   QualType CondType = Cond.get()->getType();
-  const auto *CondVT = CondType->castAs<VectorType>();
-  QualType CondElementTy = CondVT->getElementType();
-  unsigned CondElementCount = CondVT->getNumElements();
   QualType LHSType = LHS.get()->getType();
-  const auto *LHSVT = LHSType->getAs<VectorType>();
   QualType RHSType = RHS.get()->getType();
-  const auto *RHSVT = RHSType->getAs<VectorType>();
+
+  bool LHSSizelessVector = LHSType->isSizelessVectorType();
+  bool RHSSizelessVector = RHSType->isSizelessVectorType();
+  bool LHSIsVector = LHSType->isVectorType() || LHSSizelessVector;
+  bool RHSIsVector = RHSType->isVectorType() || RHSSizelessVector;
+
+  auto GetVectorInfo =
+      [&](QualType Type) -> std::pair<QualType, llvm::ElementCount> {
+    if (const auto *VT = Type->getAs<VectorType>())
+      return std::make_pair(VT->getElementType(),
+                            llvm::ElementCount::getFixed(VT->getNumElements()));
+    ASTContext::BuiltinVectorTypeInfo VectorInfo =
+        Context.getBuiltinVectorTypeInfo(Type->castAs<BuiltinType>());
+    return std::make_pair(VectorInfo.ElementType, VectorInfo.EC);
+  };
+
+  auto [CondElementTy, CondElementCount] = GetVectorInfo(CondType);
 
   QualType ResultType;
-
-
-  if (LHSVT && RHSVT) {
-    if (isa<ExtVectorType>(CondVT) != isa<ExtVectorType>(LHSVT)) {
+  if (LHSIsVector && RHSIsVector) {
+    if (CondType->isExtVectorType() != LHSType->isExtVectorType()) {
       Diag(QuestionLoc, diag::err_conditional_vector_cond_result_mismatch)
-          << /*isExtVector*/ isa<ExtVectorType>(CondVT);
+          << /*isExtVectorNotSizeless=*/1;
       return {};
     }
 
@@ -5701,12 +5745,23 @@ QualType Sema::CheckVectorConditionalTypes(ExprResult &Cond, ExprResult &LHS,
       return {};
     }
     ResultType = Context.getCommonSugaredType(LHSType, RHSType);
-  } else if (LHSVT || RHSVT) {
-    ResultType = CheckVectorOperands(
-        LHS, RHS, QuestionLoc, /*isCompAssign*/ false, /*AllowBothBool*/ true,
-        /*AllowBoolConversions*/ false,
-        /*AllowBoolOperation*/ true,
-        /*ReportInvalid*/ true);
+  } else if (LHSIsVector || RHSIsVector) {
+    bool ResultSizeless = LHSSizelessVector || RHSSizelessVector;
+    if (ResultSizeless != CondType->isSizelessVectorType()) {
+      Diag(QuestionLoc, diag::err_conditional_vector_cond_result_mismatch)
+          << /*isExtVectorNotSizeless=*/0;
+      return {};
+    }
+    if (ResultSizeless)
+      ResultType = CheckSizelessVectorOperands(LHS, RHS, QuestionLoc,
+                                               /*IsCompAssign*/ false,
+                                               ArithConvKind::Conditional);
+    else
+      ResultType = CheckVectorOperands(
+          LHS, RHS, QuestionLoc, /*isCompAssign*/ false, /*AllowBothBool*/ true,
+          /*AllowBoolConversions*/ false,
+          /*AllowBoolOperation*/ true,
+          /*ReportInvalid*/ true);
     if (ResultType.isNull())
       return {};
   } else {
@@ -5724,24 +5779,33 @@ QualType Sema::CheckVectorConditionalTypes(ExprResult &Cond, ExprResult &LHS,
           << ResultElementTy;
       return {};
     }
-    if (CondType->isExtVectorType())
-      ResultType =
-          Context.getExtVectorType(ResultElementTy, CondVT->getNumElements());
-    else
-      ResultType = Context.getVectorType(
-          ResultElementTy, CondVT->getNumElements(), VectorKind::Generic);
-
+    if (CondType->isExtVectorType()) {
+      ResultType = Context.getExtVectorType(ResultElementTy,
+                                            CondElementCount.getFixedValue());
+    } else if (CondType->isSizelessVectorType()) {
+      ResultType = Context.getScalableVectorType(
+          ResultElementTy, CondElementCount.getKnownMinValue());
+      // There are not scalable vector type mappings for all element counts.
+      if (ResultType.isNull()) {
+        Diag(QuestionLoc, diag::err_conditional_vector_scalar_type_unsupported)
+            << ResultElementTy << CondType;
+        return {};
+      }
+    } else {
+      ResultType = Context.getVectorType(ResultElementTy,
+                                         CondElementCount.getFixedValue(),
+                                         VectorKind::Generic);
+    }
     LHS = ImpCastExprToType(LHS.get(), ResultType, CK_VectorSplat);
     RHS = ImpCastExprToType(RHS.get(), ResultType, CK_VectorSplat);
   }
 
-  assert(!ResultType.isNull() && ResultType->isVectorType() &&
+  assert(!ResultType.isNull() &&
+         (ResultType->isVectorType() || ResultType->isSizelessVectorType()) &&
          (!CondType->isExtVectorType() || ResultType->isExtVectorType()) &&
          "Result should have been a vector type");
-  auto *ResultVectorTy = ResultType->castAs<VectorType>();
-  QualType ResultElementTy = ResultVectorTy->getElementType();
-  unsigned ResultElementCount = ResultVectorTy->getNumElements();
 
+  auto [ResultElementTy, ResultElementCount] = GetVectorInfo(ResultType);
   if (ResultElementCount != CondElementCount) {
     Diag(QuestionLoc, diag::err_conditional_vector_size) << CondType
                                                          << ResultType;
@@ -5760,90 +5824,6 @@ QualType Sema::CheckVectorConditionalTypes(ExprResult &Cond, ExprResult &LHS,
   return ResultType;
 }
 
-QualType Sema::CheckSizelessVectorConditionalTypes(ExprResult &Cond,
-                                                   ExprResult &LHS,
-                                                   ExprResult &RHS,
-                                                   SourceLocation QuestionLoc) {
-  LHS = DefaultFunctionArrayLvalueConversion(LHS.get());
-  RHS = DefaultFunctionArrayLvalueConversion(RHS.get());
-
-  QualType CondType = Cond.get()->getType();
-  const auto *CondBT = CondType->castAs<BuiltinType>();
-  QualType CondElementTy = CondBT->getSveEltType(Context);
-  llvm::ElementCount CondElementCount =
-      Context.getBuiltinVectorTypeInfo(CondBT).EC;
-
-  QualType LHSType = LHS.get()->getType();
-  const auto *LHSBT =
-      LHSType->isSveVLSBuiltinType() ? LHSType->getAs<BuiltinType>() : nullptr;
-  QualType RHSType = RHS.get()->getType();
-  const auto *RHSBT =
-      RHSType->isSveVLSBuiltinType() ? RHSType->getAs<BuiltinType>() : nullptr;
-
-  QualType ResultType;
-
-  if (LHSBT && RHSBT) {
-    // If both are sizeless vector types, they must be the same type.
-    if (!Context.hasSameType(LHSType, RHSType)) {
-      Diag(QuestionLoc, diag::err_conditional_vector_mismatched)
-          << LHSType << RHSType;
-      return QualType();
-    }
-    ResultType = LHSType;
-  } else if (LHSBT || RHSBT) {
-    ResultType = CheckSizelessVectorOperands(LHS, RHS, QuestionLoc,
-                                             /*IsCompAssign*/ false,
-                                             ArithConvKind::Conditional);
-    if (ResultType.isNull())
-      return QualType();
-  } else {
-    // Both are scalar so splat
-    QualType ResultElementTy;
-    LHSType = LHSType.getCanonicalType().getUnqualifiedType();
-    RHSType = RHSType.getCanonicalType().getUnqualifiedType();
-
-    if (Context.hasSameType(LHSType, RHSType))
-      ResultElementTy = LHSType;
-    else
-      ResultElementTy = UsualArithmeticConversions(LHS, RHS, QuestionLoc,
-                                                   ArithConvKind::Conditional);
-
-    if (ResultElementTy->isEnumeralType()) {
-      Diag(QuestionLoc, diag::err_conditional_vector_operand_type)
-          << ResultElementTy;
-      return QualType();
-    }
-
-    ResultType = Context.getScalableVectorType(
-        ResultElementTy, CondElementCount.getKnownMinValue());
-
-    LHS = ImpCastExprToType(LHS.get(), ResultType, CK_VectorSplat);
-    RHS = ImpCastExprToType(RHS.get(), ResultType, CK_VectorSplat);
-  }
-
-  assert(!ResultType.isNull() && ResultType->isSveVLSBuiltinType() &&
-         "Result should have been a vector type");
-  auto *ResultBuiltinTy = ResultType->castAs<BuiltinType>();
-  QualType ResultElementTy = ResultBuiltinTy->getSveEltType(Context);
-  llvm::ElementCount ResultElementCount =
-      Context.getBuiltinVectorTypeInfo(ResultBuiltinTy).EC;
-
-  if (ResultElementCount != CondElementCount) {
-    Diag(QuestionLoc, diag::err_conditional_vector_size)
-        << CondType << ResultType;
-    return QualType();
-  }
-
-  if (Context.getTypeSize(ResultElementTy) !=
-      Context.getTypeSize(CondElementTy)) {
-    Diag(QuestionLoc, diag::err_conditional_vector_element_size)
-        << CondType << ResultType;
-    return QualType();
-  }
-
-  return ResultType;
-}
-
 QualType Sema::CXXCheckConditionalOperands(ExprResult &Cond, ExprResult &LHS,
                                            ExprResult &RHS, ExprValueKind &VK,
                                            ExprObjectKind &OK,
@@ -5857,14 +5837,10 @@ QualType Sema::CXXCheckConditionalOperands(ExprResult &Cond, ExprResult &LHS,
   bool IsVectorConditional =
       isValidVectorForConditionalCondition(Context, Cond.get()->getType());
 
-  bool IsSizelessVectorConditional =
-      isValidSizelessVectorForConditionalCondition(Context,
-                                                   Cond.get()->getType());
-
   // C++11 [expr.cond]p1
   //   The first expression is contextually converted to bool.
   if (!Cond.get()->isTypeDependent()) {
-    ExprResult CondRes = IsVectorConditional || IsSizelessVectorConditional
+    ExprResult CondRes = IsVectorConditional
                              ? DefaultFunctionArrayLvalueConversion(Cond.get())
                              : CheckCXXBooleanCondition(Cond.get());
     if (CondRes.isInvalid())
@@ -5932,9 +5908,6 @@ QualType Sema::CXXCheckConditionalOperands(ExprResult &Cond, ExprResult &LHS,
   // Neither is void.
   if (IsVectorConditional)
     return CheckVectorConditionalTypes(Cond, LHS, RHS, QuestionLoc);
-
-  if (IsSizelessVectorConditional)
-    return CheckSizelessVectorConditionalTypes(Cond, LHS, RHS, QuestionLoc);
 
   // WebAssembly tables are not allowed as conditional LHS or RHS.
   if (LTy->isWebAssemblyTableType() || RTy->isWebAssemblyTableType()) {
@@ -6660,8 +6633,7 @@ ExprResult Sema::MaybeBindToTemporary(Expr *E) {
 
   // That should be enough to guarantee that this type is complete, if we're
   // not processing a decltype expression.
-  CXXRecordDecl *RD =
-      cast<CXXRecordDecl>(RT->getOriginalDecl())->getDefinitionOrSelf();
+  auto *RD = cast<CXXRecordDecl>(RT->getDecl())->getDefinitionOrSelf();
   if (RD->isInvalidDecl() || RD->isDependentContext())
     return E;
 
@@ -7928,21 +7900,27 @@ Sema::BuildExprRequirement(
     //     be satisfied.
     TemplateParameterList *TPL =
         ReturnTypeRequirement.getTypeConstraintTemplateParameterList();
-    QualType MatchedType =
-        Context.getReferenceQualifiedType(E).getCanonicalType();
+    QualType MatchedType = Context.getReferenceQualifiedType(E);
     llvm::SmallVector<TemplateArgument, 1> Args;
     Args.push_back(TemplateArgument(MatchedType));
 
     auto *Param = cast<TemplateTypeParmDecl>(TPL->getParam(0));
 
-    MultiLevelTemplateArgumentList MLTAL(Param, Args, /*Final=*/false);
+    MultiLevelTemplateArgumentList MLTAL(Param, Args, /*Final=*/true);
     MLTAL.addOuterRetainedLevels(TPL->getDepth());
     const TypeConstraint *TC = Param->getTypeConstraint();
     assert(TC && "Type Constraint cannot be null here");
     auto *IDC = TC->getImmediatelyDeclaredConstraint();
     assert(IDC && "ImmediatelyDeclaredConstraint can't be null here.");
     ExprResult Constraint = SubstExpr(IDC, MLTAL);
-    if (Constraint.isInvalid()) {
+    bool HasError = Constraint.isInvalid();
+    if (!HasError) {
+      SubstitutedConstraintExpr =
+          cast<ConceptSpecializationExpr>(Constraint.get());
+      if (SubstitutedConstraintExpr->getSatisfaction().ContainsErrors)
+        HasError = true;
+    }
+    if (HasError) {
       return new (Context) concepts::ExprRequirement(
           createSubstDiagAt(IDC->getExprLoc(),
                             [&](llvm::raw_ostream &OS) {
@@ -7951,8 +7929,6 @@ Sema::BuildExprRequirement(
                             }),
           IsSimple, NoexceptLoc, ReturnTypeRequirement);
     }
-    SubstitutedConstraintExpr =
-        cast<ConceptSpecializationExpr>(Constraint.get());
     if (!SubstitutedConstraintExpr->isSatisfied())
       Status = concepts::ExprRequirement::SS_ConstraintsNotSatisfied;
   }
@@ -7989,7 +7965,9 @@ concepts::Requirement *Sema::ActOnNestedRequirement(Expr *Constraint) {
 concepts::NestedRequirement *
 Sema::BuildNestedRequirement(Expr *Constraint) {
   ConstraintSatisfaction Satisfaction;
+  LocalInstantiationScope Scope(*this);
   if (!Constraint->isInstantiationDependent() &&
+      !Constraint->isValueDependent() &&
       CheckConstraintSatisfaction(nullptr, AssociatedConstraint(Constraint),
                                   /*TemplateArgs=*/{},
                                   Constraint->getSourceRange(), Satisfaction))

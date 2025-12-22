@@ -21,7 +21,7 @@ namespace clang::tidy::portability {
 /// compiler.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/portability/template-virtual-member-function.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/portability/template-virtual-member-function.html
 class TemplateVirtualMemberFunctionCheck : public ClangTidyCheck {
 public:
   TemplateVirtualMemberFunctionCheck(StringRef Name, ClangTidyContext *Context)

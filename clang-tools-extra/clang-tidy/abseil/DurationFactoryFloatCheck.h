@@ -19,7 +19,7 @@ namespace clang::tidy::abseil {
 /// component.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/abseil/duration-factory-float.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/abseil/duration-factory-float.html
 class DurationFactoryFloatCheck : public ClangTidyCheck {
 public:
   DurationFactoryFloatCheck(StringRef Name, ClangTidyContext *Context)

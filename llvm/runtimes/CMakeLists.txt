@@ -34,6 +34,13 @@ function(get_compiler_rt_path path)
       return()
     endif()
   endforeach()
+
+  # If LLVM_BUILTIN_TARGETS is specified, we still need
+  # to locate the compiler-rt runtime to be able to build builtins.
+  # This supports bootstrapping builtins without compiler-rt.
+  if (LLVM_BUILTIN_TARGETS)
+    set(${path} "${CMAKE_CURRENT_SOURCE_DIR}/../../compiler-rt" PARENT_SCOPE)
+  endif()
 endfunction()
 
 include(LLVMExternalProjectUtils)
@@ -473,7 +480,6 @@ if(build_runtimes)
   if(LLVM_INCLUDE_TESTS)
     foreach(dep FileCheck
                 clang
-                clang-offload-packager
                 flang
                 count
                 lld
@@ -489,6 +495,7 @@ if(build_runtimes)
                 llvm-size
                 llvm-symbolizer
                 llvm-xray
+                llvm-offload-binary
                 not
                 obj2yaml
                 opt
@@ -548,7 +555,7 @@ if(build_runtimes)
       # that all .mod files are also properly build.
       list(APPEND extra_deps "flang" "module_files")
     endif()
-    foreach(dep opt llvm-link llvm-extract clang clang-offload-packager clang-nvlink-wrapper)
+    foreach(dep opt llvm-link llvm-extract clang llvm-offload-binary clang-nvlink-wrapper)
       if(TARGET ${dep})
         list(APPEND extra_deps ${dep})
       endif()
@@ -556,8 +563,8 @@ if(build_runtimes)
   endif()
   if(LLVM_LIBC_GPU_BUILD)
     list(APPEND extra_cmake_args "-DLLVM_LIBC_GPU_BUILD=ON")
-    if(TARGET clang-offload-packager)
-      list(APPEND extra_deps clang-offload-packager)
+    if(TARGET llvm-offload-binary)
+      list(APPEND extra_deps llvm-offload-binary)
     endif()
     if(TARGET clang-nvlink-wrapper)
       list(APPEND extra_deps clang-nvlink-wrapper)

@@ -15,7 +15,6 @@
 
 #include "llvm/Support/Compiler.h"
 #include <cinttypes>
-#include <type_traits>
 
 #include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/Support/Endian.h"

@@ -11,6 +11,7 @@
 #include "Context.h"
 #include "Floating.h"
 #include "Function.h"
+#include "InitMap.h"
 #include "Integral.h"
 #include "InterpBlock.h"
 #include "MemberPointer.h"
@@ -33,6 +34,7 @@ Pointer::Pointer(Block *Pointee, uint64_t BaseAndOffset)
 Pointer::Pointer(Block *Pointee, unsigned Base, uint64_t Offset)
     : Offset(Offset), StorageKind(Storage::Block) {
   assert((Base == RootPtrMark || Base % alignof(void *) == 0) && "wrong base");
+  assert(Base >= Pointee->getDescriptor()->getMetadataSize());
 
   BS = {Pointee, Base, nullptr, nullptr};
 
@@ -110,19 +112,21 @@ Pointer &Pointer::operator=(const Pointer &P) {
   StorageKind = P.StorageKind;
   Offset = P.Offset;
 
-  if (P.isBlockPointer()) {
+  switch (StorageKind) {
+  case Storage::Int:
+    Int = P.Int;
+    break;
+  case Storage::Block:
     BS = P.BS;
 
     if (BS.Pointee)
       BS.Pointee->addPointer(this);
-  } else if (P.isIntegralPointer()) {
-    Int = P.Int;
-  } else if (P.isFunctionPointer()) {
+    break;
+  case Storage::Fn:
     Fn = P.Fn;
-  } else if (P.isTypeidPointer()) {
+    break;
+  case Storage::Typeid:
     Typeid = P.Typeid;
-  } else {
-    assert(false && "Unhandled storage kind");
   }
   return *this;
 }
@@ -147,19 +151,21 @@ Pointer &Pointer::operator=(Pointer &&P) {
   StorageKind = P.StorageKind;
   Offset = P.Offset;
 
-  if (P.isBlockPointer()) {
+  switch (StorageKind) {
+  case Storage::Int:
+    Int = P.Int;
+    break;
+  case Storage::Block:
     BS = P.BS;
 
     if (BS.Pointee)
       BS.Pointee->addPointer(this);
-  } else if (P.isIntegralPointer()) {
-    Int = P.Int;
-  } else if (P.isFunctionPointer()) {
+    break;
+  case Storage::Fn:
     Fn = P.Fn;
-  } else if (P.isTypeidPointer()) {
+    break;
+  case Storage::Typeid:
     Typeid = P.Typeid;
-  } else {
-    assert(false && "Unhandled storage kind");
   }
   return *this;
 }
@@ -358,13 +364,17 @@ void Pointer::print(llvm::raw_ostream &OS) const {
 }
 
 size_t Pointer::computeOffsetForComparison() const {
-  if (isIntegralPointer())
-    return asIntPointer().Value + Offset;
-  if (isTypeidPointer())
+  switch (StorageKind) {
+  case Storage::Int:
+    return Int.Value + Offset;
+  case Storage::Block:
+    // See below.
+    break;
+  case Storage::Fn:
+    return Fn.getIntegerRepresentation() + Offset;
+  case Storage::Typeid:
     return reinterpret_cast<uintptr_t>(asTypeidPointer().TypePtr) + Offset;
-
-  if (!isBlockPointer())
-    return Offset;
+  }
 
   size_t Result = 0;
   Pointer P = *this;
@@ -435,8 +445,7 @@ bool Pointer::isInitialized() const {
 
   if (isRoot() && BS.Base == sizeof(GlobalInlineDescriptor) &&
       Offset == BS.Base) {
-    const GlobalInlineDescriptor &GD =
-        *reinterpret_cast<const GlobalInlineDescriptor *>(block()->rawData());
+    const auto &GD = block()->getBlockDesc<GlobalInlineDescriptor>();
     return GD.InitState == GlobalInitState::Initialized;
   }
 
@@ -464,20 +473,19 @@ bool Pointer::isElementInitialized(unsigned Index) const {
 
   if (isRoot() && BS.Base == sizeof(GlobalInlineDescriptor) &&
       Offset == BS.Base) {
-    const GlobalInlineDescriptor &GD =
-        *reinterpret_cast<const GlobalInlineDescriptor *>(block()->rawData());
+    const auto &GD = block()->getBlockDesc<GlobalInlineDescriptor>();
     return GD.InitState == GlobalInitState::Initialized;
   }
 
   if (Desc->isPrimitiveArray()) {
-    InitMapPtr &IM = getInitMap();
-    if (!IM)
-      return false;
+    InitMapPtr IM = getInitMap();
 
-    if (IM->first)
+    if (IM.allInitialized())
       return true;
 
-    return IM->second->isElementInitialized(Index);
+    if (!IM.hasInitMap())
+      return false;
+    return IM->isElementInitialized(Index);
   }
   return isInitialized();
 }
@@ -490,8 +498,7 @@ void Pointer::initialize() const {
 
   if (isRoot() && BS.Base == sizeof(GlobalInlineDescriptor) &&
       Offset == BS.Base) {
-    GlobalInlineDescriptor &GD = *reinterpret_cast<GlobalInlineDescriptor *>(
-        asBlockPointer().Pointee->rawData());
+    auto &GD = BS.Pointee->getBlockDesc<GlobalInlineDescriptor>();
     GD.InitState = GlobalInitState::Initialized;
     return;
   }
@@ -517,34 +524,25 @@ void Pointer::initializeElement(unsigned Index) const {
   assert(Index < getFieldDesc()->getNumElems());
 
   InitMapPtr &IM = getInitMap();
-  if (!IM) {
-    const Descriptor *Desc = getFieldDesc();
-    IM = std::make_pair(false, std::make_shared<InitMap>(Desc->getNumElems()));
-  }
 
-  assert(IM);
-
-  // All initialized.
-  if (IM->first)
+  if (IM.allInitialized())
     return;
 
-  if (IM->second->initializeElement(Index)) {
-    IM->first = true;
-    IM->second.reset();
+  if (!IM.hasInitMap()) {
+    const Descriptor *Desc = getFieldDesc();
+    IM.setInitMap(new InitMap(Desc->getNumElems()));
   }
+  assert(IM.hasInitMap());
+
+  if (IM->initializeElement(Index))
+    IM.noteAllInitialized();
 }
 
 void Pointer::initializeAllElements() const {
   assert(getFieldDesc()->isPrimitiveArray());
   assert(isArrayRoot());
 
-  InitMapPtr &IM = getInitMap();
-  if (!IM) {
-    IM = std::make_pair(true, nullptr);
-  } else {
-    IM->first = true;
-    IM->second.reset();
-  }
+  getInitMap().noteAllInitialized();
 }
 
 bool Pointer::allElementsInitialized() const {
@@ -556,13 +554,12 @@ bool Pointer::allElementsInitialized() const {
 
   if (isRoot() && BS.Base == sizeof(GlobalInlineDescriptor) &&
       Offset == BS.Base) {
-    const GlobalInlineDescriptor &GD =
-        *reinterpret_cast<const GlobalInlineDescriptor *>(block()->rawData());
+    const auto &GD = block()->getBlockDesc<GlobalInlineDescriptor>();
     return GD.InitState == GlobalInitState::Initialized;
   }
 
-  InitMapPtr &IM = getInitMap();
-  return IM && IM->first;
+  InitMapPtr IM = getInitMap();
+  return IM.allInitialized();
 }
 
 void Pointer::activate() const {
@@ -743,7 +740,7 @@ std::optional<APValue> Pointer::toRValue(const Context &Ctx,
       assert(Record && "Missing record descriptor");
 
       bool Ok = true;
-      if (RT->getOriginalDecl()->isUnion()) {
+      if (RT->getDecl()->isUnion()) {
         const FieldDecl *ActiveField = nullptr;
         APValue Value;
         for (const auto &F : Record->fields()) {
@@ -886,8 +883,8 @@ std::optional<APValue> Pointer::toRValue(const Context &Ctx,
   return Result;
 }
 
-IntPointer IntPointer::atOffset(const ASTContext &ASTCtx,
-                                unsigned Offset) const {
+std::optional<IntPointer> IntPointer::atOffset(const ASTContext &ASTCtx,
+                                               unsigned Offset) const {
   if (!this->Desc)
     return *this;
   const Record *R = this->Desc->ElemRecord;
@@ -905,6 +902,9 @@ IntPointer IntPointer::atOffset(const ASTContext &ASTCtx,
     return *this;
 
   const FieldDecl *FD = F->Decl;
+  if (FD->getParent()->isInvalidDecl())
+    return std::nullopt;
+
   const ASTRecordLayout &Layout = ASTCtx.getASTRecordLayout(FD->getParent());
   unsigned FieldIndex = FD->getFieldIndex();
   uint64_t FieldOffset =

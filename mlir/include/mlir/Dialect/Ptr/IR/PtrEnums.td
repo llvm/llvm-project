@@ -79,4 +79,14 @@ def Ptr_PtrAddFlags : I32Enum<"PtrAddFlags", "Pointer add flags", [
   let cppNamespace = "::mlir::ptr";
 }
 
+//===----------------------------------------------------------------------===//
+// Ptr diff flags enum properties.
+//===----------------------------------------------------------------------===//
+
+def Ptr_PtrDiffFlags : I8BitEnum<"PtrDiffFlags", "Pointer difference flags", [
+    I8BitEnumCase<"none", 0>, I8BitEnumCase<"nuw", 1>, I8BitEnumCase<"nsw", 2>
+  ]> {
+  let cppNamespace = "::mlir::ptr";
+}
+
 #endif // PTR_ENUMS

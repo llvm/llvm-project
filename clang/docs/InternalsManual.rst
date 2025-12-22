@@ -10,7 +10,7 @@ Introduction
 
 This document describes some of the more important APIs and internal design
 decisions made in the Clang C front-end.  The purpose of this document is to
-both capture some of this high level information and also describe some of the
+both capture some of this high-level information and also describe some of the
 design decisions behind it.  This is meant for people interested in hacking on
 Clang, not for end-users.  The description below is categorized by libraries,
 and does not describe any of the clients of the libraries.
@@ -20,7 +20,7 @@ LLVM Support Library
 
 The LLVM ``libSupport`` library provides many underlying libraries and
 `data-structures <https://llvm.org/docs/ProgrammersManual.html>`_, including
-command line option processing, various containers and a system abstraction
+command line option processing, various containers, and a system abstraction
 layer, which is used for file system access.
 
 The Clang "Basic" Library
@@ -34,7 +34,7 @@ and information about the subset of the language being compiled for.
 Part of this infrastructure is specific to C (such as the ``TargetInfo``
 class), other parts could be reused for other non-C-based languages
 (``SourceLocation``, ``SourceManager``, ``Diagnostics``, ``FileManager``).
-When and if there is future demand we can figure out if it makes sense to
+When and if there is future demand, we can figure out if it makes sense to
 introduce a new library, move the general classes somewhere else, or introduce
 some other solution.
 
@@ -96,7 +96,7 @@ The ``EXTENSION`` and ``EXTWARN`` severities are used for extensions to the
 language that Clang accepts.  This means that Clang fully understands and can
 represent them in the AST, but we produce diagnostics to tell the user their
 code is non-portable.  The difference is that the former are ignored by
-default, and the later warn by default.  The ``WARNING`` severity is used for
+default, and the latter warn by default.  The ``WARNING`` severity is used for
 constructs that are valid in the currently selected source language but that
 are dubious in some way.  The ``REMARK`` severity provides generic information
 about the compilation that is not necessarily related to any dubious code.  The
@@ -106,7 +106,7 @@ These *severities* are mapped into a smaller set (the ``Diagnostic::Level``
 enum, {``Ignored``, ``Note``, ``Remark``, ``Warning``, ``Error``, ``Fatal``}) of
 output
 *levels* by the diagnostics subsystem based on various configuration options.
-Clang internally supports a fully fine grained mapping mechanism that allows
+Clang internally supports a fully fine-grained mapping mechanism that allows
 you to map almost any diagnostic to the output level that you want.  The only
 diagnostics that cannot be mapped are ``NOTE``\ s, which always follow the
 severity of the previously emitted diagnostic and ``ERROR``\ s, which can only
@@ -116,18 +116,18 @@ example).
 Diagnostic mappings are used in many ways.  For example, if the user specifies
 ``-pedantic``, ``EXTENSION`` maps to ``Warning``, if they specify
 ``-pedantic-errors``, it turns into ``Error``.  This is used to implement
-options like ``-Wunused_macros``, ``-Wundef`` etc.
+options like ``-Wunused_macros``, ``-Wundef``, etc.
 
 Mapping to ``Fatal`` should only be used for diagnostics that are considered so
 severe that error recovery won't be able to recover sensibly from them (thus
-spewing a ton of bogus errors).  One example of this class of error are failure
+spewing a ton of bogus errors).  One example of this class of error is failure
 to ``#include`` a file.
 
 Diagnostic Wording
 ^^^^^^^^^^^^^^^^^^
 The wording used for a diagnostic is critical because it is the only way for a
 user to know how to correct their code. Use the following suggestions when
-wording a diagnostic.
+wording a diagnostic:
 
 * Diagnostics in Clang do not start with a capital letter and do not end with
   punctuation.
@@ -162,7 +162,7 @@ wording a diagnostic.
   cannot be null in well-defined C++ code``.
 * Prefer diagnostic wording without contractions whenever possible. The single
   quote in a contraction can be visually distracting due to its use with
-  syntactic constructs and contractions can be harder to understand for non-
+  syntactic constructs, and contractions can be harder to understand for non-
   native English speakers.
 
 The Format String
@@ -195,14 +195,14 @@ the C++ code that :ref:`produces them <internals-producing-diag>`, and are
 referenced by ``%0`` .. ``%9``.  If you have more than 10 arguments to your
 diagnostic, you are doing something wrong :).  Unlike ``printf``, there is no
 requirement that arguments to the diagnostic end up in the output in the same
-order as they are specified, you could have a format string with "``%1 %0``"
+order as they are specified; you could have a format string with "``%1 %0``"
 that swaps them, for example.  The text in between the percent and digit are
 formatting instructions.  If there are no instructions, the argument is just
 turned into a string and substituted in.
 
 Here are some "best practices" for writing the English format string:
 
-* Keep the string short.  It should ideally fit in the 80 column limit of the
+* Keep the string short.  It should ideally fit in the 80-column limit of the
   ``DiagnosticKinds.td`` file.  This avoids the diagnostic wrapping when
   printed, and forces you to think about the important point you are conveying
   with the diagnostic.
@@ -227,7 +227,7 @@ used to achieve this sort of thing in a localizable way, see below.
 Formatting a Diagnostic Argument
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Arguments to diagnostics are fully typed internally, and come from a couple
+Arguments to diagnostics are fully typed internally and come from a couple of
 different classes: integers, types, names, and random strings.  Depending on
 the class of the argument, it can be optionally formatted in different ways.
 This gives the ``DiagnosticConsumer`` information about what the argument means
@@ -268,7 +268,7 @@ Description:
   This format specifier is used to merge multiple related diagnostics together
   into one common one, without requiring the difference to be specified as an
   English string argument.  Instead of specifying the string, the diagnostic
-  gets an integer argument and the format string selects the numbered option.
+  gets an integer argument, and the format string selects the numbered option.
   In this case, the "``%0``" value must be an integer in the range [0..2].  If
   it is 0, it prints "unary", if it is 1 it prints "binary" if it is 2, it
   prints "unary or binary".  This allows other language translations to
@@ -287,7 +287,7 @@ Description:
   additionally generates a namespace, enumeration, and enumerator list based on
   the format string given. In the above case, a namespace is generated named
   ``FrobbleKind`` that has an unscoped enumeration with the enumerators
-  ``VarDecl`` and ``FuncDecl`` which correspond to the values 0 and 1. This
+  ``VarDecl`` and ``FuncDecl``, which correspond to the values 0 and 1. This
   permits a clearer use of the ``Diag`` in source code, as the above could be
   called as: ``Diag(Loc, diag::frobble) << diag::FrobbleKind::VarDecl``.
 
@@ -407,7 +407,7 @@ Example:
     def note_ovl_candidate : Note<
       "candidate %sub{select_ovl_candidate}3,2,1 not viable">;
 
-  and will act as if it was written
+  and will act as if it were written
   ``"candidate %select{function|constructor}3%select{| template| %1}2 not viable"``.
 Description:
   This format specifier is used to avoid repeating strings verbatim in multiple
@@ -447,7 +447,7 @@ For example, the binary expression error comes from code like this:
       << lex->getType() << rex->getType()
       << lex->getSourceRange() << rex->getSourceRange();
 
-This shows that use of the ``Diag`` method: it takes a location (a
+This shows the use of the ``Diag`` method: it takes a location (a
 :ref:`SourceLocation <SourceLocation>` object) and a diagnostic enum value
 (which matches the name from ``Diagnostic*Kinds.td``).  If the diagnostic takes
 arguments, they are specified with the ``<<`` operator: the first argument
@@ -586,7 +586,7 @@ Strangely enough, the ``SourceLocation`` class represents a location within the
 source code of the program.  Important design points include:
 
 #. ``sizeof(SourceLocation)`` must be extremely small, as these are embedded
-   into many AST nodes and are passed around often.  Currently it is 32 bits.
+   into many AST nodes and are passed around often.  Currently, it is 32 bits.
 #. ``SourceLocation`` must be a simple value object that can be efficiently
    copied.
 #. We should be able to represent a source location for any byte of any input
@@ -605,7 +605,7 @@ In practice, the ``SourceLocation`` works together with the ``SourceManager``
 class to encode two pieces of information about a location: its spelling
 location and its expansion location.  For most tokens, these will be the
 same.  However, for a macro expansion (or tokens that came from a ``_Pragma``
-directive) these will describe the location of the characters corresponding to
+directive), these will describe the location of the characters corresponding to
 the token and the location where the token was used (i.e., the macro
 expansion point or the location of the ``_Pragma`` itself).
 
@@ -621,7 +621,7 @@ token.  This concept maps directly to the "spelling location" for the token.
 .. mostly taken from https://discourse.llvm.org/t/code-ranges-of-tokens-ast-elements/16893/2
 
 Clang represents most source ranges by [first, last], where "first" and "last"
-each point to the beginning of their respective tokens.  For example consider
+each point to the beginning of their respective tokens.  For example, consider
 the ``SourceRange`` of the following statement:
 
 .. code-block:: text
@@ -632,7 +632,7 @@ the ``SourceRange`` of the following statement:
 To map from this representation to a character-based representation, the "last"
 location needs to be adjusted to point to (or past) the end of that token with
 either ``Lexer::MeasureTokenLength()`` or ``Lexer::getLocForEndOfToken()``.  For
-the rare cases where character-level source ranges information is needed we use
+the rare cases where character-level source ranges information is needed, we use
 the ``CharSourceRange`` class.
 
 The Driver Library
@@ -651,23 +651,23 @@ The Frontend Library
 ====================
 
 The Frontend library contains functionality useful for building tools on top of
-the Clang libraries, for example several methods for outputting diagnostics.
+the Clang libraries, including several methods for outputting diagnostics.
 
 Compiler Invocation
 -------------------
 
 One of the classes provided by the Frontend library is ``CompilerInvocation``,
-which holds information that describe current invocation of the Clang ``-cc1``
+which holds information that describes the current invocation of the Clang ``-cc1``
 frontend. The information typically comes from the command line constructed by
 the Clang driver or from clients performing custom initialization. The data
 structure is split into logical units used by different parts of the compiler,
-for example ``PreprocessorOptions``, ``LanguageOptions`` or ``CodeGenOptions``.
+for example, ``PreprocessorOptions``, ``LanguageOptions``, or ``CodeGenOptions``.
 
 Command Line Interface
 ----------------------
 
 The command line interface of the Clang ``-cc1`` frontend is defined alongside
-the driver options in ``clang/Driver/Options.td``. The information making up an
+the driver options in ``clang/Options/Options.td``. The information making up an
 option definition includes its prefix and name (for example ``-std=``), form and
 position of the option value, help text, aliases and more. Each option may
 belong to a certain group and can be marked with zero or more flags. Options
@@ -698,7 +698,7 @@ Adding new Command Line Option
 ------------------------------
 
 When adding a new command line option, the first place of interest is the header
-file declaring the corresponding options class (e.g. ``CodeGenOptions.h`` for
+file declaring the corresponding options class (e.g., ``CodeGenOptions.h`` for
 command line option that affects the code generation). Create new member
 variable for the option value:
 
@@ -712,7 +712,7 @@ variable for the option value:
     }
 
 Next, declare the command line interface of the option in the tablegen file
-``clang/include/clang/Driver/Options.td``. This is done by instantiating the
+``clang/include/clang/Options/Options.td``. This is done by instantiating the
 ``Option`` class (defined in ``llvm/include/llvm/Option/OptParser.td``). The
 instance is typically created through one of the helper classes that encode the
 acceptable ways to specify the option value on the command line:
@@ -739,7 +739,7 @@ The helper classes take a list of acceptable prefixes of the option (e.g.
 Then, specify additional attributes via mix-ins:
 
 * ``HelpText`` holds the text that will be printed besides the option name when
-  the user requests help (e.g. via ``clang --help``).
+  the user requests help (e.g., via ``clang --help``).
 * ``Group`` specifies the "category" of options this option belongs to. This is
   used by various tools to categorize and sometimes filter options.
 * ``Flags`` may contain "tags" associated with the option. These may affect how
@@ -779,7 +779,7 @@ use them to construct the ``-cc1`` job:
     }
 
 The last step is implementing the ``-cc1`` command line argument
-parsing/generation that initializes/serializes the option class (in our case
+parsing/generation that initializes/serializes the option class (in our case,
 ``CodeGenOptions``) stored within ``CompilerInvocation``. This can be done
 automatically by using the marshalling annotations on the option definition:
 
@@ -906,7 +906,7 @@ command line:
                                   SHOULD_PARSE, KEYPATH, DEFAULT_VALUE,          \
                                   IMPLIED_CHECK, IMPLIED_VALUE, NORMALIZER,      \
                                   MERGER, TABLE_INDEX)
-  #include "clang/Driver/Options.inc"
+  #include "clang/Options/Options.inc"
   #undef LANG_OPTION_WITH_MARSHALLING
 
     // ...
@@ -925,7 +925,7 @@ command line:
     GENERATE_OPTION_WITH_MARSHALLING(                                            \
         Args, SA, KIND, FLAGS, SPELLING, ALWAYS_EMIT, KEYPATH, DEFAULT_VALUE,    \
         IMPLIED_CHECK, IMPLIED_VALUE, DENORMALIZER, EXTRACTOR, TABLE_INDEX)
-  #include "clang/Driver/Options.inc"
+  #include "clang/Options/Options.inc"
   #undef LANG_OPTION_WITH_MARSHALLING
 
     // ...
@@ -946,13 +946,13 @@ described below. All of them take a key path argument and possibly other
 information required for parsing or generating the command line argument.
 
 **Note:** The marshalling infrastructure is not intended for driver-only
-options. Only options of the ``-cc1`` frontend need to be marshalled to/from
+options. Only options of the ``-cc1`` frontend need to be marshalled to/from a
 ``CompilerInvocation`` instance.
 
 **Positive Flag**
 
 The key path defaults to ``false`` and is set to ``true`` when the flag is
-present on command line.
+present on the command line.
 
 .. code-block:: text
 
@@ -963,7 +963,7 @@ present on command line.
 **Negative Flag**
 
 The key path defaults to ``true`` and is set to ``false`` when the flag is
-present on command line.
+present on the command line.
 
 .. code-block:: text
 
@@ -1041,7 +1041,7 @@ and the result is assigned to the key path on success.
 
 The key path defaults to the value specified in ``MarshallingInfoEnum`` prefixed
 by the contents of ``NormalizedValuesScope`` and ``::``. This ensures correct
-reference to an enum case is formed even if the enum resides in different
+reference to an enum case is formed even if the enum resides in a different
 namespace or is an enum class. If the value present on the command line does not
 match any of the comma-separated values from ``Values``, an error diagnostic is
 issued. Otherwise, the corresponding element from ``NormalizedValues`` at the
@@ -1410,7 +1410,7 @@ or a clear engineering tradeoff -- should desugar minimally and wrap the result
 in a construct representing the original source form.
 
 For example, ``CXXForRangeStmt`` directly represents the syntactic form of a
-range-based for statement, but also holds a semantic representation of the
+range-based for statement but also holds a semantic representation of the
 range declaration and iterator declarations. It does not contain a
 fully-desugared ``ForStmt``, however.
 
@@ -1425,7 +1425,7 @@ with the same or similar semantics.
 The ``Type`` class and its subclasses
 -------------------------------------
 
-The ``Type`` class (and its subclasses) are an important part of the AST.
+The ``Type`` class (and its subclasses) is an important part of the AST.
 Types are accessed through the ``ASTContext`` class, which implicitly creates
 and uniques them as they are needed.  Types have a couple of non-obvious
 features: 1) they do not capture type qualifiers like ``const`` or ``volatile``
@@ -1474,7 +1474,7 @@ various operators (for example, the type of ``*Y`` is "``foo``", not
 is an instance of the ``TypedefType`` class, which indicates that the type of
 these expressions is a typedef for "``foo``".
 
-Representing types like this is great for diagnostics, because the
+Representing types like this is great for diagnostics because the
 user-specified type is always immediately available.  There are two problems
 with this: first, various semantic checks need to make judgements about the
 *actual structure* of a type, ignoring typedefs.  Second, we need an efficient
@@ -1521,7 +1521,7 @@ know it exists.  To continue the example, the result type of the indirection
 operator is the pointee type of the subexpression.  In order to determine the
 type, we need to get the instance of ``PointerType`` that best captures the
 typedef information in the program.  If the type of the expression is literally
-a ``PointerType``, we can return that, otherwise we have to dig through the
+a ``PointerType``, we can return that; otherwise, we have to dig through the
 typedefs to find the pointer type.  For example, if the subexpression had type
 "``foo*``", we could return that type as the result.  If the subexpression had
 type "``bar``", we want to return "``foo*``" (note that we do *not* want
@@ -1552,7 +1552,7 @@ that sets a bit), and remove one or more type qualifiers (just return a
 ``QualType`` with the bitfield set to empty).
 
 Further, because the bits are stored outside of the type itself, we do not need
-to create duplicates of types with different sets of qualifiers (i.e. there is
+to create duplicates of types with different sets of qualifiers (i.e., there is
 only a single heap allocated "``int``" type: "``const int``" and "``volatile
 const int``" both point to the same heap allocated "``int``" type).  This
 reduces the heap size used to represent bits and also means we do not have to
@@ -1972,7 +1972,7 @@ and optimize code for it, but it's used as parsing continues to detect further
 errors in the input. Clang-based tools also depend on such ASTs, and IDEs in
 particular benefit from a high-quality AST for broken code.
 
-In presence of errors, clang uses a few error-recovery strategies to present the
+In the presence of errors, clang uses a few error-recovery strategies to present the
 broken code in the AST:
 
 - correcting errors: in cases where clang is confident about the fix, it
@@ -1981,7 +1981,7 @@ broken code in the AST:
   provide more accurate subsequent diagnostics. Typo correction is a typical
   example.
 - representing invalid node: the invalid node is preserved in the AST in some
-  form, e.g. when the "declaration" part of the declaration contains semantic
+  form, e.g., when the "declaration" part of the declaration contains semantic
   errors, the Decl node is marked as invalid.
 - dropping invalid node: this often happens for errors that we don’t have
   graceful recovery. Prior to Recovery AST, a mismatched-argument function call
@@ -1994,9 +1994,9 @@ for broken code.
 Recovery AST
 ^^^^^^^^^^^^
 
-The idea of Recovery AST is to use recovery nodes which act as a placeholder to
+The idea of Recovery AST is to use recovery nodes, which act as a placeholder to
 maintain the rough structure of the parsing tree, preserve locations and
-children but have no language semantics attached to them.
+children, but have no language semantics attached to them.
 
 For example, consider the following mismatched function call:
 
@@ -2031,10 +2031,10 @@ With Recovery AST, the AST looks like:
           `-DeclRefExpr <col:9> 'int' lvalue ParmVar 'abc' 'int'
 
 
-An alternative is to use existing Exprs, e.g. CallExpr for the above example.
-This would capture more call details (e.g. locations of parentheses) and allow
+An alternative is to use existing Exprs, e.g., CallExpr for the above example.
+This would capture more call details (e.g., locations of parentheses) and allow
 it to be treated uniformly with valid CallExprs. However, jamming the data we
-have into CallExpr forces us to weaken its invariants, e.g. arg count may be
+have into CallExpr forces us to weaken its invariants, e.g., arg count may be
 wrong. This would introduce a huge burden on consumers of the AST to handle such
 "impossible" cases. So when we're representing (rather than correcting) errors,
 we use a distinct recovery node type with extremely weak invariants instead.
@@ -2048,7 +2048,7 @@ Types and dependence
 ^^^^^^^^^^^^^^^^^^^^
 
 ``RecoveryExpr`` is an ``Expr``, so it must have a type. In many cases the true
-type can't really be known until the code is corrected (e.g. a call to a
+type can't really be known until the code is corrected (e.g., a call to a
 function that doesn't exist). And it means that we can't properly perform type
 checks on some containing constructs, such as ``return 42 + unknownFunction()``.
 
@@ -2058,7 +2058,7 @@ mean dependence on a template parameter or how an error is repaired. The
 ``DependentTy``, and this suppresses type-based analysis in the same way it
 would inside a template.
 
-In cases where we are confident about the concrete type (e.g. the return type
+In cases where we are confident about the concrete type (e.g., the return type
 for a broken non-overloaded function call), the ``RecoveryExpr`` will have this
 type. This allows more code to be typechecked, and produces a better AST and
 more diagnostics. For example:
@@ -2071,7 +2071,7 @@ more diagnostics. For example:
 Whether or not the ``RecoveryExpr`` has a dependent type, it is always
 considered value-dependent, because its value isn't well-defined until the error
 is resolved. Among other things, this means that clang doesn't emit more errors
-where a RecoveryExpr is used as a constant (e.g. array size), but also won't try
+where a RecoveryExpr is used as a constant (e.g., array size), but also won't try
 to evaluate it.
 
 ContainsErrors bit
@@ -2122,7 +2122,7 @@ cycles. One example of a cycle is the connection between a
 ``ClassTemplateDecl`` and its "templated" ``CXXRecordDecl``. The *templated*
 ``CXXRecordDecl`` represents all the fields and methods inside the class
 template, while the ``ClassTemplateDecl`` holds the information which is
-related to being a template, i.e. template arguments, etc. We can get the
+related to being a template, i.e., template arguments, etc. We can get the
 *templated* class (the ``CXXRecordDecl``) of a ``ClassTemplateDecl`` with
 ``ClassTemplateDecl::getTemplatedDecl()``. And we can get back a pointer of the
 "described" class template from the *templated* class:
@@ -2145,7 +2145,7 @@ we skip the copy.
 The informal definition of structural equivalency is the following:
 Two nodes are **structurally equivalent** if they are
 
-- builtin types and refer to the same type, e.g. ``int`` and ``int`` are
+- builtin types and refer to the same type, e.g., ``int`` and ``int`` are
   structurally equivalent,
 - function types and all their parameters have structurally equivalent types,
 - record types and all their fields in order of their definition have the same
@@ -2162,7 +2162,7 @@ mentioned properties, we have to check for equivalent template
 parameters/arguments, etc.
 
 The structural equivalent check can be and is used independently from the
-ASTImporter, e.g. the ``clang::Sema`` class uses it also.
+ASTImporter, e.g., the ``clang::Sema`` class uses it also.
 
 The equivalence of nodes may depend on the equivalency of other pairs of nodes.
 Thus, the check is implemented as a parallel graph traversal. We traverse
@@ -2195,7 +2195,7 @@ Redeclaration Chains
 ^^^^^^^^^^^^^^^^^^^^
 
 The early version of the ``ASTImporter``'s merge mechanism squashed the
-declarations, i.e. it aimed to have only one declaration instead of maintaining
+declarations, i.e., it aimed to have only one declaration instead of maintaining
 a whole redeclaration chain. This early approach simply skipped importing a
 function prototype, but it imported a definition. To demonstrate the problem
 with this approach let's consider an empty "to" context and the following
@@ -2225,7 +2225,7 @@ another definition, we will use the existing definition. However, we can import
 prototype(s): we chain the newly imported prototype(s) to the existing
 definition. Whenever we import a new prototype from a third context, that will
 be added to the end of the redeclaration chain. This may result in long
-redeclaration chains in certain cases, e.g. if we import from several
+redeclaration chains in certain cases, e.g., if we import from several
 translation units which include the same header with the prototype.
 
 .. Squashing prototypes
@@ -2290,7 +2290,7 @@ Traversal during the Import
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The node specific import mechanisms are implemented in
-``ASTNodeImporter::VisitNode()`` functions, e.g. ``VisitFunctionDecl()``.
+``ASTNodeImporter::VisitNode()`` functions, e.g., ``VisitFunctionDecl()``.
 When we import a declaration then first we import everything which is needed to
 call the constructor of that declaration node. Everything which can be set
 later is set after the node is created. For example, in case of  a
@@ -2351,7 +2351,7 @@ different "from" contexts; in this case, they have to share the associated
 errors of the "to" context.
 
 When an error happens, that propagates through the call stack, through all the
-dependant nodes. However, in case of dependency cycles, this is not enough,
+dependent nodes. However, in case of dependency cycles, this is not enough,
 because we strive to mark the erroneous nodes so clients can act upon. In those
 cases, we have to keep track of the errors for those nodes which are
 intermediate nodes of a cycle.
@@ -2490,7 +2490,7 @@ In case of LLDB, an implementation of the ``ExternalASTSource`` interface is
 attached to the AST context which is related to the parsed expression. This
 implementation of the ``ExternalASTSource`` interface is realized with the help
 of the ``ASTImporter`` class. This way, LLDB can reuse Clang's parsing
-machinery while synthesizing the underlying AST from the debug data (e.g. from
+machinery while synthesizing the underlying AST from the debug data (e.g., from
 DWARF). From the view of the ``ASTImporter`` this means both the "to" and the
 "from" context may have declaration contexts with external lexical storage. If
 a ``DeclContext`` in the "to" AST context has external lexical storage then we
@@ -2573,7 +2573,7 @@ conflict error (ODR violation in C++). In this case, we return with an
 clients of the ``ASTImporter`` may require a different, perhaps less
 conservative and more liberal error handling strategy.
 
-E.g. static analysis clients may benefit if the node is created even if there
+E.g., static analysis clients may benefit if the node is created even if there
 is a name conflict. During the CTU analysis of certain projects, we recognized
 that there are global declarations which collide with declarations from other
 translation units, but they are not referenced outside from their translation
@@ -2858,6 +2858,67 @@ The Sema Library
 This library is called by the :ref:`Parser library <Parser>` during parsing to
 do semantic analysis of the input.  For valid programs, Sema builds an AST for
 parsed constructs.
+
+
+Concept Satisfaction Checking and Subsumption
+---------------------------------------------
+
+As per the C++ standard, constraints are `normalized <https://eel.is/c++draft/temp.constr.normal>`_
+and the normal form is used both for subsumption, and constraint checking.
+Both depend on a parameter mapping that substitutes lazily. In particular,
+we should not substitute in unused arguments.
+
+Clang follows the order of operations prescribed by the standard.
+
+Normalization happens prior to satisfaction and subsumption
+and is handled by ``NormalizedConstraint``.
+
+Clang preserves in the normalized form intermediate concept-ids
+(``ConceptIdConstraint``) This is used for diagnostics only and no substitution
+happens in a ConceptIdConstraint if its expression is satisfied.
+
+The normal form of the associated constraints of a declaration is cached in
+Sema::NormalizationCache such that it is only computed once.
+
+A ``NormalizedConstraint`` is a recursive data structure, where each node
+contains a parameter mapping, represented by the indexes of all parameter
+being used.
+
+Checking satisfaction is done by ``ConstraintSatisfactionChecker``, recursively
+walking ``NormalizedConstraint``. At each level, we substitute the outermost
+level of the template arguments referenced in the parameter mapping of a
+normalized expression (``MultiLevelTemplateArgumentList``).
+
+For the following example,
+
+.. code-block:: c++
+
+  template <typename T>
+  concept A = __is_same(T, int);
+
+  template <typename U>
+  concept B = A<U> && __is_same(U, int);
+
+The normal form of B is
+
+.. code-block:: c++
+
+    __is_same(T, int) /*T->U, innermost level*/
+ && __is_same(U, int) {U->U} /*T->U, outermost level*/
+
+After substitution in the mapping, we substitute in the constraint expression
+using that copy of the ``MultiLevelTemplateArgumentList``, and then evaluate it.
+
+Because this is expensive, it is cached in
+``UnsubstitutedConstraintSatisfactionCache``.
+
+Any error during satisfaction is recorded in ``ConstraintSatisfaction``.
+for nested requirements, ``ConstraintSatisfaction`` is stored (including
+diagnostics) in the AST, which is something we might want to improve.
+
+When an atomic constraint is not satisfied, we try to substitute into any
+enclosing concept-id using the same mechanism described above, for
+diagnostics purpose, and inject that in the ``ConstraintSatisfaction``.
 
 .. _CodeGen:
 
@@ -3523,7 +3584,7 @@ be specified by appending a ``+`` to the number. For example:
   void f(); // expected-note 0+ {{previous declaration is here}}
   void g(); // expected-note 1+ {{previous declaration is here}}
 
-In the first example, the diagnostic becomes optional, i.e. it will be
+In the first example, the diagnostic becomes optional, i.e., it will be
 swallowed if it occurs, but will not generate an error if it does not occur. In
 the second example, the diagnostic must occur at least once. As a short-hand,
 "one or more" can be specified simply by ``+``. For example:

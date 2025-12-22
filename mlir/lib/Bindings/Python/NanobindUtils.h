@@ -19,6 +19,7 @@
 #include "llvm/Support/raw_ostream.h"
 
 #include <string>
+#include <typeinfo>
 #include <variant>
 
 template <>
@@ -276,7 +277,7 @@ protected:
   /// Returns the element at the given slice index. Supports negative indices
   /// by taking elements in inverse order. Returns a nullptr object if out
   /// of bounds.
-  nanobind::typed<nanobind::object, ElementTy> getItem(intptr_t index) {
+  nanobind::object getItem(intptr_t index) {
     // Negative indices mean we count from the end.
     index = wrapIndex(index);
     if (index < 0) {
@@ -344,7 +345,16 @@ public:
 
   /// Binds the indexing and length methods in the Python class.
   static void bind(nanobind::module_ &m) {
-    auto clazz = nanobind::class_<Derived>(m, Derived::pyClassName)
+    const std::type_info &elemTy = typeid(ElementTy);
+    PyObject *elemTyInfo = nanobind::detail::nb_type_lookup(&elemTy);
+    assert(elemTyInfo &&
+           "expected nb_type_lookup to succeed for Sliceable elemTy");
+    nanobind::handle elemTyName = nanobind::detail::nb_type_name(elemTyInfo);
+    std::string sig = std::string("class ") + Derived::pyClassName +
+                      "(collections.abc.Sequence[" +
+                      nanobind::cast<std::string>(elemTyName) + "])";
+    auto clazz = nanobind::class_<Derived>(m, Derived::pyClassName,
+                                           nanobind::sig(sig.c_str()))
                      .def("__add__", &Sliceable::dunderAdd);
     Derived::bindDerived(clazz);
 
@@ -395,7 +405,6 @@ public:
   /// Hook for derived classes willing to bind more methods.
   static void bindDerived(ClassTy &) {}
 
-private:
   intptr_t startIndex;
   intptr_t length;
   intptr_t step;

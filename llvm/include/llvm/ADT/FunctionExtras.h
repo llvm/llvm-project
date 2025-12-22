@@ -39,7 +39,6 @@
 #include "llvm/Support/MemAlloc.h"
 #include "llvm/Support/type_traits.h"
 #include <cstring>
-#include <memory>
 #include <type_traits>
 
 namespace llvm {
@@ -58,10 +57,6 @@ template <typename FunctionT> class unique_function;
 
 namespace detail {
 
-template <typename T>
-using EnableIfTrivial =
-    std::enable_if_t<std::is_trivially_move_constructible<T>::value &&
-                     std::is_trivially_destructible<T>::value>;
 template <typename CallableT, typename ThisT>
 using EnableUnlessSameType =
     std::enable_if_t<!std::is_same<remove_cvref_t<CallableT>, ThisT>::value>;
@@ -94,13 +89,12 @@ protected:
   template <typename T> struct AdjustedParamTBase {
     static_assert(!std::is_reference<T>::value,
                   "references should be handled by template specialization");
-    template <typename U>
-    using IsSizeLessThanThresholdT =
-        std::bool_constant<sizeof(U) <= 2 * sizeof(void *)>;
+    static constexpr bool IsSizeLessThanThreshold =
+        sizeof(T) <= 2 * sizeof(void *);
     using type =
         std::conditional_t<std::is_trivially_copy_constructible<T>::value &&
                                std::is_trivially_move_constructible<T>::value &&
-                               IsSizeLessThanThresholdT<T>::value,
+                               IsSizeLessThanThreshold,
                            T, T &>;
   };
 
@@ -231,22 +225,22 @@ protected:
 
   // The pointers to call/move/destroy functions are determined for each
   // callable type (and called-as type, which determines the overload chosen).
-  // (definitions are out-of-line).
 
   // By default, we need an object that contains all the different
   // type erased behaviors needed. Create a static instance of the struct type
   // here and each instance will contain a pointer to it.
   // Wrap in a struct to avoid https://gcc.gnu.org/PR71954
-  template <typename CallableT, typename CalledAs, typename Enable = void>
-  struct CallbacksHolder {
-    static NonTrivialCallbacks Callbacks;
-  };
-  // See if we can create a trivial callback. We need the callable to be
-  // trivially moved and trivially destroyed so that we don't have to store
-  // type erased callbacks for those operations.
-  template <typename CallableT, typename CalledAs>
-  struct CallbacksHolder<CallableT, CalledAs, EnableIfTrivial<CallableT>> {
-    static TrivialCallback Callbacks;
+  template <typename CallableT, typename CalledAs> struct CallbacksHolder {
+    inline static auto Callbacks = []() constexpr {
+      // For trivial callables, we don't need to store move and destroy
+      // callbacks.
+      if constexpr (std::is_trivially_move_constructible_v<CallableT> &&
+                    std::is_trivially_destructible_v<CallableT>)
+        return TrivialCallback{&CallImpl<CalledAs>};
+      else
+        return NonTrivialCallbacks{&CallImpl<CalledAs>, &MoveImpl<CallableT>,
+                                   &DestroyImpl<CallableT>};
+    }();
   };
 
   // A simple tag type so the call-as type to be passed to the constructor.
@@ -343,19 +337,6 @@ public:
     return (bool)CallbackAndInlineFlag.getPointer();
   }
 };
-
-template <typename R, typename... P>
-template <typename CallableT, typename CalledAsT, typename Enable>
-typename UniqueFunctionBase<R, P...>::NonTrivialCallbacks UniqueFunctionBase<
-    R, P...>::CallbacksHolder<CallableT, CalledAsT, Enable>::Callbacks = {
-    &CallImpl<CalledAsT>, &MoveImpl<CallableT>, &DestroyImpl<CallableT>};
-
-template <typename R, typename... P>
-template <typename CallableT, typename CalledAsT>
-typename UniqueFunctionBase<R, P...>::TrivialCallback
-    UniqueFunctionBase<R, P...>::CallbacksHolder<
-        CallableT, CalledAsT, EnableIfTrivial<CallableT>>::Callbacks{
-        &CallImpl<CalledAsT>};
 
 } // namespace detail
 

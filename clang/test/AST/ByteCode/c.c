@@ -368,3 +368,40 @@ void discardedCmp(void)
 {
     (*_b) = ((&a == &a) , a); // all-warning {{left operand of comma operator has no effect}}
 }
+
+/// ArraySubscriptExpr that's not an lvalue
+typedef unsigned char U __attribute__((vector_size(1)));
+void nonLValueASE(U f) { f[0] = f[((U)(U){0})[0]]; }
+
+static char foo_(a) // all-warning {{definition without a prototype}}
+  char a;
+{
+  return 'a';
+}
+static void bar_(void) {
+  foo_(foo_(1));
+}
+
+void foo2(void*);
+void bar2(void) {
+  int a[2][3][4][5]; // all-note {{array 'a' declared here}}
+  foo2(&a[0][4]); // all-warning {{array index 4 is past the end of the array}}
+}
+
+void plainComplex(void) {
+  _Complex cd; // all-warning {{_Complex double}}
+  cd = *(_Complex *)&(struct { double r, i; }){0.0, 0.0}; // all-warning {{_Complex double}}
+}
+
+/// This test results in an ImplicitValueInitExpr with DiscardResult set.
+struct M{
+  char c;
+};
+typedef struct S64 {
+  struct M m;
+  char a[64];
+} I64;
+
+_Static_assert((((I64){}, 1)), ""); // all-warning {{left operand of comma operator has no effect}} \
+                                    // pedantic-warning {{use of an empty initializer is a C23 extension}} \
+                                    // pedantic-warning {{expression is not an integer constant expression; folding it to a constant is a GNU extension}}

@@ -18,14 +18,13 @@ namespace clang::tidy::bugprone {
 /// (i.e., `operator()`).
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/lambda-function-name.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/bugprone/lambda-function-name.html
 class LambdaFunctionNameCheck : public ClangTidyCheck {
 public:
   struct SourceRangeLessThan {
     bool operator()(const SourceRange &L, const SourceRange &R) const {
-      if (L.getBegin() == R.getBegin()) {
+      if (L.getBegin() == R.getBegin())
         return L.getEnd() < R.getEnd();
-      }
       return L.getBegin() < R.getBegin();
     }
   };

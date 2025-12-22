@@ -17,7 +17,7 @@ namespace clang::tidy::bugprone {
 /// unintendedly.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/suspicious-semicolon.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/bugprone/suspicious-semicolon.html
 class SuspiciousSemicolonCheck : public ClangTidyCheck {
 public:
   SuspiciousSemicolonCheck(StringRef Name, ClangTidyContext *Context)

@@ -465,6 +465,12 @@ public:
     ExternalSource = ES;
   }
 
+  void diagnoseHeaderShadowing(
+      StringRef Filename, OptionalFileEntryRef FE, bool &DiagnosedShadowing,
+      SourceLocation IncludeLoc, ConstSearchDirIterator FromDir,
+      ArrayRef<std::pair<OptionalFileEntryRef, DirectoryEntryRef>> Includers,
+      bool isAngled, int IncluderLoopIndex, ConstSearchDirIterator MainLoopIt);
+
   /// Set the target information for the header search, if not
   /// already known.
   void setTarget(const TargetInfo &Target);

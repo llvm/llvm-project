@@ -270,6 +270,10 @@ namespace llvm {
     HADD,
     HSUB,
 
+    /// Integer horizontal saturating add/sub.
+    HADDS,
+    HSUBS,
+
     /// Floating point horizontal add/sub.
     FHADD,
     FHSUB,
@@ -471,8 +475,7 @@ namespace llvm {
     // VBMI2 Concat & Shift.
     VSHLD,
     VSHRD,
-    VSHLDV,
-    VSHRDV,
+
     // Shuffle Packed Values at 128-bit granularity.
     SHUF128,
     MOVDDUP,
@@ -1004,13 +1007,14 @@ namespace llvm {
     /// Current rounding mode is represented in bits 11:10 of FPSR. These
     /// values are same as corresponding constants for rounding mode used
     /// in glibc.
-    enum RoundingMode {
-      rmToNearest   = 0,        // FE_TONEAREST
-      rmDownward    = 1 << 10,  // FE_DOWNWARD
-      rmUpward      = 2 << 10,  // FE_UPWARD
-      rmTowardZero  = 3 << 10,  // FE_TOWARDZERO
-      rmMask        = 3 << 10   // Bit mask selecting rounding mode
-    };
+  enum RoundingMode {
+    rmInvalid = -1,         // For handle Invalid rounding mode
+    rmToNearest = 0,        // FE_TONEAREST
+    rmDownward = 1 << 10,   // FE_DOWNWARD
+    rmUpward = 2 << 10,     // FE_UPWARD
+    rmTowardZero = 3 << 10, // FE_TOWARDZERO
+    rmMask = 3 << 10        // Bit mask selecting rounding mode
+  };
   }
 
   /// Define some predicates that are used for node matching.
@@ -1038,7 +1042,8 @@ namespace llvm {
     /// Check if Op is a load operation that could be folded into some other x86
     /// instruction as a memory operand. Example: vpaddd (%rdi), %xmm0, %xmm0.
     bool mayFoldLoad(SDValue Op, const X86Subtarget &Subtarget,
-                     bool AssumeSingleUse = false);
+                     bool AssumeSingleUse = false,
+                     bool IgnoreAlignment = false);
 
     /// Check if Op is a load operation that could be folded into a vector splat
     /// instruction as a memory operand. Example: vbroadcastss 16(%rdi), %xmm2.
@@ -1058,6 +1063,10 @@ namespace llvm {
     /// functions.
     bool isExtendedSwiftAsyncFrameSupported(const X86Subtarget &Subtarget,
                                             const MachineFunction &MF);
+
+    /// Convert LLVM rounding mode to X86 rounding mode.
+    int getRoundingModeX86(unsigned RM);
+
   } // end namespace X86
 
   //===--------------------------------------------------------------------===//
@@ -1240,8 +1249,7 @@ namespace llvm {
     getJumpConditionMergingParams(Instruction::BinaryOps Opc, const Value *Lhs,
                                   const Value *Rhs) const override;
 
-    bool shouldFoldConstantShiftPairToMask(const SDNode *N,
-                                           CombineLevel Level) const override;
+    bool shouldFoldConstantShiftPairToMask(const SDNode *N) const override;
 
     bool shouldFoldMaskToVariableShiftPair(SDValue Y) const override;
 
@@ -1475,7 +1483,7 @@ namespace llvm {
     /// to a MemIntrinsicNode (touches memory). If this is the case, it returns
     /// true and stores the intrinsic information into the IntrinsicInfo that was
     /// passed to the function.
-    bool getTgtMemIntrinsic(IntrinsicInfo &Info, const CallInst &I,
+    bool getTgtMemIntrinsic(IntrinsicInfo &Info, const CallBase &I,
                             MachineFunction &MF,
                             unsigned Intrinsic) const override;
 
@@ -1587,12 +1595,11 @@ namespace llvm {
     Value *getIRStackGuard(IRBuilderBase &IRB) const override;
 
     bool useLoadStackGuardNode(const Module &M) const override;
-    bool useStackGuardXorFP() const override;
+    bool useStackGuardMixCookie() const override;
     void insertSSPDeclarations(Module &M) const override;
-    Function *getSSPStackGuardCheck(const Module &M) const override;
-    SDValue emitStackGuardXorFP(SelectionDAG &DAG, SDValue Val,
-                                const SDLoc &DL) const override;
-
+    SDValue emitStackGuardMixCookie(SelectionDAG &DAG, SDValue Val,
+                                    const SDLoc &DL,
+                                    bool FailureBB) const override;
 
     /// Return true if the target stores SafeStack pointer at a fixed offset in
     /// some non-standard address space, and populates the address space and

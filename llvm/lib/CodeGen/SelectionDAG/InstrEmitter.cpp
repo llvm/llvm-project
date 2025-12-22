@@ -15,10 +15,12 @@
 #include "InstrEmitter.h"
 #include "SDNodeDbgValue.h"
 #include "llvm/BinaryFormat/Dwarf.h"
+#include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/CodeGen/StackMaps.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetLowering.h"
@@ -61,6 +63,8 @@ static unsigned countOperands(SDNode *Node, unsigned NumExpUses,
   unsigned N = Node->getNumOperands();
   while (N && Node->getOperand(N - 1).getValueType() == MVT::Glue)
     --N;
+  if (N && Node->getOperand(N - 1).getOpcode() == ISD::DEACTIVATION_SYMBOL)
+    --N; // Ignore deactivation symbol if it exists.
   if (N && Node->getOperand(N - 1).getValueType() == MVT::Other)
     --N; // Ignore chain if it exists.
 
@@ -125,7 +129,7 @@ void InstrEmitter::EmitCopyFromReg(SDValue Op, bool IsClone, Register SrcReg,
           const TargetRegisterClass *RC = nullptr;
           if (i + II.getNumDefs() < II.getNumOperands()) {
             RC = TRI->getAllocatableClass(
-                TII->getRegClass(II, i + II.getNumDefs(), TRI));
+                TII->getRegClass(II, i + II.getNumDefs()));
           }
           if (!UseRC)
             UseRC = RC;
@@ -160,7 +164,7 @@ void InstrEmitter::EmitCopyFromReg(SDValue Op, bool IsClone, Register SrcReg,
 
   // If all uses are reading from the src physical register and copying the
   // register is either impossible or very expensive, then don't create a copy.
-  if (MatchReg && SrcRC->getCopyCost() < 0) {
+  if (MatchReg && SrcRC->expensiveOrImpossibleToCopy()) {
     VRBase = SrcReg;
   } else {
     // Create the reg, emit the copy.
@@ -197,7 +201,7 @@ void InstrEmitter::CreateVirtualRegisters(SDNode *Node,
     // register instead of creating a new vreg.
     Register VRBase;
     const TargetRegisterClass *RC =
-        TRI->getAllocatableClass(TII->getRegClass(II, i, TRI));
+        TRI->getAllocatableClass(TII->getRegClass(II, i));
     // Always let the value type influence the used register class. The
     // constraints on the instruction may be too lax to represent the value
     // type correctly. For example, a 64-bit float (X86::FR64) can't live in
@@ -330,7 +334,7 @@ InstrEmitter::AddRegisterOperand(MachineInstrBuilder &MIB,
   if (II) {
     const TargetRegisterClass *OpRC = nullptr;
     if (IIOpNum < II->getNumOperands())
-      OpRC = TII->getRegClass(*II, IIOpNum, TRI);
+      OpRC = TII->getRegClass(*II, IIOpNum);
 
     if (OpRC) {
       unsigned MinNumRegs = MinRCSize;
@@ -409,8 +413,7 @@ void InstrEmitter::AddOperand(MachineInstrBuilder &MIB, SDValue Op,
     Register VReg = R->getReg();
     MVT OpVT = Op.getSimpleValueType();
     const TargetRegisterClass *IIRC =
-        II ? TRI->getAllocatableClass(TII->getRegClass(*II, IIOpNum, TRI))
-           : nullptr;
+        II ? TRI->getAllocatableClass(TII->getRegClass(*II, IIOpNum)) : nullptr;
     const TargetRegisterClass *OpRC =
         TLI->isTypeLegal(OpVT)
             ? TLI->getRegClassFor(OpVT,
@@ -733,6 +736,8 @@ MachineOperand GetMOForConstDbgOp(const SDDbgOperand &Op) {
   if (const ConstantInt *CI = dyn_cast<ConstantInt>(V)) {
     if (CI->getBitWidth() > 64)
       return MachineOperand::CreateCImm(CI);
+    if (CI->getBitWidth() == 1)
+      return MachineOperand::CreateImm(CI->getZExtValue());
     return MachineOperand::CreateImm(CI->getSExtValue());
   }
   if (const ConstantFP *CF = dyn_cast<ConstantFP>(V))
@@ -1221,15 +1226,23 @@ EmitMachineNode(SDNode *Node, bool IsClone, bool IsCloned,
     }
   }
 
-  if (SDNode *GluedNode = Node->getGluedNode()) {
-    // FIXME: Possibly iterate over multiple glue nodes?
-    if (GluedNode->getOpcode() ==
-        ~(unsigned)TargetOpcode::CONVERGENCECTRL_GLUE) {
-      Register VReg = getVR(GluedNode->getOperand(0), VRBaseMap);
-      MachineOperand MO = MachineOperand::CreateReg(VReg, /*isDef=*/false,
-                                                    /*isImp=*/true);
-      MIB->addOperand(MO);
-    }
+  unsigned Op = Node->getNumOperands();
+  if (Op != 0 && Node->getOperand(Op - 1)->getOpcode() ==
+                     ~(unsigned)TargetOpcode::CONVERGENCECTRL_GLUE) {
+    Register VReg = getVR(Node->getOperand(Op - 1)->getOperand(0), VRBaseMap);
+    MachineOperand MO = MachineOperand::CreateReg(VReg, /*isDef=*/false,
+                                                  /*isImp=*/true);
+    MIB->addOperand(MO);
+    Op--;
+  }
+
+  if (Op != 0 &&
+      Node->getOperand(Op - 1)->getOpcode() == ISD::DEACTIVATION_SYMBOL) {
+    MI->setDeactivationSymbol(
+        *MF, const_cast<GlobalValue *>(
+                 cast<DeactivationSymbolSDNode>(Node->getOperand(Op - 1))
+                     ->getGlobal()));
+    Op--;
   }
 
   // Run post-isel target hook to adjust this instruction if needed.
@@ -1250,7 +1263,8 @@ EmitSpecialNode(SDNode *Node, bool IsClone, bool IsCloned,
     llvm_unreachable("This target-independent node should have been selected!");
   case ISD::EntryToken:
   case ISD::MERGE_VALUES:
-  case ISD::TokenFactor: // fall thru
+  case ISD::TokenFactor:
+  case ISD::DEACTIVATION_SYMBOL:
     break;
   case ISD::CopyToReg: {
     Register DestReg = cast<RegisterSDNode>(Node->getOperand(1))->getReg();
@@ -1415,13 +1429,6 @@ EmitSpecialNode(SDNode *Node, bool IsClone, bool IsCloned,
       }
     }
 
-    // Add rounding control registers as implicit def for inline asm.
-    if (MF->getFunction().hasFnAttribute(Attribute::StrictFP)) {
-      ArrayRef<MCPhysReg> RCRegs = TLI->getRoundingControlRegisters();
-      for (MCPhysReg Reg : RCRegs)
-        MIB.addReg(Reg, RegState::ImplicitDefine);
-    }
-
     // GCC inline assembly allows input operands to also be early-clobber
     // output operands (so long as the operand is written only after it's
     // used), but this does not match the semantics of our early-clobber flag.
@@ -1441,6 +1448,13 @@ EmitSpecialNode(SDNode *Node, bool IsClone, bool IsCloned,
     const MDNode *MD = cast<MDNodeSDNode>(MDV)->getMD();
     if (MD)
       MIB.addMetadata(MD);
+
+    // Add rounding control registers as implicit def for inline asm.
+    if (MF->getFunction().hasFnAttribute(Attribute::StrictFP)) {
+      ArrayRef<MCPhysReg> RCRegs = TLI->getRoundingControlRegisters();
+      for (MCPhysReg Reg : RCRegs)
+        MIB.addReg(Reg, RegState::ImplicitDefine);
+    }
 
     MBB->insert(InsertPos, MIB);
     break;

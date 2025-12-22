@@ -65,10 +65,10 @@ func.func @parallel(%arg0: i32, %arg1: !fir.ref<i32>) {
     // CHECK: fir.convert
     %16 = fir.convert %c100000_i32 : (i32) -> index
     // CHECK: fir.do_loop
-    %18:2 = fir.do_loop %arg4 = %15 to %16 step %c1 iter_args(%arg2 = %arg0) -> (index, i32) {
+    %18 = fir.do_loop %arg4 = %15 to %16 step %c1 iter_args(%arg2 = %arg0) -> (i32) {
       // CHECK: fir.store
       fir.store %arg0 to %arg1 : !fir.ref<i32>
-      fir.result %arg4, %arg2 : index, i32
+      fir.result %arg2 : i32
     }
     // CHECK-NOT: omp.terminator
     omp.terminator

@@ -17,7 +17,7 @@ namespace clang::tidy::bugprone {
 /// variable as passed to the first argument.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/suspicious-realloc-usage.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/bugprone/suspicious-realloc-usage.html
 class SuspiciousReallocUsageCheck : public ClangTidyCheck {
 public:
   SuspiciousReallocUsageCheck(StringRef Name, ClangTidyContext *Context)

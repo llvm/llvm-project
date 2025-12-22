@@ -43,9 +43,11 @@ def main(argv):
     parser.add_argument('--commit-list', type=argparse.FileType('r'), default=sys.stdin,
         help='Path to a file containing a whitespace separated list of commits to test. '
              'By default, this is read from standard input.')
-    parser.add_argument('--overwrite', action='store_true',
-        help='When the data for a commit already exists in the output directory, the tool normally skips it. '
-             'This option instructs the tool to generate the data and overwrite it in the output directory.')
+    parser.add_argument('--existing', type=str, choices=['skip', 'overwrite', 'append'], default='skip',
+        help='This option instructs what to do when data for a commit already exists in the output directory. '
+             'Selecting "skip" instructs the tool to skip generating data for a commit that already has data, '
+             '"overwrite" will overwrite the existing data with the newly-generated one, and "append" will '
+             'append the new data to the existing one. By default, the tool uses "skip".')
     parser.add_argument('lit_options', nargs=argparse.REMAINDER,
         help='Optional arguments passed to lit when running the tests. Should be provided last and '
              'separated from other arguments with a `--`.')
@@ -70,14 +72,11 @@ def main(argv):
         commit = resolve_commit(args.git_repo, commit) # resolve e.g. HEAD to a real SHA
 
         output_file = args.output / (commit + '.lnt')
-        if output_file.exists():
-            if args.overwrite:
-                logging.info(f'Will overwrite data for commit {commit} in {output_file}')
-            else:
-                logging.info(f'Data for commit {commit} already exists in {output_file}, skipping')
-                continue
+        if output_file.exists() and args.existing == 'skip':
+            logging.info(f'Skipping {commit} which already has data in {output_file}')
+            continue
         else:
-            logging.info(f'Benchmarking commit {commit}')
+            logging.info(f'Benchmarking {commit}')
 
         with tempfile.TemporaryDirectory() as build_dir:
             test_cmd = [PARENT_DIR / 'test-at-commit', '--git-repo', args.git_repo,
@@ -92,8 +91,15 @@ def main(argv):
 
             subprocess.call(test_cmd)
             output_file.parent.mkdir(parents=True, exist_ok=True)
-            consolidate_cmd = [(PARENT_DIR / 'consolidate-benchmarks'), build_dir, '--output', output_file]
-            subprocess.check_call(consolidate_cmd)
+            mode = 'a' if args.existing == 'append' else 'w'
+            if output_file.exists() and args.existing == 'append':
+                logging.info(f'Appending to existing data for {commit}')
+            elif output_file.exists() and args.existing == 'overwrite':
+                logging.info(f'Overwriting existing data for {commit}')
+            else:
+                logging.info(f'Writing data for {commit}')
+            with open(output_file, mode) as out:
+                subprocess.check_call([(PARENT_DIR / 'consolidate-benchmarks'), build_dir], stdout=out)
 
 if __name__ == '__main__':
     main(sys.argv[1:])

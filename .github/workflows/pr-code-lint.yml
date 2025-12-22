@@ -20,20 +20,20 @@ jobs:
       run:
         shell: bash
     container:
-      image: 'ghcr.io/llvm/ci-ubuntu-24.04:latest'
+      image: 'ghcr.io/llvm/ci-ubuntu-24.04-lint'
     timeout-minutes: 60
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}
       cancel-in-progress: true
     steps:
       - name: Fetch LLVM sources
-        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
         with:
           fetch-depth: 2
       
       - name: Get changed files
         id: changed-files
-        uses: step-security/changed-files@3dbe17c78367e7d60f00d78ae6781a35be47b4a1 # v45.0.1
+        uses: tj-actions/changed-files@24d32ffd492484c1d75e0c0b894501ddb9d30d62 # v47.0.0
         with:
           separator: ","
           skip_initial_fetch: true
@@ -46,19 +46,6 @@ jobs:
         run: |
           echo "Changed files:"
           echo "$CHANGED_FILES"
-
-      - name: Install clang-tidy
-        uses: aminya/setup-cpp@17c11551771948abc5752bbf3183482567c7caf0 # v1.1.1
-        with:
-          clang-tidy: 20.1.8
-      
-      - name: Setup Python env
-        uses: actions/setup-python@42375524e23c412d93fb67b49958b491fce71c38 # v5.4.0
-        with:
-          python-version: '3.12'
-
-      - name: Install Python dependencies
-        run: python3 -m pip install -r llvm/utils/git/requirements_linting.txt
       
       # TODO: create special mapping for 'codegen' targets, for now build predefined set
       # TODO: add entrypoint in 'compute_projects.py' that only adds a project and its direct dependencies
@@ -104,7 +91,7 @@ jobs:
             --changed-files "$CHANGED_FILES"
       
       - name: Upload results
-        uses: actions/upload-artifact@26f96dfa697d77e81fd5907df203aa23a56210a8 #v4.3.0
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
         if: always()
         with:
           name: workflow-args

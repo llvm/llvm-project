@@ -20,7 +20,7 @@ namespace clang::tidy::modernize {
 /// now-unnecessary calls to std::string::c_str() and std::string::data().
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/modernize/use-std-format.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/modernize/use-std-format.html
 class UseStdFormatCheck : public ClangTidyCheck {
 public:
   UseStdFormatCheck(StringRef Name, ClangTidyContext *Context);

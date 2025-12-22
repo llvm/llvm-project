@@ -38,14 +38,25 @@ Breaking changes
 COFF Improvements
 -----------------
 
+* ``/fat-lto-objects`` addded to support FatLTO. Without ``/fat-lto-objects`` or with ``/fat-lto-objects:no``, LLD will link LLVM FatLTO objects using the relocatable object file.
+  (`#165529 <https://github.com/llvm/llvm-project/pull/165529>`_)
+
 MinGW Improvements
 ------------------
 
 MachO Improvements
 ------------------
 
+* ``--separate-cstring-literal-sections`` emits cstring literal sections into sections defined by their section name.
+  (`#158720 <https://github.com/llvm/llvm-project/pull/158720>`_)
+* ``--tail-merge-strings`` enables tail merging of cstring literals.
+  (`#161262 <https://github.com/llvm/llvm-project/pull/161262>`_)
+
 WebAssembly Improvements
 ------------------------
+
+* The ``--stack-first`` flag is now enabled by default. The old
+  behavior can be enabled using ``--no-stack-first``.
 
 Fixes
 #####

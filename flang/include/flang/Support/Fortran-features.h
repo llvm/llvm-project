@@ -56,7 +56,7 @@ ENUM_CLASS(LanguageFeature, BackslashEscapes, OldDebugLines,
     IgnoreIrrelevantAttributes, Unsigned, AmbiguousStructureConstructor,
     ContiguousOkForSeqAssociation, ForwardRefExplicitTypeDummy,
     InaccessibleDeferredOverride, CudaWarpMatchFunction, DoConcurrentOffload,
-    TransferBOZ, Coarray)
+    TransferBOZ, Coarray, PointerPassObject)
 
 // Portability and suspicious usage warnings
 ENUM_CLASS(UsageWarning, Portability, PointerToUndefinable,
@@ -73,10 +73,10 @@ ENUM_CLASS(UsageWarning, Portability, PointerToUndefinable,
     ZeroDoStep, UnusedForallIndex, OpenMPUsage, DataLength, IgnoredDirective,
     HomonymousSpecific, HomonymousResult, IgnoredIntrinsicFunctionType,
     PreviousScalarUse, RedeclaredInaccessibleComponent, ImplicitShared,
-    IndexVarRedefinition, IncompatibleImplicitInterfaces, CdefinedInit,
+    IndexVarRedefinition, IncompatibleImplicitInterfaces,
     VectorSubscriptFinalization, UndefinedFunctionResult, UselessIomsg,
     MismatchingDummyProcedure, SubscriptedEmptyArray, UnsignedLiteralTruncation,
-    CompatibleDeclarationsFromDistinctModules,
+    CompatibleDeclarationsFromDistinctModules, ConstantIsContiguous,
     NullActualForDefaultIntentAllocatable, UseAssociationIntoSameNameSubprogram,
     HostAssociatedIntentOutInSpecExpr, NonVolatilePointerToVolatile,
     RealConstantWidening, VolatileOrAsynchronousTemporary)

@@ -240,7 +240,7 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
   }
 
   /// Allocate memory. Use std::malloc in all cases.
-  void *allocate(size_t Size, void *, TargetAllocTy Kind) override {
+  Expected<void *> allocate(size_t Size, void *, TargetAllocTy Kind) override {
     if (Size == 0)
       return nullptr;
 
@@ -257,9 +257,9 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
   }
 
   /// Free the memory. Use std::free in all cases.
-  int free(void *TgtPtr, TargetAllocTy Kind) override {
+  Error free(void *TgtPtr, TargetAllocTy Kind) override {
     std::free(TgtPtr);
-    return OFFLOAD_SUCCESS;
+    return Plugin::success();
   }
 
   /// This plugin does nothing to lock buffers. Do not return an error, just
@@ -344,12 +344,6 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
                          "initAsyncInfoImpl not supported");
   }
 
-  /// This plugin does not support interoperability
-  Error initDeviceInfoImpl(__tgt_device_info *DeviceInfo) override {
-    return Plugin::error(ErrorCode::UNSUPPORTED,
-                         "initDeviceInfoImpl not supported");
-  }
-
   Error enqueueHostCallImpl(void (*Callback)(void *), void *UserData,
                             AsyncInfoWrapperTy &AsyncInfo) override {
     Callback(UserData);
@@ -386,9 +380,6 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
     return Info;
   }
 
-  /// This plugin should not setup the device environment or memory pool.
-  virtual bool shouldSetupDeviceMemoryPool() const override { return false; };
-
   /// Getters and setters for stack size and heap size not relevant.
   Error getDeviceStackSize(uint64_t &Value) override {
     Value = 0;
@@ -397,11 +388,6 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
   Error setDeviceStackSize(uint64_t Value) override {
     return Plugin::success();
   }
-  Error getDeviceHeapSize(uint64_t &Value) override {
-    Value = 0;
-    return Plugin::success();
-  }
-  Error setDeviceHeapSize(uint64_t Value) override { return Plugin::success(); }
 
 private:
   /// Grid values for Generic ELF64 plugins.
@@ -457,6 +443,8 @@ struct GenELF64PluginTy final : public GenericPluginTy {
     if (auto Err = Plugin::check(ffi_init(), "failed to initialize libffi"))
       return std::move(Err);
 #endif
+    ODBG("Init") << "GenELF64 plugin detected " << ODBG_IF_LEVEL(2)
+                 << NUM_DEVICES << " " << ODBG_RESET_LEVEL() << "devices";
 
     return NUM_DEVICES;
   }

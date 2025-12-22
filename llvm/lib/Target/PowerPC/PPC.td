@@ -360,8 +360,11 @@ def FeatureFastMFLR : SubtargetFeature<"fast-MFLR", "HasFastMFLR", "true",
 
 //===----------------------------------------------------------------------===//
 // PowerPC Instruction Predicate Definitions.
-def In32BitMode  : Predicate<"!Subtarget->isPPC64()">;
-def In64BitMode  : Predicate<"Subtarget->isPPC64()">;
+
+def IsLittleEndian : Predicate<"Subtarget->isLittleEndian()">;
+def IsBigEndian : Predicate<"!Subtarget->isLittleEndian()">;
+def IsPPC32 : Predicate<"!Subtarget->isPPC64()">;
+def IsPPC64 : Predicate<"Subtarget->isPPC64()">;
 def IsBookE  : Predicate<"Subtarget->isBookE()">;
 def IsNotBookE  : Predicate<"!Subtarget->isBookE()">;
 def HasOnlyMSYNC : Predicate<"Subtarget->hasOnlyMSYNC()">;
@@ -379,27 +382,51 @@ def NaNsFPMath
     : Predicate<"!Subtarget->getTargetMachine().Options.NoNaNsFPMath">;
 def HasBPERMD : Predicate<"Subtarget->hasBPERMD()">;
 def HasExtDiv : Predicate<"Subtarget->hasExtDiv()">;
+def HasFPU : Predicate<"Subtarget->hasFPU()">;
+def HasHTM : Predicate<"Subtarget->hasHTM()">;
+def HasDirectMove : Predicate<"Subtarget->hasDirectMove()">;
+def HasP8Crypto : Predicate<"Subtarget->hasP8Crypto()">;
+def PCRelativeMemops : Predicate<"Subtarget->hasPCRelativeMemops()">;
+def PrefixInstrs : Predicate<"Subtarget->hasPrefixInstrs()">;
+def PairedVectorMemops : Predicate<"Subtarget->pairedVectorMemops()">;
+def MMA : Predicate<"Subtarget->hasMMA()">;
+
+// Vector support predicates
+def HasVSX : Predicate<"Subtarget->hasVSX()">;
+def NoP8Vector : Predicate<"!Subtarget->hasP8Vector()">;
+def HasP8Vector : Predicate<"Subtarget->hasP8Vector()">;
+def HasAltivec : Predicate<"Subtarget->hasAltivec()">;
+def HasP8Altivec : Predicate<"Subtarget->hasP8Altivec()">;
+def NoP9Vector : Predicate<"!Subtarget->hasP9Vector()">;
+def HasP9Vector : Predicate<"Subtarget->hasP9Vector()">;
+def NoP9Altivec : Predicate<"!Subtarget->hasP9Altivec()">;
+def HasP9Altivec : Predicate<"Subtarget->hasP9Altivec()">;
+def HasOnlySwappingMemOps : Predicate<"!Subtarget->hasP9Vector()">;
+def NoP10Vector : Predicate<"!Subtarget->hasP10Vector()">;
+def HasP10Vector : Predicate<"Subtarget->hasP10Vector()">;
+
+// Predicates used to differenciate between different ISAs.
 def IsISA2_06 : Predicate<"Subtarget->isISA2_06()">;
 def IsISA2_07 : Predicate<"Subtarget->isISA2_07()">;
 def IsISA3_0 : Predicate<"Subtarget->isISA3_0()">;
-def HasFPU : Predicate<"Subtarget->hasFPU()">;
-def PCRelativeMemops : Predicate<"Subtarget->hasPCRelativeMemops()">;
+def IsNotISA3_0 : Predicate<"!Subtarget->isISA3_0()">;
+def IsISA3_1 : Predicate<"Subtarget->isISA3_1()">;
 def IsNotISA3_1 : Predicate<"!Subtarget->isISA3_1()">;
+def IsISAFuture : Predicate<"Subtarget->isISAFuture()">;
+def IsNotISAFuture : Predicate<"!Subtarget->isISAFuture()">;
 
 // AIX assembler may not be modern enough to support some extended mne.
 def ModernAs: Predicate<"!Subtarget->isAIXABI() || Subtarget->HasModernAIXAs">,
                  AssemblerPredicate<(any_of (not AIXOS), FeatureModernAIXAs)>;
 def IsAIX : Predicate<"Subtarget->isAIXABI()">;
 def NotAIX : Predicate<"!Subtarget->isAIXABI()">;
-def IsISAFuture : Predicate<"Subtarget->isISAFuture()">;
-def IsNotISAFuture : Predicate<"!Subtarget->isISAFuture()">;
 
 //===----------------------------------------------------------------------===//
 // HwModes
 //===----------------------------------------------------------------------===//
 
 defvar PPC32 = DefaultMode;
-def PPC64 : HwMode<[In64BitMode]>;
+def PPC64 : HwMode<[IsPPC64]>;
 
 // Since new processors generally contain a superset of features of those that
 // came before them, the idea is to make implementations of new processors
@@ -792,6 +819,8 @@ def PPCAsmParserVariant : AsmParserVariant {
   string RegisterPrefix = "%";
   string BreakCharacters = ".";
 }
+
+defm : RemapAllTargetPseudoPointerOperands<ppc_ptr_rc>;
 
 def PPC : Target {
   // Information about the instructions.

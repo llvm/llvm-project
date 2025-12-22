@@ -16,7 +16,7 @@ namespace clang::tidy::modernize {
 /// Find all function definitions of C-style variadic functions.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/modernize/avoid-variadic-functions.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/modernize/avoid-variadic-functions.html
 class AvoidVariadicFunctionsCheck : public ClangTidyCheck {
 public:
   AvoidVariadicFunctionsCheck(StringRef Name, ClangTidyContext *Context)

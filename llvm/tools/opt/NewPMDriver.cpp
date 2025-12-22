@@ -18,8 +18,10 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/CGSCCPassManager.h"
+#include "llvm/Analysis/RuntimeLibcallInfo.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Bitcode/BitcodeWriterPass.h"
+#include "llvm/CodeGen/LibcallLoweringInfo.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/LLVMContext.h"
@@ -45,32 +47,30 @@
 using namespace llvm;
 using namespace opt_tool;
 
-namespace llvm {
-cl::opt<bool> DebugifyEach(
+cl::opt<bool> llvm::DebugifyEach(
     "debugify-each",
     cl::desc("Start each pass with debugify and end it with check-debugify"));
 
-cl::opt<std::string>
-    DebugifyExport("debugify-export",
-                   cl::desc("Export per-pass debugify statistics to this file"),
-                   cl::value_desc("filename"));
+cl::opt<std::string> llvm::DebugifyExport(
+    "debugify-export",
+    cl::desc("Export per-pass debugify statistics to this file"),
+    cl::value_desc("filename"));
 
-cl::opt<bool> VerifyEachDebugInfoPreserve(
+cl::opt<bool> llvm::VerifyEachDebugInfoPreserve(
     "verify-each-debuginfo-preserve",
     cl::desc("Start each pass with collecting and end it with checking of "
              "debug info preservation."));
 
+cl::opt<std::string> llvm::VerifyDIPreserveExport(
+    "verify-di-preserve-export",
+    cl::desc("Export debug info preservation failures into "
+             "specified (JSON) file (should be abs path as we use"
+             " append mode to insert new JSON objects)"),
+    cl::value_desc("filename"), cl::init(""));
+
 static cl::opt<bool> EnableLoopFusion("enable-loopfusion", cl::init(false),
                                       cl::Hidden,
                                       cl::desc("Enable the LoopFuse Pass"));
-cl::opt<std::string>
-    VerifyDIPreserveExport("verify-di-preserve-export",
-                   cl::desc("Export debug info preservation failures into "
-                            "specified (JSON) file (should be abs path as we use"
-                            " append mode to insert new JSON objects)"),
-                   cl::value_desc("filename"), cl::init(""));
-
-} // namespace llvm
 
 enum class DebugLogging { None, Normal, Verbose, Quiet };
 
@@ -356,32 +356,30 @@ bool llvm::runPassPipeline(
     ToolOutputFile *Out, ToolOutputFile *ThinLTOLinkOut,
     ToolOutputFile *OptRemarkFile, StringRef PassPipeline,
     ArrayRef<PassPlugin> PassPlugins,
-    ArrayRef<std::function<void(llvm::PassBuilder &)>> PassBuilderCallbacks,
+    ArrayRef<std::function<void(PassBuilder &)>> PassBuilderCallbacks,
     OutputKind OK, VerifierKind VK, bool ShouldPreserveAssemblyUseListOrder,
     bool ShouldPreserveBitcodeUseListOrder, bool EmitSummaryIndex,
     bool EmitModuleHash, bool EnableDebugify, bool VerifyDIPreserve,
     bool EnableProfcheck, bool UnifiedLTO) {
-  auto FS = vfs::getRealFileSystem();
   std::optional<PGOOptions> P;
   switch (PGOKindFlag) {
   case InstrGen:
-    P = PGOOptions(ProfileFile, "", "", MemoryProfileFile, FS,
-                   PGOOptions::IRInstr, PGOOptions::NoCSAction,
-                   PGOColdFuncAttr);
+    P = PGOOptions(ProfileFile, "", "", MemoryProfileFile, PGOOptions::IRInstr,
+                   PGOOptions::NoCSAction, PGOColdFuncAttr);
     break;
   case InstrUse:
-    P = PGOOptions(ProfileFile, "", ProfileRemappingFile, MemoryProfileFile, FS,
+    P = PGOOptions(ProfileFile, "", ProfileRemappingFile, MemoryProfileFile,
                    PGOOptions::IRUse, PGOOptions::NoCSAction, PGOColdFuncAttr);
     break;
   case SampleUse:
-    P = PGOOptions(ProfileFile, "", ProfileRemappingFile, MemoryProfileFile, FS,
+    P = PGOOptions(ProfileFile, "", ProfileRemappingFile, MemoryProfileFile,
                    PGOOptions::SampleUse, PGOOptions::NoCSAction,
                    PGOColdFuncAttr);
     break;
   case NoPGO:
     if (DebugInfoForProfiling || PseudoProbeForProfiling ||
         !MemoryProfileFile.empty())
-      P = PGOOptions("", "", "", MemoryProfileFile, FS, PGOOptions::NoAction,
+      P = PGOOptions("", "", "", MemoryProfileFile, PGOOptions::NoAction,
                      PGOOptions::NoCSAction, PGOColdFuncAttr,
                      DebugInfoForProfiling, PseudoProbeForProfiling);
     else
@@ -403,7 +401,7 @@ bool llvm::runPassPipeline(
         P->CSProfileGenFile = CSProfileGenFile;
       } else
         P = PGOOptions("", CSProfileGenFile, ProfileRemappingFile,
-                       /*MemoryProfile=*/"", FS, PGOOptions::NoAction,
+                       /*MemoryProfile=*/"", PGOOptions::NoAction,
                        PGOOptions::CSIRInstr);
     } else /* CSPGOKindFlag == CSInstrUse */ {
       if (!P) {
@@ -413,13 +411,24 @@ bool llvm::runPassPipeline(
       P->CSAction = PGOOptions::CSIRUse;
     }
   }
-  if (TM)
-    TM->setPGOOption(P);
 
   LoopAnalysisManager LAM;
   FunctionAnalysisManager FAM;
   CGSCCAnalysisManager CGAM;
   ModuleAnalysisManager MAM;
+
+  if (TM) {
+    TM->setPGOOption(P);
+
+    MAM.registerPass([&] {
+      const TargetOptions &Options = TM->Options;
+      return RuntimeLibraryAnalysis(M.getTargetTriple(), Options.ExceptionModel,
+                                    Options.FloatABIType, Options.EABIVersion,
+                                    Options.MCOptions.ABIName, Options.VecLib);
+    });
+
+    MAM.registerPass([&] { return LibcallLoweringModuleAnalysis(); });
+  }
 
   PassInstrumentationCallbacks PIC;
   PrintPassOptions PrintPassOpts;
@@ -511,7 +520,7 @@ bool llvm::runPassPipeline(
         false, "", nullptr, DebugifyMode::OriginalDebugInfo,
         &DebugInfoBeforePass, VerifyDIPreserveExport));
   if (EnableProfcheck)
-    MPM.addPass(createModuleToFunctionPassAdaptor(ProfileVerifierPass()));
+    MPM.addPass(ProfileVerifierPass());
 
   // Add any relevant output pass at the end of the pipeline.
   switch (OK) {

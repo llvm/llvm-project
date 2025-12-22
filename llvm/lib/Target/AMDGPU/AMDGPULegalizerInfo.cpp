@@ -30,6 +30,7 @@
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
+#include "llvm/CodeGen/PseudoSourceValueManager.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
@@ -976,9 +977,25 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     FPOpActions.clampMaxNumElementsStrict(0, S32, 2);
   }
 
+  auto &MinNumMaxNumIeee =
+      getActionDefinitionsBuilder({G_FMINNUM_IEEE, G_FMAXNUM_IEEE});
+
+  if (ST.hasVOP3PInsts()) {
+    MinNumMaxNumIeee.legalFor(FPTypesPK16)
+        .moreElementsIf(isSmallOddVector(0), oneMoreElement(0))
+        .clampMaxNumElements(0, S16, 2)
+        .clampScalar(0, S16, S64)
+        .scalarize(0);
+  } else if (ST.has16BitInsts()) {
+    MinNumMaxNumIeee.legalFor(FPTypes16).clampScalar(0, S16, S64).scalarize(0);
+  } else {
+    MinNumMaxNumIeee.legalFor(FPTypesBase)
+        .clampScalar(0, S32, S64)
+        .scalarize(0);
+  }
+
   auto &MinNumMaxNum = getActionDefinitionsBuilder(
-      {G_FMINNUM, G_FMAXNUM, G_FMINIMUMNUM, G_FMAXIMUMNUM, G_FMINNUM_IEEE,
-       G_FMAXNUM_IEEE});
+      {G_FMINNUM, G_FMAXNUM, G_FMINIMUMNUM, G_FMAXIMUMNUM});
 
   if (ST.hasVOP3PInsts()) {
     MinNumMaxNum.customFor(FPTypesPK16)
@@ -1705,6 +1722,13 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     Atomics.legalFor({{S32, FlatPtr}, {S64, FlatPtr}});
   }
 
+  auto &Atomics32 =
+      getActionDefinitionsBuilder({G_ATOMICRMW_USUB_COND, G_ATOMICRMW_USUB_SAT})
+          .legalFor({{S32, GlobalPtr}, {S32, LocalPtr}, {S32, RegionPtr}});
+  if (ST.hasFlatAddressSpace()) {
+    Atomics32.legalFor({{S32, FlatPtr}});
+  }
+
   // TODO: v2bf16 operations, and fat buffer pointer support.
   auto &Atomic = getActionDefinitionsBuilder(G_ATOMICRMW_FADD);
   if (ST.hasLDSFPAtomicAddF32()) {
@@ -2136,9 +2160,17 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
         .legalFor(FPTypesPK16)
         .clampMaxNumElements(0, S16, 2)
         .scalarize(0);
+  } else if (ST.hasVOP3PInsts()) {
+    getActionDefinitionsBuilder({G_FMINIMUM, G_FMAXIMUM})
+        .lowerFor({V2S16})
+        .clampMaxNumElementsStrict(0, S16, 2)
+        .scalarize(0)
+        .lower();
   } else {
-    // TODO: Implement
-    getActionDefinitionsBuilder({G_FMINIMUM, G_FMAXIMUM}).lower();
+    getActionDefinitionsBuilder({G_FMINIMUM, G_FMAXIMUM})
+        .scalarize(0)
+        .clampScalar(0, S32, S64)
+        .lower();
   }
 
   getActionDefinitionsBuilder({G_MEMCPY, G_MEMCPY_INLINE, G_MEMMOVE, G_MEMSET})
@@ -2195,8 +2227,6 @@ bool AMDGPULegalizerInfo::legalizeCustom(
   case TargetOpcode::G_FMAXNUM:
   case TargetOpcode::G_FMINIMUMNUM:
   case TargetOpcode::G_FMAXIMUMNUM:
-  case TargetOpcode::G_FMINNUM_IEEE:
-  case TargetOpcode::G_FMAXNUM_IEEE:
     return legalizeMinNumMaxNum(Helper, MI);
   case TargetOpcode::G_EXTRACT_VECTOR_ELT:
     return legalizeExtractVectorElt(MI, MRI, B);
@@ -2299,14 +2329,14 @@ Register AMDGPULegalizerInfo::getSegmentAperture(
     return B.buildUnmerge(S32, Dst).getReg(1);
   }
 
-  // TODO: can we be smarter about machine pointer info?
-  MachinePointerInfo PtrInfo(AMDGPUAS::CONSTANT_ADDRESS);
   Register LoadAddr = MRI.createGenericVirtualRegister(
     LLT::pointer(AMDGPUAS::CONSTANT_ADDRESS, 64));
   // For code object version 5, private_base and shared_base are passed through
   // implicit kernargs.
   if (AMDGPU::getAMDHSACodeObjectVersion(*MF.getFunction().getParent()) >=
       AMDGPU::AMDHSA_COV5) {
+    MachinePointerInfo PtrInfo = getKernargSegmentPtrInfo(B.getMF());
+
     AMDGPUTargetLowering::ImplicitParameter Param =
         AS == AMDGPUAS::LOCAL_ADDRESS ? AMDGPUTargetLowering::SHARED_BASE
                                       : AMDGPUTargetLowering::PRIVATE_BASE;
@@ -2321,7 +2351,7 @@ Register AMDGPULegalizerInfo::getSegmentAperture(
       return Register();
 
     MachineMemOperand *MMO = MF.getMachineMemOperand(
-        PtrInfo,
+        PtrInfo.getWithOffset(Offset),
         MachineMemOperand::MOLoad | MachineMemOperand::MODereferenceable |
             MachineMemOperand::MOInvariant,
         LLT::scalar(32), commonAlignment(Align(64), Offset));
@@ -2338,6 +2368,9 @@ Register AMDGPULegalizerInfo::getSegmentAperture(
 
   if (!loadInputValue(QueuePtr, B, AMDGPUFunctionArgInfo::QUEUE_PTR))
     return Register();
+
+  // TODO: Use custom PseudoSourceValue
+  MachinePointerInfo PtrInfo(AMDGPUAS::CONSTANT_ADDRESS);
 
   // Offset into amd_queue_t for group_segment_aperture_base_hi /
   // private_segment_aperture_base_hi.
@@ -2538,8 +2571,14 @@ bool AMDGPULegalizerInfo::legalizeAddrSpaceCast(
     const SIMachineFunctionInfo *Info = MF.getInfo<SIMachineFunctionInfo>();
     uint32_t AddrHiVal = Info->get32BitAddressHighBits();
     auto PtrLo = B.buildPtrToInt(S32, Src);
-    auto HighAddr = B.buildConstant(S32, AddrHiVal);
-    B.buildMergeLikeInstr(Dst, {PtrLo, HighAddr});
+    if (AddrHiVal == 0) {
+      auto Zext = B.buildZExt(LLT::scalar(64), PtrLo);
+      B.buildIntToPtr(Dst, Zext);
+    } else {
+      auto HighAddr = B.buildConstant(S32, AddrHiVal);
+      B.buildMergeLikeInstr(Dst, {PtrLo, HighAddr});
+    }
+
     MI.eraseFromParent();
     return true;
   }
@@ -2817,23 +2856,8 @@ bool AMDGPULegalizerInfo::legalizeMinNumMaxNum(LegalizerHelper &Helper,
   MachineFunction &MF = Helper.MIRBuilder.getMF();
   const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
 
-  const bool IsIEEEOp = MI.getOpcode() == AMDGPU::G_FMINNUM_IEEE ||
-                        MI.getOpcode() == AMDGPU::G_FMAXNUM_IEEE;
-
-  // With ieee_mode disabled, the instructions have the correct behavior
-  // already for G_FMINIMUMNUM/G_FMAXIMUMNUM.
-  //
-  // FIXME: G_FMINNUM/G_FMAXNUM should match the behavior with ieee_mode
-  // enabled.
-  if (!MFI->getMode().IEEE) {
-    if (MI.getOpcode() == AMDGPU::G_FMINIMUMNUM ||
-        MI.getOpcode() == AMDGPU::G_FMAXIMUMNUM)
-      return true;
-
-    return !IsIEEEOp;
-  }
-
-  if (IsIEEEOp)
+  // With ieee_mode disabled, the instructions have the correct behavior.
+  if (!MFI->getMode().IEEE)
     return true;
 
   return Helper.lowerFMinNumMaxNum(MI) == LegalizerHelper::Legalized;
@@ -3544,12 +3568,14 @@ bool AMDGPULegalizerInfo::legalizeFlogCommon(MachineInstr &MI,
 
     auto C = B.buildFConstant(Ty, IsLog10 ? c_log10 : c_log);
     auto CC = B.buildFConstant(Ty, IsLog10 ? cc_log10 : cc_log);
-
-    R = B.buildFMul(Ty, Y, C, Flags).getReg(0);
-    auto NegR = B.buildFNeg(Ty, R, Flags);
-    auto FMA0 = B.buildFMA(Ty, Y, C, NegR, Flags);
-    auto FMA1 = B.buildFMA(Ty, Y, CC, FMA0, Flags);
-    R = B.buildFAdd(Ty, R, FMA1, Flags).getReg(0);
+    // This adds correction terms for which contraction may lead to an increase
+    // in the error of the approximation, so disable it.
+    auto NewFlags = Flags & ~(MachineInstr::FmContract);
+    R = B.buildFMul(Ty, Y, C, NewFlags).getReg(0);
+    auto NegR = B.buildFNeg(Ty, R, NewFlags);
+    auto FMA0 = B.buildFMA(Ty, Y, C, NegR, NewFlags);
+    auto FMA1 = B.buildFMA(Ty, Y, CC, FMA0, NewFlags);
+    R = B.buildFAdd(Ty, R, FMA1, NewFlags).getReg(0);
   } else {
     // ch+ct is ln(2)/ln(10) to more than 36 bits
     const float ch_log10 = 0x1.344000p-2f;
@@ -3565,17 +3591,20 @@ bool AMDGPULegalizerInfo::legalizeFlogCommon(MachineInstr &MI,
     auto MaskConst = B.buildConstant(Ty, 0xfffff000);
     auto YH = B.buildAnd(Ty, Y, MaskConst);
     auto YT = B.buildFSub(Ty, Y, YH, Flags);
-    auto YTCT = B.buildFMul(Ty, YT, CT, Flags);
+    // This adds correction terms for which contraction may lead to an increase
+    // in the error of the approximation, so disable it.
+    auto NewFlags = Flags & ~(MachineInstr::FmContract);
+    auto YTCT = B.buildFMul(Ty, YT, CT, NewFlags);
 
     Register Mad0 =
-        getMad(B, Ty, YH.getReg(0), CT.getReg(0), YTCT.getReg(0), Flags);
-    Register Mad1 = getMad(B, Ty, YT.getReg(0), CH.getReg(0), Mad0, Flags);
-    R = getMad(B, Ty, YH.getReg(0), CH.getReg(0), Mad1, Flags);
+        getMad(B, Ty, YH.getReg(0), CT.getReg(0), YTCT.getReg(0), NewFlags);
+    Register Mad1 = getMad(B, Ty, YT.getReg(0), CH.getReg(0), Mad0, NewFlags);
+    R = getMad(B, Ty, YH.getReg(0), CH.getReg(0), Mad1, NewFlags);
   }
 
   const bool IsFiniteOnly =
       (MI.getFlag(MachineInstr::FmNoNans) || TM.Options.NoNaNsFPMath) &&
-      (MI.getFlag(MachineInstr::FmNoInfs) || TM.Options.NoInfsFPMath);
+      MI.getFlag(MachineInstr::FmNoInfs);
 
   if (!IsFiniteOnly) {
     // Expand isfinite(x) => fabs(x) < inf
@@ -3699,24 +3728,39 @@ bool AMDGPULegalizerInfo::legalizeFExp2(MachineInstr &MI,
   return true;
 }
 
+static MachineInstrBuilder buildExp(MachineIRBuilder &B, const DstOp &Dst,
+                                    const SrcOp &Src, unsigned Flags) {
+  LLT Ty = Dst.getLLTTy(*B.getMRI());
+
+  if (Ty == LLT::scalar(32)) {
+    return B.buildIntrinsic(Intrinsic::amdgcn_exp2, {Dst})
+        .addUse(Src.getReg())
+        .setMIFlags(Flags);
+  }
+  return B.buildFExp2(Dst, Src, Flags);
+}
+
+bool AMDGPULegalizerInfo::legalizeFExpUnsafeImpl(MachineIRBuilder &B,
+                                                 Register Dst, Register X,
+                                                 unsigned Flags,
+                                                 bool IsExp10) const {
+  LLT Ty = B.getMRI()->getType(X);
+
+  // exp(x) -> exp2(M_LOG2E_F * x);
+  // exp10(x) -> exp2(log2(10) * x);
+  auto Const = B.buildFConstant(Ty, IsExp10 ? 0x1.a934f0p+1f : numbers::log2e);
+  auto Mul = B.buildFMul(Ty, X, Const, Flags);
+  buildExp(B, Dst, Mul, Flags);
+  return true;
+}
+
 bool AMDGPULegalizerInfo::legalizeFExpUnsafe(MachineIRBuilder &B, Register Dst,
                                              Register X, unsigned Flags) const {
   LLT Ty = B.getMRI()->getType(Dst);
   LLT F32 = LLT::scalar(32);
 
   if (Ty != F32 || !needsDenormHandlingF32(B.getMF(), X, Flags)) {
-    auto Log2E = B.buildFConstant(Ty, numbers::log2e);
-    auto Mul = B.buildFMul(Ty, X, Log2E, Flags);
-
-    if (Ty == F32) {
-      B.buildIntrinsic(Intrinsic::amdgcn_exp2, ArrayRef<Register>{Dst})
-        .addUse(Mul.getReg(0))
-        .setMIFlags(Flags);
-    } else {
-      B.buildFExp2(Dst, Mul.getReg(0), Flags);
-    }
-
-    return true;
+    return legalizeFExpUnsafeImpl(B, Dst, X, Flags, /*IsExp10=*/false);
   }
 
   auto Threshold = B.buildFConstant(Ty, -0x1.5d58a0p+6f);
@@ -3739,6 +3783,55 @@ bool AMDGPULegalizerInfo::legalizeFExpUnsafe(MachineIRBuilder &B, Register Dst,
   return true;
 }
 
+bool AMDGPULegalizerInfo::legalizeFExp10Unsafe(MachineIRBuilder &B,
+                                               Register Dst, Register X,
+                                               unsigned Flags) const {
+  LLT Ty = B.getMRI()->getType(Dst);
+  LLT F32 = LLT::scalar(32);
+
+  if (Ty != F32 || !needsDenormHandlingF32(B.getMF(), X, Flags)) {
+    // exp2(x * 0x1.a92000p+1f) * exp2(x * 0x1.4f0978p-11f);
+    auto K0 = B.buildFConstant(Ty, 0x1.a92000p+1f);
+    auto K1 = B.buildFConstant(Ty, 0x1.4f0978p-11f);
+
+    auto Mul1 = B.buildFMul(Ty, X, K1, Flags);
+    auto Exp2_1 = buildExp(B, Ty, Mul1, Flags);
+    auto Mul0 = B.buildFMul(Ty, X, K0, Flags);
+    auto Exp2_0 = buildExp(B, Ty, Mul0, Flags);
+    B.buildFMul(Dst, Exp2_0, Exp2_1, Flags);
+    return true;
+  }
+
+  // bool s = x < -0x1.2f7030p+5f;
+  // x += s ? 0x1.0p+5f : 0.0f;
+  // exp10 = exp2(x * 0x1.a92000p+1f) *
+  //        exp2(x * 0x1.4f0978p-11f) *
+  //        (s ? 0x1.9f623ep-107f : 1.0f);
+
+  auto Threshold = B.buildFConstant(Ty, -0x1.2f7030p+5f);
+  auto NeedsScaling =
+      B.buildFCmp(CmpInst::FCMP_OLT, LLT::scalar(1), X, Threshold);
+
+  auto ScaleOffset = B.buildFConstant(Ty, 0x1.0p+5f);
+  auto ScaledX = B.buildFAdd(Ty, X, ScaleOffset, Flags);
+  auto AdjustedX = B.buildSelect(Ty, NeedsScaling, ScaledX, X);
+
+  auto K0 = B.buildFConstant(Ty, 0x1.a92000p+1f);
+  auto K1 = B.buildFConstant(Ty, 0x1.4f0978p-11f);
+
+  auto Mul1 = B.buildFMul(Ty, AdjustedX, K1, Flags);
+  auto Exp2_1 = buildExp(B, Ty, Mul1, Flags);
+  auto Mul0 = B.buildFMul(Ty, AdjustedX, K0, Flags);
+  auto Exp2_0 = buildExp(B, Ty, Mul0, Flags);
+
+  auto MulExps = B.buildFMul(Ty, Exp2_0, Exp2_1, Flags);
+  auto ResultScaleFactor = B.buildFConstant(Ty, 0x1.9f623ep-107f);
+  auto AdjustedResult = B.buildFMul(Ty, MulExps, ResultScaleFactor, Flags);
+
+  B.buildSelect(Dst, NeedsScaling, AdjustedResult, MulExps);
+  return true;
+}
+
 bool AMDGPULegalizerInfo::legalizeFExp(MachineInstr &MI,
                                        MachineIRBuilder &B) const {
   Register Dst = MI.getOperand(0).getReg();
@@ -3755,18 +3848,22 @@ bool AMDGPULegalizerInfo::legalizeFExp(MachineInstr &MI,
     // v_exp_f16 (fmul x, log2e)
     if (allowApproxFunc(MF, Flags)) {
       // TODO: Does this really require fast?
-      legalizeFExpUnsafe(B, Dst, X, Flags);
+      IsExp10 ? legalizeFExp10Unsafe(B, Dst, X, Flags)
+              : legalizeFExpUnsafe(B, Dst, X, Flags);
       MI.eraseFromParent();
       return true;
     }
 
+    // Nothing in half is a denormal when promoted to f32.
+    //
     // exp(f16 x) ->
     //   fptrunc (v_exp_f32 (fmul (fpext x), log2e))
-
-    // Nothing in half is a denormal when promoted to f32.
+    //
+    // exp10(f16 x) ->
+    //   fptrunc (v_exp_f32 (fmul (fpext x), log2(10)))
     auto Ext = B.buildFPExt(F32, X, Flags);
     Register Lowered = MRI.createGenericVirtualRegister(F32);
-    legalizeFExpUnsafe(B, Lowered, Ext.getReg(0), Flags);
+    legalizeFExpUnsafeImpl(B, Lowered, Ext.getReg(0), Flags, IsExp10);
     B.buildFPTrunc(Dst, Lowered, Flags);
     MI.eraseFromParent();
     return true;
@@ -3777,7 +3874,8 @@ bool AMDGPULegalizerInfo::legalizeFExp(MachineInstr &MI,
   // TODO: Interpret allowApproxFunc as ignoring DAZ. This is currently copying
   // library behavior. Also, is known-not-daz source sufficient?
   if (allowApproxFunc(MF, Flags)) {
-    legalizeFExpUnsafe(B, Dst, X, Flags);
+    IsExp10 ? legalizeFExp10Unsafe(B, Dst, X, Flags)
+            : legalizeFExpUnsafe(B, Dst, X, Flags);
     MI.eraseFromParent();
     return true;
   }
@@ -3864,9 +3962,7 @@ bool AMDGPULegalizerInfo::legalizeFExp(MachineInstr &MI,
 
   R = B.buildSelect(Ty, Underflow, Zero, R);
 
-  const auto &Options = MF.getTarget().Options;
-
-  if (!(Flags & MachineInstr::FmNoInfs) && !Options.NoInfsFPMath) {
+  if (!(Flags & MachineInstr::FmNoInfs)) {
     auto OverflowCheckConst =
         B.buildFConstant(Ty, IsExp10 ? 0x1.344136p+5f : 0x1.62e430p+6f);
 
@@ -4704,6 +4800,14 @@ bool AMDGPULegalizerInfo::legalizeWorkitemIDIntrinsic(
   return true;
 }
 
+MachinePointerInfo
+AMDGPULegalizerInfo::getKernargSegmentPtrInfo(MachineFunction &MF) const {
+  // This isn't really a constant pool but close enough.
+  MachinePointerInfo PtrInfo(MF.getPSVManager().getConstantPool());
+  PtrInfo.AddrSpace = AMDGPUAS::CONSTANT_ADDRESS;
+  return PtrInfo;
+}
+
 Register AMDGPULegalizerInfo::getKernargParameterPtr(MachineIRBuilder &B,
                                                      int64_t Offset) const {
   LLT PtrTy = LLT::pointer(AMDGPUAS::CONSTANT_ADDRESS, 64);
@@ -4731,8 +4835,8 @@ bool AMDGPULegalizerInfo::legalizeKernargMemParameter(MachineInstr &MI,
          "unexpected kernarg parameter type");
 
   Register Ptr = getKernargParameterPtr(B, Offset);
-  MachinePointerInfo PtrInfo(AMDGPUAS::CONSTANT_ADDRESS);
-  B.buildLoad(DstReg, Ptr, PtrInfo, Align(4),
+  MachinePointerInfo PtrInfo = getKernargSegmentPtrInfo(B.getMF());
+  B.buildLoad(DstReg, Ptr, PtrInfo.getWithOffset(Offset), Align(4),
               MachineMemOperand::MODereferenceable |
                   MachineMemOperand::MOInvariant);
   MI.eraseFromParent();
@@ -5905,33 +6009,50 @@ bool AMDGPULegalizerInfo::legalizePointerAsRsrcIntrin(
   Register Flags = MI.getOperand(5).getReg();
 
   LLT S32 = LLT::scalar(32);
+  LLT S64 = LLT::scalar(64);
 
   B.setInsertPt(B.getMBB(), ++B.getInsertPt());
-  auto Unmerge = B.buildUnmerge(S32, Pointer);
-  Register LowHalf = Unmerge.getReg(0);
-  Register HighHalf = Unmerge.getReg(1);
 
-  auto AndMask = B.buildConstant(S32, 0x0000ffff);
-  auto Masked = B.buildAnd(S32, HighHalf, AndMask);
+  auto ExtStride = B.buildAnyExt(S32, Stride);
 
-  MachineInstrBuilder NewHighHalf = Masked;
-  std::optional<ValueAndVReg> StrideConst =
-      getIConstantVRegValWithLookThrough(Stride, MRI);
-  if (!StrideConst || !StrideConst->Value.isZero()) {
-    MachineInstrBuilder ShiftedStride;
-    if (StrideConst) {
-      uint32_t StrideVal = StrideConst->Value.getZExtValue();
-      uint32_t ShiftedStrideVal = StrideVal << 16;
-      ShiftedStride = B.buildConstant(S32, ShiftedStrideVal);
-    } else {
-      auto ExtStride = B.buildAnyExt(S32, Stride);
-      auto ShiftConst = B.buildConstant(S32, 16);
-      ShiftedStride = B.buildShl(S32, ExtStride, ShiftConst);
-    }
-    NewHighHalf = B.buildOr(S32, Masked, ShiftedStride);
+  if (ST.has45BitNumRecordsBufferResource()) {
+    Register Zero = B.buildConstant(S32, 0).getReg(0);
+    // Build the lower 64-bit value, which has a 57-bit base and the lower 7-bit
+    // num_records.
+    LLT PtrIntTy = LLT::scalar(MRI.getType(Pointer).getSizeInBits());
+    auto PointerInt = B.buildPtrToInt(PtrIntTy, Pointer);
+    auto ExtPointer = B.buildAnyExtOrTrunc(S64, PointerInt);
+    auto NumRecordsLHS = B.buildShl(S64, NumRecords, B.buildConstant(S32, 57));
+    Register LowHalf = B.buildOr(S64, ExtPointer, NumRecordsLHS).getReg(0);
+
+    // Build the higher 64-bit value, which has the higher 38-bit num_records,
+    // 6-bit zero (omit), 16-bit stride and scale and 4-bit flag.
+    auto NumRecordsRHS = B.buildLShr(S64, NumRecords, B.buildConstant(S32, 7));
+    auto ShiftedStride = B.buildShl(S32, ExtStride, B.buildConstant(S32, 12));
+    auto ExtShiftedStride =
+        B.buildMergeValues(S64, {Zero, ShiftedStride.getReg(0)});
+    auto ShiftedFlags = B.buildShl(S32, Flags, B.buildConstant(S32, 28));
+    auto ExtShiftedFlags =
+        B.buildMergeValues(S64, {Zero, ShiftedFlags.getReg(0)});
+    auto CombinedFields = B.buildOr(S64, NumRecordsRHS, ExtShiftedStride);
+    Register HighHalf =
+        B.buildOr(S64, CombinedFields, ExtShiftedFlags).getReg(0);
+    B.buildMergeValues(Result, {LowHalf, HighHalf});
+  } else {
+    NumRecords = B.buildTrunc(S32, NumRecords).getReg(0);
+    auto Unmerge = B.buildUnmerge(S32, Pointer);
+    auto LowHalf = Unmerge.getReg(0);
+    auto HighHalf = Unmerge.getReg(1);
+
+    auto AndMask = B.buildConstant(S32, 0x0000ffff);
+    auto Masked = B.buildAnd(S32, HighHalf, AndMask);
+    auto ShiftConst = B.buildConstant(S32, 16);
+    auto ShiftedStride = B.buildShl(S32, ExtStride, ShiftConst);
+    auto NewHighHalf = B.buildOr(S32, Masked, ShiftedStride);
+    Register NewHighHalfReg = NewHighHalf.getReg(0);
+    B.buildMergeValues(Result, {LowHalf, NewHighHalfReg, NumRecords, Flags});
   }
-  Register NewHighHalfReg = NewHighHalf.getReg(0);
-  B.buildMergeValues(Result, {LowHalf, NewHighHalfReg, NumRecords, Flags});
+
   MI.eraseFromParent();
   return true;
 }
@@ -6516,8 +6637,15 @@ static unsigned getBufferAtomicPseudo(Intrinsic::ID IntrID) {
   case Intrinsic::amdgcn_struct_buffer_atomic_fmax:
   case Intrinsic::amdgcn_struct_ptr_buffer_atomic_fmax:
     return AMDGPU::G_AMDGPU_BUFFER_ATOMIC_FMAX;
+  case Intrinsic::amdgcn_raw_buffer_atomic_sub_clamp_u32:
+  case Intrinsic::amdgcn_raw_ptr_buffer_atomic_sub_clamp_u32:
+  case Intrinsic::amdgcn_struct_buffer_atomic_sub_clamp_u32:
+  case Intrinsic::amdgcn_struct_ptr_buffer_atomic_sub_clamp_u32:
+    return AMDGPU::G_AMDGPU_BUFFER_ATOMIC_SUB_CLAMP_U32;
   case Intrinsic::amdgcn_raw_buffer_atomic_cond_sub_u32:
+  case Intrinsic::amdgcn_raw_ptr_buffer_atomic_cond_sub_u32:
   case Intrinsic::amdgcn_struct_buffer_atomic_cond_sub_u32:
+  case Intrinsic::amdgcn_struct_ptr_buffer_atomic_cond_sub_u32:
     return AMDGPU::G_AMDGPU_BUFFER_ATOMIC_COND_SUB_U32;
   default:
     llvm_unreachable("unhandled atomic opcode");
@@ -7238,9 +7366,9 @@ bool AMDGPULegalizerInfo::legalizeTrapHsaQueuePtr(
       return false;
 
     // TODO: can we be smarter about machine pointer info?
-    MachinePointerInfo PtrInfo(AMDGPUAS::CONSTANT_ADDRESS);
+    MachinePointerInfo PtrInfo = getKernargSegmentPtrInfo(MF);
     MachineMemOperand *MMO = MF.getMachineMemOperand(
-        PtrInfo,
+        PtrInfo.getWithOffset(Offset),
         MachineMemOperand::MOLoad | MachineMemOperand::MODereferenceable |
             MachineMemOperand::MOInvariant,
         LLT::scalar(64), commonAlignment(Align(64), Offset));
@@ -7702,7 +7830,7 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
   case Intrinsic::amdgcn_make_buffer_rsrc:
     return legalizePointerAsRsrcIntrin(MI, MRI, B);
   case Intrinsic::amdgcn_kernarg_segment_ptr:
-    if (!AMDGPU::isKernel(B.getMF().getFunction().getCallingConv())) {
+    if (!AMDGPU::isKernel(B.getMF().getFunction())) {
       // This only makes sense to call in a kernel, so just lower to null.
       B.buildConstant(MI.getOperand(0).getReg(), 0);
       MI.eraseFromParent();
@@ -7925,6 +8053,14 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
   case Intrinsic::amdgcn_raw_ptr_buffer_atomic_fmax:
   case Intrinsic::amdgcn_struct_buffer_atomic_fmax:
   case Intrinsic::amdgcn_struct_ptr_buffer_atomic_fmax:
+  case Intrinsic::amdgcn_raw_buffer_atomic_sub_clamp_u32:
+  case Intrinsic::amdgcn_raw_ptr_buffer_atomic_sub_clamp_u32:
+  case Intrinsic::amdgcn_struct_buffer_atomic_sub_clamp_u32:
+  case Intrinsic::amdgcn_struct_ptr_buffer_atomic_sub_clamp_u32:
+  case Intrinsic::amdgcn_raw_buffer_atomic_cond_sub_u32:
+  case Intrinsic::amdgcn_raw_ptr_buffer_atomic_cond_sub_u32:
+  case Intrinsic::amdgcn_struct_buffer_atomic_cond_sub_u32:
+  case Intrinsic::amdgcn_struct_ptr_buffer_atomic_cond_sub_u32:
   case Intrinsic::amdgcn_raw_buffer_atomic_fadd:
   case Intrinsic::amdgcn_raw_ptr_buffer_atomic_fadd:
   case Intrinsic::amdgcn_struct_buffer_atomic_fadd:

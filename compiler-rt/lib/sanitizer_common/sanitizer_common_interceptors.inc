@@ -1326,7 +1326,7 @@ PRCTL_INTERCEPTOR(int, prctl, int option, unsigned long arg2,
   static const int PR_SET_SECCOMP = 22;
   static const int SECCOMP_MODE_FILTER = 2;
 #  endif
-  if (option == PR_SET_VMA && arg2 == 0UL) {
+  if (option == PR_SET_VMA && arg2 == 0UL && arg5 != 0UL) {
     char *name = (char *)arg5;
     COMMON_INTERCEPTOR_READ_RANGE(ctx, name, internal_strlen(name) + 1);
   }

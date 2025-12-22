@@ -7,14 +7,20 @@
 //===----------------------------------------------------------------------===//
 
 #include "hdr/math_macros.h"
+#include "hdr/stdint_proxy.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/libc_errno.h"
+#include "src/__support/macros/optimization.h"
 #include "src/math/expm1f.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
 
-#include "hdr/stdint_proxy.h"
+#ifdef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
+#define TOLERANCE 1
+#else
+#define TOLERANCE 0
+#endif // LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
 using LlvmLibcExpm1fTest = LIBC_NAMESPACE::testing::FPTest<float>;
 
@@ -93,7 +99,7 @@ TEST_F(LlvmLibcExpm1fTest, Borderline) {
 
   x = FPBits(0x3e35bec5U).get_val();
   ASSERT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Expm1, x,
-                                 LIBC_NAMESPACE::expm1f(x), 0.5);
+                                 LIBC_NAMESPACE::expm1f(x), TOLERANCE + 0.5);
   EXPECT_MATH_ERRNO(0);
 
   x = FPBits(0x942ed494U).get_val();
@@ -103,7 +109,7 @@ TEST_F(LlvmLibcExpm1fTest, Borderline) {
 
   x = FPBits(0xbdc1c6cbU).get_val();
   ASSERT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Expm1, x,
-                                 LIBC_NAMESPACE::expm1f(x), 0.5);
+                                 LIBC_NAMESPACE::expm1f(x), TOLERANCE + 0.5);
   EXPECT_MATH_ERRNO(0);
 }
 

@@ -61,7 +61,7 @@ void createMissingComponents(CompilerInstance &Clang) {
   if (!Clang.hasFileManager())
     Clang.createFileManager();
   if (!Clang.hasSourceManager())
-    Clang.createSourceManager(Clang.getFileManager());
+    Clang.createSourceManager();
   if (!Clang.hasTarget())
     Clang.createTarget();
   if (!Clang.hasPreprocessor())

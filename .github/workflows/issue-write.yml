@@ -7,6 +7,8 @@ on:
       - "Check for private emails used in PRs"
       - "PR Request Release Note"
       - "Code lint"
+      - "CI Checks"
+      - "Test Issue Write"
     types:
       - completed
 
@@ -26,7 +28,7 @@ jobs:
       )
     steps:
       - name: Fetch Sources
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
         with:
           sparse-checkout: |
             .github/workflows/unprivileged-download-artifact/action.yml
@@ -39,13 +41,18 @@ jobs:
           artifact-name: workflow-args
 
       - name: 'Comment on PR'
-        if: steps.download-artifact.outputs.artifact-id != ''
-        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
+        if: steps.download-artifact.outputs.artifact-ids != ''
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8.0.0
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             var fs = require('fs');
-            const comments = JSON.parse(fs.readFileSync('./comments'));
+            var comments = []
+            for (local_file of fs.readdirSync('.')) {
+              if (local_file.startsWith("comments")) {
+                comments.push(...JSON.parse(fs.readFileSync(local_file)))
+              }
+            }
             if (!comments || comments.length == 0) {
               return;
             }
@@ -154,5 +161,5 @@ jobs:
       - name: Dump comments file
         if: >-
           always() &&
-          steps.download-artifact.outputs.artifact-id != ''
-        run: cat comments
+          steps.download-artifact.outputs.artifact-ids != ''
+        run: cat comments*

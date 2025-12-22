@@ -41,7 +41,7 @@ func.func @main() {
   %cast = memref.cast %buffer : memref<5xf32> to memref<?xf32>
 
   //      CHECK: ERROR: Runtime op verification failed
-  // CHECK-NEXT: "memref.store"(%{{.*}}, %{{.*}}, %{{.*}}) : (f32, memref<?xf32>, index) -> ()
+  // CHECK-NEXT: memref.store %{{.*}}, %{{.*}}[%{{.*}}] : memref<?xf32>
   // CHECK-NEXT: ^ out-of-bounds access
   // CHECK-NEXT: Location: loc({{.*}})
   %c9 = arith.constant 9 : index

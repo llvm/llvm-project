@@ -1290,8 +1290,8 @@ SampleProfileReaderExtBinaryBase::readNameTableSec(bool IsMD5,
     NameTable.reserve(*Size);
     for (size_t I = 0; I < *Size; ++I) {
       using namespace support;
-      uint64_t FID = endian::read<uint64_t, endianness::little, unaligned>(
-          Data + I * sizeof(uint64_t));
+      uint64_t FID = endian::read<uint64_t, unaligned>(
+          Data + I * sizeof(uint64_t), endianness::little);
       NameTable.emplace_back(FunctionId(FID));
     }
     if (!ProfileIsCS)

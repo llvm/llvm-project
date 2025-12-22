@@ -121,8 +121,6 @@ define double @fdiv_d(double %a, double %b) nounwind {
   ret double %1
 }
 
-declare double @llvm.sqrt.f64(double)
-
 define double @fsqrt_d(double %a) nounwind {
 ; CHECKIFD-LABEL: fsqrt_d:
 ; CHECKIFD:       # %bb.0:
@@ -149,8 +147,6 @@ define double @fsqrt_d(double %a) nounwind {
   %1 = call double @llvm.sqrt.f64(double %a)
   ret double %1
 }
-
-declare double @llvm.copysign.f64(double, double)
 
 define double @fsgnj_d(double %a, double %b) nounwind {
 ; CHECKIFD-LABEL: fsgnj_d:
@@ -261,8 +257,6 @@ define double @fsgnjn_d(double %a, double %b) nounwind {
   ret double %2
 }
 
-declare double @llvm.fabs.f64(double)
-
 ; This function performs extra work to ensure that
 ; DAGCombiner::visitBITCAST doesn't replace the fabs with an and.
 define double @fabs_d(double %a, double %b) nounwind {
@@ -305,8 +299,6 @@ define double @fabs_d(double %a, double %b) nounwind {
   ret double %3
 }
 
-declare double @llvm.minnum.f64(double, double)
-
 define double @fmin_d(double %a, double %b) nounwind {
 ; CHECKIFD-LABEL: fmin_d:
 ; CHECKIFD:       # %bb.0:
@@ -333,8 +325,6 @@ define double @fmin_d(double %a, double %b) nounwind {
   %1 = call double @llvm.minnum.f64(double %a, double %b)
   ret double %1
 }
-
-declare double @llvm.maxnum.f64(double, double)
 
 define double @fmax_d(double %a, double %b) nounwind {
 ; CHECKIFD-LABEL: fmax_d:
@@ -363,8 +353,6 @@ define double @fmax_d(double %a, double %b) nounwind {
   ret double %1
 }
 
-declare double @llvm.minimumnum.f64(double, double)
-
 define double @fminimumnum_d(double %a, double %b) nounwind {
 ; CHECKIFD-LABEL: fminimumnum_d:
 ; CHECKIFD:       # %bb.0:
@@ -392,8 +380,6 @@ define double @fminimumnum_d(double %a, double %b) nounwind {
   ret double %1
 }
 
-declare double @llvm.maximumnum.f64(double, double)
-
 define double @fmaximumnum_d(double %a, double %b) nounwind {
 ; CHECKIFD-LABEL: fmaximumnum_d:
 ; CHECKIFD:       # %bb.0:
@@ -420,8 +406,6 @@ define double @fmaximumnum_d(double %a, double %b) nounwind {
   %1 = call double @llvm.maximumnum.f64(double %a, double %b)
   ret double %1
 }
-
-declare double @llvm.fma.f64(double, double, double)
 
 define double @fmadd_d(double %a, double %b, double %c) nounwind {
 ; CHECKIFD-LABEL: fmadd_d:
@@ -770,7 +754,6 @@ define double @fnmadd_d_3(double %a, double %b, double %c) nounwind {
   %neg = fneg double %1
   ret double %neg
 }
-
 
 define double @fnmadd_nsz(double %a, double %b, double %c) nounwind {
 ; CHECKIFD-LABEL: fnmadd_nsz:

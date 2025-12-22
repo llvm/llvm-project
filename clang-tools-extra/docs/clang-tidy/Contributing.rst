@@ -436,7 +436,7 @@ in the release notes, as the first sentence in the doxygen comments in the heade
 for your check class and as the first sentence of the check documentation.  Avoid the
 phrase "this check" in your check summary and check documentation.
 
-If your check relates to a published coding guideline (C++ Core Guidelines, MISRA, etc.)
+If your check relates to a published coding guideline (C++ Core Guidelines, SEI CERT, etc.)
 or style guide, provide links to the relevant guideline or style guide sections in your
 check documentation.
 
@@ -449,7 +449,22 @@ Building the target ``docs-clang-tools-html`` will run the Sphinx documentation 
 and create HTML documentation files in the tools/clang/tools/extra/docs/html directory in
 your build tree.  Make sure that your check is correctly shown in the release notes and the
 list of checks.  Make sure that the formatting and structure of your check's documentation
-look correct.
+look correct: there is no trailing whitespaces and lines are no longer than 80 characters.
+
+To validate your files, please use ``doc8`` as described below.
+
+Clang-Tidy uses `doc8 <https://pypi.org/project/doc8/>`_ to check ``.rst``
+files for formatting consistency. You can install ``doc8`` with ``pip``:
+
+.. code-block:: console
+
+  $ pip install doc8
+
+To run ``doc8`` on the modified documentations:
+
+.. code-block:: console
+
+  $ git diff --name-only HEAD -- clang-tools-extra/docs/clang-tidy/ | grep "\.rst$" | xargs -r doc8
 
 
 Registering your Check

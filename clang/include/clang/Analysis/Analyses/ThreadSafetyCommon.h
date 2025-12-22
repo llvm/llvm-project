@@ -213,10 +213,8 @@ public:
 
         case CFGElement::AutomaticObjectDtor: {
           CFGAutomaticObjDtor AD = BI.castAs<CFGAutomaticObjDtor>();
-          auto *DD = const_cast<CXXDestructorDecl *>(
-              AD.getDestructorDecl(ACtx->getASTContext()));
-          auto *VD = const_cast<VarDecl *>(AD.getVarDecl());
-          V.handleDestructorCall(VD, DD);
+          V.handleDestructorCall(AD.getVarDecl(),
+                                 AD.getDestructorDecl(ACtx->getASTContext()));
           break;
         }
         default:
@@ -543,10 +541,14 @@ private:
   til::BasicBlock *CurrentBB = nullptr;
   BlockInfo *CurrentBlockInfo = nullptr;
 
+  // The closure that captures state required for the lookup; this may be
+  // mutable, so we have to save/restore before/after recursive lookups.
+  using LookupLocalVarExprClosure =
+      std::function<const Expr *(const NamedDecl *)>;
   // Recursion guard.
   llvm::DenseSet<const ValueDecl *> VarsBeingTranslated;
   // Context-dependent lookup of currently valid definitions of local variables.
-  std::function<const Expr *(const NamedDecl *)> LookupLocalVarExpr;
+  LookupLocalVarExprClosure LookupLocalVarExpr;
 };
 
 #ifndef NDEBUG

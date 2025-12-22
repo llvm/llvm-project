@@ -424,6 +424,174 @@ join:
   ret ptr %phi
 }
 
+define void @hoist_captures_same(i1 %c, ptr %x, ptr %y) {
+; CHECK-LABEL: @hoist_captures_same(
+; CHECK-NEXT:  if:
+; CHECK-NEXT:    store ptr [[X:%.*]], ptr [[Y:%.*]], align 8, !captures [[META9:![0-9]+]]
+; CHECK-NEXT:    ret void
+;
+if:
+  br i1 %c, label %then, label %else
+
+then:
+  store ptr %x, ptr %y, !captures !{!"address"}
+  br label %out
+
+else:
+  store ptr %x, ptr %y, !captures !{!"address"}
+  br label %out
+
+out:
+  ret void
+}
+
+define void @hoist_captures_different(i1 %c, ptr %x, ptr %y) {
+; CHECK-LABEL: @hoist_captures_different(
+; CHECK-NEXT:  if:
+; CHECK-NEXT:    store ptr [[X:%.*]], ptr [[Y:%.*]], align 8, !captures [[META10:![0-9]+]]
+; CHECK-NEXT:    ret void
+;
+if:
+  br i1 %c, label %then, label %else
+
+then:
+  store ptr %x, ptr %y, !captures !{!"address"}
+  br label %out
+
+else:
+  store ptr %x, ptr %y, !captures !{!"read_provenance"}
+  br label %out
+
+out:
+  ret void
+}
+
+define void @hoist_captures_overlap(i1 %c, ptr %x, ptr %y) {
+; CHECK-LABEL: @hoist_captures_overlap(
+; CHECK-NEXT:  if:
+; CHECK-NEXT:    store ptr [[X:%.*]], ptr [[Y:%.*]], align 8, !captures [[META10]]
+; CHECK-NEXT:    ret void
+;
+if:
+  br i1 %c, label %then, label %else
+
+then:
+  store ptr %x, ptr %y, !captures !{!"address"}
+  br label %out
+
+else:
+  store ptr %x, ptr %y, !captures !{!"address", !"read_provenance"}
+  br label %out
+
+out:
+  ret void
+}
+
+define void @hoist_captures_subsume1(i1 %c, ptr %x, ptr %y) {
+; CHECK-LABEL: @hoist_captures_subsume1(
+; CHECK-NEXT:  if:
+; CHECK-NEXT:    store ptr [[X:%.*]], ptr [[Y:%.*]], align 8, !captures [[META9]]
+; CHECK-NEXT:    ret void
+;
+if:
+  br i1 %c, label %then, label %else
+
+then:
+  store ptr %x, ptr %y, !captures !{!"address_is_null"}
+  br label %out
+
+else:
+  store ptr %x, ptr %y, !captures !{!"address"}
+  br label %out
+
+out:
+  ret void
+}
+
+define void @hoist_captures_subsume2(i1 %c, ptr %x, ptr %y) {
+; CHECK-LABEL: @hoist_captures_subsume2(
+; CHECK-NEXT:  if:
+; CHECK-NEXT:    store ptr [[X:%.*]], ptr [[Y:%.*]], align 8, !captures [[META11:![0-9]+]]
+; CHECK-NEXT:    ret void
+;
+if:
+  br i1 %c, label %then, label %else
+
+then:
+  store ptr %x, ptr %y, !captures !{!"provenance"}
+  br label %out
+
+else:
+  store ptr %x, ptr %y, !captures !{!"read_provenance"}
+  br label %out
+
+out:
+  ret void
+}
+
+define void @hoist_captures_full_set(i1 %c, ptr %x, ptr %y) {
+; CHECK-LABEL: @hoist_captures_full_set(
+; CHECK-NEXT:  if:
+; CHECK-NEXT:    store ptr [[X:%.*]], ptr [[Y:%.*]], align 8
+; CHECK-NEXT:    ret void
+;
+if:
+  br i1 %c, label %then, label %else
+
+then:
+  store ptr %x, ptr %y, !captures !{!"address"}
+  br label %out
+
+else:
+  store ptr %x, ptr %y, !captures !{!"provenance"}
+  br label %out
+
+out:
+  ret void
+}
+
+define void @hoist_captures_only_one1(i1 %c, ptr %x, ptr %y) {
+; CHECK-LABEL: @hoist_captures_only_one1(
+; CHECK-NEXT:  if:
+; CHECK-NEXT:    store ptr [[X:%.*]], ptr [[Y:%.*]], align 8
+; CHECK-NEXT:    ret void
+;
+if:
+  br i1 %c, label %then, label %else
+
+then:
+  store ptr %x, ptr %y, !captures !{!"address"}
+  br label %out
+
+else:
+  store ptr %x, ptr %y
+  br label %out
+
+out:
+  ret void
+}
+
+define void @hoist_captures_only_one2(i1 %c, ptr %x, ptr %y) {
+; CHECK-LABEL: @hoist_captures_only_one2(
+; CHECK-NEXT:  if:
+; CHECK-NEXT:    store ptr [[X:%.*]], ptr [[Y:%.*]], align 8
+; CHECK-NEXT:    ret void
+;
+if:
+  br i1 %c, label %then, label %else
+
+then:
+  store ptr %x, ptr %y
+  br label %out
+
+else:
+  store ptr %x, ptr %y, !captures !{!"address"}
+  br label %out
+
+out:
+  ret void
+}
+
 !0 = !{ i8 0, i8 1 }
 !1 = !{ i8 3, i8 5 }
 !2 = !{}
@@ -445,4 +613,7 @@ join:
 ; CHECK: [[META6]] = !{float 2.500000e+00}
 ; CHECK: [[META7]] = !{i32 5, i32 6}
 ; CHECK: [[META8]] = !{i32 4, i32 5}
+; CHECK: [[META9]] = !{!"address"}
+; CHECK: [[META10]] = !{!"address", !"read_provenance"}
+; CHECK: [[META11]] = !{!"provenance"}
 ;.

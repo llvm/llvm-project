@@ -47,7 +47,8 @@ struct IntPointer {
   const Descriptor *Desc;
   uint64_t Value;
 
-  IntPointer atOffset(const ASTContext &ASTCtx, unsigned Offset) const;
+  std::optional<IntPointer> atOffset(const ASTContext &ASTCtx,
+                                     unsigned Offset) const;
   IntPointer baseCast(const ASTContext &ASTCtx, unsigned BaseOffset) const;
 };
 
@@ -56,7 +57,7 @@ struct TypeidPointer {
   const Type *TypeInfoType;
 };
 
-enum class Storage { Block, Int, Fn, Typeid };
+enum class Storage { Int, Block, Fn, Typeid };
 
 /// A pointer to a memory block, live or dead.
 ///
@@ -199,17 +200,19 @@ public:
       return Pointer(BS.Pointee, sizeof(InlineDescriptor),
                      Offset == 0 ? Offset : PastEndMark);
 
-    // Pointer is one past end - magic offset marks that.
-    if (isOnePastEnd())
-      return Pointer(BS.Pointee, Base, PastEndMark);
+    if (inArray()) {
+      // Pointer is one past end - magic offset marks that.
+      if (isOnePastEnd())
+        return Pointer(BS.Pointee, Base, PastEndMark);
 
-    if (Offset != Base) {
-      // If we're pointing to a primitive array element, there's nothing to do.
-      if (inPrimitiveArray())
-        return *this;
-      // Pointer is to a composite array element - enter it.
-      if (Offset != Base)
+      if (Offset != Base) {
+        // If we're pointing to a primitive array element, there's nothing to
+        // do.
+        if (inPrimitiveArray())
+          return *this;
+        // Pointer is to a composite array element - enter it.
         return Pointer(BS.Pointee, Offset, Offset);
+      }
     }
 
     // Otherwise, we're pointing to a non-array element or
@@ -219,6 +222,8 @@ public:
 
   /// Expands a pointer to the containing array, undoing narrowing.
   [[nodiscard]] Pointer expand() const {
+    if (!isBlockPointer())
+      return *this;
     assert(isBlockPointer());
     Block *Pointee = BS.Pointee;
 
@@ -252,14 +257,17 @@ public:
 
   /// Checks if the pointer is null.
   bool isZero() const {
-    if (isBlockPointer())
+    switch (StorageKind) {
+    case Storage::Int:
+      return Int.Value == 0 && Offset == 0;
+    case Storage::Block:
       return BS.Pointee == nullptr;
-    if (isFunctionPointer())
+    case Storage::Fn:
       return Fn.isZero();
-    if (isTypeidPointer())
+    case Storage::Typeid:
       return false;
-    assert(isIntegralPointer());
-    return Int.Value == 0 && Offset == 0;
+    }
+    llvm_unreachable("Unknown clang::interp::Storage enum");
   }
   /// Checks if the pointer is live.
   bool isLive() const {
@@ -827,6 +835,9 @@ private:
 
 inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const Pointer &P) {
   P.print(OS);
+  OS << ' ';
+  if (const Descriptor *D = P.getFieldDesc())
+    D->dump(OS);
   return OS;
 }
 

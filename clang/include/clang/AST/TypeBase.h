@@ -2607,7 +2607,7 @@ public:
   bool isAnyPointerType() const;   // Any C pointer or ObjC object pointer
   bool isCountAttributedType() const;
   bool isCFIUncheckedCalleeFunctionType() const;
-  bool hasPointeeToToCFIUncheckedCalleeFunctionType() const;
+  bool hasPointeeToCFIUncheckedCalleeFunctionType() const;
   bool isBlockPointerType() const;
   bool isVoidPointerType() const;
   bool isReferenceType() const;
@@ -2637,6 +2637,7 @@ public:
   bool isVectorType() const;                    // GCC vector type.
   bool isExtVectorType() const;                 // Extended vector type.
   bool isExtVectorBoolType() const;             // Extended vector type with bool element.
+  bool isConstantMatrixBoolType() const; // Matrix type with bool element.
   // Extended vector type with bool element that is packed. HLSL doesn't pack
   // its bool vectors.
   bool isPackedVectorBoolType(const ASTContext &ctx) const;
@@ -3495,7 +3496,9 @@ protected:
 
   AdjustedType(TypeClass TC, QualType OriginalTy, QualType AdjustedTy,
                QualType CanonicalPtr)
-      : Type(TC, CanonicalPtr, OriginalTy->getDependence()),
+      : Type(TC, CanonicalPtr,
+             AdjustedTy->getDependence() |
+                 (OriginalTy->getDependence() & ~TypeDependence::Dependent)),
         OriginalTy(OriginalTy), AdjustedTy(AdjustedTy) {}
 
 public:
@@ -4350,12 +4353,26 @@ public:
 
   /// Valid elements types are the following:
   /// * an integer type (as in C23 6.2.5p22), but excluding enumerated types
-  ///   and _Bool
+  ///   and _Bool (except that in HLSL, bool is allowed)
   /// * the standard floating types float or double
   /// * a half-precision floating point type, if one is supported on the target
-  static bool isValidElementType(QualType T) {
-    return T->isDependentType() ||
-           (T->isRealType() && !T->isBooleanType() && !T->isEnumeralType());
+  static bool isValidElementType(QualType T, const LangOptions &LangOpts) {
+    // Dependent is always okay
+    if (T->isDependentType())
+      return true;
+
+    // Enums are never okay
+    if (T->isEnumeralType())
+      return false;
+
+    // In HLSL, bool is allowed as a matrix element type.
+    // Note: isRealType includes bool so don't need to check
+    if (LangOpts.HLSL)
+      return T->isRealType();
+
+    // In non-HLSL modes, follow the existing rule:
+    // real type, but not _Bool.
+    return T->isRealType() && !T->isBooleanType();
   }
 
   bool isSugared() const { return false; }
@@ -4376,8 +4393,6 @@ protected:
   unsigned NumRows;
   unsigned NumColumns;
 
-  static constexpr unsigned MaxElementsPerDimension = (1 << 20) - 1;
-
   ConstantMatrixType(QualType MatrixElementType, unsigned NRows,
                      unsigned NColumns, QualType CanonElementType);
 
@@ -4394,16 +4409,6 @@ public:
   /// Returns the number of elements required to embed the matrix into a vector.
   unsigned getNumElementsFlattened() const {
     return getNumRows() * getNumColumns();
-  }
-
-  /// Returns true if \p NumElements is a valid matrix dimension.
-  static constexpr bool isDimensionValid(size_t NumElements) {
-    return NumElements > 0 && NumElements <= MaxElementsPerDimension;
-  }
-
-  /// Returns the maximum number of elements per dimension.
-  static constexpr unsigned getMaxElementsPerDimension() {
-    return MaxElementsPerDimension;
   }
 
   void Profile(llvm::FoldingSetNodeID &ID) {
@@ -6417,10 +6422,10 @@ protected:
           bool IsInjected, const Type *CanonicalType);
 
 public:
-  // FIXME: Temporarily renamed from `getDecl` in order to facilitate
-  // rebasing, due to change in behaviour. This should be renamed back
-  // to `getDecl` once the change is settled.
-  TagDecl *getOriginalDecl() const { return decl; }
+  TagDecl *getDecl() const { return decl; }
+  [[deprecated("Use getDecl instead")]] TagDecl *getOriginalDecl() const {
+    return decl;
+  }
 
   NestedNameSpecifier getQualifier() const;
 
@@ -6461,7 +6466,7 @@ struct TagTypeFoldingSetPlaceholder : public llvm::FoldingSetNode {
 
   void Profile(llvm::FoldingSetNodeID &ID) const {
     const TagType *T = getTagType();
-    Profile(ID, T->getKeyword(), T->getQualifier(), T->getOriginalDecl(),
+    Profile(ID, T->getKeyword(), T->getQualifier(), T->getDecl(),
             T->isTagOwned(), T->isInjected());
   }
 
@@ -6485,11 +6490,11 @@ class RecordType final : public TagType {
   using TagType::TagType;
 
 public:
-  // FIXME: Temporarily renamed from `getDecl` in order to facilitate
-  // rebasing, due to change in behaviour. This should be renamed back
-  // to `getDecl` once the change is settled.
-  RecordDecl *getOriginalDecl() const {
-    return reinterpret_cast<RecordDecl *>(TagType::getOriginalDecl());
+  RecordDecl *getDecl() const {
+    return reinterpret_cast<RecordDecl *>(TagType::getDecl());
+  }
+  [[deprecated("Use getDecl instead")]] RecordDecl *getOriginalDecl() const {
+    return getDecl();
   }
 
   /// Recursively check all fields in the record for const-ness. If any field
@@ -6505,11 +6510,11 @@ class EnumType final : public TagType {
   using TagType::TagType;
 
 public:
-  // FIXME: Temporarily renamed from `getDecl` in order to facilitate
-  // rebasing, due to change in behaviour. This should be renamed back
-  // to `getDecl` once the change is settled.
-  EnumDecl *getOriginalDecl() const {
-    return reinterpret_cast<EnumDecl *>(TagType::getOriginalDecl());
+  EnumDecl *getDecl() const {
+    return reinterpret_cast<EnumDecl *>(TagType::getDecl());
+  }
+  [[deprecated("Use getDecl instead")]] EnumDecl *getOriginalDecl() const {
+    return getDecl();
   }
 
   static bool classof(const Type *T) { return T->getTypeClass() == Enum; }
@@ -6540,11 +6545,11 @@ class InjectedClassNameType final : public TagType {
                         bool IsInjected, const Type *CanonicalType);
 
 public:
-  // FIXME: Temporarily renamed from `getDecl` in order to facilitate
-  // rebasing, due to change in behaviour. This should be renamed back
-  // to `getDecl` once the change is settled.
-  CXXRecordDecl *getOriginalDecl() const {
-    return reinterpret_cast<CXXRecordDecl *>(TagType::getOriginalDecl());
+  CXXRecordDecl *getDecl() const {
+    return reinterpret_cast<CXXRecordDecl *>(TagType::getDecl());
+  }
+  [[deprecated("Use getDecl instead")]] CXXRecordDecl *getOriginalDecl() const {
+    return getDecl();
   }
 
   static bool classof(const Type *T) {
@@ -6700,15 +6705,21 @@ public:
     LLVM_PREFERRED_TYPE(bool)
     uint8_t RawBuffer : 1;
 
-    Attributes(llvm::dxil::ResourceClass ResourceClass, bool IsROV = false,
-               bool RawBuffer = false)
-        : ResourceClass(ResourceClass), IsROV(IsROV), RawBuffer(RawBuffer) {}
+    LLVM_PREFERRED_TYPE(bool)
+    uint8_t IsCounter : 1;
 
-    Attributes() : Attributes(llvm::dxil::ResourceClass::UAV, false, false) {}
+    Attributes(llvm::dxil::ResourceClass ResourceClass, bool IsROV = false,
+               bool RawBuffer = false, bool IsCounter = false)
+        : ResourceClass(ResourceClass), IsROV(IsROV), RawBuffer(RawBuffer),
+          IsCounter(IsCounter) {}
+
+    Attributes()
+        : Attributes(llvm::dxil::ResourceClass::UAV, false, false, false) {}
 
     friend bool operator==(const Attributes &LHS, const Attributes &RHS) {
-      return std::tie(LHS.ResourceClass, LHS.IsROV, LHS.RawBuffer) ==
-             std::tie(RHS.ResourceClass, RHS.IsROV, RHS.RawBuffer);
+      return std::tie(LHS.ResourceClass, LHS.IsROV, LHS.RawBuffer,
+                      LHS.IsCounter) == std::tie(RHS.ResourceClass, RHS.IsROV,
+                                                 RHS.RawBuffer, RHS.IsCounter);
     }
     friend bool operator!=(const Attributes &LHS, const Attributes &RHS) {
       return !(LHS == RHS);
@@ -6749,6 +6760,7 @@ public:
     ID.AddInteger(static_cast<uint32_t>(Attrs.ResourceClass));
     ID.AddBoolean(Attrs.IsROV);
     ID.AddBoolean(Attrs.RawBuffer);
+    ID.AddBoolean(Attrs.IsCounter);
   }
 
   static bool classof(const Type *T) {
@@ -7072,10 +7084,6 @@ public:
 /// at the current pack substitution index.
 class SubstTemplateTypeParmPackType : public SubstPackType {
   friend class ASTContext;
-
-  /// A pointer to the set of template arguments that this
-  /// parameter pack is instantiated with.
-  const TemplateArgument *Arguments;
 
   llvm::PointerIntPair<Decl *, 1, bool> AssociatedDeclAndFinal;
 
@@ -8571,7 +8579,7 @@ inline bool Type::isCFIUncheckedCalleeFunctionType() const {
   return false;
 }
 
-inline bool Type::hasPointeeToToCFIUncheckedCalleeFunctionType() const {
+inline bool Type::hasPointeeToCFIUncheckedCalleeFunctionType() const {
   QualType Pointee;
   if (const auto *PT = getAs<PointerType>())
     Pointee = PT->getPointeeType();
@@ -8670,6 +8678,12 @@ inline bool Type::isExtVectorBoolType() const {
   if (!isExtVectorType())
     return false;
   return cast<ExtVectorType>(CanonicalType)->getElementType()->isBooleanType();
+}
+
+inline bool Type::isConstantMatrixBoolType() const {
+  if (auto *CMT = dyn_cast<ConstantMatrixType>(CanonicalType))
+    return CMT->getElementType()->isBooleanType();
+  return false;
 }
 
 inline bool Type::isSubscriptableVectorType() const {
@@ -8925,8 +8939,8 @@ inline bool Type::isIntegerType() const {
   if (const EnumType *ET = dyn_cast<EnumType>(CanonicalType)) {
     // Incomplete enum types are not treated as integer types.
     // FIXME: In C++, enum types are never integer types.
-    return IsEnumDeclComplete(ET->getOriginalDecl()) &&
-           !IsEnumDeclScoped(ET->getOriginalDecl());
+    return IsEnumDeclComplete(ET->getDecl()) &&
+           !IsEnumDeclScoped(ET->getDecl());
   }
   return isBitIntType();
 }
@@ -8984,7 +8998,7 @@ inline bool Type::isScalarType() const {
   if (const EnumType *ET = dyn_cast<EnumType>(CanonicalType))
     // Enums are scalar types, but only if they are defined.  Incomplete enums
     // are not treated as scalar types.
-    return IsEnumDeclComplete(ET->getOriginalDecl());
+    return IsEnumDeclComplete(ET->getDecl());
   return isa<PointerType>(CanonicalType) ||
          isa<BlockPointerType>(CanonicalType) ||
          isa<MemberPointerType>(CanonicalType) ||
@@ -9000,7 +9014,7 @@ inline bool Type::isIntegralOrEnumerationType() const {
   // Check for a complete enum type; incomplete enum types are not properly an
   // enumeration type in the sense required here.
   if (const auto *ET = dyn_cast<EnumType>(CanonicalType))
-    return IsEnumDeclComplete(ET->getOriginalDecl());
+    return IsEnumDeclComplete(ET->getDecl());
 
   return isBitIntType();
 }

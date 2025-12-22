@@ -154,7 +154,7 @@ DXContainerYAML::RootSignatureYamlDesc::create(
         if (Error E = readDescriptorRanges<dxbc::RTS0::v1::DescriptorRange>(
                 Header, RootSigDesc, DTV))
           return std::move(E);
-      } else if (Version == 2) {
+      } else if (Version == 2 || Version == 3) {
         if (Error E = readDescriptorRanges<dxbc::RTS0::v2::DescriptorRange>(
                 Header, RootSigDesc, DTV))
           return std::move(E);
@@ -209,6 +209,11 @@ DXContainerYAML::RootSignatureYamlDesc::create(
     NewS.RegisterSpace = S.RegisterSpace;
     NewS.ShaderVisibility = dxbc::ShaderVisibility(S.ShaderVisibility);
 
+    if (Version > 2) {
+#define STATIC_SAMPLER_FLAG(Num, Enum, Flag)                                   \
+  NewS.Enum = (S.Flags & llvm::to_underlying(dxbc::StaticSamplerFlags::Enum));
+#include "llvm/BinaryFormat/DXContainerConstants.def"
+    }
     RootSigDesc.StaticSamplers.push_back(NewS);
   }
 
@@ -241,6 +246,15 @@ uint32_t DXContainerYAML::DescriptorRangeYaml::getEncodedFlags() const {
 #define DESCRIPTOR_RANGE_FLAG(Num, Enum, Flag)                                 \
   if (Enum)                                                                    \
     Flags |= (uint32_t)dxbc::DescriptorRangeFlags::Enum;
+#include "llvm/BinaryFormat/DXContainerConstants.def"
+  return Flags;
+}
+
+uint32_t DXContainerYAML::StaticSamplerYamlDesc::getEncodedFlags() const {
+  uint64_t Flags = 0;
+#define STATIC_SAMPLER_FLAG(Num, Enum, Flag)                                   \
+  if (Enum)                                                                    \
+    Flags |= (uint32_t)dxbc::StaticSamplerFlags::Enum;
 #include "llvm/BinaryFormat/DXContainerConstants.def"
   return Flags;
 }
@@ -512,6 +526,9 @@ void MappingTraits<llvm::DXContainerYAML::StaticSamplerYamlDesc>::mapping(
   IO.mapRequired("ShaderRegister", S.ShaderRegister);
   IO.mapRequired("RegisterSpace", S.RegisterSpace);
   IO.mapRequired("ShaderVisibility", S.ShaderVisibility);
+#define STATIC_SAMPLER_FLAG(Num, Enum, Flag)                                   \
+  IO.mapOptional(#Flag, S.Enum, false);
+#include "llvm/BinaryFormat/DXContainerConstants.def"
 }
 
 void MappingTraits<DXContainerYAML::Part>::mapping(IO &IO,
@@ -572,55 +589,55 @@ void MappingTraits<DXContainerYAML::SignatureElement>::mapping(
 void ScalarEnumerationTraits<dxbc::PSV::SemanticKind>::enumeration(
     IO &IO, dxbc::PSV::SemanticKind &Value) {
   for (const auto &E : dxbc::PSV::getSemanticKinds())
-    IO.enumCase(Value, E.Name.str().c_str(), E.Value);
+    IO.enumCase(Value, E.Name, E.Value);
 }
 
 void ScalarEnumerationTraits<dxbc::PSV::ComponentType>::enumeration(
     IO &IO, dxbc::PSV::ComponentType &Value) {
   for (const auto &E : dxbc::PSV::getComponentTypes())
-    IO.enumCase(Value, E.Name.str().c_str(), E.Value);
+    IO.enumCase(Value, E.Name, E.Value);
 }
 
 void ScalarEnumerationTraits<dxbc::PSV::InterpolationMode>::enumeration(
     IO &IO, dxbc::PSV::InterpolationMode &Value) {
   for (const auto &E : dxbc::PSV::getInterpolationModes())
-    IO.enumCase(Value, E.Name.str().c_str(), E.Value);
+    IO.enumCase(Value, E.Name, E.Value);
 }
 
 void ScalarEnumerationTraits<dxbc::PSV::ResourceType>::enumeration(
     IO &IO, dxbc::PSV::ResourceType &Value) {
   for (const auto &E : dxbc::PSV::getResourceTypes())
-    IO.enumCase(Value, E.Name.str().c_str(), E.Value);
+    IO.enumCase(Value, E.Name, E.Value);
 }
 
 void ScalarEnumerationTraits<dxbc::PSV::ResourceKind>::enumeration(
     IO &IO, dxbc::PSV::ResourceKind &Value) {
   for (const auto &E : dxbc::PSV::getResourceKinds())
-    IO.enumCase(Value, E.Name.str().c_str(), E.Value);
+    IO.enumCase(Value, E.Name, E.Value);
 }
 
 void ScalarEnumerationTraits<dxbc::D3DSystemValue>::enumeration(
     IO &IO, dxbc::D3DSystemValue &Value) {
   for (const auto &E : dxbc::getD3DSystemValues())
-    IO.enumCase(Value, E.Name.str().c_str(), E.Value);
+    IO.enumCase(Value, E.Name, E.Value);
 }
 
 void ScalarEnumerationTraits<dxbc::SigMinPrecision>::enumeration(
     IO &IO, dxbc::SigMinPrecision &Value) {
   for (const auto &E : dxbc::getSigMinPrecisions())
-    IO.enumCase(Value, E.Name.str().c_str(), E.Value);
+    IO.enumCase(Value, E.Name, E.Value);
 }
 
 void ScalarEnumerationTraits<dxbc::SigComponentType>::enumeration(
     IO &IO, dxbc::SigComponentType &Value) {
   for (const auto &E : dxbc::getSigComponentTypes())
-    IO.enumCase(Value, E.Name.str().c_str(), E.Value);
+    IO.enumCase(Value, E.Name, E.Value);
 }
 
 void ScalarEnumerationTraits<dxbc::RootParameterType>::enumeration(
     IO &IO, dxbc::RootParameterType &Value) {
   for (const auto &E : dxbc::getRootParameterTypes())
-    IO.enumCase(Value, E.Name.str().c_str(), E.Value);
+    IO.enumCase(Value, E.Name, E.Value);
 }
 
 void ScalarEnumerationTraits<dxil::ResourceClass>::enumeration(
@@ -633,37 +650,37 @@ void ScalarEnumerationTraits<dxil::ResourceClass>::enumeration(
   };
 
   for (const auto &E : ResourceClasses)
-    IO.enumCase(Value, E.Name.str().c_str(), E.Value);
+    IO.enumCase(Value, E.Name, E.Value);
 }
 
 void ScalarEnumerationTraits<dxbc::SamplerFilter>::enumeration(
     IO &IO, dxbc::SamplerFilter &Value) {
   for (const auto &E : dxbc::getSamplerFilters())
-    IO.enumCase(Value, E.Name.str().c_str(), E.Value);
+    IO.enumCase(Value, E.Name, E.Value);
 }
 
 void ScalarEnumerationTraits<dxbc::StaticBorderColor>::enumeration(
     IO &IO, dxbc::StaticBorderColor &Value) {
   for (const auto &E : dxbc::getStaticBorderColors())
-    IO.enumCase(Value, E.Name.str().c_str(), E.Value);
+    IO.enumCase(Value, E.Name, E.Value);
 }
 
 void ScalarEnumerationTraits<dxbc::TextureAddressMode>::enumeration(
     IO &IO, dxbc::TextureAddressMode &Value) {
   for (const auto &E : dxbc::getTextureAddressModes())
-    IO.enumCase(Value, E.Name.str().c_str(), E.Value);
+    IO.enumCase(Value, E.Name, E.Value);
 }
 
 void ScalarEnumerationTraits<dxbc::ShaderVisibility>::enumeration(
     IO &IO, dxbc::ShaderVisibility &Value) {
   for (const auto &E : dxbc::getShaderVisibility())
-    IO.enumCase(Value, E.Name.str().c_str(), E.Value);
+    IO.enumCase(Value, E.Name, E.Value);
 }
 
 void ScalarEnumerationTraits<dxbc::ComparisonFunc>::enumeration(
     IO &IO, dxbc::ComparisonFunc &Value) {
   for (const auto &E : dxbc::getComparisonFuncs())
-    IO.enumCase(Value, E.Name.str().c_str(), E.Value);
+    IO.enumCase(Value, E.Name, E.Value);
 }
 
 } // namespace yaml

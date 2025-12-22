@@ -35,9 +35,6 @@ InstructionEncoding::findOperandDecoderMethod(const Record *Record) {
     Decoder = "Decode" + Record->getName().str() + "RegisterClass";
   } else if (Record->isSubClassOf("RegClassByHwMode")) {
     Decoder = "Decode" + Record->getName().str() + "RegClassByHwMode";
-  } else if (Record->isSubClassOf("PointerLikeRegClass")) {
-    Decoder = "DecodePointerLikeRegClass" +
-              utostr(Record->getValueAsInt("RegClassKind"));
   }
 
   return {Decoder, true};
@@ -315,6 +312,14 @@ static void addOneOperandFields(const Record *EncodingDef,
       ++J;
     else
       OpInfo.addField(I, J - I, Offset);
+  }
+
+  if (!OpInfo.InitValue && OpInfo.fields().empty()) {
+    // We found a field in InstructionEncoding record that corresponds to the
+    // named operand, but that field has no constant bits and doesn't contribute
+    // to the Inst field. For now, treat that field as if it didn't exist.
+    // TODO: Remove along with IgnoreNonDecodableOperands.
+    OpInfo.HasNoEncoding = true;
   }
 }
 

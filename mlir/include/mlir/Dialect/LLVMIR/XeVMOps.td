@@ -190,8 +190,9 @@ def XeVM_StoreCacheControlAttr
 
 def XeVM_BlockLoadOp
     : XeVM_Op<"blockload">,
-      Results<(
-          outs FixedVectorOfRankAndType<[1], [XeVM_1DBlockElemType]>:$res)>,
+      Results<(outs AnyTypeOf<
+          [XeVM_1DBlockElemType,
+           FixedVectorOfRankAndType<[1], [XeVM_1DBlockElemType]>]>:$res)>,
       Arguments<(ins Arg<LLVM_AnyPointer, "", [MemRead]>:$ptr,
           OptionalAttr<XeVM_LoadCacheControlAttr>:$cache_control)> {
   let summary = "subgroup block load";
@@ -228,7 +229,9 @@ def XeVM_BlockLoadOp
 def XeVM_BlockStoreOp
     : XeVM_Op<"blockstore">,
       Arguments<(ins Arg<LLVM_AnyPointer, "", [MemWrite]>:$ptr,
-          FixedVectorOfRankAndType<[1], [XeVM_1DBlockElemType]>:$val,
+          AnyTypeOf<[XeVM_1DBlockElemType,
+                     FixedVectorOfRankAndType<[1],
+                                              [XeVM_1DBlockElemType]>]>:$val,
           OptionalAttr<XeVM_StoreCacheControlAttr>:$cache_control)> {
   let summary = "subgroup block store";
   let description = [{
@@ -460,10 +463,9 @@ def XeVM_PrefetchOp
 
 def XeVM_BlockPrefetch2dOp
     : XeVM_Op<"blockprefetch2d">,
-      Arguments<(ins Arg<LLVM_AnyPointer, "", [MemRead]>:$ptr, I32:$base_width,
-          I32:$base_height, I32:$base_pitch, I32:$x, I32:$y,
-          I32Attr:$elem_size_in_bits, I32Attr:$tile_width, I32Attr:$tile_height,
-          I32Attr:$v_blocks,
+      Arguments<(ins LLVM_AnyPointer:$ptr, I32:$base_width, I32:$base_height,
+          I32:$base_pitch, I32:$x, I32:$y, I32Attr:$elem_size_in_bits,
+          I32Attr:$tile_width, I32Attr:$tile_height, I32Attr:$v_blocks,
           OptionalAttr<XeVM_LoadCacheControlAttr>:$cache_control)> {
 
   let summary = "2D block prefetch";
@@ -633,5 +635,38 @@ def XeVM_TargetAttr : XeVM_Attr<"XeVMTarget", "target"> {
   let skipDefaultBuilders = 1;
   let genVerifyDecl = 1;
 }
+
+//===----------------------------------------------------------------------===//
+// XeVM special register op definitions
+//===----------------------------------------------------------------------===//
+
+class XeVM_SpecialIdRegisterOp<string mnemonic, list<Trait> traits = []>
+    : XeVM_Op<mnemonic, traits>,
+      Results<(outs AnyTypeOf<[I32, I64]>:$res)>,
+      Arguments<(ins OptionalAttr<LLVM_ConstantRangeAttr>:$range)> {
+  let assemblyFormat = "(`range` $range^)? attr-dict `:` type($res)";
+}
+
+multiclass XeVM_SpecialRegisterXYZ<string mnemonic, list<Trait> traits = []> {
+  def XOp : XeVM_SpecialIdRegisterOp<!strconcat(mnemonic, ".x"), traits>;
+  def YOp : XeVM_SpecialIdRegisterOp<!strconcat(mnemonic, ".y"), traits>;
+  def ZOp : XeVM_SpecialIdRegisterOp<!strconcat(mnemonic, ".z"), traits>;
+}
+
+//===----------------------------------------------------------------------===//
+// Workitem index and range
+defm XeVM_WorkitemId : XeVM_SpecialRegisterXYZ<"local_id">;
+defm XeVM_WorkgroupDim : XeVM_SpecialRegisterXYZ<"local_size">;
+
+//===----------------------------------------------------------------------===//
+// Workgroup index and range
+defm XeVM_WorkgroupId : XeVM_SpecialRegisterXYZ<"group_id">;
+defm XeVM_GridDim : XeVM_SpecialRegisterXYZ<"group_count">;
+
+//===----------------------------------------------------------------------===//
+// Lane, Subgroup index and range
+def XeVM_LaneIdOp : XeVM_SpecialIdRegisterOp<"lane_id">;
+def XeVM_SubgroupIdOp : XeVM_SpecialIdRegisterOp<"subgroup_id">;
+def XeVM_SubgroupSizeOp : XeVM_SpecialIdRegisterOp<"subgroup_size">;
 
 #endif // XEVMIR_OPS

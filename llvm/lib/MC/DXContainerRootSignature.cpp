@@ -23,19 +23,20 @@ static uint32_t writePlaceholder(raw_svector_ostream &Stream) {
 static uint32_t rewriteOffsetToCurrentByte(raw_svector_ostream &Stream,
                                            uint32_t Offset) {
   uint32_t ByteOffset = Stream.tell();
-  uint32_t Value =
-      support::endian::byte_swap<uint32_t, llvm::endianness::little>(
-          ByteOffset);
+  uint32_t Value = support::endian::byte_swap<uint32_t>(
+      ByteOffset, llvm::endianness::little);
   Stream.pwrite(reinterpret_cast<const char *>(&Value), sizeof(Value), Offset);
   return ByteOffset;
 }
 
 size_t RootSignatureDesc::getSize() const {
   uint32_t StaticSamplersOffset = computeStaticSamplersOffset();
-  size_t StaticSamplersSize =
-      StaticSamplers.size() * sizeof(dxbc::RTS0::v1::StaticSampler);
+  size_t StaticSamplersSize = sizeof(dxbc::RTS0::v1::StaticSampler);
+  if (Version > 2)
+    StaticSamplersSize = sizeof(dxbc::RTS0::v3::StaticSampler);
 
-  return size_t(StaticSamplersOffset) + StaticSamplersSize;
+  return size_t(StaticSamplersOffset) +
+         (StaticSamplersSize * StaticSamplers.size());
 }
 
 uint32_t RootSignatureDesc::computeRootParametersOffset() const {
@@ -171,6 +172,9 @@ void RootSignatureDesc::write(raw_ostream &OS) const {
     support::endian::write(BOS, S.ShaderRegister, llvm::endianness::little);
     support::endian::write(BOS, S.RegisterSpace, llvm::endianness::little);
     support::endian::write(BOS, S.ShaderVisibility, llvm::endianness::little);
+
+    if (Version > 2)
+      support::endian::write(BOS, S.Flags, llvm::endianness::little);
   }
   assert(Storage.size() == getSize());
   OS.write(Storage.data(), Storage.size());

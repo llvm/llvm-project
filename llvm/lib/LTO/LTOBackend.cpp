@@ -17,6 +17,7 @@
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/CGSCCPassManager.h"
 #include "llvm/Analysis/ModuleSummaryAnalysis.h"
+#include "llvm/Analysis/RuntimeLibcallInfo.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
@@ -240,27 +241,26 @@ static void runNewPMPasses(const Config &Conf, Module &Mod, TargetMachine *TM,
                            unsigned OptLevel, bool IsThinLTO,
                            ModuleSummaryIndex *ExportSummary,
                            const ModuleSummaryIndex *ImportSummary) {
-  auto FS = vfs::getRealFileSystem();
   std::optional<PGOOptions> PGOOpt;
   if (!Conf.SampleProfile.empty())
     PGOOpt = PGOOptions(Conf.SampleProfile, "", Conf.ProfileRemapping,
-                        /*MemoryProfile=*/"", FS, PGOOptions::SampleUse,
+                        /*MemoryProfile=*/"", PGOOptions::SampleUse,
                         PGOOptions::NoCSAction,
                         PGOOptions::ColdFuncOpt::Default, true);
   else if (Conf.RunCSIRInstr) {
     PGOOpt = PGOOptions("", Conf.CSIRProfile, Conf.ProfileRemapping,
-                        /*MemoryProfile=*/"", FS, PGOOptions::IRUse,
+                        /*MemoryProfile=*/"", PGOOptions::IRUse,
                         PGOOptions::CSIRInstr, PGOOptions::ColdFuncOpt::Default,
                         Conf.AddFSDiscriminator);
   } else if (!Conf.CSIRProfile.empty()) {
-    PGOOpt = PGOOptions(Conf.CSIRProfile, "", Conf.ProfileRemapping,
-                        /*MemoryProfile=*/"", FS, PGOOptions::IRUse,
-                        PGOOptions::CSIRUse, PGOOptions::ColdFuncOpt::Default,
-                        Conf.AddFSDiscriminator);
+    PGOOpt =
+        PGOOptions(Conf.CSIRProfile, "", Conf.ProfileRemapping,
+                   /*MemoryProfile=*/"", PGOOptions::IRUse, PGOOptions::CSIRUse,
+                   PGOOptions::ColdFuncOpt::Default, Conf.AddFSDiscriminator);
     NoPGOWarnMismatch = !Conf.PGOWarnMismatch;
   } else if (Conf.AddFSDiscriminator) {
-    PGOOpt = PGOOptions("", "", "", /*MemoryProfile=*/"", nullptr,
-                        PGOOptions::NoAction, PGOOptions::NoCSAction,
+    PGOOpt = PGOOptions("", "", "", /*MemoryProfile=*/"", PGOOptions::NoAction,
+                        PGOOptions::NoCSAction,
                         PGOOptions::ColdFuncOpt::Default, true);
   }
   TM->setPGOOption(PGOOpt);
@@ -279,7 +279,7 @@ static void runNewPMPasses(const Config &Conf, Module &Mod, TargetMachine *TM,
   RegisterPassPlugins(Conf.PassPlugins, PB);
 
   std::unique_ptr<TargetLibraryInfoImpl> TLII(
-      new TargetLibraryInfoImpl(TM->getTargetTriple()));
+      new TargetLibraryInfoImpl(TM->getTargetTriple(), TM->Options.VecLib));
   if (Conf.Freestanding)
     TLII->disableAllFunctions();
   FAM.registerPass([&] { return TargetLibraryAnalysis(*TLII); });
@@ -445,8 +445,13 @@ static void codegen(const Config &Conf, TargetMachine *TM,
   // keep the pointer and may use it until their destruction. See #138194.
   {
     legacy::PassManager CodeGenPasses;
-    TargetLibraryInfoImpl TLII(Mod.getTargetTriple());
+    TargetLibraryInfoImpl TLII(Mod.getTargetTriple(), TM->Options.VecLib);
     CodeGenPasses.add(new TargetLibraryInfoWrapperPass(TLII));
+    CodeGenPasses.add(new RuntimeLibraryInfoWrapper(
+        Mod.getTargetTriple(), TM->Options.ExceptionModel,
+        TM->Options.FloatABIType, TM->Options.EABIVersion,
+        TM->Options.MCOptions.ABIName, TM->Options.VecLib));
+
     // No need to make index available if the module is empty.
     // In theory these passes should not use the index for an empty
     // module, however, this guards against doing any unnecessary summary-based
@@ -540,12 +545,12 @@ static Expected<const Target *> initAndLookupTarget(const Config &C,
   return T;
 }
 
-Error lto::finalizeOptimizationRemarks(
-    std::unique_ptr<ToolOutputFile> DiagOutputFile) {
+Error lto::finalizeOptimizationRemarks(LLVMRemarkFileHandle DiagOutputFile) {
   // Make sure we flush the diagnostic remarks file in case the linker doesn't
   // call the global destructors before exiting.
   if (!DiagOutputFile)
     return Error::success();
+  DiagOutputFile.finalize();
   DiagOutputFile->keep();
   DiagOutputFile->os().flush();
   return Error::success();
@@ -640,7 +645,7 @@ Error lto::thinBackend(const Config &Conf, unsigned Task, AddStreamFn AddStream,
 
   auto OptimizeAndCodegen =
       [&](Module &Mod, TargetMachine *TM,
-          std::unique_ptr<ToolOutputFile> DiagnosticOutputFile) {
+          LLVMRemarkFileHandle DiagnosticOutputFile) {
         // Perform optimization and code generation for ThinLTO.
         if (!opt(Conf, TM, Task, Mod, /*IsThinLTO=*/true,
                  /*ExportSummary=*/nullptr, /*ImportSummary=*/&CombinedIndex,
@@ -727,7 +732,6 @@ Error lto::thinBackend(const Config &Conf, unsigned Task, AddStreamFn AddStream,
   }
 
   // Do this after any importing so that imported code is updated.
-  updateMemProfAttributes(Mod, CombinedIndex);
   updatePublicTypeTestCalls(Mod, CombinedIndex.withWholeProgramVisibility());
 
   if (Conf.PostImportModuleHook && !Conf.PostImportModuleHook(Task, Mod))
@@ -772,11 +776,11 @@ bool lto::initImportList(const Module &M,
   // via a WriteIndexesThinBackend.
   for (const auto &GlobalList : CombinedIndex) {
     // Ignore entries for undefined references.
-    if (GlobalList.second.SummaryList.empty())
+    if (GlobalList.second.getSummaryList().empty())
       continue;
 
     auto GUID = GlobalList.first;
-    for (const auto &Summary : GlobalList.second.SummaryList) {
+    for (const auto &Summary : GlobalList.second.getSummaryList()) {
       // Skip the summaries for the importing module. These are included to
       // e.g. record required linkage changes.
       if (Summary->modulePath() == M.getModuleIdentifier())

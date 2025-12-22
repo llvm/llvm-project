@@ -12,12 +12,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Basic/Diagnostic.h"
+#include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Driver/DriverDiagnostic.h"
-#include "clang/Driver/Options.h"
-#include "clang/Frontend/FrontendDiagnostic.h"
 #include "clang/Frontend/TextDiagnosticPrinter.h"
 #include "clang/Frontend/Utils.h"
+#include "clang/Options/Options.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -45,6 +45,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FormattedStream.h"
+#include "llvm/Support/IOSandbox.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
@@ -59,8 +60,7 @@
 #include <optional>
 #include <system_error>
 using namespace clang;
-using namespace clang::driver;
-using namespace clang::driver::options;
+using namespace clang::options;
 using namespace llvm;
 using namespace llvm::opt;
 
@@ -417,15 +417,19 @@ getOutputStream(StringRef Path, DiagnosticsEngine &Diags, bool Binary) {
 }
 
 static bool ExecuteAssemblerImpl(AssemblerInvocation &Opts,
-                                 DiagnosticsEngine &Diags) {
+                                 DiagnosticsEngine &Diags,
+                                 IntrusiveRefCntPtr<vfs::FileSystem> VFS) {
   // Get the target specific parser.
   std::string Error;
   const Target *TheTarget = TargetRegistry::lookupTarget(Opts.Triple, Error);
   if (!TheTarget)
     return Diags.Report(diag::err_target_unknown_triple) << Opts.Triple.str();
 
-  ErrorOr<std::unique_ptr<MemoryBuffer>> Buffer =
-      MemoryBuffer::getFileOrSTDIN(Opts.InputFile, /*IsText=*/true);
+  ErrorOr<std::unique_ptr<MemoryBuffer>> Buffer = [&] {
+    // FIXME(sandboxing): Make this a proper input file.
+    auto BypassSandbox = sys::sandbox::scopedDisable();
+    return MemoryBuffer::getFileOrSTDIN(Opts.InputFile, /*IsText=*/true);
+  }();
 
   if (std::error_code EC = Buffer.getError()) {
     return Diags.Report(diag::err_fe_error_reading)
@@ -440,6 +444,7 @@ static bool ExecuteAssemblerImpl(AssemblerInvocation &Opts,
   // Record the location of the include directories so that the lexer can find
   // it later.
   SrcMgr.setIncludeDirs(Opts.IncludePaths);
+  SrcMgr.setVirtualFileSystem(VFS);
 
   std::unique_ptr<MCRegisterInfo> MRI(TheTarget->createMCRegInfo(Opts.Triple));
   assert(MRI && "Unable to create target register info!");
@@ -632,8 +637,9 @@ static bool ExecuteAssemblerImpl(AssemblerInvocation &Opts,
 }
 
 static bool ExecuteAssembler(AssemblerInvocation &Opts,
-                             DiagnosticsEngine &Diags) {
-  bool Failed = ExecuteAssemblerImpl(Opts, Diags);
+                             DiagnosticsEngine &Diags,
+                             IntrusiveRefCntPtr<vfs::FileSystem> VFS) {
+  bool Failed = ExecuteAssemblerImpl(Opts, Diags, VFS);
 
   // Delete output file if there were errors.
   if (Failed) {
@@ -669,7 +675,10 @@ int cc1as_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
   DiagClient->setPrefix("clang -cc1as");
   DiagnosticsEngine Diags(DiagnosticIDs::create(), DiagOpts, DiagClient);
 
-  auto VFS = vfs::getRealFileSystem();
+  auto VFS = [] {
+    auto BypassSandbox = sys::sandbox::scopedDisable();
+    return vfs::getRealFileSystem();
+  }();
 
   // Set an error handler, so that any LLVM backend diagnostics go through our
   // error handler.
@@ -685,8 +694,7 @@ int cc1as_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
     getDriverOptTable().printHelp(
         llvm::outs(), "clang -cc1as [options] file...",
         "Clang Integrated Assembler", /*ShowHidden=*/false,
-        /*ShowAllAliases=*/false,
-        llvm::opt::Visibility(driver::options::CC1AsOption));
+        /*ShowAllAliases=*/false, llvm::opt::Visibility(options::CC1AsOption));
 
     return 0;
   }
@@ -714,7 +722,7 @@ int cc1as_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
   }
 
   // Execute the invocation, unless there were parsing errors.
-  bool Failed = Diags.hasErrorOccurred() || ExecuteAssembler(Asm, Diags);
+  bool Failed = Diags.hasErrorOccurred() || ExecuteAssembler(Asm, Diags, VFS);
 
   // If any timers were active but haven't been destroyed yet, print their
   // results now.
