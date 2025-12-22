@@ -120,29 +120,6 @@ public:
   bool hasDotInstructions() const {
     return SmVersion >= 61 && PTXVersion >= 50;
   }
-  // Tcgen05 instructions in Blackwell family
-  bool hasTcgen05Instructions() const {
-    bool HasTcgen05 = false;
-    unsigned MinPTXVersion = 86;
-    switch (FullSmVersion) {
-    default:
-      break;
-    case 1003: // sm_100a
-    case 1013: // sm_101a
-      HasTcgen05 = true;
-      break;
-    case 1103: // sm_110a
-      HasTcgen05 = true;
-      MinPTXVersion = 90;
-      break;
-    case 1033: // sm_103a
-      HasTcgen05 = true;
-      MinPTXVersion = 88;
-      break;
-    }
-
-    return HasTcgen05 && PTXVersion >= MinPTXVersion;
-  }
 
   // Checks following instructions support:
   // - tcgen05.ld/st
@@ -150,6 +127,7 @@ public:
   // - tcgen05.cp
   // - tcgen05.fence/wait
   // - tcgen05.commit
+  // - tcgen05.mma
   bool hasTcgen05InstSupport() const {
     // sm_101 renamed to sm_110 in PTX 9.0
     return hasPTXWithFamilySMs(90, {100, 110}) ||
@@ -166,8 +144,36 @@ public:
   }
 
   bool hasTcgen05MMAScaleInputDImm() const {
-    return FullSmVersion == 1003 && PTXVersion >= 86;
+    return hasPTXWithFamilySMs(88, {100}) || hasPTXWithAccelSMs(86, {100});
   }
+
+  bool hasTcgen05MMAI8Kind() const {
+    return hasPTXWithAccelSMs(90, {100, 110}) ||
+           hasPTXWithAccelSMs(86, {100, 101});
+  }
+
+  bool hasTcgen05MMASparseMxf4nvf4() const {
+    return hasPTXWithAccelSMs(90, {100, 110, 103}) ||
+           hasPTXWithAccelSMs(87, {100, 101, 103});
+  }
+
+  bool hasTcgen05MMASparseMxf4() const {
+    return hasPTXWithAccelSMs(90, {100, 110, 103}) ||
+           hasPTXWithAccelSMs(86, {100, 101, 103});
+  }
+
+  bool hasReduxSyncF32() const {
+    return hasPTXWithFamilySMs(88, {100}) || hasPTXWithAccelSMs(86, {100});
+  }
+
+  bool hasMMABlockScale() const {
+    return hasPTXWithFamilySMs(88, {120}) || hasPTXWithAccelSMs(87, {120});
+  }
+
+  bool hasMMASparseBlockScaleF4() const {
+    return hasPTXWithAccelSMs(87, {120, 121});
+  }
+
   // f32x2 instructions in Blackwell family
   bool hasF32x2Instructions() const;
 
@@ -231,6 +237,25 @@ public:
     return hasTensormapReplaceSupport();
   }
 
+  bool hasClusterLaunchControlTryCancelMulticastSupport() const {
+    return hasPTXWithFamilySMs(90, {100, 110, 120}) ||
+           hasPTXWithFamilySMs(88, {100, 101, 120}) ||
+           hasPTXWithAccelSMs(86, {100, 101, 120});
+  }
+
+  bool hasSetMaxNRegSupport() const {
+    return hasPTXWithFamilySMs(90, {100, 110, 120}) ||
+           hasPTXWithFamilySMs(88, {100, 101, 120}) ||
+           hasPTXWithAccelSMs(86, {100, 101, 120}) ||
+           hasPTXWithAccelSMs(80, {90});
+  }
+
+  bool hasLdStmatrixBlackwellSupport() const {
+    return hasPTXWithFamilySMs(90, {100, 110, 120}) ||
+           hasPTXWithFamilySMs(88, {100, 101, 120}) ||
+           hasPTXWithAccelSMs(86, {100, 101, 120});
+  }
+
   // Prior to CUDA 12.3 ptxas did not recognize that the trap instruction
   // terminates a basic block. Instead, it would assume that control flow
   // continued to the next instruction. The next instruction could be in the
@@ -240,6 +265,9 @@ public:
   // present.
   bool hasPTXASUnreachableBug() const { return PTXVersion < 83; }
   bool hasCvtaParam() const { return SmVersion >= 70 && PTXVersion >= 77; }
+  bool hasConvertWithStochasticRounding() const {
+    return hasPTXWithAccelSMs(87, {100, 103});
+  }
   unsigned int getFullSmVersion() const { return FullSmVersion; }
   unsigned int getSmVersion() const { return getFullSmVersion() / 10; }
   unsigned int getSmFamilyVersion() const { return getFullSmVersion() / 100; }
