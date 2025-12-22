@@ -2,9 +2,9 @@ import("//third-party/unittest/unittest.gni")
 unittest("PluginsTests") {
   deps = [
     "//llvm/include/llvm/Config:config",
-    "//llvm/lib/Extensions",
     "//llvm/lib/IR",
     "//llvm/lib/Passes",
+    "//llvm/lib/Plugins",
     "//llvm/lib/Support",
     "//llvm/lib/Testing/Support",
   ]

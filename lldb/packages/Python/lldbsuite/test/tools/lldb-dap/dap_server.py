@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
 
+# FIXME: remove when LLDB_MINIMUM_PYTHON_VERSION > 3.8
+from __future__ import annotations
+
 import argparse
 import binascii
 import dataclasses
@@ -1707,8 +1710,12 @@ class DebugAdapterServer(DebugCommunication):
                 )
             )
 
+        # FIXME: use `str.removeprefix` when LLDB_MINIMUM_PYTHON_VERSION > 3.8
+        if out.startswith(expected_prefix):
+            out = out[len(expected_prefix) :]
+
         # If the listener expanded into multiple addresses, use the first.
-        connection = out.removeprefix(expected_prefix).rstrip("\r\n").split(",", 1)[0]
+        connection = out.rstrip("\r\n").split(",", 1)[0]
 
         return (process, connection)
 

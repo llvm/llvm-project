@@ -15,7 +15,8 @@
 #include "src/__support/File/linux/lseekImpl.h"
 #include "src/__support/OSUtil/fcntl.h"
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
-#include "src/__support/libc_errno.h"     // For error macros
+#include "src/__support/alloc-checker.h"
+#include "src/__support/libc_errno.h" // For error macros
 #include "src/__support/macros/config.h"
 
 #include "hdr/fcntl_macros.h" // For mode_t and other flags to the open syscall
