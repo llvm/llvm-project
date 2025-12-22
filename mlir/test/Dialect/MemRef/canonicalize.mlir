@@ -1362,19 +1362,6 @@ func.func @fold_view_same_source_result_types(%0: memref<128xi8>) -> memref<128x
 
 // -----
 
-// CHECK-LABEL: func @fold_view_compatible_source_result_types
-//  CHECK-SAME:   (%[[ARG:.*]]: memref<?xi8>)
-func.func @fold_view_compatible_source_result_types(%0: memref<?xi8>) -> memref<128xi8> {
-  %c0 = arith.constant 0 : index
-  // CHECK-NOT: memref.view
-  // CHECK: %[[RES:.*]] = memref.cast %[[ARG]] : memref<?xi8> to memref<128xi8>
-  // CHECK: return %[[RES]]
-  %res = memref.view %0[%c0][] : memref<?xi8> to memref<128xi8>
-  return %res : memref<128xi8>
-}
-
-// -----
-
 // CHECK-LABEL: func @non_fold_view_non_zero_offset
 //  CHECK-SAME:   (%[[ARG:.*]]: memref<128xi8>)
 func.func @non_fold_view_non_zero_offset(%0: memref<128xi8>) -> memref<128xi8> {

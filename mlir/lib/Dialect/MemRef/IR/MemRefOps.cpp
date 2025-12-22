@@ -3768,38 +3768,11 @@ struct ViewOpMemrefCastFolder : public OpRewritePattern<ViewOp> {
     return success();
   }
 };
-
-/// view %source[0] -> cast(%source) if static shapes.
-struct ViewOpZeroOffsetFolder : public OpRewritePattern<ViewOp> {
-  using Base::Base;
-
-  LogicalResult matchAndRewrite(ViewOp viewOp,
-                                PatternRewriter &rewriter) const override {
-    if (!isZeroInteger(viewOp.getByteShift()))
-      return failure();
-
-    Value source = viewOp.getSource();
-    auto sourceMemrefType = cast<MemRefType>(source.getType());
-    auto resultMemrefType = cast<MemRefType>(viewOp.getType());
-    if (sourceMemrefType == resultMemrefType)
-      return failure(); // Handled by folder
-
-    if (!resultMemrefType.hasStaticShape() ||
-        !CastOp::areCastCompatible(sourceMemrefType, resultMemrefType))
-      return failure();
-
-    rewriter.replaceOpWithNewOp<CastOp>(viewOp, resultMemrefType, source);
-    return success();
-  }
-};
-
 } // namespace
 
 void ViewOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                          MLIRContext *context) {
-  results
-      .add<ViewOpShapeFolder, ViewOpMemrefCastFolder, ViewOpZeroOffsetFolder>(
-          context);
+  results.add<ViewOpShapeFolder, ViewOpMemrefCastFolder>(context);
 }
 
 FailureOr<std::optional<SmallVector<Value>>>
