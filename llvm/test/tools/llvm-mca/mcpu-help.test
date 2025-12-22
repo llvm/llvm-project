@@ -1,0 +1,9 @@
+# REQUIRES: aarch64-registered-target
+
+# RUN: llvm-mca -mtriple=aarch64-unknown-linux-gnu -mcpu=help %t.no-input 2>&1 | FileCheck %s
+
+// Ensures -mcpu=help prints target info without erroring on missing input.
+
+# CHECK: Available CPUs for this target:
+# CHECK: Available features for this target:
+# CHECK-NOT: error:
