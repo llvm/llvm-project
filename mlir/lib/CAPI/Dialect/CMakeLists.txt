@@ -427,6 +427,15 @@ add_mlir_upstream_c_api_library(MLIRCAPIUB
   MLIRUBDialect
 )
 
+add_mlir_upstream_c_api_library(MLIRCAPIVCIX
+  VCIX.cpp
+
+  PARTIAL_SOURCES_INTENDED
+  LINK_LIBS PUBLIC
+  MLIRCAPIIR
+  MLIRVCIXDialect
+)
+
 add_mlir_upstream_c_api_library(MLIRCAPIVector
   Vector.cpp
   VectorPasses.cpp
@@ -462,4 +471,13 @@ add_mlir_upstream_c_api_library(MLIRCAPIXeGPU
   LINK_LIBS PUBLIC
   MLIRCAPIIR
   MLIRXeGPUDialect
+)
+
+add_mlir_upstream_c_api_library(MLIRCAPIXeVM
+  XeVM.cpp
+
+  PARTIAL_SOURCES_INTENDED
+  LINK_LIBS PUBLIC
+  MLIRCAPIIR
+  MLIRXeVMDialect
 )
