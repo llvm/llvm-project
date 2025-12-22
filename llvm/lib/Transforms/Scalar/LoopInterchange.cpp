@@ -1821,29 +1821,27 @@ void LoopInterchangeTransform::restructureLoops(
   SE->forgetLoop(NewOuter);
 }
 
-/*
-  User can write, optimizers can generate simple reduction for inner loop. In
-  order to make interchange valid, we have to undo reduction by moving th
-  initialization and store instructions into the inner loop. So far we only
-  handle cases where the reduction variable is initialized to a constant.
-  For example, below code:
-
-  loop:
-    re = phi<0.0, next>
-    next = re op ...
-  reduc_sum = phi<next>       // lcssa phi
-  MEM_REF[idx] = reduc_sum		// LcssaStorer
-
-  is transformed into:
-
-  loop:
-    tmp = MEM_REF[idx];
-    new_var = !first_iteration ? tmp : 0.0;
-    next = new_var op ...
-    MEM_REF[idx] = next;		// after moving
-
-  In this way the initial const is used in the first iteration of loop.
-*/
+///  User can write, optimizers can generate simple reduction for inner loop. In
+///  order to make interchange valid, we have to undo reduction by moving th
+///  initialization and store instructions into the inner loop. So far we only
+///  handle cases where the reduction variable is initialized to a constant.
+///  For example, below code:
+///
+///  loop:
+///    re = phi<0.0, next>
+///    next = re op ...
+///  reduc_sum = phi<next>       // lcssa phi
+///  MEM_REF[idx] = reduc_sum		// LcssaStorer
+///
+///  is transformed into:
+///
+///  loop:
+///    tmp = MEM_REF[idx];
+///    new_var = !first_iteration ? tmp : 0.0;
+///    next = new_var op ...
+///    MEM_REF[idx] = next;		// after moving
+///
+///  In this way the initial const is used in the first iteration of loop.
 void LoopInterchangeTransform::undoSimpleReduction() {
 
   auto &InnerSimpleReductions = LIL.getInnerSimpleReductions();
