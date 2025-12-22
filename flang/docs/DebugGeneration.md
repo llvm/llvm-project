@@ -418,7 +418,7 @@ with fixed sizes arrays. It needs to also accept `DIExpressionAttr` or
 `rank`, `allocated` and `associated`.
 5. `DIStringTypeAttr`
 
-# Testing
+## Testing
 
 - LLVM LIT tests will be added to test:
   - the driver and ensure that it passes the line table and full debug
@@ -434,7 +434,7 @@ with fixed sizes arrays. It needs to also accept `DIExpressionAttr` or
   - print values and types (ptype) of various type of variables
 - Manually run `GDB`'s gdb.fortran testsuite with llvm-flang.
 
-# Resources
+## Resources
 - [1] https://dwarfstd.org/doc/DWARF5.pdf
 - [2] https://llvm.org/docs/LangRef.html#metadata
 - [3] https://archive.fosdem.org/2022/schedule/event/llvm_fortran_debug/
