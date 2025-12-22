@@ -776,9 +776,8 @@ VariableDescription::VariableDescription(
       CreateUniqueVariableNameForDisplay(val, is_name_duplicated));
 
   type_obj = val.GetType();
-  llvm::StringRef raw_display_type_name = type_obj.GetDisplayTypeName();
-  display_type_name =
-      !raw_display_type_name.empty() ? raw_display_type_name : NO_TYPENAME;
+  const llvm::StringRef type_name = type_obj.GetDisplayTypeName();
+  display_type_name = type_name.empty() ? NO_TYPENAME : type_name;
 
   // Only format hex/default if there is no existing special format.
   if (const lldb::Format current_format = val.GetFormat();
@@ -799,19 +798,19 @@ VariableDescription::VariableDescription(
     if (summary.empty() && auto_variable_summaries)
       auto_summary = TryCreateAutoSummary(val);
 
-    std::optional<std::string> effective_summary =
-        !summary.empty() ? summary.str() : auto_summary;
+    llvm::StringRef display_summary = auto_summary ? *auto_summary : summary;
+    const bool has_summary = !display_summary.empty();
 
     if (!value.empty()) {
       os_display_value << value;
-      if (effective_summary)
-        os_display_value << " " << *effective_summary;
-    } else if (effective_summary) {
-      os_display_value << *effective_summary;
+      if (has_summary)
+        os_display_value << " " << display_summary;
+    } else if (has_summary) {
+      os_display_value << display_summary;
 
-      // As last resort, we print its type and address if available.
-    } else if (!raw_display_type_name.empty()) {
-      os_display_value << raw_display_type_name;
+    } else if (!type_name.empty()) {
+      // As last resort, we print its type if available.
+      os_display_value << type_name;
     }
   }
 
