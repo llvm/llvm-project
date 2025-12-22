@@ -528,7 +528,12 @@ public:
     return !relocs.empty() ||
            llvm::any_of(relocsVec, [](auto &v) { return !v.empty(); });
   }
-  size_t getSize() const override { return relocs.size() * this->entsize; }
+  size_t getSize() const override {
+    size_t count = relocs.size();
+    for (const auto &v : relocsVec)
+      count += v.size();
+    return count * this->entsize;
+  }
   size_t getRelativeRelocCount() const { return numRelativeRelocs; }
   void mergeRels();
   void partitionRels();
