@@ -110,7 +110,7 @@ define <vscale x 16 x i1> @whilele_b_ii_dont_fold_to_ptrue_nonexistent_vl9() {
 define <vscale x 16 x i1> @whilele_b_vl_maximum() vscale_range(16, 16) {
 ; CHECK-LABEL: whilele_b_vl_maximum:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.b, vl256
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    ret
   %out = call <vscale x 16 x i1> @llvm.aarch64.sve.whilele.nxv16i1.i64(i64 0, i64 255)
   ret <vscale x 16 x i1> %out
@@ -245,7 +245,7 @@ define <vscale x 16 x i1> @whilelo_b_ii_dont_fold_to_ptrue_nonexistent_vl9() {
 define <vscale x 16 x i1> @whilelo_b_vl_maximum() vscale_range(16, 16) {
 ; CHECK-LABEL: whilelo_b_vl_maximum:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.b, vl256
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    ret
   %out = call <vscale x 16 x i1> @llvm.aarch64.sve.whilelo.nxv16i1.i64(i64 0, i64 256)
   ret <vscale x 16 x i1> %out
@@ -370,7 +370,7 @@ define <vscale x 16 x i1> @whilels_b_ii_dont_fold_to_ptrue_nonexistent_vl9() {
 define <vscale x 16 x i1> @whilels_b_ii_vl_maximum() vscale_range(16, 16) {
 ; CHECK-LABEL: whilels_b_ii_vl_maximum:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.b, vl256
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    ret
   %out = call <vscale x 16 x i1> @llvm.aarch64.sve.whilels.nxv16i1.i64(i64 0, i64 255)
   ret <vscale x 16 x i1> %out
@@ -504,7 +504,7 @@ define <vscale x 16 x i1> @whilelt_b_ii_dont_fold_to_ptrue_nonexistent_vl9() {
 define <vscale x 16 x i1> @whilelt_b_ii_vl_maximum() vscale_range(16, 16) {
 ; CHECK-LABEL: whilelt_b_ii_vl_maximum:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.b, vl256
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    ret
   %out = call <vscale x 16 x i1> @llvm.aarch64.sve.whilelt.nxv16i1.i64(i64 0, i64 256)
   ret <vscale x 16 x i1> %out
