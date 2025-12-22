@@ -272,6 +272,21 @@ public:
     return false;
   }
 
+  Error validateRawBufferElementIndex(Value *Resource, Value *ElementIndex) {
+    bool IsStruct = cast<RawBufferExtType>(Resource->getType())->isStructured();
+    bool IsPoison = isa<PoisonValue>(ElementIndex);
+
+    if (IsStruct && IsPoison)
+      return make_error<StringError>(
+          "Element index of structured buffer may not be poison",
+          inconvertibleErrorCode());
+    else if (!IsStruct && !IsPoison)
+      return make_error<StringError>(
+          "Element index of raw buffer must be poison",
+          inconvertibleErrorCode());
+    return Error::success();
+  }
+
   [[nodiscard]] bool lowerToCreateHandle(Function &F) {
     IRBuilder<> &IRB = OpBuilder.getIRB();
     Type *Int8Ty = IRB.getInt8Ty();
@@ -560,6 +575,11 @@ public:
       Value *Align =
           ConstantInt::get(Int32Ty, DL.getPrefTypeAlign(ScalarTy).value());
 
+      if (Error E = validateRawBufferElementIndex(CI->getOperand(0), Index1))
+        return E;
+      if (isa<PoisonValue>(Index1))
+        Index1 = UndefValue::get(Index1->getType());
+
       Expected<CallInst *> OpCall =
           MMDI.DXILVersion >= VersionTuple(1, 2)
               ? OpBuilder.tryCreateOp(OpCode::RawBufferLoad,
@@ -670,6 +690,13 @@ public:
           createTmpHandleCast(CI->getArgOperand(0), OpBuilder.getHandleType());
       Value *Index0 = CI->getArgOperand(1);
       Value *Index1 = IsRaw ? CI->getArgOperand(2) : UndefValue::get(Int32Ty);
+
+      if (IsRaw) {
+        if (Error E = validateRawBufferElementIndex(CI->getOperand(0), Index1))
+          return E;
+        if (isa<PoisonValue>(Index1))
+          Index1 = UndefValue::get(Index1->getType());
+      }
 
       Value *Data = CI->getArgOperand(IsRaw ? 3 : 2);
       Type *DataTy = Data->getType();
