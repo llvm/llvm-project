@@ -671,8 +671,10 @@ void RISCVFrameLowering::allocateAndProbeStackForRVV(
 
 static void appendScalableVectorExpression(const TargetRegisterInfo &TRI,
                                            SmallVectorImpl<char> &Expr,
-                                           int FixedOffset, int ScalableOffset,
+                                           StackOffset Offset,
                                            llvm::raw_string_ostream &Comment) {
+  int64_t FixedOffset = Offset.getFixed();
+  int64_t ScalableOffset = Offset.getScalable();
   unsigned DwarfVLenB = TRI.getDwarfRegNum(RISCV::VLENB, true);
   uint8_t Buffer[16];
   if (FixedOffset) {
@@ -698,9 +700,8 @@ static void appendScalableVectorExpression(const TargetRegisterInfo &TRI,
 
 static MCCFIInstruction createDefCFAExpression(const TargetRegisterInfo &TRI,
                                                Register Reg,
-                                               uint64_t FixedOffset,
-                                               uint64_t ScalableOffset) {
-  assert(ScalableOffset != 0 && "Did not need to adjust CFA for RVV");
+                                               StackOffset Offset) {
+  assert(Offset.getScalable() != 0 && "Did not need to adjust CFA for RVV");
   SmallString<64> Expr;
   std::string CommentBuffer;
   llvm::raw_string_ostream Comment(CommentBuffer);
@@ -713,8 +714,7 @@ static MCCFIInstruction createDefCFAExpression(const TargetRegisterInfo &TRI,
   else
     Comment << printReg(Reg, &TRI);
 
-  appendScalableVectorExpression(TRI, Expr, FixedOffset, ScalableOffset,
-                                 Comment);
+  appendScalableVectorExpression(TRI, Expr, Offset, Comment);
 
   SmallString<64> DefCfaExpr;
   uint8_t Buffer[16];
@@ -727,17 +727,15 @@ static MCCFIInstruction createDefCFAExpression(const TargetRegisterInfo &TRI,
 }
 
 static MCCFIInstruction createDefCFAOffset(const TargetRegisterInfo &TRI,
-                                           Register Reg, uint64_t FixedOffset,
-                                           uint64_t ScalableOffset) {
-  assert(ScalableOffset != 0 && "Did not need to adjust CFA for RVV");
+                                           Register Reg, StackOffset Offset) {
+  assert(Offset.getScalable() != 0 && "Did not need to adjust CFA for RVV");
   SmallString<64> Expr;
   std::string CommentBuffer;
   llvm::raw_string_ostream Comment(CommentBuffer);
   Comment << printReg(Reg, &TRI) << "  @ cfa";
 
   // Build up the expression (FixedOffset + ScalableOffset * VLENB).
-  appendScalableVectorExpression(TRI, Expr, FixedOffset, ScalableOffset,
-                                 Comment);
+  appendScalableVectorExpression(TRI, Expr, Offset, Comment);
 
   SmallString<64> DefCfaExpr;
   uint8_t Buffer[16];
@@ -1133,7 +1131,8 @@ void RISCVFrameLowering::emitPrologue(MachineFunction &MF,
     if (NeedsDwarfCFI && !hasFP(MF)) {
       // Emit .cfi_def_cfa_expression "sp + StackSize + RVVStackSize * vlenb".
       CFIBuilder.insertCFIInst(createDefCFAExpression(
-          *RI, SPReg, getStackSizeWithRVVPadding(MF), RVVStackSize / 8));
+          *RI, SPReg,
+          StackOffset::get(getStackSizeWithRVVPadding(MF), RVVStackSize / 8)));
     }
 
     std::advance(MBBI, getRVVCalleeSavedInfo(MF, CSI).size());
@@ -2213,7 +2212,8 @@ void RISCVFrameLowering::emitCalleeSavedRVVPrologCFI(
     unsigned NumRegs = getCalleeSavedRVVNumRegs(CS.getReg());
     for (unsigned i = 0; i < NumRegs; ++i) {
       CFIBuilder.insertCFIInst(createDefCFAOffset(
-          TRI, BaseReg + i, -FixedSize, MFI.getObjectOffset(FI) / 8 + i));
+          TRI, BaseReg + i,
+          StackOffset::get(-FixedSize, MFI.getObjectOffset(FI) / 8 + i)));
     }
   }
 }
