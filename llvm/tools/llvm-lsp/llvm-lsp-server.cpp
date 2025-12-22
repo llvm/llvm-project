@@ -76,6 +76,13 @@ void LspServer::handleRequestInitialize(
   Reply(json::Value(std::move(ResponseParams)));
 }
 
+void LspServer::handleRequestShutdown(const lsp::NoParams &Params,
+                                      lsp::Callback<std::nullptr_t> Reply) {
+  // Do cleanup if needed
+  ShutDownRequested = true;
+  Reply(nullptr);
+}
+
 void LspServer::handleNotificationTextDocumentDidOpen(
     const lsp::DidOpenTextDocumentParams &Params) {
   StringRef Filepath = Params.textDocument.uri.file();

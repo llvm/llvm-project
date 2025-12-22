@@ -13,6 +13,7 @@
 
 #include "IRDocument.h"
 #include "llvm/Support/JSON.h"
+#include "llvm/Support/LSP/Protocol.h"
 #include "llvm/Support/LSP/Transport.h"
 
 namespace llvm {
@@ -20,37 +21,7 @@ namespace llvm {
 class LspServer {
   lsp::MessageHandler MessageHandler;
 
-  enum class LspServerState {
-    Starting,
-    Initializing,
-    Ready,
-    ShuttingDown, // Received 'shutdown' message
-    Exitted,      // Received 'exit' message
-  } State = LspServerState::Starting;
-
-  std::string stateToString(LspServerState S) {
-    switch (S) {
-    case LspServerState::Starting:
-      return "Starting";
-    case LspServerState::Initializing:
-      return "Initializing";
-    case LspServerState::Ready:
-      return "Ready";
-    case LspServerState::ShuttingDown:
-      return "ShuttingDown";
-    case LspServerState::Exitted:
-      return "Exitted";
-    }
-    return "<UNKNOWN STATE>";
-  }
-
-  void switchToState(LspServerState NewState) {
-    std::stringstream SS;
-    SS << "Changing State from " << stateToString(State) << " to "
-       << stateToString(NewState);
-    lsp::Logger::info("{}", SS.str());
-    State = NewState;
-  }
+  bool ShutDownRequested = false;
 
   std::unordered_map<std::string, std::unique_ptr<IRDocument>> OpenDocuments;
   std::unordered_map<std::string, std::string> SVGToIRMap;
@@ -71,7 +42,7 @@ public:
   void sendError(const std::string &Message);
 
   // The process exit code, should be success only if the State is Exitted
-  int getExitCode() { return State == LspServerState::Exitted ? 0 : 1; }
+  int getExitCode() { return 1 - ShutDownRequested; }
 
 private:
   // ---------- Functions to handle various RPC calls -----------------------
@@ -79,6 +50,11 @@ private:
   // initialize
   void handleRequestInitialize(const lsp::InitializeParams &Params,
                                lsp::Callback<llvm::json::Value> Reply);
+
+  // shutdown
+  void handleRequestShutdown(const lsp::NoParams &Params,
+                             lsp::Callback<std::nullptr_t> Reply);
+
   // textDocument/didOpen
   void handleNotificationTextDocumentDidOpen(
       const lsp::DidOpenTextDocumentParams &Params);
