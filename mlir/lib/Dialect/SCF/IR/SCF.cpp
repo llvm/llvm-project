@@ -1986,6 +1986,15 @@ struct FoldTensorCastOfOutputIntoForallOp
     if (tensorCastProducers.empty())
       return failure();
 
+    llvm::SmallMapVector<Operation *, int64_t, 2> yieldOpToIterArgsIndex;
+    for (auto [index, iterArg] :
+         llvm::enumerate(forallOp.getRegionIterArgs())) {
+      for (Operation *user : iterArg.getUsers()) {
+        if (isa<ParallelCombiningOpInterface>(user))
+          yieldOpToIterArgsIndex[user] = index;
+      }
+    }
+
     // Create new loop.
     Location loc = forallOp.getLoc();
     auto newForallOp = ForallOp::create(
@@ -2012,13 +2021,11 @@ struct FoldTensorCastOfOutputIntoForallOp
     // After `mergeBlocks` happened, the destinations in the terminator were
     // mapped to the tensor.cast old-typed results of the output bbArgs. The
     // destination have to be updated to point to the output bbArgs directly.
-    auto terminator = newForallOp.getTerminator();
-    for (auto [yieldingOp, outputBlockArg] : llvm::zip(
-             terminator.getYieldingOps(), newForallOp.getRegionIterArgs())) {
-      if (auto parallelCombingingOp =
-              dyn_cast<ParallelCombiningOpInterface>(yieldingOp)) {
-        parallelCombingingOp.getUpdatedDestinations().assign(outputBlockArg);
-      }
+    auto newOutputIterArgs = newForallOp.getRegionIterArgs();
+    for (auto [yieldOp, iterArgsIndex] : yieldOpToIterArgsIndex) {
+      auto parallelCombiningOp = cast<ParallelCombiningOpInterface>(yieldOp);
+      parallelCombiningOp.getUpdatedDestinations().assign(
+          newOutputIterArgs[iterArgsIndex]);
     }
 
     // Cast results back to the original types.
