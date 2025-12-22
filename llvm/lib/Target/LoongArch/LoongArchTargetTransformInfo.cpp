@@ -19,6 +19,7 @@
 #include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGenTypes/MachineValueType.h"
 #include "llvm/IR/InstrTypes.h"
+#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/InstructionCost.h"
 #include <optional>
@@ -882,6 +883,297 @@ InstructionCost LoongArchTTIImpl::getShuffleCost(
 
   return BaseT::getShuffleCost(Kind, DstTy, SrcTy, Mask, CostKind, Index,
                                SubTp);
+}
+
+InstructionCost
+LoongArchTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
+                                        TTI::TargetCostKind CostKind) const {
+  static const CostKindTblEntry LASXCostTable[] = {
+      {ISD::ABS, MVT::v32i8, {1, 2}},  // xvsigncov.b
+      {ISD::ABS, MVT::v16i16, {1, 2}}, // xvsigncov.h
+      {ISD::ABS, MVT::v8i32, {1, 2}},  // xvsigncov.w
+      {ISD::ABS, MVT::v4i64, {1, 2}},  // xvsigncov.d
+
+      {ISD::SADDSAT, MVT::v32i8, {1, 1}},  // xvsadd.b
+      {ISD::SADDSAT, MVT::v16i16, {1, 1}}, // xvsadd.h
+      {ISD::SADDSAT, MVT::v8i32, {1, 1}},  // xvsadd.w
+      {ISD::SADDSAT, MVT::v4i64, {1, 1}},  // xvsadd.d
+
+      {ISD::SSUBSAT, MVT::v32i8, {1, 1}},  // xvssub.b
+      {ISD::SSUBSAT, MVT::v16i16, {1, 1}}, // xvssub.h
+      {ISD::SSUBSAT, MVT::v8i32, {1, 1}},  // xvssub.w
+      {ISD::SSUBSAT, MVT::v4i64, {1, 1}},  // xvssub.d
+
+      {ISD::UADDSAT, MVT::v32i8, {1, 1}},  // xvadd.bu
+      {ISD::UADDSAT, MVT::v16i16, {1, 1}}, // xvadd.hu
+      {ISD::UADDSAT, MVT::v8i32, {1, 1}},  // xvadd.wu
+      {ISD::UADDSAT, MVT::v4i64, {1, 1}},  // xvadd.du
+
+      {ISD::USUBSAT, MVT::v32i8, {1, 1}},  // xvsub.bu
+      {ISD::USUBSAT, MVT::v16i16, {1, 1}}, // xvsub.hu
+      {ISD::USUBSAT, MVT::v8i32, {1, 1}},  // xvsub.wu
+      {ISD::USUBSAT, MVT::v4i64, {1, 1}},  // xvsub.du
+
+      {ISD::SMAX, MVT::v32i8, {1, 1}},  // xvmax.b
+      {ISD::SMAX, MVT::v16i16, {1, 1}}, // xvmax.h
+      {ISD::SMAX, MVT::v8i32, {1, 1}},  // xvmax.w
+      {ISD::SMAX, MVT::v4i64, {2, 1}},  // xvmax.d
+
+      {ISD::SMIN, MVT::v32i8, {1, 1}},  // xvmin.b
+      {ISD::SMIN, MVT::v16i16, {1, 1}}, // xvmin.h
+      {ISD::SMIN, MVT::v8i32, {1, 1}},  // xvmin.w
+      {ISD::SMIN, MVT::v4i64, {2, 1}},  // xvmin.d
+
+      {ISD::UMAX, MVT::v32i8, {1, 1}},  // xvmax.bu
+      {ISD::UMAX, MVT::v16i16, {1, 1}}, // xvmax.hu
+      {ISD::UMAX, MVT::v8i32, {1, 1}},  // xvmax.wu
+      {ISD::UMAX, MVT::v4i64, {2, 1}},  // xvmax.du
+
+      {ISD::UMIN, MVT::v32i8, {1, 1}},  // xvmin.bu
+      {ISD::UMIN, MVT::v16i16, {1, 1}}, // xvmin.hu
+      {ISD::UMIN, MVT::v8i32, {1, 1}},  // xvmin.wu
+      {ISD::UMIN, MVT::v4i64, {2, 1}},  // xvmin.du
+
+      {ISD::FMAXNUM, MVT::v8f32, {2, 1}}, // xvfmax.s
+      {ISD::FMAXNUM, MVT::v4f64, {2, 1}}, // xvfmax.d
+      {ISD::FMINNUM, MVT::v8f32, {2, 1}}, // xvfmin.s
+      {ISD::FMINNUM, MVT::v4f64, {2, 1}}, // xvfmin.d
+
+      {ISD::FLOG2, MVT::v8f32, {4, 1}}, // xvflogb.s
+      {ISD::FLOG2, MVT::v4f64, {4, 1}}, // xvflogb.d
+
+      {ISD::FMA, MVT::v8f32, {5, 2}}, // xvfmadd.s
+      {ISD::FMA, MVT::v4f64, {5, 2}}, // xvfmadd.d
+
+      {ISD::FSQRT, MVT::v8f32, {25, 28}}, // xvrsqrt.s
+      {ISD::FSQRT, MVT::v4f64, {22, 20}}, // xvrsqrt.d
+
+      {ISD::CTPOP, MVT::v32i8, {2, 2}},  // xvpcnt.b
+      {ISD::CTPOP, MVT::v16i16, {2, 2}}, // xvpcnt.h
+      {ISD::CTPOP, MVT::v8i32, {2, 2}},  // xvpcnt.w
+      {ISD::CTPOP, MVT::v4i64, {2, 2}},  // xvpcnt.d
+
+      {ISD::CTLZ, MVT::v32i8, {2, 1}},  // xvclz.b
+      {ISD::CTLZ, MVT::v16i16, {2, 1}}, // xvclz.h
+      {ISD::CTLZ, MVT::v8i32, {2, 1}},  // xvclz.w
+      {ISD::CTLZ, MVT::v4i64, {2, 1}},  // xvclz.d
+
+      {ISD::CTTZ, MVT::v32i8, {4, 4}},  // xvsubi.bu + xvandn.v + xvpcnt.b
+      {ISD::CTTZ, MVT::v16i16, {4, 4}}, // xvsubi.hu + xvandn.v + xvpcnt.h
+      {ISD::CTTZ, MVT::v8i32, {4, 4}},  // xvsubi.wu + xvandn.v + xvpcnt.w
+      {ISD::CTTZ, MVT::v4i64, {4, 4}},  // xvsubi.du + xvandn.v + xvpcnt.d
+
+      {ISD::BSWAP, MVT::v16i16, {1, 1}}, // xvshuf4i.b
+      {ISD::BSWAP, MVT::v8i32, {1, 1}},  // xvshuf4i.b
+      {ISD::BSWAP, MVT::v4i64, {2, 2}},  // xvshuf4i.b + xvshuf4i.w
+  };
+
+  static const CostKindTblEntry LSXCostTable[] = {
+      {ISD::ABS, MVT::v16i8, {1, 2}}, // vsigncov.b
+      {ISD::ABS, MVT::v8i16, {1, 2}}, // vsigncov.h
+      {ISD::ABS, MVT::v4i32, {1, 2}}, // vsigncov.w
+      {ISD::ABS, MVT::v2i64, {1, 2}}, // vsigncov.d
+
+      {ISD::SADDSAT, MVT::v16i8, {1, 1}}, // vsadd.b
+      {ISD::SADDSAT, MVT::v8i16, {1, 1}}, // vsadd.h
+      {ISD::SADDSAT, MVT::v4i32, {1, 1}}, // vsadd.w
+      {ISD::SADDSAT, MVT::v2i64, {1, 1}}, // vsadd.d
+
+      {ISD::SSUBSAT, MVT::v16i8, {1, 1}}, // vssub.b
+      {ISD::SSUBSAT, MVT::v8i16, {1, 1}}, // vssub.h
+      {ISD::SSUBSAT, MVT::v4i32, {1, 1}}, // vssub.w
+      {ISD::SSUBSAT, MVT::v2i64, {1, 1}}, // vssub.d
+
+      {ISD::UADDSAT, MVT::v16i8, {1, 1}}, // vsadd.bu
+      {ISD::UADDSAT, MVT::v8i16, {1, 1}}, // vsadd.hu
+      {ISD::UADDSAT, MVT::v4i32, {1, 1}}, // vsadd.wu
+      {ISD::UADDSAT, MVT::v2i64, {1, 1}}, // vsadd.du
+
+      {ISD::USUBSAT, MVT::v16i8, {1, 1}}, // vssub.bu
+      {ISD::USUBSAT, MVT::v8i16, {1, 1}}, // vssub.hu
+      {ISD::USUBSAT, MVT::v4i32, {1, 1}}, // vssub.wu
+      {ISD::USUBSAT, MVT::v2i64, {1, 1}}, // vssub.du
+
+      {ISD::SMAX, MVT::v16i8, {1, 1}}, // vmax.b
+      {ISD::SMAX, MVT::v8i16, {1, 1}}, // vmax.h
+      {ISD::SMAX, MVT::v4i32, {1, 1}}, // vmax.w
+      {ISD::SMAX, MVT::v2i64, {2, 1}}, // vmax.d
+
+      {ISD::SMIN, MVT::v16i8, {1, 1}}, // vmin.b
+      {ISD::SMIN, MVT::v8i16, {1, 1}}, // vmin.h
+      {ISD::SMIN, MVT::v4i32, {1, 1}}, // vmin.w
+      {ISD::SMIN, MVT::v2i64, {2, 1}}, // vmin.d
+
+      {ISD::UMAX, MVT::v16i8, {1, 1}}, // vmax.bu
+      {ISD::UMAX, MVT::v8i16, {1, 1}}, // vmax.hu
+      {ISD::UMAX, MVT::v4i32, {1, 1}}, // vmax.wu
+      {ISD::UMAX, MVT::v2i64, {2, 1}}, // vmax.du
+
+      {ISD::UMIN, MVT::v16i8, {1, 1}}, // vmin.bu
+      {ISD::UMIN, MVT::v8i16, {1, 1}}, // vmin.hu
+      {ISD::UMIN, MVT::v4i32, {1, 1}}, // vmin.wu
+      {ISD::UMIN, MVT::v2i64, {2, 1}}, // vmin.du
+
+      {ISD::FMAXNUM, MVT::v4f32, {2, 1}}, // vfmax.s
+      {ISD::FMAXNUM, MVT::v2f64, {2, 1}}, // vfmax.d
+      {ISD::FMINNUM, MVT::v4f32, {2, 1}}, // vfmin.s
+      {ISD::FMINNUM, MVT::v2f64, {2, 1}}, // vfmin.d
+
+      {ISD::FLOG2, MVT::v4f32, {4, 1}}, // vflogb.s
+      {ISD::FLOG2, MVT::v2f64, {4, 1}}, // vflogb.d
+
+      {ISD::FMA, MVT::v4f32, {5, 2}}, // vfmadd.s
+      {ISD::FMA, MVT::v2f64, {5, 2}}, // vfmadd.d
+
+      {ISD::FSQRT, MVT::v4f32, {25, 28}}, // vfsqrt.s
+      {ISD::FSQRT, MVT::v2f64, {22, 20}}, // vfsqrt.d
+
+      {ISD::CTPOP, MVT::v16i8, {2, 2}}, // vpcnt.b
+      {ISD::CTPOP, MVT::v8i16, {2, 2}}, // vpcnt.h
+      {ISD::CTPOP, MVT::v4i32, {2, 2}}, // vpcnt.w
+      {ISD::CTPOP, MVT::v2i64, {2, 2}}, // vpcnt.d
+
+      {ISD::CTLZ, MVT::v16i8, {2, 1}}, // vclz.b
+      {ISD::CTLZ, MVT::v8i16, {2, 1}}, // vclz.h
+      {ISD::CTLZ, MVT::v4i32, {2, 1}}, // vclz.w
+      {ISD::CTLZ, MVT::v2i64, {2, 1}}, // vclz.d
+
+      {ISD::CTTZ, MVT::v16i8, {4, 4}}, // vsubi.bu + vandn.v + vpcnt.b
+      {ISD::CTTZ, MVT::v8i16, {4, 4}}, // vsubi.hu + vandn.v + vpcnt.h
+      {ISD::CTTZ, MVT::v4i32, {4, 4}}, // vsubi.wu + vandn.v + vpcnt.w
+      {ISD::CTTZ, MVT::v2i64, {4, 4}}, // vsubi.du + vandn.v + vpcnt.d
+
+      {ISD::BSWAP, MVT::v8i16, {1, 1}}, // vshuf4i.b
+      {ISD::BSWAP, MVT::v4i32, {1, 1}}, // vshuf4i.b
+      {ISD::BSWAP, MVT::v2i64, {2, 2}}, // vshuf4i.b + vshuf4i.w
+  };
+
+  static const CostKindTblEntry LA64CostTable[] = {
+      {ISD::ABS, MVT::i8, {3, 3}},  // srai.d + xor + sub.d
+      {ISD::ABS, MVT::i16, {3, 3}}, // srai.d + xor + sub.d
+      {ISD::ABS, MVT::i32, {3, 3}}, // srai.d + xor + sub.d
+      {ISD::ABS, MVT::i64, {3, 3}}, // srai.d + xor + sub.d
+
+      {ISD::FMINNUM, MVT::f32, {2, 1}}, // fmin.s
+      {ISD::FMINNUM, MVT::f64, {2, 1}}, // fmin.d
+
+      {ISD::FLOG2, MVT::f32, {4, 1}}, // flogb.s
+      {ISD::FLOG2, MVT::f64, {4, 1}}, // flogb.d
+
+      {ISD::FMA, MVT::f32, {5, 2}}, // fmadd.s
+      {ISD::FMA, MVT::f64, {5, 2}}, // fmadd.d
+
+      {ISD::FSQRT, MVT::f32, {15, 9}},  // fsqrt.s
+      {ISD::FSQRT, MVT::f64, {22, 10}}, // fsqrt.d
+
+      {ISD::CTLZ, MVT::i8, {1, 1}},  // clz.b
+      {ISD::CTLZ, MVT::i16, {1, 1}}, // clz.h
+      {ISD::CTLZ, MVT::i32, {1, 1}}, // clz.w
+      {ISD::CTLZ, MVT::i64, {1, 1}}, // clz.d
+
+      {ISD::CTTZ, MVT::i8, {1, 1}},  // ctz.b
+      {ISD::CTTZ, MVT::i16, {1, 1}}, // ctz.h
+      {ISD::CTTZ, MVT::i32, {1, 1}}, // ctz.w
+      {ISD::CTTZ, MVT::i64, {1, 1}}, // ctz.d
+
+      {ISD::BITREVERSE, MVT::i8, {1, 1}},  // bitrev.4b
+      {ISD::BITREVERSE, MVT::i16, {2, 2}}, // bitrev.d + srli.d
+      {ISD::BITREVERSE, MVT::i32, {1, 1}}, // bitrev.w
+      {ISD::BITREVERSE, MVT::i64, {1, 1}}, // bitrev.d
+
+      {ISD::BSWAP, MVT::i16, {1, 1}}, // bswap.2h
+      {ISD::BSWAP, MVT::i32, {1, 1}}, // bswap.2w
+      {ISD::BSWAP, MVT::i64, {1, 1}}, // bswap.d
+  };
+
+  Type *RetTy = ICA.getReturnType();
+  Type *OpTy = RetTy;
+  Intrinsic::ID IID = ICA.getID();
+  unsigned ISD = ISD::DELETED_NODE;
+  switch (IID) {
+  default:
+    break;
+  case Intrinsic::abs:
+    ISD = ISD::ABS;
+    break;
+  case Intrinsic::sadd_sat:
+    ISD = ISD::SADDSAT;
+    break;
+  case Intrinsic::ssub_sat:
+    ISD = ISD::SSUBSAT;
+    break;
+  case Intrinsic::uadd_sat:
+    ISD = ISD::UADDSAT;
+    break;
+  case Intrinsic::usub_sat:
+    ISD = ISD::USUBSAT;
+    break;
+  case Intrinsic::smax:
+    ISD = ISD::SMAX;
+    break;
+  case Intrinsic::smin:
+    ISD = ISD::SMIN;
+    break;
+  case Intrinsic::umax:
+    ISD = ISD::UMAX;
+    break;
+  case Intrinsic::umin:
+    ISD = ISD::UMIN;
+    break;
+  case Intrinsic::maxnum:
+    ISD = ISD::FMAXNUM;
+    break;
+  case Intrinsic::minnum:
+    ISD = ISD::FMINNUM;
+    break;
+  case Intrinsic::log2:
+    ISD = ISD::FLOG2;
+    break;
+  case Intrinsic::fma:
+    ISD = ISD::FMA;
+    break;
+  case Intrinsic::sqrt:
+    ISD = ISD::FSQRT;
+    break;
+  case Intrinsic::ctlz:
+    ISD = ISD::CTLZ;
+    break;
+  case Intrinsic::ctpop:
+    ISD = ISD::CTPOP;
+    break;
+  case Intrinsic::cttz:
+    ISD = ISD::CTTZ;
+    break;
+  case Intrinsic::bitreverse:
+    ISD = ISD::BITREVERSE;
+    break;
+  case Intrinsic::bswap:
+    ISD = ISD::BSWAP;
+    break;
+  }
+
+  if (ISD != ISD::DELETED_NODE) {
+
+    std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(OpTy);
+    MVT MTy = LT.second;
+
+    if (ST->hasExtLASX())
+      if (const auto *Entry = CostTableLookup(LASXCostTable, ISD, MTy))
+        if (auto KindCost = Entry->Cost[CostKind])
+          return LT.first * *KindCost;
+
+    if (ST->hasExtLSX())
+      if (const auto *Entry = CostTableLookup(LSXCostTable, ISD, MTy))
+        if (auto KindCost = Entry->Cost[CostKind])
+          return LT.first * *KindCost;
+
+    if (ST->is64Bit())
+      if (const auto *Entry = CostTableLookup(LA64CostTable, ISD, MTy))
+        if (auto KindCost = Entry->Cost[CostKind])
+          return LT.first * *KindCost;
+  }
+
+  return BaseT::getIntrinsicInstrCost(ICA, CostKind);
 }
 
 bool LoongArchTTIImpl::prefersVectorizedAddressing() const { return false; }

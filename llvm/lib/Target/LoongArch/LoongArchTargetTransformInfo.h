@@ -88,6 +88,10 @@ public:
                  VectorType *SubTp, ArrayRef<const Value *> Args = {},
                  const Instruction *CxtI = nullptr) const override;
 
+  InstructionCost
+  getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
+                        TTI::TargetCostKind CostKind) const override;
+
   bool prefersVectorizedAddressing() const override;
 
   TTI::MemCmpExpansionOptions

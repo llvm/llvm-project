@@ -11,7 +11,7 @@ define void @fadd() {
 ; LSX-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %V1F64 = fadd double poison, poison
 ; LSX-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %V2F64 = fadd <2 x double> poison, poison
 ; LSX-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:6 SizeLat:1 for: %V4F64 = fadd <4 x double> poison, poison
-; LSX-NEXT:  Cost Model: Found costs of 1 for: ret void
+; LSX-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; LASX-LABEL: 'fadd'
 ; LASX-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %V1F32 = fadd float poison, poison
@@ -21,7 +21,7 @@ define void @fadd() {
 ; LASX-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %V1F64 = fadd double poison, poison
 ; LASX-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %V2F64 = fadd <2 x double> poison, poison
 ; LASX-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %V4F64 = fadd <4 x double> poison, poison
-; LASX-NEXT:  Cost Model: Found costs of 1 for: ret void
+; LASX-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
    %V1F32 = fadd float poison, poison
    %V2F32 = fadd <2 x float> poison, poison
@@ -44,7 +44,7 @@ define void @fsub() {
 ; LSX-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %V1F64 = fsub double poison, poison
 ; LSX-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %V2F64 = fsub <2 x double> poison, poison
 ; LSX-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:6 SizeLat:1 for: %V4F64 = fsub <4 x double> poison, poison
-; LSX-NEXT:  Cost Model: Found costs of 1 for: ret void
+; LSX-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; LASX-LABEL: 'fsub'
 ; LASX-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %V1F32 = fsub float poison, poison
@@ -54,7 +54,7 @@ define void @fsub() {
 ; LASX-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %V1F64 = fsub double poison, poison
 ; LASX-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %V2F64 = fsub <2 x double> poison, poison
 ; LASX-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %V4F64 = fsub <4 x double> poison, poison
-; LASX-NEXT:  Cost Model: Found costs of 1 for: ret void
+; LASX-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
    %V1F32 = fsub float poison, poison
    %V2F32 = fsub <2 x float> poison, poison
@@ -77,7 +77,7 @@ define void @fmul() {
 ; LSX-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:5 SizeLat:1 for: %V1F64 = fmul double poison, poison
 ; LSX-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:5 SizeLat:1 for: %V2F64 = fmul <2 x double> poison, poison
 ; LSX-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:10 SizeLat:1 for: %V4F64 = fmul <4 x double> poison, poison
-; LSX-NEXT:  Cost Model: Found costs of 1 for: ret void
+; LSX-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; LASX-LABEL: 'fmul'
 ; LASX-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:5 SizeLat:1 for: %V1F32 = fmul float poison, poison
@@ -87,7 +87,7 @@ define void @fmul() {
 ; LASX-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:5 SizeLat:1 for: %V1F64 = fmul double poison, poison
 ; LASX-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:5 SizeLat:1 for: %V2F64 = fmul <2 x double> poison, poison
 ; LASX-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:5 SizeLat:1 for: %V4F64 = fmul <4 x double> poison, poison
-; LASX-NEXT:  Cost Model: Found costs of 1 for: ret void
+; LASX-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
    %V1F32 = fmul float poison, poison
    %V2F32 = fmul <2 x float> poison, poison
@@ -110,7 +110,7 @@ define void @fdiv() {
 ; LSX-NEXT:  Cost Model: Found costs of RThru:9 CodeSize:4 Lat:12 SizeLat:4 for: %V1F64 = fdiv double poison, poison
 ; LSX-NEXT:  Cost Model: Found costs of RThru:18 CodeSize:4 Lat:12 SizeLat:4 for: %V2F64 = fdiv <2 x double> poison, poison
 ; LSX-NEXT:  Cost Model: Found costs of RThru:36 CodeSize:4 Lat:24 SizeLat:4 for: %V4F64 = fdiv <4 x double> poison, poison
-; LSX-NEXT:  Cost Model: Found costs of 1 for: ret void
+; LSX-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; LASX-LABEL: 'fdiv'
 ; LASX-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:9 SizeLat:4 for: %V1F32 = fdiv float poison, poison
@@ -120,7 +120,7 @@ define void @fdiv() {
 ; LASX-NEXT:  Cost Model: Found costs of RThru:9 CodeSize:4 Lat:12 SizeLat:4 for: %V1F64 = fdiv double poison, poison
 ; LASX-NEXT:  Cost Model: Found costs of RThru:18 CodeSize:4 Lat:12 SizeLat:4 for: %V2F64 = fdiv <2 x double> poison, poison
 ; LASX-NEXT:  Cost Model: Found costs of RThru:18 CodeSize:4 Lat:12 SizeLat:4 for: %V4F64 = fdiv <4 x double> poison, poison
-; LASX-NEXT:  Cost Model: Found costs of 1 for: ret void
+; LASX-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
    %V1F32 = fdiv float poison, poison
    %V2F32 = fdiv <2 x float> poison, poison
@@ -132,4 +132,34 @@ define void @fdiv() {
    %V4F64 = fdiv <4 x double> poison, poison
 
    ret void
+}
+
+define i32 @fsqrt(i32 %arg) {
+; LSX-LABEL: 'fsqrt'
+; LSX-NEXT:  Cost Model: Found costs of RThru:9 CodeSize:1 Lat:15 SizeLat:1 for: %F32 = call float @llvm.sqrt.f32(float undef)
+; LSX-NEXT:  Cost Model: Found costs of RThru:28 CodeSize:1 Lat:25 SizeLat:1 for: %V4F32 = call <4 x float> @llvm.sqrt.v4f32(<4 x float> undef)
+; LSX-NEXT:  Cost Model: Found costs of RThru:56 CodeSize:4 Lat:50 SizeLat:4 for: %V8F32 = call <8 x float> @llvm.sqrt.v8f32(<8 x float> undef)
+; LSX-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:1 Lat:22 SizeLat:1 for: %F64 = call double @llvm.sqrt.f64(double undef)
+; LSX-NEXT:  Cost Model: Found costs of RThru:20 CodeSize:1 Lat:22 SizeLat:1 for: %V2F64 = call <2 x double> @llvm.sqrt.v2f64(<2 x double> undef)
+; LSX-NEXT:  Cost Model: Found costs of RThru:40 CodeSize:4 Lat:44 SizeLat:4 for: %V4F64 = call <4 x double> @llvm.sqrt.v4f64(<4 x double> undef)
+; LSX-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 undef
+;
+; LASX-LABEL: 'fsqrt'
+; LASX-NEXT:  Cost Model: Found costs of RThru:9 CodeSize:1 Lat:15 SizeLat:1 for: %F32 = call float @llvm.sqrt.f32(float undef)
+; LASX-NEXT:  Cost Model: Found costs of RThru:28 CodeSize:1 Lat:25 SizeLat:1 for: %V4F32 = call <4 x float> @llvm.sqrt.v4f32(<4 x float> undef)
+; LASX-NEXT:  Cost Model: Found costs of RThru:28 CodeSize:1 Lat:25 SizeLat:1 for: %V8F32 = call <8 x float> @llvm.sqrt.v8f32(<8 x float> undef)
+; LASX-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:1 Lat:22 SizeLat:1 for: %F64 = call double @llvm.sqrt.f64(double undef)
+; LASX-NEXT:  Cost Model: Found costs of RThru:20 CodeSize:1 Lat:22 SizeLat:1 for: %V2F64 = call <2 x double> @llvm.sqrt.v2f64(<2 x double> undef)
+; LASX-NEXT:  Cost Model: Found costs of RThru:20 CodeSize:1 Lat:22 SizeLat:1 for: %V4F64 = call <4 x double> @llvm.sqrt.v4f64(<4 x double> undef)
+; LASX-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 undef
+;
+  %F32 = call float @llvm.sqrt.f32(float undef)
+  %V4F32 = call <4 x float> @llvm.sqrt.v4f32(<4 x float> undef)
+  %V8F32 = call <8 x float> @llvm.sqrt.v8f32(<8 x float> undef)
+
+  %F64 = call double @llvm.sqrt.f64(double undef)
+  %V2F64 = call <2 x double> @llvm.sqrt.v2f64(<2 x double> undef)
+  %V4F64 = call <4 x double> @llvm.sqrt.v4f64(<4 x double> undef)
+
+  ret i32 undef
 }
