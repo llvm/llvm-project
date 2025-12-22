@@ -75,8 +75,7 @@ Error GNUPropertyRewriter::sectionInitializer() {
   if (BC.isAArch64()) {
     BC.setUsesBTI(FeaturesAcc & llvm::ELF::GNU_PROPERTY_AARCH64_FEATURE_1_BTI);
     if (BC.usesBTI())
-      BC.outs() << "BOLT-WARNING: binary is using BTI. Optimized binary may be "
-                   "corrupted\n";
+      BC.outs() << "BOLT-INFO: binary is using BTI\n";
   }
 
   return Error::success();

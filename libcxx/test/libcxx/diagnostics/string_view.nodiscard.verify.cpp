@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03
-
 // check that <string_view> functions are marked [[nodiscard]]
 
 #include <string_view>
@@ -126,7 +124,7 @@ void test_nonmembers() {
 
   std::hash<std::string_view> hash;
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-  hash(std::string_view{});
+  hash(std::string_view());
 
 #if TEST_STD_VER >= 14
   // string_view literals
