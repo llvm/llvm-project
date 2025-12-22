@@ -179,7 +179,7 @@
 /clang/tools/clang-installapi/ @cyndyishida
 
 # ExtractAPI
-/clang/**/ExtractAPI @daniel-grumberg @QuietMisdreavus
+/clang/**/ExtractAPI @QuietMisdreavus @snprajwal
 
 # DWARFLinker, dwarfutil, dsymutil
 /llvm/**/DWARFLinker/ @JDevlieghere

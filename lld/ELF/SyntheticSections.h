@@ -113,7 +113,7 @@ public:
   bool isNeeded() const override;
   void writeTo(uint8_t *buf) override;
 
-  void addConstant(const Relocation &r) { addReloc(r); }
+  void addConstant(const Relocation &r);
   void addEntry(const Symbol &sym);
   void addAuthEntry(const Symbol &sym);
   bool addTlsDescEntry(const Symbol &sym);
@@ -592,37 +592,14 @@ struct RelativeReloc {
 class RelrBaseSection : public SyntheticSection {
 public:
   RelrBaseSection(Ctx &, unsigned concurrency, bool isAArch64Auth = false);
-  /// Add a dynamic relocation without writing an addend to the output section.
-  /// This overload can be used if the addends are written directly instead of
-  /// using relocations on the input section.
-  template <bool shard = false> void addReloc(const RelativeReloc &reloc) {
-    relocs.push_back(reloc);
-  }
-  /// Add a relative dynamic relocation that uses the target address of \p sym
-  /// (i.e. InputSection::getRelocTargetVA()) + \p addend as the addend.
-  template <bool shard = false>
-  void addRelativeReloc(InputSectionBase &isec, uint64_t offsetInSec,
-                        Symbol &sym, int64_t addend, RelType addendRelType,
-                        RelExpr expr) {
-    assert(expr != R_ADDEND && "expected non-addend relocation expression");
-    isec.addReloc({expr, addendRelType, offsetInSec, addend, &sym});
-    addReloc<shard>({&isec, isec.relocs().size() - 1});
-  }
   void mergeRels();
   bool isNeeded() const override {
     return !relocs.empty() ||
            llvm::any_of(relocsVec, [](auto &v) { return !v.empty(); });
   }
   SmallVector<RelativeReloc, 0> relocs;
-
-protected:
   SmallVector<SmallVector<RelativeReloc, 0>, 0> relocsVec;
 };
-
-template <>
-inline void RelrBaseSection::addReloc<true>(const RelativeReloc &reloc) {
-  relocsVec[llvm::parallel::getThreadIndex()].push_back(reloc);
-}
 
 // RelrSection is used to encode offsets for relative relocations.
 // Proposal for adding SHT_RELR sections to generic-abi is here:
