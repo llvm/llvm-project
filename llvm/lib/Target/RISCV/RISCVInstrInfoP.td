@@ -894,23 +894,35 @@ let Predicates = [HasStdExtP, IsRV32] in {
 // Codegen patterns
 //===----------------------------------------------------------------------===//
 
+class RISCVTImmLeafOp<int bitsNum> :
+  RISCVUImmOp<bitsNum>, TImmLeaf<XLenVT, "return isUInt<" # bitsNum # ">(Imm);">;
+def timm3 : RISCVTImmLeafOp<3>;
+def timm4 : RISCVTImmLeafOp<4>;
+def timm5 : RISCVTImmLeafOp<5>;
+def timm6 : RISCVTImmLeafOp<6>;
+
+class PatGprTImm<SDPatternOperator OpNode, RVInst Inst, TImmLeaf ImmType,
+                 ValueType vt = XLenVT>
+    : Pat<(vt (OpNode (vt GPR:$rs1), ImmType:$imm)),
+          (Inst GPR:$rs1, ImmType:$imm)>;
+
 let Predicates = [HasStdExtP] in {
-def : PatGprImm<int_riscv_pslli_b,      PSLLI_B,  uimm3>;
-def : PatGprImm<int_riscv_pslli_h,      PSLLI_H,  uimm4>;
-def : PatGprImm<int_riscv_psslai_h,     PSSLAI_H, uimm4>;
+def : PatGprTImm<int_riscv_pslli_b,     PSLLI_B,  timm3>;
+def : PatGprTImm<int_riscv_pslli_h,     PSLLI_H,  timm4>;
+def : PatGprTImm<int_riscv_psslai_h,    PSSLAI_H, timm4>;
 def : PatGprGpr<int_riscv_psll_bs,      PSLL_BS>;
 def : PatGprGpr<int_riscv_psll_hs,      PSLL_HS>;
 def : PatGprGpr<int_riscv_padd_bs,      PADD_BS>;
 def : PatGprGpr<int_riscv_padd_hs,      PADD_HS>;
 def : PatGprGpr<int_riscv_pssha_hs,     PSSHA_HS>;
 def : PatGprGpr<int_riscv_psshar_hs,    PSSHAR_HS>;
-def : PatGprImm<int_riscv_psrli_b,      PSRLI_B,  uimm3>;
-def : PatGprImm<int_riscv_psrli_h,      PSRLI_H,  uimm4>;
-def : PatGprImm<int_riscv_pusati_h,     PUSATI_H, uimm4>;
-def : PatGprImm<int_riscv_psrai_b,      PSRAI_B,  uimm3>;
-def : PatGprImm<int_riscv_psrai_h,      PSRAI_H,  uimm4>;
-def : PatGprImm<int_riscv_psrari_h,     PSRARI_H, uimm4>;
-def : PatGprImm<int_riscv_psati_h,      PSATI_H,  uimm4>;
+def : PatGprTImm<int_riscv_psrli_b,     PSRLI_B,  timm3>;
+def : PatGprTImm<int_riscv_psrli_h,     PSRLI_H,  timm4>;
+def : PatGprTImm<int_riscv_pusati_h,    PUSATI_H, timm4>;
+def : PatGprTImm<int_riscv_psrai_b,     PSRAI_B,  timm3>;
+def : PatGprTImm<int_riscv_psrai_h,     PSRAI_H,  timm4>;
+def : PatGprTImm<int_riscv_psrari_h,    PSRARI_H, timm4>;
+def : PatGprTImm<int_riscv_psati_h,     PSATI_H,  timm4>;
 def : PatGprGpr<int_riscv_psrl_bs,      PSRL_BS>;
 def : PatGprGpr<int_riscv_psrl_hs,      PSRL_HS>;
 def : PatGprGpr<int_riscv_predsum_bs,   PREDSUM_BS>;
@@ -991,12 +1003,12 @@ def : PatGprGpr<int_riscv_pmulhrsu_h,   PMULHRSU_H>;
 } // Predicates = [HasStdExtP]
 
 let Predicates = [HasStdExtP, IsRV32] in {
-def : PatGprImm<int_riscv_sslai,     SSLAI, uimm5>;
+def : PatGprTImm<int_riscv_sslai,    SSLAI, timm5>;
 def : PatGprGpr<int_riscv_ssha,      SSHA>;
 def : PatGprGpr<int_riscv_sshar,     SSHAR>;
-def : PatGprImm<int_riscv_usati,     USATI_RV32, uimm5>;
-def : PatGprImm<int_riscv_srari,     SRARI_RV32, uimm5>;
-def : PatGprImm<int_riscv_sati,      SATI_RV32,  uimm5>;
+def : PatGprTImm<int_riscv_usati,    USATI_RV32, timm5>;
+def : PatGprTImm<int_riscv_srari,    SRARI_RV32, timm5>;
+def : PatGprTImm<int_riscv_sati,     SATI_RV32,  timm5>;
 def : PatGprGpr<int_riscv_sadd,      SADD>;
 def : PatGprGpr<int_riscv_aadd,      AADD>;
 def : PatGprGpr<int_riscv_saddu,     SADDU>;
@@ -1030,22 +1042,22 @@ def : PatGprGpr<int_riscv_mulhrsu,   MULHRSU>;
 } // Predicates = [HasStdExtP, IsRV32]
 
 let Predicates = [HasStdExtP, IsRV64] in {
-def : PatGprImm<int_riscv_pslli_w,      PSLLI_W,  uimm5>;
-def : PatGprImm<int_riscv_psslai_w,     PSSLAI_W, uimm5>;
+def : PatGprTImm<int_riscv_pslli_w,     PSLLI_W,  timm5>;
+def : PatGprTImm<int_riscv_psslai_w,    PSSLAI_W, timm5>;
 def : PatGprGpr<int_riscv_psll_ws,      PSLL_WS>;
 def : PatGprGpr<int_riscv_padd_ws,      PADD_WS>;
 def : PatGprGpr<int_riscv_pssha_ws,     PSSHA_WS>;
 def : PatGprGpr<int_riscv_sha,          SHA>;
 def : PatGprGpr<int_riscv_psshar_ws,    PSSHAR_WS>;
 def : PatGprGpr<int_riscv_shar,         SHAR>;
-def : PatGprImm<int_riscv_psrli_w,      PSRLI_W,  uimm5>;
-def : PatGprImm<int_riscv_pusati_w,     PUSATI_W, uimm5>;
-def : PatGprImm<int_riscv_usati,        USATI_RV64, uimm6>;
-def : PatGprImm<int_riscv_psrai_w,      PSRAI_W,    uimm5>;
-def : PatGprImm<int_riscv_psrari_w,     PSRARI_W,   uimm5>;
-def : PatGprImm<int_riscv_srari,        SRARI_RV64, uimm6>;
-def : PatGprImm<int_riscv_psati_w,      PSATI_W,    uimm5>;
-def : PatGprImm<int_riscv_sati,         SATI_RV64,  uimm6>;
+def : PatGprTImm<int_riscv_psrli_w,     PSRLI_W,  timm5>;
+def : PatGprTImm<int_riscv_pusati_w,    PUSATI_W, timm5>;
+def : PatGprTImm<int_riscv_usati,       USATI_RV64, timm6>;
+def : PatGprTImm<int_riscv_psrai_w,     PSRAI_W,    timm5>;
+def : PatGprTImm<int_riscv_psrari_w,    PSRARI_W,   timm5>;
+def : PatGprTImm<int_riscv_srari,       SRARI_RV64, timm6>;
+def : PatGprTImm<int_riscv_psati_w,     PSATI_W,    timm5>;
+def : PatGprTImm<int_riscv_sati,        SATI_RV64,  timm6>;
 def : PatGprGpr<int_riscv_psrl_ws,      PSRL_WS>;
 def : PatGprGpr<int_riscv_predsum_ws,   PREDSUM_WS>;
 def : PatGprGpr<int_riscv_predsumu_ws,  PREDSUMU_WS>;
