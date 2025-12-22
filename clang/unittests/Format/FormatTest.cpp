@@ -20895,6 +20895,14 @@ TEST_F(FormatTest, AlignWithLineBreaks) {
                "                   };",
                Style);
 
+  verifyFormat("const char *const MatHtool[] = {};\n"
+               "const char        Htool[]    = \"@article{m,\\n\"\n"
+               "                               \" \"\n"
+               "                               \" \"\n"
+               "                               \" \"\n"
+               "                               \"}\\n\";",
+               Style);
+
   Style.ColumnLimit = 15;
   verifyFormat("int i1 = 1;\n"
                "k      = bar(\n"

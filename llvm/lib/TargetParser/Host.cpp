@@ -203,6 +203,10 @@ getHostCPUNameForARMFromComponents(StringRef Implementer, StringRef Hardware,
         .Case("0xb36", "arm1136j-s")
         .Case("0xb56", "arm1156t2-s")
         .Case("0xb76", "arm1176jz-s")
+        .Case("0xd8a", "c1-nano")
+        .Case("0xd90", "c1-premium")
+        .Case("0xd8b", "c1-pro")
+        .Case("0xd8c", "c1-ultra")
         .Case("0xc05", "cortex-a5")
         .Case("0xc07", "cortex-a7")
         .Case("0xc08", "cortex-a8")
@@ -2036,6 +2040,8 @@ StringMap<bool> sys::getHostCPUFeatures() {
   // AMX requires additional context to be saved by the OS.
   const unsigned AMXBits = (1 << 17) | (1 << 18);
   bool HasAMXSave = HasXSave && ((EAX & AMXBits) == AMXBits);
+  // APX requires additional context to be saved by the OS.
+  bool HasAPXSave = HasXSave && ((EAX >> 19) & 1);
 
   Features["avx"]   = HasAVXSave;
   Features["fma"]   = ((ECX >> 12) & 1) && HasAVXSave;
@@ -2158,7 +2164,7 @@ StringMap<bool> sys::getHostCPUFeatures() {
   Features["prefetchi"] |= HasLeaf7Subleaf1 && ((EDX >> 14) & 1);
   Features["usermsr"]  = HasLeaf7Subleaf1 && ((EDX >> 15) & 1);
   bool HasAVX10 = HasLeaf7Subleaf1 && ((EDX >> 19) & 1);
-  bool HasAPXF = HasLeaf7Subleaf1 && ((EDX >> 21) & 1);
+  bool HasAPXF = HasLeaf7Subleaf1 && ((EDX >> 21) & 1) && HasAPXSave;
   Features["egpr"] = HasAPXF;
   Features["push2pop2"] = HasAPXF;
   Features["ppx"] = HasAPXF;
@@ -2192,10 +2198,10 @@ StringMap<bool> sys::getHostCPUFeatures() {
   Features["amx-avx512"] = HasLeaf1E && ((EAX >> 7) & 1) && HasAMXSave;
   Features["amx-movrs"] = HasLeaf1E && ((EAX >> 8) & 1) && HasAMXSave;
 
-  bool HasLeaf24 =
-      MaxLevel >= 0x24 && !getX86CpuIDAndInfo(0x24, &EAX, &EBX, &ECX, &EDX);
+  bool HasLeaf24 = MaxLevel >= 0x24 &&
+                   !getX86CpuIDAndInfoEx(0x24, 0x0, &EAX, &EBX, &ECX, &EDX);
 
-  int AVX10Ver = HasLeaf24 && (EBX & 0xff);
+  int AVX10Ver = HasLeaf24 ? (EBX & 0xff) : 0;
   Features["avx10.1"] = HasAVX10 && AVX10Ver >= 1;
   Features["avx10.2"] = HasAVX10 && AVX10Ver >= 2;
 

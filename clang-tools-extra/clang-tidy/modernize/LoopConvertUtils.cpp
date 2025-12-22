@@ -35,7 +35,7 @@ namespace clang::tidy::modernize {
 /// the stack is the parent of the current statement (NULL for the topmost
 /// statement).
 bool StmtAncestorASTVisitor::TraverseStmt(Stmt *Statement) {
-  StmtAncestors.insert(std::make_pair(Statement, StmtStack.back()));
+  StmtAncestors.try_emplace(Statement, StmtStack.back());
   StmtStack.push_back(Statement);
   RecursiveASTVisitor<StmtAncestorASTVisitor>::TraverseStmt(Statement);
   StmtStack.pop_back();
@@ -48,10 +48,9 @@ bool StmtAncestorASTVisitor::TraverseStmt(Stmt *Statement) {
 /// Scope, as we can map a VarDecl to its DeclStmt, then walk up the parent tree
 /// using StmtAncestors.
 bool StmtAncestorASTVisitor::VisitDeclStmt(DeclStmt *Statement) {
-  for (const auto *Decl : Statement->decls()) {
+  for (const auto *Decl : Statement->decls())
     if (const auto *V = dyn_cast<VarDecl>(Decl))
-      DeclParents.insert(std::make_pair(V, Statement));
-  }
+      DeclParents.try_emplace(V, Statement);
   return true;
 }
 
@@ -470,7 +469,7 @@ void ForLoopIndexUseVisitor::addComponent(const Expr *E) {
   llvm::FoldingSetNodeID ID;
   const Expr *Node = E->IgnoreParenImpCasts();
   Node->Profile(ID, *Context, true);
-  DependentExprs.push_back(std::make_pair(Node, ID));
+  DependentExprs.emplace_back(Node, ID);
 }
 
 void ForLoopIndexUseVisitor::addUsage(const Usage &U) {
@@ -830,9 +829,8 @@ bool ForLoopIndexUseVisitor::TraverseStmt(Stmt *S) {
   if (const auto *LE = dyn_cast_or_null<LambdaExpr>(NextStmtParent)) {
     // Any child of a LambdaExpr that isn't the body is an initialization
     // expression.
-    if (S != LE->getBody()) {
+    if (S != LE->getBody())
       return true;
-    }
   }
   return traverseStmtImpl(S);
 }
