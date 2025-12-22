@@ -684,14 +684,13 @@ Value *AMDGPUCodeGenPrepareImpl::emitRsqF64(IRBuilder<> &Builder, Value *X,
 
   // Could be fmuladd, but isFMAFasterThanFMulAndFAdd is always true for f64.
   Value *E = Builder.CreateFMA(NegXY0, Y0, ConstantFP::get(X->getType(), 1.0));
-  Value *Y0E = Builder.CreateFMul(Y0, E);
+
+  Value *Y0E = Builder.CreateFMul(IsNegative ? NegY0 : Y0, E);
 
   Value *EFMA = Builder.CreateFMA(E, ConstantFP::get(X->getType(), 0.375),
                                   ConstantFP::get(X->getType(), 0.5));
-  if (IsNegative)
-    EFMA = Builder.CreateFNeg(EFMA);
 
-  return Builder.CreateFMA(Y0E, EFMA, Y0);
+  return Builder.CreateFMA(Y0E, EFMA, IsNegative ? NegY0 : Y0);
 }
 
 bool AMDGPUCodeGenPrepareImpl::canOptimizeWithRsq(const FPMathOperator *SqrtOp,
