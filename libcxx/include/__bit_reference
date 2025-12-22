@@ -309,6 +309,15 @@ public:
   {
   }
 
+#ifdef _LIBCPP_ABI_TRIVIALLY_COPYABLE_BIT_ITERATOR
+  template <bool _IsConstDep = _IsConst, __enable_if_t<_IsConstDep, int> = 0>
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __bit_iterator(const __bit_iterator<_Cp, false>& __it) _NOEXCEPT
+      : __seg_(__it.__seg_),
+        __ctz_(__it.__ctz_) {}
+
+  _LIBCPP_HIDE_FROM_ABI __bit_iterator(const __bit_iterator&)            = default;
+  _LIBCPP_HIDE_FROM_ABI __bit_iterator& operator=(const __bit_iterator&) = default;
+#else
   // When _IsConst=false, this is the copy constructor.
   // It is non-trivial. Making it trivial would break ABI.
   // When _IsConst=true, this is a converting constructor;
@@ -329,6 +338,7 @@ public:
     __ctz_ = __it.__ctz_;
     return *this;
   }
+#endif
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 reference operator*() const _NOEXCEPT {
     _LIBCPP_ASSERT_INTERNAL(__ctz_ < __bits_per_word, "Dereferencing an invalid __bit_iterator.");
