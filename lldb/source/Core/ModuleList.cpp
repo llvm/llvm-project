@@ -1845,9 +1845,8 @@ llvm::Expected<bool> ModuleList::GetSharedModuleFromCAS(
   if (!*loaded)
     return false;
 
-  auto status =
-      GetSharedModule(module_spec, module_sp, nullptr, nullptr, nullptr,
-                      /*always_create=*/true);
+  auto status = GetSharedModule(module_spec, module_sp, nullptr, nullptr,
+                                /*always_create=*/true);
   if (status.Success()) {
     if (module_sp) {
       // Enter the new module into the config cache.
