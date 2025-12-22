@@ -23,6 +23,7 @@
 
 namespace clang::tidy {
 namespace llvm_check {
+namespace {
 
 class LLVMModule : public ClangTidyModule {
 public:
@@ -56,6 +57,8 @@ public:
     return Options;
   }
 };
+
+} // namespace
 
 // Register the LLVMTidyModule using this statically initialized variable.
 static ClangTidyModuleRegistry::Add<LLVMModule> X("llvm-module",

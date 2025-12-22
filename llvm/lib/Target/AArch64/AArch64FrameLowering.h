@@ -21,6 +21,7 @@ namespace llvm {
 
 class TargetLowering;
 class AArch64FunctionInfo;
+class AArch64InstrInfo;
 class AArch64PrologueEmitter;
 class AArch64EpilogueEmitter;
 
@@ -235,7 +236,7 @@ private:
   // Given a load or a store instruction, generate an appropriate unwinding SEH
   // code on Windows.
   MachineBasicBlock::iterator insertSEH(MachineBasicBlock::iterator MBBI,
-                                        const TargetInstrInfo &TII,
+                                        const AArch64InstrInfo &TII,
                                         MachineInstr::MIFlag Flag) const;
 
   /// Returns how much of the incoming argument stack area (in bytes) we should

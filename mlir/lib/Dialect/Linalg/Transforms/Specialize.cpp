@@ -291,6 +291,9 @@ static FailureOr<LinalgOp> specializeLinalgConvolutions(RewriterBase &rewriter,
   CONV_OP_SPECIALIZER(linalg::Conv2DNhwgcGfhwcOp);
   CONV_OP_SPECIALIZER(linalg::Conv2DNhwgcGfhwcQOp);
   CONV_OP_SPECIALIZER(linalg::Conv3DOp);
+  CONV_OP_SPECIALIZER(linalg::Conv3DNdhwcDhwcfOp);
+  CONV_OP_SPECIALIZER(linalg::Conv3DNdhwcDhwcfQOp);
+  CONV_OP_SPECIALIZER(linalg::Conv3DNcdhwFcdhwOp);
   // -----------------------------
   // Depthwise Convolution ops.
   // -----------------------------
@@ -302,6 +305,8 @@ static FailureOr<LinalgOp> specializeLinalgConvolutions(RewriterBase &rewriter,
   CONV_OP_SPECIALIZER(linalg::DepthwiseConv2DNhwcHwcQOp);
   CONV_OP_SPECIALIZER(linalg::DepthwiseConv2DNhwcHwcmOp);
   CONV_OP_SPECIALIZER(linalg::DepthwiseConv2DNhwcHwcmQOp);
+  CONV_OP_SPECIALIZER(linalg::DepthwiseConv3DNdhwcDhwcOp);
+  CONV_OP_SPECIALIZER(linalg::DepthwiseConv3DNcdhwCdhwOp);
   CONV_OP_SPECIALIZER(linalg::DepthwiseConv3DNdhwcDhwcmOp);
   // -----------------------------
   // Pooling ops.
@@ -311,6 +316,18 @@ static FailureOr<LinalgOp> specializeLinalgConvolutions(RewriterBase &rewriter,
   CONV_OP_SPECIALIZER(linalg::PoolingNhwcSumOp);
   CONV_OP_SPECIALIZER(linalg::PoolingNhwcMaxUnsignedOp);
   CONV_OP_SPECIALIZER(linalg::PoolingNhwcMinUnsignedOp);
+  CONV_OP_SPECIALIZER(linalg::PoolingNchwSumOp);
+  CONV_OP_SPECIALIZER(linalg::PoolingNchwMaxOp);
+  CONV_OP_SPECIALIZER(linalg::PoolingNwcSumOp);
+  CONV_OP_SPECIALIZER(linalg::PoolingNcwSumOp);
+  CONV_OP_SPECIALIZER(linalg::PoolingNwcMaxOp);
+  CONV_OP_SPECIALIZER(linalg::PoolingNwcMaxUnsignedOp);
+  CONV_OP_SPECIALIZER(linalg::PoolingNcwMaxOp);
+  CONV_OP_SPECIALIZER(linalg::PoolingNwcMinOp);
+  CONV_OP_SPECIALIZER(linalg::PoolingNwcMinUnsignedOp);
+  CONV_OP_SPECIALIZER(linalg::PoolingNdhwcSumOp);
+  CONV_OP_SPECIALIZER(linalg::PoolingNdhwcMaxOp);
+  CONV_OP_SPECIALIZER(linalg::PoolingNdhwcMinOp);
 #undef CONV_OP_SPECIALIZER
   return failure();
 }
