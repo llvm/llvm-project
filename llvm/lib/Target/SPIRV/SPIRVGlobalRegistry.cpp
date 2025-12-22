@@ -151,22 +151,22 @@ SPIRVType *SPIRVGlobalRegistry::getOpTypeBool(MachineIRBuilder &MIRBuilder) {
 }
 
 unsigned SPIRVGlobalRegistry::adjustOpTypeIntWidth(unsigned Width) const {
-  if (Width > 64)
-    report_fatal_error("Unsupported integer width!");
   const SPIRVSubtarget &ST = cast<SPIRVSubtarget>(CurMF->getSubtarget());
   if (ST.canUseExtension(
           SPIRV::Extension::SPV_ALTERA_arbitrary_precision_integers) ||
-      ST.canUseExtension(SPIRV::Extension::SPV_INTEL_int4))
+      (Width == 4 && ST.canUseExtension(SPIRV::Extension::SPV_INTEL_int4)))
     return Width;
   if (Width <= 8)
-    Width = 8;
+    return 8;
   else if (Width <= 16)
-    Width = 16;
+    return 16;
   else if (Width <= 32)
-    Width = 32;
-  else
-    Width = 64;
-  return Width;
+    return 32;
+  else if (Width <= 64)
+    return 64;
+  else if (Width <= 128)
+    return 128;
+  reportFatalUsageError("Unsupported Integer width!");
 }
 
 SPIRVType *SPIRVGlobalRegistry::getOpTypeInt(unsigned Width,
@@ -413,7 +413,7 @@ Register SPIRVGlobalRegistry::createConstInt(const ConstantInt *CI,
           MIB = MIRBuilder.buildInstr(SPIRV::OpConstantI)
                     .addDef(Res)
                     .addUse(getSPIRVTypeID(SpvType));
-          addNumImm(APInt(BitWidth, CI->getZExtValue()), MIB);
+          addNumImm(CI->getValue(), MIB);
         } else {
           MIB = MIRBuilder.buildInstr(SPIRV::OpConstantNull)
                     .addDef(Res)
@@ -1465,6 +1465,27 @@ SPIRVGlobalRegistry::getOrCreatePaddingType(MachineIRBuilder &MIRBuilder) {
   auto *T = Type::getInt8Ty(MIRBuilder.getContext());
   SPIRVType *R = getOrCreateSPIRVIntegerType(8, MIRBuilder);
   finishCreatingSPIRVType(T, R);
+  add(Key, R);
+  return R;
+}
+
+SPIRVType *SPIRVGlobalRegistry::getOrCreateVulkanPushConstantType(
+    MachineIRBuilder &MIRBuilder, Type *T) {
+  const auto SC = SPIRV::StorageClass::PushConstant;
+
+  auto Key = SPIRV::irhandle_vkbuffer(T, SC, /* IsWritable= */ false);
+  if (const MachineInstr *MI = findMI(Key, &MIRBuilder.getMF()))
+    return MI;
+
+  // We need to get the SPIR-V type for the element here, so we can add the
+  // decoration to it.
+  auto *BlockType = getOrCreateSPIRVType(
+      T, MIRBuilder, SPIRV::AccessQualifier::None,
+      /* ExplicitLayoutRequired= */ true, /* EmitIr= */ false);
+
+  buildOpDecorate(BlockType->defs().begin()->getReg(), MIRBuilder,
+                  SPIRV::Decoration::Block, {});
+  SPIRVType *R = BlockType;
   add(Key, R);
   return R;
 }

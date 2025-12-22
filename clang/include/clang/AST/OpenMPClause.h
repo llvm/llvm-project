@@ -9527,7 +9527,9 @@ public:
 
 #define GEN_CLANG_CLAUSE_CLASS
 #define CLAUSE_CLASS(Enum, Str, Class)                                         \
-  RetTy Visit##Class(PTR(Class) S) { DISPATCH(Class); }
+  RetTy Visit##Class(PTR(Class) S) {                                           \
+    return static_cast<ImplClass *>(this)->VisitOMPClause(S);                  \
+  }
 #include "llvm/Frontend/OpenMP/OMP.inc"
 
   RetTy Visit(PTR(OMPClause) S) {
@@ -9536,7 +9538,7 @@ public:
 #define GEN_CLANG_CLAUSE_CLASS
 #define CLAUSE_CLASS(Enum, Str, Class)                                         \
   case llvm::omp::Clause::Enum:                                                \
-    return Visit##Class(static_cast<PTR(Class)>(S));
+    DISPATCH(Class);
 #define CLAUSE_NO_CLASS(Enum, Str)                                             \
   case llvm::omp::Clause::Enum:                                                \
     break;
