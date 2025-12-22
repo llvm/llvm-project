@@ -2094,7 +2094,7 @@ let TargetPrefix = "riscv" in {
 
   class RVPBinaryABBIntrinsics
       : Intrinsic<[llvm_any_ty],
-                  [LLVMMatchType<0>, llvm_any_ty],
+                  [llvm_any_ty, LLVMMatchType<1>],
                   [IntrNoMem]>;
 
   multiclass RVPBinaryABBIntrinsics {
