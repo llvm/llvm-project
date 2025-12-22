@@ -11,6 +11,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/JSON.h"
+#include "llvm/Support/LSP/Logging.h"
 #include "llvm/Support/Program.h"
 
 #include "IRDocument.h"
@@ -26,6 +27,13 @@ static cl::opt<std::string> LogFilePath("log-file",
                                         cl::desc("Path to log file"),
                                         cl::init("/tmp/llvm-lsp-server.log"),
                                         cl::cat(LlvmLspServerCategory));
+
+static cl::opt<lsp::Logger::Level> LogLevel(
+    "log-level", cl::desc("Log level"), cl::init(lsp::Logger::Level::Info),
+    cl::values(clEnumValN(lsp::Logger::Level::Info, "info", "Info"),
+               clEnumValN(lsp::Logger::Level::Debug, "debug", "Debug"),
+               clEnumValN(lsp::Logger::Level::Error, "error", "Error")),
+    cl::cat(LlvmLspServerCategory));
 
 static lsp::Position llvmFileLocToLspPosition(const FileLoc &Pos) {
   return lsp::Position(Pos.Line, Pos.Col);
@@ -203,7 +211,7 @@ int main(int argc, char **argv) {
 
   LspServer LS(Transport);
 
-  lsp::Logger::setLogLevel(lsp::Logger::Level::Debug);
+  lsp::Logger::setLogLevel(LogLevel);
 
   auto LSResult = LS.run();
   if (!LSResult)
