@@ -12,6 +12,7 @@
 #include <__algorithm/for_each.h>
 #include <__algorithm/for_each_n.h>
 #include <__algorithm/in_fun_result.h>
+#include <__algorithm/specialized_algorithms.h>
 #include <__concepts/assignable.h>
 #include <__config>
 #include <__functional/identity.h>
@@ -20,6 +21,7 @@
 #include <__ranges/access.h>
 #include <__ranges/concepts.h>
 #include <__ranges/dangling.h>
+#include <__type_traits/remove_cvref.h>
 #include <__utility/move.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -71,7 +73,13 @@ public:
             indirectly_unary_invocable<projected<iterator_t<_Range>, _Proj>> _Func>
   _LIBCPP_HIDE_FROM_ABI constexpr for_each_result<borrowed_iterator_t<_Range>, _Func>
   operator()(_Range&& __range, _Func __func, _Proj __proj = {}) const {
-    return __for_each_impl(ranges::begin(__range), ranges::end(__range), __func, __proj);
+    using _SpecialAlg = __specialized_algorithm<_Algorithm::__for_each, __single_range<remove_cvref_t<_Range>>>;
+    if constexpr (_SpecialAlg::__has_algorithm) {
+      auto [__iter, __func2] = _SpecialAlg()(__range, std::move(__func), std::move(__proj));
+      return {std::move(__iter), std::move(__func)};
+    } else {
+      return __for_each_impl(ranges::begin(__range), ranges::end(__range), __func, __proj);
+    }
   }
 };
 

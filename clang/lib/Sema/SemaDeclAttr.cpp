@@ -2042,7 +2042,7 @@ static bool isKnownToAlwaysThrow(const FunctionDecl *FD) {
   return false;
 }
 
-void clang::inferNoReturnAttr(Sema &S, const Decl *D) {
+void clang::inferNoReturnAttr(Sema &S, Decl *D) {
   auto *FD = dyn_cast<FunctionDecl>(D);
   if (!FD)
     return;
@@ -2054,7 +2054,6 @@ void clang::inferNoReturnAttr(Sema &S, const Decl *D) {
   if (FD->getTemplateSpecializationKind() == TSK_ExplicitSpecialization)
     return;
 
-  auto *NonConstFD = const_cast<FunctionDecl *>(FD);
   DiagnosticsEngine &Diags = S.getDiagnostics();
   if (Diags.isIgnored(diag::warn_falloff_nonvoid, FD->getLocation()) &&
       Diags.isIgnored(diag::warn_suggest_noreturn_function, FD->getLocation()))
@@ -2062,7 +2061,7 @@ void clang::inferNoReturnAttr(Sema &S, const Decl *D) {
 
   if (!FD->isNoReturn() && !FD->hasAttr<InferredNoReturnAttr>() &&
       isKnownToAlwaysThrow(FD)) {
-    NonConstFD->addAttr(InferredNoReturnAttr::CreateImplicit(S.Context));
+    FD->addAttr(InferredNoReturnAttr::CreateImplicit(S.Context));
 
     // [[noreturn]] can only be added to lambdas since C++23
     if (const auto *MD = dyn_cast<CXXMethodDecl>(FD);
@@ -3445,19 +3444,20 @@ bool Sema::checkTargetAttr(SourceLocation LiteralLoc, StringRef AttrStr) {
 static void handleTargetVersionAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   StringRef Param;
   SourceLocation Loc;
+  SmallString<64> NewParam;
   if (!S.checkStringLiteralArgumentAttr(AL, 0, Param, &Loc))
     return;
 
   if (S.Context.getTargetInfo().getTriple().isAArch64()) {
-    if (S.ARM().checkTargetVersionAttr(Param, Loc))
+    if (S.ARM().checkTargetVersionAttr(Param, Loc, NewParam))
       return;
   } else if (S.Context.getTargetInfo().getTriple().isRISCV()) {
-    if (S.RISCV().checkTargetVersionAttr(Param, Loc))
+    if (S.RISCV().checkTargetVersionAttr(Param, Loc, NewParam))
       return;
   }
 
   TargetVersionAttr *NewAttr =
-      ::new (S.Context) TargetVersionAttr(S.Context, AL, Param);
+      ::new (S.Context) TargetVersionAttr(S.Context, AL, NewParam);
   D->addAttr(NewAttr);
 }
 
@@ -3634,7 +3634,7 @@ static void handleEnumExtensibilityAttr(Sema &S, Decl *D,
 }
 
 /// Handle __attribute__((format_arg((idx)))) attribute based on
-/// http://gcc.gnu.org/onlinedocs/gcc/Function-Attributes.html
+/// https://gcc.gnu.org/onlinedocs/gcc/Common-Function-Attributes.html
 static void handleFormatArgAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   const Expr *IdxExpr = AL.getArgAsExpr(0);
   ParamIdx Idx;
@@ -3833,7 +3833,7 @@ struct FormatAttrCommon {
 };
 
 /// Handle __attribute__((format(type,idx,firstarg))) attributes based on
-/// http://gcc.gnu.org/onlinedocs/gcc/Function-Attributes.html
+/// https://gcc.gnu.org/onlinedocs/gcc/Common-Function-Attributes.html
 static bool handleFormatAttrCommon(Sema &S, Decl *D, const ParsedAttr &AL,
                                    FormatAttrCommon *Info) {
   // Checks the first two arguments of the attribute; this is shared between
@@ -6172,6 +6172,36 @@ static void handleMSConstexprAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   D->addAttr(::new (S.Context) MSConstexprAttr(S.Context, AL));
 }
 
+static void handleMSStructAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
+  if (const auto *First = D->getAttr<GCCStructAttr>()) {
+    S.Diag(AL.getLoc(), diag::err_attributes_are_not_compatible)
+        << AL << First << 0;
+    S.Diag(First->getLocation(), diag::note_conflicting_attribute);
+    return;
+  }
+  if (const auto *Preexisting = D->getAttr<MSStructAttr>()) {
+    if (Preexisting->isImplicit())
+      D->dropAttr<MSStructAttr>();
+  }
+
+  D->addAttr(::new (S.Context) MSStructAttr(S.Context, AL));
+}
+
+static void handleGCCStructAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
+  if (const auto *First = D->getAttr<MSStructAttr>()) {
+    if (First->isImplicit()) {
+      D->dropAttr<MSStructAttr>();
+    } else {
+      S.Diag(AL.getLoc(), diag::err_attributes_are_not_compatible)
+          << AL << First << 0;
+      S.Diag(First->getLocation(), diag::note_conflicting_attribute);
+      return;
+    }
+  }
+
+  D->addAttr(::new (S.Context) GCCStructAttr(S.Context, AL));
+}
+
 static void handleAbiTagAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   SmallVector<StringRef, 4> Tags;
   for (unsigned I = 0, E = AL.getNumArgs(); I != E; ++I) {
@@ -7744,6 +7774,9 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
   case ParsedAttr::AT_HLSLVkExtBuiltinInput:
     S.HLSL().handleVkExtBuiltinInputAttr(D, AL);
     break;
+  case ParsedAttr::AT_HLSLVkPushConstant:
+    S.HLSL().handleVkPushConstantAttr(D, AL);
+    break;
   case ParsedAttr::AT_HLSLVkConstantId:
     S.HLSL().handleVkConstantIdAttr(D, AL);
     break;
@@ -7982,6 +8015,14 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
   case ParsedAttr::AT_ModularFormat:
     handleModularFormat(S, D, AL);
     break;
+
+  case ParsedAttr::AT_MSStruct:
+    handleMSStructAttr(S, D, AL);
+    break;
+
+  case ParsedAttr::AT_GCCStruct:
+    handleGCCStructAttr(S, D, AL);
+    break;
   }
 }
 
@@ -8055,6 +8096,30 @@ void Sema::ProcessDeclAttributeList(
       D->setInvalidDecl();
     }
   }
+
+  // CUDA/HIP: restrict explicit CUDA target attributes on deduction guides.
+  //
+  // Deduction guides are not callable functions and never participate in
+  // codegen; they are always treated as host+device for CUDA/HIP semantic
+  // checks.  We therefore allow either no CUDA target attributes or an explicit
+  // '__host__ __device__' annotation, but reject guides that are host-only,
+  // device-only, or marked '__global__'.  The use of explicit CUDA/HIP target
+  // attributes on deduction guides is deprecated and will be rejected in a
+  // future Clang version.
+  if (getLangOpts().CUDA)
+    if (auto *Guide = dyn_cast<CXXDeductionGuideDecl>(D)) {
+      bool HasHost = Guide->hasAttr<CUDAHostAttr>();
+      bool HasDevice = Guide->hasAttr<CUDADeviceAttr>();
+      bool HasGlobal = Guide->hasAttr<CUDAGlobalAttr>();
+
+      if (HasGlobal || HasHost != HasDevice) {
+        Diag(Guide->getLocation(), diag::err_deduction_guide_target_attr);
+        Guide->setInvalidDecl();
+      } else if (HasHost && HasDevice) {
+        Diag(Guide->getLocation(),
+             diag::warn_deduction_guide_target_attr_deprecated);
+      }
+    }
 
   // Do not permit 'constructor' or 'destructor' attributes on __device__ code.
   if (getLangOpts().CUDAIsDevice && D->hasAttr<CUDADeviceAttr>() &&

@@ -1,6 +1,9 @@
+# FIXME: remove when LLDB_MINIMUM_PYTHON_VERSION > 3.8
+from __future__ import annotations
+
 import os
 import time
-from typing import Optional, Callable, Any, List, Union
+from typing import Optional, Callable, Any, List, Union, Final
 import uuid
 
 import dap_server
@@ -18,7 +21,7 @@ import base64
 class DAPTestCaseBase(TestBase):
     # set timeout based on whether ASAN was enabled or not. Increase
     # timeout by a factor of 10 if ASAN is enabled.
-    DEFAULT_TIMEOUT = dap_server.DEFAULT_TIMEOUT
+    DEFAULT_TIMEOUT: Final[float] = dap_server.DEFAULT_TIMEOUT
     NO_DEBUG_INFO_TESTCASE = True
 
     def create_debug_adapter(
