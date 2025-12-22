@@ -254,7 +254,7 @@ bool isExpandedFromParameterPack(const ParmVarDecl *D);
 
 /// Heuristic that checks if FT is likely to be forwarding a parameter pack to
 /// another function (e.g. `make_unique`).
-bool isLikelyForwardingFunction(FunctionTemplateDecl *FT);
+bool isLikelyForwardingFunction(const FunctionTemplateDecl *FT);
 
 /// Only call if FD is a likely forwarding function. Returns
 /// constructors that might be forwraded to

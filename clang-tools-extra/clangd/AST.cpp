@@ -1038,7 +1038,7 @@ bool isExpandedFromParameterPack(const ParmVarDecl *D) {
   return getUnderlyingPackType(D) != nullptr;
 }
 
-bool isLikelyForwardingFunction(FunctionTemplateDecl *FT) {
+bool isLikelyForwardingFunction(const FunctionTemplateDecl *FT) {
   const auto *FD = FT->getTemplatedDecl();
   const auto NumParams = FD->getNumParams();
   // Check whether its last parameter is a parameter pack...

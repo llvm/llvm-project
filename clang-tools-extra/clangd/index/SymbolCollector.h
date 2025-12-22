@@ -19,6 +19,7 @@
 #include "index/SymbolOrigin.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
+#include "clang/AST/DeclTemplate.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
@@ -151,6 +152,10 @@ public:
   RefSlab takeRefs() { return std::move(Refs).build(); }
   RelationSlab takeRelations() { return std::move(Relations).build(); }
 
+  /// Checks if \p D is either a likely forwarding function template or an
+  /// instation of it.
+  bool potentiallyForwardInBody(const Decl *D);
+
   /// Returns true if we are interested in references and declarations from \p
   /// FID. If this function return false, bodies of functions inside those files
   /// will be skipped to decrease indexing time.
@@ -159,6 +164,8 @@ public:
   void finish() override;
 
 private:
+  bool isLikelyForwardingFunctionCached(const FunctionTemplateDecl *FT);
+
   // If D is an instantiation of a likely forwarding function, return the
   // constructors it invokes so that we can record indirect references
   // to those as well.
@@ -235,6 +242,7 @@ private:
   std::unique_ptr<HeaderFileURICache> HeaderFileURIs;
   llvm::DenseMap<const Decl *, SymbolID> DeclToIDCache;
   llvm::DenseMap<const MacroInfo *, SymbolID> MacroToIDCache;
+  llvm::DenseSet<const FunctionTemplateDecl *> LikelyForwardingFunctionCached;
   llvm::DenseMap<const FunctionDecl *, SmallVector<CXXConstructorDecl *, 1>>
       ForwardingToConstructorCache;
 };

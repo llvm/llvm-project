@@ -576,6 +576,29 @@ SymbolCollector::getRefContainer(const Decl *Enclosing,
   return Enclosing;
 }
 
+bool SymbolCollector::isLikelyForwardingFunctionCached(
+    const FunctionTemplateDecl *FT) {
+  if (LikelyForwardingFunctionCached.contains(FT))
+    return true;
+  if (isLikelyForwardingFunction(FT)) {
+    LikelyForwardingFunctionCached.insert(FT);
+    return true;
+  }
+  return false;
+}
+
+bool SymbolCollector::potentiallyForwardInBody(const Decl *D) {
+  if (auto *FD = llvm::dyn_cast<clang::FunctionDecl>(D);
+      FD && FD->isTemplateInstantiation())
+    if (auto *PT = FD->getPrimaryTemplate();
+        PT && isLikelyForwardingFunctionCached(PT))
+      return true;
+  if (auto *FT = llvm::dyn_cast<clang::FunctionTemplateDecl>(D);
+      FT && isLikelyForwardingFunctionCached(FT))
+    return true;
+  return false;
+}
+
 SmallVector<CXXConstructorDecl *, 1>
 SymbolCollector::findIndirectConstructors(const Decl *D) {
   auto *FD = llvm::dyn_cast<clang::FunctionDecl>(D);
@@ -585,7 +608,7 @@ SymbolCollector::findIndirectConstructors(const Decl *D) {
       Entry != ForwardingToConstructorCache.end())
     return Entry->getSecond();
   if (auto *PT = FD->getPrimaryTemplate();
-      PT == nullptr || !isLikelyForwardingFunction(PT))
+      PT == nullptr || !isLikelyForwardingFunctionCached(PT))
     return {};
 
   SmallVector<CXXConstructorDecl *, 1> FoundConstructors =

@@ -145,6 +145,10 @@ public:
       // inside, it becomes quadratic. So we give up on nested symbols.
       if (isDeeplyNested(D))
         return false;
+      // If D is a likely forwarding function we need the body to index indirect
+      // constructor calls (e.g. `make_unique`)
+      if (Collector->potentiallyForwardInBody(D))
+        return true;
       auto &SM = D->getASTContext().getSourceManager();
       auto FID = SM.getFileID(SM.getExpansionLoc(D->getLocation()));
       if (!FID.isValid())
