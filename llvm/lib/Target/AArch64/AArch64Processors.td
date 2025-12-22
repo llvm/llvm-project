@@ -1549,7 +1549,7 @@ def : ProcessorModel<"carmel", NoSchedModel, ProcessorFeatures.Carmel,
                      [TuneCarmel]>;
 
 // NVIDIA Olympus
-def : ProcessorModel<"olympus", NeoverseV2Model, ProcessorFeatures.Olympus,
+def : ProcessorModel<"olympus", OlympusModel, ProcessorFeatures.Olympus,
                      [TuneOlympus]>;
 
 // Ampere Computing
