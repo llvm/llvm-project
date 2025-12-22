@@ -42,25 +42,7 @@ public:
 
   // ---------------- APIs that the Language Server can use  -----------------
 
-  Function *getFirstFunction() {
-    return &ParsedModule->getFunctionList().front();
-  }
-
   auto &getFunctions() { return ParsedModule->getFunctionList(); }
-
-  Function *getFunctionAtLocation(unsigned Line, unsigned Col) {
-    FileLoc FL(Line, Col);
-    if (auto *MaybeF = ParserContext.getFunctionAtLocation(FL))
-      return MaybeF;
-    return nullptr;
-  }
-
-  BasicBlock *getBlockAtLocation(unsigned Line, unsigned Col) {
-    FileLoc FL(Line, Col);
-    if (auto *MaybeBB = ParserContext.getBlockAtLocation(FL))
-      return MaybeBB;
-    return nullptr;
-  }
 
   Instruction *getInstructionAtLocation(unsigned Line, unsigned Col) {
     FileLoc FL(Line, Col);
