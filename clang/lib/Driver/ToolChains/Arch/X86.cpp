@@ -277,6 +277,9 @@ void x86::getX86TargetFeatures(const Driver &D, const llvm::Triple &Triple,
     Features.push_back(Args.MakeArgString((IsNegative ? "-" : "+") + Name));
   }
 
+  if (Args.hasArgNoClaim(options::OPT__SLASH_apx_features_egprnv))
+    Features.push_back("+egpr");
+
   // Enable/disable straight line speculation hardening.
   if (Arg *A = Args.getLastArg(options::OPT_mharden_sls_EQ)) {
     StringRef Scope = A->getValue();

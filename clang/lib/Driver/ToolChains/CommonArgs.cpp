@@ -922,6 +922,12 @@ void tools::getTargetFeatures(const Driver &D, const llvm::Triple &Triple,
     CmdArgs.push_back(IsAux ? "-aux-target-feature" : "-target-feature");
     CmdArgs.push_back(Feature.data());
   }
+
+  if (Arg *A = Args.getLastArg(options::OPT__SLASH_apx_features_egprnv)) {
+    StringRef Value = A->getValue();
+    CmdArgs.push_back("-mllvm");
+    CmdArgs.push_back(Args.MakeArgString("-apx-egpr-csr=" + Value));
+  }
 }
 
 llvm::StringRef tools::getLTOParallelism(const ArgList &Args, const Driver &D) {

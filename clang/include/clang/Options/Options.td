@@ -9330,6 +9330,8 @@ def : CLFlag<"Qscatter-">, Alias<mno_scatter>,
 
 // Non-aliases:
 
+def _SLASH_apx_features_egprnv : CLCompileJoined<"apx-features=egpr-nv:">,
+  HelpText<"Set number of non-volatile registers of APX features">;
 def _SLASH_arch : CLCompileJoined<"arch:">,
   HelpText<"Set architecture for code generation">;
 def _SLASH_vlen : CLFlag<"vlen">,
