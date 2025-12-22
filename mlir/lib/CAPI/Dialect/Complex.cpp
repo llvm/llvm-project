@@ -12,7 +12,7 @@
 #include "mlir/CAPI/Registration.h"
 
 MLIR_DEFINE_CAPI_DIALECT_REGISTRATION(Complex, complex,
-                                     mlir::complex::ComplexDialect)
+                                      mlir::complex::ComplexDialect)
 
 bool mlirAttributeIsAComplex(MlirAttribute attr) {
   return llvm::isa<ComplexAttr>(unwrap(attr));
@@ -41,4 +41,3 @@ double mlirComplexAttrGetImagDouble(MlirAttribute attr) {
 MlirTypeID mlirComplexAttrGetTypeID(void) {
   return wrap(complex::NumberAttr::getTypeID());
 }
-

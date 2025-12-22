@@ -30,9 +30,8 @@ MLIR_CAPI_EXPORTED MlirAttribute mlirComplexAttrDoubleGet(MlirContext ctx,
 
 /// Same as "mlirComplexAttrDoubleGet", but if the type is not valid for a
 /// construction of a ComplexAttr, returns a null MlirAttribute.
-MLIR_CAPI_EXPORTED MlirAttribute
-mlirComplexAttrDoubleGetChecked(MlirLocation loc, MlirType type, double real,
-                                double imag);
+MLIR_CAPI_EXPORTED MlirAttribute mlirComplexAttrDoubleGetChecked(
+    MlirLocation loc, MlirType type, double real, double imag);
 
 /// Returns the real value stored in the given complex attribute, interpreting
 /// the value as double.
