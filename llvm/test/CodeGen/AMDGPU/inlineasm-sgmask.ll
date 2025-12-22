@@ -1,5 +1,4 @@
 ; RUN: llc -mcpu=gfx942 < %s | FileCheck %s
-; ModuleID = '<stdin>'
 target triple = "amdgcn-amd-amdhsa"
 
 ; Function Attrs: convergent mustprogress norecurse nounwind
