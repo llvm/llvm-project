@@ -26,10 +26,10 @@ void MemProfSummary::printSummaryYaml(raw_ostream &OS) const {
   OS << "#   Maximum warm context total size: " << MaxWarmTotalSize << "\n";
   OS << "#   Maximum hot context total size: " << MaxHotTotalSize << "\n";
   if (HasDataAccessProfile) {
-    OS << "# Num hot symbols and string literals: "
+    OS << "#   Num hot symbols and string literals: "
        << NumHotSymbolsAndStringLiterals << "\n";
-    OS << "# Num known cold symbols: " << NumKnownColdSymbols << "\n";
-    OS << "# Num known cold string literals: " << NumKnownColdStringLiterals
+    OS << "#   Num known cold symbols: " << NumKnownColdSymbols << "\n";
+    OS << "#   Num known cold string literals: " << NumKnownColdStringLiterals
        << "\n";
   }
 }
