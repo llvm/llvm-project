@@ -521,7 +521,7 @@ class VPseudoVLN8Mask<VReg RetClass, bit U> :
       RISCVVPseudo<(outs GetVRegNoV0<RetClass>.R:$rd),
                    (ins GetVRegNoV0<RetClass>.R:$passthru,
                         GPRMemZeroOffset:$rs1,
-                        VMaskOp:$vm, AVL:$vl, sew:$sew, vec_policy:$policy),
+                        VMV0:$vm, AVL:$vl, sew:$sew, vec_policy:$policy),
                    []>,
       RISCVNDSVLN</*Masked*/1, /*Unsigned*/U, !logtwo(8), VLMul> {
   let mayLoad = 1;
@@ -832,6 +832,17 @@ def : Sh1AddPat<NDS_LEA_H_ZE>;
 def : Sh2AddPat<NDS_LEA_W_ZE>;
 def : Sh3AddPat<NDS_LEA_D_ZE>;
 } // Predicates = [HasVendorXAndesPerf, IsRV64]
+
+let Predicates = [HasVendorXAndesPerf] in {
+def : Pat<(XLenVT (int_riscv_nds_ffb (XLenVT GPR:$rs1), (XLenVT GPR:$rs2))),
+          (NDS_FFB GPR:$rs1, GPR:$rs2)>;
+def : Pat<(XLenVT (int_riscv_nds_ffzmism (XLenVT GPR:$rs1), (XLenVT GPR:$rs2))),
+          (NDS_FFZMISM GPR:$rs1, GPR:$rs2)>;
+def : Pat<(XLenVT (int_riscv_nds_ffmism (XLenVT GPR:$rs1), (XLenVT GPR:$rs2))),
+          (NDS_FFMISM GPR:$rs1, GPR:$rs2)>;
+def : Pat<(XLenVT (int_riscv_nds_flmism (XLenVT GPR:$rs1), (XLenVT GPR:$rs2))),
+          (NDS_FLMISM GPR:$rs1, GPR:$rs2)>;
+} // Predicates = [HasVendorXAndesPerf]
 
 let Predicates = [HasVendorXAndesBFHCvt] in {
 def : Pat<(fpextend (bf16 FPR16:$rs)),

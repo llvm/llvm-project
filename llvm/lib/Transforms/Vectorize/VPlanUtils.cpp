@@ -13,9 +13,11 @@
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
+#include "llvm/Analysis/ScalarEvolutionPatternMatch.h"
 
 using namespace llvm;
 using namespace llvm::VPlanPatternMatch;
+using namespace llvm::SCEVPatternMatch;
 
 bool vputils::onlyFirstLaneUsed(const VPValue *Def) {
   return all_of(Def->users(),
@@ -80,37 +82,42 @@ bool vputils::isHeaderMask(const VPValue *V, const VPlan &Plan) {
 }
 
 const SCEV *vputils::getSCEVExprForVPValue(const VPValue *V,
-                                           ScalarEvolution &SE, const Loop *L) {
+                                           PredicatedScalarEvolution &PSE,
+                                           const Loop *L) {
+  ScalarEvolution &SE = *PSE.getSE();
   if (V->isLiveIn()) {
-    if (Value *LiveIn = V->getLiveInIRValue())
+    Value *LiveIn = V->getLiveInIRValue();
+    if (LiveIn && SE.isSCEVable(LiveIn->getType()))
       return SE.getSCEV(LiveIn);
     return SE.getCouldNotCompute();
   }
 
   // TODO: Support constructing SCEVs for more recipes as needed.
-  return TypeSwitch<const VPRecipeBase *, const SCEV *>(V->getDefiningRecipe())
+  const VPRecipeBase *DefR = V->getDefiningRecipe();
+  const SCEV *Expr = TypeSwitch<const VPRecipeBase *, const SCEV *>(DefR)
       .Case<VPExpandSCEVRecipe>(
           [](const VPExpandSCEVRecipe *R) { return R->getSCEV(); })
-      .Case<VPCanonicalIVPHIRecipe>([&SE, L](const VPCanonicalIVPHIRecipe *R) {
+      .Case<VPCanonicalIVPHIRecipe>([&SE, &PSE,
+                                     L](const VPCanonicalIVPHIRecipe *R) {
         if (!L)
           return SE.getCouldNotCompute();
-        const SCEV *Start = getSCEVExprForVPValue(R->getOperand(0), SE, L);
+        const SCEV *Start = getSCEVExprForVPValue(R->getOperand(0), PSE, L);
         return SE.getAddRecExpr(Start, SE.getOne(Start->getType()), L,
                                 SCEV::FlagAnyWrap);
       })
       .Case<VPWidenIntOrFpInductionRecipe>(
-          [&SE, L](const VPWidenIntOrFpInductionRecipe *R) {
-            const SCEV *Step = getSCEVExprForVPValue(R->getStepValue(), SE, L);
+          [&SE, &PSE, L](const VPWidenIntOrFpInductionRecipe *R) {
+            const SCEV *Step = getSCEVExprForVPValue(R->getStepValue(), PSE, L);
             if (!L || isa<SCEVCouldNotCompute>(Step))
               return SE.getCouldNotCompute();
             const SCEV *Start =
-                getSCEVExprForVPValue(R->getStartValue(), SE, L);
+                getSCEVExprForVPValue(R->getStartValue(), PSE, L);
             return SE.getAddRecExpr(Start, Step, L, SCEV::FlagAnyWrap);
           })
-      .Case<VPDerivedIVRecipe>([&SE, L](const VPDerivedIVRecipe *R) {
-        const SCEV *Start = getSCEVExprForVPValue(R->getOperand(0), SE, L);
-        const SCEV *IV = getSCEVExprForVPValue(R->getOperand(1), SE, L);
-        const SCEV *Scale = getSCEVExprForVPValue(R->getOperand(2), SE, L);
+      .Case<VPDerivedIVRecipe>([&SE, &PSE, L](const VPDerivedIVRecipe *R) {
+        const SCEV *Start = getSCEVExprForVPValue(R->getOperand(0), PSE, L);
+        const SCEV *IV = getSCEVExprForVPValue(R->getOperand(1), PSE, L);
+        const SCEV *Scale = getSCEVExprForVPValue(R->getOperand(2), PSE, L);
         if (any_of(ArrayRef({Start, IV, Scale}), IsaPred<SCEVCouldNotCompute>))
           return SE.getCouldNotCompute();
 
@@ -118,26 +125,27 @@ const SCEV *vputils::getSCEVExprForVPValue(const VPValue *V,
                              SE.getMulExpr(IV, SE.getTruncateOrSignExtend(
                                                    Scale, IV->getType())));
       })
-      .Case<VPScalarIVStepsRecipe>([&SE, L](const VPScalarIVStepsRecipe *R) {
-        const SCEV *IV = getSCEVExprForVPValue(R->getOperand(0), SE, L);
-        const SCEV *Step = getSCEVExprForVPValue(R->getOperand(1), SE, L);
+      .Case<VPScalarIVStepsRecipe>([&SE, &PSE,
+                                    L](const VPScalarIVStepsRecipe *R) {
+        const SCEV *IV = getSCEVExprForVPValue(R->getOperand(0), PSE, L);
+        const SCEV *Step = getSCEVExprForVPValue(R->getOperand(1), PSE, L);
         if (isa<SCEVCouldNotCompute>(IV) || isa<SCEVCouldNotCompute>(Step) ||
             !Step->isOne())
           return SE.getCouldNotCompute();
         return SE.getMulExpr(SE.getTruncateOrSignExtend(IV, Step->getType()),
                              Step);
       })
-      .Case<VPReplicateRecipe>([&SE, L](const VPReplicateRecipe *R) {
+      .Case<VPReplicateRecipe>([&SE, &PSE, L](const VPReplicateRecipe *R) {
         if (R->getOpcode() != Instruction::GetElementPtr)
           return SE.getCouldNotCompute();
 
-        const SCEV *Base = getSCEVExprForVPValue(R->getOperand(0), SE, L);
+        const SCEV *Base = getSCEVExprForVPValue(R->getOperand(0), PSE, L);
         if (isa<SCEVCouldNotCompute>(Base))
           return SE.getCouldNotCompute();
 
         SmallVector<const SCEV *> IndexExprs;
         for (VPValue *Index : drop_begin(R->operands())) {
-          const SCEV *IndexExpr = getSCEVExprForVPValue(Index, SE, L);
+          const SCEV *IndexExpr = getSCEVExprForVPValue(Index, PSE, L);
           if (isa<SCEVCouldNotCompute>(IndexExpr))
             return SE.getCouldNotCompute();
           IndexExprs.push_back(IndexExpr);
@@ -147,7 +155,27 @@ const SCEV *vputils::getSCEVExprForVPValue(const VPValue *V,
                                  ->getSourceElementType();
         return SE.getGEPExpr(Base, IndexExprs, SrcElementTy);
       })
-      .Default([&SE](const VPRecipeBase *) { return SE.getCouldNotCompute(); });
+      .Default(
+          [&SE](const VPRecipeBase *) { return SE.getCouldNotCompute(); });
+
+  return PSE.getPredicatedSCEV(Expr);
+}
+
+bool vputils::isAddressSCEVForCost(const SCEV *Addr, ScalarEvolution &SE,
+                                   const Loop *L) {
+  // If address is an SCEVAddExpr, we require that all operands must be either
+  // be invariant or a (possibly sign-extend) affine AddRec.
+  if (auto *PtrAdd = dyn_cast<SCEVAddExpr>(Addr)) {
+    return all_of(PtrAdd->operands(), [&SE, L](const SCEV *Op) {
+      return SE.isLoopInvariant(Op, L) ||
+             match(Op, m_scev_SExt(m_scev_AffineAddRec(m_SCEV(), m_SCEV()))) ||
+             match(Op, m_scev_AffineAddRec(m_SCEV(), m_SCEV()));
+    });
+  }
+
+  // Otherwise, check if address is loop invariant or an affine add recurrence.
+  return SE.isLoopInvariant(Addr, L) ||
+         match(Addr, m_scev_AffineAddRec(m_SCEV(), m_SCEV()));
 }
 
 /// Returns true if \p Opcode preserves uniformity, i.e., if all operands are

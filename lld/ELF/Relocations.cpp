@@ -705,35 +705,36 @@ static void addRelativeReloc(Ctx &ctx, InputSectionBase &isec,
                              RelExpr expr, RelType type) {
   Partition &part = isec.getPartition(ctx);
 
-  if (sym.isTagged()) {
-    part.relaDyn->addRelativeReloc<shard>(ctx.target->relativeRel, isec,
-                                          offsetInSec, sym, addend, type, expr);
-    // With MTE globals, we always want to derive the address tag by `ldg`-ing
-    // the symbol. When we have a RELATIVE relocation though, we no longer have
-    // a reference to the symbol. Because of this, when we have an addend that
-    // puts the result of the RELATIVE relocation out-of-bounds of the symbol
-    // (e.g. the addend is outside of [0, sym.getSize()]), the AArch64 MemtagABI
-    // says we should store the offset to the start of the symbol in the target
-    // field. This is described in further detail in:
-    // https://github.com/ARM-software/abi-aa/blob/main/memtagabielf64/memtagabielf64.rst#841extended-semantics-of-r_aarch64_relative
-    if (addend < 0 || static_cast<uint64_t>(addend) >= sym.getSize())
-      isec.addReloc({expr, type, offsetInSec, addend, &sym});
-    return;
-  }
-
   // Add a relative relocation. If relrDyn section is enabled, and the
   // relocation offset is guaranteed to be even, add the relocation to
   // the relrDyn section, otherwise add it to the relaDyn section.
   // relrDyn sections don't support odd offsets. Also, relrDyn sections
   // don't store the addend values, so we must write it to the relocated
   // address.
-  if (part.relrDyn && isec.addralign >= 2 && offsetInSec % 2 == 0) {
-    part.relrDyn->addRelativeReloc<shard>(isec, offsetInSec, sym, addend, type,
-                                          expr);
+  //
+  // MTE globals may need to store the original addend as well so cannot use
+  // relrDyn. TODO: It should be unambiguous when not using R_ADDEND_NEG below?
+  RelrBaseSection *relrDyn = part.relrDyn.get();
+  if (sym.isTagged())
+    relrDyn = nullptr;
+  if (relrDyn && isec.addralign >= 2 && offsetInSec % 2 == 0) {
+    relrDyn->addRelativeReloc<shard>(isec, offsetInSec, sym, addend, type,
+                                     expr);
     return;
   }
   part.relaDyn->addRelativeReloc<shard>(ctx.target->relativeRel, isec,
                                         offsetInSec, sym, addend, type, expr);
+  // With MTE globals, we always want to derive the address tag by `ldg`-ing
+  // the symbol. When we have a RELATIVE relocation though, we no longer have
+  // a reference to the symbol. Because of this, when we have an addend that
+  // puts the result of the RELATIVE relocation out-of-bounds of the symbol
+  // (e.g. the addend is outside of [0, sym.getSize()]), the AArch64 MemtagABI
+  // says we should store the offset to the start of the symbol in the target
+  // field. This is described in further detail in:
+  // https://github.com/ARM-software/abi-aa/blob/main/memtagabielf64/memtagabielf64.rst#841extended-semantics-of-r_aarch64_relative
+  if (sym.isTagged() &&
+      (addend < 0 || static_cast<uint64_t>(addend) >= sym.getSize()))
+    isec.addReloc({R_ADDEND_NEG, type, offsetInSec, addend, &sym});
 }
 
 template <class PltSection, class GotPltSection>
@@ -1004,9 +1005,11 @@ void RelocScan::process(RelExpr expr, RelType type, uint64_t offset,
       // For a preemptible symbol, we can't use a relative relocation. For an
       // undefined symbol, we can't compute offset at link-time and use a
       // relative relocation. Use a symbolic relocation instead.
+      // Handle the composition with Memtag like addRelativeReloc.
       if (ctx.arg.emachine == EM_AARCH64 && type == R_AARCH64_AUTH_ABS64 &&
           !sym.isPreemptible) {
-        if (part.relrAuthDyn && sec->addralign >= 2 && offset % 2 == 0) {
+        if (!sym.isTagged() && part.relrAuthDyn && sec->addralign >= 2 &&
+            offset % 2 == 0) {
           // When symbol values are determined in
           // finalizeAddressDependentContent, some .relr.auth.dyn relocations
           // may be moved to .rela.dyn.
@@ -1015,6 +1018,9 @@ void RelocScan::process(RelExpr expr, RelType type, uint64_t offset,
         } else {
           part.relaDyn->addReloc({R_AARCH64_AUTH_RELATIVE, sec, offset, false,
                                   sym, addend, R_ABS});
+          if (sym.isTagged() &&
+              (addend < 0 || static_cast<uint64_t>(addend) >= sym.getSize()))
+            sec->addReloc({R_ADDEND_NEG, type, offset, addend, &sym});
         }
         return;
       }
@@ -1290,7 +1296,7 @@ unsigned RelocScan::handleTlsRelocation(RelExpr expr, RelType type,
     // label, so TLSDESC=>IE will be categorized as R_RELAX_TLS_GD_TO_LE. We fix
     // the categorization in RISCV::relocateAllosec->
     if (sym.isPreemptible) {
-      sym.setFlags(NEEDS_TLSGD_TO_IE);
+      sym.setFlags(NEEDS_TLSIE);
       sec->addReloc({ctx.target->adjustTlsExpr(type, R_RELAX_TLS_GD_TO_IE),
                      type, offset, addend, &sym});
     } else {
@@ -1630,18 +1636,13 @@ void elf::postScanRelocations(Ctx &ctx) {
       else
         got->addConstant({R_ABS, ctx.target->tlsOffsetRel, offsetOff, 0, &sym});
     }
-    if (flags & NEEDS_TLSGD_TO_IE) {
-      got->addEntry(sym);
-      ctx.mainPart->relaDyn->addSymbolReloc(ctx.target->tlsGotRel, *got,
-                                            sym.getGotOffset(ctx), sym);
-    }
     if (flags & NEEDS_GOT_DTPREL) {
       got->addEntry(sym);
       got->addConstant(
           {R_ABS, ctx.target->tlsOffsetRel, sym.getGotOffset(ctx), 0, &sym});
     }
 
-    if ((flags & NEEDS_TLSIE) && !(flags & NEEDS_TLSGD_TO_IE))
+    if (flags & NEEDS_TLSIE)
       addTpOffsetGotEntry(ctx, sym);
   };
 

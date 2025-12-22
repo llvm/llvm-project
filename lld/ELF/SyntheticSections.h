@@ -528,16 +528,21 @@ public:
     return !relocs.empty() ||
            llvm::any_of(relocsVec, [](auto &v) { return !v.empty(); });
   }
-  size_t getSize() const override { return relocs.size() * this->entsize; }
+  size_t getSize() const override {
+    size_t count = relocs.size();
+    for (const auto &v : relocsVec)
+      count += v.size();
+    return count * this->entsize;
+  }
   size_t getRelativeRelocCount() const { return numRelativeRelocs; }
-  void mergeRels();
-  void partitionRels();
   void finalizeContents() override;
 
   int32_t dynamicTag, sizeDynamicTag;
   SmallVector<DynamicReloc, 0> relocs;
 
 protected:
+  void mergeRels();
+  void partitionRels();
   void computeRels();
   // Used when parallel relocation scanning adds relocations. The elements
   // will be moved into relocs by mergeRel().
@@ -585,7 +590,7 @@ struct RelativeReloc {
     return inputSec->getVA(inputSec->relocs()[relocIdx].offset);
   }
 
-  const InputSectionBase *inputSec;
+  InputSectionBase *inputSec;
   size_t relocIdx;
 };
 
@@ -608,14 +613,15 @@ public:
     isec.addReloc({expr, addendRelType, offsetInSec, addend, &sym});
     addReloc<shard>({&isec, isec.relocs().size() - 1});
   }
-  void mergeRels();
   bool isNeeded() const override {
     return !relocs.empty() ||
            llvm::any_of(relocsVec, [](auto &v) { return !v.empty(); });
   }
+  void finalizeContents() override;
   SmallVector<RelativeReloc, 0> relocs;
 
 protected:
+  void mergeRels();
   SmallVector<SmallVector<RelativeReloc, 0>, 0> relocsVec;
 };
 
