@@ -410,16 +410,8 @@ static emitc::GlobalOp getConstGlobal(Value value, Operation *fromOp) {
     return nullptr;
 
   // Find the nearest symbol table to check whether the global is const.
-  Operation *symbolTableOp = fromOp;
-  while (symbolTableOp && !symbolTableOp->hasTrait<OpTrait::SymbolTable>()) {
-    symbolTableOp = symbolTableOp->getParentOp();
-  }
-
-  if (!symbolTableOp)
-    return nullptr;
-
-  SymbolTable symbolTable(symbolTableOp);
-  auto globalOp = symbolTable.lookup<emitc::GlobalOp>(getGlobalOp.getName());
+  auto globalOp = SymbolTable::lookupNearestSymbolFrom<emitc::GlobalOp>(
+      fromOp, getGlobalOp.getNameAttr());
 
   if (globalOp && globalOp.getConstSpecifier())
     return globalOp;
