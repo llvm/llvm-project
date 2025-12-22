@@ -36,11 +36,14 @@ static Value calculateTripCount(OpBuilder &b, Location loc, Value lb, Value ub,
 
   if (!inclusiveUpperbound) {
     Value one = arith::ConstantIndexOp::create(b, loc, 1);
-    ub = b.createOrFold<arith::SubIOp>(loc, ub, one);
+    ub = b.createOrFold<arith::SubIOp>(loc, ub, one,
+                                       arith::IntegerOverflowFlags::nsw);
   }
 
-  Value sub = b.createOrFold<arith::SubIOp>(loc, ub, lb);
-  Value add = b.createOrFold<arith::AddIOp>(loc, sub, step);
+  Value sub = b.createOrFold<arith::SubIOp>(loc, ub, lb,
+                                            arith::IntegerOverflowFlags::nsw);
+  Value add = b.createOrFold<arith::AddIOp>(loc, sub, step,
+                                            arith::IntegerOverflowFlags::nsw);
   return b.createOrFold<arith::DivSIOp>(loc, add, step);
 }
 
@@ -60,7 +63,8 @@ static Value getExclusiveUpperBoundAsIndex(acc::LoopOp loopOp, size_t ivPos,
   Value ub = getValueOrCreateCastToIndexLike(b, loc, indexType, origUB);
   if (isInclusive) {
     Value one = arith::ConstantIndexOp::create(b, loc, 1);
-    ub = b.createOrFold<arith::AddIOp>(loc, ub, one);
+    ub = b.createOrFold<arith::AddIOp>(loc, ub, one,
+                                       arith::IntegerOverflowFlags::nsw);
   }
   return ub;
 }
@@ -88,8 +92,10 @@ static void normalizeIVUses(OpBuilder &b, Location loc, Value iv, Value origLB,
   Value step = getValueOrCreateCastToIndexLike(b, loc, indexType, origStep);
 
   // new_iv * step + lb
-  Value scaled = arith::MulIOp::create(b, loc, iv, step);
-  Value denormalized = arith::AddIOp::create(b, loc, scaled, lb);
+  Value scaled =
+      arith::MulIOp::create(b, loc, iv, step, arith::IntegerOverflowFlags::nsw);
+  Value denormalized = arith::AddIOp::create(b, loc, scaled, lb,
+                                             arith::IntegerOverflowFlags::nsw);
 
   // Replace uses of iv with denormalized value, except for the ops that
   // compute the denormalized value itself (muli and addi)
