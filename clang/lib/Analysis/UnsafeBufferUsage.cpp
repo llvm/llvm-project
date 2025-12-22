@@ -825,11 +825,13 @@ struct LibcFunNamePrefixSuffixParser {
 //
 // `UnsafeArg` is the output argument that will be set only if this function
 // returns true.
-// `FmtArgIdx` is insignificant if its value is negative, meaning that format
-// arguments start at `FmtIdx` + 1.
-static bool hasUnsafeFormatOrSArg(ASTContext &Ctx, const CallExpr *Call,
-                                  const Expr *&UnsafeArg, const unsigned FmtIdx,
-                                  int FmtArgIdx = -1, bool isKprintf = false) {
+//
+// Format arguments start at `FmtIdx` + 1, if `FmtArgIdx` is insignificant.
+static bool
+hasUnsafeFormatOrSArg(ASTContext &Ctx, const CallExpr *Call,
+                      const Expr *&UnsafeArg, const unsigned FmtIdx,
+                      std::optional<const unsigned> FmtArgIdx = std::nullopt,
+                      bool isKprintf = false) {
   class StringFormatStringHandler
       : public analyze_format_string::FormatStringHandler {
     const CallExpr *Call;
@@ -849,18 +851,18 @@ static bool hasUnsafeFormatOrSArg(ASTContext &Ctx, const CallExpr *Call,
     const Expr *
     getPrecisionAsExpr(const analyze_printf::OptionalAmount &Precision,
                        const CallExpr *Call) {
-      unsigned PArgIdx = -1;
+      if (Precision.hasDataArgument()) {
+        unsigned PArgIdx = Precision.getArgIndex() + FmtArgIdx;
 
-      if (Precision.hasDataArgument())
-        PArgIdx = Precision.getArgIndex() + FmtArgIdx;
-      if (0 <= PArgIdx && PArgIdx < Call->getNumArgs()) {
-        const Expr *PArg = Call->getArg(PArgIdx);
+        if (PArgIdx < Call->getNumArgs()) {
+          const Expr *PArg = Call->getArg(PArgIdx);
 
-        // Strip the cast if `PArg` is a cast-to-int expression:
-        if (auto *CE = dyn_cast<CastExpr>(PArg);
-            CE && CE->getType()->isSignedIntegerType())
-          PArg = CE->getSubExpr();
-        return PArg;
+          // Strip the cast if `PArg` is a cast-to-int expression:
+          if (auto *CE = dyn_cast<CastExpr>(PArg);
+              CE && CE->getType()->isSignedIntegerType())
+            PArg = CE->getSubExpr();
+          return PArg;
+        }
       }
       if (Precision.getHowSpecified() ==
           analyze_printf::OptionalAmount::HowSpecified::Constant) {
@@ -890,7 +892,7 @@ static bool hasUnsafeFormatOrSArg(ASTContext &Ctx, const CallExpr *Call,
 
       unsigned ArgIdx = FS.getArgIndex() + FmtArgIdx;
 
-      if (!(0 <= ArgIdx && ArgIdx < Call->getNumArgs()))
+      if (ArgIdx >= Call->getNumArgs())
         // If the `ArgIdx` is invalid, give up.
         return true; // continue parsing
 
@@ -925,7 +927,7 @@ static bool hasUnsafeFormatOrSArg(ASTContext &Ctx, const CallExpr *Call,
 
   const Expr *Fmt = Call->getArg(FmtIdx);
   unsigned FmtArgStartingIdx =
-      FmtArgIdx < 0 ? FmtIdx + 1 : static_cast<unsigned>(FmtArgIdx);
+      FmtArgIdx.has_value() ? static_cast<unsigned>(*FmtArgIdx) : FmtIdx + 1;
 
   if (auto *SL = dyn_cast<clang::StringLiteral>(Fmt->IgnoreParenImpCasts())) {
     if (SL->getCharByteWidth() == 1) {
@@ -1167,7 +1169,7 @@ static bool hasUnsafePrintfStringArg(const CallExpr &Node, ASTContext &Ctx,
     // It is a fprintf:
     const Expr *UnsafeArg;
 
-    if (hasUnsafeFormatOrSArg(Ctx, &Node, UnsafeArg, 1)) {
+    if (hasUnsafeFormatOrSArg(Ctx, &Node, UnsafeArg, /* FmtIdx= */ 1)) {
       Result.addNode(Tag, DynTypedNode::create(*UnsafeArg));
       return true;
     }
@@ -1181,7 +1183,8 @@ static bool hasUnsafePrintfStringArg(const CallExpr &Node, ASTContext &Ctx,
 
     if (auto *II = FD->getIdentifier())
       isKprintf = II->getName() == "kprintf";
-    if (hasUnsafeFormatOrSArg(Ctx, &Node, UnsafeArg, 0, -1, isKprintf)) {
+    if (hasUnsafeFormatOrSArg(Ctx, &Node, UnsafeArg, /* FmtIdx= */ 0,
+                              /* FmtArgIdx= */ std::nullopt, isKprintf)) {
       Result.addNode(Tag, DynTypedNode::create(*UnsafeArg));
       return true;
     }
@@ -1196,7 +1199,7 @@ static bool hasUnsafePrintfStringArg(const CallExpr &Node, ASTContext &Ctx,
       // second is an integer, it is a snprintf:
       const Expr *UnsafeArg;
 
-      if (hasUnsafeFormatOrSArg(Ctx, &Node, UnsafeArg, 2)) {
+      if (hasUnsafeFormatOrSArg(Ctx, &Node, UnsafeArg, /* FmtIdx= */ 2)) {
         Result.addNode(Tag, DynTypedNode::create(*UnsafeArg));
         return true;
       }
@@ -2227,7 +2230,8 @@ public:
     if (AnyAttr && libc_func_matchers::hasUnsafeFormatOrSArg(
                        Ctx, CE, UnsafeArg,
                        // FormatAttribute indexes are 1-based:
-                       Attr->getFormatIdx() - 1, Attr->getFirstArg() - 1)) {
+                       /* FmtIdx= */ Attr->getFormatIdx() - 1,
+                       /* FmtArgIdx= */ Attr->getFirstArg() - 1)) {
       Result.addNode(Tag, DynTypedNode::create(*CE));
       Result.addNode(UnsafeStringTag, DynTypedNode::create(*UnsafeArg));
       return true;

@@ -258,9 +258,10 @@ void dontCrashForInvalidFormatString() {
 
 
 // Also warn about unsafe printf/scanf-like functions:
-void myprintf(const char *F, ...) __attribute__((__format__ (__printf__, 1, 2)));
-void myprintf_2(const char *F, int irrelevant, const char *Str) __attribute__((__format__ (__printf__, 1, 3)));
-void myscanf(const char *F, ...) __attribute__((__format__ (__scanf__, 1, 2)));
+void myprintf(const char *, ...) __attribute__((__format__ (__printf__, 1, 2)));
+void myprintf_2(const char *, int, const char *) __attribute__((__format__ (__printf__, 1, 3)));
+void myprintf_3(const char *, const char *, int, const char *) __attribute__((__format__ (__printf__, 2, 4)));
+void myscanf(const char *, ...) __attribute__((__format__ (__scanf__, 1, 2)));
 
 void test_myprintf(char * Str, std::string StdStr) {
   myprintf("hello", Str);
@@ -272,6 +273,12 @@ void test_myprintf(char * Str, std::string StdStr) {
   myprintf_2("hello %s", 0, StdStr.c_str());
   myprintf_2("hello %s", 0, Str);  // expected-warning{{function 'myprintf_2' is unsafe}} \
 			              expected-note{{string argument is not guaranteed to be null-terminated}}
+
+  myprintf_3("irrelevant", "hello", 0, Str);
+  myprintf_3("irrelevant", "hello %s", 0, StdStr.c_str());
+  myprintf_3("irrelevant", "hello %s", 0, Str);  // expected-warning{{function 'myprintf_3' is unsafe}} \
+			               expected-note{{string argument is not guaranteed to be null-terminated}}
+  
   myscanf("hello %s");
   myscanf("hello %s", Str); // expected-warning{{function 'myscanf' is unsafe}}
 
