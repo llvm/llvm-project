@@ -44,11 +44,11 @@ private:
 
 public:
   LocateExample(llvm::StringRef AnnotatedCode,
-                std::vector<const char *> ExtraArgs = {"-std=c++17"})
+                llvm::ArrayRef<llvm::StringRef> ExtraArgs = {"-std=c++17"})
       : Target(AnnotatedCode), AST([&] {
           TestInputs Inputs(Target.code());
           for (auto Arg : ExtraArgs)
-            Inputs.ExtraArgs.push_back(Arg);
+            Inputs.ExtraArgs.push_back(Arg.str());
           return Inputs;
         }()) {}
 
