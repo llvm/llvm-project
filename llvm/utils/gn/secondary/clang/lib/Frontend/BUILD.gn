@@ -15,6 +15,7 @@ static_library("Frontend") {
     "//clang/lib/Serialization",
     "//llvm/include/llvm/Config:llvm-config",
     "//llvm/lib/Bitcode/Reader",
+    "//llvm/lib/Extensions",
     "//llvm/lib/Option",
     "//llvm/lib/ProfileData",
     "//llvm/lib/Support",
