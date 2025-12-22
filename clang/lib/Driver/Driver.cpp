@@ -1273,8 +1273,7 @@ bool Driver::readConfigFile(StringRef FileName,
 
 bool Driver::loadConfigFiles() {
   llvm::cl::ExpansionContext ExpCtx(Saver.getAllocator(),
-                                    llvm::cl::tokenizeConfigFile);
-  ExpCtx.setVFS(&getVFS());
+                                    llvm::cl::tokenizeConfigFile, &getVFS());
 
   // Process options that change search path for config files.
   if (CLOptions) {
