@@ -63,17 +63,25 @@ define void @za_with_raii(i1 %fail) "aarch64_inout_za" personality ptr @__gxx_pe
 ; CHECK-NEXT:    ldr x1, [x1, :got_lo12:typeinfo_for_char_const_ptr]
 ; CHECK-NEXT:    bl __cxa_throw
 ; CHECK-NEXT:  .Ltmp1: // EH_LABEL
-; CHECK-NEXT:  // %bb.3: // %throw_fail
-; CHECK-NEXT:  .LBB0_4: // %unwind_dtors
+; CHECK-NEXT:    smstart za
+; CHECK-NEXT:    mrs x8, TPIDR2_EL0
+; CHECK-NEXT:    sub x0, x29, #16
+; CHECK-NEXT:    cbnz x8, .LBB0_4
+; CHECK-NEXT:  // %bb.3: // %throw_exception
+; CHECK-NEXT:    bl __arm_tpidr2_restore
+; CHECK-NEXT:  .LBB0_4: // %throw_exception
+; CHECK-NEXT:    msr TPIDR2_EL0, xzr
+; CHECK-NEXT:  // %bb.5: // %throw_fail
+; CHECK-NEXT:  .LBB0_6: // %unwind_dtors
 ; CHECK-NEXT:  .Ltmp2: // EH_LABEL
 ; CHECK-NEXT:    mov x19, x0
 ; CHECK-NEXT:    smstart za
 ; CHECK-NEXT:    mrs x8, TPIDR2_EL0
 ; CHECK-NEXT:    sub x0, x29, #16
-; CHECK-NEXT:    cbnz x8, .LBB0_6
-; CHECK-NEXT:  // %bb.5: // %unwind_dtors
+; CHECK-NEXT:    cbnz x8, .LBB0_8
+; CHECK-NEXT:  // %bb.7: // %unwind_dtors
 ; CHECK-NEXT:    bl __arm_tpidr2_restore
-; CHECK-NEXT:  .LBB0_6: // %unwind_dtors
+; CHECK-NEXT:  .LBB0_8: // %unwind_dtors
 ; CHECK-NEXT:    msr TPIDR2_EL0, xzr
 ; CHECK-NEXT:    bl shared_za_call
 ; CHECK-NEXT:    sub x8, x29, #16

@@ -58,6 +58,8 @@
 #include "AArch64Subtarget.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
 #include "llvm/ADT/BitmaskEnum.h"
+#include "llvm/ADT/EquivalenceClasses.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/EdgeBundles.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
@@ -138,8 +140,6 @@ struct InstInfo {
 struct BlockInfo {
   SmallVector<InstInfo> Insts;
   ZAState FixedEntryState{ZAState::ANY};
-  ZAState DesiredIncomingState{ZAState::ANY};
-  ZAState DesiredOutgoingState{ZAState::ANY};
   LiveRegs PhysLiveRegsAtEntry = LiveRegs::None;
   LiveRegs PhysLiveRegsAtExit = LiveRegs::None;
 };
@@ -294,8 +294,7 @@ getInstNeededZAState(const TargetRegisterInfo &TRI, MachineInstr &MI,
 struct MachineSMEABI : public MachineFunctionPass {
   inline static char ID = 0;
 
-  MachineSMEABI(CodeGenOptLevel OptLevel = CodeGenOptLevel::Default)
-      : MachineFunctionPass(ID), OptLevel(OptLevel) {}
+  MachineSMEABI() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
@@ -324,11 +323,6 @@ struct MachineSMEABI : public MachineFunctionPass {
   void insertStateChanges(EmitContext &, const FunctionInfo &FnInfo,
                           const EdgeBundles &Bundles,
                           ArrayRef<ZAState> BundleStates);
-
-  /// Propagates desired states forwards (from predecessors -> successors) if
-  /// \p Forwards, otherwise, propagates backwards (from successors ->
-  /// predecessors).
-  void propagateDesiredStates(FunctionInfo &FnInfo, bool Forwards = true);
 
   void emitZT0SaveRestore(EmitContext &, MachineBasicBlock &MBB,
                           MachineBasicBlock::iterator MBBI, bool IsSave);
@@ -414,8 +408,6 @@ struct MachineSMEABI : public MachineFunctionPass {
                          MachineBasicBlock::iterator MBBI, DebugLoc DL);
 
 private:
-  CodeGenOptLevel OptLevel = CodeGenOptLevel::Default;
-
   MachineFunction *MF = nullptr;
   const AArch64Subtarget *Subtarget = nullptr;
   const AArch64RegisterInfo *TRI = nullptr;
@@ -513,67 +505,10 @@ FunctionInfo MachineSMEABI::collectNeededZAStates(SMEAttrs SMEFnAttrs) {
 
     // Reverse vector (as we had to iterate backwards for liveness).
     std::reverse(Block.Insts.begin(), Block.Insts.end());
-
-    // Record the desired states on entry/exit of this block. These are the
-    // states that would not incur a state transition.
-    if (!Block.Insts.empty()) {
-      Block.DesiredIncomingState = Block.Insts.front().NeededState;
-      Block.DesiredOutgoingState = Block.Insts.back().NeededState;
-    }
   }
 
   return FunctionInfo{std::move(Blocks), AfterSMEProloguePt,
                       PhysLiveRegsAfterSMEPrologue};
-}
-
-void MachineSMEABI::propagateDesiredStates(FunctionInfo &FnInfo,
-                                           bool Forwards) {
-  // If `Forwards`, this propagates desired states from predecessors to
-  // successors, otherwise, this propagates states from successors to
-  // predecessors.
-  auto GetBlockState = [](BlockInfo &Block, bool Incoming) -> ZAState & {
-    return Incoming ? Block.DesiredIncomingState : Block.DesiredOutgoingState;
-  };
-
-  SmallVector<MachineBasicBlock *> Worklist;
-  for (auto [BlockID, BlockInfo] : enumerate(FnInfo.Blocks)) {
-    if (!isLegalEdgeBundleZAState(GetBlockState(BlockInfo, Forwards)))
-      Worklist.push_back(MF->getBlockNumbered(BlockID));
-  }
-
-  while (!Worklist.empty()) {
-    MachineBasicBlock *MBB = Worklist.pop_back_val();
-    BlockInfo &Block = FnInfo.Blocks[MBB->getNumber()];
-
-    // Pick a legal edge bundle state that matches the majority of
-    // predecessors/successors.
-    int StateCounts[ZAState::NUM_ZA_STATE] = {0};
-    for (MachineBasicBlock *PredOrSucc :
-         Forwards ? predecessors(MBB) : successors(MBB)) {
-      BlockInfo &PredOrSuccBlock = FnInfo.Blocks[PredOrSucc->getNumber()];
-      ZAState ZAState = GetBlockState(PredOrSuccBlock, !Forwards);
-      if (isLegalEdgeBundleZAState(ZAState))
-        StateCounts[ZAState]++;
-    }
-
-    ZAState PropagatedState = ZAState(max_element(StateCounts) - StateCounts);
-    ZAState &CurrentState = GetBlockState(Block, Forwards);
-    if (PropagatedState != CurrentState) {
-      CurrentState = PropagatedState;
-      ZAState &OtherState = GetBlockState(Block, !Forwards);
-      // Propagate to the incoming/outgoing state if that is also "ANY".
-      if (OtherState == ZAState::ANY)
-        OtherState = PropagatedState;
-      // Push any successors/predecessors that may need updating to the
-      // worklist.
-      for (MachineBasicBlock *SuccOrPred :
-           Forwards ? successors(MBB) : predecessors(MBB)) {
-        BlockInfo &SuccOrPredBlock = FnInfo.Blocks[SuccOrPred->getNumber()];
-        if (!isLegalEdgeBundleZAState(GetBlockState(SuccOrPredBlock, Forwards)))
-          Worklist.push_back(SuccOrPred);
-      }
-    }
-  }
 }
 
 /// Assigns each edge bundle a ZA state based on the needed states of blocks
@@ -581,38 +516,66 @@ void MachineSMEABI::propagateDesiredStates(FunctionInfo &FnInfo,
 SmallVector<ZAState>
 MachineSMEABI::assignBundleZAStates(const EdgeBundles &Bundles,
                                     const FunctionInfo &FnInfo) {
+  EquivalenceClasses<unsigned> JoinedBundles;
+  for (unsigned I = 0, E = Bundles.getNumBundles(); I != E; ++I)
+    JoinedBundles.insert(I);
+
+  // Join/merge the "in" and "out" edge bundles of blocks with no required ZA
+  // states. This simplifies the graph leaving only bundles with at least one
+  // required ZA state (unless the function has no desired states).
+  for (auto [BlockID, Block] : enumerate(FnInfo.Blocks)) {
+    if (Block.Insts.empty())
+      JoinedBundles.unionSets(Bundles.getBundle(BlockID, /*Out=*/false),
+                              Bundles.getBundle(BlockID, /*Out=*/true));
+  }
+
   SmallVector<ZAState> BundleStates(Bundles.getNumBundles());
-  for (unsigned I = 0, E = Bundles.getNumBundles(); I != E; ++I) {
-    LLVM_DEBUG(dbgs() << "Assigning ZA state for edge bundle: " << I << '\n');
+  for (const auto &C : JoinedBundles) {
+    if (!C->isLeader())
+      continue;
 
-    // Attempt to assign a ZA state for this bundle that minimizes state
-    // transitions. Edges within loops are given a higher weight as we assume
-    // they will be executed more than once.
+    SmallSet<unsigned, 4> Joined(JoinedBundles.member_begin(*C),
+                                 JoinedBundles.member_end());
+
+    LLVM_DEBUG({
+      dbgs() << "Assigning ZA state for edge bundles: ";
+      interleaveComma(Joined, dbgs());
+      dbgs() << '\n';
+    });
+
+    // Attempt to assign a ZA state for the "Joined" bundles that minimizes
+    // state transitions. Edges within loops are given a higher weight as we
+    // assume they will be executed more than once.
     int EdgeStateCounts[ZAState::NUM_ZA_STATE] = {0};
-    for (unsigned BlockID : Bundles.getBlocks(I)) {
-      LLVM_DEBUG(dbgs() << "- bb." << BlockID);
+    for (unsigned Bundle : Joined) {
+      for (unsigned BlockID : Bundles.getBlocks(Bundle)) {
+        LLVM_DEBUG(dbgs() << "- bb." << BlockID);
 
-      const BlockInfo &Block = FnInfo.Blocks[BlockID];
-      bool InEdge = Bundles.getBundle(BlockID, /*Out=*/false) == I;
-      bool OutEdge = Bundles.getBundle(BlockID, /*Out=*/true) == I;
+        const BlockInfo &Block = FnInfo.Blocks[BlockID];
+        if (Block.Insts.empty()) {
+          LLVM_DEBUG(dbgs() << " (no state preference)\n");
+          continue;
+        }
 
-      bool LegalInEdge =
-          InEdge && isLegalEdgeBundleZAState(Block.DesiredIncomingState);
-      bool LegalOutEgde =
-          OutEdge && isLegalEdgeBundleZAState(Block.DesiredOutgoingState);
-      if (LegalInEdge) {
+        bool InEdge =
+            Joined.contains(Bundles.getBundle(BlockID, /*Out=*/false));
+        bool OutEdge =
+            Joined.contains(Bundles.getBundle(BlockID, /*Out=*/true));
+
+        ZAState DesiredIncomingState = Block.Insts.front().NeededState;
         LLVM_DEBUG(dbgs() << " DesiredIncomingState: "
-                          << getZAStateString(Block.DesiredIncomingState));
-        EdgeStateCounts[Block.DesiredIncomingState]++;
-      }
-      if (LegalOutEgde) {
+                          << getZAStateString(DesiredIncomingState));
+        if (InEdge && isLegalEdgeBundleZAState(DesiredIncomingState))
+          ++EdgeStateCounts[DesiredIncomingState];
+
+        ZAState DesiredOutgoingState = Block.Insts.back().NeededState;
         LLVM_DEBUG(dbgs() << " DesiredOutgoingState: "
-                          << getZAStateString(Block.DesiredOutgoingState));
-        EdgeStateCounts[Block.DesiredOutgoingState]++;
+                          << getZAStateString(DesiredOutgoingState));
+        if (OutEdge && isLegalEdgeBundleZAState(DesiredOutgoingState))
+          ++EdgeStateCounts[DesiredOutgoingState];
+
+        LLVM_DEBUG(dbgs() << '\n');
       }
-      if (!LegalInEdge && !LegalOutEgde)
-        LLVM_DEBUG(dbgs() << " (no state preference)");
-      LLVM_DEBUG(dbgs() << '\n');
     }
 
     ZAState BundleState =
@@ -629,7 +592,8 @@ MachineSMEABI::assignBundleZAStates(const EdgeBundles &Bundles,
       dbgs() << "\n\n";
     });
 
-    BundleStates[I] = BundleState;
+    for (unsigned Bundle : Joined)
+      BundleStates[Bundle] = BundleState;
   }
 
   return BundleStates;
@@ -1268,42 +1232,6 @@ bool MachineSMEABI::runOnMachineFunction(MachineFunction &MF) {
 
   FunctionInfo FnInfo = collectNeededZAStates(SMEFnAttrs);
 
-  if (OptLevel != CodeGenOptLevel::None) {
-    // Propagate desired states forward, then backwards. Most of the propagation
-    // should be done in the forward step, and backwards propagation is then
-    // used to fill in the gaps. Note: Doing both in one step can give poor
-    // results. For example, consider this subgraph:
-    //
-    //    ┌─────┐
-    //  ┌─┤ BB0 ◄───┐
-    //  │ └─┬───┘   │
-    //  │ ┌─▼───◄──┐│
-    //  │ │ BB1 │  ││
-    //  │ └─┬┬──┘  ││
-    //  │   │└─────┘│
-    //  │ ┌─▼───┐   │
-    //  │ │ BB2 ├───┘
-    //  │ └─┬───┘
-    //  │ ┌─▼───┐
-    //  └─► BB3 │
-    //    └─────┘
-    //
-    // If:
-    // - "BB0" and "BB2" (outer loop) has no state preference
-    // - "BB1" (inner loop) desires the ACTIVE state on entry/exit
-    // - "BB3" desires the LOCAL_SAVED state on entry
-    //
-    // If we propagate forwards first, ACTIVE is propagated from BB1 to BB2,
-    // then from BB2 to BB0. Which results in the inner and outer loops having
-    // the "ACTIVE" state. This avoids any state changes in the loops.
-    //
-    // If we propagate backwards first, we _could_ propagate LOCAL_SAVED from
-    // BB3 to BB0, which would result in a transition from ACTIVE -> LOCAL_SAVED
-    // in the outer loop.
-    for (bool Forwards : {true, false})
-      propagateDesiredStates(FnInfo, Forwards);
-  }
-
   SmallVector<ZAState> BundleStates = assignBundleZAStates(Bundles, FnInfo);
 
   EmitContext Context;
@@ -1327,6 +1255,4 @@ bool MachineSMEABI::runOnMachineFunction(MachineFunction &MF) {
   return true;
 }
 
-FunctionPass *llvm::createMachineSMEABIPass(CodeGenOptLevel OptLevel) {
-  return new MachineSMEABI(OptLevel);
-}
+FunctionPass *llvm::createMachineSMEABIPass() { return new MachineSMEABI(); }

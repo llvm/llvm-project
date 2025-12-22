@@ -229,33 +229,61 @@ exit:
 }
 
 define void @cond_private_za_call(i1 %cond) "aarch64_inout_za" nounwind {
-; CHECK-COMMON-LABEL: cond_private_za_call:
-; CHECK-COMMON:       // %bb.0:
-; CHECK-COMMON-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
-; CHECK-COMMON-NEXT:    mov x29, sp
-; CHECK-COMMON-NEXT:    sub sp, sp, #16
-; CHECK-COMMON-NEXT:    rdsvl x8, #1
-; CHECK-COMMON-NEXT:    mov x9, sp
-; CHECK-COMMON-NEXT:    msub x9, x8, x8, x9
-; CHECK-COMMON-NEXT:    mov sp, x9
-; CHECK-COMMON-NEXT:    stp x9, x8, [x29, #-16]
-; CHECK-COMMON-NEXT:    tbz w0, #0, .LBB3_4
-; CHECK-COMMON-NEXT:  // %bb.1: // %private_za_call
-; CHECK-COMMON-NEXT:    sub x8, x29, #16
-; CHECK-COMMON-NEXT:    msr TPIDR2_EL0, x8
-; CHECK-COMMON-NEXT:    bl private_za_call
-; CHECK-COMMON-NEXT:    smstart za
-; CHECK-COMMON-NEXT:    mrs x8, TPIDR2_EL0
-; CHECK-COMMON-NEXT:    sub x0, x29, #16
-; CHECK-COMMON-NEXT:    cbnz x8, .LBB3_3
-; CHECK-COMMON-NEXT:  // %bb.2: // %private_za_call
-; CHECK-COMMON-NEXT:    bl __arm_tpidr2_restore
-; CHECK-COMMON-NEXT:  .LBB3_3: // %private_za_call
-; CHECK-COMMON-NEXT:    msr TPIDR2_EL0, xzr
-; CHECK-COMMON-NEXT:  .LBB3_4: // %exit
-; CHECK-COMMON-NEXT:    mov sp, x29
-; CHECK-COMMON-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
-; CHECK-COMMON-NEXT:    b shared_za_call
+; CHECK-SDAG-LABEL: cond_private_za_call:
+; CHECK-SDAG:       // %bb.0:
+; CHECK-SDAG-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
+; CHECK-SDAG-NEXT:    mov x29, sp
+; CHECK-SDAG-NEXT:    sub sp, sp, #16
+; CHECK-SDAG-NEXT:    rdsvl x8, #1
+; CHECK-SDAG-NEXT:    mov x9, sp
+; CHECK-SDAG-NEXT:    msub x9, x8, x8, x9
+; CHECK-SDAG-NEXT:    mov sp, x9
+; CHECK-SDAG-NEXT:    stp x9, x8, [x29, #-16]
+; CHECK-SDAG-NEXT:    tbz w0, #0, .LBB3_4
+; CHECK-SDAG-NEXT:  // %bb.1: // %private_za_call
+; CHECK-SDAG-NEXT:    sub x8, x29, #16
+; CHECK-SDAG-NEXT:    msr TPIDR2_EL0, x8
+; CHECK-SDAG-NEXT:    bl private_za_call
+; CHECK-SDAG-NEXT:    smstart za
+; CHECK-SDAG-NEXT:    mrs x8, TPIDR2_EL0
+; CHECK-SDAG-NEXT:    sub x0, x29, #16
+; CHECK-SDAG-NEXT:    cbnz x8, .LBB3_3
+; CHECK-SDAG-NEXT:  // %bb.2: // %private_za_call
+; CHECK-SDAG-NEXT:    bl __arm_tpidr2_restore
+; CHECK-SDAG-NEXT:  .LBB3_3: // %private_za_call
+; CHECK-SDAG-NEXT:    msr TPIDR2_EL0, xzr
+; CHECK-SDAG-NEXT:  .LBB3_4: // %exit
+; CHECK-SDAG-NEXT:    mov sp, x29
+; CHECK-SDAG-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
+; CHECK-SDAG-NEXT:    b shared_za_call
+;
+; CHECK-LABEL: cond_private_za_call:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
+; CHECK-NEXT:    mov x29, sp
+; CHECK-NEXT:    sub sp, sp, #16
+; CHECK-NEXT:    rdsvl x8, #1
+; CHECK-NEXT:    mov x9, sp
+; CHECK-NEXT:    msub x9, x8, x8, x9
+; CHECK-NEXT:    mov sp, x9
+; CHECK-NEXT:    sub x10, x29, #16
+; CHECK-NEXT:    stp x9, x8, [x29, #-16]
+; CHECK-NEXT:    msr TPIDR2_EL0, x10
+; CHECK-NEXT:    tbz w0, #0, .LBB3_2
+; CHECK-NEXT:  // %bb.1: // %private_za_call
+; CHECK-NEXT:    bl private_za_call
+; CHECK-NEXT:  .LBB3_2: // %exit
+; CHECK-NEXT:    smstart za
+; CHECK-NEXT:    mrs x8, TPIDR2_EL0
+; CHECK-NEXT:    sub x0, x29, #16
+; CHECK-NEXT:    cbnz x8, .LBB3_4
+; CHECK-NEXT:  // %bb.3: // %exit
+; CHECK-NEXT:    bl __arm_tpidr2_restore
+; CHECK-NEXT:  .LBB3_4: // %exit
+; CHECK-NEXT:    msr TPIDR2_EL0, xzr
+; CHECK-NEXT:    mov sp, x29
+; CHECK-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
+; CHECK-NEXT:    b shared_za_call
   br i1 %cond, label %private_za_call, label %exit
 
 private_za_call:
@@ -950,30 +978,30 @@ define void @unswitched_loops_with_preheader_shared_za_loop(i1 %A, i32 %N) "aarc
 ; CHECK-SDAG-NEXT:    smstart za
 ; CHECK-SDAG-NEXT:    mrs x8, TPIDR2_EL0
 ; CHECK-SDAG-NEXT:    sub x0, x29, #16
-; CHECK-SDAG-NEXT:    cbnz x8, .LBB13_2
+; CHECK-SDAG-NEXT:    cbnz x8, .LBB12_2
 ; CHECK-SDAG-NEXT:  // %bb.1: // %entry
 ; CHECK-SDAG-NEXT:    bl __arm_tpidr2_restore
-; CHECK-SDAG-NEXT:  .LBB13_2: // %entry
+; CHECK-SDAG-NEXT:  .LBB12_2: // %entry
 ; CHECK-SDAG-NEXT:    cmp w19, #1
 ; CHECK-SDAG-NEXT:    msr TPIDR2_EL0, xzr
-; CHECK-SDAG-NEXT:    b.lt .LBB13_6
+; CHECK-SDAG-NEXT:    b.lt .LBB12_6
 ; CHECK-SDAG-NEXT:  // %bb.3: // %for.body.lr.ph
-; CHECK-SDAG-NEXT:    tbz w20, #0, .LBB13_5
-; CHECK-SDAG-NEXT:  .LBB13_4: // %for.body.us
+; CHECK-SDAG-NEXT:    tbz w20, #0, .LBB12_5
+; CHECK-SDAG-NEXT:  .LBB12_4: // %for.body.us
 ; CHECK-SDAG-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-SDAG-NEXT:    bl shared_za_call
 ; CHECK-SDAG-NEXT:    bl shared_za_call
 ; CHECK-SDAG-NEXT:    bl shared_za_call
 ; CHECK-SDAG-NEXT:    subs w19, w19, #1
-; CHECK-SDAG-NEXT:    b.ne .LBB13_4
-; CHECK-SDAG-NEXT:    b .LBB13_6
-; CHECK-SDAG-NEXT:  .LBB13_5: // %for.body
+; CHECK-SDAG-NEXT:    b.ne .LBB12_4
+; CHECK-SDAG-NEXT:    b .LBB12_6
+; CHECK-SDAG-NEXT:  .LBB12_5: // %for.body
 ; CHECK-SDAG-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-SDAG-NEXT:    bl shared_za_call
 ; CHECK-SDAG-NEXT:    bl shared_za_call
 ; CHECK-SDAG-NEXT:    subs w19, w19, #1
-; CHECK-SDAG-NEXT:    b.ne .LBB13_5
-; CHECK-SDAG-NEXT:  .LBB13_6: // %for.cond.cleanup
+; CHECK-SDAG-NEXT:    b.ne .LBB12_5
+; CHECK-SDAG-NEXT:  .LBB12_6: // %for.cond.cleanup
 ; CHECK-SDAG-NEXT:    mov sp, x29
 ; CHECK-SDAG-NEXT:    ldp x20, x19, [sp, #16] // 16-byte Folded Reload
 ; CHECK-SDAG-NEXT:    ldp x29, x30, [sp], #32 // 16-byte Folded Reload
@@ -998,48 +1026,30 @@ define void @unswitched_loops_with_preheader_shared_za_loop(i1 %A, i32 %N) "aarc
 ; CHECK-NEXT:    smstart za
 ; CHECK-NEXT:    mrs x8, TPIDR2_EL0
 ; CHECK-NEXT:    sub x0, x29, #16
-; CHECK-NEXT:    cbnz x8, .LBB13_2
+; CHECK-NEXT:    cbnz x8, .LBB12_2
 ; CHECK-NEXT:  // %bb.1: // %entry
 ; CHECK-NEXT:    bl __arm_tpidr2_restore
-; CHECK-NEXT:  .LBB13_2: // %entry
+; CHECK-NEXT:  .LBB12_2: // %entry
 ; CHECK-NEXT:    cmp w19, #1
 ; CHECK-NEXT:    msr TPIDR2_EL0, xzr
-; CHECK-NEXT:    b.lt .LBB13_12
+; CHECK-NEXT:    b.lt .LBB12_6
 ; CHECK-NEXT:  // %bb.3: // %for.body.lr.ph
-; CHECK-NEXT:    sub x8, x29, #16
-; CHECK-NEXT:    msr TPIDR2_EL0, x8
-; CHECK-NEXT:    tbz w20, #0, .LBB13_8
-; CHECK-NEXT:  // %bb.4: // %for.body.us.preheader
-; CHECK-NEXT:    smstart za
-; CHECK-NEXT:    mrs x8, TPIDR2_EL0
-; CHECK-NEXT:    cbnz x8, .LBB13_6
-; CHECK-NEXT:  // %bb.5: // %for.body.us.preheader
-; CHECK-NEXT:    bl __arm_tpidr2_restore
-; CHECK-NEXT:  .LBB13_6: // %for.body.us.preheader
-; CHECK-NEXT:    msr TPIDR2_EL0, xzr
-; CHECK-NEXT:  .LBB13_7: // %for.body.us
+; CHECK-NEXT:    tbz w20, #0, .LBB12_5
+; CHECK-NEXT:  .LBB12_4: // %for.body.us
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    bl shared_za_call
 ; CHECK-NEXT:    bl shared_za_call
 ; CHECK-NEXT:    bl shared_za_call
 ; CHECK-NEXT:    subs w19, w19, #1
-; CHECK-NEXT:    b.ne .LBB13_7
-; CHECK-NEXT:    b .LBB13_12
-; CHECK-NEXT:  .LBB13_8: // %for.body.preheader
-; CHECK-NEXT:    smstart za
-; CHECK-NEXT:    mrs x8, TPIDR2_EL0
-; CHECK-NEXT:    cbnz x8, .LBB13_10
-; CHECK-NEXT:  // %bb.9: // %for.body.preheader
-; CHECK-NEXT:    bl __arm_tpidr2_restore
-; CHECK-NEXT:  .LBB13_10: // %for.body.preheader
-; CHECK-NEXT:    msr TPIDR2_EL0, xzr
-; CHECK-NEXT:  .LBB13_11: // %for.body
+; CHECK-NEXT:    b.ne .LBB12_4
+; CHECK-NEXT:    b .LBB12_6
+; CHECK-NEXT:  .LBB12_5: // %for.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    bl shared_za_call
 ; CHECK-NEXT:    bl shared_za_call
 ; CHECK-NEXT:    subs w19, w19, #1
-; CHECK-NEXT:    b.ne .LBB13_11
-; CHECK-NEXT:  .LBB13_12: // %for.cond.cleanup
+; CHECK-NEXT:    b.ne .LBB12_5
+; CHECK-NEXT:  .LBB12_6: // %for.cond.cleanup
 ; CHECK-NEXT:    mov sp, x29
 ; CHECK-NEXT:    ldp x20, x19, [sp, #16] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp x29, x30, [sp], #32 // 16-byte Folded Reload

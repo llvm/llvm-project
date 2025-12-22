@@ -764,7 +764,7 @@ bool AArch64PassConfig::addGlobalInstructionSelect() {
 
 void AArch64PassConfig::addMachineSSAOptimization() {
   if (TM->getOptLevel() != CodeGenOptLevel::None && EnableNewSMEABILowering)
-    addPass(createMachineSMEABIPass(TM->getOptLevel()));
+    addPass(createMachineSMEABIPass());
 
   if (TM->getOptLevel() != CodeGenOptLevel::None && EnableSMEPeepholeOpt)
     addPass(createSMEPeepholeOptPass());
@@ -797,7 +797,7 @@ bool AArch64PassConfig::addILPOpts() {
 
 void AArch64PassConfig::addPreRegAlloc() {
   if (TM->getOptLevel() == CodeGenOptLevel::None && EnableNewSMEABILowering)
-    addPass(createMachineSMEABIPass(CodeGenOptLevel::None));
+    addPass(createMachineSMEABIPass());
 
   // Change dead register definitions to refer to the zero register.
   if (TM->getOptLevel() != CodeGenOptLevel::None &&
