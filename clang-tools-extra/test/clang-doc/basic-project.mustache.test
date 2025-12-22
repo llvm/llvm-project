@@ -25,10 +25,7 @@ HTML-SHAPE:             </div>
 HTML-SHAPE:         <div class="navbar__menu">
 HTML-SHAPE:             <ul class="navbar__links">
 HTML-SHAPE:                 <li class="navbar__item">
-HTML-SHAPE:                     <a href="/" class="navbar__link">Namespace</a>
-HTML-SHAPE:                 </li>
-HTML-SHAPE:                 <li class="navbar__item">
-HTML-SHAPE:                     <a href="/" class="navbar__link">Class</a>
+HTML-SHAPE:                     <a href="../index.html" class="navbar__link">Home</a>
 HTML-SHAPE:                 </li>
 HTML-SHAPE:             </ul>
 HTML-SHAPE:         </div>
@@ -135,10 +132,7 @@ HTML-CALC:             </div>
 HTML-CALC:         <div class="navbar__menu">
 HTML-CALC:             <ul class="navbar__links">
 HTML-CALC:                 <li class="navbar__item">
-HTML-CALC:                     <a href="/" class="navbar__link">Namespace</a>
-HTML-CALC:                 </li>
-HTML-CALC:                 <li class="navbar__item">
-HTML-CALC:                     <a href="/" class="navbar__link">Class</a>
+HTML-CALC:                     <a href="../index.html" class="navbar__link">Home</a>
 HTML-CALC:                 </li>
 HTML-CALC:             </ul>
 HTML-CALC:         </div>
@@ -339,10 +333,7 @@ HTML-RECTANGLE:             </div>
 HTML-RECTANGLE:         <div class="navbar__menu">
 HTML-RECTANGLE:             <ul class="navbar__links">
 HTML-RECTANGLE:                 <li class="navbar__item">
-HTML-RECTANGLE:                     <a href="/" class="navbar__link">Namespace</a>
-HTML-RECTANGLE:                 </li>
-HTML-RECTANGLE:                 <li class="navbar__item">
-HTML-RECTANGLE:                     <a href="/" class="navbar__link">Class</a>
+HTML-RECTANGLE:                     <a href="../index.html" class="navbar__link">Home</a>
 HTML-RECTANGLE:                 </li>
 HTML-RECTANGLE:             </ul>
 HTML-RECTANGLE:         </div>
@@ -457,10 +448,7 @@ HTML-CIRCLE:             </div>
 HTML-CIRCLE:         <div class="navbar__menu">
 HTML-CIRCLE:             <ul class="navbar__links">
 HTML-CIRCLE:                 <li class="navbar__item">
-HTML-CIRCLE:                     <a href="/" class="navbar__link">Namespace</a>
-HTML-CIRCLE:                 </li>
-HTML-CIRCLE:                 <li class="navbar__item">
-HTML-CIRCLE:                     <a href="/" class="navbar__link">Class</a>
+HTML-CIRCLE:                     <a href="../index.html" class="navbar__link">Home</a>
 HTML-CIRCLE:                 </li>
 HTML-CIRCLE:             </ul>
 HTML-CIRCLE:         </div>
