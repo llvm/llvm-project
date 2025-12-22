@@ -271,7 +271,7 @@ class provide the mechanisms for describing such locations. These and
 other topics are described in the `"Clang" CFE Internals Manual
 <https://clang.llvm.org/docs/InternalsManual.html>`_. Whereas the doxygen generated
 documentation serves as a reference to the internals of Clang, this document
-servesas a guide to other developers. Topics in that manual of interest to a
+serves as a guide to other developers. Topics in that manual of interest to a
 check developer are:
 
 - `The Clang "Basic" Library
