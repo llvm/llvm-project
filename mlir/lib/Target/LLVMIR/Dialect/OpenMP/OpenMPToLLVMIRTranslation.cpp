@@ -1626,61 +1626,10 @@ static llvm::Expected<llvm::Value *> initPrivateVar(
   return phis[0];
 }
 
-/// Beginning with \p startBlock, this function visits all reachable successor
-/// blocks. For each such block, static alloca instructions (i.e. non-array
-/// allocas) are collected. Then, these collected alloca instructions are moved
-/// to the \p allocaIP insertion point.
-///
-/// This is useful in cases where, for example, more than one allocatable or
-/// array are privatized. In such cases, we allocate a number of temporary
-/// descriptors to handle the initialization logic. Additonally, for each
-/// private value, there is branching logic based on the value of the origianl
-/// private variable's allocation state. Therefore, we end up with descriptor
-/// alloca instructions preceded by conditional branches which casues runtime
-/// issues at least on the GPU.
-static void hoistStaticAllocasToAllocaIP(
-    llvm::BasicBlock *startBlock,
-    const llvm::OpenMPIRBuilder::InsertPointTy &allocaIP) {
-  llvm::SmallVector<llvm::BasicBlock *> inlinedBlocks{startBlock};
-  llvm::SmallPtrSet<llvm::BasicBlock *, 4> seenBlocks;
-  llvm::SmallVector<llvm::Instruction *> staticAllocas;
-
-  while (!inlinedBlocks.empty()) {
-    llvm::BasicBlock *curBlock = inlinedBlocks.front();
-    inlinedBlocks.erase(inlinedBlocks.begin());
-    llvm::Instruction *terminator = curBlock->getTerminator();
-
-    for (llvm::Instruction &inst : *curBlock) {
-      if (auto *allocaInst = mlir::dyn_cast<llvm::AllocaInst>(&inst)) {
-        if (!allocaInst->isArrayAllocation()) {
-#ifdef EXPENSIVE_CHECKS
-          assert(llvm::count(staticInitAllocas, allocaInst) == 0);
-#endif
-          staticAllocas.push_back(allocaInst);
-        }
-      }
-    }
-
-    if (!terminator || !terminator->isTerminator() ||
-        terminator->getNumSuccessors() == 0)
-      continue;
-
-    for (llvm::BasicBlock *successor : llvm::successors(terminator))
-      if (!seenBlocks.contains(successor)) {
-        inlinedBlocks.push_back(successor);
-        seenBlocks.insert(successor);
-      }
-  }
-
-  for (llvm::Instruction *staticAlloca : staticAllocas)
-    staticAlloca->moveBefore(allocaIP.getPoint());
-}
-
 static llvm::Error
 initPrivateVars(llvm::IRBuilderBase &builder,
                 LLVM::ModuleTranslation &moduleTranslation,
                 PrivateVarsInfo &privateVarsInfo,
-                const llvm::OpenMPIRBuilder::InsertPointTy &allocaIP,
                 llvm::DenseMap<Value, Value> *mappedPrivateVars = nullptr) {
   if (privateVarsInfo.blockArgs.empty())
     return llvm::Error::success();
@@ -1704,8 +1653,6 @@ initPrivateVars(llvm::IRBuilderBase &builder,
 
     setInsertPointForPossiblyEmptyBlock(builder);
   }
-
-  hoistStaticAllocasToAllocaIP(privInitBlock, allocaIP);
 
   return llvm::Error::success();
 }
@@ -2658,8 +2605,7 @@ convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
                                 deferredStores, isByRef)))
     return failure();
 
-  if (handleError(initPrivateVars(builder, moduleTranslation, privateVarsInfo,
-                                  allocaIP),
+  if (handleError(initPrivateVars(builder, moduleTranslation, privateVarsInfo),
                   opInst)
           .failed())
     return failure();
@@ -2849,9 +2795,9 @@ convertOmpParallel(omp::ParallelOp opInst, llvm::IRBuilderBase &builder,
     assert(afterAllocas.get()->getSinglePredecessor());
     builder.restoreIP(codeGenIP);
 
-    if (handleError(initPrivateVars(builder, moduleTranslation, privateVarsInfo,
-                                    allocaIP),
-                    *opInst)
+    if (handleError(
+            initPrivateVars(builder, moduleTranslation, privateVarsInfo),
+            *opInst)
             .failed())
       return llvm::make_error<PreviouslyReportedError>();
 
@@ -3068,8 +3014,7 @@ convertOmpSimd(Operation &opInst, llvm::IRBuilderBase &builder,
                                 deferredStores, isByRef)))
     return failure();
 
-  if (handleError(initPrivateVars(builder, moduleTranslation, privateVarsInfo,
-                                  allocaIP),
+  if (handleError(initPrivateVars(builder, moduleTranslation, privateVarsInfo),
                   opInst)
           .failed())
     return failure();
@@ -5391,9 +5336,8 @@ convertOmpDistribute(Operation &opInst, llvm::IRBuilderBase &builder,
     if (handleError(afterAllocas, opInst).failed())
       return llvm::make_error<PreviouslyReportedError>();
 
-    if (handleError(
-            initPrivateVars(builder, moduleTranslation, privVarsInfo, allocaIP),
-            opInst)
+    if (handleError(initPrivateVars(builder, moduleTranslation, privVarsInfo),
+                    opInst)
             .failed())
       return llvm::make_error<PreviouslyReportedError>();
 
@@ -6194,7 +6138,7 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
 
     builder.restoreIP(codeGenIP);
     if (handleError(initPrivateVars(builder, moduleTranslation, privateVarsInfo,
-                                    allocaIP, &mappedPrivateVars),
+                                    &mappedPrivateVars),
                     *targetOp)
             .failed())
       return llvm::make_error<PreviouslyReportedError>();

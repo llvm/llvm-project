@@ -2348,6 +2348,7 @@ public:
     PostOutlineCBTy PostOutlineCB;
     BasicBlock *EntryBB, *ExitBB, *OuterAllocaBB;
     SmallVector<Value *, 2> ExcludeArgsFromAggregate;
+    bool FixUpNonEntryAllocas = false;
 
     /// Collect all blocks in between EntryBB and ExitBB in both the given
     /// vector and set.
