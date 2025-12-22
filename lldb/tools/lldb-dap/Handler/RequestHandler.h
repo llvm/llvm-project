@@ -340,11 +340,14 @@ public:
   void PostRun() const override;
 };
 
-class RestartRequestHandler : public LegacyRequestHandler {
+class RestartRequestHandler
+    : public RequestHandler<std::optional<protocol::RestartArguments>,
+                            protocol::RestartResponse> {
 public:
-  using LegacyRequestHandler::LegacyRequestHandler;
+  using RequestHandler::RequestHandler;
   static llvm::StringLiteral GetCommand() { return "restart"; }
-  void operator()(const llvm::json::Object &request) const override;
+  llvm::Error
+  Run(const std::optional<protocol::RestartArguments> &args) const override;
 };
 
 class NextRequestHandler
