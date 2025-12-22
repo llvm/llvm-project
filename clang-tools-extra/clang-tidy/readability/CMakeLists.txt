@@ -58,6 +58,7 @@ add_clang_library(clangTidyReadabilityModule STATIC
   StaticDefinitionInAnonymousNamespaceCheck.cpp
   StringCompareCheck.cpp
   SuspiciousCallArgumentCheck.cpp
+  TrailingCommaCheck.cpp
   UniqueptrDeleteReleaseCheck.cpp
   UppercaseLiteralSuffixCheck.cpp
   UseAnyOfAllOfCheck.cpp
