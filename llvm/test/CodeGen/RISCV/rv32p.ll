@@ -60,3 +60,59 @@ define void @pli_b_store_i32(ptr %p) {
   store i32 u0x41414141, ptr %p
   ret void
 }
+
+define i64 @slx_i64(i64 %x, i64 %y) {
+; CHECK-LABEL: slx_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    sll a1, a1, a2
+; CHECK-NEXT:    srli a3, a0, 1
+; CHECK-NEXT:    andi a4, a2, 31
+; CHECK-NEXT:    xori a4, a4, 31
+; CHECK-NEXT:    srl a3, a3, a4
+; CHECK-NEXT:    or a1, a1, a3
+; CHECK-NEXT:    sll a0, a0, a2
+; CHECK-NEXT:    ret
+  %a = and i64 %y, 31
+  %b = shl i64 %x, %a
+  ret i64 %b
+}
+
+define i64 @slxi_i64(i64 %x) {
+; CHECK-LABEL: slxi_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    srli a2, a0, 7
+; CHECK-NEXT:    slli a1, a1, 25
+; CHECK-NEXT:    or a1, a1, a2
+; CHECK-NEXT:    slli a0, a0, 25
+; CHECK-NEXT:    ret
+  %a = shl i64 %x, 25
+  ret i64 %a
+}
+
+define i64 @srx_i64(i64 %x, i64 %y) {
+; CHECK-LABEL: srx_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    srl a0, a0, a2
+; CHECK-NEXT:    slli a3, a1, 1
+; CHECK-NEXT:    andi a4, a2, 31
+; CHECK-NEXT:    xori a4, a4, 31
+; CHECK-NEXT:    sll a3, a3, a4
+; CHECK-NEXT:    or a0, a0, a3
+; CHECK-NEXT:    srl a1, a1, a2
+; CHECK-NEXT:    ret
+  %a = and i64 %y, 31
+  %b = lshr i64 %x, %a
+  ret i64 %b
+}
+
+define i64 @srxi_i64(i64 %x) {
+; CHECK-LABEL: srxi_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    slli a2, a1, 7
+; CHECK-NEXT:    srli a0, a0, 25
+; CHECK-NEXT:    or a0, a0, a2
+; CHECK-NEXT:    srli a1, a1, 25
+; CHECK-NEXT:    ret
+  %a = lshr i64 %x, 25
+  ret i64 %a
+}
