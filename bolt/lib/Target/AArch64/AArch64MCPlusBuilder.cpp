@@ -2792,7 +2792,9 @@ public:
         Inst.getOpcode() == AArch64::HINT && Inst.getNumOperands() == 1 &&
         Inst.getOperand(0).isImm() && Inst.getOperand(0).getImm() == HintNum;
 
-    bool IsImplicitBTI = HintNum == 34 && isImplicitBTIC(Inst);
+    // Only "BTI C" can be implicit.
+    bool IsImplicitBTI =
+        HintNum == getBTIHintNum(true, false) && isImplicitBTIC(Inst);
     return IsExplicitBTI || IsImplicitBTI;
   }
 
