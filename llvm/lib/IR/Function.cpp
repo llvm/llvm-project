@@ -130,10 +130,9 @@ bool Argument::hasByValAttr() const {
   return hasAttribute(Attribute::ByVal);
 }
 
-bool Argument::hasDeadOnReturnAttr() const {
-  if (!getType()->isPointerTy())
-    return false;
-  return hasAttribute(Attribute::DeadOnReturn);
+std::optional<uint64_t> Argument::getDeadOnReturnBytes() const {
+  assert(getType()->isPointerTy() && "Only pointers have dead_on_return bytes");
+  return getParent()->getDeadOnReturnBytes(getArgNo());
 }
 
 bool Argument::hasByRefAttr() const {
