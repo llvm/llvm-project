@@ -2883,14 +2883,27 @@ public:
         << EscapeExpr->getEndLoc();
   }
 
-  void suggestAnnotation(const ParmVarDecl *PVD,
+  void suggestAnnotation(SuggestionScope Scope,
+                         const ParmVarDecl *ParmToAnnotate,
                          const Expr *EscapeExpr) override {
+    unsigned DiagID;
+    switch (Scope) {
+    case SuggestionScope::CrossTU:
+      DiagID = diag::warn_lifetime_safety_cross_tu_suggestion;
+      break;
+    case SuggestionScope::IntraTU:
+      DiagID = diag::warn_lifetime_safety_intra_tu_suggestion;
+      break;
+    }
+
     SourceLocation InsertionPoint = Lexer::getLocForEndOfToken(
-        PVD->getEndLoc(), 0, S.getSourceManager(), S.getLangOpts());
-    S.Diag(PVD->getBeginLoc(), diag::warn_lifetime_safety_suggest_lifetimebound)
-        << PVD->getSourceRange()
+        ParmToAnnotate->getEndLoc(), 0, S.getSourceManager(), S.getLangOpts());
+
+    S.Diag(ParmToAnnotate->getBeginLoc(), DiagID)
+        << ParmToAnnotate->getSourceRange()
         << FixItHint::CreateInsertion(InsertionPoint,
                                       " [[clang::lifetimebound]]");
+
     S.Diag(EscapeExpr->getBeginLoc(),
            diag::note_lifetime_safety_suggestion_returned_here)
         << EscapeExpr->getSourceRange();
@@ -3026,6 +3039,9 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
       .setAlwaysAdd(Stmt::DeclRefExprClass)
       .setAlwaysAdd(Stmt::ImplicitCastExprClass)
       .setAlwaysAdd(Stmt::UnaryOperatorClass);
+  }
+  if (EnableLifetimeSafetyAnalysis) {
+    AC.getCFGBuildOptions().AddLifetime = true;
   }
 
   // Install the logical handler.

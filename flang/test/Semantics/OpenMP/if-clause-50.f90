@@ -280,7 +280,7 @@ program main
 
   !ERROR: TARGET is not a constituent of the TARGET EXIT DATA directive
   !$omp target exit data map(from: i) if(target: .true.)
-  
+
   !ERROR: At most one IF clause can appear on the TARGET EXIT DATA directive
   !$omp target exit data map(from: i) if(.true.) if(target exit data: .false.)
 
@@ -457,7 +457,7 @@ program main
   ! TARGET UPDATE
   ! ----------------------------------------------------------------------------
   !$omp target update to(i) if(.true.)
-  
+
   !$omp target update to(i) if(target update: .true.)
 
   !ERROR: TARGET is not a constituent of the TARGET UPDATE directive

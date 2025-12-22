@@ -23,6 +23,7 @@
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/IVDescriptors.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instruction.h"
@@ -444,6 +445,7 @@ unsigned VPInstruction::getNumOperandsForOpcode(unsigned Opcode) {
   case VPInstruction::ExtractPenultimateElement:
   case VPInstruction::Not:
   case VPInstruction::ResumeForEpilogue:
+  case VPInstruction::Reverse:
   case VPInstruction::Unpack:
     return 1;
   case Instruction::ICmp:
@@ -508,26 +510,6 @@ bool VPInstruction::canGenerateScalarForFirstLane() const {
   default:
     return false;
   }
-}
-
-/// Create a conditional branch using \p Cond branching to the successors of \p
-/// VPBB. Note that the first successor is always forward (i.e. not created yet)
-/// while the second successor may already have been created (if it is a header
-/// block and VPBB is a latch).
-static BranchInst *createCondBranch(Value *Cond, VPBasicBlock *VPBB,
-                                    VPTransformState &State) {
-  // Replace the temporary unreachable terminator with a new conditional
-  // branch, hooking it up to backward destination (header) for latch blocks
-  // now, and to forward destination(s) later when they are created.
-  // Second successor may be backwards - iff it is already in VPBB2IRBB.
-  VPBasicBlock *SecondVPSucc = cast<VPBasicBlock>(VPBB->getSuccessors()[1]);
-  BasicBlock *SecondIRSucc = State.CFG.VPBB2IRBB.lookup(SecondVPSucc);
-  BasicBlock *IRBB = State.CFG.VPBB2IRBB[VPBB];
-  BranchInst *CondBr = State.Builder.CreateCondBr(Cond, IRBB, SecondIRSucc);
-  // First successor is always forward, reset it to nullptr
-  CondBr->setSuccessor(0, nullptr);
-  IRBB->getTerminator()->eraseFromParent();
-  return CondBr;
 }
 
 Value *VPInstruction::generate(VPTransformState &State) {
@@ -659,16 +641,20 @@ Value *VPInstruction::generate(VPTransformState &State) {
   }
   case VPInstruction::BranchOnCond: {
     Value *Cond = State.get(getOperand(0), VPLane(0));
-    auto *Br = createCondBranch(Cond, getParent(), State);
+    // Replace the temporary unreachable terminator with a new conditional
+    // branch, hooking it up to backward destination for latch blocks now, and
+    // to forward destination(s) later when they are created.
+    // Second successor may be backwards - iff it is already in VPBB2IRBB.
+    VPBasicBlock *SecondVPSucc =
+        cast<VPBasicBlock>(getParent()->getSuccessors()[1]);
+    BasicBlock *SecondIRSucc = State.CFG.VPBB2IRBB.lookup(SecondVPSucc);
+    BasicBlock *IRBB = State.CFG.VPBB2IRBB[getParent()];
+    auto *Br = Builder.CreateCondBr(Cond, IRBB, SecondIRSucc);
+    // First successor is always forward, reset it to nullptr.
+    Br->setSuccessor(0, nullptr);
+    IRBB->getTerminator()->eraseFromParent();
     applyMetadata(*Br);
     return Br;
-  }
-  case VPInstruction::BranchOnCount: {
-    // First create the compare.
-    Value *IV = State.get(getOperand(0), /*IsScalar*/ true);
-    Value *TC = State.get(getOperand(1), /*IsScalar*/ true);
-    Value *Cond = Builder.CreateICmpEQ(IV, TC);
-    return createCondBranch(Cond, getParent(), State);
   }
   case VPInstruction::Broadcast: {
     return Builder.CreateVectorSplat(
@@ -917,6 +903,8 @@ Value *VPInstruction::generate(VPTransformState &State) {
   }
   case VPInstruction::ResumeForEpilogue:
     return State.get(getOperand(0), true);
+  case VPInstruction::Reverse:
+    return Builder.CreateVectorReverse(State.get(getOperand(0)), "reverse");
   default:
     llvm_unreachable("Unsupported opcode for instruction");
   }
@@ -1103,6 +1091,14 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
                                   I32Ty, {Arg0Ty, I32Ty, I1Ty});
     return Ctx.TTI.getIntrinsicInstrCost(Attrs, Ctx.CostKind);
   }
+  case VPInstruction::Reverse: {
+    assert(VF.isVector() && "Reverse operation must be vector type");
+    auto *VectorTy = cast<VectorType>(
+        toVectorTy(Ctx.Types.inferScalarType(getOperand(0)), VF));
+    return Ctx.TTI.getShuffleCost(TargetTransformInfo::SK_Reverse, VectorTy,
+                                  VectorTy, /*Mask=*/{}, Ctx.CostKind,
+                                  /*Index=*/0);
+  }
   case VPInstruction::ExtractLastLane: {
     // Add on the cost of extracting the element.
     auto *VecTy = toVectorTy(Ctx.Types.inferScalarType(getOperand(0)), VF);
@@ -1205,6 +1201,7 @@ bool VPInstruction::opcodeMayReadOrWriteFromMemory() const {
   case VPInstruction::WidePtrAdd:
   case VPInstruction::StepVector:
   case VPInstruction::ReductionStartVector:
+  case VPInstruction::Reverse:
   case VPInstruction::VScale:
   case VPInstruction::Unpack:
     return false;
@@ -1381,6 +1378,9 @@ void VPInstruction::printRecipe(raw_ostream &O, const Twine &Indent,
     break;
   case VPInstruction::ResumeForEpilogue:
     O << "resume-for-epilogue";
+    break;
+  case VPInstruction::Reverse:
+    O << "reverse";
     break;
   case VPInstruction::Unpack:
     O << "unpack";
@@ -1908,7 +1908,7 @@ void VPWidenSelectRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
                                       VPSlotTracker &SlotTracker) const {
   O << Indent << "WIDEN-SELECT ";
   printAsOperand(O, SlotTracker);
-  O << " = select ";
+  O << " = select";
   printFlags(O);
   getOperand(0)->printAsOperand(O, SlotTracker);
   O << ", ";
@@ -2260,18 +2260,32 @@ InstructionCost VPWidenCastRecipe::computeCost(ElementCount VF,
   VPValue *Operand = getOperand(0);
   TTI::CastContextHint CCH = TTI::CastContextHint::None;
   // For Trunc/FPTrunc, get the context from the only user.
-  if ((Opcode == Instruction::Trunc || Opcode == Instruction::FPTrunc) &&
-      !hasMoreThanOneUniqueUser() && getNumUsers() > 0) {
-    if (auto *StoreRecipe = dyn_cast<VPRecipeBase>(*user_begin()))
-      CCH = ComputeCCH(StoreRecipe);
+  if (Opcode == Instruction::Trunc || Opcode == Instruction::FPTrunc) {
+    auto GetOnlyUser = [](const VPSingleDefRecipe *R) -> VPRecipeBase * {
+      if (R->getNumUsers() == 0 || R->hasMoreThanOneUniqueUser())
+        return nullptr;
+      return dyn_cast<VPRecipeBase>(*R->user_begin());
+    };
+
+    if (VPRecipeBase *Recipe = GetOnlyUser(this)) {
+      if (match(Recipe, m_Reverse(m_VPValue())))
+        Recipe = GetOnlyUser(cast<VPInstruction>(Recipe));
+      if (Recipe)
+        CCH = ComputeCCH(Recipe);
+    }
   }
   // For Z/Sext, get the context from the operand.
   else if (Opcode == Instruction::ZExt || Opcode == Instruction::SExt ||
            Opcode == Instruction::FPExt) {
     if (Operand->isLiveIn())
       CCH = TTI::CastContextHint::Normal;
-    else if (Operand->getDefiningRecipe())
-      CCH = ComputeCCH(Operand->getDefiningRecipe());
+    else if (auto *Recipe = Operand->getDefiningRecipe()) {
+      VPValue *ReverseOp;
+      if (match(Recipe, m_Reverse(m_VPValue(ReverseOp))))
+        Recipe = ReverseOp->getDefiningRecipe();
+      if (Recipe)
+        CCH = ComputeCCH(Recipe);
+    }
   }
 
   auto *SrcTy =
@@ -2314,7 +2328,6 @@ void VPWidenIntOrFpInductionRecipe::printRecipe(
   printAsOperand(O, SlotTracker);
   O << " = WIDEN-INDUCTION";
   printFlags(O);
-  O << " ";
   printOperands(O, SlotTracker);
 
   if (auto *TI = getTruncInst())
@@ -2503,7 +2516,8 @@ void VPVectorEndPointerRecipe::execute(VPTransformState &State) {
   // LastLane = Stride * (RunTimeVF - 1)
   Value *LastLane = Builder.CreateSub(RunTimeVF, ConstantInt::get(IndexTy, 1));
   if (Stride != 1)
-    LastLane = Builder.CreateMul(ConstantInt::get(IndexTy, Stride), LastLane);
+    LastLane =
+        Builder.CreateMul(ConstantInt::getSigned(IndexTy, Stride), LastLane);
   Value *Ptr = State.get(getOperand(0), VPLane(0));
   Value *ResultPtr =
       Builder.CreateGEP(IndexedTy, Ptr, NumElt, "", getGEPNoWrapFlags());
@@ -2526,15 +2540,12 @@ void VPVectorEndPointerRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
 
 void VPVectorPointerRecipe::execute(VPTransformState &State) {
   auto &Builder = State.Builder;
-  unsigned CurrentPart = getUnrollPart(*this);
-  const DataLayout &DL = Builder.GetInsertBlock()->getDataLayout();
-  Type *IndexTy = DL.getIndexType(State.TypeAnalysis.inferScalarType(this));
+  assert(getOffset() &&
+         "Expected prior simplification of recipe without offset");
   Value *Ptr = State.get(getOperand(0), VPLane(0));
-
-  Value *Increment = createStepForVF(Builder, IndexTy, State.VF, CurrentPart);
-  Value *ResultPtr = Builder.CreateGEP(getSourceElementType(), Ptr, Increment,
-                                       "", getGEPNoWrapFlags());
-
+  Value *Offset = State.get(getOffset(), true);
+  Value *ResultPtr = Builder.CreateGEP(getSourceElementType(), Ptr, Offset, "",
+                                       getGEPNoWrapFlags());
   State.set(this, ResultPtr, /*IsScalar*/ true);
 }
 
@@ -2551,10 +2562,10 @@ void VPVectorPointerRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
 
 InstructionCost VPBlendRecipe::computeCost(ElementCount VF,
                                            VPCostContext &Ctx) const {
-  // Handle cases where only the first lane is used the same way as the legacy
-  // cost model.
+  // A blend will be expanded to a select VPInstruction, which will generate a
+  // scalar select if only the first lane is used.
   if (vputils::onlyFirstLaneUsed(this))
-    return Ctx.TTI.getCFInstrCost(Instruction::PHI, Ctx.CostKind);
+    VF = ElementCount::getFixed(1);
 
   Type *ResultTy = toVectorTy(Ctx.Types.inferScalarType(this), VF);
   Type *CmpTy = toVectorTy(Type::getInt1Ty(Ctx.Types.getContext()), VF);
@@ -3113,7 +3124,8 @@ bool VPReplicateRecipe::shouldPack() const {
 /// address cost. Computing SCEVs for VPValues is incomplete and returns
 /// SCEVCouldNotCompute in cases the legacy cost model can compute SCEVs. In
 /// those cases we fall back to the legacy cost model. Otherwise return nullptr.
-static const SCEV *getAddressAccessSCEV(const VPValue *Ptr, ScalarEvolution &SE,
+static const SCEV *getAddressAccessSCEV(const VPValue *Ptr,
+                                        PredicatedScalarEvolution &PSE,
                                         const Loop *L) {
   auto *PtrR = Ptr->getDefiningRecipe();
   if (!PtrR || !((isa<VPReplicateRecipe>(Ptr) &&
@@ -3123,15 +3135,11 @@ static const SCEV *getAddressAccessSCEV(const VPValue *Ptr, ScalarEvolution &SE,
                  match(Ptr, m_GetElementPtr(m_VPValue(), m_VPValue()))))
     return nullptr;
 
-  // We are looking for a GEP where all indices are either loop invariant or
-  // inductions.
-  for (VPValue *Opd : drop_begin(PtrR->operands())) {
-    if (!Opd->isDefinedOutsideLoopRegions() &&
-        !isa<VPScalarIVStepsRecipe, VPWidenIntOrFpInductionRecipe>(Opd))
-      return nullptr;
-  }
+  const SCEV *Addr = vputils::getSCEVExprForVPValue(Ptr, PSE, L);
+  if (isa<SCEVCouldNotCompute>(Addr))
+    return Addr;
 
-  return vputils::getSCEVExprForVPValue(Ptr, SE, L);
+  return vputils::isAddressSCEVForCost(Addr, *PSE.getSE(), L) ? Addr : nullptr;
 }
 
 /// Returns true if \p V is used as part of the address of another load or
@@ -3299,7 +3307,7 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
 
     bool IsLoad = UI->getOpcode() == Instruction::Load;
     const VPValue *PtrOp = getOperand(!IsLoad);
-    const SCEV *PtrSCEV = getAddressAccessSCEV(PtrOp, Ctx.SE, Ctx.L);
+    const SCEV *PtrSCEV = getAddressAccessSCEV(PtrOp, Ctx.PSE, Ctx.L);
     if (isa_and_nonnull<SCEVCouldNotCompute>(PtrSCEV))
       break;
 
@@ -3316,9 +3324,10 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
     bool UsedByLoadStoreAddress =
         !PreferVectorizedAddressing && isUsedByLoadStoreAddress(this);
     InstructionCost ScalarCost =
-        ScalarMemOpCost + Ctx.TTI.getAddressComputationCost(
-                              PtrTy, UsedByLoadStoreAddress ? nullptr : &Ctx.SE,
-                              PtrSCEV, Ctx.CostKind);
+        ScalarMemOpCost +
+        Ctx.TTI.getAddressComputationCost(
+            PtrTy, UsedByLoadStoreAddress ? nullptr : Ctx.PSE.getSE(), PtrSCEV,
+            Ctx.CostKind);
     if (isSingleScalar())
       return ScalarCost;
 
@@ -3519,12 +3528,7 @@ InstructionCost VPWidenMemoryRecipe::computeCost(ElementCount VF,
     Cost += Ctx.TTI.getMemoryOpCost(Opcode, Ty, Alignment, AS, Ctx.CostKind,
                                     OpInfo, &Ingredient);
   }
-  if (!Reverse)
-    return Cost;
-
-  return Cost += Ctx.TTI.getShuffleCost(
-             TargetTransformInfo::SK_Reverse, cast<VectorType>(Ty),
-             cast<VectorType>(Ty), {}, Ctx.CostKind, 0);
+  return Cost;
 }
 
 void VPWidenLoadRecipe::execute(VPTransformState &State) {
@@ -3555,8 +3559,6 @@ void VPWidenLoadRecipe::execute(VPTransformState &State) {
     NewLI = Builder.CreateAlignedLoad(DataTy, Addr, Alignment, "wide.load");
   }
   applyMetadata(*cast<Instruction>(NewLI));
-  if (Reverse)
-    NewLI = Builder.CreateVectorReverse(NewLI, "reverse");
   State.set(this, NewLI);
 }
 
@@ -3611,8 +3613,6 @@ void VPWidenLoadEVLRecipe::execute(VPTransformState &State) {
       0, Attribute::getWithAlignment(NewLI->getContext(), Alignment));
   applyMetadata(*NewLI);
   Instruction *Res = NewLI;
-  if (isReverse())
-    Res = createReverseEVL(Builder, Res, EVL, "vp.reverse");
   State.set(this, Res);
 }
 
@@ -3629,15 +3629,9 @@ InstructionCost VPWidenLoadEVLRecipe::computeCost(ElementCount VF,
   Type *Ty = toVectorTy(getLoadStoreType(&Ingredient), VF);
   unsigned AS = cast<PointerType>(Ctx.Types.inferScalarType(getAddr()))
                     ->getAddressSpace();
-  InstructionCost Cost = Ctx.TTI.getMemIntrinsicInstrCost(
+  return Ctx.TTI.getMemIntrinsicInstrCost(
       MemIntrinsicCostAttributes(Intrinsic::vp_load, Ty, Alignment, AS),
       Ctx.CostKind);
-  if (!Reverse)
-    return Cost;
-
-  return Cost + Ctx.TTI.getShuffleCost(
-                    TargetTransformInfo::SK_Reverse, cast<VectorType>(Ty),
-                    cast<VectorType>(Ty), {}, Ctx.CostKind, 0);
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -3666,13 +3660,6 @@ void VPWidenStoreRecipe::execute(VPTransformState &State) {
   }
 
   Value *StoredVal = State.get(StoredVPValue);
-  if (isReverse()) {
-    // If we store to reverse consecutive memory locations, then we need
-    // to reverse the order of elements in the stored value.
-    StoredVal = Builder.CreateVectorReverse(StoredVal, "reverse");
-    // We don't want to update the value in the map as it might be used in
-    // another expression. So don't call resetVectorValue(StoredVal).
-  }
   Value *Addr = State.get(getAddr(), /*IsScalar*/ !CreateScatter);
   Instruction *NewSI = nullptr;
   if (CreateScatter)
@@ -3701,8 +3688,6 @@ void VPWidenStoreEVLRecipe::execute(VPTransformState &State) {
   CallInst *NewSI = nullptr;
   Value *StoredVal = State.get(StoredValue);
   Value *EVL = State.get(getEVL(), VPLane(0));
-  if (isReverse())
-    StoredVal = createReverseEVL(Builder, StoredVal, EVL, "vp.reverse");
   Value *Mask = nullptr;
   if (VPValue *VPMask = getMask()) {
     Mask = State.get(VPMask);
@@ -3739,15 +3724,9 @@ InstructionCost VPWidenStoreEVLRecipe::computeCost(ElementCount VF,
   Type *Ty = toVectorTy(getLoadStoreType(&Ingredient), VF);
   unsigned AS = cast<PointerType>(Ctx.Types.inferScalarType(getAddr()))
                     ->getAddressSpace();
-  InstructionCost Cost = Ctx.TTI.getMemIntrinsicInstrCost(
+  return Ctx.TTI.getMemIntrinsicInstrCost(
       MemIntrinsicCostAttributes(Intrinsic::vp_store, Ty, Alignment, AS),
       Ctx.CostKind);
-  if (!Reverse)
-    return Cost;
-
-  return Cost + Ctx.TTI.getShuffleCost(
-                    TargetTransformInfo::SK_Reverse, cast<VectorType>(Ty),
-                    cast<VectorType>(Ty), {}, Ctx.CostKind, 0);
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -4407,8 +4386,6 @@ void VPWidenPHIRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
 }
 #endif
 
-// TODO: It would be good to use the existing VPWidenPHIRecipe instead and
-// remove VPActiveLaneMaskPHIRecipe.
 void VPActiveLaneMaskPHIRecipe::execute(VPTransformState &State) {
   BasicBlock *VectorPH =
       State.CFG.VPBB2IRBB.at(getParent()->getCFGPredecessor(0));

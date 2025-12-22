@@ -498,6 +498,9 @@ foreach mx = SchedMxList in {
     defm "" : LMULWriteResMX<"WriteVIALUI", [SMX60_VIEU], mx, IsWorstCase>;
   }
 
+  let Latency = VIALULat in
+  def SMX60WriteVCOPY_ # mx : SchedWriteRes<[]>;
+
   defvar VILogicalLat = ConstValueUntilLMULThenDouble<"M2", 4, mx>.c;
   defvar VILogicalOcc = ConstValueUntilLMULThenDouble<"MF2", 1, mx>.c;
   let Latency = VILogicalLat, ReleaseAtCycles = [VILogicalOcc] in {
@@ -1033,9 +1036,25 @@ def : WriteRes<WriteCSR, [SMX60_IEU]>;
 def : WriteRes<WriteNop, [SMX60_IEU]>;
 def : WriteRes<WriteRdVLENB, [SMX60_IEUA]>;
 
-// Give COPY instructions an execution resource.
-// FIXME: This could be better modeled by looking at the regclasses of the operands.
-def : InstRW<[WriteIALU], (instrs COPY)>;
+// Assign scheduling info to COPY instructions.
+// Note: We try NOT to assign ProcResource but only latency to vector COPY because
+// those resources might prevent those COPYs from showing up to the scheulder
+// until it's too late.
+// Specifically, for a given COPY of live-in (physical) register, ideally we want it
+// to be visible to the top available queue as early as possible so that it can be scheduled
+// at the beginning of the function. Assigning resource to vector COPYs might risk
+// creating structural hazard that prevents those COPYs from even entering the available
+// queue and as a consequence, sinking those COPYs.
+// I see little difference on assigning ProcResource to scalar COPY or not, so I'm still
+// assigning WriteIALU to it.
+def SMX60CopySchedWriteVariant : SchedWriteVariant<[
+  SchedVar<SchedPredicate<[{ TII->isVRegCopy(MI, /*LMUL=*/1) }]>, [SMX60WriteVCOPY_M1]>,
+  SchedVar<SchedPredicate<[{ TII->isVRegCopy(MI, /*LMUL=*/2) }]>, [SMX60WriteVCOPY_M2]>,
+  SchedVar<SchedPredicate<[{ TII->isVRegCopy(MI, /*LMUL=*/4) }]>, [SMX60WriteVCOPY_M4]>,
+  SchedVar<SchedPredicate<[{ TII->isVRegCopy(MI, /*LMUL=*/8) }]>, [SMX60WriteVCOPY_M8]>,
+  SchedVar<NoSchedPred,                                           [WriteIALU]>
+]>;
+def : InstRW<[SMX60CopySchedWriteVariant], (instrs COPY)>;
 
 //===----------------------------------------------------------------------===//
 // Bypass and advance
@@ -1183,7 +1202,7 @@ def : ReadAdvance<ReadVST2R, 0>;
 def : ReadAdvance<ReadVST4R, 0>;
 def : ReadAdvance<ReadVST8R, 0>;
 
-// 12. Vector Integer Arithmetic Instructions
+// 11. Vector Integer Arithmetic Instructions
 defm : LMULReadAdvance<"ReadVIALUV", 0>;
 defm : LMULReadAdvance<"ReadVIALUX", 0>;
 defm : LMULReadAdvanceW<"ReadVIWALUV", 0>;
@@ -1214,7 +1233,7 @@ defm : LMULReadAdvance<"ReadVIMergeX", 0>;
 defm : LMULReadAdvance<"ReadVIMovV", 0>;
 defm : LMULReadAdvance<"ReadVIMovX", 0>;
 
-// 13. Vector Fixed-Point Arithmetic Instructions
+// 12. Vector Fixed-Point Arithmetic Instructions
 defm "" : LMULReadAdvance<"ReadVSALUV", 0>;
 defm "" : LMULReadAdvance<"ReadVSALUX", 0>;
 defm "" : LMULReadAdvance<"ReadVAALUV", 0>;
@@ -1226,7 +1245,7 @@ defm "" : LMULReadAdvance<"ReadVSShiftX", 0>;
 defm "" : LMULReadAdvanceW<"ReadVNClipV", 0>;
 defm "" : LMULReadAdvanceW<"ReadVNClipX", 0>;
 
-// 14. Vector Floating-Point Instructions
+// 13. Vector Floating-Point Instructions
 defm "" : LMULSEWReadAdvanceF<"ReadVFALUV", 0>;
 defm "" : LMULSEWReadAdvanceF<"ReadVFALUF", 0>;
 defm "" : LMULSEWReadAdvanceFW<"ReadVFWALUV", 0>;
@@ -1262,7 +1281,7 @@ defm "" : LMULSEWReadAdvanceFW<"ReadVFNCvtIToFV", 0>;
 defm "" : LMULReadAdvanceW<"ReadVFNCvtFToIV", 0>;
 defm "" : LMULSEWReadAdvanceFW<"ReadVFNCvtFToFV", 0>;
 
-// 15. Vector Reduction Operations
+// 14. Vector Reduction Operations
 def : ReadAdvance<ReadVIRedV, 0>;
 def : ReadAdvance<ReadVIRedV0, 0>;
 def : ReadAdvance<ReadVIWRedV, 0>;
@@ -1276,14 +1295,14 @@ def : ReadAdvance<ReadVFWRedV0, 0>;
 def : ReadAdvance<ReadVFWRedOV, 0>;
 def : ReadAdvance<ReadVFWRedOV0, 0>;
 
-// 16. Vector Mask Instructions
+// 15. Vector Mask Instructions
 defm "" : LMULReadAdvance<"ReadVMALUV", 0>;
 defm "" : LMULReadAdvance<"ReadVMPopV", 0>;
 defm "" : LMULReadAdvance<"ReadVMFFSV", 0>;
 defm "" : LMULReadAdvance<"ReadVMSFSV", 0>;
 defm "" : LMULReadAdvance<"ReadVIotaV", 0>;
 
-// 17. Vector Permutation Instructions
+// 16. Vector Permutation Instructions
 def : ReadAdvance<ReadVMovXS, 0>;
 def : ReadAdvance<ReadVMovSX_V, 0>;
 def : ReadAdvance<ReadVMovSX_X, 0>;
