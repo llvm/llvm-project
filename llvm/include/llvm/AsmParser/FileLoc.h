@@ -21,6 +21,10 @@ struct FileLoc {
   /// 0-based column number
   unsigned Col;
 
+  bool operator==(const FileLoc &RHS) const {
+    return Line == RHS.Line && Col == RHS.Col;
+  }
+
   bool operator<=(const FileLoc &RHS) const {
     return Line < RHS.Line || (Line == RHS.Line && Col <= RHS.Col);
   }

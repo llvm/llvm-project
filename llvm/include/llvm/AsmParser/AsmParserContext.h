@@ -17,23 +17,6 @@
 #include <optional>
 
 namespace llvm {
-struct FileLocIntervalInfo {
-  // Overriding 'adjacent' to return false prevents the map
-  // from merging [10, 20] and [21, 30] even if values match.
-  static bool adjacent(const llvm::FileLoc &A, const llvm::FileLoc &B) {
-    return false;
-  }
-  static bool startLess(const llvm::FileLoc &X, const llvm::FileLoc &A) {
-    return X < A;
-  }
-  static bool stopLess(const llvm::FileLoc &B, const llvm::FileLoc &X) {
-    return B <= X;
-  }
-  static bool nonEmpty(const llvm::FileLoc &A, const llvm::FileLoc &B) {
-    return A < B;
-  }
-};
-
 /// Registry of file location information for LLVM IR constructs.
 ///
 /// This class provides access to the file location information
@@ -50,7 +33,7 @@ class AsmParserContext {
   using FMap =
       IntervalMap<FileLoc, Function *,
                   IntervalMapImpl::NodeSizer<FileLoc, Function *>::LeafSize,
-                  FileLocIntervalInfo>;
+                  IntervalMapHalfOpenInfo<FileLoc>>;
 
   DenseMap<Function *, FileLocRange> Functions;
   FMap::Allocator FAllocator;
@@ -59,14 +42,14 @@ class AsmParserContext {
   using BBMap =
       IntervalMap<FileLoc, BasicBlock *,
                   IntervalMapImpl::NodeSizer<FileLoc, BasicBlock *>::LeafSize,
-                  FileLocIntervalInfo>;
+                  IntervalMapHalfOpenInfo<FileLoc>>;
   BBMap::Allocator BBAllocator;
   BBMap BlocksInverse = BBMap(BBAllocator);
   DenseMap<Instruction *, FileLocRange> Instructions;
   using IMap =
       IntervalMap<FileLoc, Instruction *,
                   IntervalMapImpl::NodeSizer<FileLoc, Instruction *>::LeafSize,
-                  FileLocIntervalInfo>;
+                  IntervalMapHalfOpenInfo<FileLoc>>;
   IMap::Allocator IAllocator;
   IMap InstructionsInverse = IMap(IAllocator);
 
