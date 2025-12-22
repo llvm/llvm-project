@@ -12,10 +12,11 @@ add_llvm_executable(check-gdb-llvm-support
 )
 target_link_libraries(check-gdb-llvm-support PRIVATE LLVMSupport)
 
-add_llvm_executable(check-lldb-llvm-support-arrayref
+add_executable(check-lldb-llvm-support-arrayref
         debuginfo-tests/llvm-prettyprinters/lldb/arrayref.cpp
 )
 target_link_libraries(check-lldb-llvm-support-arrayref PRIVATE LLVMSupport)
+target_compile_options(check-lldb-llvm-support-arrayref PRIVATE -g -O0)
 
 set(CROSS_PROJECT_TESTS_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 set(CROSS_PROJECT_TESTS_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})

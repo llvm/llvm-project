@@ -1,4 +1,3 @@
-# REQUIRES: debug-info
 # RUN: split-file %s %t
 # RUN: lldb -b -x -o 'command script import %llvm_src_root/utils/lldbDataFormatters.py' -s %t/commands.input %llvm_tools_dir/check-lldb-llvm-support-arrayref | FileCheck %t/checks
 
