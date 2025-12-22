@@ -276,9 +276,10 @@ public:
   /// dereferenceable attribute.
   LLVM_ABI uint64_t getDereferenceableBytes() const;
 
-  /// Returns the number of dead_on_return bytes from the
-  /// dead_on_return attribute.
-  LLVM_ABI uint64_t getDeadOnReturnBytes() const;
+  /// Returns the number of dead_on_return bytes from the dead_on_return
+  /// attribute, or std::nullopt if all memory reachable through the pointer is
+  /// marked dead on return.
+  LLVM_ABI std::optional<uint64_t> getDeadOnReturnBytes() const;
 
   /// Returns the number of dereferenceable_or_null bytes from the
   /// dereferenceable_or_null attribute.
@@ -449,7 +450,7 @@ public:
   LLVM_ABI MaybeAlign getAlignment() const;
   LLVM_ABI MaybeAlign getStackAlignment() const;
   LLVM_ABI uint64_t getDereferenceableBytes() const;
-  LLVM_ABI uint64_t getDeadOnReturnBytes() const;
+  LLVM_ABI std::optional<uint64_t> getDeadOnReturnBytes() const;
   LLVM_ABI uint64_t getDereferenceableOrNullBytes() const;
   LLVM_ABI Type *getByValType() const;
   LLVM_ABI Type *getStructRetType() const;
@@ -970,7 +971,7 @@ public:
   LLVM_ABI uint64_t getRetDereferenceableOrNullBytes() const;
 
   /// Get the number of dead_on_return bytes (or zero if unknown) of an arg.
-  LLVM_ABI uint64_t getDeadOnReturnBytes(unsigned Index) const;
+  LLVM_ABI std::optional<uint64_t> getDeadOnReturnBytes(unsigned Index) const;
 
   /// Get the number of dereferenceable_or_null bytes (or zero if unknown) of an
   /// arg.
@@ -1252,7 +1253,7 @@ public:
 
   /// This turns the number of dead_on_return bytes into the form used
   /// internally in Attribute.
-  LLVM_ABI AttrBuilder &addDeadOnReturnAttr(uint64_t Bytes);
+  LLVM_ABI AttrBuilder &addDeadOnReturnAttr(std::optional<uint64_t> Bytes);
 
   /// This turns the number of dereferenceable_or_null bytes into the
   /// form used internally in Attribute.

@@ -856,7 +856,7 @@ bb:
   ret void
 }
 
-define void @test_dead_on_return(ptr dead_on_return(4) %p) {
+define void @test_dead_on_return(ptr dead_on_return %p) {
 ; CHECK-LABEL: @test_dead_on_return(
 ; CHECK-NEXT:    ret void
 ;
@@ -864,7 +864,7 @@ define void @test_dead_on_return(ptr dead_on_return(4) %p) {
   ret void
 }
 
-define void @test_dead_on_return_maythrow(ptr dead_on_return(4) %p) {
+define void @test_dead_on_return_maythrow(ptr dead_on_return %p) {
 ; CHECK-LABEL: @test_dead_on_return_maythrow(
 ; CHECK-NEXT:    call void @maythrow()
 ; CHECK-NEXT:    ret void
@@ -874,7 +874,7 @@ define void @test_dead_on_return_maythrow(ptr dead_on_return(4) %p) {
   ret void
 }
 
-define ptr @test_dead_on_return_ptr_returned(ptr dead_on_return(64) %p) {
+define ptr @test_dead_on_return_ptr_returned(ptr dead_on_return %p) {
 ; CHECK-LABEL: @test_dead_on_return_ptr_returned(
 ; CHECK-NEXT:    [[LOCAL_VAR:%.*]] = alloca ptr, align 8
 ; CHECK-NEXT:    call void @opaque(ptr [[LOCAL_VAR]])

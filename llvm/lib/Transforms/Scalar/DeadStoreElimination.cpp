@@ -1018,7 +1018,8 @@ struct DSEState {
     // stores to them are dead at the end of the function.
     for (Argument &AI : F.args())
       if (AI.hasPassPointeeByValueCopyAttr() ||
-          (AI.getType()->isPointerTy() && AI.getDeadOnReturnBytes() > 0))
+          (AI.getType()->isPointerTy() &&
+           !AI.getDeadOnReturnBytes().has_value()))
         InvisibleToCallerAfterRet.insert({&AI, true});
 
     // Collect whether there is any irreducible control flow in the function.

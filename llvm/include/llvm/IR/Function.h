@@ -525,7 +525,7 @@ public:
 
   /// Extract the number of dead_on_return bytes for a parameter.
   /// @param ArgNo Index of an argument, with 0 being the first function arg.
-  uint64_t getDeadOnReturnBytes(unsigned ArgNo) const {
+  std::optional<uint64_t> getDeadOnReturnBytes(unsigned ArgNo) const {
     return AttributeSets.getDeadOnReturnBytes(ArgNo);
   }
 

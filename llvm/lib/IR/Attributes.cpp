@@ -451,11 +451,14 @@ uint64_t Attribute::getDereferenceableBytes() const {
   return pImpl->getValueAsInt();
 }
 
-uint64_t Attribute::getDeadOnReturnBytes() const {
+std::optional<uint64_t> Attribute::getDeadOnReturnBytes() const {
   assert(hasAttribute(Attribute::DeadOnReturn) &&
          "Trying to get dead_on_return bytes from"
          "from a parameter without such an attribute!");
-  return pImpl->getValueAsInt();
+  uint64_t DeadBytes = pImpl->getValueAsInt();
+  if (DeadBytes == std::numeric_limits<uint64_t>::max())
+    return std::nullopt;
+  return DeadBytes;
 }
 
 uint64_t Attribute::getDereferenceableOrNullBytes() const {
@@ -581,8 +584,12 @@ std::string Attribute::getAsString(bool InAttrGrp) const {
   if (hasAttribute(Attribute::DereferenceableOrNull))
     return AttrWithBytesToString("dereferenceable_or_null");
 
-  if (hasAttribute(Attribute::DeadOnReturn))
+  if (hasAttribute(Attribute::DeadOnReturn)) {
+    uint64_t DeadBytes = getValueAsInt();
+    if (DeadBytes == std::numeric_limits<uint64_t>::max())
+      return "dead_on_return";
     return AttrWithBytesToString("dead_on_return");
+  }
 
   if (hasAttribute(Attribute::AllocSize)) {
     unsigned ElemSize;
@@ -1172,7 +1179,7 @@ uint64_t AttributeSet::getDereferenceableBytes() const {
   return SetNode ? SetNode->getDereferenceableBytes() : 0;
 }
 
-uint64_t AttributeSet::getDeadOnReturnBytes() const {
+std::optional<uint64_t> AttributeSet::getDeadOnReturnBytes() const {
   return SetNode ? SetNode->getDeadOnReturnBytes() : 0;
 }
 
@@ -1380,7 +1387,7 @@ uint64_t AttributeSetNode::getDereferenceableBytes() const {
   return 0;
 }
 
-uint64_t AttributeSetNode::getDeadOnReturnBytes() const {
+std::optional<uint64_t> AttributeSetNode::getDeadOnReturnBytes() const {
   if (auto A = findEnumAttribute(Attribute::DeadOnReturn))
     return A->getDeadOnReturnBytes();
   return 0;
@@ -2003,7 +2010,8 @@ uint64_t AttributeList::getRetDereferenceableOrNullBytes() const {
   return getRetAttrs().getDereferenceableOrNullBytes();
 }
 
-uint64_t AttributeList::getDeadOnReturnBytes(unsigned Index) const {
+std::optional<uint64_t>
+AttributeList::getDeadOnReturnBytes(unsigned Index) const {
   return getParamAttrs(Index).getDeadOnReturnBytes();
 }
 
@@ -2229,11 +2237,15 @@ AttrBuilder &AttrBuilder::addDereferenceableAttr(uint64_t Bytes) {
   return addRawIntAttr(Attribute::Dereferenceable, Bytes);
 }
 
-AttrBuilder &AttrBuilder::addDeadOnReturnAttr(uint64_t Bytes) {
-  if (Bytes == 0)
+AttrBuilder &AttrBuilder::addDeadOnReturnAttr(std::optional<uint64_t> Bytes) {
+  if (!Bytes.has_value())
+    return addRawIntAttr(Attribute::DeadOnReturn,
+                         std::numeric_limits<uint64_t>::max());
+
+  if (Bytes.value() == 0)
     return *this;
 
-  return addRawIntAttr(Attribute::DeadOnReturn, Bytes);
+  return addRawIntAttr(Attribute::DeadOnReturn, Bytes.value());
 }
 
 AttrBuilder &AttrBuilder::addDereferenceableOrNullAttr(uint64_t Bytes) {

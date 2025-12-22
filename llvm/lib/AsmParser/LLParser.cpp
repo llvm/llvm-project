@@ -1606,24 +1606,26 @@ bool LLParser::parseEnumAttribute(Attribute::AttrKind Attr, AttrBuilder &B,
     return false;
   }
   case Attribute::Dereferenceable: {
-    uint64_t Bytes;
+    std::optional<uint64_t> Bytes;
     if (parseOptionalAttrBytes(lltok::kw_dereferenceable, Bytes))
       return true;
-    B.addDereferenceableAttr(Bytes);
+    assert(Bytes.has_value());
+    B.addDereferenceableAttr(Bytes.value());
     return false;
   }
   case Attribute::DeadOnReturn: {
-    uint64_t Bytes;
+    std::optional<uint64_t> Bytes;
     if (parseOptionalAttrBytes(lltok::kw_dead_on_return, Bytes))
       return true;
     B.addDeadOnReturnAttr(Bytes);
     return false;
   }
   case Attribute::DereferenceableOrNull: {
-    uint64_t Bytes;
+    std::optional<uint64_t> Bytes;
     if (parseOptionalAttrBytes(lltok::kw_dereferenceable_or_null, Bytes))
       return true;
-    B.addDereferenceableOrNullAttr(Bytes);
+    assert(Bytes.has_value());
+    B.addDereferenceableOrNullAttr(Bytes.value());
     return false;
   }
   case Attribute::UWTable: {
@@ -2481,7 +2483,9 @@ bool LLParser::parseOptionalCodeModel(CodeModel::Model &model) {
 ///
 /// where AttrKind is either 'dereferenceable', 'dereferenceable_or_null', or
 /// 'dead_on_return'
-bool LLParser::parseOptionalAttrBytes(lltok::Kind AttrKind, uint64_t &Bytes) {
+bool LLParser::parseOptionalAttrBytes(lltok::Kind AttrKind,
+                                      std::optional<uint64_t> &Bytes,
+                                      bool ErrorNoBytes) {
   assert((AttrKind == lltok::kw_dereferenceable ||
           AttrKind == lltok::kw_dereferenceable_or_null ||
           AttrKind == lltok::kw_dead_on_return) &&
@@ -2491,16 +2495,20 @@ bool LLParser::parseOptionalAttrBytes(lltok::Kind AttrKind, uint64_t &Bytes) {
   if (!EatIfPresent(AttrKind))
     return false;
   LocTy ParenLoc = Lex.getLoc();
-  if (!EatIfPresent(lltok::lparen))
-    return error(ParenLoc, "expected '('");
+  if (!EatIfPresent(lltok::lparen)) {
+    if (ErrorNoBytes)
+      return error(ParenLoc, "expected '('");
+    Bytes = std::nullopt;
+    return false;
+  }
   LocTy DerefLoc = Lex.getLoc();
-  if (parseUInt64(Bytes))
+  if (parseUInt64(Bytes.value()))
     return true;
   ParenLoc = Lex.getLoc();
   if (!EatIfPresent(lltok::rparen))
     return error(ParenLoc, "expected ')'");
-  if (!Bytes)
-    return error(DerefLoc, "dereferenceable bytes must be non-zero");
+  if (!Bytes.value())
+    return error(DerefLoc, "byte count specified must be non-zero");
   return false;
 }
 
