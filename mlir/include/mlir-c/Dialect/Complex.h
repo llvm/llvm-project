@@ -16,7 +16,7 @@
 extern "C" {
 #endif
 
-MLIR_DECLARE_CAPI_DIALECT_REGISTRATION(Func, func);
+MLIR_DECLARE_CAPI_DIALECT_REGISTRATION(Complex, complex);
 
 /// Checks whether the given attribute is a complex attribute.
 MLIR_CAPI_EXPORTED bool mlirAttributeIsAComplex(MlirAttribute attr);
