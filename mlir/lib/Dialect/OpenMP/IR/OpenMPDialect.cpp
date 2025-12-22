@@ -72,7 +72,7 @@ struct MemRefPointerLikeModel
 
 struct LLVMPointerPointerLikeModel
     : public PointerLikeType::ExternalModel<LLVMPointerPointerLikeModel,
-                                            LLVM::LLVMPointerType> {
+                                            ptr::PtrType> {
   Type getElementType(Type pointer) const { return Type(); }
 };
 } // namespace
@@ -320,8 +320,7 @@ void OpenMPDialect::initialize() {
   declarePromisedInterface<ConvertToLLVMPatternInterface, OpenMPDialect>();
 
   MemRefType::attachInterface<MemRefPointerLikeModel>(*getContext());
-  LLVM::LLVMPointerType::attachInterface<LLVMPointerPointerLikeModel>(
-      *getContext());
+  ptr::PtrType::attachInterface<LLVMPointerPointerLikeModel>(*getContext());
 
   // Attach default offload module interface to module op to access
   // offload functionality through

@@ -14,10 +14,10 @@
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
+#include "mlir/Dialect/Ptr/IR/PtrDialect.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
-#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/Matchers.h"
@@ -4276,6 +4276,26 @@ Speculation::Speculatability SDivOp::getSpeculatability() {
 // LLVMDialect initialization, type parsing, and registration.
 //===----------------------------------------------------------------------===//
 
+namespace {
+struct LLVMOpAsmDialectInterface : public OpAsmDialectInterface {
+  using OpAsmDialectInterface::OpAsmDialectInterface;
+
+  void registerTypeAliasPrinter(InsertTypeAliasPrinter insertFn) const final {
+    insertFn(TypeID::get<LLVMPointerType>(),
+             [](Type type, AsmPrinter &printer, bool isStripped) {
+               auto ptrTy = dyn_cast<LLVMPointerType>(type);
+               if (!ptrTy)
+                 return;
+               if (isStripped) {
+                 ptrTy.print(printer);
+                 return;
+               }
+               printPrettyLLVMType(printer, ptrTy);
+             });
+  }
+};
+} // namespace
+
 void LLVMDialect::initialize() {
   registerAttributes();
 
@@ -4301,6 +4321,7 @@ void LLVMDialect::initialize() {
   allowUnknownOperations();
   declarePromisedInterface<DialectInlinerInterface, LLVMDialect>();
   detail::addBytecodeInterface(this);
+  addInterfaces<LLVMOpAsmDialectInterface>();
 }
 
 #define GET_OP_CLASSES

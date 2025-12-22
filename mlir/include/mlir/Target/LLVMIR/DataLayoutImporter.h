@@ -15,6 +15,7 @@
 #define MLIR_TARGET_LLVMIR_DATALAYOUTIMPORTER_H
 
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
+#include "mlir/Dialect/Ptr/IR/PtrAttrs.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/Interfaces/DataLayoutInterfaces.h"
 #include "llvm/ADT/MapVector.h"
@@ -92,8 +93,7 @@ private:
   FailureOr<DenseIntElementsAttr> tryToParseAlignment(StringRef token) const;
 
   /// Tries to parse the parameters of a pointer alignment entry.
-  FailureOr<DenseIntElementsAttr>
-  tryToParsePointerAlignment(StringRef token) const;
+  FailureOr<ptr::SpecAttr> tryToParsePointerAlignment(StringRef token) const;
 
   /// Adds a type alignment entry if there is none yet.
   LogicalResult tryToEmplaceAlignmentEntry(Type type, StringRef token);

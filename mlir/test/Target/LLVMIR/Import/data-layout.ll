@@ -4,7 +4,7 @@
 
 ; CHECK: dlti.dl_spec =
 ; CHECK: #dlti.dl_spec<
-; CHECK-SAME:   !llvm.ptr = dense<64> : vector<4xi64>
+; CHECK-SAME:   !llvm.ptr = #ptr.spec<size = 64, abi = 64, preferred = 64, index = 64>
 ; CHECK-SAME:   i1 = dense<8> : vector<2xi64>
 ; CHECK-SAME:   i8 = dense<8> : vector<2xi64>
 ; CHECK-SAME:   i16 = dense<16> : vector<2xi64>
@@ -21,9 +21,9 @@ target datalayout = ""
 
 ; CHECK: dlti.dl_spec =
 ; CHECK: #dlti.dl_spec<
-; CHECK-SAME:   !llvm.ptr<270> = dense<[32, 64, 64, 32]> : vector<4xi64>
-; CHECK-SAME:   !llvm.ptr<271> = dense<32> : vector<4xi64>
-; CHECK-SAME:   !llvm.ptr<272> = dense<64> : vector<4xi64>
+; CHECK-SAME:   !llvm.ptr<270> = #ptr.spec<size = 32, abi = 64, preferred = 64, index = 32>
+; CHECK-SAME:   !llvm.ptr<271> = #ptr.spec<size = 32, abi = 32, preferred = 32, index = 32>
+; CHECK-SAME:   !llvm.ptr<272> = #ptr.spec<size = 64, abi = 64, preferred = 64, index = 64>
 ; CHECK-SAME:   i64 = dense<64> : vector<2xi64>
 ; CHECK-SAME:   f80 = dense<128> : vector<2xi64>
 ; CHECK-SAME:   i8 = dense<8> : vector<2xi64>
@@ -38,8 +38,8 @@ target datalayout = "e-m:e-p270:32:64-p271:32:32-p272:64:64-i64:64-f80:128-n8:16
 
 ; CHECK: dlti.dl_spec =
 ; CHECK: #dlti.dl_spec<
-; CHECK-SAME:   !llvm.ptr<270> = dense<[16, 32, 64, 8]> : vector<4xi64>
-; CHECK-SAME:   !llvm.ptr<271> = dense<[16, 32, 64, 16]> : vector<4xi64>
+; CHECK-SAME:   !llvm.ptr<270> = #ptr.spec<size = 16, abi = 32, preferred = 64, index = 8>
+; CHECK-SAME:   !llvm.ptr<271> = #ptr.spec<size = 16, abi = 32, preferred = 64, index = 16>
 ; CHECK-SAME:   i64 = dense<[64, 128]> : vector<2xi64>
 ; CHECK-SAME:   "dlti.alloca_memory_space" = 1 : ui64
 ; CHECK-SAME:   "dlti.endianness" = "big"

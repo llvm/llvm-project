@@ -6,7 +6,7 @@
 //   common /common1/ a, b
 //   a = b
 // end subroutine test1
-module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4xi64>, i1 = dense<8> : vector<2xi64>, i8 = dense<8> : vector<2xi64>, i16 = dense<16> : vector<2xi64>, i32 = dense<32> : vector<2xi64>, i64 = dense<[32, 64]> : vector<2xi64>, f16 = dense<16> : vector<2xi64>, f64 = dense<64> : vector<2xi64>, f128 = dense<128> : vector<2xi64>, "dlti.endianness" = "little">, llvm.data_layout = ""} {
+module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = #ptr.spec<size = 64, abi = 64, preferred = 64, index = 64>, i1 = dense<8> : vector<2xi64>, i8 = dense<8> : vector<2xi64>, i16 = dense<16> : vector<2xi64>, i32 = dense<32> : vector<2xi64>, i64 = dense<[32, 64]> : vector<2xi64>, f16 = dense<16> : vector<2xi64>, f64 = dense<64> : vector<2xi64>, f128 = dense<128> : vector<2xi64>, "dlti.endianness" = "little">, llvm.data_layout = ""} {
   fir.global common @common1_(dense<0> : vector<8xi8>) {alignment = 4 : i64} : !fir.array<8xi8>
   func.func @_QPtest1() {
     %c4 = arith.constant 4 : index
@@ -47,7 +47,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4
 //   equivalence (a, b)
 //   a = b
 // end subroutine test2
-module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4xi64>, i1 = dense<8> : vector<2xi64>, i8 = dense<8> : vector<2xi64>, i16 = dense<16> : vector<2xi64>, i32 = dense<32> : vector<2xi64>, i64 = dense<[32, 64]> : vector<2xi64>, f16 = dense<16> : vector<2xi64>, f64 = dense<64> : vector<2xi64>, f128 = dense<128> : vector<2xi64>, "dlti.endianness" = "little">, llvm.data_layout = ""} {
+module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = #ptr.spec<size = 64, abi = 64, preferred = 64, index = 64>, i1 = dense<8> : vector<2xi64>, i8 = dense<8> : vector<2xi64>, i16 = dense<16> : vector<2xi64>, i32 = dense<32> : vector<2xi64>, i64 = dense<[32, 64]> : vector<2xi64>, f16 = dense<16> : vector<2xi64>, f64 = dense<64> : vector<2xi64>, f128 = dense<128> : vector<2xi64>, "dlti.endianness" = "little">, llvm.data_layout = ""} {
   fir.global common @common2_(dense<0> : vector<4xi8>) {alignment = 4 : i64} : !fir.array<4xi8>
   func.func @_QPtest2() {
     %c0 = arith.constant 0 : index
@@ -87,7 +87,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4
 //     c = d
 //   end subroutine inner
 // end subroutine test3
-module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4xi64>, i1 = dense<8> : vector<2xi64>, i8 = dense<8> : vector<2xi64>, i16 = dense<16> : vector<2xi64>, i32 = dense<32> : vector<2xi64>, i64 = dense<[32, 64]> : vector<2xi64>, f16 = dense<16> : vector<2xi64>, f64 = dense<64> : vector<2xi64>, f128 = dense<128> : vector<2xi64>, "dlti.endianness" = "little">, llvm.data_layout = ""} {
+module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = #ptr.spec<size = 64, abi = 64, preferred = 64, index = 64>, i1 = dense<8> : vector<2xi64>, i8 = dense<8> : vector<2xi64>, i16 = dense<16> : vector<2xi64>, i32 = dense<32> : vector<2xi64>, i64 = dense<[32, 64]> : vector<2xi64>, f16 = dense<16> : vector<2xi64>, f64 = dense<64> : vector<2xi64>, f128 = dense<128> : vector<2xi64>, "dlti.endianness" = "little">, llvm.data_layout = ""} {
   fir.global common @common3_(dense<0> : vector<8xi8>) {alignment = 4 : i64} : !fir.array<8xi8>
   func.func @_QPtest3() {
     %c4 = arith.constant 4 : index
@@ -148,7 +148,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4
 //     c = d
 //   end subroutine inner
 // end subroutine test4
-module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4xi64>, i1 = dense<8> : vector<2xi64>, i8 = dense<8> : vector<2xi64>, i16 = dense<16> : vector<2xi64>, i32 = dense<32> : vector<2xi64>, i64 = dense<[32, 64]> : vector<2xi64>, f16 = dense<16> : vector<2xi64>, f64 = dense<64> : vector<2xi64>, f128 = dense<128> : vector<2xi64>, "dlti.endianness" = "little">, llvm.data_layout = ""} {
+module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = #ptr.spec<size = 64, abi = 64, preferred = 64, index = 64>, i1 = dense<8> : vector<2xi64>, i8 = dense<8> : vector<2xi64>, i16 = dense<16> : vector<2xi64>, i32 = dense<32> : vector<2xi64>, i64 = dense<[32, 64]> : vector<2xi64>, f16 = dense<16> : vector<2xi64>, f64 = dense<64> : vector<2xi64>, f128 = dense<128> : vector<2xi64>, "dlti.endianness" = "little">, llvm.data_layout = ""} {
   fir.global common @common4_(dense<0> : vector<8xi8>) {alignment = 4 : i64} : !fir.array<8xi8>
   func.func @_QPtest4() {
     %c4 = arith.constant 4 : index
@@ -203,7 +203,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4
 //   common /common5/ a, b
 //   a = b
 // end subroutine test5
-module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4xi64>, i1 = dense<8> : vector<2xi64>, i8 = dense<8> : vector<2xi64>, i16 = dense<16> : vector<2xi64>, i32 = dense<32> : vector<2xi64>, i64 = dense<[32, 64]> : vector<2xi64>, f16 = dense<16> : vector<2xi64>, f64 = dense<64> : vector<2xi64>, f128 = dense<128> : vector<2xi64>, "dlti.endianness" = "little">, llvm.data_layout = ""} {
+module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = #ptr.spec<size = 64, abi = 64, preferred = 64, index = 64>, i1 = dense<8> : vector<2xi64>, i8 = dense<8> : vector<2xi64>, i16 = dense<16> : vector<2xi64>, i32 = dense<32> : vector<2xi64>, i64 = dense<[32, 64]> : vector<2xi64>, f16 = dense<16> : vector<2xi64>, f64 = dense<64> : vector<2xi64>, f128 = dense<128> : vector<2xi64>, "dlti.endianness" = "little">, llvm.data_layout = ""} {
   fir.global common @common5_(dense<0> : vector<8xi8>) {alignment = 4 : i64} : !fir.array<8xi8>
   func.func @_QPtest5() {
     %c4 = arith.constant 4 : index
@@ -249,7 +249,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4
 // end subroutine test6
 //
 // Test that all accesses are using the same TBAA tag.
-module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4xi64>, i1 = dense<8> : vector<2xi64>, i8 = dense<8> : vector<2xi64>, i16 = dense<16> : vector<2xi64>, i32 = dense<32> : vector<2xi64>, i64 = dense<[32, 64]> : vector<2xi64>, f16 = dense<16> : vector<2xi64>, f64 = dense<64> : vector<2xi64>, f128 = dense<128> : vector<2xi64>, "dlti.endianness" = "little">, llvm.data_layout = ""} {
+module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = #ptr.spec<size = 64, abi = 64, preferred = 64, index = 64>, i1 = dense<8> : vector<2xi64>, i8 = dense<8> : vector<2xi64>, i16 = dense<16> : vector<2xi64>, i32 = dense<32> : vector<2xi64>, i64 = dense<[32, 64]> : vector<2xi64>, f16 = dense<16> : vector<2xi64>, f64 = dense<64> : vector<2xi64>, f128 = dense<128> : vector<2xi64>, "dlti.endianness" = "little">, llvm.data_layout = ""} {
   fir.global common @block_(dense<0> : vector<80xi8>) {alignment = 4 : i64} : !fir.array<80xi8>
   func.func @_QPtest6() {
     %c1 = arith.constant 1 : index
@@ -313,7 +313,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4
 //   * access to 'b' is tagged with global data/block_/bytes_40_to_43
 //   * access to 'a' is not tagged, because it overlaps with
 //     a descriptor.
-module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4xi64>, i1 = dense<8> : vector<2xi64>, i8 = dense<8> : vector<2xi64>, i16 = dense<16> : vector<2xi64>, i32 = dense<32> : vector<2xi64>, i64 = dense<[32, 64]> : vector<2xi64>, f16 = dense<16> : vector<2xi64>, f64 = dense<64> : vector<2xi64>, f128 = dense<128> : vector<2xi64>, "dlti.endianness" = "little">, llvm.data_layout = ""} {  fir.global common @block_(dense<0> : vector<44xi8>) {alignment = 4 : i64} : !fir.array<44xi8>
+module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = #ptr.spec<size = 64, abi = 64, preferred = 64, index = 64>, i1 = dense<8> : vector<2xi64>, i8 = dense<8> : vector<2xi64>, i16 = dense<16> : vector<2xi64>, i32 = dense<32> : vector<2xi64>, i64 = dense<[32, 64]> : vector<2xi64>, f16 = dense<16> : vector<2xi64>, f64 = dense<64> : vector<2xi64>, f128 = dense<128> : vector<2xi64>, "dlti.endianness" = "little">, llvm.data_layout = ""} {  fir.global common @block_(dense<0> : vector<44xi8>) {alignment = 4 : i64} : !fir.array<44xi8>
   func.func @_QPtest7() {
     %c1 = arith.constant 1 : index
     %c40 = arith.constant 40 : index
@@ -380,7 +380,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4
 // because there is member containing descriptor in 'block',
 // and we cannot reliably trace the storage for 'b'.
 // In most cases, the storage should be traceable.
-module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4xi64>, i1 = dense<8> : vector<2xi64>, i8 = dense<8> : vector<2xi64>, i16 = dense<16> : vector<2xi64>, i32 = dense<32> : vector<2xi64>, i64 = dense<[32, 64]> : vector<2xi64>, f16 = dense<16> : vector<2xi64>, f64 = dense<64> : vector<2xi64>, f128 = dense<128> : vector<2xi64>, "dlti.endianness" = "little">, llvm.data_layout = ""} {  fir.global common @block_(dense<0> : vector<44xi8>) {alignment = 4 : i64} : !fir.array<44xi8>
+module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = #ptr.spec<size = 64, abi = 64, preferred = 64, index = 64>, i1 = dense<8> : vector<2xi64>, i8 = dense<8> : vector<2xi64>, i16 = dense<16> : vector<2xi64>, i32 = dense<32> : vector<2xi64>, i64 = dense<[32, 64]> : vector<2xi64>, f16 = dense<16> : vector<2xi64>, f64 = dense<64> : vector<2xi64>, f128 = dense<128> : vector<2xi64>, "dlti.endianness" = "little">, llvm.data_layout = ""} {  fir.global common @block_(dense<0> : vector<44xi8>) {alignment = 4 : i64} : !fir.array<44xi8>
   func.func @_QPtest8() {
     %c1 = arith.constant 1 : index
     %c40 = arith.constant 40 : index
@@ -439,7 +439,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4
 // end subroutine
 //
 // Test generation of tbaa tags where some members of a common block are TARGET
-module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4xi64>, i1 = dense<8> : vector<2xi64>, i8 = dense<8> : vector<2xi64>, i16 = dense<16> : vector<2xi64>, i32 = dense<32> : vector<2xi64>, i64 = dense<[32, 64]> : vector<2xi64>, f16 = dense<16> : vector<2xi64>, f64 = dense<64> : vector<2xi64>, f128 = dense<128> : vector<2xi64>, "dlti.endianness" = "little">, llvm.data_layout = ""} {  fir.global common @block_(dense<0> : vector<44xi8>) {alignment = 4 : i64} : !fir.array<44xi8>
+module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = #ptr.spec<size = 64, abi = 64, preferred = 64, index = 64>, i1 = dense<8> : vector<2xi64>, i8 = dense<8> : vector<2xi64>, i16 = dense<16> : vector<2xi64>, i32 = dense<32> : vector<2xi64>, i64 = dense<[32, 64]> : vector<2xi64>, f16 = dense<16> : vector<2xi64>, f64 = dense<64> : vector<2xi64>, f128 = dense<128> : vector<2xi64>, "dlti.endianness" = "little">, llvm.data_layout = ""} {  fir.global common @block_(dense<0> : vector<44xi8>) {alignment = 4 : i64} : !fir.array<44xi8>
   fir.global common @common1_(dense<0> : vector<12xi8>) {alignment = 4 : i64} : !fir.array<12xi8>
   func.func @_QPtarget_common_tbaa() {
     %c8 = arith.constant 8 : index

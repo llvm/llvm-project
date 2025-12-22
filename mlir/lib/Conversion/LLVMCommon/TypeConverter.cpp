@@ -8,6 +8,7 @@
 
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
 #include "mlir/Conversion/LLVMCommon/MemRefBuilder.h"
+#include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "llvm/ADT/ScopeExit.h"
@@ -586,6 +587,9 @@ LLVMTypeConverter::getMemRefAddressSpace(BaseMemRefType type) const {
         explicitSpace.getType().isSignlessInteger())
       return explicitSpace.getInt();
   }
+  if (auto addrSpaceAttr =
+          dyn_cast_if_present<LLVM::LLVMAddrSpaceAttrInterface>(*converted))
+    return addrSpaceAttr.getAddressSpace();
   return failure();
 }
 

@@ -22,8 +22,8 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<
 #dlti.dl_entry<index, 64>,
 #dlti.dl_entry<i64, dense<[64,128]> : vector<2xi64>>,
 #dlti.dl_entry<f80, dense<[128,256]> : vector<2xi64>>,
-#dlti.dl_entry<!llvm.ptr, dense<[32,64,128]> : vector<3xi64>>,
-#dlti.dl_entry<!llvm.ptr<1>, dense<[32,32,32,16]> : vector<4xi64>>
+#dlti.dl_entry<!llvm.ptr, #ptr.spec<size = 32, abi = 64, preferred = 128>>,
+#dlti.dl_entry<!llvm.ptr<1>, #ptr.spec<size = 32, abi = 32, preferred = 32, index = 16>>
 >} {
   llvm.func @foo() {
     llvm.return

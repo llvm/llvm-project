@@ -255,41 +255,6 @@ def LLVMStructType : LLVMType<"LLVMStruct", "struct", [
 }
 
 //===----------------------------------------------------------------------===//
-// LLVMPointerType
-//===----------------------------------------------------------------------===//
-
-def LLVMPointerType : LLVMType<"LLVMPointer", "ptr", [
-    DeclareTypeInterfaceMethods<DataLayoutTypeInterface, [
-      "getIndexBitwidth", "areCompatible", "verifyEntries",
-      "getPreferredAlignment"]>,
-    VectorElementTypeInterface]> {
-  let summary = "LLVM pointer type";
-  let description = [{
-    The `!llvm.ptr` type is an LLVM pointer type. This type typically represents
-    a reference to an object in memory. Pointers are optionally parameterized
-    by the address space.
-
-    Example:
-
-    ```mlir
-    !llvm.ptr
-    ```
-  }];
-
-  let parameters = (ins DefaultValuedParameter<"unsigned", "0">:$addressSpace);
-  let assemblyFormat = [{
-    (`<` $addressSpace^ `>`)?
-  }];
-
-  let skipDefaultBuilders = 1;
-  let builders = [
-    TypeBuilder<(ins CArg<"unsigned", "0">:$addressSpace), [{
-      return $_get($_ctxt, addressSpace);
-    }]>
-  ];
-}
-
-//===----------------------------------------------------------------------===//
 // LLVMTargetExtType
 //===----------------------------------------------------------------------===//
 
