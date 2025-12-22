@@ -130,7 +130,7 @@ static std::string ReadPCHRecord(StringRef type) {
       .EndsWith("Decl *", "Record.readDeclAs<" + type.drop_back().str() + ">()")
       .Case("TypeSourceInfo *", "Record.readTypeSourceInfo()")
       .Case("Expr *", "Record.readExpr()")
-      .Case("IdentifierInfo *", "Record.readIdentifier()")
+      .Case("const IdentifierInfo *", "Record.readIdentifier()")
       .Case("StringRef", "Record.readString()")
       .Case("ParamIdx", "ParamIdx::deserialize(Record.readInt())")
       .Case("OMPTraitInfo *", "Record.readOMPTraitInfo()")
@@ -152,7 +152,7 @@ static std::string WritePCHRecord(StringRef type, StringRef name) {
              .Case("TypeSourceInfo *",
                    "AddTypeSourceInfo(" + name.str() + ");\n")
              .Case("Expr *", "AddStmt(" + name.str() + ");\n")
-             .Case("IdentifierInfo *",
+             .Case("const IdentifierInfo *",
                    "AddIdentifierRef(" + name.str() + ");\n")
              .Case("StringRef", "AddString(" + name.str() + ");\n")
              .Case("ParamIdx", "push_back(" + name.str() + ".serialize());\n")
@@ -340,7 +340,7 @@ namespace {
         return ((subject == list) || ...);
       };
 
-      if (IsOneOf(type, "IdentifierInfo *", "Expr *"))
+      if (IsOneOf(type, "const IdentifierInfo *", "Expr *"))
         return "!get" + getUpperName().str() + "()";
       if (IsOneOf(type, "TypeSourceInfo *"))
         return "!get" + getUpperName().str() + "Loc()";
@@ -356,7 +356,7 @@ namespace {
       if (type == "FunctionDecl *")
         OS << "\" << get" << getUpperName()
            << "()->getNameInfo().getAsString() << \"";
-      else if (type == "IdentifierInfo *")
+      else if (type == "const IdentifierInfo *")
         // Some non-optional (comma required) identifier arguments can be the
         // empty string but are then recorded as a nullptr.
         OS << "\" << (get" << getUpperName() << "() ? get" << getUpperName()
@@ -375,7 +375,7 @@ namespace {
       if (StringRef(type).ends_with("Decl *")) {
         OS << "    OS << \" \";\n";
         OS << "    dumpBareDeclRef(SA->get" << getUpperName() << "());\n";
-      } else if (type == "IdentifierInfo *") {
+      } else if (type == "const IdentifierInfo *") {
         // Some non-optional (comma required) identifier arguments can be the
         // empty string but are then recorded as a nullptr.
         OS << "    if (SA->get" << getUpperName() << "())\n"
@@ -1371,7 +1371,7 @@ namespace {
   class VariadicIdentifierArgument : public VariadicArgument {
   public:
     VariadicIdentifierArgument(const Record &Arg, StringRef Attr)
-      : VariadicArgument(Arg, Attr, "IdentifierInfo *")
+      : VariadicArgument(Arg, Attr, "const IdentifierInfo *")
     {}
   };
 
@@ -1481,7 +1481,7 @@ createArgument(const Record &Arg, StringRef Attr,
     Ptr = std::make_unique<SimpleArgument>(
         Arg, Attr, (Arg.getValueAsDef("Kind")->getName() + "Decl *").str());
   else if (ArgName == "IdentifierArgument")
-    Ptr = std::make_unique<SimpleArgument>(Arg, Attr, "IdentifierInfo *");
+    Ptr = std::make_unique<SimpleArgument>(Arg, Attr, "const IdentifierInfo *");
   else if (ArgName == "DefaultBoolArgument")
     Ptr = std::make_unique<DefaultSimpleArgument>(
         Arg, Attr, "bool", Arg.getValueAsBit("Default"));
