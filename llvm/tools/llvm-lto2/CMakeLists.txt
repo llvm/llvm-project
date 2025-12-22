@@ -6,6 +6,7 @@ set(LLVM_LINK_COMPONENTS
   BitReader
   CodeGen
   Core
+  Extensions
   Linker
   LTO
   MC
