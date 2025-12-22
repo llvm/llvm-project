@@ -3186,6 +3186,24 @@ def TestEffectsWriteEF : TEST_Op<"test_effects_write_EF",
 def TestEffectsReadEF : TEST_Op<"test_effects_read_EF",
   [MemoryEffects<[MemRead<TestResourceE>, MemRead<TestResourceF>]>]>;
 
+def TestEffectsInitVectorPipeline : TEST_Op<"test_effects_init_vector_pipeline",
+  [MemoryEffects<[MemWrite<TestResourceA>]>]>;
+
+def TestEffectsInitMatrixPipeline : TEST_Op<"test_effects_init_matrix_pipeline",
+  [MemoryEffects<[MemWrite<TestResourceB>, MemWrite<TestResourceC>]>]>;
+
+def TestEffectsInitSpecialPipeline : TEST_Op<"test_effects_init_special_pipeline",
+  [MemoryEffects<[MemWrite<TestResourceA>]>]>;
+
+def TestEffectsVectorOp : TEST_Op<"test_effects_vector_op",
+  [MemoryEffects<[MemRead<TestResourceA, 0>, MemRead<TestResourceD, 0>, MemWrite<TestResourceD, 1>]>]>;
+
+def TestEffectsMatrixOp : TEST_Op<"test_effects_matrix_op",
+  [MemoryEffects<[MemRead<TestResourceB, 0>, MemRead<TestResourceC, 0>, MemRead<TestResourceD, 0>, MemWrite<TestResourceD, 1>]>]>;
+
+def TestEffectsSpecialOp : TEST_Op<"test_effects_special_op",
+  [MemoryEffects<[MemRead<TestResourceA, 0>, MemRead<TestResourceD, 0>, MemWrite<TestResourceD, 1>]>]>;
+
 
 //===----------------------------------------------------------------------===//
 // Test Ops with verifiers

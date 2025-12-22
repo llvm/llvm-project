@@ -351,12 +351,14 @@ namespace MemoryEffects {
 /// Effects for when two Effect instances on the same op are defined with the
 /// same Stage.
 ///
-/// This adds a concrete evaluation priority to the Effect instances to allow us
-/// to analyze potential Memory Effect conflicts in a transparent, predictable,
+/// This adds a concrete evaluation order to the Effect instances to allow us
+/// to sort the Effect Instances in the same order that they will be taking place
+/// as the op is executing. This allows us to then analyze this sequence of Memory Effects
+/// for potential conflicts in a transparent, predictable,
 /// and deterministic manner AND creates a better defined contract with users.
 /// i.e., a set of Memory Effect instances on an op could look like the
 /// following: [MemRead<rA, 0>, MemFree<rA, 0>] where the evaluation order is
-/// ambiguous based on how the user defined both effects with the same Stage 0.
+/// ambiguous based on how the user defined both effects with the same Stage.
 /// If we Read then Free, we are safe. If we Free first, then we'll Read
 /// garbage. Reordering the effects based on priority removes this ambiguity.
 /// Stage values can be leveraged by users to define the exact order that the
@@ -399,7 +401,7 @@ struct Effect : public SideEffects::Effect {
   StringRef getEffectName() const { return effectName; }
 
 protected:
-  /// Priority value for this effect. Lower numbers indicate higher precedence.
+  /// Priority value for this effect. Higher numbers indicate higher precedence.
   Priority priority = Priority::DefaultPriority;
   StringRef effectName = "<DefaultMemEffect>";
 };

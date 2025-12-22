@@ -2124,3 +2124,80 @@ func.func @no_move_same_op_conflicting_write_before_read() attributes {} {
 
   return
 }
+
+// -----
+
+// CHECK-LABEL func.func @pipeline_init_example
+func.func @pipeline_init_example() attributes {} {
+  // Constants are used to mark loops based on upper bound to
+  // make it more clear which loops were moved and to where
+  %c0_i32 = arith.constant 0 : i32
+  %c1_i32 = arith.constant 1 : i32
+  %c10_i32 = arith.constant 10 : i32
+
+  // CHECK: "test.test_effects_init_matrix_pipeline"() : () -> ()
+  // CHECK: "test.test_effects_init_vector_pipeline"() : () -> ()
+
+  // CHECK: scf.for %[[IV:.*]] = %c0_i32 to %c10_i32 step %c1_i32
+  scf.for %arg0 = %c0_i32 to %c10_i32 step %c1_i32  : i32 {
+    // CHECK: "test.test_effects_matrix_op"() : () -> ()
+    // CHECK: "test.test_effects_vector_op"() : () -> ()
+
+    // We want to execute two operations that each need to initialize 
+    // a set of independent resources before executing (e.g. reset 
+    // a compute pipeline configuration register).
+    // Init ops write to these resources to configure
+    // them while the main ops read them to create a dependency 
+    // such that the init ops cannot be moved ahead of the main ops. 
+    // The main ops are also set to read and write to the same resource D (e.g. a core register bank)
+    // to make them immovable. This then allows the LICM pass to hoist out the init ops that don't write
+    // to conflicting resources while the main ops stay in place with their relative order in tact.  
+
+    // Initializes compute pipelines for a matrix operation
+    // by writing to resources B and C.
+    "test.test_effects_init_matrix_pipeline"() : () -> ()
+    // Reads/checks states of resources B and C, reads and writes to resource D.
+    "test.test_effects_matrix_op"() : () -> ()
+
+    // Initializes compute pipelines for a vector operation
+    // by writing to resource A.
+    "test.test_effects_init_vector_pipeline"() : () -> ()
+    // Reads/checks states of resource A, reads and writes to resource D.
+    "test.test_effects_vector_op"() : () -> ()
+  }
+
+
+  // CHECK: "test.test_effects_init_matrix_pipeline"() : () -> ()
+
+
+  // CHECK: scf.for %[[IV:.*]] = %c0_i32 to %c10_i32 step %c1_i32
+  scf.for %arg0 = %c0_i32 to %c10_i32 step %c1_i32  : i32 {
+
+    // CHECK: "test.test_effects_matrix_op"() : () -> ()
+
+    // Conflicts with init_special_pipeline. Neither can be moved out.
+    // CHECK: "test.test_effects_init_vector_pipeline"() : () -> ()
+    // CHECK: "test.test_effects_vector_op"() : () -> ()
+
+    // CHECK: "test.test_effects_init_special_pipeline"() : () -> ()
+    // CHECK: "test.test_effects_special_op"() : () -> ()
+
+    // Initializes compute pipelines for a matrix operation
+    // by writing to resources B and C.
+    "test.test_effects_init_matrix_pipeline"() : () -> ()
+    // Reads resources B and C, reads and writes to resource D.
+    "test.test_effects_matrix_op"() : () -> ()
+
+    // Writes to resource A.
+    "test.test_effects_init_vector_pipeline"() : () -> ()
+    // Reads resource A, reads and writes to resource D.
+    "test.test_effects_vector_op"() : () -> ()
+
+    // Writes to resource A.
+    "test.test_effects_init_special_pipeline"() : () -> ()
+    // Reads resource A, reads and writes to resource D.
+    "test.test_effects_special_op"() : () -> ()
+  }
+
+  return
+}
