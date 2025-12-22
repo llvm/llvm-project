@@ -67,8 +67,8 @@ static StackFrame CreateStackFrame(DAP &dap, lldb::SBFrame &frame,
     stack_frame.column = 1;
   } else {
     // No valid line entry or symbol.
-    stack_frame.line = 1;
-    stack_frame.column = 1;
+    stack_frame.line = 0;
+    stack_frame.column = 0;
   }
 
   stack_frame.source = std::move(source);
@@ -104,6 +104,8 @@ static StackFrame CreateExtendedStackFrameLabel(lldb::SBThread &thread,
 
   stack_frame.id = thread.GetThreadID() + 1;
   stack_frame.presentationHint = StackFrame::ePresentationHintLabel;
+  stack_frame.line = 0;
+  stack_frame.column = 0;
 
   return stack_frame;
 }

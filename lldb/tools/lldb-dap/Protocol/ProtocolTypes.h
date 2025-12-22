@@ -32,6 +32,7 @@
 #define LLDB_DAP_INVALID_VAR_REF INT64_MAX
 #define LLDB_DAP_INVALID_SRC_REF 0
 #define LLDB_DAP_INVALID_VALUE_LOC 0
+#define LLDB_DAP_INVALID_STACK_FRAME_ID UINT64_MAX
 
 namespace lldb_dap::protocol {
 
@@ -1074,6 +1075,7 @@ bool fromJSON(const llvm::json::Value &, StackFrameFormat &, llvm::json::Path);
 /// A Stackframe contains the source location.
 struct StackFrame {
   enum PresentationHint : unsigned {
+    ePresentationHintNone,
     ePresentationHintNormal,
     ePresentationHintLabel,
     ePresentationHintSubtle,
@@ -1082,7 +1084,7 @@ struct StackFrame {
   /// An identifier for the stack frame. It must be unique across all threads.
   /// This id can be used to retrieve the scopes of the frame with the `scopes`
   /// request or to restart the execution of a stack frame.
-  lldb::tid_t id;
+  lldb::tid_t id = LLDB_DAP_INVALID_STACK_FRAME_ID;
 
   /// The name of the stack frame, typically a method name.
   std::string name;
@@ -1126,7 +1128,7 @@ struct StackFrame {
   /// visual label or separator. A value of `subtle` can be used to change the
   /// appearance of a frame in a 'subtle' way. Values: 'normal', 'label',
   /// 'subtle'
-  std::optional<PresentationHint> presentationHint;
+  PresentationHint presentationHint = ePresentationHintNone;
 };
 llvm::json::Value toJSON(const StackFrame::PresentationHint &);
 llvm::json::Value toJSON(const StackFrame &);

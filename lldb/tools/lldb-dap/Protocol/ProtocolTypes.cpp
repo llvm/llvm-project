@@ -15,6 +15,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/JSON.h"
+#include <cassert>
 #include <optional>
 
 using namespace llvm;
@@ -1188,6 +1189,8 @@ bool fromJSON(const llvm::json::Value &Params, StackFrameFormat &SFF,
 
 llvm::json::Value toJSON(const StackFrame::PresentationHint &PH) {
   switch (PH) {
+  case StackFrame::ePresentationHintNone:
+    return "";
   case StackFrame::ePresentationHintNormal:
     return "normal";
   case StackFrame::ePresentationHintLabel:
@@ -1211,7 +1214,9 @@ llvm::json::Value toJSON(const StackFrame &SF) {
     if (SF.endColumn != 0 && SF.endColumn != LLDB_INVALID_COLUMN_NUMBER)
       result.insert({"endColumn", SF.endColumn});
   } else {
+    assert(SF.line == 0);
     result.insert({"line", 0});
+    assert(SF.column == 0);
     result.insert({"column", 0});
   }
   if (SF.canRestart)
@@ -1221,8 +1226,8 @@ llvm::json::Value toJSON(const StackFrame &SF) {
                    EncodeMemoryReference(SF.instructionPointerReference)});
   if (SF.moduleId)
     result.insert({"moduleId", *SF.moduleId});
-  if (SF.presentationHint)
-    result.insert({"presentationHint", *SF.presentationHint});
+  if (SF.presentationHint != StackFrame::ePresentationHintNone)
+    result.insert({"presentationHint", SF.presentationHint});
 
   return result;
 }
