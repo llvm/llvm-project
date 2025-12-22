@@ -69,6 +69,10 @@ LLVM_ABI MachineFunctionPass *createBasicBlockSectionsPass();
 
 LLVM_ABI MachineFunctionPass *createBasicBlockPathCloningPass();
 
+/// createBasicBlockMatchingAndInferencePass - This pass enables matching
+/// and inference when using propeller.
+LLVM_ABI MachineFunctionPass *createBasicBlockMatchingAndInferencePass();
+
 /// createMachineBlockHashInfoPass - This pass computes basic block hashes.
 LLVM_ABI MachineFunctionPass *createMachineBlockHashInfoPass();
 
@@ -543,10 +547,7 @@ LLVM_ABI FunctionPass *createExpandReductionsPass();
 LLVM_ABI FunctionPass *createReplaceWithVeclibLegacyPass();
 
 // Expands large div/rem instructions.
-LLVM_ABI FunctionPass *createExpandLargeDivRemPass();
-
-// Expands large div/rem instructions.
-LLVM_ABI FunctionPass *createExpandFpPass();
+LLVM_ABI FunctionPass *createExpandIRInstsPass();
 
 // This pass expands memcmp() to load/stores.
 LLVM_ABI FunctionPass *createExpandMemCmpLegacyPass();
@@ -564,7 +565,7 @@ LLVM_ABI FunctionPass *createCFIFixup();
 LLVM_ABI FunctionPass *createCFIInstrInserter();
 
 // Expands floating point instructions.
-FunctionPass *createExpandFpPass(CodeGenOptLevel);
+FunctionPass *createExpandIRInstsPass(CodeGenOptLevel);
 
 /// Creates CFGuard longjmp target identification pass.
 /// \see CFGuardLongjmp.cpp

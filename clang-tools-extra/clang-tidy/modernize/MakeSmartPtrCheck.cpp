@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "MakeSmartPtrCheck.h"
 #include "../utils/TypeTraits.h"
-#include "MakeSharedCheck.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Lex/Lexer.h"
 #include "clang/Lex/Preprocessor.h"
@@ -28,9 +28,8 @@ static std::string getNewExprName(const CXXNewExpr *NewExpr,
       CharSourceRange::getTokenRange(
           NewExpr->getAllocatedTypeSourceInfo()->getTypeLoc().getSourceRange()),
       SM, Lang);
-  if (NewExpr->isArray()) {
+  if (NewExpr->isArray())
     return (WrittenName + "[]").str();
-  }
   return WrittenName.str();
 }
 
@@ -153,9 +152,8 @@ void MakeSmartPtrCheck::checkConstruct(SourceManager &SM, ASTContext *Ctx,
   const SourceLocation ConstructCallStart = Construct->getExprLoc();
   const bool InMacro = ConstructCallStart.isMacroID();
 
-  if (InMacro && IgnoreMacros) {
+  if (InMacro && IgnoreMacros)
     return;
-  }
 
   bool Invalid = false;
   const StringRef ExprStr = Lexer::getSourceText(
@@ -169,13 +167,11 @@ void MakeSmartPtrCheck::checkConstruct(SourceManager &SM, ASTContext *Ctx,
               << MakeSmartPtrFunctionName;
 
   // Disable the fix in macros.
-  if (InMacro) {
+  if (InMacro)
     return;
-  }
 
-  if (!replaceNew(Diag, New, SM, Ctx)) {
+  if (!replaceNew(Diag, New, SM, Ctx))
     return;
-  }
 
   // Find the location of the template's left angle.
   const size_t LAngle = ExprStr.find('<');
@@ -228,28 +224,24 @@ void MakeSmartPtrCheck::checkReset(SourceManager &SM, ASTContext *Ctx,
 
   const bool InMacro = ExprStart.isMacroID();
 
-  if (InMacro && IgnoreMacros) {
+  if (InMacro && IgnoreMacros)
     return;
-  }
 
   // There are some cases where we don't have operator ("." or "->") of the
   // "reset" expression, e.g. call "reset()" method directly in the subclass of
   // "std::unique_ptr<>". We skip these cases.
-  if (OperatorLoc.isInvalid()) {
+  if (OperatorLoc.isInvalid())
     return;
-  }
 
   auto Diag = diag(ResetCallStart, "use %0 instead")
               << MakeSmartPtrFunctionName;
 
   // Disable the fix in macros.
-  if (InMacro) {
+  if (InMacro)
     return;
-  }
 
-  if (!replaceNew(Diag, New, SM, Ctx)) {
+  if (!replaceNew(Diag, New, SM, Ctx))
     return;
-  }
 
   Diag << FixItHint::CreateReplacement(
       CharSourceRange::getCharRange(OperatorLoc, ExprEnd),
@@ -439,9 +431,8 @@ bool MakeSmartPtrCheck::replaceNew(DiagnosticBuilder &Diag,
 }
 
 void MakeSmartPtrCheck::insertHeader(DiagnosticBuilder &Diag, FileID FD) {
-  if (MakeSmartPtrFunctionHeader.empty()) {
+  if (MakeSmartPtrFunctionHeader.empty())
     return;
-  }
   Diag << Inserter.createIncludeInsertion(FD, MakeSmartPtrFunctionHeader);
 }
 

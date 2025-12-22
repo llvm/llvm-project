@@ -1,3 +1,4 @@
+# REQUIRES: asserts
 # RUN: llc -mtriple=amdgcn -verify-machineinstrs -run-pass si-insert-waitcnts -debug-counter=si-insert-waitcnts-forcelgkm=0 -o - %s | FileCheck -check-prefixes=GCN,LGKM %s
 # RUN: llc -mtriple=amdgcn -verify-machineinstrs -run-pass si-insert-waitcnts -debug-counter=si-insert-waitcnts-forceexp=0-1 -o - %s | FileCheck -check-prefixes=GCN,EXP %s
 # RUN: llc -mtriple=amdgcn -verify-machineinstrs -run-pass si-insert-waitcnts -debug-counter=si-insert-waitcnts-forcevm=0-2 -o - %s | FileCheck -check-prefixes=GCN,VM %s

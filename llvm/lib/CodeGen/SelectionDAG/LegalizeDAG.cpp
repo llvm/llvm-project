@@ -993,18 +993,18 @@ void SelectionDAGLegalize::LegalizeOp(SDNode *Node) {
   TargetLowering::LegalizeAction Action = TargetLowering::Legal;
   bool SimpleFinishLegalizing = true;
   switch (Node->getOpcode()) {
-  // TODO: Currently, POISON is being lowered to UNDEF here. However, there is
-  // an open concern that this transformation may not be ideal, as targets
-  // should ideally handle POISON directly. Changing this behavior would require
-  // adding support for POISON in TableGen, which is a large change.
-  // Additionally, many existing test cases rely on the current behavior (e.g.,
-  // llvm/test/CodeGen/PowerPC/vec_shuffle.ll). A broader discussion and
-  // incremental changes might be needed to properly
-  // support POISON without breaking existing targets and tests.
   case ISD::POISON: {
+    // TODO: Currently, POISON is being lowered to UNDEF here. However, there is
+    // an open concern that this transformation may not be ideal, as targets
+    // should ideally handle POISON directly. Changing this behavior would
+    // require adding support for POISON in TableGen, which is a large change.
+    // Additionally, many existing test cases rely on the current behavior
+    // (e.g., llvm/test/CodeGen/PowerPC/vec_shuffle.ll). A broader discussion
+    // and incremental changes might be needed to properly support POISON
+    // without breaking existing targets and tests.
     SDValue UndefNode = DAG.getUNDEF(Node->getValueType(0));
     ReplaceNode(Node, UndefNode.getNode());
-    break;
+    return;
   }
   case ISD::INTRINSIC_W_CHAIN:
   case ISD::INTRINSIC_WO_CHAIN:
@@ -2051,7 +2051,8 @@ SDValue SelectionDAGLegalize::ExpandBUILD_VECTOR(SDNode *Node) {
           // we don't want a v16i8 to become a v16i32 for example.
           const ConstantInt *CI = V->getConstantIntValue();
           CV.push_back(ConstantInt::get(EltVT.getTypeForEVT(*DAG.getContext()),
-                                        CI->getZExtValue()));
+                                        CI->getZExtValue(), /*IsSigned=*/false,
+                                        /*ImplicitTrunc=*/true));
         }
       } else {
         assert(Node->getOperand(i).isUndef());
@@ -2127,8 +2128,9 @@ SelectionDAGLegalize::ExpandLibCall(RTLIB::Libcall LC, SDNode *Node,
                                     bool IsSigned, EVT RetVT) {
   EVT CodePtrTy = TLI.getPointerTy(DAG.getDataLayout());
   SDValue Callee;
-  if (const char *LibcallName = TLI.getLibcallName(LC))
-    Callee = DAG.getExternalSymbol(LibcallName, CodePtrTy);
+  RTLIB::LibcallImpl LCImpl = TLI.getLibcallImpl(LC);
+  if (LCImpl != RTLIB::Unsupported)
+    Callee = DAG.getExternalSymbol(LCImpl, CodePtrTy);
   else {
     Callee = DAG.getPOISON(CodePtrTy);
     DAG.getContext()->emitError(Twine("no libcall available for ") +
@@ -2157,7 +2159,7 @@ SelectionDAGLegalize::ExpandLibCall(RTLIB::Libcall LC, SDNode *Node,
   bool signExtend = TLI.shouldSignExtendTypeInLibCall(RetTy, IsSigned);
   CLI.setDebugLoc(SDLoc(Node))
       .setChain(InChain)
-      .setLibCallee(TLI.getLibcallCallingConv(LC), RetTy, Callee,
+      .setLibCallee(TLI.getLibcallImplCallingConv(LCImpl), RetTy, Callee,
                     std::move(Args))
       .setTailCall(isTailCall)
       .setSExtResult(signExtend)
@@ -2392,14 +2394,13 @@ SelectionDAGLegalize::ExpandDivRemLibCall(SDNode *Node,
   }
 
   SDValue Callee =
-      DAG.getExternalSymbol(TLI.getLibcallImplName(LibcallImpl).data(),
-                            TLI.getPointerTy(DAG.getDataLayout()));
+      DAG.getExternalSymbol(LibcallImpl, TLI.getPointerTy(DAG.getDataLayout()));
 
   SDLoc dl(Node);
   TargetLowering::CallLoweringInfo CLI(DAG);
   CLI.setDebugLoc(dl)
       .setChain(InChain)
-      .setLibCallee(TLI.getLibcallCallingConv(LC), RetTy, Callee,
+      .setLibCallee(TLI.getLibcallImplCallingConv(LibcallImpl), RetTy, Callee,
                     std::move(Args))
       .setSExtResult(isSigned)
       .setZExtResult(!isSigned);
@@ -2407,8 +2408,11 @@ SelectionDAGLegalize::ExpandDivRemLibCall(SDNode *Node,
   std::pair<SDValue, SDValue> CallInfo = TLI.LowerCallTo(CLI);
 
   // Remainder is loaded back from the stack frame.
-  SDValue Rem =
-      DAG.getLoad(RetVT, dl, CallInfo.second, FIPtr, MachinePointerInfo());
+  int FI = cast<FrameIndexSDNode>(FIPtr)->getIndex();
+  MachinePointerInfo PtrInfo =
+      MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), FI);
+
+  SDValue Rem = DAG.getLoad(RetVT, dl, CallInfo.second, FIPtr, PtrInfo);
   Results.push_back(CallInfo.first);
   Results.push_back(Rem);
 }
@@ -2461,10 +2465,9 @@ SDValue SelectionDAGLegalize::ExpandSincosStretLibCall(SDNode *Node) const {
 
   Type *SincosStretRetTy = FuncTy->getReturnType();
   CallingConv::ID CallConv = CallsInfo.getLibcallImplCallingConv(SincosStret);
-  StringRef LibcallImplName = CallsInfo.getLibcallImplName(SincosStret);
 
-  SDValue Callee = DAG.getExternalSymbol(LibcallImplName.data(),
-                                         TLI.getProgramPointerTy(DL));
+  SDValue Callee =
+      DAG.getExternalSymbol(SincosStret, TLI.getProgramPointerTy(DL));
 
   TargetLowering::ArgListTy Args;
   SDValue SRet;
@@ -3878,7 +3881,7 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     RTLIB::Libcall LC = RTLIB::getLDEXP(VT);
     // Use the LibCall instead, it is very likely faster
     // FIXME: Use separate LibCall action.
-    if (TLI.getLibcallName(LC))
+    if (TLI.getLibcallImpl(LC) != RTLIB::Unsupported)
       break;
 
     if (SDValue Expanded = expandLdexp(Node)) {
@@ -3893,7 +3896,7 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     RTLIB::Libcall LC = RTLIB::getFREXP(Node->getValueType(0));
     // Use the LibCall instead, it is very likely faster
     // FIXME: Use separate LibCall action.
-    if (TLI.getLibcallName(LC))
+    if (TLI.getLibcallImpl(LC) != RTLIB::Unsupported)
       break;
 
     if (SDValue Expanded = expandFrexp(Node)) {
@@ -4695,7 +4698,7 @@ void SelectionDAGLegalize::ConvertNodeToLibcall(SDNode *Node) {
     RTLIB::Libcall LC = RTLIB::getOUTLINE_ATOMIC(Opc, Order, VT);
     EVT RetVT = Node->getValueType(0);
     SmallVector<SDValue, 4> Ops;
-    if (TLI.getLibcallName(LC)) {
+    if (TLI.getLibcallImpl(LC) != RTLIB::Unsupported) {
       // If outline atomic available, prepare its arguments and expand.
       Ops.append(Node->op_begin() + 2, Node->op_end());
       Ops.push_back(Node->getOperand(1));
@@ -4961,7 +4964,7 @@ void SelectionDAGLegalize::ConvertNodeToLibcall(SDNode *Node) {
   case ISD::STRICT_FPOWI: {
     RTLIB::Libcall LC = RTLIB::getPOWI(Node->getSimpleValueType(0));
     assert(LC != RTLIB::UNKNOWN_LIBCALL && "Unexpected fpowi.");
-    if (!TLI.getLibcallName(LC)) {
+    if (TLI.getLibcallImpl(LC) == RTLIB::Unsupported) {
       // Some targets don't have a powi libcall; use pow instead.
       if (Node->isStrictFPOpcode()) {
         SDValue Exponent =

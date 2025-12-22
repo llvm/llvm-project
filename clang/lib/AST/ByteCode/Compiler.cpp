@@ -40,7 +40,7 @@ static std::optional<bool> getBoolValue(const Expr *E) {
 template <class Emitter> class DeclScope final : public LocalScope<Emitter> {
 public:
   DeclScope(Compiler<Emitter> *Ctx, const ValueDecl *VD)
-      : LocalScope<Emitter>(Ctx, VD), Scope(Ctx->P),
+      : LocalScope<Emitter>(Ctx), Scope(Ctx->P),
         OldInitializingDecl(Ctx->InitializingDecl) {
     Ctx->InitializingDecl = VD;
     Ctx->InitStack.push_back(InitLink::Decl(VD));
@@ -2137,8 +2137,7 @@ bool Compiler<Emitter>::visitCallArgs(ArrayRef<const Expr *> Args,
       }
 
       UnsignedOrNone LocalIndex =
-          allocateLocal(std::move(Source), Arg->getType(),
-                        /*ExtendingDecl=*/nullptr, ScopeKind::Call);
+          allocateLocal(std::move(Source), Arg->getType(), ScopeKind::Call);
       if (!LocalIndex)
         return false;
 
@@ -2451,7 +2450,7 @@ bool Compiler<Emitter>::VisitArrayInitLoopExpr(const ArrayInitLoopExpr *E) {
   // and the RHS is our SubExpr.
   for (size_t I = 0; I != Size; ++I) {
     ArrayIndexScope<Emitter> IndexScope(this, I);
-    LocalScope<Emitter> BS(this);
+    LocalScope<Emitter> BS(this, ScopeKind::FullExpression);
 
     if (!this->visitArrayElemInit(I, SubExpr, SubExprT))
       return false;
@@ -2504,6 +2503,15 @@ bool Compiler<Emitter>::VisitAbstractConditionalOperator(
   const Expr *TrueExpr = E->getTrueExpr();
   const Expr *FalseExpr = E->getFalseExpr();
 
+  if (std::optional<bool> BoolValue = getBoolValue(Condition)) {
+    if (*BoolValue)
+      return this->delegate(TrueExpr);
+    return this->delegate(FalseExpr);
+  }
+
+  // Force-init the scope, which creates a InitScope op. This is necessary so
+  // the scope is not only initialized in one arm of the conditional operator.
+  this->VarScope->forceInit();
   // The TrueExpr and FalseExpr of a conditional operator do _not_ create a
   // scope, which means the local variables created within them unconditionally
   // always exist. However, we need to later differentiate which branch was
@@ -2511,13 +2519,6 @@ bool Compiler<Emitter>::VisitAbstractConditionalOperator(
   // "enabled" flags on local variables are used for.
   llvm::SaveAndRestore LAAA(this->VarScope->LocalsAlwaysEnabled,
                             /*NewValue=*/false);
-
-  if (std::optional<bool> BoolValue = getBoolValue(Condition)) {
-    if (*BoolValue)
-      return this->delegate(TrueExpr);
-    return this->delegate(FalseExpr);
-  }
-
   bool IsBcpCall = false;
   if (const auto *CE = dyn_cast<CallExpr>(Condition->IgnoreParenCasts());
       CE && CE->getBuiltinCallee() == Builtin::BI__builtin_constant_p) {
@@ -2903,7 +2904,7 @@ bool Compiler<Emitter>::VisitCompoundAssignOperator(
 
 template <class Emitter>
 bool Compiler<Emitter>::VisitExprWithCleanups(const ExprWithCleanups *E) {
-  LocalScope<Emitter> ES(this);
+  LocalScope<Emitter> ES(this, ScopeKind::FullExpression);
   const Expr *SubExpr = E->getSubExpr();
 
   return this->delegate(SubExpr) && ES.destroyLocals(E);
@@ -2926,9 +2927,7 @@ bool Compiler<Emitter>::VisitMaterializeTemporaryExpr(
   // When we're initializing a global variable *or* the storage duration of
   // the temporary is explicitly static, create a global variable.
   OptPrimType SubExprT = classify(SubExpr);
-  bool IsStatic = E->getStorageDuration() == SD_Static;
-  if (IsStatic) {
-
+  if (E->getStorageDuration() == SD_Static) {
     UnsignedOrNone GlobalIndex = P.createGlobal(E);
     if (!GlobalIndex)
       return false;
@@ -2955,12 +2954,16 @@ bool Compiler<Emitter>::VisitMaterializeTemporaryExpr(
     return this->emitInitGlobalTempComp(TempDecl, E);
   }
 
+  ScopeKind VarScope = E->getStorageDuration() == SD_FullExpression
+                           ? ScopeKind::FullExpression
+                           : ScopeKind::Block;
+
   // For everyhing else, use local variables.
   if (SubExprT) {
     bool IsConst = SubExpr->getType().isConstQualified();
     bool IsVolatile = SubExpr->getType().isVolatileQualified();
-    unsigned LocalIndex = allocateLocalPrimitive(
-        E, *SubExprT, IsConst, IsVolatile, E->getExtendingDecl());
+    unsigned LocalIndex =
+        allocateLocalPrimitive(E, *SubExprT, IsConst, IsVolatile, VarScope);
     if (!this->VarScope->LocalsAlwaysEnabled &&
         !this->emitEnableLocal(LocalIndex, E))
       return false;
@@ -2975,9 +2978,10 @@ bool Compiler<Emitter>::VisitMaterializeTemporaryExpr(
 
   if (!this->checkLiteralType(SubExpr))
     return false;
+
   const Expr *Inner = E->getSubExpr()->skipRValueSubobjectAdjustments();
   if (UnsignedOrNone LocalIndex =
-          allocateLocal(E, Inner->getType(), E->getExtendingDecl())) {
+          allocateLocal(E, Inner->getType(), VarScope)) {
     InitLinkScope<Emitter> ILS(this, InitLink::Temp(*LocalIndex));
 
     if (!this->VarScope->LocalsAlwaysEnabled &&
@@ -4269,7 +4273,8 @@ template <class Emitter> bool Compiler<Emitter>::visit(const Expr *E) {
 
   // Create local variable to hold the return value.
   if (!E->isGLValue() && !canClassify(E->getType())) {
-    UnsignedOrNone LocalIndex = allocateLocal(stripDerivedToBaseCasts(E));
+    UnsignedOrNone LocalIndex = allocateLocal(
+        stripDerivedToBaseCasts(E), QualType(), ScopeKind::FullExpression);
     if (!LocalIndex)
       return false;
 
@@ -4626,9 +4631,11 @@ bool Compiler<Emitter>::emitConst(const APSInt &Value, const Expr *E) {
 }
 
 template <class Emitter>
-unsigned Compiler<Emitter>::allocateLocalPrimitive(
-    DeclTy &&Src, PrimType Ty, bool IsConst, bool IsVolatile,
-    const ValueDecl *ExtendingDecl, ScopeKind SC, bool IsConstexprUnknown) {
+unsigned Compiler<Emitter>::allocateLocalPrimitive(DeclTy &&Src, PrimType Ty,
+                                                   bool IsConst,
+                                                   bool IsVolatile,
+                                                   ScopeKind SC,
+                                                   bool IsConstexprUnknown) {
   // FIXME: There are cases where Src.is<Expr*>() is wrong, e.g.
   //   (int){12} in C. Consider using Expr::isTemporaryObject() instead
   //   or isa<MaterializeTemporaryExpr>().
@@ -4639,16 +4646,12 @@ unsigned Compiler<Emitter>::allocateLocalPrimitive(
   Scope::Local Local = this->createLocal(D);
   if (auto *VD = dyn_cast_if_present<ValueDecl>(Src.dyn_cast<const Decl *>()))
     Locals.insert({VD, Local});
-  if (ExtendingDecl)
-    VarScope->addExtended(Local, ExtendingDecl);
-  else
-    VarScope->addForScopeKind(Local, SC);
+  VarScope->addForScopeKind(Local, SC);
   return Local.Offset;
 }
 
 template <class Emitter>
 UnsignedOrNone Compiler<Emitter>::allocateLocal(DeclTy &&Src, QualType Ty,
-                                                const ValueDecl *ExtendingDecl,
                                                 ScopeKind SC,
                                                 bool IsConstexprUnknown) {
   const ValueDecl *Key = nullptr;
@@ -4676,10 +4679,7 @@ UnsignedOrNone Compiler<Emitter>::allocateLocal(DeclTy &&Src, QualType Ty,
   Scope::Local Local = this->createLocal(D);
   if (Key)
     Locals.insert({Key, Local});
-  if (ExtendingDecl)
-    VarScope->addExtended(Local, ExtendingDecl);
-  else
-    VarScope->addForScopeKind(Local, SC);
+  VarScope->addForScopeKind(Local, SC);
   return Local.Offset;
 }
 
@@ -4731,7 +4731,7 @@ const Function *Compiler<Emitter>::getFunction(const FunctionDecl *FD) {
 
 template <class Emitter>
 bool Compiler<Emitter>::visitExpr(const Expr *E, bool DestroyToplevelScope) {
-  LocalScope<Emitter> RootScope(this);
+  LocalScope<Emitter> RootScope(this, ScopeKind::FullExpression);
 
   // If we won't destroy the toplevel scope, check for memory leaks first.
   if (!DestroyToplevelScope) {
@@ -4798,8 +4798,7 @@ VarCreationState Compiler<Emitter>::visitDecl(const VarDecl *VD,
   if (!R && Context::shouldBeGloballyIndexed(VD)) {
     if (auto GlobalIndex = P.getGlobal(VD)) {
       Block *GlobalBlock = P.getGlobal(*GlobalIndex);
-      GlobalInlineDescriptor &GD =
-          *reinterpret_cast<GlobalInlineDescriptor *>(GlobalBlock->rawData());
+      auto &GD = GlobalBlock->getBlockDesc<GlobalInlineDescriptor>();
 
       GD.InitState = GlobalInitState::InitializerFailed;
       GlobalBlock->invokeDtor();
@@ -4825,7 +4824,7 @@ bool Compiler<Emitter>::visitDeclAndReturn(const VarDecl *VD, const Expr *Init,
            LS.destroyLocals() && this->emitCheckAllocations(VD);
   }
 
-  LocalScope<Emitter> VDScope(this, VD);
+  LocalScope<Emitter> VDScope(this);
   if (!this->visitVarDecl(VD, Init, /*Toplevel=*/true))
     return false;
 
@@ -4860,8 +4859,7 @@ bool Compiler<Emitter>::visitDeclAndReturn(const VarDecl *VD, const Expr *Init,
       auto GlobalIndex = P.getGlobal(VD);
       assert(GlobalIndex);
       Block *GlobalBlock = P.getGlobal(*GlobalIndex);
-      GlobalInlineDescriptor &GD =
-          *reinterpret_cast<GlobalInlineDescriptor *>(GlobalBlock->rawData());
+      auto &GD = GlobalBlock->getBlockDesc<GlobalInlineDescriptor>();
 
       GD.InitState = GlobalInitState::InitializerFailed;
       GlobalBlock->invokeDtor();
@@ -4936,7 +4934,7 @@ Compiler<Emitter>::visitVarDecl(const VarDecl *VD, const Expr *Init,
   if (VarT) {
     unsigned Offset = this->allocateLocalPrimitive(
         VD, *VarT, VD->getType().isConstQualified(),
-        VD->getType().isVolatileQualified(), nullptr, ScopeKind::Block,
+        VD->getType().isVolatileQualified(), ScopeKind::Block,
         IsConstexprUnknown);
 
     if (!Init)
@@ -4956,7 +4954,7 @@ Compiler<Emitter>::visitVarDecl(const VarDecl *VD, const Expr *Init,
   }
   // Local composite variables.
   if (UnsignedOrNone Offset = this->allocateLocal(
-          VD, VD->getType(), nullptr, ScopeKind::Block, IsConstexprUnknown)) {
+          VD, VD->getType(), ScopeKind::Block, IsConstexprUnknown)) {
     if (!Init)
       return true;
 
@@ -5671,19 +5669,24 @@ bool Compiler<Emitter>::visitReturnStmt(const ReturnStmt *RS) {
 }
 
 template <class Emitter> bool Compiler<Emitter>::visitIfStmt(const IfStmt *IS) {
+  LocalScope<Emitter> IfScope(this);
+
   auto visitChildStmt = [&](const Stmt *S) -> bool {
     LocalScope<Emitter> SScope(this);
     if (!visitStmt(S))
       return false;
     return SScope.destroyLocals();
   };
-  if (auto *CondInit = IS->getInit())
+
+  if (auto *CondInit = IS->getInit()) {
     if (!visitStmt(CondInit))
       return false;
+  }
 
-  if (const DeclStmt *CondDecl = IS->getConditionVariableDeclStmt())
+  if (const DeclStmt *CondDecl = IS->getConditionVariableDeclStmt()) {
     if (!visitDeclStmt(CondDecl))
       return false;
+  }
 
   // Save ourselves compiling some code and the jumps, etc. if the condition is
   // stataically known to be either true or false. We could look at more cases
@@ -5707,7 +5710,10 @@ template <class Emitter> bool Compiler<Emitter>::visitIfStmt(const IfStmt *IS) {
     if (!this->emitInv(IS))
       return false;
   } else {
+    LocalScope<Emitter> CondScope(this, ScopeKind::FullExpression);
     if (!this->visitBool(IS->getCond()))
+      return false;
+    if (!CondScope.destroyLocals())
       return false;
   }
 
@@ -5735,6 +5741,9 @@ template <class Emitter> bool Compiler<Emitter>::visitIfStmt(const IfStmt *IS) {
       return false;
     this->emitLabel(LabelEnd);
   }
+
+  if (!IfScope.destroyLocals())
+    return false;
 
   return true;
 }
@@ -6333,7 +6342,7 @@ bool Compiler<Emitter>::compileConstructor(const CXXConstructorDecl *Ctor) {
   InitLinkScope<Emitter> InitScope(this, InitLink::This());
   for (const auto *Init : Ctor->inits()) {
     // Scope needed for the initializers.
-    LocalScope<Emitter> Scope(this);
+    LocalScope<Emitter> Scope(this, ScopeKind::FullExpression);
 
     const Expr *InitExpr = Init->getInit();
     if (const FieldDecl *Member = Init->getMember()) {

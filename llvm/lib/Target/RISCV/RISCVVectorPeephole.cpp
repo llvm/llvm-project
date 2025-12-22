@@ -651,11 +651,23 @@ bool RISCVVectorPeephole::foldVMV_V_V(MachineInstr &MI) {
   if (!hasSameEEW(MI, *Src))
     return false;
 
+  std::optional<std::pair<unsigned, unsigned>> NeedsCommute;
+
   // Src needs to have the same passthru as VMV_V_V
   MachineOperand &SrcPassthru = Src->getOperand(Src->getNumExplicitDefs());
   if (SrcPassthru.getReg().isValid() &&
-      SrcPassthru.getReg() != Passthru.getReg())
-    return false;
+      SrcPassthru.getReg() != Passthru.getReg()) {
+    // If Src's passthru != Passthru, check if it uses Passthru in another
+    // operand and try to commute it.
+    int OtherIdx = Src->findRegisterUseOperandIdx(Passthru.getReg(), TRI);
+    if (OtherIdx == -1)
+      return false;
+    unsigned OpIdx1 = OtherIdx;
+    unsigned OpIdx2 = Src->getNumExplicitDefs();
+    if (!TII->findCommutedOpIndices(*Src, OpIdx1, OpIdx2))
+      return false;
+    NeedsCommute = {OpIdx1, OpIdx2};
+  }
 
   // Src VL will have already been reduced if legal (see tryToReduceVL),
   // so we don't need to handle a smaller source VL here.  However, the
@@ -667,6 +679,13 @@ bool RISCVVectorPeephole::foldVMV_V_V(MachineInstr &MI) {
   // If the new passthru doesn't dominate Src, try to move Src so it does.
   if (!ensureDominates(Passthru, *Src))
     return false;
+
+  if (NeedsCommute) {
+    auto [OpIdx1, OpIdx2] = *NeedsCommute;
+    [[maybe_unused]] bool Commuted =
+        TII->commuteInstruction(*Src, /*NewMI=*/false, OpIdx1, OpIdx2);
+    assert(Commuted && "Failed to commute Src?");
+  }
 
   if (SrcPassthru.getReg() != Passthru.getReg()) {
     SrcPassthru.setReg(Passthru.getReg());

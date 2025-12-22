@@ -132,13 +132,13 @@ protected:
 
   /// Allocate the array of Uses, followed by a pointer
   /// (with bottom bit set) to the User.
-  /// \param IsPhi identifies callers which are phi nodes and which need
-  /// N BasicBlock* allocated along with N
-  LLVM_ABI void allocHungoffUses(unsigned N, bool IsPhi = false);
+  /// \param WithExtraValues identifies callers which need N Value* allocated
+  /// along the N operands.
+  LLVM_ABI void allocHungoffUses(unsigned N, bool WithExtraValues = false);
 
   /// Grow the number of hung off uses.  Note that allocHungoffUses
   /// should be called if there are no uses.
-  LLVM_ABI void growHungoffUses(unsigned N, bool IsPhi = false);
+  LLVM_ABI void growHungoffUses(unsigned N, bool WithExtraValues = false);
 
 protected:
   // Use deleteValue() to delete a generic User.

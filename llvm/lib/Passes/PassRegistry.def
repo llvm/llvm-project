@@ -149,6 +149,7 @@ MODULE_PASS("print<ir2vec>", IR2VecPrinterPass(errs()))
 MODULE_PASS("print<ir2vec-vocab>", IR2VecVocabPrinterPass(errs()))
 MODULE_PASS("print<module-debuginfo>", ModuleDebugInfoPrinterPass(errs()))
 MODULE_PASS("print<reg-usage>", PhysicalRegisterUsageInfoPrinterPass(errs()))
+MODULE_PASS("prof-verify", ProfileVerifierPass())
 MODULE_PASS("pseudo-probe", SampleProfileProbePass(TM))
 MODULE_PASS("pseudo-probe-update", PseudoProbeUpdatePass())
 MODULE_PASS("recompute-globalsaa", RecomputeGlobalsAAPass())
@@ -432,7 +433,6 @@ FUNCTION_PASS("dot-post-dom", PostDomPrinter())
 FUNCTION_PASS("dot-post-dom-only", PostDomOnlyPrinter())
 FUNCTION_PASS("dse", DSEPass())
 FUNCTION_PASS("dwarf-eh-prepare", DwarfEHPreparePass(*TM))
-FUNCTION_PASS("expand-large-div-rem", ExpandLargeDivRemPass(*TM))
 FUNCTION_PASS("expand-memcmp", ExpandMemCmpPass(*TM))
 FUNCTION_PASS("expand-reductions", ExpandReductionsPass())
 FUNCTION_PASS("extra-vector-passes",
@@ -526,7 +526,6 @@ FUNCTION_PASS("print<scev-division>", SCEVDivisionPrinterPass(errs()))
 FUNCTION_PASS("print<stack-safety-local>", StackSafetyPrinterPass(errs()))
 FUNCTION_PASS("print<uniformity>", UniformityInfoPrinterPass(errs()))
 FUNCTION_PASS("prof-inject", ProfileInjectorPass())
-FUNCTION_PASS("prof-verify", ProfileVerifierPass())
 FUNCTION_PASS("reassociate", ReassociatePass())
 FUNCTION_PASS("redundant-dbg-inst-elim", RedundantDbgInstEliminationPass())
 FUNCTION_PASS("replace-with-veclib", ReplaceWithVeclib())
@@ -730,11 +729,11 @@ FUNCTION_PASS_WITH_PARAMS(
     parseBoundsCheckingOptions,
     "trap;rt;rt-abort;min-rt;min-rt-abort;merge;guard=N")
 FUNCTION_PASS_WITH_PARAMS(
-    "expand-fp", "ExpandFpPass",
+    "expand-ir-insts", "ExpandIRInstsPass",
     [TM = TM](CodeGenOptLevel OL) {
-      return ExpandFpPass(*TM, OL);
+      return ExpandIRInstsPass(*TM, OL);
     },
-    parseExpandFpOptions, "O0;O1;O2;O3")
+    parseExpandIRInstsOptions, "O0;O1;O2;O3")
 
 #undef FUNCTION_PASS_WITH_PARAMS
 

@@ -62,7 +62,7 @@ def UImm5Plus1AsmOperand : AsmOperandClass {
 }
 
 def uimm5_plus1 : RISCVOp, ImmLeaf<XLenVT,
-  [{return (isUInt<5>(Imm) && (Imm != 0)) || (Imm == 32);}]> {
+  [{return Imm >= 1 && Imm <= 32;}]> {
   let ParserMatchClass = UImm5Plus1AsmOperand;
   let EncoderMethod = "getImmOpValueMinus1";
   let DecoderMethod = "decodeUImmPlus1Operand<5>";
@@ -71,12 +71,12 @@ def uimm5_plus1 : RISCVOp, ImmLeaf<XLenVT,
     int64_t Imm;
     if (!MCOp.evaluateAsConstantImm(Imm))
       return false;
-    return (isUInt<5>(Imm) && (Imm != 0)) || (Imm == 32);
+    return Imm >= 1 && Imm <= 32;
   }];
 }
 
 def uimm5ge6_plus1 : RISCVOp<XLenVT>, ImmLeaf<XLenVT,
-  [{return (Imm >= 6) && (isUInt<5>(Imm) || (Imm == 32));}]> {
+  [{return Imm >= 6 && Imm <= 32;}]> {
   let ParserMatchClass = UImmAsmOperand<5, "GE6Plus1">;
   let EncoderMethod = "getImmOpValueMinus1";
   let DecoderMethod = "decodeUImmPlus1OperandGE<5,6>";
@@ -85,7 +85,7 @@ def uimm5ge6_plus1 : RISCVOp<XLenVT>, ImmLeaf<XLenVT,
     int64_t Imm;
     if (!MCOp.evaluateAsConstantImm(Imm))
       return false;
-    return (Imm >= 6) && (isUInt<5>(Imm) || (Imm == 32));
+    return Imm >= 6 && Imm <= 32;
   }];
 }
 
@@ -468,22 +468,26 @@ class QCIStore_ScaleIdx<bits<4> funct4, string opcodestr>
 class QCIRVInstI<bits<4> funct4, string opcodestr>
     : RVInstIUnary<{0b000, funct4, 0b00000}, 0b011, OPC_CUSTOM_0,
                    (outs GPRNoX0:$rd), (ins GPRNoX0:$rs1), opcodestr,
-                   "$rd, $rs1">;
+                   "$rd, $rs1">,
+      Sched<[WriteIALU, ReadIALU]>;
 
 class QCIRVInstR<bits<4> funct4, string opcodestr>
     : RVInstR<{0b000, funct4}, 0b011, OPC_CUSTOM_0, (outs GPRNoX0:$rd),
-              (ins GPRNoX0:$rs1), opcodestr, "$rd, $rs1"> {
+              (ins GPRNoX0:$rs1), opcodestr, "$rd, $rs1">,
+      Sched<[WriteIALU, ReadIALU]> {
   let rs2 = 0;
 }
 
 class QCIRVInstRR<bits<5> funct5, DAGOperand InTyRs1, string opcodestr>
     : RVInstR<{0b00, funct5}, 0b011, OPC_CUSTOM_0, (outs GPRNoX0:$rd),
-              (ins InTyRs1:$rs1, GPRNoX0:$rs2), opcodestr, "$rd, $rs1, $rs2">;
+              (ins InTyRs1:$rs1, GPRNoX0:$rs2), opcodestr, "$rd, $rs1, $rs2">,
+      Sched<[WriteIALU, ReadIALU, ReadIALU]>;
 
 class QCIRVInstRRTied<bits<5> funct5, DAGOperand InTyRs1, string opcodestr>
     : RVInstR<{0b00, funct5}, 0b011, OPC_CUSTOM_0, (outs GPRNoX0:$rd_wb),
               (ins GPRNoX0:$rd, InTyRs1:$rs1, GPRNoX0:$rs2), opcodestr,
-              "$rd, $rs1, $rs2"> {
+              "$rd, $rs1, $rs2">,
+      Sched<[WriteIALU, ReadIALU, ReadIALU, ReadIALU]> {
   let Constraints = "$rd = $rd_wb";
 }
 
@@ -491,7 +495,8 @@ class QCIBitManipRII<bits<3> funct3, bits<2> funct2,
                      DAGOperand InTyRs1, string opcodestr>
     : RVInstIBase<funct3, OPC_CUSTOM_0, (outs GPRNoX0:$rd),
                   (ins InTyRs1:$rs1, uimm5_plus1:$width, uimm5:$shamt),
-                  opcodestr, "$rd, $rs1, $width, $shamt"> {
+                  opcodestr, "$rd, $rs1, $width, $shamt">,
+      Sched<[WriteIALU, ReadIALU]> {
   bits<5> shamt;
   bits<5> width;
 
@@ -504,7 +509,8 @@ class QCIBitManipRIITied<bits<3> funct3, bits<2> funct2,
                          DAGOperand InTyRs1, string opcodestr>
     : RVInstIBase<funct3, OPC_CUSTOM_0, (outs GPRNoX0:$rd_wb), (ins GPRNoX0:$rd,
                   InTyRs1:$rs1, uimm5_plus1:$width, uimm5:$shamt),
-                  opcodestr, "$rd, $rs1, $width, $shamt"> {
+                  opcodestr, "$rd, $rs1, $width, $shamt">,
+      Sched<[WriteIALU, ReadIALU, ReadIALU]> {
   let Constraints = "$rd = $rd_wb";
   bits<5> shamt;
   bits<5> width;
@@ -518,7 +524,8 @@ class QCIRVInstRI<bits<1> funct1, DAGOperand InTyImm11,
                              string opcodestr>
     : RVInstIBase<0b000, OPC_CUSTOM_0, (outs GPRNoX0:$rd_wb),
                   (ins GPRNoX0:$rd, GPRNoX0:$rs1, InTyImm11:$imm11), opcodestr,
-                  "$rd, $rs1, $imm11"> {
+                  "$rd, $rs1, $imm11">,
+      Sched<[WriteIALU, ReadIALU, ReadIALU]> {
   let Constraints = "$rd = $rd_wb";
   bits<11> imm11;
 
@@ -530,7 +537,8 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0, isCommutable = 1 in
 class QCISELECTIICC<bits<3> funct3, string opcodestr>
     : RVInstR4<0b00, funct3, OPC_CUSTOM_2, (outs GPRNoX0:$rd_wb),
                (ins GPRNoX0:$rd, GPRNoX0:$rs1, simm5:$simm1, simm5:$simm2),
-               opcodestr, "$rd, $rs1, $simm1, $simm2"> {
+               opcodestr, "$rd, $rs1, $simm1, $simm2">,
+      Sched<[WriteIALU, ReadIALU, ReadIALU]> {
   let Constraints = "$rd = $rd_wb";
   bits<5> simm1;
   bits<5> simm2;
@@ -543,7 +551,8 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0, isCommutable = 1 in
 class QCISELECTICC<bits<3> funct3, string opcodestr>
     : RVInstR4<0b01, funct3, OPC_CUSTOM_2, (outs GPRNoX0:$rd_wb),
                (ins GPRNoX0:$rd, GPRNoX0:$rs1, GPRNoX0:$rs2, simm5:$simm2),
-               opcodestr, "$rd, $rs1, $rs2, $simm2"> {
+               opcodestr, "$rd, $rs1, $rs2, $simm2">,
+      Sched<[WriteIALU, ReadIALU, ReadIALU, ReadIALU]> {
   let Constraints = "$rd = $rd_wb";
   bits<5> simm2;
 
@@ -554,7 +563,8 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 class QCISELECTCCI<bits<3> funct3, string opcodestr>
     : RVInstR4<0b10, funct3, OPC_CUSTOM_2, (outs GPRNoX0:$rd_wb),
                (ins GPRNoX0:$rd, simm5:$imm, GPRNoX0:$rs2, GPRNoX0:$rs3),
-               opcodestr, "$rd, $imm, $rs2, $rs3"> {
+               opcodestr, "$rd, $imm, $rs2, $rs3">,
+      Sched<[WriteIALU, ReadIALU, ReadIALU, ReadIALU]> {
   let Constraints = "$rd = $rd_wb";
   bits<5> imm;
 
@@ -565,7 +575,8 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 class QCISELECTICCI<bits<3> funct3, string opcodestr>
     : RVInstR4<0b11, funct3, OPC_CUSTOM_2, (outs GPRNoX0:$rd_wb),
                (ins GPRNoX0:$rd, simm5:$imm, GPRNoX0:$rs2, simm5:$simm2),
-               opcodestr, "$rd, $imm, $rs2, $simm2"> {
+               opcodestr, "$rd, $imm, $rs2, $simm2">,
+      Sched<[WriteIALU, ReadIALU, ReadIALU]> {
   let Constraints = "$rd = $rd_wb";
   bits<5> imm;
   bits<5> simm2;
@@ -610,7 +621,8 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0, isCommutable = 1 in
 class QCIMVCC<bits<3> funct3, string opcodestr>
     : RVInstR4<0b00, funct3, OPC_CUSTOM_2, (outs GPRNoX0:$rd_wb),
                (ins GPRNoX0:$rd, GPRNoX0:$rs1, GPRNoX0:$rs2, GPRNoX0:$rs3),
-               opcodestr, "$rd, $rs1, $rs2, $rs3"> {
+               opcodestr, "$rd, $rs1, $rs2, $rs3">,
+      Sched<[WriteIALU, ReadIALU, ReadIALU, ReadIALU, ReadIALU]> {
   let Constraints = "$rd = $rd_wb";
 }
 
@@ -618,7 +630,8 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0, isCommutable = 1 in
 class QCIMVCCI<bits<3> funct3, string opcodestr, DAGOperand immType>
     : RVInstR4<0b10, funct3, OPC_CUSTOM_2, (outs GPRNoX0:$rd_wb),
                (ins GPRNoX0:$rd, GPRNoX0:$rs1, immType:$imm, GPRNoX0:$rs3),
-               opcodestr, "$rd, $rs1, $imm, $rs3"> {
+               opcodestr, "$rd, $rs1, $imm, $rs3">,
+      Sched<[WriteIALU, ReadIALU, ReadIALU, ReadIALU]> {
   bits<5> imm;
   
   let Constraints = "$rd = $rd_wb";
@@ -751,7 +764,7 @@ class QCIRVInstEIBase<bits<3> funct3, bits<2> funct2, dag outs,
   let Inst{6-0} = 0b0011111;
 }
 
-let hasSideEffects = 0, mayLoad = 1, mayStore = 0 in
+let hasSideEffects = 0, mayLoad = 1, mayStore = 0, canFoldAsLoad = 1 in
 class QCIRVInstEILoad<bits<3> funct3, bits<2> funct2, string opcodestr>
     : QCIRVInstEIBase<funct3, funct2, (outs GPR:$rd),
                       (ins GPRMem:$rs1, simm26:$imm), opcodestr,
@@ -782,7 +795,8 @@ class QCIRVInstESStore<bits<3> funct3, bits<2> funct2, string opcodestr>
 
 class QCIRVInstEAI<bits<3> funct3, bits<1> funct1, string opcodestr>
     : RVInst48<(outs GPRNoX0:$rd_wb), (ins GPRNoX0:$rd, bare_simm32:$imm),
-               opcodestr, "$rd, $imm", [], InstFormatOther> {
+               opcodestr, "$rd, $imm", [], InstFormatOther>,
+      Sched<[WriteIALU, ReadIALU]> {
   bits<5> rd;
   bits<32> imm;
 
@@ -797,7 +811,8 @@ class QCIRVInstEAI<bits<3> funct3, bits<1> funct1, string opcodestr>
 class QCIRVInstEI<bits<3> funct3, bits<2> funct2, string opcodestr>
     : QCIRVInstEIBase<funct3, funct2, (outs GPRNoX0:$rd),
                       (ins GPRNoX0:$rs1, simm26:$imm), opcodestr,
-                      "$rd, $rs1, $imm">;
+                      "$rd, $rs1, $imm">,
+      Sched<[WriteIALU, ReadIALU]>;
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 class QCIRVInst48EJ<bits<2> func2, string opcodestr>
@@ -834,6 +849,17 @@ class SFBQC_E_LI
                   bare_simm32:$imm), []> {
   let hasSideEffects = 0;
   let mayLoad = 0;
+  let mayStore = 0;
+  let Size = 10;
+  let Constraints = "$dst = $falsev";
+}
+
+class SFBQCLoad
+    : Pseudo<(outs GPR:$dst),
+             (ins GPR:$lhs, GPR:$rhs, cond_code:$cc, GPR:$falsev, GPR:$rs1,
+                  simm26:$imm), []> {
+  let hasSideEffects = 0;
+  let mayLoad = 1;
   let mayStore = 0;
   let Size = 10;
   let Constraints = "$dst = $falsev";
@@ -881,7 +907,8 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
   def QC_WRAP : QCIRVInstRR<0b10010, GPR, "qc.wrap">;
   def QC_WRAPI : RVInstI<0b000, OPC_CUSTOM_0, (outs GPRNoX0:$rd),
                          (ins GPRNoX0:$rs1, uimm11:$imm11), "qc.wrapi",
-                         "$rd, $rs1, $imm11"> {
+                         "$rd, $rs1, $imm11">,
+                 Sched<[WriteIALU, ReadIALU]> {
     bits<11> imm11;
 
     let imm12 = {0b0, imm11};
@@ -915,7 +942,8 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
   def QC_INSBI : RVInstIBase<0b001, OPC_CUSTOM_0, (outs GPRNoX0:$rd_wb),
                              (ins GPRNoX0:$rd, simm5:$imm5, uimm5_plus1:$width,
                              uimm5:$shamt), "qc.insbi",
-                             "$rd, $imm5, $width, $shamt"> {
+                             "$rd, $imm5, $width, $shamt">,
+                 Sched<[WriteIALU, ReadIALU]> {
     let Constraints = "$rd = $rd_wb";
     bits<5> imm5;
     bits<5> shamt;
@@ -948,11 +976,14 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
   def QC_CLO : QCIRVInstI<0b0100, "qc.clo">;
   def QC_CTO : QCIRVInstI<0b0101, "qc.cto">;
   def QC_BREV32 : QCIRVInstI<0b0110, "qc.brev32">;
-  def QC_C_BEXTI  : QCI_RVInst16CB_BM<0b00, "qc.c.bexti">;
-  def QC_C_BSETI  : QCI_RVInst16CB_BM<0b01, "qc.c.bseti">;
+  def QC_C_BEXTI  : QCI_RVInst16CB_BM<0b00, "qc.c.bexti">,
+                    Sched<[WriteIALU, ReadIALU]>;
+  def QC_C_BSETI  : QCI_RVInst16CB_BM<0b01, "qc.c.bseti">,
+                    Sched<[WriteIALU, ReadIALU]>;
   def QC_C_EXTU : RVInst16CI<0b000, 0b10, (outs GPRNoX0:$rd_wb),
                              (ins GPRNoX0:$rd, uimm5ge6_plus1:$width),
-                             "qc.c.extu", "$rd, $width"> {
+                             "qc.c.extu", "$rd, $width">,
+                  Sched<[WriteIALU, ReadIALU]> {
     bits<5> rd;
     bits<5> width;
     let Constraints = "$rd = $rd_wb";
@@ -967,7 +998,8 @@ let Predicates = [HasVendorXqciac, IsRV32] in {
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
   def QC_C_MULIADD : RVInst16CL<0b001, 0b10, (outs GPRC:$rd_wb),
                                (ins GPRC:$rd, GPRC:$rs1, uimm5:$uimm),
-                               "qc.c.muliadd", "$rd, $rs1, $uimm"> {
+                               "qc.c.muliadd", "$rd, $rs1, $uimm">,
+                     Sched<[WriteIALU, ReadIALU, ReadIALU]> {
     let Constraints = "$rd = $rd_wb";
     bits<5> uimm;
 
@@ -978,13 +1010,15 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
 
   def QC_MULIADD : RVInstI<0b110, OPC_CUSTOM_0, (outs GPRNoX0:$rd_wb),
                            (ins GPRNoX0:$rd, GPRNoX0:$rs1, simm12_lo:$imm12),
-                           "qc.muliadd", "$rd, $rs1, $imm12"> {
+                           "qc.muliadd", "$rd, $rs1, $imm12">,
+                   Sched<[WriteIALU, ReadIALU, ReadIALU]> {
     let Constraints = "$rd = $rd_wb";
   }
 
   def QC_SHLADD : RVInstRBase<0b011, OPC_CUSTOM_0, (outs GPRNoX0:$rd),
                               (ins GPRNoX0:$rs1, GPRNoX0:$rs2, uimm5gt3:$shamt),
-                              "qc.shladd", "$rd, $rs1, $rs2, $shamt"> {
+                              "qc.shladd", "$rd, $rs1, $rs2, $shamt">,
+                  Sched<[WriteIALU, ReadIALU, ReadIALU]> {
     bits<5> shamt;
 
     let Inst{31-30} = 0b01;
@@ -1016,26 +1050,39 @@ let Predicates = [HasVendorXqcilsm, IsRV32] in {
 } // Predicates = [HasVendorXqcilsm, IsRV32]
 
 let Predicates = [HasVendorXqcicli, IsRV32] in {
-  def QC_LIEQ    : QCILICC<0b000, 0b01, GPRNoX0, "qc.lieq">;
-  def QC_LINE    : QCILICC<0b001, 0b01, GPRNoX0, "qc.line">;
-  def QC_LILT    : QCILICC<0b100, 0b01, GPRNoX0, "qc.lilt">;
-  def QC_LIGE    : QCILICC<0b101, 0b01, GPRNoX0, "qc.lige">;
-  def QC_LILTU   : QCILICC<0b110, 0b01, GPRNoX0, "qc.liltu">;
-  def QC_LIGEU   : QCILICC<0b111, 0b01, GPRNoX0, "qc.ligeu">;
+  def QC_LIEQ    : QCILICC<0b000, 0b01, GPRNoX0, "qc.lieq">,
+                   Sched<[WriteIALU, ReadIALU, ReadIALU, ReadIALU]>;
+  def QC_LINE    : QCILICC<0b001, 0b01, GPRNoX0, "qc.line">,
+                   Sched<[WriteIALU, ReadIALU, ReadIALU, ReadIALU]>;
+  def QC_LILT    : QCILICC<0b100, 0b01, GPRNoX0, "qc.lilt">,
+                   Sched<[WriteIALU, ReadIALU, ReadIALU, ReadIALU]>;
+  def QC_LIGE    : QCILICC<0b101, 0b01, GPRNoX0, "qc.lige">,
+                   Sched<[WriteIALU, ReadIALU, ReadIALU, ReadIALU]>;
+  def QC_LILTU   : QCILICC<0b110, 0b01, GPRNoX0, "qc.liltu">,
+                   Sched<[WriteIALU, ReadIALU, ReadIALU, ReadIALU]>;
+  def QC_LIGEU   : QCILICC<0b111, 0b01, GPRNoX0, "qc.ligeu">,
+                   Sched<[WriteIALU, ReadIALU, ReadIALU, ReadIALU]>;
 
-  def QC_LIEQI   : QCILICC<0b000, 0b11, simm5, "qc.lieqi">;
-  def QC_LINEI   : QCILICC<0b001, 0b11, simm5, "qc.linei">;
-  def QC_LILTI   : QCILICC<0b100, 0b11, simm5, "qc.lilti">;
-  def QC_LIGEI   : QCILICC<0b101, 0b11, simm5, "qc.ligei">;
-  def QC_LILTUI  : QCILICC<0b110, 0b11, uimm5, "qc.liltui">;
-  def QC_LIGEUI  : QCILICC<0b111, 0b11, uimm5, "qc.ligeui">;
+  def QC_LIEQI   : QCILICC<0b000, 0b11, simm5, "qc.lieqi">,
+                   Sched<[WriteIALU, ReadIALU, ReadIALU]>;
+  def QC_LINEI   : QCILICC<0b001, 0b11, simm5, "qc.linei">,
+                   Sched<[WriteIALU, ReadIALU, ReadIALU]>;
+  def QC_LILTI   : QCILICC<0b100, 0b11, simm5, "qc.lilti">,
+                   Sched<[WriteIALU, ReadIALU, ReadIALU]>;
+  def QC_LIGEI   : QCILICC<0b101, 0b11, simm5, "qc.ligei">,
+                   Sched<[WriteIALU, ReadIALU, ReadIALU]>;
+  def QC_LILTUI  : QCILICC<0b110, 0b11, uimm5, "qc.liltui">,
+                   Sched<[WriteIALU, ReadIALU, ReadIALU]>;
+  def QC_LIGEUI  : QCILICC<0b111, 0b11, uimm5, "qc.ligeui">,
+                   Sched<[WriteIALU, ReadIALU, ReadIALU]>;
 } // Predicates = [HasVendorXqcicli, IsRV32]
 
 let Predicates = [HasVendorXqcicm, IsRV32] in {
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
   def QC_C_MVEQZ   : RVInst16CL<0b101, 0b10, (outs GPRC:$rd_wb),
                               (ins GPRC:$rd, GPRC:$rs1),
-                              "qc.c.mveqz", "$rd, $rs1"> {
+                              "qc.c.mveqz", "$rd, $rs1">,
+                     Sched<[WriteIALU, ReadIALU, ReadIALU]> {
     let Constraints = "$rd = $rd_wb";
 
     let Inst{12-10} = 0b011;
@@ -1143,14 +1190,15 @@ let Predicates = [HasVendorXqcilb, IsRV32] in {
 let Predicates = [HasVendorXqcili, IsRV32] in {
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
   def QC_LI : RVInstU<OPC_OP_IMM_32, (outs GPRNoX0:$rd), (ins simm20_li:$imm20),
-                      "qc.li", "$rd, $imm20"> {
+                      "qc.li", "$rd, $imm20">, Sched<[WriteIALU]> {
     let Inst{31} = imm20{19};
     let Inst{30-16} = imm20{14-0};
     let Inst{15-12} = imm20{18-15};
   }
 
   def QC_E_LI : RVInst48<(outs GPRNoX0:$rd), (ins bare_simm32:$imm),
-                         "qc.e.li", "$rd, $imm", [], InstFormatQC_EAI> {
+                         "qc.e.li", "$rd, $imm", [], InstFormatQC_EAI>,
+                Sched<[WriteIALU]> {
     bits<5> rd;
     bits<32> imm;
 
@@ -1333,6 +1381,14 @@ def PseudoQC_E_SW : PseudoStore<"qc.e.sw">;
 let Predicates = [HasShortForwardBranchIALU] in {
 def PseudoCCQC_LI : SFBQC_LI;
 def PseudoCCQC_E_LI : SFBQC_E_LI;
+}
+
+let Predicates = [HasShortForwardBranchILoad] in {
+def PseudoCCQC_E_LB : SFBQCLoad;
+def PseudoCCQC_E_LH : SFBQCLoad;
+def PseudoCCQC_E_LW : SFBQCLoad;
+def PseudoCCQC_E_LHU : SFBQCLoad;
+def PseudoCCQC_E_LBU : SFBQCLoad;
 }
 
 //===----------------------------------------------------------------------===//

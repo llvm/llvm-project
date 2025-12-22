@@ -22,9 +22,11 @@
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/RuntimeLibcalls.h"
 #include "llvm/IR/Type.h"
@@ -471,6 +473,144 @@ bool PreISelIntrinsicLowering::expandMemIntrinsicUses(
   return Changed;
 }
 
+static bool expandProtectedFieldPtr(Function &Intr) {
+  Module &M = *Intr.getParent();
+
+  SmallPtrSet<GlobalValue *, 2> DSsToDeactivate;
+
+  Type *Int8Ty = Type::getInt8Ty(M.getContext());
+  Type *Int64Ty = Type::getInt64Ty(M.getContext());
+  PointerType *PtrTy = PointerType::get(M.getContext(), 0);
+
+  Function *SignIntr =
+      Intrinsic::getOrInsertDeclaration(&M, Intrinsic::ptrauth_sign, {});
+  Function *AuthIntr =
+      Intrinsic::getOrInsertDeclaration(&M, Intrinsic::ptrauth_auth, {});
+
+  auto *EmuFnTy = FunctionType::get(Int64Ty, {Int64Ty, Int64Ty}, false);
+
+  auto CreateSign = [&](IRBuilder<> &B, Value *Val, Value *Disc,
+                        OperandBundleDef DSBundle) {
+    Function *F = B.GetInsertBlock()->getParent();
+    Attribute FSAttr = F->getFnAttribute("target-features");
+    if (FSAttr.isValid() && FSAttr.getValueAsString().contains("+pauth"))
+      return B.CreateCall(
+          SignIntr, {Val, B.getInt32(/*AArch64PACKey::DA*/ 2), Disc}, DSBundle);
+    FunctionCallee EmuSignIntr =
+        M.getOrInsertFunction("__emupac_pacda", EmuFnTy);
+    return B.CreateCall(EmuSignIntr, {Val, Disc}, DSBundle);
+  };
+
+  auto CreateAuth = [&](IRBuilder<> &B, Value *Val, Value *Disc,
+                        OperandBundleDef DSBundle) {
+    Function *F = B.GetInsertBlock()->getParent();
+    Attribute FSAttr = F->getFnAttribute("target-features");
+    if (FSAttr.isValid() && FSAttr.getValueAsString().contains("+pauth"))
+      return B.CreateCall(
+          AuthIntr, {Val, B.getInt32(/*AArch64PACKey::DA*/ 2), Disc}, DSBundle);
+    FunctionCallee EmuAuthIntr =
+        M.getOrInsertFunction("__emupac_autda", EmuFnTy);
+    return B.CreateCall(EmuAuthIntr, {Val, Disc}, DSBundle);
+  };
+
+  auto GetDeactivationSymbol = [&](CallInst *Call) -> GlobalValue * {
+    if (auto Bundle =
+            Call->getOperandBundle(LLVMContext::OB_deactivation_symbol))
+      return cast<GlobalValue>(Bundle->Inputs[0]);
+    return nullptr;
+  };
+
+  for (User *U : llvm::make_early_inc_range(Intr.users())) {
+    auto *Call = cast<CallInst>(U);
+
+    auto *Pointer = Call->getArgOperand(0);
+    auto *Disc = Call->getArgOperand(1);
+    bool UseHWEncoding =
+        cast<ConstantInt>(Call->getArgOperand(2))->getZExtValue();
+    if (!UseHWEncoding)
+      reportFatalUsageError("software encoding currently unsupported");
+
+    auto *DS = GetDeactivationSymbol(Call);
+    OperandBundleDef DSBundle("deactivation-symbol", DS);
+
+    for (Use &U : llvm::make_early_inc_range(Call->uses())) {
+      // Insert code to encode each pointer stored to the pointer returned by
+      // the intrinsic.
+      if (auto *SI = dyn_cast<StoreInst>(U.getUser())) {
+        if (U.getOperandNo() == 1 &&
+            isa<PointerType>(SI->getValueOperand()->getType())) {
+          IRBuilder<> B(SI);
+          auto *SIValInt =
+              B.CreatePtrToInt(SI->getValueOperand(), B.getInt64Ty());
+          Value *Sign = CreateSign(B, SIValInt, Disc, DSBundle);
+          SI->setOperand(0, B.CreateIntToPtr(Sign, B.getPtrTy()));
+          SI->setOperand(1, Pointer);
+          continue;
+        }
+      }
+
+      // Insert code to decode each pointer loaded from the pointer returned by
+      // the intrinsic. This is the inverse of the encode operation implemented
+      // above.
+      if (auto *LI = dyn_cast<LoadInst>(U.getUser())) {
+        if (isa<PointerType>(LI->getType())) {
+          IRBuilder<> B(LI);
+          auto *NewLI = cast<LoadInst>(LI->clone());
+          NewLI->setOperand(0, Pointer);
+          B.Insert(NewLI);
+          auto *LIInt = B.CreatePtrToInt(NewLI, B.getInt64Ty());
+          Value *Auth = CreateAuth(B, LIInt, Disc, DSBundle);
+          LI->replaceAllUsesWith(B.CreateIntToPtr(Auth, B.getPtrTy()));
+          LI->eraseFromParent();
+          continue;
+        }
+      }
+      // Comparisons against null cannot be used to recover the original
+      // pointer so we replace them with comparisons against the original
+      // pointer.
+      if (auto *CI = dyn_cast<ICmpInst>(U.getUser())) {
+        if (auto *Op = dyn_cast<Constant>(CI->getOperand(0))) {
+          if (Op->isNullValue()) {
+            CI->setOperand(1, Pointer);
+            continue;
+          }
+        }
+        if (auto *Op = dyn_cast<Constant>(CI->getOperand(1))) {
+          if (Op->isNullValue()) {
+            CI->setOperand(0, Pointer);
+            continue;
+          }
+        }
+      }
+
+      // We couldn't rewrite away this use of the intrinsic. Replace it with the
+      // pointer operand, and arrange to define a deactivation symbol.
+      U.set(Pointer);
+      if (DS)
+        DSsToDeactivate.insert(DS);
+    }
+
+    Call->eraseFromParent();
+  }
+
+  if (!DSsToDeactivate.empty()) {
+    // This is an AArch64 NOP instruction. When the deactivation symbol support
+    // is expanded to more architectures, there will likely need to be an API
+    // for retrieving this constant.
+    Constant *Nop =
+        ConstantExpr::getIntToPtr(ConstantInt::get(Int64Ty, 0xd503201f), PtrTy);
+    for (GlobalValue *OldDS : DSsToDeactivate) {
+      GlobalValue *DS = GlobalAlias::create(
+          Int8Ty, 0, GlobalValue::ExternalLinkage, OldDS->getName(), Nop, &M);
+      DS->setVisibility(GlobalValue::HiddenVisibility);
+      DS->takeName(OldDS);
+      OldDS->replaceAllUsesWith(DS);
+      OldDS->eraseFromParent();
+    }
+  }
+  return true;
+}
+
 bool PreISelIntrinsicLowering::lowerIntrinsics(Module &M) const {
   // Map unique constants to globals.
   DenseMap<Constant *, GlobalVariable *> CMap;
@@ -612,6 +752,9 @@ bool PreISelIntrinsicLowering::lowerIntrinsics(Module &M) const {
           return false;
         return lowerUnaryVectorIntrinsicAsLoop(M, CI);
       });
+      break;
+    case Intrinsic::protected_field_ptr:
+      Changed |= expandProtectedFieldPtr(F);
       break;
     }
   }

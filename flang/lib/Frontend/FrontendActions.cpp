@@ -42,10 +42,12 @@
 #include "clang/Driver/DriverDiagnostic.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Analysis/RuntimeLibcallInfo.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Bitcode/BitcodeWriterPass.h"
 #include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
+#include "llvm/Extensions/PassPlugin.h"
 #include "llvm/IR/LLVMRemarkStreamer.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Verifier.h"
@@ -54,7 +56,6 @@
 #include "llvm/Linker/Linker.h"
 #include "llvm/Object/OffloadBinary.h"
 #include "llvm/Passes/PassBuilder.h"
-#include "llvm/Passes/PassPlugin.h"
 #include "llvm/Passes/StandardInstrumentations.h"
 #include "llvm/ProfileData/InstrProfCorrelator.h"
 #include "llvm/Support/AMDGPUAddrSpace.h"
@@ -902,6 +903,9 @@ static void generateMachineCodeOrAssemblyImpl(clang::DiagnosticsEngine &diags,
   llvm::TargetLibraryInfoImpl *tlii =
       llvm::driver::createTLII(triple, codeGenOpts.getVecLib());
   codeGenPasses.add(new llvm::TargetLibraryInfoWrapperPass(*tlii));
+  codeGenPasses.add(new llvm::RuntimeLibraryInfoWrapper(
+      triple, tm.Options.ExceptionModel, tm.Options.FloatABIType,
+      tm.Options.EABIVersion, tm.Options.MCOptions.ABIName, tm.Options.VecLib));
 
   llvm::CodeGenFileType cgft = (act == BackendActionTy::Backend_EmitAssembly)
                                    ? llvm::CodeGenFileType::AssemblyFile
@@ -1009,6 +1013,13 @@ void CodeGenAction::runOptimizationPipeline(llvm::raw_pwrite_stream &os) {
   llvm::TargetLibraryInfoImpl *tlii =
       llvm::driver::createTLII(triple, opts.getVecLib());
   fam.registerPass([&] { return llvm::TargetLibraryAnalysis(*tlii); });
+  mam.registerPass([&] {
+    return llvm::RuntimeLibraryAnalysis(
+        triple, targetMachine->Options.ExceptionModel,
+        targetMachine->Options.FloatABIType, targetMachine->Options.EABIVersion,
+        targetMachine->Options.MCOptions.ABIName,
+        targetMachine->Options.VecLib);
+  });
 
   // Register all the basic analyses with the managers.
   pb.registerModuleAnalyses(mam);
