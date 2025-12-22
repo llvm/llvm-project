@@ -239,14 +239,22 @@ def helpExit(exCode):
     print("  -dryrun   : do not run bindings")
     print("  -taskset  : use taskset for binding")
     print("  -numatcl  : use numactl for binding [default]")
+    print("  -l        : use numactl --localalloc")
+    print("  -m        : use numactl --membind[default]")
     print("  -md       : Set number of desired devices for multi-device mode, default=1")
     print("  -nr       : use numactl ROCR_VISIBLE_DEVICES")
     print("  -nm       : use numactl OMPI_COMM_WORLD_LOCAL_RANK")
     print("  -topo     : display the topology and exit")
     print("  -rocmsmi  : force use of rocm-smi rather than amd-smi")
     print("  -amdsmi   : force use of amd-smi rather than rocm-smi")
+    print("  -nomask   : sets GPURUN_MASK_POLICY to nomask : not yet implemented")
     print("  --version : Print version of gpurun and exit")
     print("")
+    print("Supported environment variables")
+    print("  GPURUN_DEVICE_BIAS    Device# to start with [default 0]")
+    print("  GPURUN_BYPASS         pass through, no bindings")
+    print("")
+
     sys.exit(exCode)
     # still to do
     #  -m   use numactl membind to CPUs in same NUMA domain. Note: Allocation
@@ -264,28 +272,35 @@ def processArgs():
     use_nr=False
     use_nm=False
     use_md=False
+    use_localalloc=False
+    use_membind=False
     use_rocmsmi=False
     use_amdsmi=False
     md_count=1
-
+    use_nomask_policy=False
     dump_topo=False
     dry_run=False
-    skip_args = ["-s", "-q", "-m", "-l" ]
+    skip_args = ["-s", "-q" ]
     # loop over bind arguments
     while True:
-      if len(sys.argv[sysPos:]) == 0: helpExit(1)
+      if len(sys.argv[sysPos:]) == 0:
+        if dump_topo: break
+        helpExit(1)
       if   sys.argv[sysPos] == "-v": debug_numa=1
       elif sys.argv[sysPos] == "-vv":  debug_numa=2
       elif sys.argv[sysPos] == "-vvv": debug_numa=3
-      elif sys.argv[sysPos] in ["-h", "--help"]: helpExit(0)
+      elif sys.argv[sysPos] in ["-h", "-help", "--help"]: helpExit(0)
       elif sys.argv[sysPos] == "--version": print("Version: 22.0.0"); sys.exit(0)
       elif sys.argv[sysPos] == "-dryrun": dry_run=True
       elif sys.argv[sysPos] == "-taskset": use_taskset=True; use_numactl=False; use_nobind=False
       elif sys.argv[sysPos] == "-numactl": use_numactl=True; use_taskset=False; use_nobind=False
       elif sys.argv[sysPos] == "-nobind":  use_nobind=True;  use_taskset=False; use_numactl=False
-      elif sys.argv[sysPos] == "-topo":  dump_topo=True; break
+      elif sys.argv[sysPos] == "-topo":  dump_topo=True
       elif sys.argv[sysPos] == "-nr":  use_nr=True
       elif sys.argv[sysPos] == "-nm":  use_nm=True
+      elif sys.argv[sysPos] == "-m":  use_membind=True
+      elif sys.argv[sysPos] == "-l":  use_localalloc=True
+      elif sys.argv[sysPos] == "-nomask":  use_nomask_policy=True
       elif sys.argv[sysPos] == "-rocmsmi":  use_rocmsmi=True; use_amdsmi=False
       elif sys.argv[sysPos] == "-amdsmi":  use_amdsmi=True; use_rocmsmi=False
       elif sys.argv[sysPos] == "-md":
@@ -298,7 +313,7 @@ def processArgs():
       else: break
       sysPos += 1
 
-    return sysPos, debug_numa, use_taskset, use_numactl, use_nobind, dry_run, use_md, md_count, use_nr, use_nm, dump_topo, use_rocmsmi, use_amdsmi
+    return sysPos, debug_numa, use_taskset, use_numactl, use_nobind, dry_run, use_md, md_count, use_nr, use_nm, dump_topo, use_rocmsmi, use_amdsmi, use_membind, use_localalloc
 
 def dumpTopology(affinity_data, node_data, hip_uuid, numa_cpus):
     numaStat="<unknown>"
@@ -312,7 +327,7 @@ def dumpTopology(affinity_data, node_data, hip_uuid, numa_cpus):
     sys.exit(0)
 
 if __name__ == "__main__":
-    sysPos, debug_numa, use_taskset, use_numactl, use_nobind, dry_run, use_md, md_count, use_nr, use_nm, dump_topo, use_rocmsmi, use_amdsmi = processArgs()
+    sysPos, debug_numa, use_taskset, use_numactl, use_nobind, dry_run, use_md, md_count, use_nr, use_nm, dump_topo, use_rocmsmi, use_amdsmi, use_membind, use_localalloc = processArgs()
     #check for numactl and taskset
     has_numactl = check_numactl_exists()
     has_taskset = check_taskset_exists()
@@ -335,6 +350,7 @@ if __name__ == "__main__":
     numRanksLocal = int(os.environ.get('OMPI_COMM_WORLD_LOCAL_SIZE', '1'))
 
     # support override by envvar
+    gpurun_device_bias = int(os.environ.get('GPURUN_DEVICE_BIAS', '0'))
     gpurun_bypass = int(os.environ.get('GPURUN_BYPASS', '0'))
     if gpurun_bypass:
        use_taskset = False
@@ -342,13 +358,13 @@ if __name__ == "__main__":
        use_nobind = True
 
     if rocrVisDev != -1 or use_nr:
-       adjRank = rocrVisDev
+       adjRank = rocrVisDev + gpurun_device_bias
     elif use_nm or use_numactl:
-       adjRank = localRank % numGpus
+       adjRank = (localRank + gpurun_device_bias) % numGpus
     else:
-       adjRank=0
+       adjRank=gpurun_device_bias % numGpus
     if debug_numa > 1:
-      print("#GPUs ", numGpus, "numRanks", numRanksLocal, "localRank", localRank, "adjRank", adjRank, "RVD", rocrVisDev)
+      print("#GPUs ", numGpus, "numRanks", numRanksLocal, "localRank", localRank, "adjRank", adjRank, "RVD", rocrVisDev, "gpurun_device_bias", gpurun_device_bias)
       if debug_numa > 2:
         if affinity_data is not None and node_data is not None:
           print("\nGPU Affinity:")
@@ -367,9 +383,11 @@ if __name__ == "__main__":
     else:
        my_env["ROCR_VISIBLE_DEVICES"] = str(adjRank)
     if use_taskset and has_taskset:
+       if use_localalloc or use_membind: print("Warning: taskset does not support localalloc or membind, use numactl")
        program_to_run = [ "taskset", "-c", numa_cpus[node_data[adjRank]]]
     elif use_numactl and has_numactl:
        program_to_run = [ "numactl", "--cpunodebind", str(node_data[adjRank]), "--membind", str(affinity_data[adjRank]) ]
+       if use_localalloc: program_to_run += "--localalloc"
     elif use_nobind:
        program_to_run = [ ]
     else:
