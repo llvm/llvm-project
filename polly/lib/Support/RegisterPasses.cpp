@@ -42,11 +42,11 @@
 #include "polly/Support/DumpModulePass.h"
 #include "llvm/Analysis/CFGPrinter.h"
 #include "llvm/Config/llvm-config.h" // for LLVM_VERSION_STRING
-#include "llvm/Extensions/PassPlugin.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/Passes/PassBuilder.h"
+#include "llvm/Passes/PassPlugin.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/TargetSelect.h"
