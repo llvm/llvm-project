@@ -680,12 +680,12 @@ Value *AMDGPUCodeGenPrepareImpl::emitRsqF64(IRBuilder<> &Builder, Value *X,
   }
 
   Value *NegY0 = Builder.CreateFNeg(Y0);
-  Value *NegXY0 = Builder.CreateFMul(NegY0, SpecialOrRsq);
+  Value *NegXY0 = Builder.CreateFMul(SpecialOrRsq, NegY0);
 
   // Could be fmuladd, but isFMAFasterThanFMulAndFAdd is always true for f64.
   Value *E = Builder.CreateFMA(NegXY0, Y0, ConstantFP::get(X->getType(), 1.0));
 
-  Value *Y0E = Builder.CreateFMul(IsNegative ? NegY0 : Y0, E);
+  Value *Y0E = Builder.CreateFMul(E, IsNegative ? NegY0 : Y0);
 
   Value *EFMA = Builder.CreateFMA(E, ConstantFP::get(X->getType(), 0.375),
                                   ConstantFP::get(X->getType(), 0.5));
