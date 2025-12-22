@@ -1,0 +1,26 @@
+# REQUIRES: debug-info
+# RUN: split-file %s %t
+# RUN: lldb -b -x -o 'command script import %llvm_src_root/utils/lldbDataFormatters.py' -s %t/commands.input %llvm_tools_dir/check-lldb-llvm-support-arrayref | FileCheck %t/checks
+
+#--- commands.input
+b main
+run
+p ArrayRef
+p MutableArrayRef
+
+#--- checks
+# CHECK:      (lldb) p ArrayRef
+# CHECK-NEXT: (llvm::ArrayRef<int>) size=3 {
+# CHECK-NEXT:  [0] = 1
+# CHECK-NEXT:  [1] = 2
+# CHECK-NEXT:  [2] = 3
+# CHECK-NEXT: }
+
+# CHECK:      (lldb) p MutableArrayRef
+# CHECK-NEXT: (llvm::MutableArrayRef<int>) {
+# CHECK-NEXT:   llvm::ArrayRef<int> = size=3 {
+# CHECK-NEXT:    [0] = 1
+# CHECK-NEXT:    [1] = 2
+# CHECK-NEXT:    [2] = 3
+# CHECK-NEXT:   }
+# CHECK-NEXT: }
