@@ -73,7 +73,7 @@ class Is(ConstraintExpr):
 
     def _lower(self, ctx: ConstraintLoweringContext) -> ir.Value:
         # for most attributes and types, they are created via `.get` method,
-        # here we can just omit the `.get`
+        # here we can just omit the `.get` suffix for convenience
         if isinstance(self.val, type) and hasattr(self.val, "get"):
             self.val = self.val.get
 
