@@ -9612,6 +9612,12 @@ class DXCJoinedOrSeparate<string name> : Option<["/", "-"], name,
   KIND_JOINED_OR_SEPARATE>, Group<dxc_Group>,
   Visibility<[DXCOption]>;
 
+def dxc_all_resources_bound : DXCFlag<"all-resources-bound">,
+  HelpText<"Enables agressive flattening">;
+def hlsl_all_resources_bound : Option<["-"], "hlsl-all-resources-bound", KIND_SEPARATE>,
+                      Group<dxc_Group>,
+                      Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Enables agressive flattening">;
 def dxc_col_major : DXCFlag<"Zpc">, HelpText<"Pack matrices in column-major order">;
 def dxc_row_major : DXCFlag<"Zpr">, HelpText<"Pack matrices in row-major order">;
 def dxc_no_stdinc : DXCFlag<"hlsl-no-stdinc">,
