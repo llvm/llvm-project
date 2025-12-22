@@ -141,14 +141,14 @@ void UseInternalLinkageCheck::registerMatchers(MatchFinder *Finder) {
                                 isMain())))
           .bind("fn"),
       this);
-  Finder->addMatcher(varDecl(Common, hasGlobalStorage(),
-                             unless(anyOf(isExplicitlyExternC(),
-                                          isStaticStorageClass(),
-                                          isExternStorageClass(),
-                                          isExplicitTemplateSpecialization(),
-                                          hasThreadStorageDuration())))
-                         .bind("var"),
-                     this);
+  Finder->addMatcher(
+      varDecl(Common, hasGlobalStorage(),
+              unless(anyOf(isExplicitlyExternC(), isStaticStorageClass(),
+                           isExternStorageClass(),
+                           isExplicitTemplateSpecialization(),
+                           hasThreadStorageDuration())))
+          .bind("var"),
+      this);
   if (getLangOpts().CPlusPlus)
     Finder->addMatcher(
         tagDecl(Common, isDefinition(), hasNameForLinkage(),
