@@ -33,7 +33,7 @@ int main() {
   for (int i = 0; i < LEN; i++)
     printf("%.1f\n", s2.data[i]);
 
-#pragma omp target data map(tofrom : s1, s2)
+#pragma omp target data map(to : s1, s2)
   {
 // Initialize all device values to 20
 #pragma omp target map(tofrom : s1, s2)
@@ -101,30 +101,30 @@ int main() {
   // CHECK: host struct array values after update from:
   // CHECK-NEXT: s1.data:
   // CHECK-NEXT: 10.0
-  // CHECK-NEXT: 20.0
+  // CHECK-NEXT: 1.0
   // CHECK-NEXT: 10.0
-  // CHECK-NEXT: 20.0
+  // CHECK-NEXT: 3.0
   // CHECK-NEXT: 10.0
-  // CHECK-NEXT: 20.0
+  // CHECK-NEXT: 5.0
   // CHECK-NEXT: 10.0
-  // CHECK-NEXT: 20.0
+  // CHECK-NEXT: 7.0
   // CHECK-NEXT: 10.0
-  // CHECK-NEXT: 20.0
+  // CHECK-NEXT: 9.0
   // CHECK-NEXT: 10.0
-  // CHECK-NEXT: 20.0
+  // CHECK-NEXT: 11.0
   // CHECK-NEXT: s2.data:
   // CHECK-NEXT: 10.0
-  // CHECK-NEXT: 20.0
-  // CHECK-NEXT: 20.0
+  // CHECK-NEXT: 1.0
+  // CHECK-NEXT: 2.0
   // CHECK-NEXT: 10.0
-  // CHECK-NEXT: 20.0
-  // CHECK-NEXT: 20.0
+  // CHECK-NEXT: 4.0
+  // CHECK-NEXT: 5.0
   // CHECK-NEXT: 10.0
-  // CHECK-NEXT: 20.0
-  // CHECK-NEXT: 20.0
+  // CHECK-NEXT: 7.0
+  // CHECK-NEXT: 8.0
   // CHECK-NEXT: 10.0
-  // CHECK-NEXT: 20.0
-  // CHECK-NEXT: 20.0
+  // CHECK-NEXT: 10.0
+  // CHECK-NEXT: 11.0
 
   return 0;
 }

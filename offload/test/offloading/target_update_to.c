@@ -23,9 +23,22 @@ int main() {
     printf("%f\n", result[i]);
   printf("\n");
 
-#pragma omp target data map(tofrom : result[0 : N])
+#pragma omp target data map(from : result[0 : N])
   {
-// Update strided elements to device: indices 0,2,4,6
+// Initialize device array to 0
+#pragma omp target
+    {
+      for (int i = 0; i < N; i++) {
+        result[i] = 0.0;
+      }
+    }
+
+    // Modify host strided elements (even indices)
+    for (int i = 0; i < 8; i++) {
+      result[i * 2] = 100.0;
+    }
+
+// Update strided elements to device: indices 0,2,4,6,8,10,12,14
 #pragma omp target update to(result[0 : 8 : 2])
 
 #pragma omp target
@@ -59,22 +72,22 @@ int main() {
   // CHECK-NEXT: 15.000000
 
   // CHECK: from target array results:
-  // CHECK-NEXT: 0.000000
-  // CHECK-NEXT: 2.000000
-  // CHECK-NEXT: 4.000000
-  // CHECK-NEXT: 6.000000
-  // CHECK-NEXT: 8.000000
-  // CHECK-NEXT: 10.000000
-  // CHECK-NEXT: 12.000000
-  // CHECK-NEXT: 14.000000
-  // CHECK-NEXT: 16.000000
-  // CHECK-NEXT: 18.000000
-  // CHECK-NEXT: 20.000000
-  // CHECK-NEXT: 22.000000
-  // CHECK-NEXT: 24.000000
-  // CHECK-NEXT: 26.000000
-  // CHECK-NEXT: 28.000000
-  // CHECK-NEXT: 30.000000
+  // CHECK-NEXT: 100.000000
+  // CHECK-NEXT: 1.000000
+  // CHECK-NEXT: 102.000000
+  // CHECK-NEXT: 3.000000
+  // CHECK-NEXT: 104.000000
+  // CHECK-NEXT: 5.000000
+  // CHECK-NEXT: 106.000000
+  // CHECK-NEXT: 7.000000
+  // CHECK-NEXT: 108.000000
+  // CHECK-NEXT: 9.000000
+  // CHECK-NEXT: 110.000000
+  // CHECK-NEXT: 11.000000
+  // CHECK-NEXT: 112.000000
+  // CHECK-NEXT: 13.000000
+  // CHECK-NEXT: 114.000000
+  // CHECK-NEXT: 15.000000
 
   free(result);
   return 0;

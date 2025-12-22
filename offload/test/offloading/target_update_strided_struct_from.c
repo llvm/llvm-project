@@ -28,7 +28,7 @@ int main() {
     printf("%f\n", s.data[i]);
   printf("\n");
 
-#pragma omp target data map(mapper(custom), tofrom : s)
+#pragma omp target data map(mapper(custom), to : s)
   {
 // Execute on device with explicit mapper
 #pragma omp target map(mapper(custom), tofrom : s)

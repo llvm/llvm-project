@@ -32,6 +32,7 @@ int main() {
   printf("\n");
 
   // Expected: even indices i, odd indices 0
+  // CHECK: after target update from
   // CHECK: 0.000000
   // CHECK: 0.000000
   // CHECK: 2.000000
