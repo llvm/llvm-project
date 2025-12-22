@@ -1782,6 +1782,9 @@ static Value *foldOperationIntoSelectOperand(Instruction &I, SelectInst *SI,
 Instruction *InstCombinerImpl::FoldOpIntoSelect(Instruction &Op, SelectInst *SI,
                                                 bool FoldWithMultiUse,
                                                 bool SimplifyBothArms) {
+  if (SI->getCondition()->getType()->isVectorTy() &&
+      !Op.getType()->isVectorTy())
+    return nullptr;
   // Don't modify shared select instructions unless set FoldWithMultiUse
   if (!SI->hasOneUse() && !FoldWithMultiUse)
     return nullptr;
