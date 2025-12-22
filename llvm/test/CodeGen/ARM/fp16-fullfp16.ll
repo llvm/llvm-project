@@ -675,8 +675,8 @@ define half @frem_f16(half %x, half %y) #0 {
 ; CHECK-LABEL: frem_f16:
 ; CHECK:         .save {r11, lr}
 ; CHECK-NEXT:    push {r11, lr}
-; CHECK-NEXT:    vcvtb.f32.f16 s0, s0
 ; CHECK-NEXT:    vcvtb.f32.f16 s1, s1
+; CHECK-NEXT:    vcvtb.f32.f16 s0, s0
 ; CHECK-NEXT:    bl fmodf
 ; CHECK-NEXT:    vcvtb.f16.f32 s0, s0
 ; CHECK-NEXT:    pop {r11, pc}
@@ -713,7 +713,7 @@ define i32 @fptosi_i32_f16(half %x) #0 {
 
 define i32 @fptoui_i32_f16(half %x) #0 {
 ; CHECK-LABEL: fptoui_i32_f16:
-; CHECK:         vcvt.s32.f16 s0, s0
+; CHECK:         vcvt.u32.f16 s0, s0
 ; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    bx lr
   %val = call i32 @llvm.experimental.constrained.fptoui.i32.f16(half %x, metadata !"fpexcept.strict") #0
@@ -925,8 +925,8 @@ define half @atan2_f16(half %x, half %y) #0 {
 ; CHECK-LABEL: atan2_f16:
 ; CHECK:         .save {r11, lr}
 ; CHECK-NEXT:    push {r11, lr}
-; CHECK-NEXT:    vcvtb.f32.f16 s0, s0
 ; CHECK-NEXT:    vcvtb.f32.f16 s1, s1
+; CHECK-NEXT:    vcvtb.f32.f16 s0, s0
 ; CHECK-NEXT:    bl atan2f
 ; CHECK-NEXT:    vcvtb.f16.f32 s0, s0
 ; CHECK-NEXT:    pop {r11, pc}
@@ -974,8 +974,8 @@ define half @pow_f16(half %x, half %y) #0 {
 ; CHECK-LABEL: pow_f16:
 ; CHECK:         .save {r11, lr}
 ; CHECK-NEXT:    push {r11, lr}
-; CHECK-NEXT:    vcvtb.f32.f16 s0, s0
 ; CHECK-NEXT:    vcvtb.f32.f16 s1, s1
+; CHECK-NEXT:    vcvtb.f32.f16 s0, s0
 ; CHECK-NEXT:    bl powf
 ; CHECK-NEXT:    vcvtb.f16.f32 s0, s0
 ; CHECK-NEXT:    pop {r11, pc}

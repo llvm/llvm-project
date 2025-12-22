@@ -82,15 +82,12 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FileUtilities.h"
+#include "llvm/Support/IOSandbox.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/raw_ostream.h"
 #include <optional>
-
-#if __has_include(<sys/sysctl.h>)
-#include <sys/sysctl.h>
-#endif
 
 using namespace llvm;
 using namespace llvm::cas;
@@ -271,29 +268,6 @@ static Error validateInProcess(StringRef RootPath, StringRef HashName,
   return Error::success();
 }
 
-static Expected<uint64_t> getBootTime() {
-#if __has_include(<sys/sysctl.h>) && defined(KERN_BOOTTIME)
-  struct timeval TV;
-  size_t TVLen = sizeof(TV);
-  int KernBoot[2] = {CTL_KERN, KERN_BOOTTIME};
-  if (sysctl(KernBoot, 2, &TV, &TVLen, nullptr, 0) < 0)
-    return createStringError(llvm::errnoAsErrorCode(),
-                             "failed to get boottime");
-  if (TVLen != sizeof(TV))
-    return createStringError("sysctl kern.boottime unexpected format");
-  return TV.tv_sec;
-#elif defined(__linux__)
-  // Use the mtime for /proc, which is recreated during system boot.
-  // We could also read /proc/stat and search for 'btime'.
-  sys::fs::file_status Status;
-  if (std::error_code EC = sys::fs::status("/proc", Status))
-    return createFileError("/proc", EC);
-  return Status.getLastModificationTime().time_since_epoch().count();
-#else
-  llvm::report_fatal_error("getBootTime unimplemented");
-#endif
-}
-
 Expected<ValidationResult> UnifiedOnDiskCache::validateIfNeeded(
     StringRef RootPath, StringRef HashName, unsigned HashByteSize,
     bool CheckHash, bool AllowRecovery, bool ForceValidation,
@@ -417,6 +391,8 @@ Expected<std::unique_ptr<UnifiedOnDiskCache>>
 UnifiedOnDiskCache::open(StringRef RootPath, std::optional<uint64_t> SizeLimit,
                          StringRef HashName, unsigned HashByteSize,
                          OnDiskGraphDB::FaultInPolicy FaultInPolicy) {
+  auto BypassSandbox = sys::sandbox::scopedDisable();
+
   if (std::error_code EC = sys::fs::create_directories(RootPath))
     return createFileError(RootPath, EC);
 
@@ -539,6 +515,8 @@ bool UnifiedOnDiskCache::hasExceededSizeLimit() const {
 }
 
 Error UnifiedOnDiskCache::close(bool CheckSizeLimit) {
+  auto BypassSandbox = sys::sandbox::scopedDisable();
+
   if (LockFD == -1)
     return Error::success(); // already closed.
   auto CloseLock = make_scope_exit([&]() {

@@ -220,17 +220,21 @@
     "https://bcr.bazel.build/modules/swift_argument_parser/1.3.1.1/source.json": "32bd87e5f4d7acc57c5b2ff7c325ae3061d5e242c0c4c214ae87e0f1c13e54cb",
     "https://bcr.bazel.build/modules/upb/0.0.0-20220923-a547704/MODULE.bazel": "7298990c00040a0e2f121f6c32544bab27d4452f80d9ce51349b1a28f3005c43",
     "https://bcr.bazel.build/modules/upb/0.0.0-20230516-61a97ef/MODULE.bazel": "c0df5e35ad55e264160417fd0875932ee3c9dda63d9fccace35ac62f45e1b6f9",
+    "https://bcr.bazel.build/modules/zlib-ng/2.0.7/MODULE.bazel": "3ca640b745b55f287e95aa0477e6cd76dfa0a565725d5412b7d8dae4274436c8",
+    "https://bcr.bazel.build/modules/zlib-ng/2.0.7/source.json": "107bf3a70ecf9f87fe90f7002c9e35423564ffed070affec23d41478503bc5cf",
     "https://bcr.bazel.build/modules/zlib/1.2.11/MODULE.bazel": "07b389abc85fdbca459b69e2ec656ae5622873af3f845e1c9d80fe179f3effa0",
     "https://bcr.bazel.build/modules/zlib/1.2.12/MODULE.bazel": "3b1a8834ada2a883674be8cbd36ede1b6ec481477ada359cd2d3ddc562340b27",
     "https://bcr.bazel.build/modules/zlib/1.3.1.bcr.5/MODULE.bazel": "eec517b5bbe5492629466e11dae908d043364302283de25581e3eb944326c4ca",
     "https://bcr.bazel.build/modules/zlib/1.3.1.bcr.5/source.json": "22bc55c47af97246cfc093d0acf683a7869377de362b5d1c552c2c2e16b7a806",
-    "https://bcr.bazel.build/modules/zlib/1.3.1/MODULE.bazel": "751c9940dcfe869f5f7274e1295422a34623555916eb98c174c1e945594bf198"
+    "https://bcr.bazel.build/modules/zlib/1.3.1/MODULE.bazel": "751c9940dcfe869f5f7274e1295422a34623555916eb98c174c1e945594bf198",
+    "https://bcr.bazel.build/modules/zstd/1.5.7/MODULE.bazel": "f5780cdbd6f4c5bb985a20f839844316fe48fb5e463056f372dbc37cfabdf450",
+    "https://bcr.bazel.build/modules/zstd/1.5.7/source.json": "f72c48184b6528ffc908a5a2bcbf3070c6684f3db03da2182c8ca999ae5f5cfd"
   },
   "selectedYankedVersions": {},
   "moduleExtensions": {
     "//:extensions.bzl%llvm_repos_extension": {
       "general": {
-        "bzlTransitiveDigest": "ojj7cD2YU2vcH58jVPVj2juUYn5SvdSNj1pmWb8Xo/k=",
+        "bzlTransitiveDigest": "9jGazpNxASw0pQCCKAMsxGYnVBJH8Mkddp3w7yRm6eU=",
         "usagesDigest": "X0yUkkWyxQ2Y5oZVDkRSE/K4YkDWo1IjhHsL+1weKyU=",
         "recordedFileInputs": {},
         "recordedDirentsInputs": {},
@@ -241,17 +245,6 @@
             "attributes": {
               "build_file_content": "# empty",
               "path": "../../"
-            }
-          },
-          "llvm_zlib": {
-            "repoRuleId": "@@bazel_tools//tools/build_defs/repo:http.bzl%http_archive",
-            "attributes": {
-              "build_file": "@@+llvm_repos_extension+llvm-raw//utils/bazel/third_party_build:zlib-ng.BUILD",
-              "sha256": "e36bb346c00472a1f9ff2a0a4643e590a254be6379da7cddd9daeb9a7f296731",
-              "strip_prefix": "zlib-ng-2.0.7",
-              "urls": [
-                "https://github.com/zlib-ng/zlib-ng/archive/refs/tags/2.0.7.zip"
-              ]
             }
           },
           "vulkan_headers": {
@@ -312,17 +305,6 @@
               "sha256": "d18b97764c755528c1051d376e33545d0eb60c6ebf85680436813fa5b04cc3d1",
               "strip_prefix": "libpfm-4.13.0",
               "build_file": "@@+llvm_repos_extension+llvm-raw//utils/bazel/third_party_build:pfm.BUILD"
-            }
-          },
-          "llvm_zstd": {
-            "repoRuleId": "@@bazel_tools//tools/build_defs/repo:http.bzl%http_archive",
-            "attributes": {
-              "build_file": "@@+llvm_repos_extension+llvm-raw//utils/bazel/third_party_build:zstd.BUILD",
-              "sha256": "7c42d56fac126929a6a85dbc73ff1db2411d04f104fae9bdea51305663a83fd0",
-              "strip_prefix": "zstd-1.5.2",
-              "urls": [
-                "https://github.com/facebook/zstd/releases/download/v1.5.2/zstd-1.5.2.tar.gz"
-              ]
             }
           },
           "pybind11": {

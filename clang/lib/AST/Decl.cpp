@@ -1753,9 +1753,11 @@ void NamedDecl::printNestedNameSpecifier(raw_ostream &OS,
     // Suppress inline namespace if it doesn't make the result ambiguous.
     if (Ctx->isInlineNamespace() && NameInScope) {
       if (P.SuppressInlineNamespace ==
-              PrintingPolicy::SuppressInlineNamespaceMode::All ||
+              llvm::to_underlying(
+                  PrintingPolicy::SuppressInlineNamespaceMode::All) ||
           (P.SuppressInlineNamespace ==
-               PrintingPolicy::SuppressInlineNamespaceMode::Redundant &&
+               llvm::to_underlying(
+                   PrintingPolicy::SuppressInlineNamespaceMode::Redundant) &&
            cast<NamespaceDecl>(Ctx)->isRedundantInlineQualifierFor(
                NameInScope))) {
         continue;
@@ -1790,7 +1792,9 @@ void NamedDecl::printNestedNameSpecifier(raw_ostream &OS,
       else
         OS << *ND;
     } else if (const auto *RD = dyn_cast<RecordDecl>(DC)) {
-      if (!RD->getIdentifier())
+      if (TypedefNameDecl *TD = RD->getTypedefNameForAnonDecl())
+        OS << *TD;
+      else if (!RD->getIdentifier())
         OS << "(anonymous " << RD->getKindName() << ')';
       else
         OS << *RD;
@@ -5240,7 +5244,14 @@ void RecordDecl::completeDefinition() {
 /// This which can be turned on with an attribute, pragma, or the
 /// -mms-bitfields command-line option.
 bool RecordDecl::isMsStruct(const ASTContext &C) const {
-  return hasAttr<MSStructAttr>() || C.getLangOpts().MSBitfields == 1;
+  if (hasAttr<GCCStructAttr>())
+    return false;
+  if (hasAttr<MSStructAttr>())
+    return true;
+  auto LayoutCompatibility = C.getLangOpts().getLayoutCompatibility();
+  if (LayoutCompatibility == LangOptions::LayoutCompatibilityKind::Default)
+    return C.defaultsToMsStruct();
+  return LayoutCompatibility == LangOptions::LayoutCompatibilityKind::Microsoft;
 }
 
 void RecordDecl::reorderDecls(const SmallVectorImpl<Decl *> &Decls) {
