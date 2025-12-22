@@ -1736,29 +1736,29 @@ func.func @batch_matmul(%A: memref<?x?x?xf32>, %B: memref<?x?x?xf32>, %C: memref
 
 // CHECK-LABEL: func.func @batch_matmul(
 // CHECK-SAME:  %[[A:.*]]: memref<?x?x?xf32>, %[[B:.*]]: memref<?x?x?xf32>, %[[C:.*]]: memref<?x?x?xf32>
-// CHECK:       %[[c0:.*]] = arith.constant 0 : index
-// CHECK:       %[[BATCH_DIM:.*]] = memref.dim %[[A]], %[[c0]] : memref<?x?x?xf32>
-// CHECK:       %[[c1:.*]] = arith.constant 1 : index
-// CHECK:       %[[M:.*]] = memref.dim %[[A]], %[[c1]] : memref<?x?x?xf32>
-// CHECK:       %[[c2:.*]] = arith.constant 2 : index
-// CHECK:       %[[N:.*]] = memref.dim %[[B]], %[[c2]] : memref<?x?x?xf32>
-// CHECK:       %[[c2_2:.*]] = arith.constant 2 : index
-// CHECK:       %[[K:.*]] = memref.dim %[[A]], %[[c2_2]] : memref<?x?x?xf32>
-// CHECK:       %[[c0_4:.*]] = arith.constant 0 : index
+// CHECK:       %[[C0:.*]] = arith.constant 0 : index
+// CHECK:       %[[BATCH_DIM:.*]] = memref.dim %[[A]], %[[C0]] : memref<?x?x?xf32>
+// CHECK:       %[[C1:.*]] = arith.constant 1 : index
+// CHECK:       %[[M:.*]] = memref.dim %[[A]], %[[C1]] : memref<?x?x?xf32>
+// CHECK:       %[[C2:.*]] = arith.constant 2 : index
+// CHECK:       %[[N:.*]] = memref.dim %[[B]], %[[C2]] : memref<?x?x?xf32>
+// CHECK:       %[[C2_2:.*]] = arith.constant 2 : index
+// CHECK:       %[[K:.*]] = memref.dim %[[A]], %[[C2_2]] : memref<?x?x?xf32>
+// CHECK:       %[[C0_4:.*]] = arith.constant 0 : index
 // CHECK:       %[[P0:.*]] = ub.poison : f32
 // CHECK:       %[[MA:.*]] = vector.create_mask %[[BATCH_DIM]], %[[M]], %[[K]] : vector<4x8x4xi1>
-// CHECK:       %[[VA:.*]] = vector.mask %[[MA]] { vector.transfer_read %[[A]][%[[c0_4]], %[[c0_4]], %[[c0_4]]], %[[P0]] {in_bounds = [true, true, true, true], permutation_map = #{{.*}}} : memref<?x?x?xf32>, vector<4x8x16x4xf32> } : vector<4x8x4xi1> -> vector<4x8x16x4xf32>
+// CHECK:       %[[VA:.*]] = vector.mask %[[MA]] { vector.transfer_read %[[A]][%[[C0_4]], %[[C0_4]], %[[C0_4]]], %[[P0]] {in_bounds = [true, true, true, true], permutation_map = #{{.*}}} : memref<?x?x?xf32>, vector<4x8x16x4xf32> } : vector<4x8x4xi1> -> vector<4x8x16x4xf32>
 // CHECK:       %[[P1:.*]] = ub.poison : f32
 // CHECK:       %[[MB:.*]] = vector.create_mask %[[BATCH_DIM]], %[[K]], %[[N]] : vector<4x4x16xi1>
-// CHECK:       %[[VB:.*]] = vector.mask %[[MB]] { vector.transfer_read %[[B]][%[[c0_4]], %[[c0_4]], %[[c0_4]]], %[[P1]] {in_bounds = [true, true, true, true], permutation_map = #{{.*}}} : memref<?x?x?xf32>, vector<4x8x16x4xf32> } : vector<4x4x16xi1> -> vector<4x8x16x4xf32>
+// CHECK:       %[[VB:.*]] = vector.mask %[[MB]] { vector.transfer_read %[[B]][%[[C0_4]], %[[C0_4]], %[[C0_4]]], %[[P1]] {in_bounds = [true, true, true, true], permutation_map = #{{.*}}} : memref<?x?x?xf32>, vector<4x8x16x4xf32> } : vector<4x4x16xi1> -> vector<4x8x16x4xf32>
 // CHECK:       %[[P2:.*]] = ub.poison : f32
 // CHECK:       %[[MC:.*]] = vector.create_mask %[[BATCH_DIM]], %[[M]], %[[N]] : vector<4x8x16xi1>
-// CHECK:       %[[VC:.*]] = vector.mask %[[MC]] { vector.transfer_read %[[C]][%[[c0_4]], %[[c0_4]], %[[c0_4]]], %[[P2]] {in_bounds = [true, true, true]} : memref<?x?x?xf32>, vector<4x8x16xf32> } : vector<4x8x16xi1> -> vector<4x8x16xf32>
+// CHECK:       %[[VC:.*]] = vector.mask %[[MC]] { vector.transfer_read %[[C]][%[[C0_4]], %[[C0_4]], %[[C0_4]]], %[[P2]] {in_bounds = [true, true, true]} : memref<?x?x?xf32>, vector<4x8x16xf32> } : vector<4x8x16xi1> -> vector<4x8x16xf32>
 // CHECK:       %[[MUL:.*]] = arith.mulf %[[VA]], %[[VB]] : vector<4x8x16x4xf32>
 // CHECK:       %[[MRED:.*]] = vector.create_mask %[[BATCH_DIM]], %[[M]], %[[N]], %[[K]] : vector<4x8x16x4xi1>
 // CHECK:       %[[RED:.*]] = vector.mask %[[MRED]] { vector.multi_reduction <add>, %[[MUL]], %[[VC]] [3] : vector<4x8x16x4xf32> to vector<4x8x16xf32> } : vector<4x8x16x4xi1> -> vector<4x8x16xf32>
-// CHECK:       %[[c0_5:.*]] = arith.constant 0 : index
-// CHECK:       vector.mask %[[MC]] { vector.transfer_write %[[RED]], %[[C]][%[[c0_5]], %[[c0_5]], %[[c0_5]]] {in_bounds = [true, true, true]} : vector<4x8x16xf32>, memref<?x?x?xf32> } : vector<4x8x16xi1>
+// CHECK:       %[[C0_5:.*]] = arith.constant 0 : index
+// CHECK:       vector.mask %[[MC]] { vector.transfer_write %[[RED]], %[[C]][%[[C0_5]], %[[C0_5]], %[[C0_5]]] {in_bounds = [true, true, true]} : vector<4x8x16xf32>, memref<?x?x?xf32> } : vector<4x8x16xi1>
 
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
@@ -1778,29 +1778,29 @@ func.func @batch_matmul_scalable(%A: memref<?x?x?xf32>, %B: memref<?x?x?xf32>, %
 
 // CHECK-LABEL: func.func @batch_matmul_scalable
 // CHECK-SAME:  (%[[A:.*]]: memref<?x?x?xf32>, %[[B:.*]]: memref<?x?x?xf32>, %[[C:.*]]: memref<?x?x?xf32>) {
-// CHECK:       %[[c0:.*]] = arith.constant 0 : index
-// CHECK:       %[[BATCH_DIM:.*]] = memref.dim %[[A]], %[[c0]] : memref<?x?x?xf32>
-// CHECK:       %[[c1:.*]] = arith.constant 1 : index
-// CHECK:       %[[M:.*]] = memref.dim %[[A]], %[[c1]] : memref<?x?x?xf32>
-// CHECK:       %[[c2:.*]] = arith.constant 2 : index
-// CHECK:       %[[N:.*]] = memref.dim %[[B]], %[[c2]] : memref<?x?x?xf32>
-// CHECK:       %[[c2_2:.*]] = arith.constant 2 : index
-// CHECK:       %[[K:.*]] = memref.dim %[[A]], %[[c2_2]] : memref<?x?x?xf32>
-// CHECK:       %[[c0_4:.*]] = arith.constant 0 : index
+// CHECK:       %[[C0:.*]] = arith.constant 0 : index
+// CHECK:       %[[BATCH_DIM:.*]] = memref.dim %[[A]], %[[C0]] : memref<?x?x?xf32>
+// CHECK:       %[[C1:.*]] = arith.constant 1 : index
+// CHECK:       %[[M:.*]] = memref.dim %[[A]], %[[C1]] : memref<?x?x?xf32>
+// CHECK:       %[[C2:.*]] = arith.constant 2 : index
+// CHECK:       %[[N:.*]] = memref.dim %[[B]], %[[C2]] : memref<?x?x?xf32>
+// CHECK:       %[[C2_2:.*]] = arith.constant 2 : index
+// CHECK:       %[[K:.*]] = memref.dim %[[A]], %[[C2_2]] : memref<?x?x?xf32>
+// CHECK:       %[[C0_4:.*]] = arith.constant 0 : index
 // CHECK:       %[[P0:.*]] = ub.poison : f32
 // CHECK:       %[[MA:.*]] = vector.create_mask %[[BATCH_DIM]], %[[M]], %[[K]] : vector<4x8x4xi1>
-// CHECK:       %[[VA:.*]] = vector.mask %[[MA]] { vector.transfer_read %[[A]][%[[c0_4]], %[[c0_4]], %[[c0_4]]], %[[P0]] {in_bounds = [true, true, true, true], permutation_map = #{{.*}}} : memref<?x?x?xf32>, vector<4x8x[16]x4xf32> } : vector<4x8x4xi1> -> vector<4x8x[16]x4xf32>
+// CHECK:       %[[VA:.*]] = vector.mask %[[MA]] { vector.transfer_read %[[A]][%[[C0_4]], %[[C0_4]], %[[C0_4]]], %[[P0]] {in_bounds = [true, true, true, true], permutation_map = #{{.*}}} : memref<?x?x?xf32>, vector<4x8x[16]x4xf32> } : vector<4x8x4xi1> -> vector<4x8x[16]x4xf32>
 // CHECK:       %[[P1:.*]] = ub.poison : f32
 // CHECK:       %[[MB:.*]] = vector.create_mask %[[BATCH_DIM]], %[[K]], %[[N]] : vector<4x4x[16]xi1>
-// CHECK:       %[[VB:.*]] = vector.mask %[[MB]] { vector.transfer_read %[[B]][%[[c0_4]], %[[c0_4]], %[[c0_4]]], %[[P1]] {in_bounds = [true, true, true, true], permutation_map = #{{.*}}} : memref<?x?x?xf32>, vector<4x8x[16]x4xf32> } : vector<4x4x[16]xi1> -> vector<4x8x[16]x4xf32>
+// CHECK:       %[[VB:.*]] = vector.mask %[[MB]] { vector.transfer_read %[[B]][%[[C0_4]], %[[C0_4]], %[[C0_4]]], %[[P1]] {in_bounds = [true, true, true, true], permutation_map = #{{.*}}} : memref<?x?x?xf32>, vector<4x8x[16]x4xf32> } : vector<4x4x[16]xi1> -> vector<4x8x[16]x4xf32>
 // CHECK:       %[[P2:.*]] = ub.poison : f32
 // CHECK:       %[[MC:.*]] = vector.create_mask %[[BATCH_DIM]], %[[M]], %[[N]] : vector<4x8x[16]xi1>
-// CHECK:       %[[VC:.*]] = vector.mask %[[MC]] { vector.transfer_read %[[C]][%[[c0_4]], %[[c0_4]], %[[c0_4]]], %[[P2]] {in_bounds = [true, true, true]} : memref<?x?x?xf32>, vector<4x8x[16]xf32> } : vector<4x8x[16]xi1> -> vector<4x8x[16]xf32>
+// CHECK:       %[[VC:.*]] = vector.mask %[[MC]] { vector.transfer_read %[[C]][%[[C0_4]], %[[C0_4]], %[[C0_4]]], %[[P2]] {in_bounds = [true, true, true]} : memref<?x?x?xf32>, vector<4x8x[16]xf32> } : vector<4x8x[16]xi1> -> vector<4x8x[16]xf32>
 // CHECK:       %[[MUL:.*]] = arith.mulf %[[VA]], %[[VB]] : vector<4x8x[16]x4xf32>
 // CHECK:       %[[MRED:.*]] = vector.create_mask %[[BATCH_DIM]], %[[M]], %[[N]], %[[K]] : vector<4x8x[16]x4xi1>
 // CHECK:       %[[RED:.*]] = vector.mask %[[MRED]] { vector.multi_reduction <add>, %[[MUL]], %[[VC]] [3] : vector<4x8x[16]x4xf32> to vector<4x8x[16]xf32> } : vector<4x8x[16]x4xi1> -> vector<4x8x[16]xf32>
-// CHECK:       %[[c0_5:.*]] = arith.constant 0 : index
-// CHECK:       vector.mask %[[MC]] { vector.transfer_write %[[RED]], %[[C]][%[[c0_5]], %[[c0_5]], %[[c0_5]]] {in_bounds = [true, true, true]} : vector<4x8x[16]xf32>, memref<?x?x?xf32> } : vector<4x8x[16]xi1>
+// CHECK:       %[[C0_5:.*]] = arith.constant 0 : index
+// CHECK:       vector.mask %[[MC]] { vector.transfer_write %[[RED]], %[[C]][%[[C0_5]], %[[C0_5]], %[[C0_5]]] {in_bounds = [true, true, true]} : vector<4x8x[16]xf32>, memref<?x?x?xf32> } : vector<4x8x[16]xi1>
 
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
