@@ -3145,7 +3145,7 @@ bool VectorCombine::foldShuffleOfIntrinsics(Instruction &I) {
                     << "\n  OldCost: " << OldCost << " vs NewCost: " << NewCost
                     << "\n");
 
-  if (NewCost >OldCost)
+  if (NewCost > OldCost)
     return false;
 
   SmallVector<Value *> NewArgs;
