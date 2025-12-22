@@ -5129,8 +5129,11 @@ void EnumDecl::getValueRange(llvm::APInt &Max, llvm::APInt &Min) const {
     unsigned NumBits = std::max(NumNegativeBits, NumPositiveBits + 1);
     Max = llvm::APInt(Bitwidth, 1) << (NumBits - 1);
     Min = -Max;
-  } else {
-    Max = llvm::APInt(Bitwidth, 1) << NumPositiveBits;
+ } else {
+    if (NumPositiveBits >= Bitwidth)
+      Max = llvm::APInt::getZero(Bitwidth);
+    else
+      Max = llvm::APInt(Bitwidth, 1) << NumPositiveBits;
     Min = llvm::APInt::getZero(Bitwidth);
   }
 }
