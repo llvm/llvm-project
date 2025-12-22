@@ -141,11 +141,7 @@ class Result(FieldDef):
 @dataclass
 class Attribute(FieldDef):
     constraint: ConstraintExpr
-
-    def __post_init__(self):
-        # just for unified processing,
-        # currently optional attribute is not supported by IRDL
-        self.variadicity = Variadicity.single
+    variadicity: typing.ClassVar[Variadicity] = Variadicity.single
 
 
 def partition_fields(
