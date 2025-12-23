@@ -5271,15 +5271,16 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       break;
     }
     case Intrinsic::canonicalize: {
+      KnownFPClass KnownSrc;
       computeKnownFPClass(II->getArgOperand(0), DemandedElts, InterestedClasses,
-                          Known, Q, Depth + 1);
+                          KnownSrc, Q, Depth + 1);
 
       const Function *F = II->getFunction();
       DenormalMode DenormMode =
           F ? F->getDenormalMode(
                   II->getType()->getScalarType()->getFltSemantics())
             : DenormalMode::getDynamic();
-      Known.canonicalize(DenormMode);
+      Known = KnownFPClass::canonicalize(KnownSrc, DenormMode);
       break;
     }
     case Intrinsic::vector_reduce_fmax:

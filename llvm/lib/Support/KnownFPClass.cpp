@@ -91,9 +91,9 @@ void KnownFPClass::propagateDenormal(const KnownFPClass &Src,
   }
 }
 
-void KnownFPClass::canonicalize(DenormalMode DenormMode) {
-  KnownFPClass KnownSrc = *this;
-  *this = KnownFPClass();
+KnownFPClass KnownFPClass::canonicalize(const KnownFPClass &KnownSrc,
+                                        DenormalMode DenormMode) {
+  KnownFPClass Known;
 
   // This is essentially a stronger form of
   // propagateCanonicalizingSrc. Other "canonicalizing" operations don't
@@ -101,14 +101,14 @@ void KnownFPClass::canonicalize(DenormalMode DenormMode) {
 
   // Canonicalize may flush denormals to zero, so we have to consider the
   // denormal mode to preserve known-not-0 knowledge.
-  KnownFPClasses = KnownSrc.KnownFPClasses | fcZero | fcQNan;
+  Known.KnownFPClasses = KnownSrc.KnownFPClasses | fcZero | fcQNan;
 
   // Stronger version of propagateNaN
   // Canonicalize is guaranteed to quiet signaling nans.
   if (KnownSrc.isKnownNeverNaN())
-    knownNot(fcNan);
+    Known.knownNot(fcNan);
   else
-    knownNot(fcSNan);
+    Known.knownNot(fcSNan);
 
   // FIXME: Missing check of IEEE like types.
 
@@ -116,27 +116,29 @@ void KnownFPClass::canonicalize(DenormalMode DenormMode) {
   // denormal.
   if (DenormMode == DenormalMode::getIEEE()) {
     if (KnownSrc.isKnownNever(fcPosZero))
-      knownNot(fcPosZero);
+      Known.knownNot(fcPosZero);
     if (KnownSrc.isKnownNever(fcNegZero))
-      knownNot(fcNegZero);
-    return;
+      Known.knownNot(fcNegZero);
+    return Known;
   }
 
   if (DenormMode.inputsAreZero() || DenormMode.outputsAreZero())
-    knownNot(fcSubnormal);
+    Known.knownNot(fcSubnormal);
 
   if (DenormMode == DenormalMode::getPreserveSign()) {
     if (KnownSrc.isKnownNever(fcPosZero | fcPosSubnormal))
-      knownNot(fcPosZero);
+      Known.knownNot(fcPosZero);
     if (KnownSrc.isKnownNever(fcNegZero | fcNegSubnormal))
-      knownNot(fcNegZero);
-    return;
+      Known.knownNot(fcNegZero);
+    return Known;
   }
 
   if (DenormMode.Input == DenormalMode::PositiveZero ||
       (DenormMode.Output == DenormalMode::PositiveZero &&
        DenormMode.Input == DenormalMode::IEEE))
-    knownNot(fcNegZero);
+    Known.knownNot(fcNegZero);
+
+  return Known;
 }
 
 void KnownFPClass::propagateCanonicalizingSrc(const KnownFPClass &Src,

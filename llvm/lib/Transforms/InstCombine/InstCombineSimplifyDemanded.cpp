@@ -2150,10 +2150,8 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Value *V,
         if (SimplifyDemandedFPClass(I, 0, SrcDemandedMask, KnownSrc, Depth + 1))
           return I;
 
-        Known = KnownSrc;
-
         // Perform the canonicalization to see if this folded to a constant.
-        Known.canonicalize(Mode);
+        Known = KnownFPClass::canonicalize(KnownSrc, Mode);
 
         if (Constant *SingleVal =
                 getFPClassConstant(VTy, DemandedMask & Known.KnownFPClasses))
