@@ -1046,34 +1046,34 @@ def err_itanium_layout_unimplemented : Error<
   "Itanium-compatible layout for the Microsoft C++ ABI is not yet supported">;
 
 // Unsupported features in name mangling
-def err_unsupported_itanium_mangling
-    : Error<"cannot yet mangle "
-            "%enum_select<UnsupportedItaniumManglingKind>"
-            "{%FixedPointLiteral{fixed point literal}"
-            "|%DependentNeonVector{dependent neon vector type}"
-            "|%DependentFixedLengthSVEVector{dependent fixed-length SVE vector "
-            "type}"
-            "|%DependentFixedLengthRVVVectorType{dependent fixed-length RVV "
-            "vector type}"
-            "|%TernaryWithOmittedMiddleOperand{?: operator with omitted middle "
-            "operand}"
-            "|%OpenACCAsteriskSizeExpr{OpenACC Asterisk Size expression}"
-            "|%UnnamedUnionNTTP{unnamed union non-type template parameter}"
-            "|%RequiresExprWithSubstitutionFailure{requires-expression "
-            "containing a substitution failure}"
-            "}0 yet">;
+def err_unsupported_itanium_mangling : Error<
+    "cannot yet mangle "
+    "%enum_select<UnsupportedItaniumManglingKind>"
+    "{%FixedPointLiteral{fixed point literal}"
+    "|%DependentNeonVector{dependent neon vector type}"
+    "|%DependentFixedLengthSVEVector{dependent fixed-length SVE vector "
+    "type}"
+    "|%DependentFixedLengthRVVVectorType{dependent fixed-length RVV "
+    "vector type}"
+    "|%TernaryWithOmittedMiddleOperand{?: operator with omitted middle "
+    "operand}"
+    "|%OpenACCAsteriskSizeExpr{OpenACC Asterisk Size expression}"
+    "|%UnnamedUnionNTTP{unnamed union non-type template parameter}"
+    "|%RequiresExprWithSubstitutionFailure{requires-expression "
+    "containing a substitution failure}"
+    "}0">;
 
-def err_unsupported_itanium_expr_mangling
-    : Error<"cannot yet mangle %0 expression">;
+def err_unsupported_itanium_expr_mangling : Error<
+    "cannot yet mangle %0 expression">;
 
-def err_ms_mangle_number_overflow
-    : Error<"mangling number exceeds limit (65535)">;
-def err_ms_mangle_unsupported_with_detail
-    : Error<"cannot mangle this %0 %1 yet">;
+def err_ms_mangle_number_overflow : Error<
+    "mangling number exceeds limit (65535)">;
+def err_ms_mangle_unsupported_with_detail : Error<
+    "cannot mangle this %0 %1 yet">;
 def err_ms_mangle_unsupported : Error<"cannot mangle this %0 yet">;
 
-def err_unexpected_vftable_component
-    : Error<"unexpected vftable component type %0 for component number %1">;
+def err_unexpected_vftable_component : Error<
+    "unexpected vftable component type %0 for component number %1">;
 
 // -Wpadded-bitfield
 def warn_padded_struct_bitfield : Warning<
