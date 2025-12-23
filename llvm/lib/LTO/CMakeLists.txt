@@ -41,6 +41,7 @@ add_llvm_component_library(LLVMLTO
   ObjCARC
   Object
   Passes
+  Plugins
   Remarks
   RemoteCachingService
   Scalar

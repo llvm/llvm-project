@@ -25,6 +25,7 @@ set(LLVM_LINK_COMPONENTS
   ObjCARCOpts
   Object
   Passes
+  Plugins
   ProfileData
   ScalarOpts
   Support
