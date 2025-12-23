@@ -1,5 +1,8 @@
 # RUN: rm -rf %t.dir && mkdir -p %t.dir
 
+# The mock driver below is a shell script:
+# UNSUPPORTED: system-windows
+
 # Create a bin directory to store the mock-driver and add it to the path
 # RUN: mkdir -p %t.dir/bin
 # RUN: %python -c "print(__import__('os').environ['PATH'])" | tr -d '\n' > %t.path
