@@ -81,6 +81,24 @@ func.func @global_load_to_rocdl_wg_mem(%global : memref<128x72xf32>) {
   func.return
 }
 
+// CHECK-LABEL: func @global_load_to_rocdl_0d
+// CHECK-SAME: (%[[ARG0:.*]]: memref<f32>)
+func.func @global_load_to_rocdl_0d(%global : memref<f32>) {
+  %alloc = memref.alloc() : memref<f32, #gpu.address_space<workgroup>>
+  // CHECK: %[[GLOBAL_DESC:.*]] = builtin.unrealized_conversion_cast %[[ARG0]] : memref<f32> to !llvm.struct<(ptr, ptr, i64)>
+
+  // CHECK: %[[ALLOC:.*]] = memref.alloc()
+  // CHECK: %[[LDS_DESC:.*]] = builtin.unrealized_conversion_cast %[[ALLOC]] : memref<f32, #gpu.address_space<workgroup>> to !llvm.struct<(ptr<3>, ptr<3>, i64)>
+
+  // CHECK: %[[GLOBAL_BASE:.*]] = llvm.extractvalue %[[GLOBAL_DESC]][1] : !llvm.struct<(ptr, ptr, i64)>
+  // CHECK: %[[LDS_BASE:.*]] = llvm.extractvalue %[[LDS_DESC]][1] : !llvm.struct<(ptr<3>, ptr<3>, i64)>
+
+  // CHECK: rocdl.load.to.lds %[[GLOBAL_BASE]], %[[LDS_BASE]], 4
+  amdgpu.gather_to_lds %global[], %alloc[]
+    : f32, memref<f32>, memref<f32, #gpu.address_space<workgroup>>
+  func.return
+}
+
 // CHECK-LABEL: func @global_load_to_rocdl_i8
 // CHECK-SAME: (%[[ARG0:.*]]: memref<128x72xi8, 1>)
 func.func @global_load_to_rocdl_i8(%global : memref<128x72xi8, #gpu_global_addrspace>) {
