@@ -11,31 +11,26 @@
 #include "clang/ASTMatchers/ASTMatchers.h"
 
 using namespace clang::ast_matchers;
-using namespace clang::ast_matchers::internal;
 
 namespace clang::tidy::modernize {
 
 void RedundantVoidArgCheck::registerMatchers(MatchFinder *Finder) {
-  const VariadicDynCastAllOfMatcher<TypeLoc, FunctionProtoTypeLoc>
-      functionProtoTypeLoc; // NOLINT(readability-identifier-naming)
-  Finder->addMatcher(traverse(TK_IgnoreUnlessSpelledInSource,
-                              functionProtoTypeLoc(
-                                  unless(hasParent(functionDecl(isExternC()))))
-                                  .bind("fn")),
-                     this);
+  Finder->addMatcher(
+      traverse(TK_IgnoreUnlessSpelledInSource,
+               functionTypeLoc(unless(hasParent(functionDecl(isExternC()))))
+                   .bind("fn")),
+      this);
   Finder->addMatcher(
       traverse(TK_IgnoreUnlessSpelledInSource, lambdaExpr().bind("fn")), this);
 }
 
 void RedundantVoidArgCheck::check(const MatchFinder::MatchResult &Result) {
-  const FunctionProtoTypeLoc TL = [&] {
-    if (const auto *TL = Result.Nodes.getNodeAs<FunctionProtoTypeLoc>("fn"))
+  const FunctionTypeLoc TL = [&] {
+    if (const auto *TL = Result.Nodes.getNodeAs<FunctionTypeLoc>("fn"))
       return *TL;
     return Result.Nodes.getNodeAs<LambdaExpr>("fn")
         ->getCallOperator()
-        ->getTypeSourceInfo()
-        ->getTypeLoc()
-        .getAs<FunctionProtoTypeLoc>();
+        ->getFunctionTypeLoc();
   }();
 
   if (TL.getNumParams() != 0)
