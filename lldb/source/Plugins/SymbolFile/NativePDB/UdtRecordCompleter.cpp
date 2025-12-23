@@ -234,7 +234,7 @@ Error UdtRecordCompleter::visitKnownMember(CVMemberRecord &cvr,
     return Error::success();
 
   clang::QualType qt =
-      m_ast_builder.GetOrCreateType(PdbTypeSymId(nested.Type, false));
+      m_ast_builder.GetOrCreateClangType(PdbTypeSymId(nested.Type, false));
   if (qt.isNull())
     return Error::success();
   CompilerType ct = m_ast_builder.ToCompilerType(qt);
@@ -248,7 +248,7 @@ Error UdtRecordCompleter::visitKnownMember(CVMemberRecord &cvr,
     return Error::success();
 
   clang::DeclContext *decl_ctx =
-      m_ast_builder.GetOrCreateDeclContextForUid(m_id);
+      m_ast_builder.GetOrCreateClangDeclContextForUid(m_id);
   if (!decl_ctx)
     return Error::success();
 
