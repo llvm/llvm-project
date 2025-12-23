@@ -41,12 +41,6 @@ LLVM_ABI bool recordContextSizeInfoForAnalysis();
 LLVM_ABI MDNode *buildCallstackMetadata(ArrayRef<uint64_t> CallStack,
                                         LLVMContext &Ctx);
 
-/// Build metadata from the provided list of full stack id and profiled size, to
-/// use when reporting of hinted sizes is enabled.
-LLVM_ABI MDNode *
-buildContextSizeMetadata(ArrayRef<ContextTotalSize> ContextSizeInfo,
-                         LLVMContext &Ctx);
-
 /// Returns the stack node from an MIB metadata node.
 LLVM_ABI MDNode *getMIBStackNode(const MDNode *MIB);
 
