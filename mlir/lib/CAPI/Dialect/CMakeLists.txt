@@ -215,7 +215,6 @@ add_mlir_upstream_c_api_library(MLIRCAPILLVM
   LINK_LIBS PUBLIC
   MLIRCAPIIR
   MLIRLLVMDialect
-  MLIRLLVMTransforms
 )
 
 add_mlir_upstream_c_api_library(MLIRCAPIMath
@@ -380,7 +379,6 @@ add_mlir_upstream_c_api_library(MLIRCAPIShape
   LINK_LIBS PUBLIC
   MLIRCAPIIR
   MLIRShapeDialect
-  MLIRShapeTransforms
 )
 
 add_mlir_upstream_c_api_library(MLIRCAPIShard
@@ -439,9 +437,6 @@ add_mlir_upstream_c_api_library(MLIRCAPITensor
   TensorPasses.cpp
 
   PARTIAL_SOURCES_INTENDED
-  DEPENDS
-  MLIRTensorPassIncGen
-
   LINK_LIBS PUBLIC
   MLIRCAPIIR
   MLIRTensorDialect
@@ -470,7 +465,6 @@ add_mlir_upstream_c_api_library(MLIRCAPITransformDialect
   LINK_LIBS PUBLIC
   MLIRCAPIIR
   MLIRTransformDialect
-  MLIRTransformTransforms
 )
 
 add_mlir_upstream_c_api_library(MLIRCAPITransformDialectTransforms
