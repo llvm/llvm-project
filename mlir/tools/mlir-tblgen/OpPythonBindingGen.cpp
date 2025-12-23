@@ -296,12 +296,12 @@ def {0}({2}) -> _Union[_ods_ir.OpResult, _ods_ir.OpResultList, {1}]:
 
 static llvm::cl::OptionCategory
     clPythonBindingCat("Options for -gen-python-op-bindings and "
-	                 "-gen-python-enum-bindings");
+                       "-gen-python-enum-bindings");
 
-llvm::cl::opt<std::string>
-    clPythonPackagePrefix("python-package-prefix",
-                  llvm::cl::desc("The prefix of the MLIR Python package"),
-                  llvm::cl::init("mlir"), llvm::cl::cat(clPythonBindingCat));
+llvm::cl::opt<std::string> clPythonPackagePrefix(
+    "python-package-prefix",
+    llvm::cl::desc("The prefix of the MLIR Python package"),
+    llvm::cl::init("mlir"), llvm::cl::cat(clPythonBindingCat));
 
 static llvm::cl::OptionCategory
     clOpPythonBindingCat("Options for -gen-python-op-bindings");
@@ -1235,7 +1235,7 @@ static bool emitAllOps(const RecordKeeper &records, raw_ostream &os) {
   os << formatv(fileHeader, clPythonPackagePrefix.getValue());
   if (!clDialectExtensionName.empty())
     os << formatv(dialectExtensionTemplate, clDialectName.getValue(),
-		  clPythonPackagePrefix.getValue());
+                  clPythonPackagePrefix.getValue());
   else
     os << formatv(dialectClassTemplate, clDialectName.getValue());
 
