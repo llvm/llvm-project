@@ -8773,8 +8773,6 @@ SDValue TargetLowering::expandFMINIMUM_FMAXIMUM(SDNode *N,
   unsigned MinMaxOpcNum2019 = IsMax ? ISD::FMAXIMUMNUM : ISD::FMINIMUMNUM;
   unsigned MinMaxOpc = ISD::DELETED_NODE;
 
-  bool IsZeroOrdered = true;
-
   if (isOperationLegal(MinMaxOpcIeee, VT))
     MinMaxOpc = MinMaxOpcIeee;
   else if (isOperationLegal(MinMaxOpcNum2019, VT))
@@ -8796,24 +8794,24 @@ SDValue TargetLowering::expandFMINIMUM_FMAXIMUM(SDNode *N,
           DAG.getSelect(DL, VT, DAG.getSetCC(DL, CCVT, LHS, RHS, ISD::SETUO),
                         DAG.getConstantFP(*FPNaN, DL, VT), MinMax, Flags);
     }
-  } else {
-    if (VT.isVector() && !isOperationLegalOrCustom(ISD::VSELECT, VT))
-      return DAG.UnrollVectorOp(N);
-
-    if (!Flags.hasNoNaNs() && !DAG.isKnownNeverNaN(RHS))
-      LHS = DAG.getSelect(DL, VT, DAG.getSetCC(DL, CCVT, RHS, RHS, ISD::SETUO),
-                          RHS, LHS, Flags);
-    MinMax = DAG.getSelectCC(DL, LHS, RHS, LHS, RHS,
-                             IsMax ? ISD::SETUGT : ISD::SETULT);
-    IsZeroOrdered = false;
+    return MinMax
   }
+
+  if (VT.isVector() && !isOperationLegalOrCustom(ISD::VSELECT, VT))
+    return DAG.UnrollVectorOp(N);
+
+  if (!Flags.hasNoNaNs() && !DAG.isKnownNeverNaN(RHS))
+    LHS = DAG.getSelect(DL, VT, DAG.getSetCC(DL, CCVT, RHS, RHS, ISD::SETUO),
+                        RHS, LHS, Flags);
+  MinMax = DAG.getSelectCC(DL, LHS, RHS, LHS, RHS,
+                           IsMax ? ISD::SETUGT : ISD::SETULT);
 
   // TODO: We need quiet sNaN if strictfp.
 
   // fminimum/fmaximum requires -0.0 less than +0.0
   bool LHSNotZero = DAG.isKnownNeverZeroFloat(LHS);
   bool RHSNotZero = DAG.isKnownNeverZeroFloat(RHS);
-  if (IsZeroOrdered || Flags.hasNoSignedZeros() || LHSNotZero || RHSNotZero) {
+  if (Flags.hasNoSignedZeros() || LHSNotZero || RHSNotZero) {
     return MinMax;
   }
   SDValue IsZero = DAG.getSetCC(DL, CCVT, MinMax,
