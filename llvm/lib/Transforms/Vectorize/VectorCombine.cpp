@@ -3086,8 +3086,7 @@ bool VectorCombine::foldShufflesOfLengthChangingShuffles(Instruction &I) {
 bool VectorCombine::foldShuffleOfIntrinsics(Instruction &I) {
   Value *V0, *V1;
   ArrayRef<int> OldMask;
-  if (!match(&I, m_Shuffle(m_OneUse(m_Value(V0)), m_OneUse(m_Value(V1)),
-                           m_Mask(OldMask))))
+  if (!match(&I, m_Shuffle(m_Value(V0), m_Value(V1), m_Mask(OldMask))))
     return false;
 
   auto *II0 = dyn_cast<IntrinsicInst>(V0);
@@ -3098,6 +3097,10 @@ bool VectorCombine::foldShuffleOfIntrinsics(Instruction &I) {
   Intrinsic::ID IID = II0->getIntrinsicID();
   if (IID != II1->getIntrinsicID())
     return false;
+  InstructionCost CostII0 =
+      TTI.getIntrinsicInstrCost(IntrinsicCostAttributes(IID, *II0), CostKind);
+  InstructionCost CostII1 =
+      TTI.getIntrinsicInstrCost(IntrinsicCostAttributes(IID, *II1), CostKind);
 
   auto *ShuffleDstTy = dyn_cast<FixedVectorType>(I.getType());
   auto *II0Ty = dyn_cast<FixedVectorType>(II0->getType());
@@ -3113,8 +3116,7 @@ bool VectorCombine::foldShuffleOfIntrinsics(Instruction &I) {
       return false;
 
   InstructionCost OldCost =
-      TTI.getIntrinsicInstrCost(IntrinsicCostAttributes(IID, *II0), CostKind) +
-      TTI.getIntrinsicInstrCost(IntrinsicCostAttributes(IID, *II1), CostKind) +
+      CostII0 + CostII1 +
       TTI.getShuffleCost(TargetTransformInfo::SK_PermuteTwoSrc, ShuffleDstTy,
                          II0Ty, OldMask, CostKind, 0, nullptr, {II0, II1}, &I);
 
@@ -3141,7 +3143,12 @@ bool VectorCombine::foldShuffleOfIntrinsics(Instruction &I) {
     }
   }
   IntrinsicCostAttributes NewAttr(IID, ShuffleDstTy, NewArgsTy);
+
   NewCost += TTI.getIntrinsicInstrCost(NewAttr, CostKind);
+  if (!II0->hasOneUse())
+    NewCost += CostII0;
+  if (II1 != II0 && !II1->hasOneUse())
+    NewCost += CostII1;
 
   LLVM_DEBUG(dbgs() << "Found a shuffle feeding two intrinsics: " << I
                     << "\n  OldCost: " << OldCost << " vs NewCost: " << NewCost
