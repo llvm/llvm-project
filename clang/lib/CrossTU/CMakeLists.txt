@@ -7,6 +7,7 @@ add_clang_library(clangCrossTU
   CrossTranslationUnit.cpp
 
   LINK_LIBS
+  clangAnalysis
   clangAST
   clangBasic
   clangDriver

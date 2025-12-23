@@ -164,10 +164,6 @@ static void printCoverage(const PathDiagnostic *D,
                           FIDMap &FM,
                           llvm::raw_fd_ostream &o);
 
-static std::optional<StringRef> getExpandedMacro(
-    SourceLocation MacroLoc, const cross_tu::CrossTranslationUnitContext &CTU,
-    const MacroExpansionContext &MacroExpansions, const SourceManager &SM);
-
 //===----------------------------------------------------------------------===//
 // Methods of PlistPrinter.
 //===----------------------------------------------------------------------===//
@@ -381,10 +377,13 @@ void PlistPrinter::ReportMacroExpansions(raw_ostream &o, unsigned indent) {
     SourceLocation MacroExpansionLoc =
         P->getLocation().asLocation().getExpansionLoc();
 
+    auto [ExpansionCtx, ExpansionLoc] =
+        CTU.getMacroExpansionContextForSourceLocation(MacroExpansionLoc)
+            .value_or(std::make_pair(MacroExpansions, MacroExpansionLoc));
     const std::optional<StringRef> MacroName =
-        MacroExpansions.getOriginalText(MacroExpansionLoc);
+        ExpansionCtx.getOriginalText(ExpansionLoc);
     const std::optional<StringRef> ExpansionText =
-        getExpandedMacro(MacroExpansionLoc, CTU, MacroExpansions, SM);
+        ExpansionCtx.getFormattedExpandedText(ExpansionLoc);
 
     if (!MacroName || !ExpansionText)
       continue;
@@ -822,20 +821,4 @@ void PlistDiagnostics::FlushDiagnosticsImpl(
 
   // Finish.
   o << "</dict>\n</plist>\n";
-}
-
-//===----------------------------------------------------------------------===//
-// Definitions of helper functions and methods for expanding macros.
-//===----------------------------------------------------------------------===//
-
-static std::optional<StringRef>
-getExpandedMacro(SourceLocation MacroExpansionLoc,
-                 const cross_tu::CrossTranslationUnitContext &CTU,
-                 const MacroExpansionContext &MacroExpansions,
-                 const SourceManager &SM) {
-  if (auto CTUMacroExpCtx =
-          CTU.getMacroExpansionContextForSourceLocation(MacroExpansionLoc)) {
-    return CTUMacroExpCtx->getFormattedExpandedText(MacroExpansionLoc);
-  }
-  return MacroExpansions.getFormattedExpandedText(MacroExpansionLoc);
 }

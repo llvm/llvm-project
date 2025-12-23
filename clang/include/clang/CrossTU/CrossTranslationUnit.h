@@ -186,14 +186,14 @@ public:
   /// Emit diagnostics for the user for potential configuration errors.
   void emitCrossTUDiagnostics(const IndexError &IE);
 
-  /// Returns the MacroExpansionContext for the imported TU to which the given
-  /// source-location corresponds.
-  /// \p ToLoc Source location in the imported-to AST.
-  /// \note If any error happens such as \p ToLoc is a non-imported
+  /// Returns the MacroExpansionContext for the imported TU and the location in
+  /// the imported-from AST to which the given source-location corresponds. \p
+  /// ToLoc Source location in the imported-to AST. \note If any error happens
+  /// such as \p ToLoc is a non-imported
   ///       source-location, empty is returned.
   /// \note Macro expansion tracking for imported TUs is not implemented yet.
   ///       It returns empty unconditionally.
-  std::optional<clang::MacroExpansionContext>
+  std::optional<std::pair<MacroExpansionContext, SourceLocation>>
   getMacroExpansionContextForSourceLocation(
       const clang::SourceLocation &ToLoc) const;
 
@@ -206,6 +206,8 @@ public:
   bool hasError(const Decl *ToDecl) const;
 
 private:
+  using ImportedFileIDMap =
+      llvm::DenseMap<FileID, std::pair<FileID, ASTUnit *>>;
   void lazyInitImporterSharedSt(TranslationUnitDecl *ToTU);
   ASTImporter &getOrCreateASTImporter(ASTUnit *Unit);
   template <typename T>
@@ -227,7 +229,25 @@ private:
   ASTContext &Context;
   std::shared_ptr<ASTImporterSharedState> ImporterSharedSt;
 
-  using LoadResultTy = llvm::Expected<std::unique_ptr<ASTUnit>>;
+  /// Map of imported FileID's (in "To" context) to FileID in "From" context
+  /// and the ASTUnit for the From context.
+  /// This map is used by getMacroExpansionContextForSourceLocation to lookup a
+  /// FileID and its Preprocessor when knowing only the FileID in the 'To'
+  /// context. The FileID could be imported by any of multiple 'From'
+  /// ASTImporter objects. we do not want to loop over all ASTImporter's to find
+  /// the one that imported the FileID.
+  ImportedFileIDMap ImportedFileIDs;
+
+  struct LoadResult {
+    std::unique_ptr<ASTUnit> Unit;
+    std::unique_ptr<MacroExpansionContext> MacroExpansions;
+
+    LoadResult(std::unique_ptr<ASTUnit> Unit,
+               std::unique_ptr<MacroExpansionContext> MacroExpansions);
+    LoadResult(LoadResult &&Other) = default;
+    ~LoadResult();
+  };
+  using LoadResultTy = llvm::Expected<LoadResult>;
 
   /// Loads ASTUnits from AST-dumps or source-files.
   class ASTLoader {
@@ -320,6 +340,9 @@ private:
                                                    StringRef CrossTUDir,
                                                    StringRef IndexName);
 
+    const MacroExpansionContext *
+    getMacroExpansionsForUnit(const ASTUnit *Unit) const;
+
   private:
     llvm::Error ensureCTUIndexLoaded(StringRef CrossTUDir, StringRef IndexName);
     llvm::Expected<ASTUnit *> getASTUnitForFile(StringRef FileName,
@@ -331,6 +354,9 @@ private:
 
     OwningMapTy FileASTUnitMap;
     NonOwningMapTy NameASTUnitMap;
+
+    llvm::DenseMap<clang::ASTUnit *, std::unique_ptr<MacroExpansionContext>>
+        UnitMacroExpansionsMap;
 
     using IndexMapTy = BaseMapTy<std::string>;
     IndexMapTy NameFileMap;

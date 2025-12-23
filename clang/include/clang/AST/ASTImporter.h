@@ -66,6 +66,8 @@ class TypeSourceInfo;
         llvm::DenseSet<std::tuple<Decl *, Decl *, int>>;
     using ImportedCXXBaseSpecifierMap =
         llvm::DenseMap<const CXXBaseSpecifier *, CXXBaseSpecifier *>;
+    using FileIDImportHandlerType =
+        std::function<void(FileID /*ToID*/, FileID /*FromID*/)>;
 
     enum class ODRHandlingType { Conservative, Liberal };
 
@@ -201,6 +203,8 @@ class TypeSourceInfo;
     };
 
   private:
+    FileIDImportHandlerType FileIDImportHandler;
+
     std::shared_ptr<ASTImporterSharedState> SharedState = nullptr;
 
     /// The path which we go through during the import of a given AST node.
@@ -308,6 +312,14 @@ class TypeSourceInfo;
                 std::shared_ptr<ASTImporterSharedState> SharedState = nullptr);
 
     virtual ~ASTImporter();
+
+    /// Set a callback function for FileID import handling.
+    /// The function is invoked when a FileID is imported from the From context.
+    /// The imported FileID in the To context and the original FileID in the
+    /// From context is passed to it.
+    void setFileIDImportHandler(FileIDImportHandlerType H) {
+      FileIDImportHandler = H;
+    }
 
     /// Whether the importer will perform a minimal import, creating
     /// to-be-completed forward declarations when possible.
