@@ -5894,6 +5894,17 @@ static inline SDValue getPTrue(SelectionDAG &DAG, SDLoc DL, EVT VT,
                                int Pattern) {
   if (Pattern == AArch64SVEPredPattern::all)
     return DAG.getConstant(1, DL, VT);
+
+  // When the number of active elements of a pattern matches the scalable vector
+  // length, we can upgrade the pattern to ALL and emit a splat instead.
+  if (unsigned PatNumElts = getNumElementsFromSVEPredPattern(Pattern)) {
+    const AArch64Subtarget &Subtarget = DAG.getSubtarget<AArch64Subtarget>();
+    unsigned NumElts = VT.getVectorMinNumElements();
+    unsigned VScale = Subtarget.getSVEVectorSizeInBits() / 128;
+    if (PatNumElts == (NumElts * VScale))
+      return DAG.getConstant(1, DL, VT);
+  }
+
   return DAG.getNode(AArch64ISD::PTRUE, DL, VT,
                      DAG.getTargetConstant(Pattern, DL, MVT::i32));
 }
@@ -7571,8 +7582,7 @@ static SDValue LowerFLDEXP(SDValue Op, SelectionDAG &DAG) {
       DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, XVT, DAG.getUNDEF(XVT), X, Zero);
   SDValue VExp = DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, ExpVT,
                              DAG.getUNDEF(ExpVT), Exp, Zero);
-  SDValue VPg = getPTrue(DAG, DL, XVT.changeVectorElementType(MVT::i1),
-                         AArch64SVEPredPattern::all);
+  SDValue VPg = DAG.getConstant(1, DL, XVT.changeVectorElementType(MVT::i1));
   SDValue FScale = DAG.getNode(
       ISD::INTRINSIC_WO_CHAIN, DL, XVT,
       DAG.getTargetConstant(Intrinsic::aarch64_sve_fscale, DL, MVT::i64), VPg,
@@ -15336,20 +15346,6 @@ static bool isAllActivePredicate(SelectionDAG &DAG, SDValue N) {
       N.getConstantOperandVal(0) == AArch64SVEPredPattern::all)
     return N.getValueType().getVectorMinNumElements() >= NumElts;
 
-  // If we're compiling for a specific vector-length, we can check if the
-  // pattern's VL equals that of the scalable vector at runtime.
-  if (N.getOpcode() == AArch64ISD::PTRUE) {
-    const auto &Subtarget = DAG.getSubtarget<AArch64Subtarget>();
-    unsigned MinSVESize = Subtarget.getMinSVEVectorSizeInBits();
-    unsigned MaxSVESize = Subtarget.getMaxSVEVectorSizeInBits();
-    if (MaxSVESize && MinSVESize == MaxSVESize) {
-      unsigned VScale = MaxSVESize / AArch64::SVEBitsPerBlock;
-      unsigned PatNumElts =
-          getNumElementsFromSVEPredPattern(N.getConstantOperandVal(0));
-      return PatNumElts == (NumElts * VScale);
-    }
-  }
-
   return false;
 }
 
@@ -15638,7 +15634,9 @@ static SDValue trySVESplat64(SDValue Op, SelectionDAG &DAG,
   // See if we can make use of the SVE dup instruction.
   APInt Val64 = DefBits.trunc(64);
   int32_t ImmVal, ShiftVal;
-  if (!AArch64_AM::isSVECpyDupImm(64, Val64.getSExtValue(), ImmVal, ShiftVal))
+  uint64_t Encoding;
+  if (!AArch64_AM::isSVECpyDupImm(64, Val64.getSExtValue(), ImmVal, ShiftVal) &&
+      !AArch64_AM::isSVELogicalImm(64, Val64.getZExtValue(), Encoding))
     return SDValue();
 
   SDLoc DL(Op);
@@ -20852,7 +20850,7 @@ performFirstTrueTestVectorCombine(SDNode *N,
 
   // Extracts of lane 0 for SVE can be expressed as PTEST(Op, FIRST) ? 1 : 0
   SelectionDAG &DAG = DCI.DAG;
-  SDValue Pg = getPTrue(DAG, SDLoc(N), VT, AArch64SVEPredPattern::all);
+  SDValue Pg = DAG.getConstant(1, SDLoc(N), VT);
   return getPTest(DAG, N->getValueType(0), Pg, N0, AArch64CC::FIRST_ACTIVE);
 }
 
@@ -20883,7 +20881,7 @@ performLastTrueTestVectorCombine(SDNode *N,
 
   // Extracts of lane EC-1 for SVE can be expressed as PTEST(Op, LAST) ? 1 : 0
   SelectionDAG &DAG = DCI.DAG;
-  SDValue Pg = getPTrue(DAG, SDLoc(N), OpVT, AArch64SVEPredPattern::all);
+  SDValue Pg = DAG.getConstant(1, SDLoc(N), OpVT);
   return getPTest(DAG, N->getValueType(0), Pg, N0, AArch64CC::LAST_ACTIVE);
 }
 
@@ -30337,16 +30335,6 @@ static SDValue getPredicateForFixedLengthVector(SelectionDAG &DAG, SDLoc &DL,
       getSVEPredPatternFromNumElements(VT.getVectorNumElements());
   assert(PgPattern && "Unexpected element count for SVE predicate");
 
-  // For vectors that are exactly getMaxSVEVectorSizeInBits big, we can use
-  // AArch64SVEPredPattern::all, which can enable the use of unpredicated
-  // variants of instructions when available.
-  const auto &Subtarget = DAG.getSubtarget<AArch64Subtarget>();
-  unsigned MinSVESize = Subtarget.getMinSVEVectorSizeInBits();
-  unsigned MaxSVESize = Subtarget.getMaxSVEVectorSizeInBits();
-  if (MaxSVESize && MinSVESize == MaxSVESize &&
-      MaxSVESize == VT.getSizeInBits())
-    PgPattern = AArch64SVEPredPattern::all;
-
   MVT MaskVT;
   switch (VT.getVectorElementType().getSimpleVT().SimpleTy) {
   default:
@@ -30377,7 +30365,7 @@ static SDValue getPredicateForScalableVector(SelectionDAG &DAG, SDLoc &DL,
   assert(VT.isScalableVector() && DAG.getTargetLoweringInfo().isTypeLegal(VT) &&
          "Expected legal scalable vector!");
   auto PredTy = VT.changeVectorElementType(MVT::i1);
-  return getPTrue(DAG, DL, PredTy, AArch64SVEPredPattern::all);
+  return DAG.getConstant(1, DL, PredTy);
 }
 
 static SDValue getPredicateForVector(SelectionDAG &DAG, SDLoc &DL, EVT VT) {

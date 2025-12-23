@@ -101,12 +101,6 @@ public:
     }
   }
 
-  /// Return true if the operand is commutable.
-  bool isCommutableOperand(unsigned Op) const {
-    constexpr unsigned NumCommutativeOps = 2;
-    return isCommutative() && Op < NumCommutativeOps;
-  }
-
   /// Checks if the intrinsic is an annotation.
   bool isAssumeLikeIntrinsic() const {
     switch (getIntrinsicID()) {
