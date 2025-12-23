@@ -12352,6 +12352,25 @@ defm : AVX512_scalar_unary_math_patterns<any_fsqrt, "SQRTSS", X86Movss, v4f32x_i
 defm : AVX512_scalar_unary_math_patterns<any_fsqrt, "SQRTSD", X86Movsd, v2f64x_info>;
 defm : AVX512_scalar_unary_math_patterns<any_fsqrt, "SQRTSH", X86Movsh, v8f16x_info>;
 
+multiclass AVX512_scalar_unary_math_patterns_with_immediate<
+    SDPatternOperator OpNode, string OpcPrefix, SDNode Move,
+    X86VectorVTInfo _> {
+  let Predicates = [HasAVX512] in {
+    def : Pat<(_.VT(Move _.VT:$dst, (scalar_to_vector(OpNode
+                                        (extractelt _.VT:$src, (i64 0)),
+                                        i32:$imm)))),
+              (!cast<Instruction>("V"#OpcPrefix#"Zrri_Int") _.VT:$dst,
+                  _.VT:$src, i32:$imm)>;
+  }
+}
+
+defm : AVX512_scalar_unary_math_patterns_with_immediate<
+           X86any_VRndScale, "RNDSCALESS", X86Movss, v4f32x_info>;
+defm : AVX512_scalar_unary_math_patterns_with_immediate<
+           X86any_VRndScale, "RNDSCALESD", X86Movsd, v2f64x_info>;
+defm : AVX512_scalar_unary_math_patterns_with_immediate<
+           X86any_VRndScale, "RNDSCALESH", X86Movsd, v2f64x_info>;
+
 //===----------------------------------------------------------------------===//
 // AES instructions
 //===----------------------------------------------------------------------===//
