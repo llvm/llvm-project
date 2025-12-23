@@ -14,6 +14,7 @@
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/os.h"
+#include "src/__support/CPP/new.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
