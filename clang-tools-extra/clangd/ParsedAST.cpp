@@ -10,7 +10,6 @@
 #include "../clang-tidy/ClangTidyCheck.h"
 #include "../clang-tidy/ClangTidyDiagnosticConsumer.h"
 #include "../clang-tidy/ClangTidyModule.h"
-#include "../clang-tidy/ClangTidyModuleRegistry.h"
 #include "../clang-tidy/ClangTidyOptions.h"
 #include "AST.h"
 #include "CollectMacros.h"

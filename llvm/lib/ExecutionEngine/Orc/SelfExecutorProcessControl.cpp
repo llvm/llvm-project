@@ -161,7 +161,8 @@ SelfExecutorProcessControl::jitDispatchViaWrapperFunctionManager(
               shared::WrapperFunctionBuffer Result) mutable {
             ResultP.set_value(std::move(Result));
           },
-          ExecutorAddr::fromPtr(FnTag), {Data, Size});
+          ExecutorAddr::fromPtr(FnTag),
+          shared::WrapperFunctionBuffer::copyFrom(Data, Size));
 
   return ResultF.get().release();
 }
