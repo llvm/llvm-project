@@ -1922,8 +1922,8 @@ void SwiftASTContext::AddExtraClangCC1Args(
     const std::vector<std::pair<std::string, bool>> framework_search_paths,
     std::vector<std::string> &dest) {
   clang::CompilerInvocation invocation;
-  std::vector<std::string> default_paths = {"/usr/include",
-                                            "/user/local/include"};
+  std::vector<std::string> default_paths = {
+      "/usr/include", "/usr/local/include", "/usr/lib/swift/shims"};
   llvm::SmallVector<const char *> clangArgs;
   clangArgs.reserve(source.size() + module_search_paths.size() * 2 +
                     framework_search_paths.size() * 2 +
@@ -1978,6 +1978,11 @@ void SwiftASTContext::AddExtraClangCC1Args(
   invocation.getHeaderSearchOpts().ImplicitModuleMaps = true;
   invocation.getHeaderSearchOpts().ModuleCachePath =
       GetCompilerInvocation().getClangModuleCachePath().str();
+
+  // Since explicit module build, do not check relocated modules and update
+  // module base directories. Clang modules loaded from swift are loaded
+  // by name and there is no need to update and validate module maps.
+  invocation.getPreprocessorOpts().ModulesCheckRelocated = false;
 
   bool use_cas_module = m_cas && m_action_cache;
   if (use_cas_module) {
