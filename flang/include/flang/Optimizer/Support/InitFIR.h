@@ -129,6 +129,7 @@ inline void registerMLIRPassesForFortranTools() {
   mlir::affine::registerAffineLoopTilingPass();
   mlir::affine::registerAffineDataCopyGenerationPass();
 
+  mlir::registerMem2RegPass();
   mlir::registerLowerAffinePass();
 }
 
