@@ -329,14 +329,14 @@ define i32 @overflow(i32 %type) {
 ; CHECK-NEXT:      i32 1, label [[IF_END:%.*]]
 ; CHECK-NEXT:      i32 2, label [[SW_BB2:%.*]]
 ; CHECK-NEXT:    ]
-; CHECK:       sw.bb1:
-; CHECK-NEXT:    br label [[SW_DEFAULT]]
 ; CHECK:       sw.bb2:
-; CHECK-NEXT:    br label [[SW_DEFAULT]]
+; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       sw.bb3:
-; CHECK-NEXT:    br label [[SW_DEFAULT]]
+; CHECK-NEXT:    br label [[IF_END]]
+; CHECK:       sw.default:
+; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
-; CHECK-NEXT:    [[DIRENT_TYPE_0:%.*]] = phi i32 [ 3, [[ENTRY:%.*]] ], [ 6, [[SW_BB3]] ], [ 5, [[SW_BB2]] ], [ 0, [[IF_END]] ]
+; CHECK-NEXT:    [[DIRENT_TYPE_0:%.*]] = phi i32 [ 3, [[SW_DEFAULT]] ], [ 6, [[SW_BB3]] ], [ 5, [[SW_BB2]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    ret i32 [[DIRENT_TYPE_0]]
 ;
 entry:
