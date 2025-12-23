@@ -1,6 +1,5 @@
 #include "../ClangTidy.h"
 #include "../ClangTidyModule.h"
-#include "../ClangTidyModuleRegistry.h"
 #include "../ClangTidyOptions.h"
 #include "QueryCheck.h"
 #include "llvm/ADT/SmallSet.h"

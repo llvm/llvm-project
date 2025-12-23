@@ -8,7 +8,6 @@
 
 #include "../ClangTidy.h"
 #include "../ClangTidyModule.h"
-#include "../ClangTidyModuleRegistry.h"
 #include "CleanupCtadCheck.h"
 #include "DurationAdditionCheck.h"
 #include "DurationComparisonCheck.h"

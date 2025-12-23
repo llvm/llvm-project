@@ -25,7 +25,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "../clang-tidy/ClangTidyModule.h"
-#include "../clang-tidy/ClangTidyModuleRegistry.h"
 #include "../clang-tidy/ClangTidyOptions.h"
 #include "../clang-tidy/GlobList.h"
 #include "ClangdLSPServer.h"

@@ -96,7 +96,6 @@ The Directory Structure
   |-- ClangTidy.h                   # Interfaces for users.
   |-- ClangTidyCheck.h              # Interfaces for checks.
   |-- ClangTidyModule.h             # Interface for clang-tidy modules.
-  |-- ClangTidyModuleRegistry.h     # Interface for registering of modules.
      ...
   |-- google/                       # Google clang-tidy module.
   |-+
