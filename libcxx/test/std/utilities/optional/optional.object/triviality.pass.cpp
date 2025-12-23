@@ -66,6 +66,16 @@ struct SpecialMemberTest {
         "trivially destructible.");
 #if TEST_STD_VER >= 26
     static_assert(std::is_trivially_copyable_v<std::optional<T&>>);
+    static_assert(std::is_trivially_copy_constructible_v<std::optional<T&>>);
+    static_assert(std::is_trivially_move_constructible_v<std::optional<T&>>);
+    static_assert(std::is_trivially_constructible_v<std::optional<T&>, std::optional<T&>&>);
+    static_assert(std::is_trivially_constructible_v<std::optional<T&>, const std::optional<T&>&&>);
+    static_assert(std::is_trivially_copy_assignable_v<std::optional<T&>>);
+    static_assert(std::is_trivially_move_assignable_v<std::optional<T&>>);
+    static_assert(std::is_trivially_assignable_v<std::optional<T&>&, std::optional<T&>&>);
+    static_assert(std::is_trivially_assignable_v<std::optional<T&>&, const std::optional<T&>&&>);
+    static_assert(std::is_trivially_destructible_v<std::optional<T&>>);
+
 #endif
 };
 
