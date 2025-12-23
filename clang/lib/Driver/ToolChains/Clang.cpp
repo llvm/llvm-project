@@ -7930,43 +7930,16 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
       if (!Args.hasArg(options::OPT_fdisable_ripple_lib)) {
         // Collect all the ripple's runtime libs (.bc files) available for the
-        // target
-        llvm::SmallString<128> RippleRTLibPath;
-        llvm::SmallString<128> RippleIncludePath;
+        // target.
         std::vector<std::string> TargetRTLibs;
-        std::string TargetName = TargetTriple.getArchName().str();
-        std::string LibPrefix = ""; // Default value to include all libs
-
-        if (TargetTriple.isX86()) {
-          RippleRTLibPath = TC.getDriver().ResourceDir;
-          llvm::sys::path::append(RippleRTLibPath, "lib",
-                                  TargetTriple.getTriple(), "ripple",
-                                  TargetName);
-        } else if (TargetTriple.isHexagon()) {
-          if (Args.hasArg(options::OPT_mhexagon_hvx)) {
-            LibPrefix = "HVX_";
-          } else {
-            LibPrefix = "NONE"; // Currently we don't have any non_hvx library
-          }
-          const Driver &D = TC.getDriver();
-          auto &HTC =
-              static_cast<const toolchains::HexagonToolChain &>(getToolChain());
-          RippleRTLibPath = HTC.getHexagonTargetDir(D.Dir, D.PrefixDirs);
-
-          StringRef CpuVer =
-              toolchains::HexagonToolChain::GetTargetCPUVersion(Args);
-
-          llvm::sys::path::append(RippleRTLibPath, "hexagon", "lib", CpuVer);
-          if (auto G =
-                  toolchains::HexagonToolChain::getSmallDataThreshold(Args)) {
-            if (G.value() == 0)
-              llvm::sys::path::append(RippleRTLibPath, "G0");
-          }
-          RippleIncludePath = RippleRTLibPath;
-          llvm::sys::path::append(RippleRTLibPath, "lib", "ripple");
-          // Set the include path for Hexagon
-          llvm::sys::path::append(RippleIncludePath, "include");
-          CmdArgs.push_back(Args.MakeArgString("-I" + RippleIncludePath.str()));
+        llvm::SmallString<256> RippleRTLibPath;
+        // Toolchain::getRuntimePath() returns an optional, but it's always valid except on Darwin.
+        if (auto RuntimePathOpt = TC.getRuntimePath()) {
+          RippleRTLibPath = *RuntimePathOpt;
+          llvm::sys::path::append(RippleRTLibPath, "ripple");
+          // On Hexagon, libraries are versioned by architecture.
+          if (TargetTriple.isHexagon())
+            llvm::sys::path::append(RippleRTLibPath, toolchains::HexagonToolChain::GetTargetCPUVersion(Args));
         }
         if (llvm::sys::fs::is_directory(RippleRTLibPath)) {
           std::error_code EC;
