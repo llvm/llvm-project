@@ -275,7 +275,7 @@ add_header(
 add_header(
   Elf32_Verdef
   HDR
-    Elf32_Verdaux.h
+    Elf32_Verdef.h
   DEPENDS
     .Elf32_Half
     .Elf32_Word
@@ -398,7 +398,7 @@ add_header(
 add_header(
   Elf64_Verdef
   HDR
-    Elf64_Verdaux.h
+    Elf64_Verdef.h
   DEPENDS
     .Elf64_Half
     .Elf64_Word
