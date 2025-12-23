@@ -1131,7 +1131,7 @@ lltok::Kind LLLexer::Lex0x() {
     return lltok::APFloat;
   case 'H': {
     uint64_t Val = HexIntToVal(TokStart + 3, CurPtr);
-    if (!llvm::isUIntN(16, Val)) {
+    if (!llvm::isUInt<16>(Val)) {
       LexError("hexadecimal constant too large for half (16-bit)");
       return lltok::Error;
     }
@@ -1141,7 +1141,7 @@ lltok::Kind LLLexer::Lex0x() {
   case 'R': {
     // Brain floating point
     uint64_t Val = HexIntToVal(TokStart + 3, CurPtr);
-    if (!llvm::isUIntN(16, Val)) {
+    if (!llvm::isUInt<16>(Val)) {
       LexError("hexadecimal constant too large for bfloat (16-bit)");
       return lltok::Error;
     }
