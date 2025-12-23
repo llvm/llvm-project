@@ -475,7 +475,7 @@ bool X86PassConfig::addIRTranslator() {
 void X86PassConfig::addPreRegBankSelect() {
   bool IsOptNone = getOptLevel() == CodeGenOptLevel::None;
   if (!IsOptNone) {
-    addPass(createX86PostLegalizerCombiner());
+    addPass(createX86PostLegalizerCombiner(IsOptNone));
   }
 }
 bool X86PassConfig::addLegalizeMachineIR() {
