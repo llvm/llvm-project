@@ -993,9 +993,75 @@ module {
 
 // -----
 
+func.func @map_ops(%in1: tensor<8xf32>, %in2: tensor<8xf32>) -> tensor<8xf32> {
+    %fill = tensor.empty() : tensor<8xf32>
+    %add = linalg.map {arith.addf} ins(%in1, %in2: tensor<8xf32>, tensor<8xf32>) outs(%fill: tensor<8xf32>)
+    %mapped_65 = linalg.map { math.sqrt } ins(%add : tensor<8xf32>) outs(%fill : tensor<8xf32>)
+    return %mapped_65 : tensor<8xf32>
+}
+
+// CHECK-LABEL: func @map_ops
+//  CHECK-SAME:   %[[ARG0:[a-zA-Z0-9]+]]: tensor<8xf32>
+//  CHECK-SAME:   %[[ARG1:[a-zA-Z0-9]+]]: tensor<8xf32>
+//       CHECK:   %[[EMPTY:.+]] = tensor.empty() : tensor<8xf32>
+//       CHECK:   %[[FUSED_OP:.+]] = linalg.generic
+//  CHECK-SAME:       ins(%[[ARG0]], %[[ARG1]] : {{.*}}) outs(%[[EMPTY]] :
+//  CHECK-NEXT:   ^bb0(%[[IN0:.*]]: f32, %[[IN1:.*]]: f32, %[[OUT:.*]]: f32):
+//  CHECK-NEXT:     %[[ADD:.*]] = arith.addf %[[IN0]], %[[IN1]]
+//  CHECK-NEXT:     %[[SQRT:.*]] = math.sqrt %[[ADD]]
+//  CHECK-NEXT:     linalg.yield %[[SQRT]] 
+//   CHECK-NOT:   linalg.generic
+
+// -----
+
+func.func @map_matmul(%in1: tensor<8x10xf32>, %in2: tensor<10x12xf32>) -> tensor<8x12xf32> {
+    %fill0 = tensor.empty() : tensor<8x10xf32>
+    %exp = linalg.map {math.exp} ins(%in1 : tensor<8x10xf32>) outs(%fill0: tensor<8x10xf32>)
+    %fill1 = tensor.empty() : tensor<8x12xf32>
+    %matmul = linalg.matmul ins(%exp, %in2 : tensor<8x10xf32>, tensor<10x12xf32>) outs(%fill1 : tensor<8x12xf32>) -> tensor<8x12xf32>
+    return %matmul : tensor<8x12xf32>
+}
+
+// CHECK-DAG: #[[$MAP0:.+]] = affine_map<(d0, d1, d2) -> (d0, d2)>
+// CHECK-DAG: #[[$MAP1:.+]] = affine_map<(d0, d1, d2) -> (d2, d1)>
+// CHECK-DAG: #[[$MAP2:.+]] = affine_map<(d0, d1, d2) -> (d0, d1)>
+// CHECK-LABEL: func @map_matmul
+//  CHECK-SAME:   %[[ARG0:[a-zA-Z0-9]+]]: tensor<8x10xf32>
+//  CHECK-SAME:   %[[ARG1:[a-zA-Z0-9]+]]: tensor<10x12xf32>
+//       CHECK:   %[[EMPTY:.+]] = tensor.empty() : tensor<8x12xf32>
+//       CHECK:   %[[FUSED_OP:.+]] = linalg.generic
+//  CHECK-SAME:       indexing_maps = [#[[$MAP0]], #[[$MAP1]], #[[$MAP2]]]
+//  CHECK-SAME:       iterator_types = ["parallel", "parallel", "reduction"]
+//  CHECK-SAME:       ins(%[[ARG0]], %[[ARG1]] : {{.*}}) outs(%[[EMPTY]] :
+//  CHECK-NEXT:   ^bb0(%[[IN0:.*]]: f32, %[[IN1:.*]]: f32, %[[OUT:.*]]: f32):
+//  CHECK-NEXT:     %[[EXP:.*]] = math.exp %[[IN0]]
+//  CHECK-NEXT:     %[[MUL:.*]] = arith.mulf %[[EXP]], %[[IN1]]
+//  CHECK-NEXT:     %[[ADD:.*]] = arith.addf %[[OUT]], %[[MUL]]
+//  CHECK-NEXT:     linalg.yield %[[ADD]] 
+//   CHECK-NOT:   linalg.generic
+
+// -----
+
+func.func @matmul_map(%in1: tensor<8x10xf32>, %in2: tensor<10x12xf32>) -> tensor<8x12xf32> {
+    %fill1 = tensor.empty() : tensor<8x12xf32>
+    %matmul = linalg.matmul ins(%in1, %in2 : tensor<8x10xf32>, tensor<10x12xf32>) outs(%fill1 : tensor<8x12xf32>) -> tensor<8x12xf32>
+    %exp = linalg.map {math.exp} ins(%matmul : tensor<8x12xf32>) outs(%fill1: tensor<8x12xf32>)
+    
+    return %exp : tensor<8x12xf32>
+}
+
+// Should not fuse
+// CHECK-LABEL: func @matmul_map
+// CHECK-NEXT:    tensor.empty
+// CHECK-NEXT:    linalg.matmul
+// CHECK-NEXT:    linalg.map
+// CHECK-NEXT:    return
+
+// -----
+
 // In this test we expect the first two linalg.generic operations to be fused into one, but the third one (the matmul) to remain separate. 
 // The reason is that when the pattern is applied the 1st time, the fusion of the first two operations produces a fused operation with 
-// an additional result and ana dditional output indexing map that is not a permutation / not invertible. 
+// an additional result and an additional output indexing map that is not a permutation / not invertible. 
 // The fused op will still produce also the original result (and its output indexing map), which is preserved because the new indexing map 
 // is not invertible. Thus the fused op will have 2 results, but only the 2nd one will be used by the following matmul op as an input argument.
 // When trying to apply the fusion pattern again, the matmul op won't be fused because the operand to fuse was not produced with an invertible indexing map.
