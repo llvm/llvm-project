@@ -227,8 +227,8 @@ static bool tryCompressVPMOVPattern(MachineInstr &MI, MachineBasicBlock &MBB,
         return false; // Fail: Mask has MULTIPLE uses
 
       unsigned UseOpc = CurMI.getOpcode();
-      bool IsKMOV = (UseOpc == X86::KMOVBrk || UseOpc == X86::KMOVWrk ||
-                     UseOpc == X86::KMOVDrk || UseOpc == X86::KMOVQrk);
+      bool IsKMOV = UseOpc == X86::KMOVWrk || UseOpc == X86::KMOVDrk ||
+                    UseOpc == X86::KMOVQrk;
 
       if (IsKMOV && CurMI.getOperand(1).getReg() == MaskReg) {
         KMovMI = &CurMI;
