@@ -14,19 +14,19 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::modernize {
 
-static constexpr llvm::StringLiteral PairDeclName = "PairVarD";
-static constexpr llvm::StringLiteral PairVarTypeName = "PairVarType";
-static constexpr llvm::StringLiteral FirstVarDeclName = "FirstVarDecl";
-static constexpr llvm::StringLiteral SecondVarDeclName = "SecondVarDecl";
-static constexpr llvm::StringLiteral BeginDeclStmtName = "BeginDeclStmt";
-static constexpr llvm::StringLiteral EndDeclStmtName = "EndDeclStmt";
-static constexpr llvm::StringLiteral FirstTypeName = "FirstType";
-static constexpr llvm::StringLiteral SecondTypeName = "SecondType";
-static constexpr llvm::StringLiteral ScopeBlockName = "ScopeBlock";
-static constexpr llvm::StringLiteral StdTieAssignStmtName = "StdTieAssign";
-static constexpr llvm::StringLiteral StdTieExprName = "StdTieExpr";
-static constexpr llvm::StringLiteral ForRangeStmtName = "ForRangeStmt";
-static constexpr llvm::StringLiteral InitExprName = "init_expr";
+static constexpr StringRef PairDeclName = "PairVarD";
+static constexpr StringRef PairVarTypeName = "PairVarType";
+static constexpr StringRef FirstVarDeclName = "FirstVarDecl";
+static constexpr StringRef SecondVarDeclName = "SecondVarDecl";
+static constexpr StringRef BeginDeclStmtName = "BeginDeclStmt";
+static constexpr StringRef EndDeclStmtName = "EndDeclStmt";
+static constexpr StringRef FirstTypeName = "FirstType";
+static constexpr StringRef SecondTypeName = "SecondType";
+static constexpr StringRef ScopeBlockName = "ScopeBlock";
+static constexpr StringRef StdTieAssignStmtName = "StdTieAssign";
+static constexpr StringRef StdTieExprName = "StdTieExpr";
+static constexpr StringRef ForRangeStmtName = "ForRangeStmt";
+static constexpr StringRef InitExprName = "init_expr";
 
 /// Matches a sequence of VarDecls matching the inner matchers, starting from
 /// the \p Iter to \p EndIter and set bindings for the first DeclStmt and the
@@ -218,7 +218,7 @@ void UseStructuredBindingCheck::registerMatchers(MatchFinder *Finder) {
       getVarInitWithMemberMatcher(PairDeclName, "second", SecondTypeName,
                                   SecondVarDeclName, UnlessShouldBeIgnored);
 
-  auto RefToBindName = [&UnlessShouldBeIgnored](const llvm::StringLiteral &Name)
+  auto RefToBindName = [&UnlessShouldBeIgnored](const StringRef &Name)
       -> ast_matchers::internal::BindableMatcher<Stmt> {
     return declRefExpr(to(varDecl(UnlessShouldBeIgnored).bind(Name)));
   };
