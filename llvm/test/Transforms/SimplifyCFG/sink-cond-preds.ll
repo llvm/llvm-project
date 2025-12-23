@@ -20,19 +20,7 @@ define i32 @foo(ptr %ssl, ptr %name, ptr %iv, ptr %ectx, ptr %hctx, i32 %enc) {
 ; CHECK:       if.end:
 ; CHECK-NEXT:    [[BCMP:%.*]] = call i32 @bcmp(ptr [[NAME]], ptr [[TICKET_KEY_NAME_13]], i64 16)
 ; CHECK-NEXT:    [[CMP16_NOT:%.*]] = icmp eq i32 [[BCMP]], 0
-; CHECK-NEXT:    br i1 [[CMP16_NOT]], label [[COND_PRED2:%.*]], label [[RETURN]]
-; CHECK:       cond_pred1:
-; CHECK-NEXT:    [[CALL4:%.*]] = call ptr @fn4()
-; CHECK-NEXT:    [[TICKET_KEY_AES_:%.*]] = getelementptr i8, ptr [[CALL1]], i64 96
-; CHECK-NEXT:    [[CALL6:%.*]] = call i32 @fn5(ptr [[ECTX:%.*]], ptr [[CALL4]], ptr null, ptr [[TICKET_KEY_AES_]], ptr [[IV]])
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[CALL6]], 1
-; CHECK-NEXT:    br i1 [[CMP]], label [[RETURN]], label [[COMMON:%.*]]
-; CHECK:       cond_pred2:
-; CHECK-NEXT:    [[CALL19:%.*]] = call ptr @fn4()
-; CHECK-NEXT:    [[TICKET_KEY_AES_20:%.*]] = getelementptr i8, ptr [[CALL1]], i64 96
-; CHECK-NEXT:    [[CALL22:%.*]] = call i32 @fn5(ptr [[ECTX]], ptr [[CALL19]], ptr null, ptr [[TICKET_KEY_AES_20]], ptr [[IV]])
-; CHECK-NEXT:    [[CMP23:%.*]] = icmp slt i32 [[CALL22]], 1
-; CHECK-NEXT:    br i1 [[CMP23]], label [[RETURN]], label [[COMMON]]
+; CHECK-NEXT:    br i1 [[CMP16_NOT]], label [[COND_PRED1]], label [[RETURN]]
 ; CHECK:       common:
 ; CHECK-NEXT:    [[TICKET_KEY_HMAC_25:%.*]] = getelementptr i8, ptr [[CALL1]], i64 112
 ; CHECK-NEXT:    [[CALL27:%.*]] = call ptr @fn6()
@@ -40,8 +28,14 @@ define i32 @foo(ptr %ssl, ptr %name, ptr %iv, ptr %ectx, ptr %hctx, i32 %enc) {
 ; CHECK-NEXT:    [[CMP29:%.*]] = icmp slt i32 [[CALL28]], 1
 ; CHECK-NEXT:    [[SPEC_SELECT11:%.*]] = select i1 [[CMP29]], i32 -1, i32 1
 ; CHECK-NEXT:    br label [[RETURN]]
+; CHECK:       return.sink.split:
+; CHECK-NEXT:    [[CALL19:%.*]] = call ptr @fn4()
+; CHECK-NEXT:    [[TICKET_KEY_AES_20:%.*]] = getelementptr i8, ptr [[CALL1]], i64 96
+; CHECK-NEXT:    [[CALL22:%.*]] = call i32 @fn5(ptr [[ECTX:%.*]], ptr [[CALL19]], ptr null, ptr [[TICKET_KEY_AES_20]], ptr [[IV]])
+; CHECK-NEXT:    [[CMP23:%.*]] = icmp slt i32 [[CALL22]], 1
+; CHECK-NEXT:    br i1 [[CMP23]], label [[RETURN]], label [[COMMON:%.*]]
 ; CHECK:       return:
-; CHECK-NEXT:    [[RETVAL_0:%.*]] = phi i32 [ -1, [[COND_PRED1]] ], [ -1, [[COND_PRED2]] ], [ -1, [[IF_THEN]] ], [ 0, [[IF_END]] ], [ [[SPEC_SELECT11]], [[COMMON]] ]
+; CHECK-NEXT:    [[RETVAL_0:%.*]] = phi i32 [ [[SPEC_SELECT11]], [[COMMON]] ], [ 0, [[IF_END]] ], [ -1, [[IF_THEN]] ], [ -1, [[COND_PRED1]] ]
 ; CHECK-NEXT:    ret i32 [[RETVAL_0]]
 ;
 entry:
@@ -97,17 +91,17 @@ define ptr @getAMDProcessorTypeAndSubtype(i32 %Family, ptr %CpuModel, i1 %cmp35)
 ; CHECK-NEXT:      i32 26, label [[COND_PRED1:%.*]]
 ; CHECK-NEXT:      i32 21, label [[COND_PRED2:%.*]]
 ; CHECK-NEXT:    ]
-; CHECK:       cond_pred1:
+; CHECK:       cond_pred2:
+; CHECK-NEXT:    br label [[COND_PRED1]]
+; CHECK:       end.sink.split:
+; CHECK-NEXT:    [[PHI2_PH:%.*]] = phi i32 [ 2, [[COND_PRED2]] ], [ 1, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    store i32 0, ptr [[CPUMODEL:%.*]], align 4
 ; CHECK-NEXT:    br i1 [[CMP35:%.*]], label [[END]], label [[COMMON:%.*]]
-; CHECK:       cond_pred2:
-; CHECK-NEXT:    store i32 0, ptr [[CPUMODEL]], align 4
-; CHECK-NEXT:    br i1 [[CMP35]], label [[END]], label [[COMMON]]
 ; CHECK:       end:
 ; CHECK-NEXT:    ret ptr null
 ; CHECK:       common:
-; CHECK-NEXT:    [[PHI1:%.*]] = phi i32 [ 0, [[COND_PRED1]] ], [ 0, [[COND_PRED2]] ]
-; CHECK-NEXT:    [[PHI2:%.*]] = phi i32 [ 1, [[COND_PRED1]] ], [ 2, [[COND_PRED2]] ]
+; CHECK-NEXT:    [[PHI1:%.*]] = phi i32 [ 0, [[COND_PRED1]] ]
+; CHECK-NEXT:    [[PHI2:%.*]] = phi i32 [ [[PHI2_PH]], [[COND_PRED1]] ]
 ; CHECK-NEXT:    call void @use(i32 [[PHI1]])
 ; CHECK-NEXT:    call void @use(i32 [[PHI2]])
 ; CHECK-NEXT:    br label [[END]]
