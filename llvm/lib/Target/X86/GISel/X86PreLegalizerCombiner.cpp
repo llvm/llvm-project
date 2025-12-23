@@ -89,9 +89,7 @@ X86PreLegalizerCombinerImpl::X86PreLegalizerCombinerImpl(
 }
 
 bool X86PreLegalizerCombinerImpl::tryCombineAll(MachineInstr &MI) const {
-  if (tryCombineAllImpl(MI))
-    return true;
-  return false;
+  return tryCombineAllImpl(MI);
 }
 
 class X86PreLegalizerCombiner : public MachineFunctionPass {
