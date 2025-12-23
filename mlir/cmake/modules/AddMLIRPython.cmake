@@ -855,6 +855,11 @@ function(add_mlir_python_extension libname extname nb_library_target_name)
     endif()
     nanobind_link_options(${libname})
     target_compile_definitions(${libname} PRIVATE NB_DOMAIN=${MLIR_BINDINGS_PYTHON_NB_DOMAIN})
+    set_target_properties(${libname} PROPERTIES
+      VISIBILITY_INLINES_HIDDEN OFF
+      C_VISIBILITY_PRESET default
+      CXX_VISIBILITY_PRESET default
+    )
     if (MSVC)
       set_property(TARGET ${libname} PROPERTY WINDOWS_EXPORT_ALL_SYMBOLS ON)
     endif ()
