@@ -257,7 +257,7 @@ bool isExpandedFromParameterPack(const ParmVarDecl *D);
 bool isLikelyForwardingFunction(const FunctionTemplateDecl *FT);
 
 /// Only call if FD is a likely forwarding function. Returns
-/// constructors that might be forwraded to
+/// constructors that might be forwarded to.
 SmallVector<CXXConstructorDecl *, 1>
 searchConstructorsInForwardingFunction(const FunctionDecl *FD);
 

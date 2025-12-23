@@ -147,7 +147,8 @@ public:
         return false;
       // If D is a likely forwarding function we need the body to index indirect
       // constructor calls (e.g. `make_unique`)
-      if (Collector->potentiallyForwardInBody(D))
+      if (auto *FT = llvm::dyn_cast<clang::FunctionTemplateDecl>(D);
+          FT && isLikelyForwardingFunction(FT))
         return true;
       auto &SM = D->getASTContext().getSourceManager();
       auto FID = SM.getFileID(SM.getExpansionLoc(D->getLocation()));

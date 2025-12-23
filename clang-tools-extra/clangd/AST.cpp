@@ -1104,7 +1104,7 @@ public:
     return true;
   }
 
-  // List of function stack
+  // Stack of seen functions
   SeenFunctions SF;
   // Output of this visitor
   SmallVector<CXXConstructorDecl *, 1> &Constructors;
