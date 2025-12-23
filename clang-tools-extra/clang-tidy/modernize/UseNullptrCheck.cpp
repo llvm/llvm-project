@@ -30,7 +30,7 @@ AST_MATCHER(Type, sugaredNullptrType) {
 
 } // namespace
 
-static const char CastSequence[] = "sequence";
+static constexpr char CastSequence[] = "sequence";
 
 /// Create a matcher that finds implicit casts as well as the head of a
 /// sequence of zero or more nested explicit casts that have an implicit cast
