@@ -120,4 +120,3 @@ public:
 } // namespace mlir
 
 #endif // MLIR_DIALECT_OPENACC_TRANSFORMS_ACCSPECIALIZEPATTERNS_H
-

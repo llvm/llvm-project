@@ -230,8 +230,7 @@ public:
       }
       rewriter.eraseOp(writeOp);
     } else {
-      accSupport.emitNYI(writeOp.getLoc(),
-                         "unsupported type for atomic write");
+      accSupport.emitNYI(writeOp.getLoc(), "unsupported type for atomic write");
       return failure();
     }
     return success();
@@ -460,15 +459,13 @@ void mlir::acc::populateACCHostFallbackPatterns(RewritePatternSet &patterns,
                   ACCOpEraseConversion<acc::UpdateOp>>(context);
 
   // Runtime operations - erase them
-  patterns.insert<ACCOpEraseConversion<acc::InitOp>,
-                  ACCOpEraseConversion<acc::ShutdownOp>,
-                  ACCOpEraseConversion<acc::SetOp>,
-                  ACCOpEraseConversion<acc::WaitOp>,
-                  ACCOpEraseConversion<acc::TerminatorOp>>(context);
+  patterns.insert<
+      ACCOpEraseConversion<acc::InitOp>, ACCOpEraseConversion<acc::ShutdownOp>,
+      ACCOpEraseConversion<acc::SetOp>, ACCOpEraseConversion<acc::WaitOp>,
+      ACCOpEraseConversion<acc::TerminatorOp>>(context);
 
   // Compute constructs - unwrap their regions
   patterns.insert<ACCRegionUnwrapConversion<acc::ParallelOp>,
                   ACCRegionUnwrapConversion<acc::SerialOp>,
                   ACCRegionUnwrapConversion<acc::KernelsOp>>(context);
 }
-

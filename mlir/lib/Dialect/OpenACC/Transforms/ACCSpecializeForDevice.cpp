@@ -165,9 +165,8 @@ void mlir::acc::populateACCSpecializeForDevicePatterns(
                   ACCOpEraseConversion<acc::UpdateOp>>(context);
 
   // Runtime operations - erase them
-  patterns.insert<ACCOpEraseConversion<acc::InitOp>,
-                  ACCOpEraseConversion<acc::ShutdownOp>,
-                  ACCOpEraseConversion<acc::SetOp>,
-                  ACCOpEraseConversion<acc::WaitOp>>(context);
+  patterns.insert<
+      ACCOpEraseConversion<acc::InitOp>, ACCOpEraseConversion<acc::ShutdownOp>,
+      ACCOpEraseConversion<acc::SetOp>, ACCOpEraseConversion<acc::WaitOp>>(
+      context);
 }
-
