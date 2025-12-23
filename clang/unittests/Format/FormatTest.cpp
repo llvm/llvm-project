@@ -20855,6 +20855,22 @@ TEST_F(FormatTest, AlignWithLineBreaks) {
                Style);
   // clang-format on
 
+  Style = getLLVMStyle();
+  Style.AlignConsecutiveAssignments.Enabled = true;
+  verifyFormat("param->fault_depth = grid->jfault * grid->dz; //\n"
+               "grid->corner       = grid->jlid + 1;          //\n"
+               "param->peclet      = param->V                 //\n"
+               "                     * param->L * 1000.0      //\n"
+               "                     / param->kappa;          //",
+               Style);
+  Style.AlignOperands = FormatStyle::OAS_AlignAfterOperator;
+  verifyFormat("param->fault_depth = grid->jfault * grid->dz; //\n"
+               "grid->corner       = grid->jlid + 1;          //\n"
+               "param->peclet      = param->V                 //\n"
+               "                   * param->L * 1000.0        //\n"
+               "                   / param->kappa;            //",
+               Style);
+
   Style = getLLVMStyleWithColumns(70);
   Style.AlignConsecutiveDeclarations.Enabled = true;
   verifyFormat(

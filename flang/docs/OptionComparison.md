@@ -1,16 +1,16 @@
-<!--===- docs/OptionComparison.md 
-  
+<!--===- docs/OptionComparison.md
+
    Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
    See https://llvm.org/LICENSE.txt for license information.
    SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-  
+
 -->
 
 # Compiler options comparison
 
 This document catalogs the options processed by Flang's peers/competitors.  Much of the document is taken up by a set of tables that list the options categorized into different topics.  Some of the table headings link to more information about the contents of the tables.  For example, the table on **Standards conformance** options links to <a href="#standards">notes on Standards conformance</a>.
 
-**There's also important information in the ___[Appendix section](#appendix)___ near the end of the document on how this data was gathered and what ___is___ and ___is not___ included in this document.**  
+**There's also important information in the ___[Appendix section](#appendix)___ near the end of the document on how this data was gathered and what ___is___ and ___is not___ included in this document.**
 
 Note that compilers may support language features without having an option for them.  Such cases are frequently, but not always noted in this document.
 
@@ -281,7 +281,7 @@ Tf filename
    </td>
    <td>eQ
    </td>
-   <td>N/A 
+   <td>N/A
    </td>
    <td>N/A
    </td>
@@ -428,7 +428,7 @@ qonetrip
    </td>
    <td>Monetrip
    </td>
-   <td>N/A 
+   <td>N/A
    </td>
   </tr>
   <tr>
@@ -1187,16 +1187,16 @@ Mcuda
 
 ## Notes
 
-**<a name="standards"></a>Standards conformance:** 
+**<a name="standards"></a>Standards conformance:**
 
 All conformance options are similar -- they issue warnings if non-standard features are used.  All defaults are to allow extensions without warnings.  The GNU, IBM, and Intel compilers allow multiple standard levels to be specified.
 
 
 
-*   **Cray**: The capital "-eN" option specifies to issue error messages for non-compliance rather than warnings.  
+*   **Cray**: The capital "-eN" option specifies to issue error messages for non-compliance rather than warnings.
 *   **GNU:** The "std=_level_" option specifies the standard to which the program is expected to conform.   The default value for std is 'gnu', which specifies a superset of the latest Fortran standard that includes all of the extensions supported by GNU Fortran, although warnings will be given for obsolete extensions not recommended for use in new code. The 'legacy' value is equivalent but without the warnings for obsolete extensions. The 'f95', 'f2003', 'f2008', and 'f2018' values specify strict conformance to the respective standards.  Errors are given for all extensions beyond the relevant language standard, and warnings are given for the Fortran 77 features that are permitted but obsolescent in later standards. '-std=f2008ts' allows the Fortran 2008 standard including the additions of the Technical Specification (TS) 29113 on Further Interoperability of Fortran with C and TS 18508 on Additional Parallel Features in Fortran.  Values for "_level_" are f_95, f2003, f2008, f2008ts, f2018, gnu,_ and _legacy._
 
-**<a name="source"></a>Source format:** 
+**<a name="source"></a>Source format:**
 
 **Fixed or free source:**  Cray, IBM, and Intel default the source format based on the source file suffix as follows:
 
@@ -1220,7 +1220,7 @@ IBM Fortran's options allow the source line length to be specified with the opti
 *   **GNU:** For both "ffixed-line-length-_n_" and "ffree-line-length-_n_" options, characters are ignored after the specified length.  The default for fixed is 72.  The default for free is 132.  For free, you can specify 'none' as the length, which means that all characters in the line are meaningful.
 *   **IBM:** For **fixed**, the default is 72.  For **free**, there's no default, but the maximum length for either form is 132.
 *   **Intel:** The default is 72 for **fixed** and 132 for **free**.
-*   **PGI, Classic Flang:** 
+*   **PGI, Classic Flang:**
     * in free form, it is an error if the line is longer than 1000 characters
     * in fixed form by default, characters after column 72 are ignored
     * in fixed form with -Mextend, characters after column 132 are ignored

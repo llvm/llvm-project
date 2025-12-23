@@ -15,6 +15,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include <algorithm>
+#include <optional>
 
 namespace clang {
 namespace format {
@@ -475,7 +476,7 @@ static unsigned AlignTokens(const FormatStyle &Style, F &&Matches,
   // RightJustify is false.
   unsigned WidthRight = 0;
 
-  // Line number of the start and the end of the current token sequence.
+  // Number of the start and the end of the current token sequence.
   unsigned StartOfSequence = 0;
   unsigned EndOfSequence = 0;
 
@@ -494,8 +495,8 @@ static unsigned AlignTokens(const FormatStyle &Style, F &&Matches,
   unsigned CommasBeforeLastMatch = 0;
   unsigned CommasBeforeMatch = 0;
 
-  // Whether a matching token has been found on the current line.
-  bool FoundMatchOnLine = false;
+  // The column number of the matching token on the current line.
+  std::optional<unsigned> MatchingColumn;
 
   // Whether the current line consists purely of comments.
   bool LineIsComment = true;
@@ -539,17 +540,15 @@ static unsigned AlignTokens(const FormatStyle &Style, F &&Matches,
       // Whether to break the alignment sequence because of a line without a
       // match.
       bool NoMatchBreak =
-          !FoundMatchOnLine && !(LineIsComment && ACS.AcrossComments);
+          !MatchingColumn && !(LineIsComment && ACS.AcrossComments);
 
       if (EmptyLineBreak || NoMatchBreak)
         AlignCurrentSequence();
 
       // A new line starts, re-initialize line status tracking bools.
       // Keep the match state if a string literal is continued on this line.
-      if (I == 0 || CurrentChange.Tok->isNot(tok::string_literal) ||
-          Changes[I - 1].Tok->isNot(tok::string_literal)) {
-        FoundMatchOnLine = false;
-      }
+      if (MatchingColumn && CurrentChange.IndentedFromColumn < *MatchingColumn)
+        MatchingColumn.reset();
       LineIsComment = true;
     }
 
@@ -574,13 +573,14 @@ static unsigned AlignTokens(const FormatStyle &Style, F &&Matches,
 
     // If there is more than one matching token per line, or if the number of
     // preceding commas, do not match anymore, end the sequence.
-    if (FoundMatchOnLine || CommasBeforeMatch != CommasBeforeLastMatch) {
+    if ((CurrentChange.NewlinesBefore == 0U && MatchingColumn) ||
+        CommasBeforeMatch != CommasBeforeLastMatch) {
       MatchedIndices.push_back(I);
       AlignCurrentSequence();
     }
 
     CommasBeforeLastMatch = CommasBeforeMatch;
-    FoundMatchOnLine = true;
+    MatchingColumn = CurrentChange.StartOfTokenColumn;
 
     if (StartOfSequence == 0)
       StartOfSequence = I;
