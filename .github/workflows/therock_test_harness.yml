@@ -1,0 +1,101 @@
+name: TheRock Test Harness
+
+on:
+  workflow_dispatch:
+    inputs:
+      families:
+        type: string
+        description: 'The AMD GPU family to test. ex: gfx94X, gfx120X'
+        default: 'gfx94X'
+      release_version:
+        type: string
+        description: 'TheRock release version. (ex: nightly-tarball (X.Y.ZrcYYYYMMDD) or dev-tarball (X.Y.Z.dev0+{hash}))'
+        default: '7.9.0rc20251008'
+      tests_to_run:
+        type: string
+        description: 'The list of tests to run with "or" expression. (ex: "hipcub or rocprim")'
+        default: 'hipcub or rocprim or rocrand or rocthrust'
+
+permissions:
+  contents: read
+
+concurrency:
+  # A PR number if a pull request and otherwise the commit hash. This cancels
+  # queued and in-progress runs for the same PR (presubmit) or commit
+  # (postsubmit). The workflow name is prepended to avoid conflicts between
+  # different workflows.
+  group: ${{ github.workflow }}-${{ github.event.number || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  setup_metadata:
+    runs-on: ubuntu-24.04
+    outputs:
+      package_targets: ${{ steps.configure.outputs.package_targets }}
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          repository: "ROCm/TheRock"
+
+      - name: Setup Python
+        uses: actions/setup-python@83679a892e2d95755f2dac6acb0bfd1e9ac5d548 # v6.1.0
+        with:
+          python-version: 3.12
+
+      - name: Generating package target matrix
+        id: configure
+        env:
+          AMDGPU_FAMILIES: ${{ inputs.families }}
+          THEROCK_PACKAGE_PLATFORM: "linux"
+          TEST_HARNESS_TARGET_FETCH: true
+          # Variable comes from ROCm organization variable 'ROCM_THEROCK_TEST_RUNNERS'
+          ROCM_THEROCK_TEST_RUNNERS: ${{ vars.ROCM_THEROCK_TEST_RUNNERS }}
+          LOAD_TEST_RUNNERS_FROM_VAR: false
+        run: python ./build_tools/github_actions/fetch_package_targets.py
+
+
+  therock_test_harness_linux:
+    name: TheRock Tests Sharded Linux Nightly
+    needs: [setup_metadata]
+    runs-on: ${{ matrix.target_bundle.test_machine }}
+    container:
+      image: 'ghcr.io/rocm/no_rocm_image_ubuntu24_04@sha256:4150afe4759d14822f0e3f8930e1124f26e11f68b5c7b91ec9a02b20b1ebbb98'
+      options: --ipc host
+        --group-add video
+        --device /dev/kfd
+        --device /dev/dri
+        --group-add 110
+        --env-file /etc/podinfo/gha-gpu-isolation-settings
+    strategy:
+      fail-fast: false
+      matrix:
+        target_bundle: ${{ fromJSON(needs.setup_metadata.outputs.package_targets) }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          repository: "ROCm/TheRock"
+
+      - name: Setup Python
+        uses: actions/setup-python@83679a892e2d95755f2dac6acb0bfd1e9ac5d548 # v6.1.0
+        with:
+          python-version: 3.12
+
+      - name: Install TheRock
+        env:
+          release_version: ${{ inputs.release_version }}
+        run: |
+          pip install -r requirements-test.txt
+          python3 build_tools/install_rocm_from_artifacts.py --tests --amdgpu-family ${{ matrix.target_bundle.amdgpu_family }} --release ${{ env.release_version }}
+
+      # TODO: add parallelism
+      - name: Running test harness
+        # TESTING
+        run: |
+          python3 -m pytest -s -v --tb=short --therock-path=./therock-build tests/harness/tests*.py -k ${{ inputs.tests_to_run }}
+
+# TODO: Add windows tests

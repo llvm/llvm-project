@@ -1,0 +1,119 @@
+name: Test Artifacts
+
+on:
+  workflow_dispatch:
+    inputs:
+      artifact_group:
+        type: string
+      artifact_run_id:
+        type: string
+        default: ""
+      amdgpu_families:
+        type: string
+      test_runs_on:
+        type: string
+      sanity_check_only_for_family:
+        type: boolean
+        default: false
+      test_type:
+        type: string
+      test_labels:
+        type: string
+  workflow_call:
+    inputs:
+      artifact_group:
+        type: string
+      artifact_run_id:
+        type: string
+        default: ""
+      amdgpu_families:
+        type: string
+      test_runs_on:
+        type: string
+      sanity_check_only_for_family:
+        type: boolean
+        default: false
+      test_type:
+        type: string
+      test_labels:
+        type: string
+  push:
+    branches:
+      - ADHOCBUILD
+
+permissions:
+  contents: read
+
+jobs:
+  configure_test_matrix:
+    name: "Configure test matrix"
+    # if there is a test machine available
+    if: ${{ inputs.test_runs_on != '' }}
+    runs-on: ${{ inputs.test_runs_on }}
+    outputs:
+      components: ${{ steps.configure.outputs.components }}
+      platform: ${{ steps.configure.outputs.platform }}
+      shard_arr: ${{ steps.configure.outputs.shard_arr }}
+    steps:
+      - name: "Fetch 'build_tools' from repository"
+        if: ${{ runner.os == 'Windows' }}
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          repository: "ROCm/TheRock"
+          sparse-checkout: build_tools
+          path: "prejob"
+
+      # Checkout failure is possible on Windows, as it's the first job on a GPU test runner.
+      # Post-job cleanup isn't necessary since no executables are launched in this job.
+      - name: Pre-job cleanup processes on Windows
+        if: ${{ runner.os == 'Windows' }}
+        shell: powershell
+        run: . '${{ github.workspace }}\prejob\build_tools\github_actions\cleanup_processes.ps1'
+
+      - name: "Checking out repository"
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          repository: "ROCm/TheRock"
+
+      - name: Setting up Python
+        uses: actions/setup-python@83679a892e2d95755f2dac6acb0bfd1e9ac5d548 # v6.1.0
+        with:
+          python-version: 3.12
+
+      - name: "Configuring CI options"
+        id: configure
+        env:
+          ARTIFACT_GROUP: ${{ inputs.artifact_group }}
+          AMDGPU_FAMILIES: ${{ inputs.amdgpu_families }}
+          TEST_TYPE: ${{ inputs.test_type }}
+          TEST_LABELS: ${{ inputs.test_labels }}
+        run: python ./build_tools/github_actions/fetch_test_configurations.py
+
+  test_sanity_check:
+    name: 'Test Sanity Check'
+    needs: configure_test_matrix
+    uses: './.github/workflows/test_sanity_check.yml'
+    with:
+      artifact_group: ${{ inputs.artifact_group }}
+      artifact_run_id: ${{ inputs.artifact_run_id }}
+      amdgpu_families: ${{ inputs.amdgpu_families }}
+      test_runs_on: ${{ inputs.test_runs_on }}
+      platform: ${{ needs.configure_test_matrix.outputs.platform }}
+
+  test_components:
+    name: 'Test ${{ matrix.components.job_name }}'
+    needs: [test_sanity_check, configure_test_matrix]
+    # skip tests if no test matrix to run and sanity check only requested
+    if: ${{ needs.configure_test_matrix.outputs.components != '[]' && !inputs.sanity_check_only_for_family }}
+    strategy:
+      fail-fast: false
+      matrix:
+        components: ${{ fromJSON(needs.configure_test_matrix.outputs.components) }}
+    uses: './.github/workflows/test_component.yml'
+    with:
+      artifact_run_id: ${{ inputs.artifact_run_id }}
+      artifact_group: ${{ inputs.artifact_group }}
+      amdgpu_families: ${{ inputs.amdgpu_families }}
+      test_runs_on: ${{ inputs.test_runs_on }}
+      platform: ${{ needs.configure_test_matrix.outputs.platform }}
+      component: ${{ toJSON(matrix.components) }}

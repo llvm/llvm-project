@@ -1,0 +1,54 @@
+name: Test JAX Wheels
+
+on:
+  workflow_dispatch:
+    inputs:
+      test_runs_on:
+        required: true
+        type: string
+        default: "linux-mi325-1gpu-ossci-rocm-frac"
+      image_name:
+        required: true
+        description: JAX docker image to run tests with
+        type: string
+      jax_version:
+        description: Version of JAX to install
+        required: false
+        type: string
+      jax_plugin_branch:
+        required: true
+        description: JAX plugin branch to checkout
+        type: string
+        default: "rocm-jaxlib-v0.6.0"
+
+  workflow_call:
+    inputs:
+      test_runs_on:
+        required: true
+        type: string
+      image_name:
+        required: true
+        description: JAX docker image to run tests with
+        type: string
+      jax_version:
+        description: Version of JAX to install instead of the one on the docker image
+        required: false
+        type: string
+      jax_plugin_branch:
+        description: JAX plugin branch to checkout to use for test scripts
+        type: string
+        default: "rocm-jaxlib-v0.8.0"
+
+permissions:
+  contents: read
+
+jobs:
+  test_wheels:
+    name: Test
+    runs-on: ${{ inputs.test_runs_on }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          repo: rocm/rocm-jax
+      # TODO: Add steps for creating the JAX docker image with an install of TheRock and then running JAX tests on the container

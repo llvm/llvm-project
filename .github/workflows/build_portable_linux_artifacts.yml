@@ -1,0 +1,205 @@
+name: Build Portable Linux Artifacts
+
+on:
+  workflow_dispatch:
+    inputs:
+      amdgpu_families:
+        type: string
+        default: gfx94X-dcgpu
+      artifact_group:
+        type: string
+        default: gfx94X-dcgpu
+      build_variant_label:
+        type: string
+        description: "A label for the build variant (ex: 'release', 'asan')"
+        default: "release"
+      build_variant_suffix:
+        type: string
+        description: "The build variant suffix (ex: 'asan' suffix -> 'gfx94X-dcgpu-asan')"
+        default: ""
+      build_variant_cmake_preset:
+        type: string
+        description: "The name of the cmake preset to use for this build variant, matching an entry in CMakePresets.json (ex: 'linux-release-asan')"
+        default: ""
+      package_version:
+        type: string
+        default: ADHOCBUILD
+      expect_failure:
+        type: boolean
+        default: false
+      extra_cmake_options:
+        type: string
+
+  workflow_call:
+    inputs:
+      package_version:
+        type: string
+        default: ADHOCBUILD
+      amdgpu_families:
+        type: string
+      artifact_group:
+        type: string
+      build_variant_label:
+        type: string
+      build_variant_suffix:
+        type: string
+      build_variant_cmake_preset:
+        type: string
+      expect_failure:
+        type: boolean
+      extra_cmake_options:
+        type: string
+
+# See the details regarding permissions from the link:
+# https://github.com/aws-actions/configure-aws-credentials?tab=readme-ov-file#oidc
+permissions:
+  contents: read
+
+jobs:
+  build_portable_linux_artifacts:
+    name: Build (xfail ${{ inputs.expect_failure }})
+    # azure-linux-scale-rocm are used for regular CI builds
+    # azure-linux-scale-rocm-heavy are used for CI builds that require more resources (ex: ASAN builds)
+    runs-on: ${{ inputs.build_variant_label == 'asan' && 'azure-linux-u2404-hx176-cpu-rocm' || 'azure-linux-scale-rocm' }}
+    continue-on-error: ${{ inputs.expect_failure }}
+    timeout-minutes: 720 # 12 hour timeout
+    permissions:
+      id-token: write
+    container:
+      image: ghcr.io/rocm/therock_build_manylinux_x86_64@sha256:583d473f263a289222c48d4b493e2956b2354a45796f09dee6f2c8ecd4504ab6
+      options: -v /runner/config:/home/awsconfig/
+    env:
+      AWS_SHARED_CREDENTIALS_FILE: /home/awsconfig/credentials.ini
+      CACHE_DIR: ${{ github.workspace }}/.container-cache
+      # The ccache.conf will be written by setup_ccache.py before this gets used.
+      CCACHE_CONFIGPATH: ${{ github.workspace }}/.ccache/ccache.conf
+      AMDGPU_FAMILIES: ${{ inputs.amdgpu_families }}
+      TEATIME_FORCE_INTERACTIVE: 0
+      IS_PR_FROM_FORK: ${{ github.event.pull_request.head.repo.fork }}
+    steps:
+      - name: Checkout TheRock repository
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          repository: "ROCm/TheRock"
+          ref: "compiler/amd-mainline"
+          fetch-depth: 10
+
+      - name: SHA of TheRock
+        run: |
+             git config --global --add safe.directory /__w/llvm-project/llvm-project
+             git log -1
+             cd compiler/amd-llvm
+             git log -3
+             cd -
+
+      - name: Install python deps
+        run: |
+          pip install -r requirements.txt
+
+      # safe.directory must be set before Runner Health Status
+      - name: Adjust git config
+        run: |
+          git config --global --add safe.directory $PWD
+          git config fetch.parallel 10
+
+      # TODO: We shouldn't be using a cache on actual release branches, but it
+      # really helps for iteration time.
+      - name: Setup ccache
+        run: |
+          ./build_tools/setup_ccache.py \
+            --config-preset "github-oss-presubmit" \
+            --dir "$(dirname $CCACHE_CONFIGPATH)" \
+            --local-path "$CACHE_DIR/ccache"
+
+      - name: Runner health status
+        run: |
+          ./build_tools/health_status.py
+
+      - name: Test build_tools
+        run: |
+          python -m pytest build_tools/tests build_tools/github_actions/tests
+
+      - name: Fetch sources
+        timeout-minutes: 30
+        run: |
+          ./build_tools/fetch_sources.py --jobs 12
+
+      - name: "Checking out repository for llvm-project"
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          path: compiler/amd-llvm
+
+      - name: Apply patches
+        run: |
+             cp -v patches/amd-mainline/llvm-project/*.patch compiler/amd-llvm
+             cd compiler/amd-llvm
+             git config --global --add safe.directory /__w/llvm-project/llvm-project
+             find . -type f -name '*.patch' -exec git apply --check {} \;
+             find . -type f -name '*.patch' -exec git apply {} \;
+             git log -15
+             cd -
+
+      - name: Configure Projects
+        env:
+          cmake_preset: ${{ inputs.build_variant_cmake_preset }}
+          amdgpu_families: ${{ inputs.amdgpu_families }}
+          package_version: ${{ inputs.package_version }}
+          extra_cmake_options: ${{ inputs.extra_cmake_options }}
+          BUILD_DIR: build
+        run: |
+          python3 build_tools/github_actions/build_configure.py --manylinux
+
+      - name: Build therock-archives and therock-dist
+        run: |
+          cmake --build build --target therock-archives therock-dist -- -k 0
+
+      - name: Test Packaging
+        if: ${{ github.event.repository.name == 'TheRock' }}
+        run: |
+          ctest --test-dir build --output-on-failure
+
+      - name: Report
+        if: ${{ !cancelled() }}
+        shell: bash
+        run: |
+          if [ -d "./build" ]; then
+            echo "Full SDK du:"
+            echo "------------"
+            du -h -d 1 build/dist/rocm
+            echo "Artifact Archives:"
+            echo "------------------"
+            ls -lh build/artifacts/*.tar.xz
+            echo "Artifacts:"
+            echo "----------"
+            du -h -d 1 build/artifacts
+            echo "CCache Stats:"
+            echo "-------------"
+            ccache -s -v
+            tail -v -n +1 .ccache/compiler_check_cache/* > build/logs/ccache_compiler_check_cache.log
+          else
+            echo "[ERROR] Build directory ./build does not exist. Skipping report!"
+            echo "        This should only happen if the CI is cancelled before the build step."
+            exit 1
+          fi
+
+      # Analyze ninja build log to generate per-component timing report
+      - name: Analyze Build Times
+        if: ${{ !cancelled() }}
+        run: |
+          python3 build_tools/analyze_build_times.py --build-dir build
+
+      - name: Configure AWS Credentials for non-forked repos
+        if: ${{ always() && !github.event.pull_request.head.repo.fork }}
+        uses: aws-actions/configure-aws-credentials@61815dcd50bd041e203e49132bacad1fd04d2708 # v5.1.1
+        with:
+          aws-region: us-east-2
+          role-to-assume: arn:aws:iam::692859939525:role/therock-ci
+
+      - name: Post Build Upload
+        if: always()
+        run: |
+          python3 build_tools/github_actions/post_build_upload.py \
+            --run-id ${{ github.run_id }} \
+            --artifact-group "${{ inputs.artifact_group }}" \
+            --build-dir build \
+            --upload

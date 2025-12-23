@@ -1,0 +1,21 @@
+name: Publish no_rocm_image_ubuntu24_04 images
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - 'main'
+      - 'stage/docker/**'
+    paths:
+      - dockerfiles/no_rocm_image_ubuntu24_04*.Dockerfile
+      - .github/workflows/publish_no_rocm_image_ubuntu24_04.yml
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  publish_no_rocm_image_ubuntu24_04:
+    uses: ./.github/workflows/publish_dockerfile.yml
+    with:
+      DOCKER_FILE_NAME: no_rocm_image_ubuntu24_04
+      DOCKER_IMAGE_NAME: no_rocm_image_ubuntu24_04

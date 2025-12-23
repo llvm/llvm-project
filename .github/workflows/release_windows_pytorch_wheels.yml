@@ -1,0 +1,110 @@
+name: Release Windows PyTorch Wheels
+
+on:
+  workflow_call:
+    inputs:
+      amdgpu_family:
+        required: true
+        type: string
+      release_type:
+        description: The type of release to build ("dev", "nightly", or "prerelease"). All developer-triggered jobs should use "dev"!
+        type: string
+        default: "dev"
+      s3_subdir:
+        description: S3 subdirectory, not including the GPU-family
+        type: string
+        default: "v2"
+      s3_staging_subdir:
+        description: Staging subdirectory to push the wheels for test
+        type: string
+        default: "v2-staging"
+      cloudfront_url:
+        description: CloudFront URL pointing to Python index
+        type: string
+        default: "https://rocm.devreleases.amd.com/v2"
+      cloudfront_staging_url:
+        description: CloudFront base URL pointing to staging Python index
+        required: true
+        type: string
+      rocm_version:
+        description: ROCm version to pip install (e.g. "7.10.0a20251124")
+        type: string
+      ref:
+        description: "Branch, tag or SHA to checkout. Defaults to the reference or SHA that triggered the workflow."
+        type: string
+  workflow_dispatch:
+    inputs:
+      amdgpu_family:
+        type: choice
+        options:
+          - gfx101X-dgpu
+          - gfx103X-dgpu
+          - gfx110X-all
+          - gfx1150
+          - gfx1151
+          - gfx120X-all
+          - gfx90X-dcgpu
+          - gfx94X-dcgpu
+          - gfx950-dcgpu
+        default: gfx1151
+      release_type:
+        description: The type of release to build ("dev", "nightly", or "prerelease"). All developer-triggered jobs should use "dev"!
+        type: string
+        default: "dev"
+      s3_subdir:
+        description: S3 subdirectory, not including the GPU-family
+        type: string
+        default: "v2"
+      s3_staging_subdir:
+        description: "Staging subdirectory to push the wheels for test"
+        type: string
+        default: "v2-staging"
+      cloudfront_url:
+        description: CloudFront URL pointing to Python index
+        type: string
+        default: "https://rocm.devreleases.amd.com/v2"
+      cloudfront_staging_url:
+        description: CloudFront base URL pointing to staging Python index
+        type: string
+        default: "https://rocm.devreleases.amd.com/v2-staging"
+      rocm_version:
+        description: ROCm version to pip install (e.g. "7.10.0a20251124")
+        type: string
+      ref:
+        description: "Branch, tag or SHA to checkout. Defaults to the reference or SHA that triggered the workflow."
+        type: string
+        default: ''
+
+permissions:
+  id-token: write
+  contents: read
+
+run-name: Release Windows PyTorch Wheels (${{ inputs.amdgpu_family }}, ${{ inputs.release_type }}, ${{ inputs.rocm_version }})
+
+jobs:
+  release:
+    name: Release | ${{ inputs.amdgpu_family }} | py ${{ matrix.python_version }} | torch ${{ matrix.pytorch_git_ref }}
+    strategy:
+      fail-fast: false
+      matrix:
+        python_version: ["3.11", "3.12", "3.13"]
+        pytorch_git_ref: ["release/2.9", "nightly"]
+        include:
+          - pytorch_git_ref: release/2.9
+            pytorch_patchset: rocm_2.9
+          - pytorch_git_ref: nightly
+            pytorch_patchset: nightly
+
+    uses: ./.github/workflows/build_windows_pytorch_wheels.yml
+    with:
+      amdgpu_family: ${{ inputs.amdgpu_family }}
+      python_version: ${{ matrix.python_version }}
+      release_type: ${{ inputs.release_type }}
+      s3_subdir: ${{ inputs.s3_subdir }}
+      s3_staging_subdir: ${{ inputs.s3_staging_subdir }}
+      cloudfront_url: ${{ inputs.cloudfront_url }}
+      cloudfront_staging_url: ${{ inputs.cloudfront_staging_url }}
+      rocm_version: ${{ inputs.rocm_version }}
+      pytorch_git_ref: ${{ matrix.pytorch_git_ref }}
+      pytorch_patchset: ${{ matrix.pytorch_patchset }}
+      ref: ${{ inputs.ref || '' }}

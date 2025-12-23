@@ -1,0 +1,117 @@
+name: TheRock Sanity Check
+
+on:
+  workflow_dispatch:
+    inputs:
+      artifact_group:
+        type: string
+      artifact_run_id:
+        type: string
+        default: ""
+      amdgpu_families:
+        type: string
+        default: ""
+      test_runs_on:
+        type: string
+      platform:
+        type: string
+  workflow_call:
+    inputs:
+      artifact_group:
+        type: string
+      artifact_run_id:
+        type: string
+        default: ""
+      amdgpu_families:
+        type: string
+        default: ""
+      test_runs_on:
+        type: string
+      platform:
+        type: string
+  push:
+    branches:
+      - ADHOCBUILD
+
+permissions:
+  contents: read
+
+jobs:
+  test_sanity_check:
+    name: "Sanity ROCM Test"
+    runs-on: ${{ inputs.test_runs_on }}
+    container:
+      image: ${{ inputs.platform == 'linux' && 'ghcr.io/rocm/no_rocm_image_ubuntu24_04@sha256:405945a40deaff9db90b9839c0f41d4cba4a383c1a7459b28627047bf6302a26' || null }}
+      options: --ipc host
+        --group-add video
+        --device /dev/kfd
+        --device /dev/dri
+        --group-add 110
+        --env-file /etc/podinfo/gha-gpu-isolation-settings
+        --user 0:0 # Running as root, by recommendation of GitHub: https://docs.github.com/en/actions/reference/workflows-and-actions/dockerfile-support#user
+    defaults:
+      run:
+        shell: bash
+    env:
+      VENV_DIR: ${{ github.workspace }}/.venv
+      ARTIFACT_RUN_ID: "${{ inputs.artifact_run_id != '' && inputs.artifact_run_id || github.run_id }}"
+      OUTPUT_ARTIFACTS_DIR: ${{ github.workspace }}/build
+      THEROCK_BIN_DIR: ${{ github.workspace }}/build/bin
+    steps:
+      - name: "Fetch 'build_tools' from repository"
+        if: ${{ runner.os == 'Windows' }}
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          sparse-checkout: build_tools
+          path: prejob
+
+      - name: Pre-job cleanup processes on Windows
+        if: ${{ runner.os == 'Windows' }}
+        shell: powershell
+        run: . '${{ github.workspace }}\prejob\build_tools\github_actions\cleanup_processes.ps1'
+
+      - name: Checkout Repository
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          repository: "ROCm/TheRock"
+
+      - name: Pre-job cleanup Docker containers on Linux
+        if: ${{ runner.os == 'Linux' }}
+        shell: bash
+        run: |
+          # Remove any stopped containers
+          docker container prune -f || true
+          # Remove dangling networks
+          docker network prune -f || true
+
+      - name: Run setup test environment workflow
+        uses: './.github/actions/setup_test_environment'
+        with:
+          ARTIFACT_GROUP: ${{ inputs.artifact_group }}
+          ARTIFACT_RUN_ID: ${{ env.ARTIFACT_RUN_ID }}
+          OUTPUT_ARTIFACTS_DIR: ${{ env.OUTPUT_ARTIFACTS_DIR }}
+          VENV_DIR: ${{ env.VENV_DIR }}
+          FETCH_ARTIFACT_ARGS: "--base-only"
+          IS_PR_FROM_FORK: ${{ github.event.pull_request.head.repo.fork }}
+
+      - name: Set HIP_CLANG_PATH for windows
+        if: ${{ runner.os == 'Windows' }}
+        run: echo "HIP_CLANG_PATH=${OUTPUT_ARTIFACTS_DIR}\lib\llvm\bin" >> $GITHUB_ENV
+
+      - name: Driver / GPU sanity check
+        run: |
+          python ./build_tools/print_driver_gpu_info.py
+
+      - name: Run ROCm Sanity Tests
+        timeout-minutes: 5
+        env:
+          # Enable verbose logging, see
+          # https://rocm.docs.amd.com/projects/HIP/en/latest/how-to/debugging.html
+          AMD_LOG_LEVEL: 4
+        run: |
+          pytest tests/ --log-cli-level=info --timeout=60
+
+      - name: Post-job cleanup processes on Windows
+        if: ${{ always() && runner.os == 'Windows' }}
+        shell: powershell
+        run: . '${{ github.workspace }}\build_tools\github_actions\cleanup_processes.ps1'

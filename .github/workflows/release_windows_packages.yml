@@ -1,0 +1,360 @@
+name: Release Windows packages
+
+on:
+  # Trigger from another workflow (typically to build dev packages and then test them)
+  workflow_call:
+    inputs:
+      release_type:
+        description: The type of release to build ("dev", "nightly", or "prerelease"). All developer-triggered jobs should use "dev"!
+        type: string
+        default: "dev"
+      package_suffix:
+        type: string
+      s3_subdir:
+        description: "Subdirectory to push the Python packages"
+        type: string
+        default: "v2"
+      s3_staging_subdir:
+        description: "Staging subdirectory to push the packages"
+        type: string
+        default: "v2-staging"
+      families:
+        description: "Comma separated list of AMD GPU families, e.g. `gfx94X,gfx103x`, or empty for the default list"
+        type: string
+      prerelease_version:
+        description: "(Optional) Number of the prerelease"
+        type: string
+      repository:
+        description: "Repository to checkout. Otherwise, defaults to `github.repository`."
+        type: string
+      ref:
+        description: "Branch, tag or SHA to checkout. Defaults to the reference or SHA that triggered the workflow."
+        type: string
+  # Trigger manually (typically to test the workflow or manually build a release [candidate])
+  workflow_dispatch:
+    inputs:
+      release_type:
+        description: The type of release to build ("dev", "nightly", or "prerelease"). All developer-triggered jobs should use "dev"!
+        type: string
+        default: "dev"
+      package_suffix:
+        type: string
+      s3_subdir:
+        description: "Subdirectory to push the Python packages"
+        type: string
+        default: "v2"
+      s3_staging_subdir:
+        description: "Staging subdirectory to push the packages"
+        type: string
+        default: "v2-staging"
+      families:
+        description: "A comma separated list of AMD GPU families, e.g. `gfx94X,gfx103x`, or empty for the default list"
+        type: string
+      prerelease_version:
+        description: "(Optional) Number of the prerelease"
+        type: string
+      extra_cmake_options:
+        description: "Extra options to pass to the CMake configure command"
+        type: string
+
+  # Trigger on a schedule to build nightly release candidates.
+  schedule:
+    # Runs at 04:00 AM UTC, which is 8:00 PM PST (UTC-8)
+    - cron: '0 04 * * *'
+
+permissions:
+  contents: read
+
+run-name: Release Windows packages (${{ inputs.families || 'default' }}, ${{ inputs.release_type || 'nightly' }})
+
+jobs:
+  setup_metadata:
+    if: ${{ github.repository_owner == 'ROCm' || github.event_name != 'schedule' }}
+    runs-on: ubuntu-24.04
+    env:
+      release_type: ${{ inputs.release_type || 'nightly' }}
+    outputs:
+      version: ${{ steps.rocm_package_version.outputs.rocm_package_version }}
+      release_type: ${{ env.release_type }}
+      package_targets: ${{ steps.configure.outputs.package_targets }}
+      cloudfront_url: ${{ steps.release_information.outputs.cloudfront_url }}
+      cloudfront_staging_url: ${{ steps.release_information.outputs.cloudfront_staging_url }}
+      s3_subdir_tar: ${{ steps.release_information.outputs.s3_subdir_tar }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          repository: ${{ inputs.repository || github.repository }}
+          ref: ${{ inputs.ref || '' }}
+
+      - name: Setup Python
+        uses: actions/setup-python@83679a892e2d95755f2dac6acb0bfd1e9ac5d548 # v6.1.0
+        with:
+          python-version: 3.12
+
+      - name: Compute package version
+        id: rocm_package_version
+        run: |
+          python ./build_tools/compute_rocm_package_version.py \
+            --release-type=${{ env.release_type }} \
+            --prerelease-version=${{ inputs.prerelease_version }}
+
+      - name: Set variables for nightly release
+        if: ${{ env.release_type == 'nightly' }}
+        run: |
+          echo "tmp_cloudfront_url=https://rocm.nightlies.amd.com/v2" >> $GITHUB_ENV
+          echo "tmp_cloudfront_staging_url=https://rocm.nightlies.amd.com/v2-staging" >> $GITHUB_ENV
+          echo "tmp_s3_subdir_tar=''" >> $GITHUB_ENV
+
+      - name: Set variables for prerelease
+        if: ${{ env.release_type == 'prerelease' }}
+        run: |
+          echo "tmp_cloudfront_url=https://rocm.prereleases.amd.com/whl" >> $GITHUB_ENV
+          echo "tmp_cloudfront_staging_url=https://rocm.prereleases.amd.com/whl-staging" >> $GITHUB_ENV
+          echo "tmp_s3_subdir_tar=v3/tarball/" >> $GITHUB_ENV
+
+      - name: Set variables for development release
+        if: ${{ env.release_type == 'dev' }}
+        run: |
+          echo "tmp_cloudfront_url=https://rocm.devreleases.amd.com/v2" >> $GITHUB_ENV
+          echo "tmp_cloudfront_staging_url=https://rocm.devreleases.amd.com/v2-staging" >> $GITHUB_ENV
+          echo "tmp_s3_subdir_tar=''" >> $GITHUB_ENV
+
+      - name: Generate release information
+        id: release_information
+        run: |
+          echo "cloudfront_url=${tmp_cloudfront_url}" >> $GITHUB_OUTPUT
+          echo "cloudfront_staging_url=${tmp_cloudfront_staging_url}" >> $GITHUB_OUTPUT
+          echo "s3_subdir_tar=${tmp_s3_subdir_tar}" >> $GITHUB_OUTPUT
+
+      - name: Generating package target matrix
+        id: configure
+        env:
+          AMDGPU_FAMILIES: ${{ inputs.families }}
+          THEROCK_PACKAGE_PLATFORM: "windows"
+          # Variable comes from ROCm organization variable 'ROCM_THEROCK_TEST_RUNNERS'
+          ROCM_THEROCK_TEST_RUNNERS: ${{ vars.ROCM_THEROCK_TEST_RUNNERS }}
+          LOAD_TEST_RUNNERS_FROM_VAR: false
+        run: python ./build_tools/github_actions/fetch_package_targets.py
+
+  windows_packages:
+    name: ${{ matrix.target_bundle.amdgpu_family }}::Build Windows
+    runs-on: ${{ github.repository_owner == 'ROCm' && 'azure-windows-scale-rocm' || 'windows-2022' }}
+    continue-on-error: ${{ matrix.target_bundle.expect_failure == true }} # for GPU families that are flaky, we mark as xfail
+    timeout-minutes: 720 # 12 hour timeout
+    needs: [setup_metadata]
+    permissions:
+      contents: write
+      actions: write # Added permission to trigger workflows
+      id-token: write # Added permission for AWS S3 upload
+    defaults:
+      run:
+        shell: bash
+    strategy:
+      fail-fast: false
+      matrix:
+        target_bundle: ${{ fromJSON(needs.setup_metadata.outputs.package_targets) }}
+    env:
+      TEATIME_LABEL_GH_GROUP: 1
+      BUILD_DIR: B:\build
+      CACHE_DIR: "${{github.workspace}}/.cache"
+      CCACHE_DIR: "${{github.workspace}}/.cache/ccache"
+      CCACHE_MAXSIZE: "4000M"
+      DIST_ARCHIVE: "B:/build/artifacts/therock-dist-windows-${{ matrix.target_bundle.amdgpu_family }}${{ inputs.package_suffix }}-${{ needs.setup_metadata.outputs.version }}.tar.gz"
+      RELEASE_TYPE: "${{ needs.setup_metadata.outputs.release_type }}"
+      S3_BUCKET_TAR: "therock-${{ needs.setup_metadata.outputs.release_type }}-tarball"
+      S3_SUBDIR_TAR: ${{ needs.setup_metadata.outputs.s3_subdir_tar }}
+      S3_BUCKET_PY: "therock-${{ needs.setup_metadata.outputs.release_type }}-python"
+      S3_SUBDIR: ${{ inputs.s3_subdir || 'v2' }}
+      S3_STAGING_SUBDIR: ${{ inputs.s3_staging_subdir || 'v2-staging' }}
+
+    steps:
+      - name: "Checking out repository"
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          repository: ${{ inputs.repository || github.repository }}
+          ref: ${{ inputs.ref || '' }}
+
+      - uses: actions/setup-python@83679a892e2d95755f2dac6acb0bfd1e9ac5d548 # v6.1.0
+        with:
+          python-version: 3.12
+
+      - name: Install python deps
+        run: |
+          pip install -r requirements.txt
+
+      # TODO(amd-justchen): share with build_windows_artifacts.yml. Include in VM image? Dockerfile?
+      - name: Install requirements
+        run: |
+          choco install --no-progress -y ccache
+          # ninja pinned due to a bug in the 1.13.0 release:
+          # https://github.com/ninja-build/ninja/issues/2616
+          choco install --no-progress -y ninja --version 1.12.1
+          choco install --no-progress -y strawberryperl
+          echo "$PATH;C:\Strawberry\c\bin" >> $GITHUB_PATH
+          choco install --no-progress -y awscli
+          choco install --no-progress -y pkgconfiglite
+          echo "$PATH;C:\Program Files\Amazon\AWSCLIV2" >> $GITHUB_PATH
+
+      - uses: iterative/setup-dvc@4bdfd2b0f6f1ad7e08afadb03b1a895c352a5239 # v2.0.0
+        with:
+          version: '3.62.0'
+
+      # After other installs, so MSVC get priority in the PATH.
+      - name: Configure MSVC
+        uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1.13.0
+
+      - name: Runner health status
+        run: |
+          ccache --zero-stats
+          python ./build_tools/health_status.py
+
+      # TODO: We shouldn't be using a cache on actual release branches, but it
+      # really helps for iteration time.
+      - name: Enable cache
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: ${{ env.CACHE_DIR }}
+          key: windows-package-matrix-v1-${{ matrix.target_bundle.amdgpu_family }}-${{ github.sha }}
+          restore-keys: |
+            windows-package-matrix-v1-${{ matrix.target_bundle.amdgpu_family }}-
+
+      - name: Fetch sources
+        timeout-minutes: 30
+        run: |
+          git config fetch.parallel 10
+          git config --global core.symlinks true
+          git config --global core.longpaths true
+          python ./build_tools/fetch_sources.py --jobs 12
+
+      - name: Configure Projects
+        env:
+          amdgpu_families: ${{ matrix.target_bundle.amdgpu_family }}
+          package_version: "ADHOCBUILD"
+          extra_cmake_options: ${{ inputs.extra_cmake_options }}
+        run: |
+          # clear cache before build and after download
+          ccache -z
+
+          python3 build_tools/github_actions/build_configure.py
+
+      - name: Build therock-dist
+        run: cmake --build "${{ env.BUILD_DIR }}" --target therock-dist
+
+      - name: Build therock-archives
+        run: cmake --build "${{ env.BUILD_DIR }}" --target therock-archives
+
+      - name: Compress dist folder
+        run: |
+          cd ${{ env.BUILD_DIR }}/dist/rocm
+          echo "Compressing ${{ env.DIST_ARCHIVE }}"
+          tar cfz "${{ env.DIST_ARCHIVE }}" --force-local .
+
+      - name: Build Python Packages
+        run: |
+          python ./build_tools/build_python_packages.py \
+            --artifact-dir=${{ env.BUILD_DIR }}/artifacts \
+            --dest-dir=${{ env.BUILD_DIR }}/packages \
+            --version=${{ needs.setup_metadata.outputs.version }}
+
+      - name: Build report
+        if: ${{ !cancelled() }}
+        shell: bash
+        run: |
+          if [ -d "${{ env.BUILD_DIR }}" ]; then
+            echo "Build dir:"
+            echo "------------"
+            ls -lh "${{ env.BUILD_DIR }}"
+            echo "CCache Stats:"
+            echo "-------------"
+            ccache -s
+          else
+            echo "[ERROR] Build directory ${{ env.BUILD_DIR }} does not exist. Skipping report!"
+            echo "        This should only happen if the CI is cancelled before the build step."
+            exit 1  # Stop the CI as build did not happen
+          fi
+
+      - name: Configure AWS Credentials
+        if: ${{ github.repository_owner == 'ROCm' && !cancelled() }}
+        uses: aws-actions/configure-aws-credentials@61815dcd50bd041e203e49132bacad1fd04d2708 # v5.1.1
+        with:
+          aws-region: us-east-2
+          role-to-assume: arn:aws:iam::692859939525:role/therock-${{ env.RELEASE_TYPE }}
+          special-characters-workaround: true
+
+      - name: Post Build Upload
+        if: ${{ github.repository_owner == 'ROCm' && !cancelled() }}
+        run: |
+          python3 build_tools/github_actions/post_build_upload.py \
+            --run-id ${{ github.run_id }} \
+            --artifact-group "${{ matrix.target_bundle.amdgpu_family }}" \
+            --build-dir ${{ env.BUILD_DIR }} \
+            --upload \
+            --job-status ${{ job.status }}
+
+      - name: Upload Releases to staging S3
+        if: ${{ github.repository_owner == 'ROCm' }}
+        run: |
+          aws s3 cp ${{ env.BUILD_DIR }}/packages/dist/ s3://${{ env.S3_BUCKET_PY }}/${{ env.S3_STAGING_SUBDIR }}/${{ matrix.target_bundle.amdgpu_family }}/ \
+          --recursive --no-follow-symlinks \
+          --exclude "*" \
+          --include "*.whl" \
+          --include "*.tar.gz"
+
+      - name: (Re-)Generate Python package release index for staging
+        if: ${{ github.repository_owner == 'ROCm' }}
+        env:
+          # Environment variable to be set for `manage.py`
+          CUSTOM_PREFIX: "${{ env.S3_STAGING_SUBDIR }}/${{ matrix.target_bundle.amdgpu_family }}"
+        run: |
+          pip install boto3 packaging
+          python ./build_tools/third_party/s3_management/manage.py ${{ env.CUSTOM_PREFIX }}
+
+      ## TODO: Restrict uploading to the non-staging S3 directory until sanity checks and all validation tests have successfully passed.
+      - name: Upload Releases to S3
+        if: ${{ github.repository_owner == 'ROCm' }}
+        run: |
+          aws s3 cp ${{ env.DIST_ARCHIVE }} s3://${{ env.S3_BUCKET_TAR }}/${{ env.S3_SUBDIR_TAR }}
+          aws s3 cp ${{ env.BUILD_DIR }}/packages/dist/ s3://${{ env.S3_BUCKET_PY }}/${{ env.S3_SUBDIR }}/${{ matrix.target_bundle.amdgpu_family }}/ \
+          --recursive --no-follow-symlinks \
+          --exclude "*" \
+          --include "*.whl" \
+          --include "*.tar.gz"
+
+      # TODO(marbre): guard against race conditions where multiple workflows update the index at the same time?
+      #    Moving the index computation server-side could help
+      - name: (Re-)Generate release index pages
+        if: ${{ github.repository_owner == 'ROCm' }}
+        env:
+          # Environment variable to be set for `manage.py`
+          CUSTOM_PREFIX: "${{ env.S3_SUBDIR }}/${{ matrix.target_bundle.amdgpu_family }}"
+        run: |
+          pip install boto3 packaging
+          python ./build_tools/third_party/s3_management/manage.py  ${{ env.CUSTOM_PREFIX }}
+          python ./build_tools/index_generation_s3_tar.py \
+            --bucket ${{ env.S3_BUCKET_TAR }} \
+            --directory ${{ env.S3_SUBDIR_TAR }} \
+            --upload
+
+      - name: Trigger building PyTorch wheels
+        if: ${{ github.repository_owner == 'ROCm' && matrix.target_bundle.expect_pytorch_failure == false }}
+        uses: benc-uk/workflow-dispatch@e2e5e9a103e331dad343f381a29e654aea3cf8fc # v1.2.4
+        with:
+          workflow: release_windows_pytorch_wheels.yml
+          inputs: |
+            { "amdgpu_family": "${{ matrix.target_bundle.amdgpu_family }}",
+              "release_type": "${{ env.RELEASE_TYPE }}",
+              "s3_subdir": "${{ env.S3_SUBDIR }}",
+              "s3_staging_subdir": "${{ env.S3_STAGING_SUBDIR }}",
+              "cloudfront_url": "${{ needs.setup_metadata.outputs.cloudfront_url }}",
+              "cloudfront_staging_url": "${{ needs.setup_metadata.outputs.cloudfront_staging_url }}",
+              "rocm_version": "${{ needs.setup_metadata.outputs.version }}",
+              "ref": "${{ inputs.ref || '' }}"
+            }
+
+      - name: Save cache
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        if: ${{ !cancelled() }}
+        with:
+          path: ${{ env.CACHE_DIR }}
+          key: windows-package-matrix-v1-${{ matrix.target_bundle.amdgpu_family }}-${{ github.sha }}

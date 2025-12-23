@@ -1,0 +1,190 @@
+name: Test PyTorch Wheels
+
+on:
+  workflow_dispatch:
+    inputs:
+      amdgpu_family:
+        description: GPU family to test
+        required: true
+        type: string
+        default: "gfx94X-dcgpu"
+      test_runs_on:
+        description: Runner label to use. The selected runner should have a GPU supported by amdgpu_family
+        required: true
+        type: string
+        default: "linux-mi325-1gpu-ossci-rocm-frac"
+      package_index_url:
+        description: Base Python package index URL to test, typically nightly/dev URL with a "v2" or "v2-staging" subdir (without a GPU family subdir)
+        required: true
+        type: string
+        default: "https://rocm.nightlies.amd.com/v2"
+      python_version:
+        required: true
+        type: string
+        default: "3.12"
+      torch_version:
+        description: torch package version to install. (e.g. "2.7.1+rocm7.10.0a20251120")
+        required: true
+        type: string
+      pytorch_git_ref:
+        description: PyTorch ref to checkout test sources from. (e.g. "nightly", or "release/2.7")
+        type: string
+        default: "release/2.7"
+
+  workflow_call:
+    inputs:
+      amdgpu_family:
+        required: true
+        type: string
+      test_runs_on:
+        required: true
+        type: string
+      package_index_url:
+        required: true
+        type: string
+      python_version:
+        required: true
+        type: string
+      torch_version:
+        required: true
+        type: string
+      pytorch_git_ref:
+        type: string
+        default: "release/2.7"
+      repository:
+        description: "Repository to checkout. Otherwise, defaults to `github.repository`."
+        type: string
+      ref:
+        description: "Branch, tag or SHA to checkout. Defaults to the reference or SHA that triggered the workflow."
+        type: string
+
+permissions:
+  contents: read
+
+run-name: Test PyTorch (${{ inputs.amdgpu_family }}, ${{ inputs.torch_version}}, ${{ inputs.test_runs_on }})
+
+jobs:
+  test_wheels:
+    name: Test PyTorch | ${{ inputs.amdgpu_family }}
+    runs-on: ${{ inputs.test_runs_on }}
+    container:
+      image: ${{ contains(inputs.test_runs_on, 'linux') && 'ghcr.io/rocm/no_rocm_image_ubuntu24_04@sha256:405945a40deaff9db90b9839c0f41d4cba4a383c1a7459b28627047bf6302a26' || null }}
+      options: --ipc host
+        --group-add video
+        --device /dev/kfd
+        --device /dev/dri
+        --group-add 110
+        --env-file /etc/podinfo/gha-gpu-isolation-settings
+        --user 0:0 # Running as root, by recommendation of GitHub: https://docs.github.com/en/actions/reference/workflows-and-actions/dockerfile-support#user
+    defaults:
+      run:
+        shell: bash
+    env:
+      VENV_DIR: ${{ github.workspace }}/.venv
+      AMDGPU_FAMILY: ${{ inputs.amdgpu_family }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          repository: ${{ inputs.repository || github.repository }}
+          ref: ${{ inputs.ref || '' }}
+
+      - name: Set up Python
+        uses: actions/setup-python@83679a892e2d95755f2dac6acb0bfd1e9ac5d548 # v6.1.0
+        with:
+          python-version: ${{ inputs.python_version }}
+
+      # TODO: also upload and reference test report together with this logging?
+      - name: Summarize workflow inputs
+        run: |
+          python build_tools/github_actions/summarize_test_pytorch_workflow.py \
+            --torch-version=${{ inputs.torch_version }} \
+            --pytorch-git-ref=${{ inputs.pytorch_git_ref }} \
+            --index-url=${{ inputs.package_index_url }} \
+            --index-subdir=${{ inputs.amdgpu_family }}
+
+      - name: Set git options
+        run: |
+          git config --global core.longpaths true
+
+      # Here we checkout the same version of PyTorch that wheels were built from
+      # so we have the right set of test source files. We _probably_ don't need
+      # to run HIPIFY or apply any patches, so we skip those steps to save time.
+      - name: Checkout PyTorch Source Repos from nightly branch
+        if: ${{ (inputs.pytorch_git_ref == 'nightly') }}
+        run: |
+          python external-builds/pytorch/pytorch_torch_repo.py checkout \
+            --gitrepo-origin https://github.com/pytorch/pytorch.git \
+            --repo-hashtag nightly \
+            --no-hipify --no-patch
+
+      - name: Checkout PyTorch Source Repos from stable branch
+        if: ${{ (inputs.pytorch_git_ref != 'nightly') }}
+        run: |
+          python external-builds/pytorch/pytorch_torch_repo.py checkout \
+            --gitrepo-origin https://github.com/ROCm/pytorch.git \
+            --repo-hashtag ${{ inputs.pytorch_git_ref }} \
+            --no-hipify --no-patch
+
+      - name: Set up virtual environment
+        run: |
+          python build_tools/setup_venv.py ${VENV_DIR} \
+            --packages torch==${{ inputs.torch_version }} \
+            --index-url=${{ inputs.package_index_url }} \
+            --index-subdir=${{ inputs.amdgpu_family }} \
+            --activate-in-future-github-actions-steps
+
+      - name: Install test requirements
+        run: |
+          python -m pip install -r external-builds/pytorch/requirements-test.txt
+          pip freeze
+
+      - name: Run rocm-sdk sanity tests
+        run: |
+          rocm-sdk test
+
+      - name: Run PyTorch smoketests
+        run: |
+          python ./external-builds/pytorch/run_pytorch_smoke_tests.py -- \
+            --log-cli-level=INFO \
+            -v
+
+      - name: (Linux) Run PyTorch tests
+        if: ${{ runner.os == 'Linux' }}
+        run: |
+          python ./external-builds/pytorch/run_pytorch_tests.py -- \
+            --continue-on-collection-errors \
+            --import-mode=importlib \
+            -v
+
+      # Windows testing is a recent addition and is being enabled incrementally.
+      # See https://github.com/ROCm/TheRock/issues/2258.
+      #
+      # Many tests are failing on torch 2.10+ so we limit testing to 2.9.
+      # (Obviously that's not ideal, but we need to start somewhere)
+      #
+      # HACK: The test process does not terminate on its own gracefully,
+      # so we write to run_pytorch_tests_exit_code.txt and then kill the process.
+      # After killing the process we read the return code to signal it normally.
+      # See https://github.com/ROCm/TheRock/issues/999.
+      - name: (Windows) Run PyTorch tests
+        if: ${{ runner.os == 'Windows' && contains(inputs.torch_version, '2.9') }}
+        continue-on-error: true
+        run: |
+          python ./external-builds/pytorch/run_pytorch_tests.py -- \
+            --continue-on-collection-errors \
+            --import-mode=importlib \
+            -v
+
+      - name: (Windows) Read and propagate exit code
+        if: ${{ runner.os == 'Windows' && contains(inputs.torch_version, '2.9') }}
+        run: |
+          if [ -f run_pytorch_tests_exit_code.txt ]; then
+            EXIT_CODE=$(cat run_pytorch_tests_exit_code.txt)
+            echo "Exit code from file: ${EXIT_CODE}"
+            exit ${EXIT_CODE}
+          else
+            echo "No run_pytorch_tests_exit_code.txt found"
+            exit 1
+          fi

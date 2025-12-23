@@ -1,0 +1,108 @@
+name: CI - Linux
+
+on:
+  workflow_call:
+    inputs:
+      artifact_group:
+        type: string
+      amdgpu_families:
+        type: string
+      build_variant_label:
+        type: string
+      build_variant_cmake_preset:
+        type: string
+      build_variant_suffix:
+        type: string
+      test_labels:
+        type: string
+      artifact_run_id:
+        type: string
+      test_runs_on:
+        type: string
+      expect_failure:
+        type: boolean
+      use_prebuilt_artifacts:
+        type: string
+      rocm_package_version:
+        type: string
+      test_type:
+        type: string
+      sanity_check_only_for_family:
+        type: boolean
+
+permissions:
+  contents: read
+
+jobs:
+  build_portable_linux_artifacts:
+    name: Build Artifacts
+    if: ${{ inputs.use_prebuilt_artifacts == 'false' }}
+    uses: ./.github/workflows/build_portable_linux_artifacts.yml
+    secrets: inherit
+    with:
+      artifact_group: ${{ inputs.artifact_group }}
+      package_version: ${{ inputs.rocm_package_version }}
+      amdgpu_families: ${{ inputs.amdgpu_families }}
+      build_variant_label: ${{ inputs.build_variant_label }}
+      build_variant_cmake_preset: ${{ inputs.build_variant_cmake_preset }}
+      build_variant_suffix: ${{ inputs.build_variant_suffix }}
+      expect_failure: ${{ inputs.expect_failure }}
+    permissions:
+      contents: read
+      id-token: write
+
+  # TODO: rework "artifact_run_id" and "use_prebuilt_artifacts" here?
+  #   I don't want to copy/paste this condition and special case plumbing
+  #   through multiple workflows. All the packaging and testing workflows need
+  #   to know is what artifact run id to use. That could be the current
+  #   (implicit) run id, or it could be an explicit run id.
+  #   How about having the "build artifacts" job run as a passthrough?
+
+  test_linux_artifacts:
+    needs: [build_portable_linux_artifacts]
+    name: Test Artifacts
+    # If the dependent job failed/cancelled, this job will not be run
+    # The use_prebuilt_artifacts "or" statement ensures that tests will run if
+    # previous build step is run or skipped.concurrency.
+    # If we are expecting a build failure, do not run tests to save machine capacity
+    if: >-
+      ${{
+        !failure() &&
+        !cancelled() &&
+        (
+          inputs.use_prebuilt_artifacts == 'false' ||
+          inputs.use_prebuilt_artifacts == 'true'
+        ) &&
+        inputs.expect_failure == false
+      }}
+    uses: ./.github/workflows/test_artifacts.yml
+    with:
+      artifact_group: ${{ inputs.artifact_group }}
+      amdgpu_families: ${{ inputs.amdgpu_families }}
+      test_runs_on: ${{ inputs.test_runs_on }}
+      artifact_run_id: ${{ inputs.artifact_run_id }}
+      test_type: ${{ inputs.test_type }}
+      test_labels: ${{ inputs.test_labels }}
+      sanity_check_only_for_family: ${{ inputs.sanity_check_only_for_family == true }}
+
+  build_portable_linux_python_packages:
+    needs: [build_portable_linux_artifacts]
+    name: Build Python
+    # If the dependent job failed/cancelled, this job will not be run
+    # The use_prebuilt_artifacts "or" statement ensures that tests will run if
+    # previous build step is run or skipped.concurrency.
+    if: >-
+      ${{
+        !failure() &&
+        !cancelled() &&
+        (
+          inputs.use_prebuilt_artifacts == 'false' ||
+          inputs.use_prebuilt_artifacts == 'true'
+        ) &&
+        inputs.expect_failure == false
+      }}
+    uses: ./.github/workflows/build_portable_linux_python_packages.yml
+    with:
+      artifact_run_id: "${{ inputs.artifact_run_id != '' && inputs.artifact_run_id || github.run_id }}"
+      artifact_group: ${{ inputs.artifact_group }}
+      package_version: ${{ inputs.rocm_package_version }}

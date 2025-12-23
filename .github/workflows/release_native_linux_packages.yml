@@ -1,0 +1,67 @@
+name: Release native Linux Packages
+
+on:
+  workflow_call:
+    inputs:
+      amdgpu_family:
+        description: gfx arch for creating the s3 bucket url
+        required: true
+        type: string
+      artifact_run_id:
+        description: workflow run id to download the artifacts from
+        type: string
+      rocm_version:
+        description: ROCm version to append to the package( Like 8.0.0 or 8.1.0).
+        required: true
+        type: string
+      package_type:
+        description: Specify whether debian or rpm packages are needed (deb or rpm).
+        required: true
+        type: string
+      package_suffix:
+        description: The suffix to be added to package name(build_no or master or rc or combiantion).
+        required: true
+        type: string
+  workflow_dispatch:
+    inputs:
+      amdgpu_family:
+        type: string
+        default: gfx94X-dcgpu
+      artifact_run_id:
+        description: workflow run id to download the artifacts from
+        type: string
+      rocm_version:
+        description: ROCm version to append to the package( Like 7.0.0 or 7.1.0)
+        type: string
+        default: "0.0.1"
+      package_type:
+        description: Specify whether debian or rpm packages are needed (deb or rpm).
+        required: true
+        type: choice
+        options:
+          - rpm
+          - deb
+        default: "rpm"
+      package_suffix:
+        description: The suffix to be added to package name(build_no or master or rc or combiantion).
+        type: string
+        default: "test"
+
+permissions:
+  id-token: write
+  contents: read
+
+run-name: Release native Linux packages (${{ inputs.amdgpu_family }}, ${{ inputs.rocm_version }}, ${{ inputs.package_type }}, ${{ inputs.package_suffix }})
+
+jobs:
+  release:
+    name: Release Native Linux Package
+    strategy:
+      fail-fast: false
+    uses: ./.github/workflows/build_native_linux_packages.yml
+    with:
+      artifact_group: ${{ inputs.amdgpu_family }}
+      artifact_run_id: ${{ inputs.artifact_run_id }}
+      rocm_version: ${{ inputs.rocm_version }}
+      native_package_type: ${{ inputs.package_type }}
+      package_suffix: ${{ inputs.package_suffix }}

@@ -1,0 +1,230 @@
+name: Build Windows Artifacts
+
+on:
+  workflow_dispatch:
+    inputs:
+      amdgpu_families:
+        type: string
+        default: gfx1151
+      artifact_group:
+        type: string
+        default: gfx1151
+      build_variant_label:
+        type: string
+        description: "A label for the build variant (ex: 'release', 'asan')"
+        default: "release"
+      build_variant_suffix:
+        type: string
+        description: "The build variant suffix (ex: 'asan' suffix -> 'gfx94X-dcgpu-asan')"
+        default: ""
+      build_variant_cmake_preset:
+        type: string
+        description: "The name of the cmake preset to use for this build variant, matching an entry in CMakePresets.json (ex: 'linux-release-asan')"
+        default: ""
+      package_version:
+        type: string
+        default: ADHOCBUILD
+      expect_failure:
+        type: boolean
+      extra_cmake_options:
+        type: string
+
+  workflow_call:
+    inputs:
+      package_version:
+        type: string
+        default: ADHOCBUILD
+      amdgpu_families:
+        type: string
+      artifact_group:
+        type: string
+      build_variant_label:
+        type: string
+      build_variant_suffix:
+        type: string
+      build_variant_cmake_preset:
+        type: string
+      expect_failure:
+        type: boolean
+      extra_cmake_options:
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  build_windows_artifacts:
+    name: Build ${{ inputs.build_variant_label }} (xfail ${{ inputs.expect_failure }})
+    runs-on: azure-windows-scale-rocm
+    continue-on-error: ${{ inputs.expect_failure }}
+    timeout-minutes: 720 # 12 hour timeout
+    permissions:
+      id-token: write
+    defaults:
+      run:
+        shell: bash
+    strategy:
+      fail-fast: true
+    env:
+      BUILD_DIR: B:\build
+      CACHE_DIR: "${{github.workspace}}/.cache"
+      CCACHE_DIR: "${{github.workspace}}/.cache/ccache"
+      CCACHE_MAXSIZE: "4000M"
+      TEATIME_FORCE_INTERACTIVE: 0
+      AMDGPU_FAMILIES: ${{ inputs.amdgpu_families }}
+      IS_PR_FROM_FORK: ${{ github.event.pull_request.head.repo.fork }}
+    steps:
+      - name: Checkout TheRock repository
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          repository: "ROCm/TheRock"
+          ref: "compiler/amd-mainline"
+          fetch-depth: 10
+
+      - name: SHA of TheRock
+        run: |
+             git rev-parse HEAD
+             git log -1
+
+      - uses: actions/setup-python@83679a892e2d95755f2dac6acb0bfd1e9ac5d548 # v6.1.0
+        with:
+          python-version: 3.12
+
+      - name: Install python deps
+        run: |
+          pip install -r requirements.txt
+
+      - name: Install requirements
+        # The first two lines removes the default commmunity feed and uses the internal proxy feed
+        run: |
+          choco source disable -n=chocolatey
+          choco source add -n=internal -s http://10.0.167.96:8081/repository/choco-group/ --priority=1
+          choco install --no-progress -y ccache
+          # ninja pinned due to a bug in the 1.13.0 release:
+          # https://github.com/ninja-build/ninja/issues/2616
+          choco install --no-progress -y ninja --version 1.12.1
+          choco install --no-progress -y strawberryperl
+          echo "$PATH;C:\Strawberry\c\bin" >> $GITHUB_PATH
+          choco install --no-progress -y awscli
+          choco install --no-progress -y pkgconfiglite
+          echo "$PATH;C:\Program Files\Amazon\AWSCLIV2" >> $GITHUB_PATH
+
+      - uses: iterative/setup-dvc@4bdfd2b0f6f1ad7e08afadb03b1a895c352a5239 # v2.0.0
+        with:
+          version: '3.62.0'
+
+      # After other installs, so MSVC get priority in the PATH.
+      - name: Configure MSVC
+        uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1.13.0
+
+      - name: Runner health status
+        run: |
+          ccache --zero-stats
+          python ./build_tools/health_status.py
+
+      - name: Test build_tools
+        run: |
+          python -m pytest build_tools/tests build_tools/github_actions/tests
+
+      # TODO: We shouldn't be using a cache on actual release branches, but it
+      # really helps for iteration time.
+      - name: Enable cache
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: ${{ env.CACHE_DIR }}
+          key: windows-build-packages-v4-${{ inputs.amdgpu_families }}-${{ github.sha }}
+          restore-keys: |
+            windows-build-packages-v4-${{ inputs.amdgpu_families }}-
+
+      - name: Fetch sources
+        timeout-minutes: 30
+        run: |
+          git config fetch.parallel 10
+          git config --global core.symlinks true
+          git config --global core.longpaths true
+          python ./build_tools/fetch_sources.py --jobs 12
+
+      - name: "Checking out repository for llvm-project"
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+           path: compiler/amd-llvm
+
+      - name: Apply patches
+        run: |
+             cp -v patches/amd-mainline/llvm-project/*.patch compiler/amd-llvm
+             cd compiler/amd-llvm
+             git config --global --add safe.directory /__w/llvm-project/llvm-project
+             find . -type f -name '*.patch' -exec git apply --check {} \;
+             find . -type f -name '*.patch' -exec git apply {} \;
+             git log -15
+             cd -
+
+      - name: Configure Projects
+        env:
+          cmake_preset: ${{ inputs.build_variant_cmake_preset }}
+          amdgpu_families: ${{ inputs.amdgpu_families }}
+          package_version: ${{ inputs.package_version }}
+          extra_cmake_options: ${{ inputs.extra_cmake_options }}
+        run: |
+          # clear cache before build and after download
+          ccache -z
+          python3 build_tools/github_actions/build_configure.py
+
+      - name: Build therock-archives and therock-dist
+        run: cmake --build "${{ env.BUILD_DIR }}" --target therock-archives therock-dist -- -k 0
+
+      - name: Report
+        if: ${{ !cancelled() }}
+        shell: bash
+        run: |
+          if [ -d "${{ env.BUILD_DIR }}" ]; then
+            echo "Build dir:"
+            echo "------------"
+            ls -lh "${{ env.BUILD_DIR }}"
+            echo "Artifact Archives:"
+            echo "------------------"
+            ls -lh "${{ env.BUILD_DIR }}"/artifacts/*.tar.xz
+            echo "Artifacts:"
+            echo "----------"
+            du -h -d 1 "${{ env.BUILD_DIR }}"/artifacts
+            echo "CCache Stats:"
+            echo "-------------"
+            ccache -s
+          else
+            echo "[ERROR] Build directory ${{ env.BUILD_DIR }} does not exist. Skipping report!"
+            echo "        This should only happen if the CI is cancelled before the build step."
+            exit 1
+          fi
+
+      - name: "Build size report"
+        if: always()
+        shell: powershell
+        run: |
+          $fs = Get-PSDrive -PSProvider "FileSystem"
+          $fsout = $fs | Select-Object -Property Name,Used,Free,Root
+          $fsout | % {$_.Used/=1GB;$_.Free/=1GB;$_} | Write-Host
+          get-disk | Select-object @{Name="Size(GB)";Expression={$_.Size/1GB}} | Write-Host
+
+      - name: Configure AWS Credentials for non-forked repos
+        if: ${{ always() && !github.event.pull_request.head.repo.fork }}
+        uses: aws-actions/configure-aws-credentials@61815dcd50bd041e203e49132bacad1fd04d2708 # v5.1.1
+        with:
+          aws-region: us-east-2
+          role-to-assume: arn:aws:iam::692859939525:role/therock-ci
+          special-characters-workaround: true
+
+      - name: Post Build Upload
+        if: always()
+        run: |
+          python3 build_tools/github_actions/post_build_upload.py \
+            --run-id ${{ github.run_id }} \
+            --artifact-group ${{ inputs.artifact_group }} \
+            --build-dir ${{ env.BUILD_DIR }} \
+            --upload
+
+      - name: Save cache
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        if: ${{ !cancelled() }}
+        with:
+          path: ${{ env.CACHE_DIR }}
+          key: windows-build-packages-v4-${{ inputs.amdgpu_families }}-${{ github.sha }}

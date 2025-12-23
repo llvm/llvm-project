@@ -1,0 +1,93 @@
+name: Setup
+
+on:
+  workflow_call:
+    inputs:
+      build_variant:
+        type: string
+        default: "release"
+      multi_arch:
+        type: boolean
+        default: false
+        description: "If true, group all families into one entry per build_variant instead of expanding cross-product"
+    outputs:
+      enable_build_jobs:
+        description: Whether to enable build jobs.
+        value: ${{ jobs.setup.outputs.enable_build_jobs }}
+      linux_variants:
+        description: Matrix variants to run on Linux
+        value: ${{ jobs.setup.outputs.linux_variants }}
+      linux_test_labels:
+        description: ROCm projects to run Linux tests on. Optional filter.
+        value: ${{ jobs.setup.outputs.linux_test_labels }}
+      windows_variants:
+        description: Matrix variants to run on Windows.
+        value: ${{ jobs.setup.outputs.windows_variants }}
+      test_type:
+        description: The test type to run for component tests (i.e. smoke, full)
+        value: ${{ jobs.setup.outputs.test_type }}
+      windows_test_labels:
+        description: ROCm projects to run Windows tests on. Optional filter.
+        value: ${{ jobs.setup.outputs.windows_test_labels }}
+      rocm_package_version:
+        description: ROCm package version (primarily for Python packages).
+        value: ${{ jobs.setup.outputs.rocm_package_version }}
+
+permissions:
+  contents: read
+
+jobs:
+  setup:
+    runs-on: ubuntu-24.04
+    env:
+      # The commit being checked out is the merge commit for a PR. Its first
+      # parent will be the tip of the base branch.
+      BASE_REF: HEAD^
+    outputs:
+      enable_build_jobs: ${{ steps.configure.outputs.enable_build_jobs }}
+      linux_variants: ${{ steps.configure.outputs.linux_variants }}
+      linux_test_labels: ${{ steps.configure.outputs.linux_test_labels }}
+      windows_variants: ${{ steps.configure.outputs.windows_variants }}
+      test_type: ${{ steps.configure.outputs.test_type }}
+      windows_test_labels: ${{ steps.configure.outputs.windows_test_labels }}
+      rocm_package_version: ${{ steps.rocm_package_version.outputs.rocm_package_version }}
+    steps:
+      - name: Checkout TheRock repository
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          repository: "ROCm/TheRock"
+          ref: "compiler/amd-mainline"
+          fetch-depth: 10
+      - name: SHA of TheRock
+        run: |
+             git rev-parse HEAD
+             git log -1
+      - name: Set PR_LABELS variable with labels assigned to pull request
+        if: ${{ github.event.pull_request }} # only set PR labels var if this is a pull request
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.number }}
+        run: |
+          echo "PR_LABELS=$(gh pr view ${PR_NUMBER} --json labels)" >> $GITHUB_ENV
+
+      - name: Configuring CI options
+        id: configure
+        env:
+          #INPUT_LINUX_AMDGPU_FAMILIES: ${{ github.event.inputs.linux_amdgpu_families }}
+          INPUT_LINUX_AMDGPU_FAMILIES: "gfx94X"
+          LINUX_TEST_LABELS: ${{ github.event.inputs.linux_test_labels }}
+          LINUX_USE_PREBUILT_ARTIFACTS: ${{ github.event.inputs.linux_use_prebuilt_artifacts }}
+          #INPUT_WINDOWS_AMDGPU_FAMILIES: ${{ github.event.inputs.windows_amdgpu_families }}
+          INPUT_WINDOWS_AMDGPU_FAMILIES: "gfx1151"
+          WINDOWS_TEST_LABELS: ${{ github.event.inputs.windows_test_labels }}
+          WINDOWS_USE_PREBUILT_ARTIFACTS: ${{ github.event.inputs.windows_use_prebuilt_artifacts }}
+          BUILD_VARIANT: ${{ inputs.build_variant }}
+          MULTI_ARCH: ${{ inputs.multi_arch }}
+          # Variable comes from ROCm organization variable 'ROCM_THEROCK_TEST_RUNNERS'
+          ROCM_THEROCK_TEST_RUNNERS: ${{ vars.ROCM_THEROCK_TEST_RUNNERS }}
+          LOAD_TEST_RUNNERS_FROM_VAR: false
+        run: ./build_tools/github_actions/configure_ci.py
+
+      - name: Compute package version
+        id: rocm_package_version
+        run: python ./build_tools/compute_rocm_package_version.py --release-type=dev

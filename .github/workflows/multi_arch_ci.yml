@@ -1,0 +1,142 @@
+# Multi-Arch CI
+#
+# This is a staging workflow for the sharded multi-arch build pipeline.
+# It mirrors ci.yml but uses multi_arch_build_portable_linux.yml instead of
+# ci_linux.yml. Once validated, ci.yml will be updated to use the multi-arch
+# sub-workflows directly.
+
+name: Multi-Arch CI
+
+on:
+  push:
+    branches:
+      # While we are iterating on testing.
+      - 'multi_arch/**'
+  workflow_dispatch:
+    inputs:
+      linux_amdgpu_families:
+        type: string
+        description: "Insert comma-separated list of Linux GPU families to build and test. ex: gfx94X, gfx1201X"
+        default: ""
+      linux_test_labels:
+        type: string
+        description: "If enabled, reduce test set on Linux to the list of labels prefixed with 'test:'. ex: test:rocprim, test:hipcub"
+        default: ""
+      linux_use_prebuilt_artifacts:
+        type: boolean
+        description: "If enabled, the CI will pull Linux artifacts using artifact_run_id and only run tests"
+      windows_amdgpu_families:
+        type: string
+        description: "Insert comma-separated list of Windows GPU families to build and test. ex: gfx94X, gfx1201X"
+        default: ""
+      windows_test_labels:
+        type: string
+        description: "If enabled, reduce test set on Windows to the list of labels prefixed with 'test:' ex: test:rocprim, test:hipcub"
+        default: ""
+      windows_use_prebuilt_artifacts:
+        type: boolean
+        description: "If enabled, the CI will pull Windows artifacts using artifact_run_id and only run tests"
+      artifact_run_id:
+        type: string
+        description: "If provided, the tests will run on this artifact ID"
+        default: ""
+  # pull_request:
+  #   types:
+  #     - labeled
+  #     - opened
+  #     - synchronize
+
+permissions:
+  contents: read
+
+concurrency:
+  # A PR number if a pull request and otherwise the commit hash. This cancels
+  # queued and in-progress runs for the same PR (presubmit) or commit
+  # (postsubmit). The workflow name is prepended to avoid conflicts between
+  # different workflows.
+  group: ${{ github.workflow }}-${{ github.event.number || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  setup:
+    uses: ./.github/workflows/setup.yml
+    with:
+      build_variant: "release"
+      multi_arch: true
+
+  linux_build_and_test:
+    name: Linux::${{ matrix.variant.build_variant_label }}
+    needs: setup
+    if: >-
+      ${{
+        needs.setup.outputs.linux_variants != '[]' &&
+        needs.setup.outputs.enable_build_jobs == 'true'
+      }}
+    strategy:
+      fail-fast: false
+      matrix:
+        variant: ${{ fromJSON(needs.setup.outputs.linux_variants) }}
+    uses: ./.github/workflows/multi_arch_build_portable_linux.yml
+    secrets: inherit
+    with:
+      matrix_per_family_json: ${{ matrix.variant.matrix_per_family_json }}
+      dist_amdgpu_families: ${{ matrix.variant.dist_amdgpu_families }}
+      artifact_group: ${{ matrix.variant.artifact_group }}
+      build_variant_label: ${{ matrix.variant.build_variant_label }}
+      build_variant_suffix: ${{ matrix.variant.build_variant_suffix }}
+      build_variant_cmake_preset: ${{ matrix.variant.build_variant_cmake_preset }}
+      test_labels: ${{ needs.setup.outputs.linux_test_labels }}
+      artifact_run_id: ${{ inputs.artifact_run_id }}
+      expect_failure: ${{ matrix.variant.expect_failure == true }}
+      use_prebuilt_artifacts: ${{ inputs.linux_use_prebuilt_artifacts == true && 'true' || 'false' }}
+      rocm_package_version: ${{ needs.setup.outputs.rocm_package_version }}
+      test_type: ${{ needs.setup.outputs.test_type }}
+    permissions:
+      contents: read
+      id-token: write
+
+  # TODO: Add windows_build_and_test when ready
+  # windows_build_and_test:
+  #   name: Windows::${{ matrix.variant.family }}::${{ matrix.variant.build_variant_label }}
+  #   needs: setup
+  #   if: >-
+  #     ${{
+  #       needs.setup.outputs.windows_variants != '[]' &&
+  #       needs.setup.outputs.enable_build_jobs == 'true'
+  #     }}
+  #   strategy:
+  #     fail-fast: false
+  #     matrix:
+  #       variant: ${{ fromJSON(needs.setup.outputs.windows_variants) }}
+  #   uses: ./.github/workflows/ci_windows.yml
+  #   ...
+
+  ci_summary:
+    name: CI Summary
+    if: always()
+    needs:
+      - setup
+      - linux_build_and_test
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Output failed jobs
+        run: |
+          # Build a list of failed jobs, but ignore those marked continue-on-error
+          FAILED_JOBS="$(echo '${{ toJson(needs) }}' \
+            | jq --raw-output '
+              to_entries
+              | map(select(
+                  (.value.result != "success" and .value.result != "skipped")
+                  and (.value.outputs.continue_on_error | not)
+                ))
+              | map(.key)
+              | join(",")
+            ' \
+          )"
+
+          if [[ -n "${FAILED_JOBS}" ]]; then
+            echo "The following jobs failed: ${FAILED_JOBS}"
+            exit 1
+          else
+            echo "All required jobs succeeded (continue-on-error jobs ignored)."
+          fi

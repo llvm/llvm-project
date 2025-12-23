@@ -1,0 +1,87 @@
+name: Build Windows Python Packages
+
+on:
+  workflow_dispatch:
+    inputs:
+      artifact_github_repo:
+        description: GitHub repository for artifact_run_id
+        type: string
+        default: ROCm/TheRock
+      artifact_run_id:
+        description: Workflow run ID to download artifacts from
+        type: string
+        default: "17865324892" # TODO: default to the most recent successful run (using a script)
+      artifact_group:
+        description: "The artifact group to build (ex: gfx94X-dcgpu, gfx101X-dgpu, gfx1151, gfx120X-all)"
+        type: string
+      package_version:
+        type: string
+  workflow_call:
+    inputs:
+      artifact_github_repo:
+        type: string
+      artifact_run_id:
+        type: string
+        default: ""
+      artifact_group:
+        type: string
+      package_version:
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build Python | ${{ inputs.artifact_group }}
+    runs-on: ${{ github.repository_owner == 'ROCm' && 'azure-windows-scale-rocm' || 'windows-2022' }}
+    env:
+      ARTIFACT_RUN_ID: "${{ inputs.artifact_run_id != '' && inputs.artifact_run_id || github.run_id }}"
+      ARTIFACTS_DIR: "${{ github.workspace }}/artifacts"
+      PACKAGES_DIR: "${{ github.workspace }}/packages"
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          repository: "ROCm/TheRock"
+          ref: "compiler/amd-mainline"
+      - uses: actions/setup-python@83679a892e2d95755f2dac6acb0bfd1e9ac5d548 # v6.1.0
+        with:
+          python-version: '3.12'
+
+      - name: Install Python requirements
+        run: pip install boto3 packaging piprepo setuptools
+
+      # Note: we could fetch "all" artifacts if we wanted to include more files
+      - name: Fetch artifacts
+        env:
+          IS_PR_FROM_FORK: ${{ github.event.pull_request.head.repo.fork }}
+        run: |
+          python ./build_tools/fetch_artifacts.py \
+            --run-github-repo=${{ inputs.artifact_github_repo }} \
+            --run-id=${{ env.ARTIFACT_RUN_ID }} \
+            --artifact-group=${{ inputs.artifact_group }} \
+            --output-dir="${{ env.ARTIFACTS_DIR }}" \
+            _dev_ _lib_ _run_
+
+      - name: Build Python packages
+        run: |
+          python ./build_tools/build_python_packages.py \
+            --artifact-dir="${{ env.ARTIFACTS_DIR }}" \
+            --dest-dir="${{ env.PACKAGES_DIR }}" \
+            --version="${{ inputs.package_version }}"
+
+      - name: Inspect Python packages
+        run: |
+          ls -la "${{ env.PACKAGES_DIR }}"
+
+      - name: Sanity check Python packages
+        run: |
+          piprepo build "${{ env.PACKAGES_DIR }}/dist"
+          pip install rocm[libraries,devel]==${{ inputs.package_version }} \
+            --extra-index-url "${{ env.PACKAGES_DIR }}/dist/simple/"
+          rocm-sdk test
+
+      # TODO(#1559): upload packages to artifacts S3 bucket and/or a dedicated Python packages bucket

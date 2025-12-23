@@ -1,0 +1,70 @@
+name: Publish TheRock Docker image
+on:
+  workflow_call:
+    inputs:
+      DOCKER_FILE_NAME:
+        type: string
+      DOCKER_IMAGE_NAME:
+        type: string
+
+jobs:
+  build-and-push-image:
+    runs-on: ubuntu-24.04
+    env:
+      REGISTRY: ghcr.io
+      IMAGE_NAME: ROCm/${{ inputs.DOCKER_IMAGE_NAME }}
+    # Sets the permissions granted to the `GITHUB_TOKEN` for the actions in this job.
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+
+      - name: Log in to the Container registry
+        uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef # v3.6.0
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Sanitization of tag names is done automatically by the metadata-action
+      - name: Determine Docker tag
+        id: tag
+        run: |
+          ref="${{ github.ref_name }}"
+          if [[ "$ref" == stage/docker/* ]]; then
+            suffix="${ref#stage/docker/}"
+            echo "TAG_SUFFIX=stage-${suffix}" >> "$GITHUB_OUTPUT"
+          elif [[ "$ref" == "main" ]]; then
+            echo "TAG_SUFFIX=latest" >> "$GITHUB_OUTPUT"
+          else
+            echo "TAG_SUFFIX=${ref}" >> "$GITHUB_OUTPUT"
+          fi
+
+      # Adds extra tags to the image, with the default tags from https://github.com/docker/metadata-action#tags-input
+      # The custom tag is for the branches prefixed with `stage/docker/`.
+      # For the default branch (i.e., main), the default behaviour remains and is labelled `latest`.
+      - name: Extract metadata (tags, labels) for Docker
+        id: meta
+        uses: docker/metadata-action@c299e40c65443455700f0fdfc63efafe5b349051 # v5.10.0
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=schedule
+            type=ref,event=branch,enable={{is_default_branch}}
+            type=ref,event=tag
+            type=ref,event=pr
+            type=raw,value=${{ steps.tag.outputs.TAG_SUFFIX }}
+
+      # This step uses the `docker/build-push-action` action to build the image, based on your repository's `Dockerfile`. If the build succeeds, it pushes the image to GitHub Packages.
+      # It uses the `context` parameter to define the build's context as the set of files located in the specified path. For more information, see "[Usage](https://github.com/docker/build-push-action#usage)" in the README of the `docker/build-push-action` repository.
+      # It uses the `tags` and `labels` parameters to tag and label the image with the output from the "meta" step.
+      - name: Build and push Docker image
+        uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # v6.18.0
+        with:
+          context: dockerfiles/
+          file: dockerfiles/${{ inputs.DOCKER_FILE_NAME }}.Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
