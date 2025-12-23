@@ -11,10 +11,11 @@
 
 #include "hdr/func/aligned_alloc.h"
 #include "hdr/func/malloc.h"
-#include "src/__support/CPP/new.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/os.h"
+
+#include <new>
 
 namespace LIBC_NAMESPACE_DECL {
 
