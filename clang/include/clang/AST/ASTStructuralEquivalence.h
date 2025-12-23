@@ -171,7 +171,6 @@ struct StructuralEquivalenceContext {
   bool checkDeclQueue();
 
 private:
-
   /// Finish checking all of the structural equivalences.
   ///
   /// \returns true if the equivalence check failed (non-equivalence detected),
@@ -197,7 +196,7 @@ bool isEquivalent(StructuralEquivalenceContext &Context, QualType T1,
 bool isEquivalent(StructuralEquivalenceContext &Context, const Stmt *S1,
                   const Stmt *S2);
 bool isEquivalent(const IdentifierInfo *Name1, const IdentifierInfo *Name2);
-}
+} // namespace ASTStructuralEquivalence
 
 } // namespace clang
 
