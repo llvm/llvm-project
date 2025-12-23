@@ -181,7 +181,13 @@ void CallStackTrie::addCallStack(
     Curr = New;
   }
   assert(Curr);
-  llvm::append_range(Curr->ContextSizeInfo, ContextSizeInfo);
+  // Append all of the ContextSizeInfo, along with their original AllocType.
+  llvm::append_range(
+      Curr->ContextInfo,
+      llvm::map_range(
+          ContextSizeInfo, [AllocType](const ContextTotalSize &CTS) {
+            return std::pair<ContextTotalSize, AllocationType>(CTS, AllocType);
+          }));
 }
 
 void CallStackTrie::addCallStack(MDNode *MIB) {
@@ -214,18 +220,18 @@ void CallStackTrie::addCallStack(MDNode *MIB) {
   addCallStack(getMIBAllocType(MIB), CallStack, std::move(ContextSizeInfo));
 }
 
-static MDNode *createMIBNode(LLVMContext &Ctx, ArrayRef<uint64_t> MIBCallStack,
-                             AllocationType AllocType,
-                             ArrayRef<ContextTotalSize> ContextSizeInfo,
-                             const uint64_t MaxColdSize,
-                             bool BuiltFromExistingMetadata,
-                             uint64_t &TotalBytes, uint64_t &ColdBytes) {
+static MDNode *
+createMIBNode(LLVMContext &Ctx, ArrayRef<uint64_t> MIBCallStack,
+              AllocationType AllocType,
+              ArrayRef<std::pair<ContextTotalSize, AllocationType>> ContextInfo,
+              const uint64_t MaxColdSize, bool BuiltFromExistingMetadata,
+              uint64_t &TotalBytes, uint64_t &ColdBytes) {
   SmallVector<Metadata *> MIBPayload(
       {buildCallstackMetadata(MIBCallStack, Ctx)});
   MIBPayload.push_back(
       MDString::get(Ctx, getAllocTypeAttributeString(AllocType)));
 
-  if (ContextSizeInfo.empty()) {
+  if (ContextInfo.empty()) {
     // The profile matcher should have provided context size info if there was a
     // MinCallsiteColdBytePercent < 100. Here we check >=100 to gracefully
     // handle a user-provided percent larger than 100. However, we may not have
@@ -234,7 +240,8 @@ static MDNode *createMIBNode(LLVMContext &Ctx, ArrayRef<uint64_t> MIBCallStack,
     return MDNode::get(Ctx, MIBPayload);
   }
 
-  for (const auto &[FullStackId, TotalSize] : ContextSizeInfo) {
+  for (const auto &[CSI, AT] : ContextInfo) {
+    const auto &[FullStackId, TotalSize] = CSI;
     TotalBytes += TotalSize;
     bool LargeColdContext = false;
     if (AllocType == AllocationType::Cold) {
@@ -267,11 +274,12 @@ static MDNode *createMIBNode(LLVMContext &Ctx, ArrayRef<uint64_t> MIBCallStack,
   return MDNode::get(Ctx, MIBPayload);
 }
 
-void CallStackTrie::collectContextSizeInfo(
-    CallStackTrieNode *Node, std::vector<ContextTotalSize> &ContextSizeInfo) {
-  llvm::append_range(ContextSizeInfo, Node->ContextSizeInfo);
+void CallStackTrie::collectContextInfo(
+    CallStackTrieNode *Node,
+    std::vector<std::pair<ContextTotalSize, AllocationType>> &ContextInfo) {
+  llvm::append_range(ContextInfo, Node->ContextInfo);
   for (auto &Caller : Node->Callers)
-    collectContextSizeInfo(Caller.second, ContextSizeInfo);
+    collectContextInfo(Caller.second, ContextInfo);
 }
 
 void CallStackTrie::convertHotToNotCold(CallStackTrieNode *Node) {
@@ -281,6 +289,17 @@ void CallStackTrie::convertHotToNotCold(CallStackTrieNode *Node) {
   }
   for (auto &Caller : Node->Callers)
     convertHotToNotCold(Caller.second);
+}
+
+// Helper to emit messages for non-cold contexts that are ignored for various
+// reasons when reporting of hinted bytes is enabled.
+static void emitIgnoredNonColdContextMessage(StringRef Tag,
+                                             uint64_t FullStackId,
+                                             StringRef Extra,
+                                             uint64_t TotalSize) {
+  errs() << "MemProf hinting: Total size for " << Tag
+         << " non-cold full allocation context hash " << FullStackId << Extra
+         << ": " << TotalSize << "\n";
 }
 
 // Copy over some or all of NewMIBNodes to the SavedMIBNodes vector, depending
@@ -321,9 +340,7 @@ static void saveFilteredNewMIBNodes(std::vector<Metadata *> &NewMIBNodes,
       uint64_t TS =
           mdconst::dyn_extract<ConstantInt>(ContextSizePair->getOperand(1))
               ->getZExtValue();
-      errs() << "MemProf hinting: Total size for " << Tag
-             << " non-cold full allocation context hash " << FullStackId
-             << Extra << ": " << TS << "\n";
+      emitIgnoredNonColdContextMessage(Tag, FullStackId, Extra, TS);
     }
   };
 
@@ -430,10 +447,10 @@ bool CallStackTrie::buildMIBNodes(CallStackTrieNode *Node, LLVMContext &Ctx,
   // Trim context below the first node in a prefix with a single alloc type.
   // Add an MIB record for the current call stack prefix.
   if (hasSingleAllocType(Node->AllocTypes)) {
-    std::vector<ContextTotalSize> ContextSizeInfo;
-    collectContextSizeInfo(Node, ContextSizeInfo);
+    std::vector<std::pair<ContextTotalSize, AllocationType>> ContextInfo;
+    collectContextInfo(Node, ContextInfo);
     MIBNodes.push_back(createMIBNode(
-        Ctx, MIBCallStack, (AllocationType)Node->AllocTypes, ContextSizeInfo,
+        Ctx, MIBCallStack, (AllocationType)Node->AllocTypes, ContextInfo,
         MaxColdSize, BuiltFromExistingMetadata, TotalBytes, ColdBytes));
     return true;
   }
@@ -486,10 +503,10 @@ bool CallStackTrie::buildMIBNodes(CallStackTrieNode *Node, LLVMContext &Ctx,
   // non-cold allocation type.
   if (!CalleeHasAmbiguousCallerContext)
     return false;
-  std::vector<ContextTotalSize> ContextSizeInfo;
-  collectContextSizeInfo(Node, ContextSizeInfo);
+  std::vector<std::pair<ContextTotalSize, AllocationType>> ContextInfo;
+  collectContextInfo(Node, ContextInfo);
   MIBNodes.push_back(createMIBNode(
-      Ctx, MIBCallStack, AllocationType::NotCold, ContextSizeInfo, MaxColdSize,
+      Ctx, MIBCallStack, AllocationType::NotCold, ContextInfo, MaxColdSize,
       BuiltFromExistingMetadata, TotalBytes, ColdBytes));
   return true;
 }
@@ -503,9 +520,16 @@ void CallStackTrie::addSingleAllocTypeAttribute(CallBase *CI, AllocationType AT,
   removeAnyExistingAmbiguousAttribute(CI);
   CI->addFnAttr(A);
   if (MemProfReportHintedSizes) {
-    std::vector<ContextTotalSize> ContextSizeInfo;
-    collectContextSizeInfo(Alloc, ContextSizeInfo);
-    for (const auto &[FullStackId, TotalSize] : ContextSizeInfo) {
+    std::vector<std::pair<ContextTotalSize, AllocationType>> ContextInfo;
+    collectContextInfo(Alloc, ContextInfo);
+    for (const auto &[CSI, OrigAT] : ContextInfo) {
+      const auto &[FullStackId, TotalSize] = CSI;
+      // If the original alloc type is not the one being applied as the hint,
+      // report that we ignored this context.
+      if (AT != OrigAT) {
+        emitIgnoredNonColdContextMessage("ignored", FullStackId, "", TotalSize);
+        continue;
+      }
       errs() << "MemProf hinting: Total size for full allocation context hash "
              << FullStackId << " and " << Descriptor << " alloc type "
              << getAllocTypeAttributeString(AT) << ": " << TotalSize << "\n";

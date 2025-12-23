@@ -75,8 +75,9 @@ private:
     // If the user has requested reporting of hinted sizes, keep track of the
     // associated full stack id and profiled sizes. Can have more than one
     // after trimming (e.g. when building from metadata). This is only placed on
-    // the last (root-most) trie node for each allocation context.
-    std::vector<ContextTotalSize> ContextSizeInfo;
+    // the last (root-most) trie node for each allocation context. Also
+    // track the original allocation type of the context.
+    std::vector<std::pair<ContextTotalSize, AllocationType>> ContextInfo;
     // Map of caller stack id to the corresponding child Trie node.
     std::map<uint64_t, CallStackTrieNode *> Callers;
     CallStackTrieNode(AllocationType Type)
@@ -118,10 +119,12 @@ private:
     delete Node;
   }
 
-  // Recursively build up a complete list of context size information from the
-  // trie nodes reached form the given Node, for hint size reporting.
-  void collectContextSizeInfo(CallStackTrieNode *Node,
-                              std::vector<ContextTotalSize> &ContextSizeInfo);
+  // Recursively build up a complete list of context information from the
+  // trie nodes reached form the given Node, including each context's
+  // ContextTotalSize and AllocationType, for hint size reporting.
+  void collectContextInfo(
+      CallStackTrieNode *Node,
+      std::vector<std::pair<ContextTotalSize, AllocationType>> &ContextInfo);
 
   // Recursively convert hot allocation types to notcold, since we don't
   // actually do any cloning for hot contexts, to facilitate more aggressive
