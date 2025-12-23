@@ -81,12 +81,8 @@ using namespace llvm;
 
 STATISTIC(NumTailCalls, "Number of tail calls");
 
-static cl::opt<bool>
-NoZeroDivCheck("mno-check-zero-division", cl::Hidden,
-               cl::desc("MIPS: Don't trap on integer division by zero."),
-               cl::init(false));
-
 extern cl::opt<bool> EmitJalrReloc;
+extern cl::opt<bool> NoZeroDivCheck;
 
 static const MCPhysReg Mips64DPRegs[8] = {
   Mips::D12_64, Mips::D13_64, Mips::D14_64, Mips::D15_64,
