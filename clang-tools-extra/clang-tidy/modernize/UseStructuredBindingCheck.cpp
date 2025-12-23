@@ -76,11 +76,10 @@ static bool matchNVarDeclStartingWith(
 
     // All the matchers is satisfied in those DeclStmts.
     if (Count == N) {
-      Builder->setBinding(
-          BeginDeclStmtName,
-          clang::DynTypedNode::create(Backwards ? *EndDS : *BeginDS));
-      Builder->setBinding(EndDeclStmtName, clang::DynTypedNode::create(
-                                               Backwards ? *BeginDS : *EndDS));
+      if (Backwards)
+        std::swap(BeginDS, EndDS);
+      Builder->setBinding(BeginDeclStmtName, DynTypedNode::create(*BeginDS));
+      Builder->setBinding(EndDeclStmtName, DynTypedNode::create(*EndDS));
       return true;
     }
   }
