@@ -41,7 +41,8 @@ public:
   MCSection *SelectSectionForGlobal(const GlobalObject *GO, SectionKind Kind,
                                     const TargetMachine &TM) const override;
 
-  bool canEmitConstantPtrAuthAsIRelative(const Constant *CPA) const override;
+  bool
+  canEmitConstantPtrAuthAsIRelative(const ConstantPtrAuth *CPA) const override;
 };
 
 /// AArch64_MachoTargetObjectFile - This TLOF implementation is used for Darwin.
