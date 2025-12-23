@@ -104,11 +104,9 @@ using namespace mlir::acc;
 
 /// Check if an operation is inside an ACC compute construct.
 static bool isInsideACCComputeConstruct(Operation *op) {
-  while ((op = op->getParentOp())) {
-    if (isa<ACC_COMPUTE_CONSTRUCT_OPS>(op)) {
+  while ((op = op->getParentOp()))
+    if (isa<ACC_COMPUTE_CONSTRUCT_OPS>(op))
       return true;
-    }
-  }
   return false;
 }
 
@@ -126,9 +124,8 @@ public:
   LogicalResult matchAndRewrite(acc::AtomicUpdateOp atomicUpdateOp,
                                 PatternRewriter &rewriter) const override {
     // Only convert if this op is not inside an ACC compute construct
-    if (isInsideACCComputeConstruct(atomicUpdateOp)) {
+    if (isInsideACCComputeConstruct(atomicUpdateOp))
       return failure();
-    }
 
     Value x = atomicUpdateOp.getX();
     Type type = x.getType();
@@ -176,9 +173,8 @@ public:
   LogicalResult matchAndRewrite(acc::AtomicReadOp readOp,
                                 PatternRewriter &rewriter) const override {
     // Only convert if this op is not inside an ACC compute construct
-    if (isInsideACCComputeConstruct(readOp)) {
+    if (isInsideACCComputeConstruct(readOp))
       return failure();
-    }
 
     Value x = readOp.getX();
     Value v = readOp.getV();
@@ -218,9 +214,8 @@ public:
   LogicalResult matchAndRewrite(acc::AtomicWriteOp writeOp,
                                 PatternRewriter &rewriter) const override {
     // Only convert if this op is not inside an ACC compute construct
-    if (isInsideACCComputeConstruct(writeOp)) {
+    if (isInsideACCComputeConstruct(writeOp))
       return failure();
-    }
 
     Value x = writeOp.getX();
     Value expr = writeOp.getExpr();
@@ -257,9 +252,8 @@ class ACCOrphanAtomicCaptureOpConversion
   LogicalResult matchAndRewrite(acc::AtomicCaptureOp captureOp,
                                 PatternRewriter &rewriter) const override {
     // Only convert if this op is not inside an ACC compute construct
-    if (isInsideACCComputeConstruct(captureOp)) {
+    if (isInsideACCComputeConstruct(captureOp))
       return failure();
-    }
 
     assert(captureOp.getRegion().hasOneBlock() && "expected one block");
     Block *block = &captureOp.getRegion().front();
@@ -279,23 +273,20 @@ class ACCOrphanLoopOpConversion : public OpRewritePattern<acc::LoopOp> {
   LogicalResult matchAndRewrite(acc::LoopOp loopOp,
                                 PatternRewriter &rewriter) const override {
     // Only convert if this op is not inside an ACC compute construct
-    if (isInsideACCComputeConstruct(loopOp)) {
+    if (isInsideACCComputeConstruct(loopOp))
       return failure();
-    }
 
     if (loopOp.getUnstructured()) {
       auto executeRegion =
           acc::convertUnstructuredACCLoopToSCFExecuteRegion(loopOp, rewriter);
-      if (!executeRegion) {
+      if (!executeRegion)
         return failure();
-      }
       rewriter.replaceOp(loopOp, executeRegion);
     } else {
       auto forOp =
           acc::convertACCLoopToSCFFor(loopOp, /*enableCollapse=*/false);
-      if (!forOp) {
+      if (!forOp)
         return failure();
-      }
       rewriter.replaceOp(loopOp, forOp);
     }
     return success();
@@ -304,12 +295,9 @@ class ACCOrphanLoopOpConversion : public OpRewritePattern<acc::LoopOp> {
 
 /// Check if an operation is used by a compute construct or loop op
 static bool isUsedByComputeOrLoop(Operation *op) {
-  for (auto *user : op->getUsers()) {
-    if (isa<acc::ParallelOp, acc::SerialOp, acc::KernelsOp, acc::LoopOp>(
-            user)) {
+  for (auto *user : op->getUsers())
+    if (isa<acc::ParallelOp, acc::SerialOp, acc::KernelsOp, acc::LoopOp>(user))
       return true;
-    }
-  }
   return false;
 }
 
@@ -324,15 +312,13 @@ class ACCOrphanDataEntryConversion : public OpRewritePattern<OpTy> {
                                 PatternRewriter &rewriter) const override {
     // Only convert if this op is not used by a compute construct or loop,
     // and not inside an ACC compute construct.
-    if (isUsedByComputeOrLoop(op) || isInsideACCComputeConstruct(op)) {
+    if (isUsedByComputeOrLoop(op) || isInsideACCComputeConstruct(op))
       return failure();
-    }
 
-    if (op->use_empty()) {
+    if (op->use_empty())
       rewriter.eraseOp(op);
-    } else {
+    else
       rewriter.replaceOp(op, op.getVar());
-    }
     return success();
   }
 };
@@ -353,16 +339,14 @@ public:
       auto *context = &getContext();
       RewritePatternSet patterns(context);
       OpenACCSupport &accSupport = getAnalysis<OpenACCSupport>();
-      if (enableHostFallback) {
+      if (enableHostFallback)
         populateACCHostFallbackPatterns(patterns, accSupport);
-      } else {
+      else
         populateACCOrphanToHostPatterns(patterns, accSupport);
-      }
       GreedyRewriteConfig config;
       config.setUseTopDownTraversal(true);
-      if (failed(applyPatternsGreedily(funcOp, std::move(patterns), config))) {
+      if (failed(applyPatternsGreedily(funcOp, std::move(patterns), config)))
         signalPassFailure();
-      }
     }
 
     LLVM_DEBUG(llvm::dbgs() << "Exit ACCSpecializeForHost()\n");
@@ -393,10 +377,9 @@ void mlir::acc::populateACCOrphanToHostPatterns(RewritePatternSet &patterns,
   // constructs, or their associated data operations - those are valid
   // in host routines and will be processed by other passes.
 
-  if (enableLoopConversion) {
-    // Loop conversion (orphan only)
+  // Loop conversion (orphan only)
+  if (enableLoopConversion)
     patterns.insert<ACCOrphanLoopOpConversion>(context);
-  }
 
   // Atomic operations - convert to non-atomic load/store (orphan only)
   patterns.insert<ACCOrphanAtomicUpdateOpConversion>(context, accSupport);
@@ -422,11 +405,10 @@ void mlir::acc::populateACCHostFallbackPatterns(RewritePatternSet &patterns,
   // This includes structured/unstructured data, compute constructs, and
   // their associated data operations.
 
-  if (enableLoopConversion) {
-    // Loop conversion - OK to use the orphan loop conversion pattern here
-    // because the parent compute constructs will also be converted.
+  // Loop conversion - OK to use the orphan loop conversion pattern here
+  // because the parent compute constructs will also be converted.
+  if (enableLoopConversion)
     patterns.insert<ACCOrphanLoopOpConversion>(context);
-  }
 
   // Atomic operations - convert to non-atomic load/store. OK to use the orphan
   // atomic conversion patterns here because the parent compute constructs will

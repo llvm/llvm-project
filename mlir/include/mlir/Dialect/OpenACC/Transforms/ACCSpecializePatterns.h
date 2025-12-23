@@ -50,11 +50,10 @@ public:
                                 PatternRewriter &rewriter) const override {
     // Replace this op with its var operand; it's possible the op has no uses
     // if the op that had previously used it was already converted.
-    if (op->use_empty()) {
+    if (op->use_empty())
       rewriter.eraseOp(op);
-    } else {
+    else
       rewriter.replaceOp(op, op.getVar());
-    }
     return success();
   }
 };

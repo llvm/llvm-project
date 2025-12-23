@@ -101,19 +101,16 @@ public:
           // Walk inside the compute construct and collect ACC ops
           op->walk([&](Operation *innerOp) {
             // Skip the compute construct itself
-            if (innerOp == op) {
+            if (innerOp == op)
               return;
-            }
-            if (isa<acc::OpenACCDialect>(innerOp->getDialect())) {
+            if (isa<acc::OpenACCDialect>(innerOp->getDialect()))
               opsToTransform.push_back(innerOp);
-            }
           });
         }
       });
-      if (!opsToTransform.empty()) {
+      if (!opsToTransform.empty())
         (void)applyOpPatternsGreedily(opsToTransform, std::move(patterns),
                                       config);
-      }
     }
   }
 };
