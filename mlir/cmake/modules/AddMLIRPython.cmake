@@ -317,6 +317,14 @@ function(build_nanobind_lib)
   set(NB_LIBRARY_TARGET_NAME "nanobind${_ft}-${MLIR_BINDINGS_PYTHON_NB_DOMAIN}")
   set(NB_LIBRARY_TARGET_NAME "${NB_LIBRARY_TARGET_NAME}" PARENT_SCOPE)
   nanobind_build_library(${NB_LIBRARY_TARGET_NAME} AS_SYSINCLUDE)
+  # nanobind configures with LTO for shared build which doesn't work everywhere
+  # (see https://github.com/llvm/llvm-project/issues/139602).
+  if(NOT LLVM_ENABLE_LTO)
+    set_target_properties(${NB_LIBRARY_TARGET_NAME} PROPERTIES
+      INTERPROCEDURAL_OPTIMIZATION_RELEASE OFF
+      INTERPROCEDURAL_OPTIMIZATION_MINSIZEREL OFF
+    )
+  endif()
   if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     target_link_options(${NB_LIBRARY_TARGET_NAME} PRIVATE "-Wl,-z,undefs")
   endif()
