@@ -19,10 +19,10 @@
 void test_mm512_2intersect_epi32(__m512i a, __m512i b, __mmask16 *m0, __mmask16 *m1) {
   // CIR-LABEL: mm512_2intersect_epi32
   // CIR: %[[RES:.*]] = cir.call_llvm_intrinsic "x86.avx512.vp2intersect.d.512" %{{.*}}, %{{.*}} : (!cir.vector<16 x !s32i>, !cir.vector<16 x !s32i>) -> !rec_anon_struct
-  // CIR: %[[VAL1:.*]] = cir.get_member_value %[[RES]][0] : !rec_anon_struct -> !cir.vector<16 x !cir.bool>
+  // CIR: %[[VAL1:.*]] = cir.extract_member %[[RES]][0] : !rec_anon_struct -> !cir.vector<16 x !cir.bool>
   // CIR: %[[CAST1:.*]] = cir.cast bitcast %[[VAL1]] : !cir.vector<16 x !cir.bool> -> !u16i
   // CIR: cir.store align(2) %[[CAST1]], %{{.*}} : !u16i, !cir.ptr<!u16i>
-  // CIR: %[[VAL2:.*]] = cir.get_member_value %[[RES]][1] : !rec_anon_struct -> !cir.vector<16 x !cir.bool>
+  // CIR: %[[VAL2:.*]] = cir.extract_member %[[RES]][1] : !rec_anon_struct -> !cir.vector<16 x !cir.bool>
   // CIR: %[[CAST2:.*]] = cir.cast bitcast %[[VAL2]] : !cir.vector<16 x !cir.bool> -> !u16i
   // CIR: cir.store align(2) %[[CAST2]], %{{.*}} : !u16i, !cir.ptr<!u16i>
 
@@ -49,10 +49,10 @@ void test_mm512_2intersect_epi32(__m512i a, __m512i b, __mmask16 *m0, __mmask16 
 void test_mm512_2intersect_epi64(__m512i a, __m512i b, __mmask8 *m0, __mmask8 *m1) {
   // CIR-LABEL: mm512_2intersect_epi64
   // CIR: %[[RES:.*]] = cir.call_llvm_intrinsic "x86.avx512.vp2intersect.q.512" %{{.*}}, %{{.*}} : (!cir.vector<8 x !s64i>, !cir.vector<8 x !s64i>) -> !rec_anon_struct1
-  // CIR: %[[VAL1:.*]] = cir.get_member_value %[[RES]][0] : !rec_anon_struct1 -> !cir.vector<8 x !cir.bool>
+  // CIR: %[[VAL1:.*]] = cir.extract_member %[[RES]][0] : !rec_anon_struct1 -> !cir.vector<8 x !cir.bool>
   // CIR: %[[CAST1:.*]] = cir.cast bitcast %[[VAL1]] : !cir.vector<8 x !cir.bool> -> !u8i
   // CIR: cir.store align(1) %[[CAST1]], %{{.*}} : !u8i, !cir.ptr<!u8i>
-  // CIR: %[[VAL2:.*]] = cir.get_member_value %[[RES]][1] : !rec_anon_struct1 -> !cir.vector<8 x !cir.bool>
+  // CIR: %[[VAL2:.*]] = cir.extract_member %[[RES]][1] : !rec_anon_struct1 -> !cir.vector<8 x !cir.bool>
   // CIR: %[[CAST2:.*]] = cir.cast bitcast %[[VAL2]] : !cir.vector<8 x !cir.bool> -> !u8i
   // CIR: cir.store align(1) %[[CAST2]], %{{.*}} : !u8i, !cir.ptr<!u8i>
 

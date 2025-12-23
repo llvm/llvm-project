@@ -1898,24 +1898,22 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
     }
 
     auto resVector = cir::VectorType::get(builder.getBoolTy(), numElts);
-    llvm::SmallVector<mlir::Type, 2> resultTypes = {resVector, resVector};
 
     cir::RecordType resRecord =
-        cir::RecordType::get(&getMLIRContext(), resultTypes, false, false,
-                             cir::RecordType::RecordKind::Struct);
+        cir::RecordType::get(&getMLIRContext(), {resVector, resVector}, false,
+                             false, cir::RecordType::RecordKind::Struct);
 
-    llvm::SmallVector<mlir::Value, 2> callOps = {ops[0], ops[1]};
-
-    mlir::Value call = emitIntrinsicCallOp(builder, getLoc(expr->getExprLoc()),
-                                           intrinsicName, resRecord, callOps);
+    mlir::Value call =
+        emitIntrinsicCallOp(builder, getLoc(expr->getExprLoc()), intrinsicName,
+                            resRecord, mlir::ValueRange{ops[0], ops[1]});
     mlir::Value result =
-        cir::GetMemberValueOp::create(builder, loc, resVector, call, 0);
+        cir::ExtractMemberOp::create(builder, loc, resVector, call, 0);
     result = emitX86MaskedCompareResult(builder, loc, result, numElts, nullptr);
     Address addr = Address(
         ops[2], clang::CharUnits::fromQuantity(std::max(1U, numElts / 8)));
     builder.createStore(loc, result, addr);
 
-    result = cir::GetMemberValueOp::create(builder, loc, resVector, call, 1);
+    result = cir::ExtractMemberOp::create(builder, loc, resVector, call, 1);
     result = emitX86MaskedCompareResult(builder, loc, result, numElts, nullptr);
     addr = Address(ops[3],
                    clang::CharUnits::fromQuantity(std::max(1U, numElts / 8)));
