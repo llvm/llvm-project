@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 #include "startup/linux/do_start.h"
 #include "config/linux/app.h"
-#include "hdr/linux_macros.h"
+#include "hdr/link_macros.h"
 #include "hdr/stdint_proxy.h"
 #include "hdr/types/Elf32_Dyn.h"
 #include "hdr/types/Elf32_Phdr.h"
