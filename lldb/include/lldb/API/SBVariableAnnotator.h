@@ -43,7 +43,7 @@ public:
   /// - "decl_file": string path to the file where variable is declared
   /// - "decl_line": unsigned integer line number where variable is declared
   /// - "type_name": string type name of the variable
-  lldb::SBStructuredData AnnotateStructured(SBInstruction &inst);
+  lldb::SBStructuredData AnnotateStructured(SBInstruction inst);
 
 protected:
   SBVariableAnnotator(const lldb::VariableAnnotatorSP &annotator_sp);

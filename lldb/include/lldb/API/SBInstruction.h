@@ -75,6 +75,7 @@ public:
 
 protected:
   friend class SBInstructionList;
+  friend class SBVariableAnnotator;
 
   SBInstruction(const lldb::DisassemblerSP &disasm_sp,
                 const lldb::InstructionSP &inst_sp);

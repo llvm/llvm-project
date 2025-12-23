@@ -156,6 +156,7 @@ protected:
   friend class lldb_private::python::SWIGBridge;
   friend class lldb_private::lua::SWIGBridge;
   friend class SBCommandInterpreter;
+  friend class SBVariableAnnotator;
 
   SBStructuredData(const lldb_private::StructuredDataImpl &impl);
 
