@@ -2396,8 +2396,9 @@ bool SchedGroup::canAddMI(const MachineInstr &MI) const {
   else if (MI.isInlineAsm()) {
     const SIRegisterInfo &TRI = TII->getRegisterInfo();
     auto &MRI = MI.getParent()->getParent()->getRegInfo();
-    bool SGPR_used = false, VGPR_used = false, VMFMA_used = false,
-         VReg32_used = false, MayLoad = MI.mayLoad(), MayStore = MI.mayStore();
+    bool SGPR_used = false, SGPR_big_def = false, VGPR_used = false,
+         VMFMA_used = false, VReg32_used = false, MayLoad = MI.mayLoad(),
+         MayStore = MI.mayStore();
     for (const MachineOperand &Operand : MI.operands())
       if (Operand.isReg()) {
         const TargetRegisterClass &RegClass =
@@ -2414,6 +2415,8 @@ bool SchedGroup::canAddMI(const MachineInstr &MI) const {
           VMFMA_used = true;
         if (TRI.hasSGPRs(&RegClass))
           SGPR_used = true;
+        if (TRI.getRegSizeInBits(RegClass) > 64 && Operand.isDef())
+          SGPR_big_def = true;
       }
 
     typedef std::underlying_type_t<SchedGroupMask> SGMask_t;
@@ -2430,6 +2433,8 @@ bool SchedGroup::canAddMI(const MachineInstr &MI) const {
     if (VGPR_used && MayStore)
       InlineAsmMask |= (SGMask_t)(VReg32_used ? SchedGroupMask::DS_WRITE
                                               : SchedGroupMask::VMEM_WRITE);
+    if (SGPR_big_def)
+      InlineAsmMask |= (SGMask_t)SchedGroupMask::DS_READ;
     if (InlineAsmMask & (SGMask_t)SchedGroupMask::VALU ||
         InlineAsmMask & (SGMask_t)SchedGroupMask::SALU)
       InlineAsmMask |= (SGMask_t)SchedGroupMask::ALU;
