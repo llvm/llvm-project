@@ -3,9 +3,13 @@ add_mlir_upstream_c_api_library(MLIRCAPIAffine
   AffinePasses.cpp
 
   PARTIAL_SOURCES_INTENDED
+  DEPENDS
+  MLIRAffinePassIncGen
+
   LINK_LIBS PUBLIC
   MLIRCAPIIR
   MLIRAffineDialect
+  MLIRAffineTransforms
 )
 
 add_mlir_upstream_c_api_library(MLIRCAPIAMDGPU
@@ -13,9 +17,13 @@ add_mlir_upstream_c_api_library(MLIRCAPIAMDGPU
   AMDGPUPasses.cpp
 
   PARTIAL_SOURCES_INTENDED
+  DEPENDS
+  MLIRNVGPUPassIncGen
+
   LINK_LIBS PUBLIC
   MLIRCAPIIR
   MLIRAMDGPUDialect
+  MLIRAMDGPUTransforms
 )
 
 add_mlir_upstream_c_api_library(MLIRCAPIAMX
@@ -32,18 +40,26 @@ add_mlir_upstream_c_api_library(MLIRCAPIArith
   ArithPasses.cpp
 
   PARTIAL_SOURCES_INTENDED
+  DEPENDS
+  MLIRArithPassIncGen
+
   LINK_LIBS PUBLIC
   MLIRCAPIIR
   MLIRArithDialect
+  MLIRArithTransforms
 )
 
 add_mlir_upstream_c_api_library(MLIRCAPIArmNeon
   ArmNeon.cpp
 
   PARTIAL_SOURCES_INTENDED
+  DEPENDS
+  MLIRArmNeonPassIncGen
+
   LINK_LIBS PUBLIC
   MLIRCAPIIR
   MLIRArmNeonDialect
+  MLIRArmNeonTransforms
 )
 
 add_mlir_upstream_c_api_library(MLIRCAPIArmSME
@@ -51,9 +67,13 @@ add_mlir_upstream_c_api_library(MLIRCAPIArmSME
   ArmSMEPasses.cpp
 
   PARTIAL_SOURCES_INTENDED
+  DEPENDS
+  MLIRArmSMEPassIncGen
+
   LINK_LIBS PUBLIC
   MLIRCAPIIR
   MLIRArmSMEDialect
+  MLIRArmSMETransforms
 )
 
 add_mlir_upstream_c_api_library(MLIRCAPIArmSVE
@@ -61,9 +81,13 @@ add_mlir_upstream_c_api_library(MLIRCAPIArmSVE
   ArmSVEPasses.cpp
 
   PARTIAL_SOURCES_INTENDED
+  DEPENDS
+  MLIRArmSVEPassIncGen
+
   LINK_LIBS PUBLIC
   MLIRCAPIIR
   MLIRArmSVEDialect
+  MLIRArmSVETransforms
 )
 
 add_mlir_upstream_c_api_library(MLIRCAPIAsync
@@ -86,9 +110,13 @@ add_mlir_upstream_c_api_library(MLIRCAPIBufferization
   BufferizationPasses.cpp
 
   PARTIAL_SOURCES_INTENDED
+  DEPENDS
+  MLIRBufferizationPassIncGen
+
   LINK_LIBS PUBLIC
   MLIRCAPIIR
   MLIRBufferizationDialect
+  MLIRBufferizationTransforms
 )
 
 add_mlir_upstream_c_api_library(MLIRCAPIComplex
@@ -124,9 +152,13 @@ add_mlir_upstream_c_api_library(MLIRCAPIEmitC
   EmitCPasses.cpp
 
   PARTIAL_SOURCES_INTENDED
+  DEPENDS
+  MLIREmitCPassIncGen
+
   LINK_LIBS PUBLIC
   MLIRCAPIIR
   MLIREmitCDialect
+  MLIREmitCTransforms
 )
 
 add_mlir_upstream_c_api_library(MLIRCAPIFunc
@@ -134,9 +166,13 @@ add_mlir_upstream_c_api_library(MLIRCAPIFunc
   FuncPasses.cpp
 
   PARTIAL_SOURCES_INTENDED
+  DEPENDS
+  MLIRFuncPassIncGen
+
   LINK_LIBS PUBLIC
   MLIRCAPIIR
   MLIRFuncDialect
+  MLIRFuncTransforms
 )
 
 add_mlir_upstream_c_api_library(MLIRCAPIGPU
@@ -191,9 +227,13 @@ add_mlir_upstream_c_api_library(MLIRCAPILLVM
   LLVMPasses.cpp
 
   PARTIAL_SOURCES_INTENDED
+  DEPENDS
+  MLIRLLVMPassIncGen
+
   LINK_LIBS PUBLIC
   MLIRCAPIIR
   MLIRLLVMDialect
+  MLIRLLVMTransforms
 )
 
 add_mlir_upstream_c_api_library(MLIRCAPIMath
@@ -201,9 +241,13 @@ add_mlir_upstream_c_api_library(MLIRCAPIMath
   MathPasses.cpp
 
   PARTIAL_SOURCES_INTENDED
+  DEPENDS
+  MLIRMathPassIncGen
+
   LINK_LIBS PUBLIC
   MLIRCAPIIR
   MLIRMathDialect
+  MLIRMathTransforms
 )
 
 add_mlir_upstream_c_api_library(MLIRCAPIMemRef
@@ -211,9 +255,14 @@ add_mlir_upstream_c_api_library(MLIRCAPIMemRef
   MemRefPasses.cpp
 
   PARTIAL_SOURCES_INTENDED
+  PARTIAL_SOURCES_INTENDED
+  DEPENDS
+  MLIRMemRefPassIncGen
+
   LINK_LIBS PUBLIC
   MLIRCAPIIR
   MLIRMemRefDialect
+  MLIRMemRefTransforms
 )
 
 add_mlir_upstream_c_api_library(MLIRCAPIMLProgram
@@ -221,9 +270,13 @@ add_mlir_upstream_c_api_library(MLIRCAPIMLProgram
   MLProgramPasses.cpp
 
   PARTIAL_SOURCES_INTENDED
+  DEPENDS
+  MLIRMLProgramPassIncGen
+
   LINK_LIBS PUBLIC
   MLIRCAPIIR
   MLIRMLProgramDialect
+  MLIRMLProgramTransforms
 )
 
 add_mlir_upstream_c_api_library(MLIRCAPIMPI
@@ -240,9 +293,13 @@ add_mlir_upstream_c_api_library(MLIRCAPINVGPU
   NVGPUPasses.cpp
 
   PARTIAL_SOURCES_INTENDED
+  DEPENDS
+  MLIRNVGPUPassIncGen
+
   LINK_LIBS PUBLIC
   MLIRCAPIIR
   MLIRNVGPUDialect
+  MLIRNVGPUTransforms
 )
 
 add_mlir_upstream_c_api_library(MLIRCAPINVVM
@@ -259,9 +316,13 @@ add_mlir_upstream_c_api_library(MLIRCAPIOpenACC
   OpenACCPasses.cpp
 
   PARTIAL_SOURCES_INTENDED
+  DEPENDS
+  MLIROpenACCPassIncGen
+
   LINK_LIBS PUBLIC
   MLIRCAPIIR
   MLIROpenACCDialect
+  MLIROpenACCTransforms
 )
 
 add_mlir_upstream_c_api_library(MLIRCAPIOpenMP
@@ -323,9 +384,13 @@ add_mlir_upstream_c_api_library(MLIRCAPISCF
   SCFPasses.cpp
 
   PARTIAL_SOURCES_INTENDED
+  DEPENDS
+  MLIRSCFPassIncGen
+
   LINK_LIBS PUBLIC
   MLIRCAPIIR
   MLIRSCFDialect
+  MLIRSCFTransforms
 )
 
 add_mlir_upstream_c_api_library(MLIRCAPIShape
@@ -333,9 +398,13 @@ add_mlir_upstream_c_api_library(MLIRCAPIShape
   ShapePasses.cpp
 
   PARTIAL_SOURCES_INTENDED
+  DEPENDS
+  MLIRShapePassIncGen
+
   LINK_LIBS PUBLIC
   MLIRCAPIIR
   MLIRShapeDialect
+  MLIRShapeTransforms
 )
 
 add_mlir_upstream_c_api_library(MLIRCAPIShard
@@ -343,9 +412,13 @@ add_mlir_upstream_c_api_library(MLIRCAPIShard
   ShardPasses.cpp
 
   PARTIAL_SOURCES_INTENDED
+  DEPENDS
+  MLIRShardPassIncGen
+
   LINK_LIBS PUBLIC
   MLIRCAPIIR
   MLIRShardDialect
+  MLIRShardTransforms
 )
 
 add_mlir_upstream_c_api_library(MLIRCAPISMT
@@ -357,12 +430,14 @@ add_mlir_upstream_c_api_library(MLIRCAPISMT
   MLIRSMT
 )
 
-
 add_mlir_upstream_c_api_library(MLIRCAPISparseTensor
   SparseTensor.cpp
   SparseTensorPasses.cpp
 
   PARTIAL_SOURCES_INTENDED
+  DEPENDS
+  MLIRSparseTensorPassIncGen
+
   LINK_LIBS PUBLIC
   MLIRCAPIIR
   MLIRSparseTensorDialect
@@ -374,9 +449,13 @@ add_mlir_upstream_c_api_library(MLIRCAPISPIRV
   SPIRVPasses.cpp
 
   PARTIAL_SOURCES_INTENDED
+  DEPENDS
+  MLIRSPIRVPassIncGen
+
   LINK_LIBS PUBLIC
   MLIRCAPIIR
   MLIRSPIRVDialect
+  MLIRSPIRVTransforms
 )
 
 add_mlir_upstream_c_api_library(MLIRCAPITensor
@@ -384,9 +463,13 @@ add_mlir_upstream_c_api_library(MLIRCAPITensor
   TensorPasses.cpp
 
   PARTIAL_SOURCES_INTENDED
+  DEPENDS
+  MLIRTensorPassIncGen
+
   LINK_LIBS PUBLIC
   MLIRCAPIIR
   MLIRTensorDialect
+  MLIRTensorTransforms
 )
 
 add_mlir_upstream_c_api_library(MLIRCAPITosa
@@ -394,9 +477,13 @@ add_mlir_upstream_c_api_library(MLIRCAPITosa
   TosaPasses.cpp
 
   PARTIAL_SOURCES_INTENDED
+  DEPENDS
+  MLIRTosaPassIncGen
+
   LINK_LIBS PUBLIC
   MLIRCAPIIR
   MLIRTosaDialect
+  MLIRTosaTransforms
 )
 
 add_mlir_upstream_c_api_library(MLIRCAPITransformDialect
@@ -404,9 +491,13 @@ add_mlir_upstream_c_api_library(MLIRCAPITransformDialect
   TransformPasses.cpp
 
   PARTIAL_SOURCES_INTENDED
+  DEPENDS
+  MLIRTransformPassIncGen
+
   LINK_LIBS PUBLIC
   MLIRCAPIIR
   MLIRTransformDialect
+  MLIRTransformTransforms
 )
 
 add_mlir_upstream_c_api_library(MLIRCAPITransformDialectTransforms
@@ -441,9 +532,13 @@ add_mlir_upstream_c_api_library(MLIRCAPIVector
   VectorPasses.cpp
 
   PARTIAL_SOURCES_INTENDED
+  DEPENDS
+  MLIRVectorPassIncGen
+
   LINK_LIBS PUBLIC
   MLIRCAPIIR
   MLIRVectorDialect
+  MLIRVectorTransforms
 )
 
 add_mlir_upstream_c_api_library(MLIRCAPIWasmSSA
