@@ -606,6 +606,7 @@ Bug Fixes to C++ Support
 - Fix a crash when extracting unavailable member type from alias in template deduction. (#GH165560)
 - Fix incorrect diagnostics for lambdas with init-captures inside braced initializers. (#GH163498)
 - Fixed an issue where templates prevented nested anonymous records from checking the deletion of special members. (#GH167217)
+- Fixed a serialization bug in PackIndexingType, where we failed to expand those packs from a PCH/module. (#GH172464)
 - Fixed spurious diagnoses of certain nested lambda expressions. (#GH149121) (#GH156579)
 - Fix the result of ``__is_pointer_interconvertible_base_of`` when arguments are qualified and passed via template parameters. (#GH135273)
 
