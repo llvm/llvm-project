@@ -73,26 +73,9 @@ add_object_library(
     libc.src.__support.OSUtil.linux.auxv
     libc.hdr.link_macros
     libc.hdr.sys_auxv_macros
-    libc.hdr.types.Elf32_Addr
-    libc.hdr.types.Elf32_Dyn
-    libc.hdr.types.Elf32_Ehdr
-    libc.hdr.types.Elf32_Phdr
-    libc.hdr.types.Elf32_Shdr
-    libc.hdr.types.Elf32_Sym
-    libc.hdr.types.Elf32_Verdaux
-    libc.hdr.types.Elf32_Verdef
-    libc.hdr.types.Elf32_Versym
-    libc.hdr.types.Elf64_Addr
-    libc.hdr.types.Elf64_Dyn
-    libc.hdr.types.Elf64_Ehdr
-    libc.hdr.types.Elf64_Phdr
-    libc.hdr.types.Elf64_Shdr
-    libc.hdr.types.Elf64_Sym
-    libc.hdr.types.Elf64_Verdaux
-    libc.hdr.types.Elf64_Verdef
-    libc.hdr.types.Elf64_Versym
     libc.hdr.types.clockid_t
     libc.hdr.types.struct_timespec
     libc.hdr.types.struct_timeval
     libc.hdr.types.time_t
+    libc.include.elf
 )

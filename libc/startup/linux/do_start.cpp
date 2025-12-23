@@ -9,10 +9,6 @@
 #include "config/linux/app.h"
 #include "hdr/link_macros.h"
 #include "hdr/stdint_proxy.h"
-#include "hdr/types/Elf32_Dyn.h"
-#include "hdr/types/Elf32_Phdr.h"
-#include "hdr/types/Elf64_Dyn.h"
-#include "hdr/types/Elf64_Phdr.h"
 #include "src/__support/OSUtil/linux/auxv.h"
 #include "src/__support/OSUtil/syscall.h"
 #include "src/__support/macros/config.h"
@@ -21,6 +17,7 @@
 #include "src/stdlib/exit.h"
 #include "src/unistd/environ.h"
 
+#include <elf.h>
 #include <sys/mman.h>
 #include <sys/syscall.h>
 

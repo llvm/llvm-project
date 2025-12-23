@@ -8,30 +8,14 @@
 #include "src/__support/OSUtil/linux/vdso.h"
 #include "hdr/link_macros.h"
 #include "hdr/sys_auxv_macros.h"
-#include "hdr/types/Elf32_Addr.h"
-#include "hdr/types/Elf32_Dyn.h"
-#include "hdr/types/Elf32_Ehdr.h"
-#include "hdr/types/Elf32_Phdr.h"
-#include "hdr/types/Elf32_Shdr.h"
-#include "hdr/types/Elf32_Sym.h"
-#include "hdr/types/Elf32_Verdaux.h"
-#include "hdr/types/Elf32_Verdef.h"
-#include "hdr/types/Elf32_Versym.h"
-#include "hdr/types/Elf64_Addr.h"
-#include "hdr/types/Elf64_Dyn.h"
-#include "hdr/types/Elf64_Ehdr.h"
-#include "hdr/types/Elf64_Phdr.h"
-#include "hdr/types/Elf64_Shdr.h"
-#include "hdr/types/Elf64_Sym.h"
-#include "hdr/types/Elf64_Verdaux.h"
-#include "hdr/types/Elf64_Verdef.h"
-#include "hdr/types/Elf64_Versym.h"
 #include "src/__support/CPP/array.h"
 #include "src/__support/CPP/optional.h"
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/OSUtil/linux/auxv.h"
 #include "src/__support/threads/callonce.h"
 #include "src/__support/threads/linux/futex_word.h"
+
+#include <elf.h>
 
 // TODO: This is a temporary workaround to avoid including elf.h
 // Include our own headers for ElfW and friends once we have them.
