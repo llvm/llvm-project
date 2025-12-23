@@ -16,6 +16,7 @@
 //   d. NF_ND (EVEX) -> NF (EVEX)
 //   e. NonNF (EVEX) -> NF (EVEX)
 //   f. SETZUCCm (EVEX) -> SETCCm (legacy)
+//   g. VPMOV*2M + KMOV (EVEX) -> VMOVMSK (VEX)
 //
 // Compression a, b and c can always reduce code size, with some exceptions
 // such as promoted 16-bit CRC32 which is as long as the legacy version.
@@ -177,26 +178,39 @@ static bool performCustomAdjustments(MachineInstr &MI, unsigned NewOpc) {
 }
 
 // Try to compress VPMOV*2M + KMOV chain patterns:
-//   vpmovd2m %xmm0, %k0     ->  (erase this)
-//   kmovb %k0, %eax         ->  vmovmskps %xmm0, %eax
-static bool tryCompressMultiOpPattern(MachineInstr &MI,
-                                      MachineBasicBlock &MBB,
-                                      const X86Subtarget &ST,
-                                      SmallVectorImpl<MachineInstr *> &
-                                      ToErase) {
+//   vpmov*2m %xmm0, %k0     ->  (erase this)
+//   kmov* %k0, %eax         ->  vmovmskp* %xmm0, %eax
+static bool tryCompressVPMOVPattern(MachineInstr &MI, MachineBasicBlock &MBB,
+                                    const X86Subtarget &ST,
+                                    SmallVectorImpl<MachineInstr *> &ToErase) {
   const X86InstrInfo *TII = ST.getInstrInfo();
   const TargetRegisterInfo *TRI = ST.getRegisterInfo();
 
   unsigned Opc = MI.getOpcode();
-  if (Opc != X86::VPMOVD2MZ128kr && Opc != X86::VPMOVD2MZ256kr)
+  if (Opc != X86::VPMOVD2MZ128kr && Opc != X86::VPMOVD2MZ256kr &&
+      Opc != X86::VPMOVQ2MZ128kr && Opc != X86::VPMOVQ2MZ256kr)
     return false;
 
   Register MaskReg = MI.getOperand(0).getReg();
   Register SrcVecReg = MI.getOperand(1).getReg();
 
-  unsigned MovMskOpc = (Opc == X86::VPMOVD2MZ128kr)
-                         ? X86::VMOVMSKPSrr
-                         : X86::VMOVMSKPSYrr;
+  unsigned MovMskOpc = 0;
+  switch (Opc) {
+  case X86::VPMOVD2MZ128kr:
+    MovMskOpc = X86::VMOVMSKPSrr;
+    break;
+  case X86::VPMOVD2MZ256kr:
+    MovMskOpc = X86::VMOVMSKPSYrr;
+    break;
+  case X86::VPMOVQ2MZ128kr:
+    MovMskOpc = X86::VMOVMSKPDrr;
+    break;
+  case X86::VPMOVQ2MZ256kr:
+    MovMskOpc = X86::VMOVMSKPDYrr;
+    break;
+  default:
+    llvm_unreachable("Unknown VPMOV opcode");
+  }
 
   MachineInstr *KMovMI = nullptr;
 
@@ -256,7 +270,7 @@ static bool CompressEVEXImpl(MachineInstr &MI, MachineBasicBlock &MBB,
     return false;
 
   // Specialized VPMOVD2M + KMOV -> MOVMSK fold first.
-  if (tryCompressMultiOpPattern(MI, MBB, ST, ToErase))
+  if (tryCompressVPMOVPattern(MI, MBB, ST, ToErase))
     return true;
 
   unsigned Opc = MI.getOpcode();
