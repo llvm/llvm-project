@@ -91,7 +91,7 @@ If invoking the optimizer directly via ``opt``:
 
     opt -passes='memprof-use<profile-filename=memprof.memprofdata>' ...
 
-The compiler uses the profile data to annotate allocation instructions with metadata (e.g., ``!memprof``), distinguishing between "hot", "cold", and "notcold" allocations. This metadata guides downstream optimizations.
+The compiler uses the profile data to annotate allocation instructions with ``!memprof`` metadata (`documentation <https://llvm.org/docs/LangRef.html#memprof-metadata>`), distinguishing between "hot", "cold", and "notcold" allocations. This metadata guides downstream optimizations. Additionally, callsites which are part of allocation contexts are also annotated with ``!callsite`` metadata (`documentation <https://llvm.org/docs/LangRef.html#callsite-metadata>`).
 
 .. note::
     Ensure that the same debug info flags (e.g. ``-gmlt`` and ``-fdebug-info-for-profiling``) used during instrumentation are also passed during this compilation step to enable correct matching of the profile data.
@@ -134,7 +134,7 @@ MemProf profiles guide the layout of static data (e.g., global variables, consta
 
 This feature uses a hybrid approach:
 
-1.  **Symbolizable Data:** Data with external or local linkage (tracked by the symbol table) is partitioned based on data access profiles collected via instrumentation (`draft <https://github.com/llvm/llvm-project/pull/142884>`_) or hardware performance counters (e.g., Intel PEBS events such as ``MEM_INST_RETIRED.ALL_LOADS``).
+1.  **Symbolizable Data:** Data with external or local linkage (tracked by the symbol table) is partitioned based on data access profiles collected via instrumentation (`PR <https://github.com/llvm/llvm-project/pull/142884>`_) or hardware performance counters (e.g., Intel PEBS events such as ``MEM_INST_RETIRED.ALL_LOADS``).
 2.  **Module-Internal Data:** Data not tracked by the symbol table (e.g., jump tables, constant pools, internal globals) has its hotness inferred from standard PGO code execution profiles.
 
 To enable this feature, pass the following flags to the compiler:
@@ -164,12 +164,12 @@ MemProf consists of three main components:
 
 1.  **Instrumentation Pass (Compile-time):** Memory accesses are instrumented to increment the access count held in a shadow memory location, or alternatively to call into the runtime.
 2.  **Runtime Library (Link-time/Run-time):** Manages shadow memory and tracks allocation contexts and access statistics.
-3.  **Profile Analysis (Post-processing/Compile-time):** Tools and passes that read the profile, annotate the IR, and perform advanced optimizations like context disambiguation for ThinLTO.
+3.  **Profile Analysis (Post-processing/Compile-time):** Tools and passes that read the profile, annotate the IR using metadata, and perform context disambiguation if necessary when LTO is enabled.
 
 Detailed Workflow (LTO)
 -----------------------
 
-The optimization process, using LTO, involves several steps during the LTO pipeline:
+The optimization process, using LTO, involves several steps:
 
 1.  **Metadata Serialization:** During the LTO summary analysis step, MemProf metadata (``!memprof`` and ``!callsite``) is serialized into the module summary. This is implemented in ``llvm/lib/Analysis/ModuleSummaryAnalysis.cpp``.
 2.  **Whole Program Graph Construction:** During the LTO indexing step, the compiler constructs a whole-program ``CallsiteContextGraph`` to analyze and disambiguate contexts. This graph identifies where allocation contexts diverge (e.g., same function called from hot vs. cold paths). This logic resides in ``llvm/lib/Transforms/IPO/MemProfContextDisambiguation.cpp``.
