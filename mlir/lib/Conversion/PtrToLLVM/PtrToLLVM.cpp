@@ -370,6 +370,59 @@ LogicalResult TypeOffsetOpConversion::matchAndRewrite(
   return success();
 }
 
+static LLVM::AtomicOrdering getLLVMAtomicOrdering(ptr::AtomicOrdering order) {
+  switch (order) {
+  case ptr::AtomicOrdering::not_atomic:
+    return LLVM::AtomicOrdering::not_atomic;
+  case ptr::AtomicOrdering::monotonic:
+    return LLVM::AtomicOrdering::monotonic;
+  case ptr::AtomicOrdering::acquire:
+    return LLVM::AtomicOrdering::acquire;
+  case ptr::AtomicOrdering::release:
+    return LLVM::AtomicOrdering::release;
+  case ptr::AtomicOrdering::acq_rel:
+    return LLVM::AtomicOrdering::acq_rel;
+  case ptr::AtomicOrdering::seq_cst:
+    return LLVM::AtomicOrdering::seq_cst;
+  case ptr::AtomicOrdering::unordered:
+    return LLVM::AtomicOrdering::unordered;
+  }
+  llvm_unreachable("Unknown atomic ordering");
+}
+
+struct PtrLoadOpConversion : public ConvertOpToLLVMPattern<ptr::LoadOp> {
+  using ConvertOpToLLVMPattern::ConvertOpToLLVMPattern;
+  LogicalResult
+  matchAndRewrite(ptr::LoadOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Type resultType = typeConverter->convertType(op.getType());
+    if (!resultType)
+      return rewriter.notifyMatchFailure(op,
+                                         "Couldn't convert the result type");
+
+    rewriter.replaceOpWithNewOp<LLVM::LoadOp>(
+        op, resultType, adaptor.getPtr(), op.getAlignment().value_or(0),
+        op.getVolatile_(), op.getNontemporal(), op.getInvariant(),
+        op.getInvariantGroup(), getLLVMAtomicOrdering(op.getOrdering()),
+        op.getSyncscope().value_or(StringRef()));
+    return success();
+  }
+};
+
+struct PtrStoreOpConversion : public ConvertOpToLLVMPattern<ptr::StoreOp> {
+  using ConvertOpToLLVMPattern::ConvertOpToLLVMPattern;
+  LogicalResult
+  matchAndRewrite(ptr::StoreOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    rewriter.replaceOpWithNewOp<LLVM::StoreOp>(
+        op, adaptor.getValue(), adaptor.getPtr(), op.getAlignment().value_or(0),
+        op.getVolatile_(), op.getNontemporal(), op.getInvariantGroup(),
+        getLLVMAtomicOrdering(op.getOrdering()),
+        op.getSyncscope().value_or(StringRef()));
+    return success();
+  }
+};
+
 //===----------------------------------------------------------------------===//
 // ConvertToLLVMPatternInterface implementation
 //===----------------------------------------------------------------------===//
@@ -431,7 +484,8 @@ void mlir::ptr::populatePtrToLLVMConversionPatterns(
 
   // Add conversion patterns.
   patterns.add<FromPtrOpConversion, GetMetadataOpConversion, PtrAddOpConversion,
-               ToPtrOpConversion, TypeOffsetOpConversion>(converter);
+               ToPtrOpConversion, TypeOffsetOpConversion, PtrLoadOpConversion,
+               PtrStoreOpConversion>(converter);
 }
 
 void mlir::ptr::registerConvertPtrToLLVMInterface(DialectRegistry &registry) {

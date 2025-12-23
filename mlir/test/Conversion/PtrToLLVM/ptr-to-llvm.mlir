@@ -316,3 +316,41 @@ func.func @test_memref_ptradd_indexing(%arg0: memref<10x?x30xf32, #ptr.generic_s
   %3 = ptr.ptr_add %0, %2 : !ptr.ptr<#ptr.generic_space>, index
   return %3 : !ptr.ptr<#ptr.generic_space>
 }
+
+// CHECK-LABEL:  func @test_load_ops
+//  CHECK-SAME:    (%[[ARG:.*]]: !llvm.ptr)
+//       CHECK:    %{{.*}} = llvm.load %[[ARG]] : !llvm.ptr -> f32
+//       CHECK:    %{{.*}} = llvm.load volatile %[[ARG]] : !llvm.ptr -> f32
+//       CHECK:    %{{.*}} = llvm.load %[[ARG]] {nontemporal} : !llvm.ptr -> f32
+//       CHECK:    %{{.*}} = llvm.load %[[ARG]] invariant : !llvm.ptr -> f32
+//       CHECK:    %{{.*}} = llvm.load %[[ARG]] invariant_group : !llvm.ptr -> f32
+//       CHECK:    %{{.*}} = llvm.load %[[ARG]] atomic monotonic {alignment = 8 : i64} : !llvm.ptr -> i64
+//       CHECK:    %{{.*}} = llvm.load volatile %[[ARG]] atomic syncscope("workgroup") acquire {alignment = 4 : i64, nontemporal} : !llvm.ptr -> i32
+func.func @test_load_ops(%arg0: !ptr.ptr<#ptr.generic_space>) -> (f32, f32, f32, f32, f32, i64, i32) {
+  %0 = ptr.load %arg0 : !ptr.ptr<#ptr.generic_space> -> f32
+  %1 = ptr.load volatile %arg0 : !ptr.ptr<#ptr.generic_space> -> f32
+  %2 = ptr.load %arg0 nontemporal : !ptr.ptr<#ptr.generic_space> -> f32
+  %3 = ptr.load %arg0 invariant : !ptr.ptr<#ptr.generic_space> -> f32
+  %4 = ptr.load %arg0 invariant_group : !ptr.ptr<#ptr.generic_space> -> f32
+  %5 = ptr.load %arg0 atomic monotonic alignment = 8 : !ptr.ptr<#ptr.generic_space> -> i64
+  %6 = ptr.load volatile %arg0 atomic syncscope("workgroup") acquire nontemporal alignment = 4 : !ptr.ptr<#ptr.generic_space> -> i32
+  return %0, %1, %2, %3, %4, %5, %6 : f32, f32, f32, f32, f32, i64, i32
+}
+
+// CHECK-LABEL:  func @test_store_ops
+//  CHECK-SAME:    (%[[ARG0:.*]]: !llvm.ptr, %[[ARG1:.*]]: f32, %[[ARG2:.*]]: i64, %[[ARG3:.*]]: i32)
+//       CHECK:    llvm.store %[[ARG1]], %[[ARG0]] : f32, !llvm.ptr
+//       CHECK:    llvm.store volatile %[[ARG1]], %[[ARG0]] : f32, !llvm.ptr
+//       CHECK:    llvm.store %[[ARG1]], %[[ARG0]] {nontemporal} : f32, !llvm.ptr
+//       CHECK:    llvm.store %[[ARG1]], %[[ARG0]] invariant_group : f32, !llvm.ptr
+//       CHECK:    llvm.store %[[ARG2]], %[[ARG0]] atomic monotonic {alignment = 8 : i64} : i64, !llvm.ptr
+//       CHECK:    llvm.store volatile %[[ARG3]], %[[ARG0]] atomic syncscope("workgroup") release {alignment = 4 : i64, nontemporal} : i32, !llvm.ptr
+func.func @test_store_ops(%arg0: !ptr.ptr<#ptr.generic_space>, %arg1: f32, %arg2: i64, %arg3: i32) {
+  ptr.store %arg1, %arg0 : f32, !ptr.ptr<#ptr.generic_space>
+  ptr.store volatile %arg1, %arg0 : f32, !ptr.ptr<#ptr.generic_space>
+  ptr.store %arg1, %arg0 nontemporal : f32, !ptr.ptr<#ptr.generic_space>
+  ptr.store %arg1, %arg0 invariant_group : f32, !ptr.ptr<#ptr.generic_space>
+  ptr.store %arg2, %arg0 atomic monotonic alignment = 8 : i64, !ptr.ptr<#ptr.generic_space>
+  ptr.store volatile %arg3, %arg0 atomic syncscope("workgroup") release nontemporal alignment = 4 : i32, !ptr.ptr<#ptr.generic_space>
+  return
+}
