@@ -291,7 +291,10 @@ protected:
 
   std::optional<llvm::Triple> DarwinTargetVariantTriple;
 
-  bool HasMicrosoftRecordLayout = false;
+  /// Override flag to force Microsoft record layout, used when device target
+  /// (e.g., CUDA/HIP) must match host's Microsoft layout despite using a
+  /// different C++ ABI.
+  bool ForceMicrosoftRecordLayout = false;
 
   // TargetInfo Constructor.  Default initializes all fields.
   TargetInfo(const llvm::Triple &T);
@@ -1906,7 +1909,12 @@ public:
 
   virtual void setAuxTarget(const TargetInfo *Aux) {}
 
-  bool hasMicrosoftRecordLayout() const { return HasMicrosoftRecordLayout; }
+  /// Returns true if Microsoft record layout should be used.
+  /// This is true when either the C++ ABI is Microsoft, or when forced
+  /// for device compilation to match a Microsoft host.
+  bool hasMicrosoftRecordLayout() const {
+    return ForceMicrosoftRecordLayout || TheCXXABI.isMicrosoft();
+  }
 
   /// Whether target allows debuginfo types for decl only variables/functions.
   virtual bool allowDebugInfoForExternalRef() const { return false; }
