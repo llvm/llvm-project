@@ -134,6 +134,7 @@ class LLDB_API SBTypeSynthetic;
 class LLDB_API SBTypeList;
 class LLDB_API SBValue;
 class LLDB_API SBValueList;
+class LLDB_API SBVariableAnnotator;
 class LLDB_API SBVariablesOptions;
 class LLDB_API SBWatchpoint;
 class LLDB_API SBWatchpointOptions;
@@ -152,6 +153,6 @@ typedef lldb::CommandReturnObjectCallbackResult (*SBCommandPrintCallback)(
 typedef lldb::SBError (*SBPlatformLocateModuleCallback)(
     void *baton, const lldb::SBModuleSpec &module_spec,
     lldb::SBFileSpec &module_file_spec, lldb::SBFileSpec &symbol_file_spec);
-}
+} // namespace lldb
 
 #endif // LLDB_API_SBDEFINES_H
