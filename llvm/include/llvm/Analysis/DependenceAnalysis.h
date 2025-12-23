@@ -543,7 +543,7 @@ private:
   /// If the dependence isn't proven to exist,
   /// marks the Result as inconsistent.
   bool testSIV(const SCEV *Src, const SCEV *Dst, unsigned &Level,
-               FullDependence &Result) const;
+               FullDependence &Result, bool UnderRuntimeAssumptions);
 
   /// testRDIV - Tests the RDIV subscript pair (Src and Dst) for dependence.
   /// Things of the form [c1 + a1*i] and [c2 + a2*j]
@@ -573,7 +573,7 @@ private:
   bool strongSIVtest(const SCEV *Coeff, const SCEV *SrcConst,
                      const SCEV *DstConst, const Loop *CurrentSrcLoop,
                      const Loop *CurrentDstLoop, unsigned Level,
-                     FullDependence &Result) const;
+                     FullDependence &Result, bool UnderRuntimeAssumptions);
 
   /// weakCrossingSIVtest - Tests the weak-crossing SIV subscript pair
   /// (Src and Dst) for dependence.

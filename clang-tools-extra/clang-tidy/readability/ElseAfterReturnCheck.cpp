@@ -41,10 +41,11 @@ private:
 
 } // namespace
 
-static const char InterruptingStr[] = "interrupting";
-static const char WarningMessage[] = "do not use 'else' after '%0'";
-static const char WarnOnUnfixableStr[] = "WarnOnUnfixable";
-static const char WarnOnConditionVariablesStr[] = "WarnOnConditionVariables";
+static constexpr char InterruptingStr[] = "interrupting";
+static constexpr char WarningMessage[] = "do not use 'else' after '%0'";
+static constexpr char WarnOnUnfixableStr[] = "WarnOnUnfixable";
+static constexpr char WarnOnConditionVariablesStr[] =
+    "WarnOnConditionVariables";
 
 static const DeclRefExpr *findUsage(const Stmt *Node, int64_t DeclIdentifier) {
   if (!Node)
@@ -53,10 +54,9 @@ static const DeclRefExpr *findUsage(const Stmt *Node, int64_t DeclIdentifier) {
     if (DeclRef->getDecl()->getID() == DeclIdentifier)
       return DeclRef;
   } else {
-    for (const Stmt *ChildNode : Node->children()) {
+    for (const Stmt *ChildNode : Node->children())
       if (const DeclRefExpr *Result = findUsage(ChildNode, DeclIdentifier))
         return Result;
-    }
   }
   return nullptr;
 }
@@ -70,11 +70,10 @@ findUsageRange(const Stmt *Node,
     if (llvm::is_contained(DeclIdentifiers, DeclRef->getDecl()->getID()))
       return DeclRef;
   } else {
-    for (const Stmt *ChildNode : Node->children()) {
+    for (const Stmt *ChildNode : Node->children())
       if (const DeclRefExpr *Result =
               findUsageRange(ChildNode, DeclIdentifiers))
         return Result;
-    }
   }
   return nullptr;
 }

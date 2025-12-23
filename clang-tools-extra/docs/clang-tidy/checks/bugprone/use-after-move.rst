@@ -253,3 +253,21 @@ For example, if an additional member variable is added to ``S``, it is easy to
 forget to add the reinitialization for this additional member. Instead, it is
 safer to assign to the entire struct in one go, and this will also avoid the
 use-after-move warning.
+
+Options
+-------
+
+.. option:: InvalidationFunctions
+
+  A semicolon-separated list of names of functions that cause their first
+  arguments to be invalidated (e.g., closing a handle).
+  For member functions, the first argument is considered to be the implicit
+  object argument (``this``). Default value is an empty string.
+
+.. option:: ReinitializationFunctions
+
+  A semicolon-separated list of names of functions that reinitialize the
+  object. For member functions, the implicit object argument (``*this``) is
+  considered to be reinitialized. For non-member or static member functions,
+  the first argument is considered to be reinitialized. Default value is an
+  empty string.

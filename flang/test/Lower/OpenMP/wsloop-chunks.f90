@@ -50,7 +50,7 @@ do i=1, 9
 ! CHECK:             omp.yield
 ! CHECK:           }
 ! CHECK:         }
-  
+
 end do
 !$OMP END DO NOWAIT
 chunk = 6

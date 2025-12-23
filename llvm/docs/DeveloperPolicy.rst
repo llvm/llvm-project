@@ -596,11 +596,6 @@ having this ability would help that work.
 Proposing Major Changes (RFCs)
 ------------------------------
 
-LLVM is a large community with many stakeholders, and before landing any major
-change, it is important to discuss the design of a change publicly with the
-community. This is done by posting a Request For Comments (RFC) on the `LLVM
-Discourse forums`_.
-
 The design of LLVM is carefully controlled to ensure that all the pieces fit
 together well and are as consistent as possible. If you plan to make a major
 change to the way LLVM works or want to add a major new extension, it is a good
@@ -609,45 +604,13 @@ significant effort in an implementation. Prototype implementations, however, can
 often be helpful in making design discussions more concrete by demonstrating
 what is possible.
 
-These are some suggestions for how to get a major change accepted:
+LLVM is a large community with many stakeholders, and before landing any major
+change, it is important to discuss the design of a change publicly with the
+community. This is done by posting a Request For Comments (RFC) on the `LLVM
+Discourse forums`_. See the :doc:`RFC process <RFCProcess>` documentation for
+more details.
 
-* Make it targeted, and avoid touching components irrelevant to the task.
-
-* Explain how the change improves LLVM for other stakeholders rather than
-  focusing on your specific use case.
-
-* As discussion evolves, periodically summarize the current state of the
-  discussion and clearly separate points where consensus seems to emerge from
-  those where further discussion is necessary.
-
-* Compilers are foundational infrastructure, so there is a high quality bar,
-  and the burden of proof is on the proposer. If reviewers repeatedly ask for
-  an unreasonable amount of evidence or data, proposal authors can escalate to
-  the area team to resolve disagreements.
-
-After posting a major proposal, it is common to receive lots of conflicting
-feedback from different parties, or no feedback at all, leaving authors without
-clear next steps. As a community, we are aiming for `"rough consensus"
-<https://en.wikipedia.org/wiki/Rough_consensus>`_, similar in spirit to what is
-described in `IETF RFC7282 <https://datatracker.ietf.org/doc/html/rfc7282>`_.
-This requires considering and addressing all of the objections to the RFC, and
-confirming that we can all live with the tradeoffs embodied in the proposal.
-
-The LLVM Area Teams (defined in `LP0004
-<https://github.com/llvm/llvm-www/blob/main/proposals/LP0004-project-governance.md>`_)
-are responsible for facilitating project decision making. In cases where there
-isn't obvious agreement, area teams should step in to restate their perceived
-consensus. In cases of deeper disagreement, area teams should try to identify
-the next steps for the proposal, such as gathering more data, changing the
-proposal, or rejecting it outright. They can also act as moderators by
-scheduling calls for participants to speak directly to resolve disagreements,
-subject to normal :ref:`Code of Conduct <LLVM Community Code of Conduct>`
-guidelines.
-
-Once the design of the new feature is finalized, the work itself should be done
-as a series of `incremental changes`_, not as a long-term development branch.
-
-.. _incremental changes:
+.. _incremental-changes:
 
 Incremental Development
 -----------------------
@@ -877,6 +840,7 @@ will only be done through the following process:
       library features LLVM should use; avoid miscompiles in particular compiler
       versions, etc).
     - Detail downsides on important platforms (e.g. Ubuntu LTS status).
+    - See the :doc:`RFC process <RFCProcess>` documentation for more details.
 
   * Once the RFC reaches consensus, update the CMake toolchain version checks as
     well as the :doc:`getting started<GettingStarted>` guide.  This provides a
@@ -1065,7 +1029,8 @@ Those wishing to add a new target to LLVM must follow the procedure below:
    your target and how it follows all the requirements and what work has been
    done and will need to be done to accommodate the official target requirements.
    Make sure to expose any and all controversial issues, changes needed in the
-   base code, table gen, etc.
+   base code, table gen, etc. See the :doc:`RFC process <RFCProcess>`
+   documentation for more details.
 3. Once the response is positive, the LLVM community can start reviewing the
    actual patches (but they can be prepared before, to support the RFC). Create
    a sequence of N patches, numbered '1/N' to 'N/N' (make sure N is an actual
@@ -1116,7 +1081,8 @@ components to a high bar similar to "official targets", they:
    clear path to resolving them.
  * Must be proposed through the LLVM RFC process, and have its addition approved
    by the LLVM community - this ultimately mediates the resolution of the
-   "should" concerns above.
+   "should" concerns above. See the :doc:`RFC process <RFCProcess>`
+   documentation for more details.
 
 If you have a project that you think would make sense to add to the LLVM
 monorepo, please start an RFC topic on the `LLVM Discourse forums`_ to kick off
@@ -1160,7 +1126,8 @@ criteria:
    suggested wording below).
  * Must be proposed through the LLVM RFC process, and have its addition
    approved by the LLVM community - this ultimately mediates the resolution of
-   the "should" concerns above.
+   the "should" concerns above. See the :doc:`RFC process <RFCProcess>`
+   documentation for more details.
 
 That said, the project need not have any code to get started, and need not have
 an established community at all!  Furthermore, incubating projects may pass
@@ -1533,3 +1500,9 @@ review all generated code before sending it for review to verify its
 correctness and to understand it so that they can answer questions during code
 review. Reviewing and maintaining generated code that the original contributor
 does not understand is not a good use of limited project resources.
+
+The one exception we reserve is for GitHub issues labelled with the
+"good first issue" label. These issues are selected by LLVM contributors
+to help newcomers get familiar with the code base. Thus, it makes no sense to
+fix them using AI tools. **Using AI tools to fix issues labelled as
+"good first issues" is forbidden**.

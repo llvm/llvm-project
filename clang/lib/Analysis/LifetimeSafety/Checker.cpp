@@ -20,6 +20,7 @@
 #include "clang/Analysis/Analyses/PostOrderCFGView.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Basic/SourceManager.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/TimeProfiler.h"
@@ -50,22 +51,48 @@ struct PendingWarning {
 class LifetimeChecker {
 private:
   llvm::DenseMap<LoanID, PendingWarning> FinalWarningsMap;
+  llvm::DenseMap<const ParmVarDecl *, const Expr *> AnnotationWarningsMap;
   const LoanPropagationAnalysis &LoanPropagation;
   const LiveOriginsAnalysis &LiveOrigins;
   const FactManager &FactMgr;
   LifetimeSafetyReporter *Reporter;
+  ASTContext &AST;
 
 public:
   LifetimeChecker(const LoanPropagationAnalysis &LoanPropagation,
                   const LiveOriginsAnalysis &LiveOrigins, const FactManager &FM,
                   AnalysisDeclContext &ADC, LifetimeSafetyReporter *Reporter)
       : LoanPropagation(LoanPropagation), LiveOrigins(LiveOrigins), FactMgr(FM),
-        Reporter(Reporter) {
+        Reporter(Reporter), AST(ADC.getASTContext()) {
     for (const CFGBlock *B : *ADC.getAnalysis<PostOrderCFGView>())
       for (const Fact *F : FactMgr.getFacts(B))
         if (const auto *EF = F->getAs<ExpireFact>())
           checkExpiry(EF);
+        else if (const auto *OEF = F->getAs<OriginEscapesFact>())
+          checkAnnotations(OEF);
     issuePendingWarnings();
+    suggestAnnotations();
+    //  Annotation inference is currently guarded by a frontend flag. In the
+    //  future, this might be replaced by a design that differentiates between
+    //  explicit and inferred findings with separate warning groups.
+    if (AST.getLangOpts().EnableLifetimeSafetyInference)
+      inferAnnotations();
+  }
+
+  /// Checks if an escaping origin holds a placeholder loan, indicating a
+  /// missing [[clang::lifetimebound]] annotation.
+  void checkAnnotations(const OriginEscapesFact *OEF) {
+    OriginID EscapedOID = OEF->getEscapedOriginID();
+    LoanSet EscapedLoans = LoanPropagation.getLoans(EscapedOID, OEF);
+    for (LoanID LID : EscapedLoans) {
+      const Loan *L = FactMgr.getLoanMgr().getLoan(LID);
+      if (const auto *PL = dyn_cast<PlaceholderLoan>(L)) {
+        const ParmVarDecl *PVD = PL->getParmVarDecl();
+        if (PVD->hasAttr<LifetimeBoundAttr>())
+          continue;
+        AnnotationWarningsMap.try_emplace(PVD, OEF->getEscapeExpr());
+      }
+    }
   }
 
   /// Checks for use-after-free & use-after-return errors when a loan expires.
@@ -114,8 +141,9 @@ public:
     if (!Reporter)
       return;
     for (const auto &[LID, Warning] : FinalWarningsMap) {
-      const Loan &L = FactMgr.getLoanMgr().getLoan(LID);
-      const Expr *IssueExpr = L.IssueExpr;
+      const Loan *L = FactMgr.getLoanMgr().getLoan(LID);
+      const auto *BL = cast<PathLoan>(L);
+      const Expr *IssueExpr = BL->getIssueExpr();
       llvm::PointerUnion<const UseFact *, const OriginEscapesFact *>
           CausingFact = Warning.CausingFact;
       Confidence Confidence = Warning.ConfidenceLevel;
@@ -130,6 +158,52 @@ public:
                                        ExpiryLoc, Confidence);
       else
         llvm_unreachable("Unhandled CausingFact type");
+    }
+  }
+
+  /// Returns the declaration of a function that is visible across translation
+  /// units, if such a declaration exists and is different from the definition.
+  static const FunctionDecl *getCrossTUDecl(const ParmVarDecl &PVD,
+                                            SourceManager &SM) {
+    const auto *FD = dyn_cast<FunctionDecl>(PVD.getDeclContext());
+    if (!FD)
+      return nullptr;
+    if (!FD->isExternallyVisible())
+      return nullptr;
+    const FileID DefinitionFile = SM.getFileID(FD->getLocation());
+    for (const FunctionDecl *Redecl : FD->redecls())
+      if (SM.getFileID(Redecl->getLocation()) != DefinitionFile)
+        return Redecl;
+
+    return nullptr;
+  }
+
+  void suggestAnnotations() {
+    if (!Reporter)
+      return;
+    SourceManager &SM = AST.getSourceManager();
+    for (const auto &[PVD, EscapeExpr] : AnnotationWarningsMap) {
+      if (const FunctionDecl *CrossTUDecl = getCrossTUDecl(*PVD, SM))
+        Reporter->suggestAnnotation(
+            SuggestionScope::CrossTU,
+            CrossTUDecl->getParamDecl(PVD->getFunctionScopeIndex()),
+            EscapeExpr);
+      else
+        Reporter->suggestAnnotation(SuggestionScope::IntraTU, PVD, EscapeExpr);
+    }
+  }
+
+  void inferAnnotations() {
+    // FIXME: To maximise inference propagation, functions should be analyzed in
+    // post-order of the call graph, allowing inferred annotations to propagate
+    // through the call chain
+    // FIXME: Add the inferred attribute to all redeclarations of the function,
+    // not just the definition being analyzed.
+    for (const auto &[ConstPVD, EscapeExpr] : AnnotationWarningsMap) {
+      ParmVarDecl *PVD = const_cast<ParmVarDecl *>(ConstPVD);
+      if (!PVD->hasAttr<LifetimeBoundAttr>())
+        PVD->addAttr(
+            LifetimeBoundAttr::CreateImplicit(AST, PVD->getLocation()));
     }
   }
 };
