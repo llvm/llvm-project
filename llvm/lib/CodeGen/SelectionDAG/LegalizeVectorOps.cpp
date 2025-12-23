@@ -716,10 +716,11 @@ void VectorLegalizer::PromoteVECTOR_COMPRESS(
          "Only integer promotion or bitcasts between types is supported");
 
   SDValue Vec = Node->getOperand(0);
-  SDValue Mask = TLI.promoteTargetBoolean(DAG, Node->getOperand(1), PromotedVT);
+  SDValue Mask = Node->getOperand(1);
   SDValue Passthru = Node->getOperand(2);
   if (VT.isInteger()) {
     Vec = DAG.getNode(ISD::ANY_EXTEND, DL, PromotedVT, Vec);
+    Mask = TLI.promoteTargetBoolean(DAG, Mask, PromotedVT);
     Passthru = DAG.getNode(ISD::ANY_EXTEND, DL, PromotedVT, Passthru);
   } else {
     Vec = DAG.getBitcast(PromotedVT, Vec);
