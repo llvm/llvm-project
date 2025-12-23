@@ -2297,15 +2297,23 @@ static bool canSinkInstructions(
 // Assuming canSinkInstructions(Blocks) has returned true, sink the last
 // instruction of every block in Blocks to their common successor, commoning
 // into one instruction.
-static void sinkLastInstruction(ArrayRef<BasicBlock*> Blocks) {
-  auto *BBEnd = Blocks[0]->getTerminator()->getSuccessor(0);
+// If CondBrMoveTo is not null, move the conditional branch in Blocks to
+// CondBrMoveTo.
+static void sinkLastInstruction(ArrayRef<BasicBlock *> Blocks,
+                                BasicBlock *CondBrMoveTo = nullptr) {
+  auto *BBEnd =
+      CondBrMoveTo ? CondBrMoveTo : Blocks[0]->getTerminator()->getSuccessor(0);
 
   // canSinkInstructions returning true guarantees that every block has at
   // least one non-terminator instruction.
   SmallVector<Instruction*,4> Insts;
   for (auto *BB : Blocks) {
     Instruction *I = BB->getTerminator();
-    I = I->getPrevNode();
+    if (CondBrMoveTo)
+      assert(isa<BranchInst>(I) && cast<BranchInst>(I)->isConditional() &&
+             "Expected a conditional branch");
+    else
+      I = I->getPrevNode();
     Insts.push_back(I);
   }
 
@@ -2368,14 +2376,15 @@ static void sinkLastInstruction(ArrayRef<BasicBlock*> Blocks) {
       }
     }
 
-  for (User *U : make_early_inc_range(I0->users())) {
-    // canSinkLastInstruction checked that all instructions are only used by
-    // phi nodes in a way that allows replacing the phi node with the common
-    // instruction.
-    auto *PN = cast<PHINode>(U);
-    PN->replaceAllUsesWith(I0);
-    PN->eraseFromParent();
-  }
+  if (!CondBrMoveTo)
+    for (User *U : make_early_inc_range(I0->users())) {
+      // canSinkLastInstruction checked that all instructions are only used by
+      // phi nodes in a way that allows replacing the phi node with the common
+      // instruction.
+      auto *PN = cast<PHINode>(U);
+      PN->replaceAllUsesWith(I0);
+      PN->eraseFromParent();
+    }
 
   // Finally nuke all instructions apart from the common instruction.
   for (auto *I : Insts) {
@@ -2389,85 +2398,131 @@ static void sinkLastInstruction(ArrayRef<BasicBlock*> Blocks) {
   }
 }
 
-/// Check whether BB's predecessors end with unconditional branches. If it is
-/// true, sink any common code from the predecessors to BB.
-static bool sinkCommonCodeFromPredecessors(BasicBlock *BB,
-                                           DomTreeUpdater *DTU) {
-  // We support two situations:
-  //   (1) all incoming arcs are unconditional
-  //   (2) there are non-unconditional incoming arcs
-  //
-  // (2) is very common in switch defaults and
-  // else-if patterns;
-  //
-  //   if (a) f(1);
-  //   else if (b) f(2);
-  //
-  // produces:
-  //
-  //       [if]
-  //      /    \
-  //    [f(1)] [if]
-  //      |     | \
-  //      |     |  |
-  //      |  [f(2)]|
-  //       \    | /
-  //        [ end ]
-  //
-  // [end] has two unconditional predecessor arcs and one conditional. The
-  // conditional refers to the implicit empty 'else' arc. This conditional
-  // arc can also be caused by an empty default block in a switch.
-  //
-  // In this case, we attempt to sink code from all *unconditional* arcs.
-  // If we can sink instructions from these arcs (determined during the scan
-  // phase below) we insert a common successor for all unconditional arcs and
-  // connect that to [end], to enable sinking:
-  //
-  //       [if]
-  //      /    \
-  //    [x(1)] [if]
-  //      |     | \
-  //      |     |  \
-  //      |  [x(2)] |
-  //       \   /    |
-  //   [sink.split] |
-  //         \     /
-  //         [ end ]
-  //
-  SmallVector<BasicBlock*,4> UnconditionalPreds;
-  bool HaveNonUnconditionalPredecessors = false;
-  for (auto *PredBB : predecessors(BB)) {
-    auto *PredBr = dyn_cast<BranchInst>(PredBB->getTerminator());
-    if (PredBr && PredBr->isUnconditional())
-      UnconditionalPreds.push_back(PredBB);
-    else
-      HaveNonUnconditionalPredecessors = true;
+/// Modified from UpdatePHINodes in BasicBlockUtils.cpp.
+/// Update the PHI nodes in OrigBB to include the values coming from NewBB.
+/// This also updates AliasAnalysis, if available.
+///           phi [ ..., %pred0 ], [ ..., %pred1 ], ...
+///                               to
+///           phi [ %phi, %sink.split ], ...
+static void UpdatePHINodes(BasicBlock *OrigBB, BasicBlock *NewBB,
+                           ArrayRef<BasicBlock *> Preds) {
+  // Otherwise, create a new PHI node in NewBB for each PHI node in OrigBB.
+  SmallPtrSet<BasicBlock *, 16> PredSet(llvm::from_range, Preds);
+  for (BasicBlock::iterator I = OrigBB->begin(); isa<PHINode>(I);) {
+    PHINode *PN = cast<PHINode>(I++);
+
+    // Check to see if all of the values coming in are the same.  If so, we
+    // don't need to create a new PHI node, unless it's needed for LCSSA.
+    Value *InVal = nullptr;
+    InVal = PN->getIncomingValueForBlock(Preds[0]);
+    for (unsigned i = 0, e = PN->getNumIncomingValues(); i != e; ++i) {
+      if (!PredSet.count(PN->getIncomingBlock(i)))
+        continue;
+      if (!InVal)
+        InVal = PN->getIncomingValue(i);
+      else if (InVal != PN->getIncomingValue(i)) {
+        InVal = nullptr;
+        break;
+      }
+    }
+
+    if (InVal) {
+      // If all incoming values for the new PHI would be the same, just don't
+      // make a new PHI.  Instead, just remove the incoming values from the old
+      // PHI.
+      PN->removeIncomingValueIf(
+          [&](unsigned Idx) {
+            return PredSet.contains(PN->getIncomingBlock(Idx));
+          },
+          /* DeletePHIIfEmpty */ false);
+
+      // Add an incoming value to the PHI node in the loop for the preheader
+      // edge.
+      PN->addIncoming(InVal, NewBB);
+      continue;
+    }
+
+    // If the values coming into the block are not the same, we need a new
+    // PHI.
+    // Create the new PHI node, insert it into NewBB at the end of the block
+    PHINode *NewPHI =
+        PHINode::Create(PN->getType(), Preds.size(), PN->getName() + ".ph",
+                        NewBB->getFirstInsertionPt());
+
+    // NOTE! This loop walks backwards for a reason! First off, this minimizes
+    // the cost of removal if we end up removing a large number of values, and
+    // second off, this ensures that the indices for the incoming values aren't
+    // invalidated when we remove one.
+    for (int64_t i = PN->getNumIncomingValues() - 1; i >= 0; --i) {
+      BasicBlock *IncomingBB = PN->getIncomingBlock(i);
+      if (PredSet.count(IncomingBB)) {
+        Value *V = PN->removeIncomingValue(i, false);
+        NewPHI->addIncoming(V, IncomingBB);
+      }
+    }
+
+    PN->addIncoming(NewPHI, NewBB);
   }
-  if (UnconditionalPreds.size() < 2)
+}
+
+/// Try to sink common instructions from predecessors of SinkBB into SinkBB.
+static bool trySinkFromPredsIntoBB(BasicBlock *SinkBB,
+                                   SmallVectorImpl<BasicBlock *> &Preds,
+                                   bool HaveNonUnconditionalPredecessors,
+                                   DomTreeUpdater *DTU) {
+  if (Preds.size() < 2)
     return false;
 
+  const bool IsConditionalPreds =
+      cast<BranchInst>(Preds[0]->getTerminator())->isConditional();
+
+  assert((!IsConditionalPreds || HaveNonUnconditionalPredecessors) &&
+         "HaveNonUnconditionalPredecessors must be true if IsConditionalPreds");
+
   // We take a two-step approach to tail sinking. First we scan from the end of
-  // each block upwards in lockstep. If the n'th instruction from the end of each
-  // block can be sunk, those instructions are added to ValuesToSink and we
+  // each block upwards in lockstep. If the n'th instruction from the end of
+  // each block can be sunk, those instructions are added to ValuesToSink and we
   // carry on. If we can sink an instruction but need to PHI-merge some operands
   // (because they're not identical in each instruction) we add these to
   // PHIOperands.
-  // We prepopulate PHIOperands with the phis that already exist in BB.
+  // We prepopulate PHIOperands with the phis that already exist in SinkBB.
   DenseMap<const Use *, SmallVector<Value *, 4>> PHIOperands;
-  for (PHINode &PN : BB->phis()) {
+  for (PHINode &PN : SinkBB->phis()) {
     SmallDenseMap<BasicBlock *, const Use *, 4> IncomingVals;
     for (const Use &U : PN.incoming_values())
       IncomingVals.insert({PN.getIncomingBlock(U), &U});
-    auto &Ops = PHIOperands[IncomingVals[UnconditionalPreds[0]]];
-    for (BasicBlock *Pred : UnconditionalPreds)
+    auto &Ops = PHIOperands[IncomingVals[Preds[0]]];
+    for (BasicBlock *Pred : Preds)
       Ops.push_back(*IncomingVals[Pred]);
   }
 
+  if (IsConditionalPreds) {
+    // If Preds are conditional, there might be no phi-uses for the last
+    // instruction, we need to add cond-br uses.
+    BranchInst *T0 = cast<BranchInst>(Preds[0]->getTerminator());
+    assert(T0->isConditional() && "Expected a conditional branch");
+    Use *Pred0Use = &T0->getOperandUse(0);
+    BasicBlock *ThenBB = T0->getSuccessor(0);
+    for (BasicBlock *Pred : Preds) {
+      BranchInst *BI = cast<BranchInst>(Pred->getTerminator());
+      assert(BI->isConditional() && "Expected a conditional branch");
+      if (BI->getSuccessor(0) != ThenBB) {
+        // br %cond1, label %common, label %end
+        //            mismatch
+        // br %cond2, label %end, label %common
+        // TODO: if %cond comes from outer block, we can rewrite the cond brs to
+        // make them match.
+        return false;
+      }
+      Use &U = BI->getOperandUse(0);
+      PHIOperands[Pred0Use].push_back(U);
+    }
+  }
+
   int ScanIdx = 0;
-  SmallPtrSet<Value*,4> InstructionsToSink;
-  LockstepReverseIterator<true> LRI(UnconditionalPreds);
-  while (LRI.isValid() &&
-         canSinkInstructions(*LRI, PHIOperands)) {
+  SmallPtrSet<Value *, 4> InstructionsToSink;
+  LockstepReverseIterator<true> LRI(Preds);
+  while (LRI.isValid() && canSinkInstructions(*LRI, PHIOperands)) {
     LLVM_DEBUG(dbgs() << "SINK: instruction can be sunk: " << *(*LRI)[0]
                       << "\n");
     InstructionsToSink.insert_range(*LRI);
@@ -2479,7 +2534,10 @@ static bool sinkCommonCodeFromPredecessors(BasicBlock *BB,
   if (ScanIdx == 0)
     return false;
 
-  bool followedByDeoptOrUnreachable = IsBlockFollowedByDeoptOrUnreachable(BB);
+  // NOTE: profitability is still based on the original BB (the final merge
+  // point), not the synthetic SinkBB we might introduce for (3).
+  bool followedByDeoptOrUnreachable =
+      IsBlockFollowedByDeoptOrUnreachable(SinkBB);
 
   if (!followedByDeoptOrUnreachable) {
     // Check whether this is the pointer operand of a load/store.
@@ -2612,9 +2670,47 @@ static bool sinkCommonCodeFromPredecessors(BasicBlock *BB,
     LLVM_DEBUG(dbgs() << "SINK: Splitting edge\n");
     // We have a conditional edge and we're going to sink some instructions.
     // Insert a new block postdominating all blocks we're going to sink from.
-    if (!SplitBlockPredecessors(BB, UnconditionalPreds, ".sink.split", DTU))
+    BasicBlock *SinkSplit =
+        SplitBlockPredecessors(SinkBB, Preds, ".sink.split", DTU);
+    if (!SinkSplit)
       // Edges couldn't be split.
       return false;
+    // If Preds are conditional, we need to preprocess them to make them
+    // unconditional branching to SinkSplit.
+    if (IsConditionalPreds) {
+      // Sink the cond br from Preds into SinkSplit
+      sinkLastInstruction(Preds, SinkSplit);
+      // Erase the legacy uncond br from SinkSplit
+      SinkSplit->getTerminator()->eraseFromParent();
+      BranchInst *NewBr = cast<BranchInst>(SinkSplit->getTerminator());
+      // Correct `br %cond, %sink.split, %common` to `br %cond, %end, %common`
+      NewBr->replaceSuccessorWith(SinkSplit, SinkBB);
+      // Connect Pred to SinkSplit with unconditional branches.
+      for (BasicBlock *Pred : Preds) {
+        assert(!Pred->getTerminator() &&
+               "Pred's terminator should be moved to SinkSplit");
+        BranchInst::Create(SinkSplit, Pred);
+      }
+      BasicBlock *CommonBlock = NewBr->getSuccessor(0) == SinkBB
+                                    ? NewBr->getSuccessor(1)
+                                    : NewBr->getSuccessor(0);
+      // Check if CommonBlock contains any PHIs.
+      if (!CommonBlock->phis().empty()) {
+        // Handle PHIs in Common
+        // phi [ ..., %pred0 ], [ ..., %pred1 ], ...
+        //                     to
+        // phi [ ..., %sink.split ], ...
+        UpdatePHINodes(CommonBlock, SinkSplit, Preds);
+      }
+      if (DTU) {
+        SmallVector<DominatorTree::UpdateType, 8> Updates;
+        Updates.reserve(1 + Preds.size());
+        Updates.push_back({DominatorTree::Insert, SinkSplit, CommonBlock});
+        for (BasicBlock *Pred : Preds)
+          Updates.push_back({DominatorTree::Delete, Pred, CommonBlock});
+        DTU->applyUpdates(Updates);
+      }
+    }
     Changed = true;
   }
 
@@ -2624,8 +2720,8 @@ static bool sinkCommonCodeFromPredecessors(BasicBlock *BB,
   // many PHI instructions to be generated (currently only one PHI is allowed
   // per sunk instruction).
   //
-  // We can use InstructionsToSink to discount values needing PHI-merging that will
-  // actually be sunk in a later iteration. This allows us to be more
+  // We can use InstructionsToSink to discount values needing PHI-merging that
+  // will actually be sunk in a later iteration. This allows us to be more
   // aggressive in what we sink. This does allow a false positive where we
   // sink presuming a later value will also be sunk, but stop half way through
   // and never actually sink it which means we produce more PHIs than intended.
@@ -2633,19 +2729,132 @@ static bool sinkCommonCodeFromPredecessors(BasicBlock *BB,
   int SinkIdx = 0;
   for (; SinkIdx != ScanIdx; ++SinkIdx) {
     LLVM_DEBUG(dbgs() << "SINK: Sink: "
-                      << *UnconditionalPreds[0]->getTerminator()->getPrevNode()
-                      << "\n");
+                      << *Preds[0]->getTerminator()->getPrevNode() << "\n");
 
     // Because we've sunk every instruction in turn, the current instruction to
     // sink is always at index 0.
     LRI.reset();
 
-    sinkLastInstruction(UnconditionalPreds);
+    sinkLastInstruction(Preds);
     NumSinkCommonInstrs++;
     Changed = true;
   }
   if (SinkIdx != 0)
     ++NumSinkCommonCode;
+  return Changed;
+}
+
+/// Check whether BB's predecessors end with branches. If it is
+/// true, sink any common code from the predecessors to BB.
+static bool sinkCommonCodeFromPredecessors(BasicBlock *BB,
+                                           DomTreeUpdater *DTU) {
+  // We support three situations:
+  //   (1) all incoming arcs are unconditional
+  //   (2) there are non-unconditional incoming arcs
+  //   (3) there are incoming conditional arcs P->BB, where P's other successor
+  //       unconditionally branches to BB
+  //
+  // (2) is very common in switch defaults and
+  // else-if patterns;
+  //
+  //   if (a) f(1);
+  //   else if (b) f(2);
+  //
+  // produces:
+  //
+  //       [if]
+  //      /    \
+  //    [f(1)] [if]
+  //      |     | \
+  //      |     |  |
+  //      |  [f(2)]|
+  //       \    | /
+  //        [ end ]
+  //
+  // [end] has two unconditional predecessor arcs and one conditional. The
+  // conditional refers to the implicit empty 'else' arc. This conditional
+  // arc can also be caused by an empty default block in a switch.
+  //
+  // In this case, we attempt to sink code from all *unconditional* arcs.
+  // If we can sink instructions from these arcs (determined during the scan
+  // phase below) we insert a common successor for all unconditional arcs and
+  // connect that to [end], to enable sinking:
+  //
+  //       [if]
+  //      /    \
+  //    [x(1)] [if]
+  //      |     | \
+  //      |     |  \
+  //      |  [x(2)] |
+  //       \   /    |
+  //   [sink.split] |
+  //         \     /
+  //         [ end ]
+  //
+  // (3) is common after SimplifyCFG merging some uncond blocks, e.g.:
+  //
+  //    [f(1)] [f(2)]
+  //      /\    /\
+  //     /  \  /  \
+  //    |  [comm]  |
+  //     \   |    /
+  //      \  |   /
+  //       [ end ]
+  //
+  // Here, [end] has incoming *conditional* arcs from [f(1)] and [f(2)], but the
+  // other successor ([comm]) unconditionally branches to [end].
+  // In this case, we attempt to sink from all such conditional predecessors by
+  // inserting a common successor for them (also named ".sink.split") and moving
+  // the conditional branch into that block:
+  //
+  //    [f(1)] [f(2)]
+  //       \    /
+  //     [sink.split]
+  //        /   \
+  //     [comm]  |
+  //        \   /
+  //       [ end ]
+  //
+  // This enables sinking from the (now) unconditional predecessors into
+  // [sink.split].
+
+  SmallVector<BasicBlock *, 4> UnconditionalPreds;
+  bool HaveNonUnconditionalPredecessors = false;
+
+  // For (3). Common successor -> related conditional predecessors.
+  SmallDenseMap<BasicBlock *, SmallVector<BasicBlock *, 4>, 2>
+      ConditionalPredsMap;
+
+  for (auto *PredBB : predecessors(BB)) {
+    auto *PredBr = dyn_cast<BranchInst>(PredBB->getTerminator());
+    if (PredBr && PredBr->isUnconditional()) {
+      UnconditionalPreds.push_back(PredBB);
+      continue;
+    }
+
+    HaveNonUnconditionalPredecessors = true;
+    if (!PredBr || PredBr->getNumSuccessors() != 2)
+      continue;
+    assert(PredBr->isConditional() && "Expected conditional branch");
+
+    // Try to match (3): PredBB has a conditional edge to BB, and the other
+    // successor unconditionally branches to BB.
+    BasicBlock *S0 = PredBr->getSuccessor(0), *S1 = PredBr->getSuccessor(1);
+    BasicBlock *Common = S0 == BB ? S1 : S0;
+
+    if (auto *CommonBr = dyn_cast<BranchInst>(Common->getTerminator()))
+      if (CommonBr->isUnconditional() && CommonBr->getSuccessor(0) == BB)
+        ConditionalPredsMap[Common].push_back(PredBB);
+  }
+
+  // First only unconditional preds (1) and (2).
+  bool Changed = trySinkFromPredsIntoBB(BB, UnconditionalPreds,
+                                        HaveNonUnconditionalPredecessors, DTU);
+
+  // Then attempt conditional preds (3).
+  for (auto &[_, ConditionalPreds] : ConditionalPredsMap)
+    Changed |= trySinkFromPredsIntoBB(BB, ConditionalPreds, true, DTU);
+
   return Changed;
 }
 
