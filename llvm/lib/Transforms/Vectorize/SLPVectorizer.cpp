@@ -5399,16 +5399,16 @@ private:
           // considered as non-commutative, operands reordering does not change
           // the semantics.
           assert(
-              (!IsCommutativeUser ||
-               (((::isCommutative(User) &&
-                  ::isCommutableOperand(User, User, 0) &&
-                  ::isCommutableOperand(User, User, 1)) ||
-                 (::isCommutative(TE->getMatchingMainOpOrAltOp(User), User) &&
-                  ::isCommutableOperand(TE->getMatchingMainOpOrAltOp(User),
-                                        User, 0) &&
-                  ::isCommutableOperand(TE->getMatchingMainOpOrAltOp(User),
-                                        User, 1))))) &&
-              "Expected commutative user with 2 first commutable operands");
+              !IsCommutativeUser ||
+              (((::isCommutative(User) &&
+                 ::isCommutableOperand(User, User, 0) &&
+                 ::isCommutableOperand(User, User, 1)) ||
+                (::isCommutative(TE->getMatchingMainOpOrAltOp(User), User) &&
+                 ::isCommutableOperand(TE->getMatchingMainOpOrAltOp(User), User,
+                                       0) &&
+                 ::isCommutableOperand(TE->getMatchingMainOpOrAltOp(User), User,
+                                       1)))) &&
+                  "Expected commutative user with 2 first commutable operands");
           bool IsCommutativeWithSameOps =
               IsCommutativeUser && User->getOperand(0) == User->getOperand(1);
           if ((!IsCommutativeUser || IsCommutativeWithSameOps) &&
