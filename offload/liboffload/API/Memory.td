@@ -139,6 +139,14 @@ def olMemFill : Function {
 
 def olMemRegister : Function {
   let desc = "Register and page-lock host memory so it can be accessible by the device.";
+  let details = [
+        "Pins host memory to optimize transfers and returns the device accessible",
+        "pointer that devices should use for memory transfers involving the host",
+        "pinned allocation. If the buffer intersects with other existing buffer,",
+        "a new user will be registered. A partial overlapping is not allowed.",
+        "The locked pointer can be accessed both on host and device and",
+        "no guarantees are made about consistency."
+  ];
   let params = [
     Param<"ol_device_handle_t", "Device", "handle of the device", PARAM_IN>,
     Param<"void *", "Ptr", "host pointer", PARAM_IN>,
@@ -155,6 +163,11 @@ def olMemRegister : Function {
 
 def olMemUnregister : Function {
   let desc = "Unregister and page-unlock host memory.";
+  let details = [
+        "Unpins host memory that was previously pinned or unregister the buffer",
+        "if other users are still using the buffer. If no users are using the buffer",
+        "the memory is unlocked."
+  ];
   let params = [
     Param<"ol_device_handle_t", "Device", "handle of the device", PARAM_IN>,
     Param<"void *", "Ptr", "host pointer", PARAM_IN>
