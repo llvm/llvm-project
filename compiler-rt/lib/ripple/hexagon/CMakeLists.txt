@@ -89,10 +89,12 @@ foreach(HEXAGON_ARCH_VERSION IN LISTS HEXAGON_ARCH_VERSIONS)
     continue()
   endif()
 
-  # Apply the special ripple flag only to HVX_Scatter_Gather
+  # Apply the special RIPPLE_FLAG only to source files that require
+  # ripple-specific implementation.
+  # Add more library names to the condition below as needed.
   foreach(SRC IN LISTS RIPPLE_RT_SOURCES)
     get_filename_component(_base "${SRC}" NAME_WE)
-    if(_base STREQUAL "HVX_Scatter_Gather")
+    if(_base STREQUAL "HVX_Scatter_Gather" OR _base STREQUAL "HVX_Bfloat")
       set_source_files_properties("${SRC}" PROPERTIES COMPILE_OPTIONS "${RIPPLE_FLAG}")
     endif()
   endforeach()
