@@ -102,11 +102,9 @@ DistributeLayoutAttr inferBroadCastSourceLayout(MLIRContext *context,
                                                 ArrayRef<int64_t> srcShape);
 
 /// Infers the source layout attribute for a reduction operation given the
-/// result layout attribute, result shape, source shape, and reduced dims.
+/// result layout attribute and reduced dims.
 DistributeLayoutAttr
-inferReductionSourceLayout(MLIRContext *context, DistributeLayoutAttr resLayout,
-                           ArrayRef<int64_t> resShape,
-                           ArrayRef<int64_t> srcShape,
+inferReductionSourceLayout(DistributeLayoutAttr resLayout,
                            SmallVector<int64_t> reduceDims);
 
 /// Infers the source layout attribute for a bitcast operation given the
@@ -123,6 +121,14 @@ DistributeLayoutAttr inferShapeCastSourceLayout(MLIRContext *context,
                                                 DistributeLayoutAttr resLayout,
                                                 ArrayRef<int64_t> resShape,
                                                 ArrayRef<int64_t> srcShape);
+
+/// Sets the the layout attribute for result based on a preferred Layout
+/// propagated from consumer
+/// the ouput must be a slice attribute
+SliceAttr
+reductionLayoutSetupRule(ArrayRef<int64_t> srcShape,
+                         SmallVector<int64_t> reductionDims,
+                         DistributeLayoutAttr consumerPreferredLayout);
 
 } // namespace xegpu
 

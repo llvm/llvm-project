@@ -128,6 +128,7 @@ public:
   }
 
   Attribute get() { return storage; }
+  void set(const xegpu::DistributeLayoutAttr &layout) { storage = layout; }
 };
 
 SmallVector<int> LayoutInfo::getLaneLayout() const {
@@ -607,25 +608,58 @@ void LayoutInfoPropagation::visitVectorMultiReductionOp(
       llvm::dyn_cast<VectorType>(reduction.getSourceVectorType());
   SmallVector<int64_t> reductionDims(reduction.getReductionDims().begin(),
                                      reduction.getReductionDims().end());
-  // xegpu::DistributeLayoutAttr operandLayout =
-  // xegpu::inferReductionSourceLayout(
-  //       reduction.getContext(),
-  //       dyn_cast<xegpu::DistributeLayoutAttr>(resultLayout.get()),
-  //       resultTy.getShape(),
-  //       sourceTy.getShape(),
-  //       reductionDims);
-  // We only consider 2D -> 1D reductions at this point.
 
-  if (!resultTy || resultTy.getRank() != 1) {
-    reduction.emitWarning("Expecting output type to be 1D vector.");
-    return;
+  auto srcShape = sourceTy.getShape();
+
+  LLVM_DEBUG(DBGS() << "visitVectorMultiReductionOp: srcShape = [";
+             for (auto dim
+                  : srcShape) llvm::dbgs()
+             << dim << " ";
+             llvm::dbgs() << "]\n");
+  LLVM_DEBUG(DBGS() << "visitVectorMultiReductionOp: reductionDims = [";
+             for (auto dim
+                  : reductionDims) llvm::dbgs()
+             << dim << " ";
+             llvm::dbgs() << "]\n");
+
+  auto resultLayoutAttr =
+      dyn_cast<xegpu::DistributeLayoutAttr>(resultLayout.get());
+
+  LLVM_DEBUG(DBGS() << "visitVectorMultiReductionOp: resultLayoutAttr = "
+                    << resultLayoutAttr << "\n");
+
+  // An dominant layout is for the result and represents the layout requirements
+  // for the operation it is recorded to anchor layout or temporary layout it
+  // must be honored for current op and may conflict with the layout propagated
+  // from consumer op the conflict is resolved in later phase by converting the
+  // dominant layout to the source layout
+
+  xegpu::DistributeLayoutAttr dominantLayout = xegpu::reductionLayoutSetupRule(
+      srcShape, reductionDims, resultLayoutAttr);
+
+  LLVM_DEBUG(DBGS() << "visitVectorMultiReductionOp: dominantLayout = "
+                    << dominantLayout << "\n");
+
+  if (layoutKind == LayoutKind::Lane) {
+    // only lane layout/data is considered
+    dominantLayout = dominantLayout.dropInstData();
+    dominantLayout = dominantLayout.dropSgLayoutAndData();
+  } else if (layoutKind == LayoutKind::InstData) {
+    dominantLayout = dominantLayout.dropSgLayoutAndData();
   }
-  auto uArch = getUArch(xegpu::getChipStr(reduction).value_or(""));
-  // Given that the result is 1D, the layout of the operand should be 2D with
-  // default layout.
-  LayoutInfo operandLayout = getDefaultSIMTLayoutInfo(
-      reduction->getContext(), 2, uArch->getSubgroupSize());
-  propagateIfChanged(operands[0], operands[0]->meet(operandLayout));
+
+  // record the dominant layout to the reduction op
+  xegpu::setTemporaryLayout(reduction->getResult(0), dominantLayout);
+
+  // derive the source layout from the dominant layout and reduction dims
+  auto srcLayoutAttr =
+      xegpu::inferReductionSourceLayout(dominantLayout, reductionDims);
+  // void set(const xegpu::DistributeLayoutAttr &layout) { storage = layout; }
+
+  LLVM_DEBUG(DBGS() << "visitVectorMultiReductionOp: srcLayoutAttr = "
+                    << srcLayoutAttr << "\n");
+
+  propagateIfChanged(operands[0], operands[0]->meet(LayoutInfo(srcLayoutAttr)));
   // Accumulator should have the same layout as the result.
   propagateIfChanged(operands[1], operands[1]->meet(resultLayout));
 }
@@ -637,6 +671,7 @@ void LayoutInfoPropagation::visitVectorBroadCastOp(
   LayoutInfo resultLayout = results[0]->getValue();
   if (!resultLayout.isAssigned())
     return;
+
   // Only consider vector to vector broadcasts for now.
   VectorType resultTy = broadcast.getResultVectorType();
   VectorType sourceTy = dyn_cast<VectorType>(broadcast.getSourceType());
@@ -644,20 +679,23 @@ void LayoutInfoPropagation::visitVectorBroadCastOp(
   if (!sourceTy)
     return;
 
-  // Hanlding broadcast from low-rank to high-rank (e.g., 1D to 2D) case.
-  if (sourceTy.getRank() != resultTy.getRank()) {
-    auto srcShape = sourceTy.getShape();
-    auto resShape = resultTy.getShape();
-    auto resultLayoutAttr =
-        dyn_cast<xegpu::DistributeLayoutAttr>(resultLayout.get());
+  auto srcShape = sourceTy.getShape();
+  auto resShape = resultTy.getShape();
 
-    xegpu::DistributeLayoutAttr sliceLayout = xegpu::inferBroadCastSourceLayout(
-        broadcast.getContext(), resultLayoutAttr, resShape, srcShape);
+  size_t dimDiff = resultTy.getRank() - sourceTy.getRank();
+  for (size_t i = 0; i < srcShape.size(); i++)
+    if ((srcShape[i] == 1) && (resShape[i + dimDiff] != 1))
+      broadcast.emitWarning("broadcast must either from low-rank or same-rank "
+                            "with unit-dim, mixed scenario is not supported!");
 
-    propagateIfChanged(operands[0], operands[0]->meet(LayoutInfo(sliceLayout)));
-    return;
-  }
-  propagateIfChanged(operands[0], operands[0]->meet(resultLayout));
+  auto resultLayoutAttr =
+      dyn_cast<xegpu::DistributeLayoutAttr>(resultLayout.get());
+
+  xegpu::DistributeLayoutAttr resLayout = xegpu::inferBroadCastSourceLayout(
+      broadcast.getContext(), resultLayoutAttr, resShape, srcShape);
+
+  propagateIfChanged(operands[0], operands[0]->meet(LayoutInfo(resLayout)));
+  return;
 }
 
 void LayoutInfoPropagation::visitShapeCastOp(
