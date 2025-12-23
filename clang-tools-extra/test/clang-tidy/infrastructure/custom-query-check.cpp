@@ -1,3 +1,5 @@
+// sed command does not work as-is on Windows.
+// UNSUPPORTED: system-windows
 // REQUIRES: custom-check
 
 // RUN: sed -e "s:INPUT_DIR:%S/Inputs/custom-query-check:g" -e "s:OUT_DIR:%t:g" -e "s:MAIN_FILE:%s:g" %S/Inputs/custom-query-check/vfsoverlay.yaml > %t.yaml
