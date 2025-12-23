@@ -98,11 +98,12 @@ static void insertComment(Object &Description, json::Value &Comment,
   // The comment has a Children array for the actual text, with meta attributes
   // alongside it in the Object.
   if (auto *Obj = Comment.getAsObject()) {
-    if (auto *Children = Obj->getArray("Children"); Children->empty())
+    if (auto *Children = Obj->getArray("Children");
+        Children && Children->empty())
       return;
   }
   // The comment is just an array of text comments.
-  else if (auto *Array = Comment.getAsArray(); Array->empty()) {
+  else if (auto *Array = Comment.getAsArray(); Array && Array->empty()) {
     return;
   }
 

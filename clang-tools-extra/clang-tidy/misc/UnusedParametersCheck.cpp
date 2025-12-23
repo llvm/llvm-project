@@ -148,9 +148,8 @@ void UnusedParametersCheck::warnOnUnusedParameter(
     return;
   auto MyDiag = diag(Param->getLocation(), "parameter %0 is unused") << Param;
 
-  if (!Indexer) {
+  if (!Indexer)
     Indexer = std::make_unique<IndexerVisitor>(*Result.Context);
-  }
 
   // Cannot remove parameter for non-local functions.
   if (Function->isExternallyVisible() ||
