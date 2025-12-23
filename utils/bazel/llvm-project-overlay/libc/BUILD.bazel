@@ -1106,6 +1106,16 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_alloc_checker",
+    hdrs = ["src/__support/alloc-checker.h"],
+    deps = [
+        ":__support_cpp_new",
+        ":__support_cpp_type_traits",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
     name = "__support_file_linux_lseekimpl",
     hdrs = ["src/__support/File/linux/lseekImpl.h"],
     deps = [
