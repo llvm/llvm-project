@@ -228,7 +228,7 @@ define amdgpu_kernel void @recip_sqrt(ptr addrspace(1) %out, float %src) nounwin
 ; R600-NEXT:     LSHR T0.X, KC0[2].Y, literal.x,
 ; R600-NEXT:     RECIPSQRT_IEEE * T1.X, KC0[2].Z,
 ; R600-NEXT:    2(2.802597e-45), 0(0.000000e+00)
-  %sqrt = call arcp float @llvm.sqrt.f32(float %src)
+  %sqrt = call float @llvm.sqrt.f32(float %src)
   %recipsqrt = fdiv fast float 1.0, %sqrt
   store float %recipsqrt, ptr addrspace(1) %out, align 4
   ret void

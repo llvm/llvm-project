@@ -981,7 +981,7 @@ define float @v_fdiv_recip_sqrt_f32_arcp_fdiv_only(float %x) {
 ; IR-DAZ-GISEL-NEXT:    v_div_fmas_f32 v1, v1, v2, v4
 ; IR-DAZ-GISEL-NEXT:    v_div_fixup_f32 v0, v1, v0, 1.0
 ; IR-DAZ-GISEL-NEXT:    s_setpc_b64 s[30:31]
-  %sqrt = call arcp float @llvm.sqrt.f32(float %x)
+  %sqrt = call float @llvm.sqrt.f32(float %x)
   %fdiv = fdiv arcp float 1.0, %sqrt
   ret float %fdiv
 }
@@ -1297,7 +1297,7 @@ define float @v_fdiv_recip_sqrt_f32_arcp_afn_fdiv_only(float %x) {
 ; IR-DAZ-GISEL-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
 ; IR-DAZ-GISEL-NEXT:    v_rcp_f32_e32 v0, v0
 ; IR-DAZ-GISEL-NEXT:    s_setpc_b64 s[30:31]
-  %sqrt = call arcp float @llvm.sqrt.f32(float %x)
+  %sqrt = call float @llvm.sqrt.f32(float %x)
   %fdiv = fdiv arcp afn float 1.0, %sqrt
   ret float %fdiv
 }

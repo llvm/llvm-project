@@ -53,7 +53,7 @@ define double @test_rsqrt64(double %a) {
 ; CHECK-NEXT:    rsqrt.approx.f64 %rd2, %rd1;
 ; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
-  %val = tail call arcp double @llvm.sqrt.f64(double %a)
+  %val = tail call double @llvm.sqrt.f64(double %a)
   %ret = fdiv arcp double 1.0, %val
   ret double %ret
 }
@@ -69,7 +69,7 @@ define double @test_rsqrt64_ftz(double %a) #1 {
 ; CHECK-NEXT:    rsqrt.approx.f64 %rd2, %rd1;
 ; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
-  %val = tail call arcp double @llvm.sqrt.f64(double %a)
+  %val = tail call double @llvm.sqrt.f64(double %a)
   %ret = fdiv arcp double 1.0, %val
   ret double %ret
 }
@@ -228,7 +228,7 @@ define float @test_rsqrt32_refined(float %a) #2 {
 ; CHECK-NEXT:    mul.f32 %r6, %r5, %r4;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r6;
 ; CHECK-NEXT:    ret;
-  %val = tail call arcp float @llvm.sqrt.f32(float %a)
+  %val = tail call float @llvm.sqrt.f32(float %a)
   %ret = fdiv arcp contract float 1.0, %val
   ret float %ret
 }
@@ -283,7 +283,7 @@ define double @test_rsqrt64_refined(double %a) #2 {
 ; CHECK-NEXT:    mul.f64 %rd6, %rd5, %rd4;
 ; CHECK-NEXT:    st.param.b64 [func_retval0], %rd6;
 ; CHECK-NEXT:    ret;
-  %val = tail call arcp double @llvm.sqrt.f64(double %a)
+  %val = tail call double @llvm.sqrt.f64(double %a)
   %ret = fdiv arcp contract double 1.0, %val
   ret double %ret
 }
@@ -340,7 +340,7 @@ define float @test_rsqrt32_refined_ftz(float %a) #1 #2 {
 ; CHECK-NEXT:    mul.ftz.f32 %r6, %r5, %r4;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r6;
 ; CHECK-NEXT:    ret;
-  %val = tail call arcp float @llvm.sqrt.f32(float %a)
+  %val = tail call float @llvm.sqrt.f32(float %a)
   %ret = fdiv arcp contract float 1.0, %val
   ret float %ret
 }
@@ -395,7 +395,7 @@ define double @test_rsqrt64_refined_ftz(double %a) #1 #2 {
 ; CHECK-NEXT:    mul.f64 %rd6, %rd5, %rd4;
 ; CHECK-NEXT:    st.param.b64 [func_retval0], %rd6;
 ; CHECK-NEXT:    ret;
-  %val = tail call arcp double @llvm.sqrt.f64(double %a)
+  %val = tail call double @llvm.sqrt.f64(double %a)
   %ret = fdiv arcp contract double 1.0, %val
   ret double %ret
 }

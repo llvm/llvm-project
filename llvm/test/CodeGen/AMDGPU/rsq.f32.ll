@@ -194,8 +194,8 @@ define amdgpu_kernel void @rsqrt_fmul(ptr addrspace(1) %out, ptr addrspace(1) %i
   %b = load volatile float, ptr addrspace(1) %gep.1
   %c = load volatile float, ptr addrspace(1) %gep.2
 
-  %x = call arcp contract float @llvm.sqrt.f32(float %a)
-  %y = fmul arcp contract float %x, %b
+  %x = call contract float @llvm.sqrt.f32(float %a)
+  %y = fmul contract float %x, %b
   %z = fdiv arcp afn contract float %c, %y
   store float %z, ptr addrspace(1) %out.gep
   ret void
@@ -756,7 +756,7 @@ define { float, float } @v_rsq_f32_multi_use(float %val) {
 ; CI-IEEE-SAFE-NEXT:    v_sub_i32_e32 v2, vcc, 0, v2
 ; CI-IEEE-SAFE-NEXT:    v_ldexp_f32_e32 v1, v1, v2
 ; CI-IEEE-SAFE-NEXT:    s_setpc_b64 s[30:31]
-  %sqrt = call arcp afn contract float @llvm.sqrt.f32(float %val), !fpmath !1
+  %sqrt = call afn contract float @llvm.sqrt.f32(float %val), !fpmath !1
   %insert.0 = insertvalue { float, float } poison, float %sqrt, 0
   %div = fdiv arcp afn contract float 1.0, %sqrt, !fpmath !1
   %insert.1 = insertvalue { float, float } %insert.0, float %div, 1
@@ -838,7 +838,7 @@ define float @v_rsq_f32_missing_contract0(float %val) {
 ; CI-IEEE-SAFE-NEXT:    v_sub_i32_e32 v0, vcc, 0, v0
 ; CI-IEEE-SAFE-NEXT:    v_ldexp_f32_e32 v0, v1, v0
 ; CI-IEEE-SAFE-NEXT:    s_setpc_b64 s[30:31]
-  %sqrt = call arcp afn float @llvm.sqrt.f32(float %val), !fpmath !1
+  %sqrt = call afn float @llvm.sqrt.f32(float %val), !fpmath !1
   %div = fdiv arcp afn contract float 1.0, %sqrt, !fpmath !1
   ret float %div
 }
@@ -855,7 +855,7 @@ define float @v_rsq_f32_missing_contract1(float %val) {
 ; GCN-IEEE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-IEEE-NEXT:    v_rsq_f32_e32 v0, v0
 ; GCN-IEEE-NEXT:    s_setpc_b64 s[30:31]
-  %sqrt = call arcp afn contract float @llvm.sqrt.f32(float %val), !fpmath !1
+  %sqrt = call afn contract float @llvm.sqrt.f32(float %val), !fpmath !1
   %div = fdiv arcp afn float 1.0, %sqrt, !fpmath !1
   ret float %div
 }

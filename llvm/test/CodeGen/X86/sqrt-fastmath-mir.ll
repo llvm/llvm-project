@@ -114,7 +114,7 @@ define float @rsqrt_ieee(float %f) #0 {
   ; CHECK-NEXT:   [[VMULSSrr5:%[0-9]+]]:fr32 = nnan ninf nsz arcp contract afn reassoc nofpexcept VMULSSrr killed [[VMULSSrr4]], killed [[VFMADD213SSr1]], implicit $mxcsr
   ; CHECK-NEXT:   $xmm0 = COPY [[VMULSSrr5]]
   ; CHECK-NEXT:   RET 0, $xmm0
-  %sqrt = tail call arcp float @llvm.sqrt.f32(float %f)
+  %sqrt = tail call float @llvm.sqrt.f32(float %f)
   %div = fdiv fast float 1.0, %sqrt
   ret float %div
 }
@@ -139,7 +139,7 @@ define float @rsqrt_daz(float %f) #1 {
   ; CHECK-NEXT:   [[VMULSSrr5:%[0-9]+]]:fr32 = nnan ninf nsz arcp contract afn reassoc nofpexcept VMULSSrr killed [[VMULSSrr4]], killed [[VFMADD213SSr1]], implicit $mxcsr
   ; CHECK-NEXT:   $xmm0 = COPY [[VMULSSrr5]]
   ; CHECK-NEXT:   RET 0, $xmm0
-  %sqrt = tail call arcp float @llvm.sqrt.f32(float %f)
+  %sqrt = tail call float @llvm.sqrt.f32(float %f)
   %div = fdiv fast float 1.0, %sqrt
   ret float %div
 }

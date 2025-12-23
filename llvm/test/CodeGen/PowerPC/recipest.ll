@@ -163,8 +163,8 @@ define double @foof_fmf(double %a, float %b) nounwind {
 ; CHECK-P9-NEXT:    xsmulsp f0, f0, f3
 ; CHECK-P9-NEXT:    xsmuldp f1, f1, f0
 ; CHECK-P9-NEXT:    blr
-  %x = tail call contract reassoc arcp float @llvm.sqrt.f32(float %b)
-  %y = fpext reassoc arcp float %x to double
+  %x = call contract reassoc arcp float @llvm.sqrt.f32(float %b)
+  %y = fpext arcp float %x to double
   %r = fdiv contract reassoc arcp double %a, %y
   ret double %r
 }
@@ -188,7 +188,7 @@ define double @foof_safe(double %a, float %b) nounwind {
 ; CHECK-P9-NEXT:    xsdivdp f1, f1, f0
 ; CHECK-P9-NEXT:    blr
   %x = call float @llvm.sqrt.f32(float %b)
-  %y = fpext arcp float %x to double
+  %y = fpext float %x to double
   %r = fdiv double %a, %y
   ret double %r
 }
@@ -253,7 +253,7 @@ define float @food_fmf(float %a, double %b) nounwind {
 ; CHECK-P9-NEXT:    xsmulsp f1, f1, f0
 ; CHECK-P9-NEXT:    blr
   %x = call contract reassoc arcp double @llvm.sqrt.f64(double %b)
-  %y = fptrunc arcp double %x to float
+  %y = fptrunc double %x to float
   %r = fdiv contract reassoc arcp float %a, %y
   ret float %r
 }
@@ -280,7 +280,7 @@ define float @food_safe(float %a, double %b) nounwind {
 ; CHECK-P9-NEXT:    xsdivsp f1, f1, f0
 ; CHECK-P9-NEXT:    blr
   %x = call double @llvm.sqrt.f64(double %b)
-  %y = fptrunc arcp double %x to float
+  %y = fptrunc double %x to float
   %r = fdiv float %a, %y
   ret float %r
 }
@@ -433,7 +433,7 @@ define float @rsqrt_fmul_fmf(float %a, float %b, float %c) {
 ; CHECK-P9-NEXT:    xsmulsp f1, f3, f4
 ; CHECK-P9-NEXT:    blr
   %x = call contract reassoc arcp nsz float @llvm.sqrt.f32(float %a)
-  %y = fmul contract reassoc arcp nsz float %x, %b
+  %y = fmul contract reassoc nsz float %x, %b
   %z = fdiv contract reassoc arcp nsz ninf float %c, %y
   ret float %z
 }

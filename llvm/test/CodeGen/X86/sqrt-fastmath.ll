@@ -333,7 +333,7 @@ define float @f32_estimate(float %x) #1 {
 ; AVX512-NEXT:    vmulss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
 ; AVX512-NEXT:    vmulss %xmm0, %xmm1, %xmm0
 ; AVX512-NEXT:    retq
-  %sqrt = tail call fast float @llvm.sqrt.f32(float %x)
+  %sqrt = tail call float @llvm.sqrt.f32(float %x)
   %div = fdiv fast float 1.0, %sqrt
   ret float %div
 }
@@ -366,7 +366,7 @@ define <4 x float> @v4f32_no_estimate(<4 x float> %x) #0 {
 ; AVX-NEXT:    vbroadcastss {{.*#+}} xmm1 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0]
 ; AVX-NEXT:    vdivps %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    retq
-  %sqrt = tail call fast <4 x float> @llvm.sqrt.v4f32(<4 x float> %x)
+  %sqrt = tail call <4 x float> @llvm.sqrt.v4f32(<4 x float> %x)
   %div = fdiv fast <4 x float> <float 1.0, float 1.0, float 1.0, float 1.0>, %sqrt
   ret <4 x float> %div
 }
@@ -402,7 +402,7 @@ define <4 x float> @v4f32_estimate(<4 x float> %x) #1 {
 ; AVX512-NEXT:    vmulps %xmm0, %xmm1, %xmm0
 ; AVX512-NEXT:    vmulps %xmm2, %xmm0, %xmm0
 ; AVX512-NEXT:    retq
-  %sqrt = tail call fast <4 x float> @llvm.sqrt.v4f32(<4 x float> %x)
+  %sqrt = tail call <4 x float> @llvm.sqrt.v4f32(<4 x float> %x)
   %div = fdiv fast <4 x float> <float 1.0, float 1.0, float 1.0, float 1.0>, %sqrt
   ret <4 x float> %div
 }
@@ -467,7 +467,7 @@ define <8 x float> @v8f32_no_estimate(<8 x float> %x) #0 {
 ; AVX512-NEXT:    vbroadcastss {{.*#+}} ymm1 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
 ; AVX512-NEXT:    vdivps %ymm0, %ymm1, %ymm0
 ; AVX512-NEXT:    retq
-  %sqrt = tail call fast <8 x float> @llvm.sqrt.v8f32(<8 x float> %x)
+  %sqrt = tail call <8 x float> @llvm.sqrt.v8f32(<8 x float> %x)
   %div = fdiv fast <8 x float> <float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0>, %sqrt
   ret <8 x float> %div
 }
@@ -511,7 +511,7 @@ define <8 x float> @v8f32_estimate(<8 x float> %x) #1 {
 ; AVX512-NEXT:    vmulps %ymm3, %ymm1, %ymm0
 ; AVX512-NEXT:    vmulps %ymm2, %ymm0, %ymm0
 ; AVX512-NEXT:    retq
-  %sqrt = tail call fast <8 x float> @llvm.sqrt.v8f32(<8 x float> %x)
+  %sqrt = tail call <8 x float> @llvm.sqrt.v8f32(<8 x float> %x)
   %div = fdiv fast <8 x float> <float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0>, %sqrt
   ret <8 x float> %div
 }
@@ -610,7 +610,7 @@ define <16 x float> @v16f32_estimate(<16 x float> %x) #1 {
 ; AVX512-NEXT:    vmulps {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm1, %zmm1
 ; AVX512-NEXT:    vmulps %zmm0, %zmm1, %zmm0
 ; AVX512-NEXT:    retq
-  %sqrt = tail call fast <16 x float> @llvm.sqrt.v16f32(<16 x float> %x)
+  %sqrt = tail call <16 x float> @llvm.sqrt.v16f32(<16 x float> %x)
   %div = fdiv fast <16 x float> <float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0>, %sqrt
   ret <16 x float> %div
 }
@@ -656,8 +656,8 @@ define float @div_sqrt_fabs_f32(float %x, float %y, float %z) {
 ; AVX512-NEXT:    vmulss %xmm2, %xmm0, %xmm0
 ; AVX512-NEXT:    vmulss %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    retq
-  %s = call arcp reassoc float @llvm.sqrt.f32(float %z)
-  %a = call float @llvm.fabs.f32(float %y)
+  %s = call fast float @llvm.sqrt.f32(float %z)
+  %a = call fast float @llvm.fabs.f32(float %y)
   %m = fmul fast float %s, %a
   %d = fdiv fast float %x, %m
   ret float %d
@@ -705,9 +705,9 @@ define <4 x float> @div_sqrt_fabs_v4f32(<4 x float> %x, <4 x float> %y, <4 x flo
 ; AVX512-NEXT:    vmulps %xmm3, %xmm1, %xmm1
 ; AVX512-NEXT:    vmulps %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    retq
-  %s = call arcp reassoc <4 x float> @llvm.sqrt.v4f32(<4 x float> %z)
+  %s = call <4 x float> @llvm.sqrt.v4f32(<4 x float> %z)
   %a = call <4 x float> @llvm.fabs.v4f32(<4 x float> %y)
-  %m = fmul contract reassoc arcp <4 x float> %a, %s
+  %m = fmul contract reassoc <4 x float> %a, %s
   %d = fdiv contract reassoc arcp <4 x float> %x, %m
   ret <4 x float> %d
 }
@@ -759,9 +759,9 @@ define <4 x float> @div_sqrt_fabs_v4f32_fmf(<4 x float> %x, <4 x float> %y, <4 x
 ; AVX512-NEXT:    vdivps %xmm1, %xmm2, %xmm1
 ; AVX512-NEXT:    vmulps %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    retq
-  %s = call arcp <4 x float> @llvm.sqrt.v4f32(<4 x float> %z)
+  %s = call <4 x float> @llvm.sqrt.v4f32(<4 x float> %z)
   %a = call <4 x float> @llvm.fabs.v4f32(<4 x float> %y)
-  %m = fmul arcp <4 x float> %a, %s
+  %m = fmul <4 x float> %a, %s
   %d = fdiv arcp <4 x float> %x, %m
   ret <4 x float> %d
 }
@@ -888,8 +888,8 @@ define <4 x float> @div_sqrt_v4f32(<4 x float> %x, <4 x float> %y) {
 ; AVX512-NEXT:    vmulps %xmm3, %xmm1, %xmm1
 ; AVX512-NEXT:    vmulps %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    retq
-  %s = call fast <4 x float> @llvm.sqrt.v4f32(<4 x float> %y)
-  %m = fmul contract reassoc arcp <4 x float> %y, %s
+  %s = call <4 x float> @llvm.sqrt.v4f32(<4 x float> %y)
+  %m = fmul contract reassoc <4 x float> %y, %s
   %d = fdiv contract reassoc arcp <4 x float> %x, %m
   ret <4 x float> %d
 }
@@ -919,7 +919,7 @@ define <2 x double> @sqrt_fdiv_common_operand_vec(<2 x double> %x) nounwind {
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vsqrtpd %xmm0, %xmm0
 ; AVX-NEXT:    retq
-  %sqrt = call fast <2 x double> @llvm.sqrt.v2f64(<2 x double> %x)
+  %sqrt = call <2 x double> @llvm.sqrt.v2f64(<2 x double> %x)
   %r = fdiv arcp nsz reassoc <2 x double> %x, %sqrt
   ret <2 x double> %r
 }

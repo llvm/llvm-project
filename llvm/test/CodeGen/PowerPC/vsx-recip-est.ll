@@ -23,7 +23,7 @@ entry:
   store float %f, ptr %f.addr, align 4
   %0 = load float, ptr %f.addr, align 4
   %1 = load float, ptr @b, align 4
-  %2 = call arcp float @llvm.sqrt.f32(float %1)
+  %2 = call float @llvm.sqrt.f32(float %1)
   %div = fdiv arcp float %0, %2
   ret float %div
 ; CHECK-LABEL: @emit_xsrsqrtesp
@@ -51,7 +51,7 @@ entry:
   store double %f, ptr %f.addr, align 8
   %0 = load double, ptr %f.addr, align 8
   %1 = load double, ptr @d, align 8
-  %2 = call arcp double @llvm.sqrt.f64(double %1)
+  %2 = call double @llvm.sqrt.f64(double %1)
   %div = fdiv arcp double %0, %2
   ret double %div
 ; CHECK-LABEL: @emit_xsrsqrtedp

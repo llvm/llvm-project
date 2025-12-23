@@ -99,7 +99,7 @@ define dso_local float @not_so_fast_recip_sqrt(float %x) {
 ; X86-NEXT:    fxch %st(1)
 ; X86-NEXT:    fstps sqrt1
 ; X86-NEXT:    retl
-  %y = call arcp float @llvm.sqrt.f32(float %x)
+  %y = call float @llvm.sqrt.f32(float %x)
   %z = fdiv fast float 1.0, %y
   store float %y, ptr @sqrt1, align 4
   %ret = fadd float %z , 14.5
