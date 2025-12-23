@@ -1482,6 +1482,7 @@ MicrosoftARMleTargetInfo::MicrosoftARMleTargetInfo(const llvm::Triple &Triple,
                                                    const TargetOptions &Opts)
     : WindowsARMTargetInfo(Triple, Opts) {
   TheCXXABI.set(TargetCXXABI::Microsoft);
+  HasMicrosoftRecordLayout = true;
 }
 
 void MicrosoftARMleTargetInfo::getTargetDefines(const LangOptions &Opts,

@@ -1701,6 +1701,7 @@ MicrosoftARM64TargetInfo::MicrosoftARM64TargetInfo(const llvm::Triple &Triple,
                                                    const TargetOptions &Opts)
     : WindowsARM64TargetInfo(Triple, Opts) {
   TheCXXABI.set(TargetCXXABI::Microsoft);
+  HasMicrosoftRecordLayout = true;
 }
 
 void MicrosoftARM64TargetInfo::getTargetDefines(const LangOptions &Opts,

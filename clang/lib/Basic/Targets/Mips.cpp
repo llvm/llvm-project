@@ -353,6 +353,7 @@ MicrosoftMipsTargetInfo::MicrosoftMipsTargetInfo(const llvm::Triple &Triple,
                                                  const TargetOptions &Opts)
     : WindowsMipsTargetInfo(Triple, Opts) {
   TheCXXABI.set(TargetCXXABI::Microsoft);
+  HasMicrosoftRecordLayout = true;
 }
 
 void MicrosoftMipsTargetInfo::getTargetDefines(const LangOptions &Opts,

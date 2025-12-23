@@ -845,6 +845,7 @@ public:
     // intend to offer flexibility by supporting choices that are not default in
     // Windows target in the future.
     this->TheCXXABI.set(TargetCXXABI::Microsoft);
+    this->HasMicrosoftRecordLayout = true;
     LongWidth = LongAlign = 32;
     DoubleAlign = LongLongAlign = 64;
     LongDoubleWidth = LongDoubleAlign = 64;
