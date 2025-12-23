@@ -222,59 +222,44 @@ class PointerIntPairSynthProvider:
             return 1
         return None
 
-    def _is_valid(self) -> bool:
-        return (
-            self.value
-            and self.pointer_ty
-            and self.int_ty
-            and self.pointer_bit_mask
-            and self.int_shift
-            and self.int_mask
-        )
-
-    def _get_pointer(self):
+    def _get_raw_value(self):
         data: SBData = self.value.GetData()
         error = lldb.SBError()
         raw_bytes = data.ReadRawData(error, 0, self.ptr_size)
         if error.Fail():
             return None
 
-        unmasked_pointer = int.from_bytes(raw_bytes, self.byteorder)
-        return unmasked_pointer & self.pointer_bit_mask.GetValueAsUnsigned()
+        return raw_bytes
 
-    def _get_int(self):
-        data: SBData = self.value.GetData()
-        error = lldb.SBError()
-        raw_bytes = data.ReadRawData(error, 0, self.ptr_size)
-        if error.Fail():
-            return None
+    def _get_pointer(self, pointer_bit_mask: int, pointer_ty: SBType):
+        raw_bytes = self._get_raw_value()
+        if raw_bytes is None:
+            return
 
         unmasked_pointer = int.from_bytes(raw_bytes, self.byteorder)
-        return (
-            unmasked_pointer >> self.int_shift.GetValueAsUnsigned()
-        ) & self.int_mask.GetValueAsUnsigned()
+        pointer_value = unmasked_pointer & pointer_bit_mask
+
+        data = lldb.SBData()
+        data.SetDataFromUInt64Array([pointer_value])
+        return self.valobj.CreateValueFromData("Pointer", data, pointer_ty)
+
+    def _get_int(self, int_shift: int, int_mask: int, int_ty: SBType):
+        raw_bytes = self._get_raw_value()
+        if raw_bytes is None:
+            return
+
+        unmasked_pointer = int.from_bytes(raw_bytes, self.byteorder)
+        int_value = (unmasked_pointer >> int_shift) & int_mask
+
+        data = lldb.SBData()
+        data.SetDataFromUInt64Array([int_value])
+        return self.valobj.CreateValueFromData("Int", data, int_ty)
 
     def get_child_at_index(self, index):
-        if not self._is_valid():
-            return None
-
         if index == 0:
-            pointer_value = self._get_pointer()
-            if pointer_value is None:
-                return None
-
-            data = lldb.SBData()
-            data.SetDataFromUInt64Array([pointer_value])
-            return self.valobj.CreateValueFromData("Pointer", data, self.pointer_ty)
+            return self.pointer_valobj
         if index == 1:
-            int_value = self._get_int()
-            if int_value is None:
-                return None
-
-            data = lldb.SBData()
-            data.SetDataFromUInt64Array([int_value])
-            return self.valobj.CreateValueFromData("Int", data, self.int_ty)
-
+            return self.int_valobj
         return None
 
     def update(self):
@@ -285,30 +270,53 @@ class PointerIntPairSynthProvider:
         )
         self.ptr_size = self.valobj.target.GetAddressByteSize()
         self.value: SBValue = self.valobj.GetChildMemberWithName("Value")
-        self.pointer_ty: SBType = self.valobj.GetType().GetTemplateArgumentType(0)
-        self.int_ty: SBType = self.valobj.GetType().GetTemplateArgumentType(2)
+        if not self.value:
+            return
 
-        pointer_info = self.valobj.GetType().GetTemplateArgumentType(4)
+        valobj_type = self.valobj.GetType()
+
+        pointer_ty: SBType = valobj_type.GetTemplateArgumentType(0)
+        if not pointer_ty:
+            return
+
+        int_ty: SBType = valobj_type.GetTemplateArgumentType(2)
+        if not int_ty:
+            return
+
+        pointer_info = valobj_type.GetTemplateArgumentType(4)
+        if not pointer_info:
+            return
+
         mask_and_shift_constants = pointer_info.FindDirectNestedType(
             "MaskAndShiftConstants"
         ).GetEnumMembers()
 
         # FIXME: SBAPI should provide a way to retrieve an enum member
         # by name.
-        self.pointer_bit_mask: SBTypeEnumMember = (
+        pointer_bit_mask: SBTypeEnumMember = (
             mask_and_shift_constants.GetTypeEnumMemberAtIndex(0)
         )
-        assert self.pointer_bit_mask.name == "PointerBitMask"
+        if pointer_bit_mask.name != "PointerBitMask":
+            return
 
-        self.int_shift: SBTypeEnumMember = (
-            mask_and_shift_constants.GetTypeEnumMemberAtIndex(1)
+        int_shift: SBTypeEnumMember = mask_and_shift_constants.GetTypeEnumMemberAtIndex(
+            1
         )
-        assert self.int_shift.name == "IntShift"
+        if int_shift.name != "IntShift":
+            return
 
-        self.int_mask: SBTypeEnumMember = (
-            mask_and_shift_constants.GetTypeEnumMemberAtIndex(2)
+        int_mask: SBTypeEnumMember = mask_and_shift_constants.GetTypeEnumMemberAtIndex(
+            2
         )
-        assert self.int_mask.name == "IntMask"
+        if int_mask.name != "IntMask":
+            return
+
+        self.pointer_valobj = self._get_pointer(
+            pointer_bit_mask.GetValueAsUnsigned(), pointer_ty
+        )
+        self.int_valobj = self._get_int(
+            int_shift.GetValueAsUnsigned(), int_mask.GetValueAsUnsigned(), int_ty
+        )
 
 
 def DenseMapSummary(valobj: lldb.SBValue, _) -> str:
