@@ -38,11 +38,13 @@ SBVariableAnnotator::~SBVariableAnnotator() = default;
 SBVariableAnnotator::operator bool() const {
   LLDB_INSTRUMENT_VA(this);
 
-  return IsValid();
+  return m_opaque_sp.get() != nullptr;
 }
 
-// TODO: implement
-bool lldb::SBVariableAnnotator::IsValid() const { return false; }
+bool lldb::SBVariableAnnotator::IsValid() const {
+  LLDB_INSTRUMENT_VA(this);
+  return this->operator bool();
+}
 
 lldb::SBStructuredData
 lldb::SBVariableAnnotator::AnnotateStructured(SBInstruction inst) {
