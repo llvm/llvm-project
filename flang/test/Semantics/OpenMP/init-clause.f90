@@ -10,7 +10,7 @@ end
 subroutine f01
   integer :: x, y, z
   !ERROR: DEPOBJ syntax with no argument is not handled yet
-  !ERROR: 'DEPOBJ' is not am allowed value of the 'depinfo-modifier' modifier
+  !ERROR: 'DEPOBJ' is not an allowed value of the 'depinfo-modifier' modifier
   !$omp depobj init(depobj(y): z)
 end
 
