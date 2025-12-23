@@ -33,7 +33,7 @@ using namespace sema;
 
 static bool hasMatchingEnvironmentOrNone(const ASTContext &Context,
                                          const AvailabilityAttr *AA) {
-  IdentifierInfo *IIEnvironment = AA->getEnvironment();
+  const IdentifierInfo *IIEnvironment = AA->getEnvironment();
   auto Environment = Context.getTargetInfo().getTriple().getEnvironment();
   if (!IIEnvironment || Environment == llvm::Triple::UnknownEnvironment)
     return true;
