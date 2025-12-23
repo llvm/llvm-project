@@ -61,5 +61,5 @@ Options
 
 .. option:: AnalyzeTypes
 
-  (C++-only) Whether to suggest giving user-defined types (structs,
+  (C++ only) Whether to suggest giving user-defined types (structs,
   classes, unions, and enums) internal linkage. Default is `true`.
