@@ -35,7 +35,7 @@ static constexpr StringRef InitExprName = "init_expr";
 /// \p Backwards indicates whether to match the VarDecls in reverse order.
 template <typename Iterator>
 static bool matchNVarDeclStartingWith(
-    Iterator Iter, Iterator EndIter,
+    Iterator Iter, const Iterator &EndIter,
     ArrayRef<ast_matchers::internal::Matcher<VarDecl>> InnerMatchers,
     ast_matchers::internal::ASTMatchFinder *Finder,
     ast_matchers::internal::BoundNodesTreeBuilder *Builder,
@@ -187,7 +187,7 @@ AST_MATCHER(VarDecl, isDirectInitialization) {
 static auto getVarInitWithMemberMatcher(
     StringRef PairName, StringRef MemberName, StringRef TypeName,
     StringRef BindingName,
-    ast_matchers::internal::Matcher<VarDecl> ExtraMatcher) {
+    const ast_matchers::internal::Matcher<VarDecl> &ExtraMatcher) {
   return varDecl(ExtraMatcher,
                  hasInitializer(ignoringCopyCtorAndImplicitCast(memberExpr(
                      hasObjectExpression(ignoringImpCasts(declRefExpr(
@@ -218,7 +218,7 @@ void UseStructuredBindingCheck::registerMatchers(MatchFinder *Finder) {
   };
 
   auto HasAnyLambdaCaptureThisVar =
-      [](ast_matchers::internal::Matcher<VarDecl> VDMatcher)
+      [](const ast_matchers::internal::Matcher<VarDecl> &VDMatcher)
       -> ast_matchers::internal::BindableMatcher<Stmt> {
     return compoundStmt(hasDescendant(
         lambdaExpr(hasAnyCapture(capturesVar(varDecl(VDMatcher))))));
