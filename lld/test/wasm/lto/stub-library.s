@@ -23,14 +23,14 @@
 
 # RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown -o %t.o %s
 # RUN: mkdir -p %t
-# RUN: llvm-as %S/Inputs/foo.ll -o %t/foo.o
-# RUN: wasm-ld %t.o %t/foo.o %p/Inputs/stub2.so -o %t.wasm
+# RUN: llvm-as %S/Inputs/foobaz.ll -o %t/foobaz.o
+# RUN: wasm-ld %t.o %t/foobaz.o %p/Inputs/stub2.so -o %t.wasm
 # RUN: obj2yaml %t.wasm | FileCheck %s --check-prefix=UNUSED
 
-## Run the same test but with foo.o inside of an archive file.
-# RUN: rm -f %t/libfoo.a
-# RUN: llvm-ar rcs %t/libfoo.a %t/foo.o
-# RUN: wasm-ld %t.o %t/libfoo.a %p/Inputs/stub2.so -o %t2.wasm
+## Run the same test but with foobaz.o inside of an archive file.
+# RUN: rm -f %t/libfoobaz.a
+# RUN: llvm-ar rcs %t/libfoobaz.a %t/foobaz.o
+# RUN: wasm-ld %t.o %t/libfoobaz.a %p/Inputs/stub2.so -o %t2.wasm
 # RUN: obj2yaml %t2.wasm | FileCheck %s --check-prefix=UNUSED
 
 .functype bar () -> ()
