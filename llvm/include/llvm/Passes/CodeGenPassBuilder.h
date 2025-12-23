@@ -277,12 +277,17 @@ protected:
 
   void requireCGSCCOrder(PassManagerWrapper &PMW) const {
     assert(!AddInCGSCCOrder);
-    flushFPMsToMPM(PMW);
+    assert(PMW.FPM.isEmpty() && PMW.MFPM.isEmpty() &&
+           "Requiring CGSCC ordering requires flushing the current function "
+           "pipelines to the MPM.");
     AddInCGSCCOrder = true;
   }
+
   void stopAddingInCGSCCOrder(PassManagerWrapper &PMW) const {
     assert(AddInCGSCCOrder);
-    flushFPMsToMPM(PMW);
+    assert(PMW.FPM.isEmpty() && PMW.MFPM.isEmpty() &&
+           "Stopping CGSCC ordering requires flushing the current function "
+           "pipelines to the MPM.");
     AddInCGSCCOrder = false;
   }
 

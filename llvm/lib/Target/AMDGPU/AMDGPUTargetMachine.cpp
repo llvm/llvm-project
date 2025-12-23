@@ -2206,6 +2206,7 @@ void AMDGPUCodeGenPassBuilder::addCodeGenPrepare(
   // many cases.
   flushFPMsToMPM(PMW);
   addModulePass(AMDGPULowerBufferFatPointersPass(TM), PMW);
+  flushFPMsToMPM(PMW);
   requireCGSCCOrder(PMW);
 
   addModulePass(AMDGPULowerIntrinsicsPass(TM), PMW);
