@@ -207,11 +207,9 @@ public:
 #  ifndef _LIBCPP_CXX03_LANG
   template <class _Fp, class... _Args, __enable_if_t<!is_same<__remove_cvref_t<_Fp>, thread>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI explicit thread(_Fp&& __f, _Args&&... __args) {
-#    if _LIBCPP_STD_VER >= 17
-    static_assert(is_constructible_v<__decay_t<_Fp>, _Fp>);
-    static_assert((is_constructible_v<__decay_t<_Args>, _Args> && ...));
-    static_assert(is_invocable_v<__decay_t<_Fp>, __decay_t<_Args>...>);
-#    endif
+    static_assert(is_constructible<__decay_t<_Fp>, _Fp>::value, "");
+    static_assert(_And<is_constructible<__decay_t<_Args>, _Args>...>::value, "");
+    static_assert(__is_invocable_v<__decay_t<_Fp>, __decay_t<_Args>...>, "");
 
     typedef unique_ptr<__thread_struct> _TSPtr;
     _TSPtr __tsp(new __thread_struct);

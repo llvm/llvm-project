@@ -49,7 +49,12 @@ public:
   _LIBCPP_HIDE_FROM_ABI explicit jthread(_Fun&& __fun, _Args&&... __args)
     requires(!std::is_same_v<remove_cvref_t<_Fun>, jthread>)
       : __stop_source_(),
-        __thread_(__init_thread(__stop_source_, std::forward<_Fun>(__fun), std::forward<_Args>(__args)...)) {}
+        __thread_(__init_thread(__stop_source_, std::forward<_Fun>(__fun), std::forward<_Args>(__args)...)) {
+    static_assert(is_constructible_v<decay_t<_Fun>, _Fun>);
+    static_assert((is_constructible_v<decay_t<_Args>, _Args> && ...));
+    static_assert(is_invocable_v<decay_t<_Fun>, decay_t<_Args>...> ||
+                  is_invocable_v<decay_t<_Fun>, stop_token, decay_t<_Args>...>);
+  }
 
   _LIBCPP_HIDE_FROM_ABI ~jthread() {
     if (joinable()) {
@@ -111,11 +116,6 @@ public:
 private:
   template <class _Fun, class... _Args>
   _LIBCPP_HIDE_FROM_ABI static thread __init_thread(const stop_source& __ss, _Fun&& __fun, _Args&&... __args) {
-    static_assert(is_constructible_v<decay_t<_Fun>, _Fun>);
-    static_assert((is_constructible_v<decay_t<_Args>, _Args> && ...));
-    static_assert(is_invocable_v<decay_t<_Fun>, decay_t<_Args>...> ||
-                  is_invocable_v<decay_t<_Fun>, stop_token, decay_t<_Args>...>);
-
     if constexpr (is_invocable_v<decay_t<_Fun>, stop_token, decay_t<_Args>...>) {
       return thread(std::forward<_Fun>(__fun), __ss.get_token(), std::forward<_Args>(__args)...);
     } else {

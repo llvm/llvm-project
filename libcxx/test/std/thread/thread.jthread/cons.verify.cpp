@@ -64,7 +64,7 @@ void test() {
     Arg arg;
     std::jthread t(F{}, arg);
     // expected-error@*:* 2 {{static assertion failed}}
-    // expected-error@*:* 2 {{call to deleted constructor}}
+    // expected-error@*:* {{call to deleted constructor}}
     // expected-error@*:* {{no matching constructor for initialization}}
   }
 
@@ -81,7 +81,7 @@ void test() {
 
     std::jthread t(F{}, Arg{});
     // expected-error@*:* 2 {{static assertion failed}}
-    // expected-error@*:* 2 {{call to deleted constructor}}
+    // expected-error@*:* {{call to deleted constructor}}
     // expected-error@*:* {{no matching constructor for initialization}}
   }
 

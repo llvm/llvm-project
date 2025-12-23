@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: no-threads
-// UNSUPPORTED: c++03, c++11, c++14
+// UNSUPPORTED: c++03
 
 // <thread>
 
@@ -64,7 +64,6 @@ void test() {
     Arg arg;
     std::thread t(F{}, arg);
     // expected-error@*:* {{static assertion failed}}
-    // expected-error@*:* {{call to deleted constructor}}
     // expected-error@*:* {{no matching constructor for initialization}}
   }
 
@@ -81,7 +80,6 @@ void test() {
 
     std::thread t(F{}, Arg{});
     // expected-error@*:* {{static assertion failed}}
-    // expected-error@*:* {{call to deleted constructor}}
     // expected-error@*:* {{no matching constructor for initialization}}
   }
 
