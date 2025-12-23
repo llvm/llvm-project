@@ -800,10 +800,6 @@ static bool isTLIScalarize(const TargetLibraryInfo &TLI, const CallInst &CI) {
   return Scalarize;
 }
 
-/// Returns true if the call return type `Ty` can be widened by the loop
-/// vectorizer.
-static bool canWidenCallReturnType(Type *Ty) { return canVectorizeTy(Ty); }
-
 bool LoopVectorizationLegality::canVectorizeInstrs() {
   bool DoExtraAnalysis = ORE->allowExtraAnalysis(DEBUG_TYPE);
   bool Result = true;
@@ -1018,7 +1014,7 @@ bool LoopVectorizationLegality::canVectorizeInstr(Instruction &I) {
     // For now, we only recognize struct values returned from calls where
     // all users are extractvalue as vectorizable. All element types of the
     // struct must be types that can be widened.
-    return isa<CallInst>(Inst) && canWidenCallReturnType(InstTy) &&
+    return isa<CallInst>(Inst) && canVectorizeTy(InstTy) &&
            all_of(Inst.users(), IsaPred<ExtractValueInst>);
   };
 

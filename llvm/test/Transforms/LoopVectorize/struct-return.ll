@@ -378,7 +378,6 @@ exit:
   ret void
 }
 
-; Widening structs with mixed element types is now supported.
 ; CHECK-REMARKS: remark: {{.*}} vectorized loop (vectorization width: 2, interleaved count: 1)
 define void @mixed_element_type_struct_return(ptr noalias %in, ptr noalias writeonly %out_a, ptr noalias writeonly %out_b) {
 ; CHECK-LABEL: define void @mixed_element_type_struct_return(
