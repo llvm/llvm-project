@@ -211,17 +211,15 @@ void UseStructuredBindingCheck::registerMatchers(MatchFinder *Finder) {
       getVarInitWithMemberMatcher(PairDeclName, "second", SecondTypeName,
                                   SecondVarDeclName, UnlessShouldBeIgnored);
 
-  auto RefToBindName = [&UnlessShouldBeIgnored](const StringRef &Name)
-      -> ast_matchers::internal::BindableMatcher<Stmt> {
+  auto RefToBindName = [&UnlessShouldBeIgnored](const StringRef &Name) {
     return declRefExpr(to(varDecl(UnlessShouldBeIgnored).bind(Name)));
   };
 
   auto HasAnyLambdaCaptureThisVar =
-      [](const ast_matchers::internal::Matcher<VarDecl> &VDMatcher)
-      -> ast_matchers::internal::BindableMatcher<Stmt> {
-    return compoundStmt(hasDescendant(
-        lambdaExpr(hasAnyCapture(capturesVar(varDecl(VDMatcher))))));
-  };
+      [](const ast_matchers::internal::Matcher<VarDecl> &VDMatcher) {
+        return compoundStmt(hasDescendant(
+            lambdaExpr(hasAnyCapture(capturesVar(varDecl(VDMatcher))))));
+      };
 
   // Captured structured bindings are a C++20 extension
   auto UnlessFirstVarOrSecondVarIsCapturedByLambda =
