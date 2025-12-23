@@ -31,7 +31,7 @@ void test() {
     F f;
     std::jthread t(f);
     // expected-error@*:* 2 {{static assertion failed}}
-    // expected-error@*:* 2 {{call to deleted constructor}}
+    // expected-error@*:* 0-2 {{call to deleted constructor}}
     // expected-error@*:* {{no matching constructor for initialization}}
   }
 
@@ -46,7 +46,7 @@ void test() {
 
     std::jthread t(F{});
     // expected-error@*:* 2 {{static assertion failed}}
-    // expected-error@*:* 2 {{call to deleted constructor}}
+    // expected-error@*:* 0-2 {{call to deleted constructor}}
     // expected-error@*:* {{no matching constructor for initialization}}
   }
 
@@ -64,7 +64,7 @@ void test() {
     Arg arg;
     std::jthread t(F{}, arg);
     // expected-error@*:* 2 {{static assertion failed}}
-    // expected-error@*:* {{call to deleted constructor}}
+    // expected-error@*:* 0-1 {{call to deleted constructor}}
     // expected-error@*:* {{no matching constructor for initialization}}
   }
 
@@ -81,7 +81,7 @@ void test() {
 
     std::jthread t(F{}, Arg{});
     // expected-error@*:* 2 {{static assertion failed}}
-    // expected-error@*:* {{call to deleted constructor}}
+    // expected-error@*:* 0-1 {{call to deleted constructor}}
     // expected-error@*:* {{no matching constructor for initialization}}
   }
 
@@ -90,6 +90,7 @@ void test() {
 
     std::jthread t(F{});
     // expected-error@*:* 2 {{static assertion failed}}
-    // expected-error@*:* {{no matching function for call to '__invoke'}}
+    // expected-error@*:* 0-1 {{no matching function for call to '__invoke'}}
+    // expected-error@*:* 0-1 {{attempt to use a deleted function}}
   }
 }

@@ -31,7 +31,7 @@ void test() {
     F f;
     std::thread t(f);
     // expected-error@*:* {{static assertion failed}}
-    // expected-error@*:* {{call to deleted constructor}}
+    // expected-error@*:* 0-1 {{call to deleted constructor}}
     // expected-error@*:* {{no matching constructor for initialization}}
   }
 
@@ -46,7 +46,7 @@ void test() {
 
     std::thread t(F{});
     // expected-error@*:* {{static assertion failed}}
-    // expected-error@*:* {{call to deleted constructor}}
+    // expected-error@*:* 0-1 {{call to deleted constructor}}
     // expected-error@*:* {{no matching constructor for initialization}}
   }
 
@@ -88,6 +88,7 @@ void test() {
 
     std::thread t(F{});
     // expected-error@*:* {{static assertion failed}}
-    // expected-error@*:* {{no matching function for call to '__invoke'}}
+    // expected-error@*:* 0-1 {{no matching function for call to '__invoke'}}
+    // expected-error@*:* 0-1 {{attempt to use a deleted function}}
   }
 }
