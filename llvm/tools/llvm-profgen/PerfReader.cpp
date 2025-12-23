@@ -571,22 +571,23 @@ void PerfScriptReader::updateBinaryAddress(const MMapEvent &Event) {
     return;
   }
 
-  std::optional<int32_t> LastSeenPID = Binary->getLastSeenPID();
-  if (!MultiProcessProfile && LastSeenPID.has_value() &&
-      LastSeenPID.value() != Event.PID) {
-    WithColor::warning() << "Binary previously loaded in process ID "
-                         << LastSeenPID.value() << " at "
-                         << format("0x%" PRIx64,
-                                   Binary->getBaseAddress(LookupPID))
-                         << " was reloaded in process ID " << Event.PID
-                         << " at " << format("0x%" PRIx64, Event.Address)
-                         << ". If profiling multiple processes running "
-                         << "concurrently, use --multi-process-profile to "
-                         << "prevent loss of samples.\n";
-  }
-  Binary->setLastSeenPID(Event.PID);
-
   if (IsKernel || Event.Offset == Binary->getTextSegmentOffset()) {
+    // Warn if multiple processes are presesnt without the relevant flag
+    std::optional<int32_t> LastSeenPID = Binary->getLastSeenPID();
+    if (!MultiProcessProfile && LastSeenPID.has_value() &&
+        LastSeenPID.value() != Event.PID) {
+      WithColor::warning() << "Binary previously loaded in process ID "
+                           << LastSeenPID.value() << " at "
+                           << format("0x%" PRIx64,
+                                     Binary->getBaseAddress(LookupPID))
+                           << " was reloaded in process ID " << Event.PID
+                           << " at " << format("0x%" PRIx64, Event.Address)
+                           << ". If profiling multiple processes running "
+                           << "concurrently, use --multi-process-profile to "
+                           << "prevent loss of samples.\n";
+    }
+    Binary->setLastSeenPID(Event.PID);
+
     // A binary image could be unloaded and then reloaded at different
     // place, so update binary load address.
     // Only update for the first executable segment and assume all other
