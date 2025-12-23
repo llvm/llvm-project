@@ -16,7 +16,7 @@ namespace LIBC_NAMESPACE_DECL {
 
 constinit ExitCallbackList atexit_callbacks;
 Mutex handler_list_mtx(false, false, false, false);
-[[gnu::weak]] extern void teardown_main_tls();
+[[gnu::weak]] void teardown_main_tls() {}
 
 extern "C" {
 
@@ -27,8 +27,7 @@ int __cxa_atexit(AtExitCallback *callback, void *payload, void *) {
 void __cxa_finalize(void *dso) {
   if (!dso) {
     call_exit_callbacks(atexit_callbacks);
-    if (teardown_main_tls)
-      teardown_main_tls();
+    teardown_main_tls();
   }
 }
 
