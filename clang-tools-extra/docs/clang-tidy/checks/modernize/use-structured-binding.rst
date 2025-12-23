@@ -68,7 +68,7 @@ to structured bindings, for example:
 
 .. code-block:: c++
 
-  const auto& results = mapping.try_emplace("hello!"); 
+  const auto& results = mapping.try_emplace("hello!");
   const iterator& it = results.first;
   bool succeed = results.second;
   // succeed is not changed in the following code
