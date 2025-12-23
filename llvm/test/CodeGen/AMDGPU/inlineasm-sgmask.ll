@@ -7,10 +7,10 @@ define protected amdgpu_kernel void @test_valu(ptr addrspace(1) noalias noundef 
 ; CHECK: s_mul_i32
 ; CHECK: ASMSTART
 entry:
-  %0 = tail call i32 @llvm.amdgcn.workgroup.id.x()
-  %mul = shl i32 %0, 6
-  %1 = tail call i32 @llvm.amdgcn.workitem.id.x()
-  %add = add i32 %mul, %1
+  %a0 = tail call i32 @llvm.amdgcn.workgroup.id.x()
+  %mul = shl i32 %a0, 6
+  %a1 = tail call i32 @llvm.amdgcn.workitem.id.x()
+  %add = add i32 %mul, %a1
   %cmp = icmp slt i32 %add, %length
   br i1 %cmp, label %if.then, label %if.end
 
@@ -20,14 +20,14 @@ if.then:                                          ; preds = %entry
   %mul4 = shl nsw i32 %add, 2
   %idx.ext5 = sext i32 %mul4 to i64
   %add.ptr6 = getelementptr inbounds float, ptr addrspace(1) %from.coerce, i64 %idx.ext5
-  %2 = load <4 x float>, ptr addrspace(1) %add.ptr6, align 16
-  %3 = extractelement <4 x float> %2, i64 3
-  %4 = extractelement <4 x float> %2, i64 0
-  %5 = tail call contract noundef float asm "v_add_f32_e32 $0, $1, $2", "=v,v,v"(float %3, float %4) #3
-  %6 = extractelement <4 x float> %2, i64 1
-  %7 = extractelement <4 x float> %2, i64 2
-  %add7 = fadd contract float %6, %7
-  %add8 = fadd contract float %5, %add7
+  %a2 = load <4 x float>, ptr addrspace(1) %add.ptr6, align 16
+  %a3 = extractelement <4 x float> %a2, i64 3
+  %a4 = extractelement <4 x float> %a2, i64 0
+  %a5 = tail call contract noundef float asm "v_add_f32_e32 $0, $1, $2", "=v,v,v"(float %a3, float %a4) #3
+  %a6 = extractelement <4 x float> %a2, i64 1
+  %a7 = extractelement <4 x float> %a2, i64 2
+  %add7 = fadd contract float %a6, %a7
+  %add8 = fadd contract float %a5, %add7
   store float %add8, ptr addrspace(1) %add.ptr, align 4
   %mul9 = mul nsw i32 %k, 3
   store i32 %mul9, ptr addrspace(1) %ret.coerce, align 4
@@ -49,10 +49,10 @@ define protected amdgpu_kernel void @test_salu(ptr addrspace(1) noalias noundef 
 ; CHECK-NEXT: s_waitcnt
 ; CHECK-NEXT: ASMSTART
 entry:
-  %0 = tail call i32 @llvm.amdgcn.workgroup.id.x()
-  %mul = shl i32 %0, 6
-  %1 = tail call i32 @llvm.amdgcn.workitem.id.x()
-  %add = add i32 %mul, %1
+  %a0 = tail call i32 @llvm.amdgcn.workgroup.id.x()
+  %mul = shl i32 %a0, 6
+  %a1 = tail call i32 @llvm.amdgcn.workitem.id.x()
+  %add = add i32 %mul, %a1
   %cmp = icmp slt i32 %add, %length
   br i1 %cmp, label %if.then, label %if.end
 
@@ -62,14 +62,14 @@ if.then:                                          ; preds = %entry
   %mul4 = shl nsw i32 %add, 2
   %idx.ext5 = sext i32 %mul4 to i64
   %add.ptr6 = getelementptr inbounds float, ptr addrspace(1) %from.coerce, i64 %idx.ext5
-  %2 = load <4 x float>, ptr addrspace(1) %add.ptr6, align 16
-  %3 = extractelement <4 x float> %2, i64 3
-  %4 = extractelement <4 x float> %2, i64 0
-  %5 = fadd contract float %3, %4
-  %6 = extractelement <4 x float> %2, i64 1
-  %7 = extractelement <4 x float> %2, i64 2
-  %add7 = fadd contract float %6, %7
-  %add8 = fadd contract float %5, %add7
+  %a2 = load <4 x float>, ptr addrspace(1) %add.ptr6, align 16
+  %a3 = extractelement <4 x float> %a2, i64 3
+  %a4 = extractelement <4 x float> %a2, i64 0
+  %a5 = fadd contract float %a3, %a4
+  %a6 = extractelement <4 x float> %a2, i64 1
+  %a7 = extractelement <4 x float> %a2, i64 2
+  %add7 = fadd contract float %a6, %a7
+  %add8 = fadd contract float %a5, %add7
   store float %add8, ptr addrspace(1) %add.ptr, align 4
   %mul9 = tail call noundef i32 asm "s_mul_i32, $0, $1, 3", "=s,s"(i32 %k) #3
   store i32 %mul9, ptr addrspace(1) %ret.coerce, align 4
@@ -90,10 +90,10 @@ define protected amdgpu_kernel void @test_mfma(ptr addrspace(1) noalias noundef 
 ; CHECK-NEXT: ;;#ASMEND
 ; CHECK: v_add_f32_e32
 entry:
-  %0 = tail call i32 @llvm.amdgcn.workgroup.id.x()
-  %mul = shl i32 %0, 6
-  %1 = tail call i32 @llvm.amdgcn.workitem.id.x()
-  %add = add i32 %mul, %1
+  %a0 = tail call i32 @llvm.amdgcn.workgroup.id.x()
+  %mul = shl i32 %a0, 6
+  %a1 = tail call i32 @llvm.amdgcn.workitem.id.x()
+  %add = add i32 %mul, %a1
   %cmp = icmp slt i32 %add, %length
   br i1 %cmp, label %if.then, label %if.end
 
@@ -103,17 +103,17 @@ if.then:                                          ; preds = %entry
   %mul3 = shl nsw i32 %add, 2
   %idx.ext4 = sext i32 %mul3 to i64
   %add.ptr5 = getelementptr inbounds float, ptr addrspace(1) %from.coerce, i64 %idx.ext4
-  %2 = load <2 x float>, ptr addrspace(1) %add.ptr5, align 16
+  %a2 = load <2 x float>, ptr addrspace(1) %add.ptr5, align 16
   %a20 = add i64 %idx.ext4, 2
   %a21 = getelementptr inbounds float, ptr addrspace(1) %from.coerce, i64 %a20
   %a22 = load <2 x float>, ptr addrspace(1) %a21, align 16
-  %3 = extractelement <2 x float> %a22, i64 1
-  %4 = extractelement <2 x float> %2, i64 0
-  %5 = tail call contract noundef float asm "v_mfma_f64_4x4x4f64 $0, $1, $2, 0", "=a,v,v"(<2 x float> %2, <2 x float> %a22) #3
-  %6 = extractelement <2 x float> %2, i64 1
-  %7 = extractelement <2 x float> %a22, i64 0
-  %add6 = fadd contract float %6, %7
-  %add7 = fadd contract float %5, %add6
+  %a3 = extractelement <2 x float> %a22, i64 1
+  %a4 = extractelement <2 x float> %a2, i64 0
+  %a5 = tail call contract noundef float asm "v_mfma_f64_4x4x4f64 $0, $1, $2, 0", "=a,v,v"(<2 x float> %a2, <2 x float> %a22) #3
+  %a6 = extractelement <2 x float> %a2, i64 1
+  %a7 = extractelement <2 x float> %a22, i64 0
+  %add6 = fadd contract float %a6, %a7
+  %add7 = fadd contract float %a5, %add6
   store float %add7, ptr addrspace(1) %add.ptr, align 4
   tail call void @llvm.amdgcn.sched.group.barrier(i32 16, i32 1, i32 0)
   tail call void @llvm.amdgcn.sched.group.barrier(i32 2, i32 5, i32 0)
@@ -136,10 +136,10 @@ define protected amdgpu_kernel void @test_ds(ptr addrspace(1) noalias noundef wr
 ; CHECK-DAG: v_add_f32_e32
 ; CHECK-NEXT: ASMSTART
 entry:
-  %0 = tail call i32 @llvm.amdgcn.workgroup.id.x()
-  %mul = shl i32 %0, 6
-  %1 = tail call i32 @llvm.amdgcn.workitem.id.x()
-  %add = add i32 %mul, %1
+  %a0 = tail call i32 @llvm.amdgcn.workgroup.id.x()
+  %mul = shl i32 %a0, 6
+  %a1 = tail call i32 @llvm.amdgcn.workitem.id.x()
+  %add = add i32 %mul, %a1
   %cmp = icmp slt i32 %add, %length
   br i1 %cmp, label %if.then, label %if.end
 
@@ -149,17 +149,17 @@ if.then:                                          ; preds = %entry
   %mul3 = shl nsw i32 %add, 2
   %idx.ext4 = sext i32 %mul3 to i64
   %add.ptr5 = getelementptr inbounds float, ptr addrspace(1) %from.coerce, i64 %idx.ext4
-  %2 = load <2 x float>, ptr addrspace(1) %add.ptr5, align 16
+  %a2 = load <2 x float>, ptr addrspace(1) %add.ptr5, align 16
   %a20 = add i64 %idx.ext4, 2
   %a21 = getelementptr inbounds float, ptr addrspace(1) %from.coerce, i64 %a20
   %a22 = load <2 x float>, ptr addrspace(1) %a21, align 16
-  %3 = extractelement <2 x float> %a22, i64 1
-  %4 = extractelement <2 x float> %2, i64 0
-  %5 = tail call contract noundef float asm "ds_read_b32 $0, $1 offset:0", "=v,v,~{memory}"(i32 ptrtoint (ptr addrspacecast (ptr addrspace(3) @_ZZ16group4_sum_floatPfPKfE6cpymem to ptr) to i32)) #4
-  %6 = extractelement <2 x float> %2, i64 1
-  %7 = extractelement <2 x float> %a22, i64 0
-  %add6 = fadd contract float %6, %7
-  %add7 = fadd contract float %5, %add6
+  %a3 = extractelement <2 x float> %a22, i64 1
+  %a4 = extractelement <2 x float> %a2, i64 0
+  %a5 = tail call contract noundef float asm "ds_read_b32 $0, $1 offset:0", "=v,v,~{memory}"(i32 ptrtoint (ptr addrspacecast (ptr addrspace(3) @_ZZ16group4_sum_floatPfPKfE6cpymem to ptr) to i32)) #4
+  %a6 = extractelement <2 x float> %a2, i64 1
+  %a7 = extractelement <2 x float> %a22, i64 0
+  %add6 = fadd contract float %a6, %a7
+  %add7 = fadd contract float %a5, %add6
   store float %add7, ptr addrspace(1) %add.ptr, align 4
   tail call void @llvm.amdgcn.sched.group.barrier(i32 2, i32 7, i32 0)
   tail call void @llvm.amdgcn.sched.group.barrier(i32 128, i32 1, i32 0)

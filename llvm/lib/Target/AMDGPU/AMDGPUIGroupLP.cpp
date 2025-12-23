@@ -2420,7 +2420,7 @@ bool SchedGroup::canAddMI(const MachineInstr &MI) const {
     SGMask_t InlineAsmMask = 0;
     if (VGPR_used && !VMFMA_used && !MayLoad && !MayStore)
       InlineAsmMask |= (SGMask_t)SchedGroupMask::VALU;
-    if (SGPR_used && !MayLoad && !MayStore)
+    if (SGPR_used && !VGPR_used && !MayLoad && !MayStore)
       InlineAsmMask |= (SGMask_t)SchedGroupMask::SALU;
     if (VMFMA_used)
       InlineAsmMask |= (SGMask_t)SchedGroupMask::MFMA;
