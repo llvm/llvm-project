@@ -250,6 +250,72 @@ entry:
 }
 
 
+define i1 @test_fcmp(float %x) {
+; CHECK-LABEL: test_fcmp:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    frintz s0, s0
+; CHECK-NEXT:    fcmp s0, #0.0
+; CHECK-NEXT:    cset w0, eq
+; CHECK-NEXT:    ret
+  %conv1 = fptosi float %x to i32
+  %conv2 = sitofp i32 %conv1 to float
+  %cmp = fcmp oeq float %conv2, 0.0
+  ret i1 %cmp
+}
+
+define float @test_fabs(float %x) {
+; CHECK-LABEL: test_fabs:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    frintz s0, s0
+; CHECK-NEXT:    fabs s0, s0
+; CHECK-NEXT:    ret
+  %conv1 = fptosi float %x to i32
+  %conv2 = sitofp i32 %conv1 to float
+  %abs = call float @llvm.fabs.f32(float %conv2)
+  ret float %abs
+}
+
+define float @test_copysign(float %x, float %y) {
+; CHECK-LABEL: test_copysign:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    frintz s0, s0
+; CHECK-NEXT:    mvni v2.4s, #128, lsl #24
+; CHECK-NEXT:    // kill: def $s1 killed $s1 def $q1
+; CHECK-NEXT:    bif v0.16b, v1.16b, v2.16b
+; CHECK-NEXT:    // kill: def $s0 killed $s0 killed $q0
+; CHECK-NEXT:    ret
+  %conv1 = fptosi float %x to i32
+  %conv2 = sitofp i32 %conv1 to float
+  %combine = call float @llvm.copysign.f32(float %conv2, float %y)
+  ret float %combine
+}
+
+define float @test_fadd(float %x) {
+; CHECK-LABEL: test_fadd:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    frintz s0, s0
+; CHECK-NEXT:    fmov s1, #1.00000000
+; CHECK-NEXT:    fadd s0, s0, s1
+; CHECK-NEXT:    ret
+  %conv1 = fptosi float %x to i32
+  %conv2 = sitofp i32 %conv1 to float
+  %add = fadd float %conv2, 1.0
+  ret float %add
+}
+
+define float @test_fsub(float %x) {
+; CHECK-LABEL: test_fsub:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    frintz s0, s0
+; CHECK-NEXT:    fmov s1, #-1.00000000
+; CHECK-NEXT:    fadd s0, s0, s1
+; CHECK-NEXT:    ret
+  %conv1 = fptosi float %x to i32
+  %conv2 = sitofp i32 %conv1 to float
+  %sub = fsub float %conv2, 1.0
+  ret float %sub
+}
+
 declare i32 @llvm.smin.i32(i32, i32)
 declare i32 @llvm.smax.i32(i32, i32)
 declare i32 @llvm.umin.i32(i32, i32)
@@ -258,3 +324,5 @@ declare <4 x i32> @llvm.smin.v4i32(<4 x i32>, <4 x i32>)
 declare <4 x i32> @llvm.smax.v4i32(<4 x i32>, <4 x i32>)
 declare <4 x i32> @llvm.umin.v4i32(<4 x i32>, <4 x i32>)
 declare <4 x i32> @llvm.umax.v4i32(<4 x i32>, <4 x i32>)
+declare float @llvm.fabs.f32(float)
+declare float @llvm.copysign.f32(float, float)
