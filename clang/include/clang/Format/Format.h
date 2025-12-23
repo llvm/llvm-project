@@ -3931,11 +3931,6 @@ struct FormatStyle {
   /// \version 18
   std::vector<std::string> ObjCPropertyAttributeOrder;
 
-  /// Add a space after ``@property`` in Objective-C, i.e. use
-  /// ``@property (readonly)`` instead of ``@property(readonly)``.
-  /// \version 3.7
-  bool ObjCSpaceAfterProperty;
-
   /// Add or remove a space between the '-'/'+' and the return type in
   /// Objective-C method declarations. i.e
   /// \code{.objc}
@@ -3944,7 +3939,12 @@ struct FormatStyle {
   ///    -(void)method      vs.      - (void)method
   /// \endcode
   /// \version 22
-  bool ObjCSpaceBeforeMethodDeclColon;
+  bool ObjCSpaceAfterMethodDeclarationPrefix;
+
+  /// Add a space after ``@property`` in Objective-C, i.e. use
+  /// ``@property (readonly)`` instead of ``@property(readonly)``.
+  /// \version 3.7
+  bool ObjCSpaceAfterProperty;
 
   /// Add a space in front of an Objective-C protocol list, i.e. use
   /// ``Foo <Protocol>`` instead of ``Foo<Protocol>``.
@@ -5781,8 +5781,9 @@ struct FormatStyle {
            ObjCBreakBeforeNestedBlockParam ==
                R.ObjCBreakBeforeNestedBlockParam &&
            ObjCPropertyAttributeOrder == R.ObjCPropertyAttributeOrder &&
+           ObjCSpaceAfterMethodDeclarationPrefix ==
+               R.ObjCSpaceAfterMethodDeclarationPrefix &&
            ObjCSpaceAfterProperty == R.ObjCSpaceAfterProperty &&
-           ObjCSpaceBeforeMethodDeclColon == R.ObjCSpaceBeforeMethodDeclColon &&
            ObjCSpaceBeforeProtocolList == R.ObjCSpaceBeforeProtocolList &&
            OneLineFormatOffRegex == R.OneLineFormatOffRegex &&
            PackConstructorInitializers == R.PackConstructorInitializers &&

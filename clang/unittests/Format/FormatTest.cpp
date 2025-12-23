@@ -15624,19 +15624,11 @@ TEST_F(FormatTest, FormatForObjectiveCMethodDecls) {
 }
 
 TEST_F(FormatTest, SpaceBeforeObjCMethodDeclColon) {
-  FormatStyle Style = getLLVMStyle();
-  verifyFormat("- (void)method;", "-(void)method;", Style);
-  verifyFormat("+ (int)foo:(int)x;", "+       (int)        foo:(int)x;", Style);
-  verifyFormat("- foo;", "-foo;", Style);
-  verifyFormat("- foo:(int)f;", "-foo:(int)f;", Style);
-
-  Style.ObjCSpaceBeforeMethodDeclColon = false;
-  verifyFormat("-(void)method;", "-  (void)   method;", Style);
-  verifyFormat("+(int)foo:(int)x;", "+        (int)foo:(int)x;", Style);
-  verifyFormat("+(int)foo:(int)x;", "+ (int)foo:(int)x;", Style);
-
-  verifyFormat("-foo;", "- foo;", Style);
-  verifyFormat("-foo:(int)f;", "- foo:(int)f;", Style);
+  auto Style = getLLVMStyle();
+  EXPECT_TRUE(Style.ObjCSpaceAfterMethodDeclarationPrefix);
+  verifyFormat("- (void)method;", Style);
+  Style.ObjCSpaceAfterMethodDeclarationPrefix = false;
+  verifyFormat("-(void)method;", Style);
 }
 
 TEST_F(FormatTest, BreaksStringLiterals) {

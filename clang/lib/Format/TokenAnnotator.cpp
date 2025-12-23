@@ -5494,7 +5494,7 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
     return Right.hasWhitespaceBefore();
   if (Line.Type == LT_ObjCMethodDecl) {
     if (Left.is(TT_ObjCMethodSpecifier))
-      return Style.ObjCSpaceBeforeMethodDeclColon;
+      return Style.ObjCSpaceAfterMethodDeclarationPrefix;
     if (Left.is(tok::r_paren) && Left.isNot(TT_AttributeRParen) &&
         canBeObjCSelectorComponent(Right)) {
       // Don't space between ')' and <id> or ')' and 'new'. 'new' is not a

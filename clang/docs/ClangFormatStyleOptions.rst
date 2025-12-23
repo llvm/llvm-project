@@ -5532,15 +5532,9 @@ the configuration (without a prefix: ``Auto``).
         nullable, nonnull, null_resettable, null_unspecified
     ]
 
-.. _ObjCSpaceAfterProperty:
+.. _ObjCSpaceAfterMethodDeclarationPrefix:
 
-**ObjCSpaceAfterProperty** (``Boolean``) :versionbadge:`clang-format 3.7` :ref:`¶ <ObjCSpaceAfterProperty>`
-  Add a space after ``@property`` in Objective-C, i.e. use
-  ``@property (readonly)`` instead of ``@property(readonly)``.
-
-.. _ObjCSpaceBeforeMethodDeclColon:
-
-**ObjCSpaceBeforeMethodDeclColon** (``Boolean``) :versionbadge:`clang-format 22` :ref:`¶ <ObjCSpaceBeforeMethodDeclColon>`
+**ObjCSpaceAfterMethodDeclarationPrefix** (``Boolean``) :versionbadge:`clang-format 22` :ref:`¶ <ObjCSpaceAfterMethodDeclarationPrefix>`
   Add or remove a space between the '-'/'+' and the return type in
   Objective-C method declarations. i.e
 
@@ -5549,6 +5543,12 @@ the configuration (without a prefix: ``Auto``).
      false:                      true:
 
      -(void)method      vs.      - (void)method
+
+.. _ObjCSpaceAfterProperty:
+
+**ObjCSpaceAfterProperty** (``Boolean``) :versionbadge:`clang-format 3.7` :ref:`¶ <ObjCSpaceAfterProperty>`
+  Add a space after ``@property`` in Objective-C, i.e. use
+  ``@property (readonly)`` instead of ``@property(readonly)``.
 
 .. _ObjCSpaceBeforeProtocolList:
 

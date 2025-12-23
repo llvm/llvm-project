@@ -793,7 +793,7 @@ clang-format
 - Rename ``(Binary|Decimal|Hex)MinDigits`` to ``...MinDigitsInsert`` and  add
   ``(Binary|Decimal|Hex)MaxDigitsSeparator`` suboptions to
   ``IntegerLiteralSeparator``.
-- Add ``ObjCSpaceBeforeMethodDeclColon`` option to control space between the 
+- Add ``ObjCSpaceAfterMethodDeclarationPrefix`` option to control space between the 
   '-'/'+' and the return type in Objective-C method declarations
 
 libclang
