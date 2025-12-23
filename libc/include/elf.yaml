@@ -356,6 +356,20 @@ macros:
     macro_value: '0x70000000'
   - macro_name: DT_HIPROC
     macro_value: '0x7fffffff'
+  - macro_name: DT_VERSYM
+    macro_value: '0x6ffffff0'
+  - macro_name: DT_RELACOUNT
+    macro_value: '0x6ffffff9'
+  - macro_name: DT_RELCOUNT
+    macro_value: '0x6ffffffa'
+  - macro_name: DT_VERDEF
+    macro_value: '0x6ffffffc'
+  - macro_name: DT_VERDEFNUM
+    macro_value: '0x6ffffffd'
+  - macro_name: DT_VERNEED
+    macro_value: '0x6ffffffe'
+  - macro_name: DT_VERNEEDNUM
+    macro_value: '0x6fffffff'
   - macro_name: DF_ORIGIN
     macro_value: '0x1'
   - macro_name: DF_SYMBOLIC
