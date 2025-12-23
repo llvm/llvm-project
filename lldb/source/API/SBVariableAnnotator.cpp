@@ -44,13 +44,13 @@ SBVariableAnnotator::operator bool() const {
   return m_opaque_sp.get() != nullptr;
 }
 
-bool lldb::SBVariableAnnotator::IsValid() const {
+bool SBVariableAnnotator::IsValid() const {
   LLDB_INSTRUMENT_VA(this);
   return this->operator bool();
 }
 
 lldb::SBStructuredData
-lldb::SBVariableAnnotator::AnnotateStructured(SBInstruction inst) {
+SBVariableAnnotator::AnnotateStructured(SBInstruction inst) {
   LLDB_INSTRUMENT_VA(this, inst);
 
   lldb::SBStructuredData result;
@@ -99,19 +99,18 @@ lldb::SBVariableAnnotator::AnnotateStructured(SBInstruction inst) {
   return result;
 }
 
-lldb::SBVariableAnnotator::SBVariableAnnotator(
+SBVariableAnnotator::SBVariableAnnotator(
     const lldb::VariableAnnotatorSP &annotator_sp)
     : m_opaque_sp(annotator_sp) {
   LLDB_INSTRUMENT_VA(this, annotator_sp);
 }
 
-lldb::VariableAnnotatorSP lldb::SBVariableAnnotator::GetSP() const {
+lldb::VariableAnnotatorSP SBVariableAnnotator::GetSP() const {
   LLDB_INSTRUMENT_VA(this);
   return m_opaque_sp;
 }
 
-void lldb::SBVariableAnnotator::SetSP(
-    const lldb::VariableAnnotatorSP &annotator_sp) {
+void SBVariableAnnotator::SetSP(const lldb::VariableAnnotatorSP &annotator_sp) {
   LLDB_INSTRUMENT_VA(this, annotator_sp);
   m_opaque_sp = annotator_sp;
 }
