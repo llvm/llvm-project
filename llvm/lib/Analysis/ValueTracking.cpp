@@ -9675,10 +9675,10 @@ isImpliedCondICmps(CmpPredicate LPred, const Value *L0, const Value *L1,
       match(L1, m_APInt(L1C)) && !L1C->isZero() &&
       match(L0, m_Sub(m_Value(A), m_Value(B))) &&
       ((A == R0 && B == R1) || (A == R1 && B == R0) ||
-       (match(A, m_PtrToInt(m_Specific(R0))) &&
-        match(B, m_PtrToInt(m_Specific(R1)))) ||
-       (match(A, m_PtrToInt(m_Specific(R1))) &&
-        match(B, m_PtrToInt(m_Specific(R0)))))) {
+       (match(A, m_PtrToIntOrAddr(m_Specific(R0))) &&
+        match(B, m_PtrToIntOrAddr(m_Specific(R1)))) ||
+       (match(A, m_PtrToIntOrAddr(m_Specific(R1))) &&
+        match(B, m_PtrToIntOrAddr(m_Specific(R0)))))) {
     return RPred.dropSameSign() == ICmpInst::ICMP_NE;
   }
 
@@ -10460,7 +10460,8 @@ addValueAffectedByCondition(Value *V,
 
     // Peek through unary operators to find the source of the condition.
     Value *Op;
-    if (match(I, m_CombineOr(m_PtrToInt(m_Value(Op)), m_Trunc(m_Value(Op))))) {
+    if (match(I, m_CombineOr(m_PtrToIntOrAddr(m_Value(Op)),
+                             m_Trunc(m_Value(Op))))) {
       if (isa<Instruction>(Op) || isa<Argument>(Op))
         InsertAffected(Op);
     }
