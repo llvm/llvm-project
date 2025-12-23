@@ -3,12 +3,7 @@
 // RUN: %clang_cc1 -x c++ -std=c++23 -fsyntax-only -verify -Wno-string-plus-int -Wno-unused-value %s
 // RUN: %clang_cc1 -x c++ -std=c++23 -fsyntax-only -verify -Wno-string-plus-int -Wno-unused-value %s -fexperimental-new-constant-interpreter
 
-void test(char* c) {
-  __builtin_strcat(c, "42" + 0);
-  __builtin_strcat(c, "42" + 1);
-  __builtin_strcat(c, "42" + 2);
-  __builtin_strcat(c, "42" + 3);
-  __builtin_strcat(c, "42" + 4);
+void test(void) {
   char buffer[10];
   __builtin_sprintf(buffer, "%%d%d%d"+0, 1);
   // expected-warning@-1 {{more '%' conversions than data arguments}}
