@@ -129,6 +129,9 @@ struct FoldableDef {
       MachineOperand TmpOp = MachineOperand::CreateFI(FrameIndexToFold);
       return TII.isOperandLegal(MI, OpIdx, &TmpOp);
     }
+    case MachineOperand::MO_Register: {
+      return TII.isOperandLegal(MI, OpIdx, OpToFold);
+    }
     default:
       // TODO: Try to apply DefSubReg, for global address we can extract
       // low/high.
@@ -732,6 +735,11 @@ bool SIFoldOperandsImpl::updateOperand(FoldCandidate &Fold) const {
       return false;
     }
   }
+
+  assert(Old.getSubReg() == AMDGPU::NoSubRegister ||
+         (Old.getSubReg() == AMDGPU::lo16 &&
+          TRI->isSGPRReg(*MRI, New->getReg())) ||
+         MRI->getVRegDef(Old.getReg())->isRegSequence());
 
   Old.setSubReg(New->getSubReg());
   if (New->getReg().isPhysical()) {
@@ -1490,35 +1498,6 @@ void SIFoldOperandsImpl::foldOperand(
     if (UseDesc.isVariadic() || UseOp->isImplicit() ||
         UseDesc.operands()[UseOpIdx].RegClass == -1)
       return;
-  }
-
-  // FIXME: If we properly encode the 32-bit aligned register requirement for
-  // these DS_GWS instructions, this can be removed.
-  if (!FoldingImmLike && OpToFold.isReg() && ST->needsAlignedVGPRs()) {
-    unsigned Opc = UseMI->getOpcode();
-    // Special case for DS_GWS instructions that only use 32 bits but hardware
-    // treats it as a 64 bit read.
-    if (Opc == AMDGPU::DS_GWS_INIT || Opc == AMDGPU::DS_GWS_SEMA_BR ||
-        Opc == AMDGPU::DS_GWS_BARRIER) {
-      const TargetRegisterClass *RC =
-          TRI->getRegClassForReg(*MRI, OpToFold.getReg());
-      assert(RC);
-
-      const auto isAlignedReg = [&OpToFold, &UseOp, &UseMI, &RC,
-                                 this](AMDGPU::OpName OpName) -> bool {
-        const MachineOperand *Op = TII->getNamedOperand(*UseMI, OpName);
-        if (Op != UseOp)
-          return true;
-        Register Reg = OpToFold.getReg();
-        assert(!Reg.isPhysical());
-        return TRI->getRegSizeInBits(*RC) > 32 &&
-               !(TRI->getChannelFromSubReg(OpToFold.getSubReg()) & 1) &&
-               TRI->isProperlyAlignedRC(*RC);
-      };
-
-      if (!isAlignedReg(AMDGPU::OpName::data0))
-        return;
-    }
   }
 
   // FIXME: We could try to change the instruction from 64-bit to 32-bit
