@@ -21,7 +21,6 @@
 // Also test that std::optional<T&> is always trivially copyable.
 
 #include <optional>
-#include <string>
 #include <type_traits>
 
 #include "archetypes.h"
@@ -64,6 +63,7 @@ struct SpecialMemberTest {
         "trivially move constructible, "
         "trivially move assignable, and"
         "trivially destructible.");
+
 #if TEST_STD_VER >= 26
     static_assert(std::is_trivially_copyable_v<std::optional<T&>>);
     static_assert(std::is_trivially_copy_constructible_v<std::optional<T&>>);
@@ -75,7 +75,6 @@ struct SpecialMemberTest {
     static_assert(std::is_trivially_assignable_v<std::optional<T&>&, std::optional<T&>&>);
     static_assert(std::is_trivially_assignable_v<std::optional<T&>&, const std::optional<T&>&&>);
     static_assert(std::is_trivially_destructible_v<std::optional<T&>>);
-
 #endif
 };
 
@@ -111,11 +110,5 @@ int main(int, char**) {
         DoTestsMetafunction<TrivialMoveNonTrivialCopy, TrivialCopyNonTrivialMove>{}
     );
 
-#if TEST_STD_VER >= 26
-    static_assert(std::is_trivially_copyable_v<std::optional<TrivialMoveNonTrivialCopy&>>);
-    static_assert(std::is_trivially_copyable_v<std::optional<TrivialCopyNonTrivialMove&>>);
-    static_assert(std::is_trivially_copyable_v<std::optional<std::string&>>);
-    static_assert(std::is_trivially_copyable_v<std::optional<int&>>);
-#endif
     return 0;
 }
