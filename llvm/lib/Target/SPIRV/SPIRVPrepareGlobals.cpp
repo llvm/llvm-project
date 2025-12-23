@@ -16,6 +16,9 @@
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/IR/Module.h"
+#include "llvm/Support/Debug.h"
+
+#define DEBUG_TYPE "spirv-prepare-globals"
 
 using namespace llvm;
 
@@ -77,12 +80,53 @@ bool tryExtendDynamicLDSGlobal(GlobalVariable &GV) {
   return true;
 }
 
+// The backend does not support GlobalAlias. Replace aliases with their aliasees
+// when possible and remove them from the module.
+bool tryReplaceAliasWithAliasee(GlobalAlias &GA) {
+  // According to the lang ref, aliases cannot be replaced if either the alias
+  // or the aliasee are interposable. We only replace in the case that both
+  // are not interposable.
+  if (GA.isInterposable()) {
+    LLVM_DEBUG(dbgs() << "Skipping interposable alias: " << GA.getName()
+                      << "\n");
+    return false;
+  }
+
+  auto *AO = dyn_cast<GlobalObject>(GA.getAliasee());
+  if (!AO) {
+    LLVM_DEBUG(dbgs() << "Skipping alias whose aliasee is not a GlobalObject: "
+                      << GA.getName() << "\n");
+    return false;
+  }
+
+  if (AO->isInterposable()) {
+    LLVM_DEBUG(dbgs() << "Skipping interposable aliasee: " << AO->getName()
+                      << "\n");
+    return false;
+  }
+
+  LLVM_DEBUG(dbgs() << "Replacing alias " << GA.getName()
+                    << " with aliasee: " << AO->getName() << "\n");
+
+  GA.replaceAllUsesWith(AO);
+  if (GA.isDiscardableIfUnused()) {
+    GA.eraseFromParent();
+  }
+
+  return true;
+}
+
 bool SPIRVPrepareGlobals::runOnModule(Module &M) {
+  bool Changed = false;
+
+  for (GlobalAlias &GA : make_early_inc_range(M.aliases())) {
+    Changed |= tryReplaceAliasWithAliasee(GA);
+  }
+
   const bool IsAMD = M.getTargetTriple().getVendor() == Triple::AMD;
   if (!IsAMD)
-    return false;
+    return Changed;
 
-  bool Changed = false;
   if (GlobalVariable *Bitcode = M.getNamedGlobal("llvm.embedded.module"))
     Changed |= tryExtendLLVMBitcodeMarker(*Bitcode);
 
