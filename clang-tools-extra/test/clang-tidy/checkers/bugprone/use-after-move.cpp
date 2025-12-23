@@ -1770,7 +1770,7 @@ void lambdaReinitConditional() {
   };
   std::move(s);
   reinit(true);
-  s.empty();plicit
+  s.empty();
 }
 
 void lambdaReinitInDeadCode() {
