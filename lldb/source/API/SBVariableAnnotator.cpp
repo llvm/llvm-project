@@ -18,10 +18,13 @@
 using namespace lldb;
 using namespace lldb_private;
 
-SBVariableAnnotator::SBVariableAnnotator() { LLDB_INSTRUMENT_VA(this); }
-
-SBVariableAnnotator::SBVariableAnnotator(const SBVariableAnnotator &rhs) {
+SBVariableAnnotator::SBVariableAnnotator() : m_opaque_sp() {
   LLDB_INSTRUMENT_VA(this);
+}
+
+SBVariableAnnotator::SBVariableAnnotator(const SBVariableAnnotator &rhs)
+    : m_opaque_sp(rhs.m_opaque_sp) {
+  LLDB_INSTRUMENT_VA(this, rhs);
 }
 
 const SBVariableAnnotator &
