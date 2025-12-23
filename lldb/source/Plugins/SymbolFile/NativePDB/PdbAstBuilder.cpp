@@ -430,8 +430,10 @@ CompilerDeclContext PdbAstBuilder::GetParentDeclContext(PdbSymUid uid) {
 }
 
 bool PdbAstBuilder::CompleteType(CompilerType ct) {
-  clang::QualType qt =
-      clang::QualType::getFromOpaquePtr(ct.GetOpaqueQualType());
+  if (GetClangASTImporter().CanImport(ct))
+    return GetClangASTImporter().CompleteType(ct);
+
+  clang::QualType qt = FromCompilerType(ct);
   if (qt.isNull())
     return false;
   clang::TagDecl *tag = qt->getAsTagDecl();
@@ -1465,6 +1467,10 @@ CompilerDecl PdbAstBuilder::ToCompilerDecl(clang::Decl &decl) {
 
 CompilerType PdbAstBuilder::ToCompilerType(clang::QualType qt) {
   return {m_clang.weak_from_this(), qt.getAsOpaquePtr()};
+}
+
+clang::QualType PdbAstBuilder::FromCompilerType(CompilerType ct) {
+  return ClangUtil::GetQualType(ct);
 }
 
 CompilerDeclContext

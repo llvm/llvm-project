@@ -2490,17 +2490,11 @@ SymbolFileNativePDB::GetDynamicArrayInfoForUID(
 
 bool SymbolFileNativePDB::CompleteType(CompilerType &compiler_type) {
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
-  auto clang_type_system = compiler_type.GetTypeSystem<TypeSystemClang>();
-  if (!clang_type_system)
+  auto ts = compiler_type.GetTypeSystem();
+  if (!ts || !ts->GetNativePDBParser())
     return false;
 
-  PdbAstBuilder *ast_builder =
-      static_cast<PdbAstBuilder *>(clang_type_system->GetNativePDBParser());
-  if (ast_builder &&
-      ast_builder->GetClangASTImporter().CanImport(compiler_type))
-    return ast_builder->GetClangASTImporter().CompleteType(compiler_type);
-
-  return ast_builder->CompleteType(compiler_type);
+  return ts->GetNativePDBParser()->CompleteType(compiler_type);
 }
 
 void SymbolFileNativePDB::GetTypes(lldb_private::SymbolContextScope *sc_scope,

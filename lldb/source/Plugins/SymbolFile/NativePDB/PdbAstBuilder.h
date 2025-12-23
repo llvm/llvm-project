@@ -84,6 +84,7 @@ public:
   CompilerDecl ToCompilerDecl(clang::Decl &decl);
   CompilerType ToCompilerType(clang::QualType qt);
   CompilerDeclContext ToCompilerDeclContext(clang::DeclContext &context);
+  clang::QualType FromCompilerType(CompilerType ct);
   clang::Decl *FromCompilerDecl(CompilerDecl decl);
   clang::DeclContext *FromCompilerDeclContext(CompilerDeclContext context);
 
