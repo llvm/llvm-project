@@ -86,6 +86,7 @@
 #include "lldb/API/SBUnixSignals.h"
 #include "lldb/API/SBValue.h"
 #include "lldb/API/SBValueList.h"
+#include "lldb/API/SBVariableAnnotator.h"
 #include "lldb/API/SBVariablesOptions.h"
 #include "lldb/API/SBWatchpoint.h"
 
