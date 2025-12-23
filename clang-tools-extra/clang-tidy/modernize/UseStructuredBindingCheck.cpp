@@ -68,16 +68,10 @@ static bool matchNVarDeclStartingWith(
     if (!BeginDS)
       BeginDS = EndDS;
 
-    if (Backwards) {
-      for (const auto *VD : llvm::reverse(EndDS->decls())) {
-        if (!Matches(VD))
-          return false;
-      }
-    } else {
-      for (const auto *VD : EndDS->decls()) {
-        if (!Matches(VD))
-          return false;
-      }
+    for (const auto *VD :
+         llvm::reverse_conditionally(EndDS->decls(), Backwards)) {
+      if (!Matches(VD))
+        return false;
     }
 
     // All the matchers is satisfied in those DeclStmts.
