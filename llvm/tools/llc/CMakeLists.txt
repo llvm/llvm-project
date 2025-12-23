@@ -8,7 +8,6 @@ set(LLVM_LINK_COMPONENTS
   CodeGen
   CodeGenTypes
   Core
-  Extensions
   IRPrinter
   IRReader
   MC

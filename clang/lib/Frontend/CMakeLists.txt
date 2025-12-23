@@ -5,7 +5,6 @@ set(LLVM_LINK_COMPONENTS
   BitstreamReader
   CAS
   CASUtil
-  Extensions
   MCCAS
   Option
   ProfileData
