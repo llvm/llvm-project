@@ -42,7 +42,7 @@ static bool matchNVarDeclStartingWith(
     bool Backwards = false) {
   const DeclStmt *BeginDS = nullptr;
   const DeclStmt *EndDS = nullptr;
-  size_t N = InnerMatchers.size();
+  const size_t N = InnerMatchers.size();
   size_t Count = 0;
 
   auto Matches = [&](const Decl *VD) {
@@ -348,7 +348,7 @@ void UseStructuredBindingCheck::check(const MatchFinder::MatchResult &Result) {
       }
     }();
 
-    std::string ReplacementText =
+    const std::string ReplacementText =
         (Twine(Prefix) + " [" + FirstVar->getNameAsString() + ", " +
          SecondVar->getNameAsString() + "]" + (CFRS ? " :" : ""))
             .str();
