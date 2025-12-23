@@ -569,7 +569,7 @@ ValueObjectSP StackFrame::DILGetValueForVariableExpressionPath(
                                use_dynamic, !no_synth_child, !no_fragile_ivar,
                                check_ptr_vs_member);
 
-  auto valobj_or_error = interpreter.Evaluate((*tree_or_error).get());
+  auto valobj_or_error = interpreter.Evaluate(**tree_or_error);
   if (!valobj_or_error) {
     error = Status::FromError(valobj_or_error.takeError());
     return ValueObjectConstResult::Create(nullptr, std::move(error));

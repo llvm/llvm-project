@@ -47914,6 +47914,7 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
   EVT CondVT = Cond.getValueType();
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   bool CondConstantVector = ISD::isBuildVectorOfConstantSDNodes(Cond.getNode());
+  unsigned EltBitWidth = VT.getScalarSizeInBits();
 
   // Attempt to combine (select M, (sub 0, X), X) -> (sub (xor X, M), M).
   // Limit this to cases of non-constant masks that createShuffleMaskFromVSELECT
@@ -48439,7 +48440,7 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
       Cond.getOperand(0).getOpcode() == ISD::AND &&
       isNullOrNullSplat(Cond.getOperand(1)) &&
       cast<CondCodeSDNode>(Cond.getOperand(2))->get() == ISD::SETEQ &&
-      Cond.getOperand(0).getValueType() == VT) {
+      Cond.getOperand(0).getScalarValueSizeInBits() == EltBitWidth) {
     // The 'and' mask must be composed of power-of-2 constants.
     SDValue And = Cond.getOperand(0);
     auto *C = isConstOrConstSplat(And.getOperand(1));
@@ -48453,7 +48454,6 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
     // If we have a non-splat but still powers-of-2 mask, AVX1 can use pmulld
     // and AVX2 can use vpsllv{dq}. 8-bit lacks a proper shift or multiply.
     // 16-bit lacks a proper blendv.
-    unsigned EltBitWidth = VT.getScalarSizeInBits();
     bool CanShiftBlend =
         TLI.isTypeLegal(VT) && ((Subtarget.hasAVX() && EltBitWidth == 32) ||
                                 (Subtarget.hasAVX2() && EltBitWidth == 64) ||
@@ -55154,6 +55154,19 @@ static SDValue isFNEG(SelectionDAG &DAG, SDNode *N, unsigned Depth = 0) {
                                     cast<ShuffleVectorSDNode>(Op)->getMask());
     break;
   }
+  case ISD::CONCAT_VECTORS: {
+    // Limited to FNEG to ensure we don't create orphan nodes via isFNEG.
+    SmallVector<SDValue, 4> SubOps;
+    if (collectConcatOps(N, SubOps, DAG) &&
+        llvm::all_of(SubOps, [](SDValue SubOp) {
+          return SubOp.getOpcode() == ISD::FNEG;
+        })) {
+      for (SDValue &SubOp : SubOps)
+        SubOp = SubOp.getOperand(0);
+      return DAG.getNode(ISD::CONCAT_VECTORS, SDLoc(Op), VT, SubOps);
+    }
+    break;
+  }
   case ISD::INSERT_VECTOR_ELT: {
     // Negate of INSERT_VECTOR_ELT(UNDEF, V, INDEX) is INSERT_VECTOR_ELT(UNDEF,
     // -V, INDEX).
@@ -59495,10 +59508,10 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
           ((VT.is256BitVector() && Subtarget.hasInt256()) ||
            (VT.is512BitVector() && Subtarget.useAVX512Regs() &&
             (EltSizeInBits >= 32 || Subtarget.useBWIRegs()))) &&
-          Op0.getOperand(0).getValueType().is128BitVector() &&
-          Op0.getOperand(0).getValueType() ==
-              Ops[0].getOperand(0).getValueType()) {
-        EVT SrcVT = Op0.getOperand(0).getValueType();
+          Ops[0].getOperand(0).getValueType().is128BitVector() &&
+          Ops[0].getOperand(0).getValueType() ==
+              Ops[1].getOperand(0).getValueType()) {
+        EVT SrcVT = Ops[0].getOperand(0).getValueType();
         unsigned NumElts = VT.getVectorNumElements();
         MVT UnpackSVT =
             MVT::getIntegerVT(SrcVT.getScalarSizeInBits() * (NumElts / 2));

@@ -842,7 +842,7 @@ defvar CIR_YieldableScopes = [
 ];
 
 def CIR_YieldOp : CIR_Op<"yield", [
-  ReturnLike, Terminator, ParentOneOf<CIR_YieldableScopes>
+  ReturnLike, Terminator, ParentOneOf<CIR_YieldableScopes>, NoMemoryEffect
 ]> {
   let summary = "Represents the default branching behaviour of a region";
   let description = [{
@@ -999,7 +999,8 @@ def CIR_ResumeFlatOp : CIR_Op<"resume.flat", [
 
 def CIR_ScopeOp : CIR_Op<"scope", [
   DeclareOpInterfaceMethods<RegionBranchOpInterface>,
-  RecursivelySpeculatable, AutomaticAllocationScope, NoRegionArguments
+  RecursivelySpeculatable, AutomaticAllocationScope, NoRegionArguments,
+  RecursiveMemoryEffects
 ]> {
   let summary = "Represents a C/C++ scope";
   let description = [{
@@ -1026,6 +1027,7 @@ def CIR_ScopeOp : CIR_Op<"scope", [
   let results = (outs Optional<CIR_AnyType>:$results);
   let regions = (region AnyRegion:$scopeRegion);
 
+  let hasFolder = 1;
   let hasVerifier = 1;
   let skipDefaultBuilders = 1;
   let assemblyFormat = [{
@@ -1104,7 +1106,8 @@ def CIR_CaseOp : CIR_Op<"case", [
 def CIR_SwitchOp : CIR_Op<"switch", [
   SameVariadicOperandSize,
   DeclareOpInterfaceMethods<RegionBranchOpInterface>,
-  RecursivelySpeculatable, AutomaticAllocationScope, NoRegionArguments
+  RecursivelySpeculatable, AutomaticAllocationScope, NoRegionArguments,
+  RecursiveMemoryEffects
 ]> {
   let summary = "Switch operation";
   let description = [{
@@ -2722,6 +2725,63 @@ def CIR_GetMemberOp : CIR_Op<"get_member"> {
   }];
 
   let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// GetElementOp
+//===----------------------------------------------------------------------===//
+
+def CIR_GetElementOp : CIR_Op<"get_element", [
+  TypesMatchWith<
+      "type of 'result' matches element type of 'base'", "base", "result",
+      "cir::PointerType::get(mlir::cast<cir::ArrayType>(mlir::cast<cir::"
+      "PointerType>($_self).getPointee()).getElementType())">
+]> {
+  let summary = "Get the address of an array element";
+
+  let description = [{
+    The `cir.get_element` operation gets the address of a particular element
+    from the `base` array.
+
+    It expects a pointer to the `base` array and the `index` of the element.
+
+    Example:
+    ```mlir
+    // Suppose we have a array.
+    !s32i = !cir.int<s, 32>
+    !arr_ty = !cir.array<!s32i x 4>
+
+    // Get the address of the element at index 1.
+    %elem_1 = cir.get_element %0[1 : !s32i] : !cir.ptr<!array_ty> -> !cir.ptr<!s32i>
+
+    // Get the address of the element at index %i.
+    %i = ...
+    %elem_i = cir.get_element %0[%i : !s32i] : !cir.ptr<!array_ty> -> !cir.ptr<!s32i>
+
+    ```
+  }];
+
+  let arguments = (ins
+    Arg<CIR_PtrToArray, "the base address of the array ">:$base,
+    Arg<CIR_AnyFundamentalIntType, "the index of the element">:$index
+  );
+  let results = (outs CIR_PointerType : $result);
+
+  let assemblyFormat = [{
+    $base`[` $index `:` type($index) `]` attr-dict
+      `:` qualified(type($base)) `->` qualified(type($result))
+  }];
+
+  let extraClassDeclaration = [{
+    // Get the type of the element of the array.
+    mlir::Type getElementType() {
+      return getType().getPointee();
+}
+
+    cir::PointerType getBaseType() {
+      return mlir::cast<cir::PointerType>(getBase().getType());
+    }
+  }];
 }
 
 //===----------------------------------------------------------------------===//

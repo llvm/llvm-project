@@ -36,6 +36,7 @@
 
 namespace llvm {
 class raw_fd_ostream;
+class PassPlugin;
 class Timer;
 class TimerGroup;
 }
@@ -130,6 +131,9 @@ class CompilerInstance : public ModuleLoader {
 
   /// The semantic analysis object.
   std::unique_ptr<Sema> TheSema;
+
+  /// Back-end pass plugins.
+  std::vector<std::unique_ptr<llvm::PassPlugin>> PassPlugins;
 
   /// The frontend timer group.
   std::unique_ptr<llvm::TimerGroup> timerGroup;
@@ -644,6 +648,14 @@ public:
   /// the compiler instance takes ownership of \p Value.
   void setCodeCompletionConsumer(CodeCompleteConsumer *Value);
 
+  /// }
+  /// @name Back-end Pass Plugins
+  /// @{
+
+  llvm::ArrayRef<std::unique_ptr<llvm::PassPlugin>> getPassPlugins() const {
+    return PassPlugins;
+  }
+
   /// @}
   /// @name Frontend timer
   /// @{
@@ -893,7 +905,7 @@ private:
   /// load it.
   ModuleLoadResult findOrCompileModuleAndReadAST(StringRef ModuleName,
                                                  SourceLocation ImportLoc,
-                                                 SourceRange ModuleNameRange,
+                                                 SourceLocation ModuleNameLoc,
                                                  bool IsInclusionDirective);
 
   /// Creates a \c CompilerInstance for compiling a module.
