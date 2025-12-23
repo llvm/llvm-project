@@ -34,10 +34,11 @@ define void @test_xmm(i32 %shift, i32 %mulp, <2 x i64> %a,ptr %arraydecay,ptr %f
 ; CHECK-NEXT:    ## kill: def $eax killed $eax killed $rax
 ; CHECK-NEXT:    ## kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    movzwl %ax, %esi
+; CHECK-NEXT:    kmovb %k0, %edi
 ; CHECK-NEXT:    callq _check_mask16
 ; CHECK-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 ## 16-byte Reload
 ; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdi ## 8-byte Reload
-; CHECK-NEXT:    vmovmskps %xmm0, %edi
+; CHECK-NEXT:    vpmovd2m %xmm0, %k0
 ; CHECK-NEXT:    ## kill: def $k1 killed $k0
 ; CHECK-NEXT:    kmovd %k0, %eax
 ; CHECK-NEXT:    ## kill: def $al killed $al killed $eax

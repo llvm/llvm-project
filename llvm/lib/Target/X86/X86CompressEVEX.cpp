@@ -176,6 +176,72 @@ static bool performCustomAdjustments(MachineInstr &MI, unsigned NewOpc) {
   return true;
 }
 
+// Try to compress VPMOV*2M + KMOV chain patterns:
+//   vpmovd2m %xmm0, %k0     ->  (erase this)
+//   kmovb %k0, %eax         ->  vmovmskps %xmm0, %eax
+static bool tryCompressMultiOpPattern(MachineInstr &MI,
+                                      MachineBasicBlock &MBB,
+                                      const X86Subtarget &ST,
+                                      SmallVectorImpl<MachineInstr *> &
+                                      ToErase) {
+  const X86InstrInfo *TII = ST.getInstrInfo();
+  const TargetRegisterInfo *TRI = ST.getRegisterInfo();
+
+  unsigned Opc = MI.getOpcode();
+  if (Opc != X86::VPMOVD2MZ128kr && Opc != X86::VPMOVD2MZ256kr)
+    return false;
+
+  Register MaskReg = MI.getOperand(0).getReg();
+  Register SrcVecReg = MI.getOperand(1).getReg();
+
+  unsigned MovMskOpc = (Opc == X86::VPMOVD2MZ128kr)
+                         ? X86::VMOVMSKPSrr
+                         : X86::VMOVMSKPSYrr;
+
+  MachineInstr *KMovMI = nullptr;
+
+  for (MachineInstr &CurMI : llvm::make_range(
+           std::next(MachineBasicBlock::iterator(MI)), MBB.end())) {
+    if (CurMI.modifiesRegister(MaskReg, TRI)) {
+      if (!KMovMI)
+        return false; // Mask clobbered before use
+      break;
+    }
+
+    if (CurMI.readsRegister(MaskReg, TRI)) {
+      if (KMovMI)
+        return false; // Fail: Mask has MULTIPLE uses
+
+      unsigned UseOpc = CurMI.getOpcode();
+      bool IsKMOV = (UseOpc == X86::KMOVBrk || UseOpc == X86::KMOVWrk ||
+                     UseOpc == X86::KMOVDrk || UseOpc == X86::KMOVQrk);
+
+      if (IsKMOV && CurMI.getOperand(1).getReg() == MaskReg) {
+        KMovMI = &CurMI;
+        // continue scanning to ensure
+        // there are no *other* uses of the mask later in the block.
+      } else {
+        return false;
+      }
+    }
+
+    if (!KMovMI && CurMI.modifiesRegister(SrcVecReg, TRI)) {
+      return false; // SrcVecReg modified before it could be used by MOVMSK
+    }
+  }
+
+  if (!KMovMI)
+    return false;
+
+  // Apply the transformation
+  KMovMI->setDesc(TII->get(MovMskOpc));
+  KMovMI->getOperand(1).setReg(SrcVecReg);
+  KMovMI->setAsmPrinterFlag(X86::AC_EVEX_2_VEX);
+
+  ToErase.push_back(&MI);
+  return true;
+}
+
 static bool CompressEVEXImpl(MachineInstr &MI, MachineBasicBlock &MBB,
                              const X86Subtarget &ST,
                              SmallVectorImpl<MachineInstr *> &ToErase) {
@@ -189,54 +255,12 @@ static bool CompressEVEXImpl(MachineInstr &MI, MachineBasicBlock &MBB,
   if (TSFlags & (X86II::EVEX_K | X86II::EVEX_L2))
     return false;
 
-  // Try to compress VPMOV*2M + KMOV chain patterns:
-  //   vpmovd2m %xmm0, %k0     ->   vmovmskps %xmm0, %eax
-  //   kmovb %k0, %eax              (erase this)
+  // Specialized VPMOVD2M + KMOV -> MOVMSK fold first.
+  if (tryCompressMultiOpPattern(MI, MBB, ST, ToErase))
+    return true;
+
   unsigned Opc = MI.getOpcode();
-  if ((Opc == X86::VPMOVD2MZ128kr || Opc == X86::VPMOVD2MZ256kr) &&
-      !usesExtendedRegister(MI) && MI.getOperand(0).isReg()) {
-
-    Register MaskReg = MI.getOperand(0).getReg();
-    Register SrcVecReg = MI.getOperand(1).getReg();
-
-    // Find the unique KMOV instruction that reads this mask register
-    MachineInstr *KMovMI = nullptr;
-    Register GPRReg;
-    for (MachineInstr &UseMI : MBB) {
-      if (&UseMI == &MI)
-        continue;
-
-      unsigned UseOpc = UseMI.getOpcode();
-      if ((UseOpc == X86::KMOVBrk || UseOpc == X86::KMOVWrk ||
-           UseOpc == X86::KMOVDrk || UseOpc == X86::KMOVQrk) &&
-          UseMI.getOperand(1).isReg() &&
-          UseMI.getOperand(1).getReg() == MaskReg) {
-
-        if (KMovMI)
-          break; // Multiple uses, can't compress
-
-        KMovMI = &UseMI;
-        GPRReg = UseMI.getOperand(0).getReg();
-      }
-    }
-    if (KMovMI) {
-      unsigned MovMskOpc =
-          (Opc == X86::VPMOVD2MZ128kr) ? X86::VMOVMSKPSrr : X86::VMOVMSKPSYrr;
-
-      const MCInstrDesc &MovMskDesc = ST.getInstrInfo()->get(MovMskOpc);
-      MI.setDesc(MovMskDesc);
-      MI.getOperand(0).setReg(GPRReg);
-      MI.getOperand(1).setReg(SrcVecReg);
-      MI.setAsmPrinterFlag(X86::AC_EVEX_2_VEX);
-
-      // Record KMOV for deletion
-      ToErase.push_back(KMovMI);
-
-      return true;
-    }
-  }
-
-  auto IsRedundantNewDataDest = [&](unsigned &Opc) {
+  auto IsRedundantNewDataDest = [&](unsigned &OpcRef) {
     // $rbx = ADD64rr_ND $rbx, $rax / $rbx = ADD64rr_ND $rax, $rbx
     //   ->
     // $rbx = ADD64rr $rbx, $rax
@@ -256,7 +280,7 @@ static bool CompressEVEXImpl(MachineInstr &MI, MachineBasicBlock &MBB,
       return false;
     // Opcode may change after commute, e.g. SHRD -> SHLD
     ST.getInstrInfo()->commuteInstruction(MI, false, 1, 2);
-    Opc = MI.getOpcode();
+    OpcRef = MI.getOpcode();
     return true;
   };
 
