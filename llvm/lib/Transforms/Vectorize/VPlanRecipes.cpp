@@ -856,27 +856,31 @@ Value *VPInstruction::generate(VPTransformState &State) {
   case VPInstruction::ExtractLane: {
     Value *LaneToExtract = State.get(getOperand(0), true);
     Type *IdxTy = State.TypeAnalysis.inferScalarType(getOperand(0));
-    Value *Ext = State.VF.isScalar()
-                     ? State.get(getOperand(1))
-                     : Builder.CreateExtractElement(State.get(getOperand(1)),
-                                                    LaneToExtract);
+    Value *Res = nullptr;
 
+    // Just create an extractelement when extracting from a single vector.
     if (getNumOperands() == 2)
-      return Ext;
+      return State.VF.isScalar() ? State.get(getOperand(1))
+                                 : Builder.CreateExtractElement(
+                                       State.get(getOperand(1)), LaneToExtract);
 
-    Value *Res = Ext;
     Value *RuntimeVF = getRuntimeVF(Builder, IdxTy, State.VF);
-
-    for (unsigned Idx = 2; Idx != getNumOperands(); ++Idx) {
+    for (unsigned Idx = 1; Idx != getNumOperands(); ++Idx) {
       Value *VectorStart =
           Builder.CreateMul(RuntimeVF, ConstantInt::get(IdxTy, Idx - 1));
-      Value *VectorIdx = Builder.CreateSub(LaneToExtract, VectorStart);
+      Value *VectorIdx = Idx == 1
+                             ? LaneToExtract
+                             : Builder.CreateSub(LaneToExtract, VectorStart);
       Value *Ext = State.VF.isScalar()
                        ? State.get(getOperand(Idx))
                        : Builder.CreateExtractElement(
                              State.get(getOperand(Idx)), VectorIdx);
-      Value *Cmp = Builder.CreateICmpUGE(LaneToExtract, VectorStart);
-      Res = Builder.CreateSelect(Cmp, Ext, Res);
+      if (Res) {
+        Value *Cmp = Builder.CreateICmpUGE(LaneToExtract, VectorStart);
+        Res = Builder.CreateSelect(Cmp, Ext, Res);
+      } else {
+        Res = Ext;
+      }
     }
     return Res;
   }
