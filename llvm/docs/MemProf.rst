@@ -101,8 +101,6 @@ The compiler uses the profile data to annotate allocation instructions with meta
 
 .. note::
     Ensure that the same debug info flags (e.g. ``-gmlt`` and ``-fdebug-info-for-profiling``) used during instrumentation are also passed during this compilation step to enable correct matching of the profile data.
-
-.. note::
     For the optimized binary to fully utilize the hot/cold hinting, it must be linked with an allocator that supports this mechanism, such as `tcmalloc <https://github.com/google/tcmalloc>`_. TCMalloc provides an API (``tcmalloc::hot_cold_t``) that accepts a hint (0 for cold, 255 for hot) to guide data placement and improve locality. To indicate that the library supports these interfaces, the ``-mllvm -supports-hot-cold-new`` flag is used during the LTO link.
 
 Context Disambiguation (LTO)
@@ -129,6 +127,7 @@ Consider the following example:
 Without context disambiguation, the compiler sees a single ``allocate`` function called from both hot and cold contexts. It must conservatively assume the allocation is "not cold" or "ambiguous".
 
 With LTO and MemProf:
+
 1.  The compiler constructs a whole-program call graph.
 2.  It identifies that ``allocate`` has distinct calling contexts with different behaviors.
 3.  It **clones** ``allocate`` into two versions: one for the hot path and one for the cold path.
