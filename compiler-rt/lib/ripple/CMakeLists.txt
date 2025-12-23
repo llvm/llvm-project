@@ -1,6 +1,6 @@
-if(AArch64 IN_LIST RIPPLE_SUPPORTED_ARCH)
+if(aarch64 IN_LIST RIPPLE_SUPPORTED_ARCH)
   add_subdirectory(aarch64)
 endif()
-if(Hexagon IN_LIST RIPPLE_SUPPORTED_ARCH)
+if(hexagon IN_LIST RIPPLE_SUPPORTED_ARCH)
   add_subdirectory(hexagon)
 endif()
