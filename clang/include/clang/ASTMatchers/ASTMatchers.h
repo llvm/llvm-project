@@ -5927,7 +5927,7 @@ AST_POLYMORPHIC_MATCHER_P(hasAnySubstatement,
 /// with binaryOperator()
 ///   matching '1+2' (first match) and '3+4' (second match)
 extern const internal::VariadicFunction<
-    internal::ForEachAdjSubstatementsMatcherType, internal::Matcher<Stmt>,
+    internal::ForEachAdjacentSubstatementsMatcherType, internal::Matcher<Stmt>,
     internal::forEachAdjSubstatementsFunc>
     forEachAdjacentSubstatements;
 

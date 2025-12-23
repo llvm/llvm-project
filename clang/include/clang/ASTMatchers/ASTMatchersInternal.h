@@ -2289,7 +2289,7 @@ HasOpNameMatcher hasAnyOperatorNameFunc(ArrayRef<const StringRef *> NameRefs);
 ///
 /// See \c forEachAdjacentSubstatements() in ASTMatchers.h for details.
 template <typename T, typename ArgT = std::vector<Matcher<Stmt>>>
-class ForEachAdjSubstatementsMatcher : public MatcherInterface<T> {
+class ForEachAdjacentSubstatementsMatcher : public MatcherInterface<T> {
   static_assert(std::is_same<T, CompoundStmt>::value ||
                     std::is_same<T, StmtExpr>::value,
                 "Matcher only supports `CompoundStmt` and `StmtExpr`");
@@ -2297,7 +2297,7 @@ class ForEachAdjSubstatementsMatcher : public MatcherInterface<T> {
                 "Matcher ArgT must be std::vector<Matcher<Stmt>>");
 
 public:
-  explicit ForEachAdjSubstatementsMatcher(std::vector<Matcher<Stmt>> Matchers)
+  explicit ForEachAdjacentSubstatementsMatcher(std::vector<Matcher<Stmt>> Matchers)
       : Matchers(std::move(Matchers)) {}
 
   bool matches(const T &Node, ASTMatchFinder *Finder,
@@ -2307,12 +2307,12 @@ private:
   std::vector<Matcher<Stmt>> Matchers;
 };
 
-using ForEachAdjSubstatementsMatcherType =
-    PolymorphicMatcher<ForEachAdjSubstatementsMatcher,
+using ForEachAdjacentSubstatementsMatcherType =
+    PolymorphicMatcher<ForEachAdjacentSubstatementsMatcher,
                        AST_POLYMORPHIC_SUPPORTED_TYPES(CompoundStmt, StmtExpr),
                        std::vector<Matcher<Stmt>>>;
 
-ForEachAdjSubstatementsMatcherType
+ForEachAdjacentSubstatementsMatcherType
 forEachAdjSubstatementsFunc(ArrayRef<const Matcher<Stmt> *> MatcherRefs);
 
 using HasOverloadOpNameMatcher =

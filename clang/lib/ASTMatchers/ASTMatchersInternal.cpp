@@ -485,13 +485,13 @@ static BoundNodesTreeBuilder extendBuilder(BoundNodesTreeBuilder &&Builder) {
   return Extended;
 }
 
-ForEachAdjSubstatementsMatcherType
+ForEachAdjacentSubstatementsMatcherType
 forEachAdjSubstatementsFunc(ArrayRef<const Matcher<Stmt> *> MatcherRefs) {
-  return ForEachAdjSubstatementsMatcherType(vectorFromMatcherRefs(MatcherRefs));
+  return ForEachAdjacentSubstatementsMatcherType(vectorFromMatcherRefs(MatcherRefs));
 }
 
 template <typename T, typename ArgT>
-bool ForEachAdjSubstatementsMatcher<T, ArgT>::matches(
+bool ForEachAdjacentSubstatementsMatcher<T, ArgT>::matches(
     const T &Node, ASTMatchFinder *Finder,
     BoundNodesTreeBuilder *Builder) const {
   const CompoundStmt *CS = CompoundStmtMatcher<T>::get(Node);
@@ -536,9 +536,9 @@ bool ForEachAdjSubstatementsMatcher<T, ArgT>::matches(
   return FoundAny;
 }
 
-template bool ForEachAdjSubstatementsMatcher<CompoundStmt>::matches(
+template bool ForEachAdjacentSubstatementsMatcher<CompoundStmt>::matches(
     const CompoundStmt &, ASTMatchFinder *, BoundNodesTreeBuilder *) const;
-template bool ForEachAdjSubstatementsMatcher<StmtExpr>::matches(
+template bool ForEachAdjacentSubstatementsMatcher<StmtExpr>::matches(
     const StmtExpr &, ASTMatchFinder *, BoundNodesTreeBuilder *) const;
 
 HasNameMatcher::HasNameMatcher(std::vector<std::string> N)
@@ -1121,7 +1121,7 @@ const internal::VariadicFunction<internal::Matcher<NamedDecl>, StringRef,
 const internal::VariadicFunction<internal::HasOpNameMatcher, StringRef,
                                  internal::hasAnyOperatorNameFunc>
     hasAnyOperatorName = {};
-const internal::VariadicFunction<internal::ForEachAdjSubstatementsMatcherType,
+const internal::VariadicFunction<internal::ForEachAdjacentSubstatementsMatcherType,
                                  internal::Matcher<Stmt>,
                                  internal::forEachAdjSubstatementsFunc>
     forEachAdjacentSubstatements = {};
