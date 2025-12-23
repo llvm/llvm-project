@@ -4750,6 +4750,109 @@ entry:
   ret void
 }
 
+define float @v_sqrt_f32__amdgcn_exp_known_not_denorm(float %x) {
+; SDAG-LABEL: v_sqrt_f32__amdgcn_exp_known_not_denorm:
+; SDAG:       ; %bb.0:
+; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SDAG-NEXT:    v_exp_f32_e32 v0, v0
+; SDAG-NEXT:    s_mov_b32 s4, 0xf800000
+; SDAG-NEXT:    v_mov_b32_e32 v2, 0x260
+; SDAG-NEXT:    v_mul_f32_e32 v1, 0x4f800000, v0
+; SDAG-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
+; SDAG-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
+; SDAG-NEXT:    v_rsq_f32_e32 v1, v0
+; SDAG-NEXT:    v_mul_f32_e32 v3, v0, v1
+; SDAG-NEXT:    v_mul_f32_e32 v1, 0.5, v1
+; SDAG-NEXT:    v_fma_f32 v4, -v1, v3, 0.5
+; SDAG-NEXT:    v_fma_f32 v3, v3, v4, v3
+; SDAG-NEXT:    v_fma_f32 v1, v1, v4, v1
+; SDAG-NEXT:    v_fma_f32 v4, -v3, v3, v0
+; SDAG-NEXT:    v_fma_f32 v1, v4, v1, v3
+; SDAG-NEXT:    v_mul_f32_e32 v3, 0x37800000, v1
+; SDAG-NEXT:    v_cndmask_b32_e32 v1, v1, v3, vcc
+; SDAG-NEXT:    v_cmp_class_f32_e32 vcc, v0, v2
+; SDAG-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
+; SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GISEL-LABEL: v_sqrt_f32__amdgcn_exp_known_not_denorm:
+; GISEL:       ; %bb.0:
+; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-NEXT:    v_exp_f32_e32 v0, v0
+; GISEL-NEXT:    v_mov_b32_e32 v1, 0xf800000
+; GISEL-NEXT:    v_mul_f32_e32 v2, 0x4f800000, v0
+; GISEL-NEXT:    v_cmp_lt_f32_e32 vcc, v0, v1
+; GISEL-NEXT:    v_cndmask_b32_e32 v0, v0, v2, vcc
+; GISEL-NEXT:    v_rsq_f32_e32 v1, v0
+; GISEL-NEXT:    v_mov_b32_e32 v2, 0x260
+; GISEL-NEXT:    v_mul_f32_e32 v3, v0, v1
+; GISEL-NEXT:    v_mul_f32_e32 v1, 0.5, v1
+; GISEL-NEXT:    v_fma_f32 v4, -v1, v3, 0.5
+; GISEL-NEXT:    v_fma_f32 v3, v3, v4, v3
+; GISEL-NEXT:    v_fma_f32 v1, v1, v4, v1
+; GISEL-NEXT:    v_fma_f32 v4, -v3, v3, v0
+; GISEL-NEXT:    v_fma_f32 v1, v4, v1, v3
+; GISEL-NEXT:    v_mul_f32_e32 v3, 0x37800000, v1
+; GISEL-NEXT:    v_cndmask_b32_e32 v1, v1, v3, vcc
+; GISEL-NEXT:    v_cmp_class_f32_e32 vcc, v0, v2
+; GISEL-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
+; GISEL-NEXT:    s_setpc_b64 s[30:31]
+  %exp = call float @llvm.amdgcn.exp2.f32(float %x)
+  %result = call float @llvm.sqrt.f32(float %exp)
+  ret float %result
+}
+
+define float @v_sqrt_f32__amdgcn_log_known_not_denorm(float %x) {
+; SDAG-LABEL: v_sqrt_f32__amdgcn_log_known_not_denorm:
+; SDAG:       ; %bb.0:
+; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SDAG-NEXT:    v_log_f32_e32 v0, v0
+; SDAG-NEXT:    s_mov_b32 s4, 0xf800000
+; SDAG-NEXT:    v_mov_b32_e32 v2, 0x260
+; SDAG-NEXT:    v_mul_f32_e32 v1, 0x4f800000, v0
+; SDAG-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
+; SDAG-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
+; SDAG-NEXT:    v_rsq_f32_e32 v1, v0
+; SDAG-NEXT:    v_mul_f32_e32 v3, v0, v1
+; SDAG-NEXT:    v_mul_f32_e32 v1, 0.5, v1
+; SDAG-NEXT:    v_fma_f32 v4, -v1, v3, 0.5
+; SDAG-NEXT:    v_fma_f32 v3, v3, v4, v3
+; SDAG-NEXT:    v_fma_f32 v1, v1, v4, v1
+; SDAG-NEXT:    v_fma_f32 v4, -v3, v3, v0
+; SDAG-NEXT:    v_fma_f32 v1, v4, v1, v3
+; SDAG-NEXT:    v_mul_f32_e32 v3, 0x37800000, v1
+; SDAG-NEXT:    v_cndmask_b32_e32 v1, v1, v3, vcc
+; SDAG-NEXT:    v_cmp_class_f32_e32 vcc, v0, v2
+; SDAG-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
+; SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GISEL-LABEL: v_sqrt_f32__amdgcn_log_known_not_denorm:
+; GISEL:       ; %bb.0:
+; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-NEXT:    v_log_f32_e32 v0, v0
+; GISEL-NEXT:    v_mov_b32_e32 v1, 0xf800000
+; GISEL-NEXT:    v_mul_f32_e32 v2, 0x4f800000, v0
+; GISEL-NEXT:    v_cmp_lt_f32_e32 vcc, v0, v1
+; GISEL-NEXT:    v_cndmask_b32_e32 v0, v0, v2, vcc
+; GISEL-NEXT:    v_rsq_f32_e32 v1, v0
+; GISEL-NEXT:    v_mov_b32_e32 v2, 0x260
+; GISEL-NEXT:    v_mul_f32_e32 v3, v0, v1
+; GISEL-NEXT:    v_mul_f32_e32 v1, 0.5, v1
+; GISEL-NEXT:    v_fma_f32 v4, -v1, v3, 0.5
+; GISEL-NEXT:    v_fma_f32 v3, v3, v4, v3
+; GISEL-NEXT:    v_fma_f32 v1, v1, v4, v1
+; GISEL-NEXT:    v_fma_f32 v4, -v3, v3, v0
+; GISEL-NEXT:    v_fma_f32 v1, v4, v1, v3
+; GISEL-NEXT:    v_mul_f32_e32 v3, 0x37800000, v1
+; GISEL-NEXT:    v_cndmask_b32_e32 v1, v1, v3, vcc
+; GISEL-NEXT:    v_cmp_class_f32_e32 vcc, v0, v2
+; GISEL-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
+; GISEL-NEXT:    s_setpc_b64 s[30:31]
+  %log = call float @llvm.amdgcn.log.f32(float %x)
+  %result = call float @llvm.sqrt.f32(float %log)
+  ret float %result
+}
+
+
 declare float @llvm.fabs.f32(float) #0
 declare float @llvm.sqrt.f32(float) #0
 declare <2 x float> @llvm.fabs.v2f32(<2 x float>) #0
