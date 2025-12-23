@@ -1058,12 +1058,11 @@ public:
     // lowered to ICmp + BranchOnCond during VPlan to VPlan transformation.
     BranchOnCount,
     BranchOnCond,
-    // Multi-way branch with N boolean condition operands and N+1 successors.
-    // If condition i is true, branches to successor i; otherwise falls through
-    // to check the next condition. If all conditions are false, branches to
-    // the final successor. Expanded to a chain of BranchOnCond after region
-    // dissolution.
-    BranchOnMultiCond,
+    // Branch with 2 boolean condition operands and 3 successors. If condition
+    // 0 is true, branches to successor 0; if condition 1 is true, branches to
+    // successor 1; otherwise branches to successor 2. Expanded to a chain of
+    // BranchOnCond after region dissolution.
+    BranchOnTwoConds,
     Broadcast,
     /// Given operands of (the same) struct type, creates a struct of fixed-
     /// width vectors each containing a struct field of all operands. The
@@ -1220,7 +1219,7 @@ public:
     case Instruction::Fence:
     case Instruction::AtomicRMW:
     case VPInstruction::BranchOnCond:
-    case VPInstruction::BranchOnMultiCond:
+    case VPInstruction::BranchOnTwoConds:
     case VPInstruction::BranchOnCount:
       return false;
     default:

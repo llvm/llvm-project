@@ -136,7 +136,7 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPInstruction *R) {
     // Return the type based on first operand.
     return inferScalarType(R->getOperand(0));
   case VPInstruction::BranchOnCond:
-  case VPInstruction::BranchOnMultiCond:
+  case VPInstruction::BranchOnTwoConds:
   case VPInstruction::BranchOnCount:
     return Type::getVoidTy(Ctx);
   default:

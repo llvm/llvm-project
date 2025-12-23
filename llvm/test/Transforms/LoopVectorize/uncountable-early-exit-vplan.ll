@@ -31,7 +31,7 @@ define i64 @multi_exiting_to_different_exits_live_in_exit_values() {
 ; CHECK-NEXT:     EMIT vp<%index.next> = add nuw vp<[[CAN_IV]]>, vp<[[VFxUF]]>
 ; CHECK-NEXT:     EMIT vp<[[EA_TAKEN:%.+]]> = any-of ir<%c.1>
 ; CHECK-NEXT:     EMIT vp<[[LATCH_CMP:%.+]]> = icmp eq vp<%index.next>, vp<[[VTC]]>
-; CHECK-NEXT:     EMIT branch-on-multi-cond vp<[[EA_TAKEN]]>, vp<[[LATCH_CMP]]>
+; CHECK-NEXT:     EMIT branch-on-two-conds vp<[[EA_TAKEN]]>, vp<[[LATCH_CMP]]>
 ; CHECK-NEXT:   No successors
 ; CHECK-NEXT: }
 ; CHECK-NEXT: Successor(s): vector.early.exit, middle.block
@@ -113,7 +113,7 @@ define i64 @multi_exiting_to_same_exit_live_in_exit_values() {
 ; CHECK-NEXT:     EMIT vp<%index.next> = add nuw vp<[[CAN_IV]]>, vp<[[VFxUF]]>
 ; CHECK-NEXT:     EMIT vp<[[EA_TAKEN:%.+]]> = any-of ir<%c.1>
 ; CHECK-NEXT:     EMIT vp<[[LATCH_CMP:%.+]]> = icmp eq vp<%index.next>, vp<[[VTC]]>
-; CHECK-NEXT:     EMIT branch-on-multi-cond vp<[[EA_TAKEN]]>, vp<[[LATCH_CMP]]>
+; CHECK-NEXT:     EMIT branch-on-two-conds vp<[[EA_TAKEN]]>, vp<[[LATCH_CMP]]>
 ; CHECK-NEXT:   No successors
 ; CHECK-NEXT: }
 ; CHECK-NEXT: Successor(s): vector.early.exit, middle.block
@@ -188,7 +188,7 @@ define i64 @multi_exiting_to_same_exit_live_in_exit_values_2() {
 ; CHECK-NEXT:     EMIT vp<%index.next> = add nuw vp<[[CAN_IV]]>, vp<[[VFxUF]]>
 ; CHECK-NEXT:     EMIT vp<[[EA_TAKEN:%.+]]> = any-of ir<%c.1>
 ; CHECK-NEXT:     EMIT vp<[[LATCH_CMP:%.+]]> = icmp eq vp<%index.next>, vp<[[VTC]]>
-; CHECK-NEXT:     EMIT branch-on-multi-cond vp<[[EA_TAKEN]]>, vp<[[LATCH_CMP]]>
+; CHECK-NEXT:     EMIT branch-on-two-conds vp<[[EA_TAKEN]]>, vp<[[LATCH_CMP]]>
 ; CHECK-NEXT:   No successors
 ; CHECK-NEXT: }
 ; CHECK-NEXT: Successor(s): vector.early.exit, middle.block

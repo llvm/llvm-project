@@ -344,7 +344,7 @@ vputils::getRecipesForUncountableExit(VPlan &Plan,
   //     EMIT vp<%5> = any-of vp<%4>
   //     EMIT vp<%6> = add vp<%2>, vp<%0>
   //     EMIT vp<%7> = icmp eq vp<%6>, ir<64>
-  //     EMIT branch-on-muli-cond vp<%5>, vp<%8>
+  //     EMIT branch-on-two-conds vp<%5>, vp<%7>
   //   No successors
   // }
   // Successor(s): early.exit, middle.block
@@ -360,8 +360,8 @@ vputils::getRecipesForUncountableExit(VPlan &Plan,
   auto *Region = Plan.getVectorLoopRegion();
   VPValue *UncountableCondition = nullptr;
   if (!match(Region->getExitingBasicBlock()->getTerminator(),
-             m_BranchOnMultiCond(m_AnyOf(m_VPValue(UncountableCondition)),
-                                 m_VPValue())))
+             m_BranchOnTwoConds(m_AnyOf(m_VPValue(UncountableCondition)),
+                                m_VPValue())))
     return std::nullopt;
 
   SmallVector<VPValue *, 4> Worklist;
