@@ -241,24 +241,51 @@ Static Data Profile
 To support static data partitioning, the profile format includes a payload for symbolized data access profiles. This maps data addresses to canonical symbol names (or module source location for internal data) and access counts. This enables the compiler to identify which global variables are hot.
 
 Testing
+
 -------
+
+
 
 When making changes to MemProf, verify your changes using the following test suites:
 
+
+
 1.  **Runtime Tests:**
+
+
+
     *   Location: ``compiler-rt/test/memprof``
+
     *   Purpose: Verify the runtime instrumentation, shadow memory behavior, and profile generation.
 
+
+
 2.  **Profile Manipulation Tests:**
+
+
+
     *   Location: ``llvm/test/tools/llvm-profdata``
+
     *   Purpose: Verify that ``llvm-profdata`` can correctly merge, show, and handle MemProf profiles.
 
+
+
 3.  **Instrumentation & Optimization Tests:**
+
+
+
     *   Location: ``llvm/test/Transforms/PGOProfile``
+
     *   Purpose: Verify the correctness of the ``MemProfUse`` pass, metadata annotation, and IR transformations.
 
+
+
 4.  **ThinLTO & Context Disambiguation Tests:**
+
+
+
     *   Location: ``llvm/test/ThinLTO/X86/memprof*`` and ``llvm/test/Transforms/MemProfContextDisambiguation``
+
     *   Purpose: Verify context disambiguation, cloning, and summary analysis during ThinLTO and LTO.
 
 Testing with YAML Profiles
@@ -267,6 +294,7 @@ Testing with YAML Profiles
 You can create MemProf profiles in YAML format for testing purposes. This is useful for creating small, self-contained test cases without needing to run a binary.
 
 1.  **Create a YAML Profile:** You can start by dumping a real profile to YAML (see :ref:`Processing Profiles` above) or writing one from scratch.
+
 2.  **Convert to Indexed Format:** Use ``llvm-profdata`` to convert the YAML to the indexed MemProf format.
 
     .. code-block:: bash
@@ -279,21 +307,19 @@ You can create MemProf profiles in YAML format for testing purposes. This is use
 
         opt -passes='memprof-use<profile-filename=profile.memprofdata>' test.ll -S
 
-**Example YAML Profile:**
+**Example YAML Profile:** ::
 
-.. code-block:: yaml
-
-    ---
-    HeapProfileRecords:
-      - GUID:            _Z3foov
-        AllocSites:
-          - Callstack:
-              - { Function: _Z3foov, LineOffset: 0, Column: 22, IsInlineFrame: false }
-              - { Function: main, LineOffset: 2, Column: 5, IsInlineFrame: false }
-            MemInfoBlock:
-              TotalSize:                  400
-              AllocCount:                 1
-              TotalLifetimeAccessDensity: 1
-              TotalLifetime:              1000000
-        CallSites:       []
-    ...
+   ---
+   HeapProfileRecords:
+     - GUID:            _Z3foov
+       AllocSites:
+         - Callstack:
+             - { Function: _Z3foov, LineOffset: 0, Column: 22, IsInlineFrame: false }
+             - { Function: main, LineOffset: 2, Column: 5, IsInlineFrame: false }
+           MemInfoBlock:
+             TotalSize:                  400
+             AllocCount:                 1
+             TotalLifetimeAccessDensity: 1
+             TotalLifetime:              1000000
+       CallSites:       []
+   ...
