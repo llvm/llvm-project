@@ -13,8 +13,6 @@
 #include <hexagon_protos.h>
 #include <ripple_hvx.h>
 
-#include "HVX_Rotate.h"
-
 #include "lib_func_attrib.h"
 
 #define _decl_rotate_impl(N, T, C_T, shft)                                     \
