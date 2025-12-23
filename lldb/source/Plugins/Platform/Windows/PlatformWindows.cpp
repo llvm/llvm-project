@@ -231,7 +231,7 @@ uint32_t PlatformWindows::DoLoadImage(Process *process,
 
   /* Inject paths parameter into inferior */
   lldb::addr_t injected_paths{0x0};
-  std::optional<llvm::detail::scope_exit<std::function<void()>>> paths_cleanup;
+  std::optional<llvm::scope_exit<std::function<void()>>> paths_cleanup;
   if (paths) {
     llvm::SmallVector<llvm::UTF16, 261> search_paths;
 
@@ -519,8 +519,18 @@ ProcessSP PlatformWindows::DebugProcess(ProcessLaunchInfo &launch_info,
 
   // We need to launch and attach to the process.
   launch_info.GetFlags().Set(eLaunchFlagDebug);
-  if (process_sp)
-    error = process_sp->Launch(launch_info);
+  if (!process_sp)
+    return nullptr;
+  error = process_sp->Launch(launch_info);
+#ifdef _WIN32
+  if (error.Success())
+    process_sp->SetPseudoConsoleHandle(launch_info.GetPTYSP());
+  else {
+    Log *log = GetLog(LLDBLog::Platform);
+    LLDB_LOGF(log, "Platform::%s LaunchProcess() failed: %s", __FUNCTION__,
+              error.AsCString());
+  }
+#endif
 
   return process_sp;
 }

@@ -112,7 +112,6 @@
 #include <optional>
 #include <tuple>
 #include <type_traits>
-#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -247,11 +246,15 @@ class Vectorizer {
   const DataLayout &DL;
   IRBuilder<> Builder;
 
-  // We could erase instrs right after vectorizing them, but that can mess up
-  // our BB iterators, and also can make the equivalence class keys point to
-  // freed memory.  This is fixable, but it's simpler just to wait until we're
-  // done with the BB and erase all at once.
+  /// We could erase instrs right after vectorizing them, but that can mess up
+  /// our BB iterators, and also can make the equivalence class keys point to
+  /// freed memory.  This is fixable, but it's simpler just to wait until we're
+  /// done with the BB and erase all at once.
   SmallVector<Instruction *, 128> ToErase;
+
+  /// We insert load/store instructions and GEPs to fill gaps and extend chains
+  /// to enable vectorization. Keep track and delete them later.
+  DenseSet<Instruction *> ExtraElements;
 
 public:
   Vectorizer(Function &F, AliasAnalysis &AA, AssumptionCache &AC,
@@ -269,19 +272,26 @@ private:
   /// isGuaranteedToTransferExecutionToSuccessor(I) == true.
   bool runOnPseudoBB(BasicBlock::iterator Begin, BasicBlock::iterator End);
 
+  /// Runs the vectorizer on one equivalence class, i.e. one set of loads/stores
+  /// in the same BB with the same value for getUnderlyingObject() etc.
+  bool runOnEquivalenceClass(const EqClassKey &EqClassKey,
+                             ArrayRef<Instruction *> EqClass);
+
   /// Runs the vectorizer on one chain, i.e. a subset of an equivalence class
   /// where all instructions access a known, constant offset from the first
   /// instruction.
   bool runOnChain(Chain &C);
 
   /// Splits the chain into subchains of instructions which read/write a
-  /// contiguous block of memory.  Discards any length-1 subchains (because
-  /// there's nothing to vectorize in there).
+  /// contiguous block of memory. Discards any length-1 subchains (because
+  /// there's nothing to vectorize in there). Also attempts to fill gaps with
+  /// "extra" elements to artificially make chains contiguous in some cases.
   std::vector<Chain> splitChainByContiguity(Chain &C);
 
   /// Splits the chain into subchains where it's safe to hoist loads up to the
   /// beginning of the sub-chain and it's safe to sink loads up to the end of
-  /// the sub-chain.  Discards any length-1 subchains.
+  /// the sub-chain. Discards any length-1 subchains. Also attempts to extend
+  /// non-power-of-two chains by adding "extra" elements in some cases.
   std::vector<Chain> splitChainByMayAliasInstrs(Chain &C);
 
   /// Splits the chain into subchains that make legal, aligned accesses.
@@ -334,9 +344,6 @@ private:
   EquivalenceClassMap collectEquivalenceClasses(BasicBlock::iterator Begin,
                                                 BasicBlock::iterator End);
 
-  /// Inserts a cast instruction to convert Inst to DstTy.
-  Value *insertCast(Value *Val, Type *DstTy);
-
   /// Partitions Instrs into "chains" where every instruction has a known
   /// constant offset from the first instr in the chain.
   ///
@@ -344,12 +351,29 @@ private:
   /// in the chain is the leader, and an instr touches distance 0 from itself.
   std::vector<Chain> gatherChains(ArrayRef<Instruction *> Instrs);
 
-  // Helpers for chain merging.
-  std::optional<APInt> computeLeaderDelta(Instruction *I1, Instruction *I2);
-  bool chainsOverlapAfterRebase(const Chain &A, const Chain &B,
-                                const APInt &Delta) const;
-  static void rebaseChain(Chain &C, const APInt &Delta);
-  void normalizeChainToType(Chain &C, Type *CastTy);
+  /// Checks if a potential vector load/store with a given alignment is allowed
+  /// and fast. Aligned accesses are always allowed and fast, while misaligned
+  /// accesses depend on TTI checks to determine whether they can and should be
+  /// vectorized or kept as element-wise accesses.
+  bool accessIsAllowedAndFast(unsigned SizeBytes, unsigned AS, Align Alignment,
+                              unsigned VecElemBits) const;
+
+  /// Create a new GEP and a new Load/Store instruction such that the GEP
+  /// is pointing at PrevElem + Offset. In the case of stores, store poison.
+  /// Extra elements will either be combined into a masked load/store or
+  /// deleted before the end of the pass.
+  ChainElem createExtraElementAfter(const ChainElem &PrevElem, Type *Ty,
+                                    APInt Offset, StringRef Prefix,
+                                    Align Alignment = Align());
+
+  /// Create a mask that masks off the extra elements in the chain, to be used
+  /// for the creation of a masked load/store vector.
+  Value *createMaskForExtraElements(const ArrayRef<ChainElem> C,
+                                    FixedVectorType *VecTy);
+
+  /// Delete dead GEPs and extra Load/Store instructions created by
+  /// createExtraElementAfter
+  void deleteExtraElements();
 };
 
 class LoadStoreVectorizerLegacyPass : public FunctionPass {
@@ -431,20 +455,6 @@ PreservedAnalyses LoadStoreVectorizerPass::run(Function &F,
   return Changed ? PA : PreservedAnalyses::all();
 }
 
-static const Value *getUnderlyingObject(const Value *Ptr) {
-  const Value *ObjPtr = llvm::getUnderlyingObject(Ptr);
-  if (const auto *Sel = dyn_cast<SelectInst>(ObjPtr)) {
-    // The select's themselves are distinct instructions even if they share
-    // the same condition and evaluate to consecutive pointers for true and
-    // false values of the condition. Therefore using the select's themselves
-    // for grouping instructions would put consecutive accesses into different
-    // lists and they won't be even checked for being consecutive, and won't
-    // be vectorized.
-    return Sel->getCondition();
-  }
-  return ObjPtr;
-}
-
 bool Vectorizer::run() {
   bool Changed = false;
   // Break up the BB if there are any instrs which aren't guaranteed to transfer
@@ -477,97 +487,24 @@ bool Vectorizer::run() {
       Changed |= runOnPseudoBB(*It, *std::next(It));
 
     for (Instruction *I : ToErase) {
+      // These will get deleted in deleteExtraElements.
+      // This is because ExtraElements will include both extra elements
+      // that *were* vectorized and extra elements that *were not*
+      // vectorized. ToErase will only include extra elements that *were*
+      // vectorized, so in order to avoid double deletion we skip them here and
+      // handle them in deleteExtraElements.
+      if (ExtraElements.contains(I))
+        continue;
       auto *PtrOperand = getLoadStorePointerOperand(I);
       if (I->use_empty())
         I->eraseFromParent();
       RecursivelyDeleteTriviallyDeadInstructions(PtrOperand);
     }
     ToErase.clear();
+    deleteExtraElements();
   }
 
   return Changed;
-}
-
-Value *Vectorizer::insertCast(Value *Val, Type *DstTy) {
-  if (DL.getTypeSizeInBits(Val->getType()) == DL.getTypeSizeInBits(DstTy)) {
-    return Builder.CreateBitOrPointerCast(Val, DstTy, Val->getName() + ".bc");
-  }
-
-  // If the types are of different sizes and both are integers, we can use
-  // zext or sext to cast.
-  if (Val->getType()->isIntegerTy() && DstTy->isIntegerTy()) {
-    if (DL.getTypeSizeInBits(Val->getType()) < DL.getTypeSizeInBits(DstTy)) {
-      return Builder.CreateZExt(Val, DstTy, Val->getName() + ".bc");
-    }
-    return Builder.CreateTrunc(Val, DstTy, Val->getName() + ".bc");
-  }
-
-  return nullptr;
-}
-
-std::optional<APInt> Vectorizer::computeLeaderDelta(Instruction *I1,
-                                                    Instruction *I2) {
-  assert(((isa<LoadInst>(I1) && isa<LoadInst>(I2)) ||
-          (isa<StoreInst>(I1) && isa<StoreInst>(I2))) &&
-         "computeLeaderDelta must be called with two load or two store "
-         "instructions");
-  Instruction *CtxInst = I1->comesBefore(I2) ? I2 : I1;
-  const Value *Ptr1 = getLoadStorePointerOperand(I1);
-  const Value *Ptr2 = getLoadStorePointerOperand(I2);
-  return getConstantOffset(const_cast<Value *>(Ptr1), const_cast<Value *>(Ptr2),
-                           CtxInst);
-}
-
-bool Vectorizer::chainsOverlapAfterRebase(const Chain &A, const Chain &B,
-                                          const APInt &Delta) const {
-  ConstantRange ARange(
-      A.front().OffsetFromLeader,
-      A.back().OffsetFromLeader +
-          DL.getTypeStoreSize(getLoadStoreType(A.back().Inst)));
-  ConstantRange BRange(
-      B.front().OffsetFromLeader + Delta,
-      B.back().OffsetFromLeader + Delta +
-          DL.getTypeStoreSize(getLoadStoreType(B.back().Inst)));
-  return !ARange.intersectWith(BRange).isEmptySet();
-}
-
-void Vectorizer::rebaseChain(Chain &C, const APInt &Delta) {
-  for (ChainElem &E : C)
-    E.OffsetFromLeader += Delta;
-}
-
-void Vectorizer::normalizeChainToType(Chain &C, Type *CastTy) {
-  for (ChainElem &Elem : C) {
-    Instruction *Inst = Elem.Inst;
-    Type *OrigValTy = getLoadStoreType(Inst);
-    if (OrigValTy == CastTy)
-      continue;
-
-    if (auto *LI = dyn_cast<LoadInst>(Inst)) {
-      Builder.SetInsertPoint(LI);
-      LoadInst *NewLoad = Builder.CreateLoad(CastTy, LI->getPointerOperand(),
-                                             LI->getName() + ".mut");
-      copyMetadataForAccess(*NewLoad, *LI);
-      Value *CastBack = insertCast(NewLoad, OrigValTy);
-      if (!CastBack)
-        llvm_unreachable("Failed to insert cast");
-      LI->replaceAllUsesWith(CastBack);
-      ToErase.emplace_back(LI);
-      Elem.Inst = NewLoad;
-    } else if (auto *SI = dyn_cast<StoreInst>(Inst)) {
-      Builder.SetInsertPoint(SI);
-      Value *CastVal = insertCast(SI->getValueOperand(), CastTy);
-      if (!CastVal)
-        llvm_unreachable("Failed to insert cast");
-      StoreInst *NewStore =
-          Builder.CreateStore(CastVal, SI->getPointerOperand());
-      NewStore->setAlignment(SI->getAlign());
-      NewStore->setVolatile(SI->isVolatile());
-      copyMetadataForAccess(*NewStore, *SI);
-      ToErase.emplace_back(SI);
-      Elem.Inst = NewStore;
-    }
-  }
 }
 
 bool Vectorizer::runOnPseudoBB(BasicBlock::iterator Begin,
@@ -582,120 +519,49 @@ bool Vectorizer::runOnPseudoBB(BasicBlock::iterator Begin,
   });
 
   bool Changed = false;
-  SmallVector<Chain> ContiguousSubChains;
-
   for (const auto &[EqClassKey, EqClass] :
-       collectEquivalenceClasses(Begin, End)) {
+       collectEquivalenceClasses(Begin, End))
+    Changed |= runOnEquivalenceClass(EqClassKey, EqClass);
 
-    LLVM_DEBUG({
-      dbgs() << "LSV: Running on equivalence class of size " << EqClass.size()
-             << " keyed on " << EqClassKey << ":\n";
-      for (Instruction *I : EqClass)
-        dbgs() << "  " << *I << "\n";
-    });
+  return Changed;
+}
 
-    for (Chain &C : gatherChains(EqClass)) {
+bool Vectorizer::runOnEquivalenceClass(const EqClassKey &EqClassKey,
+                                       ArrayRef<Instruction *> EqClass) {
+  bool Changed = false;
 
-      // Split up the chain into increasingly smaller chains, until we can
-      // finally vectorize the chains.
-      //
-      // (Don't be scared by the depth of the loop nest here.  These operations
-      // are all at worst O(n lg n) in the number of instructions, and splitting
-      // chains doesn't change the number of instrs.  So the whole loop nest is
-      // O(n lg n).)
-      for (auto &C : splitChainByMayAliasInstrs(C)) {
-        for (auto &C : splitChainByContiguity(C)) {
-          ContiguousSubChains.emplace_back(C);
-        }
-      }
-    }
-  }
+  LLVM_DEBUG({
+    dbgs() << "LSV: Running on equivalence class of size " << EqClass.size()
+           << " keyed on " << EqClassKey << ":\n";
+    for (Instruction *I : EqClass)
+      dbgs() << "  " << *I << "\n";
+  });
 
-  // Merge chains in reverse order, so that the first chain is the largest.
-  for (int I = ContiguousSubChains.size() - 1; I > 0; I--) {
-    Chain &C1 = ContiguousSubChains[I - 1];
-    Chain &C2 = ContiguousSubChains[I];
+  std::vector<Chain> Chains = gatherChains(EqClass);
+  LLVM_DEBUG(dbgs() << "LSV: Got " << Chains.size()
+                    << " nontrivial chains.\n";);
+  for (Chain &C : Chains)
+    Changed |= runOnChain(C);
+  return Changed;
+}
 
-    // If the scalar types of the chains are the same, we can merge them
-    // without inserting any casts.
-    if (getLoadStoreType(C1[0].Inst)->getScalarType() ==
-        getLoadStoreType(C2[0].Inst)->getScalarType())
-      continue;
+bool Vectorizer::runOnChain(Chain &C) {
+  LLVM_DEBUG({
+    dbgs() << "LSV: Running on chain with " << C.size() << " instructions:\n";
+    dumpChain(C);
+  });
 
-    const Value *C1Ptr = getLoadStorePointerOperand(C1[0].Inst);
-    const Value *C2Ptr = getLoadStorePointerOperand(C2[0].Inst);
-    unsigned AS1 = C1Ptr->getType()->getPointerAddressSpace();
-    unsigned AS2 = C2Ptr->getType()->getPointerAddressSpace();
-    bool C1IsLoad = isa<LoadInst>(C1[0].Inst);
-    bool C2IsLoad = isa<LoadInst>(C2[0].Inst);
-
-    // If the chains are mapped to different types, have distinct underlying
-    // pointer objects, or include both loads and stores, skip.
-    if (C1IsLoad != C2IsLoad || AS1 != AS2 ||
-        ::getUnderlyingObject(C1Ptr) != ::getUnderlyingObject(C2Ptr))
-      continue;
-
-    // Compute constant offset between chain leaders; if unknown, skip.
-    std::optional<APInt> DeltaOpt = computeLeaderDelta(C1[0].Inst, C2[0].Inst);
-    if (!DeltaOpt)
-      continue;
-
-    // Check that rebasing C2 into C1's coordinate space will not overlap C1.
-    if (chainsOverlapAfterRebase(C1, C2, *DeltaOpt))
-      continue;
-
-    // Determine the common integer cast type for normalization and ensure total
-    // bitwidth matches across all elements of both chains.
-    Type *C1ElemTy = getLoadStoreType(C1[0].Inst);
-    unsigned TotalBits = DL.getTypeSizeInBits(C1ElemTy);
-    auto AllElemsMatchTotalBits = [&](const Chain &C) {
-      return llvm::all_of(C, [&](const ChainElem &E) {
-        return DL.getTypeSizeInBits(getLoadStoreType(E.Inst)) == TotalBits;
-      });
-    };
-    if (!AllElemsMatchTotalBits(C1) || !AllElemsMatchTotalBits(C2))
-      continue;
-
-    // Power-of-two span ensures we can form a legal, single vector access
-    // without padding or splitting. Many targets and cost models assume POT
-    // widths, and it guarantees an integral element count for the chosen
-    // VecElemTy.
-    APInt Sz = C2.front().OffsetFromLeader +
-               DL.getTypeStoreSize(getLoadStoreType(C2.front().Inst)) -
-               C1.back().OffsetFromLeader + *DeltaOpt;
-    if (!Sz.isPowerOf2())
-      continue;
-
-    // Rebase C2's offsets into C1's coordinate space prior to merging and
-    // merge C2 into C1 by appending all elements of C2 to C1, then erase C2
-    // from ContiguousSubChains.
-    rebaseChain(C2, *DeltaOpt);
-    C1.insert(C1.end(), C2.begin(), C2.end());
-    ContiguousSubChains.erase(ContiguousSubChains.begin() + I);
-
-    // Normalize the value operand/result type of each instruction in C1 to
-    // C1CastTy.
-    Type *C1CastTy =
-        Type::getIntNTy(C1ElemTy->getContext(), DL.getTypeSizeInBits(C1ElemTy));
-    normalizeChainToType(C1, C1CastTy);
-  }
-
-  for (auto &C : ContiguousSubChains) {
-    if (C.size() <= 1)
-      continue;
-    for (auto &AlignedSubChain : splitChainByAlignment(C))
-      Changed |= vectorizeChain(AlignedSubChain);
-  }
-
-  // Erase all instructions scheduled for deletion in this pseudo-BB.
-  for (Instruction *I : ToErase) {
-    auto *PtrOperand = getLoadStorePointerOperand(I);
-    if (I->use_empty())
-      I->eraseFromParent();
-    RecursivelyDeleteTriviallyDeadInstructions(PtrOperand);
-  }
-  ToErase.clear();
-
+  // Split up the chain into increasingly smaller chains, until we can finally
+  // vectorize the chains.
+  //
+  // (Don't be scared by the depth of the loop nest here.  These operations are
+  // all at worst O(n lg n) in the number of instructions, and splitting chains
+  // doesn't change the number of instrs.  So the whole loop nest is O(n lg n).)
+  bool Changed = false;
+  for (auto &C : splitChainByMayAliasInstrs(C))
+    for (auto &C : splitChainByContiguity(C))
+      for (auto &C : splitChainByAlignment(C))
+        Changed |= vectorizeChain(C);
   return Changed;
 }
 
@@ -756,7 +622,7 @@ std::vector<Chain> Vectorizer::splitChainByMayAliasInstrs(Chain &C) {
         LLVM_DEBUG(
             dbgs() << "LSV: Found intervening may-alias instrs; cannot merge "
                    << *ChainIt->Inst << " into " << *ChainBegin->Inst << "\n");
-        if (!NewChain.empty()) {
+        if (NewChain.size() > 1) {
           LLVM_DEBUG({
             dbgs() << "LSV: got nontrivial chain without aliasing instrs:\n";
             dumpChain(NewChain);
@@ -768,7 +634,7 @@ std::vector<Chain> Vectorizer::splitChainByMayAliasInstrs(Chain &C) {
         NewChain = SmallVector<ChainElem, 1>({*ChainIt});
       }
     }
-    if (!NewChain.empty()) {
+    if (NewChain.size() > 1) {
       LLVM_DEBUG({
         dbgs() << "LSV: got nontrivial chain without aliasing instrs:\n";
         dumpChain(NewChain);
@@ -796,15 +662,68 @@ std::vector<Chain> Vectorizer::splitChainByContiguity(Chain &C) {
     dumpChain(C);
   });
 
+  // If the chain is not contiguous, we try to fill the gap with "extra"
+  // elements to artificially make it contiguous, to try to enable
+  // vectorization. We only fill gaps if there is potential to end up with a
+  // legal masked load/store given the target, address space, and element type.
+  // At this point, when querying the TTI, optimistically assume max alignment
+  // and max vector size, as splitChainByAlignment will ensure the final vector
+  // shape passes the legalization check.
+  unsigned AS = getLoadStoreAddressSpace(C[0].Inst);
+  Type *ElementType = getLoadStoreType(C[0].Inst)->getScalarType();
+  unsigned MaxVecRegBits = TTI.getLoadStoreVecRegBitWidth(AS);
+  Align OptimisticAlign = Align(MaxVecRegBits / 8);
+  unsigned int MaxVectorNumElems =
+      MaxVecRegBits / DL.getTypeSizeInBits(ElementType);
+  // Note: This check decides whether to try to fill gaps based on the masked
+  // legality of the target's maximum vector size (getLoadStoreVecRegBitWidth).
+  // If a target *does not* support a masked load/store with this max vector
+  // size, but *does* support a masked load/store with a *smaller* vector size,
+  // that optimization will be missed. This does not occur in any of the targets
+  // that currently support this API.
+  FixedVectorType *OptimisticVectorType =
+      FixedVectorType::get(ElementType, MaxVectorNumElems);
+  bool TryFillGaps =
+      isa<LoadInst>(C[0].Inst)
+          ? TTI.isLegalMaskedLoad(OptimisticVectorType, OptimisticAlign, AS,
+                                  TTI::MaskKind::ConstantMask)
+          : TTI.isLegalMaskedStore(OptimisticVectorType, OptimisticAlign, AS,
+                                   TTI::MaskKind::ConstantMask);
+
+  // Cache the best aligned element in the chain for use when creating extra
+  // elements.
+  Align BestAlignedElemAlign = getLoadStoreAlignment(C[0].Inst);
+  APInt OffsetOfBestAlignedElemFromLeader = C[0].OffsetFromLeader;
+  for (const auto &E : C) {
+    Align ElementAlignment = getLoadStoreAlignment(E.Inst);
+    if (ElementAlignment > BestAlignedElemAlign) {
+      BestAlignedElemAlign = ElementAlignment;
+      OffsetOfBestAlignedElemFromLeader = E.OffsetFromLeader;
+    }
+  }
+
+  auto DeriveAlignFromBestAlignedElem = [&](APInt NewElemOffsetFromLeader) {
+    return commonAlignment(
+        BestAlignedElemAlign,
+        (NewElemOffsetFromLeader - OffsetOfBestAlignedElemFromLeader)
+            .abs()
+            .getLimitedValue());
+  };
+
+  unsigned ASPtrBits = DL.getIndexSizeInBits(AS);
+
   std::vector<Chain> Ret;
   Ret.push_back({C.front()});
 
   unsigned ChainElemTyBits = DL.getTypeSizeInBits(getChainElemTy(C));
-  APInt PrevReadEnd = C[0].OffsetFromLeader +
-                      DL.getTypeStoreSize(getLoadStoreType(&*C[0].Inst));
+  ChainElem &Prev = C[0];
   for (auto It = std::next(C.begin()), End = C.end(); It != End; ++It) {
     auto &CurChain = Ret.back();
-    unsigned SzBytes = DL.getTypeStoreSize(getLoadStoreType(&*It->Inst));
+
+    APInt PrevSzBytes =
+        APInt(ASPtrBits, DL.getTypeStoreSize(getLoadStoreType(Prev.Inst)));
+    APInt PrevReadEnd = Prev.OffsetFromLeader + PrevSzBytes;
+    unsigned SzBytes = DL.getTypeStoreSize(getLoadStoreType(It->Inst));
 
     // Add this instruction to the end of the current chain, or start a new one.
     assert(
@@ -826,13 +745,52 @@ std::vector<Chain> Vectorizer::splitChainByContiguity(Chain &C) {
                       << *It->Inst << " (starts at offset "
                       << It->OffsetFromLeader << ")\n");
 
-    if (AreContiguous)
+    // If the chain is not contiguous, try to fill in gaps between Prev and
+    // Curr. For now, we aren't filling gaps between load/stores of different
+    // sizes. Additionally, as a conservative heuristic, we only fill gaps of
+    // 1-2 elements. Generating loads/stores with too many unused bytes has a
+    // side effect of increasing register pressure (on NVIDIA targets at least),
+    // which could cancel out the benefits of reducing number of load/stores.
+    bool GapFilled = false;
+    if (!AreContiguous && TryFillGaps && PrevSzBytes == SzBytes) {
+      APInt GapSzBytes = It->OffsetFromLeader - PrevReadEnd;
+      if (GapSzBytes == PrevSzBytes) {
+        // There is a single gap between Prev and Curr, create one extra element
+        ChainElem NewElem = createExtraElementAfter(
+            Prev, getLoadStoreType(Prev.Inst), PrevSzBytes, "GapFill",
+            DeriveAlignFromBestAlignedElem(PrevReadEnd));
+        CurChain.push_back(NewElem);
+        GapFilled = true;
+      }
+      // There are two gaps between Prev and Curr, only create two extra
+      // elements if Prev is the first element in a sequence of four.
+      // This has the highest chance of resulting in a beneficial vectorization.
+      if ((GapSzBytes == 2 * PrevSzBytes) && (CurChain.size() % 4 == 1)) {
+        ChainElem NewElem1 = createExtraElementAfter(
+            Prev, getLoadStoreType(Prev.Inst), PrevSzBytes, "GapFill",
+            DeriveAlignFromBestAlignedElem(PrevReadEnd));
+        ChainElem NewElem2 = createExtraElementAfter(
+            NewElem1, getLoadStoreType(Prev.Inst), PrevSzBytes, "GapFill",
+            DeriveAlignFromBestAlignedElem(PrevReadEnd + PrevSzBytes));
+        CurChain.push_back(NewElem1);
+        CurChain.push_back(NewElem2);
+        GapFilled = true;
+      }
+    }
+
+    if (AreContiguous || GapFilled)
       CurChain.push_back(*It);
     else
       Ret.push_back({*It});
-    PrevReadEnd = APIntOps::smax(PrevReadEnd, ReadEnd);
+    // In certain cases when handling redundant elements with partial overlaps,
+    // the previous element may still extend beyond the current element. Only
+    // update Prev if the current element is the new end of the chain.
+    if (ReadEnd.sge(PrevReadEnd))
+      Prev = *It;
   }
 
+  // Filter out length-1 chains, these are uninteresting.
+  llvm::erase_if(Ret, [](const auto &Chain) { return Chain.size() <= 1; });
   return Ret;
 }
 
@@ -852,7 +810,7 @@ Type *Vectorizer::getChainElemTy(const Chain &C) {
   if (any_of(C, [](const ChainElem &E) {
         return getLoadStoreType(E.Inst)->getScalarType()->isPointerTy();
       })) {
-    return IntegerType::getIntNTy(
+    return Type::getIntNTy(
         F.getContext(),
         DL.getTypeSizeInBits(getLoadStoreType(C[0].Inst)->getScalarType()));
   }
@@ -903,6 +861,12 @@ std::vector<Chain> Vectorizer::splitChainByAlignment(Chain &C) {
 
   unsigned AS = getLoadStoreAddressSpace(C[0].Inst);
   unsigned VecRegBytes = TTI.getLoadStoreVecRegBitWidth(AS) / 8;
+
+  // For compile time reasons, we cache whether or not the superset
+  // of all candidate chains contains any extra loads/stores from earlier gap
+  // filling.
+  bool CandidateChainsMayContainExtraLoadsStores = any_of(
+      C, [this](const ChainElem &E) { return ExtraElements.contains(E.Inst); });
 
   std::vector<Chain> Ret;
   for (unsigned CBegin = 0; CBegin < C.size(); ++CBegin) {
@@ -958,41 +922,6 @@ std::vector<Chain> Vectorizer::splitChainByAlignment(Chain &C) {
         continue;
       }
 
-      // Is a load/store with this alignment allowed by TTI and at least as fast
-      // as an unvectorized load/store?
-      //
-      // TTI and F are passed as explicit captures to WAR an MSVC misparse (??).
-      auto IsAllowedAndFast = [&, SizeBytes = SizeBytes, &TTI = TTI,
-                               &F = F](Align Alignment) {
-        if (Alignment.value() % SizeBytes == 0)
-          return true;
-        unsigned VectorizedSpeed = 0;
-        bool AllowsMisaligned = TTI.allowsMisalignedMemoryAccesses(
-            F.getContext(), SizeBytes * 8, AS, Alignment, &VectorizedSpeed);
-        if (!AllowsMisaligned) {
-          LLVM_DEBUG(dbgs()
-                     << "LSV: Access of " << SizeBytes << "B in addrspace "
-                     << AS << " with alignment " << Alignment.value()
-                     << " is misaligned, and therefore can't be vectorized.\n");
-          return false;
-        }
-
-        unsigned ElementwiseSpeed = 0;
-        (TTI).allowsMisalignedMemoryAccesses((F).getContext(), VecElemBits, AS,
-                                             Alignment, &ElementwiseSpeed);
-        if (VectorizedSpeed < ElementwiseSpeed) {
-          LLVM_DEBUG(dbgs()
-                     << "LSV: Access of " << SizeBytes << "B in addrspace "
-                     << AS << " with alignment " << Alignment.value()
-                     << " has relative speed " << VectorizedSpeed
-                     << ", which is lower than the elementwise speed of "
-                     << ElementwiseSpeed
-                     << ".  Therefore this access won't be vectorized.\n");
-          return false;
-        }
-        return true;
-      };
-
       // If we're loading/storing from an alloca, align it if possible.
       //
       // FIXME: We eagerly upgrade the alignment, regardless of whether TTI
@@ -1008,7 +937,7 @@ std::vector<Chain> Vectorizer::splitChainByAlignment(Chain &C) {
       Align Alignment = getLoadStoreAlignment(C[CBegin].Inst);
       Align PrefAlign = Align(StackAdjustedAlignment);
       if (IsAllocaAccess && Alignment.value() % SizeBytes != 0 &&
-          IsAllowedAndFast(PrefAlign)) {
+          accessIsAllowedAndFast(SizeBytes, AS, PrefAlign, VecElemBits)) {
         Align NewAlign = getOrEnforceKnownAlignment(
             PtrOperand, PrefAlign, DL, C[CBegin].Inst, nullptr, &DT);
         if (NewAlign >= Alignment) {
@@ -1020,12 +949,79 @@ std::vector<Chain> Vectorizer::splitChainByAlignment(Chain &C) {
         }
       }
 
-      if (!IsAllowedAndFast(Alignment)) {
-        LLVM_DEBUG(
-            dbgs() << "LSV: splitChainByAlignment discarding candidate chain "
-                      "because its alignment is not AllowedAndFast: "
-                   << Alignment.value() << "\n");
-        continue;
+      Chain ExtendingLoadsStores;
+      if (!accessIsAllowedAndFast(SizeBytes, AS, Alignment, VecElemBits)) {
+        // If we have a non-power-of-2 element count, attempt to extend the
+        // chain to the next power-of-2 if it makes the access allowed and
+        // fast.
+        bool AllowedAndFast = false;
+        if (NumVecElems < TargetVF && !isPowerOf2_32(NumVecElems) &&
+            VecElemBits >= 8) {
+          // TargetVF may be a lot higher than NumVecElems,
+          // so only extend to the next power of 2.
+          assert(VecElemBits % 8 == 0);
+          unsigned VecElemBytes = VecElemBits / 8;
+          unsigned NewNumVecElems = PowerOf2Ceil(NumVecElems);
+          unsigned NewSizeBytes = VecElemBytes * NewNumVecElems;
+
+          assert(isPowerOf2_32(TargetVF) &&
+                 "TargetVF expected to be a power of 2");
+          assert(NewNumVecElems <= TargetVF &&
+                 "Should not extend past TargetVF");
+
+          LLVM_DEBUG(dbgs()
+                     << "LSV: attempting to extend chain of " << NumVecElems
+                     << " " << (IsLoadChain ? "loads" : "stores") << " to "
+                     << NewNumVecElems << " elements\n");
+          bool IsLegalToExtend =
+              IsLoadChain ? TTI.isLegalMaskedLoad(
+                                FixedVectorType::get(VecElemTy, NewNumVecElems),
+                                Alignment, AS, TTI::MaskKind::ConstantMask)
+                          : TTI.isLegalMaskedStore(
+                                FixedVectorType::get(VecElemTy, NewNumVecElems),
+                                Alignment, AS, TTI::MaskKind::ConstantMask);
+          // Only artificially increase the chain if it would be AllowedAndFast
+          // and if the resulting masked load/store will be legal for the
+          // target.
+          if (IsLegalToExtend &&
+              accessIsAllowedAndFast(NewSizeBytes, AS, Alignment,
+                                     VecElemBits)) {
+            LLVM_DEBUG(dbgs()
+                       << "LSV: extending " << (IsLoadChain ? "load" : "store")
+                       << " chain of " << NumVecElems << " "
+                       << (IsLoadChain ? "loads" : "stores")
+                       << " with total byte size of " << SizeBytes << " to "
+                       << NewNumVecElems << " "
+                       << (IsLoadChain ? "loads" : "stores")
+                       << " with total byte size of " << NewSizeBytes
+                       << ", TargetVF=" << TargetVF << " \n");
+
+            // Create (NewNumVecElems - NumVecElems) extra elements.
+            // We are basing each extra element on CBegin, which means the
+            // offsets should be based on SizeBytes, which represents the offset
+            // from CBegin to the current end of the chain.
+            unsigned ASPtrBits = DL.getIndexSizeInBits(AS);
+            for (unsigned I = 0; I < (NewNumVecElems - NumVecElems); I++) {
+              ChainElem NewElem = createExtraElementAfter(
+                  C[CBegin], VecElemTy,
+                  APInt(ASPtrBits, SizeBytes + I * VecElemBytes), "Extend");
+              ExtendingLoadsStores.push_back(NewElem);
+            }
+
+            // Update the size and number of elements for upcoming checks.
+            SizeBytes = NewSizeBytes;
+            NumVecElems = NewNumVecElems;
+            AllowedAndFast = true;
+          }
+        }
+        if (!AllowedAndFast) {
+          // We were not able to achieve legality by extending the chain.
+          LLVM_DEBUG(dbgs()
+                     << "LSV: splitChainByAlignment discarding candidate chain "
+                        "because its alignment is not AllowedAndFast: "
+                     << Alignment.value() << "\n");
+          continue;
+        }
       }
 
       if ((IsLoadChain &&
@@ -1038,10 +1034,43 @@ std::vector<Chain> Vectorizer::splitChainByAlignment(Chain &C) {
         continue;
       }
 
+      if (CandidateChainsMayContainExtraLoadsStores) {
+        // If the candidate chain contains extra loads/stores from an earlier
+        // optimization, confirm legality now. This filter is essential because
+        // when filling gaps in splitChainByContiguity, we queried the API to
+        // check that (for a given element type and address space) there *may*
+        // have been a legal masked load/store we could possibly create. Now, we
+        // need to check if the actual chain we ended up with is legal to turn
+        // into a masked load/store. This is relevant for NVPTX, for example,
+        // where a masked store is only legal if we have ended up with a 256-bit
+        // vector.
+        bool CurrCandContainsExtraLoadsStores = llvm::any_of(
+            ArrayRef<ChainElem>(C).slice(CBegin, CEnd - CBegin + 1),
+            [this](const ChainElem &E) {
+              return ExtraElements.contains(E.Inst);
+            });
+
+        if (CurrCandContainsExtraLoadsStores &&
+            (IsLoadChain ? !TTI.isLegalMaskedLoad(
+                               FixedVectorType::get(VecElemTy, NumVecElems),
+                               Alignment, AS, TTI::MaskKind::ConstantMask)
+                         : !TTI.isLegalMaskedStore(
+                               FixedVectorType::get(VecElemTy, NumVecElems),
+                               Alignment, AS, TTI::MaskKind::ConstantMask))) {
+          LLVM_DEBUG(dbgs()
+                     << "LSV: splitChainByAlignment discarding candidate chain "
+                        "because it contains extra loads/stores that we cannot "
+                        "legally vectorize into a masked load/store \n");
+          continue;
+        }
+      }
+
       // Hooray, we can vectorize this chain!
       Chain &NewChain = Ret.emplace_back();
       for (unsigned I = CBegin; I <= CEnd; ++I)
         NewChain.emplace_back(C[I]);
+      for (ChainElem E : ExtendingLoadsStores)
+        NewChain.emplace_back(E);
       CBegin = CEnd; // Skip over the instructions we've added to the chain.
       break;
     }
@@ -1051,6 +1080,14 @@ std::vector<Chain> Vectorizer::splitChainByAlignment(Chain &C) {
 
 bool Vectorizer::vectorizeChain(Chain &C) {
   if (C.size() < 2)
+    return false;
+
+  bool ChainContainsExtraLoadsStores = llvm::any_of(
+      C, [this](const ChainElem &E) { return ExtraElements.contains(E.Inst); });
+
+  // If we are left with a two-element chain, and one of the elements is an
+  // extra element, we don't want to vectorize
+  if (C.size() == 2 && ChainContainsExtraLoadsStores)
     return false;
 
   sortChainInOffsetOrder(C);
@@ -1107,15 +1144,25 @@ bool Vectorizer::vectorizeChain(Chain &C) {
         llvm::min_element(C, [](const auto &A, const auto &B) {
           return A.Inst->comesBefore(B.Inst);
         })->Inst);
-    // This can happen due to a chain of redundant loads.
-    // In this case, just use the element-type, and avoid ExtractElement.
-    if (NumElem == 1)
-      VecTy = VecElemTy;
-    // Chain is in offset order, so C[0] is the instr with the lowest offset,
-    // i.e. the root of the vector.
-    VecInst = Builder.CreateAlignedLoad(VecTy,
-                                        getLoadStorePointerOperand(C[0].Inst),
-                                        Alignment);
+
+    // If the chain contains extra loads, we need to vectorize into a
+    // masked load.
+    if (ChainContainsExtraLoadsStores) {
+      assert(TTI.isLegalMaskedLoad(VecTy, Alignment, AS,
+                                   TTI::MaskKind::ConstantMask));
+      Value *Mask = createMaskForExtraElements(C, cast<FixedVectorType>(VecTy));
+      VecInst = Builder.CreateMaskedLoad(
+          VecTy, getLoadStorePointerOperand(C[0].Inst), Alignment, Mask);
+    } else {
+      // This can happen due to a chain of redundant loads.
+      // In this case, just use the element-type, and avoid ExtractElement.
+      if (NumElem == 1)
+        VecTy = VecElemTy;
+      // Chain is in offset order, so C[0] is the instr with the lowest offset,
+      // i.e. the root of the vector.
+      VecInst = Builder.CreateAlignedLoad(
+          VecTy, getLoadStorePointerOperand(C[0].Inst), Alignment);
+    }
 
     for (const ChainElem &E : C) {
       Instruction *I = E.Inst;
@@ -1189,12 +1236,21 @@ bool Vectorizer::vectorizeChain(Chain &C) {
       }
     }
 
-    // Chain is in offset order, so C[0] is the instr with the lowest offset,
-    // i.e. the root of the vector.
-    VecInst = Builder.CreateAlignedStore(
-        Vec,
-        getLoadStorePointerOperand(C[0].Inst),
-        Alignment);
+    // If the chain originates from extra stores, we need to vectorize into a
+    // masked store.
+    if (ChainContainsExtraLoadsStores) {
+      assert(TTI.isLegalMaskedStore(Vec->getType(), Alignment, AS,
+                                    TTI::MaskKind::ConstantMask));
+      Value *Mask =
+          createMaskForExtraElements(C, cast<FixedVectorType>(Vec->getType()));
+      VecInst = Builder.CreateMaskedStore(
+          Vec, getLoadStorePointerOperand(C[0].Inst), Alignment, Mask);
+    } else {
+      // Chain is in offset order, so C[0] is the instr with the lowest offset,
+      // i.e. the root of the vector.
+      VecInst = Builder.CreateAlignedStore(
+          Vec, getLoadStorePointerOperand(C[0].Inst), Alignment);
+    }
   }
 
   propagateMetadata(VecInst, C);
@@ -1640,6 +1696,20 @@ Vectorizer::collectEquivalenceClasses(BasicBlock::iterator Begin,
                                       BasicBlock::iterator End) {
   EquivalenceClassMap Ret;
 
+  auto GetUnderlyingObject = [](const Value *Ptr) -> const Value * {
+    const Value *ObjPtr = llvm::getUnderlyingObject(Ptr);
+    if (const auto *Sel = dyn_cast<SelectInst>(ObjPtr)) {
+      // The select's themselves are distinct instructions even if they share
+      // the same condition and evaluate to consecutive pointers for true and
+      // false values of the condition. Therefore using the select's themselves
+      // for grouping instructions would put consecutive accesses into different
+      // lists and they won't be even checked for being consecutive, and won't
+      // be vectorized.
+      return Sel->getCondition();
+    }
+    return ObjPtr;
+  };
+
   for (Instruction &I : make_range(Begin, End)) {
     auto *LI = dyn_cast<LoadInst>(&I);
     auto *SI = dyn_cast<StoreInst>(&I);
@@ -1687,7 +1757,7 @@ Vectorizer::collectEquivalenceClasses(BasicBlock::iterator Begin,
         (VecTy && TTI.getLoadVectorFactor(VF, TySize, TySize / 8, VecTy) == 0))
       continue;
 
-    Ret[{::getUnderlyingObject(Ptr), AS,
+    Ret[{GetUnderlyingObject(Ptr), AS,
          DL.getTypeSizeInBits(getLoadStoreType(&I)->getScalarType()),
          /*IsLoad=*/LI != nullptr}]
         .emplace_back(&I);
@@ -1782,7 +1852,8 @@ std::vector<Chain> Vectorizer::gatherChains(ArrayRef<Instruction *> Instrs) {
   Ret.reserve(Chains.size());
   // Iterate over MRU rather than Chains so the order is deterministic.
   for (auto &E : MRU)
-    Ret.emplace_back(std::move(E.second));
+    if (E.second.size() > 1)
+      Ret.emplace_back(std::move(E.second));
   return Ret;
 }
 
@@ -1831,4 +1902,115 @@ std::optional<APInt> Vectorizer::getConstantOffset(Value *PtrA, Value *PtrB,
     return (OffsetB - OffsetA + Diff->sext(OffsetB.getBitWidth()))
         .sextOrTrunc(OrigBitWidth);
   return std::nullopt;
+}
+
+bool Vectorizer::accessIsAllowedAndFast(unsigned SizeBytes, unsigned AS,
+                                        Align Alignment,
+                                        unsigned VecElemBits) const {
+  // Aligned vector accesses are ALWAYS faster than element-wise accesses.
+  if (Alignment.value() % SizeBytes == 0)
+    return true;
+
+  // Ask TTI whether misaligned accesses are faster as vector or element-wise.
+  unsigned VectorizedSpeed = 0;
+  bool AllowsMisaligned = TTI.allowsMisalignedMemoryAccesses(
+      F.getContext(), SizeBytes * 8, AS, Alignment, &VectorizedSpeed);
+  if (!AllowsMisaligned) {
+    LLVM_DEBUG(
+        dbgs() << "LSV: Access of " << SizeBytes << "B in addrspace " << AS
+               << " with alignment " << Alignment.value()
+               << " is misaligned, and therefore can't be vectorized.\n");
+    return false;
+  }
+
+  unsigned ElementwiseSpeed = 0;
+  (TTI).allowsMisalignedMemoryAccesses((F).getContext(), VecElemBits, AS,
+                                       Alignment, &ElementwiseSpeed);
+  if (VectorizedSpeed < ElementwiseSpeed) {
+    LLVM_DEBUG(dbgs() << "LSV: Access of " << SizeBytes << "B in addrspace "
+                      << AS << " with alignment " << Alignment.value()
+                      << " has relative speed " << VectorizedSpeed
+                      << ", which is lower than the elementwise speed of "
+                      << ElementwiseSpeed
+                      << ".  Therefore this access won't be vectorized.\n");
+    return false;
+  }
+  return true;
+}
+
+ChainElem Vectorizer::createExtraElementAfter(const ChainElem &Prev, Type *Ty,
+                                              APInt Offset, StringRef Prefix,
+                                              Align Alignment) {
+  Instruction *NewElement = nullptr;
+  Builder.SetInsertPoint(Prev.Inst->getNextNode());
+  if (LoadInst *PrevLoad = dyn_cast<LoadInst>(Prev.Inst)) {
+    Value *NewGep = Builder.CreatePtrAdd(
+        PrevLoad->getPointerOperand(), Builder.getInt(Offset), Prefix + "GEP");
+    LLVM_DEBUG(dbgs() << "LSV: Extra GEP Created: \n" << *NewGep << "\n");
+    NewElement = Builder.CreateAlignedLoad(Ty, NewGep, Alignment, Prefix);
+  } else {
+    StoreInst *PrevStore = cast<StoreInst>(Prev.Inst);
+
+    Value *NewGep = Builder.CreatePtrAdd(
+        PrevStore->getPointerOperand(), Builder.getInt(Offset), Prefix + "GEP");
+    LLVM_DEBUG(dbgs() << "LSV: Extra GEP Created: \n" << *NewGep << "\n");
+    NewElement =
+        Builder.CreateAlignedStore(PoisonValue::get(Ty), NewGep, Alignment);
+  }
+
+  // Attach all metadata to the new element.
+  // propagateMetadata will fold it into the final vector when applicable.
+  NewElement->copyMetadata(*Prev.Inst);
+
+  // Cache created elements for tracking and cleanup
+  ExtraElements.insert(NewElement);
+
+  APInt NewOffsetFromLeader = Prev.OffsetFromLeader + Offset;
+  LLVM_DEBUG(dbgs() << "LSV: Extra Element Created: \n"
+                    << *NewElement
+                    << " OffsetFromLeader: " << NewOffsetFromLeader << "\n");
+  return ChainElem{NewElement, NewOffsetFromLeader};
+}
+
+Value *Vectorizer::createMaskForExtraElements(const ArrayRef<ChainElem> C,
+                                              FixedVectorType *VecTy) {
+  // Start each mask element as false
+  SmallVector<Constant *, 64> MaskElts(VecTy->getNumElements(),
+                                       Builder.getInt1(false));
+  // Iterate over the chain and set the corresponding mask element to true for
+  // each element that is not an extra element.
+  for (const ChainElem &E : C) {
+    if (ExtraElements.contains(E.Inst))
+      continue;
+    unsigned EOffset =
+        (E.OffsetFromLeader - C[0].OffsetFromLeader).getZExtValue();
+    unsigned VecIdx =
+        8 * EOffset / DL.getTypeSizeInBits(VecTy->getScalarType());
+    if (FixedVectorType *VT =
+            dyn_cast<FixedVectorType>(getLoadStoreType(E.Inst)))
+      for (unsigned J = 0; J < VT->getNumElements(); ++J)
+        MaskElts[VecIdx + J] = Builder.getInt1(true);
+    else
+      MaskElts[VecIdx] = Builder.getInt1(true);
+  }
+  return ConstantVector::get(MaskElts);
+}
+
+void Vectorizer::deleteExtraElements() {
+  for (auto *ExtraElement : ExtraElements) {
+    if (isa<LoadInst>(ExtraElement)) {
+      [[maybe_unused]] bool Deleted =
+          RecursivelyDeleteTriviallyDeadInstructions(ExtraElement);
+      assert(Deleted && "Extra Load should always be trivially dead");
+    } else {
+      // Unlike Extra Loads, Extra Stores won't be "dead", but should all be
+      // deleted regardless. They will have either been combined into a masked
+      // store, or will be left behind and need to be cleaned up.
+      auto *PtrOperand = getLoadStorePointerOperand(ExtraElement);
+      ExtraElement->eraseFromParent();
+      RecursivelyDeleteTriviallyDeadInstructions(PtrOperand);
+    }
+  }
+
+  ExtraElements.clear();
 }

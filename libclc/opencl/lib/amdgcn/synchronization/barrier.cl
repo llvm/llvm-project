@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/opencl/synchronization/barrier.h>
 #include <clc/opencl/synchronization/utils.h>
 #include <clc/synchronization/clc_work_group_barrier.h>
 

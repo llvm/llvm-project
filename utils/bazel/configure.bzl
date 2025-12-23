@@ -25,8 +25,8 @@ DEFAULT_TARGETS = [
     "WebAssembly",
     "X86",
     "XCore",
+    "Xtensa",
 ]
-
 
 MAX_TRAVERSAL_STEPS = 1000000  # "big number" upper bound on total visited dirs
 
@@ -44,7 +44,9 @@ def _overlay_directories(repository_ctx):
     for _ in range(MAX_TRAVERSAL_STEPS):
         rel_dir = stack.pop()
 
-        overlay_dirs = set()
+        # TODO: `set()` is only available in bazel 8.1.
+        # Use `set()` after downstream users are on more recent versions.
+        overlay_dirs = {}
 
         # Symlink overlay files, overlay dirs will be handled in future iterations.
         for entry in overlay_root.get_child(rel_dir).readdir():
@@ -53,7 +55,7 @@ def _overlay_directories(repository_ctx):
 
             if entry.is_dir:
                 stack.append(full_rel_path)
-                overlay_dirs.add(name)
+                overlay_dirs[name] = None
             else:
                 src_path = overlay_root.get_child(full_rel_path)
                 dst_path = target_root.get_child(full_rel_path)
@@ -62,7 +64,7 @@ def _overlay_directories(repository_ctx):
         # Symlink source dirs (if not themselves overlaid) and files.
         for src_entry in src_root.get_child(rel_dir).readdir():
             name = src_entry.basename
-            if name in overlay_dirs:
+            if name in overlay_dirs.keys():
                 # Skip: overlay has a directory with this name
                 continue
 

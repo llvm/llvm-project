@@ -181,14 +181,22 @@ struct type_caster<MlirContext> {
   bool from_python(handle src, uint8_t flags, cleanup_list *cleanup) noexcept {
     if (src.is_none()) {
       // Gets the current thread-bound context.
-      // TODO: This raises an error of "No current context" currently.
-      // Update the implementation to pretty-print the helpful error that the
-      // core implementations print in this case.
       src = mlir::python::irModule().attr("Context").attr("current");
     }
-    std::optional<nanobind::object> capsule = mlirApiObjectToCapsule(src);
-    value = mlirPythonCapsuleToContext(capsule->ptr());
-    return !mlirContextIsNull(value);
+    // If there is no context, including thread-bound, emit a warning (since
+    // this function is not allowed to throw) and fail to cast.
+    if (src.is_none()) {
+      PyErr_Warn(
+          PyExc_RuntimeWarning,
+          "Passing None as MLIR Context is only allowed inside "
+          "the " MAKE_MLIR_PYTHON_QUALNAME("ir.Context") " context manager.");
+      return false;
+    }
+    if (std::optional<nanobind::object> capsule = mlirApiObjectToCapsule(src)) {
+      value = mlirPythonCapsuleToContext(capsule->ptr());
+      return !mlirContextIsNull(value);
+    }
+    return false;
   }
 };
 

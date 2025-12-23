@@ -112,8 +112,7 @@ attributes #2 = { nounwind readnone }
 ; CHECK: attributes #[[ATTR0]] = { nounwind }
 ; CHECK: attributes #[[ATTR1]] = { nounwind "amdgpu-lds-size"="1" }
 ; CHECK: attributes #[[ATTR2:[0-9]+]] = { convergent nocallback nofree nounwind willreturn }
-; CHECK: attributes #[[ATTR3:[0-9]+]] = { convergent nounwind }
-; CHECK: attributes #[[ATTR4:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(none) }
+; CHECK: attributes #[[ATTR3:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(none) }
 ;.
 ; CHECK: [[META0]] = !{i32 8396816, i32 8396817}
 ; CHECK: [[META1]] = !{i32 8396912, i32 8396913}
