@@ -92,10 +92,10 @@ exit:
 
 define i32 @select_xor_cond(ptr %src, i1 %c.0) {
 ; CHECK: LV: Checking a loop in 'select_xor_cond'
-; CHECK: Cost of 6 for VF 2: WIDEN-SELECT ir<%sel> = select ir<%c>, ir<false>, ir<%c.0>
-; CHECK: Cost of 12 for VF 4: WIDEN-SELECT ir<%sel> = select ir<%c>, ir<false>, ir<%c.0>
-; CHECK: Cost of 24 for VF 8: WIDEN-SELECT ir<%sel> = select ir<%c>, ir<false>, ir<%c.0>
-; CHECK: Cost of 48 for VF 16: WIDEN-SELECT ir<%sel> = select ir<%c>, ir<false>, ir<%c.0>
+; CHECK: Cost of 1 for VF 2: WIDEN-SELECT ir<%sel> = select ir<%c>, ir<false>, ir<%c.0>
+; CHECK: Cost of 1 for VF 4: WIDEN-SELECT ir<%sel> = select ir<%c>, ir<false>, ir<%c.0>
+; CHECK: Cost of 1 for VF 8: WIDEN-SELECT ir<%sel> = select ir<%c>, ir<false>, ir<%c.0>
+; CHECK: Cost of 1 for VF 16: WIDEN-SELECT ir<%sel> = select ir<%c>, ir<false>, ir<%c.0>
 ; CHECK: LV: Selecting VF: 4.
 
 entry:
