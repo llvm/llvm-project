@@ -277,7 +277,7 @@ struct WgToSgLoadNdOp : public OpConversionPattern<xegpu::LoadNdOp> {
       ArrayRef<int64_t> srcShape = tdescTy.getShape();
       VectorType newResTy = VectorType::get(srcShape, tdescTy.getElementType());
       auto newLoadOp = xegpu::LoadNdOp::create(rewriter, op.getLoc(), newResTy,
-                                               src, op->getAttrs());
+                                               src, xegpu::dropSgLayoutAndDataOnAttrs(op->getAttrs()));
       newLoadOps.push_back(newLoadOp);
     }
     rewriter.replaceOpWithMultiple(op, {newLoadOps});
@@ -474,7 +474,7 @@ struct WgToSgPrefetchNdOp : public OpConversionPattern<xegpu::PrefetchNdOp> {
 
     for (auto src : adaptor.getTensorDesc())
       xegpu::PrefetchNdOp::create(rewriter, op.getLoc(), TypeRange(), src,
-                                  op->getAttrs());
+                                  xegpu::dropSgLayoutAndDataOnAttrs(op->getAttrs()));
     rewriter.eraseOp(op);
     return success();
   }
@@ -563,16 +563,7 @@ struct WgToSgElementwiseOp : public ConversionPattern {
       state.addTypes(newResultType);
       // Copy all attributes, but update "layout_result_0" to drop
       // sgLayout/sgData
-      for (auto attr : op->getAttrs()) {
-        if (auto layout =
-                dyn_cast<xegpu::DistributeLayoutAttr>(attr.getValue())) {
-          if (!layout.getEffectiveLaneLayoutAsInt().empty() ||
-              !layout.getEffectiveInstDataAsInt().empty())
-            state.addAttribute(attr.getName(), layout.dropSgLayoutAndData());
-        } else {
-          state.addAttribute(attr.getName(), attr.getValue());
-        }
-      }
+      state.addAttributes(xegpu::dropSgLayoutAndDataOnAttrs(op->getAttrs()));
       Operation *newOp = rewriter.create(state);
       newResults.push_back(newOp->getResult(0));
     }

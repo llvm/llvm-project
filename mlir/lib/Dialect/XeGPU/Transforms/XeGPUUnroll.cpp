@@ -253,7 +253,7 @@ struct UnrollPrefetchNdOp : public UnrollPattern<xegpu::PrefetchNdOp> {
     if (!hasOffsets) {
       for (auto t : convertedTdesc)
         xegpu::PrefetchNdOp::create(rewriter, loc, TypeRange(), t,
-                                    op->getAttrs());
+                                    xegpu::dropInstDataOnAttrs(op->getAttrs()));
     } else {
       auto createPrefetch = [&](SmallVector<OpFoldResult> offsets) -> Value {
         xegpu::PrefetchNdOp::create(rewriter, loc, convertedTdesc[0], offsets,
@@ -304,7 +304,7 @@ struct UnrollLoadNdOp : public UnrollPattern<xegpu::LoadNdOp> {
     if (!hasOffsets) {
       for (auto t : convertedTdescs) {
         auto newOp = xegpu::LoadNdOp::create(rewriter, loc, newValueTy, t,
-                                             op->getAttrs());
+                                             xegpu::dropInstDataOnAttrs(op->getAttrs()));
         newOps.push_back(newOp);
       }
     } else {
@@ -463,7 +463,7 @@ struct UnrollDpasOp : public UnrollPattern<xegpu::DpasOp> {
             operands.push_back(tmpC);
 
           tmpC = xegpu::DpasOp::create(rewriter, loc, vecTy, operands,
-                                       op->getAttrs());
+                                       xegpu::dropInstDataOnAttrs(op->getAttrs()));
         }
         newOps.push_back(tmpC);
       }
@@ -825,7 +825,7 @@ struct UnrollPrefetchOp : public UnrollPattern<xegpu::PrefetchOp> {
         op.getTensorDesc(), convertedTdescTypes, *targetShape, loc, rewriter);
 
     for (auto t : convertedTdesc)
-      xegpu::PrefetchOp::create(rewriter, loc, TypeRange(), t, op->getAttrs());
+      xegpu::PrefetchOp::create(rewriter, loc, TypeRange(), t, xegpu::dropInstDataOnAttrs(op->getAttrs()));
 
     rewriter.eraseOp(op);
     return success();
