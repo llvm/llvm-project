@@ -1402,8 +1402,7 @@ namespace {
   class VariadicIdentifierArgument : public VariadicArgument {
   public:
     VariadicIdentifierArgument(const Record &Arg, StringRef Attr)
-      : VariadicArgument(Arg, Attr, "const IdentifierInfo *")
-    {}
+        : VariadicArgument(Arg, Attr, "const IdentifierInfo *") {}
   };
 
   class VariadicStringArgument : public VariadicArgument {
