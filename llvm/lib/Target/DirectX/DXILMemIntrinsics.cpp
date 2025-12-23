@@ -109,6 +109,24 @@ static Type *getPointeeType(Value *Ptr, const DataLayout &DL) {
   llvm_unreachable("Could not calculate pointee type");
 }
 
+static size_t flattenTypes(Type *ContainerTy, const DataLayout &DL,
+                           SmallVectorImpl<std::pair<Type *, size_t>> &FlatTys,
+                           size_t NextOffset = 0) {
+  if (auto *AT = dyn_cast<ArrayType>(ContainerTy)) {
+    for (uint64_t I = 0, E = AT->getNumElements(); I != E; ++I)
+      NextOffset = flattenTypes(AT->getElementType(), DL, FlatTys, NextOffset);
+    return NextOffset;
+  }
+  if (auto *ST = dyn_cast<StructType>(ContainerTy)) {
+    for (Type *Ty : ST->elements())
+      NextOffset = flattenTypes(Ty, DL, FlatTys, NextOffset);
+    return NextOffset;
+  }
+
+  FlatTys.emplace_back(ContainerTy, NextOffset);
+  return NextOffset + DL.getTypeStoreSize(ContainerTy);
+}
+
 void expandMemCpy(MemCpyInst *MemCpy) {
   IRBuilder<> Builder(MemCpy);
   Value *Dst = MemCpy->getDest();
@@ -124,43 +142,36 @@ void expandMemCpy(MemCpyInst *MemCpy) {
 
   const DataLayout &DL = Builder.GetInsertBlock()->getModule()->getDataLayout();
 
-  auto *DstArrTy = dyn_cast<ArrayType>(getPointeeType(Dst, DL));
-  assert(DstArrTy && "Expected Dst of memcpy to be a Pointer to an Array Type");
-  if (auto *DstGlobalVar = dyn_cast<GlobalVariable>(Dst))
-    assert(!DstGlobalVar->isConstant() &&
-           "The Dst of memcpy must not be a constant Global Variable");
-  [[maybe_unused]] auto *SrcArrTy =
-      dyn_cast<ArrayType>(getPointeeType(Src, DL));
-  assert(SrcArrTy && "Expected Src of memcpy to be a Pointer to an Array Type");
+  SmallVector<std::pair<Type *, size_t>> FlattenedTypes;
+  [[maybe_unused]] size_t MaxLength =
+      flattenTypes(getPointeeType(Dst, DL), DL, FlattenedTypes);
+  assert(MaxLength >= ByteLength && "Dst not large enough for memcpy");
 
-  Type *DstElemTy = DstArrTy->getElementType();
-  uint64_t DstElemByteSize = DL.getTypeStoreSize(DstElemTy);
-  assert(DstElemByteSize > 0 && "Dst element type store size must be set");
-  Type *SrcElemTy = SrcArrTy->getElementType();
-  [[maybe_unused]] uint64_t SrcElemByteSize = DL.getTypeStoreSize(SrcElemTy);
-  assert(SrcElemByteSize > 0 && "Src element type store size must be set");
+  LLVM_DEBUG({
+    // Check if Src is layout compatible with Dst. This should always be true
+    // unless the frontend did something wrong.
+    SmallVector<std::pair<Type *, size_t>> SrcTypes;
+    size_t SrcLength = flattenTypes(getPointeeType(Src, DL), DL, SrcTypes);
+    assert(SrcLength >= ByteLength && "Src not large enough for memcpy");
+    for (const auto &[LHS, RHS] : zip(FlattenedTypes, SrcTypes)) {
+      auto &[DstTy, DstOffset] = LHS;
+      auto &[SrcTy, SrcOffset] = RHS;
+      assert(DstTy == SrcTy && "Mismatched types for memcpy");
+      assert(DstOffset == SrcOffset && "Incompatible layouts for memcpy");
+      if (DstOffset >= ByteLength)
+        break;
+    }
+  });
 
-  // This assumption simplifies implementation and covers currently-known
-  // use-cases for DXIL. It may be relaxed in the future if required.
-  assert(DstElemTy == SrcElemTy &&
-         "The element types of Src and Dst arrays must match");
-
-  [[maybe_unused]] uint64_t DstArrNumElems = DstArrTy->getArrayNumElements();
-  assert(DstElemByteSize * DstArrNumElems >= ByteLength &&
-         "Dst array size must be at least as large as the memcpy length");
-  [[maybe_unused]] uint64_t SrcArrNumElems = SrcArrTy->getArrayNumElements();
-  assert(SrcElemByteSize * SrcArrNumElems >= ByteLength &&
-         "Src array size must be at least as large as the memcpy length");
-
-  uint64_t NumElemsToCopy = ByteLength / DstElemByteSize;
-  assert(ByteLength % DstElemByteSize == 0 &&
-         "memcpy length must be divisible by array element type");
-  for (uint64_t I = 0; I < NumElemsToCopy; ++I) {
-    SmallVector<Value *, 2> Indices = {Builder.getInt32(0),
-                                       Builder.getInt32(I)};
-    Value *SrcPtr = Builder.CreateInBoundsGEP(SrcArrTy, Src, Indices, "gep");
-    Value *SrcVal = Builder.CreateLoad(SrcElemTy, SrcPtr);
-    Value *DstPtr = Builder.CreateInBoundsGEP(DstArrTy, Dst, Indices, "gep");
+  for (const auto &[Ty, Offset] : FlattenedTypes) {
+    if (Offset >= ByteLength)
+      break;
+    // TODO: Should we skip padding types here?
+    Type *Int8Ty = Builder.getInt8Ty();
+    Value *ByteOffset = Builder.getInt32(Offset);
+    Value *SrcPtr = Builder.CreateInBoundsGEP(Int8Ty, Src, ByteOffset);
+    Value *SrcVal = Builder.CreateLoad(Ty, SrcPtr);
+    Value *DstPtr = Builder.CreateInBoundsGEP(Int8Ty, Dst, ByteOffset);
     Builder.CreateStore(SrcVal, DstPtr);
   }
 
