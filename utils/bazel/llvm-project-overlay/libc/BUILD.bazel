@@ -815,6 +815,7 @@ libc_support_library(
     name = "__support_blockstore",
     hdrs = ["src/__support/blockstore.h"],
     deps = [
+        ":__support_alloc_checker",
         ":__support_cpp_array",
         ":__support_cpp_new",
         ":__support_libc_assert",
@@ -1087,6 +1088,7 @@ libc_support_library(
     ],
     hdrs = ["src/__support/File/file.h"],
     deps = [
+        ":__support_alloc_checker",
         ":__support_cpp_new",
         ":__support_cpp_span",
         ":__support_error_or",
@@ -5467,6 +5469,18 @@ libc_support_library(
         ":llvm_libc_types_size_t",
         ":string_memory_utils",
         ":types_size_t",
+    ],
+)
+
+libc_support_library(
+    name = "string_allocating_string_utils",
+    hdrs = ["src/string/allocating_string_utils.h"],
+    deps = [
+        ":__support_alloc_checker",
+        ":__support_cpp_optional",
+        ":__support_macros_config",
+        ":string_memory_utils",
+        ":string_utils",
     ],
 )
 
