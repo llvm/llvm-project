@@ -40,7 +40,7 @@ struct CollapseShapeOpInterface
     assert(value == collapseOp.getResult() && "invalid value");
 
     // Multiply the expressions for the dimensions in the reassociation group.
-    const ReassociationIndices reassocIndices =
+    const ReassociationIndices &reassocIndices =
         collapseOp.getReassociationIndices()[dim];
     AffineExpr productExpr =
         cstr.getExpr(collapseOp.getSrc(), reassocIndices[0]);
