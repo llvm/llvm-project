@@ -59,6 +59,7 @@ class TestDAP_attach(lldbdap_testcase.DAPTestCaseBase):
         self.attach(program=program)
         self.continue_and_verify_pid()
 
+    @expectedFailureWindows
     def test_by_name_waitFor(self):
         """
         Tests waiting for, and attaching to a process by process name that
@@ -84,10 +85,10 @@ class TestDAP_attach(lldbdap_testcase.DAPTestCaseBase):
         self.build_and_create_debug_adapter()
 
         # Test with only targetId specified (no debuggerId)
-        resp = self.attach(targetId=99999, expectFailure=True)
+        resp = self.attach(targetId=99999, waitForResponse=True)
         self.assertFalse(resp["success"])
         self.assertIn(
-            "Both debuggerId and targetId must be specified together",
+            "Both 'debuggerId' and 'targetId' must be specified together",
             resp["body"]["error"]["format"],
         )
 
@@ -101,7 +102,7 @@ class TestDAP_attach(lldbdap_testcase.DAPTestCaseBase):
         # Attach with both debuggerId=9999 and targetId=99999 (both invalid).
         # Since debugger ID 9999 likely doesn't exist in the global registry,
         # we expect a validation error.
-        resp = self.attach(debuggerId=9999, targetId=99999, expectFailure=True)
+        resp = self.attach(debuggerId=9999, targetId=99999, waitForResponse=True)
         self.assertFalse(resp["success"])
         error_msg = resp["body"]["error"]["format"]
         # Either error is acceptable - both indicate the debugger reuse

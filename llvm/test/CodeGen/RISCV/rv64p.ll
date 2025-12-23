@@ -28,3 +28,113 @@ define i64 @abs_i64(i64 %x) {
   %abs = tail call i64 @llvm.abs.i64(i64 %x, i1 true)
   ret i64 %abs
 }
+
+define i64 @pack_i64_imm() {
+; CHECK-LABEL: pack_i64_imm:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lui a0, 16432
+; CHECK-NEXT:    addi a0, a0, 513
+; CHECK-NEXT:    pack a0, a0, a0
+; CHECK-NEXT:    ret
+  ret i64 u0x0403020104030201
+}
+
+; Make sure we prefer li over pli
+define i64 @li_imm() {
+; CHECK-LABEL: li_imm:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a0, -1
+; CHECK-NEXT:    ret
+  ret i64 -1
+}
+
+define i32 @pli_b_i32() {
+; CHECK-LABEL: pli_b_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lui a0, 20560
+; CHECK-NEXT:    addi a0, a0, 1285
+; CHECK-NEXT:    ret
+  ret i32 u0x05050505
+}
+
+define i64 @pli_b_i64() {
+; CHECK-LABEL: pli_b_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pli.b a0, -128
+; CHECK-NEXT:    ret
+  ret i64 u0x8080808080808080
+}
+
+define i32 @pli_h_i32() {
+; CHECK-LABEL: pli_h_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lui a0, 1047840
+; CHECK-NEXT:    addi a0, a0, -47
+; CHECK-NEXT:    ret
+  ret i32 u0xffd1ffd1
+}
+
+define i64 @pli_h_i64() {
+; CHECK-LABEL: pli_h_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pli.h a0, 291
+; CHECK-NEXT:    ret
+  ret i64 u0x0123012301230123
+}
+
+define i64 @pli_w_i64() {
+; CHECK-LABEL: pli_w_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pli.w a0, -292
+; CHECK-NEXT:    ret
+  ret i64 u0xfffffedcfffffedc
+}
+
+define void @pli_b_store_i32(ptr %p) {
+; CHECK-LABEL: pli_b_store_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pli.b a1, 65
+; CHECK-NEXT:    sw a1, 0(a0)
+; CHECK-NEXT:    ret
+  store i32 u0x41414141, ptr %p
+  ret void
+}
+
+define i64 @pack_i64(i64 %a, i64 %b) nounwind {
+; CHECK-LABEL: pack_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pack a0, a0, a1
+; CHECK-NEXT:    ret
+  %shl = and i64 %a, 4294967295
+  %shl1 = shl i64 %b, 32
+  %or = or i64 %shl1, %shl
+  ret i64 %or
+}
+
+define i64 @pack_i64_2(i32 signext %a, i32 signext %b) nounwind {
+; CHECK-LABEL: pack_i64_2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pack a0, a0, a1
+; CHECK-NEXT:    ret
+  %zexta = zext i32 %a to i64
+  %zextb = zext i32 %b to i64
+  %shl1 = shl i64 %zextb, 32
+  %or = or i64 %shl1, %zexta
+  ret i64 %or
+}
+
+define i64 @pack_i64_3(ptr %0, ptr %1) {
+; CHECK-LABEL: pack_i64_3:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lw a0, 0(a0)
+; CHECK-NEXT:    lw a1, 0(a1)
+; CHECK-NEXT:    pack a0, a1, a0
+; CHECK-NEXT:    ret
+  %3 = load i32, ptr %0, align 4
+  %4 = zext i32 %3 to i64
+  %5 = shl i64 %4, 32
+  %6 = load i32, ptr %1, align 4
+  %7 = zext i32 %6 to i64
+  %8 = or i64 %5, %7
+  ret i64 %8
+}

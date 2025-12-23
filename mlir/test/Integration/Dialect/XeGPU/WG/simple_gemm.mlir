@@ -53,34 +53,34 @@ module @gemm attributes {gpu.container_module} {
       %m = arith.muli %block_id_x, %c256 : index
       %n = arith.muli %block_id_y, %c256 : index
       %c_tdesc = xegpu.create_nd_tdesc %C : memref<256x256xf32> -> !xegpu.tensor_desc<256x256xf32, #c>
-      %c_init_value = xegpu.load_nd %c_tdesc[%m, %n] : !xegpu.tensor_desc<256x256xf32, #c> -> vector<256x256xf32>
+      %c_init_value = xegpu.load_nd %c_tdesc[%m, %n] {layout = #c}: !xegpu.tensor_desc<256x256xf32, #c> -> vector<256x256xf32>
       %a_tdesc = xegpu.create_nd_tdesc %A : memref<256x256xf16> -> !xegpu.tensor_desc<256x32xf16, #a>
       %b_tdesc = xegpu.create_nd_tdesc %B : memref<256x256xf16> -> !xegpu.tensor_desc<32x256xf16, #b>
       // Prefetch A 3 times.
       %a_prefetch_tdesc = xegpu.create_nd_tdesc %A : memref<256x256xf16> -> !xegpu.tensor_desc<256x32xf16, #a_prefetch>
-      xegpu.prefetch_nd %a_prefetch_tdesc[%m, %c0] : !xegpu.tensor_desc<256x32xf16, #a_prefetch>
-      xegpu.prefetch_nd %a_prefetch_tdesc[%m, %c32] : !xegpu.tensor_desc<256x32xf16, #a_prefetch>
-      xegpu.prefetch_nd %a_prefetch_tdesc[%m, %c64] : !xegpu.tensor_desc<256x32xf16, #a_prefetch>
+      xegpu.prefetch_nd %a_prefetch_tdesc[%m, %c0] {layout = #a_prefetch}: !xegpu.tensor_desc<256x32xf16, #a_prefetch>
+      xegpu.prefetch_nd %a_prefetch_tdesc[%m, %c32] {layout = #a_prefetch}: !xegpu.tensor_desc<256x32xf16, #a_prefetch>
+      xegpu.prefetch_nd %a_prefetch_tdesc[%m, %c64] {layout = #a_prefetch}: !xegpu.tensor_desc<256x32xf16, #a_prefetch>
        // Prefetch B 3 times.
       %b_prefetch_tdesc = xegpu.create_nd_tdesc %B : memref<256x256xf16> -> !xegpu.tensor_desc<32x256xf16, #b_prefetch>
-      xegpu.prefetch_nd %b_prefetch_tdesc[%c0, %n] : !xegpu.tensor_desc<32x256xf16, #b_prefetch>
-      xegpu.prefetch_nd %b_prefetch_tdesc[%c32, %n] : !xegpu.tensor_desc<32x256xf16, #b_prefetch>
-      xegpu.prefetch_nd %b_prefetch_tdesc[%c64, %n] : !xegpu.tensor_desc<32x256xf16, #b_prefetch>
+      xegpu.prefetch_nd %b_prefetch_tdesc[%c0, %n] {layout = #b_prefetch}: !xegpu.tensor_desc<32x256xf16, #b_prefetch>
+      xegpu.prefetch_nd %b_prefetch_tdesc[%c32, %n] {layout = #b_prefetch}: !xegpu.tensor_desc<32x256xf16, #b_prefetch>
+      xegpu.prefetch_nd %b_prefetch_tdesc[%c64, %n] {layout = #b_prefetch}: !xegpu.tensor_desc<32x256xf16, #b_prefetch>
 
       %out = scf.for %k = %c0 to %c256 step %c32
         iter_args(%c_value = %c_init_value)
         -> (vector<256x256xf32>) {
-        %a_value = xegpu.load_nd %a_tdesc[%m, %k]  : !xegpu.tensor_desc<256x32xf16, #a> -> vector<256x32xf16>
-        %b_value = xegpu.load_nd %b_tdesc[%k, %n] : !xegpu.tensor_desc<32x256xf16, #b> -> vector<32x256xf16>
+        %a_value = xegpu.load_nd %a_tdesc[%m, %k]  {layout = #a}: !xegpu.tensor_desc<256x32xf16, #a> -> vector<256x32xf16>
+        %b_value = xegpu.load_nd %b_tdesc[%k, %n] {layout = #b}: !xegpu.tensor_desc<32x256xf16, #b> -> vector<32x256xf16>
         // Prefetch next tiles.
         %prefetch_offset = arith.addi %k, %c96 : index
-        xegpu.prefetch_nd %a_prefetch_tdesc[%m, %prefetch_offset] : !xegpu.tensor_desc<256x32xf16, #a_prefetch>
-        xegpu.prefetch_nd %b_prefetch_tdesc[%prefetch_offset, %n] : !xegpu.tensor_desc<32x256xf16, #b_prefetch>
-        %c_new_value = xegpu.dpas %a_value, %b_value, %c_value {layout_result_0 = #c}
+        xegpu.prefetch_nd %a_prefetch_tdesc[%m, %prefetch_offset] {layout = #a_prefetch}: !xegpu.tensor_desc<256x32xf16, #a_prefetch>
+        xegpu.prefetch_nd %b_prefetch_tdesc[%prefetch_offset, %n] {layout = #b_prefetch}: !xegpu.tensor_desc<32x256xf16, #b_prefetch>
+        %c_new_value = xegpu.dpas %a_value, %b_value, %c_value {layout_a = #a, layout_b = #b, layout_cd = #c}
           : vector<256x32xf16>, vector<32x256xf16>, vector<256x256xf32> -> vector<256x256xf32>
         scf.yield %c_new_value : vector<256x256xf32>
       }
-      xegpu.store_nd %out, %c_tdesc[%m, %n] : vector<256x256xf32>, !xegpu.tensor_desc<256x256xf32, #c>
+      xegpu.store_nd %out, %c_tdesc[%m, %n] {layout = #c}: vector<256x256xf32>, !xegpu.tensor_desc<256x256xf32, #c>
       gpu.return
     }
   }

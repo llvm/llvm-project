@@ -24,6 +24,7 @@
 #include "clang/AST/OpenMPClause.h"
 #include "clang/AST/StmtOpenMP.h"
 #include "clang/AST/StmtVisitor.h"
+#include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/OpenMPKinds.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/CodeGen/ConstantInitBuilder.h"
@@ -2832,25 +2833,17 @@ void CGOpenMPRuntime::createOffloadEntriesAndInfoMetadata() {
     }
     switch (Kind) {
     case llvm::OpenMPIRBuilder::EMIT_MD_TARGET_REGION_ERROR: {
-      unsigned DiagID = CGM.getDiags().getCustomDiagID(
-          DiagnosticsEngine::Error, "Offloading entry for target region in "
-                                    "%0 is incorrect: either the "
-                                    "address or the ID is invalid.");
-      CGM.getDiags().Report(Loc, DiagID) << EntryInfo.ParentName;
+      CGM.getDiags().Report(Loc,
+                            diag::err_target_region_offloading_entry_incorrect)
+          << EntryInfo.ParentName;
     } break;
     case llvm::OpenMPIRBuilder::EMIT_MD_DECLARE_TARGET_ERROR: {
-      unsigned DiagID = CGM.getDiags().getCustomDiagID(
-          DiagnosticsEngine::Error, "Offloading entry for declare target "
-                                    "variable %0 is incorrect: the "
-                                    "address is invalid.");
-      CGM.getDiags().Report(Loc, DiagID) << EntryInfo.ParentName;
+      CGM.getDiags().Report(
+          Loc, diag::err_target_var_offloading_entry_incorrect_with_parent)
+          << EntryInfo.ParentName;
     } break;
     case llvm::OpenMPIRBuilder::EMIT_MD_GLOBAL_VAR_LINK_ERROR: {
-      unsigned DiagID = CGM.getDiags().getCustomDiagID(
-          DiagnosticsEngine::Error,
-          "Offloading entry for declare target variable is incorrect: the "
-          "address is invalid.");
-      CGM.getDiags().Report(DiagID);
+      CGM.getDiags().Report(diag::err_target_var_offloading_entry_incorrect);
     } break;
     }
   };
@@ -6477,7 +6470,7 @@ llvm::Value *CGOpenMPRuntime::emitNumTeamsForTargetDirective(
   }
 
   assert(MinNT == MaxNT && "Num threads ranges require handling here.");
-  return llvm::ConstantInt::get(CGF.Int32Ty, MinNT);
+  return llvm::ConstantInt::getSigned(CGF.Int32Ty, MinNT);
 }
 
 /// Check for a num threads constant value (stored in \p DefaultVal), or
@@ -12008,20 +12001,14 @@ static void emitAArch64DeclareSimdFunction(
   // Check the values provided via `simdlen` by the user.
   // 1. A `simdlen(1)` doesn't produce vector signatures,
   if (UserVLEN == 1) {
-    unsigned DiagID = CGM.getDiags().getCustomDiagID(
-        DiagnosticsEngine::Warning,
-        "The clause simdlen(1) has no effect when targeting aarch64.");
-    CGM.getDiags().Report(SLoc, DiagID);
+    CGM.getDiags().Report(SLoc, diag::warn_simdlen_1_no_effect);
     return;
   }
 
   // 2. Section 3.3.1, item 1: user input must be a power of 2 for
   // Advanced SIMD output.
   if (ISA == 'n' && UserVLEN && !llvm::isPowerOf2_32(UserVLEN)) {
-    unsigned DiagID = CGM.getDiags().getCustomDiagID(
-        DiagnosticsEngine::Warning, "The value specified in simdlen must be a "
-                                    "power of 2 when targeting Advanced SIMD.");
-    CGM.getDiags().Report(SLoc, DiagID);
+    CGM.getDiags().Report(SLoc, diag::warn_simdlen_requires_power_of_2);
     return;
   }
 
@@ -12029,12 +12016,7 @@ static void emitAArch64DeclareSimdFunction(
   // limits.
   if (ISA == 's' && UserVLEN != 0) {
     if ((UserVLEN * WDS > 2048) || (UserVLEN * WDS % 128 != 0)) {
-      unsigned DiagID = CGM.getDiags().getCustomDiagID(
-          DiagnosticsEngine::Warning, "The clause simdlen must fit the %0-bit "
-                                      "lanes in the architectural constraints "
-                                      "for SVE (min is 128-bit, max is "
-                                      "2048-bit, by steps of 128-bit)");
-      CGM.getDiags().Report(SLoc, DiagID) << WDS;
+      CGM.getDiags().Report(SLoc, diag::warn_simdlen_must_fit_lanes) << WDS;
       return;
     }
   }

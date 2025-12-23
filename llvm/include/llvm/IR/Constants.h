@@ -65,10 +65,10 @@ class ConstantData : public Constant {
 protected:
   explicit ConstantData(Type *Ty, ValueTy VT) : Constant(Ty, VT, AllocMarker) {}
 
-  void *operator new(size_t S) { return User::operator new(S, AllocMarker); }
+  void *operator new(size_t S) { return ::operator new(S); }
 
 public:
-  void operator delete(void *Ptr) { User::operator delete(Ptr); }
+  void operator delete(void *Ptr) { ::operator delete(Ptr); }
 
   ConstantData(const ConstantData &) = delete;
 
@@ -133,11 +133,14 @@ public:
   /// either getSExtValue() or getZExtValue() will yield a correctly sized and
   /// signed value for the type Ty.
   /// Get a ConstantInt for a specific signed value.
-  static ConstantInt *getSigned(IntegerType *Ty, int64_t V) {
-    return get(Ty, V, true);
+  /// \param ImplicitTrunc Whether to allow implicit truncation of the value.
+  // TODO: Make ImplicitTrunc default to false.
+  static ConstantInt *getSigned(IntegerType *Ty, int64_t V,
+                                bool ImplicitTrunc = true) {
+    return get(Ty, V, /*IsSigned=*/true, ImplicitTrunc);
   }
-  static Constant *getSigned(Type *Ty, int64_t V) {
-    return get(Ty, V, true);
+  static Constant *getSigned(Type *Ty, int64_t V, bool ImplicitTrunc = true) {
+    return get(Ty, V, /*IsSigned=*/true, ImplicitTrunc);
   }
 
   /// Return a ConstantInt with the specified value and an implied Type. The
