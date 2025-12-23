@@ -2740,7 +2740,7 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
           return ConstantFP::getInfinity(Ty, true);
         if (U.isNegative())
           return ConstantFP::getNaN(Ty);
-        if (U.isExactlyValue(1))
+        if (U.isExactlyValue(1.0))
           return ConstantFP::getZero(Ty);
         // TODO: What about hosts that lack a C99 library?
         return ConstantFoldFP(log10, APF, Ty);
