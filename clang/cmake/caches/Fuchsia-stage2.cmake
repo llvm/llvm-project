@@ -462,7 +462,7 @@ set(LLVM_TOOLCHAIN_TOOLS
   llvm-libtool-darwin
   llvm-lipo
   llvm-ml
-  llvm-mt
+  #llvm-mt
   llvm-nm
   llvm-objcopy
   llvm-objdump

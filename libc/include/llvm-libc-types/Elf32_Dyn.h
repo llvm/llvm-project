@@ -21,4 +21,4 @@ typedef struct {
   } d_un;
 } Elf32_Dyn;
 
-#endif // NLLVM_LIBC_TYPES_ELF32_DYN_H
+#endif // LLVM_LIBC_TYPES_ELF32_DYN_H

@@ -7,8 +7,12 @@
 //===----------------------------------------------------------------------===//
 #include "startup/linux/do_start.h"
 #include "config/linux/app.h"
+#include "hdr/linux_macros.h"
 #include "hdr/stdint_proxy.h"
-#include "include/llvm-libc-macros/link-macros.h"
+#include "hdr/types/Elf32_Dyn.h"
+#include "hdr/types/Elf32_Phdr.h"
+#include "hdr/types/Elf64_Dyn.h"
+#include "hdr/types/Elf64_Phdr.h"
 #include "src/__support/OSUtil/linux/auxv.h"
 #include "src/__support/OSUtil/syscall.h"
 #include "src/__support/macros/config.h"
@@ -17,8 +21,6 @@
 #include "src/stdlib/exit.h"
 #include "src/unistd/environ.h"
 
-#include <linux/auxvec.h>
-#include <linux/elf.h>
 #include <sys/mman.h>
 #include <sys/syscall.h>
 
@@ -37,7 +39,7 @@ extern uintptr_t __fini_array_end[];
 // This symbol is provided by the dynamic linker. It can be undefined depending
 // on how the program is loaded exactly.
 [[gnu::weak,
-  gnu::visibility("hidden")]] extern const Elf64_Dyn _DYNAMIC[]; // NOLINT
+  gnu::visibility("hidden")]] extern const ElfW(Dyn) _DYNAMIC[]; // NOLINT
 }
 
 namespace LIBC_NAMESPACE_DECL {

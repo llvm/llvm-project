@@ -485,6 +485,11 @@ add_header_macro(
     .llvm-libc-types.Elf32_Off
     .llvm-libc-types.Elf32_Phdr
     .llvm-libc-types.Elf32_Sword
+    .llvm-libc-types.Elf32_Verdaux
+    .llvm-libc-types.Elf32_Verdef
+    .llvm-libc-types.Elf32_Vernaux
+    .llvm-libc-types.Elf32_Verneed
+    .llvm-libc-types.Elf32_Versym
     .llvm-libc-types.Elf32_Word
     .llvm-libc-types.Elf64_Addr
     .llvm-libc-types.Elf64_Ehdr
@@ -495,6 +500,11 @@ add_header_macro(
     .llvm-libc-types.Elf64_Phdr
     .llvm-libc-types.Elf64_Sword
     .llvm-libc-types.Elf64_Sxword
+    .llvm-libc-types.Elf64_Verdaux
+    .llvm-libc-types.Elf64_Verdef
+    .llvm-libc-types.Elf64_Vernaux
+    .llvm-libc-types.Elf64_Verneed
+    .llvm-libc-types.Elf64_Versym
     .llvm-libc-types.Elf64_Word
     .llvm-libc-types.Elf64_Xword
 )

@@ -215,7 +215,6 @@ add_header(
   HDR
     Elf32_Ehdr.h
   DEPENDS
-    libc.include.llvm-libc-macros.elf_macros
     .Elf32_Addr
     .Elf32_Half
     .Elf32_Off
@@ -266,6 +265,44 @@ add_header(
     .Elf32_Half
     .Elf32_Word
 )
+add_header(
+  Elf32_Verdaux
+  HDR
+    Elf32_Verdaux.h
+  DEPENDS
+    .Elf32_Word
+)
+add_header(
+  Elf32_Verdef
+  HDR
+    Elf32_Verdaux.h
+  DEPENDS
+    .Elf32_Half
+    .Elf32_Word
+)
+add_header(
+  Elf32_Vernaux
+  HDR
+    Elf32_Vernaux.h
+  DEPENDS
+    .Elf32_Half
+    .Elf32_Word
+)
+add_header(
+  Elf32_Verneed
+  HDR
+    Elf32_Verneed.h
+  DEPENDS
+    .Elf32_Half
+    .Elf32_Word
+)
+add_header(
+  Elf32_Versym
+  HDR
+    Elf32_Versym.h
+  DEPENDS
+  .Elf32_Half
+)
 
 add_header(Elf64_Addr HDR Elf64_Addr.h DEPENDS libc.include.llvm-libc-macros.stdint_macros)
 add_header(Elf64_Half HDR Elf64_Half.h DEPENDS libc.include.llvm-libc-macros.stdint_macros)
@@ -298,7 +335,6 @@ add_header(
   HDR
     Elf64_Ehdr.h
   DEPENDS
-    libc.include.llvm-libc-macros.elf_macros
     .Elf64_Addr
     .Elf64_Half
     .Elf64_Off
@@ -351,6 +387,44 @@ add_header(
     .Elf64_Half
     .Elf64_Word
     .Elf64_Xword
+)
+add_header(
+  Elf64_Verdaux
+  HDR
+    Elf64_Verdaux.h
+  DEPENDS
+    .Elf64_Word
+)
+add_header(
+  Elf64_Verdef
+  HDR
+    Elf64_Verdaux.h
+  DEPENDS
+    .Elf64_Half
+    .Elf64_Word
+)
+add_header(
+  Elf64_Vernaux
+  HDR
+    Elf64_Vernaux.h
+  DEPENDS
+    .Elf64_Half
+    .Elf64_Word
+)
+add_header(
+  Elf64_Verneed
+  HDR
+    Elf64_Verneed.h
+  DEPENDS
+    .Elf64_Half
+    .Elf64_Word
+)
+add_header(
+  Elf64_Versym
+  HDR
+    Elf64_Versym.h
+  DEPENDS
+  .Elf64_Half
 )
 
 # UEFI

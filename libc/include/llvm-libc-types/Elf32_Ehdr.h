@@ -9,11 +9,12 @@
 #ifndef LLVM_LIBC_TYPES_ELF32_EHDR_H
 #define LLVM_LIBC_TYPES_ELF32_EHDR_H
 
-#include "../llvm-libc-macros/elf-macros.h"
 #include "Elf32_Addr.h"
 #include "Elf32_Half.h"
 #include "Elf32_Off.h"
 #include "Elf32_Word.h"
+
+#define EI_NIDENT 16
 
 typedef struct {
   unsigned char e_ident[EI_NIDENT];
