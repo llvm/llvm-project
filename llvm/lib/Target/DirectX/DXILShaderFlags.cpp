@@ -287,6 +287,13 @@ ModuleShaderFlags::gatherGlobalModuleFlags(const Module &M,
   if (CanSetResMayNotAlias && MMDI.ValidatorVersion < VersionTuple(1, 8))
     CSF.ResMayNotAlias = !DRM.uavs().empty();
 
+  // The command line option -all-resources-bound will set the
+  // dx.allresourcesbound module flag to 1
+  if (auto *AllResourcesBound = mdconst::extract_or_null<ConstantInt>(
+          M.getModuleFlag("dx.allresourcesbound")))
+    if (AllResourcesBound->getValue().getBoolValue())
+      CSF.AllResourcesBound = true;
+
   return CSF;
 }
 

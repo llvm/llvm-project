@@ -488,6 +488,9 @@ CODEGENOPT(StaticClosure, 1, 0, Benign)
 /// Assume that UAVs/SRVs may alias
 CODEGENOPT(ResMayAlias, 1, 0, Benign)
 
+/// Assume that not all resources are bound
+CODEGENOPT(AllResourcesBound, 1, 0, Benign)
+
 /// Controls how unwind v2 (epilog) information should be generated for x64
 /// Windows.
 ENUM_CODEGENOPT(WinX64EHUnwindV2, WinX64EHUnwindV2Mode,
