@@ -23,10 +23,10 @@ define void @storef32_byte(i32 %offset, float %data) {
       @llvm.dx.resource.handlefrombinding.tdx.RawBuffer_i8_0_0_0(
           i32 0, i32 0, i32 1, i32 0, ptr null)
 
-  ; CHECK: call void @dx.op.bufferStore.f32(i32 69, %dx.types.Handle %{{.*}}, i32 %offset, i32 0, float %data, float undef, float undef, float undef, i8 1)
+  ; CHECK: call void @dx.op.bufferStore.f32(i32 69, %dx.types.Handle %{{.*}}, i32 %offset, i32 undef, float %data, float undef, float undef, float undef, i8 1)
   call void @llvm.dx.resource.store.rawbuffer.f32(
       target("dx.RawBuffer", i8, 1, 0, 0) %buffer,
-      i32 %offset, i32 0, float %data)
+      i32 %offset, i32 poison, float %data)
 
   ret void
 }
@@ -59,10 +59,10 @@ define void @storev4f32_byte(i32 %offset, <4 x float> %data) {
   ; CHECK: [[DATA1:%.*]] = extractelement <4 x float> %data, i32 1
   ; CHECK: [[DATA2:%.*]] = extractelement <4 x float> %data, i32 2
   ; CHECK: [[DATA3:%.*]] = extractelement <4 x float> %data, i32 3
-  ; CHECK: call void @dx.op.bufferStore.f32(i32 69, %dx.types.Handle %{{.*}}, i32 %offset, i32 0, float [[DATA0]], float [[DATA1]], float [[DATA2]], float [[DATA3]], i8 15)
+  ; CHECK: call void @dx.op.bufferStore.f32(i32 69, %dx.types.Handle %{{.*}}, i32 %offset, i32 undef, float [[DATA0]], float [[DATA1]], float [[DATA2]], float [[DATA3]], i8 15)
   call void @llvm.dx.resource.store.rawbuffer.v4f32(
       target("dx.RawBuffer", i8, 1, 0, 0) %buffer,
-      i32 %offset, i32 0, <4 x float> %data)
+      i32 %offset, i32 poison, <4 x float> %data)
 
   ret void
 }

@@ -152,7 +152,7 @@ struct CognitiveComplexity final {
 // to use is based of the combination of the CognitiveComplexity::Criteria.
 // It would be nice to have it in CognitiveComplexity struct, but then it is
 // not static.
-static const std::array<const StringRef, 4> Msgs = {{
+static constexpr std::array<StringRef, 4> Msgs = {{
     // B1 + B2 + B3
     "+%0, including nesting penalty of %1, nesting level increased to %2",
 

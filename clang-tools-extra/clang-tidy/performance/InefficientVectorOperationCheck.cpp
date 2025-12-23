@@ -46,17 +46,17 @@ namespace clang::tidy::performance {
 //   - ProtoVarDeclName: 'p' (as VarDecl).
 //   - ProtoVarDeclStmtName: The entire 'SomeProto p;' statement (as DeclStmt).
 //   - ProtoAddFieldCallName: 'p.add_xxx(i)' (as cxxMemberCallExpr).
-static const char LoopCounterName[] = "for_loop_counter";
-static const char LoopParentName[] = "loop_parent";
-static const char VectorVarDeclName[] = "vector_var_decl";
-static const char VectorVarDeclStmtName[] = "vector_var_decl_stmt";
-static const char PushBackOrEmplaceBackCallName[] = "append_call";
-static const char ProtoVarDeclName[] = "proto_var_decl";
-static const char ProtoVarDeclStmtName[] = "proto_var_decl_stmt";
-static const char ProtoAddFieldCallName[] = "proto_add_field";
-static const char LoopInitVarName[] = "loop_init_var";
-static const char LoopEndExprName[] = "loop_end_expr";
-static const char RangeLoopName[] = "for_range_loop";
+static constexpr char LoopCounterName[] = "for_loop_counter";
+static constexpr char LoopParentName[] = "loop_parent";
+static constexpr char VectorVarDeclName[] = "vector_var_decl";
+static constexpr char VectorVarDeclStmtName[] = "vector_var_decl_stmt";
+static constexpr char PushBackOrEmplaceBackCallName[] = "append_call";
+static constexpr char ProtoVarDeclName[] = "proto_var_decl";
+static constexpr char ProtoVarDeclStmtName[] = "proto_var_decl_stmt";
+static constexpr char ProtoAddFieldCallName[] = "proto_add_field";
+static constexpr char LoopInitVarName[] = "loop_init_var";
+static constexpr char LoopEndExprName[] = "loop_end_expr";
+static constexpr char RangeLoopName[] = "for_range_loop";
 
 static ast_matchers::internal::Matcher<Expr> supportedContainerTypesMatcher() {
   return hasType(cxxRecordDecl(hasAnyName(

@@ -33,8 +33,6 @@ static std::string getNewExprName(const CXXNewExpr *NewExpr,
   return WrittenName.str();
 }
 
-const char MakeSmartPtrCheck::PointerType[] = "pointerType";
-
 MakeSmartPtrCheck::MakeSmartPtrCheck(StringRef Name, ClangTidyContext *Context,
                                      StringRef MakeSmartPtrFunctionName)
     : ClangTidyCheck(Name, Context),
