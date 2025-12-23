@@ -95,11 +95,13 @@ class _LIBCPP_EXPORTED_FROM_ABI type_info {
 public:
   virtual ~type_info();
 
-  const char* name() const _NOEXCEPT;
+  [[__nodiscard__]] const char* name() const _NOEXCEPT;
 
-  _LIBCPP_HIDE_FROM_ABI bool before(const type_info& __arg) const _NOEXCEPT { return __compare(__arg) < 0; }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI bool before(const type_info& __arg) const _NOEXCEPT {
+    return __compare(__arg) < 0;
+  }
 
-  size_t hash_code() const _NOEXCEPT;
+  [[__nodiscard__]] size_t hash_code() const _NOEXCEPT;
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 bool operator==(const type_info& __arg) const _NOEXCEPT {
     // When evaluated in a constant expression, both type infos simply can't come
@@ -306,14 +308,15 @@ protected:
 
 public:
   virtual ~type_info();
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI const char* name() const _NOEXCEPT {
+    return __impl::__type_name_to_string(__type_name);
+  }
 
-  _LIBCPP_HIDE_FROM_ABI const char* name() const _NOEXCEPT { return __impl::__type_name_to_string(__type_name); }
-
-  _LIBCPP_HIDE_FROM_ABI bool before(const type_info& __arg) const _NOEXCEPT {
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI bool before(const type_info& __arg) const _NOEXCEPT {
     return __impl::__lt(__type_name, __arg.__type_name);
   }
 
-  _LIBCPP_HIDE_FROM_ABI size_t hash_code() const _NOEXCEPT { return __impl::__hash(__type_name); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI size_t hash_code() const _NOEXCEPT { return __impl::__hash(__type_name); }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 bool operator==(const type_info& __arg) const _NOEXCEPT {
     // When evaluated in a constant expression, both type infos simply can't come
@@ -336,7 +339,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI bad_cast(const bad_cast&) _NOEXCEPT            = default;
   _LIBCPP_HIDE_FROM_ABI bad_cast& operator=(const bad_cast&) _NOEXCEPT = default;
   ~bad_cast() _NOEXCEPT override;
-  const char* what() const _NOEXCEPT override;
+  [[__nodiscard__]] const char* what() const _NOEXCEPT override;
 };
 
 class _LIBCPP_EXPORTED_FROM_ABI bad_typeid : public exception {
@@ -345,7 +348,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI bad_typeid(const bad_typeid&) _NOEXCEPT            = default;
   _LIBCPP_HIDE_FROM_ABI bad_typeid& operator=(const bad_typeid&) _NOEXCEPT = default;
   ~bad_typeid() _NOEXCEPT override;
-  const char* what() const _NOEXCEPT override;
+  [[__nodiscard__]] const char* what() const _NOEXCEPT override;
 };
 
 } // namespace std
