@@ -1721,13 +1721,17 @@ mlir::LogicalResult CIRToLLVMLoadOpLowering::matchAndRewrite(
 
   // TODO: nontemporal.
   assert(!cir::MissingFeatures::opLoadStoreNontemporal());
-  std::optional<llvm::StringRef> syncScope =
-      getLLVMSyncScope(op.getSyncScope());
+
+  std::optional<std::string> llvmSyncScope;
+  if (std::optional<cir::SyncScopeKind> syncScope = op.getSyncScope())
+    llvmSyncScope =
+        lowerMod->getTargetLoweringInfo().getLLVMSyncScope(*syncScope);
+
   mlir::LLVM::LoadOp newLoad = mlir::LLVM::LoadOp::create(
       rewriter, op->getLoc(), llvmTy, adaptor.getAddr(), alignment,
       op.getIsVolatile(), /*isNonTemporal=*/false,
       /*isInvariant=*/false, /*isInvariantGroup=*/false, ordering,
-      syncScope.value_or(llvm::StringRef()));
+      llvmSyncScope.value_or(std::string()));
 
   // Convert adapted result to its original type if needed.
   mlir::Value result =
@@ -1755,13 +1759,17 @@ mlir::LogicalResult CIRToLLVMStoreOpLowering::matchAndRewrite(
   // TODO: nontemporal.
   assert(!cir::MissingFeatures::opLoadStoreNontemporal());
   assert(!cir::MissingFeatures::opLoadStoreTbaa());
-  std::optional<llvm::StringRef> syncScope =
-      getLLVMSyncScope(op.getSyncScope());
+
+  std::optional<std::string> llvmSyncScope;
+  if (std::optional<cir::SyncScopeKind> syncScope = op.getSyncScope())
+    llvmSyncScope =
+        lowerMod->getTargetLoweringInfo().getLLVMSyncScope(*syncScope);
+
   mlir::LLVM::StoreOp storeOp = mlir::LLVM::StoreOp::create(
       rewriter, op->getLoc(), value, adaptor.getAddr(), alignment,
       op.getIsVolatile(),
       /*isNonTemporal=*/false, /*isInvariantGroup=*/false, memorder,
-      syncScope.value_or(llvm::StringRef()));
+      llvmSyncScope.value_or(std::string()));
   rewriter.replaceOp(op, storeOp);
   assert(!cir::MissingFeatures::opLoadStoreTbaa());
   return mlir::LogicalResult::success();
