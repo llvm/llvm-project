@@ -102,6 +102,8 @@ Improvements and New Features
 Deprecations and Removals
 -------------------------
 
+- Extension ``launch::any`` is deprecated. It will be removed in LLVM 24.
+
 Potentially breaking changes
 ----------------------------
 

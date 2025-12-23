@@ -6,17 +6,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03
-
 // UNSUPPORTED: no-threads
 
-// check that <future> functions are marked [[nodiscard]]
+// <future>
 
-// clang-format off
+// enum class launch;
+
+// Verify that std::launch::any is deprecated.
+// It was a draft C++11 feature that was removed, but libc++ kept it as an extension.
 
 #include <future>
 
 void test() {
-  std::async([]() {});                   // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-  std::async(std::launch::async | std::launch::deferred, []() {}); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  (void)std::launch::any; // expected-warning {{std::launch::any is a deprecated extension}}
 }
