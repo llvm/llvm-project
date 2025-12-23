@@ -273,14 +273,15 @@ public:
   }
 
   Error validateRawBufferElementIndex(Value *Resource, Value *ElementIndex) {
-    bool IsStruct = cast<RawBufferExtType>(Resource->getType())->isStructured();
+    bool IsStructured =
+        cast<RawBufferExtType>(Resource->getType())->isStructured();
     bool IsPoison = isa<PoisonValue>(ElementIndex);
 
-    if (IsStruct && IsPoison)
+    if (IsStructured && IsPoison)
       return make_error<StringError>(
           "Element index of structured buffer may not be poison",
           inconvertibleErrorCode());
-    else if (!IsStruct && !IsPoison)
+    else if (!IsStructured && !IsPoison)
       return make_error<StringError>(
           "Element index of raw buffer must be poison",
           inconvertibleErrorCode());
