@@ -20,9 +20,8 @@ namespace optutils = clang::tidy::utils::options;
 namespace clang::tidy::readability {
 
 static constexpr StringRef CompareMessage =
-    "do not use 'compare' to test equality "
-    "of strings; use the string equality "
-    "operator instead";
+    "do not use 'compare' to test equality of strings; use the string "
+    "equality operator instead";
 
 static constexpr StringRef DefaultStringLikeClasses =
     "::std::basic_string;"
