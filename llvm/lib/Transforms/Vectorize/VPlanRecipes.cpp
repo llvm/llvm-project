@@ -1697,15 +1697,8 @@ void VPWidenIntrinsicRecipe::execute(VPTransformState &State) {
   // Add return type if intrinsic is overloaded on it.
   if (isVectorIntrinsicWithOverloadTypeAtArg(VectorIntrinsicID, -1,
                                              State.TTI)) {
-    // If the return type is a struct, we need to unpack its elements and
-    // vectorize them individually for the overloaded declaration.
-    Type *RetTy = getResultType();
-    if (auto *ST = dyn_cast<StructType>(RetTy)) {
-      for (Type *ElemTy : ST->elements())
-        TysForDecl.push_back(VectorType::get(ElemTy, State.VF));
-    } else {
-      TysForDecl.push_back(VectorType::get(RetTy, State.VF));
-    }
+    Type *RetTy = toVectorizedTy(getResultType(), State.VF);
+    append_range(TysForDecl, getContainedTypes(RetTy));
   }
   SmallVector<Value *, 4> Args;
   for (const auto &I : enumerate(operands())) {
