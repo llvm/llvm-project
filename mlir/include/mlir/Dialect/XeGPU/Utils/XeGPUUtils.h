@@ -150,8 +150,7 @@ void removeLayoutAttrs(Operation *op);
 SmallVector<NamedAttribute>
 dropSgLayoutAndDataOnAttrs(ArrayRef<NamedAttribute> attrs);
 
-SmallVector<NamedAttribute>
-dropInstDataOnAttrs(ArrayRef<NamedAttribute> attrs);
+SmallVector<NamedAttribute> dropInstDataOnAttrs(ArrayRef<NamedAttribute> attrs);
 
 /// [to-be-deprecated] Sets the DistributeLayoutAttr for a given OpResult
 /// user should use setAnchorLayout instead

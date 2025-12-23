@@ -276,8 +276,9 @@ struct WgToSgLoadNdOp : public OpConversionPattern<xegpu::LoadNdOp> {
           dyn_cast<xegpu::TensorDescType>(src.getType());
       ArrayRef<int64_t> srcShape = tdescTy.getShape();
       VectorType newResTy = VectorType::get(srcShape, tdescTy.getElementType());
-      auto newLoadOp = xegpu::LoadNdOp::create(rewriter, op.getLoc(), newResTy,
-                                               src, xegpu::dropSgLayoutAndDataOnAttrs(op->getAttrs()));
+      auto newLoadOp = xegpu::LoadNdOp::create(
+          rewriter, op.getLoc(), newResTy, src,
+          xegpu::dropSgLayoutAndDataOnAttrs(op->getAttrs()));
       newLoadOps.push_back(newLoadOp);
     }
     rewriter.replaceOpWithMultiple(op, {newLoadOps});
@@ -473,8 +474,9 @@ struct WgToSgPrefetchNdOp : public OpConversionPattern<xegpu::PrefetchNdOp> {
       return failure();
 
     for (auto src : adaptor.getTensorDesc())
-      xegpu::PrefetchNdOp::create(rewriter, op.getLoc(), TypeRange(), src,
-                                  xegpu::dropSgLayoutAndDataOnAttrs(op->getAttrs()));
+      xegpu::PrefetchNdOp::create(
+          rewriter, op.getLoc(), TypeRange(), src,
+          xegpu::dropSgLayoutAndDataOnAttrs(op->getAttrs()));
     rewriter.eraseOp(op);
     return success();
   }
