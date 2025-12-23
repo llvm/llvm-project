@@ -1420,7 +1420,8 @@ bool DwarfUnit::applySubprogramDefinitionAttributes(const DISubprogram *SP,
   }
 
   // Add function template parameters.
-  addTemplateParams(SPDie, SP->getTemplateParams());
+  if (!Minimal)
+    addTemplateParams(SPDie, SP->getTemplateParams());
 
   // Add the linkage name if we have one and it isn't in the Decl.
   StringRef LinkageName = SP->getLinkageName();
