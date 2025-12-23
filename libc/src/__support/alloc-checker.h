@@ -16,8 +16,6 @@
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/os.h"
 
-#include <new>
-
 namespace LIBC_NAMESPACE_DECL {
 
 class AllocChecker {
