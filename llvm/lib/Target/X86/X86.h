@@ -220,7 +220,7 @@ InstructionSelector *createX86InstructionSelector(const X86TargetMachine &TM,
                                                   const X86Subtarget &,
                                                   const X86RegisterBankInfo &);
 
-FunctionPass *createX86PostLegalizerCombiner();
+FunctionPass *createX86PostLegalizerCombiner(bool);
 FunctionPass *createX86LoadValueInjectionLoadHardeningPass();
 FunctionPass *createX86LoadValueInjectionRetHardeningPass();
 FunctionPass *createX86SpeculativeLoadHardeningPass();
