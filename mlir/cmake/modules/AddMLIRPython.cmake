@@ -854,11 +854,10 @@ function(add_mlir_python_extension libname extname nb_library_target_name)
       target_link_options(${libname} PRIVATE "-Wl,-z,undefs")
     endif()
     nanobind_link_options(${libname})
-    target_compile_definitions(${libname} PRIVATE NB_DOMAIN=${MLIR_BINDINGS_PYTHON_NB_DOMAIN})
-    set_target_properties(${libname} PROPERTIES
-      VISIBILITY_INLINES_HIDDEN OFF
-      C_VISIBILITY_PRESET default
-      CXX_VISIBILITY_PRESET default
+    target_compile_definitions(${libname}
+      PRIVATE
+      NB_DOMAIN=${MLIR_BINDINGS_PYTHON_NB_DOMAIN}
+      MLIR_CAPI_BUILDING_LIBRARY=1
     )
     if (MSVC)
       set_property(TARGET ${libname} PROPERTY WINDOWS_EXPORT_ALL_SYMBOLS ON)

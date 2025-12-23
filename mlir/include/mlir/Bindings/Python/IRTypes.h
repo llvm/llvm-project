@@ -10,20 +10,21 @@
 #define MLIR_BINDINGS_PYTHON_IRTYPES_H
 
 #include "mlir/Bindings/Python/NanobindAdaptors.h"
+#include "mlir/CAPI/Support.h"
 
 namespace mlir {
 
 /// Shaped Type Interface - ShapedType
-class PyShapedType : public python::PyConcreteType<PyShapedType> {
+class MLIR_PYTHON_API_EXPORTED PyShapedType : public python::PyConcreteType<PyShapedType> {
 public:
   static const IsAFunctionTy isaFunction;
   static constexpr const char *pyClassName = "ShapedType";
   using PyConcreteType::PyConcreteType;
 
-  static void bindDerived(ClassTy &c);
+  MLIR_PYTHON_API_EXPORTED static void bindDerived(ClassTy &c);
 
 private:
-  void requireHasRank();
+  MLIR_PYTHON_API_EXPORTED void requireHasRank();
 };
 
 } // namespace mlir

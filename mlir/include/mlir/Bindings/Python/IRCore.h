@@ -52,24 +52,24 @@ class PyValue;
 /// Template for a reference to a concrete type which captures a python
 /// reference to its underlying python object.
 template <typename T>
-class PyObjectRef {
+class MLIR_PYTHON_API_EXPORTED PyObjectRef {
 public:
-  PyObjectRef(T *referrent, nanobind::object object)
+  MLIR_PYTHON_API_EXPORTED PyObjectRef(T *referrent, nanobind::object object)
       : referrent(referrent), object(std::move(object)) {
     assert(this->referrent &&
            "cannot construct PyObjectRef with null referrent");
     assert(this->object && "cannot construct PyObjectRef with null object");
   }
-  PyObjectRef(PyObjectRef &&other) noexcept
+  MLIR_PYTHON_API_EXPORTED PyObjectRef(PyObjectRef &&other) noexcept
       : referrent(other.referrent), object(std::move(other.object)) {
     other.referrent = nullptr;
     assert(!other.object);
   }
-  PyObjectRef(const PyObjectRef &other)
+  MLIR_PYTHON_API_EXPORTED PyObjectRef(const PyObjectRef &other)
       : referrent(other.referrent), object(other.object /* copies */) {}
-  ~PyObjectRef() = default;
+  MLIR_PYTHON_API_EXPORTED ~PyObjectRef() = default;
 
-  int getRefCount() {
+  MLIR_PYTHON_API_EXPORTED int getRefCount() {
     if (!object)
       return 0;
     return Py_REFCNT(object.ptr());
@@ -78,23 +78,23 @@ public:
   /// Releases the object held by this instance, returning it.
   /// This is the proper thing to return from a function that wants to return
   /// the reference. Note that this does not work from initializers.
-  nanobind::object releaseObject() {
+  MLIR_PYTHON_API_EXPORTED nanobind::object releaseObject() {
     assert(referrent && object);
     referrent = nullptr;
     auto stolen = std::move(object);
     return stolen;
   }
 
-  T *get() { return referrent; }
-  T *operator->() {
+  MLIR_PYTHON_API_EXPORTED T *get() { return referrent; }
+  MLIR_PYTHON_API_EXPORTED T *operator->() {
     assert(referrent && object);
     return referrent;
   }
-  nanobind::object getObject() {
+  MLIR_PYTHON_API_EXPORTED nanobind::object getObject() {
     assert(referrent && object);
     return object;
   }
-  operator bool() const { return referrent && object; }
+  MLIR_PYTHON_API_EXPORTED operator bool() const { return referrent && object; }
 
   using NBTypedT = nanobind::typed<nanobind::object, T>;
 
@@ -111,7 +111,7 @@ private:
 /// Context. Pushing a Context will not modify the Location or InsertionPoint
 /// unless if they are from a different context, in which case, they are
 /// cleared.
-class PyThreadContextEntry {
+class MLIR_PYTHON_API_EXPORTED PyThreadContextEntry {
 public:
   enum class FrameKind {
     Context,
@@ -119,41 +119,48 @@ public:
     Location,
   };
 
-  PyThreadContextEntry(FrameKind frameKind, nanobind::object context,
-                       nanobind::object insertionPoint,
-                       nanobind::object location)
+  MLIR_PYTHON_API_EXPORTED PyThreadContextEntry(FrameKind frameKind,
+                                                nanobind::object context,
+                                                nanobind::object insertionPoint,
+                                                nanobind::object location)
       : context(std::move(context)), insertionPoint(std::move(insertionPoint)),
         location(std::move(location)), frameKind(frameKind) {}
 
   /// Gets the top of stack context and return nullptr if not defined.
-  static PyMlirContext *getDefaultContext();
+  MLIR_PYTHON_API_EXPORTED static PyMlirContext *getDefaultContext();
 
   /// Gets the top of stack insertion point and return nullptr if not defined.
-  static PyInsertionPoint *getDefaultInsertionPoint();
+  MLIR_PYTHON_API_EXPORTED static PyInsertionPoint *getDefaultInsertionPoint();
 
   /// Gets the top of stack location and returns nullptr if not defined.
-  static PyLocation *getDefaultLocation();
+  MLIR_PYTHON_API_EXPORTED static PyLocation *getDefaultLocation();
 
-  PyMlirContext *getContext();
-  PyInsertionPoint *getInsertionPoint();
-  PyLocation *getLocation();
-  FrameKind getFrameKind() { return frameKind; }
+  MLIR_PYTHON_API_EXPORTED PyMlirContext *getContext();
+  MLIR_PYTHON_API_EXPORTED PyInsertionPoint *getInsertionPoint();
+  MLIR_PYTHON_API_EXPORTED PyLocation *getLocation();
+  MLIR_PYTHON_API_EXPORTED FrameKind getFrameKind() { return frameKind; }
 
   /// Stack management.
-  static PyThreadContextEntry *getTopOfStack();
-  static nanobind::object pushContext(nanobind::object context);
-  static void popContext(PyMlirContext &context);
-  static nanobind::object pushInsertionPoint(nanobind::object insertionPoint);
-  static void popInsertionPoint(PyInsertionPoint &insertionPoint);
-  static nanobind::object pushLocation(nanobind::object location);
-  static void popLocation(PyLocation &location);
+  MLIR_PYTHON_API_EXPORTED static PyThreadContextEntry *getTopOfStack();
+  MLIR_PYTHON_API_EXPORTED static nanobind::object
+  pushContext(nanobind::object context);
+  MLIR_PYTHON_API_EXPORTED static void popContext(PyMlirContext &context);
+  MLIR_PYTHON_API_EXPORTED static nanobind::object
+  pushInsertionPoint(nanobind::object insertionPoint);
+  MLIR_PYTHON_API_EXPORTED static void
+  popInsertionPoint(PyInsertionPoint &insertionPoint);
+  MLIR_PYTHON_API_EXPORTED static nanobind::object
+  pushLocation(nanobind::object location);
+  MLIR_PYTHON_API_EXPORTED static void popLocation(PyLocation &location);
 
   /// Gets the thread local stack.
-  static std::vector<PyThreadContextEntry> &getStack();
+  MLIR_PYTHON_API_EXPORTED static std::vector<PyThreadContextEntry> &getStack();
 
 private:
-  static void push(FrameKind frameKind, nanobind::object context,
-                   nanobind::object insertionPoint, nanobind::object location);
+  MLIR_PYTHON_API_EXPORTED static void push(FrameKind frameKind,
+                                            nanobind::object context,
+                                            nanobind::object insertionPoint,
+                                            nanobind::object location);
 
   /// An object reference to the PyContext.
   nanobind::object context;
@@ -167,18 +174,22 @@ private:
 
 /// Wrapper around MlirLlvmThreadPool
 /// Python object owns the C++ thread pool
-class PyThreadPool {
+class MLIR_PYTHON_API_EXPORTED PyThreadPool {
 public:
-  PyThreadPool() {
+  MLIR_PYTHON_API_EXPORTED PyThreadPool() {
     ownedThreadPool = std::make_unique<llvm::DefaultThreadPool>();
   }
   PyThreadPool(const PyThreadPool &) = delete;
   PyThreadPool(PyThreadPool &&) = delete;
 
-  int getMaxConcurrency() const { return ownedThreadPool->getMaxConcurrency(); }
-  MlirLlvmThreadPool get() { return wrap(ownedThreadPool.get()); }
+  MLIR_PYTHON_API_EXPORTED int getMaxConcurrency() const {
+    return ownedThreadPool->getMaxConcurrency();
+  }
+  MLIR_PYTHON_API_EXPORTED MlirLlvmThreadPool get() {
+    return wrap(ownedThreadPool.get());
+  }
 
-  std::string _mlir_thread_pool_ptr() const {
+  MLIR_PYTHON_API_EXPORTED std::string _mlir_thread_pool_ptr() const {
     std::stringstream ss;
     ss << ownedThreadPool.get();
     return ss.str();
@@ -190,57 +201,65 @@ private:
 
 /// Wrapper around MlirContext.
 using PyMlirContextRef = PyObjectRef<PyMlirContext>;
-class PyMlirContext {
+class MLIR_PYTHON_API_EXPORTED PyMlirContext {
 public:
   PyMlirContext() = delete;
-  PyMlirContext(MlirContext context);
+  MLIR_PYTHON_API_EXPORTED PyMlirContext(MlirContext context);
   PyMlirContext(const PyMlirContext &) = delete;
   PyMlirContext(PyMlirContext &&) = delete;
 
   /// Returns a context reference for the singleton PyMlirContext wrapper for
   /// the given context.
-  static PyMlirContextRef forContext(MlirContext context);
-  ~PyMlirContext();
+  MLIR_PYTHON_API_EXPORTED static PyMlirContextRef
+  forContext(MlirContext context);
+  MLIR_PYTHON_API_EXPORTED ~PyMlirContext();
 
   /// Accesses the underlying MlirContext.
-  MlirContext get() { return context; }
+  MLIR_PYTHON_API_EXPORTED MlirContext get() { return context; }
 
   /// Gets a strong reference to this context, which will ensure it is kept
   /// alive for the life of the reference.
-  PyMlirContextRef getRef() {
+  MLIR_PYTHON_API_EXPORTED PyMlirContextRef getRef() {
     return PyMlirContextRef(this, nanobind::cast(this));
   }
 
   /// Gets a capsule wrapping the void* within the MlirContext.
-  nanobind::object getCapsule();
+  MLIR_PYTHON_API_EXPORTED nanobind::object getCapsule();
 
   /// Creates a PyMlirContext from the MlirContext wrapped by a capsule.
   /// Note that PyMlirContext instances are uniqued, so the returned object
   /// may be a pre-existing object. Ownership of the underlying MlirContext
   /// is taken by calling this function.
-  static nanobind::object createFromCapsule(nanobind::object capsule);
+  MLIR_PYTHON_API_EXPORTED static nanobind::object
+  createFromCapsule(nanobind::object capsule);
 
   /// Gets the count of live context objects. Used for testing.
-  static size_t getLiveCount();
+  MLIR_PYTHON_API_EXPORTED static size_t getLiveCount();
 
   /// Gets the count of live modules associated with this context.
   /// Used for testing.
-  size_t getLiveModuleCount();
+  MLIR_PYTHON_API_EXPORTED size_t getLiveModuleCount();
 
   /// Enter and exit the context manager.
-  static nanobind::object contextEnter(nanobind::object context);
-  void contextExit(const nanobind::object &excType,
-                   const nanobind::object &excVal,
-                   const nanobind::object &excTb);
+  MLIR_PYTHON_API_EXPORTED static nanobind::object
+  contextEnter(nanobind::object context);
+  MLIR_PYTHON_API_EXPORTED void contextExit(const nanobind::object &excType,
+                                            const nanobind::object &excVal,
+                                            const nanobind::object &excTb);
 
   /// Attaches a Python callback as a diagnostic handler, returning a
   /// registration object (internally a PyDiagnosticHandler).
-  nanobind::object attachDiagnosticHandler(nanobind::object callback);
+  MLIR_PYTHON_API_EXPORTED nanobind::object
+  attachDiagnosticHandler(nanobind::object callback);
 
   /// Controls whether error diagnostics should be propagated to diagnostic
   /// handlers, instead of being captured by `ErrorCapture`.
-  void setEmitErrorDiagnostics(bool value) { emitErrorDiagnostics = value; }
-  bool getEmitErrorDiagnostics() { return emitErrorDiagnostics; }
+  MLIR_PYTHON_API_EXPORTED void setEmitErrorDiagnostics(bool value) {
+    emitErrorDiagnostics = value;
+  }
+  MLIR_PYTHON_API_EXPORTED bool getEmitErrorDiagnostics() {
+    return emitErrorDiagnostics;
+  }
   struct ErrorCapture;
 
 private:
@@ -252,7 +271,7 @@ private:
   // Mappings will be removed when the context is destructed.
   using LiveContextMap = llvm::DenseMap<void *, PyMlirContext *>;
   static nanobind::ft_mutex live_contexts_mutex;
-  static LiveContextMap &getLiveContexts();
+  MLIR_PYTHON_API_EXPORTED static LiveContextMap &getLiveContexts();
 
   // Interns all live modules associated with this context. Modules tracked
   // in this map are valid. When a module is invalidated, it is removed
@@ -271,55 +290,59 @@ private:
 
 /// Used in function arguments when None should resolve to the current context
 /// manager set instance.
-class DefaultingPyMlirContext
+class MLIR_PYTHON_API_EXPORTED DefaultingPyMlirContext
     : public Defaulting<DefaultingPyMlirContext, PyMlirContext> {
 public:
   using Defaulting::Defaulting;
   static constexpr const char kTypeDescription[] = "Context";
-  static PyMlirContext &resolve();
+  MLIR_PYTHON_API_EXPORTED static PyMlirContext &resolve();
 };
 
 /// Base class for all objects that directly or indirectly depend on an
 /// MlirContext. The lifetime of the context will extend at least to the
 /// lifetime of these instances.
 /// Immutable objects that depend on a context extend this directly.
-class BaseContextObject {
+class MLIR_PYTHON_API_EXPORTED BaseContextObject {
 public:
-  BaseContextObject(PyMlirContextRef ref) : contextRef(std::move(ref)) {
+  MLIR_PYTHON_API_EXPORTED BaseContextObject(PyMlirContextRef ref)
+      : contextRef(std::move(ref)) {
     assert(this->contextRef &&
            "context object constructed with null context ref");
   }
 
   /// Accesses the context reference.
-  PyMlirContextRef &getContext() { return contextRef; }
+  MLIR_PYTHON_API_EXPORTED PyMlirContextRef &getContext() { return contextRef; }
 
 private:
   PyMlirContextRef contextRef;
 };
 
 /// Wrapper around an MlirLocation.
-class PyLocation : public BaseContextObject {
+class MLIR_PYTHON_API_EXPORTED PyLocation : public BaseContextObject {
 public:
-  PyLocation(PyMlirContextRef contextRef, MlirLocation loc)
+  MLIR_PYTHON_API_EXPORTED PyLocation(PyMlirContextRef contextRef,
+                                      MlirLocation loc)
       : BaseContextObject(std::move(contextRef)), loc(loc) {}
 
-  operator MlirLocation() const { return loc; }
-  MlirLocation get() const { return loc; }
+  MLIR_PYTHON_API_EXPORTED operator MlirLocation() const { return loc; }
+  MLIR_PYTHON_API_EXPORTED MlirLocation get() const { return loc; }
 
   /// Enter and exit the context manager.
-  static nanobind::object contextEnter(nanobind::object location);
-  void contextExit(const nanobind::object &excType,
-                   const nanobind::object &excVal,
-                   const nanobind::object &excTb);
+  MLIR_PYTHON_API_EXPORTED static nanobind::object
+  contextEnter(nanobind::object location);
+  MLIR_PYTHON_API_EXPORTED void contextExit(const nanobind::object &excType,
+                                            const nanobind::object &excVal,
+                                            const nanobind::object &excTb);
 
   /// Gets a capsule wrapping the void* within the MlirLocation.
-  nanobind::object getCapsule();
+  MLIR_PYTHON_API_EXPORTED nanobind::object getCapsule();
 
   /// Creates a PyLocation from the MlirLocation wrapped by a capsule.
   /// Note that PyLocation instances are uniqued, so the returned object
   /// may be a pre-existing object. Ownership of the underlying MlirLocation
   /// is taken by calling this function.
-  static PyLocation createFromCapsule(nanobind::object capsule);
+  MLIR_PYTHON_API_EXPORTED static PyLocation
+  createFromCapsule(nanobind::object capsule);
 
 private:
   MlirLocation loc;
@@ -329,30 +352,31 @@ private:
 /// are only valid for the duration of a diagnostic callback and attempting
 /// to access them outside of that will raise an exception. This applies to
 /// nested diagnostics (in the notes) as well.
-class PyDiagnostic {
+class MLIR_PYTHON_API_EXPORTED PyDiagnostic {
 public:
-  PyDiagnostic(MlirDiagnostic diagnostic) : diagnostic(diagnostic) {}
-  void invalidate();
-  bool isValid() { return valid; }
-  MlirDiagnosticSeverity getSeverity();
-  PyLocation getLocation();
-  nanobind::str getMessage();
-  nanobind::tuple getNotes();
+  MLIR_PYTHON_API_EXPORTED PyDiagnostic(MlirDiagnostic diagnostic)
+      : diagnostic(diagnostic) {}
+  MLIR_PYTHON_API_EXPORTED void invalidate();
+  MLIR_PYTHON_API_EXPORTED bool isValid() { return valid; }
+  MLIR_PYTHON_API_EXPORTED MlirDiagnosticSeverity getSeverity();
+  MLIR_PYTHON_API_EXPORTED PyLocation getLocation();
+  MLIR_PYTHON_API_EXPORTED nanobind::str getMessage();
+  MLIR_PYTHON_API_EXPORTED nanobind::tuple getNotes();
 
   /// Materialized diagnostic information. This is safe to access outside the
   /// diagnostic callback.
-  struct DiagnosticInfo {
+  struct MLIR_PYTHON_API_EXPORTED DiagnosticInfo {
     MlirDiagnosticSeverity severity;
     PyLocation location;
     std::string message;
     std::vector<DiagnosticInfo> notes;
   };
-  DiagnosticInfo getInfo();
+  MLIR_PYTHON_API_EXPORTED DiagnosticInfo getInfo();
 
 private:
   MlirDiagnostic diagnostic;
 
-  void checkValid();
+  MLIR_PYTHON_API_EXPORTED void checkValid();
   /// If notes have been materialized from the diagnostic, then this will
   /// be populated with the corresponding objects (all castable to
   /// PyDiagnostic).
@@ -379,21 +403,26 @@ private:
 /// The object may remain live from a Python perspective for an arbitrary time
 /// after detachment, but there is nothing the user can do with it (since there
 /// is no way to attach an existing handler object).
-class PyDiagnosticHandler {
+class MLIR_PYTHON_API_EXPORTED PyDiagnosticHandler {
 public:
-  PyDiagnosticHandler(MlirContext context, nanobind::object callback);
-  ~PyDiagnosticHandler();
+  MLIR_PYTHON_API_EXPORTED PyDiagnosticHandler(MlirContext context,
+                                               nanobind::object callback);
+  MLIR_PYTHON_API_EXPORTED ~PyDiagnosticHandler();
 
-  bool isAttached() { return registeredID.has_value(); }
-  bool getHadError() { return hadError; }
+  MLIR_PYTHON_API_EXPORTED bool isAttached() {
+    return registeredID.has_value();
+  }
+  MLIR_PYTHON_API_EXPORTED bool getHadError() { return hadError; }
 
   /// Detaches the handler. Does nothing if not attached.
-  void detach();
+  MLIR_PYTHON_API_EXPORTED void detach();
 
-  nanobind::object contextEnter() { return nanobind::cast(this); }
-  void contextExit(const nanobind::object &excType,
-                   const nanobind::object &excVal,
-                   const nanobind::object &excTb) {
+  MLIR_PYTHON_API_EXPORTED nanobind::object contextEnter() {
+    return nanobind::cast(this);
+  }
+  MLIR_PYTHON_API_EXPORTED void contextExit(const nanobind::object &excType,
+                                            const nanobind::object &excVal,
+                                            const nanobind::object &excTb) {
     detach();
   }
 
@@ -407,17 +436,17 @@ private:
 
 /// RAII object that captures any error diagnostics emitted to the provided
 /// context.
-struct PyMlirContext::ErrorCapture {
-  ErrorCapture(PyMlirContextRef ctx)
+struct MLIR_PYTHON_API_EXPORTED PyMlirContext::ErrorCapture {
+  MLIR_PYTHON_API_EXPORTED ErrorCapture(PyMlirContextRef ctx)
       : ctx(ctx), handlerID(mlirContextAttachDiagnosticHandler(
                       ctx->get(), handler, /*userData=*/this,
                       /*deleteUserData=*/nullptr)) {}
-  ~ErrorCapture() {
+  MLIR_PYTHON_API_EXPORTED ~ErrorCapture() {
     mlirContextDetachDiagnosticHandler(ctx->get(), handlerID);
     assert(errors.empty() && "unhandled captured errors");
   }
 
-  std::vector<PyDiagnostic::DiagnosticInfo> take() {
+  MLIR_PYTHON_API_EXPORTED std::vector<PyDiagnostic::DiagnosticInfo> take() {
     return std::move(errors);
   };
 
@@ -426,7 +455,8 @@ private:
   MlirDiagnosticHandlerID handlerID;
   std::vector<PyDiagnostic::DiagnosticInfo> errors;
 
-  static MlirLogicalResult handler(MlirDiagnostic diag, void *userData);
+  MLIR_PYTHON_API_EXPORTED static MlirLogicalResult handler(MlirDiagnostic diag,
+                                                            void *userData);
 };
 
 /// Wrapper around an MlirDialect. This is exported as `DialectDescriptor` in
@@ -434,12 +464,13 @@ private:
 /// plugins which extend dialect functionality through extension python code.
 /// This should be seen as the "low-level" object and `Dialect` as the
 /// high-level, user facing object.
-class PyDialectDescriptor : public BaseContextObject {
+class MLIR_PYTHON_API_EXPORTED PyDialectDescriptor : public BaseContextObject {
 public:
-  PyDialectDescriptor(PyMlirContextRef contextRef, MlirDialect dialect)
+  MLIR_PYTHON_API_EXPORTED PyDialectDescriptor(PyMlirContextRef contextRef,
+                                               MlirDialect dialect)
       : BaseContextObject(std::move(contextRef)), dialect(dialect) {}
 
-  MlirDialect get() { return dialect; }
+  MLIR_PYTHON_API_EXPORTED MlirDialect get() { return dialect; }
 
 private:
   MlirDialect dialect;
@@ -447,22 +478,26 @@ private:
 
 /// User-level object for accessing dialects with dotted syntax such as:
 ///   ctx.dialect.std
-class PyDialects : public BaseContextObject {
+class MLIR_PYTHON_API_EXPORTED PyDialects : public BaseContextObject {
 public:
-  PyDialects(PyMlirContextRef contextRef)
+  MLIR_PYTHON_API_EXPORTED PyDialects(PyMlirContextRef contextRef)
       : BaseContextObject(std::move(contextRef)) {}
 
-  MlirDialect getDialectForKey(const std::string &key, bool attrError);
+  MLIR_PYTHON_API_EXPORTED MlirDialect getDialectForKey(const std::string &key,
+                                                        bool attrError);
 };
 
 /// User-level dialect object. For dialects that have a registered extension,
 /// this will be the base class of the extension dialect type. For un-extended,
 /// objects of this type will be returned directly.
-class PyDialect {
+class MLIR_PYTHON_API_EXPORTED PyDialect {
 public:
-  PyDialect(nanobind::object descriptor) : descriptor(std::move(descriptor)) {}
+  MLIR_PYTHON_API_EXPORTED PyDialect(nanobind::object descriptor)
+      : descriptor(std::move(descriptor)) {}
 
-  nanobind::object getDescriptor() { return descriptor; }
+  MLIR_PYTHON_API_EXPORTED nanobind::object getDescriptor() {
+    return descriptor;
+  }
 
 private:
   nanobind::object descriptor;
@@ -471,25 +506,30 @@ private:
 /// Wrapper around an MlirDialectRegistry.
 /// Upon construction, the Python wrapper takes ownership of the
 /// underlying MlirDialectRegistry.
-class PyDialectRegistry {
+class MLIR_PYTHON_API_EXPORTED PyDialectRegistry {
 public:
-  PyDialectRegistry() : registry(mlirDialectRegistryCreate()) {}
-  PyDialectRegistry(MlirDialectRegistry registry) : registry(registry) {}
-  ~PyDialectRegistry() {
+  MLIR_PYTHON_API_EXPORTED PyDialectRegistry()
+      : registry(mlirDialectRegistryCreate()) {}
+  MLIR_PYTHON_API_EXPORTED PyDialectRegistry(MlirDialectRegistry registry)
+      : registry(registry) {}
+  MLIR_PYTHON_API_EXPORTED ~PyDialectRegistry() {
     if (!mlirDialectRegistryIsNull(registry))
       mlirDialectRegistryDestroy(registry);
   }
   PyDialectRegistry(PyDialectRegistry &) = delete;
-  PyDialectRegistry(PyDialectRegistry &&other) noexcept
+  MLIR_PYTHON_API_EXPORTED PyDialectRegistry(PyDialectRegistry &&other) noexcept
       : registry(other.registry) {
     other.registry = {nullptr};
   }
 
-  operator MlirDialectRegistry() const { return registry; }
-  MlirDialectRegistry get() const { return registry; }
+  MLIR_PYTHON_API_EXPORTED operator MlirDialectRegistry() const {
+    return registry;
+  }
+  MLIR_PYTHON_API_EXPORTED MlirDialectRegistry get() const { return registry; }
 
-  nanobind::object getCapsule();
-  static PyDialectRegistry createFromCapsule(nanobind::object capsule);
+  MLIR_PYTHON_API_EXPORTED nanobind::object getCapsule();
+  MLIR_PYTHON_API_EXPORTED static PyDialectRegistry
+  createFromCapsule(nanobind::object capsule);
 
 private:
   MlirDialectRegistry registry;
@@ -497,34 +537,34 @@ private:
 
 /// Used in function arguments when None should resolve to the current context
 /// manager set instance.
-class DefaultingPyLocation
+class MLIR_PYTHON_API_EXPORTED DefaultingPyLocation
     : public Defaulting<DefaultingPyLocation, PyLocation> {
 public:
   using Defaulting::Defaulting;
   static constexpr const char kTypeDescription[] = "Location";
-  static PyLocation &resolve();
+  MLIR_PYTHON_API_EXPORTED static PyLocation &resolve();
 
-  operator MlirLocation() const { return *get(); }
+  MLIR_PYTHON_API_EXPORTED operator MlirLocation() const { return *get(); }
 };
 
 /// Wrapper around MlirModule.
 /// This is the top-level, user-owned object that contains regions/ops/blocks.
 class PyModule;
 using PyModuleRef = PyObjectRef<PyModule>;
-class PyModule : public BaseContextObject {
+class MLIR_PYTHON_API_EXPORTED PyModule : public BaseContextObject {
 public:
   /// Returns a PyModule reference for the given MlirModule. This always returns
   /// a new object.
-  static PyModuleRef forModule(MlirModule module);
+  MLIR_PYTHON_API_EXPORTED static PyModuleRef forModule(MlirModule module);
   PyModule(PyModule &) = delete;
   PyModule(PyMlirContext &&) = delete;
-  ~PyModule();
+  MLIR_PYTHON_API_EXPORTED ~PyModule();
 
   /// Gets the backing MlirModule.
-  MlirModule get() { return module; }
+  MLIR_PYTHON_API_EXPORTED MlirModule get() { return module; }
 
   /// Gets a strong reference to this module.
-  PyModuleRef getRef() {
+  MLIR_PYTHON_API_EXPORTED PyModuleRef getRef() {
     return PyModuleRef(this, nanobind::borrow<nanobind::object>(handle));
   }
 
@@ -532,17 +572,19 @@ public:
   /// Note that the module does not (yet) provide a corresponding factory for
   /// constructing from a capsule as that would require uniquing PyModule
   /// instances, which is not currently done.
-  nanobind::object getCapsule();
+  MLIR_PYTHON_API_EXPORTED nanobind::object getCapsule();
 
   /// Creates a PyModule from the MlirModule wrapped by a capsule.
   /// Note this returns a new object BUT clearMlirModule() must be called to
   /// prevent double-frees (of the underlying mlir::Module).
-  static nanobind::object createFromCapsule(nanobind::object capsule);
+  MLIR_PYTHON_API_EXPORTED static nanobind::object
+  createFromCapsule(nanobind::object capsule);
 
-  void clearMlirModule() { module = {nullptr}; }
+  MLIR_PYTHON_API_EXPORTED void clearMlirModule() { module = {nullptr}; }
 
 private:
-  PyModule(PyMlirContextRef contextRef, MlirModule module);
+  MLIR_PYTHON_API_EXPORTED PyModule(PyMlirContextRef contextRef,
+                                    MlirModule module);
   MlirModule module;
   nanobind::handle handle;
 };
@@ -551,48 +593,52 @@ class PyAsmState;
 
 /// Base class for PyOperation and PyOpView which exposes the primary, user
 /// visible methods for manipulating it.
-class PyOperationBase {
+class MLIR_PYTHON_API_EXPORTED PyOperationBase {
 public:
-  virtual ~PyOperationBase() = default;
+  MLIR_PYTHON_API_EXPORTED virtual ~PyOperationBase() = default;
   /// Implements the bound 'print' method and helps with others.
-  void print(std::optional<int64_t> largeElementsLimit,
-             std::optional<int64_t> largeResourceLimit, bool enableDebugInfo,
-             bool prettyDebugInfo, bool printGenericOpForm, bool useLocalScope,
-             bool useNameLocAsPrefix, bool assumeVerified,
-             nanobind::object fileObject, bool binary, bool skipRegions);
-  void print(PyAsmState &state, nanobind::object fileObject, bool binary);
+  MLIR_PYTHON_API_EXPORTED void
+  print(std::optional<int64_t> largeElementsLimit,
+        std::optional<int64_t> largeResourceLimit, bool enableDebugInfo,
+        bool prettyDebugInfo, bool printGenericOpForm, bool useLocalScope,
+        bool useNameLocAsPrefix, bool assumeVerified,
+        nanobind::object fileObject, bool binary, bool skipRegions);
+  MLIR_PYTHON_API_EXPORTED void print(PyAsmState &state,
+                                      nanobind::object fileObject, bool binary);
 
-  nanobind::object
+  MLIR_PYTHON_API_EXPORTED nanobind::object
   getAsm(bool binary, std::optional<int64_t> largeElementsLimit,
          std::optional<int64_t> largeResourceLimit, bool enableDebugInfo,
          bool prettyDebugInfo, bool printGenericOpForm, bool useLocalScope,
          bool useNameLocAsPrefix, bool assumeVerified, bool skipRegions);
 
   // Implement the bound 'writeBytecode' method.
-  void writeBytecode(const nanobind::object &fileObject,
-                     std::optional<int64_t> bytecodeVersion);
+  MLIR_PYTHON_API_EXPORTED void
+  writeBytecode(const nanobind::object &fileObject,
+                std::optional<int64_t> bytecodeVersion);
 
   // Implement the walk method.
-  void walk(std::function<MlirWalkResult(MlirOperation)> callback,
-            MlirWalkOrder walkOrder);
+  MLIR_PYTHON_API_EXPORTED void
+  walk(std::function<MlirWalkResult(MlirOperation)> callback,
+       MlirWalkOrder walkOrder);
 
   /// Moves the operation before or after the other operation.
-  void moveAfter(PyOperationBase &other);
-  void moveBefore(PyOperationBase &other);
+  MLIR_PYTHON_API_EXPORTED void moveAfter(PyOperationBase &other);
+  MLIR_PYTHON_API_EXPORTED void moveBefore(PyOperationBase &other);
 
   /// Given an operation 'other' that is within the same parent block, return
   /// whether the current operation is before 'other' in the operation list
   /// of the parent block.
   /// Note: This function has an average complexity of O(1), but worst case may
   /// take O(N) where N is the number of operations within the parent block.
-  bool isBeforeInBlock(PyOperationBase &other);
+  MLIR_PYTHON_API_EXPORTED bool isBeforeInBlock(PyOperationBase &other);
 
   /// Verify the operation. Throws `MLIRError` if verification fails, and
   /// returns `true` otherwise.
-  bool verify();
+  MLIR_PYTHON_API_EXPORTED bool verify();
 
   /// Each must provide access to the raw Operation.
-  virtual PyOperation &getOperation() = 0;
+  MLIR_PYTHON_API_EXPORTED virtual PyOperation &getOperation() = 0;
 };
 
 /// Wrapper around PyOperation.
@@ -604,77 +650,81 @@ public:
 class PyOperation;
 class PyOpView;
 using PyOperationRef = PyObjectRef<PyOperation>;
-class PyOperation : public PyOperationBase, public BaseContextObject {
+class MLIR_PYTHON_API_EXPORTED PyOperation : public PyOperationBase, public BaseContextObject {
 public:
-  ~PyOperation() override;
-  PyOperation &getOperation() override { return *this; }
+  MLIR_PYTHON_API_EXPORTED ~PyOperation() override;
+  MLIR_PYTHON_API_EXPORTED PyOperation &getOperation() override {
+    return *this;
+  }
 
   /// Returns a PyOperation for the given MlirOperation, optionally associating
   /// it with a parentKeepAlive.
-  static PyOperationRef
+  MLIR_PYTHON_API_EXPORTED static PyOperationRef
   forOperation(PyMlirContextRef contextRef, MlirOperation operation,
                nanobind::object parentKeepAlive = nanobind::object());
 
   /// Creates a detached operation. The operation must not be associated with
   /// any existing live operation.
-  static PyOperationRef
+  MLIR_PYTHON_API_EXPORTED static PyOperationRef
   createDetached(PyMlirContextRef contextRef, MlirOperation operation,
                  nanobind::object parentKeepAlive = nanobind::object());
 
   /// Parses a source string (either text assembly or bytecode), creating a
   /// detached operation.
-  static PyOperationRef parse(PyMlirContextRef contextRef,
-                              const std::string &sourceStr,
-                              const std::string &sourceName);
+  MLIR_PYTHON_API_EXPORTED static PyOperationRef
+  parse(PyMlirContextRef contextRef, const std::string &sourceStr,
+        const std::string &sourceName);
 
   /// Detaches the operation from its parent block and updates its state
   /// accordingly.
-  void detachFromParent() {
+  MLIR_PYTHON_API_EXPORTED void detachFromParent() {
     mlirOperationRemoveFromParent(getOperation());
     setDetached();
     parentKeepAlive = nanobind::object();
   }
 
   /// Gets the backing operation.
-  operator MlirOperation() const { return get(); }
-  MlirOperation get() const {
+  MLIR_PYTHON_API_EXPORTED operator MlirOperation() const { return get(); }
+  MLIR_PYTHON_API_EXPORTED MlirOperation get() const {
     checkValid();
     return operation;
   }
 
-  PyOperationRef getRef() {
+  MLIR_PYTHON_API_EXPORTED PyOperationRef getRef() {
     return PyOperationRef(this, nanobind::borrow<nanobind::object>(handle));
   }
 
-  bool isAttached() { return attached; }
-  void setAttached(const nanobind::object &parent = nanobind::object()) {
+  MLIR_PYTHON_API_EXPORTED bool isAttached() { return attached; }
+  MLIR_PYTHON_API_EXPORTED void
+  setAttached(const nanobind::object &parent = nanobind::object()) {
     assert(!attached && "operation already attached");
     attached = true;
   }
-  void setDetached() {
+  MLIR_PYTHON_API_EXPORTED void setDetached() {
     assert(attached && "operation already detached");
     attached = false;
   }
-  void checkValid() const;
+  MLIR_PYTHON_API_EXPORTED void checkValid() const;
 
   /// Gets the owning block or raises an exception if the operation has no
   /// owning block.
-  PyBlock getBlock();
+  MLIR_PYTHON_API_EXPORTED PyBlock getBlock();
 
   /// Gets the parent operation or raises an exception if the operation has
   /// no parent.
-  std::optional<PyOperationRef> getParentOperation();
+  MLIR_PYTHON_API_EXPORTED std::optional<PyOperationRef> getParentOperation();
 
   /// Gets a capsule wrapping the void* within the MlirOperation.
-  nanobind::object getCapsule();
+  MLIR_PYTHON_API_EXPORTED nanobind::object getCapsule();
 
   /// Creates a PyOperation from the MlirOperation wrapped by a capsule.
   /// Ownership of the underlying MlirOperation is taken by calling this
   /// function.
-  static nanobind::object createFromCapsule(const nanobind::object &capsule);
+  MLIR_PYTHON_API_EXPORTED static nanobind::object
+  createFromCapsule(const nanobind::object &capsule);
 
   /// Creates an operation. See corresponding python docstring.
-  static nanobind::object
+  MLIR_PYTHON_API_EXPORTED static nanobind::object
   create(std::string_view name, std::optional<std::vector<PyType *>> results,
          llvm::ArrayRef<MlirValue> operands,
          std::optional<nanobind::dict> attributes,
@@ -682,24 +732,25 @@ public:
          PyLocation &location, const nanobind::object &ip, bool inferType);
 
   /// Creates an OpView suitable for this operation.
-  nanobind::object createOpView();
+  MLIR_PYTHON_API_EXPORTED nanobind::object createOpView();
 
   /// Erases the underlying MlirOperation, removes its pointer from the
   /// parent context's live operations map, and sets the valid bit false.
-  void erase();
+  MLIR_PYTHON_API_EXPORTED void erase();
 
   /// Invalidate the operation.
-  void setInvalid() { valid = false; }
+  MLIR_PYTHON_API_EXPORTED void setInvalid() { valid = false; }
 
   /// Clones this operation.
-  nanobind::object clone(const nanobind::object &ip);
+  MLIR_PYTHON_API_EXPORTED nanobind::object clone(const nanobind::object &ip);
 
-  PyOperation(PyMlirContextRef contextRef, MlirOperation operation);
+  MLIR_PYTHON_API_EXPORTED PyOperation(PyMlirContextRef contextRef,
+                                       MlirOperation operation);
 
 private:
-  static PyOperationRef createInstance(PyMlirContextRef contextRef,
-                                       MlirOperation operation,
-                                       nanobind::object parentKeepAlive);
+  MLIR_PYTHON_API_EXPORTED static PyOperationRef
+  createInstance(PyMlirContextRef contextRef, MlirOperation operation,
+                 nanobind::object parentKeepAlive);
 
   MlirOperation operation;
   nanobind::handle handle;
@@ -722,14 +773,18 @@ private:
 /// custom ODS-style operation classes. Since this class is subclass on the
 /// python side, it must present an __init__ method that operates in pure
 /// python types.
-class PyOpView : public PyOperationBase {
+class MLIR_PYTHON_API_EXPORTED PyOpView : public PyOperationBase {
 public:
-  PyOpView(const nanobind::object &operationObject);
-  PyOperation &getOperation() override { return operation; }
+  MLIR_PYTHON_API_EXPORTED PyOpView(const nanobind::object &operationObject);
+  MLIR_PYTHON_API_EXPORTED PyOperation &getOperation() override {
+    return operation;
+  }
 
-  nanobind::object getOperationObject() { return operationObject; }
+  MLIR_PYTHON_API_EXPORTED nanobind::object getOperationObject() {
+    return operationObject;
+  }
 
-  static nanobind::object
+  MLIR_PYTHON_API_EXPORTED static nanobind::object
   buildGeneric(std::string_view name, std::tuple<int, bool> opRegionSpec,
                nanobind::object operandSegmentSpecObj,
                nanobind::object resultSegmentSpecObj,
@@ -747,8 +802,9 @@ public:
   ///
   /// The caller is responsible for verifying that `operation` is a valid
   /// operation to construct `cls` with.
-  static nanobind::object constructDerived(const nanobind::object &cls,
-                                           const nanobind::object &operation);
+  MLIR_PYTHON_API_EXPORTED static nanobind::object
+  constructDerived(const nanobind::object &cls,
+                   const nanobind::object &operation);
 
 private:
   PyOperation &operation;           // For efficient, cast-free access from C++
@@ -758,18 +814,23 @@ private:
 /// Wrapper around an MlirRegion.
 /// Regions are managed completely by their containing operation. Unlike the
 /// C++ API, the python API does not support detached regions.
-class PyRegion {
+class MLIR_PYTHON_API_EXPORTED PyRegion {
 public:
-  PyRegion(PyOperationRef parentOperation, MlirRegion region)
+  MLIR_PYTHON_API_EXPORTED PyRegion(PyOperationRef parentOperation,
+                                    MlirRegion region)
       : parentOperation(std::move(parentOperation)), region(region) {
     assert(!mlirRegionIsNull(region) && "python region cannot be null");
   }
-  operator MlirRegion() const { return region; }
+  MLIR_PYTHON_API_EXPORTED operator MlirRegion() const { return region; }
 
-  MlirRegion get() { return region; }
-  PyOperationRef &getParentOperation() { return parentOperation; }
+  MLIR_PYTHON_API_EXPORTED MlirRegion get() { return region; }
+  MLIR_PYTHON_API_EXPORTED PyOperationRef &getParentOperation() {
+    return parentOperation;
+  }
 
-  void checkValid() { return parentOperation->checkValid(); }
+  MLIR_PYTHON_API_EXPORTED void checkValid() {
+    return parentOperation->checkValid();
+  }
 
 private:
   PyOperationRef parentOperation;
@@ -777,9 +838,9 @@ private:
 };
 
 /// Wrapper around an MlirAsmState.
-class PyAsmState {
+class MLIR_PYTHON_API_EXPORTED PyAsmState {
 public:
-  PyAsmState(MlirValue value, bool useLocalScope) {
+  MLIR_PYTHON_API_EXPORTED PyAsmState(MlirValue value, bool useLocalScope) {
     flags = mlirOpPrintingFlagsCreate();
     // The OpPrintingFlags are not exposed Python side, create locally and
     // associate lifetime with the state.
@@ -788,7 +849,8 @@ public:
     state = mlirAsmStateCreateForValue(value, flags);
   }
 
-  PyAsmState(PyOperationBase &operation, bool useLocalScope) {
+  MLIR_PYTHON_API_EXPORTED PyAsmState(PyOperationBase &operation,
+                                      bool useLocalScope) {
     flags = mlirOpPrintingFlagsCreate();
     // The OpPrintingFlags are not exposed Python side, create locally and
     // associate lifetime with the state.
@@ -797,12 +859,12 @@ public:
     state =
         mlirAsmStateCreateForOperation(operation.getOperation().get(), flags);
   }
-  ~PyAsmState() { mlirOpPrintingFlagsDestroy(flags); }
+  MLIR_PYTHON_API_EXPORTED ~PyAsmState() { mlirOpPrintingFlagsDestroy(flags); }
   // Delete copy constructors.
   PyAsmState(PyAsmState &other) = delete;
   PyAsmState(const PyAsmState &other) = delete;
 
-  MlirAsmState get() { return state; }
+  MLIR_PYTHON_API_EXPORTED MlirAsmState get() { return state; }
 
 private:
   MlirAsmState state;
@@ -812,20 +874,25 @@ private:
 /// Wrapper around an MlirBlock.
 /// Blocks are managed completely by their containing operation. Unlike the
 /// C++ API, the python API does not support detached blocks.
-class PyBlock {
+class MLIR_PYTHON_API_EXPORTED PyBlock {
 public:
-  PyBlock(PyOperationRef parentOperation, MlirBlock block)
+  MLIR_PYTHON_API_EXPORTED PyBlock(PyOperationRef parentOperation,
+                                   MlirBlock block)
       : parentOperation(std::move(parentOperation)), block(block) {
     assert(!mlirBlockIsNull(block) && "python block cannot be null");
   }
 
-  MlirBlock get() { return block; }
-  PyOperationRef &getParentOperation() { return parentOperation; }
+  MLIR_PYTHON_API_EXPORTED MlirBlock get() { return block; }
+  MLIR_PYTHON_API_EXPORTED PyOperationRef &getParentOperation() {
+    return parentOperation;
+  }
 
-  void checkValid() { return parentOperation->checkValid(); }
+  MLIR_PYTHON_API_EXPORTED void checkValid() {
+    return parentOperation->checkValid();
+  }
 
   /// Gets a capsule wrapping the void* within the MlirBlock.
-  nanobind::object getCapsule();
+  MLIR_PYTHON_API_EXPORTED nanobind::object getCapsule();
 
 private:
   PyOperationRef parentOperation;
@@ -836,39 +903,45 @@ private:
 /// Calls to insert() will insert a new operation before the
 /// reference operation. If the reference operation is null, then appends to
 /// the end of the block.
-class PyInsertionPoint {
+class MLIR_PYTHON_API_EXPORTED PyInsertionPoint {
 public:
   /// Creates an insertion point positioned after the last operation in the
   /// block, but still inside the block.
-  PyInsertionPoint(const PyBlock &block);
+  MLIR_PYTHON_API_EXPORTED PyInsertionPoint(const PyBlock &block);
   /// Creates an insertion point positioned before a reference operation.
+  MLIR_PYTHON_API_EXPORTED
   PyInsertionPoint(PyOperationBase &beforeOperationBase);
   /// Creates an insertion point positioned before a reference operation.
-  PyInsertionPoint(PyOperationRef beforeOperationRef);
+  MLIR_PYTHON_API_EXPORTED PyInsertionPoint(PyOperationRef beforeOperationRef);
 
   /// Shortcut to create an insertion point at the beginning of the block.
-  static PyInsertionPoint atBlockBegin(PyBlock &block);
+  MLIR_PYTHON_API_EXPORTED static PyInsertionPoint atBlockBegin(PyBlock &block);
   /// Shortcut to create an insertion point before the block terminator.
-  static PyInsertionPoint atBlockTerminator(PyBlock &block);
+  MLIR_PYTHON_API_EXPORTED static PyInsertionPoint
+  atBlockTerminator(PyBlock &block);
   /// Shortcut to create an insertion point to the node after the specified
   /// operation.
-  static PyInsertionPoint after(PyOperationBase &op);
+  MLIR_PYTHON_API_EXPORTED static PyInsertionPoint after(PyOperationBase &op);
 
   /// Inserts an operation.
-  void insert(PyOperationBase &operationBase);
+  MLIR_PYTHON_API_EXPORTED void insert(PyOperationBase &operationBase);
 
   /// Enter and exit the context manager.
-  static nanobind::object contextEnter(nanobind::object insertionPoint);
-  void contextExit(const nanobind::object &excType,
-                   const nanobind::object &excVal,
-                   const nanobind::object &excTb);
+  MLIR_PYTHON_API_EXPORTED static nanobind::object
+  contextEnter(nanobind::object insertionPoint);
+  MLIR_PYTHON_API_EXPORTED void contextExit(const nanobind::object &excType,
+                                            const nanobind::object &excVal,
+                                            const nanobind::object &excTb);
 
-  PyBlock &getBlock() { return block; }
-  std::optional<PyOperationRef> &getRefOperation() { return refOperation; }
+  MLIR_PYTHON_API_EXPORTED PyBlock &getBlock() { return block; }
+  MLIR_PYTHON_API_EXPORTED std::optional<PyOperationRef> &getRefOperation() {
+    return refOperation;
+  }
 
 private:
   // Trampoline constructor that avoids null initializing members while
   // looking up parents.
+  MLIR_PYTHON_API_EXPORTED
   PyInsertionPoint(PyBlock block, std::optional<PyOperationRef> refOperation)
       : refOperation(std::move(refOperation)), block(std::move(block)) {}
 
@@ -877,24 +950,25 @@ private:
 };
 /// Wrapper around the generic MlirType.
 /// The lifetime of a type is bound by the PyContext that created it.
-class PyType : public BaseContextObject {
+class MLIR_PYTHON_API_EXPORTED PyType : public BaseContextObject {
 public:
-  PyType(PyMlirContextRef contextRef, MlirType type)
+  MLIR_PYTHON_API_EXPORTED PyType(PyMlirContextRef contextRef, MlirType type)
       : BaseContextObject(std::move(contextRef)), type(type) {}
-  bool operator==(const PyType &other) const;
-  operator MlirType() const { return type; }
-  MlirType get() const { return type; }
+  MLIR_PYTHON_API_EXPORTED bool operator==(const PyType &other) const;
+  MLIR_PYTHON_API_EXPORTED operator MlirType() const { return type; }
+  MLIR_PYTHON_API_EXPORTED MlirType get() const { return type; }
 
   /// Gets a capsule wrapping the void* within the MlirType.
-  nanobind::object getCapsule();
+  MLIR_PYTHON_API_EXPORTED nanobind::object getCapsule();
 
   /// Creates a PyType from the MlirType wrapped by a capsule.
   /// Note that PyType instances are uniqued, so the returned object
   /// may be a pre-existing object. Ownership of the underlying MlirType
   /// is taken by calling this function.
-  static PyType createFromCapsule(nanobind::object capsule);
+  MLIR_PYTHON_API_EXPORTED static PyType
+  createFromCapsule(nanobind::object capsule);
 
-  nanobind::object maybeDownCast();
+  MLIR_PYTHON_API_EXPORTED nanobind::object maybeDownCast();
 
 private:
   MlirType type;
@@ -903,21 +977,22 @@ private:
 /// A TypeID provides an efficient and unique identifier for a specific C++
 /// type. This allows for a C++ type to be compared, hashed, and stored in an
 /// opaque context. This class wraps around the generic MlirTypeID.
-class PyTypeID {
+class MLIR_PYTHON_API_EXPORTED PyTypeID {
 public:
-  PyTypeID(MlirTypeID typeID) : typeID(typeID) {}
+  MLIR_PYTHON_API_EXPORTED PyTypeID(MlirTypeID typeID) : typeID(typeID) {}
   // Note, this tests whether the underlying TypeIDs are the same,
   // not whether the wrapper MlirTypeIDs are the same, nor whether
   // the PyTypeID objects are the same (i.e., PyTypeID is a value type).
-  bool operator==(const PyTypeID &other) const;
-  operator MlirTypeID() const { return typeID; }
-  MlirTypeID get() { return typeID; }
+  MLIR_PYTHON_API_EXPORTED bool operator==(const PyTypeID &other) const;
+  MLIR_PYTHON_API_EXPORTED operator MlirTypeID() const { return typeID; }
+  MLIR_PYTHON_API_EXPORTED MlirTypeID get() { return typeID; }
 
   /// Gets a capsule wrapping the void* within the MlirTypeID.
-  nanobind::object getCapsule();
+  MLIR_PYTHON_API_EXPORTED nanobind::object getCapsule();
 
   /// Creates a PyTypeID from the MlirTypeID wrapped by a capsule.
-  static PyTypeID createFromCapsule(nanobind::object capsule);
+  MLIR_PYTHON_API_EXPORTED static PyTypeID
+  createFromCapsule(nanobind::object capsule);
 
 private:
   MlirTypeID typeID;
@@ -929,7 +1004,7 @@ private:
 /// concrete type class extends PyType); however, intermediate python-visible
 /// base classes can be modeled by specifying a BaseTy.
 template <typename DerivedTy, typename BaseTy = PyType>
-class PyConcreteType : public BaseTy {
+class MLIR_PYTHON_API_EXPORTED PyConcreteType : public BaseTy {
 public:
   // Derived classes must define statics for:
   //   IsAFunctionTy isaFunction
@@ -939,13 +1014,14 @@ public:
   using GetTypeIDFunctionTy = MlirTypeID (*)();
   static constexpr GetTypeIDFunctionTy getTypeIdFunction = nullptr;
 
-  PyConcreteType() = default;
-  PyConcreteType(PyMlirContextRef contextRef, MlirType t)
+  MLIR_PYTHON_API_EXPORTED PyConcreteType() = default;
+  MLIR_PYTHON_API_EXPORTED PyConcreteType(PyMlirContextRef contextRef,
+                                          MlirType t)
       : BaseTy(std::move(contextRef), t) {}
-  PyConcreteType(PyType &orig)
+  MLIR_PYTHON_API_EXPORTED PyConcreteType(PyType &orig)
       : PyConcreteType(orig.getContext(), castFrom(orig)) {}
 
-  static MlirType castFrom(PyType &orig) {
+  MLIR_PYTHON_API_EXPORTED static MlirType castFrom(PyType &orig) {
     if (!DerivedTy::isaFunction(orig)) {
       auto origRepr =
           nanobind::cast<std::string>(nanobind::repr(nanobind::cast(orig)));
@@ -958,7 +1034,7 @@ public:
     return orig;
   }
 
-  static void bind(nanobind::module_ &m) {
+  MLIR_PYTHON_API_EXPORTED static void bind(nanobind::module_ &m) {
     auto cls = ClassTy(m, DerivedTy::pyClassName);
     cls.def(nanobind::init<PyType &>(), nanobind::keep_alive<0, 1>(),
             nanobind::arg("cast_from_type"));
@@ -1002,29 +1078,31 @@ public:
   }
 
   /// Implemented by derived classes to add methods to the Python subclass.
-  static void bindDerived(ClassTy &m) {}
+  MLIR_PYTHON_API_EXPORTED static void bindDerived(ClassTy &m) {}
 };
 
 /// Wrapper around the generic MlirAttribute.
 /// The lifetime of a type is bound by the PyContext that created it.
-class PyAttribute : public BaseContextObject {
+class MLIR_PYTHON_API_EXPORTED PyAttribute : public BaseContextObject {
 public:
-  PyAttribute(PyMlirContextRef contextRef, MlirAttribute attr)
+  MLIR_PYTHON_API_EXPORTED PyAttribute(PyMlirContextRef contextRef,
+                                       MlirAttribute attr)
       : BaseContextObject(std::move(contextRef)), attr(attr) {}
-  bool operator==(const PyAttribute &other) const;
-  operator MlirAttribute() const { return attr; }
-  MlirAttribute get() const { return attr; }
+  MLIR_PYTHON_API_EXPORTED bool operator==(const PyAttribute &other) const;
+  MLIR_PYTHON_API_EXPORTED operator MlirAttribute() const { return attr; }
+  MLIR_PYTHON_API_EXPORTED MlirAttribute get() const { return attr; }
 
   /// Gets a capsule wrapping the void* within the MlirAttribute.
-  nanobind::object getCapsule();
+  MLIR_PYTHON_API_EXPORTED nanobind::object getCapsule();
 
   /// Creates a PyAttribute from the MlirAttribute wrapped by a capsule.
   /// Note that PyAttribute instances are uniqued, so the returned object
   /// may be a pre-existing object. Ownership of the underlying MlirAttribute
   /// is taken by calling this function.
-  static PyAttribute createFromCapsule(const nanobind::object &capsule);
+  MLIR_PYTHON_API_EXPORTED static PyAttribute
+  createFromCapsule(const nanobind::object &capsule);
 
-  nanobind::object maybeDownCast();
+  MLIR_PYTHON_API_EXPORTED nanobind::object maybeDownCast();
 
 private:
   MlirAttribute attr;
@@ -1033,14 +1111,15 @@ private:
 /// Represents a Python MlirNamedAttr, carrying an optional owned name.
 /// TODO: Refactor this and the C-API to be based on an Identifier owned
 /// by the context so as to avoid ownership issues here.
-class PyNamedAttribute {
+class MLIR_PYTHON_API_EXPORTED PyNamedAttribute {
 public:
   /// Constructs a PyNamedAttr that retains an owned name. This should be
   /// used in any code that originates an MlirNamedAttribute from a python
   /// string.
   /// The lifetime of the PyNamedAttr must extend to the lifetime of the
   /// passed attribute.
-  PyNamedAttribute(MlirAttribute attr, std::string ownedName);
+  MLIR_PYTHON_API_EXPORTED PyNamedAttribute(MlirAttribute attr,
+                                            std::string ownedName);
 
   MlirNamedAttribute namedAttr;
 
@@ -1059,7 +1138,7 @@ private:
 /// concrete attribute class extends PyAttribute); however, intermediate
 /// python-visible base classes can be modeled by specifying a BaseTy.
 template <typename DerivedTy, typename BaseTy = PyAttribute>
-class PyConcreteAttribute : public BaseTy {
+class MLIR_PYTHON_API_EXPORTED PyConcreteAttribute : public BaseTy {
 public:
   // Derived classes must define statics for:
   //   IsAFunctionTy isaFunction
@@ -1069,13 +1148,14 @@ public:
   using GetTypeIDFunctionTy = MlirTypeID (*)();
   static constexpr GetTypeIDFunctionTy getTypeIdFunction = nullptr;
 
-  PyConcreteAttribute() = default;
-  PyConcreteAttribute(PyMlirContextRef contextRef, MlirAttribute attr)
+  MLIR_PYTHON_API_EXPORTED PyConcreteAttribute() = default;
+  MLIR_PYTHON_API_EXPORTED PyConcreteAttribute(PyMlirContextRef contextRef,
+                                               MlirAttribute attr)
       : BaseTy(std::move(contextRef), attr) {}
-  PyConcreteAttribute(PyAttribute &orig)
+  MLIR_PYTHON_API_EXPORTED PyConcreteAttribute(PyAttribute &orig)
       : PyConcreteAttribute(orig.getContext(), castFrom(orig)) {}
 
-  static MlirAttribute castFrom(PyAttribute &orig) {
+  MLIR_PYTHON_API_EXPORTED static MlirAttribute castFrom(PyAttribute &orig) {
     if (!DerivedTy::isaFunction(orig)) {
       auto origRepr =
           nanobind::cast<std::string>(nanobind::repr(nanobind::cast(orig)));
@@ -1088,7 +1168,8 @@ public:
     return orig;
   }
 
-  static void bind(nanobind::module_ &m, PyType_Slot *slots = nullptr) {
+  MLIR_PYTHON_API_EXPORTED static void bind(nanobind::module_ &m,
+                                            PyType_Slot *slots = nullptr) {
     ClassTy cls;
     if (slots) {
       cls = ClassTy(m, DerivedTy::pyClassName, nanobind::type_slots(slots));
@@ -1146,10 +1227,10 @@ public:
   }
 
   /// Implemented by derived classes to add methods to the Python subclass.
-  static void bindDerived(ClassTy &m) {}
+  MLIR_PYTHON_API_EXPORTED static void bindDerived(ClassTy &m) {}
 };
 
-class PyStringAttribute : public PyConcreteAttribute<PyStringAttribute> {
+class MLIR_PYTHON_API_EXPORTED PyStringAttribute : public PyConcreteAttribute<PyStringAttribute> {
 public:
   static constexpr IsAFunctionTy isaFunction = mlirAttributeIsAString;
   static constexpr const char *pyClassName = "StringAttr";
@@ -1157,7 +1238,7 @@ public:
   static constexpr GetTypeIDFunctionTy getTypeIdFunction =
       mlirStringAttrGetTypeID;
 
-  static void bindDerived(ClassTy &c);
+  MLIR_PYTHON_API_EXPORTED static void bindDerived(ClassTy &c);
 };
 
 /// Wrapper around the generic MlirValue.
@@ -1166,29 +1247,35 @@ public:
 /// value. For block argument values, this is the operation that contains the
 /// block to which the value is an argument (blocks cannot be detached in Python
 /// bindings so such operation always exists).
-class PyValue {
+class MLIR_PYTHON_API_EXPORTED PyValue {
 public:
   // The virtual here is "load bearing" in that it enables RTTI
   // for PyConcreteValue CRTP classes that support maybeDownCast.
   // See PyValue::maybeDownCast.
-  virtual ~PyValue() = default;
-  PyValue(PyOperationRef parentOperation, MlirValue value)
+  MLIR_PYTHON_API_EXPORTED virtual ~PyValue() = default;
+  MLIR_PYTHON_API_EXPORTED PyValue(PyOperationRef parentOperation,
+                                   MlirValue value)
       : parentOperation(std::move(parentOperation)), value(value) {}
-  operator MlirValue() const { return value; }
+  MLIR_PYTHON_API_EXPORTED operator MlirValue() const { return value; }
 
-  MlirValue get() { return value; }
-  PyOperationRef &getParentOperation() { return parentOperation; }
+  MLIR_PYTHON_API_EXPORTED MlirValue get() { return value; }
+  MLIR_PYTHON_API_EXPORTED PyOperationRef &getParentOperation() {
+    return parentOperation;
+  }
 
-  void checkValid() { return parentOperation->checkValid(); }
+  MLIR_PYTHON_API_EXPORTED void checkValid() {
+    return parentOperation->checkValid();
+  }
 
   /// Gets a capsule wrapping the void* within the MlirValue.
-  nanobind::object getCapsule();
+  MLIR_PYTHON_API_EXPORTED nanobind::object getCapsule();
 
-  nanobind::object maybeDownCast();
+  MLIR_PYTHON_API_EXPORTED nanobind::object maybeDownCast();
 
   /// Creates a PyValue from the MlirValue wrapped by a capsule. Ownership of
   /// the underlying MlirValue is still tied to the owning operation.
-  static PyValue createFromCapsule(nanobind::object capsule);
+  MLIR_PYTHON_API_EXPORTED static PyValue
+  createFromCapsule(nanobind::object capsule);
 
 private:
   PyOperationRef parentOperation;
@@ -1196,119 +1283,138 @@ private:
 };
 
 /// Wrapper around MlirAffineExpr. Affine expressions are owned by the context.
-class PyAffineExpr : public BaseContextObject {
+class MLIR_PYTHON_API_EXPORTED PyAffineExpr : public BaseContextObject {
 public:
-  PyAffineExpr(PyMlirContextRef contextRef, MlirAffineExpr affineExpr)
+  MLIR_PYTHON_API_EXPORTED PyAffineExpr(PyMlirContextRef contextRef,
+                                        MlirAffineExpr affineExpr)
       : BaseContextObject(std::move(contextRef)), affineExpr(affineExpr) {}
-  bool operator==(const PyAffineExpr &other) const;
-  operator MlirAffineExpr() const { return affineExpr; }
-  MlirAffineExpr get() const { return affineExpr; }
+  MLIR_PYTHON_API_EXPORTED bool operator==(const PyAffineExpr &other) const;
+  MLIR_PYTHON_API_EXPORTED operator MlirAffineExpr() const {
+    return affineExpr;
+  }
+  MLIR_PYTHON_API_EXPORTED MlirAffineExpr get() const { return affineExpr; }
 
   /// Gets a capsule wrapping the void* within the MlirAffineExpr.
-  nanobind::object getCapsule();
+  MLIR_PYTHON_API_EXPORTED nanobind::object getCapsule();
 
   /// Creates a PyAffineExpr from the MlirAffineExpr wrapped by a capsule.
   /// Note that PyAffineExpr instances are uniqued, so the returned object
   /// may be a pre-existing object. Ownership of the underlying MlirAffineExpr
   /// is taken by calling this function.
-  static PyAffineExpr createFromCapsule(const nanobind::object &capsule);
+  MLIR_PYTHON_API_EXPORTED static PyAffineExpr
+  createFromCapsule(const nanobind::object &capsule);
 
-  PyAffineExpr add(const PyAffineExpr &other) const;
-  PyAffineExpr mul(const PyAffineExpr &other) const;
-  PyAffineExpr floorDiv(const PyAffineExpr &other) const;
-  PyAffineExpr ceilDiv(const PyAffineExpr &other) const;
-  PyAffineExpr mod(const PyAffineExpr &other) const;
+  MLIR_PYTHON_API_EXPORTED PyAffineExpr add(const PyAffineExpr &other) const;
+  MLIR_PYTHON_API_EXPORTED PyAffineExpr mul(const PyAffineExpr &other) const;
+  MLIR_PYTHON_API_EXPORTED PyAffineExpr
+  floorDiv(const PyAffineExpr &other) const;
+  MLIR_PYTHON_API_EXPORTED PyAffineExpr
+  ceilDiv(const PyAffineExpr &other) const;
+  MLIR_PYTHON_API_EXPORTED PyAffineExpr mod(const PyAffineExpr &other) const;
 
 private:
   MlirAffineExpr affineExpr;
 };
 
-class PyAffineMap : public BaseContextObject {
+class MLIR_PYTHON_API_EXPORTED PyAffineMap : public BaseContextObject {
 public:
-  PyAffineMap(PyMlirContextRef contextRef, MlirAffineMap affineMap)
+  MLIR_PYTHON_API_EXPORTED PyAffineMap(PyMlirContextRef contextRef,
+                                       MlirAffineMap affineMap)
       : BaseContextObject(std::move(contextRef)), affineMap(affineMap) {}
-  bool operator==(const PyAffineMap &other) const;
-  operator MlirAffineMap() const { return affineMap; }
-  MlirAffineMap get() const { return affineMap; }
+  MLIR_PYTHON_API_EXPORTED bool operator==(const PyAffineMap &other) const;
+  MLIR_PYTHON_API_EXPORTED operator MlirAffineMap() const { return affineMap; }
+  MLIR_PYTHON_API_EXPORTED MlirAffineMap get() const { return affineMap; }
 
   /// Gets a capsule wrapping the void* within the MlirAffineMap.
-  nanobind::object getCapsule();
+  MLIR_PYTHON_API_EXPORTED nanobind::object getCapsule();
 
   /// Creates a PyAffineMap from the MlirAffineMap wrapped by a capsule.
   /// Note that PyAffineMap instances are uniqued, so the returned object
   /// may be a pre-existing object. Ownership of the underlying MlirAffineMap
   /// is taken by calling this function.
-  static PyAffineMap createFromCapsule(const nanobind::object &capsule);
+  MLIR_PYTHON_API_EXPORTED static PyAffineMap
+  createFromCapsule(const nanobind::object &capsule);
 
 private:
   MlirAffineMap affineMap;
 };
 
-class PyIntegerSet : public BaseContextObject {
+class MLIR_PYTHON_API_EXPORTED PyIntegerSet : public BaseContextObject {
 public:
-  PyIntegerSet(PyMlirContextRef contextRef, MlirIntegerSet integerSet)
+  MLIR_PYTHON_API_EXPORTED PyIntegerSet(PyMlirContextRef contextRef,
+                                        MlirIntegerSet integerSet)
       : BaseContextObject(std::move(contextRef)), integerSet(integerSet) {}
-  bool operator==(const PyIntegerSet &other) const;
-  operator MlirIntegerSet() const { return integerSet; }
-  MlirIntegerSet get() const { return integerSet; }
+  MLIR_PYTHON_API_EXPORTED bool operator==(const PyIntegerSet &other) const;
+  MLIR_PYTHON_API_EXPORTED operator MlirIntegerSet() const {
+    return integerSet;
+  }
+  MLIR_PYTHON_API_EXPORTED MlirIntegerSet get() const { return integerSet; }
 
   /// Gets a capsule wrapping the void* within the MlirIntegerSet.
-  nanobind::object getCapsule();
+  MLIR_PYTHON_API_EXPORTED nanobind::object getCapsule();
 
   /// Creates a PyIntegerSet from the MlirAffineMap wrapped by a capsule.
   /// Note that PyIntegerSet instances may be uniqued, so the returned object
   /// may be a pre-existing object. Integer sets are owned by the context.
-  static PyIntegerSet createFromCapsule(const nanobind::object &capsule);
+  MLIR_PYTHON_API_EXPORTED static PyIntegerSet
+  createFromCapsule(const nanobind::object &capsule);
 
 private:
   MlirIntegerSet integerSet;
 };
 
 /// Bindings for MLIR symbol tables.
-class PySymbolTable {
+class MLIR_PYTHON_API_EXPORTED PySymbolTable {
 public:
   /// Constructs a symbol table for the given operation.
-  explicit PySymbolTable(PyOperationBase &operation);
+  MLIR_PYTHON_API_EXPORTED explicit PySymbolTable(PyOperationBase &operation);
 
   /// Destroys the symbol table.
-  ~PySymbolTable() { mlirSymbolTableDestroy(symbolTable); }
+  MLIR_PYTHON_API_EXPORTED ~PySymbolTable() {
+    mlirSymbolTableDestroy(symbolTable);
+  }
 
   /// Returns the symbol (opview) with the given name, throws if there is no
   /// such symbol in the table.
-  nanobind::object dunderGetItem(const std::string &name);
+  MLIR_PYTHON_API_EXPORTED nanobind::object
+  dunderGetItem(const std::string &name);
 
   /// Removes the given operation from the symbol table and erases it.
-  void erase(PyOperationBase &symbol);
+  MLIR_PYTHON_API_EXPORTED void erase(PyOperationBase &symbol);
 
   /// Removes the operation with the given name from the symbol table and erases
   /// it, throws if there is no such symbol in the table.
-  void dunderDel(const std::string &name);
+  MLIR_PYTHON_API_EXPORTED void dunderDel(const std::string &name);
 
   /// Inserts the given operation into the symbol table. The operation must have
   /// the symbol trait.
-  PyStringAttribute insert(PyOperationBase &symbol);
+  MLIR_PYTHON_API_EXPORTED PyStringAttribute insert(PyOperationBase &symbol);
 
   /// Gets and sets the name of a symbol op.
-  static PyStringAttribute getSymbolName(PyOperationBase &symbol);
-  static void setSymbolName(PyOperationBase &symbol, const std::string &name);
+  MLIR_PYTHON_API_EXPORTED static PyStringAttribute
+  getSymbolName(PyOperationBase &symbol);
+  MLIR_PYTHON_API_EXPORTED static void setSymbolName(PyOperationBase &symbol,
+                                                     const std::string &name);
 
   /// Gets and sets the visibility of a symbol op.
-  static PyStringAttribute getVisibility(PyOperationBase &symbol);
-  static void setVisibility(PyOperationBase &symbol,
-                            const std::string &visibility);
+  MLIR_PYTHON_API_EXPORTED static PyStringAttribute
+  getVisibility(PyOperationBase &symbol);
+  MLIR_PYTHON_API_EXPORTED static void
+  setVisibility(PyOperationBase &symbol, const std::string &visibility);
 
   /// Replaces all symbol uses within an operation. See the API
   /// mlirSymbolTableReplaceAllSymbolUses for all caveats.
-  static void replaceAllSymbolUses(const std::string &oldSymbol,
-                                   const std::string &newSymbol,
-                                   PyOperationBase &from);
+  MLIR_PYTHON_API_EXPORTED static void
+  replaceAllSymbolUses(const std::string &oldSymbol,
+                       const std::string &newSymbol, PyOperationBase &from);
 
   /// Walks all symbol tables under and including 'from'.
-  static void walkSymbolTables(PyOperationBase &from, bool allSymUsesVisible,
-                               nanobind::object callback);
+  MLIR_PYTHON_API_EXPORTED static void
+  walkSymbolTables(PyOperationBase &from, bool allSymUsesVisible,
+                   nanobind::object callback);
 
   /// Casts the bindings class into the C API structure.
-  operator MlirSymbolTable() { return symbolTable; }
+  MLIR_PYTHON_API_EXPORTED operator MlirSymbolTable() { return symbolTable; }
 
 private:
   PyOperationRef operation;
@@ -1317,7 +1423,8 @@ private:
 
 /// Custom exception that allows access to error diagnostic information. This is
 /// converted to the `ir.MLIRError` python exception when thrown.
-struct MLIRError {
+struct MLIR_PYTHON_API_EXPORTED MLIRError {
+  MLIR_PYTHON_API_EXPORTED
   MLIRError(llvm::Twine message,
             std::vector<PyDiagnostic::DiagnosticInfo> &&errorDiagnostics = {})
       : message(message.str()), errorDiagnostics(std::move(errorDiagnostics)) {}
@@ -1325,7 +1432,7 @@ struct MLIRError {
   std::vector<PyDiagnostic::DiagnosticInfo> errorDiagnostics;
 };
 
-inline void registerMLIRError() {
+MLIR_PYTHON_API_EXPORTED inline void registerMLIRError() {
   nanobind::register_exception_translator(
       [](const std::exception_ptr &p, void *payload) {
         // We can't define exceptions with custom fields through pybind, so
@@ -1342,7 +1449,7 @@ inline void registerMLIRError() {
       });
 }
 
-void registerMLIRErrorInCore();
+MLIR_PYTHON_API_EXPORTED void registerMLIRErrorInCore();
 
 //------------------------------------------------------------------------------
 // Utilities.
@@ -1350,12 +1457,12 @@ void registerMLIRErrorInCore();
 
 /// Helper for creating an @classmethod.
 template <class Func, typename... Args>
-nanobind::object classmethod(Func f, Args... args) {
+MLIR_PYTHON_API_EXPORTED nanobind::object classmethod(Func f, Args... args) {
   nanobind::object cf = nanobind::cpp_function(f, args...);
   return nanobind::borrow<nanobind::object>((PyClassMethod_New(cf.ptr())));
 }
 
-inline nanobind::object
+MLIR_PYTHON_API_EXPORTED inline nanobind::object
 createCustomDialectWrapper(const std::string &dialectNamespace,
                            nanobind::object dialectDescriptor) {
   auto dialectClass = PyGlobals::get().lookupDialectClass(dialectNamespace);
@@ -1368,21 +1475,24 @@ createCustomDialectWrapper(const std::string &dialectNamespace,
   return (*dialectClass)(std::move(dialectDescriptor));
 }
 
-inline MlirStringRef toMlirStringRef(const std::string &s) {
+MLIR_PYTHON_API_EXPORTED inline MlirStringRef
+toMlirStringRef(const std::string &s) {
   return mlirStringRefCreate(s.data(), s.size());
 }
 
-inline MlirStringRef toMlirStringRef(std::string_view s) {
+MLIR_PYTHON_API_EXPORTED inline MlirStringRef
+toMlirStringRef(std::string_view s) {
   return mlirStringRefCreate(s.data(), s.size());
 }
 
-inline MlirStringRef toMlirStringRef(const nanobind::bytes &s) {
+MLIR_PYTHON_API_EXPORTED inline MlirStringRef
+toMlirStringRef(const nanobind::bytes &s) {
   return mlirStringRefCreate(static_cast<const char *>(s.data()), s.size());
 }
 
 /// Create a block, using the current location context if no locations are
 /// specified.
-inline MlirBlock
+MLIR_PYTHON_API_EXPORTED inline MlirBlock
 createBlock(const nanobind::sequence &pyArgTypes,
             const std::optional<nanobind::sequence> &pyArgLocs) {
   SmallVector<MlirType> argTypes;
@@ -1407,24 +1517,26 @@ createBlock(const nanobind::sequence &pyArgTypes,
   return mlirBlockCreate(argTypes.size(), argTypes.data(), argLocs.data());
 }
 
-struct PyAttrBuilderMap {
-  static bool dunderContains(const std::string &attributeKind) {
+struct MLIR_PYTHON_API_EXPORTED PyAttrBuilderMap {
+  MLIR_PYTHON_API_EXPORTED static bool
+  dunderContains(const std::string &attributeKind) {
     return PyGlobals::get().lookupAttributeBuilder(attributeKind).has_value();
   }
-  static nanobind::callable
+  MLIR_PYTHON_API_EXPORTED static nanobind::callable
   dunderGetItemNamed(const std::string &attributeKind) {
     auto builder = PyGlobals::get().lookupAttributeBuilder(attributeKind);
     if (!builder)
       throw nanobind::key_error(attributeKind.c_str());
     return *builder;
   }
-  static void dunderSetItemNamed(const std::string &attributeKind,
-                                 nanobind::callable func, bool replace) {
+  MLIR_PYTHON_API_EXPORTED static void
+  dunderSetItemNamed(const std::string &attributeKind, nanobind::callable func,
+                     bool replace) {
     PyGlobals::get().registerAttributeBuilder(attributeKind, std::move(func),
                                               replace);
   }
 
-  static void bind(nanobind::module_ &m) {
+  MLIR_PYTHON_API_EXPORTED static void bind(nanobind::module_ &m) {
     nanobind::class_<PyAttrBuilderMap>(m, "AttrBuilder")
         .def_static("contains", &PyAttrBuilderMap::dunderContains,
                     nanobind::arg("attribute_kind"),
@@ -1447,7 +1559,7 @@ struct PyAttrBuilderMap {
 // PyBlock
 //------------------------------------------------------------------------------
 
-inline nanobind::object PyBlock::getCapsule() {
+MLIR_PYTHON_API_EXPORTED inline nanobind::object PyBlock::getCapsule() {
   return nanobind::steal<nanobind::object>(mlirPythonBlockToCapsule(get()));
 }
 
@@ -1455,14 +1567,15 @@ inline nanobind::object PyBlock::getCapsule() {
 // Collections.
 //------------------------------------------------------------------------------
 
-class PyRegionIterator {
+class MLIR_PYTHON_API_EXPORTED PyRegionIterator {
 public:
-  PyRegionIterator(PyOperationRef operation, int nextIndex)
+  MLIR_PYTHON_API_EXPORTED PyRegionIterator(PyOperationRef operation,
+                                            int nextIndex)
       : operation(std::move(operation)), nextIndex(nextIndex) {}
 
-  PyRegionIterator &dunderIter() { return *this; }
+  MLIR_PYTHON_API_EXPORTED PyRegionIterator &dunderIter() { return *this; }
 
-  PyRegion dunderNext() {
+  MLIR_PYTHON_API_EXPORTED PyRegion dunderNext() {
     operation->checkValid();
     if (nextIndex >= mlirOperationGetNumRegions(operation->get())) {
       throw nanobind::stop_iteration();
@@ -1471,7 +1584,7 @@ public:
     return PyRegion(operation, region);
   }
 
-  static void bind(nanobind::module_ &m) {
+  MLIR_PYTHON_API_EXPORTED static void bind(nanobind::module_ &m) {
     nanobind::class_<PyRegionIterator>(m, "RegionIterator")
         .def("__iter__", &PyRegionIterator::dunderIter,
              "Returns an iterator over the regions in the operation.")
@@ -1486,24 +1599,25 @@ private:
 
 /// Regions of an op are fixed length and indexed numerically so are represented
 /// with a sequence-like container.
-class PyRegionList : public Sliceable<PyRegionList, PyRegion> {
+class MLIR_PYTHON_API_EXPORTED PyRegionList : public Sliceable<PyRegionList, PyRegion> {
 public:
   static constexpr const char *pyClassName = "RegionSequence";
 
-  PyRegionList(PyOperationRef operation, intptr_t startIndex = 0,
-               intptr_t length = -1, intptr_t step = 1)
+  MLIR_PYTHON_API_EXPORTED PyRegionList(PyOperationRef operation,
+                                        intptr_t startIndex = 0,
+                                        intptr_t length = -1, intptr_t step = 1)
       : Sliceable(startIndex,
                   length == -1 ? mlirOperationGetNumRegions(operation->get())
                                : length,
                   step),
         operation(std::move(operation)) {}
 
-  PyRegionIterator dunderIter() {
+  MLIR_PYTHON_API_EXPORTED PyRegionIterator dunderIter() {
     operation->checkValid();
     return PyRegionIterator(operation, startIndex);
   }
 
-  static void bindDerived(ClassTy &c) {
+  MLIR_PYTHON_API_EXPORTED static void bindDerived(ClassTy &c) {
     c.def("__iter__", &PyRegionList::dunderIter,
           "Returns an iterator over the regions in the sequence.");
   }
@@ -1512,31 +1626,33 @@ private:
   /// Give the parent CRTP class access to hook implementations below.
   friend class Sliceable<PyRegionList, PyRegion>;
 
-  intptr_t getRawNumElements() {
+  MLIR_PYTHON_API_EXPORTED intptr_t getRawNumElements() {
     operation->checkValid();
     return mlirOperationGetNumRegions(operation->get());
   }
 
-  PyRegion getRawElement(intptr_t pos) {
+  MLIR_PYTHON_API_EXPORTED PyRegion getRawElement(intptr_t pos) {
     operation->checkValid();
     return PyRegion(operation, mlirOperationGetRegion(operation->get(), pos));
   }
 
-  PyRegionList slice(intptr_t startIndex, intptr_t length, intptr_t step) {
+  MLIR_PYTHON_API_EXPORTED PyRegionList slice(intptr_t startIndex,
+                                              intptr_t length, intptr_t step) {
     return PyRegionList(operation, startIndex, length, step);
   }
 
   PyOperationRef operation;
 };
 
-class PyBlockIterator {
+class MLIR_PYTHON_API_EXPORTED PyBlockIterator {
 public:
-  PyBlockIterator(PyOperationRef operation, MlirBlock next)
+  MLIR_PYTHON_API_EXPORTED PyBlockIterator(PyOperationRef operation,
+                                           MlirBlock next)
       : operation(std::move(operation)), next(next) {}
 
-  PyBlockIterator &dunderIter() { return *this; }
+  MLIR_PYTHON_API_EXPORTED PyBlockIterator &dunderIter() { return *this; }
 
-  PyBlock dunderNext() {
+  MLIR_PYTHON_API_EXPORTED PyBlock dunderNext() {
     operation->checkValid();
     if (mlirBlockIsNull(next)) {
       throw nanobind::stop_iteration();
@@ -1547,7 +1663,7 @@ public:
     return returnBlock;
   }
 
-  static void bind(nanobind::module_ &m) {
+  MLIR_PYTHON_API_EXPORTED static void bind(nanobind::module_ &m) {
     nanobind::class_<PyBlockIterator>(m, "BlockIterator")
         .def("__iter__", &PyBlockIterator::dunderIter,
              "Returns an iterator over the blocks in the operation's region.")
@@ -1563,17 +1679,18 @@ private:
 /// Blocks are exposed by the C-API as a forward-only linked list. In Python,
 /// we present them as a more full-featured list-like container but optimize
 /// it for forward iteration. Blocks are always owned by a region.
-class PyBlockList {
+class MLIR_PYTHON_API_EXPORTED PyBlockList {
 public:
-  PyBlockList(PyOperationRef operation, MlirRegion region)
+  MLIR_PYTHON_API_EXPORTED PyBlockList(PyOperationRef operation,
+                                       MlirRegion region)
       : operation(std::move(operation)), region(region) {}
 
-  PyBlockIterator dunderIter() {
+  MLIR_PYTHON_API_EXPORTED PyBlockIterator dunderIter() {
     operation->checkValid();
     return PyBlockIterator(operation, mlirRegionGetFirstBlock(region));
   }
 
-  intptr_t dunderLen() {
+  MLIR_PYTHON_API_EXPORTED intptr_t dunderLen() {
     operation->checkValid();
     intptr_t count = 0;
     MlirBlock block = mlirRegionGetFirstBlock(region);
@@ -1584,7 +1701,7 @@ public:
     return count;
   }
 
-  PyBlock dunderGetItem(intptr_t index) {
+  MLIR_PYTHON_API_EXPORTED PyBlock dunderGetItem(intptr_t index) {
     operation->checkValid();
     if (index < 0) {
       index += dunderLen();
@@ -1603,8 +1720,9 @@ public:
     throw nanobind::index_error("attempt to access out of bounds block");
   }
 
-  PyBlock appendBlock(const nanobind::args &pyArgTypes,
-                      const std::optional<nanobind::sequence> &pyArgLocs) {
+  MLIR_PYTHON_API_EXPORTED PyBlock
+  appendBlock(const nanobind::args &pyArgTypes,
+              const std::optional<nanobind::sequence> &pyArgLocs) {
     operation->checkValid();
     MlirBlock block =
         createBlock(nanobind::cast<nanobind::sequence>(pyArgTypes), pyArgLocs);
@@ -1612,7 +1730,7 @@ public:
     return PyBlock(operation, block);
   }
 
-  static void bind(nanobind::module_ &m) {
+  MLIR_PYTHON_API_EXPORTED static void bind(nanobind::module_ &m) {
     nanobind::class_<PyBlockList>(m, "BlockList")
         .def("__getitem__", &PyBlockList::dunderGetItem,
              "Returns the block at the specified index.")
@@ -1636,14 +1754,16 @@ private:
   MlirRegion region;
 };
 
-class PyOperationIterator {
+class MLIR_PYTHON_API_EXPORTED PyOperationIterator {
 public:
-  PyOperationIterator(PyOperationRef parentOperation, MlirOperation next)
+  MLIR_PYTHON_API_EXPORTED PyOperationIterator(PyOperationRef parentOperation,
+                                               MlirOperation next)
       : parentOperation(std::move(parentOperation)), next(next) {}
 
-  PyOperationIterator &dunderIter() { return *this; }
+  MLIR_PYTHON_API_EXPORTED PyOperationIterator &dunderIter() { return *this; }
 
-  nanobind::typed<nanobind::object, PyOpView> dunderNext() {
+  MLIR_PYTHON_API_EXPORTED nanobind::typed<nanobind::object, PyOpView>
+  dunderNext() {
     parentOperation->checkValid();
     if (mlirOperationIsNull(next)) {
       throw nanobind::stop_iteration();
@@ -1655,7 +1775,7 @@ public:
     return returnOperation->createOpView();
   }
 
-  static void bind(nanobind::module_ &m) {
+  MLIR_PYTHON_API_EXPORTED static void bind(nanobind::module_ &m) {
     nanobind::class_<PyOperationIterator>(m, "OperationIterator")
         .def("__iter__", &PyOperationIterator::dunderIter,
              "Returns an iterator over the operations in an operation's block.")
@@ -1672,18 +1792,19 @@ private:
 /// Python, we present them as a more full-featured list-like container but
 /// optimize it for forward iteration. Iterable operations are always owned
 /// by a block.
-class PyOperationList {
+class MLIR_PYTHON_API_EXPORTED PyOperationList {
 public:
-  PyOperationList(PyOperationRef parentOperation, MlirBlock block)
+  MLIR_PYTHON_API_EXPORTED PyOperationList(PyOperationRef parentOperation,
+                                           MlirBlock block)
       : parentOperation(std::move(parentOperation)), block(block) {}
 
-  PyOperationIterator dunderIter() {
+  MLIR_PYTHON_API_EXPORTED PyOperationIterator dunderIter() {
     parentOperation->checkValid();
     return PyOperationIterator(parentOperation,
                                mlirBlockGetFirstOperation(block));
   }
 
-  intptr_t dunderLen() {
+  MLIR_PYTHON_API_EXPORTED intptr_t dunderLen() {
     parentOperation->checkValid();
     intptr_t count = 0;
     MlirOperation childOp = mlirBlockGetFirstOperation(block);
@@ -1694,7 +1815,8 @@ public:
     return count;
   }
 
-  nanobind::typed<nanobind::object, PyOpView> dunderGetItem(intptr_t index) {
+  MLIR_PYTHON_API_EXPORTED nanobind::typed<nanobind::object, PyOpView>
+  dunderGetItem(intptr_t index) {
     parentOperation->checkValid();
     if (index < 0) {
       index += dunderLen();
@@ -1714,7 +1836,7 @@ public:
     throw nanobind::index_error("attempt to access out of bounds operation");
   }
 
-  static void bind(nanobind::module_ &m) {
+  MLIR_PYTHON_API_EXPORTED static void bind(nanobind::module_ &m) {
     nanobind::class_<PyOperationList>(m, "OperationList")
         .def("__getitem__", &PyOperationList::dunderGetItem,
              "Returns the operation at the specified index.")
@@ -1729,20 +1851,24 @@ private:
   MlirBlock block;
 };
 
-class PyOpOperand {
+class MLIR_PYTHON_API_EXPORTED PyOpOperand {
 public:
-  PyOpOperand(MlirOpOperand opOperand) : opOperand(opOperand) {}
+  MLIR_PYTHON_API_EXPORTED PyOpOperand(MlirOpOperand opOperand)
+      : opOperand(opOperand) {}
 
-  nanobind::typed<nanobind::object, PyOpView> getOwner() {
+  MLIR_PYTHON_API_EXPORTED nanobind::typed<nanobind::object, PyOpView>
+  getOwner() {
     MlirOperation owner = mlirOpOperandGetOwner(opOperand);
     PyMlirContextRef context =
         PyMlirContext::forContext(mlirOperationGetContext(owner));
     return PyOperation::forOperation(context, owner)->createOpView();
   }
 
-  size_t getOperandNumber() { return mlirOpOperandGetOperandNumber(opOperand); }
+  MLIR_PYTHON_API_EXPORTED size_t getOperandNumber() {
+    return mlirOpOperandGetOperandNumber(opOperand);
+  }
 
-  static void bind(nanobind::module_ &m) {
+  MLIR_PYTHON_API_EXPORTED static void bind(nanobind::module_ &m) {
     nanobind::class_<PyOpOperand>(m, "OpOperand")
         .def_prop_ro("owner", &PyOpOperand::getOwner,
                      "Returns the operation that owns this operand.")
@@ -1754,13 +1880,14 @@ private:
   MlirOpOperand opOperand;
 };
 
-class PyOpOperandIterator {
+class MLIR_PYTHON_API_EXPORTED PyOpOperandIterator {
 public:
-  PyOpOperandIterator(MlirOpOperand opOperand) : opOperand(opOperand) {}
+  MLIR_PYTHON_API_EXPORTED PyOpOperandIterator(MlirOpOperand opOperand)
+      : opOperand(opOperand) {}
 
-  PyOpOperandIterator &dunderIter() { return *this; }
+  MLIR_PYTHON_API_EXPORTED PyOpOperandIterator &dunderIter() { return *this; }
 
-  PyOpOperand dunderNext() {
+  MLIR_PYTHON_API_EXPORTED PyOpOperand dunderNext() {
     if (mlirOpOperandIsNull(opOperand))
       throw nanobind::stop_iteration();
 
@@ -1769,7 +1896,7 @@ public:
     return returnOpOperand;
   }
 
-  static void bind(nanobind::module_ &m) {
+  MLIR_PYTHON_API_EXPORTED static void bind(nanobind::module_ &m) {
     nanobind::class_<PyOpOperandIterator>(m, "OpOperandIterator")
         .def("__iter__", &PyOpOperandIterator::dunderIter,
              "Returns an iterator over operands.")
@@ -1785,7 +1912,7 @@ private:
 /// castable from it. The value hierarchy is one level deep and is not supposed
 /// to accommodate other levels unless core MLIR changes.
 template <typename DerivedTy>
-class PyConcreteValue : public PyValue {
+class MLIR_PYTHON_API_EXPORTED PyConcreteValue : public PyValue {
 public:
   // Derived classes must define statics for:
   //   IsAFunctionTy isaFunction
@@ -1794,15 +1921,16 @@ public:
   using ClassTy = nanobind::class_<DerivedTy, PyValue>;
   using IsAFunctionTy = bool (*)(MlirValue);
 
-  PyConcreteValue() = default;
-  PyConcreteValue(PyOperationRef operationRef, MlirValue value)
+  MLIR_PYTHON_API_EXPORTED PyConcreteValue() = default;
+  MLIR_PYTHON_API_EXPORTED PyConcreteValue(PyOperationRef operationRef,
+                                           MlirValue value)
       : PyValue(operationRef, value) {}
-  PyConcreteValue(PyValue &orig)
+  MLIR_PYTHON_API_EXPORTED PyConcreteValue(PyValue &orig)
       : PyConcreteValue(orig.getParentOperation(), castFrom(orig)) {}
 
   /// Attempts to cast the original value to the derived type and throws on
   /// type mismatches.
-  static MlirValue castFrom(PyValue &orig) {
+  MLIR_PYTHON_API_EXPORTED static MlirValue castFrom(PyValue &orig) {
     if (!DerivedTy::isaFunction(orig.get())) {
       auto origRepr =
           nanobind::cast<std::string>(nanobind::repr(nanobind::cast(orig)));
@@ -1816,7 +1944,7 @@ public:
   }
 
   /// Binds the Python module objects to functions of this class.
-  static void bind(nanobind::module_ &m) {
+  MLIR_PYTHON_API_EXPORTED static void bind(nanobind::module_ &m) {
     auto cls = ClassTy(
         m, DerivedTy::pyClassName, nanobind::is_generic(),
         nanobind::sig((Twine("class ") + DerivedTy::pyClassName + "(Value[_T])")
@@ -1839,17 +1967,17 @@ public:
   }
 
   /// Implemented by derived classes to add methods to the Python subclass.
-  static void bindDerived(ClassTy &m) {}
+  MLIR_PYTHON_API_EXPORTED static void bindDerived(ClassTy &m) {}
 };
 
 /// Python wrapper for MlirOpResult.
-class PyOpResult : public PyConcreteValue<PyOpResult> {
+class MLIR_PYTHON_API_EXPORTED PyOpResult : public PyConcreteValue<PyOpResult> {
 public:
   static constexpr IsAFunctionTy isaFunction = mlirValueIsAOpResult;
   static constexpr const char *pyClassName = "OpResult";
   using PyConcreteValue::PyConcreteValue;
 
-  static void bindDerived(ClassTy &c) {
+  MLIR_PYTHON_API_EXPORTED static void bindDerived(ClassTy &c) {
     c.def_prop_ro(
         "owner",
         [](PyOpResult &self) -> nanobind::typed<nanobind::object, PyOpView> {
@@ -1887,11 +2015,12 @@ getValueTypes(Container &container, PyMlirContextRef &context) {
 /// elements, random access is cheap. The (returned) result list is associated
 /// with the operation whose results these are, and thus extends the lifetime of
 /// this operation.
-class PyOpResultList : public Sliceable<PyOpResultList, PyOpResult> {
+class MLIR_PYTHON_API_EXPORTED PyOpResultList : public Sliceable<PyOpResultList, PyOpResult> {
 public:
   static constexpr const char *pyClassName = "OpResultList";
   using SliceableT = Sliceable<PyOpResultList, PyOpResult>;
 
+  MLIR_PYTHON_API_EXPORTED
   PyOpResultList(PyOperationRef operation, intptr_t startIndex = 0,
                  intptr_t length = -1, intptr_t step = 1)
       : Sliceable(startIndex,
@@ -1900,7 +2029,7 @@ public:
                   step),
         operation(std::move(operation)) {}
 
-  static void bindDerived(ClassTy &c) {
+  MLIR_PYTHON_API_EXPORTED static void bindDerived(ClassTy &c) {
     c.def_prop_ro(
         "types",
         [](PyOpResultList &self) {
@@ -1916,23 +2045,25 @@ public:
         "Returns the operation that owns this result list.");
   }
 
-  PyOperationRef &getOperation() { return operation; }
+  MLIR_PYTHON_API_EXPORTED PyOperationRef &getOperation() { return operation; }
 
 private:
   /// Give the parent CRTP class access to hook implementations below.
   friend class Sliceable<PyOpResultList, PyOpResult>;
 
-  intptr_t getRawNumElements() {
+  MLIR_PYTHON_API_EXPORTED intptr_t getRawNumElements() {
     operation->checkValid();
     return mlirOperationGetNumResults(operation->get());
   }
 
-  PyOpResult getRawElement(intptr_t index) {
+  MLIR_PYTHON_API_EXPORTED PyOpResult getRawElement(intptr_t index) {
     PyValue value(operation, mlirOperationGetResult(operation->get(), index));
     return PyOpResult(value);
   }
 
-  PyOpResultList slice(intptr_t startIndex, intptr_t length, intptr_t step) {
+  MLIR_PYTHON_API_EXPORTED PyOpResultList slice(intptr_t startIndex,
+                                                intptr_t length,
+                                                intptr_t step) {
     return PyOpResultList(operation, startIndex, length, step);
   }
 
@@ -1940,13 +2071,13 @@ private:
 };
 
 /// Python wrapper for MlirBlockArgument.
-class PyBlockArgument : public PyConcreteValue<PyBlockArgument> {
+class MLIR_PYTHON_API_EXPORTED PyBlockArgument : public PyConcreteValue<PyBlockArgument> {
 public:
   static constexpr IsAFunctionTy isaFunction = mlirValueIsABlockArgument;
   static constexpr const char *pyClassName = "BlockArgument";
   using PyConcreteValue::PyConcreteValue;
 
-  static void bindDerived(ClassTy &c) {
+  MLIR_PYTHON_API_EXPORTED static void bindDerived(ClassTy &c) {
     c.def_prop_ro(
         "owner",
         [](PyBlockArgument &self) {
@@ -1979,12 +2110,13 @@ public:
 /// elements, random access is cheap. The argument list is associated with the
 /// operation that contains the block (detached blocks are not allowed in
 /// Python bindings) and extends its lifetime.
-class PyBlockArgumentList
+class MLIR_PYTHON_API_EXPORTED PyBlockArgumentList
     : public Sliceable<PyBlockArgumentList, PyBlockArgument> {
 public:
   static constexpr const char *pyClassName = "BlockArgumentList";
   using SliceableT = Sliceable<PyBlockArgumentList, PyBlockArgument>;
 
+  MLIR_PYTHON_API_EXPORTED
   PyBlockArgumentList(PyOperationRef operation, MlirBlock block,
                       intptr_t startIndex = 0, intptr_t length = -1,
                       intptr_t step = 1)
@@ -1993,7 +2125,7 @@ public:
                   step),
         operation(std::move(operation)), block(block) {}
 
-  static void bindDerived(ClassTy &c) {
+  MLIR_PYTHON_API_EXPORTED static void bindDerived(ClassTy &c) {
     c.def_prop_ro(
         "types",
         [](PyBlockArgumentList &self) {
@@ -2007,20 +2139,21 @@ private:
   friend class Sliceable<PyBlockArgumentList, PyBlockArgument>;
 
   /// Returns the number of arguments in the list.
-  intptr_t getRawNumElements() {
+  MLIR_PYTHON_API_EXPORTED intptr_t getRawNumElements() {
     operation->checkValid();
     return mlirBlockGetNumArguments(block);
   }
 
   /// Returns `pos`-the element in the list.
-  PyBlockArgument getRawElement(intptr_t pos) {
+  MLIR_PYTHON_API_EXPORTED PyBlockArgument getRawElement(intptr_t pos) {
     MlirValue argument = mlirBlockGetArgument(block, pos);
     return PyBlockArgument(operation, argument);
   }
 
   /// Returns a sublist of this list.
-  PyBlockArgumentList slice(intptr_t startIndex, intptr_t length,
-                            intptr_t step) {
+  MLIR_PYTHON_API_EXPORTED PyBlockArgumentList slice(intptr_t startIndex,
+                                                     intptr_t length,
+                                                     intptr_t step) {
     return PyBlockArgumentList(operation, block, startIndex, length, step);
   }
 
@@ -2032,11 +2165,12 @@ private:
 /// elements, random access is cheap. The (returned) operand list is associated
 /// with the operation whose operands these are, and thus extends the lifetime
 /// of this operation.
-class PyOpOperandList : public Sliceable<PyOpOperandList, PyValue> {
+class MLIR_PYTHON_API_EXPORTED PyOpOperandList : public Sliceable<PyOpOperandList, PyValue> {
 public:
   static constexpr const char *pyClassName = "OpOperandList";
   using SliceableT = Sliceable<PyOpOperandList, PyValue>;
 
+  MLIR_PYTHON_API_EXPORTED
   PyOpOperandList(PyOperationRef operation, intptr_t startIndex = 0,
                   intptr_t length = -1, intptr_t step = 1)
       : Sliceable(startIndex,
@@ -2045,12 +2179,12 @@ public:
                   step),
         operation(operation) {}
 
-  void dunderSetItem(intptr_t index, PyValue value) {
+  MLIR_PYTHON_API_EXPORTED void dunderSetItem(intptr_t index, PyValue value) {
     index = wrapIndex(index);
     mlirOperationSetOperand(operation->get(), index, value.get());
   }
 
-  static void bindDerived(ClassTy &c) {
+  MLIR_PYTHON_API_EXPORTED static void bindDerived(ClassTy &c) {
     c.def("__setitem__", &PyOpOperandList::dunderSetItem,
           nanobind::arg("index"), nanobind::arg("value"),
           "Sets the operand at the specified index to a new value.");
@@ -2060,12 +2194,12 @@ private:
   /// Give the parent CRTP class access to hook implementations below.
   friend class Sliceable<PyOpOperandList, PyValue>;
 
-  intptr_t getRawNumElements() {
+  MLIR_PYTHON_API_EXPORTED intptr_t getRawNumElements() {
     operation->checkValid();
     return mlirOperationGetNumOperands(operation->get());
   }
 
-  PyValue getRawElement(intptr_t pos) {
+  MLIR_PYTHON_API_EXPORTED PyValue getRawElement(intptr_t pos) {
     MlirValue operand = mlirOperationGetOperand(operation->get(), pos);
     MlirOperation owner;
     if (mlirValueIsAOpResult(operand))
@@ -2079,7 +2213,9 @@ private:
     return PyValue(pyOwner, operand);
   }
 
-  PyOpOperandList slice(intptr_t startIndex, intptr_t length, intptr_t step) {
+  MLIR_PYTHON_API_EXPORTED PyOpOperandList slice(intptr_t startIndex,
+                                                 intptr_t length,
+                                                 intptr_t step) {
     return PyOpOperandList(operation, startIndex, length, step);
   }
 
@@ -2090,10 +2226,11 @@ private:
 /// elements, random access is cheap. The (returned) successor list is
 /// associated with the operation whose successors these are, and thus extends
 /// the lifetime of this operation.
-class PyOpSuccessors : public Sliceable<PyOpSuccessors, PyBlock> {
+class MLIR_PYTHON_API_EXPORTED PyOpSuccessors : public Sliceable<PyOpSuccessors, PyBlock> {
 public:
   static constexpr const char *pyClassName = "OpSuccessors";
 
+  MLIR_PYTHON_API_EXPORTED
   PyOpSuccessors(PyOperationRef operation, intptr_t startIndex = 0,
                  intptr_t length = -1, intptr_t step = 1)
       : Sliceable(startIndex,
@@ -2102,12 +2239,12 @@ public:
                   step),
         operation(operation) {}
 
-  void dunderSetItem(intptr_t index, PyBlock block) {
+  MLIR_PYTHON_API_EXPORTED void dunderSetItem(intptr_t index, PyBlock block) {
     index = wrapIndex(index);
     mlirOperationSetSuccessor(operation->get(), index, block.get());
   }
 
-  static void bindDerived(ClassTy &c) {
+  MLIR_PYTHON_API_EXPORTED static void bindDerived(ClassTy &c) {
     c.def("__setitem__", &PyOpSuccessors::dunderSetItem, nanobind::arg("index"),
           nanobind::arg("block"),
           "Sets the successor block at the specified index.");
@@ -2117,17 +2254,19 @@ private:
   /// Give the parent CRTP class access to hook implementations below.
   friend class Sliceable<PyOpSuccessors, PyBlock>;
 
-  intptr_t getRawNumElements() {
+  MLIR_PYTHON_API_EXPORTED intptr_t getRawNumElements() {
     operation->checkValid();
     return mlirOperationGetNumSuccessors(operation->get());
   }
 
-  PyBlock getRawElement(intptr_t pos) {
+  MLIR_PYTHON_API_EXPORTED PyBlock getRawElement(intptr_t pos) {
     MlirBlock block = mlirOperationGetSuccessor(operation->get(), pos);
     return PyBlock(operation, block);
   }
 
-  PyOpSuccessors slice(intptr_t startIndex, intptr_t length, intptr_t step) {
+  MLIR_PYTHON_API_EXPORTED PyOpSuccessors slice(intptr_t startIndex,
+                                                intptr_t length,
+                                                intptr_t step) {
     return PyOpSuccessors(operation, startIndex, length, step);
   }
 
@@ -2138,10 +2277,11 @@ private:
 /// elements, random access is cheap. The (returned) successor list is
 /// associated with the operation and block whose successors these are, and thus
 /// extends the lifetime of this operation and block.
-class PyBlockSuccessors : public Sliceable<PyBlockSuccessors, PyBlock> {
+class MLIR_PYTHON_API_EXPORTED PyBlockSuccessors : public Sliceable<PyBlockSuccessors, PyBlock> {
 public:
   static constexpr const char *pyClassName = "BlockSuccessors";
 
+  MLIR_PYTHON_API_EXPORTED
   PyBlockSuccessors(PyBlock block, PyOperationRef operation,
                     intptr_t startIndex = 0, intptr_t length = -1,
                     intptr_t step = 1)
@@ -2155,17 +2295,19 @@ private:
   /// Give the parent CRTP class access to hook implementations below.
   friend class Sliceable<PyBlockSuccessors, PyBlock>;
 
-  intptr_t getRawNumElements() {
+  MLIR_PYTHON_API_EXPORTED intptr_t getRawNumElements() {
     block.checkValid();
     return mlirBlockGetNumSuccessors(block.get());
   }
 
-  PyBlock getRawElement(intptr_t pos) {
+  MLIR_PYTHON_API_EXPORTED PyBlock getRawElement(intptr_t pos) {
     MlirBlock block = mlirBlockGetSuccessor(this->block.get(), pos);
     return PyBlock(operation, block);
   }
 
-  PyBlockSuccessors slice(intptr_t startIndex, intptr_t length, intptr_t step) {
+  MLIR_PYTHON_API_EXPORTED PyBlockSuccessors slice(intptr_t startIndex,
+                                                   intptr_t length,
+                                                   intptr_t step) {
     return PyBlockSuccessors(block, operation, startIndex, length, step);
   }
 
@@ -2180,10 +2322,11 @@ private:
 /// WARNING: This Sliceable is more expensive than the others here because
 /// mlirBlockGetPredecessor actually iterates the use-def chain (of block
 /// operands) anew for each indexed access.
-class PyBlockPredecessors : public Sliceable<PyBlockPredecessors, PyBlock> {
+class MLIR_PYTHON_API_EXPORTED PyBlockPredecessors : public Sliceable<PyBlockPredecessors, PyBlock> {
 public:
   static constexpr const char *pyClassName = "BlockPredecessors";
 
+  MLIR_PYTHON_API_EXPORTED
   PyBlockPredecessors(PyBlock block, PyOperationRef operation,
                       intptr_t startIndex = 0, intptr_t length = -1,
                       intptr_t step = 1)
@@ -2197,18 +2340,19 @@ private:
   /// Give the parent CRTP class access to hook implementations below.
   friend class Sliceable<PyBlockPredecessors, PyBlock>;
 
-  intptr_t getRawNumElements() {
+  MLIR_PYTHON_API_EXPORTED intptr_t getRawNumElements() {
     block.checkValid();
     return mlirBlockGetNumPredecessors(block.get());
   }
 
-  PyBlock getRawElement(intptr_t pos) {
+  MLIR_PYTHON_API_EXPORTED PyBlock getRawElement(intptr_t pos) {
     MlirBlock block = mlirBlockGetPredecessor(this->block.get(), pos);
     return PyBlock(operation, block);
   }
 
-  PyBlockPredecessors slice(intptr_t startIndex, intptr_t length,
-                            intptr_t step) {
+  MLIR_PYTHON_API_EXPORTED PyBlockPredecessors slice(intptr_t startIndex,
+                                                     intptr_t length,
+                                                     intptr_t step) {
     return PyBlockPredecessors(block, operation, startIndex, length, step);
   }
 
@@ -2218,12 +2362,12 @@ private:
 
 /// A list of operation attributes. Can be indexed by name, producing
 /// attributes, or by index, producing named attributes.
-class PyOpAttributeMap {
+class MLIR_PYTHON_API_EXPORTED PyOpAttributeMap {
 public:
-  PyOpAttributeMap(PyOperationRef operation)
+  MLIR_PYTHON_API_EXPORTED PyOpAttributeMap(PyOperationRef operation)
       : operation(std::move(operation)) {}
 
-  nanobind::typed<nanobind::object, PyAttribute>
+  MLIR_PYTHON_API_EXPORTED nanobind::typed<nanobind::object, PyAttribute>
   dunderGetItemNamed(const std::string &name) {
     MlirAttribute attr = mlirOperationGetAttributeByName(operation->get(),
                                                          toMlirStringRef(name));
@@ -2233,7 +2377,8 @@ public:
     return PyAttribute(operation->getContext(), attr).maybeDownCast();
   }
 
-  PyNamedAttribute dunderGetItemIndexed(intptr_t index) {
+  MLIR_PYTHON_API_EXPORTED PyNamedAttribute
+  dunderGetItemIndexed(intptr_t index) {
     if (index < 0) {
       index += dunderLen();
     }
@@ -2248,28 +2393,29 @@ public:
                     mlirIdentifierStr(namedAttr.name).length));
   }
 
-  void dunderSetItem(const std::string &name, const PyAttribute &attr) {
+  MLIR_PYTHON_API_EXPORTED void dunderSetItem(const std::string &name,
+                                              const PyAttribute &attr) {
     mlirOperationSetAttributeByName(operation->get(), toMlirStringRef(name),
                                     attr);
   }
 
-  void dunderDelItem(const std::string &name) {
+  MLIR_PYTHON_API_EXPORTED void dunderDelItem(const std::string &name) {
     int removed = mlirOperationRemoveAttributeByName(operation->get(),
                                                      toMlirStringRef(name));
     if (!removed)
       throw nanobind::key_error("attempt to delete a non-existent attribute");
   }
 
-  intptr_t dunderLen() {
+  MLIR_PYTHON_API_EXPORTED intptr_t dunderLen() {
     return mlirOperationGetNumAttributes(operation->get());
   }
 
-  bool dunderContains(const std::string &name) {
+  MLIR_PYTHON_API_EXPORTED bool dunderContains(const std::string &name) {
     return !mlirAttributeIsNull(mlirOperationGetAttributeByName(
         operation->get(), toMlirStringRef(name)));
   }
 
-  static void
+  MLIR_PYTHON_API_EXPORTED static void
   forEachAttr(MlirOperation op,
               llvm::function_ref<void(MlirStringRef, MlirAttribute)> fn) {
     intptr_t n = mlirOperationGetNumAttributes(op);
@@ -2280,7 +2426,7 @@ public:
     }
   }
 
-  static void bind(nanobind::module_ &m) {
+  MLIR_PYTHON_API_EXPORTED static void bind(nanobind::module_ &m) {
     nanobind::class_<PyOpAttributeMap>(m, "OpAttributeMap")
         .def("__contains__", &PyOpAttributeMap::dunderContains,
              nanobind::arg("name"),
@@ -2354,7 +2500,7 @@ private:
   PyOperationRef operation;
 };
 
-MlirValue getUniqueResult(MlirOperation operation);
+MLIR_PYTHON_API_EXPORTED MlirValue getUniqueResult(MlirOperation operation);
 } // namespace python
 } // namespace mlir
 

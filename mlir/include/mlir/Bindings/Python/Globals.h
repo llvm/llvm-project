@@ -31,25 +31,26 @@ namespace python {
 
 /// Globals that are always accessible once the extension has been initialized.
 /// Methods of this class are thread-safe.
-class PyGlobals {
+class MLIR_PYTHON_API_EXPORTED PyGlobals {
 public:
-  PyGlobals();
-  ~PyGlobals();
+  MLIR_PYTHON_API_EXPORTED PyGlobals();
+  MLIR_PYTHON_API_EXPORTED ~PyGlobals();
 
   /// Most code should get the globals via this static accessor.
-  static PyGlobals &get();
+  MLIR_PYTHON_API_EXPORTED static PyGlobals &get();
 
   /// Get and set the list of parent modules to search for dialect
   /// implementation classes.
-  std::vector<std::string> getDialectSearchPrefixes() {
+  MLIR_PYTHON_API_EXPORTED std::vector<std::string> getDialectSearchPrefixes() {
     nanobind::ft_lock_guard lock(mutex);
     return dialectSearchPrefixes;
   }
-  void setDialectSearchPrefixes(std::vector<std::string> newValues) {
+  MLIR_PYTHON_API_EXPORTED void
+  setDialectSearchPrefixes(std::vector<std::string> newValues) {
     nanobind::ft_lock_guard lock(mutex);
     dialectSearchPrefixes.swap(newValues);
   }
-  void addDialectSearchPrefix(std::string value) {
+  MLIR_PYTHON_API_EXPORTED void addDialectSearchPrefix(std::string value) {
     nanobind::ft_lock_guard lock(mutex);
     dialectSearchPrefixes.push_back(std::move(value));
   }
@@ -60,78 +61,84 @@ public:
   /// Note that this returns void because it is expected that the module
   /// contains calls to decorators and helpers that register the salient
   /// entities. Returns true if dialect is successfully loaded.
-  bool loadDialectModule(llvm::StringRef dialectNamespace);
+  MLIR_PYTHON_API_EXPORTED bool
+  loadDialectModule(llvm::StringRef dialectNamespace);
 
   /// Adds a user-friendly Attribute builder.
   /// Raises an exception if the mapping already exists and replace == false.
   /// This is intended to be called by implementation code.
-  void registerAttributeBuilder(const std::string &attributeKind,
-                                nanobind::callable pyFunc,
-                                bool replace = false);
+  MLIR_PYTHON_API_EXPORTED void
+  registerAttributeBuilder(const std::string &attributeKind,
+                           nanobind::callable pyFunc, bool replace = false);
 
   /// Adds a user-friendly type caster. Raises an exception if the mapping
   /// already exists and replace == false. This is intended to be called by
   /// implementation code.
-  void registerTypeCaster(MlirTypeID mlirTypeID, nanobind::callable typeCaster,
-                          bool replace = false);
+  MLIR_PYTHON_API_EXPORTED void
+  registerTypeCaster(MlirTypeID mlirTypeID, nanobind::callable typeCaster,
+                     bool replace = false);
 
   /// Adds a user-friendly value caster. Raises an exception if the mapping
   /// already exists and replace == false. This is intended to be called by
   /// implementation code.
-  void registerValueCaster(MlirTypeID mlirTypeID,
-                           nanobind::callable valueCaster,
-                           bool replace = false);
+  MLIR_PYTHON_API_EXPORTED void
+  registerValueCaster(MlirTypeID mlirTypeID, nanobind::callable valueCaster,
+                      bool replace = false);
 
   /// Adds a concrete implementation dialect class.
   /// Raises an exception if the mapping already exists.
   /// This is intended to be called by implementation code.
-  void registerDialectImpl(const std::string &dialectNamespace,
-                           nanobind::object pyClass);
+  MLIR_PYTHON_API_EXPORTED void
+  registerDialectImpl(const std::string &dialectNamespace,
+                      nanobind::object pyClass);
 
   /// Adds a concrete implementation operation class.
   /// Raises an exception if the mapping already exists and replace == false.
   /// This is intended to be called by implementation code.
-  void registerOperationImpl(const std::string &operationName,
-                             nanobind::object pyClass, bool replace = false);
+  MLIR_PYTHON_API_EXPORTED void
+  registerOperationImpl(const std::string &operationName,
+                        nanobind::object pyClass, bool replace = false);
 
   /// Returns the custom Attribute builder for Attribute kind.
-  std::optional<nanobind::callable>
+  MLIR_PYTHON_API_EXPORTED std::optional<nanobind::callable>
   lookupAttributeBuilder(const std::string &attributeKind);
 
   /// Returns the custom type caster for MlirTypeID mlirTypeID.
-  std::optional<nanobind::callable> lookupTypeCaster(MlirTypeID mlirTypeID,
-                                                     MlirDialect dialect);
+  MLIR_PYTHON_API_EXPORTED std::optional<nanobind::callable>
+  lookupTypeCaster(MlirTypeID mlirTypeID, MlirDialect dialect);
 
   /// Returns the custom value caster for MlirTypeID mlirTypeID.
-  std::optional<nanobind::callable> lookupValueCaster(MlirTypeID mlirTypeID,
-                                                      MlirDialect dialect);
+  MLIR_PYTHON_API_EXPORTED std::optional<nanobind::callable>
+  lookupValueCaster(MlirTypeID mlirTypeID, MlirDialect dialect);
 
   /// Looks up a registered dialect class by namespace. Note that this may
   /// trigger loading of the defining module and can arbitrarily re-enter.
-  std::optional<nanobind::object>
+  MLIR_PYTHON_API_EXPORTED std::optional<nanobind::object>
   lookupDialectClass(const std::string &dialectNamespace);
 
   /// Looks up a registered operation class (deriving from OpView) by operation
   /// name. Note that this may trigger a load of the dialect, which can
   /// arbitrarily re-enter.
-  std::optional<nanobind::object>
+  MLIR_PYTHON_API_EXPORTED std::optional<nanobind::object>
   lookupOperationClass(llvm::StringRef operationName);
 
   class TracebackLoc {
   public:
-    bool locTracebacksEnabled();
+    MLIR_PYTHON_API_EXPORTED bool locTracebacksEnabled();
 
-    void setLocTracebacksEnabled(bool value);
+    MLIR_PYTHON_API_EXPORTED void setLocTracebacksEnabled(bool value);
 
-    size_t locTracebackFramesLimit();
+    MLIR_PYTHON_API_EXPORTED size_t locTracebackFramesLimit();
 
-    void setLocTracebackFramesLimit(size_t value);
+    MLIR_PYTHON_API_EXPORTED void setLocTracebackFramesLimit(size_t value);
 
-    void registerTracebackFileInclusion(const std::string &file);
+    MLIR_PYTHON_API_EXPORTED void
+    registerTracebackFileInclusion(const std::string &file);
 
-    void registerTracebackFileExclusion(const std::string &file);
+    MLIR_PYTHON_API_EXPORTED void
+    registerTracebackFileExclusion(const std::string &file);
 
-    bool isUserTracebackFilename(llvm::StringRef file);
+    MLIR_PYTHON_API_EXPORTED bool isUserTracebackFilename(llvm::StringRef file);
 
     static constexpr size_t kMaxFrames = 512;
 
@@ -148,22 +155,26 @@ public:
     llvm::StringMap<bool> isUserTracebackFilenameCache;
   };
 
-  TracebackLoc &getTracebackLoc() { return tracebackLoc; }
+  MLIR_PYTHON_API_EXPORTED TracebackLoc &getTracebackLoc() {
+    return tracebackLoc;
+  }
 
-  class TypeIDAllocator {
+  class MLIR_PYTHON_API_EXPORTED TypeIDAllocator {
   public:
-    TypeIDAllocator() : allocator(mlirTypeIDAllocatorCreate()) {}
-    ~TypeIDAllocator() {
+    MLIR_PYTHON_API_EXPORTED TypeIDAllocator()
+        : allocator(mlirTypeIDAllocatorCreate()) {}
+    MLIR_PYTHON_API_EXPORTED ~TypeIDAllocator() {
       if (allocator.ptr)
         mlirTypeIDAllocatorDestroy(allocator);
     }
     TypeIDAllocator(const TypeIDAllocator &) = delete;
-    TypeIDAllocator(TypeIDAllocator &&other) : allocator(other.allocator) {
+    MLIR_PYTHON_API_EXPORTED TypeIDAllocator(TypeIDAllocator &&other)
+        : allocator(other.allocator) {
       other.allocator.ptr = nullptr;
     }
 
-    MlirTypeIDAllocator get() { return allocator; }
-    MlirTypeID allocate() {
+    MLIR_PYTHON_API_EXPORTED MlirTypeIDAllocator get() { return allocator; }
+    MLIR_PYTHON_API_EXPORTED MlirTypeID allocate() {
       return mlirTypeIDAllocatorAllocateTypeID(allocator);
     }
 
@@ -171,7 +182,9 @@ public:
     MlirTypeIDAllocator allocator;
   };
 
-  MlirTypeID allocateTypeID() { return typeIDAllocator.allocate(); }
+  MLIR_PYTHON_API_EXPORTED MlirTypeID allocateTypeID() {
+    return typeIDAllocator.allocate();
+  }
 
 private:
   static PyGlobals *instance;
