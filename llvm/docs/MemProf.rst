@@ -45,13 +45,7 @@ To enable MemProf instrumentation, compile your application with the ``-fmemory-
 Running and Generating Profiles
 -------------------------------
 
-Run the instrumented application. By default, MemProf writes a raw profile file named ``memprof.profraw.<pid>`` to the current directory upon exit.
-
-.. code-block:: bash
-
-    ./app
-
-Control the runtime behavior using the ``MEMPROF_OPTIONS`` environment variable. Common options include:
+Run the instrumented application. By default, MemProf writes a raw profile file named ``memprof.profraw.<pid>`` to the current directory upon exit. Control the runtime behavior using the ``MEMPROF_OPTIONS`` environment variable. Common options include:
 
 *   ``log_path``: Redirects runtime logs (e.g., ``stdout``, ``stderr``, or a file path).
 *   ``print_text``: If set to ``true``, prints a text-based summary of the profile to the log path.
