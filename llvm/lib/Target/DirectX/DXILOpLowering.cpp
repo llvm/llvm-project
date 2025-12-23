@@ -281,10 +281,12 @@ public:
       return make_error<StringError>(
           "Element index of structured buffer may not be poison",
           inconvertibleErrorCode());
-    else if (!IsStructured && !IsPoison)
+
+    if (!IsStructured && !IsPoison)
       return make_error<StringError>(
           "Element index of raw buffer must be poison",
           inconvertibleErrorCode());
+
     return Error::success();
   }
 
