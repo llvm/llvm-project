@@ -1561,7 +1561,7 @@ void OmpStructureChecker::CheckInitOnDepobj(
     if (depKind == common::OmpDependenceKind::Depobj) {
       auto &desc{OmpGetDescriptor<parser::OmpDepinfoModifier>()};
       context_.Say(OmpGetModifierSource(modifiers, depInfo),
-          "'%s' is not am allowed value of the '%s' modifier"_err_en_US,
+          "'%s' is not an allowed value of the '%s' modifier"_err_en_US,
           parser::ToUpperCaseLetters(EnumToString(depKind)), desc.name.str());
     }
   } else {
