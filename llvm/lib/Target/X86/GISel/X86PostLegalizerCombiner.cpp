@@ -99,18 +99,14 @@ X86PostLegalizerCombinerImpl::X86PostLegalizerCombinerImpl(
 }
 
 bool X86PostLegalizerCombinerImpl::tryCombineAll(MachineInstr &MI) const {
-  if (tryCombineAllImpl(MI))
-    return true;
-  LLVM_DEBUG(dbgs() << "\nNo table match found.\nTry Custom Combine for "
-                    << MI);
-  return false;
+  return tryCombineAllImpl(MI);
 }
 
 class X86PostLegalizerCombiner : public MachineFunctionPass {
 public:
   static char ID;
 
-  X86PostLegalizerCombiner(bool IsOptNone = false);
+  X86PostLegalizerCombiner();
 
   StringRef getPassName() const override { return "X86PostLegalizerCombiner"; }
 
@@ -118,7 +114,6 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override;
 
 private:
-  bool IsOptNone;
   X86PostLegalizerCombinerImplRuleConfig RuleConfig;
 };
 } // end anonymous namespace
@@ -129,17 +124,16 @@ void X86PostLegalizerCombiner::getAnalysisUsage(AnalysisUsage &AU) const {
   getSelectionDAGFallbackAnalysisUsage(AU);
   AU.addRequired<GISelValueTrackingAnalysisLegacy>();
   AU.addPreserved<GISelValueTrackingAnalysisLegacy>();
-  if (!IsOptNone) {
-    AU.addRequired<MachineDominatorTreeWrapperPass>();
-    AU.addPreserved<MachineDominatorTreeWrapperPass>();
-    AU.addRequired<GISelCSEAnalysisWrapperPass>();
-    AU.addPreserved<GISelCSEAnalysisWrapperPass>();
-  }
+  // This is only added when processing level is not OptNone.
+  AU.addRequired<MachineDominatorTreeWrapperPass>();
+  AU.addPreserved<MachineDominatorTreeWrapperPass>();
+  AU.addRequired<GISelCSEAnalysisWrapperPass>();
+  AU.addPreserved<GISelCSEAnalysisWrapperPass>();
+
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
-X86PostLegalizerCombiner::X86PostLegalizerCombiner(bool IsOptNone)
-    : MachineFunctionPass(ID), IsOptNone(IsOptNone) {
+X86PostLegalizerCombiner::X86PostLegalizerCombiner() : MachineFunctionPass(ID) {
   if (!RuleConfig.parseCommandLineOption())
     report_fatal_error("Invalid rule identifier");
 }
@@ -159,8 +153,7 @@ bool X86PostLegalizerCombiner::runOnMachineFunction(MachineFunction &MF) {
   GISelValueTracking *VT =
       &getAnalysis<GISelValueTrackingAnalysisLegacy>().get(MF);
   MachineDominatorTree *MDT =
-      IsOptNone ? nullptr
-                : &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
+      &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
   GISelCSEAnalysisWrapper &Wrapper =
       getAnalysis<GISelCSEAnalysisWrapperPass>().getCSEWrapper();
   auto *CSEInfo = &Wrapper.get(TPC->getCSEConfig());
@@ -190,7 +183,7 @@ INITIALIZE_PASS_END(X86PostLegalizerCombiner, DEBUG_TYPE,
                     false)
 
 namespace llvm {
-FunctionPass *createX86PostLegalizerCombiner(bool IsOptNone) {
-  return new X86PostLegalizerCombiner(IsOptNone);
+FunctionPass *createX86PostLegalizerCombiner() {
+  return new X86PostLegalizerCombiner();
 }
 } // end namespace llvm
