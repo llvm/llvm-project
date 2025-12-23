@@ -107,15 +107,15 @@ Consider the following example:
 .. code-block:: cpp
 
     void *allocate() { return new char[10]; }
-    
+
     void hot_path() {
       // This path is executed frequently.
       allocate();
-    } 
-    
+    }
+
     void cold_path() {
        // This path is executed rarely.
-       allocate(); 
+       allocate();
     }
 
 Without context disambiguation, the compiler sees a single ``allocate`` function called from both hot and cold contexts. It must conservatively assume the allocation is "not cold" or "ambiguous".
@@ -171,10 +171,11 @@ Detailed Workflow (LTO)
 
 The optimization process, using LTO, involves several steps:
 
-1.  **Metadata Serialization:** During the LTO summary analysis step, MemProf metadata (``!memprof`` and ``!callsite``) is serialized into the module summary. This is implemented in ``llvm/lib/Analysis/ModuleSummaryAnalysis.cpp``.
-2.  **Whole Program Graph Construction:** During the LTO indexing step, the compiler constructs a whole-program ``CallsiteContextGraph`` to analyze and disambiguate contexts. This graph identifies where allocation contexts diverge (e.g., same function called from hot vs. cold paths). This logic resides in ``llvm/lib/Transforms/IPO/MemProfContextDisambiguation.cpp``.
-3.  **Cloning Decisions:** The analysis identifies which functions and callsites need to be cloned to isolate cold allocation paths from hot ones using the ``CallsiteContextGraph``.
-4.  **LTO Backend:** The actual cloning of functions happens in the ``MemProfContextDisambiguation`` pass. The replacement of allocation calls (e.g., ``operator new``) happens in ``SimplifyLibCalls`` during the ``InstCombine`` pass. These transformations are guided by the decisions made during the indexing step.
+1. **Matching (MemProfUse Pass):** The memprof profile is mapped onto allocation calls and callsite which are part of the allocation context using debug information. MemProf metadata is attached to the call instructions in the IR.
+2.  **Metadata Serialization:** During the LTO summary analysis step, MemProf metadata (``!memprof`` and ``!callsite``) is serialized into the module summary. This is implemented in ``llvm/lib/Analysis/ModuleSummaryAnalysis.cpp``.
+3.  **Whole Program Graph Construction:** During the LTO indexing step, the compiler constructs a whole-program ``CallsiteContextGraph`` to analyze and disambiguate contexts. This graph identifies where allocation contexts diverge (e.g., same function called from hot vs. cold paths). This logic resides in ``llvm/lib/Transforms/IPO/MemProfContextDisambiguation.cpp``.
+4.  **Cloning Decisions:** The analysis identifies which functions and callsites need to be cloned to isolate cold allocation paths from hot ones using the ``CallsiteContextGraph``.
+5.  **LTO Backend:** The actual cloning of functions happens in the ``MemProfContextDisambiguation`` pass. The replacement of allocation calls (e.g., ``operator new`` to the ``hot_cold_t`` variant) happens in ``SimplifyLibCalls`` during the ``InstCombine`` pass. These transformations are guided by the decisions made during the indexing step.
 
 Source Structure
 ----------------
