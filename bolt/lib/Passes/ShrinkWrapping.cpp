@@ -1100,9 +1100,8 @@ SmallVector<ProgramPoint, 4> ShrinkWrapping::fixPopsPlacements(
     bool Found = false;
     if (SPT.getStateAt(ProgramPoint::getLastPointAt(*BB))->first ==
         SaveOffset) {
-      BitVector BV = *RI.getStateAt(ProgramPoint::getLastPointAt(*BB));
-      BV &= UsesByReg[CSR];
-      if (!BV.any()) {
+      const BitVector &BV = *RI.getStateAt(ProgramPoint::getLastPointAt(*BB));
+      if (!BV.anyCommon(UsesByReg[CSR])) {
         Found = true;
         PP = BB;
         continue;
@@ -1110,9 +1109,8 @@ SmallVector<ProgramPoint, 4> ShrinkWrapping::fixPopsPlacements(
     }
     for (MCInst &Inst : llvm::reverse(*BB)) {
       if (SPT.getStateBefore(Inst)->first == SaveOffset) {
-        BitVector BV = *RI.getStateAt(Inst);
-        BV &= UsesByReg[CSR];
-        if (!BV.any()) {
+        const BitVector &BV = *RI.getStateAt(Inst);
+        if (!BV.anyCommon(UsesByReg[CSR])) {
           Found = true;
           PP = &Inst;
           break;
