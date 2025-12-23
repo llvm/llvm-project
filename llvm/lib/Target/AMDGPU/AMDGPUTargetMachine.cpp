@@ -74,6 +74,7 @@
 #include "llvm/CodeGen/AtomicExpand.h"
 #include "llvm/CodeGen/BranchRelaxation.h"
 #include "llvm/CodeGen/DeadMachineInstructionElim.h"
+#include "llvm/CodeGen/EarlyIfConversion.h"
 #include "llvm/CodeGen/GlobalISel/CSEInfo.h"
 #include "llvm/CodeGen/GlobalISel/IRTranslator.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelect.h"
@@ -2205,6 +2206,7 @@ void AMDGPUCodeGenPassBuilder::addCodeGenPrepare(
   // many cases.
   flushFPMsToMPM(PMW);
   addModulePass(AMDGPULowerBufferFatPointersPass(TM), PMW);
+  flushFPMsToMPM(PMW);
   requireCGSCCOrder(PMW);
 
   addModulePass(AMDGPULowerIntrinsicsPass(TM), PMW);

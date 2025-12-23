@@ -4,8 +4,15 @@
 define double @rsq_f64(double %x) {
 ; CHECK-LABEL: define double @rsq_f64(
 ; CHECK-SAME: double [[X:%.*]]) {
-; CHECK-NEXT:    [[SQRT_X:%.*]] = call contract double @llvm.sqrt.f64(double [[X]])
-; CHECK-NEXT:    [[FDIV:%.*]] = fdiv contract double 1.000000e+00, [[SQRT_X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call contract double @llvm.amdgcn.rsq.f64(double [[X]])
+; CHECK-NEXT:    [[TMP2:%.*]] = call i1 @llvm.is.fpclass.f64(double [[X]], i32 608)
+; CHECK-NEXT:    [[TMP3:%.*]] = select contract i1 [[TMP2]], double [[TMP1]], double [[X]]
+; CHECK-NEXT:    [[TMP4:%.*]] = fneg contract double [[TMP1]]
+; CHECK-NEXT:    [[TMP5:%.*]] = fmul contract double [[TMP3]], [[TMP4]]
+; CHECK-NEXT:    [[TMP6:%.*]] = call contract double @llvm.fma.f64(double [[TMP5]], double [[TMP1]], double 1.000000e+00)
+; CHECK-NEXT:    [[TMP7:%.*]] = fmul contract double [[TMP6]], [[TMP1]]
+; CHECK-NEXT:    [[TMP8:%.*]] = call contract double @llvm.fma.f64(double [[TMP6]], double 3.750000e-01, double 5.000000e-01)
+; CHECK-NEXT:    [[FDIV:%.*]] = call contract double @llvm.fma.f64(double [[TMP7]], double [[TMP8]], double [[TMP1]])
 ; CHECK-NEXT:    ret double [[FDIV]]
 ;
   %sqrt.x = call contract double @llvm.sqrt.f64(double %x)
@@ -16,8 +23,15 @@ define double @rsq_f64(double %x) {
 define double @neg_rsq_f64(double %x) {
 ; CHECK-LABEL: define double @neg_rsq_f64(
 ; CHECK-SAME: double [[X:%.*]]) {
-; CHECK-NEXT:    [[SQRT_X:%.*]] = call contract double @llvm.sqrt.f64(double [[X]])
-; CHECK-NEXT:    [[FDIV:%.*]] = fdiv contract double -1.000000e+00, [[SQRT_X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call contract double @llvm.amdgcn.rsq.f64(double [[X]])
+; CHECK-NEXT:    [[TMP2:%.*]] = call i1 @llvm.is.fpclass.f64(double [[X]], i32 608)
+; CHECK-NEXT:    [[TMP3:%.*]] = select contract i1 [[TMP2]], double [[TMP1]], double [[X]]
+; CHECK-NEXT:    [[TMP4:%.*]] = fneg contract double [[TMP1]]
+; CHECK-NEXT:    [[TMP5:%.*]] = fmul contract double [[TMP3]], [[TMP4]]
+; CHECK-NEXT:    [[TMP6:%.*]] = call contract double @llvm.fma.f64(double [[TMP5]], double [[TMP1]], double 1.000000e+00)
+; CHECK-NEXT:    [[TMP7:%.*]] = fmul contract double [[TMP6]], [[TMP4]]
+; CHECK-NEXT:    [[TMP8:%.*]] = call contract double @llvm.fma.f64(double [[TMP6]], double 3.750000e-01, double 5.000000e-01)
+; CHECK-NEXT:    [[FDIV:%.*]] = call contract double @llvm.fma.f64(double [[TMP7]], double [[TMP8]], double [[TMP4]])
 ; CHECK-NEXT:    ret double [[FDIV]]
 ;
   %sqrt.x = call contract double @llvm.sqrt.f64(double %x)
@@ -28,8 +42,15 @@ define double @neg_rsq_f64(double %x) {
 define double @rsq_f64_nnan(double %x) {
 ; CHECK-LABEL: define double @rsq_f64_nnan(
 ; CHECK-SAME: double [[X:%.*]]) {
-; CHECK-NEXT:    [[SQRT_X:%.*]] = call nnan contract double @llvm.sqrt.f64(double [[X]])
-; CHECK-NEXT:    [[FDIV:%.*]] = fdiv nnan contract double 1.000000e+00, [[SQRT_X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call nnan contract double @llvm.amdgcn.rsq.f64(double [[X]])
+; CHECK-NEXT:    [[TMP2:%.*]] = call i1 @llvm.is.fpclass.f64(double [[X]], i32 608)
+; CHECK-NEXT:    [[TMP3:%.*]] = select nnan contract i1 [[TMP2]], double [[TMP1]], double [[X]]
+; CHECK-NEXT:    [[TMP4:%.*]] = fneg nnan contract double [[TMP1]]
+; CHECK-NEXT:    [[TMP5:%.*]] = fmul nnan contract double [[TMP3]], [[TMP4]]
+; CHECK-NEXT:    [[TMP6:%.*]] = call nnan contract double @llvm.fma.f64(double [[TMP5]], double [[TMP1]], double 1.000000e+00)
+; CHECK-NEXT:    [[TMP7:%.*]] = fmul nnan contract double [[TMP6]], [[TMP1]]
+; CHECK-NEXT:    [[TMP8:%.*]] = call nnan contract double @llvm.fma.f64(double [[TMP6]], double 3.750000e-01, double 5.000000e-01)
+; CHECK-NEXT:    [[FDIV:%.*]] = call nnan contract double @llvm.fma.f64(double [[TMP7]], double [[TMP8]], double [[TMP1]])
 ; CHECK-NEXT:    ret double [[FDIV]]
 ;
   %sqrt.x = call contract nnan double @llvm.sqrt.f64(double %x)
@@ -40,8 +61,15 @@ define double @rsq_f64_nnan(double %x) {
 define double @neg_rsq_f64_nnan(double %x) {
 ; CHECK-LABEL: define double @neg_rsq_f64_nnan(
 ; CHECK-SAME: double [[X:%.*]]) {
-; CHECK-NEXT:    [[SQRT_X:%.*]] = call nnan contract double @llvm.sqrt.f64(double [[X]])
-; CHECK-NEXT:    [[FDIV:%.*]] = fdiv nnan contract double -1.000000e+00, [[SQRT_X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call nnan contract double @llvm.amdgcn.rsq.f64(double [[X]])
+; CHECK-NEXT:    [[TMP2:%.*]] = call i1 @llvm.is.fpclass.f64(double [[X]], i32 608)
+; CHECK-NEXT:    [[TMP3:%.*]] = select nnan contract i1 [[TMP2]], double [[TMP1]], double [[X]]
+; CHECK-NEXT:    [[TMP4:%.*]] = fneg nnan contract double [[TMP1]]
+; CHECK-NEXT:    [[TMP5:%.*]] = fmul nnan contract double [[TMP3]], [[TMP4]]
+; CHECK-NEXT:    [[TMP6:%.*]] = call nnan contract double @llvm.fma.f64(double [[TMP5]], double [[TMP1]], double 1.000000e+00)
+; CHECK-NEXT:    [[TMP7:%.*]] = fmul nnan contract double [[TMP6]], [[TMP4]]
+; CHECK-NEXT:    [[TMP8:%.*]] = call nnan contract double @llvm.fma.f64(double [[TMP6]], double 3.750000e-01, double 5.000000e-01)
+; CHECK-NEXT:    [[FDIV:%.*]] = call nnan contract double @llvm.fma.f64(double [[TMP7]], double [[TMP8]], double [[TMP4]])
 ; CHECK-NEXT:    ret double [[FDIV]]
 ;
   %sqrt.x = call contract nnan double @llvm.sqrt.f64(double %x)
@@ -52,8 +80,13 @@ define double @neg_rsq_f64_nnan(double %x) {
 define double @rsq_f64_ninf(double %x) {
 ; CHECK-LABEL: define double @rsq_f64_ninf(
 ; CHECK-SAME: double [[X:%.*]]) {
-; CHECK-NEXT:    [[SQRT_X:%.*]] = call ninf contract double @llvm.sqrt.f64(double [[X]])
-; CHECK-NEXT:    [[FDIV:%.*]] = fdiv ninf contract double 1.000000e+00, [[SQRT_X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call ninf contract double @llvm.amdgcn.rsq.f64(double [[X]])
+; CHECK-NEXT:    [[TMP2:%.*]] = fneg ninf contract double [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = fmul ninf contract double [[X]], [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = call ninf contract double @llvm.fma.f64(double [[TMP3]], double [[TMP1]], double 1.000000e+00)
+; CHECK-NEXT:    [[TMP5:%.*]] = fmul ninf contract double [[TMP4]], [[TMP1]]
+; CHECK-NEXT:    [[TMP6:%.*]] = call ninf contract double @llvm.fma.f64(double [[TMP4]], double 3.750000e-01, double 5.000000e-01)
+; CHECK-NEXT:    [[FDIV:%.*]] = call ninf contract double @llvm.fma.f64(double [[TMP5]], double [[TMP6]], double [[TMP1]])
 ; CHECK-NEXT:    ret double [[FDIV]]
 ;
   %sqrt.x = call contract ninf double @llvm.sqrt.f64(double %x)
@@ -64,8 +97,13 @@ define double @rsq_f64_ninf(double %x) {
 define double @neg_rsq_f64_ninf(double %x) {
 ; CHECK-LABEL: define double @neg_rsq_f64_ninf(
 ; CHECK-SAME: double [[X:%.*]]) {
-; CHECK-NEXT:    [[SQRT_X:%.*]] = call ninf contract double @llvm.sqrt.f64(double [[X]])
-; CHECK-NEXT:    [[FDIV:%.*]] = fdiv ninf contract double -1.000000e+00, [[SQRT_X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call ninf contract double @llvm.amdgcn.rsq.f64(double [[X]])
+; CHECK-NEXT:    [[TMP2:%.*]] = fneg ninf contract double [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = fmul ninf contract double [[X]], [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = call ninf contract double @llvm.fma.f64(double [[TMP3]], double [[TMP1]], double 1.000000e+00)
+; CHECK-NEXT:    [[TMP5:%.*]] = fmul ninf contract double [[TMP4]], [[TMP2]]
+; CHECK-NEXT:    [[TMP6:%.*]] = call ninf contract double @llvm.fma.f64(double [[TMP4]], double 3.750000e-01, double 5.000000e-01)
+; CHECK-NEXT:    [[FDIV:%.*]] = call ninf contract double @llvm.fma.f64(double [[TMP5]], double [[TMP6]], double [[TMP2]])
 ; CHECK-NEXT:    ret double [[FDIV]]
 ;
   %sqrt.x = call contract ninf double @llvm.sqrt.f64(double %x)
@@ -76,8 +114,13 @@ define double @neg_rsq_f64_ninf(double %x) {
 define double @rsq_f64_nnan_ninf(double %x) {
 ; CHECK-LABEL: define double @rsq_f64_nnan_ninf(
 ; CHECK-SAME: double [[X:%.*]]) {
-; CHECK-NEXT:    [[SQRT_X:%.*]] = call nnan ninf contract double @llvm.sqrt.f64(double [[X]])
-; CHECK-NEXT:    [[FDIV:%.*]] = fdiv nnan ninf contract double 1.000000e+00, [[SQRT_X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call nnan ninf contract double @llvm.amdgcn.rsq.f64(double [[X]])
+; CHECK-NEXT:    [[TMP2:%.*]] = fneg nnan ninf contract double [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = fmul nnan ninf contract double [[X]], [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = call nnan ninf contract double @llvm.fma.f64(double [[TMP3]], double [[TMP1]], double 1.000000e+00)
+; CHECK-NEXT:    [[TMP5:%.*]] = fmul nnan ninf contract double [[TMP4]], [[TMP1]]
+; CHECK-NEXT:    [[TMP6:%.*]] = call nnan ninf contract double @llvm.fma.f64(double [[TMP4]], double 3.750000e-01, double 5.000000e-01)
+; CHECK-NEXT:    [[FDIV:%.*]] = call nnan ninf contract double @llvm.fma.f64(double [[TMP5]], double [[TMP6]], double [[TMP1]])
 ; CHECK-NEXT:    ret double [[FDIV]]
 ;
   %sqrt.x = call contract nnan ninf double @llvm.sqrt.f64(double %x)
@@ -88,8 +131,13 @@ define double @rsq_f64_nnan_ninf(double %x) {
 define double @neg_rsq_f64_nnan_ninf(double %x) {
 ; CHECK-LABEL: define double @neg_rsq_f64_nnan_ninf(
 ; CHECK-SAME: double [[X:%.*]]) {
-; CHECK-NEXT:    [[SQRT_X:%.*]] = call nnan ninf contract double @llvm.sqrt.f64(double [[X]])
-; CHECK-NEXT:    [[FDIV:%.*]] = fdiv nnan ninf contract double -1.000000e+00, [[SQRT_X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call nnan ninf contract double @llvm.amdgcn.rsq.f64(double [[X]])
+; CHECK-NEXT:    [[TMP2:%.*]] = fneg nnan ninf contract double [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = fmul nnan ninf contract double [[X]], [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = call nnan ninf contract double @llvm.fma.f64(double [[TMP3]], double [[TMP1]], double 1.000000e+00)
+; CHECK-NEXT:    [[TMP5:%.*]] = fmul nnan ninf contract double [[TMP4]], [[TMP2]]
+; CHECK-NEXT:    [[TMP6:%.*]] = call nnan ninf contract double @llvm.fma.f64(double [[TMP4]], double 3.750000e-01, double 5.000000e-01)
+; CHECK-NEXT:    [[FDIV:%.*]] = call nnan ninf contract double @llvm.fma.f64(double [[TMP5]], double [[TMP6]], double [[TMP2]])
 ; CHECK-NEXT:    ret double [[FDIV]]
 ;
   %sqrt.x = call contract nnan ninf double @llvm.sqrt.f64(double %x)
@@ -100,8 +148,15 @@ define double @neg_rsq_f64_nnan_ninf(double %x) {
 define double @rsq_f64_sqrt_nnan_ninf(double %x) {
 ; CHECK-LABEL: define double @rsq_f64_sqrt_nnan_ninf(
 ; CHECK-SAME: double [[X:%.*]]) {
-; CHECK-NEXT:    [[SQRT_X:%.*]] = call nnan ninf contract double @llvm.sqrt.f64(double [[X]])
-; CHECK-NEXT:    [[FDIV:%.*]] = fdiv contract double 1.000000e+00, [[SQRT_X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call nnan ninf contract double @llvm.amdgcn.rsq.f64(double [[X]])
+; CHECK-NEXT:    [[TMP2:%.*]] = fcmp nnan ninf contract oeq double [[X]], 0.000000e+00
+; CHECK-NEXT:    [[TMP3:%.*]] = select nnan ninf contract i1 [[TMP2]], double [[TMP1]], double [[X]]
+; CHECK-NEXT:    [[TMP4:%.*]] = fneg nnan ninf contract double [[TMP1]]
+; CHECK-NEXT:    [[TMP5:%.*]] = fmul nnan ninf contract double [[TMP3]], [[TMP4]]
+; CHECK-NEXT:    [[TMP6:%.*]] = call nnan ninf contract double @llvm.fma.f64(double [[TMP5]], double [[TMP1]], double 1.000000e+00)
+; CHECK-NEXT:    [[TMP7:%.*]] = fmul nnan ninf contract double [[TMP6]], [[TMP1]]
+; CHECK-NEXT:    [[TMP8:%.*]] = call nnan ninf contract double @llvm.fma.f64(double [[TMP6]], double 3.750000e-01, double 5.000000e-01)
+; CHECK-NEXT:    [[FDIV:%.*]] = call nnan ninf contract double @llvm.fma.f64(double [[TMP7]], double [[TMP8]], double [[TMP1]])
 ; CHECK-NEXT:    ret double [[FDIV]]
 ;
   %sqrt.x = call contract nnan ninf double @llvm.sqrt.f64(double %x)
@@ -112,8 +167,13 @@ define double @rsq_f64_sqrt_nnan_ninf(double %x) {
 define double @rsq_f64_fdiv_nnan_ninf(double %x) {
 ; CHECK-LABEL: define double @rsq_f64_fdiv_nnan_ninf(
 ; CHECK-SAME: double [[X:%.*]]) {
-; CHECK-NEXT:    [[SQRT_X:%.*]] = call contract double @llvm.sqrt.f64(double [[X]])
-; CHECK-NEXT:    [[FDIV:%.*]] = fdiv nnan ninf contract double 1.000000e+00, [[SQRT_X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call nnan ninf contract double @llvm.amdgcn.rsq.f64(double [[X]])
+; CHECK-NEXT:    [[TMP2:%.*]] = fneg nnan ninf contract double [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = fmul nnan ninf contract double [[X]], [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = call nnan ninf contract double @llvm.fma.f64(double [[TMP3]], double [[TMP1]], double 1.000000e+00)
+; CHECK-NEXT:    [[TMP5:%.*]] = fmul nnan ninf contract double [[TMP4]], [[TMP1]]
+; CHECK-NEXT:    [[TMP6:%.*]] = call nnan ninf contract double @llvm.fma.f64(double [[TMP4]], double 3.750000e-01, double 5.000000e-01)
+; CHECK-NEXT:    [[FDIV:%.*]] = call nnan ninf contract double @llvm.fma.f64(double [[TMP5]], double [[TMP6]], double [[TMP1]])
 ; CHECK-NEXT:    ret double [[FDIV]]
 ;
   %sqrt.x = call contract double @llvm.sqrt.f64(double %x)
@@ -125,7 +185,30 @@ define <2 x double> @rsq_v2f64(<2 x double> %x) {
 ; CHECK-LABEL: define <2 x double> @rsq_v2f64(
 ; CHECK-SAME: <2 x double> [[X:%.*]]) {
 ; CHECK-NEXT:    [[SQRT_X:%.*]] = call contract <2 x double> @llvm.sqrt.v2f64(<2 x double> [[X]])
-; CHECK-NEXT:    [[FDIV:%.*]] = fdiv contract <2 x double> splat (double 1.000000e+00), [[SQRT_X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x double> [[SQRT_X]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x double> [[SQRT_X]], i64 1
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x double> [[X]], i64 0
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x double> [[X]], i64 1
+; CHECK-NEXT:    [[TMP5:%.*]] = call contract double @llvm.amdgcn.rsq.f64(double [[TMP3]])
+; CHECK-NEXT:    [[TMP6:%.*]] = call i1 @llvm.is.fpclass.f64(double [[TMP3]], i32 608)
+; CHECK-NEXT:    [[TMP7:%.*]] = select contract i1 [[TMP6]], double [[TMP5]], double [[TMP3]]
+; CHECK-NEXT:    [[TMP8:%.*]] = fneg contract double [[TMP5]]
+; CHECK-NEXT:    [[TMP9:%.*]] = fmul contract double [[TMP7]], [[TMP8]]
+; CHECK-NEXT:    [[TMP10:%.*]] = call contract double @llvm.fma.f64(double [[TMP9]], double [[TMP5]], double 1.000000e+00)
+; CHECK-NEXT:    [[TMP11:%.*]] = fmul contract double [[TMP10]], [[TMP5]]
+; CHECK-NEXT:    [[TMP12:%.*]] = call contract double @llvm.fma.f64(double [[TMP10]], double 3.750000e-01, double 5.000000e-01)
+; CHECK-NEXT:    [[TMP13:%.*]] = call contract double @llvm.fma.f64(double [[TMP11]], double [[TMP12]], double [[TMP5]])
+; CHECK-NEXT:    [[TMP14:%.*]] = call contract double @llvm.amdgcn.rsq.f64(double [[TMP4]])
+; CHECK-NEXT:    [[TMP15:%.*]] = call i1 @llvm.is.fpclass.f64(double [[TMP4]], i32 608)
+; CHECK-NEXT:    [[TMP16:%.*]] = select contract i1 [[TMP15]], double [[TMP14]], double [[TMP4]]
+; CHECK-NEXT:    [[TMP17:%.*]] = fneg contract double [[TMP14]]
+; CHECK-NEXT:    [[TMP18:%.*]] = fmul contract double [[TMP16]], [[TMP17]]
+; CHECK-NEXT:    [[TMP19:%.*]] = call contract double @llvm.fma.f64(double [[TMP18]], double [[TMP14]], double 1.000000e+00)
+; CHECK-NEXT:    [[TMP20:%.*]] = fmul contract double [[TMP19]], [[TMP14]]
+; CHECK-NEXT:    [[TMP21:%.*]] = call contract double @llvm.fma.f64(double [[TMP19]], double 3.750000e-01, double 5.000000e-01)
+; CHECK-NEXT:    [[TMP22:%.*]] = call contract double @llvm.fma.f64(double [[TMP20]], double [[TMP21]], double [[TMP14]])
+; CHECK-NEXT:    [[TMP23:%.*]] = insertelement <2 x double> poison, double [[TMP13]], i64 0
+; CHECK-NEXT:    [[FDIV:%.*]] = insertelement <2 x double> [[TMP23]], double [[TMP22]], i64 1
 ; CHECK-NEXT:    ret <2 x double> [[FDIV]]
 ;
   %sqrt.x = call contract <2 x double> @llvm.sqrt.f64(<2 x double> %x)
@@ -137,7 +220,30 @@ define <2 x double> @neg_rsq_v2f64(<2 x double> %x) {
 ; CHECK-LABEL: define <2 x double> @neg_rsq_v2f64(
 ; CHECK-SAME: <2 x double> [[X:%.*]]) {
 ; CHECK-NEXT:    [[SQRT_X:%.*]] = call contract <2 x double> @llvm.sqrt.v2f64(<2 x double> [[X]])
-; CHECK-NEXT:    [[FDIV:%.*]] = fdiv contract <2 x double> splat (double 1.000000e+00), [[SQRT_X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x double> [[SQRT_X]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x double> [[SQRT_X]], i64 1
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x double> [[X]], i64 0
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x double> [[X]], i64 1
+; CHECK-NEXT:    [[TMP5:%.*]] = call contract double @llvm.amdgcn.rsq.f64(double [[TMP3]])
+; CHECK-NEXT:    [[TMP6:%.*]] = call i1 @llvm.is.fpclass.f64(double [[TMP3]], i32 608)
+; CHECK-NEXT:    [[TMP7:%.*]] = select contract i1 [[TMP6]], double [[TMP5]], double [[TMP3]]
+; CHECK-NEXT:    [[TMP8:%.*]] = fneg contract double [[TMP5]]
+; CHECK-NEXT:    [[TMP9:%.*]] = fmul contract double [[TMP7]], [[TMP8]]
+; CHECK-NEXT:    [[TMP10:%.*]] = call contract double @llvm.fma.f64(double [[TMP9]], double [[TMP5]], double 1.000000e+00)
+; CHECK-NEXT:    [[TMP11:%.*]] = fmul contract double [[TMP10]], [[TMP5]]
+; CHECK-NEXT:    [[TMP12:%.*]] = call contract double @llvm.fma.f64(double [[TMP10]], double 3.750000e-01, double 5.000000e-01)
+; CHECK-NEXT:    [[TMP13:%.*]] = call contract double @llvm.fma.f64(double [[TMP11]], double [[TMP12]], double [[TMP5]])
+; CHECK-NEXT:    [[TMP14:%.*]] = call contract double @llvm.amdgcn.rsq.f64(double [[TMP4]])
+; CHECK-NEXT:    [[TMP15:%.*]] = call i1 @llvm.is.fpclass.f64(double [[TMP4]], i32 608)
+; CHECK-NEXT:    [[TMP16:%.*]] = select contract i1 [[TMP15]], double [[TMP14]], double [[TMP4]]
+; CHECK-NEXT:    [[TMP17:%.*]] = fneg contract double [[TMP14]]
+; CHECK-NEXT:    [[TMP18:%.*]] = fmul contract double [[TMP16]], [[TMP17]]
+; CHECK-NEXT:    [[TMP19:%.*]] = call contract double @llvm.fma.f64(double [[TMP18]], double [[TMP14]], double 1.000000e+00)
+; CHECK-NEXT:    [[TMP20:%.*]] = fmul contract double [[TMP19]], [[TMP14]]
+; CHECK-NEXT:    [[TMP21:%.*]] = call contract double @llvm.fma.f64(double [[TMP19]], double 3.750000e-01, double 5.000000e-01)
+; CHECK-NEXT:    [[TMP22:%.*]] = call contract double @llvm.fma.f64(double [[TMP20]], double [[TMP21]], double [[TMP14]])
+; CHECK-NEXT:    [[TMP23:%.*]] = insertelement <2 x double> poison, double [[TMP13]], i64 0
+; CHECK-NEXT:    [[FDIV:%.*]] = insertelement <2 x double> [[TMP23]], double [[TMP22]], i64 1
 ; CHECK-NEXT:    ret <2 x double> [[FDIV]]
 ;
   %sqrt.x = call contract <2 x double> @llvm.sqrt.f64(<2 x double> %x)
@@ -149,7 +255,30 @@ define <2 x double> @mixed_sign_rsq_v2f64(<2 x double> %x) {
 ; CHECK-LABEL: define <2 x double> @mixed_sign_rsq_v2f64(
 ; CHECK-SAME: <2 x double> [[X:%.*]]) {
 ; CHECK-NEXT:    [[SQRT_X:%.*]] = call contract <2 x double> @llvm.sqrt.v2f64(<2 x double> [[X]])
-; CHECK-NEXT:    [[FDIV:%.*]] = fdiv contract <2 x double> <double 1.000000e+00, double -1.000000e+00>, [[SQRT_X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x double> [[SQRT_X]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x double> [[SQRT_X]], i64 1
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x double> [[X]], i64 0
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x double> [[X]], i64 1
+; CHECK-NEXT:    [[TMP5:%.*]] = call contract double @llvm.amdgcn.rsq.f64(double [[TMP3]])
+; CHECK-NEXT:    [[TMP6:%.*]] = call i1 @llvm.is.fpclass.f64(double [[TMP3]], i32 608)
+; CHECK-NEXT:    [[TMP7:%.*]] = select contract i1 [[TMP6]], double [[TMP5]], double [[TMP3]]
+; CHECK-NEXT:    [[TMP8:%.*]] = fneg contract double [[TMP5]]
+; CHECK-NEXT:    [[TMP9:%.*]] = fmul contract double [[TMP7]], [[TMP8]]
+; CHECK-NEXT:    [[TMP10:%.*]] = call contract double @llvm.fma.f64(double [[TMP9]], double [[TMP5]], double 1.000000e+00)
+; CHECK-NEXT:    [[TMP11:%.*]] = fmul contract double [[TMP10]], [[TMP5]]
+; CHECK-NEXT:    [[TMP12:%.*]] = call contract double @llvm.fma.f64(double [[TMP10]], double 3.750000e-01, double 5.000000e-01)
+; CHECK-NEXT:    [[TMP13:%.*]] = call contract double @llvm.fma.f64(double [[TMP11]], double [[TMP12]], double [[TMP5]])
+; CHECK-NEXT:    [[TMP14:%.*]] = call contract double @llvm.amdgcn.rsq.f64(double [[TMP4]])
+; CHECK-NEXT:    [[TMP15:%.*]] = call i1 @llvm.is.fpclass.f64(double [[TMP4]], i32 608)
+; CHECK-NEXT:    [[TMP16:%.*]] = select contract i1 [[TMP15]], double [[TMP14]], double [[TMP4]]
+; CHECK-NEXT:    [[TMP17:%.*]] = fneg contract double [[TMP14]]
+; CHECK-NEXT:    [[TMP18:%.*]] = fmul contract double [[TMP16]], [[TMP17]]
+; CHECK-NEXT:    [[TMP19:%.*]] = call contract double @llvm.fma.f64(double [[TMP18]], double [[TMP14]], double 1.000000e+00)
+; CHECK-NEXT:    [[TMP20:%.*]] = fmul contract double [[TMP19]], [[TMP17]]
+; CHECK-NEXT:    [[TMP21:%.*]] = call contract double @llvm.fma.f64(double [[TMP19]], double 3.750000e-01, double 5.000000e-01)
+; CHECK-NEXT:    [[TMP23:%.*]] = call contract double @llvm.fma.f64(double [[TMP20]], double [[TMP21]], double [[TMP17]])
+; CHECK-NEXT:    [[TMP24:%.*]] = insertelement <2 x double> poison, double [[TMP13]], i64 0
+; CHECK-NEXT:    [[FDIV:%.*]] = insertelement <2 x double> [[TMP24]], double [[TMP23]], i64 1
 ; CHECK-NEXT:    ret <2 x double> [[FDIV]]
 ;
   %sqrt.x = call contract <2 x double> @llvm.sqrt.f64(<2 x double> %x)
@@ -161,7 +290,22 @@ define <2 x double> @rsq_some_elements_v2f64(<2 x double> %x) {
 ; CHECK-LABEL: define <2 x double> @rsq_some_elements_v2f64(
 ; CHECK-SAME: <2 x double> [[X:%.*]]) {
 ; CHECK-NEXT:    [[SQRT_X:%.*]] = call contract <2 x double> @llvm.sqrt.v2f64(<2 x double> [[X]])
-; CHECK-NEXT:    [[FDIV:%.*]] = fdiv contract <2 x double> <double 1.000000e+00, double 2.000000e+00>, [[SQRT_X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x double> [[SQRT_X]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x double> [[SQRT_X]], i64 1
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x double> [[X]], i64 0
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x double> [[X]], i64 1
+; CHECK-NEXT:    [[TMP5:%.*]] = call contract double @llvm.amdgcn.rsq.f64(double [[TMP3]])
+; CHECK-NEXT:    [[TMP6:%.*]] = call i1 @llvm.is.fpclass.f64(double [[TMP3]], i32 608)
+; CHECK-NEXT:    [[TMP7:%.*]] = select contract i1 [[TMP6]], double [[TMP5]], double [[TMP3]]
+; CHECK-NEXT:    [[TMP8:%.*]] = fneg contract double [[TMP5]]
+; CHECK-NEXT:    [[TMP9:%.*]] = fmul contract double [[TMP7]], [[TMP8]]
+; CHECK-NEXT:    [[TMP10:%.*]] = call contract double @llvm.fma.f64(double [[TMP9]], double [[TMP5]], double 1.000000e+00)
+; CHECK-NEXT:    [[TMP11:%.*]] = fmul contract double [[TMP10]], [[TMP5]]
+; CHECK-NEXT:    [[TMP12:%.*]] = call contract double @llvm.fma.f64(double [[TMP10]], double 3.750000e-01, double 5.000000e-01)
+; CHECK-NEXT:    [[TMP13:%.*]] = call contract double @llvm.fma.f64(double [[TMP11]], double [[TMP12]], double [[TMP5]])
+; CHECK-NEXT:    [[TMP14:%.*]] = fdiv contract double 2.000000e+00, [[TMP2]]
+; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <2 x double> poison, double [[TMP13]], i64 0
+; CHECK-NEXT:    [[FDIV:%.*]] = insertelement <2 x double> [[TMP15]], double [[TMP14]], i64 1
 ; CHECK-NEXT:    ret <2 x double> [[FDIV]]
 ;
   %sqrt.x = call contract <2 x double> @llvm.sqrt.f64(<2 x double> %x)
@@ -324,8 +468,15 @@ define double @rsq_amdgcn_f64_nnan_ninf(double %x) {
 define double @rsq_f64_input_known_not_zero(double nofpclass(zero) %x) {
 ; CHECK-LABEL: define double @rsq_f64_input_known_not_zero(
 ; CHECK-SAME: double nofpclass(zero) [[X:%.*]]) {
-; CHECK-NEXT:    [[SQRT_X:%.*]] = call contract double @llvm.sqrt.f64(double [[X]])
-; CHECK-NEXT:    [[FDIV:%.*]] = fdiv contract double 1.000000e+00, [[SQRT_X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call contract double @llvm.amdgcn.rsq.f64(double [[X]])
+; CHECK-NEXT:    [[TMP2:%.*]] = fcmp contract oeq double [[X]], 0x7FF0000000000000
+; CHECK-NEXT:    [[TMP3:%.*]] = select contract i1 [[TMP2]], double [[TMP1]], double [[X]]
+; CHECK-NEXT:    [[TMP4:%.*]] = fneg contract double [[TMP1]]
+; CHECK-NEXT:    [[TMP5:%.*]] = fmul contract double [[TMP3]], [[TMP4]]
+; CHECK-NEXT:    [[TMP6:%.*]] = call contract double @llvm.fma.f64(double [[TMP5]], double [[TMP1]], double 1.000000e+00)
+; CHECK-NEXT:    [[TMP7:%.*]] = fmul contract double [[TMP6]], [[TMP1]]
+; CHECK-NEXT:    [[TMP8:%.*]] = call contract double @llvm.fma.f64(double [[TMP6]], double 3.750000e-01, double 5.000000e-01)
+; CHECK-NEXT:    [[FDIV:%.*]] = call contract double @llvm.fma.f64(double [[TMP7]], double [[TMP8]], double [[TMP1]])
 ; CHECK-NEXT:    ret double [[FDIV]]
 ;
   %sqrt.x = call contract double @llvm.sqrt.f64(double %x)
@@ -336,8 +487,15 @@ define double @rsq_f64_input_known_not_zero(double nofpclass(zero) %x) {
 define double @rsq_f64_input_known_not_pinf(double nofpclass(pinf) %x) {
 ; CHECK-LABEL: define double @rsq_f64_input_known_not_pinf(
 ; CHECK-SAME: double nofpclass(pinf) [[X:%.*]]) {
-; CHECK-NEXT:    [[SQRT_X:%.*]] = call contract double @llvm.sqrt.f64(double [[X]])
-; CHECK-NEXT:    [[FDIV:%.*]] = fdiv contract double 1.000000e+00, [[SQRT_X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call contract double @llvm.amdgcn.rsq.f64(double [[X]])
+; CHECK-NEXT:    [[TMP2:%.*]] = fcmp contract oeq double [[X]], 0.000000e+00
+; CHECK-NEXT:    [[TMP3:%.*]] = select contract i1 [[TMP2]], double [[TMP1]], double [[X]]
+; CHECK-NEXT:    [[TMP4:%.*]] = fneg contract double [[TMP1]]
+; CHECK-NEXT:    [[TMP5:%.*]] = fmul contract double [[TMP3]], [[TMP4]]
+; CHECK-NEXT:    [[TMP6:%.*]] = call contract double @llvm.fma.f64(double [[TMP5]], double [[TMP1]], double 1.000000e+00)
+; CHECK-NEXT:    [[TMP7:%.*]] = fmul contract double [[TMP6]], [[TMP1]]
+; CHECK-NEXT:    [[TMP8:%.*]] = call contract double @llvm.fma.f64(double [[TMP6]], double 3.750000e-01, double 5.000000e-01)
+; CHECK-NEXT:    [[FDIV:%.*]] = call contract double @llvm.fma.f64(double [[TMP7]], double [[TMP8]], double [[TMP1]])
 ; CHECK-NEXT:    ret double [[FDIV]]
 ;
   %sqrt.x = call contract double @llvm.sqrt.f64(double %x)
@@ -348,8 +506,13 @@ define double @rsq_f64_input_known_not_pinf(double nofpclass(pinf) %x) {
 define double @rsq_f64_input_known_not_pinf_zero(double nofpclass(pinf zero) %x) {
 ; CHECK-LABEL: define double @rsq_f64_input_known_not_pinf_zero(
 ; CHECK-SAME: double nofpclass(pinf zero) [[X:%.*]]) {
-; CHECK-NEXT:    [[SQRT_X:%.*]] = call contract double @llvm.sqrt.f64(double [[X]])
-; CHECK-NEXT:    [[FDIV:%.*]] = fdiv contract double 1.000000e+00, [[SQRT_X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call contract double @llvm.amdgcn.rsq.f64(double [[X]])
+; CHECK-NEXT:    [[TMP2:%.*]] = fneg contract double [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = fmul contract double [[X]], [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = call contract double @llvm.fma.f64(double [[TMP3]], double [[TMP1]], double 1.000000e+00)
+; CHECK-NEXT:    [[TMP5:%.*]] = fmul contract double [[TMP4]], [[TMP1]]
+; CHECK-NEXT:    [[TMP6:%.*]] = call contract double @llvm.fma.f64(double [[TMP4]], double 3.750000e-01, double 5.000000e-01)
+; CHECK-NEXT:    [[FDIV:%.*]] = call contract double @llvm.fma.f64(double [[TMP5]], double [[TMP6]], double [[TMP1]])
 ; CHECK-NEXT:    ret double [[FDIV]]
 ;
   %sqrt.x = call contract double @llvm.sqrt.f64(double %x)
@@ -360,8 +523,15 @@ define double @rsq_f64_input_known_not_pinf_zero(double nofpclass(pinf zero) %x)
 define double @rsq_f64_input_known_not_pinf_zero_dynamic_fp(double nofpclass(pinf zero) %x) #0 {
 ; CHECK-LABEL: define double @rsq_f64_input_known_not_pinf_zero_dynamic_fp(
 ; CHECK-SAME: double nofpclass(pinf zero) [[X:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:    [[SQRT_X:%.*]] = call contract double @llvm.sqrt.f64(double [[X]])
-; CHECK-NEXT:    [[FDIV:%.*]] = fdiv contract double 1.000000e+00, [[SQRT_X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call contract double @llvm.amdgcn.rsq.f64(double [[X]])
+; CHECK-NEXT:    [[TMP2:%.*]] = fcmp contract oeq double [[X]], 0.000000e+00
+; CHECK-NEXT:    [[TMP3:%.*]] = select contract i1 [[TMP2]], double [[TMP1]], double [[X]]
+; CHECK-NEXT:    [[TMP4:%.*]] = fneg contract double [[TMP1]]
+; CHECK-NEXT:    [[TMP5:%.*]] = fmul contract double [[TMP3]], [[TMP4]]
+; CHECK-NEXT:    [[TMP6:%.*]] = call contract double @llvm.fma.f64(double [[TMP5]], double [[TMP1]], double 1.000000e+00)
+; CHECK-NEXT:    [[TMP7:%.*]] = fmul contract double [[TMP6]], [[TMP1]]
+; CHECK-NEXT:    [[TMP8:%.*]] = call contract double @llvm.fma.f64(double [[TMP6]], double 3.750000e-01, double 5.000000e-01)
+; CHECK-NEXT:    [[FDIV:%.*]] = call contract double @llvm.fma.f64(double [[TMP7]], double [[TMP8]], double [[TMP1]])
 ; CHECK-NEXT:    ret double [[FDIV]]
 ;
   %sqrt.x = call contract double @llvm.sqrt.f64(double %x)
@@ -372,8 +542,15 @@ define double @rsq_f64_input_known_not_pinf_zero_dynamic_fp(double nofpclass(pin
 define double @rsq_f64_input_known_not_pinf_zero_daz(double nofpclass(pinf zero) %x) #1 {
 ; CHECK-LABEL: define double @rsq_f64_input_known_not_pinf_zero_daz(
 ; CHECK-SAME: double nofpclass(pinf zero) [[X:%.*]]) #[[ATTR1:[0-9]+]] {
-; CHECK-NEXT:    [[SQRT_X:%.*]] = call contract double @llvm.sqrt.f64(double [[X]])
-; CHECK-NEXT:    [[FDIV:%.*]] = fdiv contract double 1.000000e+00, [[SQRT_X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call contract double @llvm.amdgcn.rsq.f64(double [[X]])
+; CHECK-NEXT:    [[TMP2:%.*]] = fcmp contract oeq double [[X]], 0.000000e+00
+; CHECK-NEXT:    [[TMP3:%.*]] = select contract i1 [[TMP2]], double [[TMP1]], double [[X]]
+; CHECK-NEXT:    [[TMP4:%.*]] = fneg contract double [[TMP1]]
+; CHECK-NEXT:    [[TMP5:%.*]] = fmul contract double [[TMP3]], [[TMP4]]
+; CHECK-NEXT:    [[TMP6:%.*]] = call contract double @llvm.fma.f64(double [[TMP5]], double [[TMP1]], double 1.000000e+00)
+; CHECK-NEXT:    [[TMP7:%.*]] = fmul contract double [[TMP6]], [[TMP1]]
+; CHECK-NEXT:    [[TMP8:%.*]] = call contract double @llvm.fma.f64(double [[TMP6]], double 3.750000e-01, double 5.000000e-01)
+; CHECK-NEXT:    [[FDIV:%.*]] = call contract double @llvm.fma.f64(double [[TMP7]], double [[TMP8]], double [[TMP1]])
 ; CHECK-NEXT:    ret double [[FDIV]]
 ;
   %sqrt.x = call contract double @llvm.sqrt.f64(double %x)
@@ -384,8 +561,13 @@ define double @rsq_f64_input_known_not_pinf_zero_daz(double nofpclass(pinf zero)
 define double @rsq_f64_input_known_not_pinf_zero_denorm_daz(double nofpclass(pinf zero sub) %x) #1 {
 ; CHECK-LABEL: define double @rsq_f64_input_known_not_pinf_zero_denorm_daz(
 ; CHECK-SAME: double nofpclass(pinf zero sub) [[X:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[SQRT_X:%.*]] = call contract double @llvm.sqrt.f64(double [[X]])
-; CHECK-NEXT:    [[FDIV:%.*]] = fdiv contract double 1.000000e+00, [[SQRT_X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call contract double @llvm.amdgcn.rsq.f64(double [[X]])
+; CHECK-NEXT:    [[TMP2:%.*]] = fneg contract double [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = fmul contract double [[X]], [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = call contract double @llvm.fma.f64(double [[TMP3]], double [[TMP1]], double 1.000000e+00)
+; CHECK-NEXT:    [[TMP5:%.*]] = fmul contract double [[TMP4]], [[TMP1]]
+; CHECK-NEXT:    [[TMP6:%.*]] = call contract double @llvm.fma.f64(double [[TMP4]], double 3.750000e-01, double 5.000000e-01)
+; CHECK-NEXT:    [[FDIV:%.*]] = call contract double @llvm.fma.f64(double [[TMP5]], double [[TMP6]], double [[TMP1]])
 ; CHECK-NEXT:    ret double [[FDIV]]
 ;
   %sqrt.x = call contract double @llvm.sqrt.f64(double %x)
@@ -396,8 +578,17 @@ define double @rsq_f64_input_known_not_pinf_zero_denorm_daz(double nofpclass(pin
 define double @rsq_f64_dynamic_denormal(double %x) #0 {
 ; CHECK-LABEL: define double @rsq_f64_dynamic_denormal(
 ; CHECK-SAME: double [[X:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[SQRT_X:%.*]] = call contract double @llvm.sqrt.f64(double [[X]])
-; CHECK-NEXT:    [[FDIV:%.*]] = fdiv contract double 1.000000e+00, [[SQRT_X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call contract double @llvm.amdgcn.rsq.f64(double [[X]])
+; CHECK-NEXT:    [[TMP2:%.*]] = fcmp contract oeq double [[X]], 0.000000e+00
+; CHECK-NEXT:    [[TMP3:%.*]] = fcmp contract oeq double [[X]], 0x7FF0000000000000
+; CHECK-NEXT:    [[TMP4:%.*]] = or i1 [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = select contract i1 [[TMP4]], double [[TMP1]], double [[X]]
+; CHECK-NEXT:    [[TMP6:%.*]] = fneg contract double [[TMP1]]
+; CHECK-NEXT:    [[TMP7:%.*]] = fmul contract double [[TMP5]], [[TMP6]]
+; CHECK-NEXT:    [[TMP8:%.*]] = call contract double @llvm.fma.f64(double [[TMP7]], double [[TMP1]], double 1.000000e+00)
+; CHECK-NEXT:    [[TMP9:%.*]] = fmul contract double [[TMP8]], [[TMP1]]
+; CHECK-NEXT:    [[TMP10:%.*]] = call contract double @llvm.fma.f64(double [[TMP8]], double 3.750000e-01, double 5.000000e-01)
+; CHECK-NEXT:    [[FDIV:%.*]] = call contract double @llvm.fma.f64(double [[TMP9]], double [[TMP10]], double [[TMP1]])
 ; CHECK-NEXT:    ret double [[FDIV]]
 ;
   %sqrt.x = call contract double @llvm.sqrt.f64(double %x)
@@ -408,8 +599,15 @@ define double @rsq_f64_dynamic_denormal(double %x) #0 {
 define double @rsq_f64_dynamic_denormal_no_pinf(double nofpclass(pinf) %x) #0 {
 ; CHECK-LABEL: define double @rsq_f64_dynamic_denormal_no_pinf(
 ; CHECK-SAME: double nofpclass(pinf) [[X:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[SQRT_X:%.*]] = call contract double @llvm.sqrt.f64(double [[X]])
-; CHECK-NEXT:    [[FDIV:%.*]] = fdiv contract double 1.000000e+00, [[SQRT_X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call contract double @llvm.amdgcn.rsq.f64(double [[X]])
+; CHECK-NEXT:    [[TMP2:%.*]] = fcmp contract oeq double [[X]], 0.000000e+00
+; CHECK-NEXT:    [[TMP3:%.*]] = select contract i1 [[TMP2]], double [[TMP1]], double [[X]]
+; CHECK-NEXT:    [[TMP4:%.*]] = fneg contract double [[TMP1]]
+; CHECK-NEXT:    [[TMP5:%.*]] = fmul contract double [[TMP3]], [[TMP4]]
+; CHECK-NEXT:    [[TMP6:%.*]] = call contract double @llvm.fma.f64(double [[TMP5]], double [[TMP1]], double 1.000000e+00)
+; CHECK-NEXT:    [[TMP7:%.*]] = fmul contract double [[TMP6]], [[TMP1]]
+; CHECK-NEXT:    [[TMP8:%.*]] = call contract double @llvm.fma.f64(double [[TMP6]], double 3.750000e-01, double 5.000000e-01)
+; CHECK-NEXT:    [[FDIV:%.*]] = call contract double @llvm.fma.f64(double [[TMP7]], double [[TMP8]], double [[TMP1]])
 ; CHECK-NEXT:    ret double [[FDIV]]
 ;
   %sqrt.x = call contract double @llvm.sqrt.f64(double %x)
@@ -420,8 +618,15 @@ define double @rsq_f64_dynamic_denormal_no_pinf(double nofpclass(pinf) %x) #0 {
 define double @rsq_f64_dynamic_denormal_no_zero_no_denorm(double nofpclass(zero sub) %x) #0 {
 ; CHECK-LABEL: define double @rsq_f64_dynamic_denormal_no_zero_no_denorm(
 ; CHECK-SAME: double nofpclass(zero sub) [[X:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[SQRT_X:%.*]] = call contract double @llvm.sqrt.f64(double [[X]])
-; CHECK-NEXT:    [[FDIV:%.*]] = fdiv contract double 1.000000e+00, [[SQRT_X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call contract double @llvm.amdgcn.rsq.f64(double [[X]])
+; CHECK-NEXT:    [[TMP2:%.*]] = fcmp contract oeq double [[X]], 0x7FF0000000000000
+; CHECK-NEXT:    [[TMP3:%.*]] = select contract i1 [[TMP2]], double [[TMP1]], double [[X]]
+; CHECK-NEXT:    [[TMP4:%.*]] = fneg contract double [[TMP1]]
+; CHECK-NEXT:    [[TMP5:%.*]] = fmul contract double [[TMP3]], [[TMP4]]
+; CHECK-NEXT:    [[TMP6:%.*]] = call contract double @llvm.fma.f64(double [[TMP5]], double [[TMP1]], double 1.000000e+00)
+; CHECK-NEXT:    [[TMP7:%.*]] = fmul contract double [[TMP6]], [[TMP1]]
+; CHECK-NEXT:    [[TMP8:%.*]] = call contract double @llvm.fma.f64(double [[TMP6]], double 3.750000e-01, double 5.000000e-01)
+; CHECK-NEXT:    [[FDIV:%.*]] = call contract double @llvm.fma.f64(double [[TMP7]], double [[TMP8]], double [[TMP1]])
 ; CHECK-NEXT:    ret double [[FDIV]]
 ;
   %sqrt.x = call contract double @llvm.sqrt.f64(double %x)
@@ -432,8 +637,15 @@ define double @rsq_f64_dynamic_denormal_no_zero_no_denorm(double nofpclass(zero 
 define double @rsq_f64_nnan_sqrt(double %x) {
 ; CHECK-LABEL: define double @rsq_f64_nnan_sqrt(
 ; CHECK-SAME: double [[X:%.*]]) {
-; CHECK-NEXT:    [[SQRT_X:%.*]] = call nnan contract double @llvm.sqrt.f64(double [[X]])
-; CHECK-NEXT:    [[FDIV:%.*]] = fdiv contract double 1.000000e+00, [[SQRT_X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call nnan contract double @llvm.amdgcn.rsq.f64(double [[X]])
+; CHECK-NEXT:    [[TMP2:%.*]] = call i1 @llvm.is.fpclass.f64(double [[X]], i32 608)
+; CHECK-NEXT:    [[TMP3:%.*]] = select nnan contract i1 [[TMP2]], double [[TMP1]], double [[X]]
+; CHECK-NEXT:    [[TMP4:%.*]] = fneg nnan contract double [[TMP1]]
+; CHECK-NEXT:    [[TMP5:%.*]] = fmul nnan contract double [[TMP3]], [[TMP4]]
+; CHECK-NEXT:    [[TMP6:%.*]] = call nnan contract double @llvm.fma.f64(double [[TMP5]], double [[TMP1]], double 1.000000e+00)
+; CHECK-NEXT:    [[TMP7:%.*]] = fmul nnan contract double [[TMP6]], [[TMP1]]
+; CHECK-NEXT:    [[TMP8:%.*]] = call nnan contract double @llvm.fma.f64(double [[TMP6]], double 3.750000e-01, double 5.000000e-01)
+; CHECK-NEXT:    [[FDIV:%.*]] = call nnan contract double @llvm.fma.f64(double [[TMP7]], double [[TMP8]], double [[TMP1]])
 ; CHECK-NEXT:    ret double [[FDIV]]
 ;
   %sqrt.x = call contract nnan double @llvm.sqrt.f64(double %x)
@@ -444,8 +656,15 @@ define double @rsq_f64_nnan_sqrt(double %x) {
 define double @rsq_f64_nnan_fdiv(double %x) {
 ; CHECK-LABEL: define double @rsq_f64_nnan_fdiv(
 ; CHECK-SAME: double [[X:%.*]]) {
-; CHECK-NEXT:    [[SQRT_X:%.*]] = call contract double @llvm.sqrt.f64(double [[X]])
-; CHECK-NEXT:    [[FDIV:%.*]] = fdiv nnan contract double 1.000000e+00, [[SQRT_X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call nnan contract double @llvm.amdgcn.rsq.f64(double [[X]])
+; CHECK-NEXT:    [[TMP2:%.*]] = call i1 @llvm.is.fpclass.f64(double [[X]], i32 608)
+; CHECK-NEXT:    [[TMP3:%.*]] = select nnan contract i1 [[TMP2]], double [[TMP1]], double [[X]]
+; CHECK-NEXT:    [[TMP4:%.*]] = fneg nnan contract double [[TMP1]]
+; CHECK-NEXT:    [[TMP5:%.*]] = fmul nnan contract double [[TMP3]], [[TMP4]]
+; CHECK-NEXT:    [[TMP6:%.*]] = call nnan contract double @llvm.fma.f64(double [[TMP5]], double [[TMP1]], double 1.000000e+00)
+; CHECK-NEXT:    [[TMP7:%.*]] = fmul nnan contract double [[TMP6]], [[TMP1]]
+; CHECK-NEXT:    [[TMP8:%.*]] = call nnan contract double @llvm.fma.f64(double [[TMP6]], double 3.750000e-01, double 5.000000e-01)
+; CHECK-NEXT:    [[FDIV:%.*]] = call nnan contract double @llvm.fma.f64(double [[TMP7]], double [[TMP8]], double [[TMP1]])
 ; CHECK-NEXT:    ret double [[FDIV]]
 ;
   %sqrt.x = call contract double @llvm.sqrt.f64(double %x)
@@ -456,8 +675,15 @@ define double @rsq_f64_nnan_fdiv(double %x) {
 define double @rsq_f64_ninf_sqrt(double %x) {
 ; CHECK-LABEL: define double @rsq_f64_ninf_sqrt(
 ; CHECK-SAME: double [[X:%.*]]) {
-; CHECK-NEXT:    [[SQRT_X:%.*]] = call ninf contract double @llvm.sqrt.f64(double [[X]])
-; CHECK-NEXT:    [[FDIV:%.*]] = fdiv contract double 1.000000e+00, [[SQRT_X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call ninf contract double @llvm.amdgcn.rsq.f64(double [[X]])
+; CHECK-NEXT:    [[TMP2:%.*]] = fcmp ninf contract oeq double [[X]], 0.000000e+00
+; CHECK-NEXT:    [[TMP3:%.*]] = select ninf contract i1 [[TMP2]], double [[TMP1]], double [[X]]
+; CHECK-NEXT:    [[TMP4:%.*]] = fneg ninf contract double [[TMP1]]
+; CHECK-NEXT:    [[TMP5:%.*]] = fmul ninf contract double [[TMP3]], [[TMP4]]
+; CHECK-NEXT:    [[TMP6:%.*]] = call ninf contract double @llvm.fma.f64(double [[TMP5]], double [[TMP1]], double 1.000000e+00)
+; CHECK-NEXT:    [[TMP7:%.*]] = fmul ninf contract double [[TMP6]], [[TMP1]]
+; CHECK-NEXT:    [[TMP8:%.*]] = call ninf contract double @llvm.fma.f64(double [[TMP6]], double 3.750000e-01, double 5.000000e-01)
+; CHECK-NEXT:    [[FDIV:%.*]] = call ninf contract double @llvm.fma.f64(double [[TMP7]], double [[TMP8]], double [[TMP1]])
 ; CHECK-NEXT:    ret double [[FDIV]]
 ;
   %sqrt.x = call contract ninf double @llvm.sqrt.f64(double %x)
@@ -468,8 +694,13 @@ define double @rsq_f64_ninf_sqrt(double %x) {
 define double @rsq_f64_ninf_fdiv(double %x) {
 ; CHECK-LABEL: define double @rsq_f64_ninf_fdiv(
 ; CHECK-SAME: double [[X:%.*]]) {
-; CHECK-NEXT:    [[SQRT_X:%.*]] = call contract double @llvm.sqrt.f64(double [[X]])
-; CHECK-NEXT:    [[FDIV:%.*]] = fdiv ninf contract double 1.000000e+00, [[SQRT_X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call ninf contract double @llvm.amdgcn.rsq.f64(double [[X]])
+; CHECK-NEXT:    [[TMP2:%.*]] = fneg ninf contract double [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = fmul ninf contract double [[X]], [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = call ninf contract double @llvm.fma.f64(double [[TMP3]], double [[TMP1]], double 1.000000e+00)
+; CHECK-NEXT:    [[TMP5:%.*]] = fmul ninf contract double [[TMP4]], [[TMP1]]
+; CHECK-NEXT:    [[TMP6:%.*]] = call ninf contract double @llvm.fma.f64(double [[TMP4]], double 3.750000e-01, double 5.000000e-01)
+; CHECK-NEXT:    [[FDIV:%.*]] = call ninf contract double @llvm.fma.f64(double [[TMP5]], double [[TMP6]], double [[TMP1]])
 ; CHECK-NEXT:    ret double [[FDIV]]
 ;
   %sqrt.x = call contract double @llvm.sqrt.f64(double %x)
@@ -480,8 +711,15 @@ define double @rsq_f64_ninf_fdiv(double %x) {
 define double @rsq_f64_ninf_sqrt_nnan_fdiv(double %x) {
 ; CHECK-LABEL: define double @rsq_f64_ninf_sqrt_nnan_fdiv(
 ; CHECK-SAME: double [[X:%.*]]) {
-; CHECK-NEXT:    [[SQRT_X:%.*]] = call ninf contract double @llvm.sqrt.f64(double [[X]])
-; CHECK-NEXT:    [[FDIV:%.*]] = fdiv nnan contract double 1.000000e+00, [[SQRT_X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call nnan ninf contract double @llvm.amdgcn.rsq.f64(double [[X]])
+; CHECK-NEXT:    [[TMP7:%.*]] = fcmp nnan ninf contract oeq double [[X]], 0.000000e+00
+; CHECK-NEXT:    [[TMP8:%.*]] = select nnan ninf contract i1 [[TMP7]], double [[TMP1]], double [[X]]
+; CHECK-NEXT:    [[TMP2:%.*]] = fneg nnan ninf contract double [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = fmul nnan ninf contract double [[TMP8]], [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = call nnan ninf contract double @llvm.fma.f64(double [[TMP3]], double [[TMP1]], double 1.000000e+00)
+; CHECK-NEXT:    [[TMP5:%.*]] = fmul nnan ninf contract double [[TMP4]], [[TMP1]]
+; CHECK-NEXT:    [[TMP6:%.*]] = call nnan ninf contract double @llvm.fma.f64(double [[TMP4]], double 3.750000e-01, double 5.000000e-01)
+; CHECK-NEXT:    [[FDIV:%.*]] = call nnan ninf contract double @llvm.fma.f64(double [[TMP5]], double [[TMP6]], double [[TMP1]])
 ; CHECK-NEXT:    ret double [[FDIV]]
 ;
   %sqrt.x = call contract ninf double @llvm.sqrt.f64(double %x)
@@ -492,8 +730,13 @@ define double @rsq_f64_ninf_sqrt_nnan_fdiv(double %x) {
 define double @rsq_f64_nann_sqrt_ninf_fdiv(double %x) {
 ; CHECK-LABEL: define double @rsq_f64_nann_sqrt_ninf_fdiv(
 ; CHECK-SAME: double [[X:%.*]]) {
-; CHECK-NEXT:    [[SQRT_X:%.*]] = call nnan contract double @llvm.sqrt.f64(double [[X]])
-; CHECK-NEXT:    [[FDIV:%.*]] = fdiv ninf contract double 1.000000e+00, [[SQRT_X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call nnan ninf contract double @llvm.amdgcn.rsq.f64(double [[X]])
+; CHECK-NEXT:    [[TMP2:%.*]] = fneg nnan ninf contract double [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = fmul nnan ninf contract double [[X]], [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = call nnan ninf contract double @llvm.fma.f64(double [[TMP3]], double [[TMP1]], double 1.000000e+00)
+; CHECK-NEXT:    [[TMP5:%.*]] = fmul nnan ninf contract double [[TMP4]], [[TMP1]]
+; CHECK-NEXT:    [[TMP6:%.*]] = call nnan ninf contract double @llvm.fma.f64(double [[TMP4]], double 3.750000e-01, double 5.000000e-01)
+; CHECK-NEXT:    [[FDIV:%.*]] = call nnan ninf contract double @llvm.fma.f64(double [[TMP5]], double [[TMP6]], double [[TMP1]])
 ; CHECK-NEXT:    ret double [[FDIV]]
 ;
   %sqrt.x = call contract nnan double @llvm.sqrt.f64(double %x)
@@ -506,8 +749,15 @@ define double @rsq_f64_assume_nonzero(double %x) {
 ; CHECK-SAME: double [[X:%.*]]) {
 ; CHECK-NEXT:    [[NONZERO:%.*]] = fcmp one double [[X]], 0.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[NONZERO]])
-; CHECK-NEXT:    [[SQRT_X:%.*]] = call contract double @llvm.sqrt.f64(double [[X]])
-; CHECK-NEXT:    [[FDIV:%.*]] = fdiv contract double 1.000000e+00, [[SQRT_X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call contract double @llvm.amdgcn.rsq.f64(double [[X]])
+; CHECK-NEXT:    [[TMP2:%.*]] = fcmp contract oeq double [[X]], 0x7FF0000000000000
+; CHECK-NEXT:    [[TMP3:%.*]] = select contract i1 [[TMP2]], double [[TMP1]], double [[X]]
+; CHECK-NEXT:    [[TMP4:%.*]] = fneg contract double [[TMP1]]
+; CHECK-NEXT:    [[TMP5:%.*]] = fmul contract double [[TMP3]], [[TMP4]]
+; CHECK-NEXT:    [[TMP6:%.*]] = call contract double @llvm.fma.f64(double [[TMP5]], double [[TMP1]], double 1.000000e+00)
+; CHECK-NEXT:    [[TMP7:%.*]] = fmul contract double [[TMP6]], [[TMP1]]
+; CHECK-NEXT:    [[TMP8:%.*]] = call contract double @llvm.fma.f64(double [[TMP6]], double 3.750000e-01, double 5.000000e-01)
+; CHECK-NEXT:    [[FDIV:%.*]] = call contract double @llvm.fma.f64(double [[TMP7]], double [[TMP8]], double [[TMP1]])
 ; CHECK-NEXT:    ret double [[FDIV]]
 ;
   %nonzero = fcmp one double %x, 0.0
