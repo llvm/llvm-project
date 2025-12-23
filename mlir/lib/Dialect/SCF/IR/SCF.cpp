@@ -2021,11 +2021,11 @@ struct FoldTensorCastOfOutputIntoForallOp
     // After `mergeBlocks` happened, the destinations in the terminator were
     // mapped to the tensor.cast old-typed results of the output bbArgs. The
     // destination have to be updated to point to the output bbArgs directly.
-    auto newOutputIterArgs = newForallOp.getRegionIterArgs();
+    ArrayRef<BlockArgument> newIterArgs = newForallOp.getRegionIterArgs();
     for (auto [yieldOp, iterArgsIndex] : yieldOpToIterArgsIndex) {
       auto parallelCombiningOp = cast<ParallelCombiningOpInterface>(yieldOp);
       parallelCombiningOp.getUpdatedDestinations().assign(
-          newOutputIterArgs[iterArgsIndex]);
+          newIterArgs[iterArgsIndex]);
     }
 
     // Cast results back to the original types.
