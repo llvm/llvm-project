@@ -19,6 +19,11 @@ def ol_alloc_type_t : Enum {
   ];
 }
 
+def ol_memory_register_flags_t : Typedef {
+  let desc = "Memory registering/locking flags";
+  let value = "uint32_t";
+}
+
 def olMemAlloc : Function {
   let desc = "Creates a memory allocation on the specified device.";
   let details = [
@@ -132,13 +137,14 @@ def olMemFill : Function {
   ];
 }
 
-def olMemDataLock : Function {
-  let desc = "Locks / pins host memory using the plugin runtime.";
+def olMemRegister : Function {
+  let desc = "Register and page-lock host memory so it can be accessible by the device.";
   let params = [
-    Param<"ol_device_handle_t", "Device", "handle of the device to allocate on", PARAM_IN>,
-    Param<"void *", "Ptr", "Host Pointer", PARAM_IN>,
-    Param<"size_t", "Size", "size of the allocation in bytes", PARAM_IN>,
-    Param<"void**", "LockedPtr", "output for the allocated pointer", PARAM_OUT>
+    Param<"ol_device_handle_t", "Device", "handle of the device", PARAM_IN>,
+    Param<"void *", "Ptr", "host pointer", PARAM_IN>,
+    Param<"size_t", "Size", "size of the memory in bytes", PARAM_IN>,
+    Param<"ol_memory_register_flags_t", "Flags", "flags. Reserved for future use", PARAM_IN>,
+    Param<"void**", "LockedPtr", "pointer to the locked memory", PARAM_OUT>
   ];
   let returns = [
     Return<"OL_ERRC_INVALID_SIZE", [
@@ -147,11 +153,11 @@ def olMemDataLock : Function {
   ];
 }
 
-def olMemDataUnLock : Function {
-  let desc = "Unlocks / unpins host memory using the plugin runtime.";
+def olMemUnregister : Function {
+  let desc = "Unregister and page-unlock host memory.";
   let params = [
-    Param<"ol_device_handle_t", "Device", "handle of the device to allocate on", PARAM_IN>,
-    Param<"void *", "Ptr", "Host Pointer", PARAM_IN>
+    Param<"ol_device_handle_t", "Device", "handle of the device", PARAM_IN>,
+    Param<"void *", "Ptr", "host pointer", PARAM_IN>
   ];
   let returns = [];
 }
