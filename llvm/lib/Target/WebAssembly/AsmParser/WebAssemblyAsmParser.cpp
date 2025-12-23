@@ -997,9 +997,10 @@ public:
         else if (AddrType == "i64")
           Limits.Flags |= wasm::WASM_LIMITS_FLAG_IS_64;
         else
-          return error(std::string(
-              "Expected address type or integer constant, instead got: ",
-              Lexer.getTok()));
+          return error(
+              std::string(
+                  "Expected address type or integer constant, instead got: "),
+              Lexer.getTok());
         ;
       }
 
