@@ -23747,7 +23747,7 @@ SDValue DAGCombiner::visitINSERT_VECTOR_ELT(SDNode *N) {
     if (!IsByteSized) {
       EltVT =
           EltVT.changeTypeToInteger().getRoundIntegerType(*DAG.getContext());
-      VT = VT.changeElementType(EltVT);
+      VT = VT.changeElementType(*DAG.getContext(), EltVT);
     }
 
     // Check if this operation will be handled the default way for its type.

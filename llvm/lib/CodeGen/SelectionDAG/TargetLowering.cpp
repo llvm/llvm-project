@@ -8887,7 +8887,7 @@ SDValue TargetLowering::expandFMINIMUMNUM_FMAXIMUMNUM(SDNode *Node,
   SDValue IsZero = DAG.getSetCC(DL, CCVT, MinMax,
                                 DAG.getConstantFP(0.0, DL, VT), ISD::SETEQ);
   EVT IntVT = VT.changeTypeToInteger();
-  EVT FloatVT = VT.changeElementType(MVT::f32);
+  EVT FloatVT = VT.changeElementType(*DAG.getContext(), MVT::f32);
   SDValue LHSTrunc = LHS;
   if (!isTypeLegal(IntVT) && !isOperationLegalOrCustom(ISD::IS_FPCLASS, VT)) {
     LHSTrunc = DAG.getNode(ISD::FP_ROUND, DL, FloatVT, LHS,
@@ -9673,7 +9673,7 @@ SDValue TargetLowering::expandVectorFindLastActive(SDNode *N,
       BoolVT.getTypeForEVT(*DAG.getContext()), MaskVT.getVectorElementCount(),
       /*ZeroIsPoison=*/true, &VScaleRange);
   EVT StepVT = MVT::getIntegerVT(EltWidth);
-  EVT StepVecVT = MaskVT.changeVectorElementType(StepVT);
+  EVT StepVecVT = MaskVT.changeVectorElementType(*DAG.getContext(), StepVT);
 
   // If promotion is required to make the type legal, do it here; promotion
   // of integers within LegalizeVectorOps is looking for types of the same
@@ -10635,7 +10635,7 @@ TargetLowering::IncrementMemoryAddress(SDValue Addr, SDValue Mask,
   if (IsCompressedMemory) {
     // Incrementing the pointer according to number of '1's in the mask.
     if (DataVT.isScalableVector()) {
-      EVT MaskExtVT = MaskVT.changeElementType(MVT::i32);
+      EVT MaskExtVT = MaskVT.changeElementType(*DAG.getContext(), MVT::i32);
       SDValue MaskExt = DAG.getNode(ISD::ZERO_EXTEND, DL, MaskExtVT, Mask);
       Increment = DAG.getNode(ISD::VECREDUCE_ADD, DL, MVT::i32, MaskExt);
     } else {
@@ -11890,7 +11890,9 @@ SDValue TargetLowering::expandFP_ROUND(SDNode *Node, SelectionDAG &DAG) const {
     // correct for this using a trick explained in: Boldo, Sylvie, and
     // Guillaume Melquiond. "When double rounding is odd." 17th IMACS
     // World Congress. 2005.
-    EVT F32 = VT.isVector() ? VT.changeVectorElementType(MVT::f32) : MVT::f32;
+    EVT F32 = VT.isVector()
+                  ? VT.changeVectorElementType(*DAG.getContext(), MVT::f32)
+                  : MVT::f32;
     EVT I32 = F32.changeTypeToInteger();
     Op = expandRoundInexactToOdd(F32, Op, dl, DAG);
     Op = DAG.getNode(ISD::BITCAST, dl, I32, Op);
@@ -11917,7 +11919,9 @@ SDValue TargetLowering::expandFP_ROUND(SDNode *Node, SelectionDAG &DAG) const {
     Op = DAG.getNode(ISD::SRL, dl, I32, Op,
                      DAG.getShiftAmountConstant(16, I32, dl));
     Op = DAG.getNode(ISD::BITCAST, dl, I32, Op);
-    EVT I16 = I32.isVector() ? I32.changeVectorElementType(MVT::i16) : MVT::i16;
+    EVT I16 = I32.isVector()
+                  ? I32.changeVectorElementType(*DAG.getContext(), MVT::i16)
+                  : MVT::i16;
     Op = DAG.getNode(ISD::TRUNCATE, dl, I16, Op);
     return DAG.getNode(ISD::BITCAST, dl, VT, Op);
   }
@@ -12041,10 +12045,12 @@ SDValue TargetLowering::expandVECTOR_COMPRESS(SDNode *Node,
     // overwritten in the loop below.
     EVT PopcountVT = ScalarVT.changeTypeToInteger();
     SDValue Popcount = DAG.getNode(
-        ISD::TRUNCATE, DL, MaskVT.changeVectorElementType(MVT::i1), Mask);
-    Popcount =
-        DAG.getNode(ISD::ZERO_EXTEND, DL,
-                    MaskVT.changeVectorElementType(PopcountVT), Popcount);
+        ISD::TRUNCATE, DL,
+        MaskVT.changeVectorElementType(*DAG.getContext(), MVT::i1), Mask);
+    Popcount = DAG.getNode(
+        ISD::ZERO_EXTEND, DL,
+        MaskVT.changeVectorElementType(*DAG.getContext(), PopcountVT),
+        Popcount);
     Popcount = DAG.getNode(ISD::VECREDUCE_ADD, DL, PopcountVT, Popcount);
     SDValue LastElmtPtr =
         getVectorElementPointer(DAG, StackPtr, VecVT, Popcount);
