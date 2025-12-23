@@ -80,6 +80,17 @@ class SFBLUI
   let Constraints = "$dst = $falsev";
 }
 
+class SFBLoad
+    : Pseudo<(outs GPR:$dst),
+             (ins GPR:$lhs, GPR:$rhs, cond_code:$cc, GPR:$falsev, GPR:$rs1,
+                  simm12_lo:$imm), []> {
+  let hasSideEffects = 0;
+  let mayLoad = 1;
+  let mayStore = 0;
+  let Size = 8;
+  let Constraints = "$dst = $falsev";
+}
+
 class SFBShift_ri
     : Pseudo<(outs GPR:$dst),
              (ins GPR:$lhs, GPR:$rhs, cond_code:$cc, GPR:$falsev, GPR:$rs1,
@@ -166,3 +177,13 @@ def PseudoCCMINU : SFBALU_rr;
 
 let Predicates = [HasShortForwardBranchIMul] in
 def PseudoCCMUL : SFBALU_rr;
+
+let Predicates = [HasShortForwardBranchILoad] in {
+def PseudoCCLB : SFBLoad;
+def PseudoCCLH : SFBLoad;
+def PseudoCCLW : SFBLoad;
+def PseudoCCLHU : SFBLoad;
+def PseudoCCLBU : SFBLoad;
+def PseudoCCLWU : SFBLoad;
+def PseudoCCLD : SFBLoad;
+}

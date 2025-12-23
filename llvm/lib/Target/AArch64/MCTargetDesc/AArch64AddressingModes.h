@@ -901,6 +901,34 @@ static inline bool isSVECpyDupImm(int SizeInBits, int64_t Val, int32_t &Imm,
   return false;
 }
 
+static inline bool isSVELogicalImm(unsigned SizeInBits, uint64_t ImmVal,
+                                   uint64_t &Encoding) {
+  // Shift mask depending on type size.
+  switch (SizeInBits) {
+  case 8:
+    ImmVal &= 0xFF;
+    ImmVal |= ImmVal << 8;
+    ImmVal |= ImmVal << 16;
+    ImmVal |= ImmVal << 32;
+    break;
+  case 16:
+    ImmVal &= 0xFFFF;
+    ImmVal |= ImmVal << 16;
+    ImmVal |= ImmVal << 32;
+    break;
+  case 32:
+    ImmVal &= 0xFFFFFFFF;
+    ImmVal |= ImmVal << 32;
+    break;
+  case 64:
+    break;
+  default:
+    llvm_unreachable("Unexpected size");
+  }
+
+  return processLogicalImmediate(ImmVal, 64, Encoding);
+}
+
 } // end namespace AArch64_AM
 
 } // end namespace llvm

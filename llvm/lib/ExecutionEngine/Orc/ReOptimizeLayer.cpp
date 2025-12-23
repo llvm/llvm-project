@@ -26,7 +26,104 @@ void ReOptimizeLayer::ReOptMaterializationUnitState::reoptimizeFailed() {
   Reoptimizing = false;
 }
 
-Error ReOptimizeLayer::reigsterRuntimeFunctions(JITDylib &PlatformJD) {
+static void orc_rt_lite_reoptimize_helper(
+    shared::CWrapperFunctionBuffer (*JITDispatch)(
+        void *Ctx, void *Tag, shared::CWrapperFunctionBuffer),
+    void *JITDispatchCtx, void *Tag, uint64_t MUID, uint32_t CurVersion) {
+  // Serialize the arguments into a WrapperFunctionBuffer and call dispatch.
+  using SPSArgs = shared::SPSArgList<uint64_t, uint32_t>;
+  auto ArgBytes =
+      shared::WrapperFunctionBuffer::allocate(SPSArgs::size(MUID, CurVersion));
+  shared::SPSOutputBuffer OB(ArgBytes.data(), ArgBytes.size());
+  if (!SPSArgs::serialize(OB, MUID, CurVersion)) {
+    errs()
+        << "Reoptimization error: could not serialize reoptimization arguments";
+    abort();
+  }
+  shared::WrapperFunctionBuffer Buf{
+      JITDispatch(JITDispatchCtx, Tag, ArgBytes.release())};
+
+  if (const char *ErrMsg = Buf.getOutOfBandError()) {
+    errs() << "Reoptimization error: " << ErrMsg << "\naborting.\n";
+    abort();
+  }
+}
+
+Error ReOptimizeLayer::addOrcRTLiteSupport(JITDylib &PlatformJD,
+                                           const DataLayout &DL) {
+  auto Ctx = std::make_unique<LLVMContext>();
+  auto Mod = std::make_unique<Module>("orc-rt-lite-reoptimize.ll", *Ctx);
+  Mod->setDataLayout(DL);
+
+  IRBuilder<> Builder(*Ctx);
+
+  // Create basic types portably
+  Type *VoidTy = Type::getVoidTy(*Ctx);
+  Type *Int8Ty = Type::getInt8Ty(*Ctx);
+  Type *Int32Ty = Type::getInt32Ty(*Ctx);
+  Type *Int64Ty = Type::getInt64Ty(*Ctx);
+  Type *VoidPtrTy = PointerType::getUnqual(*Ctx);
+
+  // Helper function type: void (void*, void*, void*, uint64_t, uint32_t)
+  FunctionType *HelperFnTy = FunctionType::get(
+      VoidTy, {VoidPtrTy, VoidPtrTy, VoidPtrTy, Int64Ty, Int32Ty}, false);
+
+  // Define ReoptimizeTag with initializer = 0
+  GlobalVariable *ReoptimizeTag = new GlobalVariable(
+      *Mod, Int8Ty, false, GlobalValue::ExternalLinkage,
+      ConstantInt::get(Int8Ty, 0), "__orc_rt_reoptimize_tag");
+
+  // Define orc_rt_lite_reoptimize function: void (uint64_t, uint32_t)
+  FunctionType *ReOptimizeFnTy =
+      FunctionType::get(VoidTy, {Int64Ty, Int32Ty}, false);
+
+  Function *ReOptimizeFn =
+      Function::Create(ReOptimizeFnTy, Function::ExternalLinkage,
+                       "__orc_rt_reoptimize", Mod.get());
+
+  // Set parameter names
+  auto ArgIt = ReOptimizeFn->arg_begin();
+  Value *MUID = &*ArgIt++;
+  MUID->setName("MUID");
+  Value *CurVersion = &*ArgIt;
+  CurVersion->setName("CurVersion");
+
+  // Build function body
+  BasicBlock *Entry = BasicBlock::Create(*Ctx, "entry", ReOptimizeFn);
+  Builder.SetInsertPoint(Entry);
+
+  // Create absolute address constants
+  auto &JDI = PlatformJD.getExecutionSession()
+                  .getExecutorProcessControl()
+                  .getJITDispatchInfo();
+
+  Type *IntPtrTy = DL.getIntPtrType(*Ctx);
+  Constant *JITDispatchPtr = ConstantExpr::getIntToPtr(
+      ConstantInt::get(IntPtrTy, JDI.JITDispatchFunction.getValue()),
+      VoidPtrTy);
+  Constant *JITDispatchCtxPtr = ConstantExpr::getIntToPtr(
+      ConstantInt::get(IntPtrTy, JDI.JITDispatchContext.getValue()), VoidPtrTy);
+  Constant *HelperFnAddr = ConstantExpr::getIntToPtr(
+      ConstantInt::get(IntPtrTy, reinterpret_cast<uintptr_t>(
+                                     &orc_rt_lite_reoptimize_helper)),
+      PointerType::getUnqual(*Ctx));
+
+  // Cast ReoptimizeTag to void*
+  Value *ReoptimizeTagPtr = Builder.CreatePointerCast(ReoptimizeTag, VoidPtrTy);
+
+  // Call the helper function
+  Builder.CreateCall(
+      HelperFnTy, HelperFnAddr,
+      {JITDispatchPtr, JITDispatchCtxPtr, ReoptimizeTagPtr, MUID, CurVersion});
+
+  // Return void
+  Builder.CreateRetVoid();
+
+  return BaseLayer.add(PlatformJD,
+                       ThreadSafeModule(std::move(Mod), std::move(Ctx)));
+}
+
+Error ReOptimizeLayer::registerRuntimeFunctions(JITDylib &PlatformJD) {
   ExecutionSession::JITDispatchHandlerAssociationMap WFs;
   using ReoptimizeSPSSig = shared::SPSError(uint64_t, uint32_t);
   WFs[Mangle("__orc_rt_reoptimize_tag")] =
@@ -88,12 +185,6 @@ Error ReOptimizeLayer::reoptimizeIfCallFrequent(ReOptimizeLayer &Parent,
     GlobalVariable *Counter = new GlobalVariable(
         M, I64Ty, false, GlobalValue::InternalLinkage,
         Constant::getNullValue(I64Ty), "__orc_reopt_counter");
-    auto ArgBufferConst = createReoptimizeArgBuffer(M, MUID, CurVersion);
-    if (auto Err = ArgBufferConst.takeError())
-      return Err;
-    GlobalVariable *ArgBuffer =
-        new GlobalVariable(M, (*ArgBufferConst)->getType(), true,
-                           GlobalValue::InternalLinkage, (*ArgBufferConst));
     for (auto &F : M) {
       if (F.isDeclaration())
         continue;
@@ -107,7 +198,7 @@ Error ReOptimizeLayer::reoptimizeIfCallFrequent(ReOptimizeLayer &Parent,
       Value *Added = IRB.CreateAdd(Cnt, ConstantInt::get(I64Ty, 1));
       (void)IRB.CreateStore(Added, Counter);
       Instruction *SplitTerminator = SplitBlockAndInsertIfThen(Cmp, IP, false);
-      createReoptimizeCall(M, *SplitTerminator, ArgBuffer);
+      createReoptimizeCall(M, *SplitTerminator, MUID, CurVersion);
     }
     return Error::success();
   });
@@ -195,49 +286,23 @@ void ReOptimizeLayer::rt_reoptimize(SendErrorFn SendResult,
   SendResult(Error::success());
 }
 
-Expected<Constant *> ReOptimizeLayer::createReoptimizeArgBuffer(
-    Module &M, ReOptMaterializationUnitID MUID, uint32_t CurVersion) {
-  size_t ArgBufferSize = SPSReoptimizeArgList::size(MUID, CurVersion);
-  std::vector<char> ArgBuffer(ArgBufferSize);
-  shared::SPSOutputBuffer OB(ArgBuffer.data(), ArgBuffer.size());
-  if (!SPSReoptimizeArgList::serialize(OB, MUID, CurVersion))
-    return make_error<StringError>("Could not serealize args list",
-                                   inconvertibleErrorCode());
-  return ConstantDataArray::get(M.getContext(), ArrayRef(ArgBuffer));
-}
-
 void ReOptimizeLayer::createReoptimizeCall(Module &M, Instruction &IP,
-                                           GlobalVariable *ArgBuffer) {
-  GlobalVariable *DispatchCtx =
-      M.getGlobalVariable("__orc_rt_jit_dispatch_ctx");
-  if (!DispatchCtx)
-    DispatchCtx = new GlobalVariable(M, PointerType::get(M.getContext(), 0),
-                                     false, GlobalValue::ExternalLinkage,
-                                     nullptr, "__orc_rt_jit_dispatch_ctx");
-  GlobalVariable *ReoptimizeTag =
-      M.getGlobalVariable("__orc_rt_reoptimize_tag");
-  if (!ReoptimizeTag)
-    ReoptimizeTag = new GlobalVariable(M, PointerType::get(M.getContext(), 0),
-                                       false, GlobalValue::ExternalLinkage,
-                                       nullptr, "__orc_rt_reoptimize_tag");
-  Function *DispatchFunc = M.getFunction("__orc_rt_jit_dispatch");
-  if (!DispatchFunc) {
-    std::vector<Type *> Args = {PointerType::get(M.getContext(), 0),
-                                PointerType::get(M.getContext(), 0),
-                                PointerType::get(M.getContext(), 0),
-                                IntegerType::get(M.getContext(), 64)};
+                                           ReOptMaterializationUnitID MUID,
+                                           uint32_t CurVersion) {
+  Type *MUIDTy = IntegerType::get(M.getContext(), 64);
+  Type *VersionTy = IntegerType::get(M.getContext(), 32);
+  Function *ReoptimizeFunc = M.getFunction("__orc_rt_reoptimize");
+  if (!ReoptimizeFunc) {
+    std::vector<Type *> ArgTys = {MUIDTy, VersionTy};
     FunctionType *FuncTy =
-        FunctionType::get(Type::getVoidTy(M.getContext()), Args, false);
-    DispatchFunc = Function::Create(FuncTy, GlobalValue::ExternalLinkage,
-                                    "__orc_rt_jit_dispatch", &M);
+        FunctionType::get(Type::getVoidTy(M.getContext()), ArgTys, false);
+    ReoptimizeFunc = Function::Create(FuncTy, GlobalValue::ExternalLinkage,
+                                      "__orc_rt_reoptimize", &M);
   }
-  size_t ArgBufferSizeConst =
-      SPSReoptimizeArgList::size(ReOptMaterializationUnitID{}, uint32_t{});
-  Constant *ArgBufferSize = ConstantInt::get(
-      IntegerType::get(M.getContext(), 64), ArgBufferSizeConst, false);
+  Constant *MUIDArg = ConstantInt::get(MUIDTy, MUID, false);
+  Constant *CurVersionArg = ConstantInt::get(VersionTy, CurVersion, false);
   IRBuilder<> IRB(&IP);
-  (void)IRB.CreateCall(DispatchFunc,
-                       {DispatchCtx, ReoptimizeTag, ArgBuffer, ArgBufferSize});
+  (void)IRB.CreateCall(ReoptimizeFunc, {MUIDArg, CurVersionArg});
 }
 
 ReOptimizeLayer::ReOptMaterializationUnitState &

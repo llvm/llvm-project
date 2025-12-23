@@ -115,7 +115,9 @@ rarely have to include this file directly).
   The ``isa<>`` operator works exactly like the Java "``instanceof``" operator.
   It returns ``true`` or ``false`` depending on whether a reference or pointer points to
   an instance of the specified class.  This can be very useful for constraint
-  checking of various sorts (example below).
+  checking of various sorts (example below). It's a variadic operator, so you
+  can specify more than one class to check if the reference or pointer points
+  to an instance of one of the classes specified.
 
 ``cast<>``:
   The ``cast<>`` operator is a "checked cast" operation.  It converts a pointer
@@ -131,7 +133,11 @@ rarely have to include this file directly).
       if (isa<Constant>(V) || isa<Argument>(V) || isa<GlobalValue>(V))
         return true;
 
-      // Otherwise, it must be an instruction...
+      // Alternate, more compact form.
+      if (isa<Constant, Argument, GlobalValue>(V))
+        return true;
+
+      // Otherwise, it must be an instruction.
       return !L->contains(cast<Instruction>(V)->getParent());
     }
 
@@ -167,8 +173,9 @@ rarely have to include this file directly).
 ``isa_and_present<>``:
   The ``isa_and_present<>`` operator works just like the ``isa<>`` operator,
   except that it allows for a null pointer as an argument (which it then
-  returns ``false``).  This can sometimes be useful, allowing you to combine several
-  null checks into one.
+  returns ``false``).  This can sometimes be useful, allowing you to combine
+  several null checks into one. Similar to ``isa<>`` operator, you can specify
+  more than one class to check.
 
 ``cast_if_present<>``:
   The ``cast_if_present<>`` operator works just like the ``cast<>`` operator,

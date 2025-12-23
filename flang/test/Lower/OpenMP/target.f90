@@ -567,6 +567,36 @@ end subroutine omp_target_device_addr
 
 
 !===============================================================================
+! Target `is_device_ptr` clause
+!===============================================================================
+
+!CHECK-LABEL: func.func @_QPomp_target_is_device_ptr() {
+subroutine omp_target_is_device_ptr
+   use iso_c_binding, only: c_ptr
+   implicit none
+   integer :: i
+   integer :: arr(4)
+   type(c_ptr) :: p
+
+   i = 0
+   arr = 0
+
+   !CHECK: %[[P_STORAGE:.*]] = omp.map.info {{.*}}{name = "p"}
+   !CHECK: %[[P_IS:.*]] = omp.map.info {{.*}}{name = "p"}
+   !CHECK: %[[ARR_MAP:.*]] = omp.map.info {{.*}}{name = "arr"}
+   !CHECK: omp.target is_device_ptr(%[[P_IS]] :
+   !CHECK-SAME: has_device_addr(%[[P_STORAGE]] ->
+   !CHECK-SAME: map_entries({{.*}}%[[ARR_MAP]] ->
+   !$omp target is_device_ptr(p)
+      i = i + 1
+      arr(1) = i
+   !$omp end target
+   !CHECK: omp.terminator
+   !CHECK: }
+end subroutine omp_target_is_device_ptr
+
+
+!===============================================================================
 ! Target Data with unstructured code
 !===============================================================================
 !CHECK-LABEL: func.func @_QPsb
