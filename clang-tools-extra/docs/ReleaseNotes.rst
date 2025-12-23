@@ -446,8 +446,9 @@ Changes in existing checks
 
 - Improved :doc:`bugprone-use-after-move
   <clang-tidy/checks/bugprone/use-after-move>` check by adding
-  `InvalidationFunctions` option to support custom invalidation functions and
-  by enabling the check to handle lambda correctly.
+  `InvalidationFunctions` option to support custom invalidation functions,
+  `ReinitializationFunctions` option to support custom reinitialization
+  functions, and by enabling the check to handle lambda correctly.
 
 - Improved :doc:`cppcoreguidelines-avoid-non-const-global-variables
   <clang-tidy/checks/cppcoreguidelines/avoid-non-const-global-variables>` check
@@ -517,6 +518,10 @@ Changes in existing checks
 
 - Improved :doc:`misc-header-include-cycle
   <clang-tidy/checks/misc/header-include-cycle>` check performance.
+
+- Improved :doc:`misc-use-internal-linkage
+  <clang-tidy/checks/misc/use-internal-linkage>` to suggest giving
+  structs, classes, unions, and enums internal linkage.
 
 - Improved :doc:`modernize-avoid-c-arrays
   <clang-tidy/checks/modernize/avoid-c-arrays>` to not diagnose array types
@@ -608,7 +613,9 @@ Changes in existing checks
   <clang-tidy/checks/readability/identifier-naming>` check by ignoring
   declarations and macros in system headers. The documentation is also improved
   to differentiate the general options from the specific ones. Options for
-  fine-grained control over ``constexpr`` variables were added.
+  fine-grained control over ``constexpr`` variables were added. Added default
+  options which simplify configs by removing the need to specify each
+  identifier kind separately.
 
 - Improved :doc:`readability-implicit-bool-conversion
   <clang-tidy/checks/readability/implicit-bool-conversion>` check by correctly
