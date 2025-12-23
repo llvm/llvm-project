@@ -1,6 +1,4 @@
 // Check that UAR mode can handle very deep recursion.
-// Requires ulimit
-// UNSUPPORTED: system-windows
 // TODO(boomanaiden154): This test currently fails with the internal
 // shell because python is not able to set RLIMIT_STACK. We should
 // reenable this when the behavior is fixed.

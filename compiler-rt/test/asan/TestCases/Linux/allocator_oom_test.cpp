@@ -44,7 +44,7 @@
 // AArch64 bots fail on this test.
 // TODO(alekseys): Android lit do not run ulimit on device.
 // REQUIRES: shadow-scale-3
-// UNSUPPORTED: android, target={{(s390|aarch64|powerpc64le).*}}, system-windows
+// UNSUPPORTED: android, target={{(s390|aarch64|powerpc64le).*}}
 
 #include <stdlib.h>
 #include <string.h>
