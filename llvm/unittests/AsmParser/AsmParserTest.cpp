@@ -514,6 +514,8 @@ TEST(AsmParserTest, ParserObjectLocations) {
   auto MainLoc = MaybeMainLoc.value();
   auto ExpectedMainLoc = FileLocRange(FileLoc{0, 0}, FileLoc{4, 1});
   ASSERT_EQ_LOC(MainLoc, ExpectedMainLoc);
+  ASSERT_EQ(ParserContext.getFunctionAtLocation(MainLoc.Start),
+            ParserContext.getFunctionAtLocation(MainLoc));
 
   auto &EntryBB = MainFn->getEntryBlock();
   auto MaybeEntryBBLoc = ParserContext.getBlockLocation(&EntryBB);
@@ -521,6 +523,8 @@ TEST(AsmParserTest, ParserObjectLocations) {
   auto EntryBBLoc = MaybeEntryBBLoc.value();
   auto ExpectedEntryBBLoc = FileLocRange(FileLoc{1, 0}, FileLoc{3, 14});
   ASSERT_EQ_LOC(EntryBBLoc, ExpectedEntryBBLoc);
+  ASSERT_EQ(ParserContext.getBlockAtLocation(MaybeEntryBBLoc->Start),
+            ParserContext.getBlockAtLocation(*MaybeEntryBBLoc));
 
   SmallVector<FileLocRange> InstructionLocations = {
       FileLocRange(FileLoc{2, 4}, FileLoc{2, 21}),
@@ -531,6 +535,8 @@ TEST(AsmParserTest, ParserObjectLocations) {
     ASSERT_TRUE(MaybeMainLoc.has_value());
     auto InstLoc = MaybeInstLoc.value();
     ASSERT_EQ_LOC(InstLoc, ExpectedLoc);
+    ASSERT_EQ(ParserContext.getInstructionAtLocation(MaybeInstLoc->Start),
+              ParserContext.getInstructionAtLocation(*MaybeInstLoc));
   }
 }
 
