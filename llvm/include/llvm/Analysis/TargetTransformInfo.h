@@ -1430,7 +1430,11 @@ public:
 
   /// Collect properties of V used in cost analysis, e.g. OP_PowerOf2.
   LLVM_ABI static OperandValueInfo getOperandInfo(const Value *V);
+
+  /// Collect common data between two OperandValueInfo inputs
   LLVM_ABI static OperandValueInfo mergeInfo(const Value *X, const Value *Y);
+  LLVM_ABI static OperandValueInfo
+  mergeInfo(const OperandValueInfo X, const OperandValueInfo Y, bool IsEqual);
 
   /// This is an approximation of reciprocal throughput of a math/logic op.
   /// A higher cost indicates less expected throughput.

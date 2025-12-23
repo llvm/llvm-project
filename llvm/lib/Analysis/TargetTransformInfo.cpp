@@ -958,23 +958,25 @@ TargetTransformInfo::getOperandInfo(const Value *V) {
 
 TargetTransformInfo::OperandValueInfo
 TargetTransformInfo::mergeInfo(const Value *X, const Value *Y) {
-  auto [OpInfoX, OpPropsX] = TargetTransformInfo::getOperandInfo(X);
-  auto [OpInfoY, OpPropsY] = TargetTransformInfo::getOperandInfo(Y);
+  return mergeInfo(getOperandInfo(X), getOperandInfo(Y), X == Y);
+}
 
-  OperandValueKind MergeInfo = OK_AnyValue;
+TargetTransformInfo::OperandValueInfo
+TargetTransformInfo::mergeInfo(const OperandValueInfo OpInfoX,
+                               const OperandValueInfo OpInfoY, bool IsEqual) {
+  OperandValueKind MergeKind = OK_AnyValue;
   OperandValueProperties MergeProp = OP_None;
+  if (IsEqual)
+    return OpInfoX;
 
-  if (OpInfoX == OK_AnyValue || OpInfoY == OK_AnyValue ||
-      OpInfoX == OK_UniformValue || OpInfoY == OK_UniformValue)
-    MergeInfo = OK_AnyValue;
-  else if (OpInfoX == OK_NonUniformConstantValue ||
-           OpInfoY == OK_NonUniformConstantValue)
-    MergeInfo = OK_NonUniformConstantValue;
+  if (OpInfoX.isConstant() || OpInfoY.isConstant())
+    MergeKind = OK_NonUniformConstantValue;
   else
-    MergeInfo = X == Y ? OK_UniformConstantValue : OK_NonUniformConstantValue;
+    MergeKind = OK_AnyValue;
 
-  MergeProp = OpPropsX == OpPropsY ? OpPropsX : OP_None;
-  return {MergeInfo, MergeProp};
+  MergeProp =
+      OpInfoX.Properties == OpInfoY.Properties ? OpInfoX.Properties : OP_None;
+  return {MergeKind, MergeProp};
 }
 
 InstructionCost TargetTransformInfo::getArithmeticInstrCost(
