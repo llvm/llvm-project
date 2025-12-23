@@ -26,9 +26,7 @@ VariablesRequestHandler::Run(const VariablesArguments &arguments) const {
   const uint64_t var_ref = arguments.variablesReference;
   const uint64_t count = arguments.count;
   const uint64_t start = arguments.start;
-  bool hex = false;
-  if (arguments.format)
-    hex = arguments.format->hex;
+  const bool hex = arguments.format ? arguments.format->hex : false;
 
   std::vector<Variable> variables;
 
@@ -85,7 +83,7 @@ VariablesRequestHandler::Run(const VariablesArguments &arguments) const {
     const int64_t end_idx = start_idx + ((count == 0) ? num_children : count);
 
     // We first find out which variable names are duplicated
-    std::map<std::string, int> variable_name_counts;
+    std::map<llvm::StringRef, int> variable_name_counts;
     for (auto i = start_idx; i < end_idx; ++i) {
       lldb::SBValue variable = top_scope->GetValueAtIndex(i);
       if (!variable.IsValid())
@@ -139,7 +137,7 @@ VariablesRequestHandler::Run(const VariablesArguments &arguments) const {
       const bool is_permanent =
           dap.variables.IsPermanentVariableReference(var_ref);
       auto addChild = [&](lldb::SBValue child,
-                          std::optional<std::string> custom_name = {}) {
+                          std::optional<llvm::StringRef> custom_name = {}) {
         if (!child.IsValid())
           return;
         const int64_t child_var_ref =
@@ -166,7 +164,7 @@ VariablesRequestHandler::Run(const VariablesArguments &arguments) const {
     }
   }
 
-  return VariablesResponseBody{variables};
+  return VariablesResponseBody{std::move(variables)};
 }
 
 } // namespace lldb_dap
