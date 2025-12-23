@@ -8981,7 +8981,7 @@ bool SimplifyCFGOpt::simplifyOnce(BasicBlock *BB) {
   if (MergeBlockIntoPredecessor(BB, DTU))
     return true;
 
-  if (SinkCommon && Options.SinkCommonInsts)
+  if (SinkCommon && Options.SinkCommonInsts) {
     if (sinkCommonCodeFromPredecessors(BB, DTU) ||
         mergeCompatibleInvokes(BB, DTU)) {
       // sinkCommonCodeFromPredecessors() does not automatically CSE PHI's,
@@ -8991,6 +8991,10 @@ bool SimplifyCFGOpt::simplifyOnce(BasicBlock *BB) {
       // after which we'd need a whole EarlyCSE pass run to cleanup them.
       return true;
     }
+    // Merge identical predecessors of this block
+    if (simplifyDuplicatePredecessors(BB, DTU))
+      return true;
+  }
 
   if (Options.SpeculateBlocks &&
       !BB->getParent()->hasFnAttribute(Attribute::OptForFuzzing)) {
@@ -9002,10 +9006,6 @@ bool SimplifyCFGOpt::simplifyOnce(BasicBlock *BB) {
                                 Options.SpeculateUnpredictables))
           return true;
   }
-
-  // Merge identical predecessors of this block
-  if (simplifyDuplicatePredecessors(BB, DTU))
-    return true;
 
   IRBuilder<> Builder(BB);
   Instruction *Terminator = BB->getTerminator();
