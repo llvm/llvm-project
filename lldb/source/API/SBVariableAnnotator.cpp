@@ -26,10 +26,10 @@ SBVariableAnnotator::SBVariableAnnotator(const SBVariableAnnotator &rhs) {
 
 const SBVariableAnnotator &
 SBVariableAnnotator::operator=(const SBVariableAnnotator &rhs) {
-  LLDB_INSTRUMENT_VA(this);
+  LLDB_INSTRUMENT_VA(this, rhs);
 
-  //   if (this != &rhs)
-  //     // TODO implement
+  if (this != &rhs)
+    m_opaque_sp = rhs.m_opaque_sp;
   return *this;
 }
 
