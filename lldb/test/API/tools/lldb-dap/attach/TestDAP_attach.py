@@ -15,10 +15,10 @@ import time
 # process scheduling can cause a massive (minutes) delay during this test.
 @skipIf(oslist=["linux"], archs=["arm$"])
 class TestDAP_attach(lldbdap_testcase.DAPTestCaseBase):
-    def spawn(self, args):
-        self.process = subprocess.Popen(
-            args,
-            stdin=subprocess.PIPE,
+    def spawn(self, program, args=None):
+        return self.spawnSubprocess(
+            executable=program,
+            args=args,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             universal_newlines=True,
@@ -26,21 +26,28 @@ class TestDAP_attach(lldbdap_testcase.DAPTestCaseBase):
 
     def spawn_and_wait(self, program, delay):
         time.sleep(delay)
-        self.spawn([program])
-        self.process.wait()
+        proc = self.spawn(program=program)
+        # Wait for either the process to exit or the event to be set
+        while proc.poll() is None and not self.spawn_event.is_set():
+            time.sleep(0.1)
+        proc.kill()
+        proc.wait()
 
     def continue_and_verify_pid(self):
         self.do_continue()
-        out, _ = self.process.communicate("foo")
-        self.assertIn(f"pid = {self.process.pid}", out)
+        proc = self.lastSubprocess
+        if proc is None:
+            self.fail(f"lastSubprocess is None")
+        out, _ = proc.communicate("foo")
+        self.assertIn(f"pid = {proc.pid}", out)
 
     def test_by_pid(self):
         """
         Tests attaching to a process by process ID.
         """
         program = self.build_and_create_debug_adapter_for_attach()
-        self.spawn([program])
-        self.attach(pid=self.process.pid)
+        proc = self.spawn(program=program)
+        self.attach(pid=proc.pid)
         self.continue_and_verify_pid()
 
     def test_by_name(self):
@@ -53,7 +60,7 @@ class TestDAP_attach(lldbdap_testcase.DAPTestCaseBase):
         pid_file_path = lldbutil.append_to_process_working_directory(
             self, "pid_file_%d" % (int(time.time()))
         )
-        self.spawn([program, pid_file_path])
+        self.spawn(program=program, args=[pid_file_path])
         lldbutil.wait_for_file_on_target(self, pid_file_path)
 
         self.attach(program=program)
@@ -66,6 +73,7 @@ class TestDAP_attach(lldbdap_testcase.DAPTestCaseBase):
         doesn't exist yet.
         """
         program = self.build_and_create_debug_adapter_for_attach()
+        self.spawn_event = threading.Event()
         self.spawn_thread = threading.Thread(
             target=self.spawn_and_wait,
             args=(
@@ -74,8 +82,13 @@ class TestDAP_attach(lldbdap_testcase.DAPTestCaseBase):
             ),
         )
         self.spawn_thread.start()
-        self.attach(program=program, waitFor=True)
-        self.continue_and_verify_pid()
+        try:
+            self.attach(program=program, waitFor=True)
+            self.continue_and_verify_pid()
+        finally:
+            self.spawn_event.set()
+            if self.spawn_thread.is_alive():
+                self.spawn_thread.join(timeout=10)
 
     def test_attach_with_missing_debuggerId_or_targetId(self):
         """

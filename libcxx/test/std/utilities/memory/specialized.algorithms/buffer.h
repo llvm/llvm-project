@@ -19,7 +19,7 @@ struct Buffer {
   const T* cbegin() const { return reinterpret_cast<const T*>(buffer); }
   const T* cend() const { return cbegin() + N; }
 
-  constexpr int size() const { return N; }
+  constexpr unsigned size() const { return N; }
 };
 
 #endif // LIBCPP_TEST_STD_UTILITIES_MEMORY_SPECIALIZED_ALGORITHMS_BUFFER_H
