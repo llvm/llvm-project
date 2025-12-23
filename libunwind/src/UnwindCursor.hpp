@@ -1788,20 +1788,37 @@ bool UnwindCursor<A, R>::getInfoFromDwarfSection(
   }
   if (!foundFDE) {
     // Still not found, do full scan of __eh_frame section.
-    foundFDE = CFI_Parser<A>::findFDE(_addressSpace, pc, sects.dwarf_section,
-                                      sects.dwarf_section_length, 0,
-                                      &fdeInfo, &cieInfo);
+    // But only if __eh_frame_hdr is absent or empty.
+    // We assume that both sections have the same data, and don't want to waste
+    // time for long scan for absent addresses.
+    bool hasEHHeaderData = false;
+#if defined(_LIBUNWIND_SUPPORT_DWARF_INDEX)
+    if ((sects.dwarf_index_section != 0)) {
+      typename EHHeaderParser<A>::EHHeaderInfo hdrInfo;
+      const pint_t ehHdrStart = sects.dwarf_index_section;
+      const pint_t ehHdrEnd = ehHdrStart + sects.dwarf_index_section_length;
+      if (EHHeaderParser<A>::decodeEHHdr(_addressSpace, ehHdrStart, ehHdrEnd,
+                                         hdrInfo)) {
+        hasEHHeaderData = (hdrInfo.fde_count != 0);
+      }
+    }
+#endif
+    if (!hasEHHeaderData) {
+      foundFDE = CFI_Parser<A>::findFDE(_addressSpace, pc, sects.dwarf_section,
+                                        sects.dwarf_section_length, 0, &fdeInfo,
+                                        &cieInfo);
+    }
   }
   if (foundFDE) {
     if (getInfoFromFdeCie(fdeInfo, cieInfo, pc, sects.dso_base)) {
       // Add to cache (to make next lookup faster) if we had no hint
       // and there was no index.
       if (!foundInCache && (fdeSectionOffsetHint == 0)) {
-  #if defined(_LIBUNWIND_SUPPORT_DWARF_INDEX)
+#if defined(_LIBUNWIND_SUPPORT_DWARF_INDEX)
         if (sects.dwarf_index_section == 0)
-  #endif
-        DwarfFDECache<A>::add(sects.dso_base, fdeInfo.pcStart, fdeInfo.pcEnd,
-                              fdeInfo.fdeStart);
+#endif
+          DwarfFDECache<A>::add(sects.dso_base, fdeInfo.pcStart, fdeInfo.pcEnd,
+                                fdeInfo.fdeStart);
       }
       return true;
     }
