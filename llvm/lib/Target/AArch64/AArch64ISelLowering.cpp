@@ -15635,7 +15635,9 @@ static SDValue trySVESplat64(SDValue Op, SelectionDAG &DAG,
   // See if we can make use of the SVE dup instruction.
   APInt Val64 = DefBits.trunc(64);
   int32_t ImmVal, ShiftVal;
-  if (!AArch64_AM::isSVECpyDupImm(64, Val64.getSExtValue(), ImmVal, ShiftVal))
+  uint64_t Encoding;
+  if (!AArch64_AM::isSVECpyDupImm(64, Val64.getSExtValue(), ImmVal, ShiftVal) &&
+      !AArch64_AM::isSVELogicalImm(64, Val64.getZExtValue(), Encoding))
     return SDValue();
 
   SDLoc DL(Op);
