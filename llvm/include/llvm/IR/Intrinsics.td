@@ -957,6 +957,9 @@ def int_experimental_noalias_scope_decl
     : DefaultAttrsIntrinsic<[], [llvm_metadata_ty],
         [IntrInaccessibleMemOnly]>; // blocks LICM and some more
 
+def int_experimental_restrict
+    : DefaultAttrsIntrinsic<[], [llvm_ptr_ty, llvm_metadata_ty], []>;
+
 // Stack Protector Intrinsic - The stackprotector intrinsic writes the stack
 // guard to the correct place on the stack frame.
 def int_stackprotector : DefaultAttrsIntrinsic<[], [llvm_ptr_ty, llvm_ptr_ty], []>;

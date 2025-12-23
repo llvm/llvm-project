@@ -346,6 +346,11 @@ public:
   QualType FnRetTy;
   llvm::Function *CurFn = nullptr;
 
+  llvm::SmallVector<std::pair<llvm::SmallString<32>, const CompoundStmt *>, 8>
+      ScopeCodes;
+  llvm::DenseMap<const CompoundStmt *, unsigned> ScopeChildCount;
+  llvm::SmallVector<unsigned, 4> RestrictCodes;
+
   /// If a cast expression is being visited, this holds the current cast's
   /// expression.
   const CastExpr *CurCast = nullptr;
@@ -3418,6 +3423,17 @@ public:
   /// This function can be called with a null (unreachable) insert point.
   void EmitAutoVarDecl(const VarDecl &D);
 
+  bool IsRestrictExperimentalSupportEnabled() const;
+
+  void ConstructMetodataForScope(RawAddress AllocaAddr, QualType Ty,
+                                 llvm::StringRef CurScopeCode = "1");
+
+  void AddMetodataForRestrict(RawAddress AllocaAddr, QualType Ty,
+                              llvm::StringRef FullName);
+
+  void AddPointerMetodataForRestrict(RawAddress AllocaAddr, QualType Ty,
+                                     llvm::StringRef FullName);
+
   class AutoVarEmission {
     friend class CodeGenFunction;
 
@@ -3597,6 +3613,10 @@ public:
 
   Address EmitCompoundStmt(const CompoundStmt &S, bool GetLast = false,
                            AggValueSlot AVS = AggValueSlot::ignored());
+
+  void EmitUniqueEncoding(const CompoundStmt &S);
+  void FreeNodeUniqueEncoding();
+
   Address
   EmitCompoundStmtWithoutScope(const CompoundStmt &S, bool GetLast = false,
                                AggValueSlot AVS = AggValueSlot::ignored());
