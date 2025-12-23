@@ -1690,8 +1690,8 @@ static llvm::Expected<bool> loadModuleFromCASImpl(llvm::StringRef cas_id,
 
   auto id = cas->parseID(cas_id);
   if (!id) {
-    LLDB_LOG(GetLog(LLDBLog::Modules), "'{0}' is not valid CASID: {1}", cas_id,
-             toString(id.takeError()));
+    LLDB_LOG_ERROR(GetLog(LLDBLog::Modules), id.takeError(),
+                   "'{1}' is not valid CASID: {0}", cas_id);
     return false;
   }
 
