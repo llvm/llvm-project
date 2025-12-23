@@ -713,9 +713,8 @@ int targetDataBegin(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
         if (ArgTypes[I] & OMP_TGT_MAPTYPE_FB_NULLIFY) {
           TgtPtrBase = reinterpret_cast<void *>(
               reinterpret_cast<uintptr_t>(nullptr) - Delta);
-          ODBG(ODT_MAPPING) << "Returning offsetted null pointer "
-
-                            << TgtPtrBase << " as fallback (lookup failed)";
+          ODBG(ODT_Mapping) << "Returning offsetted null pointer " << TgtPtrBase
+                            << " as fallback (lookup failed)";
         } else {
           TgtPtrBase = reinterpret_cast<void *>(
               reinterpret_cast<uintptr_t>(HstPtrBegin) - Delta);
