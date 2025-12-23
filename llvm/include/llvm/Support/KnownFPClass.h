@@ -166,7 +166,7 @@ struct KnownFPClass {
                DenormalMode DenormMode = DenormalMode::getDynamic());
 
   /// Report known values for exp, exp2 and exp10.
-  LLVM_ABI void exp();
+  LLVM_ABI static KnownFPClass exp(const KnownFPClass &Src);
 
   /// Return true if the sign bit must be 0, ignoring the sign of nans.
   bool signBitIsZeroOrNaN() const { return isKnownNever(fcNegative); }

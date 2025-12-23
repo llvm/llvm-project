@@ -141,13 +141,13 @@ KnownFPClass KnownFPClass::canonicalize(const KnownFPClass &KnownSrc,
   return Known;
 }
 
-void KnownFPClass::exp() {
-  KnownFPClass KnownSrc = *this;
-  *this = KnownFPClass();
+KnownFPClass KnownFPClass::exp(const KnownFPClass &KnownSrc) {
+  KnownFPClass Known;
+  Known.knownNot(fcNegative);
 
   if (KnownSrc.isKnownNeverNaN()) {
-    knownNot(fcNan);
-    signBitMustBeZero();
+    Known.knownNot(fcNan);
+    Known.signBitMustBeZero();
   }
 
   if (KnownSrc.cannotBeOrderedLessThanZero()) {

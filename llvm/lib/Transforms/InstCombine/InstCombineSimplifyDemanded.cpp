@@ -2151,21 +2151,23 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Value *V,
       if (DemandedMask & fcPosInf)
         SrcDemandedMask |= fcPosInf | fcPosNormal;
 
+      KnownFPClass KnownSrc;
+
       // TODO: This could really make use of KnownFPClass of specific value
       // range, (i.e., close enough to 1)
-      if (SimplifyDemandedFPClass(I, 0, SrcDemandedMask, Known, Depth + 1))
+      if (SimplifyDemandedFPClass(I, 0, SrcDemandedMask, KnownSrc, Depth + 1))
         return I;
 
       /// Propagate nnan-ness to simplify edge case checks.
       if ((DemandedMask & fcNan) == fcNone)
-        Known.knownNot(fcNan);
+        KnownSrc.knownNot(fcNan);
 
       // exp(+/-0) = 1
-      if (Known.isKnownAlways(fcZero))
+      if (KnownSrc.isKnownAlways(fcZero))
         return ConstantFP::get(VTy, 1.0);
 
       // exp(0 | nan) => x == 0.0 ? 1.0 : x
-      if (Known.isKnownAlways(fcZero | fcNan)) {
+      if (KnownSrc.isKnownAlways(fcZero | fcNan)) {
         IRBuilderBase::InsertPointGuard Guard(Builder);
         Builder.SetInsertPoint(CI);
 
@@ -2175,7 +2177,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Value *V,
                                   ConstantFP::get(VTy, 1.0));
       }
 
-      if (Known.isKnownAlways(fcInf | fcNan)) {
+      if (KnownSrc.isKnownAlways(fcInf | fcNan)) {
         // exp(-inf) = 0
         // exp(+inf) = +inf
         IRBuilderBase::InsertPointGuard Guard(Builder);
@@ -2190,10 +2192,10 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Value *V,
 
       // Only perform nan propagation.
       // Note: Dropping canonicalize / quiet of signaling nan.
-      if (Known.isKnownAlways(fcNan))
+      if (KnownSrc.isKnownAlways(fcNan))
         return CI->getArgOperand(0);
 
-      Known.exp();
+      Known = KnownFPClass::exp(KnownSrc);
       break;
     }
     case Intrinsic::canonicalize: {
