@@ -648,8 +648,8 @@ using __optional_sfinae_ctor_base_t _LIBCPP_NODEBUG =
 
 template <class _Tp>
 using __optional_sfinae_assign_base_t _LIBCPP_NODEBUG =
-    __sfinae_assign_base< (is_copy_constructible<_Tp>::value && is_copy_assignable<_Tp>::value),
-                          (is_move_constructible<_Tp>::value && is_move_assignable<_Tp>::value) >;
+    __sfinae_assign_base< (is_copy_constructible_v<_Tp> && is_copy_assignable_v<_Tp>) || is_lvalue_reference_v<_Tp>,
+                          (is_move_constructible_v<_Tp> && is_move_assignable_v<_Tp>) || is_lvalue_reference_v<_Tp>>;
 
 template <class _Tp>
 class optional;
