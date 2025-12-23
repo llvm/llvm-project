@@ -1,9 +1,6 @@
 // FIXME: https://code.google.com/p/address-sanitizer/issues/detail?id=316
 // UNSUPPORTED: ios, android
 //
-// The for loop in the backticks below requires bash.
-// REQUIRES: shell
-//
 // RUN: %clangxx_asan  %s -o %t
 
 // Regular run.
