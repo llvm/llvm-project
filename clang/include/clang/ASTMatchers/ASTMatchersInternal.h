@@ -47,6 +47,7 @@
 #include "clang/AST/TemplateName.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
+#include "clang/ASTMatchers/ASTMatchersMacros.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/OperatorKinds.h"
 #include "llvm/ADT/APFloat.h"
@@ -2282,6 +2283,37 @@ using HasOpNameMatcher =
                        std::vector<std::string>>;
 
 HasOpNameMatcher hasAnyOperatorNameFunc(ArrayRef<const StringRef *> NameRefs);
+
+/// Matches nodes of type T (CompoundStmt or StmtExpr) that contain sequences
+/// of consecutive substatements matching the provided matchers in order.
+///
+/// See \c forEachAdjacentSubstatements() in ASTMatchers.h for details.
+template <typename T, typename ArgT = std::vector<Matcher<Stmt>>>
+class ForEachAdjSubstatementsMatcher : public MatcherInterface<T> {
+  static_assert(std::is_same<T, CompoundStmt>::value ||
+                    std::is_same<T, StmtExpr>::value,
+                "Matcher only supports `CompoundStmt` and `StmtExpr`");
+  static_assert(std::is_same<ArgT, std::vector<Matcher<Stmt>>>::value,
+                "Matcher ArgT must be std::vector<Matcher<Stmt>>");
+
+public:
+  explicit ForEachAdjSubstatementsMatcher(std::vector<Matcher<Stmt>> Matchers)
+      : Matchers(std::move(Matchers)) {}
+
+  bool matches(const T &Node, ASTMatchFinder *Finder,
+               BoundNodesTreeBuilder *Builder) const override;
+
+private:
+  std::vector<Matcher<Stmt>> Matchers;
+};
+
+using ForEachAdjSubstatementsMatcherType =
+    PolymorphicMatcher<ForEachAdjSubstatementsMatcher,
+                       AST_POLYMORPHIC_SUPPORTED_TYPES(CompoundStmt, StmtExpr),
+                       std::vector<Matcher<Stmt>>>;
+
+ForEachAdjSubstatementsMatcherType
+forEachAdjSubstatementsFunc(ArrayRef<const Matcher<Stmt> *> MatcherRefs);
 
 using HasOverloadOpNameMatcher =
     PolymorphicMatcher<HasOverloadedOperatorNameMatcher,

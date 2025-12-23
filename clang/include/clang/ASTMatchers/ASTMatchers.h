@@ -5911,6 +5911,26 @@ AST_POLYMORPHIC_MATCHER_P(hasAnySubstatement,
                                           Builder) != CS->body_end();
 }
 
+
+/// Matches compound statements where one ore more sets of adjacent
+/// substatements matching the provided sequence of matchers. Also matches
+/// StmtExprs that have CompoundStmt as children.
+///
+/// Given
+/// \code
+///   { {}; 1+2; {}; 3+4; }
+/// \endcode
+/// forEachAdjacentSubstatements(compoundStmt(), binaryOperator())
+///   matches '{ {}; 1+2; {}; 3+4; }' twice
+/// with compoundStmt()
+///   matching '{}' (first match) and '{}' (second match)
+/// with binaryOperator()
+///   matching '1+2' (first match) and '3+4' (second match)
+extern const internal::VariadicFunction<
+    internal::ForEachAdjSubstatementsMatcherType, internal::Matcher<Stmt>,
+    internal::forEachAdjSubstatementsFunc>
+    forEachAdjacentSubstatements;
+
 /// Checks that a compound statement contains a specific number of
 /// child statements.
 ///

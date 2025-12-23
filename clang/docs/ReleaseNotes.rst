@@ -753,6 +753,7 @@ AST Matchers
 - Added ``hasExplicitParameters`` for ``LambdaExpr`` as an output attribute to
   AST JSON dumps.
 - Add ``arrayTypeLoc`` matcher for matching ``ArrayTypeLoc``.
+- Add ``forEachAdjacentSubstatements``.
 
 clang-format
 ------------

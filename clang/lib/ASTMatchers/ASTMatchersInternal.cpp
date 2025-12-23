@@ -467,6 +467,80 @@ hasAnyOverloadedOperatorNameFunc(ArrayRef<const StringRef *> NameRefs) {
   return HasOverloadOpNameMatcher(vectorFromRefs(NameRefs));
 }
 
+static std::vector<Matcher<Stmt>>
+vectorFromMatcherRefs(ArrayRef<const Matcher<Stmt> *> MatcherRefs) {
+  std::vector<Matcher<Stmt>> Matchers;
+  Matchers.reserve(MatcherRefs.size());
+  for (auto *Matcher : MatcherRefs)
+    Matchers.push_back(*Matcher);
+  return Matchers;
+}
+
+/// Creates a new BoundNodesTreeBuilder that extends the given builder.
+/// This is a helper to simplify the pattern of creating a new builder,
+/// adding the current builder's matches to it, and then using it for matching.
+static BoundNodesTreeBuilder extendBuilder(BoundNodesTreeBuilder &&Builder) {
+  BoundNodesTreeBuilder Extended;
+  Extended.addMatch(std::move(Builder));
+  return Extended;
+}
+
+ForEachAdjSubstatementsMatcherType
+forEachAdjSubstatementsFunc(ArrayRef<const Matcher<Stmt> *> MatcherRefs) {
+  return ForEachAdjSubstatementsMatcherType(vectorFromMatcherRefs(MatcherRefs));
+}
+
+template <typename T, typename ArgT>
+bool ForEachAdjSubstatementsMatcher<T, ArgT>::matches(
+    const T &Node, ASTMatchFinder *Finder,
+    BoundNodesTreeBuilder *Builder) const {
+  const CompoundStmt *CS = CompoundStmtMatcher<T>::get(Node);
+  if (!CS)
+    return false;
+
+  // Search for all sequences of adjacent substatements that match the matchers
+  const auto BodyBegin = CS->body_begin();
+  const auto BodyEnd = CS->body_end();
+
+  if (Matchers.empty())
+    return false;
+
+  bool FoundAny = false;
+
+  // Try each possible starting position
+  for (auto StartIt = BodyBegin; StartIt != BodyEnd; ++StartIt) {
+    // Check if there are enough statements remaining
+    if (std::distance(StartIt, BodyEnd) <
+        static_cast<ptrdiff_t>(Matchers.size()))
+      break;
+
+    // Start with a fresh builder for this sequence
+    BoundNodesTreeBuilder SequenceBuilder;
+
+    // Use enumerate to iterate over matchers and statements simultaneously
+    auto StmtRange = llvm::make_range(StartIt, StartIt + Matchers.size());
+    for (auto [Idx, Matcher, StmtPtr] : llvm::enumerate(Matchers, StmtRange)) {
+      // Extend the builder before matching each statement
+      SequenceBuilder = extendBuilder(std::move(SequenceBuilder));
+      if (!Matcher.matches(*StmtPtr, Finder, &SequenceBuilder))
+        break;
+
+      // If this is the last iteration and we matched, add the match
+      if (Idx == Matchers.size() - 1) {
+        Builder->addMatch(SequenceBuilder);
+        FoundAny = true;
+      }
+    }
+  }
+
+  return FoundAny;
+}
+
+template bool ForEachAdjSubstatementsMatcher<CompoundStmt>::matches(
+    const CompoundStmt &, ASTMatchFinder *, BoundNodesTreeBuilder *) const;
+template bool ForEachAdjSubstatementsMatcher<StmtExpr>::matches(
+    const StmtExpr &, ASTMatchFinder *, BoundNodesTreeBuilder *) const;
+
 HasNameMatcher::HasNameMatcher(std::vector<std::string> N)
     : UseUnqualifiedMatch(
           llvm::all_of(N, [](StringRef Name) { return !Name.contains("::"); })),
@@ -1047,6 +1121,10 @@ const internal::VariadicFunction<internal::Matcher<NamedDecl>, StringRef,
 const internal::VariadicFunction<internal::HasOpNameMatcher, StringRef,
                                  internal::hasAnyOperatorNameFunc>
     hasAnyOperatorName = {};
+const internal::VariadicFunction<internal::ForEachAdjSubstatementsMatcherType,
+                                 internal::Matcher<Stmt>,
+                                 internal::forEachAdjSubstatementsFunc>
+    forEachAdjacentSubstatements = {};
 const internal::VariadicFunction<internal::HasOverloadOpNameMatcher, StringRef,
                                  internal::hasAnyOverloadedOperatorNameFunc>
     hasAnyOverloadedOperatorName = {};
