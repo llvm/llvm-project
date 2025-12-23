@@ -1507,8 +1507,11 @@ CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::duplicateContextIds(
     NewContextIds.insert(++LastContextId);
     OldToNewContextIds[OldId].insert(LastContextId);
     assert(ContextIdToAllocationType.count(OldId));
-    // The new context has the same allocation type as original.
+    // The new context has the same allocation type and size info as original.
     ContextIdToAllocationType[LastContextId] = ContextIdToAllocationType[OldId];
+    auto CSI = ContextIdToContextSizeInfos.find(OldId);
+    if (CSI != ContextIdToContextSizeInfos.end())
+      ContextIdToContextSizeInfos[LastContextId] = CSI->second;
     if (DotAllocContextIds.contains(OldId))
       DotAllocContextIds.insert(LastContextId);
   }
