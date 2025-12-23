@@ -832,7 +832,7 @@ define <4 x float> @floor_ss(<4 x float> %x, <4 x float> %y) nounwind {
 ;
 ; AVX512-LABEL: floor_ss:
 ; AVX512:       ## %bb.0:
-; AVX512-NEXT:    vroundss $9, %xmm0, %xmm0, %xmm0
+; AVX512-NEXT:    vroundss $9, %xmm0, %xmm1, %xmm0
 ; AVX512-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; AVX512-NEXT:    retq
   %s = extractelement <4 x float> %x, i32 0
@@ -856,8 +856,7 @@ define <2 x double> @floor_sd(<2 x double> %x, <2 x double> %y) nounwind {
 ;
 ; AVX512-LABEL: floor_sd:
 ; AVX512:       ## %bb.0:
-; AVX512-NEXT:    vroundsd $9, %xmm0, %xmm0, %xmm0
-; AVX512-NEXT:    vmovsd {{.*#+}} xmm0 = xmm0[0],xmm1[1]
+; AVX512-NEXT:    vroundsd $9, %xmm0, %xmm1, %xmm0
 ; AVX512-NEXT:    retq
   %s = extractelement <2 x double> %x, i32 0
   %call = call double @llvm.floor.f64(double %s)
@@ -1820,8 +1819,7 @@ define <4 x float> @ceil_ss(<4 x float> %x, <4 x float> %y) nounwind {
 ;
 ; AVX512-LABEL: ceil_ss:
 ; AVX512:       ## %bb.0:
-; AVX512-NEXT:    vroundss $10, %xmm0, %xmm0, %xmm0
-; AVX512-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; AVX512-NEXT:    vroundss $10, %xmm0, %xmm1, %xmm0
 ; AVX512-NEXT:    retq
   %s = extractelement <4 x float> %x, i32 0
   %call = call float @llvm.ceil.f32(float %s)
@@ -1844,8 +1842,7 @@ define <2 x double> @ceil_sd(<2 x double> %x, <2 x double> %y) nounwind {
 ;
 ; AVX512-LABEL: ceil_sd:
 ; AVX512:       ## %bb.0:
-; AVX512-NEXT:    vroundsd $10, %xmm0, %xmm0, %xmm0
-; AVX512-NEXT:    vmovsd {{.*#+}} xmm0 = xmm0[0],xmm1[1]
+; AVX512-NEXT:    vroundsd $10, %xmm0, %xmm1, %xmm0
 ; AVX512-NEXT:    retq
   %s = extractelement <2 x double> %x, i32 0
   %call = call double @llvm.ceil.f64(double %s)
