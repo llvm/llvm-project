@@ -700,7 +700,11 @@ template <> class FloatToString<long double> {
 
       const int SHIFT_AMOUNT = FLOAT_AS_INT_WIDTH + exponent;
       static_assert(EXTRA_INT_WIDTH >= sizeof(long double) * 8);
-      float_as_fixed <<= SHIFT_AMOUNT;
+      if (SHIFT_AMOUNT > 0) {
+        float_as_fixed <<= SHIFT_AMOUNT;
+      } else {
+        float_as_fixed >>= -SHIFT_AMOUNT;
+      }
 
       // If there are still digits above the decimal point, handle those.
       if (cpp::countl_zero(float_as_fixed) <
@@ -769,7 +773,7 @@ public:
     // The decimal representation of 2**(-i) will have exactly i digits after
     // the decimal point.
     const int num_requested_digits =
-        static_cast<int>((negative_block_index + 1) * BLOCK_SIZE);
+        static_cast<int>(negative_block_index * BLOCK_SIZE);
 
     return num_requested_digits > -exponent;
   }

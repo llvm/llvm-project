@@ -244,7 +244,7 @@ static bool canEmitMemcpy(const TargetMachine *TM, Function *F) {
   if (!TM)
     return true;
   const TargetLowering *TLI = TM->getSubtargetImpl(*F)->getTargetLowering();
-  return TLI->getMemcpyName() != nullptr;
+  return TLI->getMemcpyImpl() != RTLIB::Unsupported;
 }
 
 // Return a value appropriate for use with the memset_pattern16 libcall, if
@@ -593,7 +593,7 @@ bool PreISelIntrinsicLowering::lowerIntrinsics(Module &M) const {
     case Intrinsic::log:
       Changed |= forEachCall(F, [&](CallInst *CI) {
         Type *Ty = CI->getArgOperand(0)->getType();
-        if (!isa<ScalableVectorType>(Ty))
+        if (!TM || !isa<ScalableVectorType>(Ty))
           return false;
         const TargetLowering *TL = TM->getSubtargetImpl(F)->getTargetLowering();
         unsigned Op = TL->IntrinsicIDToISD(F.getIntrinsicID());

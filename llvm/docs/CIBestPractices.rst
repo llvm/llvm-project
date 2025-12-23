@@ -135,4 +135,21 @@ branches as follows:
   push:
     branches:
       - main
-      - releases/*
+      - release/*
+
+Container Best Practices
+========================
+
+This section contains best practices/guidelines when working with containers
+for LLVM infrastructure.
+
+Using Fully Qualified Container Names
+-------------------------------------
+
+When referencing container images from a registry, such as in GitHub Actions
+workflows, or in ``Dockerfile`` files used for building images, prefer fully
+qualified names (i.e., including the registry domain) over just the image.
+For example, prefer ``docker.io/ubuntu:24.04`` over ``ubuntu:24.04``. This
+ensures portability across systems where a different default registry might
+be specified and also prevents attackers from changing the default registry
+to pull in a malicious image instead of the intended one.

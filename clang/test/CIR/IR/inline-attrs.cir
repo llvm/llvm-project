@@ -1,0 +1,33 @@
+// RUN: cir-opt %s --verify-roundtrip | FileCheck %s
+
+!s32i = !cir.int<s, 32>
+
+module {
+  cir.func @noinline_func(%arg0: !s32i) -> !s32i inline(never) {
+    cir.return %arg0 : !s32i
+  }
+  cir.func @always_inline_func(%arg0: !s32i) -> !s32i inline(always) {
+    cir.return %arg0 : !s32i
+  }
+  cir.func @inline_hint_func(%arg0: !s32i) -> !s32i inline(hint) {
+    cir.return %arg0 : !s32i
+  }
+  cir.func @regular_func(%arg0: !s32i) -> !s32i {
+    cir.return %arg0 : !s32i
+  }
+  cir.func dso_local @noinline_with_attrs(%arg0: !s32i) -> !s32i inline(never) {
+    cir.return %arg0 : !s32i
+  }
+  cir.func private @noinline_decl(!s32i) -> !s32i inline(never)
+  cir.func private @always_inline_decl(!s32i) -> !s32i inline(always)
+  cir.func private @inline_hint_decl(!s32i) -> !s32i inline(hint)
+}
+
+// CHECK: cir.func @noinline_func(%arg0: !s32i) -> !s32i inline(never)
+// CHECK: cir.func @always_inline_func(%arg0: !s32i) -> !s32i inline(always)
+// CHECK: cir.func @inline_hint_func(%arg0: !s32i) -> !s32i inline(hint)
+// CHECK: cir.func @regular_func(%arg0: !s32i) -> !s32i {
+// CHECK: cir.func dso_local @noinline_with_attrs(%arg0: !s32i) -> !s32i inline(never)
+// CHECK: cir.func private @noinline_decl(!s32i) -> !s32i inline(never)
+// CHECK: cir.func private @always_inline_decl(!s32i) -> !s32i inline(always)
+// CHECK: cir.func private @inline_hint_decl(!s32i) -> !s32i inline(hint)

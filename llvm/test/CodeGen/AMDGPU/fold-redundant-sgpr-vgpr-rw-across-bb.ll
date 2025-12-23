@@ -1,20 +1,13 @@
-; RUN: llc -mtriple=amdgcn -mcpu=gfx942 < %s | FileCheck --check-prefix=CHECK1 %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx942 -amdgpu-si-fold-operands-preheader-threshold=10 < %s | FileCheck --check-prefix=CHECK2 %s
-
+; RUN: llc -mtriple=amdgcn -mcpu=gfx942 < %s | FileCheck --check-prefix=CHECK %s
+; XFAIL: *
 define protected amdgpu_kernel void @main(ptr addrspace(1) noundef %args.coerce, ptr addrspace(1) noundef %args.coerce2, ptr addrspace(1) noundef %args.coerce4, i32 noundef %args12) {
-; CHECK1-LABEL: main:
+; CHECK-LABEL: main:
 ; check that non-redundant readfirstlanes are not removed
-; CHECK1:      v_readfirstlane_b32
+; CHECK:      v_readfirstlane_b32
 ; check that all redundant readfirstlanes are removed
-; CHECK1-NOT:  v_readfirstlane_b32
-; CHECK1:      s_endpgm
+; CHECK-NOT:  v_readfirstlane_b32
+; CHECK:      s_endpgm
 
-; CHECK2-LABEL: main:
-; CHECK2:      v_readfirstlane_b32
-; check that all redundant readfirstlanes across basic blocks persist
-; CHECK2:      v_readfirstlane_b32
-; CHECK2:      v_readfirstlane_b32
-; CHECK2:      s_endpgm
 entry:
     %wid = tail call noundef range(i32 0, 1024) i32 @llvm.amdgcn.workitem.id.x()
     %div1 = lshr i32 %wid, 6

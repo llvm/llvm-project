@@ -82,9 +82,9 @@ define void @main(i1 %arg) #0 {
 ; CHECK-NEXT:    s_mov_b32 s69, s68
 ; CHECK-NEXT:    s_mov_b32 s71, s68
 ; CHECK-NEXT:    v_writelane_b32 v7, s67, 31
-; CHECK-NEXT:    image_sample_lz v3, v[1:2], s[60:67], s[68:71] dmask:0x1
+; CHECK-NEXT:    image_sample_lz v1, v[1:2], s[60:67], s[68:71] dmask:0x1
 ; CHECK-NEXT:    v_readlane_b32 s52, v7, 0
-; CHECK-NEXT:    v_mov_b32_e32 v1, v2
+; CHECK-NEXT:    v_mov_b32_e32 v3, v2
 ; CHECK-NEXT:    v_readlane_b32 s53, v7, 1
 ; CHECK-NEXT:    v_readlane_b32 s54, v7, 2
 ; CHECK-NEXT:    v_readlane_b32 s55, v7, 3
@@ -97,14 +97,14 @@ define void @main(i1 %arg) #0 {
 ; CHECK-NEXT:    v_readlane_b32 s60, v7, 8
 ; CHECK-NEXT:    v_readlane_b32 s61, v7, 9
 ; CHECK-NEXT:    v_readlane_b32 s62, v7, 10
-; CHECK-NEXT:    image_sample_lz v4, v[1:2], s[52:59], s[68:71] dmask:0x1
+; CHECK-NEXT:    image_sample_lz v4, v[2:3], s[52:59], s[68:71] dmask:0x1
 ; CHECK-NEXT:    v_readlane_b32 s63, v7, 11
 ; CHECK-NEXT:    v_readlane_b32 s64, v7, 12
 ; CHECK-NEXT:    v_readlane_b32 s65, v7, 13
 ; CHECK-NEXT:    v_readlane_b32 s66, v7, 14
 ; CHECK-NEXT:    v_readlane_b32 s67, v7, 15
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    v_mul_f32_e32 v0, v4, v3
+; CHECK-NEXT:    v_mul_f32_e32 v0, v4, v1
 ; CHECK-NEXT:    s_and_saveexec_b64 s[6:7], s[4:5]
 ; CHECK-NEXT:    s_xor_b64 s[6:7], exec, s[6:7]
 ; CHECK-NEXT:    s_cbranch_execz .LBB0_3
@@ -118,13 +118,13 @@ define void @main(i1 %arg) #0 {
 ; CHECK-NEXT:    v_readlane_b32 s65, v7, 29
 ; CHECK-NEXT:    v_readlane_b32 s66, v7, 30
 ; CHECK-NEXT:    v_readlane_b32 s67, v7, 31
+; CHECK-NEXT:    v_mov_b32_e32 v1, v2
 ; CHECK-NEXT:    s_and_b64 vcc, exec, -1
 ; CHECK-NEXT:    v_readlane_b32 s53, v7, 17
 ; CHECK-NEXT:    v_readlane_b32 s54, v7, 18
 ; CHECK-NEXT:    v_readlane_b32 s55, v7, 19
+; CHECK-NEXT:    image_sample_lz v3, v[2:3], s[60:67], s[68:71] dmask:0x1
 ; CHECK-NEXT:    v_readlane_b32 s56, v7, 20
-; CHECK-NEXT:    image_sample_lz v3, v[1:2], s[60:67], s[68:71] dmask:0x1
-; CHECK-NEXT:    v_mov_b32_e32 v1, v2
 ; CHECK-NEXT:    v_readlane_b32 s57, v7, 21
 ; CHECK-NEXT:    v_readlane_b32 s58, v7, 22
 ; CHECK-NEXT:    v_readlane_b32 s59, v7, 23

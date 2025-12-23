@@ -39,7 +39,7 @@ void PluginManager::init() {
     return;
   }
 
-  DP("Loading RTLs...\n");
+  ODBG("Init") << "Loading RTLs";
 
   // Attempt to create an instance of each supported plugin.
 #define PLUGIN_TARGET(Name)                                                    \

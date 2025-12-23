@@ -69,6 +69,9 @@ LLVM_ABI MachineFunctionPass *createBasicBlockSectionsPass();
 
 LLVM_ABI MachineFunctionPass *createBasicBlockPathCloningPass();
 
+/// createMachineBlockHashInfoPass - This pass computes basic block hashes.
+LLVM_ABI MachineFunctionPass *createMachineBlockHashInfoPass();
+
 /// createMachineFunctionSplitterPass - This pass splits machine functions
 /// using profile information.
 LLVM_ABI MachineFunctionPass *createMachineFunctionSplitterPass();
@@ -87,6 +90,15 @@ LLVM_ABI ModulePass *createStaticDataAnnotatorPass();
 LLVM_ABI MachineFunctionPass *
 createMachineFunctionPrinterPass(raw_ostream &OS,
                                  const std::string &Banner = "");
+
+/// MIR2VecVocabPrinter pass - This pass prints out the MIR2Vec vocabulary
+/// contents to the given stream as a debugging tool.
+LLVM_ABI MachineFunctionPass *
+createMIR2VecVocabPrinterLegacyPass(raw_ostream &OS);
+
+/// MIR2VecPrinter pass - This pass prints out the MIR2Vec embeddings for
+/// machine functions, basic blocks and instructions.
+LLVM_ABI MachineFunctionPass *createMIR2VecPrinterLegacyPass(raw_ostream &OS);
 
 /// StackFramePrinter pass - This pass prints out the machine function's
 /// stack frame to the given stream as a debugging tool.
@@ -597,14 +609,6 @@ LLVM_ABI ModulePass *createCheckDebugMachineModulePass();
 /// The pass fixups statepoint machine instruction to replace usage of
 /// caller saved registers with stack slots.
 LLVM_ABI extern char &FixupStatepointCallerSavedID;
-
-/// The pass transforms load/store <256 x i32> to AMX load/store intrinsics
-/// or split the data to two <128 x i32>.
-LLVM_ABI FunctionPass *createX86LowerAMXTypePass();
-
-/// The pass transforms amx intrinsics to scalar operation if the function has
-/// optnone attribute or it is O0.
-LLVM_ABI FunctionPass *createX86LowerAMXIntrinsicsPass();
 
 /// When learning an eviction policy, extract score(reward) information,
 /// otherwise this does nothing

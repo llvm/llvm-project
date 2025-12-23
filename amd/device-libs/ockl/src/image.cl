@@ -13,6 +13,7 @@
 #define EII() __oclc_ISA_version != 9010
 
 #define RATTR __attribute__((pure))
+#define CRATTR __attribute__((pure, target("cube-insts")))
 #define ERATTR __attribute__((pure, target("extended-image-insts")))
 #define WATTR
 #define GATTR __attribute__((const))
@@ -510,14 +511,14 @@ OCKL_MANGLE_T(image_load,3D)(TSHARP i, int4 c)
     return my_image_load_3d_v4f32_i32(c.x, c.y, c.z, LOAD_TSHARP(i));
 }
 
-RATTR float4
-OCKL_MANGLE_T(image_load,CM)(TSHARP i, int2 c, int f)
+CRATTR float4
+OCKL_MANGLE_T(image_load, CM)(TSHARP i, int2 c, int f)
 {
     return my_image_load_cube_v4f32_i32(c.x, c.y, f, LOAD_TSHARP(i));
 }
 
-RATTR float4
-OCKL_MANGLE_T(image_load,CMa)(TSHARP i, int4 c, int f)
+CRATTR float4
+OCKL_MANGLE_T(image_load, CMa)(TSHARP i, int4 c, int f)
 {
     f = LS_ARRAY_FACE(c.z, f);
     return my_image_load_cube_v4f32_i32(c.x, c.y, f, LOAD_TSHARP(i));
@@ -565,14 +566,14 @@ OCKL_MANGLE_T(image_load_lod,3D)(TSHARP i, int4 c, int l)
     return my_image_load_mip_3d_v4f32_i32(c.x, c.y, c.z, l, LOAD_TSHARP(i));
 }
 
-RATTR float4
-OCKL_MANGLE_T(image_load_lod,CM)(TSHARP i, int2 c, int f, int l)
+CRATTR float4
+OCKL_MANGLE_T(image_load_lod, CM)(TSHARP i, int2 c, int f, int l)
 {
     return my_image_load_mip_cube_v4f32_i32(c.x, c.y, f, l, LOAD_TSHARP(i));
 }
 
-RATTR float4
-OCKL_MANGLE_T(image_load_lod,CMa)(TSHARP i, int4 c, int f, int l)
+CRATTR float4
+OCKL_MANGLE_T(image_load_lod, CMa)(TSHARP i, int4 c, int f, int l)
 {
     f = LS_ARRAY_FACE(c.z, f);
     return my_image_load_mip_cube_v4f32_i32(c.x, c.y, f, l, LOAD_TSHARP(i));
@@ -614,14 +615,14 @@ OCKL_MANGLE_T(image_loadh,3D)(TSHARP i, int4 c)
     return my_image_load_3d_v4f16_i32(c.x, c.y, c.z, LOAD_TSHARP(i));
 }
 
-RATTR half4
-OCKL_MANGLE_T(image_loadh,CM)(TSHARP i, int2 c, int f)
+CRATTR half4
+OCKL_MANGLE_T(image_loadh, CM)(TSHARP i, int2 c, int f)
 {
     return my_image_load_cube_v4f16_i32(c.x, c.y, f, LOAD_TSHARP(i));
 }
 
-RATTR half4
-OCKL_MANGLE_T(image_loadh,CMa)(TSHARP i, int4 c, int f)
+CRATTR half4
+OCKL_MANGLE_T(image_loadh, CMa)(TSHARP i, int4 c, int f)
 {
     f = LS_ARRAY_FACE(c.z, f);
     return my_image_load_cube_v4f16_i32(c.x, c.y, f, LOAD_TSHARP(i));
@@ -657,14 +658,14 @@ OCKL_MANGLE_T(image_loadh_lod,3D)(TSHARP i, int4 c, int l)
     return my_image_load_mip_3d_v4f16_i32(c.x, c.y, c.z, l, LOAD_TSHARP(i));
 }
 
-RATTR half4
-OCKL_MANGLE_T(image_loadh_lod,CM)(TSHARP i, int2 c, int f, int l)
+CRATTR half4
+OCKL_MANGLE_T(image_loadh_lod, CM)(TSHARP i, int2 c, int f, int l)
 {
     return my_image_load_mip_cube_v4f16_i32(c.x, c.y, f, l, LOAD_TSHARP(i));
 }
 
-RATTR half4
-OCKL_MANGLE_T(image_loadh_lod,CMa)(TSHARP i, int4 c, int f, int l)
+CRATTR half4
+OCKL_MANGLE_T(image_loadh_lod, CMa)(TSHARP i, int4 c, int f, int l)
 {
     f = LS_ARRAY_FACE(c.z, f);
     return my_image_load_mip_cube_v4f16_i32(c.x, c.y, f, l, LOAD_TSHARP(i));
@@ -950,8 +951,8 @@ OCKL_MANGLE_T(image_sample,3D)(TSHARP i, SSHARP s, float4 c)
         return my_image_sample_3d_v4f32_f32(c.x, c.y, c.z, LOAD_TSHARP(i), LOAD_SSHARP(s));
 }
 
-RATTR float4
-OCKL_MANGLE_T(image_sample,CM)(TSHARP i, SSHARP s, float4 c)
+CRATTR float4
+OCKL_MANGLE_T(image_sample, CM)(TSHARP i, SSHARP s, float4 c)
 {
     CUBE_PREP(c);
     if (EII())
@@ -960,8 +961,8 @@ OCKL_MANGLE_T(image_sample,CM)(TSHARP i, SSHARP s, float4 c)
         return my_image_sample_cube_v4f32_f32(c.x, c.y, c.z, LOAD_TSHARP(i), LOAD_SSHARP(s));
 }
 
-RATTR float4
-OCKL_MANGLE_T(image_sample,CMa)(TSHARP i, SSHARP s, float4 c)
+CRATTR float4
+OCKL_MANGLE_T(image_sample, CMa)(TSHARP i, SSHARP s, float4 c)
 {
     CUBE_PREP(c);
     c.z = SAMPLE_ARRAY_FACE(c.w, c.z);
@@ -1068,15 +1069,15 @@ OCKL_MANGLE_T(image_sample_lod,3D)(TSHARP i, SSHARP s, float4 c, float l)
     return my_image_sample_l_3d_v4f32_f32(c.x, c.y, c.z, l, LOAD_TSHARP(i), LOAD_SSHARP(s));
 }
 
-RATTR float4
-OCKL_MANGLE_T(image_sample_lod,CM)(TSHARP i, SSHARP s, float4 c, float l)
+CRATTR float4
+OCKL_MANGLE_T(image_sample_lod, CM)(TSHARP i, SSHARP s, float4 c, float l)
 {
     CUBE_PREP(c);
     return my_image_sample_l_cube_v4f32_f32(c.x, c.y, c.z, l, LOAD_TSHARP(i), LOAD_SSHARP(s));
 }
 
-RATTR float4
-OCKL_MANGLE_T(image_sample_lod,CMa)(TSHARP i, SSHARP s, float4 c, float l)
+CRATTR float4
+OCKL_MANGLE_T(image_sample_lod, CMa)(TSHARP i, SSHARP s, float4 c, float l)
 {
     CUBE_PREP(c);
     c.z = SAMPLE_ARRAY_FACE(c.w, c.z);
@@ -1135,8 +1136,8 @@ OCKL_MANGLE_T(image_sampleh,3D)(TSHARP i, SSHARP s, float4 c)
         return my_image_sample_3d_v4f16_f32(c.x, c.y, c.z, LOAD_TSHARP(i), LOAD_SSHARP(s));
 }
 
-RATTR half4
-OCKL_MANGLE_T(image_sampleh,CM)(TSHARP i, SSHARP s, float4 c)
+CRATTR half4
+OCKL_MANGLE_T(image_sampleh, CM)(TSHARP i, SSHARP s, float4 c)
 {
     CUBE_PREP(c);
     if (EII())
@@ -1145,8 +1146,8 @@ OCKL_MANGLE_T(image_sampleh,CM)(TSHARP i, SSHARP s, float4 c)
         return my_image_sample_cube_v4f16_f32(c.x, c.y, c.z, LOAD_TSHARP(i), LOAD_SSHARP(s));
 }
 
-RATTR half4
-OCKL_MANGLE_T(image_sampleh,CMa)(TSHARP i, SSHARP s, float4 c)
+CRATTR half4
+OCKL_MANGLE_T(image_sampleh, CMa)(TSHARP i, SSHARP s, float4 c)
 {
     CUBE_PREP(c);
     c.z = SAMPLE_ARRAY_FACE(c.w, c.z);
@@ -1225,15 +1226,15 @@ OCKL_MANGLE_T(image_sampleh_lod,3D)(TSHARP i, SSHARP s, float4 c, float l)
     return my_image_sample_l_3d_v4f16_f32(c.x, c.y, c.z, l, LOAD_TSHARP(i), LOAD_SSHARP(s));
 }
 
-RATTR half4
-OCKL_MANGLE_T(image_sampleh_lod,CM)(TSHARP i, SSHARP s, float4 c, float l)
+CRATTR half4
+OCKL_MANGLE_T(image_sampleh_lod, CM)(TSHARP i, SSHARP s, float4 c, float l)
 {
     CUBE_PREP(c);
     return my_image_sample_l_cube_v4f16_f32(c.x, c.y, c.z, l, LOAD_TSHARP(i), LOAD_SSHARP(s));
 }
 
-RATTR half4
-OCKL_MANGLE_T(image_sampleh_lod,CMa)(TSHARP i, SSHARP s, float4 c, float l)
+CRATTR half4
+OCKL_MANGLE_T(image_sampleh_lod, CMa)(TSHARP i, SSHARP s, float4 c, float l)
 {
     CUBE_PREP(c);
     c.z = SAMPLE_ARRAY_FACE(c.w, c.z);

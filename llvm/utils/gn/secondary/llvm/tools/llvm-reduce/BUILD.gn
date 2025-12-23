@@ -31,6 +31,7 @@ executable("llvm-reduce") {
     "deltas/ReduceGlobalVarInitializers.cpp",
     "deltas/ReduceGlobalVars.cpp",
     "deltas/ReduceIRReferences.cpp",
+    "deltas/ReduceInlineCallSites.cpp",
     "deltas/ReduceInstructionFlags.cpp",
     "deltas/ReduceInstructionFlagsMIR.cpp",
     "deltas/ReduceInstructions.cpp",

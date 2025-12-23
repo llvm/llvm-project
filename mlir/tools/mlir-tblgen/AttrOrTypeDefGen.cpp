@@ -130,6 +130,9 @@ private:
   void emitTraitMethods(const InterfaceTrait &trait);
   /// Emit a trait method.
   void emitTraitMethod(const InterfaceMethod &method);
+  /// Generate a using declaration for a trait method.
+  void genTraitMethodUsingDecl(const InterfaceTrait &trait,
+                               const InterfaceMethod &method);
 
   //===--------------------------------------------------------------------===//
   // OpAsm{Type,Attr}Interface Default Method Emission
@@ -176,6 +179,9 @@ private:
   StringRef valueType;
   /// The prefix/suffix of the TableGen def name, either "Attr" or "Type".
   StringRef defType;
+
+  /// The set of using declarations for trait methods.
+  llvm::StringSet<> interfaceUsingNames;
 };
 } // namespace
 
@@ -631,9 +637,13 @@ void DefGen::emitTraitMethods(const InterfaceTrait &trait) {
   for (auto &method : iface.getMethods()) {
     // Don't declare if the method has a body. Or if the method has a default
     // implementation and the def didn't request that it always be declared.
-    if (method.getBody() || (method.getDefaultImplementation() &&
-                             !alwaysDeclared.count(method.getName())))
+    if (method.getBody())
       continue;
+    if (method.getDefaultImplementation() &&
+        !alwaysDeclared.count(method.getName())) {
+      genTraitMethodUsingDecl(trait, method);
+      continue;
+    }
     emitTraitMethod(method);
   }
 }
@@ -647,6 +657,15 @@ void DefGen::emitTraitMethod(const InterfaceMethod &method) {
     params.emplace_back(param.type, param.name);
   defCls.addMethod(method.getReturnType(), method.getName(), props,
                    std::move(params));
+}
+
+void DefGen::genTraitMethodUsingDecl(const InterfaceTrait &trait,
+                                     const InterfaceMethod &method) {
+  std::string name = (llvm::Twine(trait.getFullyQualifiedTraitName()) + "<" +
+                      def.getCppClassName() + ">::" + method.getName())
+                         .str();
+  if (interfaceUsingNames.insert(name).second)
+    defCls.declare<UsingDeclaration>(std::move(name));
 }
 
 //===----------------------------------------------------------------------===//
@@ -864,11 +883,8 @@ bool DefGenerator::emitDecls(StringRef selectedDialect) {
 
     // Declare all the def classes first (in case they reference each other).
     for (const AttrOrTypeDef &def : defs) {
-      std::string comments = tblgen::emitSummaryAndDescComments(
-          def.getSummary(), def.getDescription());
-      if (!comments.empty()) {
-        os << comments << "\n";
-      }
+      tblgen::emitSummaryAndDescComments(os, def.getSummary(),
+                                         def.getDescription());
       os << "class " << def.getCppClassName() << ";\n";
     }
 
@@ -1166,7 +1182,7 @@ getAllCppAttrConstraints(const RecordKeeper &records) {
 
 /// Emit the declarations for the given constraints, of the form:
 /// `bool <constraintCppFunctionName>(<parameterTypeName> <parameterName>);`
-static void emitConstraintDecls(const std::vector<Constraint> &constraints,
+static void emitConstraintDecls(ArrayRef<Constraint> constraints,
                                 raw_ostream &os, StringRef parameterTypeName,
                                 StringRef parameterName) {
   static const char *const constraintDecl = "bool {0}({1} {2});\n";
@@ -1192,7 +1208,7 @@ static void emitAttrConstraintDecls(const RecordKeeper &records,
 ///   return (<condition>); }`
 /// where `<condition>` is the condition template with the `self` variable
 /// replaced with the `selfName` parameter.
-static void emitConstraintDefs(const std::vector<Constraint> &constraints,
+static void emitConstraintDefs(ArrayRef<Constraint> constraints,
                                raw_ostream &os, StringRef parameterTypeName,
                                StringRef selfName) {
   static const char *const constraintDef = R"(

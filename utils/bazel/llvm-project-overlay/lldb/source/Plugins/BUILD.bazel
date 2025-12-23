@@ -80,6 +80,7 @@ cc_library(
     hdrs = glob(["LanguageRuntime/CPlusPlus/*.h"]),
     includes = [".."],
     deps = [
+        "//clang:codegen",
         "//lldb:CoreHeaders",
         "//lldb:Headers",
         "//lldb:SymbolHeaders",
@@ -192,6 +193,7 @@ cc_library(
         "//clang:frontend",
         "//clang:frontend_rewrite",
         "//clang:lex",
+        "//clang:options",
         "//clang:parse",
         "//clang:rewrite",
         "//clang:sema",

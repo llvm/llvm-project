@@ -14,6 +14,7 @@
 // Thumb specific DAG Nodes.
 //
 
+// CMSE non-secure function call.
 def ARMtsecall : SDNode<"ARMISD::tSECALL", SDT_ARMcall,
                         [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
                          SDNPVariadic]>;

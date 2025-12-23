@@ -1824,9 +1824,24 @@ typedef enum amd_comgr_action_kind_s {
   AMD_COMGR_ACTION_TRANSLATE_SPIRV_TO_BC = 0x13,
 
   /**
+   * Compile each HIP source data object in @p input in order. For each
+   * successful compilation add a SPIR-V data object to @p result. Resolve
+   * any include source names using the names of include data objects in
+   * @p input. Resolve any include relative path names using the working
+   * directory path in @p info. Compile the source for the language in @p
+   * info.
+   *
+   * Return @p AMD_COMGR_STATUS_ERROR if any compilation fails.
+   *
+   * Return @p AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT if language is not
+   * HIP in @p info.
+   */
+  AMD_COMGR_ACTION_COMPILE_SOURCE_TO_SPIRV = 0x14,
+
+  /**
    * Marker for last valid action kind.
    */
-  AMD_COMGR_ACTION_LAST = AMD_COMGR_ACTION_TRANSLATE_SPIRV_TO_BC
+  AMD_COMGR_ACTION_LAST = AMD_COMGR_ACTION_COMPILE_SOURCE_TO_SPIRV
 } amd_comgr_action_kind_t;
 
 /**

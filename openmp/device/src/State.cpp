@@ -55,98 +55,15 @@ using namespace ompx;
 
 namespace {
 
-/// Malloc/Free API implementation
-/// AMDGCN does not expose a malloc/free API, while
-/// NVPTX does. FOr this reason, the order of the following malloc/free
-/// variant declarations and definitions is important and should not be changed
-
-/// AMDGCN implementations of the shuffle sync idiom
-///
-///{
-
-// global_allocate uses ockl_dm_alloc/asan_malloc_impl to manage a global memory
-// heap
-__attribute__((noinline)) extern "C" uint64_t __ockl_dm_alloc(uint64_t bufsz);
-__attribute__((noinline)) extern "C" void __ockl_dm_dealloc(uint64_t ptr);
-#if SANITIZER_AMDGPU
-__attribute__((noinline)) extern "C" uint64_t __asan_malloc_impl(uint64_t bufsz,
-                                                                 uint64_t pc);
-__attribute__((noinline)) extern "C" void __asan_free_impl(uint64_t ptr,
-                                                           uint64_t pc);
-#endif
-#ifdef __AMDGPU__
-extern "C" {
-__attribute__((noinline)) uint64_t __ockl_devmem_request(uint64_t addr,
-                                                         uint64_t size) {
-  if (size) { // allocation request
-    [[clang::noinline]] return (uint64_t)__alt_libc_malloc((size_t)size);
-  } else { // free request
-    [[clang::noinline]] __alt_libc_free((void *)addr);
-    return 0;
-  }
-}
-
-__attribute__((noinline)) void *internal_malloc(uint64_t Size) {
-#if SANITIZER_AMDGPU
-  uint64_t ptr =
-      __asan_malloc_impl(Size, (uint64_t)__builtin_return_address(0));
-  return (void *)ptr;
-#else
-  [[clang::noinline]] return (void *)__ockl_dm_alloc(Size);
-#endif
-}
-
-__attribute__((noinline)) void internal_free(void *Ptr) {
-#if SANITIZER_AMDGPU
-  __asan_free_impl((uint64_t)Ptr, (uint64_t)__builtin_return_address(0));
-#else
-  [[clang::noinline]] __ockl_dm_dealloc((uint64_t)Ptr);
-#endif
-}
-}
-#endif
-
-extern "C" {
-#ifdef __AMDGCN__
-#ifdef USE_BUMP_ALLOCATOR
-[[gnu::weak]] void *malloc(size_t Size) { return allocator::alloc(Size); }
-[[gnu::weak]] void free(void *Ptr) { allocator::free(Ptr); }
-#else
-void *malloc(size_t Size) { return internal_malloc(Size); }
-void free(void *Ptr) { internal_free(Ptr); }
-#endif
-#else
-#ifdef USE_BUMP_ALLOCATOR
-
-[[gnu::weak, gnu::leaf]] void *malloc(size_t Size);
-[[gnu::weak, gnu::leaf]] void free(void *Ptr);
-#else
-__attribute__((leaf)) void *malloc(size_t Size);
-__attribute__((leaf)) void free(void *Ptr);
-#endif
-#endif
-} // extern "C"
-
-///}
-/// NVPTX implementations of internal mallocs
-///
-///{
-#ifdef __NVPTX__
-extern "C" {
-void *internal_malloc(uint64_t Size) { return malloc(Size); }
-
-void internal_free(void *Ptr) { free(Ptr); }
-}
-#endif
-
 /// A "smart" stack in shared memory.
 ///
-/// The stack exposes a malloc/free interface but works like a stack internally.
-/// In fact, it is a separate stack *per warp*. That means, each warp must push
-/// and pop symmetrically or this breaks, badly. The implementation will (aim
-/// to) detect non-lock-step warps and fallback to malloc/free. The same will
-/// happen if a warp runs out of memory. The master warp in generic memory is
-/// special and is given more memory than the rest.
+/// The stack exposes a malloc/free interface but works like a stack
+/// internally. In fact, it is a separate stack *per warp*. That means, each
+/// warp must push and pop symmetrically or this breaks, badly. The
+/// implementation will (aim to) detect non-lock-step warps and fallback to
+/// malloc/free. The same will happen if a warp runs out of memory. The
+/// master warp in generic memory is special and is given more memory than
+/// the rest.
 ///
 struct SharedMemorySmartStackTy {
   /// Initialize the stack. Must be called by all threads.
@@ -246,13 +163,13 @@ void memory::freeShared(void *Ptr, uint64_t Bytes, const char *Reason) {
 }
 
 void *memory::allocGlobal(uint64_t Bytes, const char *Reason) {
-  void *Ptr = malloc(Bytes);
+  void *Ptr = allocator::alloc(Bytes);
   if (config::isDebugMode(DeviceDebugKind::CommonIssues) && Ptr == nullptr)
     printf("nullptr returned by malloc!\n");
   return Ptr;
 }
 
-void memory::freeGlobal(void *Ptr, const char *Reason) { free(Ptr); }
+void memory::freeGlobal(void *Ptr, const char *Reason) { allocator::free(Ptr); }
 
 ///}
 
@@ -558,6 +475,8 @@ void __kmpc_get_shared_variables(void ***GlobalArgs) {
 }
 
 extern "C" {
-__attribute__((leaf)) void *__kmpc_impl_malloc(uint64_t t) { return malloc(t); }
-__attribute__((leaf)) void __kmpc_impl_free(void *ptr) { free(ptr); }
+__attribute__((leaf)) void *__kmpc_impl_malloc(uint64_t t) {
+  return allocator::alloc(t);
+}
+__attribute__((leaf)) void __kmpc_impl_free(void *ptr) { allocator::free(ptr); }
 }

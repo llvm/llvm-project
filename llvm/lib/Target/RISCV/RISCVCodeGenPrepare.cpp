@@ -33,20 +33,33 @@ using namespace llvm;
 #define PASS_NAME "RISC-V CodeGenPrepare"
 
 namespace {
-
-class RISCVCodeGenPrepare : public FunctionPass,
-                            public InstVisitor<RISCVCodeGenPrepare, bool> {
+class RISCVCodeGenPrepare : public InstVisitor<RISCVCodeGenPrepare, bool> {
+  Function &F;
   const DataLayout *DL;
   const DominatorTree *DT;
   const RISCVSubtarget *ST;
 
 public:
+  RISCVCodeGenPrepare(Function &F, const DominatorTree *DT,
+                      const RISCVSubtarget *ST)
+      : F(F), DL(&F.getDataLayout()), DT(DT), ST(ST) {}
+  bool run();
+  bool visitInstruction(Instruction &I) { return false; }
+  bool visitAnd(BinaryOperator &BO);
+  bool visitIntrinsicInst(IntrinsicInst &I);
+  bool expandVPStrideLoad(IntrinsicInst &I);
+  bool widenVPMerge(IntrinsicInst &I);
+};
+} // namespace
+
+namespace {
+class RISCVCodeGenPrepareLegacyPass : public FunctionPass {
+public:
   static char ID;
 
-  RISCVCodeGenPrepare() : FunctionPass(ID) {}
+  RISCVCodeGenPrepareLegacyPass() : FunctionPass(ID) {}
 
   bool runOnFunction(Function &F) override;
-
   StringRef getPassName() const override { return PASS_NAME; }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
@@ -54,15 +67,8 @@ public:
     AU.addRequired<DominatorTreeWrapperPass>();
     AU.addRequired<TargetPassConfig>();
   }
-
-  bool visitInstruction(Instruction &I) { return false; }
-  bool visitAnd(BinaryOperator &BO);
-  bool visitIntrinsicInst(IntrinsicInst &I);
-  bool expandVPStrideLoad(IntrinsicInst &I);
-  bool widenVPMerge(IntrinsicInst &I);
 };
-
-} // end anonymous namespace
+} // namespace
 
 // Try to optimize (i64 (and (zext/sext (i32 X), C1))) if C1 has bit 31 set,
 // but bits 63:32 are zero. If we know that bit 31 of X is 0, we can fill
@@ -273,17 +279,7 @@ bool RISCVCodeGenPrepare::expandVPStrideLoad(IntrinsicInst &II) {
   return true;
 }
 
-bool RISCVCodeGenPrepare::runOnFunction(Function &F) {
-  if (skipFunction(F))
-    return false;
-
-  auto &TPC = getAnalysis<TargetPassConfig>();
-  auto &TM = TPC.getTM<RISCVTargetMachine>();
-  ST = &TM.getSubtarget<RISCVSubtarget>(F);
-
-  DL = &F.getDataLayout();
-  DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-
+bool RISCVCodeGenPrepare::run() {
   bool MadeChange = false;
   for (auto &BB : F)
     for (Instruction &I : llvm::make_early_inc_range(BB))
@@ -292,12 +288,40 @@ bool RISCVCodeGenPrepare::runOnFunction(Function &F) {
   return MadeChange;
 }
 
-INITIALIZE_PASS_BEGIN(RISCVCodeGenPrepare, DEBUG_TYPE, PASS_NAME, false, false)
+bool RISCVCodeGenPrepareLegacyPass::runOnFunction(Function &F) {
+  if (skipFunction(F))
+    return false;
+
+  auto &TPC = getAnalysis<TargetPassConfig>();
+  auto &TM = TPC.getTM<RISCVTargetMachine>();
+  auto ST = &TM.getSubtarget<RISCVSubtarget>(F);
+  auto DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
+
+  RISCVCodeGenPrepare RVCGP(F, DT, ST);
+  return RVCGP.run();
+}
+
+INITIALIZE_PASS_BEGIN(RISCVCodeGenPrepareLegacyPass, DEBUG_TYPE, PASS_NAME,
+                      false, false)
 INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
-INITIALIZE_PASS_END(RISCVCodeGenPrepare, DEBUG_TYPE, PASS_NAME, false, false)
+INITIALIZE_PASS_END(RISCVCodeGenPrepareLegacyPass, DEBUG_TYPE, PASS_NAME, false,
+                    false)
 
-char RISCVCodeGenPrepare::ID = 0;
+char RISCVCodeGenPrepareLegacyPass::ID = 0;
 
-FunctionPass *llvm::createRISCVCodeGenPreparePass() {
-  return new RISCVCodeGenPrepare();
+FunctionPass *llvm::createRISCVCodeGenPrepareLegacyPass() {
+  return new RISCVCodeGenPrepareLegacyPass();
+}
+
+PreservedAnalyses RISCVCodeGenPreparePass::run(Function &F,
+                                               FunctionAnalysisManager &FAM) {
+  DominatorTree *DT = &FAM.getResult<DominatorTreeAnalysis>(F);
+  auto ST = &TM->getSubtarget<RISCVSubtarget>(F);
+  bool Changed = RISCVCodeGenPrepare(F, DT, ST).run();
+  if (!Changed)
+    return PreservedAnalyses::all();
+
+  PreservedAnalyses PA = PreservedAnalyses::none();
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
 }

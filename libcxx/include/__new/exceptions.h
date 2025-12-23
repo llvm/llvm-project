@@ -17,6 +17,12 @@
 #  pragma GCC system_header
 #endif
 
+// <vcruntime_exception.h> defines its own std::bad_alloc type,
+// which we use in order to be ABI-compatible with other STLs on Windows.
+#if defined(_LIBCPP_ABI_VCRUNTIME)
+#  include <vcruntime_exception.h>
+#endif
+
 _LIBCPP_BEGIN_UNVERSIONED_NAMESPACE_STD
 #if !defined(_LIBCPP_ABI_VCRUNTIME)
 

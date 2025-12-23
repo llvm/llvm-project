@@ -20,20 +20,20 @@ jobs:
       run:
         shell: bash
     container:
-      image: 'ghcr.io/llvm/ci-ubuntu-24.04:latest'
+      image: 'ghcr.io/llvm/ci-ubuntu-24.04-lint'
     timeout-minutes: 60
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}
       cancel-in-progress: true
     steps:
       - name: Fetch LLVM sources
-        uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4.3.0
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
           fetch-depth: 2
       
       - name: Get changed files
         id: changed-files
-        uses: tj-actions/changed-files@ed68ef82c095e0d48ec87eccea555d944a631a4c # v46.0.5
+        uses: tj-actions/changed-files@24d32ffd492484c1d75e0c0b894501ddb9d30d62 # v47.0.0
         with:
           separator: ","
           skip_initial_fetch: true
@@ -46,22 +46,6 @@ jobs:
         run: |
           echo "Changed files:"
           echo "$CHANGED_FILES"
-
-      # The clang tidy version should always be upgraded to the first version
-      # of a release cycle (x.1.0) or the last version of a release cycle, or
-      # if there have been relevant clang-format backports.
-      - name: Install clang-tidy
-        uses: aminya/setup-cpp@a276e6e3d1db9160db5edc458e99a30d3b109949 # v1.7.1
-        with:
-          clang-tidy: 21.1.0
-      
-      - name: Setup Python env
-        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
-        with:
-          python-version: '3.13'
-
-      - name: Install Python dependencies
-        run: python3 -m pip install -r llvm/utils/git/requirements_linting.txt
       
       # TODO: create special mapping for 'codegen' targets, for now build predefined set
       # TODO: add entrypoint in 'compute_projects.py' that only adds a project and its direct dependencies
@@ -107,7 +91,7 @@ jobs:
             --changed-files "$CHANGED_FILES"
       
       - name: Upload results
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
         if: always()
         with:
           name: workflow-args

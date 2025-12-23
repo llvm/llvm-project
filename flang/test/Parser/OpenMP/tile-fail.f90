@@ -8,17 +8,16 @@
 ! Parser error
 
 subroutine stray_end1
-  !CHECK: error: expected OpenMP construct
+  !CHECK: error: Misplaced OpenMP end-directive
   !$omp end tile
 end subroutine
 
 
 !--- stray_end2.f90
-! Semantic error
 
 subroutine stray_end2
   print *
-  !CHECK: error: The END TILE directive must follow the DO loop associated with the loop construct
+  !CHECK: error: Misplaced OpenMP end-directive
   !$omp end tile
 end subroutine
 
@@ -26,7 +25,7 @@ end subroutine
 !--- stray_begin.f90
 
 subroutine stray_begin
-  !CHECK: error: A DO loop must follow the TILE directive
+  !CHECK: error: OpenMP loop construct should contain a DO-loop or a loop-nest-generating OpenMP construct
   !$omp tile sizes(2)
 end subroutine
 

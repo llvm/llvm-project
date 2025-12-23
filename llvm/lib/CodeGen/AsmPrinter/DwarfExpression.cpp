@@ -598,31 +598,55 @@ bool DwarfExpression::addExpression(
     case dwarf::DW_OP_LLVM_extract_bits_zext: {
       unsigned SizeInBits = Op->getArg(1);
       unsigned BitOffset = Op->getArg(0);
+      unsigned DerefSize = 0;
+      //  Operations are done in the DWARF "generic type" whose size
+      // is the size of a pointer.
+      unsigned PtrSizeInBytes = CU.getAsmPrinter()->MAI->getCodePointerSize();
 
       // If we have a memory location then dereference to get the value, though
       // we have to make sure we don't dereference any bytes past the end of the
       // object.
       if (isMemoryLocation()) {
-        emitOp(dwarf::DW_OP_deref_size);
-        emitUnsigned(alignTo(BitOffset + SizeInBits, 8) / 8);
+        DerefSize = alignTo(BitOffset + SizeInBits, 8) / 8;
+        if (DerefSize == PtrSizeInBytes) {
+          emitOp(dwarf::DW_OP_deref);
+        } else {
+          emitOp(dwarf::DW_OP_deref_size);
+          emitUnsigned(DerefSize);
+        }
       }
 
-      // Extract the bits by a shift left (to shift out the bits after what we
-      // want to extract) followed by shift right (to shift the bits to position
-      // 0 and also sign/zero extend). These operations are done in the DWARF
-      // "generic type" whose size is the size of a pointer.
-      unsigned PtrSizeInBytes = CU.getAsmPrinter()->MAI->getCodePointerSize();
-      unsigned LeftShift = PtrSizeInBytes * 8 - (SizeInBits + BitOffset);
-      unsigned RightShift = LeftShift + BitOffset;
-      if (LeftShift) {
-        emitOp(dwarf::DW_OP_constu);
-        emitUnsigned(LeftShift);
-        emitOp(dwarf::DW_OP_shl);
+      // If a dereference was emitted for an unsigned value, and
+      // there's no bit offset, then a bit of optimization is
+      // possible.
+      if (OpNum == dwarf::DW_OP_LLVM_extract_bits_zext && BitOffset == 0) {
+        if (8 * DerefSize == SizeInBits) {
+          // The correct value is already on the stack.
+        } else {
+          // No need to shift, we can just mask off the desired bits.
+          emitOp(dwarf::DW_OP_constu);
+          emitUnsigned((1u << SizeInBits) - 1);
+          emitOp(dwarf::DW_OP_and);
+        }
+      } else {
+        // Extract the bits by a shift left (to shift out the bits after what we
+        // want to extract) followed by shift right (to shift the bits to
+        // position 0 and also sign/zero extend).
+        unsigned LeftShift = PtrSizeInBytes * 8 - (SizeInBits + BitOffset);
+        unsigned RightShift = LeftShift + BitOffset;
+        if (LeftShift) {
+          emitOp(dwarf::DW_OP_constu);
+          emitUnsigned(LeftShift);
+          emitOp(dwarf::DW_OP_shl);
+        }
+        if (RightShift) {
+          emitOp(dwarf::DW_OP_constu);
+          emitUnsigned(RightShift);
+          emitOp(OpNum == dwarf::DW_OP_LLVM_extract_bits_sext
+                     ? dwarf::DW_OP_shra
+                     : dwarf::DW_OP_shr);
+        }
       }
-      emitOp(dwarf::DW_OP_constu);
-      emitUnsigned(RightShift);
-      emitOp(OpNum == dwarf::DW_OP_LLVM_extract_bits_sext ? dwarf::DW_OP_shra
-                                                          : dwarf::DW_OP_shr);
 
       // The value is now at the top of the stack, so set the location to
       // implicit so that we get a stack_value at the end.
@@ -929,7 +953,7 @@ NewOpResult DwarfExpression::convertValueKind(const NewOpResult &Res,
   }
 
   if (Res.VK == ValueKind::LocationDesc && ReqVK == ValueKind::Value) {
-    readToValue(Res.Ty);
+    readToValue(Res);
     return {Res.Ty, ValueKind::Value, Res.DivergentAddrSpace};
   }
 
@@ -949,11 +973,12 @@ std::optional<NewOpResult> DwarfExpression::traverse(DIOp::Arg Arg,
     // address spaces, e.g. LDS. Generate a 'DW_OP_constu' with a dummy
     // constant value (0) for now.
     unsigned AMDGPUGlobalAddrSpace = 1;
+    unsigned AMDGPUConstantAddrSpace = 4;
     if ((AP.TM.getTargetTriple().getArch() == Triple::amdgcn) &&
-        (GV->getAddressSpace() != AMDGPUGlobalAddrSpace)) {
+        (GV->getAddressSpace() != AMDGPUGlobalAddrSpace &&
+         GV->getAddressSpace() != AMDGPUConstantAddrSpace)) {
       emitConstu(0);
-      emitOp(dwarf::DW_OP_stack_value);
-      return NewOpResult{Arg.getResultType(), ValueKind::LocationDesc};
+      return NewOpResult{Arg.getResultType(), ValueKind::Value};
     }
 
     // TODO: We only support PIC reloc-model and non-TLS globals so far, see
@@ -965,8 +990,7 @@ std::optional<NewOpResult> DwarfExpression::traverse(DIOp::Arg Arg,
 
     CU.getDwarfDebug().addArangeLabel(SymbolCU(&CU, AP.getSymbol(GV)));
     emitOpAddress(GV);
-    emitOp(dwarf::DW_OP_stack_value);
-    return NewOpResult{Arg.getResultType(), ValueKind::LocationDesc};
+    return NewOpResult{Arg.getResultType(), ValueKind::Value};
   }
 
   if (Entry.isLocation()) {
@@ -1128,7 +1152,7 @@ std::optional<NewOpResult> DwarfExpression::traverse(DIOp::Convert Convert,
   // If we're not dealing with the divergent address space case, Convert
   // requires a value operand.
   if (Child->VK == ValueKind::LocationDesc)
-    readToValue(Child->Ty);
+    readToValue(*Child);
 
   uint64_t ToBits = DestTy->getPrimitiveSizeInBits().getFixedValue();
   uint64_t FromBits = Child->Ty->getPrimitiveSizeInBits().getFixedValue();
@@ -1165,7 +1189,7 @@ std::optional<NewOpResult> DwarfExpression::traverse(DIOp::SExt SExt,
 
 std::optional<NewOpResult> DwarfExpression::traverse(DIOp::Deref Deref,
                                                      ChildrenT Children) {
-  auto Child = traverse(Children[0].get(), ValueKind::LocationDesc,
+  auto Child = traverse(Children[0].get(), ValueKind::Value,
                         /*PermitDivergentAddrSpace=*/true);
   if (!Child)
     return std::nullopt;
@@ -1180,11 +1204,6 @@ std::optional<NewOpResult> DwarfExpression::traverse(DIOp::Deref Deref,
   unsigned PointerLLVMAddrSpace = Child->DivergentAddrSpace
                                       ? *Child->DivergentAddrSpace
                                       : PointerResultType->getAddressSpace();
-  uint64_t PointerSizeInBits =
-      AP.getDataLayout().getPointerSizeInBits(PointerLLVMAddrSpace);
-  assert(PointerSizeInBits % 8 == 0 && "Expected multiple of 8");
-
-  uint64_t PointerSizeInBytes = PointerSizeInBits / 8;
   auto PointerDWARFAddrSpace = AP.TM.mapToDWARFAddrSpace(PointerLLVMAddrSpace);
   if (!PointerDWARFAddrSpace) {
     LLVM_DEBUG(dbgs() << "Failed to lower DIOpDeref of pointer to addrspace("
@@ -1193,8 +1212,6 @@ std::optional<NewOpResult> DwarfExpression::traverse(DIOp::Deref Deref,
     return std::nullopt;
   }
 
-  emitOp(dwarf::DW_OP_deref_size);
-  emitData1(PointerSizeInBytes);
   emitConstu(*PointerDWARFAddrSpace);
   emitUserOp(dwarf::DW_OP_LLVM_form_aspace_address);
 
@@ -1212,13 +1229,13 @@ std::optional<NewOpResult> DwarfExpression::traverse(DIOp::Read Read,
   auto Child = traverse(Children[0].get(), ValueKind::LocationDesc);
   if (!Child)
     return std::nullopt;
-  readToValue(Children[0].get());
+  readToValue(*Child);
   return NewOpResult{Child->Ty, ValueKind::Value};
 }
 
 std::optional<NewOpResult>
 DwarfExpression::traverse(DIOp::Reinterpret Reinterpret, ChildrenT Children) {
-  auto Child = traverse(Children[0].get(), ValueKind::LocationDesc,
+  auto Child = traverse(Children[0].get(), /*ReqVK=*/std::nullopt,
                         /*PermitDivergentAddrSpace=*/true);
   if (!Child)
     return Child;
@@ -1301,26 +1318,21 @@ std::optional<NewOpResult> DwarfExpression::traverse(DIOp::Fragment Fragment,
   return std::nullopt;
 }
 
-void DwarfExpression::readToValue(Type *Ty) {
-  uint64_t PrimitiveSizeInBits = Ty->getPrimitiveSizeInBits();
-  assert(PrimitiveSizeInBits != 0 && "Expected primitive type");
-
-  uint64_t ByteAlignedPrimitiveSizeInBits = alignTo<8>(PrimitiveSizeInBits);
-  uint64_t PrimitiveSizeInBytes = ByteAlignedPrimitiveSizeInBits / 8;
-  bool NeedsMask = ByteAlignedPrimitiveSizeInBits != PrimitiveSizeInBits;
+void DwarfExpression::readToValue(const OpResult &R) {
+  const DataLayout &DL = AP.getDataLayout();
+  uint64_t SizeInBits = R.Ty->isPointerTy() && R.DivergentAddrSpace
+                            ? DL.getPointerSizeInBits(*R.DivergentAddrSpace)
+                            : DL.getTypeSizeInBits(R.Ty).getFixedValue();
+  uint64_t ByteAlignedSizeInBits = alignTo<8>(SizeInBits);
+  uint64_t SizeInBytes = ByteAlignedSizeInBits / 8;
+  bool NeedsMask = ByteAlignedSizeInBits != SizeInBits;
 
   emitOp(dwarf::DW_OP_deref_size);
-  emitData1(PrimitiveSizeInBytes);
+  emitData1(SizeInBytes);
 
   if (NeedsMask) {
-    uint64_t Mask = (1ULL << PrimitiveSizeInBits) - 1ULL;
+    uint64_t Mask = (1ULL << SizeInBits) - 1ULL;
     emitConstu(Mask);
     emitOp(dwarf::DW_OP_and);
   }
-}
-
-void DwarfExpression::readToValue(DwarfExpression::Node *OpNode) {
-  assert(OpNode->isLowered() && "Expected lowered node");
-  assert(OpNode->getResultType() && "Expected non-null result type");
-  readToValue(OpNode->getResultType());
 }

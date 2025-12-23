@@ -1,5 +1,5 @@
-// RUN: %clangxx -fsanitize=undefined -O0 %s -o %t && UBSAN_OPTIONS=stack_trace_format=DEFAULT:fast_unwind_on_fatal=1 %run %t 2>&1 | FileCheck %s
-// RUN: %clangxx -fsanitize=undefined -O0 %s -o %t && UBSAN_OPTIONS=stack_trace_format=DEFAULT:fast_unwind_on_fatal=0 %run %t 2>&1 | FileCheck %s
+// RUN: %clangxx -fsanitize=undefined -O0 %s -o %t && env UBSAN_OPTIONS=stack_trace_format=DEFAULT:fast_unwind_on_fatal=1 %run %t 2>&1 | FileCheck %s
+// RUN: %clangxx -fsanitize=undefined -O0 %s -o %t && env UBSAN_OPTIONS=stack_trace_format=DEFAULT:fast_unwind_on_fatal=0 %run %t 2>&1 | FileCheck %s
 
 // This test is temporarily disabled due to broken unwinding on ARM.
 // UNSUPPORTED: target={{.*-linux-.*}}

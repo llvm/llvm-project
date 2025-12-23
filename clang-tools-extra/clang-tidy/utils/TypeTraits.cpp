@@ -111,7 +111,7 @@ bool isTriviallyDefaultConstructible(QualType Type, const ASTContext &Context) {
     }
   }
 
-  QualType CanonicalType = Type.getCanonicalType();
+  const QualType CanonicalType = Type.getCanonicalType();
   if (CanonicalType->isDependentType())
     return false;
 

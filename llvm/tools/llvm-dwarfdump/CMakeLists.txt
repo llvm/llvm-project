@@ -1,4 +1,5 @@
 set(LLVM_LINK_COMPONENTS
+  BinaryFormat
   DebugInfoDWARF
   DebugInfoDWARFLowLevel
   AllTargetsDescs
@@ -8,6 +9,7 @@ set(LLVM_LINK_COMPONENTS
   Object
   Support
   TargetParser
+  BinaryFormat
   )
 
 add_llvm_tool(llvm-dwarfdump

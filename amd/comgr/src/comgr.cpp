@@ -102,6 +102,8 @@ amd_comgr_status_t dispatchCompilerAction(amd_comgr_action_kind_t ActionKind,
     return Compiler.compileSpirvToRelocatable();
   case AMD_COMGR_ACTION_TRANSLATE_SPIRV_TO_BC:
     return Compiler.translateSpirvToBitcode();
+  case AMD_COMGR_ACTION_COMPILE_SOURCE_TO_SPIRV:
+    return Compiler.compileSourceToSpirv();
 
   default:
     return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
@@ -193,6 +195,8 @@ StringRef getActionKindName(amd_comgr_action_kind_t ActionKind) {
     return "AMD_COMGR_ACTION_COMPILE_SPIRV_TO_RELOCATABLE";
   case AMD_COMGR_ACTION_TRANSLATE_SPIRV_TO_BC:
     return "AMD_COMGR_ACTION_TRANSLATE_SPIRV_TO_BC";
+  case AMD_COMGR_ACTION_COMPILE_SOURCE_TO_SPIRV:
+    return "AMD_COMGR_ACTION_COMPILE_SOURCE_TO_SPIRV";
   }
 
   llvm_unreachable("invalid action");
@@ -1302,6 +1306,7 @@ amd_comgr_status_t AMD_COMGR_API
     case AMD_COMGR_ACTION_COMPILE_SOURCE_TO_EXECUTABLE:
     case AMD_COMGR_ACTION_COMPILE_SPIRV_TO_RELOCATABLE:
     case AMD_COMGR_ACTION_TRANSLATE_SPIRV_TO_BC:
+    case AMD_COMGR_ACTION_COMPILE_SOURCE_TO_SPIRV:
       ActionStatus = dispatchCompilerAction(ActionKind, ActionInfoP, InputSetP,
                                             ResultSetP, *LogP);
       break;

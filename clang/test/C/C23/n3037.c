@@ -30,11 +30,24 @@ void func2(PRODUCT(int, SUM(float, double)) y) { // c17-warning {{declaration of
 
 struct foop { struct { int x; }; }; // c17-note {{previous definition is here}}
 struct foop { struct { int x; }; }; // c17-error {{redefinition of 'foop'}}
+// Test the field lookup compatibility isn't sufficient, the structure of types should be compatible.
+struct AnonymousStructNotMatchingFields { // c17-note {{previous definition is here}}
+  struct { // c23-note {{field has name '' here}}
+    int x;
+  };
+};
+struct AnonymousStructNotMatchingFields { // c23-error {{type 'struct AnonymousStructNotMatchingFields' has incompatible definitions}} \
+                                             c17-error {{redefinition of 'AnonymousStructNotMatchingFields'}}
+  int x; // c23-note {{field has name 'x' here}}
+};
+
 union barp { int x; float y; };     // c17-note {{previous definition is here}}
 union barp { int x; float y; };     // c17-error {{redefinition of 'barp'}}
 typedef struct q { int x; } q_t;    // c17-note 2 {{previous definition is here}}
 typedef struct q { int x; } q_t;    // c17-error {{redefinition of 'q'}} \
                                        c17-error-re {{typedef redefinition with different types ('struct (unnamed struct at {{.*}})' vs 'struct q')}}
+typedef struct { int x; } untagged_q_t; // both-note {{previous definition is here}}
+typedef struct { int x; } untagged_q_t; // both-error {{typedef redefinition with different types}}
 void func3(void) {
   struct S { int x; };       // c17-note {{previous definition is here}}
   struct T { struct S s; };  // c17-note {{previous definition is here}}
@@ -389,13 +402,40 @@ void nontag_both_in_params(struct { int i; } Arg1, struct { int i; } Arg2) {
   _Static_assert(0 == _Generic(__typeof__(Arg1), __typeof__(Arg2) : 1, default : 0)); // both-warning {{passing a type argument as the first operand to '_Generic' is a C2y extension}}
 }
 
-struct InnerAnonStruct {
+struct InnerUnnamedStruct {
   struct {
     int i;
   } untagged;
-} inner_anon_tagged;
+} inner_unnamed_tagged;
+_Static_assert(0 == _Generic(inner_unnamed_tagged.untagged, struct { int i; } : 1, default : 0));
 
-_Static_assert(0 == _Generic(inner_anon_tagged.untagged, struct { int i; } : 1, default : 0));
+struct InnerUnnamedStruct_same {
+  struct {
+    int i;
+  } untagged;
+};
+struct InnerUnnamedStruct_differentNaming {
+  struct {
+    int i;
+  } untaggedDifferent;
+};
+struct InnerUnnamedStruct_differentShape {
+  float x;
+  struct {
+    int i;
+  } untagged;
+  int y;
+};
+void compare_unnamed_struct_from_different_outer_type(
+    struct InnerUnnamedStruct sameOuterType,
+    struct InnerUnnamedStruct_same matchingType,
+    struct InnerUnnamedStruct_differentNaming differentFieldName,
+    struct InnerUnnamedStruct_differentShape differentType) {
+  inner_unnamed_tagged.untagged = sameOuterType.untagged;
+  inner_unnamed_tagged.untagged = matchingType.untagged; // both-error-re {{assigning to 'struct (unnamed struct at {{.*}})' from incompatible type 'struct (unnamed struct at {{.*}})'}}
+  inner_unnamed_tagged.untagged = differentFieldName.untaggedDifferent; // both-error-re {{assigning to 'struct (unnamed struct at {{.*}})' from incompatible type 'struct (unnamed struct at {{.*}})'}}
+  inner_unnamed_tagged.untagged = differentType.untagged; // both-error-re {{assigning to 'struct (unnamed struct at {{.*}})' from incompatible type 'struct (unnamed struct at {{.*}})'}}
+}
 
 // Test the same thing with enumerations (test for unions is omitted because
 // unions and structures are both RecordDecl objects, whereas EnumDecl is not).

@@ -16,11 +16,13 @@
 #include "llvm/Testing/Support/Error.h"
 
 #include "Plugins/ObjectFile/PECOFF/ObjectFilePECOFF.h"
+#include "Plugins/Platform/Windows/PlatformWindows.h"
 #include "Plugins/SymbolFile/DWARF/SymbolFileDWARF.h"
 #include "Plugins/SymbolFile/PDB/SymbolFilePDB.h"
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "TestingSupport/TestUtilities.h"
 #include "lldb/Core/Address.h"
+#include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Host/FileSystem.h"
@@ -59,6 +61,13 @@ public:
 
     m_pdb_test_exe = GetInputFilePath("test-pdb.exe");
     m_types_test_exe = GetInputFilePath("test-pdb-types.exe");
+
+    ArchSpec arch("x86_64-pc-windows-msvc");
+    Platform::SetHostPlatform(PlatformWindows::CreateInstance(true, &arch));
+    m_debugger_sp = Debugger::CreateInstance();
+    m_debugger_sp->SetPropertyValue(nullptr,
+                                    lldb_private::eVarSetOperationAssign,
+                                    "plugin.symbol-file.pdb.reader", "dia");
   }
 
   void TearDown() override {
@@ -77,6 +86,7 @@ public:
 protected:
   std::string m_pdb_test_exe;
   std::string m_types_test_exe;
+  lldb::DebuggerSP m_debugger_sp;
 
   bool FileSpecMatchesAsBaseOrFull(const FileSpec &left,
                                    const FileSpec &right) const {

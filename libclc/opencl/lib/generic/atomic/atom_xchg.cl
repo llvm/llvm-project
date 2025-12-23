@@ -6,32 +6,35 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <clc/atomic/clc_atomic_exchange.h>
 #include <clc/opencl/atomic/atom_xchg.h>
-#include <clc/opencl/atomic/atomic_xchg.h>
 
-#ifdef cl_khr_global_int32_base_atomics
-#define __CLC_ATOMIC_OP xchg
-#define __CLC_ATOMIC_ADDRESS_SPACE global
-#include "atom_int32_binary.inc"
-#endif // cl_khr_global_int32_base_atomics
-
-#ifdef cl_khr_local_int32_base_atomics
-#define __CLC_ATOMIC_OP xchg
-#define __CLC_ATOMIC_ADDRESS_SPACE local
-#include "atom_int32_binary.inc"
-#endif // cl_khr_local_int32_base_atomics
-
-#ifdef cl_khr_int64_base_atomics
+// Non-volatile overloads are for backward compatibility with OpenCL 1.0.
 
 #define __CLC_IMPL(AS, TYPE)                                                   \
   _CLC_OVERLOAD _CLC_DEF TYPE atom_xchg(volatile AS TYPE *p, TYPE val) {       \
-    return __sync_swap_8(p, val);                                              \
+    return __clc_atomic_exchange(p, val, __ATOMIC_RELAXED,                     \
+                                 __MEMORY_SCOPE_DEVICE);                       \
+  }                                                                            \
+  _CLC_OVERLOAD _CLC_DEF TYPE atom_xchg(AS TYPE *p, TYPE val) {                \
+    return atom_xchg((volatile AS TYPE *)p, val);                              \
   }
+
+#ifdef cl_khr_global_int32_base_atomics
+__CLC_IMPL(global, int)
+__CLC_IMPL(global, unsigned int)
+#endif // cl_khr_global_int32_base_atomics
+
+#ifdef cl_khr_local_int32_base_atomics
+__CLC_IMPL(local, int)
+__CLC_IMPL(local, unsigned int)
+#endif // cl_khr_local_int32_base_atomics
+
+#ifdef cl_khr_int64_base_atomics
 
 __CLC_IMPL(global, long)
 __CLC_IMPL(global, unsigned long)
 __CLC_IMPL(local, long)
 __CLC_IMPL(local, unsigned long)
-#undef __CLC_IMPL
 
 #endif // cl_khr_int64_base_atomics

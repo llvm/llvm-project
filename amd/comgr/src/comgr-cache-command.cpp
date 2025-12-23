@@ -27,20 +27,6 @@ namespace COMGR {
 using namespace llvm;
 using namespace clang;
 
-namespace {
-// std::isalnum is locale dependent and can have issues
-// depending on the stdlib version and application. We prefer to avoid it
-bool isalnum(char c) {
-  char low[] = {'0', 'a', 'A'};
-  char hi[] = {'9', 'z', 'Z'};
-  for (unsigned i = 0; i != 3; ++i) {
-    if (low[i] <= c && c <= hi[i])
-      return true;
-  }
-  return false;
-}
-} // namespace
-
 std::optional<CachedCommandAdaptor::ComgrTmpSearchResult>
 CachedCommandAdaptor::searchComgrTmpModel(StringRef S) {
   // Ideally, we would use std::regex_search with the regex
@@ -82,7 +68,9 @@ CachedCommandAdaptor::searchComgrTmpModel(StringRef S) {
       continue;
     }
 
-    if (!all_of(Remaining.substr(0, AlnumCount), isalnum)) {
+    // Use llvm::isAlnum and not std::isalnum. The later is locale dependent and
+    // can have issues depending on the stdlib version and application.
+    if (!all_of(Remaining.substr(0, AlnumCount), llvm::isAlnum)) {
       continue;
     }
 

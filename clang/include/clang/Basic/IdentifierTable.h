@@ -46,6 +46,57 @@ class LangOptions;
 class MultiKeywordSelector;
 class SourceLocation;
 
+/// Constants for TokenKinds.def
+enum TokenKey : unsigned {
+  KEYC99 = 0x1,
+  KEYCXX = 0x2,
+  KEYCXX11 = 0x4,
+  KEYGNU = 0x8,
+  KEYMS = 0x10,
+  BOOLSUPPORT = 0x20,
+  KEYALTIVEC = 0x40,
+  KEYNOCXX = 0x80,
+  KEYBORLAND = 0x100,
+  KEYOPENCLC = 0x200,
+  KEYC23 = 0x400,
+  KEYNOMS18 = 0x800,
+  KEYNOOPENCL = 0x1000,
+  WCHARSUPPORT = 0x2000,
+  HALFSUPPORT = 0x4000,
+  CHAR8SUPPORT = 0x8000,
+  KEYOBJC = 0x10000,
+  KEYZVECTOR = 0x20000,
+  KEYCOROUTINES = 0x40000,
+  KEYMODULES = 0x80000,
+  KEYCXX20 = 0x100000,
+  KEYOPENCLCXX = 0x200000,
+  KEYMSCOMPAT = 0x400000,
+  KEYSYCL = 0x800000,
+  KEYCUDA = 0x1000000,
+  KEYZOS = 0x2000000,
+  KEYNOZOS = 0x4000000,
+  KEYHLSL = 0x8000000,
+  KEYFIXEDPOINT = 0x10000000,
+  KEYMAX = KEYFIXEDPOINT, // The maximum key
+  KEYALLCXX = KEYCXX | KEYCXX11 | KEYCXX20,
+  KEYALL = (KEYMAX | (KEYMAX - 1)) & ~KEYNOMS18 & ~KEYNOOPENCL &
+           ~KEYNOZOS // KEYNOMS18, KEYNOOPENCL, KEYNOZOS are excluded.
+};
+
+/// How a keyword is treated in the selected standard. This enum is ordered
+/// intentionally so that the value that 'wins' is the most 'permissive'.
+enum KeywordStatus {
+  KS_Unknown,   // Not yet calculated. Used when figuring out the status.
+  KS_Disabled,  // Disabled
+  KS_Future,    // Is a keyword in future standard
+  KS_Extension, // Is an extension
+  KS_Enabled,   // Enabled
+};
+
+/// Translates flags as specified in TokenKinds.def into keyword status
+/// in the given language standard.
+KeywordStatus getKeywordStatus(const LangOptions &LangOpts, unsigned Flags);
+
 enum class ReservedIdentifierStatus {
   NotReserved = 0,
   StartsWithUnderscoreAtGlobalScope,

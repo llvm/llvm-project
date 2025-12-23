@@ -163,7 +163,7 @@ public:
 class LLVM_LIBRARY_VISIBILITY OffloadPackager final : public Tool {
 public:
   OffloadPackager(const ToolChain &TC)
-      : Tool("Offload::Packager", "clang-offload-packager", TC) {}
+      : Tool("Offload::Packager", "llvm-offload-binary", TC) {}
 
   bool hasIntegratedCPP() const override { return false; }
   void ConstructJob(Compilation &C, const JobAction &JA,
@@ -185,11 +185,6 @@ public:
                     const InputInfo &Output, const InputInfoList &Inputs,
                     const llvm::opt::ArgList &TCArgs,
                     const char *LinkingOutput) const override;
-  void ConstructOpaqueJob(Compilation &C, const JobAction &JA,
-                          const InputInfo &Output, const InputInfoList &Inputs,
-                          const llvm::opt::ArgList &TCArgs,
-                          const llvm::Triple &TheTriple,
-                          const char *LinkingOutput) const;
 };
 
 // Calculate the output path of the module file when compiling a module unit

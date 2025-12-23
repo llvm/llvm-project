@@ -14,12 +14,6 @@
 // UNSUPPORTED: c++03, c++11, c++14
 // UNSUPPORTED: clang-modules-build
 
-#include "test_macros.h"
-
 #include <ctgmath>
 
-#if TEST_STD_VER >= 20
-// expected-warning@ctgmath:* {{'__standard_header_ctgmath' is deprecated: removed in C++20. Include <cmath> and <complex> instead.}}
-#else
-// expected-warning@ctgmath:* {{'__standard_header_ctgmath' is deprecated: Include <cmath> and <complex> instead.}}
-#endif
+// expected-warning@ctgmath:* {{<ctgmath> is deprecated in C++17 and removed in C++20. Include <cmath> and <complex> instead.}}

@@ -28,7 +28,7 @@ end subroutine
 ! CHECK-LABEL:   func.func @_QPsectionsreduction(
 ! CHECK-SAME:                                    %[[VAL_0:.*]]: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "x"}) {
 ! CHECK:           %[[VAL_1:.*]] = fir.dummy_scope : !fir.dscope
-! CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %[[VAL_1]] {uniq_name = "_QFsectionsreductionEx"} : (!fir.box<!fir.array<?xf32>>, !fir.dscope) -> (!fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>)
+! CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %[[VAL_1]] arg {{[0-9]+}} {uniq_name = "_QFsectionsreductionEx"} : (!fir.box<!fir.array<?xf32>>, !fir.dscope) -> (!fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>)
 ! CHECK:           omp.parallel {
 ! CHECK:             %[[VAL_3:.*]] = fir.alloca !fir.box<!fir.array<?xf32>>
 ! CHECK:             fir.store %[[VAL_2]]#0 to %[[VAL_3]] : !fir.ref<!fir.box<!fir.array<?xf32>>>

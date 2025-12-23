@@ -722,39 +722,27 @@ define i1 @ne_v4i256(<4 x i256> %a0) {
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    movq {{[0-9]+}}(%rsp), %rax
 ; AVX512-NEXT:    movq {{[0-9]+}}(%rsp), %r10
-; AVX512-NEXT:    orq {{[0-9]+}}(%rsp), %rax
-; AVX512-NEXT:    vmovd %eax, %xmm0
-; AVX512-NEXT:    shrq $32, %rax
-; AVX512-NEXT:    vpinsrd $1, %eax, %xmm0, %xmm0
 ; AVX512-NEXT:    orq {{[0-9]+}}(%rsp), %r10
-; AVX512-NEXT:    vpinsrd $2, %r10d, %xmm0, %xmm0
-; AVX512-NEXT:    shrq $32, %r10
-; AVX512-NEXT:    vpinsrd $3, %r10d, %xmm0, %xmm0
-; AVX512-NEXT:    orq {{[0-9]+}}(%rsp), %r8
-; AVX512-NEXT:    vmovd %r8d, %xmm1
-; AVX512-NEXT:    shrq $32, %r8
-; AVX512-NEXT:    vpinsrd $1, %r8d, %xmm1, %xmm1
+; AVX512-NEXT:    vmovq %r10, %xmm0
+; AVX512-NEXT:    orq {{[0-9]+}}(%rsp), %rax
+; AVX512-NEXT:    vmovq %rax, %xmm1
+; AVX512-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
 ; AVX512-NEXT:    orq {{[0-9]+}}(%rsp), %r9
-; AVX512-NEXT:    vpinsrd $2, %r9d, %xmm1, %xmm1
-; AVX512-NEXT:    shrq $32, %r9
-; AVX512-NEXT:    vpinsrd $3, %r9d, %xmm1, %xmm1
+; AVX512-NEXT:    vmovq %r9, %xmm1
+; AVX512-NEXT:    orq {{[0-9]+}}(%rsp), %r8
+; AVX512-NEXT:    vmovq %r8, %xmm2
+; AVX512-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm2[0],xmm1[0]
 ; AVX512-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm0
-; AVX512-NEXT:    orq {{[0-9]+}}(%rsp), %rdx
-; AVX512-NEXT:    vmovd %edx, %xmm1
-; AVX512-NEXT:    shrq $32, %rdx
-; AVX512-NEXT:    vpinsrd $1, %edx, %xmm1, %xmm1
 ; AVX512-NEXT:    orq {{[0-9]+}}(%rsp), %rcx
-; AVX512-NEXT:    vpinsrd $2, %ecx, %xmm1, %xmm1
-; AVX512-NEXT:    shrq $32, %rcx
-; AVX512-NEXT:    vpinsrd $3, %ecx, %xmm1, %xmm1
-; AVX512-NEXT:    orq {{[0-9]+}}(%rsp), %rdi
-; AVX512-NEXT:    vmovd %edi, %xmm2
-; AVX512-NEXT:    shrq $32, %rdi
-; AVX512-NEXT:    vpinsrd $1, %edi, %xmm2, %xmm2
+; AVX512-NEXT:    vmovq %rcx, %xmm1
+; AVX512-NEXT:    orq {{[0-9]+}}(%rsp), %rdx
+; AVX512-NEXT:    vmovq %rdx, %xmm2
+; AVX512-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm2[0],xmm1[0]
 ; AVX512-NEXT:    orq {{[0-9]+}}(%rsp), %rsi
-; AVX512-NEXT:    vpinsrd $2, %esi, %xmm2, %xmm2
-; AVX512-NEXT:    shrq $32, %rsi
-; AVX512-NEXT:    vpinsrd $3, %esi, %xmm2, %xmm2
+; AVX512-NEXT:    vmovq %rsi, %xmm2
+; AVX512-NEXT:    orq {{[0-9]+}}(%rsp), %rdi
+; AVX512-NEXT:    vmovq %rdi, %xmm3
+; AVX512-NEXT:    vpunpcklqdq {{.*#+}} xmm2 = xmm3[0],xmm2[0]
 ; AVX512-NEXT:    vinserti128 $1, %xmm1, %ymm2, %ymm1
 ; AVX512-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
 ; AVX512-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -1446,4 +1434,176 @@ define i1 @eq_i512_load_arg(ptr%p, i512 %b) {
   %a = load i512, ptr %p
   %r = icmp eq i512 %a, %b
   ret i1 %r
+}
+
+; Tests for any/allbits from memory.
+
+define i1 @anybits_i128_load_arg(ptr %w) {
+; ANY-LABEL: anybits_i128_load_arg:
+; ANY:       # %bb.0:
+; ANY-NEXT:    movq (%rdi), %rax
+; ANY-NEXT:    orq 8(%rdi), %rax
+; ANY-NEXT:    setne %al
+; ANY-NEXT:    retq
+  %ld = load i128, ptr %w
+  %cmp = icmp ne i128 %ld, 0
+  ret i1 %cmp
+}
+
+define i1 @allbits_i128_load_arg(ptr %w) {
+; SSE2-LABEL: allbits_i128_load_arg:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    pcmpeqd %xmm0, %xmm0
+; SSE2-NEXT:    pcmpeqb (%rdi), %xmm0
+; SSE2-NEXT:    pmovmskb %xmm0, %eax
+; SSE2-NEXT:    cmpl $65535, %eax # imm = 0xFFFF
+; SSE2-NEXT:    sete %al
+; SSE2-NEXT:    retq
+;
+; SSE41-LABEL: allbits_i128_load_arg:
+; SSE41:       # %bb.0:
+; SSE41-NEXT:    movdqa (%rdi), %xmm0
+; SSE41-NEXT:    pcmpeqd %xmm1, %xmm1
+; SSE41-NEXT:    ptest %xmm1, %xmm0
+; SSE41-NEXT:    setb %al
+; SSE41-NEXT:    retq
+;
+; AVXANY-LABEL: allbits_i128_load_arg:
+; AVXANY:       # %bb.0:
+; AVXANY-NEXT:    vmovdqa (%rdi), %xmm0
+; AVXANY-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
+; AVXANY-NEXT:    vptest %xmm1, %xmm0
+; AVXANY-NEXT:    setb %al
+; AVXANY-NEXT:    retq
+  %ld = load i128, ptr %w
+  %cmp = icmp eq i128 %ld, -1
+  ret i1 %cmp
+}
+
+define i1 @anybits_i256_load_arg(ptr %w) {
+; SSE-LABEL: anybits_i256_load_arg:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movq (%rdi), %rax
+; SSE-NEXT:    movq 8(%rdi), %rcx
+; SSE-NEXT:    orq 24(%rdi), %rcx
+; SSE-NEXT:    orq 16(%rdi), %rax
+; SSE-NEXT:    orq %rcx, %rax
+; SSE-NEXT:    setne %al
+; SSE-NEXT:    retq
+;
+; AVXANY-LABEL: anybits_i256_load_arg:
+; AVXANY:       # %bb.0:
+; AVXANY-NEXT:    vmovdqu (%rdi), %ymm0
+; AVXANY-NEXT:    vptest %ymm0, %ymm0
+; AVXANY-NEXT:    setne %al
+; AVXANY-NEXT:    vzeroupper
+; AVXANY-NEXT:    retq
+  %ld = load i256, ptr %w
+  %cmp = icmp ne i256 %ld, 0
+  ret i1 %cmp
+}
+
+define i1 @allbits_i256_load_arg(ptr %w) {
+; SSE-LABEL: allbits_i256_load_arg:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movq (%rdi), %rax
+; SSE-NEXT:    movq 8(%rdi), %rcx
+; SSE-NEXT:    andq 24(%rdi), %rcx
+; SSE-NEXT:    andq 16(%rdi), %rax
+; SSE-NEXT:    andq %rcx, %rax
+; SSE-NEXT:    cmpq $-1, %rax
+; SSE-NEXT:    sete %al
+; SSE-NEXT:    retq
+;
+; AVX1-LABEL: allbits_i256_load_arg:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vmovdqu (%rdi), %ymm0
+; AVX1-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; AVX1-NEXT:    vcmptrueps %ymm1, %ymm1, %ymm1
+; AVX1-NEXT:    vptest %ymm1, %ymm0
+; AVX1-NEXT:    setb %al
+; AVX1-NEXT:    vzeroupper
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: allbits_i256_load_arg:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vmovdqu (%rdi), %ymm0
+; AVX2-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
+; AVX2-NEXT:    vptest %ymm1, %ymm0
+; AVX2-NEXT:    setb %al
+; AVX2-NEXT:    vzeroupper
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: allbits_i256_load_arg:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vmovdqu (%rdi), %ymm0
+; AVX512-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
+; AVX512-NEXT:    vptest %ymm1, %ymm0
+; AVX512-NEXT:    setb %al
+; AVX512-NEXT:    vzeroupper
+; AVX512-NEXT:    retq
+  %ld = load i256, ptr %w
+  %cmp = icmp eq i256 %ld, -1
+  ret i1 %cmp
+}
+
+define i1 @anybits_i512_load_arg(ptr %w) {
+; NO512-LABEL: anybits_i512_load_arg:
+; NO512:       # %bb.0:
+; NO512-NEXT:    movq 16(%rdi), %rax
+; NO512-NEXT:    movq (%rdi), %rcx
+; NO512-NEXT:    movq 8(%rdi), %rdx
+; NO512-NEXT:    movq 24(%rdi), %rsi
+; NO512-NEXT:    orq 56(%rdi), %rsi
+; NO512-NEXT:    orq 40(%rdi), %rdx
+; NO512-NEXT:    orq %rsi, %rdx
+; NO512-NEXT:    orq 48(%rdi), %rax
+; NO512-NEXT:    orq 32(%rdi), %rcx
+; NO512-NEXT:    orq %rax, %rcx
+; NO512-NEXT:    orq %rdx, %rcx
+; NO512-NEXT:    setne %al
+; NO512-NEXT:    retq
+;
+; AVX512-LABEL: anybits_i512_load_arg:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vmovdqu64 (%rdi), %zmm0
+; AVX512-NEXT:    vptestmd %zmm0, %zmm0, %k0
+; AVX512-NEXT:    kortestw %k0, %k0
+; AVX512-NEXT:    setne %al
+; AVX512-NEXT:    vzeroupper
+; AVX512-NEXT:    retq
+  %ld = load i512, ptr %w
+  %cmp = icmp ne i512 %ld, 0
+  ret i1 %cmp
+}
+
+define i1 @allbits_i512_load_arg(ptr %w) {
+; NO512-LABEL: allbits_i512_load_arg:
+; NO512:       # %bb.0:
+; NO512-NEXT:    movq 16(%rdi), %rax
+; NO512-NEXT:    movq (%rdi), %rcx
+; NO512-NEXT:    movq 8(%rdi), %rdx
+; NO512-NEXT:    movq 24(%rdi), %rsi
+; NO512-NEXT:    andq 56(%rdi), %rsi
+; NO512-NEXT:    andq 40(%rdi), %rdx
+; NO512-NEXT:    andq %rsi, %rdx
+; NO512-NEXT:    andq 48(%rdi), %rax
+; NO512-NEXT:    andq 32(%rdi), %rcx
+; NO512-NEXT:    andq %rax, %rcx
+; NO512-NEXT:    andq %rdx, %rcx
+; NO512-NEXT:    cmpq $-1, %rcx
+; NO512-NEXT:    sete %al
+; NO512-NEXT:    retq
+;
+; AVX512-LABEL: allbits_i512_load_arg:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpternlogd {{.*#+}} zmm0 = -1
+; AVX512-NEXT:    vpcmpneqd (%rdi), %zmm0, %k0
+; AVX512-NEXT:    kortestw %k0, %k0
+; AVX512-NEXT:    sete %al
+; AVX512-NEXT:    vzeroupper
+; AVX512-NEXT:    retq
+  %ld = load i512, ptr %w
+  %cmp = icmp eq i512 %ld, -1
+  ret i1 %cmp
 }

@@ -53,7 +53,8 @@ int bar() { return foo1() + foo2() + foo3() + foo4() + foo5() + foo6() + foo7() 
 // CHECK-NEXT:    ret i32 1
 //
 //
-// CHECK-LABEL: define weak_odr ptr @foo1.resolver() comdat {
+// CHECK-LABEL: define weak_odr ptr @foo1.resolver()
+// CHECK-SAME: #[[ATTR_RESOLVER:[0-9]+]] comdat {
 // CHECK-NEXT:  resolver_entry:
 // CHECK-NEXT:    call void @__init_riscv_feature_bits(ptr null)
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr getelementptr inbounds ({ i32, [2 x i64] }, ptr @__riscv_feature_bits, i32 0, i32 1, i32 0), align 8
@@ -84,7 +85,8 @@ int bar() { return foo1() + foo2() + foo3() + foo4() + foo5() + foo6() + foo7() 
 // CHECK-NEXT:    ret i32 2
 //
 //
-// CHECK-LABEL: define weak_odr ptr @foo2.resolver() comdat {
+// CHECK-LABEL: define weak_odr ptr @foo2.resolver()
+// CHECK-SAME: #[[ATTR_RESOLVER]] comdat {
 // CHECK-NEXT:  resolver_entry:
 // CHECK-NEXT:    call void @__init_riscv_feature_bits(ptr null)
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr getelementptr inbounds ({ i32, [2 x i64] }, ptr @__riscv_feature_bits, i32 0, i32 1, i32 0), align 8
@@ -116,7 +118,8 @@ int bar() { return foo1() + foo2() + foo3() + foo4() + foo5() + foo6() + foo7() 
 // CHECK-NEXT:    ret i32 3
 //
 //
-// CHECK-LABEL: define weak_odr ptr @foo3.resolver() comdat {
+// CHECK-LABEL: define weak_odr ptr @foo3.resolver()
+// CHECK-SAME: #[[ATTR_RESOLVER]] comdat {
 // CHECK-NEXT:  resolver_entry:
 // CHECK-NEXT:    call void @__init_riscv_feature_bits(ptr null)
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr getelementptr inbounds ({ i32, [2 x i64] }, ptr @__riscv_feature_bits, i32 0, i32 1, i32 0), align 8
@@ -141,7 +144,8 @@ int bar() { return foo1() + foo2() + foo3() + foo4() + foo5() + foo6() + foo7() 
 // CHECK-NEXT:    ret i32 4
 //
 //
-// CHECK-LABEL: define weak_odr ptr @foo4.resolver() comdat {
+// CHECK-LABEL: define weak_odr ptr @foo4.resolver()
+// CHECK-SAME: #[[ATTR_RESOLVER]] comdat {
 // CHECK-NEXT:  resolver_entry:
 // CHECK-NEXT:    call void @__init_riscv_feature_bits(ptr null)
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr getelementptr inbounds ({ i32, [2 x i64] }, ptr @__riscv_feature_bits, i32 0, i32 1, i32 0), align 8
@@ -160,7 +164,8 @@ int bar() { return foo1() + foo2() + foo3() + foo4() + foo5() + foo6() + foo7() 
 // CHECK-NEXT:    ret i32 5
 //
 //
-// CHECK-LABEL: define weak_odr ptr @foo5.resolver() comdat {
+// CHECK-LABEL: define weak_odr ptr @foo5.resolver()
+// CHECK-SAME: #[[ATTR_RESOLVER]] comdat {
 // CHECK-NEXT:  resolver_entry:
 // CHECK-NEXT:    call void @__init_riscv_feature_bits(ptr null)
 // CHECK-NEXT:    ret ptr @foo5.default
@@ -178,7 +183,8 @@ int bar() { return foo1() + foo2() + foo3() + foo4() + foo5() + foo6() + foo7() 
 // CHECK-NEXT:    ret i32 2
 //
 //
-// CHECK-LABEL: define weak_odr ptr @foo6.resolver() comdat {
+// CHECK-LABEL: define weak_odr ptr @foo6.resolver()
+// CHECK-SAME: #[[ATTR_RESOLVER]] comdat {
 // CHECK-NEXT:  resolver_entry:
 // CHECK-NEXT:    call void @__init_riscv_feature_bits(ptr null)
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr getelementptr inbounds ({ i32, [2 x i64] }, ptr @__riscv_feature_bits, i32 0, i32 1, i32 0), align 8
@@ -215,7 +221,8 @@ int bar() { return foo1() + foo2() + foo3() + foo4() + foo5() + foo6() + foo7() 
 // CHECK-NEXT:    ret i32 2
 //
 //
-// CHECK-LABEL: define weak_odr ptr @foo7.resolver() comdat {
+// CHECK-LABEL: define weak_odr ptr @foo7.resolver()
+// CHECK-SAME: #[[ATTR_RESOLVER]] comdat {
 // CHECK-NEXT:  resolver_entry:
 // CHECK-NEXT:    call void @__init_riscv_feature_bits(ptr null)
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr getelementptr inbounds ({ i32, [2 x i64] }, ptr @__riscv_feature_bits, i32 0, i32 1, i32 0), align 8
@@ -266,7 +273,8 @@ int bar() { return foo1() + foo2() + foo3() + foo4() + foo5() + foo6() + foo7() 
 // CHECK-NEXT:    ret i32 2
 //
 //
-// CHECK-LABEL: define weak_odr ptr @foo8.resolver() comdat {
+// CHECK-LABEL: define weak_odr ptr @foo8.resolver()
+// CHECK-SAME: #[[ATTR_RESOLVER]] comdat {
 // CHECK-NEXT:  resolver_entry:
 // CHECK-NEXT:    call void @__init_riscv_feature_bits(ptr null)
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr getelementptr inbounds ({ i32, [2 x i64] }, ptr @__riscv_feature_bits, i32 0, i32 1, i32 0), align 8
@@ -317,7 +325,8 @@ int bar() { return foo1() + foo2() + foo3() + foo4() + foo5() + foo6() + foo7() 
 // CHECK-NEXT:    ret i32 2
 //
 //
-// CHECK-LABEL: define weak_odr ptr @foo9.resolver() comdat {
+// CHECK-LABEL: define weak_odr ptr @foo9.resolver()
+// CHECK-SAME: #[[ATTR_RESOLVER]] comdat {
 // CHECK-NEXT:  resolver_entry:
 // CHECK-NEXT:    call void @__init_riscv_feature_bits(ptr null)
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr getelementptr inbounds ({ i32, [2 x i64] }, ptr @__riscv_feature_bits, i32 0, i32 1, i32 0), align 8

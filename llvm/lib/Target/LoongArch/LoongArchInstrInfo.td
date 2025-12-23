@@ -100,14 +100,22 @@ def loongarch_tail_large : SDNode<"LoongArchISD::TAIL_LARGE", SDT_LoongArchCall,
 def loongarch_selectcc : SDNode<"LoongArchISD::SELECT_CC", SDT_LoongArchSelectCC>;
 def loongarch_brcc : SDNode<"LoongArchISD::BR_CC", SDT_LoongArchBrCC,
                             [SDNPHasChain]>;
+
+// 32-bit shifts, directly matching the semantics of the named LoongArch
+// instructions.
 def loongarch_sll_w : SDNode<"LoongArchISD::SLL_W", SDT_LoongArchIntBinOpW>;
 def loongarch_sra_w : SDNode<"LoongArchISD::SRA_W", SDT_LoongArchIntBinOpW>;
 def loongarch_srl_w : SDNode<"LoongArchISD::SRL_W", SDT_LoongArchIntBinOpW>;
+
 def loongarch_rotr_w : SDNode<"LoongArchISD::ROTR_W", SDT_LoongArchIntBinOpW>;
+
+// unsigned 32-bit integer division
 def loongarch_div_w : SDNode<"LoongArchISD::DIV_W", SDT_LoongArchIntBinOpW>;
 def loongarch_div_wu : SDNode<"LoongArchISD::DIV_WU", SDT_LoongArchIntBinOpW>;
 def loongarch_mod_w : SDNode<"LoongArchISD::MOD_W", SDT_LoongArchIntBinOpW>;
 def loongarch_mod_wu : SDNode<"LoongArchISD::MOD_WU", SDT_LoongArchIntBinOpW>;
+
+// CRC check operations
 def loongarch_crc_w_b_w
     : SDNode<"LoongArchISD::CRC_W_B_W", SDT_LoongArchIntBinOpW, [SDNPHasChain]>;
 def loongarch_crc_w_h_w
@@ -124,37 +132,63 @@ def loongarch_crcc_w_w_w : SDNode<"LoongArchISD::CRCC_W_W_W",
                                   SDT_LoongArchIntBinOpW, [SDNPHasChain]>;
 def loongarch_crcc_w_d_w : SDNode<"LoongArchISD::CRCC_W_D_W",
                                   SDT_LoongArchIntBinOpW, [SDNPHasChain]>;
+
 def loongarch_bstrins
     : SDNode<"LoongArchISD::BSTRINS", SDT_LoongArchBStrIns>;
 def loongarch_bstrpick
     : SDNode<"LoongArchISD::BSTRPICK", SDT_LoongArchBStrPick>;
+
+// Byte-swapping and bit-reversal
 def loongarch_revb_2h : SDNode<"LoongArchISD::REVB_2H", SDTUnaryOp>;
 def loongarch_revb_2w : SDNode<"LoongArchISD::REVB_2W", SDTUnaryOp>;
 def loongarch_bitrev_4b : SDNode<"LoongArchISD::BITREV_4B", SDTUnaryOp>;
 def loongarch_bitrev_8b : SDNode<"LoongArchISD::BITREV_8B", SDTUnaryOp>;
 def loongarch_bitrev_w : SDNode<"LoongArchISD::BITREV_W", SDTUnaryOp>;
+
+// Bit counting operations
 def loongarch_clzw : SDNode<"LoongArchISD::CLZ_W", SDTIntBitCountUnaryOp>;
 def loongarch_ctzw : SDNode<"LoongArchISD::CTZ_W", SDTIntBitCountUnaryOp>;
+
 def loongarch_dbar : SDNode<"LoongArchISD::DBAR", SDT_LoongArchVI,
                              [SDNPHasChain, SDNPSideEffect]>;
 def loongarch_ibar : SDNode<"LoongArchISD::IBAR", SDT_LoongArchVI,
                              [SDNPHasChain, SDNPSideEffect]>;
 def loongarch_break : SDNode<"LoongArchISD::BREAK", SDT_LoongArchVI,
                               [SDNPHasChain, SDNPSideEffect]>;
+
+// FPR<->GPR transfer operations
 def loongarch_movfcsr2gr : SDNode<"LoongArchISD::MOVFCSR2GR",
                                   SDT_LoongArchMovfcsr2gr, [SDNPHasChain]>;
 def loongarch_movgr2fcsr : SDNode<"LoongArchISD::MOVGR2FCSR",
                                   SDT_LoongArchMovgr2fcsr,
                                   [SDNPHasChain, SDNPSideEffect]>;
+
 def loongarch_syscall : SDNode<"LoongArchISD::SYSCALL", SDT_LoongArchVI,
                                 [SDNPHasChain, SDNPSideEffect]>;
 def loongarch_csrrd : SDNode<"LoongArchISD::CSRRD", SDT_LoongArchCsrrd,
                               [SDNPHasChain, SDNPSideEffect]>;
+
+// Write new value to CSR and return old value.
+// Operand 0: A chain pointer.
+// Operand 1: The new value to write.
+// Operand 2: The address of the required CSR.
+// Result 0: The old value of the CSR.
+// Result 1: The new chain pointer.
 def loongarch_csrwr : SDNode<"LoongArchISD::CSRWR", SDT_LoongArchCsrwr,
                               [SDNPHasChain, SDNPSideEffect]>;
+
+// Similar to CSRWR but with a write mask.
+// Operand 0: A chain pointer.
+// Operand 1: The new value to write.
+// Operand 2: The write mask.
+// Operand 3: The address of the required CSR.
+// Result 0: The old value of the CSR.
+// Result 1: The new chain pointer.
 def loongarch_csrxchg : SDNode<"LoongArchISD::CSRXCHG",
                                 SDT_LoongArchCsrxchg,
                                 [SDNPHasChain, SDNPSideEffect]>;
+
+// IOCSR access operations
 def loongarch_iocsrrd_b : SDNode<"LoongArchISD::IOCSRRD_B", SDTUnaryOp,
                                   [SDNPHasChain, SDNPSideEffect]>;
 def loongarch_iocsrrd_h : SDNode<"LoongArchISD::IOCSRRD_H", SDTUnaryOp,
@@ -175,9 +209,12 @@ def loongarch_iocsrwr_w : SDNode<"LoongArchISD::IOCSRWR_W",
 def loongarch_iocsrwr_d : SDNode<"LoongArchISD::IOCSRWR_D",
                                   SDT_LoongArchIocsrwr,
                                   [SDNPHasChain, SDNPSideEffect]>;
+
+// Read CPU configuration information operation
 def loongarch_cpucfg : SDNode<"LoongArchISD::CPUCFG", SDTUnaryOp,
                                [SDNPHasChain]>;
 
+// Build and split F64 pair
 def loongarch_build_pair_f64 : SDNode<"LoongArchISD::BUILD_PAIR_F64",
                                       SDT_LoongArchBuildPairF64>;
 def loongarch_split_pair_f64 : SDNode<"LoongArchISD::SPLIT_PAIR_F64",

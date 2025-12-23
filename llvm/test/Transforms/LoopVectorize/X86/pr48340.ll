@@ -31,7 +31,7 @@ define ptr @foo(ptr %p, ptr %p.last) unnamed_addr #0 {
 ; CHECK-NEXT:    [[STEP_ADD:%.*]] = getelementptr i8, <4 x ptr> [[TMP5]], <4 x i64> splat (i64 4096)
 ; CHECK-NEXT:    [[STEP_ADD_2:%.*]] = getelementptr i8, <4 x ptr> [[STEP_ADD]], <4 x i64> splat (i64 4096)
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i8, <4 x ptr> [[STEP_ADD_2]], <4 x i64> splat (i64 4096)
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER6:%.*]] = call <4 x ptr> @llvm.masked.gather.v4p0.v4p0(<4 x ptr> [[TMP8]], i32 8, <4 x i1> splat (i1 true), <4 x ptr> poison)
+; CHECK-NEXT:    [[WIDE_MASKED_GATHER6:%.*]] = call <4 x ptr> @llvm.masked.gather.v4p0.v4p0(<4 x ptr> align 8 [[TMP8]], <4 x i1> splat (i1 true), <4 x ptr> poison)
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
 ; CHECK-NEXT:    [[PTR_IND]] = getelementptr i8, ptr [[POINTER_PHI]], i64 16384
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
@@ -91,7 +91,7 @@ define ptr @bar(ptr %p, ptr %p.last) unnamed_addr #0 {
 ; CHECK-NEXT:    [[STEP_ADD:%.*]] = getelementptr i8, <4 x ptr> [[TMP5]], <4 x i64> splat (i64 4096)
 ; CHECK-NEXT:    [[STEP_ADD_2:%.*]] = getelementptr i8, <4 x ptr> [[STEP_ADD]], <4 x i64> splat (i64 4096)
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i8, <4 x ptr> [[STEP_ADD_2]], <4 x i64> splat (i64 4096)
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER6:%.*]] = call <4 x ptr> @llvm.masked.gather.v4p0.v4p0(<4 x ptr> [[TMP8]], i32 8, <4 x i1> splat (i1 true), <4 x ptr> poison)
+; CHECK-NEXT:    [[WIDE_MASKED_GATHER6:%.*]] = call <4 x ptr> @llvm.masked.gather.v4p0.v4p0(<4 x ptr> align 8 [[TMP8]], <4 x i1> splat (i1 true), <4 x ptr> poison)
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
 ; CHECK-NEXT:    [[PTR_IND]] = getelementptr i8, ptr [[POINTER_PHI]], i64 16384
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]

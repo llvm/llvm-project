@@ -25,12 +25,12 @@ class ClangCommand final : public CachedCommandAdaptor {
 public:
   using ExecuteFnTy = std::function<amd_comgr_status_t(
       clang::driver::Command &, llvm::raw_ostream &, clang::DiagnosticOptions &,
-      llvm::vfs::FileSystem &)>;
+      llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem>)>;
 
 private:
   clang::driver::Command &Command;
   clang::DiagnosticOptions &DiagOpts;
-  llvm::vfs::FileSystem &VFS;
+  llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS;
   ExecuteFnTy ExecuteImpl;
 
   // To avoid copies, store the output of execute, such that readExecuteOutput
@@ -39,7 +39,8 @@ private:
 
 public:
   ClangCommand(clang::driver::Command &Command,
-               clang::DiagnosticOptions &DiagOpts, llvm::vfs::FileSystem &VFS,
+               clang::DiagnosticOptions &DiagOpts,
+               llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
                ExecuteFnTy &&ExecuteImpl);
 
   bool canCache() const override;

@@ -88,6 +88,8 @@ private:
 };
 
 class SIInstrInfo final : public AMDGPUGenInstrInfo {
+  struct ThreeAddressUpdates;
+
 private:
   const SIRegisterInfo RI;
   const GCNSubtarget &ST;
@@ -134,6 +136,8 @@ private:
 
   void lowerScalarAbs(SIInstrWorklist &Worklist, MachineInstr &Inst) const;
 
+  void lowerScalarAbsDiff(SIInstrWorklist &Worklist, MachineInstr &Inst) const;
+
   void lowerScalarXnor(SIInstrWorklist &Worklist, MachineInstr &Inst) const;
 
   void splitScalarNotBinop(SIInstrWorklist &Worklist, MachineInstr &Inst,
@@ -170,7 +174,7 @@ private:
   void addUsersToMoveToVALUWorklist(Register Reg, MachineRegisterInfo &MRI,
                                     SIInstrWorklist &Worklist) const;
 
-  void addSCCDefUsersToVALUWorklist(MachineOperand &Op,
+  void addSCCDefUsersToVALUWorklist(const MachineOperand &Op,
                                     MachineInstr &SCCDefInst,
                                     SIInstrWorklist &Worklist,
                                     Register NewCond = Register()) const;
@@ -189,6 +193,9 @@ private:
                   StringRef &ErrInfo) const;
 
   bool resultDependsOnExec(const MachineInstr &MI) const;
+
+  MachineInstr *convertToThreeAddressImpl(MachineInstr &MI,
+                                          ThreeAddressUpdates &Updates) const;
 
 protected:
   /// If the specific machine instruction is a instruction that moves/copies
@@ -292,8 +299,7 @@ private:
   void storeRegToStackSlotImpl(MachineBasicBlock &MBB,
                                MachineBasicBlock::iterator MI, Register SrcReg,
                                bool isKill, int FrameIndex,
-                               const TargetRegisterClass *RC,
-                               const TargetRegisterInfo *TRI, Register VReg,
+                               const TargetRegisterClass *RC, Register VReg,
                                MachineInstr::MIFlag Flags, bool NeedsCFI) const;
 
 public:
@@ -318,22 +324,19 @@ public:
 
   void storeRegToStackSlot(
       MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, Register SrcReg,
-      bool isKill, int FrameIndex, const TargetRegisterClass *RC,
-      const TargetRegisterInfo *TRI, Register VReg,
+      bool isKill, int FrameIndex, const TargetRegisterClass *RC, Register VReg,
       MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const override;
 
   void loadRegFromStackSlot(
       MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, Register DestReg,
-      int FrameIndex, const TargetRegisterClass *RC,
-      const TargetRegisterInfo *TRI, Register VReg,
+      int FrameIndex, const TargetRegisterClass *RC, Register VReg,
       MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const override;
 
   bool expandPostRAPseudo(MachineInstr &MI) const override;
 
   void reMaterialize(MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
                      Register DestReg, unsigned SubIdx,
-                     const MachineInstr &Orig,
-                     const TargetRegisterInfo &TRI) const override;
+                     const MachineInstr &Orig) const override;
 
   // Splits a V_MOV_B64_DPP_PSEUDO opcode into a pair of v_mov_b32_dpp
   // instructions. Returns a pair of generated instructions.
@@ -436,6 +439,9 @@ public:
   static unsigned getFoldableCopySrcIdx(const MachineInstr &MI);
 
   void removeModOperands(MachineInstr &MI) const;
+
+  void mutateAndCleanupImplicit(MachineInstr &MI,
+                                const MCInstrDesc &NewDesc) const;
 
   /// Return the extracted immediate value in a subregister use from a constant
   /// materialized in a super register.
@@ -726,6 +732,52 @@ public:
     }
   }
 
+  static bool setsSCCifResultIsNonZero(const MachineInstr &MI) {
+    switch (MI.getOpcode()) {
+    case AMDGPU::S_ABSDIFF_I32:
+    case AMDGPU::S_ABS_I32:
+    case AMDGPU::S_AND_B32:
+    case AMDGPU::S_AND_B64:
+    case AMDGPU::S_ANDN2_B32:
+    case AMDGPU::S_ANDN2_B64:
+    case AMDGPU::S_ASHR_I32:
+    case AMDGPU::S_ASHR_I64:
+    case AMDGPU::S_BCNT0_I32_B32:
+    case AMDGPU::S_BCNT0_I32_B64:
+    case AMDGPU::S_BCNT1_I32_B32:
+    case AMDGPU::S_BCNT1_I32_B64:
+    case AMDGPU::S_BFE_I32:
+    case AMDGPU::S_BFE_I64:
+    case AMDGPU::S_BFE_U32:
+    case AMDGPU::S_BFE_U64:
+    case AMDGPU::S_LSHL_B32:
+    case AMDGPU::S_LSHL_B64:
+    case AMDGPU::S_LSHR_B32:
+    case AMDGPU::S_LSHR_B64:
+    case AMDGPU::S_NAND_B32:
+    case AMDGPU::S_NAND_B64:
+    case AMDGPU::S_NOR_B32:
+    case AMDGPU::S_NOR_B64:
+    case AMDGPU::S_NOT_B32:
+    case AMDGPU::S_NOT_B64:
+    case AMDGPU::S_OR_B32:
+    case AMDGPU::S_OR_B64:
+    case AMDGPU::S_ORN2_B32:
+    case AMDGPU::S_ORN2_B64:
+    case AMDGPU::S_QUADMASK_B32:
+    case AMDGPU::S_QUADMASK_B64:
+    case AMDGPU::S_WQM_B32:
+    case AMDGPU::S_WQM_B64:
+    case AMDGPU::S_XNOR_B32:
+    case AMDGPU::S_XNOR_B64:
+    case AMDGPU::S_XOR_B32:
+    case AMDGPU::S_XOR_B64:
+      return true;
+    default:
+      return false;
+    }
+  }
+
   static bool isEXP(const MachineInstr &MI) {
     return MI.getDesc().TSFlags & SIInstrFlags::EXP;
   }
@@ -896,6 +948,11 @@ public:
            MI.getOpcode() != AMDGPU::V_ACCVGPR_READ_B32_e64;
   }
 
+  bool isMFMA(uint16_t Opcode) const {
+    return isMAI(Opcode) && Opcode != AMDGPU::V_ACCVGPR_WRITE_B32_e64 &&
+           Opcode != AMDGPU::V_ACCVGPR_READ_B32_e64;
+  }
+
   static bool isDOT(const MachineInstr &MI) {
     return MI.getDesc().TSFlags & SIInstrFlags::IsDOT;
   }
@@ -910,6 +967,10 @@ public:
 
   static bool isMFMAorWMMA(const MachineInstr &MI) {
     return isMFMA(MI) || isWMMA(MI) || isSWMMAC(MI);
+  }
+
+  bool isMFMAorWMMA(uint16_t Opcode) const {
+    return isMFMA(Opcode) || isWMMA(Opcode) || isSWMMAC(Opcode);
   }
 
   static bool isSWMMAC(const MachineInstr &MI) {
@@ -1131,13 +1192,13 @@ public:
   bool isVGPRCopy(const MachineInstr &MI) const {
     assert(isCopyInstr(MI));
     Register Dest = MI.getOperand(0).getReg();
-    const MachineFunction &MF = *MI.getParent()->getParent();
+    const MachineFunction &MF = *MI.getMF();
     const MachineRegisterInfo &MRI = MF.getRegInfo();
     return !RI.isSGPRReg(MRI, Dest);
   }
 
   bool hasVGPRUses(const MachineInstr &MI) const {
-    const MachineFunction &MF = *MI.getParent()->getParent();
+    const MachineFunction &MF = *MI.getMF();
     const MachineRegisterInfo &MRI = MF.getRegInfo();
     return llvm::any_of(MI.explicit_uses(),
                         [&MRI, this](const MachineOperand &MO) {
@@ -1315,7 +1376,7 @@ public:
       return 4;
     }
 
-    return RI.getRegSizeInBits(*RI.getRegClass(OpInfo.RegClass)) / 8;
+    return RI.getRegSizeInBits(*RI.getRegClass(getOpRegClassID(OpInfo))) / 8;
   }
 
   /// This form should usually be preferred since it handles operands
@@ -1579,10 +1640,6 @@ public:
   /// Return true if this opcode should not be used by codegen.
   bool isAsmOnlyOpcode(int MCOp) const;
 
-  const TargetRegisterClass *
-  getRegClass(const MCInstrDesc &TID, unsigned OpNum,
-              const TargetRegisterInfo *TRI) const override;
-
   void fixImplicitOperands(MachineInstr &MI) const;
 
   MachineInstr *foldMemoryOperandImpl(MachineFunction &MF, MachineInstr &MI,
@@ -1597,7 +1654,7 @@ public:
                            unsigned *PredCost = nullptr) const override;
 
   InstructionUniformity
-  getInstructionUniformity(const MachineInstr &MI) const override final;
+  getInstructionUniformity(const MachineInstr &MI) const final;
 
   InstructionUniformity
   getGenericInstructionUniformity(const MachineInstr &MI) const;
@@ -1644,7 +1701,7 @@ TargetInstrInfo::RegSubRegPair getRegSequenceSubReg(MachineInstr &MI,
 /// skipping copy like instructions and subreg-manipulation pseudos.
 /// Following another subreg of a reg:subreg isn't supported.
 MachineInstr *getVRegSubRegDef(const TargetInstrInfo::RegSubRegPair &P,
-                               MachineRegisterInfo &MRI);
+                               const MachineRegisterInfo &MRI);
 
 /// \brief Return false if EXEC is not changed between the def of \p VReg at \p
 /// DefMI and the use at \p UseMI. Should be run on SSA. Currently does not
@@ -1654,10 +1711,6 @@ bool execMayBeModifiedBeforeUse(const MachineRegisterInfo &MRI,
                                 const MachineInstr &DefMI,
                                 const MachineInstr &UseMI);
 
-bool checkIfExecMayBeModifiedBeforeUseAcrossBB(
-    const MachineRegisterInfo &MRI, Register VReg, const MachineInstr &DefMI,
-    const MachineInstr &UseMI, const int SIFoldOperandsPreheaderThreshold);
-    
 /// \brief Return false if EXEC is not changed between the def of \p VReg at \p
 /// DefMI and all its uses. Should be run on SSA. Currently does not attempt to
 /// track between blocks.

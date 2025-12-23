@@ -138,6 +138,11 @@ bool isCheckedPtr(const std::string &Name) {
   return Name == "CheckedPtr" || Name == "CheckedRef";
 }
 
+bool isOwnerPtr(const std::string &Name) {
+  return isRefType(Name) || isCheckedPtr(Name) || Name == "unique_ptr" ||
+         Name == "UniqueRef" || Name == "LazyUniqueRef";
+}
+
 bool isSmartPtrClass(const std::string &Name) {
   return isRefType(Name) || isCheckedPtr(Name) || isRetainPtrOrOSPtr(Name) ||
          Name == "WeakPtr" || Name == "WeakPtrFactory" ||
@@ -206,10 +211,7 @@ bool isRetainPtrOrOSPtrType(const clang::QualType T) {
 }
 
 bool isOwnerPtrType(const clang::QualType T) {
-  return isPtrOfType(T, [](auto Name) {
-    return isRefType(Name) || isCheckedPtr(Name) || Name == "unique_ptr" ||
-           Name == "UniqueRef" || Name == "LazyUniqueRef";
-  });
+  return isPtrOfType(T, [](auto Name) { return isOwnerPtr(Name); });
 }
 
 std::optional<bool> isUncounted(const QualType T) {
@@ -255,7 +257,7 @@ void RetainTypeChecker::visitTypedef(const TypedefDecl *TD) {
     return;
   }
 
-  for (auto *Redecl : RT->getOriginalDecl()->getMostRecentDecl()->redecls()) {
+  for (auto *Redecl : RT->getDecl()->getMostRecentDecl()->redecls()) {
     if (Redecl->getAttr<ObjCBridgeAttr>() ||
         Redecl->getAttr<ObjCBridgeMutableAttr>()) {
       CFPointees.insert(RT);
@@ -296,7 +298,7 @@ std::optional<bool> isUnretained(const QualType T, bool IsARCEnabled) {
   auto *Record = PointeeType->getAsStructureType();
   if (!Record)
     return false;
-  auto *Decl = Record->getOriginalDecl();
+  auto *Decl = Record->getDecl();
   if (!Decl)
     return false;
   auto TypeName = Decl->getName();
@@ -574,6 +576,10 @@ public:
     // A compound statement is allowed as long each individual sub-statement
     // is trivial.
     return WithCachedResult(CS, [&]() { return VisitChildren(CS); });
+  }
+
+  bool VisitCoroutineBodyStmt(const CoroutineBodyStmt *CBS) {
+    return WithCachedResult(CBS, [&]() { return VisitChildren(CBS); });
   }
 
   bool VisitReturnStmt(const ReturnStmt *RS) {

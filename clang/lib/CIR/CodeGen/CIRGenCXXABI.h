@@ -15,6 +15,7 @@
 #define LLVM_CLANG_LIB_CIR_CIRGENCXXABI_H
 
 #include "CIRGenCall.h"
+#include "CIRGenCleanup.h"
 #include "CIRGenFunction.h"
 #include "CIRGenModule.h"
 
@@ -27,6 +28,8 @@ class CIRGenCXXABI {
 protected:
   CIRGenModule &cgm;
   std::unique_ptr<clang::MangleContext> mangleContext;
+
+  virtual bool requiresArrayCookie(const CXXNewExpr *e);
 
 public:
   // TODO(cir): make this protected when target-specific CIRGenCXXABIs are
@@ -51,6 +54,12 @@ public:
   getVirtualBaseClassOffset(mlir::Location loc, CIRGenFunction &cgf,
                             Address thisAddr, const CXXRecordDecl *classDecl,
                             const CXXRecordDecl *baseClassDecl) = 0;
+
+  virtual mlir::Value emitDynamicCast(CIRGenFunction &cgf, mlir::Location loc,
+                                      QualType srcRecordTy,
+                                      QualType destRecordTy,
+                                      cir::PointerType destCIRTy,
+                                      bool isRefCast, Address src) = 0;
 
 public:
   /// Similar to AddedStructorArgs, but only notes the number of additional
@@ -113,6 +122,9 @@ public:
                                           CIRGenFunction &cgf) = 0;
 
   virtual void emitRethrow(CIRGenFunction &cgf, bool isNoReturn) = 0;
+  virtual void emitThrow(CIRGenFunction &cgf, const CXXThrowExpr *e) = 0;
+
+  virtual void emitBadCastCall(CIRGenFunction &cgf, mlir::Location loc) = 0;
 
   virtual mlir::Attribute getAddrOfRTTIDescriptor(mlir::Location loc,
                                                   QualType ty) = 0;
@@ -146,6 +158,16 @@ public:
   /// Loads the incoming C++ this pointer as it was passed by the caller.
   mlir::Value loadIncomingCXXThis(CIRGenFunction &cgf);
 
+  virtual CatchTypeInfo getCatchAllTypeInfo();
+
+  /// Get the implicit (second) parameter that comes after the "this" pointer,
+  /// or nullptr if there is isn't one.
+  virtual mlir::Value getCXXDestructorImplicitParam(CIRGenFunction &cgf,
+                                                    const CXXDestructorDecl *dd,
+                                                    CXXDtorType type,
+                                                    bool forVirtualBase,
+                                                    bool delegating) = 0;
+
   /// Emit constructor variants required by this ABI.
   virtual void emitCXXConstructors(const clang::CXXConstructorDecl *d) = 0;
 
@@ -157,6 +179,19 @@ public:
                                   bool forVirtualBase, bool delegating,
                                   Address thisAddr, QualType thisTy) = 0;
 
+  /// Emit code to force the execution of a destructor during global
+  /// teardown.  The default implementation of this uses atexit.
+  ///
+  /// \param dtor - a function taking a single pointer argument
+  /// \param addr - a pointer to pass to the destructor function.
+  virtual void registerGlobalDtor(const VarDecl *vd, cir::FuncOp dtor,
+                                  mlir::Value addr) = 0;
+
+  virtual void emitVirtualObjectDelete(CIRGenFunction &cgf,
+                                       const CXXDeleteExpr *de, Address ptr,
+                                       QualType elementType,
+                                       const CXXDestructorDecl *dtor) = 0;
+
   /// Checks if ABI requires extra virtual offset for vtable field.
   virtual bool
   isVirtualOffsetNeededForVTableField(CIRGenFunction &cgf,
@@ -165,6 +200,15 @@ public:
   /// Emits the VTable definitions required for the given record type.
   virtual void emitVTableDefinitions(CIRGenVTables &cgvt,
                                      const CXXRecordDecl *rd) = 0;
+
+  using DeleteOrMemberCallExpr =
+      llvm::PointerUnion<const CXXDeleteExpr *, const CXXMemberCallExpr *>;
+
+  virtual mlir::Value emitVirtualDestructorCall(CIRGenFunction &cgf,
+                                                const CXXDestructorDecl *dtor,
+                                                CXXDtorType dtorType,
+                                                Address thisAddr,
+                                                DeleteOrMemberCallExpr e) = 0;
 
   /// Emit any tables needed to implement virtual inheritance.  For Itanium,
   /// this emits virtual table tables.
@@ -230,6 +274,16 @@ public:
     return false;
   }
 
+  /// Returns true if the target allows calling a function through a pointer
+  /// with a different signature than the actual function (or equivalently,
+  /// bitcasting a function or function pointer to a different function type).
+  /// In principle in the most general case this could depend on the target, the
+  /// calling convention, and the actual types of the arguments and return
+  /// value. Here it just means whether the signature mismatch could *ever* be
+  /// allowed; in other words, does the target do strict checking of signatures
+  /// for all calls.
+  virtual bool canCallMismatchedFunctionType() const { return true; }
+
   /// Gets the mangle context.
   clang::MangleContext &getMangleContext() { return *mangleContext; }
 
@@ -244,6 +298,39 @@ public:
   void setStructorImplicitParamValue(CIRGenFunction &cgf, mlir::Value val) {
     cgf.cxxStructorImplicitParamValue = val;
   }
+
+  /**************************** Array cookies ******************************/
+
+  /// Returns the extra size required in order to store the array
+  /// cookie for the given new-expression.  May return 0 to indicate that no
+  /// array cookie is required.
+  ///
+  /// Several cases are filtered out before this method is called:
+  ///   - non-array allocations never need a cookie
+  ///   - calls to \::operator new(size_t, void*) never need a cookie
+  ///
+  /// \param e - the new-expression being allocated.
+  virtual CharUnits getArrayCookieSize(const CXXNewExpr *e);
+
+  /// Initialize the array cookie for the given allocation.
+  ///
+  /// \param newPtr - a char* which is the presumed-non-null
+  ///   return value of the allocation function
+  /// \param numElements - the computed number of elements,
+  ///   potentially collapsed from the multidimensional array case;
+  ///   always a size_t
+  /// \param elementType - the base element allocated type,
+  ///   i.e. the allocated type after stripping all array types
+  virtual Address initializeArrayCookie(CIRGenFunction &cgf, Address newPtr,
+                                        mlir::Value numElements,
+                                        const CXXNewExpr *e,
+                                        QualType elementType) = 0;
+
+protected:
+  /// Returns the extra size required in order to store the array
+  /// cookie for the given type.  Assumes that an array cookie is
+  /// required.
+  virtual CharUnits getArrayCookieSizeImpl(QualType elementType) = 0;
 };
 
 /// Creates and Itanium-family ABI

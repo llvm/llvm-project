@@ -21,6 +21,8 @@
 #include "Shared/Debug.h"
 #include "omp-tools.h"
 
+#include "GenericProfiler.h"
+
 #include "llvm/Support/ErrorHandling.h"
 
 #include <functional>
@@ -473,16 +475,20 @@ template <typename FunctionPairTy, typename AsyncInfoTy, typename... ArgsTy>
 class TracerInterfaceRAII {
 public:
   TracerInterfaceRAII(FunctionPairTy Callbacks, AsyncInfoTy &AsyncInfo,
-                      void *OmptSpecificData, int TracedDeviceId,
+                      plugin::GenericProfilerTy *Prof, int TracedDeviceId,
                       ompt_callbacks_t EventType, ArgsTy... Args)
       : Arguments(Args...), beginFunction(std::get<0>(Callbacks)) {
     __tgt_async_info *AI = AsyncInfo;
     if (isTracingEnabled(TracedDeviceId, EventType)) {
       auto Record = begin();
 
-      // Access the already allocated profiler data and populate it
+      // The Profiler can allocate specific data to be used to pass information
+      // from here to lower parts of the runtime system.
+      // NOTE: It is the responsibility of the programmer to ensure type
+      // compatibility and correct usage of the data. The profiler, however,
+      // OWNS the pointer and frees it at an appropriate time.
       OmptEventInfoTy *ProfilerData =
-          reinterpret_cast<OmptEventInfoTy *>(OmptSpecificData);
+          reinterpret_cast<OmptEventInfoTy *>(Prof->getProfilerSpecificData());
       ProfilerData->TraceRecord = Record;
       ProfilerData->NumTeams = 0;
 

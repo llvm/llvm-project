@@ -184,6 +184,8 @@ struct DeviceTy {
   /// Ask the device to perform sanity checks for zero-copy configurations.
   void zeroCopySanityChecksAndDiag(bool isUnifiedSharedMemory,
                                    bool isAutoZeroCopy, bool isEagerMaps);
+  /// Ask the device whether the storage is accessible.
+  bool isAccessiblePtr(const void *Ptr, size_t Size);
 
   /// Check if there are pending images for this device.
   bool hasPendingImages() const { return HasPendingImages; }

@@ -50,7 +50,9 @@ def InstD : InstBase {
 
 // CHECK-LABEL: #ifdef GET_INSTRINFO_OPERAND_ENUM
 // CHECK-NEXT:  #undef GET_INSTRINFO_OPERAND_ENUM
+// CHECK-EMPTY:
 // CHECK-NEXT:  namespace llvm::MyNamespace {
+// CHECK-EMPTY:
 // CHECK-NEXT:  enum class OpName : uint8_t {
 // CHECK-NEXT:    a = 0,
 // CHECK-NEXT:    b = 1,
@@ -62,12 +64,16 @@ def InstD : InstBase {
 // CHECK-EMPTY:
 // CHECK-NEXT:  LLVM_READONLY int16_t getNamedOperandIdx(uint16_t Opcode, OpName Name);
 // CHECK-NEXT:  LLVM_READONLY OpName getOperandIdxName(uint16_t Opcode, int16_t Idx);
-// CHECK-NEXT:  } // end namespace llvm::MyNamespace
-// CHECK-NEXT:  #endif //GET_INSTRINFO_OPERAND_ENUM
+// CHECK-EMPTY:
+// CHECK-NEXT:  } // namespace llvm::MyNamespace
+// CHECK-EMPTY:
+// CHECK-NEXT:  #endif // GET_INSTRINFO_OPERAND_ENUM
 
 // CHECK-LABEL: #ifdef GET_INSTRINFO_NAMED_OPS
 // CHECK-NEXT:  #undef GET_INSTRINFO_NAMED_OPS
+// CHECK-EMPTY:
 // CHECK-NEXT:  namespace llvm::MyNamespace {
+// CHECK-EMPTY:
 // CHECK-NEXT:  LLVM_READONLY static uint8_t getInstructionIndexForOpLookup(uint16_t Opcode) {
 // CHECK-NEXT:    static constexpr uint8_t InstructionIndex[] = {
 // CHECK-NEXT:      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -89,7 +95,8 @@ def InstD : InstBase {
 // CHECK-NEXT:      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 // CHECK-NEXT:      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 // CHECK-NEXT:      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-// CHECK-NEXT:      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 2, 0,
+// CHECK-NEXT:      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+// CHECK-NEXT:      1, 2, 2, 0,
 // CHECK-NEXT:    };
 // CHECK-NEXT:    return InstructionIndex[Opcode];
 // CHECK-NEXT:  }
@@ -113,5 +120,7 @@ def InstD : InstBase {
 // CHECK-NEXT:    unsigned InstrIdx = getInstructionIndexForOpLookup(Opcode);
 // CHECK-NEXT:    return OperandMap[InstrIdx][(unsigned)Idx];
 // CHECK-NEXT:  }
-// CHECK-NEXT:  } // end namespace llvm::MyNamespace
-// CHECK-NEXT:  #endif //GET_INSTRINFO_NAMED_OPS
+// CHECK-EMPTY:
+// CHECK-NEXT:  } // namespace llvm::MyNamespace
+// CHECK-EMPTY:
+// CHECK-NEXT:  #endif // GET_INSTRINFO_NAMED_OPS

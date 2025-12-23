@@ -16,27 +16,33 @@ program allocate_align_tree
     allocate(j(z), xarray(t))
 end program allocate_align_tree
 
-!CHECK: | | DeclarationConstruct -> SpecificationConstruct -> TypeDeclarationStmt
-!CHECK-NEXT: | | | DeclarationTypeSpec -> IntrinsicTypeSpec -> IntegerTypeSpec ->
-!CHECK-NEXT: | | | AttrSpec -> Allocatable
-!CHECK-NEXT: | | | EntityDecl
-!CHECK-NEXT: | | | | Name = 'j'
+!CHECK:      DeclarationConstruct -> SpecificationConstruct -> TypeDeclarationStmt
+!CHECK-NEXT: | DeclarationTypeSpec -> IntrinsicTypeSpec -> IntegerTypeSpec ->
+!CHECK-NEXT: | AttrSpec -> Allocatable
+!CHECK-NEXT: | EntityDecl
+!CHECK-NEXT: | | Name = 'j'
 
+!CHECK:      ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OmpAllocateDirective
+!CHECK-NEXT: | OmpBeginDirective
+!CHECK-NEXT: | | OmpDirectiveName -> llvm::omp::Directive = allocate
+!CHECK-NEXT: | | OmpArgumentList -> OmpArgument -> OmpLocator -> OmpObject -> Designator -> DataRef -> Name = 'j'
+!CHECK-NEXT: | | OmpClauseList -> OmpClause -> Align -> OmpAlignClause -> Scalar -> Integer -> Constant -> Expr = '16_4'
+!CHECK-NEXT: | | | LiteralConstant -> IntLiteralConstant = '16'
+!CHECK-NEXT: | | Flags = None
+!CHECK-NEXT: | Block
+!CHECK-NEXT: | | ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OmpAllocateDirective
+!CHECK-NEXT: | | | OmpBeginDirective
+!CHECK-NEXT: | | | | OmpDirectiveName -> llvm::omp::Directive = allocate
+!CHECK-NEXT: | | | | OmpArgumentList -> OmpArgument -> OmpLocator -> OmpObject -> Designator -> DataRef -> Name = 'xarray'
+!CHECK-NEXT: | | | | OmpClauseList -> OmpClause -> Align -> OmpAlignClause -> Scalar -> Integer -> Constant -> Expr = '32_4'
+!CHECK-NEXT: | | | | | LiteralConstant -> IntLiteralConstant = '32'
+!CHECK-NEXT: | | | | OmpClause -> Allocator -> Scalar -> Integer -> Expr = '2_8'
+!CHECK-NEXT: | | | | | Designator -> DataRef -> Name = 'omp_large_cap_mem_alloc'
+!CHECK-NEXT: | | | | Flags = None
+!CHECK-NEXT: | | | Block
+!CHECK-NEXT: | | | | ExecutionPartConstruct -> ExecutableConstruct -> ActionStmt -> AllocateStmt
 
-!CHECK: | | ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPExecutableAllocate
-!CHECK-NEXT: | | | Verbatim
-!CHECK-NEXT: | | | OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'xarray'
-!CHECK-NEXT: | | | OmpClauseList -> OmpClause -> Align -> OmpAlignClause -> Scalar -> Integer -> Expr = '32_4'
-!CHECK-NEXT: | | | | LiteralConstant -> IntLiteralConstant = '32'
-!CHECK-NEXT: | | | OmpClause -> Allocator -> Scalar -> Integer -> Expr = '2_8'
-!CHECK-NEXT: | | | | Designator -> DataRef -> Name = 'omp_large_cap_mem_alloc'
-!CHECK-NEXT: | | | OpenMPDeclarativeAllocate
-!CHECK-NEXT: | | | | Verbatim
-!CHECK-NEXT: | | | | OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'j'
-!CHECK-NEXT: | | | | OmpClauseList -> OmpClause -> Align -> OmpAlignClause -> Scalar -> Integer -> Expr = '16_4'
-!CHECK-NEXT: | | | | | LiteralConstant -> IntLiteralConstant = '16'
-!CHECK-NEXT: | | | AllocateStmt
+!UNPARSE:      !$OMP ALLOCATE(j) ALIGN(16_4)
+!UNPARSE-NEXT: !$OMP ALLOCATE(xarray) ALIGN(32_4) ALLOCATOR(2_8)
+!UNPARSE-NEXT:  ALLOCATE(j(z), xarray(t))
 
-!UNPARSE: !$OMP ALLOCATE (j) ALIGN(16_4)
-!UNPARSE: !$OMP ALLOCATE (xarray) ALIGN(32_4) ALLOCATOR(2_8)
-!UNPARSE-NEXT: ALLOCATE(j(z), xarray(t))

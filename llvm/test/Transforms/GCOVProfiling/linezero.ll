@@ -9,7 +9,7 @@ target triple = "x86_64-unknown-linux-gnu"
 %struct.vector = type { i8 }
 
 ; Function Attrs: nounwind
-define i32 @_Z4testv() #0 !dbg !15 {
+define i32 @_Z4testv() !dbg !15 {
 entry:
   %retval = alloca i32, align 4
   %__range = alloca ptr, align 8
@@ -63,30 +63,25 @@ return:                                           ; No predecessors!
 }
 
 ; Function Attrs: nounwind readnone
-declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
+declare void @llvm.dbg.declare(metadata, metadata, metadata)
 
-declare void @_Z13TagFieldSpecsv() #2
+declare void @_Z13TagFieldSpecsv()
 
-declare ptr @_ZN6vector5beginEv(ptr) #2
+declare ptr @_ZN6vector5beginEv(ptr)
 
-declare ptr @_ZN6vector3endEv(ptr) #2
+declare ptr @_ZN6vector3endEv(ptr)
 
 ; Function Attrs: noreturn nounwind
-declare void @llvm.trap() #3
+declare void @llvm.trap()
 
 ; Function Attrs: nounwind
-define void @_Z2f1v() #0 !dbg !20 {
+define void @_Z2f1v() !dbg !20 {
 entry:
   br label %0
 
 ; <label>:0                                       ; preds = %entry
   ret void, !dbg !45
 }
-
-attributes #0 = { nounwind "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-realign-stack" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #1 = { nounwind readnone }
-attributes #2 = { "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-realign-stack" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #3 = { noreturn nounwind }
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!23, !24}

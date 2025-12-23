@@ -81,6 +81,12 @@ lldb::BreakpointSP ScriptInterpreter::GetOpaqueTypeFromSBBreakpoint(
   return breakpoint.m_opaque_wp.lock();
 }
 
+lldb::BreakpointLocationSP
+ScriptInterpreter::GetOpaqueTypeFromSBBreakpointLocation(
+    const lldb::SBBreakpointLocation &break_loc) const {
+  return break_loc.m_opaque_wp.lock();
+}
+
 lldb::ProcessAttachInfoSP ScriptInterpreter::GetOpaqueTypeFromSBAttachInfo(
     const lldb::SBAttachInfo &attach_info) const {
   return attach_info.m_opaque_sp;
@@ -98,6 +104,13 @@ ScriptInterpreter::GetStatusFromSBError(const lldb::SBError &error) const {
     return error.m_opaque_up->Clone();
 
   return Status();
+}
+
+lldb::StackFrameSP
+ScriptInterpreter::GetOpaqueTypeFromSBFrame(const lldb::SBFrame &frame) const {
+  if (frame.m_opaque_sp)
+    return frame.m_opaque_sp->GetFrameSP();
+  return nullptr;
 }
 
 Event *
@@ -135,6 +148,11 @@ lldb::ExecutionContextRefSP
 ScriptInterpreter::GetOpaqueTypeFromSBExecutionContext(
     const lldb::SBExecutionContext &exe_ctx) const {
   return exe_ctx.m_exe_ctx_sp;
+}
+
+lldb::StackFrameListSP ScriptInterpreter::GetOpaqueTypeFromSBFrameList(
+    const lldb::SBFrameList &frame_list) const {
+  return frame_list.m_opaque_sp;
 }
 
 lldb::ScriptLanguage
