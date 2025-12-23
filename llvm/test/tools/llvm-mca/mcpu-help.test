@@ -2,7 +2,7 @@
 
 # RUN: llvm-mca -mtriple=aarch64-unknown-linux-gnu -mcpu=help %t.no-input 2>&1 | FileCheck %s
 
-// Ensures -mcpu=help prints target info without erroring on missing input.
+// Ensures -mcpu=help still prints the CPU/features lists even when the input file after the flag is nonexistent.
 
 # CHECK: Available CPUs for this target:
 # CHECK: Available features for this target:
