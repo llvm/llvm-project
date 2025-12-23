@@ -3898,6 +3898,17 @@ cc_library(
 )
 
 cc_library(
+    name = "Plugins",
+    srcs = ["lib/Plugins/PassPlugin.cpp"],
+    hdrs = ["include/llvm/Plugins/PassPlugin.h"],
+    copts = llvm_copts,
+    includes = ["include"],
+    deps = [
+        ":Support",
+    ],
+)
+
+cc_library(
     name = "LTO",
     srcs = glob([
         "lib/LTO/*.cpp",
@@ -3926,6 +3937,7 @@ cc_library(
         ":ObjCARC",
         ":Object",
         ":Passes",
+        ":Plugins",
         ":Remarks",
         ":Scalar",
         ":Support",
@@ -4556,6 +4568,7 @@ cc_binary(
         ":IRReader",
         ":MC",
         ":Passes",
+        ":Plugins",
         ":Remarks",
         ":Scalar",
         ":Support",
@@ -5289,6 +5302,7 @@ cc_binary(
         ":Core",
         ":LTO",
         ":Passes",
+        ":Plugins",
         ":Remarks",
         ":Support",
     ],
@@ -6077,6 +6091,7 @@ cc_library(
         ":Instrumentation",
         ":MC",
         ":Passes",
+        ":Plugins",
         ":Remarks",
         ":Scalar",
         ":Support",
@@ -6315,6 +6330,7 @@ cc_binary(
         ":IRReader",
         ":Linker",
         ":Passes",
+        ":Plugins",
         ":Scalar",
         ":Support",
         ":TargetParser",
@@ -6391,6 +6407,7 @@ cc_binary(
         ":Object",
         ":OrcJIT",
         ":Passes",
+        ":Plugins",
         ":Remarks",
         ":Scalar",
         ":Support",
