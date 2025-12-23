@@ -633,6 +633,8 @@ namespace {
     SDValue foldAddToAvg(SDNode *N, const SDLoc &DL);
     SDValue foldSubToAvg(SDNode *N, const SDLoc &DL);
 
+    SDValue foldCTLZToCTLS(SDValue Src, const SDLoc &DL);
+
     SDValue SimplifyNodeWithTwoResults(SDNode *N, unsigned LoOp,
                                          unsigned HiOp);
     SDValue CombineConsecutiveLoads(SDNode *N, EVT VT);
@@ -11821,6 +11823,27 @@ SDValue DAGCombiner::visitBITREVERSE(SDNode *N) {
   return SDValue();
 }
 
+// Fold (ctlz (xor x, (sra x, bitwidth-1))) -> (add (ctls x), 1).
+SDValue DAGCombiner::foldCTLZToCTLS(SDValue Src, const SDLoc &DL) {
+  EVT VT = Src.getValueType();
+
+  auto LK = TLI.getTypeConversion(*DAG.getContext(), VT);
+  if (!(LK.first == TargetLoweringBase::TypeLegal ||
+        LK.first == TargetLoweringBase::TypePromoteInteger) ||
+      !TLI.isOperationLegalOrCustom(ISD::CTLS, LK.second))
+    return SDValue();
+
+  unsigned BitWidth = VT.getScalarSizeInBits();
+
+  SDValue X;
+  if (!sd_match(Src, m_Xor(m_Value(X),
+                           m_Sra(m_Deferred(X), m_SpecificInt(BitWidth - 1)))))
+    return SDValue();
+
+  SDValue Res = DAG.getNode(ISD::CTLS, DL, VT, X);
+  return DAG.getNode(ISD::ADD, DL, VT, Res, DAG.getConstant(1, DL, VT));
+}
+
 SDValue DAGCombiner::visitCTLZ(SDNode *N) {
   SDValue N0 = N->getOperand(0);
   EVT VT = N->getValueType(0);
@@ -11834,6 +11857,9 @@ SDValue DAGCombiner::visitCTLZ(SDNode *N) {
   if (!LegalOperations || TLI.isOperationLegal(ISD::CTLZ_ZERO_UNDEF, VT))
     if (DAG.isKnownNeverZero(N0))
       return DAG.getNode(ISD::CTLZ_ZERO_UNDEF, DL, VT, N0);
+
+  if (SDValue V = foldCTLZToCTLS(N0, DL))
+    return V;
 
   return SDValue();
 }

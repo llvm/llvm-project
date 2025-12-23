@@ -781,6 +781,10 @@ enum NodeType {
   CTTZ_ZERO_UNDEF,
   CTLZ_ZERO_UNDEF,
 
+  /// Count leading redundant sign bits. Equivalent to
+  /// (sub (ctlz (x < 0 ? ~x : x)), 1).
+  CTLS,
+
   /// Select(COND, TRUEVAL, FALSEVAL).  If the type of the boolean COND is not
   /// i1 then the high bits must conform to getBooleanContents.
   SELECT,
