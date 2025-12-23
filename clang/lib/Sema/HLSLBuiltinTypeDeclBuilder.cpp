@@ -647,8 +647,7 @@ BuiltinTypeMethodBuilder &BuiltinTypeMethodBuilder::dereference(T Ptr) {
   Expr *Deref =
       UnaryOperator::Create(DeclBuilder.SemaRef.getASTContext(), PtrExpr,
                             UO_Deref, PtrExpr->getType()->getPointeeType(),
-                            /*solution #1? use VK_LValue instead*/ VK_PRValue,
-                            OK_Ordinary, SourceLocation(),
+                            VK_LValue, OK_Ordinary, SourceLocation(),
                             /*CanOverflow=*/false, FPOptionsOverride());
   StmtsList.push_back(Deref);
   return *this;
@@ -1284,11 +1283,16 @@ BuiltinTypeDeclBuilder::addByteAddressBufferStoreMethods() {
     IdentifierInfo &II = AST.Idents.get(MethodName, tok::TokenKind::identifier);
     DeclarationName Store(&II);
 
+    QualType AddrSpaceElemTy =
+        AST.getAddrSpaceQualType(ValueType, LangAS::hlsl_device);
+    QualType ElemPtrTy = AST.getPointerType(AddrSpaceElemTy);
     BuiltinTypeMethodBuilder(*this, Store, AST.VoidTy, /*IsConst=*/false)
         .addParam("Index", AST.UnsignedIntTy)
         .addParam("Value", ValueType)
-        .callBuiltin("__builtin_hlsl_resource_store", AST.VoidTy, PH::Handle,
-                     PH::_0, PH::_1)
+        .callBuiltin("__builtin_hlsl_resource_getpointer", ElemPtrTy,
+                     PH::Handle, PH::_0)
+        .dereference(PH::LastStmt)
+        .assign(PH::LastStmt, PH::_1)
         .finalize();
   };
 
@@ -1303,10 +1307,15 @@ BuiltinTypeDeclBuilder::addByteAddressBufferStoreMethods() {
 
   BuiltinTypeMethodBuilder Builder(*this, Store, AST.VoidTy, /*IsConst=*/false);
   QualType ValueType = Builder.addTemplateTypeParam("element_type");
+  QualType AddrSpaceElemTy =
+      AST.getAddrSpaceQualType(ValueType, LangAS::hlsl_device);
+  QualType ElemPtrTy = AST.getPointerType(AddrSpaceElemTy);
   Builder.addParam("Index", AST.UnsignedIntTy)
       .addParam("Value", ValueType)
-      .callBuiltin("__builtin_hlsl_resource_store", AST.VoidTy, PH::Handle,
-                   PH::_0, PH::_1)
+      .callBuiltin("__builtin_hlsl_resource_getpointer", ElemPtrTy, PH::Handle,
+                   PH::_0)
+      .dereference(PH::LastStmt)
+      .assign(PH::LastStmt, PH::_1)
       .finalize();
 
   return *this;
