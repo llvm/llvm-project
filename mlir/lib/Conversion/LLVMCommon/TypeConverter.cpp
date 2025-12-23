@@ -269,6 +269,12 @@ LLVMTypeConverter::LLVMTypeConverter(MLIRContext *ctx,
   // Integer memory spaces map to themselves.
   addTypeAttributeConversion(
       [](BaseMemRefType memref, IntegerAttr addrspace) { return addrspace; });
+
+  // LLVM address spaces map to themselves.
+  addTypeAttributeConversion(
+      [](BaseMemRefType memref, LLVM::AddressSpaceAttr addrspace) {
+        return addrspace;
+      });
 }
 
 /// Returns the MLIR context.
@@ -575,17 +581,24 @@ FailureOr<unsigned>
 LLVMTypeConverter::getMemRefAddressSpace(BaseMemRefType type) const {
   if (!type.getMemorySpace()) // Default memory space -> 0.
     return 0;
+
   std::optional<Attribute> converted =
       convertTypeAttribute(type, type.getMemorySpace());
   if (!converted)
     return failure();
+
   if (!(*converted)) // Conversion to default is 0.
     return 0;
-  if (auto explicitSpace = dyn_cast_if_present<IntegerAttr>(*converted)) {
+
+  if (auto explicitSpace = dyn_cast<IntegerAttr>(*converted)) {
     if (explicitSpace.getType().isIndex() ||
         explicitSpace.getType().isSignlessInteger())
       return explicitSpace.getInt();
   }
+
+  if (auto explicitSpace = dyn_cast<LLVM::AddressSpaceAttr>(*converted))
+    return explicitSpace.getAddressSpace();
+
   return failure();
 }
 

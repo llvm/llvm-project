@@ -289,6 +289,26 @@ func.func @address_space(%arg0 : memref<32xf32, affine_map<(d0) -> (d0)>, 7>) {
 
 // -----
 
+// ALL-LABEL: func @llvm_address_space_cast
+//  ALL-SAME:   (%[[ARG:.*]]: memref<f32, #llvm.address_space<3>>)
+func.func @llvm_address_space_cast(%arg0 : memref<f32, #llvm.address_space<3>>) -> memref<f32, 3 : i32> {
+  // ALL: %[[UNREALIZED:.*]] = builtin.unrealized_conversion_cast %[[ARG]] : memref<f32, #llvm.address_space<3>> to !llvm.struct<(ptr<3>, ptr<3>, i64)>
+  // ALL: %[[ALLOC:.*]] = llvm.extractvalue %[[UNREALIZED]][0] : !llvm.struct<(ptr<3>, ptr<3>, i64)>
+  // ALL: %[[ALIGNED:.*]] = llvm.extractvalue %[[UNREALIZED]][1] : !llvm.struct<(ptr<3>, ptr<3>, i64)>
+  // ALL: %[[OFFSET:.*]] = llvm.extractvalue %[[UNREALIZED]][2] : !llvm.struct<(ptr<3>, ptr<3>, i64)>
+  // ALL: %[[POISON:.*]] = llvm.mlir.poison : !llvm.struct<(ptr<3>, ptr<3>, i64)>
+  // ALL: %[[INS0:.*]] = llvm.insertvalue %[[ALLOC]], %[[POISON]][0] : !llvm.struct<(ptr<3>, ptr<3>, i64)>
+  // ALL: %[[INS1:.*]] = llvm.insertvalue %[[ALIGNED]], %[[INS0]][1] : !llvm.struct<(ptr<3>, ptr<3>, i64)>
+  // ALL: %[[INS2:.*]] = llvm.insertvalue %[[OFFSET]], %[[INS1]][2] : !llvm.struct<(ptr<3>, ptr<3>, i64)>
+  // ALL: %[[RECAST:.*]] = builtin.unrealized_conversion_cast %[[INS2]] : !llvm.struct<(ptr<3>, ptr<3>, i64)> to memref<f32, 3 : i32>
+  // ALL: return %[[RECAST]] : memref<f32, 3 : i32>
+
+  %0 = memref.memory_space_cast %arg0 : memref<f32, #llvm.address_space<3>> to memref<f32, 3 : i32>
+  func.return %0 : memref<f32, 3 : i32>
+}
+
+// -----
+
 // CHECK-LABEL: func @transpose
 //       CHECK:   llvm.mlir.poison : !llvm.struct<(ptr, ptr, i64, array<3 x i64>, array<3 x i64>)>
 //       CHECK:   llvm.insertvalue {{.*}}[0] : !llvm.struct<(ptr, ptr, i64, array<3 x i64>, array<3 x i64>)>

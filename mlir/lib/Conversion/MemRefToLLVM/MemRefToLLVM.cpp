@@ -114,6 +114,14 @@ static unsigned getMemRefEltSizeInBytes(const LLVMTypeConverter *typeConverter,
   return layout->getTypeSize(elementType);
 }
 
+static Value createAddrSpaceCast(ConversionPatternRewriter &rewriter,
+                                 Location loc, Type type, Value value) {
+  if (value.getType() == type)
+    return value;
+
+  return LLVM::AddrSpaceCastOp::create(rewriter, loc, type, value);
+}
+
 static Value castAllocFuncResult(ConversionPatternRewriter &rewriter,
                                  Location loc, Value allocatedPtr,
                                  MemRefType memRefType, Type elementPtrType,
@@ -124,7 +132,7 @@ static Value castAllocFuncResult(ConversionPatternRewriter &rewriter,
   assert(succeeded(maybeMemrefAddrSpace) && "unsupported address space");
   unsigned memrefAddrSpace = *maybeMemrefAddrSpace;
   if (allocatedPtrTy.getAddressSpace() != memrefAddrSpace)
-    allocatedPtr = LLVM::AddrSpaceCastOp::create(
+    allocatedPtr = createAddrSpaceCast(
         rewriter, loc,
         LLVM::LLVMPointerType::get(rewriter.getContext(), memrefAddrSpace),
         allocatedPtr);
@@ -1262,10 +1270,8 @@ struct MemorySpaceCastOpLowering
       SmallVector<Value> descVals;
       MemRefDescriptor::unpack(rewriter, loc, adaptor.getSource(), resultTypeR,
                                descVals);
-      descVals[0] =
-          LLVM::AddrSpaceCastOp::create(rewriter, loc, newPtrType, descVals[0]);
-      descVals[1] =
-          LLVM::AddrSpaceCastOp::create(rewriter, loc, newPtrType, descVals[1]);
+      descVals[0] = createAddrSpaceCast(rewriter, loc, newPtrType, descVals[0]);
+      descVals[1] = createAddrSpaceCast(rewriter, loc, newPtrType, descVals[1]);
       Value result = MemRefDescriptor::pack(rewriter, loc, *getTypeConverter(),
                                             resultTypeR, descVals);
       rewriter.replaceOp(op, result);
@@ -1314,10 +1320,10 @@ struct MemorySpaceCastOpLowering
       Value alignedPtr =
           sourceDesc.alignedPtr(rewriter, loc, *getTypeConverter(),
                                 sourceUnderlyingDesc, sourceElemPtrType);
-      allocatedPtr = LLVM::AddrSpaceCastOp::create(
-          rewriter, loc, resultElemPtrType, allocatedPtr);
-      alignedPtr = LLVM::AddrSpaceCastOp::create(rewriter, loc,
-                                                 resultElemPtrType, alignedPtr);
+      allocatedPtr =
+          createAddrSpaceCast(rewriter, loc, resultElemPtrType, allocatedPtr);
+      alignedPtr =
+          createAddrSpaceCast(rewriter, loc, resultElemPtrType, alignedPtr);
 
       result.setAllocatedPtr(rewriter, loc, resultUnderlyingDesc,
                              resultElemPtrType, allocatedPtr);
