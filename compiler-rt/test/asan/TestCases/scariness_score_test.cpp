@@ -73,11 +73,11 @@
 // RUN: not %run %t 27 2>&1 | FileCheck %s --check-prefix=CHECK27
 // Parts of the test are too platform-specific:
 // REQUIRES: x86_64-target-arch
-// REQUIRES: shell
 // TODO(boomanaiden154): This test currently fails with the internal
 // shell because python is not able to set RLIMIT_STACK. We should
-// reenable this when the behavior is fixed.
-// UNSUPPORTED: system-darwin
+// reenable this when the behavior is fixed. Windows does not support
+// ulimit.
+// UNSUPPORTED: system-darwin, system-windows
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>

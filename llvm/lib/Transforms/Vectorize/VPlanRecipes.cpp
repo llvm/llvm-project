@@ -1964,9 +1964,11 @@ InstructionCost VPWidenSelectRecipe::computeCost(ElementCount VF,
   if (!ScalarCond)
     CondTy = VectorType::get(CondTy, VF);
 
-  CmpInst::Predicate Pred = CmpInst::BAD_ICMP_PREDICATE;
-  if (auto *Cmp = dyn_cast<CmpInst>(SI->getCondition()))
-    Pred = Cmp->getPredicate();
+  llvm::CmpPredicate Pred;
+  if (!match(getOperand(0), m_Cmp(Pred, m_VPValue(), m_VPValue())))
+    if (getOperand(0)->isLiveIn())
+      if (auto *Cmp = dyn_cast<CmpInst>(getOperand(0)->getLiveInIRValue()))
+        Pred = Cmp->getPredicate();
   return Ctx.TTI.getCmpSelInstrCost(
       Instruction::Select, VectorTy, CondTy, Pred, Ctx.CostKind,
       {TTI::OK_AnyValue, TTI::OP_None}, {TTI::OK_AnyValue, TTI::OP_None}, SI);
@@ -3127,14 +3129,6 @@ bool VPReplicateRecipe::shouldPack() const {
 static const SCEV *getAddressAccessSCEV(const VPValue *Ptr,
                                         PredicatedScalarEvolution &PSE,
                                         const Loop *L) {
-  auto *PtrR = Ptr->getDefiningRecipe();
-  if (!PtrR || !((isa<VPReplicateRecipe>(Ptr) &&
-                  cast<VPReplicateRecipe>(Ptr)->getOpcode() ==
-                      Instruction::GetElementPtr) ||
-                 isa<VPWidenGEPRecipe>(Ptr) ||
-                 match(Ptr, m_GetElementPtr(m_VPValue(), m_VPValue()))))
-    return nullptr;
-
   const SCEV *Addr = vputils::getSCEVExprForVPValue(Ptr, PSE, L);
   if (isa<SCEVCouldNotCompute>(Addr))
     return Addr;

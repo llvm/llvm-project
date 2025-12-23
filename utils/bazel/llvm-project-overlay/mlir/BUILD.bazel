@@ -10453,6 +10453,8 @@ cc_library(
         ":OpenACCOpsIncGen",
         ":OpenACCPassIncGen",
         ":OpenACCTypeInterfacesIncGen",
+        ":SCFDialect",
+        ":SCFUtils",
         ":Support",
         ":TransformUtils",
         ":ViewLikeInterface",
