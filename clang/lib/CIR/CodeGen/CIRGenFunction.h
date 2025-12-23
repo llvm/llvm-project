@@ -1362,6 +1362,9 @@ public:
   void emitAtomicStore(RValue rvalue, LValue dest, bool isInit);
   void emitAtomicStore(RValue rvalue, LValue dest, cir::MemOrder order,
                        bool isVolatile, bool isInit);
+  void emitAtomicExprWithMemOrder(
+      const Expr *memOrder, bool isStore, bool isLoad, bool isFence,
+      llvm::function_ref<void(cir::MemOrder)> emitAtomicOp);
 
   AutoVarEmission emitAutoVarAlloca(const clang::VarDecl &d,
                                     mlir::OpBuilder::InsertPoint ip = {});
@@ -1629,6 +1632,8 @@ public:
 
   mlir::Value emitRuntimeCall(mlir::Location loc, cir::FuncOp callee,
                               llvm::ArrayRef<mlir::Value> args = {});
+
+  void emitInvariantStart(CharUnits size, mlir::Value addr, mlir::Location loc);
 
   /// Emit the computation of the specified expression of scalar type.
   mlir::Value emitScalarExpr(const clang::Expr *e,

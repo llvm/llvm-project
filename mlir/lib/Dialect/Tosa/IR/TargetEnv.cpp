@@ -43,6 +43,7 @@ TosaSpecificationVersion getMinVersion(const Extension &extension) {
     return TosaSpecificationVersion(1, 0);
   case Extension::mxfp:
   case Extension::int64:
+  case Extension::shape:
     return TosaSpecificationVersion(1, 1);
   case Extension::none:
     return TosaSpecificationVersion(0, 0);

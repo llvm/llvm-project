@@ -1065,6 +1065,7 @@ module std [system] {
     module class_or_enum            { header "__concepts/class_or_enum.h" }
     module common_reference_with    { header "__concepts/common_reference_with.h" }
     module common_with              { header "__concepts/common_with.h" }
+    module comparison_common_type   { header "__concepts/comparison_common_type.h" }
     module constructible            { header "__concepts/constructible.h" }
     module convertible_to           { header "__concepts/convertible_to.h" }
     module copyable                 { header "__concepts/copyable.h" }
@@ -1851,6 +1852,7 @@ module std [system] {
 
   module ranges {
     module access                         { header "__ranges/access.h" }
+    module adjacent_transform_view        { header "__ranges/adjacent_transform_view.h" }
     module adjacent_view                  { header "__ranges/adjacent_view.h" }
     module all                            {
       header "__ranges/all.h"

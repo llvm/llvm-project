@@ -70,11 +70,9 @@ struct ProgramPoint : public StorageUniquer::BaseStorage {
   ProgramPoint() {}
 
   /// Create a new program point from the given program point.
-  ProgramPoint(const ProgramPoint &point) {
-    this->block = point.getBlock();
-    this->point = point.getPoint();
-    this->op = point.getOperation();
-  }
+  ProgramPoint(const ProgramPoint &point)
+      : block(point.getBlock()), point(point.getPoint()),
+        op(point.getOperation()) {}
 
   static ProgramPoint *construct(StorageUniquer::StorageAllocator &alloc,
                                  KeyTy &&key) {
