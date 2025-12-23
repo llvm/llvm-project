@@ -1099,8 +1099,13 @@ public:
 
   bool VisitCXXNewExpr(CXXNewExpr *E) {
     if (auto *CE = E->getConstructExpr())
-      if (auto *Callee = CE->getConstructor())
-        Constructors.push_back(Callee);
+      if (auto *Callee = CE->getConstructor()) {
+        if (Callee->isTemplateInstantiation())
+          Constructors.push_back(llvm::dyn_cast<clang::CXXConstructorDecl>(
+              Callee->getPrimaryTemplate()->getTemplatedDecl()));
+        else
+          Constructors.push_back(Callee);
+      }
     return true;
   }
 

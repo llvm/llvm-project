@@ -2715,7 +2715,7 @@ TEST(FindReferences, NoQueryForLocalSymbols) {
   }
 }
 
-TEST(FindReferences, ForwardingInAST) {
+TEST(FindReferences, ConstructorForwardingInAST) {
   Annotations Main(R"cpp(
     namespace std {
     template <class T> T &&forward(T &t);
@@ -2741,7 +2741,7 @@ TEST(FindReferences, ForwardingInAST) {
                           rangeIs(Main.range("Caller"))));
 }
 
-TEST(FindReferences, ForwardingInASTChained) {
+TEST(FindReferences, ConstructorForwardingInASTChained) {
   Annotations Main(R"cpp(
     namespace std {
     template <class T> T &&forward(T &t);
@@ -2773,7 +2773,7 @@ TEST(FindReferences, ForwardingInASTChained) {
                           rangeIs(Main.range("Caller"))));
 }
 
-TEST(FindReferences, ForwardingInIndex) {
+TEST(FindReferences, ConstructorForwardingInIndex) {
   Annotations Header(R"cpp(
     namespace std {
     template <class T> T &&forward(T &t);
@@ -2804,6 +2804,37 @@ TEST(FindReferences, ForwardingInIndex) {
       ElementsAre(
           AllOf(rangeIs(Header.range()), fileIs(testPath("header.hpp"))),
           AllOf(rangeIs(Main.range()), fileIs(testPath("main.cpp")))));
+}
+
+TEST(FindReferences, TemplatedConstructorForwarding) {
+  Annotations Main(R"cpp(
+    namespace std {
+    template <class T> T &&forward(T &t);
+    template <class T, class... Args> T *make_unique(Args &&...args) {
+      return new T(std::forward<Args>(args)...);
+    }
+    }
+
+    struct Waldo {
+      template <typename T>
+      $Constructor[[W^aldo]](T);
+    };
+    struct S {};
+
+    int main() {
+      S s;
+      Waldo $Caller[[w]](s);
+      std::$ForwardedCaller[[make_unique]]<Waldo>(s);
+    }
+  )cpp");
+  TestTU TU;
+  TU.Code = std::string(Main.code());
+  auto AST = TU.build();
+
+  EXPECT_THAT(findReferences(AST, Main.point(), 0).References,
+              ElementsAre(rangeIs(Main.range("Constructor")),
+                          rangeIs(Main.range("Caller")),
+                          rangeIs(Main.range("ForwardedCaller"))));
 }
 
 TEST(GetNonLocalDeclRefs, All) {
