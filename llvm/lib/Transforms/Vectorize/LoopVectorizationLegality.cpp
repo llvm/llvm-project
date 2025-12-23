@@ -802,15 +802,7 @@ static bool isTLIScalarize(const TargetLibraryInfo &TLI, const CallInst &CI) {
 
 /// Returns true if the call return type `Ty` can be widened by the loop
 /// vectorizer.
-static bool canWidenCallReturnType(Type *Ty) {
-  auto *StructTy = dyn_cast<StructType>(Ty);
-  // TODO: Remove the homogeneous types restriction. This is just an initial
-  // simplification. When we want to support things like the overflow intrinsics
-  // we will have to lift this restriction.
-  if (StructTy && !StructTy->containsHomogeneousTypes())
-    return false;
-  return canVectorizeTy(StructTy);
-}
+static bool canWidenCallReturnType(Type *Ty) { return canVectorizeTy(Ty); }
 
 bool LoopVectorizationLegality::canVectorizeInstrs() {
   bool DoExtraAnalysis = ORE->allowExtraAnalysis(DEBUG_TYPE);

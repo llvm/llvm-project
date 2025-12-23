@@ -282,12 +282,14 @@ define void @frexp_f32(ptr noalias %in, ptr noalias writeonly %out_mantissa, ptr
 ; CHECK-SAME: ptr noalias [[IN:%.*]], ptr noalias writeonly [[OUT_MANTISSA:%.*]], ptr noalias writeonly [[OUT_EXPONENT:%.*]]) {
 ; CHECK:  [[ENTRY:.*:]]
 ; CHECK:  [[FOR_BODY:.*:]]
-; CHECK:    [[CALL:%.*]] = tail call { float, i32 } @llvm.frexp.f32.i32(float [[IN_VAL:%.*]])
-; CHECK:    [[MANTISSA:%.*]] = extractvalue { float, i32 } [[CALL]], 0
-; CHECK:    [[EXPONENT:%.*]] = extractvalue { float, i32 } [[CALL]], 1
-; CHECK:    store float [[MANTISSA]], ptr [[ARRAYIDX2:%.*]], align 4
-; CHECK:    store i32 [[EXPONENT]], ptr [[ARRAYIDX4:%.*]], align 4
 ; CHECK:  [[EXIT:.*:]]
+; CHECK:    [[TMP1:%.*]] = call { <2 x float>, <2 x i32> } @llvm.frexp.v2f32.v2i32(<2 x float> [[WIDE_LOAD:%.*]])
+; CHECK:    [[TMP2:%.*]] = extractvalue { <2 x float>, <2 x i32> } [[TMP1]], 0
+; CHECK:    [[TMP3:%.*]] = extractvalue { <2 x float>, <2 x i32> } [[TMP1]], 1
+; CHECK:    store <2 x float> [[TMP2]], ptr [[TMP4:%.*]], align 4
+; CHECK:    store <2 x i32> [[TMP3]], ptr [[TMP5:%.*]], align 4
+; CHECK:  [[MIDDLE_BLOCK:.*:]]
+; CHECK:  [[EXIT1:.*:]]
 ;
 entry:
   br label %for.body
@@ -316,12 +318,14 @@ define void @frexp_f64(ptr noalias %in, ptr noalias writeonly %out_mantissa, ptr
 ; CHECK-SAME: ptr noalias [[IN:%.*]], ptr noalias writeonly [[OUT_MANTISSA:%.*]], ptr noalias writeonly [[OUT_EXPONENT:%.*]]) {
 ; CHECK:  [[ENTRY:.*:]]
 ; CHECK:  [[FOR_BODY:.*:]]
-; CHECK:    [[CALL:%.*]] = tail call { double, i32 } @llvm.frexp.f64.i32(double [[IN_VAL:%.*]])
-; CHECK:    [[MANTISSA:%.*]] = extractvalue { double, i32 } [[CALL]], 0
-; CHECK:    [[EXPONENT:%.*]] = extractvalue { double, i32 } [[CALL]], 1
-; CHECK:    store double [[MANTISSA]], ptr [[ARRAYIDX2:%.*]], align 8
-; CHECK:    store i32 [[EXPONENT]], ptr [[ARRAYIDX4:%.*]], align 4
 ; CHECK:  [[EXIT:.*:]]
+; CHECK:    [[TMP1:%.*]] = call { <2 x double>, <2 x i32> } @llvm.frexp.v2f64.v2i32(<2 x double> [[WIDE_LOAD:%.*]])
+; CHECK:    [[TMP2:%.*]] = extractvalue { <2 x double>, <2 x i32> } [[TMP1]], 0
+; CHECK:    [[TMP3:%.*]] = extractvalue { <2 x double>, <2 x i32> } [[TMP1]], 1
+; CHECK:    store <2 x double> [[TMP2]], ptr [[TMP4:%.*]], align 8
+; CHECK:    store <2 x i32> [[TMP3]], ptr [[TMP5:%.*]], align 4
+; CHECK:  [[MIDDLE_BLOCK:.*:]]
+; CHECK:  [[EXIT1:.*:]]
 ;
 entry:
   br label %for.body

@@ -378,27 +378,31 @@ exit:
   ret void
 }
 
-; Negative test. Widening structs with mixed element types is not supported.
-; CHECK-REMARKS-COUNT: remark: {{.*}} loop not vectorized: instruction return type cannot be vectorized
-define void @negative_mixed_element_type_struct_return(ptr noalias %in, ptr noalias writeonly %out_a, ptr noalias writeonly %out_b) {
-; CHECK-LABEL: define void @negative_mixed_element_type_struct_return(
+; Widening structs with mixed element types is now supported.
+; CHECK-REMARKS: remark: {{.*}} vectorized loop (vectorization width: 2, interleaved count: 1)
+define void @mixed_element_type_struct_return(ptr noalias %in, ptr noalias writeonly %out_a, ptr noalias writeonly %out_b) {
+; CHECK-LABEL: define void @mixed_element_type_struct_return(
 ; CHECK-SAME: ptr noalias [[IN:%.*]], ptr noalias writeonly [[OUT_A:%.*]], ptr noalias writeonly [[OUT_B:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
-; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[FOR_BODY]] ]
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[IV_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[IN]], i64 [[IV]]
-; CHECK-NEXT:    [[IN_VAL:%.*]] = load float, ptr [[ARRAYIDX]], align 4
-; CHECK-NEXT:    [[CALL:%.*]] = tail call { float, i32 } @baz(float [[IN_VAL]]) #[[ATTR3:[0-9]+]]
-; CHECK-NEXT:    [[EXTRACT_A:%.*]] = extractvalue { float, i32 } [[CALL]], 0
-; CHECK-NEXT:    [[EXTRACT_B:%.*]] = extractvalue { float, i32 } [[CALL]], 1
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x float>, ptr [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = call { <2 x float>, <2 x i32> } @fixed_vec_baz(<2 x float> [[WIDE_LOAD]])
+; CHECK-NEXT:    [[TMP2:%.*]] = extractvalue { <2 x float>, <2 x i32> } [[TMP1]], 0
+; CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <2 x float>, <2 x i32> } [[TMP1]], 1
 ; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds float, ptr [[OUT_A]], i64 [[IV]]
-; CHECK-NEXT:    store float [[EXTRACT_A]], ptr [[ARRAYIDX2]], align 4
+; CHECK-NEXT:    store <2 x float> [[TMP2]], ptr [[ARRAYIDX2]], align 4
 ; CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds i32, ptr [[OUT_B]], i64 [[IV]]
-; CHECK-NEXT:    store i32 [[EXTRACT_B]], ptr [[ARRAYIDX4]], align 4
-; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    store <2 x i32> [[TMP3]], ptr [[ARRAYIDX4]], align 4
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw i64 [[IV]], 2
 ; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], 1024
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT:.*]], label %[[FOR_BODY]]
+; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
