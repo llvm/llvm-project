@@ -8811,7 +8811,7 @@ SDValue TargetLowering::expandFMINIMUM_FMAXIMUM(SDNode *N,
           DAG.getSelect(DL, VT, DAG.getSetCC(DL, CCVT, LHS, RHS, ISD::SETUO),
                         DAG.getConstantFP(*FPNaN, DL, VT), MinMax, Flags);
     }
-    return MinMax
+    return MinMax;
   }
 
   if (VT.isVector() && !isOperationLegalOrCustom(ISD::VSELECT, VT))
