@@ -340,7 +340,7 @@ static LogicalResult checkImplementationStatus(Operation &op) {
       result = todo("depend");
   };
   auto checkDevice = [&todo](auto op, LogicalResult &result) {
-    if (op.getDevice())
+    if (op.getDevice() && !isa<omp::TargetOp>(op))
       result = todo("device");
   };
   auto checkHint = [](auto op, LogicalResult &) {
@@ -5981,6 +5981,15 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
   llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
   bool isTargetDevice = ompBuilder->Config.isTargetDevice();
   bool isGPU = ompBuilder->Config.isGPU();
+  llvm::Value *deviceIDValue = builder.getInt64(llvm::omp::OMP_DEVICEID_UNDEF);
+
+  if (!isTargetDevice) {
+    if (mlir::Value devId = targetOp.getDevice()) {
+      deviceIDValue = moduleTranslation.lookupValue(devId);
+      deviceIDValue =
+          builder.CreateSExtOrTrunc(deviceIDValue, builder.getInt64Ty());
+    }
+  }
 
   auto parentFn = opInst.getParentOfType<LLVM::LLVMFuncOp>();
   auto argIface = cast<omp::BlockArgOpenMPOpInterface>(opInst);
@@ -6255,9 +6264,10 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
 
   llvm::OpenMPIRBuilder::InsertPointOrErrorTy afterIP =
       moduleTranslation.getOpenMPBuilder()->createTarget(
-          ompLoc, isOffloadEntry, allocaIP, builder.saveIP(), info, entryInfo,
-          defaultAttrs, runtimeAttrs, ifCond, kernelInput, genMapInfoCB, bodyCB,
-          argAccessorCB, customMapperCB, dds, targetOp.getNowait());
+          ompLoc, isOffloadEntry, allocaIP, builder.saveIP(), info,
+          deviceIDValue, entryInfo, defaultAttrs, runtimeAttrs, ifCond,
+          kernelInput, genMapInfoCB, bodyCB, argAccessorCB, customMapperCB, dds,
+          targetOp.getNowait());
 
   if (failed(handleError(afterIP, opInst)))
     return failure();
