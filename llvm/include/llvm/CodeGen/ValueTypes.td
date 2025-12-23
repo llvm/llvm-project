@@ -113,6 +113,8 @@ def v4096i1 : VTVec<4096, i1>; // 4096 x i1 vector value
 def v128i2  : VTVec<128,  i2>; //  128 x i2 vector value
 def v256i2  : VTVec<256,  i2>; //  256 x i2 vector value
 
+def v16i4   : VTVec<16,   i4>; //   16 x i4 vector value
+def v32i4   : VTVec<32,   i4>; //   32 x i4 vector value
 def v64i4   : VTVec<64,   i4>; //   64 x i4 vector value
 def v128i4  : VTVec<128,  i4>; //  128 x i4 vector value
 

@@ -876,7 +876,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
                      {MVT::v4i16, MVT::v4f16, MVT::v4bf16, MVT::v2i8, MVT::v4i8,
                       MVT::v8i8, MVT::v8i16, MVT::v8f16, MVT::v8bf16,
                       MVT::v16i16, MVT::v16f16, MVT::v16bf16, MVT::v32i16,
-                      MVT::v32f16, MVT::v32bf16},
+                      MVT::v32f16, MVT::v32bf16, MVT::v16i4},
                      Custom);
 
   setOperationAction({ISD::SMULO, ISD::UMULO}, MVT::i64, Custom);

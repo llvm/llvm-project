@@ -65,6 +65,21 @@ define amdgpu_kernel void @v_select_v16i8(ptr addrspace(1) %out, ptr addrspace(1
   ret void
 }
 
+; GCN-LABEL: {{^}}v_select_v32i4:
+; GCN: v_cndmask_b32_e32
+; GCN: v_cndmask_b32_e32
+; GCN: v_cndmask_b32_e32
+; GCN: v_cndmask_b32_e32
+; GCN-NOT: cndmask
+define amdgpu_kernel void @v_select_v32i4(ptr addrspace(1) %out, ptr addrspace(1) %a.ptr, ptr addrspace(4) %b.ptr, i32 %c) #0 {
+  %a = load <32 x i4>, ptr addrspace(1) %a.ptr, align 2
+  %b = load <32 x i4>, ptr addrspace(4) %b.ptr, align 2
+  %cmp = icmp eq i32 %c, 0
+  %select = select i1 %cmp, <32 x i4> %a, <32 x i4> %b
+  store <32 x i4> %select, ptr addrspace(1) %out, align 2
+  ret void
+}
+
 ; GCN-LABEL: {{^}}select_v4i8:
 ; GFX89: s_cselect_b32
 ; GFX89-NOT: s_cselect_b32
