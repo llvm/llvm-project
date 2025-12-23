@@ -292,15 +292,23 @@ class PointerIntPairSynthProvider:
         mask_and_shift_constants = pointer_info.FindDirectNestedType(
             "MaskAndShiftConstants"
         ).GetEnumMembers()
+
+        # FIXME: SBAPI should provide a way to retrieve an enum member
+        # by name.
         self.pointer_bit_mask: SBTypeEnumMember = (
             mask_and_shift_constants.GetTypeEnumMemberAtIndex(0)
         )
+        assert self.pointer_bit_mask.name == "PointerBitMask"
+
         self.int_shift: SBTypeEnumMember = (
             mask_and_shift_constants.GetTypeEnumMemberAtIndex(1)
         )
+        assert self.int_shift.name == "IntShift"
+
         self.int_mask: SBTypeEnumMember = (
             mask_and_shift_constants.GetTypeEnumMemberAtIndex(2)
         )
+        assert self.int_mask.name == "IntMask"
 
 
 def DenseMapSummary(valobj: lldb.SBValue, _) -> str:
