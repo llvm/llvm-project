@@ -133,7 +133,7 @@ Error SimpleRemoteEPC::disconnect() {
 Expected<SimpleRemoteEPCTransportClient::HandleMessageAction>
 SimpleRemoteEPC::handleMessage(SimpleRemoteEPCOpcode OpC, uint64_t SeqNo,
                                ExecutorAddr TagAddr,
-                               SimpleRemoteEPCArgBytesVector ArgBytes) {
+                               shared::WrapperFunctionBuffer ArgBytes) {
 
   LLVM_DEBUG({
     dbgs() << "SimpleRemoteEPC::handleMessage: opc = ";
@@ -282,7 +282,7 @@ Error SimpleRemoteEPC::sendMessage(SimpleRemoteEPCOpcode OpC, uint64_t SeqNo,
 }
 
 Error SimpleRemoteEPC::handleSetup(uint64_t SeqNo, ExecutorAddr TagAddr,
-                                   SimpleRemoteEPCArgBytesVector ArgBytes) {
+                                   shared::WrapperFunctionBuffer ArgBytes) {
   if (SeqNo != 0)
     return make_error<StringError>("Setup packet SeqNo not zero",
                                    inconvertibleErrorCode());
@@ -399,7 +399,7 @@ Error SimpleRemoteEPC::setup(Setup S) {
 }
 
 Error SimpleRemoteEPC::handleResult(uint64_t SeqNo, ExecutorAddr TagAddr,
-                                    SimpleRemoteEPCArgBytesVector ArgBytes) {
+                                    shared::WrapperFunctionBuffer ArgBytes) {
   IncomingWFRHandler SendResult;
 
   if (TagAddr)
@@ -426,10 +426,10 @@ Error SimpleRemoteEPC::handleResult(uint64_t SeqNo, ExecutorAddr TagAddr,
 
 void SimpleRemoteEPC::handleCallWrapper(
     uint64_t RemoteSeqNo, ExecutorAddr TagAddr,
-    SimpleRemoteEPCArgBytesVector ArgBytes) {
+    shared::WrapperFunctionBuffer ArgBytes) {
   assert(ES && "No ExecutionSession attached");
   D->dispatch(makeGenericNamedTask(
-      [this, RemoteSeqNo, TagAddr, ArgBytes = std::move(ArgBytes)]() {
+      [this, RemoteSeqNo, TagAddr, ArgBytes = std::move(ArgBytes)]() mutable {
         ES->runJITDispatchHandler(
             [this, RemoteSeqNo](shared::WrapperFunctionBuffer WFR) {
               if (auto Err =
@@ -437,12 +437,12 @@ void SimpleRemoteEPC::handleCallWrapper(
                                   ExecutorAddr(), {WFR.data(), WFR.size()}))
                 getExecutionSession().reportError(std::move(Err));
             },
-            TagAddr, ArgBytes);
+            TagAddr, std::move(ArgBytes));
       },
       "callWrapper task"));
 }
 
-Error SimpleRemoteEPC::handleHangup(SimpleRemoteEPCArgBytesVector ArgBytes) {
+Error SimpleRemoteEPC::handleHangup(shared::WrapperFunctionBuffer ArgBytes) {
   using namespace llvm::orc::shared;
   auto WFR = WrapperFunctionBuffer::copyFrom(ArgBytes.data(), ArgBytes.size());
   if (const char *ErrMsg = WFR.getOutOfBandError())

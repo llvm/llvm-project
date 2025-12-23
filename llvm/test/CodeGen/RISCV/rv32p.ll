@@ -97,3 +97,52 @@ define i32 @pack_i32_3(i16 zeroext %0, i16 zeroext %1, i32 %2) {
   %8 = add i32 %7, %2
   ret i32 %8
 }
+
+define i64 @slx_i64(i64 %x, i64 %y) {
+; CHECK-LABEL: slx_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    sll a3, a0, a2
+; CHECK-NEXT:    slx a1, a0, a2
+; CHECK-NEXT:    mv a0, a3
+; CHECK-NEXT:    ret
+  %a = and i64 %y, 31
+  %b = shl i64 %x, %a
+  ret i64 %b
+}
+
+define i64 @slxi_i64(i64 %x) {
+; CHECK-LABEL: slxi_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a2, 25
+; CHECK-NEXT:    slx a1, a0, a2
+; CHECK-NEXT:    slli a0, a0, 25
+; CHECK-NEXT:    ret
+  %a = shl i64 %x, 25
+  ret i64 %a
+}
+
+define i64 @srx_i64(i64 %x, i64 %y) {
+; CHECK-LABEL: srx_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    srl a3, a1, a2
+; CHECK-NEXT:    srx a0, a1, a2
+; CHECK-NEXT:    mv a1, a3
+; CHECK-NEXT:    ret
+  %a = and i64 %y, 31
+  %b = lshr i64 %x, %a
+  ret i64 %b
+}
+
+; FIXME: Using srx instead of slx would avoid the mv.
+define i64 @srxi_i64(i64 %x) {
+; CHECK-LABEL: srxi_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mv a2, a1
+; CHECK-NEXT:    li a3, 7
+; CHECK-NEXT:    srli a1, a1, 25
+; CHECK-NEXT:    slx a2, a0, a3
+; CHECK-NEXT:    mv a0, a2
+; CHECK-NEXT:    ret
+  %a = lshr i64 %x, 25
+  ret i64 %a
+}

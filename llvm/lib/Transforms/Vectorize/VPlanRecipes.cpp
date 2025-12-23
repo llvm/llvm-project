@@ -3129,14 +3129,6 @@ bool VPReplicateRecipe::shouldPack() const {
 static const SCEV *getAddressAccessSCEV(const VPValue *Ptr,
                                         PredicatedScalarEvolution &PSE,
                                         const Loop *L) {
-  auto *PtrR = Ptr->getDefiningRecipe();
-  if (!PtrR || !((isa<VPReplicateRecipe>(Ptr) &&
-                  cast<VPReplicateRecipe>(Ptr)->getOpcode() ==
-                      Instruction::GetElementPtr) ||
-                 isa<VPWidenGEPRecipe>(Ptr) ||
-                 match(Ptr, m_GetElementPtr(m_VPValue(), m_VPValue()))))
-    return nullptr;
-
   const SCEV *Addr = vputils::getSCEVExprForVPValue(Ptr, PSE, L);
   if (isa<SCEVCouldNotCompute>(Addr))
     return Addr;
