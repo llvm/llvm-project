@@ -273,8 +273,7 @@ static bool CompressEVEXImpl(MachineInstr &MI, MachineBasicBlock &MBB,
   if (tryCompressVPMOVPattern(MI, MBB, ST, ToErase))
     return true;
 
-  unsigned Opc = MI.getOpcode();
-  auto IsRedundantNewDataDest = [&](unsigned &OpcRef) {
+  auto IsRedundantNewDataDest = [&](unsigned &Opc) {
     // $rbx = ADD64rr_ND $rbx, $rax / $rbx = ADD64rr_ND $rax, $rbx
     //   ->
     // $rbx = ADD64rr $rbx, $rax
@@ -294,7 +293,7 @@ static bool CompressEVEXImpl(MachineInstr &MI, MachineBasicBlock &MBB,
       return false;
     // Opcode may change after commute, e.g. SHRD -> SHLD
     ST.getInstrInfo()->commuteInstruction(MI, false, 1, 2);
-    OpcRef = MI.getOpcode();
+    Opc = MI.getOpcode();
     return true;
   };
 
@@ -309,6 +308,7 @@ static bool CompressEVEXImpl(MachineInstr &MI, MachineBasicBlock &MBB,
   // For AVX512 cases, EVEX prefix is needed in order to carry this information
   // thus preventing the transformation to VEX encoding.
   bool IsND = X86II::hasNewDataDest(TSFlags);
+  unsigned Opc = MI.getOpcode();
   bool IsSetZUCCm = Opc == X86::SETZUCCm;
   if (TSFlags & X86II::EVEX_B && !IsND && !IsSetZUCCm)
     return false;
