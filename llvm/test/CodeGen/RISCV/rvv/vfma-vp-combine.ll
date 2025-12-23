@@ -35,11 +35,11 @@ define <vscale x 1 x double> @test2(<vscale x 1 x double> %a, <vscale x 1 x i1> 
 ; RV64-LABEL: test2:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    li a1, 1025
-; RV64-NEXT:    li a2, 1
 ; RV64-NEXT:    slli a1, a1, 52
-; RV64-NEXT:    slli a2, a2, 62
+; RV64-NEXT:    li a2, 1
 ; RV64-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
 ; RV64-NEXT:    vmv.v.x v9, a1
+; RV64-NEXT:    slli a2, a2, 62
 ; RV64-NEXT:    fmv.d.x fa5, a2
 ; RV64-NEXT:    vfadd.vf v9, v9, fa5, v0.t
 ; RV64-NEXT:    vfmul.vv v8, v8, v9, v0.t
@@ -67,11 +67,11 @@ define <vscale x 1 x double> @test3(<vscale x 1 x double> %a, <vscale x 1 x doub
 ; RV64-LABEL: test3:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    li a1, 1025
-; RV64-NEXT:    li a2, 1
 ; RV64-NEXT:    slli a1, a1, 52
-; RV64-NEXT:    slli a2, a2, 62
+; RV64-NEXT:    li a2, 1
 ; RV64-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
 ; RV64-NEXT:    vmv.v.x v10, a1
+; RV64-NEXT:    slli a2, a2, 62
 ; RV64-NEXT:    fmv.d.x fa5, a2
 ; RV64-NEXT:    vfmul.vf v10, v10, fa5, v0.t
 ; RV64-NEXT:    vfmadd.vv v10, v8, v9, v0.t

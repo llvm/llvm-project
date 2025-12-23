@@ -60,15 +60,13 @@ define void @test_different_evl(<vscale x 2 x float> %val, <vscale x 2 x float>*
 ; CHECK-NEXT:    vrsub.vx v9, v9, a1
 ; CHECK-NEXT:    vsetvli zero, zero, e8, mf4, ta, ma
 ; CHECK-NEXT:    vmerge.vim v10, v10, 1, v0
+; CHECK-NEXT:    vrgatherei16.vv v11, v10, v9
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; CHECK-NEXT:    vid.v v11
+; CHECK-NEXT:    vid.v v9
 ; CHECK-NEXT:    vsetvli zero, zero, e8, mf4, ta, ma
-; CHECK-NEXT:    vrgatherei16.vv v12, v10, v9
+; CHECK-NEXT:    vmsne.vi v0, v11, 0
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; CHECK-NEXT:    vrsub.vx v9, v11, a1
-; CHECK-NEXT:    vsetvli zero, zero, e8, mf4, ta, ma
-; CHECK-NEXT:    vmsne.vi v0, v12, 0
-; CHECK-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vrsub.vx v9, v9, a1
 ; CHECK-NEXT:    vrgather.vv v10, v8, v9
 ; CHECK-NEXT:    vsetvli zero, a2, e32, m1, ta, ma
 ; CHECK-NEXT:    vse32.v v10, (a0), v0.t

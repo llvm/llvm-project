@@ -512,8 +512,8 @@ define <8 x i16> @shuffle_v8i16_as_i64_16(<8 x i16> %v) {
 ; ZVKB-ZVE32X:       # %bb.0:
 ; ZVKB-ZVE32X-NEXT:    li a0, 136
 ; ZVKB-ZVE32X-NEXT:    vsetivli zero, 8, e16, m2, ta, mu
-; ZVKB-ZVE32X-NEXT:    vslidedown.vi v10, v8, 1
 ; ZVKB-ZVE32X-NEXT:    vmv.s.x v0, a0
+; ZVKB-ZVE32X-NEXT:    vslidedown.vi v10, v8, 1
 ; ZVKB-ZVE32X-NEXT:    vslideup.vi v10, v8, 3, v0.t
 ; ZVKB-ZVE32X-NEXT:    vmv.v.v v8, v10
 ; ZVKB-ZVE32X-NEXT:    ret
@@ -557,8 +557,8 @@ define <8 x i16> @shuffle_v8i16_as_i64_32(<8 x i16> %v) {
 ; ZVKB-ZVE32X:       # %bb.0:
 ; ZVKB-ZVE32X-NEXT:    li a0, 204
 ; ZVKB-ZVE32X-NEXT:    vsetivli zero, 8, e16, m2, ta, mu
-; ZVKB-ZVE32X-NEXT:    vslidedown.vi v10, v8, 2
 ; ZVKB-ZVE32X-NEXT:    vmv.s.x v0, a0
+; ZVKB-ZVE32X-NEXT:    vslidedown.vi v10, v8, 2
 ; ZVKB-ZVE32X-NEXT:    vslideup.vi v10, v8, 2, v0.t
 ; ZVKB-ZVE32X-NEXT:    vmv.v.v v8, v10
 ; ZVKB-ZVE32X-NEXT:    ret
@@ -602,8 +602,8 @@ define <8 x i16> @shuffle_v8i16_as_i64_48(<8 x i16> %v) {
 ; ZVKB-ZVE32X:       # %bb.0:
 ; ZVKB-ZVE32X-NEXT:    li a0, -18
 ; ZVKB-ZVE32X-NEXT:    vsetivli zero, 8, e16, m2, ta, mu
-; ZVKB-ZVE32X-NEXT:    vslidedown.vi v10, v8, 3
 ; ZVKB-ZVE32X-NEXT:    vmv.s.x v0, a0
+; ZVKB-ZVE32X-NEXT:    vslidedown.vi v10, v8, 3
 ; ZVKB-ZVE32X-NEXT:    vslideup.vi v10, v8, 1, v0.t
 ; ZVKB-ZVE32X-NEXT:    vmv.v.v v8, v10
 ; ZVKB-ZVE32X-NEXT:    ret
@@ -716,8 +716,8 @@ define <8 x half> @shuffle_v8f16_as_i64_16(<8 x half> %v) {
 ; ZVKB-ZVE32X:       # %bb.0:
 ; ZVKB-ZVE32X-NEXT:    li a0, 136
 ; ZVKB-ZVE32X-NEXT:    vsetivli zero, 8, e16, m2, ta, mu
-; ZVKB-ZVE32X-NEXT:    vslidedown.vi v10, v8, 1
 ; ZVKB-ZVE32X-NEXT:    vmv.s.x v0, a0
+; ZVKB-ZVE32X-NEXT:    vslidedown.vi v10, v8, 1
 ; ZVKB-ZVE32X-NEXT:    vslideup.vi v10, v8, 3, v0.t
 ; ZVKB-ZVE32X-NEXT:    vmv.v.v v8, v10
 ; ZVKB-ZVE32X-NEXT:    ret
@@ -761,8 +761,8 @@ define <8 x half> @shuffle_v8f16_as_i64_32(<8 x half> %v) {
 ; ZVKB-ZVE32X:       # %bb.0:
 ; ZVKB-ZVE32X-NEXT:    li a0, 204
 ; ZVKB-ZVE32X-NEXT:    vsetivli zero, 8, e16, m2, ta, mu
-; ZVKB-ZVE32X-NEXT:    vslidedown.vi v10, v8, 2
 ; ZVKB-ZVE32X-NEXT:    vmv.s.x v0, a0
+; ZVKB-ZVE32X-NEXT:    vslidedown.vi v10, v8, 2
 ; ZVKB-ZVE32X-NEXT:    vslideup.vi v10, v8, 2, v0.t
 ; ZVKB-ZVE32X-NEXT:    vmv.v.v v8, v10
 ; ZVKB-ZVE32X-NEXT:    ret
@@ -806,8 +806,8 @@ define <8 x half> @shuffle_v8f16_as_i64_48(<8 x half> %v) {
 ; ZVKB-ZVE32X:       # %bb.0:
 ; ZVKB-ZVE32X-NEXT:    li a0, -18
 ; ZVKB-ZVE32X-NEXT:    vsetivli zero, 8, e16, m2, ta, mu
-; ZVKB-ZVE32X-NEXT:    vslidedown.vi v10, v8, 3
 ; ZVKB-ZVE32X-NEXT:    vmv.s.x v0, a0
+; ZVKB-ZVE32X-NEXT:    vslidedown.vi v10, v8, 3
 ; ZVKB-ZVE32X-NEXT:    vslideup.vi v10, v8, 1, v0.t
 ; ZVKB-ZVE32X-NEXT:    vmv.v.v v8, v10
 ; ZVKB-ZVE32X-NEXT:    ret

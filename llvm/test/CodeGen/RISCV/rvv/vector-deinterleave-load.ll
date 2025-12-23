@@ -584,8 +584,8 @@ define {<vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i
 ; CHECK-NEXT:    vmerge.vim v12, v12, 1, v0
 ; CHECK-NEXT:    vmv.v.v v13, v12
 ; CHECK-NEXT:    vmv.v.v v14, v12
-; CHECK-NEXT:    addi a1, sp, 16
 ; CHECK-NEXT:    vmv.v.v v15, v12
+; CHECK-NEXT:    addi a1, sp, 16
 ; CHECK-NEXT:    vsseg4e8.v v12, (a1)
 ; CHECK-NEXT:    csrr a2, vlenb
 ; CHECK-NEXT:    add a3, a1, a2

@@ -126,9 +126,9 @@ entry:
 define i256 @test_v256i1(<256 x i1> %x) {
 ; RV32-LABEL: test_v256i1:
 ; RV32:       # %bb.0: # %entry
+; RV32-NEXT:    li a1, 32
 ; RV32-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
 ; RV32-NEXT:    vslidedown.vi v9, v0, 1
-; RV32-NEXT:    li a1, 32
 ; RV32-NEXT:    vsrl.vx v10, v9, a1
 ; RV32-NEXT:    vmv.x.s a2, v10
 ; RV32-NEXT:    vsrl.vx v10, v0, a1
@@ -178,6 +178,7 @@ define i256 @test_v256i1(<256 x i1> %x) {
 ;
 ; RV64-LABEL: test_v256i1:
 ; RV64:       # %bb.0: # %entry
+; RV64-NEXT:    sd zero, 16(a0)
 ; RV64-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
 ; RV64-NEXT:    vslidedown.vi v9, v0, 1
 ; RV64-NEXT:    vmv.x.s a1, v9
@@ -195,7 +196,6 @@ define i256 @test_v256i1(<256 x i1> %x) {
 ; RV64-NEXT:    sltu a1, a2, a1
 ; RV64-NEXT:    sd a2, 0(a0)
 ; RV64-NEXT:    sd a1, 8(a0)
-; RV64-NEXT:    sd zero, 16(a0)
 ; RV64-NEXT:    sd zero, 24(a0)
 ; RV64-NEXT:    ret
 entry:
@@ -207,9 +207,9 @@ entry:
 define i32 @test_trunc_v256i1(<256 x i1> %x) {
 ; RV32-LABEL: test_trunc_v256i1:
 ; RV32:       # %bb.0: # %entry
+; RV32-NEXT:    li a0, 32
 ; RV32-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
 ; RV32-NEXT:    vslidedown.vi v9, v0, 1
-; RV32-NEXT:    li a0, 32
 ; RV32-NEXT:    vsrl.vx v10, v9, a0
 ; RV32-NEXT:    vmv.x.s a1, v10
 ; RV32-NEXT:    vsrl.vx v10, v0, a0

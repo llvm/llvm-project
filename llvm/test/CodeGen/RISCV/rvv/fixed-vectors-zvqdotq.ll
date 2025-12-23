@@ -75,12 +75,12 @@ entry:
 define i32 @vqdotu_vv(<16 x i8> %a, <16 x i8> %b) {
 ; NODOT-LABEL: vqdotu_vv:
 ; NODOT:       # %bb.0: # %entry
+; NODOT-NEXT:    vsetivli zero, 16, e32, m1, ta, ma
+; NODOT-NEXT:    vmv.s.x v12, zero
 ; NODOT-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; NODOT-NEXT:    vwmulu.vv v10, v8, v9
-; NODOT-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; NODOT-NEXT:    vmv.s.x v8, zero
 ; NODOT-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
-; NODOT-NEXT:    vwredsumu.vs v8, v10, v8
+; NODOT-NEXT:    vwredsumu.vs v8, v10, v12
 ; NODOT-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; NODOT-NEXT:    vmv.x.s a0, v8
 ; NODOT-NEXT:    ret
@@ -205,9 +205,9 @@ define i32 @vdotqus_vx_constant(<16 x i8> %a) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    li a0, -23
 ; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
-; CHECK-NEXT:    vzext.vf2 v12, v8
-; CHECK-NEXT:    vmv.v.x v14, a0
-; CHECK-NEXT:    vwmulsu.vv v8, v14, v12
+; CHECK-NEXT:    vmv.v.x v12, a0
+; CHECK-NEXT:    vzext.vf2 v14, v8
+; CHECK-NEXT:    vwmulsu.vv v8, v12, v14
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; CHECK-NEXT:    vmv.s.x v12, zero
 ; CHECK-NEXT:    vredsum.vs v8, v8, v12
@@ -278,9 +278,9 @@ define i32 @vqdot_vv_accum(<16 x i8> %a, <16 x i8> %b, <16 x i32> %x) {
 ; NODOT-LABEL: vqdot_vv_accum:
 ; NODOT:       # %bb.0: # %entry
 ; NODOT-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
-; NODOT-NEXT:    vsext.vf2 v10, v8
-; NODOT-NEXT:    vsext.vf2 v16, v9
-; NODOT-NEXT:    vwmacc.vv v12, v10, v16
+; NODOT-NEXT:    vsext.vf2 v10, v9
+; NODOT-NEXT:    vsext.vf2 v16, v8
+; NODOT-NEXT:    vwmacc.vv v12, v16, v10
 ; NODOT-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; NODOT-NEXT:    vmv.s.x v8, zero
 ; NODOT-NEXT:    vredsum.vs v8, v12, v8
@@ -346,9 +346,9 @@ define i32 @vqdotsu_vv_accum(<16 x i8> %a, <16 x i8> %b, <16 x i32> %x) {
 ; NODOT-LABEL: vqdotsu_vv_accum:
 ; NODOT:       # %bb.0: # %entry
 ; NODOT-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
-; NODOT-NEXT:    vsext.vf2 v10, v8
-; NODOT-NEXT:    vzext.vf2 v16, v9
-; NODOT-NEXT:    vwmaccsu.vv v12, v10, v16
+; NODOT-NEXT:    vzext.vf2 v10, v9
+; NODOT-NEXT:    vsext.vf2 v16, v8
+; NODOT-NEXT:    vwmaccsu.vv v12, v16, v10
 ; NODOT-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; NODOT-NEXT:    vmv.s.x v8, zero
 ; NODOT-NEXT:    vredsum.vs v8, v12, v8
@@ -473,12 +473,12 @@ define i32 @vqdot_vv_split(<16 x i8> %a, <16 x i8> %b, <16 x i8> %c, <16 x i8> %
 ; NODOT-LABEL: vqdot_vv_split:
 ; NODOT:       # %bb.0: # %entry
 ; NODOT-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
-; NODOT-NEXT:    vsext.vf2 v16, v8
-; NODOT-NEXT:    vsext.vf2 v18, v9
-; NODOT-NEXT:    vwmul.vv v12, v16, v18
-; NODOT-NEXT:    vsext.vf2 v8, v10
-; NODOT-NEXT:    vsext.vf2 v16, v11
-; NODOT-NEXT:    vwmacc.vv v12, v8, v16
+; NODOT-NEXT:    vsext.vf2 v16, v10
+; NODOT-NEXT:    vsext.vf2 v18, v8
+; NODOT-NEXT:    vsext.vf2 v20, v9
+; NODOT-NEXT:    vwmul.vv v12, v18, v20
+; NODOT-NEXT:    vsext.vf2 v8, v11
+; NODOT-NEXT:    vwmacc.vv v12, v16, v8
 ; NODOT-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; NODOT-NEXT:    vmv.s.x v8, zero
 ; NODOT-NEXT:    vredsum.vs v8, v12, v8
@@ -1342,27 +1342,27 @@ define <64 x i32> @vqdotsu_vv_partial_v64i32_v256i8(<256 x i8> %a, <256 x i8> %b
 ; NODOT-NEXT:    add a2, sp, a2
 ; NODOT-NEXT:    addi a2, a2, 16
 ; NODOT-NEXT:    vs8r.v v8, (a2) # vscale x 64-byte Folded Spill
-; NODOT-NEXT:    addi a2, a0, 128
-; NODOT-NEXT:    li a3, 128
+; NODOT-NEXT:    li a2, 128
+; NODOT-NEXT:    addi a3, a0, 128
 ; NODOT-NEXT:    vslidedown.vx v8, v24, a1
 ; NODOT-NEXT:    csrr a4, vlenb
 ; NODOT-NEXT:    slli a4, a4, 5
 ; NODOT-NEXT:    add a4, sp, a4
 ; NODOT-NEXT:    addi a4, a4, 16
 ; NODOT-NEXT:    vs8r.v v8, (a4) # vscale x 64-byte Folded Spill
-; NODOT-NEXT:    vsetvli zero, a3, e8, m8, ta, ma
-; NODOT-NEXT:    vle8.v v0, (a2)
+; NODOT-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
+; NODOT-NEXT:    vle8.v v0, (a3)
 ; NODOT-NEXT:    vsetvli zero, a1, e8, m8, ta, ma
 ; NODOT-NEXT:    vslidedown.vx v8, v0, a1
-; NODOT-NEXT:    csrr a2, vlenb
-; NODOT-NEXT:    slli a2, a2, 3
-; NODOT-NEXT:    mv a4, a2
-; NODOT-NEXT:    slli a2, a2, 2
-; NODOT-NEXT:    add a2, a2, a4
-; NODOT-NEXT:    add a2, sp, a2
-; NODOT-NEXT:    addi a2, a2, 16
-; NODOT-NEXT:    vs8r.v v8, (a2) # vscale x 64-byte Folded Spill
-; NODOT-NEXT:    vsetvli zero, a3, e8, m8, ta, ma
+; NODOT-NEXT:    csrr a3, vlenb
+; NODOT-NEXT:    slli a3, a3, 3
+; NODOT-NEXT:    mv a4, a3
+; NODOT-NEXT:    slli a3, a3, 2
+; NODOT-NEXT:    add a3, a3, a4
+; NODOT-NEXT:    add a3, sp, a3
+; NODOT-NEXT:    addi a3, a3, 16
+; NODOT-NEXT:    vs8r.v v8, (a3) # vscale x 64-byte Folded Spill
+; NODOT-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
 ; NODOT-NEXT:    vle8.v v8, (a0)
 ; NODOT-NEXT:    vsetvli zero, a1, e8, m8, ta, ma
 ; NODOT-NEXT:    vslidedown.vx v16, v8, a1
@@ -1574,23 +1574,22 @@ define <64 x i32> @vqdotsu_vv_partial_v64i32_v256i8(<256 x i8> %a, <256 x i8> %b
 ; DOT-NEXT:    add a1, sp, a1
 ; DOT-NEXT:    addi a1, a1, 16
 ; DOT-NEXT:    vs8r.v v8, (a1) # vscale x 64-byte Folded Spill
-; DOT-NEXT:    li a1, 128
-; DOT-NEXT:    vsetvli zero, a1, e8, m8, ta, ma
+; DOT-NEXT:    li a1, 32
+; DOT-NEXT:    vsetvli zero, a1, e32, m8, ta, ma
+; DOT-NEXT:    vmv.v.i v24, 0
+; DOT-NEXT:    li a2, 128
+; DOT-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
 ; DOT-NEXT:    vle8.v v8, (a0)
 ; DOT-NEXT:    csrr a2, vlenb
 ; DOT-NEXT:    slli a2, a2, 3
 ; DOT-NEXT:    add a2, sp, a2
 ; DOT-NEXT:    addi a2, a2, 16
 ; DOT-NEXT:    vs8r.v v8, (a2) # vscale x 64-byte Folded Spill
-; DOT-NEXT:    li a2, 32
-; DOT-NEXT:    vsetvli zero, a2, e32, m8, ta, ma
-; DOT-NEXT:    vmv.v.i v24, 0
+; DOT-NEXT:    vmv8r.v v0, v24
 ; DOT-NEXT:    addi a0, a0, 128
-; DOT-NEXT:    vsetvli zero, a1, e8, m8, ta, ma
 ; DOT-NEXT:    vle8.v v8, (a0)
 ; DOT-NEXT:    addi a0, sp, 16
 ; DOT-NEXT:    vs8r.v v8, (a0) # vscale x 64-byte Folded Spill
-; DOT-NEXT:    vmv8r.v v0, v24
 ; DOT-NEXT:    csrr a0, vlenb
 ; DOT-NEXT:    slli a0, a0, 4
 ; DOT-NEXT:    add a0, sp, a0
@@ -1601,7 +1600,7 @@ define <64 x i32> @vqdotsu_vv_partial_v64i32_v256i8(<256 x i8> %a, <256 x i8> %b
 ; DOT-NEXT:    add a0, sp, a0
 ; DOT-NEXT:    addi a0, a0, 16
 ; DOT-NEXT:    vl8r.v v8, (a0) # vscale x 64-byte Folded Reload
-; DOT-NEXT:    vsetvli zero, a2, e32, m8, ta, ma
+; DOT-NEXT:    vsetvli zero, a1, e32, m8, ta, ma
 ; DOT-NEXT:    vqdotsu.vv v0, v16, v8
 ; DOT-NEXT:    csrr a0, vlenb
 ; DOT-NEXT:    slli a0, a0, 3
@@ -1635,11 +1634,11 @@ entry:
 define <4 x i31> @vqdotsu_vv_partial_v4i31_v16i7(<16 x i7> %a, <16 x i7> %b) {
 ; NODOT-LABEL: vqdotsu_vv_partial_v4i31_v16i7:
 ; NODOT:       # %bb.0: # %entry
+; NODOT-NEXT:    li a0, 127
 ; NODOT-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
 ; NODOT-NEXT:    vzext.vf4 v12, v8
 ; NODOT-NEXT:    vsll.vi v12, v12, 25
 ; NODOT-NEXT:    vsra.vi v12, v12, 25
-; NODOT-NEXT:    li a0, 127
 ; NODOT-NEXT:    vsetvli zero, zero, e8, m1, ta, ma
 ; NODOT-NEXT:    vand.vx v16, v9, a0
 ; NODOT-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
@@ -1661,9 +1660,9 @@ define <4 x i31> @vqdotsu_vv_partial_v4i31_v16i7(<16 x i7> %a, <16 x i7> %b) {
 ;
 ; DOT-LABEL: vqdotsu_vv_partial_v4i31_v16i7:
 ; DOT:       # %bb.0: # %entry
+; DOT-NEXT:    li a0, 127
 ; DOT-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; DOT-NEXT:    vadd.vv v8, v8, v8
-; DOT-NEXT:    li a0, 127
 ; DOT-NEXT:    vand.vx v9, v9, a0
 ; DOT-NEXT:    vsra.vi v10, v8, 1
 ; DOT-NEXT:    vsetivli zero, 4, e32, m1, ta, ma

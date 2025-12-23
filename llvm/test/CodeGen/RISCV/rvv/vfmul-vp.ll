@@ -245,8 +245,8 @@ define <vscale x 4 x half> @vfmul_vf_nxv4f16(<vscale x 4 x half> %va, half %b, <
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    fmv.x.h a1, fa0
 ; ZVFHMIN-NEXT:    vsetvli zero, a0, e16, m1, ta, ma
-; ZVFHMIN-NEXT:    vfwcvt.f.f.v v10, v8, v0.t
 ; ZVFHMIN-NEXT:    vmv.v.x v12, a1
+; ZVFHMIN-NEXT:    vfwcvt.f.f.v v10, v8, v0.t
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v8, v12, v0.t
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
 ; ZVFHMIN-NEXT:    vfmul.vv v10, v10, v8, v0.t
@@ -454,8 +454,8 @@ define <vscale x 16 x half> @vfmul_vf_nxv16f16_unmasked(<vscale x 16 x half> %va
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    fmv.x.h a1, fa0
 ; ZVFHMIN-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
-; ZVFHMIN-NEXT:    vfwcvt.f.f.v v16, v8
 ; ZVFHMIN-NEXT:    vmv.v.x v24, a1
+; ZVFHMIN-NEXT:    vfwcvt.f.f.v v16, v8
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v8, v24
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
 ; ZVFHMIN-NEXT:    vfmul.vv v16, v16, v8
@@ -487,8 +487,8 @@ define <vscale x 32 x half> @vfmul_vv_nxv32f16(<vscale x 32 x half> %va, <vscale
 ; ZVFHMIN-NEXT:    vmv1r.v v7, v0
 ; ZVFHMIN-NEXT:    csrr a1, vlenb
 ; ZVFHMIN-NEXT:    srli a2, a1, 2
-; ZVFHMIN-NEXT:    slli a1, a1, 1
 ; ZVFHMIN-NEXT:    vslidedown.vx v0, v0, a2
+; ZVFHMIN-NEXT:    slli a1, a1, 1
 ; ZVFHMIN-NEXT:    sub a2, a0, a1
 ; ZVFHMIN-NEXT:    sltu a3, a0, a2
 ; ZVFHMIN-NEXT:    addi a3, a3, -1
@@ -546,9 +546,9 @@ define <vscale x 32 x half> @vfmul_vv_nxv32f16_unmasked(<vscale x 32 x half> %va
 ; ZVFHMIN-NEXT:    vmset.m v24
 ; ZVFHMIN-NEXT:    csrr a1, vlenb
 ; ZVFHMIN-NEXT:    srli a2, a1, 2
-; ZVFHMIN-NEXT:    slli a1, a1, 1
 ; ZVFHMIN-NEXT:    vsetvli a3, zero, e8, mf2, ta, ma
 ; ZVFHMIN-NEXT:    vslidedown.vx v0, v24, a2
+; ZVFHMIN-NEXT:    slli a1, a1, 1
 ; ZVFHMIN-NEXT:    sub a2, a0, a1
 ; ZVFHMIN-NEXT:    sltu a3, a0, a2
 ; ZVFHMIN-NEXT:    addi a3, a3, -1
@@ -607,9 +607,9 @@ define <vscale x 32 x half> @vfmul_vf_nxv32f16(<vscale x 32 x half> %va, half %b
 ; ZVFHMIN-NEXT:    vmv.v.x v24, a1
 ; ZVFHMIN-NEXT:    csrr a1, vlenb
 ; ZVFHMIN-NEXT:    srli a2, a1, 2
-; ZVFHMIN-NEXT:    slli a1, a1, 1
 ; ZVFHMIN-NEXT:    vsetvli a3, zero, e8, mf2, ta, ma
 ; ZVFHMIN-NEXT:    vslidedown.vx v0, v0, a2
+; ZVFHMIN-NEXT:    slli a1, a1, 1
 ; ZVFHMIN-NEXT:    sub a2, a0, a1
 ; ZVFHMIN-NEXT:    sltu a3, a0, a2
 ; ZVFHMIN-NEXT:    addi a3, a3, -1
@@ -681,9 +681,9 @@ define <vscale x 32 x half> @vfmul_vf_nxv32f16_unmasked(<vscale x 32 x half> %va
 ; ZVFHMIN-NEXT:    vmset.m v24
 ; ZVFHMIN-NEXT:    csrr a1, vlenb
 ; ZVFHMIN-NEXT:    srli a2, a1, 2
-; ZVFHMIN-NEXT:    slli a1, a1, 1
 ; ZVFHMIN-NEXT:    vsetvli a3, zero, e8, mf2, ta, ma
 ; ZVFHMIN-NEXT:    vslidedown.vx v0, v24, a2
+; ZVFHMIN-NEXT:    slli a1, a1, 1
 ; ZVFHMIN-NEXT:    sub a2, a0, a1
 ; ZVFHMIN-NEXT:    sltu a3, a0, a2
 ; ZVFHMIN-NEXT:    addi a3, a3, -1

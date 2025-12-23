@@ -1141,8 +1141,8 @@ define <vscale x 2 x i64> @vandn_vx_vp_nxv2i64(i64 %a, <vscale x 2 x i64> %b, <v
 ; CHECK-RV32:       # %bb.0:
 ; CHECK-RV32-NEXT:    addi sp, sp, -16
 ; CHECK-RV32-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-RV32-NEXT:    not a1, a1
 ; CHECK-RV32-NEXT:    not a0, a0
+; CHECK-RV32-NEXT:    not a1, a1
 ; CHECK-RV32-NEXT:    sw a0, 8(sp)
 ; CHECK-RV32-NEXT:    sw a1, 12(sp)
 ; CHECK-RV32-NEXT:    addi a0, sp, 8
@@ -1164,8 +1164,8 @@ define <vscale x 2 x i64> @vandn_vx_vp_nxv2i64(i64 %a, <vscale x 2 x i64> %b, <v
 ; CHECK-ZVKB32:       # %bb.0:
 ; CHECK-ZVKB32-NEXT:    addi sp, sp, -16
 ; CHECK-ZVKB32-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-ZVKB32-NEXT:    not a1, a1
 ; CHECK-ZVKB32-NEXT:    not a0, a0
+; CHECK-ZVKB32-NEXT:    not a1, a1
 ; CHECK-ZVKB32-NEXT:    sw a0, 8(sp)
 ; CHECK-ZVKB32-NEXT:    sw a1, 12(sp)
 ; CHECK-ZVKB32-NEXT:    addi a0, sp, 8
@@ -1229,8 +1229,8 @@ define <vscale x 4 x i64> @vandn_vx_vp_nxv4i64(i64 %a, <vscale x 4 x i64> %b, <v
 ; CHECK-RV32:       # %bb.0:
 ; CHECK-RV32-NEXT:    addi sp, sp, -16
 ; CHECK-RV32-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-RV32-NEXT:    not a1, a1
 ; CHECK-RV32-NEXT:    not a0, a0
+; CHECK-RV32-NEXT:    not a1, a1
 ; CHECK-RV32-NEXT:    sw a0, 8(sp)
 ; CHECK-RV32-NEXT:    sw a1, 12(sp)
 ; CHECK-RV32-NEXT:    addi a0, sp, 8
@@ -1252,8 +1252,8 @@ define <vscale x 4 x i64> @vandn_vx_vp_nxv4i64(i64 %a, <vscale x 4 x i64> %b, <v
 ; CHECK-ZVKB32:       # %bb.0:
 ; CHECK-ZVKB32-NEXT:    addi sp, sp, -16
 ; CHECK-ZVKB32-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-ZVKB32-NEXT:    not a1, a1
 ; CHECK-ZVKB32-NEXT:    not a0, a0
+; CHECK-ZVKB32-NEXT:    not a1, a1
 ; CHECK-ZVKB32-NEXT:    sw a0, 8(sp)
 ; CHECK-ZVKB32-NEXT:    sw a1, 12(sp)
 ; CHECK-ZVKB32-NEXT:    addi a0, sp, 8

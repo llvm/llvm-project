@@ -351,9 +351,9 @@ define i64 @op_then_reduce(<4 x i64> %v, <4 x i64> %v2) {
 ; CHECK-LABEL: op_then_reduce:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
+; CHECK-NEXT:    vmv.s.x v12, zero
 ; CHECK-NEXT:    vadd.vv v8, v8, v10
-; CHECK-NEXT:    vmv.s.x v10, zero
-; CHECK-NEXT:    vredsum.vs v8, v8, v10
+; CHECK-NEXT:    vredsum.vs v8, v8, v12
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
 entry:

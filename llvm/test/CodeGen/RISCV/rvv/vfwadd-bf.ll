@@ -83,12 +83,13 @@ entry:
 define <vscale x 4 x float> @intrinsic_vfwadd_vv_nxv4f32_nxv4bf16_nxv4bf16(<vscale x 4 x bfloat> %0, <vscale x 4 x bfloat> %1, iXLen %2) nounwind {
 ; CHECK-LABEL: intrinsic_vfwadd_vv_nxv4f32_nxv4bf16_nxv4bf16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a0, e16alt, m1, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v10, v9
 ; CHECK-NEXT:    vmv1r.v v11, v8
-; CHECK-NEXT:    fsrmi a0, 0
+; CHECK-NEXT:    fsrmi a1, 0
+; CHECK-NEXT:    vsetvli zero, a0, e16alt, m1, ta, ma
 ; CHECK-NEXT:    vfwadd.vv v8, v11, v10
-; CHECK-NEXT:    fsrm a0
+; CHECK-NEXT:    fsrm a1
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 4 x float> @llvm.riscv.vfwadd.nxv4f32.nxv4bf16.nxv4bf16(
@@ -122,12 +123,13 @@ entry:
 define <vscale x 8 x float> @intrinsic_vfwadd_vv_nxv8f32_nxv8bf16_nxv8bf16(<vscale x 8 x bfloat> %0, <vscale x 8 x bfloat> %1, iXLen %2) nounwind {
 ; CHECK-LABEL: intrinsic_vfwadd_vv_nxv8f32_nxv8bf16_nxv8bf16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a0, e16alt, m2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv2r.v v12, v10
 ; CHECK-NEXT:    vmv2r.v v14, v8
-; CHECK-NEXT:    fsrmi a0, 0
+; CHECK-NEXT:    fsrmi a1, 0
+; CHECK-NEXT:    vsetvli zero, a0, e16alt, m2, ta, ma
 ; CHECK-NEXT:    vfwadd.vv v8, v14, v12
-; CHECK-NEXT:    fsrm a0
+; CHECK-NEXT:    fsrm a1
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 8 x float> @llvm.riscv.vfwadd.nxv8f32.nxv8bf16.nxv8bf16(
@@ -161,12 +163,13 @@ entry:
 define <vscale x 16 x float> @intrinsic_vfwadd_vv_nxv16f32_nxv16bf16_nxv16bf16(<vscale x 16 x bfloat> %0, <vscale x 16 x bfloat> %1, iXLen %2) nounwind {
 ; CHECK-LABEL: intrinsic_vfwadd_vv_nxv16f32_nxv16bf16_nxv16bf16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a0, e16alt, m4, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv4r.v v16, v12
 ; CHECK-NEXT:    vmv4r.v v20, v8
-; CHECK-NEXT:    fsrmi a0, 0
+; CHECK-NEXT:    fsrmi a1, 0
+; CHECK-NEXT:    vsetvli zero, a0, e16alt, m4, ta, ma
 ; CHECK-NEXT:    vfwadd.vv v8, v20, v16
-; CHECK-NEXT:    fsrm a0
+; CHECK-NEXT:    fsrm a1
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 16 x float> @llvm.riscv.vfwadd.nxv16f32.nxv16bf16.nxv16bf16(

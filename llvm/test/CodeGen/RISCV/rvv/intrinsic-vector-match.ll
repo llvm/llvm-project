@@ -173,8 +173,8 @@ define <16 x i1> @match_v16i8_v4i8(<16 x i8> %op1, <4 x i8> %op2, <16 x i1> %mas
 ; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; CHECK-NEXT:    vrgather.vi v10, v9, 1
 ; CHECK-NEXT:    vrgather.vi v11, v9, 0
-; CHECK-NEXT:    vmseq.vv v10, v8, v10
 ; CHECK-NEXT:    vrgather.vi v12, v9, 2
+; CHECK-NEXT:    vmseq.vv v10, v8, v10
 ; CHECK-NEXT:    vmseq.vv v11, v8, v11
 ; CHECK-NEXT:    vmseq.vv v12, v8, v12
 ; CHECK-NEXT:    vmor.mm v10, v11, v10
@@ -194,8 +194,8 @@ define <16 x i1> @match_v16i8_v8i8(<16 x i8> %op1, <8 x i8> %op2, <16 x i1> %mas
 ; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; CHECK-NEXT:    vrgather.vi v10, v9, 1
 ; CHECK-NEXT:    vrgather.vi v11, v9, 0
-; CHECK-NEXT:    vmseq.vv v10, v8, v10
 ; CHECK-NEXT:    vrgather.vi v12, v9, 2
+; CHECK-NEXT:    vmseq.vv v10, v8, v10
 ; CHECK-NEXT:    vmseq.vv v11, v8, v11
 ; CHECK-NEXT:    vmseq.vv v12, v8, v12
 ; CHECK-NEXT:    vmor.mm v10, v11, v10
@@ -227,8 +227,8 @@ define <16 x i1> @match_v16i8_v16i8(<16 x i8> %op1, <16 x i8> %op2, <16 x i1> %m
 ; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; CHECK-NEXT:    vrgather.vi v10, v9, 1
 ; CHECK-NEXT:    vrgather.vi v11, v9, 0
-; CHECK-NEXT:    vmseq.vv v10, v8, v10
 ; CHECK-NEXT:    vrgather.vi v12, v9, 2
+; CHECK-NEXT:    vmseq.vv v10, v8, v10
 ; CHECK-NEXT:    vmseq.vv v11, v8, v11
 ; CHECK-NEXT:    vmseq.vv v12, v8, v12
 ; CHECK-NEXT:    vmor.mm v10, v11, v10
@@ -350,8 +350,8 @@ define <8 x i1> @match_v8i16(<8 x i16> %op1, <8 x i16> %op2, <8 x i1> %mask) {
 ; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; CHECK-NEXT:    vrgather.vi v10, v9, 1
 ; CHECK-NEXT:    vrgather.vi v11, v9, 0
-; CHECK-NEXT:    vmseq.vv v10, v8, v10
 ; CHECK-NEXT:    vrgather.vi v12, v9, 2
+; CHECK-NEXT:    vmseq.vv v10, v8, v10
 ; CHECK-NEXT:    vmseq.vv v11, v8, v11
 ; CHECK-NEXT:    vmseq.vv v12, v8, v12
 ; CHECK-NEXT:    vmor.mm v10, v11, v10
@@ -1007,8 +1007,8 @@ define <4 x i1> @match_v4xi32_v4i32(<4 x i32> %op1, <4 x i32> %op2, <4 x i1> %ma
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:    vrgather.vi v10, v9, 1
 ; CHECK-NEXT:    vrgather.vi v11, v9, 0
-; CHECK-NEXT:    vmseq.vv v10, v8, v10
 ; CHECK-NEXT:    vrgather.vi v12, v9, 2
+; CHECK-NEXT:    vmseq.vv v10, v8, v10
 ; CHECK-NEXT:    vmseq.vv v11, v8, v11
 ; CHECK-NEXT:    vmseq.vv v12, v8, v12
 ; CHECK-NEXT:    vmor.mm v10, v11, v10

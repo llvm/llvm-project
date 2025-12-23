@@ -517,17 +517,18 @@ define void @test_masked_store_intervening(<8 x i32> %x, ptr %ptr, <8 x i1> %mas
 ; RISCV-NEXT:    addi a1, a1, 16
 ; RISCV-NEXT:    vs1r.v v0, (a1) # vscale x 8-byte Folded Spill
 ; RISCV-NEXT:    mv s0, a0
+; RISCV-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; RISCV-NEXT:    vle32.v v10, (a0)
 ; RISCV-NEXT:    csrr a1, vlenb
 ; RISCV-NEXT:    slli a1, a1, 1
 ; RISCV-NEXT:    add a1, sp, a1
 ; RISCV-NEXT:    addi a1, a1, 16
-; RISCV-NEXT:    vs2r.v v8, (a1) # vscale x 16-byte Folded Spill
-; RISCV-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; RISCV-NEXT:    vle32.v v8, (a0)
+; RISCV-NEXT:    vs2r.v v10, (a1) # vscale x 16-byte Folded Spill
+; RISCV-NEXT:    vmv.v.i v10, 0
 ; RISCV-NEXT:    addi a1, sp, 16
 ; RISCV-NEXT:    vs2r.v v8, (a1) # vscale x 16-byte Folded Spill
+; RISCV-NEXT:    vse32.v v10, (a0)
 ; RISCV-NEXT:    vmv.v.i v8, 0
-; RISCV-NEXT:    vse32.v v8, (a0)
 ; RISCV-NEXT:    call use_vec
 ; RISCV-NEXT:    csrr a0, vlenb
 ; RISCV-NEXT:    slli a0, a0, 2
@@ -542,7 +543,7 @@ define void @test_masked_store_intervening(<8 x i32> %x, ptr %ptr, <8 x i1> %mas
 ; RISCV-NEXT:    addi a0, sp, 16
 ; RISCV-NEXT:    vl2r.v v10, (a0) # vscale x 16-byte Folded Reload
 ; RISCV-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; RISCV-NEXT:    vmerge.vvm v8, v10, v8, v0
+; RISCV-NEXT:    vmerge.vvm v8, v8, v10, v0
 ; RISCV-NEXT:    vse32.v v8, (s0)
 ; RISCV-NEXT:    csrr a0, vlenb
 ; RISCV-NEXT:    slli a1, a0, 2
@@ -626,8 +627,8 @@ define void @test_masked_store_unaligned_v4i32(<4 x i32> %data, ptr %ptr, <4 x i
 define void @test_masked_store_unaligned_v4i64(<4 x i64> %data, ptr %ptr, <4 x i1> %mask) {
 ; RISCV-LABEL: test_masked_store_unaligned_v4i64:
 ; RISCV:       # %bb.0:
-; RISCV-NEXT:    li a1, 32
 ; RISCV-NEXT:    addi a0, a0, 1
+; RISCV-NEXT:    li a1, 32
 ; RISCV-NEXT:    vsetvli zero, a1, e8, m2, ta, ma
 ; RISCV-NEXT:    vle8.v v10, (a0)
 ; RISCV-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
@@ -646,8 +647,8 @@ define void @test_masked_store_unaligned_v4i64(<4 x i64> %data, ptr %ptr, <4 x i
 define void @test_masked_store_unaligned_v8i32(<8 x i32> %data, ptr %ptr, <8 x i1> %mask) {
 ; RISCV-LABEL: test_masked_store_unaligned_v8i32:
 ; RISCV:       # %bb.0:
-; RISCV-NEXT:    li a1, 32
 ; RISCV-NEXT:    addi a0, a0, 1
+; RISCV-NEXT:    li a1, 32
 ; RISCV-NEXT:    vsetvli zero, a1, e8, m2, ta, ma
 ; RISCV-NEXT:    vle8.v v10, (a0)
 ; RISCV-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
@@ -666,8 +667,8 @@ define void @test_masked_store_unaligned_v8i32(<8 x i32> %data, ptr %ptr, <8 x i
 define void @test_masked_store_unaligned_v8i64(<8 x i64> %data, ptr %ptr, <8 x i1> %mask) {
 ; RISCV-LABEL: test_masked_store_unaligned_v8i64:
 ; RISCV:       # %bb.0:
-; RISCV-NEXT:    li a1, 64
 ; RISCV-NEXT:    addi a0, a0, 1
+; RISCV-NEXT:    li a1, 64
 ; RISCV-NEXT:    vsetvli zero, a1, e8, m4, ta, ma
 ; RISCV-NEXT:    vle8.v v12, (a0)
 ; RISCV-NEXT:    vsetivli zero, 8, e64, m4, ta, ma

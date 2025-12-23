@@ -906,9 +906,10 @@ entry:
 define <vscale x 1 x i8> @intrinsic_viota_mask_m_nxv1i8_nxv1i1(<vscale x 1 x i1> %0, <vscale x 1 x i1> %1, iXLen %2) nounwind {
 ; CHECK-LABEL: intrinsic_viota_mask_m_nxv1i8_nxv1i1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v9, v0
 ; CHECK-NEXT:    vmv1r.v v0, v8
+; CHECK-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
 ; CHECK-NEXT:    viota.m v8, v9, v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -924,9 +925,10 @@ entry:
 define <vscale x 1 x i1> @intrinsic_vmsbf_mask_m_nxv1i1_nxv1i1(<vscale x 1 x i1> %0, <vscale x 1 x i1> %1, iXLen %2) nounwind {
 ; CHECK-LABEL: intrinsic_vmsbf_mask_m_nxv1i1_nxv1i1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v9, v0
 ; CHECK-NEXT:    vmv1r.v v0, v8
+; CHECK-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
 ; CHECK-NEXT:    vmsbf.m v8, v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v0, v8
 ; CHECK-NEXT:    ret
@@ -965,8 +967,8 @@ define <vscale x 1 x i1> @intrinsic_vmseq_mask_vx_nxv1i64_i64(<vscale x 1 x i64>
 ; RV32-LABEL: intrinsic_vmseq_mask_vx_nxv1i64_i64:
 ; RV32:       # %bb.0: # %entry
 ; RV32-NEXT:    addi sp, sp, -16
-; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    sw a0, 8(sp)
+; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vsetvli zero, a2, e64, m1, ta, ma
 ; RV32-NEXT:    vlse64.v v9, (a0), zero
@@ -994,8 +996,8 @@ define <vscale x 1 x i1> @intrinsic_vmsge_mask_vx_nxv1i64_i64(<vscale x 1 x i64>
 ; RV32-LABEL: intrinsic_vmsge_mask_vx_nxv1i64_i64:
 ; RV32:       # %bb.0: # %entry
 ; RV32-NEXT:    addi sp, sp, -16
-; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    sw a0, 8(sp)
+; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vsetvli zero, a2, e64, m1, ta, ma
 ; RV32-NEXT:    vlse64.v v9, (a0), zero
@@ -1023,9 +1025,10 @@ entry:
 define <vscale x 64 x i1> @intrinsic_vmsbf_mask_m_nxv64i1_nxv64i1(<vscale x 64 x i1> %0, <vscale x 64 x i1> %1, iXLen %2) nounwind {
 ; CHECK-LABEL: intrinsic_vmsbf_mask_m_nxv64i1_nxv64i1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v9, v0
 ; CHECK-NEXT:    vmv1r.v v0, v8
+; CHECK-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
 ; CHECK-NEXT:    vmsbf.m v8, v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v0, v8
 ; CHECK-NEXT:    ret

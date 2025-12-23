@@ -382,10 +382,10 @@ define <32 x double> @vfmax_vv_v32f64(<32 x double> %va, <32 x double> %vb, <32 
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
 ; CHECK-NEXT:    vfmax.vv v8, v8, v24, v0.t
 ; CHECK-NEXT:    addi a0, a2, -16
+; CHECK-NEXT:    vmv1r.v v0, v7
 ; CHECK-NEXT:    sltu a1, a2, a0
 ; CHECK-NEXT:    addi a1, a1, -1
 ; CHECK-NEXT:    and a0, a1, a0
-; CHECK-NEXT:    vmv1r.v v0, v7
 ; CHECK-NEXT:    addi a1, sp, 16
 ; CHECK-NEXT:    vl8r.v v24, (a1) # vscale x 64-byte Folded Reload
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, ma

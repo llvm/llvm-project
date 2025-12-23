@@ -7,14 +7,15 @@
 define i16 @ctz_v4i32(<4 x i32> %a) {
 ; RV32-LABEL: ctz_v4i32:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; RV32-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
+; RV32-NEXT:    vmv.v.i v9, 0
+; RV32-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
 ; RV32-NEXT:    vmsne.vi v0, v8, 0
 ; RV32-NEXT:    vsetvli zero, zero, e8, mf4, ta, ma
-; RV32-NEXT:    vmv.v.i v8, 0
-; RV32-NEXT:    vid.v v9
-; RV32-NEXT:    vmerge.vim v8, v8, -1, v0
-; RV32-NEXT:    vrsub.vi v9, v9, 4
-; RV32-NEXT:    vand.vv v8, v8, v9
+; RV32-NEXT:    vid.v v8
+; RV32-NEXT:    vmerge.vim v9, v9, -1, v0
+; RV32-NEXT:    vrsub.vi v8, v8, 4
+; RV32-NEXT:    vand.vv v8, v9, v8
 ; RV32-NEXT:    vredmaxu.vs v8, v8, v8
 ; RV32-NEXT:    vmv.x.s a0, v8
 ; RV32-NEXT:    li a1, 4
@@ -24,14 +25,15 @@ define i16 @ctz_v4i32(<4 x i32> %a) {
 ;
 ; RV64-LABEL: ctz_v4i32:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; RV64-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
+; RV64-NEXT:    vmv.v.i v9, 0
+; RV64-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
 ; RV64-NEXT:    vmsne.vi v0, v8, 0
 ; RV64-NEXT:    vsetvli zero, zero, e8, mf4, ta, ma
-; RV64-NEXT:    vmv.v.i v8, 0
-; RV64-NEXT:    vid.v v9
-; RV64-NEXT:    vmerge.vim v8, v8, -1, v0
-; RV64-NEXT:    vrsub.vi v9, v9, 4
-; RV64-NEXT:    vand.vv v8, v8, v9
+; RV64-NEXT:    vid.v v8
+; RV64-NEXT:    vmerge.vim v9, v9, -1, v0
+; RV64-NEXT:    vrsub.vi v8, v8, 4
+; RV64-NEXT:    vand.vv v8, v9, v8
 ; RV64-NEXT:    vredmaxu.vs v8, v8, v8
 ; RV64-NEXT:    vmv.x.s a0, v8
 ; RV64-NEXT:    li a1, 4

@@ -619,10 +619,10 @@ define <32 x double> @vfma_vv_v32f64(<32 x double> %va, <32 x double> %b, <32 x 
 ; CHECK-NEXT:    addi a0, sp, 16
 ; CHECK-NEXT:    vs8r.v v8, (a0) # vscale x 64-byte Folded Spill
 ; CHECK-NEXT:    addi a0, a4, -16
+; CHECK-NEXT:    vmv1r.v v0, v7
 ; CHECK-NEXT:    sltu a1, a4, a0
 ; CHECK-NEXT:    addi a1, a1, -1
 ; CHECK-NEXT:    and a0, a1, a0
-; CHECK-NEXT:    vmv1r.v v0, v7
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    li a2, 24
 ; CHECK-NEXT:    mul a1, a1, a2

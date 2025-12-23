@@ -8,12 +8,12 @@ define <vscale x 1 x half> @trunc_nxv1f16(<vscale x 1 x half> %x) strictfp {
 ; CHECK-LABEL: trunc_nxv1f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a0, 25
-; CHECK-NEXT:    vsetvli a1, zero, e16, mf4, ta, mu
+; CHECK-NEXT:    slli a0, a0, 10
+; CHECK-NEXT:    fmv.h.x fa5, a0
+; CHECK-NEXT:    vsetvli a0, zero, e16, mf4, ta, mu
 ; CHECK-NEXT:    vmfne.vv v0, v8, v8
 ; CHECK-NEXT:    vfadd.vv v8, v8, v8, v0.t
-; CHECK-NEXT:    slli a0, a0, 10
 ; CHECK-NEXT:    vfabs.v v9, v8
-; CHECK-NEXT:    fmv.h.x fa5, a0
 ; CHECK-NEXT:    vmflt.vf v0, v9, fa5
 ; CHECK-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
 ; CHECK-NEXT:    vfcvt.rtz.x.f.v v9, v8, v0.t
@@ -29,12 +29,12 @@ define <vscale x 2 x half> @trunc_nxv2f16(<vscale x 2 x half> %x) strictfp {
 ; CHECK-LABEL: trunc_nxv2f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a0, 25
-; CHECK-NEXT:    vsetvli a1, zero, e16, mf2, ta, mu
+; CHECK-NEXT:    slli a0, a0, 10
+; CHECK-NEXT:    fmv.h.x fa5, a0
+; CHECK-NEXT:    vsetvli a0, zero, e16, mf2, ta, mu
 ; CHECK-NEXT:    vmfne.vv v0, v8, v8
 ; CHECK-NEXT:    vfadd.vv v8, v8, v8, v0.t
-; CHECK-NEXT:    slli a0, a0, 10
 ; CHECK-NEXT:    vfabs.v v9, v8
-; CHECK-NEXT:    fmv.h.x fa5, a0
 ; CHECK-NEXT:    vmflt.vf v0, v9, fa5
 ; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
 ; CHECK-NEXT:    vfcvt.rtz.x.f.v v9, v8, v0.t
@@ -50,12 +50,12 @@ define <vscale x 4 x half> @trunc_nxv4f16(<vscale x 4 x half> %x) strictfp {
 ; CHECK-LABEL: trunc_nxv4f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a0, 25
-; CHECK-NEXT:    vsetvli a1, zero, e16, m1, ta, mu
+; CHECK-NEXT:    slli a0, a0, 10
+; CHECK-NEXT:    fmv.h.x fa5, a0
+; CHECK-NEXT:    vsetvli a0, zero, e16, m1, ta, mu
 ; CHECK-NEXT:    vmfne.vv v0, v8, v8
 ; CHECK-NEXT:    vfadd.vv v8, v8, v8, v0.t
-; CHECK-NEXT:    slli a0, a0, 10
 ; CHECK-NEXT:    vfabs.v v9, v8
-; CHECK-NEXT:    fmv.h.x fa5, a0
 ; CHECK-NEXT:    vmflt.vf v0, v9, fa5
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
 ; CHECK-NEXT:    vfcvt.rtz.x.f.v v9, v8, v0.t
@@ -71,12 +71,12 @@ define <vscale x 8 x half> @trunc_nxv8f16(<vscale x 8 x half> %x) strictfp {
 ; CHECK-LABEL: trunc_nxv8f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a0, 25
-; CHECK-NEXT:    vsetvli a1, zero, e16, m2, ta, mu
+; CHECK-NEXT:    slli a0, a0, 10
+; CHECK-NEXT:    fmv.h.x fa5, a0
+; CHECK-NEXT:    vsetvli a0, zero, e16, m2, ta, mu
 ; CHECK-NEXT:    vmfne.vv v0, v8, v8
 ; CHECK-NEXT:    vfadd.vv v8, v8, v8, v0.t
-; CHECK-NEXT:    slli a0, a0, 10
 ; CHECK-NEXT:    vfabs.v v10, v8
-; CHECK-NEXT:    fmv.h.x fa5, a0
 ; CHECK-NEXT:    vmflt.vf v0, v10, fa5
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
 ; CHECK-NEXT:    vfcvt.rtz.x.f.v v10, v8, v0.t
@@ -134,11 +134,11 @@ define <vscale x 1 x float> @trunc_nxv1f32(<vscale x 1 x float> %x) strictfp {
 ; CHECK-LABEL: trunc_nxv1f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a0, 307200
-; CHECK-NEXT:    vsetvli a1, zero, e32, mf2, ta, mu
+; CHECK-NEXT:    fmv.w.x fa5, a0
+; CHECK-NEXT:    vsetvli a0, zero, e32, mf2, ta, mu
 ; CHECK-NEXT:    vmfne.vv v0, v8, v8
 ; CHECK-NEXT:    vfadd.vv v8, v8, v8, v0.t
 ; CHECK-NEXT:    vfabs.v v9, v8
-; CHECK-NEXT:    fmv.w.x fa5, a0
 ; CHECK-NEXT:    vmflt.vf v0, v9, fa5
 ; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
 ; CHECK-NEXT:    vfcvt.rtz.x.f.v v9, v8, v0.t
@@ -154,11 +154,11 @@ define <vscale x 2 x float> @trunc_nxv2f32(<vscale x 2 x float> %x) strictfp {
 ; CHECK-LABEL: trunc_nxv2f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a0, 307200
-; CHECK-NEXT:    vsetvli a1, zero, e32, m1, ta, mu
+; CHECK-NEXT:    fmv.w.x fa5, a0
+; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, mu
 ; CHECK-NEXT:    vmfne.vv v0, v8, v8
 ; CHECK-NEXT:    vfadd.vv v8, v8, v8, v0.t
 ; CHECK-NEXT:    vfabs.v v9, v8
-; CHECK-NEXT:    fmv.w.x fa5, a0
 ; CHECK-NEXT:    vmflt.vf v0, v9, fa5
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
 ; CHECK-NEXT:    vfcvt.rtz.x.f.v v9, v8, v0.t
@@ -174,11 +174,11 @@ define <vscale x 4 x float> @trunc_nxv4f32(<vscale x 4 x float> %x) strictfp {
 ; CHECK-LABEL: trunc_nxv4f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a0, 307200
-; CHECK-NEXT:    vsetvli a1, zero, e32, m2, ta, mu
+; CHECK-NEXT:    fmv.w.x fa5, a0
+; CHECK-NEXT:    vsetvli a0, zero, e32, m2, ta, mu
 ; CHECK-NEXT:    vmfne.vv v0, v8, v8
 ; CHECK-NEXT:    vfadd.vv v8, v8, v8, v0.t
 ; CHECK-NEXT:    vfabs.v v10, v8
-; CHECK-NEXT:    fmv.w.x fa5, a0
 ; CHECK-NEXT:    vmflt.vf v0, v10, fa5
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
 ; CHECK-NEXT:    vfcvt.rtz.x.f.v v10, v8, v0.t
@@ -234,11 +234,11 @@ define <vscale x 1 x double> @trunc_nxv1f64(<vscale x 1 x double> %x) strictfp {
 ; RV32-LABEL: trunc_nxv1f64:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    lui a0, %hi(.LCPI11_0)
-; RV32-NEXT:    vsetvli a1, zero, e64, m1, ta, mu
+; RV32-NEXT:    fld fa5, %lo(.LCPI11_0)(a0)
+; RV32-NEXT:    vsetvli a0, zero, e64, m1, ta, mu
 ; RV32-NEXT:    vmfne.vv v0, v8, v8
 ; RV32-NEXT:    vfadd.vv v8, v8, v8, v0.t
 ; RV32-NEXT:    vfabs.v v9, v8
-; RV32-NEXT:    fld fa5, %lo(.LCPI11_0)(a0)
 ; RV32-NEXT:    vmflt.vf v0, v9, fa5
 ; RV32-NEXT:    vsetvli zero, zero, e64, m1, ta, ma
 ; RV32-NEXT:    vfcvt.rtz.x.f.v v9, v8, v0.t
@@ -250,12 +250,12 @@ define <vscale x 1 x double> @trunc_nxv1f64(<vscale x 1 x double> %x) strictfp {
 ; RV64-LABEL: trunc_nxv1f64:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    li a0, 1075
-; RV64-NEXT:    vsetvli a1, zero, e64, m1, ta, mu
+; RV64-NEXT:    slli a0, a0, 52
+; RV64-NEXT:    fmv.d.x fa5, a0
+; RV64-NEXT:    vsetvli a0, zero, e64, m1, ta, mu
 ; RV64-NEXT:    vmfne.vv v0, v8, v8
 ; RV64-NEXT:    vfadd.vv v8, v8, v8, v0.t
-; RV64-NEXT:    slli a0, a0, 52
 ; RV64-NEXT:    vfabs.v v9, v8
-; RV64-NEXT:    fmv.d.x fa5, a0
 ; RV64-NEXT:    vmflt.vf v0, v9, fa5
 ; RV64-NEXT:    vsetvli zero, zero, e64, m1, ta, ma
 ; RV64-NEXT:    vfcvt.rtz.x.f.v v9, v8, v0.t
@@ -271,11 +271,11 @@ define <vscale x 2 x double> @trunc_nxv2f64(<vscale x 2 x double> %x) strictfp {
 ; RV32-LABEL: trunc_nxv2f64:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    lui a0, %hi(.LCPI12_0)
-; RV32-NEXT:    vsetvli a1, zero, e64, m2, ta, mu
+; RV32-NEXT:    fld fa5, %lo(.LCPI12_0)(a0)
+; RV32-NEXT:    vsetvli a0, zero, e64, m2, ta, mu
 ; RV32-NEXT:    vmfne.vv v0, v8, v8
 ; RV32-NEXT:    vfadd.vv v8, v8, v8, v0.t
 ; RV32-NEXT:    vfabs.v v10, v8
-; RV32-NEXT:    fld fa5, %lo(.LCPI12_0)(a0)
 ; RV32-NEXT:    vmflt.vf v0, v10, fa5
 ; RV32-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
 ; RV32-NEXT:    vfcvt.rtz.x.f.v v10, v8, v0.t
@@ -287,12 +287,12 @@ define <vscale x 2 x double> @trunc_nxv2f64(<vscale x 2 x double> %x) strictfp {
 ; RV64-LABEL: trunc_nxv2f64:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    li a0, 1075
-; RV64-NEXT:    vsetvli a1, zero, e64, m2, ta, mu
+; RV64-NEXT:    slli a0, a0, 52
+; RV64-NEXT:    fmv.d.x fa5, a0
+; RV64-NEXT:    vsetvli a0, zero, e64, m2, ta, mu
 ; RV64-NEXT:    vmfne.vv v0, v8, v8
 ; RV64-NEXT:    vfadd.vv v8, v8, v8, v0.t
-; RV64-NEXT:    slli a0, a0, 52
 ; RV64-NEXT:    vfabs.v v10, v8
-; RV64-NEXT:    fmv.d.x fa5, a0
 ; RV64-NEXT:    vmflt.vf v0, v10, fa5
 ; RV64-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
 ; RV64-NEXT:    vfcvt.rtz.x.f.v v10, v8, v0.t

@@ -160,15 +160,15 @@ define <vscale x 16 x i1> @test_vp_reverse_nxv16i1_masked(<vscale x 16 x i1> %sr
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e8, m2, ta, ma
 ; CHECK-NEXT:    vmv.v.i v10, 0
-; CHECK-NEXT:    vmerge.vim v12, v10, 1, v0
+; CHECK-NEXT:    vmerge.vim v10, v10, 1, v0
 ; CHECK-NEXT:    vmv1r.v v0, v8
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m4, ta, ma
-; CHECK-NEXT:    vid.v v8, v0.t
+; CHECK-NEXT:    vid.v v12, v0.t
 ; CHECK-NEXT:    addi a0, a0, -1
-; CHECK-NEXT:    vrsub.vx v8, v8, a0, v0.t
+; CHECK-NEXT:    vrsub.vx v12, v12, a0, v0.t
 ; CHECK-NEXT:    vsetvli zero, zero, e8, m2, ta, ma
-; CHECK-NEXT:    vrgatherei16.vv v14, v12, v8, v0.t
-; CHECK-NEXT:    vmsne.vi v8, v14, 0, v0.t
+; CHECK-NEXT:    vrgatherei16.vv v16, v10, v12, v0.t
+; CHECK-NEXT:    vmsne.vi v8, v16, 0, v0.t
 ; CHECK-NEXT:    vmv1r.v v0, v8
 ; CHECK-NEXT:    ret
   %dst = call <vscale x 16 x i1> @llvm.experimental.vp.reverse.nxv16i1(<vscale x 16 x i1> %src, <vscale x 16 x i1> %mask, i32 %evl)
@@ -198,15 +198,15 @@ define <vscale x 32 x i1> @test_vp_reverse_nxv32i1_masked(<vscale x 32 x i1> %sr
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e8, m4, ta, ma
 ; CHECK-NEXT:    vmv.v.i v12, 0
-; CHECK-NEXT:    vmerge.vim v16, v12, 1, v0
+; CHECK-NEXT:    vmerge.vim v12, v12, 1, v0
 ; CHECK-NEXT:    vmv1r.v v0, v8
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m8, ta, ma
-; CHECK-NEXT:    vid.v v8, v0.t
+; CHECK-NEXT:    vid.v v16, v0.t
 ; CHECK-NEXT:    addi a0, a0, -1
-; CHECK-NEXT:    vrsub.vx v8, v8, a0, v0.t
+; CHECK-NEXT:    vrsub.vx v16, v16, a0, v0.t
 ; CHECK-NEXT:    vsetvli zero, zero, e8, m4, ta, ma
-; CHECK-NEXT:    vrgatherei16.vv v20, v16, v8, v0.t
-; CHECK-NEXT:    vmsne.vi v8, v20, 0, v0.t
+; CHECK-NEXT:    vrgatherei16.vv v24, v12, v16, v0.t
+; CHECK-NEXT:    vmsne.vi v8, v24, 0, v0.t
 ; CHECK-NEXT:    vmv1r.v v0, v8
 ; CHECK-NEXT:    ret
   %dst = call <vscale x 32 x i1> @llvm.experimental.vp.reverse.nxv32i1(<vscale x 32 x i1> %src, <vscale x 32 x i1> %mask, i32 %evl)
@@ -251,9 +251,9 @@ define <vscale x 64 x i1> @test_vp_reverse_nxv64i1_masked(<vscale x 64 x i1> %sr
 ; CHECK-NEXT:    vrgatherei16.vv v18, v29, v10
 ; CHECK-NEXT:    vrgatherei16.vv v17, v30, v10
 ; CHECK-NEXT:    vrgatherei16.vv v16, v31, v10
+; CHECK-NEXT:    vmv1r.v v0, v8
 ; CHECK-NEXT:    slli a1, a1, 3
 ; CHECK-NEXT:    sub a1, a1, a0
-; CHECK-NEXT:    vmv1r.v v0, v8
 ; CHECK-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v16, v16, a1, v0.t
 ; CHECK-NEXT:    vmsne.vi v8, v16, 0, v0.t

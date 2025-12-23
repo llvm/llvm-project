@@ -4814,8 +4814,8 @@ define void @sink_splat_vp_icmp(ptr nocapture %x, i32 signext %y, <4 x i1> %m, i
 ; CHECK-NEXT:    add a3, a0, a3
 ; CHECK-NEXT:  .LBB102_1: # %vector.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vle32.v v10, (a0)
 ; CHECK-NEXT:    vmv1r.v v0, v8
+; CHECK-NEXT:    vle32.v v10, (a0)
 ; CHECK-NEXT:    vsetvli zero, a2, e32, m1, ta, ma
 ; CHECK-NEXT:    vmseq.vx v0, v10, a1, v0.t
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
@@ -4853,8 +4853,8 @@ define void @sink_splat_vp_fcmp(ptr nocapture %x, float %y, <4 x i1> %m, i32 zer
 ; CHECK-NEXT:    add a2, a0, a2
 ; CHECK-NEXT:  .LBB103_1: # %vector.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vle32.v v10, (a0)
 ; CHECK-NEXT:    vmv1r.v v0, v8
+; CHECK-NEXT:    vle32.v v10, (a0)
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
 ; CHECK-NEXT:    vmfeq.vf v0, v10, fa0, v0.t
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma

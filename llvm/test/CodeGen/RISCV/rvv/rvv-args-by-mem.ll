@@ -40,13 +40,13 @@ define <vscale x 16 x i32> @foo(i32 %0, i32 %1, i32 %2, i32 %3, i32 %4, i32 %5, 
 ; CHECK-NEXT:    addi sp, sp, -16
 ; CHECK-NEXT:    addi t0, s1, 64
 ; CHECK-NEXT:    vs8r.v v8, (t0)
+; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
+; CHECK-NEXT:    vmv8r.v v16, v8
 ; CHECK-NEXT:    csrr t1, vlenb
 ; CHECK-NEXT:    slli t1, t1, 3
 ; CHECK-NEXT:    add t1, s1, t1
 ; CHECK-NEXT:    addi t1, t1, 64
 ; CHECK-NEXT:    vs8r.v v8, (t1)
-; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
-; CHECK-NEXT:    vmv8r.v v16, v8
 ; CHECK-NEXT:    sd t1, 0(sp)
 ; CHECK-NEXT:    sd t0, 8(sp)
 ; CHECK-NEXT:    call bar

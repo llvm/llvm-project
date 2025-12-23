@@ -231,15 +231,15 @@ define void @test4b() nounwind {
 ;
 ; RV32IXQCILSM-LABEL: test4b:
 ; RV32IXQCILSM:       # %bb.0: # %entry
-; RV32IXQCILSM-NEXT:    lui a1, %hi(struct4b)
-; RV32IXQCILSM-NEXT:    addi a1, a1, %lo(struct4b)
+; RV32IXQCILSM-NEXT:    li a1, 0
+; RV32IXQCILSM-NEXT:    lui a3, %hi(struct4b)
+; RV32IXQCILSM-NEXT:    addi a3, a3, %lo(struct4b)
 ; RV32IXQCILSM-NEXT:    lui a0, %hi(struct4b1)
 ; RV32IXQCILSM-NEXT:    addi a0, a0, %lo(struct4b1)
+; RV32IXQCILSM-NEXT:    qc.setwmi zero, 16, 0(a3)
 ; RV32IXQCILSM-NEXT:    li a2, 192
-; RV32IXQCILSM-NEXT:    qc.setwmi zero, 16, 0(a1)
-; RV32IXQCILSM-NEXT:    qc.setwmi zero, 15, 64(a1)
-; RV32IXQCILSM-NEXT:    qc.setwmi zero, 16, 124(a1)
-; RV32IXQCILSM-NEXT:    li a1, 0
+; RV32IXQCILSM-NEXT:    qc.setwmi zero, 15, 64(a3)
+; RV32IXQCILSM-NEXT:    qc.setwmi zero, 16, 124(a3)
 ; RV32IXQCILSM-NEXT:    tail memset
 entry:
   tail call void @llvm.memset.p0.i32(ptr align 4 @struct4b, i8 0, i32 188, i1 false)
@@ -272,16 +272,16 @@ define i32 @test6() nounwind {
 ; RV32I-LABEL: test6:
 ; RV32I:       # %bb.0: # %entry
 ; RV32I-NEXT:    addi sp, sp, -16
-; RV32I-NEXT:    sw zero, 12(sp)
 ; RV32I-NEXT:    li a0, 0
+; RV32I-NEXT:    sw zero, 12(sp)
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
 ; RV32IXQCILSM-LABEL: test6:
 ; RV32IXQCILSM:       # %bb.0: # %entry
 ; RV32IXQCILSM-NEXT:    addi sp, sp, -16
-; RV32IXQCILSM-NEXT:    sw zero, 12(sp)
 ; RV32IXQCILSM-NEXT:    li a0, 0
+; RV32IXQCILSM-NEXT:    sw zero, 12(sp)
 ; RV32IXQCILSM-NEXT:    addi sp, sp, 16
 ; RV32IXQCILSM-NEXT:    ret
 entry:
@@ -397,16 +397,16 @@ define zeroext i8 @test6c_c() nounwind {
 ; RV32I-LABEL: test6c_c:
 ; RV32I:       # %bb.0: # %entry
 ; RV32I-NEXT:    addi sp, sp, -16
-; RV32I-NEXT:    sb zero, 15(sp)
 ; RV32I-NEXT:    li a0, 0
+; RV32I-NEXT:    sb zero, 15(sp)
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
 ; RV32IXQCILSM-LABEL: test6c_c:
 ; RV32IXQCILSM:       # %bb.0: # %entry
 ; RV32IXQCILSM-NEXT:    addi sp, sp, -16
-; RV32IXQCILSM-NEXT:    sb zero, 15(sp)
 ; RV32IXQCILSM-NEXT:    li a0, 0
+; RV32IXQCILSM-NEXT:    sb zero, 15(sp)
 ; RV32IXQCILSM-NEXT:    addi sp, sp, 16
 ; RV32IXQCILSM-NEXT:    ret
 entry:
@@ -420,16 +420,16 @@ define signext i16 @test6c_s() nounwind {
 ; RV32I-LABEL: test6c_s:
 ; RV32I:       # %bb.0: # %entry
 ; RV32I-NEXT:    addi sp, sp, -16
-; RV32I-NEXT:    sh zero, 14(sp)
 ; RV32I-NEXT:    li a0, 0
+; RV32I-NEXT:    sh zero, 14(sp)
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
 ; RV32IXQCILSM-LABEL: test6c_s:
 ; RV32IXQCILSM:       # %bb.0: # %entry
 ; RV32IXQCILSM-NEXT:    addi sp, sp, -16
-; RV32IXQCILSM-NEXT:    sh zero, 14(sp)
 ; RV32IXQCILSM-NEXT:    li a0, 0
+; RV32IXQCILSM-NEXT:    sh zero, 14(sp)
 ; RV32IXQCILSM-NEXT:    addi sp, sp, 16
 ; RV32IXQCILSM-NEXT:    ret
 entry:
@@ -443,16 +443,16 @@ define i32 @test6c_l() nounwind {
 ; RV32I-LABEL: test6c_l:
 ; RV32I:       # %bb.0: # %entry
 ; RV32I-NEXT:    addi sp, sp, -16
-; RV32I-NEXT:    sw zero, 12(sp)
 ; RV32I-NEXT:    li a0, 0
+; RV32I-NEXT:    sw zero, 12(sp)
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
 ; RV32IXQCILSM-LABEL: test6c_l:
 ; RV32IXQCILSM:       # %bb.0: # %entry
 ; RV32IXQCILSM-NEXT:    addi sp, sp, -16
-; RV32IXQCILSM-NEXT:    sw zero, 12(sp)
 ; RV32IXQCILSM-NEXT:    li a0, 0
+; RV32IXQCILSM-NEXT:    sw zero, 12(sp)
 ; RV32IXQCILSM-NEXT:    addi sp, sp, 16
 ; RV32IXQCILSM-NEXT:    ret
 entry:
@@ -466,19 +466,19 @@ define i64 @test6c_ll() nounwind {
 ; RV32I-LABEL: test6c_ll:
 ; RV32I:       # %bb.0: # %entry
 ; RV32I-NEXT:    addi sp, sp, -16
-; RV32I-NEXT:    sw zero, 8(sp)
-; RV32I-NEXT:    sw zero, 12(sp)
 ; RV32I-NEXT:    li a0, 0
 ; RV32I-NEXT:    li a1, 0
+; RV32I-NEXT:    sw zero, 8(sp)
+; RV32I-NEXT:    sw zero, 12(sp)
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
 ; RV32IXQCILSM-LABEL: test6c_ll:
 ; RV32IXQCILSM:       # %bb.0: # %entry
 ; RV32IXQCILSM-NEXT:    addi sp, sp, -16
-; RV32IXQCILSM-NEXT:    qc.setwmi zero, 2, 8(sp)
 ; RV32IXQCILSM-NEXT:    li a0, 0
 ; RV32IXQCILSM-NEXT:    li a1, 0
+; RV32IXQCILSM-NEXT:    qc.setwmi zero, 2, 8(sp)
 ; RV32IXQCILSM-NEXT:    addi sp, sp, 16
 ; RV32IXQCILSM-NEXT:    ret
 entry:
@@ -580,12 +580,12 @@ define void @test7c() nounwind {
 ;
 ; RV32IXQCILSM-LABEL: test7c:
 ; RV32IXQCILSM:       # %bb.0: # %entry
-; RV32IXQCILSM-NEXT:    lui a0, %hi(arr1)
-; RV32IXQCILSM-NEXT:    addi a0, a0, %lo(arr1)
-; RV32IXQCILSM-NEXT:    lui a1, 526344
-; RV32IXQCILSM-NEXT:    addi a1, a1, 128
-; RV32IXQCILSM-NEXT:    qc.setwmi a1, 16, 0(a0)
-; RV32IXQCILSM-NEXT:    qc.setwmi a1, 16, 64(a0)
+; RV32IXQCILSM-NEXT:    lui a0, 526344
+; RV32IXQCILSM-NEXT:    lui a1, %hi(arr1)
+; RV32IXQCILSM-NEXT:    addi a1, a1, %lo(arr1)
+; RV32IXQCILSM-NEXT:    addi a0, a0, 128
+; RV32IXQCILSM-NEXT:    qc.setwmi a0, 16, 0(a1)
+; RV32IXQCILSM-NEXT:    qc.setwmi a0, 16, 64(a1)
 ; RV32IXQCILSM-NEXT:    ret
 entry:
   tail call void @llvm.memset.p0.i32(ptr align 4 @arr1, i8 -128, i32 128, i1 false)
@@ -603,13 +603,13 @@ define void @test7d() nounwind {
 ;
 ; RV32IXQCILSM-LABEL: test7d:
 ; RV32IXQCILSM:       # %bb.0: # %entry
-; RV32IXQCILSM-NEXT:    lui a0, %hi(arr1)
-; RV32IXQCILSM-NEXT:    addi a0, a0, %lo(arr1)
-; RV32IXQCILSM-NEXT:    lui a1, 53457
-; RV32IXQCILSM-NEXT:    addi a1, a1, -755
-; RV32IXQCILSM-NEXT:    qc.setwmi a1, 16, 0(a0)
-; RV32IXQCILSM-NEXT:    qc.setwmi a1, 15, 64(a0)
-; RV32IXQCILSM-NEXT:    qc.setwmi a1, 6, 124(a0)
+; RV32IXQCILSM-NEXT:    lui a0, 53457
+; RV32IXQCILSM-NEXT:    lui a1, %hi(arr1)
+; RV32IXQCILSM-NEXT:    addi a1, a1, %lo(arr1)
+; RV32IXQCILSM-NEXT:    addi a0, a0, -755
+; RV32IXQCILSM-NEXT:    qc.setwmi a0, 16, 0(a1)
+; RV32IXQCILSM-NEXT:    qc.setwmi a0, 15, 64(a1)
+; RV32IXQCILSM-NEXT:    qc.setwmi a0, 6, 124(a1)
 ; RV32IXQCILSM-NEXT:    ret
 entry:
   tail call void @llvm.memset.p0.i32(ptr align 4 @arr1, i8 13, i32 148, i1 false)
@@ -627,12 +627,12 @@ define void @test7e() nounwind {
 ;
 ; RV32IXQCILSM-LABEL: test7e:
 ; RV32IXQCILSM:       # %bb.0: # %entry
-; RV32IXQCILSM-NEXT:    lui a0, %hi(arr1)
-; RV32IXQCILSM-NEXT:    addi a0, a0, %lo(arr1)
-; RV32IXQCILSM-NEXT:    lui a1, 982783
-; RV32IXQCILSM-NEXT:    addi a1, a1, -17
-; RV32IXQCILSM-NEXT:    qc.setwmi a1, 16, 0(a0)
-; RV32IXQCILSM-NEXT:    qc.setwmi a1, 9, 64(a0)
+; RV32IXQCILSM-NEXT:    lui a0, 982783
+; RV32IXQCILSM-NEXT:    lui a1, %hi(arr1)
+; RV32IXQCILSM-NEXT:    addi a1, a1, %lo(arr1)
+; RV32IXQCILSM-NEXT:    addi a0, a0, -17
+; RV32IXQCILSM-NEXT:    qc.setwmi a0, 16, 0(a1)
+; RV32IXQCILSM-NEXT:    qc.setwmi a0, 9, 64(a1)
 ; RV32IXQCILSM-NEXT:    ret
 entry:
   tail call void @llvm.memset.p0.i32(ptr align 4 @arr1, i8 -17, i32 100, i1 false)

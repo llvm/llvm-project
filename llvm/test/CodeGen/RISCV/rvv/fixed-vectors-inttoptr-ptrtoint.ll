@@ -4,8 +4,9 @@
 define <4 x ptr> @inttoptr_v4p0_v4i32(<4 x i32> %va, <4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: inttoptr_v4p0_v4i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e64, m2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v10, v8
+; CHECK-NEXT:    vsetvli zero, a0, e64, m2, ta, ma
 ; CHECK-NEXT:    vzext.vf2 v8, v10, v0.t
 ; CHECK-NEXT:    ret
   %v = call <4 x ptr> @llvm.vp.inttoptr.v4p0.v4i32(<4 x i32> %va, <4 x i1> %m, i32 %evl)

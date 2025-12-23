@@ -320,8 +320,9 @@ define <4 x double> @vsitofp_v4f64_v4i16_unmasked(<4 x i16> %va, i32 zeroext %ev
 define <4 x double> @vsitofp_v4f64_v4i32(<4 x i32> %va, <4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vsitofp_v4f64_v4i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v10, v8
+; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
 ; CHECK-NEXT:    vfwcvt.f.x.v v8, v10, v0.t
 ; CHECK-NEXT:    ret
   %v = call <4 x double> @llvm.vp.sitofp.v4f64.v4i32(<4 x i32> %va, <4 x i1> %m, i32 %evl)
@@ -331,8 +332,9 @@ define <4 x double> @vsitofp_v4f64_v4i32(<4 x i32> %va, <4 x i1> %m, i32 zeroext
 define <4 x double> @vsitofp_v4f64_v4i32_unmasked(<4 x i32> %va, i32 zeroext %evl) {
 ; CHECK-LABEL: vsitofp_v4f64_v4i32_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v10, v8
+; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
 ; CHECK-NEXT:    vfwcvt.f.x.v v8, v10
 ; CHECK-NEXT:    ret
   %v = call <4 x double> @llvm.vp.sitofp.v4f64.v4i32(<4 x i32> %va, <4 x i1> splat (i1 true), i32 %evl)
@@ -373,10 +375,10 @@ define <32 x double> @vsitofp_v32f64_v32i64(<32 x i64> %va, <32 x i1> %m, i32 ze
 ; CHECK-NEXT:    vsetvli zero, a1, e64, m8, ta, ma
 ; CHECK-NEXT:    vfcvt.f.x.v v8, v8, v0.t
 ; CHECK-NEXT:    addi a1, a0, -16
+; CHECK-NEXT:    vmv1r.v v0, v24
 ; CHECK-NEXT:    sltu a0, a0, a1
 ; CHECK-NEXT:    addi a0, a0, -1
 ; CHECK-NEXT:    and a0, a0, a1
-; CHECK-NEXT:    vmv1r.v v0, v24
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
 ; CHECK-NEXT:    vfcvt.f.x.v v16, v16, v0.t
 ; CHECK-NEXT:    ret

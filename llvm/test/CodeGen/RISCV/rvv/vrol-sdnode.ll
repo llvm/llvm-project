@@ -592,9 +592,9 @@ define <vscale x 32 x i16> @vrol_vx_nxv32i16(<vscale x 32 x i16> %a, i16 %b) {
 define <vscale x 1 x i32> @vrol_vv_nxv1i32(<vscale x 1 x i32> %a, <vscale x 1 x i32> %b) {
 ; CHECK-LABEL: vrol_vv_nxv1i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e32, mf2, ta, ma
-; CHECK-NEXT:    vrsub.vi v10, v9, 0
 ; CHECK-NEXT:    li a0, 31
+; CHECK-NEXT:    vsetvli a1, zero, e32, mf2, ta, ma
+; CHECK-NEXT:    vrsub.vi v10, v9, 0
 ; CHECK-NEXT:    vand.vx v9, v9, a0
 ; CHECK-NEXT:    vand.vx v10, v10, a0
 ; CHECK-NEXT:    vsll.vv v9, v8, v9
@@ -616,9 +616,9 @@ define <vscale x 1 x i32> @vrol_vx_nxv1i32(<vscale x 1 x i32> %a, i32 %b) {
 ; CHECK-RV32:       # %bb.0:
 ; CHECK-RV32-NEXT:    andi a1, a0, 31
 ; CHECK-RV32-NEXT:    neg a0, a0
+; CHECK-RV32-NEXT:    andi a0, a0, 31
 ; CHECK-RV32-NEXT:    vsetvli a2, zero, e32, mf2, ta, ma
 ; CHECK-RV32-NEXT:    vsll.vx v9, v8, a1
-; CHECK-RV32-NEXT:    andi a0, a0, 31
 ; CHECK-RV32-NEXT:    vsrl.vx v8, v8, a0
 ; CHECK-RV32-NEXT:    vor.vv v8, v9, v8
 ; CHECK-RV32-NEXT:    ret
@@ -650,9 +650,9 @@ define <vscale x 1 x i32> @vrol_vx_nxv1i32(<vscale x 1 x i32> %a, i32 %b) {
 define <vscale x 2 x i32> @vrol_vv_nxv2i32(<vscale x 2 x i32> %a, <vscale x 2 x i32> %b) {
 ; CHECK-LABEL: vrol_vv_nxv2i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, ma
-; CHECK-NEXT:    vrsub.vi v10, v9, 0
 ; CHECK-NEXT:    li a0, 31
+; CHECK-NEXT:    vsetvli a1, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vrsub.vi v10, v9, 0
 ; CHECK-NEXT:    vand.vx v9, v9, a0
 ; CHECK-NEXT:    vand.vx v10, v10, a0
 ; CHECK-NEXT:    vsll.vv v9, v8, v9
@@ -882,9 +882,9 @@ define <vscale x 16 x i32> @vrol_vx_nxv16i32(<vscale x 16 x i32> %a, i32 %b) {
 define <vscale x 1 x i64> @vrol_vv_nxv1i64(<vscale x 1 x i64> %a, <vscale x 1 x i64> %b) {
 ; CHECK-LABEL: vrol_vv_nxv1i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
-; CHECK-NEXT:    vrsub.vi v10, v9, 0
 ; CHECK-NEXT:    li a0, 63
+; CHECK-NEXT:    vsetvli a1, zero, e64, m1, ta, ma
+; CHECK-NEXT:    vrsub.vi v10, v9, 0
 ; CHECK-NEXT:    vand.vx v9, v9, a0
 ; CHECK-NEXT:    vand.vx v10, v10, a0
 ; CHECK-NEXT:    vsll.vv v9, v8, v9

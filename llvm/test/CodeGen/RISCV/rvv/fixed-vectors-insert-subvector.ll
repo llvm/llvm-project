@@ -466,15 +466,15 @@ define void @insert_v8i1_v4i1_0(ptr %vp, ptr %svp) {
 ; CHECK-LABEL: insert_v8i1_v4i1_0:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; CHECK-NEXT:    vmv.v.i v9, 0
 ; CHECK-NEXT:    vlm.v v0, (a0)
+; CHECK-NEXT:    vmv.v.i v9, 0
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
-; CHECK-NEXT:    vmv.v.i v10, 0
 ; CHECK-NEXT:    vlm.v v8, (a1)
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    vmerge.vim v9, v9, 1, v0
-; CHECK-NEXT:    vmv1r.v v0, v8
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
+; CHECK-NEXT:    vmv.v.i v10, 0
+; CHECK-NEXT:    vmv1r.v v0, v8
 ; CHECK-NEXT:    vmerge.vim v8, v10, 1, v0
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf2, tu, ma
 ; CHECK-NEXT:    vmv.v.v v9, v8
@@ -493,15 +493,15 @@ define void @insert_v8i1_v4i1_4(ptr %vp, ptr %svp) {
 ; CHECK-LABEL: insert_v8i1_v4i1_4:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; CHECK-NEXT:    vmv.v.i v9, 0
 ; CHECK-NEXT:    vlm.v v0, (a0)
+; CHECK-NEXT:    vmv.v.i v9, 0
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
-; CHECK-NEXT:    vmv.v.i v10, 0
 ; CHECK-NEXT:    vlm.v v8, (a1)
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    vmerge.vim v9, v9, 1, v0
-; CHECK-NEXT:    vmv1r.v v0, v8
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
+; CHECK-NEXT:    vmv.v.i v10, 0
+; CHECK-NEXT:    vmv1r.v v0, v8
 ; CHECK-NEXT:    vmerge.vim v8, v10, 1, v0
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    vslideup.vi v9, v8, 4
@@ -545,27 +545,31 @@ define <vscale x 2 x i1> @insert_nxv2i1_v4i1_0(<vscale x 2 x i1> %v, ptr %svp) {
 ; VLA-LABEL: insert_nxv2i1_v4i1_0:
 ; VLA:       # %bb.0:
 ; VLA-NEXT:    vsetvli a1, zero, e8, mf4, ta, ma
-; VLA-NEXT:    vmv.v.i v8, 0
-; VLA-NEXT:    vmerge.vim v8, v8, 1, v0
-; VLA-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; VLA-NEXT:    vmv.v.i v9, 0
-; VLA-NEXT:    vlm.v v0, (a0)
-; VLA-NEXT:    vsetvli zero, zero, e8, mf4, tu, ma
-; VLA-NEXT:    vmerge.vim v8, v9, 1, v0
+; VLA-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
+; VLA-NEXT:    vlm.v v8, (a0)
 ; VLA-NEXT:    vsetvli a0, zero, e8, mf4, ta, ma
-; VLA-NEXT:    vmsne.vi v0, v8, 0
+; VLA-NEXT:    vmerge.vim v9, v9, 1, v0
+; VLA-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
+; VLA-NEXT:    vmv.v.i v10, 0
+; VLA-NEXT:    vmv1r.v v0, v8
+; VLA-NEXT:    vsetvli zero, zero, e8, mf4, tu, ma
+; VLA-NEXT:    vmerge.vim v9, v10, 1, v0
+; VLA-NEXT:    vsetvli a0, zero, e8, mf4, ta, ma
+; VLA-NEXT:    vmsne.vi v0, v9, 0
 ; VLA-NEXT:    ret
 ;
 ; VLS-LABEL: insert_nxv2i1_v4i1_0:
 ; VLS:       # %bb.0:
 ; VLS-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
-; VLS-NEXT:    vmv.v.i v8, 0
-; VLS-NEXT:    vmerge.vim v9, v8, 1, v0
-; VLS-NEXT:    vlm.v v0, (a0)
+; VLS-NEXT:    vmv.v.i v9, 0
+; VLS-NEXT:    vlm.v v8, (a0)
+; VLS-NEXT:    vmerge.vim v10, v9, 1, v0
+; VLS-NEXT:    vmv1r.v v0, v8
 ; VLS-NEXT:    vsetvli zero, zero, e8, mf4, tu, ma
-; VLS-NEXT:    vmerge.vim v9, v8, 1, v0
+; VLS-NEXT:    vmerge.vim v10, v9, 1, v0
 ; VLS-NEXT:    vsetvli zero, zero, e8, mf4, ta, ma
-; VLS-NEXT:    vmsne.vi v0, v9, 0
+; VLS-NEXT:    vmsne.vi v0, v10, 0
 ; VLS-NEXT:    ret
   %sv = load <4 x i1>, ptr %svp
   %c = call <vscale x 2 x i1> @llvm.vector.insert.v4i1.nxv2i1(<vscale x 2 x i1> %v, <4 x i1> %sv, i64 0)

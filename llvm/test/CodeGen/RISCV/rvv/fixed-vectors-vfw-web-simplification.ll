@@ -11,31 +11,31 @@ define void @vfwmul_v2f116_multiple_users(ptr %x, ptr %y, ptr %z, <2 x half> %a,
 ; NO_FOLDING1-LABEL: vfwmul_v2f116_multiple_users:
 ; NO_FOLDING1:       # %bb.0:
 ; NO_FOLDING1-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; NO_FOLDING1-NEXT:    vfwcvt.f.f.v v11, v8
-; NO_FOLDING1-NEXT:    vfwcvt.f.f.v v8, v9
-; NO_FOLDING1-NEXT:    vfwcvt.f.f.v v9, v10
+; NO_FOLDING1-NEXT:    vfwcvt.f.f.v v11, v9
+; NO_FOLDING1-NEXT:    vfwcvt.f.f.v v9, v8
+; NO_FOLDING1-NEXT:    vfwcvt.f.f.v v8, v10
 ; NO_FOLDING1-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
-; NO_FOLDING1-NEXT:    vfmul.vv v10, v11, v8
-; NO_FOLDING1-NEXT:    vfadd.vv v11, v11, v9
-; NO_FOLDING1-NEXT:    vfsub.vv v8, v8, v9
+; NO_FOLDING1-NEXT:    vfmul.vv v10, v9, v11
+; NO_FOLDING1-NEXT:    vfadd.vv v9, v9, v8
+; NO_FOLDING1-NEXT:    vfsub.vv v8, v11, v8
 ; NO_FOLDING1-NEXT:    vse32.v v10, (a0)
-; NO_FOLDING1-NEXT:    vse32.v v11, (a1)
+; NO_FOLDING1-NEXT:    vse32.v v9, (a1)
 ; NO_FOLDING1-NEXT:    vse32.v v8, (a2)
 ; NO_FOLDING1-NEXT:    ret
 ;
 ; NO_FOLDING2-LABEL: vfwmul_v2f116_multiple_users:
 ; NO_FOLDING2:       # %bb.0:
 ; NO_FOLDING2-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; NO_FOLDING2-NEXT:    vfwcvt.f.f.v v11, v8
-; NO_FOLDING2-NEXT:    vfwcvt.f.f.v v8, v9
+; NO_FOLDING2-NEXT:    vfwcvt.f.f.v v11, v9
+; NO_FOLDING2-NEXT:    vfwcvt.f.f.v v9, v8
 ; NO_FOLDING2-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
-; NO_FOLDING2-NEXT:    vfmul.vv v9, v11, v8
+; NO_FOLDING2-NEXT:    vfmul.vv v8, v9, v11
 ; NO_FOLDING2-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
-; NO_FOLDING2-NEXT:    vfwadd.wv v11, v11, v10
-; NO_FOLDING2-NEXT:    vfwsub.wv v8, v8, v10
-; NO_FOLDING2-NEXT:    vse32.v v9, (a0)
-; NO_FOLDING2-NEXT:    vse32.v v11, (a1)
-; NO_FOLDING2-NEXT:    vse32.v v8, (a2)
+; NO_FOLDING2-NEXT:    vfwadd.wv v9, v9, v10
+; NO_FOLDING2-NEXT:    vfwsub.wv v11, v11, v10
+; NO_FOLDING2-NEXT:    vse32.v v8, (a0)
+; NO_FOLDING2-NEXT:    vse32.v v9, (a1)
+; NO_FOLDING2-NEXT:    vse32.v v11, (a2)
 ; NO_FOLDING2-NEXT:    ret
 ;
 ; ZVFH-LABEL: vfwmul_v2f116_multiple_users:
@@ -52,15 +52,15 @@ define void @vfwmul_v2f116_multiple_users(ptr %x, ptr %y, ptr %z, <2 x half> %a,
 ; ZVFHMIN-LABEL: vfwmul_v2f116_multiple_users:
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; ZVFHMIN-NEXT:    vfwcvt.f.f.v v11, v8
-; ZVFHMIN-NEXT:    vfwcvt.f.f.v v8, v9
-; ZVFHMIN-NEXT:    vfwcvt.f.f.v v9, v10
+; ZVFHMIN-NEXT:    vfwcvt.f.f.v v11, v9
+; ZVFHMIN-NEXT:    vfwcvt.f.f.v v9, v8
+; ZVFHMIN-NEXT:    vfwcvt.f.f.v v8, v10
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
-; ZVFHMIN-NEXT:    vfmul.vv v10, v11, v8
-; ZVFHMIN-NEXT:    vfadd.vv v11, v11, v9
-; ZVFHMIN-NEXT:    vfsub.vv v8, v8, v9
+; ZVFHMIN-NEXT:    vfmul.vv v10, v9, v11
+; ZVFHMIN-NEXT:    vfadd.vv v9, v9, v8
+; ZVFHMIN-NEXT:    vfsub.vv v8, v11, v8
 ; ZVFHMIN-NEXT:    vse32.v v10, (a0)
-; ZVFHMIN-NEXT:    vse32.v v11, (a1)
+; ZVFHMIN-NEXT:    vse32.v v9, (a1)
 ; ZVFHMIN-NEXT:    vse32.v v8, (a2)
 ; ZVFHMIN-NEXT:    ret
   %c = fpext <2 x half> %a to <2 x float>
@@ -79,17 +79,15 @@ define void @vfwmul_v2f32_multiple_users(ptr %x, ptr %y, ptr %z, <2 x float> %a,
 ; NO_FOLDING1-LABEL: vfwmul_v2f32_multiple_users:
 ; NO_FOLDING1:       # %bb.0:
 ; NO_FOLDING1-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; NO_FOLDING1-NEXT:    vfwcvt.f.f.v v11, v8
-; NO_FOLDING1-NEXT:    vfwcvt.f.f.v v8, v9
+; NO_FOLDING1-NEXT:    vfwcvt.f.f.v v11, v9
+; NO_FOLDING1-NEXT:    vfwcvt.f.f.v v9, v8
+; NO_FOLDING1-NEXT:    vfwcvt.f.f.v v8, v10
 ; NO_FOLDING1-NEXT:    vsetvli zero, zero, e64, m1, ta, ma
-; NO_FOLDING1-NEXT:    vfmul.vv v9, v11, v8
-; NO_FOLDING1-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
-; NO_FOLDING1-NEXT:    vfwcvt.f.f.v v12, v10
-; NO_FOLDING1-NEXT:    vsetvli zero, zero, e64, m1, ta, ma
-; NO_FOLDING1-NEXT:    vfadd.vv v10, v11, v12
-; NO_FOLDING1-NEXT:    vse64.v v9, (a0)
-; NO_FOLDING1-NEXT:    vfsub.vv v8, v8, v12
-; NO_FOLDING1-NEXT:    vse64.v v10, (a1)
+; NO_FOLDING1-NEXT:    vfmul.vv v10, v9, v11
+; NO_FOLDING1-NEXT:    vfadd.vv v9, v9, v8
+; NO_FOLDING1-NEXT:    vse64.v v10, (a0)
+; NO_FOLDING1-NEXT:    vfsub.vv v8, v11, v8
+; NO_FOLDING1-NEXT:    vse64.v v9, (a1)
 ; NO_FOLDING1-NEXT:    vse64.v v8, (a2)
 ; NO_FOLDING1-NEXT:    ret
 ;
@@ -173,30 +171,30 @@ define void @vfwmacc_v2f32_multiple_users_addend_user(ptr %x, ptr %y, ptr %z, <2
 ; NO_FOLDING-LABEL: vfwmacc_v2f32_multiple_users_addend_user:
 ; NO_FOLDING:       # %bb.0:
 ; NO_FOLDING-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; NO_FOLDING-NEXT:    vfwcvt.f.f.v v11, v8
-; NO_FOLDING-NEXT:    vfwcvt.f.f.v v8, v9
-; NO_FOLDING-NEXT:    vfwcvt.f.f.v v9, v10
+; NO_FOLDING-NEXT:    vfwcvt.f.f.v v11, v9
+; NO_FOLDING-NEXT:    vfwcvt.f.f.v v9, v8
+; NO_FOLDING-NEXT:    vfwcvt.f.f.v v8, v10
 ; NO_FOLDING-NEXT:    vsetvli zero, zero, e64, m1, ta, ma
-; NO_FOLDING-NEXT:    vfmul.vv v10, v11, v8
-; NO_FOLDING-NEXT:    vfmadd.vv v11, v9, v8
+; NO_FOLDING-NEXT:    vfmul.vv v10, v9, v11
+; NO_FOLDING-NEXT:    vfmadd.vv v9, v8, v11
 ; NO_FOLDING-NEXT:    vse64.v v10, (a0)
-; NO_FOLDING-NEXT:    vfsub.vv v8, v8, v9
-; NO_FOLDING-NEXT:    vse64.v v11, (a1)
+; NO_FOLDING-NEXT:    vfsub.vv v8, v11, v8
+; NO_FOLDING-NEXT:    vse64.v v9, (a1)
 ; NO_FOLDING-NEXT:    vse64.v v8, (a2)
 ; NO_FOLDING-NEXT:    ret
 ;
 ; FOLDING-LABEL: vfwmacc_v2f32_multiple_users_addend_user:
 ; FOLDING:       # %bb.0:
 ; FOLDING-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; FOLDING-NEXT:    vfwcvt.f.f.v v11, v8
-; FOLDING-NEXT:    vfwcvt.f.f.v v8, v9
-; FOLDING-NEXT:    vfwcvt.f.f.v v9, v10
+; FOLDING-NEXT:    vfwcvt.f.f.v v11, v9
+; FOLDING-NEXT:    vfwcvt.f.f.v v9, v8
+; FOLDING-NEXT:    vfwcvt.f.f.v v8, v10
 ; FOLDING-NEXT:    vsetvli zero, zero, e64, m1, ta, ma
-; FOLDING-NEXT:    vfmul.vv v10, v11, v8
-; FOLDING-NEXT:    vfmadd.vv v11, v9, v8
+; FOLDING-NEXT:    vfmul.vv v10, v9, v11
+; FOLDING-NEXT:    vfmadd.vv v9, v8, v11
 ; FOLDING-NEXT:    vse64.v v10, (a0)
-; FOLDING-NEXT:    vfsub.vv v8, v8, v9
-; FOLDING-NEXT:    vse64.v v11, (a1)
+; FOLDING-NEXT:    vfsub.vv v8, v11, v8
+; FOLDING-NEXT:    vse64.v v9, (a1)
 ; FOLDING-NEXT:    vse64.v v8, (a2)
 ; FOLDING-NEXT:    ret
   %c = fpext <2 x float> %a to <2 x double>

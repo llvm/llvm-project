@@ -87,8 +87,8 @@ define <4 x i64> @vwsll_vx_i32_v4i64_sext(<4 x i32> %a, i32 %b) {
 ; CHECK-ZVBB-LABEL: vwsll_vx_i32_v4i64_sext:
 ; CHECK-ZVBB:       # %bb.0:
 ; CHECK-ZVBB-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-ZVBB-NEXT:    vmv.v.x v11, a0
 ; CHECK-ZVBB-NEXT:    vmv1r.v v10, v8
+; CHECK-ZVBB-NEXT:    vmv.v.x v11, a0
 ; CHECK-ZVBB-NEXT:    vwsll.vv v8, v10, v11
 ; CHECK-ZVBB-NEXT:    ret
   %head = insertelement <4 x i32> poison, i32 %b, i32 0
@@ -349,8 +349,8 @@ define <8 x i32> @vwsll_vx_i16_v8i32_sext(<8 x i16> %a, i16 %b) {
 ; CHECK-ZVBB-LABEL: vwsll_vx_i16_v8i32_sext:
 ; CHECK-ZVBB:       # %bb.0:
 ; CHECK-ZVBB-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; CHECK-ZVBB-NEXT:    vmv.v.x v11, a0
 ; CHECK-ZVBB-NEXT:    vmv1r.v v10, v8
+; CHECK-ZVBB-NEXT:    vmv.v.x v11, a0
 ; CHECK-ZVBB-NEXT:    vwsll.vv v8, v10, v11
 ; CHECK-ZVBB-NEXT:    ret
   %head = insertelement <8 x i16> poison, i16 %b, i32 0
@@ -619,8 +619,8 @@ define <16 x i16> @vwsll_vx_i8_v16i16_sext(<16 x i8> %a, i8 %b) {
 ; CHECK-ZVBB-LABEL: vwsll_vx_i8_v16i16_sext:
 ; CHECK-ZVBB:       # %bb.0:
 ; CHECK-ZVBB-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
-; CHECK-ZVBB-NEXT:    vmv.v.x v11, a0
 ; CHECK-ZVBB-NEXT:    vmv1r.v v10, v8
+; CHECK-ZVBB-NEXT:    vmv.v.x v11, a0
 ; CHECK-ZVBB-NEXT:    vwsll.vv v8, v10, v11
 ; CHECK-ZVBB-NEXT:    ret
   %head = insertelement <16 x i8> poison, i8 %b, i32 0

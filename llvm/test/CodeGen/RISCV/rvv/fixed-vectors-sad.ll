@@ -5,14 +5,13 @@
 define signext i16 @sad_4x8_as_i16(<4 x i8> %a, <4 x i8> %b) {
 ; CHECK-LABEL: sad_4x8_as_i16:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetivli zero, 4, e16, m1, ta, ma
+; CHECK-NEXT:    vmv.s.x v10, zero
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
-; CHECK-NEXT:    vminu.vv v10, v8, v9
+; CHECK-NEXT:    vminu.vv v11, v8, v9
 ; CHECK-NEXT:    vmaxu.vv v8, v8, v9
-; CHECK-NEXT:    vsub.vv v8, v8, v10
-; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
-; CHECK-NEXT:    vmv.s.x v9, zero
-; CHECK-NEXT:    vsetvli zero, zero, e8, mf4, ta, ma
-; CHECK-NEXT:    vwredsumu.vs v8, v8, v9
+; CHECK-NEXT:    vsub.vv v8, v8, v11
+; CHECK-NEXT:    vwredsumu.vs v8, v8, v10
 ; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
@@ -28,14 +27,15 @@ entry:
 define signext i32 @sad_4x8_as_i32(<4 x i8> %a, <4 x i8> %b) {
 ; CHECK-LABEL: sad_4x8_as_i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
-; CHECK-NEXT:    vminu.vv v10, v8, v9
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vmv.s.x v10, zero
+; CHECK-NEXT:    vsetvli zero, zero, e8, mf4, ta, ma
+; CHECK-NEXT:    vminu.vv v11, v8, v9
 ; CHECK-NEXT:    vmaxu.vv v8, v8, v9
-; CHECK-NEXT:    vsub.vv v8, v8, v10
+; CHECK-NEXT:    vsub.vv v8, v8, v11
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
 ; CHECK-NEXT:    vzext.vf4 v9, v8
-; CHECK-NEXT:    vmv.s.x v8, zero
-; CHECK-NEXT:    vredsum.vs v8, v9, v8
+; CHECK-NEXT:    vredsum.vs v8, v9, v10
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
 entry:
@@ -50,14 +50,13 @@ entry:
 define signext i16 @sad_16x8_as_i16(<16 x i8> %a, <16 x i8> %b) {
 ; CHECK-LABEL: sad_16x8_as_i16:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetivli zero, 16, e16, m1, ta, ma
+; CHECK-NEXT:    vmv.s.x v10, zero
 ; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
-; CHECK-NEXT:    vminu.vv v10, v8, v9
+; CHECK-NEXT:    vminu.vv v11, v8, v9
 ; CHECK-NEXT:    vmaxu.vv v8, v8, v9
-; CHECK-NEXT:    vsub.vv v8, v8, v10
-; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
-; CHECK-NEXT:    vmv.s.x v9, zero
-; CHECK-NEXT:    vsetvli zero, zero, e8, m1, ta, ma
-; CHECK-NEXT:    vwredsumu.vs v8, v8, v9
+; CHECK-NEXT:    vsub.vv v8, v8, v11
+; CHECK-NEXT:    vwredsumu.vs v8, v8, v10
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret

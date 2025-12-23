@@ -632,40 +632,26 @@ define <16 x i64> @fshr_v16i64(<16 x i64> %a, <16 x i64> %b, <16 x i64> %c, <16 
 ; CHECK-NEXT:    addi sp, sp, -16
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    csrr a2, vlenb
-; CHECK-NEXT:    slli a2, a2, 4
+; CHECK-NEXT:    slli a2, a2, 3
 ; CHECK-NEXT:    sub sp, sp, a2
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x10, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 16 * vlenb
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 8 * vlenb
+; CHECK-NEXT:    addi a2, sp, 16
+; CHECK-NEXT:    vs8r.v v8, (a2) # vscale x 64-byte Folded Spill
 ; CHECK-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
 ; CHECK-NEXT:    vle64.v v24, (a0)
-; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    slli a0, a0, 3
-; CHECK-NEXT:    add a0, sp, a0
-; CHECK-NEXT:    addi a0, a0, 16
-; CHECK-NEXT:    vs8r.v v24, (a0) # vscale x 64-byte Folded Spill
 ; CHECK-NEXT:    li a0, 63
-; CHECK-NEXT:    csrr a2, vlenb
-; CHECK-NEXT:    slli a2, a2, 3
-; CHECK-NEXT:    add a2, sp, a2
-; CHECK-NEXT:    addi a2, a2, 16
-; CHECK-NEXT:    vl8r.v v24, (a2) # vscale x 64-byte Folded Reload
 ; CHECK-NEXT:    vsetvli zero, a1, e64, m8, ta, ma
-; CHECK-NEXT:    vand.vx v24, v24, a0, v0.t
-; CHECK-NEXT:    addi a1, sp, 16
-; CHECK-NEXT:    vs8r.v v24, (a1) # vscale x 64-byte Folded Spill
-; CHECK-NEXT:    vl8r.v v24, (a1) # vscale x 64-byte Folded Reload
-; CHECK-NEXT:    vsrl.vv v16, v16, v24, v0.t
-; CHECK-NEXT:    csrr a1, vlenb
-; CHECK-NEXT:    slli a1, a1, 3
-; CHECK-NEXT:    add a1, sp, a1
-; CHECK-NEXT:    addi a1, a1, 16
-; CHECK-NEXT:    vl8r.v v24, (a1) # vscale x 64-byte Folded Reload
-; CHECK-NEXT:    vnot.v v24, v24, v0.t
-; CHECK-NEXT:    vand.vx v24, v24, a0, v0.t
-; CHECK-NEXT:    vsll.vi v8, v8, 1, v0.t
-; CHECK-NEXT:    vsll.vv v8, v8, v24, v0.t
+; CHECK-NEXT:    vand.vx v8, v24, a0, v0.t
+; CHECK-NEXT:    vsrl.vv v16, v16, v8, v0.t
+; CHECK-NEXT:    vnot.v v8, v24, v0.t
+; CHECK-NEXT:    vand.vx v8, v8, a0, v0.t
+; CHECK-NEXT:    addi a0, sp, 16
+; CHECK-NEXT:    vl8r.v v24, (a0) # vscale x 64-byte Folded Reload
+; CHECK-NEXT:    vsll.vi v24, v24, 1, v0.t
+; CHECK-NEXT:    vsll.vv v8, v24, v8, v0.t
 ; CHECK-NEXT:    vor.vv v8, v8, v16, v0.t
 ; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    slli a0, a0, 4
+; CHECK-NEXT:    slli a0, a0, 3
 ; CHECK-NEXT:    add sp, sp, a0
 ; CHECK-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-NEXT:    addi sp, sp, 16
@@ -684,32 +670,28 @@ define <16 x i64> @fshl_v16i64(<16 x i64> %a, <16 x i64> %b, <16 x i64> %c, <16 
 ; CHECK-NEXT:    slli a2, a2, 4
 ; CHECK-NEXT:    sub sp, sp, a2
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x10, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 16 * vlenb
-; CHECK-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
-; CHECK-NEXT:    vle64.v v24, (a0)
-; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    slli a0, a0, 3
-; CHECK-NEXT:    add a0, sp, a0
-; CHECK-NEXT:    addi a0, a0, 16
-; CHECK-NEXT:    vs8r.v v24, (a0) # vscale x 64-byte Folded Spill
-; CHECK-NEXT:    li a0, 63
 ; CHECK-NEXT:    csrr a2, vlenb
 ; CHECK-NEXT:    slli a2, a2, 3
 ; CHECK-NEXT:    add a2, sp, a2
 ; CHECK-NEXT:    addi a2, a2, 16
-; CHECK-NEXT:    vl8r.v v24, (a2) # vscale x 64-byte Folded Reload
+; CHECK-NEXT:    vs8r.v v8, (a2) # vscale x 64-byte Folded Spill
+; CHECK-NEXT:    addi a2, sp, 16
+; CHECK-NEXT:    vs8r.v v16, (a2) # vscale x 64-byte Folded Spill
+; CHECK-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
+; CHECK-NEXT:    vle64.v v24, (a0)
+; CHECK-NEXT:    li a0, 63
 ; CHECK-NEXT:    vsetvli zero, a1, e64, m8, ta, ma
-; CHECK-NEXT:    vand.vx v24, v24, a0, v0.t
-; CHECK-NEXT:    addi a1, sp, 16
-; CHECK-NEXT:    vs8r.v v24, (a1) # vscale x 64-byte Folded Spill
-; CHECK-NEXT:    vl8r.v v24, (a1) # vscale x 64-byte Folded Reload
-; CHECK-NEXT:    vsll.vv v8, v8, v24, v0.t
+; CHECK-NEXT:    vand.vx v16, v24, a0, v0.t
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    slli a1, a1, 3
 ; CHECK-NEXT:    add a1, sp, a1
 ; CHECK-NEXT:    addi a1, a1, 16
-; CHECK-NEXT:    vl8r.v v24, (a1) # vscale x 64-byte Folded Reload
+; CHECK-NEXT:    vl8r.v v8, (a1) # vscale x 64-byte Folded Reload
+; CHECK-NEXT:    vsll.vv v8, v8, v16, v0.t
 ; CHECK-NEXT:    vnot.v v24, v24, v0.t
 ; CHECK-NEXT:    vand.vx v24, v24, a0, v0.t
+; CHECK-NEXT:    addi a0, sp, 16
+; CHECK-NEXT:    vl8r.v v16, (a0) # vscale x 64-byte Folded Reload
 ; CHECK-NEXT:    vsrl.vi v16, v16, 1, v0.t
 ; CHECK-NEXT:    vsrl.vv v16, v16, v24, v0.t
 ; CHECK-NEXT:    vor.vv v8, v8, v16, v0.t

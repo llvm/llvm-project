@@ -237,8 +237,8 @@ define <1 x i1> @fcmps_ord_vf_v1f16(<1 x half> %va, half %b) nounwind strictfp {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
 ; CHECK-NEXT:    vfmv.s.f v9, fa0
-; CHECK-NEXT:    vmfle.vf v9, v9, fa0
 ; CHECK-NEXT:    vmfle.vv v8, v8, v8
+; CHECK-NEXT:    vmfle.vf v9, v9, fa0
 ; CHECK-NEXT:    vmand.mm v0, v8, v9
 ; CHECK-NEXT:    ret
   %head = insertelement <1 x half> poison, half %b, i32 0
@@ -252,8 +252,8 @@ define <1 x i1> @fcmps_ord_fv_v1f16(<1 x half> %va, half %b) nounwind strictfp {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
 ; CHECK-NEXT:    vfmv.s.f v9, fa0
-; CHECK-NEXT:    vmfle.vf v9, v9, fa0
 ; CHECK-NEXT:    vmfle.vv v8, v8, v8
+; CHECK-NEXT:    vmfle.vf v9, v9, fa0
 ; CHECK-NEXT:    vmand.mm v0, v9, v8
 ; CHECK-NEXT:    ret
   %head = insertelement <1 x half> poison, half %b, i32 0
@@ -524,9 +524,9 @@ define <1 x i1> @fcmps_uno_fv_v1f16(<1 x half> %va, half %b) nounwind strictfp {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
 ; CHECK-NEXT:    vfmv.s.f v9, fa0
+; CHECK-NEXT:    vmfle.vv v8, v8, v8
 ; CHECK-NEXT:    vmfle.vf v9, v9, fa0
 ; CHECK-NEXT:    vmnot.m v9, v9
-; CHECK-NEXT:    vmfle.vv v8, v8, v8
 ; CHECK-NEXT:    vmorn.mm v0, v9, v8
 ; CHECK-NEXT:    ret
   %head = insertelement <1 x half> poison, half %b, i32 0
@@ -768,8 +768,8 @@ define <2 x i1> @fcmps_ord_vf_v2f16(<2 x half> %va, half %b) nounwind strictfp {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; CHECK-NEXT:    vfmv.v.f v9, fa0
-; CHECK-NEXT:    vmfle.vf v9, v9, fa0
 ; CHECK-NEXT:    vmfle.vv v8, v8, v8
+; CHECK-NEXT:    vmfle.vf v9, v9, fa0
 ; CHECK-NEXT:    vmand.mm v0, v8, v9
 ; CHECK-NEXT:    ret
   %head = insertelement <2 x half> poison, half %b, i32 0
@@ -783,8 +783,8 @@ define <2 x i1> @fcmps_ord_fv_v2f16(<2 x half> %va, half %b) nounwind strictfp {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; CHECK-NEXT:    vfmv.v.f v9, fa0
-; CHECK-NEXT:    vmfle.vf v9, v9, fa0
 ; CHECK-NEXT:    vmfle.vv v8, v8, v8
+; CHECK-NEXT:    vmfle.vf v9, v9, fa0
 ; CHECK-NEXT:    vmand.mm v0, v9, v8
 ; CHECK-NEXT:    ret
   %head = insertelement <2 x half> poison, half %b, i32 0
@@ -1055,9 +1055,9 @@ define <2 x i1> @fcmps_uno_fv_v2f16(<2 x half> %va, half %b) nounwind strictfp {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; CHECK-NEXT:    vfmv.v.f v9, fa0
+; CHECK-NEXT:    vmfle.vv v8, v8, v8
 ; CHECK-NEXT:    vmfle.vf v9, v9, fa0
 ; CHECK-NEXT:    vmnot.m v9, v9
-; CHECK-NEXT:    vmfle.vv v8, v8, v8
 ; CHECK-NEXT:    vmorn.mm v0, v9, v8
 ; CHECK-NEXT:    ret
   %head = insertelement <2 x half> poison, half %b, i32 0
@@ -1299,8 +1299,8 @@ define <4 x i1> @fcmps_ord_vf_v4f16(<4 x half> %va, half %b) nounwind strictfp {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; CHECK-NEXT:    vfmv.v.f v9, fa0
-; CHECK-NEXT:    vmfle.vf v9, v9, fa0
 ; CHECK-NEXT:    vmfle.vv v8, v8, v8
+; CHECK-NEXT:    vmfle.vf v9, v9, fa0
 ; CHECK-NEXT:    vmand.mm v0, v8, v9
 ; CHECK-NEXT:    ret
   %head = insertelement <4 x half> poison, half %b, i32 0
@@ -1314,8 +1314,8 @@ define <4 x i1> @fcmps_ord_fv_v4f16(<4 x half> %va, half %b) nounwind strictfp {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; CHECK-NEXT:    vfmv.v.f v9, fa0
-; CHECK-NEXT:    vmfle.vf v9, v9, fa0
 ; CHECK-NEXT:    vmfle.vv v8, v8, v8
+; CHECK-NEXT:    vmfle.vf v9, v9, fa0
 ; CHECK-NEXT:    vmand.mm v0, v9, v8
 ; CHECK-NEXT:    ret
   %head = insertelement <4 x half> poison, half %b, i32 0
@@ -1586,9 +1586,9 @@ define <4 x i1> @fcmps_uno_fv_v4f16(<4 x half> %va, half %b) nounwind strictfp {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; CHECK-NEXT:    vfmv.v.f v9, fa0
+; CHECK-NEXT:    vmfle.vv v8, v8, v8
 ; CHECK-NEXT:    vmfle.vf v9, v9, fa0
 ; CHECK-NEXT:    vmnot.m v9, v9
-; CHECK-NEXT:    vmfle.vv v8, v8, v8
 ; CHECK-NEXT:    vmorn.mm v0, v9, v8
 ; CHECK-NEXT:    ret
   %head = insertelement <4 x half> poison, half %b, i32 0
@@ -1830,8 +1830,8 @@ define <8 x i1> @fcmps_ord_vf_v8f16(<8 x half> %va, half %b) nounwind strictfp {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; CHECK-NEXT:    vfmv.v.f v9, fa0
-; CHECK-NEXT:    vmfle.vf v9, v9, fa0
 ; CHECK-NEXT:    vmfle.vv v8, v8, v8
+; CHECK-NEXT:    vmfle.vf v9, v9, fa0
 ; CHECK-NEXT:    vmand.mm v0, v8, v9
 ; CHECK-NEXT:    ret
   %head = insertelement <8 x half> poison, half %b, i32 0
@@ -1845,8 +1845,8 @@ define <8 x i1> @fcmps_ord_fv_v8f16(<8 x half> %va, half %b) nounwind strictfp {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; CHECK-NEXT:    vfmv.v.f v9, fa0
-; CHECK-NEXT:    vmfle.vf v9, v9, fa0
 ; CHECK-NEXT:    vmfle.vv v8, v8, v8
+; CHECK-NEXT:    vmfle.vf v9, v9, fa0
 ; CHECK-NEXT:    vmand.mm v0, v9, v8
 ; CHECK-NEXT:    ret
   %head = insertelement <8 x half> poison, half %b, i32 0
@@ -2117,9 +2117,9 @@ define <8 x i1> @fcmps_uno_fv_v8f16(<8 x half> %va, half %b) nounwind strictfp {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; CHECK-NEXT:    vfmv.v.f v9, fa0
+; CHECK-NEXT:    vmfle.vv v8, v8, v8
 ; CHECK-NEXT:    vmfle.vf v9, v9, fa0
 ; CHECK-NEXT:    vmnot.m v9, v9
-; CHECK-NEXT:    vmfle.vv v8, v8, v8
 ; CHECK-NEXT:    vmorn.mm v0, v9, v8
 ; CHECK-NEXT:    ret
   %head = insertelement <8 x half> poison, half %b, i32 0
@@ -3465,8 +3465,8 @@ define <1 x i1> @fcmps_ord_vf_v1f32(<1 x float> %va, float %b) nounwind strictfp
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
 ; CHECK-NEXT:    vfmv.s.f v9, fa0
-; CHECK-NEXT:    vmfle.vf v9, v9, fa0
 ; CHECK-NEXT:    vmfle.vv v8, v8, v8
+; CHECK-NEXT:    vmfle.vf v9, v9, fa0
 ; CHECK-NEXT:    vmand.mm v0, v8, v9
 ; CHECK-NEXT:    ret
   %head = insertelement <1 x float> poison, float %b, i32 0
@@ -3480,8 +3480,8 @@ define <1 x i1> @fcmps_ord_fv_v1f32(<1 x float> %va, float %b) nounwind strictfp
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
 ; CHECK-NEXT:    vfmv.s.f v9, fa0
-; CHECK-NEXT:    vmfle.vf v9, v9, fa0
 ; CHECK-NEXT:    vmfle.vv v8, v8, v8
+; CHECK-NEXT:    vmfle.vf v9, v9, fa0
 ; CHECK-NEXT:    vmand.mm v0, v9, v8
 ; CHECK-NEXT:    ret
   %head = insertelement <1 x float> poison, float %b, i32 0
@@ -3752,9 +3752,9 @@ define <1 x i1> @fcmps_uno_fv_v1f32(<1 x float> %va, float %b) nounwind strictfp
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
 ; CHECK-NEXT:    vfmv.s.f v9, fa0
+; CHECK-NEXT:    vmfle.vv v8, v8, v8
 ; CHECK-NEXT:    vmfle.vf v9, v9, fa0
 ; CHECK-NEXT:    vmnot.m v9, v9
-; CHECK-NEXT:    vmfle.vv v8, v8, v8
 ; CHECK-NEXT:    vmorn.mm v0, v9, v8
 ; CHECK-NEXT:    ret
   %head = insertelement <1 x float> poison, float %b, i32 0
@@ -3996,8 +3996,8 @@ define <2 x i1> @fcmps_ord_vf_v2f32(<2 x float> %va, float %b) nounwind strictfp
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; CHECK-NEXT:    vfmv.v.f v9, fa0
-; CHECK-NEXT:    vmfle.vf v9, v9, fa0
 ; CHECK-NEXT:    vmfle.vv v8, v8, v8
+; CHECK-NEXT:    vmfle.vf v9, v9, fa0
 ; CHECK-NEXT:    vmand.mm v0, v8, v9
 ; CHECK-NEXT:    ret
   %head = insertelement <2 x float> poison, float %b, i32 0
@@ -4011,8 +4011,8 @@ define <2 x i1> @fcmps_ord_fv_v2f32(<2 x float> %va, float %b) nounwind strictfp
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; CHECK-NEXT:    vfmv.v.f v9, fa0
-; CHECK-NEXT:    vmfle.vf v9, v9, fa0
 ; CHECK-NEXT:    vmfle.vv v8, v8, v8
+; CHECK-NEXT:    vmfle.vf v9, v9, fa0
 ; CHECK-NEXT:    vmand.mm v0, v9, v8
 ; CHECK-NEXT:    ret
   %head = insertelement <2 x float> poison, float %b, i32 0
@@ -4283,9 +4283,9 @@ define <2 x i1> @fcmps_uno_fv_v2f32(<2 x float> %va, float %b) nounwind strictfp
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; CHECK-NEXT:    vfmv.v.f v9, fa0
+; CHECK-NEXT:    vmfle.vv v8, v8, v8
 ; CHECK-NEXT:    vmfle.vf v9, v9, fa0
 ; CHECK-NEXT:    vmnot.m v9, v9
-; CHECK-NEXT:    vmfle.vv v8, v8, v8
 ; CHECK-NEXT:    vmorn.mm v0, v9, v8
 ; CHECK-NEXT:    ret
   %head = insertelement <2 x float> poison, float %b, i32 0
@@ -4527,8 +4527,8 @@ define <4 x i1> @fcmps_ord_vf_v4f32(<4 x float> %va, float %b) nounwind strictfp
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:    vfmv.v.f v9, fa0
-; CHECK-NEXT:    vmfle.vf v9, v9, fa0
 ; CHECK-NEXT:    vmfle.vv v8, v8, v8
+; CHECK-NEXT:    vmfle.vf v9, v9, fa0
 ; CHECK-NEXT:    vmand.mm v0, v8, v9
 ; CHECK-NEXT:    ret
   %head = insertelement <4 x float> poison, float %b, i32 0
@@ -4542,8 +4542,8 @@ define <4 x i1> @fcmps_ord_fv_v4f32(<4 x float> %va, float %b) nounwind strictfp
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:    vfmv.v.f v9, fa0
-; CHECK-NEXT:    vmfle.vf v9, v9, fa0
 ; CHECK-NEXT:    vmfle.vv v8, v8, v8
+; CHECK-NEXT:    vmfle.vf v9, v9, fa0
 ; CHECK-NEXT:    vmand.mm v0, v9, v8
 ; CHECK-NEXT:    ret
   %head = insertelement <4 x float> poison, float %b, i32 0
@@ -4814,9 +4814,9 @@ define <4 x i1> @fcmps_uno_fv_v4f32(<4 x float> %va, float %b) nounwind strictfp
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:    vfmv.v.f v9, fa0
+; CHECK-NEXT:    vmfle.vv v8, v8, v8
 ; CHECK-NEXT:    vmfle.vf v9, v9, fa0
 ; CHECK-NEXT:    vmnot.m v9, v9
-; CHECK-NEXT:    vmfle.vv v8, v8, v8
 ; CHECK-NEXT:    vmorn.mm v0, v9, v8
 ; CHECK-NEXT:    ret
   %head = insertelement <4 x float> poison, float %b, i32 0
@@ -6120,8 +6120,8 @@ define <1 x i1> @fcmps_ord_vf_v1f64(<1 x double> %va, double %b) nounwind strict
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
 ; CHECK-NEXT:    vfmv.s.f v9, fa0
-; CHECK-NEXT:    vmfle.vf v9, v9, fa0
 ; CHECK-NEXT:    vmfle.vv v8, v8, v8
+; CHECK-NEXT:    vmfle.vf v9, v9, fa0
 ; CHECK-NEXT:    vmand.mm v0, v8, v9
 ; CHECK-NEXT:    ret
   %head = insertelement <1 x double> poison, double %b, i32 0
@@ -6135,8 +6135,8 @@ define <1 x i1> @fcmps_ord_fv_v1f64(<1 x double> %va, double %b) nounwind strict
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
 ; CHECK-NEXT:    vfmv.s.f v9, fa0
-; CHECK-NEXT:    vmfle.vf v9, v9, fa0
 ; CHECK-NEXT:    vmfle.vv v8, v8, v8
+; CHECK-NEXT:    vmfle.vf v9, v9, fa0
 ; CHECK-NEXT:    vmand.mm v0, v9, v8
 ; CHECK-NEXT:    ret
   %head = insertelement <1 x double> poison, double %b, i32 0
@@ -6407,9 +6407,9 @@ define <1 x i1> @fcmps_uno_fv_v1f64(<1 x double> %va, double %b) nounwind strict
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
 ; CHECK-NEXT:    vfmv.s.f v9, fa0
+; CHECK-NEXT:    vmfle.vv v8, v8, v8
 ; CHECK-NEXT:    vmfle.vf v9, v9, fa0
 ; CHECK-NEXT:    vmnot.m v9, v9
-; CHECK-NEXT:    vmfle.vv v8, v8, v8
 ; CHECK-NEXT:    vmorn.mm v0, v9, v8
 ; CHECK-NEXT:    ret
   %head = insertelement <1 x double> poison, double %b, i32 0
@@ -6651,8 +6651,8 @@ define <2 x i1> @fcmps_ord_vf_v2f64(<2 x double> %va, double %b) nounwind strict
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; CHECK-NEXT:    vfmv.v.f v9, fa0
-; CHECK-NEXT:    vmfle.vf v9, v9, fa0
 ; CHECK-NEXT:    vmfle.vv v8, v8, v8
+; CHECK-NEXT:    vmfle.vf v9, v9, fa0
 ; CHECK-NEXT:    vmand.mm v0, v8, v9
 ; CHECK-NEXT:    ret
   %head = insertelement <2 x double> poison, double %b, i32 0
@@ -6666,8 +6666,8 @@ define <2 x i1> @fcmps_ord_fv_v2f64(<2 x double> %va, double %b) nounwind strict
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; CHECK-NEXT:    vfmv.v.f v9, fa0
-; CHECK-NEXT:    vmfle.vf v9, v9, fa0
 ; CHECK-NEXT:    vmfle.vv v8, v8, v8
+; CHECK-NEXT:    vmfle.vf v9, v9, fa0
 ; CHECK-NEXT:    vmand.mm v0, v9, v8
 ; CHECK-NEXT:    ret
   %head = insertelement <2 x double> poison, double %b, i32 0
@@ -6938,9 +6938,9 @@ define <2 x i1> @fcmps_uno_fv_v2f64(<2 x double> %va, double %b) nounwind strict
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; CHECK-NEXT:    vfmv.v.f v9, fa0
+; CHECK-NEXT:    vmfle.vv v8, v8, v8
 ; CHECK-NEXT:    vmfle.vf v9, v9, fa0
 ; CHECK-NEXT:    vmnot.m v9, v9
-; CHECK-NEXT:    vmfle.vv v8, v8, v8
 ; CHECK-NEXT:    vmorn.mm v0, v9, v8
 ; CHECK-NEXT:    ret
   %head = insertelement <2 x double> poison, double %b, i32 0

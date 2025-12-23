@@ -8,9 +8,9 @@ define <vscale x 2 x i32> @vwadd_tu(<vscale x 2 x i8> %arg, <vscale x 2 x i32> %
 ; CHECK-NEXT:    srli a0, a0, 32
 ; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, ta, ma
 ; CHECK-NEXT:    vsext.vf2 v10, v8
-; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, tu, ma
-; CHECK-NEXT:    vwadd.wv v8, v8, v10
+; CHECK-NEXT:    vwadd.wv v9, v9, v10
+; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
 bb:
   %tmp = call <vscale x 2 x i32> @llvm.vp.sext.nxv2i32.nxv2i8(<vscale x 2 x i8> %arg, <vscale x 2 x i1> splat (i1 true), i32 %arg2)
@@ -26,9 +26,9 @@ define <vscale x 2 x i32> @vwaddu_tu(<vscale x 2 x i8> %arg, <vscale x 2 x i32> 
 ; CHECK-NEXT:    srli a0, a0, 32
 ; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, ta, ma
 ; CHECK-NEXT:    vzext.vf2 v10, v8
-; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, tu, ma
-; CHECK-NEXT:    vwaddu.wv v8, v8, v10
+; CHECK-NEXT:    vwaddu.wv v9, v9, v10
+; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
 bb:
   %tmp = call <vscale x 2 x i32> @llvm.vp.zext.nxv2i32.nxv2i8(<vscale x 2 x i8> %arg, <vscale x 2 x i1> splat (i1 true), i32 %arg2)

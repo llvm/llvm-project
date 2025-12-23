@@ -1064,13 +1064,13 @@ define <4 x i64> @reverse_v4i64_2(<2 x i64> %a, < 2 x i64> %b) {
 ; CHECK-LABEL: reverse_v4i64_2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; CHECK-NEXT:    vslidedown.vi v10, v9, 1
-; CHECK-NEXT:    vslidedown.vi v12, v8, 1
-; CHECK-NEXT:    vslideup.vi v10, v9, 1
-; CHECK-NEXT:    vslideup.vi v12, v8, 1
+; CHECK-NEXT:    vmv1r.v v10, v8
+; CHECK-NEXT:    vslidedown.vi v8, v9, 1
+; CHECK-NEXT:    vslidedown.vi v12, v10, 1
+; CHECK-NEXT:    vslideup.vi v8, v9, 1
+; CHECK-NEXT:    vslideup.vi v12, v10, 1
 ; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; CHECK-NEXT:    vslideup.vi v10, v12, 2
-; CHECK-NEXT:    vmv.v.v v8, v10
+; CHECK-NEXT:    vslideup.vi v8, v12, 2
 ; CHECK-NEXT:    ret
   %res = shufflevector <2 x i64> %a, <2 x i64> %b, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
   ret <4 x i64> %res
@@ -1252,13 +1252,13 @@ define <4 x double> @reverse_v4f64_2(<2 x double> %a, < 2 x double> %b) {
 ; CHECK-LABEL: reverse_v4f64_2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; CHECK-NEXT:    vslidedown.vi v10, v9, 1
-; CHECK-NEXT:    vslidedown.vi v12, v8, 1
-; CHECK-NEXT:    vslideup.vi v10, v9, 1
-; CHECK-NEXT:    vslideup.vi v12, v8, 1
+; CHECK-NEXT:    vmv1r.v v10, v8
+; CHECK-NEXT:    vslidedown.vi v8, v9, 1
+; CHECK-NEXT:    vslidedown.vi v12, v10, 1
+; CHECK-NEXT:    vslideup.vi v8, v9, 1
+; CHECK-NEXT:    vslideup.vi v12, v10, 1
 ; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; CHECK-NEXT:    vslideup.vi v10, v12, 2
-; CHECK-NEXT:    vmv.v.v v8, v10
+; CHECK-NEXT:    vslideup.vi v8, v12, 2
 ; CHECK-NEXT:    ret
   %res = shufflevector <2 x double> %a, <2 x double> %b, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
   ret <4 x double> %res

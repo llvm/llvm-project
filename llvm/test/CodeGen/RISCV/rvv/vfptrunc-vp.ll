@@ -128,11 +128,11 @@ define <vscale x 32 x float> @vfptrunc_nxv32f32_nxv32f64(<vscale x 32 x double> 
 ; CHECK-NEXT:    add a1, sp, a1
 ; CHECK-NEXT:    addi a1, a1, 16
 ; CHECK-NEXT:    vs8r.v v8, (a1) # vscale x 64-byte Folded Spill
-; CHECK-NEXT:    vl8re64.v v16, (a0)
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    slli a3, a1, 3
-; CHECK-NEXT:    add a0, a0, a3
-; CHECK-NEXT:    vl8re64.v v8, (a0)
+; CHECK-NEXT:    add a3, a0, a3
+; CHECK-NEXT:    vl8re64.v v8, (a3)
+; CHECK-NEXT:    vl8re64.v v16, (a0)
 ; CHECK-NEXT:    srli a3, a1, 2
 ; CHECK-NEXT:    slli a0, a1, 1
 ; CHECK-NEXT:    sub a4, a2, a0
@@ -162,10 +162,10 @@ define <vscale x 32 x float> @vfptrunc_nxv32f32_nxv32f64(<vscale x 32 x double> 
 ; CHECK-NEXT:    mv a2, a0
 ; CHECK-NEXT:  .LBB8_4:
 ; CHECK-NEXT:    sub a0, a2, a1
+; CHECK-NEXT:    vmv1r.v v0, v6
 ; CHECK-NEXT:    sltu a3, a2, a0
 ; CHECK-NEXT:    addi a3, a3, -1
 ; CHECK-NEXT:    and a0, a3, a0
-; CHECK-NEXT:    vmv1r.v v0, v6
 ; CHECK-NEXT:    addi a3, sp, 16
 ; CHECK-NEXT:    vl8r.v v16, (a3) # vscale x 64-byte Folded Reload
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m4, ta, ma

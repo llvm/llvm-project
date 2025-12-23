@@ -271,11 +271,10 @@ define <8 x half> @vfadd_vf_v8f16(<8 x half> %va, half %b, <8 x i1> %m, i32 zero
 ; ZVFHMIN-LABEL: vfadd_vf_v8f16:
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    fmv.x.h a1, fa0
-; ZVFHMIN-NEXT:    vsetvli zero, a0, e16, m1, ta, ma
-; ZVFHMIN-NEXT:    vfwcvt.f.f.v v10, v8, v0.t
 ; ZVFHMIN-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; ZVFHMIN-NEXT:    vmv.v.x v12, a1
 ; ZVFHMIN-NEXT:    vsetvli zero, a0, e16, m1, ta, ma
+; ZVFHMIN-NEXT:    vfwcvt.f.f.v v10, v8, v0.t
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v8, v12, v0.t
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
 ; ZVFHMIN-NEXT:    vfadd.vv v10, v10, v8, v0.t

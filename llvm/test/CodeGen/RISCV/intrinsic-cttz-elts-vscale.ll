@@ -7,18 +7,18 @@
 define i32 @ctz_nxv4i32(<vscale x 4 x i32> %a) #0 {
 ; RV32-LABEL: ctz_nxv4i32:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
-; RV32-NEXT:    vid.v v10
 ; RV32-NEXT:    csrr a0, vlenb
 ; RV32-NEXT:    srli a0, a0, 1
-; RV32-NEXT:    vmv.v.x v11, a0
+; RV32-NEXT:    vsetvli a1, zero, e16, m1, ta, ma
+; RV32-NEXT:    vmv.v.x v10, a0
+; RV32-NEXT:    vid.v v11
 ; RV32-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
 ; RV32-NEXT:    vmsne.vi v0, v8, 0
 ; RV32-NEXT:    li a1, -1
 ; RV32-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
-; RV32-NEXT:    vmadd.vx v10, a1, v11
+; RV32-NEXT:    vmadd.vx v11, a1, v10
 ; RV32-NEXT:    vmv.v.i v8, 0
-; RV32-NEXT:    vmerge.vvm v8, v8, v10, v0
+; RV32-NEXT:    vmerge.vvm v8, v8, v11, v0
 ; RV32-NEXT:    vredmaxu.vs v8, v8, v8
 ; RV32-NEXT:    vmv.x.s a1, v8
 ; RV32-NEXT:    sub a0, a0, a1
@@ -28,18 +28,18 @@ define i32 @ctz_nxv4i32(<vscale x 4 x i32> %a) #0 {
 ;
 ; RV64-LABEL: ctz_nxv4i32:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
-; RV64-NEXT:    vid.v v10
 ; RV64-NEXT:    csrr a0, vlenb
 ; RV64-NEXT:    srli a0, a0, 1
-; RV64-NEXT:    vmv.v.x v11, a0
+; RV64-NEXT:    vsetvli a1, zero, e16, m1, ta, ma
+; RV64-NEXT:    vmv.v.x v10, a0
+; RV64-NEXT:    vid.v v11
 ; RV64-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
 ; RV64-NEXT:    vmsne.vi v0, v8, 0
 ; RV64-NEXT:    li a1, -1
 ; RV64-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
-; RV64-NEXT:    vmadd.vx v10, a1, v11
+; RV64-NEXT:    vmadd.vx v11, a1, v10
 ; RV64-NEXT:    vmv.v.i v8, 0
-; RV64-NEXT:    vmerge.vvm v8, v8, v10, v0
+; RV64-NEXT:    vmerge.vvm v8, v8, v11, v0
 ; RV64-NEXT:    vredmaxu.vs v8, v8, v8
 ; RV64-NEXT:    vmv.x.s a1, v8
 ; RV64-NEXT:    sub a0, a0, a1

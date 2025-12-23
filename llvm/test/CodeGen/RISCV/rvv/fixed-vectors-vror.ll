@@ -1084,9 +1084,9 @@ define <32 x i16> @vror_vi_rotl_v32i16(<32 x i16> %a) {
 define <1 x i32> @vror_vv_v1i32(<1 x i32> %a, <1 x i32> %b) {
 ; CHECK-LABEL: vror_vv_v1i32:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a0, 31
 ; CHECK-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
 ; CHECK-NEXT:    vrsub.vi v10, v9, 0
-; CHECK-NEXT:    li a0, 31
 ; CHECK-NEXT:    vand.vx v9, v9, a0
 ; CHECK-NEXT:    vand.vx v10, v10, a0
 ; CHECK-NEXT:    vsrl.vv v9, v8, v9
@@ -1167,9 +1167,9 @@ define <1 x i32> @vror_vi_rotl_v1i32(<1 x i32> %a) {
 define <2 x i32> @vror_vv_v2i32(<2 x i32> %a, <2 x i32> %b) {
 ; CHECK-LABEL: vror_vv_v2i32:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a0, 31
 ; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; CHECK-NEXT:    vrsub.vi v10, v9, 0
-; CHECK-NEXT:    li a0, 31
 ; CHECK-NEXT:    vand.vx v9, v9, a0
 ; CHECK-NEXT:    vand.vx v10, v10, a0
 ; CHECK-NEXT:    vsrl.vv v9, v8, v9
@@ -1250,9 +1250,9 @@ define <2 x i32> @vror_vi_rotl_v2i32(<2 x i32> %a) {
 define <4 x i32> @vror_vv_v4i32(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: vror_vv_v4i32:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a0, 31
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:    vrsub.vi v10, v9, 0
-; CHECK-NEXT:    li a0, 31
 ; CHECK-NEXT:    vand.vx v9, v9, a0
 ; CHECK-NEXT:    vand.vx v10, v10, a0
 ; CHECK-NEXT:    vsrl.vv v9, v8, v9
@@ -1499,9 +1499,9 @@ define <16 x i32> @vror_vi_rotl_v16i32(<16 x i32> %a) {
 define <1 x i64> @vror_vv_v1i64(<1 x i64> %a, <1 x i64> %b) {
 ; CHECK-LABEL: vror_vv_v1i64:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a0, 63
 ; CHECK-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
 ; CHECK-NEXT:    vrsub.vi v10, v9, 0
-; CHECK-NEXT:    li a0, 63
 ; CHECK-NEXT:    vand.vx v9, v9, a0
 ; CHECK-NEXT:    vand.vx v10, v10, a0
 ; CHECK-NEXT:    vsrl.vv v9, v8, v9
@@ -1612,9 +1612,9 @@ define <1 x i64> @vror_vi_rotl_v1i64(<1 x i64> %a) {
 define <2 x i64> @vror_vv_v2i64(<2 x i64> %a, <2 x i64> %b) {
 ; CHECK-LABEL: vror_vv_v2i64:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a0, 63
 ; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; CHECK-NEXT:    vrsub.vi v10, v9, 0
-; CHECK-NEXT:    li a0, 63
 ; CHECK-NEXT:    vand.vx v9, v9, a0
 ; CHECK-NEXT:    vand.vx v10, v10, a0
 ; CHECK-NEXT:    vsrl.vv v9, v8, v9

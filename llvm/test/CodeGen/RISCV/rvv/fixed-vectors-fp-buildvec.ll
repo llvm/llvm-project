@@ -1682,8 +1682,8 @@ define <8 x float> @buildvec_v8f32_zvl256(float %e0, float %e1, float %e2, float
 ; CHECK-NEXT:    vfslide1down.vf v9, v9, fa1
 ; CHECK-NEXT:    vfslide1down.vf v8, v8, fa6
 ; CHECK-NEXT:    vfslide1down.vf v9, v9, fa2
-; CHECK-NEXT:    vfslide1down.vf v8, v8, fa7
 ; CHECK-NEXT:    vmv.v.i v0, 15
+; CHECK-NEXT:    vfslide1down.vf v8, v8, fa7
 ; CHECK-NEXT:    vfslide1down.vf v9, v9, fa3
 ; CHECK-NEXT:    vslidedown.vi v8, v9, 4, v0.t
 ; CHECK-NEXT:    ret
@@ -1733,8 +1733,8 @@ define <8 x double> @buildvec_v8f64_zvl512(double %e0, double %e1, double %e2, d
 ; CHECK-NEXT:    vfslide1down.vf v9, v9, fa1
 ; CHECK-NEXT:    vfslide1down.vf v8, v8, fa6
 ; CHECK-NEXT:    vfslide1down.vf v9, v9, fa2
-; CHECK-NEXT:    vfslide1down.vf v8, v8, fa7
 ; CHECK-NEXT:    vmv.v.i v0, 15
+; CHECK-NEXT:    vfslide1down.vf v8, v8, fa7
 ; CHECK-NEXT:    vfslide1down.vf v9, v9, fa3
 ; CHECK-NEXT:    vslidedown.vi v8, v9, 4, v0.t
 ; CHECK-NEXT:    ret

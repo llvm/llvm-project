@@ -192,11 +192,11 @@ define void @cttz_v4i32(ptr %x, ptr %y) nounwind {
 ;
 ; RVF-LABEL: cttz_v4i32:
 ; RVF:       # %bb.0:
+; RVF-NEXT:    fsrmi a1, 1
 ; RVF-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; RVF-NEXT:    vle32.v v8, (a0)
 ; RVF-NEXT:    vrsub.vi v9, v8, 0
 ; RVF-NEXT:    vand.vv v9, v8, v9
-; RVF-NEXT:    fsrmi a1, 1
 ; RVF-NEXT:    vfcvt.f.xu.v v9, v9
 ; RVF-NEXT:    vsrl.vi v9, v9, 23
 ; RVF-NEXT:    vmseq.vi v0, v8, 0
@@ -210,12 +210,12 @@ define void @cttz_v4i32(ptr %x, ptr %y) nounwind {
 ;
 ; RVD-LABEL: cttz_v4i32:
 ; RVD:       # %bb.0:
+; RVD-NEXT:    li a1, 52
 ; RVD-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; RVD-NEXT:    vle32.v v10, (a0)
 ; RVD-NEXT:    vrsub.vi v8, v10, 0
 ; RVD-NEXT:    vand.vv v11, v10, v8
 ; RVD-NEXT:    vfwcvt.f.xu.v v8, v11
-; RVD-NEXT:    li a1, 52
 ; RVD-NEXT:    vnsrl.wx v11, v8, a1
 ; RVD-NEXT:    vmseq.vi v0, v10, 0
 ; RVD-NEXT:    li a1, 1023
@@ -324,11 +324,11 @@ define void @cttz_v2i64(ptr %x, ptr %y) nounwind {
 ;
 ; RVF-LABEL: cttz_v2i64:
 ; RVF:       # %bb.0:
+; RVF-NEXT:    fsrmi a1, 1
 ; RVF-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; RVF-NEXT:    vle64.v v8, (a0)
 ; RVF-NEXT:    vrsub.vi v9, v8, 0
 ; RVF-NEXT:    vand.vv v9, v8, v9
-; RVF-NEXT:    fsrmi a1, 1
 ; RVF-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
 ; RVF-NEXT:    vfncvt.f.xu.w v10, v9
 ; RVF-NEXT:    vsrl.vi v9, v10, 23
@@ -571,10 +571,10 @@ define void @cttz_v8i32(ptr %x, ptr %y) nounwind {
 ; RVF-NEXT:    vrsub.vi v10, v8, 0
 ; RVF-NEXT:    vand.vv v10, v8, v10
 ; RVF-NEXT:    vfcvt.f.xu.v v10, v10
-; RVF-NEXT:    vsrl.vi v10, v10, 23
 ; RVF-NEXT:    vmseq.vi v0, v8, 0
+; RVF-NEXT:    vsrl.vi v8, v10, 23
 ; RVF-NEXT:    li a2, 127
-; RVF-NEXT:    vsub.vx v8, v10, a2
+; RVF-NEXT:    vsub.vx v8, v8, a2
 ; RVF-NEXT:    li a2, 32
 ; RVF-NEXT:    vmerge.vxm v8, v8, a2, v0
 ; RVF-NEXT:    fsrm a1
@@ -704,11 +704,11 @@ define void @cttz_v4i64(ptr %x, ptr %y) nounwind {
 ; RVF-NEXT:    vand.vv v10, v8, v10
 ; RVF-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
 ; RVF-NEXT:    vfncvt.f.xu.w v12, v10
-; RVF-NEXT:    vsrl.vi v10, v12, 23
 ; RVF-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
 ; RVF-NEXT:    vmseq.vi v0, v8, 0
-; RVF-NEXT:    li a2, 127
 ; RVF-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
+; RVF-NEXT:    vsrl.vi v10, v12, 23
+; RVF-NEXT:    li a2, 127
 ; RVF-NEXT:    vwsubu.vx v8, v10, a2
 ; RVF-NEXT:    li a2, 64
 ; RVF-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
@@ -719,17 +719,17 @@ define void @cttz_v4i64(ptr %x, ptr %y) nounwind {
 ;
 ; RVD-LABEL: cttz_v4i64:
 ; RVD:       # %bb.0:
+; RVD-NEXT:    fsrmi a1, 1
 ; RVD-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; RVD-NEXT:    vle64.v v8, (a0)
 ; RVD-NEXT:    vrsub.vi v10, v8, 0
 ; RVD-NEXT:    vand.vv v10, v8, v10
-; RVD-NEXT:    fsrmi a1, 1
 ; RVD-NEXT:    vfcvt.f.xu.v v10, v10
-; RVD-NEXT:    li a2, 52
-; RVD-NEXT:    vsrl.vx v10, v10, a2
 ; RVD-NEXT:    vmseq.vi v0, v8, 0
+; RVD-NEXT:    li a2, 52
+; RVD-NEXT:    vsrl.vx v8, v10, a2
 ; RVD-NEXT:    li a2, 1023
-; RVD-NEXT:    vsub.vx v8, v10, a2
+; RVD-NEXT:    vsub.vx v8, v8, a2
 ; RVD-NEXT:    li a2, 64
 ; RVD-NEXT:    vmerge.vxm v8, v8, a2, v0
 ; RVD-NEXT:    fsrm a1

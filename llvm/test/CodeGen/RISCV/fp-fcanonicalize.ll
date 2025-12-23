@@ -2902,10 +2902,10 @@ define double @fcanonicalize_softfloat(double, double) unnamed_addr #0 {
 ;
 ; CHECK-FP16-RV64-LABEL: fcanonicalize_softfloat:
 ; CHECK-FP16-RV64:       # %bb.0: # %start
-; CHECK-FP16-RV64-NEXT:    flt.d a0, fa0, fa1
-; CHECK-FP16-RV64-NEXT:    feq.d a1, fa0, fa0
-; CHECK-FP16-RV64-NEXT:    xori a1, a1, 1
-; CHECK-FP16-RV64-NEXT:    or a0, a1, a0
+; CHECK-FP16-RV64-NEXT:    feq.d a0, fa0, fa0
+; CHECK-FP16-RV64-NEXT:    flt.d a1, fa0, fa1
+; CHECK-FP16-RV64-NEXT:    xori a0, a0, 1
+; CHECK-FP16-RV64-NEXT:    or a0, a0, a1
 ; CHECK-FP16-RV64-NEXT:    bnez a0, .LBB15_2
 ; CHECK-FP16-RV64-NEXT:  # %bb.1: # %start
 ; CHECK-FP16-RV64-NEXT:    fmv.d fa1, fa0
@@ -2915,10 +2915,10 @@ define double @fcanonicalize_softfloat(double, double) unnamed_addr #0 {
 ;
 ; CHECK-NOFP16-RV64-LABEL: fcanonicalize_softfloat:
 ; CHECK-NOFP16-RV64:       # %bb.0: # %start
-; CHECK-NOFP16-RV64-NEXT:    flt.d a0, fa0, fa1
-; CHECK-NOFP16-RV64-NEXT:    feq.d a1, fa0, fa0
-; CHECK-NOFP16-RV64-NEXT:    xori a1, a1, 1
-; CHECK-NOFP16-RV64-NEXT:    or a0, a1, a0
+; CHECK-NOFP16-RV64-NEXT:    feq.d a0, fa0, fa0
+; CHECK-NOFP16-RV64-NEXT:    flt.d a1, fa0, fa1
+; CHECK-NOFP16-RV64-NEXT:    xori a0, a0, 1
+; CHECK-NOFP16-RV64-NEXT:    or a0, a0, a1
 ; CHECK-NOFP16-RV64-NEXT:    bnez a0, .LBB15_2
 ; CHECK-NOFP16-RV64-NEXT:  # %bb.1: # %start
 ; CHECK-NOFP16-RV64-NEXT:    fmv.d fa1, fa0
@@ -2983,10 +2983,10 @@ define double @fcanonicalize_softfloat(double, double) unnamed_addr #0 {
 ;
 ; CHECK-FP16-RV32-LABEL: fcanonicalize_softfloat:
 ; CHECK-FP16-RV32:       # %bb.0: # %start
-; CHECK-FP16-RV32-NEXT:    flt.d a0, fa0, fa1
-; CHECK-FP16-RV32-NEXT:    feq.d a1, fa0, fa0
-; CHECK-FP16-RV32-NEXT:    xori a1, a1, 1
-; CHECK-FP16-RV32-NEXT:    or a0, a1, a0
+; CHECK-FP16-RV32-NEXT:    feq.d a0, fa0, fa0
+; CHECK-FP16-RV32-NEXT:    flt.d a1, fa0, fa1
+; CHECK-FP16-RV32-NEXT:    xori a0, a0, 1
+; CHECK-FP16-RV32-NEXT:    or a0, a0, a1
 ; CHECK-FP16-RV32-NEXT:    bnez a0, .LBB15_2
 ; CHECK-FP16-RV32-NEXT:  # %bb.1: # %start
 ; CHECK-FP16-RV32-NEXT:    fmv.d fa1, fa0
@@ -2996,10 +2996,10 @@ define double @fcanonicalize_softfloat(double, double) unnamed_addr #0 {
 ;
 ; CHECK-NOFP16-RV32-LABEL: fcanonicalize_softfloat:
 ; CHECK-NOFP16-RV32:       # %bb.0: # %start
-; CHECK-NOFP16-RV32-NEXT:    flt.d a0, fa0, fa1
-; CHECK-NOFP16-RV32-NEXT:    feq.d a1, fa0, fa0
-; CHECK-NOFP16-RV32-NEXT:    xori a1, a1, 1
-; CHECK-NOFP16-RV32-NEXT:    or a0, a1, a0
+; CHECK-NOFP16-RV32-NEXT:    feq.d a0, fa0, fa0
+; CHECK-NOFP16-RV32-NEXT:    flt.d a1, fa0, fa1
+; CHECK-NOFP16-RV32-NEXT:    xori a0, a0, 1
+; CHECK-NOFP16-RV32-NEXT:    or a0, a0, a1
 ; CHECK-NOFP16-RV32-NEXT:    bnez a0, .LBB15_2
 ; CHECK-NOFP16-RV32-NEXT:  # %bb.1: # %start
 ; CHECK-NOFP16-RV32-NEXT:    fmv.d fa1, fa0

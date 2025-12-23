@@ -79,22 +79,22 @@ define <4 x i64> @interleave_v2i64(<2 x i64> %x, <2 x i64> %y) {
 ; V128-NEXT:    vslideup.vi v12, v10, 1
 ; V128-NEXT:    vslideup.vi v12, v10, 2
 ; V128-NEXT:    vmv2r.v v10, v8
-; V128-NEXT:    vslideup.vi v10, v8, 1
 ; V128-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
 ; V128-NEXT:    vmv.v.i v0, 10
 ; V128-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
+; V128-NEXT:    vslideup.vi v10, v8, 1
 ; V128-NEXT:    vmerge.vvm v8, v10, v12, v0
 ; V128-NEXT:    ret
 ;
 ; V512-LABEL: interleave_v2i64:
 ; V512:       # %bb.0:
 ; V512-NEXT:    vsetivli zero, 4, e64, m1, ta, ma
-; V512-NEXT:    vslideup.vi v10, v9, 1
-; V512-NEXT:    vslideup.vi v10, v9, 2
-; V512-NEXT:    vmv1r.v v9, v8
 ; V512-NEXT:    vmv.v.i v0, 10
-; V512-NEXT:    vslideup.vi v9, v8, 1
-; V512-NEXT:    vmerge.vvm v8, v9, v10, v0
+; V512-NEXT:    vslideup.vi v10, v9, 1
+; V512-NEXT:    vmv1r.v v11, v8
+; V512-NEXT:    vslideup.vi v10, v9, 2
+; V512-NEXT:    vslideup.vi v11, v8, 1
+; V512-NEXT:    vmerge.vvm v8, v11, v10, v0
 ; V512-NEXT:    ret
 ;
 ; ZIP-LABEL: interleave_v2i64:
@@ -553,13 +553,14 @@ define <64 x i32> @interleave_v32i32(<32 x i32> %x, <32 x i32> %y) {
 ; V128-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 8 * vlenb
 ; V128-NEXT:    addi a0, sp, 16
 ; V128-NEXT:    vs8r.v v8, (a0) # vscale x 64-byte Folded Spill
+; V128-NEXT:    li a0, 32
 ; V128-NEXT:    vsetivli zero, 16, e32, m8, ta, ma
 ; V128-NEXT:    vslidedown.vi v24, v16, 16
 ; V128-NEXT:    vslidedown.vi v0, v8, 16
+; V128-NEXT:    vmv4r.v v8, v24
 ; V128-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
-; V128-NEXT:    vzext.vf2 v8, v24
-; V128-NEXT:    li a0, 32
-; V128-NEXT:    vsll.vx v24, v8, a0
+; V128-NEXT:    vzext.vf2 v24, v8
+; V128-NEXT:    vsll.vx v24, v24, a0
 ; V128-NEXT:    vzext.vf2 v8, v0
 ; V128-NEXT:    lui a1, 699051
 ; V128-NEXT:    addi a1, a1, -1366
@@ -599,86 +600,49 @@ define <64 x i32> @interleave_v32i32(<32 x i32> %x, <32 x i32> %y) {
 ; ZIP-NEXT:    addi sp, sp, -16
 ; ZIP-NEXT:    .cfi_def_cfa_offset 16
 ; ZIP-NEXT:    csrr a0, vlenb
-; ZIP-NEXT:    li a1, 41
-; ZIP-NEXT:    mul a0, a0, a1
-; ZIP-NEXT:    sub sp, sp, a0
-; ZIP-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x29, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 41 * vlenb
-; ZIP-NEXT:    csrr a0, vlenb
-; ZIP-NEXT:    slli a1, a0, 5
-; ZIP-NEXT:    add a0, a1, a0
-; ZIP-NEXT:    add a0, sp, a0
-; ZIP-NEXT:    addi a0, a0, 16
-; ZIP-NEXT:    vs8r.v v16, (a0) # vscale x 64-byte Folded Spill
-; ZIP-NEXT:    addi a0, sp, 16
-; ZIP-NEXT:    vs8r.v v8, (a0) # vscale x 64-byte Folded Spill
-; ZIP-NEXT:    vsetivli zero, 16, e32, m8, ta, ma
-; ZIP-NEXT:    vslidedown.vi v16, v16, 16
-; ZIP-NEXT:    csrr a0, vlenb
-; ZIP-NEXT:    li a1, 25
-; ZIP-NEXT:    mul a0, a0, a1
-; ZIP-NEXT:    add a0, sp, a0
-; ZIP-NEXT:    addi a0, a0, 16
-; ZIP-NEXT:    vs8r.v v16, (a0) # vscale x 64-byte Folded Spill
-; ZIP-NEXT:    vslidedown.vi v16, v8, 16
-; ZIP-NEXT:    lui a0, 699051
-; ZIP-NEXT:    addi a0, a0, -1366
-; ZIP-NEXT:    vmv.s.x v24, a0
-; ZIP-NEXT:    csrr a0, vlenb
 ; ZIP-NEXT:    li a1, 24
 ; ZIP-NEXT:    mul a0, a0, a1
-; ZIP-NEXT:    add a0, sp, a0
-; ZIP-NEXT:    addi a0, a0, 16
-; ZIP-NEXT:    vs1r.v v24, (a0) # vscale x 8-byte Folded Spill
-; ZIP-NEXT:    li a0, 32
-; ZIP-NEXT:    vsetvli zero, a0, e32, m8, ta, mu
-; ZIP-NEXT:    ri.vzip2a.vv v8, v16, v0
-; ZIP-NEXT:    csrr a0, vlenb
-; ZIP-NEXT:    slli a0, a0, 3
-; ZIP-NEXT:    add a0, sp, a0
-; ZIP-NEXT:    addi a0, a0, 16
-; ZIP-NEXT:    vs8r.v v8, (a0) # vscale x 64-byte Folded Spill
+; ZIP-NEXT:    sub sp, sp, a0
+; ZIP-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x18, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 24 * vlenb
 ; ZIP-NEXT:    csrr a0, vlenb
 ; ZIP-NEXT:    slli a0, a0, 4
 ; ZIP-NEXT:    add a0, sp, a0
 ; ZIP-NEXT:    addi a0, a0, 16
 ; ZIP-NEXT:    vs8r.v v16, (a0) # vscale x 64-byte Folded Spill
+; ZIP-NEXT:    vsetivli zero, 16, e32, m8, ta, ma
+; ZIP-NEXT:    vmv8r.v v24, v8
+; ZIP-NEXT:    addi a0, sp, 16
+; ZIP-NEXT:    vs8r.v v8, (a0) # vscale x 64-byte Folded Spill
+; ZIP-NEXT:    vslidedown.vi v8, v16, 16
 ; ZIP-NEXT:    csrr a0, vlenb
-; ZIP-NEXT:    li a1, 24
-; ZIP-NEXT:    mul a0, a0, a1
+; ZIP-NEXT:    slli a0, a0, 3
 ; ZIP-NEXT:    add a0, sp, a0
 ; ZIP-NEXT:    addi a0, a0, 16
-; ZIP-NEXT:    vl1r.v v0, (a0) # vscale x 8-byte Folded Reload
+; ZIP-NEXT:    vs8r.v v8, (a0) # vscale x 64-byte Folded Spill
+; ZIP-NEXT:    vslidedown.vi v8, v24, 16
+; ZIP-NEXT:    lui a0, 699051
+; ZIP-NEXT:    addi a0, a0, -1366
+; ZIP-NEXT:    vmv.s.x v0, a0
+; ZIP-NEXT:    li a0, 32
+; ZIP-NEXT:    vsetvli zero, a0, e32, m8, ta, mu
+; ZIP-NEXT:    ri.vzip2a.vv v16, v8, v24
 ; ZIP-NEXT:    csrr a0, vlenb
-; ZIP-NEXT:    li a1, 25
-; ZIP-NEXT:    mul a0, a0, a1
+; ZIP-NEXT:    slli a0, a0, 3
 ; ZIP-NEXT:    add a0, sp, a0
 ; ZIP-NEXT:    addi a0, a0, 16
-; ZIP-NEXT:    vl8r.v v16, (a0) # vscale x 64-byte Folded Reload
+; ZIP-NEXT:    vl8r.v v8, (a0) # vscale x 64-byte Folded Reload
+; ZIP-NEXT:    ri.vzip2a.vv v16, v24, v8, v0.t
 ; ZIP-NEXT:    csrr a0, vlenb
 ; ZIP-NEXT:    slli a0, a0, 4
 ; ZIP-NEXT:    add a0, sp, a0
 ; ZIP-NEXT:    addi a0, a0, 16
 ; ZIP-NEXT:    vl8r.v v24, (a0) # vscale x 64-byte Folded Reload
-; ZIP-NEXT:    csrr a0, vlenb
-; ZIP-NEXT:    slli a0, a0, 3
-; ZIP-NEXT:    add a0, sp, a0
-; ZIP-NEXT:    addi a0, a0, 16
-; ZIP-NEXT:    vl8r.v v8, (a0) # vscale x 64-byte Folded Reload
-; ZIP-NEXT:    ri.vzip2a.vv v8, v24, v16, v0.t
-; ZIP-NEXT:    vmv.v.v v24, v8
-; ZIP-NEXT:    csrr a0, vlenb
-; ZIP-NEXT:    slli a1, a0, 5
-; ZIP-NEXT:    add a0, a1, a0
-; ZIP-NEXT:    add a0, sp, a0
-; ZIP-NEXT:    addi a0, a0, 16
-; ZIP-NEXT:    vl8r.v v16, (a0) # vscale x 64-byte Folded Reload
 ; ZIP-NEXT:    addi a0, sp, 16
 ; ZIP-NEXT:    vl8r.v v8, (a0) # vscale x 64-byte Folded Reload
-; ZIP-NEXT:    ri.vzip2a.vv v0, v8, v16
+; ZIP-NEXT:    ri.vzip2a.vv v0, v8, v24
 ; ZIP-NEXT:    vmv.v.v v8, v0
-; ZIP-NEXT:    vmv.v.v v16, v24
 ; ZIP-NEXT:    csrr a0, vlenb
-; ZIP-NEXT:    li a1, 41
+; ZIP-NEXT:    li a1, 24
 ; ZIP-NEXT:    mul a0, a0, a1
 ; ZIP-NEXT:    add sp, sp, a0
 ; ZIP-NEXT:    .cfi_def_cfa sp, 16

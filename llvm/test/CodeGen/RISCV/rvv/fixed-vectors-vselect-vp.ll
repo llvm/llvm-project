@@ -132,19 +132,20 @@ define <256 x i8> @select_v256i8(<256 x i1> %a, <256 x i8> %b, <256 x i8> %c, i3
 ; CHECK-LABEL: select_v256i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
+; CHECK-NEXT:    vmv1r.v v6, v8
 ; CHECK-NEXT:    vmv1r.v v7, v0
-; CHECK-NEXT:    vmv1r.v v0, v8
 ; CHECK-NEXT:    li a2, 128
 ; CHECK-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
-; CHECK-NEXT:    vle8.v v8, (a0)
-; CHECK-NEXT:    addi a0, a1, 128
 ; CHECK-NEXT:    vle8.v v24, (a0)
+; CHECK-NEXT:    addi a0, a1, 128
+; CHECK-NEXT:    vle8.v v8, (a0)
 ; CHECK-NEXT:    addi a0, a3, -128
+; CHECK-NEXT:    vmv1r.v v0, v6
 ; CHECK-NEXT:    sltu a4, a3, a0
 ; CHECK-NEXT:    addi a4, a4, -1
 ; CHECK-NEXT:    and a0, a4, a0
 ; CHECK-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
-; CHECK-NEXT:    vmerge.vvm v24, v24, v8, v0
+; CHECK-NEXT:    vmerge.vvm v24, v8, v24, v0
 ; CHECK-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
 ; CHECK-NEXT:    vle8.v v8, (a1)
 ; CHECK-NEXT:    bltu a3, a2, .LBB11_2
@@ -169,11 +170,11 @@ define <256 x i8> @select_evl_v256i8(<256 x i1> %a, <256 x i8> %b, <256 x i8> %c
 ; CHECK-NEXT:    slli a2, a2, 3
 ; CHECK-NEXT:    sub sp, sp, a2
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 8 * vlenb
-; CHECK-NEXT:    addi a2, sp, 16
-; CHECK-NEXT:    vs8r.v v16, (a2) # vscale x 64-byte Folded Spill
 ; CHECK-NEXT:    li a2, 128
 ; CHECK-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
-; CHECK-NEXT:    vle8.v v16, (a1)
+; CHECK-NEXT:    vle8.v v24, (a1)
+; CHECK-NEXT:    addi a3, sp, 16
+; CHECK-NEXT:    vs8r.v v24, (a3) # vscale x 64-byte Folded Spill
 ; CHECK-NEXT:    addi a1, a1, 128
 ; CHECK-NEXT:    vle8.v v24, (a1)
 ; CHECK-NEXT:    vmv1r.v v9, v0
@@ -184,7 +185,7 @@ define <256 x i8> @select_evl_v256i8(<256 x i1> %a, <256 x i8> %b, <256 x i8> %c
 ; CHECK-NEXT:    addi a0, sp, 16
 ; CHECK-NEXT:    vl8r.v v8, (a0) # vscale x 64-byte Folded Reload
 ; CHECK-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
-; CHECK-NEXT:    vmerge.vvm v8, v16, v8, v0
+; CHECK-NEXT:    vmerge.vvm v8, v8, v16, v0
 ; CHECK-NEXT:    vmv8r.v v16, v24
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 3

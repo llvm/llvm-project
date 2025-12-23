@@ -429,12 +429,11 @@ define void @extract_v8i1_nxv64i1_192(<vscale x 64 x i1> %x, ptr %y) {
 define void @extract_v2i1_v64i1_0(ptr %x, ptr %y) {
 ; VLA-LABEL: extract_v2i1_v64i1_0:
 ; VLA:       # %bb.0:
-; VLA-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
-; VLA-NEXT:    vmv.v.i v8, 0
 ; VLA-NEXT:    li a2, 64
 ; VLA-NEXT:    vsetvli zero, a2, e8, m4, ta, ma
 ; VLA-NEXT:    vlm.v v0, (a0)
 ; VLA-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
+; VLA-NEXT:    vmv.v.i v8, 0
 ; VLA-NEXT:    vmerge.vim v8, v8, 1, v0
 ; VLA-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; VLA-NEXT:    vmv.v.i v9, 0

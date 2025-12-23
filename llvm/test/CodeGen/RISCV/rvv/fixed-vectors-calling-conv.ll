@@ -182,9 +182,9 @@ define <32 x i32> @ret_v32i32_call_v32i32_v32i32_i32(<32 x i32> %x, <32 x i32> %
 ; CHECK-NEXT:    .cfi_offset ra, -8
 ; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv8r.v v24, v8
-; CHECK-NEXT:    li a1, 2
 ; CHECK-NEXT:    vmv8r.v v8, v16
 ; CHECK-NEXT:    vmv8r.v v16, v24
+; CHECK-NEXT:    li a1, 2
 ; CHECK-NEXT:    call ext2
 ; CHECK-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    .cfi_restore ra
@@ -207,14 +207,14 @@ define <32 x i32> @ret_v32i32_call_v32i32_v32i32_v32i32_i32(<32 x i32> %x, <32 x
 ; CHECK-NEXT:    addi s0, sp, 256
 ; CHECK-NEXT:    .cfi_def_cfa s0, 0
 ; CHECK-NEXT:    andi sp, sp, -128
+; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
+; CHECK-NEXT:    vmv8r.v v24, v8
 ; CHECK-NEXT:    li a2, 32
 ; CHECK-NEXT:    vsetvli zero, a2, e32, m8, ta, ma
-; CHECK-NEXT:    vle32.v v0, (a0)
-; CHECK-NEXT:    vmv8r.v v24, v8
+; CHECK-NEXT:    vle32.v v8, (a0)
 ; CHECK-NEXT:    mv a3, sp
 ; CHECK-NEXT:    mv a0, sp
 ; CHECK-NEXT:    li a2, 42
-; CHECK-NEXT:    vmv.v.v v8, v0
 ; CHECK-NEXT:    vse32.v v24, (a3)
 ; CHECK-NEXT:    call ext3
 ; CHECK-NEXT:    addi sp, s0, -256
@@ -268,12 +268,12 @@ define <32 x i32> @call_split_vector_args(ptr %pa, ptr %pb) {
 ; CHECK-NEXT:    vle32.v v16, (a1)
 ; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; CHECK-NEXT:    vle32.v v8, (a0)
-; CHECK-NEXT:    mv a1, sp
-; CHECK-NEXT:    mv a0, sp
 ; CHECK-NEXT:    vmv1r.v v9, v8
 ; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    vmv1r.v v11, v8
 ; CHECK-NEXT:    vmv1r.v v12, v8
+; CHECK-NEXT:    mv a1, sp
+; CHECK-NEXT:    mv a0, sp
 ; CHECK-NEXT:    vsetvli zero, a2, e32, m8, ta, ma
 ; CHECK-NEXT:    vse32.v v16, (a1)
 ; CHECK-NEXT:    call split_vector_args
@@ -318,6 +318,7 @@ define <32 x i32> @pass_vector_arg_via_stack(<32 x i32> %x, <32 x i32> %y, <32 x
 ; CHECK-NEXT:    li a1, 32
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m8, ta, ma
 ; CHECK-NEXT:    vmv.v.i v8, 0
+; CHECK-NEXT:    vmv.v.i v16, 0
 ; CHECK-NEXT:    li t0, 8
 ; CHECK-NEXT:    li a1, 1
 ; CHECK-NEXT:    li a2, 2
@@ -326,7 +327,6 @@ define <32 x i32> @pass_vector_arg_via_stack(<32 x i32> %x, <32 x i32> %y, <32 x
 ; CHECK-NEXT:    li a5, 5
 ; CHECK-NEXT:    li a6, 6
 ; CHECK-NEXT:    li a7, 7
-; CHECK-NEXT:    vmv.v.i v16, 0
 ; CHECK-NEXT:    vse32.v v8, (sp)
 ; CHECK-NEXT:    sd t0, 128(sp)
 ; CHECK-NEXT:    call vector_arg_via_stack
@@ -370,20 +370,20 @@ define <4 x i1> @pass_vector_mask_arg_via_stack(<4 x i1> %v) {
 ; CHECK-NEXT:    vmv.v.i v8, 0
 ; CHECK-NEXT:    vse32.v v8, (sp)
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
-; CHECK-NEXT:    vmv.v.i v16, 0
-; CHECK-NEXT:    vmerge.vim v16, v16, 1, v0
+; CHECK-NEXT:    vmv.v.i v24, 0
+; CHECK-NEXT:    vmv8r.v v16, v8
+; CHECK-NEXT:    vmerge.vim v24, v24, 1, v0
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; CHECK-NEXT:    vmv.v.i v17, 0
+; CHECK-NEXT:    vmv.v.i v25, 0
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf2, tu, ma
-; CHECK-NEXT:    vmv.v.v v17, v16
+; CHECK-NEXT:    vmv.v.v v25, v24
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+; CHECK-NEXT:    vmsne.vi v24, v25, 0
 ; CHECK-NEXT:    li t0, 8
 ; CHECK-NEXT:    addi t1, sp, 136
-; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; CHECK-NEXT:    vmsne.vi v24, v17, 0
 ; CHECK-NEXT:    li a5, 5
 ; CHECK-NEXT:    li a6, 6
 ; CHECK-NEXT:    li a7, 7
-; CHECK-NEXT:    vmv8r.v v16, v8
 ; CHECK-NEXT:    vsm.v v24, (t1)
 ; CHECK-NEXT:    sd t0, 128(sp)
 ; CHECK-NEXT:    call vector_mask_arg_via_stack

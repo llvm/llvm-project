@@ -209,13 +209,13 @@ define <16 x float> @shuffle2(<4 x float> %a) vscale_range(2,2) {
 ; CHECK-LABEL: shuffle2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
-; CHECK-NEXT:    vmv.v.i v12, 0
+; CHECK-NEXT:    vmv1r.v v12, v8
+; CHECK-NEXT:    vmv.v.i v8, 0
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vslidedown.vi v9, v8, 1
+; CHECK-NEXT:    vslidedown.vi v13, v12, 1
 ; CHECK-NEXT:    vmv.v.i v0, 6
-; CHECK-NEXT:    vslideup.vi v9, v8, 2
-; CHECK-NEXT:    vmerge.vvm v13, v13, v9, v0
-; CHECK-NEXT:    vmv4r.v v8, v12
+; CHECK-NEXT:    vslideup.vi v13, v12, 2
+; CHECK-NEXT:    vmerge.vvm v9, v9, v13, v0
 ; CHECK-NEXT:    ret
   %b = extractelement <4 x float> %a, i32 2
   %c = insertelement <16 x float> <float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float poison, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00>, float %b, i32 5
@@ -290,8 +290,8 @@ define <4 x double> @shuffles_add(<4 x double> %0, <4 x double> %1) vscale_range
 ; CHECK-NEXT:    vmv1r.v v13, v10
 ; CHECK-NEXT:    vslideup.vi v13, v11, 1
 ; CHECK-NEXT:    vslidedown.vi v11, v10, 1, v0.t
-; CHECK-NEXT:    vrgather.vi v12, v9, 0
 ; CHECK-NEXT:    vmv1r.v v10, v9
+; CHECK-NEXT:    vrgather.vi v12, v9, 0
 ; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; CHECK-NEXT:    vfadd.vv v8, v12, v10
 ; CHECK-NEXT:    ret

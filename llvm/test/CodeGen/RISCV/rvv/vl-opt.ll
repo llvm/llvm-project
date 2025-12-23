@@ -119,8 +119,9 @@ define <vscale x 4 x i32> @different_imm_vl_with_tu(<vscale x 4 x i32> %passthru
 define <vscale x 4 x i32> @different_vl_as_passthru(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b, iXLen %vl1, iXLen %vl2) {
 ; CHECK-LABEL: different_vl_as_passthru:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m2, tu, ma
+; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv2r.v v12, v8
+; CHECK-NEXT:    vsetvli zero, a0, e32, m2, tu, ma
 ; CHECK-NEXT:    vadd.vv v12, v8, v10
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m2, tu, ma
 ; CHECK-NEXT:    vadd.vv v12, v8, v10
@@ -181,9 +182,9 @@ define void @optimize_ternary_use(<vscale x 4 x i16> %a, <vscale x 4 x i32> %b, 
 define void @fadd_fcmp_select_copy(<vscale x 4 x float> %v, <vscale x 4 x i1> %c, ptr %p, iXLen %vl) {
 ; CHECK-LABEL: fadd_fcmp_select_copy:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    fmv.w.x fa5, zero
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
 ; CHECK-NEXT:    vfadd.vv v8, v8, v8
-; CHECK-NEXT:    fmv.w.x fa5, zero
 ; CHECK-NEXT:    vmflt.vf v10, v8, fa5
 ; CHECK-NEXT:    vmand.mm v10, v0, v10
 ; CHECK-NEXT:    vse32.v v8, (a0)
@@ -330,15 +331,15 @@ bar:
 define <vscale x 2 x i64> @dead_vsmul() {
 ; CHECK-LABEL: dead_vsmul:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetivli zero, 0, e16, mf2, ta, ma
-; CHECK-NEXT:    vmv.v.i v10, 0
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m2, ta, ma
 ; CHECK-NEXT:    vmv.v.i v8, 0
-; CHECK-NEXT:    csrwi vxrm, 0
-; CHECK-NEXT:    vsetivli zero, 0, e16, mf2, tu, ma
-; CHECK-NEXT:    vsmul.vx v10, v10, zero
+; CHECK-NEXT:    vsetivli zero, 0, e16, mf2, ta, ma
+; CHECK-NEXT:    vmv.v.i v10, 0
 ; CHECK-NEXT:    vsetvli zero, zero, e64, m2, tu, ma
 ; CHECK-NEXT:    vmv.v.v v8, v8
+; CHECK-NEXT:    csrwi vxrm, 0
+; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, tu, ma
+; CHECK-NEXT:    vsmul.vx v10, v10, zero
 ; CHECK-NEXT:    ret
 entry:
   %0 = call <vscale x 2 x i16> @llvm.riscv.vsmul(<vscale x 2 x i16> zeroinitializer, <vscale x 2 x i16> zeroinitializer, i16 0, iXLen 0, iXLen 0)

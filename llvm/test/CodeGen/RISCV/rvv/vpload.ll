@@ -456,15 +456,15 @@ define <vscale x 16 x double> @vpload_nxv16f64(ptr %ptr, <vscale x 16 x i1> %m, 
 ; CHECK-NEXT:    vmv1r.v v8, v0
 ; CHECK-NEXT:    csrr a2, vlenb
 ; CHECK-NEXT:    srli a3, a2, 3
-; CHECK-NEXT:    sub a4, a1, a2
 ; CHECK-NEXT:    vslidedown.vx v0, v0, a3
-; CHECK-NEXT:    sltu a3, a1, a4
-; CHECK-NEXT:    addi a3, a3, -1
-; CHECK-NEXT:    and a3, a3, a4
-; CHECK-NEXT:    slli a4, a2, 3
-; CHECK-NEXT:    add a4, a0, a4
+; CHECK-NEXT:    sub a3, a1, a2
+; CHECK-NEXT:    sltu a4, a1, a3
+; CHECK-NEXT:    addi a4, a4, -1
+; CHECK-NEXT:    slli a5, a2, 3
+; CHECK-NEXT:    and a3, a4, a3
+; CHECK-NEXT:    add a5, a0, a5
 ; CHECK-NEXT:    vsetvli zero, a3, e64, m8, ta, ma
-; CHECK-NEXT:    vle64.v v16, (a4), v0.t
+; CHECK-NEXT:    vle64.v v16, (a5), v0.t
 ; CHECK-NEXT:    bltu a1, a2, .LBB44_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a1, a2

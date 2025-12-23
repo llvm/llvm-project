@@ -27,10 +27,10 @@ define i1 @foo(<vscale x 16 x i8> %x, i64 %y) {
 ; CHECK-NEXT:    vmv1r.v v0, v9
 ; CHECK-NEXT:    vmv.v.i v16, 0
 ; CHECK-NEXT:    vmerge.vim v24, v16, 1, v0
+; CHECK-NEXT:    vmv1r.v v0, v8
 ; CHECK-NEXT:    addi a2, sp, 64
 ; CHECK-NEXT:    slli a1, a1, 3
 ; CHECK-NEXT:    add a1, a2, a1
-; CHECK-NEXT:    vmv1r.v v0, v8
 ; CHECK-NEXT:    vs8r.v v24, (a1)
 ; CHECK-NEXT:    vmerge.vim v8, v16, 1, v0
 ; CHECK-NEXT:    add a0, a2, a0

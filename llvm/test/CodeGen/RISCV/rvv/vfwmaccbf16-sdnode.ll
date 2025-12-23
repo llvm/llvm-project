@@ -35,10 +35,10 @@ define <vscale x 1 x float> @vfwmaccbf16_vf_nxv1f32(<vscale x 1 x float> %a, bfl
 ; ZVFBFMIN-LABEL: vfwmaccbf16_vf_nxv1f32:
 ; ZVFBFMIN:       # %bb.0:
 ; ZVFBFMIN-NEXT:    fmv.x.w a0, fa0
+; ZVFBFMIN-NEXT:    vsetvli a1, zero, e16, mf4, ta, ma
+; ZVFBFMIN-NEXT:    vfwcvtbf16.f.f.v v10, v9
 ; ZVFBFMIN-NEXT:    slli a0, a0, 16
 ; ZVFBFMIN-NEXT:    fmv.w.x fa5, a0
-; ZVFBFMIN-NEXT:    vsetvli a0, zero, e16, mf4, ta, ma
-; ZVFBFMIN-NEXT:    vfwcvtbf16.f.f.v v10, v9
 ; ZVFBFMIN-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
 ; ZVFBFMIN-NEXT:    vfmacc.vf v8, fa5, v10
 ; ZVFBFMIN-NEXT:    ret
@@ -81,10 +81,10 @@ define <vscale x 2 x float> @vfwmaccbf16_vf_nxv2f32(<vscale x 2 x float> %a, bfl
 ; ZVFBFMIN-LABEL: vfwmaccbf16_vf_nxv2f32:
 ; ZVFBFMIN:       # %bb.0:
 ; ZVFBFMIN-NEXT:    fmv.x.w a0, fa0
+; ZVFBFMIN-NEXT:    vsetvli a1, zero, e16, mf2, ta, ma
+; ZVFBFMIN-NEXT:    vfwcvtbf16.f.f.v v10, v9
 ; ZVFBFMIN-NEXT:    slli a0, a0, 16
 ; ZVFBFMIN-NEXT:    fmv.w.x fa5, a0
-; ZVFBFMIN-NEXT:    vsetvli a0, zero, e16, mf2, ta, ma
-; ZVFBFMIN-NEXT:    vfwcvtbf16.f.f.v v10, v9
 ; ZVFBFMIN-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
 ; ZVFBFMIN-NEXT:    vfmacc.vf v8, fa5, v10
 ; ZVFBFMIN-NEXT:    ret
@@ -127,10 +127,10 @@ define <vscale x 4 x float> @vfwmaccbf16_vf_nxv4f32(<vscale x 4 x float> %a, bfl
 ; ZVFBFMIN-LABEL: vfwmaccbf16_vf_nxv4f32:
 ; ZVFBFMIN:       # %bb.0:
 ; ZVFBFMIN-NEXT:    fmv.x.w a0, fa0
+; ZVFBFMIN-NEXT:    vsetvli a1, zero, e16, m1, ta, ma
+; ZVFBFMIN-NEXT:    vfwcvtbf16.f.f.v v12, v10
 ; ZVFBFMIN-NEXT:    slli a0, a0, 16
 ; ZVFBFMIN-NEXT:    fmv.w.x fa5, a0
-; ZVFBFMIN-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
-; ZVFBFMIN-NEXT:    vfwcvtbf16.f.f.v v12, v10
 ; ZVFBFMIN-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
 ; ZVFBFMIN-NEXT:    vfmacc.vf v8, fa5, v12
 ; ZVFBFMIN-NEXT:    ret

@@ -85,8 +85,8 @@ define <vscale x 4 x i64> @test_signed_v4f32_v4i64(<vscale x 4 x float> %f) {
 ; CHECK-LABEL: test_signed_v4f32_v4i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
-; CHECK-NEXT:    vfwcvt.rtz.x.f.v v12, v8
 ; CHECK-NEXT:    vmfne.vv v0, v8, v8
+; CHECK-NEXT:    vfwcvt.rtz.x.f.v v12, v8
 ; CHECK-NEXT:    vsetvli zero, zero, e64, m4, ta, ma
 ; CHECK-NEXT:    vmerge.vim v8, v12, 0, v0
 ; CHECK-NEXT:    ret
@@ -138,10 +138,10 @@ define <vscale x 8 x i32> @test_signed_v8f64_v8i32(<vscale x 8 x double> %f) {
 define <vscale x 4 x i16> @test_signed_v4f64_v4i16(<vscale x 4 x double> %f) {
 ; CHECK-LABEL: test_signed_v4f64_v4i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
-; CHECK-NEXT:    vfncvt.rtz.x.f.w v12, v8
-; CHECK-NEXT:    vsetvli zero, zero, e64, m4, ta, ma
+; CHECK-NEXT:    vsetvli a0, zero, e64, m4, ta, ma
 ; CHECK-NEXT:    vmfne.vv v0, v8, v8
+; CHECK-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
+; CHECK-NEXT:    vfncvt.rtz.x.f.w v12, v8
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
 ; CHECK-NEXT:    vnclip.wi v8, v12, 0
 ; CHECK-NEXT:    vmerge.vim v8, v8, 0, v0
@@ -221,8 +221,8 @@ define <vscale x 8 x i32> @test_signed_v8f16_v8i32(<vscale x 8 x half> %f) {
 ; CHECK-LABEL: test_signed_v8f16_v8i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
-; CHECK-NEXT:    vfwcvt.rtz.x.f.v v12, v8
 ; CHECK-NEXT:    vmfne.vv v0, v8, v8
+; CHECK-NEXT:    vfwcvt.rtz.x.f.v v12, v8
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; CHECK-NEXT:    vmerge.vim v8, v12, 0, v0
 ; CHECK-NEXT:    ret
@@ -258,8 +258,8 @@ define <vscale x 2 x i64> @test_signed_v2f16_v2i64(<vscale x 2 x half> %f) {
 ; CHECK-LABEL: test_signed_v2f16_v2i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e16, mf2, ta, ma
-; CHECK-NEXT:    vfwcvt.f.f.v v10, v8
 ; CHECK-NEXT:    vmfne.vv v0, v8, v8
+; CHECK-NEXT:    vfwcvt.f.f.v v10, v8
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
 ; CHECK-NEXT:    vfwcvt.rtz.x.f.v v8, v10
 ; CHECK-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
@@ -273,13 +273,12 @@ define <vscale x 4 x i64> @test_signed_v4f16_v4i64(<vscale x 4 x half> %f) {
 ; CHECK-LABEL: test_signed_v4f16_v4i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
-; CHECK-NEXT:    vfwcvt.f.f.v v10, v8
-; CHECK-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; CHECK-NEXT:    vfwcvt.rtz.x.f.v v12, v10
-; CHECK-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
+; CHECK-NEXT:    vfwcvt.f.f.v v12, v8
 ; CHECK-NEXT:    vmfne.vv v0, v8, v8
+; CHECK-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
+; CHECK-NEXT:    vfwcvt.rtz.x.f.v v8, v12
 ; CHECK-NEXT:    vsetvli zero, zero, e64, m4, ta, ma
-; CHECK-NEXT:    vmerge.vim v8, v12, 0, v0
+; CHECK-NEXT:    vmerge.vim v8, v8, 0, v0
 ; CHECK-NEXT:    ret
     %x = call <vscale x 4 x i64> @llvm.fptosi.sat.nxv4f16.nxv4i64(<vscale x 4 x half> %f)
     ret <vscale x 4 x i64> %x

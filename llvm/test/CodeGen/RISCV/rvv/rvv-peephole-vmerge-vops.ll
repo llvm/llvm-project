@@ -861,8 +861,8 @@ define void @test_dag_loop() {
 ; CHECK-NEXT:    vmv.v.i v8, 0
 ; CHECK-NEXT:    vsetvli zero, zero, e8, m4, ta, ma
 ; CHECK-NEXT:    vmv.v.i v16, 0
-; CHECK-NEXT:    vmclr.m v0
 ; CHECK-NEXT:    vmv.v.i v20, 0
+; CHECK-NEXT:    vmclr.m v0
 ; CHECK-NEXT:    vsetvli zero, zero, e8, m4, tu, mu
 ; CHECK-NEXT:    vssubu.vx v20, v16, zero, v0.t
 ; CHECK-NEXT:    vsetvli zero, zero, e8, m4, ta, ma
@@ -918,12 +918,13 @@ define <vscale x 2 x i32> @vredsum(<vscale x 2 x i32> %passthru, <vscale x 2 x i
 define <vscale x 2 x float> @vfredusum(<vscale x 2 x float> %passthru, <vscale x 2 x float> %x, <vscale x 2 x float> %y, <vscale x 2 x i1> %m, i64 %vl) {
 ; CHECK-LABEL: vfredusum:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m1, tu, ma
+; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v11, v8
-; CHECK-NEXT:    fsrmi a0, 0
+; CHECK-NEXT:    fsrmi a1, 0
+; CHECK-NEXT:    vsetvli zero, a0, e32, m1, tu, ma
 ; CHECK-NEXT:    vfredusum.vs v11, v9, v10
 ; CHECK-NEXT:    vmerge.vvm v8, v8, v11, v0
-; CHECK-NEXT:    fsrm a0
+; CHECK-NEXT:    fsrm a1
 ; CHECK-NEXT:    ret
   %a = call <vscale x 2 x float> @llvm.riscv.vfredusum.nxv2f32.nxv2f32(
     <vscale x 2 x float> %passthru,

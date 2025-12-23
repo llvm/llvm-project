@@ -622,10 +622,10 @@ define <32 x double> @vfabs_vv_v32f64(<32 x double> %va, <32 x i1> %m, i32 zeroe
 ; CHECK-NEXT:    vsetvli zero, a1, e64, m8, ta, ma
 ; CHECK-NEXT:    vfabs.v v8, v8, v0.t
 ; CHECK-NEXT:    addi a1, a0, -16
+; CHECK-NEXT:    vmv1r.v v0, v24
 ; CHECK-NEXT:    sltu a0, a0, a1
 ; CHECK-NEXT:    addi a0, a0, -1
 ; CHECK-NEXT:    and a0, a0, a1
-; CHECK-NEXT:    vmv1r.v v0, v24
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
 ; CHECK-NEXT:    vfabs.v v16, v16, v0.t
 ; CHECK-NEXT:    ret

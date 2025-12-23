@@ -674,12 +674,11 @@ define <vscale x 8 x i64> @vwmulsu_vv_nxv8i64_nxv8i16(<vscale x 8 x i16> %va, <v
 define <vscale x 8 x i64> @vwmul_vx_nxv8i64_nxv8i16(<vscale x 8 x i16> %va, i16 %b) {
 ; CHECK-LABEL: vwmul_vx_nxv8i64_nxv8i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a1, zero, e32, m4, ta, ma
-; CHECK-NEXT:    vsext.vf2 v16, v8
-; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
-; CHECK-NEXT:    vmv.v.x v8, a0
+; CHECK-NEXT:    vsetvli a1, zero, e16, m2, ta, ma
+; CHECK-NEXT:    vmv.v.x v10, a0
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; CHECK-NEXT:    vsext.vf2 v20, v8
+; CHECK-NEXT:    vsext.vf2 v16, v8
+; CHECK-NEXT:    vsext.vf2 v20, v10
 ; CHECK-NEXT:    vwmul.vv v8, v16, v20
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 8 x i16> poison, i16 %b, i16 0
@@ -709,12 +708,11 @@ define <vscale x 8 x i64> @vwmulu_vx_nxv8i64_nxv8i16(<vscale x 8 x i16> %va, i16
 define <vscale x 8 x i64> @vwmulsu_vx_nxv8i64_nxv8i16(<vscale x 8 x i16> %va, i16 %b) {
 ; CHECK-LABEL: vwmulsu_vx_nxv8i64_nxv8i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a1, zero, e32, m4, ta, ma
-; CHECK-NEXT:    vsext.vf2 v16, v8
-; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
-; CHECK-NEXT:    vmv.v.x v8, a0
+; CHECK-NEXT:    vsetvli a1, zero, e16, m2, ta, ma
+; CHECK-NEXT:    vmv.v.x v10, a0
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; CHECK-NEXT:    vzext.vf2 v20, v8
+; CHECK-NEXT:    vsext.vf2 v16, v8
+; CHECK-NEXT:    vzext.vf2 v20, v10
 ; CHECK-NEXT:    vwmulsu.vv v8, v16, v20
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 8 x i16> poison, i16 %b, i16 0
@@ -1052,12 +1050,11 @@ define <vscale x 8 x i64> @vwmulsu_vv_nxv8i64_nxv8i8(<vscale x 8 x i8> %va, <vsc
 define <vscale x 8 x i64> @vwmul_vx_nxv8i64_nxv8i8(<vscale x 8 x i8> %va, i8 %b) {
 ; CHECK-LABEL: vwmul_vx_nxv8i64_nxv8i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a1, zero, e32, m4, ta, ma
-; CHECK-NEXT:    vsext.vf4 v16, v8
-; CHECK-NEXT:    vsetvli zero, zero, e8, m1, ta, ma
-; CHECK-NEXT:    vmv.v.x v8, a0
+; CHECK-NEXT:    vsetvli a1, zero, e8, m1, ta, ma
+; CHECK-NEXT:    vmv.v.x v9, a0
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; CHECK-NEXT:    vsext.vf4 v20, v8
+; CHECK-NEXT:    vsext.vf4 v16, v8
+; CHECK-NEXT:    vsext.vf4 v20, v9
 ; CHECK-NEXT:    vwmul.vv v8, v16, v20
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 8 x i8> poison, i8 %b, i8 0
@@ -1087,12 +1084,11 @@ define <vscale x 8 x i64> @vwmulu_vx_nxv8i64_nxv8i8(<vscale x 8 x i8> %va, i8 %b
 define <vscale x 8 x i64> @vwmulsu_vx_nxv8i64_nxv8i8(<vscale x 8 x i8> %va, i8 %b) {
 ; CHECK-LABEL: vwmulsu_vx_nxv8i64_nxv8i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a1, zero, e32, m4, ta, ma
-; CHECK-NEXT:    vsext.vf4 v16, v8
-; CHECK-NEXT:    vsetvli zero, zero, e8, m1, ta, ma
-; CHECK-NEXT:    vmv.v.x v8, a0
+; CHECK-NEXT:    vsetvli a1, zero, e8, m1, ta, ma
+; CHECK-NEXT:    vmv.v.x v9, a0
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; CHECK-NEXT:    vzext.vf4 v20, v8
+; CHECK-NEXT:    vsext.vf4 v16, v8
+; CHECK-NEXT:    vzext.vf4 v20, v9
 ; CHECK-NEXT:    vwmulsu.vv v8, v16, v20
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 8 x i8> poison, i8 %b, i8 0

@@ -1319,14 +1319,14 @@ define <vscale x 2 x i64> @ctlz_nxv2i64(<vscale x 2 x i64> %va) {
 ; RV64I-NEXT:    vsrl.vx v10, v8, a0
 ; RV64I-NEXT:    vor.vv v8, v8, v10
 ; RV64I-NEXT:    vnot.v v8, v8
-; RV64I-NEXT:    vsrl.vi v10, v8, 1
 ; RV64I-NEXT:    lui a0, 349525
+; RV64I-NEXT:    vsrl.vi v10, v8, 1
 ; RV64I-NEXT:    addi a0, a0, 1365
 ; RV64I-NEXT:    slli a1, a0, 32
 ; RV64I-NEXT:    add a0, a0, a1
 ; RV64I-NEXT:    vand.vx v10, v10, a0
-; RV64I-NEXT:    vsub.vv v8, v8, v10
 ; RV64I-NEXT:    lui a0, 209715
+; RV64I-NEXT:    vsub.vv v8, v8, v10
 ; RV64I-NEXT:    addi a0, a0, 819
 ; RV64I-NEXT:    slli a1, a0, 32
 ; RV64I-NEXT:    add a0, a0, a1
@@ -2912,14 +2912,14 @@ define <vscale x 2 x i64> @ctlz_zero_undef_nxv2i64(<vscale x 2 x i64> %va) {
 ; RV64I-NEXT:    vsrl.vx v10, v8, a0
 ; RV64I-NEXT:    vor.vv v8, v8, v10
 ; RV64I-NEXT:    vnot.v v8, v8
-; RV64I-NEXT:    vsrl.vi v10, v8, 1
 ; RV64I-NEXT:    lui a0, 349525
+; RV64I-NEXT:    vsrl.vi v10, v8, 1
 ; RV64I-NEXT:    addi a0, a0, 1365
 ; RV64I-NEXT:    slli a1, a0, 32
 ; RV64I-NEXT:    add a0, a0, a1
 ; RV64I-NEXT:    vand.vx v10, v10, a0
-; RV64I-NEXT:    vsub.vv v8, v8, v10
 ; RV64I-NEXT:    lui a0, 209715
+; RV64I-NEXT:    vsub.vv v8, v8, v10
 ; RV64I-NEXT:    addi a0, a0, 819
 ; RV64I-NEXT:    slli a1, a0, 32
 ; RV64I-NEXT:    add a0, a0, a1

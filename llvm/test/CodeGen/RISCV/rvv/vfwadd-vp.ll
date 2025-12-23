@@ -81,9 +81,9 @@ define <vscale x 2 x float> @vfwadd_tu(<vscale x 2 x half> %arg, <vscale x 2 x f
 ; ZVFHMIN-NEXT:    srli a0, a0, 32
 ; ZVFHMIN-NEXT:    vsetvli zero, a0, e16, mf2, ta, ma
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v10, v8
-; ZVFHMIN-NEXT:    vmv1r.v v8, v9
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m1, tu, ma
-; ZVFHMIN-NEXT:    vfadd.vv v8, v9, v10
+; ZVFHMIN-NEXT:    vfadd.vv v9, v9, v10
+; ZVFHMIN-NEXT:    vmv1r.v v8, v9
 ; ZVFHMIN-NEXT:    ret
 bb:
   %tmp = call <vscale x 2 x float> @llvm.vp.fpext.nxv2f32.nxv2f16(<vscale x 2 x half> %arg, <vscale x 2 x i1> splat (i1 true), i32 %arg2)

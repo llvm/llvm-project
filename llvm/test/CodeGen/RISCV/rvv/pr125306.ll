@@ -36,38 +36,36 @@ define <2 x i32> @main(ptr %0) {
 ; CHECK-NEXT:    vmin.vv v8, v16, v15
 ; CHECK-NEXT:    vslide1down.vx v9, v17, zero
 ; CHECK-NEXT:    vid.v v10
-; CHECK-NEXT:    vmin.vv v8, v8, v9
-; CHECK-NEXT:    vadd.vi v9, v10, -1
+; CHECK-NEXT:    vmin.vx v11, v14, a4
+; CHECK-NEXT:    vmin.vv v9, v8, v9
+; CHECK-NEXT:    vadd.vi v10, v10, -1
+; CHECK-NEXT:    vmin.vx v11, v11, a1
 ; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; CHECK-NEXT:    vse32.v v12, (a0)
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vmv.v.i v10, 0
+; CHECK-NEXT:    vmv.v.i v12, 0
+; CHECK-NEXT:    li a1, 64
+; CHECK-NEXT:    vmv1r.v v8, v11
+; CHECK-NEXT:    vse32.v v12, (a1)
 ; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; CHECK-NEXT:    vmin.vx v11, v14, a4
-; CHECK-NEXT:    li a2, 64
-; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vse32.v v10, (a2)
-; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; CHECK-NEXT:    vand.vv v8, v8, v9
+; CHECK-NEXT:    vand.vv v9, v9, v10
 ; CHECK-NEXT:    sw zero, 80(zero)
-; CHECK-NEXT:    lui a2, 1
-; CHECK-NEXT:    sh zero, -392(a2)
-; CHECK-NEXT:    vmin.vx v9, v11, a1
-; CHECK-NEXT:    sh zero, 534(a2)
-; CHECK-NEXT:    li a1, 16
-; CHECK-NEXT:    vse32.v v8, (a1)
+; CHECK-NEXT:    lui a1, 1
+; CHECK-NEXT:    sh zero, -392(a1)
 ; CHECK-NEXT:    vmv.v.i v10, 0
-; CHECK-NEXT:    sh zero, 1460(a2)
+; CHECK-NEXT:    li a2, 16
+; CHECK-NEXT:    vslideup.vi v8, v11, 1
+; CHECK-NEXT:    sh zero, 534(a1)
+; CHECK-NEXT:    vse32.v v9, (a2)
+; CHECK-NEXT:    sh zero, 1460(a1)
 ; CHECK-NEXT:    lui a1, 2
 ; CHECK-NEXT:    sh zero, -1710(a1)
-; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    li a2, 24
-; CHECK-NEXT:    vslideup.vi v8, v9, 1
 ; CHECK-NEXT:    vse32.v v10, (a2)
 ; CHECK-NEXT:    sh zero, -784(a1)
+; CHECK-NEXT:    li a2, 32
 ; CHECK-NEXT:    sh zero, 142(a1)
-; CHECK-NEXT:    li a1, 32
-; CHECK-NEXT:    vse32.v v10, (a1)
+; CHECK-NEXT:    vse32.v v10, (a2)
 ; CHECK-NEXT:    sh zero, 0(a0)
 ; CHECK-NEXT:    li a0, 40
 ; CHECK-NEXT:    vse32.v v10, (a0)

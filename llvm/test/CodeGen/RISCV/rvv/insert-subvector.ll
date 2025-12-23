@@ -432,12 +432,10 @@ define <vscale x 4 x i1> @insert_nxv4i1_nxv1i1_0(<vscale x 4 x i1> %v, <vscale x
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e8, mf2, ta, ma
 ; CHECK-NEXT:    vmv.v.i v9, 0
+; CHECK-NEXT:    vmerge.vim v9, v9, 1, v0
 ; CHECK-NEXT:    vsetvli a0, zero, e8, mf8, ta, ma
 ; CHECK-NEXT:    vmv.v.i v10, 0
-; CHECK-NEXT:    vsetvli a0, zero, e8, mf2, ta, ma
-; CHECK-NEXT:    vmerge.vim v9, v9, 1, v0
 ; CHECK-NEXT:    vmv1r.v v0, v8
-; CHECK-NEXT:    vsetvli a0, zero, e8, mf8, ta, ma
 ; CHECK-NEXT:    vmerge.vim v8, v10, 1, v0
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    srli a0, a0, 3
@@ -455,12 +453,10 @@ define <vscale x 4 x i1> @insert_nxv4i1_nxv1i1_2(<vscale x 4 x i1> %v, <vscale x
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e8, mf2, ta, ma
 ; CHECK-NEXT:    vmv.v.i v9, 0
+; CHECK-NEXT:    vmerge.vim v9, v9, 1, v0
 ; CHECK-NEXT:    vsetvli a0, zero, e8, mf8, ta, ma
 ; CHECK-NEXT:    vmv.v.i v10, 0
-; CHECK-NEXT:    vsetvli a0, zero, e8, mf2, ta, ma
-; CHECK-NEXT:    vmerge.vim v9, v9, 1, v0
 ; CHECK-NEXT:    vmv1r.v v0, v8
-; CHECK-NEXT:    vsetvli a0, zero, e8, mf8, ta, ma
 ; CHECK-NEXT:    vmerge.vim v8, v10, 1, v0
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    srli a1, a0, 3
@@ -632,10 +628,11 @@ define <vscale x 8 x i32> @insert_splat_to_splat() {
 define <vscale x 8 x i32> @insert_splat_to_splat2() {
 ; CHECK-LABEL: insert_splat_to_splat2:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
+; CHECK-NEXT:    vmv.v.i v12, 1
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
 ; CHECK-NEXT:    vmv.v.i v8, 0
-; CHECK-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
-; CHECK-NEXT:    vmv.v.i v8, 1
+; CHECK-NEXT:    vmv2r.v v8, v12
 ; CHECK-NEXT:    ret
   %v = call <vscale x 8 x i32> @llvm.vector.insert.nxv4i32.nxv8i32(<vscale x 8 x i32> splat (i32 0), <vscale x 4 x i32> splat (i32 1), i64 0)
   ret <vscale x 8 x i32> %v

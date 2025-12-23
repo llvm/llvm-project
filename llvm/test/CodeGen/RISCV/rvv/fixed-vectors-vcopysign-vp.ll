@@ -32,10 +32,10 @@ define <2 x bfloat> @vfsgnj_vv_v2bf16_unmasked(<2 x bfloat> %va, <2 x bfloat> %v
 ; ZVFH-LABEL: vfsgnj_vv_v2bf16_unmasked:
 ; ZVFH:       # %bb.0:
 ; ZVFH-NEXT:    lui a1, 8
+; ZVFH-NEXT:    addi a2, a1, -1
 ; ZVFH-NEXT:    vsetvli zero, a0, e16, mf4, ta, ma
 ; ZVFH-NEXT:    vand.vx v9, v9, a1
-; ZVFH-NEXT:    addi a1, a1, -1
-; ZVFH-NEXT:    vand.vx v8, v8, a1
+; ZVFH-NEXT:    vand.vx v8, v8, a2
 ; ZVFH-NEXT:    vor.vv v8, v8, v9
 ; ZVFH-NEXT:    ret
 ;
@@ -72,10 +72,10 @@ define <4 x bfloat> @vfsgnj_vv_v4bf16_unmasked(<4 x bfloat> %va, <4 x bfloat> %v
 ; ZVFH-LABEL: vfsgnj_vv_v4bf16_unmasked:
 ; ZVFH:       # %bb.0:
 ; ZVFH-NEXT:    lui a1, 8
+; ZVFH-NEXT:    addi a2, a1, -1
 ; ZVFH-NEXT:    vsetvli zero, a0, e16, mf2, ta, ma
 ; ZVFH-NEXT:    vand.vx v9, v9, a1
-; ZVFH-NEXT:    addi a1, a1, -1
-; ZVFH-NEXT:    vand.vx v8, v8, a1
+; ZVFH-NEXT:    vand.vx v8, v8, a2
 ; ZVFH-NEXT:    vor.vv v8, v8, v9
 ; ZVFH-NEXT:    ret
 ;
@@ -112,10 +112,10 @@ define <8 x bfloat> @vfsgnj_vv_v8bf16_unmasked(<8 x bfloat> %va, <8 x bfloat> %v
 ; ZVFH-LABEL: vfsgnj_vv_v8bf16_unmasked:
 ; ZVFH:       # %bb.0:
 ; ZVFH-NEXT:    lui a1, 8
+; ZVFH-NEXT:    addi a2, a1, -1
 ; ZVFH-NEXT:    vsetvli zero, a0, e16, m1, ta, ma
 ; ZVFH-NEXT:    vand.vx v9, v9, a1
-; ZVFH-NEXT:    addi a1, a1, -1
-; ZVFH-NEXT:    vand.vx v8, v8, a1
+; ZVFH-NEXT:    vand.vx v8, v8, a2
 ; ZVFH-NEXT:    vor.vv v8, v8, v9
 ; ZVFH-NEXT:    ret
 ;
@@ -152,10 +152,10 @@ define <16 x bfloat> @vfsgnj_vv_v16bf16_unmasked(<16 x bfloat> %va, <16 x bfloat
 ; ZVFH-LABEL: vfsgnj_vv_v16bf16_unmasked:
 ; ZVFH:       # %bb.0:
 ; ZVFH-NEXT:    lui a1, 8
+; ZVFH-NEXT:    addi a2, a1, -1
 ; ZVFH-NEXT:    vsetvli zero, a0, e16, m2, ta, ma
 ; ZVFH-NEXT:    vand.vx v10, v10, a1
-; ZVFH-NEXT:    addi a1, a1, -1
-; ZVFH-NEXT:    vand.vx v8, v8, a1
+; ZVFH-NEXT:    vand.vx v8, v8, a2
 ; ZVFH-NEXT:    vor.vv v8, v8, v10
 ; ZVFH-NEXT:    ret
 ;
@@ -454,10 +454,10 @@ define <32 x double> @vfsgnj_vv_v32f64(<32 x double> %va, <32 x double> %vb, <32
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
 ; CHECK-NEXT:    vfsgnj.vv v8, v8, v24, v0.t
 ; CHECK-NEXT:    addi a0, a2, -16
+; CHECK-NEXT:    vmv1r.v v0, v7
 ; CHECK-NEXT:    sltu a1, a2, a0
 ; CHECK-NEXT:    addi a1, a1, -1
 ; CHECK-NEXT:    and a0, a1, a0
-; CHECK-NEXT:    vmv1r.v v0, v7
 ; CHECK-NEXT:    addi a1, sp, 16
 ; CHECK-NEXT:    vl8r.v v24, (a1) # vscale x 64-byte Folded Reload
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, ma

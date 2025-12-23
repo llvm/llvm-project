@@ -14,8 +14,8 @@ define <vscale x 1 x i1> @splice_nxv1i1_offset_negone(<vscale x 1 x i1> %a, <vsc
 ; NOVLDEP-LABEL: splice_nxv1i1_offset_negone:
 ; NOVLDEP:       # %bb.0:
 ; NOVLDEP-NEXT:    vsetvli a0, zero, e8, mf8, ta, ma
-; NOVLDEP-NEXT:    vmv.v.i v10, 0
 ; NOVLDEP-NEXT:    vmv1r.v v9, v0
+; NOVLDEP-NEXT:    vmv.v.i v10, 0
 ; NOVLDEP-NEXT:    vmv1r.v v0, v8
 ; NOVLDEP-NEXT:    vmerge.vim v8, v10, 1, v0
 ; NOVLDEP-NEXT:    vmv1r.v v0, v9
@@ -32,8 +32,8 @@ define <vscale x 1 x i1> @splice_nxv1i1_offset_negone(<vscale x 1 x i1> %a, <vsc
 ; VLDEP-LABEL: splice_nxv1i1_offset_negone:
 ; VLDEP:       # %bb.0:
 ; VLDEP-NEXT:    vsetvli a0, zero, e8, mf8, ta, ma
-; VLDEP-NEXT:    vmv.v.i v10, 0
 ; VLDEP-NEXT:    vmv1r.v v9, v0
+; VLDEP-NEXT:    vmv.v.i v10, 0
 ; VLDEP-NEXT:    vmv1r.v v0, v8
 ; VLDEP-NEXT:    vmerge.vim v8, v10, 1, v0
 ; VLDEP-NEXT:    vmv1r.v v0, v9
@@ -56,8 +56,8 @@ define <vscale x 1 x i1> @splice_nxv1i1_offset_max(<vscale x 1 x i1> %a, <vscale
 ; NOVLDEP-LABEL: splice_nxv1i1_offset_max:
 ; NOVLDEP:       # %bb.0:
 ; NOVLDEP-NEXT:    vsetvli a0, zero, e8, mf8, ta, ma
-; NOVLDEP-NEXT:    vmv.v.i v10, 0
 ; NOVLDEP-NEXT:    vmv1r.v v9, v0
+; NOVLDEP-NEXT:    vmv.v.i v10, 0
 ; NOVLDEP-NEXT:    vmv1r.v v0, v8
 ; NOVLDEP-NEXT:    vmerge.vim v8, v10, 1, v0
 ; NOVLDEP-NEXT:    vmv1r.v v0, v9
@@ -74,8 +74,8 @@ define <vscale x 1 x i1> @splice_nxv1i1_offset_max(<vscale x 1 x i1> %a, <vscale
 ; VLDEP-LABEL: splice_nxv1i1_offset_max:
 ; VLDEP:       # %bb.0:
 ; VLDEP-NEXT:    vsetvli a0, zero, e8, mf8, ta, ma
-; VLDEP-NEXT:    vmv.v.i v10, 0
 ; VLDEP-NEXT:    vmv1r.v v9, v0
+; VLDEP-NEXT:    vmv.v.i v10, 0
 ; VLDEP-NEXT:    vmv1r.v v0, v8
 ; VLDEP-NEXT:    vmerge.vim v8, v10, 1, v0
 ; VLDEP-NEXT:    vmv1r.v v0, v9
@@ -98,8 +98,8 @@ define <vscale x 2 x i1> @splice_nxv2i1_offset_negone(<vscale x 2 x i1> %a, <vsc
 ; NOVLDEP-LABEL: splice_nxv2i1_offset_negone:
 ; NOVLDEP:       # %bb.0:
 ; NOVLDEP-NEXT:    vsetvli a0, zero, e8, mf4, ta, ma
-; NOVLDEP-NEXT:    vmv.v.i v10, 0
 ; NOVLDEP-NEXT:    vmv1r.v v9, v0
+; NOVLDEP-NEXT:    vmv.v.i v10, 0
 ; NOVLDEP-NEXT:    vmv1r.v v0, v8
 ; NOVLDEP-NEXT:    vmerge.vim v8, v10, 1, v0
 ; NOVLDEP-NEXT:    vmv1r.v v0, v9
@@ -116,8 +116,8 @@ define <vscale x 2 x i1> @splice_nxv2i1_offset_negone(<vscale x 2 x i1> %a, <vsc
 ; VLDEP-LABEL: splice_nxv2i1_offset_negone:
 ; VLDEP:       # %bb.0:
 ; VLDEP-NEXT:    vsetvli a0, zero, e8, mf4, ta, ma
-; VLDEP-NEXT:    vmv.v.i v10, 0
 ; VLDEP-NEXT:    vmv1r.v v9, v0
+; VLDEP-NEXT:    vmv.v.i v10, 0
 ; VLDEP-NEXT:    vmv1r.v v0, v8
 ; VLDEP-NEXT:    vmerge.vim v8, v10, 1, v0
 ; VLDEP-NEXT:    vmv1r.v v0, v9
@@ -140,8 +140,8 @@ define <vscale x 2 x i1> @splice_nxv2i1_offset_max(<vscale x 2 x i1> %a, <vscale
 ; NOVLDEP-LABEL: splice_nxv2i1_offset_max:
 ; NOVLDEP:       # %bb.0:
 ; NOVLDEP-NEXT:    vsetvli a0, zero, e8, mf4, ta, ma
-; NOVLDEP-NEXT:    vmv.v.i v10, 0
 ; NOVLDEP-NEXT:    vmv1r.v v9, v0
+; NOVLDEP-NEXT:    vmv.v.i v10, 0
 ; NOVLDEP-NEXT:    vmv1r.v v0, v8
 ; NOVLDEP-NEXT:    vmerge.vim v8, v10, 1, v0
 ; NOVLDEP-NEXT:    vmv1r.v v0, v9
@@ -158,8 +158,8 @@ define <vscale x 2 x i1> @splice_nxv2i1_offset_max(<vscale x 2 x i1> %a, <vscale
 ; VLDEP-LABEL: splice_nxv2i1_offset_max:
 ; VLDEP:       # %bb.0:
 ; VLDEP-NEXT:    vsetvli a0, zero, e8, mf4, ta, ma
-; VLDEP-NEXT:    vmv.v.i v10, 0
 ; VLDEP-NEXT:    vmv1r.v v9, v0
+; VLDEP-NEXT:    vmv.v.i v10, 0
 ; VLDEP-NEXT:    vmv1r.v v0, v8
 ; VLDEP-NEXT:    vmerge.vim v8, v10, 1, v0
 ; VLDEP-NEXT:    vmv1r.v v0, v9
@@ -182,8 +182,8 @@ define <vscale x 4 x i1> @splice_nxv4i1_offset_negone(<vscale x 4 x i1> %a, <vsc
 ; NOVLDEP-LABEL: splice_nxv4i1_offset_negone:
 ; NOVLDEP:       # %bb.0:
 ; NOVLDEP-NEXT:    vsetvli a0, zero, e8, mf2, ta, ma
-; NOVLDEP-NEXT:    vmv.v.i v10, 0
 ; NOVLDEP-NEXT:    vmv1r.v v9, v0
+; NOVLDEP-NEXT:    vmv.v.i v10, 0
 ; NOVLDEP-NEXT:    vmv1r.v v0, v8
 ; NOVLDEP-NEXT:    vmerge.vim v8, v10, 1, v0
 ; NOVLDEP-NEXT:    vmv1r.v v0, v9
@@ -200,8 +200,8 @@ define <vscale x 4 x i1> @splice_nxv4i1_offset_negone(<vscale x 4 x i1> %a, <vsc
 ; VLDEP-LABEL: splice_nxv4i1_offset_negone:
 ; VLDEP:       # %bb.0:
 ; VLDEP-NEXT:    vsetvli a0, zero, e8, mf2, ta, ma
-; VLDEP-NEXT:    vmv.v.i v10, 0
 ; VLDEP-NEXT:    vmv1r.v v9, v0
+; VLDEP-NEXT:    vmv.v.i v10, 0
 ; VLDEP-NEXT:    vmv1r.v v0, v8
 ; VLDEP-NEXT:    vmerge.vim v8, v10, 1, v0
 ; VLDEP-NEXT:    vmv1r.v v0, v9
@@ -224,8 +224,8 @@ define <vscale x 4 x i1> @splice_nxv4i1_offset_max(<vscale x 4 x i1> %a, <vscale
 ; NOVLDEP-LABEL: splice_nxv4i1_offset_max:
 ; NOVLDEP:       # %bb.0:
 ; NOVLDEP-NEXT:    vsetvli a0, zero, e8, mf2, ta, ma
-; NOVLDEP-NEXT:    vmv.v.i v10, 0
 ; NOVLDEP-NEXT:    vmv1r.v v9, v0
+; NOVLDEP-NEXT:    vmv.v.i v10, 0
 ; NOVLDEP-NEXT:    vmv1r.v v0, v8
 ; NOVLDEP-NEXT:    vmerge.vim v8, v10, 1, v0
 ; NOVLDEP-NEXT:    vmv1r.v v0, v9
@@ -242,8 +242,8 @@ define <vscale x 4 x i1> @splice_nxv4i1_offset_max(<vscale x 4 x i1> %a, <vscale
 ; VLDEP-LABEL: splice_nxv4i1_offset_max:
 ; VLDEP:       # %bb.0:
 ; VLDEP-NEXT:    vsetvli a0, zero, e8, mf2, ta, ma
-; VLDEP-NEXT:    vmv.v.i v10, 0
 ; VLDEP-NEXT:    vmv1r.v v9, v0
+; VLDEP-NEXT:    vmv.v.i v10, 0
 ; VLDEP-NEXT:    vmv1r.v v0, v8
 ; VLDEP-NEXT:    vmerge.vim v8, v10, 1, v0
 ; VLDEP-NEXT:    vmv1r.v v0, v9
@@ -266,8 +266,8 @@ define <vscale x 8 x i1> @splice_nxv8i1_offset_negone(<vscale x 8 x i1> %a, <vsc
 ; NOVLDEP-LABEL: splice_nxv8i1_offset_negone:
 ; NOVLDEP:       # %bb.0:
 ; NOVLDEP-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
-; NOVLDEP-NEXT:    vmv.v.i v10, 0
 ; NOVLDEP-NEXT:    vmv1r.v v9, v0
+; NOVLDEP-NEXT:    vmv.v.i v10, 0
 ; NOVLDEP-NEXT:    vmv1r.v v0, v8
 ; NOVLDEP-NEXT:    vmerge.vim v8, v10, 1, v0
 ; NOVLDEP-NEXT:    vmv1r.v v0, v9
@@ -283,8 +283,8 @@ define <vscale x 8 x i1> @splice_nxv8i1_offset_negone(<vscale x 8 x i1> %a, <vsc
 ; VLDEP-LABEL: splice_nxv8i1_offset_negone:
 ; VLDEP:       # %bb.0:
 ; VLDEP-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
-; VLDEP-NEXT:    vmv.v.i v10, 0
 ; VLDEP-NEXT:    vmv1r.v v9, v0
+; VLDEP-NEXT:    vmv.v.i v10, 0
 ; VLDEP-NEXT:    vmv1r.v v0, v8
 ; VLDEP-NEXT:    vmerge.vim v8, v10, 1, v0
 ; VLDEP-NEXT:    vmv1r.v v0, v9
@@ -306,8 +306,8 @@ define <vscale x 8 x i1> @splice_nxv8i1_offset_max(<vscale x 8 x i1> %a, <vscale
 ; NOVLDEP-LABEL: splice_nxv8i1_offset_max:
 ; NOVLDEP:       # %bb.0:
 ; NOVLDEP-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
-; NOVLDEP-NEXT:    vmv.v.i v10, 0
 ; NOVLDEP-NEXT:    vmv1r.v v9, v0
+; NOVLDEP-NEXT:    vmv.v.i v10, 0
 ; NOVLDEP-NEXT:    vmv1r.v v0, v8
 ; NOVLDEP-NEXT:    vmerge.vim v8, v10, 1, v0
 ; NOVLDEP-NEXT:    vmv1r.v v0, v9
@@ -323,8 +323,8 @@ define <vscale x 8 x i1> @splice_nxv8i1_offset_max(<vscale x 8 x i1> %a, <vscale
 ; VLDEP-LABEL: splice_nxv8i1_offset_max:
 ; VLDEP:       # %bb.0:
 ; VLDEP-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
-; VLDEP-NEXT:    vmv.v.i v10, 0
 ; VLDEP-NEXT:    vmv1r.v v9, v0
+; VLDEP-NEXT:    vmv.v.i v10, 0
 ; VLDEP-NEXT:    vmv1r.v v0, v8
 ; VLDEP-NEXT:    vmerge.vim v8, v10, 1, v0
 ; VLDEP-NEXT:    vmv1r.v v0, v9
@@ -346,8 +346,8 @@ define <vscale x 16 x i1> @splice_nxv16i1_offset_negone(<vscale x 16 x i1> %a, <
 ; NOVLDEP-LABEL: splice_nxv16i1_offset_negone:
 ; NOVLDEP:       # %bb.0:
 ; NOVLDEP-NEXT:    vsetvli a0, zero, e8, m2, ta, ma
-; NOVLDEP-NEXT:    vmv.v.i v10, 0
 ; NOVLDEP-NEXT:    vmv1r.v v9, v0
+; NOVLDEP-NEXT:    vmv.v.i v10, 0
 ; NOVLDEP-NEXT:    vmv1r.v v0, v8
 ; NOVLDEP-NEXT:    vmerge.vim v12, v10, 1, v0
 ; NOVLDEP-NEXT:    vmv1r.v v0, v9
@@ -364,8 +364,8 @@ define <vscale x 16 x i1> @splice_nxv16i1_offset_negone(<vscale x 16 x i1> %a, <
 ; VLDEP-LABEL: splice_nxv16i1_offset_negone:
 ; VLDEP:       # %bb.0:
 ; VLDEP-NEXT:    vsetvli a0, zero, e8, m2, ta, ma
-; VLDEP-NEXT:    vmv.v.i v10, 0
 ; VLDEP-NEXT:    vmv1r.v v9, v0
+; VLDEP-NEXT:    vmv.v.i v10, 0
 ; VLDEP-NEXT:    vmv1r.v v0, v8
 ; VLDEP-NEXT:    vmerge.vim v12, v10, 1, v0
 ; VLDEP-NEXT:    vmv1r.v v0, v9
@@ -388,8 +388,8 @@ define <vscale x 16 x i1> @splice_nxv16i1_offset_max(<vscale x 16 x i1> %a, <vsc
 ; NOVLDEP-LABEL: splice_nxv16i1_offset_max:
 ; NOVLDEP:       # %bb.0:
 ; NOVLDEP-NEXT:    vsetvli a0, zero, e8, m2, ta, ma
-; NOVLDEP-NEXT:    vmv.v.i v10, 0
 ; NOVLDEP-NEXT:    vmv1r.v v9, v0
+; NOVLDEP-NEXT:    vmv.v.i v10, 0
 ; NOVLDEP-NEXT:    vmv1r.v v0, v8
 ; NOVLDEP-NEXT:    vmerge.vim v12, v10, 1, v0
 ; NOVLDEP-NEXT:    vmv1r.v v0, v9
@@ -406,8 +406,8 @@ define <vscale x 16 x i1> @splice_nxv16i1_offset_max(<vscale x 16 x i1> %a, <vsc
 ; VLDEP-LABEL: splice_nxv16i1_offset_max:
 ; VLDEP:       # %bb.0:
 ; VLDEP-NEXT:    vsetvli a0, zero, e8, m2, ta, ma
-; VLDEP-NEXT:    vmv.v.i v10, 0
 ; VLDEP-NEXT:    vmv1r.v v9, v0
+; VLDEP-NEXT:    vmv.v.i v10, 0
 ; VLDEP-NEXT:    vmv1r.v v0, v8
 ; VLDEP-NEXT:    vmerge.vim v12, v10, 1, v0
 ; VLDEP-NEXT:    vmv1r.v v0, v9
@@ -967,14 +967,14 @@ define <vscale x 16 x i8> @splice_nxv16i8_offset_min(<vscale x 16 x i8> %a, <vsc
 ;
 ; VLDEP-LABEL: splice_nxv16i8_offset_min:
 ; VLDEP:       # %bb.0:
-; VLDEP-NEXT:    li a0, 32
-; VLDEP-NEXT:    csrr a1, vlenb
-; VLDEP-NEXT:    slli a1, a1, 1
-; VLDEP-NEXT:    addi a1, a1, -32
-; VLDEP-NEXT:    vsetvli zero, a0, e8, m2, ta, ma
-; VLDEP-NEXT:    vslidedown.vx v8, v8, a1
-; VLDEP-NEXT:    vsetvli a1, zero, e8, m2, ta, ma
-; VLDEP-NEXT:    vslideup.vx v8, v10, a0
+; VLDEP-NEXT:    csrr a0, vlenb
+; VLDEP-NEXT:    slli a0, a0, 1
+; VLDEP-NEXT:    addi a0, a0, -32
+; VLDEP-NEXT:    li a1, 32
+; VLDEP-NEXT:    vsetvli zero, a1, e8, m2, ta, ma
+; VLDEP-NEXT:    vslidedown.vx v8, v8, a0
+; VLDEP-NEXT:    vsetvli a0, zero, e8, m2, ta, ma
+; VLDEP-NEXT:    vslideup.vx v8, v10, a1
 ; VLDEP-NEXT:    ret
   %res = call <vscale x 16 x i8> @llvm.vector.splice.nxv16i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b, i32 -32)
   ret <vscale x 16 x i8> %res
@@ -1052,14 +1052,14 @@ define <vscale x 32 x i8> @splice_nxv32i8_offset_min(<vscale x 32 x i8> %a, <vsc
 ;
 ; VLDEP-LABEL: splice_nxv32i8_offset_min:
 ; VLDEP:       # %bb.0:
-; VLDEP-NEXT:    li a0, 64
-; VLDEP-NEXT:    csrr a1, vlenb
-; VLDEP-NEXT:    slli a1, a1, 2
-; VLDEP-NEXT:    addi a1, a1, -64
-; VLDEP-NEXT:    vsetvli zero, a0, e8, m4, ta, ma
-; VLDEP-NEXT:    vslidedown.vx v8, v8, a1
-; VLDEP-NEXT:    vsetvli a1, zero, e8, m4, ta, ma
-; VLDEP-NEXT:    vslideup.vx v8, v12, a0
+; VLDEP-NEXT:    csrr a0, vlenb
+; VLDEP-NEXT:    slli a0, a0, 2
+; VLDEP-NEXT:    addi a0, a0, -64
+; VLDEP-NEXT:    li a1, 64
+; VLDEP-NEXT:    vsetvli zero, a1, e8, m4, ta, ma
+; VLDEP-NEXT:    vslidedown.vx v8, v8, a0
+; VLDEP-NEXT:    vsetvli a0, zero, e8, m4, ta, ma
+; VLDEP-NEXT:    vslideup.vx v8, v12, a1
 ; VLDEP-NEXT:    ret
   %res = call <vscale x 32 x i8> @llvm.vector.splice.nxv32i8(<vscale x 32 x i8> %a, <vscale x 32 x i8> %b, i32 -64)
   ret <vscale x 32 x i8> %res
@@ -1079,14 +1079,14 @@ define <vscale x 32 x i8> @splice_nxv32i8_offset_max(<vscale x 32 x i8> %a, <vsc
 ;
 ; VLDEP-LABEL: splice_nxv32i8_offset_max:
 ; VLDEP:       # %bb.0:
-; VLDEP-NEXT:    li a0, 63
-; VLDEP-NEXT:    csrr a1, vlenb
-; VLDEP-NEXT:    slli a1, a1, 2
-; VLDEP-NEXT:    addi a1, a1, -63
-; VLDEP-NEXT:    vsetvli zero, a1, e8, m4, ta, ma
-; VLDEP-NEXT:    vslidedown.vx v8, v8, a0
-; VLDEP-NEXT:    vsetvli a0, zero, e8, m4, ta, ma
-; VLDEP-NEXT:    vslideup.vx v8, v12, a1
+; VLDEP-NEXT:    csrr a0, vlenb
+; VLDEP-NEXT:    slli a0, a0, 2
+; VLDEP-NEXT:    addi a0, a0, -63
+; VLDEP-NEXT:    li a1, 63
+; VLDEP-NEXT:    vsetvli zero, a0, e8, m4, ta, ma
+; VLDEP-NEXT:    vslidedown.vx v8, v8, a1
+; VLDEP-NEXT:    vsetvli a1, zero, e8, m4, ta, ma
+; VLDEP-NEXT:    vslideup.vx v8, v12, a0
 ; VLDEP-NEXT:    ret
   %res = call <vscale x 32 x i8> @llvm.vector.splice.nxv32i8(<vscale x 32 x i8> %a, <vscale x 32 x i8> %b, i32 63)
   ret <vscale x 32 x i8> %res
@@ -1139,14 +1139,14 @@ define <vscale x 64 x i8> @splice_nxv64i8_offset_min(<vscale x 64 x i8> %a, <vsc
 ;
 ; VLDEP-LABEL: splice_nxv64i8_offset_min:
 ; VLDEP:       # %bb.0:
-; VLDEP-NEXT:    li a0, 128
-; VLDEP-NEXT:    csrr a1, vlenb
-; VLDEP-NEXT:    slli a1, a1, 3
-; VLDEP-NEXT:    addi a1, a1, -128
-; VLDEP-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
-; VLDEP-NEXT:    vslidedown.vx v8, v8, a1
-; VLDEP-NEXT:    vsetvli a1, zero, e8, m8, ta, ma
-; VLDEP-NEXT:    vslideup.vx v8, v16, a0
+; VLDEP-NEXT:    csrr a0, vlenb
+; VLDEP-NEXT:    slli a0, a0, 3
+; VLDEP-NEXT:    addi a0, a0, -128
+; VLDEP-NEXT:    li a1, 128
+; VLDEP-NEXT:    vsetvli zero, a1, e8, m8, ta, ma
+; VLDEP-NEXT:    vslidedown.vx v8, v8, a0
+; VLDEP-NEXT:    vsetvli a0, zero, e8, m8, ta, ma
+; VLDEP-NEXT:    vslideup.vx v8, v16, a1
 ; VLDEP-NEXT:    ret
   %res = call <vscale x 64 x i8> @llvm.vector.splice.nxv64i8(<vscale x 64 x i8> %a, <vscale x 64 x i8> %b, i32 -128)
   ret <vscale x 64 x i8> %res
@@ -1166,14 +1166,14 @@ define <vscale x 64 x i8> @splice_nxv64i8_offset_max(<vscale x 64 x i8> %a, <vsc
 ;
 ; VLDEP-LABEL: splice_nxv64i8_offset_max:
 ; VLDEP:       # %bb.0:
-; VLDEP-NEXT:    li a0, 127
-; VLDEP-NEXT:    csrr a1, vlenb
-; VLDEP-NEXT:    slli a1, a1, 3
-; VLDEP-NEXT:    addi a1, a1, -127
-; VLDEP-NEXT:    vsetvli zero, a1, e8, m8, ta, ma
-; VLDEP-NEXT:    vslidedown.vx v8, v8, a0
-; VLDEP-NEXT:    vsetvli a0, zero, e8, m8, ta, ma
-; VLDEP-NEXT:    vslideup.vx v8, v16, a1
+; VLDEP-NEXT:    csrr a0, vlenb
+; VLDEP-NEXT:    slli a0, a0, 3
+; VLDEP-NEXT:    addi a0, a0, -127
+; VLDEP-NEXT:    li a1, 127
+; VLDEP-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
+; VLDEP-NEXT:    vslidedown.vx v8, v8, a1
+; VLDEP-NEXT:    vsetvli a1, zero, e8, m8, ta, ma
+; VLDEP-NEXT:    vslideup.vx v8, v16, a0
 ; VLDEP-NEXT:    ret
   %res = call <vscale x 64 x i8> @llvm.vector.splice.nxv64i8(<vscale x 64 x i8> %a, <vscale x 64 x i8> %b, i32 127)
   ret <vscale x 64 x i8> %res
@@ -1552,14 +1552,14 @@ define <vscale x 16 x i16> @splice_nxv16i16_offset_min(<vscale x 16 x i16> %a, <
 ;
 ; VLDEP-LABEL: splice_nxv16i16_offset_min:
 ; VLDEP:       # %bb.0:
-; VLDEP-NEXT:    li a0, 32
-; VLDEP-NEXT:    csrr a1, vlenb
-; VLDEP-NEXT:    slli a1, a1, 1
-; VLDEP-NEXT:    addi a1, a1, -32
-; VLDEP-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
-; VLDEP-NEXT:    vslidedown.vx v8, v8, a1
-; VLDEP-NEXT:    vsetvli a1, zero, e16, m4, ta, ma
-; VLDEP-NEXT:    vslideup.vx v8, v12, a0
+; VLDEP-NEXT:    csrr a0, vlenb
+; VLDEP-NEXT:    slli a0, a0, 1
+; VLDEP-NEXT:    addi a0, a0, -32
+; VLDEP-NEXT:    li a1, 32
+; VLDEP-NEXT:    vsetvli zero, a1, e16, m4, ta, ma
+; VLDEP-NEXT:    vslidedown.vx v8, v8, a0
+; VLDEP-NEXT:    vsetvli a0, zero, e16, m4, ta, ma
+; VLDEP-NEXT:    vslideup.vx v8, v12, a1
 ; VLDEP-NEXT:    ret
   %res = call <vscale x 16 x i16> @llvm.vector.splice.nxv16i16(<vscale x 16 x i16> %a, <vscale x 16 x i16> %b, i32 -32)
   ret <vscale x 16 x i16> %res
@@ -1637,14 +1637,14 @@ define <vscale x 32 x i16> @splice_nxv32i16_offset_min(<vscale x 32 x i16> %a, <
 ;
 ; VLDEP-LABEL: splice_nxv32i16_offset_min:
 ; VLDEP:       # %bb.0:
-; VLDEP-NEXT:    li a0, 64
-; VLDEP-NEXT:    csrr a1, vlenb
-; VLDEP-NEXT:    slli a1, a1, 2
-; VLDEP-NEXT:    addi a1, a1, -64
-; VLDEP-NEXT:    vsetvli zero, a0, e16, m8, ta, ma
-; VLDEP-NEXT:    vslidedown.vx v8, v8, a1
-; VLDEP-NEXT:    vsetvli a1, zero, e16, m8, ta, ma
-; VLDEP-NEXT:    vslideup.vx v8, v16, a0
+; VLDEP-NEXT:    csrr a0, vlenb
+; VLDEP-NEXT:    slli a0, a0, 2
+; VLDEP-NEXT:    addi a0, a0, -64
+; VLDEP-NEXT:    li a1, 64
+; VLDEP-NEXT:    vsetvli zero, a1, e16, m8, ta, ma
+; VLDEP-NEXT:    vslidedown.vx v8, v8, a0
+; VLDEP-NEXT:    vsetvli a0, zero, e16, m8, ta, ma
+; VLDEP-NEXT:    vslideup.vx v8, v16, a1
 ; VLDEP-NEXT:    ret
   %res = call <vscale x 32 x i16> @llvm.vector.splice.nxv32i16(<vscale x 32 x i16> %a, <vscale x 32 x i16> %b, i32 -64)
   ret <vscale x 32 x i16> %res
@@ -1664,14 +1664,14 @@ define <vscale x 32 x i16> @splice_nxv32i16_offset_max(<vscale x 32 x i16> %a, <
 ;
 ; VLDEP-LABEL: splice_nxv32i16_offset_max:
 ; VLDEP:       # %bb.0:
-; VLDEP-NEXT:    li a0, 63
-; VLDEP-NEXT:    csrr a1, vlenb
-; VLDEP-NEXT:    slli a1, a1, 2
-; VLDEP-NEXT:    addi a1, a1, -63
-; VLDEP-NEXT:    vsetvli zero, a1, e16, m8, ta, ma
-; VLDEP-NEXT:    vslidedown.vx v8, v8, a0
-; VLDEP-NEXT:    vsetvli a0, zero, e16, m8, ta, ma
-; VLDEP-NEXT:    vslideup.vx v8, v16, a1
+; VLDEP-NEXT:    csrr a0, vlenb
+; VLDEP-NEXT:    slli a0, a0, 2
+; VLDEP-NEXT:    addi a0, a0, -63
+; VLDEP-NEXT:    li a1, 63
+; VLDEP-NEXT:    vsetvli zero, a0, e16, m8, ta, ma
+; VLDEP-NEXT:    vslidedown.vx v8, v8, a1
+; VLDEP-NEXT:    vsetvli a1, zero, e16, m8, ta, ma
+; VLDEP-NEXT:    vslideup.vx v8, v16, a0
 ; VLDEP-NEXT:    ret
   %res = call <vscale x 32 x i16> @llvm.vector.splice.nxv32i16(<vscale x 32 x i16> %a, <vscale x 32 x i16> %b, i32 63)
   ret <vscale x 32 x i16> %res
@@ -2050,14 +2050,14 @@ define <vscale x 16 x i32> @splice_nxv16i32_offset_min(<vscale x 16 x i32> %a, <
 ;
 ; VLDEP-LABEL: splice_nxv16i32_offset_min:
 ; VLDEP:       # %bb.0:
-; VLDEP-NEXT:    li a0, 32
-; VLDEP-NEXT:    csrr a1, vlenb
-; VLDEP-NEXT:    slli a1, a1, 1
-; VLDEP-NEXT:    addi a1, a1, -32
-; VLDEP-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
-; VLDEP-NEXT:    vslidedown.vx v8, v8, a1
-; VLDEP-NEXT:    vsetvli a1, zero, e32, m8, ta, ma
-; VLDEP-NEXT:    vslideup.vx v8, v16, a0
+; VLDEP-NEXT:    csrr a0, vlenb
+; VLDEP-NEXT:    slli a0, a0, 1
+; VLDEP-NEXT:    addi a0, a0, -32
+; VLDEP-NEXT:    li a1, 32
+; VLDEP-NEXT:    vsetvli zero, a1, e32, m8, ta, ma
+; VLDEP-NEXT:    vslidedown.vx v8, v8, a0
+; VLDEP-NEXT:    vsetvli a0, zero, e32, m8, ta, ma
+; VLDEP-NEXT:    vslideup.vx v8, v16, a1
 ; VLDEP-NEXT:    ret
   %res = call <vscale x 16 x i32> @llvm.vector.splice.nxv16i32(<vscale x 16 x i32> %a, <vscale x 16 x i32> %b, i32 -32)
   ret <vscale x 16 x i32> %res
@@ -2787,14 +2787,14 @@ define <vscale x 16 x bfloat> @splice_nxv16bf16_offset_min(<vscale x 16 x bfloat
 ;
 ; VLDEP-LABEL: splice_nxv16bf16_offset_min:
 ; VLDEP:       # %bb.0:
-; VLDEP-NEXT:    li a0, 32
-; VLDEP-NEXT:    csrr a1, vlenb
-; VLDEP-NEXT:    slli a1, a1, 1
-; VLDEP-NEXT:    addi a1, a1, -32
-; VLDEP-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
-; VLDEP-NEXT:    vslidedown.vx v8, v8, a1
-; VLDEP-NEXT:    vsetvli a1, zero, e16, m4, ta, ma
-; VLDEP-NEXT:    vslideup.vx v8, v12, a0
+; VLDEP-NEXT:    csrr a0, vlenb
+; VLDEP-NEXT:    slli a0, a0, 1
+; VLDEP-NEXT:    addi a0, a0, -32
+; VLDEP-NEXT:    li a1, 32
+; VLDEP-NEXT:    vsetvli zero, a1, e16, m4, ta, ma
+; VLDEP-NEXT:    vslidedown.vx v8, v8, a0
+; VLDEP-NEXT:    vsetvli a0, zero, e16, m4, ta, ma
+; VLDEP-NEXT:    vslideup.vx v8, v12, a1
 ; VLDEP-NEXT:    ret
   %res = call <vscale x 16 x bfloat> @llvm.vector.splice.nxv16bf16(<vscale x 16 x bfloat> %a, <vscale x 16 x bfloat> %b, i32 -32)
   ret <vscale x 16 x bfloat> %res
@@ -2872,14 +2872,14 @@ define <vscale x 32 x bfloat> @splice_nxv32bf16_offset_min(<vscale x 32 x bfloat
 ;
 ; VLDEP-LABEL: splice_nxv32bf16_offset_min:
 ; VLDEP:       # %bb.0:
-; VLDEP-NEXT:    li a0, 64
-; VLDEP-NEXT:    csrr a1, vlenb
-; VLDEP-NEXT:    slli a1, a1, 2
-; VLDEP-NEXT:    addi a1, a1, -64
-; VLDEP-NEXT:    vsetvli zero, a0, e16, m8, ta, ma
-; VLDEP-NEXT:    vslidedown.vx v8, v8, a1
-; VLDEP-NEXT:    vsetvli a1, zero, e16, m8, ta, ma
-; VLDEP-NEXT:    vslideup.vx v8, v16, a0
+; VLDEP-NEXT:    csrr a0, vlenb
+; VLDEP-NEXT:    slli a0, a0, 2
+; VLDEP-NEXT:    addi a0, a0, -64
+; VLDEP-NEXT:    li a1, 64
+; VLDEP-NEXT:    vsetvli zero, a1, e16, m8, ta, ma
+; VLDEP-NEXT:    vslidedown.vx v8, v8, a0
+; VLDEP-NEXT:    vsetvli a0, zero, e16, m8, ta, ma
+; VLDEP-NEXT:    vslideup.vx v8, v16, a1
 ; VLDEP-NEXT:    ret
   %res = call <vscale x 32 x bfloat> @llvm.vector.splice.nxv32bf16(<vscale x 32 x bfloat> %a, <vscale x 32 x bfloat> %b, i32 -64)
   ret <vscale x 32 x bfloat> %res
@@ -2899,14 +2899,14 @@ define <vscale x 32 x bfloat> @splice_nxv32bf16_offset_max(<vscale x 32 x bfloat
 ;
 ; VLDEP-LABEL: splice_nxv32bf16_offset_max:
 ; VLDEP:       # %bb.0:
-; VLDEP-NEXT:    li a0, 63
-; VLDEP-NEXT:    csrr a1, vlenb
-; VLDEP-NEXT:    slli a1, a1, 2
-; VLDEP-NEXT:    addi a1, a1, -63
-; VLDEP-NEXT:    vsetvli zero, a1, e16, m8, ta, ma
-; VLDEP-NEXT:    vslidedown.vx v8, v8, a0
-; VLDEP-NEXT:    vsetvli a0, zero, e16, m8, ta, ma
-; VLDEP-NEXT:    vslideup.vx v8, v16, a1
+; VLDEP-NEXT:    csrr a0, vlenb
+; VLDEP-NEXT:    slli a0, a0, 2
+; VLDEP-NEXT:    addi a0, a0, -63
+; VLDEP-NEXT:    li a1, 63
+; VLDEP-NEXT:    vsetvli zero, a0, e16, m8, ta, ma
+; VLDEP-NEXT:    vslidedown.vx v8, v8, a1
+; VLDEP-NEXT:    vsetvli a1, zero, e16, m8, ta, ma
+; VLDEP-NEXT:    vslideup.vx v8, v16, a0
 ; VLDEP-NEXT:    ret
   %res = call <vscale x 32 x bfloat> @llvm.vector.splice.nxv32bf16(<vscale x 32 x bfloat> %a, <vscale x 32 x bfloat> %b, i32 63)
   ret <vscale x 32 x bfloat> %res
@@ -3285,14 +3285,14 @@ define <vscale x 16 x half> @splice_nxv16f16_offset_min(<vscale x 16 x half> %a,
 ;
 ; VLDEP-LABEL: splice_nxv16f16_offset_min:
 ; VLDEP:       # %bb.0:
-; VLDEP-NEXT:    li a0, 32
-; VLDEP-NEXT:    csrr a1, vlenb
-; VLDEP-NEXT:    slli a1, a1, 1
-; VLDEP-NEXT:    addi a1, a1, -32
-; VLDEP-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
-; VLDEP-NEXT:    vslidedown.vx v8, v8, a1
-; VLDEP-NEXT:    vsetvli a1, zero, e16, m4, ta, ma
-; VLDEP-NEXT:    vslideup.vx v8, v12, a0
+; VLDEP-NEXT:    csrr a0, vlenb
+; VLDEP-NEXT:    slli a0, a0, 1
+; VLDEP-NEXT:    addi a0, a0, -32
+; VLDEP-NEXT:    li a1, 32
+; VLDEP-NEXT:    vsetvli zero, a1, e16, m4, ta, ma
+; VLDEP-NEXT:    vslidedown.vx v8, v8, a0
+; VLDEP-NEXT:    vsetvli a0, zero, e16, m4, ta, ma
+; VLDEP-NEXT:    vslideup.vx v8, v12, a1
 ; VLDEP-NEXT:    ret
   %res = call <vscale x 16 x half> @llvm.vector.splice.nxv16f16(<vscale x 16 x half> %a, <vscale x 16 x half> %b, i32 -32)
   ret <vscale x 16 x half> %res
@@ -3370,14 +3370,14 @@ define <vscale x 32 x half> @splice_nxv32f16_offset_min(<vscale x 32 x half> %a,
 ;
 ; VLDEP-LABEL: splice_nxv32f16_offset_min:
 ; VLDEP:       # %bb.0:
-; VLDEP-NEXT:    li a0, 64
-; VLDEP-NEXT:    csrr a1, vlenb
-; VLDEP-NEXT:    slli a1, a1, 2
-; VLDEP-NEXT:    addi a1, a1, -64
-; VLDEP-NEXT:    vsetvli zero, a0, e16, m8, ta, ma
-; VLDEP-NEXT:    vslidedown.vx v8, v8, a1
-; VLDEP-NEXT:    vsetvli a1, zero, e16, m8, ta, ma
-; VLDEP-NEXT:    vslideup.vx v8, v16, a0
+; VLDEP-NEXT:    csrr a0, vlenb
+; VLDEP-NEXT:    slli a0, a0, 2
+; VLDEP-NEXT:    addi a0, a0, -64
+; VLDEP-NEXT:    li a1, 64
+; VLDEP-NEXT:    vsetvli zero, a1, e16, m8, ta, ma
+; VLDEP-NEXT:    vslidedown.vx v8, v8, a0
+; VLDEP-NEXT:    vsetvli a0, zero, e16, m8, ta, ma
+; VLDEP-NEXT:    vslideup.vx v8, v16, a1
 ; VLDEP-NEXT:    ret
   %res = call <vscale x 32 x half> @llvm.vector.splice.nxv32f16(<vscale x 32 x half> %a, <vscale x 32 x half> %b, i32 -64)
   ret <vscale x 32 x half> %res
@@ -3397,14 +3397,14 @@ define <vscale x 32 x half> @splice_nxv32f16_offset_max(<vscale x 32 x half> %a,
 ;
 ; VLDEP-LABEL: splice_nxv32f16_offset_max:
 ; VLDEP:       # %bb.0:
-; VLDEP-NEXT:    li a0, 63
-; VLDEP-NEXT:    csrr a1, vlenb
-; VLDEP-NEXT:    slli a1, a1, 2
-; VLDEP-NEXT:    addi a1, a1, -63
-; VLDEP-NEXT:    vsetvli zero, a1, e16, m8, ta, ma
-; VLDEP-NEXT:    vslidedown.vx v8, v8, a0
-; VLDEP-NEXT:    vsetvli a0, zero, e16, m8, ta, ma
-; VLDEP-NEXT:    vslideup.vx v8, v16, a1
+; VLDEP-NEXT:    csrr a0, vlenb
+; VLDEP-NEXT:    slli a0, a0, 2
+; VLDEP-NEXT:    addi a0, a0, -63
+; VLDEP-NEXT:    li a1, 63
+; VLDEP-NEXT:    vsetvli zero, a0, e16, m8, ta, ma
+; VLDEP-NEXT:    vslidedown.vx v8, v8, a1
+; VLDEP-NEXT:    vsetvli a1, zero, e16, m8, ta, ma
+; VLDEP-NEXT:    vslideup.vx v8, v16, a0
 ; VLDEP-NEXT:    ret
   %res = call <vscale x 32 x half> @llvm.vector.splice.nxv32f16(<vscale x 32 x half> %a, <vscale x 32 x half> %b, i32 63)
   ret <vscale x 32 x half> %res
@@ -3783,14 +3783,14 @@ define <vscale x 16 x float> @splice_nxv16f32_offset_min(<vscale x 16 x float> %
 ;
 ; VLDEP-LABEL: splice_nxv16f32_offset_min:
 ; VLDEP:       # %bb.0:
-; VLDEP-NEXT:    li a0, 32
-; VLDEP-NEXT:    csrr a1, vlenb
-; VLDEP-NEXT:    slli a1, a1, 1
-; VLDEP-NEXT:    addi a1, a1, -32
-; VLDEP-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
-; VLDEP-NEXT:    vslidedown.vx v8, v8, a1
-; VLDEP-NEXT:    vsetvli a1, zero, e32, m8, ta, ma
-; VLDEP-NEXT:    vslideup.vx v8, v16, a0
+; VLDEP-NEXT:    csrr a0, vlenb
+; VLDEP-NEXT:    slli a0, a0, 1
+; VLDEP-NEXT:    addi a0, a0, -32
+; VLDEP-NEXT:    li a1, 32
+; VLDEP-NEXT:    vsetvli zero, a1, e32, m8, ta, ma
+; VLDEP-NEXT:    vslidedown.vx v8, v8, a0
+; VLDEP-NEXT:    vsetvli a0, zero, e32, m8, ta, ma
+; VLDEP-NEXT:    vslideup.vx v8, v16, a1
 ; VLDEP-NEXT:    ret
   %res = call <vscale x 16 x float> @llvm.vector.splice.nxv16f32(<vscale x 16 x float> %a, <vscale x 16 x float> %b, i32 -32)
   ret <vscale x 16 x float> %res

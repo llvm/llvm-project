@@ -590,12 +590,12 @@ define <256 x i1> @icmp_eq_vv_v256i8(<256 x i8> %va, <256 x i8> %vb, <256 x i1> 
 ; CHECK-NEXT:    addi a4, a0, 128
 ; CHECK-NEXT:    vsetvli zero, a1, e8, m8, ta, ma
 ; CHECK-NEXT:    vle8.v v24, (a4)
-; CHECK-NEXT:    addi a4, a3, -128
-; CHECK-NEXT:    sltu a5, a3, a4
 ; CHECK-NEXT:    vlm.v v0, (a2)
-; CHECK-NEXT:    addi a5, a5, -1
-; CHECK-NEXT:    and a4, a5, a4
-; CHECK-NEXT:    vsetvli zero, a4, e8, m8, ta, ma
+; CHECK-NEXT:    addi a2, a3, -128
+; CHECK-NEXT:    sltu a4, a3, a2
+; CHECK-NEXT:    addi a4, a4, -1
+; CHECK-NEXT:    and a2, a4, a2
+; CHECK-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
 ; CHECK-NEXT:    vmseq.vv v6, v16, v24, v0.t
 ; CHECK-NEXT:    vsetvli zero, a1, e8, m8, ta, ma
 ; CHECK-NEXT:    vle8.v v24, (a0)
@@ -618,16 +618,16 @@ define <256 x i1> @icmp_eq_vx_v256i8(<256 x i8> %va, i8 %b, <256 x i1> %m, i32 z
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v24, v0
-; CHECK-NEXT:    addi a3, a2, -128
-; CHECK-NEXT:    li a4, 128
-; CHECK-NEXT:    sltu a5, a2, a3
-; CHECK-NEXT:    vsetvli zero, a4, e8, m8, ta, ma
-; CHECK-NEXT:    vlm.v v0, (a1)
-; CHECK-NEXT:    addi a5, a5, -1
-; CHECK-NEXT:    and a3, a5, a3
+; CHECK-NEXT:    li a3, 128
 ; CHECK-NEXT:    vsetvli zero, a3, e8, m8, ta, ma
+; CHECK-NEXT:    vlm.v v0, (a1)
+; CHECK-NEXT:    addi a1, a2, -128
+; CHECK-NEXT:    sltu a4, a2, a1
+; CHECK-NEXT:    addi a4, a4, -1
+; CHECK-NEXT:    and a1, a4, a1
+; CHECK-NEXT:    vsetvli zero, a1, e8, m8, ta, ma
 ; CHECK-NEXT:    vmseq.vx v25, v16, a0, v0.t
-; CHECK-NEXT:    bltu a2, a4, .LBB52_2
+; CHECK-NEXT:    bltu a2, a3, .LBB52_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    li a2, 128
 ; CHECK-NEXT:  .LBB52_2:
@@ -648,16 +648,16 @@ define <256 x i1> @icmp_eq_vx_swap_v256i8(<256 x i8> %va, i8 %b, <256 x i1> %m, 
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v24, v0
-; CHECK-NEXT:    addi a3, a2, -128
-; CHECK-NEXT:    li a4, 128
-; CHECK-NEXT:    sltu a5, a2, a3
-; CHECK-NEXT:    vsetvli zero, a4, e8, m8, ta, ma
-; CHECK-NEXT:    vlm.v v0, (a1)
-; CHECK-NEXT:    addi a5, a5, -1
-; CHECK-NEXT:    and a3, a5, a3
+; CHECK-NEXT:    li a3, 128
 ; CHECK-NEXT:    vsetvli zero, a3, e8, m8, ta, ma
+; CHECK-NEXT:    vlm.v v0, (a1)
+; CHECK-NEXT:    addi a1, a2, -128
+; CHECK-NEXT:    sltu a4, a2, a1
+; CHECK-NEXT:    addi a4, a4, -1
+; CHECK-NEXT:    and a1, a4, a1
+; CHECK-NEXT:    vsetvli zero, a1, e8, m8, ta, ma
 ; CHECK-NEXT:    vmseq.vx v25, v16, a0, v0.t
-; CHECK-NEXT:    bltu a2, a4, .LBB53_2
+; CHECK-NEXT:    bltu a2, a3, .LBB53_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    li a2, 128
 ; CHECK-NEXT:  .LBB53_2:
@@ -1236,10 +1236,10 @@ define <64 x i1> @icmp_eq_vv_v64i32(<64 x i32> %va, <64 x i32> %vb, <64 x i1> %m
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
 ; CHECK-NEXT:    vmseq.vv v6, v8, v24, v0.t
 ; CHECK-NEXT:    addi a0, a2, -32
+; CHECK-NEXT:    vmv1r.v v0, v7
 ; CHECK-NEXT:    sltu a1, a2, a0
 ; CHECK-NEXT:    addi a1, a1, -1
 ; CHECK-NEXT:    and a0, a1, a0
-; CHECK-NEXT:    vmv1r.v v0, v7
 ; CHECK-NEXT:    addi a1, sp, 16
 ; CHECK-NEXT:    vl8r.v v24, (a1) # vscale x 64-byte Folded Reload
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
@@ -1272,10 +1272,10 @@ define <64 x i1> @icmp_eq_vx_v64i32(<64 x i32> %va, i32 %b, <64 x i1> %m, i32 ze
 ; CHECK-NEXT:    vsetvli zero, a2, e32, m8, ta, ma
 ; CHECK-NEXT:    vmseq.vx v25, v8, a0, v0.t
 ; CHECK-NEXT:    addi a2, a1, -32
+; CHECK-NEXT:    vmv1r.v v0, v24
 ; CHECK-NEXT:    sltu a1, a1, a2
 ; CHECK-NEXT:    addi a1, a1, -1
 ; CHECK-NEXT:    and a1, a1, a2
-; CHECK-NEXT:    vmv1r.v v0, v24
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m8, ta, ma
 ; CHECK-NEXT:    vmseq.vx v8, v16, a0, v0.t
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
@@ -1302,10 +1302,10 @@ define <64 x i1> @icmp_eq_vx_swap_v64i32(<64 x i32> %va, i32 %b, <64 x i1> %m, i
 ; CHECK-NEXT:    vsetvli zero, a2, e32, m8, ta, ma
 ; CHECK-NEXT:    vmseq.vx v25, v8, a0, v0.t
 ; CHECK-NEXT:    addi a2, a1, -32
+; CHECK-NEXT:    vmv1r.v v0, v24
 ; CHECK-NEXT:    sltu a1, a1, a2
 ; CHECK-NEXT:    addi a1, a1, -1
 ; CHECK-NEXT:    and a1, a1, a2
-; CHECK-NEXT:    vmv1r.v v0, v24
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m8, ta, ma
 ; CHECK-NEXT:    vmseq.vx v8, v16, a0, v0.t
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma

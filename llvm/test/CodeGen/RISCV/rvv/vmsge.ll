@@ -819,8 +819,8 @@ define <vscale x 4 x i1> @intrinsic_vmsge_mask_vx_nxv4i8_i8_1(<vscale x 4 x i1> 
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a0, e8, mf2, ta, mu
 ; CHECK-NEXT:    vmv1r.v v10, v0
-; CHECK-NEXT:    li a0, 99
 ; CHECK-NEXT:    vmv1r.v v0, v9
+; CHECK-NEXT:    li a0, 99
 ; CHECK-NEXT:    vmsgt.vx v10, v8, a0, v0.t
 ; CHECK-NEXT:    vmv1r.v v0, v10
 ; CHECK-NEXT:    ret
@@ -1288,8 +1288,8 @@ define <vscale x 1 x i1> @intrinsic_vmsge_vx_nxv1i64_i64(<vscale x 1 x i64> %0, 
 ; RV32-LABEL: intrinsic_vmsge_vx_nxv1i64_i64:
 ; RV32:       # %bb.0: # %entry
 ; RV32-NEXT:    addi sp, sp, -16
-; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    sw a0, 8(sp)
+; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vsetvli zero, a2, e64, m1, ta, ma
 ; RV32-NEXT:    vlse64.v v9, (a0), zero
@@ -1316,12 +1316,12 @@ define <vscale x 1 x i1> @intrinsic_vmsge_mask_vx_nxv1i64_i64(<vscale x 1 x i1> 
 ; RV32-LABEL: intrinsic_vmsge_mask_vx_nxv1i64_i64:
 ; RV32:       # %bb.0: # %entry
 ; RV32-NEXT:    addi sp, sp, -16
+; RV32-NEXT:    vsetvli zero, a2, e64, m1, ta, mu
+; RV32-NEXT:    vmv1r.v v10, v0
 ; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    addi a0, sp, 8
-; RV32-NEXT:    vsetvli zero, a2, e64, m1, ta, mu
 ; RV32-NEXT:    vlse64.v v11, (a0), zero
-; RV32-NEXT:    vmv1r.v v10, v0
 ; RV32-NEXT:    vmv1r.v v0, v9
 ; RV32-NEXT:    vmsle.vv v10, v11, v8, v0.t
 ; RV32-NEXT:    vmv.v.v v0, v10
@@ -1491,9 +1491,10 @@ entry:
 define <vscale x 1 x i1> @intrinsic_vmsge_mask_vi_nxv1i8_i8(<vscale x 1 x i1> %0, <vscale x 1 x i8> %1, <vscale x 1 x i1> %2, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_vmsge_mask_vi_nxv1i8_i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a0, e8, mf8, ta, mu
+; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v10, v0
 ; CHECK-NEXT:    vmv1r.v v0, v9
+; CHECK-NEXT:    vsetvli zero, a0, e8, mf8, ta, mu
 ; CHECK-NEXT:    vmsgt.vi v10, v8, -15, v0.t
 ; CHECK-NEXT:    vmv1r.v v0, v10
 ; CHECK-NEXT:    ret
@@ -1526,9 +1527,10 @@ entry:
 define <vscale x 2 x i1> @intrinsic_vmsge_mask_vi_nxv2i8_i8(<vscale x 2 x i1> %0, <vscale x 2 x i8> %1, <vscale x 2 x i1> %2, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_vmsge_mask_vi_nxv2i8_i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a0, e8, mf4, ta, mu
+; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v10, v0
 ; CHECK-NEXT:    vmv1r.v v0, v9
+; CHECK-NEXT:    vsetvli zero, a0, e8, mf4, ta, mu
 ; CHECK-NEXT:    vmsgt.vi v10, v8, -13, v0.t
 ; CHECK-NEXT:    vmv1r.v v0, v10
 ; CHECK-NEXT:    ret
@@ -1592,9 +1594,10 @@ entry:
 define <vscale x 4 x i1> @intrinsic_vmsge_mask_vi_nxv4i8_i8(<vscale x 4 x i1> %0, <vscale x 4 x i8> %1, <vscale x 4 x i1> %2, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_vmsge_mask_vi_nxv4i8_i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a0, e8, mf2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v10, v0
 ; CHECK-NEXT:    vmv1r.v v0, v9
+; CHECK-NEXT:    vsetvli zero, a0, e8, mf2, ta, mu
 ; CHECK-NEXT:    vmsgt.vi v10, v8, -11, v0.t
 ; CHECK-NEXT:    vmv1r.v v0, v10
 ; CHECK-NEXT:    ret
@@ -1627,9 +1630,10 @@ entry:
 define <vscale x 8 x i1> @intrinsic_vmsge_mask_vi_nxv8i8_i8(<vscale x 8 x i1> %0, <vscale x 8 x i8> %1, <vscale x 8 x i1> %2, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_vmsge_mask_vi_nxv8i8_i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a0, e8, m1, ta, mu
+; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v10, v0
 ; CHECK-NEXT:    vmv1r.v v0, v9
+; CHECK-NEXT:    vsetvli zero, a0, e8, m1, ta, mu
 ; CHECK-NEXT:    vmsgt.vi v10, v8, -9, v0.t
 ; CHECK-NEXT:    vmv.v.v v0, v10
 ; CHECK-NEXT:    ret
@@ -1662,9 +1666,10 @@ entry:
 define <vscale x 16 x i1> @intrinsic_vmsge_mask_vi_nxv16i8_i8(<vscale x 16 x i1> %0, <vscale x 16 x i8> %1, <vscale x 16 x i1> %2, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_vmsge_mask_vi_nxv16i8_i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a0, e8, m2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v11, v0
 ; CHECK-NEXT:    vmv1r.v v0, v10
+; CHECK-NEXT:    vsetvli zero, a0, e8, m2, ta, mu
 ; CHECK-NEXT:    vmsgt.vi v11, v8, -7, v0.t
 ; CHECK-NEXT:    vmv1r.v v0, v11
 ; CHECK-NEXT:    ret
@@ -1697,9 +1702,10 @@ entry:
 define <vscale x 32 x i1> @intrinsic_vmsge_mask_vi_nxv32i8_i8(<vscale x 32 x i1> %0, <vscale x 32 x i8> %1, <vscale x 32 x i1> %2, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_vmsge_mask_vi_nxv32i8_i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a0, e8, m4, ta, mu
+; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v13, v0
 ; CHECK-NEXT:    vmv1r.v v0, v12
+; CHECK-NEXT:    vsetvli zero, a0, e8, m4, ta, mu
 ; CHECK-NEXT:    vmsgt.vi v13, v8, -5, v0.t
 ; CHECK-NEXT:    vmv1r.v v0, v13
 ; CHECK-NEXT:    ret
@@ -1732,9 +1738,10 @@ entry:
 define <vscale x 1 x i1> @intrinsic_vmsge_mask_vi_nxv1i16_i16(<vscale x 1 x i1> %0, <vscale x 1 x i16> %1, <vscale x 1 x i1> %2, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_vmsge_mask_vi_nxv1i16_i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a0, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v10, v0
 ; CHECK-NEXT:    vmv1r.v v0, v9
+; CHECK-NEXT:    vsetvli zero, a0, e16, mf4, ta, mu
 ; CHECK-NEXT:    vmsgt.vi v10, v8, -3, v0.t
 ; CHECK-NEXT:    vmv1r.v v0, v10
 ; CHECK-NEXT:    ret
@@ -1767,9 +1774,10 @@ entry:
 define <vscale x 2 x i1> @intrinsic_vmsge_mask_vi_nxv2i16_i16(<vscale x 2 x i1> %0, <vscale x 2 x i16> %1, <vscale x 2 x i1> %2, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_vmsge_mask_vi_nxv2i16_i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v10, v0
 ; CHECK-NEXT:    vmv1r.v v0, v9
+; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, ta, mu
 ; CHECK-NEXT:    vmsgt.vi v10, v8, -1, v0.t
 ; CHECK-NEXT:    vmv1r.v v0, v10
 ; CHECK-NEXT:    ret
@@ -1802,9 +1810,10 @@ entry:
 define <vscale x 4 x i1> @intrinsic_vmsge_mask_vi_nxv4i16_i16(<vscale x 4 x i1> %0, <vscale x 4 x i16> %1, <vscale x 4 x i1> %2, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_vmsge_mask_vi_nxv4i16_i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a0, e16, m1, ta, mu
+; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v10, v0
 ; CHECK-NEXT:    vmv1r.v v0, v9
+; CHECK-NEXT:    vsetvli zero, a0, e16, m1, ta, mu
 ; CHECK-NEXT:    vmsgt.vi v10, v8, 0, v0.t
 ; CHECK-NEXT:    vmv.v.v v0, v10
 ; CHECK-NEXT:    ret
@@ -1837,9 +1846,10 @@ entry:
 define <vscale x 8 x i1> @intrinsic_vmsge_mask_vi_nxv8i16_i16(<vscale x 8 x i1> %0, <vscale x 8 x i16> %1, <vscale x 8 x i1> %2, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_vmsge_mask_vi_nxv8i16_i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a0, e16, m2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v11, v0
 ; CHECK-NEXT:    vmv1r.v v0, v10
+; CHECK-NEXT:    vsetvli zero, a0, e16, m2, ta, mu
 ; CHECK-NEXT:    vmsgt.vi v11, v8, 2, v0.t
 ; CHECK-NEXT:    vmv1r.v v0, v11
 ; CHECK-NEXT:    ret
@@ -1872,9 +1882,10 @@ entry:
 define <vscale x 16 x i1> @intrinsic_vmsge_mask_vi_nxv16i16_i16(<vscale x 16 x i1> %0, <vscale x 16 x i16> %1, <vscale x 16 x i1> %2, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_vmsge_mask_vi_nxv16i16_i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a0, e16, m4, ta, mu
+; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v13, v0
 ; CHECK-NEXT:    vmv1r.v v0, v12
+; CHECK-NEXT:    vsetvli zero, a0, e16, m4, ta, mu
 ; CHECK-NEXT:    vmsgt.vi v13, v8, 4, v0.t
 ; CHECK-NEXT:    vmv1r.v v0, v13
 ; CHECK-NEXT:    ret
@@ -1907,9 +1918,10 @@ entry:
 define <vscale x 1 x i1> @intrinsic_vmsge_mask_vi_nxv1i32_i32(<vscale x 1 x i1> %0, <vscale x 1 x i32> %1, <vscale x 1 x i1> %2, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_vmsge_mask_vi_nxv1i32_i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v10, v0
 ; CHECK-NEXT:    vmv1r.v v0, v9
+; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, ta, mu
 ; CHECK-NEXT:    vmsgt.vi v10, v8, 6, v0.t
 ; CHECK-NEXT:    vmv1r.v v0, v10
 ; CHECK-NEXT:    ret
@@ -1942,9 +1954,10 @@ entry:
 define <vscale x 2 x i1> @intrinsic_vmsge_mask_vi_nxv2i32_i32(<vscale x 2 x i1> %0, <vscale x 2 x i32> %1, <vscale x 2 x i1> %2, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_vmsge_mask_vi_nxv2i32_i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, mu
+; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v10, v0
 ; CHECK-NEXT:    vmv1r.v v0, v9
+; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, mu
 ; CHECK-NEXT:    vmsgt.vi v10, v8, 8, v0.t
 ; CHECK-NEXT:    vmv.v.v v0, v10
 ; CHECK-NEXT:    ret
@@ -1977,9 +1990,10 @@ entry:
 define <vscale x 4 x i1> @intrinsic_vmsge_mask_vi_nxv4i32_i32(<vscale x 4 x i1> %0, <vscale x 4 x i32> %1, <vscale x 4 x i1> %2, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_vmsge_mask_vi_nxv4i32_i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a0, e32, m2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v11, v0
 ; CHECK-NEXT:    vmv1r.v v0, v10
+; CHECK-NEXT:    vsetvli zero, a0, e32, m2, ta, mu
 ; CHECK-NEXT:    vmsgt.vi v11, v8, 10, v0.t
 ; CHECK-NEXT:    vmv1r.v v0, v11
 ; CHECK-NEXT:    ret
@@ -2012,9 +2026,10 @@ entry:
 define <vscale x 8 x i1> @intrinsic_vmsge_mask_vi_nxv8i32_i32(<vscale x 8 x i1> %0, <vscale x 8 x i32> %1, <vscale x 8 x i1> %2, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_vmsge_mask_vi_nxv8i32_i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a0, e32, m4, ta, mu
+; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v13, v0
 ; CHECK-NEXT:    vmv1r.v v0, v12
+; CHECK-NEXT:    vsetvli zero, a0, e32, m4, ta, mu
 ; CHECK-NEXT:    vmsgt.vi v13, v8, 12, v0.t
 ; CHECK-NEXT:    vmv1r.v v0, v13
 ; CHECK-NEXT:    ret
@@ -2047,9 +2062,10 @@ entry:
 define <vscale x 1 x i1> @intrinsic_vmsge_mask_vi_nxv1i64_i64(<vscale x 1 x i1> %0, <vscale x 1 x i64> %1, <vscale x 1 x i1> %2, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_vmsge_mask_vi_nxv1i64_i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, mu
+; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v10, v0
 ; CHECK-NEXT:    vmv1r.v v0, v9
+; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, mu
 ; CHECK-NEXT:    vmsgt.vi v10, v8, 8, v0.t
 ; CHECK-NEXT:    vmv.v.v v0, v10
 ; CHECK-NEXT:    ret
@@ -2082,9 +2098,10 @@ entry:
 define <vscale x 2 x i1> @intrinsic_vmsge_mask_vi_nxv2i64_i64(<vscale x 2 x i1> %0, <vscale x 2 x i64> %1, <vscale x 2 x i1> %2, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_vmsge_mask_vi_nxv2i64_i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a0, e64, m2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v11, v0
 ; CHECK-NEXT:    vmv1r.v v0, v10
+; CHECK-NEXT:    vsetvli zero, a0, e64, m2, ta, mu
 ; CHECK-NEXT:    vmsgt.vi v11, v8, 8, v0.t
 ; CHECK-NEXT:    vmv1r.v v0, v11
 ; CHECK-NEXT:    ret
@@ -2117,9 +2134,10 @@ entry:
 define <vscale x 4 x i1> @intrinsic_vmsge_mask_vi_nxv4i64_i64(<vscale x 4 x i1> %0, <vscale x 4 x i64> %1, <vscale x 4 x i1> %2, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_vmsge_mask_vi_nxv4i64_i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a0, e64, m4, ta, mu
+; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v13, v0
 ; CHECK-NEXT:    vmv1r.v v0, v12
+; CHECK-NEXT:    vsetvli zero, a0, e64, m4, ta, mu
 ; CHECK-NEXT:    vmsgt.vi v13, v8, 8, v0.t
 ; CHECK-NEXT:    vmv1r.v v0, v13
 ; CHECK-NEXT:    ret
@@ -2409,8 +2427,8 @@ define <vscale x 1 x i1> @intrinsic_vmsge_maskedoff_mask_vx_nxv1i64_i64(<vscale 
 ; RV32-LABEL: intrinsic_vmsge_maskedoff_mask_vx_nxv1i64_i64:
 ; RV32:       # %bb.0: # %entry
 ; RV32-NEXT:    addi sp, sp, -16
-; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    sw a0, 8(sp)
+; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vsetvli zero, a2, e64, m1, ta, mu
 ; RV32-NEXT:    vlse64.v v9, (a0), zero
@@ -2439,12 +2457,12 @@ define <vscale x 2 x i1> @intrinsic_vmsge_maskedoff_mask_vx_nxv2i64_i64(<vscale 
 ; RV32-LABEL: intrinsic_vmsge_maskedoff_mask_vx_nxv2i64_i64:
 ; RV32:       # %bb.0: # %entry
 ; RV32-NEXT:    addi sp, sp, -16
-; RV32-NEXT:    sw a1, 12(sp)
-; RV32-NEXT:    sw a0, 8(sp)
-; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vsetvli zero, a2, e64, m2, ta, mu
-; RV32-NEXT:    vlse64.v v12, (a0), zero
 ; RV32-NEXT:    vmv1r.v v10, v0
+; RV32-NEXT:    sw a0, 8(sp)
+; RV32-NEXT:    sw a1, 12(sp)
+; RV32-NEXT:    addi a0, sp, 8
+; RV32-NEXT:    vlse64.v v12, (a0), zero
 ; RV32-NEXT:    vmsle.vv v10, v12, v8, v0.t
 ; RV32-NEXT:    vmv1r.v v0, v10
 ; RV32-NEXT:    addi sp, sp, 16
@@ -2471,8 +2489,8 @@ define <vscale x 4 x i1> @intrinsic_vmsge_maskedoff_mask_vx_nxv4i64_i64(<vscale 
 ; RV32-LABEL: intrinsic_vmsge_maskedoff_mask_vx_nxv4i64_i64:
 ; RV32:       # %bb.0: # %entry
 ; RV32-NEXT:    addi sp, sp, -16
-; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    sw a0, 8(sp)
+; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vsetvli zero, a2, e64, m4, ta, mu
 ; RV32-NEXT:    vlse64.v v16, (a0), zero

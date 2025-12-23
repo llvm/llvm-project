@@ -377,9 +377,10 @@ entry:
 define i64 @avl_forward1(<vscale x 2 x i32> %v, ptr %p) nounwind {
 ; CHECK-LABEL: avl_forward1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    mv a1, a0
-; CHECK-NEXT:    vsetivli a0, 6, e32, m1, ta, ma
-; CHECK-NEXT:    vse32.v v8, (a1)
+; CHECK-NEXT:    vsetivli a1, 6, e32, m1, ta, ma
+; CHECK-NEXT:    mv a2, a0
+; CHECK-NEXT:    mv a0, a1
+; CHECK-NEXT:    vse32.v v8, (a2)
 ; CHECK-NEXT:    ret
 entry:
   %vl = tail call i64 @llvm.riscv.vsetvli(i64 6, i64 2, i64 0)
@@ -391,10 +392,11 @@ entry:
 define i64 @avl_forward1b_neg(<vscale x 2 x i32> %v, ptr %p) nounwind {
 ; CHECK-LABEL: avl_forward1b_neg:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    mv a1, a0
-; CHECK-NEXT:    vsetivli a0, 6, e16, m1, ta, ma
-; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
-; CHECK-NEXT:    vse32.v v8, (a1)
+; CHECK-NEXT:    vsetivli a1, 6, e16, m1, ta, ma
+; CHECK-NEXT:    mv a2, a0
+; CHECK-NEXT:    mv a0, a1
+; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
+; CHECK-NEXT:    vse32.v v8, (a2)
 ; CHECK-NEXT:    ret
 entry:
   %vl = tail call i64 @llvm.riscv.vsetvli(i64 6, i64 1, i64 0)
@@ -405,9 +407,10 @@ entry:
 define i64 @avl_forward2(<vscale x 2 x i32> %v, ptr %p) nounwind {
 ; CHECK-LABEL: avl_forward2:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    mv a1, a0
-; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, ma
-; CHECK-NEXT:    vse32.v v8, (a1)
+; CHECK-NEXT:    vsetvli a1, zero, e32, m1, ta, ma
+; CHECK-NEXT:    mv a2, a0
+; CHECK-NEXT:    mv a0, a1
+; CHECK-NEXT:    vse32.v v8, (a2)
 ; CHECK-NEXT:    ret
 entry:
   %vl = tail call i64 @llvm.riscv.vsetvlimax(i64 2, i64 0)
@@ -432,8 +435,9 @@ entry:
 define i64 @avl_forward3b(<vscale x 2 x i32> %v, ptr %p, i64 %reg) nounwind {
 ; CHECK-LABEL: avl_forward3b:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli a1, a1, e32, m1, ta, ma
 ; CHECK-NEXT:    mv a2, a0
-; CHECK-NEXT:    vsetvli a0, a1, e32, m1, ta, ma
+; CHECK-NEXT:    mv a0, a1
 ; CHECK-NEXT:    vse32.v v8, (a2)
 ; CHECK-NEXT:    ret
 entry:
@@ -460,9 +464,10 @@ entry:
 define i64 @avl_forward4b(<vscale x 2 x i32> %v, ptr %p, i64 %reg) nounwind {
 ; CHECK-LABEL: avl_forward4b:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli a1, a1, e16, m1, ta, ma
 ; CHECK-NEXT:    mv a2, a0
-; CHECK-NEXT:    vsetvli a0, a1, e16, m1, ta, ma
-; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
+; CHECK-NEXT:    mv a0, a1
+; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
 ; CHECK-NEXT:    vse32.v v8, (a2)
 ; CHECK-NEXT:    ret
 entry:
@@ -826,9 +831,9 @@ define void @coalesce_vl_clobber(ptr %p) {
 ; CHECK-NEXT:    slli a2, a2, 32
 ; CHECK-NEXT:    srli a2, a2, 32
 ; CHECK-NEXT:    vslideup.vx v10, v9, a2, v0.t
-; CHECK-NEXT:    vsetvli a2, a1, e8, mf8, ta, ma
-; CHECK-NEXT:    vsetivli zero, 0, e8, mf2, ta, ma
+; CHECK-NEXT:    vsetvli zero, zero, e8, mf2, ta, ma
 ; CHECK-NEXT:    vmsne.vi v0, v10, 0, v0.t
+; CHECK-NEXT:    vsetvli a2, a1, e8, mf8, ta, ma
 ; CHECK-NEXT:    vsetvli zero, a2, e32, m2, ta, ma
 ; CHECK-NEXT:    vmv.v.i v10, 0
 ; CHECK-NEXT:    vse32.v v10, (a0), v0.t

@@ -795,9 +795,9 @@ define i32 @extractelt_sdiv_nxv4i32_splat(<vscale x 4 x i32> %x) {
 ; RV64M-LABEL: extractelt_sdiv_nxv4i32_splat:
 ; RV64M:       # %bb.0:
 ; RV64M-NEXT:    lui a0, 349525
+; RV64M-NEXT:    addi a0, a0, 1366
 ; RV64M-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; RV64M-NEXT:    vmv.x.s a1, v8
-; RV64M-NEXT:    addi a0, a0, 1366
 ; RV64M-NEXT:    mul a0, a1, a0
 ; RV64M-NEXT:    srli a1, a0, 63
 ; RV64M-NEXT:    srli a0, a0, 32
@@ -823,9 +823,9 @@ define i32 @extractelt_udiv_nxv4i32_splat(<vscale x 4 x i32> %x) {
 ; RV64M-LABEL: extractelt_udiv_nxv4i32_splat:
 ; RV64M:       # %bb.0:
 ; RV64M-NEXT:    lui a0, 349525
+; RV64M-NEXT:    addi a0, a0, 1366
 ; RV64M-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; RV64M-NEXT:    vmv.x.s a1, v8
-; RV64M-NEXT:    addi a0, a0, 1366
 ; RV64M-NEXT:    mul a0, a1, a0
 ; RV64M-NEXT:    srli a1, a0, 63
 ; RV64M-NEXT:    srli a0, a0, 32
@@ -863,20 +863,20 @@ define i64 @extractelt_nxv16i64_neg1(<vscale x 16 x i64> %v) {
 ; CHECK-NEXT:    andi sp, sp, -64
 ; CHECK-NEXT:    addi a0, sp, 64
 ; CHECK-NEXT:    vs8r.v v8, (a0)
-; CHECK-NEXT:    csrr a1, vlenb
-; CHECK-NEXT:    slli a2, a1, 3
-; CHECK-NEXT:    add a3, a0, a2
-; CHECK-NEXT:    li a2, -1
-; CHECK-NEXT:    slli a1, a1, 1
-; CHECK-NEXT:    srli a2, a2, 32
-; CHECK-NEXT:    addi a1, a1, -1
+; CHECK-NEXT:    csrr a2, vlenb
+; CHECK-NEXT:    li a1, -1
+; CHECK-NEXT:    slli a3, a2, 3
+; CHECK-NEXT:    srli a1, a1, 32
+; CHECK-NEXT:    slli a2, a2, 1
+; CHECK-NEXT:    add a3, a0, a3
+; CHECK-NEXT:    addi a2, a2, -1
 ; CHECK-NEXT:    vs8r.v v16, (a3)
-; CHECK-NEXT:    bltu a1, a2, .LBB74_2
+; CHECK-NEXT:    bltu a2, a1, .LBB74_2
 ; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    mv a1, a2
+; CHECK-NEXT:    mv a2, a1
 ; CHECK-NEXT:  .LBB74_2:
-; CHECK-NEXT:    slli a1, a1, 3
-; CHECK-NEXT:    add a0, a0, a1
+; CHECK-NEXT:    slli a2, a2, 3
+; CHECK-NEXT:    add a0, a0, a2
 ; CHECK-NEXT:    ld a0, 0(a0)
 ; CHECK-NEXT:    addi sp, s0, -80
 ; CHECK-NEXT:    .cfi_def_cfa sp, 80

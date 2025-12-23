@@ -19,6 +19,7 @@ define void @bar() nounwind {
 ; CHECK-NEXT:    addi sp, sp, -16
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m8, ta, ma
 ; CHECK-NEXT:    vmv.v.i v8, 0
+; CHECK-NEXT:    vmv.v.i v16, 0
 ; CHECK-NEXT:    addi t0, s1, 64
 ; CHECK-NEXT:    li a0, 0
 ; CHECK-NEXT:    li a1, 0
@@ -28,7 +29,6 @@ define void @bar() nounwind {
 ; CHECK-NEXT:    li a5, 0
 ; CHECK-NEXT:    li a6, 0
 ; CHECK-NEXT:    li a7, 0
-; CHECK-NEXT:    vmv.v.i v16, 0
 ; CHECK-NEXT:    vs8r.v v8, (t0)
 ; CHECK-NEXT:    sd t0, 0(sp)
 ; CHECK-NEXT:    call foo

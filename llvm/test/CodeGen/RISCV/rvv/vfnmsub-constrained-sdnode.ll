@@ -22,8 +22,8 @@ define <vscale x 1 x half> @vfnmsub_vv_nxv1f16(<vscale x 1 x half> %va, <vscale 
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    lui a0, 8
 ; ZVFHMIN-NEXT:    vsetvli a1, zero, e16, mf4, ta, ma
-; ZVFHMIN-NEXT:    vxor.vx v8, v8, a0
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v11, v10
+; ZVFHMIN-NEXT:    vxor.vx v8, v8, a0
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v10, v8
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v12, v9
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
@@ -76,8 +76,8 @@ define <vscale x 2 x half> @vfnmsub_vv_nxv2f16(<vscale x 2 x half> %va, <vscale 
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    lui a0, 8
 ; ZVFHMIN-NEXT:    vsetvli a1, zero, e16, mf2, ta, ma
-; ZVFHMIN-NEXT:    vxor.vx v8, v8, a0
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v11, v9
+; ZVFHMIN-NEXT:    vxor.vx v8, v8, a0
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v9, v8
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v12, v10
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
@@ -131,13 +131,13 @@ define <vscale x 4 x half> @vfnmsub_vv_nxv4f16(<vscale x 4 x half> %va, <vscale 
 ; ZVFHMIN-NEXT:    lui a0, 8
 ; ZVFHMIN-NEXT:    vsetvli a1, zero, e16, m1, ta, ma
 ; ZVFHMIN-NEXT:    vxor.vx v9, v9, a0
-; ZVFHMIN-NEXT:    vfwcvt.f.f.v v12, v9
-; ZVFHMIN-NEXT:    vfwcvt.f.f.v v14, v10
-; ZVFHMIN-NEXT:    vfwcvt.f.f.v v10, v8
+; ZVFHMIN-NEXT:    vfwcvt.f.f.v v12, v10
+; ZVFHMIN-NEXT:    vfwcvt.f.f.v v10, v9
+; ZVFHMIN-NEXT:    vfwcvt.f.f.v v14, v8
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; ZVFHMIN-NEXT:    vfmadd.vv v10, v12, v14
+; ZVFHMIN-NEXT:    vfmadd.vv v14, v10, v12
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
-; ZVFHMIN-NEXT:    vfncvt.f.f.w v8, v10
+; ZVFHMIN-NEXT:    vfncvt.f.f.w v8, v14
 ; ZVFHMIN-NEXT:    ret
   %neg = fneg <vscale x 4 x half> %vb
   %vd = call <vscale x 4 x half> @llvm.experimental.constrained.fma.nxv4f16(<vscale x 4 x half> %neg, <vscale x 4 x half> %va, <vscale x 4 x half> %vc, metadata !"round.dynamic", metadata !"fpexcept.strict")
@@ -184,14 +184,14 @@ define <vscale x 8 x half> @vfnmsub_vv_nxv8f16(<vscale x 8 x half> %va, <vscale 
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    lui a0, 8
 ; ZVFHMIN-NEXT:    vsetvli a1, zero, e16, m2, ta, ma
-; ZVFHMIN-NEXT:    vxor.vx v10, v10, a0
-; ZVFHMIN-NEXT:    vfwcvt.f.f.v v16, v10
-; ZVFHMIN-NEXT:    vfwcvt.f.f.v v20, v8
-; ZVFHMIN-NEXT:    vfwcvt.f.f.v v24, v12
+; ZVFHMIN-NEXT:    vxor.vx v14, v10, a0
+; ZVFHMIN-NEXT:    vfwcvt.f.f.v v16, v8
+; ZVFHMIN-NEXT:    vfwcvt.f.f.v v8, v14
+; ZVFHMIN-NEXT:    vfwcvt.f.f.v v20, v12
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; ZVFHMIN-NEXT:    vfmadd.vv v24, v16, v20
+; ZVFHMIN-NEXT:    vfmadd.vv v20, v8, v16
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
-; ZVFHMIN-NEXT:    vfncvt.f.f.w v8, v24
+; ZVFHMIN-NEXT:    vfncvt.f.f.w v8, v20
 ; ZVFHMIN-NEXT:    ret
   %neg = fneg <vscale x 8 x half> %vb
   %vd = call <vscale x 8 x half> @llvm.experimental.constrained.fma.nxv8f16(<vscale x 8 x half> %neg, <vscale x 8 x half> %vc, <vscale x 8 x half> %va, metadata !"round.dynamic", metadata !"fpexcept.strict")
