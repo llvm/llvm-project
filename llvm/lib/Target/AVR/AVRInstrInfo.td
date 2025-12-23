@@ -1183,7 +1183,9 @@ let isReMaterializable = 1, mayLoad = 1, hasSideEffects = 0 in {
 
   def LPMRdZ : FLPMX<0, 0, (outs GPR8:$rd), (ins ZREG:$z), "lpm\t$rd, $z", []>,
                Requires<[HasLPMX]>;
+}
 
+let mayLoad = 1, hasSideEffects = 0 in {
   // Load program memory, while postincrementing the Z register.
   let Defs = [R31R30] in {
     def LPMRdZPi : FLPMX<0, 1, (outs GPR8:$rd), (ins ZREG:$z),
@@ -1212,7 +1214,7 @@ let mayLoad = 1, hasSideEffects = 0 in {
                   Requires<[HasELPMX]>;
 
   // These pseudo instructions are combination of the OUT and ELPM instructions.
-  let Defs = [R0], hasSideEffects = 1 in {
+  let Defs = [R0], mayStore = 1 in {
     def ELPMBRdZ : Pseudo<(outs GPR8:$dst), (ins ZREG:$z, LD8:$p),
                           "elpmb\t$dst, $z, $p", []>,
                    Requires<[HasELPM]>;
