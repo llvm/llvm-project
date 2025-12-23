@@ -152,11 +152,13 @@ void TargetLoweringBase::ArgListEntry::setAttributes(const CallBase *Call,
 /// Generate a libcall taking the given operands as arguments and returning a
 /// result of type RetVT.
 std::pair<SDValue, SDValue>
-TargetLowering::makeLibCall(SelectionDAG &DAG, RTLIB::Libcall LC, EVT RetVT,
-                            ArrayRef<SDValue> Ops,
-                            MakeLibCallOptions CallOptions,
-                            const SDLoc &dl,
+TargetLowering::makeLibCall(SelectionDAG &DAG, RTLIB::LibcallImpl LibcallImpl,
+                            EVT RetVT, ArrayRef<SDValue> Ops,
+                            MakeLibCallOptions CallOptions, const SDLoc &dl,
                             SDValue InChain) const {
+  if (LibcallImpl == RTLIB::Unsupported)
+    reportFatalInternalError("unsupported library call operation");
+
   if (!InChain)
     InChain = DAG.getEntryNode();
 
@@ -185,12 +187,8 @@ TargetLowering::makeLibCall(SelectionDAG &DAG, RTLIB::Libcall LC, EVT RetVT,
     Args.push_back(Entry);
   }
 
-  RTLIB::LibcallImpl LibcallImpl = getLibcallImpl(LC);
-  if (LibcallImpl == RTLIB::Unsupported)
-    reportFatalInternalError("unsupported library call operation");
-
-  SDValue Callee = DAG.getExternalSymbol(getLibcallImplName(LibcallImpl).data(),
-                                         getPointerTy(DAG.getDataLayout()));
+  SDValue Callee =
+      DAG.getExternalSymbol(LibcallImpl, getPointerTy(DAG.getDataLayout()));
 
   Type *RetTy = RetVT.getTypeForEVT(*DAG.getContext());
   Type *OrigRetTy = RetTy;
@@ -632,7 +630,7 @@ bool TargetLowering::ShrinkDemandedOp(SDValue Op, unsigned BitWidth,
   for (unsigned SmallVTBits = llvm::bit_ceil(DemandedSize);
        SmallVTBits < BitWidth; SmallVTBits = NextPowerOf2(SmallVTBits)) {
     EVT SmallVT = EVT::getIntegerVT(*DAG.getContext(), SmallVTBits);
-    if (isTruncateFree(VT, SmallVT) && isZExtFree(SmallVT, VT)) {
+    if (isTruncateFree(Op, SmallVT) && isZExtFree(SmallVT, VT)) {
       // We found a type with free casts.
 
       // If the operation has the 'disjoint' flag, then the
@@ -6738,6 +6736,19 @@ SDValue TargetLowering::BuildUDIV(SDNode *N, SelectionDAG &DAG,
   // avoid expensive fixups.
   unsigned KnownLeadingZeros = DAG.computeKnownBits(N0).countMinLeadingZeros();
 
+  // If we're after type legalization and SVT is not legal, use the
+  // promoted type for creating constants to avoid creating nodes with
+  // illegal types.
+  if (IsAfterLegalTypes && VT.isVector()) {
+    SVT = getTypeToTransformTo(*DAG.getContext(), SVT);
+    if (SVT.bitsLT(VT.getScalarType()))
+      return SDValue();
+    ShSVT = getTypeToTransformTo(*DAG.getContext(), ShSVT);
+    if (ShSVT.bitsLT(ShVT.getScalarType()))
+      return SDValue();
+  }
+  const unsigned SVTBits = SVT.getSizeInBits();
+
   bool UseNPQ = false, UsePreShift = false, UsePostShift = false;
   SmallVector<SDValue, 16> PreShifts, PostShifts, MagicFactors, NPQFactors;
 
@@ -6760,7 +6771,7 @@ SDValue TargetLowering::BuildUDIV(SDNode *N, SelectionDAG &DAG,
           UnsignedDivisionByConstantInfo::get(
               Divisor, std::min(KnownLeadingZeros, Divisor.countl_zero()));
 
-      MagicFactor = DAG.getConstant(magics.Magic, dl, SVT);
+      MagicFactor = DAG.getConstant(magics.Magic.zext(SVTBits), dl, SVT);
 
       assert(magics.PreShift < Divisor.getBitWidth() &&
              "We shouldn't generate an undefined shift!");
@@ -6771,8 +6782,8 @@ SDValue TargetLowering::BuildUDIV(SDNode *N, SelectionDAG &DAG,
       PreShift = DAG.getConstant(magics.PreShift, dl, ShSVT);
       PostShift = DAG.getConstant(magics.PostShift, dl, ShSVT);
       NPQFactor = DAG.getConstant(
-          magics.IsAdd ? APInt::getOneBitSet(EltBits, EltBits - 1)
-                       : APInt::getZero(EltBits),
+          magics.IsAdd ? APInt::getOneBitSet(SVTBits, EltBits - 1)
+                       : APInt::getZero(SVTBits),
           dl, SVT);
       UseNPQ |= magics.IsAdd;
       UsePreShift |= magics.PreShift != 0;
@@ -8253,8 +8264,7 @@ SDValue TargetLowering::expandFunnelShift(SDNode *Node,
     if (isNonZeroModBitWidthOrUndef(Z, BW)) {
       // fshl X, Y, Z -> fshr X, Y, -Z
       // fshr X, Y, Z -> fshl X, Y, -Z
-      SDValue Zero = DAG.getConstant(0, DL, ShVT);
-      Z = DAG.getNode(ISD::SUB, DL, VT, Zero, Z);
+      Z = DAG.getNegative(Z, DL, ShVT);
     } else {
       // fshl X, Y, Z -> fshr (srl X, 1), (fshr X, Y, 1), ~Z
       // fshr X, Y, Z -> fshl (fshl X, Y, 1), (shl Y, 1), ~Z
@@ -10885,6 +10895,18 @@ SDValue TargetLowering::expandAddSubSat(SDNode *Node, SelectionDAG &DAG) const {
     return DAG.getNode(ISD::SUB, dl, VT, Max, RHS);
   }
 
+  // usub.sat(a, 1) -> sub(a, zext(a != 0))
+  if (Opcode == ISD::USUBSAT && isOneOrOneSplat(RHS)) {
+    LHS = DAG.getFreeze(LHS);
+    SDValue Zero = DAG.getConstant(0, dl, VT);
+    EVT BoolVT = getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT);
+    SDValue IsNonZero = DAG.getSetCC(dl, BoolVT, LHS, Zero, ISD::SETNE);
+    SDValue Subtrahend = DAG.getBoolExtOrTrunc(IsNonZero, dl, VT, BoolVT);
+    Subtrahend =
+        DAG.getNode(ISD::AND, dl, VT, Subtrahend, DAG.getConstant(1, dl, VT));
+    return DAG.getNode(ISD::SUB, dl, VT, LHS, Subtrahend);
+  }
+
   // uadd.sat(a, b) -> umin(a, ~b) + b
   if (Opcode == ISD::UADDSAT && isOperationLegal(ISD::UMIN, VT)) {
     SDValue InvRHS = DAG.getNOT(dl, RHS, VT);
@@ -11031,8 +11053,7 @@ SDValue TargetLowering::expandShlSat(SDNode *Node, SelectionDAG &DAG) const {
 
   assert((Node->getOpcode() == ISD::SSHLSAT ||
           Node->getOpcode() == ISD::USHLSAT) &&
-          "Expected a SHLSAT opcode");
-  assert(VT == RHS.getValueType() && "Expected operands to be the same type");
+         "Expected a SHLSAT opcode");
   assert(VT.isInteger() && "Expected operands to be integers");
 
   if (VT.isVector() && !isOperationLegalOrCustom(ISD::VSELECT, VT))
@@ -12263,8 +12284,8 @@ bool TargetLowering::expandMultipleResultFPLibCall(
                       ? Node->getValueType(*CallRetResNo).getTypeForEVT(Ctx)
                       : Type::getVoidTy(Ctx);
   SDValue InChain = StoresInChain ? StoresInChain : DAG.getEntryNode();
-  SDValue Callee = DAG.getExternalSymbol(getLibcallImplName(LibcallImpl).data(),
-                                         getPointerTy(DAG.getDataLayout()));
+  SDValue Callee =
+      DAG.getExternalSymbol(LibcallImpl, getPointerTy(DAG.getDataLayout()));
   TargetLowering::CallLoweringInfo CLI(DAG);
   CLI.setDebugLoc(DL).setChain(InChain).setLibCallee(
       getLibcallImplCallingConv(LibcallImpl), RetType, Callee, std::move(Args));

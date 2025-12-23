@@ -6,13 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/types/size_t.h"
 #include "src/__support/CPP/new.h"
 #include "src/__support/File/file.h"
+#include "src/__support/alloc-checker.h"
 #include "src/__support/error_or.h"
 #include "test/UnitTest/MemoryMatcher.h"
 #include "test/UnitTest/Test.h"
-
-#include "hdr/types/size_t.h"
 
 using ModeFlags = LIBC_NAMESPACE::File::ModeFlags;
 using MemoryView = LIBC_NAMESPACE::testing::MemoryView;

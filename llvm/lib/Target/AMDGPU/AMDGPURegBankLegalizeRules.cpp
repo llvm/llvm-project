@@ -120,6 +120,8 @@ bool matchUniformityAndLLT(Register Reg, UniformityLLTOpPredicateID UniID,
     return isAnyPtr(MRI.getType(Reg), 128) && MUI.isUniform(Reg);
   case UniV2S16:
     return MRI.getType(Reg) == LLT::fixed_vector(2, 16) && MUI.isUniform(Reg);
+  case UniV2S32:
+    return MRI.getType(Reg) == LLT::fixed_vector(2, 32) && MUI.isUniform(Reg);
   case UniB32:
     return MRI.getType(Reg).getSizeInBits() == 32 && MUI.isUniform(Reg);
   case UniB64:
@@ -160,6 +162,8 @@ bool matchUniformityAndLLT(Register Reg, UniformityLLTOpPredicateID UniID,
     return isAnyPtr(MRI.getType(Reg), 128) && MUI.isDivergent(Reg);
   case DivV2S16:
     return MRI.getType(Reg) == LLT::fixed_vector(2, 16) && MUI.isDivergent(Reg);
+  case DivV2S32:
+    return MRI.getType(Reg) == LLT::fixed_vector(2, 32) && MUI.isDivergent(Reg);
   case DivB32:
     return MRI.getType(Reg).getSizeInBits() == 32 && MUI.isDivergent(Reg);
   case DivB64:
@@ -889,6 +893,12 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Div(B128, {{VgprB128}, {SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}})
       .Uni(B128, {{UniInVgprB128}, {SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}});
 
+  addRulesForGOpcs({G_AMDGPU_BUFFER_LOAD_USHORT, G_AMDGPU_BUFFER_LOAD_UBYTE,
+                    G_AMDGPU_BUFFER_LOAD_SSHORT, G_AMDGPU_BUFFER_LOAD_SBYTE},
+                   StandardB)
+      .Div(B32, {{VgprB32}, {SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}})
+      .Uni(B32, {{UniInVgprB32}, {SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}});
+
   addRulesForGOpcs({G_AMDGPU_BUFFER_STORE})
       .Any({{S32}, {{}, {Vgpr32, SgprV4S32, Vgpr32, Vgpr32, Sgpr32}}});
 
@@ -915,6 +925,12 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Any({{DivS128}, {{Vgpr128}, {VgprPtr128}}});
 
   addRulesForGOpcs({G_ABS}, Standard).Uni(S16, {{Sgpr32Trunc}, {Sgpr32SExt}});
+
+  addRulesForGOpcs({G_BITREVERSE}, Standard)
+      .Uni(S32, {{Sgpr32}, {Sgpr32}})
+      .Div(S32, {{Vgpr32}, {Vgpr32}})
+      .Uni(S64, {{Sgpr64}, {Sgpr64}})
+      .Div(S64, {{Vgpr64}, {Vgpr64}});
 
   addRulesForGOpcs({G_FENCE}).Any({{{}}, {{}, {}}});
 
@@ -948,6 +964,38 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
            hasSALUFloat)
       .Div(V2S16, {{VgprV2S16}, {VgprV2S16, VgprV2S16}});
 
+  addRulesForGOpcs({G_FSUB}, Standard)
+      .Div(S16, {{Vgpr16}, {Vgpr16, Vgpr16}})
+      .Div(S32, {{Vgpr32}, {Vgpr32, Vgpr32}})
+      .Uni(S16, {{Sgpr16}, {Sgpr16, Sgpr16}}, hasSALUFloat)
+      .Uni(S16, {{UniInVgprS16}, {Vgpr16, Vgpr16}}, !hasSALUFloat)
+      .Uni(S32, {{Sgpr32}, {Sgpr32, Sgpr32}}, hasSALUFloat)
+      .Uni(S32, {{UniInVgprS32}, {Vgpr32, Vgpr32}}, !hasSALUFloat);
+
+  addRulesForGOpcs({G_FMAD}, Standard)
+      .Uni(S16, {{UniInVgprS16}, {Vgpr16, Vgpr16, Vgpr16}})
+      .Div(S16, {{Vgpr16}, {Vgpr16, Vgpr16, Vgpr16}})
+      .Uni(S32, {{UniInVgprS32}, {Vgpr32, Vgpr32, Vgpr32}})
+      .Div(S32, {{Vgpr32}, {Vgpr32, Vgpr32, Vgpr32}});
+
+  addRulesForGOpcs({G_FMA}, Standard)
+      .Div(S16, {{Vgpr16}, {Vgpr16, Vgpr16, Vgpr16}})
+      .Div(S32, {{Vgpr32}, {Vgpr32, Vgpr32, Vgpr32}})
+      .Uni(S64, {{UniInVgprS64}, {Vgpr64, Vgpr64, Vgpr64}})
+      .Div(S64, {{Vgpr64}, {Vgpr64, Vgpr64, Vgpr64}})
+      .Div(V2S16, {{VgprV2S16}, {VgprV2S16, VgprV2S16, VgprV2S16}})
+      .Any({{UniV2S32}, {{UniInVgprV2S32}, {VgprV2S32, VgprV2S32, VgprV2S32}}})
+      .Any({{DivV2S32}, {{VgprV2S32}, {VgprV2S32, VgprV2S32, VgprV2S32}}})
+      .Uni(S16, {{Sgpr16}, {Sgpr16, Sgpr16, Sgpr16}}, hasSALUFloat)
+      .Uni(S16, {{UniInVgprS16}, {Vgpr16, Vgpr16, Vgpr16}}, !hasSALUFloat)
+      .Uni(S32, {{Sgpr32}, {Sgpr32, Sgpr32, Sgpr32}}, hasSALUFloat)
+      .Uni(S32, {{UniInVgprS32}, {Vgpr32, Vgpr32, Vgpr32}}, !hasSALUFloat)
+      .Uni(V2S16,
+           {{SgprV2S16}, {SgprV2S16, SgprV2S16, SgprV2S16}, ScalarizeToS16},
+           hasSALUFloat)
+      .Uni(V2S16, {{UniInVgprV2S16}, {VgprV2S16, VgprV2S16, VgprV2S16}},
+           !hasSALUFloat);
+
   // FNEG and FABS are either folded as source modifiers or can be selected as
   // bitwise XOR and AND with Mask. XOR and AND are available on SALU but for
   // targets without SALU float we still select them as VGPR since there would
@@ -975,6 +1023,22 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Any({{DivS32, S32}, {{Vgpr32}, {Vgpr32}}})
       .Any({{UniS32, S32}, {{Sgpr32}, {Sgpr32}}}, hasSALUFloat)
       .Any({{UniS32, S32}, {{UniInVgprS32}, {Vgpr32}}}, !hasSALUFloat);
+
+  addRulesForGOpcs({G_FPEXT})
+      .Any({{DivS32, S16}, {{Vgpr32}, {Vgpr16}}})
+      .Any({{UniS64, S32}, {{UniInVgprS64}, {Vgpr32}}})
+      .Any({{DivS64, S32}, {{Vgpr64}, {Vgpr32}}})
+      .Any({{UniS32, S16}, {{Sgpr32}, {Sgpr16}}}, hasSALUFloat)
+      .Any({{UniS32, S16}, {{UniInVgprS32}, {Vgpr16}}}, !hasSALUFloat);
+
+  addRulesForGOpcs({G_FPTRUNC})
+      .Any({{DivS16, S32}, {{Vgpr16}, {Vgpr32}}})
+      .Any({{UniS32, S64}, {{UniInVgprS32}, {Vgpr64}}})
+      .Any({{DivS32, S64}, {{Vgpr32}, {Vgpr64}}})
+      .Any({{UniV2S16, V2S32}, {{UniInVgprV2S16}, {VgprV2S32}}})
+      .Any({{DivV2S16, V2S32}, {{VgprV2S16}, {VgprV2S32}}})
+      .Any({{UniS16, S32}, {{Sgpr16}, {Sgpr32}}}, hasSALUFloat)
+      .Any({{UniS16, S32}, {{UniInVgprS16}, {Vgpr32}}}, !hasSALUFloat);
 
   addRulesForGOpcs({G_IS_FPCLASS})
       .Any({{DivS1, S16}, {{Vcc}, {Vgpr16}}})

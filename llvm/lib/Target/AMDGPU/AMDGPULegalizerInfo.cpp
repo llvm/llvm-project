@@ -1722,6 +1722,13 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     Atomics.legalFor({{S32, FlatPtr}, {S64, FlatPtr}});
   }
 
+  auto &Atomics32 =
+      getActionDefinitionsBuilder({G_ATOMICRMW_USUB_COND, G_ATOMICRMW_USUB_SAT})
+          .legalFor({{S32, GlobalPtr}, {S32, LocalPtr}, {S32, RegionPtr}});
+  if (ST.hasFlatAddressSpace()) {
+    Atomics32.legalFor({{S32, FlatPtr}});
+  }
+
   // TODO: v2bf16 operations, and fat buffer pointer support.
   auto &Atomic = getActionDefinitionsBuilder(G_ATOMICRMW_FADD);
   if (ST.hasLDSFPAtomicAddF32()) {
@@ -3400,6 +3407,9 @@ static bool valueIsKnownNeverF32Denorm(const MachineRegisterInfo &MRI,
   case TargetOpcode::G_INTRINSIC: {
     switch (cast<GIntrinsic>(DefMI)->getIntrinsicID()) {
     case Intrinsic::amdgcn_frexp_mant:
+    case Intrinsic::amdgcn_log:
+    case Intrinsic::amdgcn_log_clamp:
+    case Intrinsic::amdgcn_exp2:
       return true;
     default:
       break;
@@ -3561,12 +3571,14 @@ bool AMDGPULegalizerInfo::legalizeFlogCommon(MachineInstr &MI,
 
     auto C = B.buildFConstant(Ty, IsLog10 ? c_log10 : c_log);
     auto CC = B.buildFConstant(Ty, IsLog10 ? cc_log10 : cc_log);
-
-    R = B.buildFMul(Ty, Y, C, Flags).getReg(0);
-    auto NegR = B.buildFNeg(Ty, R, Flags);
-    auto FMA0 = B.buildFMA(Ty, Y, C, NegR, Flags);
-    auto FMA1 = B.buildFMA(Ty, Y, CC, FMA0, Flags);
-    R = B.buildFAdd(Ty, R, FMA1, Flags).getReg(0);
+    // This adds correction terms for which contraction may lead to an increase
+    // in the error of the approximation, so disable it.
+    auto NewFlags = Flags & ~(MachineInstr::FmContract);
+    R = B.buildFMul(Ty, Y, C, NewFlags).getReg(0);
+    auto NegR = B.buildFNeg(Ty, R, NewFlags);
+    auto FMA0 = B.buildFMA(Ty, Y, C, NegR, NewFlags);
+    auto FMA1 = B.buildFMA(Ty, Y, CC, FMA0, NewFlags);
+    R = B.buildFAdd(Ty, R, FMA1, NewFlags).getReg(0);
   } else {
     // ch+ct is ln(2)/ln(10) to more than 36 bits
     const float ch_log10 = 0x1.344000p-2f;
@@ -3582,12 +3594,15 @@ bool AMDGPULegalizerInfo::legalizeFlogCommon(MachineInstr &MI,
     auto MaskConst = B.buildConstant(Ty, 0xfffff000);
     auto YH = B.buildAnd(Ty, Y, MaskConst);
     auto YT = B.buildFSub(Ty, Y, YH, Flags);
-    auto YTCT = B.buildFMul(Ty, YT, CT, Flags);
+    // This adds correction terms for which contraction may lead to an increase
+    // in the error of the approximation, so disable it.
+    auto NewFlags = Flags & ~(MachineInstr::FmContract);
+    auto YTCT = B.buildFMul(Ty, YT, CT, NewFlags);
 
     Register Mad0 =
-        getMad(B, Ty, YH.getReg(0), CT.getReg(0), YTCT.getReg(0), Flags);
-    Register Mad1 = getMad(B, Ty, YT.getReg(0), CH.getReg(0), Mad0, Flags);
-    R = getMad(B, Ty, YH.getReg(0), CH.getReg(0), Mad1, Flags);
+        getMad(B, Ty, YH.getReg(0), CT.getReg(0), YTCT.getReg(0), NewFlags);
+    Register Mad1 = getMad(B, Ty, YT.getReg(0), CH.getReg(0), Mad0, NewFlags);
+    R = getMad(B, Ty, YH.getReg(0), CH.getReg(0), Mad1, NewFlags);
   }
 
   const bool IsFiniteOnly =
@@ -3716,24 +3731,39 @@ bool AMDGPULegalizerInfo::legalizeFExp2(MachineInstr &MI,
   return true;
 }
 
+static MachineInstrBuilder buildExp(MachineIRBuilder &B, const DstOp &Dst,
+                                    const SrcOp &Src, unsigned Flags) {
+  LLT Ty = Dst.getLLTTy(*B.getMRI());
+
+  if (Ty == LLT::scalar(32)) {
+    return B.buildIntrinsic(Intrinsic::amdgcn_exp2, {Dst})
+        .addUse(Src.getReg())
+        .setMIFlags(Flags);
+  }
+  return B.buildFExp2(Dst, Src, Flags);
+}
+
+bool AMDGPULegalizerInfo::legalizeFExpUnsafeImpl(MachineIRBuilder &B,
+                                                 Register Dst, Register X,
+                                                 unsigned Flags,
+                                                 bool IsExp10) const {
+  LLT Ty = B.getMRI()->getType(X);
+
+  // exp(x) -> exp2(M_LOG2E_F * x);
+  // exp10(x) -> exp2(log2(10) * x);
+  auto Const = B.buildFConstant(Ty, IsExp10 ? 0x1.a934f0p+1f : numbers::log2e);
+  auto Mul = B.buildFMul(Ty, X, Const, Flags);
+  buildExp(B, Dst, Mul, Flags);
+  return true;
+}
+
 bool AMDGPULegalizerInfo::legalizeFExpUnsafe(MachineIRBuilder &B, Register Dst,
                                              Register X, unsigned Flags) const {
   LLT Ty = B.getMRI()->getType(Dst);
   LLT F32 = LLT::scalar(32);
 
   if (Ty != F32 || !needsDenormHandlingF32(B.getMF(), X, Flags)) {
-    auto Log2E = B.buildFConstant(Ty, numbers::log2e);
-    auto Mul = B.buildFMul(Ty, X, Log2E, Flags);
-
-    if (Ty == F32) {
-      B.buildIntrinsic(Intrinsic::amdgcn_exp2, ArrayRef<Register>{Dst})
-        .addUse(Mul.getReg(0))
-        .setMIFlags(Flags);
-    } else {
-      B.buildFExp2(Dst, Mul.getReg(0), Flags);
-    }
-
-    return true;
+    return legalizeFExpUnsafeImpl(B, Dst, X, Flags, /*IsExp10=*/false);
   }
 
   auto Threshold = B.buildFConstant(Ty, -0x1.5d58a0p+6f);
@@ -3756,6 +3786,55 @@ bool AMDGPULegalizerInfo::legalizeFExpUnsafe(MachineIRBuilder &B, Register Dst,
   return true;
 }
 
+bool AMDGPULegalizerInfo::legalizeFExp10Unsafe(MachineIRBuilder &B,
+                                               Register Dst, Register X,
+                                               unsigned Flags) const {
+  LLT Ty = B.getMRI()->getType(Dst);
+  LLT F32 = LLT::scalar(32);
+
+  if (Ty != F32 || !needsDenormHandlingF32(B.getMF(), X, Flags)) {
+    // exp2(x * 0x1.a92000p+1f) * exp2(x * 0x1.4f0978p-11f);
+    auto K0 = B.buildFConstant(Ty, 0x1.a92000p+1f);
+    auto K1 = B.buildFConstant(Ty, 0x1.4f0978p-11f);
+
+    auto Mul1 = B.buildFMul(Ty, X, K1, Flags);
+    auto Exp2_1 = buildExp(B, Ty, Mul1, Flags);
+    auto Mul0 = B.buildFMul(Ty, X, K0, Flags);
+    auto Exp2_0 = buildExp(B, Ty, Mul0, Flags);
+    B.buildFMul(Dst, Exp2_0, Exp2_1, Flags);
+    return true;
+  }
+
+  // bool s = x < -0x1.2f7030p+5f;
+  // x += s ? 0x1.0p+5f : 0.0f;
+  // exp10 = exp2(x * 0x1.a92000p+1f) *
+  //        exp2(x * 0x1.4f0978p-11f) *
+  //        (s ? 0x1.9f623ep-107f : 1.0f);
+
+  auto Threshold = B.buildFConstant(Ty, -0x1.2f7030p+5f);
+  auto NeedsScaling =
+      B.buildFCmp(CmpInst::FCMP_OLT, LLT::scalar(1), X, Threshold);
+
+  auto ScaleOffset = B.buildFConstant(Ty, 0x1.0p+5f);
+  auto ScaledX = B.buildFAdd(Ty, X, ScaleOffset, Flags);
+  auto AdjustedX = B.buildSelect(Ty, NeedsScaling, ScaledX, X);
+
+  auto K0 = B.buildFConstant(Ty, 0x1.a92000p+1f);
+  auto K1 = B.buildFConstant(Ty, 0x1.4f0978p-11f);
+
+  auto Mul1 = B.buildFMul(Ty, AdjustedX, K1, Flags);
+  auto Exp2_1 = buildExp(B, Ty, Mul1, Flags);
+  auto Mul0 = B.buildFMul(Ty, AdjustedX, K0, Flags);
+  auto Exp2_0 = buildExp(B, Ty, Mul0, Flags);
+
+  auto MulExps = B.buildFMul(Ty, Exp2_0, Exp2_1, Flags);
+  auto ResultScaleFactor = B.buildFConstant(Ty, 0x1.9f623ep-107f);
+  auto AdjustedResult = B.buildFMul(Ty, MulExps, ResultScaleFactor, Flags);
+
+  B.buildSelect(Dst, NeedsScaling, AdjustedResult, MulExps);
+  return true;
+}
+
 bool AMDGPULegalizerInfo::legalizeFExp(MachineInstr &MI,
                                        MachineIRBuilder &B) const {
   Register Dst = MI.getOperand(0).getReg();
@@ -3772,18 +3851,22 @@ bool AMDGPULegalizerInfo::legalizeFExp(MachineInstr &MI,
     // v_exp_f16 (fmul x, log2e)
     if (allowApproxFunc(MF, Flags)) {
       // TODO: Does this really require fast?
-      legalizeFExpUnsafe(B, Dst, X, Flags);
+      IsExp10 ? legalizeFExp10Unsafe(B, Dst, X, Flags)
+              : legalizeFExpUnsafe(B, Dst, X, Flags);
       MI.eraseFromParent();
       return true;
     }
 
+    // Nothing in half is a denormal when promoted to f32.
+    //
     // exp(f16 x) ->
     //   fptrunc (v_exp_f32 (fmul (fpext x), log2e))
-
-    // Nothing in half is a denormal when promoted to f32.
+    //
+    // exp10(f16 x) ->
+    //   fptrunc (v_exp_f32 (fmul (fpext x), log2(10)))
     auto Ext = B.buildFPExt(F32, X, Flags);
     Register Lowered = MRI.createGenericVirtualRegister(F32);
-    legalizeFExpUnsafe(B, Lowered, Ext.getReg(0), Flags);
+    legalizeFExpUnsafeImpl(B, Lowered, Ext.getReg(0), Flags, IsExp10);
     B.buildFPTrunc(Dst, Lowered, Flags);
     MI.eraseFromParent();
     return true;
@@ -3794,7 +3877,8 @@ bool AMDGPULegalizerInfo::legalizeFExp(MachineInstr &MI,
   // TODO: Interpret allowApproxFunc as ignoring DAZ. This is currently copying
   // library behavior. Also, is known-not-daz source sufficient?
   if (allowApproxFunc(MF, Flags)) {
-    legalizeFExpUnsafe(B, Dst, X, Flags);
+    IsExp10 ? legalizeFExp10Unsafe(B, Dst, X, Flags)
+            : legalizeFExpUnsafe(B, Dst, X, Flags);
     MI.eraseFromParent();
     return true;
   }
@@ -6556,8 +6640,15 @@ static unsigned getBufferAtomicPseudo(Intrinsic::ID IntrID) {
   case Intrinsic::amdgcn_struct_buffer_atomic_fmax:
   case Intrinsic::amdgcn_struct_ptr_buffer_atomic_fmax:
     return AMDGPU::G_AMDGPU_BUFFER_ATOMIC_FMAX;
+  case Intrinsic::amdgcn_raw_buffer_atomic_sub_clamp_u32:
+  case Intrinsic::amdgcn_raw_ptr_buffer_atomic_sub_clamp_u32:
+  case Intrinsic::amdgcn_struct_buffer_atomic_sub_clamp_u32:
+  case Intrinsic::amdgcn_struct_ptr_buffer_atomic_sub_clamp_u32:
+    return AMDGPU::G_AMDGPU_BUFFER_ATOMIC_SUB_CLAMP_U32;
   case Intrinsic::amdgcn_raw_buffer_atomic_cond_sub_u32:
+  case Intrinsic::amdgcn_raw_ptr_buffer_atomic_cond_sub_u32:
   case Intrinsic::amdgcn_struct_buffer_atomic_cond_sub_u32:
+  case Intrinsic::amdgcn_struct_ptr_buffer_atomic_cond_sub_u32:
     return AMDGPU::G_AMDGPU_BUFFER_ATOMIC_COND_SUB_U32;
   default:
     llvm_unreachable("unhandled atomic opcode");
@@ -7965,6 +8056,14 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
   case Intrinsic::amdgcn_raw_ptr_buffer_atomic_fmax:
   case Intrinsic::amdgcn_struct_buffer_atomic_fmax:
   case Intrinsic::amdgcn_struct_ptr_buffer_atomic_fmax:
+  case Intrinsic::amdgcn_raw_buffer_atomic_sub_clamp_u32:
+  case Intrinsic::amdgcn_raw_ptr_buffer_atomic_sub_clamp_u32:
+  case Intrinsic::amdgcn_struct_buffer_atomic_sub_clamp_u32:
+  case Intrinsic::amdgcn_struct_ptr_buffer_atomic_sub_clamp_u32:
+  case Intrinsic::amdgcn_raw_buffer_atomic_cond_sub_u32:
+  case Intrinsic::amdgcn_raw_ptr_buffer_atomic_cond_sub_u32:
+  case Intrinsic::amdgcn_struct_buffer_atomic_cond_sub_u32:
+  case Intrinsic::amdgcn_struct_ptr_buffer_atomic_cond_sub_u32:
   case Intrinsic::amdgcn_raw_buffer_atomic_fadd:
   case Intrinsic::amdgcn_raw_ptr_buffer_atomic_fadd:
   case Intrinsic::amdgcn_struct_buffer_atomic_fadd:

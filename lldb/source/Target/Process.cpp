@@ -117,6 +117,8 @@ static constexpr OptionEnumValueElement g_follow_fork_mode_values[] = {
     },
 };
 
+static constexpr unsigned g_string_read_width = 256;
+
 #define LLDB_PROPERTIES_process
 #include "TargetProperties.inc"
 
@@ -2135,9 +2137,63 @@ lldb::addr_t Process::FindInMemory(const uint8_t *buf, uint64_t size,
   return matches[0].GetBaseAddress().GetLoadAddress(&target);
 }
 
+llvm::SmallVector<std::optional<std::string>>
+Process::ReadCStringsFromMemory(llvm::ArrayRef<lldb::addr_t> addresses) {
+  llvm::SmallVector<std::optional<std::string>> output_strs(addresses.size(),
+                                                            "");
+  llvm::SmallVector<Range<addr_t, size_t>> ranges{
+      llvm::map_range(addresses, [=](addr_t ptr) {
+        return Range<addr_t, size_t>(ptr, g_string_read_width);
+      })};
+
+  std::vector<uint8_t> buffer(g_string_read_width * addresses.size(), 0);
+  uint64_t num_completed_strings = 0;
+
+  while (num_completed_strings != addresses.size()) {
+    llvm::SmallVector<llvm::MutableArrayRef<uint8_t>> read_results =
+        ReadMemoryRanges(ranges, buffer);
+
+    // Each iteration of this loop either increments num_completed_strings or
+    // updates the base pointer of some range, guaranteeing forward progress of
+    // the outer loop.
+    for (auto [range, read_result, output_str] :
+         llvm::zip(ranges, read_results, output_strs)) {
+      // A previously completed string.
+      if (range.GetByteSize() == 0)
+        continue;
+
+      // The read failed, set the range to 0 to avoid reading it again.
+      if (read_result.empty()) {
+        output_str = std::nullopt;
+        range.SetByteSize(0);
+        num_completed_strings++;
+        continue;
+      }
+
+      // Convert ArrayRef to StringRef so the pointers work with std::string.
+      auto read_result_str = llvm::toStringRef(read_result);
+
+      const char *null_terminator_pos = llvm::find(read_result_str, '\0');
+      output_str->append(read_result_str.begin(), null_terminator_pos);
+
+      // If the terminator was found, this string is complete.
+      if (null_terminator_pos != read_result_str.end()) {
+        range.SetByteSize(0);
+        num_completed_strings++;
+      }
+      // Otherwise increment the base pointer for the next read.
+      else {
+        range.SetRangeBase(range.GetRangeBase() + read_result.size());
+      }
+    }
+  }
+
+  return output_strs;
+}
+
 size_t Process::ReadCStringFromMemory(addr_t addr, std::string &out_str,
                                       Status &error) {
-  char buf[256];
+  char buf[g_string_read_width];
   out_str.clear();
   addr_t curr_addr = addr;
   while (true) {

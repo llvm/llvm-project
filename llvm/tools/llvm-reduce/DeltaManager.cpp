@@ -45,6 +45,7 @@
 #include "deltas/ReduceRegisterDefs.h"
 #include "deltas/ReduceRegisterMasks.h"
 #include "deltas/ReduceRegisterUses.h"
+#include "deltas/ReduceSinkDefsToUses.h"
 #include "deltas/ReduceSpecialGlobals.h"
 #include "deltas/ReduceTargetFeaturesAttr.h"
 #include "deltas/ReduceUsingSimplifyCFG.h"
