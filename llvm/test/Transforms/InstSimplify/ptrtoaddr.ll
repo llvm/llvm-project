@@ -470,3 +470,61 @@ define i1 @icmp_ptrtoint_null_dyn_addrsize(ptr addrspace(1) nonnull %a) {
   %cmp = icmp ne i64 %a.addr, 0
   ret i1 %cmp
 }
+
+define i1 @non_zero_ptrtoaddr(ptr nonnull %p, i64 %unknown) {
+; CHECK-LABEL: define i1 @non_zero_ptrtoaddr(
+; CHECK-SAME: ptr nonnull [[P:%.*]], i64 [[UNKNOWN:%.*]]) {
+; CHECK-NEXT:    ret i1 true
+;
+  %p.addr = ptrtoaddr ptr %p to i64
+  %or = or i64 %p.addr, %unknown
+  %cmp = icmp ne i64 %or, 0
+  ret i1 %cmp
+}
+
+define i1 @non_zero_ptrtoaddr_addrsize(ptr addrspace(1) nonnull %p, i32 %unknown) {
+; CHECK-LABEL: define i1 @non_zero_ptrtoaddr_addrsize(
+; CHECK-SAME: ptr addrspace(1) nonnull [[P:%.*]], i32 [[UNKNOWN:%.*]]) {
+; CHECK-NEXT:    ret i1 true
+;
+  %p.addr = ptrtoaddr ptr addrspace(1) %p to i32
+  %or = or i32 %p.addr, %unknown
+  %cmp = icmp ne i32 %or, 0
+  ret i1 %cmp
+}
+
+define i1 @non_zero_ptrtoint_equal_addrsize(ptr addrspace(1) nonnull %p, i32 %unknown) {
+; CHECK-LABEL: define i1 @non_zero_ptrtoint_equal_addrsize(
+; CHECK-SAME: ptr addrspace(1) nonnull [[P:%.*]], i32 [[UNKNOWN:%.*]]) {
+; CHECK-NEXT:    ret i1 true
+;
+  %p.addr = ptrtoint ptr addrspace(1) %p to i32
+  %or = or i32 %p.addr, %unknown
+  %cmp = icmp ne i32 %or, 0
+  ret i1 %cmp
+}
+
+define i1 @non_zero_ptrtoint_larger_addrsize(ptr addrspace(1) nonnull %p, i64 %unknown) {
+; CHECK-LABEL: define i1 @non_zero_ptrtoint_larger_addrsize(
+; CHECK-SAME: ptr addrspace(1) nonnull [[P:%.*]], i64 [[UNKNOWN:%.*]]) {
+; CHECK-NEXT:    ret i1 true
+;
+  %p.addr = ptrtoint ptr addrspace(1) %p to i64
+  %or = or i64 %p.addr, %unknown
+  %cmp = icmp ne i64 %or, 0
+  ret i1 %cmp
+}
+
+define i1 @non_zero_ptrtoint_smaller_addrsize(ptr addrspace(1) nonnull %p, i16 %unknown) {
+; CHECK-LABEL: define i1 @non_zero_ptrtoint_smaller_addrsize(
+; CHECK-SAME: ptr addrspace(1) nonnull [[P:%.*]], i16 [[UNKNOWN:%.*]]) {
+; CHECK-NEXT:    [[P_ADDR:%.*]] = ptrtoint ptr addrspace(1) [[P]] to i16
+; CHECK-NEXT:    [[OR:%.*]] = or i16 [[P_ADDR]], [[UNKNOWN]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i16 [[OR]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %p.addr = ptrtoint ptr addrspace(1) %p to i16
+  %or = or i16 %p.addr, %unknown
+  %cmp = icmp ne i16 %or, 0
+  ret i1 %cmp
+}
