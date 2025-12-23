@@ -814,13 +814,8 @@ VariableDescription::VariableDescription(lldb::SBValue v,
       os_display_value << *effective_summary;
 
       // As last resort, we print its type and address if available.
-    } else {
-      if (!raw_display_type_name.empty()) {
-        os_display_value << raw_display_type_name;
-        lldb::addr_t address = v.GetLoadAddress();
-        if (address != LLDB_INVALID_ADDRESS)
-          os_display_value << " @ " << llvm::format_hex(address, 0);
-      }
+    } else if (!raw_display_type_name.empty()) {
+      os_display_value << raw_display_type_name;
     }
   }
 
@@ -863,15 +858,6 @@ int64_t PackLocation(int64_t var_ref, bool is_value_location) {
 
 std::pair<int64_t, bool> UnpackLocation(int64_t location_id) {
   return std::pair{location_id >> 1, location_id & 1};
-}
-
-llvm::json::Value CreateCompileUnit(lldb::SBCompileUnit &unit) {
-  llvm::json::Object object;
-  char unit_path_arr[PATH_MAX];
-  unit.GetFileSpec().GetPath(unit_path_arr, sizeof(unit_path_arr));
-  std::string unit_path(unit_path_arr);
-  object.try_emplace("compileUnitPath", unit_path);
-  return llvm::json::Value(std::move(object));
 }
 
 /// See

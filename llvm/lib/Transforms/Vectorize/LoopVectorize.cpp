@@ -1405,6 +1405,11 @@ public:
     return InLoopReductions.contains(Phi);
   }
 
+  /// Returns the set of in-loop reduction PHIs.
+  const SmallPtrSetImpl<PHINode *> &getInLoopReductions() const {
+    return InLoopReductions;
+  }
+
   /// Returns true if the predicated reduction select should be used to set the
   /// incoming value for the reduction phi.
   bool usePredicatedReductionSelect() const {
@@ -1819,7 +1824,8 @@ public:
   /// there is no vector code generation, the check blocks are removed
   /// completely.
   void create(Loop *L, const LoopAccessInfo &LAI,
-              const SCEVPredicate &UnionPred, ElementCount VF, unsigned IC) {
+              const SCEVPredicate &UnionPred, ElementCount VF, unsigned IC,
+              OptimizationRemarkEmitter &ORE) {
 
     // Hard cutoff to limit compile-time increase in case a very large number of
     // runtime checks needs to be generated.
@@ -1827,8 +1833,19 @@ public:
     // profile info.
     CostTooHigh =
         LAI.getNumRuntimePointerChecks() > VectorizeMemoryCheckThreshold;
-    if (CostTooHigh)
+    if (CostTooHigh) {
+      // Mark runtime checks as never succeeding when they exceed the threshold.
+      MemRuntimeCheckCond = ConstantInt::getTrue(L->getHeader()->getContext());
+      SCEVCheckCond = ConstantInt::getTrue(L->getHeader()->getContext());
+      ORE.emit([&]() {
+        return OptimizationRemarkAnalysisAliasing(
+                   DEBUG_TYPE, "TooManyMemoryRuntimeChecks", L->getStartLoc(),
+                   L->getHeader())
+               << "loop not vectorized: too many memory checks needed";
+      });
+      LLVM_DEBUG(dbgs() << "LV: Too many memory checks needed.\n");
       return;
+    }
 
     BasicBlock *LoopHeader = L->getHeader();
     BasicBlock *Preheader = L->getLoopPreheader();
@@ -3967,8 +3984,8 @@ void LoopVectorizationPlanner::emitInvalidCostRemarks(
       if (VF.isScalar())
         continue;
 
-      VPCostContext CostCtx(CM.TTI, *CM.TLI, *Plan, CM, CM.CostKind,
-                            *CM.PSE.getSE(), OrigLoop);
+      VPCostContext CostCtx(CM.TTI, *CM.TLI, *Plan, CM, CM.CostKind, CM.PSE,
+                            OrigLoop);
       precomputeCosts(*Plan, VF, CostCtx);
       auto Iter = vp_depth_first_deep(Plan->getVectorLoopRegion()->getEntry());
       for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(Iter)) {
@@ -4228,8 +4245,8 @@ VectorizationFactor LoopVectorizationPlanner::selectVectorizationFactor() {
 
       // Add on other costs that are modelled in VPlan, but not in the legacy
       // cost model.
-      VPCostContext CostCtx(CM.TTI, *CM.TLI, *P, CM, CM.CostKind,
-                            *CM.PSE.getSE(), OrigLoop);
+      VPCostContext CostCtx(CM.TTI, *CM.TLI, *P, CM, CM.CostKind, CM.PSE,
+                            OrigLoop);
       VPRegionBlock *VectorRegion = P->getVectorLoopRegion();
       assert(VectorRegion && "Expected to have a vector region!");
       for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
@@ -4432,16 +4449,16 @@ VectorizationFactor LoopVectorizationPlanner::selectEpilogueVectorizationFactor(
   ElementCount EstimatedRuntimeVF = ElementCount::getFixed(
       estimateElementCount(MainLoopVF, CM.getVScaleForTuning()));
 
-  ScalarEvolution &SE = *PSE.getSE();
   Type *TCType = Legal->getWidestInductionType();
   const SCEV *RemainingIterations = nullptr;
   unsigned MaxTripCount = 0;
-  const SCEV *TC =
-      vputils::getSCEVExprForVPValue(getPlanFor(MainLoopVF).getTripCount(), SE);
+  const SCEV *TC = vputils::getSCEVExprForVPValue(
+      getPlanFor(MainLoopVF).getTripCount(), PSE);
   assert(!isa<SCEVCouldNotCompute>(TC) && "Trip count SCEV must be computable");
   const SCEV *KnownMinTC;
   bool ScalableTC = match(TC, m_scev_c_Mul(m_SCEV(KnownMinTC), m_SCEVVScale()));
   bool ScalableRemIter = false;
+  ScalarEvolution &SE = *PSE.getSE();
   // Use versions of TC and VF in which both are either scalable or fixed.
   if (ScalableTC == MainLoopVF.isScalable()) {
     ScalableRemIter = ScalableTC;
@@ -5196,19 +5213,9 @@ static const SCEV *getAddressAccessSCEV(
   if (!Gep)
     return nullptr;
 
-  // We are looking for a gep with all loop invariant indices except for one
-  // which should be an induction variable.
-  auto *SE = PSE.getSE();
-  unsigned NumOperands = Gep->getNumOperands();
-  for (unsigned Idx = 1; Idx < NumOperands; ++Idx) {
-    Value *Opd = Gep->getOperand(Idx);
-    if (!SE->isLoopInvariant(SE->getSCEV(Opd), TheLoop) &&
-        !Legal->isInductionVariable(Opd))
-      return nullptr;
-  }
-
-  // Now we know we have a GEP ptr, %inv, %ind, %inv. return the Ptr SCEV.
-  return PSE.getSCEV(Ptr);
+  const SCEV *Addr = PSE.getSCEV(Ptr);
+  return vputils::isAddressSCEVForCost(Addr, *PSE.getSE(), TheLoop) ? Addr
+                                                                    : nullptr;
 }
 
 InstructionCost
@@ -6984,8 +6991,7 @@ LoopVectorizationPlanner::precomputeCosts(VPlan &Plan, ElementCount VF,
 
 InstructionCost LoopVectorizationPlanner::cost(VPlan &Plan,
                                                ElementCount VF) const {
-  VPCostContext CostCtx(CM.TTI, *CM.TLI, Plan, CM, CM.CostKind, *PSE.getSE(),
-                        OrigLoop);
+  VPCostContext CostCtx(CM.TTI, *CM.TLI, Plan, CM, CM.CostKind, PSE, OrigLoop);
   InstructionCost Cost = precomputeCosts(Plan, VF, CostCtx);
 
   // Now compute and add the VPlan-based cost.
@@ -7079,7 +7085,27 @@ static bool planContainsAdditionalSimplifications(VPlan &Plan,
         if (AddrI && vputils::isSingleScalar(WidenMemR->getAddr()) !=
                          CostCtx.isLegacyUniformAfterVectorization(AddrI, VF))
           return true;
+
+        if (WidenMemR->isReverse()) {
+          // If the stored value of a reverse store is invariant, LICM will
+          // hoist the reverse operation to the preheader. In this case, the
+          // result of the VPlan-based cost model will diverge from that of
+          // the legacy model.
+          if (auto *StoreR = dyn_cast<VPWidenStoreRecipe>(WidenMemR))
+            if (StoreR->getStoredValue()->isDefinedOutsideLoopRegions())
+              return true;
+
+          if (auto *StoreR = dyn_cast<VPWidenStoreEVLRecipe>(WidenMemR))
+            if (StoreR->getStoredValue()->isDefinedOutsideLoopRegions())
+              return true;
+        }
       }
+
+      // The legacy cost model costs non-header phis with a scalar VF as a phi,
+      // but scalar unrolled VPlans will have VPBlendRecipes which emit selects.
+      if (isa<VPBlendRecipe>(&R) &&
+          vputils::onlyFirstLaneUsed(R.getVPSingleValue()))
+        return true;
 
       /// If a VPlan transform folded a recipe to one producing a single-scalar,
       /// but the original instruction wasn't uniform-after-vectorization in the
@@ -7218,8 +7244,8 @@ VectorizationFactor LoopVectorizationPlanner::computeBestVF() {
   // simplifications not accounted for in the legacy cost model. If that's the
   // case, don't trigger the assertion, as the extra simplifications may cause a
   // different VF to be picked by the VPlan-based cost model.
-  VPCostContext CostCtx(CM.TTI, *CM.TLI, BestPlan, CM, CM.CostKind,
-                        *CM.PSE.getSE(), OrigLoop);
+  VPCostContext CostCtx(CM.TTI, *CM.TLI, BestPlan, CM, CM.CostKind, CM.PSE,
+                        OrigLoop);
   precomputeCosts(BestPlan, BestFactor.Width, CostCtx);
   // Verify that the VPlan-based and legacy cost models agree, except for
   // * VPlans with early exits,
@@ -7610,8 +7636,8 @@ void EpilogueVectorizerEpilogueLoop::printDebugTracesAtEnd() {
   });
 }
 
-VPWidenMemoryRecipe *VPRecipeBuilder::tryToWidenMemory(VPInstruction *VPI,
-                                                       VFRange &Range) {
+VPRecipeBase *VPRecipeBuilder::tryToWidenMemory(VPInstruction *VPI,
+                                                VFRange &Range) {
   assert((VPI->getOpcode() == Instruction::Load ||
           VPI->getOpcode() == Instruction::Store) &&
          "Must be called with either a load or store");
@@ -7672,69 +7698,26 @@ VPWidenMemoryRecipe *VPRecipeBuilder::tryToWidenMemory(VPInstruction *VPI,
     Builder.insert(VectorPtr);
     Ptr = VectorPtr;
   }
+
   if (VPI->getOpcode() == Instruction::Load) {
     auto *Load = cast<LoadInst>(I);
-    return new VPWidenLoadRecipe(*Load, Ptr, Mask, Consecutive, Reverse, *VPI,
-                                 VPI->getDebugLoc());
+    auto *LoadR = new VPWidenLoadRecipe(*Load, Ptr, Mask, Consecutive, Reverse,
+                                        *VPI, Load->getDebugLoc());
+    if (Reverse) {
+      Builder.insert(LoadR);
+      return new VPInstruction(VPInstruction::Reverse, LoadR, {}, {},
+                               LoadR->getDebugLoc());
+    }
+    return LoadR;
   }
 
   StoreInst *Store = cast<StoreInst>(I);
-  return new VPWidenStoreRecipe(*Store, Ptr, VPI->getOperand(0), Mask,
-                                Consecutive, Reverse, *VPI, VPI->getDebugLoc());
-}
-
-/// Creates a VPWidenIntOrFpInductionRecipe for \p PhiR. If needed, it will
-/// also insert a recipe to expand the step for the induction recipe.
-static VPWidenIntOrFpInductionRecipe *
-createWidenInductionRecipes(VPInstruction *PhiR,
-                            const InductionDescriptor &IndDesc, VPlan &Plan,
-                            ScalarEvolution &SE, Loop &OrigLoop) {
-  assert(SE.isLoopInvariant(IndDesc.getStep(), &OrigLoop) &&
-         "step must be loop invariant");
-
-  VPValue *Start = PhiR->getOperand(0);
-  assert((Plan.getLiveIn(IndDesc.getStartValue()) == Start ||
-          (SE.isSCEVable(IndDesc.getStartValue()->getType()) &&
-           SE.getSCEV(IndDesc.getStartValue()) ==
-               vputils::getSCEVExprForVPValue(Start, SE))) &&
-         "Start VPValue must match IndDesc's start value");
-
-  // It is always safe to copy over the NoWrap and FastMath flags. In
-  // particular, when folding tail by masking, the masked-off lanes are never
-  // used, so it is safe.
-  VPIRFlags Flags = vputils::getFlagsFromIndDesc(IndDesc);
-  VPValue *Step =
-      vputils::getOrCreateVPValueForSCEVExpr(Plan, IndDesc.getStep());
-
-  // Update wide induction increments to use the same step as the corresponding
-  // wide induction. This enables detecting induction increments directly in
-  // VPlan and removes redundant splats.
-  using namespace llvm::VPlanPatternMatch;
-  if (match(PhiR->getOperand(1), m_Add(m_Specific(PhiR), m_VPValue())))
-    PhiR->getOperand(1)->getDefiningRecipe()->setOperand(1, Step);
-
-  PHINode *Phi = cast<PHINode>(PhiR->getUnderlyingInstr());
-  return new VPWidenIntOrFpInductionRecipe(Phi, Start, Step, &Plan.getVF(),
-                                           IndDesc, Flags, PhiR->getDebugLoc());
-}
-
-VPHeaderPHIRecipe *
-VPRecipeBuilder::tryToOptimizeInductionPHI(VPInstruction *VPI) {
-  auto *Phi = cast<PHINode>(VPI->getUnderlyingInstr());
-
-  // Check if this is an integer or fp induction. If so, build the recipe that
-  // produces its scalar and vector values.
-  if (auto *II = Legal->getIntOrFpInductionDescriptor(Phi))
-    return createWidenInductionRecipes(VPI, *II, Plan, *PSE.getSE(), *OrigLoop);
-
-  // Check if this is pointer induction. If so, build the recipe for it.
-  if (auto *II = Legal->getPointerInductionDescriptor(Phi)) {
-    VPValue *Step = vputils::getOrCreateVPValueForSCEVExpr(Plan, II->getStep());
-    return new VPWidenPointerInductionRecipe(Phi, VPI->getOperand(0), Step,
-                                             &Plan.getVFxUF(), *II,
-                                             VPI->getDebugLoc());
-  }
-  return nullptr;
+  VPValue *StoredVal = VPI->getOperand(0);
+  if (Reverse)
+    StoredVal = Builder.createNaryOp(VPInstruction::Reverse, StoredVal,
+                                     Store->getDebugLoc());
+  return new VPWidenStoreRecipe(*Store, Ptr, StoredVal, Mask, Consecutive,
+                                Reverse, *VPI, Store->getDebugLoc());
 }
 
 VPWidenIntOrFpInductionRecipe *
@@ -7849,12 +7832,9 @@ VPSingleDefRecipe *VPRecipeBuilder::tryToWidenCall(VPInstruction *VPI,
       //   2) No mask is required for the block, but the only available
       //      vector variant at this VF requires a mask, so we synthesize an
       //      all-true mask.
-      VPValue *Mask = nullptr;
-      if (Legal->isMaskRequired(CI))
-        Mask = getBlockInMask(Builder.getInsertBlock());
-      else
-        Mask = Plan.getOrAddLiveIn(
-            ConstantInt::getTrue(IntegerType::getInt1Ty(Plan.getContext())));
+      VPValue *Mask = Legal->isMaskRequired(CI)
+                          ? getBlockInMask(Builder.getInsertBlock())
+                          : Plan.getTrue();
 
       Ops.insert(Ops.begin() + *MaskPos, Mask);
     }
@@ -8218,56 +8198,15 @@ bool VPRecipeBuilder::getScaledReductions(
   return false;
 }
 
-VPRecipeBase *VPRecipeBuilder::tryToCreateWidenRecipe(VPSingleDefRecipe *R,
-                                                      VFRange &Range) {
-  // First, check for specific widening recipes that deal with inductions, Phi
-  // nodes, calls and memory operations.
+VPRecipeBase *
+VPRecipeBuilder::tryToCreateWidenNonPhiRecipe(VPSingleDefRecipe *R,
+                                              VFRange &Range) {
+  assert(!R->isPhi() && "phis must be handled earlier");
+  // First, check for specific widening recipes that deal with optimizing
+  // truncates, calls and memory operations.
+
   VPRecipeBase *Recipe;
-  if (auto *PhiR = dyn_cast<VPPhi>(R)) {
-    VPBasicBlock *Parent = PhiR->getParent();
-    [[maybe_unused]] VPRegionBlock *LoopRegionOf =
-        Parent->getEnclosingLoopRegion();
-    assert(LoopRegionOf && LoopRegionOf->getEntry() == Parent &&
-           "Non-header phis should have been handled during predication");
-    auto *Phi = cast<PHINode>(R->getUnderlyingInstr());
-    assert(R->getNumOperands() == 2 && "Must have 2 operands for header phis");
-    if ((Recipe = tryToOptimizeInductionPHI(PhiR)))
-      return Recipe;
-
-    assert((Legal->isReductionVariable(Phi) ||
-            Legal->isFixedOrderRecurrence(Phi)) &&
-           "can only widen reductions and fixed-order recurrences here");
-    VPValue *StartV = R->getOperand(0);
-    VPValue *BackedgeValue = R->getOperand(1);
-    if (Legal->isReductionVariable(Phi)) {
-      const RecurrenceDescriptor &RdxDesc = Legal->getRecurrenceDescriptor(Phi);
-      assert(RdxDesc.getRecurrenceStartValue() ==
-             Phi->getIncomingValueForBlock(OrigLoop->getLoopPreheader()));
-
-      // If the PHI is used by a partial reduction, set the scale factor.
-      bool UseInLoopReduction = CM.isInLoopReduction(Phi);
-      bool UseOrderedReductions = CM.useOrderedReductions(RdxDesc);
-      unsigned ScaleFactor =
-          getScalingForReduction(RdxDesc.getLoopExitInstr()).value_or(1);
-
-      return new VPReductionPHIRecipe(
-          Phi, RdxDesc.getRecurrenceKind(), *StartV, *BackedgeValue,
-          getReductionStyle(UseInLoopReduction, UseOrderedReductions,
-                            ScaleFactor),
-          RdxDesc.hasUsesOutsideReductionChain());
-    }
-
-    // TODO: Currently fixed-order recurrences are modeled as chains of
-    // first-order recurrences. If there are no users of the intermediate
-    // recurrences in the chain, the fixed order recurrence should be modeled
-    // directly, enabling more efficient codegen.
-    return new VPFirstOrderRecurrencePHIRecipe(Phi, *StartV, *BackedgeValue);
-  }
-
-  assert(!R->isPhi() && "only VPPhi nodes expected at this point");
-
   auto *VPI = cast<VPInstruction>(R);
-  Instruction *Instr = R->getUnderlyingInstr();
   if (VPI->getOpcode() == Instruction::Trunc &&
       (Recipe = tryToOptimizeInductionTruncate(VPI, Range)))
     return Recipe;
@@ -8280,6 +8219,7 @@ VPRecipeBase *VPRecipeBuilder::tryToCreateWidenRecipe(VPSingleDefRecipe *R,
   if (VPI->getOpcode() == Instruction::Call)
     return tryToWidenCall(VPI, Range);
 
+  Instruction *Instr = R->getUnderlyingInstr();
   if (VPI->getOpcode() == Instruction::Store)
     if (auto HistInfo = Legal->getHistogramInfo(cast<StoreInst>(Instr)))
       return tryToWidenHistogram(*HistInfo, VPI);
@@ -8327,15 +8267,17 @@ VPRecipeBuilder::tryToCreatePartialReduction(VPInstruction *Reduction,
        cast<VPReductionRecipe>(BinOpRecipe)->isPartialReduction()))
     std::swap(BinOp, Accumulator);
 
+  if (auto *RedPhiR = dyn_cast<VPReductionPHIRecipe>(Accumulator))
+    RedPhiR->setVFScaleFactor(ScaleFactor);
+
   assert(ScaleFactor ==
              vputils::getVFScaleFactor(Accumulator->getDefiningRecipe()) &&
          "all accumulators in chain must have same scale factor");
 
   auto *ReductionI = Reduction->getUnderlyingInstr();
   if (Reduction->getOpcode() == Instruction::Sub) {
-    auto *const Zero = ConstantInt::get(ReductionI->getType(), 0);
     SmallVector<VPValue *, 2> Ops;
-    Ops.push_back(Plan.getOrAddLiveIn(Zero));
+    Ops.push_back(Plan.getConstantInt(ReductionI->getType(), 0));
     Ops.push_back(BinOp);
     BinOp = new VPWidenRecipe(*ReductionI, Ops, VPIRFlags(*ReductionI),
                               VPIRMetadata(), ReductionI->getDebugLoc());
@@ -8374,14 +8316,20 @@ void LoopVectorizationPlanner::buildVPlansWithVPRecipes(ElementCount MinVF,
       OrigLoop, *LI, Legal->getWidestInductionType(),
       getDebugLocFromInstOrOperands(Legal->getPrimaryInduction()), PSE, &LVer);
 
+  // Create recipes for header phis.
+  VPlanTransforms::createHeaderPhiRecipes(
+      *VPlan0, PSE, *OrigLoop, Legal->getInductionVars(),
+      Legal->getReductionVars(), Legal->getFixedOrderRecurrences(),
+      CM.getInLoopReductions(), Hints.allowReordering());
+
   auto MaxVFTimes2 = MaxVF * 2;
   for (ElementCount VF = MinVF; ElementCount::isKnownLT(VF, MaxVFTimes2);) {
     VFRange SubRange = {VF, MaxVFTimes2};
     if (auto Plan = tryToBuildVPlanWithVPRecipes(
             std::unique_ptr<VPlan>(VPlan0->duplicate()), SubRange, &LVer)) {
       // Now optimize the initial VPlan.
-      VPlanTransforms::hoistPredicatedLoads(*Plan, *PSE.getSE(), OrigLoop);
-      VPlanTransforms::sinkPredicatedStores(*Plan, *PSE.getSE(), OrigLoop);
+      VPlanTransforms::hoistPredicatedLoads(*Plan, PSE, OrigLoop);
+      VPlanTransforms::sinkPredicatedStores(*Plan, PSE, OrigLoop);
       VPlanTransforms::runPass(VPlanTransforms::truncateToMinimalBitwidths,
                                *Plan, CM.getMinimalBitwidths());
       VPlanTransforms::runPass(VPlanTransforms::optimize, *Plan);
@@ -8479,8 +8427,8 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
   // Construct wide recipes and apply predication for original scalar
   // VPInstructions in the loop.
   // ---------------------------------------------------------------------------
-  VPRecipeBuilder RecipeBuilder(*Plan, OrigLoop, TLI, &TTI, Legal, CM, PSE,
-                                Builder, BlockMaskCache);
+  VPRecipeBuilder RecipeBuilder(*Plan, OrigLoop, TLI, &TTI, Legal, CM, Builder,
+                                BlockMaskCache);
   // TODO: Handle partial reductions with EVL tail folding.
   if (!CM.foldTailWithEVL())
     RecipeBuilder.collectScaledReductions(Range);
@@ -8496,26 +8444,22 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
   // Mapping from VPValues in the initial plan to their widened VPValues. Needed
   // temporarily to update created block masks.
   DenseMap<VPValue *, VPValue *> Old2New;
+
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(RPOT)) {
     // Convert input VPInstructions to widened recipes.
     for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
-      auto *SingleDef = cast<VPSingleDefRecipe>(&R);
-      auto *UnderlyingValue = SingleDef->getUnderlyingValue();
-      // Skip recipes that do not need transforming, including canonical IV,
-      // wide canonical IV and VPInstructions without underlying values. The
-      // latter are added above for masking.
-      // FIXME: Migrate code relying on the underlying instruction from VPlan0
-      // to construct recipes below to not use the underlying instruction.
-      if (isa<VPCanonicalIVPHIRecipe, VPWidenCanonicalIVRecipe, VPBlendRecipe>(
-              &R) ||
-          (isa<VPInstruction>(&R) && !UnderlyingValue))
+      auto *VPI = dyn_cast<VPInstruction>(&R);
+      // Skip recipes that do not need transforming, including
+      // non-VPInstructions (such as ...) and VPInstructions without underlying
+      // values. The latter are added above for masking.
+      if (!VPI || !VPI->getUnderlyingValue())
         continue;
-      assert(isa<VPInstruction>(&R) && UnderlyingValue && "unsupported recipe");
 
       // TODO: Gradually replace uses of underlying instruction by analyses on
-      // VPlan.
-      Instruction *Instr = cast<Instruction>(UnderlyingValue);
-      Builder.setInsertPoint(SingleDef);
+      // VPlan. Migrate code relying on the underlying instruction from VPlan0
+      // to construct recipes below to not use the underlying instruction.
+      Instruction *Instr = cast<Instruction>(VPI->getUnderlyingValue());
+      Builder.setInsertPoint(VPI);
 
       // The stores with invariant address inside the loop will be deleted, and
       // in the exit block, a uniform store recipe will be created for the final
@@ -8525,7 +8469,6 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
           Legal->isInvariantAddressOfReduction(SI->getPointerOperand())) {
         // Only create recipe for the final invariant store of the reduction.
         if (Legal->isInvariantStoreOfReduction(SI)) {
-          auto *VPI = cast<VPInstruction>(SingleDef);
           auto *Recipe = new VPReplicateRecipe(
               SI, R.operands(), true /* IsUniform */, nullptr /*Mask*/, *VPI,
               *VPI, VPI->getDebugLoc());
@@ -8536,10 +8479,10 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
       }
 
       VPRecipeBase *Recipe =
-          RecipeBuilder.tryToCreateWidenRecipe(SingleDef, Range);
+          RecipeBuilder.tryToCreateWidenNonPhiRecipe(VPI, Range);
       if (!Recipe)
-        Recipe = RecipeBuilder.handleReplication(cast<VPInstruction>(SingleDef),
-                                                 Range);
+        Recipe =
+            RecipeBuilder.handleReplication(cast<VPInstruction>(VPI), Range);
 
       RecipeBuilder.setRecipe(Instr, Recipe);
       if (isa<VPWidenIntOrFpInductionRecipe>(Recipe) && isa<TruncInst>(Instr)) {
@@ -8550,8 +8493,8 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
         Builder.insert(Recipe);
       }
       if (Recipe->getNumDefinedValues() == 1) {
-        SingleDef->replaceAllUsesWith(Recipe->getVPSingleValue());
-        Old2New[SingleDef] = Recipe->getVPSingleValue();
+        VPI->replaceAllUsesWith(Recipe->getVPSingleValue());
+        Old2New[VPI] = Recipe->getVPSingleValue();
       } else {
         assert(Recipe->getNumDefinedValues() == 0 &&
                "Unexpected multidef recipe");
@@ -8603,8 +8546,8 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
   // TODO: Enable following transform when the EVL-version of extended-reduction
   // and mulacc-reduction are implemented.
   if (!CM.foldTailWithEVL()) {
-    VPCostContext CostCtx(CM.TTI, *CM.TLI, *Plan, CM, CM.CostKind,
-                          *CM.PSE.getSE(), OrigLoop);
+    VPCostContext CostCtx(CM.TTI, *CM.TLI, *Plan, CM, CM.CostKind, CM.PSE,
+                          OrigLoop);
     VPlanTransforms::runPass(VPlanTransforms::convertToAbstractRecipes, *Plan,
                              CostCtx, Range);
   }
@@ -8645,7 +8588,7 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
     VPlanTransforms::addActiveLaneMask(*Plan, ForControlFlow,
                                        WithoutRuntimeCheck);
   }
-  VPlanTransforms::optimizeInductionExitUsers(*Plan, IVEndValues, *PSE.getSE());
+  VPlanTransforms::optimizeInductionExitUsers(*Plan, IVEndValues, PSE);
 
   assert(verifyVPlanIsValid(*Plan) && "VPlan is invalid");
   return Plan;
@@ -9113,8 +9056,7 @@ void LoopVectorizationPlanner::addMinimumIterationCheck(
       Plan, VF, UF, MinProfitableTripCount,
       CM.requiresScalarEpilogue(VF.isVector()), CM.foldTailByMasking(),
       IsIndvarOverflowCheckNeededForVF, OrigLoop, BranchWeigths,
-      OrigLoop->getLoopPredecessor()->getTerminator()->getDebugLoc(),
-      *PSE.getSE());
+      OrigLoop->getLoopPredecessor()->getTerminator()->getDebugLoc(), PSE);
 }
 
 void VPDerivedIVRecipe::execute(VPTransformState &State) {
@@ -10063,7 +10005,8 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     //  Optimistically generate runtime checks if they are needed. Drop them if
     //  they turn out to not be profitable.
     if (VF.Width.isVector() || SelectedIC > 1) {
-      Checks.create(L, *LVL.getLAI(), PSE.getPredicate(), VF.Width, SelectedIC);
+      Checks.create(L, *LVL.getLAI(), PSE.getPredicate(), VF.Width, SelectedIC,
+                    *ORE);
 
       // Bail out early if either the SCEV or memory runtime checks are known to
       // fail. In that case, the vector loop would never execute.
@@ -10080,7 +10023,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     bool ForceVectorization =
         Hints.getForce() == LoopVectorizeHints::FK_Enabled;
     VPCostContext CostCtx(CM.TTI, *CM.TLI, LVP.getPlanFor(VF.Width), CM,
-                          CM.CostKind, *CM.PSE.getSE(), L);
+                          CM.CostKind, CM.PSE, L);
     if (!ForceVectorization &&
         !isOutsideLoopWorkProfitable(Checks, VF, L, PSE, CostCtx,
                                      LVP.getPlanFor(VF.Width), SEL,

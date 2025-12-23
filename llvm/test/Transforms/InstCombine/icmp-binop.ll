@@ -3,7 +3,6 @@
 
 declare void @use64(i64)
 declare void @llvm.assume(i1)
-
 define i1 @mul_unkV_oddC_eq(i32 %v) {
 ; CHECK-LABEL: @mul_unkV_oddC_eq(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[V:%.*]], 0
@@ -485,5 +484,22 @@ define <2 x i1> @icmp_eq_or_of_selects_with_constant_vectorized_nonsplat(<2 x i1
   %s2 = select <2 x i1> %b, <2 x i64> <i64 256, i64 128>, <2 x i64> zeroinitializer
   %or = or <2 x i64> %s1, %s2
   %cmp = icmp eq <2 x i64> %or, <i64 65792, i64 65664>
+  ret <2 x i1> %cmp
+}
+
+define <2 x i1> @pr173177(<2 x i1> %a, i1 %b) {
+; CHECK-LABEL: @pr173177(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[S1:%.*]] = select <2 x i1> [[A:%.*]], <2 x i16> splat (i16 179), <2 x i16> splat (i16 1)
+; CHECK-NEXT:    [[S2:%.*]] = select i1 [[B:%.*]], <2 x i16> zeroinitializer, <2 x i16> splat (i16 255)
+; CHECK-NEXT:    [[AND:%.*]] = and <2 x i16> [[S1]], [[S2]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i16> [[AND]], zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+;
+entry:
+  %s1 = select <2 x i1> %a, <2 x i16> splat (i16 179), <2 x i16> splat (i16 1)
+  %s2 = select i1 %b, <2 x i16> zeroinitializer, <2 x i16> splat (i16 255)
+  %and = and <2 x i16> %s1, %s2
+  %cmp = icmp eq <2 x i16> %and, zeroinitializer
   ret <2 x i1> %cmp
 }
