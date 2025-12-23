@@ -7,6 +7,7 @@ set(LLVM_LINK_COMPONENTS
   CASUtil
   MCCAS
   Option
+  Plugins
   ProfileData
   RemoteCachingService
   Support
