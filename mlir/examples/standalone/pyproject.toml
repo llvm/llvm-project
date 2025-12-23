@@ -56,8 +56,11 @@ MLIR_DIR = { env = "MLIR_DIR", default = "" }
 # Non-optional
 CMAKE_BUILD_TYPE = { env = "CMAKE_BUILD_TYPE", default = "Release" }
 MLIR_ENABLE_BINDINGS_PYTHON = "ON"
+
 # Effectively non-optional (any downstream project should specify this).
+MLIR_BINDINGS_PYTHON_NB_DOMAIN = "mlir_standalone"
 MLIR_PYTHON_PACKAGE_PREFIX = "mlir_standalone"
+
 # This specifies the directory in the install directory (i.e., /tmp/pip-wheel/platlib) where _mlir_libs, dialects, etc.
 # are installed. Thus, this will be the package location (and the name of the package) that pip assumes is
 # the root package.

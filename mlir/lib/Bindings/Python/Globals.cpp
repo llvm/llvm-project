@@ -19,6 +19,8 @@
 #include "mlir-c/Support.h"
 #include "mlir/Bindings/Python/Nanobind.h"
 
+#include <iostream>
+
 namespace nb = nanobind;
 using namespace mlir;
 
@@ -26,22 +28,26 @@ using namespace mlir;
 // PyGlobals
 // -----------------------------------------------------------------------------
 
+namespace {
+python::PyGlobals *pyGlobalsInstance = nullptr;
+}
+
 namespace mlir::python {
-PyGlobals *PyGlobals::instance = nullptr;
 
 PyGlobals::PyGlobals() {
-  assert(!instance && "PyGlobals already constructed");
-  instance = this;
+  std::cerr << MAKE_MLIR_PYTHON_QUALNAME("dialects") << "\n";
+  assert(!pyGlobalsInstance && "PyGlobals already constructed");
+  pyGlobalsInstance = this;
   // The default search path include {mlir.}dialects, where {mlir.} is the
   // package prefix configured at compile time.
   dialectSearchPrefixes.emplace_back(MAKE_MLIR_PYTHON_QUALNAME("dialects"));
 }
 
-PyGlobals::~PyGlobals() { instance = nullptr; }
+PyGlobals::~PyGlobals() { pyGlobalsInstance = nullptr; }
 
 PyGlobals &PyGlobals::get() {
-  assert(instance && "PyGlobals is null");
-  return *instance;
+  assert(pyGlobalsInstance && "PyGlobals is null");
+  return *pyGlobalsInstance;
 }
 
 bool PyGlobals::loadDialectModule(llvm::StringRef dialectNamespace) {

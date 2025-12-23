@@ -174,8 +174,6 @@ public:
   MlirTypeID allocateTypeID() { return typeIDAllocator.allocate(); }
 
 private:
-  static PyGlobals *instance;
-
   nanobind::ft_mutex mutex;
 
   /// Module name prefixes to search under for dialect implementation modules.

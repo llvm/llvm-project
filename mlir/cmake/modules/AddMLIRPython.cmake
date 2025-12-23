@@ -317,6 +317,10 @@ function(build_nanobind_lib)
   set(NB_LIBRARY_TARGET_NAME "nanobind${_ft}-${MLIR_BINDINGS_PYTHON_NB_DOMAIN}")
   set(NB_LIBRARY_TARGET_NAME "${NB_LIBRARY_TARGET_NAME}" PARENT_SCOPE)
   nanobind_build_library(${NB_LIBRARY_TARGET_NAME} AS_SYSINCLUDE)
+  target_compile_definitions(${NB_LIBRARY_TARGET_NAME}
+    PRIVATE
+    NB_DOMAIN=${MLIR_BINDINGS_PYTHON_NB_DOMAIN}
+  )
   # nanobind configures with LTO for shared build which doesn't work everywhere
   # (see https://github.com/llvm/llvm-project/issues/139602).
   if(NOT LLVM_ENABLE_LTO)
@@ -364,6 +368,10 @@ function(add_mlir_python_modules name)
     "ROOT_PREFIX;INSTALL_PREFIX"
     "COMMON_CAPI_LINK_LIBS;DECLARED_SOURCES"
     ${ARGN})
+
+  if(NOT MLIR_BINDINGS_PYTHON_NB_DOMAIN)
+    set(MLIR_BINDINGS_PYTHON_NB_DOMAIN "mlir" CACHE STRING "" FORCE)
+  endif()
 
   # This call sets NB_LIBRARY_TARGET_NAME.
   build_nanobind_lib(
@@ -420,6 +428,8 @@ function(add_mlir_python_modules name)
     get_target_property(_source_type ${sources_target} mlir_python_SOURCES_TYPE)
     if(_source_type STREQUAL "support")
       get_target_property(_module_name ${sources_target} mlir_python_EXTENSION_MODULE_NAME)
+      # Use a similar mechanism as nanobind to help the runtime loader pick the correct lib.
+      set(_module_name "${_module_name}-${MLIR_BINDINGS_PYTHON_NB_DOMAIN}")
       set(_extension_target "${name}.extension.${_module_name}.dso")
       add_mlir_python_extension(${_extension_target} "${_module_name}" ${NB_LIBRARY_TARGET_NAME}
         INSTALL_COMPONENT ${name}
@@ -844,10 +854,6 @@ function(add_mlir_python_extension libname extname nb_library_target_name)
     set(eh_rtti_enable -frtti -fexceptions)
   endif ()
 
-  if(NOT MLIR_BINDINGS_PYTHON_NB_DOMAIN)
-    set(MLIR_BINDINGS_PYTHON_NB_DOMAIN "mlir" CACHE STRING "" FORCE)
-  endif()
-
   if(ARG_SUPPORT_LIB)
     add_library(${libname} SHARED ${ARG_SOURCES})
     if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
@@ -859,9 +865,9 @@ function(add_mlir_python_extension libname extname nb_library_target_name)
       NB_DOMAIN=${MLIR_BINDINGS_PYTHON_NB_DOMAIN}
       MLIR_CAPI_BUILDING_LIBRARY=1
     )
-    if (MSVC)
+    if(MSVC)
       set_property(TARGET ${libname} PROPERTY WINDOWS_EXPORT_ALL_SYMBOLS ON)
-    endif ()
+    endif()
   else()
     nanobind_add_module(${libname}
       NB_DOMAIN ${MLIR_BINDINGS_PYTHON_NB_DOMAIN}
