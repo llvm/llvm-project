@@ -25,7 +25,8 @@ define void @foo(double %i) {
 ; CHECK-NEXT:    [[TMP20:%.*]] = fmul double 0.000000e+00, [[I82]]
 ; CHECK-NEXT:    [[I118:%.*]] = fadd double [[TMP19]], [[TMP20]]
 ; CHECK-NEXT:    [[TMP21:%.*]] = fmul <4 x double> zeroinitializer, [[TMP1]]
-; CHECK-NEXT:    [[TMP24:%.*]] = fadd <4 x double> [[TMP21]], <double 0.000000e+00, double 0.000000e+00, double 0.000000e+00, double poison>
+; CHECK-NEXT:    [[TMP23:%.*]] = insertelement <4 x double> <double 0.000000e+00, double 0.000000e+00, double 0.000000e+00, double poison>, double [[I82]], i32 3
+; CHECK-NEXT:    [[TMP24:%.*]] = fadd <4 x double> [[TMP21]], [[TMP23]]
 ; CHECK-NEXT:    [[TMP25:%.*]] = fadd <4 x double> [[TMP24]], zeroinitializer
 ; CHECK-NEXT:    [[TMP26:%.*]] = select <4 x i1> zeroinitializer, <4 x double> zeroinitializer, <4 x double> [[TMP25]]
 ; CHECK-NEXT:    [[TMP27:%.*]] = fmul <4 x double> [[TMP26]], zeroinitializer

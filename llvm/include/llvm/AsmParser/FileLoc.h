@@ -21,6 +21,10 @@ struct FileLoc {
   /// 0-based column number
   unsigned Col;
 
+  bool operator==(const FileLoc &RHS) const {
+    return Line == RHS.Line && Col == RHS.Col;
+  }
+
   bool operator<=(const FileLoc &RHS) const {
     return Line < RHS.Line || (Line == RHS.Line && Col <= RHS.Col);
   }
@@ -29,6 +33,7 @@ struct FileLoc {
     return Line < RHS.Line || (Line == RHS.Line && Col < RHS.Col);
   }
 
+  FileLoc() : Line(0), Col(0) {}
   FileLoc(unsigned L, unsigned C) : Line(L), Col(C) {}
   FileLoc(std::pair<unsigned, unsigned> LC) : Line(LC.first), Col(LC.second) {}
 };

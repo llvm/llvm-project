@@ -1,4 +1,4 @@
-#include "llvm/Extensions/PassPlugin.h"
+#include "llvm/Plugins/PassPlugin.h"
 #define HANDLE_EXTENSION(Ext)                                                  \
 		llvm::PassPluginLibraryInfo get##Ext##PluginInfo();
 #include "llvm/Support/Extension.def"

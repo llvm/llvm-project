@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_EXTENSIONS_PASSPLUGIN_H
-#define LLVM_EXTENSIONS_PASSPLUGIN_H
+#ifndef LLVM_PLUGINS_PASSPLUGIN_H
+#define LLVM_PLUGINS_PASSPLUGIN_H
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/CodeGen.h"
@@ -139,4 +139,4 @@ llvmGetPassPluginInfo();
 #pragma clang diagnostic pop
 #endif
 
-#endif /* LLVM_EXTENSIONS_PASSPLUGIN_H */
+#endif /* LLVM_PLUGINS_PASSPLUGIN_H */
