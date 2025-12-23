@@ -544,6 +544,54 @@ define <4 x i64> @blend_splat1_mask_cond_v4i64(<4 x i64> %x, <4 x i64> %y, <4 x 
   ret <4 x i64> %r
 }
 
+; FIXME: use PSLLD(Z,31) like blend_splat1_mask_cond_v4i32
+define <4 x float> @blend_splat1_mask_cond_v4f32(<4 x i32> %x, <4 x float> %y, <4 x float> %z) {
+; AVX1-LABEL: blend_splat1_mask_cond_v4f32:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm3 = [1,1,1,1]
+; AVX1-NEXT:    vpand %xmm3, %xmm0, %xmm0
+; AVX1-NEXT:    vpcmpeqd %xmm3, %xmm0, %xmm0
+; AVX1-NEXT:    vblendvps %xmm0, %xmm2, %xmm1, %xmm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: blend_splat1_mask_cond_v4f32:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm3 = [1,1,1,1]
+; AVX2-NEXT:    vpand %xmm3, %xmm0, %xmm0
+; AVX2-NEXT:    vpcmpeqd %xmm3, %xmm0, %xmm0
+; AVX2-NEXT:    vblendvps %xmm0, %xmm2, %xmm1, %xmm0
+; AVX2-NEXT:    retq
+;
+; AVX512F-LABEL: blend_splat1_mask_cond_v4f32:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    # kill: def $xmm2 killed $xmm2 def $zmm2
+; AVX512F-NEXT:    # kill: def $xmm1 killed $xmm1 def $zmm1
+; AVX512F-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
+; AVX512F-NEXT:    vptestnmd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm0, %k1
+; AVX512F-NEXT:    vblendmps %zmm1, %zmm2, %zmm0 {%k1}
+; AVX512F-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
+; AVX512F-NEXT:    vzeroupper
+; AVX512F-NEXT:    retq
+;
+; AVX512VL-LABEL: blend_splat1_mask_cond_v4f32:
+; AVX512VL:       # %bb.0:
+; AVX512VL-NEXT:    vptestnmd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %k1
+; AVX512VL-NEXT:    vblendmps %xmm1, %xmm2, %xmm0 {%k1}
+; AVX512VL-NEXT:    retq
+;
+; XOP-LABEL: blend_splat1_mask_cond_v4f32:
+; XOP:       # %bb.0:
+; XOP-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; XOP-NEXT:    vpxor %xmm3, %xmm3, %xmm3
+; XOP-NEXT:    vpcomeqd %xmm3, %xmm0, %xmm0
+; XOP-NEXT:    vblendvps %xmm0, %xmm1, %xmm2, %xmm0
+; XOP-NEXT:    retq
+  %a = and <4 x i32> %x, <i32 1, i32 1, i32 1, i32 1>
+  %c = icmp eq <4 x i32> %a, zeroinitializer
+  %r = select <4 x i1> %c, <4 x float> %y, <4 x float> %z
+  ret <4 x float> %r
+}
+
 define <4 x i32> @blend_splat1_mask_cond_v4i32(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z) {
 ; AVX12-LABEL: blend_splat1_mask_cond_v4i32:
 ; AVX12:       # %bb.0:

@@ -12,10 +12,10 @@
 
 // Computes the offset of the given GPR_PPC64 in the user data area.
 #define GPR_PPC64_OFFSET(regname) (offsetof(GPR_PPC64, regname))
-#define FPR_PPC64_OFFSET(regname) (offsetof(FPR_PPC64, regname)                \
-                                   + sizeof(GPR_PPC64))
-#define VMX_PPC64_OFFSET(regname) (offsetof(VMX_PPC64, regname)                \
-                                   + sizeof(GPR_PPC64) + sizeof(FPR_PPC64))
+#define FPR_PPC64_OFFSET(regname)                                              \
+  (offsetof(FPR_PPC64, regname) + sizeof(GPR_PPC64))
+#define VMX_PPC64_OFFSET(regname)                                              \
+  (offsetof(VMX_PPC64, regname) + sizeof(GPR_PPC64) + sizeof(FPR_PPC64))
 #define GPR_PPC64_SIZE(regname) (sizeof(((GPR_PPC64 *)NULL)->regname))
 
 #include "Utility/PPC64_DWARF_Registers.h"
@@ -24,32 +24,45 @@
 // Note that the size and offset will be updated by platform-specific classes.
 #define DEFINE_GPR_PPC64(reg, alt, lldb_kind)                                  \
   {                                                                            \
-    #reg, alt, GPR_PPC64_SIZE(reg), GPR_PPC64_OFFSET(reg), lldb::eEncodingUint,\
-                                         lldb::eFormatHex,                     \
-                                         {ppc64_dwarf::dwarf_##reg##_ppc64,    \
-                                          ppc64_dwarf::dwarf_##reg##_ppc64,    \
-                                          lldb_kind,                           \
-                                          LLDB_INVALID_REGNUM,                 \
-                                          gpr_##reg##_ppc64 },                 \
-                                          NULL, NULL, NULL,                    \
+      #reg,                                                                    \
+      alt,                                                                     \
+      GPR_PPC64_SIZE(reg),                                                     \
+      GPR_PPC64_OFFSET(reg),                                                   \
+      lldb::eEncodingUint,                                                     \
+      lldb::eFormatHex,                                                        \
+      {ppc64_dwarf::dwarf_##reg##_ppc64, ppc64_dwarf::dwarf_##reg##_ppc64,     \
+       lldb_kind, LLDB_INVALID_REGNUM, gpr_##reg##_ppc64},                     \
+      NULL,                                                                    \
+      NULL,                                                                    \
+      NULL,                                                                    \
   }
 #define DEFINE_FPR_PPC64(reg, alt, lldb_kind)                                  \
   {                                                                            \
-#reg, alt, 8, FPR_PPC64_OFFSET(reg), lldb::eEncodingIEEE754,                   \
-        lldb::eFormatFloat,                                                    \
-        {ppc64_dwarf::dwarf_##reg##_ppc64,                                     \
-         ppc64_dwarf::dwarf_##reg##_ppc64, lldb_kind, LLDB_INVALID_REGNUM,     \
-         fpr_##reg##_ppc64 },                                                  \
-         NULL, NULL, NULL,                                                     \
+      #reg,                                                                    \
+      alt,                                                                     \
+      8,                                                                       \
+      FPR_PPC64_OFFSET(reg),                                                   \
+      lldb::eEncodingIEEE754,                                                  \
+      lldb::eFormatFloat,                                                      \
+      {ppc64_dwarf::dwarf_##reg##_ppc64, ppc64_dwarf::dwarf_##reg##_ppc64,     \
+       lldb_kind, LLDB_INVALID_REGNUM, fpr_##reg##_ppc64},                     \
+      NULL,                                                                    \
+      NULL,                                                                    \
+      NULL,                                                                    \
   }
 #define DEFINE_VMX_PPC64(reg, lldb_kind)                                       \
   {                                                                            \
-#reg, NULL, 16, VMX_PPC64_OFFSET(reg), lldb::eEncodingVector,                  \
-        lldb::eFormatVectorOfUInt32,                                           \
-        {ppc64_dwarf::dwarf_##reg##_ppc64,                                     \
-         ppc64_dwarf::dwarf_##reg##_ppc64, lldb_kind, LLDB_INVALID_REGNUM,     \
-         vmx_##reg##_ppc64 },                                                  \
-         NULL, NULL, NULL,                                                     \
+      #reg,                                                                    \
+      NULL,                                                                    \
+      16,                                                                      \
+      VMX_PPC64_OFFSET(reg),                                                   \
+      lldb::eEncodingVector,                                                   \
+      lldb::eFormatVectorOfUInt32,                                             \
+      {ppc64_dwarf::dwarf_##reg##_ppc64, ppc64_dwarf::dwarf_##reg##_ppc64,     \
+       lldb_kind, LLDB_INVALID_REGNUM, vmx_##reg##_ppc64},                     \
+      NULL,                                                                    \
+      NULL,                                                                    \
+      NULL,                                                                    \
   }
 
 // General purpose registers.
@@ -125,19 +138,19 @@
       DEFINE_FPR_PPC64(f29, NULL, LLDB_INVALID_REGNUM),                        \
       DEFINE_FPR_PPC64(f30, NULL, LLDB_INVALID_REGNUM),                        \
       DEFINE_FPR_PPC64(f31, NULL, LLDB_INVALID_REGNUM),                        \
-      {"fpscr",                                                                \
-       NULL,                                                                   \
-       8,                                                                      \
-       FPR_PPC64_OFFSET(fpscr),                                                \
-       lldb::eEncodingUint,                                                    \
-       lldb::eFormatHex,                                                       \
-       {ppc64_dwarf::dwarf_fpscr_ppc64,                                        \
-        ppc64_dwarf::dwarf_fpscr_ppc64, LLDB_INVALID_REGNUM,                   \
-        LLDB_INVALID_REGNUM, fpr_fpscr_ppc64},                                 \
-       NULL,                                                                   \
-       NULL,                                                                   \
-       NULL,                                                                   \
-       },                                                                      \
+      {                                                                        \
+          "fpscr",                                                             \
+          NULL,                                                                \
+          8,                                                                   \
+          FPR_PPC64_OFFSET(fpscr),                                             \
+          lldb::eEncodingUint,                                                 \
+          lldb::eFormatHex,                                                    \
+          {ppc64_dwarf::dwarf_fpscr_ppc64, ppc64_dwarf::dwarf_fpscr_ppc64,     \
+           LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, fpr_fpscr_ppc64},         \
+          NULL,                                                                \
+          NULL,                                                                \
+          NULL,                                                                \
+      },                                                                       \
       DEFINE_VMX_PPC64(vr0, LLDB_INVALID_REGNUM),                              \
       DEFINE_VMX_PPC64(vr1, LLDB_INVALID_REGNUM),                              \
       DEFINE_VMX_PPC64(vr2, LLDB_INVALID_REGNUM),                              \
@@ -170,31 +183,32 @@
       DEFINE_VMX_PPC64(vr29, LLDB_INVALID_REGNUM),                             \
       DEFINE_VMX_PPC64(vr30, LLDB_INVALID_REGNUM),                             \
       DEFINE_VMX_PPC64(vr31, LLDB_INVALID_REGNUM),                             \
-      {"vscr",                                                                 \
-       NULL,                                                                   \
-       4,                                                                      \
-       VMX_PPC64_OFFSET(vscr),                                                 \
-       lldb::eEncodingUint,                                                    \
-       lldb::eFormatHex,                                                       \
-       {ppc64_dwarf::dwarf_vscr_ppc64, ppc64_dwarf::dwarf_vscr_ppc64,          \
-        LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, vmx_vscr_ppc64},             \
-       NULL,                                                                   \
-       NULL,                                                                   \
-       NULL,                                                                   \
-       },                                                                      \
-      {"vrsave",                                                               \
-       NULL,                                                                   \
-       4,                                                                      \
-       VMX_PPC64_OFFSET(vrsave),                                               \
-       lldb::eEncodingUint,                                                    \
-       lldb::eFormatHex,                                                       \
-       {ppc64_dwarf::dwarf_vrsave_ppc64,                                       \
-        ppc64_dwarf::dwarf_vrsave_ppc64, LLDB_INVALID_REGNUM,                  \
-        LLDB_INVALID_REGNUM, vmx_vrsave_ppc64},                                \
-       NULL,                                                                   \
-       NULL,                                                                   \
-       NULL,                                                                   \
-       },  /* */
+      {                                                                        \
+          "vscr",                                                              \
+          NULL,                                                                \
+          4,                                                                   \
+          VMX_PPC64_OFFSET(vscr),                                              \
+          lldb::eEncodingUint,                                                 \
+          lldb::eFormatHex,                                                    \
+          {ppc64_dwarf::dwarf_vscr_ppc64, ppc64_dwarf::dwarf_vscr_ppc64,       \
+           LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, vmx_vscr_ppc64},          \
+          NULL,                                                                \
+          NULL,                                                                \
+          NULL,                                                                \
+      },                                                                       \
+      {                                                                        \
+          "vrsave",                                                            \
+          NULL,                                                                \
+          4,                                                                   \
+          VMX_PPC64_OFFSET(vrsave),                                            \
+          lldb::eEncodingUint,                                                 \
+          lldb::eFormatHex,                                                    \
+          {ppc64_dwarf::dwarf_vrsave_ppc64, ppc64_dwarf::dwarf_vrsave_ppc64,   \
+           LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, vmx_vrsave_ppc64},        \
+          NULL,                                                                \
+          NULL,                                                                \
+          NULL,                                                                \
+      }, /* */
 
 typedef struct _GPR_PPC64 {
   uint64_t r0;
@@ -312,14 +326,10 @@ typedef struct _VMX_PPC64 {
   uint32_t vrsave;
 } VMX_PPC64;
 
-
-static lldb_private::RegisterInfo g_register_infos_ppc64[] = {
-    PPC64_REGS
-};
+static lldb_private::RegisterInfo g_register_infos_ppc64[] = {PPC64_REGS};
 
 static_assert((sizeof(g_register_infos_ppc64) /
-               sizeof(g_register_infos_ppc64[0])) ==
-                  k_num_registers_ppc64,
+               sizeof(g_register_infos_ppc64[0])) == k_num_registers_ppc64,
               "g_register_infos_powerpc64 has wrong number of register infos");
 
 #undef DEFINE_FPR_PPC64
