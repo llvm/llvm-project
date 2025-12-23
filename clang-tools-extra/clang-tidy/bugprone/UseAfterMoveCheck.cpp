@@ -173,7 +173,8 @@ makeReinitMatcher(const ValueDecl *MovedVariable,
 static bool
 isVariableResetInLambda(const Stmt *Body, const ValueDecl *MovedVariable,
                         ASTContext *Context,
-                        llvm::ArrayRef<StringRef> InvalidationFunctions) {
+                        llvm::ArrayRef<StringRef> InvalidationFunctions,
+                        llvm::ArrayRef<StringRef> ReinitializationFunctions) {
   assert(Body && "There should be a lambda body");
 
   // If the variable is not mentioned at all in the lambda body,
@@ -201,8 +202,8 @@ isVariableResetInLambda(const Stmt *Body, const ValueDecl *MovedVariable,
   Worklist.push_back(&TheCFG->getEntry());
   VisitedBlocks.insert(&TheCFG->getEntry());
 
-  const auto ReinitMatcher =
-      makeReinitMatcher(MovedVariable, InvalidationFunctions);
+  const auto ReinitMatcher = makeReinitMatcher(
+      MovedVariable, InvalidationFunctions, ReinitializationFunctions);
 
   while (!Worklist.empty()) {
     const CFGBlock *CurrentBlock = Worklist.pop_back_val();
@@ -498,9 +499,9 @@ void UseAfterMoveFinder::getReinits(
 
         const auto *LambdaBody = MD->getBody();
         assert(MD->getParent() && MD->getParent()->isLambda());
-        if (LambdaBody &&
-            isVariableResetInLambda(LambdaBody, MovedVariable, Context,
-                                    InvalidationFunctions))
+        if (LambdaBody && isVariableResetInLambda(
+                              LambdaBody, MovedVariable, Context,
+                              InvalidationFunctions, ReinitializationFunctions))
           Stmts->insert(Operator);
       }
     }
