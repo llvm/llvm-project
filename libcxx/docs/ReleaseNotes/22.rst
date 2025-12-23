@@ -38,17 +38,20 @@ What's New in Libc++ 22.0.0?
 Implemented Papers
 ------------------
 
-- P2321R2: ``zip`` (`Github <https://llvm.org/PR105169>`__) (The paper is partially implemented. ``zip_transform_view``
-  and `adjacent_view` are implemented in this release)
+- P2321R2: ``zip`` (`Github <https://llvm.org/PR105169>`__) (The paper is partially implemented. ``zip_transform_view``,
+  `adjacent_view`, and ``adjacent_transform_view`` are implemented in this release)
 - P2988R12: ``std::optional<T&>`` (`Github <https://llvm.org/PR148131>`__)
 - P3044R2: sub-``string_view`` from ``string`` (`Github <https://llvm.org/PR148140>`__)
 - P3223R2: Making ``std::istream::ignore`` less surprising (`Github <https://llvm.org/PR148178>`__)
 - P3060R3: Add ``std::views::indices(n)`` (`Github <https://llvm.org/PR148175>`__)
+- P2404R3: Move-only types for ``equality_comparable_with``, ``totally_ordered_with``, and ``three_way_comparable_with``
+  (`Github <https://llvm.org/PR105210>`__)
 - P2641R4: Checking if a ``union`` alternative is active (``std::is_within_lifetime``)
   (`Github <https://llvm.org/PR105381>`__)
 - P2835R7: Expose ``std::atomic_ref``'s object address (`Github <https://llvm.org/PR118377>`__)
 - P2944R3: Comparisons for ``reference_wrapper`` (`Github <https://llvm.org/PR105424>`__)
 - P3168R2: Give ``std::optional`` Range Support (`Github <https://llvm.org/PR105430>`__)
+- P3567R2: ``flat_meow`` Fixes (`Github <https://llvm.org/PR162022>`__)
 
 Improvements and New Features
 -----------------------------
@@ -93,6 +96,8 @@ Improvements and New Features
 
 - The performance of ``std::align`` has been improved by making it an inline function, which allows the compiler to
   better optimize calls to it.
+
+- ``rotate`` has been optimized, resulting in a performance improvement of up to 3x.
 
 Deprecations and Removals
 -------------------------
