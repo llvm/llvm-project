@@ -171,7 +171,7 @@ Detailed Workflow (LTO)
 
 The optimization process, using LTO, involves several steps:
 
-1. **Matching (MemProfUse Pass):** The memprof profile is mapped onto allocation calls and callsite which are part of the allocation context using debug information. MemProf metadata is attached to the call instructions in the IR.
+1. **Matching (MemProfUse Pass):** The memprof profile is mapped onto allocation calls and callsite which are part of the allocation context using debug information. MemProf metadata is attached to the call instructions in the IR. If the allocation call site is unambiguously cold (or hot) an attribute is added directly which guides the transformation.
 2.  **Metadata Serialization:** During the LTO summary analysis step, MemProf metadata (``!memprof`` and ``!callsite``) is serialized into the module summary. This is implemented in ``llvm/lib/Analysis/ModuleSummaryAnalysis.cpp``.
 3.  **Whole Program Graph Construction:** During the LTO indexing step, the compiler constructs a whole-program ``CallsiteContextGraph`` to analyze and disambiguate contexts. This graph identifies where allocation contexts diverge (e.g., same function called from hot vs. cold paths). This logic resides in ``llvm/lib/Transforms/IPO/MemProfContextDisambiguation.cpp``.
 4.  **Cloning Decisions:** The analysis identifies which functions and callsites need to be cloned to isolate cold allocation paths from hot ones using the ``CallsiteContextGraph``.
