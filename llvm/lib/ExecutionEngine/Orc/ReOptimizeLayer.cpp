@@ -27,8 +27,8 @@ void ReOptimizeLayer::ReOptMaterializationUnitState::reoptimizeFailed() {
 }
 
 static void orc_rt_lite_reoptimize_helper(
-    shared::CWrapperFunctionBuffer (*JITDispatch)(void *Ctx, void *Tag,
-                                                  void *Data, size_t Size),
+    shared::CWrapperFunctionBuffer (*JITDispatch)(
+        void *Ctx, void *Tag, shared::CWrapperFunctionBuffer),
     void *JITDispatchCtx, void *Tag, uint64_t MUID, uint32_t CurVersion) {
   // Serialize the arguments into a WrapperFunctionBuffer and call dispatch.
   using SPSArgs = shared::SPSArgList<uint64_t, uint32_t>;
@@ -41,7 +41,7 @@ static void orc_rt_lite_reoptimize_helper(
     abort();
   }
   shared::WrapperFunctionBuffer Buf{
-      JITDispatch(JITDispatchCtx, Tag, ArgBytes.data(), ArgBytes.size())};
+      JITDispatch(JITDispatchCtx, Tag, ArgBytes.release())};
 
   if (const char *ErrMsg = Buf.getOutOfBandError()) {
     errs() << "Reoptimization error: " << ErrMsg << "\naborting.\n";
