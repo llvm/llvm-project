@@ -11,6 +11,7 @@
 
 // NOLINTBEGIN
 
+// TODO(LLVM 24) Delete this header.
 #warning The ClangTidyModuleRegistry.h header is deprecated and will be removed in LLVM 24. All of the symbols it used to define have been moved into ClangTidyModule.h.
 
 #include "ClangTidyModule.h"
