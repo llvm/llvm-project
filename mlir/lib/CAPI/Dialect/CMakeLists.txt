@@ -40,9 +40,6 @@ add_mlir_upstream_c_api_library(MLIRCAPIArith
   ArithPasses.cpp
 
   PARTIAL_SOURCES_INTENDED
-  DEPENDS
-  MLIRArithPassIncGen
-
   LINK_LIBS PUBLIC
   MLIRCAPIIR
   MLIRArithDialect
@@ -53,9 +50,6 @@ add_mlir_upstream_c_api_library(MLIRCAPIArmNeon
   ArmNeon.cpp
 
   PARTIAL_SOURCES_INTENDED
-  DEPENDS
-  MLIRArmNeonPassIncGen
-
   LINK_LIBS PUBLIC
   MLIRCAPIIR
   MLIRArmNeonDialect
@@ -67,9 +61,6 @@ add_mlir_upstream_c_api_library(MLIRCAPIArmSME
   ArmSMEPasses.cpp
 
   PARTIAL_SOURCES_INTENDED
-  DEPENDS
-  MLIRArmSMEPassIncGen
-
   LINK_LIBS PUBLIC
   MLIRCAPIIR
   MLIRArmSMEDialect
@@ -152,9 +143,6 @@ add_mlir_upstream_c_api_library(MLIRCAPIEmitC
   EmitCPasses.cpp
 
   PARTIAL_SOURCES_INTENDED
-  DEPENDS
-  MLIREmitCPassIncGen
-
   LINK_LIBS PUBLIC
   MLIRCAPIIR
   MLIREmitCDialect
@@ -166,9 +154,6 @@ add_mlir_upstream_c_api_library(MLIRCAPIFunc
   FuncPasses.cpp
 
   PARTIAL_SOURCES_INTENDED
-  DEPENDS
-  MLIRFuncPassIncGen
-
   LINK_LIBS PUBLIC
   MLIRCAPIIR
   MLIRFuncDialect
@@ -227,9 +212,6 @@ add_mlir_upstream_c_api_library(MLIRCAPILLVM
   LLVMPasses.cpp
 
   PARTIAL_SOURCES_INTENDED
-  DEPENDS
-  MLIRLLVMPassIncGen
-
   LINK_LIBS PUBLIC
   MLIRCAPIIR
   MLIRLLVMDialect
@@ -241,9 +223,6 @@ add_mlir_upstream_c_api_library(MLIRCAPIMath
   MathPasses.cpp
 
   PARTIAL_SOURCES_INTENDED
-  DEPENDS
-  MLIRMathPassIncGen
-
   LINK_LIBS PUBLIC
   MLIRCAPIIR
   MLIRMathDialect
@@ -398,9 +377,6 @@ add_mlir_upstream_c_api_library(MLIRCAPIShape
   ShapePasses.cpp
 
   PARTIAL_SOURCES_INTENDED
-  DEPENDS
-  MLIRShapePassIncGen
-
   LINK_LIBS PUBLIC
   MLIRCAPIIR
   MLIRShapeDialect
@@ -491,9 +467,6 @@ add_mlir_upstream_c_api_library(MLIRCAPITransformDialect
   TransformPasses.cpp
 
   PARTIAL_SOURCES_INTENDED
-  DEPENDS
-  MLIRTransformPassIncGen
-
   LINK_LIBS PUBLIC
   MLIRCAPIIR
   MLIRTransformDialect
@@ -532,9 +505,6 @@ add_mlir_upstream_c_api_library(MLIRCAPIVector
   VectorPasses.cpp
 
   PARTIAL_SOURCES_INTENDED
-  DEPENDS
-  MLIRVectorPassIncGen
-
   LINK_LIBS PUBLIC
   MLIRCAPIIR
   MLIRVectorDialect
