@@ -1336,21 +1336,52 @@ func.func @fold_assume_alignment_chain(%0: memref<128xf32>) -> memref<128xf32> {
 
 // -----
 
+// CHECK-LABEL: func @fold_view_cast
+//  CHECK-SAME:   (%[[ARG:.*]]: memref<128xi8>)
+func.func @fold_view_cast(%0: memref<128xi8>) -> memref<i32> {
+  %c0 = arith.constant 0 : index
+  // CHECK: %[[C0:.*]] = arith.constant 0 : index
+  // CHECK: %[[RES:.*]] = memref.view %[[ARG]][%[[C0]]][] : memref<128xi8> to memref<i32>
+  // CHECK: return %[[RES]]
+  %1 = memref.cast %0 : memref<128xi8> to memref<?xi8>
+  %res = memref.view %1[%c0][] : memref<?xi8> to memref<i32>
+  return %res : memref<i32>
+}
+
+// -----
+
 // CHECK-LABEL: func @fold_view_same_source_result_types
+//  CHECK-SAME:   (%[[ARG:.*]]: memref<128xi8>)
 func.func @fold_view_same_source_result_types(%0: memref<128xi8>) -> memref<128xi8> {
-  %c0 = arith.constant 0: index
+  %c0 = arith.constant 0 : index
   // CHECK-NOT: memref.view
+  // CHECK: return %[[ARG]]
   %res = memref.view %0[%c0][] : memref<128xi8> to memref<128xi8>
   return %res : memref<128xi8>
 }
 
 // -----
 
-// CHECK-LABEL: func @non_fold_view_same_source_res_types
-//  CHECK-SAME:   %[[ARG0:[a-zA-Z0-9]+]]
-func.func @non_fold_view_same_source_res_types(%0: memref<?xi8>, %arg0 : index) -> memref<?xi8> {
+// CHECK-LABEL: func @non_fold_view_non_zero_offset
+//  CHECK-SAME:   (%[[ARG:.*]]: memref<128xi8>)
+func.func @non_fold_view_non_zero_offset(%0: memref<128xi8>) -> memref<128xi8> {
+  %c1 = arith.constant 1 : index
+  // CHECK: %[[C1:.*]] = arith.constant 1 : index
+  // CHECK: %[[RES:.*]] = memref.view %[[ARG]][%[[C1]]][] : memref<128xi8> to memref<128xi8>
+  // CHECK: return %[[RES]]
+  %res = memref.view %0[%c1][] : memref<128xi8> to memref<128xi8>
+  return %res : memref<128xi8>
+}
+
+// -----
+
+// CHECK-LABEL: func @non_fold_view_same_source_dynamic_size
+//  CHECK-SAME:   (%[[ARG:.*]]: memref<?xi8>, %[[SIZE:.*]]: index)
+func.func @non_fold_view_same_source_dynamic_size(%0: memref<?xi8>, %arg0 : index) -> memref<?xi8> {
   %c0 = arith.constant 0: index
-  // CHECK: memref.view
+  // CHECK: %[[C0:.*]] = arith.constant 0 : index
+  // CHECK: %[[RES:.*]] = memref.view %[[ARG]][%[[C0]]][%[[SIZE]]] : memref<?xi8> to memref<?xi8>
+  // CHECK: return %[[RES]]
   %res = memref.view %0[%c0][%arg0] : memref<?xi8> to memref<?xi8>
   return %res : memref<?xi8>
 }
