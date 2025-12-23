@@ -49,7 +49,8 @@ add_custom_target(RippleLib ALL)
 set(HEXAGON_ARCH_VERSIONS 68 69 71 73 75 79 81)
 
 set(RIPPLE_RT_SRC
-  HVX_Scatter_GatherHVX_Rotate
+  HVX_Scatter_Gather
+  HVX_Rotate
   HVX_Bfloat
   HVX_Vdeal
   HVX_Narrow_Shift
