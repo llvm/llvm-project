@@ -14,7 +14,8 @@
 namespace mlir {
 
 /// Shaped Type Interface - ShapedType
-class PyShapedType : public python::PyConcreteType<PyShapedType> {
+class MLIR_PYTHON_API_EXPORTED PyShapedType
+    : public python::PyConcreteType<PyShapedType> {
 public:
   static const IsAFunctionTy isaFunction;
   static constexpr const char *pyClassName = "ShapedType";

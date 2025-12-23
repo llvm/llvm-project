@@ -31,7 +31,7 @@ namespace python {
 
 /// Globals that are always accessible once the extension has been initialized.
 /// Methods of this class are thread-safe.
-class PyGlobals {
+class MLIR_PYTHON_API_EXPORTED PyGlobals {
 public:
   PyGlobals();
   ~PyGlobals();
@@ -117,7 +117,7 @@ public:
   std::optional<nanobind::object>
   lookupOperationClass(llvm::StringRef operationName);
 
-  class TracebackLoc {
+  class MLIR_PYTHON_API_EXPORTED TracebackLoc {
   public:
     bool locTracebacksEnabled();
 
