@@ -26,6 +26,7 @@ public:
   enum Kind {
     amp,
     arrow,
+    colon,
     coloncolon,
     eof,
     float_constant,

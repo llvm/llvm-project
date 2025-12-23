@@ -180,7 +180,7 @@ ASTNodeUP DILParser::ParseUnaryExpression() {
 //  postfix_expression:
 //    primary_expression
 //    postfix_expression "[" expression "]"
-//    postfix_expression "[" expression "-" expression "]"
+//    postfix_expression "[" expression ":" expression "]"
 //    postfix_expression "." id_expression
 //    postfix_expression "->" id_expression
 //
@@ -195,7 +195,7 @@ ASTNodeUP DILParser::ParsePostfixExpression() {
       m_dil_lexer.Advance();
       ASTNodeUP index = ParseExpression();
       assert(index && "ASTNodeUP must not contain a nullptr");
-      if (CurToken().GetKind() == Token::minus) {
+      if (CurToken().GetKind() == Token::colon) {
         m_dil_lexer.Advance();
         ASTNodeUP last_index = ParseExpression();
         assert(last_index && "ASTNodeUP must not contain a nullptr");
