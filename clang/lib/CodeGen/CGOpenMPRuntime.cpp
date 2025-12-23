@@ -8382,13 +8382,25 @@ private:
           ElementType = CAT->getElementType().getTypePtr();
         else if (VAT)
           ElementType = VAT->getElementType().getTypePtr();
-        else
-          assert(&Component == &*Components.begin() &&
-                 "Only expect pointer (non CAT or VAT) when this is the "
-                 "first Component");
-        // If ElementType is null, then it means the base is a pointer
-        // (neither CAT nor VAT) and we'll attempt to get ElementType again
-        // for next iteration.
+        else if (&Component == &*Components.begin()) {
+          // If the base is a raw pointer (e.g. T *data with data[a:b:c]),
+          // there was no earlier CAT/VAT/array handling to establish
+          // ElementType. Capture the pointee type now so that subsequent
+          // components (offset/length/stride) have a concrete element type to
+          // work with. This makes pointer-backed sections behave consistently
+          // with CAT/VAT/array bases.
+          if (const auto *PtrType = Ty->getAs<PointerType>())
+            ElementType = PtrType->getPointeeType().getTypePtr();
+        } else {
+          // Any component after the first should never have a raw pointer type;
+          // by this point. ElementType must already be known (set above or in
+          // prior array / CAT / VAT handling).
+          assert(!Ty->isPointerType() &&
+                 "Non-first components should not be raw pointers");
+        }
+
+        // At this stage, if ElementType was a base pointer and we are in the
+        // first iteration, it has been computed.
         if (ElementType) {
           // For the case that having pointer as base, we need to remove one
           // level of indirection.
@@ -9132,12 +9144,20 @@ private:
         // If there is an entry in PartialStruct it means we have a struct with
         // individual members mapped. Emit an extra combined entry.
         if (PartialStruct.Base.isValid()) {
-          GroupUnionCurInfo.NonContigInfo.Dims.push_back(0);
+          // Prepend a synthetic dimension of length 1 to represent the
+          // aggregated struct object. Using 1 (not 0, as 0 produced an
+          //    incorrect non-contiguous descriptor (DimSize==1), causing the
+          //    non-contiguous motion clause path to be skipped.) is important:
+          //  * It preserves the correct rank so targetDataUpdate() computes
+          //    DimSize == 2 for cases like strided array sections originating
+          //    from user-defined mappers (e.g. test with s.data[0:8:2]).
+          GroupUnionCurInfo.NonContigInfo.Dims.insert(
+              GroupUnionCurInfo.NonContigInfo.Dims.begin(), 1);
           emitCombinedEntry(
               CurInfo, GroupUnionCurInfo.Types, PartialStruct, AttachInfo,
-              /*IsMapThis*/ !VD, OMPBuilder, VD,
+              /*IsMapThis=*/!VD, OMPBuilder, VD,
               /*OffsetForMemberOfFlag=*/CombinedInfo.BasePointers.size(),
-              /*NotTargetParam=*/true);
+              /*NotTargetParams=*/true);
         }
 
         // Append this group's results to the overall CurInfo in the correct
