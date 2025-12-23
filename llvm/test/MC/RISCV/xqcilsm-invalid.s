@@ -1,7 +1,7 @@
 # Xqcilsm - Qualcomm uC Load Store Multiple Extension
-# RUN: not llvm-mc -triple riscv32 -mattr=+experimental-xqcilsm < %s 2>&1 \
+# RUN: not llvm-mc -triple riscv32 -mattr=+xqcilsm < %s 2>&1 \
 # RUN:     | FileCheck -check-prefixes=CHECK,CHECK-PLUS %s
-# RUN: not llvm-mc -triple riscv32 -mattr=-experimental-xqcilsm < %s 2>&1 \
+# RUN: not llvm-mc -triple riscv32 -mattr=-xqcilsm < %s 2>&1 \
 # RUN:     | FileCheck -check-prefixes=CHECK,CHECK-MINUS %s
 
 # CHECK: :[[@LINE+1]]:20: error: expected register
