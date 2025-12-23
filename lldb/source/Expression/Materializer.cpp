@@ -76,11 +76,10 @@ public:
 
     const bool zero_memory = false;
     IRMemoryMap::AllocationPolicy used_policy;
-    const uint64_t malloc_size =
-        llvm::expectedToOptional(m_persistent_variable_sp->GetByteSize())
-            .value_or(0);
     auto address_or_error = map.Malloc(
-        malloc_size, 8, lldb::ePermissionsReadable | lldb::ePermissionsWritable,
+        llvm::expectedToOptional(m_persistent_variable_sp->GetByteSize())
+            .value_or(0),
+        8, lldb::ePermissionsReadable | lldb::ePermissionsWritable,
         IRMemoryMap::eAllocationPolicyMirror, zero_memory, &used_policy);
     if (!address_or_error) {
       err = Status::FromErrorStringWithFormat(
@@ -91,9 +90,8 @@ public:
     }
     lldb::addr_t mem = *address_or_error;
 
-    LLDB_LOGF(
-        log, "Allocated 0x%" PRIx64 "bytes for %s (0x%" PRIx64 ") successfully",
-        malloc_size, m_persistent_variable_sp->GetName().GetCString(), mem);
+    LLDB_LOGF(log, "Allocated %s (0x%" PRIx64 ") successfully",
+              m_persistent_variable_sp->GetName().GetCString(), mem);
 
     // Put the location of the spare memory into the live data of the
     // ValueObject.
@@ -145,12 +143,12 @@ public:
   void DestroyAllocation(IRMemoryMap &map, Status &err) {
     Status deallocate_error;
 
-    lldb::ValueObjectSP live_valobj_sp =
-        m_persistent_variable_sp->GetLiveObject();
-    map.Free((lldb::addr_t)live_valobj_sp->GetValue().GetScalar().ULongLong(),
+    map.Free((lldb::addr_t)m_persistent_variable_sp->m_live_sp->GetValue()
+                 .GetScalar()
+                 .ULongLong(),
              deallocate_error);
 
-    live_valobj_sp.reset();
+    m_persistent_variable_sp->m_live_sp.reset();
 
     if (!deallocate_error.Success()) {
       err = Status::FromErrorStringWithFormat(
@@ -185,17 +183,17 @@ public:
         return;
     }
 
-    lldb::ValueObjectSP live_valobj_sp =
-        m_persistent_variable_sp->GetLiveObject();
     if ((m_persistent_variable_sp->m_flags &
              ExpressionVariable::EVIsProgramReference &&
-         live_valobj_sp) ||
+         m_persistent_variable_sp->m_live_sp) ||
         m_persistent_variable_sp->m_flags &
             ExpressionVariable::EVIsLLDBAllocated) {
       Status write_error;
 
-      map.WriteScalarToMemory(load_addr, live_valobj_sp->GetValue().GetScalar(),
-                              map.GetAddressByteSize(), write_error);
+      map.WriteScalarToMemory(
+          load_addr,
+          m_persistent_variable_sp->m_live_sp->GetValue().GetScalar(),
+          map.GetAddressByteSize(), write_error);
 
       if (!write_error.Success()) {
         err = Status::FromErrorStringWithFormat(
@@ -231,15 +229,13 @@ public:
       m_delegate->DidDematerialize(m_persistent_variable_sp);
     }
 
-    lldb::ValueObjectSP live_valobj_sp =
-        m_persistent_variable_sp->GetLiveObject();
     if ((m_persistent_variable_sp->m_flags &
          ExpressionVariable::EVIsLLDBAllocated) ||
         (m_persistent_variable_sp->m_flags &
          ExpressionVariable::EVIsProgramReference)) {
       if (m_persistent_variable_sp->m_flags &
               ExpressionVariable::EVIsProgramReference &&
-          !live_valobj_sp) {
+          !m_persistent_variable_sp->m_live_sp) {
         // If the reference comes from the program, then the
         // ClangExpressionVariable's live variable data hasn't been set up yet.
         // Do this now.
@@ -259,7 +255,7 @@ public:
 
         m_persistent_variable_sp->m_live_sp = ValueObjectConstResult::Create(
             map.GetBestExecutionContextScope(),
-            m_persistent_variable_sp->GetCompilerType(),
+            m_persistent_variable_sp.get()->GetCompilerType(),
             m_persistent_variable_sp->GetName(), location, eAddressTypeLoad,
             llvm::expectedToOptional(m_persistent_variable_sp->GetByteSize())
                 .value_or(0));
@@ -281,17 +277,19 @@ public:
         }
       }
 
-      if (!live_valobj_sp) {
+      lldb::addr_t mem = m_persistent_variable_sp->m_live_sp->GetValue()
+                             .GetScalar()
+                             .ULongLong();
+
+      if (!m_persistent_variable_sp->m_live_sp) {
         err = Status::FromErrorStringWithFormat(
             "couldn't find the memory area used to store %s",
             m_persistent_variable_sp->GetName().GetCString());
         return;
       }
 
-      lldb::addr_t mem = live_valobj_sp->GetValue().GetScalar().ULongLong();
-
-      if (live_valobj_sp->GetValue().GetValueAddressType() !=
-          eAddressTypeLoad) {
+      if (m_persistent_variable_sp->m_live_sp->GetValue()
+              .GetValueAddressType() != eAddressTypeLoad) {
         err = Status::FromErrorStringWithFormat(
             "the address of the memory area for %s is in an incorrect format",
             m_persistent_variable_sp->GetName().GetCString());
@@ -328,6 +326,7 @@ public:
               read_error.AsCString());
           return;
         }
+
         m_persistent_variable_sp->m_flags &=
             ~ExpressionVariable::EVNeedsFreezeDry;
       }

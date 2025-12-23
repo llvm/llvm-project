@@ -1043,13 +1043,16 @@ class VPatBinaryVL_VF_RM<SDPatternOperator vop,
 
 multiclass VPatBinaryFPVL_VV_VF<SDPatternOperator vop, string instruction_name,
                                 bit isSEWAware = 0> {
-  foreach vti = AllFloatVectors in {
+  foreach vti = AllFloatAndBF16Vectors in {
     let Predicates = GetVTypePredicates<vti>.Predicates in {
-      def : VPatBinaryVL_V<vop, instruction_name, "VV",
+      def : VPatBinaryVL_V<vop, instruction_name#
+                                !if(!eq(vti.Scalar, bf16), "_ALT", ""), "VV",
                            vti.Vector, vti.Vector, vti.Vector, vti.Mask,
                            vti.Log2SEW, vti.LMul, vti.RegClass, vti.RegClass,
                            vti.RegClass, isSEWAware>;
-      def : VPatBinaryVL_VF<vop, instruction_name#"_V"#vti.ScalarSuffix,
+      def : VPatBinaryVL_VF<vop, instruction_name#
+                                 !if(!eq(vti.Scalar, bf16), "_ALT", "")#"_V"#
+                                 vti.ScalarSuffix,
                             vti.Vector, vti.Vector, vti.Vector, vti.Mask,
                             vti.Log2SEW, vti.LMul, vti.RegClass, vti.RegClass,
                             vti.ScalarRegClass, isSEWAware>;
@@ -1199,7 +1202,7 @@ multiclass VPatIntegerSetCCVL_VI_Swappable<VTypeInfo vti, string instruction_nam
 multiclass VPatFPSetCCVL_VV_VF_FV<SDPatternOperator vop, CondCode cc,
                                   string inst_name,
                                   string swapped_op_inst_name> {
-  foreach fvti = AllFloatVectors in {
+  foreach fvti = AllFloatAndBF16Vectors in {
     let Predicates = GetVTypePredicates<fvti>.Predicates in {
       def : Pat<(fvti.Mask (vop (fvti.Vector fvti.RegClass:$rs1),
                                  fvti.RegClass:$rs2,
@@ -1207,7 +1210,9 @@ multiclass VPatFPSetCCVL_VV_VF_FV<SDPatternOperator vop, CondCode cc,
                                  VR:$passthru,
                                  (fvti.Mask VMV0:$vm),
                                  VLOpFrag)),
-                (!cast<Instruction>(inst_name#"_VV_"#fvti.LMul.MX#"_MASK")
+                (!cast<Instruction>(inst_name#
+                                    !if(!eq(fvti.Scalar, bf16), "_ALT", "")#
+                                    "_VV_"#fvti.LMul.MX#"_MASK")
                     VR:$passthru, fvti.RegClass:$rs1,
                     fvti.RegClass:$rs2, (fvti.Mask VMV0:$vm),
                     GPR:$vl, fvti.Log2SEW, TA_MU)>;
@@ -1217,7 +1222,9 @@ multiclass VPatFPSetCCVL_VV_VF_FV<SDPatternOperator vop, CondCode cc,
                                 VR:$passthru,
                                 (fvti.Mask VMV0:$vm),
                                 VLOpFrag)),
-                (!cast<Instruction>(inst_name#"_V"#fvti.ScalarSuffix#"_"#fvti.LMul.MX#"_MASK")
+                (!cast<Instruction>(inst_name#
+                                    !if(!eq(fvti.Scalar, bf16), "_ALT", "")#
+                                    "_V"#fvti.ScalarSuffix#"_"#fvti.LMul.MX#"_MASK")
                     VR:$passthru, fvti.RegClass:$rs1,
                     fvti.ScalarRegClass:$rs2, (fvti.Mask VMV0:$vm),
                     GPR:$vl, fvti.Log2SEW, TA_MU)>;
@@ -1227,7 +1234,9 @@ multiclass VPatFPSetCCVL_VV_VF_FV<SDPatternOperator vop, CondCode cc,
                                 VR:$passthru,
                                 (fvti.Mask VMV0:$vm),
                                 VLOpFrag)),
-                (!cast<Instruction>(swapped_op_inst_name#"_V"#fvti.ScalarSuffix#"_"#fvti.LMul.MX#"_MASK")
+                (!cast<Instruction>(swapped_op_inst_name#
+                                    !if(!eq(fvti.Scalar, bf16), "_ALT", "")#
+                                    "_V"#fvti.ScalarSuffix#"_"#fvti.LMul.MX#"_MASK")
                     VR:$passthru, fvti.RegClass:$rs1,
                     fvti.ScalarRegClass:$rs2, (fvti.Mask VMV0:$vm),
                     GPR:$vl, fvti.Log2SEW, TA_MU)>;

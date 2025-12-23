@@ -19,21 +19,19 @@ using namespace llvm;
 
 namespace clang::tidy::bugprone {
 
-static constexpr llvm::StringLiteral OptionNameCustomFunctions =
-    "CustomFunctions";
-static constexpr llvm::StringLiteral OptionNameReportDefaultFunctions =
+static constexpr StringRef OptionNameCustomFunctions = "CustomFunctions";
+static constexpr StringRef OptionNameReportDefaultFunctions =
     "ReportDefaultFunctions";
-static constexpr llvm::StringLiteral OptionNameReportMoreUnsafeFunctions =
+static constexpr StringRef OptionNameReportMoreUnsafeFunctions =
     "ReportMoreUnsafeFunctions";
 
-static constexpr llvm::StringLiteral FunctionNamesWithAnnexKReplacementId =
+static constexpr StringRef FunctionNamesWithAnnexKReplacementId =
     "FunctionNamesWithAnnexKReplacement";
-static constexpr llvm::StringLiteral FunctionNamesId = "FunctionsNames";
-static constexpr llvm::StringLiteral AdditionalFunctionNamesId =
+static constexpr StringRef FunctionNamesId = "FunctionsNames";
+static constexpr StringRef AdditionalFunctionNamesId =
     "AdditionalFunctionsNames";
-static constexpr llvm::StringLiteral CustomFunctionNamesId =
-    "CustomFunctionNames";
-static constexpr llvm::StringLiteral DeclRefId = "DRE";
+static constexpr StringRef CustomFunctionNamesId = "CustomFunctionNames";
+static constexpr StringRef DeclRefId = "DRE";
 
 static std::optional<std::string>
 getAnnexKReplacementFor(StringRef FunctionName) {
@@ -169,13 +167,12 @@ static std::string serializeCheckedFunctions(
   std::vector<std::string> Result;
   Result.reserve(Functions.size());
 
-  for (const auto &Entry : Functions) {
+  for (const auto &Entry : Functions)
     if (Entry.Reason.empty())
       Result.push_back(Entry.Name + "," + Entry.Replacement);
     else
       Result.push_back(Entry.Name + "," + Entry.Replacement + "," +
                        Entry.Reason);
-  }
 
   return llvm::join(Result, ";");
 }
