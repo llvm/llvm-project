@@ -1122,10 +1122,9 @@ TEST(ScudoCombinedTest, ZeroOnDeallocEnabledAndFlag) {
     for (scudo::uptr FlagValue = 128; FlagValue <= 2048; FlagValue *= 2) {
       // Set the size limit flag via the environment variable.
       char Options[256];
-      snprintf(Options, sizeof(Options),
-               "SCUDO_OPTIONS=zero_on_dealloc_max_size=%ld",
+      snprintf(Options, sizeof(Options), "zero_on_dealloc_max_size=%ld",
                static_cast<long>(FlagValue));
-      putenv(Options);
+      setenv("SCUDO_OPTIONS", Options, 1);
 
       // Creates an allocator, configured from the environment.
       using AllocatorT = TestAllocator<TestZeroOnDeallocConfig>;
