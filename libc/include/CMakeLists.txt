@@ -478,13 +478,19 @@ add_header_macro(
   DEPENDS
     .llvm-libc-macros.elf_macros
     .llvm-libc-types.Elf32_Addr
+    .llvm-libc-types.Elf32_Chdr
+    .llvm-libc-types.Elf32_Dyn
     .llvm-libc-types.Elf32_Ehdr
     .llvm-libc-types.Elf32_Half
     .llvm-libc-types.Elf32_Lword
     .llvm-libc-types.Elf32_Nhdr
     .llvm-libc-types.Elf32_Off
     .llvm-libc-types.Elf32_Phdr
+    .llvm-libc-types.Elf32_Rel
+    .llvm-libc-types.Elf32_Rela
+    .llvm-libc-types.Elf32_Shdr
     .llvm-libc-types.Elf32_Sword
+    .llvm-libc-types.Elf32_Sym
     .llvm-libc-types.Elf32_Verdaux
     .llvm-libc-types.Elf32_Verdef
     .llvm-libc-types.Elf32_Vernaux
@@ -492,14 +498,20 @@ add_header_macro(
     .llvm-libc-types.Elf32_Versym
     .llvm-libc-types.Elf32_Word
     .llvm-libc-types.Elf64_Addr
+    .llvm-libc-types.Elf64_Chdr
+    .llvm-libc-types.Elf64_Dyn
     .llvm-libc-types.Elf64_Ehdr
     .llvm-libc-types.Elf64_Half
     .llvm-libc-types.Elf64_Lword
     .llvm-libc-types.Elf64_Nhdr
     .llvm-libc-types.Elf64_Off
     .llvm-libc-types.Elf64_Phdr
+    .llvm-libc-types.Elf64_Rel
+    .llvm-libc-types.Elf64_Rela
+    .llvm-libc-types.Elf64_Shdr
     .llvm-libc-types.Elf64_Sword
     .llvm-libc-types.Elf64_Sxword
+    .llvm-libc-types.Elf64_Sym
     .llvm-libc-types.Elf64_Verdaux
     .llvm-libc-types.Elf64_Verdef
     .llvm-libc-types.Elf64_Vernaux

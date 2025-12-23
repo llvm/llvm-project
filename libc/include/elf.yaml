@@ -421,47 +421,47 @@ macros:
     macro_value: '0xff01'
 types:
   - type_name: Elf32_Addr
-  - type_name: Elf32_Half
-  - type_name: Elf32_Off
-  - type_name: Elf32_Sword
-  - type_name: Elf32_Word
-  - type_name: Elf32_Lword
   - type_name: Elf32_Chdr
   - type_name: Elf32_Dyn
   - type_name: Elf32_Ehdr
-  - type_name: Elf32_Phdr
+  - type_name: Elf32_Half
+  - type_name: Elf32_Lword
   - type_name: Elf32_Nhdr
+  - type_name: Elf32_Off
+  - type_name: Elf32_Phdr
   - type_name: Elf32_Rel
   - type_name: Elf32_Rela
   - type_name: Elf32_Shdr
+  - type_name: Elf32_Sword
   - type_name: Elf32_Sym
   - type_name: Elf32_Verdaux
   - type_name: Elf32_Verdef
   - type_name: Elf32_Vernaux
   - type_name: Elf32_Verneed
   - type_name: Elf32_Versym
+  - type_name: Elf32_Word
   - type_name: Elf64_Addr
-  - type_name: Elf64_Half
-  - type_name: Elf64_Off
-  - type_name: Elf64_Sword
-  - type_name: Elf64_Sxword
-  - type_name: Elf64_Word
-  - type_name: Elf64_Lword
-  - type_name: Elf64_Xword
   - type_name: Elf64_Chdr
   - type_name: Elf64_Dyn
   - type_name: Elf64_Ehdr
-  - type_name: Elf64_Phdr
+  - type_name: Elf64_Half
+  - type_name: Elf64_Lword
   - type_name: Elf64_Nhdr
+  - type_name: Elf64_Off
+  - type_name: Elf64_Phdr
   - type_name: Elf64_Rel
   - type_name: Elf64_Rela
   - type_name: Elf64_Shdr
+  - type_name: Elf64_Sword
+  - type_name: Elf64_Sxword
   - type_name: Elf64_Sym
   - type_name: Elf64_Verdaux
   - type_name: Elf64_Verdef
   - type_name: Elf64_Vernaux
   - type_name: Elf64_Verneed
   - type_name: Elf64_Versym
+  - type_name: Elf64_Word
+  - type_name: Elf64_Xword
 enums: []
 objects: []
 functions: []
