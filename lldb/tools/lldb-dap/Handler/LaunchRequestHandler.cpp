@@ -8,7 +8,6 @@
 
 #include "DAP.h"
 #include "EventHelper.h"
-#include "JSONUtils.h"
 #include "LLDBUtils.h"
 #include "Protocol/ProtocolRequests.h"
 #include "RequestHandler.h"
@@ -63,10 +62,6 @@ Error LaunchRequestHandler::Run(const LaunchRequestArguments &arguments) const {
   dap.RunPostRunCommands();
 
   return Error::success();
-}
-
-void LaunchRequestHandler::PostRun() const {
-  dap.SendJSON(CreateEventObject("initialized"));
 }
 
 } // namespace lldb_dap

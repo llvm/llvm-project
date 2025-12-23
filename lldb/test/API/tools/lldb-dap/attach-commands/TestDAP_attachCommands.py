@@ -105,7 +105,7 @@ class TestDAP_attachCommands(lldbdap_testcase.DAPTestCaseBase):
         resp = self.attach(
             program=program,
             attachCommands=attachCommands,
-            expectFailure=True,
+            waitForResponse=True,
         )
         self.assertFalse(resp["success"])
         self.assertIn(
