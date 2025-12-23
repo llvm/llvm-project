@@ -1,10 +1,10 @@
 ## The function `bar` is declared in stub.so and depends on `foo` which is
 ## defined in an LTO object.  We also test the case where the LTO object is
 ## with an archive file.
-## The function `quux` is declared in stub.so and depends on `bar` which is
-## defined in an LTO object as well. In this case, `bar` is DCE'd and becomes
-## undefined in the LTO process, but `quux` should still be preserved and
-## exported.
+## The function `baz` is declared in stub.so and depends on `quux`, and both of
+## `baz` and `quux` are defined in an LTO object. When `baz` is DCE'd and
+## becomes undefined in the LTO process, but `quux` should still be preserved
+## and exported.
 ## This verifies that stub library dependencies (which are required exports) can
 ## be defined in LTO objects, even when they are within archive files.
 
