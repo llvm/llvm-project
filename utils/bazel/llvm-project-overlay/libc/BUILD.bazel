@@ -5472,18 +5472,6 @@ libc_support_library(
     ],
 )
 
-libc_support_library(
-    name = "string_allocating_string_utils",
-    hdrs = ["src/string/allocating_string_utils.h"],
-    deps = [
-        ":__support_alloc_checker",
-        ":__support_cpp_optional",
-        ":__support_macros_config",
-        ":string_memory_utils",
-        ":string_utils",
-    ],
-)
-
 libc_function(
     name = "index",
     srcs = ["src/strings/index.cpp"],
