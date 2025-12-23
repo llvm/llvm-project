@@ -8795,9 +8795,13 @@ SDValue TargetLowering::expandFMINIMUM_FMAXIMUM(SDNode *N,
   else if (isOperationCustom(MinMaxOpcNum2019, VT))
     MinMaxOpc = MinMaxOpcNum2019;
   if (MinMaxOpc != ISD::DELETED_NODE) {
-    // TODO: we can also move NaN from RHS to LHS
-    // and LHS to RHS, so that we can keep payloads of NaNs.
-    //
+    // TODO: we have another choice for NaNs
+    //   if RHS is NaN; then LHS = RHS; fi
+    //   if LHS is NaN; then RHS = LHS; fi
+    //   MinMax = MinMaxOpc (LHS, RHS)
+    // With this we can keep the payloads of NaNs and avoid load/store,
+    // while it may cause worse performance on platforms with advanced
+    // immediate loading support.
     MinMax = DAG.getNode(MinMaxOpc, DL, VT, LHS, RHS, Flags);
     if (!N->getFlags().hasNoNaNs() &&
         (!DAG.isKnownNeverNaN(RHS) || !DAG.isKnownNeverNaN(LHS))) {
