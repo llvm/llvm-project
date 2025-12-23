@@ -1288,9 +1288,10 @@ void EmitAssemblyHelper::RunCodegenPipeline(
       return;
   }
 
-  if (TM->addPassesToEmitFile(
-          CodeGenPasses, *OS, DwoOS ? &DwoOS->os() : nullptr, CGFT,
-          /*DisableVerify=*/!CodeGenOpts.VerifyModule, nullptr, CasIDOS)) {
+  if (TM->addPassesToEmitFile(CodeGenPasses, *OS,
+                              DwoOS ? &DwoOS->os() : nullptr, CGFT,
+                              /*DisableVerify=*/!CodeGenOpts.VerifyModule,
+                              nullptr, CasIDOS.get())) {
     Diags.Report(diag::err_fe_unable_to_interface_with_target);
     return;
   }
