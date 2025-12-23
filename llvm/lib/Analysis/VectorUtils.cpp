@@ -1084,6 +1084,10 @@ Instruction *llvm::propagateMetadata(Instruction *Inst, ArrayRef<Value *> VL) {
   getMetadataToPropagate(cast<Instruction>(VL[0]), Metadata);
 
   for (auto &[Kind, MD] : Metadata) {
+    // Skip MMRA metadata if the instruction cannot have it.
+    if (Kind == LLVMContext::MD_mmra && !canInstructionHaveMMRAs(*Inst))
+      continue;
+
     for (int J = 1, E = VL.size(); MD && J != E; ++J) {
       const Instruction *IJ = cast<Instruction>(VL[J]);
       MDNode *IMD = IJ->getMetadata(Kind);
