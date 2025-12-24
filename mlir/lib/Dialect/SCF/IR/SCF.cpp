@@ -1306,10 +1306,6 @@ struct ForOpYieldCyclesFolder : public OpRewritePattern<ForOp> {
         }
 
         current = next;
-
-        // Completed the cycle.
-        if (current == start)
-          break;
       }
 
       // If we found a valid cycle (yielding own iter arg forms cycle of length

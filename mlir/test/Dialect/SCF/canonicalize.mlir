@@ -2179,7 +2179,7 @@ func.func private @side_effect()
 // CHECK-LABEL: func @iter_args_cycles
 //  CHECK-SAME:   (%[[LB:.*]]: index, %[[UB:.*]]: index, %[[STEP:.*]]: index, %[[A:.*]]: i32, %[[B:.*]]: i64, %[[C:.*]]: f32)
 //       CHECK:   scf.for %[[IV:.*]] = %[[LB]] to %[[UB]] step %[[STEP]] {
-//       CHECK:   func.call @side_effect() : () -> ()
+//       CHECK:   func.call @side_effect()
 //   CHECK-NOT:   yield
 //       CHECK:   return %[[A]], %[[B]], %[[A]], %[[B]], %[[B]], %[[C]] : i32, i64, i32, i64, i64, f32
 func.func @iter_args_cycles(%lb : index, %ub : index, %step : index, %a : i32, %b : i64, %c : f32) -> (i32, i64, i32, i64, i64, f32) {
@@ -2188,4 +2188,22 @@ func.func @iter_args_cycles(%lb : index, %ub : index, %step : index, %a : i32, %
     scf.yield %2, %4, %0, %1, %3, %5 : i32, i64, i32, i64, i64, f32
   }
   return %res#0, %res#1, %res#2, %res#3, %res#4, %res#5 : i32, i64, i32, i64, i64, f32
+}
+
+// -----
+
+func.func private @side_effect(i32)
+
+// CHECK-LABEL: func @iter_args_cycles_non_cycle_start
+//  CHECK-SAME:   (%[[LB:.*]]: index, %[[UB:.*]]: index, %[[STEP:.*]]: index, %[[A:.*]]: i32, %[[B:.*]]: i32)
+//       CHECK:   %[[RES:.*]] = scf.for %[[IV:.*]] = %[[LB]] to %[[UB]] step %[[STEP]] iter_args(%[[ITER_ARG:.*]] = %[[A]]) -> (i32) {
+//       CHECK:   func.call @side_effect(%[[ITER_ARG]])
+//       CHECK:   yield %[[B]] : i32
+//       CHECK:   return %[[RES]], %[[B]], %[[B]] : i32, i32, i32
+func.func @iter_args_cycles_non_cycle_start(%lb : index, %ub : index, %step : index, %a : i32, %b : i32) -> (i32, i32, i32) {
+  %res:3 = scf.for %i = %lb to %ub step %step iter_args(%0 = %a, %1 = %b, %2 = %b) -> (i32, i32, i32) {
+    func.call @side_effect(%0) : (i32) -> ()
+    scf.yield %1, %2, %1 : i32, i32, i32
+  }
+  return %res#0, %res#1, %res#2 : i32, i32, i32
 }
