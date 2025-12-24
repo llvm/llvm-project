@@ -1296,16 +1296,14 @@ struct ForOpYieldCyclesFolder : public OpRewritePattern<ForOp> {
         }
 
         // Next yield position.
-        unsigned next = cast<BlockArgument>(yieldedValue).getArgNumber() -
-                        op.getNumInductionVars();
+        current = cast<BlockArgument>(yieldedValue).getArgNumber() -
+                  op.getNumInductionVars();
 
         // Check if next position has the same init value.
-        if (initArgs[next] != initValue) {
+        if (initArgs[current] != initValue) {
           validCycle = false;
           break;
         }
-
-        current = next;
       }
 
       // If we found a valid cycle (yielding own iter arg forms cycle of length
