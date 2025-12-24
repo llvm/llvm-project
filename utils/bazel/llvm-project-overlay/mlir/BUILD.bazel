@@ -10483,6 +10483,7 @@ cc_library(
         ":OpenACCDialect",
         ":OpenACCPassIncGen",
         ":Pass",
+        ":SCFDialect",
         ":Support",
         ":TransformUtils",
         ":ViewLikeInterface",

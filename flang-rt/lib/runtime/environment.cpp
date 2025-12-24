@@ -16,7 +16,9 @@
 #include <limits>
 
 #ifdef _WIN32
+#ifdef _MSC_VER
 extern char **_environ;
+#endif
 #elif defined(__FreeBSD__)
 // FreeBSD has environ in crt rather than libc. Using "extern char** environ"
 // in the code of a shared library makes it fail to link with -Wl,--no-undefined

@@ -1,24 +1,24 @@
 ;; Generate ELF attributes from llc.
 
 ; RUN: llc -mtriple=riscv32 -mattr=+experimental-xqccmp %s -o - | FileCheck --check-prefix=RV32XQCCMP %s
-; RUN: llc -mtriple=riscv32 -mattr=+experimental-xqcia %s -o - | FileCheck --check-prefix=RV32XQCIA %s
-; RUN: llc -mtriple=riscv32 -mattr=+experimental-xqciac %s -o - | FileCheck --check-prefix=RV32XQCIAC %s
-; RUN: llc -mtriple=riscv32 -mattr=+experimental-xqcibi %s -o - | FileCheck --check-prefix=RV32XQCIBI %s
-; RUN: llc -mtriple=riscv32 -mattr=+experimental-xqcibm %s -o - | FileCheck --check-prefix=RV32XQCIBM %s
-; RUN: llc -mtriple=riscv32 -mattr=+experimental-xqcicli %s -o - | FileCheck --check-prefix=RV32XQCICLI %s
-; RUN: llc -mtriple=riscv32 -mattr=+experimental-xqcicm %s -o - | FileCheck --check-prefix=RV32XQCICM %s
-; RUN: llc -mtriple=riscv32 -mattr=+experimental-xqcics %s -o - | FileCheck --check-prefix=RV32XQCICS %s
-; RUN: llc -mtriple=riscv32 -mattr=+experimental-xqcicsr %s -o - | FileCheck --check-prefix=RV32XQCICSR %s
-; RUN: llc -mtriple=riscv32 -mattr=+experimental-xqciint %s -o - | FileCheck --check-prefix=RV32XQCIINT %s
-; RUN: llc -mtriple=riscv32 -mattr=+experimental-xqciio %s -o - | FileCheck --check-prefix=RV32XQCIIO %s
-; RUN: llc -mtriple=riscv32 -mattr=+experimental-xqcilb %s -o - | FileCheck --check-prefix=RV32XQCILB %s
-; RUN: llc -mtriple=riscv32 -mattr=+experimental-xqcili %s -o - | FileCheck --check-prefix=RV32XQCILI %s
-; RUN: llc -mtriple=riscv32 -mattr=+experimental-xqcilia %s -o - | FileCheck --check-prefix=RV32XQCILIA %s
-; RUN: llc -mtriple=riscv32 -mattr=+experimental-xqcilo %s -o - | FileCheck --check-prefix=RV32XQCILO %s
-; RUN: llc -mtriple=riscv32 -mattr=+experimental-xqcilsm %s -o - | FileCheck --check-prefix=RV32XQCILSM %s
-; RUN: llc -mtriple=riscv32 -mattr=+experimental-xqcisim %s -o - | FileCheck --check-prefix=RV32XQCISIM %s
-; RUN: llc -mtriple=riscv32 -mattr=+experimental-xqcisls %s -o - | FileCheck --check-prefix=RV32XQCISLS %s
-; RUN: llc -mtriple=riscv32 -mattr=+experimental-xqcisync %s -o - | FileCheck --check-prefix=RV32XQCISYNC %s
+; RUN: llc -mtriple=riscv32 -mattr=+xqcia %s -o - | FileCheck --check-prefix=RV32XQCIA %s
+; RUN: llc -mtriple=riscv32 -mattr=+xqciac %s -o - | FileCheck --check-prefix=RV32XQCIAC %s
+; RUN: llc -mtriple=riscv32 -mattr=+xqcibi %s -o - | FileCheck --check-prefix=RV32XQCIBI %s
+; RUN: llc -mtriple=riscv32 -mattr=+xqcibm %s -o - | FileCheck --check-prefix=RV32XQCIBM %s
+; RUN: llc -mtriple=riscv32 -mattr=+xqcicli %s -o - | FileCheck --check-prefix=RV32XQCICLI %s
+; RUN: llc -mtriple=riscv32 -mattr=+xqcicm %s -o - | FileCheck --check-prefix=RV32XQCICM %s
+; RUN: llc -mtriple=riscv32 -mattr=+xqcics %s -o - | FileCheck --check-prefix=RV32XQCICS %s
+; RUN: llc -mtriple=riscv32 -mattr=+xqcicsr %s -o - | FileCheck --check-prefix=RV32XQCICSR %s
+; RUN: llc -mtriple=riscv32 -mattr=+xqciint %s -o - | FileCheck --check-prefix=RV32XQCIINT %s
+; RUN: llc -mtriple=riscv32 -mattr=+xqciio %s -o - | FileCheck --check-prefix=RV32XQCIIO %s
+; RUN: llc -mtriple=riscv32 -mattr=+xqcilb %s -o - | FileCheck --check-prefix=RV32XQCILB %s
+; RUN: llc -mtriple=riscv32 -mattr=+xqcili %s -o - | FileCheck --check-prefix=RV32XQCILI %s
+; RUN: llc -mtriple=riscv32 -mattr=+xqcilia %s -o - | FileCheck --check-prefix=RV32XQCILIA %s
+; RUN: llc -mtriple=riscv32 -mattr=+xqcilo %s -o - | FileCheck --check-prefix=RV32XQCILO %s
+; RUN: llc -mtriple=riscv32 -mattr=+xqcilsm %s -o - | FileCheck --check-prefix=RV32XQCILSM %s
+; RUN: llc -mtriple=riscv32 -mattr=+xqcisim %s -o - | FileCheck --check-prefix=RV32XQCISIM %s
+; RUN: llc -mtriple=riscv32 -mattr=+xqcisls %s -o - | FileCheck --check-prefix=RV32XQCISLS %s
+; RUN: llc -mtriple=riscv32 -mattr=+xqcisync %s -o - | FileCheck --check-prefix=RV32XQCISYNC %s
 
 ; RUN: llc -mtriple=riscv64 -mattr=+experimental-xqccmp %s -o - | FileCheck --check-prefix=RV64XQCCMP %s
 
