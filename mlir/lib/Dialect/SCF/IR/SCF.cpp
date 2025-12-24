@@ -990,9 +990,8 @@ mlir::scf::replaceAndCastForOpIterArg(RewriterBase &rewriter, scf::ForOp forOp,
 
 namespace {
 // Fold away ForOp iter arguments when:
-// 1) The op yields the iter arguments.
-// 2) The argument's corresponding outer region iterators (inputs) are yielded.
-// 3) The iter arguments have no use and the corresponding (operation) results
+// 1) The argument's corresponding outer region iterators (inputs) are yielded.
+// 2) The iter arguments have no use and the corresponding (operation) results
 // have no use.
 //
 // These arguments must be defined outside of the ForOp region and can just be
@@ -1030,12 +1029,11 @@ struct ForOpIterArgsFolder : public OpRewritePattern<scf::ForOp> {
                    forOp.getYieldedValues()   // iter yield
                    )) {
       // Forwarded is `true` when:
-      // 1) The region `iter` argument is yielded.
-      // 2) The region `iter` argument the corresponding input is yielded.
-      // 3) The region `iter` argument has no use, and the corresponding op
+      // 1) The region `iter` argument the corresponding input is yielded.
+      // 2) The region `iter` argument has no use, and the corresponding op
       // result has no use.
-      bool forwarded = (arg == yielded) || (init == yielded) ||
-                       (arg.use_empty() && result.use_empty());
+      bool forwarded =
+          (init == yielded) || (arg.use_empty() && result.use_empty());
       if (forwarded) {
         canonicalize = true;
         keepMask.push_back(false);
@@ -1309,9 +1307,9 @@ struct ForOpYieldCyclesFolder : public OpRewritePattern<ForOp> {
           break;
       }
 
-      // If we found a valid cycle of length > 1, all values in it
-      // are always equal to initValue.
-      if (validCycle && cycle.size() > 1) {
+      // If we found a valid cycle (yielding own iter arg is also a cycle), all
+      // values in it are always equal to initValue.
+      if (validCycle) {
         changed = true;
         for (unsigned idx : cycle) {
           // This will leave region args and results dead so other
