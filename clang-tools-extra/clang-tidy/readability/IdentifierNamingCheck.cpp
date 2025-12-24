@@ -236,184 +236,6 @@ static StringRef const HungarianNotationUserDefinedTypes[] = {
 #undef NAMING_KEYS
 // clang-format on
 
-IdentifierNamingCheck::NamingStyle::NamingStyle(
-    std::optional<IdentifierNamingCheck::CaseType> Case, StringRef Prefix,
-    StringRef Suffix, StringRef IgnoredRegexpStr, HungarianPrefixType HPType)
-    : Case(Case), Prefix(Prefix), Suffix(Suffix),
-      IgnoredRegexpStr(IgnoredRegexpStr), HPType(HPType) {
-  if (!IgnoredRegexpStr.empty()) {
-    IgnoredRegexp =
-        llvm::Regex(llvm::SmallString<128>({"^", IgnoredRegexpStr, "$"}));
-    if (!IgnoredRegexp.isValid())
-      llvm::errs() << "Invalid IgnoredRegexp regular expression: "
-                   << IgnoredRegexpStr;
-  }
-}
-
-IdentifierNamingCheck::FileStyle IdentifierNamingCheck::getFileStyleFromOptions(
-    const ClangTidyCheck::OptionsView &Options) const {
-  IdentifierNamingCheck::HungarianNotationOption HNOption;
-
-  HungarianNotation::loadDefaultConfig(HNOption);
-  HungarianNotation::loadFileConfig(Options, HNOption);
-
-  SmallVector<std::optional<IdentifierNamingCheck::NamingStyle>, 0> Styles;
-  Styles.resize(SK_Count);
-  SmallString<64> StyleString;
-  for (unsigned I = 0; I < SK_Count; ++I) {
-    const size_t StyleSize = StyleNames[I].size();
-    StyleString.assign({StyleNames[I], "HungarianPrefix"});
-
-    auto HPTOpt =
-        Options.get<IdentifierNamingCheck::HungarianPrefixType>(StyleString);
-    if (HPTOpt && !HungarianNotation::checkOptionValid(I))
-      configurationDiag("invalid identifier naming option '%0'") << StyleString;
-
-    memcpy(&StyleString[StyleSize], "IgnoredRegexp", 13);
-    StyleString.truncate(StyleSize + 13);
-    const std::optional<StringRef> IgnoredRegexpStr = Options.get(StyleString);
-    memcpy(&StyleString[StyleSize], "Prefix", 6);
-    StyleString.truncate(StyleSize + 6);
-    const std::optional<StringRef> Prefix(Options.get(StyleString));
-    // Fast replacement of [Pre]fix -> [Suf]fix.
-    memcpy(&StyleString[StyleSize], "Suf", 3);
-    const std::optional<StringRef> Postfix(Options.get(StyleString));
-    memcpy(&StyleString[StyleSize], "Case", 4);
-    StyleString.pop_back_n(2);
-    std::optional<CaseType> CaseOptional =
-        Options.get<IdentifierNamingCheck::CaseType>(StyleString);
-
-    if (CaseOptional || Prefix || Postfix || IgnoredRegexpStr || HPTOpt)
-      Styles[I].emplace(std::move(CaseOptional), Prefix.value_or(""),
-                        Postfix.value_or(""), IgnoredRegexpStr.value_or(""),
-                        HPTOpt.value_or(IdentifierNamingCheck::HPT_Off));
-  }
-  const bool IgnoreMainLike = Options.get("IgnoreMainLikeFunctions", false);
-  const bool CheckAnonFieldInParent =
-      Options.get("CheckAnonFieldInParent", false);
-  return {std::move(Styles), std::move(HNOption), IgnoreMainLike,
-          CheckAnonFieldInParent};
-}
-
-static std::string getDeclTypeName(const NamedDecl *ND) {
-  const auto *VD = dyn_cast<ValueDecl>(ND);
-  if (!VD)
-    return {};
-
-  if (isa<FunctionDecl, EnumConstantDecl>(ND))
-    return {};
-
-  // Get type text of variable declarations.
-  auto &SM = VD->getASTContext().getSourceManager();
-  const char *Begin = SM.getCharacterData(VD->getBeginLoc());
-  const char *End = SM.getCharacterData(VD->getEndLoc());
-  intptr_t StrLen = End - Begin;
-
-  // FIXME: Sometimes the value that returns from ValDecl->getEndLoc()
-  // is wrong(out of location of Decl). This causes `StrLen` will be assigned
-  // an unexpected large value. Current workaround to find the terminated
-  // character instead of the `getEndLoc()` function.
-  const char *EOL = strchr(Begin, '\n');
-  if (!EOL)
-    EOL = Begin + strlen(Begin);
-
-  const char *const PosList[] = {strchr(Begin, '='), strchr(Begin, ';'),
-                                 strchr(Begin, ','), strchr(Begin, ')'), EOL};
-  for (const auto &Pos : PosList)
-    if (Pos > Begin)
-      EOL = std::min(EOL, Pos);
-
-  StrLen = EOL - Begin;
-  std::string TypeName;
-  if (StrLen > 0) {
-    std::string Type(Begin, StrLen);
-
-    static constexpr StringRef Keywords[] = {
-        // Constexpr specifiers
-        "constexpr", "constinit", "consteval",
-        // Qualifier
-        "const", "volatile", "restrict", "mutable",
-        // Storage class specifiers
-        "register", "static", "extern", "thread_local",
-        // Other keywords
-        "virtual"};
-
-    // Remove keywords
-    for (const StringRef Kw : Keywords)
-      for (size_t Pos = 0; (Pos = Type.find(Kw, Pos)) != std::string::npos;)
-        Type.replace(Pos, Kw.size(), "");
-    TypeName = Type.erase(0, Type.find_first_not_of(' '));
-
-    // Remove template parameters
-    const size_t Pos = Type.find('<');
-    if (Pos != std::string::npos)
-      TypeName = Type.erase(Pos, Type.size() - Pos);
-
-    // Replace spaces with single space.
-    for (size_t Pos = 0; (Pos = Type.find("  ", Pos)) != std::string::npos;
-         Pos += strlen(" ")) {
-      Type.replace(Pos, strlen("  "), " ");
-    }
-
-    // Replace " &" with "&".
-    for (size_t Pos = 0; (Pos = Type.find(" &", Pos)) != std::string::npos;
-         Pos += strlen("&")) {
-      Type.replace(Pos, strlen(" &"), "&");
-    }
-
-    // Replace " *" with "* ".
-    for (size_t Pos = 0; (Pos = Type.find(" *", Pos)) != std::string::npos;
-         Pos += strlen("*")) {
-      Type.replace(Pos, strlen(" *"), "* ");
-    }
-
-    // Remove redundant tailing.
-    static constexpr StringRef TailsOfMultiWordType[] = {
-        " int", " char", " double", " long", " short"};
-    bool RedundantRemoved = false;
-    for (auto Kw : TailsOfMultiWordType) {
-      const size_t Pos = Type.rfind(Kw);
-      if (Pos != std::string::npos) {
-        const size_t PtrCount = getAsteriskCount(Type, ND);
-        Type = Type.substr(0, Pos + Kw.size() + PtrCount);
-        RedundantRemoved = true;
-        break;
-      }
-    }
-
-    TypeName = Type.erase(0, Type.find_first_not_of(' '));
-    if (!RedundantRemoved) {
-      const std::size_t FoundSpace = Type.find(' ');
-      if (FoundSpace != std::string::npos)
-        Type = Type.substr(0, FoundSpace);
-    }
-
-    TypeName = Type.erase(0, Type.find_first_not_of(' '));
-
-    const QualType QT = VD->getType();
-    if (!QT.isNull() && QT->isArrayType())
-      TypeName.append("[]");
-  }
-
-  return TypeName;
-}
-
-IdentifierNamingCheck::IdentifierNamingCheck(StringRef Name,
-                                             ClangTidyContext *Context)
-    : RenamerClangTidyCheck(Name, Context), Context(Context),
-      GetConfigPerFile(Options.get("GetConfigPerFile", true)),
-      IgnoreFailedSplit(Options.get("IgnoreFailedSplit", false)) {
-  auto IterAndInserted = NamingStylesCache.try_emplace(
-      llvm::sys::path::parent_path(Context->getCurrentFile()),
-      getFileStyleFromOptions(Options));
-  assert(IterAndInserted.second && "Couldn't insert Style");
-  // Holding a reference to the data in the vector is safe as it should never
-  // move.
-  MainFileStyle = &IterAndInserted.first->getValue();
-}
-
-IdentifierNamingCheck::~IdentifierNamingCheck() = default;
-
 namespace HungarianNotation {
 
 static bool checkOptionValid(int StyleKindIndex) {
@@ -822,6 +644,184 @@ loadDefaultConfig(IdentifierNamingCheck::HungarianNotationOption &HNOption) {
 }
 
 } // namespace HungarianNotation
+
+IdentifierNamingCheck::NamingStyle::NamingStyle(
+    std::optional<IdentifierNamingCheck::CaseType> Case, StringRef Prefix,
+    StringRef Suffix, StringRef IgnoredRegexpStr, HungarianPrefixType HPType)
+    : Case(Case), Prefix(Prefix), Suffix(Suffix),
+      IgnoredRegexpStr(IgnoredRegexpStr), HPType(HPType) {
+  if (!IgnoredRegexpStr.empty()) {
+    IgnoredRegexp =
+        llvm::Regex(llvm::SmallString<128>({"^", IgnoredRegexpStr, "$"}));
+    if (!IgnoredRegexp.isValid())
+      llvm::errs() << "Invalid IgnoredRegexp regular expression: "
+                   << IgnoredRegexpStr;
+  }
+}
+
+IdentifierNamingCheck::FileStyle IdentifierNamingCheck::getFileStyleFromOptions(
+    const ClangTidyCheck::OptionsView &Options) const {
+  IdentifierNamingCheck::HungarianNotationOption HNOption;
+
+  HungarianNotation::loadDefaultConfig(HNOption);
+  HungarianNotation::loadFileConfig(Options, HNOption);
+
+  SmallVector<std::optional<IdentifierNamingCheck::NamingStyle>, 0> Styles;
+  Styles.resize(SK_Count);
+  SmallString<64> StyleString;
+  for (unsigned I = 0; I < SK_Count; ++I) {
+    const size_t StyleSize = StyleNames[I].size();
+    StyleString.assign({StyleNames[I], "HungarianPrefix"});
+
+    auto HPTOpt =
+        Options.get<IdentifierNamingCheck::HungarianPrefixType>(StyleString);
+    if (HPTOpt && !HungarianNotation::checkOptionValid(I))
+      configurationDiag("invalid identifier naming option '%0'") << StyleString;
+
+    memcpy(&StyleString[StyleSize], "IgnoredRegexp", 13);
+    StyleString.truncate(StyleSize + 13);
+    const std::optional<StringRef> IgnoredRegexpStr = Options.get(StyleString);
+    memcpy(&StyleString[StyleSize], "Prefix", 6);
+    StyleString.truncate(StyleSize + 6);
+    const std::optional<StringRef> Prefix(Options.get(StyleString));
+    // Fast replacement of [Pre]fix -> [Suf]fix.
+    memcpy(&StyleString[StyleSize], "Suf", 3);
+    const std::optional<StringRef> Postfix(Options.get(StyleString));
+    memcpy(&StyleString[StyleSize], "Case", 4);
+    StyleString.pop_back_n(2);
+    std::optional<CaseType> CaseOptional =
+        Options.get<IdentifierNamingCheck::CaseType>(StyleString);
+
+    if (CaseOptional || Prefix || Postfix || IgnoredRegexpStr || HPTOpt)
+      Styles[I].emplace(std::move(CaseOptional), Prefix.value_or(""),
+                        Postfix.value_or(""), IgnoredRegexpStr.value_or(""),
+                        HPTOpt.value_or(IdentifierNamingCheck::HPT_Off));
+  }
+  const bool IgnoreMainLike = Options.get("IgnoreMainLikeFunctions", false);
+  const bool CheckAnonFieldInParent =
+      Options.get("CheckAnonFieldInParent", false);
+  return {std::move(Styles), std::move(HNOption), IgnoreMainLike,
+          CheckAnonFieldInParent};
+}
+
+static std::string getDeclTypeName(const NamedDecl *ND) {
+  const auto *VD = dyn_cast<ValueDecl>(ND);
+  if (!VD)
+    return {};
+
+  if (isa<FunctionDecl, EnumConstantDecl>(ND))
+    return {};
+
+  // Get type text of variable declarations.
+  auto &SM = VD->getASTContext().getSourceManager();
+  const char *Begin = SM.getCharacterData(VD->getBeginLoc());
+  const char *End = SM.getCharacterData(VD->getEndLoc());
+  intptr_t StrLen = End - Begin;
+
+  // FIXME: Sometimes the value that returns from ValDecl->getEndLoc()
+  // is wrong(out of location of Decl). This causes `StrLen` will be assigned
+  // an unexpected large value. Current workaround to find the terminated
+  // character instead of the `getEndLoc()` function.
+  const char *EOL = strchr(Begin, '\n');
+  if (!EOL)
+    EOL = Begin + strlen(Begin);
+
+  const char *const PosList[] = {strchr(Begin, '='), strchr(Begin, ';'),
+                                 strchr(Begin, ','), strchr(Begin, ')'), EOL};
+  for (const auto &Pos : PosList)
+    if (Pos > Begin)
+      EOL = std::min(EOL, Pos);
+
+  StrLen = EOL - Begin;
+  std::string TypeName;
+  if (StrLen > 0) {
+    std::string Type(Begin, StrLen);
+
+    static constexpr StringRef Keywords[] = {
+        // Constexpr specifiers
+        "constexpr", "constinit", "consteval",
+        // Qualifier
+        "const", "volatile", "restrict", "mutable",
+        // Storage class specifiers
+        "register", "static", "extern", "thread_local",
+        // Other keywords
+        "virtual"};
+
+    // Remove keywords
+    for (const StringRef Kw : Keywords)
+      for (size_t Pos = 0; (Pos = Type.find(Kw, Pos)) != std::string::npos;)
+        Type.replace(Pos, Kw.size(), "");
+    TypeName = Type.erase(0, Type.find_first_not_of(' '));
+
+    // Remove template parameters
+    const size_t Pos = Type.find('<');
+    if (Pos != std::string::npos)
+      TypeName = Type.erase(Pos, Type.size() - Pos);
+
+    // Replace spaces with single space.
+    for (size_t Pos = 0; (Pos = Type.find("  ", Pos)) != std::string::npos;
+         Pos += strlen(" ")) {
+      Type.replace(Pos, strlen("  "), " ");
+    }
+
+    // Replace " &" with "&".
+    for (size_t Pos = 0; (Pos = Type.find(" &", Pos)) != std::string::npos;
+         Pos += strlen("&")) {
+      Type.replace(Pos, strlen(" &"), "&");
+    }
+
+    // Replace " *" with "* ".
+    for (size_t Pos = 0; (Pos = Type.find(" *", Pos)) != std::string::npos;
+         Pos += strlen("*")) {
+      Type.replace(Pos, strlen(" *"), "* ");
+    }
+
+    // Remove redundant tailing.
+    static constexpr StringRef TailsOfMultiWordType[] = {
+        " int", " char", " double", " long", " short"};
+    bool RedundantRemoved = false;
+    for (auto Kw : TailsOfMultiWordType) {
+      const size_t Pos = Type.rfind(Kw);
+      if (Pos != std::string::npos) {
+        const size_t PtrCount = getAsteriskCount(Type, ND);
+        Type = Type.substr(0, Pos + Kw.size() + PtrCount);
+        RedundantRemoved = true;
+        break;
+      }
+    }
+
+    TypeName = Type.erase(0, Type.find_first_not_of(' '));
+    if (!RedundantRemoved) {
+      const std::size_t FoundSpace = Type.find(' ');
+      if (FoundSpace != std::string::npos)
+        Type = Type.substr(0, FoundSpace);
+    }
+
+    TypeName = Type.erase(0, Type.find_first_not_of(' '));
+
+    const QualType QT = VD->getType();
+    if (!QT.isNull() && QT->isArrayType())
+      TypeName.append("[]");
+  }
+
+  return TypeName;
+}
+
+IdentifierNamingCheck::IdentifierNamingCheck(StringRef Name,
+                                             ClangTidyContext *Context)
+    : RenamerClangTidyCheck(Name, Context), Context(Context),
+      GetConfigPerFile(Options.get("GetConfigPerFile", true)),
+      IgnoreFailedSplit(Options.get("IgnoreFailedSplit", false)) {
+  auto IterAndInserted = NamingStylesCache.try_emplace(
+      llvm::sys::path::parent_path(Context->getCurrentFile()),
+      getFileStyleFromOptions(Options));
+  assert(IterAndInserted.second && "Couldn't insert Style");
+  // Holding a reference to the data in the vector is safe as it should never
+  // move.
+  MainFileStyle = &IterAndInserted.first->getValue();
+}
+
+IdentifierNamingCheck::~IdentifierNamingCheck() = default;
 
 void IdentifierNamingCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   RenamerClangTidyCheck::storeOptions(Opts);
