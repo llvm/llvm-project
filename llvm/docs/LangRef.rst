@@ -8677,6 +8677,23 @@ denoting if the type contains a pointer.
 
   !0 = !{!"<type-name>", i1 <contains-pointer>}
 
+'``stack-protector``' Metadata
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The ``stack-protector`` metadata may be attached to alloca instructions.  An
+alloca instruction with this metadata and value `i32 0` will be skipped when
+deciding whether a given function requires a stack protector.  The function
+may still use a stack protector, if other criteria determine it needs one.
+
+The metadata contains an integer, where a 0 value opts the given alloca out
+of requiring a stack protector.
+
+.. code-block:: none
+
+   %a = alloca [1000 x i8], align 1, !stack-protector !0
+
+  !0 = !{i32 0}
+
 Module Flags Metadata
 =====================
 

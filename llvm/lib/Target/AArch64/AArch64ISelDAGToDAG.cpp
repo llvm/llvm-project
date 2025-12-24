@@ -74,6 +74,8 @@ public:
   template <signed Low, signed High>
   bool SelectRDSVLShiftImm(SDValue N, SDValue &Imm);
 
+  bool SelectAddUXTXRegister(SDValue N, SDValue &Reg, SDValue &Shift);
+
   bool SelectArithExtendedRegister(SDValue N, SDValue &Reg, SDValue &Shift);
   bool SelectArithUXTXRegister(SDValue N, SDValue &Reg, SDValue &Shift);
   bool SelectArithImmed(SDValue N, SDValue &Val, SDValue &Shift);
@@ -957,6 +959,19 @@ bool AArch64DAGToDAGISel::SelectRDSVLShiftImm(SDValue N, SDValue &Imm) {
   }
 
   return false;
+}
+
+/// SelectAddUXTXRegister - Select a "UXTX register" operand. This
+/// operand is referred by the instructions have SP operand
+bool AArch64DAGToDAGISel::SelectAddUXTXRegister(SDValue N, SDValue &Reg,
+                                                SDValue &Shift) {
+  // TODO: Relax condition to apply to more scenarios
+  if (N.getOpcode() != ISD::LOAD)
+    return false;
+  Reg = N;
+  Shift = CurDAG->getTargetConstant(getArithExtendImm(AArch64_AM::UXTX, 0),
+                                    SDLoc(N), MVT::i32);
+  return true;
 }
 
 /// SelectArithExtendedRegister - Select a "extended register" operand.  This
@@ -4417,31 +4432,8 @@ bool AArch64DAGToDAGISel::SelectSVELogicalImm(SDValue N, MVT VT, SDValue &Imm,
   if (Invert)
     ImmVal = ~ImmVal;
 
-  // Shift mask depending on type size.
-  switch (VT.SimpleTy) {
-  case MVT::i8:
-    ImmVal &= 0xFF;
-    ImmVal |= ImmVal << 8;
-    ImmVal |= ImmVal << 16;
-    ImmVal |= ImmVal << 32;
-    break;
-  case MVT::i16:
-    ImmVal &= 0xFFFF;
-    ImmVal |= ImmVal << 16;
-    ImmVal |= ImmVal << 32;
-    break;
-  case MVT::i32:
-    ImmVal &= 0xFFFFFFFF;
-    ImmVal |= ImmVal << 32;
-    break;
-  case MVT::i64:
-    break;
-  default:
-    llvm_unreachable("Unexpected type");
-  }
-
   uint64_t encoding;
-  if (!AArch64_AM::processLogicalImmediate(ImmVal, 64, encoding))
+  if (!AArch64_AM::isSVELogicalImm(VT.getScalarSizeInBits(), ImmVal, encoding))
     return false;
 
   Imm = CurDAG->getTargetConstant(encoding, SDLoc(N), MVT::i64);
