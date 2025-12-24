@@ -228,6 +228,7 @@ class Tosa_I32EnumAttr<string name, string description, string mnemonic,
 // FP  : Floating-Point Inference. Primarily FP16 and FP32 operations.
 //
 // Extension:
+// INT64        : 64-bit integer operations.
 // INT16        : 16-bit integer operations.
 // INT4         : 4-bit integer weights.
 // BF16         : BFloat16 operations.
@@ -239,6 +240,8 @@ class Tosa_I32EnumAttr<string name, string description, string mnemonic,
 // DOUBLEROUND  : Adds double rounding support to the RESCALE operator.
 // INEXACTROUND : Adds inexact rounding support to the RESCALE operator.
 // DYNAMIC      : Removes all Compile Time Constant state for CTC inputs.
+// MXFP         : Microscaling formats.
+// SHAPE        : Shape calcuation operators.
 //===----------------------------------------------------------------------===//
 
 def Tosa_NONE : I32EnumAttrCase<"none", 0>;
@@ -271,21 +274,25 @@ def Tosa_EXT_DOUBLEROUND  : I32EnumAttrCase<"doubleround", 9>;
 def Tosa_EXT_INEXACTROUND : I32EnumAttrCase<"inexactround", 10>;
 def Tosa_EXT_DYNAMIC      : I32EnumAttrCase<"dynamic", 11>;
 def Tosa_EXT_MXFP         : I32EnumAttrCase<"mxfp", 12>;
+def Tosa_EXT_INT64        : I32EnumAttrCase<"int64", 13>;
+def Tosa_EXT_SHAPE        : I32EnumAttrCase<"shape", 14>;
+
 
 def Tosa_ExtensionAttr
     : Tosa_I32EnumAttr<"Extension", "supported TOSA extensions", "ext", [
       Tosa_EXT_NONE, Tosa_EXT_INT16, Tosa_EXT_INT4, Tosa_EXT_BF16,
       Tosa_EXT_FP8E4M3, Tosa_EXT_FP8E5M2, Tosa_EXT_FFT, Tosa_EXT_VARIABLE,
       Tosa_EXT_CONTROLFLOW, Tosa_EXT_DOUBLEROUND, Tosa_EXT_INEXACTROUND,
-      Tosa_EXT_DYNAMIC, Tosa_EXT_MXFP
+      Tosa_EXT_DYNAMIC, Tosa_EXT_MXFP, Tosa_EXT_INT64, Tosa_EXT_SHAPE,
     ]> {
   let extraClassDeclaration = [{
-    static llvm::SmallVector<Extension, 11> getAllValues() {
+    static llvm::SmallVector<Extension, 13> getAllValues() {
       return {
         Extension::int16, Extension::int4, Extension::bf16,
         Extension::fp8e4m3, Extension::fp8e5m2, Extension::fft,
         Extension::variable, Extension::controlflow, Extension::doubleround,
-        Extension::inexactround, Extension::dynamic, Extension::mxfp
+        Extension::inexactround, Extension::dynamic, Extension::mxfp,
+        Extension::int64, Extension::shape
       };
     }
   }];

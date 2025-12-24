@@ -42,7 +42,7 @@ void SingleVersion(void){}
 
 ATTR(cpu_dispatch(ivybridge))
 void SingleVersion(void);
-// LINUX: define weak_odr ptr @SingleVersion.resolver()
+// LINUX: define weak_odr ptr @SingleVersion.resolver() #[[ATTR_RESOLVER:[0-9]+]]
 // LINUX: call void @__cpu_indicator_init
 // LINUX: %[[FEAT_INIT:.+]] = load i32, ptr getelementptr inbounds ({ i32, i32, i32, [1 x i32] }, ptr @__cpu_model, i32 0, i32 3, i32 0), align 4
 // LINUX: %[[FEAT_JOIN:.+]] = and i32 %[[FEAT_INIT]], 525311
@@ -51,7 +51,7 @@ void SingleVersion(void);
 // LINUX: call void @llvm.trap
 // LINUX: unreachable
 
-// WINDOWS: define weak_odr dso_local void @SingleVersion() comdat
+// WINDOWS: define weak_odr dso_local void @SingleVersion() #[[ATTR_RESOLVER:[0-9]+]] comdat
 // WINDOWS: call void @__cpu_indicator_init()
 // WINDOWS: %[[FEAT_INIT:.+]] = load i32, ptr getelementptr inbounds ({ i32, i32, i32, [1 x i32] }, ptr @__cpu_model, i32 0, i32 3, i32 0), align 4
 // WINDOWS: %[[FEAT_JOIN:.+]] = and i32 %[[FEAT_INIT]], 525311
@@ -72,7 +72,7 @@ void TwoVersions(void);
 
 ATTR(cpu_dispatch(ivybridge, knl))
 void TwoVersions(void);
-// LINUX: define weak_odr ptr @TwoVersions.resolver()
+// LINUX: define weak_odr ptr @TwoVersions.resolver() #[[ATTR_RESOLVER]]
 // LINUX: call void @__cpu_indicator_init
 // LINUX: %[[FEAT_INIT:.+]] = load i32, ptr getelementptr inbounds ({ i32, i32, i32, [1 x i32] }, ptr @__cpu_model, i32 0, i32 3, i32 0), align 4
 // LINUX: %[[FEAT_JOIN:.+]] = and i32 %[[FEAT_INIT]], 9422847
@@ -82,7 +82,7 @@ void TwoVersions(void);
 // LINUX: call void @llvm.trap
 // LINUX: unreachable
 
-// WINDOWS: define weak_odr dso_local void @TwoVersions() comdat
+// WINDOWS: define weak_odr dso_local void @TwoVersions() #[[ATTR_RESOLVER]] comdat
 // WINDOWS: call void @__cpu_indicator_init()
 // WINDOWS: %[[FEAT_INIT:.+]] = load i32, ptr getelementptr inbounds ({ i32, i32, i32, [1 x i32] }, ptr @__cpu_model, i32 0, i32 3, i32 0), align 4
 // WINDOWS: %[[FEAT_JOIN:.+]] = and i32 %[[FEAT_INIT]], 9422847
@@ -119,13 +119,13 @@ void CpuSpecificNoDispatch(void) {}
 
 ATTR(cpu_dispatch(knl))
 void OrderDispatchUsageSpecific(void);
-// LINUX: define weak_odr ptr @OrderDispatchUsageSpecific.resolver()
+// LINUX: define weak_odr ptr @OrderDispatchUsageSpecific.resolver() #[[ATTR_RESOLVER]]
 // LINUX: call void @__cpu_indicator_init
 // LINUX: ret ptr @OrderDispatchUsageSpecific.Z
 // LINUX: call void @llvm.trap
 // LINUX: unreachable
 
-// WINDOWS: define weak_odr dso_local void @OrderDispatchUsageSpecific() comdat
+// WINDOWS: define weak_odr dso_local void @OrderDispatchUsageSpecific() #[[ATTR_RESOLVER]] comdat
 // WINDOWS: call void @__cpu_indicator_init()
 // WINDOWS: call void @OrderDispatchUsageSpecific.Z()
 // WINDOWS-NEXT: ret void
@@ -173,14 +173,14 @@ void usages(void) {
 // has an extra config to emit!
 ATTR(cpu_dispatch(ivybridge, knl, atom))
 void TwoVersionsSameAttr(void);
-// LINUX: define weak_odr ptr @TwoVersionsSameAttr.resolver()
+// LINUX: define weak_odr ptr @TwoVersionsSameAttr.resolver() #[[ATTR_RESOLVER]]
 // LINUX: ret ptr @TwoVersionsSameAttr.Z
 // LINUX: ret ptr @TwoVersionsSameAttr.S
 // LINUX: ret ptr @TwoVersionsSameAttr.O
 // LINUX: call void @llvm.trap
 // LINUX: unreachable
 
-// WINDOWS: define weak_odr dso_local void @TwoVersionsSameAttr() comdat
+// WINDOWS: define weak_odr dso_local void @TwoVersionsSameAttr() #[[ATTR_RESOLVER]] comdat
 // WINDOWS: call void @TwoVersionsSameAttr.Z
 // WINDOWS-NEXT: ret void
 // WINDOWS: call void @TwoVersionsSameAttr.S
@@ -192,7 +192,7 @@ void TwoVersionsSameAttr(void);
 
 ATTR(cpu_dispatch(atom, ivybridge, knl))
 void ThreeVersionsSameAttr(void){}
-// LINUX: define weak_odr ptr @ThreeVersionsSameAttr.resolver()
+// LINUX: define weak_odr ptr @ThreeVersionsSameAttr.resolver() #[[ATTR_RESOLVER]]
 // LINUX: call void @__cpu_indicator_init
 // LINUX: ret ptr @ThreeVersionsSameAttr.Z
 // LINUX: ret ptr @ThreeVersionsSameAttr.S
@@ -200,7 +200,7 @@ void ThreeVersionsSameAttr(void){}
 // LINUX: call void @llvm.trap
 // LINUX: unreachable
 
-// WINDOWS: define weak_odr dso_local void @ThreeVersionsSameAttr() comdat
+// WINDOWS: define weak_odr dso_local void @ThreeVersionsSameAttr() #[[ATTR_RESOLVER]] comdat
 // WINDOWS: call void @__cpu_indicator_init
 // WINDOWS: call void @ThreeVersionsSameAttr.Z
 // WINDOWS-NEXT: ret void
@@ -213,10 +213,10 @@ void ThreeVersionsSameAttr(void){}
 
 ATTR(cpu_dispatch(knl))
 void OrderSpecificUsageDispatch(void);
-// LINUX: define weak_odr ptr @OrderSpecificUsageDispatch.resolver()
+// LINUX: define weak_odr ptr @OrderSpecificUsageDispatch.resolver() #[[ATTR_RESOLVER]]
 // LINUX: ret ptr @OrderSpecificUsageDispatch.Z
 
-// WINDOWS: define weak_odr dso_local void @OrderSpecificUsageDispatch() comdat
+// WINDOWS: define weak_odr dso_local void @OrderSpecificUsageDispatch() #[[ATTR_RESOLVER]] comdat
 // WINDOWS: call void @__cpu_indicator_init
 // WINDOWS: call void @OrderSpecificUsageDispatch.Z
 // WINDOWS-NEXT: ret void
@@ -224,7 +224,7 @@ void OrderSpecificUsageDispatch(void);
 // No Cpu Specific options.
 ATTR(cpu_dispatch(atom, ivybridge, knl))
 void NoSpecifics(void);
-// LINUX: define weak_odr ptr @NoSpecifics.resolver()
+// LINUX: define weak_odr ptr @NoSpecifics.resolver() #[[ATTR_RESOLVER]]
 // LINUX: call void @__cpu_indicator_init
 // LINUX: ret ptr @NoSpecifics.Z
 // LINUX: ret ptr @NoSpecifics.S
@@ -232,7 +232,7 @@ void NoSpecifics(void);
 // LINUX: call void @llvm.trap
 // LINUX: unreachable
 
-// WINDOWS: define weak_odr dso_local void @NoSpecifics() comdat
+// WINDOWS: define weak_odr dso_local void @NoSpecifics() #[[ATTR_RESOLVER]] comdat
 // WINDOWS: call void @__cpu_indicator_init
 // WINDOWS: call void @NoSpecifics.Z
 // WINDOWS-NEXT: ret void
@@ -245,7 +245,7 @@ void NoSpecifics(void);
 
 ATTR(cpu_dispatch(atom, generic, ivybridge, knl))
 void HasGeneric(void);
-// LINUX: define weak_odr ptr @HasGeneric.resolver()
+// LINUX: define weak_odr ptr @HasGeneric.resolver() #[[ATTR_RESOLVER]]
 // LINUX: call void @__cpu_indicator_init
 // LINUX: ret ptr @HasGeneric.Z
 // LINUX: ret ptr @HasGeneric.S
@@ -253,7 +253,7 @@ void HasGeneric(void);
 // LINUX: ret ptr @HasGeneric.A
 // LINUX-NOT: call void @llvm.trap
 
-// WINDOWS: define weak_odr dso_local void @HasGeneric() comdat
+// WINDOWS: define weak_odr dso_local void @HasGeneric() #[[ATTR_RESOLVER]] comdat
 // WINDOWS: call void @__cpu_indicator_init
 // WINDOWS: call void @HasGeneric.Z
 // WINDOWS-NEXT: ret void
@@ -267,7 +267,7 @@ void HasGeneric(void);
 
 ATTR(cpu_dispatch(atom, generic, ivybridge, knl))
 void HasParams(int i, double d);
-// LINUX: define weak_odr ptr @HasParams.resolver()
+// LINUX: define weak_odr ptr @HasParams.resolver() #[[ATTR_RESOLVER]]
 // LINUX: call void @__cpu_indicator_init
 // LINUX: ret ptr @HasParams.Z
 // LINUX: ret ptr @HasParams.S
@@ -275,7 +275,7 @@ void HasParams(int i, double d);
 // LINUX: ret ptr @HasParams.A
 // LINUX-NOT: call void @llvm.trap
 
-// WINDOWS: define weak_odr dso_local void @HasParams(i32 %0, double %1) comdat
+// WINDOWS: define weak_odr dso_local void @HasParams(i32 %0, double %1) #[[ATTR_RESOLVER]] comdat
 // WINDOWS: call void @__cpu_indicator_init
 // WINDOWS: call void @HasParams.Z(i32 %0, double %1)
 // WINDOWS-NEXT: ret void
@@ -289,7 +289,7 @@ void HasParams(int i, double d);
 
 ATTR(cpu_dispatch(atom, generic, ivybridge, knl))
 int HasParamsAndReturn(int i, double d);
-// LINUX: define weak_odr ptr @HasParamsAndReturn.resolver()
+// LINUX: define weak_odr ptr @HasParamsAndReturn.resolver() #[[ATTR_RESOLVER]]
 // LINUX: call void @__cpu_indicator_init
 // LINUX: ret ptr @HasParamsAndReturn.Z
 // LINUX: ret ptr @HasParamsAndReturn.S
@@ -297,7 +297,7 @@ int HasParamsAndReturn(int i, double d);
 // LINUX: ret ptr @HasParamsAndReturn.A
 // LINUX-NOT: call void @llvm.trap
 
-// WINDOWS: define weak_odr dso_local i32 @HasParamsAndReturn(i32 %0, double %1) comdat
+// WINDOWS: define weak_odr dso_local i32 @HasParamsAndReturn(i32 %0, double %1) #[[ATTR_RESOLVER]] comdat
 // WINDOWS: call void @__cpu_indicator_init
 // WINDOWS: %[[RET:.+]] = musttail call i32 @HasParamsAndReturn.Z(i32 %0, double %1)
 // WINDOWS-NEXT: ret i32 %[[RET]]
@@ -311,14 +311,14 @@ int HasParamsAndReturn(int i, double d);
 
 ATTR(cpu_dispatch(atom, generic, pentium))
 int GenericAndPentium(int i, double d);
-// LINUX: define weak_odr ptr @GenericAndPentium.resolver()
+// LINUX: define weak_odr ptr @GenericAndPentium.resolver() #[[ATTR_RESOLVER]]
 // LINUX: call void @__cpu_indicator_init
 // LINUX: ret ptr @GenericAndPentium.O
 // LINUX: ret ptr @GenericAndPentium.B
 // LINUX-NOT: ret ptr @GenericAndPentium.A
 // LINUX-NOT: call void @llvm.trap
 
-// WINDOWS: define weak_odr dso_local i32 @GenericAndPentium(i32 %0, double %1) comdat
+// WINDOWS: define weak_odr dso_local i32 @GenericAndPentium(i32 %0, double %1) #[[ATTR_RESOLVER]] comdat
 // WINDOWS: call void @__cpu_indicator_init
 // WINDOWS: %[[RET:.+]] = musttail call i32 @GenericAndPentium.O(i32 %0, double %1)
 // WINDOWS-NEXT: ret i32 %[[RET]]
@@ -329,11 +329,11 @@ int GenericAndPentium(int i, double d);
 
 ATTR(cpu_dispatch(atom, pentium))
 int DispatchFirst(void);
-// LINUX: define weak_odr ptr @DispatchFirst.resolver
+// LINUX: define weak_odr ptr @DispatchFirst.resolver() #[[ATTR_RESOLVER]]
 // LINUX: ret ptr @DispatchFirst.O
 // LINUX: ret ptr @DispatchFirst.B
 
-// WINDOWS: define weak_odr dso_local i32 @DispatchFirst() comdat
+// WINDOWS: define weak_odr dso_local i32 @DispatchFirst() #[[ATTR_RESOLVER]] comdat
 // WINDOWS: %[[RET:.+]] = musttail call i32 @DispatchFirst.O()
 // WINDOWS-NEXT: ret i32 %[[RET]]
 // WINDOWS: %[[RET:.+]] = musttail call i32 @DispatchFirst.B()
@@ -360,6 +360,7 @@ void OrderDispatchUsageSpecific(void) {}
 
 // CHECK: attributes #[[S]] = {{.*}}"target-features"="+avx,+cmov,+crc32,+cx16,+cx8,+f16c,+fsgsbase,+fxsr,+mmx,+pclmul,+popcnt,+rdrnd,+sahf,+sse,+sse2,+sse3,+sse4.1,+sse4.2,+ssse3,+x87,+xsave,+xsaveopt"
 // CHECK-SAME: "tune-cpu"="ivybridge"
+// CHECK: attributes #[[ATTR_RESOLVER]] = { disable_sanitizer_instrumentation }
 // CHECK: attributes #[[K]] = {{.*}}"target-features"="+adx,+aes,+avx,+avx2,+avx512cd,+avx512f,+bmi,+bmi2,+cmov,+crc32,+cx16,+cx8,+f16c,+fma,+fsgsbase,+fxsr,+invpcid,+lzcnt,+mmx,+movbe,+pclmul,+popcnt,+prfchw,+rdrnd,+rdseed,+sahf,+sse,+sse2,+sse3,+sse4.1,+sse4.2,+ssse3,+x87,+xsave,+xsaveopt"
 // CHECK-SAME: "tune-cpu"="knl"
 // CHECK: attributes #[[O]] = {{.*}}"target-features"="+cmov,+cx16,+cx8,+fxsr,+mmx,+movbe,+sahf,+sse,+sse2,+sse3,+ssse3,+x87"

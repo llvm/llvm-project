@@ -37,7 +37,7 @@ program openacc_atomic_validity
 
   !$acc atomic read
   i = c(i)
-  
+
   !$acc atomic read if(.true.)
   i = c(i)
 
@@ -45,12 +45,12 @@ program openacc_atomic_validity
   i = c(i)
   !$acc end atomic
 
-  !$acc atomic read if(l) 
+  !$acc atomic read if(l)
   i = c(i)
   !$acc end atomic
 
   !ERROR: FINALIZE clause is not allowed on the ATOMIC READ FINALIZE IF(L)
-  !$acc atomic read finalize if(l) 
+  !$acc atomic read finalize if(l)
   i = c(i)
   !$acc end atomic
 
@@ -65,7 +65,7 @@ program openacc_atomic_validity
   c(1) = c(2)
   c(1) = c(3)
   !$acc end atomic
-  
+
   !ERROR: The assignments in this atomic capture construct do not update a variable and capture either its initial or final value
   !$acc atomic capture
   c(1) = c(2)

@@ -34,14 +34,16 @@ int RTDECL(CUFPointerAllocateSync)(Descriptor &, int64_t *stream = nullptr,
 int RTDEF(CUFPointerAllocateSource)(Descriptor &pointer,
     const Descriptor &source, int64_t *stream = nullptr, bool *pinned = nullptr,
     bool hasStat = false, const Descriptor *errMsg = nullptr,
-    const char *sourceFile = nullptr, int sourceLine = 0);
+    const char *sourceFile = nullptr, int sourceLine = 0,
+    bool sourceIsDevice = false);
 
 /// Perform allocation of the descriptor with synchronization of it when
 /// necessary. Assign data from source.
 int RTDEF(CUFPointerAllocateSourceSync)(Descriptor &pointer,
     const Descriptor &source, int64_t *stream = nullptr, bool *pinned = nullptr,
     bool hasStat = false, const Descriptor *errMsg = nullptr,
-    const char *sourceFile = nullptr, int sourceLine = 0);
+    const char *sourceFile = nullptr, int sourceLine = 0,
+    bool sourceIsDevice = false);
 
 } // extern "C"
 

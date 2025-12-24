@@ -46,7 +46,7 @@ namespace {
 class ConstExprEmitter;
 
 static mlir::TypedAttr computePadding(CIRGenModule &cgm, CharUnits size) {
-  mlir::Type eltTy = cgm.UCharTy;
+  mlir::Type eltTy = cgm.uCharTy;
   clang::CharUnits::QuantityType arSize = size.getQuantity();
   CIRGenBuilderTy &bld = cgm.getBuilder();
   if (size > CharUnits::One()) {
@@ -922,9 +922,9 @@ public:
   }
 
   mlir::Attribute VisitCastExpr(CastExpr *e, QualType destType) {
-    if (isa<ExplicitCastExpr>(e))
-      cgm.errorNYI(e->getBeginLoc(),
-                   "ConstExprEmitter::VisitCastExpr explicit cast");
+    if (const auto *ece = dyn_cast<ExplicitCastExpr>(e))
+      cgm.emitExplicitCastExprType(ece,
+                                   const_cast<CIRGenFunction *>(emitter.cgf));
 
     Expr *subExpr = e->getSubExpr();
 
@@ -1012,6 +1012,7 @@ public:
     case CK_MatrixCast:
     case CK_HLSLArrayRValue:
     case CK_HLSLVectorTruncation:
+    case CK_HLSLMatrixTruncation:
     case CK_HLSLElementwiseCast:
     case CK_HLSLAggregateSplatCast:
       return {};
@@ -1078,9 +1079,32 @@ public:
 
   mlir::Attribute VisitCXXConstructExpr(CXXConstructExpr *e, QualType ty) {
     if (!e->getConstructor()->isTrivial())
-      return nullptr;
-    cgm.errorNYI(e->getBeginLoc(), "trivial constructor const handling");
-    return {};
+      return {};
+
+    // Only default and copy/move constructors can be trivial.
+    if (e->getNumArgs()) {
+      assert(e->getNumArgs() == 1 && "trivial ctor with > 1 argument");
+      assert(e->getConstructor()->isCopyOrMoveConstructor() &&
+             "trivial ctor has argument but isn't a copy/move ctor");
+
+      Expr *arg = e->getArg(0);
+      assert(cgm.getASTContext().hasSameUnqualifiedType(ty, arg->getType()) &&
+             "argument to copy ctor is of wrong type");
+
+      // Look through the temporary; it's just converting the value to an lvalue
+      // to pass it to the constructor.
+      if (auto const *mte = dyn_cast<MaterializeTemporaryExpr>(arg))
+        return Visit(mte->getSubExpr(), ty);
+
+      // TODO: Investigate whether there are cases that can fall through to here
+      //       that need to be handled. This is missing in classic codegen also.
+      assert(!cir::MissingFeatures::ctorConstLvalueToRvalueConversion());
+
+      // Don't try to support arbitrary lvalue-to-rvalue conversions for now.
+      return {};
+    }
+
+    return cgm.getBuilder().getZeroInitAttr(cgm.convertType(ty));
   }
 
   mlir::Attribute VisitStringLiteral(StringLiteral *e, QualType t) {
@@ -1434,8 +1458,7 @@ ConstantLValueEmitter::VisitObjCBoxedExpr(const ObjCBoxedExpr *e) {
 
 ConstantLValue
 ConstantLValueEmitter::VisitPredefinedExpr(const PredefinedExpr *e) {
-  cgm.errorNYI(e->getSourceRange(), "ConstantLValueEmitter: predefined expr");
-  return {};
+  return cgm.getAddrOfConstantStringFromLiteral(e->getFunctionName());
 }
 
 ConstantLValue
@@ -1496,6 +1519,101 @@ ConstantEmitter::tryEmitAbstractForInitializer(const VarDecl &d) {
 ConstantEmitter::~ConstantEmitter() {
   assert((!initializedNonAbstract || finalized || failed) &&
          "not finalized after being initialized for non-abstract emission");
+}
+
+static mlir::TypedAttr emitNullConstantForBase(CIRGenModule &cgm,
+                                               mlir::Type baseType,
+                                               const CXXRecordDecl *baseDecl);
+
+static mlir::TypedAttr emitNullConstant(CIRGenModule &cgm, const RecordDecl *rd,
+                                        bool asCompleteObject) {
+  const CIRGenRecordLayout &layout = cgm.getTypes().getCIRGenRecordLayout(rd);
+  mlir::Type ty = (asCompleteObject ? layout.getCIRType()
+                                    : layout.getBaseSubobjectCIRType());
+  auto recordTy = mlir::cast<cir::RecordType>(ty);
+
+  unsigned numElements = recordTy.getNumElements();
+  SmallVector<mlir::Attribute> elements(numElements);
+
+  auto *cxxrd = dyn_cast<CXXRecordDecl>(rd);
+  // Fill in all the bases.
+  if (cxxrd) {
+    for (const CXXBaseSpecifier &base : cxxrd->bases()) {
+      if (base.isVirtual()) {
+        // Ignore virtual bases; if we're laying out for a complete
+        // object, we'll lay these out later.
+        continue;
+      }
+
+      const auto *baseDecl = base.getType()->castAsCXXRecordDecl();
+      // Ignore empty bases.
+      if (isEmptyRecordForLayout(cgm.getASTContext(), base.getType()) ||
+          cgm.getASTContext()
+              .getASTRecordLayout(baseDecl)
+              .getNonVirtualSize()
+              .isZero())
+        continue;
+
+      unsigned fieldIndex = layout.getNonVirtualBaseCIRFieldNo(baseDecl);
+      mlir::Type baseType = recordTy.getElementType(fieldIndex);
+      elements[fieldIndex] = emitNullConstantForBase(cgm, baseType, baseDecl);
+    }
+  }
+
+  // Fill in all the fields.
+  for (const FieldDecl *field : rd->fields()) {
+    // Fill in non-bitfields. (Bitfields always use a zero pattern, which we
+    // will fill in later.)
+    if (!field->isBitField() &&
+        !isEmptyFieldForLayout(cgm.getASTContext(), field)) {
+      unsigned fieldIndex = layout.getCIRFieldNo(field);
+      elements[fieldIndex] = cgm.emitNullConstantAttr(field->getType());
+    }
+
+    // For unions, stop after the first named field.
+    if (rd->isUnion()) {
+      if (field->getIdentifier())
+        break;
+      if (const auto *fieldRD = field->getType()->getAsRecordDecl())
+        if (fieldRD->findFirstNamedDataMember())
+          break;
+    }
+  }
+
+  // Fill in the virtual bases, if we're working with the complete object.
+  if (cxxrd && asCompleteObject) {
+    for ([[maybe_unused]] const CXXBaseSpecifier &vbase : cxxrd->vbases()) {
+      cgm.errorNYI(vbase.getSourceRange(), "emitNullConstant: virtual base");
+      return {};
+    }
+  }
+
+  // Now go through all other fields and zero them out.
+  for (unsigned i = 0; i != numElements; ++i) {
+    if (!elements[i]) {
+      cgm.errorNYI(rd->getSourceRange(), "emitNullConstant: field not zeroed");
+      return {};
+    }
+  }
+
+  mlir::MLIRContext *mlirContext = recordTy.getContext();
+  return cir::ConstRecordAttr::get(recordTy,
+                                   mlir::ArrayAttr::get(mlirContext, elements));
+}
+
+/// Emit the null constant for a base subobject.
+static mlir::TypedAttr emitNullConstantForBase(CIRGenModule &cgm,
+                                               mlir::Type baseType,
+                                               const CXXRecordDecl *baseDecl) {
+  const CIRGenRecordLayout &baseLayout =
+      cgm.getTypes().getCIRGenRecordLayout(baseDecl);
+
+  // Just zero out bases that don't have any pointer to data members.
+  if (baseLayout.isZeroInitializableAsBase())
+    return cgm.getBuilder().getZeroInitAttr(baseType);
+
+  // Otherwise, we can just use its null constant.
+  return emitNullConstant(cgm, baseDecl, /*asCompleteObject=*/false);
 }
 
 mlir::Attribute ConstantEmitter::tryEmitPrivateForVarInit(const VarDecl &d) {
@@ -1757,8 +1875,24 @@ mlir::Attribute ConstantEmitter::tryEmitPrivate(const APValue &value,
         mlir::ArrayAttr::get(cgm.getBuilder().getContext(), elements));
   }
   case APValue::MemberPointer: {
-    cgm.errorNYI("ConstExprEmitter::tryEmitPrivate member pointer");
-    return {};
+    assert(!cir::MissingFeatures::cxxABI());
+
+    const ValueDecl *memberDecl = value.getMemberPointerDecl();
+    if (value.isMemberPointerToDerivedMember()) {
+      cgm.errorNYI(
+          "ConstExprEmitter::tryEmitPrivate member pointer to derived member");
+      return {};
+    }
+
+    if (isa<CXXMethodDecl>(memberDecl)) {
+      cgm.errorNYI("ConstExprEmitter::tryEmitPrivate member pointer to method");
+      return {};
+    }
+
+    auto cirTy = mlir::cast<cir::DataMemberType>(cgm.convertType(destType));
+
+    const auto *fieldDecl = cast<FieldDecl>(memberDecl);
+    return builder.getDataMemberAttr(cirTy, fieldDecl->getFieldIndex());
   }
   case APValue::LValue:
     return ConstantLValueEmitter(*this, value, destType).tryEmit();
@@ -1797,23 +1931,32 @@ mlir::Attribute ConstantEmitter::tryEmitPrivate(const APValue &value,
 }
 
 mlir::Value CIRGenModule::emitNullConstant(QualType t, mlir::Location loc) {
-  if (t->getAs<PointerType>()) {
-    return builder.getNullPtr(getTypes().convertTypeForMem(t), loc);
-  }
+  return builder.getConstant(loc, emitNullConstantAttr(t));
+}
+
+mlir::TypedAttr CIRGenModule::emitNullConstantAttr(QualType t) {
+  if (t->getAs<PointerType>())
+    return builder.getConstNullPtrAttr(getTypes().convertTypeForMem(t));
 
   if (getTypes().isZeroInitializable(t))
-    return builder.getNullValue(getTypes().convertTypeForMem(t), loc);
+    return builder.getZeroInitAttr(getTypes().convertTypeForMem(t));
 
   if (getASTContext().getAsConstantArrayType(t)) {
-    errorNYI("CIRGenModule::emitNullConstant ConstantArrayType");
+    errorNYI("CIRGenModule::emitNullConstantAttr ConstantArrayType");
+    return {};
   }
 
-  if (t->isRecordType())
-    errorNYI("CIRGenModule::emitNullConstant RecordType");
+  if (const RecordType *rt = t->getAs<RecordType>())
+    return ::emitNullConstant(*this, rt->getDecl(), /*asCompleteObject=*/true);
 
   assert(t->isMemberDataPointerType() &&
          "Should only see pointers to data members here!");
 
-  errorNYI("CIRGenModule::emitNullConstant unsupported type");
+  errorNYI("CIRGenModule::emitNullConstantAttr unsupported type");
   return {};
+}
+
+mlir::TypedAttr
+CIRGenModule::emitNullConstantForBase(const CXXRecordDecl *record) {
+  return ::emitNullConstant(*this, record, false);
 }

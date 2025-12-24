@@ -9,6 +9,8 @@ atomic/clc_atomic_fetch_min.cl
 atomic/clc_atomic_fetch_or.cl
 atomic/clc_atomic_fetch_sub.cl
 atomic/clc_atomic_fetch_xor.cl
+atomic/clc_atomic_flag_clear.cl
+atomic/clc_atomic_flag_test_and_set.cl
 atomic/clc_atomic_inc.cl
 atomic/clc_atomic_load.cl
 atomic/clc_atomic_store.cl
@@ -17,6 +19,8 @@ common/clc_radians.cl
 common/clc_sign.cl
 common/clc_smoothstep.cl
 common/clc_step.cl
+conversion/clc_convert_float2float.cl
+conversion/clc_convert_integer.cl
 geometric/clc_cross.cl
 geometric/clc_distance.cl
 geometric/clc_dot.cl

@@ -1359,6 +1359,14 @@ function(export_executable_symbols target)
     while(NOT "${new_libs}" STREQUAL "")
       foreach(lib ${new_libs})
         if(TARGET ${lib})
+          # If this is a ALIAS target, continue with its aliasee instead.
+          get_target_property(aliased_lib ${lib} ALIASED_TARGET)
+          if(aliased_lib)
+             set(new_libs ${lib_aliased_target})
+             list(APPEND newer_libs ${aliased_lib})
+             continue()
+          endif()
+
           get_target_property(lib_type ${lib} TYPE)
           if("${lib_type}" STREQUAL "STATIC_LIBRARY")
             list(APPEND static_libs ${lib})
@@ -1747,6 +1755,31 @@ function(add_llvm_implicit_projects)
   llvm_add_implicit_projects(LLVM)
 endfunction(add_llvm_implicit_projects)
 
+function(set_unittest_link_flags target_name)
+  # The runtime benefits of LTO don't outweight the compile time costs for
+  # tests.
+  if(LLVM_ENABLE_LTO)
+    if((UNIX OR MINGW) AND LINKER_IS_LLD)
+      if(LLVM_ENABLE_FATLTO AND NOT APPLE)
+        # When using FatLTO, just use relocatable linking.
+        set_property(TARGET ${target_name} APPEND_STRING PROPERTY
+                      LINK_FLAGS " -Wl,--no-fat-lto-objects")
+      else()
+        set_property(TARGET ${target_name} APPEND_STRING PROPERTY
+                      LINK_FLAGS " -Wl,--lto-O0")
+      endif()
+    elseif(LINKER_IS_LLD_LINK)
+      set_property(TARGET ${target_name} APPEND_STRING PROPERTY
+                    LINK_FLAGS " /opt:lldlto=0")
+    elseif(APPLE AND NOT uppercase_LLVM_ENABLE_LTO STREQUAL "THIN")
+      set_property(TARGET ${target_name} APPEND_STRING PROPERTY
+                    LINK_FLAGS " -Wl,-mllvm,-O0")
+    endif()
+  endif()
+
+  target_link_options(${target_name} PRIVATE "${LLVM_UNITTEST_LINK_FLAGS}")
+endfunction(set_unittest_link_flags)
+
 # Generic support for adding a unittest.
 function(add_unittest test_suite test_name)
   if( NOT LLVM_BUILD_TESTS )
@@ -1770,34 +1803,20 @@ function(add_unittest test_suite test_name)
   get_subproject_title(subproject_title)
   set_target_properties(${test_name} PROPERTIES FOLDER "${subproject_title}/Tests/Unit")
 
-  # The runtime benefits of LTO don't outweight the compile time costs for tests.
-  if(LLVM_ENABLE_LTO)
-    if((UNIX OR MINGW) AND LINKER_IS_LLD)
-      if(LLVM_ENABLE_FATLTO AND NOT APPLE)
-        # When using FatLTO, just use relocatable linking.
-        set_property(TARGET ${test_name} APPEND_STRING PROPERTY
-                      LINK_FLAGS " -Wl,--no-fat-lto-objects")
-      else()
-        set_property(TARGET ${test_name} APPEND_STRING PROPERTY
-                      LINK_FLAGS " -Wl,--lto-O0")
-      endif()
-    elseif(LINKER_IS_LLD_LINK)
-      set_property(TARGET ${test_name} APPEND_STRING PROPERTY
-                    LINK_FLAGS " /opt:lldlto=0")
-    elseif(APPLE AND NOT uppercase_LLVM_ENABLE_LTO STREQUAL "THIN")
-      set_property(TARGET ${target_name} APPEND_STRING PROPERTY
-                    LINK_FLAGS " -Wl,-mllvm,-O0")
-    endif()
-  endif()
-
-  target_link_options(${test_name} PRIVATE "${LLVM_UNITTEST_LINK_FLAGS}")
+  set_unittest_link_flags(${test_name})
 
   set(outdir ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR})
   set_output_directory(${test_name} BINARY_DIR ${outdir} LIBRARY_DIR ${outdir})
   # libpthreads overrides some standard library symbols, so main
   # executable must be linked with it in order to provide consistent
   # API for all shared libaries loaded by this executable.
-  target_link_libraries(${test_name} PRIVATE llvm_gtest_main llvm_gtest ${LLVM_PTHREAD_LIB})
+  # default_gtest should be an alias to either llvm_gtest or runtimes_gtest.
+  # If it is not defined, fall back to llvm_gtest.
+  if(TARGET default_gtest)
+    target_link_libraries(${test_name} PRIVATE default_gtest_main default_gtest ${LLVM_PTHREAD_LIB})
+  else ()
+    target_link_libraries(${test_name} PRIVATE llvm_gtest_main llvm_gtest ${LLVM_PTHREAD_LIB})
+  endif ()
 
   add_dependencies(${test_suite} ${test_name})
 endfunction()

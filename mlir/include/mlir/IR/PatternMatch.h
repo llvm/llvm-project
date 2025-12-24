@@ -675,9 +675,9 @@ public:
   /// true. Also notify the listener about every in-place op modification (for
   /// every use that was replaced). The optional `allUsesReplaced` flag is set
   /// to "true" if all uses were replaced.
-  void replaceUsesWithIf(Value from, Value to,
-                         function_ref<bool(OpOperand &)> functor,
-                         bool *allUsesReplaced = nullptr);
+  virtual void replaceUsesWithIf(Value from, Value to,
+                                 function_ref<bool(OpOperand &)> functor,
+                                 bool *allUsesReplaced = nullptr);
   void replaceUsesWithIf(ValueRange from, ValueRange to,
                          function_ref<bool(OpOperand &)> functor,
                          bool *allUsesReplaced = nullptr);
@@ -872,7 +872,9 @@ public:
                                   ConstructorArgs &&...args) {
     // The following expands a call to emplace_back for each of the pattern
     // types 'Ts'.
-    (addImpl<Ts>(debugLabels, arg, args...), ...);
+    (addImpl<Ts>(debugLabels, std::forward<ConstructorArg>(arg),
+                 std::forward<ConstructorArgs>(args)...),
+     ...);
     return *this;
   }
 
@@ -938,7 +940,9 @@ public:
   RewritePatternSet &insert(ConstructorArg &&arg, ConstructorArgs &&...args) {
     // The following expands a call to emplace_back for each of the pattern
     // types 'Ts'.
-    (addImpl<Ts>(/*debugLabels=*/{}, arg, args...), ...);
+    (addImpl<Ts>(/*debugLabels=*/{}, std::forward<ConstructorArg>(arg),
+                 std::forward<ConstructorArgs>(args)...),
+     ...);
     return *this;
   }
 

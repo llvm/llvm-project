@@ -1,10 +1,13 @@
+# FIXME: remove when LLDB_MINIMUM_PYTHON_VERSION > 3.8
+from __future__ import annotations
+
 import os
 import time
-from typing import Optional, Callable, Any, List, Union
+from typing import Optional, Callable, Any, List, Union, Final
 import uuid
 
 import dap_server
-from dap_server import Source
+from dap_server import Source, Response
 from lldbsuite.test.decorators import skipIf
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbplatformutil
@@ -18,7 +21,7 @@ import base64
 class DAPTestCaseBase(TestBase):
     # set timeout based on whether ASAN was enabled or not. Increase
     # timeout by a factor of 10 if ASAN is enabled.
-    DEFAULT_TIMEOUT = dap_server.DEFAULT_TIMEOUT
+    DEFAULT_TIMEOUT: Final[float] = dap_server.DEFAULT_TIMEOUT
     NO_DEBUG_INFO_TESTCASE = True
 
     def create_debug_adapter(
@@ -39,6 +42,7 @@ class DAPTestCaseBase(TestBase):
             log_file=log_file_path,
             env=lldbDAPEnv,
             additional_args=additional_args or [],
+            spawn_helper=self.spawnSubprocess,
         )
 
     def build_and_create_debug_adapter(
@@ -168,6 +172,7 @@ class DAPTestCaseBase(TestBase):
                 if (
                     body["reason"] != "breakpoint"
                     and body["reason"] != "instruction breakpoint"
+                    and body["reason"] != "data breakpoint"
                 ):
                     continue
                 if "hitBreakpointIds" not in body:
@@ -222,6 +227,16 @@ class DAPTestCaseBase(TestBase):
                 if expected_description == description:
                     return True
         return False
+
+    def verify_stop_on_entry(self) -> None:
+        """Waits for the process to be stopped and then verifies at least one
+        thread has the stop reason 'entry'."""
+        self.dap_server.wait_for_stopped()
+        self.assertIn(
+            "entry",
+            (t["reason"] for t in self.dap_server.thread_stop_reasons.values()),
+            "Expected at least one thread to report stop reason 'entry' in {self.dap_server.thread_stop_reasons}",
+        )
 
     def verify_commands(self, flavor: str, output: str, commands: list[str]):
         self.assertTrue(output and len(output) > 0, "expect console output")
@@ -485,9 +500,9 @@ class DAPTestCaseBase(TestBase):
         *,
         disconnectAutomatically=True,
         sourceInitFile=False,
-        expectFailure=False,
+        waitForResponse=False,
         **kwargs,
-    ):
+    ) -> Optional[Response]:
         """Build the default Makefile target, create the DAP debug adapter,
         and attach to the process.
         """
@@ -503,20 +518,20 @@ class DAPTestCaseBase(TestBase):
         self.addTearDownHook(cleanup)
         # Initialize and launch the program
         self.dap_server.request_initialize(sourceInitFile)
-        response = self.dap_server.request_attach(**kwargs)
-        if expectFailure:
-            return response
-        if not (response and response["success"]):
-            error_msg = self._build_error_message("attach failed", response)
-            self.assertTrue(response and response["success"], error_msg)
+        attach_seq = self.dap_server.request_attach(**kwargs)
+        self.dap_server.wait_for_event(["initialized"])
+        if waitForResponse:
+            self.dap_server.request_configurationDone()
+            return self.dap_server.receive_response(attach_seq)
+        return None
 
     def launch(
         self,
-        program=None,
+        program: str,
         *,
         sourceInitFile=False,
         disconnectAutomatically=True,
-        expectFailure=False,
+        waitForResponse=False,
         **kwargs,
     ):
         """Sending launch request to dap"""
@@ -533,12 +548,12 @@ class DAPTestCaseBase(TestBase):
 
         # Initialize and launch the program
         self.dap_server.request_initialize(sourceInitFile)
-        response = self.dap_server.request_launch(program, **kwargs)
-        if expectFailure:
-            return response
-        if not (response and response["success"]):
-            error_msg = self._build_error_message("launch failed", response)
-            self.assertTrue(response and response["success"], error_msg)
+        launch_seq = self.dap_server.request_launch(program, **kwargs)
+        self.dap_server.wait_for_event(["initialized"])
+        if waitForResponse:
+            self.dap_server.request_configurationDone()
+            return self.dap_server.receive_response(launch_seq)
+        return launch_seq
 
     def build_and_launch(
         self,
@@ -554,6 +569,13 @@ class DAPTestCaseBase(TestBase):
         self.assertTrue(os.path.exists(program), "executable must exist")
 
         return self.launch(program, **kwargs)
+
+    def verify_configuration_done(self, expectedResult=True):
+        resp = self.dap_server.request_configurationDone()
+        if expectedResult:
+            self.assertTrue(resp["success"])
+        else:
+            self.assertFalse(resp["success"])
 
     def getBuiltinDebugServerTool(self):
         # Tries to find simulation/lldb-server/gdbserver tool path.

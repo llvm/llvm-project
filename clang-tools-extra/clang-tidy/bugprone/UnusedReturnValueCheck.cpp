@@ -25,7 +25,8 @@ namespace {
 // member function are matched directly with InnerMatcher.
 AST_MATCHER_P(FunctionDecl, isInstantiatedFrom, Matcher<FunctionDecl>,
               InnerMatcher) {
-  FunctionDecl *InstantiatedFrom = Node.getInstantiatedFromMemberFunction();
+  const FunctionDecl *InstantiatedFrom =
+      Node.getInstantiatedFromMemberFunction();
   return InnerMatcher.matches(InstantiatedFrom ? *InstantiatedFrom : Node,
                               Finder, Builder);
 }

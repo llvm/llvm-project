@@ -21,11 +21,11 @@
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/Job.h"
-#include "clang/Driver/Options.h"
 #include "clang/Driver/Tool.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/TextDiagnosticBuffer.h"
 #include "clang/Lex/PreprocessorOptions.h"
+#include "clang/Options/Options.h"
 
 #include "clang/Sema/Lookup.h"
 #include "llvm/IR/Module.h"

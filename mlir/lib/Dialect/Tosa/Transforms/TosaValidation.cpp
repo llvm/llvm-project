@@ -218,6 +218,12 @@ private:
       if (type.getRank() > highest_rank)
         return op->emitOpError() << "failed level check: " << operandOrResult
                                  << " rank(shape) <= MAX_RANK";
+    } else if (tosa::shapeType shapeType =
+                   dyn_cast<tosa::shapeType>(typeToCheck)) {
+      if (shapeType.getRank() > highest_rank)
+        return op->emitOpError()
+               << "failed shape type level check: " << typeToCheck
+               << " exceeds MAX_RANK";
     }
     return success();
   }
@@ -573,6 +579,12 @@ LogicalResult TosaValidation::levelCheckRanksAndSizes(Operation *op) {
       return failure();                                                        \
   }
 
+#define CHECK_RANKS(tosaOp)                                                    \
+  if (isa<tosa::tosaOp##Op>(op)) {                                             \
+    if (failed(levelCheckRanks(cast<tosa::tosaOp##Op>(op))))                   \
+      return failure();                                                        \
+  }
+
   // Tensor Operators
   CHECK_RANKS_AND_SIZES(ArgMax);
   // Activation Functions
@@ -635,16 +647,18 @@ LogicalResult TosaValidation::levelCheckRanksAndSizes(Operation *op) {
   CHECK_RANKS_AND_SIZES(Transpose);
   // Type Conversion
   CHECK_RANKS_AND_SIZES(Cast);
+  CHECK_RANKS_AND_SIZES(CastFromBlockScaled);
+  CHECK_RANKS_AND_SIZES(CastToBlockScaled);
   CHECK_RANKS_AND_SIZES(Rescale);
+  // Data Nodes
+  CHECK_RANKS_AND_SIZES(Const);
+  CHECK_RANKS_AND_SIZES(Identity);
   // Control Flow Operators
   CHECK_RANKS_AND_SIZES(If);
   // Variable Operators
   CHECK_RANKS_AND_SIZES(Variable);
   CHECK_RANKS_AND_SIZES(VariableWrite);
   CHECK_RANKS_AND_SIZES(VariableRead);
-  // Data Nodes
-  CHECK_RANKS_AND_SIZES(Const);
-  CHECK_RANKS_AND_SIZES(Identity);
 
   // For the following operators, check whether the size of each tensor
   // operand is valid in a given Level.
@@ -672,8 +686,19 @@ LogicalResult TosaValidation::levelCheckRanksAndSizes(Operation *op) {
   // Shape Operators
   CHECK_SIZES(ConstShape);
 
+  // For the following operations, check whether the rank of each operand
+  // is valid given a level.
+
+  // Shape Operators
+  CHECK_RANKS(AddShape);
+  CHECK_RANKS(DivCeilShape);
+  CHECK_RANKS(DivFloorShape);
+  CHECK_RANKS(MulShape);
+  CHECK_RANKS(SubShape);
+
 #undef CHECK_RANKS_AND_SIZES
 #undef CHECK_SIZES
+#undef CHECK_RANKS
   return success();
 }
 
@@ -686,12 +711,25 @@ LogicalResult TosaValidation::levelCheckSize(Operation *op,
       return op->emitOpError() << "failed level check: unranked tensor";
     auto shape = type.getShape();
     for (auto dim : shape) {
-      if (mlir::ShapedType::isDynamic(dim))
+      const bool dimIsDynamic = mlir::ShapedType::isDynamic(dim);
+      const TosaSpecificationVersion targetVersion = targetEnv.getSpecVersion();
+      const TosaSpecificationVersion minRequiredVersion(1, 1);
+      if (targetVersion.isBackwardsCompatibleWith(minRequiredVersion) &&
+          dimIsDynamic)
+        // TOSA 1.1 and above supports dynamic dimensions, however, they must be
+        // resolved at backend compile time. Runtime dynamism is not currently
+        // supported. Checking this requirement is met is delegated to backends.
+        return success();
+
+      // When targeting TOSA 1.0 or below, dynamic dims are not supported
+      if (dimIsDynamic)
         return op->emitOpError() << "failed level check: " << operandOrResult
-                                 << " shape dimension cannot be dynamic";
+                                 << " shape dimension cannot be dynamic when"
+                                 << " targeting TOSA specification version 1.0"
+                                 << " or below";
     }
 
-    int64_t element_bits = type.getElementTypeBitWidth();
+    int64_t element_bits = tosa::getBitWidth(getElementTypeOrSelf(type));
     int64_t element_bytes = std::max(INT64_C(1), element_bits / 8);
     int64_t size = element_bytes * type.getNumElements();
 
@@ -1204,6 +1242,7 @@ bool TosaValidation::isValidElementType(Type type, const bool allowUnsigned) {
       case 16:
       case 32:
       case 48:
+      case 64:
         return true;
       }
     } else if (allowUnsigned && intTy.isUnsigned()) {
@@ -1214,9 +1253,10 @@ bool TosaValidation::isValidElementType(Type type, const bool allowUnsigned) {
         return true;
       }
     }
-  } else if (mlir::isa<tosa::shapeType>(type)) {
+  } else if (isa<tosa::shapeType>(type))
     return true;
-  }
+  else if (isa<tosa::mxint8Type>(type))
+    return true;
   return false;
 }
 

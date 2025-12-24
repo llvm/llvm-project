@@ -408,6 +408,12 @@ public:
   const char *getStaticInitSectionSpecifier() const override {
     return ".text.startup";
   }
+
+  // This allows template specializations, see
+  // LinuxTargetInfo<AArch64leTargetInfo>::setABI
+  bool setABI(const std::string &Name) override {
+    return OSTargetInfo<Target>::setABI(Name);
+  }
 };
 
 // Managarm Target
@@ -540,7 +546,7 @@ public:
     this->IntMaxType = TargetInfo::SignedLongLong;
     this->Int64Type = TargetInfo::SignedLongLong;
     this->SizeType = TargetInfo::UnsignedInt;
-    this->resetDataLayout("E-m:e-p:32:32-Fi64-i64:64-i128:128-n32:64");
+    this->resetDataLayout();
   }
 };
 

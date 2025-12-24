@@ -8,7 +8,6 @@
 
 #include "../ClangTidy.h"
 #include "../ClangTidyModule.h"
-#include "../ClangTidyModuleRegistry.h"
 #include "../bugprone/NarrowingConversionsCheck.h"
 #include "../misc/NonPrivateMemberVariablesInClassesCheck.h"
 #include "../misc/UnconventionalAssignOperatorCheck.h"
@@ -36,7 +35,7 @@
 #include "OwningMemoryCheck.h"
 #include "PreferMemberInitializerCheck.h"
 #include "ProBoundsArrayToPointerDecayCheck.h"
-#include "ProBoundsAvoidUncheckedContainerAccess.h"
+#include "ProBoundsAvoidUncheckedContainerAccessCheck.h"
 #include "ProBoundsConstantArrayIndexCheck.h"
 #include "ProBoundsPointerArithmeticCheck.h"
 #include "ProTypeConstCastCheck.h"
@@ -54,6 +53,7 @@
 
 namespace clang::tidy {
 namespace cppcoreguidelines {
+namespace {
 
 /// A module containing checks of the C++ Core Guidelines
 class CppCoreGuidelinesModule : public ClangTidyModule {
@@ -108,7 +108,7 @@ public:
         "cppcoreguidelines-prefer-member-initializer");
     CheckFactories.registerCheck<ProBoundsArrayToPointerDecayCheck>(
         "cppcoreguidelines-pro-bounds-array-to-pointer-decay");
-    CheckFactories.registerCheck<ProBoundsAvoidUncheckedContainerAccess>(
+    CheckFactories.registerCheck<ProBoundsAvoidUncheckedContainerAccessCheck>(
         "cppcoreguidelines-pro-bounds-avoid-unchecked-container-access");
     CheckFactories.registerCheck<ProBoundsConstantArrayIndexCheck>(
         "cppcoreguidelines-pro-bounds-constant-array-index");
@@ -153,6 +153,8 @@ public:
     return Options;
   }
 };
+
+} // namespace
 
 // Register the LLVMTidyModule using this statically initialized variable.
 static ClangTidyModuleRegistry::Add<CppCoreGuidelinesModule>

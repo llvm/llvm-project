@@ -30,6 +30,7 @@
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/SaveAndRestore.h"
+#include "llvm/Support/TimeProfiler.h"
 
 using namespace clang;
 using namespace sema;
@@ -526,12 +527,12 @@ ExprResult ConstraintSatisfactionChecker::EvaluateAtomicConstraint(
         S, AtomicExpr->getBeginLoc(),
         Sema::InstantiatingTemplate::ConstraintSubstitution{},
         // FIXME: improve const-correctness of InstantiatingTemplate
-        const_cast<NamedDecl *>(Template), Info, AtomicExpr->getSourceRange());
+        const_cast<NamedDecl *>(Template), AtomicExpr->getSourceRange());
     if (Inst.isInvalid())
       return ExprError();
 
     // We do not want error diagnostics escaping here.
-    Sema::SFINAETrap Trap(S);
+    Sema::SFINAETrap Trap(S, Info);
     SubstitutedExpression =
         S.SubstConstraintExpr(const_cast<Expr *>(AtomicExpr), MLTAL);
 
@@ -599,15 +600,14 @@ ConstraintSatisfactionChecker::SubstitutionInTemplateArguments(
     return MultiLevelTemplateArgumentList();
 
   TemplateDeductionInfo Info(Constraint.getBeginLoc());
+  Sema::SFINAETrap Trap(S, Info);
   Sema::InstantiatingTemplate Inst(
       S, Constraint.getBeginLoc(),
       Sema::InstantiatingTemplate::ConstraintSubstitution{},
       // FIXME: improve const-correctness of InstantiatingTemplate
-      const_cast<NamedDecl *>(Template), Info, Constraint.getSourceRange());
+      const_cast<NamedDecl *>(Template), Constraint.getSourceRange());
   if (Inst.isInvalid())
     return std::nullopt;
-
-  Sema::SFINAETrap Trap(S);
 
   TemplateArgumentListInfo SubstArgs;
   Sema::ArgPackSubstIndexRAII SubstIndex(
@@ -778,9 +778,6 @@ ConstraintSatisfactionChecker::EvaluateFoldExpandedConstraintSize(
     const FoldExpandedConstraint &FE,
     const MultiLevelTemplateArgumentList &MLTAL) {
 
-  // We should ignore errors in the presence of packs of different size.
-  Sema::SFINAETrap Trap(S);
-
   Expr *Pattern = const_cast<Expr *>(FE.getPattern());
 
   SmallVector<UnexpandedParameterPack, 2> Unexpanded;
@@ -792,18 +789,12 @@ ConstraintSatisfactionChecker::EvaluateFoldExpandedConstraintSize(
   if (S.CheckParameterPacksForExpansion(
           Pattern->getExprLoc(), Pattern->getSourceRange(), Unexpanded, MLTAL,
           /*FailOnPackProducingTemplates=*/false, Expand, RetainExpansion,
-          NumExpansions) ||
+          NumExpansions, /*Diagnose=*/false) ||
       !Expand || RetainExpansion)
     return std::nullopt;
 
-  if (NumExpansions && S.getLangOpts().BracketDepth < *NumExpansions) {
-    S.Diag(Pattern->getExprLoc(),
-           clang::diag::err_fold_expression_limit_exceeded)
-        << *NumExpansions << S.getLangOpts().BracketDepth
-        << Pattern->getSourceRange();
-    S.Diag(Pattern->getExprLoc(), diag::note_bracket_depth);
+  if (NumExpansions && S.getLangOpts().BracketDepth < *NumExpansions)
     return std::nullopt;
-  }
   return NumExpansions;
 }
 
@@ -921,7 +912,6 @@ ExprResult ConstraintSatisfactionChecker::EvaluateSlow(
     return ExprError();
   }
 
-  Sema::SFINAETrap Trap(S);
   Sema::ArgPackSubstIndexRAII SubstIndex(
       S, Constraint.getPackSubstitutionIndex()
              ? Constraint.getPackSubstitutionIndex()
@@ -930,9 +920,10 @@ ExprResult ConstraintSatisfactionChecker::EvaluateSlow(
   const ASTTemplateArgumentListInfo *Ori =
       ConceptId->getTemplateArgsAsWritten();
   TemplateDeductionInfo Info(TemplateNameLoc);
-  Sema::InstantiatingTemplate _(
+  Sema::SFINAETrap Trap(S, Info);
+  Sema::InstantiatingTemplate _2(
       S, TemplateNameLoc, Sema::InstantiatingTemplate::ConstraintSubstitution{},
-      const_cast<NamedDecl *>(Template), Info, Constraint.getSourceRange());
+      const_cast<NamedDecl *>(Template), Constraint.getSourceRange());
 
   TemplateArgumentListInfo OutArgs(Ori->LAngleLoc, Ori->RAngleLoc);
   if (S.SubstTemplateArguments(Ori->arguments(), *SubstitutedArgs, OutArgs) ||
@@ -1142,13 +1133,21 @@ static bool CheckConstraintSatisfaction(
   if (TemplateArgsLists.getNumLevels() != 0)
     Args = TemplateArgsLists.getInnermost();
 
-  std::optional<Sema::InstantiatingTemplate> SynthesisContext;
-  if (!TopLevelConceptId) {
-    SynthesisContext.emplace(S, TemplateIDRange.getBegin(),
-                             Sema::InstantiatingTemplate::ConstraintsCheck{},
-                             const_cast<NamedDecl *>(Template), Args,
+  struct SynthesisContextPair {
+    Sema::InstantiatingTemplate Inst;
+    Sema::NonSFINAEContext NSC;
+    SynthesisContextPair(Sema &S, NamedDecl *Template,
+                         ArrayRef<TemplateArgument> TemplateArgs,
+                         SourceRange InstantiationRange)
+        : Inst(S, InstantiationRange.getBegin(),
+               Sema::InstantiatingTemplate::ConstraintsCheck{}, Template,
+               TemplateArgs, InstantiationRange),
+          NSC(S) {}
+  };
+  std::optional<SynthesisContextPair> SynthesisContext;
+  if (!TopLevelConceptId)
+    SynthesisContext.emplace(S, const_cast<NamedDecl *>(Template), Args,
                              TemplateIDRange);
-  }
 
   const NormalizedConstraint *C =
       S.getNormalizedAssociatedConstraints(Template, AssociatedConstraints);
@@ -1184,6 +1183,10 @@ bool Sema::CheckConstraintSatisfaction(
     const MultiLevelTemplateArgumentList &TemplateArgsLists,
     SourceRange TemplateIDRange, ConstraintSatisfaction &OutSatisfaction,
     const ConceptReference *TopLevelConceptId, Expr **ConvertedExpr) {
+  llvm::TimeTraceScope TimeScope(
+      "CheckConstraintSatisfaction", [TemplateIDRange, this] {
+        return TemplateIDRange.printToString(getSourceManager());
+      });
   if (AssociatedConstraints.empty()) {
     OutSatisfaction.IsSatisfied = true;
     return false;
@@ -1478,8 +1481,7 @@ static const Expr *SubstituteConstraintExpressionWithoutSatisfaction(
   if (MLTAL.getNumSubstitutedLevels() == 0)
     return ConstrExpr;
 
-  Sema::SFINAETrap SFINAE(S);
-
+  Sema::NonSFINAEContext _(S);
   Sema::InstantiatingTemplate Inst(
       S, DeclInfo.getLocation(),
       Sema::InstantiatingTemplate::ConstraintNormalization{},
@@ -1554,7 +1556,7 @@ static const Expr *SubstituteConstraintExpressionWithoutSatisfaction(
       Sema::ReuseLambdaContextDecl);
   ExprResult SubstConstr = S.SubstConstraintExprWithoutSatisfaction(
       const_cast<clang::Expr *>(ConstrExpr), MLTAL);
-  if (SFINAE.hasErrorOccurred() || !SubstConstr.isUsable())
+  if (!SubstConstr.isUsable())
     return nullptr;
   return SubstConstr.get();
 }
@@ -2104,6 +2106,7 @@ bool SubstituteParameterMappings::substitute(
     InstLocBegin = SR.getBegin();
     InstLocEnd = SR.getEnd();
   }
+  Sema::NonSFINAEContext _(SemaRef);
   Sema::InstantiatingTemplate Inst(
       SemaRef, InstLocBegin,
       Sema::InstantiatingTemplate::ParameterMappingSubstitution{},
@@ -2171,6 +2174,7 @@ bool SubstituteParameterMappings::substitute(ConceptIdConstraint &CC) {
     InstLocBegin = SR.getBegin();
     InstLocEnd = SR.getEnd();
   }
+  Sema::NonSFINAEContext _(SemaRef);
   // This is useful for name lookup across modules; see Sema::getLookupModules.
   Sema::InstantiatingTemplate Inst(
       SemaRef, InstLocBegin,
@@ -2311,6 +2315,7 @@ NormalizedConstraint *NormalizedConstraint::fromConstraintExpr(
   } else if (auto *CSE = dyn_cast<const ConceptSpecializationExpr>(E)) {
     NormalizedConstraint *SubNF;
     {
+      Sema::NonSFINAEContext _(S);
       Sema::InstantiatingTemplate Inst(
           S, CSE->getExprLoc(),
           Sema::InstantiatingTemplate::ConstraintNormalization{},
@@ -2408,11 +2413,16 @@ const NormalizedConstraint *Sema::getNormalizedAssociatedConstraints(
   if (CacheEntry == NormalizationCache.end()) {
     auto *Normalized = NormalizedConstraint::fromAssociatedConstraints(
         *this, ND, AssociatedConstraints);
+    if (!Normalized) {
+      NormalizationCache.try_emplace(ConstrainedDeclOrNestedReq, nullptr);
+      return nullptr;
+    }
+    // substitute() can invalidate iterators of NormalizationCache.
+    bool Failed = SubstituteParameterMappings(*this).substitute(*Normalized);
     CacheEntry =
         NormalizationCache.try_emplace(ConstrainedDeclOrNestedReq, Normalized)
             .first;
-    if (!Normalized ||
-        SubstituteParameterMappings(*this).substitute(*Normalized))
+    if (Failed)
       return nullptr;
   }
   return CacheEntry->second;
@@ -2541,8 +2551,6 @@ bool Sema::MaybeEmitAmbiguousAtomicConstraintsDiagnostic(
   };
 
   {
-    // The subsumption checks might cause diagnostics
-    SFINAETrap Trap(*this);
     auto *Normalized1 = getNormalizedAssociatedConstraints(D1, AC1);
     if (!Normalized1)
       return false;

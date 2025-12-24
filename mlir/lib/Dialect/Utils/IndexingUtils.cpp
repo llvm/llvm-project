@@ -19,8 +19,8 @@
 using namespace mlir;
 
 template <typename ExprType>
-SmallVector<ExprType> computeSuffixProductImpl(ArrayRef<ExprType> sizes,
-                                               ExprType unit) {
+static SmallVector<ExprType> computeSuffixProductImpl(ArrayRef<ExprType> sizes,
+                                                      ExprType unit) {
   if (sizes.empty())
     return {};
   SmallVector<ExprType> strides(sizes.size(), unit);
@@ -30,8 +30,8 @@ SmallVector<ExprType> computeSuffixProductImpl(ArrayRef<ExprType> sizes,
 }
 
 template <typename ExprType>
-SmallVector<ExprType> computeElementwiseMulImpl(ArrayRef<ExprType> v1,
-                                                ArrayRef<ExprType> v2) {
+static SmallVector<ExprType> computeElementwiseMulImpl(ArrayRef<ExprType> v1,
+                                                       ArrayRef<ExprType> v2) {
   // Early exit if both are empty, let zip_equal fail if only 1 is empty.
   if (v1.empty() && v2.empty())
     return {};
@@ -42,8 +42,8 @@ SmallVector<ExprType> computeElementwiseMulImpl(ArrayRef<ExprType> v1,
 }
 
 template <typename ExprType>
-ExprType linearizeImpl(ArrayRef<ExprType> offsets, ArrayRef<ExprType> basis,
-                       ExprType zero) {
+static ExprType linearizeImpl(ArrayRef<ExprType> offsets,
+                              ArrayRef<ExprType> basis, ExprType zero) {
   assert(offsets.size() == basis.size());
   ExprType linearIndex = zero;
   for (unsigned idx = 0, e = basis.size(); idx < e; ++idx)
@@ -52,9 +52,9 @@ ExprType linearizeImpl(ArrayRef<ExprType> offsets, ArrayRef<ExprType> basis,
 }
 
 template <typename ExprType, typename DivOpTy>
-SmallVector<ExprType> delinearizeImpl(ExprType linearIndex,
-                                      ArrayRef<ExprType> strides,
-                                      DivOpTy divOp) {
+static SmallVector<ExprType> delinearizeImpl(ExprType linearIndex,
+                                             ArrayRef<ExprType> strides,
+                                             DivOpTy divOp) {
   int64_t rank = strides.size();
   SmallVector<ExprType> offsets(rank);
   for (int64_t r = 0; r < rank; ++r) {

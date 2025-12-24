@@ -51,7 +51,7 @@ void test() {
     // G is not a specialization of std::expected
     {
       std::expected<void, int> f1(std::unexpected<int>(1));
-      f1.or_else(lval_return_not_std_expected); // expected-note{{in instantiation of function template specialization 'std::expected<void, int>::or_else<int (&)(int &)>' requested here}}
+      (void)f1.or_else(lval_return_not_std_expected); // expected-note{{in instantiation of function template specialization 'std::expected<void, int>::or_else<int (&)(int &)>' requested here}}
       // expected-error-re@*:* {{static assertion failed {{.*}}The result of f(error()) must be a specialization of std::expected}}
       // expected-error-re@*:* {{{{.*}}cannot be used prior to '::' because it has no members}}
     }
@@ -59,7 +59,7 @@ void test() {
     // !std::is_same_v<G:value_type, T>
     {
       std::expected<void, int> f1(std::unexpected<int>(1));
-      f1.or_else(lval_error_type_not_same_as_int);  // expected-note{{in instantiation of function template specialization 'std::expected<void, int>::or_else<std::expected<NotSameAsInt, int> (&)(int &)>' requested here}}
+      (void)f1.or_else(lval_error_type_not_same_as_int);  // expected-note{{in instantiation of function template specialization 'std::expected<void, int>::or_else<std::expected<NotSameAsInt, int> (&)(int &)>' requested here}}
       // expected-error-re@*:* {{static assertion failed {{.*}}The result of f(error()) must have the same value_type as this expected}}
     }
   }
@@ -69,7 +69,7 @@ void test() {
     // G is not a specialization of std::expected
     {
       const std::expected<void, int> f1(std::unexpected<int>(1));
-      f1.or_else(clval_return_not_std_expected); // expected-note{{in instantiation of function template specialization 'std::expected<void, int>::or_else<int (&)(const int &)>' requested here}}
+      (void)f1.or_else(clval_return_not_std_expected); // expected-note{{in instantiation of function template specialization 'std::expected<void, int>::or_else<int (&)(const int &)>' requested here}}
       // expected-error-re@*:* {{static assertion failed {{.*}}The result of f(error()) must be a specialization of std::expected}}
       // expected-error-re@*:* {{{{.*}}cannot be used prior to '::' because it has no members}}
     }
@@ -77,7 +77,7 @@ void test() {
     // !std::is_same_v<G:value_type, T>
     {
       const std::expected<void, int> f1(std::unexpected<int>(1));
-      f1.or_else(clval_error_type_not_same_as_int);  // expected-note{{in instantiation of function template specialization 'std::expected<void, int>::or_else<std::expected<NotSameAsInt, int> (&)(const int &)>' requested here}}
+      (void)f1.or_else(clval_error_type_not_same_as_int);  // expected-note{{in instantiation of function template specialization 'std::expected<void, int>::or_else<std::expected<NotSameAsInt, int> (&)(const int &)>' requested here}}
       // expected-error-re@*:* {{static assertion failed {{.*}}The result of f(error()) must have the same value_type as this expected}}
     }
   }
@@ -87,7 +87,7 @@ void test() {
     // G is not a specialization of std::expected
     {
       std::expected<void, int> f1(std::unexpected<int>(1));
-      std::move(f1).or_else(rval_return_not_std_expected); // expected-note{{in instantiation of function template specialization 'std::expected<void, int>::or_else<int (&)(int &&)>' requested here}}
+      (void)std::move(f1).or_else(rval_return_not_std_expected); // expected-note{{in instantiation of function template specialization 'std::expected<void, int>::or_else<int (&)(int &&)>' requested here}}
       // expected-error-re@*:* {{static assertion failed {{.*}}The result of f(std::move(error())) must be a specialization of std::expected}}
       // expected-error-re@*:* {{{{.*}}cannot be used prior to '::' because it has no members}}
     }
@@ -95,7 +95,7 @@ void test() {
     // !std::is_same_v<G:value_type, T>
     {
       std::expected<void, int> f1(std::unexpected<int>(1));
-      std::move(f1).or_else(rval_error_type_not_same_as_int); // expected-note{{in instantiation of function template specialization 'std::expected<void, int>::or_else<std::expected<NotSameAsInt, int> (&)(int &&)>' requested here}}
+      (void)std::move(f1).or_else(rval_error_type_not_same_as_int); // expected-note{{in instantiation of function template specialization 'std::expected<void, int>::or_else<std::expected<NotSameAsInt, int> (&)(int &&)>' requested here}}
       // expected-error-re@*:* {{static assertion failed {{.*}}The result of f(std::move(error())) must have the same value_type as this expected}}
     }
   }
@@ -105,7 +105,7 @@ void test() {
     // G is not a specialization of std::expected
     {
       const std::expected<void, int> f1(std::unexpected<int>(1));
-      std::move(f1).or_else(crval_return_not_std_expected); // expected-note{{in instantiation of function template specialization 'std::expected<void, int>::or_else<int (&)(const int &&)>' requested here}}
+      (void)std::move(f1).or_else(crval_return_not_std_expected); // expected-note{{in instantiation of function template specialization 'std::expected<void, int>::or_else<int (&)(const int &&)>' requested here}}
       // expected-error-re@*:* {{static assertion failed {{.*}}The result of f(std::move(error())) must be a specialization of std::expected}}
       // expected-error-re@*:* {{{{.*}}cannot be used prior to '::' because it has no members}}
     }
@@ -113,7 +113,7 @@ void test() {
     // !std::is_same_v<G:value_type, T>
     {
       const std::expected<void, int> f1(std::unexpected<int>(1));
-      std::move(f1).or_else(crval_error_type_not_same_as_int); // expected-note{{in instantiation of function template specialization 'std::expected<void, int>::or_else<std::expected<NotSameAsInt, int> (&)(const int &&)>' requested here}}
+      (void)std::move(f1).or_else(crval_error_type_not_same_as_int); // expected-note{{in instantiation of function template specialization 'std::expected<void, int>::or_else<std::expected<NotSameAsInt, int> (&)(const int &&)>' requested here}}
       // expected-error-re@*:* {{static assertion failed {{.*}}The result of f(std::move(error())) must have the same value_type as this expected}}
     }
   }

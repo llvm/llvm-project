@@ -218,6 +218,9 @@ template <class ToDuration, class Rep, class Period>
 template <class ToDuration, class Rep, class Period>
     constexpr ToDuration round(const duration<Rep, Period>& d);    // C++17
 
+template <class T> struct is_clock;                                // C++20
+template <class T> inline constexpr bool is_clock_v = is_clock<T>::value;                   // C++20
+
 // duration I/O
 template<class charT, class traits, class Rep, class Period>       // C++20
   basic_ostream<charT, traits>&
@@ -1057,6 +1060,7 @@ constexpr chrono::year                                  operator ""y(unsigned lo
 #    include <__chrono/day.h>
 #    include <__chrono/exception.h>
 #    include <__chrono/hh_mm_ss.h>
+#    include <__chrono/is_clock.h>
 #    include <__chrono/literals.h>
 #    include <__chrono/local_info.h>
 #    include <__chrono/month.h>

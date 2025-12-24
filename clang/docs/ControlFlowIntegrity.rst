@@ -135,7 +135,7 @@ Bad Cast Checking
 This scheme checks that pointer casts are made to an object of the correct
 dynamic type; that is, the dynamic type of the object must be a derived class
 of the pointee type of the cast. The checks are currently only introduced
-where the class being casted to is a polymorphic class.
+where the class being cast to is a polymorphic class.
 
 Bad casts are not in themselves control flow integrity violations, but they
 can also create security vulnerabilities, and the implementation uses many
