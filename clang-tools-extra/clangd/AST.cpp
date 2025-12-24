@@ -30,6 +30,7 @@
 #include "clang/Index/USRGeneration.h"
 #include "clang/Sema/HeuristicResolver.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
@@ -1062,36 +1063,25 @@ bool isLikelyForwardingFunction(const FunctionTemplateDecl *FT) {
 class ForwardingToConstructorVisitor
     : public RecursiveASTVisitor<ForwardingToConstructorVisitor> {
 public:
-  struct SeenFunctions {
-    unsigned int DepthLeft;
-    SeenFunctions *Prev;
-    const FunctionDecl *Current;
-
-    bool seenFunction(const FunctionDecl *FD) {
-      if (Current == FD)
-        return true;
-      if (Prev == nullptr)
-        return false;
-      return Prev->seenFunction(FD);
-    }
-  };
-
   ForwardingToConstructorVisitor(
-      SeenFunctions SF, SmallVector<const CXXConstructorDecl *, 1> &Output)
-      : SF(std::move(SF)), Constructors(Output) {}
+      llvm::DenseSet<const FunctionDecl *> &SeenFunctions,
+      SmallVector<const CXXConstructorDecl *, 1> &Output)
+      : SeenFunctions(SeenFunctions), Constructors(Output) {}
 
   bool VisitCallExpr(CallExpr *E) {
-    if (SF.DepthLeft == 0)
+    // Adjust if recurison not deep enough
+    if (SeenFunctions.size() >= 10)
       return true;
     if (auto *FD = E->getDirectCallee()) {
       // Check if we already visited this function to prevent endless recursion
-      if (SF.seenFunction(FD))
+      if (SeenFunctions.contains(FD))
         return true;
       if (auto *PT = FD->getPrimaryTemplate();
           PT && isLikelyForwardingFunction(PT)) {
-        SeenFunctions Next{SF.DepthLeft - 1, &SF, FD};
-        ForwardingToConstructorVisitor Visitor{std::move(Next), Constructors};
+        SeenFunctions.insert(FD);
+        ForwardingToConstructorVisitor Visitor{SeenFunctions, Constructors};
         Visitor.TraverseStmt(FD->getBody());
+        SeenFunctions.erase(FD);
       }
     }
     return true;
@@ -1110,7 +1100,7 @@ public:
   }
 
   // Stack of seen functions
-  SeenFunctions SF;
+  llvm::DenseSet<const FunctionDecl *> &SeenFunctions;
   // Output of this visitor
   SmallVector<const CXXConstructorDecl *, 1> &Constructors;
 };
@@ -1118,8 +1108,8 @@ public:
 SmallVector<const CXXConstructorDecl *, 1>
 searchConstructorsInForwardingFunction(const FunctionDecl *FD) {
   SmallVector<const CXXConstructorDecl *, 1> Result;
-  ForwardingToConstructorVisitor::SeenFunctions SF{10, nullptr, FD};
-  ForwardingToConstructorVisitor Visitor{std::move(SF), Result};
+  llvm::DenseSet<const FunctionDecl *> SeenFunctions{FD};
+  ForwardingToConstructorVisitor Visitor{SeenFunctions, Result};
   Visitor.TraverseStmt(FD->getBody());
   return Result;
 }
