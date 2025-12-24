@@ -15421,6 +15421,22 @@ TEST_F(FormatTest, UnderstandContextOfRecordTypeKeywords) {
   verifyFormat("class A:");
 }
 
+TEST_F(FormatTest, DoesNotCrashOnMalformedEnableIf) {
+  const char *Code =
+      "template <typename T, typename TIString>\n"
+      "typename etl::enable_if<etl::is_integral<T>::value &&\n"
+      "                        !etl::is_same<T, bool>::value>::value,\n"
+      "  const TIString& > ::type\n"
+      "to_string(const T value, TIString& str,\n"
+      "          const etl::basic_format_spec<TIString>& format,\n"
+      "          const bool append = false) {\n"
+      "}\n";
+  // Ensure formatting malformed template syntax doesn't assert, regardless of
+  // whether clang-format considers the input complete.
+  EXPECT_NO_FATAL_FAILURE(format(Code, std::nullopt, SC_DoNotCheck));
+  EXPECT_NO_FATAL_FAILURE(format(messUp(Code), std::nullopt, SC_DoNotCheck));
+}
+
 TEST_F(FormatTest, DoNotInterfereWithErrorAndWarning) {
   verifyNoChange("#error Leave     all         white!!!!! space* alone!");
   verifyNoChange("#warning Leave     all         white!!!!! space* alone!");

@@ -675,7 +675,8 @@ bool ContinuationIndenter::mustBreak(const LineState &State) {
         return false;
       if (Tok->is(TT_TemplateCloser)) {
         Tok = Tok->MatchingParen;
-        assert(Tok);
+        if (!Tok)
+          return false; // Bail out on malformed template structure.
       }
       if (Tok->FirstAfterPPLine)
         return false;

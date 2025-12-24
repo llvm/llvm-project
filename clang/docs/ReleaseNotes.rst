@@ -793,6 +793,9 @@ clang-format
 - Rename ``(Binary|Decimal|Hex)MinDigits`` to ``...MinDigitsInsert`` and  add
   ``(Binary|Decimal|Hex)MaxDigitsSeparator`` suboptions to
   ``IntegerLiteralSeparator``.
+- Avoid crashing when formatting malformed template code that lacks a matching
+  template closer (e.g., broken ``enable_if`` declarations) by bailing out
+  instead of asserting. (#GH173382)
 
 libclang
 --------
