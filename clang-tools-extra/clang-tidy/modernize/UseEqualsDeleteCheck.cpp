@@ -41,8 +41,8 @@ AST_MATCHER(CXXMethodDecl, isSpecialFunction) {
 }
 } // namespace
 
-static const char SpecialFunction[] = "SpecialFunction";
-static const char DeletedNotPublic[] = "DeletedNotPublic";
+static constexpr char SpecialFunction[] = "SpecialFunction";
+static constexpr char DeletedNotPublic[] = "DeletedNotPublic";
 
 UseEqualsDeleteCheck::UseEqualsDeleteCheck(StringRef Name,
                                            ClangTidyContext *Context)
@@ -74,7 +74,7 @@ void UseEqualsDeleteCheck::registerMatchers(MatchFinder *Finder) {
 void UseEqualsDeleteCheck::check(const MatchFinder::MatchResult &Result) {
   if (const auto *Func =
           Result.Nodes.getNodeAs<CXXMethodDecl>(SpecialFunction)) {
-    SourceLocation EndLoc = Lexer::getLocForEndOfToken(
+    const SourceLocation EndLoc = Lexer::getLocForEndOfToken(
         Func->getEndLoc(), 0, *Result.SourceManager, getLangOpts());
 
     if (IgnoreMacros && Func->getLocation().isMacroID())

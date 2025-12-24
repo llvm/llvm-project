@@ -75,6 +75,62 @@ static Value *getMaskVecValue(CodeGenFunction &CGF, Value *Mask,
   return MaskVec;
 }
 
+/// Emit rounding for the value \p X according to the rounding \p
+/// RoundingControl based on bits 0 and 1.
+static Value *emitX86RoundImmediate(CodeGenFunction &CGF, Value *X,
+                                    unsigned RoundingControl) {
+  unsigned RoundingMask = 0b11;
+  unsigned RoundingMode = RoundingControl & RoundingMask;
+
+  Intrinsic::ID ID = Intrinsic::not_intrinsic;
+  LLVMContext &Ctx = CGF.CGM.getLLVMContext();
+  if (CGF.Builder.getIsFPConstrained()) {
+
+    Value *ExceptMode =
+        MetadataAsValue::get(Ctx, MDString::get(Ctx, "fpexcept.ignore"));
+
+    switch (RoundingMode) {
+    case 0b00:
+      ID = Intrinsic::experimental_constrained_roundeven;
+      break;
+    case 0b01:
+      ID = Intrinsic::experimental_constrained_floor;
+      break;
+    case 0b10:
+      ID = Intrinsic::experimental_constrained_ceil;
+      break;
+    case 0b11:
+      ID = Intrinsic::experimental_constrained_trunc;
+      break;
+    default:
+      llvm_unreachable("Invalid rounding mode");
+    }
+
+    Function *F = CGF.CGM.getIntrinsic(ID, X->getType());
+    return CGF.Builder.CreateCall(F, {X, ExceptMode});
+  }
+
+  switch (RoundingMode) {
+  case 0b00:
+    ID = Intrinsic::roundeven;
+    break;
+  case 0b01:
+    ID = Intrinsic::floor;
+    break;
+  case 0b10:
+    ID = Intrinsic::ceil;
+    break;
+  case 0b11:
+    ID = Intrinsic::trunc;
+    break;
+  default:
+    llvm_unreachable("Invalid rounding mode");
+  }
+
+  Function *F = CGF.CGM.getIntrinsic(ID, X->getType());
+  return CGF.Builder.CreateCall(F, {X});
+}
+
 static Value *EmitX86MaskedStore(CodeGenFunction &CGF, ArrayRef<Value *> Ops,
                                  Align Alignment) {
   Value *Ptr = Ops[0];
@@ -840,6 +896,76 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
                                       Ops[0]);
     return Builder.CreateExtractValue(Call, 0);
   }
+  case X86::BI__builtin_ia32_roundps:
+  case X86::BI__builtin_ia32_roundpd:
+  case X86::BI__builtin_ia32_roundps256:
+  case X86::BI__builtin_ia32_roundpd256: {
+    unsigned M = cast<ConstantInt>(Ops[1])->getZExtValue();
+    unsigned MXCSRMask = 0b100;
+    unsigned FRoundNoExcMask = 0b1000;
+    unsigned UseMXCSR = MXCSRMask & M;
+    unsigned FRoundNoExc = FRoundNoExcMask & M;
+
+    if (UseMXCSR || !FRoundNoExc) {
+
+      Intrinsic::ID ID = Intrinsic::not_intrinsic;
+
+      switch (BuiltinID) {
+      case X86::BI__builtin_ia32_roundps:
+        ID = Intrinsic::x86_sse41_round_ps;
+        break;
+      case X86::BI__builtin_ia32_roundps256:
+        ID = Intrinsic::x86_avx_round_ps_256;
+        break;
+      case X86::BI__builtin_ia32_roundpd:
+        ID = Intrinsic::x86_sse41_round_pd;
+        break;
+      case X86::BI__builtin_ia32_roundpd256:
+        ID = Intrinsic::x86_avx_round_pd_256;
+        break;
+      default:
+        llvm_unreachable("must return from switch");
+      }
+
+      Function *F = CGM.getIntrinsic(ID);
+      return Builder.CreateCall(F, Ops);
+    }
+
+    return emitX86RoundImmediate(*this, Ops[0], M);
+  }
+  case X86::BI__builtin_ia32_roundss:
+  case X86::BI__builtin_ia32_roundsd: {
+    unsigned M = cast<ConstantInt>(Ops[2])->getZExtValue();
+    unsigned MXCSRMask = 0b100;
+    unsigned FRoundNoExcMask = 0b1000;
+    unsigned UseMXCSR = MXCSRMask & M;
+    unsigned FRoundNoExc = FRoundNoExcMask & M;
+
+    if (UseMXCSR || !FRoundNoExc) {
+
+      Intrinsic::ID ID = Intrinsic::not_intrinsic;
+
+      switch (BuiltinID) {
+      case X86::BI__builtin_ia32_roundss:
+        ID = Intrinsic::x86_sse41_round_ss;
+        break;
+      case X86::BI__builtin_ia32_roundsd:
+        ID = Intrinsic::x86_sse41_round_sd;
+        break;
+      default:
+        llvm_unreachable("must return from switch");
+      }
+
+      Function *F = CGM.getIntrinsic(ID);
+      return Builder.CreateCall(F, Ops);
+    }
+
+    Value *Idx = Builder.getInt32(0);
+    Value *ValAt0 = Builder.CreateExtractElement(Ops[1], Idx);
+    Value *RoundedAt0 = emitX86RoundImmediate(*this, ValAt0, M);
+
+    return Builder.CreateInsertElement(Ops[0], RoundedAt0, Idx);
+  }
   case X86::BI__builtin_ia32_lzcnt_u16:
   case X86::BI__builtin_ia32_lzcnt_u32:
   case X86::BI__builtin_ia32_lzcnt_u64: {
@@ -1028,16 +1154,10 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
   case X86::BI__builtin_ia32_vcvtuqq2ph512_mask:
     return EmitX86ConvertIntToFp(*this, E, Ops, /*IsSigned*/ false);
 
-  case X86::BI__builtin_ia32_vfmaddss3:
-  case X86::BI__builtin_ia32_vfmaddsd3:
   case X86::BI__builtin_ia32_vfmaddsh3_mask:
   case X86::BI__builtin_ia32_vfmaddss3_mask:
   case X86::BI__builtin_ia32_vfmaddsd3_mask:
     return EmitScalarFMAExpr(*this, E, Ops, Ops[0]);
-  case X86::BI__builtin_ia32_vfmaddss:
-  case X86::BI__builtin_ia32_vfmaddsd:
-    return EmitScalarFMAExpr(*this, E, Ops,
-                             Constant::getNullValue(Ops[0]->getType()));
   case X86::BI__builtin_ia32_vfmaddsh3_maskz:
   case X86::BI__builtin_ia32_vfmaddss3_maskz:
   case X86::BI__builtin_ia32_vfmaddsd3_maskz:
@@ -2177,21 +2297,6 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
     return Builder.CreateBitCast(Res, Ops[0]->getType());
   }
 
-  case X86::BI__builtin_ia32_sqrtss:
-  case X86::BI__builtin_ia32_sqrtsd: {
-    Value *A = Builder.CreateExtractElement(Ops[0], (uint64_t)0);
-    Function *F;
-    if (Builder.getIsFPConstrained()) {
-      CodeGenFunction::CGFPOptionsRAII FPOptsRAII(*this, E);
-      F = CGM.getIntrinsic(Intrinsic::experimental_constrained_sqrt,
-                           A->getType());
-      A = Builder.CreateConstrainedFPCall(F, {A});
-    } else {
-      F = CGM.getIntrinsic(Intrinsic::sqrt, A->getType());
-      A = Builder.CreateCall(F, {A});
-    }
-    return Builder.CreateInsertElement(Ops[0], A, (uint64_t)0);
-  }
   case X86::BI__builtin_ia32_sqrtsh_round_mask:
   case X86::BI__builtin_ia32_sqrtsd_round_mask:
   case X86::BI__builtin_ia32_sqrtss_round_mask: {
@@ -2231,40 +2336,29 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
     A = EmitX86ScalarSelect(*this, Ops[3], A, Src);
     return Builder.CreateInsertElement(Ops[0], A, (uint64_t)0);
   }
-  case X86::BI__builtin_ia32_sqrtpd256:
-  case X86::BI__builtin_ia32_sqrtpd:
-  case X86::BI__builtin_ia32_sqrtps256:
-  case X86::BI__builtin_ia32_sqrtps:
-  case X86::BI__builtin_ia32_sqrtph256:
-  case X86::BI__builtin_ia32_sqrtph:
   case X86::BI__builtin_ia32_sqrtph512:
-  case X86::BI__builtin_ia32_vsqrtbf16256:
-  case X86::BI__builtin_ia32_vsqrtbf16:
-  case X86::BI__builtin_ia32_vsqrtbf16512:
   case X86::BI__builtin_ia32_sqrtps512:
   case X86::BI__builtin_ia32_sqrtpd512: {
-    if (Ops.size() == 2) {
-      unsigned CC = cast<llvm::ConstantInt>(Ops[1])->getZExtValue();
-      // Support only if the rounding mode is 4 (AKA CUR_DIRECTION),
-      // otherwise keep the intrinsic.
-      if (CC != 4) {
-        Intrinsic::ID IID;
+    unsigned CC = cast<llvm::ConstantInt>(Ops[1])->getZExtValue();
+    // Support only if the rounding mode is 4 (AKA CUR_DIRECTION),
+    // otherwise keep the intrinsic.
+    if (CC != 4) {
+      Intrinsic::ID IID;
 
-        switch (BuiltinID) {
-        default:
-          llvm_unreachable("Unsupported intrinsic!");
-        case X86::BI__builtin_ia32_sqrtph512:
-          IID = Intrinsic::x86_avx512fp16_sqrt_ph_512;
-          break;
-        case X86::BI__builtin_ia32_sqrtps512:
-          IID = Intrinsic::x86_avx512_sqrt_ps_512;
-          break;
-        case X86::BI__builtin_ia32_sqrtpd512:
-          IID = Intrinsic::x86_avx512_sqrt_pd_512;
-          break;
-        }
-        return Builder.CreateCall(CGM.getIntrinsic(IID), Ops);
+      switch (BuiltinID) {
+      default:
+        llvm_unreachable("Unsupported intrinsic!");
+      case X86::BI__builtin_ia32_sqrtph512:
+        IID = Intrinsic::x86_avx512fp16_sqrt_ph_512;
+        break;
+      case X86::BI__builtin_ia32_sqrtps512:
+        IID = Intrinsic::x86_avx512_sqrt_ps_512;
+        break;
+      case X86::BI__builtin_ia32_sqrtpd512:
+        IID = Intrinsic::x86_avx512_sqrt_pd_512;
+        break;
       }
+      return Builder.CreateCall(CGM.getIntrinsic(IID), Ops);
     }
     if (Builder.getIsFPConstrained()) {
       CodeGenFunction::CGFPOptionsRAII FPOptsRAII(*this, E);
@@ -2802,8 +2896,6 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
     Intrinsic::ID IID = Intrinsic::x86_avx512bf16_mask_cvtneps2bf16_128;
     return Builder.CreateCall(CGM.getIntrinsic(IID), Ops);
   }
-  case X86::BI__builtin_ia32_cvtsbf162ss_32:
-    return Builder.CreateFPExt(Ops[0], Builder.getFloatTy());
 
   case X86::BI__builtin_ia32_cvtneps2bf16_256_mask:
   case X86::BI__builtin_ia32_cvtneps2bf16_512_mask: {
@@ -2930,74 +3022,6 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
     // We treat __stosb as a volatile memset - it may not generate "rep stosb"
     // instruction, but it will create a memset that won't be optimized away.
     return Builder.CreateMemSet(Ops[0], Ops[1], Ops[2], Align(1), true);
-  }
-  // Corresponding to intrisics which will return 2 tiles (tile0_tile1).
-  case X86::BI__builtin_ia32_t2rpntlvwz0_internal:
-  case X86::BI__builtin_ia32_t2rpntlvwz0rs_internal:
-  case X86::BI__builtin_ia32_t2rpntlvwz0t1_internal:
-  case X86::BI__builtin_ia32_t2rpntlvwz0rst1_internal:
-  case X86::BI__builtin_ia32_t2rpntlvwz1_internal:
-  case X86::BI__builtin_ia32_t2rpntlvwz1rs_internal:
-  case X86::BI__builtin_ia32_t2rpntlvwz1t1_internal:
-  case X86::BI__builtin_ia32_t2rpntlvwz1rst1_internal: {
-    Intrinsic::ID IID;
-    switch (BuiltinID) {
-    default:
-      llvm_unreachable("Unsupported intrinsic!");
-    case X86::BI__builtin_ia32_t2rpntlvwz0_internal:
-      IID = Intrinsic::x86_t2rpntlvwz0_internal;
-      break;
-    case X86::BI__builtin_ia32_t2rpntlvwz0rs_internal:
-      IID = Intrinsic::x86_t2rpntlvwz0rs_internal;
-      break;
-    case X86::BI__builtin_ia32_t2rpntlvwz0t1_internal:
-      IID = Intrinsic::x86_t2rpntlvwz0t1_internal;
-      break;
-    case X86::BI__builtin_ia32_t2rpntlvwz0rst1_internal:
-      IID = Intrinsic::x86_t2rpntlvwz0rst1_internal;
-      break;
-    case X86::BI__builtin_ia32_t2rpntlvwz1_internal:
-      IID = Intrinsic::x86_t2rpntlvwz1_internal;
-      break;
-    case X86::BI__builtin_ia32_t2rpntlvwz1rs_internal:
-      IID = Intrinsic::x86_t2rpntlvwz1rs_internal;
-      break;
-    case X86::BI__builtin_ia32_t2rpntlvwz1t1_internal:
-      IID = Intrinsic::x86_t2rpntlvwz1t1_internal;
-      break;
-    case X86::BI__builtin_ia32_t2rpntlvwz1rst1_internal:
-      IID = Intrinsic::x86_t2rpntlvwz1rst1_internal;
-      break;
-    }
-
-    // Ops = (Row0, Col0, Col1, DstPtr0, DstPtr1, SrcPtr, Stride)
-    Value *Call = Builder.CreateCall(CGM.getIntrinsic(IID),
-                                     {Ops[0], Ops[1], Ops[2], Ops[5], Ops[6]});
-
-    auto *PtrTy = E->getArg(3)->getType()->getAs<PointerType>();
-    assert(PtrTy && "arg3 must be of pointer type");
-    QualType PtreeTy = PtrTy->getPointeeType();
-    llvm::Type *TyPtee = ConvertType(PtreeTy);
-
-    // Bitcast amx type (x86_amx) to vector type (256 x i32)
-    // Then store tile0 into DstPtr0
-    Value *T0 = Builder.CreateExtractValue(Call, 0);
-    Value *VecT0 = Builder.CreateIntrinsic(Intrinsic::x86_cast_tile_to_vector,
-                                           {TyPtee}, {T0});
-    Builder.CreateDefaultAlignedStore(VecT0, Ops[3]);
-
-    // Then store tile1 into DstPtr1
-    Value *T1 = Builder.CreateExtractValue(Call, 1);
-    Value *VecT1 = Builder.CreateIntrinsic(Intrinsic::x86_cast_tile_to_vector,
-                                           {TyPtee}, {T1});
-    Value *Store = Builder.CreateDefaultAlignedStore(VecT1, Ops[4]);
-
-    // Note: Here we escape directly use x86_tilestored64_internal to store
-    // the results due to it can't make sure the Mem written scope. This may
-    // cause shapes reloads after first amx intrinsic, which current amx reg-
-    // ister allocation has no ability to handle it.
-
-    return Store;
   }
   case X86::BI__ud2:
     // llvm.trap makes a ud2a instruction on x86.

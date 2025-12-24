@@ -33,11 +33,11 @@ static void vTtoGetLlvmTyString(raw_ostream &OS, const Record *VT) {
   bool IsRISCVVecTuple = VT->getValueAsBit("isRISCVVecTuple");
 
   if (IsRISCVVecTuple) {
-    unsigned NElem = VT->getValueAsInt("nElem");
+    unsigned NF = VT->getValueAsInt("NF");
     unsigned Sz = VT->getValueAsInt("Size");
     OS << "TargetExtType::get(Context, \"riscv.vector.tuple\", "
           "ScalableVectorType::get(Type::getInt8Ty(Context), "
-       << (Sz / (NElem * 8)) << "), " << NElem << ")";
+       << (Sz / (NF * 8)) << "), " << NF << ")";
     return;
   }
 
@@ -91,11 +91,14 @@ void VTEmitter::run(raw_ostream &OS) {
   emitSourceFileHeader("ValueTypes Source Fragment", OS, Records);
 
   std::vector<const Record *> VTsByNumber{512};
-  for (auto *VT : Records.getAllDerivedDefinitions("ValueType")) {
-    auto Number = VT->getValueAsInt("Value");
-    assert(0 <= Number && Number < (int)VTsByNumber.size() &&
-           "ValueType should be uint16_t");
-    assert(!VTsByNumber[Number] && "Duplicate ValueType");
+  unsigned Number = 0;
+  std::vector<const Record *> Defs(
+      Records.getAllDerivedDefinitions("ValueType"));
+  // Emit VTs in the order they were declared so that VTRanges stay contiguous.
+  llvm::sort(Defs, LessRecordByID());
+  for (auto *VT : Defs) {
+    ++Number;
+    assert(Number < VTsByNumber.size() && "ValueType should be uint16_t");
     VTsByNumber[Number] = VT;
   }
 
@@ -120,13 +123,12 @@ void VTEmitter::run(raw_ostream &OS) {
     }
   };
 
-  OS << "#ifdef GET_VT_ATTR // (Ty, n, sz, Any, Int, FP, Vec, Sc, Tup, NF, "
+  OS << "#ifdef GET_VT_ATTR // (Ty, sz, Any, Int, FP, Vec, Sc, Tup, NF, "
         "NElem, EltTy)\n";
   for (const auto *VT : VTsByNumber) {
     if (!VT)
       continue;
     auto Name = VT->getValueAsString("LLVMName");
-    auto Value = VT->getValueAsInt("Value");
     bool IsInteger = VT->getValueAsBit("isInteger");
     bool IsFP = VT->getValueAsBit("isFP");
     bool IsVector = VT->getValueAsBit("isVector");
@@ -158,7 +160,6 @@ void VTEmitter::run(raw_ostream &OS) {
     // clang-format off
     OS << "  GET_VT_ATTR("
        << Name << ", "
-       << Value << ", "
        << VT->getValueAsInt("Size") << ", "
        << VT->getValueAsBit("isOverloaded") << ", "
        << (IsInteger ? Name[0] == 'i' ? 3 : 1 : 0) << ", "

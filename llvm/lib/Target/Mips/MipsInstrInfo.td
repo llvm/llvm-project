@@ -47,7 +47,7 @@ def SDTMipsLoadLR  : SDTypeProfile<1, 2,
                                    [SDTCisInt<0>, SDTCisPtrTy<1>,
                                     SDTCisSameAs<0, 2>]>;
 
-// Call
+// Jump and link (call)
 def MipsJmpLink : SDNode<"MipsISD::JmpLink",SDT_MipsJmpLink,
                          [SDNPHasChain, SDNPOutGlue, SDNPOptInGlue,
                           SDNPVariadic]>;
@@ -63,26 +63,37 @@ def MipsTailCall : SDNode<"MipsISD::TailCall", SDT_MipsJmpLink,
 // Hi is the odd node out, on MIPS64 it can expand to either daddiu when
 // using static relocations with 64 bit symbols, or lui when using 32 bit
 // symbols.
+// Get the Higher (47-32) 16 bits from a 64-bit immediate
 def MipsHigher : SDNode<"MipsISD::Higher", SDTIntUnaryOp>;
+
+// Get the Highest (63-48) 16 bits from a 64-bit immediate
 def MipsHighest : SDNode<"MipsISD::Highest", SDTIntUnaryOp>;
+
+// Get the High 16 bits from a 32/64-bit immediate
+// No relation with Mips Hi register
 def MipsHi    : SDNode<"MipsISD::Hi", SDTIntUnaryOp>;
+
+// Get the Lower 16 bits from a 32/64-bit immediate
+// No relation with Mips Lo register
 def MipsLo    : SDNode<"MipsISD::Lo", SDTIntUnaryOp>;
 
+// Handle gp_rel (small data/bss sections) relocation.
 def MipsGPRel : SDNode<"MipsISD::GPRel", SDTIntUnaryOp>;
 
-// Hi node for accessing the GOT.
+// Get the High 16 bits from a 32 bit immediate for accessing the GOT.
 def MipsGotHi : SDNode<"MipsISD::GotHi", SDTIntUnaryOp>;
 
-// Hi node for handling TLS offsets
+// Get the High 16 bits from a 32-bit immediate for accessing TLS.
 def MipsTlsHi   : SDNode<"MipsISD::TlsHi", SDTIntUnaryOp>;
 
-// Thread pointer
+// Thread Pointer
 def MipsThreadPointer: SDNode<"MipsISD::ThreadPointer", SDT_MipsThreadPointer>;
 
 // Return
 def MipsRet : SDNode<"MipsISD::Ret", SDTNone,
                      [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
 
+// Interrupt, exception, error trap Return
 def MipsERet : SDNode<"MipsISD::ERet", SDTNone,
                       [SDNPHasChain, SDNPOptInGlue, SDNPSideEffect]>;
 
@@ -136,6 +147,7 @@ def MipsExt :  SDNode<"MipsISD::Ext", SDT_Ext>;
 def MipsIns :  SDNode<"MipsISD::Ins", SDT_Ins>;
 def MipsCIns : SDNode<"MipsISD::CIns", SDT_Ext>;
 
+// Load/Store Left/Right nodes.
 def MipsLWL : SDNode<"MipsISD::LWL", SDTMipsLoadLR,
                      [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
 def MipsLWR : SDNode<"MipsISD::LWR", SDTMipsLoadLR,
@@ -854,6 +866,16 @@ def calltarget  : Operand<iPTR> {
 }
 
 def imm64: Operand<i64>;
+
+def ConstantImmAsmOperandClass : AsmOperandClass {
+  let Name = "ConstantImm";
+  let PredicateMethod = "isConstantImm";
+  let RenderMethod = "addImmOperands";
+}
+
+def ConstantImm64: Operand<i64> {
+  let ParserMatchClass = ConstantImmAsmOperandClass;
+}
 
 def simm19_lsl2 : Operand<i32> {
   let EncoderMethod = "getSimm19Lsl2Encoding";
@@ -2323,6 +2345,7 @@ def PseudoReturn : PseudoReturnBase<GPR32Opnd>;
 // the offset and return address respectively.
 def SDT_MipsEHRET : SDTypeProfile<0, 2, [SDTCisInt<0>, SDTCisPtrTy<1>]>;
 
+// Software Exception Return.
 def MIPSehret : SDNode<"MipsISD::EH_RETURN", SDT_MipsEHRET,
                       [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
 
@@ -2947,10 +2970,10 @@ def : MipsInstAlias<"nor\t$rs, $imm", (NORImm GPR32Opnd:$rs, GPR32Opnd:$rs,
 
 let hasDelaySlot = 1, isCTI = 1 in {
 def BneImm : MipsAsmPseudoInst<(outs GPR32Opnd:$rt),
-                               (ins imm64:$imm64, brtarget:$offset),
+                               (ins ConstantImm64:$imm64, brtarget:$offset),
                                "bne\t$rt, $imm64, $offset">;
 def BeqImm : MipsAsmPseudoInst<(outs GPR32Opnd:$rt),
-                               (ins imm64:$imm64, brtarget:$offset),
+                               (ins ConstantImm64:$imm64, brtarget:$offset),
                                "beq\t$rt, $imm64, $offset">;
 
 class CondBranchPseudo<string instr_asm> :
@@ -2978,7 +3001,7 @@ def BGTUL: CondBranchPseudo<"bgtul">, ISA_MIPS2_NOT_32R6_64R6;
 
 let isCTI = 1 in
 class CondBranchImmPseudo<string instr_asm> :
-  MipsAsmPseudoInst<(outs), (ins GPR32Opnd:$rs, imm64:$imm, brtarget:$offset),
+  MipsAsmPseudoInst<(outs), (ins GPR32Opnd:$rs, ConstantImm64:$imm, brtarget:$offset),
                     !strconcat(instr_asm, "\t$rs, $imm, $offset")>;
 
 def BEQLImmMacro : CondBranchImmPseudo<"beql">, ISA_MIPS2_NOT_32R6_64R6;

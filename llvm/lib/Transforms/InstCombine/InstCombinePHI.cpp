@@ -698,8 +698,7 @@ static bool isSafeAndProfitableToSinkLoad(LoadInst *L) {
 Instruction *InstCombinerImpl::foldPHIArgLoadIntoPHI(PHINode &PN) {
   LoadInst *FirstLI = cast<LoadInst>(PN.getIncomingValue(0));
 
-  // Can't forward swifterror through a phi.
-  if (FirstLI->getOperand(0)->isSwiftError())
+  if (!canReplaceOperandWithVariable(FirstLI, 0))
     return nullptr;
 
   // FIXME: This is overconservative; this transform is allowed in some cases
@@ -738,8 +737,7 @@ Instruction *InstCombinerImpl::foldPHIArgLoadIntoPHI(PHINode &PN) {
         LI->getPointerAddressSpace() != LoadAddrSpace)
       return nullptr;
 
-    // Can't forward swifterror through a phi.
-    if (LI->getOperand(0)->isSwiftError())
+    if (!canReplaceOperandWithVariable(LI, 0))
       return nullptr;
 
     // We can't sink the load if the loaded value could be modified between
@@ -1007,7 +1005,7 @@ static bool PHIsEqualValue(PHINode *PN, Value *&NonPhiInVal,
     return true;
 
   // Don't scan crazily complex things.
-  if (ValueEqualPHIs.size() == 16)
+  if (ValueEqualPHIs.size() >= 16)
     return false;
 
   // Scan the operands to see if they are either phi nodes or are equal to
@@ -1069,27 +1067,22 @@ struct LoweredPHIRecord {
 };
 } // namespace
 
-namespace llvm {
-  template<>
-  struct DenseMapInfo<LoweredPHIRecord> {
-    static inline LoweredPHIRecord getEmptyKey() {
-      return LoweredPHIRecord(nullptr, 0);
-    }
-    static inline LoweredPHIRecord getTombstoneKey() {
-      return LoweredPHIRecord(nullptr, 1);
-    }
-    static unsigned getHashValue(const LoweredPHIRecord &Val) {
-      return DenseMapInfo<PHINode*>::getHashValue(Val.PN) ^ (Val.Shift>>3) ^
-             (Val.Width>>3);
-    }
-    static bool isEqual(const LoweredPHIRecord &LHS,
-                        const LoweredPHIRecord &RHS) {
-      return LHS.PN == RHS.PN && LHS.Shift == RHS.Shift &&
-             LHS.Width == RHS.Width;
-    }
-  };
-} // namespace llvm
-
+template <> struct llvm::DenseMapInfo<LoweredPHIRecord> {
+  static inline LoweredPHIRecord getEmptyKey() {
+    return LoweredPHIRecord(nullptr, 0);
+  }
+  static inline LoweredPHIRecord getTombstoneKey() {
+    return LoweredPHIRecord(nullptr, 1);
+  }
+  static unsigned getHashValue(const LoweredPHIRecord &Val) {
+    return DenseMapInfo<PHINode *>::getHashValue(Val.PN) ^ (Val.Shift >> 3) ^
+           (Val.Width >> 3);
+  }
+  static bool isEqual(const LoweredPHIRecord &LHS,
+                      const LoweredPHIRecord &RHS) {
+    return LHS.PN == RHS.PN && LHS.Shift == RHS.Shift && LHS.Width == RHS.Width;
+  }
+};
 
 /// This is an integer PHI and we know that it has an illegal type: see if it is
 /// only used by trunc or trunc(lshr) operations. If so, we split the PHI into

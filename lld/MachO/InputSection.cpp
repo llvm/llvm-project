@@ -348,6 +348,9 @@ WordLiteralInputSection::WordLiteralInputSection(const Section &section,
 }
 
 uint64_t WordLiteralInputSection::getOffset(uint64_t off) const {
+  if (off >= data.size())
+    fatal(toString(this) + ": offset is outside the section");
+
   auto *osec = cast<WordLiteralSection>(parent);
   const uintptr_t buf = reinterpret_cast<uintptr_t>(data.data());
   switch (sectionType(getFlags())) {

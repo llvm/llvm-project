@@ -14,6 +14,7 @@
 
 #include "mlir/Conversion/SCFToGPU/SCFToGPU.h"
 
+#include "mlir/Analysis/AliasAnalysis/LocalAliasAnalysis.h"
 #include "mlir/Conversion/AffineToStandard/AffineToStandard.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
@@ -27,6 +28,7 @@
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/RegionUtils.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/Support/DebugLog.h"
 #include <optional>
 
@@ -419,9 +421,9 @@ static LogicalResult processParallelLoop(
                                   launchIndependent](Value val) -> Value {
     if (launchIndependent(val))
       return val;
-    if (auto constOp = val.getDefiningOp<arith::ConstantOp>())
-      return arith::ConstantOp::create(rewriter, constOp.getLoc(),
-                                       constOp.getValue());
+    if (std::optional<int64_t> constOp = getConstantIntValue(val))
+      return arith::ConstantIndexOp::create(rewriter, val.getLoc(),
+                                            constOp.value());
     return {};
   };
 
@@ -451,10 +453,24 @@ static LogicalResult processParallelLoop(
           1, 2,
           rewriter.getAffineDimExpr(0) * rewriter.getAffineSymbolExpr(0) +
               rewriter.getAffineSymbolExpr(1));
+      // Map through cloningMap first so we use values valid at the launch
+      // scope, then ensure they are launch-independent (or cloned constants).
+      Value mappedStep = cloningMap.lookupOrDefault(step);
+      Value mappedLowerBound = cloningMap.lookupOrDefault(lowerBound);
+
+      mappedStep = ensureLaunchIndependent(mappedStep);
+      mappedLowerBound = ensureLaunchIndependent(mappedLowerBound);
+
+      // If either cannot be made available above the launch, fail gracefully.
+      if (!mappedStep || !mappedLowerBound) {
+        return rewriter.notifyMatchFailure(
+            parallelOp, "lower bound / step must be constant or defined above "
+                        "the gpu.launch");
+      }
+
       newIndex = AffineApplyOp::create(
           rewriter, loc, annotation.getMap().compose(lowerAndStep),
-          ValueRange{operand, ensureLaunchIndependent(step),
-                     ensureLaunchIndependent(lowerBound)});
+          ValueRange{operand, mappedStep, mappedLowerBound});
       // If there was also a bound, insert that, too.
       // TODO: Check that we do not assign bounds twice.
       if (annotation.getBound()) {
@@ -466,17 +482,15 @@ static LogicalResult processParallelLoop(
         // conditional. If the lower-bound is constant or defined before the
         // launch, we can use it in the launch bounds. Otherwise fail.
         if (!launchIndependent(lowerBound) &&
-            !isa_and_nonnull<arith::ConstantOp>(lowerBound.getDefiningOp()))
+            !getConstantIntValue(lowerBound).has_value())
           return failure();
         // The step must also be constant or defined outside of the loop nest.
-        if (!launchIndependent(step) &&
-            !isa_and_nonnull<arith::ConstantOp>(step.getDefiningOp()))
+        if (!launchIndependent(step) && !getConstantIntValue(step).has_value())
           return failure();
         // If the upper-bound is constant or defined before the launch, we can
         // use it in the launch bounds directly. Otherwise try derive a bound.
-        bool boundIsPrecise =
-            launchIndependent(upperBound) ||
-            isa_and_nonnull<arith::ConstantOp>(upperBound.getDefiningOp());
+        bool boundIsPrecise = launchIndependent(upperBound) ||
+                              getConstantIntValue(upperBound).has_value();
         {
           PatternRewriter::InsertionGuard guard(rewriter);
           rewriter.setInsertionPoint(launchOp);
@@ -605,11 +619,10 @@ ParallelToGpuLaunchLowering::matchAndRewrite(ParallelOp parallelOp,
   // Create a launch operation. We start with bound one for all grid/block
   // sizes. Those will be refined later as we discover them from mappings.
   Location loc = parallelOp.getLoc();
-  Value constantOne =
-      arith::ConstantIndexOp::create(rewriter, parallelOp.getLoc(), 1);
-  gpu::LaunchOp launchOp = gpu::LaunchOp::create(
-      rewriter, parallelOp.getLoc(), constantOne, constantOne, constantOne,
-      constantOne, constantOne, constantOne);
+  Value constantOne = arith::ConstantIndexOp::create(rewriter, loc, 1);
+  gpu::LaunchOp launchOp =
+      gpu::LaunchOp::create(rewriter, loc, constantOne, constantOne,
+                            constantOne, constantOne, constantOne, constantOne);
   rewriter.setInsertionPointToEnd(&launchOp.getBody().front());
   gpu::TerminatorOp::create(rewriter, loc);
   rewriter.setInsertionPointToStart(&launchOp.getBody().front());
@@ -625,18 +638,49 @@ ParallelToGpuLaunchLowering::matchAndRewrite(ParallelOp parallelOp,
   bool seenSideeffects = false;
   // Whether we have left a nesting scope (and hence are no longer innermost).
   bool leftNestingScope = false;
+  LocalAliasAnalysis aliasAnalysis;
+  llvm::DenseSet<Value> writtenBuffer;
   while (!worklist.empty()) {
     Operation *op = worklist.pop_back_val();
     // Now walk over the body and clone it.
     // TODO: This is only correct if there either is no further scf.parallel
-    //       nested or this code is side-effect free. Otherwise we might need
-    //       predication. We are overly conservative for now and only allow
-    //       side-effects in the innermost scope.
+    //       nested or this code has side-effect but the memory buffer is not
+    //       alias to inner loop access buffer. Otherwise we might need
+    //       predication.
     if (auto nestedParallel = dyn_cast<ParallelOp>(op)) {
       // Before entering a nested scope, make sure there have been no
-      // sideeffects until now.
-      if (seenSideeffects)
-        return failure();
+      // sideeffects until now or the nested operations do not access the
+      // buffer written by outer scope.
+      if (seenSideeffects) {
+        WalkResult walkRes = nestedParallel.walk([&](Operation *nestedOp) {
+          if (isMemoryEffectFree(nestedOp))
+            return WalkResult::advance();
+
+          auto memEffectInterface = dyn_cast<MemoryEffectOpInterface>(nestedOp);
+          if (!memEffectInterface)
+            return WalkResult::advance();
+
+          SmallVector<MemoryEffects::EffectInstance> effects;
+          memEffectInterface.getEffects(effects);
+          for (const MemoryEffects::EffectInstance &effect : effects) {
+            if (isa<MemoryEffects::Read>(effect.getEffect()) ||
+                isa<MemoryEffects::Write>(effect.getEffect())) {
+              Value baseBuffer = effect.getValue();
+              if (!baseBuffer)
+                return WalkResult::interrupt();
+              for (Value val : writtenBuffer) {
+                if (aliasAnalysis.alias(baseBuffer, val) !=
+                    AliasResult::NoAlias) {
+                  return WalkResult::interrupt();
+                }
+              }
+            }
+          }
+          return WalkResult::advance();
+        });
+        if (walkRes.wasInterrupted())
+          return failure();
+      }
       // A nested scf.parallel needs insertion of code to compute indices.
       // Insert that now. This will also update the worklist with the loops
       // body.
@@ -650,6 +694,7 @@ ParallelToGpuLaunchLowering::matchAndRewrite(ParallelOp parallelOp,
       rewriter.setInsertionPointAfter(parent);
       leftNestingScope = true;
       seenSideeffects = false;
+      writtenBuffer.clear();
     } else if (auto reduceOp = dyn_cast<scf::ReduceOp>(op)) {
       // Convert scf.reduction op
       auto parentLoop = op->getParentOfType<ParallelOp>();
@@ -682,6 +727,24 @@ ParallelToGpuLaunchLowering::matchAndRewrite(ParallelOp parallelOp,
       Operation *clone = rewriter.clone(*op, cloningMap);
       cloningMap.map(op->getResults(), clone->getResults());
       // Check for side effects.
+      if (!isMemoryEffectFree(clone)) {
+        // Record the buffer accessed by the operations with write effects.
+        if (auto memEffectInterface =
+                dyn_cast<MemoryEffectOpInterface>(clone)) {
+          SmallVector<MemoryEffects::EffectInstance> effects;
+          memEffectInterface.getEffects(effects);
+          for (const MemoryEffects::EffectInstance &effect : effects) {
+            if (isa<MemoryEffects::Write>(effect.getEffect())) {
+              Value writtenBase = effect.getValue();
+              // Conservatively return failure if we cannot find the written
+              // address.
+              if (!writtenBase)
+                return failure();
+              writtenBuffer.insert(writtenBase);
+            }
+          }
+        }
+      }
       // TODO: Handle region side effects properly.
       seenSideeffects |=
           !isMemoryEffectFree(clone) || clone->getNumRegions() != 0;

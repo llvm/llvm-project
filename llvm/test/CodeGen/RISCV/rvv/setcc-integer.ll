@@ -405,8 +405,6 @@ define <vscale x 8 x i1> @icmp_ult_vi_nxv8i8_4(<vscale x 8 x i8> %va) {
   ret <vscale x 8 x i1> %vc
 }
 
-declare <vscale x 8 x i8> @llvm.riscv.vmv.v.x.nxv8i8.iXLen(<vscale x 8 x i8>, i8, iXLen);
-
 ; Test that we don't optimize ult x, 0 -> ule x, -1
 define <vscale x 8 x i1> @icmp_ult_vi_nxv8i8_5(<vscale x 8 x i8> %va, iXLen %vl) {
 ; CHECK-LABEL: icmp_ult_vi_nxv8i8_5:

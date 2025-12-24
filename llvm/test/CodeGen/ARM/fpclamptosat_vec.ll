@@ -748,8 +748,8 @@ entry:
   ret <4 x i32> %conv6
 }
 
-define <4 x i32> @utesth_f16i32(<4 x half> %x) {
-; CHECK-NEON-LABEL: utesth_f16i32:
+define <4 x i32> @utest_f16i32(<4 x half> %x) {
+; CHECK-NEON-LABEL: utest_f16i32:
 ; CHECK-NEON:       @ %bb.0: @ %entry
 ; CHECK-NEON-NEXT:    .save {r4, r5, r6, r7, r8, r9, r11, lr}
 ; CHECK-NEON-NEXT:    push {r4, r5, r6, r7, r8, r9, r11, lr}
@@ -821,7 +821,7 @@ define <4 x i32> @utesth_f16i32(<4 x half> %x) {
 ; CHECK-NEON-NEXT:    vpop {d12, d13}
 ; CHECK-NEON-NEXT:    pop {r4, r5, r6, r7, r8, r9, r11, pc}
 ;
-; CHECK-FP16-LABEL: utesth_f16i32:
+; CHECK-FP16-LABEL: utest_f16i32:
 ; CHECK-FP16:       @ %bb.0: @ %entry
 ; CHECK-FP16-NEXT:    .save {r4, r5, r6, r7, r8, r9, r11, lr}
 ; CHECK-FP16-NEXT:    push {r4, r5, r6, r7, r8, r9, r11, lr}
@@ -1366,8 +1366,8 @@ entry:
   ret <8 x i16> %conv6
 }
 
-define <8 x i16> @utesth_f16i16(<8 x half> %x) {
-; CHECK-NEON-LABEL: utesth_f16i16:
+define <8 x i16> @utest_f16i16(<8 x half> %x) {
+; CHECK-NEON-LABEL: utest_f16i16:
 ; CHECK-NEON:       @ %bb.0: @ %entry
 ; CHECK-NEON-NEXT:    .save {r4, r5, r6, r7, r11, lr}
 ; CHECK-NEON-NEXT:    push {r4, r5, r6, r7, r11, lr}
@@ -1441,7 +1441,7 @@ define <8 x i16> @utesth_f16i16(<8 x half> %x) {
 ; CHECK-NEON-NEXT:    vpop {d8, d9, d10, d11, d12, d13, d14}
 ; CHECK-NEON-NEXT:    pop {r4, r5, r6, r7, r11, pc}
 ;
-; CHECK-FP16-LABEL: utesth_f16i16:
+; CHECK-FP16-LABEL: utest_f16i16:
 ; CHECK-FP16:       @ %bb.0: @ %entry
 ; CHECK-FP16-NEXT:    vmovx.f16 s4, s0
 ; CHECK-FP16-NEXT:    vcvt.u32.f16 s12, s0
@@ -2109,8 +2109,8 @@ entry:
   ret <2 x i64> %conv6
 }
 
-define <2 x i64> @utesth_f16i64(<2 x half> %x) {
-; CHECK-NEON-LABEL: utesth_f16i64:
+define <2 x i64> @utest_f16i64(<2 x half> %x) {
+; CHECK-NEON-LABEL: utest_f16i64:
 ; CHECK-NEON:       @ %bb.0: @ %entry
 ; CHECK-NEON-NEXT:    .save {r4, r5, r6, lr}
 ; CHECK-NEON-NEXT:    push {r4, r5, r6, lr}
@@ -2148,7 +2148,7 @@ define <2 x i64> @utesth_f16i64(<2 x half> %x) {
 ; CHECK-NEON-NEXT:    vpop {d8}
 ; CHECK-NEON-NEXT:    pop {r4, r5, r6, pc}
 ;
-; CHECK-FP16-LABEL: utesth_f16i64:
+; CHECK-FP16-LABEL: utest_f16i64:
 ; CHECK-FP16:       @ %bb.0: @ %entry
 ; CHECK-FP16-NEXT:    .save {r4, r5, r6, lr}
 ; CHECK-FP16-NEXT:    push {r4, r5, r6, lr}
@@ -2835,8 +2835,8 @@ entry:
   ret <4 x i32> %conv6
 }
 
-define <4 x i32> @utesth_f16i32_mm(<4 x half> %x) {
-; CHECK-NEON-LABEL: utesth_f16i32_mm:
+define <4 x i32> @utest_f16i32_mm(<4 x half> %x) {
+; CHECK-NEON-LABEL: utest_f16i32_mm:
 ; CHECK-NEON:       @ %bb.0: @ %entry
 ; CHECK-NEON-NEXT:    .save {r4, r5, r6, r7, r11, lr}
 ; CHECK-NEON-NEXT:    push {r4, r5, r6, r7, r11, lr}
@@ -2881,7 +2881,7 @@ define <4 x i32> @utesth_f16i32_mm(<4 x half> %x) {
 ; CHECK-NEON-NEXT:    vpop {d8, d9, d10, d11}
 ; CHECK-NEON-NEXT:    pop {r4, r5, r6, r7, r11, pc}
 ;
-; CHECK-FP16-LABEL: utesth_f16i32_mm:
+; CHECK-FP16-LABEL: utest_f16i32_mm:
 ; CHECK-FP16:       @ %bb.0: @ %entry
 ; CHECK-FP16-NEXT:    .save {r4, r5, r6, lr}
 ; CHECK-FP16-NEXT:    push {r4, r5, r6, lr}
@@ -3344,8 +3344,8 @@ entry:
   ret <8 x i16> %conv6
 }
 
-define <8 x i16> @utesth_f16i16_mm(<8 x half> %x) {
-; CHECK-NEON-LABEL: utesth_f16i16_mm:
+define <8 x i16> @utest_f16i16_mm(<8 x half> %x) {
+; CHECK-NEON-LABEL: utest_f16i16_mm:
 ; CHECK-NEON:       @ %bb.0: @ %entry
 ; CHECK-NEON-NEXT:    .save {r4, r5, r6, r7, r11, lr}
 ; CHECK-NEON-NEXT:    push {r4, r5, r6, r7, r11, lr}
@@ -3419,7 +3419,7 @@ define <8 x i16> @utesth_f16i16_mm(<8 x half> %x) {
 ; CHECK-NEON-NEXT:    vpop {d8, d9, d10, d11, d12, d13, d14}
 ; CHECK-NEON-NEXT:    pop {r4, r5, r6, r7, r11, pc}
 ;
-; CHECK-FP16-LABEL: utesth_f16i16_mm:
+; CHECK-FP16-LABEL: utest_f16i16_mm:
 ; CHECK-FP16:       @ %bb.0: @ %entry
 ; CHECK-FP16-NEXT:    vmovx.f16 s4, s0
 ; CHECK-FP16-NEXT:    vcvt.u32.f16 s12, s0
@@ -4044,8 +4044,8 @@ entry:
   ret <2 x i64> %conv6
 }
 
-define <2 x i64> @utesth_f16i64_mm(<2 x half> %x) {
-; CHECK-NEON-LABEL: utesth_f16i64_mm:
+define <2 x i64> @utest_f16i64_mm(<2 x half> %x) {
+; CHECK-NEON-LABEL: utest_f16i64_mm:
 ; CHECK-NEON:       @ %bb.0: @ %entry
 ; CHECK-NEON-NEXT:    .save {r4, r5, r6, lr}
 ; CHECK-NEON-NEXT:    push {r4, r5, r6, lr}
@@ -4083,7 +4083,7 @@ define <2 x i64> @utesth_f16i64_mm(<2 x half> %x) {
 ; CHECK-NEON-NEXT:    vpop {d8}
 ; CHECK-NEON-NEXT:    pop {r4, r5, r6, pc}
 ;
-; CHECK-FP16-LABEL: utesth_f16i64_mm:
+; CHECK-FP16-LABEL: utest_f16i64_mm:
 ; CHECK-FP16:       @ %bb.0: @ %entry
 ; CHECK-FP16-NEXT:    .save {r4, r5, r6, lr}
 ; CHECK-FP16-NEXT:    push {r4, r5, r6, lr}
@@ -4213,6 +4213,77 @@ entry:
   %spec.store.select7 = call <2 x i128> @llvm.smax.v2i128(<2 x i128> %spec.store.select, <2 x i128> zeroinitializer)
   %conv6 = trunc <2 x i128> %spec.store.select7 to <2 x i64>
   ret <2 x i64> %conv6
+}
+
+; i32 non saturate
+
+define <4 x i32> @ustest_f16i32_nsat(<4 x half> %x) {
+; CHECK-NEON-LABEL: ustest_f16i32_nsat:
+; CHECK-NEON:       @ %bb.0: @ %entry
+; CHECK-NEON-NEXT:    .save {r4, lr}
+; CHECK-NEON-NEXT:    push {r4, lr}
+; CHECK-NEON-NEXT:    .vsave {d8, d9, d10, d11}
+; CHECK-NEON-NEXT:    vpush {d8, d9, d10, d11}
+; CHECK-NEON-NEXT:    vmov r0, s0
+; CHECK-NEON-NEXT:    vmov.f32 s16, s3
+; CHECK-NEON-NEXT:    vmov.f32 s18, s2
+; CHECK-NEON-NEXT:    vmov.f32 s20, s1
+; CHECK-NEON-NEXT:    bl __aeabi_h2f
+; CHECK-NEON-NEXT:    mov r4, r0
+; CHECK-NEON-NEXT:    vmov r0, s16
+; CHECK-NEON-NEXT:    bl __aeabi_h2f
+; CHECK-NEON-NEXT:    vmov s16, r0
+; CHECK-NEON-NEXT:    vmov r0, s18
+; CHECK-NEON-NEXT:    bl __aeabi_h2f
+; CHECK-NEON-NEXT:    vmov s0, r0
+; CHECK-NEON-NEXT:    vmov r1, s20
+; CHECK-NEON-NEXT:    vcvt.s32.f32 s0, s0
+; CHECK-NEON-NEXT:    vmov s18, r4
+; CHECK-NEON-NEXT:    vmov r0, s0
+; CHECK-NEON-NEXT:    vmov.32 d11[0], r0
+; CHECK-NEON-NEXT:    mov r0, r1
+; CHECK-NEON-NEXT:    bl __aeabi_h2f
+; CHECK-NEON-NEXT:    vcvt.s32.f32 s2, s18
+; CHECK-NEON-NEXT:    vmov s0, r0
+; CHECK-NEON-NEXT:    vcvt.s32.f32 s4, s16
+; CHECK-NEON-NEXT:    vcvt.s32.f32 s0, s0
+; CHECK-NEON-NEXT:    vmov.i32 q8, #0x0
+; CHECK-NEON-NEXT:    vmov r0, s2
+; CHECK-NEON-NEXT:    vmov.32 d10[0], r0
+; CHECK-NEON-NEXT:    vmov r0, s4
+; CHECK-NEON-NEXT:    vmov.32 d11[1], r0
+; CHECK-NEON-NEXT:    vmov r0, s0
+; CHECK-NEON-NEXT:    vmov.32 d10[1], r0
+; CHECK-NEON-NEXT:    vmin.s32 q9, q5, q8
+; CHECK-NEON-NEXT:    vmax.s32 q0, q9, q8
+; CHECK-NEON-NEXT:    vpop {d8, d9, d10, d11}
+; CHECK-NEON-NEXT:    pop {r4, pc}
+;
+; CHECK-FP16-LABEL: ustest_f16i32_nsat:
+; CHECK-FP16:       @ %bb.0: @ %entry
+; CHECK-FP16-NEXT:    vmovx.f16 s2, s0
+; CHECK-FP16-NEXT:    vcvt.s32.f16 s6, s0
+; CHECK-FP16-NEXT:    vcvt.s32.f16 s0, s1
+; CHECK-FP16-NEXT:    vmovx.f16 s4, s1
+; CHECK-FP16-NEXT:    vmov r0, s0
+; CHECK-FP16-NEXT:    vcvt.s32.f16 s4, s4
+; CHECK-FP16-NEXT:    vcvt.s32.f16 s2, s2
+; CHECK-FP16-NEXT:    vmov.i32 q9, #0x0
+; CHECK-FP16-NEXT:    vmov.32 d17[0], r0
+; CHECK-FP16-NEXT:    vmov r0, s6
+; CHECK-FP16-NEXT:    vmov.32 d16[0], r0
+; CHECK-FP16-NEXT:    vmov r0, s4
+; CHECK-FP16-NEXT:    vmov.32 d17[1], r0
+; CHECK-FP16-NEXT:    vmov r0, s2
+; CHECK-FP16-NEXT:    vmov.32 d16[1], r0
+; CHECK-FP16-NEXT:    vmin.s32 q8, q8, q9
+; CHECK-FP16-NEXT:    vmax.s32 q0, q8, q9
+; CHECK-FP16-NEXT:    bx lr
+entry:
+  %conv = fptosi <4 x half> %x to <4 x i32>
+  %spec.store.select = call <4 x i32> @llvm.smin.v4i32(<4 x i32> zeroinitializer, <4 x i32> %conv)
+  %spec.store.select7 = call <4 x i32> @llvm.smax.v4i32(<4 x i32> %spec.store.select, <4 x i32> zeroinitializer)
+  ret <4 x i32> %spec.store.select7
 }
 
 declare <2 x i32> @llvm.smin.v2i32(<2 x i32>, <2 x i32>)

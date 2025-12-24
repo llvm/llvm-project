@@ -674,10 +674,8 @@ define <4 x i32> @isUndefDeInterleave_t1_bad(<8 x i16> %a) {
 define i16 @undeftop(<8 x i16> %0) {
 ; CHECK-LABEL: undeftop:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    dup v0.8h, v0.h[4]
-; CHECK-NEXT:    uaddl v0.4s, v0.4h, v0.4h
-; CHECK-NEXT:    xtn v0.4h, v0.4s
-; CHECK-NEXT:    umov w0, v0.h[0]
+; CHECK-NEXT:    add v0.8h, v0.8h, v0.8h
+; CHECK-NEXT:    umov w0, v0.h[4]
 ; CHECK-NEXT:    ret
   %2 = shufflevector <8 x i16> %0, <8 x i16> zeroinitializer, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 9, i32 7, i32 5, i32 3>
   %3 = zext <8 x i16> %2 to <8 x i64>

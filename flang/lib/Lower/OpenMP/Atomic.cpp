@@ -20,6 +20,7 @@
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Parser/parse-tree.h"
+#include "flang/Semantics/openmp-utils.h"
 #include "flang/Semantics/semantics.h"
 #include "flang/Semantics/type.h"
 #include "flang/Support/Fortran.h"
@@ -183,12 +184,8 @@ getMemoryOrderFromRequires(const semantics::Scope &scope) {
   // scope.
   // For safety, traverse all enclosing scopes and check if their symbol
   // contains REQUIRES.
-  for (const auto *sc{&scope}; sc->kind() != semantics::Scope::Kind::Global;
-       sc = &sc->parent()) {
-    const semantics::Symbol *sym = sc->symbol();
-    if (!sym)
-      continue;
-
+  const semantics::Scope &unitScope = semantics::omp::GetProgramUnit(scope);
+  if (auto *symbol = unitScope.symbol()) {
     const common::OmpMemoryOrderType *admo = common::visit(
         [](auto &&s) {
           using WithOmpDeclarative = semantics::WithOmpDeclarative;
@@ -198,7 +195,8 @@ getMemoryOrderFromRequires(const semantics::Scope &scope) {
           }
           return static_cast<const common::OmpMemoryOrderType *>(nullptr);
         },
-        sym->details());
+        symbol->details());
+
     if (admo)
       return getMemoryOrderKind(*admo);
   }
@@ -214,19 +212,83 @@ getDefaultAtomicMemOrder(semantics::SemanticsContext &semaCtx) {
   return std::nullopt;
 }
 
-static std::optional<mlir::omp::ClauseMemoryOrderKind>
+static std::pair<std::optional<mlir::omp::ClauseMemoryOrderKind>, bool>
 getAtomicMemoryOrder(semantics::SemanticsContext &semaCtx,
                      const omp::List<omp::Clause> &clauses,
                      const semantics::Scope &scope) {
   for (const omp::Clause &clause : clauses) {
     if (auto maybeKind = getMemoryOrderKind(clause.id))
-      return *maybeKind;
+      return std::make_pair(*maybeKind, /*canOverride=*/false);
   }
 
   if (auto maybeKind = getMemoryOrderFromRequires(scope))
-    return *maybeKind;
+    return std::make_pair(*maybeKind, /*canOverride=*/true);
 
-  return getDefaultAtomicMemOrder(semaCtx);
+  return std::make_pair(getDefaultAtomicMemOrder(semaCtx),
+                        /*canOverride=*/false);
+}
+
+static std::optional<mlir::omp::ClauseMemoryOrderKind>
+makeValidForAction(std::optional<mlir::omp::ClauseMemoryOrderKind> memOrder,
+                   int action0, int action1, unsigned version) {
+  // When the atomic default memory order specified on a REQUIRES directive is
+  // disallowed on a given ATOMIC operation, and it's not ACQ_REL, the order
+  // reverts to RELAXED. ACQ_REL decays to either ACQUIRE or RELEASE, depending
+  // on the operation.
+
+  if (!memOrder) {
+    return memOrder;
+  }
+
+  using Analysis = parser::OpenMPAtomicConstruct::Analysis;
+  // Figure out the main action (i.e. disregard a potential capture operation)
+  int action = action0;
+  if (action1 != Analysis::None)
+    action = action0 == Analysis::Read ? action1 : action0;
+
+  // Avaliable orderings: acquire, acq_rel, relaxed, release, seq_cst
+
+  if (action == Analysis::Read) {
+    // "acq_rel" decays to "acquire"
+    if (*memOrder == mlir::omp::ClauseMemoryOrderKind::Acq_rel)
+      return mlir::omp::ClauseMemoryOrderKind::Acquire;
+  } else if (action == Analysis::Write) {
+    // "acq_rel" decays to "release"
+    if (*memOrder == mlir::omp::ClauseMemoryOrderKind::Acq_rel)
+      return mlir::omp::ClauseMemoryOrderKind::Release;
+  }
+
+  if (version > 50) {
+    if (action == Analysis::Read) {
+      // "release" prohibited
+      if (*memOrder == mlir::omp::ClauseMemoryOrderKind::Release)
+        return mlir::omp::ClauseMemoryOrderKind::Relaxed;
+    }
+    if (action == Analysis::Write) {
+      // "acquire" prohibited
+      if (*memOrder == mlir::omp::ClauseMemoryOrderKind::Acquire)
+        return mlir::omp::ClauseMemoryOrderKind::Relaxed;
+    }
+  } else {
+    if (action == Analysis::Read) {
+      // "release" prohibited
+      if (*memOrder == mlir::omp::ClauseMemoryOrderKind::Release)
+        return mlir::omp::ClauseMemoryOrderKind::Relaxed;
+    } else {
+      if (action & Analysis::Write) { // include "update"
+        // "acquire" prohibited
+        if (*memOrder == mlir::omp::ClauseMemoryOrderKind::Acquire)
+          return mlir::omp::ClauseMemoryOrderKind::Relaxed;
+        if (action == Analysis::Update) {
+          // "acq_rel" prohibited
+          if (*memOrder == mlir::omp::ClauseMemoryOrderKind::Acq_rel)
+            return mlir::omp::ClauseMemoryOrderKind::Relaxed;
+        }
+      }
+    }
+  }
+
+  return memOrder;
 }
 
 static mlir::omp::ClauseMemoryOrderKindAttr
@@ -449,16 +511,19 @@ void Fortran::lower::omp::lowerAtomic(
   mlir::Value atomAddr =
       fir::getBase(converter.genExprAddr(atom, stmtCtx, &loc));
   mlir::IntegerAttr hint = getAtomicHint(converter, clauses);
-  std::optional<mlir::omp::ClauseMemoryOrderKind> memOrder =
-      getAtomicMemoryOrder(semaCtx, clauses,
-                           semaCtx.FindScope(construct.source));
+  auto [memOrder, canOverride] = getAtomicMemoryOrder(
+      semaCtx, clauses, semaCtx.FindScope(construct.source));
+
+  unsigned version = semaCtx.langOptions().OpenMPVersion;
+  int action0 = analysis.op0.what & analysis.Action;
+  int action1 = analysis.op1.what & analysis.Action;
+  if (canOverride)
+    memOrder = makeValidForAction(memOrder, action0, action1, version);
 
   if (auto *cond = get(analysis.cond)) {
     (void)cond;
     TODO(loc, "OpenMP ATOMIC COMPARE");
   } else {
-    int action0 = analysis.op0.what & analysis.Action;
-    int action1 = analysis.op1.what & analysis.Action;
     mlir::Operation *captureOp = nullptr;
     fir::FirOpBuilder::InsertPoint preAt = builder.saveInsertionPoint();
     fir::FirOpBuilder::InsertPoint atomicAt, postAt;

@@ -22,8 +22,8 @@ mlir::Value CIRGenBuilderTy::maybeBuildArrayDecay(mlir::Location loc,
 
   if (arrayTy) {
     const cir::PointerType flatPtrTy = getPointerTo(arrayTy.getElementType());
-    return create<cir::CastOp>(loc, flatPtrTy, cir::CastKind::array_to_ptrdecay,
-                               arrayPtr);
+    return cir::CastOp::create(*this, loc, flatPtrTy,
+                               cir::CastKind::array_to_ptrdecay, arrayPtr);
   }
 
   assert(arrayPtrTy.getPointee() == eltTy &&
@@ -36,11 +36,24 @@ mlir::Value CIRGenBuilderTy::getArrayElement(mlir::Location arrayLocBegin,
                                              mlir::Value arrayPtr,
                                              mlir::Type eltTy, mlir::Value idx,
                                              bool shouldDecay) {
+  auto arrayPtrTy = mlir::dyn_cast<cir::PointerType>(arrayPtr.getType());
+  assert(arrayPtrTy && "expected pointer type");
+  // If the array pointer is not decayed, emit a GetElementOp.
+  auto arrayTy = mlir::dyn_cast<cir::ArrayType>(arrayPtrTy.getPointee());
+
+  if (shouldDecay && arrayTy && arrayTy == eltTy) {
+    auto eltPtrTy =
+        getPointerTo(arrayTy.getElementType(), arrayPtrTy.getAddrSpace());
+    return cir::GetElementOp::create(*this, arrayLocEnd, eltPtrTy, arrayPtr,
+                                     idx);
+  }
+
+  // If we don't have sufficient type information, emit a PtrStrideOp.
   mlir::Value basePtr = arrayPtr;
   if (shouldDecay)
     basePtr = maybeBuildArrayDecay(arrayLocBegin, arrayPtr, eltTy);
   const mlir::Type flatPtrTy = basePtr.getType();
-  return create<cir::PtrStrideOp>(arrayLocEnd, flatPtrTy, basePtr, idx);
+  return cir::PtrStrideOp::create(*this, arrayLocEnd, flatPtrTy, basePtr, idx);
 }
 
 cir::ConstantOp CIRGenBuilderTy::getConstInt(mlir::Location loc,
@@ -53,21 +66,22 @@ cir::ConstantOp CIRGenBuilderTy::getConstInt(mlir::Location loc,
 }
 
 cir::ConstantOp CIRGenBuilderTy::getConstInt(mlir::Location loc,
-                                             llvm::APInt intVal) {
-  return getConstInt(loc, llvm::APSInt(intVal));
+                                             llvm::APInt intVal,
+                                             bool isUnsigned) {
+  return getConstInt(loc, llvm::APSInt(intVal, isUnsigned));
 }
 
 cir::ConstantOp CIRGenBuilderTy::getConstInt(mlir::Location loc, mlir::Type t,
                                              uint64_t c) {
   assert(mlir::isa<cir::IntType>(t) && "expected cir::IntType");
-  return create<cir::ConstantOp>(loc, cir::IntAttr::get(t, c));
+  return cir::ConstantOp::create(*this, loc, cir::IntAttr::get(t, c));
 }
 
 cir::ConstantOp
 clang::CIRGen::CIRGenBuilderTy::getConstFP(mlir::Location loc, mlir::Type t,
                                            llvm::APFloat fpVal) {
   assert(mlir::isa<cir::FPTypeInterface>(t) && "expected floating point type");
-  return create<cir::ConstantOp>(loc, cir::FPAttr::get(t, fpVal));
+  return cir::ConstantOp::create(*this, loc, cir::FPAttr::get(t, fpVal));
 }
 
 void CIRGenBuilderTy::computeGlobalViewIndicesFromFlatOffset(

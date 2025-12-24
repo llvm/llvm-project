@@ -85,6 +85,19 @@ static cl::opt<bool> EnableMemProfIndirectCallSupport(
     cl::desc(
         "Enable MemProf support for summarizing and cloning indirect calls"));
 
+// This can be used to override the number of callees created from VP metadata
+// normally taken from the -icp-max-prom option with a larger amount, if useful
+// for analysis. Use a separate option so that we can control the number of
+// indirect callees for ThinLTO summary based analysis (e.g. for MemProf which
+// needs this information for a correct and not overly-conservative callsite
+// graph analysis, especially because allocation contexts may not be very
+// frequent), without affecting normal ICP.
+cl::opt<unsigned>
+    MaxSummaryIndirectEdges("module-summary-max-indirect-edges", cl::init(0),
+                            cl::Hidden,
+                            cl::desc("Max number of summary edges added from "
+                                     "indirect call profile metadata"));
+
 LLVM_ABI extern cl::opt<bool> ScalePartialSampleProfileWorkingSetSize;
 
 extern cl::opt<unsigned> MaxNumVTableAnnotations;
@@ -494,8 +507,8 @@ static void computeFunctionSummary(
         }
 
         CandidateProfileData =
-            ICallAnalysis.getPromotionCandidatesForInstruction(&I, TotalCount,
-                                                               NumCandidates);
+            ICallAnalysis.getPromotionCandidatesForInstruction(
+                &I, TotalCount, NumCandidates, MaxSummaryIndirectEdges);
         for (const auto &Candidate : CandidateProfileData)
           CallGraphEdges[Index.getOrInsertValueInfo(Candidate.Value)]
               .updateHotness(getHotness(Candidate.Count, PSI));
@@ -1100,12 +1113,12 @@ ModuleSummaryIndex llvm::buildModuleSummaryIndex(
 
   for (auto &GlobalList : Index) {
     // Ignore entries for references that are undefined in the current module.
-    if (GlobalList.second.SummaryList.empty())
+    if (GlobalList.second.getSummaryList().empty())
       continue;
 
-    assert(GlobalList.second.SummaryList.size() == 1 &&
+    assert(GlobalList.second.getSummaryList().size() == 1 &&
            "Expected module's index to have one summary per GUID");
-    auto &Summary = GlobalList.second.SummaryList[0];
+    auto &Summary = GlobalList.second.getSummaryList()[0];
     if (!IsThinLTO) {
       Summary->setNotEligibleToImport();
       continue;

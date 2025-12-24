@@ -15,6 +15,7 @@
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/ROCDLDialect.h"
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/MemRef/Utils/MemRefUtils.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
@@ -26,6 +27,7 @@
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
+#include "mlir/Transforms/InliningUtils.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/TypeSwitch.h"
@@ -40,15 +42,29 @@ using namespace mlir::amdgpu;
 
 #include "mlir/Dialect/AMDGPU/IR/AMDGPUDialect.cpp.inc"
 
+namespace {
+struct AMDGPUInlinerInterface final : DialectInlinerInterface {
+  using DialectInlinerInterface::DialectInlinerInterface;
+  bool isLegalToInline(Operation *, Region *, bool, IRMapping &) const final {
+    return true;
+  }
+};
+} // namespace
+
 void AMDGPUDialect::initialize() {
   addOperations<
 #define GET_OP_LIST
 #include "mlir/Dialect/AMDGPU/IR/AMDGPU.cpp.inc"
       >();
+  addTypes<
+#define GET_TYPEDEF_LIST
+#include "mlir/Dialect/AMDGPU/IR/AMDGPUTypes.cpp.inc"
+      >();
   addAttributes<
 #define GET_ATTRDEF_LIST
 #include "mlir/Dialect/AMDGPU/IR/AMDGPUAttributes.cpp.inc"
       >();
+  addInterfaces<AMDGPUInlinerInterface>();
 }
 
 //===----------------------------------------------------------------------===//
@@ -129,6 +145,18 @@ LogicalResult FatRawBufferCastOp::inferReturnTypes(
     return failure();
   inferredReturnTypes = SmallVector<Type>{*resultType};
   return success();
+}
+
+FailureOr<OpFoldResult> FatRawBufferCastOp::reifyDimOfResult(OpBuilder &builder,
+                                                             int resultIndex,
+                                                             int dim) {
+  assert(resultIndex == 0 && "FatRawBufferCastOp has a single result");
+  Value source = getSource();
+  auto sourceType = cast<MemRefType>(source.getType());
+  if (sourceType.isDynamicDim(dim))
+    return OpFoldResult(
+        builder.createOrFold<memref::DimOp>(getLoc(), source, dim));
+  return OpFoldResult(builder.getIndexAttr(sourceType.getDimSize(dim)));
 }
 
 LogicalResult FatRawBufferCastOp::verify() {
@@ -328,48 +356,200 @@ void RawBufferAtomicCmpswapOp::getCanonicalizationPatterns(
 }
 
 //===----------------------------------------------------------------------===//
+// ScaledExtPackedMatrixOp
+//===----------------------------------------------------------------------===//
+LogicalResult ScaledExtPackedMatrixOp::verify() {
+  int blockSize = getBlockSize();
+  assert(llvm::is_contained({16, 32}, blockSize) && "invalid block size");
+
+  int firstScaleByte = getFirstScaleByte();
+  int firstScaleLane = getFirstScaleLane();
+  auto sourceType = cast<VectorType>(getSource().getType());
+  Type elementType = sourceType.getElementType();
+  auto floatType = cast<FloatType>(elementType);
+  unsigned bitWidth = floatType.getWidth();
+
+  assert(llvm::is_contained(llvm::ArrayRef<unsigned>{4, 6, 8}, bitWidth));
+
+  const bool is_fp8 = bitWidth == 8;
+  const bool is_block_16 = blockSize == 16;
+
+  if (!is_fp8) {
+    if (is_block_16) {
+      if (!llvm::is_contained({0, 1}, firstScaleByte)) {
+        return emitOpError("blockSize of 16 can only have firstScaleByte be 0 "
+                           "or 1 for f4 and f6.");
+      }
+    } else {
+      if (!llvm::is_contained({0, 2}, firstScaleByte)) {
+        return emitOpError("blockSize of 32 can only have firstScaleByte be 0 "
+                           "or 2 for f4 and f6.");
+      }
+    }
+  } else {
+    if (is_block_16) {
+      bool is_valid = ((firstScaleLane == 0) && (firstScaleByte == 0)) ||
+                      ((firstScaleLane == 16) && (firstScaleByte == 2));
+      if (!is_valid) {
+        return emitOpError("blockSize of 16 can only have (firstScaleLane, "
+                           "firstScaleByte) be (0, 0) or (16, 2) for f8.");
+      }
+    }
+  }
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // WMMAOp
 //===----------------------------------------------------------------------===//
+
+ParseResult mlir::amdgpu::parseMNKDimensionList(OpAsmParser &parser,
+                                                IntegerAttr &m, IntegerAttr &n,
+                                                IntegerAttr &k) {
+  SmallVector<int64_t, 3> dimensions;
+  if (parser.parseDimensionList(dimensions, false, false))
+    return failure();
+  if (dimensions.size() != 3)
+    return parser.emitError(parser.getCurrentLocation())
+           << "expected 3 dimensions in MNK dimension list";
+
+  m = parser.getBuilder().getI32IntegerAttr(dimensions[0]);
+  n = parser.getBuilder().getI32IntegerAttr(dimensions[1]);
+  k = parser.getBuilder().getI32IntegerAttr(dimensions[2]);
+  return success();
+}
+
 LogicalResult WMMAOp::verify() {
-  Type sourceAType = getSourceA().getType();
-  Type sourceBType = getSourceB().getType();
-  Type destType = getDestC().getType();
+  auto sourceAType = cast<VectorType>(getSourceA().getType());
+  auto sourceBType = cast<VectorType>(getSourceB().getType());
+  auto destType = cast<VectorType>(getDestC().getType());
 
-  VectorType sourceVectorAType = dyn_cast<VectorType>(sourceAType);
-  VectorType sourceVectorBType = dyn_cast<VectorType>(sourceBType);
-  VectorType destVectorType = dyn_cast<VectorType>(destType);
-
-  Type sourceAElemType = sourceVectorAType.getElementType();
-  Type sourceBElemType = sourceVectorBType.getElementType();
-  Type destElemType = destVectorType.getElementType();
-
-  if (sourceVectorAType.getNumElements() !=
-      sourceVectorBType.getNumElements()) {
+  Type sourceAElemType = sourceAType.getElementType();
+  Type sourceBElemType = sourceBType.getElementType();
+  if (sourceAType.getNumElements() != sourceBType.getNumElements()) {
     return emitOpError("source vectors have different lengths: ")
-           << sourceVectorAType << " vs. " << sourceVectorBType;
+           << sourceAType << " vs. " << sourceBType;
   }
 
-  bool isDestFloat = isa<Float32Type, Float16Type, BFloat16Type>(destElemType);
-  bool isSrcFloat =
-      isa<Float16Type, BFloat16Type, Float8E4M3FNType, Float8E5M2Type>(
-          sourceAElemType);
+  bool isDestFloat = destType.getElementType().isFloat();
+  bool isSrcFloat = sourceAElemType.isFloat();
 
-  if (isDestFloat && !isSrcFloat) {
-    return emitOpError("Expected float sources with float destination");
-  }
+  if (isDestFloat && !isSrcFloat)
+    return emitOpError("expected float sources with float destination");
+  if (!isDestFloat && isSrcFloat)
+    return emitOpError("expected int sources with int destination");
 
-  if (!isDestFloat && isSrcFloat) {
-    return emitOpError("Expected int sources with int destination");
-  }
-
-  if (sourceAElemType != sourceBElemType &&
-      !(isa<Float8E5M2Type, Float8E4M3FNType>(sourceAElemType) &&
-        isa<Float8E5M2Type, Float8E4M3FNType>(sourceBElemType))) {
+  if (!sourceAElemType.isFloat(8) && sourceAElemType != sourceBElemType) {
     return emitOpError(
-               "source element types much match (except for fp8) but have ")
+               "source element types must match (except for fp8/bf8) but have ")
            << sourceAType << " and " << sourceBType;
   }
+
+  if (isSrcFloat) {
+    if (getClamp())
+      return emitOpError("clamp flag is not supported for float types");
+    if (getUnsignedA() || getUnsignedB())
+      return emitOpError("unsigned flags are not supported for float types");
+  }
   return success();
+}
+
+//===----------------------------------------------------------------------===//
+// ScaledWMMAOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult ScaledWMMAOp::verify() {
+  // Helper functions for type classification.
+  auto isF8 = llvm::IsaPred<Float8E4M3FNType, Float8E5M2Type>;
+  auto isF6 = llvm::IsaPred<Float6E2M3FNType, Float6E3M2FNType>;
+  auto isF4 = llvm::IsaPred<Float4E2M1FNType>;
+  auto isScaleF8 = llvm::IsaPred<Float8E8M0FNUType, Float8E4M3FNType>;
+  auto isE8M0 = llvm::IsaPred<Float8E8M0FNUType>;
+  auto isE4M3 = llvm::IsaPred<Float8E4M3FNType>;
+
+  auto sourceAType = cast<VectorType>(getSourceA().getType());
+  auto sourceBType = cast<VectorType>(getSourceB().getType());
+  auto destType = cast<VectorType>(getDestC().getType());
+
+  // Validate source element types are small floats (fp4/fp6/fp8).
+  Type aElemType = sourceAType.getElementType();
+  Type bElemType = sourceBType.getElementType();
+
+  // Validate vector lengths based on dimensions.
+  int64_t m = getM();
+  int64_t aLen = sourceAType.getNumElements();
+  int64_t bLen = sourceBType.getNumElements();
+  int64_t expectedOutLen = (m == 16) ? 8 : 16;
+
+  if (destType.getNumElements() != expectedOutLen)
+    return emitOpError("expected output vector of length ")
+           << expectedOutLen << " but got " << destType.getNumElements();
+
+  if (m == 16) {
+    // For 16×16×128: both A and B must be 64 elements.
+    if (aLen != 64)
+      return emitOpError(
+                 "for 16x16x128, sourceA must have 64 elements but got ")
+             << aLen;
+    if (bLen != 64)
+      return emitOpError(
+                 "for 16x16x128, sourceB must have 64 elements but got ")
+             << bLen;
+  } else { // m == 32
+    // For 32×16×128: only fp4 is supported, A is 128, B is 64.
+    if (!isF4(aElemType) && !isF4(bElemType))
+      return emitOpError("32x16x128 only supports fp4 element types");
+
+    if (aLen != 128)
+      return emitOpError(
+                 "for 32x16x128, sourceA must have 128 elements but got ")
+             << aLen;
+    if (bLen != 64)
+      return emitOpError(
+                 "for 32x16x128, sourceB must have 64 elements but got ")
+             << bLen;
+
+    // For 32x16x128, matrix A uses all 32 lanes so a_first_scale_lane must be
+    // 0.
+    if (getAFirstScaleLane() != 0)
+      return emitOpError("for 32x16x128, a_first_scale_lane must be 0");
+  }
+
+  // Validate scale types and their compatibility with matrix element types.
+  auto scaleAType = cast<VectorType>(getScaleA().getType());
+  auto scaleBType = cast<VectorType>(getScaleB().getType());
+  Type scaleAElemType = scaleAType.getElementType();
+  Type scaleBElemType = scaleBType.getElementType();
+
+  // Validate scale element types are valid scale f8 types (E8M0FNU or E4M3FN).
+  if (!isScaleF8(scaleAElemType) || !isScaleF8(scaleBElemType))
+    return emitOpError(
+        "scale operands must have f8 element types (E8M0FNU or E4M3FN)");
+
+  // Any matrices A/B (fp8|fp6|fp4) with E8M0 scales for matrix A/B are valid.
+  if (isE8M0(scaleAElemType) && isE8M0(scaleBElemType))
+    return success();
+
+  // Matrix A (F8|F6) x Matrix B (F4) with Scale A (E8M0), Scale B (E5M3|E4M3).
+  if ((isF8(aElemType) || isF6(aElemType)) && isE8M0(scaleAElemType) &&
+      isF4(bElemType) && isE4M3(scaleBElemType))
+    return success();
+
+  // Matrix A (F4) x Matrix B (F8|F6) with Scale A (E5M3|E4M3), Scale B (E8M0).
+  if (isF4(aElemType) && isE4M3(scaleAElemType) &&
+      (isF8(bElemType) || isF6(bElemType)) && isE8M0(scaleBElemType))
+    return success();
+
+  // Matrix A (F4) x Matrix B (F4) with Scale A (E4M3), Scale B (E4M3).
+  if (isF4(aElemType) && isF4(bElemType) && isE4M3(scaleAElemType) &&
+      isE4M3(scaleBElemType))
+    return success();
+
+  // No valid combination matched.
+  return emitOpError("invalid combination of matrix and scale types: ")
+         << "sourceA=" << aElemType << ", scaleA=" << scaleAElemType
+         << ", sourceB=" << bElemType << ", scaleB=" << scaleBElemType;
 }
 
 //===----------------------------------------------------------------------===//
@@ -384,11 +564,11 @@ LogicalResult MFMAOp::verify() {
 
   Type sourceElem = sourceType, destElem = destType;
   uint32_t sourceLen = 1, destLen = 1;
-  if (auto sourceVector = llvm::dyn_cast<VectorType>(sourceType)) {
+  if (auto sourceVector = dyn_cast<VectorType>(sourceType)) {
     sourceLen = sourceVector.getNumElements();
     sourceElem = sourceVector.getElementType();
   }
-  if (auto destVector = llvm::dyn_cast<VectorType>(destType)) {
+  if (auto destVector = dyn_cast<VectorType>(destType)) {
     destLen = destVector.getNumElements();
     destElem = destVector.getElementType();
   }
@@ -413,7 +593,7 @@ LogicalResult MFMAOp::verify() {
       return emitOpError("expected both non-small-float source operand types "
                          "to match exactly");
   }
-  // Normalize the wider integer types the compiler expects to i8
+  // Normalize the wider integer types the compiler expects to i8.
   if (sourceElem.isInteger(32)) {
     sourceLen *= 4;
     sourceElem = b.getI8Type();
@@ -448,6 +628,78 @@ LogicalResult MFMAOp::verify() {
   if ((getNegateA() || getNegateB() || getNegateC()) && !destElem.isF64())
     return emitOpError(
         "negation flags only available for double-precision operations");
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// SparseMFMAOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult SparseMFMAOp::verify() {
+  constexpr uint32_t waveSize = 64;
+
+  auto sparseType = cast<VectorType>(getSourceA().getType());
+  auto denseType = cast<VectorType>(getSourceB().getType());
+  auto destType = cast<VectorType>(getDestC().getType());
+
+  Type sparseElem = sparseType.getElementType();
+  Type denseElem = denseType.getElementType();
+  int64_t sparseLen = sparseType.getNumElements();
+  int64_t denseLen = denseType.getNumElements();
+  int64_t destLen = destType.getNumElements();
+
+  if (denseLen != 2 * sparseLen)
+    return emitOpError("expected dense source operand to have exactly double "
+                       "the number of elements of the sparse source operand");
+
+  // Check that source element types are compatible.
+  // For fp8/bf8 mixed operations, element types can differ (e.g., fp8 * bf8).
+  // For other types, element types must match exactly.
+  bool bothFloat8 = sparseElem.isFloat(8) && denseElem.isFloat(8);
+  if (!bothFloat8 && sparseElem != denseElem)
+    return emitOpError(
+        "expected source operands to have the same element type");
+
+  // When CBSZ == 0, ABID selects the index set within the sparse index VGPR.
+  // When CBSZ != 0, the first index set is always used (ABID ignored).
+  bool is8BitSource = sparseElem.isFloat(8) || sparseElem.isInteger(8);
+  // 8-bit source: ABID selects one of two 16-bit index sets.
+  if (getCbsz() == 0 && is8BitSource && getAbid() > 1)
+    return emitOpError("ABID must be 0 or 1 for 8-bit source data");
+  // 16-bit source: ABID selects one of four 8-bit index sets (0-3 all valid).
+  if (getCbsz() == 0 && !is8BitSource && getAbid() > 3)
+    return emitOpError("ABID must be between 0 and 3 for 16-bit source data");
+
+  // Validate sparseIdx type matches source element type.
+  auto sparseIdxType = cast<VectorType>(getSparseIdx().getType());
+  if (is8BitSource) {
+    // 8-bit source data requires vector<2xi16> sparse indices.
+    if (sparseIdxType.getNumElements() != 2 ||
+        !sparseIdxType.getElementType().isInteger(16))
+      return emitOpError("expected vector<2xi16> sparse indices for 8-bit "
+                         "source data, but got ")
+             << getSparseIdx().getType();
+  } else {
+    // 16-bit source data requires vector<4xi8> sparse indices.
+    if (sparseIdxType.getNumElements() != 4 ||
+        !sparseIdxType.getElementType().isInteger(8))
+      return emitOpError("expected vector<4xi8> sparse indices for 16-bit "
+                         "source data, but got ")
+             << getSparseIdx().getType();
+  }
+
+  int64_t expectedSourceElems = (getM() * getK()) / waveSize;
+  if (denseLen != expectedSourceElems)
+    return emitOpError("expected " + Twine(expectedSourceElems) +
+                       " source values for this operation but got " +
+                       Twine(denseLen));
+
+  int64_t expectedDestElems = (getM() * getN()) / waveSize;
+  if (destLen != expectedDestElems)
+    return emitOpError("expected " + Twine(expectedDestElems) +
+                       " result values for this operation but got " +
+                       Twine(destLen));
 
   return success();
 }
@@ -527,6 +779,53 @@ LogicalResult PermlaneSwapOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// MemoryCounterWaitOp
+//===----------------------------------------------------------------------===//
+
+namespace {
+/// Fuse adjacent memory counter wait ops, taking the minimum value of the
+/// counters.
+struct FuseMemoryCounterWaitOp final : OpRewritePattern<MemoryCounterWaitOp> {
+  using Base::Base;
+
+  LogicalResult matchAndRewrite(MemoryCounterWaitOp op,
+                                PatternRewriter &rewriter) const override {
+    auto next = dyn_cast<MemoryCounterWaitOp>(op->getNextNode());
+    if (!next)
+      return failure();
+
+    auto setters = {&MemoryCounterWaitOp::setLoad,
+                    &MemoryCounterWaitOp::setStore, &MemoryCounterWaitOp::setDs,
+                    &MemoryCounterWaitOp::setExp,
+                    &MemoryCounterWaitOp::setTensor};
+    auto lhsVals = {op.getLoad(), op.getStore(), op.getDs(), op.getExp(),
+                    op.getTensor()};
+    auto rhsVals = {next.getLoad(), next.getStore(), next.getDs(),
+                    next.getExp(), next.getTensor()};
+    rewriter.modifyOpInPlace(op, [&] {
+      for (auto [setter, lhs, rhs] :
+           llvm::zip_equal(setters, lhsVals, rhsVals)) {
+        if (lhs && rhs) {
+          (op.*setter)(std::min(*lhs, *rhs));
+        } else if (lhs) {
+          (op.*setter)(*lhs);
+        } else if (rhs) {
+          (op.*setter)(*rhs);
+        }
+      }
+    });
+    rewriter.eraseOp(next);
+    return success();
+  }
+};
+} // namespace
+
+void MemoryCounterWaitOp::getCanonicalizationPatterns(
+    RewritePatternSet &results, MLIRContext *context) {
+  results.add<FuseMemoryCounterWaitOp>(context);
+}
+
+//===----------------------------------------------------------------------===//
 // GatherToLDSOp
 //===----------------------------------------------------------------------===//
 
@@ -534,7 +833,7 @@ LogicalResult GatherToLDSOp::verify() {
   MemRefType srcType = cast<MemRefType>(getSrc().getType());
   MemRefType dstType = cast<MemRefType>(getDst().getType());
 
-  if (!dstType.areTrailingDimsContiguous(1))
+  if (dstType.getRank() > 0 && !dstType.areTrailingDimsContiguous(1))
     return emitOpError("destination type inner most dim must be contiguous");
 
   auto elemType = srcType.getElementType();
@@ -622,17 +921,177 @@ LogicalResult TransposeLoadOp::verify() {
   };
 
   auto validNumElems = kValidLoadSizeMap.find(elementTypeSize);
-  if (validNumElems == kValidLoadSizeMap.end()) {
+  if (validNumElems == kValidLoadSizeMap.end())
     return emitOpError("Unsupported element type size for transpose load: ")
            << elementTypeSize << " bits";
-  }
-  if (numElements != validNumElems->second) {
+
+  if (numElements != validNumElems->second)
     return emitOpError(
                "Transferring type size mismatch: expected num of elements: ")
            << validNumElems->second;
-  }
 
   return success();
+}
+
+//===----------------------------------------------------------------------===//
+// MakeDmaBaseOp
+//===----------------------------------------------------------------------===//
+
+template <typename BaseOp>
+static LogicalResult verifyBase(BaseOp op) {
+  auto ldsType = cast<MemRefType>(op.getLds().getType());
+  auto globalType = cast<MemRefType>(op.getGlobal().getType());
+  if (!hasWorkgroupMemorySpace(ldsType.getMemorySpace()))
+    return op.emitOpError(
+        "lds memref must have workgroup address space attribute.");
+  if (!hasGlobalMemorySpace(globalType.getMemorySpace()))
+    return op.emitOpError(
+        "global memref must have global address space attribute.");
+
+  Type elementType = ldsType.getElementType();
+  unsigned width = elementType.getIntOrFloatBitWidth();
+
+  if (!llvm::is_contained({8u, 16u, 32u, 64u}, width))
+    return op.emitOpError(
+               "element type must be 1, 2, 4, or 8 bytes long but type was ")
+           << width << " bits long.";
+  return success();
+}
+
+LogicalResult MakeDmaBaseOp::verify() { return verifyBase(*this); }
+
+//===----------------------------------------------------------------------===//
+// MakeGatherDmaBaseOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult
+TDMGatherBaseType::verify(function_ref<InFlightDiagnostic()> emitError,
+                          Type elementType, Type indexType) {
+  unsigned width = elementType.getIntOrFloatBitWidth();
+  if (!llvm::is_contained({8u, 16u, 32u, 64u}, width))
+    return emitError()
+           << "element type must be 1, 2, 4, or 8 bytes wide but type "
+           << elementType << " is " << width / 8 << " bytes wide.";
+  MLIRContext *ctx = elementType.getContext();
+  Type i16 = IntegerType::get(ctx, 32);
+  Type i32 = IntegerType::get(ctx, 16);
+  if (!llvm::is_contained({i16, i32}, indexType))
+    return emitError() << "index type must be i16 or i32 but index type is "
+                       << indexType << ".";
+  return success();
+}
+
+LogicalResult MakeGatherDmaBaseOp::verify() { return verifyBase(*this); }
+
+//===----------------------------------------------------------------------===//
+// MakeDmaDescriptorOp
+//===----------------------------------------------------------------------===//
+
+template <typename DescriptorOp>
+static LogicalResult verifyDescriptorOp(DescriptorOp op) {
+  ArrayRef<int64_t> globalStaticStrides = op.getGlobalStaticStrides();
+
+  if (globalStaticStrides.empty())
+    return op.emitOpError("strides must not be empty.");
+  if (globalStaticStrides.back() != 1)
+    return op.emitOpError("strides for the innermost dimension must be 1.");
+
+  ArrayRef<int64_t> globalStaticSizes = op.getGlobalStaticSizes();
+  size_t rank = globalStaticSizes.size();
+  if (rank > 5)
+    return op.emitOpError("tensor and tile must be at most of rank 5.");
+  if (rank != globalStaticStrides.size())
+    return op.emitOpError("strides and sizes must have same rank.");
+
+  ArrayRef<int64_t> sharedStaticSizes = op.getSharedStaticSizes();
+  if (rank != sharedStaticSizes.size())
+    return op.emitOpError("tensor must have same rank as tile.");
+
+  unsigned elementTypeWidth = op.getElementTypeWidth();
+  if (!llvm::is_contained({8u, 16u, 32u, 64u}, elementTypeWidth))
+    return op.emitOpError(
+               "element type width must be 1, 2, 4 or 8 bytes, but was ")
+           << elementTypeWidth << " bits long";
+
+  if (Value atomicBarrierAddress = op.getAtomicBarrierAddress()) {
+    auto atomicBarrierAddressType =
+        cast<MemRefType>(atomicBarrierAddress.getType());
+    bool barrierInLDS =
+        hasWorkgroupMemorySpace(atomicBarrierAddressType.getMemorySpace());
+    if (!barrierInLDS)
+      return op.emitOpError("atomic barrier address must be in LDS.");
+  }
+
+  if (op.getEarlyTimeout() && !op.getWorkgroupMask())
+    return op.emitOpError(
+        "early timeout does not apply when workgroup_mask is not set.");
+  return success();
+}
+
+template <typename DescriptorOp, typename FoldAdaptor>
+static OpFoldResult foldDescriptorOp(DescriptorOp op, FoldAdaptor adaptor) {
+  SmallVector<OpFoldResult> mixedGlobalSizes(op.getMixedGlobalSizes());
+  SmallVector<OpFoldResult> mixedGlobalStrides(op.getMixedGlobalStrides());
+  SmallVector<OpFoldResult> mixedSharedSizes(op.getMixedSharedSizes());
+
+  if (failed(foldDynamicIndexList(mixedGlobalSizes, /*onlyNonNegative=*/true,
+                                  /*onlyNonZero=*/true)) &&
+      failed(foldDynamicIndexList(mixedGlobalStrides, /*onlyNonNegative=*/true,
+                                  /*onlyNonZero=*/true)) &&
+      failed(foldDynamicIndexList(mixedSharedSizes, /*onlyNonNegative=*/true,
+                                  /*onlyNonZero=*/true)))
+    return nullptr;
+
+  SmallVector<Value> dynamicGlobalSizes, dynamicGlobalStrides,
+      dynamicSharedSizes;
+  SmallVector<int64_t> staticGlobalSizes, staticGlobalStrides,
+      staticSharedSizes;
+
+  dispatchIndexOpFoldResults(mixedGlobalSizes, dynamicGlobalSizes,
+                             staticGlobalSizes);
+  op.setGlobalStaticSizes(staticGlobalSizes);
+  op.getGlobalDynamicSizesMutable().assign(dynamicGlobalSizes);
+
+  dispatchIndexOpFoldResults(mixedGlobalStrides, dynamicGlobalStrides,
+                             staticGlobalStrides);
+  op.setGlobalStaticStrides(staticGlobalStrides);
+  op.getGlobalDynamicStridesMutable().assign(dynamicGlobalStrides);
+
+  dispatchIndexOpFoldResults(mixedSharedSizes, dynamicSharedSizes,
+                             staticSharedSizes);
+  op.setSharedStaticSizes(staticSharedSizes);
+  op.getSharedDynamicSizesMutable().assign(dynamicSharedSizes);
+  return op.getResult();
+}
+
+LogicalResult MakeDmaDescriptorOp::verify() {
+  return verifyDescriptorOp(*this);
+}
+
+OpFoldResult MakeDmaDescriptorOp::fold(FoldAdaptor adaptor) {
+  return foldDescriptorOp(*this, adaptor);
+}
+
+//===----------------------------------------------------------------------===//
+// MakeGatherDmaDescriptorOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult MakeGatherDmaDescriptorOp::verify() {
+  ArrayRef<int64_t> globalStaticSizes = getGlobalStaticSizes();
+  size_t rank = globalStaticSizes.size();
+  if (rank > 2)
+    return emitOpError(
+        "tensor and tile must be at most of rank two in gather mode.");
+  Value indices = getIndices();
+  Type elementType = cast<VectorType>(indices.getType()).getElementType();
+  if (elementType != getBase().getType().getIndexType())
+    return emitOpError("indices' element type must match base's element type.");
+
+  return verifyDescriptorOp(*this);
+}
+
+OpFoldResult MakeGatherDmaDescriptorOp::fold(FoldAdaptor adaptor) {
+  return foldDescriptorOp(*this, adaptor);
 }
 
 //===----------------------------------------------------------------------===//
@@ -746,13 +1205,13 @@ struct PackScales final : OpRewritePattern<ScaledMFMAOp> {
         offset = numElements - 4l;
       }
       Type scaleSrcElemType = scaleSrcType.getElementType();
-      auto newSrcType = VectorType::get(SmallVector<int64_t>({numElements}),
-                                        scaleSrcElemType);
+      auto newSrcType =
+          VectorType::get(ArrayRef{numElements}, scaleSrcElemType);
       Value newScaleSrc =
           vector::ShapeCastOp::create(rewriter, loc, newSrcType, scaleSrc);
       auto extract = vector::ExtractStridedSliceOp::create(
-          rewriter, loc, newScaleSrc, ArrayRef<int64_t>{offset},
-          ArrayRef<int64_t>{size}, ArrayRef<int64_t>{1});
+          rewriter, loc, newScaleSrc, ArrayRef{offset}, ArrayRef{size},
+          ArrayRef{int64_t(1)});
       rewriter.modifyOpInPlace(op, [&] {
         op->setOperand(opIdx, extract);
         setOpsel(opIdx, opsel);
@@ -772,6 +1231,9 @@ void ScaledMFMAOp::getCanonicalizationPatterns(RewritePatternSet &results,
 
 #define GET_ATTRDEF_CLASSES
 #include "mlir/Dialect/AMDGPU/IR/AMDGPUAttributes.cpp.inc"
+
+#define GET_TYPEDEF_CLASSES
+#include "mlir/Dialect/AMDGPU/IR/AMDGPUTypes.cpp.inc"
 
 #define GET_OP_CLASSES
 #include "mlir/Dialect/AMDGPU/IR/AMDGPU.cpp.inc"

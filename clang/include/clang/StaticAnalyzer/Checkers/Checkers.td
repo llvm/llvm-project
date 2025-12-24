@@ -76,9 +76,6 @@ def SecurityAlpha : Package<"security">, ParentPackage<Alpha>;
 def CERT : Package<"cert">, ParentPackage<Security>;
 def ENV : Package<"env">, ParentPackage<CERT>;
 
-def CERTAlpha : Package<"cert">, ParentPackage<SecurityAlpha>;
-def POSAlpha : Package<"pos">, ParentPackage<CERTAlpha>;
-
 def Unix : Package<"unix">;
 def UnixAlpha : Package<"unix">, ParentPackage<Alpha>;
 def CString : Package<"cstring">, ParentPackage<Unix>;
@@ -182,6 +179,12 @@ def CallAndMessageChecker
                "Check whether the reciever in the message expression is "
                "undefined",
                "true", Released>,
+           CmdLineOption<
+               Boolean, "ArgPointeeInitializednessComplete",
+               "If set to true, treat a struct as initialized when all of its "
+               "members are initialized, otherwise when it has any initialized "
+               "member (used only at ArgPointeeInitializedness)",
+               "false", Released>,
 ]>,
       Documentation<HasDocumentation>;
 
@@ -193,6 +196,11 @@ def FixedAddressDereferenceChecker
 def NullDereferenceChecker
     : Checker<"NullDereference">,
       HelpText<"Check for dereferences of null pointers">,
+      Documentation<HasDocumentation>;
+
+def NullPointerArithmChecker
+    : Checker<"NullPointerArithm">,
+      HelpText<"Check for undefined arithmetic operations on null pointers">,
       Documentation<HasDocumentation>;
 
 def NonNullParamChecker : Checker<"NonNullParamChecker">,

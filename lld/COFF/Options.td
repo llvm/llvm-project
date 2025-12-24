@@ -71,6 +71,7 @@ def noimplib : F<"noimplib">,
 def lib : F<"lib">,
     HelpText<"Act like lib.exe; must be first argument if present">;
 def libpath : P<"libpath", "Additional library search path">;
+def link : F<"link">, HelpText<"Ignored for compatibility">;
 def linkrepro : Joined<["/", "-", "/?", "-?"], "linkrepro:">,
     MetaVarName<"directory">,
     HelpText<"Write repro.tar containing inputs and command to reproduce link">;
@@ -292,9 +293,15 @@ def thinlto_distributor_arg : P<"thinlto-distributor-arg",
 def thinlto_remote_compiler : P<"thinlto-remote-compiler",
   "Compiler for the ThinLTO distributor to invoke for ThinLTO backend "
   "compilations">;
+def thinlto_remote_compiler_prepend_arg : P<"thinlto-remote-compiler-prepend-arg",
+  "Compiler prepend arguments for the ThinLTO distributor to pass for ThinLTO backend "
+  "compilations">;
 def thinlto_remote_compiler_arg : P<"thinlto-remote-compiler-arg",
   "Compiler arguments for the ThinLTO distributor to pass for ThinLTO backend "
   "compilations">;
+defm fat_lto_objects: B<"fat-lto-objects",
+    "Use the .llvm.lto section, which contains LLVM bitcode, in fat LTO object files to perform LTO.",
+    "Ignore the .llvm.lto section in relocatable object files (default).">;
 def lto_obj_path : P<
     "lto-obj-path",
     "output native object for merged LTO unit to this path">;

@@ -1,4 +1,4 @@
-FROM ubuntu:24.04 AS builder
+FROM docker.io/library/ubuntu:24.04 AS builder
 
 ARG DEBIAN_FRONTEND=noninteractive
 ENV TZ=UTC
@@ -25,6 +25,6 @@ RUN mkdir build && \
     ninja check-bolt && \
     ninja install-llvm-bolt install-merge-fdata install-bolt_rt
 
-FROM ubuntu:24.04
+FROM docker.io/library/ubuntu:24.04
 
 COPY --from=builder /home/bolt/install /usr/local

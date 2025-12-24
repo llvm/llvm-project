@@ -13,6 +13,7 @@
 #include "MachODump.h"
 
 #include "ObjdumpOptID.h"
+#include "SourcePrinter.h"
 #include "llvm-objdump.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
@@ -382,7 +383,7 @@ static void printRelocationTargetName(const MachOObjectFile *O,
   uint64_t Val = O->getPlainRelocationSymbolNum(RE);
 
   if (O->getAnyRelocationType(RE) == MachO::ARM64_RELOC_ADDEND &&
-      (O->getArch() == Triple::aarch64 || O->getArch() == Triple::aarch64_be)) {
+      Triple(O->getArchTriple()).isAArch64()) {
     Fmt << format("0x%0" PRIx64, Val);
     return;
   }
@@ -3141,7 +3142,7 @@ static int SymbolizerGetOpInfo(void *DisInfo, uint64_t Pc, uint64_t Offset,
     op_info->AddSymbol.Value = value;
     return 1;
   }
-  if (Arch == Triple::aarch64) {
+  if (Arch == Triple::aarch64 || Arch == Triple::aarch64_32) {
     if (Offset != 0 || InstSize != 4)
       return 0;
     if (info->O->getHeader().filetype != MachO::MH_OBJECT) {
@@ -3385,7 +3386,7 @@ static void method_reference(struct DisassembleInfo *info,
           if (method != nullptr) {
             if (Arch == Triple::x86_64)
               strcpy(method, "-[%rdi ");
-            else if (Arch == Triple::aarch64)
+            else if (Arch == Triple::aarch64 || Arch == Triple::aarch64_32)
               strcpy(method, "-[x0 ");
             else
               strcpy(method, "-[r? ");
@@ -3405,7 +3406,7 @@ static void method_reference(struct DisassembleInfo *info,
         if (method != nullptr) {
           if (Arch == Triple::x86_64)
             strcpy(method, "-[[%rdi super] ");
-          else if (Arch == Triple::aarch64)
+          else if (Arch == Triple::aarch64 || Arch == Triple::aarch64_32)
             strcpy(method, "-[[x0 super] ");
           else
             strcpy(method, "-[[r? super] ");
@@ -7012,7 +7013,8 @@ static const char *SymbolizerSymbolLookUp(void *DisInfo,
     // If this is arm64 and the reference is an adrp instruction save the
     // instruction, passed in ReferenceValue and the address of the instruction
     // for use later if we see and add immediate instruction.
-  } else if (info->O->getArch() == Triple::aarch64 &&
+  } else if ((info->O->getArch() == Triple::aarch64 ||
+              info->O->getArch() == Triple::aarch64_32) &&
              *ReferenceType == LLVMDisassembler_ReferenceType_In_ARM64_ADRP) {
     info->adrp_inst = ReferenceValue;
     info->adrp_addr = ReferencePC;
@@ -7026,7 +7028,8 @@ static const char *SymbolizerSymbolLookUp(void *DisInfo,
     // this add's Xn register reconstruct the value being referenced and look to
     // see if it is a literal pointer.  Note the add immediate instruction is
     // passed in ReferenceValue.
-  } else if (info->O->getArch() == Triple::aarch64 &&
+  } else if ((info->O->getArch() == Triple::aarch64 ||
+              info->O->getArch() == Triple::aarch64_32) &&
              *ReferenceType == LLVMDisassembler_ReferenceType_In_ARM64_ADDXri &&
              ReferencePC - 4 == info->adrp_addr &&
              (info->adrp_inst & 0x9f000000) == 0x90000000 &&
@@ -7056,7 +7059,8 @@ static const char *SymbolizerSymbolLookUp(void *DisInfo,
     // matches this add's Xn register reconstruct the value being referenced and
     // look to see if it is a literal pointer.  Note the load register
     // instruction is passed in ReferenceValue.
-  } else if (info->O->getArch() == Triple::aarch64 &&
+  } else if ((info->O->getArch() == Triple::aarch64 ||
+              info->O->getArch() == Triple::aarch64_32) &&
              *ReferenceType == LLVMDisassembler_ReferenceType_In_ARM64_LDRXui &&
              ReferencePC - 4 == info->adrp_addr &&
              (info->adrp_inst & 0x9f000000) == 0x90000000 &&
@@ -7072,8 +7076,10 @@ static const char *SymbolizerSymbolLookUp(void *DisInfo,
     ldrxui_inst = ReferenceValue;
     ldrxui_imm = (ldrxui_inst >> 10) & 0xfff;
 
+    // The size field (bits [31:30]) determines the scaling.
+    unsigned Scale = (ldrxui_inst >> 30) & 0x3;
     ReferenceValue = (info->adrp_addr & 0xfffffffffffff000LL) +
-                     (adrp_imm << 12) + (ldrxui_imm << 3);
+                     (adrp_imm << 12) + (ldrxui_imm << Scale);
 
     *ReferenceName =
         GuessLiteralPointer(ReferenceValue, ReferencePC, ReferenceType, info);
@@ -7082,7 +7088,8 @@ static const char *SymbolizerSymbolLookUp(void *DisInfo,
   }
   // If this arm64 and is an load register (PC-relative) instruction the
   // ReferenceValue is the PC plus the immediate value.
-  else if (info->O->getArch() == Triple::aarch64 &&
+  else if ((info->O->getArch() == Triple::aarch64 ||
+            info->O->getArch() == Triple::aarch64_32) &&
            (*ReferenceType == LLVMDisassembler_ReferenceType_In_ARM64_LDRXl ||
             *ReferenceType == LLVMDisassembler_ReferenceType_In_ARM64_ADR)) {
     *ReferenceName =
@@ -7097,8 +7104,7 @@ static const char *SymbolizerSymbolLookUp(void *DisInfo,
       *ReferenceName = info->demangled_name;
       *ReferenceType = LLVMDisassembler_ReferenceType_DeMangled_Name;
     }
-  }
-  else {
+  } else {
     *ReferenceName = nullptr;
     *ReferenceType = LLVMDisassembler_ReferenceType_InOut_None;
   }
@@ -7415,16 +7421,26 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
   std::unique_ptr<DIContext> diContext;
   std::unique_ptr<Binary> DSYMBinary;
   std::unique_ptr<MemoryBuffer> DSYMBuf;
-  if (UseDbg) {
-    // If separate DSym file path was specified, parse it as a macho file,
-    // get the sections and supply it to the section name parsing machinery.
-    if (const ObjectFile *DbgObj =
-            getMachODSymObject(MachOOF, Filename, DSYMBinary, DSYMBuf)) {
+  const ObjectFile *DbgObj = MachOOF;
+  if (UseDbg || PrintSource || PrintLines) {
+    // Look for debug info in external dSYM file or embedded in the object.
+    // getMachODSymObject returns MachOOF by default if no external dSYM found.
+    const ObjectFile *DSym =
+        getMachODSymObject(MachOOF, Filename, DSYMBinary, DSYMBuf);
+    if (!DSym)
+      return;
+    DbgObj = DSym;
+    if (UseDbg || PrintLines) {
       // Setup the DIContext
       diContext = DWARFContext::create(*DbgObj);
-    } else {
-      return;
     }
+  }
+
+  std::optional<SourcePrinter> SP;
+  std::optional<LiveElementPrinter> LEP;
+  if (PrintSource || PrintLines) {
+    SP.emplace(DbgObj, TheTarget->getName());
+    LEP.emplace(*MRI, *STI);
   }
 
   if (FilterSections.empty())
@@ -7605,6 +7621,12 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
           outs() << SymName << ":\n";
 
         uint64_t PC = SectAddress + Index;
+
+        if (PrintSource || PrintLines) {
+          formatted_raw_ostream FOS(outs());
+          SP->printSourceLine(FOS, {PC, SectIdx}, Filename, *LEP);
+        }
+
         if (LeadingAddr) {
           if (FullLeadingAddr) {
             if (MachOOF->is64Bit())
@@ -7660,7 +7682,7 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
             outs() << format("\t.byte 0x%02x #bad opcode\n",
                              *(Bytes.data() + Index) & 0xff);
             Size = 1; // skip exactly one illegible byte and move on.
-          } else if (Arch == Triple::aarch64 ||
+          } else if (Arch == Triple::aarch64 || Arch == Triple::aarch64_32 ||
                      (Arch == Triple::arm && !IsThumb)) {
             uint32_t opcode = (*(Bytes.data() + Index) & 0xff) |
                               (*(Bytes.data() + Index + 1) & 0xff) << 8 |
@@ -7674,7 +7696,7 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
                               (*(Bytes.data() + Index + 1) & 0xff) << 8;
             outs() << format("\t.short\t0x%04x\n", opcode);
             Size = 2;
-          } else{
+          } else {
             WithColor::warning(errs(), "llvm-objdump")
                 << "invalid instruction encoding\n";
             if (Size == 0)
@@ -7695,6 +7717,11 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
         MCInst Inst;
 
         uint64_t PC = SectAddress + Index;
+
+        if (PrintSource || PrintLines) {
+          formatted_raw_ostream FOS(outs());
+          SP->printSourceLine(FOS, {PC, SectIdx}, Filename, *LEP);
+        }
 
         if (DumpAndSkipDataInCode(PC, Bytes.data() + Index, Dices, InstSize))
           continue;

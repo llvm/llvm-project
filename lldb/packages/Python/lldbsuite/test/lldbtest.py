@@ -27,6 +27,9 @@ OK
 $
 """
 
+# FIXME: remove when LLDB_MINIMUM_PYTHON_VERSION > 3.8
+from __future__ import annotations
+
 # System modules
 import abc
 from functools import wraps
@@ -36,11 +39,13 @@ import json
 import os.path
 import re
 import shutil
+import shlex
 import signal
 from subprocess import *
 import sys
 import time
 import traceback
+from typing import Optional, Union
 
 # Third-party modules
 import unittest
@@ -56,7 +61,6 @@ from . import lldbutil
 from . import test_categories
 from lldbsuite.support import encoded_file
 from lldbsuite.support import funcutils
-from lldbsuite.support import seven
 from lldbsuite.test_event import build_exception
 
 # See also dotest.parseOptionsAndInitTestdirs(), where the environment variables
@@ -410,17 +414,22 @@ class _LocalProcess(_BaseProcess):
     def pid(self):
         return self._proc.pid
 
-    def launch(self, executable, args, extra_env):
+    def launch(self, executable, args, extra_env, **kwargs):
         env = None
         if extra_env:
             env = dict(os.environ)
             env.update([kv.split("=", 1) for kv in extra_env])
 
+        stdout = kwargs.pop("stdout", DEVNULL if not self._trace_on else None)
+        stderr = kwargs.pop("stderr", None)
+
         self._proc = Popen(
             [executable] + args,
-            stdout=DEVNULL if not self._trace_on else None,
+            stdout=stdout,
+            stderr=stderr,
             stdin=PIPE,
             env=env,
+            **kwargs,
         )
 
     def terminate(self):
@@ -444,11 +453,19 @@ class _LocalProcess(_BaseProcess):
             self._proc.kill()
             time.sleep(self._delayafterterminate)
 
+    def communicate(
+        self, input: Optional[str] = None, timeout: Optional[float] = None
+    ) -> tuple[bytes, bytes]:
+        return self._proc.communicate(input, timeout)
+
     def poll(self):
         return self._proc.poll()
 
     def wait(self, timeout=None):
         return self._proc.wait(timeout)
+
+    def kill(self):
+        return self._proc.kill()
 
 
 class _RemoteProcess(_BaseProcess):
@@ -460,7 +477,7 @@ class _RemoteProcess(_BaseProcess):
     def pid(self):
         return self._pid
 
-    def launch(self, executable, args, extra_env):
+    def launch(self, executable, args, extra_env, **kwargs):
         if self._install_remote:
             src_path = executable
             dst_path = lldbutil.join_remote_paths(
@@ -943,16 +960,23 @@ class Base(unittest.TestCase):
             del p
         del self.subprocesses[:]
 
-    def spawnSubprocess(self, executable, args=[], extra_env=None, install_remote=True):
+    @property
+    def lastSubprocess(self) -> Optional[Union[_RemoteProcess, _LocalProcess]]:
+        return self.subprocesses[-1] if len(self.subprocesses) > 0 else None
+
+    def spawnSubprocess(
+        self, executable, args=None, extra_env=None, install_remote=True, **kwargs
+    ):
         """Creates a subprocess.Popen object with the specified executable and arguments,
         saves it in self.subprocesses, and returns the object.
         """
+        args = [] if args is None else args
         proc = (
             _RemoteProcess(install_remote)
             if lldb.remote_platform
             else _LocalProcess(self.TraceOn())
         )
-        proc.launch(executable, args, extra_env=extra_env)
+        proc.launch(executable, args, extra_env=extra_env, **kwargs)
         self.subprocesses.append(proc)
         return proc
 
@@ -1508,7 +1532,7 @@ class Base(unittest.TestCase):
         self.runBuildCommand(command)
 
     def runBuildCommand(self, command):
-        self.trace(seven.join_for_shell(command))
+        self.trace(shlex.join(command))
         try:
             output = check_output(command, stderr=STDOUT, errors="replace")
         except CalledProcessError as cpe:
@@ -1791,6 +1815,11 @@ class LLDBTestCaseFactory(type):
                         if can_replicate
                     ]
 
+                    # PDB is off by default, because it has a lot of failures right now.
+                    # See llvm.org/pr149498
+                    if original_testcase.TEST_WITH_PDB_DEBUG_INFO:
+                        dbginfo_categories.append("pdb")
+
                 xfail_for_debug_info_cat_fn = getattr(
                     attrvalue, "__xfail_for_debug_info_cat_fn__", no_reason
                 )
@@ -1877,6 +1906,13 @@ class TestBase(Base, metaclass=LLDBTestCaseFactory):
     # Subclasses can set this to true (if they don't depend on debug info) to avoid running the
     # test multiple times with various debug info types.
     NO_DEBUG_INFO_TESTCASE = False
+
+    TEST_WITH_PDB_DEBUG_INFO = False
+    """
+    Subclasses can set this to True to test with PDB in addition to the other debug info
+    types. This id off by default because many tests will fail due to missing functionality in PDB.
+    See llvm.org/pr149498.
+    """
 
     def generateSource(self, source):
         template = source + ".template"

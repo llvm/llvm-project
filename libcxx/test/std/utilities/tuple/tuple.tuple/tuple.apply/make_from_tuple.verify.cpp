@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// REQUIRES: std-at-least-c++23
+// REQUIRES: std-at-least-c++26
 
 // <tuple>
 
@@ -19,17 +19,8 @@
 #include "test_macros.h"
 
 void test() {
-  // FreeBSD ci use clang 19.1.1, which hasn't implement __reference_constructs_from_temporary.
-  // The static_assert inner std::make_from_tuple will not triggered.
-#if __has_builtin(__reference_constructs_from_temporary)
   // expected-error@*:* {{static assertion failed}}
-#endif
 
-  // Turns to an error since C++26 (Disallow Binding a Returned Glvalue to a Temporary https://wg21.link/P2748R5).
-#if TEST_STD_VER >= 26
   // expected-error@tuple:* {{returning reference to local temporary object}}
-#else
-  // expected-warning@tuple:* {{returning reference to local temporary object}}
-#endif
   std::ignore = std::make_from_tuple<const int&>(std::tuple<char>{});
 }

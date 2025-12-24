@@ -344,9 +344,10 @@ bool CompilerInstance::setUpTargetMachine() {
   const std::string &theTriple = targetOpts.triple;
 
   // Create `Target`
+  const llvm::Triple triple(theTriple);
   std::string error;
   const llvm::Target *theTarget =
-      llvm::TargetRegistry::lookupTarget(theTriple, error);
+      llvm::TargetRegistry::lookupTarget(triple, error);
   if (!theTarget) {
     getDiagnostics().Report(clang::diag::err_fe_unable_to_create_target)
         << error;
@@ -365,13 +366,12 @@ bool CompilerInstance::setUpTargetMachine() {
   tOpts.EnableAIXExtendedAltivecABI = targetOpts.EnableAIXExtendedAltivecABI;
 
   targetMachine.reset(theTarget->createTargetMachine(
-      llvm::Triple(theTriple), /*CPU=*/targetOpts.cpu,
+      triple, /*CPU=*/targetOpts.cpu,
       /*Features=*/featuresStr, /*Options=*/tOpts,
       /*Reloc::Model=*/CGOpts.getRelocationModel(),
       /*CodeModel::Model=*/cm, OptLevel));
   assert(targetMachine && "Failed to create TargetMachine");
   if (cm.has_value()) {
-    const llvm::Triple triple(theTriple);
     if ((cm == llvm::CodeModel::Medium || cm == llvm::CodeModel::Large) &&
         triple.getArch() == llvm::Triple::x86_64) {
       targetMachine->setLargeDataThreshold(CGOpts.LargeDataThreshold);

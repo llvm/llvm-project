@@ -41,12 +41,6 @@ LLVM_ABI bool recordContextSizeInfoForAnalysis();
 LLVM_ABI MDNode *buildCallstackMetadata(ArrayRef<uint64_t> CallStack,
                                         LLVMContext &Ctx);
 
-/// Build metadata from the provided list of full stack id and profiled size, to
-/// use when reporting of hinted sizes is enabled.
-LLVM_ABI MDNode *
-buildContextSizeMetadata(ArrayRef<ContextTotalSize> ContextSizeInfo,
-                         LLVMContext &Ctx);
-
 /// Returns the stack node from an MIB metadata node.
 LLVM_ABI MDNode *getMIBStackNode(const MDNode *MIB);
 
@@ -58,6 +52,14 @@ LLVM_ABI std::string getAllocTypeAttributeString(AllocationType Type);
 
 /// True if the AllocTypes bitmask contains just a single type.
 LLVM_ABI bool hasSingleAllocType(uint8_t AllocTypes);
+
+/// Removes any existing "ambiguous" memprof attribute. Called before we apply a
+/// specific allocation type such as "cold", "notcold", or "hot".
+LLVM_ABI void removeAnyExistingAmbiguousAttribute(CallBase *CB);
+
+/// Adds an "ambiguous" memprof attribute to call with a matched allocation
+/// profile but that we haven't yet been able to disambiguate.
+LLVM_ABI void addAmbiguousAttribute(CallBase *CB);
 
 /// Class to build a trie of call stack contexts for a particular profiled
 /// allocation call, along with their associated allocation types.

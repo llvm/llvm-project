@@ -630,593 +630,593 @@ vfwredusum.vs v8, v8, v8
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]                                        [9]                        Instructions:
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDAND_VS                 vredand.vs	v8, v8, v8
+# CHECK-NEXT:  1      5     2.00                         5     SMX60_VIEU[2]                              VREDAND_VS                 vredand.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDAND_VS                 vredand.vs	v8, v8, v8
+# CHECK-NEXT:  1      5     1.00                         5     SMX60_VIEU                                 VREDAND_VS                 vredand.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDAND_VS                 vredand.vs	v8, v8, v8
+# CHECK-NEXT:  1      5     1.00                         5     SMX60_VIEU                                 VREDAND_VS                 vredand.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDAND_VS                 vredand.vs	v8, v8, v8
+# CHECK-NEXT:  1      7     2.00                         7     SMX60_VIEU[2]                              VREDAND_VS                 vredand.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDAND_VS                 vredand.vs	v8, v8, v8
+# CHECK-NEXT:  1      11    4.00                         11    SMX60_VIEU[4]                              VREDAND_VS                 vredand.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDAND_VS                 vredand.vs	v8, v8, v8
+# CHECK-NEXT:  1      19    10.00                        19    SMX60_VIEU[10]                             VREDAND_VS                 vredand.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDAND_VS                 vredand.vs	v8, v8, v8
+# CHECK-NEXT:  1      35    35.00                        35    SMX60_VIEU[35]                             VREDAND_VS                 vredand.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDAND_VS                 vredand.vs	v8, v8, v8
+# CHECK-NEXT:  1      5     2.00                         5     SMX60_VIEU[2]                              VREDAND_VS                 vredand.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDAND_VS                 vredand.vs	v8, v8, v8
+# CHECK-NEXT:  1      5     1.00                         5     SMX60_VIEU                                 VREDAND_VS                 vredand.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDAND_VS                 vredand.vs	v8, v8, v8
+# CHECK-NEXT:  1      7     2.00                         7     SMX60_VIEU[2]                              VREDAND_VS                 vredand.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDAND_VS                 vredand.vs	v8, v8, v8
+# CHECK-NEXT:  1      11    4.00                         11    SMX60_VIEU[4]                              VREDAND_VS                 vredand.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDAND_VS                 vredand.vs	v8, v8, v8
+# CHECK-NEXT:  1      19    10.00                        19    SMX60_VIEU[10]                             VREDAND_VS                 vredand.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDAND_VS                 vredand.vs	v8, v8, v8
+# CHECK-NEXT:  1      35    35.00                        35    SMX60_VIEU[35]                             VREDAND_VS                 vredand.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDAND_VS                 vredand.vs	v8, v8, v8
+# CHECK-NEXT:  1      5     2.00                         5     SMX60_VIEU[2]                              VREDAND_VS                 vredand.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDAND_VS                 vredand.vs	v8, v8, v8
+# CHECK-NEXT:  1      7     2.00                         7     SMX60_VIEU[2]                              VREDAND_VS                 vredand.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDAND_VS                 vredand.vs	v8, v8, v8
+# CHECK-NEXT:  1      11    4.00                         11    SMX60_VIEU[4]                              VREDAND_VS                 vredand.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDAND_VS                 vredand.vs	v8, v8, v8
+# CHECK-NEXT:  1      19    10.00                        19    SMX60_VIEU[10]                             VREDAND_VS                 vredand.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDAND_VS                 vredand.vs	v8, v8, v8
+# CHECK-NEXT:  1      35    35.00                        35    SMX60_VIEU[35]                             VREDAND_VS                 vredand.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDAND_VS                 vredand.vs	v8, v8, v8
+# CHECK-NEXT:  1      7     2.00                         7     SMX60_VIEU[2]                              VREDAND_VS                 vredand.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDAND_VS                 vredand.vs	v8, v8, v8
+# CHECK-NEXT:  1      11    4.00                         11    SMX60_VIEU[4]                              VREDAND_VS                 vredand.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDAND_VS                 vredand.vs	v8, v8, v8
+# CHECK-NEXT:  1      19    10.00                        19    SMX60_VIEU[10]                             VREDAND_VS                 vredand.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDAND_VS                 vredand.vs	v8, v8, v8
+# CHECK-NEXT:  1      35    35.00                        35    SMX60_VIEU[35]                             VREDAND_VS                 vredand.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDMAXU_VS                vredmaxu.vs	v8, v8, v8
+# CHECK-NEXT:  1      5     2.00                         5     SMX60_VIEU[2]                              VREDMAXU_VS                vredmaxu.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDMAXU_VS                vredmaxu.vs	v8, v8, v8
+# CHECK-NEXT:  1      5     1.00                         5     SMX60_VIEU                                 VREDMAXU_VS                vredmaxu.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDMAXU_VS                vredmaxu.vs	v8, v8, v8
+# CHECK-NEXT:  1      5     1.00                         5     SMX60_VIEU                                 VREDMAXU_VS                vredmaxu.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDMAXU_VS                vredmaxu.vs	v8, v8, v8
+# CHECK-NEXT:  1      7     2.00                         7     SMX60_VIEU[2]                              VREDMAXU_VS                vredmaxu.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDMAXU_VS                vredmaxu.vs	v8, v8, v8
+# CHECK-NEXT:  1      11    4.00                         11    SMX60_VIEU[4]                              VREDMAXU_VS                vredmaxu.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDMAXU_VS                vredmaxu.vs	v8, v8, v8
+# CHECK-NEXT:  1      19    10.00                        19    SMX60_VIEU[10]                             VREDMAXU_VS                vredmaxu.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDMAXU_VS                vredmaxu.vs	v8, v8, v8
+# CHECK-NEXT:  1      35    35.00                        35    SMX60_VIEU[35]                             VREDMAXU_VS                vredmaxu.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDMAXU_VS                vredmaxu.vs	v8, v8, v8
+# CHECK-NEXT:  1      5     2.00                         5     SMX60_VIEU[2]                              VREDMAXU_VS                vredmaxu.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDMAXU_VS                vredmaxu.vs	v8, v8, v8
+# CHECK-NEXT:  1      5     1.00                         5     SMX60_VIEU                                 VREDMAXU_VS                vredmaxu.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDMAXU_VS                vredmaxu.vs	v8, v8, v8
+# CHECK-NEXT:  1      7     2.00                         7     SMX60_VIEU[2]                              VREDMAXU_VS                vredmaxu.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDMAXU_VS                vredmaxu.vs	v8, v8, v8
+# CHECK-NEXT:  1      11    4.00                         11    SMX60_VIEU[4]                              VREDMAXU_VS                vredmaxu.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDMAXU_VS                vredmaxu.vs	v8, v8, v8
+# CHECK-NEXT:  1      19    10.00                        19    SMX60_VIEU[10]                             VREDMAXU_VS                vredmaxu.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDMAXU_VS                vredmaxu.vs	v8, v8, v8
+# CHECK-NEXT:  1      35    35.00                        35    SMX60_VIEU[35]                             VREDMAXU_VS                vredmaxu.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDMAXU_VS                vredmaxu.vs	v8, v8, v8
+# CHECK-NEXT:  1      5     2.00                         5     SMX60_VIEU[2]                              VREDMAXU_VS                vredmaxu.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDMAXU_VS                vredmaxu.vs	v8, v8, v8
+# CHECK-NEXT:  1      7     2.00                         7     SMX60_VIEU[2]                              VREDMAXU_VS                vredmaxu.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDMAXU_VS                vredmaxu.vs	v8, v8, v8
+# CHECK-NEXT:  1      11    4.00                         11    SMX60_VIEU[4]                              VREDMAXU_VS                vredmaxu.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDMAXU_VS                vredmaxu.vs	v8, v8, v8
+# CHECK-NEXT:  1      19    10.00                        19    SMX60_VIEU[10]                             VREDMAXU_VS                vredmaxu.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDMAXU_VS                vredmaxu.vs	v8, v8, v8
+# CHECK-NEXT:  1      35    35.00                        35    SMX60_VIEU[35]                             VREDMAXU_VS                vredmaxu.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDMAXU_VS                vredmaxu.vs	v8, v8, v8
+# CHECK-NEXT:  1      7     2.00                         7     SMX60_VIEU[2]                              VREDMAXU_VS                vredmaxu.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDMAXU_VS                vredmaxu.vs	v8, v8, v8
+# CHECK-NEXT:  1      11    4.00                         11    SMX60_VIEU[4]                              VREDMAXU_VS                vredmaxu.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDMAXU_VS                vredmaxu.vs	v8, v8, v8
+# CHECK-NEXT:  1      19    10.00                        19    SMX60_VIEU[10]                             VREDMAXU_VS                vredmaxu.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDMAXU_VS                vredmaxu.vs	v8, v8, v8
+# CHECK-NEXT:  1      35    35.00                        35    SMX60_VIEU[35]                             VREDMAXU_VS                vredmaxu.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDMAX_VS                 vredmax.vs	v8, v8, v8
+# CHECK-NEXT:  1      5     2.00                         5     SMX60_VIEU[2]                              VREDMAX_VS                 vredmax.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDMAX_VS                 vredmax.vs	v8, v8, v8
+# CHECK-NEXT:  1      5     1.00                         5     SMX60_VIEU                                 VREDMAX_VS                 vredmax.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDMAX_VS                 vredmax.vs	v8, v8, v8
+# CHECK-NEXT:  1      5     1.00                         5     SMX60_VIEU                                 VREDMAX_VS                 vredmax.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDMAX_VS                 vredmax.vs	v8, v8, v8
+# CHECK-NEXT:  1      7     2.00                         7     SMX60_VIEU[2]                              VREDMAX_VS                 vredmax.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDMAX_VS                 vredmax.vs	v8, v8, v8
+# CHECK-NEXT:  1      11    4.00                         11    SMX60_VIEU[4]                              VREDMAX_VS                 vredmax.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDMAX_VS                 vredmax.vs	v8, v8, v8
+# CHECK-NEXT:  1      19    10.00                        19    SMX60_VIEU[10]                             VREDMAX_VS                 vredmax.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDMAX_VS                 vredmax.vs	v8, v8, v8
+# CHECK-NEXT:  1      35    35.00                        35    SMX60_VIEU[35]                             VREDMAX_VS                 vredmax.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDMAX_VS                 vredmax.vs	v8, v8, v8
+# CHECK-NEXT:  1      5     2.00                         5     SMX60_VIEU[2]                              VREDMAX_VS                 vredmax.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDMAX_VS                 vredmax.vs	v8, v8, v8
+# CHECK-NEXT:  1      5     1.00                         5     SMX60_VIEU                                 VREDMAX_VS                 vredmax.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDMAX_VS                 vredmax.vs	v8, v8, v8
+# CHECK-NEXT:  1      7     2.00                         7     SMX60_VIEU[2]                              VREDMAX_VS                 vredmax.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDMAX_VS                 vredmax.vs	v8, v8, v8
+# CHECK-NEXT:  1      11    4.00                         11    SMX60_VIEU[4]                              VREDMAX_VS                 vredmax.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDMAX_VS                 vredmax.vs	v8, v8, v8
+# CHECK-NEXT:  1      19    10.00                        19    SMX60_VIEU[10]                             VREDMAX_VS                 vredmax.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDMAX_VS                 vredmax.vs	v8, v8, v8
+# CHECK-NEXT:  1      35    35.00                        35    SMX60_VIEU[35]                             VREDMAX_VS                 vredmax.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDMAX_VS                 vredmax.vs	v8, v8, v8
+# CHECK-NEXT:  1      5     2.00                         5     SMX60_VIEU[2]                              VREDMAX_VS                 vredmax.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDMAX_VS                 vredmax.vs	v8, v8, v8
+# CHECK-NEXT:  1      7     2.00                         7     SMX60_VIEU[2]                              VREDMAX_VS                 vredmax.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDMAX_VS                 vredmax.vs	v8, v8, v8
+# CHECK-NEXT:  1      11    4.00                         11    SMX60_VIEU[4]                              VREDMAX_VS                 vredmax.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDMAX_VS                 vredmax.vs	v8, v8, v8
+# CHECK-NEXT:  1      19    10.00                        19    SMX60_VIEU[10]                             VREDMAX_VS                 vredmax.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDMAX_VS                 vredmax.vs	v8, v8, v8
+# CHECK-NEXT:  1      35    35.00                        35    SMX60_VIEU[35]                             VREDMAX_VS                 vredmax.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDMAX_VS                 vredmax.vs	v8, v8, v8
+# CHECK-NEXT:  1      7     2.00                         7     SMX60_VIEU[2]                              VREDMAX_VS                 vredmax.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDMAX_VS                 vredmax.vs	v8, v8, v8
+# CHECK-NEXT:  1      11    4.00                         11    SMX60_VIEU[4]                              VREDMAX_VS                 vredmax.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDMAX_VS                 vredmax.vs	v8, v8, v8
+# CHECK-NEXT:  1      19    10.00                        19    SMX60_VIEU[10]                             VREDMAX_VS                 vredmax.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDMAX_VS                 vredmax.vs	v8, v8, v8
+# CHECK-NEXT:  1      35    35.00                        35    SMX60_VIEU[35]                             VREDMAX_VS                 vredmax.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDMINU_VS                vredminu.vs	v8, v8, v8
+# CHECK-NEXT:  1      5     2.00                         5     SMX60_VIEU[2]                              VREDMINU_VS                vredminu.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDMINU_VS                vredminu.vs	v8, v8, v8
+# CHECK-NEXT:  1      5     1.00                         5     SMX60_VIEU                                 VREDMINU_VS                vredminu.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDMINU_VS                vredminu.vs	v8, v8, v8
+# CHECK-NEXT:  1      5     1.00                         5     SMX60_VIEU                                 VREDMINU_VS                vredminu.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDMINU_VS                vredminu.vs	v8, v8, v8
+# CHECK-NEXT:  1      7     2.00                         7     SMX60_VIEU[2]                              VREDMINU_VS                vredminu.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDMINU_VS                vredminu.vs	v8, v8, v8
+# CHECK-NEXT:  1      11    4.00                         11    SMX60_VIEU[4]                              VREDMINU_VS                vredminu.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDMINU_VS                vredminu.vs	v8, v8, v8
+# CHECK-NEXT:  1      19    10.00                        19    SMX60_VIEU[10]                             VREDMINU_VS                vredminu.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDMINU_VS                vredminu.vs	v8, v8, v8
+# CHECK-NEXT:  1      35    35.00                        35    SMX60_VIEU[35]                             VREDMINU_VS                vredminu.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDMINU_VS                vredminu.vs	v8, v8, v8
+# CHECK-NEXT:  1      5     2.00                         5     SMX60_VIEU[2]                              VREDMINU_VS                vredminu.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDMINU_VS                vredminu.vs	v8, v8, v8
+# CHECK-NEXT:  1      5     1.00                         5     SMX60_VIEU                                 VREDMINU_VS                vredminu.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDMINU_VS                vredminu.vs	v8, v8, v8
+# CHECK-NEXT:  1      7     2.00                         7     SMX60_VIEU[2]                              VREDMINU_VS                vredminu.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDMINU_VS                vredminu.vs	v8, v8, v8
+# CHECK-NEXT:  1      11    4.00                         11    SMX60_VIEU[4]                              VREDMINU_VS                vredminu.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDMINU_VS                vredminu.vs	v8, v8, v8
+# CHECK-NEXT:  1      19    10.00                        19    SMX60_VIEU[10]                             VREDMINU_VS                vredminu.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDMINU_VS                vredminu.vs	v8, v8, v8
+# CHECK-NEXT:  1      35    35.00                        35    SMX60_VIEU[35]                             VREDMINU_VS                vredminu.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDMINU_VS                vredminu.vs	v8, v8, v8
+# CHECK-NEXT:  1      5     2.00                         5     SMX60_VIEU[2]                              VREDMINU_VS                vredminu.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDMINU_VS                vredminu.vs	v8, v8, v8
+# CHECK-NEXT:  1      7     2.00                         7     SMX60_VIEU[2]                              VREDMINU_VS                vredminu.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDMINU_VS                vredminu.vs	v8, v8, v8
+# CHECK-NEXT:  1      11    4.00                         11    SMX60_VIEU[4]                              VREDMINU_VS                vredminu.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDMINU_VS                vredminu.vs	v8, v8, v8
+# CHECK-NEXT:  1      19    10.00                        19    SMX60_VIEU[10]                             VREDMINU_VS                vredminu.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDMINU_VS                vredminu.vs	v8, v8, v8
+# CHECK-NEXT:  1      35    35.00                        35    SMX60_VIEU[35]                             VREDMINU_VS                vredminu.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDMINU_VS                vredminu.vs	v8, v8, v8
+# CHECK-NEXT:  1      7     2.00                         7     SMX60_VIEU[2]                              VREDMINU_VS                vredminu.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDMINU_VS                vredminu.vs	v8, v8, v8
+# CHECK-NEXT:  1      11    4.00                         11    SMX60_VIEU[4]                              VREDMINU_VS                vredminu.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDMINU_VS                vredminu.vs	v8, v8, v8
+# CHECK-NEXT:  1      19    10.00                        19    SMX60_VIEU[10]                             VREDMINU_VS                vredminu.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDMINU_VS                vredminu.vs	v8, v8, v8
+# CHECK-NEXT:  1      35    35.00                        35    SMX60_VIEU[35]                             VREDMINU_VS                vredminu.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDMIN_VS                 vredmin.vs	v8, v8, v8
+# CHECK-NEXT:  1      5     2.00                         5     SMX60_VIEU[2]                              VREDMIN_VS                 vredmin.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDMIN_VS                 vredmin.vs	v8, v8, v8
+# CHECK-NEXT:  1      5     1.00                         5     SMX60_VIEU                                 VREDMIN_VS                 vredmin.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDMIN_VS                 vredmin.vs	v8, v8, v8
+# CHECK-NEXT:  1      5     1.00                         5     SMX60_VIEU                                 VREDMIN_VS                 vredmin.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDMIN_VS                 vredmin.vs	v8, v8, v8
+# CHECK-NEXT:  1      7     2.00                         7     SMX60_VIEU[2]                              VREDMIN_VS                 vredmin.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDMIN_VS                 vredmin.vs	v8, v8, v8
+# CHECK-NEXT:  1      11    4.00                         11    SMX60_VIEU[4]                              VREDMIN_VS                 vredmin.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDMIN_VS                 vredmin.vs	v8, v8, v8
+# CHECK-NEXT:  1      19    10.00                        19    SMX60_VIEU[10]                             VREDMIN_VS                 vredmin.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDMIN_VS                 vredmin.vs	v8, v8, v8
+# CHECK-NEXT:  1      35    35.00                        35    SMX60_VIEU[35]                             VREDMIN_VS                 vredmin.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDMIN_VS                 vredmin.vs	v8, v8, v8
+# CHECK-NEXT:  1      5     2.00                         5     SMX60_VIEU[2]                              VREDMIN_VS                 vredmin.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDMIN_VS                 vredmin.vs	v8, v8, v8
+# CHECK-NEXT:  1      5     1.00                         5     SMX60_VIEU                                 VREDMIN_VS                 vredmin.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDMIN_VS                 vredmin.vs	v8, v8, v8
+# CHECK-NEXT:  1      7     2.00                         7     SMX60_VIEU[2]                              VREDMIN_VS                 vredmin.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDMIN_VS                 vredmin.vs	v8, v8, v8
+# CHECK-NEXT:  1      11    4.00                         11    SMX60_VIEU[4]                              VREDMIN_VS                 vredmin.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDMIN_VS                 vredmin.vs	v8, v8, v8
+# CHECK-NEXT:  1      19    10.00                        19    SMX60_VIEU[10]                             VREDMIN_VS                 vredmin.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDMIN_VS                 vredmin.vs	v8, v8, v8
+# CHECK-NEXT:  1      35    35.00                        35    SMX60_VIEU[35]                             VREDMIN_VS                 vredmin.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDMIN_VS                 vredmin.vs	v8, v8, v8
+# CHECK-NEXT:  1      5     2.00                         5     SMX60_VIEU[2]                              VREDMIN_VS                 vredmin.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDMIN_VS                 vredmin.vs	v8, v8, v8
+# CHECK-NEXT:  1      7     2.00                         7     SMX60_VIEU[2]                              VREDMIN_VS                 vredmin.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDMIN_VS                 vredmin.vs	v8, v8, v8
+# CHECK-NEXT:  1      11    4.00                         11    SMX60_VIEU[4]                              VREDMIN_VS                 vredmin.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDMIN_VS                 vredmin.vs	v8, v8, v8
+# CHECK-NEXT:  1      19    10.00                        19    SMX60_VIEU[10]                             VREDMIN_VS                 vredmin.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDMIN_VS                 vredmin.vs	v8, v8, v8
+# CHECK-NEXT:  1      35    35.00                        35    SMX60_VIEU[35]                             VREDMIN_VS                 vredmin.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDMIN_VS                 vredmin.vs	v8, v8, v8
+# CHECK-NEXT:  1      7     2.00                         7     SMX60_VIEU[2]                              VREDMIN_VS                 vredmin.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDMIN_VS                 vredmin.vs	v8, v8, v8
+# CHECK-NEXT:  1      11    4.00                         11    SMX60_VIEU[4]                              VREDMIN_VS                 vredmin.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDMIN_VS                 vredmin.vs	v8, v8, v8
+# CHECK-NEXT:  1      19    10.00                        19    SMX60_VIEU[10]                             VREDMIN_VS                 vredmin.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDMIN_VS                 vredmin.vs	v8, v8, v8
+# CHECK-NEXT:  1      35    35.00                        35    SMX60_VIEU[35]                             VREDMIN_VS                 vredmin.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDOR_VS                  vredor.vs	v8, v8, v8
+# CHECK-NEXT:  1      5     2.00                         5     SMX60_VIEU[2]                              VREDOR_VS                  vredor.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDOR_VS                  vredor.vs	v8, v8, v8
+# CHECK-NEXT:  1      5     1.00                         5     SMX60_VIEU                                 VREDOR_VS                  vredor.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDOR_VS                  vredor.vs	v8, v8, v8
+# CHECK-NEXT:  1      5     1.00                         5     SMX60_VIEU                                 VREDOR_VS                  vredor.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDOR_VS                  vredor.vs	v8, v8, v8
+# CHECK-NEXT:  1      7     2.00                         7     SMX60_VIEU[2]                              VREDOR_VS                  vredor.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDOR_VS                  vredor.vs	v8, v8, v8
+# CHECK-NEXT:  1      11    4.00                         11    SMX60_VIEU[4]                              VREDOR_VS                  vredor.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDOR_VS                  vredor.vs	v8, v8, v8
+# CHECK-NEXT:  1      19    10.00                        19    SMX60_VIEU[10]                             VREDOR_VS                  vredor.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDOR_VS                  vredor.vs	v8, v8, v8
+# CHECK-NEXT:  1      35    35.00                        35    SMX60_VIEU[35]                             VREDOR_VS                  vredor.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDOR_VS                  vredor.vs	v8, v8, v8
+# CHECK-NEXT:  1      5     2.00                         5     SMX60_VIEU[2]                              VREDOR_VS                  vredor.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDOR_VS                  vredor.vs	v8, v8, v8
+# CHECK-NEXT:  1      5     1.00                         5     SMX60_VIEU                                 VREDOR_VS                  vredor.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDOR_VS                  vredor.vs	v8, v8, v8
+# CHECK-NEXT:  1      7     2.00                         7     SMX60_VIEU[2]                              VREDOR_VS                  vredor.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDOR_VS                  vredor.vs	v8, v8, v8
+# CHECK-NEXT:  1      11    4.00                         11    SMX60_VIEU[4]                              VREDOR_VS                  vredor.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDOR_VS                  vredor.vs	v8, v8, v8
+# CHECK-NEXT:  1      19    10.00                        19    SMX60_VIEU[10]                             VREDOR_VS                  vredor.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDOR_VS                  vredor.vs	v8, v8, v8
+# CHECK-NEXT:  1      35    35.00                        35    SMX60_VIEU[35]                             VREDOR_VS                  vredor.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDOR_VS                  vredor.vs	v8, v8, v8
+# CHECK-NEXT:  1      5     2.00                         5     SMX60_VIEU[2]                              VREDOR_VS                  vredor.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDOR_VS                  vredor.vs	v8, v8, v8
+# CHECK-NEXT:  1      7     2.00                         7     SMX60_VIEU[2]                              VREDOR_VS                  vredor.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDOR_VS                  vredor.vs	v8, v8, v8
+# CHECK-NEXT:  1      11    4.00                         11    SMX60_VIEU[4]                              VREDOR_VS                  vredor.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDOR_VS                  vredor.vs	v8, v8, v8
+# CHECK-NEXT:  1      19    10.00                        19    SMX60_VIEU[10]                             VREDOR_VS                  vredor.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDOR_VS                  vredor.vs	v8, v8, v8
+# CHECK-NEXT:  1      35    35.00                        35    SMX60_VIEU[35]                             VREDOR_VS                  vredor.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDOR_VS                  vredor.vs	v8, v8, v8
+# CHECK-NEXT:  1      7     2.00                         7     SMX60_VIEU[2]                              VREDOR_VS                  vredor.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDOR_VS                  vredor.vs	v8, v8, v8
+# CHECK-NEXT:  1      11    4.00                         11    SMX60_VIEU[4]                              VREDOR_VS                  vredor.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDOR_VS                  vredor.vs	v8, v8, v8
+# CHECK-NEXT:  1      19    10.00                        19    SMX60_VIEU[10]                             VREDOR_VS                  vredor.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDOR_VS                  vredor.vs	v8, v8, v8
+# CHECK-NEXT:  1      35    35.00                        35    SMX60_VIEU[35]                             VREDOR_VS                  vredor.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDSUM_VS                 vredsum.vs	v8, v8, v8
+# CHECK-NEXT:  1      5     2.00                         5     SMX60_VIEU[2]                              VREDSUM_VS                 vredsum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDSUM_VS                 vredsum.vs	v8, v8, v8
+# CHECK-NEXT:  1      5     1.00                         5     SMX60_VIEU                                 VREDSUM_VS                 vredsum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDSUM_VS                 vredsum.vs	v8, v8, v8
+# CHECK-NEXT:  1      5     1.00                         5     SMX60_VIEU                                 VREDSUM_VS                 vredsum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDSUM_VS                 vredsum.vs	v8, v8, v8
+# CHECK-NEXT:  1      7     2.00                         7     SMX60_VIEU[2]                              VREDSUM_VS                 vredsum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDSUM_VS                 vredsum.vs	v8, v8, v8
+# CHECK-NEXT:  1      11    4.00                         11    SMX60_VIEU[4]                              VREDSUM_VS                 vredsum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDSUM_VS                 vredsum.vs	v8, v8, v8
+# CHECK-NEXT:  1      19    10.00                        19    SMX60_VIEU[10]                             VREDSUM_VS                 vredsum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDSUM_VS                 vredsum.vs	v8, v8, v8
+# CHECK-NEXT:  1      35    35.00                        35    SMX60_VIEU[35]                             VREDSUM_VS                 vredsum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDSUM_VS                 vredsum.vs	v8, v8, v8
+# CHECK-NEXT:  1      5     2.00                         5     SMX60_VIEU[2]                              VREDSUM_VS                 vredsum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDSUM_VS                 vredsum.vs	v8, v8, v8
+# CHECK-NEXT:  1      5     1.00                         5     SMX60_VIEU                                 VREDSUM_VS                 vredsum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDSUM_VS                 vredsum.vs	v8, v8, v8
+# CHECK-NEXT:  1      7     2.00                         7     SMX60_VIEU[2]                              VREDSUM_VS                 vredsum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDSUM_VS                 vredsum.vs	v8, v8, v8
+# CHECK-NEXT:  1      11    4.00                         11    SMX60_VIEU[4]                              VREDSUM_VS                 vredsum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDSUM_VS                 vredsum.vs	v8, v8, v8
+# CHECK-NEXT:  1      19    10.00                        19    SMX60_VIEU[10]                             VREDSUM_VS                 vredsum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDSUM_VS                 vredsum.vs	v8, v8, v8
+# CHECK-NEXT:  1      35    35.00                        35    SMX60_VIEU[35]                             VREDSUM_VS                 vredsum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDSUM_VS                 vredsum.vs	v8, v8, v8
+# CHECK-NEXT:  1      5     2.00                         5     SMX60_VIEU[2]                              VREDSUM_VS                 vredsum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDSUM_VS                 vredsum.vs	v8, v8, v8
+# CHECK-NEXT:  1      7     2.00                         7     SMX60_VIEU[2]                              VREDSUM_VS                 vredsum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDSUM_VS                 vredsum.vs	v8, v8, v8
+# CHECK-NEXT:  1      11    4.00                         11    SMX60_VIEU[4]                              VREDSUM_VS                 vredsum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDSUM_VS                 vredsum.vs	v8, v8, v8
+# CHECK-NEXT:  1      19    10.00                        19    SMX60_VIEU[10]                             VREDSUM_VS                 vredsum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDSUM_VS                 vredsum.vs	v8, v8, v8
+# CHECK-NEXT:  1      35    35.00                        35    SMX60_VIEU[35]                             VREDSUM_VS                 vredsum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDSUM_VS                 vredsum.vs	v8, v8, v8
+# CHECK-NEXT:  1      7     2.00                         7     SMX60_VIEU[2]                              VREDSUM_VS                 vredsum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDSUM_VS                 vredsum.vs	v8, v8, v8
+# CHECK-NEXT:  1      11    4.00                         11    SMX60_VIEU[4]                              VREDSUM_VS                 vredsum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDSUM_VS                 vredsum.vs	v8, v8, v8
+# CHECK-NEXT:  1      19    10.00                        19    SMX60_VIEU[10]                             VREDSUM_VS                 vredsum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDSUM_VS                 vredsum.vs	v8, v8, v8
+# CHECK-NEXT:  1      35    35.00                        35    SMX60_VIEU[35]                             VREDSUM_VS                 vredsum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDXOR_VS                 vredxor.vs	v8, v8, v8
+# CHECK-NEXT:  1      5     2.00                         5     SMX60_VIEU[2]                              VREDXOR_VS                 vredxor.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDXOR_VS                 vredxor.vs	v8, v8, v8
+# CHECK-NEXT:  1      5     1.00                         5     SMX60_VIEU                                 VREDXOR_VS                 vredxor.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDXOR_VS                 vredxor.vs	v8, v8, v8
+# CHECK-NEXT:  1      5     1.00                         5     SMX60_VIEU                                 VREDXOR_VS                 vredxor.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDXOR_VS                 vredxor.vs	v8, v8, v8
+# CHECK-NEXT:  1      7     2.00                         7     SMX60_VIEU[2]                              VREDXOR_VS                 vredxor.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDXOR_VS                 vredxor.vs	v8, v8, v8
+# CHECK-NEXT:  1      11    4.00                         11    SMX60_VIEU[4]                              VREDXOR_VS                 vredxor.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDXOR_VS                 vredxor.vs	v8, v8, v8
+# CHECK-NEXT:  1      19    10.00                        19    SMX60_VIEU[10]                             VREDXOR_VS                 vredxor.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDXOR_VS                 vredxor.vs	v8, v8, v8
+# CHECK-NEXT:  1      35    35.00                        35    SMX60_VIEU[35]                             VREDXOR_VS                 vredxor.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDXOR_VS                 vredxor.vs	v8, v8, v8
+# CHECK-NEXT:  1      5     2.00                         5     SMX60_VIEU[2]                              VREDXOR_VS                 vredxor.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDXOR_VS                 vredxor.vs	v8, v8, v8
+# CHECK-NEXT:  1      5     1.00                         5     SMX60_VIEU                                 VREDXOR_VS                 vredxor.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDXOR_VS                 vredxor.vs	v8, v8, v8
+# CHECK-NEXT:  1      7     2.00                         7     SMX60_VIEU[2]                              VREDXOR_VS                 vredxor.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDXOR_VS                 vredxor.vs	v8, v8, v8
+# CHECK-NEXT:  1      11    4.00                         11    SMX60_VIEU[4]                              VREDXOR_VS                 vredxor.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDXOR_VS                 vredxor.vs	v8, v8, v8
+# CHECK-NEXT:  1      19    10.00                        19    SMX60_VIEU[10]                             VREDXOR_VS                 vredxor.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDXOR_VS                 vredxor.vs	v8, v8, v8
+# CHECK-NEXT:  1      35    35.00                        35    SMX60_VIEU[35]                             VREDXOR_VS                 vredxor.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDXOR_VS                 vredxor.vs	v8, v8, v8
+# CHECK-NEXT:  1      5     2.00                         5     SMX60_VIEU[2]                              VREDXOR_VS                 vredxor.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDXOR_VS                 vredxor.vs	v8, v8, v8
+# CHECK-NEXT:  1      7     2.00                         7     SMX60_VIEU[2]                              VREDXOR_VS                 vredxor.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDXOR_VS                 vredxor.vs	v8, v8, v8
+# CHECK-NEXT:  1      11    4.00                         11    SMX60_VIEU[4]                              VREDXOR_VS                 vredxor.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDXOR_VS                 vredxor.vs	v8, v8, v8
+# CHECK-NEXT:  1      19    10.00                        19    SMX60_VIEU[10]                             VREDXOR_VS                 vredxor.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDXOR_VS                 vredxor.vs	v8, v8, v8
+# CHECK-NEXT:  1      35    35.00                        35    SMX60_VIEU[35]                             VREDXOR_VS                 vredxor.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDXOR_VS                 vredxor.vs	v8, v8, v8
+# CHECK-NEXT:  1      7     2.00                         7     SMX60_VIEU[2]                              VREDXOR_VS                 vredxor.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDXOR_VS                 vredxor.vs	v8, v8, v8
+# CHECK-NEXT:  1      11    4.00                         11    SMX60_VIEU[4]                              VREDXOR_VS                 vredxor.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDXOR_VS                 vredxor.vs	v8, v8, v8
+# CHECK-NEXT:  1      19    10.00                        19    SMX60_VIEU[10]                             VREDXOR_VS                 vredxor.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VREDXOR_VS                 vredxor.vs	v8, v8, v8
+# CHECK-NEXT:  1      35    35.00                        35    SMX60_VIEU[35]                             VREDXOR_VS                 vredxor.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VWREDSUMU_VS               vwredsumu.vs	v8, v16, v24
+# CHECK-NEXT:  1      5     2.00                         5     SMX60_VIEU[2]                              VWREDSUMU_VS               vwredsumu.vs	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VWREDSUMU_VS               vwredsumu.vs	v8, v16, v24
+# CHECK-NEXT:  1      5     1.00                         5     SMX60_VIEU                                 VWREDSUMU_VS               vwredsumu.vs	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VWREDSUMU_VS               vwredsumu.vs	v8, v16, v24
+# CHECK-NEXT:  1      5     1.00                         5     SMX60_VIEU                                 VWREDSUMU_VS               vwredsumu.vs	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VWREDSUMU_VS               vwredsumu.vs	v8, v16, v24
+# CHECK-NEXT:  1      7     2.00                         7     SMX60_VIEU[2]                              VWREDSUMU_VS               vwredsumu.vs	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VWREDSUMU_VS               vwredsumu.vs	v8, v16, v24
+# CHECK-NEXT:  1      11    4.00                         11    SMX60_VIEU[4]                              VWREDSUMU_VS               vwredsumu.vs	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VWREDSUMU_VS               vwredsumu.vs	v8, v16, v24
+# CHECK-NEXT:  1      19    10.00                        19    SMX60_VIEU[10]                             VWREDSUMU_VS               vwredsumu.vs	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VWREDSUMU_VS               vwredsumu.vs	v8, v16, v24
+# CHECK-NEXT:  1      35    35.00                        35    SMX60_VIEU[35]                             VWREDSUMU_VS               vwredsumu.vs	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VWREDSUMU_VS               vwredsumu.vs	v8, v16, v24
+# CHECK-NEXT:  1      5     2.00                         5     SMX60_VIEU[2]                              VWREDSUMU_VS               vwredsumu.vs	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VWREDSUMU_VS               vwredsumu.vs	v8, v16, v24
+# CHECK-NEXT:  1      5     1.00                         5     SMX60_VIEU                                 VWREDSUMU_VS               vwredsumu.vs	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VWREDSUMU_VS               vwredsumu.vs	v8, v16, v24
+# CHECK-NEXT:  1      7     2.00                         7     SMX60_VIEU[2]                              VWREDSUMU_VS               vwredsumu.vs	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VWREDSUMU_VS               vwredsumu.vs	v8, v16, v24
+# CHECK-NEXT:  1      11    4.00                         11    SMX60_VIEU[4]                              VWREDSUMU_VS               vwredsumu.vs	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VWREDSUMU_VS               vwredsumu.vs	v8, v16, v24
+# CHECK-NEXT:  1      19    10.00                        19    SMX60_VIEU[10]                             VWREDSUMU_VS               vwredsumu.vs	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VWREDSUMU_VS               vwredsumu.vs	v8, v16, v24
+# CHECK-NEXT:  1      35    35.00                        35    SMX60_VIEU[35]                             VWREDSUMU_VS               vwredsumu.vs	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VWREDSUMU_VS               vwredsumu.vs	v8, v16, v24
+# CHECK-NEXT:  1      5     2.00                         5     SMX60_VIEU[2]                              VWREDSUMU_VS               vwredsumu.vs	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VWREDSUMU_VS               vwredsumu.vs	v8, v16, v24
+# CHECK-NEXT:  1      7     2.00                         7     SMX60_VIEU[2]                              VWREDSUMU_VS               vwredsumu.vs	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VWREDSUMU_VS               vwredsumu.vs	v8, v16, v24
+# CHECK-NEXT:  1      11    4.00                         11    SMX60_VIEU[4]                              VWREDSUMU_VS               vwredsumu.vs	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VWREDSUMU_VS               vwredsumu.vs	v8, v16, v24
+# CHECK-NEXT:  1      19    10.00                        19    SMX60_VIEU[10]                             VWREDSUMU_VS               vwredsumu.vs	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VWREDSUMU_VS               vwredsumu.vs	v8, v16, v24
+# CHECK-NEXT:  1      35    35.00                        35    SMX60_VIEU[35]                             VWREDSUMU_VS               vwredsumu.vs	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VWREDSUM_VS                vwredsum.vs	v8, v16, v24
+# CHECK-NEXT:  1      5     2.00                         5     SMX60_VIEU[2]                              VWREDSUM_VS                vwredsum.vs	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VWREDSUM_VS                vwredsum.vs	v8, v16, v24
+# CHECK-NEXT:  1      5     1.00                         5     SMX60_VIEU                                 VWREDSUM_VS                vwredsum.vs	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VWREDSUM_VS                vwredsum.vs	v8, v16, v24
+# CHECK-NEXT:  1      5     1.00                         5     SMX60_VIEU                                 VWREDSUM_VS                vwredsum.vs	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VWREDSUM_VS                vwredsum.vs	v8, v16, v24
+# CHECK-NEXT:  1      7     2.00                         7     SMX60_VIEU[2]                              VWREDSUM_VS                vwredsum.vs	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VWREDSUM_VS                vwredsum.vs	v8, v16, v24
+# CHECK-NEXT:  1      11    4.00                         11    SMX60_VIEU[4]                              VWREDSUM_VS                vwredsum.vs	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VWREDSUM_VS                vwredsum.vs	v8, v16, v24
+# CHECK-NEXT:  1      19    10.00                        19    SMX60_VIEU[10]                             VWREDSUM_VS                vwredsum.vs	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VWREDSUM_VS                vwredsum.vs	v8, v16, v24
+# CHECK-NEXT:  1      35    35.00                        35    SMX60_VIEU[35]                             VWREDSUM_VS                vwredsum.vs	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VWREDSUM_VS                vwredsum.vs	v8, v16, v24
+# CHECK-NEXT:  1      5     2.00                         5     SMX60_VIEU[2]                              VWREDSUM_VS                vwredsum.vs	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VWREDSUM_VS                vwredsum.vs	v8, v16, v24
+# CHECK-NEXT:  1      5     1.00                         5     SMX60_VIEU                                 VWREDSUM_VS                vwredsum.vs	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VWREDSUM_VS                vwredsum.vs	v8, v16, v24
+# CHECK-NEXT:  1      7     2.00                         7     SMX60_VIEU[2]                              VWREDSUM_VS                vwredsum.vs	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VWREDSUM_VS                vwredsum.vs	v8, v16, v24
+# CHECK-NEXT:  1      11    4.00                         11    SMX60_VIEU[4]                              VWREDSUM_VS                vwredsum.vs	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VWREDSUM_VS                vwredsum.vs	v8, v16, v24
+# CHECK-NEXT:  1      19    10.00                        19    SMX60_VIEU[10]                             VWREDSUM_VS                vwredsum.vs	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VWREDSUM_VS                vwredsum.vs	v8, v16, v24
+# CHECK-NEXT:  1      35    35.00                        35    SMX60_VIEU[35]                             VWREDSUM_VS                vwredsum.vs	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VWREDSUM_VS                vwredsum.vs	v8, v16, v24
+# CHECK-NEXT:  1      5     2.00                         5     SMX60_VIEU[2]                              VWREDSUM_VS                vwredsum.vs	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VWREDSUM_VS                vwredsum.vs	v8, v16, v24
+# CHECK-NEXT:  1      7     2.00                         7     SMX60_VIEU[2]                              VWREDSUM_VS                vwredsum.vs	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VWREDSUM_VS                vwredsum.vs	v8, v16, v24
+# CHECK-NEXT:  1      11    4.00                         11    SMX60_VIEU[4]                              VWREDSUM_VS                vwredsum.vs	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VWREDSUM_VS                vwredsum.vs	v8, v16, v24
+# CHECK-NEXT:  1      19    10.00                        19    SMX60_VIEU[10]                             VWREDSUM_VS                vwredsum.vs	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VWREDSUM_VS                vwredsum.vs	v8, v16, v24
+# CHECK-NEXT:  1      35    35.00                        35    SMX60_VIEU[35]                             VWREDSUM_VS                vwredsum.vs	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VFP                                  VFREDMAX_VS                vfredmax.vs	v8, v8, v8
+# CHECK-NEXT:  1      12    8.00                         12    SMX60_VFP[8]                               VFREDMAX_VS                vfredmax.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VFP                                  VFREDMAX_VS                vfredmax.vs	v8, v8, v8
+# CHECK-NEXT:  1      12    8.00                         12    SMX60_VFP[8]                               VFREDMAX_VS                vfredmax.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VFP                                  VFREDMAX_VS                vfredmax.vs	v8, v8, v8
+# CHECK-NEXT:  1      15    8.00                         15    SMX60_VFP[8]                               VFREDMAX_VS                vfredmax.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VFP                                  VFREDMAX_VS                vfredmax.vs	v8, v8, v8
+# CHECK-NEXT:  1      21    14.00                        21    SMX60_VFP[14]                              VFREDMAX_VS                vfredmax.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VFP                                  VFREDMAX_VS                vfredmax.vs	v8, v8, v8
+# CHECK-NEXT:  1      33    20.00                        33    SMX60_VFP[20]                              VFREDMAX_VS                vfredmax.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VFP                                  VFREDMAX_VS                vfredmax.vs	v8, v8, v8
+# CHECK-NEXT:  1      57    57.00                        57    SMX60_VFP[57]                              VFREDMAX_VS                vfredmax.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VFP                                  VFREDMAX_VS                vfredmax.vs	v8, v8, v8
+# CHECK-NEXT:  1      12    8.00                         12    SMX60_VFP[8]                               VFREDMAX_VS                vfredmax.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VFP                                  VFREDMAX_VS                vfredmax.vs	v8, v8, v8
+# CHECK-NEXT:  1      15    8.00                         15    SMX60_VFP[8]                               VFREDMAX_VS                vfredmax.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VFP                                  VFREDMAX_VS                vfredmax.vs	v8, v8, v8
+# CHECK-NEXT:  1      21    14.00                        21    SMX60_VFP[14]                              VFREDMAX_VS                vfredmax.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VFP                                  VFREDMAX_VS                vfredmax.vs	v8, v8, v8
+# CHECK-NEXT:  1      33    20.00                        33    SMX60_VFP[20]                              VFREDMAX_VS                vfredmax.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VFP                                  VFREDMAX_VS                vfredmax.vs	v8, v8, v8
+# CHECK-NEXT:  1      57    57.00                        57    SMX60_VFP[57]                              VFREDMAX_VS                vfredmax.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VFP                                  VFREDMAX_VS                vfredmax.vs	v8, v8, v8
+# CHECK-NEXT:  1      15    8.00                         15    SMX60_VFP[8]                               VFREDMAX_VS                vfredmax.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VFP                                  VFREDMAX_VS                vfredmax.vs	v8, v8, v8
+# CHECK-NEXT:  1      21    14.00                        21    SMX60_VFP[14]                              VFREDMAX_VS                vfredmax.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VFP                                  VFREDMAX_VS                vfredmax.vs	v8, v8, v8
+# CHECK-NEXT:  1      33    20.00                        33    SMX60_VFP[20]                              VFREDMAX_VS                vfredmax.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VFP                                  VFREDMAX_VS                vfredmax.vs	v8, v8, v8
+# CHECK-NEXT:  1      57    57.00                        57    SMX60_VFP[57]                              VFREDMAX_VS                vfredmax.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VFP                                  VFREDMIN_VS                vfredmin.vs	v8, v8, v8
+# CHECK-NEXT:  1      12    8.00                         12    SMX60_VFP[8]                               VFREDMIN_VS                vfredmin.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VFP                                  VFREDMIN_VS                vfredmin.vs	v8, v8, v8
+# CHECK-NEXT:  1      12    8.00                         12    SMX60_VFP[8]                               VFREDMIN_VS                vfredmin.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VFP                                  VFREDMIN_VS                vfredmin.vs	v8, v8, v8
+# CHECK-NEXT:  1      15    8.00                         15    SMX60_VFP[8]                               VFREDMIN_VS                vfredmin.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VFP                                  VFREDMIN_VS                vfredmin.vs	v8, v8, v8
+# CHECK-NEXT:  1      21    14.00                        21    SMX60_VFP[14]                              VFREDMIN_VS                vfredmin.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VFP                                  VFREDMIN_VS                vfredmin.vs	v8, v8, v8
+# CHECK-NEXT:  1      33    20.00                        33    SMX60_VFP[20]                              VFREDMIN_VS                vfredmin.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VFP                                  VFREDMIN_VS                vfredmin.vs	v8, v8, v8
+# CHECK-NEXT:  1      57    57.00                        57    SMX60_VFP[57]                              VFREDMIN_VS                vfredmin.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VFP                                  VFREDMIN_VS                vfredmin.vs	v8, v8, v8
+# CHECK-NEXT:  1      12    8.00                         12    SMX60_VFP[8]                               VFREDMIN_VS                vfredmin.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VFP                                  VFREDMIN_VS                vfredmin.vs	v8, v8, v8
+# CHECK-NEXT:  1      15    8.00                         15    SMX60_VFP[8]                               VFREDMIN_VS                vfredmin.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VFP                                  VFREDMIN_VS                vfredmin.vs	v8, v8, v8
+# CHECK-NEXT:  1      21    14.00                        21    SMX60_VFP[14]                              VFREDMIN_VS                vfredmin.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VFP                                  VFREDMIN_VS                vfredmin.vs	v8, v8, v8
+# CHECK-NEXT:  1      33    20.00                        33    SMX60_VFP[20]                              VFREDMIN_VS                vfredmin.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VFP                                  VFREDMIN_VS                vfredmin.vs	v8, v8, v8
+# CHECK-NEXT:  1      57    57.00                        57    SMX60_VFP[57]                              VFREDMIN_VS                vfredmin.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VFP                                  VFREDMIN_VS                vfredmin.vs	v8, v8, v8
+# CHECK-NEXT:  1      15    8.00                         15    SMX60_VFP[8]                               VFREDMIN_VS                vfredmin.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VFP                                  VFREDMIN_VS                vfredmin.vs	v8, v8, v8
+# CHECK-NEXT:  1      21    14.00                        21    SMX60_VFP[14]                              VFREDMIN_VS                vfredmin.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VFP                                  VFREDMIN_VS                vfredmin.vs	v8, v8, v8
+# CHECK-NEXT:  1      33    20.00                        33    SMX60_VFP[20]                              VFREDMIN_VS                vfredmin.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VFP                                  VFREDMIN_VS                vfredmin.vs	v8, v8, v8
+# CHECK-NEXT:  1      57    57.00                        57    SMX60_VFP[57]                              VFREDMIN_VS                vfredmin.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VFP                                  VFREDOSUM_VS               vfredosum.vs	v8, v8, v8
+# CHECK-NEXT:  1      24    20.00                        24    SMX60_VFP[20]                              VFREDOSUM_VS               vfredosum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VFP                                  VFREDOSUM_VS               vfredosum.vs	v8, v8, v8
+# CHECK-NEXT:  1      12    8.00                         12    SMX60_VFP[8]                               VFREDOSUM_VS               vfredosum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VFP                                  VFREDOSUM_VS               vfredosum.vs	v8, v8, v8
+# CHECK-NEXT:  1      48    24.00                        48    SMX60_VFP[24]                              VFREDOSUM_VS               vfredosum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VFP                                  VFREDOSUM_VS               vfredosum.vs	v8, v8, v8
+# CHECK-NEXT:  1      96    48.00                        96    SMX60_VFP[48]                              VFREDOSUM_VS               vfredosum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VFP                                  VFREDOSUM_VS               vfredosum.vs	v8, v8, v8
+# CHECK-NEXT:  1      192   96.00                        192   SMX60_VFP[96]                              VFREDOSUM_VS               vfredosum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VFP                                  VFREDOSUM_VS               vfredosum.vs	v8, v8, v8
+# CHECK-NEXT:  1      384   384.00                       384   SMX60_VFP[384]                             VFREDOSUM_VS               vfredosum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VFP                                  VFREDOSUM_VS               vfredosum.vs	v8, v8, v8
+# CHECK-NEXT:  1      12    8.00                         12    SMX60_VFP[8]                               VFREDOSUM_VS               vfredosum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VFP                                  VFREDOSUM_VS               vfredosum.vs	v8, v8, v8
+# CHECK-NEXT:  1      24    12.00                        24    SMX60_VFP[12]                              VFREDOSUM_VS               vfredosum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VFP                                  VFREDOSUM_VS               vfredosum.vs	v8, v8, v8
+# CHECK-NEXT:  1      48    24.00                        48    SMX60_VFP[24]                              VFREDOSUM_VS               vfredosum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VFP                                  VFREDOSUM_VS               vfredosum.vs	v8, v8, v8
+# CHECK-NEXT:  1      96    48.00                        96    SMX60_VFP[48]                              VFREDOSUM_VS               vfredosum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VFP                                  VFREDOSUM_VS               vfredosum.vs	v8, v8, v8
+# CHECK-NEXT:  1      192   192.00                       192   SMX60_VFP[192]                             VFREDOSUM_VS               vfredosum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VFP                                  VFREDOSUM_VS               vfredosum.vs	v8, v8, v8
+# CHECK-NEXT:  1      12    6.00                         12    SMX60_VFP[6]                               VFREDOSUM_VS               vfredosum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VFP                                  VFREDOSUM_VS               vfredosum.vs	v8, v8, v8
+# CHECK-NEXT:  1      24    12.00                        24    SMX60_VFP[12]                              VFREDOSUM_VS               vfredosum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VFP                                  VFREDOSUM_VS               vfredosum.vs	v8, v8, v8
+# CHECK-NEXT:  1      48    24.00                        48    SMX60_VFP[24]                              VFREDOSUM_VS               vfredosum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VFP                                  VFREDOSUM_VS               vfredosum.vs	v8, v8, v8
+# CHECK-NEXT:  1      96    96.00                        96    SMX60_VFP[96]                              VFREDOSUM_VS               vfredosum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VFP                                  VFREDUSUM_VS               vfredusum.vs	v8, v8, v8
+# CHECK-NEXT:  1      12    8.00                         12    SMX60_VFP[8]                               VFREDUSUM_VS               vfredusum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VFP                                  VFREDUSUM_VS               vfredusum.vs	v8, v8, v8
+# CHECK-NEXT:  1      12    8.00                         12    SMX60_VFP[8]                               VFREDUSUM_VS               vfredusum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VFP                                  VFREDUSUM_VS               vfredusum.vs	v8, v8, v8
+# CHECK-NEXT:  1      15    8.00                         15    SMX60_VFP[8]                               VFREDUSUM_VS               vfredusum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VFP                                  VFREDUSUM_VS               vfredusum.vs	v8, v8, v8
+# CHECK-NEXT:  1      21    14.00                        21    SMX60_VFP[14]                              VFREDUSUM_VS               vfredusum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VFP                                  VFREDUSUM_VS               vfredusum.vs	v8, v8, v8
+# CHECK-NEXT:  1      33    20.00                        33    SMX60_VFP[20]                              VFREDUSUM_VS               vfredusum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VFP                                  VFREDUSUM_VS               vfredusum.vs	v8, v8, v8
+# CHECK-NEXT:  1      57    57.00                        57    SMX60_VFP[57]                              VFREDUSUM_VS               vfredusum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VFP                                  VFREDUSUM_VS               vfredusum.vs	v8, v8, v8
+# CHECK-NEXT:  1      12    8.00                         12    SMX60_VFP[8]                               VFREDUSUM_VS               vfredusum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VFP                                  VFREDUSUM_VS               vfredusum.vs	v8, v8, v8
+# CHECK-NEXT:  1      15    8.00                         15    SMX60_VFP[8]                               VFREDUSUM_VS               vfredusum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VFP                                  VFREDUSUM_VS               vfredusum.vs	v8, v8, v8
+# CHECK-NEXT:  1      21    14.00                        21    SMX60_VFP[14]                              VFREDUSUM_VS               vfredusum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VFP                                  VFREDUSUM_VS               vfredusum.vs	v8, v8, v8
+# CHECK-NEXT:  1      33    20.00                        33    SMX60_VFP[20]                              VFREDUSUM_VS               vfredusum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VFP                                  VFREDUSUM_VS               vfredusum.vs	v8, v8, v8
+# CHECK-NEXT:  1      57    57.00                        57    SMX60_VFP[57]                              VFREDUSUM_VS               vfredusum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VFP                                  VFREDUSUM_VS               vfredusum.vs	v8, v8, v8
+# CHECK-NEXT:  1      15    8.00                         15    SMX60_VFP[8]                               VFREDUSUM_VS               vfredusum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VFP                                  VFREDUSUM_VS               vfredusum.vs	v8, v8, v8
+# CHECK-NEXT:  1      21    14.00                        21    SMX60_VFP[14]                              VFREDUSUM_VS               vfredusum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VFP                                  VFREDUSUM_VS               vfredusum.vs	v8, v8, v8
+# CHECK-NEXT:  1      33    20.00                        33    SMX60_VFP[20]                              VFREDUSUM_VS               vfredusum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VFP                                  VFREDUSUM_VS               vfredusum.vs	v8, v8, v8
+# CHECK-NEXT:  1      57    57.00                        57    SMX60_VFP[57]                              VFREDUSUM_VS               vfredusum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VFP                                  VFWREDOSUM_VS              vfwredosum.vs	v8, v8, v8
+# CHECK-NEXT:  1      32    27.00                        32    SMX60_VFP[27]                              VFWREDOSUM_VS              vfwredosum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VFP                                  VFWREDOSUM_VS              vfwredosum.vs	v8, v8, v8
+# CHECK-NEXT:  1      16    11.00                        16    SMX60_VFP[11]                              VFWREDOSUM_VS              vfwredosum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VFP                                  VFWREDOSUM_VS              vfwredosum.vs	v8, v8, v8
+# CHECK-NEXT:  1      64    32.00                        64    SMX60_VFP[32]                              VFWREDOSUM_VS              vfwredosum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VFP                                  VFWREDOSUM_VS              vfwredosum.vs	v8, v8, v8
+# CHECK-NEXT:  1      128   64.00                        128   SMX60_VFP[64]                              VFWREDOSUM_VS              vfwredosum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VFP                                  VFWREDOSUM_VS              vfwredosum.vs	v8, v8, v8
+# CHECK-NEXT:  1      256   128.00                       256   SMX60_VFP[128]                             VFWREDOSUM_VS              vfwredosum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VFP                                  VFWREDOSUM_VS              vfwredosum.vs	v8, v8, v8
+# CHECK-NEXT:  1      512   512.00                       512   SMX60_VFP[512]                             VFWREDOSUM_VS              vfwredosum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VFP                                  VFWREDOSUM_VS              vfwredosum.vs	v8, v8, v8
+# CHECK-NEXT:  1      16    11.00                        16    SMX60_VFP[11]                              VFWREDOSUM_VS              vfwredosum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VFP                                  VFWREDOSUM_VS              vfwredosum.vs	v8, v8, v8
+# CHECK-NEXT:  1      32    16.00                        32    SMX60_VFP[16]                              VFWREDOSUM_VS              vfwredosum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VFP                                  VFWREDOSUM_VS              vfwredosum.vs	v8, v8, v8
+# CHECK-NEXT:  1      64    32.00                        64    SMX60_VFP[32]                              VFWREDOSUM_VS              vfwredosum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VFP                                  VFWREDOSUM_VS              vfwredosum.vs	v8, v8, v8
+# CHECK-NEXT:  1      128   64.00                        128   SMX60_VFP[64]                              VFWREDOSUM_VS              vfwredosum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VFP                                  VFWREDOSUM_VS              vfwredosum.vs	v8, v8, v8
+# CHECK-NEXT:  1      256   256.00                       256   SMX60_VFP[256]                             VFWREDOSUM_VS              vfwredosum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VFP                                  VFWREDUSUM_VS              vfwredusum.vs	v8, v8, v8
+# CHECK-NEXT:  1      32    27.00                        32    SMX60_VFP[27]                              VFWREDUSUM_VS              vfwredusum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VFP                                  VFWREDUSUM_VS              vfwredusum.vs	v8, v8, v8
+# CHECK-NEXT:  1      16    11.00                        16    SMX60_VFP[11]                              VFWREDUSUM_VS              vfwredusum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VFP                                  VFWREDUSUM_VS              vfwredusum.vs	v8, v8, v8
+# CHECK-NEXT:  1      64    32.00                        64    SMX60_VFP[32]                              VFWREDUSUM_VS              vfwredusum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VFP                                  VFWREDUSUM_VS              vfwredusum.vs	v8, v8, v8
+# CHECK-NEXT:  1      128   64.00                        128   SMX60_VFP[64]                              VFWREDUSUM_VS              vfwredusum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VFP                                  VFWREDUSUM_VS              vfwredusum.vs	v8, v8, v8
+# CHECK-NEXT:  1      256   128.00                       256   SMX60_VFP[128]                             VFWREDUSUM_VS              vfwredusum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VFP                                  VFWREDUSUM_VS              vfwredusum.vs	v8, v8, v8
+# CHECK-NEXT:  1      512   512.00                       512   SMX60_VFP[512]                             VFWREDUSUM_VS              vfwredusum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VFP                                  VFWREDUSUM_VS              vfwredusum.vs	v8, v8, v8
+# CHECK-NEXT:  1      16    11.00                        16    SMX60_VFP[11]                              VFWREDUSUM_VS              vfwredusum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VFP                                  VFWREDUSUM_VS              vfwredusum.vs	v8, v8, v8
+# CHECK-NEXT:  1      32    16.00                        32    SMX60_VFP[16]                              VFWREDUSUM_VS              vfwredusum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VFP                                  VFWREDUSUM_VS              vfwredusum.vs	v8, v8, v8
+# CHECK-NEXT:  1      64    32.00                        64    SMX60_VFP[32]                              VFWREDUSUM_VS              vfwredusum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VFP                                  VFWREDUSUM_VS              vfwredusum.vs	v8, v8, v8
+# CHECK-NEXT:  1      128   64.00                        128   SMX60_VFP[64]                              VFWREDUSUM_VS              vfwredusum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VFP                                  VFWREDUSUM_VS              vfwredusum.vs	v8, v8, v8
+# CHECK-NEXT:  1      256   256.00                       256   SMX60_VFP[256]                             VFWREDUSUM_VS              vfwredusum.vs	v8, v8, v8
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0]   - SMX60_FP
@@ -1230,595 +1230,595 @@ vfwredusum.vs v8, v8, v8
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3.0]  [3.1]  [4]    [5]    [6]
-# CHECK-NEXT:  -     294.00  -      -      -     82.00  212.00  -
+# CHECK-NEXT:  -     294.00  -      -      -     4271.00 2028.00  -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3.0]  [3.1]  [4]    [5]    [6]    Instructions:
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredand.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     2.00    -     vredand.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, mf4, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredand.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, mf8, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredand.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredand.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     2.00    -     vredand.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredand.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vredand.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredand.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     10.00   -     vredand.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredand.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     35.00   -     vredand.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredand.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     2.00    -     vredand.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, mf4, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredand.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredand.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     2.00    -     vredand.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredand.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vredand.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredand.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     10.00   -     vredand.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredand.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     35.00   -     vredand.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredand.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     2.00    -     vredand.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredand.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     2.00    -     vredand.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredand.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vredand.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredand.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     10.00   -     vredand.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredand.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     35.00   -     vredand.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredand.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     2.00    -     vredand.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredand.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vredand.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredand.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     10.00   -     vredand.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredand.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     35.00   -     vredand.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredmaxu.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     2.00    -     vredmaxu.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, mf4, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredmaxu.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, mf8, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredmaxu.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredmaxu.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     2.00    -     vredmaxu.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredmaxu.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vredmaxu.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredmaxu.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     10.00   -     vredmaxu.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredmaxu.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     35.00   -     vredmaxu.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredmaxu.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     2.00    -     vredmaxu.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, mf4, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredmaxu.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredmaxu.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     2.00    -     vredmaxu.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredmaxu.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vredmaxu.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredmaxu.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     10.00   -     vredmaxu.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredmaxu.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     35.00   -     vredmaxu.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredmaxu.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     2.00    -     vredmaxu.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredmaxu.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     2.00    -     vredmaxu.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredmaxu.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vredmaxu.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredmaxu.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     10.00   -     vredmaxu.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredmaxu.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     35.00   -     vredmaxu.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredmaxu.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     2.00    -     vredmaxu.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredmaxu.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vredmaxu.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredmaxu.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     10.00   -     vredmaxu.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredmaxu.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     35.00   -     vredmaxu.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredmax.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     2.00    -     vredmax.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, mf4, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredmax.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, mf8, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredmax.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredmax.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     2.00    -     vredmax.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredmax.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vredmax.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredmax.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     10.00   -     vredmax.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredmax.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     35.00   -     vredmax.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredmax.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     2.00    -     vredmax.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, mf4, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredmax.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredmax.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     2.00    -     vredmax.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredmax.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vredmax.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredmax.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     10.00   -     vredmax.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredmax.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     35.00   -     vredmax.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredmax.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     2.00    -     vredmax.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredmax.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     2.00    -     vredmax.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredmax.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vredmax.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredmax.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     10.00   -     vredmax.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredmax.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     35.00   -     vredmax.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredmax.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     2.00    -     vredmax.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredmax.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vredmax.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredmax.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     10.00   -     vredmax.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredmax.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     35.00   -     vredmax.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredminu.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     2.00    -     vredminu.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, mf4, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredminu.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, mf8, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredminu.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredminu.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     2.00    -     vredminu.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredminu.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vredminu.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredminu.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     10.00   -     vredminu.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredminu.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     35.00   -     vredminu.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredminu.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     2.00    -     vredminu.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, mf4, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredminu.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredminu.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     2.00    -     vredminu.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredminu.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vredminu.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredminu.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     10.00   -     vredminu.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredminu.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     35.00   -     vredminu.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredminu.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     2.00    -     vredminu.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredminu.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     2.00    -     vredminu.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredminu.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vredminu.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredminu.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     10.00   -     vredminu.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredminu.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     35.00   -     vredminu.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredminu.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     2.00    -     vredminu.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredminu.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vredminu.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredminu.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     10.00   -     vredminu.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredminu.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     35.00   -     vredminu.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredmin.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     2.00    -     vredmin.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, mf4, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredmin.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, mf8, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredmin.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredmin.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     2.00    -     vredmin.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredmin.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vredmin.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredmin.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     10.00   -     vredmin.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredmin.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     35.00   -     vredmin.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredmin.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     2.00    -     vredmin.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, mf4, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredmin.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredmin.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     2.00    -     vredmin.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredmin.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vredmin.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredmin.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     10.00   -     vredmin.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredmin.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     35.00   -     vredmin.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredmin.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     2.00    -     vredmin.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredmin.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     2.00    -     vredmin.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredmin.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vredmin.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredmin.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     10.00   -     vredmin.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredmin.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     35.00   -     vredmin.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredmin.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     2.00    -     vredmin.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredmin.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vredmin.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredmin.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     10.00   -     vredmin.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredmin.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     35.00   -     vredmin.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredor.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     2.00    -     vredor.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, mf4, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredor.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, mf8, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredor.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredor.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     2.00    -     vredor.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredor.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vredor.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredor.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     10.00   -     vredor.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredor.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     35.00   -     vredor.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredor.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     2.00    -     vredor.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, mf4, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredor.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredor.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     2.00    -     vredor.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredor.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vredor.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredor.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     10.00   -     vredor.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredor.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     35.00   -     vredor.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredor.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     2.00    -     vredor.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredor.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     2.00    -     vredor.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredor.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vredor.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredor.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     10.00   -     vredor.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredor.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     35.00   -     vredor.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredor.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     2.00    -     vredor.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredor.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vredor.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredor.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     10.00   -     vredor.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredor.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     35.00   -     vredor.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredsum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     2.00    -     vredsum.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, mf4, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredsum.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, mf8, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredsum.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredsum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     2.00    -     vredsum.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredsum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vredsum.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredsum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     10.00   -     vredsum.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredsum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     35.00   -     vredsum.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredsum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     2.00    -     vredsum.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, mf4, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredsum.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredsum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     2.00    -     vredsum.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredsum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vredsum.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredsum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     10.00   -     vredsum.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredsum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     35.00   -     vredsum.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredsum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     2.00    -     vredsum.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredsum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     2.00    -     vredsum.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredsum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vredsum.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredsum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     10.00   -     vredsum.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredsum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     35.00   -     vredsum.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredsum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     2.00    -     vredsum.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredsum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vredsum.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredsum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     10.00   -     vredsum.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredsum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     35.00   -     vredsum.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredxor.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     2.00    -     vredxor.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, mf4, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredxor.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, mf8, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredxor.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredxor.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     2.00    -     vredxor.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredxor.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vredxor.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredxor.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     10.00   -     vredxor.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredxor.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     35.00   -     vredxor.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredxor.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     2.00    -     vredxor.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, mf4, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredxor.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredxor.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     2.00    -     vredxor.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredxor.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vredxor.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredxor.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     10.00   -     vredxor.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredxor.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     35.00   -     vredxor.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredxor.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     2.00    -     vredxor.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredxor.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     2.00    -     vredxor.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredxor.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vredxor.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredxor.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     10.00   -     vredxor.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredxor.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     35.00   -     vredxor.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredxor.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     2.00    -     vredxor.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredxor.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vredxor.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredxor.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     10.00   -     vredxor.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vredxor.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     35.00   -     vredxor.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vwredsumu.vs	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -     2.00    -     vwredsumu.vs	v8, v16, v24
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, mf4, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vwredsumu.vs	v8, v16, v24
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, mf8, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vwredsumu.vs	v8, v16, v24
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vwredsumu.vs	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -     2.00    -     vwredsumu.vs	v8, v16, v24
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vwredsumu.vs	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vwredsumu.vs	v8, v16, v24
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vwredsumu.vs	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -     10.00   -     vwredsumu.vs	v8, v16, v24
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vwredsumu.vs	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -     35.00   -     vwredsumu.vs	v8, v16, v24
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vwredsumu.vs	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -     2.00    -     vwredsumu.vs	v8, v16, v24
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, mf4, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vwredsumu.vs	v8, v16, v24
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vwredsumu.vs	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -     2.00    -     vwredsumu.vs	v8, v16, v24
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vwredsumu.vs	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vwredsumu.vs	v8, v16, v24
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vwredsumu.vs	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -     10.00   -     vwredsumu.vs	v8, v16, v24
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vwredsumu.vs	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -     35.00   -     vwredsumu.vs	v8, v16, v24
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vwredsumu.vs	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -     2.00    -     vwredsumu.vs	v8, v16, v24
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vwredsumu.vs	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -     2.00    -     vwredsumu.vs	v8, v16, v24
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vwredsumu.vs	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vwredsumu.vs	v8, v16, v24
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vwredsumu.vs	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -     10.00   -     vwredsumu.vs	v8, v16, v24
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vwredsumu.vs	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -     35.00   -     vwredsumu.vs	v8, v16, v24
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vwredsum.vs	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -     2.00    -     vwredsum.vs	v8, v16, v24
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, mf4, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vwredsum.vs	v8, v16, v24
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, mf8, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vwredsum.vs	v8, v16, v24
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vwredsum.vs	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -     2.00    -     vwredsum.vs	v8, v16, v24
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vwredsum.vs	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vwredsum.vs	v8, v16, v24
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vwredsum.vs	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -     10.00   -     vwredsum.vs	v8, v16, v24
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vwredsum.vs	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -     35.00   -     vwredsum.vs	v8, v16, v24
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vwredsum.vs	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -     2.00    -     vwredsum.vs	v8, v16, v24
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, mf4, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vwredsum.vs	v8, v16, v24
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vwredsum.vs	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -     2.00    -     vwredsum.vs	v8, v16, v24
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vwredsum.vs	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vwredsum.vs	v8, v16, v24
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vwredsum.vs	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -     10.00   -     vwredsum.vs	v8, v16, v24
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vwredsum.vs	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -     35.00   -     vwredsum.vs	v8, v16, v24
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vwredsum.vs	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -     2.00    -     vwredsum.vs	v8, v16, v24
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vwredsum.vs	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -     2.00    -     vwredsum.vs	v8, v16, v24
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vwredsum.vs	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vwredsum.vs	v8, v16, v24
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vwredsum.vs	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -     10.00   -     vwredsum.vs	v8, v16, v24
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vwredsum.vs	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -     35.00   -     vwredsum.vs	v8, v16, v24
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vfredmax.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -     8.00    -      -     vfredmax.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vfredmax.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -     8.00    -      -     vfredmax.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vfredmax.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -     8.00    -      -     vfredmax.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vfredmax.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -     14.00   -      -     vfredmax.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vfredmax.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -     20.00   -      -     vfredmax.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vfredmax.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -     57.00   -      -     vfredmax.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vfredmax.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -     8.00    -      -     vfredmax.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vfredmax.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -     8.00    -      -     vfredmax.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vfredmax.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -     14.00   -      -     vfredmax.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vfredmax.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -     20.00   -      -     vfredmax.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vfredmax.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -     57.00   -      -     vfredmax.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vfredmax.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -     8.00    -      -     vfredmax.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vfredmax.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -     14.00   -      -     vfredmax.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vfredmax.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -     20.00   -      -     vfredmax.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vfredmax.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -     57.00   -      -     vfredmax.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vfredmin.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -     8.00    -      -     vfredmin.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vfredmin.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -     8.00    -      -     vfredmin.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vfredmin.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -     8.00    -      -     vfredmin.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vfredmin.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -     14.00   -      -     vfredmin.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vfredmin.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -     20.00   -      -     vfredmin.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vfredmin.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -     57.00   -      -     vfredmin.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vfredmin.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -     8.00    -      -     vfredmin.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vfredmin.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -     8.00    -      -     vfredmin.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vfredmin.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -     14.00   -      -     vfredmin.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vfredmin.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -     20.00   -      -     vfredmin.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vfredmin.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -     57.00   -      -     vfredmin.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vfredmin.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -     8.00    -      -     vfredmin.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vfredmin.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -     14.00   -      -     vfredmin.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vfredmin.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -     20.00   -      -     vfredmin.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vfredmin.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -     57.00   -      -     vfredmin.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vfredosum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -     20.00   -      -     vfredosum.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vfredosum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -     8.00    -      -     vfredosum.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vfredosum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -     24.00   -      -     vfredosum.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vfredosum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -     48.00   -      -     vfredosum.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vfredosum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -     96.00   -      -     vfredosum.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vfredosum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -     384.00  -      -     vfredosum.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vfredosum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -     8.00    -      -     vfredosum.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vfredosum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -     12.00   -      -     vfredosum.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vfredosum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -     24.00   -      -     vfredosum.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vfredosum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -     48.00   -      -     vfredosum.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vfredosum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -     192.00  -      -     vfredosum.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vfredosum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -     6.00    -      -     vfredosum.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vfredosum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -     12.00   -      -     vfredosum.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vfredosum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -     24.00   -      -     vfredosum.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vfredosum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -     96.00   -      -     vfredosum.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vfredusum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -     8.00    -      -     vfredusum.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vfredusum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -     8.00    -      -     vfredusum.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vfredusum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -     8.00    -      -     vfredusum.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vfredusum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -     14.00   -      -     vfredusum.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vfredusum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -     20.00   -      -     vfredusum.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vfredusum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -     57.00   -      -     vfredusum.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vfredusum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -     8.00    -      -     vfredusum.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vfredusum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -     8.00    -      -     vfredusum.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vfredusum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -     14.00   -      -     vfredusum.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vfredusum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -     20.00   -      -     vfredusum.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vfredusum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -     57.00   -      -     vfredusum.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vfredusum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -     8.00    -      -     vfredusum.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vfredusum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -     14.00   -      -     vfredusum.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vfredusum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -     20.00   -      -     vfredusum.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vfredusum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -     57.00   -      -     vfredusum.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vfwredosum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -     27.00   -      -     vfwredosum.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vfwredosum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -     11.00   -      -     vfwredosum.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vfwredosum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -     32.00   -      -     vfwredosum.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vfwredosum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -     64.00   -      -     vfwredosum.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vfwredosum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -     128.00  -      -     vfwredosum.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vfwredosum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -     512.00  -      -     vfwredosum.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vfwredosum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -     11.00   -      -     vfwredosum.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vfwredosum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -     16.00   -      -     vfwredosum.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vfwredosum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -     32.00   -      -     vfwredosum.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vfwredosum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -     64.00   -      -     vfwredosum.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vfwredosum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -     256.00  -      -     vfwredosum.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vfwredusum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -     27.00   -      -     vfwredusum.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vfwredusum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -     11.00   -      -     vfwredusum.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vfwredusum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -     32.00   -      -     vfwredusum.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vfwredusum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -     64.00   -      -     vfwredusum.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vfwredusum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -     128.00  -      -     vfwredusum.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vfwredusum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -     512.00  -      -     vfwredusum.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vfwredusum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -     11.00   -      -     vfwredusum.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vfwredusum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -     16.00   -      -     vfwredusum.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vfwredusum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -     32.00   -      -     vfwredusum.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vfwredusum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -     64.00   -      -     vfwredusum.vs	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vfwredusum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -     256.00  -      -     vfwredusum.vs	v8, v8, v8

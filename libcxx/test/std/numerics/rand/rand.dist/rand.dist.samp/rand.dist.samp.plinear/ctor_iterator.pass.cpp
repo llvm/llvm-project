@@ -16,20 +16,24 @@
 //                                     InputIteratorB lastB,
 //                                     InputIteratorW firstW);
 
+// XFAIL: FROZEN-CXX03-HEADERS-FIXME
+
 #include <random>
 
 #include <cassert>
 #include <vector>
 
+#include "test_iterators.h"
 #include "test_macros.h"
 
 int main(int, char**)
 {
     {
         typedef std::piecewise_linear_distribution<> D;
+        typedef cpp17_input_iterator<const double*> InIt;
         double b[] = {10};
         double p[] = {12};
-        D d(b, b, p);
+        D d((InIt(b)), (InIt(b)), (InIt(p)));
         std::vector<double> iv = d.intervals();
         assert(iv.size() == 2);
         assert(iv[0] == 0);

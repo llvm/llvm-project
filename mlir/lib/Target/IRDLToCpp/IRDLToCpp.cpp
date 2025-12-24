@@ -464,12 +464,6 @@ static std::string generateOpDefinition(irdl::detail::dictionary &dict,
   auto opStrings = getStrings(op);
   fillDict(dict, opStrings);
 
-  const auto operandCount = opStrings.opOperandNames.size();
-  const auto operandNames =
-      operandCount ? joinNameList(opStrings.opOperandNames) : "{\"\"}";
-
-  const auto resultNames = joinNameList(opStrings.opResultNames);
-
   auto resultTypes = llvm::join(
       llvm::map_range(opStrings.opResultNames,
                       [](StringRef attr) -> std::string {
@@ -717,9 +711,11 @@ irdl::translateIRDLDialectToCpp(llvm::ArrayRef<irdl::DialectOp> dialects,
     llvm::raw_string_ostream namespacePathStream(namespacePath);
     for (auto &pathElement : namespaceAbsolutePath) {
       namespaceOpenStream << "namespace " << pathElement << " {\n";
-      namespaceCloseStream << "} // namespace " << pathElement << "\n";
       namespacePathStream << "::" << pathElement;
     }
+
+    for (auto &pathElement : llvm::reverse(namespaceAbsolutePath))
+      namespaceCloseStream << "} // namespace " << pathElement << "\n";
 
     std::string cppShortName =
         llvm::convertToCamelFromSnakeCase(dialectName, true);

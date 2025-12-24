@@ -30,8 +30,20 @@
 #elif _LIBCPP_ABI_FORCE_MICROSOFT
 #  define _LIBCPP_ABI_MICROSOFT
 #else
+// Windows uses the Microsoft ABI
 #  if defined(_WIN32) && defined(_MSC_VER)
 #    define _LIBCPP_ABI_MICROSOFT
+
+// 32-bit ARM uses the Itanium ABI with a few differences (array cookies, etc),
+// and so does 64-bit ARM on Apple platforms.
+#  elif defined(__arm__) || (defined(__APPLE__) && defined(__aarch64__))
+#    define _LIBCPP_ABI_ITANIUM_WITH_ARM_DIFFERENCES
+
+// Non-Apple 64-bit ARM uses the vanilla Itanium ABI
+#  elif defined(__aarch64__)
+#    define _LIBCPP_ABI_ITANIUM
+
+// We assume that other architectures also use the vanilla Itanium ABI too
 #  else
 #    define _LIBCPP_ABI_ITANIUM
 #  endif
@@ -49,16 +61,10 @@
 // According to the Standard, `bitset::operator[] const` returns bool
 #  define _LIBCPP_ABI_BITSET_VECTOR_BOOL_CONST_SUBSCRIPT_RETURN_BOOL
 
-// In LLVM 20, we've changed to take these ABI breaks unconditionally. These flags only exist in case someone is running
-// into the static_asserts we added to catch the ABI break and don't care that it is one.
-// TODO(LLVM 22): Remove these flags
-#  define _LIBCPP_ABI_LIST_REMOVE_NODE_POINTER_UB
-#  define _LIBCPP_ABI_TREE_REMOVE_NODE_POINTER_UB
-#  define _LIBCPP_ABI_FIX_UNORDERED_NODE_POINTER_UB
-#  define _LIBCPP_ABI_FORWARD_LIST_REMOVE_NODE_POINTER_UB
-
 // These flags are documented in ABIGuarantees.rst
 #  define _LIBCPP_ABI_ALTERNATE_STRING_LAYOUT
+#  define _LIBCPP_ABI_ATOMIC_WAIT_NATIVE_BY_SIZE
+#  define _LIBCPP_ABI_DO_NOT_EXPORT_ALIGN
 #  define _LIBCPP_ABI_DO_NOT_EXPORT_BASIC_STRING_COMMON
 #  define _LIBCPP_ABI_DO_NOT_EXPORT_VECTOR_BASE_COMMON
 #  define _LIBCPP_ABI_DO_NOT_EXPORT_TO_CHARS_BASE_10
@@ -79,6 +85,7 @@
 #  define _LIBCPP_ABI_USE_WRAP_ITER_IN_STD_ARRAY
 #  define _LIBCPP_ABI_USE_WRAP_ITER_IN_STD_STRING_VIEW
 #  define _LIBCPP_ABI_VARIANT_INDEX_TYPE_OPTIMIZATION
+#  define _LIBCPP_ABI_TRIVIALLY_COPYABLE_BIT_ITERATOR
 
 #elif _LIBCPP_ABI_VERSION == 1
 #  if !(defined(_LIBCPP_OBJECT_FORMAT_COFF) || defined(_LIBCPP_OBJECT_FORMAT_XCOFF))
