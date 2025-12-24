@@ -21,7 +21,7 @@ namespace clang::tidy::misc {
 /// Corresponding cpplint.py check name: 'build/namespaces'.
 ///
 /// For the user-facing documentation see:
-/// https://clang.llvm.org/extra/clang-tidy/checks/google/build-namespaces.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/misc/anonymous-namespace-in-header.html
 class AnonymousNamespaceInHeaderCheck : public ClangTidyCheck {
 public:
   AnonymousNamespaceInHeaderCheck(StringRef Name, ClangTidyContext *Context);

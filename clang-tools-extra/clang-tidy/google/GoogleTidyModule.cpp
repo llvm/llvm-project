@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 #include "../ClangTidy.h"
 #include "../ClangTidyModule.h"
-#include "../ClangTidyModuleRegistry.h"
 #include "../misc/AnonymousNamespaceInHeaderCheck.h"
 #include "../modernize/AvoidCStyleCastCheck.h"
 #include "../readability/BracesAroundStatementsCheck.h"
