@@ -252,4 +252,39 @@ def ACCSpecializeForHost : Pass<"acc-specialize-for-host", "mlir::func::FuncOp">
   ];
 }
 
+def ACCIfClauseLowering : Pass<"acc-if-clause-lowering", "mlir::func::FuncOp"> {
+  let summary = "Lower if clauses in ACC compute constructs";
+  let description = [{
+    This pass lowers OpenACC compute constructs (parallel, kernels, serial) with
+    `if` clauses using region specialization. It creates two execution paths:
+    device execution when the condition is true, host execution when false.
+
+    When an ACC compute construct has an `if` clause, the construct should only
+    execute on the device when the condition is true. If the condition is false,
+    the code should execute on the host instead. This pass transforms:
+
+    ```mlir
+    acc.parallel if(%cond) { ... }
+    ```
+
+    Into:
+
+    ```mlir
+    scf.if %cond {
+      // Device path: clone data ops, compute construct without if, exit ops
+      acc.parallel { ... }
+    } else {
+      // Host path: original region body with ACC ops converted to host
+    }
+    ```
+
+    The transformation handles:
+    - Data entry operations (acc.copyin, acc.create, etc.) are cloned to device path
+    - Data exit operations (acc.copyout, acc.delete, etc.) are cloned to device path
+    - The host path uses `populateACCHostFallbackPatterns` to convert ACC ops
+  }];
+  let dependentDialects = ["mlir::acc::OpenACCDialect",
+      "mlir::scf::SCFDialect"];
+}
+
 #endif // MLIR_DIALECT_OPENACC_TRANSFORMS_PASSES
