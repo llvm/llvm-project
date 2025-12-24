@@ -194,4 +194,62 @@ def ACCLoopTiling : Pass<"acc-loop-tiling", "mlir::func::FuncOp"> {
   ];
 }
 
+def ACCSpecializeForDevice : Pass<"acc-specialize-for-device", "mlir::func::FuncOp"> {
+  let summary = "Strip OpenACC constructs inside device code";
+  let description = [{
+    In a specialized acc routine or compute construct, many OpenACC operations
+    do not make sense because they are host-side constructs. This pass removes
+    or transforms these operations appropriately.
+
+    The following operations are handled:
+    - Data entry ops (replaced with var): acc.attach, acc.copyin, acc.create,
+      acc.declare_device_resident, acc.declare_link, acc.deviceptr,
+      acc.get_deviceptr, acc.nocreate, acc.present, acc.update_device,
+      acc.use_device
+    - Data exit ops (erased): acc.copyout, acc.delete, acc.detach,
+      acc.update_host
+    - Structured data (inline region): acc.data, acc.host_data,
+      acc.kernel_environment
+    - Unstructured data (erased): acc.enter_data, acc.exit_data, acc.update,
+      acc.declare_enter, acc.declare_exit
+    - Compute constructs (inline region): acc.parallel, acc.serial, acc.kernels
+    - Runtime ops (erased): acc.init, acc.shutdown, acc.set, acc.wait
+  }];
+  let dependentDialects = ["mlir::acc::OpenACCDialect"];
+}
+
+def ACCSpecializeForHost : Pass<"acc-specialize-for-host", "mlir::func::FuncOp"> {
+  let summary = "Convert OpenACC operations for host execution";
+  let description = [{
+    This pass converts OpenACC operations to host-compatible representations.
+    It serves as a conversion pass that transforms ACC constructs to enable
+    execution on the host rather than on accelerator devices.
+
+    There are two modes of operation:
+
+    1. Default mode (orphan operations only): Only orphan operations that are
+       not allowed outside compute regions are converted. Structured/unstructured
+       data constructs, compute constructs, and their associated data operations
+       are NOT removed.
+
+    2. Host fallback mode (enableHostFallback=true): ALL ACC operations within
+       the region are converted to host equivalents. This is used when the `if`
+       clause evaluates to false at runtime.
+
+    The following operations are handled:
+    - Atomic ops: converted to load/store operations
+    - Loop ops: converted to scf.for or scf.execute_region
+    - Data entry ops (orphan): replaced with var operand
+    - In host fallback mode: all data, compute, and runtime ops are removed
+  }];
+  let dependentDialects = ["mlir::acc::OpenACCDialect",
+      "mlir::scf::SCFDialect"];
+  let options = [
+    Option<"enableHostFallback", "enable-host-fallback", "bool", "false",
+           "Enable host fallback mode which converts ALL ACC operations, "
+           "not just orphan operations. Use this when the `if` clause "
+           "evaluates to false.">
+  ];
+}
+
 #endif // MLIR_DIALECT_OPENACC_TRANSFORMS_PASSES

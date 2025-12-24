@@ -246,7 +246,7 @@ TEST_CONSTEXPR(match_m128i(_mm256_castsi256_si128((__m256i)(__v4du){0xBFF0000000
 
 __m256d test_mm256_ceil_pd(__m256d x) {
   // CHECK-LABEL: test_mm256_ceil_pd
-  // CHECK: call {{.*}}<4 x double> @llvm.x86.avx.round.pd.256(<4 x double> %{{.*}}, i32 2)
+  // CHECK: %{{.*}} = call <4 x double> @llvm.x86.avx.round.pd.256(<4 x double> %{{.*}}, i32 2)
   return _mm256_ceil_pd(x);
 }
 
@@ -1526,14 +1526,38 @@ __m256 test_mm256_rcp_ps(__m256 A) {
 
 __m256d test_mm256_round_pd(__m256d x) {
   // CHECK-LABEL: test_mm256_round_pd
-  // CHECK: call {{.*}}<4 x double> @llvm.x86.avx.round.pd.256(<4 x double> %{{.*}}, i32 4)
-  return _mm256_round_pd(x, 4);
+  // CHECK: %{{.*}} = call <4 x double> @llvm.roundeven.v4f64(<4 x double> %{{.*}})
+  return _mm256_round_pd(x, 0b1000);
+}
+
+__m256d test_mm256_round_pd_mxcsr(__m256d x) {
+  // CHECK-LABEL: test_mm256_round_pd_mxcsr
+  // CHECK: %{{.*}} = call <4 x double> @llvm.x86.avx.round.pd.256(<4 x double> %{{.*}}, i32 12)
+  return _mm256_round_pd(x, 0b1100);
+}
+
+__m256d test_mm256_round_pd_fround_no_exc(__m256d x) {
+  // CHECK-LABEL: test_mm256_round_pd_fround_no_exc
+  // CHECK: %{{.*}} = call <4 x double> @llvm.x86.avx.round.pd.256(<4 x double> %{{.*}}, i32 0)
+  return _mm256_round_pd(x, 0b0000);
 }
 
 __m256 test_mm256_round_ps(__m256 x) {
   // CHECK-LABEL: test_mm256_round_ps
-  // CHECK: call {{.*}}<8 x float> @llvm.x86.avx.round.ps.256(<8 x float> %{{.*}}, i32 4)
-  return _mm256_round_ps(x, 4);
+  // CHECK: %{{.*}} = call <8 x float> @llvm.roundeven.v8f32(<8 x float> %{{.*}})
+  return _mm256_round_ps(x, 0b1000);
+}
+
+__m256 test_mm256_round_ps_mxcsr(__m256 x) {
+  // CHECK-LABEL: test_mm256_round_ps_mxcsr
+  // CHECK: %{{.*}} = call <8 x float> @llvm.x86.avx.round.ps.256(<8 x float> %{{.*}}, i32 12)
+  return _mm256_round_ps(x, 0b1100);
+}
+
+__m256 test_mm256_round_ps_fround_no_exc(__m256 x) {
+  // CHECK-LABEL: test_mm256_round_ps_fround_no_exc
+  // CHECK: %{{.*}} = call <8 x float> @llvm.x86.avx.round.ps.256(<8 x float> %{{.*}}, i32 0)
+  return _mm256_round_ps(x, 0b0000);
 }
 
 __m256 test_mm256_rsqrt_ps(__m256 A) {
