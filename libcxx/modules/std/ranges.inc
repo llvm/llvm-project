@@ -325,7 +325,9 @@ export namespace std {
     namespace views {
       using std::ranges::views::chunk;
     }
+#endif
 
+#if _LIBCPP_STD_VER >= 23
     using std::ranges::slide_view;
 
     namespace views {
