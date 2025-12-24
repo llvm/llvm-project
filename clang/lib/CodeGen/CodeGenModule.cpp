@@ -1405,27 +1405,31 @@ void CodeGenModule::Release() {
   if ((T.isARM() || T.isThumb()) && getTriple().isTargetAEABI() &&
       getTriple().isOSBinFormatELF()) {
     uint32_t TagVal = 0;
+    llvm::Module::ModFlagBehavior DenormalTagBehavior = llvm::Module::Max;
     if (getCodeGenOpts().FPDenormalMode ==
-        llvm::DenormalMode::getPositiveZero())
+        llvm::DenormalMode::getPositiveZero()) {
       TagVal = llvm::ARMBuildAttrs::PositiveZero;
-    else if (getCodeGenOpts().FPDenormalMode == llvm::DenormalMode::getIEEE())
+    } else if (getCodeGenOpts().FPDenormalMode ==
+               llvm::DenormalMode::getIEEE()) {
       TagVal = llvm::ARMBuildAttrs::IEEEDenormals;
-    else if (getCodeGenOpts().FPDenormalMode ==
-             llvm::DenormalMode::getPreserveSign())
+      DenormalTagBehavior = llvm::Module::Override;
+    } else if (getCodeGenOpts().FPDenormalMode ==
+               llvm::DenormalMode::getPreserveSign()) {
       TagVal = llvm::ARMBuildAttrs::PreserveFPSign;
-    getModule().addModuleFlag(llvm::Module::Warning, "arm-eabi-fp-denormal",
+    }
+    getModule().addModuleFlag(DenormalTagBehavior, "arm-eabi-fp-denormal",
                               TagVal);
 
     if (getLangOpts().getDefaultExceptionMode() !=
         LangOptions::FPExceptionModeKind::FPE_Ignore)
-      getModule().addModuleFlag(llvm::Module::Warning, "arm-eabi-fp-exceptions",
+      getModule().addModuleFlag(llvm::Module::Min, "arm-eabi-fp-exceptions",
                                 llvm::ARMBuildAttrs::Allowed);
 
     if (getLangOpts().NoHonorNaNs && getLangOpts().NoHonorInfs)
       TagVal = llvm::ARMBuildAttrs::AllowIEEENormal;
     else
       TagVal = llvm::ARMBuildAttrs::AllowIEEE754;
-    getModule().addModuleFlag(llvm::Module::Warning, "arm-eabi-fp-number-model",
+    getModule().addModuleFlag(llvm::Module::Min, "arm-eabi-fp-number-model",
                               TagVal);
   }
 
