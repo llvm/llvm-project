@@ -64,8 +64,10 @@ AnalysisKey LiveIntervalsAnalysis::Key;
 LiveIntervalsAnalysis::Result
 LiveIntervalsAnalysis::run(MachineFunction &MF,
                            MachineFunctionAnalysisManager &MFAM) {
-  return Result(MF, MFAM.getResult<SlotIndexesAnalysis>(MF),
-                MFAM.getResult<MachineDominatorTreeAnalysis>(MF));
+  auto Res = Result(MF, MFAM.getResult<SlotIndexesAnalysis>(MF),
+                    MFAM.getResult<MachineDominatorTreeAnalysis>(MF));
+  LLVM_DEBUG(Res.dump());
+  return Res;
 }
 
 PreservedAnalyses
