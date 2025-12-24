@@ -114,11 +114,11 @@ public:
   /// the previous data.
   void SetValueForKey(const char *key, SBStructuredData &value);
 
-  /// Change the type to unsigned interger and overwrite the previous data with
+  /// Change the type to unsigned integer and overwrite the previous data with
   /// the new value.
   void SetUnsignedIntegerValue(uint64_t value);
 
-  /// Change the type to signed interger and overwrite the previous data with
+  /// Change the type to signed integer and overwrite the previous data with
   /// the new value.
   void SetSignedIntegerValue(int64_t value);
 

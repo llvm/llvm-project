@@ -15,7 +15,6 @@
 #include "llvm/ADT/StringRef.h"
 #include <cassert>
 #include <map>
-#include <string>
 #include <utility>
 #include <vector>
 
@@ -36,7 +35,7 @@ struct HwMode {
 
 struct HwModeSelect {
   HwModeSelect(const Record *R, CodeGenHwModes &CGH);
-  typedef std::pair<unsigned, const Record *> PairType;
+  using PairType = std::pair<unsigned, const Record *>;
   std::vector<PairType> Items;
   void dump() const;
 };

@@ -59,7 +59,7 @@ void UseTransparentFunctorsCheck::registerMatchers(MatchFinder *Finder) {
                      this);
 }
 
-static const StringRef Message = "prefer transparent functors '%0<>'";
+static constexpr StringRef Message = "prefer transparent functors '%0<>'";
 
 template <typename T> static T getInnerTypeLocAs(TypeLoc Loc) {
   T Result;
@@ -96,7 +96,7 @@ void UseTransparentFunctorsCheck::check(
         FunctorParentType->template_arguments()[ArgNum];
     if (Arg.getKind() != TemplateArgument::Type)
       continue;
-    QualType ParentArgType = Arg.getAsType();
+    const QualType ParentArgType = Arg.getAsType();
     if (ParentArgType->isRecordType() &&
         ParentArgType->getAsCXXRecordDecl() ==
             Functor->getAsType()->getAsCXXRecordDecl())
@@ -105,13 +105,13 @@ void UseTransparentFunctorsCheck::check(
   // Functor is a default template argument.
   if (ArgNum == FunctorParentType->template_arguments().size())
     return;
-  TemplateArgumentLoc FunctorLoc = FunctorParentLoc.getArgLoc(ArgNum);
+  const TemplateArgumentLoc FunctorLoc = FunctorParentLoc.getArgLoc(ArgNum);
   auto FunctorTypeLoc = getInnerTypeLocAs<TemplateSpecializationTypeLoc>(
       FunctorLoc.getTypeSourceInfo()->getTypeLoc());
   if (FunctorTypeLoc.isNull())
     return;
 
-  SourceLocation ReportLoc = FunctorLoc.getLocation();
+  const SourceLocation ReportLoc = FunctorLoc.getLocation();
   if (ReportLoc.isInvalid())
     return;
   diag(ReportLoc, Message) << FuncClass->getName()

@@ -21,12 +21,14 @@
 #include "lldb/Core/Telemetry.h"
 #include "lldb/DataFormatters/DataVisualization.h"
 #include "lldb/Expression/REPL.h"
+#include "lldb/Host/Config.h"
 #include "lldb/Host/File.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Host/StreamFile.h"
 #include "lldb/Host/Terminal.h"
 #include "lldb/Host/ThreadLauncher.h"
+#include "lldb/Host/XML.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Interpreter/OptionValue.h"
@@ -965,7 +967,8 @@ llvm::StringRef Debugger::GetStaticBroadcasterClass() {
 Debugger::Debugger(lldb::LogOutputCallback log_callback, void *baton)
     : UserID(g_unique_id++),
       Properties(std::make_shared<OptionValueProperties>()),
-      m_input_file_sp(std::make_shared<NativeFile>(stdin, NativeFile::Unowned)),
+      m_input_file_sp(std::make_shared<NativeFile>(
+          stdin, File::eOpenOptionReadOnly, NativeFile::Unowned)),
       m_output_stream_sp(std::make_shared<LockableStreamFile>(
           stdout, NativeFile::Unowned, m_output_mutex)),
       m_error_stream_sp(std::make_shared<LockableStreamFile>(
@@ -1172,7 +1175,8 @@ Status Debugger::SetInputString(const char *data) {
     return result;
   }
 
-  SetInputFile((FileSP)std::make_shared<NativeFile>(commands_file, true));
+  SetInputFile((FileSP)std::make_shared<NativeFile>(
+      commands_file, File::eOpenOptionReadOnly, true));
   return result;
 }
 
@@ -1378,7 +1382,8 @@ void Debugger::AdoptTopIOHandlerFilesIfInvalid(FileSP &in,
       in = GetInputFileSP();
     // If there is nothing, use stdin
     if (!in)
-      in = std::make_shared<NativeFile>(stdin, NativeFile::Unowned);
+      in = std::make_shared<NativeFile>(stdin, File::eOpenOptionReadOnly,
+                                        NativeFile::Unowned);
   }
   // If no STDOUT has been set, then set it appropriately
   if (!out || !out->GetUnlockedFile().IsValid()) {
@@ -2066,19 +2071,23 @@ void Debugger::CancelForwardEvents(const ListenerSP &listener_sp) {
   m_forward_listener_sp.reset();
 }
 
+bool Debugger::IsEscapeCodeCapableTTY() {
+  if (lldb::LockableStreamFileSP stream_sp = GetOutputStreamSP()) {
+    File &file = stream_sp->GetUnlockedFile();
+    return file.GetIsInteractive() && file.GetIsRealTerminal() &&
+           file.GetIsTerminalWithColors();
+  }
+  return false;
+}
+
 bool Debugger::StatuslineSupported() {
 // We have trouble with the contol codes on Windows, see
 // https://github.com/llvm/llvm-project/issues/134846.
 #ifndef _WIN32
-  if (GetShowStatusline()) {
-    if (lldb::LockableStreamFileSP stream_sp = GetOutputStreamSP()) {
-      File &file = stream_sp->GetUnlockedFile();
-      return file.GetIsInteractive() && file.GetIsRealTerminal() &&
-             file.GetIsTerminalWithColors();
-    }
-  }
-#endif
+  return GetShowStatusline() && IsEscapeCodeCapableTTY();
+#else
   return false;
+#endif
 }
 
 static bool RequiresFollowChildWorkaround(const Process &process) {
@@ -2271,10 +2280,11 @@ void Debugger::HandleProgressEvent(const lldb::EventSP &event_sp) {
   ProgressReport progress_report{data->GetID(), data->GetCompleted(),
                                  data->GetTotal(), data->GetMessage()};
 
-  // Do some bookkeeping regardless of whether we're going to display
-  // progress reports.
   {
     std::lock_guard<std::mutex> guard(m_progress_reports_mutex);
+
+    // Do some bookkeeping regardless of whether we're going to display
+    // progress reports.
     auto it = llvm::find_if(m_progress_reports, [&](const auto &report) {
       return report.id == progress_report.id;
     });
@@ -2286,6 +2296,30 @@ void Debugger::HandleProgressEvent(const lldb::EventSP &event_sp) {
         *it = progress_report;
     } else {
       m_progress_reports.push_back(progress_report);
+    }
+
+    // Show progress using Operating System Command (OSC) sequences.
+    if (GetShowProgress() && IsEscapeCodeCapableTTY()) {
+      if (lldb::LockableStreamFileSP stream_sp = GetOutputStreamSP()) {
+
+        // Clear progress if this was the last progress event.
+        if (m_progress_reports.empty()) {
+          stream_sp->Lock() << OSC_PROGRESS_REMOVE;
+          return;
+        }
+
+        const ProgressReport &report = m_progress_reports.back();
+
+        // Show indeterminate progress.
+        if (report.total == UINT64_MAX) {
+          stream_sp->Lock() << OSC_PROGRESS_INDETERMINATE;
+          return;
+        }
+
+        // Compute and show the progress value (0-100).
+        const unsigned value = (report.completed / report.total) * 100;
+        stream_sp->Lock().Printf(OSC_PROGRESS_SHOW, value);
+      }
     }
   }
 }
@@ -2409,4 +2443,57 @@ llvm::ThreadPoolInterface &Debugger::GetThreadPool() {
   assert(g_thread_pool &&
          "Debugger::GetThreadPool called before Debugger::Initialize");
   return *g_thread_pool;
+}
+
+static void AddBoolConfigEntry(StructuredData::Dictionary &dict,
+                               llvm::StringRef name, bool value,
+                               llvm::StringRef description) {
+  auto entry_up = std::make_unique<StructuredData::Dictionary>();
+  entry_up->AddBooleanItem("value", value);
+  entry_up->AddStringItem("description", description);
+  dict.AddItem(name, std::move(entry_up));
+}
+
+static void AddLLVMTargets(StructuredData::Dictionary &dict) {
+  auto array_up = std::make_unique<StructuredData::Array>();
+#define LLVM_TARGET(target)                                                    \
+  array_up->AddItem(std::make_unique<StructuredData::String>(#target));
+#include "llvm/Config/Targets.def"
+  auto entry_up = std::make_unique<StructuredData::Dictionary>();
+  entry_up->AddItem("value", std::move(array_up));
+  entry_up->AddStringItem("description", "A list of configured LLVM targets.");
+  dict.AddItem("targets", std::move(entry_up));
+}
+
+StructuredData::DictionarySP Debugger::GetBuildConfiguration() {
+  auto config_up = std::make_unique<StructuredData::Dictionary>();
+  AddBoolConfigEntry(
+      *config_up, "xml", XMLDocument::XMLEnabled(),
+      "A boolean value that indicates if XML support is enabled in LLDB");
+  AddBoolConfigEntry(
+      *config_up, "curl", LLVM_ENABLE_CURL,
+      "A boolean value that indicates if CURL support is enabled in LLDB");
+  AddBoolConfigEntry(
+      *config_up, "curses", LLDB_ENABLE_CURSES,
+      "A boolean value that indicates if curses support is enabled in LLDB");
+  AddBoolConfigEntry(
+      *config_up, "editline", LLDB_ENABLE_LIBEDIT,
+      "A boolean value that indicates if editline support is enabled in LLDB");
+  AddBoolConfigEntry(*config_up, "editline_wchar", LLDB_EDITLINE_USE_WCHAR,
+                     "A boolean value that indicates if editline wide "
+                     "characters support is enabled in LLDB");
+  AddBoolConfigEntry(
+      *config_up, "lzma", LLDB_ENABLE_LZMA,
+      "A boolean value that indicates if lzma support is enabled in LLDB");
+  AddBoolConfigEntry(
+      *config_up, "python", LLDB_ENABLE_PYTHON,
+      "A boolean value that indicates if python support is enabled in LLDB");
+  AddBoolConfigEntry(
+      *config_up, "lua", LLDB_ENABLE_LUA,
+      "A boolean value that indicates if lua support is enabled in LLDB");
+  AddBoolConfigEntry(*config_up, "fbsdvmcore", LLDB_ENABLE_FBSDVMCORE,
+                     "A boolean value that indicates if fbsdvmcore support is "
+                     "enabled in LLDB");
+  AddLLVMTargets(*config_up);
+  return config_up;
 }

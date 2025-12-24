@@ -486,9 +486,12 @@ let Class = PackIndexingType in {
   def : Property<"isFullySubstituted", Bool> {
     let Read = [{ node->isFullySubstituted() }];
   }
+  def : Property<"expansions", Array<QualType>> {
+    let Read = [{ node->getExpansions() }];
+  }
 
   def : Creator<[{
-    return ctx.getPackIndexingType(pattern, indexExpression, isFullySubstituted);
+    return ctx.getPackIndexingType(pattern, indexExpression, isFullySubstituted, expansions);
   }]>;
 }
 
@@ -575,7 +578,7 @@ let Class = TagType in {
     let Conditional = [{ !IsCanonical }];
     let Read = [{ node->getQualifier() }];
   }
-  def : Property<"TD", TagDeclRef> { let Read = [{ node->getOriginalDecl() }]; }
+  def : Property<"TD", TagDeclRef> { let Read = [{ node->getDecl() }]; }
 }
 
 let Class = EnumType in {

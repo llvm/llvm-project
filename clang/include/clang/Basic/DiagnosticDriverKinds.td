@@ -93,6 +93,12 @@ def err_drv_hipspv_no_hip_path : Error<
   "'--hip-path' must be specified when offloading to SPIR-V unless '-nogpuinc' "
   "is given">;
 
+def err_drv_no_spv_tools : Error<"cannot find SPIR-V Tools binary '%0', which "
+                                 "is required for SPIR-V compilation. "
+                                 "It can be obtained from your system package "
+                                 "manager or from KhronosGroup/SPIRV-Tools "
+                                 "on GitHub">;
+
 def err_drv_undetermined_gpu_arch : Error<
   "cannot determine %0 architecture: %1; consider passing it via '%2'; "
   "environment variable CLANG_TOOLCHAIN_PROGRAM_TIMEOUT specifies the tool "
@@ -126,12 +132,25 @@ def err_drv_bad_offload_arch_combo : Error<
   "invalid offload arch combinations: '%0' and '%1' (for a specific processor, "
   "a feature should either exist in all offload archs, or not exist in any "
   "offload archs)">;
+def err_drv_unsupported_option_for_offload_arch_req_feature : Error<
+  "'%0' option for offload arch '%1' is not currently supported "
+  "there. Use it with an offload arch containing '%2' instead">;
 def warn_drv_unsupported_option_for_offload_arch_req_feature : Warning<
   "ignoring '%0' option for offload arch '%1' as it is not currently supported "
   "there. Use it with an offload arch containing '%2' instead">,
   InGroup<OptionIgnored>;
 def warn_drv_unsupported_option_for_target : Warning<
   "ignoring '%0' option as it is not currently supported for target '%1'">,
+  InGroup<OptionIgnored>;
+def err_drv_unsupported_option_for_target : Error<
+  "'%0' option is not currently supported for target '%1'">;
+def warn_drv_unsupported_option_part_for_target : Warning<
+  "ignoring '%0' in '%1' option as it is not currently supported for target '%2'">,
+  InGroup<OptionIgnored>;
+def err_drv_unsupported_option_part_for_target : Error<
+  "'%0' in '%1' option is not currently supported for target '%2'">;
+def warn_drv_invalid_argument_for_flang : Warning<
+  "'%0' is not valid for Fortran">,
   InGroup<OptionIgnored>;
 def warn_drv_unsupported_option_for_flang : Warning<
   "the argument '%0' is not supported for option '%1'. Mapping to '%1%2'">,
@@ -204,6 +223,9 @@ def err_drv_amdgpu_ieee_without_no_honor_nans : Error<
   "invalid argument '-mno-amdgpu-ieee' only allowed with relaxed NaN handling">;
 def err_drv_argument_not_allowed_with : Error<
   "invalid argument '%0' not allowed with '%1'">;
+def warn_drv_argument_not_allowed_with : Warning<
+  "invalid argument '%0' not allowed with '%1'">,
+  InGroup<OptionIgnored>;
 def err_drv_cannot_open_randomize_layout_seed_file : Error<
   "cannot read randomize layout seed file '%0'">;
 def err_drv_invalid_version_number : Error<
@@ -309,6 +331,8 @@ def warn_drv_yc_multiple_inputs_clang_cl : Warning<
 def warn_drv_potentially_misspelled_joined_argument : Warning<
   "joined argument treated as '%0'; did you mean '%1'?">, InGroup<UnknownArgument>;
 
+def err_drv_too_many_actions: Error<
+    "only one action option is allowed. Got %0">;
 def err_drv_invalid_value : Error<"invalid value '%1' in '%0'">;
 def err_drv_invalid_int_value : Error<"invalid integral value '%1' in '%0'">;
 def err_drv_invalid_value_with_suggestion : Error<
@@ -581,13 +605,6 @@ def err_drv_reduced_module_output_overrided : Warning<
   "please consider use '-fmodule-output=' to specify the output file for reduced BMI explicitly">,
   InGroup<DiagGroup<"reduced-bmi-output-overrided">>;
 
-def remark_found_cxx20_module_usage : Remark<
-  "found C++20 module usage in file '%0'">,
-  InGroup<ModulesDriver>;
-def remark_performing_driver_managed_module_build : Remark<
-  "performing driver managed module build">,
-  InGroup<ModulesDriver>;
-
 def warn_drv_delayed_template_parsing_after_cxx20 : Warning<
   "-fdelayed-template-parsing is deprecated after C++20">,
   InGroup<DiagGroup<"delayed-template-parsing-in-cxx20">>;
@@ -683,6 +700,9 @@ def warn_drv_fine_grained_bitfield_accesses_ignored : Warning<
   "option '-ffine-grained-bitfield-accesses' cannot be enabled together with a sanitizer; flag ignored">,
   InGroup<OptionIgnored>;
 
+def err_drv_profile_instrument_use_path_with_no_kind : Error<
+  "option '-fprofile-instrument-use-path=' requires -fprofile-instrument-use=<kind>">;
+
 def note_drv_verify_prefix_spelling : Note<
   "-verify prefixes must start with a letter and contain only alphanumeric"
   " characters, hyphens, and underscores">;
@@ -771,6 +791,9 @@ def err_cc1_round_trip_mismatch : Error<
 def err_cc1_unbounded_vscale_min : Error<
   "minimum vscale must be an unsigned integer greater than 0">;
 
+def err_conflicting_matrix_layout_flags: Error<
+  "-fmatrix-memory-layout=%0 conflicts with -mllvm -matrix-default-layout=%1">;
+
 def err_drv_using_omit_rtti_component_without_no_rtti : Error<
   "-fexperimental-omit-vtable-rtti call only be used with -fno-rtti">;
 
@@ -802,6 +825,8 @@ def err_drv_target_variant_invalid : Error<
 
 def err_drv_invalid_directx_shader_module : Error<
   "invalid profile : %0">;
+def err_drv_dxc_invalid_matrix_layout : Error<
+  "cannot specify /Zpr and /Zpc together">;
 def err_drv_dxc_missing_target_profile : Error<
   "target profile option (-T) is missing">;
 def err_drv_hlsl_unsupported_target : Error<
@@ -829,9 +854,6 @@ def err_drv_invalid_empty_dxil_validator_version : Error<
 def warn_drv_sarif_format_unstable : Warning<
   "diagnostic formatting in SARIF mode is currently unstable">,
   InGroup<DiagGroup<"sarif-format-unstable">>;
-
-def err_drv_riscv_unsupported_with_linker_relaxation : Error<
-  "%0 is unsupported with RISC-V linker relaxation (-mrelax)">;
 
 def warn_drv_loongarch_conflicting_implied_val : Warning<
   "ignoring '%0' as it conflicts with that implied by '%1' (%2)">,

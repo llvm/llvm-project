@@ -51,40 +51,40 @@ getNewScaleSingleStep(DurationScale OldScale, double Multiplier) {
   switch (OldScale) {
   case DurationScale::Hours:
     if (Multiplier <= 1.0 / 60.0)
-      return std::make_tuple(DurationScale::Minutes, Multiplier * 60.0);
+      return {{DurationScale::Minutes, Multiplier * 60.0}};
     break;
 
   case DurationScale::Minutes:
     if (Multiplier >= 60.0)
-      return std::make_tuple(DurationScale::Hours, Multiplier / 60.0);
+      return {{DurationScale::Hours, Multiplier / 60.0}};
     if (Multiplier <= 1.0 / 60.0)
-      return std::make_tuple(DurationScale::Seconds, Multiplier * 60.0);
+      return {{DurationScale::Seconds, Multiplier * 60.0}};
     break;
 
   case DurationScale::Seconds:
     if (Multiplier >= 60.0)
-      return std::make_tuple(DurationScale::Minutes, Multiplier / 60.0);
+      return {{DurationScale::Minutes, Multiplier / 60.0}};
     if (Multiplier <= 1e-3)
-      return std::make_tuple(DurationScale::Milliseconds, Multiplier * 1e3);
+      return {{DurationScale::Milliseconds, Multiplier * 1e3}};
     break;
 
   case DurationScale::Milliseconds:
     if (Multiplier >= 1e3)
-      return std::make_tuple(DurationScale::Seconds, Multiplier / 1e3);
+      return {{DurationScale::Seconds, Multiplier / 1e3}};
     if (Multiplier <= 1e-3)
-      return std::make_tuple(DurationScale::Microseconds, Multiplier * 1e3);
+      return {{DurationScale::Microseconds, Multiplier * 1e3}};
     break;
 
   case DurationScale::Microseconds:
     if (Multiplier >= 1e3)
-      return std::make_tuple(DurationScale::Milliseconds, Multiplier / 1e3);
+      return {{DurationScale::Milliseconds, Multiplier / 1e3}};
     if (Multiplier <= 1e-3)
-      return std::make_tuple(DurationScale::Nanoseconds, Multiplier * 1e-3);
+      return {{DurationScale::Nanoseconds, Multiplier * 1e-3}};
     break;
 
   case DurationScale::Nanoseconds:
     if (Multiplier >= 1e3)
-      return std::make_tuple(DurationScale::Microseconds, Multiplier / 1e3);
+      return {{DurationScale::Microseconds, Multiplier / 1e3}};
     break;
   }
 
@@ -112,7 +112,7 @@ static std::optional<DurationScale> getNewScale(DurationScale OldScale,
 void DurationFactoryScaleCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       callExpr(
-          callee(functionDecl(DurationFactoryFunction()).bind("call_decl")),
+          callee(functionDecl(durationFactoryFunction()).bind("call_decl")),
           hasArgument(
               0,
               ignoringImpCasts(anyOf(
@@ -158,7 +158,7 @@ void DurationFactoryScaleCheck::check(const MatchFinder::MatchResult &Result) {
   if (!MaybeScale)
     return;
 
-  DurationScale Scale = *MaybeScale;
+  const DurationScale Scale = *MaybeScale;
   const Expr *Remainder = nullptr;
   std::optional<DurationScale> NewScale;
 

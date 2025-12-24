@@ -175,7 +175,7 @@ def MIPS_CCMOV : RVInstR4<0b11, 0b011, OPC_CUSTOM_0, (outs GPR:$rd),
                  Sched<[]>;
 }
 
-let Predicates = [UseCCMovInsn] in {
+let Predicates = [UseMIPSCCMovInsn] in {
 def : Pat<(select (riscv_setne (XLenVT GPR:$rs2)),
                   (XLenVT GPR:$rs1), (XLenVT GPR:$rs3)),
           (MIPS_CCMOV GPR:$rs1, GPR:$rs2, GPR:$rs3)>;

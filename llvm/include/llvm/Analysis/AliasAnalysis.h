@@ -861,7 +861,7 @@ protected:
 
   // Provide all the copy and move constructors so that derived types aren't
   // constrained.
-  AAResultBase(const AAResultBase &Arg) {}
+  AAResultBase(const AAResultBase &Arg) = default;
   AAResultBase(AAResultBase &&Arg) {}
 
 public:

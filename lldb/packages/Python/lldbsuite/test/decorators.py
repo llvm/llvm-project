@@ -647,6 +647,31 @@ def skipIfOutOfTreeDebugserver(func):
     return skipTestIfFn(is_out_of_tree_debugserver)(func)
 
 
+def skipIfOutOfTreeLibunwind(func):
+    """Decorate the item to skip tests if libunwind was not built in-tree."""
+
+    def is_out_of_tree_libunwind():
+        if not configuration.llvm_tools_dir:
+            return "out-of-tree libunwind"
+
+        # llvm_tools_dir is typically <build>/bin, so lib is a sibling.
+        llvm_lib_dir = os.path.join(
+            os.path.dirname(configuration.llvm_tools_dir), "lib"
+        )
+
+        if not os.path.isdir(llvm_lib_dir):
+            return "out-of-tree libunwind"
+
+        # Check for libunwind library (any extension).
+        for filename in os.listdir(llvm_lib_dir):
+            if filename.startswith("libunwind.") or filename.startswith("unwind."):
+                return None
+
+        return "out-of-tree libunwind"
+
+    return skipTestIfFn(is_out_of_tree_libunwind)(func)
+
+
 def skipIfRemote(func):
     """Decorate the item to skip tests if testing remotely."""
     return unittest.skipIf(lldb.remote_platform, "skip on remote platform")(func)
@@ -756,9 +781,33 @@ def skipIfLinux(func):
     return skipIfPlatform(["linux"])(func)
 
 
-def skipIfWindows(func):
+def skipIfWindows(func=None, windows_version=None):
     """Decorate the item to skip tests that should be skipped on Windows."""
-    return skipIfPlatform(["windows"])(func)
+
+    def decorator(func):
+        if windows_version is None:
+            return skipIfPlatform(["windows"])(func)
+        else:
+            actual_win_version = lldbplatformutil.getWindowsVersion()
+
+            def version_check():
+                if actual_win_version == "unknown":
+                    return False
+                operator, required_windows_version = windows_version
+                return lldbplatformutil.isExpectedVersion(
+                    actual_version=actual_win_version,
+                    required_version=required_windows_version,
+                    operator=operator,
+                )
+
+            return unittest.skipIf(
+                version_check(),
+                f"Test is skipped on Windows '{actual_win_version}'",
+            )(func)
+
+    if func is not None:
+        return decorator(func)
+    return decorator
 
 
 def skipIfWindowsAndNonEnglish(func):
@@ -928,6 +977,19 @@ def skipUnlessHasCallSiteInfo(func):
     return skipTestIfFn(is_compiler_clang_with_call_site_info)(func)
 
 
+def skipUnlessCompilerIsClang(func):
+    """Decorate the item to skip test unless the compiler is clang."""
+
+    def is_compiler_clang():
+        compiler_path = lldbplatformutil.getCompiler()
+        compiler = os.path.basename(compiler_path)
+        if not compiler.startswith("clang"):
+            return "Test requires clang as compiler"
+        return None
+
+    return skipTestIfFn(is_compiler_clang)(func)
+
+
 def skipUnlessThreadSanitizer(func):
     """Decorate the item to skip test unless Clang -fsanitize=thread is supported."""
 
@@ -1033,6 +1095,16 @@ def skipUnlessAddressSanitizer(func):
 
     return skipTestIfFn(is_compiler_with_address_sanitizer)(func)
 
+
+def skipUnlessBoundsSafety(func):
+    """Decorate the item to skip test unless Clang -fbounds-safety is supported."""
+
+    def is_compiler_with_bounds_safety():
+        if not _compiler_supports(lldbplatformutil.getCompiler(), "-fbounds-safety"):
+            return "Compiler cannot compile with -fbounds-safety"
+        return None
+
+    return skipTestIfFn(is_compiler_with_bounds_safety)(func)
 
 def skipIfAsan(func):
     """Skip this test if the environment is set up to run LLDB *itself* under ASAN."""

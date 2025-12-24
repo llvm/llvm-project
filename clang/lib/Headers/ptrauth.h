@@ -241,6 +241,18 @@ typedef __UINTPTR_TYPE__ ptrauth_generic_signature_t;
 #define ptrauth_type_discriminator(__type)                                     \
   __builtin_ptrauth_type_discriminator(__type)
 
+/* Compute the constant discriminator used by Clang to sign pointers with the
+   given C function pointer type.
+
+   A call to this function is an integer constant expression. */
+#if __has_feature(ptrauth_function_pointer_type_discrimination)
+#define ptrauth_function_pointer_type_discriminator(__type)                    \
+  __builtin_ptrauth_type_discriminator(__type)
+#else
+#define ptrauth_function_pointer_type_discriminator(__type)                    \
+  ((ptrauth_extra_data_t)0)
+#endif
+
 /* Compute a signature for the given pair of pointer-sized values.
    The order of the arguments is significant.
 
@@ -372,6 +384,8 @@ typedef __UINTPTR_TYPE__ ptrauth_generic_signature_t;
   })
 
 #define ptrauth_type_discriminator(__type) ((ptrauth_extra_data_t)0)
+#define ptrauth_function_pointer_type_discriminator(__type)                    \
+  ((ptrauth_extra_data_t)0)
 
 #define ptrauth_sign_generic_data(__value, __data)                             \
   ({                                                                           \

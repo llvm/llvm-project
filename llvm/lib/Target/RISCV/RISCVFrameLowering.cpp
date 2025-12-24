@@ -291,12 +291,12 @@ static void emitSiFiveCLICPreemptibleSaves(MachineFunction &MF,
   // which affects other passes.
   TII->storeRegToStackSlot(MBB, MBBI, RISCV::X8, /* IsKill=*/true,
                            RVFI->getInterruptCSRFrameIndex(0),
-                           &RISCV::GPRRegClass, STI.getRegisterInfo(),
-                           Register(), MachineInstr::FrameSetup);
+                           &RISCV::GPRRegClass, Register(),
+                           MachineInstr::FrameSetup);
   TII->storeRegToStackSlot(MBB, MBBI, RISCV::X9, /* IsKill=*/true,
                            RVFI->getInterruptCSRFrameIndex(1),
-                           &RISCV::GPRRegClass, STI.getRegisterInfo(),
-                           Register(), MachineInstr::FrameSetup);
+                           &RISCV::GPRRegClass, Register(),
+                           MachineInstr::FrameSetup);
 
   // Put `mcause` into X8 (s0), and `mepc` into X9 (s1). If either of these are
   // used in the function, then they will appear in `getUnmanagedCSI` and will
@@ -357,14 +357,12 @@ static void emitSiFiveCLICPreemptibleRestores(MachineFunction &MF,
 
   // X8 and X9 need to be restored to their values on function entry, which we
   // saved onto the stack in `emitSiFiveCLICPreemptibleSaves`.
-  TII->loadRegFromStackSlot(MBB, MBBI, RISCV::X9,
-                            RVFI->getInterruptCSRFrameIndex(1),
-                            &RISCV::GPRRegClass, STI.getRegisterInfo(),
-                            Register(), MachineInstr::FrameSetup);
-  TII->loadRegFromStackSlot(MBB, MBBI, RISCV::X8,
-                            RVFI->getInterruptCSRFrameIndex(0),
-                            &RISCV::GPRRegClass, STI.getRegisterInfo(),
-                            Register(), MachineInstr::FrameSetup);
+  TII->loadRegFromStackSlot(
+      MBB, MBBI, RISCV::X9, RVFI->getInterruptCSRFrameIndex(1),
+      &RISCV::GPRRegClass, Register(), MachineInstr::FrameSetup);
+  TII->loadRegFromStackSlot(
+      MBB, MBBI, RISCV::X8, RVFI->getInterruptCSRFrameIndex(0),
+      &RISCV::GPRRegClass, Register(), MachineInstr::FrameSetup);
 }
 
 // Get the ID of the libcall used for spilling and restoring callee saved
@@ -673,22 +671,23 @@ void RISCVFrameLowering::allocateAndProbeStackForRVV(
 
 static void appendScalableVectorExpression(const TargetRegisterInfo &TRI,
                                            SmallVectorImpl<char> &Expr,
-                                           int FixedOffset, int ScalableOffset,
+                                           StackOffset Offset,
                                            llvm::raw_string_ostream &Comment) {
+  int64_t FixedOffset = Offset.getFixed();
+  int64_t ScalableOffset = Offset.getScalable();
   unsigned DwarfVLenB = TRI.getDwarfRegNum(RISCV::VLENB, true);
-  uint8_t Buffer[16];
   if (FixedOffset) {
     Expr.push_back(dwarf::DW_OP_consts);
-    Expr.append(Buffer, Buffer + encodeSLEB128(FixedOffset, Buffer));
+    appendLEB128<LEB128Sign::Signed>(Expr, FixedOffset);
     Expr.push_back((uint8_t)dwarf::DW_OP_plus);
     Comment << (FixedOffset < 0 ? " - " : " + ") << std::abs(FixedOffset);
   }
 
   Expr.push_back((uint8_t)dwarf::DW_OP_consts);
-  Expr.append(Buffer, Buffer + encodeSLEB128(ScalableOffset, Buffer));
+  appendLEB128<LEB128Sign::Signed>(Expr, ScalableOffset);
 
   Expr.push_back((uint8_t)dwarf::DW_OP_bregx);
-  Expr.append(Buffer, Buffer + encodeULEB128(DwarfVLenB, Buffer));
+  appendLEB128<LEB128Sign::Unsigned>(Expr, DwarfVLenB);
   Expr.push_back(0);
 
   Expr.push_back((uint8_t)dwarf::DW_OP_mul);
@@ -700,9 +699,8 @@ static void appendScalableVectorExpression(const TargetRegisterInfo &TRI,
 
 static MCCFIInstruction createDefCFAExpression(const TargetRegisterInfo &TRI,
                                                Register Reg,
-                                               uint64_t FixedOffset,
-                                               uint64_t ScalableOffset) {
-  assert(ScalableOffset != 0 && "Did not need to adjust CFA for RVV");
+                                               StackOffset Offset) {
+  assert(Offset.getScalable() != 0 && "Did not need to adjust CFA for RVV");
   SmallString<64> Expr;
   std::string CommentBuffer;
   llvm::raw_string_ostream Comment(CommentBuffer);
@@ -715,13 +713,11 @@ static MCCFIInstruction createDefCFAExpression(const TargetRegisterInfo &TRI,
   else
     Comment << printReg(Reg, &TRI);
 
-  appendScalableVectorExpression(TRI, Expr, FixedOffset, ScalableOffset,
-                                 Comment);
+  appendScalableVectorExpression(TRI, Expr, Offset, Comment);
 
   SmallString<64> DefCfaExpr;
-  uint8_t Buffer[16];
   DefCfaExpr.push_back(dwarf::DW_CFA_def_cfa_expression);
-  DefCfaExpr.append(Buffer, Buffer + encodeULEB128(Expr.size(), Buffer));
+  appendLEB128<LEB128Sign::Unsigned>(DefCfaExpr, Expr.size());
   DefCfaExpr.append(Expr.str());
 
   return MCCFIInstruction::createEscape(nullptr, DefCfaExpr.str(), SMLoc(),
@@ -729,24 +725,21 @@ static MCCFIInstruction createDefCFAExpression(const TargetRegisterInfo &TRI,
 }
 
 static MCCFIInstruction createDefCFAOffset(const TargetRegisterInfo &TRI,
-                                           Register Reg, uint64_t FixedOffset,
-                                           uint64_t ScalableOffset) {
-  assert(ScalableOffset != 0 && "Did not need to adjust CFA for RVV");
+                                           Register Reg, StackOffset Offset) {
+  assert(Offset.getScalable() != 0 && "Did not need to adjust CFA for RVV");
   SmallString<64> Expr;
   std::string CommentBuffer;
   llvm::raw_string_ostream Comment(CommentBuffer);
   Comment << printReg(Reg, &TRI) << "  @ cfa";
 
   // Build up the expression (FixedOffset + ScalableOffset * VLENB).
-  appendScalableVectorExpression(TRI, Expr, FixedOffset, ScalableOffset,
-                                 Comment);
+  appendScalableVectorExpression(TRI, Expr, Offset, Comment);
 
   SmallString<64> DefCfaExpr;
-  uint8_t Buffer[16];
   unsigned DwarfReg = TRI.getDwarfRegNum(Reg, true);
   DefCfaExpr.push_back(dwarf::DW_CFA_expression);
-  DefCfaExpr.append(Buffer, Buffer + encodeULEB128(DwarfReg, Buffer));
-  DefCfaExpr.append(Buffer, Buffer + encodeULEB128(Expr.size(), Buffer));
+  appendLEB128<LEB128Sign::Unsigned>(DefCfaExpr, DwarfReg);
+  appendLEB128<LEB128Sign::Unsigned>(DefCfaExpr, Expr.size());
   DefCfaExpr.append(Expr.str());
 
   return MCCFIInstruction::createEscape(nullptr, DefCfaExpr.str(), SMLoc(),
@@ -789,6 +782,8 @@ void RISCVFrameLowering::allocateStack(MachineBasicBlock &MBB,
 
   // Unroll the probe loop depending on the number of iterations.
   if (Offset < ProbeSize * 5) {
+    uint64_t CFAAdjust = RealStackSize - Offset;
+
     uint64_t CurrentOffset = 0;
     while (CurrentOffset + ProbeSize <= Offset) {
       RI->adjustReg(MBB, MBBI, DL, SPReg, SPReg,
@@ -802,7 +797,7 @@ void RISCVFrameLowering::allocateStack(MachineBasicBlock &MBB,
 
       CurrentOffset += ProbeSize;
       if (EmitCFI)
-        CFIBuilder.buildDefCFAOffset(CurrentOffset);
+        CFIBuilder.buildDefCFAOffset(CurrentOffset + CFAAdjust);
     }
 
     uint64_t Residual = Offset - CurrentOffset;
@@ -810,7 +805,7 @@ void RISCVFrameLowering::allocateStack(MachineBasicBlock &MBB,
       RI->adjustReg(MBB, MBBI, DL, SPReg, SPReg,
                     StackOffset::getFixed(-Residual), Flag, getStackAlign());
       if (EmitCFI)
-        CFIBuilder.buildDefCFAOffset(Offset);
+        CFIBuilder.buildDefCFAOffset(RealStackSize);
 
       if (DynAllocation) {
         // s[d|w] zero, 0(sp)
@@ -1133,7 +1128,8 @@ void RISCVFrameLowering::emitPrologue(MachineFunction &MF,
     if (NeedsDwarfCFI && !hasFP(MF)) {
       // Emit .cfi_def_cfa_expression "sp + StackSize + RVVStackSize * vlenb".
       CFIBuilder.insertCFIInst(createDefCFAExpression(
-          *RI, SPReg, getStackSizeWithRVVPadding(MF), RVVStackSize / 8));
+          *RI, SPReg,
+          StackOffset::get(getStackSizeWithRVVPadding(MF), RVVStackSize / 8)));
     }
 
     std::advance(MBBI, getRVVCalleeSavedInfo(MF, CSI).size());
@@ -1560,7 +1556,7 @@ static MCRegister getRVVBaseRegister(const RISCVRegisterInfo &TRI,
   MCRegister BaseReg = TRI.getSubReg(Reg, RISCV::sub_vrm1_0);
   // If it's not a grouped vector register, it doesn't have subregister, so
   // the base register is just itself.
-  if (BaseReg == RISCV::NoRegister)
+  if (!BaseReg.isValid())
     BaseReg = Reg;
   return BaseReg;
 }
@@ -1992,17 +1988,17 @@ RISCVFrameLowering::getFirstSPAdjustAmount(const MachineFunction &MF) const {
 
 bool RISCVFrameLowering::assignCalleeSavedSpillSlots(
     MachineFunction &MF, const TargetRegisterInfo *TRI,
-    std::vector<CalleeSavedInfo> &CSI, unsigned &MinCSFrameIndex,
-    unsigned &MaxCSFrameIndex) const {
+    std::vector<CalleeSavedInfo> &CSI) const {
   auto *RVFI = MF.getInfo<RISCVMachineFunctionInfo>();
+  MachineFrameInfo &MFI = MF.getFrameInfo();
+  const TargetRegisterInfo *RegInfo = MF.getSubtarget().getRegisterInfo();
 
   // Preemptible Interrupts have two additional Callee-save Frame Indexes,
   // not tracked by `CSI`.
   if (RVFI->isSiFivePreemptibleInterrupt(MF)) {
     for (int I = 0; I < 2; ++I) {
       int FI = RVFI->getInterruptCSRFrameIndex(I);
-      MinCSFrameIndex = std::min<unsigned>(MinCSFrameIndex, FI);
-      MaxCSFrameIndex = std::max<unsigned>(MaxCSFrameIndex, FI);
+      MFI.setIsCalleeSavedObjectIndex(FI, true);
     }
   }
 
@@ -2027,9 +2023,6 @@ bool RISCVFrameLowering::assignCalleeSavedSpillSlots(
       RVFI->setRVPushStackSize(alignTo((STI.getXLen() / 8) * PushedRegNum, 16));
     }
   }
-
-  MachineFrameInfo &MFI = MF.getFrameInfo();
-  const TargetRegisterInfo *RegInfo = MF.getSubtarget().getRegisterInfo();
 
   for (auto &CS : CSI) {
     MCRegister Reg = CS.getReg();
@@ -2080,10 +2073,7 @@ bool RISCVFrameLowering::assignCalleeSavedSpillSlots(
     // min.
     Alignment = std::min(Alignment, getStackAlign());
     int FrameIdx = MFI.CreateStackObject(Size, Alignment, true);
-    if ((unsigned)FrameIdx < MinCSFrameIndex)
-      MinCSFrameIndex = FrameIdx;
-    if ((unsigned)FrameIdx > MaxCSFrameIndex)
-      MaxCSFrameIndex = FrameIdx;
+    MFI.setIsCalleeSavedObjectIndex(FrameIdx, true);
     CS.setFrameIdx(FrameIdx);
     if (RISCVRegisterInfo::isRVVRegClass(RC))
       MFI.setStackID(FrameIdx, TargetStackID::ScalableVector);
@@ -2175,7 +2165,7 @@ bool RISCVFrameLowering::spillCalleeSavedRegisters(
       MCRegister Reg = CS.getReg();
       const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
       TII.storeRegToStackSlot(MBB, MI, Reg, !MBB.isLiveIn(Reg),
-                              CS.getFrameIdx(), RC, TRI, Register(),
+                              CS.getFrameIdx(), RC, Register(),
                               MachineInstr::FrameSetup);
     }
   };
@@ -2219,7 +2209,8 @@ void RISCVFrameLowering::emitCalleeSavedRVVPrologCFI(
     unsigned NumRegs = getCalleeSavedRVVNumRegs(CS.getReg());
     for (unsigned i = 0; i < NumRegs; ++i) {
       CFIBuilder.insertCFIInst(createDefCFAOffset(
-          TRI, BaseReg + i, -FixedSize, MFI.getObjectOffset(FI) / 8 + i));
+          TRI, BaseReg + i,
+          StackOffset::get(-FixedSize, MFI.getObjectOffset(FI) / 8 + i)));
     }
   }
 }
@@ -2265,8 +2256,8 @@ bool RISCVFrameLowering::restoreCalleeSavedRegisters(
     for (auto &CS : CSInfo) {
       MCRegister Reg = CS.getReg();
       const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
-      TII.loadRegFromStackSlot(MBB, MI, Reg, CS.getFrameIdx(), RC, TRI,
-                               Register(), MachineInstr::FrameDestroy);
+      TII.loadRegFromStackSlot(MBB, MI, Reg, CS.getFrameIdx(), RC, Register(),
+                               MachineInstr::FrameDestroy);
       assert(MI != MBB.begin() &&
              "loadRegFromStackSlot didn't insert any code!");
     }
@@ -2506,4 +2497,13 @@ void RISCVFrameLowering::inlineStackProbe(MachineFunction &MF,
       MBBI->eraseFromParent();
     }
   }
+}
+
+int RISCVFrameLowering::getInitialCFAOffset(const MachineFunction &MF) const {
+  return 0;
+}
+
+Register
+RISCVFrameLowering::getInitialCFARegister(const MachineFunction &MF) const {
+  return RISCV::X2;
 }

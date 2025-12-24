@@ -87,10 +87,6 @@ public:
   bool defaultSynthProperties() const { return DefaultSynthProperties; }
 };
 
-/// \returns true if \p Class is NS or CF objects AND not retained, false if
-/// not, std::nullopt if inconclusive.
-std::optional<bool> isUnretained(const clang::QualType T, bool IsARCEnabled);
-
 /// \returns true if \p Class is ref-countable AND not ref-counted, false if
 /// not, std::nullopt if inconclusive.
 std::optional<bool> isUncounted(const clang::CXXRecordDecl* Class);
@@ -106,10 +102,6 @@ std::optional<bool> isUncountedPtr(const clang::QualType T);
 /// \returns true if \p T is either a raw pointer or reference to an unchecked
 /// class, false if not, std::nullopt if inconclusive.
 std::optional<bool> isUncheckedPtr(const clang::QualType T);
-
-/// \returns true if \p T is either a raw pointer or reference to an uncounted
-/// or unchecked class, false if not, std::nullopt if inconclusive.
-std::optional<bool> isUnsafePtr(const QualType T, bool IsArcEnabled);
 
 /// \returns true if \p T is a RefPtr, Ref, CheckedPtr, CheckedRef, or its
 /// variant, false if not.
@@ -134,6 +126,9 @@ bool isCtorOfCheckedPtr(const clang::FunctionDecl *F);
 /// uncounted parameter, false if not.
 bool isCtorOfSafePtr(const clang::FunctionDecl *F);
 
+/// \returns true if \p F is std::move or WTF::move.
+bool isStdOrWTFMove(const clang::FunctionDecl *F);
+
 /// \returns true if \p Name is RefPtr, Ref, or its variant, false if not.
 bool isRefType(const std::string &Name);
 
@@ -142,6 +137,10 @@ bool isCheckedPtr(const std::string &Name);
 
 /// \returns true if \p Name is RetainPtr or its variant, false if not.
 bool isRetainPtrOrOSPtr(const std::string &Name);
+
+/// \returns true if \p Name is an owning smar pointer such as Ref, CheckedPtr,
+/// and unique_ptr.
+bool isOwnerPtr(const std::string &Name);
 
 /// \returns true if \p Name is a smart pointer type name, false if not.
 bool isSmartPtrClass(const std::string &Name);

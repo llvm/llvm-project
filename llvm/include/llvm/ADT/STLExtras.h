@@ -161,12 +161,10 @@ using TypeAtIndex = std::tuple_element_t<I, std::tuple<Ts...>>;
 /// Helper which adds two underlying types of enumeration type.
 /// Implicit conversion to a common type is accepted.
 template <typename EnumTy1, typename EnumTy2,
-          typename UT1 = std::enable_if_t<std::is_enum<EnumTy1>::value,
-                                          std::underlying_type_t<EnumTy1>>,
-          typename UT2 = std::enable_if_t<std::is_enum<EnumTy2>::value,
-                                          std::underlying_type_t<EnumTy2>>>
+          typename = std::enable_if_t<std::is_enum_v<EnumTy1> &&
+                                      std::is_enum_v<EnumTy2>>>
 constexpr auto addEnumValues(EnumTy1 LHS, EnumTy2 RHS) {
-  return static_cast<UT1>(LHS) + static_cast<UT2>(RHS);
+  return llvm::to_underlying(LHS) + llvm::to_underlying(RHS);
 }
 
 //===----------------------------------------------------------------------===//
@@ -676,7 +674,7 @@ using zip_traits = iterator_facade_base<
     ReferenceTupleType *, ReferenceTupleType>;
 
 template <typename ZipType, typename ReferenceTupleType, typename... Iters>
-struct zip_common : public zip_traits<ZipType, ReferenceTupleType, Iters...> {
+struct zip_common : zip_traits<ZipType, ReferenceTupleType, Iters...> {
   using Base = zip_traits<ZipType, ReferenceTupleType, Iters...>;
   using IndexSequence = std::index_sequence_for<Iters...>;
   using value_type = typename Base::value_type;
@@ -1417,6 +1415,18 @@ template <typename ContainerTy> auto make_second_range(ContainerTy &&c) {
       });
 }
 
+/// Return a range that conditionally reverses \p C. The collection is iterated
+/// in reverse if \p ShouldReverse is true (otherwise, it is iterated forwards).
+template <typename ContainerTy>
+[[nodiscard]] auto reverse_conditionally(ContainerTy &&C, bool ShouldReverse) {
+  using IterTy = detail::IterOfRange<ContainerTy>;
+  using ReferenceTy = typename std::iterator_traits<IterTy>::reference;
+  return map_range(zip_equal(reverse(C), C),
+                   [ShouldReverse](auto I) -> ReferenceTy {
+                     return ShouldReverse ? std::get<0>(I) : std::get<1>(I);
+                   });
+}
+
 //===----------------------------------------------------------------------===//
 //     Extra additions to <utility>
 //===----------------------------------------------------------------------===//
@@ -1518,8 +1528,8 @@ template <class Iterator, class RNG>
 void shuffle(Iterator first, Iterator last, RNG &&g) {
   // It would be better to use a std::uniform_int_distribution,
   // but that would be stdlib dependent.
-  typedef
-      typename std::iterator_traits<Iterator>::difference_type difference_type;
+  using difference_type =
+      typename std::iterator_traits<Iterator>::difference_type;
   for (auto size = last - first; size > 1; ++first, (void)--size) {
     difference_type offset = g() % size;
     // Avoid self-assignment due to incorrect assertions in libstdc++
@@ -1692,6 +1702,28 @@ template <typename R, typename E> auto accumulate(R &&Range, E &&Init) {
                          std::forward<E>(Init));
 }
 
+/// Wrapper for std::accumulate with a binary operator.
+template <typename R, typename E, typename BinaryOp>
+auto accumulate(R &&Range, E &&Init, BinaryOp &&Op) {
+  return std::accumulate(adl_begin(Range), adl_end(Range),
+                         std::forward<E>(Init), std::forward<BinaryOp>(Op));
+}
+
+/// Returns the sum of all values in `Range` with `Init` initial value.
+/// The default initial value is 0.
+template <typename R, typename E = detail::ValueOfRange<R>>
+auto sum_of(R &&Range, E Init = E{0}) {
+  return accumulate(std::forward<R>(Range), std::move(Init));
+}
+
+/// Returns the product of all values in `Range` with `Init` initial value.
+/// The default initial value is 1.
+template <typename R, typename E = detail::ValueOfRange<R>>
+auto product_of(R &&Range, E Init = E{1}) {
+  return accumulate(std::forward<R>(Range), std::move(Init),
+                    std::multiplies<>{});
+}
+
 /// Provide wrappers to std::for_each which take ranges instead of having to
 /// pass begin/end explicitly.
 template <typename R, typename UnaryFunction>
@@ -1756,6 +1788,42 @@ auto remove_if(R &&Range, UnaryPredicate P) {
 template <typename R, typename OutputIt, typename UnaryPredicate>
 OutputIt copy_if(R &&Range, OutputIt Out, UnaryPredicate P) {
   return std::copy_if(adl_begin(Range), adl_end(Range), Out, P);
+}
+
+/// Provide wrappers to std::search which searches for the first occurrence of
+/// Range2 within Range1.
+/// \returns An iterator to the start of Range2 within Range1 if found, or
+///          the end iterator of Range1 if not found.
+template <typename R1, typename R2> auto search(R1 &&Range1, R2 &&Range2) {
+  return std::search(adl_begin(Range1), adl_end(Range1), adl_begin(Range2),
+                     adl_end(Range2));
+}
+
+/// Provide wrappers to std::search which searches for the first occurrence of
+/// Range2 within Range1 using predicate `P`.
+/// \returns An iterator to the start of Range2 within Range1 if found, or
+///          the end iterator of Range1 if not found.
+template <typename R1, typename R2, typename BinaryPredicate>
+auto search(R1 &&Range1, R2 &&Range2, BinaryPredicate P) {
+  return std::search(adl_begin(Range1), adl_end(Range1), adl_begin(Range2),
+                     adl_end(Range2), P);
+}
+
+/// Provide wrappers to std::adjacent_find which finds the first pair of
+/// adjacent elements that are equal.
+/// \returns An iterator to the first adjacent element within Range1 if found,
+///          or the end iterator of Range1 if not found.
+template <typename R> auto adjacent_find(R &&Range) {
+  return std::adjacent_find(adl_begin(Range), adl_end(Range));
+}
+
+/// Provide wrappers to std::adjacent_find which finds the first pair of
+/// adjacent elements that are satisfy `P`.
+/// \returns An iterator to the first adjacent element within Range1 if found,
+///          or the end iterator of Range1 if not found.
+template <typename R, typename BinaryPredicate>
+auto adjacent_find(R &&Range, BinaryPredicate P) {
+  return std::adjacent_find(adl_begin(Range), adl_end(Range), P);
 }
 
 /// Return the single value in \p Range that satisfies
@@ -2120,7 +2188,17 @@ void append_range(Container &C, Range &&R) {
 /// Appends all `Values` to container `C`.
 template <typename Container, typename... Args>
 void append_values(Container &C, Args &&...Values) {
-  C.reserve(range_size(C) + sizeof...(Args));
+  if (size_t InitialSize = range_size(C); InitialSize == 0) {
+    // Only reserve if the container is empty. Reserving on a non-empty
+    // container may interfere with the exponential growth strategy, if the
+    // container does not round up the capacity. Consider `append_values` called
+    // repeatedly in a loop: each call would reserve exactly `size + N`, causing
+    // the capacity to grow linearly (e.g., 100 -> 105 -> 110 -> ...) instead of
+    // exponentially (e.g., 100 -> 200 -> ...). Linear growth turns the
+    // amortized O(1) append into O(n) because every few insertions trigger a
+    // reallocation and copy of all elements.
+    C.reserve(InitialSize + sizeof...(Args));
+  }
   // Append all values one by one.
   ((void)C.insert(C.end(), std::forward<Args>(Values)), ...);
 }
@@ -2579,16 +2657,6 @@ template <typename ContainerTy>
 bool hasNItemsOrLess(ContainerTy &&C, unsigned N) {
   return hasNItemsOrLess(adl_begin(C), adl_end(C), N);
 }
-
-/// Returns a raw pointer that represents the same address as the argument.
-///
-/// This implementation can be removed once we move to C++20 where it's defined
-/// as std::to_address().
-///
-/// The std::pointer_traits<>::to_address(p) variations of these overloads has
-/// not been implemented.
-template <class Ptr> auto to_address(const Ptr &P) { return P.operator->(); }
-template <class T> constexpr T *to_address(T *P) { return P; }
 
 // Detect incomplete types, relying on the fact that their size is unknown.
 namespace detail {

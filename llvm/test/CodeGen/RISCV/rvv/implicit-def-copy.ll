@@ -19,4 +19,3 @@ define <vscale x 8 x i64> @vpload_nxv8i64(ptr %ptr, <vscale x 8 x i1> %m, i32 ze
   ret <vscale x 8 x i64> %load
 }
 
-declare <vscale x 8 x i64> @llvm.vp.load.nxv8i64.p0(ptr, <vscale x 8 x i1>, i32)

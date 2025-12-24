@@ -1,9 +1,7 @@
 ; RUN: opt -safe-stack -S -mtriple=i686-pc-linux-gnu < %s -o - | FileCheck --check-prefixes=COMMON,TLS32 %s
 ; RUN: opt -safe-stack -S -mtriple=x86_64-pc-linux-gnu < %s -o - | FileCheck --check-prefixes=COMMON,TLS64 %s
 
-; RUN: opt -safe-stack -S -mtriple=i686-linux-android < %s -o - | FileCheck --check-prefixes=COMMON,GLOBAL32 %s
-; RUN: opt -safe-stack -S -mtriple=i686-linux-android24 < %s -o - | FileCheck --check-prefixes=COMMON,TLS32 %s
-
+; RUN: opt -safe-stack -S -mtriple=i686-linux-android < %s -o - | FileCheck --check-prefixes=COMMON,TLS32 %s
 ; RUN: opt -safe-stack -S -mtriple=x86_64-linux-android < %s -o - | FileCheck --check-prefixes=COMMON,TLS64 %s
 
 ; RUN: opt -safe-stack -S -mtriple=x86_64-unknown-fuchsia < %s -o - | FileCheck --check-prefixes=COMMON,FUCHSIA64 %s
@@ -11,9 +9,7 @@
 ; RUN: opt -passes=safe-stack -S -mtriple=i686-pc-linux-gnu < %s -o - | FileCheck --check-prefixes=COMMON,TLS32 %s
 ; RUN: opt -passes=safe-stack -S -mtriple=x86_64-pc-linux-gnu < %s -o - | FileCheck --check-prefixes=COMMON,TLS64 %s
 
-; RUN: opt -passes=safe-stack -S -mtriple=i686-linux-android < %s -o - | FileCheck --check-prefixes=COMMON,GLOBAL32 %s
-; RUN: opt -passes=safe-stack -S -mtriple=i686-linux-android24 < %s -o - | FileCheck --check-prefixes=COMMON,TLS32 %s
-
+; RUN: opt -passes=safe-stack -S -mtriple=i686-linux-android < %s -o - | FileCheck --check-prefixes=COMMON,TLS32 %s
 ; RUN: opt -passes=safe-stack -S -mtriple=x86_64-linux-android < %s -o - | FileCheck --check-prefixes=COMMON,TLS64 %s
 
 ; RUN: opt -passes=safe-stack -S -mtriple=x86_64-unknown-fuchsia < %s -o - | FileCheck --check-prefixes=COMMON,FUCHSIA64 %s

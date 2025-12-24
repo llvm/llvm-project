@@ -77,4 +77,3 @@ entry:
   ret void
 }
 
-declare void @llvm.masked.store.v4i32.p0(<4 x i32>, ptr, i32, <4 x i1>)

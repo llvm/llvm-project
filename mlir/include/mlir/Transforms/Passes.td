@@ -248,6 +248,7 @@ def RemoveDeadValues : Pass<"remove-dead-values"> {
     ```
   }];
   let constructor = "mlir::createRemoveDeadValuesPass()";
+  let dependentDialects = ["ub::UBDialect"];
 }
 
 def PrintIRPass : Pass<"print-ir"> {
@@ -270,7 +271,14 @@ def GenerateRuntimeVerification : Pass<"generate-runtime-verification"> {
     passes that are suspected to introduce faulty IR.
   }];
   let constructor = "mlir::createGenerateRuntimeVerificationPass()";
+  let options = [
+    Option<"verboseLevel", "verbose-level", "unsigned", /*default=*/"1",
+           "Verbosity level for runtime verification messages: "
+           "0 = Minimum (only source location), "
+           "1 = Detailed (include full operation details, names, types, shapes, etc.)">
+  ];
 }
+
 
 def Inliner : Pass<"inline"> {
   let summary = "Inline function calls";

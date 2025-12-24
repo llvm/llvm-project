@@ -323,6 +323,8 @@ void StmtProfiler::VisitReturnStmt(const ReturnStmt *S) {
   VisitStmt(S);
 }
 
+void StmtProfiler::VisitDeferStmt(const DeferStmt *S) { VisitStmt(S); }
+
 void StmtProfiler::VisitGCCAsmStmt(const GCCAsmStmt *S) {
   VisitStmt(S);
   ID.AddBoolean(S->isVolatile());
@@ -546,6 +548,8 @@ void OMPClauseProfiler::VisitOMPNocontextClause(const OMPNocontextClause *C) {
 
 void OMPClauseProfiler::VisitOMPDefaultClause(const OMPDefaultClause *C) { }
 
+void OMPClauseProfiler::VisitOMPThreadsetClause(const OMPThreadsetClause *C) {}
+
 void OMPClauseProfiler::VisitOMPProcBindClause(const OMPProcBindClause *C) { }
 
 void OMPClauseProfiler::VisitOMPUnifiedAddressClause(
@@ -585,7 +589,10 @@ void OMPClauseProfiler::VisitOMPOrderedClause(const OMPOrderedClause *C) {
     Profiler->VisitStmt(Num);
 }
 
-void OMPClauseProfiler::VisitOMPNowaitClause(const OMPNowaitClause *) {}
+void OMPClauseProfiler::VisitOMPNowaitClause(const OMPNowaitClause *C) {
+  if (C->getCondition())
+    Profiler->VisitStmt(C->getCondition());
+}
 
 void OMPClauseProfiler::VisitOMPUntiedClause(const OMPUntiedClause *) {}
 
@@ -961,6 +968,12 @@ void OMPClauseProfiler::VisitOMPXDynCGroupMemClause(
     const OMPXDynCGroupMemClause *C) {
   VisitOMPClauseWithPreInit(C);
   if (Expr *Size = C->getSize())
+    Profiler->VisitStmt(Size);
+}
+void OMPClauseProfiler::VisitOMPDynGroupprivateClause(
+    const OMPDynGroupprivateClause *C) {
+  VisitOMPClauseWithPreInit(C);
+  if (auto *Size = C->getSize())
     Profiler->VisitStmt(Size);
 }
 void OMPClauseProfiler::VisitOMPDoacrossClause(const OMPDoacrossClause *C) {
@@ -1494,6 +1507,11 @@ StmtProfiler::VisitUnaryExprOrTypeTraitExpr(const UnaryExprOrTypeTraitExpr *S) {
 }
 
 void StmtProfiler::VisitArraySubscriptExpr(const ArraySubscriptExpr *S) {
+  VisitExpr(S);
+}
+
+void StmtProfiler::VisitMatrixSingleSubscriptExpr(
+    const MatrixSingleSubscriptExpr *S) {
   VisitExpr(S);
 }
 
@@ -2769,10 +2787,19 @@ void OpenACCClauseProfiler::VisitReductionClause(
 
   for (auto &Recipe : Clause.getRecipes()) {
     Profiler.VisitDecl(Recipe.AllocaDecl);
+
     // TODO: OpenACC: Make sure we remember to update this when we figure out
     // what we're adding for the operation recipe, in the meantime, a static
     // assert will make sure we don't add something.
-    static_assert(sizeof(OpenACCReductionRecipe) == sizeof(int *));
+    static_assert(sizeof(OpenACCReductionRecipe::CombinerRecipe) ==
+                  3 * sizeof(int *));
+    for (auto &CombinerRecipe : Recipe.CombinerRecipes) {
+      if (CombinerRecipe.Op) {
+        Profiler.VisitDecl(CombinerRecipe.LHS);
+        Profiler.VisitDecl(CombinerRecipe.RHS);
+        Profiler.VisitStmt(CombinerRecipe.Op);
+      }
+    }
   }
 }
 

@@ -131,3 +131,36 @@ void bitcast() {
 
 // LLVM: %[[D_VEC:.*]] = load <2 x double>, ptr {{.*}}, align 16
 // LLVM: %[[I_VEC:.*]] = bitcast <2 x double> %[[D_VEC]] to <4 x i32>
+
+void f(long int start) {
+  void *p = (void*)start;
+}
+// CIR: %[[L:.*]] = cir.load {{.*}} : !cir.ptr<!s64i>, !s64i
+// CIR: %[[MID:.*]] = cir.cast integral %[[L]] : !s64i -> !u64i
+// CIR:          cir.cast int_to_ptr %[[MID]] : !u64i -> !cir.ptr<!void>
+
+// LLVM-LABEL: define{{.*}} void @_Z1fl(i64 %0)
+// LLVM: %[[ADDR:.*]] = alloca i64, i64 1, align 8
+// LLVM: %[[PADDR:.*]] = alloca ptr, i64 1, align 8
+// LLVM: store i64 %0, ptr %[[ADDR]], align 8
+// LLVM: %[[L:.*]] = load i64, ptr %[[ADDR]], align 8
+// LLVM: %[[PTR:.*]] = inttoptr i64 %[[L]] to ptr
+// LLVM: store ptr %[[PTR]], ptr %[[PADDR]], align 8
+// LLVM: ret void
+
+struct A { int x; };
+
+void int_cast(long ptr) {
+  ((A *)ptr)->x = 0;
+}
+// CIR: cir.cast int_to_ptr {{.*}} : !u64i -> !cir.ptr<!rec_A>
+// LLVM: inttoptr {{.*}} to ptr
+
+void null_cast(long) {
+  *(int *)0 = 0;
+  ((A *)0)->x = 0;
+}
+// CIR:    %[[NULLPTR:.*]] = cir.const #cir.ptr<null> : !cir.ptr<!s32i>
+// CIR:    cir.store{{.*}} %{{.*}}, %[[NULLPTR]] : !s32i, !cir.ptr<!s32i>
+// CIR:    %[[NULLPTR_A:.*]] = cir.const #cir.ptr<null> : !cir.ptr<!rec_A>
+// CIR:    %[[A_X:.*]] = cir.get_member %[[NULLPTR_A]][0] {name = "x"} : !cir.ptr<!rec_A> -> !cir.ptr<!s32i>
