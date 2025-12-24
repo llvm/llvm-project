@@ -38,7 +38,7 @@ jobs:
       LLVM_VERSION_PATCH: ${{ steps.version.outputs.patch }}
     steps:
       - name: Checkout source
-        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
         with:
           fetch-depth: 250
 
@@ -102,14 +102,14 @@ jobs:
             repo: ${{ github.repository }}
     steps:
       - name: Download source code
-        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
         with:
           ref: ${{ matrix.ref }}
           repository: ${{ matrix.repo }}
       - name: Configure
         run: |
           mkdir install
-          cmake -B build -S llvm -G Ninja -DLLVM_ENABLE_PROJECTS=clang -DCMAKE_BUILD_TYPE=Debug -DLLVM_TARGETS_TO_BUILD="" -DLLVM_BUILD_LLVM_DYLIB=ON -DLLVM_LINK_LLVM_DYLIB=ON -DCMAKE_C_FLAGS_DEBUG="-g1 -Og" -DCMAKE_CXX_FLAGS_DEBUG="-g1 -Og" -DCMAKE_INSTALL_PREFIX="$(pwd)"/install llvm
+          cmake -B build -S llvm -G Ninja -DLLVM_ENABLE_PROJECTS=clang -DCMAKE_BUILD_TYPE=Debug -DLLVM_TARGETS_TO_BUILD="" -DLLVM_BUILD_LLVM_DYLIB=ON -DLLVM_LINK_LLVM_DYLIB=ON -DCMAKE_INSTALL_PREFIX="$(pwd)"/install llvm
       - name: Build
         run: ninja -C build/ ${{ needs.abi-dump-setup.outputs.ABI_LIBS }} install-clang-headers
       - name: Dump ABI

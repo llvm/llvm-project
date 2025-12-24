@@ -8,7 +8,6 @@
 
 #include "../ClangTidy.h"
 #include "../ClangTidyModule.h"
-#include "../ClangTidyModuleRegistry.h"
 #include "AmbiguousSmartptrResetCallCheck.h"
 #include "AvoidConstParamsInDeclsCheck.h"
 #include "AvoidNestedConditionalOperatorCheck.h"
@@ -69,6 +68,7 @@
 
 namespace clang::tidy {
 namespace readability {
+namespace {
 
 class ReadabilityModule : public ClangTidyModule {
 public:
@@ -189,6 +189,8 @@ public:
         "readability-use-std-min-max");
   }
 };
+
+} // namespace
 
 // Register the ReadabilityModule using this statically initialized variable.
 static ClangTidyModuleRegistry::Add<ReadabilityModule>

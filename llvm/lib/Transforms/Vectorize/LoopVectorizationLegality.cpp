@@ -179,17 +179,37 @@ void LoopVectorizeHints::setAlreadyVectorized() {
   IsVectorized.Value = 1;
 }
 
+void LoopVectorizeHints::reportDisallowedVectorization(
+    const StringRef DebugMsg, const StringRef RemarkName,
+    const StringRef RemarkMsg, const Loop *L) const {
+  LLVM_DEBUG(dbgs() << "LV: Not vectorizing: " << DebugMsg << ".\n");
+  ORE.emit(OptimizationRemarkMissed(LV_NAME, RemarkName, L->getStartLoc(),
+                                    L->getHeader())
+           << "loop not vectorized: " << RemarkMsg);
+}
+
 bool LoopVectorizeHints::allowVectorization(
     Function *F, Loop *L, bool VectorizeOnlyWhenForced) const {
   if (getForce() == LoopVectorizeHints::FK_Disabled) {
-    LLVM_DEBUG(dbgs() << "LV: Not vectorizing: #pragma vectorize disable.\n");
-    emitRemarkWithHints();
+    if (Force.Value == LoopVectorizeHints::FK_Disabled) {
+      reportDisallowedVectorization("#pragma vectorize disable",
+                                    "MissedExplicitlyDisabled",
+                                    "vectorization is explicitly disabled", L);
+    } else if (hasDisableAllTransformsHint(L)) {
+      reportDisallowedVectorization("loop hasDisableAllTransformsHint",
+                                    "MissedTransformsDisabled",
+                                    "loop transformations are disabled", L);
+    } else {
+      llvm_unreachable("loop vect disabled for an unknown reason");
+    }
     return false;
   }
 
   if (VectorizeOnlyWhenForced && getForce() != LoopVectorizeHints::FK_Enabled) {
-    LLVM_DEBUG(dbgs() << "LV: Not vectorizing: No #pragma vectorize enable.\n");
-    emitRemarkWithHints();
+    reportDisallowedVectorization(
+        "VectorizeOnlyWhenForced is set, and no #pragma vectorize enable",
+        "MissedForceOnly", "only vectorizing loops that explicitly request it",
+        L);
     return false;
   }
 
@@ -1423,7 +1443,8 @@ bool LoopVectorizationLegality::isFixedOrderRecurrence(
   return FixedOrderRecurrences.count(Phi);
 }
 
-bool LoopVectorizationLegality::blockNeedsPredication(BasicBlock *BB) const {
+bool LoopVectorizationLegality::blockNeedsPredication(
+    const BasicBlock *BB) const {
   // When vectorizing early exits, create predicates for the latch block only.
   // The early exiting block must be a direct predecessor of the latch at the
   // moment.

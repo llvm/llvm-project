@@ -58,12 +58,11 @@ jobs:
         shell: bash
     steps:
       - name: Checkout LLVM
-        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
         with:
           fetch-depth: 2
       - name: Build and Test
         timeout-minutes: 120
-        continue-on-error: ${{ runner.arch == 'ARM64' }}
         env:
           GITHUB_TOKEN: ${{ github.token }}
           GITHUB_PR_NUMBER: ${{ github.event.pull_request.number }}
@@ -120,13 +119,13 @@ jobs:
           retention-days: 5
           include-hidden-files: 'true'
       - name: Upload Comment
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
         if: ${{ always() && !startsWith(matrix.runs-on, 'depot-ubuntu-24.04-arm') }}
         continue-on-error: true
         with:
-          name: workflow-args
+          name: workflow-args-x86-linux
           path: |
-            comments
+            comments-Linux-x86_64
 
   premerge-checks-windows:
     name: Build and Test Windows
@@ -139,7 +138,7 @@ jobs:
         shell: bash
     steps:
       - name: Checkout LLVM
-        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
         with:
           fetch-depth: 2
       - name: Compute Projects
@@ -185,6 +184,14 @@ jobs:
           path: artifacts/
           retention-days: 5
           include-hidden-files: 'true'
+      - name: Upload Comment
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        if: always()
+        continue-on-error: true
+        with:
+          name: workflow-args-windows
+          path: |
+            comments-Windows-AMD64
 
   premerge-check-macos:
     name: MacOS Premerge Checks
@@ -196,11 +203,11 @@ jobs:
       (github.event_name != 'pull_request' || github.event.action != 'closed')
     steps:
       - name: Checkout LLVM
-        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
         with:
           fetch-depth: 2
       - name: Setup ccache
-        uses: hendrikmuhs/ccache-action@bfa03e1de4d7f7c3e80ad9109feedd05c4f5a716 # v1.2.19
+        uses: hendrikmuhs/ccache-action@5ebbd400eff9e74630f759d94ddd7b6c26299639 # v1.2.20
         with:
           max-size: "2000M"
       - name: Install Ninja

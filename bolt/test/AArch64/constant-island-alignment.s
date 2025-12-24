@@ -53,6 +53,7 @@ _start:
   blr x0
   mov x0, #1
   ret
+.size _start,.-_start
   nop
 # CHECK: {{0|8}} <$d>:
 .Lci:
