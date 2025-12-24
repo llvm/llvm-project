@@ -6,50 +6,62 @@
 //
 //===----------------------------------------------------------------------===//
 
-// <atomic>
+// REQUIRES: std-at-least-c++26
 
-// Check that functions are marked [[nodiscard]]
+// check that <atomic> functions are marked [[nodiscard]]
 
 #include <atomic>
 
+#include "atomic_helpers.h"
 #include "test_macros.h"
 
+template <typename T>
+struct TestAtomicRef {
+  void operator()() const {
+    T x(T(1));
+    const std::atomic_ref<T> a(x);
+
+    a.address(); // expected-warning 4 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  }
+};
+
 void test() {
-#if TEST_STD_VER >= 20
-  {
-    int i = 49;
-    const std::atomic_ref<int> atRef{i};
+  TestAtomicRef<UserAtomicType>()();
+  TestAtomicRef<int>()();
+  TestAtomicRef<float>()();
+  TestAtomicRef<char*>()();
+}
 
-    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-    atRef.is_lock_free();
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
 
-    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-    atRef.load();
+// REQUIRES: std-at-least-c++26
+
+// check that <atomic> functions are marked [[nodiscard]]
+
+#include <atomic>
+
+#include "atomic_helpers.h"
+#include "test_macros.h"
+
+template <typename T>
+struct TestAtomicRef {
+  void operator()() const {
+    T x(T(1));
+    const std::atomic_ref<T> a(x);
+
+    a.address(); // expected-warning 4 {{ignoring return value of function declared with 'nodiscard' attribute}}
   }
-#endif
+};
 
-  {
-    const volatile std::atomic<int> vat(82);
-    const std::atomic<int> at(94);
-
-    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-    vat.load();
-    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-    at.load();
-
-    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-    std::atomic_is_lock_free(&vat);
-    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-    std::atomic_is_lock_free(&at);
-
-    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-    std::atomic_load(&vat);
-    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-    std::atomic_load(&at);
-
-    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-    std::atomic_load_explicit(&vat, std::memory_order_seq_cst);
-    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-    std::atomic_load_explicit(&at, std::memory_order_seq_cst);
-  }
+void test() {
+  TestAtomicRef<UserAtomicType>()();
+  TestAtomicRef<int>()();
+  TestAtomicRef<float>()();
+  TestAtomicRef<char*>()();
 }
