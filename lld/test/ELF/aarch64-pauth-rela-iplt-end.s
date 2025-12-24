@@ -1,7 +1,7 @@
 # REQUIRES: aarch64
 # RUN: llvm-mc -filetype=obj -triple=aarch64 %s -o %t.o
-# RUN: ld.lld --static %t.o -o %t
-# RUN: llvm-readelf -S -s -d %t | FileCheck %s
+# RUN: ld.lld %t.o -o %t
+# RUN: llvm-readelf -S -s %t | FileCheck %s
 
 ## Verify that R_AARCH64_AUTH_RELATIVE relocations are included within the
 ## bounds of __rela_iplt_start/end, as relative relocations still emitted for
