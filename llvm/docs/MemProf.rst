@@ -91,7 +91,7 @@ If invoking the optimizer directly via ``opt``:
 
     opt -passes='memprof-use<profile-filename=memprof.memprofdata>' ...
 
-The compiler uses the profile data to annotate allocation instructions with ``!memprof`` metadata (`documentation <https://llvm.org/docs/LangRef.html#memprof-metadata>_`), distinguishing between "hot", "cold", and "notcold" allocations. This metadata guides downstream optimizations. Additionally, callsites which are part of allocation contexts are also annotated with ``!callsite`` metadata (`documentation <https://llvm.org/docs/LangRef.html#callsite-metadata>_`).
+The compiler uses the profile data to annotate allocation instructions with ``!memprof`` metadata (`documentation <https://llvm.org/docs/LangRef.html#memprof-metadata>`_), distinguishing between "hot", "cold", and "notcold" allocations. This metadata guides downstream optimizations. Additionally, callsites which are part of allocation contexts are also annotated with ``!callsite`` metadata (`documentation <https://llvm.org/docs/LangRef.html#callsite-metadata>`_).
 
 .. note::
     Ensure that the same debug info flags (e.g. ``-gmlt`` and ``-fdebug-info-for-profiling``) used during instrumentation are also passed during this compilation step to enable correct matching of the profile data.
