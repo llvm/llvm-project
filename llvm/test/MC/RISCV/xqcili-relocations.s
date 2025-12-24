@@ -1,8 +1,8 @@
-# RUN: llvm-mc -triple riscv32 -mattr=+experimental-xqcili %s \
+# RUN: llvm-mc -triple riscv32 -mattr=+xqcili %s \
 # RUN:     | FileCheck -check-prefix=ASM %s
-# RUN: llvm-mc -triple riscv32 -mattr=+experimental-xqcili %s \
+# RUN: llvm-mc -triple riscv32 -mattr=+xqcili %s \
 # RUN:     -filetype=obj -o - \
-# RUN:     | llvm-objdump -dr --mattr=+experimental-xqcili - \
+# RUN:     | llvm-objdump -dr --mattr=+xqcili - \
 # RUN:     | FileCheck -check-prefix=OBJ %s
 
 ## This test checks that we emit the right relocations for Xqcili

@@ -3,7 +3,7 @@
 ; RUN:   | FileCheck %s -check-prefixes=RV32I
 ; RUN: llc -mtriple=riscv32 --mattr=+zba -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s -check-prefixes=RV32IZBA
-; RUN: llc -mtriple=riscv32 -mattr=+zba,+experimental-xqcisls -verify-machineinstrs < %s \
+; RUN: llc -mtriple=riscv32 -mattr=+zba,+xqcisls -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s -check-prefixes=RV32IZBAXQCISLS
 
 define i32 @lb_ri(i8* %a, i32 %b) {

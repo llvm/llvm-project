@@ -1695,7 +1695,7 @@ void SemaRISCV::handleInterruptAttr(Decl *D, const ParsedAttr &AL) {
     // The QCI interrupt types require Xqciint
     case RISCVInterruptAttr::qcinest:
     case RISCVInterruptAttr::qcinonest: {
-      if (!HasFeature("experimental-xqciint")) {
+      if (!HasFeature("xqciint")) {
         Diag(AL.getLoc(),
              diag::err_riscv_attribute_interrupt_requires_extension)
             << RISCVInterruptAttr::ConvertInterruptTypeToStr(Type) << "Xqciint";

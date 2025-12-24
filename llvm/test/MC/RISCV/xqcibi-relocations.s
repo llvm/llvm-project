@@ -1,8 +1,8 @@
-# RUN: llvm-mc -triple riscv32 -mattr=+experimental-xqcibi %s \
+# RUN: llvm-mc -triple riscv32 -mattr=+xqcibi %s \
 # RUN:     | FileCheck -check-prefix=ASM %s
-# RUN: llvm-mc -triple riscv32 -mattr=+experimental-xqcibi %s \
+# RUN: llvm-mc -triple riscv32 -mattr=+xqcibi %s \
 # RUN:     -filetype=obj -o - \
-# RUN:     | llvm-objdump -dr --mattr=+experimental-xqcibi - \
+# RUN:     | llvm-objdump -dr --mattr=+xqcibi - \
 # RUN:     | FileCheck -check-prefix=OBJ %s
 
 ## This test checks that we emit the right relocations for Xqcibi
