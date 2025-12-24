@@ -3158,6 +3158,10 @@ void CodeGenFunction::EmitAArch64MultiVersionResolver(
       Builder.SetInsertPoint(CurBlock);
     }
 
+    // Skip unreachable versions.
+    if (RO.Function == nullptr)
+      continue;
+
     llvm::BasicBlock *RetBlock = createBasicBlock("resolver_return", Resolver);
     CGBuilderTy RetBuilder(*this, RetBlock);
     CreateMultiVersionResolverReturn(CGM, Resolver, RetBuilder, RO.Function,

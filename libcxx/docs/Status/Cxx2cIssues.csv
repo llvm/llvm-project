@@ -169,7 +169,7 @@
 "`LWG4269 <https://wg21.link/LWG4269>`__","``unique_copy`` passes arguments to its predicate backwards","2025-11 (Kona)","","","`#171326 <https://github.com/llvm/llvm-project/issues/171326>`__",""
 "`LWG4272 <https://wg21.link/LWG4272>`__","For ``rank == 0``, ``layout_stride`` is atypically convertible","2025-11 (Kona)","","","`#171327 <https://github.com/llvm/llvm-project/issues/171327>`__",""
 "`LWG4274 <https://wg21.link/LWG4274>`__","The ``chrono::hh_mm_ss`` constructor is ill-formed for unsigned durations","2025-11 (Kona)","","","`#171328 <https://github.com/llvm/llvm-project/issues/171328>`__",""
-"`LWG4275 <https://wg21.link/LWG4275>`__","``std::dynamic_extent`` should also be defined in ``<mdspan>``","2025-11 (Kona)","","","`#171329 <https://github.com/llvm/llvm-project/issues/171329>`__",""
+"`LWG4275 <https://wg21.link/LWG4275>`__","``std::dynamic_extent`` should also be defined in ``<mdspan>``","2025-11 (Kona)","|Complete|","21","`#171329 <https://github.com/llvm/llvm-project/issues/171329>`__",""
 "`LWG4276 <https://wg21.link/LWG4276>`__","``front()`` and ``back()`` are not hardened for zero-length ``std::array``\s","2025-11 (Kona)","","","`#171330 <https://github.com/llvm/llvm-project/issues/171330>`__",""
 "`LWG4280 <https://wg21.link/LWG4280>`__","``simd::partial_load`` uses undefined identifier ``T``","2025-11 (Kona)","","","`#171331 <https://github.com/llvm/llvm-project/issues/171331>`__",""
 "`LWG4286 <https://wg21.link/LWG4286>`__","Some more feature-test macros for fully freestanding features are not marked freestanding","2025-11 (Kona)","","","`#171332 <https://github.com/llvm/llvm-project/issues/171332>`__",""

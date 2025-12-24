@@ -3232,12 +3232,15 @@ static bool isKnownNonZeroFromOperator(const Operator *I,
             Q.DL.getTypeSizeInBits(I->getType()).getFixedValue())
       return isKnownNonZero(I->getOperand(0), DemandedElts, Q, Depth);
     break;
+  case Instruction::PtrToAddr:
+    // isKnownNonZero() for pointers refers to the address bits being non-zero,
+    // so we can directly forward.
+    return isKnownNonZero(I->getOperand(0), DemandedElts, Q, Depth);
   case Instruction::PtrToInt:
-    // Similar to int2ptr above, we can look through ptr2int here if the cast
-    // is a no-op or an extend and not a truncate.
-    if (!isa<ScalableVectorType>(I->getType()) &&
-        Q.DL.getTypeSizeInBits(I->getOperand(0)->getType()).getFixedValue() <=
-            Q.DL.getTypeSizeInBits(I->getType()).getFixedValue())
+    // For inttoptr, make sure the result size is >= the address size. If the
+    // address is non-zero, any larger value is also non-zero.
+    if (Q.DL.getAddressSizeInBits(I->getOperand(0)->getType()) <=
+        I->getType()->getScalarSizeInBits())
       return isKnownNonZero(I->getOperand(0), DemandedElts, Q, Depth);
     break;
   case Instruction::Trunc:
