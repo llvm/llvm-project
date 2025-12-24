@@ -1,4 +1,4 @@
-/// Verify that marshals are only generated correctly without declare ops
+/// Verify that converts are only generated correctly without declare ops
 
 // RUN: fir-opt %s --fir-to-memref --allow-unregistered-dialect | FileCheck %s
 

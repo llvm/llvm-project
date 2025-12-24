@@ -1,5 +1,5 @@
 /// Verify that fir.convert are only generated one per fir.declare and that
-/// optional marshaling is optimized appropriately. 
+/// optional conversions are optimized appropriately. 
 ///
 /// RUN: fir-opt --enable-fir-convert-opts %s --fir-to-memref --allow-unregistered-dialect | FileCheck %s
 
@@ -70,14 +70,14 @@ func.func @store_array1d(%arg0: !fir.ref<!fir.array<3xi32>>) {
 }
 
 // When Present() checks the same optional memref than the one accessed inside
-// the if statement, marshal is hoisted near the if statement.
+// the if statement, the convert is hoisted near the if statement.
 // CHECK-LABEL: func.func @optional_optimized
 // CHECK: [[DECLARE0:%[0-9]]] = fir.declare
 // CHECK: [[DECLARE:%[0-9]]] = fir.declare %arg0
 // CHECK: [[PRESENT:%[0-9]]] = fir.is_present [[DECLARE]]
 // CHECK-NEXT: scf.if [[PRESENT]]
 // CHECK: [[BOXADDR:%[0-9]+]] = fir.box_addr [[DECLARE]]
-// CHECK: [[MARSHAL:%[0-9]+]] = fir.convert [[BOXADDR]] : (!fir.ref<!fir.array<?x!fir.logical<4>>>) -> memref<?xi32>
+// CHECK: [[CONVERT:%[0-9]+]] = fir.convert [[BOXADDR]] : (!fir.ref<!fir.array<?x!fir.logical<4>>>) -> memref<?xi32>
 func.func @optional_optimized(%arg0: !fir.box<!fir.array<?x!fir.logical<4>>> {fir.optional}) {
   %c1 = arith.constant 1 : index
   %c3 = arith.constant 3 : index
@@ -120,7 +120,7 @@ func.func @optional_optimized(%arg0: !fir.box<!fir.array<?x!fir.logical<4>>> {fi
 }
 
 // When optional memref access is not control dependent on a check of it, no
-// hoisting is applied and the marshal is placed closer to the load/store
+// hoisting is applied and the convert is placed closer to the load/store
 // (inside the loop).
 // CHECK-LABEL: func.func @optional
 // CHECK: [[DECLARE1:%[0-9]]] = fir.declare %arg1
@@ -130,7 +130,7 @@ func.func @optional_optimized(%arg0: !fir.box<!fir.array<?x!fir.logical<4>>> {fi
 // CHECK: scf.if [[PRESENT]]
 // CHECK: scf.for
 // CHECK: [[BOXADDR:%.+]] = fir.box_addr [[DECLARE0]]
-// CHECK: [[MARSHAL:%.+]] = fir.convert [[BOXADDR]] : (!fir.ref<!fir.array<?x!fir.logical<4>>>) -> memref<?xi32>
+// CHECK: [[CONVERT:%.+]] = fir.convert [[BOXADDR]] : (!fir.ref<!fir.array<?x!fir.logical<4>>>) -> memref<?xi32>
 func.func @optional(%arg0: !fir.box<!fir.array<?x!fir.logical<4>>> {fir.optional},
                     %arg1: !fir.ref<!fir.logical<4>> {fir.optional}) {
   %c1 = arith.constant 1 : index
@@ -175,7 +175,7 @@ func.func @optional(%arg0: !fir.box<!fir.array<?x!fir.logical<4>>> {fir.optional
   return
 }
 
-// Derived from a real-world example: ensure that we only generate one marshal
+// Derived from a real-world example: ensure that we only generate one convert
 // for an absent optional argument and reuse it for multiple loads.
 // CHECK-LABEL: func.func @optional_declare
 // CHECK:       [[ABSENT:%[0-9]+]] = fir.absent !fir.ref<i32>
@@ -183,8 +183,8 @@ func.func @optional(%arg0: !fir.box<!fir.array<?x!fir.logical<4>>> {fir.optional
 // CHECK:       [[DECLARE0:%[0-9]+]] = fir.declare [[ABSENT]] dummy_scope [[DUMMY]]
 // CHECK:       [[PRESENT:%[0-9]+]] = fir.is_present [[DECLARE0]]
 // CHECK:       scf.if [[PRESENT]]
-// CHECK:         [[MARSHAL0:%.+]] = fir.convert [[DECLARE0]] : (!fir.ref<i32>) -> memref<i32>
-// CHECK:         memref.load [[MARSHAL0]][] : memref<i32>
+// CHECK:         [[CONVERT0:%.+]] = fir.convert [[DECLARE0]] : (!fir.ref<i32>) -> memref<i32>
+// CHECK:         memref.load [[CONVERT0]][] : memref<i32>
 func.func @optional_declare() {
   %c1 = arith.constant 1 : index
   %c0_i32 = arith.constant 0 : i32

@@ -1,4 +1,4 @@
-/// Verify that marshals are only generated one per fir.declare
+/// Verify that converts are only generated one per fir.declare
 
 // RUN: fir-opt %s --fir-to-memref --allow-unregistered-dialect | FileCheck %s
 

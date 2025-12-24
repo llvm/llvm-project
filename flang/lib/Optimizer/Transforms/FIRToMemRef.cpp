@@ -129,12 +129,12 @@ private:
   MemRefInfo getMemRefInfo(Value, PatternRewriter &, FIRToMemRefTypeConverter &,
                            Operation *);
 
-  MemRefInfo marshalArrayCoorOp(Operation *memOp, fir::ArrayCoorOp,
+  MemRefInfo convertArrayCoorOp(Operation *memOp, fir::ArrayCoorOp,
                                 PatternRewriter &, FIRToMemRefTypeConverter &);
 
   void replaceFIRMemrefs(Value, Value, PatternRewriter &) const;
 
-  FailureOr<Value> getFIRMarshal(Operation *memOp, Operation *memref,
+  FailureOr<Value> getFIRConvert(Operation *memOp, Operation *memref,
                                  PatternRewriter &, FIRToMemRefTypeConverter &);
 
   FailureOr<SmallVector<Value>> getMemrefIndices(fir::ArrayCoorOp, Operation *,
@@ -412,7 +412,7 @@ static Value castTypeToIndexType(Value originalValue,
 
 FailureOr<SmallVector<Value>>
 FIRToMemRef::getMemrefIndices(fir::ArrayCoorOp arrayCoorOp, Operation *memref,
-                              PatternRewriter &rewriter, Value marshal,
+                              PatternRewriter &rewriter, Value converted,
                               Value one) const {
   IndexType indexTy = rewriter.getIndexType();
   SmallVector<Value> indices;
@@ -491,7 +491,7 @@ FIRToMemRef::getMemrefIndices(fir::ArrayCoorOp arrayCoorOp, Operation *memref,
 }
 
 MemRefInfo
-FIRToMemRef::marshalArrayCoorOp(Operation *memOp, fir::ArrayCoorOp arrayCoorOp,
+FIRToMemRef::convertArrayCoorOp(Operation *memOp, fir::ArrayCoorOp arrayCoorOp,
                                 PatternRewriter &rewriter,
                                 FIRToMemRefTypeConverter &typeConverter) {
   IndexType indexTy = rewriter.getIndexType();
@@ -507,18 +507,18 @@ FIRToMemRef::marshalArrayCoorOp(Operation *memOp, fir::ArrayCoorOp arrayCoorOp,
     rewriter.setInsertionPointAfter(arrayCoorOp);
     Location loc = arrayCoorOp->getLoc();
     Type elemMemrefTy = typeConverter.convertMemrefType(elemRef.getType());
-    Value marshal =
+    Value converted =
         fir::ConvertOp::create(rewriter, loc, elemMemrefTy, elemRef);
     SmallVector<Value> indices;
-    return std::pair{marshal, indices};
+    return std::pair{converted, indices};
   }
 
   Operation *memref = firMemref.getDefiningOp();
 
-  FailureOr<Value> marshal;
+  FailureOr<Value> converted;
   if (enableFIRConvertOptimizations && isMarshalLike(memref) &&
       !fir::isa_fir_type(firMemref.getType())) {
-    marshal = firMemref;
+    converted = firMemref;
     rewriter.setInsertionPoint(arrayCoorOp);
   } else {
     Operation *arrayCoorOperation = arrayCoorOp.getOperation();
@@ -544,8 +544,8 @@ FIRToMemRef::marshalArrayCoorOp(Operation *memOp, fir::ArrayCoorOp arrayCoorOp,
     }
 
     rewriter.setInsertionPoint(arrayCoorOp);
-    marshal = getFIRMarshal(memOp, memref, rewriter, typeConverter);
-    if (failed(marshal))
+    converted = getFIRConvert(memOp, memref, rewriter, typeConverter);
+    if (failed(converted))
       return failure();
 
     rewriter.setInsertionPointAfter(arrayCoorOp);
@@ -554,21 +554,21 @@ FIRToMemRef::marshalArrayCoorOp(Operation *memOp, fir::ArrayCoorOp arrayCoorOp,
   Location loc = arrayCoorOp->getLoc();
   Value one = arith::ConstantIndexOp::create(rewriter, loc, 1);
   FailureOr<SmallVector<Value>> failureOrIndices =
-      getMemrefIndices(arrayCoorOp, memref, rewriter, *marshal, one);
+      getMemrefIndices(arrayCoorOp, memref, rewriter, *converted, one);
   if (failed(failureOrIndices))
     return failure();
   SmallVector<Value> indices = *failureOrIndices;
 
-  if (marshal == firMemref)
-    return std::pair{*marshal, indices};
+  if (converted == firMemref)
+    return std::pair{*converted, indices};
 
-  Value marshalVal = *marshal;
-  MemRefType memRefTy = dyn_cast<MemRefType>(marshalVal.getType());
+  Value convertedVal = *converted;
+  MemRefType memRefTy = dyn_cast<MemRefType>(convertedVal.getType());
 
   bool isRebox = firMemref.getDefiningOp<fir::ReboxOp>() != nullptr;
 
   if (memRefTy.hasStaticShape() && !isRebox)
-    return std::pair{*marshal, indices};
+    return std::pair{*converted, indices};
 
   unsigned rank = arrayCoorOp.getIndices().size();
 
@@ -633,7 +633,7 @@ FIRToMemRef::marshalArrayCoorOp(Operation *memOp, fir::ArrayCoorOp arrayCoorOp,
 
   int64_t dynamicOffset = ShapedType::kDynamic;
   SmallVector<int64_t> dynamicStrides(rank, ShapedType::kDynamic);
-  auto stridedLayout = StridedLayoutAttr::get(marshalVal.getContext(),
+  auto stridedLayout = StridedLayoutAttr::get(convertedVal.getContext(),
                                               dynamicOffset, dynamicStrides);
 
   SmallVector<int64_t> dynamicShape(rank, ShapedType::kDynamic);
@@ -643,14 +643,14 @@ FIRToMemRef::marshalArrayCoorOp(Operation *memOp, fir::ArrayCoorOp arrayCoorOp,
   Value offset = arith::ConstantIndexOp::create(rewriter, loc, 0);
 
   auto reinterpret = memref::ReinterpretCastOp::create(
-      rewriter, loc, memRefTy, *marshal, offset, sizes, strides);
+      rewriter, loc, memRefTy, *converted, offset, sizes, strides);
 
   Value result = reinterpret->getResult(0);
   return std::pair{result, indices};
 }
 
 FailureOr<Value>
-FIRToMemRef::getFIRMarshal(Operation *memOp, Operation *op,
+FIRToMemRef::getFIRConvert(Operation *memOp, Operation *op,
                            PatternRewriter &rewriter,
                            FIRToMemRefTypeConverter &typeConverter) {
   if (enableFIRConvertOptimizations && !op->hasOneUse() &&
@@ -804,10 +804,10 @@ MemRefInfo FIRToMemRef::getMemRefInfo(Value firMemref,
         if (auto inner = llvm::dyn_cast<MemRefType>(mt.getElementType()))
           memrefTy = inner;
       }
-      Value marshal = fir::ConvertOp::create(rewriter, blockArg.getLoc(),
-                                             memrefTy, blockArg);
+      Value converted = fir::ConvertOp::create(rewriter, blockArg.getLoc(),
+                                               memrefTy, blockArg);
       SmallVector<Value> indices;
-      return std::pair{marshal, indices};
+      return std::pair{converted, indices};
     }
     llvm_unreachable(
         "FIRToMemRef: expected defining op or block argument for FIR memref");
@@ -815,7 +815,7 @@ MemRefInfo FIRToMemRef::getMemRefInfo(Value firMemref,
 
   if (auto arrayCoorOp = dyn_cast<fir::ArrayCoorOp>(memrefOp)) {
     MemRefInfo memrefInfo =
-        marshalArrayCoorOp(memOp, arrayCoorOp, rewriter, typeConverter);
+        convertArrayCoorOp(memOp, arrayCoorOp, rewriter, typeConverter);
     if (succeeded(memrefInfo)) {
       for (auto user : memrefOp->getUsers()) {
         if (!isa<fir::LoadOp, fir::StoreOp>(user)) {
@@ -834,17 +834,17 @@ MemRefInfo FIRToMemRef::getMemRefInfo(Value firMemref,
   rewriter.setInsertionPoint(memOp);
 
   if (isMarshalLike(memrefOp)) {
-    FailureOr<Value> marshal =
-        getFIRMarshal(memOp, memrefOp, rewriter, typeConverter);
-    if (failed(marshal)) {
+    FailureOr<Value> converted =
+        getFIRConvert(memOp, memrefOp, rewriter, typeConverter);
+    if (failed(converted)) {
       LLVM_DEBUG(llvm::dbgs()
-                     << "FIRToMemRef: expected FIR memref in marshal, bailing "
+                     << "FIRToMemRef: expected FIR memref in convert, bailing "
                         "out:\n";
                  firMemref.dump());
       return failure();
     }
     SmallVector<Value> indices;
-    return std::pair{*marshal, indices};
+    return std::pair{*converted, indices};
   }
 
   if (auto declareOp = dyn_cast<fir::DeclareOp>(memrefOp)) {
@@ -867,84 +867,84 @@ MemRefInfo FIRToMemRef::getMemRefInfo(Value firMemref,
       }
     }
 
-    FailureOr<Value> marshal =
-        getFIRMarshal(memOp, declareOp, rewriter, typeConverter);
-    if (failed(marshal)) {
+    FailureOr<Value> converted =
+        getFIRConvert(memOp, declareOp, rewriter, typeConverter);
+    if (failed(converted)) {
       LLVM_DEBUG(llvm::dbgs()
-                     << "FIRToMemRef: unable to create marshal for scalar "
+                     << "FIRToMemRef: unable to create convert for scalar "
                         "memref:\n";
                  firMemref.dump());
       return failure();
     }
     SmallVector<Value> indices;
-    return std::pair{*marshal, indices};
+    return std::pair{*converted, indices};
   }
 
   if (auto coordinateOp = dyn_cast<fir::CoordinateOp>(memrefOp)) {
-    FailureOr<Value> marshal =
-        getFIRMarshal(memOp, coordinateOp, rewriter, typeConverter);
-    if (failed(marshal)) {
+    FailureOr<Value> converted =
+        getFIRConvert(memOp, coordinateOp, rewriter, typeConverter);
+    if (failed(converted)) {
       LLVM_DEBUG(
           llvm::dbgs()
-              << "FIRToMemRef: unable to create marshal for derived-type "
+              << "FIRToMemRef: unable to create convert for derived-type "
                  "memref:\n";
           firMemref.dump());
       return failure();
     }
     SmallVector<Value> indices;
-    return std::pair{*marshal, indices};
+    return std::pair{*converted, indices};
   }
 
   if (auto convertOp = dyn_cast<fir::ConvertOp>(memrefOp)) {
     Type fromTy = convertOp->getOperand(0).getType();
     Type toTy = firMemref.getType();
     if (isa<fir::ReferenceType>(fromTy) && isa<fir::ReferenceType>(toTy)) {
-      FailureOr<Value> marshal =
-          getFIRMarshal(memOp, convertOp, rewriter, typeConverter);
-      if (failed(marshal)) {
+      FailureOr<Value> converted =
+          getFIRConvert(memOp, convertOp, rewriter, typeConverter);
+      if (failed(converted)) {
         LLVM_DEBUG(
             llvm::dbgs()
-                << "FIRToMemRef: unable to create marshal for conversion "
+                << "FIRToMemRef: unable to create convert for conversion "
                    "op:\n";
             firMemref.dump());
         return failure();
       }
       SmallVector<Value> indices;
-      return std::pair{*marshal, indices};
+      return std::pair{*converted, indices};
     }
   }
 
   if (auto boxAddrOp = dyn_cast<fir::BoxAddrOp>(memrefOp)) {
-    FailureOr<Value> marshal =
-        getFIRMarshal(memOp, boxAddrOp, rewriter, typeConverter);
-    if (failed(marshal)) {
+    FailureOr<Value> converted =
+        getFIRConvert(memOp, boxAddrOp, rewriter, typeConverter);
+    if (failed(converted)) {
       LLVM_DEBUG(llvm::dbgs()
-                     << "FIRToMemRef: unable to create marshal for box_addr "
+                     << "FIRToMemRef: unable to create convert for box_addr "
                         "op:\n";
                  firMemref.dump());
       return failure();
     }
     SmallVector<Value> indices;
-    return std::pair{*marshal, indices};
+    return std::pair{*converted, indices};
   }
 
   if (memrefIsDeviceData(memrefOp)) {
-    FailureOr<Value> marshal =
-        getFIRMarshal(memOp, memrefOp, rewriter, typeConverter);
-    if (failed(marshal))
+    FailureOr<Value> converted =
+        getFIRConvert(memOp, memrefOp, rewriter, typeConverter);
+    if (failed(converted))
       return failure();
     SmallVector<Value> indices;
-    return std::pair{*marshal, indices};
+    return std::pair{*converted, indices};
   }
 
   LLVM_DEBUG(llvm::dbgs()
-                 << "FIRToMemRef: unable to create marshal for memref value:\n";
+                 << "FIRToMemRef: unable to create convert for memref value:\n";
              firMemref.dump());
 
   return failure();
 }
 
-void FIRToMemRef::replaceFIRMemrefs(Value firMemref, Value marshal,
+void FIRToMemRef::replaceFIRMemrefs(Value firMemref, Value converted,
                                     PatternRewriter &rewriter) const {
   Operation *op = firMemref.getDefiningOp();
   if (op && (isa<fir::ArrayCoorOp>(op) || isMarshalLike(op)))
@@ -954,7 +954,7 @@ void FIRToMemRef::replaceFIRMemrefs(Value firMemref, Value marshal,
   for (auto user : firMemref.getUsers()) {
     if (isMarshalLike(user) || isa<fir::LoadOp, fir::StoreOp>(user))
       continue;
-    if (!domInfo->dominates(marshal, user))
+    if (!domInfo->dominates(converted, user))
       continue;
 
     if (!(isa<omp::AtomicCaptureOp>(user->getParentOp()) ||
@@ -968,7 +968,7 @@ void FIRToMemRef::replaceFIRMemrefs(Value firMemref, Value marshal,
   for (auto op : worklist) {
     rewriter.setInsertionPoint(op);
     Location loc = op->getLoc();
-    Value replaceConvert = fir::ConvertOp::create(rewriter, loc, ty, marshal);
+    Value replaceConvert = fir::ConvertOp::create(rewriter, loc, ty, converted);
     op->replaceUsesOfWith(firMemref, replaceConvert);
   }
 
@@ -979,7 +979,7 @@ void FIRToMemRef::replaceFIRMemrefs(Value firMemref, Value marshal,
       continue;
     if (isa<omp::AtomicCaptureOp>(user->getParentOp()) ||
         isa<acc::AtomicCaptureOp>(user->getParentOp())) {
-      if (domInfo->dominates(marshal, user))
+      if (domInfo->dominates(converted, user))
         worklist.insert(user);
     }
   }
@@ -998,7 +998,7 @@ void FIRToMemRef::replaceFIRMemrefs(Value firMemref, Value marshal,
       if (!replaceConvert) {
         rewriter.setInsertionPoint(parentOp);
         replaceConvert =
-            fir::ConvertOp::create(rewriter, op->getLoc(), ty, marshal);
+            fir::ConvertOp::create(rewriter, op->getLoc(), ty, converted);
       }
       op->replaceUsesOfWith(firMemref, replaceConvert);
       erase.push_back(op);
@@ -1024,17 +1024,17 @@ void FIRToMemRef::rewriteLoadOp(fir::LoadOp load, PatternRewriter &rewriter,
     return;
 
   auto originalType = load.getResult().getType();
-  auto [marshal, indices] = *memrefInfo;
+  auto [converted, indices] = *memrefInfo;
 
   LLVM_DEBUG(llvm::dbgs()
-                 << "FIRToMemRef: marshal for FIR load created successfully:\n";
-             marshal.dump());
+                 << "FIRToMemRef: convert for FIR load created successfully:\n";
+             converted.dump());
 
   rewriter.setInsertionPointAfter(load);
 
   auto attr = (load.getOperation())->getAttr("tbaa");
   auto loadOp =
-      rewriter.replaceOpWithNewOp<memref::LoadOp>(load, marshal, indices);
+      rewriter.replaceOpWithNewOp<memref::LoadOp>(load, converted, indices);
   if (attr)
     loadOp.getOperation()->setAttr("tbaa", attr);
 
@@ -1056,7 +1056,7 @@ void FIRToMemRef::rewriteLoadOp(fir::LoadOp load, PatternRewriter &rewriter,
   }
 
   if (!isa<fir::LogicalType>(originalType))
-    replaceFIRMemrefs(firMemref, marshal, rewriter);
+    replaceFIRMemrefs(firMemref, converted, rewriter);
 }
 
 void FIRToMemRef::rewriteStoreOp(fir::StoreOp store, PatternRewriter &rewriter,
@@ -1074,11 +1074,11 @@ void FIRToMemRef::rewriteStoreOp(fir::StoreOp store, PatternRewriter &rewriter,
   if (failed(memrefInfo))
     return;
 
-  auto [marshal, indices] = *memrefInfo;
+  auto [converted, indices] = *memrefInfo;
   LLVM_DEBUG(
       llvm::dbgs()
-          << "FIRToMemRef: marshal for FIR store created successfully:\n";
-      marshal.dump());
+          << "FIRToMemRef: convert for FIR store created successfully:\n";
+      converted.dump());
 
   Value value = store.getValue();
   rewriter.setInsertionPointAfter(store);
@@ -1090,8 +1090,8 @@ void FIRToMemRef::rewriteStoreOp(fir::StoreOp store, PatternRewriter &rewriter,
   }
 
   auto attr = (store.getOperation())->getAttr("tbaa");
-  auto storeOp = rewriter.replaceOpWithNewOp<memref::StoreOp>(store, value,
-                                                              marshal, indices);
+  auto storeOp = rewriter.replaceOpWithNewOp<memref::StoreOp>(
+      store, value, converted, indices);
   if (attr)
     storeOp.getOperation()->setAttr("tbaa", attr);
 
@@ -1103,7 +1103,7 @@ void FIRToMemRef::rewriteStoreOp(fir::StoreOp store, PatternRewriter &rewriter,
     isLogicalRef = llvm::isa<fir::LogicalType>(refTy.getEleTy());
   }
   if (!isLogicalRef)
-    replaceFIRMemrefs(firMemref, marshal, rewriter);
+    replaceFIRMemrefs(firMemref, converted, rewriter);
 }
 
 void FIRToMemRef::runOnOperation() {

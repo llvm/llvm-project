@@ -820,7 +820,7 @@ struct ConvertOpConversion : public fir::FIROpConversion<fir::ConvertOp> {
 
     // Handle conversions between pointer-like values and memref descriptors.
     // These are produced by FIR-to-MemRef lowering and represent descriptor
-    // marshaling rather than pure value conversions.
+    // conversion rather than pure value conversions.
     if (auto memRefTy = mlir::dyn_cast<mlir::MemRefType>(toFirTy)) {
       mlir::Location loc = convert.getLoc();
       mlir::Value basePtr = adaptor.getValue();

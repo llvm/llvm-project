@@ -11,7 +11,7 @@
 // CHECK:       [[DECLARE:%[0-9]+]] = fir.declare %arg0 dummy_scope [[DUMMY]] {uniq_name = "x"} : (!fir.box<!fir.array<?xf32>>, !fir.dscope) -> !fir.box<!fir.array<?xf32>>
 // CHECK:       [[REBOX:%[0-9]+]] = fir.rebox [[DECLARE]] : (!fir.box<!fir.array<?xf32>>) -> !fir.box<!fir.array<?xf32>>
 // CHECK:       [[BOXADDR:%[0-9]+]] = fir.box_addr [[REBOX]] : (!fir.box<!fir.array<?xf32>>) -> !fir.ref<!fir.array<?xf32>>
-// CHECK:       [[MARSHAL:%[0-9]+]] = fir.convert [[BOXADDR]] : (!fir.ref<!fir.array<?xf32>>) -> memref<?xf32>
+// CHECK:       [[CONVERT:%[0-9]+]] = fir.convert [[BOXADDR]] : (!fir.ref<!fir.array<?xf32>>) -> memref<?xf32>
 // CHECK:       [[CONST1:%.+]] = arith.constant 1 : index
 // CHECK:       [[SUB1:%[0-9]+]] = arith.subi [[CONST2]], [[CONST1]] : index
 // CHECK:       [[MUL1:%[0-9]+]] = arith.muli [[SUB1]], [[CONST1]] : index
@@ -22,7 +22,7 @@
 // CHECK:       [[DIMS:%[0-9]+]]:3 = fir.box_dims [[REBOX]], [[CONST0]] : (!fir.box<!fir.array<?xf32>>, index) -> (index, index, index)
 // CHECK:       [[DIV:%[0-9]+]] = arith.divsi [[DIMS]]#2, [[ELSIZE]] : index
 // CHECK:       [[CONST0_0:%.+]] = arith.constant 0 : index
-// CHECK:       [[REINTERPRET:%.+]] = memref.reinterpret_cast [[MARSHAL]] to offset: [[[CONST0_0]]], sizes: [[[DIMS]]#1], strides: [[[DIV]]] : memref<?xf32> to memref<?xf32, strided<[?], offset: ?>>
+// CHECK:       [[REINTERPRET:%.+]] = memref.reinterpret_cast [[CONVERT]] to offset: [[[CONST0_0]]], sizes: [[[DIMS]]#1], strides: [[[DIV]]] : memref<?xf32> to memref<?xf32, strided<[?], offset: ?>>
 // CHECK:       memref.store [[CST]], [[REINTERPRET]][[[ADD1]]] : memref<?xf32, strided<[?], offset: ?>>
 func.func @store_dynamic_1d(%arg0: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "x"}) {
   %c2 = arith.constant 2 : index
@@ -46,7 +46,7 @@ func.func @store_dynamic_1d(%arg0: !fir.box<!fir.array<?xf32>> {fir.bindc_name =
 // CHECK:       [[DECLARE:%[0-9]+]] = fir.declare %arg0 dummy_scope [[DUMMY]] {uniq_name = "x"} : (!fir.box<!fir.array<?x?xf32>>, !fir.dscope) -> !fir.box<!fir.array<?x?xf32>>
 // CHECK:       [[REBOX:%[0-9]+]] = fir.rebox [[DECLARE]] : (!fir.box<!fir.array<?x?xf32>>) -> !fir.box<!fir.array<?x?xf32>>
 // CHECK:       [[BOXADDR:%[0-9]+]] = fir.box_addr [[REBOX]] : (!fir.box<!fir.array<?x?xf32>>) -> !fir.ref<!fir.array<?x?xf32>>
-// CHECK:       [[MARSHAL:%[0-9]+]] = fir.convert [[BOXADDR]] : (!fir.ref<!fir.array<?x?xf32>>) -> memref<?x?xf32>
+// CHECK:       [[CONVERT:%[0-9]+]] = fir.convert [[BOXADDR]] : (!fir.ref<!fir.array<?x?xf32>>) -> memref<?x?xf32>
 // CHECK:       [[CONST1:%.+]] = arith.constant 1 : index
 // CHECK:       [[SUB1:%[0-9]+]] = arith.subi [[CONST2]], [[CONST1]] : index
 // CHECK:       [[MUL1:%[0-9]+]] = arith.muli [[SUB1]], [[CONST1]] : index
@@ -64,7 +64,7 @@ func.func @store_dynamic_1d(%arg0: !fir.box<!fir.array<?xf32>> {fir.bindc_name =
 // CHECK:       [[DIMS0:%[0-9]+]]:3 = fir.box_dims [[REBOX]], [[CONST0]] : (!fir.box<!fir.array<?x?xf32>>, index) -> (index, index, index)
 // CHECK:       [[DIV0:%[0-9]+]] = arith.divsi [[DIMS0]]#2, [[ELSIZE]] : index
 // CHECK:       [[CONST0_2:%.+]] = arith.constant 0 : index
-// CHECK:       [[REINTERPRET:%.+]] = memref.reinterpret_cast [[MARSHAL]] to offset: [[[CONST0_2]]], sizes: [[[DIMS1]]#1, [[DIMS0]]#1], strides: [[[DIV1]], [[DIV0]]] : memref<?x?xf32> to memref<?x?xf32, strided<[?, ?], offset: ?>>
+// CHECK:       [[REINTERPRET:%.+]] = memref.reinterpret_cast [[CONVERT]] to offset: [[[CONST0_2]]], sizes: [[[DIMS1]]#1, [[DIMS0]]#1], strides: [[[DIV1]], [[DIV0]]] : memref<?x?xf32> to memref<?x?xf32, strided<[?, ?], offset: ?>>
 // CHECK:       memref.store [[CST]], [[REINTERPRET]][[[ADD2]], [[ADD1]]] : memref<?x?xf32, strided<[?, ?], offset: ?>>
 func.func @store_dynamic_2d(%arg0: !fir.box<!fir.array<?x?xf32>> {fir.bindc_name = "x"}) {
   %c2 = arith.constant 2 : index
@@ -89,7 +89,7 @@ func.func @store_dynamic_2d(%arg0: !fir.box<!fir.array<?x?xf32>> {fir.bindc_name
 // CHECK:       [[DECLARE:%[0-9]+]] = fir.declare %arg0 dummy_scope [[DUMMY]] {uniq_name = "x"} : (!fir.box<!fir.array<?x?x?xf32>>, !fir.dscope) -> !fir.box<!fir.array<?x?x?xf32>>
 // CHECK:       [[REBOX:%[0-9]+]] = fir.rebox [[DECLARE]] : (!fir.box<!fir.array<?x?x?xf32>>) -> !fir.box<!fir.array<?x?x?xf32>>
 // CHECK:       [[BOXADDR:%[0-9]+]] = fir.box_addr [[REBOX]] : (!fir.box<!fir.array<?x?x?xf32>>) -> !fir.ref<!fir.array<?x?x?xf32>>
-// CHECK:       [[MARSHAL:%[0-9]+]] = fir.convert [[BOXADDR]] : (!fir.ref<!fir.array<?x?x?xf32>>) -> memref<?x?x?xf32>
+// CHECK:       [[CONVERT:%[0-9]+]] = fir.convert [[BOXADDR]] : (!fir.ref<!fir.array<?x?x?xf32>>) -> memref<?x?x?xf32>
 // CHECK:       [[CONST1:%.+]] = arith.constant 1 : index
 // CHECK:       [[SUB1:%[0-9]+]] = arith.subi [[CONST2]], [[CONST1]] : index
 // CHECK:       [[MUL1:%[0-9]+]] = arith.muli [[SUB1]], [[CONST1]] : index
@@ -114,7 +114,7 @@ func.func @store_dynamic_2d(%arg0: !fir.box<!fir.array<?x?xf32>> {fir.bindc_name
 // CHECK:       [[DIMS0:%[0-9]+]]:3 = fir.box_dims [[REBOX]], [[CONST0]] : (!fir.box<!fir.array<?x?x?xf32>>, index) -> (index, index, index)
 // CHECK:       [[DIV0:%[0-9]+]] = arith.divsi [[DIMS0]]#2, [[ELSIZE]] : index
 // CHECK:       [[CONST0_2:%.+]] = arith.constant 0 : index
-// CHECK:       [[REINTERPRET:%.+]] = memref.reinterpret_cast [[MARSHAL]] to offset: [[[CONST0_2]]], sizes: [[[DIMS2]]#1, [[DIMS1]]#1, [[DIMS0]]#1], strides: [[[DIV2]], [[DIV1]], [[DIV0]]] : memref<?x?x?xf32> to memref<?x?x?xf32, strided<[?, ?, ?], offset: ?>>
+// CHECK:       [[REINTERPRET:%.+]] = memref.reinterpret_cast [[CONVERT]] to offset: [[[CONST0_2]]], sizes: [[[DIMS2]]#1, [[DIMS1]]#1, [[DIMS0]]#1], strides: [[[DIV2]], [[DIV1]], [[DIV0]]] : memref<?x?x?xf32> to memref<?x?x?xf32, strided<[?, ?, ?], offset: ?>>
 // CHECK:       memref.store [[CST]], [[REINTERPRET]][[[ADD3]], [[ADD2]], [[ADD1]]] : memref<?x?x?xf32, strided<[?, ?, ?], offset: ?>>
 func.func @store_dynamic_3d(%arg0: !fir.box<!fir.array<?x?x?xf32>> {fir.bindc_name = "x"}) {
   %c3 = arith.constant 3 : index
