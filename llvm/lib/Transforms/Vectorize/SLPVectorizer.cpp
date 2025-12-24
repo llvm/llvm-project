@@ -15617,17 +15617,6 @@ bool BoUpSLP::isTreeTinyAndNotFullyVectorizable(bool ForReduction) const {
          allConstant(VectorizableTree[1]->Scalars))))
     return true;
 
-  // Buildvector with externally used scalars, which should remain as scalars,
-  // should not be vectorized, the compiler may hang.
-  if (SLPCostThreshold < 0 && VectorizableTree.size() > 1 &&
-      isa<InsertElementInst>(VectorizableTree[0]->Scalars[0]) &&
-      VectorizableTree[1]->hasState() &&
-      VectorizableTree[1]->State == TreeEntry::Vectorize &&
-      all_of(VectorizableTree[1]->Scalars, [&](Value *V) {
-        return ExternalUsesAsOriginalScalar.contains(V);
-      }))
-    return true;
-
   // If the graph includes only PHI nodes and gathers, it is defnitely not
   // profitable for the vectorization, we can skip it, if the cost threshold is
   // default. The cost of vectorized PHI nodes is almost always 0 + the cost of
@@ -16579,6 +16568,17 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals,
       }
     }
   }
+
+  // Buildvector with externally used scalars, which should remain as scalars,
+  // should not be vectorized, the compiler may hang.
+  if (SLPCostThreshold < 0 && VectorizableTree.size() > 1 &&
+      isa<InsertElementInst>(VectorizableTree[0]->Scalars[0]) &&
+      VectorizableTree[1]->hasState() &&
+      VectorizableTree[1]->State == TreeEntry::Vectorize &&
+      all_of(VectorizableTree[1]->Scalars, [&](Value *V) {
+        return ExternalUsesAsOriginalScalar.contains(V);
+      }))
+    return InstructionCost::getInvalid();
 
   Cost += ExtractCost;
   auto &&ResizeToVF = [this, &Cost](const TreeEntry *TE, ArrayRef<int> Mask,
