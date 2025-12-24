@@ -44,6 +44,7 @@ def ol_device_info_t : Enum {
     TaggedEtor<"MAX_MEM_ALLOC_SIZE", "uint64_t", "The maximum size of memory object allocation in bytes">,
     TaggedEtor<"GLOBAL_MEM_SIZE", "uint64_t", "The size of global device memory in bytes">,
     TaggedEtor<"WORK_GROUP_LOCAL_MEM_SIZE", "uint64_t", "The maximum size of local shared memory per work group in bytes">,
+    TaggedEtor<"IS_VA_SUPPORTED", "bool", "Is virtual address management supported on this device.">,
   ];
   list<TaggedEtor> fp_configs = !foreach(type, ["Single", "Double", "Half"], TaggedEtor<type # "_FP_CONFIG", "ol_device_fp_capability_flags_t", type # " precision floating point capability">);
   list<TaggedEtor> native_vec_widths = !foreach(type, ["char","short","int","long","float","double","half"], TaggedEtor<"NATIVE_VECTOR_WIDTH_" # type, "uint32_t", "Native vector width for " # type>);
@@ -132,15 +133,3 @@ def olGetDeviceInfoSize : Function {
   ];
 }
 
-def olInitializeRecordReplay : Function {
-  let desc = "Initializes the record and replay mechanism.";
-  let params = [
-    Param<"ol_device_handle_t", "Device", "handle of the device", PARAM_IN>,
-    Param<"uint64_t", "MemorySize", " The number of bytes to be (pre-)allocated by the bump allocator", PARAM_IN>,
-    Param<"void *", "VAddr", "handle of the destination device", PARAM_IN>,
-    Param<"bool", "IsRecord", "Activates the record replay mechanism in 'record' mode or 'replay' mode", PARAM_IN>,
-    Param<"bool", "SaveOutput", "Store the device memory after kernel execution on persistent storage", PARAM_IN>,
-    Param<"uint64_t *", "ReqPtrArgOffset", "handle of the destination device", PARAM_OUT>,
-  ];
-  let returns = [];
-}

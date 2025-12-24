@@ -131,3 +131,35 @@ def olMemFill : Function {
     Return<"OL_ERRC_INVALID_SIZE", ["`FillSize % PatternSize != 0`"]>
   ];
 }
+
+def olMemVAMap : Function {
+  let desc = "Allocates memory on device and map it to a provided virtual address.";
+  let details = [
+        "Allocates Size bytes (rounded up to page size) and hints the driver to",
+        "map it to VAddr. The obtained address is returned in Addr. At return",
+        "RSize contains the actual size which can be equal or larger than the",
+        "requested size."
+  ];
+  let params = [
+    Param<"ol_device_handle_t", "Device", "handle of the device", PARAM_IN>,
+    Param<"void *", "Vaddr", "virtual address", PARAM_IN>,
+    Param<"size_t", "Size", "requested size of the memory in bytes", PARAM_IN>,
+    Param<"void **", "Addr", "pointer to the allocated memory", PARAM_OUT>,
+    Param<"size_t *", "RSize", "actual allocated memory size", PARAM_OUT>
+  ];
+  let returns = [
+    Return<"OL_ERRC_INVALID_SIZE", [
+      "`Size == 0`"
+    ]>
+  ];
+}
+
+def olMemVAUnmap : Function {
+  let desc = "De-allocates device memory and unmaps the virtual address.";
+  let params = [
+    Param<"ol_device_handle_t", "Device", "handle of the device", PARAM_IN>,
+    Param<"void *", "Vaddr", "virtual address", PARAM_IN>,
+    Param<"size_t", "Size", "size of the allocated memory", PARAM_IN>
+  ];
+  let returns = [];
+}

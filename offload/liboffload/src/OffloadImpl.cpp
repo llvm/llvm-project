@@ -530,6 +530,9 @@ Error olGetDeviceInfoImplDetail(ol_device_handle_t Device,
     return Info.write(Out);
   }
 
+  case OL_DEVICE_INFO_IS_VA_SUPPORTED:
+    return Info.write<bool>(Device->Device->supportVAManagement()); 
+
   default:
     llvm_unreachable("Unimplemented device info");
   }
@@ -1214,19 +1217,18 @@ Error olLaunchHostFunction_impl(ol_queue_handle_t Queue,
                                                 Queue->AsyncInfo);
 }
 
-Error olInitializeRecordReplay_impl(ol_device_handle_t Device,
-                                    uint64_t MemorySize, void *VAddr,
-                                    bool IsRecord, bool SaveOutput,
-                                    uint64_t *ReqPtrArgOffset) {
-  uint64_t ReqPtrArgOffsetOut = 0;
-  Expected<int> Rc = Device->Device->Plugin.initialize_record_replay(
-      Device->DeviceNum, MemorySize, VAddr, IsRecord, SaveOutput,
-      ReqPtrArgOffsetOut);
-  if (Rc) {
-    return Rc.takeError();
-  }
-  *ReqPtrArgOffset = ReqPtrArgOffsetOut;
-  return Error::success();
+Error olMemVAMap_impl(ol_device_handle_t Device, void *Vaddr, size_t Size,
+                         void **Addr, size_t *RSize) {
+  size_t MemorySize = Size;
+  Error Err = Device->Device->memoryVAMap(Addr, Vaddr, &MemorySize);
+
+  *RSize = MemorySize;
+
+  return Err;
+}
+
+Error olMemVAUnmap_impl(ol_device_handle_t Device, void *Vaddr, size_t Size) {
+  return Device->Device->memoryVAUnMap(Vaddr, Size);
 }
 
 } // namespace offload
