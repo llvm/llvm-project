@@ -444,7 +444,8 @@ Instruction *InstCombinerImpl::visitExtractElementInst(ExtractElementInst &EI) {
         unsigned BitWidth = Ty->getIntegerBitWidth();
         Value *Idx;
         // Return index when its value does not exceed the allowed limit
-        // for the element type of the vector, otherwise return undefined.
+        // for the element type of the vector.
+        // TODO: Truncate out-of-range values.
         if (IndexC->getValue().getActiveBits() <= BitWidth)
           Idx = ConstantInt::get(Ty, IndexC->getValue().zextOrTrunc(BitWidth));
         else
