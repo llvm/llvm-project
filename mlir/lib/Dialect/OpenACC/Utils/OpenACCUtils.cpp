@@ -153,7 +153,7 @@ std::string mlir::acc::getRecipeName(mlir::acc::RecipeKind kind,
 
 mlir::Value mlir::acc::getBaseEntity(mlir::Value val) {
   if (auto partialEntityAccessOp =
-          dyn_cast<PartialEntityAccessOpInterface>(val.getDefiningOp())) {
+          val.getDefiningOp<PartialEntityAccessOpInterface>()) {
     if (!partialEntityAccessOp.isCompleteView())
       return partialEntityAccessOp.getBaseEntity();
   }
