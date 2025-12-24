@@ -100,7 +100,7 @@ The compiler uses the profile data to annotate allocation instructions with ``!m
 Context Disambiguation (LTO)
 ----------------------------
 
-To fully benefit from MemProf, especially for common allocation wrappers, enabling **ThinLTO** (preferred) or LTO is required. This allows the compiler to perform **context disambiguation**.
+To fully benefit from MemProf, especially for common allocation wrappers, enabling **ThinLTO** (preferred) or **Full LTO** is required. This allows the compiler to perform **context disambiguation**.
 
 Consider the following example:
 
@@ -162,7 +162,7 @@ Architecture Overview
 
 MemProf consists of three main components:
 
-1.  **Instrumentation Pass (Compile-time):** Memory accesses are instrumented to increment the access count held in a shadow memory location, or alternatively to call into the runtime.
+1.  **Instrumentation Pass (Compile-time):** Memory accesses are instrumented to increment the access count held in a shadow memory location, or alternatively to call into the runtime. Memory allocations are intercepted by the runtime library.
 2.  **Runtime Library (Link-time/Run-time):** Manages shadow memory and tracks allocation contexts and access statistics.
 3.  **Profile Analysis (Post-processing/Compile-time):** Tools and passes that read the profile, annotate the IR using metadata, and perform context disambiguation if necessary when LTO is enabled.
 
@@ -171,11 +171,11 @@ Detailed Workflow (LTO)
 
 The optimization process, using LTO, involves several steps:
 
-1. **Matching (MemProfUse Pass):** The memprof profile is mapped onto allocation calls and callsite which are part of the allocation context using debug information. MemProf metadata is attached to the call instructions in the IR. If the allocation call site is unambiguously cold (or hot) an attribute is added directly which guides the transformation.
-2.  **Metadata Serialization:** During the LTO summary analysis step, MemProf metadata (``!memprof`` and ``!callsite``) is serialized into the module summary. This is implemented in ``llvm/lib/Analysis/ModuleSummaryAnalysis.cpp``.
-3.  **Whole Program Graph Construction:** During the LTO indexing step, the compiler constructs a whole-program ``CallsiteContextGraph`` to analyze and disambiguate contexts. This graph identifies where allocation contexts diverge (e.g., same function called from hot vs. cold paths). This logic resides in ``llvm/lib/Transforms/IPO/MemProfContextDisambiguation.cpp``.
+1. **Matching (MemProfUse Pass):** The memprof profile is mapped onto allocation calls and callsites which are part of the allocation context using debug information. MemProf metadata is attached to the call instructions in the IR. If the allocation call site is unambiguously cold (or hot) an attribute is added directly which guides the transformation.
+2.  **Metadata Serialization:** For ThinLTO, during the summary analysis step, MemProf metadata (``!memprof`` and ``!callsite``) is serialized into the module summary. This is implemented in ``llvm/lib/Analysis/ModuleSummaryAnalysis.cpp``.
+3.  **Whole Program Graph Construction:** During the LTO step, the compiler constructs a whole-program ``CallsiteContextGraph`` to analyze and disambiguate contexts. This graph identifies where allocation contexts diverge (e.g., same function called from hot vs. cold paths). This logic resides in ``llvm/lib/Transforms/IPO/MemProfContextDisambiguation.cpp``.
 4.  **Cloning Decisions:** The analysis identifies which functions and callsites need to be cloned to isolate cold allocation paths from hot ones using the ``CallsiteContextGraph``.
-5.  **LTO Backend:** The actual cloning of functions happens in the ``MemProfContextDisambiguation`` pass. The replacement of allocation calls (e.g., ``operator new`` to the ``hot_cold_t`` variant) happens in ``SimplifyLibCalls`` during the ``InstCombine`` pass. These transformations are guided by the decisions made during the indexing step.
+5.  **LTO Backend:** The actual cloning of functions happens in the ``MemProfContextDisambiguation`` pass. The replacement of allocation calls (e.g., ``operator new`` to the ``hot_cold_t`` variant) happens in ``SimplifyLibCalls`` during the ``InstCombine`` pass. These transformations are guided by the decisions made during the LTO step.
 
 Source Structure
 ----------------
