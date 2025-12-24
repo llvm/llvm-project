@@ -3,7 +3,6 @@ include(AddMLIRPython)
 # Specifies that all MLIR packages are co-located under the `mlir_standalone`
 # top level package (the API has been embedded in a relocatable way).
 add_compile_definitions("MLIR_PYTHON_PACKAGE_PREFIX=${MLIR_PYTHON_PACKAGE_PREFIX}.")
-add_compile_definitions("MLIR_BINDINGS_PYTHON_DOMAIN=${MLIR_BINDINGS_PYTHON_NB_DOMAIN}")
 
 
 ################################################################################
