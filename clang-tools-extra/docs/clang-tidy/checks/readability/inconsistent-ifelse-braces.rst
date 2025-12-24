@@ -17,7 +17,7 @@ Before:
 
   if (condition)
     statement;
-  
+
   if (condition)
     statement;
   else
@@ -35,7 +35,7 @@ After:
 
   if (condition)
     statement;
-  
+
   if (condition)
     statement;
   else
