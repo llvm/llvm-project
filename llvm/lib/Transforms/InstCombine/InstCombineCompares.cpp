@@ -8704,13 +8704,13 @@ static bool isMinMaxCmpSelectEliminable(SelectPatternFlavor Flavor, Value *A,
   bool IsUnsigned = I->getOpcode() == Instruction::UIToFP;
   unsigned BitWidth =
       I->getOperand(0)->getType()->getScalarType()->getIntegerBitWidth();
-  APSInt MinOrMaxInt = (Flavor == SPF_FMAXNUM)
+  APSInt IntBoundary = (Flavor == SPF_FMAXNUM)
                            ? APSInt::getMinValue(BitWidth, IsUnsigned)
                            : APSInt::getMaxValue(BitWidth, IsUnsigned);
   APSInt ToInt(BitWidth, IsUnsigned);
   bool IsExact;
   CFP->getValueAPF().convertToInteger(ToInt, APFloat::rmTowardZero, &IsExact);
-  return IsExact && ToInt == MinOrMaxInt;
+  return IsExact && ToInt == IntBoundary;
 }
 
 Instruction *InstCombinerImpl::visitFCmpInst(FCmpInst &I) {
