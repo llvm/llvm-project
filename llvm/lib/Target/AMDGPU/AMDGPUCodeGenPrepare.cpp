@@ -210,8 +210,7 @@ public:
   Value *matchFractPat(IntrinsicInst &I);
   Value *applyFractPat(IRBuilder<> &Builder, Value *FractArg);
 
-  bool canOptimizeWithRsq(const FPMathOperator *SqrtOp, FastMathFlags DivFMF,
-                          FastMathFlags SqrtFMF) const;
+  bool canOptimizeWithRsq(FastMathFlags DivFMF, FastMathFlags SqrtFMF) const;
 
   Value *optimizeWithRsq(IRBuilder<> &Builder, Value *Num, Value *Den,
                          FastMathFlags DivFMF, FastMathFlags SqrtFMF,
@@ -698,29 +697,11 @@ Value *AMDGPUCodeGenPrepareImpl::emitRsqF64(IRBuilder<> &Builder, Value *X,
   return Builder.CreateFMA(Y0E, EFMA, IsNegative ? NegY0 : Y0);
 }
 
-bool AMDGPUCodeGenPrepareImpl::canOptimizeWithRsq(const FPMathOperator *SqrtOp,
-                                                  FastMathFlags DivFMF,
+bool AMDGPUCodeGenPrepareImpl::canOptimizeWithRsq(FastMathFlags DivFMF,
                                                   FastMathFlags SqrtFMF) const {
-  // The rsqrt contraction increases accuracy from ~2ulp to ~1ulp.
-  if (!DivFMF.allowContract() || !SqrtFMF.allowContract())
-    return false;
-
-  Type *EltTy = SqrtOp->getType()->getScalarType();
-  switch (EltTy->getTypeID()) {
-  case Type::FloatTyID:
-    // v_rsq_f32 gives 1ulp
-    // Separate correctly rounded fdiv + sqrt give ~1.81 ulp.
-
-    // FIXME: rsq formation should not depend on approx func or the fpmath
-    // accuracy. This strictly improves precision.
-    return SqrtFMF.approxFunc() || SqrtOp->getFPAccuracy() >= 1.0f;
-  case Type::DoubleTyID:
-    return true;
-  default:
-    return false;
-  }
-
-  llvm_unreachable("covered switch");
+  // The rsqrt contraction increases accuracy from ~2ulp to ~1ulp for f32 and
+  // f64.
+  return DivFMF.allowContract() && SqrtFMF.allowContract();
 }
 
 Value *AMDGPUCodeGenPrepareImpl::optimizeWithRsq(
@@ -929,7 +910,7 @@ bool AMDGPUCodeGenPrepareImpl::visitFDiv(BinaryOperator &FDiv) {
       DenII->hasOneUse()) {
     const auto *SqrtOp = cast<FPMathOperator>(DenII);
     SqrtFMF = SqrtOp->getFastMathFlags();
-    if (canOptimizeWithRsq(SqrtOp, DivFMF, SqrtFMF))
+    if (canOptimizeWithRsq(DivFMF, SqrtFMF))
       RsqOp = SqrtOp->getOperand(0);
   }
 

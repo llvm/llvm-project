@@ -509,10 +509,20 @@ private:
             bool _IsConst1,
             bool _IsConst2,
             class _BinaryPredicate,
-            __enable_if_t<__desugars_to_v<__equal_tag, _BinaryPredicate, bool, bool>, int> >
+            class _Proj1,
+            class _Proj2,
+            __enable_if_t<__is_identity<_Proj1>::value && __is_identity<_Proj2>::value &&
+                              __desugars_to_v<__equal_tag, _BinaryPredicate, bool, bool>,
+                          int> >
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 friend bool __equal_iter_impl(
-      __bit_iterator<_Dp, _IsConst1>, __bit_iterator<_Dp, _IsConst1>, __bit_iterator<_Dp, _IsConst2>, _BinaryPredicate);
-  template <class _Dp,
+      __bit_iterator<_Dp, _IsConst1>,
+      __bit_iterator<_Dp, _IsConst1>,
+      __bit_iterator<_Dp, _IsConst2>,
+      _BinaryPredicate,
+      _Proj1&,
+      _Proj2&);
+  template <bool,
+            class _Dp,
             bool _IsConst1,
             bool _IsConst2,
             class _Pred,
