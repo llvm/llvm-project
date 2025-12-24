@@ -19,7 +19,7 @@
 // CHECK: [[DECLARE:%[0-9]+]] = fir.declare %arg0([[SHIFT]]) dummy_scope [[DUMMY_SCOPE]] {uniq_name = "x"} : (!fir.box<!fir.array<?xf32>>, !fir.shift<1>, !fir.dscope) -> !fir.box<!fir.array<?xf32>>
 // CHECK: [[REBOX:%[0-9]+]] = fir.rebox [[DECLARE]]([[SHIFT]]) : (!fir.box<!fir.array<?xf32>>, !fir.shift<1>) -> !fir.box<!fir.array<?xf32>>
 // CHECK: [[BOX_ADDR:%[0-9]+]] = fir.box_addr [[REBOX]] : (!fir.box<!fir.array<?xf32>>) -> !fir.ref<!fir.array<?xf32>>
-// CHECK: [[MARSHAL:%[0-9]+]] = fir.convert [[BOX_ADDR]] : (!fir.ref<!fir.array<?xf32>>) -> memref<?xf32>
+// CHECK: [[CONVERT:%[0-9]+]] = fir.convert [[BOX_ADDR]] : (!fir.ref<!fir.array<?xf32>>) -> memref<?xf32>
 // CHECK: [[C1:%.*]] = arith.constant 1 : index
 // CHECK: [[SUBI:%[0-9]+]] = arith.subi [[C6]], [[C1]] : index
 // CHECK: [[MULI:%[0-9]+]] = arith.muli [[SUBI]], [[C1]] : index
@@ -30,7 +30,7 @@
 // CHECK: [[BOX_DIMS:%[0-9]+]]:3 = fir.box_dims [[REBOX]], [[C0]] : (!fir.box<!fir.array<?xf32>>, index) -> (index, index, index)
 // CHECK: [[DIVSI:%[0-9]+]] = arith.divsi [[BOX_DIMS]]#2, [[BOX_ELESIZE]] : index
 // CHECK: [[C0_0:%.*]] = arith.constant 0 : index
-// CHECK: [[REINTERPRET_CAST:%.*]] = memref.reinterpret_cast [[MARSHAL]] to offset: [[[C0_0]]], sizes: [[[BOX_DIMS]]#1], strides: [[[DIVSI]]] : memref<?xf32> to memref<?xf32, strided<[?], offset: ?>>
+// CHECK: [[REINTERPRET_CAST:%.*]] = memref.reinterpret_cast [[CONVERT]] to offset: [[[C0_0]]], sizes: [[[BOX_DIMS]]#1], strides: [[[DIVSI]]] : memref<?xf32> to memref<?xf32, strided<[?], offset: ?>>
 // CHECK: [[LOAD:%[0-9]+]] = memref.load [[REINTERPRET_CAST]][[[ADDI]]] : memref<?xf32, strided<[?], offset: ?>>
 func.func @load_shift_1d(%arg0: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "x"}) {
   %c6 = arith.constant 6 : index
@@ -65,7 +65,7 @@ func.func @load_shift_1d(%arg0: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "x
 // CHECK: [[DECLARE:%[0-9]+]] = fir.declare %arg0([[SHIFT]]) dummy_scope [[DUMMY_SCOPE]] {uniq_name = "x"} : (!fir.box<!fir.array<?x?xf32>>, !fir.shift<2>, !fir.dscope) -> !fir.box<!fir.array<?x?xf32>>
 // CHECK: [[REBOX:%[0-9]+]] = fir.rebox [[DECLARE]]([[SHIFT]]) : (!fir.box<!fir.array<?x?xf32>>, !fir.shift<2>) -> !fir.box<!fir.array<?x?xf32>>
 // CHECK: [[BOX_ADDR:%[0-9]+]] = fir.box_addr [[REBOX]] : (!fir.box<!fir.array<?x?xf32>>) -> !fir.ref<!fir.array<?x?xf32>>
-// CHECK: [[MARSHAL:%[0-9]+]] = fir.convert [[BOX_ADDR]] : (!fir.ref<!fir.array<?x?xf32>>) -> memref<?x?xf32>
+// CHECK: [[CONVERT:%[0-9]+]] = fir.convert [[BOX_ADDR]] : (!fir.ref<!fir.array<?x?xf32>>) -> memref<?x?xf32>
 // CHECK: [[C1:%.*]] = arith.constant 1 : index
 // CHECK: [[SUBI1:%[0-9]+]] = arith.subi [[C6]], [[INDEX_CAST1]] : index
 // CHECK: [[MULI1:%[0-9]+]] = arith.muli [[SUBI1]], [[C1]] : index
@@ -83,7 +83,7 @@ func.func @load_shift_1d(%arg0: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "x
 // CHECK: [[BOX_DIMS2:%[0-9]+]]:3 = fir.box_dims [[REBOX]], [[C0]] : (!fir.box<!fir.array<?x?xf32>>, index) -> (index, index, index)
 // CHECK: [[DIVSI2:%[0-9]+]] = arith.divsi [[BOX_DIMS2]]#2, [[BOX_ELESIZE]] : index
 // CHECK: [[C0_1:%.*]] = arith.constant 0 : index
-// CHECK: [[REINTERPRET_CAST:%.*]] = memref.reinterpret_cast [[MARSHAL]] to offset: [[[C0_1]]], sizes: [[[BOX_DIMS1]]#1, [[BOX_DIMS2]]#1], strides: [[[DIVSI1]], [[DIVSI2]]] : memref<?x?xf32> to memref<?x?xf32, strided<[?, ?], offset: ?>>
+// CHECK: [[REINTERPRET_CAST:%.*]] = memref.reinterpret_cast [[CONVERT]] to offset: [[[C0_1]]], sizes: [[[BOX_DIMS1]]#1, [[BOX_DIMS2]]#1], strides: [[[DIVSI1]], [[DIVSI2]]] : memref<?x?xf32> to memref<?x?xf32, strided<[?, ?], offset: ?>>
 // CHECK: [[LOAD:%[0-9]+]] = memref.load [[REINTERPRET_CAST]][[[ADDI2]], [[ADDI1]]] : memref<?x?xf32, strided<[?, ?], offset: ?>>
 func.func @load_shift_2d(%arg0: !fir.box<!fir.array<?x?xf32>> {fir.bindc_name = "x"}) {
   %c7 = arith.constant 7 : index
@@ -123,7 +123,7 @@ func.func @load_shift_2d(%arg0: !fir.box<!fir.array<?x?xf32>> {fir.bindc_name = 
 // CHECK: [[DECLARE:%[0-9]+]] = fir.declare %arg0([[SHIFT]]) dummy_scope [[DUMMY_SCOPE]] {uniq_name = "x"} : (!fir.box<!fir.array<?x?x?xf32>>, !fir.shift<3>, !fir.dscope) -> !fir.box<!fir.array<?x?x?xf32>>
 // CHECK: [[REBOX:%[0-9]+]] = fir.rebox [[DECLARE]]([[SHIFT]]) : (!fir.box<!fir.array<?x?x?xf32>>, !fir.shift<3>) -> !fir.box<!fir.array<?x?x?xf32>>
 // CHECK: [[BOX_ADDR:%[0-9]+]] = fir.box_addr [[REBOX]] : (!fir.box<!fir.array<?x?x?xf32>>) -> !fir.ref<!fir.array<?x?x?xf32>>
-// CHECK: [[MARSHAL:%[0-9]+]] = fir.convert [[BOX_ADDR]] : (!fir.ref<!fir.array<?x?x?xf32>>) -> memref<?x?x?xf32>
+// CHECK: [[CONVERT:%[0-9]+]] = fir.convert [[BOX_ADDR]] : (!fir.ref<!fir.array<?x?x?xf32>>) -> memref<?x?x?xf32>
 // CHECK: [[C1:%.*]] = arith.constant 1 : index
 // CHECK: [[SUBI1:%[0-9]+]] = arith.subi [[C9]], [[INDEX_CAST1]] : index
 // CHECK: [[MULI1:%[0-9]+]] = arith.muli [[SUBI1]], [[C1]] : index
@@ -148,7 +148,7 @@ func.func @load_shift_2d(%arg0: !fir.box<!fir.array<?x?xf32>> {fir.bindc_name = 
 // CHECK: [[BOX_DIMS3:%[0-9]+]]:3 = fir.box_dims [[REBOX]], [[C0]] : (!fir.box<!fir.array<?x?x?xf32>>, index) -> (index, index, index)
 // CHECK: [[DIVSI3:%[0-9]+]] = arith.divsi [[BOX_DIMS3]]#2, [[BOX_ELESIZE]] : index
 // CHECK: [[C0_1:%.*]] = arith.constant 0 : index
-// CHECK: [[REINTERPRET_CAST:%.*]] = memref.reinterpret_cast [[MARSHAL]] to offset: [[[C0_1]]], sizes: [[[BOX_DIMS1]]#1, [[BOX_DIMS2]]#1, [[BOX_DIMS3]]#1], strides: [[[DIVSI1]], [[DIVSI2]], [[DIVSI3]]] : memref<?x?x?xf32> to memref<?x?x?xf32, strided<[?, ?, ?], offset: ?>>
+// CHECK: [[REINTERPRET_CAST:%.*]] = memref.reinterpret_cast [[CONVERT]] to offset: [[[C0_1]]], sizes: [[[BOX_DIMS1]]#1, [[BOX_DIMS2]]#1, [[BOX_DIMS3]]#1], strides: [[[DIVSI1]], [[DIVSI2]], [[DIVSI3]]] : memref<?x?x?xf32> to memref<?x?x?xf32, strided<[?, ?, ?], offset: ?>>
 // CHECK: [[LOAD:%[0-9]+]] = memref.load [[REINTERPRET_CAST]][[[ADDI3]], [[ADDI2]], [[ADDI1]]] : memref<?x?x?xf32, strided<[?, ?, ?], offset: ?>>
 func.func @load_shift_3d(%arg0: !fir.box<!fir.array<?x?x?xf32>> {fir.bindc_name = "x"}) {
   %c10 = arith.constant 10 : index

@@ -43,7 +43,7 @@
 // CHECK:         [[ADD2:%[0-9]+]] = arith.addi %[[C2]], %[[C1_1]] : index
 // CHECK:         scf.for %[[ARG3:.*]] = %[[C1]] to [[ADD2]] step %[[C1]] {
 // CHECK:           [[BOXADDR:%[0-9]+]] = fir.box_addr [[EMBOX]] : (!fir.box<!fir.array<2x3xi32>>) -> !fir.ref<!fir.array<2x3xi32>>
-// CHECK:           [[MARSHAL:%[0-9]+]] = fir.convert [[DECLARE]] : (!fir.ref<!fir.array<5x7xi32>>) -> memref<7x5xi32>
+// CHECK:           [[CONVERT:%[0-9]+]] = fir.convert [[DECLARE]] : (!fir.ref<!fir.array<5x7xi32>>) -> memref<7x5xi32>
 // CHECK:           %[[C1_2:.*]] = arith.constant 1 : index
 // CHECK:           %[[C1_3:.*]] = arith.constant 1 : index
 // CHECK:           [[SUB1:%[0-9]+]] = arith.subi %[[ARG3]], %[[C1_3]] : index
@@ -55,7 +55,7 @@
 // CHECK:           [[MUL2:%[0-9]+]] = arith.muli [[SUB3]], %[[C2]] : index
 // CHECK:           [[SUB4:%[0-9]+]] = arith.subi %[[C2]], %[[C1_2]] : index
 // CHECK:           [[ADD4:%[0-9]+]] = arith.addi [[MUL2]], [[SUB4]] : index
-// CHECK:           [[LOAD:%[0-9]+]] = memref.load [[MARSHAL]][[[ADD4]], [[ADD3]]] : memref<7x5xi32>
+// CHECK:           [[LOAD:%[0-9]+]] = memref.load [[CONVERT]][[[ADD4]], [[ADD3]]] : memref<7x5xi32>
 func.func @slice_2d(%arg0: !fir.ref<!fir.array<5x7xi32>>, %arg1: !fir.ref<!fir.array<5x7xi32>>) {
   %c4 = arith.constant 4 : index
   %c2 = arith.constant 2 : index
@@ -126,7 +126,7 @@ func.func @slice_2d(%arg0: !fir.ref<!fir.array<5x7xi32>>, %arg1: !fir.ref<!fir.a
 // CHECK:         fir.do_loop %[[ARG3:.*]] = %[[C1]] to %[[C3]] step %[[C1]] unordered {
 // CHECK:           fir.do_loop %[[ARG4:.*]] = %[[C1]] to %[[C2]] step %[[C1]] unordered {
 // CHECK:             [[BOXADDR:%[0-9]+]] = fir.box_addr [[EMBOX]] : (!fir.box<!fir.array<2x3x2xi32>>) -> !fir.ref<!fir.array<2x3x2xi32>>
-// CHECK:             [[MARSHAL2:%[0-9]+]] = fir.convert [[DECLARE_B]] : (!fir.ref<!fir.array<5x7x7xi32>>) -> memref<7x7x5xi32>
+// CHECK:             [[CONVERT2:%[0-9]+]] = fir.convert [[DECLARE_B]] : (!fir.ref<!fir.array<5x7x7xi32>>) -> memref<7x7x5xi32>
 // CHECK:             %[[C1_0:.*]] = arith.constant 1 : index
 // CHECK:             %[[C1_1:.*]] = arith.constant 1 : index
 // CHECK:             [[SUB1:%[0-9]+]] = arith.subi %[[ARG4]], %[[C1_1]] : index
@@ -143,7 +143,7 @@ func.func @slice_2d(%arg0: !fir.ref<!fir.array<5x7xi32>>, %arg1: !fir.ref<!fir.a
 // CHECK:             [[MUL3:%[0-9]+]] = arith.muli [[SUB5]], %[[C4]] : index
 // CHECK:             [[SUB6:%[0-9]+]] = arith.subi %[[C3]], %[[C1_0]] : index
 // CHECK:             [[ADD3:%[0-9]+]] = arith.addi [[MUL3]], [[SUB6]] : index
-// CHECK:             [[LOAD:%[0-9]+]] = memref.load [[MARSHAL2]][[[ADD3]], [[ADD2]], [[ADD1]]] : memref<7x7x5xi32>
+// CHECK:             [[LOAD:%[0-9]+]] = memref.load [[CONVERT2]][[[ADD3]], [[ADD2]], [[ADD1]]] : memref<7x7x5xi32>
 func.func @slice_3d(%arg0: !fir.ref<!fir.array<5x7x7xi32>> {fir.bindc_name = "a", llvm.nocapture}, %arg1: !fir.ref<!fir.array<5x7x7xi32>> {fir.bindc_name = "b", llvm.nocapture}) attributes {fir.internal_name = "_QPcopy"} {
   %c4 = arith.constant 4 : index
   %c2 = arith.constant 2 : index
@@ -185,7 +185,7 @@ func.func @slice_3d(%arg0: !fir.ref<!fir.array<5x7x7xi32>> {fir.bindc_name = "a"
 // CHECK:       [[ADD1:%[0-9]+]] = arith.addi %[[C3]], %[[C1_0]] : index
 // CHECK:       scf.for %[[ARG1:.*]] = %[[C1]] to [[ADD1]] step %[[C1]] {
 // CHECK:         [[BOXADDR:%[0-9]+]] = fir.box_addr [[EMBOX]] : (!fir.box<!fir.array<3xi32>>) -> !fir.ref<!fir.array<3xi32>>
-// CHECK:         [[MARSHAL:%[0-9]+]] = fir.convert [[DECLARE]] : (!fir.ref<!fir.array<3x3xi32>>) -> memref<3x3xi32>
+// CHECK:         [[CONVERT:%[0-9]+]] = fir.convert [[DECLARE]] : (!fir.ref<!fir.array<3x3xi32>>) -> memref<3x3xi32>
 // CHECK:         %[[C1_1:.*]] = arith.constant 1 : index
 // CHECK:         [[SUB1:%[0-9]+]] = arith.subi %[[C2]], %[[C1_1]] : index
 // CHECK:         %[[C1_2:.*]] = arith.constant 1 : index
@@ -193,7 +193,7 @@ func.func @slice_3d(%arg0: !fir.ref<!fir.array<5x7x7xi32>> {fir.bindc_name = "a"
 // CHECK:         [[MUL1:%[0-9]+]] = arith.muli [[SUB2]], %[[C1]] : index
 // CHECK:         [[SUB3:%[0-9]+]] = arith.subi %[[C1]], %[[C1_1]] : index
 // CHECK:         [[ADD2:%[0-9]+]] = arith.addi [[MUL1]], [[SUB3]] : index
-// CHECK:         [[LOAD:%[0-9]+]] = memref.load [[MARSHAL]][[[ADD2]], [[SUB1]]] : memref<3x3xi32>
+// CHECK:         [[LOAD:%[0-9]+]] = memref.load [[CONVERT]][[[ADD2]], [[SUB1]]] : memref<3x3xi32>
 func.func @extract_row(%arg0: !fir.ref<!fir.array<3x3xi32>>) {
   %c1 = arith.constant 1 : index
   %c2 = arith.constant 2 : index
@@ -233,7 +233,7 @@ func.func @extract_row(%arg0: !fir.ref<!fir.array<3x3xi32>>) {
 // CHECK:       [[ADD1:%[0-9]+]] = arith.addi %[[C10]], %[[C1_0]] : index
 // CHECK:       scf.for %[[ARG1:.*]] = %[[C1]] to [[ADD1]] step %[[C1]] {
 // CHECK:         [[BOXADDR:%[0-9]+]] = fir.box_addr [[EMBOX]] : (!fir.box<!fir.array<10xf32>>) -> !fir.ref<!fir.array<10xf32>>
-// CHECK:         [[MARSHAL:%[0-9]+]] = fir.convert [[DECLARE_TMP]] : (!fir.ref<!fir.array<100x5xf32>>) -> memref<5x100xf32>
+// CHECK:         [[CONVERT:%[0-9]+]] = fir.convert [[DECLARE_TMP]] : (!fir.ref<!fir.array<100x5xf32>>) -> memref<5x100xf32>
 // CHECK:         %[[C1_1:.*]] = arith.constant 1 : index
 // CHECK:         [[SUB1:%[0-9]+]] = arith.subi %[[C1]], %[[C1_1]] : index
 // CHECK:         %[[C1_2:.*]] = arith.constant 1 : index
@@ -241,7 +241,7 @@ func.func @extract_row(%arg0: !fir.ref<!fir.array<3x3xi32>>) {
 // CHECK:         [[MUL1:%[0-9]+]] = arith.muli [[SUB2]], %[[C11]] : index
 // CHECK:         [[SUB3:%[0-9]+]] = arith.subi %[[C1]], %[[C1_1]] : index
 // CHECK:         [[ADD2:%[0-9]+]] = arith.addi [[MUL1]], [[SUB3]] : index
-// CHECK:         memref.store %[[CST]], [[MARSHAL]][[[SUB1]], [[ADD2]]] : memref<5x100xf32>
+// CHECK:         memref.store %[[CST]], [[CONVERT]][[[SUB1]], [[ADD2]]] : memref<5x100xf32>
 func.func @extract_column(%arg0: !fir.ref<!fir.array<100x5xf32>> {fir.bindc_name = "tmp", llvm.nocapture}) attributes {fir.internal_name = "_QPextract_column"} {
   %c10 = arith.constant 10 : index
   %c11 = arith.constant 11 : index
@@ -282,14 +282,14 @@ func.func @extract_column(%arg0: !fir.ref<!fir.array<100x5xf32>> {fir.bindc_name
 // CHECK:         [[ADD1:%.*]] = arith.addi %[[ARG0]], %[[C_NEG1]] : index
 // CHECK:         [[SHIFT:%.*]] = fir.shift %[[C0]] : (index) -> !fir.shift<1>
 // CHECK:         [[BOXADDR2:%.*]] = fir.box_addr [[EMBOX]] : (!fir.box<!fir.array<7xf32>>) -> !fir.ref<!fir.array<7xf32>>
-// CHECK:         [[MARSHAL:%.*]] = fir.convert [[BOXADDR2]] : (!fir.ref<!fir.array<7xf32>>) -> memref<7xf32>
+// CHECK:         [[CONVERT:%.*]] = fir.convert [[BOXADDR2]] : (!fir.ref<!fir.array<7xf32>>) -> memref<7xf32>
 // CHECK:         %[[C1_0:.*]] = arith.constant 1 : index
 // CHECK:         [[ADD2:%.*]] = arith.addi %[[ARG0]], %[[C_NEG1]] : index
 // CHECK:         [[SUB1:%.*]] = arith.subi [[ADD2]], %[[C0]] : index
 // CHECK:         [[MUL1:%.*]] = arith.muli [[SUB1]], %[[C1_0]] : index
 // CHECK:         [[SUB2:%[0-9]+]] = arith.subi %[[C0]], %[[C0]] : index
 // CHECK:         [[ADD3:%.*]] = arith.addi [[MUL1]], [[SUB2]] : index
-// CHECK:         [[LOADVAL:%.*]] = memref.load [[MARSHAL]][[[ADD3]]] : memref<7xf32>
+// CHECK:         [[LOADVAL:%.*]] = memref.load [[CONVERT]][[[ADD3]]] : memref<7xf32>
 func.func @noslice() {
   %c7 = arith.constant 7 : index
   %c-1 = arith.constant -1 : index
@@ -317,7 +317,7 @@ func.func @noslice() {
 // CHECK: %[[C_NEG6:.*]] = arith.constant -6 : index
 // CHECK: %[[C5:.*]] = arith.constant 5 : index
 // CHECK: %[[ALLOCA:.*]] = memref.alloca() : memref<i32>
-// CHECK: %[[MARSHAL1:.*]] = fir.convert %[[ALLOCA]] : (memref<i32>) -> !fir.ref<i32>
+// CHECK: %[[CONVERT1:.*]] = fir.convert %[[ALLOCA]] : (memref<i32>) -> !fir.ref<i32>
 // CHECK: %[[DUMMY_SCOPE:[0-9]+]] = fir.dummy_scope : !fir.dscope
 // CHECK: %[[ADDR:[0-9]+]] = fir.address_of(@_QFFsECindex) : !fir.ref<!fir.array<5xi32>>
 // CHECK: %[[SHAPE:[0-9]+]] = fir.shape %[[C5]] : (index) -> !fir.shape<1>
@@ -333,14 +333,14 @@ func.func @noslice() {
 // CHECK: %[[C1_0:.*]] = arith.constant 1 : index
 // CHECK: %[[ADD2:[0-9]+]] = arith.addi %[[SELECT]], %[[C1_0]] : index
 // CHECK: scf.for %[[ARG0:.*]] = %[[C1]] to %[[ADD2]] step %[[C1]] {
-// CHECK:   %[[MARSHAL2:.*]] = fir.convert %[[DECLARE]] : (!fir.ref<!fir.array<5xi32>>) -> memref<5xi32>
+// CHECK:   %[[CONVERT2:.*]] = fir.convert %[[DECLARE]] : (!fir.ref<!fir.array<5xi32>>) -> memref<5xi32>
 // CHECK:   %[[C1_1:.*]] = arith.constant 1 : index
 // CHECK:   %[[C1_2:.*]] = arith.constant 1 : index
 // CHECK:   %[[SUB1:[0-9]+]] = arith.subi %[[ARG0]], %[[C1_2]] : index
 // CHECK:   %[[MUL1:[0-9]+]] = arith.muli %[[SUB1]], %[[C_NEG1]] : index
 // CHECK:   %[[SUB2:[0-9]+]] = arith.subi %[[C5]], %[[C1_1]] : index
 // CHECK:   %[[ADD3:[0-9]+]] = arith.addi %[[MUL1]], %[[SUB2]] : index
-// CHECK:   %[[LOAD2:[0-9]+]] = memref.load %[[MARSHAL2]][%[[ADD3]]] : memref<5xi32>
+// CHECK:   %[[LOAD2:[0-9]+]] = memref.load %[[CONVERT2]][%[[ADD3]]] : memref<5xi32>
 func.func @array_coor_slice() attributes {fir.bindc_name = "tf4a", noinline} {
   %c0 = arith.constant 0 : index
   %c-1 = arith.constant -1 : index

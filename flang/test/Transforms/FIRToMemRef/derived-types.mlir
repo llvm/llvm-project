@@ -3,8 +3,8 @@
 // CHECK-LABEL: func.func @load_scalar
 // CHECK:       [[INDEX:%[0-9]]] = fir.field_index
 // CHECK:       [[COORD:%[0-9]]] = fir.coordinate_of
-// CHECK-NEXT:  [[MARSHAL:%[0-9]]] = fir.convert [[COORD]] : (!fir.ref<f32>) -> memref<f32>
-// CHECK-NEXT:  memref.load [[MARSHAL]][] : memref<f32>
+// CHECK-NEXT:  [[CONVERT:%[0-9]]] = fir.convert [[COORD]] : (!fir.ref<f32>) -> memref<f32>
+// CHECK-NEXT:  memref.load [[CONVERT]][] : memref<f32>
 func.func @load_scalar(%arg0: !fir.ref<!fir.type<DerivedType{a:f32}>>) {
     %0 = fir.undefined !fir.dscope
     %1 = fir.declare %arg0 dummy_scope %0 {uniq_name = "dtype"} : (!fir.ref<!fir.type<DerivedType{a:f32}>>, !fir.dscope) -> !fir.ref<!fir.type<DerivedType{a:f32}>>
@@ -17,8 +17,8 @@ func.func @load_scalar(%arg0: !fir.ref<!fir.type<DerivedType{a:f32}>>) {
 // CHECK-LABEL: func.func @store_scalar
 // CHECK:       [[INDEX:%[0-9]]] = fir.field_index
 // CHECK:       [[COORD:%[0-9]]] = fir.coordinate_of
-// CHECK-NEXT:  [[MARSHAL:%[0-9]]] = fir.convert [[COORD]] : (!fir.ref<f32>) -> memref<f32>
-// CHECK-NEXT:  memref.store %4, [[MARSHAL]][] : memref<f32>
+// CHECK-NEXT:  [[CONVERT:%[0-9]]] = fir.convert [[COORD]] : (!fir.ref<f32>) -> memref<f32>
+// CHECK-NEXT:  memref.store %4, [[CONVERT]][] : memref<f32>
 func.func @store_scalar(%arg0: !fir.ref<!fir.type<DerivedType{a:f32}>>, %arg1: !fir.ref<f32>) {
   %0 = fir.undefined !fir.dscope
   %1 = fir.declare %arg0 dummy_scope %0 {uniq_name = "dtype"} : (!fir.ref<!fir.type<DerivedType{a:f32}>>, !fir.dscope) -> !fir.ref<!fir.type<DerivedType{a:f32}>>

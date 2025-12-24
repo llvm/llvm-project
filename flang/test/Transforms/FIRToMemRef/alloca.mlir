@@ -8,10 +8,10 @@
 
 // CHECK-LABEL: func.func @alloca
 // CHECK:       [[ALLOCA:%.+]] = memref.alloca() : memref<i32>
-// CHECK-NEXT:  [[MARSHAL0:%[0-9]]] = fir.convert [[ALLOCA]] : (memref<i32>) -> !fir.ref<i32>
+// CHECK-NEXT:  [[CONVERT0:%[0-9]]] = fir.convert [[ALLOCA]] : (memref<i32>) -> !fir.ref<i32>
 // CHECK:       [[CONSTANT:%.+]] = arith.constant 1 : i32
 // CHECK:       memref.store [[CONSTANT]], [[ALLOCA]][] : memref<i32>
-// CHECK:       fir.call @f([[MARSHAL0]])
+// CHECK:       fir.call @f([[CONVERT0]])
 
 func.func @alloca(%arg0: !fir.ref<f32> {fir.bindc_name = "a"}) {
   %0 = fir.alloca i32 {adapt.valuebyref}
@@ -32,7 +32,7 @@ func.func private @f(!fir.ref<i32>)
 
 // CHECK-LABEL: func.func @passbyvalue
 // CHECK:       [[ALLOCA:%.+]] = memref.alloca() : memref<i32>
-// CHECK-NEXT:  [[MARSHAL0:%[0-9]]] = fir.convert [[ALLOCA]] : (memref<i32>) -> !fir.ref<i32>
+// CHECK-NEXT:  [[CONVERT0:%[0-9]]] = fir.convert [[ALLOCA]] : (memref<i32>) -> !fir.ref<i32>
 // CHECK-NEXT:  memref.store %arg0, [[ALLOCA]][] : memref<i32>
 
 func.func @passbyvalue(%arg0: i32 {fir.bindc_name = "x"}) {
@@ -52,7 +52,7 @@ func.func @passbyvalue(%arg0: i32 {fir.bindc_name = "x"}) {
 // CHECK:       [[CON5:%.+]] = arith.constant 5
 // CHECK-NEXT:  [[CON3:%.+]] = arith.constant 3
 // CHECK-NEXT:  [[ALLOCA:%.+]] = memref.alloca([[CON3]], [[CON5]]) {bindc_name = "a"} : memref<?x?xf32>
-// CHECK-NEXT:  [[MARSHAL0:%[0-9]]] = fir.convert [[ALLOCA]] : (memref<?x?xf32>) -> !fir.ref<!fir.array<?x?xf32>>
+// CHECK-NEXT:  [[CONVERT0:%[0-9]]] = fir.convert [[ALLOCA]] : (memref<?x?xf32>) -> !fir.ref<!fir.array<?x?xf32>>
 
 func.func @_QPalloca_2d() {
   %0 = arith.constant 5 : index
@@ -64,7 +64,7 @@ func.func @_QPalloca_2d() {
 // CHECK-LABEL: func.func @alloca_nonconvertible
 // CHECK-NEXT:  [[ALLOCA1:%.+]] = fir.alloca
 // CHECK-NEXT:  [[ALLOCA2:%.+]] = memref.alloca
-// CHECK-NEXT:  [[MARSHAL0:%[0-9]]] = fir.convert [[ALLOCA2]] : (memref<i32>) -> !fir.ref<i32>
+// CHECK-NEXT:  [[CONVERT0:%[0-9]]] = fir.convert [[ALLOCA2]] : (memref<i32>) -> !fir.ref<i32>
 func.func @alloca_nonconvertible() {
   %0 = fir.alloca !fir.box<!fir.array<20xi32>>
   %1 = fir.alloca i32

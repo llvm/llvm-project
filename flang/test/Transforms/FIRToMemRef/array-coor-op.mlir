@@ -24,13 +24,13 @@
 // CHECK:       [[DECLARE:%.+]]  = fir.declare %arg0([[SHAPE]]) dummy_scope [[DUMMY]]
 // CHECK:       [[COOR1:%.+]]    = fir.array_coor [[DECLARE]]([[SHAPE]]) [[C1]] : (!fir.ref<!fir.array<8xi32>>, !fir.shape<1>, index) -> !fir.ref<i32>
 // CHECK:       [[SLICE:%.+]]    = fir.convert [[COOR1]] : (!fir.ref<i32>) -> !fir.ref<!fir.array<4xi32>>
-// CHECK:       [[MARSHAL:%.+]]  = fir.convert [[DECLARE]] : (!fir.ref<!fir.array<8xi32>>) -> memref<8xi32>
+// CHECK:       [[CONVERT:%.+]]  = fir.convert [[DECLARE]] : (!fir.ref<!fir.array<8xi32>>) -> memref<8xi32>
 // CHECK:       [[C1B:%.+]]      = arith.constant 1 : index
 // CHECK:       [[SUB:%.+]]      = arith.subi [[C5]], [[C1B]] : index
 // CHECK:       [[MUL:%.+]]      = arith.muli [[SUB]], [[C1B]] : index
 // CHECK:       [[SUB2:%.+]]     = arith.subi [[C1B]], [[C1B]] : index
 // CHECK:       [[IDX:%.+]]      = arith.addi [[MUL]], [[SUB2]] : index
-// CHECK:       memref.store [[C1_I32]], [[MARSHAL]][[[IDX]]] : memref<8xi32>
+// CHECK:       memref.store [[C1_I32]], [[CONVERT]][[[IDX]]] : memref<8xi32>
 func.func @slice(%arg0: !fir.ref<!fir.array<8xi32>>){
   %c5 = arith.constant 5 : index
   %c1_i32 = arith.constant 1 : i32

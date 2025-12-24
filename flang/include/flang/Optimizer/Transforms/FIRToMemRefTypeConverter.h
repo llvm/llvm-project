@@ -66,7 +66,7 @@ public:
   void setConvertScalarTypesOnly(bool value) { convertScalarTypesOnly = value; }
 
   /// Return true if the given FIR type can be converted to a MemRef-typed
-  /// descriptor (i.e. is a supported base element for MemRef marshaling).
+  /// descriptor (i.e. is a supported base element for MemRef converting).
   bool convertibleMemrefType(mlir::Type ty) {
     if (auto refTy = mlir::dyn_cast<fir::ReferenceType>(ty)) {
       auto elTy = refTy.getElementType();
