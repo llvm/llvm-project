@@ -1692,7 +1692,7 @@ public:
   /// to incoming jit-dispatch requests from the executor.
   LLVM_ABI void runJITDispatchHandler(SendResultFunction SendResult,
                                       ExecutorAddr HandlerFnTagAddr,
-                                      ArrayRef<char> ArgBuffer);
+                                      shared::WrapperFunctionBuffer ArgBytes);
 
   /// Dump the state of all the JITDylibs in this session.
   LLVM_ABI void dump(raw_ostream &OS);
