@@ -3,7 +3,7 @@
 
 %funcref = type ptr addrspace(20) ;; addrspace 20 is nonintegral
 
-; CHECK: .tabletype __funcref_call_table, funcref, 1
+; CHECK: .tabletype __funcref_call_table, funcref, i32, 1
 
 define void @call_funcref(%funcref %ref) {
 ; CHECK-LABEL: call_funcref:
