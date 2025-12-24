@@ -1325,6 +1325,7 @@ func.func @_QPtest_dummy_scalar_pointer_optional(%arg0: !fir.ref<!fir.array<?xi3
   return
 }
 
+// -----
 // Check that nothing is hoisted out of omp.loop_nest
 // (even if omp.loop_nest becomes a loop-like operation):
 // CHECK-LABEL: func.func @_QPtest_omp_loop_wrapper
@@ -1357,6 +1358,7 @@ func.func @_QPtest_omp_loop_wrapper(%arg0: !fir.ref<!fir.box<!fir.heap<!fir.arra
   return
 }
 
+// -----
 // Check that a volatile scalar load is not hoisted.
 // CHECK-LABEL: func.func @_QPtest_volatile_load
 // CHECK-NOT: fir.load{{.*}}volatile
@@ -1388,6 +1390,7 @@ func.func @_QPtest_volatile_load(%arg0: !fir.ref<!fir.array<?xi32>> {fir.bindc_n
   return
 }
 
+// -----
 // Check that a load of scalar defined as associate(c => b(10))
 // is not hoisted, because it is actually an access of array
 // and it may be out of bounds.
@@ -1444,6 +1447,7 @@ func.func @_QPtest_associated_array_access(%arg0: !fir.ref<!fir.array<?xi32>> {f
   return
 }
 
+// -----
 // 'b' can be hoisted.
 // subroutine test_common_scalar(a,n)
 //   common /blk/ b,c
@@ -1504,6 +1508,7 @@ func.func @_QPtest_common_scalar(%arg0: !fir.ref<!fir.array<?xi32>> {fir.bindc_n
   return
 }
 
+// -----
 // 'm' can be hoisted, and 'c(m)' cannot.
 // subroutine test_common_array(a,n,m)
 //   common /blk/ b,c
@@ -1572,5 +1577,85 @@ func.func @_QPtest_common_array(%arg0: !fir.ref<!fir.array<?xi32>> {fir.bindc_na
     fir.result %29 : i32
   }
   fir.store %19 to %13 : !fir.ref<i32>
+  return
+}
+
+// -----
+// Same example as test_dummy_scalar with manually added fir.if inside the loop.
+// Check that the invariant fir.if is hoisted:
+// CHECK-LABEL:   func.func @test_if_hoisting(
+// CHECK-SAME:      %[[ARG0:.*]]: !fir.ref<!fir.array<?xi32>> {fir.bindc_name = "r"},
+// CHECK-SAME:      %[[ARG1:.*]]: !fir.ref<i32> {fir.bindc_name = "x"},
+// CHECK-SAME:      %[[ARG2:.*]]: !fir.ref<i32> {fir.bindc_name = "n"},
+// CHECK-SAME:      %[[ARG3:.*]]: i1) {
+// CHECK:           %[[CONSTANT_0:.*]] = arith.constant 1 : index
+// CHECK:           %[[DUMMY_SCOPE_0:.*]] = fir.dummy_scope : !fir.dscope
+// CHECK:           %[[ALLOCA_0:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFtest_dummy_scalarEi"}
+// CHECK:           %[[DECLARE_0:.*]] = fir.declare %[[ALLOCA_0]] {uniq_name = "_QFtest_dummy_scalarEi"} : (!fir.ref<i32>) -> !fir.ref<i32>
+// CHECK:           %[[DECLARE_1:.*]] = fir.declare %[[ARG2]] dummy_scope %[[DUMMY_SCOPE_0]] arg 3 {uniq_name = "_QFtest_dummy_scalarEn"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
+// CHECK:           %[[ASSUMED_SIZE_EXTENT_0:.*]] = fir.assumed_size_extent : index
+// CHECK:           %[[SHAPE_0:.*]] = fir.shape %[[ASSUMED_SIZE_EXTENT_0]] : (index) -> !fir.shape<1>
+// CHECK:           %[[DECLARE_2:.*]] = fir.declare %[[ARG0]](%[[SHAPE_0]]) dummy_scope %[[DUMMY_SCOPE_0]] arg 1 {uniq_name = "_QFtest_dummy_scalarEr"} : (!fir.ref<!fir.array<?xi32>>, !fir.shape<1>, !fir.dscope) -> !fir.ref<!fir.array<?xi32>>
+// CHECK:           %[[DECLARE_3:.*]] = fir.declare %[[ARG1]] dummy_scope %[[DUMMY_SCOPE_0]] arg 2 {uniq_name = "_QFtest_dummy_scalarEx"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
+// CHECK:           %[[LOAD_0:.*]] = fir.load %[[DECLARE_1]] : !fir.ref<i32>
+// CHECK:           %[[CONVERT_0:.*]] = fir.convert %[[LOAD_0]] : (i32) -> index
+// CHECK:           %[[CONVERT_1:.*]] = fir.convert %[[CONSTANT_0]] : (index) -> i32
+// CHECK:           %[[IF_0:.*]] = fir.if %[[ARG3]] -> (i32) {
+// CHECK:             %[[LOAD_1:.*]] = fir.load %[[DECLARE_3]] : !fir.ref<i32>
+// CHECK:             fir.result %[[LOAD_1]] : i32
+// CHECK:           } else {
+// CHECK:             %[[CONSTANT_1:.*]] = arith.constant 1 : i32
+// CHECK:             %[[LOAD_2:.*]] = fir.load %[[DECLARE_3]] : !fir.ref<i32>
+// CHECK:             %[[ADDI_0:.*]] = arith.addi %[[LOAD_2]], %[[CONSTANT_1]] : i32
+// CHECK:             fir.result %[[ADDI_0]] : i32
+// CHECK:           }
+// CHECK:           %[[DO_LOOP_0:.*]] = fir.do_loop %[[VAL_0:.*]] = %[[CONSTANT_0]] to %[[CONVERT_0]] step %[[CONSTANT_0]] iter_args(%[[VAL_1:.*]] = %[[CONVERT_1]]) -> (i32) {
+// CHECK:             fir.store %[[VAL_1]] to %[[DECLARE_0]] : !fir.ref<i32>
+// CHECK:             %[[LOAD_3:.*]] = fir.load %[[DECLARE_0]] : !fir.ref<i32>
+// CHECK:             %[[CONVERT_2:.*]] = fir.convert %[[LOAD_3]] : (i32) -> i64
+// CHECK:             %[[ARRAY_COOR_0:.*]] = fir.array_coor %[[DECLARE_2]](%[[SHAPE_0]]) %[[CONVERT_2]] : (!fir.ref<!fir.array<?xi32>>, !fir.shape<1>, i64) -> !fir.ref<i32>
+// CHECK:             fir.store %[[IF_0]] to %[[ARRAY_COOR_0]] : !fir.ref<i32>
+// CHECK:             fir.call @_QPexternal_sub() : () -> ()
+// CHECK:             %[[LOAD_4:.*]] = fir.load %[[DECLARE_0]] : !fir.ref<i32>
+// CHECK:             %[[ADDI_1:.*]] = arith.addi %[[LOAD_4]], %[[CONVERT_1]] overflow<nsw> : i32
+// CHECK:             fir.result %[[ADDI_1]] : i32
+// CHECK:           }
+// CHECK:           fir.store %[[DO_LOOP_0]] to %[[DECLARE_0]] : !fir.ref<i32>
+// CHECK:           return
+// CHECK:         }
+func.func @test_if_hoisting(%arg0: !fir.ref<!fir.array<?xi32>> {fir.bindc_name = "r"}, %arg1: !fir.ref<i32> {fir.bindc_name = "x"}, %arg2: !fir.ref<i32> {fir.bindc_name = "n"}, %cond : i1) {
+  %c1 = arith.constant 1 : index
+  %0 = fir.dummy_scope : !fir.dscope
+  %1 = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFtest_dummy_scalarEi"}
+  %2 = fir.declare %1 {uniq_name = "_QFtest_dummy_scalarEi"} : (!fir.ref<i32>) -> !fir.ref<i32>
+  %3 = fir.declare %arg2 dummy_scope %0 arg 3 {uniq_name = "_QFtest_dummy_scalarEn"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
+  %4 = fir.assumed_size_extent : index
+  %5 = fir.shape %4 : (index) -> !fir.shape<1>
+  %6 = fir.declare %arg0(%5) dummy_scope %0 arg 1 {uniq_name = "_QFtest_dummy_scalarEr"} : (!fir.ref<!fir.array<?xi32>>, !fir.shape<1>, !fir.dscope) -> !fir.ref<!fir.array<?xi32>>
+  %7 = fir.declare %arg1 dummy_scope %0 arg 2 {uniq_name = "_QFtest_dummy_scalarEx"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
+  %8 = fir.load %3 : !fir.ref<i32>
+  %9 = fir.convert %8 : (i32) -> index
+  %10 = fir.convert %c1 : (index) -> i32
+  %11 = fir.do_loop %arg3 = %c1 to %9 step %c1 iter_args(%arg4 = %10) -> (i32) {
+    fir.store %arg4 to %2 : !fir.ref<i32>
+    %12 = fir.if %cond -> i32 {
+      %orig = fir.load %7 : !fir.ref<i32>
+      fir.result %orig : i32
+    } else {
+      %c1_i32 = arith.constant 1 : i32
+      %orig = fir.load %7 : !fir.ref<i32>
+      %new = arith.addi %orig, %c1_i32 : i32
+      fir.result %new : i32
+    }
+    %13 = fir.load %2 : !fir.ref<i32>
+    %14 = fir.convert %13 : (i32) -> i64
+    %15 = fir.array_coor %6(%5) %14 : (!fir.ref<!fir.array<?xi32>>, !fir.shape<1>, i64) -> !fir.ref<i32>
+    fir.store %12 to %15 : !fir.ref<i32>
+    fir.call @_QPexternal_sub() : () -> ()
+    %16 = fir.load %2 : !fir.ref<i32>
+    %17 = arith.addi %16, %10 overflow<nsw> : i32
+    fir.result %17 : i32
+  }
+  fir.store %11 to %2 : !fir.ref<i32>
   return
 }
