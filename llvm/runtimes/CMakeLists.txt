@@ -18,7 +18,7 @@ endforeach()
 
 function(get_compiler_rt_path path)
   set(all_runtimes ${runtimes})
-  foreach(name ${LLVM_RUNTIME_TARGETS})
+  foreach(name ${runtime_targets})
     foreach(proj ${RUNTIMES_${name}_LLVM_ENABLE_RUNTIMES})
       set(proj_dir "${CMAKE_CURRENT_SOURCE_DIR}/../../${proj}")
       if(IS_DIRECTORY ${proj_dir} AND EXISTS ${proj_dir}/CMakeLists.txt)
@@ -48,6 +48,20 @@ include(LLVMExternalProjectUtils)
 if(NOT LLVM_BUILD_RUNTIMES)
   set(EXTRA_ARGS EXCLUDE_FROM_ALL)
 endif()
+
+set(runtime_targets "")
+if(NOT LLVM_RUNTIME_TARGETS)
+  list(APPEND runtime_targets "${LLVM_DEFAULT_TARGET_TRIPLE}")
+else()
+  foreach(target ${LLVM_RUNTIME_TARGETS})
+    if("${target}" STREQUAL "default")
+      list(APPEND runtime_targets "${LLVM_DEFAULT_TARGET_TRIPLE}")
+    else()
+      list(APPEND runtime_targets "${target}")
+    endif()
+  endforeach()
+endif()
+list(REMOVE_DUPLICATES runtime_targets)
 
 function(check_apple_target triple builtin_or_runtime)
   set(error "\
@@ -83,33 +97,6 @@ macro(set_enable_per_target_runtime_dir)
     set(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR ON)
   endif()
 endmacro()
-
-function(builtin_default_target compiler_rt_path)
-  cmake_parse_arguments(ARG "" "" "DEPENDS" ${ARGN})
-
-  set_enable_per_target_runtime_dir()
-
-  llvm_ExternalProject_Add(builtins
-                           ${compiler_rt_path}/lib/builtins
-                           DEPENDS ${ARG_DEPENDS}
-                           CMAKE_ARGS -DLLVM_LIBRARY_OUTPUT_INTDIR=${LLVM_LIBRARY_DIR}
-                                      -DLLVM_RUNTIME_OUTPUT_INTDIR=${LLVM_TOOLS_BINARY_DIR}
-                                      -DLLVM_DEFAULT_TARGET_TRIPLE=${LLVM_TARGET_TRIPLE}
-                                      -DLLVM_ENABLE_PER_TARGET_RUNTIME_DIR=${LLVM_ENABLE_PER_TARGET_RUNTIME_DIR}
-                                      -DLLVM_CMAKE_DIR=${CMAKE_BINARY_DIR}
-                                      -DCMAKE_C_COMPILER_WORKS=ON
-                                      -DCMAKE_CXX_COMPILER_WORKS=ON
-                                      -DCMAKE_ASM_COMPILER_WORKS=ON
-                                      ${COMMON_CMAKE_ARGS}
-                                      ${BUILTINS_CMAKE_ARGS}
-                           PASSTHROUGH_PREFIXES COMPILER_RT
-                                                DARWIN
-                                                SANITIZER
-                           USE_TOOLCHAIN
-                           TARGET_TRIPLE ${LLVM_TARGET_TRIPLE}
-                           FOLDER "Compiler-RT"
-                           ${EXTRA_ARGS})
-endfunction()
 
 function(builtin_register_target compiler_rt_path name)
   cmake_parse_arguments(ARG "" "" "DEPENDS;CMAKE_ARGS;EXTRA_ARGS" ${ARGN})
@@ -154,31 +141,35 @@ endfunction()
 # before the just-built compiler can pass the configuration tests.
 get_compiler_rt_path(compiler_rt_path)
 if(compiler_rt_path)
-  # If the user did not specify the targets infer them from the runtimes.
-  set(builtin_targets ${LLVM_BUILTIN_TARGETS})
-  if(NOT builtin_targets)
+# If the user did not specify the targets infer them from the runtimes.
+  set(builtin_targets "")
+  if(NOT LLVM_BUILTIN_TARGETS)
     if("compiler-rt" IN_LIST LLVM_ENABLE_RUNTIMES)
-      list(APPEND builtin_targets "default")
+      list(APPEND builtin_targets "${LLVM_DEFAULT_TARGET_TRIPLE}")
     endif()
-    foreach(name ${LLVM_RUNTIME_TARGETS})
+    foreach(name ${runtime_targets})
       if("compiler-rt" IN_LIST RUNTIMES_${name}_LLVM_ENABLE_RUNTIMES)
         list(APPEND builtin_targets ${name})
       endif()
     endforeach()
-  endif()
-  if("default" IN_LIST builtin_targets)
-    builtin_default_target(${compiler_rt_path}
-      DEPENDS clang-resource-headers)
-    list(REMOVE_ITEM builtin_targets "default")
   else()
-    add_custom_target(builtins)
-    add_custom_target(install-builtins)
-    add_custom_target(install-builtins-stripped)
-    set_target_properties(
-      builtins install-builtins install-builtins-stripped
-      PROPERTIES FOLDER "Compiler-RT"
-    )
+    foreach(target ${LLVM_RUNTIME_TARGETS})
+      if("${target}" STREQUAL "default")
+        list(APPEND builtin_targets "${LLVM_DEFAULT_TARGET_TRIPLE}")
+      else()
+        list(APPEND builtin_targets "${target}")
+      endif()
+    endforeach()
   endif()
+  list(REMOVE_DUPLICATES builtin_targets)
+
+  add_custom_target(builtins)
+  add_custom_target(install-builtins)
+  add_custom_target(install-builtins-stripped)
+  set_target_properties(
+    builtins install-builtins install-builtins-stripped
+    PROPERTIES FOLDER "Compiler-RT"
+  )
 
   foreach(target ${builtin_targets})
     check_apple_target(${target} builtin)
@@ -233,74 +224,6 @@ foreach(entry ${runtimes})
   list(APPEND RUNTIME_NAMES ${name})
 endforeach()
 
-function(runtime_default_target)
-  cmake_parse_arguments(ARG "" "" "DEPENDS;CMAKE_ARGS;PREFIXES;EXTRA_ARGS" ${ARGN})
-
-  include(${LLVM_BINARY_DIR}/runtimes/Components.cmake OPTIONAL)
-  set(SUB_CHECK_TARGETS ${SUB_CHECK_TARGETS} PARENT_SCOPE)
-  set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${LLVM_BINARY_DIR}/runtimes/Components.cmake)
-
-  foreach(runtime_name ${RUNTIME_NAMES})
-    list(APPEND extra_targets
-      ${runtime_name}
-      install-${runtime_name}
-      install-${runtime_name}-stripped)
-    if(LLVM_INCLUDE_TESTS)
-      list(APPEND test_targets check-${runtime_name})
-    endif()
-  endforeach()
-  foreach(component ${LLVM_RUNTIME_DISTRIBUTION_COMPONENTS})
-    if(NOT ${component} IN_LIST SUB_COMPONENTS)
-      list(APPEND extra_targets install-${component} install-${component}-stripped)
-    endif()
-  endforeach()
-  if ("openmp" IN_LIST LLVM_ENABLE_RUNTIMES)
-    # The target libomp-mod is a dependee of check-flang needed to run its
-    # OpenMP tests
-    list(APPEND extra_targets "libomp-mod")
-  endif ()
-
-  if(LLVM_INCLUDE_TESTS)
-    set_property(GLOBAL APPEND PROPERTY LLVM_ALL_LIT_TESTSUITES "@${LLVM_BINARY_DIR}/runtimes/runtimes-bins/lit.tests")
-    list(APPEND test_targets runtimes-test-depends check-runtimes)
-  endif()
-
-  set_enable_per_target_runtime_dir()
-
-  llvm_ExternalProject_Add(runtimes
-                           ${CMAKE_CURRENT_SOURCE_DIR}/../../runtimes
-                           DEPENDS ${ARG_DEPENDS}
-                           # Builtins were built separately above
-                           CMAKE_ARGS -DCOMPILER_RT_BUILD_BUILTINS=Off
-                                      -DLLVM_INCLUDE_TESTS=${LLVM_INCLUDE_TESTS}
-                                      -DLLVM_DEFAULT_TARGET_TRIPLE=${LLVM_TARGET_TRIPLE}
-                                      -DLLVM_ENABLE_PROJECTS_USED=${LLVM_ENABLE_PROJECTS_USED}
-                                      -DLLVM_ENABLE_PER_TARGET_RUNTIME_DIR=${LLVM_ENABLE_PER_TARGET_RUNTIME_DIR}
-                                      -DLLVM_BUILD_TOOLS=${LLVM_BUILD_TOOLS}
-                                      -DCMAKE_C_COMPILER_WORKS=ON
-                                      -DCMAKE_CXX_COMPILER_WORKS=ON
-                                      -DCMAKE_Fortran_COMPILER_WORKS=ON
-                                      -DCMAKE_ASM_COMPILER_WORKS=ON
-                                      ${COMMON_CMAKE_ARGS}
-                                      ${RUNTIMES_CMAKE_ARGS}
-                                      ${ARG_CMAKE_ARGS}
-                           PASSTHROUGH_PREFIXES LLVM_ENABLE_RUNTIMES
-                                                LLVM_USE_LINKER
-                                                CUDA CMAKE_CUDA # For runtimes that may look for the CUDA compiler and/or SDK (libc, offload, flang-rt)
-                                                FFI # offload uses libffi
-                                                FLANG_RUNTIME # Shared between Flang and Flang-RT
-                                                ${ARG_PREFIXES}
-                           EXTRA_TARGETS ${extra_targets}
-                                         ${test_targets}
-                                         ${SUB_COMPONENTS}
-                                         ${SUB_CHECK_TARGETS}
-                                         ${SUB_INSTALL_TARGETS}
-                           USE_TOOLCHAIN
-                           TARGET_TRIPLE ${LLVM_TARGET_TRIPLE}
-                           FOLDER "Runtimes"
-                           ${EXTRA_ARGS} ${ARG_EXTRA_ARGS})
-endfunction()
-
 # runtime_register_target(name)
 #   Utility function to register external runtime target.
 function(runtime_register_target name)
@@ -325,8 +248,12 @@ function(runtime_register_target name)
     set(install-${runtime_name}-${name}-stripped install-${runtime_name}-stripped)
     list(APPEND ${name}_extra_targets ${runtime_name}-${name} install-${runtime_name}-${name} install-${runtime_name}-${name}-stripped)
     if(LLVM_INCLUDE_TESTS)
-      set(check-${runtime_name}-${name} check-${runtime_name} )
+      set(check-${runtime_name}-${name} check-${runtime_name})
       list(APPEND ${name}_test_targets check-${runtime_name}-${name})
+      if(NOT TARGET check-${runtime_name})
+        add_custom_target(check-${runtime_name})
+      endif()
+      add_dependencies(check-${runtime_name} check-${runtime_name}-${name})
     endif()
   endforeach()
 
@@ -378,8 +305,19 @@ function(runtime_register_target name)
   list(APPEND ${name}_extra_args -DLLVM_USE_LINKER=${LLVM_USE_LINKER})
 
   get_cmake_property(variable_names VARIABLES)
+  set(normalized_variable_names "")
+  foreach(var ${variable_names})
+    if(var MATCHES "^RUNTIMES_default_")
+      string(REPLACE "RUNTIMES_default_" "RUNTIMES_${LLVM_DEFAULT_TARGET_TRIPLE}_" normalized_var "${var}")
+      set(${normalized_var} "${${var}}")
+      list(APPEND normalized_variable_names "${normalized_var}")
+    else()
+      list(APPEND normalized_variable_names "${var}")
+    endif()
+  endforeach()
+
   foreach(extra_name IN ITEMS ${ARG_BASE_NAME} ${name})
-    foreach(variable_name ${variable_names})
+    foreach(variable_name ${normalized_variable_names})
       string(FIND "${variable_name}" "RUNTIMES_${extra_name}_" out)
       if("${out}" EQUAL 0)
         string(REPLACE "RUNTIMES_${extra_name}_" "" new_name ${variable_name})
@@ -463,7 +401,7 @@ endfunction()
 if(runtimes)
   set(build_runtimes TRUE)
 endif()
-foreach(name ${LLVM_RUNTIME_TARGETS})
+foreach(name ${runtime_targets})
   if(RUNTIMES_${name}_LLVM_ENABLE_RUNTIMES)
     set(build_runtimes TRUE)
   endif()
@@ -577,82 +515,64 @@ if(build_runtimes)
     list(APPEND extra_args ENABLE_FORTRAN)
   endif ()
 
-  if(NOT LLVM_RUNTIME_TARGETS)
-    runtime_default_target(
-      DEPENDS ${builtins_dep} ${extra_deps}
-      CMAKE_ARGS ${extra_cmake_args}
-      PREFIXES ${prefixes}
-      EXTRA_ARGS ${extra_args})
-    set(test_targets check-runtimes)
-  else()
-    if("default" IN_LIST LLVM_RUNTIME_TARGETS)
-      runtime_default_target(
-        DEPENDS ${builtins_dep} ${extra_deps}
-        CMAKE_ARGS ${extra_cmake_args}
-        PREFIXES ${prefixes}
-        EXTRA_ARGS ${extra_args})
-      list(REMOVE_ITEM LLVM_RUNTIME_TARGETS "default")
-    else()
-      add_custom_target(runtimes)
-      add_custom_target(runtimes-configure)
-      add_custom_target(install-runtimes)
-      add_custom_target(install-runtimes-stripped)
+  add_custom_target(runtimes)
+  add_custom_target(runtimes-configure)
+  add_custom_target(install-runtimes)
+  add_custom_target(install-runtimes-stripped)
+  set_target_properties(
+    runtimes runtimes-configure install-runtimes install-runtimes-stripped
+    PROPERTIES FOLDER "Runtimes"
+  )
+  if(LLVM_INCLUDE_TESTS)
+    add_custom_target(check-runtimes)
+    add_custom_target(runtimes-test-depends)
+    set_target_properties(
+      check-runtimes runtimes-test-depends
+      PROPERTIES FOLDER "Runtimes"
+    )
+    set(test_targets "")
+  endif()
+  if(LLVM_RUNTIME_DISTRIBUTION_COMPONENTS)
+    foreach(component ${LLVM_RUNTIME_DISTRIBUTION_COMPONENTS})
+      add_custom_target(${component})
+      add_custom_target(install-${component})
+      add_custom_target(install-${component}-stripped)
       set_target_properties(
-        runtimes runtimes-configure install-runtimes install-runtimes-stripped
-        PROPERTIES FOLDER "Runtimes"
+        ${component} install-${component} install-${component}-stripped
+        PROPERTIES FOLDER "${component}"
       )
-      if(LLVM_INCLUDE_TESTS)
-        add_custom_target(check-runtimes)
-        add_custom_target(runtimes-test-depends)
-        set_target_properties(
-          check-runtimes runtimes-test-depends
-          PROPERTIES FOLDER "Runtimes"
-        )
-        set(test_targets "")
-      endif()
-      if(LLVM_RUNTIME_DISTRIBUTION_COMPONENTS)
-        foreach(component ${LLVM_RUNTIME_DISTRIBUTION_COMPONENTS})
-          add_custom_target(${component})
-          add_custom_target(install-${component})
-          add_custom_target(install-${component}-stripped)
-          set_target_properties(
-            ${component} install-${component} install-${component}-stripped
-            PROPERTIES FOLDER "${component}"
-          )
-        endforeach()
+    endforeach()
+  endif()
+
+  foreach(name ${runtime_targets})
+    if(builtins_dep)
+      if (LLVM_BUILTIN_TARGETS)
+        set(builtins_dep_name "${builtins_dep}-${name}")
+      else()
+        set(builtins_dep_name ${builtins_dep})
       endif()
     endif()
 
-    foreach(name ${LLVM_RUNTIME_TARGETS})
-      if(builtins_dep)
-        if (LLVM_BUILTIN_TARGETS)
-          set(builtins_dep_name "${builtins_dep}-${name}")
-        else()
-          set(builtins_dep_name ${builtins_dep})
-        endif()
-      endif()
+    check_apple_target(${name} runtime)
 
-      check_apple_target(${name} runtime)
+    runtime_register_target(${name}
+      DEPENDS ${builtins_dep_name} ${extra_deps}
+      CMAKE_ARGS -DLLVM_DEFAULT_TARGET_TRIPLE=${name} ${extra_cmake_args}
+      EXTRA_ARGS TARGET_TRIPLE ${name} ${extra_args})
+  endforeach()
 
-      runtime_register_target(${name}
-        DEPENDS ${builtins_dep_name} ${extra_deps}
-        CMAKE_ARGS -DLLVM_DEFAULT_TARGET_TRIPLE=${name} ${extra_cmake_args}
+  foreach(multilib ${LLVM_RUNTIME_MULTILIBS})
+    foreach(name ${LLVM_RUNTIME_MULTILIB_${multilib}_TARGETS})
+      runtime_register_target(${name}+${multilib}
+        DEPENDS runtimes-${name}
+        CMAKE_ARGS -DLLVM_DEFAULT_TARGET_TRIPLE=${name}
+                   -DLLVM_RUNTIMES_PREFIX=${name}/
+                   -DLLVM_RUNTIMES_LIBDIR_SUBDIR=${multilib}
+                   ${extra_cmake_args}
+        BASE_NAME ${name}
         EXTRA_ARGS TARGET_TRIPLE ${name} ${extra_args})
     endforeach()
-
-    foreach(multilib ${LLVM_RUNTIME_MULTILIBS})
-      foreach(name ${LLVM_RUNTIME_MULTILIB_${multilib}_TARGETS})
-        runtime_register_target(${name}+${multilib}
-          DEPENDS runtimes-${name}
-          CMAKE_ARGS -DLLVM_DEFAULT_TARGET_TRIPLE=${name}
-                     -DLLVM_RUNTIMES_PREFIX=${name}/
-                     -DLLVM_RUNTIMES_LIBDIR_SUBDIR=${multilib}
-                     ${extra_cmake_args}
-          BASE_NAME ${name}
-          EXTRA_ARGS TARGET_TRIPLE ${name} ${extra_args})
-      endforeach()
-    endforeach()
-  endif()
+  endforeach()
 
   if(NOT LLVM_BUILD_INSTRUMENTED AND CLANG_ENABLE_BOOTSTRAP)
     # TODO: This is a hack needed because the libcxx headers are copied into the
