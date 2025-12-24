@@ -2115,10 +2115,9 @@ bool TargetLowering::SimplifyDemandedBits(
         if (std::optional<unsigned> InnerSA =
                 TLO.DAG.getValidShiftAmount(Op0, DemandedElts, Depth + 2)) {
           unsigned LowBits = BitWidth - ShAmt;
-          EVT ExtVT = EVT::getIntegerVT(*TLO.DAG.getContext(), LowBits);
-          if (VT.isVector())
-            ExtVT = EVT::getVectorVT(*TLO.DAG.getContext(), ExtVT,
-                                     VT.getVectorElementCount());
+          EVT ExtVT = VT.changeElementType(
+              *TLO.DAG.getContext(),
+              EVT::getIntegerVT(*TLO.DAG.getContext(), LowBits));
 
           if (*InnerSA == ShAmt) {
             if (!TLO.LegalOperations() ||
@@ -6646,10 +6645,8 @@ SDValue TargetLowering::BuildSDIV(SDNode *N, SelectionDAG &DAG,
     }
     // If type twice as wide legal, widen and use a mul plus a shift.
     unsigned Size = VT.getScalarSizeInBits();
-    EVT WideVT = EVT::getIntegerVT(*DAG.getContext(), Size * 2);
-    if (VT.isVector())
-      WideVT = EVT::getVectorVT(*DAG.getContext(), WideVT,
-                                VT.getVectorElementCount());
+    EVT WideVT = VT.changeElementType(
+        *DAG.getContext(), EVT::getIntegerVT(*DAG.getContext(), Size * 2));
     // Some targets like AMDGPU try to go from SDIV to SDIVREM which is then
     // custom lowered. This is very expensive so avoid it at all costs for
     // constant divisors.
@@ -6851,10 +6848,8 @@ SDValue TargetLowering::BuildUDIV(SDNode *N, SelectionDAG &DAG,
     }
     // If type twice as wide legal, widen and use a mul plus a shift.
     unsigned Size = VT.getScalarSizeInBits();
-    EVT WideVT = EVT::getIntegerVT(*DAG.getContext(), Size * 2);
-    if (VT.isVector())
-      WideVT = EVT::getVectorVT(*DAG.getContext(), WideVT,
-                                VT.getVectorElementCount());
+    EVT WideVT = VT.changeElementType(
+        *DAG.getContext(), EVT::getIntegerVT(*DAG.getContext(), Size * 2));
     // Some targets like AMDGPU try to go from UDIV to UDIVREM which is then
     // custom lowered. This is very expensive so avoid it at all costs for
     // constant divisors.
@@ -9089,10 +9084,8 @@ SDValue TargetLowering::expandIS_FPCLASS(EVT ResultVT, SDValue Op,
 
   // In the general case use integer operations.
   unsigned BitSize = OperandVT.getScalarSizeInBits();
-  EVT IntVT = EVT::getIntegerVT(*DAG.getContext(), BitSize);
-  if (OperandVT.isVector())
-    IntVT = EVT::getVectorVT(*DAG.getContext(), IntVT,
-                             OperandVT.getVectorElementCount());
+  EVT IntVT = OperandVT.changeElementType(
+      *DAG.getContext(), EVT::getIntegerVT(*DAG.getContext(), BitSize));
   SDValue OpAsInt = DAG.getBitcast(IntVT, Op);
 
   // Various masks.
@@ -11890,9 +11883,7 @@ SDValue TargetLowering::expandFP_ROUND(SDNode *Node, SelectionDAG &DAG) const {
     // correct for this using a trick explained in: Boldo, Sylvie, and
     // Guillaume Melquiond. "When double rounding is odd." 17th IMACS
     // World Congress. 2005.
-    EVT F32 = VT.isVector()
-                  ? VT.changeVectorElementType(*DAG.getContext(), MVT::f32)
-                  : MVT::f32;
+    EVT F32 = VT.changeElementType(*DAG.getContext(), MVT::f32);
     EVT I32 = F32.changeTypeToInteger();
     Op = expandRoundInexactToOdd(F32, Op, dl, DAG);
     Op = DAG.getNode(ISD::BITCAST, dl, I32, Op);
@@ -11919,9 +11910,7 @@ SDValue TargetLowering::expandFP_ROUND(SDNode *Node, SelectionDAG &DAG) const {
     Op = DAG.getNode(ISD::SRL, dl, I32, Op,
                      DAG.getShiftAmountConstant(16, I32, dl));
     Op = DAG.getNode(ISD::BITCAST, dl, I32, Op);
-    EVT I16 = I32.isVector()
-                  ? I32.changeVectorElementType(*DAG.getContext(), MVT::i16)
-                  : MVT::i16;
+    EVT I16 = I32.changeElementType(*DAG.getContext(), MVT::i16);
     Op = DAG.getNode(ISD::TRUNCATE, dl, I16, Op);
     return DAG.getNode(ISD::BITCAST, dl, VT, Op);
   }

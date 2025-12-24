@@ -1272,10 +1272,8 @@ static SDValue earlyExpandDIVFIX(SDNode *N, SDValue LHS, SDValue RHS,
   SDLoc dl(N);
   // Widen the types by a factor of two. This is guaranteed to expand, since it
   // will always have enough high bits in the LHS to shift into.
-  EVT WideVT = EVT::getIntegerVT(*DAG.getContext(), VTSize * 2);
-  if (VT.isVector())
-    WideVT = EVT::getVectorVT(*DAG.getContext(), WideVT,
-                              VT.getVectorElementCount());
+  EVT WideVT = VT.changeElementType(
+      *DAG.getContext(), EVT::getIntegerVT(*DAG.getContext(), VTSize * 2));
   LHS = DAG.getExtOrTrunc(Signed, LHS, dl, WideVT);
   RHS = DAG.getExtOrTrunc(Signed, RHS, dl, WideVT);
   SDValue Res = TLI.expandFixedPointDiv(N->getOpcode(), dl, LHS, RHS, Scale,

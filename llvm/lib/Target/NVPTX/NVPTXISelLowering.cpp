@@ -2487,10 +2487,8 @@ SDValue NVPTXTargetLowering::LowerFP_ROUND(SDValue Op,
           // Round-inexact-to-odd f64 to f32, then do the final rounding using
           // the hardware f32 -> bf16 instruction.
           SDValue rod = TLI->expandRoundInexactToOdd(
-              WideVT.isVector()
-                  ? WideVT.changeVectorElementType(*DAG.getContext(), MVT::f32)
-                  : MVT::f32,
-              Wide, Loc, DAG);
+              WideVT.changeElementType(*DAG.getContext(), MVT::f32), Wide, Loc,
+              DAG);
           return DAG.getFPExtendOrRound(rod, Loc, NarrowVT);
         }
       }
@@ -2515,10 +2513,7 @@ SDValue NVPTXTargetLowering::LowerFP_EXTEND(SDValue Op,
     }
     if (WideVT.getScalarType() == MVT::f64 &&
         (STI.getSmVersion() < 90 || STI.getPTXVersion() < 78)) {
-      EVT F32 =
-          NarrowVT.isVector()
-              ? NarrowVT.changeVectorElementType(*DAG.getContext(), MVT::f32)
-              : MVT::f32;
+      EVT F32 = NarrowVT.changeElementType(*DAG.getContext(), MVT::f32);
       SDLoc Loc(Op);
       if (STI.getSmVersion() >= 80 && STI.getPTXVersion() >= 71) {
         Op = DAG.getNode(ISD::FP_EXTEND, Loc, F32, Narrow);

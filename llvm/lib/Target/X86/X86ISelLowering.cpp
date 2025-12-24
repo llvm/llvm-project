@@ -34424,9 +34424,7 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
 
     SDValue Res;
     if (isSoftF16(SrcVT, Subtarget)) {
-      EVT NVT = VT.isVector()
-                    ? VT.changeVectorElementType(*DAG.getContext(), MVT::f32)
-                    : MVT::f32;
+      EVT NVT = VT.changeElementType(*DAG.getContext(), MVT::f32);
       if (IsStrict) {
         Res =
             DAG.getNode(Opc, dl, {VT, MVT::Other},

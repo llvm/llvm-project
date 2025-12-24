@@ -7806,9 +7806,7 @@ SDValue SITargetLowering::lowerFP_ROUND(SDValue Op, SelectionDAG &DAG) const {
 
   // Round-inexact-to-odd f64 to f32, then do the final rounding using the
   // hardware f32 -> bf16 instruction.
-  EVT F32VT = SrcVT.isVector()
-                  ? SrcVT.changeVectorElementType(*DAG.getContext(), MVT::f32)
-                  : MVT::f32;
+  EVT F32VT = SrcVT.changeElementType(*DAG.getContext(), MVT::f32);
   SDValue Rod = expandRoundInexactToOdd(F32VT, Src, DL, DAG);
   return DAG.getNode(ISD::FP_ROUND, DL, DstVT, Rod,
                      DAG.getTargetConstant(0, DL, MVT::i32));

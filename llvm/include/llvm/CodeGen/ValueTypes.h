@@ -100,11 +100,10 @@ namespace llvm {
     /// Return a VT for a vector type whose attributes match ourselves
     /// with the exception of the element type that is chosen by the caller.
     EVT changeVectorElementType(LLVMContext &Context, EVT EltVT) const {
-      if (isSimple() and EltVT.isSimple()) {
+      if (isSimple() && EltVT.isSimple()) {
         MVT M = MVT::getVectorVT(EltVT.getSimpleVT(), getVectorElementCount());
-        if (M != MVT::INVALID_SIMPLE_VALUE_TYPE) {
+        if (M != MVT::INVALID_SIMPLE_VALUE_TYPE)
           return M;
-        }
       }
       return getVectorVT(Context, EltVT, getVectorElementCount());
     }

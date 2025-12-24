@@ -7592,7 +7592,8 @@ static SDValue LowerFLDEXP(SDValue Op, SelectionDAG &DAG) {
       DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, XVT, DAG.getUNDEF(XVT), X, Zero);
   SDValue VExp = DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, ExpVT,
                              DAG.getUNDEF(ExpVT), Exp, Zero);
-  SDValue VPg = DAG.getConstant(1, DL, XVT.changeVectorElementType(*DAG.getContext(), MVT::i1));
+  SDValue VPg = DAG.getConstant(
+      1, DL, XVT.changeVectorElementType(*DAG.getContext(), MVT::i1));
   SDValue FScale = DAG.getNode(
       ISD::INTRINSIC_WO_CHAIN, DL, XVT,
       DAG.getTargetConstant(Intrinsic::aarch64_sve_fscale, DL, MVT::i64), VPg,
