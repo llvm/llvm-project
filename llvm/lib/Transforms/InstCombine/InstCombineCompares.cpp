@@ -8686,14 +8686,8 @@ static Instruction *foldFCmpWithFloorAndCeil(FCmpInst &I,
 /// representable by A.
 static bool isMinMaxCmpSelectEliminable(SelectPatternFlavor Flavor, Value *A,
                                         Value *B) {
-  Constant *C = dyn_cast<Constant>(B);
-  if (isa<Constant>(A) || !C)
-    return false;
-
-  if (C->getType()->isVectorTy())
-    C = C->getSplatValue();
-  auto *CFP = dyn_cast_or_null<ConstantFP>(C);
-  if (!CFP)
+  ConstantFP *CFP;
+  if (!match(B, m_APFloat(CFP)))
     return false;
 
   auto *I = dyn_cast<Instruction>(A);
