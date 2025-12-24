@@ -33,7 +33,7 @@
 ; LAXX-NEXT:   ModulePass Manager
 ; LAXX-NEXT:     Pre-ISel Intrinsic Lowering
 ; LAXX-NEXT:     FunctionPass Manager
-; LAXX-NEXT:       Expand fp
+; LAXX-NEXT:       Expand IR instructions
 ; LAXX-NEXT:       Expand Atomic instructions
 ; LAXX-NEXT:       Module Verifier
 ; LAXX-NEXT:       Dominator Tree Construction

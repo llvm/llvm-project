@@ -39,7 +39,7 @@
 #include "llvm/LinkAllPasses.h"
 #include "llvm/MC/MCTargetOptionsCommandFlags.h"
 #include "llvm/MC/TargetRegistry.h"
-#include "llvm/Passes/PassPlugin.h"
+#include "llvm/Plugins/PassPlugin.h"
 #include "llvm/Remarks/HotnessThresholdParser.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -377,7 +377,7 @@ static bool shouldPinPassToLegacyPM(StringRef Pass) {
       "select-optimize",
       "structurizecfg",
       "fix-irreducible",
-      "expand-fp",
+      "expand-ir-insts",
       "callbrprepare",
       "scalarizer",
   };
@@ -428,7 +428,7 @@ optMain(int argc, char **argv,
   initializeTarget(Registry);
   // For codegen passes, only passes that do IR to IR transformation are
   // supported.
-  initializeExpandFpLegacyPassPass(Registry);
+  initializeExpandIRInstsLegacyPassPass(Registry);
   initializeExpandMemCmpLegacyPassPass(Registry);
   initializeScalarizeMaskedMemIntrinLegacyPassPass(Registry);
   initializeSelectOptimizePass(Registry);
