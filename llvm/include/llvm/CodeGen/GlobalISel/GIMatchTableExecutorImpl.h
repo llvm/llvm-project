@@ -25,7 +25,6 @@
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/RegisterBankInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
-#include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
@@ -33,8 +32,6 @@
 #include "llvm/Support/CodeGenCoverage.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/LEB128.h"
-#include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
@@ -769,6 +766,15 @@ bool GIMatchTableExecutor::executeMatchTable(
       } else if (handleReject() == RejectAndGiveUp)
         return false;
 
+      break;
+    }
+    case GIM_CheckMachineOperandType: {
+      uint64_t InsnID = readULEB();
+      uint64_t OpIdx = readULEB();
+      uint64_t MOTy = readULEB();
+      MachineOperand &MO = State.MIs[InsnID]->getOperand(OpIdx);
+      if (MO.getType() != MOTy)
+        return false;
       break;
     }
     case GIM_RecordNamedOperand: {

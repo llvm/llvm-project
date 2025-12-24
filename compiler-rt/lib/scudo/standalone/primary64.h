@@ -1394,7 +1394,7 @@ uptr SizeClassAllocator64<Config>::releaseToOSMaybe(RegionInfo *Region,
                                             Region->FreeListInfo.PushedBlocks) *
                                                BlockSize;
     if (UNLIKELY(BytesInFreeList == 0))
-      return false;
+      return 0;
 
     // ==================================================================== //
     // 1. Check if we have enough free blocks and if it's worth doing a page

@@ -53,6 +53,30 @@
 /mlir/include/mlir/Interfaces/DestinationStyleOpInterface.* @matthias-springer
 /mlir/lib/Interfaces/DestinationStyleOpInterface.* @matthias-springer
 
+# AMDGPU and ROCDL dialects in MLIR.
+/mlir/include/mlir/Dialect/AMDGPU @krzysz00 @kuhar
+/mlir/lib/Dialect/AMDGPU @krzysz00 @kuhar
+/mlir/lib/Conversion/*AMDGPU* @krzysz00 @kuhar
+/mlir/lib/Conversion/*ToROCDL @krzysz00 @kuhar
+/mlir/include/mlir/Dialect/LLVMIR/ROCDL* @krzysz00 @kuhar
+
+# Arith dialect in MLIR.
+/mlir/include/mlir/Dialect/Arith @kuhar
+/mlir/lib/Dialect/Arith @kuhar
+/mlir/lib/Conversion/ArithTo* @kuhar
+
+# XeGPU and XeVM dialects in MLIR.
+/mlir/include/mlir/Dialect/XeGPU @charithaintc @Jianhui-Li
+/mlir/lib/Dialect/XeGPU @charithaintc @Jianhui-Li
+/mlir/lib/Conversion/*XeGPU* @charithaintc @Jianhui-Li
+/mlir/include/mlir/Dialect/XeGPU/Transforms @charithaintc @Jianhui-Li
+/mlir/lib/Dialect/XeGPU/Transforms @charithaintc @Jianhui-Li
+/mlir/include/mlir/Dialect/XeGPU/TransformOps @charithaintc @Jianhui-Li @tkarna
+/mlir/lib/Dialect/XeGPU/TransformOps @charithaintc @Jianhui-Li @tkarna
+/mlir/include/mlir/Dialect/LLVMIR/XeVM* @silee2
+/mlir/lib/Dialect/LLVMIR/IR/XeVM @silee2
+/mlir/lib/Conversion/*XeVM* @silee2
+
 # Bufferization Dialect in MLIR.
 /mlir/include/mlir/Dialect/Bufferization @matthias-springer
 /mlir/lib/Dialect/Bufferization @matthias-springer
@@ -131,6 +155,7 @@
 /mlir/test/python/ @ftynse @makslevental @stellaraccident @rolfmorel
 /mlir/python/ @ftynse @makslevental @stellaraccident @rolfmorel
 /mlir/lib/Bindings/Python @makslevental @rolfmorel
+/mlir/include/Bindings/Python @makslevental @rolfmorel
 
 # MLIR Mem2Reg/SROA
 /mlir/**/Transforms/Mem2Reg.* @moxinilian
@@ -162,6 +187,6 @@
 /clang/bindings/python @DeinAlptraum
 
 # AMD-specific projects.
-/amd/comgr/ @jlambert_amdeng
-/amd/device-libs/ @bsumner_amdeng
-/amd/hipcc/ @dsalinas_amdeng
+/amd/comgr/ @lamb-j
+/amd/device-libs/ @b-sumner
+/amd/hipcc/ @david-salinas

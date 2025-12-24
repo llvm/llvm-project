@@ -14,16 +14,14 @@
 ! target code in the same function.
 
 ! CHECK: define weak_odr protected amdgpu_kernel void @{{.*}}(ptr %{{.*}}, ptr %[[ARG1:.*]], ptr %[[ARG2:.*]]) #{{[0-9]+}} {
-! CHECK:  %[[ALLOCA_X:.*]] = alloca ptr, align 8, addrspace(5)
-! CHECK:  %[[ASCAST_X:.*]] = addrspacecast ptr addrspace(5) %[[ALLOCA_X]] to ptr
-! CHECK:  store ptr %[[ARG1]], ptr %[[ASCAST_X]], align 8
+! CHECK:  %[[ALLOC_N:.*]] = call align 8 ptr @__kmpc_alloc_shared(i64 8)
+! CHECK:  store ptr %[[ARG2]], ptr %[[ALLOC_N]], align 8
 
-! CHECK:  %[[ALLOCA_N:.*]] = alloca ptr, align 8, addrspace(5)
-! CHECK:  %[[ASCAST_N:.*]] = addrspacecast ptr addrspace(5) %[[ALLOCA_N]] to ptr
-! CHECK:  store ptr %[[ARG2]], ptr %[[ASCAST_N]], align 8
+! CHECK:  %[[ALLOC_X:.*]] = call align 8 ptr @__kmpc_alloc_shared(i64 8)
+! CHECK:  store ptr %[[ARG1]], ptr %[[ALLOC_X]], align 8
 
-! CHECK:  %[[LOAD_X:.*]] = load ptr, ptr %[[ASCAST_X]], align 8
-! CHECK:  call void @bar_(ptr %[[LOAD_X]], ptr %[[ASCAST_N]])
+! CHECK:  %[[LOAD_X:.*]] = load ptr, ptr %[[ALLOC_X]], align 8
+! CHECK:  call void @bar_(ptr %[[LOAD_X]], ptr %[[ALLOC_N]])
 
 module test
   implicit none

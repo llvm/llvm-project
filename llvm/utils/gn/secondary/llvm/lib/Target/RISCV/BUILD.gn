@@ -151,6 +151,7 @@ static_library("LLVMRISCVCodeGen") {
     "RISCVMoveMerger.cpp",
     "RISCVOptWInstrs.cpp",
     "RISCVPostRAExpandPseudoInsts.cpp",
+    "RISCVPromoteConstant.cpp",
     "RISCVPushPopOptimizer.cpp",
     "RISCVRedundantCopyElimination.cpp",
     "RISCVRegisterInfo.cpp",

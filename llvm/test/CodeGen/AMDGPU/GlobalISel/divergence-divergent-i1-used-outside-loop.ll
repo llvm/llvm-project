@@ -240,11 +240,11 @@ define void @divergent_i1_xor_used_outside_loop_larger_loop_body(i32 %num.elts, 
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v0
 ; GFX10-NEXT:    s_mov_b32 s6, exec_lo
-; GFX10-NEXT:    s_mov_b32 s8, 0
+; GFX10-NEXT:    s_mov_b32 s4, 0
 ; GFX10-NEXT:    s_and_saveexec_b32 s7, vcc_lo
 ; GFX10-NEXT:    s_cbranch_execz .LBB4_6
 ; GFX10-NEXT:  ; %bb.1: ; %loop.start.preheader
-; GFX10-NEXT:    s_mov_b32 s4, 0
+; GFX10-NEXT:    s_mov_b32 s8, 0
 ; GFX10-NEXT:    ; implicit-def: $sgpr10
 ; GFX10-NEXT:    ; implicit-def: $sgpr11
 ; GFX10-NEXT:    ; implicit-def: $sgpr9
@@ -345,8 +345,8 @@ define void @divergent_i1_icmp_used_outside_loop(i32 %v0, i32 %v1, ptr addrspace
 ; GFX10-LABEL: divergent_i1_icmp_used_outside_loop:
 ; GFX10:       ; %bb.0: ; %entry
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_mov_b32 s6, 0
 ; GFX10-NEXT:    s_mov_b32 s4, 0
+; GFX10-NEXT:    s_mov_b32 s6, 0
 ; GFX10-NEXT:    ; implicit-def: $sgpr7
 ; GFX10-NEXT:    s_branch .LBB5_2
 ; GFX10-NEXT:  .LBB5_1: ; %Flow
@@ -457,8 +457,8 @@ define amdgpu_ps void @divergent_i1_freeze_used_outside_loop(i32 %n, ptr addrspa
 ; GFX10-LABEL: divergent_i1_freeze_used_outside_loop:
 ; GFX10:       ; %bb.0: ; %entry
 ; GFX10-NEXT:    s_mov_b32 s1, exec_lo
-; GFX10-NEXT:    s_mov_b32 s2, 0
 ; GFX10-NEXT:    s_mov_b32 s0, 0
+; GFX10-NEXT:    s_mov_b32 s2, 0
 ; GFX10-NEXT:    ; implicit-def: $sgpr4
 ; GFX10-NEXT:    ; implicit-def: $sgpr3
 ; GFX10-NEXT:    s_branch .LBB6_2
@@ -534,8 +534,8 @@ exit:
 define amdgpu_cs void @loop_with_1break(ptr addrspace(1) %x, ptr addrspace(1) %a, ptr addrspace(1) %a.break) {
 ; GFX10-LABEL: loop_with_1break:
 ; GFX10:       ; %bb.0: ; %entry
-; GFX10-NEXT:    s_mov_b32 s4, 0
 ; GFX10-NEXT:    s_mov_b32 s0, 0
+; GFX10-NEXT:    s_mov_b32 s4, 0
 ; GFX10-NEXT:    ; implicit-def: $sgpr6
 ; GFX10-NEXT:    ; implicit-def: $sgpr7
 ; GFX10-NEXT:    ; implicit-def: $sgpr5

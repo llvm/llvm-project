@@ -28,6 +28,7 @@
 #include "deltas/ReduceGlobalVarInitializers.h"
 #include "deltas/ReduceGlobalVars.h"
 #include "deltas/ReduceIRReferences.h"
+#include "deltas/ReduceInlineCallSites.h"
 #include "deltas/ReduceInstructionFlags.h"
 #include "deltas/ReduceInstructionFlagsMIR.h"
 #include "deltas/ReduceInstructions.h"

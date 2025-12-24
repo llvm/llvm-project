@@ -747,7 +747,7 @@ int processAttachEntries(DeviceTy &Device, AttachInfoTy &AttachInfo,
   if (!AttachInfo.NewAllocations.empty()) {
     DP("Tracked %u total new allocations:\n",
        (unsigned)AttachInfo.NewAllocations.size());
-    for (const auto &Alloc : AttachInfo.NewAllocations) {
+    for ([[maybe_unused]] const auto &Alloc : AttachInfo.NewAllocations) {
       DP("  Host ptr: " DPxMOD ", Size: %" PRId64 " bytes\n",
          DPxPTR(Alloc.first), Alloc.second);
     }
@@ -2101,13 +2101,6 @@ int target(ident_t *Loc, DeviceTy &Device, void *HostPtr,
     InterfaceRAII TargetSubmitRAII(
         RegionInterface.getCallbacks<ompt_callback_target_submit>(), NumTeams);
 
-    // The Profiler can allocate specific data to be used to pass information
-    // from here to lower parts of the runtime system.
-    // NOTE: It is the responsibility of the programmer to ensure type
-    // compatibility and correct usage of the data. The profiler, however, OWNS
-    // the pointer and frees it at an appropriate time.
-    void *ProfData = Device.RTL->getProfiler()->getProfilerSpecificData();
-
     // Calls "begin" for the OMPT trace record and let the plugin
     // enqueue the stop operation for after the kernel is done. The stop
     // operation completes the trace record entry with the information from
@@ -2116,7 +2109,7 @@ int target(ident_t *Loc, DeviceTy &Device, void *HostPtr,
     // set and a trace record generated. Otherwise: No OMPT device tracing.
     TracerInterfaceRAII TargetTraceRAII(
         RegionInterface.getTraceGenerators<ompt_callback_target_submit>(),
-        AsyncInfo, ProfData, /*TracedDeviceId=*/DeviceId,
+        AsyncInfo, Device.RTL->getProfiler(), /*TracedDeviceId=*/DeviceId,
         /*EventType=*/ompt_callback_target_submit, DeviceId, NumTeams);
 #endif
     Ret = Device.launchKernel(TgtEntryPtr, TgtArgs.data(), TgtOffsets.data(),

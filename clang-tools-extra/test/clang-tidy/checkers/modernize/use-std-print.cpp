@@ -1,11 +1,11 @@
-// RUN: %check_clang_tidy --match-partial-fixes -check-suffixes=,STRICT \
-// RUN:   -std=c++23 %s modernize-use-std-print %t -- \
+// RUN: %check_clang_tidy -check-suffixes=,STRICT \
+// RUN:   -std=c++23-or-later %s modernize-use-std-print %t -- \
 // RUN:   -config="{CheckOptions: {modernize-use-std-print.StrictMode: true}}" \
 // RUN:   -- -isystem %clang_tidy_headers -fexceptions \
 // RUN:      -DPRI_CMDLINE_MACRO="\"s\"" \
 // RUN:      -D__PRI_CMDLINE_MACRO="\"s\""
-// RUN: %check_clang_tidy --match-partial-fixes -check-suffixes=,NOTSTRICT \
-// RUN:   -std=c++23 %s modernize-use-std-print %t -- \
+// RUN: %check_clang_tidy -check-suffixes=,NOTSTRICT \
+// RUN:   -std=c++23-or-later %s modernize-use-std-print %t -- \
 // RUN:   -config="{CheckOptions: {modernize-use-std-print.StrictMode: false}}" \
 // RUN:   -- -isystem %clang_tidy_headers -fexceptions \
 // RUN:      -DPRI_CMDLINE_MACRO="\"s\"" \
@@ -113,7 +113,7 @@ int printf_uses_return_value(int choice) {
 
   for (printf("for init statement %d\n", i);;)
     // CHECK-MESSAGES: [[@LINE-1]]:8: warning: use 'std::println' instead of 'printf' [modernize-use-std-print]
-    // CHECK-FIXES: std::println("for init statement {}", i);
+    // CHECK-FIXES: for (std::println("for init statement {}", i);;)
     ;;
 
   for (int j = printf("for init statement %d\n", i);;)
@@ -124,7 +124,7 @@ int printf_uses_return_value(int choice) {
 
   for (;; printf("for expression %d\n", i))
     // CHECK-MESSAGES: [[@LINE-1]]:11: warning: use 'std::println' instead of 'printf' [modernize-use-std-print]
-    // CHECK-FIXES: std::println("for expression {}", i)
+    // CHECK-FIXES: for (;; std::println("for expression {}", i))
     ;;
 
   for (auto C : "foo")
@@ -228,7 +228,7 @@ int fprintf_uses_return_value(int choice) {
 
   for (fprintf(stderr, "for init statement %d\n", i);;)
     // CHECK-MESSAGES: [[@LINE-1]]:8: warning: use 'std::println' instead of 'fprintf' [modernize-use-std-print]
-    // CHECK-FIXES: std::println(stderr, "for init statement {}", i);
+    // CHECK-FIXES: for (std::println(stderr, "for init statement {}", i);;)
     ;;
 
   for (int j = fprintf(stderr, "for init statement %d\n", i);;)
@@ -239,7 +239,7 @@ int fprintf_uses_return_value(int choice) {
 
   for (;; fprintf(stderr, "for expression %d\n", i))
     // CHECK-MESSAGES: [[@LINE-1]]:11: warning: use 'std::println' instead of 'fprintf' [modernize-use-std-print]
-    // CHECK-FIXES: std::println(stderr, "for expression {}", i)
+    // CHECK-FIXES: for (;; std::println(stderr, "for expression {}", i))
     ;;
 
   for (auto C : "foo")

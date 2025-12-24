@@ -19,7 +19,6 @@
 
 #include "OmptDeviceTracing.h"
 #include "OpenMP/OMPT/Callback.h"
-#include "OpenMP/OMPT/Interface.h"
 #include "Shared/Debug.h"
 #include "omp-tools.h"
 
@@ -80,7 +79,7 @@ public:
 #undef bindOmptTracingFunction
   }
 
-  bool shouldEnableProfiling() override;
+  bool isProfilingEnabled() override;
 
   void handleInit(plugin::GenericDeviceTy *Device,
                   plugin::GenericPluginTy *Plugin) override;

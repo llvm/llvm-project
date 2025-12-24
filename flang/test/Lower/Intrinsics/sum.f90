@@ -111,7 +111,7 @@ integer function sum_test_optional_4(x, use_mask)
 integer :: x(:)
 logical :: use_mask
 logical, allocatable :: mask(:)
-if (use_mask) then 
+if (use_mask) then
   allocate(mask(size(x, 1)))
   call set_mask(mask)
   ! CHECK: fir.call @_QPset_mask

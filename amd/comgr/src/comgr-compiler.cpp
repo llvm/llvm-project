@@ -27,12 +27,12 @@
 #include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/Job.h"
 #include "clang/Driver/OffloadBundler.h"
-#include "clang/Driver/Options.h"
 #include "clang/Driver/Tool.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendDiagnostic.h"
 #include "clang/Frontend/TextDiagnosticPrinter.h"
 #include "clang/FrontendTool/Utils.h"
+#include "clang/Options/Options.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
 #include "llvm/IR/Constants.h"
@@ -79,7 +79,7 @@ using namespace llvm::opt;
 using namespace llvm::sys;
 using namespace clang;
 using namespace clang::driver;
-using namespace clang::driver::options;
+using namespace clang::options;
 using namespace COMGR::TimeStatistics;
 
 namespace COMGR {
@@ -350,7 +350,8 @@ bool executeAssemblerImpl(AssemblerInvocation &Opts, DiagnosticsEngine &Diags,
                           raw_ostream &LogS) {
   // Get the target specific parser.
   std::string Error;
-  const Target *TheTarget = TargetRegistry::lookupTarget(Opts.Triple, Error);
+  const Target *TheTarget = TargetRegistry::lookupTarget(
+    llvm::Triple(Opts.Triple), Error);
   if (!TheTarget) {
     return Diags.Report(diag::err_target_unknown_triple) << Opts.Triple;
   }
@@ -377,14 +378,15 @@ bool executeAssemblerImpl(AssemblerInvocation &Opts, DiagnosticsEngine &Diags,
   // it later.
   SrcMgr.setIncludeDirs(Opts.IncludePaths);
 
-  std::unique_ptr<MCRegisterInfo> MRI(TheTarget->createMCRegInfo(Opts.Triple));
+  std::unique_ptr<MCRegisterInfo> MRI(TheTarget->createMCRegInfo(
+      llvm::Triple(Opts.Triple)));
   assert(MRI && "Unable to create target register info!");
 
   llvm::MCTargetOptions MCOptions;
   MCOptions.X86RelaxRelocations = Opts.RelaxELFRelocations;
   MCOptions.CompressDebugSections = Opts.CompressDebugSections;
   std::unique_ptr<MCAsmInfo> MAI(
-      TheTarget->createMCAsmInfo(*MRI, Opts.Triple, MCOptions));
+      TheTarget->createMCAsmInfo(*MRI, llvm::Triple(Opts.Triple), MCOptions));
   assert(MAI && "Unable to create target asm info!");
 
   // Ensure MCAsmInfo initialization occurs before any use, otherwise sections
@@ -407,7 +409,7 @@ bool executeAssemblerImpl(AssemblerInvocation &Opts, DiagnosticsEngine &Diags,
 
   std::unique_ptr<MCObjectFileInfo> MOFI(new MCObjectFileInfo());
   std::unique_ptr<MCSubtargetInfo> STI(
-      TheTarget->createMCSubtargetInfo(Opts.Triple, Opts.CPU, FS));
+      TheTarget->createMCSubtargetInfo(llvm::Triple(Opts.Triple), Opts.CPU, FS));
 
   MCContext Ctx(Triple(Opts.Triple), MAI.get(), MRI.get(), STI.get(), &SrcMgr);
   Ctx.setObjectFileInfo(MOFI.get());
@@ -637,9 +639,10 @@ void logArgv(raw_ostream &OS, StringRef ProgramName,
   OS.flush();
 }
 
-amd_comgr_status_t executeCommand(const Command &Job, raw_ostream &LogS,
-                                  DiagnosticOptions &DiagOpts,
-                                  llvm::vfs::FileSystem &FS) {
+amd_comgr_status_t
+executeCommand(const Command &Job, raw_ostream &LogS,
+               DiagnosticOptions &DiagOpts,
+               IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS) {
   TextDiagnosticPrinter DiagClient(LogS, DiagOpts);
   IntrusiveRefCntPtr<DiagnosticIDs> DiagID(new DiagnosticIDs);
   DiagnosticsEngine Diags(DiagID, DiagOpts, &DiagClient, false);
@@ -659,7 +662,7 @@ amd_comgr_status_t executeCommand(const Command &Job, raw_ostream &LogS,
 
     std::unique_ptr<CompilerInstance> Clang(new CompilerInstance());
     Clang->setVerboseOutputStream(LogS);
-    Clang->setFileManager(new FileManager(Clang->getFileSystemOpts(), &FS));
+    Clang->setVirtualFileSystem(FS);
     if (!Argv.back()) {
       Argv.pop_back();
     }
@@ -775,7 +778,7 @@ AMDGPUCompiler::executeInProcessDriver(ArrayRef<const char *> Args) {
 
   auto Cache = CommandCache::get(LogS);
   for (auto &Job : C->getJobs()) {
-    ClangCommand C(Job, *DiagOpts, *OverlayFS, executeCommand);
+    ClangCommand C(Job, *DiagOpts, OverlayFS, executeCommand);
     if (Cache) {
       if (auto Status = Cache->execute(C, LogS)) {
         return Status;
@@ -1126,7 +1129,7 @@ amd_comgr_status_t AMDGPUCompiler::addDeviceLibraries() {
   SmallString<256> ClangBinaryPath(env::getLLVMPath());
   sys::path::append(ClangBinaryPath, "bin", "clang");
 
-  std::string ClangResourceDir = Driver::GetResourcesPath(ClangBinaryPath);
+  std::string ClangResourceDir = GetResourcesPath(ClangBinaryPath);
 
   SmallString<256> DeviceLibPath(ClangResourceDir);
   sys::path::append(DeviceLibPath, "lib");
@@ -2123,6 +2126,7 @@ amd_comgr_status_t AMDGPUCompiler::compileSpirvToRelocatable() {
   amd_comgr_data_set_t TranslatedSpirvT;
   if (auto Status = amd_comgr_create_data_set(&TranslatedSpirvT))
     return Status;
+  ScopedDataSetReleaser SDSR(TranslatedSpirvT);
   DataSet *TranslatedSpirv = DataSet::convert(TranslatedSpirvT);
 
   if (auto Status = translateSpirvToBitcodeImpl(InSet, TranslatedSpirv))
@@ -2151,6 +2155,42 @@ amd_comgr_status_t AMDGPUCompiler::compileSpirvToRelocatable() {
   Args.push_back("-amdgpu-internalize-symbols");
 
   return processFiles(AMD_COMGR_DATA_KIND_RELOCATABLE, ".o", TranslatedSpirv);
+}
+
+amd_comgr_status_t AMDGPUCompiler::compileSourceToSpirv() {
+  if (auto Status = createTmpDirs()) {
+    return Status;
+  }
+
+  if (ActionInfo->Language != AMD_COMGR_LANGUAGE_HIP) {
+    return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
+  }
+
+  if (auto Status = addIncludeFlags()) {
+    return Status;
+  }
+
+  if (auto Status = addCompilationFlags()) {
+    return Status;
+  }
+
+  // Add SPIRV-specific compilation flags
+  Args.push_back("--offload-arch=amdgcnspirv");
+  Args.push_back("--no-gpu-bundle-output");
+  Args.push_back("-c");
+
+
+#if _WIN32
+  Args.push_back("-fshort-wchar");
+#endif
+
+  if (ActionInfo->ShouldLinkDeviceLibs) {
+    if (auto Status = addDeviceLibraries()) {
+      return Status;
+    }
+  }
+
+  return processFiles(AMD_COMGR_DATA_KIND_SPIRV, ".spv");
 }
 
 AMDGPUCompiler::AMDGPUCompiler(DataAction *ActionInfo, DataSet *InSet,

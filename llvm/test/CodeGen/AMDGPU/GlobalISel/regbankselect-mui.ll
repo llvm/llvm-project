@@ -547,8 +547,8 @@ define amdgpu_cs void @loop_with_2breaks(ptr addrspace(1) %x, ptr addrspace(1) %
 ;
 ; NEW_RBS-LABEL: loop_with_2breaks:
 ; NEW_RBS:       ; %bb.0: ; %entry
-; NEW_RBS-NEXT:    s_mov_b32 s4, 0
 ; NEW_RBS-NEXT:    s_mov_b32 s0, 0
+; NEW_RBS-NEXT:    s_mov_b32 s4, 0
 ; NEW_RBS-NEXT:    ; implicit-def: $sgpr5
 ; NEW_RBS-NEXT:    s_branch .LBB16_3
 ; NEW_RBS-NEXT:  .LBB16_1: ; %Flow3

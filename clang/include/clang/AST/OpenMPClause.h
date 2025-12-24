@@ -91,8 +91,7 @@ public:
 
   child_range children();
   const_child_range children() const {
-    auto Children = const_cast<OMPClause *>(this)->children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPClause *>(this)->children();
   }
 
   /// Get the iterator range for the expressions used in the clauses. Used
@@ -100,8 +99,7 @@ public:
   /// runtime before entering the construct.
   child_range used_children();
   const_child_range used_children() const {
-    auto Children = const_cast<OMPClause *>(this)->children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPClause *>(this)->children();
   }
 
   static bool classof(const OMPClause *) { return true; }
@@ -650,8 +648,7 @@ public:
   }
 
   const_child_range children() const {
-    auto Children = const_cast<OMPAllocateClause *>(this)->children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPAllocateClause *>(this)->children();
   }
 
   child_range used_children() {
@@ -758,8 +755,7 @@ public:
 
   child_range used_children();
   const_child_range used_children() const {
-    auto Children = const_cast<OMPIfClause *>(this)->used_children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPIfClause *>(this)->used_children();
   }
 
   static bool classof(const OMPClause *T) {
@@ -808,8 +804,7 @@ public:
 
   child_range used_children();
   const_child_range used_children() const {
-    auto Children = const_cast<OMPFinalClause *>(this)->used_children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPFinalClause *>(this)->used_children();
   }
 };
 /// This represents 'num_threads' clause in the '#pragma omp ...'
@@ -1421,6 +1416,86 @@ public:
 
   static bool classof(const OMPClause *T) {
     return T->getClauseKind() == llvm::omp::OMPC_default;
+  }
+};
+
+/// This represents 'threadset' clause in the '#pragma omp task ...' directive.
+///
+/// \code
+/// #pragma omp task threadset(omp_pool)
+/// \endcode
+/// In this example directive '#pragma omp task' has simple 'threadset'
+/// clause with kind 'omp_pool'.
+class OMPThreadsetClause final : public OMPClause {
+  friend class OMPClauseReader;
+
+  /// Location of '('.
+  SourceLocation LParenLoc;
+
+  /// A kind of the 'threadset' clause.
+  OpenMPThreadsetKind Kind = OMPC_THREADSET_unknown;
+
+  /// Start location of the kind in source code.
+  SourceLocation KindLoc;
+
+  /// Set kind of the clauses.
+  ///
+  /// \param K Argument of clause.
+  void setThreadsetKind(OpenMPThreadsetKind K) { Kind = K; }
+
+  /// Set argument location.
+  ///
+  /// \param KLoc Argument location.
+  void setThreadsetKindLoc(SourceLocation KLoc) { KindLoc = KLoc; }
+
+public:
+  /// Build 'threadset' clause with argument \a A ('omp_team' or 'omp_pool').
+  ///
+  /// \param A Argument of the clause ('omp_team' or 'omp_pool').
+  /// \param ALoc Starting location of the argument.
+  /// \param StartLoc Starting location of the clause.
+  /// \param LParenLoc Location of '('.
+  /// \param EndLoc Ending location of the clause.
+  OMPThreadsetClause(OpenMPThreadsetKind A, SourceLocation ALoc,
+                     SourceLocation StartLoc, SourceLocation LParenLoc,
+                     SourceLocation EndLoc)
+      : OMPClause(llvm::omp::OMPC_threadset, StartLoc, EndLoc),
+        LParenLoc(LParenLoc), Kind(A), KindLoc(ALoc) {}
+
+  /// Build an empty clause.
+  OMPThreadsetClause()
+      : OMPClause(llvm::omp::OMPC_threadset, SourceLocation(),
+                  SourceLocation()) {}
+
+  /// Sets the location of '('.
+  void setLParenLoc(SourceLocation Loc) { LParenLoc = Loc; }
+
+  /// Returns the location of '('.
+  SourceLocation getLParenLoc() const { return LParenLoc; }
+
+  /// Returns kind of the clause.
+  OpenMPThreadsetKind getThreadsetKind() const { return Kind; }
+
+  /// Returns location of clause kind.
+  SourceLocation getThreadsetKindLoc() const { return KindLoc; }
+
+  child_range children() {
+    return child_range(child_iterator(), child_iterator());
+  }
+
+  const_child_range children() const {
+    return const_child_range(const_child_iterator(), const_child_iterator());
+  }
+
+  child_range used_children() {
+    return child_range(child_iterator(), child_iterator());
+  }
+  const_child_range used_children() const {
+    return const_child_range(const_child_iterator(), const_child_iterator());
+  }
+
+  static bool classof(const OMPClause *T) {
+    return T->getClauseKind() == llvm::omp::OMPC_threadset;
   }
 };
 
@@ -2176,8 +2251,7 @@ public:
   }
 
   const_child_range children() const {
-    auto Children = const_cast<OMPScheduleClause *>(this)->children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPScheduleClause *>(this)->children();
   }
 
   child_range used_children() {
@@ -2291,18 +2365,67 @@ public:
 /// This represents 'nowait' clause in the '#pragma omp ...' directive.
 ///
 /// \code
-/// #pragma omp for nowait
+/// #pragma omp for nowait (cond)
 /// \endcode
-/// In this example directive '#pragma omp for' has 'nowait' clause.
-class OMPNowaitClause final : public OMPNoChildClause<llvm::omp::OMPC_nowait> {
+/// In this example directive '#pragma omp for' has simple 'nowait' clause with
+/// condition 'cond'.
+class OMPNowaitClause final : public OMPClause {
+  friend class OMPClauseReader;
+
+  /// Location of '('.
+  SourceLocation LParenLoc;
+
+  /// Condition of the 'nowait' clause.
+  Stmt *Condition = nullptr;
+
+  /// Set condition.
+  void setCondition(Expr *Cond) { Condition = Cond; }
+
 public:
-  /// Build 'nowait' clause.
+  /// Build 'nowait' clause with condition \a Cond.
   ///
+  /// \param Cond Condition of the clause.
   /// \param StartLoc Starting location of the clause.
+  /// \param LParenLoc Location of '('.
   /// \param EndLoc Ending location of the clause.
-  OMPNowaitClause(SourceLocation StartLoc = SourceLocation(),
-                  SourceLocation EndLoc = SourceLocation())
-      : OMPNoChildClause(StartLoc, EndLoc) {}
+  OMPNowaitClause(Expr *Cond, SourceLocation StartLoc, SourceLocation LParenLoc,
+                  SourceLocation EndLoc)
+      : OMPClause(llvm::omp::OMPC_nowait, StartLoc, EndLoc),
+        LParenLoc(LParenLoc), Condition(Cond) {}
+
+  /// Build an empty clause.
+  OMPNowaitClause()
+      : OMPClause(llvm::omp::OMPC_nowait, SourceLocation(), SourceLocation()) {}
+
+  /// Sets the location of '('.
+  void setLParenLoc(SourceLocation Loc) { LParenLoc = Loc; }
+
+  /// Returns the location of '('.
+  SourceLocation getLParenLoc() const { return LParenLoc; }
+
+  /// Returns condition.
+  Expr *getCondition() const { return cast_or_null<Expr>(Condition); }
+
+  child_range children() {
+    if (Condition)
+      return child_range(&Condition, &Condition + 1);
+    return child_range(child_iterator(), child_iterator());
+  }
+
+  const_child_range children() const {
+    if (Condition)
+      return const_child_range(&Condition, &Condition + 1);
+    return const_child_range(const_child_iterator(), const_child_iterator());
+  }
+
+  child_range used_children();
+  const_child_range used_children() const {
+    return const_cast<OMPNowaitClause *>(this)->used_children();
+  }
+
+  static bool classof(const OMPClause *T) {
+    return T->getClauseKind() == llvm::omp::OMPC_nowait;
+  }
 };
 
 /// This represents 'untied' clause in the '#pragma omp ...' directive.
@@ -3297,8 +3420,7 @@ public:
   }
 
   const_child_range children() const {
-    auto Children = const_cast<OMPPrivateClause *>(this)->children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPPrivateClause *>(this)->children();
   }
 
   child_range used_children() {
@@ -3436,8 +3558,7 @@ public:
   }
 
   const_child_range children() const {
-    auto Children = const_cast<OMPFirstprivateClause *>(this)->children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPFirstprivateClause *>(this)->children();
   }
 
   child_range used_children() {
@@ -3445,8 +3566,7 @@ public:
                        reinterpret_cast<Stmt **>(varlist_end()));
   }
   const_child_range used_children() const {
-    auto Children = const_cast<OMPFirstprivateClause *>(this)->used_children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPFirstprivateClause *>(this)->used_children();
   }
 
   static bool classof(const OMPClause *T) {
@@ -3677,8 +3797,7 @@ public:
   }
 
   const_child_range children() const {
-    auto Children = const_cast<OMPLastprivateClause *>(this)->children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPLastprivateClause *>(this)->children();
   }
 
   child_range used_children() {
@@ -3749,8 +3868,7 @@ public:
   }
 
   const_child_range children() const {
-    auto Children = const_cast<OMPSharedClause *>(this)->children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPSharedClause *>(this)->children();
   }
 
   child_range used_children() {
@@ -4140,8 +4258,7 @@ public:
   }
 
   const_child_range children() const {
-    auto Children = const_cast<OMPReductionClause *>(this)->children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPReductionClause *>(this)->children();
   }
 
   child_range used_children() {
@@ -4149,8 +4266,7 @@ public:
                        reinterpret_cast<Stmt **>(varlist_end()));
   }
   const_child_range used_children() const {
-    auto Children = const_cast<OMPReductionClause *>(this)->used_children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPReductionClause *>(this)->used_children();
   }
 
   static bool classof(const OMPClause *T) {
@@ -4374,8 +4490,7 @@ public:
   }
 
   const_child_range children() const {
-    auto Children = const_cast<OMPTaskReductionClause *>(this)->children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPTaskReductionClause *>(this)->children();
   }
 
   child_range used_children() {
@@ -4629,8 +4744,7 @@ public:
   }
 
   const_child_range children() const {
-    auto Children = const_cast<OMPInReductionClause *>(this)->children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPInReductionClause *>(this)->children();
   }
 
   child_range used_children() {
@@ -4919,15 +5033,13 @@ public:
   }
 
   const_child_range children() const {
-    auto Children = const_cast<OMPLinearClause *>(this)->children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPLinearClause *>(this)->children();
   }
 
   child_range used_children();
 
   const_child_range used_children() const {
-    auto Children = const_cast<OMPLinearClause *>(this)->used_children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPLinearClause *>(this)->used_children();
   }
 
   static bool classof(const OMPClause *T) {
@@ -5018,8 +5130,7 @@ public:
   }
 
   const_child_range children() const {
-    auto Children = const_cast<OMPAlignedClause *>(this)->children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPAlignedClause *>(this)->children();
   }
 
   child_range used_children() {
@@ -5194,8 +5305,7 @@ public:
   }
 
   const_child_range children() const {
-    auto Children = const_cast<OMPCopyinClause *>(this)->children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPCopyinClause *>(this)->children();
   }
 
   child_range used_children() {
@@ -5358,8 +5468,7 @@ public:
   }
 
   const_child_range children() const {
-    auto Children = const_cast<OMPCopyprivateClause *>(this)->children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPCopyprivateClause *>(this)->children();
   }
 
   child_range used_children() {
@@ -5435,8 +5544,7 @@ public:
   }
 
   const_child_range children() const {
-    auto Children = const_cast<OMPFlushClause *>(this)->children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPFlushClause *>(this)->children();
   }
 
   child_range used_children() {
@@ -5522,8 +5630,7 @@ public:
   }
 
   const_child_range children() const {
-    auto Children = const_cast<OMPDepobjClause *>(this)->children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPDepobjClause *>(this)->children();
   }
 
   child_range used_children() {
@@ -5676,8 +5783,7 @@ public:
   }
 
   const_child_range children() const {
-    auto Children = const_cast<OMPDependClause *>(this)->children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPDependClause *>(this)->children();
   }
 
   child_range used_children() {
@@ -6824,8 +6930,7 @@ public:
   }
 
   const_child_range children() const {
-    auto Children = const_cast<OMPMapClause *>(this)->children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPMapClause *>(this)->children();
   }
 
   child_range used_children() {
@@ -6835,8 +6940,7 @@ public:
     return child_range(child_iterator(), child_iterator());
   }
   const_child_range used_children() const {
-    auto Children = const_cast<OMPMapClause *>(this)->used_children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPMapClause *>(this)->used_children();
   }
 
 
@@ -6922,8 +7026,7 @@ public:
   }
 
   const_child_range children() const {
-    auto Children = const_cast<OMPNumTeamsClause *>(this)->children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPNumTeamsClause *>(this)->children();
   }
 
   child_range used_children() {
@@ -7016,8 +7119,7 @@ public:
   }
 
   const_child_range children() const {
-    auto Children = const_cast<OMPThreadLimitClause *>(this)->children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPThreadLimitClause *>(this)->children();
   }
 
   child_range used_children() {
@@ -7097,8 +7199,7 @@ public:
 
   child_range used_children();
   const_child_range used_children() const {
-    auto Children = const_cast<OMPPriorityClause *>(this)->used_children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPPriorityClause *>(this)->used_children();
   }
 
   static bool classof(const OMPClause *T) {
@@ -7189,8 +7290,7 @@ public:
 
   child_range used_children();
   const_child_range used_children() const {
-    auto Children = const_cast<OMPGrainsizeClause *>(this)->used_children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPGrainsizeClause *>(this)->used_children();
   }
 
   static bool classof(const OMPClause *T) {
@@ -7321,8 +7421,7 @@ public:
 
   child_range used_children();
   const_child_range used_children() const {
-    auto Children = const_cast<OMPNumTasksClause *>(this)->used_children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPNumTasksClause *>(this)->used_children();
   }
 
   static bool classof(const OMPClause *T) {
@@ -7496,8 +7595,7 @@ public:
   }
 
   const_child_range children() const {
-    auto Children = const_cast<OMPDistScheduleClause *>(this)->children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPDistScheduleClause *>(this)->children();
   }
 
   child_range used_children() {
@@ -7810,8 +7908,7 @@ public:
   }
 
   const_child_range children() const {
-    auto Children = const_cast<OMPToClause *>(this)->children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPToClause *>(this)->children();
   }
 
   child_range used_children() {
@@ -8010,8 +8107,7 @@ public:
   }
 
   const_child_range children() const {
-    auto Children = const_cast<OMPFromClause *>(this)->children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPFromClause *>(this)->children();
   }
 
   child_range used_children() {
@@ -8174,8 +8270,7 @@ public:
   }
 
   const_child_range children() const {
-    auto Children = const_cast<OMPUseDevicePtrClause *>(this)->children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPUseDevicePtrClause *>(this)->children();
   }
 
   child_range used_children() {
@@ -8278,8 +8373,7 @@ public:
   }
 
   const_child_range children() const {
-    auto Children = const_cast<OMPUseDeviceAddrClause *>(this)->children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPUseDeviceAddrClause *>(this)->children();
   }
 
   child_range used_children() {
@@ -8381,8 +8475,7 @@ public:
   }
 
   const_child_range children() const {
-    auto Children = const_cast<OMPIsDevicePtrClause *>(this)->children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPIsDevicePtrClause *>(this)->children();
   }
 
   child_range used_children() {
@@ -8485,8 +8578,7 @@ public:
   }
 
   const_child_range children() const {
-    auto Children = const_cast<OMPHasDeviceAddrClause *>(this)->children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPHasDeviceAddrClause *>(this)->children();
   }
 
   child_range used_children() {
@@ -8572,8 +8664,7 @@ public:
   }
 
   const_child_range children() const {
-    auto Children = const_cast<OMPNontemporalClause *>(this)->children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPNontemporalClause *>(this)->children();
   }
 
   child_range private_refs() {
@@ -8582,8 +8673,7 @@ public:
   }
 
   const_child_range private_refs() const {
-    auto Children = const_cast<OMPNontemporalClause *>(this)->private_refs();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPNontemporalClause *>(this)->private_refs();
   }
 
   child_range used_children() {
@@ -8793,8 +8883,7 @@ public:
   }
 
   const_child_range children() const {
-    auto Children = const_cast<OMPInitClause *>(this)->children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPInitClause *>(this)->children();
   }
 
   child_range used_children() {
@@ -9026,8 +9115,7 @@ public:
 
   child_range used_children();
   const_child_range used_children() const {
-    auto Children = const_cast<OMPNovariantsClause *>(this)->used_children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPNovariantsClause *>(this)->used_children();
   }
 };
 
@@ -9072,8 +9160,7 @@ public:
 
   child_range used_children();
   const_child_range used_children() const {
-    auto Children = const_cast<OMPNocontextClause *>(this)->used_children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPNocontextClause *>(this)->used_children();
   }
 };
 
@@ -9167,8 +9254,7 @@ public:
   }
 
   const_child_range children() const {
-    auto Children = const_cast<OMPInclusiveClause *>(this)->children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPInclusiveClause *>(this)->children();
   }
 
   child_range used_children() {
@@ -9241,8 +9327,7 @@ public:
   }
 
   const_child_range children() const {
-    auto Children = const_cast<OMPExclusiveClause *>(this)->children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPExclusiveClause *>(this)->children();
   }
 
   child_range used_children() {
@@ -9463,8 +9548,7 @@ public:
   }
 
   const_child_range children() const {
-    auto Children = const_cast<OMPAffinityClause *>(this)->children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPAffinityClause *>(this)->children();
   }
 
   child_range used_children() {
@@ -9938,6 +10022,151 @@ public:
   Expr *getSize() const { return getStmtAs<Expr>(); }
 };
 
+/// This represents 'dyn_groupprivate' clause in '#pragma omp target ...'
+/// and '#pragma omp teams ...' directives.
+///
+/// \code
+/// #pragma omp target [...] dyn_groupprivate(a,b: N)
+/// \endcode
+class OMPDynGroupprivateClause : public OMPClause, public OMPClauseWithPreInit {
+  friend class OMPClauseReader;
+
+  /// Location of '('.
+  SourceLocation LParenLoc;
+
+  /// Modifiers for 'dyn_groupprivate' clause.
+  enum { SIMPLE, FALLBACK, NUM_MODIFIERS };
+  unsigned Modifiers[NUM_MODIFIERS];
+
+  /// Locations of modifiers.
+  SourceLocation ModifiersLoc[NUM_MODIFIERS];
+
+  /// The size of the dyn_groupprivate.
+  Expr *Size = nullptr;
+
+  /// Set the first dyn_groupprivate modifier.
+  ///
+  /// \param M The modifier.
+  void setDynGroupprivateModifier(OpenMPDynGroupprivateClauseModifier M) {
+    Modifiers[SIMPLE] = M;
+  }
+
+  /// Set the second dyn_groupprivate modifier.
+  ///
+  /// \param M The modifier.
+  void setDynGroupprivateFallbackModifier(
+      OpenMPDynGroupprivateClauseFallbackModifier M) {
+    Modifiers[FALLBACK] = M;
+  }
+
+  /// Set location of the first dyn_groupprivate modifier.
+  void setDynGroupprivateModifierLoc(SourceLocation Loc) {
+    ModifiersLoc[SIMPLE] = Loc;
+  }
+
+  /// Set location of the second dyn_groupprivate modifier.
+  void setDynGroupprivateFallbackModifierLoc(SourceLocation Loc) {
+    ModifiersLoc[FALLBACK] = Loc;
+  }
+
+  /// Sets the location of '('.
+  ///
+  /// \param Loc Location of '('.
+  void setLParenLoc(SourceLocation Loc) { LParenLoc = Loc; }
+
+  /// Set size.
+  ///
+  /// \param E Size.
+  void setSize(Expr *E) { Size = E; }
+
+public:
+  /// Build 'dyn_groupprivate' clause with a size expression \a Size.
+  ///
+  /// \param StartLoc Starting location of the clause.
+  /// \param LParenLoc Location of '('.
+  /// \param EndLoc Ending location of the clause.
+  /// \param Size Size.
+  /// \param M1 The first modifier applied to 'dyn_groupprivate' clause.
+  /// \param M1Loc Location of the first modifier.
+  /// \param M2 The second modifier applied to 'dyn_groupprivate' clause.
+  /// \param M2Loc Location of the second modifier.
+  OMPDynGroupprivateClause(SourceLocation StartLoc, SourceLocation LParenLoc,
+                           SourceLocation EndLoc, Expr *Size, Stmt *HelperSize,
+                           OpenMPDirectiveKind CaptureRegion,
+                           OpenMPDynGroupprivateClauseModifier M1,
+                           SourceLocation M1Loc,
+                           OpenMPDynGroupprivateClauseFallbackModifier M2,
+                           SourceLocation M2Loc)
+      : OMPClause(llvm::omp::OMPC_dyn_groupprivate, StartLoc, EndLoc),
+        OMPClauseWithPreInit(this), LParenLoc(LParenLoc), Size(Size) {
+    setPreInitStmt(HelperSize, CaptureRegion);
+    Modifiers[SIMPLE] = M1;
+    Modifiers[FALLBACK] = M2;
+    ModifiersLoc[SIMPLE] = M1Loc;
+    ModifiersLoc[FALLBACK] = M2Loc;
+  }
+
+  /// Build an empty clause.
+  explicit OMPDynGroupprivateClause()
+      : OMPClause(llvm::omp::OMPC_dyn_groupprivate, SourceLocation(),
+                  SourceLocation()),
+        OMPClauseWithPreInit(this) {
+    Modifiers[SIMPLE] = OMPC_DYN_GROUPPRIVATE_unknown;
+    Modifiers[FALLBACK] = OMPC_DYN_GROUPPRIVATE_FALLBACK_unknown;
+  }
+
+  /// Get the first modifier of the clause.
+  OpenMPDynGroupprivateClauseModifier getDynGroupprivateModifier() const {
+    return static_cast<OpenMPDynGroupprivateClauseModifier>(Modifiers[SIMPLE]);
+  }
+
+  /// Get the second modifier of the clause.
+  OpenMPDynGroupprivateClauseFallbackModifier
+  getDynGroupprivateFallbackModifier() const {
+    return static_cast<OpenMPDynGroupprivateClauseFallbackModifier>(
+        Modifiers[FALLBACK]);
+  }
+
+  /// Get location of '('.
+  SourceLocation getLParenLoc() { return LParenLoc; }
+
+  /// Get the first modifier location.
+  SourceLocation getDynGroupprivateModifierLoc() const {
+    return ModifiersLoc[SIMPLE];
+  }
+
+  /// Get the second modifier location.
+  SourceLocation getDynGroupprivateFallbackModifierLoc() const {
+    return ModifiersLoc[FALLBACK];
+  }
+
+  /// Get size.
+  Expr *getSize() { return Size; }
+
+  /// Get size.
+  const Expr *getSize() const { return Size; }
+
+  child_range children() {
+    return child_range(reinterpret_cast<Stmt **>(&Size),
+                       reinterpret_cast<Stmt **>(&Size) + 1);
+  }
+
+  const_child_range children() const {
+    return const_cast<OMPDynGroupprivateClause *>(this)->children();
+  }
+
+  child_range used_children() {
+    return child_range(child_iterator(), child_iterator());
+  }
+  const_child_range used_children() const {
+    return const_child_range(const_child_iterator(), const_child_iterator());
+  }
+
+  static bool classof(const OMPClause *T) {
+    return T->getClauseKind() == llvm::omp::OMPC_dyn_groupprivate;
+  }
+};
+
 /// This represents the 'doacross' clause for the '#pragma omp ordered'
 /// directive.
 ///
@@ -10048,8 +10277,7 @@ public:
   }
 
   const_child_range children() const {
-    auto Children = const_cast<OMPDoacrossClause *>(this)->children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPDoacrossClause *>(this)->children();
   }
 
   child_range used_children() {

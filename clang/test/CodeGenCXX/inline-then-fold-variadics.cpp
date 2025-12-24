@@ -110,8 +110,8 @@ int first_i32_ulong2(int x, ulong2 *y) { return first<int, ulong2>(x, *y); }
 // CHECK-LABEL: define void @second_i32_ulong2(
 // CHECK-SAME: i32 noundef [[X:%.*]], ptr noundef readonly captures(none) [[Y:%.*]], ptr noundef writeonly captures(none) initializes((0, 16)) [[R:%.*]]) local_unnamed_addr #[[ATTR1:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i64>, ptr [[Y]], align 16, !tbaa [[INT_TBAA2:![0-9]+]]
-// CHECK-NEXT:    store <2 x i64> [[TMP0]], ptr [[R]], align 16, !tbaa [[INT_TBAA2]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i64>, ptr [[Y]], align 16, !tbaa [[DOUBLE_TBAA6:![0-9]+]]
+// CHECK-NEXT:    store <2 x i64> [[TMP0]], ptr [[R]], align 16, !tbaa [[DOUBLE_TBAA6]]
 // CHECK-NEXT:    ret void
 //
 void second_i32_ulong2(int x, ulong2 *y, ulong2 *r) {
@@ -121,8 +121,8 @@ void second_i32_ulong2(int x, ulong2 *y, ulong2 *r) {
 // CHECK-LABEL: define void @first_ulong2_i32(
 // CHECK-SAME: ptr noundef readonly captures(none) [[X:%.*]], i32 noundef [[Y:%.*]], ptr noundef writeonly captures(none) initializes((0, 16)) [[R:%.*]]) local_unnamed_addr #[[ATTR1]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i64>, ptr [[X]], align 16, !tbaa [[INT_TBAA2]]
-// CHECK-NEXT:    store <2 x i64> [[TMP0]], ptr [[R]], align 16, !tbaa [[INT_TBAA2]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i64>, ptr [[X]], align 16, !tbaa [[DOUBLE_TBAA6]]
+// CHECK-NEXT:    store <2 x i64> [[TMP0]], ptr [[R]], align 16, !tbaa [[DOUBLE_TBAA6]]
 // CHECK-NEXT:    ret void
 //
 void first_ulong2_i32(ulong2 *x, int y, ulong2 *r) {
@@ -180,7 +180,7 @@ void first_asc_i32(asc *x, int y, asc *r) { *r = first<asc, int>(*x, y); }
 int second_asc_i32(asc *x, int y) { return second<asc, int>(*x, y); }
 }
 //.
-// CHECK: [[INT_TBAA2]] = !{[[META3:![0-9]+]], [[META3]], i64 0}
-// CHECK: [[META3]] = !{!"omnipotent char", [[META4:![0-9]+]], i64 0}
-// CHECK: [[META4]] = !{!"Simple C++ TBAA"}
+// CHECK: [[META4:![0-9]+]] = !{!"omnipotent char", [[META5:![0-9]+]], i64 0}
+// CHECK: [[META5]] = !{!"Simple C++ TBAA"}
+// CHECK: [[DOUBLE_TBAA6]] = !{[[META4]], [[META4]], i64 0}
 //.

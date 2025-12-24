@@ -1,0 +1,3 @@
+## switch_case test checking that update_test_checks.py works correctly
+# RUN: cp -f %S/Inputs/switch_case.ll %t.ll && %update_test_checks %t.ll --version 7
+# RUN: diff -u %t.ll %S/Inputs/switch_case.ll.expected

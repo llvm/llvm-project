@@ -111,11 +111,28 @@ public:
       return std::move(*result);
     return defaultFn(this->value);
   }
+
   /// As a default, return the given value.
   [[nodiscard]] ResultT Default(ResultT defaultResult) {
     if (result)
       return std::move(*result);
     return defaultResult;
+  }
+
+  /// Default for pointer-like results types that accept `nullptr`.
+  template <typename ArgT = ResultT,
+            typename =
+                std::enable_if_t<std::is_constructible_v<ArgT, std::nullptr_t>>>
+  [[nodiscard]] ResultT Default(std::nullptr_t) {
+    return Default(ResultT(nullptr));
+  }
+
+  /// Default for optional results types that accept `std::nullopt`.
+  template <typename ArgT = ResultT,
+            typename =
+                std::enable_if_t<std::is_constructible_v<ArgT, std::nullopt_t>>>
+  [[nodiscard]] ResultT Default(std::nullopt_t) {
+    return Default(ResultT(std::nullopt));
   }
 
   /// Declare default as unreachable, making sure that all cases were handled.

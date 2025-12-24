@@ -66,6 +66,10 @@ public:
 
   void remapInstruction(MCInst &Instr) const;
 
+  Expected<bool> onSymbolStart(SymbolInfoTy &Symbol, uint64_t &Size,
+                               ArrayRef<uint8_t> Bytes,
+                               uint64_t Address) const override;
+
 private:
   bool makeBundle(ArrayRef<uint8_t> Bytes, uint64_t Address,
                   uint64_t &BytesToSkip, raw_ostream &CS) const;
@@ -567,6 +571,18 @@ DecodeStatus HexagonDisassembler::getSingleInstruction(MCInst &MI, MCInst &MCB,
   return Result;
 }
 
+Expected<bool> HexagonDisassembler::onSymbolStart(SymbolInfoTy &Symbol,
+                                                  uint64_t &Size,
+                                                  ArrayRef<uint8_t> Bytes,
+                                                  uint64_t Address) const {
+  // At the start of a symbol, force a fresh packet by resetting any
+  // in-progress bundle state. This prevents packets from straddling label
+  // boundaries when data (e.g. jump tables) appears in between.
+  Size = 0;
+  resetBundle();
+  return true;
+}
+
 static DecodeStatus DecodeRegisterClass(MCInst &Inst, unsigned RegNo,
                                         ArrayRef<MCPhysReg> Table) {
   if (RegNo < Table.size()) {
@@ -667,11 +683,10 @@ static DecodeStatus DecodeHvxWRRegisterClass(MCInst &Inst, unsigned RegNo,
   return DecodeRegisterClass(Inst, RegNo, HvxWRDecoderTable);
 }
 
-LLVM_ATTRIBUTE_UNUSED // Suppress warning temporarily.
-    static DecodeStatus
-    DecodeHvxVQRRegisterClass(MCInst &Inst, unsigned RegNo,
-                              uint64_t /*Address*/,
-                              const MCDisassembler *Decoder) {
+[[maybe_unused]] // Suppress warning temporarily.
+static DecodeStatus DecodeHvxVQRRegisterClass(MCInst &Inst, unsigned RegNo,
+                                              uint64_t /*Address*/,
+                                              const MCDisassembler *Decoder) {
   static const MCPhysReg HvxVQRDecoderTable[] = {
       Hexagon::VQ0,  Hexagon::VQ1,  Hexagon::VQ2,  Hexagon::VQ3,
       Hexagon::VQ4,  Hexagon::VQ5,  Hexagon::VQ6,  Hexagon::VQ7};

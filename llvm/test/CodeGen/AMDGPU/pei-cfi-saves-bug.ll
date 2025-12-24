@@ -84,8 +84,8 @@ end:                                  ; preds = %entry
 ; Function Attrs: noinline
 define dso_local fastcc void @func_needs_fp() unnamed_addr #0 {
 ; CHECK-LABEL: func_needs_fp:
-; CHECK:       func_needs_fp$local:
-; CHECK-NEXT:    .type func_needs_fp$local,@function
+; CHECK:       .Lfunc_needs_fp$local:
+; CHECK-NEXT:    .type .Lfunc_needs_fp$local,@function
 ; CHECK-NEXT:  ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    s_mov_b32 s16, s33

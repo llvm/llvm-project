@@ -41,8 +41,8 @@ define void @reuse_lcssa_phi_for_add_rec1(ptr %head) {
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x ptr>, ptr [[TMP7]], align 8
 ; CHECK-NEXT:    [[REVERSE:%.*]] = shufflevector <2 x ptr> [[WIDE_LOAD]], <2 x ptr> poison, <2 x i32> <i32 1, i32 0>
 ; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <2 x ptr> [[REVERSE]], i32 0
-; CHECK-NEXT:    store ptr null, ptr [[TMP8]], align 8
 ; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <2 x ptr> [[REVERSE]], i32 1
+; CHECK-NEXT:    store ptr null, ptr [[TMP8]], align 8
 ; CHECK-NEXT:    store ptr null, ptr [[TMP9]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
@@ -205,12 +205,11 @@ define void @expand_diff_scev_unknown(ptr %dst, i1 %invar.c, i32 %step) mustprog
 ; CHECK-NEXT:    [[INDVAR_NEXT]] = add i32 [[INDVAR]], 1
 ; CHECK-NEXT:    br i1 [[INVAR_C]], label %[[LOOP_2_PREHEADER:.*]], label %[[LOOP_1]]
 ; CHECK:       [[LOOP_2_PREHEADER]]:
-; CHECK-NEXT:    [[INDVAR_LCSSA1:%.*]] = phi i32 [ [[INDVAR]], %[[LOOP_1]] ]
 ; CHECK-NEXT:    [[IV_1_LCSSA:%.*]] = phi i32 [ [[IV_1]], %[[LOOP_1]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[IV_1_LCSSA]], [[STEP]]
 ; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[TMP1]], i32 0)
 ; CHECK-NEXT:    [[TMP2:%.*]] = mul i32 [[STEP]], -2
-; CHECK-NEXT:    [[TMP3:%.*]] = mul i32 [[INDVAR_LCSSA1]], -1
+; CHECK-NEXT:    [[TMP3:%.*]] = mul i32 [[INDVAR]], -1
 ; CHECK-NEXT:    [[TMP4:%.*]] = add i32 [[TMP3]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = add i32 [[SMAX]], [[TMP4]]
 ; CHECK-NEXT:    [[UMIN:%.*]] = call i32 @llvm.umin.i32(i32 [[TMP5]], i32 1)
@@ -219,7 +218,8 @@ define void @expand_diff_scev_unknown(ptr %dst, i1 %invar.c, i32 %step) mustprog
 ; CHECK-NEXT:    [[UMAX:%.*]] = call i32 @llvm.umax.i32(i32 [[STEP]], i32 1)
 ; CHECK-NEXT:    [[TMP8:%.*]] = udiv i32 [[TMP7]], [[UMAX]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = add i32 [[TMP6]], [[TMP8]]
-; CHECK-NEXT:    [[TMP12:%.*]] = add i32 [[INDVAR_LCSSA1]], 2
+; CHECK-NEXT:    [[TMP16:%.*]] = sub i32 2, [[STEP]]
+; CHECK-NEXT:    [[TMP12:%.*]] = add i32 [[IV_1_LCSSA]], [[TMP16]]
 ; CHECK-NEXT:    [[SMAX1:%.*]] = call i32 @llvm.smax.i32(i32 [[TMP12]], i32 0)
 ; CHECK-NEXT:    [[TMP14:%.*]] = add i32 [[TMP3]], -1
 ; CHECK-NEXT:    [[TMP15:%.*]] = add i32 [[SMAX1]], [[TMP14]]

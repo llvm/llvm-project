@@ -19,6 +19,7 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringTable.h"
+#include "llvm/TargetParser/Triple.h"
 #include <cstring>
 
 // VC++ defines 'alloca' as an object-like macro, which interferes with our
@@ -404,6 +405,22 @@ public:
   bool isConstWithoutExceptions(unsigned ID) const {
     return strchr(getAttributesString(ID), 'g') != nullptr;
   }
+
+  /// Determine whether we can generate LLVM intrinsics for the given
+  /// builtin ID, based on whether it has side effects such as setting errno.
+  ///
+  /// \param BuiltinID The builtin ID to check.
+  /// \param Trip The target triple.
+  /// \param ErrnoOverwritten Indicates whether the errno setting behavior
+  ///        has been overwritten via '#pragma float_control(precise, on/off)'.
+  /// \param MathErrnoEnabled Indicates whether math-errno is enabled on
+  ///        command line.
+  /// \param HasOptNoneAttr True iff 'attribute__((optnone))' is used.
+  /// \param IsOptimizationEnabled True iff the optimization level is not 'O0'.
+  bool shouldGenerateFPMathIntrinsic(unsigned BuiltinID, llvm::Triple Trip,
+                                     std::optional<bool> ErrnoOverwritten,
+                                     bool MathErrnoEnabled, bool HasOptNoneAttr,
+                                     bool IsOptimizationEnabled) const;
 
   const char *getRequiredFeatures(unsigned ID) const;
 

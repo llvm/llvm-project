@@ -73,15 +73,6 @@ struct Memcpy {
 namespace LIBC_NAMESPACE_DECL {
 namespace generic {
 
-// Not equals: returns non-zero iff values at head or tail differ.
-// This function typically loads more data than necessary when the two buffer
-// differs.
-template <typename T>
-LIBC_INLINE uint32_t branchless_head_tail_neq(CPtr p1, CPtr p2, size_t count) {
-  static_assert(cpp::is_integral_v<T>);
-  return neq<T>(p1, p2, 0) | neq<T>(p1, p2, count - sizeof(T));
-}
-
 ///////////////////////////////////////////////////////////////////////////////
 // Specializations for uint16_t
 template <> struct cmp_is_expensive<uint16_t> : public cpp::false_type {};
@@ -154,11 +145,6 @@ LIBC_INLINE MemcmpReturnType cmp_neq<uint64_t>(CPtr p1, CPtr p2,
 #if defined(__SSE4_1__)
 template <> struct is_vector<__m128i> : cpp::true_type {};
 template <> struct cmp_is_expensive<__m128i> : cpp::true_type {};
-LIBC_INLINE __m128i load_and_xor_m128i(CPtr p1, CPtr p2, size_t offset) {
-  const auto a = load<__m128i>(p1, offset);
-  const auto b = load<__m128i>(p2, offset);
-  return _mm_xor_si128(a, b);
-}
 LIBC_INLINE __m128i bytewise_max(__m128i a, __m128i b) {
   return _mm_max_epu8(a, b);
 }
@@ -170,21 +156,17 @@ LIBC_INLINE uint16_t big_endian_cmp_mask(__m128i max, __m128i value) {
   return static_cast<uint16_t>(
       _mm_movemask_epi8(bytewise_reverse(_mm_cmpeq_epi8(max, value))));
 }
-LIBC_INLINE bool is_zero(__m128i value) {
-  return _mm_testz_si128(value, value) == 1;
-}
 template <> LIBC_INLINE bool eq<__m128i>(CPtr p1, CPtr p2, size_t offset) {
-  return is_zero(load_and_xor_m128i(p1, p2, offset));
+  const auto a = load<__m128i>(p1, offset);
+  const auto b = load<__m128i>(p2, offset);
+  const auto xored = _mm_xor_si128(a, b);
+  return _mm_testz_si128(xored, xored) == 1; // 1 iff xored == 0
 }
 template <> LIBC_INLINE uint32_t neq<__m128i>(CPtr p1, CPtr p2, size_t offset) {
-  return !is_zero(load_and_xor_m128i(p1, p2, offset));
-}
-template <>
-LIBC_INLINE uint32_t branchless_head_tail_neq<__m128i>(CPtr p1, CPtr p2,
-                                                       size_t count) {
-  const __m128i head = load_and_xor_m128i(p1, p2, 0);
-  const __m128i tail = load_and_xor_m128i(p1, p2, count - sizeof(__m128i));
-  return !is_zero(_mm_or_si128(head, tail));
+  const auto a = load<__m128i>(p1, offset);
+  const auto b = load<__m128i>(p2, offset);
+  const auto xored = _mm_xor_si128(a, b);
+  return _mm_testz_si128(xored, xored) == 0; // 0 iff xored != 0
 }
 template <>
 LIBC_INLINE MemcmpReturnType cmp_neq<__m128i>(CPtr p1, CPtr p2, size_t offset) {
@@ -203,34 +185,19 @@ LIBC_INLINE MemcmpReturnType cmp_neq<__m128i>(CPtr p1, CPtr p2, size_t offset) {
 #if defined(__AVX__)
 template <> struct is_vector<__m256i> : cpp::true_type {};
 template <> struct cmp_is_expensive<__m256i> : cpp::true_type {};
-LIBC_INLINE __m256i xor_m256i(__m256i a, __m256i b) {
-  return _mm256_castps_si256(
-      _mm256_xor_ps(_mm256_castsi256_ps(a), _mm256_castsi256_ps(b)));
-}
-LIBC_INLINE __m256i or_m256i(__m256i a, __m256i b) {
-  return _mm256_castps_si256(
-      _mm256_or_ps(_mm256_castsi256_ps(a), _mm256_castsi256_ps(b)));
-}
-LIBC_INLINE __m256i load_and_xor_m256i(CPtr p1, CPtr p2, size_t offset) {
+template <> LIBC_INLINE bool eq<__m256i>(CPtr p1, CPtr p2, size_t offset) {
   const auto a = load<__m256i>(p1, offset);
   const auto b = load<__m256i>(p2, offset);
-  return xor_m256i(a, b);
-}
-LIBC_INLINE bool is_zero(__m256i value) {
-  return _mm256_testz_si256(value, value) == 1;
-}
-template <> LIBC_INLINE bool eq<__m256i>(CPtr p1, CPtr p2, size_t offset) {
-  return is_zero(load_and_xor_m256i(p1, p2, offset));
+  const auto xored = _mm256_castps_si256(
+      _mm256_xor_ps(_mm256_castsi256_ps(a), _mm256_castsi256_ps(b)));
+  return _mm256_testz_si256(xored, xored) == 1; // 1 iff xored == 0
 }
 template <> LIBC_INLINE uint32_t neq<__m256i>(CPtr p1, CPtr p2, size_t offset) {
-  return !is_zero(load_and_xor_m256i(p1, p2, offset));
-}
-template <>
-LIBC_INLINE uint32_t branchless_head_tail_neq<__m256i>(CPtr p1, CPtr p2,
-                                                       size_t count) {
-  const __m256i head = load_and_xor_m256i(p1, p2, 0);
-  const __m256i tail = load_and_xor_m256i(p1, p2, count - sizeof(__m256i));
-  return !is_zero(or_m256i(head, tail));
+  const auto a = load<__m256i>(p1, offset);
+  const auto b = load<__m256i>(p2, offset);
+  const auto xored = _mm256_castps_si256(
+      _mm256_xor_ps(_mm256_castsi256_ps(a), _mm256_castsi256_ps(b)));
+  return _mm256_testz_si256(xored, xored) == 0; // 0 iff xored != 0
 }
 #endif // __AVX__
 
@@ -345,22 +312,9 @@ template <> LIBC_INLINE bool eq<__m512i>(CPtr p1, CPtr p2, size_t offset) {
 template <> LIBC_INLINE uint32_t neq<__m512i>(CPtr p1, CPtr p2, size_t offset) {
   const auto a = load<__m512i>(p1, offset);
   const auto b = load<__m512i>(p2, offset);
-  return _mm512_cmpneq_epi8_mask(a, b) != 0;
-}
-LIBC_INLINE __m512i load_and_xor_m512i(CPtr p1, CPtr p2, size_t offset) {
-  const auto a = load<__m512i>(p1, offset);
-  const auto b = load<__m512i>(p2, offset);
-  return _mm512_xor_epi64(a, b);
-}
-LIBC_INLINE bool is_zero(__m512i value) {
-  return _mm512_test_epi32_mask(value, value) == 0;
-}
-template <>
-LIBC_INLINE uint32_t branchless_head_tail_neq<__m512i>(CPtr p1, CPtr p2,
-                                                       size_t count) {
-  const __m512i head = load_and_xor_m512i(p1, p2, 0);
-  const __m512i tail = load_and_xor_m512i(p1, p2, count - sizeof(__m512i));
-  return !is_zero(_mm512_or_epi64(head, tail));
+  const uint64_t xored = _mm512_cmpneq_epi8_mask(a, b);
+  return static_cast<uint32_t>(xored >> 32) |
+         static_cast<uint32_t>(xored & 0xFFFFFFFF);
 }
 template <>
 LIBC_INLINE MemcmpReturnType cmp_neq<__m512i>(CPtr p1, CPtr p2, size_t offset) {

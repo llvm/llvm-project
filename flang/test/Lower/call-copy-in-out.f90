@@ -120,7 +120,7 @@ subroutine test_intent_out(x)
 ! CHECK:  %[[cast:.*]] = fir.convert %[[addr]] : (!fir.heap<!fir.array<?xf32>>) -> !fir.ref<!fir.array<100xf32>>
 ! CHECK:  fir.call @_QPbar_intent_out(%[[cast]]) {{.*}}: (!fir.ref<!fir.array<100xf32>>) -> ()
   call bar_intent_out(x)
-  
+
 ! CHECK: fir.if %[[not_contiguous]]
 ! CHECK: fir.call @_FortranACopyOutAssign
 ! CHECK: return
@@ -224,7 +224,7 @@ subroutine test_char(x)
 ! CHECK:             %[[VAL_32:.*]] = fir.convert %[[TMP_BOX_REF]] : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,10>>>>>) -> !fir.ref<!fir.box<none>>
 ! CHECK:             fir.call @_FortranACopyOutAssign(%[[VAL_31]], %[[VAL_32]], %{{.*}}, %{{.*}}) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.ref<!fir.box<none>>, !fir.ref<i8>, i32) -> ()
 ! CHECK:           }
-  
+
   character(10) :: x(:)
   call bar_char(x)
   ! CHECK:         return

@@ -1564,8 +1564,7 @@ public:
   child_range children();
 
   const_child_range children() const {
-    auto Children = const_cast<Stmt *>(this)->children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<Stmt *>(this)->children();
   }
 
   child_iterator child_begin() { return children().begin(); }
@@ -1829,26 +1828,6 @@ public:
 
   const_reverse_body_iterator body_rend() const {
     return const_reverse_body_iterator(body_begin());
-  }
-
-  // Get the Stmt that StmtExpr would consider to be the result of this
-  // compound statement. This is used by StmtExpr to properly emulate the GCC
-  // compound expression extension, which ignores trailing NullStmts when
-  // getting the result of the expression.
-  // i.e. ({ 5;;; })
-  //           ^^ ignored
-  // If we don't find something that isn't a NullStmt, just return the last
-  // Stmt.
-  Stmt *getStmtExprResult() {
-    for (auto *B : llvm::reverse(body())) {
-      if (!isa<NullStmt>(B))
-        return B;
-    }
-    return body_back();
-  }
-
-  const Stmt *getStmtExprResult() const {
-    return const_cast<CompoundStmt *>(this)->getStmtExprResult();
   }
 
   SourceLocation getBeginLoc() const { return LBraceLoc; }

@@ -136,6 +136,12 @@ public:
 
   std::string convertConstraint(const char *&Constraint) const override {
     switch (Constraint[0]) {
+    case '@': // Flag output operand.
+      if (llvm::StringRef(Constraint) == "@cc") {
+        Constraint += 2;
+        return std::string("{@cc}");
+      }
+      break;
     case 'p': // Keep 'p' constraint.
       return std::string("p");
     case 'Z':

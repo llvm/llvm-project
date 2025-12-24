@@ -19,13 +19,13 @@
 #if KMP_USE_HIER_SCHED
 #include "kmp_dispatch_hier.h"
 #endif
-#if KMP_USE_HWLOC
+#if KMP_HWLOC_ENABLED
 // Copied from hwloc
 #define HWLOC_GROUP_KIND_INTEL_MODULE 102
 #define HWLOC_GROUP_KIND_INTEL_TILE 103
 #define HWLOC_GROUP_KIND_INTEL_DIE 104
 #define HWLOC_GROUP_KIND_WINDOWS_PROCESSOR_GROUP 220
-#endif
+#endif // KMP_HWLOC_ENABLED
 #include <ctype.h>
 
 // The machine topology
@@ -1440,7 +1440,7 @@ void KMPAffinity::pick_api() {
   KMPAffinity *affinity_dispatch;
   if (picked_api)
     return;
-#if KMP_USE_HWLOC
+#if KMP_HWLOC_ENABLED
   // Only use Hwloc if affinity isn't explicitly disabled and
   // user requests Hwloc topology method
   if (__kmp_affinity_top_method == affinity_top_method_hwloc &&
@@ -1448,7 +1448,7 @@ void KMPAffinity::pick_api() {
     affinity_dispatch = new KMPHwlocAffinity();
     __kmp_hwloc_available = true;
   } else
-#endif
+#endif // KMP_HWLOC_ENABLED
   {
     affinity_dispatch = new KMPNativeAffinity();
   }
@@ -1699,7 +1699,7 @@ kmp_affin_mask_t *__kmp_affin_fullMask = NULL;
 // Original mask is a subset of full mask in multiple processor groups topology
 kmp_affin_mask_t *__kmp_affin_origMask = NULL;
 
-#if KMP_USE_HWLOC
+#if KMP_HWLOC_ENABLED
 static inline bool __kmp_hwloc_is_cache_type(hwloc_obj_t obj) {
 #if HWLOC_API_VERSION >= 0x00020000
   return hwloc_obj_type_is_cache(obj->type);
@@ -2007,7 +2007,7 @@ static bool __kmp_affinity_create_hwloc_map(kmp_i18n_id_t *const msg_id) {
   __kmp_topology->sort_ids();
   return true;
 }
-#endif // KMP_USE_HWLOC
+#endif // KMP_HWLOC_ENABLED
 
 // If we don't know how to retrieve the machine's processor topology, or
 // encounter an error in doing so, this routine is called to form a "flat"
@@ -4854,7 +4854,7 @@ static bool __kmp_aux_affinity_initialize_topology(kmp_affinity_t &affinity) {
 // In the default code path, errors are not fatal - we just try using
 // another method. We only emit a warning message if affinity is on, or the
 // verbose flag is set, an the nowarnings flag was not set.
-#if KMP_USE_HWLOC
+#if KMP_HWLOC_ENABLED
     if (!success &&
         __kmp_affinity_dispatch->get_api_type() == KMPAffinity::HWLOC) {
       if (!__kmp_hwloc_error) {
@@ -4866,7 +4866,7 @@ static bool __kmp_aux_affinity_initialize_topology(kmp_affinity_t &affinity) {
         KMP_INFORM(AffIgnoringHwloc, env_var);
       }
     }
-#endif
+#endif // KMP_HWLOC_ENABLED
 
 #if KMP_ARCH_X86 || KMP_ARCH_X86_64
     if (!success) {
@@ -4914,7 +4914,7 @@ static bool __kmp_aux_affinity_initialize_topology(kmp_affinity_t &affinity) {
 // If the user has specified that a paricular topology discovery method is to be
 // used, then we abort if that method fails. The exception is group affinity,
 // which might have been implicitly set.
-#if KMP_USE_HWLOC
+#if KMP_HWLOC_ENABLED
   else if (__kmp_affinity_top_method == affinity_top_method_hwloc) {
     KMP_ASSERT(__kmp_affinity_dispatch->get_api_type() == KMPAffinity::HWLOC);
     success = __kmp_affinity_create_hwloc_map(&msg_id);
@@ -4923,7 +4923,7 @@ static bool __kmp_aux_affinity_initialize_topology(kmp_affinity_t &affinity) {
       KMP_FATAL(MsgExiting, __kmp_i18n_catgets(msg_id));
     }
   }
-#endif // KMP_USE_HWLOC
+#endif // KMP_HWLOC_ENABLED
 
 #if KMP_ARCH_X86 || KMP_ARCH_X86_64
   else if (__kmp_affinity_top_method == affinity_top_method_x2apicid ||
@@ -5322,12 +5322,12 @@ void __kmp_affinity_uninitialize(void) {
     __kmp_free(__kmp_osid_to_hwthread_map);
     __kmp_osid_to_hwthread_map = NULL;
   }
-#if KMP_USE_HWLOC
+#if KMP_HWLOC_ENABLED
   if (__kmp_hwloc_topology != NULL) {
     hwloc_topology_destroy(__kmp_hwloc_topology);
     __kmp_hwloc_topology = NULL;
   }
-#endif
+#endif // KMP_HWLOC_ENABLED
   if (__kmp_hw_subset) {
     kmp_hw_subset_t::deallocate(__kmp_hw_subset);
     __kmp_hw_subset = nullptr;

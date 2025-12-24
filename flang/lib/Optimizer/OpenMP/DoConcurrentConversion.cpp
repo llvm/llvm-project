@@ -22,7 +22,6 @@
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/RegionUtils.h"
 #include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/Frontend/OpenMP/OMPConstants.h"
 
 namespace flangomp {
 #define GEN_PASS_DEF_DOCONCURRENTCONVERSIONPASS
@@ -568,16 +567,15 @@ private:
     if (auto refType = mlir::dyn_cast<fir::ReferenceType>(liveInType))
       eleType = refType.getElementType();
 
-    llvm::omp::OpenMPOffloadMappingFlags mapFlag =
-        llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_IMPLICIT;
+    mlir::omp::ClauseMapFlags mapFlag = mlir::omp::ClauseMapFlags::implicit;
     mlir::omp::VariableCaptureKind captureKind =
         mlir::omp::VariableCaptureKind::ByRef;
 
     if (fir::isa_trivial(eleType) || fir::isa_char(eleType)) {
       captureKind = mlir::omp::VariableCaptureKind::ByCopy;
     } else if (!fir::isa_builtin_cptr_type(eleType)) {
-      mapFlag |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO;
-      mapFlag |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_FROM;
+      mapFlag |= mlir::omp::ClauseMapFlags::to;
+      mapFlag |= mlir::omp::ClauseMapFlags::from;
     }
 
     llvm::SmallVector<mlir::Value> boundsOps;
@@ -587,11 +585,8 @@ private:
         builder, liveIn.getLoc(), rawAddr,
         /*varPtrPtr=*/{}, name.str(), boundsOps,
         /*members=*/{},
-        /*membersIndex=*/mlir::ArrayAttr{},
-        static_cast<
-            std::underlying_type_t<llvm::omp::OpenMPOffloadMappingFlags>>(
-            mapFlag),
-        captureKind, rawAddr.getType());
+        /*membersIndex=*/mlir::ArrayAttr{}, mapFlag, captureKind,
+        rawAddr.getType());
   }
 
   mlir::omp::TargetOp
@@ -600,7 +595,7 @@ private:
               mlir::omp::TargetOperands &clauseOps,
               mlir::omp::LoopNestOperands &loopNestClauseOps,
               const LiveInShapeInfoMap &liveInShapeInfoMap) const {
-    auto targetOp = rewriter.create<mlir::omp::TargetOp>(loc, clauseOps);
+    auto targetOp = mlir::omp::TargetOp::create(rewriter, loc, clauseOps);
     auto argIface = llvm::cast<mlir::omp::BlockArgOpenMPOpInterface>(*targetOp);
 
     mlir::Region &region = targetOp.getRegion();
@@ -677,7 +672,7 @@ private:
     // temporary.
     Fortran::utils::openmp::cloneOrMapRegionOutsiders(builder, targetOp);
     rewriter.setInsertionPoint(
-        rewriter.create<mlir::omp::TerminatorOp>(targetOp.getLoc()));
+        mlir::omp::TerminatorOp::create(rewriter, targetOp.getLoc()));
 
     return targetOp;
   }
@@ -696,9 +691,6 @@ private:
     mlir::Value shape = [&]() -> mlir::Value {
       if (!targetShapeCreationInfo.isShapedValue())
         return {};
-
-      llvm::SmallVector<mlir::Value> extentOperands;
-      llvm::SmallVector<mlir::Value> startIndexOperands;
 
       if (targetShapeCreationInfo.isShapeShiftedValue()) {
         llvm::SmallVector<mlir::Value> shapeShiftOperands;
@@ -720,8 +712,8 @@ private:
 
         auto shapeShiftType = fir::ShapeShiftType::get(
             builder.getContext(), shapeShiftOperands.size() / 2);
-        return builder.create<fir::ShapeShiftOp>(
-            liveInArg.getLoc(), shapeShiftType, shapeShiftOperands);
+        return fir::ShapeShiftOp::create(builder, liveInArg.getLoc(),
+                                         shapeShiftType, shapeShiftOperands);
       }
 
       llvm::SmallVector<mlir::Value> shapeOperands;
@@ -733,11 +725,11 @@ private:
         ++shapeIdx;
       }
 
-      return builder.create<fir::ShapeOp>(liveInArg.getLoc(), shapeOperands);
+      return fir::ShapeOp::create(builder, liveInArg.getLoc(), shapeOperands);
     }();
 
-    return builder.create<hlfir::DeclareOp>(liveInArg.getLoc(), liveInArg,
-                                            liveInName, shape);
+    return hlfir::DeclareOp::create(builder, liveInArg.getLoc(), liveInArg,
+                                    liveInName, shape);
   }
 
   mlir::omp::TeamsOp genTeamsOp(mlir::ConversionPatternRewriter &rewriter,
@@ -747,13 +739,13 @@ private:
     genReductions(rewriter, mapper, loop, teamsOps);
 
     mlir::Location loc = loop.getLoc();
-    auto teamsOp = rewriter.create<mlir::omp::TeamsOp>(loc, teamsOps);
+    auto teamsOp = mlir::omp::TeamsOp::create(rewriter, loc, teamsOps);
     Fortran::common::openmp::EntryBlockArgs teamsArgs;
     teamsArgs.reduction.vars = teamsOps.reductionVars;
     Fortran::common::openmp::genEntryBlock(rewriter, teamsArgs,
                                            teamsOp.getRegion());
 
-    rewriter.setInsertionPoint(rewriter.create<mlir::omp::TerminatorOp>(loc));
+    rewriter.setInsertionPoint(mlir::omp::TerminatorOp::create(rewriter, loc));
 
     for (auto [loopVar, teamsArg] : llvm::zip_equal(
              loop.getReduceVars(), teamsOp.getRegion().getArguments())) {
@@ -766,8 +758,8 @@ private:
   mlir::omp::DistributeOp
   genDistributeOp(mlir::Location loc,
                   mlir::ConversionPatternRewriter &rewriter) const {
-    auto distOp = rewriter.create<mlir::omp::DistributeOp>(
-        loc, /*clauses=*/mlir::omp::DistributeOperands{});
+    auto distOp = mlir::omp::DistributeOp::create(
+        rewriter, loc, /*clauses=*/mlir::omp::DistributeOperands{});
 
     rewriter.createBlock(&distOp.getRegion());
     return distOp;

@@ -20,6 +20,7 @@
 #include "mlir/Dialect/SPIRV/Interfaces/SPIRVImageInterfaces.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/OpImplementation.h"
+#include "mlir/Interfaces/AlignmentAttrInterface.h"
 #include "mlir/Interfaces/CallInterfaces.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/FunctionInterfaces.h"

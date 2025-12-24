@@ -31,6 +31,7 @@ static cl::opt<bool> EnableSpillVGPRToAGPR(
   cl::init(true));
 
 static constexpr unsigned SGPRBitSize = 32;
+static constexpr unsigned SGPRByteSize = SGPRBitSize / 8;
 static constexpr unsigned VGPRLaneBitSize = 32;
 
 // Find a register matching \p RC from \p LiveUnits which is unused and
@@ -73,23 +74,25 @@ createScaledCFAInPrivateWave(const GCNSubtarget &ST,
                              MCRegister DwarfStackPtrReg) {
   assert(ST.enableFlatScratch());
 
-  // When flat scratch is used, the cfa is expressed in terms of private_lane
-  // (address space 5), but the debugger only accepts addresses in terms of
-  // private_wave (6). Override the cfa value using the expression
-  // (wave_size*cfa_reg), which is equivalent to (cfa_reg << wave_size_log2)
+  // When flat scratch is enabled, the stack pointer is an address in the
+  // private_lane DWARF address space (i.e. swizzled), but in order to
+  // accurately and efficiently describe things like masked spills of vector
+  // registers we want to define the CFA to be an address in the private_wave
+  // DWARF address space (i.e. unswizzled). To achieve this we scale the stack
+  // pointer by the wavefront size, implemented as (SP << wave_size_log2).
   const unsigned WavefrontSizeLog2 = ST.getWavefrontSizeLog2();
   assert(WavefrontSizeLog2 < 32);
 
   SmallString<20> Block;
   raw_svector_ostream OSBlock(Block);
   encodeDwarfRegisterLocation(DwarfStackPtrReg, OSBlock);
-  OSBlock << uint8_t(dwarf::DW_OP_deref_size) << uint8_t(4)
+  OSBlock << uint8_t(dwarf::DW_OP_deref_size) << uint8_t(SGPRByteSize)
           << uint8_t(dwarf::DW_OP_lit0 + WavefrontSizeLog2)
           << uint8_t(dwarf::DW_OP_shl)
           << uint8_t(dwarf::DW_OP_lit0 +
-                     dwarf::DW_ASPACE_LLVM_AMDGPU_private_wave);
-    OSBlock << uint8_t(dwarf::DW_OP_LLVM_user)
-            << uint8_t(dwarf::DW_OP_LLVM_form_aspace_address);
+                     dwarf::DW_ASPACE_LLVM_AMDGPU_private_wave)
+          << uint8_t(dwarf::DW_OP_LLVM_user)
+          << uint8_t(dwarf::DW_OP_LLVM_form_aspace_address);
 
   SmallString<20> CFIInst;
   raw_svector_ostream OSCFIInst(CFIInst);
@@ -950,6 +953,17 @@ void SIFrameLowering::emitEntryFunctionPrologue(MachineFunction &MF,
                                          PreloadedScratchRsrcReg,
                                          ScratchRsrcReg, ScratchWaveOffsetReg);
   }
+
+  if (ST.hasWaitXCnt()) {
+    // Set REPLAY_MODE (bit 25) in MODE register to enable multi-group XNACK
+    // replay. This aligns hardware behavior with the compiler's s_wait_xcnt
+    // insertion logic, which assumes multi-group mode by default.
+    unsigned RegEncoding =
+        AMDGPU::Hwreg::HwregEncoding::encode(AMDGPU::Hwreg::ID_MODE, 25, 1);
+    BuildMI(MBB, I, DL, TII->get(AMDGPU::S_SETREG_IMM32_B32))
+        .addImm(1)
+        .addImm(RegEncoding);
+  }
 }
 
 // Emit scratch RSRC setup code, assuming `ScratchRsrcReg != AMDGPU::NoReg`
@@ -1267,16 +1281,13 @@ void SIFrameLowering::emitCSRSpillStores(MachineFunction &MF,
 
   StoreWWMRegisters(WWMCalleeSavedRegs);
   if (FuncInfo->isWholeWaveFunction()) {
-    // SI_WHOLE_WAVE_FUNC_SETUP has outlived its purpose, so we can remove
-    // it now. If we have already saved some WWM CSR registers, then the EXEC is
-    // already -1 and we don't need to do anything else. Otherwise, set EXEC to
-    // -1 here.
+    // If we have already saved some WWM CSR registers, then the EXEC is already
+    // -1 and we don't need to do anything else. Otherwise, set EXEC to -1 here.
     if (!ScratchExecCopy)
       buildScratchExecCopy(LiveUnits, MF, MBB, MBBI, DL, /*IsProlog*/ true,
                            /*EnableInactiveLanes*/ true);
     else if (WWMCalleeSavedRegs.empty())
       EnableAllLanes();
-    TII->getWholeWaveFunctionSetup(MF)->eraseFromParent();
   } else if (ScratchExecCopy) {
     // FIXME: Split block and make terminator.
     BuildMI(MBB, MBBI, DL, TII->get(LMC.MovOpc), LMC.ExecReg)
@@ -1590,6 +1601,11 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
          "Needed to save BP but didn't save it anywhere");
 
   assert((HasBP || !BPSaved) && "Saved BP but didn't need it");
+
+  if (FuncInfo->isWholeWaveFunction()) {
+    // SI_WHOLE_WAVE_FUNC_SETUP has outlived its purpose.
+    TII->getWholeWaveFunctionSetup(MF)->eraseFromParent();
+  }
 }
 
 void SIFrameLowering::emitEpilogue(MachineFunction &MF,
@@ -2466,7 +2482,9 @@ bool SIFrameLowering::hasFPImpl(const MachineFunction &MF) const {
     return MFI.getStackSize() != 0;
   }
 
-  return frameTriviallyRequiresSP(MFI) || MFI.isFrameAddressTaken() ||
+  return (frameTriviallyRequiresSP(MFI) &&
+          !MF.getInfo<SIMachineFunctionInfo>()->isChainFunction()) ||
+         MFI.isFrameAddressTaken() ||
          MF.getSubtarget<GCNSubtarget>().getRegisterInfo()->hasStackRealignment(
              MF) ||
          mayReserveScratchForCWSR(MF) ||

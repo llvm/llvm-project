@@ -5,6 +5,11 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file contains the declaration of the ObjectStore class.
+///
+//===----------------------------------------------------------------------===//
 
 #ifndef LLVM_CAS_OBJECTSTORE_H
 #define LLVM_CAS_OBJECTSTORE_H
@@ -111,7 +116,10 @@ public:
   virtual Expected<bool> isMaterialized(ObjectRef Ref) const = 0;
 
   /// Validate the underlying object referred by CASID.
-  virtual Error validate(const CASID &ID) = 0;
+  virtual Error validateObject(const CASID &ID) = 0;
+
+  /// Validate the entire ObjectStore.
+  virtual Error validate(bool CheckHash) const = 0;
 
 protected:
   /// Load the object referenced by \p Ref.
@@ -171,7 +179,8 @@ protected:
 
 public:
   /// Helper functions to store object and returns a ObjectProxy.
-  Expected<ObjectProxy> createProxy(ArrayRef<ObjectRef> Refs, StringRef Data);
+  LLVM_ABI_FOR_TEST Expected<ObjectProxy> createProxy(ArrayRef<ObjectRef> Refs,
+                                                      StringRef Data);
 
   /// Store object from StringRef.
   Expected<ObjectRef> storeFromString(ArrayRef<ObjectRef> Refs,
@@ -197,10 +206,10 @@ public:
   static Error createUnknownObjectError(const CASID &ID);
 
   /// Create ObjectProxy from CASID. If the object doesn't exist, get an error.
-  Expected<ObjectProxy> getProxy(const CASID &ID);
+  LLVM_ABI Expected<ObjectProxy> getProxy(const CASID &ID);
   /// Create ObjectProxy from ObjectRef. If the object can't be loaded, get an
   /// error.
-  Expected<ObjectProxy> getProxy(ObjectRef Ref);
+  LLVM_ABI Expected<ObjectProxy> getProxy(ObjectRef Ref);
 
   /// \returns \c std::nullopt if the object is missing from the CAS.
   Expected<std::optional<ObjectProxy>> getProxyIfExists(ObjectRef Ref);
@@ -215,8 +224,38 @@ public:
     return Data.size();
   }
 
+  /// Set the size for limiting growth of on-disk storage. This has an effect
+  /// for when the instance is closed.
+  ///
+  /// Implementations may leave this unimplemented.
+  virtual Error setSizeLimit(std::optional<uint64_t> SizeLimit) {
+    return Error::success();
+  }
+
+  /// \returns the storage size of the on-disk CAS data.
+  ///
+  /// Implementations that don't have an implementation for this should return
+  /// \p std::nullopt.
+  virtual Expected<std::optional<uint64_t>> getStorageSize() const {
+    return std::nullopt;
+  }
+
+  /// Prune local storage to reduce its size according to the desired size
+  /// limit. Pruning can happen concurrently with other operations.
+  ///
+  /// Implementations may leave this unimplemented.
+  virtual Error pruneStorageData() { return Error::success(); }
+
   /// Validate the whole node tree.
   Error validateTree(ObjectRef Ref);
+
+  /// Import object from another CAS. This will import the full tree from the
+  /// other CAS.
+  Expected<ObjectRef> importObject(ObjectStore &Upstream, ObjectRef Other);
+
+  /// Print the ObjectStore internals for debugging purpose.
+  virtual void print(raw_ostream &) const {}
+  void dump() const;
 
   /// Get CASContext
   const CASContext &getContext() const { return Context; }
@@ -290,7 +329,15 @@ private:
   ObjectHandle H;
 };
 
-std::unique_ptr<ObjectStore> createInMemoryCAS();
+/// Create an in memory CAS.
+LLVM_ABI std::unique_ptr<ObjectStore> createInMemoryCAS();
+
+/// \returns true if \c LLVM_ENABLE_ONDISK_CAS configuration was enabled.
+bool isOnDiskCASEnabled();
+
+/// Create a persistent on-disk path at \p Path.
+LLVM_ABI Expected<std::unique_ptr<ObjectStore>>
+createOnDiskCAS(const Twine &Path);
 
 } // namespace cas
 } // namespace llvm

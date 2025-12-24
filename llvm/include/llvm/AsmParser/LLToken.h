@@ -206,6 +206,8 @@ enum Kind {
   kw_readwrite,
   kw_argmem,
   kw_inaccessiblemem,
+  kw_target_mem0,
+  kw_target_mem1,
   kw_errnomem,
 
   // Legacy attributes:
@@ -488,29 +490,30 @@ enum Kind {
   SummaryID,  // ^42
 
   // String valued tokens (StrVal).
-  LabelStr,         // foo:
-  GlobalVar,        // @foo @"foo"
-  ComdatVar,        // $foo
-  LocalVar,         // %foo %"foo"
-  MetadataVar,      // !foo
-  StringConstant,   // "foo"
-  DwarfTag,         // DW_TAG_foo
-  DwarfAttEncoding, // DW_ATE_foo
-  DwarfVirtuality,  // DW_VIRTUALITY_foo
-  DwarfLang,        // DW_LANG_foo
-  DwarfCC,          // DW_CC_foo
-  DwarfMSpaceLLVM,  // DW_MSPACE_LLVM_foo
-  EmissionKind,     // lineTablesOnly
-  NameTableKind,    // GNU
-  FixedPointKind,   // Fixed point
-  DwarfOp,          // DW_OP_foo
-  DIFlag,           // DIFlagFoo
-  DISPFlag,         // DISPFlagFoo
-  DwarfMacinfo,     // DW_MACINFO_foo
-  ChecksumKind,     // CSK_foo
-  DIOp,             // DIOpFoo
-  DbgRecordType,    // dbg_foo
-  DwarfEnumKind,    // DW_APPLE_ENUM_KIND_foo
+  LabelStr,            // foo:
+  GlobalVar,           // @foo @"foo"
+  ComdatVar,           // $foo
+  LocalVar,            // %foo %"foo"
+  MetadataVar,         // !foo
+  StringConstant,      // "foo"
+  DwarfTag,            // DW_TAG_foo
+  DwarfAttEncoding,    // DW_ATE_foo
+  DwarfVirtuality,     // DW_VIRTUALITY_foo
+  DwarfLang,           // DW_LANG_foo
+  DwarfSourceLangName, // DW_LNAME_foo
+  DwarfCC,             // DW_CC_foo
+  DwarfMSpaceLLVM,     // DW_MSPACE_LLVM_foo
+  EmissionKind,        // lineTablesOnly
+  NameTableKind,       // GNU
+  FixedPointKind,      // Fixed point
+  DwarfOp,             // DW_OP_foo
+  DIFlag,              // DIFlagFoo
+  DISPFlag,            // DISPFlagFoo
+  DwarfMacinfo,        // DW_MACINFO_foo
+  ChecksumKind,        // CSK_foo
+  DIOp,                // DIOpFoo
+  DbgRecordType,       // dbg_foo
+  DwarfEnumKind,       // DW_APPLE_ENUM_KIND_foo
 
   // Type valued tokens (TyVal).
   Type,

@@ -120,8 +120,7 @@ public:
       TTI::OperandValueInfo OpInfo = {TTI::OK_AnyValue, TTI::OP_None},
       const Instruction *I = nullptr) const override;
   InstructionCost
-  getMaskedMemoryOpCost(unsigned Opcode, Type *Src, Align Alignment,
-                        unsigned AddressSpace,
+  getMaskedMemoryOpCost(const MemIntrinsicCostAttributes &MICA,
                         TTI::TargetCostKind CostKind) const override;
   InstructionCost
   getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy,
@@ -169,6 +168,12 @@ public:
                           unsigned AddressSpace) const override;
   bool isLegalMaskedLoad(Type *DataType, Align Alignment,
                          unsigned AddressSpace) const override;
+  bool isLegalMaskedGather(Type *Ty, Align Alignment) const override;
+  bool isLegalMaskedScatter(Type *Ty, Align Alignment) const override;
+  bool forceScalarizeMaskedGather(VectorType *VTy,
+                                  Align Alignment) const override;
+  bool forceScalarizeMaskedScatter(VectorType *VTy,
+                                   Align Alignment) const override;
 
   /// @}
 

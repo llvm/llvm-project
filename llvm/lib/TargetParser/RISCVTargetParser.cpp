@@ -228,6 +228,10 @@ void printVType(unsigned VType, raw_ostream &OS) {
     OS << ", mu";
 }
 
+void printXSfmmVType(unsigned VType, raw_ostream &OS) {
+  OS << "e" << getSEW(VType) << ", w" << getXSfmmWiden(VType);
+}
+
 unsigned getSEWLMULRatio(unsigned SEW, VLMUL VLMul) {
   unsigned LMul;
   bool Fractional;

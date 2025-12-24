@@ -87,7 +87,7 @@ public:
   latch(const latch&)            = delete;
   latch& operator=(const latch&) = delete;
 
-  inline _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI void count_down(ptrdiff_t __update = 1) {
+  inline _LIBCPP_HIDE_FROM_ABI void count_down(ptrdiff_t __update = 1) {
     _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(__update >= 0, "latch::count_down called with a negative value");
     auto const __old = __a_.fetch_sub(__update, memory_order_release);
     _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(
@@ -101,12 +101,12 @@ public:
     auto __value = __a_.load(memory_order_acquire);
     return try_wait_impl(__value);
   }
-  inline _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI void wait() const {
+  inline _LIBCPP_HIDE_FROM_ABI void wait() const {
     std::__atomic_wait_unless(__a_, memory_order_acquire, [this](ptrdiff_t& __value) -> bool {
       return try_wait_impl(__value);
     });
   }
-  inline _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI void arrive_and_wait(ptrdiff_t __update = 1) {
+  inline _LIBCPP_HIDE_FROM_ABI void arrive_and_wait(ptrdiff_t __update = 1) {
     _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(__update >= 0, "latch::arrive_and_wait called with a negative value");
     // other preconditions on __update are checked in count_down()
 
