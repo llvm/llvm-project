@@ -27,7 +27,8 @@ static bool mlirTypeIsARankedIntegerTensor(MlirType t) {
          mlirTypeIsAInteger(mlirShapedTypeGetElementType(t));
 }
 
-struct PyTestType : mlir::python::PyConcreteType<PyTestType> {
+struct PyTestType
+    : mlir::python::MLIR_BINDINGS_PYTHON_DOMAIN::PyConcreteType<PyTestType> {
   static constexpr IsAFunctionTy isaFunction = mlirTypeIsAPythonTestTestType;
   static constexpr GetTypeIDFunctionTy getTypeIdFunction =
       mlirPythonTestTestTypeGetTypeID;
@@ -37,7 +38,8 @@ struct PyTestType : mlir::python::PyConcreteType<PyTestType> {
   static void bindDerived(ClassTy &c) {
     c.def_static(
         "get",
-        [](mlir::python::DefaultingPyMlirContext context) {
+        [](mlir::python::MLIR_BINDINGS_PYTHON_DOMAIN::DefaultingPyMlirContext
+               context) {
           return PyTestType(context->getRef(),
                             mlirPythonTestTestTypeGet(context.get()->get()));
         },
@@ -45,7 +47,9 @@ struct PyTestType : mlir::python::PyConcreteType<PyTestType> {
   }
 };
 
-class PyTestAttr : public mlir::python::PyConcreteAttribute<PyTestAttr> {
+class PyTestAttr
+    : public mlir::python::MLIR_BINDINGS_PYTHON_DOMAIN::PyConcreteAttribute<
+          PyTestAttr> {
 public:
   static constexpr IsAFunctionTy isaFunction =
       mlirAttributeIsAPythonTestTestAttribute;
@@ -57,7 +61,8 @@ public:
   static void bindDerived(ClassTy &c) {
     c.def_static(
         "get",
-        [](mlir::python::DefaultingPyMlirContext context) {
+        [](mlir::python::MLIR_BINDINGS_PYTHON_DOMAIN::DefaultingPyMlirContext
+               context) {
           return PyTestAttr(context->getRef(), mlirPythonTestTestAttributeGet(
                                                    context.get()->get()));
         },

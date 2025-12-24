@@ -13,9 +13,9 @@
 
 namespace mlir {
 namespace python {
-
+namespace MLIR_BINDINGS_PYTHON_DOMAIN {
 void populateRewriteSubmodule(nanobind::module_ &m);
-
+}
 } // namespace python
 } // namespace mlir
 

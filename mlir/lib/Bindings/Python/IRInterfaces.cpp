@@ -25,7 +25,7 @@ namespace nb = nanobind;
 
 namespace mlir {
 namespace python {
-
+namespace MLIR_BINDINGS_PYTHON_DOMAIN {
 constexpr static const char *constructorDoc =
     R"(Creates an interface from a given operation/opview object or from a
 subclass of OpView. Raises ValueError if the operation does not implement the
@@ -469,6 +469,6 @@ void populateIRInterfaces(nb::module_ &m) {
   PyShapedTypeComponents::bind(m);
   PyInferShapedTypeOpInterface::bind(m);
 }
-
+} // namespace MLIR_BINDINGS_PYTHON_DOMAIN
 } // namespace python
 } // namespace mlir
