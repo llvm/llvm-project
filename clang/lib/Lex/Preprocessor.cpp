@@ -119,6 +119,8 @@ Preprocessor::Preprocessor(const PreprocessorOptions &PPOpts,
   // We haven't read anything from the external source.
   ReadMacrosFromExternalSource = false;
 
+  LastTokenWasExportKeyword.reset();
+
   BuiltinInfo = std::make_unique<Builtin::Context>();
 
   // "Poison" __VA_ARGS__, __VA_OPT__ which can only appear in the expansion of
@@ -1252,7 +1254,7 @@ bool Preprocessor::LexModuleNameContinue(Token &Tok, SourceLocation UseLoc,
 /// Otherwise the token is treated as an identifier.
 bool Preprocessor::HandleModuleContextualKeyword(
     Token &Result, bool TokAtPhysicalStartOfLine) {
-  if (!Result.isModuleContextualKeyword(getLangOpts()))
+  if (!getLangOpts().CPlusPlusModules || !Result.isModuleContextualKeyword())
     return false;
 
   if (Result.is(tok::kw_export)) {

@@ -1359,8 +1359,9 @@ void Preprocessor::HandleDirective(Token &Result) {
       case tok::pp___preprocessed_module:
       case tok::pp___preprocessed_import:
         Diag(Result, diag::err_embedded_directive)
-            << Introducer.isModuleContextualKeyword(getLangOpts(),
-                                                    /*AllowExport=*/false)
+            << (getLangOpts().CPlusPlusModules &&
+                Introducer.isModuleContextualKeyword(
+                    /*AllowExport=*/false))
             << II->getName();
         Diag(*ArgMacro, diag::note_macro_expansion_here)
             << ArgMacro->getIdentifierInfo();
@@ -1462,8 +1463,9 @@ void Preprocessor::HandleDirective(Token &Result) {
       return HandleCXXImportDirective(Result);
     // GNU Extensions.
     case tok::pp_import:
-      if (Introducer.isModuleContextualKeyword(getLangOpts(),
-                                               /*AllowExport=*/false))
+      if (getLangOpts().CPlusPlusModules &&
+          Introducer.isModuleContextualKeyword(
+              /*AllowExport=*/false))
         return HandleCXXImportDirective(Result);
       return HandleImportDirective(Introducer.getLocation(), Result);
     case tok::pp_include_next:

@@ -73,10 +73,7 @@ tok::ObjCKeywordKind Token::getObjCKeywordID() const {
   return specId ? specId->getObjCKeywordID() : tok::objc_not_keyword;
 }
 
-bool Token::isModuleContextualKeyword(const LangOptions &LangOpts,
-                                      bool AllowExport) const {
-  if (!LangOpts.CPlusPlusModules)
-    return false;
+bool Token::isModuleContextualKeyword(bool AllowExport) const {
   if (AllowExport && is(tok::kw_export))
     return true;
   if (isOneOf(tok::kw_import, tok::kw_module))
@@ -4038,17 +4035,16 @@ LexStart:
     // Notify MIOpt that we read a non-whitespace/non-comment token.
     MIOpt.ReadToken();
 
-    // The reason for saving and using LangOpts in the preprocessor here is that
-    // EOF may be encountered in LexIdentifierContinue and current Lexer might
-    // be destructed in HandleEndOfFile, If the code after
-    // LexIdentifierContinue try to access LangOps in this Lexer, it will hit
-    // undefined behavior.
-    const LangOptions *PPLangOpts = PP ? &PP->getLangOpts() : nullptr;
+    // The reason for saving and using CPlusPlusModules here is that EOF may be
+    // encountered in LexIdentifierContinue and current Lexer might be
+    // destructed in HandleEndOfFile, If the code after LexIdentifierContinue
+    // try to access LangOps in this Lexer, it will hit undefined behavior.
+    bool CPlusPlusModules = LangOpts.CPlusPlusModules;
     bool returnedToken = LexIdentifierContinue(Result, CurPtr);
 
     if (returnedToken && !LexingRawMode && !Is_PragmaLexer &&
-        !ParsingPreprocessorDirective && PP &&
-        Result.isModuleContextualKeyword(*PPLangOpts) &&
+        !ParsingPreprocessorDirective && CPlusPlusModules &&
+        Result.isModuleContextualKeyword() &&
         PP->HandleModuleContextualKeyword(Result, TokAtPhysicalStartOfLine))
       goto HandleDirective;
     return returnedToken;
@@ -4625,7 +4621,7 @@ bool Lexer::LexDependencyDirectiveToken(Token &Result) {
     Result.setRawIdentifierData(TokPtr);
     if (!isLexingRawMode()) {
       const IdentifierInfo *II = PP->LookUpIdentifierInfo(Result);
-      if (Result.isModuleContextualKeyword(LangOpts) &&
+      if (LangOpts.CPlusPlusModules && Result.isModuleContextualKeyword() &&
           PP->HandleModuleContextualKeyword(Result, Result.isAtStartOfLine())) {
         PP->HandleDirective(Result);
         return false;

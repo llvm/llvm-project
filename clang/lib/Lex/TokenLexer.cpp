@@ -57,6 +57,7 @@ void TokenLexer::Init(Token &Tok, SourceLocation ELEnd, MacroInfo *MI,
   IsReinject = false;
   NumTokens = Macro->tokens_end()-Macro->tokens_begin();
   MacroExpansionStart = SourceLocation();
+  LexingCXXModuleDirective = false;
 
   SourceManager &SM = PP.getSourceManager();
   MacroStartSLocOffset = SM.getNextLocalOffset();
@@ -113,6 +114,7 @@ void TokenLexer::Init(const Token *TokArray, unsigned NumToks,
   HasLeadingSpace = false;
   NextTokGetsSpace = false;
   MacroExpansionStart = SourceLocation();
+  LexingCXXModuleDirective = false;
 
   // Set HasLeadingSpace/AtStartOfLine so that the first token will be
   // returned unmodified.
@@ -713,7 +715,7 @@ bool TokenLexer::Lex(Token &Tok) {
   // Handle recursive expansion!
   if (!Tok.isAnnotation() && Tok.getIdentifierInfo() != nullptr &&
       (!PP.getLangOpts().CPlusPlusModules ||
-       !Tok.isModuleContextualKeyword(PP.getLangOpts()))) {
+       !Tok.isModuleContextualKeyword())) {
     // Change the kind of this identifier to the appropriate token kind, e.g.
     // turning "for" into a keyword.
     IdentifierInfo *II = Tok.getIdentifierInfo();
