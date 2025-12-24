@@ -31,13 +31,14 @@
 namespace nb = nanobind;
 using namespace nb::literals;
 using namespace mlir;
-using namespace mlir::python;
 
 using llvm::SmallVector;
 using llvm::StringRef;
 using llvm::Twine;
 
-namespace mlir::python {
+namespace mlir {
+namespace python {
+namespace MLIR_BINDINGS_PYTHON_DOMAIN {
 //------------------------------------------------------------------------------
 // PyMlirContext
 //------------------------------------------------------------------------------
@@ -169,7 +170,8 @@ MlirLogicalResult PyMlirContext::ErrorCapture::handler(MlirDiagnostic diag,
   if (self->ctx->emitErrorDiagnostics)
     return mlirLogicalResultFailure();
 
-  if (mlirDiagnosticGetSeverity(diag) != MlirDiagnosticError)
+  if (mlirDiagnosticGetSeverity(diag) !=
+      MlirDiagnosticSeverity::MlirDiagnosticError)
     return mlirLogicalResultFailure();
 
   self->errors.emplace_back(PyDiagnostic(diag).getInfo());
@@ -356,9 +358,10 @@ void PyDiagnostic::checkValid() {
   }
 }
 
-MlirDiagnosticSeverity PyDiagnostic::getSeverity() {
+PyMlirDiagnosticSeverity PyDiagnostic::getSeverity() {
   checkValid();
-  return mlirDiagnosticGetSeverity(diagnostic);
+  return static_cast<PyMlirDiagnosticSeverity>(
+      mlirDiagnosticGetSeverity(diagnostic));
 }
 
 PyLocation PyDiagnostic::getLocation() {
@@ -672,12 +675,12 @@ void PyOperationBase::writeBytecode(const nb::object &fileOrStringObject,
 }
 
 void PyOperationBase::walk(
-    std::function<MlirWalkResult(MlirOperation)> callback,
-    MlirWalkOrder walkOrder) {
+    std::function<PyMlirWalkResult(MlirOperation)> callback,
+    PyMlirWalkOrder walkOrder) {
   PyOperation &operation = getOperation();
   operation.checkValid();
   struct UserData {
-    std::function<MlirWalkResult(MlirOperation)> callback;
+    std::function<PyMlirWalkResult(MlirOperation)> callback;
     bool gotException;
     std::string exceptionWhat;
     nb::object exceptionType;
@@ -687,7 +690,7 @@ void PyOperationBase::walk(
                                               void *userData) {
     UserData *calleeUserData = static_cast<UserData *>(userData);
     try {
-      return (calleeUserData->callback)(op);
+      return static_cast<MlirWalkResult>((calleeUserData->callback)(op));
     } catch (nb::python_error &e) {
       calleeUserData->gotException = true;
       calleeUserData->exceptionWhat = std::string(e.what());
@@ -695,7 +698,8 @@ void PyOperationBase::walk(
       return MlirWalkResult::MlirWalkResultInterrupt;
     }
   };
-  mlirOperationWalk(operation, walkCallback, &userData, walkOrder);
+  mlirOperationWalk(operation, walkCallback, &userData,
+                    static_cast<MlirWalkOrder>(walkOrder));
   if (userData.gotException) {
     std::string message("Exception raised in callback: ");
     message.append(userData.exceptionWhat);
@@ -1685,4 +1689,6 @@ void registerMLIRErrorInCore() {
     }
   });
 }
-} // namespace mlir::python
+} // namespace MLIR_BINDINGS_PYTHON_DOMAIN
+} // namespace python
+} // namespace mlir

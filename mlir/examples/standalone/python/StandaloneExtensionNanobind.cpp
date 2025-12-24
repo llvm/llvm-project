@@ -17,7 +17,8 @@
 
 namespace nb = nanobind;
 
-struct PyCustomType : mlir::python::PyConcreteType<PyCustomType> {
+struct PyCustomType
+    : mlir::python::MLIR_BINDINGS_PYTHON_DOMAIN::PyConcreteType<PyCustomType> {
   static constexpr IsAFunctionTy isaFunction = mlirStandaloneTypeIsACustomType;
   static constexpr GetTypeIDFunctionTy getTypeIdFunction =
       mlirStandaloneCustomTypeGetTypeID;
@@ -28,7 +29,8 @@ struct PyCustomType : mlir::python::PyConcreteType<PyCustomType> {
     c.def_static(
         "get",
         [](const std::string &value,
-           mlir::python::DefaultingPyMlirContext context) {
+           mlir::python::MLIR_BINDINGS_PYTHON_DOMAIN::DefaultingPyMlirContext
+               context) {
           return PyCustomType(
               context->getRef(),
               mlirStandaloneCustomTypeGet(

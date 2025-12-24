@@ -19,9 +19,11 @@
 namespace nb = nanobind;
 using namespace nb::literals;
 using namespace mlir;
-using namespace mlir::python;
+using namespace mlir::python::MLIR_BINDINGS_PYTHON_DOMAIN;
 
-namespace {
+namespace mlir {
+namespace python {
+namespace MLIR_BINDINGS_PYTHON_DOMAIN {
 
 /// Owning Wrapper around a PassManager.
 class PyPassManager {
@@ -53,23 +55,29 @@ private:
   MlirPassManager passManager;
 };
 
-} // namespace
+enum PyMlirPassDisplayMode : std::underlying_type<MlirPassDisplayMode>::type {
+  MLIR_PASS_DISPLAY_MODE_LIST = MLIR_PASS_DISPLAY_MODE_LIST,
+  MLIR_PASS_DISPLAY_MODE_PIPELINE = MLIR_PASS_DISPLAY_MODE_PIPELINE
+};
+
+struct PyMlirExternalPass : MlirExternalPass {};
 
 /// Create the `mlir.passmanager` here.
-void mlir::python::populatePassManagerSubmodule(nb::module_ &m) {
+void populatePassManagerSubmodule(nb::module_ &m) {
   //----------------------------------------------------------------------------
   // Mapping of enumerated types
   //----------------------------------------------------------------------------
-  nb::enum_<MlirPassDisplayMode>(m, "PassDisplayMode")
+  nb::enum_<PyMlirPassDisplayMode>(m, "PassDisplayMode")
       .value("LIST", MLIR_PASS_DISPLAY_MODE_LIST)
       .value("PIPELINE", MLIR_PASS_DISPLAY_MODE_PIPELINE);
 
   //----------------------------------------------------------------------------
   // Mapping of MlirExternalPass
   //----------------------------------------------------------------------------
-  nb::class_<MlirExternalPass>(m, "ExternalPass")
-      .def("signal_pass_failure",
-           [](MlirExternalPass pass) { mlirExternalPassSignalFailure(pass); });
+  nb::class_<PyMlirExternalPass>(m, "ExternalPass")
+      .def("signal_pass_failure", [](PyMlirExternalPass pass) {
+        mlirExternalPassSignalFailure(pass);
+      });
 
   //----------------------------------------------------------------------------
   // Mapping of the top-level PassManager
@@ -148,11 +156,12 @@ void mlir::python::populatePassManagerSubmodule(nb::module_ &m) {
           "Enable pass timing.")
       .def(
           "enable_statistics",
-          [](PyPassManager &passManager, MlirPassDisplayMode displayMode) {
-            mlirPassManagerEnableStatistics(passManager.get(), displayMode);
+          [](PyPassManager &passManager, PyMlirPassDisplayMode displayMode) {
+            mlirPassManagerEnableStatistics(
+                passManager.get(),
+                static_cast<MlirPassDisplayMode>(displayMode));
           },
-          "displayMode"_a =
-              MlirPassDisplayMode::MLIR_PASS_DISPLAY_MODE_PIPELINE,
+          "displayMode"_a = MLIR_PASS_DISPLAY_MODE_PIPELINE,
           "Enable pass statistics.")
       .def_static(
           "parse",
@@ -211,7 +220,8 @@ void mlir::python::populatePassManagerSubmodule(nb::module_ &m) {
             };
             callbacks.run = [](MlirOperation op, MlirExternalPass pass,
                                void *userData) {
-              nb::handle(static_cast<PyObject *>(userData))(op, pass);
+              nb::handle(static_cast<PyObject *>(userData))(
+                  op, PyMlirExternalPass{pass.ptr});
             };
             auto externalPass = mlirCreateExternalPass(
                 passID, mlirStringRefCreate(name->data(), name->length()),
@@ -268,3 +278,6 @@ void mlir::python::populatePassManagerSubmodule(nb::module_ &m) {
           "be passed to `parse` for round-tripping.");
   registerMLIRError();
 }
+} // namespace MLIR_BINDINGS_PYTHON_DOMAIN
+} // namespace python
+} // namespace mlir

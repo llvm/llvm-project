@@ -33,6 +33,7 @@
 
 namespace mlir {
 namespace python {
+namespace MLIR_BINDINGS_PYTHON_DOMAIN {
 
 class PyBlock;
 class PyDiagnostic;
@@ -325,6 +326,26 @@ private:
   MlirLocation loc;
 };
 
+enum PyMlirDiagnosticSeverity : std::underlying_type<
+    MlirDiagnosticSeverity>::type {
+  MlirDiagnosticError = MlirDiagnosticError,
+  MlirDiagnosticWarning = MlirDiagnosticWarning,
+  MlirDiagnosticNote = MlirDiagnosticNote,
+  MlirDiagnosticRemark = MlirDiagnosticRemark
+};
+
+enum PyMlirWalkResult : std::underlying_type<MlirWalkResult>::type {
+  MlirWalkResultAdvance = MlirWalkResultAdvance,
+  MlirWalkResultInterrupt = MlirWalkResultInterrupt,
+  MlirWalkResultSkip = MlirWalkResultSkip
+};
+
+/// Traversal order for operation walk.
+enum PyMlirWalkOrder : std::underlying_type<MlirWalkOrder>::type {
+  MlirWalkPreOrder = MlirWalkPreOrder,
+  MlirWalkPostOrder = MlirWalkPostOrder
+};
+
 /// Python class mirroring the C MlirDiagnostic struct. Note that these structs
 /// are only valid for the duration of a diagnostic callback and attempting
 /// to access them outside of that will raise an exception. This applies to
@@ -334,7 +355,7 @@ public:
   PyDiagnostic(MlirDiagnostic diagnostic) : diagnostic(diagnostic) {}
   void invalidate();
   bool isValid() { return valid; }
-  MlirDiagnosticSeverity getSeverity();
+  PyMlirDiagnosticSeverity getSeverity();
   PyLocation getLocation();
   nanobind::str getMessage();
   nanobind::tuple getNotes();
@@ -342,7 +363,7 @@ public:
   /// Materialized diagnostic information. This is safe to access outside the
   /// diagnostic callback.
   struct DiagnosticInfo {
-    MlirDiagnosticSeverity severity;
+    PyMlirDiagnosticSeverity severity;
     PyLocation location;
     std::string message;
     std::vector<DiagnosticInfo> notes;
@@ -573,8 +594,8 @@ public:
                      std::optional<int64_t> bytecodeVersion);
 
   // Implement the walk method.
-  void walk(std::function<MlirWalkResult(MlirOperation)> callback,
-            MlirWalkOrder walkOrder);
+  void walk(std::function<PyMlirWalkResult(MlirOperation)> callback,
+            PyMlirWalkOrder walkOrder);
 
   /// Moves the operation before or after the other operation.
   void moveAfter(PyOperationBase &other);
@@ -2364,6 +2385,7 @@ private:
 };
 
 MLIR_PYTHON_API_EXPORTED MlirValue getUniqueResult(MlirOperation operation);
+} // namespace MLIR_BINDINGS_PYTHON_DOMAIN
 } // namespace python
 } // namespace mlir
 
@@ -2371,11 +2393,16 @@ namespace nanobind {
 namespace detail {
 
 template <>
-struct type_caster<mlir::python::DefaultingPyMlirContext>
-    : MlirDefaultingCaster<mlir::python::DefaultingPyMlirContext> {};
+struct type_caster<
+    mlir::python::MLIR_BINDINGS_PYTHON_DOMAIN::DefaultingPyMlirContext>
+    : MlirDefaultingCaster<
+          mlir::python::MLIR_BINDINGS_PYTHON_DOMAIN::DefaultingPyMlirContext> {
+};
 template <>
-struct type_caster<mlir::python::DefaultingPyLocation>
-    : MlirDefaultingCaster<mlir::python::DefaultingPyLocation> {};
+struct type_caster<
+    mlir::python::MLIR_BINDINGS_PYTHON_DOMAIN::DefaultingPyLocation>
+    : MlirDefaultingCaster<
+          mlir::python::MLIR_BINDINGS_PYTHON_DOMAIN::DefaultingPyLocation> {};
 
 } // namespace detail
 } // namespace nanobind

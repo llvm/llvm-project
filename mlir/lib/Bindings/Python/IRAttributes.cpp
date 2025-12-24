@@ -24,7 +24,7 @@
 namespace nb = nanobind;
 using namespace nanobind::literals;
 using namespace mlir;
-using namespace mlir::python;
+using namespace mlir::python::MLIR_BINDINGS_PYTHON_DOMAIN;
 
 using llvm::SmallVector;
 
@@ -121,7 +121,9 @@ Raises:
     type or if the buffer does not meet expectations.
 )";
 
-namespace {
+namespace mlir {
+namespace python {
+namespace MLIR_BINDINGS_PYTHON_DOMAIN {
 
 struct nb_buffer_info {
   void *ptr = nullptr;
@@ -1745,7 +1747,9 @@ nb::object symbolRefOrFlatSymbolRefAttributeCaster(PyAttribute &pyAttribute) {
   throw nb::type_error(msg.c_str());
 }
 
-} // namespace
+} // namespace MLIR_BINDINGS_PYTHON_DOMAIN
+} // namespace python
+} // namespace mlir
 
 void PyStringAttribute::bindDerived(ClassTy &c) {
   c.def_static(
@@ -1791,7 +1795,9 @@ void PyStringAttribute::bindDerived(ClassTy &c) {
       "Returns the value of the string attribute as `bytes`");
 }
 
-namespace mlir::python {
+namespace mlir {
+namespace python {
+namespace MLIR_BINDINGS_PYTHON_DOMAIN {
 void populateIRAttributes(nb::module_ &m) {
   PyAffineMapAttribute::bind(m);
   PyDenseBoolArrayAttribute::bind(m);
@@ -1846,4 +1852,6 @@ void populateIRAttributes(nb::module_ &m) {
   PyStridedLayoutAttribute::bind(m);
   registerMLIRError();
 }
-} // namespace mlir::python
+} // namespace MLIR_BINDINGS_PYTHON_DOMAIN
+} // namespace python
+} // namespace mlir

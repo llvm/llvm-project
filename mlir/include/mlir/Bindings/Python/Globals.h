@@ -28,7 +28,7 @@
 
 namespace mlir {
 namespace python {
-
+namespace MLIR_BINDINGS_PYTHON_DOMAIN {
 /// Globals that are always accessible once the extension has been initialized.
 /// Methods of this class are thread-safe.
 class MLIR_PYTHON_API_EXPORTED PyGlobals {
@@ -174,6 +174,8 @@ public:
   MlirTypeID allocateTypeID() { return typeIDAllocator.allocate(); }
 
 private:
+  static PyGlobals *instance;
+
   nanobind::ft_mutex mutex;
 
   /// Module name prefixes to search under for dialect implementation modules.
@@ -195,6 +197,7 @@ private:
   TracebackLoc tracebackLoc;
   TypeIDAllocator typeIDAllocator;
 };
+} // namespace MLIR_BINDINGS_PYTHON_DOMAIN
 } // namespace python
 } // namespace mlir
 

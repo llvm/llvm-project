@@ -12,10 +12,11 @@
 #include "mlir/Bindings/Python/NanobindAdaptors.h"
 
 namespace mlir {
-
+namespace python {
+namespace MLIR_BINDINGS_PYTHON_DOMAIN {
 /// Shaped Type Interface - ShapedType
 class MLIR_PYTHON_API_EXPORTED PyShapedType
-    : public python::PyConcreteType<PyShapedType> {
+    : public PyConcreteType<PyShapedType> {
 public:
   static const IsAFunctionTy isaFunction;
   static constexpr const char *pyClassName = "ShapedType";
@@ -26,7 +27,8 @@ public:
 private:
   void requireHasRank();
 };
-
+} // namespace MLIR_BINDINGS_PYTHON_DOMAIN
+} // namespace python
 } // namespace mlir
 
 #endif // MLIR_BINDINGS_PYTHON_IRTYPES_H

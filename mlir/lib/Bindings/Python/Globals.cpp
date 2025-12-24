@@ -19,8 +19,6 @@
 #include "mlir-c/Support.h"
 #include "mlir/Bindings/Python/Nanobind.h"
 
-#include <iostream>
-
 namespace nb = nanobind;
 using namespace mlir;
 
@@ -28,26 +26,24 @@ using namespace mlir;
 // PyGlobals
 // -----------------------------------------------------------------------------
 
-namespace {
-python::PyGlobals *pyGlobalsInstance = nullptr;
-}
-
-namespace mlir::python {
+namespace mlir {
+namespace python {
+namespace MLIR_BINDINGS_PYTHON_DOMAIN {
+PyGlobals *PyGlobals::instance = nullptr;
 
 PyGlobals::PyGlobals() {
-  std::cerr << MAKE_MLIR_PYTHON_QUALNAME("dialects") << "\n";
-  assert(!pyGlobalsInstance && "PyGlobals already constructed");
-  pyGlobalsInstance = this;
+  assert(!instance && "PyGlobals already constructed");
+  instance = this;
   // The default search path include {mlir.}dialects, where {mlir.} is the
   // package prefix configured at compile time.
   dialectSearchPrefixes.emplace_back(MAKE_MLIR_PYTHON_QUALNAME("dialects"));
 }
 
-PyGlobals::~PyGlobals() { pyGlobalsInstance = nullptr; }
+PyGlobals::~PyGlobals() { instance = nullptr; }
 
 PyGlobals &PyGlobals::get() {
-  assert(pyGlobalsInstance && "PyGlobals is null");
-  return *pyGlobalsInstance;
+  assert(instance && "PyGlobals is null");
+  return *instance;
 }
 
 bool PyGlobals::loadDialectModule(llvm::StringRef dialectNamespace) {
@@ -278,4 +274,6 @@ bool PyGlobals::TracebackLoc::isUserTracebackFilename(
   }
   return isUserTracebackFilenameCache[file];
 }
-} // namespace mlir::python
+} // namespace MLIR_BINDINGS_PYTHON_DOMAIN
+} // namespace python
+} // namespace mlir

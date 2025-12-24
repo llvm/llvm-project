@@ -22,9 +22,11 @@
 namespace nb = nanobind;
 using namespace mlir;
 using namespace nb::literals;
-using namespace mlir::python;
+using namespace mlir::python::MLIR_BINDINGS_PYTHON_DOMAIN;
 
-namespace {
+namespace mlir {
+namespace python {
+namespace MLIR_BINDINGS_PYTHON_DOMAIN {
 
 class PyPatternRewriter {
 public:
@@ -59,6 +61,8 @@ private:
   MlirRewriterBase base;
   PyMlirContextRef ctx;
 };
+
+struct PyMlirPDLResultList : MlirPDLResultList {};
 
 #if MLIR_ENABLE_PDL_IN_PATTERNMATCH
 static nb::object objectFromPDLValue(MlirPDLValue value) {
@@ -118,7 +122,7 @@ public:
            void *userData) -> MlirLogicalResult {
           nb::handle f = nb::handle(static_cast<PyObject *>(userData));
           return logicalResultFromObject(
-              f(PyPatternRewriter(rewriter), results,
+              f(PyPatternRewriter(rewriter), PyMlirPDLResultList{results.ptr},
                 objectsFromPDLValues(nValues, values)));
         },
         fn.ptr());
@@ -133,7 +137,7 @@ public:
            void *userData) -> MlirLogicalResult {
           nb::handle f = nb::handle(static_cast<PyObject *>(userData));
           return logicalResultFromObject(
-              f(PyPatternRewriter(rewriter), results,
+              f(PyPatternRewriter(rewriter), PyMlirPDLResultList{results.ptr},
                 objectsFromPDLValues(nValues, values)));
         },
         fn.ptr());
@@ -223,10 +227,8 @@ private:
   MlirContext ctx;
 };
 
-} // namespace
-
 /// Create the `mlir.rewrite` here.
-void mlir::python::populateRewriteSubmodule(nb::module_ &m) {
+void populateRewriteSubmodule(nb::module_ &m) {
   //----------------------------------------------------------------------------
   // Mapping of the PatternRewriter
   //----------------------------------------------------------------------------
@@ -315,10 +317,10 @@ void mlir::python::populateRewriteSubmodule(nb::module_ &m) {
   // Mapping of the PDLResultList and PDLModule
   //----------------------------------------------------------------------------
 #if MLIR_ENABLE_PDL_IN_PATTERNMATCH
-  nb::class_<MlirPDLResultList>(m, "PDLResultList")
+  nb::class_<PyMlirPDLResultList>(m, "PDLResultList")
       .def(
           "append",
-          [](MlirPDLResultList results, const PyValue &value) {
+          [](PyMlirPDLResultList results, const PyValue &value) {
             mlirPDLResultListPushBackValue(results, value);
           },
           // clang-format off
@@ -327,7 +329,7 @@ void mlir::python::populateRewriteSubmodule(nb::module_ &m) {
           )
       .def(
           "append",
-          [](MlirPDLResultList results, const PyOperation &op) {
+          [](PyMlirPDLResultList results, const PyOperation &op) {
             mlirPDLResultListPushBackOperation(results, op);
           },
           // clang-format off
@@ -336,7 +338,7 @@ void mlir::python::populateRewriteSubmodule(nb::module_ &m) {
           )
       .def(
           "append",
-          [](MlirPDLResultList results, const PyType &type) {
+          [](PyMlirPDLResultList results, const PyType &type) {
             mlirPDLResultListPushBackType(results, type);
           },
           // clang-format off
@@ -345,7 +347,7 @@ void mlir::python::populateRewriteSubmodule(nb::module_ &m) {
           )
       .def(
           "append",
-          [](MlirPDLResultList results, const PyAttribute &attr) {
+          [](PyMlirPDLResultList results, const PyAttribute &attr) {
             mlirPDLResultListPushBackAttribute(results, attr);
           },
           // clang-format off
@@ -355,9 +357,9 @@ void mlir::python::populateRewriteSubmodule(nb::module_ &m) {
   nb::class_<PyPDLPatternModule>(m, "PDLModule")
       .def(
           "__init__",
-          [](PyPDLPatternModule &self, MlirModule module) {
-            new (&self)
-                PyPDLPatternModule(mlirPDLPatternModuleFromModule(module));
+          [](PyPDLPatternModule &self, PyModule &module) {
+            new (&self) PyPDLPatternModule(
+                mlirPDLPatternModuleFromModule(module.get()));
           },
           // clang-format off
           nb::sig("def __init__(self, module: " MAKE_MLIR_PYTHON_QUALNAME("ir.Module") ") -> None"),
@@ -416,9 +418,9 @@ void mlir::python::populateRewriteSubmodule(nb::module_ &m) {
        "results.")
       .def(
           "apply_patterns_and_fold_greedily",
-          [](PyModule &module, MlirFrozenRewritePatternSet set) {
+          [](PyModule &module, PyFrozenRewritePatternSet &set) {
             auto status =
-                mlirApplyPatternsAndFoldGreedily(module.get(), set, {});
+                mlirApplyPatternsAndFoldGreedily(module.get(), set.get(), {});
             if (mlirLogicalResultIsFailure(status))
               throw std::runtime_error(
                   "pattern application failed to converge");
@@ -447,9 +449,9 @@ void mlir::python::populateRewriteSubmodule(nb::module_ &m) {
           "results.")
       .def(
           "apply_patterns_and_fold_greedily",
-          [](PyOperationBase &op, MlirFrozenRewritePatternSet set) {
+          [](PyOperationBase &op, PyFrozenRewritePatternSet &set) {
             auto status = mlirApplyPatternsAndFoldGreedilyWithOp(
-                op.getOperation(), set, {});
+                op.getOperation(), set.get(), {});
             if (mlirLogicalResultIsFailure(status))
               throw std::runtime_error(
                   "pattern application failed to converge");
@@ -472,3 +474,6 @@ void mlir::python::populateRewriteSubmodule(nb::module_ &m) {
           "Applies the given patterns to the given op by a fast walk-based "
           "driver.");
 }
+} // namespace MLIR_BINDINGS_PYTHON_DOMAIN
+} // namespace python
+} // namespace mlir
