@@ -79,7 +79,7 @@ cmake -G Ninja -S llvm-project/llvm -B build \
        -DBUILD_SHARED_LIBS=ON \
        -DLLVM_BUILD_TOOLS=ON \
        -DLLVM_ENABLE_ASSERTIONS=ON \
-       -DLLVM_ENABLE_PROJECTS="clang;bolt;clang-tools-extra;lld" \
+       -DLLVM_ENABLE_PROJECTS="clang;bolt;lld" \
        -DLLVM_USE_LINKER=lld \
        -DLLVM_CCACHE_BUILD=ON \
        -DLLVM_EXTERNAL_PROJECTS="bolttests" \
