@@ -306,8 +306,8 @@ define float @test_select_nnan_nsz_fcmp_ult(float %x) {
 
 define float @test_select_fcmp_sitofp_max(i8 %x) {
 ; CHECK-LABEL: @test_select_fcmp_sitofp_max(
-; CHECK-NEXT:    [[TMP2:%.*]] = sitofp i8 [[TMP0:%.*]] to float
-; CHECK-NEXT:    ret float [[TMP2]]
+; CHECK-NEXT:    [[F:%.*]] = sitofp i8 [[X:%.*]] to float
+; CHECK-NEXT:    ret float [[F]]
 ;
   %f = sitofp i8 %x to float
   %cmp = fcmp ole float %f, -1.280000e+02
@@ -328,8 +328,8 @@ define <2 x float> @test_select_fcmp_sitofp_max_vec(<2 x i8> %x) {
 
 define float @test_select_fcmp_sitofp_min(i8 %x) {
 ; CHECK-LABEL: @test_select_fcmp_sitofp_min(
-; CHECK-NEXT:    [[TMP2:%.*]] = sitofp i8 [[TMP0:%.*]] to float
-; CHECK-NEXT:    ret float [[TMP2]]
+; CHECK-NEXT:    [[F:%.*]] = sitofp i8 [[X:%.*]] to float
+; CHECK-NEXT:    ret float [[F]]
 ;
   %f = sitofp i8 %x to float
   %cmp = fcmp oge float %f, 1.270000e+02
@@ -339,8 +339,8 @@ define float @test_select_fcmp_sitofp_min(i8 %x) {
 
 define float @test_select_fcmp_uitofp_min(i8 %x) {
 ; CHECK-LABEL: @test_select_fcmp_uitofp_min(
-; CHECK-NEXT:    [[TMP2:%.*]] = uitofp i8 [[TMP0:%.*]] to float
-; CHECK-NEXT:    ret float [[TMP2]]
+; CHECK-NEXT:    [[F:%.*]] = uitofp i8 [[X:%.*]] to float
+; CHECK-NEXT:    ret float [[F]]
 ;
   %f = uitofp i8 %x to float
   %cmp = fcmp oge float %f, 2.550000e+02
