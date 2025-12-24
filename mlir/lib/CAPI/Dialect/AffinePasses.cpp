@@ -13,6 +13,7 @@
 // Must include the declarations as they carry important visibility attributes.
 #include "mlir/Dialect/Affine/Transforms/Passes.capi.h.inc"
 using namespace mlir;
+using namespace mlir::affine;
 
 #ifdef __cplusplus
 extern "C" {
