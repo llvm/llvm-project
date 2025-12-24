@@ -12,8 +12,9 @@
 // CHECK:       [[LOAD:%[0-9]+]] = memref.load [[CONVERT1]][] : memref<i64>
 // CHECK:       [[CONVERT0:%.+]] = fir.convert [[DECLARE0]] : (!fir.ref<!fir.array<3xf32>>) -> memref<3xf32>
 // CHECK:       [[C1:%.+]]       = arith.constant 1 : index
+// CHECK-NEXT:  [[C0:%.+]]       = arith.constant 0 : index
 // CHECK-NEXT:  [[CAST:%[0-9]+]] = arith.index_cast [[LOAD]] : i64 to index
-// CHECK-NEXT:  [[SUB:%.+]]      = arith.subi [[CAST]], [[C1]] : index
+// CHECK:       [[SUB:%.+]]      = arith.subi [[CAST]], [[C1]] : index
 // CHECK-NEXT:  [[MUL:%.+]]      = arith.muli [[SUB]], [[C1]] : index
 // CHECK-NEXT:  [[SUBA:%.+]]     = arith.subi [[C1]], [[C1]] : index
 // CHECK-NEXT:  [[ADD:%.+]]      = arith.addi [[MUL]], [[SUBA]] : index

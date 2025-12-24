@@ -1140,22 +1140,6 @@ void FIRToMemRef::runOnOperation() {
     }
   });
 
-  while (!worklist.empty()) {
-    Operation *w = worklist.pop_back_val();
-    for (auto v : w->getOperands()) {
-      if (Operation *opnd = v.getDefiningOp()) {
-        if (llvm::isa<arith::ArithDialect>(opnd->getDialect()) &&
-            opnd->hasOneUse()) {
-          worklist.push_back(opnd);
-        }
-      }
-    }
-    assert(w->use_empty());
-    w->erase();
-  }
-
-  assert(op == getOperation());
-
   for (auto eraseOp : eraseOps) {
     rewriter.eraseOp(eraseOp);
   }
