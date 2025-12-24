@@ -3,7 +3,7 @@
 // RUN: %clang_cc1 -triple aarch64-linux-gnu -emit-llvm -o - %s -fsanitize=function -fno-sanitize-recover=all | FileCheck %s --check-prefixes=CHECK,GNU,64
 // RUN: %clang_cc1 -triple aarch64_be-linux-gnu -emit-llvm -o - %s -fsanitize=function -fno-sanitize-recover=all | FileCheck %s --check-prefixes=CHECK,GNU,64
 // RUN: %clang_cc1 -triple arm-none-eabi -emit-llvm -o - %s -fsanitize=function -fno-sanitize-recover=all | FileCheck %s --check-prefixes=CHECK,ARM,GNU,32
-// RUN: %clang_cc1 -triple apple-macosx-x86_64 -emit-llvm -o - %s -fsanitize=function -fno-sanitize-recover=all | FileCheck %s --check-prefixes=CHECK,64
+// RUN: %clang_cc1 -triple apple-macosx-x86_64 -emit-llvm -o - %s -fsanitize=function -fno-sanitize-recover=all | FileCheck %s --check-prefixes=CHECK,GNU,64
 
 
 // RUN: %clang_cc1 -triple arm64e-apple-ios  -emit-llvm -o - %s -fsanitize=function -fno-sanitize-recover=all -fptrauth-calls | FileCheck %s --check-prefixes=CHECK,GNU,64,AUTH
