@@ -23,6 +23,7 @@
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/Passes.h" // For IDs of passes that are preserved.
 #include "llvm/IR/Analysis.h"
 #include "llvm/IR/EHPersonalities.h"
@@ -973,9 +974,7 @@ X86ExpandPseudoPass::run(MachineFunction &MF,
   if (!Changed)
     return PreservedAnalyses::all();
 
-  PreservedAnalyses PA = PreservedAnalyses::none();
+  PreservedAnalyses PA = getMachineFunctionPassPreservedAnalyses();
   PA.preserveSet<CFGAnalyses>();
-  /*PA.preserve<MachineLoopInfo>();
-  PA.preserve<MachineDominatorTree>();*/
   return PA;
 }
