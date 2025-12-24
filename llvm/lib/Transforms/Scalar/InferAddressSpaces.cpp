@@ -349,13 +349,11 @@ static bool isAddressExpression(const Value &V, const DataLayout &DL,
 }
 
 // Returns the pointer operands of V.
-// If V is a load from a global variable G, also collect the pointer values
-// stored into G.
 //
 // Precondition: V is an address expression.
-static SmallVector<Value *, 2> getPointerOperands(
-    const Value &V, const DataLayout &DL, const TargetTransformInfo *TTI,
-    const DenseMap<GlobalVariable *, SmallVector<Instruction *, 4>> &GVToLdSt) {
+static SmallVector<Value *, 2>
+getPointerOperands(const Value &V, const DataLayout &DL,
+                   const TargetTransformInfo *TTI) {
   if (isa<Argument>(&V))
     return {};
 
@@ -383,23 +381,36 @@ static SmallVector<Value *, 2> getPointerOperands(
     return {P2I->getOperand(0)};
   }
   case Instruction::Load: {
-    if (auto *GV = dyn_cast<GlobalVariable>(Op.getOperand(0))) {
-      SmallVector<Value *, 2> PtrOps;
-      // Only consider GV that is exclusively used within current function.
-      auto It = GVToLdSt.find(GV);
-      assert(It != GVToLdSt.end() && "Expected GV to be in the map");
-      if (GV->getNumUses() == It->second.size()) {
-        for (auto *I : It->second)
-          if (auto *SI = dyn_cast<StoreInst>(I))
-            PtrOps.push_back(SI->getValueOperand());
-      }
-      return PtrOps;
-    }
+    assert(Op.getType()->isPtrOrPtrVectorTy());
     return {};
   }
   default:
     llvm_unreachable("Unexpected instruction type.");
   }
+}
+
+// Given a load from a global variable G, collect the pointer values
+// stored into G.
+static SmallVector<Value *, 2> getStoredPointerOperands(
+    const Value &V,
+    const DenseMap<GlobalVariable *, SmallVector<Instruction *, 4>> &GVToLdSt) {
+  const Operator &Op = cast<Operator>(V);
+  if (Op.getOpcode() != Instruction::Load)
+    return {};
+  auto *GV = dyn_cast<GlobalVariable>(Op.getOperand(0));
+  if (!GV)
+    return {};
+
+  SmallVector<Value *, 2> PtrOps;
+  // Only consider GV that is exclusively used within current function.
+  auto It = GVToLdSt.find(GV);
+  assert(It != GVToLdSt.end() && "Expected GV to be in the map");
+  if (GV->getNumUses() == It->second.size()) {
+    for (auto *I : It->second)
+      if (auto *SI = dyn_cast<StoreInst>(I))
+        PtrOps.push_back(SI->getValueOperand());
+  }
+  return PtrOps;
 }
 
 bool InferAddressSpacesImpl::rewriteIntrinsicOperands(IntrinsicInst *II,
@@ -642,8 +653,7 @@ InferAddressSpacesImpl::collectFlatAddressExpressions(Function &F) const {
     PostorderStack.back().setInt(true);
     // Skip values with an assumed address space.
     if (TTI->getAssumedAddrSpace(TopVal) == UninitializedAddressSpace) {
-      for (Value *PtrOperand :
-           getPointerOperands(*TopVal, *DL, TTI, GVToLdSt)) {
+      for (Value *PtrOperand : getPointerOperands(*TopVal, *DL, TTI)) {
         appendsFlatAddressExpressionToPostorderStack(PtrOperand, PostorderStack,
                                                      Visited);
       }
@@ -1048,7 +1058,11 @@ bool InferAddressSpacesImpl::updateAddressSpace(
   } else {
     // Otherwise, infer the address space from its pointer operands.
     SmallVector<Constant *, 2> ConstantPtrOps;
-    for (Value *PtrOperand : getPointerOperands(V, *DL, TTI, GVToLdSt)) {
+    SmallVector<Value *, 2> PtrOperands = getPointerOperands(V, *DL, TTI);
+    SmallVector<Value *, 2> StoredPtrOperands =
+        getStoredPointerOperands(V, GVToLdSt);
+    PtrOperands.append(StoredPtrOperands.begin(), StoredPtrOperands.end());
+    for (Value *PtrOperand : PtrOperands) {
       auto I = InferredAddrSpace.find(PtrOperand);
       unsigned OperandAS;
       if (I == InferredAddrSpace.end()) {
