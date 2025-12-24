@@ -1271,6 +1271,8 @@ struct ForOpYieldCyclesFolder : public OpRewritePattern<ForOp> {
     bool changed = false;
     SmallVector<unsigned> cycle;
     llvm::SmallBitVector visited(numYieldedValues, false);
+
+    // Go through all possible start points for the cycle.
     for (auto start : llvm::seq(numYieldedValues)) {
       if (visited[start])
         continue;
@@ -1279,6 +1281,8 @@ struct ForOpYieldCyclesFolder : public OpRewritePattern<ForOp> {
       unsigned current = start;
       bool validCycle = true;
       Value initValue = initArgs[start];
+      // Go through yield -> block arg -> yield cycles and check if all values
+      // are always equal to the init.
       while (!visited[current]) {
         cycle.push_back(current);
         visited[current] = true;
@@ -1291,6 +1295,7 @@ struct ForOpYieldCyclesFolder : public OpRewritePattern<ForOp> {
           break;
         }
 
+        // Next yield position.
         unsigned next = cast<BlockArgument>(yieldedValue).getArgNumber() -
                         op.getNumInductionVars();
 
@@ -1307,8 +1312,8 @@ struct ForOpYieldCyclesFolder : public OpRewritePattern<ForOp> {
           break;
       }
 
-      // If we found a valid cycle (yielding own iter arg is also a cycle), all
-      // values in it are always equal to initValue.
+      // If we found a valid cycle (yielding own iter arg forms cycle of length
+      // 1), all values in it are always equal to initValue.
       if (validCycle) {
         changed = true;
         for (unsigned idx : cycle) {
