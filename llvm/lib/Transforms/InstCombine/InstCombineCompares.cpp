@@ -8686,8 +8686,8 @@ static Instruction *foldFCmpWithFloorAndCeil(FCmpInst &I,
 /// representable by A.
 static bool isMinMaxCmpSelectEliminable(SelectPatternFlavor Flavor, Value *A,
                                         Value *B) {
-  ConstantFP *CFP;
-  if (!match(B, m_APFloat(CFP)))
+  const APFloat *APF;
+  if (!match(B, m_APFloat(APF)))
     return false;
 
   auto *I = dyn_cast<Instruction>(A);
@@ -8696,14 +8696,13 @@ static bool isMinMaxCmpSelectEliminable(SelectPatternFlavor Flavor, Value *A,
     return false;
 
   bool IsUnsigned = I->getOpcode() == Instruction::UIToFP;
-  unsigned BitWidth =
-      I->getOperand(0)->getType()->getScalarSizeInBits();
+  unsigned BitWidth = I->getOperand(0)->getType()->getScalarSizeInBits();
   APSInt IntBoundary = (Flavor == SPF_FMAXNUM)
                            ? APSInt::getMinValue(BitWidth, IsUnsigned)
                            : APSInt::getMaxValue(BitWidth, IsUnsigned);
   APSInt ToInt(BitWidth, IsUnsigned);
   bool IsExact;
-  CFP->getValueAPF().convertToInteger(ToInt, APFloat::rmTowardZero, &IsExact);
+  APF->convertToInteger(ToInt, APFloat::rmTowardZero, &IsExact);
   return IsExact && ToInt == IntBoundary;
 }
 
