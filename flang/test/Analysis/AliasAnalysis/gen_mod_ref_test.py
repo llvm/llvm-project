@@ -13,7 +13,7 @@
 import sys
 import re
 
-box_addr_counter=0
+box_addr_counter = 0
 
 for line in sys.stdin:
     line = re.sub(
