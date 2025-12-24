@@ -47,7 +47,7 @@ void test_global_max_f64(__global double *addr, double x){
 }
 
 // CHECK-LABEL: test_flat_add_local_f64
-// CHECK: = atomicrmw fadd ptr addrspace(3) %{{.+}}, double %{{.+}} syncscope("agent") monotonic, align 8{{$}}
+// CHECK: = atomicrmw fadd ptr %{{.+}}, double %{{.+}} syncscope("agent") monotonic, align 8, !amdgpu.no.fine.grained.memory !{{[0-9]+$}}
 
 // GFX90A-LABEL:  test_flat_add_local_f64$local
 // GFX90A:  ds_add_rtn_f64
@@ -57,7 +57,7 @@ void test_flat_add_local_f64(__local double *addr, double x){
 }
 
 // CHECK-LABEL: test_flat_global_add_f64
-// CHECK: = atomicrmw fadd ptr addrspace(1) {{.+}}, double %{{.+}} syncscope("agent") monotonic, align 8, !amdgpu.no.fine.grained.memory !{{[0-9]+$}}
+// CHECK: = atomicrmw fadd ptr {{.+}}, double %{{.+}} syncscope("agent") monotonic, align 8, !amdgpu.no.fine.grained.memory !{{[0-9]+$}}
 
 // GFX90A-LABEL:  test_flat_global_add_f64$local
 // GFX90A:  global_atomic_add_f64
