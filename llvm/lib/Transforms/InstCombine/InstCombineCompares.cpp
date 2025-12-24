@@ -8697,7 +8697,7 @@ static bool isMinMaxCmpSelectEliminable(SelectPatternFlavor Flavor, Value *A,
 
   bool IsUnsigned = I->getOpcode() == Instruction::UIToFP;
   unsigned BitWidth =
-      I->getOperand(0)->getType()->getScalarType()->getIntegerBitWidth();
+      I->getOperand(0)->getType()->getScalarSizeInBits();
   APSInt IntBoundary = (Flavor == SPF_FMAXNUM)
                            ? APSInt::getMinValue(BitWidth, IsUnsigned)
                            : APSInt::getMaxValue(BitWidth, IsUnsigned);
