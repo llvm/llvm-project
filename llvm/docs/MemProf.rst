@@ -37,10 +37,11 @@ To enable MemProf instrumentation, compile your application with the ``-fmemory-
 
 .. code-block:: bash
 
-    clang++ -fmemory-profile -fno-omit-frame-pointer -mno-omit-leaf-frame-pointer -fno-optimize-sibling-calls -fdebug-info-for-profiling -gmlt -O2 source.cpp -o app
+    clang++ -fmemory-profile -fno-omit-frame-pointer -mno-omit-leaf-frame-pointer -fno-optimize-sibling-calls -fdebug-info-for-profiling -gmlt -O2 -fno-pie -no-pie -Wl,-z,noseparate-code -Wl,--build-id source.cpp -o app
 
 .. note::
     Link with ``-fmemory-profile`` as well to link the necessary runtime libraries. If you use a separate link step, ensure the flag is passed to the linker.
+    On Linux, the flags ``-fno-pie -no-pie -Wl,-z,noseparate-code -Wl,--build-id`` are currently required to ensure the binary layout (executable segment at offset 0) and Build ID presence are compatible with the ``llvm-profdata`` profile reader.
 
 Running and Generating Profiles
 -------------------------------
