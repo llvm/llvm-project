@@ -291,6 +291,7 @@ bool xegpu::recoverTemporaryLayouts(Operation *rootOp) {
 //       across region boundaries
 //        while preserving a single well-defined use for each definition at the
 //        region-op level.
+bool xegpu::recoverTemporaryLayouts_first(Operation *rootOp) {}
 
 template <typename T, typename>
 void xegpu::removeLayoutAttr(const T &operandOrResult) {
@@ -369,125 +370,168 @@ xegpu::inferReductionSourceLayout(xegpu::DistributeLayoutAttr resLayout,
   return sliceLayout.getParent();
 }
 
-// /// Infers the source layout attribute for a bitcast operation given the
-// /// result layout attribute, result element type bitwidth, and source element
-// /// type bitwidth.
-// xegpu::DistributeLayoutAttr
-// xegpu::inferBitCastSourceLayout(MLIRContext *context,
-//                                 xegpu::DistributeLayoutAttr resLayout,
-//                                 int resElemTyBitWidth, int
-//                                 srcElemTyBitWidth){
-//   // the result and source layout must be the same
-//   // if resLayout is SliceAttr, we need to first get its root layout
-//   xegpu::DistributeLayoutAttr resRootLayout = resLayout;
-//   while (auto sliceLayout = dyn_cast<xegpu::SliceAttr>(resRootLayout)) {
-//     resRootLayout = sliceLayout.getParent();
-//   }
-//   // change the laneData of resRootLayout according to the bitwidth ratio
-//   xegpu::LayoutAttr resRootPlainLayout =
-//   dyn_cast<xegpu::LayoutAttr>(resRootLayout); SmallVector<int64_t> laneData =
-//   resRootPlainLayout.getEffectiveLaneDataAsInt();
+/// Infers the source layout attribute for a bitcast operation given the
+/// result layout attribute, result element type bitwidth, and source element
+/// type bitwidth.
+xegpu::DistributeLayoutAttr
+xegpu::inferBitCastSourceLayout(MLIRContext *context,
+                                xegpu::DistributeLayoutAttr resLayout,
+                                int resElemTyBitWidth, int srcElemTyBitWidth) {
+  // the result and source layout must be the same
+  // if resLayout is SliceAttr, we need to first get its root layout
+  xegpu::DistributeLayoutAttr resRootLayout = resLayout;
+  while (auto sliceLayout = dyn_cast<xegpu::SliceAttr>(resRootLayout)) {
+    resRootLayout = sliceLayout.getParent();
+  }
+  // change the laneData of resRootLayout according to the bitwidth ratio
+  xegpu::LayoutAttr resRootPlainLayout =
+      dyn_cast<xegpu::LayoutAttr>(resRootLayout);
+  SmallVector<int64_t> laneData =
+      resRootPlainLayout.getEffectiveLaneDataAsInt();
 
-//   if (srcElemTyBitWidth >= resElemTyBitWidth) {
-//     int bitWidthRatio = srcElemTyBitWidth / resElemTyBitWidth;
-//     laneData[laneData.size()-1] = laneData[laneData.size()-1] *
-//     bitWidthRatio;
-//   } else {
-//     int bitWidthRatio = resElemTyBitWidth / srcElemTyBitWidth;
-//     assert((laneData[laneData.size()-2] % bitWidthRatio) == 0 &&
-//            "laneData not divisible by bitWidthRatio");
-//     laneData[laneData.size()-1] = laneData[laneData.size()-1] /
-//     bitWidthRatio;
-//   }
+  if (srcElemTyBitWidth >= resElemTyBitWidth) {
+    int bitWidthRatio = srcElemTyBitWidth / resElemTyBitWidth;
+    laneData[laneData.size() - 1] =
+        laneData[laneData.size() - 1] * bitWidthRatio;
+  } else {
+    int bitWidthRatio = resElemTyBitWidth / srcElemTyBitWidth;
+    assert((laneData[laneData.size() - 2] % bitWidthRatio) == 0 &&
+           "laneData not divisible by bitWidthRatio");
+    laneData[laneData.size() - 1] =
+        laneData[laneData.size() - 1] / bitWidthRatio;
+  }
 
-//   // now reconstruct the source layout with updated laneData
-//   // by updating the root layout and going throught the slice layers
-//   SmallVector<int32_t> laneData32(laneData.begin(), laneData.end());
-//   xegpu::LayoutAttr proposedSrcLayout = xegpu::LayoutAttr::get(
-//           context,
-//           resRootPlainLayout.getSgLayout(),
-//           resRootPlainLayout.getSgData(),
-//           resRootPlainLayout.getInstData(),
-//           resRootPlainLayout.getLaneLayout(),
-//           DenseI32ArrayAttr::get(context, laneData32),
-//           resRootPlainLayout.getOrder());
+  // now reconstruct the source layout with updated laneData
+  // by updating the root layout and going throught the slice layers
+  SmallVector<int32_t> laneData32(laneData.begin(), laneData.end());
+  xegpu::LayoutAttr proposedSrcLayout = xegpu::LayoutAttr::get(
+      context, resRootPlainLayout.getSgLayout(), resRootPlainLayout.getSgData(),
+      resRootPlainLayout.getInstData(), resRootPlainLayout.getLaneLayout(),
+      DenseI32ArrayAttr::get(context, laneData32),
+      resRootPlainLayout.getOrder());
 
-//   // reconstruct slice layers if any
-//   // First collect all slice layers from innermost to outermost
-//   SmallVector<DenseI64ArrayAttr> sliceDims;
-//   xegpu::DistributeLayoutAttr currentLayout = resLayout;
-//   while (auto sliceLayout = dyn_cast<xegpu::SliceAttr>(currentLayout)) {
-//     sliceDims.push_back(sliceLayout.getDims());
-//     currentLayout = sliceLayout.getParent();
-//   }
+  // reconstruct slice layers if any
+  // First collect all slice layers from innermost to outermost
+  SmallVector<DenseI64ArrayAttr> sliceDims;
+  xegpu::DistributeLayoutAttr currentLayout = resLayout;
+  while (auto sliceLayout = dyn_cast<xegpu::SliceAttr>(currentLayout)) {
+    sliceDims.push_back(sliceLayout.getDims());
+    currentLayout = sliceLayout.getParent();
+  }
 
-//   // Now rebuild from outermost to innermost (reverse order)
-//   xegpu::DistributeLayoutAttr finalSrcLayout = proposedSrcLayout;
-//   for (auto it = sliceDims.rbegin(); it != sliceDims.rend(); ++it) {
-//     finalSrcLayout = xegpu::SliceAttr::get(context, finalSrcLayout, *it);
-//   }
-//   return finalSrcLayout;
-// }
+  // Now rebuild from outermost to innermost (reverse order)
+  xegpu::DistributeLayoutAttr finalSrcLayout = proposedSrcLayout;
+  for (auto it = sliceDims.rbegin(); it != sliceDims.rend(); ++it) {
+    finalSrcLayout = xegpu::SliceAttr::get(context, finalSrcLayout, *it);
+  }
+  return finalSrcLayout;
+}
 
-// /// Infers the source layout attribute for a shape cast operation given the
-// /// result layout attribute, result shape, and source shape.
-// xegpu::DistributeLayoutAttr xegpu::inferShapeCastSourceLayout(
-//     MLIRContext *context, xegpu::DistributeLayoutAttr resLayout,
-//     ArrayRef<int64_t> resShape, ArrayRef<int64_t> srcShape){
+/// Infers the source layout attribute for a shape cast operation given the
+/// result layout attribute, result shape, and source shape.
+xegpu::DistributeLayoutAttr xegpu::inferShapeCastSourceLayout(
+    MLIRContext *context, xegpu::DistributeLayoutAttr resLayout,
+    ArrayRef<int64_t> resShape, ArrayRef<int64_t> srcShape) {
 
-// // there are two use cases:
-// // 1. expand dims of low-rank dimensions (e.g., 1D to 2D): to set up the
-// tensor before broadcast
-// // 2. split dim of a high-rank dimension (e.g., 1D to 2D): to setup tensor
-// for multi-stage reduction
+  // there are two use cases:
+  // 1. expand dims of low-rank dimensions (e.g., 1D to 2D): to set up the
+  // tensor before broadcast
+  // 2. split dim of a high-rank dimension (e.g., 1D to 2D): to setup tensor
+  // for multi-stage reduction
+  // 3. combines all dims to a single dim and put in the innermost dim in 2d as
+  // [1, combinedData]. only used after workgroup distribution to save
+  // multidimension data to 1D slm buffer so no need to handle sg_layout and
+  // sg_data.
 
-//   SmallVector<int64_t> shapeCastDims;
-//   auto returnLayout = resLayout;
+  // Use case 1: Check if shapes only differ by expanding unit dimensions (like
+  // expand_dims)
+  SmallVector<int64_t> expandedUnitDims;
+  auto checkOnlyExpandUnitDims = [&](ArrayRef<int64_t> src,
+                                     ArrayRef<int64_t> dst) -> bool {
+    // All unit dimensions in dst that don't appear in src are the expanded
+    // unit dimensions
+    size_t srcIdx = 0;
+    for (size_t dstIdx = 0; dstIdx < dst.size(); ++dstIdx)
+      if (srcIdx < src.size() && src[srcIdx] == dst[dstIdx])
+        srcIdx++;
+      else if (dst[dstIdx] == 1)
+        expandedUnitDims.push_back(dstIdx);
+      else
+        return false;
+    return srcIdx == src.size();
+  };
 
-//   int resRank = resShape.size();
-//   int srcRank = srcShape.size();
+  if (checkOnlyExpandUnitDims(srcShape, resShape)) {
+    // create a slice layout for the source by removing the expanded unit dims
+    auto sliceDimsAttr =
+        DenseI64ArrayAttr::get(context, ArrayRef<int64_t>(expandedUnitDims));
+    auto srcLayout = xegpu::SliceAttr::get(context, resLayout, sliceDimsAttr);
+    return srcLayout;
+  }
 
-//   if (srcRank < resRank) {
-//     // Case 1: expand dims of low-rank dimensions (e.g., 1D to 2D)
-//     int dimDiff = resRank - srcRank;
-//     // adding the missing leading dims
-//     for (int i = 0; i < dimDiff; i++)
-//       shapeCastDims.push_back(i);
+  // Maps each source dimension to the range of destination dimensions it splits
+  // into
+  SmallVector<SmallVector<size_t>> splitDimGroups;
 
-//     // create a slice layout for the source
-//     returnLayout = xegpu::SliceAttr::get(
-//         context, resLayout, DenseI64ArrayAttr::get(context, shapeCastDims));
-//   } else if (srcRank > resRank) {
-//     // Case 2: split dim of a high-rank dimension (e.g., 1D to 2D)
-//     // find the split dims by comparing srcShape and resShape
-//     int srcIdx = 0;
-//     int resIdx = 0;
-//     while (srcIdx < srcRank && resIdx < resRank) {
-//       if (srcShape[srcIdx] == resShape[resIdx]) {
-//         srcIdx++;
-//         resIdx++;
-//       } else if (srcShape[srcIdx] < resShape[resIdx]) {
-//         shapeCastDims.push_back(srcIdx);
-//         srcIdx++;
-//       } else {
-//         // this should not happen in valid shape cast
-//         assert(false && "Invalid shape cast: source shape dimension smaller
-//         than result shape dimension");
-//       }
-//     }
-//     // handle remaining src dims
-//     while (srcIdx < srcRank) {
-//       shapeCastDims.push_back(srcIdx);
-//       srcIdx++;
-//     }
+  auto checkSplitDims = [&](ArrayRef<int64_t> src,
+                            ArrayRef<int64_t> dst) -> bool {
+    // each dim in src can be mapped to one or more dims in dst whose product
+    // equals to the src dim
+    splitDimGroups.clear();
+    size_t srcIdx = 0;
+    int64_t accumulatedSize = 1;
+    SmallVector<size_t> currentDstDims;
 
-//     // create a slice layout for the source
-//     returnLayout = xegpu::SliceAttr::get(
-//         context, resLayout, DenseI64ArrayAttr::get(context, shapeCastDims));
-//   }
-//   return returnLayout;
+    for (size_t dstIdx = 0; dstIdx < dst.size(); ++dstIdx) {
+      if (srcIdx >= src.size())
+        return false;
+      accumulatedSize *= dst[dstIdx];
+      currentDstDims.push_back(dstIdx);
 
-// }
+      if (accumulatedSize == src[srcIdx]) {
+        // Record the mapping: srcIdx -> currentDstDims
+        splitDimGroups.push_back(currentDstDims);
+        // move to next src dim
+        srcIdx++;
+        accumulatedSize = 1;
+        currentDstDims.clear();
+      } else if (accumulatedSize > src[srcIdx]) {
+        return false;
+      }
+    }
+    return srcIdx == src.size();
+  };
+
+  if (checkSplitDims(srcShape, resShape)) {
+    return resLayout.collapseDims(splitDimGroups);
+  }
+
+  auto checkCombineToInnerMostDim = [&](ArrayRef<int64_t> src,
+                                        ArrayRef<int64_t> dst) -> bool {
+    // only one non-unit dim in dst which is the innermost dim
+    assert((dst.size() == 2) && "dst shape must be 2D");
+    int64_t srcSize = std::accumulate(src.begin(), src.end(), 1LL,
+                                      std::multiplies<int64_t>());
+    return (dst[0] == 1) && (dst[1] == srcSize);
+  };
+
+  if (checkCombineToInnerMostDim(srcShape, resShape)) {
+    const int subgroupSize = 16; // assuming 16 lanes per subgroup
+    const int vectorSize = 8;    // assuming 8 elements per vector lane
+    int srcShapeSize = srcShape.size();
+
+    SmallVector<int64_t> instData(srcShapeSize, 1);
+    instData[srcShapeSize - 1] = subgroupSize;
+    instData[srcShapeSize - 2] =
+        vectorSize; // assuming 8 elements per instruction as starting point
+
+    // construct a vector layout with lane_layout = [1, ..., 1, subgroupSize]
+    SmallVector<int64_t> laneLayout(srcShapeSize, 1);
+    laneLayout[srcShapeSize - 1] = subgroupSize;
+    // construct a vector layout with lane_data = [1, ..., 1]
+    SmallVector<int64_t> laneData(srcShapeSize, 1);
+  }
+}
 
 xegpu::SliceAttr
 xegpu::reductionLayoutSetupRule(ArrayRef<int64_t> srcShape,
@@ -530,6 +574,8 @@ xegpu::reductionLayoutSetupRule(ArrayRef<int64_t> srcShape,
   // construct a vector layout with lane_layout = [1, ..., 1, subgroupSize]
   SmallVector<int64_t> laneLayout(srcShapeSize, 1);
   laneLayout[srcShapeSize - 1] = subgroupSize;
+  // construct a vector layout with lane_data = [1, ..., 1]
+  SmallVector<int64_t> laneData(srcShapeSize, 1);
   llvm::errs() << "DEBUG: laneLayout = [";
   for (size_t i = 0; i < laneLayout.size(); i++) {
     llvm::errs() << laneLayout[i];
@@ -537,8 +583,6 @@ xegpu::reductionLayoutSetupRule(ArrayRef<int64_t> srcShape,
       llvm::errs() << ", ";
   }
   llvm::errs() << "]\n";
-  // construct a vector layout with lane_data = [1, ..., 1]
-  SmallVector<int64_t> laneData(srcShapeSize, 1);
 
   bool failToAlignSliceStruct = false;
   if (sliceCPL && sliceCPL.getDims().asArrayRef().equals(reductionDims)) {

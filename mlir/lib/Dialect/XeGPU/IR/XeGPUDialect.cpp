@@ -512,6 +512,102 @@ DistributeLayoutAttr LayoutAttr::setDimData(int64_t dim, int64_t sgData,
       getOrder());
 }
 
+// Derive a new layout by collapsing groups of dimensions.
+// Each inner array in `dimGroups` specifies a set of dimensions
+// that are collapsed into a single dimension in the derived layout.
+DistributeLayoutAttr
+LayoutAttr::collapseDims(ArrayRef<ArrayRef<int64_t>> dimGroups) {
+
+  // Extract layout attributes as vectors
+  SmallVector<int64_t> sgLayout = getEffectiveSgLayoutAsInt();
+  SmallVector<int64_t> sgData = getEffectiveSgDataAsInt();
+  SmallVector<int64_t> instData = getEffectiveInstDataAsInt();
+  SmallVector<int64_t> laneLayout = getEffectiveLaneLayoutAsInt();
+  SmallVector<int64_t> laneData = getEffectiveLaneDataAsInt();
+
+  DenseI32ArrayAttr orderAttr = getOrder();
+  SmallVector<int64_t> order;
+  if (orderAttr && !orderAttr.empty()) {
+    order = llvm::to_vector(
+        llvm::map_range(orderAttr.asArrayRef(),
+                        [](int32_t idx) { return static_cast<int64_t>(idx); }));
+  } else {
+    // Default order: [1, 0] for 2D (row-major), [2, 1, 0] for 3D, etc.
+    order =
+        llvm::to_vector(llvm::reverse(llvm::seq<int64_t>(0, sgLayout.size())));
+  }
+
+  SmallVector<int64_t> collapsedSgLayout;
+  SmallVector<int64_t> collapsedSgData;
+  SmallVector<int64_t> collapsedInstData;
+  SmallVector<int64_t> collapsedLaneLayout;
+  SmallVector<int64_t> collapsedLaneData;
+  SmallVector<int64_t> collapsedOrder;
+
+  for (const auto &group : dimGroups) {
+
+    // Collapse by multiplying values across dimension group
+    int64_t collapsedSg = 1, collapsedSgD = 1, collapsedInst = 1;
+    int64_t collapsedLaneL = 1, collapsedLaneD = 1;
+    int64_t collapsedOrderValue = -1;
+
+    for (int64_t dimIdx : group) {
+      collapsedSg *= sgLayout[dimIdx];
+      collapsedSgD *= sgData[dimIdx];
+      collapsedInst *= instData[dimIdx];
+      collapsedLaneL *= laneLayout[dimIdx];
+      collapsedLaneD *= laneData[dimIdx];
+      collapsedOrderValue = order[dimIdx]; // take the last one's order
+    }
+
+    collapsedSgLayout.push_back(collapsedSg);
+    collapsedSgData.push_back(collapsedSgD);
+    collapsedInstData.push_back(collapsedInst);
+    collapsedLaneLayout.push_back(collapsedLaneL);
+    collapsedLaneData.push_back(collapsedLaneD);
+    collapsedOrder.push_back(collapsedOrderValue);
+  }
+
+  // go through the values inside collapsedOrder, and re-map the order values to
+  // be in range of [0, N-1] where N is the number of dimensions in collapsed
+  // shape
+  int64_t orderSize = static_cast<int64_t>(collapsedOrder.size());
+  SmallVector<int64_t> remappedOrder(orderSize, -1);
+  for (int64_t i = 0; i < orderSize; ++i) {
+    int64_t originalOrderValue = collapsedOrder[i];
+    // count how many values in collapsedOrder are less than originalOrderValue
+    int64_t count = 0;
+    for (int64_t j = 0; j < orderSize; ++j) {
+      if (collapsedOrder[j] < originalOrderValue)
+        count++;
+    }
+    remappedOrder[i] = count;
+  }
+
+  // Create collapsed layout
+  SmallVector<int32_t> collapsedSgLayout32(collapsedSgLayout.begin(),
+                                           collapsedSgLayout.end());
+  SmallVector<int32_t> collapsedSgData32(collapsedSgData.begin(),
+                                         collapsedSgData.end());
+  SmallVector<int32_t> collapsedInstData32(collapsedInstData.begin(),
+                                           collapsedInstData.end());
+  SmallVector<int32_t> collapsedLaneLayout32(collapsedLaneLayout.begin(),
+                                             collapsedLaneLayout.end());
+  SmallVector<int32_t> collapsedLaneData32(collapsedLaneData.begin(),
+                                           collapsedLaneData.end());
+  SmallVector<int32_t> remappedOrder32(remappedOrder.begin(),
+                                       remappedOrder.end());
+
+  auto collapsedLayout = xegpu::LayoutAttr::get(
+      getContext(), DenseI32ArrayAttr::get(getContext(), collapsedSgLayout32),
+      DenseI32ArrayAttr::get(getContext(), collapsedSgData32),
+      DenseI32ArrayAttr::get(getContext(), collapsedInstData32),
+      DenseI32ArrayAttr::get(getContext(), collapsedLaneLayout32),
+      DenseI32ArrayAttr::get(getContext(), collapsedLaneData32),
+      DenseI32ArrayAttr::get(getContext(), remappedOrder32));
+  return collapsedLayout;
+}
+
 //===----------------------------------------------------------------------===//
 // XeGPU_SliceAttr
 //===----------------------------------------------------------------------===//
@@ -721,6 +817,28 @@ DistributeLayoutAttr SliceAttr::setDimData(int64_t dim, int64_t sgData,
   return SliceAttr::get(
       getContext(),
       parent.setDimData(adjustDims[0], sgData, instData, laneData), getDims());
+}
+
+// Derive a new layout by collapsing groups of dimensions.
+// Each inner array in `dimGroups` specifies a set of dimensions
+// that are collapsed into a single dimension in the derived layout.
+DistributeLayoutAttr
+SliceAttr::collapseDims(ArrayRef<ArrayRef<int64_t>> dimGroups) const {
+
+  // Map the sliced dims from parent space to collapsed space
+  ArrayRef<int64_t> sliceDims = getDims().asArrayRef();
+
+  // go through dimGroups and map each dim from sliced space to parent space
+  SmallVector<SmallVector<int64_t>> adjustedDimGroups;
+  for (const auto &group : dimGroups) {
+    SetVector<int64_t> mappedDims = mapDimsFromSlicedSpace(group, sliceDims);
+    adjustedDimGroups.push_back(mappedDims.getArrayRef());
+  }
+
+  auto collapsedParent = getParent().collapseDims(adjustedDimGroups);
+
+  return SliceAttr::get(getContext(), collapsedParent,
+                        DenseI64ArrayAttr::get(getContext(), sliceDims));
 }
 
 //===----------------------------------------------------------------------===//
