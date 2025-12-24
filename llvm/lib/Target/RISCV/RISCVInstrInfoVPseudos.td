@@ -5851,8 +5851,9 @@ multiclass VPatConversionWF_VI<string intrinsic, string instruction,
 }
 
 multiclass VPatConversionWF_VF<string intrinsic, string instruction,
+                               list<VTypeInfoToWide> wlist = AllWidenableFloatVectors,
                                bit isSEWAware = 0> {
-  foreach fvtiToFWti = AllWidenableFloatVectors in {
+  foreach fvtiToFWti = wlist in {
     defvar fvti = fvtiToFWti.Vti;
     defvar fwti = fvtiToFWti.Wti;
     // Define vfwcvt.f.f.v for f16 when Zvfhmin is enable.
@@ -7177,6 +7178,7 @@ defm : VPatConversionWF_VI<"int_riscv_vfwcvt_f_xu_v", "PseudoVFWCVT_F_XU",
 defm : VPatConversionWF_VI<"int_riscv_vfwcvt_f_x_v", "PseudoVFWCVT_F_X",
                            isSEWAware=1>;
 defm : VPatConversionWF_VF<"int_riscv_vfwcvt_f_f_v", "PseudoVFWCVT_F_F",
+                           wlist=AllWidenableFloatVectors,
                            isSEWAware=1>;
 
 //===----------------------------------------------------------------------===//
