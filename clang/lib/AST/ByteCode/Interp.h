@@ -1095,8 +1095,9 @@ inline bool CmpHelperEQ<Pointer>(InterpState &S, CodePtr OpPC, CompareFn Fn) {
   }
 
   if (Pointer::hasSameBase(LHS, RHS)) {
-    size_t A = LHS.computeOffsetForComparison();
-    size_t B = RHS.computeOffsetForComparison();
+    size_t A = LHS.computeOffsetForComparison(S.getASTContext());
+    size_t B = RHS.computeOffsetForComparison(S.getASTContext());
+
     S.Stk.push<BoolT>(BoolT::from(Fn(Compare(A, B))));
     return true;
   }

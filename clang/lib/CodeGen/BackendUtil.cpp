@@ -41,8 +41,8 @@
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Object/OffloadBinary.h"
 #include "llvm/Passes/PassBuilder.h"
-#include "llvm/Passes/PassPlugin.h"
 #include "llvm/Passes/StandardInstrumentations.h"
+#include "llvm/Plugins/PassPlugin.h"
 #include "llvm/ProfileData/InstrProfCorrelator.h"
 #include "llvm/Support/BuryPointer.h"
 #include "llvm/Support/CommandLine.h"
@@ -170,12 +170,6 @@ class EmitAssemblyHelper {
   /// When MustCreateTM is used, we print an error if we are unable to load
   /// the requested target.
   void CreateTargetMachine(bool MustCreateTM);
-
-  /// Add passes necessary to emit assembly or LLVM IR.
-  ///
-  /// \return True on success.
-  bool AddEmitPasses(legacy::PassManager &CodeGenPasses, BackendAction Action,
-                     raw_pwrite_stream &OS, raw_pwrite_stream *DwoOS);
 
   std::unique_ptr<llvm::ToolOutputFile> openOutputFile(StringRef Path) {
     std::error_code EC;
@@ -648,33 +642,6 @@ void EmitAssemblyHelper::CreateTargetMachine(bool MustCreateTM) {
     TM->setLargeDataThreshold(CodeGenOpts.LargeDataThreshold);
 }
 
-bool EmitAssemblyHelper::AddEmitPasses(legacy::PassManager &CodeGenPasses,
-                                       BackendAction Action,
-                                       raw_pwrite_stream &OS,
-                                       raw_pwrite_stream *DwoOS) {
-  // Add LibraryInfo.
-  std::unique_ptr<TargetLibraryInfoImpl> TLII(
-      llvm::driver::createTLII(TargetTriple, CodeGenOpts.getVecLib()));
-  CodeGenPasses.add(new TargetLibraryInfoWrapperPass(*TLII));
-
-  const llvm::TargetOptions &Options = TM->Options;
-  CodeGenPasses.add(new RuntimeLibraryInfoWrapper(
-      TargetTriple, Options.ExceptionModel, Options.FloatABIType,
-      Options.EABIVersion, Options.MCOptions.ABIName, Options.VecLib));
-
-  // Normal mode, emit a .s or .o file by running the code generator. Note,
-  // this also adds codegenerator level optimization passes.
-  CodeGenFileType CGFT = getCodeGenFileType(Action);
-
-  if (TM->addPassesToEmitFile(CodeGenPasses, OS, DwoOS, CGFT,
-                              /*DisableVerify=*/!CodeGenOpts.VerifyModule)) {
-    Diags.Report(diag::err_fe_unable_to_interface_with_target);
-    return false;
-  }
-
-  return true;
-}
-
 static OptimizationLevel mapToLevel(const CodeGenOptions &Opts) {
   switch (Opts.OptimizationLevel) {
   default:
@@ -1019,16 +986,9 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
     }
 #endif
   }
-  // Attempt to load pass plugins and register their callbacks with PB.
-  for (auto &PluginFN : CodeGenOpts.PassPlugins) {
-    auto PassPlugin = PassPlugin::Load(PluginFN);
-    if (PassPlugin) {
-      PassPlugin->registerPassBuilderCallbacks(PB);
-    } else {
-      Diags.Report(diag::err_fe_unable_to_load_plugin)
-          << PluginFN << toString(PassPlugin.takeError());
-    }
-  }
+  // Register plugin callbacks with PB.
+  for (const std::unique_ptr<PassPlugin> &Plugin : CI.getPassPlugins())
+    Plugin->registerPassBuilderCallbacks(PB);
   for (const auto &PassCallback : CodeGenOpts.PassBuilderCallbacks)
     PassCallback(PB);
 #define HANDLE_EXTENSION(Ext)                                                  \
@@ -1267,29 +1227,47 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
 void EmitAssemblyHelper::RunCodegenPipeline(
     BackendAction Action, std::unique_ptr<raw_pwrite_stream> &OS,
     std::unique_ptr<llvm::ToolOutputFile> &DwoOS) {
+  if (!actionRequiresCodeGen(Action))
+    return;
+
+  // Normal mode, emit a .s or .o file by running the code generator. Note,
+  // this also adds codegenerator level optimization passes.
+  CodeGenFileType CGFT = getCodeGenFileType(Action);
+
+  // Invoke pre-codegen callback from plugin, which might want to take over the
+  // entire code generation itself.
+  for (const std::unique_ptr<llvm::PassPlugin> &Plugin : CI.getPassPlugins()) {
+    if (Plugin->invokePreCodeGenCallback(*TheModule, *TM, CGFT, *OS))
+      return;
+  }
+
   // We still use the legacy PM to run the codegen pipeline since the new PM
   // does not work with the codegen pipeline.
   // FIXME: make the new PM work with the codegen pipeline.
   legacy::PassManager CodeGenPasses;
 
-  // Append any output we need to the pass manager.
-  switch (Action) {
-  case Backend_EmitAssembly:
-  case Backend_EmitMCNull:
-  case Backend_EmitObj:
-    CodeGenPasses.add(
-        createTargetTransformInfoWrapperPass(getTargetIRAnalysis()));
-    if (!CodeGenOpts.SplitDwarfOutput.empty()) {
-      DwoOS = openOutputFile(CodeGenOpts.SplitDwarfOutput);
-      if (!DwoOS)
-        return;
-    }
-    if (!AddEmitPasses(CodeGenPasses, Action, *OS,
-                       DwoOS ? &DwoOS->os() : nullptr))
-      // FIXME: Should we handle this error differently?
+  CodeGenPasses.add(
+      createTargetTransformInfoWrapperPass(getTargetIRAnalysis()));
+  // Add LibraryInfo.
+  std::unique_ptr<TargetLibraryInfoImpl> TLII(
+      llvm::driver::createTLII(TargetTriple, CodeGenOpts.getVecLib()));
+  CodeGenPasses.add(new TargetLibraryInfoWrapperPass(*TLII));
+
+  const llvm::TargetOptions &Options = TM->Options;
+  CodeGenPasses.add(new RuntimeLibraryInfoWrapper(
+      TargetTriple, Options.ExceptionModel, Options.FloatABIType,
+      Options.EABIVersion, Options.MCOptions.ABIName, Options.VecLib));
+
+  if (!CodeGenOpts.SplitDwarfOutput.empty()) {
+    DwoOS = openOutputFile(CodeGenOpts.SplitDwarfOutput);
+    if (!DwoOS)
       return;
-    break;
-  default:
+  }
+
+  if (TM->addPassesToEmitFile(CodeGenPasses, *OS,
+                              DwoOS ? &DwoOS->os() : nullptr, CGFT,
+                              /*DisableVerify=*/!CodeGenOpts.VerifyModule)) {
+    Diags.Report(diag::err_fe_unable_to_interface_with_target);
     return;
   }
 
