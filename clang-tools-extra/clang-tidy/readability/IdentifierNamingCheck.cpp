@@ -254,8 +254,8 @@ IdentifierNamingCheck::FileStyle IdentifierNamingCheck::getFileStyleFromOptions(
     const ClangTidyCheck::OptionsView &Options) const {
   IdentifierNamingCheck::HungarianNotationOption HNOption;
 
-  HungarianNotation.loadDefaultConfig(HNOption);
-  HungarianNotation.loadFileConfig(Options, HNOption);
+  HungarianNotation::loadDefaultConfig(HNOption);
+  HungarianNotation::loadFileConfig(Options, HNOption);
 
   SmallVector<std::optional<IdentifierNamingCheck::NamingStyle>, 0> Styles;
   Styles.resize(SK_Count);
@@ -266,7 +266,7 @@ IdentifierNamingCheck::FileStyle IdentifierNamingCheck::getFileStyleFromOptions(
 
     auto HPTOpt =
         Options.get<IdentifierNamingCheck::HungarianPrefixType>(StyleString);
-    if (HPTOpt && !HungarianNotation.checkOptionValid(I))
+    if (HPTOpt && !HungarianNotation::checkOptionValid(I))
       configurationDiag("invalid identifier naming option '%0'") << StyleString;
 
     memcpy(&StyleString[StyleSize], "IgnoredRegexp", 13);
@@ -295,8 +295,7 @@ IdentifierNamingCheck::FileStyle IdentifierNamingCheck::getFileStyleFromOptions(
           CheckAnonFieldInParent};
 }
 
-std::string IdentifierNamingCheck::HungarianNotation::getDeclTypeName(
-    const NamedDecl *ND) const {
+static std::string getDeclTypeName(const NamedDecl *ND) {
   const auto *VD = dyn_cast<ValueDecl>(ND);
   if (!VD)
     return {};
@@ -415,8 +414,9 @@ IdentifierNamingCheck::IdentifierNamingCheck(StringRef Name,
 
 IdentifierNamingCheck::~IdentifierNamingCheck() = default;
 
-bool IdentifierNamingCheck::HungarianNotation::checkOptionValid(
-    int StyleKindIndex) const {
+namespace HungarianNotation {
+
+static bool checkOptionValid(int StyleKindIndex) {
   if ((StyleKindIndex >= SK_EnumConstant) &&
       (StyleKindIndex <= SK_ConstantParameter))
     return true;
@@ -427,8 +427,8 @@ bool IdentifierNamingCheck::HungarianNotation::checkOptionValid(
   return false;
 }
 
-bool IdentifierNamingCheck::HungarianNotation::isOptionEnabled(
-    StringRef OptionKey, const llvm::StringMap<std::string> &StrMap) const {
+static bool isOptionEnabled(StringRef OptionKey,
+                            const llvm::StringMap<std::string> &StrMap) {
   if (OptionKey.empty())
     return false;
 
@@ -439,14 +439,14 @@ bool IdentifierNamingCheck::HungarianNotation::isOptionEnabled(
   return *llvm::yaml::parseBool(Iter->getValue());
 }
 
-void IdentifierNamingCheck::HungarianNotation::loadFileConfig(
-    const ClangTidyCheck::OptionsView &Options,
-    IdentifierNamingCheck::HungarianNotationOption &HNOption) const {
+static void
+loadFileConfig(const ClangTidyCheck::OptionsView &Options,
+               IdentifierNamingCheck::HungarianNotationOption &HNOption) {
   static constexpr StringRef HNOpts[] = {"TreatStructAsClass"};
   static constexpr StringRef HNDerivedTypes[] = {"Array", "Pointer",
                                                  "FunctionPointer"};
 
-  const StringRef Section = "HungarianNotation.";
+  const StringRef Section = "HungarianNotation::";
 
   SmallString<128> Buffer = {Section, "General."};
   size_t DefSize = Buffer.size();
@@ -508,9 +508,9 @@ void IdentifierNamingCheck::HungarianNotation::loadFileConfig(
   }
 }
 
-std::string IdentifierNamingCheck::HungarianNotation::getPrefix(
-    const Decl *D,
-    const IdentifierNamingCheck::HungarianNotationOption &HNOption) const {
+static std::string
+getPrefix(const Decl *D,
+          const IdentifierNamingCheck::HungarianNotationOption &HNOption) {
   if (!D)
     return {};
   const auto *ND = dyn_cast<NamedDecl>(D);
@@ -531,9 +531,9 @@ std::string IdentifierNamingCheck::HungarianNotation::getPrefix(
   return Prefix;
 }
 
-bool IdentifierNamingCheck::HungarianNotation::removeDuplicatedPrefix(
+static bool removeDuplicatedPrefix(
     SmallVector<StringRef, 8> &Words,
-    const IdentifierNamingCheck::HungarianNotationOption &HNOption) const {
+    const IdentifierNamingCheck::HungarianNotationOption &HNOption) {
   if (Words.size() <= 1)
     return true;
 
@@ -554,9 +554,9 @@ bool IdentifierNamingCheck::HungarianNotation::removeDuplicatedPrefix(
   return false;
 }
 
-std::string IdentifierNamingCheck::HungarianNotation::getDataTypePrefix(
+static std::string getDataTypePrefix(
     StringRef TypeName, const NamedDecl *ND,
-    const IdentifierNamingCheck::HungarianNotationOption &HNOption) const {
+    const IdentifierNamingCheck::HungarianNotationOption &HNOption) {
   if (!ND || TypeName.empty())
     return TypeName.str();
 
@@ -634,9 +634,9 @@ std::string IdentifierNamingCheck::HungarianNotation::getDataTypePrefix(
   return PrefixStr;
 }
 
-std::string IdentifierNamingCheck::HungarianNotation::getClassPrefix(
-    const CXXRecordDecl *CRD,
-    const IdentifierNamingCheck::HungarianNotationOption &HNOption) const {
+static std::string
+getClassPrefix(const CXXRecordDecl *CRD,
+               const IdentifierNamingCheck::HungarianNotationOption &HNOption) {
   if (CRD->isUnion())
     return {};
 
@@ -647,8 +647,7 @@ std::string IdentifierNamingCheck::HungarianNotation::getClassPrefix(
   return CRD->isAbstract() ? "I" : "C";
 }
 
-std::string IdentifierNamingCheck::HungarianNotation::getEnumPrefix(
-    const EnumConstantDecl *ECD) const {
+static std::string getEnumPrefix(const EnumConstantDecl *ECD) {
   const auto *ED = cast<EnumDecl>(ECD->getDeclContext());
 
   std::string Name = ED->getName().str();
@@ -692,8 +691,7 @@ std::string IdentifierNamingCheck::HungarianNotation::getEnumPrefix(
   return Initial;
 }
 
-size_t IdentifierNamingCheck::HungarianNotation::getAsteriskCount(
-    const std::string &TypeName) const {
+static size_t getAsteriskCount(const std::string &TypeName) {
   size_t Pos = TypeName.find('*');
   size_t Count = 0;
   for (; Pos < TypeName.length(); Pos++, Count++)
@@ -702,8 +700,8 @@ size_t IdentifierNamingCheck::HungarianNotation::getAsteriskCount(
   return Count;
 }
 
-size_t IdentifierNamingCheck::HungarianNotation::getAsteriskCount(
-    const std::string &TypeName, const NamedDecl *ND) const {
+static size_t getAsteriskCount(const std::string &TypeName,
+                               const NamedDecl *ND) {
   size_t PtrCount = 0;
   if (const auto *TD = dyn_cast<ValueDecl>(ND)) {
     const QualType QT = TD->getType();
@@ -713,8 +711,8 @@ size_t IdentifierNamingCheck::HungarianNotation::getAsteriskCount(
   return PtrCount;
 }
 
-void IdentifierNamingCheck::HungarianNotation::loadDefaultConfig(
-    IdentifierNamingCheck::HungarianNotationOption &HNOption) const {
+static void
+loadDefaultConfig(IdentifierNamingCheck::HungarianNotationOption &HNOption) {
   // Options
   static constexpr std::pair<StringRef, StringRef> General[] = {
       {"TreatStructAsClass", "false"}};
@@ -823,6 +821,8 @@ void IdentifierNamingCheck::HungarianNotation::loadDefaultConfig(
     HNOption.UserDefinedType.try_emplace(UDT.first, UDT.second);
 }
 
+} // namespace HungarianNotation
+
 void IdentifierNamingCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   RenamerClangTidyCheck::storeOptions(Opts);
   SmallString<64> StyleString;
@@ -880,7 +880,7 @@ bool IdentifierNamingCheck::matchesStyle(
   if (!Name.consume_back(Style.Suffix))
     return false;
   if (IdentifierNamingCheck::HungarianPrefixType::HPT_Off != Style.HPType) {
-    const std::string HNPrefix = HungarianNotation.getPrefix(Decl, HNOption);
+    const std::string HNPrefix = HungarianNotation::getPrefix(Decl, HNOption);
     if (!HNPrefix.empty()) {
       if (!Name.consume_front(HNPrefix))
         return false;
@@ -938,7 +938,7 @@ std::string IdentifierNamingCheck::fixupWithCase(
     return Name.str();
 
   if (IdentifierNamingCheck::HungarianPrefixType::HPT_Off != Style.HPType)
-    HungarianNotation.removeDuplicatedPrefix(Words, HNOption);
+    HungarianNotation::removeDuplicatedPrefix(Words, HNOption);
 
   SmallString<128> Fixup;
   switch (Case) {
@@ -1096,7 +1096,7 @@ std::string IdentifierNamingCheck::fixupWithStyle(
   std::string HungarianPrefix;
   using HungarianPrefixType = IdentifierNamingCheck::HungarianPrefixType;
   if (HungarianPrefixType::HPT_Off != Style.HPType) {
-    HungarianPrefix = HungarianNotation.getPrefix(D, HNOption);
+    HungarianPrefix = HungarianNotation::getPrefix(D, HNOption);
     if (!HungarianPrefix.empty()) {
       if (Style.HPType == HungarianPrefixType::HPT_LowerCase)
         HungarianPrefix += "_";
@@ -1379,7 +1379,7 @@ IdentifierNamingCheck::getDeclFailureInfo(const NamedDecl *Decl,
     return std::nullopt;
 
   return getFailureInfo(
-      HungarianNotation.getDeclTypeName(Decl), Decl->getName(), Decl, Loc,
+      HungarianNotation::getDeclTypeName(Decl), Decl->getName(), Decl, Loc,
       FileStyle.getStyles(), FileStyle.getHNOption(),
       findStyleKind(Decl, FileStyle.getStyles(),
                     FileStyle.isIgnoringMainLikeFunction(),
