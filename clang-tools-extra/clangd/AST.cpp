@@ -1076,8 +1076,8 @@ public:
     }
   };
 
-  ForwardingToConstructorVisitor(SeenFunctions SF,
-                                 SmallVector<CXXConstructorDecl *, 1> &Output)
+  ForwardingToConstructorVisitor(
+      SeenFunctions SF, SmallVector<const CXXConstructorDecl *, 1> &Output)
       : SF(std::move(SF)), Constructors(Output) {}
 
   bool VisitCallExpr(CallExpr *E) {
@@ -1100,11 +1100,11 @@ public:
   bool VisitCXXNewExpr(CXXNewExpr *E) {
     if (auto *CE = E->getConstructExpr())
       if (auto *Callee = CE->getConstructor()) {
-        if (Callee->isTemplateInstantiation())
-          Constructors.push_back(llvm::dyn_cast<clang::CXXConstructorDecl>(
-              Callee->getPrimaryTemplate()->getTemplatedDecl()));
-        else
-          Constructors.push_back(Callee);
+        auto *Adjusted = &adjustDeclToTemplate(*Callee);
+        if (auto *Template = dyn_cast<TemplateDecl>(Adjusted))
+          Adjusted = Template->getTemplatedDecl();
+        if (auto *Constructor = dyn_cast<CXXConstructorDecl>(Adjusted))
+          Constructors.push_back(Constructor);
       }
     return true;
   }
@@ -1112,12 +1112,12 @@ public:
   // Stack of seen functions
   SeenFunctions SF;
   // Output of this visitor
-  SmallVector<CXXConstructorDecl *, 1> &Constructors;
+  SmallVector<const CXXConstructorDecl *, 1> &Constructors;
 };
 
-SmallVector<CXXConstructorDecl *, 1>
+SmallVector<const CXXConstructorDecl *, 1>
 searchConstructorsInForwardingFunction(const FunctionDecl *FD) {
-  SmallVector<CXXConstructorDecl *, 1> Result;
+  SmallVector<const CXXConstructorDecl *, 1> Result;
   ForwardingToConstructorVisitor::SeenFunctions SF{10, nullptr, FD};
   ForwardingToConstructorVisitor Visitor{std::move(SF), Result};
   Visitor.TraverseStmt(FD->getBody());

@@ -2817,7 +2817,11 @@ TEST(FindReferences, TemplatedConstructorForwarding) {
 
     struct Waldo {
       template <typename T>
-      $Constructor[[W^aldo]](T);
+      $Constructor[[W$Waldo^aldo]](T);
+    };
+    template <typename T>
+    struct Waldo2 {
+      $Constructor2[[W$Waldo2^aldo2]](int);
     };
     struct S {};
 
@@ -2825,16 +2829,24 @@ TEST(FindReferences, TemplatedConstructorForwarding) {
       S s;
       Waldo $Caller[[w]](s);
       std::$ForwardedCaller[[make_unique]]<Waldo>(s);
+
+      Waldo2<int> $Caller2[[w2]](42);
+      std::$ForwardedCaller2[[make_unique]]<Waldo2<int>>(42);
     }
   )cpp");
   TestTU TU;
   TU.Code = std::string(Main.code());
   auto AST = TU.build();
 
-  EXPECT_THAT(findReferences(AST, Main.point(), 0).References,
+  EXPECT_THAT(findReferences(AST, Main.point("Waldo"), 0).References,
               ElementsAre(rangeIs(Main.range("Constructor")),
                           rangeIs(Main.range("Caller")),
                           rangeIs(Main.range("ForwardedCaller"))));
+
+  EXPECT_THAT(findReferences(AST, Main.point("Waldo2"), 0).References,
+              ElementsAre(rangeIs(Main.range("Constructor2")),
+                          rangeIs(Main.range("Caller2")),
+                          rangeIs(Main.range("ForwardedCaller2"))));
 }
 
 TEST(GetNonLocalDeclRefs, All) {

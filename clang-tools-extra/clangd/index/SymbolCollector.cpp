@@ -576,7 +576,7 @@ SymbolCollector::getRefContainer(const Decl *Enclosing,
   return Enclosing;
 }
 
-SmallVector<CXXConstructorDecl *, 1>
+SmallVector<const CXXConstructorDecl *, 1>
 SymbolCollector::findIndirectConstructors(const Decl *D) {
   auto *FD = llvm::dyn_cast<clang::FunctionDecl>(D);
   if (FD == nullptr || !FD->isTemplateInstantiation())
@@ -588,7 +588,7 @@ SymbolCollector::findIndirectConstructors(const Decl *D) {
       PT == nullptr || !isLikelyForwardingFunction(PT))
     return {};
 
-  SmallVector<CXXConstructorDecl *, 1> FoundConstructors =
+  SmallVector<const CXXConstructorDecl *, 1> FoundConstructors =
       searchConstructorsInForwardingFunction(FD);
   auto Iter = ForwardingToConstructorCache.try_emplace(
       FD, std::move(FoundConstructors));

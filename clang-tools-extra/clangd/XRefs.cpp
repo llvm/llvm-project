@@ -962,7 +962,7 @@ public:
     if (FD == nullptr || !FD->isTemplateInstantiation())
       return false;
 
-    SmallVector<CXXConstructorDecl *, 1> *Constructors = nullptr;
+    SmallVector<const CXXConstructorDecl *, 1> *Constructors = nullptr;
     if (auto Entry = AST.ForwardingToConstructorCache.find(FD);
         Entry != AST.ForwardingToConstructorCache.end())
       Constructors = &Entry->getSecond();
@@ -971,17 +971,15 @@ public:
           PT == nullptr || !isLikelyForwardingFunction(PT))
         return false;
 
-      SmallVector<CXXConstructorDecl *, 1> FoundConstructors =
+      SmallVector<const CXXConstructorDecl *, 1> FoundConstructors =
           searchConstructorsInForwardingFunction(FD);
       auto Iter = AST.ForwardingToConstructorCache.try_emplace(
           FD, std::move(FoundConstructors));
-      if (Iter.second)
-        Constructors = &Iter.first->getSecond();
+      Constructors = &Iter.first->getSecond();
     }
-    if (Constructors != nullptr)
-      for (auto *Constructor : *Constructors)
-        if (TargetConstructors.contains(Constructor))
-          return true;
+    for (auto *Constructor : *Constructors)
+      if (TargetConstructors.contains(Constructor))
+        return true;
     return false;
   }
 

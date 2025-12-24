@@ -258,7 +258,7 @@ bool isLikelyForwardingFunction(const FunctionTemplateDecl *FT);
 
 /// Only call if FD is a likely forwarding function. Returns
 /// constructors that might be forwarded to.
-SmallVector<CXXConstructorDecl *, 1>
+SmallVector<const CXXConstructorDecl *, 1>
 searchConstructorsInForwardingFunction(const FunctionDecl *FD);
 
 } // namespace clangd
