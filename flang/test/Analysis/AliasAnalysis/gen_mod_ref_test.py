@@ -27,7 +27,7 @@ for line in sys.stdin:
         line,
     )
     line, count = re.subn(
-        r'(fir.box_addr.*) :',
+        r"(fir.box_addr.*) :",
         rf'\1 {{test.ptr ="box_addr_{box_addr_counter}"}} :',
         line,
     )
