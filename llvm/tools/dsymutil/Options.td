@@ -108,6 +108,12 @@ def fat64: F<"fat64">,
 def update: F<"update">,
   HelpText<"Updates existing dSYM files to contain the latest accelerator tables and other DWARF optimizations.">,
   Group<grp_general>;
+
+def allow_invalid_macho: F<"allow-invalid-macho">,
+  HelpText<"Allow generating Mach-O files that exceed certain format limitations, such as sections with file offsets greater than 4GB."
+           "Use with caution, as such files may not be compatible with all tools.">,
+  Group<grp_general>;
+
 def: Flag<["-"], "u">,
   Alias<update>,
   HelpText<"Alias for --update">,

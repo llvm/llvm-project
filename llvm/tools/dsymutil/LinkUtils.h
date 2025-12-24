@@ -123,6 +123,10 @@ struct LinkOptions {
   bool IncludeSwiftModulesFromInterface = false;
   /// @}
 
+  /// Whether to allow generating Mach-O files that exceed certain format
+  /// limitations, such as sections with file offsets greater than 4GB.
+  bool AllowInvalidMachO = false;
+
   LinkOptions() = default;
 };
 
