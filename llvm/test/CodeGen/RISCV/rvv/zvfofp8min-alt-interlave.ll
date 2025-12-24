@@ -5,8 +5,8 @@
 ; RUN:   -verify-machineinstrs -target-abi=lp64d | FileCheck %s
 
 ; a -> need alt
-; n -> dont need alt
-; d -> dont care alt
+; n -> don't need alt
+; d -> don't care alt
 
 define <vscale x 1 x bfloat> @test_a_n_interleave(<vscale x 1 x bfloat> %0, iXLen %1) nounwind {
 ; CHECK-LABEL: test_a_n_interleave:
