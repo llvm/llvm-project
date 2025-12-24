@@ -985,12 +985,14 @@ uint64_t WinCOFFWriter::writeObject(MCAssembler &Asm) {
   const auto *Options = Asm.getContext().getTargetOptions();
 
   if (Mode != DwoOnly && Options && Options->PgoInstrumentation) {
-    auto *Section = Asm.getContext().getCOFFSection(".pgi", 0);
+    auto *Section = Asm.getContext().getCOFFSection(
+        ".pgi", COFF::IMAGE_SCN_MEM_DISCARDABLE);
     defineSection(Asm, *Section);
   }
 
   if (Mode != DwoOnly && Options && Options->PgoUse) {
-    auto *Section = Asm.getContext().getCOFFSection(".pgu", 0);
+    auto *Section = Asm.getContext().getCOFFSection(
+        ".pgu", COFF::IMAGE_SCN_MEM_DISCARDABLE);
     defineSection(Asm, *Section);
   }
 
