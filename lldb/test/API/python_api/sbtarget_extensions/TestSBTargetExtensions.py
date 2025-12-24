@@ -7,7 +7,6 @@ from lldbsuite.test.lldbtest import *
 
 
 class SBTargetExtensionsTestCase(TestBase):
-
     def test_equality(self):
         """Test the equality operator for SBTarget."""
         self.build()
@@ -68,7 +67,9 @@ class SBTargetExtensionsTestCase(TestBase):
         target = self.dbg.CreateTarget(exe)
         self.assertTrue(target.IsValid())
 
-        breakpoint = target.BreakpointCreateBySourceRegex("Set breakpoint here", lldb.SBFileSpec("main.c"))
+        breakpoint = target.BreakpointCreateBySourceRegex(
+            "Set breakpoint here", lldb.SBFileSpec("main.c")
+        )
         self.assertTrue(breakpoint.IsValid())
 
         self.assertEqual(target.num_breakpoints, 1)
@@ -78,7 +79,9 @@ class SBTargetExtensionsTestCase(TestBase):
         self.assertEqual(target.breakpoint[0].GetID(), target.breakpoints[0].GetID())
 
         # To verify ID lookup works via the standard API:
-        self.assertEqual(target.FindBreakpointByID(breakpoint.GetID()).GetID(), breakpoint.GetID())
+        self.assertEqual(
+            target.FindBreakpointByID(breakpoint.GetID()).GetID(), breakpoint.GetID()
+        )
 
     def test_watchpoints(self):
         """Test watchpoint access via extensions."""
@@ -88,7 +91,9 @@ class SBTargetExtensionsTestCase(TestBase):
         self.assertTrue(target.IsValid())
 
         # 1. Set a breakpoint so the process stops and stays alive.
-        breakpoint = target.BreakpointCreateBySourceRegex("Set breakpoint here", lldb.SBFileSpec("main.c"))
+        breakpoint = target.BreakpointCreateBySourceRegex(
+            "Set breakpoint here", lldb.SBFileSpec("main.c")
+        )
         self.assertTrue(breakpoint.IsValid())
 
         # 2. Launch the process.
@@ -105,7 +110,9 @@ class SBTargetExtensionsTestCase(TestBase):
         error = lldb.SBError()
 
         # 4. Now we can set the watchpoint.
-        watchpoint = target.WatchAddress(global_variable.GetLoadAddress(), 4, False, True, error)
+        watchpoint = target.WatchAddress(
+            global_variable.GetLoadAddress(), 4, False, True, error
+        )
         self.assertTrue(error.Success(), f"Watchpoint failed: {error.GetCString()}")
 
         self.assertTrue(target.num_watchpoints > 0)
@@ -126,7 +133,10 @@ class SBTargetExtensionsTestCase(TestBase):
         self.assertEqual(target.debugger.GetID(), self.dbg.GetID())
 
         self.assertTrue(target.broadcaster.IsValid())
-        self.assertIn(target.byte_order, [lldb.eByteOrderLittle, lldb.eByteOrderBig, lldb.eByteOrderInvalid])
+        self.assertIn(
+            target.byte_order,
+            [lldb.eByteOrderLittle, lldb.eByteOrderBig, lldb.eByteOrderInvalid],
+        )
         self.assertTrue(target.addr_size > 0)
         self.assertIsNotNone(target.triple)
         self.assertIsNotNone(target.arch_name)
