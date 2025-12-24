@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: no-threads
-// UNSUPPORTED: c++03
+// REQUIRES: std-at-least-c++11
 
 // <thread>
 

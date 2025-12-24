@@ -1849,11 +1849,9 @@ inline _LIBCPP_HIDE_FROM_ABI bool __does_policy_contain(launch __policy, launch 
 template <class _Fp, class... _Args>
 [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI future<__invoke_result_t<__decay_t<_Fp>, __decay_t<_Args>...> >
 async(launch __policy, _Fp&& __f, _Args&&... __args) {
-#      if _LIBCPP_STD_VER >= 17
-  static_assert(is_constructible_v<__decay_t<_Fp>, _Fp>);
-  static_assert((is_constructible_v<__decay_t<_Args>, _Args> && ...));
-  static_assert(is_invocable_v<__decay_t<_Fp>, __decay_t<_Args>...>);
-#      endif
+  static_assert(is_constructible<__decay_t<_Fp>, _Fp>::value, "");
+  static_assert(_And<is_constructible<__decay_t<_Args>, _Args>...>::value, "");
+  static_assert(__is_invocable_v<__decay_t<_Fp>, __decay_t<_Args>...>, "");
 
   typedef __async_func<__decay_t<_Fp>, __decay_t<_Args>...> _BF;
   typedef typename _BF::_Rp _Rp;
