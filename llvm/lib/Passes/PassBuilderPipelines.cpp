@@ -72,6 +72,7 @@
 #include "llvm/Transforms/IPO/SCCP.h"
 #include "llvm/Transforms/IPO/SampleProfile.h"
 #include "llvm/Transforms/IPO/SampleProfileProbe.h"
+#include "llvm/Transforms/IPO/Scopes2AliasScopeMetadata.h"
 #include "llvm/Transforms/IPO/WholeProgramDevirt.h"
 #include "llvm/Transforms/InstCombine/InstCombine.h"
 #include "llvm/Transforms/Instrumentation/AllocToken.h"
@@ -1715,6 +1716,9 @@ PassBuilder::buildPerModuleDefaultPipeline(OptimizationLevel Level,
   // a library containing the necessary interfaces.
   if (Phase == ThinOrFullLTOPhase::None)
     MPM.addPass(MemProfRemoveInfo());
+
+  // Convert !scope metadata to !alias.scope one. Set !noalias nodes as well
+  MPM.addPass(Scopes2AliasScopeMetadataPass());
 
   // Convert @llvm.global.annotations to !annotation metadata.
   MPM.addPass(Annotation2MetadataPass());

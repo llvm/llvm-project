@@ -40,6 +40,7 @@ add_llvm_component_library(LLVMipo
   SampleProfileMatcher.cpp
   SampleProfileProbe.cpp
   SCCP.cpp
+  Scopes2AliasScopeMetadata.cpp
   StripDeadPrototypes.cpp
   StripSymbols.cpp
   ThinLTOBitcodeWriter.cpp

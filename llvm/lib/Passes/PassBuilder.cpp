@@ -234,6 +234,7 @@
 #include "llvm/Transforms/IPO/SCCP.h"
 #include "llvm/Transforms/IPO/SampleProfile.h"
 #include "llvm/Transforms/IPO/SampleProfileProbe.h"
+#include "llvm/Transforms/IPO/Scopes2AliasScopeMetadata.h"
 #include "llvm/Transforms/IPO/StripDeadPrototypes.h"
 #include "llvm/Transforms/IPO/StripSymbols.h"
 #include "llvm/Transforms/IPO/WholeProgramDevirt.h"
