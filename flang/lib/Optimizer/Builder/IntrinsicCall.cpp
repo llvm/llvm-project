@@ -7906,7 +7906,7 @@ void IntrinsicLibrary::genShowDescriptor(
     descrAddr = builder.createTemporary(loc, descriptor.getType());
     builder.createStoreWithConvert(loc, descriptor, descrAddr);
   } else {
-    // If descriptor is not a box type (and not ref<box>), pass null.
+    // If argument is not a box type (and not ref<box>), pass null.
     descrAddr = builder.createNullConstant(
         loc, fir::BoxType::get(builder.getNoneType()));
   }
