@@ -953,7 +953,7 @@ static Value *followLCSSA(Value *SV) {
 }
 
 static bool CheckReductionKind(Loop *L, PHINode *PHI,
-                        SmallVectorImpl<Instruction *> &HasNoWrapInsts) {
+                               SmallVectorImpl<Instruction *> &HasNoWrapInsts) {
   RecurrenceDescriptor RD;
   if (RecurrenceDescriptor::isReductionPHI(PHI, L, RD)) {
     // Detect floating point reduction only when it can be reordered.
@@ -1043,8 +1043,8 @@ findInnerReductionPhi(Loop *L, Value *V,
     }
   }
 
-      return nullptr;
-    }
+  return nullptr;
+}
 
 static PHINode *getCounterFromInc(Value *IncV, Loop *L) {
   Instruction *IncI = dyn_cast<Instruction>(IncV);
@@ -1157,7 +1157,7 @@ bool LoopInterchangeLegality::findSimpleReduction(
     return false;
 
   // Find lcssa_phi in OuterLoop's Latch
-  BasicBlock *ExitBlock = L->getExitBlock();;
+  BasicBlock *ExitBlock = L->getExitBlock();
   if (!ExitBlock)
     return false;
 
