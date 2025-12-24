@@ -18309,13 +18309,12 @@ NodeExtensionHelper::getSupportedFoldings(const SDNode *Root,
   case RISCVISD::VFNMADD_VL:
   case RISCVISD::VFNMSUB_VL:
     Strategies.push_back(canFoldToVWWithSameExtension);
-    if (Subtarget.hasStdExtZvfbfwma() &&
-        Root->getOpcode() == RISCVISD::VFMADD_VL)
-      Strategies.push_back(canFoldToVWWithSameExtBF16);
-    else if (Subtarget.hasStdExtZvfbfa() &&
-             Root->getOpcode() != RISCVISD::FMUL_VL)
+    if (Subtarget.hasStdExtZvfbfa() && Root->getOpcode() != RISCVISD::FMUL_VL)
       // TODO: Once other widen operations are supported we can merge
       // canFoldToVWWithSameExtension and canFoldToVWWithSameExtBF16.
+      Strategies.push_back(canFoldToVWWithSameExtBF16);
+    else if (Subtarget.hasStdExtZvfbfwma() &&
+             Root->getOpcode() == RISCVISD::VFMADD_VL)
       Strategies.push_back(canFoldToVWWithSameExtBF16);
     break;
   case ISD::MUL:
