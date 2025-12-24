@@ -2,7 +2,7 @@
 ; RUN: llc < %s -mattr=sse2 -mattr=avx | FileCheck %s
 ; RUN: llc < %s -mtriple=x86_64-win32 -mattr=sse2 -mattr=avx | FileCheck %s
 ; RUN: llc < %s -mtriple=x86_64-windows-msvc -mattr=sse2 -mattr=avx | FileCheck %s
-; RUN: llc < %s -mtriple=x86_64-windows-msvc -mattr=sse2 -mattr=avx --use-constant-int-for-fixed-length-splat -use-constant-fp-for-fixed-length-splat | FileCheck %s --check-prefix=CHECK-CI
+; RUN: llc < %s -mtriple=x86_64-windows-msvc -mattr=sse2 -mattr=avx --use-constant-int-for-fixed-length-splat -use-constant-fp-for-fixed-length-splat | FileCheck %s
 ; GNU environment.
 ; RUN: llc < %s -mtriple=x86_64-win32-gnu -mattr=sse2 -mattr=avx | FileCheck -check-prefix=MINGW %s
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
@@ -118,15 +118,6 @@ entry:
 ; CHECK: 	.quad	8589934593             # 0x200000001
 ; CHECK: 	.quad	8589934593             # 0x200000001
 
-; CHECK-CI:	.globl	__ymm@0000000200000001
-; CHECK-CI:	.section	.rdata,"dr",discard,__ymm@0000000200000001
-; CHECK-CI:	.p2align	5
-; CHECK-CI: __ymm@0000000200000001
-; CHECK-CI: 	.quad	8589934593             # 0x200000001
-; CHECK-CI: 	.quad	8589934593             # 0x200000001
-; CHECK-CI: 	.quad	8589934593             # 0x200000001
-; CHECK-CI: 	.quad	8589934593             # 0x200000001
-
 define <4 x double> @ymm_splat_double() {
 entry:
   ret <4 x double> splat(double 0x0000000000800000)
@@ -140,12 +131,3 @@ entry:
 ; CHECK:	.quad	0x0000000000800000              # double 4.1445230292290475E-317
 ; CHECK:	.quad	0x0000000000800000              # double 4.1445230292290475E-317
 ; CHECK:	.quad	0x0000000000800000              # double 4.1445230292290475E-317
-
-; CHECK-CI:	.globl	__ymm@0000000000800000
-; CHECK-CI:	.section	.rdata,"dr",discard,__ymm@0000000000800000
-; CHECK-CI:	.p2align	5, 0x0
-; CHECK-CI: __ymm@0000000000800000
-; CHECK-CI:	.quad	0x0000000000800000              # double 4.1445230292290475E-317
-; CHECK-CI:	.quad	0x0000000000800000              # double 4.1445230292290475E-317
-; CHECK-CI:	.quad	0x0000000000800000              # double 4.1445230292290475E-317
-; CHECK-CI:	.quad	0x0000000000800000              # double 4.1445230292290475E-317
