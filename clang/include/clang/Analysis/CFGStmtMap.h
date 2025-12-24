@@ -29,8 +29,6 @@ class CFGStmtMap {
 
   CFGStmtMap(ParentMap *pm, SMap m) : PM(pm), M(std::move(m)) {}
 
-  static void Accumulate(SMap &SM, CFGBlock *B);
-
 public:
   /// Returns a new CFGMap for the given CFG.  It is the caller's
   /// responsibility to 'delete' this object when done using it.
