@@ -717,13 +717,7 @@ xegpu::reductionLayoutSetupRule(ArrayRef<int64_t> srcShape,
   xegpu::SliceAttr sliceCPL =
       dyn_cast<xegpu::SliceAttr>(consumerPreferredLayout);
 
-  // Strategy 1: Try to preserve the consumer's slice layout structure
-  // If the consumer already expects a slice layout with the same reduction
-  // dims, we can directly use its parent layout as our source layout. This
-  // ensures perfect alignment and avoids any data movement across subgroups or
-  // lanes.
-
-  // Hardware constraints (these should ideally be queried from device
+  // Hardware constraints (TODO: these should ideally be queried from device
   // capabilities)
   const int workgroupSize = 16; // Total number of subgroups in a workgroup
   const int subgroupSize = 16;  // Number of SIMD lanes per subgroup
@@ -735,44 +729,23 @@ xegpu::reductionLayoutSetupRule(ArrayRef<int64_t> srcShape,
   if (srcShapeSize < 2)
     return nullptr;
 
-  llvm::errs() << "DEBUG: Entering \n";
-
-  // Initialize layout components:
-  // - sgLayout[i]: Number of subgroups covering dimension i
-  // - sgData[i]: Data elements per subgroup in dimension i (srcShape[i] /
-  // sgLayout[i])
   SmallVector<int64_t> sgLayout(srcShapeSize);
   SmallVector<int64_t> sgData(srcShapeSize);
 
-  // Initialize instruction-level parallelism with SIMD-friendly defaults:
-  // - Last dimension gets subgroupSize (16) to match lane width
-  // - Second-to-last dimension gets vectorSize (8) as starting point
   SmallVector<int64_t> instData(srcShapeSize, 1);
   instData[srcShapeSize - 1] = subgroupSize;
   instData[srcShapeSize - 2] =
       vectorSize; // This will be adjusted based on actual data distribution
-  llvm::errs() << "DEBUG: Initial instData = [";
-  for (size_t i = 0; i < instData.size(); i++) {
-    llvm::errs() << instData[i];
-    if (i < instData.size() - 1)
-      llvm::errs() << ", ";
-  }
-  llvm::errs() << "]\n";
-  // Initialize lane-level distribution:
-  // - laneLayout[i]: How lanes are distributed across dimension i
-  //   (innermost dimension gets all subgroupSize lanes)
-  // - laneData[i]: Data elements per lane in dimension i (starts at 1 per lane)
+
   SmallVector<int64_t> laneLayout(srcShapeSize, 1);
   laneLayout[srcShapeSize - 1] = subgroupSize;
-  // construct a vector layout with lane_data = [1, ..., 1]
   SmallVector<int64_t> laneData(srcShapeSize, 1);
-  llvm::errs() << "DEBUG: laneLayout = [";
-  for (size_t i = 0; i < laneLayout.size(); i++) {
-    llvm::errs() << laneLayout[i];
-    if (i < laneLayout.size() - 1)
-      llvm::errs() << ", ";
-  }
-  // Attempt Strategy 1: Align with consumer's slice structure
+
+  // Strategy 1: Try to preserve the consumer's slice layout structure
+  // If the consumer already expects a slice layout with the same reduction
+  // dims, we can directly use its parent layout as our source layout. This
+  // ensures perfect alignment and avoids any data movement across subgroups or
+  // lanes.
   bool failToAlignSliceStruct = false;
   if (sliceCPL && sliceCPL.getDims().asArrayRef().equals(reductionDims)) {
     // The consumer is already expecting a slice along our reduction dimensions!
@@ -782,7 +755,7 @@ xegpu::reductionLayoutSetupRule(ArrayRef<int64_t> srcShape,
     // Verify that the parent layout can be adapted to our source shape:
     // For each dimension, check if srcShape[i] is divisible by the parent's
     // sg_layout[i]. If so, we can reuse the subgroup distribution pattern
-    // for each slice dim in source shape, if the dim size is differnt than the
+    // for each slice dim in source shape, if the dim size is different than the
     // result shape, try to adjust the sg_data/inst_data accordingly.
     SmallVector<int64_t> pcplSgLayout = parentCPL.getEffectiveSgLayoutAsInt();
     SmallVector<int64_t> pcplLaneLayout =
@@ -793,16 +766,6 @@ xegpu::reductionLayoutSetupRule(ArrayRef<int64_t> srcShape,
            "parent layout rank must match source shape rank");
 
     proposedSrcLayout = parentCPL;
-
-    llvm::errs() << "DEBUG: srcShapeSize = " << srcShapeSize << "\n";
-    llvm::errs() << "DEBUG: parentCPL rank = " << parentCPL.getRank() << "\n";
-    llvm::errs() << "DEBUG: srcShape = [";
-    for (int i = 0; i < srcShapeSize; i++) {
-      llvm::errs() << srcShape[i];
-      if (i < srcShapeSize - 1)
-        llvm::errs() << ", ";
-    }
-    llvm::errs() << "]\n";
 
     if (pcplSgLayout.size() == static_cast<size_t>(srcShapeSize)) {
       for (int i = 0; i < srcShapeSize; i++) {
@@ -832,85 +795,49 @@ xegpu::reductionLayoutSetupRule(ArrayRef<int64_t> srcShape,
     failToAlignSliceStruct = true;
   }
 
+  // Strategy 2: Construct a new layout aligned with consumer's sg_layout for
+  // the result (non-reduction dims) then distribute remaining subgroups across
+  // other dimensions
   if (failToAlignSliceStruct) {
-
-    // try to align the sg layout
     SmallVector<int64_t> cplSgLayout =
         consumerPreferredLayout.getEffectiveSgLayoutAsInt();
-    llvm::errs() << "DEBUG: cplSgLayout size = " << cplSgLayout.size() << "\n";
-    // if sg layout doesn't cover all the sg ids, distribute rest to
-    // non-reduction dims
     int remainingSgCount = workgroupSize;
-
     SmallVector<int64_t> remainingDims;
-    // print debug info for consumerPreferredLayout and cplSgLayout
-    llvm::errs() << "DEBUG: consumerPreferredLayout sgLayout = [";
-    auto cplSgLayoutFull = consumerPreferredLayout.getEffectiveSgLayoutAsInt();
-    for (size_t i = 0; i < cplSgLayoutFull.size(); i++) {
-      llvm::errs() << cplSgLayoutFull[i];
-      if (i < cplSgLayoutFull.size() - 1)
-        llvm::errs() << ", ";
-    }
-    // if cplSgLayout is not empty, try to align the sg layout first
     int cplId = cplSgLayout.size() - 1;
-    llvm::errs() << "DEBUG: Starting first loop, cplId = " << cplId << "\n";
-    for (int i = srcShapeSize - 1; i >= 0; i--) {
-      llvm::errs() << "DEBUG: Loop 1, i = " << i << ", is_reduction_dim = "
-                   << llvm::is_contained(reductionDims, i) << "\n";
 
-      // For non-reduction dimensions, try to match consumer's sg_layout
-      // This ensures the result after reduction has the expected distribution
-      if (!llvm::is_contained(reductionDims, i) && cplId >= 0) {
-        if (srcShape[i] % cplSgLayout[cplId] == 0) {
-          sgLayout[i] = cplSgLayout[cplId];
-          sgData[i] = srcShape[i] / sgLayout[i];
-          instData[i] = std::min(instData[i], sgData[i]);
-          remainingSgCount /= sgLayout[i];
-          llvm::errs() << "DEBUG: Set sgLayout[" << i << "] = " << sgLayout[i]
-                       << ", sgData[" << i << "] = " << sgData[i]
-                       << ", remainingSgCount = " << remainingSgCount << "\n";
-          cplId--;
-          continue;
-        }
-      }
-      // Dimension couldn't be aligned; defer to second pass
-      remainingDims.push_back(i);
-      llvm::errs() << "DEBUG: Added i = " << i << " to remainingDims\n";
-    }
-
-    // Second pass: Distribute remaining subgroups across unhandled dimensions
-    // This handles reduction dimensions and dimensions that didn't align with
-    // consumer
-    llvm::errs() << "DEBUG: Starting second loop\n";
-    for (int i = srcShapeSize - 1; i >= 0; i--) {
-      llvm::errs() << "DEBUG: Loop 2, i = " << i << ", is_remaining_dim = "
-                   << llvm::is_contained(remainingDims, i) << "\n";
-      if (llvm::is_contained(remainingDims, i)) {
-
-        llvm::errs() << "DEBUG: Before Set sgLayout[" << i
-                     << "] = " << sgLayout[i] << ", sgData[" << i
-                     << "] = " << sgData[i]
-                     << ", remainingSgCount = " << remainingSgCount << "\n";
-
-        sgLayout[i] = std::min((srcShape[i] / laneLayout[i]),
-                               static_cast<int64_t>(remainingSgCount));
+    // For non-reduction dimensions, try to match consumer's sg_layout
+    // This ensures the result after reduction has the expected distribution
+    if (!llvm::is_contained(reductionDims, i) && cplId >= 0) {
+      if (srcShape[i] % cplSgLayout[cplId] == 0) {
+        sgLayout[i] = cplSgLayout[cplId];
         sgData[i] = srcShape[i] / sgLayout[i];
         instData[i] = std::min(instData[i], sgData[i]);
         remainingSgCount /= sgLayout[i];
-
-        llvm::errs() << "DEBUG: After Set sgLayout[" << i
-                     << "] = " << sgLayout[i] << ", sgData[" << i
-                     << "] = " << sgData[i]
-                     << ", remainingSgCount = " << remainingSgCount << "\n";
-
-        if (remainingSgCount == 1) {
-          llvm::errs() << "DEBUG: Breaking from loop 2, remainingSgCount = 1\n";
-          break;
-        }
+        cplId--;
+        continue;
       }
     }
+    remainingDims.push_back(i);
   }
-  // Convert int64_t vectors to int32_t for DenseI32ArrayAttr
+
+  // Second pass: Distribute remaining subgroups across unhandled dimensions
+  // This handles reduction dimensions and dimensions that didn't align with
+  // consumer
+  for (int i = srcShapeSize - 1; i >= 0; i--) {
+
+    sgLayout[i] = std::min((srcShape[i] / laneLayout[i]),
+                           static_cast<int64_t>(remainingSgCount));
+    sgData[i] = srcShape[i] / sgLayout[i];
+    instData[i] = std::min(instData[i], sgData[i]);
+    remainingSgCount /= sgLayout[i];
+
+    if (remainingSgCount == 1) {
+      break;
+    }
+  }
+    }
+  }
+
   SmallVector<int32_t> sgLayout32(sgLayout.begin(), sgLayout.end());
   SmallVector<int32_t> sgData32(sgData.begin(), sgData.end());
   SmallVector<int32_t> instData32(instData.begin(), instData.end());
@@ -924,7 +851,6 @@ xegpu::reductionLayoutSetupRule(ArrayRef<int64_t> srcShape,
       DenseI32ArrayAttr::get(context, laneData32),
       consumerPreferredLayout.getOrder());
 
-  // finally, create the slice layout for reduction result
   xegpu::SliceAttr reductionResLayout =
       xegpu::SliceAttr::get(context, proposedSrcLayout,
                             DenseI64ArrayAttr::get(context, reductionDims));
