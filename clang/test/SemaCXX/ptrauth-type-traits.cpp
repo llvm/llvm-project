@@ -8,13 +8,14 @@
 // expected-no-diagnostics
 
 #ifdef __PTRAUTH__
-
+#define PTRAUTH_ENABLED 1
 #define NonAddressDiscriminatedVTablePtrAttr \
   [[clang::ptrauth_vtable_pointer(process_independent, no_address_discrimination, no_extra_discrimination)]]
 #define AddressDiscriminatedVTablePtrAttr \
   [[clang::ptrauth_vtable_pointer(process_independent, address_discrimination, no_extra_discrimination)]]
 #define ADDR_DISC_ENABLED true
 #else
+#define PTRAUTH_ENABLED 0
 #define NonAddressDiscriminatedVTablePtrAttr
 #define AddressDiscriminatedVTablePtrAttr
 #define ADDR_DISC_ENABLED false
@@ -319,26 +320,6 @@ static_assert( __builtin_is_cpp_trivially_relocatable(RelocatableAddressDiscrimi
 static_assert(!__builtin_is_cpp_trivially_relocatable(EmbdeddedAddressDiscriminatedPolymorphicClass));
 static_assert(!__builtin_is_cpp_trivially_relocatable(RelocatableEmbdeddedAddressDiscriminatedPolymorphicClass));
 
-static_assert( __builtin_is_replaceable(AddressDiscriminatedPtr));
-static_assert( __builtin_is_replaceable(AddressDiscriminatedInt64));
-static_assert( __builtin_is_replaceable(AddressDiscriminatedFields));
-static_assert( __builtin_is_replaceable(RelocatableAddressDiscriminatedFields));
-static_assert( __builtin_is_replaceable(AddressDiscriminatedFieldInBaseClass));
-static_assert(!__builtin_is_replaceable(NonAddressDiscriminatedVTablePtr));
-static_assert(!__builtin_is_replaceable(NonAddressDiscriminatedVTablePtr2));
-static_assert(!__builtin_is_replaceable(RelocatableNonAddressDiscriminatedVTablePtr));
-static_assert(!__builtin_is_replaceable(RelocatableNonAddressDiscriminatedVTablePtr2));
-static_assert(!__builtin_is_replaceable(AddressDiscriminatedVTablePtr));
-static_assert(!__builtin_is_replaceable(RelocatableAddressDiscriminatedVTablePtr));
-static_assert(!__builtin_is_replaceable(NoAddressDiscriminatedBaseClasses));
-static_assert(!__builtin_is_replaceable(RelocatableNoAddressDiscriminatedBaseClasses));
-static_assert(!__builtin_is_replaceable(AddressDiscriminatedPrimaryBase));
-static_assert(!__builtin_is_replaceable(AddressDiscriminatedSecondaryBase));
-static_assert(!__builtin_is_replaceable(RelocatableAddressDiscriminatedPrimaryBase));
-static_assert(!__builtin_is_replaceable(RelocatableAddressDiscriminatedSecondaryBase));
-static_assert(!__builtin_is_replaceable(EmbdeddedAddressDiscriminatedPolymorphicClass));
-static_assert(!__builtin_is_replaceable(RelocatableEmbdeddedAddressDiscriminatedPolymorphicClass));
-
 static_assert( __is_bitwise_cloneable(AddressDiscriminatedPtr) == !ADDR_DISC_ENABLED);
 static_assert( __is_bitwise_cloneable(AddressDiscriminatedInt64) == !ADDR_DISC_ENABLED);
 static_assert( __is_bitwise_cloneable(AddressDiscriminatedFields) == !ADDR_DISC_ENABLED);
@@ -399,3 +380,38 @@ static_assert(!ASSIGNABLE_WRAPPER(RelocatableAddressDiscriminatedPrimaryBase));
 static_assert(!ASSIGNABLE_WRAPPER(RelocatableAddressDiscriminatedSecondaryBase));
 static_assert(!ASSIGNABLE_WRAPPER(EmbdeddedAddressDiscriminatedPolymorphicClass));
 static_assert(!ASSIGNABLE_WRAPPER(RelocatableEmbdeddedAddressDiscriminatedPolymorphicClass));
+
+namespace GH159505 {
+  class A {
+    virtual void f();
+  };
+
+  template <int N> struct B {
+    class C : A {
+      A a[N];
+    } d;
+  };
+
+  template <int N> struct C {
+    void *__ptrauth(1,1,1) ptr[N];
+    static_assert(PTRAUTH_ENABLED != __is_trivially_copyable(decltype(ptr)));
+  };
+  template <class T, bool isPtrauth> struct D {
+    T ptr;
+    static_assert(isPtrauth != __is_trivially_copyable(decltype(ptr)));
+  };
+
+
+  template <class T> using Ptr = T * __ptrauth(1,1,1);
+  template <class T> void test() {
+    static_assert(PTRAUTH_ENABLED != __is_trivially_copyable(Ptr<T>));
+  }
+
+  auto f = test<int>;
+  static_assert(!__is_trivially_copyable(B<1>));
+  static_assert(PTRAUTH_ENABLED != __is_trivially_copyable(C<1>));
+
+
+  D<void *, false> d_void;
+  D<void * __ptrauth(1,1,1), PTRAUTH_ENABLED> d_void_ptrauth;
+}

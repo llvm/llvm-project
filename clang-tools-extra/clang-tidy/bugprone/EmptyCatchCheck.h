@@ -17,7 +17,7 @@ namespace clang::tidy::bugprone {
 /// Detects and suggests addressing issues with empty catch statements.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/empty-catch.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/bugprone/empty-catch.html
 class EmptyCatchCheck : public ClangTidyCheck {
 public:
   EmptyCatchCheck(StringRef Name, ClangTidyContext *Context);

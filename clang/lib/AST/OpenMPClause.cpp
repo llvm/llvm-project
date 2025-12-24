@@ -15,6 +15,7 @@
 #include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclOpenMP.h"
+#include "clang/AST/ExprOpenMP.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/OpenMPKinds.h"
 #include "clang/Basic/TargetInfo.h"
@@ -104,6 +105,8 @@ const OMPClauseWithPreInit *OMPClauseWithPreInit::get(const OMPClause *C) {
     return static_cast<const OMPFilterClause *>(C);
   case OMPC_ompx_dyn_cgroup_mem:
     return static_cast<const OMPXDynCGroupMemClause *>(C);
+  case OMPC_dyn_groupprivate:
+    return static_cast<const OMPDynGroupprivateClause *>(C);
   case OMPC_message:
     return static_cast<const OMPMessageClause *>(C);
   case OMPC_default:
@@ -123,6 +126,7 @@ const OMPClauseWithPreInit *OMPClauseWithPreInit::get(const OMPClause *C) {
   case OMPC_nowait:
   case OMPC_untied:
   case OMPC_mergeable:
+  case OMPC_threadset:
   case OMPC_threadprivate:
   case OMPC_groupprivate:
   case OMPC_flush:
@@ -306,6 +310,12 @@ OMPClause::child_range OMPIfClause::used_children() {
   if (Stmt **C = getAddrOfExprAsWritten(getPreInitStmt()))
     return child_range(C, C + 1);
   return child_range(&Condition, &Condition + 1);
+}
+
+OMPClause::child_range OMPNowaitClause::used_children() {
+  if (Condition)
+    return child_range(&Condition, &Condition + 1);
+  return children();
 }
 
 OMPClause::child_range OMPGrainsizeClause::used_children() {
@@ -1023,6 +1033,26 @@ OMPPartialClause *OMPPartialClause::CreateEmpty(const ASTContext &C) {
   return new (C) OMPPartialClause();
 }
 
+OMPLoopRangeClause *
+OMPLoopRangeClause::Create(const ASTContext &C, SourceLocation StartLoc,
+                           SourceLocation LParenLoc, SourceLocation FirstLoc,
+                           SourceLocation CountLoc, SourceLocation EndLoc,
+                           Expr *First, Expr *Count) {
+  OMPLoopRangeClause *Clause = CreateEmpty(C);
+  Clause->setLocStart(StartLoc);
+  Clause->setLParenLoc(LParenLoc);
+  Clause->setFirstLoc(FirstLoc);
+  Clause->setCountLoc(CountLoc);
+  Clause->setLocEnd(EndLoc);
+  Clause->setFirst(First);
+  Clause->setCount(Count);
+  return Clause;
+}
+
+OMPLoopRangeClause *OMPLoopRangeClause::CreateEmpty(const ASTContext &C) {
+  return new (C) OMPLoopRangeClause();
+}
+
 OMPAllocateClause *OMPAllocateClause::Create(
     const ASTContext &C, SourceLocation StartLoc, SourceLocation LParenLoc,
     Expr *Allocator, Expr *Alignment, SourceLocation ColonLoc,
@@ -1159,6 +1189,77 @@ unsigned OMPClauseMappableExprCommon::getUniqueDeclarationsTotalNumber(
   return UniqueDecls.size();
 }
 
+QualType
+OMPClauseMappableExprCommon::getComponentExprElementType(const Expr *Exp) {
+  assert(!isa<OMPArrayShapingExpr>(Exp) &&
+         "Cannot get element-type from array-shaping expr.");
+
+  // Unless we are handling array-section expressions, including
+  // array-subscripts, derefs, we can rely on getType.
+  if (!isa<ArraySectionExpr>(Exp))
+    return Exp->getType().getNonReferenceType().getCanonicalType();
+
+  // For array-sections, we need to find the type of one element of
+  // the section.
+  const auto *OASE = cast<ArraySectionExpr>(Exp);
+
+  QualType BaseType = ArraySectionExpr::getBaseOriginalType(OASE->getBase());
+
+  QualType ElemTy;
+  if (const auto *ATy = BaseType->getAsArrayTypeUnsafe())
+    ElemTy = ATy->getElementType();
+  else
+    ElemTy = BaseType->getPointeeType();
+
+  ElemTy = ElemTy.getNonReferenceType().getCanonicalType();
+  return ElemTy;
+}
+
+std::pair<const Expr *, std::optional<size_t>>
+OMPClauseMappableExprCommon::findAttachPtrExpr(
+    MappableExprComponentListRef Components, OpenMPDirectiveKind CurDirKind) {
+
+  // If we only have a single component, we have a map like "map(p)", which
+  // cannot have a base-pointer.
+  if (Components.size() < 2)
+    return {nullptr, std::nullopt};
+
+  // Only check for non-contiguous sections on target_update, since we can
+  // assume array-sections are contiguous on maps on other constructs, even if
+  // we are not sure of it at compile-time, like for a[1:x][2].
+  if (Components.back().isNonContiguous() && CurDirKind == OMPD_target_update)
+    return {nullptr, std::nullopt};
+
+  // To find the attach base-pointer, we start with the second component,
+  // stripping away one component at a time, until we reach a pointer Expr
+  // (that is not a binary operator). The first such pointer should be the
+  // attach base-pointer for the component list.
+  for (auto [I, Component] : llvm::enumerate(Components)) {
+    // Skip past the first component.
+    if (I == 0)
+      continue;
+
+    const Expr *CurExpr = Component.getAssociatedExpression();
+    if (!CurExpr)
+      break;
+
+    // If CurExpr is something like `p + 10`, we need to ignore it, since
+    // we are looking for `p`.
+    if (isa<BinaryOperator>(CurExpr))
+      continue;
+
+    // Keep going until we reach an Expr of pointer type.
+    QualType CurType = getComponentExprElementType(CurExpr);
+    if (!CurType->isPointerType())
+      continue;
+
+    // We have found a pointer Expr. This must be the attach pointer.
+    return {CurExpr, Components.size() - I};
+  }
+
+  return {nullptr, std::nullopt};
+}
+
 OMPMapClause *OMPMapClause::Create(
     const ASTContext &C, const OMPVarListLocTy &Locs, ArrayRef<Expr *> Vars,
     ArrayRef<ValueDecl *> Declarations,
@@ -1220,7 +1321,7 @@ OMPToClause *OMPToClause::Create(
     const ASTContext &C, const OMPVarListLocTy &Locs, ArrayRef<Expr *> Vars,
     ArrayRef<ValueDecl *> Declarations,
     MappableExprComponentListsRef ComponentLists, ArrayRef<Expr *> UDMapperRefs,
-    ArrayRef<OpenMPMotionModifierKind> MotionModifiers,
+    Expr *IteratorModifier, ArrayRef<OpenMPMotionModifierKind> MotionModifiers,
     ArrayRef<SourceLocation> MotionModifiersLoc,
     NestedNameSpecifierLoc UDMQualifierLoc, DeclarationNameInfo MapperId) {
   OMPMappableExprListSizeTy Sizes;
@@ -1242,7 +1343,7 @@ OMPToClause *OMPToClause::Create(
   void *Mem = C.Allocate(
       totalSizeToAlloc<Expr *, ValueDecl *, unsigned,
                        OMPClauseMappableExprCommon::MappableComponent>(
-          2 * Sizes.NumVars, Sizes.NumUniqueDeclarations,
+          2 * Sizes.NumVars + 1, Sizes.NumUniqueDeclarations,
           Sizes.NumUniqueDeclarations + Sizes.NumComponentLists,
           Sizes.NumComponents));
 
@@ -1252,6 +1353,7 @@ OMPToClause *OMPToClause::Create(
   Clause->setVarRefs(Vars);
   Clause->setUDMapperRefs(UDMapperRefs);
   Clause->setClauseInfo(Declarations, ComponentLists);
+  Clause->setIteratorModifier(IteratorModifier);
   return Clause;
 }
 
@@ -1260,17 +1362,19 @@ OMPToClause *OMPToClause::CreateEmpty(const ASTContext &C,
   void *Mem = C.Allocate(
       totalSizeToAlloc<Expr *, ValueDecl *, unsigned,
                        OMPClauseMappableExprCommon::MappableComponent>(
-          2 * Sizes.NumVars, Sizes.NumUniqueDeclarations,
+          2 * Sizes.NumVars + 1, Sizes.NumUniqueDeclarations,
           Sizes.NumUniqueDeclarations + Sizes.NumComponentLists,
           Sizes.NumComponents));
-  return new (Mem) OMPToClause(Sizes);
+  OMPToClause *Clause = new (Mem) OMPToClause(Sizes);
+  Clause->setIteratorModifier(nullptr);
+  return Clause;
 }
 
 OMPFromClause *OMPFromClause::Create(
     const ASTContext &C, const OMPVarListLocTy &Locs, ArrayRef<Expr *> Vars,
     ArrayRef<ValueDecl *> Declarations,
     MappableExprComponentListsRef ComponentLists, ArrayRef<Expr *> UDMapperRefs,
-    ArrayRef<OpenMPMotionModifierKind> MotionModifiers,
+    Expr *IteratorModifier, ArrayRef<OpenMPMotionModifierKind> MotionModifiers,
     ArrayRef<SourceLocation> MotionModifiersLoc,
     NestedNameSpecifierLoc UDMQualifierLoc, DeclarationNameInfo MapperId) {
   OMPMappableExprListSizeTy Sizes;
@@ -1292,7 +1396,7 @@ OMPFromClause *OMPFromClause::Create(
   void *Mem = C.Allocate(
       totalSizeToAlloc<Expr *, ValueDecl *, unsigned,
                        OMPClauseMappableExprCommon::MappableComponent>(
-          2 * Sizes.NumVars, Sizes.NumUniqueDeclarations,
+          2 * Sizes.NumVars + 1, Sizes.NumUniqueDeclarations,
           Sizes.NumUniqueDeclarations + Sizes.NumComponentLists,
           Sizes.NumComponents));
 
@@ -1303,6 +1407,7 @@ OMPFromClause *OMPFromClause::Create(
   Clause->setVarRefs(Vars);
   Clause->setUDMapperRefs(UDMapperRefs);
   Clause->setClauseInfo(Declarations, ComponentLists);
+  Clause->setIteratorModifier(IteratorModifier);
   return Clause;
 }
 
@@ -1312,10 +1417,12 @@ OMPFromClause::CreateEmpty(const ASTContext &C,
   void *Mem = C.Allocate(
       totalSizeToAlloc<Expr *, ValueDecl *, unsigned,
                        OMPClauseMappableExprCommon::MappableComponent>(
-          2 * Sizes.NumVars, Sizes.NumUniqueDeclarations,
+          2 * Sizes.NumVars + 1, Sizes.NumUniqueDeclarations,
           Sizes.NumUniqueDeclarations + Sizes.NumComponentLists,
           Sizes.NumComponents));
-  return new (Mem) OMPFromClause(Sizes);
+  OMPFromClause *Clause = new (Mem) OMPFromClause(Sizes);
+  Clause->setIteratorModifier(nullptr);
+  return Clause;
 }
 
 void OMPUseDevicePtrClause::setPrivateCopies(ArrayRef<Expr *> VL) {
@@ -1892,6 +1999,21 @@ void OMPClausePrinter::VisitOMPPartialClause(OMPPartialClause *Node) {
   }
 }
 
+void OMPClausePrinter::VisitOMPLoopRangeClause(OMPLoopRangeClause *Node) {
+  OS << "looprange";
+
+  Expr *First = Node->getFirst();
+  Expr *Count = Node->getCount();
+
+  if (First && Count) {
+    OS << "(";
+    First->printPretty(OS, nullptr, Policy, 0);
+    OS << ",";
+    Count->printPretty(OS, nullptr, Policy, 0);
+    OS << ")";
+  }
+}
+
 void OMPClausePrinter::VisitOMPAllocatorClause(OMPAllocatorClause *Node) {
   OS << "allocator(";
   Node->getAllocator()->printPretty(OS, nullptr, Policy, 0);
@@ -1920,6 +2042,13 @@ void OMPClausePrinter::VisitOMPDefaultClause(OMPDefaultClause *Node) {
   }
 
   OS << ")";
+}
+
+void OMPClausePrinter::VisitOMPThreadsetClause(OMPThreadsetClause *Node) {
+  OS << "threadset("
+     << getOpenMPSimpleClauseTypeName(OMPC_threadset,
+                                      unsigned(Node->getThreadsetKind()))
+     << ")";
 }
 
 void OMPClausePrinter::VisitOMPProcBindClause(OMPProcBindClause *Node) {
@@ -2006,8 +2135,13 @@ void OMPClausePrinter::VisitOMPOrderedClause(OMPOrderedClause *Node) {
   }
 }
 
-void OMPClausePrinter::VisitOMPNowaitClause(OMPNowaitClause *) {
+void OMPClausePrinter::VisitOMPNowaitClause(OMPNowaitClause *Node) {
   OS << "nowait";
+  if (auto *Cond = Node->getCondition()) {
+    OS << "(";
+    Cond->printPretty(OS, nullptr, Policy, 0);
+    OS << ")";
+  }
 }
 
 void OMPClausePrinter::VisitOMPUntiedClause(OMPUntiedClause *) {
@@ -2566,12 +2700,16 @@ template <typename T> void OMPClausePrinter::VisitOMPMotionClause(T *Node) {
     OS << '(';
     for (unsigned I = 0; I < NumberOfOMPMotionModifiers; ++I) {
       if (Node->getMotionModifier(I) != OMPC_MOTION_MODIFIER_unknown) {
-        OS << getOpenMPSimpleClauseTypeName(Node->getClauseKind(),
-                                            Node->getMotionModifier(I));
-        if (Node->getMotionModifier(I) == OMPC_MOTION_MODIFIER_mapper)
-          PrintMapper(OS, Node, Policy);
-        if (I < ModifierCount - 1)
-          OS << ", ";
+        if (Node->getMotionModifier(I) == OMPC_MOTION_MODIFIER_iterator) {
+          PrintIterator(OS, Node, Policy);
+        } else {
+          OS << getOpenMPSimpleClauseTypeName(Node->getClauseKind(),
+                                              Node->getMotionModifier(I));
+          if (Node->getMotionModifier(I) == OMPC_MOTION_MODIFIER_mapper)
+            PrintMapper(OS, Node, Policy);
+          if (I < ModifierCount - 1)
+            OS << ", ";
+        }
       }
     }
     OS << ':';
@@ -2729,6 +2867,24 @@ void OMPClausePrinter::VisitOMPXDynCGroupMemClause(
   OS << "ompx_dyn_cgroup_mem(";
   Node->getSize()->printPretty(OS, nullptr, Policy, 0);
   OS << ")";
+}
+
+void OMPClausePrinter::VisitOMPDynGroupprivateClause(
+    OMPDynGroupprivateClause *Node) {
+  OS << "dyn_groupprivate(";
+  if (Node->getDynGroupprivateModifier() != OMPC_DYN_GROUPPRIVATE_unknown) {
+    OS << getOpenMPSimpleClauseTypeName(OMPC_dyn_groupprivate,
+                                        Node->getDynGroupprivateModifier());
+    if (Node->getDynGroupprivateFallbackModifier() !=
+        OMPC_DYN_GROUPPRIVATE_FALLBACK_unknown) {
+      OS << ", ";
+      OS << getOpenMPSimpleClauseTypeName(
+          OMPC_dyn_groupprivate, Node->getDynGroupprivateFallbackModifier());
+    }
+    OS << ": ";
+  }
+  Node->getSize()->printPretty(OS, nullptr, Policy, 0);
+  OS << ')';
 }
 
 void OMPClausePrinter::VisitOMPDoacrossClause(OMPDoacrossClause *Node) {

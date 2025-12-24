@@ -96,10 +96,6 @@ static void percentEncode(StringRef Content, std::string &Out) {
 static std::string percentDecode(StringRef Content) {
   std::string Result;
   for (auto I = Content.begin(), E = Content.end(); I != E; ++I) {
-    if (*I != '%') {
-      Result += *I;
-      continue;
-    }
     if (*I == '%' && I + 2 < Content.end() && llvm::isHexDigit(*(I + 1)) &&
         llvm::isHexDigit(*(I + 2))) {
       Result.push_back(llvm::hexFromNibbles(*(I + 1), *(I + 2)));
@@ -1040,4 +1036,22 @@ llvm::json::Value llvm::lsp::toJSON(const CodeAction &Value) {
   if (Value.edit)
     CodeAction["edit"] = *Value.edit;
   return std::move(CodeAction);
+}
+
+//===----------------------------------------------------------------------===//
+// ShowMessageParams
+//===----------------------------------------------------------------------===//
+
+llvm::json::Value llvm::lsp::toJSON(const ShowMessageParams &Params) {
+  auto Out = llvm::json::Object{
+      {"type", static_cast<int>(Params.type)},
+      {"message", Params.message},
+  };
+  if (Params.actions)
+    Out["actions"] = *Params.actions;
+  return Out;
+}
+
+llvm::json::Value llvm::lsp::toJSON(const MessageActionItem &Params) {
+  return llvm::json::Object{{"title", Params.title}};
 }

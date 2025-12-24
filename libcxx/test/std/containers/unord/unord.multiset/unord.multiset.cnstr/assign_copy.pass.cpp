@@ -14,8 +14,6 @@
 
 // unordered_multiset& operator=(const unordered_multiset& u);
 
-// XFAIL: FROZEN-CXX03-HEADERS-FIXME
-
 #include <algorithm>
 #include <cassert>
 #include <cfloat>
@@ -259,7 +257,7 @@ void test_alloc(const Alloc& lhs_alloc                   = Alloc(),
       int rhs_arr[] = {10, 13, 12, 0, 50, 2};
       Set copy(std::begin(rhs_arr), std::end(rhs_arr), 0, std::hash<int>(), std::equal_to<int>(), rhs_alloc);
       copy = orig;
-      LIBCPP_ASSERT(copy.bucket_count() == 5);
+      LIBCPP_NON_FROZEN_ASSERT(copy.bucket_count() == 5);
       assert(copy.size() == 4);
       assert(copy.count(1) == 1);
       assert(copy.count(2) == 1);

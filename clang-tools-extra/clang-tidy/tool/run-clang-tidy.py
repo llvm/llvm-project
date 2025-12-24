@@ -31,7 +31,7 @@ Example invocations.
                       -header-filter=extra/clang-tidy
 
 Compilation database setup:
-http://clang.llvm.org/docs/HowToSetupToolingForLLVM.html
+https://clang.llvm.org/docs/HowToSetupToolingForLLVM.html
 """
 
 import argparse
@@ -96,6 +96,7 @@ def get_tidy_invocation(
     allow_enabling_alpha_checkers: bool,
     extra_arg: List[str],
     extra_arg_before: List[str],
+    removed_arg: List[str],
     quiet: bool,
     config_file_path: str,
     config: str,
@@ -135,6 +136,8 @@ def get_tidy_invocation(
         start.append(f"-extra-arg={arg}")
     for arg in extra_arg_before:
         start.append(f"-extra-arg-before={arg}")
+    for arg in removed_arg:
+        start.append(f"-removed-arg={arg}")
     start.append(f"-p={build_path}")
     if quiet:
         start.append("-quiet")
@@ -377,6 +380,7 @@ async def run_tidy(
         args.allow_enabling_alpha_checkers,
         args.extra_arg,
         args.extra_arg_before,
+        args.removed_arg,
         args.quiet,
         args.config_file,
         args.config,
@@ -552,6 +556,13 @@ async def main() -> None:
         help="Additional argument to prepend to the compiler command line.",
     )
     parser.add_argument(
+        "-removed-arg",
+        dest="removed_arg",
+        action="append",
+        default=[],
+        help="Arguments to remove from the compiler command line.",
+    )
+    parser.add_argument(
         "-quiet", action="store_true", help="Run clang-tidy in quiet mode."
     )
     parser.add_argument(
@@ -638,6 +649,7 @@ async def main() -> None:
             args.allow_enabling_alpha_checkers,
             args.extra_arg,
             args.extra_arg_before,
+            args.removed_arg,
             args.quiet,
             args.config_file,
             args.config,

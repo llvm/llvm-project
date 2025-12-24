@@ -13,7 +13,6 @@ define <vscale x 1 x bfloat> @masked_load_nxv1bf16(ptr %a, <vscale x 1 x i1> %ma
   %load = call <vscale x 1 x bfloat> @llvm.masked.load.nxv1bf16(ptr %a, i32 2, <vscale x 1 x i1> %mask, <vscale x 1 x bfloat> poison)
   ret <vscale x 1 x bfloat> %load
 }
-declare <vscale x 1 x bfloat> @llvm.masked.load.nxv1bf16(ptr, i32, <vscale x 1 x i1>, <vscale x 1 x bfloat>)
 
 define <vscale x 1 x half> @masked_load_nxv1f16(ptr %a, <vscale x 1 x i1> %mask) nounwind {
 ; CHECK-LABEL: masked_load_nxv1f16:
@@ -24,7 +23,6 @@ define <vscale x 1 x half> @masked_load_nxv1f16(ptr %a, <vscale x 1 x i1> %mask)
   %load = call <vscale x 1 x half> @llvm.masked.load.nxv1f16(ptr %a, i32 2, <vscale x 1 x i1> %mask, <vscale x 1 x half> poison)
   ret <vscale x 1 x half> %load
 }
-declare <vscale x 1 x half> @llvm.masked.load.nxv1f16(ptr, i32, <vscale x 1 x i1>, <vscale x 1 x half>)
 
 define <vscale x 1 x float> @masked_load_nxv1f32(ptr %a, <vscale x 1 x i1> %mask) nounwind {
 ; CHECK-LABEL: masked_load_nxv1f32:
@@ -35,7 +33,6 @@ define <vscale x 1 x float> @masked_load_nxv1f32(ptr %a, <vscale x 1 x i1> %mask
   %load = call <vscale x 1 x float> @llvm.masked.load.nxv1f32(ptr %a, i32 4, <vscale x 1 x i1> %mask, <vscale x 1 x float> poison)
   ret <vscale x 1 x float> %load
 }
-declare <vscale x 1 x float> @llvm.masked.load.nxv1f32(ptr, i32, <vscale x 1 x i1>, <vscale x 1 x float>)
 
 define <vscale x 1 x double> @masked_load_nxv1f64(ptr %a, <vscale x 1 x i1> %mask) nounwind {
 ; CHECK-LABEL: masked_load_nxv1f64:
@@ -46,7 +43,6 @@ define <vscale x 1 x double> @masked_load_nxv1f64(ptr %a, <vscale x 1 x i1> %mas
   %load = call <vscale x 1 x double> @llvm.masked.load.nxv1f64(ptr %a, i32 8, <vscale x 1 x i1> %mask, <vscale x 1 x double> poison)
   ret <vscale x 1 x double> %load
 }
-declare <vscale x 1 x double> @llvm.masked.load.nxv1f64(ptr, i32, <vscale x 1 x i1>, <vscale x 1 x double>)
 
 define <vscale x 2 x bfloat> @masked_load_nxv2bf16(ptr %a, <vscale x 2 x i1> %mask) nounwind {
 ; CHECK-LABEL: masked_load_nxv2bf16:
@@ -57,7 +53,6 @@ define <vscale x 2 x bfloat> @masked_load_nxv2bf16(ptr %a, <vscale x 2 x i1> %ma
   %load = call <vscale x 2 x bfloat> @llvm.masked.load.nxv2bf16(ptr %a, i32 2, <vscale x 2 x i1> %mask, <vscale x 2 x bfloat> poison)
   ret <vscale x 2 x bfloat> %load
 }
-declare <vscale x 2 x bfloat> @llvm.masked.load.nxv2bf16(ptr, i32, <vscale x 2 x i1>, <vscale x 2 x bfloat>)
 
 define <vscale x 2 x half> @masked_load_nxv2f16(ptr %a, <vscale x 2 x i1> %mask) nounwind {
 ; CHECK-LABEL: masked_load_nxv2f16:
@@ -68,7 +63,6 @@ define <vscale x 2 x half> @masked_load_nxv2f16(ptr %a, <vscale x 2 x i1> %mask)
   %load = call <vscale x 2 x half> @llvm.masked.load.nxv2f16(ptr %a, i32 2, <vscale x 2 x i1> %mask, <vscale x 2 x half> poison)
   ret <vscale x 2 x half> %load
 }
-declare <vscale x 2 x half> @llvm.masked.load.nxv2f16(ptr, i32, <vscale x 2 x i1>, <vscale x 2 x half>)
 
 define <vscale x 2 x float> @masked_load_nxv2f32(ptr %a, <vscale x 2 x i1> %mask) nounwind {
 ; CHECK-LABEL: masked_load_nxv2f32:
@@ -79,7 +73,6 @@ define <vscale x 2 x float> @masked_load_nxv2f32(ptr %a, <vscale x 2 x i1> %mask
   %load = call <vscale x 2 x float> @llvm.masked.load.nxv2f32(ptr %a, i32 4, <vscale x 2 x i1> %mask, <vscale x 2 x float> poison)
   ret <vscale x 2 x float> %load
 }
-declare <vscale x 2 x float> @llvm.masked.load.nxv2f32(ptr, i32, <vscale x 2 x i1>, <vscale x 2 x float>)
 
 define <vscale x 2 x double> @masked_load_nxv2f64(ptr %a, <vscale x 2 x i1> %mask) nounwind {
 ; CHECK-LABEL: masked_load_nxv2f64:
@@ -90,7 +83,6 @@ define <vscale x 2 x double> @masked_load_nxv2f64(ptr %a, <vscale x 2 x i1> %mas
   %load = call <vscale x 2 x double> @llvm.masked.load.nxv2f64(ptr %a, i32 8, <vscale x 2 x i1> %mask, <vscale x 2 x double> poison)
   ret <vscale x 2 x double> %load
 }
-declare <vscale x 2 x double> @llvm.masked.load.nxv2f64(ptr, i32, <vscale x 2 x i1>, <vscale x 2 x double>)
 
 define <vscale x 4 x bfloat> @masked_load_nxv4bf16(ptr %a, <vscale x 4 x i1> %mask) nounwind {
 ; CHECK-LABEL: masked_load_nxv4bf16:
@@ -101,7 +93,6 @@ define <vscale x 4 x bfloat> @masked_load_nxv4bf16(ptr %a, <vscale x 4 x i1> %ma
   %load = call <vscale x 4 x bfloat> @llvm.masked.load.nxv4bf16(ptr %a, i32 2, <vscale x 4 x i1> %mask, <vscale x 4 x bfloat> poison)
   ret <vscale x 4 x bfloat> %load
 }
-declare <vscale x 4 x bfloat> @llvm.masked.load.nxv4bf16(ptr, i32, <vscale x 4 x i1>, <vscale x 4 x bfloat>)
 
 define <vscale x 4 x half> @masked_load_nxv4f16(ptr %a, <vscale x 4 x i1> %mask) nounwind {
 ; CHECK-LABEL: masked_load_nxv4f16:
@@ -112,7 +103,6 @@ define <vscale x 4 x half> @masked_load_nxv4f16(ptr %a, <vscale x 4 x i1> %mask)
   %load = call <vscale x 4 x half> @llvm.masked.load.nxv4f16(ptr %a, i32 2, <vscale x 4 x i1> %mask, <vscale x 4 x half> poison)
   ret <vscale x 4 x half> %load
 }
-declare <vscale x 4 x half> @llvm.masked.load.nxv4f16(ptr, i32, <vscale x 4 x i1>, <vscale x 4 x half>)
 
 define <vscale x 4 x float> @masked_load_nxv4f32(ptr %a, <vscale x 4 x i1> %mask) nounwind {
 ; CHECK-LABEL: masked_load_nxv4f32:
@@ -123,7 +113,6 @@ define <vscale x 4 x float> @masked_load_nxv4f32(ptr %a, <vscale x 4 x i1> %mask
   %load = call <vscale x 4 x float> @llvm.masked.load.nxv4f32(ptr %a, i32 4, <vscale x 4 x i1> %mask, <vscale x 4 x float> poison)
   ret <vscale x 4 x float> %load
 }
-declare <vscale x 4 x float> @llvm.masked.load.nxv4f32(ptr, i32, <vscale x 4 x i1>, <vscale x 4 x float>)
 
 define <vscale x 4 x double> @masked_load_nxv4f64(ptr %a, <vscale x 4 x i1> %mask) nounwind {
 ; CHECK-LABEL: masked_load_nxv4f64:
@@ -134,7 +123,6 @@ define <vscale x 4 x double> @masked_load_nxv4f64(ptr %a, <vscale x 4 x i1> %mas
   %load = call <vscale x 4 x double> @llvm.masked.load.nxv4f64(ptr %a, i32 8, <vscale x 4 x i1> %mask, <vscale x 4 x double> poison)
   ret <vscale x 4 x double> %load
 }
-declare <vscale x 4 x double> @llvm.masked.load.nxv4f64(ptr, i32, <vscale x 4 x i1>, <vscale x 4 x double>)
 
 define <vscale x 8 x bfloat> @masked_load_nxv8bf16(ptr %a, <vscale x 8 x i1> %mask) nounwind {
 ; CHECK-LABEL: masked_load_nxv8bf16:
@@ -145,7 +133,6 @@ define <vscale x 8 x bfloat> @masked_load_nxv8bf16(ptr %a, <vscale x 8 x i1> %ma
   %load = call <vscale x 8 x bfloat> @llvm.masked.load.nxv8bf16(ptr %a, i32 2, <vscale x 8 x i1> %mask, <vscale x 8 x bfloat> poison)
   ret <vscale x 8 x bfloat> %load
 }
-declare <vscale x 8 x bfloat> @llvm.masked.load.nxv8bf16(ptr, i32, <vscale x 8 x i1>, <vscale x 8 x bfloat>)
 
 define <vscale x 8 x half> @masked_load_nxv8f16(ptr %a, <vscale x 8 x i1> %mask) nounwind {
 ; CHECK-LABEL: masked_load_nxv8f16:
@@ -156,7 +143,6 @@ define <vscale x 8 x half> @masked_load_nxv8f16(ptr %a, <vscale x 8 x i1> %mask)
   %load = call <vscale x 8 x half> @llvm.masked.load.nxv8f16(ptr %a, i32 2, <vscale x 8 x i1> %mask, <vscale x 8 x half> poison)
   ret <vscale x 8 x half> %load
 }
-declare <vscale x 8 x half> @llvm.masked.load.nxv8f16(ptr, i32, <vscale x 8 x i1>, <vscale x 8 x half>)
 
 define <vscale x 8 x float> @masked_load_nxv8f32(ptr %a, <vscale x 8 x i1> %mask) nounwind {
 ; CHECK-LABEL: masked_load_nxv8f32:
@@ -167,7 +153,6 @@ define <vscale x 8 x float> @masked_load_nxv8f32(ptr %a, <vscale x 8 x i1> %mask
   %load = call <vscale x 8 x float> @llvm.masked.load.nxv8f32(ptr %a, i32 4, <vscale x 8 x i1> %mask, <vscale x 8 x float> poison)
   ret <vscale x 8 x float> %load
 }
-declare <vscale x 8 x float> @llvm.masked.load.nxv8f32(ptr, i32, <vscale x 8 x i1>, <vscale x 8 x float>)
 
 define <vscale x 8 x double> @masked_load_nxv8f64(ptr %a, <vscale x 8 x i1> %mask) nounwind {
 ; CHECK-LABEL: masked_load_nxv8f64:
@@ -178,7 +163,6 @@ define <vscale x 8 x double> @masked_load_nxv8f64(ptr %a, <vscale x 8 x i1> %mas
   %load = call <vscale x 8 x double> @llvm.masked.load.nxv8f64(ptr %a, i32 8, <vscale x 8 x i1> %mask, <vscale x 8 x double> poison)
   ret <vscale x 8 x double> %load
 }
-declare <vscale x 8 x double> @llvm.masked.load.nxv8f64(ptr, i32, <vscale x 8 x i1>, <vscale x 8 x double>)
 
 define <vscale x 16 x bfloat> @masked_load_nxv16bf16(ptr %a, <vscale x 16 x i1> %mask) nounwind {
 ; CHECK-LABEL: masked_load_nxv16bf16:
@@ -189,7 +173,6 @@ define <vscale x 16 x bfloat> @masked_load_nxv16bf16(ptr %a, <vscale x 16 x i1> 
   %load = call <vscale x 16 x bfloat> @llvm.masked.load.nxv16bf16(ptr %a, i32 2, <vscale x 16 x i1> %mask, <vscale x 16 x bfloat> poison)
   ret <vscale x 16 x bfloat> %load
 }
-declare <vscale x 16 x bfloat> @llvm.masked.load.nxv16bf16(ptr, i32, <vscale x 16 x i1>, <vscale x 16 x bfloat>)
 
 define <vscale x 16 x half> @masked_load_nxv16f16(ptr %a, <vscale x 16 x i1> %mask) nounwind {
 ; CHECK-LABEL: masked_load_nxv16f16:
@@ -200,7 +183,6 @@ define <vscale x 16 x half> @masked_load_nxv16f16(ptr %a, <vscale x 16 x i1> %ma
   %load = call <vscale x 16 x half> @llvm.masked.load.nxv16f16(ptr %a, i32 2, <vscale x 16 x i1> %mask, <vscale x 16 x half> poison)
   ret <vscale x 16 x half> %load
 }
-declare <vscale x 16 x half> @llvm.masked.load.nxv16f16(ptr, i32, <vscale x 16 x i1>, <vscale x 16 x half>)
 
 define <vscale x 16 x float> @masked_load_nxv16f32(ptr %a, <vscale x 16 x i1> %mask) nounwind {
 ; CHECK-LABEL: masked_load_nxv16f32:
@@ -211,7 +193,6 @@ define <vscale x 16 x float> @masked_load_nxv16f32(ptr %a, <vscale x 16 x i1> %m
   %load = call <vscale x 16 x float> @llvm.masked.load.nxv16f32(ptr %a, i32 4, <vscale x 16 x i1> %mask, <vscale x 16 x float> poison)
   ret <vscale x 16 x float> %load
 }
-declare <vscale x 16 x float> @llvm.masked.load.nxv16f32(ptr, i32, <vscale x 16 x i1>, <vscale x 16 x float>)
 
 define <vscale x 32 x bfloat> @masked_load_nxv32bf16(ptr %a, <vscale x 32 x i1> %mask) nounwind {
 ; CHECK-LABEL: masked_load_nxv32bf16:
@@ -222,7 +203,6 @@ define <vscale x 32 x bfloat> @masked_load_nxv32bf16(ptr %a, <vscale x 32 x i1> 
   %load = call <vscale x 32 x bfloat> @llvm.masked.load.nxv32bf16(ptr %a, i32 2, <vscale x 32 x i1> %mask, <vscale x 32 x bfloat> poison)
   ret <vscale x 32 x bfloat> %load
 }
-declare <vscale x 32 x bfloat> @llvm.masked.load.nxv32bf16(ptr, i32, <vscale x 32 x i1>, <vscale x 32 x bfloat>)
 
 define <vscale x 32 x half> @masked_load_nxv32f16(ptr %a, <vscale x 32 x i1> %mask) nounwind {
 ; CHECK-LABEL: masked_load_nxv32f16:
@@ -233,4 +213,3 @@ define <vscale x 32 x half> @masked_load_nxv32f16(ptr %a, <vscale x 32 x i1> %ma
   %load = call <vscale x 32 x half> @llvm.masked.load.nxv32f16(ptr %a, i32 2, <vscale x 32 x i1> %mask, <vscale x 32 x half> poison)
   ret <vscale x 32 x half> %load
 }
-declare <vscale x 32 x half> @llvm.masked.load.nxv32f16(ptr, i32, <vscale x 32 x i1>, <vscale x 32 x half>)

@@ -231,8 +231,8 @@ __constexpr_wmemcmp(const wchar_t* __lhs, const wchar_t* __rhs, size_t __count) 
 
 template <class _Tp, class _Up>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _Tp* __constexpr_wmemchr(_Tp* __str, _Up __value, size_t __count) {
-  static_assert(sizeof(_Tp) == sizeof(wchar_t)&& _LIBCPP_ALIGNOF(_Tp) >= _LIBCPP_ALIGNOF(wchar_t) &&
-                    __libcpp_is_trivially_equality_comparable<_Tp, _Tp>::value,
+  static_assert(sizeof(_Tp) == sizeof(wchar_t) && _LIBCPP_ALIGNOF(_Tp) >= _LIBCPP_ALIGNOF(wchar_t) &&
+                    __is_trivially_equality_comparable_v<_Tp, _Tp>,
                 "Calling wmemchr on non-trivially equality comparable types is unsafe.");
 
 #  if __has_builtin(__builtin_wmemchr)

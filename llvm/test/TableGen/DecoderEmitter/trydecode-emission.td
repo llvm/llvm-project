@@ -1,5 +1,4 @@
 // RUN: llvm-tblgen -gen-disassembler -I %p/../../../include %s | FileCheck %s
-// RUN: llvm-tblgen -gen-disassembler --large-decoder-table -I %p/../../../include %s | FileCheck %s --check-prefix=CHECK-LARGE
 
 // Check that if decoding of an instruction fails and the instruction does not
 // have a complete decoder method that can determine if the bitpattern is valid
@@ -34,29 +33,14 @@ def InstB : TestInstruction {
   let hasCompleteDecoder = 0;
 }
 
-// CHECK:      /* 0 */       OPC_CheckField, 4, 4, 0,                   // if Inst{7-4} != 0x0
-// CHECK-NEXT: /* 4 */       OPC_Scope, 8, 0,                           // end scope at 15
-// CHECK-NEXT: /* 7 */       OPC_CheckField, 2, 2, 0,                   // if Inst{3-2} != 0x0
-// CHECK-NEXT: /* 11 */      OPC_Decode, {{[0-9]+}}, {{[0-9]+}}, 0,     // Opcode: InstB, DecodeIdx: 0
-// CHECK-NEXT: /* 15 */      OPC_Decode, {{[0-9]+}}, {{[0-9]+}}, 1,     // Opcode: InstA, DecodeIdx: 1
+// CHECK-LABEL: static const uint8_t DecoderTable8[18] = {
+// CHECK-NEXT:    OPC_CheckField, 4, 4, 0,     //  0: check Inst[7:4] == 0x0
+// CHECK-NEXT:    OPC_Scope, 8,                //  4: try {
+// CHECK-NEXT:    OPC_CheckField, 2, 2, 0,     //  6:  check Inst[3:2] == 0x0
+// CHECK-NEXT:    OPC_Decode, {{[0-9, ]+}}, 0, // 10:  decode to InstB using decoder 0
+// CHECK-NEXT:                                 // 10: } else try {
+// CHECK-NEXT:    OPC_Decode, {{[0-9, ]+}}, 1, // 14:  decode to InstA using decoder 1
+// CHECK-NEXT:                                 // 14: }
 // CHECK-NEXT: };
 
 // CHECK: if (!Check(S, DecodeInstB(MI, insn, Address, Decoder))) { DecodeComplete = false; return MCDisassembler::Fail; }
-
-// CHECK:       unsigned NumToSkip = *Ptr++;
-// CHECK-NEXT:  NumToSkip |= (*Ptr++) << 8;
-// CHECK-NEXT:  return NumToSkip;
-
-// CHECK-LARGE:      /* 0 */       OPC_CheckField, 4, 4, 0,                  // if Inst{7-4} != 0x0
-// CHECK-LARGE-NEXT: /* 4 */       OPC_Scope, 8, 0, 0,                       // end scope at 16
-// CHECK-LARGE-NEXT: /* 8 */       OPC_CheckField, 2, 2, 0,                  // if Inst{3-2} != 0x0
-// CHECK-LARGE-NEXT: /* 12 */      OPC_Decode, {{[0-9]+}}, {{[0-9]+}}, 0,    // Opcode: InstB, DecodeIdx: 0
-// CHECK-LARGE-NEXT: /* 16 */      OPC_Decode, {{[0-9]+}}, {{[0-9]+}}, 1,    // Opcode: InstA, DecodeIdx: 1
-// CHECK-LARGE-NEXT: };
-
-// CHECK-LARGE: if (!Check(S, DecodeInstB(MI, insn, Address, Decoder))) { DecodeComplete = false; return MCDisassembler::Fail; }
-
-// CHECK-LARGE:       unsigned NumToSkip = *Ptr++;
-// CHECK-LARGE-NEXT:  NumToSkip |= (*Ptr++) << 8;
-// CHECK-LARGE-NEXT:  NumToSkip |= (*Ptr++) << 16;
-// CHECK-LARGE-NEXT:  return NumToSkip;

@@ -3,8 +3,8 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+v,+zvfh -verify-machineinstrs < %s | FileCheck %s -check-prefixes=CHECK,RV64
 ; RUN: llc -mtriple=riscv32 -mattr=+v,+zvfh,+zvkb -verify-machineinstrs < %s | FileCheck %s -check-prefixes=ZVKB-V
 ; RUN: llc -mtriple=riscv64 -mattr=+v,+zvfh,+zvkb -verify-machineinstrs < %s | FileCheck %s -check-prefixes=ZVKB-V
-; RUN: llc -mtriple=riscv32 -mattr=+zve32x,+zvfh,+zvkb,+zvl64b -verify-machineinstrs < %s | FileCheck %s -check-prefixes=ZVKB-ZVE32X
-; RUN: llc -mtriple=riscv64 -mattr=+zve32x,+zvfh,+zvkb,+zvl64b -verify-machineinstrs < %s | FileCheck %s -check-prefixes=ZVKB-ZVE32X
+; RUN: llc -mtriple=riscv32 -mattr=+zve32x,+zvfh,+zvkb,+zvl64b -verify-machineinstrs < %s | FileCheck %s -check-prefixes=ZVKB-ZVE32X,RV32ZVKB-ZVE32X
+; RUN: llc -mtriple=riscv64 -mattr=+zve32x,+zvfh,+zvkb,+zvl64b -verify-machineinstrs < %s | FileCheck %s -check-prefixes=ZVKB-ZVE32X,RV64ZVKB-ZVE32X
 
 define <8 x i1> @shuffle_v8i1_as_i8_1(<8 x i1> %v) {
 ; CHECK-LABEL: shuffle_v8i1_as_i8_1:
@@ -926,6 +926,136 @@ define <8 x i64> @shuffle_v8i64_as_i128(<8 x i64> %v) {
 ; ZVKB-V-NEXT:    vslideup.vi v12, v8, 1, v0.t
 ; ZVKB-V-NEXT:    vmv.v.v v8, v12
 ; ZVKB-V-NEXT:    ret
+;
+; RV32ZVKB-ZVE32X-LABEL: shuffle_v8i64_as_i128:
+; RV32ZVKB-ZVE32X:       # %bb.0:
+; RV32ZVKB-ZVE32X-NEXT:    addi sp, sp, -128
+; RV32ZVKB-ZVE32X-NEXT:    .cfi_def_cfa_offset 128
+; RV32ZVKB-ZVE32X-NEXT:    sw ra, 124(sp) # 4-byte Folded Spill
+; RV32ZVKB-ZVE32X-NEXT:    sw s0, 120(sp) # 4-byte Folded Spill
+; RV32ZVKB-ZVE32X-NEXT:    sw s2, 116(sp) # 4-byte Folded Spill
+; RV32ZVKB-ZVE32X-NEXT:    sw s3, 112(sp) # 4-byte Folded Spill
+; RV32ZVKB-ZVE32X-NEXT:    .cfi_offset ra, -4
+; RV32ZVKB-ZVE32X-NEXT:    .cfi_offset s0, -8
+; RV32ZVKB-ZVE32X-NEXT:    .cfi_offset s2, -12
+; RV32ZVKB-ZVE32X-NEXT:    .cfi_offset s3, -16
+; RV32ZVKB-ZVE32X-NEXT:    addi s0, sp, 128
+; RV32ZVKB-ZVE32X-NEXT:    .cfi_def_cfa s0, 0
+; RV32ZVKB-ZVE32X-NEXT:    andi sp, sp, -64
+; RV32ZVKB-ZVE32X-NEXT:    lw a2, 0(a1)
+; RV32ZVKB-ZVE32X-NEXT:    lw a3, 4(a1)
+; RV32ZVKB-ZVE32X-NEXT:    lw a4, 8(a1)
+; RV32ZVKB-ZVE32X-NEXT:    lw a5, 12(a1)
+; RV32ZVKB-ZVE32X-NEXT:    lw a6, 16(a1)
+; RV32ZVKB-ZVE32X-NEXT:    lw a7, 20(a1)
+; RV32ZVKB-ZVE32X-NEXT:    lw t0, 24(a1)
+; RV32ZVKB-ZVE32X-NEXT:    lw t1, 28(a1)
+; RV32ZVKB-ZVE32X-NEXT:    lw t2, 48(a1)
+; RV32ZVKB-ZVE32X-NEXT:    lw t3, 52(a1)
+; RV32ZVKB-ZVE32X-NEXT:    lw t4, 56(a1)
+; RV32ZVKB-ZVE32X-NEXT:    lw t5, 60(a1)
+; RV32ZVKB-ZVE32X-NEXT:    lw t6, 32(a1)
+; RV32ZVKB-ZVE32X-NEXT:    lw s2, 36(a1)
+; RV32ZVKB-ZVE32X-NEXT:    lw s3, 40(a1)
+; RV32ZVKB-ZVE32X-NEXT:    lw a1, 44(a1)
+; RV32ZVKB-ZVE32X-NEXT:    sw t4, 48(sp)
+; RV32ZVKB-ZVE32X-NEXT:    sw t5, 52(sp)
+; RV32ZVKB-ZVE32X-NEXT:    sw t2, 56(sp)
+; RV32ZVKB-ZVE32X-NEXT:    sw t3, 60(sp)
+; RV32ZVKB-ZVE32X-NEXT:    sw s3, 32(sp)
+; RV32ZVKB-ZVE32X-NEXT:    sw a1, 36(sp)
+; RV32ZVKB-ZVE32X-NEXT:    sw t6, 40(sp)
+; RV32ZVKB-ZVE32X-NEXT:    sw s2, 44(sp)
+; RV32ZVKB-ZVE32X-NEXT:    sw t0, 16(sp)
+; RV32ZVKB-ZVE32X-NEXT:    sw t1, 20(sp)
+; RV32ZVKB-ZVE32X-NEXT:    sw a6, 24(sp)
+; RV32ZVKB-ZVE32X-NEXT:    sw a7, 28(sp)
+; RV32ZVKB-ZVE32X-NEXT:    sw a4, 0(sp)
+; RV32ZVKB-ZVE32X-NEXT:    sw a5, 4(sp)
+; RV32ZVKB-ZVE32X-NEXT:    sw a2, 8(sp)
+; RV32ZVKB-ZVE32X-NEXT:    sw a3, 12(sp)
+; RV32ZVKB-ZVE32X-NEXT:    mv a1, sp
+; RV32ZVKB-ZVE32X-NEXT:    vsetivli zero, 16, e32, m8, ta, ma
+; RV32ZVKB-ZVE32X-NEXT:    vle32.v v8, (a1)
+; RV32ZVKB-ZVE32X-NEXT:    vse32.v v8, (a0)
+; RV32ZVKB-ZVE32X-NEXT:    addi sp, s0, -128
+; RV32ZVKB-ZVE32X-NEXT:    .cfi_def_cfa sp, 128
+; RV32ZVKB-ZVE32X-NEXT:    lw ra, 124(sp) # 4-byte Folded Reload
+; RV32ZVKB-ZVE32X-NEXT:    lw s0, 120(sp) # 4-byte Folded Reload
+; RV32ZVKB-ZVE32X-NEXT:    lw s2, 116(sp) # 4-byte Folded Reload
+; RV32ZVKB-ZVE32X-NEXT:    lw s3, 112(sp) # 4-byte Folded Reload
+; RV32ZVKB-ZVE32X-NEXT:    .cfi_restore ra
+; RV32ZVKB-ZVE32X-NEXT:    .cfi_restore s0
+; RV32ZVKB-ZVE32X-NEXT:    .cfi_restore s2
+; RV32ZVKB-ZVE32X-NEXT:    .cfi_restore s3
+; RV32ZVKB-ZVE32X-NEXT:    addi sp, sp, 128
+; RV32ZVKB-ZVE32X-NEXT:    .cfi_def_cfa_offset 0
+; RV32ZVKB-ZVE32X-NEXT:    ret
+;
+; RV64ZVKB-ZVE32X-LABEL: shuffle_v8i64_as_i128:
+; RV64ZVKB-ZVE32X:       # %bb.0:
+; RV64ZVKB-ZVE32X-NEXT:    addi sp, sp, -128
+; RV64ZVKB-ZVE32X-NEXT:    .cfi_def_cfa_offset 128
+; RV64ZVKB-ZVE32X-NEXT:    sd ra, 120(sp) # 8-byte Folded Spill
+; RV64ZVKB-ZVE32X-NEXT:    sd s0, 112(sp) # 8-byte Folded Spill
+; RV64ZVKB-ZVE32X-NEXT:    sd s2, 104(sp) # 8-byte Folded Spill
+; RV64ZVKB-ZVE32X-NEXT:    sd s3, 96(sp) # 8-byte Folded Spill
+; RV64ZVKB-ZVE32X-NEXT:    .cfi_offset ra, -8
+; RV64ZVKB-ZVE32X-NEXT:    .cfi_offset s0, -16
+; RV64ZVKB-ZVE32X-NEXT:    .cfi_offset s2, -24
+; RV64ZVKB-ZVE32X-NEXT:    .cfi_offset s3, -32
+; RV64ZVKB-ZVE32X-NEXT:    addi s0, sp, 128
+; RV64ZVKB-ZVE32X-NEXT:    .cfi_def_cfa s0, 0
+; RV64ZVKB-ZVE32X-NEXT:    andi sp, sp, -64
+; RV64ZVKB-ZVE32X-NEXT:    ld a2, 0(a1)
+; RV64ZVKB-ZVE32X-NEXT:    ld a3, 8(a1)
+; RV64ZVKB-ZVE32X-NEXT:    ld a4, 16(a1)
+; RV64ZVKB-ZVE32X-NEXT:    ld a5, 24(a1)
+; RV64ZVKB-ZVE32X-NEXT:    ld a6, 32(a1)
+; RV64ZVKB-ZVE32X-NEXT:    ld a7, 40(a1)
+; RV64ZVKB-ZVE32X-NEXT:    ld t0, 48(a1)
+; RV64ZVKB-ZVE32X-NEXT:    ld a1, 56(a1)
+; RV64ZVKB-ZVE32X-NEXT:    srli t1, a3, 32
+; RV64ZVKB-ZVE32X-NEXT:    srli t2, a2, 32
+; RV64ZVKB-ZVE32X-NEXT:    srli t3, a5, 32
+; RV64ZVKB-ZVE32X-NEXT:    srli t4, a4, 32
+; RV64ZVKB-ZVE32X-NEXT:    srli t5, a7, 32
+; RV64ZVKB-ZVE32X-NEXT:    srli t6, a6, 32
+; RV64ZVKB-ZVE32X-NEXT:    srli s2, a1, 32
+; RV64ZVKB-ZVE32X-NEXT:    srli s3, t0, 32
+; RV64ZVKB-ZVE32X-NEXT:    sw a1, 48(sp)
+; RV64ZVKB-ZVE32X-NEXT:    sw s2, 52(sp)
+; RV64ZVKB-ZVE32X-NEXT:    sw t0, 56(sp)
+; RV64ZVKB-ZVE32X-NEXT:    sw s3, 60(sp)
+; RV64ZVKB-ZVE32X-NEXT:    sw a7, 32(sp)
+; RV64ZVKB-ZVE32X-NEXT:    sw t5, 36(sp)
+; RV64ZVKB-ZVE32X-NEXT:    sw a6, 40(sp)
+; RV64ZVKB-ZVE32X-NEXT:    sw t6, 44(sp)
+; RV64ZVKB-ZVE32X-NEXT:    sw a5, 16(sp)
+; RV64ZVKB-ZVE32X-NEXT:    sw t3, 20(sp)
+; RV64ZVKB-ZVE32X-NEXT:    sw a4, 24(sp)
+; RV64ZVKB-ZVE32X-NEXT:    sw t4, 28(sp)
+; RV64ZVKB-ZVE32X-NEXT:    sw a3, 0(sp)
+; RV64ZVKB-ZVE32X-NEXT:    sw t1, 4(sp)
+; RV64ZVKB-ZVE32X-NEXT:    sw a2, 8(sp)
+; RV64ZVKB-ZVE32X-NEXT:    sw t2, 12(sp)
+; RV64ZVKB-ZVE32X-NEXT:    mv a1, sp
+; RV64ZVKB-ZVE32X-NEXT:    vsetivli zero, 16, e32, m8, ta, ma
+; RV64ZVKB-ZVE32X-NEXT:    vle32.v v8, (a1)
+; RV64ZVKB-ZVE32X-NEXT:    vse32.v v8, (a0)
+; RV64ZVKB-ZVE32X-NEXT:    addi sp, s0, -128
+; RV64ZVKB-ZVE32X-NEXT:    .cfi_def_cfa sp, 128
+; RV64ZVKB-ZVE32X-NEXT:    ld ra, 120(sp) # 8-byte Folded Reload
+; RV64ZVKB-ZVE32X-NEXT:    ld s0, 112(sp) # 8-byte Folded Reload
+; RV64ZVKB-ZVE32X-NEXT:    ld s2, 104(sp) # 8-byte Folded Reload
+; RV64ZVKB-ZVE32X-NEXT:    ld s3, 96(sp) # 8-byte Folded Reload
+; RV64ZVKB-ZVE32X-NEXT:    .cfi_restore ra
+; RV64ZVKB-ZVE32X-NEXT:    .cfi_restore s0
+; RV64ZVKB-ZVE32X-NEXT:    .cfi_restore s2
+; RV64ZVKB-ZVE32X-NEXT:    .cfi_restore s3
+; RV64ZVKB-ZVE32X-NEXT:    addi sp, sp, 128
+; RV64ZVKB-ZVE32X-NEXT:    .cfi_def_cfa_offset 0
+; RV64ZVKB-ZVE32X-NEXT:    ret
   %shuffle = shufflevector <8 x i64> %v, <8 x i64> poison, <8 x i32> <i32 1, i32 0, i32 3, i32 2, i32 5, i32 4, i32 7, i32 6>
   ret <8 x i64> %shuffle
 }
@@ -951,6 +1081,104 @@ define <8 x i64> @shuffle_v8i64_as_i128_2(<8 x i64> %v) {
 ; ZVKB-V-NEXT:    vslideup.vi v12, v8, 1, v0.t
 ; ZVKB-V-NEXT:    vmv.v.v v8, v12
 ; ZVKB-V-NEXT:    ret
+;
+; RV32ZVKB-ZVE32X-LABEL: shuffle_v8i64_as_i128_2:
+; RV32ZVKB-ZVE32X:       # %bb.0:
+; RV32ZVKB-ZVE32X-NEXT:    addi sp, sp, -128
+; RV32ZVKB-ZVE32X-NEXT:    .cfi_def_cfa_offset 128
+; RV32ZVKB-ZVE32X-NEXT:    sw ra, 124(sp) # 4-byte Folded Spill
+; RV32ZVKB-ZVE32X-NEXT:    sw s0, 120(sp) # 4-byte Folded Spill
+; RV32ZVKB-ZVE32X-NEXT:    .cfi_offset ra, -4
+; RV32ZVKB-ZVE32X-NEXT:    .cfi_offset s0, -8
+; RV32ZVKB-ZVE32X-NEXT:    addi s0, sp, 128
+; RV32ZVKB-ZVE32X-NEXT:    .cfi_def_cfa s0, 0
+; RV32ZVKB-ZVE32X-NEXT:    andi sp, sp, -64
+; RV32ZVKB-ZVE32X-NEXT:    lw a2, 16(a1)
+; RV32ZVKB-ZVE32X-NEXT:    lw a3, 20(a1)
+; RV32ZVKB-ZVE32X-NEXT:    lw a4, 24(a1)
+; RV32ZVKB-ZVE32X-NEXT:    lw a5, 28(a1)
+; RV32ZVKB-ZVE32X-NEXT:    lw a6, 48(a1)
+; RV32ZVKB-ZVE32X-NEXT:    lw a7, 52(a1)
+; RV32ZVKB-ZVE32X-NEXT:    lw t0, 56(a1)
+; RV32ZVKB-ZVE32X-NEXT:    lw t1, 60(a1)
+; RV32ZVKB-ZVE32X-NEXT:    lw t2, 32(a1)
+; RV32ZVKB-ZVE32X-NEXT:    lw t3, 36(a1)
+; RV32ZVKB-ZVE32X-NEXT:    lw t4, 40(a1)
+; RV32ZVKB-ZVE32X-NEXT:    lw a1, 44(a1)
+; RV32ZVKB-ZVE32X-NEXT:    sw t0, 48(sp)
+; RV32ZVKB-ZVE32X-NEXT:    sw t1, 52(sp)
+; RV32ZVKB-ZVE32X-NEXT:    sw a6, 56(sp)
+; RV32ZVKB-ZVE32X-NEXT:    sw a7, 60(sp)
+; RV32ZVKB-ZVE32X-NEXT:    sw t4, 32(sp)
+; RV32ZVKB-ZVE32X-NEXT:    sw a1, 36(sp)
+; RV32ZVKB-ZVE32X-NEXT:    sw t2, 40(sp)
+; RV32ZVKB-ZVE32X-NEXT:    sw t3, 44(sp)
+; RV32ZVKB-ZVE32X-NEXT:    sw a4, 16(sp)
+; RV32ZVKB-ZVE32X-NEXT:    sw a5, 20(sp)
+; RV32ZVKB-ZVE32X-NEXT:    sw a2, 24(sp)
+; RV32ZVKB-ZVE32X-NEXT:    sw a3, 28(sp)
+; RV32ZVKB-ZVE32X-NEXT:    mv a1, sp
+; RV32ZVKB-ZVE32X-NEXT:    vsetivli zero, 16, e32, m8, ta, ma
+; RV32ZVKB-ZVE32X-NEXT:    vle32.v v8, (a1)
+; RV32ZVKB-ZVE32X-NEXT:    vse32.v v8, (a0)
+; RV32ZVKB-ZVE32X-NEXT:    addi sp, s0, -128
+; RV32ZVKB-ZVE32X-NEXT:    .cfi_def_cfa sp, 128
+; RV32ZVKB-ZVE32X-NEXT:    lw ra, 124(sp) # 4-byte Folded Reload
+; RV32ZVKB-ZVE32X-NEXT:    lw s0, 120(sp) # 4-byte Folded Reload
+; RV32ZVKB-ZVE32X-NEXT:    .cfi_restore ra
+; RV32ZVKB-ZVE32X-NEXT:    .cfi_restore s0
+; RV32ZVKB-ZVE32X-NEXT:    addi sp, sp, 128
+; RV32ZVKB-ZVE32X-NEXT:    .cfi_def_cfa_offset 0
+; RV32ZVKB-ZVE32X-NEXT:    ret
+;
+; RV64ZVKB-ZVE32X-LABEL: shuffle_v8i64_as_i128_2:
+; RV64ZVKB-ZVE32X:       # %bb.0:
+; RV64ZVKB-ZVE32X-NEXT:    addi sp, sp, -128
+; RV64ZVKB-ZVE32X-NEXT:    .cfi_def_cfa_offset 128
+; RV64ZVKB-ZVE32X-NEXT:    sd ra, 120(sp) # 8-byte Folded Spill
+; RV64ZVKB-ZVE32X-NEXT:    sd s0, 112(sp) # 8-byte Folded Spill
+; RV64ZVKB-ZVE32X-NEXT:    .cfi_offset ra, -8
+; RV64ZVKB-ZVE32X-NEXT:    .cfi_offset s0, -16
+; RV64ZVKB-ZVE32X-NEXT:    addi s0, sp, 128
+; RV64ZVKB-ZVE32X-NEXT:    .cfi_def_cfa s0, 0
+; RV64ZVKB-ZVE32X-NEXT:    andi sp, sp, -64
+; RV64ZVKB-ZVE32X-NEXT:    ld a2, 16(a1)
+; RV64ZVKB-ZVE32X-NEXT:    ld a3, 24(a1)
+; RV64ZVKB-ZVE32X-NEXT:    ld a4, 32(a1)
+; RV64ZVKB-ZVE32X-NEXT:    ld a5, 40(a1)
+; RV64ZVKB-ZVE32X-NEXT:    ld a6, 48(a1)
+; RV64ZVKB-ZVE32X-NEXT:    ld a1, 56(a1)
+; RV64ZVKB-ZVE32X-NEXT:    srli a7, a3, 32
+; RV64ZVKB-ZVE32X-NEXT:    srli t0, a2, 32
+; RV64ZVKB-ZVE32X-NEXT:    srli t1, a5, 32
+; RV64ZVKB-ZVE32X-NEXT:    srli t2, a4, 32
+; RV64ZVKB-ZVE32X-NEXT:    srli t3, a1, 32
+; RV64ZVKB-ZVE32X-NEXT:    srli t4, a6, 32
+; RV64ZVKB-ZVE32X-NEXT:    sw a1, 48(sp)
+; RV64ZVKB-ZVE32X-NEXT:    sw t3, 52(sp)
+; RV64ZVKB-ZVE32X-NEXT:    sw a6, 56(sp)
+; RV64ZVKB-ZVE32X-NEXT:    sw t4, 60(sp)
+; RV64ZVKB-ZVE32X-NEXT:    sw a5, 32(sp)
+; RV64ZVKB-ZVE32X-NEXT:    sw t1, 36(sp)
+; RV64ZVKB-ZVE32X-NEXT:    sw a4, 40(sp)
+; RV64ZVKB-ZVE32X-NEXT:    sw t2, 44(sp)
+; RV64ZVKB-ZVE32X-NEXT:    sw a3, 16(sp)
+; RV64ZVKB-ZVE32X-NEXT:    sw a7, 20(sp)
+; RV64ZVKB-ZVE32X-NEXT:    sw a2, 24(sp)
+; RV64ZVKB-ZVE32X-NEXT:    sw t0, 28(sp)
+; RV64ZVKB-ZVE32X-NEXT:    mv a1, sp
+; RV64ZVKB-ZVE32X-NEXT:    vsetivli zero, 16, e32, m8, ta, ma
+; RV64ZVKB-ZVE32X-NEXT:    vle32.v v8, (a1)
+; RV64ZVKB-ZVE32X-NEXT:    vse32.v v8, (a0)
+; RV64ZVKB-ZVE32X-NEXT:    addi sp, s0, -128
+; RV64ZVKB-ZVE32X-NEXT:    .cfi_def_cfa sp, 128
+; RV64ZVKB-ZVE32X-NEXT:    ld ra, 120(sp) # 8-byte Folded Reload
+; RV64ZVKB-ZVE32X-NEXT:    ld s0, 112(sp) # 8-byte Folded Reload
+; RV64ZVKB-ZVE32X-NEXT:    .cfi_restore ra
+; RV64ZVKB-ZVE32X-NEXT:    .cfi_restore s0
+; RV64ZVKB-ZVE32X-NEXT:    addi sp, sp, 128
+; RV64ZVKB-ZVE32X-NEXT:    .cfi_def_cfa_offset 0
+; RV64ZVKB-ZVE32X-NEXT:    ret
   %shuffle = shufflevector <8 x i64> %v, <8 x i64> poison, <8 x i32> <i32 poison, i32 poison, i32 3, i32 2, i32 5, i32 4, i32 7, i32 6>
   ret <8 x i64> %shuffle
 }
@@ -975,6 +1203,136 @@ define <8 x i64> @shuffle_v8i64_as_i256(<8 x i64> %v) {
 ; ZVKB-V-NEXT:    vrgatherei16.vv v12, v8, v16
 ; ZVKB-V-NEXT:    vmv.v.v v8, v12
 ; ZVKB-V-NEXT:    ret
+;
+; RV32ZVKB-ZVE32X-LABEL: shuffle_v8i64_as_i256:
+; RV32ZVKB-ZVE32X:       # %bb.0:
+; RV32ZVKB-ZVE32X-NEXT:    addi sp, sp, -128
+; RV32ZVKB-ZVE32X-NEXT:    .cfi_def_cfa_offset 128
+; RV32ZVKB-ZVE32X-NEXT:    sw ra, 124(sp) # 4-byte Folded Spill
+; RV32ZVKB-ZVE32X-NEXT:    sw s0, 120(sp) # 4-byte Folded Spill
+; RV32ZVKB-ZVE32X-NEXT:    sw s2, 116(sp) # 4-byte Folded Spill
+; RV32ZVKB-ZVE32X-NEXT:    sw s3, 112(sp) # 4-byte Folded Spill
+; RV32ZVKB-ZVE32X-NEXT:    .cfi_offset ra, -4
+; RV32ZVKB-ZVE32X-NEXT:    .cfi_offset s0, -8
+; RV32ZVKB-ZVE32X-NEXT:    .cfi_offset s2, -12
+; RV32ZVKB-ZVE32X-NEXT:    .cfi_offset s3, -16
+; RV32ZVKB-ZVE32X-NEXT:    addi s0, sp, 128
+; RV32ZVKB-ZVE32X-NEXT:    .cfi_def_cfa s0, 0
+; RV32ZVKB-ZVE32X-NEXT:    andi sp, sp, -64
+; RV32ZVKB-ZVE32X-NEXT:    lw a2, 0(a1)
+; RV32ZVKB-ZVE32X-NEXT:    lw a3, 4(a1)
+; RV32ZVKB-ZVE32X-NEXT:    lw a4, 8(a1)
+; RV32ZVKB-ZVE32X-NEXT:    lw a5, 12(a1)
+; RV32ZVKB-ZVE32X-NEXT:    lw a6, 16(a1)
+; RV32ZVKB-ZVE32X-NEXT:    lw a7, 20(a1)
+; RV32ZVKB-ZVE32X-NEXT:    lw t0, 24(a1)
+; RV32ZVKB-ZVE32X-NEXT:    lw t1, 28(a1)
+; RV32ZVKB-ZVE32X-NEXT:    lw t2, 32(a1)
+; RV32ZVKB-ZVE32X-NEXT:    lw t3, 36(a1)
+; RV32ZVKB-ZVE32X-NEXT:    lw t4, 40(a1)
+; RV32ZVKB-ZVE32X-NEXT:    lw t5, 44(a1)
+; RV32ZVKB-ZVE32X-NEXT:    lw t6, 48(a1)
+; RV32ZVKB-ZVE32X-NEXT:    lw s2, 52(a1)
+; RV32ZVKB-ZVE32X-NEXT:    lw s3, 56(a1)
+; RV32ZVKB-ZVE32X-NEXT:    lw a1, 60(a1)
+; RV32ZVKB-ZVE32X-NEXT:    sw t2, 48(sp)
+; RV32ZVKB-ZVE32X-NEXT:    sw t3, 52(sp)
+; RV32ZVKB-ZVE32X-NEXT:    sw s3, 56(sp)
+; RV32ZVKB-ZVE32X-NEXT:    sw a1, 60(sp)
+; RV32ZVKB-ZVE32X-NEXT:    sw t6, 32(sp)
+; RV32ZVKB-ZVE32X-NEXT:    sw s2, 36(sp)
+; RV32ZVKB-ZVE32X-NEXT:    sw t4, 40(sp)
+; RV32ZVKB-ZVE32X-NEXT:    sw t5, 44(sp)
+; RV32ZVKB-ZVE32X-NEXT:    sw a2, 16(sp)
+; RV32ZVKB-ZVE32X-NEXT:    sw a3, 20(sp)
+; RV32ZVKB-ZVE32X-NEXT:    sw t0, 24(sp)
+; RV32ZVKB-ZVE32X-NEXT:    sw t1, 28(sp)
+; RV32ZVKB-ZVE32X-NEXT:    sw a6, 0(sp)
+; RV32ZVKB-ZVE32X-NEXT:    sw a7, 4(sp)
+; RV32ZVKB-ZVE32X-NEXT:    sw a4, 8(sp)
+; RV32ZVKB-ZVE32X-NEXT:    sw a5, 12(sp)
+; RV32ZVKB-ZVE32X-NEXT:    mv a1, sp
+; RV32ZVKB-ZVE32X-NEXT:    vsetivli zero, 16, e32, m8, ta, ma
+; RV32ZVKB-ZVE32X-NEXT:    vle32.v v8, (a1)
+; RV32ZVKB-ZVE32X-NEXT:    vse32.v v8, (a0)
+; RV32ZVKB-ZVE32X-NEXT:    addi sp, s0, -128
+; RV32ZVKB-ZVE32X-NEXT:    .cfi_def_cfa sp, 128
+; RV32ZVKB-ZVE32X-NEXT:    lw ra, 124(sp) # 4-byte Folded Reload
+; RV32ZVKB-ZVE32X-NEXT:    lw s0, 120(sp) # 4-byte Folded Reload
+; RV32ZVKB-ZVE32X-NEXT:    lw s2, 116(sp) # 4-byte Folded Reload
+; RV32ZVKB-ZVE32X-NEXT:    lw s3, 112(sp) # 4-byte Folded Reload
+; RV32ZVKB-ZVE32X-NEXT:    .cfi_restore ra
+; RV32ZVKB-ZVE32X-NEXT:    .cfi_restore s0
+; RV32ZVKB-ZVE32X-NEXT:    .cfi_restore s2
+; RV32ZVKB-ZVE32X-NEXT:    .cfi_restore s3
+; RV32ZVKB-ZVE32X-NEXT:    addi sp, sp, 128
+; RV32ZVKB-ZVE32X-NEXT:    .cfi_def_cfa_offset 0
+; RV32ZVKB-ZVE32X-NEXT:    ret
+;
+; RV64ZVKB-ZVE32X-LABEL: shuffle_v8i64_as_i256:
+; RV64ZVKB-ZVE32X:       # %bb.0:
+; RV64ZVKB-ZVE32X-NEXT:    addi sp, sp, -128
+; RV64ZVKB-ZVE32X-NEXT:    .cfi_def_cfa_offset 128
+; RV64ZVKB-ZVE32X-NEXT:    sd ra, 120(sp) # 8-byte Folded Spill
+; RV64ZVKB-ZVE32X-NEXT:    sd s0, 112(sp) # 8-byte Folded Spill
+; RV64ZVKB-ZVE32X-NEXT:    sd s2, 104(sp) # 8-byte Folded Spill
+; RV64ZVKB-ZVE32X-NEXT:    sd s3, 96(sp) # 8-byte Folded Spill
+; RV64ZVKB-ZVE32X-NEXT:    .cfi_offset ra, -8
+; RV64ZVKB-ZVE32X-NEXT:    .cfi_offset s0, -16
+; RV64ZVKB-ZVE32X-NEXT:    .cfi_offset s2, -24
+; RV64ZVKB-ZVE32X-NEXT:    .cfi_offset s3, -32
+; RV64ZVKB-ZVE32X-NEXT:    addi s0, sp, 128
+; RV64ZVKB-ZVE32X-NEXT:    .cfi_def_cfa s0, 0
+; RV64ZVKB-ZVE32X-NEXT:    andi sp, sp, -64
+; RV64ZVKB-ZVE32X-NEXT:    ld a2, 0(a1)
+; RV64ZVKB-ZVE32X-NEXT:    ld a3, 8(a1)
+; RV64ZVKB-ZVE32X-NEXT:    ld a4, 16(a1)
+; RV64ZVKB-ZVE32X-NEXT:    ld a5, 24(a1)
+; RV64ZVKB-ZVE32X-NEXT:    ld a6, 32(a1)
+; RV64ZVKB-ZVE32X-NEXT:    ld a7, 40(a1)
+; RV64ZVKB-ZVE32X-NEXT:    ld t0, 48(a1)
+; RV64ZVKB-ZVE32X-NEXT:    ld a1, 56(a1)
+; RV64ZVKB-ZVE32X-NEXT:    srli t1, a4, 32
+; RV64ZVKB-ZVE32X-NEXT:    srli t2, a3, 32
+; RV64ZVKB-ZVE32X-NEXT:    srli t3, a2, 32
+; RV64ZVKB-ZVE32X-NEXT:    srli t4, a5, 32
+; RV64ZVKB-ZVE32X-NEXT:    srli t5, t0, 32
+; RV64ZVKB-ZVE32X-NEXT:    srli t6, a7, 32
+; RV64ZVKB-ZVE32X-NEXT:    srli s2, a6, 32
+; RV64ZVKB-ZVE32X-NEXT:    srli s3, a1, 32
+; RV64ZVKB-ZVE32X-NEXT:    sw a6, 48(sp)
+; RV64ZVKB-ZVE32X-NEXT:    sw s2, 52(sp)
+; RV64ZVKB-ZVE32X-NEXT:    sw a1, 56(sp)
+; RV64ZVKB-ZVE32X-NEXT:    sw s3, 60(sp)
+; RV64ZVKB-ZVE32X-NEXT:    sw t0, 32(sp)
+; RV64ZVKB-ZVE32X-NEXT:    sw t5, 36(sp)
+; RV64ZVKB-ZVE32X-NEXT:    sw a7, 40(sp)
+; RV64ZVKB-ZVE32X-NEXT:    sw t6, 44(sp)
+; RV64ZVKB-ZVE32X-NEXT:    sw a2, 16(sp)
+; RV64ZVKB-ZVE32X-NEXT:    sw t3, 20(sp)
+; RV64ZVKB-ZVE32X-NEXT:    sw a5, 24(sp)
+; RV64ZVKB-ZVE32X-NEXT:    sw t4, 28(sp)
+; RV64ZVKB-ZVE32X-NEXT:    sw a4, 0(sp)
+; RV64ZVKB-ZVE32X-NEXT:    sw t1, 4(sp)
+; RV64ZVKB-ZVE32X-NEXT:    sw a3, 8(sp)
+; RV64ZVKB-ZVE32X-NEXT:    sw t2, 12(sp)
+; RV64ZVKB-ZVE32X-NEXT:    mv a1, sp
+; RV64ZVKB-ZVE32X-NEXT:    vsetivli zero, 16, e32, m8, ta, ma
+; RV64ZVKB-ZVE32X-NEXT:    vle32.v v8, (a1)
+; RV64ZVKB-ZVE32X-NEXT:    vse32.v v8, (a0)
+; RV64ZVKB-ZVE32X-NEXT:    addi sp, s0, -128
+; RV64ZVKB-ZVE32X-NEXT:    .cfi_def_cfa sp, 128
+; RV64ZVKB-ZVE32X-NEXT:    ld ra, 120(sp) # 8-byte Folded Reload
+; RV64ZVKB-ZVE32X-NEXT:    ld s0, 112(sp) # 8-byte Folded Reload
+; RV64ZVKB-ZVE32X-NEXT:    ld s2, 104(sp) # 8-byte Folded Reload
+; RV64ZVKB-ZVE32X-NEXT:    ld s3, 96(sp) # 8-byte Folded Reload
+; RV64ZVKB-ZVE32X-NEXT:    .cfi_restore ra
+; RV64ZVKB-ZVE32X-NEXT:    .cfi_restore s0
+; RV64ZVKB-ZVE32X-NEXT:    .cfi_restore s2
+; RV64ZVKB-ZVE32X-NEXT:    .cfi_restore s3
+; RV64ZVKB-ZVE32X-NEXT:    addi sp, sp, 128
+; RV64ZVKB-ZVE32X-NEXT:    .cfi_def_cfa_offset 0
+; RV64ZVKB-ZVE32X-NEXT:    ret
   %shuffle = shufflevector <8 x i64> %v, <8 x i64> poison, <8 x i32> <i32 2, i32 1, i32 0, i32 3, i32 6, i32 5, i32 4, i32 7>
   ret <8 x i64> %shuffle
 }
@@ -1003,6 +1361,106 @@ define <8 x i64> @shuffle_v8i64_as_i256_zvl256b(<8 x i64> %v) vscale_range(4,0) 
 ; ZVKB-V-NEXT:    vrgatherei16.vv v10, v8, v12
 ; ZVKB-V-NEXT:    vmv2r.v v8, v10
 ; ZVKB-V-NEXT:    ret
+;
+; RV32ZVKB-ZVE32X-LABEL: shuffle_v8i64_as_i256_zvl256b:
+; RV32ZVKB-ZVE32X:       # %bb.0:
+; RV32ZVKB-ZVE32X-NEXT:    addi sp, sp, -16
+; RV32ZVKB-ZVE32X-NEXT:    .cfi_def_cfa_offset 16
+; RV32ZVKB-ZVE32X-NEXT:    sw s0, 12(sp) # 4-byte Folded Spill
+; RV32ZVKB-ZVE32X-NEXT:    sw s1, 8(sp) # 4-byte Folded Spill
+; RV32ZVKB-ZVE32X-NEXT:    .cfi_offset s0, -4
+; RV32ZVKB-ZVE32X-NEXT:    .cfi_offset s1, -8
+; RV32ZVKB-ZVE32X-NEXT:    lw a2, 48(a1)
+; RV32ZVKB-ZVE32X-NEXT:    lw a3, 52(a1)
+; RV32ZVKB-ZVE32X-NEXT:    lw a4, 56(a1)
+; RV32ZVKB-ZVE32X-NEXT:    lw a5, 60(a1)
+; RV32ZVKB-ZVE32X-NEXT:    lw a6, 32(a1)
+; RV32ZVKB-ZVE32X-NEXT:    lw a7, 36(a1)
+; RV32ZVKB-ZVE32X-NEXT:    lw t0, 40(a1)
+; RV32ZVKB-ZVE32X-NEXT:    lw t1, 44(a1)
+; RV32ZVKB-ZVE32X-NEXT:    lw t2, 16(a1)
+; RV32ZVKB-ZVE32X-NEXT:    lw t3, 20(a1)
+; RV32ZVKB-ZVE32X-NEXT:    lw t4, 24(a1)
+; RV32ZVKB-ZVE32X-NEXT:    lw t5, 28(a1)
+; RV32ZVKB-ZVE32X-NEXT:    lw t6, 0(a1)
+; RV32ZVKB-ZVE32X-NEXT:    lw s0, 4(a1)
+; RV32ZVKB-ZVE32X-NEXT:    lw s1, 8(a1)
+; RV32ZVKB-ZVE32X-NEXT:    lw a1, 12(a1)
+; RV32ZVKB-ZVE32X-NEXT:    vsetivli zero, 16, e32, m2, ta, ma
+; RV32ZVKB-ZVE32X-NEXT:    vmv.v.x v8, t2
+; RV32ZVKB-ZVE32X-NEXT:    vslide1down.vx v8, v8, t3
+; RV32ZVKB-ZVE32X-NEXT:    vslide1down.vx v8, v8, s1
+; RV32ZVKB-ZVE32X-NEXT:    vslide1down.vx v8, v8, a1
+; RV32ZVKB-ZVE32X-NEXT:    vslide1down.vx v8, v8, t6
+; RV32ZVKB-ZVE32X-NEXT:    vslide1down.vx v8, v8, s0
+; RV32ZVKB-ZVE32X-NEXT:    vslide1down.vx v8, v8, t4
+; RV32ZVKB-ZVE32X-NEXT:    vslide1down.vx v8, v8, t5
+; RV32ZVKB-ZVE32X-NEXT:    vslide1down.vx v8, v8, a2
+; RV32ZVKB-ZVE32X-NEXT:    vslide1down.vx v8, v8, a3
+; RV32ZVKB-ZVE32X-NEXT:    vslide1down.vx v8, v8, t0
+; RV32ZVKB-ZVE32X-NEXT:    vslide1down.vx v8, v8, t1
+; RV32ZVKB-ZVE32X-NEXT:    vslide1down.vx v8, v8, a6
+; RV32ZVKB-ZVE32X-NEXT:    vslide1down.vx v8, v8, a7
+; RV32ZVKB-ZVE32X-NEXT:    vslide1down.vx v8, v8, a4
+; RV32ZVKB-ZVE32X-NEXT:    vslide1down.vx v8, v8, a5
+; RV32ZVKB-ZVE32X-NEXT:    vse32.v v8, (a0)
+; RV32ZVKB-ZVE32X-NEXT:    lw s0, 12(sp) # 4-byte Folded Reload
+; RV32ZVKB-ZVE32X-NEXT:    lw s1, 8(sp) # 4-byte Folded Reload
+; RV32ZVKB-ZVE32X-NEXT:    .cfi_restore s0
+; RV32ZVKB-ZVE32X-NEXT:    .cfi_restore s1
+; RV32ZVKB-ZVE32X-NEXT:    addi sp, sp, 16
+; RV32ZVKB-ZVE32X-NEXT:    .cfi_def_cfa_offset 0
+; RV32ZVKB-ZVE32X-NEXT:    ret
+;
+; RV64ZVKB-ZVE32X-LABEL: shuffle_v8i64_as_i256_zvl256b:
+; RV64ZVKB-ZVE32X:       # %bb.0:
+; RV64ZVKB-ZVE32X-NEXT:    addi sp, sp, -16
+; RV64ZVKB-ZVE32X-NEXT:    .cfi_def_cfa_offset 16
+; RV64ZVKB-ZVE32X-NEXT:    sd s0, 8(sp) # 8-byte Folded Spill
+; RV64ZVKB-ZVE32X-NEXT:    sd s1, 0(sp) # 8-byte Folded Spill
+; RV64ZVKB-ZVE32X-NEXT:    .cfi_offset s0, -8
+; RV64ZVKB-ZVE32X-NEXT:    .cfi_offset s1, -16
+; RV64ZVKB-ZVE32X-NEXT:    ld a2, 32(a1)
+; RV64ZVKB-ZVE32X-NEXT:    ld a3, 40(a1)
+; RV64ZVKB-ZVE32X-NEXT:    ld a4, 48(a1)
+; RV64ZVKB-ZVE32X-NEXT:    ld a5, 56(a1)
+; RV64ZVKB-ZVE32X-NEXT:    ld a6, 0(a1)
+; RV64ZVKB-ZVE32X-NEXT:    ld a7, 8(a1)
+; RV64ZVKB-ZVE32X-NEXT:    ld t0, 16(a1)
+; RV64ZVKB-ZVE32X-NEXT:    ld a1, 24(a1)
+; RV64ZVKB-ZVE32X-NEXT:    srli t1, a5, 32
+; RV64ZVKB-ZVE32X-NEXT:    srli t2, a2, 32
+; RV64ZVKB-ZVE32X-NEXT:    srli t3, a3, 32
+; RV64ZVKB-ZVE32X-NEXT:    srli t4, a4, 32
+; RV64ZVKB-ZVE32X-NEXT:    srli t5, a1, 32
+; RV64ZVKB-ZVE32X-NEXT:    srli t6, a6, 32
+; RV64ZVKB-ZVE32X-NEXT:    srli s0, a7, 32
+; RV64ZVKB-ZVE32X-NEXT:    srli s1, t0, 32
+; RV64ZVKB-ZVE32X-NEXT:    vsetivli zero, 16, e32, m2, ta, ma
+; RV64ZVKB-ZVE32X-NEXT:    vmv.v.x v8, t0
+; RV64ZVKB-ZVE32X-NEXT:    vslide1down.vx v8, v8, s1
+; RV64ZVKB-ZVE32X-NEXT:    vslide1down.vx v8, v8, a7
+; RV64ZVKB-ZVE32X-NEXT:    vslide1down.vx v8, v8, s0
+; RV64ZVKB-ZVE32X-NEXT:    vslide1down.vx v8, v8, a6
+; RV64ZVKB-ZVE32X-NEXT:    vslide1down.vx v8, v8, t6
+; RV64ZVKB-ZVE32X-NEXT:    vslide1down.vx v8, v8, a1
+; RV64ZVKB-ZVE32X-NEXT:    vslide1down.vx v8, v8, t5
+; RV64ZVKB-ZVE32X-NEXT:    vslide1down.vx v8, v8, a4
+; RV64ZVKB-ZVE32X-NEXT:    vslide1down.vx v8, v8, t4
+; RV64ZVKB-ZVE32X-NEXT:    vslide1down.vx v8, v8, a3
+; RV64ZVKB-ZVE32X-NEXT:    vslide1down.vx v8, v8, t3
+; RV64ZVKB-ZVE32X-NEXT:    vslide1down.vx v8, v8, a2
+; RV64ZVKB-ZVE32X-NEXT:    vslide1down.vx v8, v8, t2
+; RV64ZVKB-ZVE32X-NEXT:    vslide1down.vx v8, v8, a5
+; RV64ZVKB-ZVE32X-NEXT:    vslide1down.vx v8, v8, t1
+; RV64ZVKB-ZVE32X-NEXT:    vse32.v v8, (a0)
+; RV64ZVKB-ZVE32X-NEXT:    ld s0, 8(sp) # 8-byte Folded Reload
+; RV64ZVKB-ZVE32X-NEXT:    ld s1, 0(sp) # 8-byte Folded Reload
+; RV64ZVKB-ZVE32X-NEXT:    .cfi_restore s0
+; RV64ZVKB-ZVE32X-NEXT:    .cfi_restore s1
+; RV64ZVKB-ZVE32X-NEXT:    addi sp, sp, 16
+; RV64ZVKB-ZVE32X-NEXT:    .cfi_def_cfa_offset 0
+; RV64ZVKB-ZVE32X-NEXT:    ret
   %shuffle = shufflevector <8 x i64> %v, <8 x i64> poison, <8 x i32> <i32 2, i32 1, i32 0, i32 3, i32 6, i32 5, i32 4, i32 7>
   ret <8 x i64> %shuffle
 }

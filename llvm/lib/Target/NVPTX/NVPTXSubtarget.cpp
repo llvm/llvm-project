@@ -72,6 +72,40 @@ const SelectionDAGTargetInfo *NVPTXSubtarget::getSelectionDAGInfo() const {
   return TSInfo.get();
 }
 
+bool NVPTXSubtarget::hasPTXWithFamilySMs(unsigned PTXVersion,
+                                         ArrayRef<unsigned> SMVersions) const {
+  unsigned PTXVer = getPTXVersion();
+  if (!hasFamilySpecificFeatures() || PTXVer < PTXVersion)
+    return false;
+
+  unsigned SMVer = getSmVersion();
+  return llvm::any_of(SMVersions, [&](unsigned SM) {
+    // sm_101 is a different family, never group it with sm_10x.
+    if (SMVer == 101 || SM == 101)
+      return SMVer == SM &&
+             // PTX 9.0 and later renamed sm_101 to sm_110, so sm_101 is not
+             // supported.
+             !(PTXVer >= 90 && SMVer == 101);
+
+    return getSmFamilyVersion() == SM / 10 && SMVer >= SM;
+  });
+}
+
+bool NVPTXSubtarget::hasPTXWithAccelSMs(unsigned PTXVersion,
+                                        ArrayRef<unsigned> SMVersions) const {
+  unsigned PTXVer = getPTXVersion();
+  if (!hasArchAccelFeatures() || PTXVer < PTXVersion)
+    return false;
+
+  unsigned SMVer = getSmVersion();
+  return llvm::any_of(SMVersions, [&](unsigned SM) {
+    return SMVer == SM &&
+           // PTX 9.0 and later renamed sm_101 to sm_110, so sm_101 is not
+           // supported.
+           !(PTXVer >= 90 && SMVer == 101);
+  });
+}
+
 bool NVPTXSubtarget::allowFP16Math() const {
   return hasFP16Math() && NoF16Math == false;
 }

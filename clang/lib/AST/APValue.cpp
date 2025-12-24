@@ -784,7 +784,7 @@ void APValue::printPretty(raw_ostream &Out, const PrintingPolicy &Policy,
       if (!O.isZero()) {
         if (IsReference)
           Out << "*(";
-        if (S.isZero() || O % S) {
+        if (S.isZero() || !O.isMultipleOf(S)) {
           Out << "(char*)";
           S = CharUnits::One();
         }

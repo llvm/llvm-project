@@ -1,5 +1,4 @@
-# RUN: %PYTHON %s pybind11 | FileCheck %s
-# RUN: %PYTHON %s nanobind | FileCheck %s
+# RUN: %PYTHON %s | FileCheck %s
 import sys
 import typing
 from typing import Union, Optional
@@ -10,26 +9,14 @@ import mlir.dialects.python_test as test
 import mlir.dialects.tensor as tensor
 import mlir.dialects.arith as arith
 
-if sys.argv[1] == "pybind11":
-    from mlir._mlir_libs._mlirPythonTestPybind11 import (
-        TestAttr,
-        TestType,
-        TestTensorValue,
-        TestIntegerRankedTensorType,
-    )
+from mlir._mlir_libs._mlirPythonTestNanobind import (
+    TestAttr,
+    TestType,
+    TestTensorValue,
+    TestIntegerRankedTensorType,
+)
 
-    test.register_python_test_dialect(get_dialect_registry(), use_nanobind=False)
-elif sys.argv[1] == "nanobind":
-    from mlir._mlir_libs._mlirPythonTestNanobind import (
-        TestAttr,
-        TestType,
-        TestTensorValue,
-        TestIntegerRankedTensorType,
-    )
-
-    test.register_python_test_dialect(get_dialect_registry(), use_nanobind=True)
-else:
-    raise ValueError("Expected pybind11 or nanobind as argument")
+test.register_python_test_dialect(get_dialect_registry())
 
 
 def run(f):
@@ -554,7 +541,7 @@ def testOptionalOperandOp():
             )
             assert (
                 typing.get_type_hints(test.OptionalOperandOp.result.fget)["return"]
-                is OpResult
+                == OpResult[IntegerType]
             )
             assert type(op1.result) is OpResult
 
@@ -660,6 +647,13 @@ def testCustomType():
             pass
         else:
             raise
+
+
+@run
+# CHECK-LABEL: TEST: testValue
+def testValue():
+    # Check that Value is a generic class at runtime.
+    assert hasattr(Value, "__class_getitem__")
 
 
 @run
@@ -904,7 +898,7 @@ def testVariadicResultAccess():
 
             assert (
                 typing.get_type_hints(test.same_variadic_result_vfv)["return"]
-                is Union[OpResult, OpResultList, test.SameVariadicResultSizeOpVFV]
+                == Union[OpResult, OpResultList, test.SameVariadicResultSizeOpVFV]
             )
             assert (
                 type(test.same_variadic_result_vfv([i[0], i[1]], i[2], [i[3], i[4]]))
@@ -992,7 +986,7 @@ def testVariadicResultAccess():
 
             assert (
                 typing.get_type_hints(test.results_variadic)["return"]
-                is Union[OpResult, OpResultList, test.ResultsVariadicOp]
+                == Union[OpResult, OpResultList, test.ResultsVariadicOp]
             )
             assert type(test.results_variadic([i[0]])) is OpResult
             op_res_variadic = test.ResultsVariadicOp([i[0]])
@@ -1003,7 +997,7 @@ def testVariadicResultAccess():
             assert type(op_res_variadic.res) is OpResultList
 
 
-# CHECK-LABEL: TEST: testVariadicAndNormalRegion
+# CHECK-LABEL: TEST: testVariadicAndNormalRegionOp
 @run
 def testVariadicAndNormalRegionOp():
     with Context() as ctx, Location.unknown(ctx):
@@ -1024,3 +1018,6 @@ def testVariadicAndNormalRegionOp():
                 is RegionSequence
             )
             assert type(region_op.variadic) is RegionSequence
+
+            assert isinstance(region_op.opview, OpView)
+            assert isinstance(region_op.operation.opview, OpView)

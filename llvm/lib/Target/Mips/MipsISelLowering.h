@@ -18,6 +18,7 @@
 #include "MCTargetDesc/MipsBaseInfo.h"
 #include "MCTargetDesc/MipsMCTargetDesc.h"
 #include "Mips.h"
+#include "MipsSelectionDAGInfo.h"
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
@@ -50,217 +51,6 @@ class MipsTargetMachine;
 class TargetLibraryInfo;
 class TargetRegisterClass;
 
-  namespace MipsISD {
-
-    enum NodeType : unsigned {
-      // Start the numbering from where ISD NodeType finishes.
-      FIRST_NUMBER = ISD::BUILTIN_OP_END,
-
-      // Jump and link (call)
-      JmpLink,
-
-      // Tail call
-      TailCall,
-
-      // Get the Highest (63-48) 16 bits from a 64-bit immediate
-      Highest,
-
-      // Get the Higher (47-32) 16 bits from a 64-bit immediate
-      Higher,
-
-      // Get the High 16 bits from a 32/64-bit immediate
-      // No relation with Mips Hi register
-      Hi,
-
-      // Get the Lower 16 bits from a 32/64-bit immediate
-      // No relation with Mips Lo register
-      Lo,
-
-      // Get the High 16 bits from a 32 bit immediate for accessing the GOT.
-      GotHi,
-
-      // Get the High 16 bits from a 32-bit immediate for accessing TLS.
-      TlsHi,
-
-      // Handle gp_rel (small data/bss sections) relocation.
-      GPRel,
-
-      // Thread Pointer
-      ThreadPointer,
-
-      // Vector Floating Point Multiply and Subtract
-      FMS,
-
-      // Floating Point Branch Conditional
-      FPBrcond,
-
-      // Floating Point Compare
-      FPCmp,
-
-      // Floating point Abs
-      FAbs,
-
-      // Floating point select
-      FSELECT,
-
-      // Node used to generate an MTC1 i32 to f64 instruction
-      MTC1_D64,
-
-      // Floating Point Conditional Moves
-      CMovFP_T,
-      CMovFP_F,
-
-      // FP-to-int truncation node.
-      TruncIntFP,
-
-      // Return
-      Ret,
-
-      // Interrupt, exception, error trap Return
-      ERet,
-
-      // Software Exception Return.
-      EH_RETURN,
-
-      // Node used to extract integer from accumulator.
-      MFHI,
-      MFLO,
-
-      // Node used to insert integers to accumulator.
-      MTLOHI,
-
-      // Mult nodes.
-      Mult,
-      Multu,
-
-      // MAdd/Sub nodes
-      MAdd,
-      MAddu,
-      MSub,
-      MSubu,
-
-      // DivRem(u)
-      DivRem,
-      DivRemU,
-      DivRem16,
-      DivRemU16,
-
-      BuildPairF64,
-      ExtractElementF64,
-
-      Wrapper,
-
-      DynAlloc,
-
-      Sync,
-
-      Ext,
-      Ins,
-      CIns,
-
-      // EXTR.W intrinsic nodes.
-      EXTP,
-      EXTPDP,
-      EXTR_S_H,
-      EXTR_W,
-      EXTR_R_W,
-      EXTR_RS_W,
-      SHILO,
-      MTHLIP,
-
-      // DPA.W intrinsic nodes.
-      MULSAQ_S_W_PH,
-      MAQ_S_W_PHL,
-      MAQ_S_W_PHR,
-      MAQ_SA_W_PHL,
-      MAQ_SA_W_PHR,
-      DPAU_H_QBL,
-      DPAU_H_QBR,
-      DPSU_H_QBL,
-      DPSU_H_QBR,
-      DPAQ_S_W_PH,
-      DPSQ_S_W_PH,
-      DPAQ_SA_L_W,
-      DPSQ_SA_L_W,
-      DPA_W_PH,
-      DPS_W_PH,
-      DPAQX_S_W_PH,
-      DPAQX_SA_W_PH,
-      DPAX_W_PH,
-      DPSX_W_PH,
-      DPSQX_S_W_PH,
-      DPSQX_SA_W_PH,
-      MULSA_W_PH,
-
-      MULT,
-      MULTU,
-      MADD_DSP,
-      MADDU_DSP,
-      MSUB_DSP,
-      MSUBU_DSP,
-
-      // DSP shift nodes.
-      SHLL_DSP,
-      SHRA_DSP,
-      SHRL_DSP,
-
-      // DSP setcc and select_cc nodes.
-      SETCC_DSP,
-      SELECT_CC_DSP,
-
-      // Vector comparisons.
-      // These take a vector and return a boolean.
-      VALL_ZERO,
-      VANY_ZERO,
-      VALL_NONZERO,
-      VANY_NONZERO,
-
-      // These take a vector and return a vector bitmask.
-      VCEQ,
-      VCLE_S,
-      VCLE_U,
-      VCLT_S,
-      VCLT_U,
-
-      // Vector Shuffle with mask as an operand
-      VSHF,  // Generic shuffle
-      SHF,   // 4-element set shuffle.
-      ILVEV, // Interleave even elements
-      ILVOD, // Interleave odd elements
-      ILVL,  // Interleave left elements
-      ILVR,  // Interleave right elements
-      PCKEV, // Pack even elements
-      PCKOD, // Pack odd elements
-
-      // Vector Lane Copy
-      INSVE, // Copy element from one vector to another
-
-      // Combined (XOR (OR $a, $b), -1)
-      VNOR,
-
-      // Extended vector element extraction
-      VEXTRACT_SEXT_ELT,
-      VEXTRACT_ZEXT_ELT,
-
-      // Double select nodes for machines without conditional-move.
-      DOUBLE_SELECT_I,
-      DOUBLE_SELECT_I64,
-
-      // Load/Store Left/Right nodes.
-      FIRST_MEMORY_OPCODE,
-      LWL = FIRST_MEMORY_OPCODE,
-      LWR,
-      SWL,
-      SWR,
-      LDL,
-      LDR,
-      SDL,
-      SDR,
-      LAST_MEMORY_OPCODE = SDR,
-    };
-
-  } // ene namespace MipsISD
-
   //===--------------------------------------------------------------------===//
   // TargetLowering Implementation
   //===--------------------------------------------------------------------===//
@@ -290,8 +80,7 @@ class TargetRegisterClass;
     bool isCheapToSpeculateCttz(Type *Ty) const override;
     bool isCheapToSpeculateCtlz(Type *Ty) const override;
     bool hasBitTest(SDValue X, SDValue Y) const override;
-    bool shouldFoldConstantShiftPairToMask(const SDNode *N,
-                                           CombineLevel Level) const override;
+    bool shouldFoldConstantShiftPairToMask(const SDNode *N) const override;
 
     /// Return the register type for a given MVT, ensuring vectors are treated
     /// as a series of gpr sized integers.
@@ -330,10 +119,6 @@ class TargetRegisterClass;
     ///
     void ReplaceNodeResults(SDNode *N, SmallVectorImpl<SDValue>&Results,
                             SelectionDAG &DAG) const override;
-
-    /// getTargetNodeName - This method returns the name of a target specific
-    //  DAG node.
-    const char *getTargetNodeName(unsigned Opcode) const override;
 
     /// getSetCCResultType - get the ISD::SETCC result ValueType
     EVT getSetCCResultType(const DataLayout &DL, LLVMContext &Context,
@@ -573,6 +358,7 @@ class TargetRegisterClass;
     SDValue lowerJumpTable(SDValue Op, SelectionDAG &DAG) const;
     SDValue lowerSELECT(SDValue Op, SelectionDAG &DAG) const;
     SDValue lowerSETCC(SDValue Op, SelectionDAG &DAG) const;
+    SDValue lowerFSETCC(SDValue Op, SelectionDAG &DAG) const;
     SDValue lowerVASTART(SDValue Op, SelectionDAG &DAG) const;
     SDValue lowerVAARG(SDValue Op, SelectionDAG &DAG) const;
     SDValue lowerFCOPYSIGN(SDValue Op, SelectionDAG &DAG) const;
@@ -591,6 +377,7 @@ class TargetRegisterClass;
                                  bool IsSRA) const;
     SDValue lowerEH_DWARF_CFA(SDValue Op, SelectionDAG &DAG) const;
     SDValue lowerFP_TO_SINT(SDValue Op, SelectionDAG &DAG) const;
+    SDValue lowerSTRICT_FP_TO_INT(SDValue Op, SelectionDAG &DAG) const;
     SDValue lowerREADCYCLECOUNTER(SDValue Op, SelectionDAG &DAG) const;
 
     /// isEligibleForTailCallOptimization - Check whether the call is eligible
@@ -717,6 +504,8 @@ class TargetRegisterClass;
     bool shouldInsertFencesForAtomic(const Instruction *I) const override {
       return true;
     }
+
+    int getCPURegisterIndex(StringRef Name) const;
 
     /// Emit a sign-extension using sll/sra, seb, or seh appropriately.
     MachineBasicBlock *emitSignExtendToI32InReg(MachineInstr &MI,

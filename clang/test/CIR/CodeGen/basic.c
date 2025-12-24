@@ -296,7 +296,7 @@ size_type max_size(void) {
 // CIR:   %0 = cir.alloca !u64i, !cir.ptr<!u64i>, ["__retval"] {alignment = 8 : i64}
 // CIR:   %1 = cir.const #cir.int<0> : !s32i
 // CIR:   %2 = cir.unary(not, %1) : !s32i, !s32i
-// CIR:   %3 = cir.cast(integral, %2 : !s32i), !u64i
+// CIR:   %3 = cir.cast integral %2 : !s32i -> !u64i
 // CIR:   %4 = cir.const #cir.int<8> : !u64i
 // CIR:   %5 = cir.binop(div, %3, %4) : !u64i
 

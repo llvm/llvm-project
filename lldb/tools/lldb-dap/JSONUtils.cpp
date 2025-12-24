@@ -10,6 +10,8 @@
 #include "DAP.h"
 #include "ExceptionBreakpoint.h"
 #include "LLDBUtils.h"
+#include "Protocol/ProtocolBase.h"
+#include "Protocol/ProtocolRequests.h"
 #include "ProtocolUtils.h"
 #include "lldb/API/SBAddress.h"
 #include "lldb/API/SBCompileUnit.h"
@@ -122,7 +124,7 @@ DecodeMemoryReference(llvm::StringRef memoryReference) {
 
 bool DecodeMemoryReference(const llvm::json::Value &v, llvm::StringLiteral key,
                            lldb::addr_t &out, llvm::json::Path path,
-                           bool required) {
+                           bool required, bool allow_empty) {
   const llvm::json::Object *v_obj = v.getAsObject();
   if (!v_obj) {
     path.report("expected object");
@@ -143,6 +145,11 @@ bool DecodeMemoryReference(const llvm::json::Value &v, llvm::StringLiteral key,
   if (!mem_ref_str) {
     path.field(key).report("expected string");
     return false;
+  }
+
+  if (allow_empty && mem_ref_str->empty()) {
+    out = LLDB_INVALID_ADDRESS;
+    return true;
   }
 
   const std::optional<lldb::addr_t> addr_opt =
@@ -284,7 +291,7 @@ void FillResponse(const llvm::json::Object &request,
   // Fill in all of the needed response fields to a "request" and set "success"
   // to true by default.
   response.try_emplace("type", "response");
-  response.try_emplace("seq", (int64_t)0);
+  response.try_emplace("seq", protocol::kCalculateSeq);
   EmplaceSafeString(response, "command",
                     GetString(request, "command").value_or(""));
   const uint64_t seq = GetInteger<uint64_t>(request, "seq").value_or(0);
@@ -417,7 +424,7 @@ llvm::json::Value CreateScope(const llvm::StringRef name,
 // }
 llvm::json::Object CreateEventObject(const llvm::StringRef event_name) {
   llvm::json::Object event;
-  event.try_emplace("seq", 0);
+  event.try_emplace("seq", protocol::kCalculateSeq);
   event.try_emplace("type", "event");
   EmplaceSafeString(event, "event", event_name);
   return event;
@@ -552,9 +559,8 @@ llvm::json::Value CreateStackFrame(DAP &dap, lldb::SBFrame &frame,
 
   lldb::SBModule module = frame.GetModule();
   if (module.IsValid()) {
-    std::string uuid = module.GetUUIDString();
-    if (!uuid.empty())
-      object.try_emplace("moduleId", uuid);
+    if (const llvm::StringRef uuid = module.GetUUIDString(); !uuid.empty())
+      object.try_emplace("moduleId", uuid.str());
   }
 
   return llvm::json::Value(std::move(object));
@@ -675,7 +681,14 @@ llvm::json::Value CreateThreadStopped(DAP &dap, lldb::SBThread &thread,
       EmplaceSafeString(body, "description", desc_str);
     }
   } break;
-  case lldb::eStopReasonWatchpoint:
+  case lldb::eStopReasonWatchpoint: {
+    body.try_emplace("reason", "data breakpoint");
+    lldb::break_id_t bp_id = thread.GetStopReasonDataAtIndex(0);
+    body.try_emplace("hitBreakpointIds",
+                     llvm::json::Array{llvm::json::Value(bp_id)});
+    EmplaceSafeString(body, "description",
+                      llvm::formatv("data breakpoint {0}", bp_id).str());
+  } break;
   case lldb::eStopReasonInstrumentation:
     body.try_emplace("reason", "breakpoint");
     break;
@@ -710,7 +723,7 @@ llvm::json::Value CreateThreadStopped(DAP &dap, lldb::SBThread &thread,
     break;
   }
   if (stop_id == 0)
-    body.try_emplace("reason", "entry");
+    body["reason"] = "entry";
   const lldb::tid_t tid = thread.GetThreadID();
   body.try_emplace("threadId", (int64_t)tid);
   // If no description has been set, then set it to the default thread stopped
@@ -732,103 +745,93 @@ llvm::json::Value CreateThreadStopped(DAP &dap, lldb::SBThread &thread,
   return llvm::json::Value(std::move(event));
 }
 
-const char *GetNonNullVariableName(lldb::SBValue &v) {
-  const char *name = v.GetName();
-  return name ? name : "<null>";
+llvm::StringRef GetNonNullVariableName(lldb::SBValue &v) {
+  const llvm::StringRef name = v.GetName();
+  return !name.empty() ? name : "<null>";
 }
 
 std::string CreateUniqueVariableNameForDisplay(lldb::SBValue &v,
                                                bool is_name_duplicated) {
-  lldb::SBStream name_builder;
-  name_builder.Print(GetNonNullVariableName(v));
+  std::string unique_name{};
+  llvm::raw_string_ostream name_builder(unique_name);
+  name_builder << GetNonNullVariableName(v);
   if (is_name_duplicated) {
-    lldb::SBDeclaration declaration = v.GetDeclaration();
-    const char *file_name = declaration.GetFileSpec().GetFilename();
+    const lldb::SBDeclaration declaration = v.GetDeclaration();
+    const llvm::StringRef file_name = declaration.GetFileSpec().GetFilename();
     const uint32_t line = declaration.GetLine();
 
-    if (file_name != nullptr && line > 0)
-      name_builder.Printf(" @ %s:%u", file_name, line);
-    else if (const char *location = v.GetLocation())
-      name_builder.Printf(" @ %s", location);
+    if (!file_name.empty() && line != 0 && line != LLDB_INVALID_LINE_NUMBER)
+      name_builder << llvm::formatv(" @ {}:{}", file_name, line);
+    else if (llvm::StringRef location = v.GetLocation(); !location.empty())
+      name_builder << llvm::formatv(" @ {}", location);
   }
-  return name_builder.GetData();
+  return unique_name;
 }
 
-VariableDescription::VariableDescription(lldb::SBValue v,
-                                         bool auto_variable_summaries,
-                                         bool format_hex,
-                                         bool is_name_duplicated,
-                                         std::optional<std::string> custom_name)
-    : v(v) {
-  name = custom_name
-             ? *custom_name
-             : CreateUniqueVariableNameForDisplay(v, is_name_duplicated);
+VariableDescription::VariableDescription(
+    lldb::SBValue val, bool auto_variable_summaries, bool format_hex,
+    bool is_name_duplicated, std::optional<llvm::StringRef> custom_name)
+    : val(val) {
+  name = custom_name.value_or(
+      CreateUniqueVariableNameForDisplay(val, is_name_duplicated));
 
-  type_obj = v.GetType();
-  std::string raw_display_type_name =
-      llvm::StringRef(type_obj.GetDisplayTypeName()).str();
-  display_type_name =
-      !raw_display_type_name.empty() ? raw_display_type_name : NO_TYPENAME;
+  type_obj = val.GetType();
+  const llvm::StringRef type_name = type_obj.GetDisplayTypeName();
+  display_type_name = type_name.empty() ? NO_TYPENAME : type_name;
 
   // Only format hex/default if there is no existing special format.
-  if (v.GetFormat() == lldb::eFormatDefault ||
-      v.GetFormat() == lldb::eFormatHex) {
-    if (format_hex)
-      v.SetFormat(lldb::eFormatHex);
-    else
-      v.SetFormat(lldb::eFormatDefault);
+  if (const lldb::Format current_format = val.GetFormat();
+      current_format == lldb::eFormatDefault ||
+      current_format == lldb::eFormatHex) {
+
+    val.SetFormat(format_hex ? lldb::eFormatHex : lldb::eFormatDefault);
   }
 
   llvm::raw_string_ostream os_display_value(display_value);
 
-  if (lldb::SBError sb_error = v.GetError(); sb_error.Fail()) {
+  if (lldb::SBError sb_error = val.GetError(); sb_error.Fail()) {
     error = sb_error.GetCString();
     os_display_value << "<error: " << error << ">";
   } else {
-    value = llvm::StringRef(v.GetValue()).str();
-    summary = llvm::StringRef(v.GetSummary()).str();
+    value = val.GetValue();
+    summary = val.GetSummary();
     if (summary.empty() && auto_variable_summaries)
-      auto_summary = TryCreateAutoSummary(v);
+      auto_summary = TryCreateAutoSummary(val);
 
-    std::optional<std::string> effective_summary =
-        !summary.empty() ? summary : auto_summary;
+    llvm::StringRef display_summary = auto_summary ? *auto_summary : summary;
+    const bool has_summary = !display_summary.empty();
 
     if (!value.empty()) {
       os_display_value << value;
-      if (effective_summary)
-        os_display_value << " " << *effective_summary;
-    } else if (effective_summary) {
-      os_display_value << *effective_summary;
+      if (has_summary)
+        os_display_value << " " << display_summary;
+    } else if (has_summary) {
+      os_display_value << display_summary;
 
-      // As last resort, we print its type and address if available.
-    } else {
-      if (!raw_display_type_name.empty()) {
-        os_display_value << raw_display_type_name;
-        lldb::addr_t address = v.GetLoadAddress();
-        if (address != LLDB_INVALID_ADDRESS)
-          os_display_value << " @ " << llvm::format_hex(address, 0);
-      }
+    } else if (!type_name.empty()) {
+      // As last resort, we print its type if available.
+      os_display_value << type_name;
     }
   }
 
   lldb::SBStream evaluateStream;
-  v.GetExpressionPath(evaluateStream);
+  val.GetExpressionPath(evaluateStream);
   evaluate_name = llvm::StringRef(evaluateStream.GetData()).str();
 }
 
-std::string VariableDescription::GetResult(llvm::StringRef context) {
+std::string VariableDescription::GetResult(protocol::EvaluateContext context) {
   // In repl context, the results can be displayed as multiple lines so more
   // detailed descriptions can be returned.
-  if (context != "repl")
+  if (context != protocol::eEvaluateContextRepl)
     return display_value;
 
-  if (!v.IsValid())
+  if (!val.IsValid())
     return display_value;
 
   // Try the SBValue::GetDescription(), which may call into language runtime
   // specific formatters (see ValueObjectPrinter).
   lldb::SBStream stream;
-  v.GetDescription(stream);
+  val.GetDescription(stream);
   llvm::StringRef description = stream.GetData();
   return description.trim().str();
 }
@@ -852,21 +855,13 @@ std::pair<int64_t, bool> UnpackLocation(int64_t location_id) {
   return std::pair{location_id >> 1, location_id & 1};
 }
 
-llvm::json::Value CreateCompileUnit(lldb::SBCompileUnit &unit) {
-  llvm::json::Object object;
-  char unit_path_arr[PATH_MAX];
-  unit.GetFileSpec().GetPath(unit_path_arr, sizeof(unit_path_arr));
-  std::string unit_path(unit_path_arr);
-  object.try_emplace("compileUnitPath", unit_path);
-  return llvm::json::Value(std::move(object));
-}
-
 /// See
 /// https://microsoft.github.io/debug-adapter-protocol/specification#Reverse_Requests_RunInTerminal
 llvm::json::Object CreateRunInTerminalReverseRequest(
     llvm::StringRef program, const std::vector<std::string> &args,
     const llvm::StringMap<std::string> &env, llvm::StringRef cwd,
-    llvm::StringRef comm_file, lldb::pid_t debugger_pid, bool external) {
+    llvm::StringRef comm_file, lldb::pid_t debugger_pid,
+    const std::vector<std::optional<std::string>> &stdio, bool external) {
   llvm::json::Object run_in_terminal_args;
   if (external) {
     // This indicates the IDE to open an external terminal window.
@@ -885,6 +880,18 @@ llvm::json::Object CreateRunInTerminalReverseRequest(
   }
   req_args.push_back("--launch-target");
   req_args.push_back(program.str());
+  if (!stdio.empty()) {
+    req_args.push_back("--stdio");
+    std::stringstream ss;
+    for (const std::optional<std::string> &file : stdio) {
+      if (file)
+        ss << *file;
+      ss << ":";
+    }
+    std::string files = ss.str();
+    files.pop_back();
+    req_args.push_back(std::move(files));
+  }
   req_args.insert(req_args.end(), args.begin(), args.end());
   run_in_terminal_args.try_emplace("args", req_args);
 

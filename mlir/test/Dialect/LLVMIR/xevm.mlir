@@ -116,3 +116,39 @@ func.func @prefetch(%ptr: !llvm.ptr<1>) {
 // CHECK-LABEL: @xevm_module [#xevm.target<O = 3, chip = "pvc">] {
 gpu.module @xevm_module [#xevm.target<O = 3, chip = "pvc">]{
 }
+
+// -----
+// CHECK-LABEL: @xevm_special_ids
+llvm.func @xevm_special_ids() -> i32 {
+  // CHECK: xevm.local_id.x : i32
+  %1 = xevm.local_id.x : i32
+  // CHECK: xevm.local_id.y : i32
+  %2 = xevm.local_id.y : i32
+  // CHECK: xevm.local_id.z : i32
+  %3 = xevm.local_id.z : i32
+  // CHECK: xevm.local_size.x : i32
+  %4 = xevm.local_size.x : i32
+  // CHECK: xevm.local_size.y : i32
+  %5 = xevm.local_size.y : i32
+  // CHECK: xevm.local_size.z : i32
+  %6 = xevm.local_size.z : i32
+  // CHECK: xevm.group_id.x : i32
+  %7 = xevm.group_id.x : i32
+  // CHECK: xevm.group_id.y : i32
+  %8 = xevm.group_id.y : i32
+  // CHECK: xevm.group_id.z : i32
+  %9 = xevm.group_id.z : i32
+  // CHECK: xevm.group_count.x : i32
+  %10 = xevm.group_count.x : i32
+  // CHECK: xevm.group_count.y : i32
+  %11 = xevm.group_count.y : i32
+  // CHECK: xevm.group_count.z : i32
+  %12 = xevm.group_count.z : i32
+  // CHECK: xevm.lane_id : i32
+  %14 = xevm.lane_id : i32
+  // CHECK: xevm.subgroup_size : i32
+  %39 = xevm.subgroup_size : i32
+  // CHECK: xevm.subgroup_id : i32
+  %40 = xevm.subgroup_id : i32
+  llvm.return %1 : i32
+}

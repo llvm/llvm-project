@@ -2173,7 +2173,7 @@ private:
     if (Tok.is(tok::kw___attribute)) {
       ParsedAttributes Attrs(AttrFactory);
       ParseGNUAttributes(Attrs, LateAttrs, &D);
-      D.takeAttributes(Attrs);
+      D.takeAttributesAppending(Attrs);
     }
   }
 
@@ -2272,7 +2272,7 @@ private:
     if (isAllowedCXX11AttributeSpecifier()) {
       ParsedAttributes Attrs(AttrFactory);
       ParseCXX11Attributes(Attrs);
-      D.takeAttributes(Attrs);
+      D.takeAttributesAppending(Attrs);
     }
   }
 
@@ -2292,7 +2292,7 @@ private:
       ParsedAttributes AttrsWithRange(AttrFactory);
       ParseMicrosoftAttributes(AttrsWithRange);
       AttrsParsed = !AttrsWithRange.empty();
-      Attrs.takeAllFrom(AttrsWithRange);
+      Attrs.takeAllAppendingFrom(AttrsWithRange);
     }
     return AttrsParsed;
   }
@@ -2835,7 +2835,6 @@ private:
   mutable IdentifierInfo *Ident_GNU_final;
   mutable IdentifierInfo *Ident_override;
   mutable IdentifierInfo *Ident_trivially_relocatable_if_eligible;
-  mutable IdentifierInfo *Ident_replaceable_if_eligible;
 
   /// Representation of a class that has been parsed, including
   /// any member function declarations or definitions that need to be
@@ -3129,7 +3128,7 @@ private:
 
   /// isClassCompatibleKeyword - Determine whether the next token is a C++11
   /// 'final', a C++26 'trivially_relocatable_if_eligible',
-  /// 'replaceable_if_eligible', or Microsoft 'sealed' or 'abstract' contextual
+  /// or Microsoft 'sealed' or 'abstract' contextual
   /// keyword.
   bool isClassCompatibleKeyword() const;
 
@@ -3603,12 +3602,8 @@ private:
   bool isCXX2CTriviallyRelocatableKeyword() const;
   void ParseCXX2CTriviallyRelocatableSpecifier(SourceLocation &TRS);
 
-  bool isCXX2CReplaceableKeyword(Token Tok) const;
-  bool isCXX2CReplaceableKeyword() const;
-  void ParseCXX2CReplaceableSpecifier(SourceLocation &MRS);
-
   /// 'final', a C++26 'trivially_relocatable_if_eligible',
-  /// 'replaceable_if_eligible', or Microsoft 'sealed' or 'abstract' contextual
+  /// or Microsoft 'sealed' or 'abstract' contextual
   /// keyword.
   bool isClassCompatibleKeyword(Token Tok) const;
 
@@ -5175,7 +5170,7 @@ private:
     if (Tok.is(tok::colon)) {
       ParsedAttributes Attrs(AttrFactory);
       ParseHLSLAnnotations(Attrs, EndLoc, CouldBeBitField);
-      D.takeAttributes(Attrs);
+      D.takeAttributesAppending(Attrs);
       return true;
     }
     return false;
@@ -5223,11 +5218,7 @@ private:
   ///         assignment-expression
   ///         '{' ...
   /// \endverbatim
-  ExprResult ParseInitializer() {
-    if (Tok.isNot(tok::l_brace))
-      return ParseAssignmentExpression();
-    return ParseBraceInitializer();
-  }
+  ExprResult ParseInitializer(Decl *DeclForInitializer = nullptr);
 
   /// MayBeDesignationStart - Return true if the current token might be the
   /// start of a designator.  If we can tell it is impossible that it is a
@@ -6767,6 +6758,9 @@ private:
                                                 OpenMPClauseKind Kind,
                                                 bool ParseOnly);
 
+  /// Parses the 'looprange' clause of a '#pragma omp fuse' directive.
+  OMPClause *ParseOpenMPLoopRangeClause();
+
   /// Parses the 'sizes' clause of a '#pragma omp tile' directive.
   OMPClause *ParseOpenMPSizesClause();
 
@@ -7501,6 +7495,16 @@ public:
 
   StmtResult ParseBreakOrContinueStatement(bool IsContinue);
 
+  /// ParseDeferStatement
+  /// \verbatim
+  ///       defer-statement:
+  ///         '_Defer' deferred-block
+  ///
+  ///       deferred-block:
+  ///         unlabeled-statement
+  /// \endverbatim
+  StmtResult ParseDeferStatement(SourceLocation *TrailingElseLoc);
+
   StmtResult ParsePragmaLoopHint(StmtVector &Stmts, ParsedStmtContext StmtCtx,
                                  SourceLocation *TrailingElseLoc,
                                  ParsedAttributes &Attrs,
@@ -7674,7 +7678,7 @@ private:
   /// [GNU] asm-clobbers:
   ///         asm-string-literal
   ///         asm-clobbers ',' asm-string-literal
-  /// \endverbatim 
+  /// \endverbatim
   ///
   StmtResult ParseAsmStatement(bool &msAsm);
 

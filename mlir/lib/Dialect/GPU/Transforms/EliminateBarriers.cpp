@@ -330,7 +330,7 @@ static Value getBase(Value v) {
               v = op.getSrc();
               return true;
             })
-            .Default([](Operation *) { return false; });
+            .Default(false);
     if (!shouldContinue)
       break;
   }
@@ -354,7 +354,7 @@ static Value propagatesCapture(Operation *op) {
       .Case([](memref::TransposeOp transpose) { return transpose.getIn(); })
       .Case<memref::ExpandShapeOp, memref::CollapseShapeOp>(
           [](auto op) { return op.getSrc(); })
-      .Default([](Operation *) { return Value(); });
+      .Default(nullptr);
 }
 
 /// Returns `true` if the given operation is known to capture the given value,
@@ -371,7 +371,7 @@ static std::optional<bool> getKnownCapturingStatus(Operation *op, Value v) {
       // These operations are known not to capture.
       .Case([](memref::DeallocOp) { return false; })
       // By default, we don't know anything.
-      .Default([](Operation *) { return std::nullopt; });
+      .Default(std::nullopt);
 }
 
 /// Returns `true` if the value may be captured by any of its users, i.e., if

@@ -24,6 +24,7 @@
 #include "clang/AST/Stmt.h"
 #include "clang/AST/StmtOpenMP.h"
 #include "clang/AST/StmtVisitor.h"
+#include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/OpenMPKinds.h"
 #include "clang/Basic/PrettyStackTrace.h"
 #include "clang/Basic/SourceManager.h"
@@ -201,6 +202,24 @@ class OMPLoopScope : public CodeGenFunction::RunCleanupsScope {
     } else {
       llvm_unreachable("Unknown loop-based directive kind.");
     }
+    doEmitPreinits(PreInits);
+    PreCondVars.restore(CGF);
+  }
+
+  void
+  emitPreInitStmt(CodeGenFunction &CGF,
+                  const OMPCanonicalLoopSequenceTransformationDirective &S) {
+    const Stmt *PreInits;
+    if (const auto *Fuse = dyn_cast<OMPFuseDirective>(&S)) {
+      PreInits = Fuse->getPreInits();
+    } else {
+      llvm_unreachable(
+          "Unknown canonical loop sequence transform directive kind.");
+    }
+    doEmitPreinits(PreInits);
+  }
+
+  void doEmitPreinits(const Stmt *PreInits) {
     if (PreInits) {
       // CompoundStmts and DeclStmts are used as lists of PreInit statements and
       // declarations. Since declarations must be visible in the the following
@@ -222,11 +241,15 @@ class OMPLoopScope : public CodeGenFunction::RunCleanupsScope {
         CGF.EmitStmt(S);
       }
     }
-    PreCondVars.restore(CGF);
   }
 
 public:
   OMPLoopScope(CodeGenFunction &CGF, const OMPLoopBasedDirective &S)
+      : CodeGenFunction::RunCleanupsScope(CGF) {
+    emitPreInitStmt(CGF, S);
+  }
+  OMPLoopScope(CodeGenFunction &CGF,
+               const OMPCanonicalLoopSequenceTransformationDirective &S)
       : CodeGenFunction::RunCleanupsScope(CGF) {
     emitPreInitStmt(CGF, S);
   }
@@ -1622,22 +1645,30 @@ static void emitCommonOMPParallelDirective(
   // if sev-level is fatal."
   OpenMPSeverityClauseKind Severity = OMPC_SEVERITY_fatal;
   clang::Expr *Message = nullptr;
+  SourceLocation SeverityLoc = SourceLocation();
+  SourceLocation MessageLoc = SourceLocation();
+
   llvm::Function *OutlinedFn =
       CGF.CGM.getOpenMPRuntime().emitParallelOutlinedFunction(
           CGF, S, *CS->getCapturedDecl()->param_begin(), InnermostKind,
           CodeGen);
+
   if (const auto *NumThreadsClause = S.getSingleClause<OMPNumThreadsClause>()) {
     CodeGenFunction::RunCleanupsScope NumThreadsScope(CGF);
     NumThreads = CGF.EmitScalarExpr(NumThreadsClause->getNumThreads(),
                                     /*IgnoreResultAssign=*/true);
     Modifier = NumThreadsClause->getModifier();
-    if (const auto *MessageClause = S.getSingleClause<OMPMessageClause>())
+    if (const auto *MessageClause = S.getSingleClause<OMPMessageClause>()) {
       Message = MessageClause->getMessageString();
-    if (const auto *SeverityClause = S.getSingleClause<OMPSeverityClause>())
+      MessageLoc = MessageClause->getBeginLoc();
+    }
+    if (const auto *SeverityClause = S.getSingleClause<OMPSeverityClause>()) {
       Severity = SeverityClause->getSeverityKind();
+      SeverityLoc = SeverityClause->getBeginLoc();
+    }
     CGF.CGM.getOpenMPRuntime().emitNumThreadsClause(
         CGF, NumThreads, NumThreadsClause->getBeginLoc(), Modifier, Severity,
-        Message);
+        SeverityLoc, Message, MessageLoc);
   }
   if (const auto *ProcBindClause = S.getSingleClause<OMPProcBindClause>()) {
     CodeGenFunction::RunCleanupsScope ProcBindScope(CGF);
@@ -1920,6 +1951,15 @@ public:
       Scope = new OMPLoopScope(CGF, *Dir);
       CGSI = new CodeGenFunction::CGCapturedStmtInfo(CR_OpenMP);
       CapInfoRAII = new CodeGenFunction::CGCapturedStmtRAII(CGF, CGSI);
+    } else if (const auto *Dir =
+                   dyn_cast<OMPCanonicalLoopSequenceTransformationDirective>(
+                       S)) {
+      // For simplicity we reuse the loop scope similarly to what we do with
+      // OMPCanonicalLoopNestTransformationDirective do by being a subclass
+      // of OMPLoopBasedDirective.
+      Scope = new OMPLoopScope(CGF, *Dir);
+      CGSI = new CodeGenFunction::CGCapturedStmtInfo(CR_OpenMP);
+      CapInfoRAII = new CodeGenFunction::CGCapturedStmtRAII(CGF, CGSI);
     }
   }
   ~OMPTransformDirectiveScopeRAII() {
@@ -1948,8 +1988,7 @@ static void emitBody(CodeGenFunction &CGF, const Stmt *S, const Stmt *NextLoop,
     return;
   }
   if (SimplifiedS == NextLoop) {
-    if (auto *Dir =
-            dyn_cast<OMPCanonicalLoopNestTransformationDirective>(SimplifiedS))
+    if (auto *Dir = dyn_cast<OMPLoopTransformationDirective>(SimplifiedS))
       SimplifiedS = Dir->getTransformedStmt();
     if (const auto *CanonLoop = dyn_cast<OMPCanonicalLoop>(SimplifiedS))
       SimplifiedS = CanonLoop->getLoopStmt();
@@ -2941,6 +2980,12 @@ void CodeGenFunction::EmitOMPInterchangeDirective(
     const OMPInterchangeDirective &S) {
   // Emit the de-sugared statement.
   OMPTransformDirectiveScopeRAII InterchangeScope(*this, &S);
+  EmitStmt(S.getTransformedStmt());
+}
+
+void CodeGenFunction::EmitOMPFuseDirective(const OMPFuseDirective &S) {
+  // Emit the de-sugared statement
+  OMPTransformDirectiveScopeRAII FuseScope(*this, &S);
   EmitStmt(S.getTransformedStmt());
 }
 
@@ -6945,10 +6990,7 @@ static void emitCommonOMPTargetDirective(CodeGenFunction &CGF,
     IsOffloadEntry = false;
 
   if (CGM.getLangOpts().OpenMPOffloadMandatory && !IsOffloadEntry) {
-    unsigned DiagID = CGM.getDiags().getCustomDiagID(
-        DiagnosticsEngine::Error,
-        "No offloading entry generated while offloading is mandatory.");
-    CGM.getDiags().Report(DiagID);
+    CGM.getDiags().Report(diag::err_missing_mandatory_offloading);
   }
 
   assert(CGF.CurFuncDecl && "No parent declaration for target region!");

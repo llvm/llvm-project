@@ -115,7 +115,7 @@ int main() {
 // CHECK1-NEXT:    store ptr [[TMP4]], ptr [[TMP15]], align 8, !dbg [[DBG61]]
 // CHECK1-NEXT:    [[TMP16:%.*]] = getelementptr inbounds [4 x ptr], ptr [[CAPTURED_VARS_ADDRS]], i64 0, i64 3, !dbg [[DBG61]]
 // CHECK1-NEXT:    store ptr [[TMP7]], ptr [[TMP16]], align 8, !dbg [[DBG61]]
-// CHECK1-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB3]], i32 [[TMP9]], i32 1, i32 -1, i32 -1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l23_debug___omp_outlined, ptr null, ptr [[CAPTURED_VARS_ADDRS]], i64 4), !dbg [[DBG61]]
+// CHECK1-NEXT:    call void @__kmpc_parallel_60(ptr @[[GLOB3]], i32 [[TMP9]], i32 1, i32 -1, i32 -1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l23_debug___omp_outlined, ptr null, ptr [[CAPTURED_VARS_ADDRS]], i64 4, i32 0), !dbg [[DBG61]]
 // CHECK1-NEXT:    call void @__kmpc_target_deinit(), !dbg [[DBG62:![0-9]+]]
 // CHECK1-NEXT:    ret void, !dbg [[DBG63:![0-9]+]]
 // CHECK1:       worker.exit:
@@ -335,7 +335,7 @@ int main() {
 // CHECK1-NEXT:    store ptr [[TMP5]], ptr [[TMP16]], align 8, !dbg [[DBG155]]
 // CHECK1-NEXT:    [[TMP17:%.*]] = getelementptr inbounds [4 x ptr], ptr [[CAPTURED_VARS_ADDRS]], i64 0, i64 3, !dbg [[DBG155]]
 // CHECK1-NEXT:    store ptr [[TMP8]], ptr [[TMP17]], align 8, !dbg [[DBG155]]
-// CHECK1-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB7]], i32 [[TMP10]], i32 1, i32 -1, i32 -1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l37_debug___omp_outlined, ptr null, ptr [[CAPTURED_VARS_ADDRS]], i64 4), !dbg [[DBG155]]
+// CHECK1-NEXT:    call void @__kmpc_parallel_60(ptr @[[GLOB7]], i32 [[TMP10]], i32 1, i32 -1, i32 -1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l37_debug___omp_outlined, ptr null, ptr [[CAPTURED_VARS_ADDRS]], i64 4, i32 0), !dbg [[DBG155]]
 // CHECK1-NEXT:    call void @__kmpc_target_deinit(), !dbg [[DBG156:![0-9]+]]
 // CHECK1-NEXT:    ret void, !dbg [[DBG157:![0-9]+]]
 // CHECK1:       worker.exit:
@@ -547,7 +547,7 @@ int main() {
 // CHECK1-NEXT:    store ptr [[TMP8]], ptr [[TMP16]], align 8, !dbg [[DBG234]]
 // CHECK1-NEXT:    [[TMP17:%.*]] = getelementptr inbounds [4 x ptr], ptr [[CAPTURED_VARS_ADDRS]], i64 0, i64 3, !dbg [[DBG234]]
 // CHECK1-NEXT:    store ptr [[TMP11]], ptr [[TMP17]], align 8, !dbg [[DBG234]]
-// CHECK1-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB11]], i32 [[TMP13]], i32 1, i32 -1, i32 -1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l51_debug___omp_outlined, ptr null, ptr [[CAPTURED_VARS_ADDRS]], i64 4), !dbg [[DBG234]]
+// CHECK1-NEXT:    call void @__kmpc_parallel_60(ptr @[[GLOB11]], i32 [[TMP13]], i32 1, i32 -1, i32 -1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l51_debug___omp_outlined, ptr null, ptr [[CAPTURED_VARS_ADDRS]], i64 4, i32 0), !dbg [[DBG234]]
 // CHECK1-NEXT:    call void @__kmpc_target_deinit(), !dbg [[DBG235:![0-9]+]]
 // CHECK1-NEXT:    ret void, !dbg [[DBG236:![0-9]+]]
 // CHECK1:       worker.exit:

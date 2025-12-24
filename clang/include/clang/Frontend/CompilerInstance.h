@@ -36,6 +36,7 @@
 
 namespace llvm {
 class raw_fd_ostream;
+class PassPlugin;
 class Timer;
 class TimerGroup;
 }
@@ -130,6 +131,9 @@ class CompilerInstance : public ModuleLoader {
 
   /// The semantic analysis object.
   std::unique_ptr<Sema> TheSema;
+
+  /// Back-end pass plugins.
+  std::vector<std::unique_ptr<llvm::PassPlugin>> PassPlugins;
 
   /// The frontend timer group.
   std::unique_ptr<llvm::TimerGroup> timerGroup;
@@ -460,7 +464,7 @@ public:
     FileMgr.resetWithoutRelease();
   }
 
-  /// Replace the current file manager and virtual file system.
+  /// Replace the current file manager.
   void setFileManager(IntrusiveRefCntPtr<FileManager> Value);
 
   /// @}
@@ -644,6 +648,14 @@ public:
   /// the compiler instance takes ownership of \p Value.
   void setCodeCompletionConsumer(CodeCompleteConsumer *Value);
 
+  /// }
+  /// @name Back-end Pass Plugins
+  /// @{
+
+  llvm::ArrayRef<std::unique_ptr<llvm::PassPlugin>> getPassPlugins() const {
+    return PassPlugins;
+  }
+
   /// @}
   /// @name Frontend timer
   /// @{
@@ -712,12 +724,10 @@ public:
                     const CodeGenOptions *CodeGenOpts = nullptr);
 
   /// Create the file manager and replace any existing one with it.
-  ///
-  /// \return The new file manager on success, or null on failure.
-  FileManager *createFileManager();
+  void createFileManager();
 
   /// Create the source manager and replace any existing one with it.
-  void createSourceManager(FileManager &FileMgr);
+  void createSourceManager();
 
   /// Create the preprocessor, using the invocation, file, and source managers,
   /// and replace any existing one with it.
@@ -915,7 +925,7 @@ public:
   /// The \c ThreadSafeConfig takes precedence over the \c DiagnosticConsumer
   /// and \c FileSystem of this instance (and disables \c FileManager sharing).
   std::unique_ptr<CompilerInstance> cloneForModuleCompile(
-      SourceLocation ImportLoc, Module *Module, StringRef ModuleFileName,
+      SourceLocation ImportLoc, const Module *Module, StringRef ModuleFileName,
       std::optional<ThreadSafeCloneConfig> ThreadSafeConfig = std::nullopt);
 
   /// Compile a module file for the given module, using the options
@@ -946,6 +956,12 @@ public:
 
   void addDependencyCollector(std::shared_ptr<DependencyCollector> Listener) {
     DependencyCollectors.push_back(std::move(Listener));
+  }
+
+  void clearDependencyCollectors() { DependencyCollectors.clear(); }
+
+  std::vector<std::shared_ptr<DependencyCollector>> &getDependencyCollectors() {
+    return DependencyCollectors;
   }
 
   void setExternalSemaSource(IntrusiveRefCntPtr<ExternalSemaSource> ESS);

@@ -30,7 +30,7 @@ ConfusableIdentifierCheck::ConfusableIdentifierCheck(StringRef Name,
 ConfusableIdentifierCheck::~ConfusableIdentifierCheck() = default;
 
 // Build a skeleton out of the Original identifier, inspired by the algorithm
-// described in http://www.unicode.org/reports/tr39/#def-skeleton
+// described in https://www.unicode.org/reports/tr39/#def-skeleton
 //
 // FIXME: TR39 mandates:
 //
@@ -53,10 +53,9 @@ static llvm::SmallString<64U> skeleton(StringRef Name) {
   const char *Curr = Name.data();
   const char *End = Curr + Name.size();
   while (Curr < End) {
-
     const char *Prev = Curr;
     UTF32 CodePoint = 0;
-    ConversionResult Result = convertUTF8Sequence(
+    const ConversionResult Result = convertUTF8Sequence(
         reinterpret_cast<const UTF8 **>(&Curr),
         reinterpret_cast<const UTF8 *>(End), &CodePoint, strictConversion);
     if (Result != conversionOK) {
@@ -64,7 +63,7 @@ static llvm::SmallString<64U> skeleton(StringRef Name) {
       break;
     }
 
-    StringRef Key(Prev, Curr - Prev);
+    const StringRef Key(Prev, Curr - Prev);
     auto *Where = llvm::lower_bound(ConfusableEntries, CodePoint,
                                     [](decltype(ConfusableEntries[0]) X,
                                        UTF32 Y) { return X.codepoint < Y; });
@@ -82,7 +81,8 @@ static llvm::SmallString<64U> skeleton(StringRef Name) {
         errs() << "Unicode conversion issue\n";
         break;
       }
-      Skeleton.append((char *)BufferStart, (char *)IBuffer);
+      Skeleton.append(reinterpret_cast<char *>(BufferStart),
+                      reinterpret_cast<char *>(IBuffer));
     }
   }
   return Skeleton;
@@ -162,16 +162,14 @@ void ConfusableIdentifierCheck::check(
                  cast<Decl>(ND->getDeclContext()->getNonTransparentContext()));
 
   // Associate template parameters with this declaration of this template.
-  if (const auto *TD = dyn_cast<TemplateDecl>(ND)) {
+  if (const auto *TD = dyn_cast<TemplateDecl>(ND))
     for (const NamedDecl *Param : *TD->getTemplateParameters())
       addDeclToCheck(Param, TD->getTemplatedDecl());
-  }
 
   // Associate function parameters with this declaration of this function.
-  if (const auto *FD = dyn_cast<FunctionDecl>(ND)) {
+  if (const auto *FD = dyn_cast<FunctionDecl>(ND))
     for (const NamedDecl *Param : FD->parameters())
       addDeclToCheck(Param, ND);
-  }
 }
 
 void ConfusableIdentifierCheck::addDeclToCheck(const NamedDecl *ND,
@@ -183,7 +181,7 @@ void ConfusableIdentifierCheck::addDeclToCheck(const NamedDecl *ND,
   if (!NDII)
     return;
 
-  StringRef NDName = NDII->getName();
+  const StringRef NDName = NDII->getName();
   if (NDName.empty())
     return;
 
@@ -193,30 +191,26 @@ void ConfusableIdentifierCheck::addDeclToCheck(const NamedDecl *ND,
 void ConfusableIdentifierCheck::onEndOfTranslationUnit() {
   llvm::StringMap<llvm::SmallVector<const IdentifierInfo *, 1>> SkeletonToNames;
   // Compute the skeleton for each identifier.
-  for (auto &[Ident, Decls] : NameToDecls) {
+  for (auto &[Ident, Decls] : NameToDecls)
     SkeletonToNames[skeleton(Ident->getName())].push_back(Ident);
-  }
 
   // Visit each skeleton with more than one identifier.
   for (auto &[Skel, Idents] : SkeletonToNames) {
-    if (Idents.size() < 2) {
+    if (Idents.size() < 2)
       continue;
-    }
 
     // Find the declaration contexts that transitively contain each identifier.
     DeclsWithinContextMap DeclsWithinContext;
-    for (const IdentifierInfo *II : Idents) {
-      for (auto [ND, Parent] : NameToDecls[II]) {
+    for (const IdentifierInfo *II : Idents)
+      for (auto [ND, Parent] : NameToDecls[II])
         addToEnclosingContexts(DeclsWithinContext, Parent, ND);
-      }
-    }
 
     // Check to see if any declaration is declared in a context that
     // transitively contains another declaration with a different identifier but
     // the same skeleton.
     for (const IdentifierInfo *II : Idents) {
       for (auto [OuterND, OuterParent] : NameToDecls[II]) {
-        for (Entry Inner : DeclsWithinContext[OuterParent]) {
+        for (const Entry Inner : DeclsWithinContext[OuterParent]) {
           // Don't complain if the identifiers are the same.
           if (OuterND->getIdentifier() == Inner.ND->getIdentifier())
             continue;

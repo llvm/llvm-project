@@ -42,7 +42,7 @@ define i32 @strlen_test(ptr noundef %str) nounwind {
 ; CHECK-AIX-32-P9-NEXT:    stwu r1, -64(r1)
 ; CHECK-AIX-32-P9-NEXT:    stw r0, 72(r1)
 ; CHECK-AIX-32-P9-NEXT:    stw r3, 60(r1)
-; CHECK-AIX-32-P9-NEXT:    bl .strlen[PR]
+; CHECK-AIX-32-P9-NEXT:    bl .___strlen[PR]
 ; CHECK-AIX-32-P9-NEXT:    nop
 ; CHECK-AIX-32-P9-NEXT:    addi r1, r1, 64
 ; CHECK-AIX-32-P9-NEXT:    lwz r0, 8(r1)
@@ -68,4 +68,94 @@ entry:
   ret i32 %call
 }
 
+define i32 @strlen_test_fp_strict(ptr noundef %str) nounwind {
+; CHECK-AIX-32-P9-LABEL: strlen_test_fp_strict:
+; CHECK-AIX-32-P9:       # %bb.0: # %entry
+; CHECK-AIX-32-P9-NEXT:    mflr r0
+; CHECK-AIX-32-P9-NEXT:    stwu r1, -64(r1)
+; CHECK-AIX-32-P9-NEXT:    stw r0, 72(r1)
+; CHECK-AIX-32-P9-NEXT:    stw r3, 60(r1)
+; CHECK-AIX-32-P9-NEXT:    bl .___strlen[PR]
+; CHECK-AIX-32-P9-NEXT:    nop
+; CHECK-AIX-32-P9-NEXT:    addi r1, r1, 64
+; CHECK-AIX-32-P9-NEXT:    lwz r0, 8(r1)
+; CHECK-AIX-32-P9-NEXT:    mtlr r0
+; CHECK-AIX-32-P9-NEXT:    blr
+;
+; CHECK-LINUX32-P9-LABEL: strlen_test_fp_strict:
+; CHECK-LINUX32-P9:       # %bb.0: # %entry
+; CHECK-LINUX32-P9-NEXT:    mflr r0
+; CHECK-LINUX32-P9-NEXT:    stwu r1, -16(r1)
+; CHECK-LINUX32-P9-NEXT:    stw r0, 20(r1)
+; CHECK-LINUX32-P9-NEXT:    stw r3, 12(r1)
+; CHECK-LINUX32-P9-NEXT:    bl strlen
+; CHECK-LINUX32-P9-NEXT:    lwz r0, 20(r1)
+; CHECK-LINUX32-P9-NEXT:    addi r1, r1, 16
+; CHECK-LINUX32-P9-NEXT:    mtlr r0
+; CHECK-LINUX32-P9-NEXT:    blr
+entry:
+  %str.addr = alloca ptr, align 4
+  store ptr %str, ptr %str.addr, align 4
+  %0 = load ptr, ptr %str.addr, align 4
+  %call = call i32 @strlen(ptr noundef %0) #0
+  ret i32 %call
+}
+
 declare i32 @strlen(ptr noundef) nounwind
+attributes #0 = { strictfp }
+
+define ptr @test_memmove(ptr noundef %destination, ptr noundef %source, i32 noundef %num) #0 {
+; CHECK-AIX-32-P9-LABEL: test_memmove:
+; CHECK-AIX-32-P9:       # %bb.0: # %entry
+; CHECK-AIX-32-P9-NEXT:    mflr r0
+; CHECK-AIX-32-P9-NEXT:    stwu r1, -80(r1)
+; CHECK-AIX-32-P9-NEXT:    stw r0, 88(r1)
+; CHECK-AIX-32-P9-NEXT:    stw r31, 76(r1) # 4-byte Folded Spill
+; CHECK-AIX-32-P9-NEXT:    mr r31, r3
+; CHECK-AIX-32-P9-NEXT:    stw r3, 72(r1)
+; CHECK-AIX-32-P9-NEXT:    stw r4, 68(r1)
+; CHECK-AIX-32-P9-NEXT:    stw r5, 64(r1)
+; CHECK-AIX-32-P9-NEXT:    bl .___memmove[PR]
+; CHECK-AIX-32-P9-NEXT:    nop
+; CHECK-AIX-32-P9-NEXT:    mr r3, r31
+; CHECK-AIX-32-P9-NEXT:    lwz r31, 76(r1) # 4-byte Folded Reload
+; CHECK-AIX-32-P9-NEXT:    addi r1, r1, 80
+; CHECK-AIX-32-P9-NEXT:    lwz r0, 8(r1)
+; CHECK-AIX-32-P9-NEXT:    mtlr r0
+; CHECK-AIX-32-P9-NEXT:    blr
+;
+; CHECK-LINUX32-P9-LABEL: test_memmove:
+; CHECK-LINUX32-P9:       # %bb.0: # %entry
+; CHECK-LINUX32-P9-NEXT:    mflr r0
+; CHECK-LINUX32-P9-NEXT:    stwu r1, -32(r1)
+; CHECK-LINUX32-P9-NEXT:    stw r0, 36(r1)
+; CHECK-LINUX32-P9-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-LINUX32-P9-NEXT:    .cfi_offset lr, 4
+; CHECK-LINUX32-P9-NEXT:    .cfi_offset r30, -8
+; CHECK-LINUX32-P9-NEXT:    stw r30, 24(r1) # 4-byte Folded Spill
+; CHECK-LINUX32-P9-NEXT:    mr r30, r3
+; CHECK-LINUX32-P9-NEXT:    stw r3, 20(r1)
+; CHECK-LINUX32-P9-NEXT:    stw r4, 16(r1)
+; CHECK-LINUX32-P9-NEXT:    stw r5, 12(r1)
+; CHECK-LINUX32-P9-NEXT:    bl memmove
+; CHECK-LINUX32-P9-NEXT:    mr r3, r30
+; CHECK-LINUX32-P9-NEXT:    lwz r30, 24(r1) # 4-byte Folded Reload
+; CHECK-LINUX32-P9-NEXT:    lwz r0, 36(r1)
+; CHECK-LINUX32-P9-NEXT:    addi r1, r1, 32
+; CHECK-LINUX32-P9-NEXT:    mtlr r0
+; CHECK-LINUX32-P9-NEXT:    blr
+entry:
+  %destination.addr = alloca ptr, align 4
+  %source.addr = alloca ptr, align 4
+  %num.addr = alloca i32, align 4
+  store ptr %destination, ptr %destination.addr, align 4
+  store ptr %source, ptr %source.addr, align 4
+  store i32 %num, ptr %num.addr, align 4
+  %0 = load ptr, ptr %destination.addr, align 4
+  %1 = load ptr, ptr %source.addr, align 4
+  %2 = load i32, ptr %num.addr, align 4
+  call void @llvm.memmove.p0.p0.i32(ptr align 1 %0, ptr align 1 %1, i32 %2, i1 false)
+  ret ptr %0
+}
+
+declare void @llvm.memmove.p0.p0.i32(ptr writeonly captures(none), ptr readonly captures(none), i32, i1 immarg)

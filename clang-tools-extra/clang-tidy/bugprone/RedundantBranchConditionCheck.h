@@ -17,7 +17,7 @@ namespace clang::tidy::bugprone {
 /// in the outer `if` statement and were not changed.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/redundant-branch-condition.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/bugprone/redundant-branch-condition.html
 class RedundantBranchConditionCheck : public ClangTidyCheck {
 public:
   RedundantBranchConditionCheck(StringRef Name, ClangTidyContext *Context)

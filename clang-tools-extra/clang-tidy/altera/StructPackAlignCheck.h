@@ -17,7 +17,7 @@ namespace clang::tidy::altera {
 /// packing and/or aligning of said structs as needed.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/altera/struct-pack-align.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/altera/struct-pack-align.html
 class StructPackAlignCheck : public ClangTidyCheck {
 public:
   StructPackAlignCheck(StringRef Name, ClangTidyContext *Context)

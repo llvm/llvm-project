@@ -28,6 +28,7 @@
 #include "llvm/Config/llvm-config.h"
 #include "llvm/LTO/LTO.h"
 #include "llvm/Object/COFFImportFile.h"
+#include "llvm/Object/IRObjectFile.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/Option.h"
@@ -256,6 +257,24 @@ MemoryBufferRef LinkerDriver::takeBuffer(std::unique_ptr<MemoryBuffer> mb) {
   return mbref;
 }
 
+static InputFile *tryCreateFatLTOFile(COFFLinkerContext &ctx,
+                                      MemoryBufferRef mb, StringRef archiveName,
+                                      uint64_t offsetInArchive, bool lazy) {
+  if (ctx.config.fatLTOObjects) {
+    Expected<MemoryBufferRef> fatLTOData =
+        IRObjectFile::findBitcodeInMemBuffer(mb);
+
+    if (!errorToBool(fatLTOData.takeError())) {
+      return BitcodeFile::create(ctx, *fatLTOData, archiveName, offsetInArchive,
+                                 lazy);
+    }
+  }
+
+  InputFile *obj = ObjFile::create(ctx, mb, lazy);
+  obj->parentName = archiveName;
+  return obj;
+}
+
 void LinkerDriver::addBuffer(std::unique_ptr<MemoryBuffer> mb,
                              bool wholeArchive, bool lazy) {
   StringRef filename = mb->getBufferIdentifier();
@@ -289,7 +308,10 @@ void LinkerDriver::addBuffer(std::unique_ptr<MemoryBuffer> mb,
   case file_magic::bitcode:
     addFile(BitcodeFile::create(ctx, mbref, "", 0, lazy));
     break;
-  case file_magic::coff_object:
+  case file_magic::coff_object: {
+    addFile(tryCreateFatLTOFile(ctx, mbref, "", 0, lazy));
+    break;
+  }
   case file_magic::coff_import_library:
     addFile(ObjFile::create(ctx, mbref, lazy));
     break;
@@ -374,7 +396,8 @@ void LinkerDriver::addArchiveBuffer(MemoryBufferRef mb, StringRef symName,
 
   InputFile *obj;
   if (magic == file_magic::coff_object) {
-    obj = ObjFile::create(ctx, mb);
+    obj = tryCreateFatLTOFile(ctx, mb, parentName, offsetInArchive,
+                              /*lazy=*/false);
   } else if (magic == file_magic::bitcode) {
     obj = BitcodeFile::create(ctx, mb, parentName, offsetInArchive,
                               /*lazy=*/false);
@@ -404,7 +427,11 @@ void LinkerDriver::enqueueArchiveMember(const Archive::Child &c,
                                         const Archive::Symbol &sym,
                                         StringRef parentName) {
 
-  auto reportBufferError = [=](Error &&e, StringRef childName) {
+  auto reportBufferError = [=](Error &&e) {
+    StringRef childName =
+      CHECK(c.getName(),
+            "could not get child name for archive " + parentName +
+            " while loading symbol " + toCOFFString(ctx, sym));
     Fatal(ctx) << "could not get the buffer for the member defining symbol "
                << &sym << ": " << parentName << "(" << childName
                << "): " << std::move(e);
@@ -414,7 +441,7 @@ void LinkerDriver::enqueueArchiveMember(const Archive::Child &c,
     uint64_t offsetInArchive = c.getChildOffset();
     Expected<MemoryBufferRef> mbOrErr = c.getMemoryBufferRef();
     if (!mbOrErr)
-      reportBufferError(mbOrErr.takeError(), check(c.getFullName()));
+      reportBufferError(mbOrErr.takeError());
     MemoryBufferRef mb = mbOrErr.get();
     enqueueTask([=]() {
       llvm::TimeTraceScope timeScope("Archive: ", mb.getBufferIdentifier());
@@ -433,7 +460,7 @@ void LinkerDriver::enqueueArchiveMember(const Archive::Child &c,
   enqueueTask([=]() {
     auto mbOrErr = future->get();
     if (mbOrErr.second)
-      reportBufferError(errorCodeToError(mbOrErr.second), childName);
+      reportBufferError(errorCodeToError(mbOrErr.second));
     llvm::TimeTraceScope timeScope("Archive: ",
                                    mbOrErr.first->getBufferIdentifier());
     ctx.driver.addThinArchiveBuffer(takeBuffer(std::move(mbOrErr.first)),
@@ -1485,6 +1512,14 @@ getVFS(COFFLinkerContext &ctx, const opt::InputArgList &args) {
   return nullptr;
 }
 
+static StringRef DllDefaultEntryPoint(MachineTypes machine, bool mingw) {
+  if (mingw) {
+    return (machine == I386) ? "_DllMainCRTStartup@12" : "DllMainCRTStartup";
+  } else {
+    return (machine == I386) ? "__DllMainCRTStartup@12" : "_DllMainCRTStartup";
+  }
+}
+
 constexpr const char *lldsaveTempsValues[] = {
     "resolution", "preopt",     "promote", "internalize",  "import",
     "opt",        "precodegen", "prelink", "combinedindex"};
@@ -2100,18 +2135,26 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   config->dtltoDistributor = args.getLastArgValue(OPT_thinlto_distributor);
 
   // Handle /thinlto-distributor-arg:<arg>
-  for (auto *arg : args.filtered(OPT_thinlto_distributor_arg))
-    config->dtltoDistributorArgs.push_back(arg->getValue());
+  config->dtltoDistributorArgs =
+      args::getStrings(args, OPT_thinlto_distributor_arg);
 
   // Handle /thinlto-remote-compiler:<path>
-  config->dtltoCompiler = args.getLastArgValue(OPT_thinlto_compiler);
+  config->dtltoCompiler = args.getLastArgValue(OPT_thinlto_remote_compiler);
   if (!config->dtltoDistributor.empty() && config->dtltoCompiler.empty())
     Err(ctx) << "A value must be specified for /thinlto-remote-compiler if "
                 "/thinlto-distributor is specified.";
 
+  // Handle /thinlto-remote-compiler-prepend-arg:<arg>
+  config->dtltoCompilerPrependArgs =
+      args::getStrings(args, OPT_thinlto_remote_compiler_prepend_arg);
+
   // Handle /thinlto-remote-compiler-arg:<arg>
-  for (auto *arg : args.filtered(OPT_thinlto_compiler_arg))
-    config->dtltoCompilerArgs.push_back(arg->getValue());
+  config->dtltoCompilerArgs =
+      args::getStrings(args, OPT_thinlto_remote_compiler_arg);
+
+  // Handle /fat-lto-objects
+  config->fatLTOObjects =
+      args.hasFlag(OPT_fat_lto_objects, OPT_fat_lto_objects_no, false);
 
   // Handle /dwodir
   config->dwoDir = args.getLastArgValue(OPT_dwodir);
@@ -2338,6 +2381,9 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
       config->is64() &&
       args.hasFlag(OPT_highentropyva, OPT_highentropyva_no, true);
 
+  // Handle /nodbgdirmerge
+  config->mergeDebugDirectory = !args.hasArg(OPT_nodbgdirmerge);
+
   if (!config->dynamicBase &&
       (config->machine == ARMNT || isAnyArm64(config->machine)))
     Err(ctx) << "/dynamicbase:no is not compatible with "
@@ -2397,8 +2443,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
       symtab.entry = symtab.addGCRoot(symtab.mangle(arg->getValue()), true);
     } else if (!symtab.entry && !config->noEntry) {
       if (args.hasArg(OPT_dll)) {
-        StringRef s = (config->machine == I386) ? "__DllMainCRTStartup@12"
-                                                : "_DllMainCRTStartup";
+        StringRef s = DllDefaultEntryPoint(config->machine, config->mingw);
         symtab.entry = symtab.addGCRoot(s, true);
       } else if (config->driverWdm) {
         // /driver:wdm implies /entry:_NtProcessStartup

@@ -635,7 +635,7 @@ public:
     B.setChangeObserver(*this);
   }
 
-  ~InstManager() { B.stopObservingChanges(); }
+  ~InstManager() override { B.stopObservingChanges(); }
 
   void createdInstr(MachineInstr &MI) override { InstList.insert(&MI); }
   void erasingInstr(MachineInstr &MI) override {}

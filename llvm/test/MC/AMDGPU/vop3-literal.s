@@ -3,6 +3,7 @@
 // RUN: not llvm-mc -triple=amdgcn %s -show-encoding -mcpu=gfx900 | FileCheck %s -check-prefix=GFX9
 // RUN: not llvm-mc -triple=amdgcn %s -show-encoding -mcpu=gfx1010 -mattr=+wavefrontsize64 | FileCheck %s -check-prefix=GFX10
 // RUN: not llvm-mc -triple=amdgcn %s -show-encoding -mcpu=gfx1250 -mattr=+wavefrontsize64 | FileCheck %s -check-prefix=GFX1250
+// RUN: not llvm-mc -triple=amdgcn %s -show-encoding -mcpu=gfx1250 -mattr=+wavefrontsize64 | %extract-encodings | llvm-mc -triple=amdgcn -mcpu=gfx1250 -mattr=+wavefrontsize64 -disassemble -show-encoding | FileCheck --check-prefixes=GFX1250 %s
 
 // RUN: not llvm-mc -triple=amdgcn %s -filetype=null -no-warn 2>&1 -mcpu=gfx900 | FileCheck %s -implicit-check-not=error: -check-prefix=GFX9-ERR
 // RUN: not llvm-mc -triple=amdgcn %s -filetype=null -no-warn 2>&1 -mcpu=gfx1010 -mattr=+wavefrontsize64 | FileCheck %s -implicit-check-not=error: -check-prefix=GFX10-ERR
@@ -185,7 +186,7 @@ v_add_f16_e64 v0, 0xfe0b, neg(0xfe0b)
 
 v_add_f64 v[0:1], 1.23456, v[0:1]
 // GFX10: v_add_f64 v[0:1], 0x3ff3c0c1, v[0:1]    ; encoding: [0x00,0x00,0x64,0xd5,0xff,0x00,0x02,0x00,0xc1,0xc0,0xf3,0x3f]
-// GFX1250: v_add_f64_e32 v[0:1], lit64(0x3ff3c0c1fc8f3238), v[0:1] ; encoding: [0xfe,0x00,0x00,0x04,0x38,0x32,0x8f,0xfc,0xc1,0xc0,0xf3,0x3f]
+// GFX1250: v_add_f64_e32 v[0:1], 0x3ff3c0c1fc8f3238, v[0:1] ; encoding: [0xfe,0x00,0x00,0x04,0x38,0x32,0x8f,0xfc,0xc1,0xc0,0xf3,0x3f]
 // GFX9-ERR: :[[@LINE-3]]:19: error: literal operands are not supported
 
 v_add_f64 v[0:1], v[0:1], -abs(1.23456)

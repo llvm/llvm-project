@@ -10,8 +10,5 @@ static_library("zircon") {
     "//clang/lib/Lex",
     "//llvm/lib/Support",
   ]
-  sources = [
-    "TemporaryObjectsCheck.cpp",
-    "ZirconTidyModule.cpp",
-  ]
+  sources = [ "ZirconTidyModule.cpp" ]
 }
