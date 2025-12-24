@@ -13,8 +13,10 @@ declare void @usevec4(<2 x i4>)
 
 define i16 @t0(i8 %x) {
 ; CHECK-LABEL: @t0(
-; CHECK-NEXT:    [[TMP1:%.*]] = ashr i8 [[X:%.*]], 4
-; CHECK-NEXT:    [[C:%.*]] = sext i8 [[TMP1]] to i16
+; CHECK-NEXT:    [[A:%.*]] = lshr i8 [[X:%.*]], 4
+; CHECK-NEXT:    [[B:%.*]] = zext nneg i8 [[A]] to i16
+; CHECK-NEXT:    [[SEXT:%.*]] = shl nuw i16 [[B]], 12
+; CHECK-NEXT:    [[C:%.*]] = ashr exact i16 [[SEXT]], 12
 ; CHECK-NEXT:    ret i16 [[C]]
 ;
   %a = lshr i8 %x, 4
@@ -25,8 +27,10 @@ define i16 @t0(i8 %x) {
 
 define i16 @t1(i8 %x) {
 ; CHECK-LABEL: @t1(
-; CHECK-NEXT:    [[TMP1:%.*]] = ashr i8 [[X:%.*]], 5
-; CHECK-NEXT:    [[C:%.*]] = sext i8 [[TMP1]] to i16
+; CHECK-NEXT:    [[A:%.*]] = lshr i8 [[X:%.*]], 5
+; CHECK-NEXT:    [[B:%.*]] = zext nneg i8 [[A]] to i16
+; CHECK-NEXT:    [[SEXT:%.*]] = shl nuw i16 [[B]], 13
+; CHECK-NEXT:    [[C:%.*]] = ashr exact i16 [[SEXT]], 13
 ; CHECK-NEXT:    ret i16 [[C]]
 ;
   %a = lshr i8 %x, 5
@@ -37,8 +41,10 @@ define i16 @t1(i8 %x) {
 
 define i16 @t2(i7 %x) {
 ; CHECK-LABEL: @t2(
-; CHECK-NEXT:    [[TMP1:%.*]] = ashr i7 [[X:%.*]], 3
-; CHECK-NEXT:    [[C:%.*]] = sext i7 [[TMP1]] to i16
+; CHECK-NEXT:    [[A:%.*]] = lshr i7 [[X:%.*]], 3
+; CHECK-NEXT:    [[B:%.*]] = zext nneg i7 [[A]] to i16
+; CHECK-NEXT:    [[SEXT:%.*]] = shl nuw i16 [[B]], 12
+; CHECK-NEXT:    [[C:%.*]] = ashr exact i16 [[SEXT]], 12
 ; CHECK-NEXT:    ret i16 [[C]]
 ;
   %a = lshr i7 %x, 3
@@ -52,8 +58,9 @@ define i16 @t2(i7 %x) {
 define i16 @n3(i8 %x) {
 ; CHECK-LABEL: @n3(
 ; CHECK-NEXT:    [[A:%.*]] = lshr i8 [[X:%.*]], 3
-; CHECK-NEXT:    [[B:%.*]] = trunc i8 [[A]] to i4
-; CHECK-NEXT:    [[C:%.*]] = sext i4 [[B]] to i16
+; CHECK-NEXT:    [[B:%.*]] = zext nneg i8 [[A]] to i16
+; CHECK-NEXT:    [[SEXT:%.*]] = shl i16 [[B]], 12
+; CHECK-NEXT:    [[C:%.*]] = ashr exact i16 [[SEXT]], 12
 ; CHECK-NEXT:    ret i16 [[C]]
 ;
   %a = lshr i8 %x, 3
@@ -126,8 +133,9 @@ define i16 @t8_extrause1(i8 %x) {
 ; CHECK-LABEL: @t8_extrause1(
 ; CHECK-NEXT:    [[A:%.*]] = lshr i8 [[X:%.*]], 4
 ; CHECK-NEXT:    call void @use8(i8 [[A]])
-; CHECK-NEXT:    [[TMP1:%.*]] = ashr i8 [[X]], 4
-; CHECK-NEXT:    [[C:%.*]] = sext i8 [[TMP1]] to i16
+; CHECK-NEXT:    [[B:%.*]] = zext nneg i8 [[A]] to i16
+; CHECK-NEXT:    [[SEXT:%.*]] = shl nuw i16 [[B]], 12
+; CHECK-NEXT:    [[C:%.*]] = ashr exact i16 [[SEXT]], 12
 ; CHECK-NEXT:    ret i16 [[C]]
 ;
   %a = lshr i8 %x, 4 ; has extra use, but we can deal with that

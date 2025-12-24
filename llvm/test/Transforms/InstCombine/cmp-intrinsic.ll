@@ -620,7 +620,7 @@ define i1 @trunc_cttz_false_ult_other_i32_i6_extra_use(i32 %x) {
 ; CHECK-NEXT:    [[TZ:%.*]] = tail call range(i32 0, 33) i32 @llvm.cttz.i32(i32 [[X:%.*]], i1 false)
 ; CHECK-NEXT:    [[TRUNC:%.*]] = trunc nuw i32 [[TZ]] to i6
 ; CHECK-NEXT:    call void @use6(i6 [[TRUNC]])
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i6 [[TRUNC]], 7
+; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ult i32 [[TZ]], 7
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %tz = tail call i32 @llvm.cttz.i32(i32 %x, i1 false)
@@ -722,7 +722,7 @@ define i1 @trunc_ctlz_false_ugt_other_i32_i6_extra_use(i32 %x) {
 ; CHECK-NEXT:    [[LZ:%.*]] = tail call range(i32 0, 33) i32 @llvm.ctlz.i32(i32 [[X:%.*]], i1 false)
 ; CHECK-NEXT:    [[TRUNC:%.*]] = trunc nuw i32 [[LZ]] to i6
 ; CHECK-NEXT:    call void @use6(i6 [[TRUNC]])
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i6 [[TRUNC]], 4
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[X]], 134217728
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %lz = tail call i32 @llvm.ctlz.i32(i32 %x, i1 false)

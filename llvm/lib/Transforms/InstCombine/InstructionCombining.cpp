@@ -328,7 +328,7 @@ bool InstCombinerImpl::shouldChangeType(unsigned FromWidth,
   // Otherwise, if both are illegal, do not increase the size of the result. We
   // do allow things like i160 -> i64, but not i64 -> i160.
   if (!FromLegal && !ToLegal && ToWidth > FromWidth)
-    return false;
+    return isDesirableIntType(ToWidth);
 
   return true;
 }

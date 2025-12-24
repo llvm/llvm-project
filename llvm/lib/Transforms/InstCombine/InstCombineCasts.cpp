@@ -234,17 +234,10 @@ Instruction *InstCombinerImpl::commonCastTransforms(CastInst &CI) {
   // If we are casting a PHI, then fold the cast into the PHI.
   if (auto *PN = dyn_cast<PHINode>(Src)) {
     // Don't do this if it would create a PHI node with an illegal type from a
-    // legal type. However, allow this if both from/to types are illegal, and
-    // the destination type is a desirable one.
-    auto *SrcTy = Src->getType();
-    auto *DstTy = CI.getType();
-    auto BothTypesIllegal = [&](const auto *SrcTy, const auto *DstTy) {
-      return !DL.isLegalInteger(SrcTy->getScalarSizeInBits()) &&
-             !DL.isLegalInteger(DstTy->getScalarSizeInBits()) &&
-             isDesirableIntType(DstTy->getScalarSizeInBits());
-    };
-    if (!SrcTy->isIntegerTy() || !DstTy->isIntegerTy() ||
-        shouldChangeType(SrcTy, DstTy) || BothTypesIllegal(SrcTy, DstTy))
+    // legal type. Allow this if both from/to types are illegal, and the
+    // destination type is a desirable one.
+    if (!Src->getType()->isIntegerTy() || !CI.getType()->isIntegerTy() ||
+        shouldChangeType(CI.getSrcTy(), CI.getType()))
       if (Instruction *NV = foldOpIntoPhi(CI, PN))
         return NV;
   }
