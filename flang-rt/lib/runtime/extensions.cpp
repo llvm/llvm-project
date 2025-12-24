@@ -471,7 +471,7 @@ void RTNAME(ShowDescriptor)(const Fortran::runtime::Descriptor *descr) {
   if (descr) {
     descr->Dump(stderr, /*dumpRawType=*/false);
   } else {
-    std::fprintf(stderr, "NULL\n");
+    std::fprintf(stderr, "NULL or not a descriptor\n");
   }
 }
 

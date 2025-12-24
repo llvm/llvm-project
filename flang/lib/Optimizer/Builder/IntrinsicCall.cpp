@@ -729,7 +729,7 @@ static constexpr IntrinsicHandler handlers[]{
     {"shiftr", &I::genShift<mlir::arith::ShRUIOp>},
     {"show_descriptor",
      &I::genShowDescriptor,
-     {{{"d", asBox}}},
+     {{{"d", asInquired}}},
      /*isElemental=*/false},
     {"sign", &I::genSign},
     {"signal",
@@ -7893,9 +7893,19 @@ void IntrinsicLibrary::genShowDescriptor(
   assert(args.size() == 1 && "expected single argument for show_descriptor");
   const mlir::Value descriptor = fir::getBase(args[0]);
 
-  assert(fir::isa_box_type(descriptor.getType()) &&
-         "argument must have been lowered to box type");
-  fir::runtime::genShowDescriptor(builder, loc, descriptor);
+  // If it's already a reference to a box, pass it directly.
+  if (fir::isa_ref_type(descriptor.getType()) &&
+      fir::isa_box_type(fir::unwrapRefType(descriptor.getType()))) {
+    fir::runtime::genShowDescriptor(builder, loc, descriptor);
+    return;
+  }
+
+  assert(!fir::isa_box_type(descriptor.getType()) &&
+         "argument must be a reference to a box type");
+
+  // If descriptor is not a box type (and not ref<box>), pass null.
+  mlir::Value nullValue = builder.createNullConstant(loc, fir::BoxType::get(builder.getNoneType()));
+  fir::runtime::genShowDescriptor(builder, loc, nullValue);
 }
 
 // SIGNAL
