@@ -515,6 +515,10 @@ template <> Expected<CommentInfo *> getCommentInfo(VarInfo *I) {
   return &I->Description.emplace_back();
 }
 
+template <> Expected<CommentInfo *> getCommentInfo(FriendInfo *I) {
+  return &I->Description.emplace_back();
+}
+
 // When readSubBlock encounters a TypeInfo sub-block, it calls addTypeInfo on
 // the parent block to set it. The template specializations define what to do
 // for each supported parent block.
