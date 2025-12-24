@@ -10,7 +10,6 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_ANONYMOUSNAMESPACEINHEADERCHECK_H
 
 #include "../ClangTidyCheck.h"
-#include "../utils/FileExtensionsUtils.h"
 
 namespace clang::tidy::misc {
 

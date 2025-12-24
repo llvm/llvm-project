@@ -8,7 +8,6 @@
 
 #include "../ClangTidy.h"
 #include "../ClangTidyModule.h"
-#include "../ClangTidyModuleRegistry.h"
 #include "../misc/AnonymousNamespaceInHeaderCheck.h"
 #include "../misc/MultipleInheritanceCheck.h"
 #include "DefaultArgumentsCallsCheck.h"
