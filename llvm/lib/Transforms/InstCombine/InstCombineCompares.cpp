@@ -8789,9 +8789,10 @@ Instruction *InstCombinerImpl::visitFCmpInst(FCmpInst &I) {
     if (SelectInst *SI = dyn_cast<SelectInst>(I.user_back())) {
       Value *A, *B;
       SelectPatternResult SPR = matchSelectPattern(SI, A, B);
-      if (SPR.Flavor != SPF_UNKNOWN &&
-          !((SPR.Flavor == SPF_FMAXNUM || SPR.Flavor == SPF_FMINNUM) &&
-            isMinMaxCmpSelectEliminable(SPR.Flavor, A, B)))
+      bool IsRedundantMinMaxClamp =
+          (SPR.Flavor == SPF_FMAXNUM || SPR.Flavor == SPF_FMINNUM) &&
+          isMinMaxCmpSelectEliminable(SPR.Flavor, A, B);
+      if (SPR.Flavor != SPF_UNKNOWN && !IsRedundantMinMaxClamp)
         return nullptr;
     }
 
