@@ -286,3 +286,480 @@ define float @ret_mul_f32_nan(float %arg0) {
   ret float %call
 }
 
+define float @ret_fmul_f32_known_zero_or_nan_lhs(float nofpclass(inf norm sub) %arg0, float %arg1) {
+; CHECK-LABEL: define float @ret_fmul_f32_known_zero_or_nan_lhs(
+; CHECK-SAME: float nofpclass(inf sub norm) [[ARG0:%.*]], float [[ARG1:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[FMUL:%.*]] = fmul float [[ARG0]], [[ARG1]]
+; CHECK-NEXT:    ret float [[FMUL]]
+;
+  %fmul = fmul float %arg0, %arg1
+  ret float %fmul
+}
+
+define float @ret_fmul_f32_known_zero_or_nan_rhs(float %arg0, float nofpclass(inf norm sub) %arg1) {
+; CHECK-LABEL: define float @ret_fmul_f32_known_zero_or_nan_rhs(
+; CHECK-SAME: float [[ARG0:%.*]], float nofpclass(inf sub norm) [[ARG1:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[FMUL:%.*]] = fmul float [[ARG0]], [[ARG1]]
+; CHECK-NEXT:    ret float [[FMUL]]
+;
+  %fmul = fmul float %arg0, %arg1
+  ret float %fmul
+}
+
+define float @ret_fmul_f32_known_zero_lhs(float nofpclass(nan inf norm sub) %arg0, float %arg1) {
+; CHECK-LABEL: define float @ret_fmul_f32_known_zero_lhs(
+; CHECK-SAME: float nofpclass(nan inf sub norm) [[ARG0:%.*]], float [[ARG1:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[FMUL:%.*]] = fmul float [[ARG0]], [[ARG1]]
+; CHECK-NEXT:    ret float [[FMUL]]
+;
+  %fmul = fmul float %arg0, %arg1
+  ret float %fmul
+}
+
+define float @ret_fmul_f32_known_zero_rhs(float %arg0, float nofpclass(nan inf norm sub) %arg1) {
+; CHECK-LABEL: define float @ret_fmul_f32_known_zero_rhs(
+; CHECK-SAME: float [[ARG0:%.*]], float nofpclass(nan inf sub norm) [[ARG1:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[FMUL:%.*]] = fmul float [[ARG0]], [[ARG1]]
+; CHECK-NEXT:    ret float [[FMUL]]
+;
+  %fmul = fmul float %arg0, %arg1
+  ret float %fmul
+}
+
+define float @ret_fmul_f32_known_pzero_or_nan_lhs(float nofpclass(inf norm sub nzero) %arg0, float %arg1) {
+; CHECK-LABEL: define float @ret_fmul_f32_known_pzero_or_nan_lhs(
+; CHECK-SAME: float nofpclass(inf nzero sub norm) [[ARG0:%.*]], float [[ARG1:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[FMUL:%.*]] = fmul float [[ARG0]], [[ARG1]]
+; CHECK-NEXT:    ret float [[FMUL]]
+;
+  %fmul = fmul float %arg0, %arg1
+  ret float %fmul
+}
+
+define float @ret_fmul_f32_known_pzero_or_nan_rhs(float %arg0, float nofpclass(inf norm sub nzero) %arg1) {
+; CHECK-LABEL: define float @ret_fmul_f32_known_pzero_or_nan_rhs(
+; CHECK-SAME: float [[ARG0:%.*]], float nofpclass(inf nzero sub norm) [[ARG1:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[FMUL:%.*]] = fmul float [[ARG0]], [[ARG1]]
+; CHECK-NEXT:    ret float [[FMUL]]
+;
+  %fmul = fmul float %arg0, %arg1
+  ret float %fmul
+}
+
+define float @ret_fmul_f32_known_pzero_lhs(float nofpclass(nan inf norm sub nzero) %arg0, float %arg1) {
+; CHECK-LABEL: define float @ret_fmul_f32_known_pzero_lhs(
+; CHECK-SAME: float nofpclass(nan inf nzero sub norm) [[ARG0:%.*]], float [[ARG1:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[FMUL:%.*]] = fmul float [[ARG0]], [[ARG1]]
+; CHECK-NEXT:    ret float [[FMUL]]
+;
+  %fmul = fmul float %arg0, %arg1
+  ret float %fmul
+}
+
+define float @ret_fmul_f32_known_pzero_rhs(float %arg0, float nofpclass(nan inf norm sub nzero) %arg1) {
+; CHECK-LABEL: define float @ret_fmul_f32_known_pzero_rhs(
+; CHECK-SAME: float [[ARG0:%.*]], float nofpclass(nan inf nzero sub norm) [[ARG1:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[FMUL:%.*]] = fmul float [[ARG0]], [[ARG1]]
+; CHECK-NEXT:    ret float [[FMUL]]
+;
+  %fmul = fmul float %arg0, %arg1
+  ret float %fmul
+}
+
+define float @ret_fmul_f32_known_nzero_or_nan_lhs(float nofpclass(inf norm sub pzero) %arg0, float %arg1) {
+; CHECK-LABEL: define float @ret_fmul_f32_known_nzero_or_nan_lhs(
+; CHECK-SAME: float nofpclass(inf pzero sub norm) [[ARG0:%.*]], float [[ARG1:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[FMUL:%.*]] = fmul float [[ARG0]], [[ARG1]]
+; CHECK-NEXT:    ret float [[FMUL]]
+;
+  %fmul = fmul float %arg0, %arg1
+  ret float %fmul
+}
+
+define float @ret_fmul_f32_known_nzero_or_nan_rhs(float %arg0, float nofpclass(inf norm sub pzero) %arg1) {
+; CHECK-LABEL: define float @ret_fmul_f32_known_nzero_or_nan_rhs(
+; CHECK-SAME: float [[ARG0:%.*]], float nofpclass(inf pzero sub norm) [[ARG1:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[FMUL:%.*]] = fmul float [[ARG0]], [[ARG1]]
+; CHECK-NEXT:    ret float [[FMUL]]
+;
+  %fmul = fmul float %arg0, %arg1
+  ret float %fmul
+}
+
+define float @ret_fmul_f32_known_nzero_lhs(float nofpclass(nan inf norm sub pzero) %arg0, float %arg1) {
+; CHECK-LABEL: define float @ret_fmul_f32_known_nzero_lhs(
+; CHECK-SAME: float nofpclass(nan inf pzero sub norm) [[ARG0:%.*]], float [[ARG1:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[FMUL:%.*]] = fmul float [[ARG0]], [[ARG1]]
+; CHECK-NEXT:    ret float [[FMUL]]
+;
+  %fmul = fmul float %arg0, %arg1
+  ret float %fmul
+}
+
+define float @ret_fmul_f32_known_nzero_rhs(float %arg0, float nofpclass(nan inf norm sub pzero) %arg1) {
+; CHECK-LABEL: define float @ret_fmul_f32_known_nzero_rhs(
+; CHECK-SAME: float [[ARG0:%.*]], float nofpclass(nan inf pzero sub norm) [[ARG1:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[FMUL:%.*]] = fmul float [[ARG0]], [[ARG1]]
+; CHECK-NEXT:    ret float [[FMUL]]
+;
+  %fmul = fmul float %arg0, %arg1
+  ret float %fmul
+}
+
+define float @ret_fmul_f32_known_inf_or_nan_lhs(float nofpclass(zero norm sub) %arg0, float %arg1) {
+; CHECK-LABEL: define float @ret_fmul_f32_known_inf_or_nan_lhs(
+; CHECK-SAME: float nofpclass(zero sub norm) [[ARG0:%.*]], float [[ARG1:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[FMUL:%.*]] = fmul float [[ARG0]], [[ARG1]]
+; CHECK-NEXT:    ret float [[FMUL]]
+;
+  %fmul = fmul float %arg0, %arg1
+  ret float %fmul
+}
+
+define float @ret_fmul_f32_known_inf_or_nan_rhs(float %arg0, float nofpclass(zero norm sub) %arg1) {
+; CHECK-LABEL: define float @ret_fmul_f32_known_inf_or_nan_rhs(
+; CHECK-SAME: float [[ARG0:%.*]], float nofpclass(zero sub norm) [[ARG1:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[FMUL:%.*]] = fmul float [[ARG0]], [[ARG1]]
+; CHECK-NEXT:    ret float [[FMUL]]
+;
+  %fmul = fmul float %arg0, %arg1
+  ret float %fmul
+}
+
+define float @ret_fmul_f32_known_inf_lhs(float nofpclass(nan zero norm sub) %arg0, float %arg1) {
+; CHECK-LABEL: define float @ret_fmul_f32_known_inf_lhs(
+; CHECK-SAME: float nofpclass(nan zero sub norm) [[ARG0:%.*]], float [[ARG1:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[FMUL:%.*]] = fmul float [[ARG0]], [[ARG1]]
+; CHECK-NEXT:    ret float [[FMUL]]
+;
+  %fmul = fmul float %arg0, %arg1
+  ret float %fmul
+}
+
+define float @ret_fmul_f32_known_inf_rhs(float %arg0, float nofpclass(nan zero norm sub) %arg1) {
+; CHECK-LABEL: define float @ret_fmul_f32_known_inf_rhs(
+; CHECK-SAME: float [[ARG0:%.*]], float nofpclass(nan zero sub norm) [[ARG1:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[FMUL:%.*]] = fmul float [[ARG0]], [[ARG1]]
+; CHECK-NEXT:    ret float [[FMUL]]
+;
+  %fmul = fmul float %arg0, %arg1
+  ret float %fmul
+}
+
+define float @ret_fmul_f32_known_pinf_or_nan_lhs(float nofpclass(ninf zero norm sub) %arg0, float %arg1) {
+; CHECK-LABEL: define float @ret_fmul_f32_known_pinf_or_nan_lhs(
+; CHECK-SAME: float nofpclass(ninf zero sub norm) [[ARG0:%.*]], float [[ARG1:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[FMUL:%.*]] = fmul float [[ARG0]], [[ARG1]]
+; CHECK-NEXT:    ret float [[FMUL]]
+;
+  %fmul = fmul float %arg0, %arg1
+  ret float %fmul
+}
+
+define float @ret_fmul_f32_known_pinf_or_nan_rhs(float %arg0, float nofpclass(ninf zero norm sub) %arg1) {
+; CHECK-LABEL: define float @ret_fmul_f32_known_pinf_or_nan_rhs(
+; CHECK-SAME: float [[ARG0:%.*]], float nofpclass(ninf zero sub norm) [[ARG1:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[FMUL:%.*]] = fmul float [[ARG0]], [[ARG1]]
+; CHECK-NEXT:    ret float [[FMUL]]
+;
+  %fmul = fmul float %arg0, %arg1
+  ret float %fmul
+}
+
+define float @ret_fmul_f32_known_ninf_or_nan_lhs(float nofpclass(pinf zero norm sub) %arg0, float %arg1) {
+; CHECK-LABEL: define float @ret_fmul_f32_known_ninf_or_nan_lhs(
+; CHECK-SAME: float nofpclass(pinf zero sub norm) [[ARG0:%.*]], float [[ARG1:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[FMUL:%.*]] = fmul float [[ARG0]], [[ARG1]]
+; CHECK-NEXT:    ret float [[FMUL]]
+;
+  %fmul = fmul float %arg0, %arg1
+  ret float %fmul
+}
+
+define float @ret_fmul_f32_known_ninf_or_nan_rhs(float %arg0, float nofpclass(pinf zero norm sub) %arg1) {
+; CHECK-LABEL: define float @ret_fmul_f32_known_ninf_or_nan_rhs(
+; CHECK-SAME: float [[ARG0:%.*]], float nofpclass(pinf zero sub norm) [[ARG1:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[FMUL:%.*]] = fmul float [[ARG0]], [[ARG1]]
+; CHECK-NEXT:    ret float [[FMUL]]
+;
+  %fmul = fmul float %arg0, %arg1
+  ret float %fmul
+}
+
+; -> nan
+define float @ret_known_inf_mul_known_zero(float nofpclass(nan norm sub zero) %arg0, float nofpclass(nan inf norm sub) %arg1) {
+; CHECK-LABEL: define float @ret_known_inf_mul_known_zero(
+; CHECK-SAME: float nofpclass(nan zero sub norm) [[ARG0:%.*]], float nofpclass(nan inf sub norm) [[ARG1:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[FMUL:%.*]] = fmul float [[ARG0]], [[ARG1]]
+; CHECK-NEXT:    ret float [[FMUL]]
+;
+  %fmul = fmul float %arg0, %arg1
+  ret float %fmul
+}
+
+; -> nan
+define float @ret_known_inf_or_nan_mul_known_zero(float nofpclass(norm sub zero) %arg0, float nofpclass(nan inf norm sub) %arg1) {
+; CHECK-LABEL: define float @ret_known_inf_or_nan_mul_known_zero(
+; CHECK-SAME: float nofpclass(zero sub norm) [[ARG0:%.*]], float nofpclass(nan inf sub norm) [[ARG1:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[FMUL:%.*]] = fmul float [[ARG0]], [[ARG1]]
+; CHECK-NEXT:    ret float [[FMUL]]
+;
+  %fmul = fmul float %arg0, %arg1
+  ret float %fmul
+}
+
+; -> nan
+define float @ret_known_inf_mul_known_zero_or_nan(float nofpclass(nan norm sub zero) %arg0, float nofpclass(inf norm sub) %arg1) {
+; CHECK-LABEL: define float @ret_known_inf_mul_known_zero_or_nan(
+; CHECK-SAME: float nofpclass(nan zero sub norm) [[ARG0:%.*]], float nofpclass(inf sub norm) [[ARG1:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[FMUL:%.*]] = fmul float [[ARG0]], [[ARG1]]
+; CHECK-NEXT:    ret float [[FMUL]]
+;
+  %fmul = fmul float %arg0, %arg1
+  ret float %fmul
+}
+
+; -> nan
+define float @ret_known_ninf_mul_known_zero(float nofpclass(nan pinf norm sub zero) %arg0, float nofpclass(nan inf norm sub) %arg1) {
+; CHECK-LABEL: define float @ret_known_ninf_mul_known_zero(
+; CHECK-SAME: float nofpclass(nan pinf zero sub norm) [[ARG0:%.*]], float nofpclass(nan inf sub norm) [[ARG1:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[FMUL:%.*]] = fmul float [[ARG0]], [[ARG1]]
+; CHECK-NEXT:    ret float [[FMUL]]
+;
+  %fmul = fmul float %arg0, %arg1
+  ret float %fmul
+}
+
+; -> nan
+define float @ret_known_pinf_mul_known_zero(float nofpclass(nan ninf norm sub zero) %arg0, float nofpclass(nan inf norm sub) %arg1) {
+; CHECK-LABEL: define float @ret_known_pinf_mul_known_zero(
+; CHECK-SAME: float nofpclass(nan ninf zero sub norm) [[ARG0:%.*]], float nofpclass(nan inf sub norm) [[ARG1:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[FMUL:%.*]] = fmul float [[ARG0]], [[ARG1]]
+; CHECK-NEXT:    ret float [[FMUL]]
+;
+  %fmul = fmul float %arg0, %arg1
+  ret float %fmul
+}
+
+; -> nan
+define float @ret_known_zero_mul_known_inf(float nofpclass(nan inf norm sub) %arg0, float nofpclass(nan norm sub zero) %arg1) {
+; CHECK-LABEL: define float @ret_known_zero_mul_known_inf(
+; CHECK-SAME: float nofpclass(nan inf sub norm) [[ARG0:%.*]], float nofpclass(nan zero sub norm) [[ARG1:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[FMUL:%.*]] = fmul float [[ARG0]], [[ARG1]]
+; CHECK-NEXT:    ret float [[FMUL]]
+;
+  %fmul = fmul float %arg0, %arg1
+  ret float %fmul
+}
+
+; -> nan
+define float @ret_known_zero_mul_known_inf_or_nan(float nofpclass(nan inf norm sub) %arg0, float nofpclass(norm sub zero) %arg1) {
+; CHECK-LABEL: define float @ret_known_zero_mul_known_inf_or_nan(
+; CHECK-SAME: float nofpclass(nan inf sub norm) [[ARG0:%.*]], float nofpclass(zero sub norm) [[ARG1:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[FMUL:%.*]] = fmul float [[ARG0]], [[ARG1]]
+; CHECK-NEXT:    ret float [[FMUL]]
+;
+  %fmul = fmul float %arg0, %arg1
+  ret float %fmul
+}
+
+; -> nan
+define float @ret_known_zero_or_nan_mul_known_inf(float nofpclass(inf norm sub) %arg0, float nofpclass(nan norm sub zero) %arg1) {
+; CHECK-LABEL: define float @ret_known_zero_or_nan_mul_known_inf(
+; CHECK-SAME: float nofpclass(inf sub norm) [[ARG0:%.*]], float nofpclass(nan zero sub norm) [[ARG1:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[FMUL:%.*]] = fmul float [[ARG0]], [[ARG1]]
+; CHECK-NEXT:    ret float [[FMUL]]
+;
+  %fmul = fmul float %arg0, %arg1
+  ret float %fmul
+}
+
+; Know nothing
+define float @ret_fmul_lhs_known_positive_or_nan(float %lhs, float %rhs) {
+; CHECK-LABEL: define float @ret_fmul_lhs_known_positive_or_nan(
+; CHECK-SAME: float [[LHS:%.*]], float [[RHS:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[LHS_FABS:%.*]] = call float @llvm.fabs.f32(float [[LHS]]) #[[ATTR2:[0-9]+]]
+; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[LHS_FABS]], [[RHS]]
+; CHECK-NEXT:    ret float [[MUL]]
+;
+  %lhs.fabs = call float @llvm.fabs.f32(float %lhs)
+  %mul = fmul float %lhs.fabs, %rhs
+  ret float %mul
+}
+
+; Know nothing
+define float @ret_fmul_rhs_known_positive_or_nan(float %lhs, float %rhs) {
+; CHECK-LABEL: define float @ret_fmul_rhs_known_positive_or_nan(
+; CHECK-SAME: float [[LHS:%.*]], float [[RHS:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[RHS_FABS:%.*]] = call float @llvm.fabs.f32(float [[RHS]]) #[[ATTR2]]
+; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[LHS]], [[RHS_FABS]]
+; CHECK-NEXT:    ret float [[MUL]]
+;
+  %rhs.fabs = call float @llvm.fabs.f32(float %rhs)
+  %mul = fmul float %lhs, %rhs.fabs
+  ret float %mul
+}
+
+; Result must be positive or nan
+define float @ret_fmul_both_signs_positive_or_nan(float %lhs, float %rhs) {
+; CHECK-LABEL: define float @ret_fmul_both_signs_positive_or_nan(
+; CHECK-SAME: float [[LHS:%.*]], float [[RHS:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[LHS_FABS:%.*]] = call float @llvm.fabs.f32(float [[LHS]]) #[[ATTR2]]
+; CHECK-NEXT:    [[RHS_FABS:%.*]] = call float @llvm.fabs.f32(float [[RHS]]) #[[ATTR2]]
+; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[LHS_FABS]], [[RHS_FABS]]
+; CHECK-NEXT:    ret float [[MUL]]
+;
+  %lhs.fabs = call float @llvm.fabs.f32(float %lhs)
+  %rhs.fabs = call float @llvm.fabs.f32(float %rhs)
+  %mul = fmul float %lhs.fabs, %rhs.fabs
+  ret float %mul
+}
+
+; Result must be positive or nan
+define float @ret_fmul_both_signs_negative_or_nan(float %lhs, float %rhs) {
+; CHECK-LABEL: define float @ret_fmul_both_signs_negative_or_nan(
+; CHECK-SAME: float [[LHS:%.*]], float [[RHS:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[LHS_FABS:%.*]] = call float @llvm.fabs.f32(float [[LHS]]) #[[ATTR2]]
+; CHECK-NEXT:    [[RHS_FABS:%.*]] = call float @llvm.fabs.f32(float [[RHS]]) #[[ATTR2]]
+; CHECK-NEXT:    [[LHS_NEG_FABS:%.*]] = fneg float [[LHS_FABS]]
+; CHECK-NEXT:    [[RHS_NEG_FABS:%.*]] = fneg float [[RHS_FABS]]
+; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[LHS_NEG_FABS]], [[RHS_NEG_FABS]]
+; CHECK-NEXT:    ret float [[MUL]]
+;
+  %lhs.fabs = call float @llvm.fabs.f32(float %lhs)
+  %rhs.fabs = call float @llvm.fabs.f32(float %rhs)
+  %lhs.neg.fabs = fneg float %lhs.fabs
+  %rhs.neg.fabs = fneg float %rhs.fabs
+  %mul = fmul float %lhs.neg.fabs, %rhs.neg.fabs
+  ret float %mul
+}
+
+; Result must be negative or nan
+define float @ret_fmul_lhs_negative_rhs_positive(float %lhs, float %rhs) {
+; CHECK-LABEL: define float @ret_fmul_lhs_negative_rhs_positive(
+; CHECK-SAME: float [[LHS:%.*]], float [[RHS:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[LHS_FABS:%.*]] = call float @llvm.fabs.f32(float [[LHS]]) #[[ATTR2]]
+; CHECK-NEXT:    [[RHS_FABS:%.*]] = call float @llvm.fabs.f32(float [[RHS]]) #[[ATTR2]]
+; CHECK-NEXT:    [[LHS_NEG_FABS:%.*]] = fneg float [[LHS_FABS]]
+; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[LHS_NEG_FABS]], [[RHS_FABS]]
+; CHECK-NEXT:    ret float [[MUL]]
+;
+  %lhs.fabs = call float @llvm.fabs.f32(float %lhs)
+  %rhs.fabs = call float @llvm.fabs.f32(float %rhs)
+  %lhs.neg.fabs = fneg float %lhs.fabs
+  %mul = fmul float %lhs.neg.fabs, %rhs.fabs
+  ret float %mul
+}
+
+; Result must be negative or nan
+define float @ret_fmul_rhs_negative_lhs_positive(float %lhs, float %rhs) {
+; CHECK-LABEL: define float @ret_fmul_rhs_negative_lhs_positive(
+; CHECK-SAME: float [[LHS:%.*]], float [[RHS:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[LHS_FABS:%.*]] = call float @llvm.fabs.f32(float [[LHS]]) #[[ATTR2]]
+; CHECK-NEXT:    [[RHS_FABS:%.*]] = call float @llvm.fabs.f32(float [[RHS]]) #[[ATTR2]]
+; CHECK-NEXT:    [[RHS_NEG_FABS:%.*]] = fneg float [[RHS_FABS]]
+; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[LHS_FABS]], [[RHS_NEG_FABS]]
+; CHECK-NEXT:    ret float [[MUL]]
+;
+  %lhs.fabs = call float @llvm.fabs.f32(float %lhs)
+  %rhs.fabs = call float @llvm.fabs.f32(float %rhs)
+  %rhs.neg.fabs = fneg float %rhs.fabs
+  %mul = fmul float %lhs.fabs, %rhs.neg.fabs
+  ret float %mul
+}
+
+; Could be inf of either sign
+define float @ret_known_inf_fmul_known_inf(float nofpclass(norm sub zero nan) %arg0, float nofpclass(norm sub zero nan) %arg1) {
+; CHECK-LABEL: define nofpclass(nan) float @ret_known_inf_fmul_known_inf(
+; CHECK-SAME: float nofpclass(nan zero sub norm) [[ARG0:%.*]], float nofpclass(nan zero sub norm) [[ARG1:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[FMUL:%.*]] = fmul float [[ARG0]], [[ARG1]]
+; CHECK-NEXT:    ret float [[FMUL]]
+;
+  %fmul = fmul float %arg0, %arg1
+  ret float %fmul
+}
+
+; Could be inf of either sign, or nan
+define float @ret_known_inf_fmul_known_inf_or_nan(float nofpclass(norm sub zero nan) %arg0, float nofpclass(norm sub zero) %arg1) {
+; CHECK-LABEL: define float @ret_known_inf_fmul_known_inf_or_nan(
+; CHECK-SAME: float nofpclass(nan zero sub norm) [[ARG0:%.*]], float nofpclass(zero sub norm) [[ARG1:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[FMUL:%.*]] = fmul float [[ARG0]], [[ARG1]]
+; CHECK-NEXT:    ret float [[FMUL]]
+;
+  %fmul = fmul float %arg0, %arg1
+  ret float %fmul
+}
+
+; Could be inf of either sign, or nan
+define float @ret_known_inf_or_nan_fmul_known_inf(float nofpclass(norm sub zero) %arg0, float nofpclass(norm sub zero nan) %arg1) {
+; CHECK-LABEL: define float @ret_known_inf_or_nan_fmul_known_inf(
+; CHECK-SAME: float nofpclass(zero sub norm) [[ARG0:%.*]], float nofpclass(nan zero sub norm) [[ARG1:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[FMUL:%.*]] = fmul float [[ARG0]], [[ARG1]]
+; CHECK-NEXT:    ret float [[FMUL]]
+;
+  %fmul = fmul float %arg0, %arg1
+  ret float %fmul
+}
+
+; Could be zero of either sign
+define float @ret_known_zero_fmul_known_zero(float nofpclass(inf norm sub nan) %arg0, float nofpclass(inf norm sub nan) %arg1) {
+; CHECK-LABEL: define nofpclass(nan) float @ret_known_zero_fmul_known_zero(
+; CHECK-SAME: float nofpclass(nan inf sub norm) [[ARG0:%.*]], float nofpclass(nan inf sub norm) [[ARG1:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[FMUL:%.*]] = fmul float [[ARG0]], [[ARG1]]
+; CHECK-NEXT:    ret float [[FMUL]]
+;
+  %fmul = fmul float %arg0, %arg1
+  ret float %fmul
+}
+
+; Could be zero of either sign, or nan
+define float @ret_known_zero_fmul_known_zero_or_nan(float nofpclass(inf norm sub nan) %arg0, float nofpclass(inf norm sub) %arg1) {
+; CHECK-LABEL: define float @ret_known_zero_fmul_known_zero_or_nan(
+; CHECK-SAME: float nofpclass(nan inf sub norm) [[ARG0:%.*]], float nofpclass(inf sub norm) [[ARG1:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[FMUL:%.*]] = fmul float [[ARG0]], [[ARG1]]
+; CHECK-NEXT:    ret float [[FMUL]]
+;
+  %fmul = fmul float %arg0, %arg1
+  ret float %fmul
+}
+
+; Could be zero of either sign, or nan
+define float @ret_known_zero_or_nan_fmul_known_zero(float nofpclass(inf norm sub) %arg0, float nofpclass(inf norm sub nan) %arg1) {
+; CHECK-LABEL: define float @ret_known_zero_or_nan_fmul_known_zero(
+; CHECK-SAME: float nofpclass(inf sub norm) [[ARG0:%.*]], float nofpclass(nan inf sub norm) [[ARG1:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[FMUL:%.*]] = fmul float [[ARG0]], [[ARG1]]
+; CHECK-NEXT:    ret float [[FMUL]]
+;
+  %fmul = fmul float %arg0, %arg1
+  ret float %fmul
+}
+
+define float @ret_known_inf_or_nan_fmul_unknown(float nofpclass(norm sub zero) %arg0, float %arg1) {
+; CHECK-LABEL: define float @ret_known_inf_or_nan_fmul_unknown(
+; CHECK-SAME: float nofpclass(zero sub norm) [[ARG0:%.*]], float [[ARG1:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[FMUL:%.*]] = fmul float [[ARG0]], [[ARG1]]
+; CHECK-NEXT:    ret float [[FMUL]]
+;
+  %fmul = fmul float %arg0, %arg1
+  ret float %fmul
+}
+
+define float @ret_unknown_fmul_known_inf_or_nan(float %arg0, float nofpclass(norm sub zero) %arg1) {
+; CHECK-LABEL: define float @ret_unknown_fmul_known_inf_or_nan(
+; CHECK-SAME: float [[ARG0:%.*]], float nofpclass(zero sub norm) [[ARG1:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[FMUL:%.*]] = fmul float [[ARG0]], [[ARG1]]
+; CHECK-NEXT:    ret float [[FMUL]]
+;
+  %fmul = fmul float %arg0, %arg1
+  ret float %fmul
+}
+
+define float @ret_known_inf_or_nan_fmul_known_inf_or_nan(float nofpclass(norm sub zero) %arg0, float nofpclass(norm sub zero) %arg1) {
+; CHECK-LABEL: define float @ret_known_inf_or_nan_fmul_known_inf_or_nan(
+; CHECK-SAME: float nofpclass(zero sub norm) [[ARG0:%.*]], float nofpclass(zero sub norm) [[ARG1:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[FMUL:%.*]] = fmul float [[ARG0]], [[ARG1]]
+; CHECK-NEXT:    ret float [[FMUL]]
+;
+  %fmul = fmul float %arg0, %arg1
+  ret float %fmul
+}
