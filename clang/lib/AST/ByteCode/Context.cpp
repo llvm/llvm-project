@@ -302,7 +302,7 @@ bool Context::evaluateStrlen(State &Parent, const Expr *E, uint64_t &Result) {
       unsigned Size = N - Ptr.getIndex();
       Result =
           strnlen(reinterpret_cast<const char *>(Ptr.getRawAddress()), Size);
-      return Result != N;
+      return Result != Size;
     }
 
     PrimType ElemT = FieldDesc->getPrimType();
