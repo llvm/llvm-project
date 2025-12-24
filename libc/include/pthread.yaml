@@ -48,6 +48,13 @@ functions:
     arguments:
       - type: const pthread_attr_t *__restrict
       - type: size_t *__restrict
+  - name: pthread_attr_getschedparam
+    standards:
+      - POSIX
+    return_type: int
+    arguments:
+      - type: const pthread_attr_t *__restrict
+      - type: struct sched_param *__restrict
   - name: pthread_attr_getstack
     standards:
       - POSIX
@@ -83,6 +90,13 @@ functions:
     arguments:
       - type: pthread_attr_t *
       - type: size_t
+  - name: pthread_attr_setschedparam
+    standards:
+      - POSIX
+    return_type: int
+    arguments:
+      - type: pthread_attr_t *__restrict
+      - type: const struct sched_param *__restrict
   - name: pthread_attr_setstack
     standards:
       - POSIX
