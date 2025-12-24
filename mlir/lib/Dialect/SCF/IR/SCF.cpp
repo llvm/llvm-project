@@ -1001,7 +1001,7 @@ namespace {
 // The implementation uses `inlineBlockBefore` to steal the content of the
 // original ForOp and avoid cloning.
 struct ForOpIterArgsFolder : public OpRewritePattern<scf::ForOp> {
-  using OpRewritePattern<scf::ForOp>::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(scf::ForOp forOp,
                                 PatternRewriter &rewriter) const final {
@@ -1133,7 +1133,7 @@ struct ForOpIterArgsFolder : public OpRewritePattern<scf::ForOp> {
 /// single-iteration loops with their bodies, and removes empty loops that
 /// iterate at least once and only return values defined outside of the loop.
 struct SimplifyTrivialLoops : public OpRewritePattern<ForOp> {
-  using OpRewritePattern<ForOp>::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(ForOp op,
                                 PatternRewriter &rewriter) const override {
@@ -1204,7 +1204,7 @@ struct SimplifyTrivialLoops : public OpRewritePattern<ForOp> {
 ///   use_of(%1)
 /// ```
 struct ForOpTensorCastFolder : public OpRewritePattern<ForOp> {
-  using OpRewritePattern<ForOp>::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(ForOp op,
                                 PatternRewriter &rewriter) const override {
@@ -1236,12 +1236,101 @@ struct ForOpTensorCastFolder : public OpRewritePattern<ForOp> {
   }
 };
 
+/// Rewriting pattern that folds away cycles in the yield of a scf.for op.
+///
+/// ```
+/// %res:2 = scf.for ... iter_args(%arg0 = %init, %arg1 = %init) {
+///   ...
+///   use %arg0, %arg1
+///   scf.yield %arg1, %arg0
+/// }
+/// return %res#0, %res#1
+/// ```
+///
+/// folds into:
+///
+/// ```
+/// scf.for ... iter_args() {
+///   ...
+///   use %init, %init
+///   scf.yield
+/// }
+/// return %init, %init
+/// ```
+struct ForOpYieldCyclesFolder : public OpRewritePattern<ForOp> {
+  using Base::Base;
+
+  LogicalResult matchAndRewrite(ForOp op,
+                                PatternRewriter &rewriter) const override {
+    ValueRange yieldedValues = op.getYieldedValues();
+    ValueRange initArgs = op.getInitArgs();
+    ValueRange results = op.getResults();
+    ValueRange regionIterArgs = op.getRegionIterArgs();
+    Block *body = op.getBody();
+
+    unsigned numYieldedValues = op.getNumRegionIterArgs();
+
+    bool changed = false;
+    SmallVector<unsigned> cycle;
+    llvm::SmallBitVector visited(numYieldedValues, false);
+
+    // Go through all possible start points for the cycle.
+    for (auto start : llvm::seq(numYieldedValues)) {
+      if (visited[start])
+        continue;
+
+      cycle.clear();
+      unsigned current = start;
+      bool validCycle = true;
+      Value initValue = initArgs[start];
+      // Go through yield -> block arg -> yield cycles and check if all values
+      // are always equal to the init.
+      while (!visited[current]) {
+        cycle.push_back(current);
+        visited[current] = true;
+
+        // Find whether this yield is from a region iter arg.
+        auto yieldedValue = yieldedValues[current];
+        if (auto arg = dyn_cast<BlockArgument>(yieldedValue);
+            !arg || arg.getOwner() != body) {
+          validCycle = false;
+          break;
+        }
+
+        // Next yield position.
+        current = cast<BlockArgument>(yieldedValue).getArgNumber() -
+                  op.getNumInductionVars();
+
+        // Check if next position has the same init value.
+        if (initArgs[current] != initValue) {
+          validCycle = false;
+          break;
+        }
+      }
+
+      // If we found a valid cycle all values in it are always equal to
+      // initValue. Skip cycle.size() == 1 (when yielding iter arg directly) as
+      // it handled by other patterns.
+      if (validCycle && cycle.size() > 1) {
+        changed = true;
+        for (unsigned idx : cycle) {
+          // This will leave region args and results dead so other
+          // canonicalization patterns can clean them up.
+          rewriter.replaceAllUsesWith(regionIterArgs[idx], initValue);
+          rewriter.replaceAllUsesWith(results[idx], initValue);
+        }
+      }
+    }
+    return success(changed);
+  }
+};
+
 } // namespace
 
 void ForOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                         MLIRContext *context) {
-  results.add<ForOpIterArgsFolder, SimplifyTrivialLoops, ForOpTensorCastFolder>(
-      context);
+  results.add<ForOpIterArgsFolder, SimplifyTrivialLoops, ForOpTensorCastFolder,
+              ForOpYieldCyclesFolder>(context);
 }
 
 std::optional<APInt> ForOp::getConstantStep() {
