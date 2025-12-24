@@ -631,18 +631,20 @@ void llvm::deleteDeadLoop(Loop *L, DominatorTree *DT, ScalarEvolution *SE,
         U.set(Poison);
       }
 
-      // For one of each variable encountered, preserve a debug record (set
-      // to Poison) and transfer it to the loop exit. This terminates any
-      // variable locations that were set during the loop.
-      for (DbgVariableRecord &DVR :
-           llvm::make_early_inc_range(filterDbgVars(I.getDbgRecordRange()))) {
-        DebugVariable Key(DVR.getVariable(), DVR.getExpression(),
-                          DVR.getDebugLoc().get());
-        if (!DeadDebugSet.insert(Key).second)
-          continue;
-        // Unlinks the DVR from it's container, for later insertion.
-        DVR.removeFromParent();
-        DeadDbgVariableRecords.push_back(&DVR);
+      if (ExitBlock) {
+        // For one of each variable encountered, preserve a debug record (set
+        // to Poison) and transfer it to the loop exit. This terminates any
+        // variable locations that were set during the loop.
+        for (DbgVariableRecord &DVR :
+             llvm::make_early_inc_range(filterDbgVars(I.getDbgRecordRange()))) {
+          DebugVariable Key(DVR.getVariable(), DVR.getExpression(),
+                            DVR.getDebugLoc().get());
+          if (!DeadDebugSet.insert(Key).second)
+            continue;
+          // Unlinks the DVR from it's container, for later insertion.
+          DVR.removeFromParent();
+          DeadDbgVariableRecords.push_back(&DVR);
+        }
       }
     }
 
