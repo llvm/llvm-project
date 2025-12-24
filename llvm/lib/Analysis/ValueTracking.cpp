@@ -5369,12 +5369,9 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
         Known.knownNot(fcPosSubnormal);
       }
 
-      if (KnownSrc.cannotBeOrderedGreaterThanZero()) {
-        // If the source is negative, and cannot be infinity, this cannot
-        // overflow to infinity.
-        if (KnownSrc.isKnownNeverPosInfinity())
-          Known.knownNot(fcPosInf);
-      }
+      // If the source is negative, this cannot overflow to infinity.
+      if (KnownSrc.cannotBeOrderedGreaterThanZero())
+        Known.knownNot(fcPosInf);
 
       break;
     }
