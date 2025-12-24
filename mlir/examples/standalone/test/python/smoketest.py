@@ -20,5 +20,5 @@ with Context():
     # CHECK: !standalone.custom<"foo">
     print(custom_type)
 
-if sys.argv[1] == "test-upstream":
+if len(sys.argv) > 1 and sys.argv[1] == "test-upstream":
     from mlir.ir import *

@@ -369,6 +369,7 @@ function(add_mlir_python_modules name)
     "COMMON_CAPI_LINK_LIBS;DECLARED_SOURCES"
     ${ARGN})
 
+  # TODO(max): do the same for MLIR_PYTHON_PACKAGE_PREFIX?
   if(NOT MLIR_BINDINGS_PYTHON_NB_DOMAIN)
     set(MLIR_BINDINGS_PYTHON_NB_DOMAIN "mlir" CACHE STRING "" FORCE)
   endif()
@@ -863,6 +864,7 @@ function(add_mlir_python_extension libname extname nb_library_target_name)
     target_compile_definitions(${libname}
       PRIVATE
       NB_DOMAIN=${MLIR_BINDINGS_PYTHON_NB_DOMAIN}
+      MLIR_BINDINGS_PYTHON_DOMAIN=${MLIR_BINDINGS_PYTHON_NB_DOMAIN}
       MLIR_CAPI_BUILDING_LIBRARY=1
     )
     if(MSVC)
@@ -874,6 +876,10 @@ function(add_mlir_python_extension libname extname nb_library_target_name)
       FREE_THREADED
       NB_SHARED
       ${ARG_SOURCES}
+    )
+    target_compile_definitions(${libname}
+      PRIVATE
+      MLIR_BINDINGS_PYTHON_DOMAIN=${MLIR_BINDINGS_PYTHON_NB_DOMAIN}
     )
   endif()
   target_link_libraries(${libname} PRIVATE ${nb_library_target_name})
