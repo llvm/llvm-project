@@ -1,4 +1,4 @@
-//===- RISCVInsertVSETVLI.cpp - Insert VSETVLI instructions ---------------===//
+//===- RISCVVSETVLIInfoAnalysis.cpp - VSETVLI Info Analysis ---------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,29 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements a function pass that inserts VSETVLI instructions where
-// needed and expands the vl outputs of VLEFF/VLSEGFF to PseudoReadVL
-// instructions.
-//
-// This pass consists of 3 phases:
-//
-// Phase 1 collects how each basic block affects VL/VTYPE.
-//
-// Phase 2 uses the information from phase 1 to do a data flow analysis to
-// propagate the VL/VTYPE changes through the function. This gives us the
-// VL/VTYPE at the start of each basic block.
-//
-// Phase 3 inserts VSETVLI instructions in each basic block. Information from
-// phase 2 is used to prevent inserting a VSETVLI before the first vector
-// instruction in the block if possible.
+// This file implements an analysis of the vtype/vl information that is needed
+// by RISCVInsertVSETVLI pass and others.
 //
 //===----------------------------------------------------------------------===//
 
 #include "RISCVVSETVLIInfoAnalysis.h"
 #include "RISCVSubtarget.h"
 #include "llvm/CodeGen/LiveIntervals.h"
-
-#define DEBUG_TYPE "riscv-vsetvli-info"
 
 namespace llvm {
 namespace RISCV {

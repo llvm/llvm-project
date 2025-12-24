@@ -40,14 +40,12 @@ bool RISCVPreRAMachineSchedStrategy::tryVType(RISCV::VSETVLIInfo TryVType,
   // We prefer the top node as it is straightforward from the perspective of
   // vtype dataflow.
   if (CandVtype.isValid() && TopVType.isValid() && Cand.AtTop &&
-      CandVtype == TopVType) {
+      CandVtype == TopVType)
     return true;
-  }
 
   if (CandVtype.isValid() && BottomVType.isValid() && !Cand.AtTop &&
-      CandVtype == BottomVType) {
+      CandVtype == BottomVType)
     return true;
-  }
 
   // Then try TryCand.
   if (TryVType.isValid() && TopVType.isValid() && TryCand.AtTop &&
@@ -164,9 +162,8 @@ bool RISCVPreRAMachineSchedStrategy::tryCandidate(SchedCandidate &Cand,
 
     // Fall through to original instruction order.
     if ((Zone->isTop() && TryCand.SU->NodeNum < Cand.SU->NodeNum) ||
-        (!Zone->isTop() && TryCand.SU->NodeNum > Cand.SU->NodeNum)) {
+        (!Zone->isTop() && TryCand.SU->NodeNum > Cand.SU->NodeNum))
       TryCand.Reason = NodeOrder;
-    }
   }
 
   //-------------------------------------------------------------------------//
