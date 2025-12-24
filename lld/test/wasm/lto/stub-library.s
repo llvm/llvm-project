@@ -10,14 +10,14 @@
 
 # RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown -o %t.o %s
 # RUN: mkdir -p %t
-# RUN: llvm-as %S/Inputs/foo.ll -o %t/foo.o
-# RUN: wasm-ld %t.o %t/foo.o %p/Inputs/stub.so -o %t.wasm
+# RUN: llvm-as %S/Inputs/funcs.ll -o %t/funcs.o
+# RUN: wasm-ld %t.o %t/funcs.o %p/Inputs/stub.so -o %t.wasm
 # RUN: obj2yaml %t.wasm | FileCheck %s
 
-## Run the same test but with foo.o inside of an archive file.
-# RUN: rm -f %t/libfoo.a
-# RUN: llvm-ar rcs %t/libfoo.a %t/foo.o
-# RUN: wasm-ld %t.o %t/libfoo.a %p/Inputs/stub.so -o %t2.wasm
+## Run the same test but with funcs.o inside of an archive file.
+# RUN: rm -f %t/libfuncs.a
+# RUN: llvm-ar rcs %t/libfuncs.a %t/funcs.o
+# RUN: wasm-ld %t.o %t/libfuncs.a %p/Inputs/stub.so -o %t2.wasm
 # RUN: obj2yaml %t2.wasm | FileCheck %s
 
 .functype bar () -> ()
