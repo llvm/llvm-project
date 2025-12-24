@@ -3096,7 +3096,9 @@ Parser::DeclGroupPtrTy Parser::ParseCXXClassMemberDeclaration(
       LateParsedAttrs.clear();
 
       // Consume the ';' - it's optional unless we have a delete or default
-      if (Tok.is(tok::semi))
+      if (Tok.is(tok::semi) &&
+          DefinitionKind != FunctionDefinitionKind::Defaulted &&
+          DefinitionKind != FunctionDefinitionKind::Deleted)
         ConsumeExtraSemi(ExtraSemiKind::AfterMemberFunctionDefinition);
 
       return DeclGroupPtrTy::make(DeclGroupRef(FunDecl));
