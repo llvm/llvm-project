@@ -41,7 +41,7 @@ static void orc_rt_lite_reoptimize_helper(
     abort();
   }
   shared::WrapperFunctionBuffer Buf{
-      JITDispatch(JITDispatchCtx, Tag, ArgBytes.data(), ArgBytes.size() )};
+      JITDispatch(JITDispatchCtx, Tag, ArgBytes.data(), ArgBytes.size())};
 
   if (const char *ErrMsg = Buf.getOutOfBandError()) {
     errs() << "Reoptimization error: " << ErrMsg << "\naborting.\n";
