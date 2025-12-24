@@ -1262,16 +1262,16 @@ bool TosaValidation::isValidElementType(Type type, const bool allowUnsigned) {
 
 void TosaValidation::runOnOperation() {
   ModuleOp modOp = getOperation();
+  TosaDialect *tosaDialect = getContext().getLoadedDialect<TosaDialect>();
+  if (!tosaDialect)
+    return;
+
   const TargetEnvAttr targetEnvAttr = lookupTargetEnvOrDefault(modOp);
   const auto maybeTargetEnv =
       tosa::TargetEnv::createTargetEnvFromAttr(targetEnvAttr, modOp.getLoc());
   if (failed(maybeTargetEnv))
     return signalPassFailure();
   targetEnv = *maybeTargetEnv;
-
-  TosaDialect *tosaDialect = getContext().getLoadedDialect<TosaDialect>();
-  if (!tosaDialect)
-    return;
 
   modOp.walk([&](Operation *op) {
     if (op->getDialect() != tosaDialect)
