@@ -1,4 +1,4 @@
-# RUN: llvm-mc -triple riscv32 -mattr=+experimental-xqcibi,+xandesperf %s \
+# RUN: llvm-mc -triple riscv32 -mattr=+xqcibi,+xandesperf %s \
 # RUN:     -filetype=obj -o - \
 # RUN:     | llvm-readelf -sr - \
 # RUN:     | FileCheck %s
