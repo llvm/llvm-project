@@ -24,6 +24,7 @@
 #include <__iterator/iter_swap.h>
 #include <__iterator/iterator_traits.h>
 #include <__iterator/next.h>
+#include <__iterator/prev.h>
 #include <__memory/addressof.h>
 #include <__ranges/access.h>
 #include <__ranges/all.h>
