@@ -476,39 +476,31 @@ LayoutAttr::setUnitDimLayout(SetVector<int64_t> unitDims) const {
 DistributeLayoutAttr LayoutAttr::setDimData(int64_t dim, int64_t sgData,
                                             int64_t instData,
                                             int64_t laneData) {
-  auto sgDataOpt = getSgData();
-  auto instDataOpt = getInstData();
-  auto laneDataOpt = getLaneData();
 
-  SmallVector<int32_t> sgDataVec;
-  SmallVector<int32_t> instDataVec;
-  SmallVector<int32_t> laneDataVec;
+  SmallVector<int64_t> sgDataVec = getEffectiveSgDataAsInt();
+  SmallVector<int64_t> instDataVec = getEffectiveInstDataAsInt();
+  SmallVector<int64_t> laneDataVec = getEffectiveLaneDataAsInt();
 
-  if (sgDataOpt)
-    sgDataVec = llvm::to_vector(sgDataOpt.asArrayRef());
-
-  if (instDataOpt)
-    instDataVec = llvm::to_vector(instDataOpt.asArrayRef());
-
-  if (laneDataOpt)
-    laneDataVec = llvm::to_vector(laneDataOpt.asArrayRef());
-
-  if (dim < static_cast<int64_t>(sgDataVec.size()))
+  if (dim < static_cast<int64_t>(sgDataVec.size()) && sgData != -1)
     sgDataVec[dim] = sgData;
-  if (dim < static_cast<int64_t>(instDataVec.size()))
+  if (dim < static_cast<int64_t>(instDataVec.size()) && instData != -1)
     instDataVec[dim] = instData;
-  if (dim < static_cast<int64_t>(laneDataVec.size()))
+  if (dim < static_cast<int64_t>(laneDataVec.size()) && laneData != -1)
     laneDataVec[dim] = laneData;
+
+  SmallVector<int32_t> sgDataVec32(sgDataVec.begin(), sgDataVec.end());
+  SmallVector<int32_t> instDataVec32(instDataVec.begin(), instDataVec.end());
+  SmallVector<int32_t> laneDataVec32(laneDataVec.begin(), laneDataVec.end());
 
   return LayoutAttr::get(
       getContext(), getSgLayout(),
       sgDataVec.empty() ? DenseI32ArrayAttr()
-                        : DenseI32ArrayAttr::get(getContext(), sgDataVec),
+                        : DenseI32ArrayAttr::get(getContext(), sgDataVec32),
       instDataVec.empty() ? DenseI32ArrayAttr()
-                          : DenseI32ArrayAttr::get(getContext(), instDataVec),
+                          : DenseI32ArrayAttr::get(getContext(), instDataVec32),
       getLaneLayout(),
       laneDataVec.empty() ? DenseI32ArrayAttr()
-                          : DenseI32ArrayAttr::get(getContext(), laneDataVec),
+                          : DenseI32ArrayAttr::get(getContext(), laneDataVec32),
       getOrder());
 }
 
@@ -516,9 +508,8 @@ DistributeLayoutAttr LayoutAttr::setDimData(int64_t dim, int64_t sgData,
 // Each inner array in `dimGroups` specifies a set of dimensions
 // that are collapsed into a single dimension in the derived layout.
 DistributeLayoutAttr
-LayoutAttr::collapseDims(ArrayRef<ArrayRef<int64_t>> dimGroups) {
+LayoutAttr::collapseDims(SmallVector<SmallVector<int64_t>> dimGroups) const {
 
-  // Extract layout attributes as vectors
   SmallVector<int64_t> sgLayout = getEffectiveSgLayoutAsInt();
   SmallVector<int64_t> sgData = getEffectiveSgDataAsInt();
   SmallVector<int64_t> instData = getEffectiveInstDataAsInt();
@@ -823,16 +814,18 @@ DistributeLayoutAttr SliceAttr::setDimData(int64_t dim, int64_t sgData,
 // Each inner array in `dimGroups` specifies a set of dimensions
 // that are collapsed into a single dimension in the derived layout.
 DistributeLayoutAttr
-SliceAttr::collapseDims(ArrayRef<ArrayRef<int64_t>> dimGroups) const {
+SliceAttr::collapseDims(SmallVector<SmallVector<int64_t>> dimGroups) const {
 
   // Map the sliced dims from parent space to collapsed space
-  ArrayRef<int64_t> sliceDims = getDims().asArrayRef();
+  SmallVector<int64_t> sliceDims = llvm::to_vector(getDims().asArrayRef());
 
   // go through dimGroups and map each dim from sliced space to parent space
   SmallVector<SmallVector<int64_t>> adjustedDimGroups;
   for (const auto &group : dimGroups) {
-    SetVector<int64_t> mappedDims = mapDimsFromSlicedSpace(group, sliceDims);
-    adjustedDimGroups.push_back(mappedDims.getArrayRef());
+    SetVector<int64_t> groupSet(group.begin(), group.end());
+    SetVector<int64_t> mappedDims = mapDimsFromSlicedSpace(groupSet, sliceDims);
+    adjustedDimGroups.push_back(
+        SmallVector<int64_t>(mappedDims.begin(), mappedDims.end()));
   }
 
   auto collapsedParent = getParent().collapseDims(adjustedDimGroups);

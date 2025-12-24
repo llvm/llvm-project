@@ -122,13 +122,31 @@ DistributeLayoutAttr inferShapeCastSourceLayout(MLIRContext *context,
                                                 ArrayRef<int64_t> resShape,
                                                 ArrayRef<int64_t> srcShape);
 
-/// Sets the the layout attribute for result based on a preferred Layout
-/// propagated from consumer
-/// the ouput must be a slice attribute
+/// Sets up layout for reduction operations by creating a SliceAttr for the
+/// result.
+///
+/// This function first attempts to construct a source layout that, when sliced
+/// along reduction dimensions, produces a result layout compatible with the
+/// consumer's preferred layout. This minimizes data redistribution overhead.
+/// The SliceAttr for the result is then created based on the derived source
+/// layout and the specified reduction dimensions.
 SliceAttr
 reductionLayoutSetupRule(ArrayRef<int64_t> srcShape,
                          SmallVector<int64_t> reductionDims,
                          DistributeLayoutAttr consumerPreferredLayout);
+
+/// Setup the result layout attribute for a bitcast operation based on element
+/// type bitwidths. This ensures the source layout can always be derived from
+/// the result layout.
+///
+/// When casting from a narrower to a wider element type (srcElemTyBitWidth <
+/// resElemTyBitWidth), the result layout's innermost dimension data sizes
+/// (sg_data, inst_data, lane_data) are scaled up by the bitwidth ratio. This
+/// maintains the invariant that the source layout can be recovered by inverse
+/// scaling during layout inference.
+DistributeLayoutAttr bitCastLayoutSetupRule(DistributeLayoutAttr resLayout,
+                                            int resElemTyBitWidth,
+                                            int srcElemTyBitWidth);
 
 } // namespace xegpu
 

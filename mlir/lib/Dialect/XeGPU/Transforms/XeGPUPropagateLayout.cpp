@@ -603,7 +603,6 @@ void LayoutInfoPropagation::visitVectorMultiReductionOp(
   if (!resultLayout.isAssigned())
     return;
 
-  VectorType resultTy = llvm::dyn_cast<VectorType>(reduction.getDestType());
   VectorType sourceTy =
       llvm::dyn_cast<VectorType>(reduction.getSourceVectorType());
   SmallVector<int64_t> reductionDims(reduction.getReductionDims().begin(),
@@ -691,10 +690,10 @@ void LayoutInfoPropagation::visitVectorBroadCastOp(
   auto resultLayoutAttr =
       dyn_cast<xegpu::DistributeLayoutAttr>(resultLayout.get());
 
-  xegpu::DistributeLayoutAttr resLayout = xegpu::inferBroadCastSourceLayout(
+  xegpu::DistributeLayoutAttr srcLayout = xegpu::inferBroadCastSourceLayout(
       broadcast.getContext(), resultLayoutAttr, resShape, srcShape);
 
-  propagateIfChanged(operands[0], operands[0]->meet(LayoutInfo(resLayout)));
+  propagateIfChanged(operands[0], operands[0]->meet(LayoutInfo(srcLayout)));
   return;
 }
 

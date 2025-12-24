@@ -291,7 +291,7 @@ bool xegpu::recoverTemporaryLayouts(Operation *rootOp) {
 //       across region boundaries
 //        while preserving a single well-defined use for each definition at the
 //        region-op level.
-bool xegpu::recoverTemporaryLayouts_first(Operation *rootOp) {}
+// bool xegpu::recoverTemporaryLayouts_first(Operation *rootOp) {}
 
 template <typename T, typename>
 void xegpu::removeLayoutAttr(const T &operandOrResult) {
@@ -378,52 +378,38 @@ xegpu::inferBitCastSourceLayout(MLIRContext *context,
                                 xegpu::DistributeLayoutAttr resLayout,
                                 int resElemTyBitWidth, int srcElemTyBitWidth) {
   // the result and source layout must be the same
-  // if resLayout is SliceAttr, we need to first get its root layout
-  xegpu::DistributeLayoutAttr resRootLayout = resLayout;
-  while (auto sliceLayout = dyn_cast<xegpu::SliceAttr>(resRootLayout)) {
-    resRootLayout = sliceLayout.getParent();
-  }
-  // change the laneData of resRootLayout according to the bitwidth ratio
-  xegpu::LayoutAttr resRootPlainLayout =
-      dyn_cast<xegpu::LayoutAttr>(resRootLayout);
-  SmallVector<int64_t> laneData =
-      resRootPlainLayout.getEffectiveLaneDataAsInt();
+  // only adjust the sg_data, inst_data, lane_data accordingly
+  // based on the bitwidth ratio between source and result element type
+
+  SmallVector<int64_t> sgData = resLayout.getEffectiveSgDataAsInt();
+  SmallVector<int64_t> instData = resLayout.getEffectiveInstDataAsInt();
+  SmallVector<int64_t> laneData = resLayout.getEffectiveLaneDataAsInt();
+  size_t dim = sgData.size() - 1;
+  int64_t sgDataValue, instDataValue, laneDataValue;
 
   if (srcElemTyBitWidth >= resElemTyBitWidth) {
     int bitWidthRatio = srcElemTyBitWidth / resElemTyBitWidth;
-    laneData[laneData.size() - 1] =
-        laneData[laneData.size() - 1] * bitWidthRatio;
+    sgDataValue = (dim < sgData.size()) ? sgData[dim] * bitWidthRatio : -1;
+    instDataValue =
+        (dim < instData.size()) ? instData[dim] * bitWidthRatio : -1;
+    laneDataValue =
+        (dim < laneData.size()) ? laneData[dim] * bitWidthRatio : -1;
   } else {
     int bitWidthRatio = resElemTyBitWidth / srcElemTyBitWidth;
-    assert((laneData[laneData.size() - 2] % bitWidthRatio) == 0 &&
+    assert((laneData[dim] % bitWidthRatio) == 0 &&
            "laneData not divisible by bitWidthRatio");
-    laneData[laneData.size() - 1] =
-        laneData[laneData.size() - 1] / bitWidthRatio;
+    sgDataValue = (dim < sgData.size()) ? sgData[dim] / bitWidthRatio : -1;
+    instDataValue =
+        (dim < instData.size()) ? instData[dim] / bitWidthRatio : -1;
+    laneDataValue =
+        (dim < laneData.size()) ? laneData[dim] / bitWidthRatio : -1;
   }
 
-  // now reconstruct the source layout with updated laneData
-  // by updating the root layout and going throught the slice layers
-  SmallVector<int32_t> laneData32(laneData.begin(), laneData.end());
-  xegpu::LayoutAttr proposedSrcLayout = xegpu::LayoutAttr::get(
-      context, resRootPlainLayout.getSgLayout(), resRootPlainLayout.getSgData(),
-      resRootPlainLayout.getInstData(), resRootPlainLayout.getLaneLayout(),
-      DenseI32ArrayAttr::get(context, laneData32),
-      resRootPlainLayout.getOrder());
+  // Now set only instData and laneData, preserving sgData
+  xegpu::DistributeLayoutAttr finalSrcLayout;
+  finalSrcLayout =
+      resLayout.setDimData(dim, sgDataValue, instDataValue, laneDataValue);
 
-  // reconstruct slice layers if any
-  // First collect all slice layers from innermost to outermost
-  SmallVector<DenseI64ArrayAttr> sliceDims;
-  xegpu::DistributeLayoutAttr currentLayout = resLayout;
-  while (auto sliceLayout = dyn_cast<xegpu::SliceAttr>(currentLayout)) {
-    sliceDims.push_back(sliceLayout.getDims());
-    currentLayout = sliceLayout.getParent();
-  }
-
-  // Now rebuild from outermost to innermost (reverse order)
-  xegpu::DistributeLayoutAttr finalSrcLayout = proposedSrcLayout;
-  for (auto it = sliceDims.rbegin(); it != sliceDims.rend(); ++it) {
-    finalSrcLayout = xegpu::SliceAttr::get(context, finalSrcLayout, *it);
-  }
   return finalSrcLayout;
 }
 
@@ -471,7 +457,7 @@ xegpu::DistributeLayoutAttr xegpu::inferShapeCastSourceLayout(
 
   // Maps each source dimension to the range of destination dimensions it splits
   // into
-  SmallVector<SmallVector<size_t>> splitDimGroups;
+  SmallVector<SmallVector<int64_t>> splitDimGroups;
 
   auto checkSplitDims = [&](ArrayRef<int64_t> src,
                             ArrayRef<int64_t> dst) -> bool {
@@ -480,7 +466,7 @@ xegpu::DistributeLayoutAttr xegpu::inferShapeCastSourceLayout(
     splitDimGroups.clear();
     size_t srcIdx = 0;
     int64_t accumulatedSize = 1;
-    SmallVector<size_t> currentDstDims;
+    SmallVector<int64_t> currentDstDims;
 
     for (size_t dstIdx = 0; dstIdx < dst.size(); ++dstIdx) {
       if (srcIdx >= src.size())
@@ -531,7 +517,29 @@ xegpu::DistributeLayoutAttr xegpu::inferShapeCastSourceLayout(
     // construct a vector layout with lane_data = [1, ..., 1]
     SmallVector<int64_t> laneData(srcShapeSize, 1);
   }
+
+  // TODO: Complete implementation for other shape cast scenarios
+  return nullptr;
 }
+
+/// Sets up layout for reduction operations by creating a SliceAttr for the
+/// result.
+///
+/// Algorithm Overview:
+/// This function attempts to construct a source layout that, when sliced along
+/// reduction dimensions, produces a result layout compatible with the
+/// consumer's preferred layout. This minimizes data redistribution overhead.
+/// The SliceAttr for the result is created based on the derived source layout
+/// and the specified reduction dimensions.
+///
+/// Strategy:
+/// 1. First, check if the consumer's preferred layout is already a SliceAttr
+///    with matching reduction dimensions. If so, use its parent layout directly
+///    and adjust the sg_data/inst_data acccording to source shape.
+/// 2. If step 1 fails, construct a new layout by distributing
+/// workgroup/subgroup
+///    resources across dimensions, prioritizing alignment with the consumer's
+///    sg_layout for non-reduction dimensions.
 
 xegpu::SliceAttr
 xegpu::reductionLayoutSetupRule(ArrayRef<int64_t> srcShape,
@@ -541,29 +549,40 @@ xegpu::reductionLayoutSetupRule(ArrayRef<int64_t> srcShape,
   xegpu::SliceAttr sliceCPL =
       dyn_cast<xegpu::SliceAttr>(consumerPreferredLayout);
 
-  // try to align wiht customer's preferred layout so that the slice layout
-  // structure is preserved, and thus avoid potential data movement acorss sg or
+  // Strategy 1: Try to preserve the consumer's slice layout structure
+  // If the consumer already expects a slice layout with the same reduction
+  // dims, we can directly use its parent layout as our source layout. This
+  // ensures perfect alignment and avoids any data movement across subgroups or
   // lanes.
 
-  const int workgroupSize = 16; // assuming 16 subgroups for now
-  const int subgroupSize = 16;  // assuming 16 lanes per subgroup
-  const int vectorSize = 8;     // assuming 8 elements per vector lane
+  // Hardware constraints (these should ideally be queried from device
+  // capabilities)
+  const int workgroupSize = 16; // Total number of subgroups in a workgroup
+  const int subgroupSize = 16;  // Number of SIMD lanes per subgroup
+  const int vectorSize = 8;     // Elements processed per vector instruction
   int srcShapeSize = srcShape.size();
   xegpu::DistributeLayoutAttr proposedSrcLayout;
   auto context = consumerPreferredLayout.getContext();
-  // if srcShapeSize is less than 2, we cannot proceed
+  // Reduction layout requires at least 2D tensors
   if (srcShapeSize < 2)
     return nullptr;
 
   llvm::errs() << "DEBUG: Entering \n";
 
+  // Initialize layout components:
+  // - sgLayout[i]: Number of subgroups covering dimension i
+  // - sgData[i]: Data elements per subgroup in dimension i (srcShape[i] /
+  // sgLayout[i])
   SmallVector<int64_t> sgLayout(srcShapeSize);
   SmallVector<int64_t> sgData(srcShapeSize);
 
+  // Initialize instruction-level parallelism with SIMD-friendly defaults:
+  // - Last dimension gets subgroupSize (16) to match lane width
+  // - Second-to-last dimension gets vectorSize (8) as starting point
   SmallVector<int64_t> instData(srcShapeSize, 1);
   instData[srcShapeSize - 1] = subgroupSize;
   instData[srcShapeSize - 2] =
-      vectorSize; // assuming 8 elements per instruction as starting point
+      vectorSize; // This will be adjusted based on actual data distribution
   llvm::errs() << "DEBUG: Initial instData = [";
   for (size_t i = 0; i < instData.size(); i++) {
     llvm::errs() << instData[i];
@@ -571,7 +590,10 @@ xegpu::reductionLayoutSetupRule(ArrayRef<int64_t> srcShape,
       llvm::errs() << ", ";
   }
   llvm::errs() << "]\n";
-  // construct a vector layout with lane_layout = [1, ..., 1, subgroupSize]
+  // Initialize lane-level distribution:
+  // - laneLayout[i]: How lanes are distributed across dimension i
+  //   (innermost dimension gets all subgroupSize lanes)
+  // - laneData[i]: Data elements per lane in dimension i (starts at 1 per lane)
   SmallVector<int64_t> laneLayout(srcShapeSize, 1);
   laneLayout[srcShapeSize - 1] = subgroupSize;
   // construct a vector layout with lane_data = [1, ..., 1]
@@ -582,13 +604,16 @@ xegpu::reductionLayoutSetupRule(ArrayRef<int64_t> srcShape,
     if (i < laneLayout.size() - 1)
       llvm::errs() << ", ";
   }
-  llvm::errs() << "]\n";
-
+  // Attempt Strategy 1: Align with consumer's slice structure
   bool failToAlignSliceStruct = false;
   if (sliceCPL && sliceCPL.getDims().asArrayRef().equals(reductionDims)) {
-
+    // The consumer is already expecting a slice along our reduction dimensions!
+    // Extract the parent layout (the layout before slicing) as our candidate.
     xegpu::DistributeLayoutAttr parentCPL = sliceCPL.getParent();
 
+    // Verify that the parent layout can be adapted to our source shape:
+    // For each dimension, check if srcShape[i] is divisible by the parent's
+    // sg_layout[i]. If so, we can reuse the subgroup distribution pattern
     // for each slice dim in source shape, if the dim size is differnt than the
     // result shape, try to adjust the sg_data/inst_data accordingly.
     SmallVector<int64_t> pcplSgLayout = parentCPL.getEffectiveSgLayoutAsInt();
@@ -664,7 +689,9 @@ xegpu::reductionLayoutSetupRule(ArrayRef<int64_t> srcShape,
     for (int i = srcShapeSize - 1; i >= 0; i--) {
       llvm::errs() << "DEBUG: Loop 1, i = " << i << ", is_reduction_dim = "
                    << llvm::is_contained(reductionDims, i) << "\n";
-      // try to align with cplSgLayout first for non-reduction dims
+
+      // For non-reduction dimensions, try to match consumer's sg_layout
+      // This ensures the result after reduction has the expected distribution
       if (!llvm::is_contained(reductionDims, i) && cplId >= 0) {
         if (srcShape[i] % cplSgLayout[cplId] == 0) {
           sgLayout[i] = cplSgLayout[cplId];
@@ -678,10 +705,14 @@ xegpu::reductionLayoutSetupRule(ArrayRef<int64_t> srcShape,
           continue;
         }
       }
+      // Dimension couldn't be aligned; defer to second pass
       remainingDims.push_back(i);
       llvm::errs() << "DEBUG: Added i = " << i << " to remainingDims\n";
     }
 
+    // Second pass: Distribute remaining subgroups across unhandled dimensions
+    // This handles reduction dimensions and dimensions that didn't align with
+    // consumer
     llvm::errs() << "DEBUG: Starting second loop\n";
     for (int i = srcShapeSize - 1; i >= 0; i--) {
       llvm::errs() << "DEBUG: Loop 2, i = " << i << ", is_remaining_dim = "
@@ -725,10 +756,37 @@ xegpu::reductionLayoutSetupRule(ArrayRef<int64_t> srcShape,
       DenseI32ArrayAttr::get(context, laneData32),
       consumerPreferredLayout.getOrder());
 
-  // finally, create the slice layout for reduction source
-  xegpu::SliceAttr reductionSrcLayout =
+  // finally, create the slice layout for reduction result
+  xegpu::SliceAttr reductionResLayout =
       xegpu::SliceAttr::get(context, proposedSrcLayout,
                             DenseI64ArrayAttr::get(context, reductionDims));
 
-  return reductionSrcLayout;
+  return reductionResLayout;
+}
+
+xegpu::DistributeLayoutAttr
+xegpu::bitCastLayoutSetupRule(xegpu::DistributeLayoutAttr resLayout,
+                              int resElemTyBitWidth, int srcElemTyBitWidth) {
+
+  SmallVector<int64_t> sgData = resLayout.getEffectiveSgDataAsInt();
+  SmallVector<int64_t> instData = resLayout.getEffectiveInstDataAsInt();
+  SmallVector<int64_t> laneData = resLayout.getEffectiveLaneDataAsInt();
+  size_t dim = sgData.size() - 1;
+  int64_t sgDataValue, instDataValue, laneDataValue;
+
+  if (srcElemTyBitWidth < resElemTyBitWidth) {
+    int bitWidthRatio = resElemTyBitWidth / srcElemTyBitWidth;
+    sgDataValue = (dim < sgData.size()) ? sgData[dim] * bitWidthRatio : -1;
+    instDataValue =
+        (dim < instData.size()) ? instData[dim] * bitWidthRatio : -1;
+    laneDataValue =
+        (dim < laneData.size()) ? laneData[dim] * bitWidthRatio : -1;
+  }
+
+  // Now set only instData and laneData, preserving sgData
+  xegpu::DistributeLayoutAttr finalResLayout;
+  finalResLayout =
+      resLayout.setDimData(dim, sgDataValue, instDataValue, laneDataValue);
+
+  return finalResLayout;
 }

@@ -249,7 +249,7 @@ def DistributeLayoutAttr: AttrInterface<"DistributeLayoutAttr"> {
                       dimension in the derived layout.}],
                     "xegpu::DistributeLayoutAttr",
                     "collapseDims",
-                    (ins "ArrayRef<ArrayRef<int64_t>>": $dimGroups)>,                                                   
+                    (ins "SmallVector<SmallVector<int64_t>>": $dimGroups)>,                                                   
     InterfaceMethod<[{Generates instructions to compute multidimensional coordinates for dist units
                       assigned to a level identified by linearId. The shape parameter
                       represents the higher-level problem size. Each level may access
@@ -527,7 +527,7 @@ def XeGPU_LayoutAttr : XeGPUAttr<"Layout", "layout", [DistributeLayoutAttr]> {
     // Derive a new layout by collapsing groups of dimensions.
     // Each inner array in `dimGroups` specifies a set of dimensions
     // that are collapsed into a single dimension in the derived layout.
-    DistributeLayoutAttr collapseDims(ArrayRef<ArrayRef<int64_t>> dimGroups);
+    DistributeLayoutAttr collapseDims(SmallVector<SmallVector<int64_t>> dimGroups) const;
 
     /// Delinearizes a linear ID into its multidimensional indices
     /// based on the effective level of the layout.
@@ -707,7 +707,7 @@ def XeGPU_SliceAttr : XeGPUAttr<"Slice", "slice", [DistributeLayoutAttr]> {
     // Derive a new layout by collapsing groups of dimensions.
     // Each inner array in `dimGroups` specifies a set of dimensions
     // that are collapsed into a single dimension in the derived layout.
-    DistributeLayoutAttr collapseDims(ArrayRef<ArrayRef<int64_t>> dimGroups);
+    DistributeLayoutAttr collapseDims(SmallVector<SmallVector<int64_t>> dimGroups) const;
 
     /// flatten a nested SliceAttr, e.g., for 2-level nested SliceAttr
     /// #xegpu.slice<#xegpu.slice<#xegpu.layout<sg_layout = [4, 8, 12]>, dims = [0]>, dims = [0]>
