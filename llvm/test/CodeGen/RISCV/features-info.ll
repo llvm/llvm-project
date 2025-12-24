@@ -30,25 +30,6 @@
 ; CHECK-NEXT:   experimental-smpmpmt             - 'Smpmpmt' (PMP-based Memory Types Extension).
 ; CHECK-NEXT:   experimental-svukte              - 'Svukte' (Address-Independent Latency of User-Mode Faults to Supervisor Addresses).
 ; CHECK-NEXT:   experimental-xqccmp              - 'Xqccmp' (Qualcomm 16-bit Push/Pop and Double Moves).
-; CHECK-NEXT:   experimental-xqci                - 'Xqci' (Qualcomm uC Extension).
-; CHECK-NEXT:   experimental-xqcia               - 'Xqcia' (Qualcomm uC Arithmetic Extension).
-; CHECK-NEXT:   experimental-xqciac              - 'Xqciac' (Qualcomm uC Load-Store Address Calculation Extension).
-; CHECK-NEXT:   experimental-xqcibi              - 'Xqcibi' (Qualcomm uC Branch Immediate Extension).
-; CHECK-NEXT:   experimental-xqcibm              - 'Xqcibm' (Qualcomm uC Bit Manipulation Extension).
-; CHECK-NEXT:   experimental-xqcicli             - 'Xqcicli' (Qualcomm uC Conditional Load Immediate Extension).
-; CHECK-NEXT:   experimental-xqcicm              - 'Xqcicm' (Qualcomm uC Conditional Move Extension).
-; CHECK-NEXT:   experimental-xqcics              - 'Xqcics' (Qualcomm uC Conditional Select Extension).
-; CHECK-NEXT:   experimental-xqcicsr             - 'Xqcicsr' (Qualcomm uC CSR Extension).
-; CHECK-NEXT:   experimental-xqciint             - 'Xqciint' (Qualcomm uC Interrupts Extension).
-; CHECK-NEXT:   experimental-xqciio              - 'Xqciio' (Qualcomm uC External Input Output Extension).
-; CHECK-NEXT:   experimental-xqcilb              - 'Xqcilb' (Qualcomm uC Long Branch Extension).
-; CHECK-NEXT:   experimental-xqcili              - 'Xqcili' (Qualcomm uC Load Large Immediate Extension).
-; CHECK-NEXT:   experimental-xqcilia             - 'Xqcilia' (Qualcomm uC Large Immediate Arithmetic Extension).
-; CHECK-NEXT:   experimental-xqcilo              - 'Xqcilo' (Qualcomm uC Large Offset Load Store Extension).
-; CHECK-NEXT:   experimental-xqcilsm             - 'Xqcilsm' (Qualcomm uC Load Store Multiple Extension).
-; CHECK-NEXT:   experimental-xqcisim             - 'Xqcisim' (Qualcomm uC Simulation Hint Extension).
-; CHECK-NEXT:   experimental-xqcisls             - 'Xqcisls' (Qualcomm uC Scaled Load Store Extension).
-; CHECK-NEXT:   experimental-xqcisync            - 'Xqcisync' (Qualcomm uC Sync Delay Extension).
 ; CHECK-NEXT:   experimental-xrivosvisni         - 'XRivosVisni' (Rivos Vector Integer Small New).
 ; CHECK-NEXT:   experimental-xrivosvizip         - 'XRivosVizip' (Rivos Vector Register Zips).
 ; CHECK-NEXT:   experimental-xsfmclic            - 'XSfmclic' (SiFive CLIC Machine-mode CSRs).
@@ -211,6 +192,25 @@
 ; CHECK-NEXT:   xmipscmov                        - 'XMIPSCMov' (MIPS conditional move instruction (mips.ccmov)).
 ; CHECK-NEXT:   mipsexectl                       - 'XMIPSEXECTL' (MIPS execution control).
 ; CHECK-NEXT:   xmipslsp                         - 'XMIPSLSP' (MIPS optimization for hardware load-store bonding).
+; CHECK-NEXT:   xqci                             - 'Xqci' (Qualcomm uC Extension).
+; CHECK-NEXT:   xqcia                            - 'Xqcia' (Qualcomm uC Arithmetic Extension).
+; CHECK-NEXT:   xqciac                           - 'Xqciac' (Qualcomm uC Load-Store Address Calculation Extension).
+; CHECK-NEXT:   xqcibi                           - 'Xqcibi' (Qualcomm uC Branch Immediate Extension).
+; CHECK-NEXT:   xqcibm                           - 'Xqcibm' (Qualcomm uC Bit Manipulation Extension).
+; CHECK-NEXT:   xqcicli                          - 'Xqcicli' (Qualcomm uC Conditional Load Immediate Extension).
+; CHECK-NEXT:   xqcicm                           - 'Xqcicm' (Qualcomm uC Conditional Move Extension).
+; CHECK-NEXT:   xqcics                           - 'Xqcics' (Qualcomm uC Conditional Select Extension).
+; CHECK-NEXT:   xqcicsr                          - 'Xqcicsr' (Qualcomm uC CSR Extension).
+; CHECK-NEXT:   xqciint                          - 'Xqciint' (Qualcomm uC Interrupts Extension).
+; CHECK-NEXT:   xqciio                           - 'Xqciio' (Qualcomm uC External Input Output Extension).
+; CHECK-NEXT:   xqcilb                           - 'Xqcilb' (Qualcomm uC Long Branch Extension).
+; CHECK-NEXT:   xqcili                           - 'Xqcili' (Qualcomm uC Load Large Immediate Extension).
+; CHECK-NEXT:   xqcilia                          - 'Xqcilia' (Qualcomm uC Large Immediate Arithmetic Extension).
+; CHECK-NEXT:   xqcilo                           - 'Xqcilo' (Qualcomm uC Large Offset Load Store Extension).
+; CHECK-NEXT:   xqcilsm                          - 'Xqcilsm' (Qualcomm uC Load Store Multiple Extension).
+; CHECK-NEXT:   xqcisim                          - 'Xqcisim' (Qualcomm uC Simulation Hint Extension).
+; CHECK-NEXT:   xqcisls                          - 'Xqcisls' (Qualcomm uC Scaled Load Store Extension).
+; CHECK-NEXT:   xqcisync                         - 'Xqcisync' (Qualcomm uC Sync Delay Extension).
 ; CHECK-NEXT:   xsfcease                         - 'XSfcease' (SiFive sf.cease Instruction).
 ; CHECK-NEXT:   xsfmm128t                        - 'XSfmm128t' (TE=128 configuration).
 ; CHECK-NEXT:   xsfmm16t                         - 'XSfmm16t' (TE=16 configuration).
