@@ -5763,7 +5763,8 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       Known.knownNot(fcPositive);
 
     // inf * anything => inf or nan
-    if (KnownLHS.isKnownAlways(fcInf) || KnownRHS.isKnownAlways(fcInf))
+    if (KnownLHS.isKnownAlways(fcInf | fcNan) ||
+        KnownRHS.isKnownAlways(fcInf | fcNan))
       Known.knownNot(fcNormal | fcSubnormal | fcZero);
 
     // 0 * anything => 0 or nan
