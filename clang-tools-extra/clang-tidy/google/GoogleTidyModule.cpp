@@ -5,6 +5,7 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+
 #include "../ClangTidy.h"
 #include "../ClangTidyModule.h"
 #include "../misc/AnonymousNamespaceInHeaderCheck.h"
