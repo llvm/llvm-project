@@ -926,6 +926,13 @@ ASTContext::setExternalSource(IntrusiveRefCntPtr<ExternalASTSource> Source) {
   ExternalSource = std::move(Source);
 }
 
+SemaProxy *ASTContext::getSemaProxy() { return SemaProxyPtr.get(); }
+
+void ASTContext::setSemaProxy(std::unique_ptr<SemaProxy> Proxy) {
+  assert((!SemaProxyPtr || !Proxy) && "SemaProxy already set");
+  SemaProxyPtr = std::move(Proxy);
+}
+
 void ASTContext::PrintStats() const {
   llvm::errs() << "\n*** AST Context Stats:\n";
   llvm::errs() << "  " << Types.size() << " types total.\n";

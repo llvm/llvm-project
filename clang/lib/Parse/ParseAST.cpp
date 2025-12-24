@@ -21,6 +21,7 @@
 #include "clang/Sema/Sema.h"
 #include "clang/Sema/SemaConsumer.h"
 #include "clang/Sema/TemplateInstCallback.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/CrashRecoveryContext.h"
 #include "llvm/Support/TimeProfiler.h"
 #include <cstdio>
@@ -161,6 +162,11 @@ void clang::ParseAST(Sema &S, bool PrintStats, bool SkipFunctionBodies) {
       return M;
     });
     P.Initialize();
+
+    auto Unregister =
+        llvm::make_scope_exit([&S]() { S.UnregisterSemaProxy(); });
+    S.RegisterSemaProxy();
+
     Parser::DeclGroupPtrTy ADecl;
     Sema::ModuleImportState ImportState;
     EnterExpressionEvaluationContext PotentiallyEvaluated(

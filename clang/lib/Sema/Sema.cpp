@@ -75,10 +75,13 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Support/TimeProfiler.h"
+#include <memory>
 #include <optional>
 
 using namespace clang;
 using namespace sema;
+
+static std::unique_ptr<SemaProxy> getSemaProxyImplementation(Sema &SemaRef);
 
 SourceLocation Sema::getLocForEndOfToken(SourceLocation Loc, unsigned Offset) {
   return Lexer::getLocForEndOfToken(Loc, Offset, SourceMgr, LangOpts);
@@ -621,6 +624,15 @@ Sema::~Sema() {
   // by the preprocessor.
   SemaPPCallbackHandler->reset();
 }
+
+void Sema::RegisterSemaProxy() {
+  // Let the AST context relies on Sema for
+  // ast mutations features that require semantic analysis
+  // (lazy instantiation, reflection, etc).
+  Context.setSemaProxy(getSemaProxyImplementation(*this));
+}
+
+void Sema::UnregisterSemaProxy() { Context.setSemaProxy({}); }
 
 void Sema::runWithSufficientStackSpace(SourceLocation Loc,
                                        llvm::function_ref<void()> Fn) {
@@ -2963,4 +2975,22 @@ Attr *Sema::CreateAnnotationAttr(const ParsedAttr &AL) {
   }
 
   return CreateAnnotationAttr(AL, Str, Args);
+}
+
+class SemaProxyImplementation final : public SemaProxy {
+private:
+  Sema &SemaRef;
+
+public:
+  SemaProxyImplementation(Sema &SemaRef) : SemaRef(SemaRef) {}
+  void InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
+                                     FunctionDecl *Function) override {
+    SemaRef.InstantiateFunctionDefinition(
+        PointOfInstantiation, Function, /*Recursive=*/true,
+        /*DefinitionRequired=*/true, /*AtEndOfTU=*/false);
+  }
+};
+
+std::unique_ptr<SemaProxy> getSemaProxyImplementation(Sema &SemaRef) {
+  return std::make_unique<SemaProxyImplementation>(SemaRef);
 }

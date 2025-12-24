@@ -47,12 +47,13 @@ constexpr Bar bb; // expected-error {{must be initialized by a constant expressi
 
 template <typename Ty>
 struct Baz {
-  constexpr Baz(); // expected-note {{declared here}}
+  constexpr Baz(); // expected-note {{explicit instantiation refers here}}
 };
 
 struct Quux : Baz<Foo>, private Bar {
   int i;
-  constexpr Quux() : i(12) {} // expected-note {{undefined constructor 'Baz' cannot be used in a constant expression}}
+  constexpr Quux() : i(12) {} // expected-error {{explicit instantiation of undefined member function 'Baz' of class template 'Baz<Foo>'}} \
+                              // expected-note {{subexpression not valid in a constant expression}}
 };
 
 constexpr Quux qx; // expected-error {{must be initialized by a constant expression}} \

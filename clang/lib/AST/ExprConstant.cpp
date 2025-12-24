@@ -43,6 +43,7 @@
 #include "clang/AST/CXXInheritance.h"
 #include "clang/AST/CharUnits.h"
 #include "clang/AST/CurrentSourceLocExprScope.h"
+#include "clang/AST/Decl.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/InferAlloc.h"
 #include "clang/AST/OSLog.h"
@@ -53,6 +54,7 @@
 #include "clang/AST/TypeLoc.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/DiagnosticSema.h"
+#include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/TargetBuiltins.h"
 #include "clang/Basic/TargetInfo.h"
 #include "llvm/ADT/APFixedPoint.h"
@@ -6961,6 +6963,28 @@ static bool handleTrivialCopy(EvalInfo &Info, const ParmVarDecl *Param,
       CopyObjectRepresentation);
 }
 
+static void InstantiateFunctionBeforeCall(const FunctionDecl *FD,
+                                          EvalInfo &Info, SourceLocation Loc) {
+
+  // [C++26] [temp.inst] p5
+  // [...] the function template specialization is implicitly instantiated
+  // when the specialization is referenced in a context that requires a function
+  // definition to exist or if the existence of the definition affects the
+  // semantics of the program.
+
+  if (!FD->isDefined() && FD->isImplicitlyInstantiable() && FD->isConstexpr() &&
+      Info.InConstantContext && !Info.TryConstantInitialization &&
+      !Info.checkingPotentialConstantExpression()) {
+
+    SemaProxy *SP = Info.getASTContext().getSemaProxy();
+    // Try to instantiate the definition if Sema is available
+    // (i.e during the initial parse of the TU).
+    if (SP) {
+      SP->InstantiateFunctionDefinition(Loc, const_cast<FunctionDecl *>(FD));
+    }
+  }
+}
+
 /// Evaluate a function call.
 static bool HandleFunctionCall(SourceLocation CallLoc,
                                const FunctionDecl *Callee,
@@ -7353,6 +7377,8 @@ static bool HandleDestructionImpl(EvalInfo &Info, SourceRange CallRange,
 
   if (!Info.CheckCallLimit(CallRange.getBegin()))
     return false;
+
+  InstantiateFunctionBeforeCall(DD, Info, CallRange.getBegin());
 
   const FunctionDecl *Definition = nullptr;
   const Stmt *Body = DD->getBody(Definition);
@@ -8819,9 +8845,12 @@ public:
              CallScope.destroy();
     }
 
-    const FunctionDecl *Definition = nullptr;
-    Stmt *Body = FD->getBody(Definition);
     SourceLocation Loc = E->getExprLoc();
+
+    InstantiateFunctionBeforeCall(FD, Info, Loc);
+
+    const FunctionDecl *Definition = nullptr;
+    const Stmt *Body = FD->getBody(Definition);
 
     // Treat the object argument as `this` when evaluating defaulted
     // special menmber functions
@@ -11340,8 +11369,10 @@ bool RecordExprEvaluator::VisitCXXConstructExpr(const CXXConstructExpr *E,
     return handleDefaultInitValue(T, Result);
   }
 
+  InstantiateFunctionBeforeCall(FD, Info, E->getBeginLoc());
+
   const FunctionDecl *Definition = nullptr;
-  auto Body = FD->getBody(Definition);
+  const Stmt *Body = FD->getBody(Definition);
 
   if (!CheckConstexprFunction(Info, E->getExprLoc(), FD, Definition, Body))
     return false;
@@ -11381,8 +11412,9 @@ bool RecordExprEvaluator::VisitCXXInheritedCtorInitExpr(
   if (FD->isInvalidDecl() || FD->getParent()->isInvalidDecl())
     return false;
 
+  InstantiateFunctionBeforeCall(FD, Info, E->getBeginLoc());
   const FunctionDecl *Definition = nullptr;
-  auto Body = FD->getBody(Definition);
+  const Stmt *Body = FD->getBody(Definition);
 
   if (!CheckConstexprFunction(Info, E->getExprLoc(), FD, Definition, Body))
     return false;
@@ -20796,6 +20828,8 @@ bool Expr::EvaluateAsInitializer(APValue &Value, const ASTContext &Ctx,
                     : EvaluationMode::ConstantFold);
   Info.setEvaluatingDecl(VD, Value);
   Info.InConstantContext = IsConstantInitialization;
+  Info.TryConstantInitialization =
+      !VD->isConstexpr() && !VD->hasAttr<ConstInitAttr>();
 
   SourceLocation DeclLoc = VD->getLocation();
   QualType DeclTy = VD->getType();

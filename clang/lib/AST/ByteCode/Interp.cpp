@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Interp.h"
+#include "ByteCode/Source.h"
 #include "Compiler.h"
 #include "Function.h"
 #include "InterpFrame.h"
@@ -1624,13 +1625,30 @@ bool CheckBitCast(InterpState &S, CodePtr OpPC, const Type *TargetType,
   return true;
 }
 
-static void compileFunction(InterpState &S, const Function *Func) {
-  const FunctionDecl *Definition = Func->getDecl()->getDefinition();
-  if (!Definition)
+static void compileFunction(InterpState &S, const Function *Func,
+                            SourceLocation Loc) {
+
+  const FunctionDecl *Fn = Func->getDecl();
+
+  // [C++26] [temp.inst] p5
+  // [...] the function template specialization is implicitly instantiated
+  // when the specialization is referenced in a context that requires a function
+  // definition to exist or if the existence of the definition affects the
+  // semantics of the program.
+  if (!Fn->isDefined() && Fn->isImplicitlyInstantiable() && Fn->isConstexpr() &&
+      S.inConstantContext() && !S.TryConstantInitialization &&
+      !S.checkingPotentialConstantExpression()) {
+    SemaProxy *SP = S.getASTContext().getSemaProxy();
+    if (!SP)
+      return;
+    SP->InstantiateFunctionDefinition(Loc, const_cast<FunctionDecl *>(Fn));
+  }
+  Fn = Fn->getDefinition();
+  if (!Fn)
     return;
 
   Compiler<ByteCodeEmitter>(S.getContext(), S.P)
-      .compileFunc(Definition, const_cast<Function *>(Func));
+      .compileFunc(Fn, const_cast<Function *>(Func));
 }
 
 bool CallVar(InterpState &S, CodePtr OpPC, const Function *Func,
@@ -1656,7 +1674,7 @@ bool CallVar(InterpState &S, CodePtr OpPC, const Function *Func,
   }
 
   if (!Func->isFullyCompiled())
-    compileFunction(S, Func);
+    compileFunction(S, Func, S.Current->getLocation(OpPC));
 
   if (!CheckCallable(S, OpPC, Func))
     return false;
@@ -1733,7 +1751,7 @@ bool Call(InterpState &S, CodePtr OpPC, const Function *Func,
   }
 
   if (!Func->isFullyCompiled())
-    compileFunction(S, Func);
+    compileFunction(S, Func, S.Current->getLocation(OpPC));
 
   if (!CheckCallable(S, OpPC, Func))
     return cleanup();
