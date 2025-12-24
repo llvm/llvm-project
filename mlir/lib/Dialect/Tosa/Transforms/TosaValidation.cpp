@@ -218,6 +218,12 @@ private:
       if (type.getRank() > highest_rank)
         return op->emitOpError() << "failed level check: " << operandOrResult
                                  << " rank(shape) <= MAX_RANK";
+    } else if (tosa::shapeType shapeType =
+                   dyn_cast<tosa::shapeType>(typeToCheck)) {
+      if (shapeType.getRank() > highest_rank)
+        return op->emitOpError()
+               << "failed shape type level check: " << typeToCheck
+               << " exceeds MAX_RANK";
     }
     return success();
   }
@@ -573,6 +579,12 @@ LogicalResult TosaValidation::levelCheckRanksAndSizes(Operation *op) {
       return failure();                                                        \
   }
 
+#define CHECK_RANKS(tosaOp)                                                    \
+  if (isa<tosa::tosaOp##Op>(op)) {                                             \
+    if (failed(levelCheckRanks(cast<tosa::tosaOp##Op>(op))))                   \
+      return failure();                                                        \
+  }
+
   // Tensor Operators
   CHECK_RANKS_AND_SIZES(ArgMax);
   // Activation Functions
@@ -638,15 +650,15 @@ LogicalResult TosaValidation::levelCheckRanksAndSizes(Operation *op) {
   CHECK_RANKS_AND_SIZES(CastFromBlockScaled);
   CHECK_RANKS_AND_SIZES(CastToBlockScaled);
   CHECK_RANKS_AND_SIZES(Rescale);
+  // Data Nodes
+  CHECK_RANKS_AND_SIZES(Const);
+  CHECK_RANKS_AND_SIZES(Identity);
   // Control Flow Operators
   CHECK_RANKS_AND_SIZES(If);
   // Variable Operators
   CHECK_RANKS_AND_SIZES(Variable);
   CHECK_RANKS_AND_SIZES(VariableWrite);
   CHECK_RANKS_AND_SIZES(VariableRead);
-  // Data Nodes
-  CHECK_RANKS_AND_SIZES(Const);
-  CHECK_RANKS_AND_SIZES(Identity);
 
   // For the following operators, check whether the size of each tensor
   // operand is valid in a given Level.
@@ -674,8 +686,19 @@ LogicalResult TosaValidation::levelCheckRanksAndSizes(Operation *op) {
   // Shape Operators
   CHECK_SIZES(ConstShape);
 
+  // For the following operations, check whether the rank of each operand
+  // is valid given a level.
+
+  // Shape Operators
+  CHECK_RANKS(AddShape);
+  CHECK_RANKS(DivCeilShape);
+  CHECK_RANKS(DivFloorShape);
+  CHECK_RANKS(MulShape);
+  CHECK_RANKS(SubShape);
+
 #undef CHECK_RANKS_AND_SIZES
 #undef CHECK_SIZES
+#undef CHECK_RANKS
   return success();
 }
 

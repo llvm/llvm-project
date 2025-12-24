@@ -3407,6 +3407,9 @@ static bool valueIsKnownNeverF32Denorm(const MachineRegisterInfo &MRI,
   case TargetOpcode::G_INTRINSIC: {
     switch (cast<GIntrinsic>(DefMI)->getIntrinsicID()) {
     case Intrinsic::amdgcn_frexp_mant:
+    case Intrinsic::amdgcn_log:
+    case Intrinsic::amdgcn_log_clamp:
+    case Intrinsic::amdgcn_exp2:
       return true;
     default:
       break;
