@@ -1331,12 +1331,30 @@ func.func @collapse_expand_fold_to_cast(%m: memref<?xf32, strided<[1]>, 3>, %sz0
 
 // -----
 
-// CHECK-LABEL: func @expand_collapse_fold_to_cast(
+// CHECK-LABEL: func @expand_collapse_fold_to_internal_stride_cast(
+//  CHECK-SAME:     %[[m:.*]]: memref<3x1x2x384xui8, strided<[1179648, 768, 384, 1]>>
+//       CHECK:   %[[casted:.*]] = memref.cast %[[m]] : memref<3x1x2x384xui8, strided<[1179648, 768, 384, 1]>> to memref<3x1x2x384xui8, strided<[1179648, 1179648, 384, 1]>>
+
+func.func @expand_collapse_fold_to_internal_stride_cast(%m: memref<3x1x2x384xui8, strided<[1179648, 768, 384, 1]>>)
+    -> (memref<3x1x2x384xui8, strided<[1179648, 1179648, 384, 1]>>)
+  {
+  %0 = memref.collapse_shape %m [[0, 1], [2], [3]]
+      : memref<3x1x2x384xui8, strided<[1179648, 768, 384, 1]>>
+        into memref<3x2x384xui8, strided<[1179648, 384, 1]>>
+  %1 = memref.expand_shape %0 [[0, 1], [2], [3]] output_shape [3, 1, 2, 384]
+      : memref<3x2x384xui8, strided<[1179648, 384, 1]>>
+        into memref<3x1x2x384xui8, strided<[1179648, 1179648, 384, 1]>>
+  return %1 : memref<3x1x2x384xui8, strided<[1179648, 1179648, 384, 1]>>
+}
+
+// -----
+
+// CHECK-LABEL: func @expand_collapse_fold_to_outermost_stride_cast(
 //  CHECK-SAME:     %[[m:.*]]: memref<1x3x2x384xui8, strided<[1179648, 768, 384, 1]>>
 //       CHECK:   %[[casted:.*]] = memref.cast %[[m]] : memref<1x3x2x384xui8, strided<[1179648, 768, 384, 1]>> to memref<1x3x2x384xui8, strided<[2304, 768, 384, 1]>>
 //       CHECK:   return %[[casted]]
 
-func.func @expand_collapse_fold_to_cast(%m: memref<1x3x2x384xui8, strided<[1179648, 768, 384, 1]>>)
+func.func @expand_collapse_fold_to_outermost_stride_cast(%m: memref<1x3x2x384xui8, strided<[1179648, 768, 384, 1]>>)
     -> (memref<1x3x2x384xui8, strided<[2304, 768, 384, 1]>>)
   {
   %0 = memref.collapse_shape %m [[0, 1], [2], [3]]
