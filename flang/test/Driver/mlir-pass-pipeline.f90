@@ -112,6 +112,9 @@ end program
 ! ALL-NEXT:   (S) 0 num-cse'd - Number of operations CSE'd
 ! ALL-NEXT:   (S) 0 num-dce'd - Number of operations DCE'd
 
+!  O2-NEXT: 'func.func' Pipeline
+!  O2-NEXT:   LoopInvariantCodeMotion
+
 ! ALL-NEXT: PolymorphicOpConversion
 ! ALL-NEXT: AssumedRankOpConversion
 ! O2-NEXT:  'func.func' Pipeline
