@@ -32,34 +32,34 @@ LogicalResult mlir::IndexingMapOpInterface::verifyImpl() {
            << "(" << str << ")";
   }
 
-  SmallVector<int64_t> endLoopRangeValues = getStaticLoopRanges();
+  SmallVector<int64_t> allShapesSizes;
 
-  // Set this flag if this op has user defined maps. This is required to guard
-  // the below error condition which assume default indexing maps.
   for (OpOperand &opOperand : getOperation()->getOpOperands()) {
     AffineMap indexingMap = getMatchingIndexingMap(&opOperand);
+    SmallVector<int64_t> shape = getStaticOperandShape(&opOperand);
+    int64_t rank = shape.size();
 
     // Symbols disallowed.
     if (indexingMap.getNumSymbols() != 0)
       return getOperation()->emitOpError("unexpected symbols in indexing_map #")
              << opOperand.getOperandNumber();
 
-    // Domain must be consistent.
-    if (indexingMap.getNumDims() != endLoopRangeValues.size())
-      return getOperation()->emitOpError("expected indexing_map #")
-             << opOperand.getOperandNumber() << " to have "
-             << endLoopRangeValues.size()
-             << " dim(s) to match the number of loops";
-
-    SmallVector<int64_t> shape = getStaticOperandShape(&opOperand);
-    int64_t rank = shape.size();
-
+    // Result rank must match operand rank.
     if (indexingMap.getNumResults() != rank)
       return getOperation()->emitOpError("expected operand rank (")
              << rank << ") to match the result rank of indexing_map #"
              << opOperand.getOperandNumber() << " ("
              << indexingMap.getNumResults() << ")";
+
+    llvm::append_range(allShapesSizes, shape);
   }
+
+  SmallVector<int64_t> endLoopRangeValues = invertedMap.compose(allShapesSizes);
+
+  if (invertedMap.getNumResults() != endLoopRangeValues.size())
+    return getOperation()->emitOpError("expected each indexing_map to have ")
+           << endLoopRangeValues.size()
+           << " dim(s) to match the number of loops";
 
   // Check if given shapes match to inferred shapes.
   SmallVector<int64_t> startLoopRangeValues(endLoopRangeValues.size(), 0);

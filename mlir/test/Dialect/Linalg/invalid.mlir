@@ -165,6 +165,41 @@ func.func @generic_singular_maps(%arg0: memref<?xf32, affine_map<(i)[off]->(off 
   }
 }
 
+// -----
+
+func.func @generic_index_rank0(%arg0: tensor<f32>) -> tensor<f32> {
+// expected-error @+1 {{op expected operand rank (0) to match the result rank of indexing_map #0 (1)}}
+  %0 = linalg.generic {
+    indexing_maps = [
+      affine_map<(d0) -> (d0)>,
+      affine_map<(d0) -> (d0)>
+    ],
+    iterator_types = ["parallel"]}
+      ins(%arg0 : tensor<f32>)
+     outs(%arg0 : tensor<f32>) {
+  ^bb(%0: f32, %1: f32):
+    linalg.yield %1 : f32
+  } -> tensor<f32>
+  return %0 : tensor<f32>
+}
+
+// -----
+
+func.func @generic_index_domain_error(%arg0: tensor<4xf32>) -> tensor<4xf32> {
+// expected-error @+1 {{op expected operand rank (1) to match the result rank of indexing_map #1 (2)}}
+  %0 = linalg.generic {
+    indexing_maps = [
+      affine_map<(d0) -> (d0)>,
+      affine_map<(d0, d1) -> (d0, d1)>],
+    iterator_types = ["parallel", "parallel"]}
+      ins(%arg0 : tensor<4xf32>)
+     outs(%arg0 : tensor<4xf32>) {
+  ^bb(%0: f32):
+    linalg.yield %0 : f32
+  } -> tensor<4xf32>
+  return %0 : tensor<4xf32>
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////// Region tests /////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
