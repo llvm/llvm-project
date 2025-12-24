@@ -3711,7 +3711,7 @@ static FormatToken *getFunctionName(const AnnotatedLine &Line,
     if (Tok->is(TT_AttributeLSquare)) {
       Tok = Tok->MatchingParen;
       if (!Tok)
-        break;
+        return nullptr;
       continue;
     }
 
@@ -3743,6 +3743,8 @@ static FormatToken *getFunctionName(const AnnotatedLine &Line,
         return nullptr;
 
       Tok = Tok->MatchingParen;
+      if (!Tok)
+        return nullptr;
 
       continue;
     }
@@ -3751,7 +3753,7 @@ static FormatToken *getFunctionName(const AnnotatedLine &Line,
     if (Tok->is(tok::coloncolon)) {
       Tok = Tok->Next;
       if (!Tok)
-        break;
+        return nullptr;
     }
 
     // Skip to the unqualified part of the name.
@@ -3765,12 +3767,12 @@ static FormatToken *getFunctionName(const AnnotatedLine &Line,
     if (Tok->is(tok::tilde)) {
       Tok = Tok->Next;
       if (!Tok)
-        break;
+        return nullptr;
     }
 
     // Make sure the name is not already annotated, e.g. as NamespaceMacro.
     if (Tok->isNot(tok::identifier) || Tok->isNot(TT_Unknown))
-      break;
+      return nullptr;
 
     Name = Tok;
   }
