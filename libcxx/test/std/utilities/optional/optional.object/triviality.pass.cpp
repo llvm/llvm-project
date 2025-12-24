@@ -109,6 +109,5 @@ int main(int, char**) {
         NonTrivialTypes::ApplyTypes<DoTestsMetafunction>{},
         DoTestsMetafunction<TrivialMoveNonTrivialCopy, TrivialCopyNonTrivialMove>{}
     );
-
     return 0;
 }
