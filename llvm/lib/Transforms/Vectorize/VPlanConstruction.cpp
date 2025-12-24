@@ -761,10 +761,10 @@ void VPlanTransforms::createInLoopReductionRecipes(
       if (auto *Blend = dyn_cast<VPBlendRecipe>(CurrentLink)) {
         assert(Blend->getNumIncomingValues() == 2 &&
                "Blend must have 2 incoming values");
-        unsigned PhiRIdx = Blend->getIncomingValue(0) == PhiR ? 1 : 0;
-        assert(Blend->getIncomingValue(1 - PhiRIdx) == PhiR &&
+        unsigned PhiRIdx = Blend->getIncomingValue(0) == PhiR ? 0 : 1;
+        assert(Blend->getIncomingValue(PhiRIdx) == PhiR &&
                "PhiR must be an operand of the blend");
-        Blend->replaceAllUsesWith(Blend->getIncomingValue(PhiRIdx));
+        Blend->replaceAllUsesWith(Blend->getIncomingValue(1 - PhiRIdx));
         continue;
       }
 
