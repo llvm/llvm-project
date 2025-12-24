@@ -612,7 +612,6 @@ define <4 x i64> @combine_vec_sdiv_by_pow2b_v4i64(<4 x i64> %x) {
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    adrp x8, .LCPI22_0
 ; CHECK-SD-NEXT:    cmlt v2.2d, v0.2d, #0
-; CHECK-SD-NEXT:    adrp x9, .LCPI22_3
 ; CHECK-SD-NEXT:    ldr q3, [x8, :lo12:.LCPI22_0]
 ; CHECK-SD-NEXT:    adrp x8, .LCPI22_2
 ; CHECK-SD-NEXT:    ldr q4, [x8, :lo12:.LCPI22_2]
@@ -624,11 +623,12 @@ define <4 x i64> @combine_vec_sdiv_by_pow2b_v4i64(<4 x i64> %x) {
 ; CHECK-SD-NEXT:    ldr q4, [x8, :lo12:.LCPI22_1]
 ; CHECK-SD-NEXT:    mov x8, #-1 // =0xffffffffffffffff
 ; CHECK-SD-NEXT:    sshl v2.2d, v2.2d, v4.2d
+; CHECK-SD-NEXT:    fmov d4, x8
 ; CHECK-SD-NEXT:    add v1.2d, v1.2d, v3.2d
-; CHECK-SD-NEXT:    fmov d3, x8
-; CHECK-SD-NEXT:    ldr q4, [x9, :lo12:.LCPI22_3]
-; CHECK-SD-NEXT:    bif v0.16b, v2.16b, v3.16b
-; CHECK-SD-NEXT:    sshl v1.2d, v1.2d, v4.2d
+; CHECK-SD-NEXT:    adrp x8, .LCPI22_3
+; CHECK-SD-NEXT:    ldr q3, [x8, :lo12:.LCPI22_3]
+; CHECK-SD-NEXT:    bif v0.16b, v2.16b, v4.16b
+; CHECK-SD-NEXT:    sshl v1.2d, v1.2d, v3.2d
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: combine_vec_sdiv_by_pow2b_v4i64:
@@ -671,27 +671,27 @@ define <8 x i64> @combine_vec_sdiv_by_pow2b_v8i64(<8 x i64> %x) {
 ; CHECK-SD-NEXT:    cmlt v6.2d, v2.2d, #0
 ; CHECK-SD-NEXT:    ldr q5, [x8, :lo12:.LCPI23_0]
 ; CHECK-SD-NEXT:    adrp x8, .LCPI23_2
-; CHECK-SD-NEXT:    cmlt v7.2d, v1.2d, #0
-; CHECK-SD-NEXT:    cmlt v16.2d, v3.2d, #0
+; CHECK-SD-NEXT:    cmlt v7.2d, v3.2d, #0
+; CHECK-SD-NEXT:    ldr q16, [x8, :lo12:.LCPI23_2]
+; CHECK-SD-NEXT:    adrp x8, .LCPI23_1
 ; CHECK-SD-NEXT:    ushl v4.2d, v4.2d, v5.2d
 ; CHECK-SD-NEXT:    ushl v5.2d, v6.2d, v5.2d
-; CHECK-SD-NEXT:    ldr q6, [x8, :lo12:.LCPI23_2]
-; CHECK-SD-NEXT:    adrp x8, .LCPI23_1
-; CHECK-SD-NEXT:    ushl v7.2d, v7.2d, v6.2d
+; CHECK-SD-NEXT:    cmlt v6.2d, v1.2d, #0
 ; CHECK-SD-NEXT:    ldr q17, [x8, :lo12:.LCPI23_1]
-; CHECK-SD-NEXT:    ushl v6.2d, v16.2d, v6.2d
+; CHECK-SD-NEXT:    ushl v7.2d, v7.2d, v16.2d
+; CHECK-SD-NEXT:    mov x8, #-1 // =0xffffffffffffffff
 ; CHECK-SD-NEXT:    add v4.2d, v0.2d, v4.2d
 ; CHECK-SD-NEXT:    add v5.2d, v2.2d, v5.2d
-; CHECK-SD-NEXT:    mov x8, #-1 // =0xffffffffffffffff
-; CHECK-SD-NEXT:    add v1.2d, v1.2d, v7.2d
-; CHECK-SD-NEXT:    fmov d7, x8
+; CHECK-SD-NEXT:    ushl v6.2d, v6.2d, v16.2d
+; CHECK-SD-NEXT:    fmov d16, x8
 ; CHECK-SD-NEXT:    adrp x8, .LCPI23_3
+; CHECK-SD-NEXT:    add v3.2d, v3.2d, v7.2d
 ; CHECK-SD-NEXT:    sshl v4.2d, v4.2d, v17.2d
 ; CHECK-SD-NEXT:    sshl v5.2d, v5.2d, v17.2d
-; CHECK-SD-NEXT:    add v3.2d, v3.2d, v6.2d
+; CHECK-SD-NEXT:    add v1.2d, v1.2d, v6.2d
 ; CHECK-SD-NEXT:    ldr q6, [x8, :lo12:.LCPI23_3]
-; CHECK-SD-NEXT:    bif v0.16b, v4.16b, v7.16b
-; CHECK-SD-NEXT:    bif v2.16b, v5.16b, v7.16b
+; CHECK-SD-NEXT:    bif v0.16b, v4.16b, v16.16b
+; CHECK-SD-NEXT:    bif v2.16b, v5.16b, v16.16b
 ; CHECK-SD-NEXT:    sshl v1.2d, v1.2d, v6.2d
 ; CHECK-SD-NEXT:    sshl v3.2d, v3.2d, v6.2d
 ; CHECK-SD-NEXT:    ret
