@@ -10,6 +10,7 @@ static_library("lib") {
     "//llvm/lib/IRPrinter",
     "//llvm/lib/MC",
     "//llvm/lib/Passes",
+    "//llvm/lib/Plugins",
     "//llvm/lib/Support",
     "//llvm/lib/Target",
     "//llvm/lib/Target:TargetsToBuild",

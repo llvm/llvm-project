@@ -7582,8 +7582,7 @@ static SDValue LowerFLDEXP(SDValue Op, SelectionDAG &DAG) {
       DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, XVT, DAG.getUNDEF(XVT), X, Zero);
   SDValue VExp = DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, ExpVT,
                              DAG.getUNDEF(ExpVT), Exp, Zero);
-  SDValue VPg = getPTrue(DAG, DL, XVT.changeVectorElementType(MVT::i1),
-                         AArch64SVEPredPattern::all);
+  SDValue VPg = DAG.getConstant(1, DL, XVT.changeVectorElementType(MVT::i1));
   SDValue FScale = DAG.getNode(
       ISD::INTRINSIC_WO_CHAIN, DL, XVT,
       DAG.getTargetConstant(Intrinsic::aarch64_sve_fscale, DL, MVT::i64), VPg,
@@ -15635,7 +15634,9 @@ static SDValue trySVESplat64(SDValue Op, SelectionDAG &DAG,
   // See if we can make use of the SVE dup instruction.
   APInt Val64 = DefBits.trunc(64);
   int32_t ImmVal, ShiftVal;
-  if (!AArch64_AM::isSVECpyDupImm(64, Val64.getSExtValue(), ImmVal, ShiftVal))
+  uint64_t Encoding;
+  if (!AArch64_AM::isSVECpyDupImm(64, Val64.getSExtValue(), ImmVal, ShiftVal) &&
+      !AArch64_AM::isSVELogicalImm(64, Val64.getZExtValue(), Encoding))
     return SDValue();
 
   SDLoc DL(Op);
@@ -20849,7 +20850,7 @@ performFirstTrueTestVectorCombine(SDNode *N,
 
   // Extracts of lane 0 for SVE can be expressed as PTEST(Op, FIRST) ? 1 : 0
   SelectionDAG &DAG = DCI.DAG;
-  SDValue Pg = getPTrue(DAG, SDLoc(N), VT, AArch64SVEPredPattern::all);
+  SDValue Pg = DAG.getConstant(1, SDLoc(N), VT);
   return getPTest(DAG, N->getValueType(0), Pg, N0, AArch64CC::FIRST_ACTIVE);
 }
 
@@ -20880,7 +20881,7 @@ performLastTrueTestVectorCombine(SDNode *N,
 
   // Extracts of lane EC-1 for SVE can be expressed as PTEST(Op, LAST) ? 1 : 0
   SelectionDAG &DAG = DCI.DAG;
-  SDValue Pg = getPTrue(DAG, SDLoc(N), OpVT, AArch64SVEPredPattern::all);
+  SDValue Pg = DAG.getConstant(1, SDLoc(N), OpVT);
   return getPTest(DAG, N->getValueType(0), Pg, N0, AArch64CC::LAST_ACTIVE);
 }
 
@@ -30364,7 +30365,7 @@ static SDValue getPredicateForScalableVector(SelectionDAG &DAG, SDLoc &DL,
   assert(VT.isScalableVector() && DAG.getTargetLoweringInfo().isTypeLegal(VT) &&
          "Expected legal scalable vector!");
   auto PredTy = VT.changeVectorElementType(MVT::i1);
-  return getPTrue(DAG, DL, PredTy, AArch64SVEPredPattern::all);
+  return DAG.getConstant(1, DL, PredTy);
 }
 
 static SDValue getPredicateForVector(SelectionDAG &DAG, SDLoc &DL, EVT VT) {
