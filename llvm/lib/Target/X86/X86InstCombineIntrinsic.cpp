@@ -2871,6 +2871,7 @@ X86TTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
   case Intrinsic::x86_avx_blendv_pd_256:
   case Intrinsic::x86_avx2_pblendvb: {
     // fold (blend A, A, Mask) -> A
+    auto *OpTy = cast<FixedVectorType>(II.getType());
     Value *Op0 = II.getArgOperand(0);
     Value *Op1 = II.getArgOperand(1);
     Value *Mask = II.getArgOperand(2);
@@ -2891,6 +2892,19 @@ X86TTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     }
 
     Mask = InstCombiner::peekThroughBitcast(Mask);
+
+    // Bitshift upto the signbit can always be converted to an efficient
+    // test+select pattern.
+    if (match(Mask, m_Shl(m_Value(), m_Value()))) {
+      if (auto *MaskTy = dyn_cast<FixedVectorType>(Mask->getType())) {
+        if (MaskTy->getScalarSizeInBits() == OpTy->getScalarSizeInBits()) {
+          Value *BoolVec = IC.Builder.CreateICmpSGT(
+              ConstantAggregateZero::get(MaskTy), Mask);
+          Value *Sel = IC.Builder.CreateSelect(BoolVec, Op1, Op0);
+          return new BitCastInst(Sel, II.getType());
+        }
+      }
+    }
 
     // Peek through a one-use shuffle - VectorCombine should have simplified
     // this for cases where we're splitting wider vectors to use blendv
@@ -2915,7 +2929,6 @@ X86TTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
         BoolVec->getType()->isVectorTy() &&
         BoolVec->getType()->getScalarSizeInBits() == 1) {
       auto *MaskTy = cast<FixedVectorType>(Mask->getType());
-      auto *OpTy = cast<FixedVectorType>(II.getType());
       unsigned NumMaskElts = MaskTy->getNumElements();
       unsigned NumOperandElts = OpTy->getNumElements();
 
