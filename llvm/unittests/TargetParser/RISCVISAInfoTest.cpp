@@ -1245,6 +1245,25 @@ R"(All available -march extensions for RISC-V
     xmipscmov            1.0
     xmipsexectl          1.0
     xmipslsp             1.0
+    xqci                 0.13
+    xqcia                0.7
+    xqciac               0.3
+    xqcibi               0.2
+    xqcibm               0.8
+    xqcicli              0.3
+    xqcicm               0.2
+    xqcics               0.2
+    xqcicsr              0.4
+    xqciint              0.10
+    xqciio               0.1
+    xqcilb               0.2
+    xqcili               0.2
+    xqcilia              0.2
+    xqcilo               0.3
+    xqcilsm              0.6
+    xqcisim              0.2
+    xqcisls              0.2
+    xqcisync             0.3
     xsfcease             1.0
     xsfmm128t            0.6
     xsfmm16t             0.6
@@ -1297,25 +1316,6 @@ Experimental extensions
     smpmpmt              0.6
     svukte               0.3
     xqccmp               0.3
-    xqci                 0.13
-    xqcia                0.7
-    xqciac               0.3
-    xqcibi               0.2
-    xqcibm               0.8
-    xqcicli              0.3
-    xqcicm               0.2
-    xqcics               0.2
-    xqcicsr              0.4
-    xqciint              0.10
-    xqciio               0.1
-    xqcilb               0.2
-    xqcili               0.2
-    xqcilia              0.2
-    xqcilo               0.3
-    xqcilsm              0.6
-    xqcisim              0.2
-    xqcisls              0.2
-    xqcisync             0.3
     xrivosvisni          0.1
     xrivosvizip          0.1
     xsfmclic             0.1

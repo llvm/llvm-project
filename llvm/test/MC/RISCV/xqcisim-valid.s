@@ -1,13 +1,13 @@
 # Xqcisim - Simulation Hint Instructions
-# RUN: llvm-mc %s -triple=riscv32 -mattr=+experimental-xqcisim -M no-aliases -show-encoding \
+# RUN: llvm-mc %s -triple=riscv32 -mattr=+xqcisim -M no-aliases -show-encoding \
 # RUN:     | FileCheck -check-prefixes=CHECK-ENC,CHECK-INST %s
-# RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+experimental-xqcisim < %s \
-# RUN:     | llvm-objdump --mattr=+experimental-xqcisim -M no-aliases --no-print-imm-hex -d - \
+# RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+xqcisim < %s \
+# RUN:     | llvm-objdump --mattr=+xqcisim -M no-aliases --no-print-imm-hex -d - \
 # RUN:     | FileCheck -check-prefixes=CHECK-INST,CHECK-NOALIAS %s
-# RUN: llvm-mc %s -triple=riscv32 -mattr=+experimental-xqcisim -show-encoding \
+# RUN: llvm-mc %s -triple=riscv32 -mattr=+xqcisim -show-encoding \
 # RUN:     | FileCheck -check-prefixes=CHECK-ENC,CHECK-INST,CHECK-ALIAS %s
-# RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+experimental-xqcisim < %s \
-# RUN:     | llvm-objdump --mattr=+experimental-xqcisim --no-print-imm-hex -d - \
+# RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+xqcisim < %s \
+# RUN:     | llvm-objdump --mattr=+xqcisim --no-print-imm-hex -d - \
 # RUN:     | FileCheck -check-prefixes=CHECK-INST,CHECK-ALIAS %s
 
 
