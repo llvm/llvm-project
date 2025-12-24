@@ -1,10 +1,13 @@
-//===- RISCVInsertVSETVLI.cpp - Insert VSETVLI instructions ---------------===//
+//===- RISCVVSETVLIInfoAnalysis.h - VSETVLI Info Analysis -----------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+//
+// This file implements an analysis of the vtype/vl information that is needed
+// by RISCVInsertVSETVLI pass and others.
 //
 //===----------------------------------------------------------------------===//
 
@@ -565,32 +568,13 @@ inline raw_ostream &operator<<(raw_ostream &OS, const VSETVLIInfo &V) {
 }
 #endif
 
-struct BlockData {
-  // The VSETVLIInfo that represents the VL/VTYPE settings on exit from this
-  // block. Calculated in Phase 2.
-  VSETVLIInfo Exit;
-
-  // The VSETVLIInfo that represents the VL/VTYPE settings from all predecessor
-  // blocks. Calculated in Phase 2, and used by Phase 3.
-  VSETVLIInfo Pred;
-
-  // Keeps track of whether the block is already in the queue.
-  bool InQueue = false;
-
-  BlockData() = default;
-};
-
-enum TKTMMode {
-  VSETTK = 0,
-  VSETTM = 1,
-};
-
 class RISCVVSETVLIInfoAnalysis {
   const RISCVSubtarget *ST;
   // Possibly null!
   LiveIntervals *LIS;
 
 public:
+  RISCVVSETVLIInfoAnalysis() = default;
   RISCVVSETVLIInfoAnalysis(const RISCVSubtarget *ST, LiveIntervals *LIS)
       : ST(ST), LIS(LIS) {}
 

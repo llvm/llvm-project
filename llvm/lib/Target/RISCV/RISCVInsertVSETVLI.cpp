@@ -68,13 +68,33 @@ static unsigned getVLOpNum(const MachineInstr &MI) {
   return RISCVII::getVLOpNum(MI.getDesc());
 }
 
+struct BlockData {
+  // The VSETVLIInfo that represents the VL/VTYPE settings on exit from this
+  // block. Calculated in Phase 2.
+  VSETVLIInfo Exit;
+
+  // The VSETVLIInfo that represents the VL/VTYPE settings from all predecessor
+  // blocks. Calculated in Phase 2, and used by Phase 3.
+  VSETVLIInfo Pred;
+
+  // Keeps track of whether the block is already in the queue.
+  bool InQueue = false;
+
+  BlockData() = default;
+};
+
+enum TKTMMode {
+  VSETTK = 0,
+  VSETTM = 1,
+};
+
 class RISCVInsertVSETVLI : public MachineFunctionPass {
   const RISCVSubtarget *ST;
   const TargetInstrInfo *TII;
   MachineRegisterInfo *MRI;
   // Possibly null!
   LiveIntervals *LIS;
-  RISCVVSETVLIInfoAnalysis *VIA;
+  RISCVVSETVLIInfoAnalysis VIA;
 
   std::vector<BlockData> BlockInfo;
   std::queue<const MachineBasicBlock *> WorkList;
@@ -179,7 +199,7 @@ void RISCVInsertVSETVLI::insertVSETVLI(MachineBasicBlock &MBB,
     if (Info.hasSameVLMAX(PrevInfo) && Info.hasAVLReg()) {
       if (const MachineInstr *DefMI = Info.getAVLDefMI(LIS);
           DefMI && RISCVInstrInfo::isVectorConfigInstr(*DefMI)) {
-        VSETVLIInfo DefInfo = VIA->getInfoForVSETVLI(*DefMI);
+        VSETVLIInfo DefInfo = VIA.getInfoForVSETVLI(*DefMI);
         if (DefInfo.hasSameAVL(PrevInfo) && DefInfo.hasSameVLMAX(PrevInfo)) {
           auto MI =
               BuildMI(MBB, InsertPt, DL, TII->get(RISCV::PseudoVSETVLIX0X0))
@@ -311,7 +331,7 @@ void RISCVInsertVSETVLI::transferBefore(VSETVLIInfo &Info,
 
   DemandedFields Demanded = getDemanded(MI, ST);
 
-  const VSETVLIInfo NewInfo = VIA->computeInfoForInstr(MI);
+  const VSETVLIInfo NewInfo = VIA.computeInfoForInstr(MI);
   assert(NewInfo.isValid() && !NewInfo.isUnknown());
   if (Info.isValid() && !needVSETVLI(Demanded, NewInfo, Info))
     return;
@@ -362,7 +382,7 @@ void RISCVInsertVSETVLI::transferBefore(VSETVLIInfo &Info,
 void RISCVInsertVSETVLI::transferAfter(VSETVLIInfo &Info,
                                        const MachineInstr &MI) const {
   if (RISCVInstrInfo::isVectorConfigInstr(MI)) {
-    Info = VIA->getInfoForVSETVLI(MI);
+    Info = VIA.getInfoForVSETVLI(MI);
     return;
   }
 
@@ -493,7 +513,7 @@ bool RISCVInsertVSETVLI::needVSETVLIPHI(const VSETVLIInfo &Require,
 
     // We found a VSET(I)VLI make sure it matches the output of the
     // predecessor block.
-    VSETVLIInfo DefInfo = VIA->getInfoForVSETVLI(*DefMI);
+    VSETVLIInfo DefInfo = VIA.getInfoForVSETVLI(*DefMI);
     if (DefInfo != PBBExit)
       return true;
 
@@ -736,8 +756,8 @@ bool RISCVInsertVSETVLI::canMutatePriorConfig(
     if (Used.VLZeroness) {
       if (RISCVInstrInfo::isVLPreservingConfig(PrevMI))
         return false;
-      if (!VIA->getInfoForVSETVLI(PrevMI).hasEquallyZeroAVL(
-              VIA->getInfoForVSETVLI(MI), LIS))
+      if (!VIA.getInfoForVSETVLI(PrevMI).hasEquallyZeroAVL(
+              VIA.getInfoForVSETVLI(MI), LIS))
         return false;
     }
 
@@ -925,7 +945,7 @@ bool RISCVInsertVSETVLI::insertVSETMTK(MachineBasicBlock &MBB,
         !RISCVII::hasSEWOp(TSFlags) || !RISCVII::hasTWidenOp(TSFlags))
       continue;
 
-    VSETVLIInfo CurrInfo = VIA->computeInfoForInstr(MI);
+    VSETVLIInfo CurrInfo = VIA.computeInfoForInstr(MI);
 
     if (Mode == VSETTK && !RISCVII::hasTKOp(TSFlags))
       continue;
@@ -986,8 +1006,7 @@ bool RISCVInsertVSETVLI::runOnMachineFunction(MachineFunction &MF) {
   MRI = &MF.getRegInfo();
   auto *LISWrapper = getAnalysisIfAvailable<LiveIntervalsWrapperPass>();
   LIS = LISWrapper ? &LISWrapper->getLIS() : nullptr;
-  RISCVVSETVLIInfoAnalysis SETVLIInfoAnalysis(ST, LIS);
-  VIA = &SETVLIInfoAnalysis;
+  VIA = RISCVVSETVLIInfoAnalysis(ST, LIS);
 
   assert(BlockInfo.empty() && "Expect empty block infos");
   BlockInfo.resize(MF.getNumBlockIDs());
