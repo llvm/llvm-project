@@ -141,7 +141,13 @@ FunctionPass *createX86WinEHStatePass();
 /// instructions into a sequence of actual instructions. This pass
 /// must run after prologue/epilogue insertion and before lowering
 /// the MachineInstr to MC.
-FunctionPass *createX86ExpandPseudoPass();
+class X86ExpandPseudoPass : public PassInfoMixin<X86ExpandPseudoPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *createX86ExpandPseudoLegacyPass();
 
 /// This pass converts X86 cmov instructions into branch when profitable.
 FunctionPass *createX86CmovConverterPass();
@@ -244,7 +250,7 @@ void initializeX86DAGToDAGISelLegacyPass(PassRegistry &);
 void initializeX86DomainReassignmentPass(PassRegistry &);
 void initializeX86DynAllocaExpanderLegacyPass(PassRegistry &);
 void initializeX86ExecutionDomainFixPass(PassRegistry &);
-void initializeX86ExpandPseudoPass(PassRegistry &);
+void initializeX86ExpandPseudoLegacyPass(PassRegistry &);
 void initializeX86FPStackifierLegacyPass(PassRegistry &);
 void initializeX86FastPreTileConfigPass(PassRegistry &);
 void initializeX86FastTileConfigPass(PassRegistry &);
