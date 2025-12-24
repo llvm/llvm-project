@@ -448,7 +448,7 @@ Instruction *InstCombinerImpl::visitExtractElementInst(ExtractElementInst &EI) {
         if (IndexC->getValue().getActiveBits() <= BitWidth)
           Idx = ConstantInt::get(Ty, IndexC->getValue().zextOrTrunc(BitWidth));
         else
-          Idx = PoisonValue::get(Ty);
+          return nullptr;
         return replaceInstUsesWith(EI, Idx);
       }
     }
