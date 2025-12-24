@@ -237,7 +237,8 @@ def DistributeLayoutAttr: AttrInterface<"DistributeLayoutAttr"> {
                     "delinearizeId",
                     (ins "OpBuilder &": $builder, "Location":$loc, "Value":$linearId)>,
     InterfaceMethod<[{Derive a new layout with sg_data, inst_data and lane_data set to the 
-                      specified values for the given dimension}],
+                      specified values for the given dimension. Passing -1 for any parameter 
+                      preserves its original value.}],
                     "xegpu::DistributeLayoutAttr",
                     "setDimData",
                     (ins "int64_t": $dim,
@@ -521,7 +522,8 @@ def XeGPU_LayoutAttr : XeGPUAttr<"Layout", "layout", [DistributeLayoutAttr]> {
     DistributeLayoutAttr setUnitDimLayout(SetVector<int64_t> unitDims) const;
 
     // Derive a new layout with sg_data, inst_data and lane_data set to the 
-    // specified values for the given dimension
+    // specified values for the given dimension. Passing -1 for any parameter 
+    // preserves its original value.
     DistributeLayoutAttr setDimData(int64_t dim, int64_t sgData, int64_t instData, int64_t laneData);
 
     // Derive a new layout by collapsing groups of dimensions.
@@ -701,7 +703,8 @@ def XeGPU_SliceAttr : XeGPUAttr<"Slice", "slice", [DistributeLayoutAttr]> {
     DistributeLayoutAttr setUnitDimLayout(SetVector<int64_t> unitDims) const;
 
     // Derive a new layout with sg_data, inst_data and lane_data set to the 
-    // specified values for the given dimension
+    // specified values for the given dimension. Passing -1 for any parameter 
+    // preserves its original value.
     DistributeLayoutAttr setDimData(int64_t dim, int64_t sgData, int64_t instData, int64_t laneData);
 
     // Derive a new layout by collapsing groups of dimensions.

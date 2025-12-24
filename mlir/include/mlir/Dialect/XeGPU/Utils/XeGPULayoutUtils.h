@@ -96,7 +96,7 @@ void removeLayoutAttrs(Operation *op);
 
 /// Infers the source layout attribute for a broadcast operation given the
 /// result layout attribute, result shape, source shape, and broadcasted dims.
-DistributeLayoutAttr inferBroadCastSourceLayout(MLIRContext *context,
+DistributeLayoutAttr inferBroadcastSourceLayout(MLIRContext *context,
                                                 DistributeLayoutAttr resLayout,
                                                 ArrayRef<int64_t> resShape,
                                                 ArrayRef<int64_t> srcShape);
@@ -117,7 +117,7 @@ DistributeLayoutAttr inferBitCastSourceLayout(MLIRContext *context,
 
 /// Infers the source layout attribute for a shape cast operation given the
 /// result layout attribute, result shape, and source shape.
-DistributeLayoutAttr inferShapeCastSourceLayout(MLIRContext *context,
+DistributeLayoutAttr inferShapecastSourceLayout(MLIRContext *context,
                                                 DistributeLayoutAttr resLayout,
                                                 ArrayRef<int64_t> resShape,
                                                 ArrayRef<int64_t> srcShape);
