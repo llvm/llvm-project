@@ -707,7 +707,8 @@ static bool is64bitDefwithZeroHigh64bit(MachineInstr *MI,
     Register SrcReg = SrcOp.getReg();
     auto IsGPR64Like = [&]() -> bool {
       if (SrcReg.isVirtual())
-        return AArch64::GPR64allRegClass.hasSubClassEq(MRI->getRegClass(SrcReg));
+        return AArch64::GPR64allRegClass.hasSubClassEq(
+            MRI->getRegClass(SrcReg));
       return AArch64::GPR64allRegClass.contains(SrcReg);
     };
     if (!IsGPR64Like())
@@ -718,7 +719,8 @@ static bool is64bitDefwithZeroHigh64bit(MachineInstr *MI,
     bool SrcKill = SrcMO.isKill();
     if (SrcReg.isVirtual()) {
       if (MRI->getRegClass(SrcReg) != &AArch64::GPR64RegClass) {
-        // Pass the value through a temporary GPR64 vreg to satisfy the verifier.
+        // Pass the value through a temporary GPR64 vreg to satisfy the
+        // verifier.
         Register NewSrc = MRI->createVirtualRegister(&AArch64::GPR64RegClass);
         BuildMI(*MI->getParent(), MI, MI->getDebugLoc(),
                 TII->get(TargetOpcode::COPY), NewSrc)
@@ -732,7 +734,8 @@ static bool is64bitDefwithZeroHigh64bit(MachineInstr *MI,
     SrcMO.setReg(SrcReg);
     SrcMO.setSubReg(0);
     SrcMO.setIsKill(SrcKill);
-    // Replace the COPY with an explicit FMOV so the zeroing behaviour stays visible.
+    // Replace the COPY with an explicit FMOV so the zeroing behaviour stays
+    // visible.
     MI->setDesc(TII->get(AArch64::FMOVXDr));
     return true;
   }
