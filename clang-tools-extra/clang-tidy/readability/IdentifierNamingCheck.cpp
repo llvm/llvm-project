@@ -330,50 +330,184 @@ loadFileConfig(const ClangTidyCheck::OptionsView &Options,
   }
 }
 
-static std::string
-getPrefix(const Decl *D,
-          const IdentifierNamingCheck::HungarianNotationOption &HNOption) {
-  if (!D)
-    return {};
-  const auto *ND = dyn_cast<NamedDecl>(D);
-  if (!ND)
-    return {};
+static std::string getEnumPrefix(const EnumConstantDecl *ECD) {
+  const auto *ED = cast<EnumDecl>(ECD->getDeclContext());
 
-  std::string Prefix;
-  if (const auto *ECD = dyn_cast<EnumConstantDecl>(ND)) {
-    Prefix = getEnumPrefix(ECD);
-  } else if (const auto *CRD = dyn_cast<CXXRecordDecl>(ND)) {
-    Prefix = getClassPrefix(CRD, HNOption);
-  } else if (isa<VarDecl, FieldDecl, RecordDecl>(ND)) {
-    const std::string TypeName = getDeclTypeName(ND);
-    if (!TypeName.empty())
-      Prefix = getDataTypePrefix(TypeName, ND, HNOption);
+  std::string Name = ED->getName().str();
+  if (StringRef(Name).contains("enum")) {
+    Name = Name.substr(strlen("enum"), Name.length() - strlen("enum"));
+    Name = Name.erase(0, Name.find_first_not_of(' '));
   }
 
-  return Prefix;
-}
+  static const llvm::Regex Splitter(
+      "([a-z0-9A-Z]*)(_+)|([A-Z]?[a-z0-9]+)([A-Z]|$)|([A-Z]+)([A-Z]|$)");
 
-static bool removeDuplicatedPrefix(
-    SmallVector<StringRef, 8> &Words,
-    const IdentifierNamingCheck::HungarianNotationOption &HNOption) {
-  if (Words.size() <= 1)
-    return true;
+  const StringRef EnumName(Name);
+  SmallVector<StringRef, 8> Substrs;
+  EnumName.split(Substrs, "_", -1, false);
 
-  const std::string CorrectName = Words[0].str();
-  const std::vector<llvm::StringMap<std::string>> MapList = {
-      HNOption.CString, HNOption.DerivedType, HNOption.PrimitiveType,
-      HNOption.UserDefinedType};
+  SmallVector<StringRef, 8> Words;
+  SmallVector<StringRef, 8> Groups;
+  for (auto Substr : Substrs) {
+    while (!Substr.empty()) {
+      Groups.clear();
+      if (!Splitter.match(Substr, &Groups))
+        break;
 
-  for (const auto &Map : MapList) {
-    for (const auto &Str : Map) {
-      if (Str.getValue() == CorrectName) {
-        Words.erase(Words.begin(), Words.begin() + 1);
-        return true;
+      if (!Groups[2].empty()) {
+        Words.push_back(Groups[1]);
+        Substr = Substr.substr(Groups[0].size());
+      } else if (!Groups[3].empty()) {
+        Words.push_back(Groups[3]);
+        Substr = Substr.substr(Groups[0].size() - Groups[4].size());
+      } else if (!Groups[5].empty()) {
+        Words.push_back(Groups[5]);
+        Substr = Substr.substr(Groups[0].size() - Groups[6].size());
       }
     }
   }
 
-  return false;
+  std::string Initial;
+  for (const StringRef Word : Words)
+    Initial += tolower(Word[0]);
+
+  return Initial;
+}
+
+static std::string
+getClassPrefix(const CXXRecordDecl *CRD,
+               const IdentifierNamingCheck::HungarianNotationOption &HNOption) {
+  if (CRD->isUnion())
+    return {};
+
+  if (CRD->isStruct() &&
+      !isOptionEnabled("TreatStructAsClass", HNOption.General))
+    return {};
+
+  return CRD->isAbstract() ? "I" : "C";
+}
+
+static size_t getAsteriskCount(const std::string &TypeName) {
+  size_t Pos = TypeName.find('*');
+  size_t Count = 0;
+  for (; Pos < TypeName.length(); Pos++, Count++)
+    if ('*' != TypeName[Pos])
+      break;
+  return Count;
+}
+
+static size_t getAsteriskCount(const std::string &TypeName,
+                               const NamedDecl *ND) {
+  size_t PtrCount = 0;
+  if (const auto *TD = dyn_cast<ValueDecl>(ND)) {
+    const QualType QT = TD->getType();
+    if (QT->isPointerType())
+      PtrCount = getAsteriskCount(TypeName);
+  }
+  return PtrCount;
+}
+
+static std::string getDeclTypeName(const NamedDecl *ND) {
+  const auto *VD = dyn_cast<ValueDecl>(ND);
+  if (!VD)
+    return {};
+
+  if (isa<FunctionDecl, EnumConstantDecl>(ND))
+    return {};
+
+  // Get type text of variable declarations.
+  auto &SM = VD->getASTContext().getSourceManager();
+  const char *Begin = SM.getCharacterData(VD->getBeginLoc());
+  const char *End = SM.getCharacterData(VD->getEndLoc());
+  intptr_t StrLen = End - Begin;
+
+  // FIXME: Sometimes the value that returns from ValDecl->getEndLoc()
+  // is wrong(out of location of Decl). This causes `StrLen` will be assigned
+  // an unexpected large value. Current workaround to find the terminated
+  // character instead of the `getEndLoc()` function.
+  const char *EOL = strchr(Begin, '\n');
+  if (!EOL)
+    EOL = Begin + strlen(Begin);
+
+  const char *const PosList[] = {strchr(Begin, '='), strchr(Begin, ';'),
+                                 strchr(Begin, ','), strchr(Begin, ')'), EOL};
+  for (const auto &Pos : PosList)
+    if (Pos > Begin)
+      EOL = std::min(EOL, Pos);
+
+  StrLen = EOL - Begin;
+  std::string TypeName;
+  if (StrLen > 0) {
+    std::string Type(Begin, StrLen);
+
+    static constexpr StringRef Keywords[] = {
+        // Constexpr specifiers
+        "constexpr", "constinit", "consteval",
+        // Qualifier
+        "const", "volatile", "restrict", "mutable",
+        // Storage class specifiers
+        "register", "static", "extern", "thread_local",
+        // Other keywords
+        "virtual"};
+
+    // Remove keywords
+    for (const StringRef Kw : Keywords)
+      for (size_t Pos = 0; (Pos = Type.find(Kw, Pos)) != std::string::npos;)
+        Type.replace(Pos, Kw.size(), "");
+    TypeName = Type.erase(0, Type.find_first_not_of(' '));
+
+    // Remove template parameters
+    const size_t Pos = Type.find('<');
+    if (Pos != std::string::npos)
+      TypeName = Type.erase(Pos, Type.size() - Pos);
+
+    // Replace spaces with single space.
+    for (size_t Pos = 0; (Pos = Type.find("  ", Pos)) != std::string::npos;
+         Pos += strlen(" ")) {
+      Type.replace(Pos, strlen("  "), " ");
+    }
+
+    // Replace " &" with "&".
+    for (size_t Pos = 0; (Pos = Type.find(" &", Pos)) != std::string::npos;
+         Pos += strlen("&")) {
+      Type.replace(Pos, strlen(" &"), "&");
+    }
+
+    // Replace " *" with "* ".
+    for (size_t Pos = 0; (Pos = Type.find(" *", Pos)) != std::string::npos;
+         Pos += strlen("*")) {
+      Type.replace(Pos, strlen(" *"), "* ");
+    }
+
+    // Remove redundant tailing.
+    static constexpr StringRef TailsOfMultiWordType[] = {
+        " int", " char", " double", " long", " short"};
+    bool RedundantRemoved = false;
+    for (auto Kw : TailsOfMultiWordType) {
+      const size_t Pos = Type.rfind(Kw);
+      if (Pos != std::string::npos) {
+        const size_t PtrCount = getAsteriskCount(Type, ND);
+        Type = Type.substr(0, Pos + Kw.size() + PtrCount);
+        RedundantRemoved = true;
+        break;
+      }
+    }
+
+    TypeName = Type.erase(0, Type.find_first_not_of(' '));
+    if (!RedundantRemoved) {
+      const std::size_t FoundSpace = Type.find(' ');
+      if (FoundSpace != std::string::npos)
+        Type = Type.substr(0, FoundSpace);
+    }
+
+    TypeName = Type.erase(0, Type.find_first_not_of(' '));
+
+    const QualType QT = VD->getType();
+    if (!QT.isNull() && QT->isArrayType())
+      TypeName.append("[]");
+  }
+
+  return TypeName;
 }
 
 static std::string getDataTypePrefix(
@@ -457,80 +591,49 @@ static std::string getDataTypePrefix(
 }
 
 static std::string
-getClassPrefix(const CXXRecordDecl *CRD,
-               const IdentifierNamingCheck::HungarianNotationOption &HNOption) {
-  if (CRD->isUnion())
+getPrefix(const Decl *D,
+          const IdentifierNamingCheck::HungarianNotationOption &HNOption) {
+  if (!D)
+    return {};
+  const auto *ND = dyn_cast<NamedDecl>(D);
+  if (!ND)
     return {};
 
-  if (CRD->isStruct() &&
-      !isOptionEnabled("TreatStructAsClass", HNOption.General))
-    return {};
-
-  return CRD->isAbstract() ? "I" : "C";
-}
-
-static std::string getEnumPrefix(const EnumConstantDecl *ECD) {
-  const auto *ED = cast<EnumDecl>(ECD->getDeclContext());
-
-  std::string Name = ED->getName().str();
-  if (StringRef(Name).contains("enum")) {
-    Name = Name.substr(strlen("enum"), Name.length() - strlen("enum"));
-    Name = Name.erase(0, Name.find_first_not_of(' '));
+  std::string Prefix;
+  if (const auto *ECD = dyn_cast<EnumConstantDecl>(ND)) {
+    Prefix = getEnumPrefix(ECD);
+  } else if (const auto *CRD = dyn_cast<CXXRecordDecl>(ND)) {
+    Prefix = getClassPrefix(CRD, HNOption);
+  } else if (isa<VarDecl, FieldDecl, RecordDecl>(ND)) {
+    const std::string TypeName = getDeclTypeName(ND);
+    if (!TypeName.empty())
+      Prefix = getDataTypePrefix(TypeName, ND, HNOption);
   }
 
-  static const llvm::Regex Splitter(
-      "([a-z0-9A-Z]*)(_+)|([A-Z]?[a-z0-9]+)([A-Z]|$)|([A-Z]+)([A-Z]|$)");
+  return Prefix;
+}
 
-  const StringRef EnumName(Name);
-  SmallVector<StringRef, 8> Substrs;
-  EnumName.split(Substrs, "_", -1, false);
+static bool removeDuplicatedPrefix(
+    SmallVector<StringRef, 8> &Words,
+    const IdentifierNamingCheck::HungarianNotationOption &HNOption) {
+  if (Words.size() <= 1)
+    return true;
 
-  SmallVector<StringRef, 8> Words;
-  SmallVector<StringRef, 8> Groups;
-  for (auto Substr : Substrs) {
-    while (!Substr.empty()) {
-      Groups.clear();
-      if (!Splitter.match(Substr, &Groups))
-        break;
+  const std::string CorrectName = Words[0].str();
+  const std::vector<llvm::StringMap<std::string>> MapList = {
+      HNOption.CString, HNOption.DerivedType, HNOption.PrimitiveType,
+      HNOption.UserDefinedType};
 
-      if (!Groups[2].empty()) {
-        Words.push_back(Groups[1]);
-        Substr = Substr.substr(Groups[0].size());
-      } else if (!Groups[3].empty()) {
-        Words.push_back(Groups[3]);
-        Substr = Substr.substr(Groups[0].size() - Groups[4].size());
-      } else if (!Groups[5].empty()) {
-        Words.push_back(Groups[5]);
-        Substr = Substr.substr(Groups[0].size() - Groups[6].size());
+  for (const auto &Map : MapList) {
+    for (const auto &Str : Map) {
+      if (Str.getValue() == CorrectName) {
+        Words.erase(Words.begin(), Words.begin() + 1);
+        return true;
       }
     }
   }
 
-  std::string Initial;
-  for (const StringRef Word : Words)
-    Initial += tolower(Word[0]);
-
-  return Initial;
-}
-
-static size_t getAsteriskCount(const std::string &TypeName) {
-  size_t Pos = TypeName.find('*');
-  size_t Count = 0;
-  for (; Pos < TypeName.length(); Pos++, Count++)
-    if ('*' != TypeName[Pos])
-      break;
-  return Count;
-}
-
-static size_t getAsteriskCount(const std::string &TypeName,
-                               const NamedDecl *ND) {
-  size_t PtrCount = 0;
-  if (const auto *TD = dyn_cast<ValueDecl>(ND)) {
-    const QualType QT = TD->getType();
-    if (QT->isPointerType())
-      PtrCount = getAsteriskCount(TypeName);
-  }
-  return PtrCount;
+  return false;
 }
 
 static void
@@ -702,109 +805,6 @@ IdentifierNamingCheck::FileStyle IdentifierNamingCheck::getFileStyleFromOptions(
       Options.get("CheckAnonFieldInParent", false);
   return {std::move(Styles), std::move(HNOption), IgnoreMainLike,
           CheckAnonFieldInParent};
-}
-
-static std::string getDeclTypeName(const NamedDecl *ND) {
-  const auto *VD = dyn_cast<ValueDecl>(ND);
-  if (!VD)
-    return {};
-
-  if (isa<FunctionDecl, EnumConstantDecl>(ND))
-    return {};
-
-  // Get type text of variable declarations.
-  auto &SM = VD->getASTContext().getSourceManager();
-  const char *Begin = SM.getCharacterData(VD->getBeginLoc());
-  const char *End = SM.getCharacterData(VD->getEndLoc());
-  intptr_t StrLen = End - Begin;
-
-  // FIXME: Sometimes the value that returns from ValDecl->getEndLoc()
-  // is wrong(out of location of Decl). This causes `StrLen` will be assigned
-  // an unexpected large value. Current workaround to find the terminated
-  // character instead of the `getEndLoc()` function.
-  const char *EOL = strchr(Begin, '\n');
-  if (!EOL)
-    EOL = Begin + strlen(Begin);
-
-  const char *const PosList[] = {strchr(Begin, '='), strchr(Begin, ';'),
-                                 strchr(Begin, ','), strchr(Begin, ')'), EOL};
-  for (const auto &Pos : PosList)
-    if (Pos > Begin)
-      EOL = std::min(EOL, Pos);
-
-  StrLen = EOL - Begin;
-  std::string TypeName;
-  if (StrLen > 0) {
-    std::string Type(Begin, StrLen);
-
-    static constexpr StringRef Keywords[] = {
-        // Constexpr specifiers
-        "constexpr", "constinit", "consteval",
-        // Qualifier
-        "const", "volatile", "restrict", "mutable",
-        // Storage class specifiers
-        "register", "static", "extern", "thread_local",
-        // Other keywords
-        "virtual"};
-
-    // Remove keywords
-    for (const StringRef Kw : Keywords)
-      for (size_t Pos = 0; (Pos = Type.find(Kw, Pos)) != std::string::npos;)
-        Type.replace(Pos, Kw.size(), "");
-    TypeName = Type.erase(0, Type.find_first_not_of(' '));
-
-    // Remove template parameters
-    const size_t Pos = Type.find('<');
-    if (Pos != std::string::npos)
-      TypeName = Type.erase(Pos, Type.size() - Pos);
-
-    // Replace spaces with single space.
-    for (size_t Pos = 0; (Pos = Type.find("  ", Pos)) != std::string::npos;
-         Pos += strlen(" ")) {
-      Type.replace(Pos, strlen("  "), " ");
-    }
-
-    // Replace " &" with "&".
-    for (size_t Pos = 0; (Pos = Type.find(" &", Pos)) != std::string::npos;
-         Pos += strlen("&")) {
-      Type.replace(Pos, strlen(" &"), "&");
-    }
-
-    // Replace " *" with "* ".
-    for (size_t Pos = 0; (Pos = Type.find(" *", Pos)) != std::string::npos;
-         Pos += strlen("*")) {
-      Type.replace(Pos, strlen(" *"), "* ");
-    }
-
-    // Remove redundant tailing.
-    static constexpr StringRef TailsOfMultiWordType[] = {
-        " int", " char", " double", " long", " short"};
-    bool RedundantRemoved = false;
-    for (auto Kw : TailsOfMultiWordType) {
-      const size_t Pos = Type.rfind(Kw);
-      if (Pos != std::string::npos) {
-        const size_t PtrCount = getAsteriskCount(Type, ND);
-        Type = Type.substr(0, Pos + Kw.size() + PtrCount);
-        RedundantRemoved = true;
-        break;
-      }
-    }
-
-    TypeName = Type.erase(0, Type.find_first_not_of(' '));
-    if (!RedundantRemoved) {
-      const std::size_t FoundSpace = Type.find(' ');
-      if (FoundSpace != std::string::npos)
-        Type = Type.substr(0, FoundSpace);
-    }
-
-    TypeName = Type.erase(0, Type.find_first_not_of(' '));
-
-    const QualType QT = VD->getType();
-    if (!QT.isNull() && QT->isArrayType())
-      TypeName.append("[]");
-  }
-
-  return TypeName;
 }
 
 IdentifierNamingCheck::IdentifierNamingCheck(StringRef Name,
