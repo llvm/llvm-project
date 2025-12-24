@@ -71,20 +71,20 @@
                         </ul>
                     </li>
                     {{/ProtectedFunction}}
-                    {{#Enums}}
+                    {{#HasEnums}}
                     <li class="sidebar-section">
                         <a class="sidebar-item" href="#Enums">Enums</a>
                     </li>
                     <li>
                         <ul>
-                            {{#Obj}}
+                            {{#Enums}}
                             <li class="sidebar-item-container">
-                                <a class="sidebar-item" href="#{{USR}}">{{EnumName}}</a>
+                                <a class="sidebar-item" href="#{{USR}}">{{Name}}</a>
                             </li>
-                            {{/Obj}}
+                            {{/Enums}}
                         </ul>
                     </li>
-                    {{/Enums}}
+                    {{/HasEnums}}
                     {{#HasTypedefs}}
                     <li class="sidebar-section">
                         <a class="sidebar-item" href="#Typedefs">Typedefs</a>
@@ -187,16 +187,14 @@
                     {{/Obj}}
                 </ul>
                 {{/ProtectedFunction}}
-                {{#Enums}}
+                {{#HasEnums}}
                 <section id="Enums" class="section-container">
                     <h2>Enumerations</h2>
-                    <div>
-                        {{#Obj}}
-                        {{>EnumPartial}}
-                        {{/Obj}}
-                    </div>
+                    {{#Enums}}
+                    {{>EnumPartial}}
+                    {{/Enums}}
                 </section>
-                {{/Enums}}
+                {{/HasEnums}}
                 {{#Record}}
                 <section id="Classes" class="section-container">
                     <h2>Inner Classes</h2>
