@@ -33,31 +33,24 @@ const CFGBlock *CFGStmtMap::getBlock(const Stmt *S) const {
   return nullptr;
 }
 
-CFGStmtMap *CFGStmtMap::Build(const CFG *C, const ParentMap *PM) {
-  if (!C || !PM)
-    return nullptr;
-
-  SMap SM;
-
+CFGStmtMap::CFGStmtMap(const CFG &C, const ParentMap &PM) : PM(&PM) {
   // Walk all blocks, accumulating the block-level expressions, labels,
   // and terminators.
-  for (const CFGBlock *B : *C) {
+  for (const CFGBlock *B : C) {
     // First walk the block-level expressions.
     for (const CFGElement &CE : *B) {
       if (std::optional<CFGStmt> CS = CE.getAs<CFGStmt>())
-        SM.try_emplace(CS->getStmt(), B);
+        M.try_emplace(CS->getStmt(), B);
     }
 
     // Look at the label of the block.
     if (const Stmt *Label = B->getLabel())
-      SM[Label] = B;
+      M[Label] = B;
 
     // Finally, look at the terminator.  If the terminator was already added
     // because it is a block-level expression in another block, overwrite
     // that mapping.
     if (const Stmt *Term = B->getTerminatorStmt())
-      SM[Term] = B;
+      M[Term] = B;
   }
-
-  return new CFGStmtMap(PM, std::move(SM));
 }
