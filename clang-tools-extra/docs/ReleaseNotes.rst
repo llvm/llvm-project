@@ -463,6 +463,10 @@ Changes in existing checks
   <clang-tidy/checks/cppcoreguidelines/init-variables>` check by fixing the
   insertion location for function pointers with multiple parameters.
 
+- Improved :doc:`cppcoreguidelines-init-variables
+  <clang-tidy/checks/cppcoreguidelines/init-variables>` check to avoid false
+  positives on Objective-C fast enumeration loop variables.
+
 - Improved :doc:`cppcoreguidelines-macro-usage
   <clang-tidy/checks/cppcoreguidelines/macro-usage>` check by excluding macro
   bodies that starts with ``__attribute__((..))`` keyword.
