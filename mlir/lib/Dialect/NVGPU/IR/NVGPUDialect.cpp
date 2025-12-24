@@ -119,7 +119,8 @@ LogicalResult DeviceAsyncCopyOp::verify() {
 //===----------------------------------------------------------------------===//
 void MmaSyncOp::build(::mlir::OpBuilder &odsBuilder,
                       ::mlir::OperationState &odsState, Value matrixA,
-                      Value matrixB, Value matrixC, ArrayAttr mmaShape) {
+                      Value matrixB, Value matrixC,
+                      DenseI64ArrayAttr mmaShape) {
   build(odsBuilder, odsState, matrixC.getType(), matrixA, matrixB, matrixC,
         mmaShape, UnitAttr());
 }
@@ -129,8 +130,7 @@ void MmaSyncOp::build(::mlir::OpBuilder &odsBuilder,
                       Value matrixB, Value matrixC, ArrayRef<int64_t> mmaShape,
                       bool tf32Enabled) {
   build(odsBuilder, odsState, matrixC.getType(), matrixA, matrixB, matrixC,
-        odsBuilder.getI64ArrayAttr(mmaShape),
-        tf32Enabled ? odsBuilder.getUnitAttr() : UnitAttr());
+        mmaShape, tf32Enabled ? odsBuilder.getUnitAttr() : UnitAttr());
 }
 
 /// Performs verification for MmaSyncOp and MmaSparseSyncOp.
@@ -138,7 +138,7 @@ static LogicalResult verifyMmaSyncOp(Operation *op,
                                      TypedValue<VectorType> matrixA,
                                      TypedValue<VectorType> matrixB,
                                      TypedValue<VectorType> matrixC,
-                                     const std::array<int64_t, 3> &mmaShape,
+                                     ArrayRef<int64_t> mmaShape,
                                      bool tf32Enabled, bool sparse = false) {
   // The verification for mma.sync covering various shapes and data types is
   // based on the fundamental tensor core shape.
@@ -209,7 +209,12 @@ static LogicalResult verifyMmaSyncOp(Operation *op,
     return op->emitError() << "matrixC must be 2 dimensional vector";
   }
 
-  auto [m, n, k] = mmaShape;
+  if (mmaShape.size() != 3) {
+    return op->emitError() << "mmaShape should be three integers";
+  }
+  int64_t m = mmaShape[0];
+  int64_t n = mmaShape[1];
+  int64_t k = mmaShape[2];
 
   // verify warp-wide size for vector a
   int64_t sparseFactor = sparse ? 2 : 1;
@@ -262,7 +267,7 @@ static LogicalResult verifyMmaSyncOp(Operation *op,
 
 LogicalResult MmaSyncOp::verify() {
   return verifyMmaSyncOp(this->getOperation(), getMatrixA(), getMatrixB(),
-                         getMatrixC(), getMmaShapeAsArray(),
+                         getMatrixC(), getMmaShape(),
                          getOperation()->hasAttr(getTf32EnabledAttrName()));
 }
 
@@ -274,17 +279,16 @@ void MmaSparseSyncOp::build(::mlir::OpBuilder &odsBuilder,
                             Value matrixB, Value matrixC, Value sparseMetadata,
                             ArrayRef<int64_t> mmaShape) {
   build(odsBuilder, odsState, matrixC.getType(), matrixA, matrixB, matrixC,
-        sparseMetadata, odsBuilder.getI64ArrayAttr(mmaShape), 0, UnitAttr());
+        sparseMetadata, mmaShape, 0, UnitAttr());
 }
 
 LogicalResult MmaSparseSyncOp::verify() {
   unsigned sparsitySelector = getSparsitySelector();
   if (sparsitySelector > 1)
     return emitOpError() << "sparsity selector should be 0 or 1";
-  return verifyMmaSyncOp(this->getOperation(), getMatrixA(), getMatrixB(),
-                         getMatrixC(), getMmaShapeAsArray(),
-                         getOperation()->hasAttr(getTf32EnabledAttrName()),
-                         true);
+  return verifyMmaSyncOp(
+      this->getOperation(), getMatrixA(), getMatrixB(), getMatrixC(),
+      getMmaShape(), getOperation()->hasAttr(getTf32EnabledAttrName()), true);
 }
 
 //===----------------------------------------------------------------------===//

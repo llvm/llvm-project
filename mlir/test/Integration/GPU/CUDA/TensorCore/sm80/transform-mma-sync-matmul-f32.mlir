@@ -3,7 +3,7 @@
 // RUN: | FileCheck %s --check-prefix=CHECK-MMA-SYNC
 
 // CHECK-MMA-SYNC-LABEL: func @main() {
-//       CHECK-MMA-SYNC:   nvgpu.mma.sync(%{{.*}}) {mmaShape = [16, 8, 4], tf32Enabled}
+//       CHECK-MMA-SYNC:   nvgpu.mma.sync(%{{.*}}) {mmaShape = array<i64: 16, 8, 4>, tf32Enabled}
 //  CHECK-MMA-SYNC-SAME:     : (vector<2x1xf32>, vector<1x1xf32>, vector<2x2xf32>) -> vector<2x2xf32>
 
 // Tested to run locally in 1.7s.
