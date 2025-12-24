@@ -395,22 +395,6 @@ define i32 @lshr_var_self_select_amt_never_zero(i32 %a0, i32 %a1, i32 %a2, i32 %
   ret i32 %r
 }
 
-; lshr by non-zero variable and using result - use separate test
-define i32 @shl_var_self_select_amt_never_zero(i32 %a0, i32 %a1, i32 %a2, i32 %a3) {
-; CHECK-LABEL: shl_var_self_select_amt_never_zero:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    orb $1, %sil, %cl
-; CHECK-NEXT:    shrl %cl, %edi, %eax
-; CHECK-NEXT:    testl %eax, %eax
-; CHECK-NEXT:    cmovnel %edx, %eax
-; CHECK-NEXT:    retq
-  %a = or i32 %a1, 1
-  %s = lshr i32 %a0, %a
-  %c = icmp eq i32 %s, 0
-  %r = select i1 %c, i32 %s, i32 %a2
-  ret i32 %r
-}
-
 define i1 @lshr_nonezero_removes_test_optsize(i32 %val, i32 %amt) minsize {
 ; CHECK-LABEL: lshr_nonezero_removes_test_optsize:
 ; CHECK:       # %bb.0:
