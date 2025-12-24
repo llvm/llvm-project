@@ -99,20 +99,20 @@
                         </ul>
                     </li>
                     {{/HasTypedefs}}
-                    {{#Record}}
+                    {{#HasRecords}}
                     <li class="sidebar-section">
                         <a class="sidebar-item" href="#Classes">Inner Classes</a>
                     </li>
                     <li>
                         <ul>
-                            {{#Links}}
+                            {{#Records}}
                             <li class="sidebar-item-container">
-                                <a class="sidebar-item" href="#{{ID}}">{{Name}}</a>
+                                <a class="sidebar-item" href="#{{USR}}">{{Name}}</a>
                             </li>
-                            {{/Links}}
+                            {{/Records}}
                         </ul>
                     </li>
-                    {{/Record}}
+                    {{/HasRecords}}
                 </ul>
             </div>
             <div class="resizer" id="resizer"></div>
@@ -195,20 +195,20 @@
                     {{/Enums}}
                 </section>
                 {{/HasEnums}}
-                {{#Record}}
+                {{#HasRecords}}
                 <section id="Classes" class="section-container">
                     <h2>Inner Classes</h2>
                     <ul class="class-container">
-                        {{#Links}}
-                        <li id="{{ID}}" style="max-height: 40px;">
-                            <a href="{{Link}}">
-                                <pre><code class="language-cpp code-clang-doc" >class {{Name}}</code></pre>
+                        {{#Records}}
+                        <li id="{{USR}}" style="max-height: 40px;">
+                            <a href="{{PathStem}}/{{DocumentationFileName}}.html">
+                                <pre><code class="language-cpp code-clang-doc">class {{Name}}</code></pre>
                             </a>
                         </li>
-                        {{/Links}}
+                        {{/Records}}
                     </ul>
                 </section>
-                {{/Record}}
+                {{/HasRecords}}
                 {{#HasTypedefs}}
                 <section id="Typedefs" class="section-container">
                     <h2>Typedefs</h2>
