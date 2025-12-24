@@ -8,6 +8,6 @@
 
 #include "mlir-c/Dialect/AMX.h"
 #include "mlir/CAPI/Registration.h"
-#include "mlir/Dialect/AMX/IR/AMX.h"
+#include "mlir/Dialect/AMX/AMXDialect.h"
 
 MLIR_DEFINE_CAPI_DIALECT_REGISTRATION(AMX, amx, mlir::amx::AMXDialect)

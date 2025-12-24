@@ -8,7 +8,9 @@
 
 #include "mlir-c/Dialect/ArmNeon.h"
 #include "mlir/CAPI/Registration.h"
-#include "mlir/Dialect/ArmNeon/IR/ArmNeon.h"
+#include "mlir/Dialect/ArmNeon/ArmNeonDialect.h"
+
+using namespace mlir::arm_neon;
 
 MLIR_DEFINE_CAPI_DIALECT_REGISTRATION(ArmNeon, arm_neon,
                                       mlir::arm_neon::ArmNeonDialect)

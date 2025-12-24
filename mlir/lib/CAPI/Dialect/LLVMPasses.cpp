@@ -7,19 +7,19 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/CAPI/Pass.h"
-#include "mlir/Dialect/LLVM/Transforms/Passes.h"
+#include "mlir/Dialect/LLVMIR/Transforms/Passes.h"
 #include "mlir/Pass/Pass.h"
 
 // Must include the declarations as they carry important visibility attributes.
-#include "mlir/Dialect/LLVM/Transforms/Passes.capi.h.inc"
+#include "mlir/Dialect/LLVMIR/Transforms/Passes.capi.h.inc"
 using namespace mlir;
-using namespace mlir::llvm;
+using namespace mlir::LLVM;
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#include "mlir/Dialect/LLVM/Transforms/Passes.capi.cpp.inc"
+#include "mlir/Dialect/LLVMIR/Transforms/Passes.capi.cpp.inc"
 
 #ifdef __cplusplus
 }

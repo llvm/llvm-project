@@ -10,4 +10,4 @@
 #include "mlir/CAPI/Registration.h"
 #include "mlir/Dialect/LLVMIR/XeVMDialect.h"
 
-MLIR_DEFINE_CAPI_DIALECT_REGISTRATION(XeVM, xevm, mlir::XeVM::XeVMDialect)
+MLIR_DEFINE_CAPI_DIALECT_REGISTRATION(XeVM, xevm, mlir::xevm::XeVMDialect)

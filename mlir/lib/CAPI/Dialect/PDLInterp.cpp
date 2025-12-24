@@ -10,5 +10,5 @@
 #include "mlir/CAPI/Registration.h"
 #include "mlir/Dialect/PDLInterp/IR/PDLInterp.h"
 
-MLIR_DEFINE_CAPI_DIALECT_REGISTRATION(PDLInterp, pdlinterp,
-                                      mlir::pdlinterp::PDLInterpDialect)
+MLIR_DEFINE_CAPI_DIALECT_REGISTRATION(PDLInterp, pdl_interp,
+                                      mlir::pdl_interp::PDLInterpDialect)

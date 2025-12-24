@@ -8,6 +8,6 @@
 
 #include "mlir-c/Dialect/Shard.h"
 #include "mlir/CAPI/Registration.h"
-#include "mlir/Dialect/Shard/IR/Shard.h"
+#include "mlir/Dialect/Shard/IR/ShardDialect.h"
 
 MLIR_DEFINE_CAPI_DIALECT_REGISTRATION(Shard, shard, mlir::shard::ShardDialect)

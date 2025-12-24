@@ -10,5 +10,7 @@
 #include "mlir/CAPI/Registration.h"
 #include "mlir/Dialect/ArmSME/IR/ArmSME.h"
 
+using namespace mlir::arm_sme;
+
 MLIR_DEFINE_CAPI_DIALECT_REGISTRATION(ArmSME, arm_sme,
                                       mlir::arm_sme::ArmSMEDialect)

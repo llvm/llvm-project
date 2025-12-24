@@ -13,6 +13,7 @@
 // Must include the declarations as they carry important visibility attributes.
 #include "mlir/Dialect/Vector/Transforms/Passes.capi.h.inc"
 using namespace mlir;
+using namespace mlir::vector;
 
 #ifdef __cplusplus
 extern "C" {

@@ -10,4 +10,4 @@
 #include "mlir/CAPI/Registration.h"
 #include "mlir/Dialect/LLVMIR/VCIXDialect.h"
 
-MLIR_DEFINE_CAPI_DIALECT_REGISTRATION(VCIX, vcix, mlir::VCIX::VCIXDialect)
+MLIR_DEFINE_CAPI_DIALECT_REGISTRATION(VCIX, vcix, mlir::vcix::VCIXDialect)

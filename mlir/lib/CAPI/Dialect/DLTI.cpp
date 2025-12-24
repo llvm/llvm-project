@@ -8,6 +8,6 @@
 
 #include "mlir-c/Dialect/DLTI.h"
 #include "mlir/CAPI/Registration.h"
-#include "mlir/Dialect/DLTI/IR/DLTI.h"
+#include "mlir/Dialect/DLTI/DLTI.h"
 
-MLIR_DEFINE_CAPI_DIALECT_REGISTRATION(DLTI, dlti, mlir::dlti::DLTIDialect)
+MLIR_DEFINE_CAPI_DIALECT_REGISTRATION(DLTI, dlti, mlir::DLTIDialect)

@@ -10,5 +10,7 @@
 #include "mlir/CAPI/Registration.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 
+using namespace mlir::bufferization;
+
 MLIR_DEFINE_CAPI_DIALECT_REGISTRATION(Bufferization, bufferization,
                                       mlir::bufferization::BufferizationDialect)

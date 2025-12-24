@@ -8,7 +8,7 @@
 
 #include "mlir-c/Dialect/X86Vector.h"
 #include "mlir/CAPI/Registration.h"
-#include "mlir/Dialect/X86Vector/IR/X86Vector.h"
+#include "mlir/Dialect/X86Vector/X86VectorDialect.h"
 
 MLIR_DEFINE_CAPI_DIALECT_REGISTRATION(X86Vector, x86vector,
                                       mlir::x86vector::X86VectorDialect)

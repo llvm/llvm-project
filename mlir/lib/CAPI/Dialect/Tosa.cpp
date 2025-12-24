@@ -8,6 +8,6 @@
 
 #include "mlir-c/Dialect/Tosa.h"
 #include "mlir/CAPI/Registration.h"
-#include "mlir/Dialect/Tosa/IR/Tosa.h"
+#include "mlir/Dialect/Tosa/IR/TosaOps.h"
 
 MLIR_DEFINE_CAPI_DIALECT_REGISTRATION(Tosa, tosa, mlir::tosa::TosaDialect)
