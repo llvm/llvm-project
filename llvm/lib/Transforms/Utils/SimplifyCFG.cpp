@@ -2534,8 +2534,6 @@ static bool trySinkFromPredsIntoBB(BasicBlock *SinkBB,
   if (ScanIdx == 0)
     return false;
 
-  // NOTE: profitability is still based on the original BB (the final merge
-  // point), not the synthetic SinkBB we might introduce for (3).
   bool followedByDeoptOrUnreachable =
       IsBlockFollowedByDeoptOrUnreachable(SinkBB);
 
