@@ -21,7 +21,7 @@
 #include <vector>
 
 constexpr bool test() {
-  std::vector<int> vector                                                  = {1, 2, 3, 4, 5, 6, 7, 8};
+  std::vector<int> vector                                                 = {1, 2, 3, 4, 5, 6, 7, 8};
   std::ranges::slide_view<std::ranges::ref_view<std::vector<int>>> slided = vector | std::views::slide(3);
   std::ranges::slide_view<std::ranges::ref_view<const std::vector<int>>> const_slided =
       std::as_const(vector) | std::views::slide(3);

@@ -61,9 +61,12 @@ constexpr bool test() {
   {
     /*__pipable*/ auto adaptors            = std::views::slide(3) | std::views::join;
     std::ranges::input_range auto rejoined = view | adaptors;
-    assert(std::ranges::equal(rejoined, std::array{1, 2, 3, /*|*/ 2, 3, 4, /*|*/ 3, 4, 5, /*|*/ 4, 5, 6, /*|*/ 5, 6, 7, /*|*/ 6, 7, 8}));
+    assert(std::ranges::equal(
+        rejoined, std::array{1, 2, 3, /*|*/ 2, 3, 4, /*|*/ 3, 4, 5, /*|*/ 4, 5, 6, /*|*/ 5, 6, 7, /*|*/ 6, 7, 8}));
     std::ranges::input_range auto const_rejoined = std::as_const(view) | adaptors;
-    assert(std::ranges::equal(const_rejoined, std::array{1, 2, 3, /*|*/ 2, 3, 4, /*|*/ 3, 4, 5, /*|*/ 4, 5, 6, /*|*/ 5, 6, 7, /*|*/ 6, 7, 8}));
+    assert(std::ranges::equal(
+        const_rejoined,
+        std::array{1, 2, 3, /*|*/ 2, 3, 4, /*|*/ 3, 4, 5, /*|*/ 4, 5, 6, /*|*/ 5, 6, 7, /*|*/ 6, 7, 8}));
   }
 
   return true;

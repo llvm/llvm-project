@@ -31,7 +31,7 @@
 #include <vector>
 
 constexpr bool test() {
-  std::vector<int> vector                                                  = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12};
+  std::vector<int> vector                                                 = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12};
   std::ranges::slide_view<std::ranges::ref_view<std::vector<int>>> slided = vector | std::views::slide(3);
 
   // Test `friend constexpr bool operator==(const iterator& x, const iterator& y)`

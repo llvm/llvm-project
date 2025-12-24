@@ -34,5 +34,5 @@ using SV = std::ranges::slide_view<random_access_view>;
 // [[no_unique_address]] range_difference_t<_View> __n_                               // size: sizeof(ptrdiff_t)
 // [[no_unique_address]] _If<__slide_caches_first, iterator_t<_View>, __empty_cache_> // size: 0, __slide_caches_nothing
 // [[no_unique_address]] _If<__slide_caches_last,  iterator_t<_View>, __empty_cache_> // size: 0, __slide_caches_nothing
-                                                                                      // size: two adjacent __empty_cache has 1 byte.
+// size: two adjacent __empty_cache has 1 byte.
 static_assert(sizeof(SV) == sizeof(std::ptrdiff_t) * 2);

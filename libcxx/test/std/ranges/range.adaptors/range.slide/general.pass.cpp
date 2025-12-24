@@ -19,8 +19,8 @@
 
 constexpr bool test() {
   std::string_view str = "amanaplanacanalpanama"; // A man, a plan, a canal, Panama!
-  auto str2 = str | std::views::slide(4) | std::views::join;
-  auto str3 = str | std::views::reverse | std::views::slide(4) | std::views::join;
+  auto str2            = str | std::views::slide(4) | std::views::join;
+  auto str3            = str | std::views::reverse | std::views::slide(4) | std::views::join;
   assert(std::ranges::equal(str2, str3));
   return true;
 }
