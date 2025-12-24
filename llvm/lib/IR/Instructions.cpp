@@ -162,9 +162,9 @@ void PHINode::removeIncomingValueIf(function_ref<bool(unsigned)> Predicate,
   unsigned NumOps = getNumIncomingValues();
 
   // Loop backwards in case the predicate is purely index based.
-  for (int Idx = NumOps - 1; Idx >= 0; --Idx) {
+  for (unsigned Idx = NumOps; Idx-- > 0;) {
     if (Predicate(Idx)) {
-      int LastIdx = NumOps - 1;
+      unsigned LastIdx = NumOps - 1;
       if (Idx != LastIdx) {
         setIncomingValue(Idx, getIncomingValue(LastIdx));
         setIncomingBlock(Idx, getIncomingBlock(LastIdx));
