@@ -29053,6 +29053,8 @@ TEST_F(FormatTest, KeywordedFunctionLikeMacros) {
                Style);
 }
 
+TEST_F(FormatTest, UnbalancedAngleBrackets) { verifyFormat("template <"); }
+
 } // namespace
 } // namespace test
 } // namespace format

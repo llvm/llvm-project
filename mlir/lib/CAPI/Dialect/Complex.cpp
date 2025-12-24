@@ -10,12 +10,15 @@
 #include "mlir-c/IR.h"
 #include "mlir-c/Support.h"
 #include "mlir/CAPI/Registration.h"
+#include "mlir/Dialect/Complex/IR/Complex.h"
+
+using namespace mlir;
 
 MLIR_DEFINE_CAPI_DIALECT_REGISTRATION(Complex, complex,
                                       mlir::complex::ComplexDialect)
 
 bool mlirAttributeIsAComplex(MlirAttribute attr) {
-  return isa<ComplexAttr>(unwrap(attr));
+  return isa<complex::NumberAttr>(unwrap(attr));
 }
 
 MlirAttribute mlirComplexAttrDoubleGet(MlirContext ctx, MlirType type,
@@ -31,11 +34,11 @@ MlirAttribute mlirComplexAttrDoubleGetChecked(MlirLocation loc, MlirType type,
 }
 
 double mlirComplexAttrGetRealDouble(MlirAttribute attr) {
-  return cast<complex::NumberAttr>(unwrap(attr)).getRealAsDouble();
+  return cast<complex::NumberAttr>(unwrap(attr)).getReal().convertToDouble();
 }
 
 double mlirComplexAttrGetImagDouble(MlirAttribute attr) {
-  return cast<complex::NumberAttr>(unwrap(attr)).getImagAsDouble();
+  return cast<complex::NumberAttr>(unwrap(attr)).getImag().convertToDouble();
 }
 
 MlirTypeID mlirComplexAttrGetTypeID(void) {
