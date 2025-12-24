@@ -398,6 +398,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction({ISD::ROTL, ISD::ROTR}, XLenVT, Expand);
   }
 
+  if (Subtarget.hasStdExtP())
+    setOperationAction({ISD::FSHL, ISD::FSHR}, XLenVT, Legal);
+
   setOperationAction(ISD::BSWAP, XLenVT,
                      Subtarget.hasREV8Like() ? Legal : Expand);
 
