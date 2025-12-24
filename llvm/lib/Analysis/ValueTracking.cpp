@@ -4904,6 +4904,25 @@ static void computeKnownFPClassForFPTrunc(const Operator *Op,
   // Infinity needs a range check.
 }
 
+static constexpr KnownFPClass::MinMaxKind getMinMaxKind(Intrinsic::ID IID) {
+  switch (IID) {
+  case Intrinsic::minimum:
+    return KnownFPClass::MinMaxKind::minimum;
+  case Intrinsic::maximum:
+    return KnownFPClass::MinMaxKind::maximum;
+  case Intrinsic::minimumnum:
+    return KnownFPClass::MinMaxKind::minimumnum;
+  case Intrinsic::maximumnum:
+    return KnownFPClass::MinMaxKind::maximumnum;
+  case Intrinsic::minnum:
+    return KnownFPClass::MinMaxKind::minnum;
+  case Intrinsic::maxnum:
+    return KnownFPClass::MinMaxKind::maxnum;
+  default:
+    llvm_unreachable("not a floating-point min-max intrinsic");
+  }
+}
+
 void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
                          FPClassTest InterestedClasses, KnownFPClass &Known,
                          const SimplifyQuery &Q, unsigned Depth) {
@@ -5174,95 +5193,15 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       computeKnownFPClass(II->getArgOperand(1), DemandedElts, InterestedClasses,
                           KnownRHS, Q, Depth + 1);
 
-      bool NeverNaN = KnownLHS.isKnownNeverNaN() || KnownRHS.isKnownNeverNaN();
-      Known = KnownLHS | KnownRHS;
+      const Function *F = II->getFunction();
 
-      // If either operand is not NaN, the result is not NaN.
-      if (NeverNaN &&
-          (IID == Intrinsic::minnum || IID == Intrinsic::maxnum ||
-           IID == Intrinsic::minimumnum || IID == Intrinsic::maximumnum))
-        Known.knownNot(fcNan);
+      DenormalMode Mode =
+          F ? F->getDenormalMode(
+                  II->getType()->getScalarType()->getFltSemantics())
+            : DenormalMode::getDynamic();
 
-      if (IID == Intrinsic::maxnum || IID == Intrinsic::maximumnum) {
-        // If at least one operand is known to be positive, the result must be
-        // positive.
-        if ((KnownLHS.cannotBeOrderedLessThanZero() &&
-             KnownLHS.isKnownNeverNaN()) ||
-            (KnownRHS.cannotBeOrderedLessThanZero() &&
-             KnownRHS.isKnownNeverNaN()))
-          Known.knownNot(KnownFPClass::OrderedLessThanZeroMask);
-      } else if (IID == Intrinsic::maximum) {
-        // If at least one operand is known to be positive, the result must be
-        // positive.
-        if (KnownLHS.cannotBeOrderedLessThanZero() ||
-            KnownRHS.cannotBeOrderedLessThanZero())
-          Known.knownNot(KnownFPClass::OrderedLessThanZeroMask);
-      } else if (IID == Intrinsic::minnum || IID == Intrinsic::minimumnum) {
-        // If at least one operand is known to be negative, the result must be
-        // negative.
-        if ((KnownLHS.cannotBeOrderedGreaterThanZero() &&
-             KnownLHS.isKnownNeverNaN()) ||
-            (KnownRHS.cannotBeOrderedGreaterThanZero() &&
-             KnownRHS.isKnownNeverNaN()))
-          Known.knownNot(KnownFPClass::OrderedGreaterThanZeroMask);
-      } else if (IID == Intrinsic::minimum) {
-        // If at least one operand is known to be negative, the result must be
-        // negative.
-        if (KnownLHS.cannotBeOrderedGreaterThanZero() ||
-            KnownRHS.cannotBeOrderedGreaterThanZero())
-          Known.knownNot(KnownFPClass::OrderedGreaterThanZeroMask);
-      } else
-        llvm_unreachable("unhandled intrinsic");
-
-      // Fixup zero handling if denormals could be returned as a zero.
-      //
-      // As there's no spec for denormal flushing, be conservative with the
-      // treatment of denormals that could be flushed to zero. For older
-      // subtargets on AMDGPU the min/max instructions would not flush the
-      // output and return the original value.
-      //
-      if ((Known.KnownFPClasses & fcZero) != fcNone &&
-          !Known.isKnownNeverSubnormal()) {
-        const Function *Parent = II->getFunction();
-        if (!Parent)
-          break;
-
-        DenormalMode Mode = Parent->getDenormalMode(
-            II->getType()->getScalarType()->getFltSemantics());
-        if (Mode != DenormalMode::getIEEE())
-          Known.KnownFPClasses |= fcZero;
-      }
-
-      if (Known.isKnownNeverNaN()) {
-        if (KnownLHS.SignBit && KnownRHS.SignBit &&
-            *KnownLHS.SignBit == *KnownRHS.SignBit) {
-          if (*KnownLHS.SignBit)
-            Known.signBitMustBeOne();
-          else
-            Known.signBitMustBeZero();
-        } else if ((IID == Intrinsic::maximum || IID == Intrinsic::minimum ||
-                    IID == Intrinsic::maximumnum ||
-                    IID == Intrinsic::minimumnum) ||
-                   // FIXME: Should be using logical zero versions
-                   ((KnownLHS.isKnownNeverNegZero() ||
-                     KnownRHS.isKnownNeverPosZero()) &&
-                    (KnownLHS.isKnownNeverPosZero() ||
-                     KnownRHS.isKnownNeverNegZero()))) {
-          // Don't take sign bit from NaN operands.
-          if (!KnownLHS.isKnownNeverNaN())
-            KnownLHS.SignBit = std::nullopt;
-          if (!KnownRHS.isKnownNeverNaN())
-            KnownRHS.SignBit = std::nullopt;
-          if ((IID == Intrinsic::maximum || IID == Intrinsic::maximumnum ||
-               IID == Intrinsic::maxnum) &&
-              (KnownLHS.SignBit == false || KnownRHS.SignBit == false))
-            Known.signBitMustBeZero();
-          else if ((IID == Intrinsic::minimum || IID == Intrinsic::minimumnum ||
-                    IID == Intrinsic::minnum) &&
-                   (KnownLHS.SignBit == true || KnownRHS.SignBit == true))
-            Known.signBitMustBeOne();
-        }
-      }
+      Known = KnownFPClass::minMaxLike(KnownLHS, KnownRHS, getMinMaxKind(IID),
+                                       Mode);
       break;
     }
     case Intrinsic::canonicalize: {

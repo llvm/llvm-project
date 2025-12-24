@@ -2228,7 +2228,8 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Value *V,
   }
   case Instruction::Call: {
     CallInst *CI = cast<CallInst>(I);
-    switch (CI->getIntrinsicID()) {
+    const Intrinsic::ID IID = CI->getIntrinsicID();
+    switch (IID) {
     case Intrinsic::fabs:
       if (SimplifyDemandedFPClass(I, 0, llvm::inverse_fabs(DemandedMask), Known,
                                   Depth + 1))
@@ -2261,6 +2262,99 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Value *V,
           computeKnownFPClass(I->getOperand(1), fcAllFlags, CxtI, Depth + 1);
       Known.copysign(KnownSign);
       break;
+    }
+    case Intrinsic::maximum:
+    case Intrinsic::minimum: {
+      KnownFPClass KnownLHS, KnownRHS;
+
+      // We can't tell much based on the demanded result without inspecting the
+      // operands (e.g., a known-positive result could have been clamped), but
+      // we can still prune known-nan inputs.
+      FPClassTest SrcDemandedMask = DemandedMask | ~fcNan;
+
+      if (SimplifyDemandedFPClass(CI, 1, SrcDemandedMask, KnownRHS,
+                                  Depth + 1) ||
+          SimplifyDemandedFPClass(CI, 0, SrcDemandedMask, KnownLHS, Depth + 1))
+        return I;
+
+      /// Propagate nnan-ness to simplify edge case checks.
+      if ((DemandedMask & fcNan) == fcNone) {
+        KnownLHS.knownNot(fcNan);
+        KnownRHS.knownNot(fcNan);
+      }
+
+      if (IID == Intrinsic::maximum) {
+        // If at least one operand is known to be positive and the other
+        // negative, the result must be the positive (unless the other operand
+        // may be propagating a nan).
+        if (KnownLHS.isKnownNever(fcNegative) &&
+            KnownRHS.isKnownNever(fcPositive | fcNan))
+          return CI->getArgOperand(0);
+
+        if (KnownRHS.isKnownNever(fcNegative) &&
+            KnownLHS.isKnownNever(fcPositive | fcNan))
+          return CI->getArgOperand(1);
+
+        // If one value must be pinf, the result is pinf or a propagated nan.
+        if (KnownLHS.isKnownAlways(fcPosInf | fcNan) &&
+            KnownRHS.isKnownNever(fcNan))
+          return CI->getArgOperand(0);
+
+        if (KnownRHS.isKnownAlways(fcPosInf | fcNan) &&
+            KnownLHS.isKnownNever(fcNan))
+          return CI->getArgOperand(1);
+      } else {
+        // If one operand is known to be negative, and the other positive, the
+        // result must be the negative (unless the other operand may be
+        // propagating a nan).
+        if (KnownLHS.isKnownNever(fcPositive) &&
+            KnownRHS.isKnownNever(fcNegative | fcNan))
+          return CI->getArgOperand(0);
+
+        if (KnownRHS.isKnownNever(fcPositive) &&
+            KnownLHS.isKnownNever(fcNegative | fcNan))
+          return CI->getArgOperand(1);
+
+        // If one value must be ninf, the result is ninf or a propagated nan.
+        if (KnownLHS.isKnownAlways(fcNegInf | fcNan) &&
+            KnownRHS.isKnownNever(fcNan))
+          return CI->getArgOperand(0);
+
+        if (KnownRHS.isKnownAlways(fcNegInf | fcNan) &&
+            KnownLHS.isKnownNever(fcNan))
+          return CI->getArgOperand(1);
+      }
+
+      Type *EltTy = VTy->getScalarType();
+      DenormalMode Mode = F.getDenormalMode(EltTy->getFltSemantics());
+      Known = KnownFPClass::minMaxLike(KnownLHS, KnownRHS,
+                                       IID == Intrinsic::maximum
+                                           ? KnownFPClass::MinMaxKind::maximum
+                                           : KnownFPClass::MinMaxKind::minimum,
+                                       Mode);
+
+      FPClassTest ValidResults = DemandedMask & Known.KnownFPClasses;
+
+      if (Constant *SingleVal =
+              getFPClassConstant(VTy, ValidResults, /*IsCanonicalizing=*/true))
+        return SingleVal;
+
+      auto *FPOp = cast<FPMathOperator>(CI);
+
+      bool ChangedFlags = false;
+
+      // TODO: Add NSZ flag if we know the result will not be sensitive on the
+      // sign of 0.
+      if (!FPOp->hasNoNaNs() && (ValidResults & fcNan) == fcNone) {
+        CI->dropUBImplyingAttrsAndMetadata();
+        CI->setHasNoNaNs(true);
+        ChangedFlags = true;
+      }
+
+      if (ChangedFlags)
+        return FPOp;
+
+      return nullptr;
     }
     case Intrinsic::exp:
     case Intrinsic::exp2:
