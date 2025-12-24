@@ -2157,20 +2157,15 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Value *V,
                 getFPClassConstant(VTy, DemandedMask & Known.KnownFPClasses))
           return SingleVal;
 
-        if (Mode == DenormalMode::getIEEE()) {
-          // For IEEE handling, there is only a bit change for nan inputs, so we
-          // can drop it if we do not demand nan results or we know the input
-          // isn't a nan.
-          if (KnownSrc.isKnownNeverNaN() || (DemandedMask & fcNan) == fcNone)
-            return CI->getArgOperand(0);
-        } else {
-          // Nan handling is the same as the IEEE case, but we also need to
-          // avoid denormal inputs to drop the canonicalize.
-          if ((KnownSrc.isKnownNeverNaN() ||
-               (DemandedMask & fcNan) == fcNone) &&
-              KnownSrc.isKnownNeverSubnormal())
-            return CI->getArgOperand(0);
-        }
+        // For IEEE handling, there is only a bit change for nan inputs, so we
+        // can drop it if we do not demand nan results or we know the input
+        // isn't a nan.
+        // Otherwise, we also need to avoid denormal inputs to drop the
+        // canonicalize.
+        if ((KnownSrc.isKnownNeverNaN() || (DemandedMask & fcNan) == fcNone) &&
+            (Mode == DenormalMode::getIEEE() ||
+             KnownSrc.isKnownNeverSubnormal()))
+          return CI->getArgOperand(0);
 
         return nullptr;
       }
