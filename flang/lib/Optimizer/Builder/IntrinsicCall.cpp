@@ -7900,12 +7900,16 @@ void IntrinsicLibrary::genShowDescriptor(
     return;
   }
 
-  assert(!fir::isa_box_type(descriptor.getType()) &&
-         "argument must be a reference to a box type");
-
-  // If descriptor is not a box type (and not ref<box>), pass null.
-  mlir::Value nullValue = builder.createNullConstant(loc, fir::BoxType::get(builder.getNoneType()));
-  fir::runtime::genShowDescriptor(builder, loc, nullValue);
+  mlir::Value descrAddr = nullptr;
+  if (fir::isa_box_type(descriptor.getType())) {
+    // Spill it to the stack
+    descrAddr = builder.createTemporary(loc, descriptor.getType());
+    builder.createStoreWithConvert(loc, descriptor, descrAddr);
+  } else {
+    // If descriptor is not a box type (and not ref<box>), pass null.
+    descrAddr = builder.createNullConstant(loc, fir::BoxType::get(builder.getNoneType()));
+  }
+  fir::runtime::genShowDescriptor(builder, loc, descrAddr);
 }
 
 // SIGNAL
