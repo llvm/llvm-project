@@ -1921,7 +1921,6 @@ void LoopInterchangeTransform::undoSimpleReduction() {
   Instruction *LoadMem = Builder.CreateLoad(SR.ElemTy, SR.MemRef);
 
   // Check if it's the first iteration.
-  auto &InductionPHIs = LIL.getInnerLoopInductions();
   PHINode *IV = SR.CounterIV;
   Value *IVInit = IV->getIncomingValueForBlock(InnerLoop->getLoopPreheader());
   Value *FirstIter = Builder.CreateICmpNE(IV, IVInit, "first.iter");
