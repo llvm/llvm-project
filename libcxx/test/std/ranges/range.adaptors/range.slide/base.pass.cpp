@@ -16,6 +16,7 @@
 #include <array>
 #include <cassert>
 #include <concepts>
+#include <memory>
 #include <ranges>
 #include <utility>
 

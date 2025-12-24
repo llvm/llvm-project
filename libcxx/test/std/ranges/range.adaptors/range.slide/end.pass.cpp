@@ -19,6 +19,7 @@
 #include <iterator>
 #include <ranges>
 #include <vector>
+#include <utility>
 
 constexpr bool test() {
   std::vector<int> vector                                                 = {1, 2, 3, 4, 5, 6, 7, 8};

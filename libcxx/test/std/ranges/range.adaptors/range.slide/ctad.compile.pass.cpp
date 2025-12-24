@@ -14,6 +14,7 @@
 //   slide_view(R&&, range_difference_t<R>) -> slide_view<all_t<R>>;
 
 #include <ranges>
+#include <utility>
 
 struct view : std::ranges::view_base {
   int* begin() const;
