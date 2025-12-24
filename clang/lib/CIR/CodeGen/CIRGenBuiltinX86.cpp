@@ -542,39 +542,6 @@ static mlir::Value emitX86vpcom(CIRGenBuilderTy &builder, mlir::Location loc,
   return builder.createVecCompare(loc, pred, op0, op1);
 }
 
-// Emits masked result similar to EmitX86MaskedCompareResult in
-// clang/lib/CodeGen/TargetBuiltins/X86.cpp
-static mlir::Value emitX86MaskedResult(CIRGenBuilderTy &builder,
-                                       mlir::Location loc, mlir::Value cmp,
-                                       unsigned numElts, mlir::Value maskIn) {
-  if (maskIn) {
-    auto constOp =
-        mlir::dyn_cast_or_null<cir::ConstantOp>(maskIn.getDefiningOp());
-    if (!constOp || !constOp.isAllOnesValue()) {
-      mlir::Value maskVec = getMaskVecValue(builder, loc, maskIn, numElts);
-      cmp = builder.createAnd(loc, cmp, maskVec);
-    }
-  }
-
-  // If we have less than 8 elements, we need to pad the result.
-  if (numElts < 8) {
-    SmallVector<mlir::Attribute> indices;
-    mlir::Type i32Ty = builder.getSInt32Ty();
-    for (auto i : llvm::seq<unsigned>(0, numElts))
-      indices.push_back(cir::IntAttr::get(i32Ty, i));
-    for (auto i : llvm::seq<unsigned>(numElts, 8))
-      indices.push_back(cir::IntAttr::get(i32Ty, i % numElts + numElts));
-
-    mlir::Value zero = builder.getNullValue(cmp.getType(), loc);
-    cmp = builder.createVecShuffle(loc, cmp, zero, indices);
-  }
-
-  // Bitcast the result to integer type
-  unsigned resultWidth = std::max(numElts, 8U);
-  cir::IntType resultTy = builder.getUIntNTy(resultWidth);
-  return builder.createBitcast(cmp, resultTy);
-}
-
 static mlir::Value emitX86Fpclass(CIRGenBuilderTy &builder, mlir::Location loc,
                                   unsigned builtinID,
                                   SmallVectorImpl<mlir::Value> &ops) {
@@ -624,11 +591,10 @@ static mlir::Value emitX86Fpclass(CIRGenBuilderTy &builder, mlir::Location loc,
     break;
   }
 
-  cir::BoolType boolTy = builder.getBoolTy();
-  auto cmpResultTy = cir::VectorType::get(boolTy, numElts);
+  auto cmpResultTy = cir::VectorType::get(builder.getSIntNTy(1), numElts);
   mlir::Value fpclass =
       emitIntrinsicCallOp(builder, loc, intrinsicName, cmpResultTy, ops);
-  return emitX86MaskedResult(builder, loc, fpclass, numElts, maskIn);
+  return emitX86MaskedCompareResult(builder, fpclass, numElts, maskIn, loc);
 }
 
 std::optional<mlir::Value>
