@@ -496,12 +496,9 @@ public:
     // The memory Location
     Value *MemRef;
     Type *ElemTy;
-
-    /// IV used for the loop exit condition.
-    PHINode *CounterIV;
   };
 
-  const ArrayRef<SimpleReduction> getInnerSimpleReductions() const {
+  ArrayRef<SimpleReduction> getInnerSimpleReductions() const {
     return InnerSimpleReductions;
   }
 
@@ -952,7 +949,7 @@ static Value *followLCSSA(Value *SV) {
   return followLCSSA(PHI->getIncomingValue(0));
 }
 
-static bool CheckReductionKind(Loop *L, PHINode *PHI,
+static bool checkReductionKind(Loop *L, PHINode *PHI,
                                SmallVectorImpl<Instruction *> &HasNoWrapInsts) {
   RecurrenceDescriptor RD;
   if (RecurrenceDescriptor::isReductionPHI(PHI, L, RD)) {
@@ -1036,7 +1033,7 @@ findInnerReductionPhi(Loop *L, Value *V,
       if (PHI->getNumIncomingValues() == 1)
         continue;
 
-      if (CheckReductionKind(L, PHI, HasNoWrapInsts))
+      if (checkReductionKind(L, PHI, HasNoWrapInsts))
         return PHI;
       else
         return nullptr;
@@ -1044,65 +1041,6 @@ findInnerReductionPhi(Loop *L, Value *V,
   }
 
   return nullptr;
-}
-
-static PHINode *getCounterFromInc(Value *IncV, Loop *L) {
-  Instruction *IncI = dyn_cast<Instruction>(IncV);
-  if (!IncI)
-    return nullptr;
-
-  if (IncI->getOpcode() != Instruction::Add &&
-      IncI->getOpcode() != Instruction::Sub)
-    return nullptr;
-
-  PHINode *Phi = dyn_cast<PHINode>(IncI->getOperand(0));
-  if (Phi && Phi->getParent() == L->getHeader()) {
-    return Phi;
-  }
-
-  // Allow add/sub to be commuted.
-  Phi = dyn_cast<PHINode>(IncI->getOperand(1));
-  if (Phi && Phi->getParent() == L->getHeader()) {
-    return Phi;
-  }
-
-  return nullptr;
-}
-
-/// UndoSimpleReduction requires the first_iteration check, so look for
-/// the IV used for the loop exit condition
-static PHINode *findCounterIV(Loop *L) {
-
-  assert(L->getLoopLatch() && "Must be in simplified form");
-
-  BranchInst *BI = cast<BranchInst>(L->getLoopLatch()->getTerminator());
-  if (L->isLoopInvariant(BI->getCondition()))
-    return nullptr;
-
-  ICmpInst *Cond = dyn_cast<ICmpInst>(BI->getCondition());
-  if (!Cond)
-    return nullptr;
-
-  // Look for a loop invariant RHS
-  Value *LHS = Cond->getOperand(0);
-  Value *RHS = Cond->getOperand(1);
-  if (!L->isLoopInvariant(RHS)) {
-    if (!L->isLoopInvariant(LHS))
-      return nullptr;
-    std::swap(LHS, RHS);
-  }
-
-  // IndVar = phi[{InitialValue, preheader}, {StepInst, latch}]
-  // StepInst = IndVar + step
-  // case 1:
-  // cmp = IndVar < FinalValue
-  PHINode *Counter = dyn_cast<PHINode>(LHS);
-  // case 2:
-  // cmp = StepInst < FinalValue
-  if (!Counter)
-    Counter = getCounterFromInc(LHS, L);
-
-  return Counter;
 }
 
 /// Detect and record the simple reduction of the inner loop.
@@ -1121,8 +1059,15 @@ bool LoopInterchangeLegality::findSimpleReduction(
 
   // Only support undo simple reduction if the loop nest to be interchanged is
   // the innermostin two loops.
-  if (!L->isInnermost())
+  if (!L->isInnermost()) {
+    ORE->emit([&]() {
+      return OptimizationRemarkMissed(DEBUG_TYPE, "UnsupportedSimpleReduction",
+                                      L->getStartLoc(), L->getHeader())
+             << "Cannot undo a reduction when the loop is not the innermost "
+                "loop.";
+    });
     return false;
+  }
 
   if (Phi->getNumIncomingValues() != 2)
     return false;
@@ -1131,8 +1076,14 @@ bool LoopInterchangeLegality::findSimpleReduction(
   Value *Next = Phi->getIncomingValueForBlock(L->getLoopLatch());
 
   // So far only supports constant initial value.
-  if (!isa<Constant>(Init))
+  if (!isa<Constant>(Init)) {
+    ORE->emit([&]() {
+      return OptimizationRemarkMissed(DEBUG_TYPE, "UnsupportedSimpleReduction",
+                                      L->getStartLoc(), L->getHeader())
+             << "Cannot undo a reduction with non-constant initial value.";
+    });
     return false;
+  }
 
   // The reduction result must live in the inner loop.
   if (Instruction *I = dyn_cast<Instruction>(Next)) {
@@ -1153,7 +1104,7 @@ bool LoopInterchangeLegality::findSimpleReduction(
     return false;
 
   // Check the reduction kind.
-  if (ReUser != Next && !CheckReductionKind(L, Phi, HasNoWrapInsts))
+  if (ReUser != Next && !checkReductionKind(L, Phi, HasNoWrapInsts))
     return false;
 
   // Find lcssa_phi in OuterLoop's Latch
@@ -1175,27 +1126,42 @@ bool LoopInterchangeLegality::findSimpleReduction(
     } else
       return false;
   }
-  if (!Lcssa || !Lcssa->hasOneUser())
+  if (!Lcssa)
     return false;
+
+  if (!Lcssa->hasOneUser()) {
+    ORE->emit([&]() {
+      return OptimizationRemarkMissed(DEBUG_TYPE, "UnsupportedSimpleReduction",
+                                      L->getStartLoc(), L->getHeader())
+             << "Cannot undo a reduction when the reduction is used more than "
+                "once in the outer loop.";
+    });
+    return false;
+  }
 
   StoreInst *LcssaStorer =
       dyn_cast<StoreInst>(Lcssa->getUniqueUndroppableUser());
-  if (!LcssaStorer)
+  if (!LcssaStorer || LcssaStorer->getParent() != ExitBlock)
     return false;
 
   Value *MemRef = LcssaStorer->getOperand(1);
   Type *ElemTy = LcssaStorer->getOperand(0)->getType();
 
-  // LcssaStorer stores the reduction result in BB. undoSimpleReduction() will
-  // move it into the inner loop. Here we must ensure that the memory reference
-  // and its operands dominate the target block; otherwise the move is unsafe.
-  if (!DT->dominates(dyn_cast<Instruction>(MemRef), ExitBlock))
+  // LcssaStorer stores the reduction result in BB.
+  // When the reduction is initialized from a constant value, we need to load
+  // from the memory object into the target basic block of the inner loop during
+  // the undoing of the reduction. This means the memory reference was used
+  // prematurely. So we must ensure that the memory reference does not dominate
+  // the target basic block.
+  if (!DT->dominates(dyn_cast<Instruction>(MemRef), L->getHeader())) {
+    ORE->emit([&]() {
+      return OptimizationRemarkMissed(DEBUG_TYPE, "UnsupportedSimpleReduction",
+                                      L->getStartLoc(), L->getHeader())
+             << "Cannot undo a reduction when memory reference does not "
+                "dominate the inner loop.";
+    });
     return false;
-
-  // find the IV used for the loop exit condition.
-  PHINode *CounterIV = findCounterIV(L);
-  if (!CounterIV)
-    return false;
+  }
 
   // Found a simple reduction of inner loop.
   SimpleReduction SR;
@@ -1206,7 +1172,6 @@ bool LoopInterchangeLegality::findSimpleReduction(
   SR.LcssaStorer = LcssaStorer;
   SR.MemRef = MemRef;
   SR.ElemTy = ElemTy;
-  SR.CounterIV = CounterIV;
 
   InnerSimpleReductions.push_back(SR);
   return true;
@@ -1254,8 +1219,15 @@ bool LoopInterchangeLegality::findInductionAndReductions(
   }
 
   // For now we only support at most one reduction.
-  if (InnerSimpleReductions.size() > 1)
+  if (InnerSimpleReductions.size() > 1){
+    ORE->emit([&]() {
+      return OptimizationRemarkMissed(DEBUG_TYPE, "UnsupportedSimpleReduction",
+                                      L->getStartLoc(), L->getHeader())
+             << "Cannot undo a reduction with two or more reductions.";
+    });
     return false;
+  }
+
   return true;
 }
 
@@ -1915,15 +1887,20 @@ void LoopInterchangeTransform::undoSimpleReduction() {
   BasicBlock *InnerLoopHeader = InnerLoop->getHeader();
   IRBuilder<> Builder(&*(InnerLoopHeader->getFirstNonPHIIt()));
 
+  // Check if it's the first iteration.
+  LLVMContext &Context = InnerLoopHeader->getContext();
+  PHINode *FirstIter =
+      Builder.CreatePHI(Type::getInt1Ty(Context), 2, "first.iter");
+  FirstIter->addIncoming(ConstantInt::get(Type::getInt1Ty(Context), 1),
+                         InnerLoop->getLoopPreheader());
+  FirstIter->addIncoming(ConstantInt::get(Type::getInt1Ty(Context), 0),
+                         InnerLoop->getLoopLatch());
+  assert(FirstIter->isComplete() && "The FirstIter PHI node is not complete.");
+
   // When the reduction is intialized from constant value, we need to add
   // a stmt loading from the memory object to target basic block in inner
   // loop during undoing the reduction.
   Instruction *LoadMem = Builder.CreateLoad(SR.ElemTy, SR.MemRef);
-
-  // Check if it's the first iteration.
-  PHINode *IV = SR.CounterIV;
-  Value *IVInit = IV->getIncomingValueForBlock(InnerLoop->getLoopPreheader());
-  Value *FirstIter = Builder.CreateICmpNE(IV, IVInit, "first.iter");
 
   // Init new_var to MEM_REF or CONST depending on if it is the first iteration.
   Value *NewVar = Builder.CreateSelect(FirstIter, LoadMem, SR.Init, "new.var");
@@ -1940,7 +1917,8 @@ bool LoopInterchangeTransform::transform(
     ArrayRef<Instruction *> DropNoWrapInsts) {
   bool Transformed = false;
 
-  auto &InnerSimpleReductions = LIL.getInnerSimpleReductions();
+  ArrayRef<LoopInterchangeLegality::SimpleReduction> InnerSimpleReductions =
+      LIL.getInnerSimpleReductions();
   if (EnableUndoSimpleReduction && InnerSimpleReductions.size() == 1)
     undoSimpleReduction();
 
