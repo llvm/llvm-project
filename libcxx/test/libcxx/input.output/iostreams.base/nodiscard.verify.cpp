@@ -34,6 +34,14 @@ void test() {
     std::ios_base::xalloc();
     ref.iword(0); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
     ref.pword(0); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+
+    // extensions
+    ref.rdstate();    // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+    ref.good();       // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+    ref.eof();        // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+    ref.fail();       // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+    ref.bad();        // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+    ref.exceptions(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   }
   {
     std::ios& ref = stream;

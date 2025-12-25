@@ -338,16 +338,16 @@ public:
 
   static bool sync_with_stdio(bool __sync = true);
 
-  _LIBCPP_HIDE_FROM_ABI iostate rdstate() const;
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI iostate rdstate() const;
   void clear(iostate __state = goodbit);
   _LIBCPP_HIDE_FROM_ABI void setstate(iostate __state);
 
-  _LIBCPP_HIDE_FROM_ABI bool good() const;
-  _LIBCPP_HIDE_FROM_ABI bool eof() const;
-  _LIBCPP_HIDE_FROM_ABI bool fail() const;
-  _LIBCPP_HIDE_FROM_ABI bool bad() const;
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI bool good() const;
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI bool eof() const;
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI bool fail() const;
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI bool bad() const;
 
-  _LIBCPP_HIDE_FROM_ABI iostate exceptions() const;
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI iostate exceptions() const;
   _LIBCPP_HIDE_FROM_ABI void exceptions(iostate __iostate);
 
   void __set_badbit_and_consider_rethrow();
