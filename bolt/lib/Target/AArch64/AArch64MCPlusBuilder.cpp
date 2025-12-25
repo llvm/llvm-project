@@ -1699,7 +1699,7 @@ public:
   /// If the PLT entry does not contain extra nops, this function will create an
   /// error. This can happen in binaries linked using BFD.
   void patchPLTEntryForBTI(BinaryFunction &PLTFunction, MCInst &Call) override {
-    BinaryContext &BC = PLTFunction.getBinaryContext();
+    // BinaryContext &BC = PLTFunction.getBinaryContext();
     assert(PLTFunction.isPLTFunction() &&
            "patchPLTEntryForBTI called on a non-PLT function");
     // Checking if the PLT entry already starts with the BTI needed for Call.
@@ -1718,16 +1718,17 @@ public:
              << " to have a BTI landing pad. Relink the workload using LLD.\n";
       exit(1);
     }
+
     // If the PLT does not have a BTI, and it has nops, create a new instruction
     // sequence to patch the entry with.
-    InstructionListType NewPLTSeq;
     MCInst BTIInst;
     createBTI(BTIInst, BTIKind::C);
-    NewPLTSeq.push_back(BTIInst);
-    for (auto II = FirstBBI->begin(); II != FirstBBI->end(); ++II) {
-      NewPLTSeq.push_back(*II);
-    }
-    BC.createInstructionPatch(PLTFunction.getAddress(), NewPLTSeq);
+
+    // remove 1 nop
+    LastBBI->eraseInstruction(LastII);
+    // insert bti c
+    FirstBBI->insertInstruction(FirstBBI->begin(), BTIInst);
+    PLTFunction.dump();
   }
 
   bool handlePLTEntry(InstructionIterator Begin,
