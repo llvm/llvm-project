@@ -1684,7 +1684,7 @@ SizeClassAllocator64<Config>::collectGroupsToRelease(
 
       if (!HighDensity) {
         DCHECK_LE(BytesInBG, ReleaseThreshold);
-        // The following is the usage of a memroy group,
+        // The following is the usage of a memory group,
         //
         //     BytesInBG             ReleaseThreshold
         //  /             \                 v

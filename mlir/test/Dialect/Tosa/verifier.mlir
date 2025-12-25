@@ -1230,3 +1230,19 @@ func.func @test_clamp_quantized(%arg0:tensor<?x112x112x32x!quant.uniform<u8:f32,
     %0 = tosa.clamp %arg0 {max_val = 127 : i8, min_val = -128 : i8} : (tensor<?x112x112x32x!quant.uniform<u8:f32, 0.023529412224888802:-128>>) -> tensor<?x112x112x32x!quant.uniform<u8:f32, 0.023529412224888802:-128>>
     return %0 : tensor<?x112x112x32x!quant.uniform<u8:f32, 0.023529412224888802:-128>>
 }
+
+// -----
+
+func.func @test_elementwise_shape_op_same_inputs_rank(%arg0: !tosa.shape<4>, %arg1: !tosa.shape<3>) -> !tosa.shape<4> {
+  // expected-error@+1 {{'tosa.add_shape' op operands don't have matching ranks}}
+  %0 = tosa.add_shape %arg0, %arg1 : (!tosa.shape<4>, !tosa.shape<3>) -> !tosa.shape<4>
+  return %0 : !tosa.shape<4>
+}
+
+// -----
+
+func.func @test_elementwise_shape_op_same_input_output_rank(%arg0: !tosa.shape<4>, %arg1: !tosa.shape<4>) -> !tosa.shape<3> {
+  // expected-error@+1 {{'tosa.div_floor_shape' op result shape has different rank than operands}}
+  %0 = tosa.div_floor_shape %arg0, %arg1 : (!tosa.shape<4>, !tosa.shape<4>) -> !tosa.shape<3>
+  return %0 : !tosa.shape<3>
+}

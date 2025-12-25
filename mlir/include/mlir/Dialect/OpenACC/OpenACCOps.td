@@ -2576,6 +2576,7 @@ def OpenACC_LoopOp
                    RecursiveMemoryEffects,
                    DeclareOpInterfaceMethods<ComputeRegionOpInterface>,
                    DeclareOpInterfaceMethods<LoopLikeOpInterface>,
+                   DeclareOpInterfaceMethods<RegionBranchOpInterface>,
                    MemoryEffects<[MemWrite<OpenACC_ConstructResource>]>]> {
   let summary = "loop construct";
 

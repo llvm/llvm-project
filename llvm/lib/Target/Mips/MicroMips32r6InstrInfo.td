@@ -976,38 +976,41 @@ multiclass CMP_CC_MMR6<bits<6> format, string Typestr,
       !strconcat("cmp.ule.", Typestr), format, FIELD_CMP_COND_ULE>,
       CMP_CONDN_DESC_BASE<"ule", Typestr, FGROpnd, Itin, setule>, HARDFLOAT,
       ISA_MICROMIPS32R6;
-  def CMP_SAF_#NAME : R6MMR6Rel, POOL32F_CMP_FM<
-      !strconcat("cmp.saf.", Typestr), format, FIELD_CMP_COND_SAF>,
-      CMP_CONDN_DESC_BASE<"saf", Typestr, FGROpnd, Itin>, HARDFLOAT,
-      ISA_MICROMIPS32R6;
-  def CMP_SUN_#NAME : R6MMR6Rel, POOL32F_CMP_FM<
-      !strconcat("cmp.sun.", Typestr), format, FIELD_CMP_COND_SUN>,
-      CMP_CONDN_DESC_BASE<"sun", Typestr, FGROpnd, Itin>, HARDFLOAT,
-      ISA_MICROMIPS32R6;
-  def CMP_SEQ_#NAME : R6MMR6Rel, POOL32F_CMP_FM<
-      !strconcat("cmp.seq.", Typestr), format, FIELD_CMP_COND_SEQ>,
-      CMP_CONDN_DESC_BASE<"seq", Typestr, FGROpnd, Itin>, HARDFLOAT,
-      ISA_MICROMIPS32R6;
-  def CMP_SUEQ_#NAME : R6MMR6Rel, POOL32F_CMP_FM<
-      !strconcat("cmp.sueq.", Typestr), format, FIELD_CMP_COND_SUEQ>,
-      CMP_CONDN_DESC_BASE<"sueq", Typestr, FGROpnd, Itin>, HARDFLOAT,
-      ISA_MICROMIPS32R6;
-  def CMP_SLT_#NAME : R6MMR6Rel, POOL32F_CMP_FM<
-      !strconcat("cmp.slt.", Typestr), format, FIELD_CMP_COND_SLT>,
-      CMP_CONDN_DESC_BASE<"slt", Typestr, FGROpnd, Itin>, HARDFLOAT,
-      ISA_MICROMIPS32R6;
-  def CMP_SULT_#NAME : R6MMR6Rel, POOL32F_CMP_FM<
-      !strconcat("cmp.sult.", Typestr), format, FIELD_CMP_COND_SULT>,
-      CMP_CONDN_DESC_BASE<"sult", Typestr, FGROpnd, Itin>, HARDFLOAT,
-      ISA_MICROMIPS32R6;
-  def CMP_SLE_#NAME : R6MMR6Rel, POOL32F_CMP_FM<
-      !strconcat("cmp.sle.", Typestr), format, FIELD_CMP_COND_SLE>,
-      CMP_CONDN_DESC_BASE<"sle", Typestr, FGROpnd, Itin>, HARDFLOAT,
-      ISA_MICROMIPS32R6;
-  def CMP_SULE_#NAME : R6MMR6Rel, POOL32F_CMP_FM<
-      !strconcat("cmp.sule.", Typestr), format, FIELD_CMP_COND_SULE>,
-      CMP_CONDN_DESC_BASE<"sule", Typestr, FGROpnd, Itin>, HARDFLOAT,
-      ISA_MICROMIPS32R6;
+
+  let mayRaiseFPException = 1 in {
+    def CMP_SAF_#NAME : R6MMR6Rel, POOL32F_CMP_FM<
+        !strconcat("cmp.saf.", Typestr), format, FIELD_CMP_COND_SAF>,
+        CMP_CONDN_DESC_BASE<"saf", Typestr, FGROpnd, Itin>, HARDFLOAT,
+        ISA_MICROMIPS32R6;
+    def CMP_SUN_#NAME : R6MMR6Rel, POOL32F_CMP_FM<
+        !strconcat("cmp.sun.", Typestr), format, FIELD_CMP_COND_SUN>,
+        CMP_CONDN_DESC_BASE<"sun", Typestr, FGROpnd, Itin>, HARDFLOAT,
+        ISA_MICROMIPS32R6;
+    def CMP_SEQ_#NAME : R6MMR6Rel, POOL32F_CMP_FM<
+        !strconcat("cmp.seq.", Typestr), format, FIELD_CMP_COND_SEQ>,
+        CMP_CONDN_DESC_BASE<"seq", Typestr, FGROpnd, Itin>, HARDFLOAT,
+        ISA_MICROMIPS32R6;
+    def CMP_SUEQ_#NAME : R6MMR6Rel, POOL32F_CMP_FM<
+        !strconcat("cmp.sueq.", Typestr), format, FIELD_CMP_COND_SUEQ>,
+        CMP_CONDN_DESC_BASE<"sueq", Typestr, FGROpnd, Itin>, HARDFLOAT,
+        ISA_MICROMIPS32R6;
+    def CMP_SLT_#NAME : R6MMR6Rel, POOL32F_CMP_FM<
+        !strconcat("cmp.slt.", Typestr), format, FIELD_CMP_COND_SLT>,
+        CMP_CONDN_DESC_BASE<"slt", Typestr, FGROpnd, Itin>, HARDFLOAT,
+        ISA_MICROMIPS32R6;
+    def CMP_SULT_#NAME : R6MMR6Rel, POOL32F_CMP_FM<
+        !strconcat("cmp.sult.", Typestr), format, FIELD_CMP_COND_SULT>,
+        CMP_CONDN_DESC_BASE<"sult", Typestr, FGROpnd, Itin>, HARDFLOAT,
+        ISA_MICROMIPS32R6;
+    def CMP_SLE_#NAME : R6MMR6Rel, POOL32F_CMP_FM<
+        !strconcat("cmp.sle.", Typestr), format, FIELD_CMP_COND_SLE>,
+        CMP_CONDN_DESC_BASE<"sle", Typestr, FGROpnd, Itin>, HARDFLOAT,
+        ISA_MICROMIPS32R6;
+    def CMP_SULE_#NAME : R6MMR6Rel, POOL32F_CMP_FM<
+        !strconcat("cmp.sule.", Typestr), format, FIELD_CMP_COND_SULE>,
+        CMP_CONDN_DESC_BASE<"sule", Typestr, FGROpnd, Itin>, HARDFLOAT,
+        ISA_MICROMIPS32R6;
+  }
 }
 
 class ABSS_FT_MMR6_DESC_BASE<string instr_asm, RegisterOperand DstRC,
@@ -1453,78 +1456,90 @@ let DecoderMethod = "DecodeMemMMImm16" in {
   def SW_MMR6 : StdMMR6Rel, SW_MMR6_DESC, SW_MMR6_ENC, ISA_MICROMIPS32R6;
 }
 /// Floating Point Instructions
-def FADD_S_MMR6 : StdMMR6Rel, FADD_S_MMR6_ENC, FADD_S_MMR6_DESC,
-                  ISA_MICROMIPS32R6;
-def FSUB_S_MMR6 : StdMMR6Rel, FSUB_S_MMR6_ENC, FSUB_S_MMR6_DESC,
-                  ISA_MICROMIPS32R6;
-def FMUL_S_MMR6 : StdMMR6Rel, FMUL_S_MMR6_ENC, FMUL_S_MMR6_DESC,
-                  ISA_MICROMIPS32R6;
-def FDIV_S_MMR6 : StdMMR6Rel, FDIV_S_MMR6_ENC, FDIV_S_MMR6_DESC,
-                  ISA_MICROMIPS32R6;
-def MADDF_S_MMR6 : R6MMR6Rel, MADDF_S_MMR6_ENC, MADDF_S_MMR6_DESC,
-                   ISA_MICROMIPS32R6;
-def MADDF_D_MMR6 : R6MMR6Rel, MADDF_D_MMR6_ENC, MADDF_D_MMR6_DESC,
-                   ISA_MICROMIPS32R6;
-def MSUBF_S_MMR6 : R6MMR6Rel, MSUBF_S_MMR6_ENC, MSUBF_S_MMR6_DESC,
-                   ISA_MICROMIPS32R6;
-def MSUBF_D_MMR6 : R6MMR6Rel, MSUBF_D_MMR6_ENC, MSUBF_D_MMR6_DESC,
-                   ISA_MICROMIPS32R6;
+let mayRaiseFPException = 1, Uses = [FCR31] in {
+  def FADD_S_MMR6 : StdMMR6Rel, FADD_S_MMR6_ENC, FADD_S_MMR6_DESC,
+                    ISA_MICROMIPS32R6;
+  def FSUB_S_MMR6 : StdMMR6Rel, FSUB_S_MMR6_ENC, FSUB_S_MMR6_DESC,
+                    ISA_MICROMIPS32R6;
+  def FMUL_S_MMR6 : StdMMR6Rel, FMUL_S_MMR6_ENC, FMUL_S_MMR6_DESC,
+                    ISA_MICROMIPS32R6;
+  def FDIV_S_MMR6 : StdMMR6Rel, FDIV_S_MMR6_ENC, FDIV_S_MMR6_DESC,
+                    ISA_MICROMIPS32R6;
+  def MADDF_S_MMR6 : R6MMR6Rel, MADDF_S_MMR6_ENC, MADDF_S_MMR6_DESC,
+                     ISA_MICROMIPS32R6;
+  def MADDF_D_MMR6 : R6MMR6Rel, MADDF_D_MMR6_ENC, MADDF_D_MMR6_DESC,
+                     ISA_MICROMIPS32R6;
+  def MSUBF_S_MMR6 : R6MMR6Rel, MSUBF_S_MMR6_ENC, MSUBF_S_MMR6_DESC,
+                     ISA_MICROMIPS32R6;
+  def MSUBF_D_MMR6 : R6MMR6Rel, MSUBF_D_MMR6_ENC, MSUBF_D_MMR6_DESC,
+                     ISA_MICROMIPS32R6;
+}
+
 def FMOV_S_MMR6 : StdMMR6Rel, FMOV_S_MMR6_ENC, FMOV_S_MMR6_DESC,
                   ISA_MICROMIPS32R6;
 def FMOV_D_MMR6 : StdMMR6Rel, FMOV_D_MMR6_ENC, FMOV_D_MMR6_DESC,
                   ISA_MICROMIPS32R6;
 def FNEG_S_MMR6 : StdMMR6Rel, FNEG_S_MMR6_ENC, FNEG_S_MMR6_DESC,
                   ISA_MICROMIPS32R6;
-def MAX_S_MMR6 : R6MMR6Rel, MAX_S_MMR6_ENC, MAX_S_MMR6_DESC, ISA_MICROMIPS32R6;
-def MAX_D_MMR6 : R6MMR6Rel, MAX_D_MMR6_ENC, MAX_D_MMR6_DESC, ISA_MICROMIPS32R6;
-def MIN_S_MMR6 : R6MMR6Rel, MIN_S_MMR6_ENC, MIN_S_MMR6_DESC, ISA_MICROMIPS32R6;
-def MIN_D_MMR6 : R6MMR6Rel, MIN_D_MMR6_ENC, MIN_D_MMR6_DESC, ISA_MICROMIPS32R6;
-def MAXA_S_MMR6 : R6MMR6Rel, MAXA_S_MMR6_ENC, MAXA_S_MMR6_DESC,
-                  ISA_MICROMIPS32R6;
-def MAXA_D_MMR6 : R6MMR6Rel, MAXA_D_MMR6_ENC, MAXA_D_MMR6_DESC,
-                  ISA_MICROMIPS32R6;
-def MINA_S_MMR6 : R6MMR6Rel, MINA_S_MMR6_ENC, MINA_S_MMR6_DESC,
-                  ISA_MICROMIPS32R6;
-def MINA_D_MMR6 : R6MMR6Rel, MINA_D_MMR6_ENC, MINA_D_MMR6_DESC,
-                  ISA_MICROMIPS32R6;
-def CVT_L_S_MMR6 : StdMMR6Rel, CVT_L_S_MMR6_ENC, CVT_L_S_MMR6_DESC,
-                   ISA_MICROMIPS32R6;
-def CVT_L_D_MMR6 : StdMMR6Rel, CVT_L_D_MMR6_ENC, CVT_L_D_MMR6_DESC,
-                   ISA_MICROMIPS32R6;
-def CVT_W_S_MMR6 : StdMMR6Rel, CVT_W_S_MMR6_ENC, CVT_W_S_MMR6_DESC,
-                   ISA_MICROMIPS32R6;
-def CVT_D_L_MMR6 : StdMMR6Rel, CVT_D_L_MMR6_ENC, CVT_D_L_MMR6_DESC,
-                   ISA_MICROMIPS32R6;
-def CVT_S_W_MMR6 : StdMMR6Rel, CVT_S_W_MMR6_ENC, CVT_S_W_MMR6_DESC,
-                   ISA_MICROMIPS32R6;
-def CVT_S_L_MMR6 : StdMMR6Rel, CVT_S_L_MMR6_ENC, CVT_S_L_MMR6_DESC,
-                   ISA_MICROMIPS32R6;
+
+let mayRaiseFPException = 1 in {
+  def MAX_S_MMR6 : R6MMR6Rel, MAX_S_MMR6_ENC, MAX_S_MMR6_DESC, ISA_MICROMIPS32R6;
+  def MAX_D_MMR6 : R6MMR6Rel, MAX_D_MMR6_ENC, MAX_D_MMR6_DESC, ISA_MICROMIPS32R6;
+  def MIN_S_MMR6 : R6MMR6Rel, MIN_S_MMR6_ENC, MIN_S_MMR6_DESC, ISA_MICROMIPS32R6;
+  def MIN_D_MMR6 : R6MMR6Rel, MIN_D_MMR6_ENC, MIN_D_MMR6_DESC, ISA_MICROMIPS32R6;
+  def MAXA_S_MMR6 : R6MMR6Rel, MAXA_S_MMR6_ENC, MAXA_S_MMR6_DESC,
+                    ISA_MICROMIPS32R6;
+  def MAXA_D_MMR6 : R6MMR6Rel, MAXA_D_MMR6_ENC, MAXA_D_MMR6_DESC,
+                    ISA_MICROMIPS32R6;
+  def MINA_S_MMR6 : R6MMR6Rel, MINA_S_MMR6_ENC, MINA_S_MMR6_DESC,
+                    ISA_MICROMIPS32R6;
+  def MINA_D_MMR6 : R6MMR6Rel, MINA_D_MMR6_ENC, MINA_D_MMR6_DESC,
+                    ISA_MICROMIPS32R6;
+
+  let Uses = [FCR31] in {
+    def CVT_L_S_MMR6 : StdMMR6Rel, CVT_L_S_MMR6_ENC, CVT_L_S_MMR6_DESC,
+                       ISA_MICROMIPS32R6;
+    def CVT_L_D_MMR6 : StdMMR6Rel, CVT_L_D_MMR6_ENC, CVT_L_D_MMR6_DESC,
+                       ISA_MICROMIPS32R6;
+    def CVT_W_S_MMR6 : StdMMR6Rel, CVT_W_S_MMR6_ENC, CVT_W_S_MMR6_DESC,
+                       ISA_MICROMIPS32R6;
+    def CVT_D_L_MMR6 : StdMMR6Rel, CVT_D_L_MMR6_ENC, CVT_D_L_MMR6_DESC,
+                       ISA_MICROMIPS32R6;
+    def CVT_S_W_MMR6 : StdMMR6Rel, CVT_S_W_MMR6_ENC, CVT_S_W_MMR6_DESC,
+                       ISA_MICROMIPS32R6;
+    def CVT_S_L_MMR6 : StdMMR6Rel, CVT_S_L_MMR6_ENC, CVT_S_L_MMR6_DESC,
+                       ISA_MICROMIPS32R6;
+  }
+}
+
 defm S_MMR6 : CMP_CC_MMR6<0b000101, "s", FGR32Opnd, II_CMP_CC_S>;
 defm D_MMR6 : CMP_CC_MMR6<0b010101, "d", FGR64Opnd, II_CMP_CC_D>;
-def FLOOR_L_S_MMR6 : StdMMR6Rel, FLOOR_L_S_MMR6_ENC, FLOOR_L_S_MMR6_DESC,
-                     ISA_MICROMIPS32R6;
-def FLOOR_L_D_MMR6 : StdMMR6Rel, FLOOR_L_D_MMR6_ENC, FLOOR_L_D_MMR6_DESC,
-                     ISA_MICROMIPS32R6;
-def FLOOR_W_S_MMR6 : StdMMR6Rel, FLOOR_W_S_MMR6_ENC, FLOOR_W_S_MMR6_DESC,
-                     ISA_MICROMIPS32R6;
-def FLOOR_W_D_MMR6 : StdMMR6Rel, FLOOR_W_D_MMR6_ENC, FLOOR_W_D_MMR6_DESC,
-                     ISA_MICROMIPS32R6;
-def CEIL_L_S_MMR6 : StdMMR6Rel, CEIL_L_S_MMR6_ENC, CEIL_L_S_MMR6_DESC,
-                    ISA_MICROMIPS32R6;
-def CEIL_L_D_MMR6 : StdMMR6Rel, CEIL_L_D_MMR6_ENC, CEIL_L_D_MMR6_DESC,
-                    ISA_MICROMIPS32R6;
-def CEIL_W_S_MMR6 : StdMMR6Rel, CEIL_W_S_MMR6_ENC, CEIL_W_S_MMR6_DESC,
-                    ISA_MICROMIPS32R6;
-def CEIL_W_D_MMR6 : StdMMR6Rel, CEIL_W_D_MMR6_ENC, CEIL_W_D_MMR6_DESC,
-                    ISA_MICROMIPS32R6;
-def TRUNC_L_S_MMR6 : StdMMR6Rel, TRUNC_L_S_MMR6_ENC, TRUNC_L_S_MMR6_DESC,
-                     ISA_MICROMIPS32R6;
-def TRUNC_L_D_MMR6 : StdMMR6Rel, TRUNC_L_D_MMR6_ENC, TRUNC_L_D_MMR6_DESC,
-                     ISA_MICROMIPS32R6;
-def TRUNC_W_S_MMR6 : StdMMR6Rel, TRUNC_W_S_MMR6_ENC, TRUNC_W_S_MMR6_DESC,
-                     ISA_MICROMIPS32R6;
-def TRUNC_W_D_MMR6 : StdMMR6Rel, TRUNC_W_D_MMR6_ENC, TRUNC_W_D_MMR6_DESC,
-                     ISA_MICROMIPS32R6;
+let mayRaiseFPException = 1 in {
+  def FLOOR_L_S_MMR6 : StdMMR6Rel, FLOOR_L_S_MMR6_ENC, FLOOR_L_S_MMR6_DESC,
+                       ISA_MICROMIPS32R6;
+  def FLOOR_L_D_MMR6 : StdMMR6Rel, FLOOR_L_D_MMR6_ENC, FLOOR_L_D_MMR6_DESC,
+                       ISA_MICROMIPS32R6;
+  def FLOOR_W_S_MMR6 : StdMMR6Rel, FLOOR_W_S_MMR6_ENC, FLOOR_W_S_MMR6_DESC,
+                       ISA_MICROMIPS32R6;
+  def FLOOR_W_D_MMR6 : StdMMR6Rel, FLOOR_W_D_MMR6_ENC, FLOOR_W_D_MMR6_DESC,
+                       ISA_MICROMIPS32R6;
+  def CEIL_L_S_MMR6 : StdMMR6Rel, CEIL_L_S_MMR6_ENC, CEIL_L_S_MMR6_DESC,
+                      ISA_MICROMIPS32R6;
+  def CEIL_L_D_MMR6 : StdMMR6Rel, CEIL_L_D_MMR6_ENC, CEIL_L_D_MMR6_DESC,
+                      ISA_MICROMIPS32R6;
+  def CEIL_W_S_MMR6 : StdMMR6Rel, CEIL_W_S_MMR6_ENC, CEIL_W_S_MMR6_DESC,
+                      ISA_MICROMIPS32R6;
+  def CEIL_W_D_MMR6 : StdMMR6Rel, CEIL_W_D_MMR6_ENC, CEIL_W_D_MMR6_DESC,
+                      ISA_MICROMIPS32R6;
+  def TRUNC_L_S_MMR6 : StdMMR6Rel, TRUNC_L_S_MMR6_ENC, TRUNC_L_S_MMR6_DESC,
+                       ISA_MICROMIPS32R6;
+  def TRUNC_L_D_MMR6 : StdMMR6Rel, TRUNC_L_D_MMR6_ENC, TRUNC_L_D_MMR6_DESC,
+                       ISA_MICROMIPS32R6;
+  def TRUNC_W_S_MMR6 : StdMMR6Rel, TRUNC_W_S_MMR6_ENC, TRUNC_W_S_MMR6_DESC,
+                       ISA_MICROMIPS32R6;
+  def TRUNC_W_D_MMR6 : StdMMR6Rel, TRUNC_W_D_MMR6_ENC, TRUNC_W_D_MMR6_DESC,
+                       ISA_MICROMIPS32R6;
+}
 def SB_MMR6 : StdMMR6Rel, SB_MMR6_DESC, SB_MMR6_ENC, ISA_MICROMIPS32R6;
 def SH_MMR6 : StdMMR6Rel, SH_MMR6_DESC, SH_MMR6_ENC, ISA_MICROMIPS32R6;
 def LW_MMR6 : StdMMR6Rel, LW_MMR6_DESC, LW_MMR6_ENC, ISA_MICROMIPS32R6;
@@ -1562,18 +1577,24 @@ def JALRC_HB_MMR6 : R6MMR6Rel, JALRC_HB_MMR6_ENC, JALRC_HB_MMR6_DESC,
 def EXT_MMR6 : StdMMR6Rel, EXT_MMR6_ENC, EXT_MMR6_DESC, ISA_MICROMIPS32R6;
 def INS_MMR6 : StdMMR6Rel, INS_MMR6_ENC, INS_MMR6_DESC, ISA_MICROMIPS32R6;
 def JALRC_MMR6 : R6MMR6Rel, JALRC_MMR6_ENC, JALRC_MMR6_DESC, ISA_MICROMIPS32R6;
-def RINT_S_MMR6 : StdMMR6Rel, RINT_S_MMR6_ENC, RINT_S_MMR6_DESC,
-                  ISA_MICROMIPS32R6;
-def RINT_D_MMR6 : StdMMR6Rel, RINT_D_MMR6_ENC, RINT_D_MMR6_DESC,
-                  ISA_MICROMIPS32R6;
-def ROUND_L_S_MMR6 : StdMMR6Rel, ROUND_L_S_MMR6_ENC, ROUND_L_S_MMR6_DESC,
-                     ISA_MICROMIPS32R6;
-def ROUND_L_D_MMR6 : StdMMR6Rel, ROUND_L_D_MMR6_ENC, ROUND_L_D_MMR6_DESC,
-                     ISA_MICROMIPS32R6;
-def ROUND_W_S_MMR6 : StdMMR6Rel, ROUND_W_S_MMR6_ENC, ROUND_W_S_MMR6_DESC,
-                     ISA_MICROMIPS32R6;
-def ROUND_W_D_MMR6 : StdMMR6Rel, ROUND_W_D_MMR6_ENC, ROUND_W_D_MMR6_DESC,
-                     ISA_MICROMIPS32R6;
+
+let mayRaiseFPException = 1 in {
+  let Uses = [FCR31] in {
+    def RINT_S_MMR6 : StdMMR6Rel, RINT_S_MMR6_ENC, RINT_S_MMR6_DESC,
+                      ISA_MICROMIPS32R6;
+    def RINT_D_MMR6 : StdMMR6Rel, RINT_D_MMR6_ENC, RINT_D_MMR6_DESC,
+                      ISA_MICROMIPS32R6;
+  }
+  def ROUND_L_S_MMR6 : StdMMR6Rel, ROUND_L_S_MMR6_ENC, ROUND_L_S_MMR6_DESC,
+                       ISA_MICROMIPS32R6;
+  def ROUND_L_D_MMR6 : StdMMR6Rel, ROUND_L_D_MMR6_ENC, ROUND_L_D_MMR6_DESC,
+                       ISA_MICROMIPS32R6;
+  def ROUND_W_S_MMR6 : StdMMR6Rel, ROUND_W_S_MMR6_ENC, ROUND_W_S_MMR6_DESC,
+                       ISA_MICROMIPS32R6;
+  def ROUND_W_D_MMR6 : StdMMR6Rel, ROUND_W_D_MMR6_ENC, ROUND_W_D_MMR6_DESC,
+                       ISA_MICROMIPS32R6;
+}
+
 def SEL_S_MMR6 : R6MMR6Rel, SEL_S_MMR6_ENC, SEL_S_MMR6_DESC, ISA_MICROMIPS32R6;
 def SEL_D_MMR6 : R6MMR6Rel, SEL_D_MMR6_ENC, SEL_D_MMR6_DESC, ISA_MICROMIPS32R6;
 def SELEQZ_S_MMR6 : R6MMR6Rel, SELEQZ_S_MMR6_ENC, SELEQZ_S_MMR6_DESC,

@@ -3598,9 +3598,14 @@ class TranslationUnit(ClangObject):
             unsaved_files = []
 
         unsaved_files_array = self.process_unsaved_files(unsaved_files)
-        ptr = conf.lib.clang_reparseTranslationUnit(
-            self, len(unsaved_files), unsaved_files_array, options
+        result = int(
+            conf.lib.clang_reparseTranslationUnit(
+                self, len(unsaved_files), unsaved_files_array, options
+            )
         )
+        if result != 0:
+            msg = "Error reparsing translation unit. Error code: " + str(result)
+            raise TranslationUnitLoadError(msg)
 
     def save(self, filename):
         """Saves the TranslationUnit to a file.
@@ -3879,7 +3884,7 @@ class CompilationDatabase(ClangObject):
                     os.fspath(buildDir), byref(errorCode)
                 )
             )
-        except CompilationDatabaseError as e:
+        except CompilationDatabaseError:
             raise CompilationDatabaseError(
                 int(errorCode.value), "CompilationDatabase loading failed"
             )
@@ -4383,8 +4388,8 @@ def register_functions(lib: CDLL, ignore_errors: bool) -> None:
 
 
 class Config:
-    library_path = None
-    library_file: str | None = None
+    library_path: str | None = os.environ.get("LIBCLANG_LIBRARY_PATH")
+    library_file: str | None = os.environ.get("LIBCLANG_LIBRARY_FILE")
     compatibility_check = True
     loaded = False
 
@@ -4468,10 +4473,11 @@ class Config:
         try:
             library = cdll.LoadLibrary(self.get_filename())
         except OSError as e:
-            msg = (
-                str(e) + ". To provide a path to libclang use "
-                "Config.set_library_path() or "
-                "Config.set_library_file()."
+            msg = str(e) + (
+                "To provide the path to the directory containing libclang, you can use the environment variable "
+                "LIBCLANG_LIBRARY_PATH or call Config.set_library_path(). "
+                "Alternatively, you can specify the path of the library file using "
+                "LIBCLANG_LIBRARY_FILE or Config.set_library_file()."
             )
             raise LibclangError(msg)
 

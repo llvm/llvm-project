@@ -15,7 +15,6 @@
 // XFAIL: (darwin && ubsan && (arm64-target-arch || arm64e-target-arch))
 
 // XFAIL: target={{.*netbsd.*}} && !asan
-// XFAIL: darwin && ubsan
 
 volatile int *null = 0;
 

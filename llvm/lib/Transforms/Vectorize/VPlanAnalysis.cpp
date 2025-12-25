@@ -120,12 +120,8 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPInstruction *R) {
   case VPInstruction::LastActiveLane:
     return Type::getIntNTy(Ctx, 64);
   case VPInstruction::ExtractLastLane:
-  case VPInstruction::ExtractPenultimateElement: {
-    Type *BaseTy = inferScalarType(R->getOperand(0));
-    if (auto *VecTy = dyn_cast<VectorType>(BaseTy))
-      return VecTy->getElementType();
-    return BaseTy;
-  }
+  case VPInstruction::ExtractPenultimateElement:
+    return inferScalarType(R->getOperand(0));
   case VPInstruction::ExtractLastPart:
     return inferScalarType(R->getOperand(0));
   case VPInstruction::LogicalAnd:
@@ -136,6 +132,7 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPInstruction *R) {
   case VPInstruction::Broadcast:
   case VPInstruction::PtrAdd:
   case VPInstruction::WidePtrAdd:
+  case VPInstruction::Reverse:
     // Return the type based on first operand.
     return inferScalarType(R->getOperand(0));
   case VPInstruction::BranchOnCond:

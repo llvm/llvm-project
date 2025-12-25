@@ -15,19 +15,19 @@ define void @test() {
 ; SSE2-LABEL: 'test'
 ; SSE2:  LV: Found an estimated cost of 1 for VF 1 For instruction: %v0 = load float, ptr %in0, align 4
 ; SSE2:  LV: Found an estimated cost of 1 for VF 1 For instruction: %v0 = load float, ptr %in0, align 4
-; SSE2:  LV: Found an estimated cost of 9 for VF 2 For instruction: %v0 = load float, ptr %in0, align 4
-; SSE2:  LV: Found an estimated cost of 21 for VF 4 For instruction: %v0 = load float, ptr %in0, align 4
-; SSE2:  LV: Found an estimated cost of 42 for VF 8 For instruction: %v0 = load float, ptr %in0, align 4
-; SSE2:  LV: Found an estimated cost of 84 for VF 16 For instruction: %v0 = load float, ptr %in0, align 4
+; SSE2:  LV: Found an estimated cost of 3 for VF 2 For instruction: %v0 = load float, ptr %in0, align 4
+; SSE2:  LV: Found an estimated cost of 7 for VF 4 For instruction: %v0 = load float, ptr %in0, align 4
+; SSE2:  LV: Found an estimated cost of 14 for VF 8 For instruction: %v0 = load float, ptr %in0, align 4
+; SSE2:  LV: Found an estimated cost of 28 for VF 16 For instruction: %v0 = load float, ptr %in0, align 4
 ;
 ; AVX1-LABEL: 'test'
 ; AVX1:  LV: Found an estimated cost of 1 for VF 1 For instruction: %v0 = load float, ptr %in0, align 4
 ; AVX1:  LV: Found an estimated cost of 1 for VF 1 For instruction: %v0 = load float, ptr %in0, align 4
-; AVX1:  LV: Found an estimated cost of 11 for VF 2 For instruction: %v0 = load float, ptr %in0, align 4
-; AVX1:  LV: Found an estimated cost of 21 for VF 4 For instruction: %v0 = load float, ptr %in0, align 4
-; AVX1:  LV: Found an estimated cost of 45 for VF 8 For instruction: %v0 = load float, ptr %in0, align 4
-; AVX1:  LV: Found an estimated cost of 90 for VF 16 For instruction: %v0 = load float, ptr %in0, align 4
-; AVX1:  LV: Found an estimated cost of 180 for VF 32 For instruction: %v0 = load float, ptr %in0, align 4
+; AVX1:  LV: Found an estimated cost of 3 for VF 2 For instruction: %v0 = load float, ptr %in0, align 4
+; AVX1:  LV: Found an estimated cost of 7 for VF 4 For instruction: %v0 = load float, ptr %in0, align 4
+; AVX1:  LV: Found an estimated cost of 15 for VF 8 For instruction: %v0 = load float, ptr %in0, align 4
+; AVX1:  LV: Found an estimated cost of 30 for VF 16 For instruction: %v0 = load float, ptr %in0, align 4
+; AVX1:  LV: Found an estimated cost of 60 for VF 32 For instruction: %v0 = load float, ptr %in0, align 4
 ;
 ; AVX2-LABEL: 'test'
 ; AVX2:  LV: Found an estimated cost of 1 for VF 1 For instruction: %v0 = load float, ptr %in0, align 4

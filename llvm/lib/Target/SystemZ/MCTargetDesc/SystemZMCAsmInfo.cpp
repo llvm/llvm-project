@@ -63,13 +63,16 @@ void SystemZMCAsmInfoGOFF::printSpecifierExpr(
     raw_ostream &OS, const MCSpecifierExpr &Expr) const {
   switch (Expr.getSpecifier()) {
   case SystemZ::S_None:
-    OS << "A";
+    OS << "AD";
+    break;
+  case SystemZ::S_QCon:
+    OS << "QD";
     break;
   case SystemZ::S_RCon:
-    OS << "R";
+    OS << "RD";
     break;
   case SystemZ::S_VCon:
-    OS << "V";
+    OS << "VD";
     break;
   default:
     llvm_unreachable("Invalid kind");
