@@ -1,12 +1,9 @@
 add_mlir_dialect_library(MLIROpenACCTransforms
-  ACCIfClauseLowering.cpp
   ACCImplicitData.cpp
   ACCLoopTiling.cpp
   ACCImplicitDeclare.cpp
   ACCImplicitRoutine.cpp
   ACCLegalizeSerial.cpp
-  ACCSpecializeForDevice.cpp
-  ACCSpecializeForHost.cpp
   LegalizeDataValues.cpp
 
   ADDITIONAL_HEADER_DIRS
@@ -29,7 +26,6 @@ add_mlir_dialect_library(MLIROpenACCTransforms
   MLIRFuncDialect
   MLIRIR
   MLIRPass
-  MLIRSCFDialect
   MLIRSupport
   MLIRTransforms
 )
