@@ -309,6 +309,14 @@ static bool endsWith(const std::string &s, const std::string &suffix) {
   return std::equal(suffix.rbegin(), suffix.rend(), s.rbegin());
 }
 
+static llvm::SmallVector<llvm::StringRef, 16>
+toRefs(const std::vector<std::string> &Syms) {
+  llvm::SmallVector<llvm::StringRef, 16> R;
+  for (auto &S : Syms)
+    R.push_back(S);
+  return R;
+}
+
 TEST_F(LibraryResolverIT, EnumerateSymbols_ExportsOnly_DefaultFlags) {
   const std::string libC = lib("C");
   SymbolEnumeratorOptions Opts = SymbolEnumeratorOptions::defaultOptions();
@@ -384,7 +392,7 @@ TEST_F(LibraryResolverIT, DriverResolvesSymbolsToCorrectLibraries) {
                                    platformSymbolName("sayZ")};
 
   bool CallbackRan = false;
-  Driver->resolveSymbols(Syms, [&](SymbolQuery &Q) {
+  Driver->resolveSymbols(toRefs(Syms), [&](SymbolQuery &Q) {
     CallbackRan = true;
 
     // sayA should resolve to A.dylib
@@ -435,7 +443,7 @@ TEST_F(LibraryResolverIT, ResolveManySymbols) {
       platformSymbolName("sayA"), platformSymbolName("sayB")};
 
   bool CallbackRan = false;
-  Driver->resolveSymbols(Syms, [&](SymbolQuery &Q) {
+  Driver->resolveSymbols(toRefs(Syms), [&](SymbolQuery &Q) {
     CallbackRan = true;
     EXPECT_TRUE(Q.isResolved(platformSymbolName("sayA")));
     EXPECT_TRUE(Q.isResolved(platformSymbolName("sayB")));

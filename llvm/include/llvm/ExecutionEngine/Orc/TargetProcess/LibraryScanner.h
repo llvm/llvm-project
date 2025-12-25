@@ -424,14 +424,14 @@ public:
   addBasePath(const std::string &P,
               PathType Kind =
                   PathType::Unknown); // Add a canonical directory for scanning
-  std::vector<const LibrarySearchPath *> getNextBatch(PathType Kind,
+  SmallVector<const LibrarySearchPath *> getNextBatch(PathType Kind,
                                                       size_t batchSize);
 
   bool leftToScan(PathType K) const;
   void resetToScan();
 
   bool isTrackedBasePath(StringRef P) const;
-  std::vector<const LibrarySearchPath *> getAllUnits() const;
+  SmallVector<const LibrarySearchPath *> getAllUnits() const;
 
   SmallVector<StringRef> getSearchPaths() const {
     SmallVector<StringRef> SearchPaths;
