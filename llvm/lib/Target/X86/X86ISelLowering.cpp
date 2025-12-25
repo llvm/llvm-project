@@ -58164,11 +58164,14 @@ static SDValue combineX86AddSub(SDNode *N, SelectionDAG &DAG,
     }
   }
 
-  // Fold ADD(ADC(Y,0,CF), C) -> ADC(Y, C, CF)
+  // Fold ADD(ADC(Y, C1, CF), C2) -> ADC(Y, C1 + C2, CF)
   if (!IsSub && LHS.getOpcode() == X86ISD::ADC &&
-      X86::isZeroNode(LHS.getOperand(1)) && isa<ConstantSDNode>(RHS)) {
-    return DAG.getNode(X86ISD::ADC, DL, N->getVTList(), LHS.getOperand(0), RHS,
-                       LHS.getOperand(2));
+      isa<ConstantSDNode>(LHS.getOperand(1)) && isa<ConstantSDNode>(RHS)) {
+    auto *C1 = dyn_cast<ConstantSDNode>(LHS.getOperand(1));
+    auto *C2 = dyn_cast<ConstantSDNode>(RHS);
+    APInt Sum = C1->getAPIntValue() + C2->getAPIntValue();
+    return DAG.getNode(X86ISD::ADC, DL, N->getVTList(), LHS.getOperand(0),
+                       DAG.getConstant(Sum, DL, VT), LHS.getOperand(2));
   }
 
   // TODO: Can we drop the ZeroSecondOpOnly limit? This is to guarantee that the
