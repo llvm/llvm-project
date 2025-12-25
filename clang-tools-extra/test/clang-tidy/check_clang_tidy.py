@@ -49,7 +49,7 @@ import platform
 import re
 import subprocess
 import sys
-from typing import List, Tuple
+from typing import Dict, List, Sequence, Tuple
 
 
 def write_file(file_name: str, text: str) -> None:
@@ -93,6 +93,7 @@ class CheckRunner:
         self.input_file_name = args.input_file_name
         self.check_name = args.check_name
         self.temp_file_name = args.temp_file_name
+        self.check_headers = args.check_headers
         self.original_file_name = self.temp_file_name + ".orig"
         self.expect_clang_tidy_error = args.expect_clang_tidy_error
         self.std = args.std
@@ -120,6 +121,18 @@ class CheckRunner:
             i = self.clang_tidy_extra_args.index("--")
             self.clang_extra_args = self.clang_tidy_extra_args[i + 1 :]
             self.clang_tidy_extra_args = self.clang_tidy_extra_args[:i]
+
+        self.check_header_map: Dict[str, str] = {}
+        self.header_dir: str = self.temp_file_name + ".headers"
+        if self.check_headers:
+            self.check_header_map = {
+                os.path.abspath(
+                    os.path.join(self.header_dir, os.path.basename(h))
+                ): os.path.abspath(h)
+                for h in self.check_headers
+            }
+
+            self.clang_extra_args.insert(0, "-I" + self.header_dir)
 
         # If the test does not specify a config style, force an empty one; otherwise
         # auto-detection logic can discover a ".clang-tidy" file that is not related to
@@ -196,14 +209,35 @@ class CheckRunner:
             )
         assert expect_diagnosis or self.expect_no_diagnosis
 
+    def _sanitize_content(self, text: str) -> str:
+        return re.sub("// *CHECK-[A-Z0-9\\-]*:[^\r\n]*", "//", text)
+
+    def _filter_prefixes(self, prefixes: Sequence[str], check_file: str) -> List[str]:
+        if check_file == self.input_file_name:
+            content = self.input_text
+        else:
+            with open(check_file, "r", encoding="utf-8") as f:
+                content = f.read()
+        return [p for p in prefixes if p in content]
+
     def prepare_test_inputs(self) -> None:
         # Remove the contents of the CHECK lines to avoid CHECKs matching on
         # themselves.  We need to keep the comments to preserve line numbers while
         # avoiding empty lines which could potentially trigger formatting-related
         # checks.
-        cleaned_test = re.sub("// *CHECK-[A-Z0-9\\-]*:[^\r\n]*", "//", self.input_text)
+        cleaned_test = self._sanitize_content(self.input_text)
         write_file(self.temp_file_name, cleaned_test)
         write_file(self.original_file_name, cleaned_test)
+
+        if self.check_headers:
+            os.makedirs(self.header_dir, exist_ok=True)
+
+            for temp_header_path, header in self.check_header_map.items():
+                with open(header, "r", encoding="utf-8") as f:
+                    cleaned_header = self._sanitize_content(f.read())
+
+                write_file(temp_header_path, cleaned_header)
+                write_file(temp_header_path + ".orig", cleaned_header)
 
     def run_clang_tidy(self) -> str:
         args = (
@@ -241,6 +275,18 @@ class CheckRunner:
         diff_output = try_run(
             ["diff", "-u", self.original_file_name, self.temp_file_name], False
         )
+        if self.check_headers:
+            for temp_header_path in self.check_header_map:
+                diff_output += try_run(
+                    [
+                        "diff",
+                        "-u",
+                        temp_header_path + ".orig",
+                        temp_header_path,
+                    ],
+                    False,
+                )
+
         print("------------------------------ Fixes -----------------------------")
         print(diff_output)
         print("------------------------------------------------------------------")
@@ -250,35 +296,57 @@ class CheckRunner:
         if clang_tidy_output != "":
             sys.exit("No diagnostics were expected, but found the ones above")
 
-    def check_fixes(self) -> None:
-        if self.has_check_fixes:
-            try_run(
-                [
-                    "FileCheck",
-                    "--input-file=" + self.temp_file_name,
-                    self.input_file_name,
-                    "--check-prefixes=" + ",".join(self.fixes.prefixes),
-                    (
-                        "--match-full-lines"
-                        if not self.match_partial_fixes
-                        else "--strict-whitespace"  # Keeping past behavior.
-                    ),
-                ]
-            )
+    def check_fixes(self, input_file: str = "", check_file: str = "") -> None:
+        if not check_file and not self.has_check_fixes:
+            return
 
-    def check_messages(self, clang_tidy_output: str) -> None:
-        if self.has_check_messages:
-            messages_file = self.temp_file_name + ".msg"
-            write_file(messages_file, clang_tidy_output)
-            try_run(
-                [
-                    "FileCheck",
-                    "-input-file=" + messages_file,
-                    self.input_file_name,
-                    "-check-prefixes=" + ",".join(self.messages.prefixes),
-                    "-implicit-check-not={{warning|error}}:",
-                ]
-            )
+        input_file = input_file or self.temp_file_name
+        check_file = check_file or self.input_file_name
+        active_prefixes = self._filter_prefixes(self.fixes.prefixes, check_file)
+
+        if not active_prefixes:
+            return
+
+        try_run(
+            [
+                "FileCheck",
+                "--input-file=" + input_file,
+                check_file,
+                "--check-prefixes=" + ",".join(active_prefixes),
+                (
+                    "--match-full-lines"
+                    if not self.match_partial_fixes
+                    else "--strict-whitespace"  # Keeping past behavior.
+                ),
+            ]
+        )
+
+    def check_messages(
+        self,
+        clang_tidy_output: str,
+        messages_file: str = "",
+        check_file: str = "",
+    ) -> None:
+        if not check_file and not self.has_check_messages:
+            return
+
+        messages_file = messages_file or (self.temp_file_name + ".msg")
+        check_file = check_file or self.input_file_name
+
+        active_prefixes = self._filter_prefixes(self.messages.prefixes, check_file)
+        if not active_prefixes:
+            return
+
+        write_file(messages_file, clang_tidy_output)
+        try_run(
+            [
+                "FileCheck",
+                "-input-file=" + messages_file,
+                check_file,
+                "-check-prefixes=" + ",".join(active_prefixes),
+                "-implicit-check-not={{warning|error}}:",
+            ]
+        )
 
     def check_notes(self, clang_tidy_output: str) -> None:
         if self.has_check_notes:
@@ -299,18 +367,72 @@ class CheckRunner:
                 ]
             )
 
+    def check_header_messages(self, clang_tidy_output: str) -> str:
+        """
+        Filters and verifies clang-tidy diagnostics for headers.
+
+        - Input: The raw diagnostic output from clang-tidy.
+        - Output: The diagnostic output intended for the main file
+                  verification.
+
+        This function separates messages belonging to headers specified by
+        `-check-header', verifies them using FileCheck against the header's
+        own rules, and returns the rest for further processing.
+        """
+        if not self.check_headers:
+            return clang_tidy_output
+
+        header_messages: Dict[str, List[str]] = {
+            t: [] for t in self.check_header_map.keys()
+        }
+        remaining_lines: List[str] = []
+        current_file: str = ""
+
+        for line in clang_tidy_output.splitlines(keepends=True):
+            if re.match(r"^\d+ warnings? generated\.", line):
+                continue
+            # Matches the beginning of a clang-tidy diagnostic line,
+            # which starts with "file_path:line:col: ".
+            match = re.match(r"^([^:]+):\d+:\d+: ", line)
+            if match:
+                abs_path = os.path.abspath(match.group(1))
+                current_file = abs_path if abs_path in header_messages else ""
+
+            header_messages.get(current_file, remaining_lines).append(line)
+
+        for temp_header, messages_list in header_messages.items():
+            original_header = self.check_header_map[temp_header]
+            messages = "".join(messages_list)
+            if not messages:
+                continue
+
+            self.check_messages(
+                messages,
+                messages_file=temp_header + ".msg",
+                check_file=original_header,
+            )
+
+        return "".join(remaining_lines)
+
     def run(self) -> None:
         self.read_input()
         if self.export_fixes is None:
             self.get_prefixes()
         self.prepare_test_inputs()
         clang_tidy_output = self.run_clang_tidy()
+        clang_tidy_output = self.check_header_messages(clang_tidy_output)
         if self.expect_no_diagnosis:
             self.check_no_diagnosis(clang_tidy_output)
         elif self.export_fixes is None:
             self.check_fixes()
             self.check_messages(clang_tidy_output)
             self.check_notes(clang_tidy_output)
+
+            for temp_header, original_header in self.check_header_map.items():
+                self.check_fixes(
+                    input_file=temp_header,
+                    check_file=original_header,
+                )
 
 
 CPP_STANDARDS = [
@@ -369,6 +491,13 @@ def parse_arguments() -> Tuple[argparse.Namespace, List[str]]:
         default=[""],
         type=csv,
         help="comma-separated list of FileCheck suffixes",
+    )
+    parser.add_argument(
+        "-check-header",
+        action="append",
+        dest="check_headers",
+        default=[],
+        help="Header files to check",
     )
     parser.add_argument(
         "-export-fixes",
