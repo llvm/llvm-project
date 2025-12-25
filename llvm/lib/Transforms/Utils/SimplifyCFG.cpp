@@ -8955,7 +8955,6 @@ static bool passingValueIsAlwaysUndefined(Value *V, Instruction *I, bool PtrValu
         return passingValueIsAlwaysUndefined(V, GEP, PtrValueMayBeModified);
       }
 
-
     // Look through return.
     if (ReturnInst *Ret = dyn_cast<ReturnInst>(User)) {
       bool HasNoUndefAttr =
