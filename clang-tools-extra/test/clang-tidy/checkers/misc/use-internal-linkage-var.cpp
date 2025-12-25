@@ -1,6 +1,15 @@
-// RUN: %check_clang_tidy %s misc-use-internal-linkage %t -- -- -I%S/Inputs/use-internal-linkage
 // RUN: %check_clang_tidy %s misc-use-internal-linkage %t -- \
-// RUN:   -config="{CheckOptions: {misc-use-internal-linkage.FixMode: 'UseStatic'}}"  -- -I%S/Inputs/use-internal-linkage
+// RUN:   -config="{CheckOptions: { \
+// RUN:     misc-use-internal-linkage.AnalyzeFunctions: false, \
+// RUN:     misc-use-internal-linkage.AnalyzeTypes: false \
+// RUN:   }}" -- -I%S/Inputs/use-internal-linkage
+
+// RUN: %check_clang_tidy %s misc-use-internal-linkage %t -- \
+// RUN:   -config="{CheckOptions: { \
+// RUN:     misc-use-internal-linkage.FixMode: 'UseStatic', \
+// RUN:     misc-use-internal-linkage.AnalyzeFunctions: false, \
+// RUN:     misc-use-internal-linkage.AnalyzeTypes: false \
+// RUN:   }}" -- -I%S/Inputs/use-internal-linkage
 
 #include "var.h"
 
@@ -60,3 +69,6 @@ extern "C" int global_in_extern_c_2;
 
 const int const_global = 123;
 constexpr int constexpr_global = 123;
+
+struct IgnoredStruct {}; // AnalyzeTypes is false.
+void ignored_func() {} // AnalyzeFunctions is false.

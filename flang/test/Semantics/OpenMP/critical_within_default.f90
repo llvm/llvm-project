@@ -19,4 +19,4 @@ program mn
     j=200
     !$omp end critical(k2)
   !$omp end parallel
-end 
+end

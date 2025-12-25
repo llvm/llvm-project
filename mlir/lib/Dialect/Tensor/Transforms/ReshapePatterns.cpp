@@ -37,8 +37,7 @@ struct FoldExpandOfRankReducingExtract
     // supported. Moreover, only simple cases where the resulting ExtractSliceOp
     // has no rank-reduction anymore are supported at the moment.
     RankedTensorType nonReducingExtractType = ExtractSliceOp::inferResultType(
-        srcType, extractSliceOp.getStaticOffsets(),
-        extractSliceOp.getStaticSizes(), extractSliceOp.getStaticStrides());
+        srcType, extractSliceOp.getStaticSizes());
     if (nonReducingExtractType != resultType)
       return failure();
 
@@ -533,8 +532,8 @@ LogicalResult mlir::tensor::getCollapsedExtractSliceInfo(
       getMixedSizes(b, loc, sliceOp.getSource());
 
   // Helper variables and function for accumulating the size values.
-  AffineExpr d0, d1, d2;
-  bindDims(b.getContext(), d0, d1, d2);
+  AffineExpr d0, d1;
+  bindDims(b.getContext(), d0, d1);
   // Multiply two integers.
   auto mul = [&](OpFoldResult v1, OpFoldResult v2) {
     auto mulMap = AffineMap::get(2, 0, {d0 * d1});

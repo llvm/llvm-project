@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include <clc/math/clc_copysign.h>
-#include <clc/opencl/math/copysign.h>
 
 #define __CLC_FUNCTION copysign
 #define __CLC_BODY <clc/shared/binary_def.inc>

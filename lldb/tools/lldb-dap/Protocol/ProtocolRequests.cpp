@@ -8,6 +8,7 @@
 
 #include "Protocol/ProtocolRequests.h"
 #include "JSONUtils.h"
+#include "Protocol/ProtocolTypes.h"
 #include "lldb/lldb-defines.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringMap.h"
@@ -215,12 +216,13 @@ bool fromJSON(const json::Value &Params, InitializeRequestArguments &IRA,
   }
 
   return OM.map("adapterID", IRA.adapterID) &&
-         OM.map("clientID", IRA.clientID) &&
-         OM.map("clientName", IRA.clientName) && OM.map("locale", IRA.locale) &&
-         OM.map("linesStartAt1", IRA.linesStartAt1) &&
-         OM.map("columnsStartAt1", IRA.columnsStartAt1) &&
+         OM.mapOptional("clientID", IRA.clientID) &&
+         OM.mapOptional("clientName", IRA.clientName) &&
+         OM.mapOptional("locale", IRA.locale) &&
+         OM.mapOptional("linesStartAt1", IRA.linesStartAt1) &&
+         OM.mapOptional("columnsStartAt1", IRA.columnsStartAt1) &&
          OM.mapOptional("pathFormat", IRA.pathFormat) &&
-         OM.map("$__lldb_sourceInitFile", IRA.lldbExtSourceInitFile);
+         OM.mapOptional("$__lldb_sourceInitFile", IRA.lldbExtSourceInitFile);
 }
 
 bool fromJSON(const json::Value &Params, Configuration &C, json::Path P) {
@@ -294,29 +296,70 @@ bool fromJSON(const json::Value &Params, Console &C, json::Path P) {
 bool fromJSON(const json::Value &Params, LaunchRequestArguments &LRA,
               json::Path P) {
   json::ObjectMapper O(Params, P);
-  return O && fromJSON(Params, LRA.configuration, P) &&
-         O.mapOptional("noDebug", LRA.noDebug) &&
-         O.mapOptional("launchCommands", LRA.launchCommands) &&
-         O.mapOptional("cwd", LRA.cwd) && O.mapOptional("args", LRA.args) &&
-         O.mapOptional("detachOnError", LRA.detachOnError) &&
-         O.mapOptional("disableASLR", LRA.disableASLR) &&
-         O.mapOptional("disableSTDIO", LRA.disableSTDIO) &&
-         O.mapOptional("shellExpandArguments", LRA.shellExpandArguments) &&
-         O.mapOptional("runInTerminal", LRA.console) &&
-         O.mapOptional("console", LRA.console) &&
-         O.mapOptional("stdio", LRA.stdio) && parseEnv(Params, LRA.env, P);
+  bool success =
+      O && fromJSON(Params, LRA.configuration, P) &&
+      O.mapOptional("noDebug", LRA.noDebug) &&
+      O.mapOptional("launchCommands", LRA.launchCommands) &&
+      O.mapOptional("cwd", LRA.cwd) && O.mapOptional("args", LRA.args) &&
+      O.mapOptional("detachOnError", LRA.detachOnError) &&
+      O.mapOptional("disableASLR", LRA.disableASLR) &&
+      O.mapOptional("disableSTDIO", LRA.disableSTDIO) &&
+      O.mapOptional("shellExpandArguments", LRA.shellExpandArguments) &&
+      O.mapOptional("runInTerminal", LRA.console) &&
+      O.mapOptional("console", LRA.console) &&
+      O.mapOptional("stdio", LRA.stdio) && parseEnv(Params, LRA.env, P);
+  if (!success)
+    return false;
+  // Validate that we have a well formed launch request.
+  if (!LRA.launchCommands.empty() &&
+      LRA.console != protocol::eConsoleInternal) {
+    P.report(
+        "'launchCommands' and non-internal 'console' are mutually exclusive");
+    return false;
+  }
+  if (LRA.configuration.program.empty() && LRA.launchCommands.empty()) {
+    P.report("'program' or 'launchCommands' should be provided");
+    return false;
+  }
+  return true;
 }
 
 bool fromJSON(const json::Value &Params, AttachRequestArguments &ARA,
               json::Path P) {
   json::ObjectMapper O(Params, P);
-  return O && fromJSON(Params, ARA.configuration, P) &&
-         O.mapOptional("attachCommands", ARA.attachCommands) &&
-         O.mapOptional("pid", ARA.pid) &&
-         O.mapOptional("waitFor", ARA.waitFor) &&
-         O.mapOptional("gdb-remote-port", ARA.gdbRemotePort) &&
-         O.mapOptional("gdb-remote-hostname", ARA.gdbRemoteHostname) &&
-         O.mapOptional("coreFile", ARA.coreFile);
+  bool success = O && fromJSON(Params, ARA.configuration, P) &&
+                 O.mapOptional("attachCommands", ARA.attachCommands) &&
+                 O.mapOptional("pid", ARA.pid) &&
+                 O.mapOptional("waitFor", ARA.waitFor) &&
+                 O.mapOptional("gdb-remote-port", ARA.gdbRemotePort) &&
+                 O.mapOptional("gdb-remote-hostname", ARA.gdbRemoteHostname) &&
+                 O.mapOptional("coreFile", ARA.coreFile) &&
+                 O.mapOptional("targetId", ARA.targetId) &&
+                 O.mapOptional("debuggerId", ARA.debuggerId);
+  if (!success)
+    return false;
+  // Validate that we have a well formed attach request.
+  if (ARA.attachCommands.empty() && ARA.coreFile.empty() &&
+      ARA.configuration.program.empty() && ARA.pid == LLDB_INVALID_PROCESS_ID &&
+      ARA.gdbRemotePort == LLDB_DAP_INVALID_PORT && !ARA.targetId.has_value()) {
+    P.report("expected one of 'pid', 'program', 'attachCommands', "
+             "'coreFile', 'gdb-remote-port', or 'targetId' to be specified");
+    return false;
+  }
+  // Check if we have mutually exclusive arguments.
+  if ((ARA.pid != LLDB_INVALID_PROCESS_ID) &&
+      (ARA.gdbRemotePort != LLDB_DAP_INVALID_PORT)) {
+    P.report("'pid' and 'gdb-remote-port' are mutually exclusive");
+    return false;
+  }
+  // Validate that both debugger_id and target_id are provided together.
+  if (ARA.debuggerId.has_value() != ARA.targetId.has_value()) {
+    P.report(
+        "Both 'debuggerId' and 'targetId' must be specified together for "
+        "debugger reuse, or both must be omitted to create a new debugger");
+    return false;
+  }
+  return true;
 }
 
 bool fromJSON(const json::Value &Params, ContinueArguments &CA, json::Path P) {
@@ -511,7 +554,7 @@ bool fromJSON(const llvm::json::Value &Params, DisassembleArguments &DA,
   json::ObjectMapper O(Params, P);
   return O &&
          DecodeMemoryReference(Params, "memoryReference", DA.memoryReference, P,
-                               /*required=*/true) &&
+                               /*required=*/true, /*allow_empty*/ true) &&
          O.mapOptional("offset", DA.offset) &&
          O.mapOptional("instructionOffset", DA.instructionOffset) &&
          O.map("instructionCount", DA.instructionCount) &&
@@ -623,6 +666,140 @@ llvm::json::Value toJSON(const ModuleSymbolsResponseBody &DGMSR) {
   json::Object result;
   result.insert({"symbols", DGMSR.symbols});
   return result;
+}
+
+bool fromJSON(const json::Value &Params, ExceptionInfoArguments &Args,
+              json::Path Path) {
+  json::ObjectMapper O(Params, Path);
+  return O && O.map("threadId", Args.threadId);
+}
+
+json::Value toJSON(const ExceptionInfoResponseBody &ERB) {
+  json::Object result{{"exceptionId", ERB.exceptionId},
+                      {"breakMode", ERB.breakMode}};
+
+  if (!ERB.description.empty())
+    result.insert({"description", ERB.description});
+  if (ERB.details.has_value())
+    result.insert({"details", *ERB.details});
+  return result;
+}
+
+static bool fromJSON(const llvm::json::Value &Params, EvaluateContext &C,
+                     llvm::json::Path P) {
+  auto rawContext = Params.getAsString();
+  if (!rawContext) {
+    P.report("expected a string");
+    return false;
+  }
+  C = StringSwitch<EvaluateContext>(*rawContext)
+          .Case("watch", EvaluateContext::eEvaluateContextWatch)
+          .Case("repl", EvaluateContext::eEvaluateContextRepl)
+          .Case("hover", EvaluateContext::eEvaluateContextHover)
+          .Case("clipboard", EvaluateContext::eEvaluateContextClipboard)
+          .Case("variables", EvaluateContext::eEvaluateContextVariables)
+          .Default(eEvaluateContextUnknown);
+  return true;
+}
+
+bool fromJSON(const llvm::json::Value &Params, EvaluateArguments &Args,
+              llvm::json::Path P) {
+  json::ObjectMapper O(Params, P);
+  return O && O.map("expression", Args.expression) &&
+         O.mapOptional("frameId", Args.frameId) &&
+         O.mapOptional("line", Args.line) &&
+         O.mapOptional("column", Args.column) &&
+         O.mapOptional("source", Args.source) &&
+         O.mapOptional("context", Args.context) &&
+         O.mapOptional("format", Args.format);
+}
+
+llvm::json::Value toJSON(const EvaluateResponseBody &Body) {
+  json::Object result{{"result", Body.result},
+                      {"variablesReference", Body.variablesReference}};
+
+  if (!Body.type.empty())
+    result.insert({"type", Body.type});
+  if (Body.presentationHint)
+    result.insert({"presentationHint", Body.presentationHint});
+  if (Body.namedVariables)
+    result.insert({"namedVariables", Body.namedVariables});
+  if (Body.indexedVariables)
+    result.insert({"indexedVariables", Body.indexedVariables});
+  if (!Body.memoryReference.empty())
+    result.insert({"memoryReference", Body.memoryReference});
+  if (Body.valueLocationReference != LLDB_DAP_INVALID_VALUE_LOC)
+    result.insert({"valueLocationReference", Body.valueLocationReference});
+
+  return result;
+}
+
+bool fromJSON(const llvm::json::Value &Params, PauseArguments &Args,
+              llvm::json::Path Path) {
+  json::ObjectMapper O(Params, Path);
+  return O && O.map("threadId", Args.threadId);
+}
+
+bool fromJSON(const llvm::json::Value &Params, LocationsArguments &Args,
+              llvm::json::Path Path) {
+  json::ObjectMapper O(Params, Path);
+  return O && O.map("locationReference", Args.locationReference);
+}
+
+llvm::json::Value toJSON(const LocationsResponseBody &Body) {
+  assert(Body.line != LLDB_INVALID_LINE_NUMBER);
+  json::Object result{{"source", Body.source}, {"line", Body.line}};
+
+  if (Body.column != 0 && Body.column != LLDB_INVALID_COLUMN_NUMBER)
+    result.insert({"column", Body.column});
+  if (Body.endLine != 0 && Body.endLine != LLDB_INVALID_LINE_NUMBER)
+    result.insert({"endLine", Body.endLine});
+  if (Body.endColumn != 0 && Body.endColumn != LLDB_INVALID_COLUMN_NUMBER)
+    result.insert({"endColumn", Body.endColumn});
+
+  return result;
+}
+
+bool fromJSON(const llvm::json::Value &Params, CompileUnitsArguments &Args,
+              llvm::json::Path Path) {
+  json::ObjectMapper O(Params, Path);
+  return O && O.map("moduleId", Args.moduleId);
+}
+
+llvm::json::Value toJSON(const CompileUnitsResponseBody &Body) {
+  json::Object result{{"compileUnits", Body.compileUnits}};
+  return result;
+}
+
+llvm::json::Value toJSON(const TestGetTargetBreakpointsResponseBody &Body) {
+  json::Object result{{"breakpoints", Body.breakpoints}};
+  return result;
+}
+
+bool fromJSON(const llvm::json::Value &Params, RestartArguments &Args,
+              llvm::json::Path Path) {
+  const json::Object *O = Params.getAsObject();
+  if (!O) {
+    Path.report("expected object");
+    return false;
+  }
+  const json::Value *arguments = O->get("arguments");
+  if (arguments == nullptr)
+    return true;
+  LaunchRequestArguments launchArguments;
+  llvm::json::Path::Root root;
+  if (fromJSON(*arguments, launchArguments, root)) {
+    Args.arguments = std::move(launchArguments);
+    return true;
+  }
+  AttachRequestArguments attachArguments;
+  if (fromJSON(*arguments, attachArguments, root)) {
+    Args.arguments = std::move(attachArguments);
+    return true;
+  }
+  Path.report(
+      "failed to parse arguments, expected `launch` or `attach` arguments");
+  return false;
 }
 
 } // namespace lldb_dap::protocol

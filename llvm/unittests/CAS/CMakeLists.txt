@@ -1,9 +1,11 @@
 set(ONDISK_CAS_TEST_SOURCES
+  BuiltinUnifiedCASDatabasesTest.cpp
   OnDiskGraphDBTest.cpp
   OnDiskDataAllocatorTest.cpp
   OnDiskKeyValueDBTest.cpp
   OnDiskTrieRawHashMapTest.cpp
   ProgramTest.cpp
+  UnifiedOnDiskCacheTest.cpp
   )
 
 set(LLVM_OPTIONAL_SOURCES

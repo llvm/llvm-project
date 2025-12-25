@@ -57,6 +57,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/IOSandbox.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
@@ -452,13 +453,6 @@ Expected<DataRecordHandle> DataRecordHandle::createWithError(
     return Mem.takeError();
 }
 
-DataRecordHandle
-DataRecordHandle::create(function_ref<char *(size_t Size)> Alloc,
-                         const Input &I) {
-  Layout L(I);
-  return constructImpl(Alloc(L.getTotalSize()), I, L);
-}
-
 ObjectHandle ObjectHandle::fromFileOffset(FileOffset Offset) {
   // Store the file offset as it is.
   assert(!(Offset.get() & 0x1));
@@ -619,10 +613,6 @@ bool TrieRecord::compare_exchange_strong(Data &Existing, Data New) {
     return true;
   Existing = unpack(ExistingPacked);
   return false;
-}
-
-DataRecordHandle DataRecordHandle::construct(char *Mem, const Input &I) {
-  return constructImpl(Mem, I, Layout(I));
 }
 
 Expected<DataRecordHandle>
@@ -893,6 +883,10 @@ int64_t DataRecordHandle::getDataRelOffset() const {
 }
 
 Error OnDiskGraphDB::validate(bool Deep, HashingFuncT Hasher) const {
+  if (UpstreamDB) {
+    if (auto E = UpstreamDB->validate(Deep, Hasher))
+      return E;
+  }
   return Index.validate([&](FileOffset Offset,
                             OnDiskTrieRawHashMap::ConstValueProxy Record)
                             -> Error {
@@ -934,8 +928,7 @@ Error OnDiskGraphDB::validate(bool Deep, HashingFuncT Hasher) const {
       // Check offset is a postive value, and large enough to hold the
       // header for the data record.
       if (D.Offset.get() <= 0 ||
-          (uint64_t)D.Offset.get() + sizeof(DataRecordHandle::Header) >=
-              DataPool.size())
+          D.Offset.get() + sizeof(DataRecordHandle::Header) >= DataPool.size())
         return formatError("datapool record out of bound");
       break;
     case TrieRecord::StorageKind::Standalone:
@@ -1117,10 +1110,11 @@ ObjectID OnDiskGraphDB::getExternalReference(const IndexProxy &I) {
 }
 
 std::optional<ObjectID>
-OnDiskGraphDB::getExistingReference(ArrayRef<uint8_t> Digest) {
+OnDiskGraphDB::getExistingReference(ArrayRef<uint8_t> Digest,
+                                    bool CheckUpstream) {
   auto tryUpstream =
       [&](std::optional<IndexProxy> I) -> std::optional<ObjectID> {
-    if (!UpstreamDB)
+    if (!CheckUpstream || !UpstreamDB)
       return std::nullopt;
     std::optional<ObjectID> UpstreamID =
         UpstreamDB->getExistingReference(Digest);
@@ -1202,11 +1196,8 @@ OnDiskGraphDB::load(ObjectID ExternalRef) {
     return I.takeError();
   TrieRecord::Data Object = I->Ref.load();
 
-  if (Object.SK == TrieRecord::StorageKind::Unknown) {
-    if (!UpstreamDB)
-      return std::nullopt;
+  if (Object.SK == TrieRecord::StorageKind::Unknown)
     return faultInFromUpstream(ExternalRef);
-  }
 
   if (Object.SK == TrieRecord::StorageKind::DataPool)
     return ObjectHandle::fromFileOffset(Object.Offset);
@@ -1235,6 +1226,8 @@ OnDiskGraphDB::load(ObjectID ExternalRef) {
   // for extremely large objects that happen to be page-aligned.
   SmallString<256> Path;
   getStandalonePath(TrieRecord::getStandaloneFilePrefix(Object.SK), *I, Path);
+
+  auto BypassSandbox = sys::sandbox::scopedDisable();
 
   auto File = sys::fs::openNativeFileForRead(Path);
   if (!File)
@@ -1286,8 +1279,10 @@ OnDiskGraphDB::getObjectPresence(ObjectID ExternalRef,
   TrieRecord::Data Object = I->Ref.load();
   if (Object.SK != TrieRecord::StorageKind::Unknown)
     return ObjectPresence::InPrimaryDB;
+
   if (!CheckUpstream || !UpstreamDB)
     return ObjectPresence::Missing;
+
   std::optional<ObjectID> UpstreamID =
       UpstreamDB->getExistingReference(getDigest(*I));
   return UpstreamID.has_value() ? ObjectPresence::OnlyInUpstreamDB
@@ -1337,6 +1332,8 @@ OnDiskContent StandaloneDataInMemory::getContent() const {
 
 static Expected<MappedTempFile> createTempFile(StringRef FinalPath,
                                                uint64_t Size) {
+  auto BypassSandbox = sys::sandbox::scopedDisable();
+
   assert(Size && "Unexpected request for an empty temp file");
   Expected<TempFile> File = TempFile::create(FinalPath + ".%%%%%%");
   if (!File)
@@ -1373,6 +1370,8 @@ Error OnDiskGraphDB::createStandaloneLeaf(IndexProxy &I, ArrayRef<char> Data) {
   SmallString<256> Path;
   int64_t FileSize = Data.size() + Leaf0;
   getStandalonePath(TrieRecord::getStandaloneFilePrefix(SK), I, Path);
+
+  auto BypassSandbox = sys::sandbox::scopedDisable();
 
   // Write the file. Don't reuse this mapped_file_region, which is read/write.
   // Let load() pull up one that's read-only.
@@ -1549,9 +1548,10 @@ unsigned OnDiskGraphDB::getHardStorageLimitUtilization() const {
   return std::max(IndexPercent, DataPercent);
 }
 
-Expected<std::unique_ptr<OnDiskGraphDB>> OnDiskGraphDB::open(
-    StringRef AbsPath, StringRef HashName, unsigned HashByteSize,
-    std::unique_ptr<OnDiskGraphDB> UpstreamDB, FaultInPolicy Policy) {
+Expected<std::unique_ptr<OnDiskGraphDB>>
+OnDiskGraphDB::open(StringRef AbsPath, StringRef HashName,
+                    unsigned HashByteSize, OnDiskGraphDB *UpstreamDB,
+                    FaultInPolicy Policy) {
   if (std::error_code EC = sys::fs::create_directories(AbsPath))
     return createFileError(AbsPath, EC);
 
@@ -1604,18 +1604,15 @@ Expected<std::unique_ptr<OnDiskGraphDB>> OnDiskGraphDB::open(
                              "unexpected user header in '" + DataPoolPath +
                                  "'");
 
-  return std::unique_ptr<OnDiskGraphDB>(
-      new OnDiskGraphDB(AbsPath, std::move(*Index), std::move(*DataPool),
-                        std::move(UpstreamDB), Policy));
+  return std::unique_ptr<OnDiskGraphDB>(new OnDiskGraphDB(
+      AbsPath, std::move(*Index), std::move(*DataPool), UpstreamDB, Policy));
 }
 
 OnDiskGraphDB::OnDiskGraphDB(StringRef RootPath, OnDiskTrieRawHashMap Index,
                              OnDiskDataAllocator DataPool,
-                             std::unique_ptr<OnDiskGraphDB> UpstreamDB,
-                             FaultInPolicy Policy)
+                             OnDiskGraphDB *UpstreamDB, FaultInPolicy Policy)
     : Index(std::move(Index)), DataPool(std::move(DataPool)),
-      RootPath(RootPath.str()), UpstreamDB(std::move(UpstreamDB)),
-      FIPolicy(Policy) {
+      RootPath(RootPath.str()), UpstreamDB(UpstreamDB), FIPolicy(Policy) {
   /// Lifetime for "big" objects not in DataPool.
   ///
   /// NOTE: Could use ThreadSafeTrieRawHashMap here. For now, doing something
@@ -1638,7 +1635,6 @@ Error OnDiskGraphDB::importFullTree(ObjectID PrimaryID,
   // against the process dying during importing and leaving the database with an
   // incomplete tree. Note that if the upstream has missing nodes then the tree
   // will be copied with missing nodes as well, it won't be considered an error.
-
   struct UpstreamCursor {
     ObjectHandle Node;
     size_t RefsCount;
@@ -1661,9 +1657,8 @@ Error OnDiskGraphDB::importFullTree(ObjectID PrimaryID,
     if (!Node)
       return;
     auto Refs = UpstreamDB->getObjectRefs(*Node);
-    CursorStack.push_back({*Node,
-                           (size_t)std::distance(Refs.begin(), Refs.end()),
-                           Refs.begin(), Refs.end()});
+    CursorStack.push_back(
+        {*Node, (size_t)llvm::size(Refs), Refs.begin(), Refs.end()});
   };
 
   enqueueNode(PrimaryID, UpstreamNode);
@@ -1720,11 +1715,10 @@ Error OnDiskGraphDB::importSingleNode(ObjectID PrimaryID,
   // Copy the node data into the primary store.
   // FIXME: Use hard-link or cloning if the file-system supports it and data is
   // stored into a separate file.
-
   auto Data = UpstreamDB->getObjectData(UpstreamNode);
   auto UpstreamRefs = UpstreamDB->getObjectRefs(UpstreamNode);
   SmallVector<ObjectID, 64> Refs;
-  Refs.reserve(std::distance(UpstreamRefs.begin(), UpstreamRefs.end()));
+  Refs.reserve(llvm::size(UpstreamRefs));
   for (ObjectID UpstreamRef : UpstreamRefs) {
     auto Ref = getReference(UpstreamDB->getDigest(UpstreamRef));
     if (LLVM_UNLIKELY(!Ref))
@@ -1737,7 +1731,8 @@ Error OnDiskGraphDB::importSingleNode(ObjectID PrimaryID,
 
 Expected<std::optional<ObjectHandle>>
 OnDiskGraphDB::faultInFromUpstream(ObjectID PrimaryID) {
-  assert(UpstreamDB);
+  if (!UpstreamDB)
+    return std::nullopt;
 
   auto UpstreamID = UpstreamDB->getReference(getDigest(PrimaryID));
   if (LLVM_UNLIKELY(!UpstreamID))

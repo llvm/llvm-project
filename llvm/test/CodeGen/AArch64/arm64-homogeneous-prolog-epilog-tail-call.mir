@@ -1,0 +1,29 @@
+# RUN: rm -rf %S/arm64-homogeneous-prolog-epilog-tail-call.s
+# RUN: llc -verify-machineinstrs -mtriple=arm64-applie-ios7.0 -start-before=aarch64-lower-homogeneous-prolog-epilog -homogeneous-prolog-epilog %s -o /dev/null
+#
+# This test ensures defined registers are preserved after lowering homogeneous
+# epilog into helper calls. Without the fix, the verifier would complain about
+# X20 being used by use_x20 without being defined.
+--- |
+  define void @foo() {
+  entry:
+    ret void
+  }
+  declare void @use_x20()
+...
+---
+name:            foo
+alignment:       4
+tracksRegLiveness: true
+liveins:
+  - { reg: '$x0' }
+  - { reg: '$x20' }
+body:             |
+  bb.0:
+    liveins: $x0, $x20, $lr, $x19, $x20
+    frame-setup HOM_Prolog $lr, $fp, $x19, $x20, 16
+    $sp = frame-setup SUBXri $sp, 32, 0
+  bb.1:
+    $sp = frame-destroy ADDXri $sp, 32, 0
+    $lr, $fp, $x19, $x20 = frame-destroy HOM_Epilog
+    TCRETURNdi @use_x20, 0, csr_aarch64_aapcs, implicit $sp, implicit $x20

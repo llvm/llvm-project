@@ -37,6 +37,7 @@
 #include "lldb/API/SBFileSpecList.h"
 #include "lldb/API/SBFormat.h"
 #include "lldb/API/SBFrame.h"
+#include "lldb/API/SBFrameList.h"
 #include "lldb/API/SBFunction.h"
 #include "lldb/API/SBHostOS.h"
 #include "lldb/API/SBInstruction.h"
