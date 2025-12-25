@@ -545,6 +545,7 @@ static bool isCommutative(Instruction *I, Value *ValWithUses,
   if (auto *BO = dyn_cast<BinaryOperator>(I))
     return BO->isCommutative() ||
            (BO->getOpcode() == Instruction::Sub &&
+            ValWithUses->hasUseList() &&
             !ValWithUses->hasNUsesOrMore(UsesLimit) &&
             all_of(
                 ValWithUses->uses(),
@@ -565,6 +566,7 @@ static bool isCommutative(Instruction *I, Value *ValWithUses,
                           Flag->isOne());
                 })) ||
            (BO->getOpcode() == Instruction::FSub &&
+            ValWithUses->hasUseList() &&
             !ValWithUses->hasNUsesOrMore(UsesLimit) &&
             all_of(ValWithUses->uses(), [](const Use &U) {
               return match(U.getUser(),
