@@ -13839,8 +13839,15 @@ void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init, bool DirectInit) {
       return;
     }
 
-    if (DeduceVariableDeclarationType(VDecl, DirectInit, Init))
+    if (DeduceVariableDeclarationType(VDecl, DirectInit, Init)) {
+      assert(VDecl->isInvalidDecl() &&
+             "decl should be invalidated when deduce fails");
+      if (auto *RecoveryExpr =
+              CreateRecoveryExpr(Init->getBeginLoc(), Init->getEndLoc(), {Init})
+                  .get())
+        VDecl->setInit(RecoveryExpr);
       return;
+    }
   }
 
   this->CheckAttributesOnDeducedType(RealDecl);
