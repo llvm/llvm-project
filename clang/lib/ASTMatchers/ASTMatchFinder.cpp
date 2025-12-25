@@ -46,12 +46,8 @@ typedef MatchFinder::MatchCallback MatchCallback;
 // optimize this on.
 static const unsigned MaxMemoizationEntries = 10000;
 
-enum class MatchType {
-  Ancestors,
-
-  Descendants,
-  Child,
-};
+// MatchType is now defined in ASTMatchFinder, use it from there.
+using MatchType = ASTMatchFinder::MatchType;
 
 // We use memoization to avoid running the same matcher on the same
 // AST node twice.  This struct is the key for looking up match
@@ -70,7 +66,7 @@ struct MatchKey {
   DynTypedNode Node;
   BoundNodesTreeBuilder BoundNodes;
   TraversalKind Traversal = TK_AsIs;
-  MatchType Type;
+  MatchType Type = MatchType::MT_Child;
 
   bool operator<(const MatchKey &Other) const {
     return std::tie(Traversal, Type, MatcherID, Node, BoundNodes) <
@@ -609,7 +605,7 @@ public:
     Key.BoundNodes = *Builder;
     Key.Traversal = Ctx.getParentMapContext().getTraversalKind();
     // Memoize result even doing a single-level match, it might be expensive.
-    Key.Type = MaxDepth == 1 ? MatchType::Child : MatchType::Descendants;
+    Key.Type = MaxDepth == 1 ? MatchType::MT_Child : MatchType::MT_Descendants;
     MemoizationMap::iterator I = ResultCache.find(Key);
     if (I != ResultCache.end()) {
       *Builder = I->second.Nodes;
@@ -698,6 +694,45 @@ public:
     if (MatchMode == AncestorMatchMode::AMM_ParentOnly)
       return matchesParentOf(Node, Matcher, Builder);
     return matchesAnyAncestorOf(Node, Ctx, Matcher, Builder);
+  }
+
+  // Implements ASTMatchFinder::memoizedMatch.
+  bool memoizedMatch(const DynTypedMatcher::MatcherIDType &MatcherID,
+                     const DynTypedNode &Node, BoundNodesTreeBuilder *Builder,
+                     llvm::function_ref<bool(BoundNodesTreeBuilder *)>
+                         MatchCallback,
+                     MatchType Type) override {
+    // Reset the cache if it's too large.
+    if (ResultCache.size() > MaxMemoizationEntries)
+      ResultCache.clear();
+
+    // For AST-nodes that don't have an identity, we can't memoize.
+    if (!Node.getMemoizationData() || !Builder->isComparable())
+      return MatchCallback(Builder);
+
+    MatchKey Key;
+    Key.MatcherID = MatcherID;
+    Key.Node = Node;
+    // Note that we key on the bindings *before* the match.
+    Key.BoundNodes = *Builder;
+    Key.Traversal = ActiveASTContext->getParentMapContext().getTraversalKind();
+    Key.Type = Type;
+
+    MemoizationMap::iterator I = ResultCache.find(Key);
+    if (I != ResultCache.end()) {
+      *Builder = I->second.Nodes;
+      return I->second.ResultOfMatch;
+    }
+
+    MemoizedMatchResult Result;
+    Result.Nodes = *Builder;
+    Result.ResultOfMatch = MatchCallback(&Result.Nodes);
+
+    MemoizedMatchResult &CachedResult = ResultCache[Key];
+    CachedResult = std::move(Result);
+
+    *Builder = CachedResult.Nodes;
+    return CachedResult.ResultOfMatch;
   }
 
   // Matches all registered matchers on the given node and calls the
@@ -1175,7 +1210,7 @@ private:
         Keys.back().Node = Node;
         Keys.back().BoundNodes = *Builder;
         Keys.back().Traversal = Ctx.getParentMapContext().getTraversalKind();
-        Keys.back().Type = MatchType::Ancestors;
+        Keys.back().Type = MatchType::MT_Ancestors;
 
         // Check the cache.
         MemoizationMap::iterator I = ResultCache.find(Keys.back());

@@ -498,42 +498,61 @@ bool ForEachAdjacentSubstatementsMatcher<T, ArgT>::matches(
   if (!CS)
     return false;
 
-  // Search for all sequences of adjacent substatements that match the matchers
-  const auto BodyBegin = CS->body_begin();
-  const auto BodyEnd = CS->body_end();
-
   if (Matchers.empty())
     return false;
 
-  bool FoundAny = false;
+  // Create a unique matcher ID for this matcher instance and sequence.
+  // We use the this pointer combined with the number of matchers to create
+  // a unique identifier. The actual matcher sequence is implicitly part of
+  // the matcher instance.
+  DynTypedMatcher::MatcherIDType MatcherID =
+      std::make_pair(ASTNodeKind::getFromNodeKind<T>(),
+                     reinterpret_cast<uint64_t>(this));
 
-  // Try each possible starting position
-  for (auto StartIt = BodyBegin; StartIt != BodyEnd; ++StartIt) {
-    // Check if there are enough statements remaining
-    if (std::distance(StartIt, BodyEnd) <
-        static_cast<ptrdiff_t>(Matchers.size()))
-      break;
+  DynTypedNode DynNode = DynTypedNode::create(Node);
 
-    // Start with a fresh builder for this sequence
-    BoundNodesTreeBuilder SequenceBuilder;
+  // Use memoization to avoid re-running the same matcher on the same node.
+  return Finder->memoizedMatch(
+      MatcherID, DynNode, Builder,
+      [this, CS, Finder](BoundNodesTreeBuilder *MemoBuilder) -> bool {
+        // Search for all sequences of adjacent substatements that match the
+        // matchers
+        const auto BodyBegin = CS->body_begin();
+        const auto BodyEnd = CS->body_end();
 
-    // Use enumerate to iterate over matchers and statements simultaneously
-    auto StmtRange = llvm::make_range(StartIt, StartIt + Matchers.size());
-    for (auto [Idx, Matcher, StmtPtr] : llvm::enumerate(Matchers, StmtRange)) {
-      // Extend the builder before matching each statement
-      SequenceBuilder = extendBuilder(std::move(SequenceBuilder));
-      if (!Matcher.matches(*StmtPtr, Finder, &SequenceBuilder))
-        break;
+        bool FoundAny = false;
 
-      // If this is the last iteration and we matched, add the match
-      if (Idx == Matchers.size() - 1) {
-        Builder->addMatch(SequenceBuilder);
-        FoundAny = true;
-      }
-    }
-  }
+        // Try each possible starting position
+        for (auto StartIt = BodyBegin; StartIt != BodyEnd; ++StartIt) {
+          // Check if there are enough statements remaining
+          if (std::distance(StartIt, BodyEnd) <
+              static_cast<ptrdiff_t>(Matchers.size()))
+            break;
 
-  return FoundAny;
+          // Start with a fresh builder for this sequence
+          BoundNodesTreeBuilder SequenceBuilder;
+
+          // Use enumerate to iterate over matchers and statements simultaneously
+          auto StmtRange =
+              llvm::make_range(StartIt, StartIt + Matchers.size());
+          for (auto [Idx, Matcher, StmtPtr] :
+               llvm::enumerate(Matchers, StmtRange)) {
+            // Extend the builder before matching each statement
+            SequenceBuilder = extendBuilder(std::move(SequenceBuilder));
+            if (!Matcher.matches(*StmtPtr, Finder, &SequenceBuilder))
+              break;
+
+            // If this is the last iteration and we matched, add the match
+            if (Idx == Matchers.size() - 1) {
+              MemoBuilder->addMatch(SequenceBuilder);
+              FoundAny = true;
+            }
+          }
+        }
+
+        return FoundAny;
+      },
+      ASTMatchFinder::MT_Child);
 }
 
 template bool ForEachAdjacentSubstatementsMatcher<CompoundStmt>::matches(
