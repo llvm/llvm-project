@@ -1850,7 +1850,6 @@ void populateIRAttributes(nb::module_ &m) {
   PyUnitAttribute::bind(m);
 
   PyStridedLayoutAttribute::bind(m);
-  registerMLIRError();
 }
 } // namespace MLIR_BINDINGS_PYTHON_DOMAIN
 } // namespace python

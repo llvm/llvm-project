@@ -276,7 +276,6 @@ void populatePassManagerSubmodule(nb::module_ &m) {
           },
           "Print the textual representation for this PassManager, suitable to "
           "be passed to `parse` for round-tripping.");
-  registerMLIRError();
 }
 } // namespace MLIR_BINDINGS_PYTHON_DOMAIN
 } // namespace python
