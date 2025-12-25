@@ -12,6 +12,7 @@
 
 #include "LowerToLLVM.h"
 
+#include <array>
 #include <deque>
 #include <optional>
 
@@ -4294,21 +4295,11 @@ mlir::LogicalResult CIRToLLVMCpuIdOpLowering::matchAndRewrite(
 
   mlir::Value funcId = adaptor.getFuncId();
   mlir::Value subFuncId = adaptor.getSubFuncId();
-  mlir::StringAttr opNameAttr = op->getAttrOfType<mlir::StringAttr>("name");
-  if (!opNameAttr)
-    return mlir::failure();
-  if (opNameAttr.getValue() == "cpuid")
-    subFuncId = mlir::LLVM::ConstantOp::create(rewriter, op.getLoc(), i32Ty, 0);
-  std::vector operands{funcId, subFuncId};
+  std::array<mlir::Value, 2> operands{funcId, subFuncId};
 
   StringRef asmString, constraints;
-  mlir::ModuleOp moduleOp = op->getParentOfType<mlir::ModuleOp>();
-  mlir::StringAttr tripleAttr =
-      moduleOp->getAttrOfType<mlir::StringAttr>("llvm.target_triple");
-  if (!tripleAttr)
-    return mlir::failure();
-  llvm::Triple triple(tripleAttr.getValue().str());
-  if (triple.getArch() == llvm::Triple::x86) {
+  if (const llvm::Triple &triple = lowerMod->getTarget().getTriple();
+      triple.getArch() == llvm::Triple::x86) {
     asmString = "cpuid";
     constraints = "={ax},={bx},={cx},={dx},{ax},{cx}";
   } else {
@@ -4349,6 +4340,8 @@ mlir::LogicalResult CIRToLLVMCpuIdOpLowering::matchAndRewrite(
     mlir::LLVM::StoreOp::create(rewriter, op.getLoc(), extracted, storePtr,
                                 alignment);
   }
+
+  rewriter.eraseOp(op);
   return mlir::success();
 }
 

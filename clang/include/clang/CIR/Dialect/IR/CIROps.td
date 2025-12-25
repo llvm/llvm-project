@@ -5903,9 +5903,16 @@ def CIR_BlockAddressOp : CIR_Op<"block_address", [Pure]> {
 def CIR_CpuIdOp : CIR_Op<"cpuid"> {
   let summary = "Get information about the CPU";
   let description = [{
-    The `cir.cpuid` operation takes a base pointer to an array of 4 integers, a
-    function ID and a sub-function ID. The array of 4 integers is filled with
-    different information about the processor.
+    The `cir.cpuid` operation retrieves different types of CPU information and
+    stores it in an array of 4 integers.
+
+    This operation takes 3 arguments: `basePtr`, a pointer to an array of 4
+    integers; `funcID`, an integer determining what type of information to be
+    retrieved (for instance, basic information, processor information and
+    features, or cache/TLB information); and `subFuncId`, an integer that adds
+    more detail about what information is requested.
+
+    As a result, the array of 4 integers is filled with the requested information.
 
     Example:
 
@@ -5918,9 +5925,8 @@ def CIR_CpuIdOp : CIR_Op<"cpuid"> {
   let arguments =
       (ins Arg<CIR_PtrToArray, "array address", [MemWrite]>:$basePtr,
           CIR_SInt32:$funcId, CIR_SInt32:$subFuncId);
-  // TODO: remove once we can return an optional mlir::Value from
-  //   emitX86BuiltinExpr
-  let results = (outs CIR_VectorType:$result);
+
+  let hasVerifier = 1;
 }
 
 #endif // CLANG_CIR_DIALECT_IR_CIROPS_TD

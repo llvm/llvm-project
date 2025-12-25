@@ -25,7 +25,6 @@
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/CIR/MissingFeatures.h"
 #include "llvm/ADT/Sequence.h"
-#include "llvm/IR/InlineAsm.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <string>
 
