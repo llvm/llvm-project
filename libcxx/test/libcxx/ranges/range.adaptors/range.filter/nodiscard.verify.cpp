@@ -56,6 +56,9 @@ void test() {
   std::move(it).base();
 
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  iter_move(it);
+
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   *it;
 
   // [range.filter.sentinel]
