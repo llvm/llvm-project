@@ -155,9 +155,11 @@ Value *IRBuilderBase::CreateStepVector(Type *DstType, const Twine &Name) {
   unsigned NumEls = cast<FixedVectorType>(DstType)->getNumElements();
 
   // Create a vector of consecutive numbers from zero to VF.
+  // It's okay if the values wrap around.
   SmallVector<Constant *, 8> Indices;
   for (unsigned i = 0; i < NumEls; ++i)
-    Indices.push_back(ConstantInt::get(STy, i));
+    Indices.push_back(
+        ConstantInt::get(STy, i, /*IsSigned=*/false, /*ImplicitTrunc=*/true));
 
   // Add the consecutive indices to the vector value.
   return ConstantVector::get(Indices);
