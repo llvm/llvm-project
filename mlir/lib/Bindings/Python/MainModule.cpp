@@ -2461,6 +2461,18 @@ NB_MODULE(_mlir, m) {
   auto passManagerModule =
       m.def_submodule("passmanager", "MLIR Pass Management Bindings");
   populatePassManagerSubmodule(passManagerModule);
-  registerMLIRError();
-  // registerMLIRErrorInCore();
+  nanobind::register_exception_translator(
+      [](const std::exception_ptr &p, void *payload) {
+        // We can't define exceptions with custom fields through pybind, so
+        // instead the exception class is defined in python and imported here.
+        try {
+          if (p)
+            std::rethrow_exception(p);
+        } catch (const MLIRError &e) {
+          nanobind::object obj =
+              nanobind::module_::import_(MAKE_MLIR_PYTHON_QUALNAME("ir"))
+                  .attr("MLIRError")(e.message, e.errorDiagnostics);
+          PyErr_SetObject(PyExc_Exception, obj.ptr());
+        }
+      });
 }

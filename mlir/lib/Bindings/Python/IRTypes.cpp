@@ -1180,7 +1180,6 @@ void populateIRTypes(nb::module_ &m) {
   PyTupleType::bind(m);
   PyFunctionType::bind(m);
   PyOpaqueType::bind(m);
-  registerMLIRError();
 }
 } // namespace MLIR_BINDINGS_PYTHON_DOMAIN
 } // namespace python
