@@ -1990,8 +1990,13 @@ struct FoldTensorCastOfOutputIntoForallOp
     for (auto [index, iterArg] :
          llvm::enumerate(forallOp.getRegionIterArgs())) {
       for (Operation *user : iterArg.getUsers()) {
-        if (isa<ParallelCombiningOpInterface>(user))
-          yieldOpToIterArgsIndex[user] = index;
+        if (isa<ParallelCombiningOpInterface>(user)) {
+          auto [it, inserted] = yieldOpToIterArgsIndex.try_emplace(user, index);
+          if (!inserted) {
+            return rewriter.notifyMatchFailure(
+                forallOp, "expected exactly one iter arg per yielding op");
+          }
+        }
       }
     }
 
