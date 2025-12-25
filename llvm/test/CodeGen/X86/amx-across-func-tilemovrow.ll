@@ -28,15 +28,15 @@ define dso_local <16 x i32> @test_api(i16 signext %0, i16 signext %1) nounwind {
 ; CHECK-NEXT:    pushq %r14
 ; CHECK-NEXT:    pushq %rbx
 ; CHECK-NEXT:    subq $2112, %rsp # imm = 0x840
-; CHECK-NEXT:    movl %esi, %ebx
-; CHECK-NEXT:    movl %edi, %ebp
+; CHECK-NEXT:    movl %esi, %ebp
+; CHECK-NEXT:    movl %edi, %ebx
 ; CHECK-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    vmovups %zmm0, (%rsp)
 ; CHECK-NEXT:    movb $1, (%rsp)
 ; CHECK-NEXT:    movw $8, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movb $8, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movw %bx, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movb %bpl, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movw %bp, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movb %bl, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    ldtilecfg (%rsp)
 ; CHECK-NEXT:    movl $buf, %eax
 ; CHECK-NEXT:    movl $32, %ecx
@@ -51,11 +51,12 @@ define dso_local <16 x i32> @test_api(i16 signext %0, i16 signext %1) nounwind {
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    callq foo
 ; CHECK-NEXT:    ldtilecfg (%rsp)
-; CHECK-NEXT:    movabsq $64, %rax
-; CHECK-NEXT:    tileloadd 64(%rsp,%rax), %tmm1 # 1024-byte Folded Reload
-; CHECK-NEXT:    tilemovrow $2, %tmm1, %zmm0
-; CHECK-NEXT:    tileloadd 1088(%rsp,%rax), %tmm0 # 1024-byte Folded Reload
-; CHECK-NEXT:    tilemovrow $2, %tmm0, %zmm1
+; CHECK-NEXT:    movl $2, %eax
+; CHECK-NEXT:    movabsq $64, %rcx
+; CHECK-NEXT:    tileloadd 64(%rsp,%rcx), %tmm1 # 1024-byte Folded Reload
+; CHECK-NEXT:    tilemovrow %eax, %tmm1, %zmm0
+; CHECK-NEXT:    tileloadd 1088(%rsp,%rcx), %tmm0 # 1024-byte Folded Reload
+; CHECK-NEXT:    tilemovrow %eax, %tmm0, %zmm1
 ; CHECK-NEXT:    vpaddd %zmm1, %zmm0, %zmm0
 ; CHECK-NEXT:    addq $2112, %rsp # imm = 0x840
 ; CHECK-NEXT:    popq %rbx
@@ -82,8 +83,9 @@ define dso_local <16 x i32> @test_api(i16 signext %0, i16 signext %1) nounwind {
 ; IPRA-NEXT:    movl $buf+1024, %eax
 ; IPRA-NEXT:    tileloadd (%rax,%rcx), %tmm1
 ; IPRA-NEXT:    callq foo
-; IPRA-NEXT:    tilemovrow $2, %tmm1, %zmm0
-; IPRA-NEXT:    tilemovrow $2, %tmm0, %zmm1
+; IPRA-NEXT:    movl $2, %eax
+; IPRA-NEXT:    tilemovrow %eax, %tmm1, %zmm0
+; IPRA-NEXT:    tilemovrow %eax, %tmm0, %zmm1
 ; IPRA-NEXT:    vpaddd %zmm1, %zmm0, %zmm0
 ; IPRA-NEXT:    addq $72, %rsp
 ; IPRA-NEXT:    tilerelease
@@ -138,8 +140,9 @@ define dso_local <16 x i32> @test_api(i16 signext %0, i16 signext %1) nounwind {
 ; O0-NEXT:    movw %dx, {{[0-9]+}}(%rsp)
 ; O0-NEXT:    ldtilecfg {{[0-9]+}}(%rsp)
 ; O0-NEXT:    tileloadd (%rsi,%rdi), %tmm0
+; O0-NEXT:    movl $2, %esi
 ; O0-NEXT:    movw $8, %cx
-; O0-NEXT:    tilemovrow $2, %tmm0, %zmm0
+; O0-NEXT:    tilemovrow %esi, %tmm0, %zmm0
 ; O0-NEXT:    movl $64, %esi
 ; O0-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
 ; O0-NEXT:    movw $8, %cx
@@ -148,8 +151,9 @@ define dso_local <16 x i32> @test_api(i16 signext %0, i16 signext %1) nounwind {
 ; O0-NEXT:    movw %cx, {{[0-9]+}}(%rsp)
 ; O0-NEXT:    ldtilecfg {{[0-9]+}}(%rsp)
 ; O0-NEXT:    tileloadd (%rdx,%rsi), %tmm0
+; O0-NEXT:    movl $2, %edx
 ; O0-NEXT:    movw $8, %cx
-; O0-NEXT:    tilemovrow $2, %tmm0, %zmm1
+; O0-NEXT:    tilemovrow %edx, %tmm0, %zmm1
 ; O0-NEXT:    vpaddd %zmm1, %zmm0, %zmm0
 ; O0-NEXT:    movq %rbp, %rsp
 ; O0-NEXT:    popq %rbp

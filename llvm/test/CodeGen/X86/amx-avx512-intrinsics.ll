@@ -13,7 +13,8 @@ define <16 x float> @test_tcvtrowd2ps(i32 %A) {
 define <16 x float> @test_tcvtrowd2psi() {
 ; CHECK-LABEL: test_tcvtrowd2psi:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    tcvtrowd2ps $127, %tmm1, %zmm0 # encoding: [0x62,0xf3,0x7e,0x48,0x07,0xc1,0x7f]
+; CHECK-NEXT:    movl $127, %eax # encoding: [0xb8,0x7f,0x00,0x00,0x00]
+; CHECK-NEXT:    tcvtrowd2ps %eax, %tmm1, %zmm0 # encoding: [0x62,0xf2,0x7e,0x48,0x4a,0xc1]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
   %ret = call <16 x float> @llvm.x86.tcvtrowd2ps(i8 1, i32 127)
   ret <16 x float> %ret
@@ -108,7 +109,8 @@ define <16 x i32> @test_tilemovrow(i32 %A) {
 define <16 x i32> @test_tilemovrowi() {
 ; CHECK-LABEL: test_tilemovrowi:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    tilemovrow $127, %tmm1, %zmm0 # encoding: [0x62,0xf3,0x7d,0x48,0x07,0xc1,0x7f]
+; CHECK-NEXT:    movl $127, %eax # encoding: [0xb8,0x7f,0x00,0x00,0x00]
+; CHECK-NEXT:    tilemovrow %eax, %tmm1, %zmm0 # encoding: [0x62,0xf2,0x7d,0x48,0x4a,0xc1]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
   %ret = call <16 x i32> @llvm.x86.tilemovrow(i8 1, i32 127)
   ret <16 x i32> %ret

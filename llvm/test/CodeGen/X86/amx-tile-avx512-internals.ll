@@ -14,17 +14,18 @@ define void @test_amx(i8* %pointer, i8* %base, i32 %index, i64 %stride) {
 ; CHECK-NEXT:    movw $8, %ax
 ; CHECK-NEXT:    tileloadd (%rsi,%rcx), %tmm0
 ; CHECK-NEXT:    tcvtrowd2ps %edx, %tmm0, %zmm0
-; CHECK-NEXT:    tcvtrowd2ps $16, %tmm0, %zmm0
+; CHECK-NEXT:    movl $16, %esi
+; CHECK-NEXT:    tcvtrowd2ps %esi, %tmm0, %zmm0
 ; CHECK-NEXT:    tcvtrowps2bf16h %edx, %tmm0, %zmm0
-; CHECK-NEXT:    tcvtrowps2bf16h $16, %tmm0, %zmm0
+; CHECK-NEXT:    tcvtrowps2bf16h %esi, %tmm0, %zmm0
 ; CHECK-NEXT:    tcvtrowps2bf16l %edx, %tmm0, %zmm0
-; CHECK-NEXT:    tcvtrowps2bf16l $16, %tmm0, %zmm0
+; CHECK-NEXT:    tcvtrowps2bf16l %esi, %tmm0, %zmm0
 ; CHECK-NEXT:    tcvtrowps2phh %edx, %tmm0, %zmm0
-; CHECK-NEXT:    tcvtrowps2phh $16, %tmm0, %zmm0
+; CHECK-NEXT:    tcvtrowps2phh %esi, %tmm0, %zmm0
 ; CHECK-NEXT:    tcvtrowps2phl %edx, %tmm0, %zmm0
-; CHECK-NEXT:    tcvtrowps2phl $16, %tmm0, %zmm0
+; CHECK-NEXT:    tcvtrowps2phl %esi, %tmm0, %zmm0
 ; CHECK-NEXT:    tilemovrow %edx, %tmm0, %zmm0
-; CHECK-NEXT:    tilemovrow $16, %tmm0, %zmm0
+; CHECK-NEXT:    tilemovrow %esi, %tmm0, %zmm0
 ; CHECK-NEXT:    tilestored %tmm0, (%rdi,%rcx)
 ; CHECK-NEXT:    tilerelease
 ; CHECK-NEXT:    vzeroupper
