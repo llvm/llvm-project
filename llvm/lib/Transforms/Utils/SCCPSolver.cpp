@@ -1498,8 +1498,11 @@ void SCCPInstVisitor::visitCastInst(CastInst &I) {
   if (Constant *OpC = getConstant(OpSt, I.getOperand(0)->getType())) {
     // Fold the constant as we build.
     if (Constant *C =
-            ConstantFoldCastOperand(I.getOpcode(), OpC, I.getType(), DL))
-      return (void)markConstant(&I, C);
+            ConstantFoldCastOperand(I.getOpcode(), OpC, I.getType(), DL)) {
+      auto &LV = ValueState[&I];
+      mergeInValue(LV, &I, ValueLatticeElement::get(C));
+      return;
+    }
   }
 
   // Ignore bitcasts, as they may change the number of vector elements.
