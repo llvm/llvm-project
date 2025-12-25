@@ -102,7 +102,7 @@ public:
       return __iterator<false>(ranges::begin(__base_), __n_);
   }
 
-  [[nodiscard]] _LIBCPP_HIDDEN constexpr auto begin() const
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto begin() const
     requires __slide_caches_nothing<const _View>
   {
     return __iterator<true>(ranges::begin(__base_), __n_);
