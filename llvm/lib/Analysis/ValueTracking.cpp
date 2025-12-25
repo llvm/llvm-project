@@ -5362,7 +5362,7 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       }
 
       if (KnownSrc.cannotBeOrderedLessThanZero()) {
-        // If the source is positive, and cannot be ~0, this cannot underflow.
+        // If the source is positive this cannot underflow.
         Known.knownNot(fcPosZero);
 
         // Cannot introduce denormal values.
