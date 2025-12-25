@@ -331,7 +331,7 @@ feature_test_macros = [
         },
         {
             "name": "__cpp_lib_concepts",
-            "values": {"c++20": 202002},
+            "values": {"c++20": 202207},
             "headers": ["concepts"],
         },
         {
@@ -557,7 +557,7 @@ feature_test_macros = [
         },
         {
             "name": "__cpp_lib_flat_map",
-            "values": {"c++23": 202207},
+            "values": {"c++23": 202511},
             "headers": ["flat_map"],
         },
         {

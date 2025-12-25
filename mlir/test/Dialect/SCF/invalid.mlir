@@ -274,6 +274,37 @@ func.func @parallel_different_types_of_results_and_reduces(
 
 // -----
 
+// The scf.parallel operation requires the number of operands in the terminator
+// (scf.reduce) to match the number of initial values provided to the loop.
+func.func @invalid_reduce_too_few_regions() {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  scf.parallel (%arg1) = (%c0) to (%c1) step (%c1) {
+    // expected-error @+1 {{expects number of reduction regions: 0 to be the same as number of reduction operands: 1}}
+    scf.reduce(%c1 : index)
+  }
+  return
+}
+
+// -----
+
+// The scf.parallel operation requires the number of operands in the terminator
+// (scf.reduce) to match the number of initial values provided to the loop.
+func.func @invalid_reduce_too_many_regions() {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %0 = scf.parallel (%i0) = (%c0) to (%c1) step (%c1) init (%c0) -> (index) {
+    // expected-error @+1 {{expects number of reduction regions: 1 to be the same as number of reduction operands: 0}}
+    scf.reduce {
+      ^bb0(%lhs : index, %rhs : index):
+        scf.reduce.return %lhs : index
+    }
+  }
+  return
+}
+
+// -----
+
 func.func @top_level_reduce(%arg0 : f32) {
   // expected-error@+1 {{expects parent op 'scf.parallel'}}
   scf.reduce(%arg0 : f32) {

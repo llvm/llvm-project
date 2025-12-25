@@ -56,6 +56,12 @@ void getHtmlFiles(StringRef AssetsPath, clang::doc::ClangDocContext &CDCtx) {
       appendPathPosix(AssetsPath, "function-template.mustache");
   SmallString<128> CommentTemplate =
       appendPathPosix(AssetsPath, "comment-template.mustache");
+  SmallString<128> HeadTemplate =
+      appendPathPosix(AssetsPath, "head-template.mustache");
+  SmallString<128> NavbarTemplate =
+      appendPathPosix(AssetsPath, "navbar-template.mustache");
+  SmallString<128> IndexTemplate =
+      appendPathPosix(AssetsPath, "index-template.mustache");
 
   CDCtx.MustacheTemplates.insert(
       {"namespace-template", NamespaceTemplate.c_str()});
@@ -64,4 +70,7 @@ void getHtmlFiles(StringRef AssetsPath, clang::doc::ClangDocContext &CDCtx) {
   CDCtx.MustacheTemplates.insert(
       {"function-template", FunctionTemplate.c_str()});
   CDCtx.MustacheTemplates.insert({"comment-template", CommentTemplate.c_str()});
+  CDCtx.MustacheTemplates.insert({"head-template", HeadTemplate.c_str()});
+  CDCtx.MustacheTemplates.insert({"navbar-template", NavbarTemplate.c_str()});
+  CDCtx.MustacheTemplates.insert({"index-template", IndexTemplate.c_str()});
 }

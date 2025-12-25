@@ -4,3 +4,4 @@
 
 from ._amdgpu_ops_gen import *
 from ._amdgpu_enum_gen import *
+from .._mlir_libs._mlirDialectsAMDGPU import *
