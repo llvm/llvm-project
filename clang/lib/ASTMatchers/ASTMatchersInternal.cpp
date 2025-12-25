@@ -129,7 +129,7 @@ private:
 class IdDynMatcher : public DynMatcherInterface {
 public:
   IdDynMatcher(StringRef ID,
-               IntrusiveRefCntPtr<DynMatcherInterface> InnerMatcher)
+               IntrusiveRefCntPtr<const DynMatcherInterface> InnerMatcher)
       : ID(ID), InnerMatcher(std::move(InnerMatcher)) {}
 
   bool dynMatches(const DynTypedNode &DynNode, ASTMatchFinder *Finder,
@@ -145,7 +145,7 @@ public:
 
 private:
   const std::string ID;
-  const IntrusiveRefCntPtr<DynMatcherInterface> InnerMatcher;
+  const IntrusiveRefCntPtr<const DynMatcherInterface> InnerMatcher;
 };
 
 /// A matcher that always returns true.
@@ -167,7 +167,7 @@ class DynTraversalMatcherImpl : public DynMatcherInterface {
 public:
   explicit DynTraversalMatcherImpl(
       clang::TraversalKind TK,
-      IntrusiveRefCntPtr<DynMatcherInterface> InnerMatcher)
+      IntrusiveRefCntPtr<const DynMatcherInterface> InnerMatcher)
       : TK(TK), InnerMatcher(std::move(InnerMatcher)) {}
 
   bool dynMatches(const DynTypedNode &DynNode, ASTMatchFinder *Finder,
@@ -181,7 +181,7 @@ public:
 
 private:
   clang::TraversalKind TK;
-  IntrusiveRefCntPtr<DynMatcherInterface> InnerMatcher;
+  IntrusiveRefCntPtr<const DynMatcherInterface> InnerMatcher;
 };
 
 } // namespace
@@ -501,19 +501,16 @@ bool ForEachAdjacentSubstatementsMatcher<T, ArgT>::matches(
   if (Matchers.empty())
     return false;
 
-  // Create a unique matcher ID for this matcher instance and sequence.
-  // We use the this pointer combined with the number of matchers to create
-  // a unique identifier. The actual matcher sequence is implicitly part of
-  // the matcher instance.
-  DynTypedMatcher::MatcherIDType MatcherID =
-      std::make_pair(ASTNodeKind::getFromNodeKind<T>(),
-                     reinterpret_cast<uint64_t>(this));
-
   DynTypedNode DynNode = DynTypedNode::create(Node);
+
+  // Create a DynTypedMatcher wrapper for this matcher instance to use for
+  // memoization. The matcher sequence is implicitly part of the matcher
+  // instance, so using 'this' pointer provides a unique identifier.
+  DynTypedMatcher MatcherWrapper(this);
 
   // Use memoization to avoid re-running the same matcher on the same node.
   return Finder->memoizedMatch(
-      MatcherID, DynNode, Builder,
+      MatcherWrapper, DynNode, Builder,
       [this, CS, Finder](BoundNodesTreeBuilder *MemoBuilder) -> bool {
         // Search for all sequences of adjacent substatements that match the
         // matchers

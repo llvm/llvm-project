@@ -411,9 +411,10 @@ class DynTypedMatcher {
 public:
   /// Takes ownership of the provided implementation pointer.
   template <typename T>
-  DynTypedMatcher(MatcherInterface<T> *Implementation)
+  DynTypedMatcher(const MatcherInterface<T> *Implementation)
       : SupportedKind(ASTNodeKind::getFromNodeKind<T>()),
-        RestrictKind(SupportedKind), Implementation(Implementation) {}
+        RestrictKind(SupportedKind),
+        Implementation(Implementation) {}
 
   /// Construct from a variadic function.
   enum VariadicOperator {
@@ -542,7 +543,7 @@ public:
 
 private:
   DynTypedMatcher(ASTNodeKind SupportedKind, ASTNodeKind RestrictKind,
-                  IntrusiveRefCntPtr<DynMatcherInterface> Implementation)
+                  IntrusiveRefCntPtr<const DynMatcherInterface> Implementation)
       : SupportedKind(SupportedKind), RestrictKind(RestrictKind),
         Implementation(std::move(Implementation)) {}
 
@@ -554,7 +555,7 @@ private:
   /// It allows to perform implicit and dynamic cast of matchers without
   /// needing to change \c Implementation.
   ASTNodeKind RestrictKind;
-  IntrusiveRefCntPtr<DynMatcherInterface> Implementation;
+  IntrusiveRefCntPtr<const DynMatcherInterface> Implementation;
 };
 
 /// Wrapper of a MatcherInterface<T> *that allows copying.
@@ -810,7 +811,7 @@ public:
   /// \param MatchCallback The callback that performs the actual matching
   /// \return true if the match succeeded, false otherwise
   virtual bool memoizedMatch(
-      const DynTypedMatcher::MatcherIDType &MatcherID,
+      const DynTypedMatcher &Matcher,
       const DynTypedNode &Node, BoundNodesTreeBuilder *Builder,
       llvm::function_ref<bool(BoundNodesTreeBuilder *)> MatchCallback) = 0;
 

@@ -701,7 +701,7 @@ public:
   }
 
   // Implements ASTMatchFinder::memoizedMatch.
-  bool memoizedMatch(const DynTypedMatcher::MatcherIDType &MatcherID,
+  bool memoizedMatch(const DynTypedMatcher &Matcher,
                      const DynTypedNode &Node, BoundNodesTreeBuilder *Builder,
                      llvm::function_ref<bool(BoundNodesTreeBuilder *)>
                          MatchCallback) override {
@@ -714,7 +714,7 @@ public:
       return MatchCallback(Builder);
 
     MatchKey Key;
-    Key.MatcherID = MatcherID;
+    Key.MatcherID = Matcher.getID();
     Key.Node = Node;
     // Note that we key on the bindings *before* the match.
     Key.BoundNodes = *Builder;
