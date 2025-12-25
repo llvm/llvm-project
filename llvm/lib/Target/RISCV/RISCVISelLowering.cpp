@@ -398,6 +398,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction({ISD::ROTL, ISD::ROTR}, XLenVT, Expand);
   }
 
+  if (Subtarget.hasStdExtP())
+    setOperationAction({ISD::FSHL, ISD::FSHR}, XLenVT, Legal);
+
   setOperationAction(ISD::BSWAP, XLenVT,
                      Subtarget.hasREV8Like() ? Legal : Expand);
 
@@ -13337,7 +13340,7 @@ SDValue RISCVTargetLowering::lowerMaskedLoad(SDValue Op,
 
     SDValue Iota =
         DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, IndexVT,
-                    DAG.getConstant(Intrinsic::riscv_viota, DL, XLenVT),
+                    DAG.getTargetConstant(Intrinsic::riscv_viota, DL, XLenVT),
                     DAG.getUNDEF(IndexVT), Mask, ExpandingVL);
     Result =
         DAG.getNode(UseVRGATHEREI16 ? RISCVISD::VRGATHEREI16_VV_VL
@@ -13440,9 +13443,10 @@ SDValue RISCVTargetLowering::lowerMaskedStore(SDValue Op,
     VL = getDefaultVLOps(VT, ContainerVT, DL, DAG, Subtarget).second;
 
   if (IsCompressingStore) {
-    Val = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, ContainerVT,
-                      DAG.getConstant(Intrinsic::riscv_vcompress, DL, XLenVT),
-                      DAG.getUNDEF(ContainerVT), Val, Mask, VL);
+    Val = DAG.getNode(
+        ISD::INTRINSIC_WO_CHAIN, DL, ContainerVT,
+        DAG.getTargetConstant(Intrinsic::riscv_vcompress, DL, XLenVT),
+        DAG.getUNDEF(ContainerVT), Val, Mask, VL);
     VL =
         DAG.getNode(RISCVISD::VCPOP_VL, DL, XLenVT, Mask,
                     getAllOnesMask(Mask.getSimpleValueType(), VL, DL, DAG), VL);
@@ -13482,7 +13486,7 @@ SDValue RISCVTargetLowering::lowerVectorCompress(SDValue Op,
   SDValue VL = getDefaultVLOps(VT, ContainerVT, DL, DAG, Subtarget).second;
   SDValue Res =
       DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, ContainerVT,
-                  DAG.getConstant(Intrinsic::riscv_vcompress, DL, XLenVT),
+                  DAG.getTargetConstant(Intrinsic::riscv_vcompress, DL, XLenVT),
                   Passthru, Val, Mask, VL);
 
   if (VT.isFixedLengthVector())
