@@ -8,7 +8,7 @@
 #include <immintrin.h>
 
 __m128 test_vcvtph2ps_mask(__m128i a, __m128 src, __mmask8 k) {
-  // CIR-LABEL: cir.func no_inline dso_local @test_vcvtph2ps_mask
+  // CIR-LABEL: cir.func no_inline dso_local @test_vcvtph2ps_mask 
   // CIR: %[[LOAD_A:.*]] = cir.load {{.*}} : !cir.ptr<!cir.vector<2 x !s64i>>, !cir.vector<2 x !s64i>
   // CIR: %[[VEC_I:.*]] = cir.cast bitcast %[[LOAD_A]] : !cir.vector<2 x !s64i> -> !cir.vector<8 x !s16i>
   // CIR: %[[LOAD_SRC:.*]] = cir.load {{.*}} : !cir.ptr<!cir.vector<4 x !cir.float>>, !cir.vector<4 x !cir.float>
