@@ -11513,6 +11513,10 @@ def err_asm_naked_this_ref : Error<
   "'this' pointer references not allowed in naked functions">;
 def err_asm_naked_parm_ref : Error<
   "parameter references not allowed in naked functions">;
+def err_naked_attribute_on_lambda_with_captures
+    : Warning<"naked attribute is incompatible with lambda captures">,
+      InGroup<DiagGroup<"naked-lambda-captures">>,
+      DefaultError;
 
 // OpenCL warnings and errors.
 def err_invalid_astype_of_different_size : Error<

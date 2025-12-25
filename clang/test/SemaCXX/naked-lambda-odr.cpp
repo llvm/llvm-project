@@ -1,17 +1,9 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s -triple x86_64-pc-linux-gnu
+// RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -verify %s
 
-void uses_capture() {
+void naked_lambda_capture() {
   int x = 42;
-  int y = 6;
-  auto l = [x, &y]() __attribute__((naked)) { // expected-no-diagnostics
-    asm volatile("movl %0, %%eax\n\tmovl %1, %%ebx\n\tretq" : : "r"(x), "r"(y));
-  };
-  l();
-}
-
-void unused_captures() {
-  int x = 42;
-  auto l = [x]() __attribute__((naked)) { // expected-no-diagnostics
+  auto l = [x]() __attribute__((naked)) { // expected-error {{naked attribute is incompatible with lambda captures}}
+    asm volatile("movl %0, %%eax" : : "r"(x));
     asm volatile("retq");
   };
   l();
