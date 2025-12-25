@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "../utils/FileExtensionsUtils.h"
 #include "AnonymousNamespaceInHeaderCheck.h"
+#include "../utils/FileExtensionsUtils.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 
