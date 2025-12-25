@@ -19,6 +19,7 @@
 #include <optional>
 
 namespace llvm {
+class APFloat;
 
 struct KnownFPClass {
   /// Floating-point classes the value could be one of.
@@ -27,6 +28,9 @@ struct KnownFPClass {
   /// std::nullopt if the sign bit is unknown, true if the sign bit is
   /// definitely set or false if the sign bit is definitely unset.
   std::optional<bool> SignBit;
+
+  KnownFPClass() = default;
+  KnownFPClass(const APFloat &C);
 
   bool operator==(KnownFPClass Other) const {
     return KnownFPClasses == Other.KnownFPClasses && SignBit == Other.SignBit;
