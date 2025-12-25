@@ -8,6 +8,7 @@
 // Test that __declspec(dllimport) doesn't instantiate entities marked with
 // the exclude_from_explicit_instantiation attribute unless marked as dllimport explicitly.
 
+// Silence --implicit-check-not=dllimport.
 // MSC: ModuleID = {{.*}}exclude_from_dllimport.cpp
 // MSC: source_filename = {{.*}}exclude_from_dllimport.cpp
 // GNU: ModuleID = {{.*}}exclude_from_dllimport.cpp
