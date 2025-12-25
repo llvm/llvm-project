@@ -8,7 +8,6 @@
 
 #include "../ClangTidy.h"
 #include "../ClangTidyModule.h"
-#include "../ClangTidyModuleRegistry.h"
 #include "ConfusableIdentifierCheck.h"
 #include "ConstCorrectnessCheck.h"
 #include "CoroutineHostileRAIICheck.h"
