@@ -2838,6 +2838,9 @@ static bool sinkCommonCodeFromPredecessors(BasicBlock *BB,
     // Try to match (3): PredBB has a conditional edge to BB, and the other
     // successor unconditionally branches to BB.
     BasicBlock *S0 = PredBr->getSuccessor(0), *S1 = PredBr->getSuccessor(1);
+    // If S0 == S1, it is a fake conditional branch
+    if (S0 == S1)
+      continue;
     BasicBlock *Common = S0 == BB ? S1 : S0;
 
     if (auto *CommonBr = dyn_cast<BranchInst>(Common->getTerminator()))
@@ -8951,6 +8954,7 @@ static bool passingValueIsAlwaysUndefined(Value *V, Instruction *I, bool PtrValu
           PtrValueMayBeModified = true;
         return passingValueIsAlwaysUndefined(V, GEP, PtrValueMayBeModified);
       }
+
 
     // Look through return.
     if (ReturnInst *Ret = dyn_cast<ReturnInst>(User)) {
