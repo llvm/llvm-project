@@ -283,7 +283,7 @@ class ACCOrphanLoopOpConversion : public OpRewritePattern<acc::LoopOp> {
       rewriter.replaceOp(loopOp, executeRegion);
     } else {
       auto forOp =
-          acc::convertACCLoopToSCFFor(loopOp, /*enableCollapse=*/false);
+          acc::convertACCLoopToSCFFor(loopOp, rewriter, /*enableCollapse=*/false);
       if (!forOp)
         return failure();
       rewriter.replaceOp(loopOp, forOp);
