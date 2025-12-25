@@ -13,7 +13,8 @@ __m128 test_vcvtph2ps_mask(__m128i a, __m128 src, __mmask8 k) {
   // CIR: %[[CAST_A:.*]] = cir.cast bitcast %[[LOAD_A]] : !cir.vector<2 x !s64i> -> !cir.vector<8 x !s16i>
   // CIR: %[[LOAD_SRC:.*]] = cir.load {{.*}} : !cir.ptr<!cir.vector<4 x !cir.float>>, !cir.vector<4 x !cir.float>
   // CIR: %[[LOAD_K:.*]] = cir.load {{.*}} : !cir.ptr<!u8i>, !u8i
-  // CIR: %[[NARROW_A:.*]] = cir.vec.shuffle(%[[CAST_A]], {{.*}}) : !cir.vector<4 x !s16i>
+  // CIR: %[[POISON:.*]] = cir.const #cir.poison : !cir.vector<8 x !s16i>
+  // CIR: %[[NARROW_A:.*]] = cir.vec.shuffle(%[[CAST_A]], %[[POISON]] {{.*}}) : !cir.vector<4 x !s16i>
   // CIR: %[[F16_VEC:.*]] = cir.cast bitcast %[[NARROW_A]] : !cir.vector<4 x !s16i> -> !cir.vector<4 x !cir.f16>
   // CIR: %[[FLOAT_VEC:.*]] = cir.cast floating %[[F16_VEC]] : !cir.vector<4 x !cir.f16> -> !cir.vector<4 x !cir.float>
   // CIR: %[[MASK_VEC:.*]] = cir.cast bitcast %[[LOAD_K]] : !u8i -> !cir.vector<8 x !cir.int<s, 1>>
@@ -107,7 +108,8 @@ __m128 test_vcvtph2ps_maskz(__m128i a, __mmask8 k) {
   // CIR: %[[LOAD_A:.*]] = cir.load {{.*}} : !cir.ptr<!cir.vector<2 x !s64i>>, !cir.vector<2 x !s64i>
   // CIR: %[[CAST_A:.*]] = cir.cast bitcast %[[LOAD_A]] : !cir.vector<2 x !s64i> -> !cir.vector<8 x !s16i>
   // CIR: %[[LOAD_K:.*]] = cir.load {{.*}} : !cir.ptr<!u8i>, !u8i
-  // CIR: %[[NARROW_A:.*]] = cir.vec.shuffle(%[[CAST_A]], {{.*}}) : !cir.vector<4 x !s16i>
+  // CIR: %[[POISON:.*]] = cir.const #cir.poison : !cir.vector<8 x !s16i>
+  // CIR: %[[NARROW_A:.*]] = cir.vec.shuffle(%[[CAST_A]], %[[POISON]] {{.*}}) : !cir.vector<4 x !s16i>
   // CIR: %[[F16_VEC:.*]] = cir.cast bitcast %[[NARROW_A]] : !cir.vector<4 x !s16i> -> !cir.vector<4 x !cir.f16>
   // CIR: %[[FLOAT_VEC:.*]] = cir.cast floating %[[F16_VEC]] : !cir.vector<4 x !cir.f16> -> !cir.vector<4 x !cir.float>
   // CIR: %[[MASK_VEC:.*]] = cir.cast bitcast %[[LOAD_K]] : !u8i -> !cir.vector<8 x !cir.int<s, 1>>
@@ -135,7 +137,8 @@ __m128 test_vcvtph2ps_maskz(__m128i a, __mmask8 k) {
   // OGCG: %[[RESULT:.*]] = select <4 x i1> %[[MASK]], <4 x float> %[[CONV]], <4 x float> {{.*}}
   // OGCG: ret <4 x float> {{.*}}
 
-  return _mm_maskz_cvtph_ps(k, a);
+  typedef short __v8hi __attribute__((__vector_size__(16)));
+  return __builtin_ia32_vcvtph2ps_mask((__v8hi)a, _mm_setzero_ps(), k);
 }
 
 __m256 test_vcvtph2ps256_maskz(__m128i a, __mmask8 k) {
@@ -168,7 +171,8 @@ __m256 test_vcvtph2ps256_maskz(__m128i a, __mmask8 k) {
   // OGCG: %[[MASK:.*]] = bitcast i8 {{.*}} to <8 x i1>
   // OGCG: %[[RESULT:.*]] = select <8 x i1> %[[MASK]], <8 x float> %[[CONV]], <8 x float> {{.*}}
   // OGCG: ret <8 x float> {{.*}}
-   return _mm256_maskz_cvtph_ps(k, a);
+   typedef short __v8hi __attribute__((__vector_size__(16)));
+   return __builtin_ia32_vcvtph2ps256_mask((__v8hi)a, _mm256_setzero_ps(), k);
 }
 
 __m512 test_vcvtph2ps512_maskz(__m256i a, __mmask16 k) {
@@ -200,5 +204,6 @@ __m512 test_vcvtph2ps512_maskz(__m256i a, __mmask16 k) {
   // OGCG: %[[MASK:.*]] = bitcast i16 {{.*}} to <16 x i1>
   // OGCG: %[[RES:.*]] = select <16 x i1> %[[MASK]], <16 x float> %[[CONV]], <16 x float> {{.*}}
   // OGCG: ret <16 x float> {{.*}}
-  return _mm512_maskz_cvtph_ps(k, a);
+  typedef short __v16hi __attribute__((__vector_size__(32)));
+  return __builtin_ia32_vcvtph2ps512_mask((__v16hi)a, _mm512_setzero_ps(), k, 4);
 }
