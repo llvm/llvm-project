@@ -1295,7 +1295,8 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
 
         // Get the lvalue for the field (which is a copy of the enclosing
         // object or contains the address of the enclosing object).
-        LValue ThisFieldLValue = EmitLValueForLambdaField(LambdaThisCaptureField);
+        LValue ThisFieldLValue =
+            EmitLValueForLambdaField(LambdaThisCaptureField);
         if (!LambdaThisCaptureField->getType()->isPointerType()) {
           // If the enclosing object was captured by value, just use its
           // address. Sign this pointer.
@@ -1303,7 +1304,8 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
         } else {
           // Load the lvalue pointed to by the field, since '*this' was captured
           // by reference.
-          CXXThisValue = EmitLoadOfLValue(ThisFieldLValue, SourceLocation()).getScalarVal();
+          CXXThisValue = EmitLoadOfLValue(ThisFieldLValue, SourceLocation())
+                             .getScalarVal();
         }
       }
 
