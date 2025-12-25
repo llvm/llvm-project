@@ -17,7 +17,7 @@ Example:
   int v1; // can be marked as static
 
   void fn1() {} // can be marked as static
-  
+
   struct S1 {}; // can be moved into anonymous namespace
 
   namespace {
