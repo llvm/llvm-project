@@ -44,6 +44,13 @@ public:
   /// Runs the serialization pipeline, returning `std::nullopt` on error.
   virtual std::optional<SmallVector<char, 0>> run();
 
+  /// Translate LLVM module to textual ISA.
+  /// TODO: switch to SmallString
+  static FailureOr<std::string>
+  translateModuleToISA(llvm::Module &llvmModule,
+                       llvm::TargetMachine &targetMachine,
+                       function_ref<InFlightDiagnostic()> emitError);
+
 protected:
   // Hooks to be implemented by derived classes.
 
@@ -97,11 +104,6 @@ protected:
 
   /// Optimize the module.
   virtual LogicalResult optimizeModule(llvm::Module &module, int optL);
-
-  /// Utility function for translating to ISA, returns `std::nullopt` on
-  /// failure.
-  static std::optional<std::string>
-  translateToISA(llvm::Module &llvmModule, llvm::TargetMachine &targetMachine);
 
 protected:
   /// Module to transform to a binary object.

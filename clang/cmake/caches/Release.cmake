@@ -36,13 +36,14 @@ if (${CMAKE_HOST_SYSTEM_NAME} MATCHES "Linux")
   list(APPEND DEFAULT_PROJECTS "bolt")
 endif()
 
+set (DEFAULT_RUNTIMES "compiler-rt;libcxx;openmp")
 # Don't build flang on Darwin due to:
 # https://github.com/llvm/llvm-project/issues/160546
 if (NOT ${CMAKE_HOST_SYSTEM_NAME} MATCHES "Darwin")
   list(APPEND DEFAULT_PROJECTS "flang")
+  list(APPEND DEFAULT_RUNTIMES "flang-rt")
 endif()
 
-set (DEFAULT_RUNTIMES "compiler-rt;libcxx")
 if (NOT WIN32)
   list(APPEND DEFAULT_RUNTIMES "libcxxabi" "libunwind")
 endif()
@@ -164,6 +165,9 @@ endif()
 # Final Stage Config (stage2)
 set_final_stage_var(LLVM_ENABLE_RUNTIMES "${LLVM_RELEASE_ENABLE_RUNTIMES}" STRING)
 set_final_stage_var(LLVM_ENABLE_PROJECTS "${LLVM_RELEASE_ENABLE_PROJECTS}" STRING)
+# Don't build libarcher due to:
+# https://github.com/llvm/llvm-project/issues/170138
+set_final_stage_var(LIBOMP_ARCHER_SUPPORT "OFF" BOOL)
 if (${CMAKE_HOST_SYSTEM_NAME} MATCHES "Linux")
   set_final_stage_var(CLANG_BOLT "INSTRUMENT" STRING)
 endif()
