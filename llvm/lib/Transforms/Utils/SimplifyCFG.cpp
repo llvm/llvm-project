@@ -2467,7 +2467,7 @@ static void UpdatePHINodes(BasicBlock *OrigBB, BasicBlock *NewBB,
 
 /// Try to sink common instructions from predecessors of SinkBB into SinkBB.
 static bool trySinkFromPredsIntoBB(BasicBlock *SinkBB,
-                                   SmallVectorImpl<BasicBlock *> &Preds,
+                                   ArrayRef<BasicBlock *> Preds,
                                    bool HaveNonUnconditionalPredecessors,
                                    DomTreeUpdater *DTU) {
   if (Preds.size() < 2)
