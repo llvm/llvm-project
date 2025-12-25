@@ -788,6 +788,16 @@ public:
                              Matcher, Builder, MatchMode);
   }
 
+  template <typename T>
+  bool memoizedMatch(
+      const T &Node, const DynTypedMatcher &Matcher,
+      BoundNodesTreeBuilder *Builder,
+      llvm::function_ref<bool(BoundNodesTreeBuilder *)> MatchCallback) {
+    static_assert(std::is_base_of<Stmt, T>::value,
+                  "type not allowed for recursive matching");
+    return memoizedMatch(Matcher, DynTypedNode::create(Node), Builder, MatchCallback);
+  }
+
   virtual ASTContext &getASTContext() const = 0;
 
   virtual bool IsMatchingInASTNodeNotSpelledInSource() const = 0;
@@ -795,25 +805,6 @@ public:
   virtual bool IsMatchingInASTNodeNotAsIs() const = 0;
 
   bool isTraversalIgnoringImplicitNodes() const;
-
-  /// Memoized match execution for custom matchers.
-  ///
-  /// This method provides memoization support for custom matcher operations
-  /// that don't use the standard matchesChildOf/matchesDescendantOf methods.
-  /// It checks the memoization cache before executing the provided callback,
-  /// and caches the result for future use.
-  ///
-  /// The match type is assumed to be Child (matching children, not descendants).
-  ///
-  /// \param MatcherID The unique identifier for this matcher operation
-  /// \param Node The AST node to match against
-  /// \param Builder The bound nodes builder (will be updated with cached result)
-  /// \param MatchCallback The callback that performs the actual matching
-  /// \return true if the match succeeded, false otherwise
-  virtual bool memoizedMatch(
-      const DynTypedMatcher &Matcher,
-      const DynTypedNode &Node, BoundNodesTreeBuilder *Builder,
-      llvm::function_ref<bool(BoundNodesTreeBuilder *)> MatchCallback) = 0;
 
 protected:
   virtual bool matchesChildOf(const DynTypedNode &Node, ASTContext &Ctx,
@@ -830,6 +821,12 @@ protected:
                                  const DynTypedMatcher &Matcher,
                                  BoundNodesTreeBuilder *Builder,
                                  AncestorMatchMode MatchMode) = 0;
+
+  virtual bool memoizedMatch(
+      const DynTypedMatcher &Matcher,
+      const DynTypedNode &Node, BoundNodesTreeBuilder *Builder,
+      llvm::function_ref<bool(BoundNodesTreeBuilder *)> MatchCallback) = 0;
+
 private:
   friend struct ASTChildrenNotSpelledInSourceScope;
   virtual bool isMatchingChildrenNotSpelledInSource() const = 0;

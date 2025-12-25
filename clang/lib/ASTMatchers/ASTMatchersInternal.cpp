@@ -501,16 +501,14 @@ bool ForEachAdjacentSubstatementsMatcher<T, ArgT>::matches(
   if (Matchers.empty())
     return false;
 
-  DynTypedNode DynNode = DynTypedNode::create(Node);
-
   // Create a DynTypedMatcher wrapper for this matcher instance to use for
   // memoization. The matcher sequence is implicitly part of the matcher
   // instance, so using 'this' pointer provides a unique identifier.
   DynTypedMatcher MatcherWrapper(this);
 
   // Use memoization to avoid re-running the same matcher on the same node.
-  return Finder->memoizedMatch(
-      MatcherWrapper, DynNode, Builder,
+  return Finder->memoizedMatch(static_cast<const Stmt&>(*CS),
+      MatcherWrapper, Builder,
       [this, CS, Finder](BoundNodesTreeBuilder *MemoBuilder) -> bool {
         // Search for all sequences of adjacent substatements that match the
         // matchers
