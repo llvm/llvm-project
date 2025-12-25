@@ -86,6 +86,10 @@ Potentially Breaking Changes
   `-header-filter='.*'`. To disable warnings from non-system, set `-header-filter`
   to an empty string.
 
+- The ``clang-tidy/ClangTidyModuleRegistry.h`` header has been deprecated and will
+  be removed in LLVM 24. All of the symbols it used to define have been moved into
+  ``clang-tidy/ClangTidyModule.h``.
+
 Improvements to clangd
 ----------------------
 
@@ -446,7 +450,9 @@ Changes in existing checks
 
 - Improved :doc:`bugprone-use-after-move
   <clang-tidy/checks/bugprone/use-after-move>` check by adding
-  `InvalidationFunctions` option to support custom invalidation functions.
+  `InvalidationFunctions` option to support custom invalidation functions
+  and `ReinitializationFunctions` option to support custom reinitialization
+  functions.
 
 - Improved :doc:`cppcoreguidelines-avoid-non-const-global-variables
   <clang-tidy/checks/cppcoreguidelines/avoid-non-const-global-variables>` check
@@ -516,6 +522,10 @@ Changes in existing checks
 
 - Improved :doc:`misc-header-include-cycle
   <clang-tidy/checks/misc/header-include-cycle>` check performance.
+
+- Improved :doc:`misc-use-internal-linkage
+  <clang-tidy/checks/misc/use-internal-linkage>` to suggest giving
+  structs, classes, unions, and enums internal linkage.
 
 - Improved :doc:`modernize-avoid-c-arrays
   <clang-tidy/checks/modernize/avoid-c-arrays>` to not diagnose array types
