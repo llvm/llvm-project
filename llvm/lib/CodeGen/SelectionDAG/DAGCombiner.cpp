@@ -12423,17 +12423,27 @@ SDValue DAGCombiner::foldSelectToABD(SDValue LHS, SDValue RHS, SDValue True,
 
   if (LegalOperations && !hasOperation(ABDOpc, VT))
     return SDValue();
+  if (!VT.isInteger())
+    return SDValue();
+
+  // Hack to support constants. (sub a, const) becomes (add a, -const)
+  SDValue NegRHS = DAG.getNegative(RHS, SDLoc(RHS), VT),
+          NegLHS = DAG.getNegative(LHS, SDLoc(LHS), VT);
 
   switch (CC) {
   case ISD::SETGT:
   case ISD::SETGE:
   case ISD::SETUGT:
   case ISD::SETUGE:
-    if (sd_match(True, m_Sub(m_Specific(LHS), m_Specific(RHS))) &&
-        sd_match(False, m_Sub(m_Specific(RHS), m_Specific(LHS))))
+    if (sd_match(True, m_AnyOf(m_Sub(m_Specific(LHS), m_Specific(RHS)),
+                               m_Add(m_Specific(LHS), m_Specific(NegRHS)))) &&
+        sd_match(False, m_AnyOf(m_Sub(m_Specific(RHS), m_Specific(LHS)),
+                                m_Add(m_Specific(RHS), m_Specific(NegLHS)))))
       return DAG.getNode(ABDOpc, DL, VT, LHS, RHS);
-    if (sd_match(True, m_Sub(m_Specific(RHS), m_Specific(LHS))) &&
-        sd_match(False, m_Sub(m_Specific(LHS), m_Specific(RHS))) &&
+    if (sd_match(True, m_AnyOf(m_Sub(m_Specific(RHS), m_Specific(LHS)),
+                               m_Add(m_Specific(RHS), m_Specific(NegLHS)))) &&
+        sd_match(False, m_AnyOf(m_Sub(m_Specific(LHS), m_Specific(RHS)),
+                                m_Add(m_Specific(LHS), m_Specific(NegRHS)))) &&
         hasOperation(ABDOpc, VT))
       return DAG.getNegative(DAG.getNode(ABDOpc, DL, VT, LHS, RHS), DL, VT);
     break;
@@ -12441,11 +12451,15 @@ SDValue DAGCombiner::foldSelectToABD(SDValue LHS, SDValue RHS, SDValue True,
   case ISD::SETLE:
   case ISD::SETULT:
   case ISD::SETULE:
-    if (sd_match(True, m_Sub(m_Specific(RHS), m_Specific(LHS))) &&
-        sd_match(False, m_Sub(m_Specific(LHS), m_Specific(RHS))))
+    if (sd_match(True, m_AnyOf(m_Sub(m_Specific(RHS), m_Specific(LHS)),
+                               m_Add(m_Specific(RHS), m_Specific(NegLHS)))) &&
+        sd_match(False, m_AnyOf(m_Sub(m_Specific(LHS), m_Specific(RHS)),
+                                m_Add(m_Specific(LHS), m_Specific(NegRHS)))))
       return DAG.getNode(ABDOpc, DL, VT, LHS, RHS);
-    if (sd_match(True, m_Sub(m_Specific(LHS), m_Specific(RHS))) &&
-        sd_match(False, m_Sub(m_Specific(RHS), m_Specific(LHS))) &&
+    if (sd_match(True, m_AnyOf(m_Sub(m_Specific(LHS), m_Specific(RHS)),
+                               m_Add(m_Specific(LHS), m_Specific(NegRHS)))) &&
+        sd_match(False, m_AnyOf(m_Sub(m_Specific(RHS), m_Specific(LHS)),
+                                m_Add(m_Specific(RHS), m_Specific(NegLHS)))) &&
         hasOperation(ABDOpc, VT))
       return DAG.getNegative(DAG.getNode(ABDOpc, DL, VT, LHS, RHS), DL, VT);
     break;
