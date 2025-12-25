@@ -392,9 +392,6 @@ bool VPlanVerifier::verifyBlock(const VPBlockBase *VPB) {
   auto *VPBB = dyn_cast<VPBasicBlock>(VPB);
   // Check block's condition bit.
   if (VPBB && !isa<VPIRBasicBlock>(VPB)) {
-    // VPRegionBlocks can have multiple successors (e.g., with
-    // BranchOnTwoConds) without needing a terminator, so only check
-    // VPBasicBlocks.
     if (VPB->getNumSuccessors() > 1 ||
         (VPBB->getParent() && VPBB->isExiting() &&
          !VPBB->getParent()->isReplicator())) {

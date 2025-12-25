@@ -404,14 +404,15 @@ Early Exit Vectorization
 
 When vectorizing a loop with a single early exit, the loop blocks following the
 early exit are predicated and the vector loop will always exit via the latch.
-It is terminated by a BranchOnTwoConds VPInstruction, which takes both the early
-and latch exiting conditions. If the early exiting condition is true,
-BranchOnToConds exits to an intermediate block (``vector.early.exit`` below).
-This intermediate block is responsible for calculating any exit values of
-loop-defined variables that are used in the early exit block. If the latch
-exiting condition is true, exits to the ``middle.block`` which selects between
-the exit block from the latch or the scalar remainder loop. Otherwise continues
-executing in the region header.
+The loop terminates with a single BranchOnTwoConds VPInstruction, which takes
+both the early and latch exiting conditions. If the early exiting condition is
+true, BranchOnToConds exits to an intermediate block (``vector.early.exit``
+below). This intermediate block is responsible for calculating any exit values
+of loop-defined variables that are used in the early exit block. If the latch
+exiting condition is true, BranchOnToConds exits to the ``middle.block`` which
+selects between the exit block and the scalar remainder loop. Otherwise
+BranchOnTwoConds continues executing the loop by jumping back to the region
+header.
 
 .. image:: vplan-early-exit.png
 

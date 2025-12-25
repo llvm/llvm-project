@@ -616,7 +616,7 @@ static bool hasConditionalTerminator(const VPBasicBlock *VPBB) {
   }
 
   assert(
-      !IsCondBranch &&
+      !IsCondBranch && !IsBranchOnTwoConds &&
       "block with 0 or 1 successors terminated by conditional branch recipe");
   return false;
 }

@@ -2007,7 +2007,8 @@ static bool simplifyBranchConditionForVFAndUF(VPlan &Plan, ElementCount BestVF,
     const SCEV *C = SE.getElementCount(VectorTripCount->getType(), NumElements);
     if (!SE.isKnownPredicate(CmpInst::ICMP_ULE, VectorTripCount, C))
       return false;
-  } else if (match(Term, m_BranchOnCond(m_VPValue(Cond)))) {
+  } else if (match(Term, m_BranchOnCond(m_VPValue(Cond))) ||
+             match(Term, m_BranchOnTwoConds(m_VPValue(), m_VPValue(Cond)))) {
     // For BranchOnCond, check if we can prove the condition to be true using VF
     // and UF.
     if (!isConditionTrueViaVFAndUF(Cond, Plan, BestVF, BestUF, PSE))
@@ -2029,6 +2030,7 @@ static bool simplifyBranchConditionForVFAndUF(VPlan &Plan, ElementCount BestVF,
         return isa<VPCanonicalIVPHIRecipe, VPEVLBasedIVPHIRecipe,
                    VPFirstOrderRecurrencePHIRecipe, VPPhi>(&Phi);
       })) {
+    // TODO: fold branch-on-constant after dissolving region.
     for (VPRecipeBase &HeaderR : make_early_inc_range(Header->phis())) {
       if (auto *R = dyn_cast<VPWidenIntOrFpInductionRecipe>(&HeaderR)) {
         VPBuilder Builder(Plan.getVectorPreheader());
@@ -2044,15 +2046,24 @@ static bool simplifyBranchConditionForVFAndUF(VPlan &Plan, ElementCount BestVF,
     }
 
     VPBlockBase *Preheader = VectorRegion->getSinglePredecessor();
-    VPBlockBase *Exit = VectorRegion->getSingleSuccessor();
+    SmallVector<VPBlockBase *> Exits = to_vector(VectorRegion->getSuccessors());
     VPBlockUtils::disconnectBlocks(Preheader, VectorRegion);
-    VPBlockUtils::disconnectBlocks(VectorRegion, Exit);
+    for (VPBlockBase *Exit : Exits)
+      VPBlockUtils::disconnectBlocks(VectorRegion, Exit);
 
     for (VPBlockBase *B : vp_depth_first_shallow(VectorRegion->getEntry()))
       B->setParent(nullptr);
 
     VPBlockUtils::connectBlocks(Preheader, Header);
-    VPBlockUtils::connectBlocks(ExitingVPBB, Exit);
+
+    for (VPBlockBase *Exit : Exits)
+      VPBlockUtils::connectBlocks(ExitingVPBB, Exit);
+    if (Exits.size() != 1) {
+      assert(match(Term, m_BranchOnTwoConds()) && Exits.size() == 2 &&
+             "BranchOnTwoConds needs 2 remaining exits");
+      VPBuilder(Term).createNaryOp(VPInstruction::BranchOnCond,
+                                   Term->getOperand(0));
+    }
     VPlanTransforms::simplifyRecipes(Plan);
   } else {
     // The vector region contains header phis for which we cannot remove the
@@ -3715,18 +3726,18 @@ void VPlanTransforms::dissolveLoopRegions(VPlan &Plan) {
 }
 
 void VPlanTransforms::expandBranchOnTwoConds(VPlan &Plan) {
-  // Expand BranchOnTwoConds instructions into explicit CFG with
-  // single-condition branches
   SmallVector<VPInstruction *> WorkList;
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_shallow(Plan.getEntry()))) {
-    assert((!isa<VPRegionBlock>(VPBB) ||
-            cast<VPRegionBlock>(VPBB)->isReplicator()) &&
-           "only replicating regions must remain");
     if (!VPBB->empty() && match(&VPBB->back(), m_BranchOnTwoConds()))
       WorkList.push_back(cast<VPInstruction>(&VPBB->back()));
   }
 
+  // Expand BranchOnTwoConds instructions into explicit CFG with
+  // single-condition branches, by introducing a new branch in VPBB that jumps
+  // to a new intermediate block if either condition is true and to the
+  // third successor otherwise. The intermediate block jumps to the first or
+  // second successor, depending on the first condition.
   for (VPInstruction *Br : WorkList) {
     assert(Br->getNumOperands() == 2 &&
            "BranchOnTwoConds must have exactly 2 conditions");
@@ -3739,24 +3750,26 @@ void VPlanTransforms::expandBranchOnTwoConds(VPlan &Plan) {
     for (VPBlockBase *Succ : Successors)
       VPBlockUtils::disconnectBlocks(VPBB, Succ);
 
-    // Create an intermediate block for the second condition check.
-    auto *SecondCondBlock =
-        Plan.createVPBasicBlock((Twine(VPBB->getName()) + ".cond.1").str());
-    SecondCondBlock->setParent(VPBB->getParent());
-
     VPValue *Cond0 = Br->getOperand(0);
-    VPBlockBase *Succ0 = Successors[0];
-    VPBuilder(VPBB).createNaryOp(VPInstruction::BranchOnCond, {Cond0}, DL);
-    VPBlockUtils::connectBlocks(VPBB, Succ0);
-    VPBlockUtils::connectBlocks(VPBB, SecondCondBlock);
-
     VPValue *Cond1 = Br->getOperand(1);
+    VPBlockBase *Succ0 = Successors[0];
     VPBlockBase *Succ1 = Successors[1];
     VPBlockBase *Succ2 = Successors[2];
-    VPBuilder(SecondCondBlock)
-        .createNaryOp(VPInstruction::BranchOnCond, {Cond1}, DL);
-    VPBlockUtils::connectBlocks(SecondCondBlock, Succ1);
-    VPBlockUtils::connectBlocks(SecondCondBlock, Succ2);
+
+    VPBasicBlock *MiddleSplit = Plan.createVPBasicBlock("middle.split");
+    MiddleSplit->setParent(VPBB->getParent());
+
+    VPBuilder Builder(VPBB);
+    VPValue *AnyExitTaken =
+        Builder.createNaryOp(Instruction::Or, {Cond0, Cond1}, DL);
+    Builder.createNaryOp(VPInstruction::BranchOnCond, {AnyExitTaken}, DL);
+    VPBlockUtils::connectBlocks(VPBB, MiddleSplit);
+    VPBlockUtils::connectBlocks(VPBB, Succ2);
+
+    VPBuilder(MiddleSplit)
+        .createNaryOp(VPInstruction::BranchOnCond, {Cond0}, DL);
+    VPBlockUtils::connectBlocks(MiddleSplit, Succ0);
+    VPBlockUtils::connectBlocks(MiddleSplit, Succ1);
 
     Br->eraseFromParent();
   }
@@ -3922,34 +3935,32 @@ void VPlanTransforms::handleUncountableEarlyExit(VPBasicBlock *EarlyExitingVPBB,
       Plan.createVPBasicBlock("vector.early.exit");
   VectorEarlyExitVPBB->setParent(EarlyExitVPBB->getParent());
 
-  // Update PHI operands: copy from EarlyExitingVPBB to VectorEarlyExitVPBB.
-  unsigned PredIdx = EarlyExitVPBB->getIndexForPredecessor(EarlyExitingVPBB);
   VPBlockUtils::connectBlocks(VectorEarlyExitVPBB, EarlyExitVPBB);
 
-  VPBuilder EarlyExitB(VectorEarlyExitVPBB);
+  // Update the exit phis in the early exit block.
   VPBuilder MiddleBuilder(MiddleVPBB);
+  VPBuilder EarlyExitB(VectorEarlyExitVPBB);
   for (VPRecipeBase &R : EarlyExitVPBB->phis()) {
     auto *ExitIRI = cast<VPIRPhi>(&R);
-    VPValue *IncomingFromEarlyExiting = ExitIRI->getOperand(PredIdx);
+    // Early exit operand should always be last, i.e., 0 if EarlyExitVPBB has
+    // a single predecessor and 1 if it has two.
+    unsigned EarlyExitIdx = ExitIRI->getNumOperands() - 1;
     if (ExitIRI->getNumOperands() != 1) {
-      // Both loop exits go to the same block. Move the operand of ExitIRI
-      // coming from EarlyExitingVPBB to appear last.
-      ExitIRI->addOperand(IncomingFromEarlyExiting);
-      ExitIRI->removeIncomingValueFor(EarlyExitingVPBB);
+      // The first of two operands corresponds to the latch exit, via MiddleVPBB
+      // predecessor. Extract its final lane.
       ExitIRI->extractLastLaneOfLastPartOfFirstOperand(MiddleBuilder);
     }
 
-    if (!IncomingFromEarlyExiting->isLiveIn()) {
+    VPValue *IncomingFromEarlyExit = ExitIRI->getOperand(EarlyExitIdx);
+    if (!IncomingFromEarlyExit->isLiveIn()) {
       // Update the incoming value from the early exit.
       VPValue *FirstActiveLane = EarlyExitB.createNaryOp(
           VPInstruction::FirstActiveLane, {CondToEarlyExit},
           DebugLoc::getUnknown(), "first.active.lane");
-      IncomingFromEarlyExiting =
-          EarlyExitB.createNaryOp(VPInstruction::ExtractLane,
-                                  {FirstActiveLane, IncomingFromEarlyExiting},
-                                  DebugLoc::getUnknown(), "early.exit.value");
-      unsigned EarlyExitIdx = ExitIRI->getNumOperands() - 1;
-      ExitIRI->setOperand(EarlyExitIdx, IncomingFromEarlyExiting);
+      IncomingFromEarlyExit = EarlyExitB.createNaryOp(
+          VPInstruction::ExtractLane, {FirstActiveLane, IncomingFromEarlyExit},
+          DebugLoc::getUnknown(), "early.exit.value");
+      ExitIRI->setOperand(EarlyExitIdx, IncomingFromEarlyExit);
     }
   }
 

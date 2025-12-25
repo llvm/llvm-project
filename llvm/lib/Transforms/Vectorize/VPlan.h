@@ -1060,8 +1060,10 @@ public:
     BranchOnCond,
     // Branch with 2 boolean condition operands and 3 successors. If condition
     // 0 is true, branches to successor 0; if condition 1 is true, branches to
-    // successor 1; otherwise branches to successor 2. Expanded to a chain of
-    // BranchOnCond after region dissolution.
+    // successor 1; otherwise branches to successor 2. Expanded after region
+    // dissolution into: (1) an OR of the two conditions branching to
+    // middle.split or successor 2, and (2) middle.split branching to successor
+    // 0 or successor 1 based on condition 0.
     BranchOnTwoConds,
     Broadcast,
     /// Given operands of (the same) struct type, creates a struct of fixed-

@@ -659,8 +659,6 @@ Value *VPInstruction::generate(VPTransformState &State) {
     applyMetadata(*Br);
     return Br;
   }
-  case VPInstruction::BranchOnTwoConds:
-    llvm_unreachable("BranchOnTwoConds should be expanded before execution");
   case VPInstruction::Broadcast: {
     return Builder.CreateVectorSplat(
         State.VF, State.get(getOperand(0), /*IsScalar*/ true), "broadcast");
