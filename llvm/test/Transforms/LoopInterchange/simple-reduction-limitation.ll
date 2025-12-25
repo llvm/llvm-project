@@ -1,6 +1,7 @@
 ; Several cases of undoing simple reductions that have not yet been supported.
 ; RUN: opt < %s -passes="loop-interchange"  -loop-interchange-undo-simple-reduction -pass-remarks-missed='loop-interchange' \
-; RUN:            -pass-remarks-output=%t -S | FileCheck --input-file=%t %s
+; RUN:            -pass-remarks-output=%t -S | FileCheck -check-prefix=IR %s
+; RUN: FileCheck --input-file=%t %s
 
 
 ; 1. The initial value of the reduction is not a constant.
@@ -25,6 +26,8 @@
 ; CHECK-NEXT: Args:
 ; CHECK-NEXT:   - String:          Only inner loops with induction or reduction PHI nodes can be interchange currently.
 
+; IR-LABEL: @simple_reduction_01(
+; IR-NOT: split
 define void @simple_reduction_01(ptr noalias readonly %a, ptr noalias readonly %b, ptr noalias writeonly %s, i64  %n) {
 entry:
   %cmp = icmp sgt i64 %n, 0
@@ -87,6 +90,8 @@ exit:
 ; CHECK-NEXT: Args:
 ; CHECK-NEXT:   - String:          Only inner loops with induction or reduction PHI nodes can be interchange currently.
 
+; IR-LABEL: @simple_reduction_02(
+; IR-NOT: split
 define void @simple_reduction_02(ptr noalias readonly %a, ptr noalias readonly %b, ptr noalias writeonly %s, ptr noalias writeonly %s2, i64  %n) {
 entry:
   %cmp = icmp sgt i64 %n, 0
@@ -150,6 +155,8 @@ exit:
 ; CHECK-NEXT: Args:
 ; CHECK-NEXT:   - String:          Only inner loops with induction or reduction PHI nodes can be interchange currently.
 
+; IR-LABEL: @simple_reduction_03(
+; IR-NOT: split
 define void @simple_reduction_03(ptr noalias readonly %a, ptr noalias readonly %b, ptr noalias writeonly %s, i64  %n) {
 entry:
   %cmp = icmp sgt i64 %n, 0
@@ -219,6 +226,8 @@ exit:
 ; CHECK-NEXT: Args:
 ; CHECK-NEXT:   - String:          Only inner loops with induction or reduction PHI nodes can be interchange currently.
 
+; IR-LABEL: @simple_reduction_04(
+; IR-NOT: split
 define void @simple_reduction_04(ptr noalias readonly %a, ptr noalias readonly %b, ptr noalias writeonly %c, ptr noalias writeonly %s, i64  %n) {
 entry:
   %cmp = icmp sgt i64 %n, 0
@@ -287,6 +296,8 @@ exit:
 ; CHECK-NEXT: Args:
 ; CHECK-NEXT:   - String:          Only inner loops with induction or reduction PHI nodes can be interchange currently.
 
+; IR-LABEL: @simple_reduction_05(
+; IR-NOT: split
 define void @simple_reduction_05(ptr noalias readonly %a, ptr noalias readonly %b, ptr noalias writeonly %s, i64  %n) {
 entry:
   %cmp = icmp sgt i64 %n, 0
