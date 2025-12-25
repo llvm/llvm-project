@@ -551,8 +551,7 @@ bool ForEachAdjacentSubstatementsMatcher<T, ArgT>::matches(
         }
 
         return FoundAny;
-      },
-      ASTMatchFinder::MT_Child);
+      });
 }
 
 template bool ForEachAdjacentSubstatementsMatcher<CompoundStmt>::matches(

@@ -46,8 +46,12 @@ typedef MatchFinder::MatchCallback MatchCallback;
 // optimize this on.
 static const unsigned MaxMemoizationEntries = 10000;
 
-// MatchType is now defined in ASTMatchFinder, use it from there.
-using MatchType = ASTMatchFinder::MatchType;
+enum class MatchType {
+  Ancestors,
+
+  Descendants,
+  Child,
+};
 
 // We use memoization to avoid running the same matcher on the same
 // AST node twice.  This struct is the key for looking up match
@@ -66,7 +70,7 @@ struct MatchKey {
   DynTypedNode Node;
   BoundNodesTreeBuilder BoundNodes;
   TraversalKind Traversal = TK_AsIs;
-  MatchType Type = MatchType::MT_Child;
+  MatchType Type;
 
   bool operator<(const MatchKey &Other) const {
     return std::tie(Traversal, Type, MatcherID, Node, BoundNodes) <
@@ -605,7 +609,7 @@ public:
     Key.BoundNodes = *Builder;
     Key.Traversal = Ctx.getParentMapContext().getTraversalKind();
     // Memoize result even doing a single-level match, it might be expensive.
-    Key.Type = MaxDepth == 1 ? MatchType::MT_Child : MatchType::MT_Descendants;
+    Key.Type = MaxDepth == 1 ? MatchType::Child : MatchType::Descendants;
     MemoizationMap::iterator I = ResultCache.find(Key);
     if (I != ResultCache.end()) {
       *Builder = I->second.Nodes;
@@ -700,8 +704,7 @@ public:
   bool memoizedMatch(const DynTypedMatcher::MatcherIDType &MatcherID,
                      const DynTypedNode &Node, BoundNodesTreeBuilder *Builder,
                      llvm::function_ref<bool(BoundNodesTreeBuilder *)>
-                         MatchCallback,
-                     MatchType Type) override {
+                         MatchCallback) override {
     // Reset the cache if it's too large.
     if (ResultCache.size() > MaxMemoizationEntries)
       ResultCache.clear();
@@ -716,7 +719,8 @@ public:
     // Note that we key on the bindings *before* the match.
     Key.BoundNodes = *Builder;
     Key.Traversal = ActiveASTContext->getParentMapContext().getTraversalKind();
-    Key.Type = Type;
+    // Assume Child match type for custom matchers.
+    Key.Type = MatchType::Child;
 
     MemoizationMap::iterator I = ResultCache.find(Key);
     if (I != ResultCache.end()) {
@@ -1210,7 +1214,7 @@ private:
         Keys.back().Node = Node;
         Keys.back().BoundNodes = *Builder;
         Keys.back().Traversal = Ctx.getParentMapContext().getTraversalKind();
-        Keys.back().Type = MatchType::MT_Ancestors;
+        Keys.back().Type = MatchType::Ancestors;
 
         // Check the cache.
         MemoizationMap::iterator I = ResultCache.find(Keys.back());

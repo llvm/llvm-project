@@ -722,16 +722,6 @@ public:
     AMM_ParentOnly
   };
 
-  /// Type of match operation for memoization purposes.
-  enum MatchType {
-    /// Matching ancestors.
-    MT_Ancestors,
-    /// Matching descendants.
-    MT_Descendants,
-    /// Matching children.
-    MT_Child
-  };
-
   virtual ~ASTMatchFinder() = default;
 
   /// Returns true if the given C++ class is directly or indirectly derived
@@ -812,17 +802,17 @@ public:
   /// It checks the memoization cache before executing the provided callback,
   /// and caches the result for future use.
   ///
+  /// The match type is assumed to be Child (matching children, not descendants).
+  ///
   /// \param MatcherID The unique identifier for this matcher operation
   /// \param Node The AST node to match against
   /// \param Builder The bound nodes builder (will be updated with cached result)
   /// \param MatchCallback The callback that performs the actual matching
-  /// \param Type The type of match (MT_Child, MT_Descendants, or MT_Ancestors)
   /// \return true if the match succeeded, false otherwise
   virtual bool memoizedMatch(
       const DynTypedMatcher::MatcherIDType &MatcherID,
       const DynTypedNode &Node, BoundNodesTreeBuilder *Builder,
-      llvm::function_ref<bool(BoundNodesTreeBuilder *)> MatchCallback,
-      MatchType Type) = 0;
+      llvm::function_ref<bool(BoundNodesTreeBuilder *)> MatchCallback) = 0;
 
 protected:
   virtual bool matchesChildOf(const DynTypedNode &Node, ASTContext &Ctx,
