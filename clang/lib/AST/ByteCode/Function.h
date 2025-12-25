@@ -17,9 +17,9 @@
 
 #include "Descriptor.h"
 #include "Source.h"
-#include "clang/AST/ASTLambda.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
+#include "clang/AST/DeclCXX.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -28,7 +28,7 @@ namespace interp {
 class Program;
 class ByteCodeEmitter;
 class Pointer;
-enum PrimType : uint32_t;
+enum PrimType : uint8_t;
 
 /// Describes a scope block.
 ///
@@ -41,6 +41,8 @@ public:
     unsigned Offset;
     /// Descriptor of the local.
     Descriptor *Desc;
+    /// If the cleanup for this local should be emitted.
+    bool EnabledByDefault = true;
   };
 
   using LocalVectorTy = llvm::SmallVector<Local, 8>;
@@ -115,7 +117,7 @@ public:
 
   /// Returns the name of the function decl this code
   /// was generated for.
-  const std::string getName() const {
+  std::string getName() const {
     if (!Source || !getDecl())
       return "<<expr>>";
 
@@ -150,12 +152,13 @@ public:
   /// Returns the source information at a given PC.
   SourceInfo getSource(CodePtr PC) const;
 
-  /// Checks if the function is valid to call in constexpr.
-  bool isConstexpr() const { return IsValid || isLambdaStaticInvoker(); }
+  /// Checks if the function is valid to call.
+  bool isValid() const { return IsValid || isLambdaStaticInvoker(); }
 
   /// Checks if the function is virtual.
   bool isVirtual() const { return Virtual; };
   bool isImmediate() const { return Immediate; }
+  bool isConstexpr() const { return Constexpr; }
 
   /// Checks if the function is a constructor.
   bool isConstructor() const { return Kind == FunctionKind::Ctor; }
@@ -235,9 +238,10 @@ private:
            bool HasRVO, bool IsLambdaStaticInvoker);
 
   /// Sets the code of a function.
-  void setCode(unsigned NewFrameSize, std::vector<std::byte> &&NewCode,
-               SourceMap &&NewSrcMap, llvm::SmallVector<Scope, 2> &&NewScopes,
-               bool NewHasBody) {
+  void setCode(FunctionDeclTy Source, unsigned NewFrameSize,
+               llvm::SmallVector<std::byte> &&NewCode, SourceMap &&NewSrcMap,
+               llvm::SmallVector<Scope, 2> &&NewScopes, bool NewHasBody) {
+    this->Source = Source;
     FrameSize = NewFrameSize;
     Code = std::move(NewCode);
     SrcMap = std::move(NewSrcMap);
@@ -265,7 +269,7 @@ private:
   /// Size of the argument stack.
   unsigned ArgSize;
   /// Program code.
-  std::vector<std::byte> Code;
+  llvm::SmallVector<std::byte> Code;
   /// Opcode-to-expression mapping.
   SourceMap SrcMap;
   /// List of block descriptors.
@@ -303,11 +307,13 @@ private:
   unsigned Virtual : 1;
   LLVM_PREFERRED_TYPE(bool)
   unsigned Immediate : 1;
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned Constexpr : 1;
 
 public:
   /// Dumps the disassembled bytecode to \c llvm::errs().
-  void dump() const;
-  void dump(llvm::raw_ostream &OS) const;
+  void dump(CodePtr PC = {}) const;
+  void dump(llvm::raw_ostream &OS, CodePtr PC = {}) const;
 };
 
 } // namespace interp

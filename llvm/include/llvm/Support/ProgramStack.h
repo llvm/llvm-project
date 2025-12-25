@@ -10,6 +10,7 @@
 #define LLVM_SUPPORT_PROGRAMSTACK_H
 
 #include "llvm/ADT/STLFunctionalExtras.h"
+#include "llvm/Support/Compiler.h"
 
 // LLVM_HAS_SPLIT_STACKS is exposed in the header because CrashRecoveryContext
 // needs to know if it's running on another thread or not.
@@ -28,12 +29,12 @@ namespace llvm {
 ///
 /// The value is not guaranteed to point to anything specific. It can be used to
 /// estimate how much stack space has been used since the previous call.
-uintptr_t getStackPointer();
+LLVM_ABI uintptr_t getStackPointer();
 
 /// \returns the default stack size for this platform.
 ///
 /// Based on \p RLIMIT_STACK or the equivalent.
-unsigned getDefaultStackSize();
+LLVM_ABI unsigned getDefaultStackSize();
 
 /// Runs Fn on a new stack of at least the given size.
 ///
@@ -42,20 +43,18 @@ unsigned getDefaultStackSize();
 ///
 /// The preferred implementation is split stacks on platforms that have a good
 /// debugging experience for them. On other platforms a new thread is used.
-void runOnNewStack(unsigned StackSize, function_ref<void()> Fn);
+LLVM_ABI void runOnNewStack(unsigned StackSize, function_ref<void()> Fn);
 
 template <typename R, typename... Ts>
-std::enable_if_t<!std::is_same_v<R, void>, R>
-runOnNewStack(unsigned StackSize, function_ref<R(Ts...)> Fn, Ts &&...Args) {
-  std::optional<R> Ret;
-  runOnNewStack(StackSize, [&]() { Ret = Fn(std::forward<Ts>(Args)...); });
-  return std::move(*Ret);
-}
-
-template <typename... Ts>
-void runOnNewStack(unsigned StackSize, function_ref<void(Ts...)> Fn,
+auto runOnNewStack(unsigned StackSize, function_ref<R(Ts...)> Fn,
                    Ts &&...Args) {
-  runOnNewStack(StackSize, [&]() { Fn(std::forward<Ts>(Args)...); });
+  if constexpr (std::is_same_v<R, void>) {
+    runOnNewStack(StackSize, [&]() { Fn(std::forward<Ts>(Args)...); });
+  } else {
+    std::optional<R> Ret;
+    runOnNewStack(StackSize, [&]() { Ret = Fn(std::forward<Ts>(Args)...); });
+    return std::move(*Ret);
+  }
 }
 
 } // namespace llvm

@@ -76,6 +76,20 @@ def AffineDialectDemotion : Pass<"demote-affine", "::mlir::func::FuncOp"> {
   ];
 }
 
+def FIRToSCFPass : Pass<"fir-to-scf"> {
+  let summary = "Convert FIR structured control flow ops to SCF dialect.";
+  let description = [{
+    Convert FIR structured control flow ops to SCF dialect.
+  }];
+  let dependentDialects = [
+    "fir::FIROpsDialect", "mlir::scf::SCFDialect"
+  ];
+  let options = [Option<"parallelUnordered", "parallel-unordered", "bool",
+                        /*default=*/"false",
+                        "Allow converting a fir.do_loop with the `unordered` "
+                        "attribute to scf.parallel (experimental).">];
+}
+
 def AnnotateConstantOperands : Pass<"annotate-constant"> {
   let summary = "Annotate constant operands to all FIR operations";
   let description = [{
@@ -231,6 +245,14 @@ def AddDebugInfo : Pass<"add-debug-info", "mlir::ModuleOp"> {
            "std::string",
            /*default=*/"std::string{}",
            "name of the input source file">,
+    Option<"dwarfVersion", "dwarf-version",
+           "int32_t",
+           /*default=*/"0",
+           "dwarf version">,
+    Option<"splitDwarfFile", "split-dwarf-file",
+           "std::string", /*default=*/"std::string{}",
+           "Name of the split dwarf file">
+
   ];
 }
 
@@ -285,7 +307,9 @@ def StackArrays : Pass<"stack-arrays", "mlir::func::FuncOp"> {
     Convert heap allocations for arrays, even those of unknown size, into stack
     allocations.
   }];
-  let dependentDialects = [ "fir::FIROpsDialect" ];
+  let dependentDialects = [
+    "fir::FIROpsDialect", "mlir::DLTIDialect", "mlir::LLVM::LLVMDialect"
+  ];
 }
 
 def StackReclaim : Pass<"stack-reclaim"> {
@@ -313,7 +337,8 @@ def AddAliasTags : Pass<"fir-add-alias-tags", "mlir::ModuleOp"> {
     theory, each operation could be considered in prallel, so long as there
     aren't races adding new tags to the mlir context.
   }];
-  let dependentDialects = [ "fir::FIROpsDialect" ];
+  // The pass inserts TBAA attributes from LLVM dialect.
+  let dependentDialects = ["mlir::LLVM::LLVMDialect"];
 }
 
 def SimplifyRegionLite : Pass<"simplify-region-lite", "mlir::ModuleOp"> {
@@ -406,18 +431,30 @@ def FunctionAttr : Pass<"function-attr", "mlir::func::FuncOp"> {
               "Set the no-infs-fp-math attribute on functions in the module.">,
        Option<"noNaNsFPMath", "no-nans-fp-math", "bool", /*default=*/"false",
               "Set the no-nans-fp-math attribute on functions in the module.">,
-       Option<
-           "approxFuncFPMath", "approx-func-fp-math", "bool",
-           /*default=*/"false",
-           "Set the approx-func-fp-math attribute on functions in the module.">,
+       Option<"approxFuncFPMath", "approx-func-fp-math", "bool",
+              /*default=*/"false",
+              "Set the afn flag on instructions in the module.">,
        Option<"noSignedZerosFPMath", "no-signed-zeros-fp-math", "bool",
               /*default=*/"false",
               "Set the no-signed-zeros-fp-math attribute on functions in the "
               "module.">,
        Option<"unsafeFPMath", "unsafe-fp-math", "bool", /*default=*/"false",
-              "Set the unsafe-fp-math attribute on functions in the module.">,
+              "Set all fast-math flags on instructions in the module.">,
+       Option<"reciprocals", "mrecip", "std::string", /*default=*/"",
+              "Set the reciprocal-estimates attribute on functions in the "
+              "module.">,
+       Option<"preferVectorWidth", "prefer-vector-width", "std::string",
+              /*default=*/"",
+              "Set the prefer-vector-width attribute on functions in the "
+              "module.">,
        Option<"tuneCPU", "tune-cpu", "std::string", /*default=*/"",
               "Set the tune-cpu attribute on functions in the module.">,
+       Option<"setNoCapture", "set-nocapture", "bool", /*default=*/"false",
+              "Set LLVM nocapture attribute on function arguments, "
+              "if possible">,
+       Option<"setNoAlias", "set-noalias", "bool", /*default=*/"false",
+              "Set LLVM noalias attribute on function arguments, "
+              "if possible">,
   ];
 }
 
@@ -433,11 +470,19 @@ def AssumedRankOpConversion : Pass<"fir-assumed-rank-op", "mlir::ModuleOp"> {
   ];
 }
 
+def CUFAllocationConversion : Pass<"cuf-allocation-convert", "mlir::ModuleOp"> {
+  let summary = "Convert allocation related CUF operations to runtime calls";
+  let dependentDialects = ["fir::FIROpsDialect"];
+}
+
 def CUFOpConversion : Pass<"cuf-convert", "mlir::ModuleOp"> {
   let summary = "Convert some CUF operations to runtime calls";
   let dependentDialects = [
     "fir::FIROpsDialect", "mlir::gpu::GPUDialect", "mlir::DLTIDialect"
   ];
+  let options = [Option<"allocationConversion", "allocation-conversion", "bool",
+                        /*default=*/"true",
+                        "Convert allocation related operation with this pass">];
 }
 
 def CUFDeviceGlobal :
@@ -523,6 +568,32 @@ def SimplifyFIROperations : Pass<"simplify-fir-operations", "mlir::ModuleOp"> {
       "preferInlineImplementation", "prefer-inline-implementation", "bool",
       /*default=*/"false",
       "Prefer expanding without using Fortran runtime calls.">];
+}
+
+def ConvertComplexPow : Pass<"convert-complex-pow", "mlir::ModuleOp"> {
+  let summary = "Convert complex.pow operations to library calls";
+  let description = [{
+    Replace `complex.pow` operations with calls to the appropriate
+    Fortran runtime or libm functions.
+  }];
+  let dependentDialects = ["fir::FIROpsDialect", "mlir::func::FuncDialect",
+                           "mlir::complex::ComplexDialect",
+                           "mlir::arith::ArithDialect"];
+}
+
+def OptimizeArrayRepacking
+    : Pass<"optimize-array-repacking", "mlir::func::FuncOp"> {
+  let summary = "Optimizes redundant array repacking operations";
+  let description = [{
+    If the source of fir.pack_array is known to be contiguous,
+    then this pass erases such operations. The corresponding
+    fir.unpack_array operations are also removed.
+  }];
+}
+
+def MIFOpConversion : Pass<"mif-convert", "mlir::ModuleOp"> {
+  let summary = "Convert some MIF operations to runtime calls";
+  let dependentDialects = ["fir::FIROpsDialect", "mlir::LLVM::LLVMDialect"];
 }
 
 #endif // FLANG_OPTIMIZER_TRANSFORMS_PASSES

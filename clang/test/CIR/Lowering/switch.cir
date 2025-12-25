@@ -1,0 +1,190 @@
+// RUN: cir-opt %s -cir-to-llvm -o %t.mlir
+// RUN: FileCheck --input-file=%t.mlir %s
+
+!s8i = !cir.int<s, 8>
+!s32i = !cir.int<s, 32>
+!s64i = !cir.int<s, 64>
+
+module {
+  cir.func @shouldLowerSwitchWithDefault(%arg0: !s8i) {
+    cir.switch (%arg0 : !s8i) {
+    // CHECK: llvm.switch %arg0 : i8, ^bb[[#DEFAULT:]] [
+    // CHECK:   1: ^bb[[#CASE1:]]
+    // CHECK: ]
+    cir.case (equal, [#cir.int<1> : !s8i]) {
+      cir.break
+    }
+    // CHECK: ^bb[[#CASE1]]:
+    // CHECK:   llvm.br ^bb[[#EXIT:]]
+    cir.case (default, []) {
+      cir.break
+    }
+    // CHECK: ^bb[[#DEFAULT]]:
+    // CHECK:   llvm.br ^bb[[#EXIT]]
+    cir.yield
+    }
+    // CHECK: ^bb[[#EXIT]]:
+    cir.return
+  }
+
+
+  cir.func @shouldLowerSwitchWithoutDefault(%arg0: !s32i) {
+    cir.switch (%arg0 : !s32i) {
+    // Default block is the exit block:
+    // CHECK: llvm.switch %arg0 : i32, ^bb[[#EXIT:]] [
+    // CHECK:   1: ^bb[[#CASE1:]]
+    // CHECK: ]
+    cir.case (equal, [#cir.int<1> : !s32i]) {
+      cir.break
+    }
+    // CHECK: ^bb[[#CASE1]]:
+    // CHECK:   llvm.br ^bb[[#EXIT]]
+    cir.yield
+    }
+    // CHECK: ^bb[[#EXIT]]:
+    cir.return
+  }
+
+
+  cir.func @shouldLowerSwitchWithImplicitFallthrough(%arg0: !s64i) {
+    cir.switch (%arg0 : !s64i) {
+    // CHECK: llvm.switch %arg0 : i64, ^bb[[#EXIT:]] [
+    // CHECK:   1: ^bb[[#CASE1N2:]],
+    // CHECK:   2: ^bb[[#CASE1N2]]
+    // CHECK: ]
+    cir.case (anyof, [#cir.int<1> : !s64i, #cir.int<2> : !s64i]) { // case 1 and 2 use same region
+      cir.break
+    }
+    // CHECK: ^bb[[#CASE1N2]]:
+    // CHECK:   llvm.br ^bb[[#EXIT]]
+    cir.yield
+    }
+    // CHECK: ^bb[[#EXIT]]:
+    cir.return
+  }
+
+
+  cir.func @shouldLowerSwitchWithExplicitFallthrough(%arg0: !s64i) {
+      cir.switch (%arg0 : !s64i) {
+      // CHECK: llvm.switch %arg0 : i64, ^bb[[#EXIT:]] [
+      // CHECK:   1: ^bb[[#CASE1:]],
+      // CHECK:   2: ^bb[[#CASE2:]]
+      // CHECK: ]
+      cir.case (equal, [#cir.int<1> : !s64i]) { // case 1 has its own region
+        cir.yield // fallthrough to case 2
+      }
+      // CHECK: ^bb[[#CASE1]]:
+      // CHECK:   llvm.br ^bb[[#CASE2]]
+      cir.case (equal, [#cir.int<2> : !s64i]) {
+        cir.break
+      }
+      // CHECK: ^bb[[#CASE2]]:
+      // CHECK:   llvm.br ^bb[[#EXIT]]
+      cir.yield
+      }
+      // CHECK: ^bb[[#EXIT]]:
+    cir.return
+  }
+
+
+  cir.func @shouldLowerSwitchWithFallthroughToExit(%arg0: !s64i) {
+      cir.switch (%arg0 : !s64i) {
+      // CHECK: llvm.switch %arg0 : i64, ^bb[[#EXIT:]] [
+      // CHECK:   1: ^bb[[#CASE1:]]
+      // CHECK: ]
+       cir.case (equal, [#cir.int<1> : !s64i]) {
+        cir.yield // fallthrough to exit
+      }
+      // CHECK: ^bb[[#CASE1]]:
+      // CHECK:   llvm.br ^bb[[#EXIT]]
+      cir.yield
+      }
+      // CHECK: ^bb[[#EXIT]]:
+    cir.return
+  }
+
+
+  cir.func @shouldDropEmptySwitch(%arg0: !s64i) {
+    cir.switch (%arg0 : !s64i) {
+      cir.yield
+    }
+    // CHECK-NOT: llvm.switch
+    cir.return
+  }
+
+  cir.func @shouldLowerMultiBlockCase(%arg0: !s32i) {
+    %0 = cir.alloca !s32i, !cir.ptr<!s32i>, ["a", init] {alignment = 4 : i64}
+    cir.store %arg0, %0 : !s32i, !cir.ptr<!s32i>
+    cir.scope {
+      %1 = cir.load %0 : !cir.ptr<!s32i>, !s32i
+      cir.switch (%1 : !s32i) {
+      cir.case (equal, [#cir.int<3> : !s32i]) {
+        cir.return
+      ^bb1:  // no predecessors
+        cir.break
+      }
+      cir.yield
+      }
+    }
+    cir.return
+  }
+  // CHECK: llvm.func @shouldLowerMultiBlockCase
+  // CHECK: ^bb1:  // pred: ^bb0
+  // CHECK:   llvm.switch {{.*}} : i32, ^[[DEFAULT_BB:.+]] [
+  // CHECK:     3: ^[[DIRECTLY_RET_BB:.+]]
+  // CHECK:   ]
+  // CHECK: ^[[DIRECTLY_RET_BB]]:
+  // CHECK:   llvm.return
+  // CHECK: ^[[DEFAULT_BB:.+]]:
+  // CHECK:   llvm.br ^[[RET_BB:.+]]
+  // CHECK: ^[[RET_BB:.+]]:  // pred: ^[[DEFAULT_BB:.+]]
+  // CHECK:   llvm.return
+  // CHECK: }
+
+  cir.func @shouldLowerNestedBreak(%arg0: !s32i, %arg1: !s32i) -> !s32i {
+    %0 = cir.alloca !s32i, !cir.ptr<!s32i>, ["x", init] {alignment = 4 : i64}
+    %1 = cir.alloca !s32i, !cir.ptr<!s32i>, ["y", init] {alignment = 4 : i64}
+    %2 = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"] {alignment = 4 : i64}
+    cir.store %arg0, %0 : !s32i, !cir.ptr<!s32i>
+    cir.store %arg1, %1 : !s32i, !cir.ptr<!s32i>
+    cir.scope {
+      %5 = cir.load %0 : !cir.ptr<!s32i>, !s32i
+      cir.switch (%5 : !s32i) {
+      cir.case (equal, [#cir.int<0> : !s32i]) {
+        cir.scope {
+          %6 = cir.load %1 : !cir.ptr<!s32i>, !s32i
+          %7 = cir.const #cir.int<0> : !s32i
+          %8 = cir.cmp(ge, %6, %7) : !s32i, !cir.bool
+          cir.if %8 {
+            cir.break
+          }
+        }
+        cir.break
+      }
+      cir.yield
+      }
+    }
+    %3 = cir.const #cir.int<3> : !s32i
+    cir.store %3, %2 : !s32i, !cir.ptr<!s32i>
+    %4 = cir.load %2 : !cir.ptr<!s32i>, !s32i
+    cir.return %4 : !s32i
+  }
+  // CHECK:  llvm.func @shouldLowerNestedBreak
+  // CHECK:    llvm.switch %6 : i32, ^[[DEFAULT_BB:.+]] [
+  // CHECK:      0: ^[[ZERO_BB:.+]]
+  // CHECK:    ]
+  // CHECK:  ^[[ZERO_BB]]:
+  // CHECK:    llvm.br ^[[ZERO_BB_SUCC:.+]]
+  // CHECK:  ^[[ZERO_BB_SUCC]]:  // pred: ^[[ZERO_BB:]]
+  // CHECK:    llvm.cond_br {{%.*}}, ^[[DEFAULT_BB_PRED1:.+]], ^[[DEFAULT_BB_PRED12:.+]]
+  // CHECK:  ^[[DEFAULT_BB_PRED1]]:  // pred: ^[[ZERO_BB_SUCC]]
+  // CHECK:    llvm.br ^[[DEFAULT_BB]]
+  // CHECK:  ^[[DEFAULT_BB_PRED12]]:  // pred: ^[[ZERO_BB_SUCC]]
+  // CHECK:    llvm.br ^[[DEFAULT_BB_PRED1:.+]]
+  // CHECK:  ^[[DEFAULT_BB_PRED1]]:  // pred: ^[[DEFAULT_BB_PRED12]]
+  // CHECK:    llvm.br ^[[DEFAULT_BB]]
+  // CHECK:  ^[[DEFAULT_BB]]:
+  // CHECK:    llvm.br ^[[RET_BB:.+]]
+  // CHECK:  ^[[RET_BB]]:  // pred: ^[[DEFAULT_BB]]
+  // CHECK:    llvm.return
+}

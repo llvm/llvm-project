@@ -823,7 +823,8 @@ public:
 
 Error CoverageMapping::loadFunctionRecord(
     const CoverageMappingRecord &Record,
-    IndexedInstrProfReader &ProfileReader) {
+    const std::optional<std::reference_wrapper<IndexedInstrProfReader>>
+        &ProfileReader) {
   StringRef OrigFuncName = Record.FunctionName;
   if (OrigFuncName.empty())
     return make_error<CoverageMapError>(coveragemap_error::malformed,
@@ -837,35 +838,44 @@ Error CoverageMapping::loadFunctionRecord(
   CounterMappingContext Ctx(Record.Expressions);
 
   std::vector<uint64_t> Counts;
-  if (Error E = ProfileReader.getFunctionCounts(Record.FunctionName,
-                                                Record.FunctionHash, Counts)) {
-    instrprof_error IPE = std::get<0>(InstrProfError::take(std::move(E)));
-    if (IPE == instrprof_error::hash_mismatch) {
-      FuncHashMismatches.emplace_back(std::string(Record.FunctionName),
-                                      Record.FunctionHash);
-      return Error::success();
+  if (ProfileReader) {
+    if (Error E = ProfileReader.value().get().getFunctionCounts(
+            Record.FunctionName, Record.FunctionHash, Counts)) {
+      instrprof_error IPE = std::get<0>(InstrProfError::take(std::move(E)));
+      if (IPE == instrprof_error::hash_mismatch) {
+        FuncHashMismatches.emplace_back(std::string(Record.FunctionName),
+                                        Record.FunctionHash);
+        return Error::success();
+      }
+      if (IPE != instrprof_error::unknown_function)
+        return make_error<InstrProfError>(IPE);
+      Counts.assign(getMaxCounterID(Ctx, Record) + 1, 0);
     }
-    if (IPE != instrprof_error::unknown_function)
-      return make_error<InstrProfError>(IPE);
+  } else {
     Counts.assign(getMaxCounterID(Ctx, Record) + 1, 0);
   }
   Ctx.setCounts(Counts);
 
   bool IsVersion11 =
-      ProfileReader.getVersion() < IndexedInstrProf::ProfVersion::Version12;
+      ProfileReader && ProfileReader.value().get().getVersion() <
+                           IndexedInstrProf::ProfVersion::Version12;
 
   BitVector Bitmap;
-  if (Error E = ProfileReader.getFunctionBitmap(Record.FunctionName,
-                                                Record.FunctionHash, Bitmap)) {
-    instrprof_error IPE = std::get<0>(InstrProfError::take(std::move(E)));
-    if (IPE == instrprof_error::hash_mismatch) {
-      FuncHashMismatches.emplace_back(std::string(Record.FunctionName),
-                                      Record.FunctionHash);
-      return Error::success();
+  if (ProfileReader) {
+    if (Error E = ProfileReader.value().get().getFunctionBitmap(
+            Record.FunctionName, Record.FunctionHash, Bitmap)) {
+      instrprof_error IPE = std::get<0>(InstrProfError::take(std::move(E)));
+      if (IPE == instrprof_error::hash_mismatch) {
+        FuncHashMismatches.emplace_back(std::string(Record.FunctionName),
+                                        Record.FunctionHash);
+        return Error::success();
+      }
+      if (IPE != instrprof_error::unknown_function)
+        return make_error<InstrProfError>(IPE);
+      Bitmap = BitVector(getMaxBitmapSize(Record, IsVersion11));
     }
-    if (IPE != instrprof_error::unknown_function)
-      return make_error<InstrProfError>(IPE);
-    Bitmap = BitVector(getMaxBitmapSize(Record, IsVersion11));
+  } else {
+    Bitmap = BitVector(getMaxBitmapSize(Record, false));
   }
   Ctx.setBitmap(std::move(Bitmap));
 
@@ -959,10 +969,14 @@ Error CoverageMapping::loadFunctionRecord(
 // of CoverageMappingReader instances.
 Error CoverageMapping::loadFromReaders(
     ArrayRef<std::unique_ptr<CoverageMappingReader>> CoverageReaders,
-    IndexedInstrProfReader &ProfileReader, CoverageMapping &Coverage) {
-  assert(!Coverage.SingleByteCoverage ||
-         *Coverage.SingleByteCoverage == ProfileReader.hasSingleByteCoverage());
-  Coverage.SingleByteCoverage = ProfileReader.hasSingleByteCoverage();
+    std::optional<std::reference_wrapper<IndexedInstrProfReader>>
+        &ProfileReader,
+    CoverageMapping &Coverage) {
+  assert(!Coverage.SingleByteCoverage || !ProfileReader ||
+         *Coverage.SingleByteCoverage ==
+             ProfileReader.value().get().hasSingleByteCoverage());
+  Coverage.SingleByteCoverage =
+      !ProfileReader || ProfileReader.value().get().hasSingleByteCoverage();
   for (const auto &CoverageReader : CoverageReaders) {
     for (auto RecordOrErr : *CoverageReader) {
       if (Error E = RecordOrErr.takeError())
@@ -977,7 +991,8 @@ Error CoverageMapping::loadFromReaders(
 
 Expected<std::unique_ptr<CoverageMapping>> CoverageMapping::load(
     ArrayRef<std::unique_ptr<CoverageMappingReader>> CoverageReaders,
-    IndexedInstrProfReader &ProfileReader) {
+    std::optional<std::reference_wrapper<IndexedInstrProfReader>>
+        &ProfileReader) {
   auto Coverage = std::unique_ptr<CoverageMapping>(new CoverageMapping());
   if (Error E = loadFromReaders(CoverageReaders, ProfileReader, *Coverage))
     return std::move(E);
@@ -986,18 +1001,19 @@ Expected<std::unique_ptr<CoverageMapping>> CoverageMapping::load(
 
 // If E is a no_data_found error, returns success. Otherwise returns E.
 static Error handleMaybeNoDataFoundError(Error E) {
-  return handleErrors(
-      std::move(E), [](const CoverageMapError &CME) {
-        if (CME.get() == coveragemap_error::no_data_found)
-          return static_cast<Error>(Error::success());
-        return make_error<CoverageMapError>(CME.get(), CME.getMessage());
-      });
+  return handleErrors(std::move(E), [](const CoverageMapError &CME) {
+    if (CME.get() == coveragemap_error::no_data_found)
+      return static_cast<Error>(Error::success());
+    return make_error<CoverageMapError>(CME.get(), CME.getMessage());
+  });
 }
 
 Error CoverageMapping::loadFromFile(
     StringRef Filename, StringRef Arch, StringRef CompilationDir,
-    IndexedInstrProfReader &ProfileReader, CoverageMapping &Coverage,
-    bool &DataFound, SmallVectorImpl<object::BuildID> *FoundBinaryIDs) {
+    std::optional<std::reference_wrapper<IndexedInstrProfReader>>
+        &ProfileReader,
+    CoverageMapping &Coverage, bool &DataFound,
+    SmallVectorImpl<object::BuildID> *FoundBinaryIDs) {
   auto CovMappingBufOrErr = MemoryBuffer::getFileOrSTDIN(
       Filename, /*IsText=*/false, /*RequiresNullTerminator=*/false);
   if (std::error_code EC = CovMappingBufOrErr.getError())
@@ -1033,13 +1049,23 @@ Error CoverageMapping::loadFromFile(
 }
 
 Expected<std::unique_ptr<CoverageMapping>> CoverageMapping::load(
-    ArrayRef<StringRef> ObjectFilenames, StringRef ProfileFilename,
-    vfs::FileSystem &FS, ArrayRef<StringRef> Arches, StringRef CompilationDir,
+    ArrayRef<StringRef> ObjectFilenames,
+    std::optional<StringRef> ProfileFilename, vfs::FileSystem &FS,
+    ArrayRef<StringRef> Arches, StringRef CompilationDir,
     const object::BuildIDFetcher *BIDFetcher, bool CheckBinaryIDs) {
-  auto ProfileReaderOrErr = IndexedInstrProfReader::create(ProfileFilename, FS);
-  if (Error E = ProfileReaderOrErr.takeError())
-    return createFileError(ProfileFilename, std::move(E));
-  auto ProfileReader = std::move(ProfileReaderOrErr.get());
+  std::unique_ptr<IndexedInstrProfReader> ProfileReader;
+  if (ProfileFilename) {
+    auto ProfileReaderOrErr =
+        IndexedInstrProfReader::create(ProfileFilename.value(), FS);
+    if (Error E = ProfileReaderOrErr.takeError())
+      return createFileError(ProfileFilename.value(), std::move(E));
+    ProfileReader = std::move(ProfileReaderOrErr.get());
+  }
+  auto ProfileReaderRef =
+      ProfileReader
+          ? std::optional<std::reference_wrapper<IndexedInstrProfReader>>(
+                *ProfileReader)
+          : std::nullopt;
   auto Coverage = std::unique_ptr<CoverageMapping>(new CoverageMapping());
   bool DataFound = false;
 
@@ -1053,16 +1079,17 @@ Expected<std::unique_ptr<CoverageMapping>> CoverageMapping::load(
 
   SmallVector<object::BuildID> FoundBinaryIDs;
   for (const auto &File : llvm::enumerate(ObjectFilenames)) {
-    if (Error E =
-            loadFromFile(File.value(), GetArch(File.index()), CompilationDir,
-                         *ProfileReader, *Coverage, DataFound, &FoundBinaryIDs))
+    if (Error E = loadFromFile(File.value(), GetArch(File.index()),
+                               CompilationDir, ProfileReaderRef, *Coverage,
+                               DataFound, &FoundBinaryIDs))
       return std::move(E);
   }
 
   if (BIDFetcher) {
     std::vector<object::BuildID> ProfileBinaryIDs;
-    if (Error E = ProfileReader->readBinaryIds(ProfileBinaryIDs))
-      return createFileError(ProfileFilename, std::move(E));
+    if (ProfileReader)
+      if (Error E = ProfileReader->readBinaryIds(ProfileBinaryIDs))
+        return createFileError(ProfileFilename.value(), std::move(E));
 
     SmallVector<object::BuildIDRef> BinaryIDsToFetch;
     if (!ProfileBinaryIDs.empty()) {
@@ -1082,12 +1109,12 @@ Expected<std::unique_ptr<CoverageMapping>> CoverageMapping::load(
       if (PathOpt) {
         std::string Path = std::move(*PathOpt);
         StringRef Arch = Arches.size() == 1 ? Arches.front() : StringRef();
-        if (Error E = loadFromFile(Path, Arch, CompilationDir, *ProfileReader,
-                                  *Coverage, DataFound))
+        if (Error E = loadFromFile(Path, Arch, CompilationDir, ProfileReaderRef,
+                                   *Coverage, DataFound))
           return std::move(E);
       } else if (CheckBinaryIDs) {
         return createFileError(
-            ProfileFilename,
+            ProfileFilename.value(),
             createStringError(errc::no_such_file_or_directory,
                               "Missing binary ID: " +
                                   llvm::toHex(BinaryID, /*LowerCase=*/true)));

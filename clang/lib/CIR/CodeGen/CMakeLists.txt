@@ -8,21 +8,44 @@ get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
 
 add_clang_library(clangCIR
   CIRGenerator.cpp
+  CIRGenAsm.cpp
+  CIRGenAtomic.cpp
   CIRGenBuilder.cpp
+  CIRGenBuiltin.cpp
+  CIRGenBuiltinAArch64.cpp
+  CIRGenBuiltinX86.cpp
   CIRGenCall.cpp
+  CIRGenClass.cpp
+  CIRGenCleanup.cpp
+  CIRGenCoroutine.cpp
+  CIRGenCXX.cpp
+  CIRGenCXXABI.cpp
   CIRGenDecl.cpp
+  CIRGenDeclCXX.cpp
   CIRGenDeclOpenACC.cpp
+  CIRGenDeclOpenMP.cpp
+  CIRGenException.cpp
   CIRGenExpr.cpp
   CIRGenExprAggregate.cpp
+  CIRGenExprComplex.cpp
   CIRGenExprConstant.cpp
+  CIRGenExprCXX.cpp
   CIRGenExprScalar.cpp
   CIRGenFunction.cpp
+  CIRGenItaniumCXXABI.cpp
   CIRGenModule.cpp
+  CIRGenOpenACC.cpp
+  CIRGenOpenACCClause.cpp
+  CIRGenOpenACCRecipe.cpp
+  CIRGenOpenMPClause.cpp
+  CIRGenPointerAuth.cpp
   CIRGenRecordLayoutBuilder.cpp
   CIRGenStmt.cpp
   CIRGenStmtOpenACC.cpp
   CIRGenStmtOpenACCLoop.cpp
+  CIRGenStmtOpenMP.cpp
   CIRGenTypes.cpp
+  CIRGenVTables.cpp
   TargetInfo.cpp
 
   DEPENDS
@@ -38,4 +61,5 @@ add_clang_library(clangCIR
   CIROpenACCSupport
   MLIRCIR
   MLIRCIRInterfaces
+  MLIRTargetLLVMIRImport
 )

@@ -16,7 +16,6 @@
 #include "clang/AST/ExprObjC.h"
 #include "clang/AST/ParentMap.h"
 #include "clang/AST/Stmt.h"
-#include "clang/Analysis/CFGStmtMap.h"
 #include "clang/Analysis/ProgramPoint.h"
 #include "clang/Analysis/Support/BumpVector.h"
 #include "clang/Basic/LLVM.h"
@@ -26,8 +25,6 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/PointerUnion.h"
-#include "llvm/ADT/SmallVector.h"
-#include "llvm/Support/Casting.h"
 #include <cassert>
 #include <memory>
 #include <optional>

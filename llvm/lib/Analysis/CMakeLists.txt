@@ -74,10 +74,13 @@ add_llvm_component_library(LLVMAnalysis
   DXILResource.cpp
   DXILMetadataAnalysis.cpp
   EphemeralValuesCache.cpp
+  FloatingPointPredicateUtils.cpp
   FunctionPropertiesAnalysis.cpp
   GlobalsModRef.cpp
   GuardUtils.cpp
+  HashRecognize.cpp
   HeatUtils.cpp
+  IR2Vec.cpp
   IRSimilarityIdentifier.cpp
   IVDescriptors.cpp
   IVUsers.cpp
@@ -86,7 +89,6 @@ add_llvm_component_library(LLVMAnalysis
   InlineCost.cpp
   InlineAdvisor.cpp
   InlineOrder.cpp
-  InlineSizeEstimatorAnalysis.cpp
   InstCount.cpp
   InstructionPrecedenceTracking.cpp
   InstructionSimplify.cpp
@@ -134,6 +136,7 @@ add_llvm_component_library(LLVMAnalysis
   RegionPass.cpp
   RegionPrinter.cpp
   ReplayInlineAdvisor.cpp
+  RuntimeLibcallInfo.cpp
   ScalarEvolution.cpp
   ScalarEvolutionAliasAnalysis.cpp
   ScalarEvolutionDivision.cpp
@@ -163,6 +166,7 @@ add_llvm_component_library(LLVMAnalysis
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/Analysis
 
   DEPENDS
+  analysis_gen
   intrinsics_gen
   ${MLDeps}
 
@@ -172,6 +176,7 @@ add_llvm_component_library(LLVMAnalysis
   LINK_COMPONENTS
   BinaryFormat
   Core
+  FrontendHLSL
   Object
   ProfileData
   Support

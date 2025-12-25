@@ -18,11 +18,14 @@
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/Specifiers.h"
+#include "clang/Basic/UnsignedOrNone.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Compiler.h"
 #include <cassert>
@@ -49,6 +52,7 @@ class FileSystem;
 namespace clang {
 
 class DeclContext;
+class Diagnostic;
 class DiagnosticBuilder;
 class DiagnosticConsumer;
 class IdentifierInfo;
@@ -228,6 +232,8 @@ public:
 class DiagnosticsEngine : public RefCountedBase<DiagnosticsEngine> {
 public:
   /// The level of the diagnostic, after it has been through mapping.
+  // FIXME: Make this an alias for DiagnosticIDs::Level as soon as
+  // we can use 'using enum'.
   enum Level {
     Ignored = DiagnosticIDs::Ignored,
     Note = DiagnosticIDs::Note,
@@ -285,6 +291,9 @@ public:
 
     /// Expr *
     ak_expr,
+
+    /// AttributeCommonInfo *
+    ak_attr_info,
   };
 
   /// Represents on argument value, which is a union discriminated
@@ -330,7 +339,7 @@ private:
   unsigned ConstexprBacktraceLimit = 0;
 
   IntrusiveRefCntPtr<DiagnosticIDs> Diags;
-  IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts;
+  DiagnosticOptions &DiagOpts;
   DiagnosticConsumer *Client = nullptr;
   std::unique_ptr<DiagnosticConsumer> Owner;
   SourceManager *SourceMgr = nullptr;
@@ -420,10 +429,13 @@ private:
     bool empty() const { return Files.empty(); }
 
     /// Clear out this map.
-    void clear() {
+    void clear(bool Soft) {
+      // Just clear the cache when in soft mode.
       Files.clear();
-      FirstDiagState = CurDiagState = nullptr;
-      CurDiagStateLoc = SourceLocation();
+      if (!Soft) {
+        FirstDiagState = CurDiagState = nullptr;
+        CurDiagStateLoc = SourceLocation();
+      }
     }
 
     /// Produce a debugging dump of the diagnostic state.
@@ -532,7 +544,7 @@ private:
   ///
   /// This is used to emit continuation diagnostics with the same level as the
   /// diagnostic that they follow.
-  DiagnosticIDs::Level LastDiagLevel;
+  Level LastDiagLevel;
 
   /// Number of warnings reported
   unsigned NumWarnings;
@@ -566,7 +578,7 @@ private:
 
 public:
   explicit DiagnosticsEngine(IntrusiveRefCntPtr<DiagnosticIDs> Diags,
-                             IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts,
+                             DiagnosticOptions &DiagOpts,
                              DiagnosticConsumer *client = nullptr,
                              bool ShouldOwnClient = true);
   DiagnosticsEngine(const DiagnosticsEngine &) = delete;
@@ -582,7 +594,7 @@ public:
   }
 
   /// Retrieve the diagnostic options.
-  DiagnosticOptions &getDiagnosticOptions() const { return *DiagOpts; }
+  DiagnosticOptions &getDiagnosticOptions() const { return DiagOpts; }
 
   using diag_mapping_range = llvm::iterator_range<DiagState::const_iterator>;
 
@@ -777,18 +789,16 @@ public:
   /// the middle of another diagnostic.
   ///
   /// This can be used by clients who suppress diagnostics themselves.
-  void setLastDiagnosticIgnored(bool Ignored) {
-    if (LastDiagLevel == DiagnosticIDs::Fatal)
+  void setLastDiagnosticIgnored(bool IsIgnored) {
+    if (LastDiagLevel == Fatal)
       FatalErrorOccurred = true;
-    LastDiagLevel = Ignored ? DiagnosticIDs::Ignored : DiagnosticIDs::Warning;
+    LastDiagLevel = IsIgnored ? Ignored : Warning;
   }
 
   /// Determine whether the previous diagnostic was ignored. This can
   /// be used by clients that want to determine whether notes attached to a
   /// diagnostic will be suppressed.
-  bool isLastDiagnosticIgnored() const {
-    return LastDiagLevel == DiagnosticIDs::Ignored;
-  }
+  bool isLastDiagnosticIgnored() const { return LastDiagLevel == Ignored; }
 
   /// Controls whether otherwise-unmapped extension diagnostics are
   /// mapped onto ignore/warning/error.
@@ -887,7 +897,10 @@ public:
   /// \param FormatString A fixed diagnostic format string that will be hashed
   /// and mapped to a unique DiagID.
   template <unsigned N>
-  // TODO: Deprecate this once all uses are removed from Clang.
+  // FIXME: this API should almost never be used; custom diagnostics do not
+  // have an associated diagnostic group and thus cannot be controlled by users
+  // like other diagnostics. The number of times this API is used in Clang
+  // should only ever be reduced, not increased.
   // [[deprecated("Use a CustomDiagDesc instead of a Level")]]
   unsigned getCustomDiagID(Level L, const char (&FormatString)[N]) {
     return Diags->getCustomDiagID((DiagnosticIDs::Level)L,
@@ -918,6 +931,10 @@ public:
   /// Reset the state of the diagnostic object to its initial configuration.
   /// \param[in] soft - if true, doesn't reset the diagnostic mappings and state
   void Reset(bool soft = false);
+  /// We keep a cache of FileIDs for diagnostics mapped by pragmas. These might
+  /// get invalidated when diagnostics engine is shared across different
+  /// compilations. Provide users with a way to reset that.
+  void ResetPragmas();
 
   //===--------------------------------------------------------------------===//
   // DiagnosticsEngine classification and reporting interfaces.
@@ -954,7 +971,7 @@ public:
   /// diagnostics in specific files.
   /// Mapping file is expected to be a special case list with sections denoting
   /// diagnostic groups and `src` entries for globs to suppress. `emit` category
-  /// can be used to disable suppression. Longest glob that matches a filepath
+  /// can be used to disable suppression. The last glob that matches a filepath
   /// takes precedence. For example:
   ///   [unused]
   ///   src:clang/*
@@ -1024,9 +1041,10 @@ private:
   /// Used to report a diagnostic that is finally fully formed.
   ///
   /// \returns true if the diagnostic was emitted, false if it was suppressed.
-  bool ProcessDiag(const DiagnosticBuilder &DiagBuilder) {
-    return Diags->ProcessDiag(*this, DiagBuilder);
-  }
+  bool ProcessDiag(const DiagnosticBuilder &DiagBuilder);
+
+  /// Forward a diagnostic to the DiagnosticConsumer.
+  void Report(Level DiagLevel, const Diagnostic &Info);
 
   /// @name Diagnostic Emission
   /// @{
@@ -1243,10 +1261,13 @@ class DiagnosticBuilder : public StreamingDiagnostic {
 
   DiagnosticBuilder() = default;
 
+protected:
   DiagnosticBuilder(DiagnosticsEngine *DiagObj, SourceLocation DiagLoc,
                     unsigned DiagID);
 
-protected:
+  DiagnosticsEngine *getDiagnosticsEngine() const { return DiagObj; }
+  unsigned getDiagID() const { return DiagID; }
+
   /// Clear out the current diagnostic.
   void Clear() const {
     DiagObj = nullptr;
@@ -1343,6 +1364,22 @@ inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &DB,
                                              const char *Str) {
   DB.AddTaggedVal(reinterpret_cast<intptr_t>(Str),
                   DiagnosticsEngine::ak_c_string);
+  return DB;
+}
+
+inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &DB,
+                                             const llvm::APSInt &Int) {
+  DB.AddString(toString(Int, /*Radix=*/10, Int.isSigned(),
+                        /*formatAsCLiteral=*/false,
+                        /*UpperCase=*/true, /*InsertSeparators=*/true));
+  return DB;
+}
+
+inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &DB,
+                                             const llvm::APInt &Int) {
+  DB.AddString(toString(Int, /*Radix=*/10, /*Signed=*/false,
+                        /*formatAsCLiteral=*/false,
+                        /*UpperCase=*/true, /*InsertSeparators=*/true));
   return DB;
 }
 

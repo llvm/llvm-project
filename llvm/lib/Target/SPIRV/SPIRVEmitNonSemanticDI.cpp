@@ -21,7 +21,6 @@
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DebugProgramInstruction.h"
 #include "llvm/IR/Metadata.h"
-#include "llvm/PassRegistry.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Path.h"
 
@@ -113,10 +112,12 @@ bool SPIRVEmitNonSemanticDI::emitGlobalDI(MachineFunction &MF) {
         FilePaths.emplace_back();
         sys::path::append(FilePaths.back(), File->getDirectory(),
                           File->getFilename());
-        LLVMSourceLanguages.push_back(CompileUnit->getSourceLanguage());
+        LLVMSourceLanguages.push_back(
+            CompileUnit->getSourceLanguage().getUnversionedName());
       }
     }
     const NamedMDNode *ModuleFlags = M->getNamedMetadata("llvm.module.flags");
+    assert(ModuleFlags && "Expected llvm.module.flags metadata to be present");
     for (const auto *Op : ModuleFlags->operands()) {
       const MDOperand &MaybeStrOp = Op->getOperand(1);
       if (MaybeStrOp.equalsStr("Dwarf Version"))

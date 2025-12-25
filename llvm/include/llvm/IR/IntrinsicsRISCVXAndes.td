@@ -11,7 +11,34 @@
 //===----------------------------------------------------------------------===//
 
 let TargetPrefix = "riscv" in {
+  // Andes Performance Extension
+  def int_riscv_nds_ffb     : Intrinsic<[llvm_anyint_ty],
+                                        [LLVMMatchType<0>, LLVMMatchType<0>],
+                                        [IntrNoMem, IntrSpeculatable]>;
+  def int_riscv_nds_ffzmism : Intrinsic<[llvm_anyint_ty],
+                                        [LLVMMatchType<0>, LLVMMatchType<0>],
+                                        [IntrNoMem, IntrSpeculatable]>;
+  def int_riscv_nds_ffmism  : Intrinsic<[llvm_anyint_ty],
+                                        [LLVMMatchType<0>, LLVMMatchType<0>],
+                                        [IntrNoMem, IntrSpeculatable]>;
+  def int_riscv_nds_flmism  : Intrinsic<[llvm_anyint_ty],
+                                        [LLVMMatchType<0>, LLVMMatchType<0>],
+                                        [IntrNoMem, IntrSpeculatable]>;
+
+  // Andes Vector BFloat16 Conversion Extension
+  def int_riscv_nds_vfwcvt_s_bf16 : RISCVConversionUnMasked;
+  def int_riscv_nds_vfncvt_bf16_s : RISCVConversionUnMaskedRoundingMode;
+
+  // Andes Vector INT4 Load Extension
+  defm nds_vln  : RISCVUSLoad;
+  defm nds_vlnu : RISCVUSLoad;
+
   // Andes Vector Packed FP16 Extension
   defm nds_vfpmadt : RISCVBinaryAAXRoundingMode;
   defm nds_vfpmadb : RISCVBinaryAAXRoundingMode;
+
+  // Andes Vector Dot Product Extension
+  defm nds_vd4dots  : RISCVTernaryWide;
+  defm nds_vd4dotu  : RISCVTernaryWide;
+  defm nds_vd4dotsu : RISCVTernaryWide;
 }

@@ -2,12 +2,12 @@
 
 import gc
 import io
-import itertools
 from tempfile import NamedTemporaryFile
 from mlir.ir import *
 from mlir.dialects.builtin import ModuleOp
-from mlir.dialects import arith
+from mlir.dialects import arith, func, scf, shape
 from mlir.dialects._ods_common import _cext
+from mlir.extras import types as T
 
 
 def run(f):
@@ -43,6 +43,10 @@ def testTraverseOpRegionBlockIterators():
     )
     op = module.operation
     assert op.context is ctx
+    # Note, __nb_signature__ stores the fully-qualified signature - the actual type stub emitted is
+    # class RegionSequence(Sequence[Region])
+    # CHECK: class RegionSequence(collections.abc.Sequence[mlir._mlir_libs._mlir.ir.Region])
+    print(RegionSequence.__nb_signature__)
     # Get the block using iterators off of the named collections.
     regions = list(op.regions[:])
     blocks = list(regions[0].blocks)
@@ -569,12 +573,30 @@ def testOperationAttributes():
     # CHECK: Attribute value b'text'
     print(f"Attribute value {sattr.value_bytes}")
 
+    # Python dict-style iteration
     # We don't know in which order the attributes are stored.
-    # CHECK-DAG: NamedAttribute(dependent="text")
-    # CHECK-DAG: NamedAttribute(other.attribute=3.000000e+00 : f64)
-    # CHECK-DAG: NamedAttribute(some.attribute=1 : i8)
-    for attr in op.attributes:
-        print(str(attr))
+    # CHECK-DAG: dependent
+    # CHECK-DAG: other.attribute
+    # CHECK-DAG: some.attribute
+    for name in op.attributes:
+        print(name)
+
+    # Basic dict-like introspection
+    # CHECK: True
+    print("some.attribute" in op.attributes)
+    # CHECK: False
+    print("missing" in op.attributes)
+    # CHECK: Keys: ['dependent', 'other.attribute', 'some.attribute']
+    print("Keys:", sorted(op.attributes.keys()))
+    # CHECK: Values count 3
+    print("Values count", len(op.attributes.values()))
+    # CHECK: Items count 3
+    print("Items count", len(op.attributes.items()))
+
+    # Dict() conversion test
+    d = {k: v.value for k, v in dict(op.attributes).items()}
+    # CHECK: Dict mapping {'dependent': 'text', 'other.attribute': 3.0, 'some.attribute': 1}
+    print("Dict mapping", d)
 
     # Check that exceptions are raised as expected.
     try:
@@ -686,6 +708,16 @@ def testOperationPrint():
         skip_regions=True,
     )
 
+    # Test print with large_resource_limit.
+    # CHECK: func.func @f1(%arg0: i32) -> i32
+    # CHECK-NOT: resource1: "0x08
+    module.operation.print(large_resource_limit=2)
+
+    # Test large_elements_limit has no effect on resource string
+    # CHECK: func.func @f1(%arg0: i32) -> i32
+    # CHECK: resource1: "0x08
+    module.operation.print(large_elements_limit=2)
+
 
 # CHECK-LABEL: TEST: testKnownOpView
 @run
@@ -744,6 +776,21 @@ def testKnownOpView():
         constant = module.body.operations[3]
         # CHECK: <__main__.testKnownOpView.<locals>.ConstantOp object
         print(repr(constant))
+
+
+# CHECK-LABEL: TEST: testFailedGenericOperationCreationReportsError
+@run
+def testFailedGenericOperationCreationReportsError():
+    with Context(), Location.unknown():
+        c0 = shape.const_shape([])
+        c1 = shape.const_shape([1, 2, 3])
+        try:
+            shape.MeetOp.build_generic(operands=[c0, c1])
+        except MLIRError as e:
+            # CHECK: unequal shape cardinality
+            print(e)
+        else:
+            assert False, "Expected exception"
 
 
 # CHECK-LABEL: TEST: testSingleResultProperty
@@ -898,7 +945,13 @@ def testCapsuleConversions():
         m_capsule = m._CAPIPtr
         assert '"mlir.ir.Operation._CAPIPtr"' in repr(m_capsule)
         m2 = Operation._CAPICreate(m_capsule)
-        assert m2 is m
+        assert m2 is not m
+        assert m2 == m
+        # Gc and verify destructed.
+        m = None
+        m_capsule = None
+        m2 = None
+        gc.collect()
 
 
 # CHECK-LABEL: TEST: testOperationErase
@@ -954,6 +1007,13 @@ def testOperationLoc():
         assert op.location == loc
         assert op.operation.location == loc
 
+        another_loc = Location.name("another_loc")
+        op.location = another_loc
+        assert op.location == another_loc
+        assert op.operation.location == another_loc
+        # CHECK: loc("another_loc")
+        print(op.location)
+
 
 # CHECK-LABEL: TEST: testModuleMerge
 @run
@@ -969,8 +1029,12 @@ def testModuleMerge():
         foo = m1.body.operations[0]
         bar = m2.body.operations[0]
         qux = m2.body.operations[1]
+        assert bar.is_before_in_block(qux)
         bar.move_before(foo)
+        assert bar.is_before_in_block(foo)
         qux.move_after(foo)
+        assert bar.is_before_in_block(qux)
+        assert foo.is_before_in_block(qux)
 
         # CHECK: module
         # CHECK: func private @bar
@@ -1008,6 +1072,8 @@ def testDetachFromParent():
     with Context():
         m1 = Module.parse("func.func private @foo()")
         func = m1.body.operations[0].detach_from_parent()
+        # CHECK: func.attached=False
+        print(f"{func.attached=}")
 
         try:
             func.detach_from_parent()
@@ -1029,6 +1095,12 @@ def testOperationHash():
     with ctx, Location.unknown():
         op = Operation.create("custom.op1")
         assert hash(op) == hash(op.operation)
+
+        module = Module.create()
+        with InsertionPoint(module.body):
+            op2 = Operation.create("custom.op2")
+            custom_op2 = module.body.operations[0]
+            assert hash(op2) == hash(custom_op2)
 
 
 # CHECK-LABEL: TEST: testOperationParse
@@ -1134,3 +1206,71 @@ def testOpWalk():
         module.operation.walk(callback)
     except RuntimeError:
         print("Exception raised")
+
+
+# CHECK-LABEL: TEST: testOpReplaceUsesWith
+@run
+def testOpReplaceUsesWith():
+    ctx = Context()
+    ctx.allow_unregistered_dialects = True
+    with Location.unknown(ctx):
+        m = Module.create()
+        i32 = IntegerType.get_signless(32)
+        with InsertionPoint(m.body):
+            value = Operation.create("custom.op1", results=[i32]).results[0]
+            value2 = Operation.create("custom.op2", results=[i32]).results[0]
+            op = Operation.create("custom.op3", operands=[value])
+            op2 = Operation.create("custom.op4", operands=[value])
+            op.replace_uses_of_with(value, value2)
+
+    assert len(list(value.uses)) == 1
+
+    # CHECK: Use owner: "custom.op4"
+    # CHECK: Use operand_number: 0
+    for use in value.uses:
+        assert use.owner in [op2]
+        print(f"Use owner: {use.owner}")
+        print(f"Use operand_number: {use.operand_number}")
+
+    assert len(list(value2.uses)) == 1
+
+    # CHECK: Use owner: "custom.op3"
+    # CHECK: Use operand_number: 0
+    for use in value2.uses:
+        assert use.owner in [op]
+        print(f"Use owner: {use.owner}")
+        print(f"Use operand_number: {use.operand_number}")
+
+
+# CHECK-LABEL: TEST: testGetOwnerConcreteOpview
+@run
+def testGetOwnerConcreteOpview():
+    with Context() as ctx, Location.unknown():
+        module = Module.create()
+        with InsertionPoint(module.body):
+            a = arith.ConstantOp(value=42, result=IntegerType.get_signless(32))
+            r = arith.AddIOp(a, a, overflowFlags=arith.IntegerOverflowFlags.nsw)
+            for u in a.result.uses:
+                assert isinstance(u.owner, arith.AddIOp)
+
+
+# CHECK-LABEL: TEST: testIndexSwitch
+@run
+def testIndexSwitch():
+    with Context() as ctx, Location.unknown():
+        i32 = T.i32()
+        module = Module.create()
+        with InsertionPoint(module.body):
+
+            @func.FuncOp.from_py_func(T.index())
+            def index_switch(index):
+                c1 = arith.constant(i32, 1)
+                switch_op = scf.IndexSwitchOp(results=[i32], arg=index, cases=range(3))
+
+                assert len(switch_op.regions) == 4
+                assert len(switch_op.regions[2:]) == 2
+                assert len([i for i in switch_op.regions[2:]]) == 2
+                assert len(switch_op.caseRegions) == 3
+                assert len([i for i in switch_op.caseRegions]) == 3
+                assert len(switch_op.caseRegions[1:]) == 2
+                assert len([i for i in switch_op.caseRegions[1:]]) == 2

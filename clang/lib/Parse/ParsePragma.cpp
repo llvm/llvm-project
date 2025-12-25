@@ -300,12 +300,6 @@ struct PragmaMSRuntimeChecksHandler : public EmptyPragmaHandler {
   PragmaMSRuntimeChecksHandler() : EmptyPragmaHandler("runtime_checks") {}
 };
 
-struct PragmaMSIntrinsicHandler : public PragmaHandler {
-  PragmaMSIntrinsicHandler() : PragmaHandler("intrinsic") {}
-  void HandlePragma(Preprocessor &PP, PragmaIntroducer Introducer,
-                    Token &FirstToken) override;
-};
-
 // "\#pragma fenv_access (on)".
 struct PragmaMSFenvAccessHandler : public PragmaHandler {
   PragmaMSFenvAccessHandler() : PragmaHandler("fenv_access") {}
@@ -517,7 +511,7 @@ void Parser::initializePragmaHandlers() {
     PP.AddPragmaHandler(MSOptimize.get());
     MSRuntimeChecks = std::make_unique<PragmaMSRuntimeChecksHandler>();
     PP.AddPragmaHandler(MSRuntimeChecks.get());
-    MSIntrinsic = std::make_unique<PragmaMSIntrinsicHandler>();
+    MSIntrinsic = std::make_unique<PragmaMSPragma>("intrinsic");
     PP.AddPragmaHandler(MSIntrinsic.get());
     MSFenvAccess = std::make_unique<PragmaMSFenvAccessHandler>();
     PP.AddPragmaHandler(MSFenvAccess.get());
@@ -1046,7 +1040,8 @@ void Parser::HandlePragmaMSPragma() {
           .Case("strict_gs_check", &Parser::HandlePragmaMSStrictGuardStackCheck)
           .Case("function", &Parser::HandlePragmaMSFunction)
           .Case("alloc_text", &Parser::HandlePragmaMSAllocText)
-          .Case("optimize", &Parser::HandlePragmaMSOptimize);
+          .Case("optimize", &Parser::HandlePragmaMSOptimize)
+          .Case("intrinsic", &Parser::HandlePragmaMSIntrinsic);
 
   if (!(this->*Handler)(PragmaName, PragmaLocation)) {
     // Pragma handling failed, and has been diagnosed.  Slurp up the tokens
@@ -1424,10 +1419,11 @@ bool Parser::HandlePragmaLoopHint(LoopHint &Hint) {
 
   // Return a valid hint if pragma unroll or nounroll were specified
   // without an argument.
-  auto IsLoopHint = llvm::StringSwitch<bool>(PragmaNameInfo->getName())
-                        .Cases("unroll", "nounroll", "unroll_and_jam",
-                               "nounroll_and_jam", true)
-                        .Default(false);
+  auto IsLoopHint =
+      llvm::StringSwitch<bool>(PragmaNameInfo->getName())
+          .Cases({"unroll", "nounroll", "unroll_and_jam", "nounroll_and_jam"},
+                 true)
+          .Default(false);
 
   if (Toks.empty() && IsLoopHint) {
     ConsumeAnnotationToken();
@@ -1535,7 +1531,7 @@ bool Parser::HandlePragmaLoopHint(LoopHint &Hint) {
         PP.Lex(Tok); // ,
 
         StateInfo = Tok.getIdentifierInfo();
-        IsScalableStr = StateInfo->getName();
+        IsScalableStr = StateInfo ? StateInfo->getName() : "";
 
         if (IsScalableStr != "scalable" && IsScalableStr != "fixed") {
           Diag(Tok.getLocation(),
@@ -1931,7 +1927,7 @@ void Parser::HandlePragmaAttribute() {
       SourceLocation AttrNameLoc = ConsumeToken();
 
       if (Tok.isNot(tok::l_paren))
-        Attrs.addNew(AttrName, AttrNameLoc, nullptr, AttrNameLoc, nullptr, 0,
+        Attrs.addNew(AttrName, AttrNameLoc, AttributeScopeInfo(), nullptr, 0,
                      ParsedAttr::Form::GNU());
       else
         ParseGNUAttributeArgs(AttrName, AttrNameLoc, Attrs, /*EndLoc=*/nullptr,
@@ -3762,56 +3758,6 @@ void PragmaUnrollHintHandler::HandlePragma(Preprocessor &PP,
                       /*DisableMacroExpansion=*/false, /*IsReinject=*/false);
 }
 
-/// Handle the Microsoft \#pragma intrinsic extension.
-///
-/// The syntax is:
-/// \code
-///  #pragma intrinsic(memset)
-///  #pragma intrinsic(strlen, memcpy)
-/// \endcode
-///
-/// Pragma intrisic tells the compiler to use a builtin version of the
-/// function. Clang does it anyway, so the pragma doesn't really do anything.
-/// Anyway, we emit a warning if the function specified in \#pragma intrinsic
-/// isn't an intrinsic in clang and suggest to include intrin.h.
-void PragmaMSIntrinsicHandler::HandlePragma(Preprocessor &PP,
-                                            PragmaIntroducer Introducer,
-                                            Token &Tok) {
-  PP.Lex(Tok);
-
-  if (Tok.isNot(tok::l_paren)) {
-    PP.Diag(Tok.getLocation(), diag::warn_pragma_expected_lparen)
-        << "intrinsic";
-    return;
-  }
-  PP.Lex(Tok);
-
-  bool SuggestIntrinH = !PP.isMacroDefined("__INTRIN_H");
-
-  while (Tok.is(tok::identifier)) {
-    IdentifierInfo *II = Tok.getIdentifierInfo();
-    if (!II->getBuiltinID())
-      PP.Diag(Tok.getLocation(), diag::warn_pragma_intrinsic_builtin)
-          << II << SuggestIntrinH;
-
-    PP.Lex(Tok);
-    if (Tok.isNot(tok::comma))
-      break;
-    PP.Lex(Tok);
-  }
-
-  if (Tok.isNot(tok::r_paren)) {
-    PP.Diag(Tok.getLocation(), diag::warn_pragma_expected_rparen)
-        << "intrinsic";
-    return;
-  }
-  PP.Lex(Tok);
-
-  if (Tok.isNot(tok::eod))
-    PP.Diag(Tok.getLocation(), diag::warn_pragma_extra_tokens_at_eol)
-        << "intrinsic";
-}
-
 bool Parser::HandlePragmaMSFunction(StringRef PragmaName,
                                     SourceLocation PragmaLocation) {
   Token FirstTok = Tok;
@@ -3904,6 +3850,56 @@ bool Parser::HandlePragmaMSOptimize(StringRef PragmaName,
     return false;
 
   Actions.ActOnPragmaMSOptimize(FirstTok.getLocation(), IsOn);
+  return true;
+}
+
+/// Handle the Microsoft \#pragma intrinsic extension.
+///
+/// The syntax is:
+/// \code
+///  #pragma intrinsic(memset)
+///  #pragma intrinsic(strlen, memcpy)
+/// \endcode
+///
+/// Pragma intrisic tells the compiler to use a builtin version of the
+/// function. Clang does it anyway, so the pragma doesn't really do anything.
+/// Anyway, we emit a warning if the function specified in \#pragma intrinsic
+/// isn't an intrinsic in clang and suggest to include intrin.h, as well as
+/// declare the builtin if it has not been declared.
+bool Parser::HandlePragmaMSIntrinsic(StringRef PragmaName,
+                                     SourceLocation PragmaLocation) {
+  if (ExpectAndConsume(tok::l_paren, diag::warn_pragma_expected_lparen,
+                       PragmaName))
+    return false;
+
+  bool SuggestIntrinH = !PP.isMacroDefined("__INTRIN_H");
+
+  while (Tok.is(tok::identifier)) {
+    IdentifierInfo *II = Tok.getIdentifierInfo();
+    if (!II->getBuiltinID())
+      PP.Diag(Tok.getLocation(), diag::warn_pragma_intrinsic_builtin)
+          << II << SuggestIntrinH;
+    // If the builtin hasn't already been declared, declare it now.
+    DeclarationNameInfo NameInfo(II, Tok.getLocation());
+    LookupResult Previous(Actions, NameInfo, Sema::LookupOrdinaryName,
+                          RedeclarationKind::NotForRedeclaration);
+    Actions.LookupName(Previous, Actions.getCurScope(),
+                       /*CreateBuiltins*/ false);
+    if (Previous.empty())
+      Actions.LazilyCreateBuiltin(II, II->getBuiltinID(), Actions.getCurScope(),
+                                  /*ForRedeclaration*/ true, Tok.getLocation());
+    PP.Lex(Tok);
+    if (Tok.isNot(tok::comma))
+      break;
+    PP.Lex(Tok);
+  }
+  if (ExpectAndConsume(tok::r_paren, diag::warn_pragma_expected_rparen,
+                       PragmaName))
+    return false;
+
+  if (ExpectAndConsume(tok::eof, diag::warn_pragma_extra_tokens_at_eol,
+                       PragmaName))
+    return false;
   return true;
 }
 
@@ -4139,6 +4135,7 @@ void PragmaMaxTokensTotalHandler::HandlePragma(Preprocessor &PP,
 
 // Handle '#pragma clang riscv intrinsic vector'.
 //        '#pragma clang riscv intrinsic sifive_vector'.
+//        '#pragma clang riscv intrinsic andes_vector'.
 void PragmaRISCVHandler::HandlePragma(Preprocessor &PP,
                                       PragmaIntroducer Introducer,
                                       Token &FirstToken) {
@@ -4154,10 +4151,11 @@ void PragmaRISCVHandler::HandlePragma(Preprocessor &PP,
 
   PP.Lex(Tok);
   II = Tok.getIdentifierInfo();
-  if (!II || !(II->isStr("vector") || II->isStr("sifive_vector"))) {
+  if (!II || !(II->isStr("vector") || II->isStr("sifive_vector") ||
+               II->isStr("andes_vector"))) {
     PP.Diag(Tok.getLocation(), diag::warn_pragma_invalid_argument)
         << PP.getSpelling(Tok) << "riscv" << /*Expected=*/true
-        << "'vector' or 'sifive_vector'";
+        << "'vector', 'sifive_vector' or 'andes_vector'";
     return;
   }
 
@@ -4172,4 +4170,6 @@ void PragmaRISCVHandler::HandlePragma(Preprocessor &PP,
     Actions.RISCV().DeclareRVVBuiltins = true;
   else if (II->isStr("sifive_vector"))
     Actions.RISCV().DeclareSiFiveVectorBuiltins = true;
+  else if (II->isStr("andes_vector"))
+    Actions.RISCV().DeclareAndesVectorBuiltins = true;
 }

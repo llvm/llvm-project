@@ -64,7 +64,7 @@ static bool lowerKernelArguments(Function &F, const TargetMachine &TM) {
     return false;
 
   const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(F);
-  LLVMContext &Ctx = F.getParent()->getContext();
+  LLVMContext &Ctx = F.getContext();
   const DataLayout &DL = F.getDataLayout();
   BasicBlock &EntryBlock = *F.begin();
   IRBuilder<> Builder(&EntryBlock, getInsertPt(EntryBlock));

@@ -2,7 +2,7 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx950 < %s | FileCheck -check-prefixes=GFX950 %s
 ; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx950 < %s | FileCheck -check-prefixes=GFX950 %s
 ; RUN: not --crash llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx942 -filetype=null < %s 2>&1 | FileCheck -check-prefix=ERR-SDAG %s
-; RUN: not --crash llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx942 -filetype=null < %s 2>&1 | FileCheck -check-prefix=ERR-GISEL %s
+; RUN: not llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx942 -filetype=null < %s 2>&1 | FileCheck -check-prefix=ERR-GISEL %s
 
 ; ERR-SDAG: LLVM ERROR: Do not know how to expand this operator's operand!
 ; ERR-GISEL: LLVM ERROR: cannot select: G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.struct.ptr.buffer.load.lds),

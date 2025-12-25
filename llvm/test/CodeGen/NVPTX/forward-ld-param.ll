@@ -7,7 +7,6 @@ define i32 @test_ld_param_const(ptr byval(i32) %a) {
 ; CHECK-LABEL: test_ld_param_const(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<2>;
-; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b32 %r1, [test_ld_param_const_param_0+4];
@@ -50,11 +49,7 @@ define void @test_ld_param_escaping(ptr byval(i32) %a) {
 ; CHECK-NEXT:    { // callseq 0, 0
 ; CHECK-NEXT:    .param .b64 param0;
 ; CHECK-NEXT:    st.param.b64 [param0], %rd2;
-; CHECK-NEXT:    call.uni
-; CHECK-NEXT:    escape,
-; CHECK-NEXT:    (
-; CHECK-NEXT:    param0
-; CHECK-NEXT:    );
+; CHECK-NEXT:    call.uni escape, (param0);
 ; CHECK-NEXT:    } // callseq 0
 ; CHECK-NEXT:    ret;
   call void @escape(ptr %a)
@@ -65,18 +60,13 @@ define void @test_ld_param_byval(ptr byval(i32) %a) {
 ; CHECK-LABEL: test_ld_param_byval(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<2>;
-; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [test_ld_param_byval_param_0];
 ; CHECK-NEXT:    { // callseq 1, 0
 ; CHECK-NEXT:    .param .align 4 .b8 param0[4];
+; CHECK-NEXT:    ld.param.b32 %r1, [test_ld_param_byval_param_0];
 ; CHECK-NEXT:    st.param.b32 [param0], %r1;
-; CHECK-NEXT:    call.uni
-; CHECK-NEXT:    byval_user,
-; CHECK-NEXT:    (
-; CHECK-NEXT:    param0
-; CHECK-NEXT:    );
+; CHECK-NEXT:    call.uni byval_user, (param0);
 ; CHECK-NEXT:    } // callseq 1
 ; CHECK-NEXT:    ret;
   call void @byval_user(ptr %a)
@@ -106,8 +96,7 @@ define i32 @test_multi_block(ptr byval([10 x i32]) %a, i1 %p) {
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<3>;
 ; CHECK-NEXT:    .reg .b16 %rs<3>;
-; CHECK-NEXT:    .reg .b32 %r<5>;
-; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-NEXT:    .reg .b32 %r<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b8 %rs1, [test_multi_block_param_1];
@@ -116,12 +105,12 @@ define i32 @test_multi_block(ptr byval([10 x i32]) %a, i1 %p) {
 ; CHECK-NEXT:    not.pred %p2, %p1;
 ; CHECK-NEXT:    @%p2 bra $L__BB5_2;
 ; CHECK-NEXT:  // %bb.1: // %if
-; CHECK-NEXT:    ld.param.b32 %r4, [test_multi_block_param_0+4];
+; CHECK-NEXT:    ld.param.b32 %r1, [test_multi_block_param_0+4];
 ; CHECK-NEXT:    bra.uni $L__BB5_3;
 ; CHECK-NEXT:  $L__BB5_2: // %else
-; CHECK-NEXT:    ld.param.b32 %r4, [test_multi_block_param_0+8];
+; CHECK-NEXT:    ld.param.b32 %r1, [test_multi_block_param_0+8];
 ; CHECK-NEXT:  $L__BB5_3: // %end
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r4;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
   br i1 %p, label %if, label %else
 if:

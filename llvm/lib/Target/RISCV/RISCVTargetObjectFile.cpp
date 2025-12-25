@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "RISCVTargetObjectFile.h"
-#include "MCTargetDesc/RISCVMCExpr.h"
 #include "MCTargetDesc/RISCVMCObjectFileInfo.h"
 #include "RISCVTargetMachine.h"
 #include "llvm/BinaryFormat/ELF.h"
@@ -53,7 +52,7 @@ const MCExpr *RISCVELFTargetObjectFile::getIndirectSymViaGOTPCRel(
   const MCExpr *Res = MCSymbolRefExpr::create(Sym, Ctx);
   Res = MCBinaryExpr::createAdd(
       Res, MCConstantExpr::create(Offset + MV.getConstant(), Ctx), Ctx);
-  return RISCVMCExpr::create(Res, ELF::R_RISCV_GOT32_PCREL, Ctx);
+  return MCSpecifierExpr::create(Res, ELF::R_RISCV_GOT32_PCREL, Ctx);
 }
 
 // A address must be loaded from a small section if its size is less than the
@@ -179,11 +178,4 @@ MCSection *RISCVELFTargetObjectFile::getSectionForConstant(
   // Otherwise, we work the same as ELF.
   return TargetLoweringObjectFileELF::getSectionForConstant(DL, Kind, C,
                                                             Alignment);
-}
-
-const MCExpr *
-RISCVELFTargetObjectFile::createTargetMCExpr(const MCExpr *Expr,
-                                             uint8_t Specifier) const {
-  return RISCVMCExpr::create(Expr, RISCVMCExpr::Specifier(Specifier),
-                             getContext());
 }

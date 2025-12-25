@@ -1,4 +1,4 @@
-//===- HLSLRootSignature.cpp - HLSL Root Signature helper objects ---------===//
+//===- HLSLRootSignature.cpp - HLSL Root Signature helpers ----------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -11,120 +11,29 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Frontend/HLSL/HLSLRootSignature.h"
-#include "llvm/ADT/bit.h"
-#include "llvm/IR/IRBuilder.h"
-#include "llvm/IR/Metadata.h"
-#include "llvm/IR/Module.h"
+#include "llvm/Support/DXILABI.h"
+#include "llvm/Support/ScopedPrinter.h"
 
 namespace llvm {
 namespace hlsl {
 namespace rootsig {
 
-static raw_ostream &operator<<(raw_ostream &OS, const Register &Reg) {
-  switch (Reg.ViewType) {
-  case RegisterType::BReg:
-    OS << "b";
-    break;
-  case RegisterType::TReg:
-    OS << "t";
-    break;
-  case RegisterType::UReg:
-    OS << "u";
-    break;
-  case RegisterType::SReg:
-    OS << "s";
-    break;
-  }
-  OS << Reg.Number;
-  return OS;
-}
-
-static raw_ostream &operator<<(raw_ostream &OS,
-                               const ShaderVisibility &Visibility) {
-  switch (Visibility) {
-  case ShaderVisibility::All:
-    OS << "All";
-    break;
-  case ShaderVisibility::Vertex:
-    OS << "Vertex";
-    break;
-  case ShaderVisibility::Hull:
-    OS << "Hull";
-    break;
-  case ShaderVisibility::Domain:
-    OS << "Domain";
-    break;
-  case ShaderVisibility::Geometry:
-    OS << "Geometry";
-    break;
-  case ShaderVisibility::Pixel:
-    OS << "Pixel";
-    break;
-  case ShaderVisibility::Amplification:
-    OS << "Amplification";
-    break;
-  case ShaderVisibility::Mesh:
-    OS << "Mesh";
-    break;
-  }
-
-  return OS;
-}
-
-void DescriptorTable::dump(raw_ostream &OS) const {
-  OS << "DescriptorTable(numClauses = " << NumClauses
-     << ", visibility = " << Visibility << ")";
-}
-
-static raw_ostream &operator<<(raw_ostream &OS, const ClauseType &Type) {
-  switch (Type) {
-  case ClauseType::CBuffer:
-    OS << "CBV";
-    break;
-  case ClauseType::SRV:
-    OS << "SRV";
-    break;
-  case ClauseType::UAV:
-    OS << "UAV";
-    break;
-  case ClauseType::Sampler:
-    OS << "Sampler";
-    break;
-  }
-
-  return OS;
-}
-
-static raw_ostream &operator<<(raw_ostream &OS,
-                               const DescriptorRangeFlags &Flags) {
+template <typename T>
+static raw_ostream &printFlags(raw_ostream &OS, const T Value,
+                               ArrayRef<EnumEntry<T>> Flags) {
   bool FlagSet = false;
-  unsigned Remaining = llvm::to_underlying(Flags);
+  unsigned Remaining = llvm::to_underlying(Value);
   while (Remaining) {
     unsigned Bit = 1u << llvm::countr_zero(Remaining);
     if (Remaining & Bit) {
       if (FlagSet)
         OS << " | ";
 
-      switch (static_cast<DescriptorRangeFlags>(Bit)) {
-      case DescriptorRangeFlags::DescriptorsVolatile:
-        OS << "DescriptorsVolatile";
-        break;
-      case DescriptorRangeFlags::DataVolatile:
-        OS << "DataVolatile";
-        break;
-      case DescriptorRangeFlags::DataStaticWhileSetAtExecute:
-        OS << "DataStaticWhileSetAtExecute";
-        break;
-      case DescriptorRangeFlags::DataStatic:
-        OS << "DataStatic";
-        break;
-      case DescriptorRangeFlags::DescriptorsStaticKeepingBufferBoundsChecks:
-        OS << "DescriptorsStaticKeepingBufferBoundsChecks";
-        break;
-      default:
+      StringRef MaybeFlag = enumToStringRef(T(Bit), Flags);
+      if (!MaybeFlag.empty())
+        OS << MaybeFlag;
+      else
         OS << "invalid: " << Bit;
-        break;
-      }
 
       FlagSet = true;
     }
@@ -133,93 +42,181 @@ static raw_ostream &operator<<(raw_ostream &OS,
 
   if (!FlagSet)
     OS << "None";
+  return OS;
+}
+
+static const EnumEntry<RegisterType> RegisterNames[] = {
+    {"b", RegisterType::BReg},
+    {"t", RegisterType::TReg},
+    {"u", RegisterType::UReg},
+    {"s", RegisterType::SReg},
+};
+
+static raw_ostream &operator<<(raw_ostream &OS, const Register &Reg) {
+  OS << enumToStringRef(Reg.ViewType, ArrayRef(RegisterNames)) << Reg.Number;
 
   return OS;
 }
 
-void DescriptorTableClause::dump(raw_ostream &OS) const {
-  OS << Type << "(" << Reg << ", numDescriptors = " << NumDescriptors
-     << ", space = " << Space << ", offset = ";
-  if (Offset == DescriptorTableOffsetAppend)
+static raw_ostream &operator<<(raw_ostream &OS,
+                               const llvm::dxbc::ShaderVisibility &Visibility) {
+  OS << enumToStringRef(Visibility, dxbc::getShaderVisibility());
+
+  return OS;
+}
+
+static raw_ostream &operator<<(raw_ostream &OS,
+                               const llvm::dxbc::SamplerFilter &Filter) {
+  OS << enumToStringRef(Filter, dxbc::getSamplerFilters());
+
+  return OS;
+}
+
+static raw_ostream &operator<<(raw_ostream &OS,
+                               const dxbc::TextureAddressMode &Address) {
+  OS << enumToStringRef(Address, dxbc::getTextureAddressModes());
+
+  return OS;
+}
+
+static raw_ostream &operator<<(raw_ostream &OS,
+                               const dxbc::ComparisonFunc &CompFunc) {
+  OS << enumToStringRef(CompFunc, dxbc::getComparisonFuncs());
+
+  return OS;
+}
+
+static raw_ostream &operator<<(raw_ostream &OS,
+                               const dxbc::StaticBorderColor &BorderColor) {
+  OS << enumToStringRef(BorderColor, dxbc::getStaticBorderColors());
+
+  return OS;
+}
+
+static raw_ostream &operator<<(raw_ostream &OS,
+                               const dxil::ResourceClass &Type) {
+  OS << dxil::getResourceClassName(Type);
+  return OS;
+}
+
+static raw_ostream &operator<<(raw_ostream &OS,
+                               const dxbc::RootDescriptorFlags &Flags) {
+  printFlags(OS, Flags, dxbc::getRootDescriptorFlags());
+
+  return OS;
+}
+
+static raw_ostream &operator<<(raw_ostream &OS,
+                               const llvm::dxbc::DescriptorRangeFlags &Flags) {
+  printFlags(OS, Flags, dxbc::getDescriptorRangeFlags());
+
+  return OS;
+}
+
+static raw_ostream &operator<<(raw_ostream &OS,
+                               const llvm::dxbc::StaticSamplerFlags &Flags) {
+  printFlags(OS, Flags, dxbc::getStaticSamplerFlags());
+
+  return OS;
+}
+
+raw_ostream &operator<<(raw_ostream &OS, const dxbc::RootFlags &Flags) {
+  OS << "RootFlags(";
+  printFlags(OS, Flags, dxbc::getRootFlags());
+  OS << ")";
+
+  return OS;
+}
+
+raw_ostream &operator<<(raw_ostream &OS, const RootConstants &Constants) {
+  OS << "RootConstants(num32BitConstants = " << Constants.Num32BitConstants
+     << ", " << Constants.Reg << ", space = " << Constants.Space
+     << ", visibility = " << Constants.Visibility << ")";
+
+  return OS;
+}
+
+raw_ostream &operator<<(raw_ostream &OS, const DescriptorTable &Table) {
+  OS << "DescriptorTable(numClauses = " << Table.NumClauses
+     << ", visibility = " << Table.Visibility << ")";
+
+  return OS;
+}
+
+raw_ostream &operator<<(raw_ostream &OS, const DescriptorTableClause &Clause) {
+  OS << Clause.Type << "(" << Clause.Reg << ", numDescriptors = ";
+  if (Clause.NumDescriptors == NumDescriptorsUnbounded)
+    OS << "unbounded";
+  else
+    OS << Clause.NumDescriptors;
+  OS << ", space = " << Clause.Space << ", offset = ";
+  if (Clause.Offset == DescriptorTableOffsetAppend)
     OS << "DescriptorTableOffsetAppend";
   else
-    OS << Offset;
-  OS << ", flags = " << Flags << ")";
+    OS << Clause.Offset;
+  OS << ", flags = " << Clause.Flags << ")";
+
+  return OS;
+}
+
+raw_ostream &operator<<(raw_ostream &OS, const RootDescriptor &Descriptor) {
+  OS << "Root" << Descriptor.Type << "(" << Descriptor.Reg
+     << ", space = " << Descriptor.Space
+     << ", visibility = " << Descriptor.Visibility
+     << ", flags = " << Descriptor.Flags << ")";
+
+  return OS;
+}
+
+raw_ostream &operator<<(raw_ostream &OS, const StaticSampler &Sampler) {
+  OS << "StaticSampler(" << Sampler.Reg << ", filter = " << Sampler.Filter
+     << ", addressU = " << Sampler.AddressU
+     << ", addressV = " << Sampler.AddressV
+     << ", addressW = " << Sampler.AddressW
+     << ", mipLODBias = " << Sampler.MipLODBias
+     << ", maxAnisotropy = " << Sampler.MaxAnisotropy
+     << ", comparisonFunc = " << Sampler.CompFunc
+     << ", borderColor = " << Sampler.BorderColor
+     << ", minLOD = " << Sampler.MinLOD << ", maxLOD = " << Sampler.MaxLOD
+     << ", space = " << Sampler.Space << ", visibility = " << Sampler.Visibility
+     << ", flags = " << Sampler.Flags << ")";
+  return OS;
+}
+
+namespace {
+
+// We use the OverloadVisit with std::visit to ensure the compiler catches if a
+// new RootElement variant type is added but it's operator<< isn't handled.
+template <class... Ts> struct OverloadedVisit : Ts... {
+  using Ts::operator()...;
+};
+template <class... Ts> OverloadedVisit(Ts...) -> OverloadedVisit<Ts...>;
+
+} // namespace
+
+raw_ostream &operator<<(raw_ostream &OS, const RootElement &Element) {
+  const auto Visitor = OverloadedVisit{
+      [&OS](const dxbc::RootFlags &Flags) { OS << Flags; },
+      [&OS](const RootConstants &Constants) { OS << Constants; },
+      [&OS](const RootDescriptor &Descriptor) { OS << Descriptor; },
+      [&OS](const DescriptorTableClause &Clause) { OS << Clause; },
+      [&OS](const DescriptorTable &Table) { OS << Table; },
+      [&OS](const StaticSampler &Sampler) { OS << Sampler; },
+  };
+  std::visit(Visitor, Element);
+  return OS;
 }
 
 void dumpRootElements(raw_ostream &OS, ArrayRef<RootElement> Elements) {
-  OS << "RootElements{";
+  OS << " RootElements{";
   bool First = true;
   for (const RootElement &Element : Elements) {
     if (!First)
       OS << ",";
-    OS << " ";
+    OS << " " << Element;
     First = false;
-    if (const auto &Clause = std::get_if<DescriptorTableClause>(&Element))
-      Clause->dump(OS);
-    if (const auto &Table = std::get_if<DescriptorTable>(&Element))
-      Table->dump(OS);
   }
   OS << "}";
-}
-
-MDNode *MetadataBuilder::BuildRootSignature() {
-  for (const RootElement &Element : Elements) {
-    MDNode *ElementMD = nullptr;
-    if (const auto &Clause = std::get_if<DescriptorTableClause>(&Element))
-      ElementMD = BuildDescriptorTableClause(*Clause);
-    if (const auto &Table = std::get_if<DescriptorTable>(&Element))
-      ElementMD = BuildDescriptorTable(*Table);
-
-    // FIXME(#126586): remove once all RootElemnt variants are handled in a
-    // visit or otherwise
-    assert(ElementMD != nullptr &&
-           "Constructed an unhandled root element type.");
-
-    GeneratedMetadata.push_back(ElementMD);
-  }
-
-  return MDNode::get(Ctx, GeneratedMetadata);
-}
-
-MDNode *MetadataBuilder::BuildDescriptorTable(const DescriptorTable &Table) {
-  IRBuilder<> Builder(Ctx);
-  SmallVector<Metadata *> TableOperands;
-  // Set the mandatory arguments
-  TableOperands.push_back(MDString::get(Ctx, "DescriptorTable"));
-  TableOperands.push_back(ConstantAsMetadata::get(
-      Builder.getInt32(llvm::to_underlying(Table.Visibility))));
-
-  // Remaining operands are references to the table's clauses. The in-memory
-  // representation of the Root Elements created from parsing will ensure that
-  // the previous N elements are the clauses for this table.
-  assert(Table.NumClauses <= GeneratedMetadata.size() &&
-         "Table expected all owned clauses to be generated already");
-  // So, add a refence to each clause to our operands
-  TableOperands.append(GeneratedMetadata.end() - Table.NumClauses,
-                       GeneratedMetadata.end());
-  // Then, remove those clauses from the general list of Root Elements
-  GeneratedMetadata.pop_back_n(Table.NumClauses);
-
-  return MDNode::get(Ctx, TableOperands);
-}
-
-MDNode *MetadataBuilder::BuildDescriptorTableClause(
-    const DescriptorTableClause &Clause) {
-  IRBuilder<> Builder(Ctx);
-  std::string Name;
-  llvm::raw_string_ostream OS(Name);
-  OS << Clause.Type;
-  return MDNode::get(
-      Ctx, {
-               MDString::get(Ctx, OS.str()),
-               ConstantAsMetadata::get(Builder.getInt32(Clause.NumDescriptors)),
-               ConstantAsMetadata::get(Builder.getInt32(Clause.Reg.Number)),
-               ConstantAsMetadata::get(Builder.getInt32(Clause.Space)),
-               ConstantAsMetadata::get(Builder.getInt32(Clause.Offset)),
-               ConstantAsMetadata::get(
-                   Builder.getInt32(llvm::to_underlying(Clause.Flags))),
-           });
 }
 
 } // namespace rootsig

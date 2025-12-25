@@ -20,12 +20,11 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-class _LIBCPP_EXPORTED_FROM_ABI error_condition;
+class error_condition;
 class _LIBCPP_EXPORTED_FROM_ABI error_code;
 
 class _LIBCPP_HIDDEN __do_message;
 
-_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 class _LIBCPP_EXPORTED_FROM_ABI error_category {
 public:
   virtual ~error_category() _NOEXCEPT;
@@ -38,11 +37,11 @@ public:
   error_category(const error_category&)            = delete;
   error_category& operator=(const error_category&) = delete;
 
-  virtual const char* name() const _NOEXCEPT = 0;
-  virtual error_condition default_error_condition(int __ev) const _NOEXCEPT;
-  virtual bool equivalent(int __code, const error_condition& __condition) const _NOEXCEPT;
-  virtual bool equivalent(const error_code& __code, int __condition) const _NOEXCEPT;
-  virtual string message(int __ev) const = 0;
+  [[__nodiscard__]] virtual const char* name() const _NOEXCEPT = 0;
+  [[__nodiscard__]] virtual error_condition default_error_condition(int __ev) const _NOEXCEPT;
+  [[__nodiscard__]] virtual bool equivalent(int __code, const error_condition& __condition) const _NOEXCEPT;
+  [[__nodiscard__]] virtual bool equivalent(const error_code& __code, int __condition) const _NOEXCEPT;
+  [[__nodiscard__]] virtual string message(int __ev) const = 0;
 
   _LIBCPP_HIDE_FROM_ABI bool operator==(const error_category& __rhs) const _NOEXCEPT { return this == &__rhs; }
 
@@ -68,9 +67,8 @@ public:
   string message(int __ev) const override;
 };
 
-[[__gnu__::__const__]] _LIBCPP_EXPORTED_FROM_ABI const error_category& generic_category() _NOEXCEPT;
-[[__gnu__::__const__]] _LIBCPP_EXPORTED_FROM_ABI const error_category& system_category() _NOEXCEPT;
-_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
+[[__gnu__::__const__]] [[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI const error_category& generic_category() _NOEXCEPT;
+[[__gnu__::__const__]] [[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI const error_category& system_category() _NOEXCEPT;
 
 _LIBCPP_END_NAMESPACE_STD
 

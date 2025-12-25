@@ -10,11 +10,13 @@
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DiagnosticInfo.h"
+#include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
@@ -70,10 +72,10 @@ static void emitRemark(IntrinsicInst *II, OptimizationRemarkEmitter &ORE,
   }
 }
 
-static bool removeUbsanTraps(Function &F, const BlockFrequencyInfo &BFI,
+static bool lowerAllowChecks(Function &F, const BlockFrequencyInfo &BFI,
                              const ProfileSummaryInfo *PSI,
                              OptimizationRemarkEmitter &ORE,
-                             const std::vector<unsigned int> &cutoffs) {
+                             const LowerAllowCheckPass::Options &Opts) {
   SmallVector<std::pair<IntrinsicInst *, bool>, 16> ReplaceWithValue;
   std::unique_ptr<RandomNumberGenerator> Rng;
 
@@ -88,8 +90,10 @@ static bool removeUbsanTraps(Function &F, const BlockFrequencyInfo &BFI,
       return HotPercentileCutoff;
     else if (II->getIntrinsicID() == Intrinsic::allow_ubsan_check) {
       auto *Kind = cast<ConstantInt>(II->getArgOperand(0));
-      if (Kind->getZExtValue() < cutoffs.size())
-        return cutoffs[Kind->getZExtValue()];
+      if (Kind->getZExtValue() < Opts.cutoffs.size())
+        return Opts.cutoffs[Kind->getZExtValue()];
+    } else if (II->getIntrinsicID() == Intrinsic::allow_runtime_check) {
+      return Opts.runtime_check;
     }
 
     return 0;
@@ -111,31 +115,29 @@ static bool removeUbsanTraps(Function &F, const BlockFrequencyInfo &BFI,
     return ShouldRemoveRandom() || ShouldRemoveHot(*(II->getParent()), cutoff);
   };
 
-  for (BasicBlock &BB : F) {
-    for (Instruction &I : BB) {
-      IntrinsicInst *II = dyn_cast<IntrinsicInst>(&I);
-      if (!II)
-        continue;
-      auto ID = II->getIntrinsicID();
-      switch (ID) {
-      case Intrinsic::allow_ubsan_check:
-      case Intrinsic::allow_runtime_check: {
-        ++NumChecksTotal;
+  for (Instruction &I : instructions(F)) {
+    IntrinsicInst *II = dyn_cast<IntrinsicInst>(&I);
+    if (!II)
+      continue;
+    auto ID = II->getIntrinsicID();
+    switch (ID) {
+    case Intrinsic::allow_ubsan_check:
+    case Intrinsic::allow_runtime_check: {
+      ++NumChecksTotal;
 
-        bool ToRemove = ShouldRemove(II);
+      bool ToRemove = ShouldRemove(II);
 
-        ReplaceWithValue.push_back({
-            II,
-            ToRemove,
-        });
-        if (ToRemove)
-          ++NumChecksRemoved;
-        emitRemark(II, ORE, ToRemove);
-        break;
-      }
-      default:
-        break;
-      }
+      ReplaceWithValue.push_back({
+          II,
+          ToRemove,
+      });
+      if (ToRemove)
+        ++NumChecksRemoved;
+      emitRemark(II, ORE, ToRemove);
+      break;
+    }
+    default:
+      break;
     }
   }
 
@@ -158,8 +160,10 @@ PreservedAnalyses LowerAllowCheckPass::run(Function &F,
   OptimizationRemarkEmitter &ORE =
       AM.getResult<OptimizationRemarkEmitterAnalysis>(F);
 
-  return removeUbsanTraps(F, BFI, PSI, ORE, Opts.cutoffs)
-             ? PreservedAnalyses::none()
+  return lowerAllowChecks(F, BFI, PSI, ORE, Opts)
+             // We do not change the CFG, we only replace the intrinsics with
+             // true or false.
+             ? PreservedAnalyses::none().preserveSet<CFGAnalyses>()
              : PreservedAnalyses::all();
 }
 
@@ -181,14 +185,14 @@ void LowerAllowCheckPass::printPipeline(
   // correctness.
   // TODO: print shorter output by combining adjacent runs, etc.
   int i = 0;
+  ListSeparator LS(";");
   for (unsigned int cutoff : Opts.cutoffs) {
-    if (cutoff > 0) {
-      if (i > 0)
-        OS << ";";
-      OS << "cutoffs[" << i << "]=" << cutoff;
-    }
-
+    if (cutoff > 0)
+      OS << LS << "cutoffs[" << i << "]=" << cutoff;
     i++;
   }
+  if (Opts.runtime_check)
+    OS << LS << "runtime_check=" << Opts.runtime_check;
+
   OS << '>';
 }

@@ -53,7 +53,10 @@ public:
   unsigned getPrefetchDistance() const override;
   bool enableWritePrefetching() const override;
 
-  // TODO: Implement more hooks to provide TTI machinery for LoongArch.
+  bool shouldExpandReduction(const IntrinsicInst *II) const override;
+
+  TTI::MemCmpExpansionOptions
+  enableMemCmpExpansion(bool OptSize, bool IsZeroCmp) const override;
 };
 
 } // end namespace llvm

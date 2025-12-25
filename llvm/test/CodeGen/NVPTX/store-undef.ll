@@ -16,11 +16,7 @@ define void @test_store_param_undef() {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    { // callseq 0, 0
 ; CHECK-NEXT:    .param .align 16 .b8 param0[32];
-; CHECK-NEXT:    call.uni
-; CHECK-NEXT:    test_call,
-; CHECK-NEXT:    (
-; CHECK-NEXT:    param0
-; CHECK-NEXT:    );
+; CHECK-NEXT:    call.uni test_call, (param0);
 ; CHECK-NEXT:    } // callseq 0
 ; CHECK-NEXT:    ret;
   call void @test_call(%struct.T undef)
@@ -38,14 +34,10 @@ define void @test_store_param_def(i64 %param0, i32 %param1) {
 ; CHECK-NEXT:    ld.param.b32 %r1, [test_store_param_def_param_1];
 ; CHECK-NEXT:    { // callseq 1, 0
 ; CHECK-NEXT:    .param .align 16 .b8 param0[32];
+; CHECK-NEXT:    st.param.v4.b32 [param0+16], {%r2, %r1, %r3, %r4};
+; CHECK-NEXT:    st.param.v2.b32 [param0+8], {%r5, %r1};
 ; CHECK-NEXT:    st.param.b64 [param0], %rd1;
-; CHECK-NEXT:    st.param.v2.b32 [param0+8], {%r2, %r1};
-; CHECK-NEXT:    st.param.v4.b32 [param0+16], {%r3, %r1, %r4, %r5};
-; CHECK-NEXT:    call.uni
-; CHECK-NEXT:    test_call,
-; CHECK-NEXT:    (
-; CHECK-NEXT:    param0
-; CHECK-NEXT:    );
+; CHECK-NEXT:    call.uni test_call, (param0);
 ; CHECK-NEXT:    } // callseq 1
 ; CHECK-NEXT:    ret;
   %V2 = insertelement <2 x i32> undef, i32 %param1, i32 1

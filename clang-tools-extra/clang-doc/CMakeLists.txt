@@ -16,7 +16,7 @@ add_clang_library(clangDoc STATIC
   Representation.cpp
   Serialize.cpp
   YAMLGenerator.cpp
-  HTMLMustacheGenerator.cpp
+  JSONGenerator.cpp
 
   DEPENDS
   omp_gen

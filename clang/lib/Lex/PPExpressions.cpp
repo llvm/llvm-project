@@ -593,11 +593,13 @@ static bool EvaluateDirectiveSubExpr(PPValue &LHS, unsigned MinPrec,
                                      Token &PeekTok, bool ValueLive,
                                      bool &IncludedUndefinedIds,
                                      Preprocessor &PP) {
-  if (PP.getPreprocessorOpts().SingleFileParseMode && IncludedUndefinedIds) {
-    // The single-file parse mode behavior kicks in as soon as single identifier
-    // is undefined. If we've already seen one, there's no point in continuing
-    // with the rest of the expression. Besides saving work, this also prevents
-    // calling undefined function-like macros.
+  if ((PP.getPreprocessorOpts().SingleFileParseMode ||
+       PP.getPreprocessorOpts().SingleModuleParseMode) &&
+      IncludedUndefinedIds) {
+    // The single-{file,module}-parse mode behavior kicks in as soon as single
+    // identifier is undefined. If we've already seen one, there's no point in
+    // continuing with the rest of the expression. Besides saving work, this
+    // also prevents calling undefined function-like macros.
     PP.DiscardUntilEndOfDirective(PeekTok);
     return true;
   }
@@ -978,4 +980,49 @@ Preprocessor::EvaluateDirectiveExpression(IdentifierInfo *&IfNDefMacro,
   bool EvaluatedDefined;
   return EvaluateDirectiveExpression(IfNDefMacro, Tok, EvaluatedDefined,
                                      CheckForEoD);
+}
+
+static std::optional<CXXStandardLibraryVersionInfo>
+getCXXStandardLibraryVersion(Preprocessor &PP, StringRef MacroName,
+                             CXXStandardLibraryVersionInfo::Library Lib) {
+  MacroInfo *Macro = PP.getMacroInfo(PP.getIdentifierInfo(MacroName));
+  if (!Macro || Macro->getNumTokens() != 1 || !Macro->isObjectLike())
+    return std::nullopt;
+
+  const Token &RevisionDateTok = Macro->getReplacementToken(0);
+
+  bool Invalid = false;
+  llvm::SmallVector<char, 10> Buffer;
+  llvm::StringRef RevisionDate =
+      PP.getSpelling(RevisionDateTok, Buffer, &Invalid);
+  if (!Invalid) {
+    std::uint64_t Value;
+    // We don't use NumericParser to avoid diagnostics
+    if (!RevisionDate.consumeInteger(10, Value))
+      return CXXStandardLibraryVersionInfo{Lib, Value};
+  }
+  return CXXStandardLibraryVersionInfo{CXXStandardLibraryVersionInfo::Unknown,
+                                       0};
+}
+
+std::optional<uint64_t> Preprocessor::getStdLibCxxVersion() {
+  if (!CXXStandardLibraryVersion)
+    CXXStandardLibraryVersion = getCXXStandardLibraryVersion(
+        *this, "__GLIBCXX__", CXXStandardLibraryVersionInfo::LibStdCXX);
+  if (!CXXStandardLibraryVersion)
+    return std::nullopt;
+
+  if (CXXStandardLibraryVersion->Lib ==
+      CXXStandardLibraryVersionInfo::LibStdCXX)
+    return CXXStandardLibraryVersion->Version;
+  return std::nullopt;
+}
+
+bool Preprocessor::NeedsStdLibCxxWorkaroundBefore(uint64_t FixedVersion) {
+  assert(FixedVersion >= 2000'00'00 && FixedVersion <= 2100'00'00 &&
+         "invalid value for __GLIBCXX__");
+  std::optional<std::uint64_t> Ver = getStdLibCxxVersion();
+  if (!Ver)
+    return false;
+  return *Ver < FixedVersion;
 }

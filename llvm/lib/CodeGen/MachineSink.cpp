@@ -43,6 +43,7 @@
 #include "llvm/CodeGen/MachinePostDominators.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/MachineSizeOpts.h"
+#include "llvm/CodeGen/PostRAMachineSink.h"
 #include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/RegisterPressure.h"
 #include "llvm/CodeGen/SlotIndexes.h"
@@ -568,7 +569,7 @@ bool MachineSinking::PerformSinkAndFold(MachineInstr &MI,
       // Sink a copy of the instruction, replacing a COPY instruction.
       MachineBasicBlock::iterator InsertPt = SinkDst->getIterator();
       Register DstReg = SinkDst->getOperand(0).getReg();
-      TII->reMaterialize(*SinkDst->getParent(), InsertPt, DstReg, 0, MI, *TRI);
+      TII->reMaterialize(*SinkDst->getParent(), InsertPt, DstReg, 0, MI);
       New = &*std::prev(InsertPt);
       if (!New->getDebugLoc())
         New->setDebugLoc(SinkDst->getDebugLoc());
@@ -1208,7 +1209,7 @@ MachineSinking::getBBRegisterPressure(const MachineBasicBlock &MBB,
                                          MIE = MBB.instr_begin();
        MII != MIE; --MII) {
     const MachineInstr &MI = *std::prev(MII);
-    if (MI.isDebugInstr() || MI.isPseudoProbe())
+    if (MI.isDebugOrPseudoInstr())
       continue;
     RegisterOperands RegOpers;
     RegOpers.collect(MI, *TRI, *MRI, false, false);
@@ -1611,8 +1612,8 @@ static void performSink(MachineInstr &MI, MachineBasicBlock &SuccToSinkTo,
   // location to prevent debug-info driven tools from potentially reporting
   // wrong location information.
   if (!SuccToSinkTo.empty() && InsertPos != SuccToSinkTo.end())
-    MI.setDebugLoc(DILocation::getMergedLocation(MI.getDebugLoc(),
-                                                 InsertPos->getDebugLoc()));
+    MI.setDebugLoc(DebugLoc::getMergedLocation(MI.getDebugLoc(),
+                                               InsertPos->getDebugLoc()));
   else
     MI.setDebugLoc(DebugLoc());
 
@@ -2068,25 +2069,7 @@ void MachineSinking::SalvageUnsunkDebugUsersOfCopy(
 //===----------------------------------------------------------------------===//
 namespace {
 
-class PostRAMachineSinking : public MachineFunctionPass {
-public:
-  bool runOnMachineFunction(MachineFunction &MF) override;
-
-  static char ID;
-  PostRAMachineSinking() : MachineFunctionPass(ID) {}
-  StringRef getPassName() const override { return "PostRA Machine Sink"; }
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.setPreservesCFG();
-    MachineFunctionPass::getAnalysisUsage(AU);
-  }
-
-  MachineFunctionProperties getRequiredProperties() const override {
-    return MachineFunctionProperties().set(
-        MachineFunctionProperties::Property::NoVRegs);
-  }
-
-private:
+class PostRAMachineSinkingImpl {
   /// Track which register units have been modified and used.
   LiveRegUnits ModifiedRegUnits, UsedRegUnits;
 
@@ -2100,13 +2083,35 @@ private:
   /// successors.
   bool tryToSinkCopy(MachineBasicBlock &BB, MachineFunction &MF,
                      const TargetRegisterInfo *TRI, const TargetInstrInfo *TII);
+
+public:
+  bool run(MachineFunction &MF);
 };
+
+class PostRAMachineSinkingLegacy : public MachineFunctionPass {
+public:
+  bool runOnMachineFunction(MachineFunction &MF) override;
+
+  static char ID;
+  PostRAMachineSinkingLegacy() : MachineFunctionPass(ID) {}
+  StringRef getPassName() const override { return "PostRA Machine Sink"; }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesCFG();
+    MachineFunctionPass::getAnalysisUsage(AU);
+  }
+
+  MachineFunctionProperties getRequiredProperties() const override {
+    return MachineFunctionProperties().setNoVRegs();
+  }
+};
+
 } // namespace
 
-char PostRAMachineSinking::ID = 0;
-char &llvm::PostRAMachineSinkingID = PostRAMachineSinking::ID;
+char PostRAMachineSinkingLegacy::ID = 0;
+char &llvm::PostRAMachineSinkingID = PostRAMachineSinkingLegacy::ID;
 
-INITIALIZE_PASS(PostRAMachineSinking, "postra-machine-sink",
+INITIALIZE_PASS(PostRAMachineSinkingLegacy, "postra-machine-sink",
                 "PostRA Machine Sink", false, false)
 
 static bool aliasWithRegsInLiveIn(MachineBasicBlock &MBB, Register Reg,
@@ -2182,11 +2187,9 @@ static void clearKillFlags(MachineInstr *MI, MachineBasicBlock &CurBB,
 static void updateLiveIn(MachineInstr *MI, MachineBasicBlock *SuccBB,
                          const SmallVectorImpl<unsigned> &UsedOpsInCopy,
                          const SmallVectorImpl<Register> &DefedRegsInCopy) {
-  MachineFunction &MF = *SuccBB->getParent();
-  const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
   for (Register DefReg : DefedRegsInCopy)
-    for (MCPhysReg S : TRI->subregs_inclusive(DefReg))
-      SuccBB->removeLiveIn(S);
+    SuccBB->removeLiveInOverlappedWith(DefReg);
+
   for (auto U : UsedOpsInCopy)
     SuccBB->addLiveIn(MI->getOperand(U).getReg());
   SuccBB->sortUniqueLiveIns();
@@ -2227,10 +2230,10 @@ static bool hasRegisterDependency(MachineInstr *MI,
   return HasRegDependency;
 }
 
-bool PostRAMachineSinking::tryToSinkCopy(MachineBasicBlock &CurBB,
-                                         MachineFunction &MF,
-                                         const TargetRegisterInfo *TRI,
-                                         const TargetInstrInfo *TII) {
+bool PostRAMachineSinkingImpl::tryToSinkCopy(MachineBasicBlock &CurBB,
+                                             MachineFunction &MF,
+                                             const TargetRegisterInfo *TRI,
+                                             const TargetInstrInfo *TII) {
   SmallPtrSet<MachineBasicBlock *, 2> SinkableBBs;
   // FIXME: For now, we sink only to a successor which has a single predecessor
   // so that we can directly sink COPY instructions to the successor without
@@ -2283,6 +2286,10 @@ bool PostRAMachineSinking::tryToSinkCopy(MachineBasicBlock &CurBB,
       }
       continue;
     }
+
+    // Don't postRASink instructions that the target prefers not to sink.
+    if (!TII->shouldPostRASink(MI))
+      continue;
 
     if (MI.isDebugOrPseudoInstr())
       continue;
@@ -2355,10 +2362,7 @@ bool PostRAMachineSinking::tryToSinkCopy(MachineBasicBlock &CurBB,
   return Changed;
 }
 
-bool PostRAMachineSinking::runOnMachineFunction(MachineFunction &MF) {
-  if (skipFunction(MF.getFunction()))
-    return false;
-
+bool PostRAMachineSinkingImpl::run(MachineFunction &MF) {
   bool Changed = false;
   const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
   const TargetInstrInfo *TII = MF.getSubtarget().getInstrInfo();
@@ -2369,4 +2373,24 @@ bool PostRAMachineSinking::runOnMachineFunction(MachineFunction &MF) {
     Changed |= tryToSinkCopy(BB, MF, TRI, TII);
 
   return Changed;
+}
+
+bool PostRAMachineSinkingLegacy::runOnMachineFunction(MachineFunction &MF) {
+  if (skipFunction(MF.getFunction()))
+    return false;
+
+  return PostRAMachineSinkingImpl().run(MF);
+}
+
+PreservedAnalyses
+PostRAMachineSinkingPass::run(MachineFunction &MF,
+                              MachineFunctionAnalysisManager &MFAM) {
+  MFPropsModifier _(*this, MF);
+
+  if (!PostRAMachineSinkingImpl().run(MF))
+    return PreservedAnalyses::all();
+
+  PreservedAnalyses PA = getMachineFunctionPassPreservedAnalyses();
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
 }

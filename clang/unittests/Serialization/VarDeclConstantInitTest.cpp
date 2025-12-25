@@ -9,6 +9,7 @@
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Basic/FileManager.h"
+#include "clang/Driver/CreateInvocationFromArgs.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/FrontendActions.h"
@@ -92,8 +93,9 @@ export namespace Fibonacci
 
   CreateInvocationOptions CIOpts;
   CIOpts.VFS = llvm::vfs::createPhysicalFileSystem();
+  DiagnosticOptions DiagOpts;
   IntrusiveRefCntPtr<DiagnosticsEngine> Diags =
-      CompilerInstance::createDiagnostics(*CIOpts.VFS, new DiagnosticOptions());
+      CompilerInstance::createDiagnostics(*CIOpts.VFS, DiagOpts);
   CIOpts.Diags = Diags;
 
   const char *Args[] = {"clang++",       "-std=c++20",
@@ -105,7 +107,7 @@ export namespace Fibonacci
   Invocation->getFrontendOpts().DisableFree = false;
 
   CompilerInstance Instance(std::move(Invocation));
-  Instance.setDiagnostics(Diags.get());
+  Instance.setDiagnostics(Diags);
 
   std::string CacheBMIPath = llvm::Twine(TestDir + "/Cached.pcm").str();
   Instance.getFrontendOpts().OutputFile = CacheBMIPath;

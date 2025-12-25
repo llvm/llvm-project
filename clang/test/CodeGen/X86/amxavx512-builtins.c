@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 %s -ffreestanding -triple=x86_64-unknown-unknown -target-feature +amx-tile -target-feature +amx-avx512 \
-// RUN: -target-feature +avx10.2-512 -emit-llvm -o - -Wall -Werror -pedantic -Wno-gnu-statement-expression -flax-vector-conversions=none | FileCheck %s
+// RUN: -target-feature +avx10.2 -emit-llvm -o - -Wall -Werror -pedantic -Wno-gnu-statement-expression -flax-vector-conversions=none | FileCheck %s
 
 #include <immintrin.h>
 #include <stddef.h>

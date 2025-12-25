@@ -50,8 +50,8 @@ public:
       return;
     }
 
-    auto ts = block_pointer_type.GetTypeSystem();
-    auto clang_ast_context = ts.dyn_cast_or_null<TypeSystemClang>();
+    auto clang_ast_context =
+        block_pointer_type.GetTypeSystem<TypeSystemClang>();
     if (!clang_ast_context)
       return;
 

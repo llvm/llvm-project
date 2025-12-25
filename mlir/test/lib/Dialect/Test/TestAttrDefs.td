@@ -22,6 +22,8 @@ include "mlir/IR/AttrTypeBase.td"
 include "mlir/IR/BuiltinAttributeInterfaces.td"
 include "mlir/IR/EnumAttr.td"
 include "mlir/IR/OpAsmInterface.td"
+include "mlir/IR/SymbolInterfaces.td"
+include "mlir/IR/TensorEncoding.td"
 
 // All of the attributes will extend this class.
 class Test_Attr<string name, list<Trait> traits = []>
@@ -347,6 +349,7 @@ def TestCopyCount : Test_Attr<"TestCopyCount"> {
   let mnemonic = "copy_count";
   let parameters = (ins TestParamCopyCount:$copy_count);
   let assemblyFormat = "`<` $copy_count `>`";
+  let genVerifyDecl = 1;
 }
 
 def TestConditionalAliasAttr : Test_Attr<"TestConditionalAlias"> {
@@ -354,6 +357,14 @@ def TestConditionalAliasAttr : Test_Attr<"TestConditionalAlias"> {
   let parameters = (ins "mlir::StringAttr":$value);
   let assemblyFormat = [{
     `<` custom<ConditionalAlias>($value) `>`
+  }];
+}
+
+def TestNestedAliasAttr : Test_Attr<"TestNestedAlias"> {
+  let mnemonic = "nested_alias";
+  let parameters = (ins "mlir::StringAttr":$value, OptionalParameter<"TestNestedAliasAttr">:$nested);
+  let assemblyFormat = [{
+    `<` $value (`,` $nested^)? `>`
   }];
 }
 
@@ -429,6 +440,42 @@ def SlashAttr: Test_Attr<"Slash">{
   );
 
   let hasCustomAssemblyFormat = 1;
+}
+
+def TestCustomStorageCtorAttr : Test_Attr<"TestCustomStorageCtorAttr"> {
+    let mnemonic = "custom_storage_ctor_attr";
+    let parameters = (ins "int":$value);
+    let assemblyFormat = "`<` $value `>`";
+    let hasStorageCustomConstructor = 1;
+}
+
+def TestTensorEncodingAttr : Test_Attr<"TestTensorEncoding",
+    [DeclareAttrInterfaceMethods<VerifiableTensorEncoding>]> {
+  let mnemonic = "tensor_encoding";
+
+  let parameters = (ins "mlir::StringAttr":$dummy);
+  let assemblyFormat = "`<` $dummy `>`";
+}
+
+def TestMemRefLayoutAttr : Test_Attr<"TestMemRefLayout",
+    [DeclareAttrInterfaceMethods<MemRefLayoutAttrInterface>]> {
+  let mnemonic = "memref_layout";
+
+  let parameters = (ins "mlir::StringAttr":$dummy);
+  let assemblyFormat = "`<` $dummy `>`";
+}
+
+// Test attribute that implements SymbolUserAttrInterface.
+def TestSymbolRefAttr : Test_Attr<"TestSymbolRef",
+    [DeclareAttrInterfaceMethods<SymbolUserAttrInterface>]> {
+  let mnemonic = "symbol_ref_attr";
+  let summary = "Test attribute that references a symbol";
+  let description = [{
+    This attribute holds a reference to a symbol and implements
+    SymbolUserAttrInterface to verify that the referenced symbol exists.
+  }];
+  let parameters = (ins "::mlir::FlatSymbolRefAttr":$symbol);
+  let assemblyFormat = "`<` $symbol `>`";
 }
 
 #endif // TEST_ATTRDEFS

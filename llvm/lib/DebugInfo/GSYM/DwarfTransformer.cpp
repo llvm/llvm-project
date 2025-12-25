@@ -320,12 +320,16 @@ static void convertFunctionLineTable(OutputAggregator &Out, CUInfo &CUI,
   // Attempt to retrieve DW_AT_LLVM_stmt_sequence if present.
   std::optional<uint64_t> StmtSeqOffset;
   if (auto StmtSeqAttr = Die.find(llvm::dwarf::DW_AT_LLVM_stmt_sequence)) {
-    // The `DW_AT_LLVM_stmt_sequence` attribute might be set to `UINT64_MAX`
-    // when it refers to an empty line sequence. In such cases, the DWARF linker
-    // will exclude the empty sequence from the final output and assign
-    // `UINT64_MAX` to the `DW_AT_LLVM_stmt_sequence` attribute.
-    uint64_t StmtSeqVal = dwarf::toSectionOffset(StmtSeqAttr, UINT64_MAX);
-    if (StmtSeqVal != UINT64_MAX)
+    // The `DW_AT_LLVM_stmt_sequence` attribute might be set to an invalid
+    // sentinel value when it refers to an empty line sequence. In such cases,
+    // the DWARF linker will exclude the empty sequence from the final output
+    // and assign the sentinel value to the `DW_AT_LLVM_stmt_sequence`
+    // attribute. The sentinel value is UINT32_MAX for DWARF32 and UINT64_MAX
+    // for DWARF64.
+    const uint64_t InvalidOffset =
+        Die.getDwarfUnit()->getFormParams().getDwarfMaxOffset();
+    uint64_t StmtSeqVal = dwarf::toSectionOffset(StmtSeqAttr, InvalidOffset);
+    if (StmtSeqVal != InvalidOffset)
       StmtSeqOffset = StmtSeqVal;
   }
 
@@ -338,9 +342,13 @@ static void convertFunctionLineTable(OutputAggregator &Out, CUInfo &CUI,
     if (FilePath.empty()) {
       // If we had a DW_AT_decl_file, but got no file then we need to emit a
       // warning.
+      const uint64_t DwarfFileIdx = dwarf::toUnsigned(
+          Die.findRecursively(dwarf::DW_AT_decl_file), UINT32_MAX);
+      // Check if there is no DW_AT_decl_line attribute, and don't report an
+      // error if it isn't there.
+      if (DwarfFileIdx == UINT32_MAX)
+        return;
       Out.Report("Invalid file index in DW_AT_decl_file", [&](raw_ostream &OS) {
-        const uint64_t DwarfFileIdx = dwarf::toUnsigned(
-            Die.findRecursively(dwarf::DW_AT_decl_file), UINT32_MAX);
         OS << "error: function DIE at " << HEX32(Die.getOffset())
            << " has an invalid file index " << DwarfFileIdx
            << " in its DW_AT_decl_file attribute, unable to create a single "
@@ -629,6 +637,10 @@ Error DwarfTransformer::convert(uint32_t NumThreads, OutputAggregator &Out) {
   size_t NumBefore = Gsym.getNumFunctionInfos();
   auto getDie = [&](DWARFUnit &DwarfUnit) -> DWARFDie {
     DWARFDie ReturnDie = DwarfUnit.getUnitDIE(false);
+    // Apple uses DW_AT_GNU_dwo_id for things other than split DWARF.
+    if (IsMachO)
+      return ReturnDie;
+
     if (DwarfUnit.getDWOId()) {
       DWARFUnit *DWOCU = DwarfUnit.getNonSkeletonUnitDIE(false).getDwarfUnit();
       if (!DWOCU->isDWOUnit())
@@ -656,11 +668,6 @@ Error DwarfTransformer::convert(uint32_t NumThreads, OutputAggregator &Out) {
       DWARFDie Die = getDie(*CU);
       CUInfo CUI(DICtx, dyn_cast<DWARFCompileUnit>(CU.get()));
       handleDie(Out, CUI, Die);
-      // Release the line table, once we're done.
-      DICtx.clearLineTableForUnit(CU.get());
-      // Free any DIEs that were allocated by the DWARF parser.
-      // If/when they're needed by other CU's, they'll be recreated.
-      CU->clearDIEs(/*KeepCUDie=*/false, /*KeepDWODIEs=*/false);
     }
   } else {
     // LLVM Dwarf parser is not thread-safe and we need to parse all DWARF up
@@ -673,7 +680,12 @@ Error DwarfTransformer::convert(uint32_t NumThreads, OutputAggregator &Out) {
     for (const auto &CU : DICtx.compile_units())
       CU->getAbbreviations();
 
+    // Now parse all DIEs in case we have cross compile unit references in a
+    // thread pool.
     DefaultThreadPool pool(hardware_concurrency(NumThreads));
+    for (const auto &CU : DICtx.compile_units())
+      pool.async([&CU]() { CU->getUnitDIE(false /*CUDieOnly*/); });
+    pool.wait();
 
     // Now convert all DWARF to GSYM in a thread pool.
     std::mutex LogMutex;
@@ -681,15 +693,11 @@ Error DwarfTransformer::convert(uint32_t NumThreads, OutputAggregator &Out) {
       DWARFDie Die = getDie(*CU);
       if (Die) {
         CUInfo CUI(DICtx, dyn_cast<DWARFCompileUnit>(CU.get()));
-        pool.async([this, CUI, &CU, &LogMutex, &Out, Die]() mutable {
+        pool.async([this, CUI, &LogMutex, &Out, Die]() mutable {
           std::string storage;
           raw_string_ostream StrStream(storage);
           OutputAggregator ThreadOut(Out.GetOS() ? &StrStream : nullptr);
           handleDie(ThreadOut, CUI, Die);
-          DICtx.clearLineTableForUnit(CU.get());
-          // Free any DIEs that were allocated by the DWARF parser.
-          // If/when they're needed by other CU's, they'll be recreated.
-          CU->clearDIEs(/*KeepCUDie=*/false, /*KeepDWODIEs=*/false);
           // Print ThreadLogStorage lines into an actual stream under a lock
           std::lock_guard<std::mutex> guard(LogMutex);
           if (Out.GetOS()) {
@@ -701,9 +709,6 @@ Error DwarfTransformer::convert(uint32_t NumThreads, OutputAggregator &Out) {
     }
     pool.wait();
   }
-  // Now get rid of all the DIEs that may have been recreated
-  for (const auto &CU : DICtx.compile_units())
-    CU->clearDIEs(/*KeepCUDie=*/false, /*KeepDWODIEs=*/false);
   size_t FunctionsAddedCount = Gsym.getNumFunctionInfos() - NumBefore;
   Out << "Loaded " << FunctionsAddedCount << " functions from DWARF.\n";
   return Error::success();

@@ -59,7 +59,27 @@ static std::string GetExecutablePath(const char *Argv0) {
 
 int main(int argc, char **argv) {
   cl::HideUnrelatedOptions(ArrayRef(opts::HeatmapCategories));
-  cl::ParseCommandLineOptions(argc, argv, "");
+  cl::ParseCommandLineOptions(
+      argc, argv,
+      " BOLT Code Heatmap tool\n\n"
+      "  Produces code heatmaps using sampled profile\n\n"
+
+      "  Inputs:\n"
+      "  - Binary (supports BOLT-optimized binaries),\n"
+      "  - Sampled profile collected from the binary:\n"
+      "    - perf data or pre-aggregated profile data (instrumentation profile "
+      "not supported)\n"
+      "    - perf data can have basic (IP) or branch-stack (brstack) "
+      "samples\n\n"
+
+      "  Outputs:\n"
+      "  - Heatmaps: colored ASCII (requires a color-capable terminal or a"
+      " conversion tool like `aha`)\n"
+      "    Multiple heatmaps are produced by default with different "
+      "granularities (set by `block-size` option)\n"
+      "  - Section hotness: per-section samples% and utilization%\n"
+      "  - Cumulative distribution: working set size corresponding to a "
+      "given percentile of samples\n");
 
   if (opts::PerfData.empty()) {
     errs() << ToolName << ": expected -perfdata=<filename> option.\n";

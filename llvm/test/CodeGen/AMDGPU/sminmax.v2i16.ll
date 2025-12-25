@@ -369,42 +369,41 @@ define amdgpu_kernel void @s_abs_v4i16(ptr addrspace(1) %out, <4 x i16> %val) #0
 ; CI-LABEL: s_abs_v4i16:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
-; CI-NEXT:    s_mov_b32 s7, 0xf000
-; CI-NEXT:    s_mov_b32 s6, -1
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
-; CI-NEXT:    s_mov_b32 s4, s0
-; CI-NEXT:    s_mov_b32 s5, s1
-; CI-NEXT:    s_ashr_i64 s[0:1], s[2:3], 48
-; CI-NEXT:    s_ashr_i32 s1, s2, 16
-; CI-NEXT:    s_lshr_b32 s8, s2, 16
-; CI-NEXT:    s_lshr_b32 s9, s3, 16
-; CI-NEXT:    s_sext_i32_i16 s10, s3
-; CI-NEXT:    s_sext_i32_i16 s11, s2
-; CI-NEXT:    s_sub_i32 s3, 0, s3
-; CI-NEXT:    s_sub_i32 s2, 0, s2
-; CI-NEXT:    s_sext_i32_i16 s3, s3
-; CI-NEXT:    s_sext_i32_i16 s2, s2
+; CI-NEXT:    s_mov_b64 s[4:5], s[2:3]
+; CI-NEXT:    s_ashr_i32 s6, s5, 16
+; CI-NEXT:    s_lshr_b32 s9, s5, 16
+; CI-NEXT:    s_sext_i32_i16 s10, s5
+; CI-NEXT:    s_sub_i32 s5, 0, s5
+; CI-NEXT:    s_ashr_i32 s7, s4, 16
+; CI-NEXT:    s_lshr_b32 s8, s4, 16
+; CI-NEXT:    s_sext_i32_i16 s11, s4
+; CI-NEXT:    s_sext_i32_i16 s5, s5
+; CI-NEXT:    s_sub_i32 s4, 0, s4
 ; CI-NEXT:    s_sub_i32 s9, 0, s9
-; CI-NEXT:    s_sub_i32 s8, 0, s8
+; CI-NEXT:    s_sext_i32_i16 s4, s4
 ; CI-NEXT:    s_sext_i32_i16 s9, s9
+; CI-NEXT:    s_sub_i32 s8, 0, s8
+; CI-NEXT:    s_max_i32 s5, s10, s5
 ; CI-NEXT:    s_sext_i32_i16 s8, s8
-; CI-NEXT:    s_max_i32 s2, s11, s2
-; CI-NEXT:    s_max_i32 s3, s10, s3
-; CI-NEXT:    s_max_i32 s1, s1, s8
-; CI-NEXT:    s_max_i32 s0, s0, s9
-; CI-NEXT:    s_add_i32 s3, s3, 2
-; CI-NEXT:    s_add_i32 s2, s2, 2
-; CI-NEXT:    s_lshl_b32 s0, s0, 16
-; CI-NEXT:    s_and_b32 s3, s3, 0xffff
-; CI-NEXT:    s_lshl_b32 s1, s1, 16
-; CI-NEXT:    s_and_b32 s2, s2, 0xffff
-; CI-NEXT:    s_or_b32 s0, s0, s3
-; CI-NEXT:    s_or_b32 s1, s1, s2
-; CI-NEXT:    s_add_i32 s0, s0, 0x20000
-; CI-NEXT:    s_add_i32 s1, s1, 0x20000
-; CI-NEXT:    v_mov_b32_e32 v0, s1
-; CI-NEXT:    v_mov_b32_e32 v1, s0
-; CI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[4:7], 0
+; CI-NEXT:    s_max_i32 s6, s6, s9
+; CI-NEXT:    s_max_i32 s4, s11, s4
+; CI-NEXT:    s_add_i32 s5, s5, 2
+; CI-NEXT:    s_max_i32 s7, s7, s8
+; CI-NEXT:    s_lshl_b32 s6, s6, 16
+; CI-NEXT:    s_and_b32 s5, s5, 0xffff
+; CI-NEXT:    s_add_i32 s4, s4, 2
+; CI-NEXT:    s_or_b32 s5, s6, s5
+; CI-NEXT:    s_lshl_b32 s6, s7, 16
+; CI-NEXT:    s_and_b32 s4, s4, 0xffff
+; CI-NEXT:    s_or_b32 s4, s6, s4
+; CI-NEXT:    s_add_i32 s5, s5, 0x20000
+; CI-NEXT:    s_add_i32 s4, s4, 0x20000
+; CI-NEXT:    s_mov_b32 s3, 0xf000
+; CI-NEXT:    s_mov_b32 s2, -1
+; CI-NEXT:    v_mov_b32_e32 v0, s4
+; CI-NEXT:    v_mov_b32_e32 v1, s5
+; CI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
 ; CI-NEXT:    s_endpgm
   %z0 = insertelement <4 x i16> poison, i16 0, i16 0
   %z1 = insertelement <4 x i16> %z0, i16 0, i16 1
@@ -488,9 +487,9 @@ define amdgpu_kernel void @v_abs_v4i16(ptr addrspace(1) %out, ptr addrspace(1) %
 ; CI-NEXT:    s_mov_b32 s0, s4
 ; CI-NEXT:    s_mov_b32 s1, s5
 ; CI-NEXT:    s_waitcnt vmcnt(0)
-; CI-NEXT:    v_ashr_i64 v[2:3], v[0:1], 48
-; CI-NEXT:    v_bfe_i32 v4, v1, 0, 16
-; CI-NEXT:    v_bfe_i32 v3, v0, 0, 16
+; CI-NEXT:    v_bfe_i32 v2, v1, 0, 16
+; CI-NEXT:    v_ashrrev_i32_e32 v3, 16, v1
+; CI-NEXT:    v_bfe_i32 v4, v0, 0, 16
 ; CI-NEXT:    v_ashrrev_i32_e32 v5, 16, v0
 ; CI-NEXT:    v_lshrrev_b32_e32 v6, 16, v0
 ; CI-NEXT:    v_lshrrev_b32_e32 v7, 16, v1
@@ -502,18 +501,18 @@ define amdgpu_kernel void @v_abs_v4i16(ptr addrspace(1) %out, ptr addrspace(1) %
 ; CI-NEXT:    v_sub_i32_e32 v6, vcc, 0, v6
 ; CI-NEXT:    v_bfe_i32 v7, v7, 0, 16
 ; CI-NEXT:    v_bfe_i32 v6, v6, 0, 16
-; CI-NEXT:    v_max_i32_e32 v0, v3, v0
-; CI-NEXT:    v_max_i32_e32 v1, v4, v1
-; CI-NEXT:    v_max_i32_e32 v3, v5, v6
-; CI-NEXT:    v_max_i32_e32 v2, v2, v7
+; CI-NEXT:    v_max_i32_e32 v0, v4, v0
+; CI-NEXT:    v_max_i32_e32 v1, v2, v1
+; CI-NEXT:    v_max_i32_e32 v2, v5, v6
+; CI-NEXT:    v_max_i32_e32 v3, v3, v7
 ; CI-NEXT:    v_add_i32_e32 v1, vcc, 2, v1
 ; CI-NEXT:    v_add_i32_e32 v0, vcc, 2, v0
 ; CI-NEXT:    v_and_b32_e32 v1, 0xffff, v1
-; CI-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
-; CI-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; CI-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
-; CI-NEXT:    v_or_b32_e32 v1, v2, v1
-; CI-NEXT:    v_or_b32_e32 v0, v3, v0
+; CI-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; CI-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
+; CI-NEXT:    v_or_b32_e32 v1, v3, v1
+; CI-NEXT:    v_or_b32_e32 v0, v2, v0
 ; CI-NEXT:    v_add_i32_e32 v1, vcc, 0x20000, v1
 ; CI-NEXT:    v_add_i32_e32 v0, vcc, 0x20000, v0
 ; CI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0

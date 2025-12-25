@@ -46,7 +46,6 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Allocator.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/DOTGraphTraits.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -899,8 +898,7 @@ private:
       return;
     }
 
-    B->appendStmt(const_cast<ObjCMessageExpr *>(ME),
-                  cfg->getBumpVectorContext());
+    B->appendStmt(ME, cfg->getBumpVectorContext());
   }
 
   void appendTemporaryDtor(CFGBlock *B, CXXBindTemporaryExpr *E) {
@@ -1262,6 +1260,28 @@ private:
         L2Result.Val.getKind() == APValue::Float) {
       llvm::APFloat L1 = L1Result.Val.getFloat();
       llvm::APFloat L2 = L2Result.Val.getFloat();
+      // Note that L1 and L2 do not necessarily have the same type.  For example
+      // `x != 0 || x != 1.0`, if `x` is a float16, the two literals `0` and
+      // `1.0` are float16 and double respectively.  In this case, we should do
+      // a conversion before comparing L1 and L2.  Their types must be
+      // compatible since they are comparing with the same DRE.
+      int Order = Context->getFloatingTypeSemanticOrder(NumExpr1->getType(),
+                                                        NumExpr2->getType());
+      bool Ignored = false;
+
+      if (Order > 0) {
+        // type rank L1 > L2:
+        if (llvm::APFloat::opOK !=
+            L2.convert(L1.getSemantics(), llvm::APFloat::rmNearestTiesToEven,
+                       &Ignored))
+          return {};
+      } else if (Order < 0)
+        // type rank L1 < L2:
+        if (llvm::APFloat::opOK !=
+            L1.convert(L2.getSemantics(), llvm::APFloat::rmNearestTiesToEven,
+                       &Ignored))
+          return {};
+
       llvm::APFloat MidValue = L1;
       MidValue.add(L2, llvm::APFloat::rmNearestTiesToEven);
       MidValue.divide(llvm::APFloat(MidValue.getSemantics(), "2.0"),
@@ -1646,6 +1666,12 @@ std::unique_ptr<CFG> CFGBuilder::buildCFG(const Decl *D, Stmt *Statement) {
   assert(Succ == &cfg->getExit());
   Block = nullptr;  // the EXIT block is empty.  Create all other blocks lazily.
 
+  // Add parameters to the initial scope to handle their dtos and lifetime ends.
+  LocalScope *paramScope = nullptr;
+  if (const auto *FD = dyn_cast_or_null<FunctionDecl>(D))
+    for (ParmVarDecl *PD : FD->parameters())
+      paramScope = addLocalScopeForVarDecl(PD, paramScope);
+
   if (BuildOpts.AddImplicitDtors)
     if (const CXXDestructorDecl *DD = dyn_cast_or_null<CXXDestructorDecl>(D))
       addImplicitDtorsForDestructor(DD);
@@ -1733,10 +1759,9 @@ std::unique_ptr<CFG> CFGBuilder::buildCFG(const Decl *D, Stmt *Statement) {
 
   // Add successors to the Indirect Goto Dispatch block (if we have one).
   if (CFGBlock *B = cfg->getIndirectGotoBlock())
-    for (LabelSetTy::iterator I = AddressTakenLabels.begin(),
-                              E = AddressTakenLabels.end(); I != E; ++I ) {
+    for (LabelDecl *LD : AddressTakenLabels) {
       // Lookup the target block.
-      LabelMapTy::iterator LI = LabelMap.find(*I);
+      LabelMapTy::iterator LI = LabelMap.find(LD);
 
       // If there is no target block that contains label, then we are looking
       // at an incomplete AST.  Handle this by not registering a successor.
@@ -2225,6 +2250,11 @@ LocalScope* CFGBuilder::addLocalScopeForVarDecl(VarDecl *VD,
 
   // Check if variable is local.
   if (!VD->hasLocalStorage())
+    return Scope;
+
+  // Reference parameters are aliases to objects that live elsewhere, so they
+  // don't require automatic destruction or lifetime tracking.
+  if (isa<ParmVarDecl>(VD) && VD->getType()->isReferenceType())
     return Scope;
 
   if (!BuildOpts.AddLifetime && !BuildOpts.AddScopes &&
@@ -2814,7 +2844,8 @@ CFGBlock *CFGBuilder::VisitCallExpr(CallExpr *C, AddStmtChoice asc) {
     if (!FD->isVariadic())
       findConstructionContextsForArguments(C);
 
-    if (FD->isNoReturn() || C->isBuiltinAssumeFalse(*Context))
+    if (FD->isNoReturn() || FD->isAnalyzerNoReturn() ||
+        C->isBuiltinAssumeFalse(*Context))
       NoReturn = true;
     if (FD->hasAttr<NoThrowAttr>())
       AddEHEdge = false;
@@ -4496,10 +4527,13 @@ CFGBlock *CFGBuilder::VisitSwitchStmt(SwitchStmt *Terminator) {
   //
   // Note: We add a successor to a switch that is considered covered yet has no
   //       case statements if the enumeration has no enumerators.
+  //       We also consider this successor reachable if
+  //       BuildOpts.SwitchReqDefaultCoveredEnum is true.
   bool SwitchAlwaysHasSuccessor = false;
   SwitchAlwaysHasSuccessor |= switchExclusivelyCovered;
-  SwitchAlwaysHasSuccessor |= Terminator->isAllEnumCasesCovered() &&
-                              Terminator->getSwitchCaseList();
+  SwitchAlwaysHasSuccessor |=
+      !BuildOpts.AssumeReachableDefaultInSwitchStatements &&
+      Terminator->isAllEnumCasesCovered() && Terminator->getSwitchCaseList();
   addSuccessor(SwitchTerminatedBlock, DefaultCaseBlock,
                !SwitchAlwaysHasSuccessor);
 
@@ -5593,8 +5627,15 @@ public:
   bool handleDecl(const Decl *D, raw_ostream &OS) {
     DeclMapTy::iterator I = DeclMap.find(D);
 
-    if (I == DeclMap.end())
+    if (I == DeclMap.end()) {
+      // ParmVarDecls are not declared in the CFG itself, so they do not appear
+      // in DeclMap.
+      if (auto *PVD = dyn_cast_or_null<ParmVarDecl>(D)) {
+        OS << "[Parm: " << PVD->getNameAsString() << "]";
+        return true;
+      }
       return false;
+    }
 
     if (currentBlock >= 0 && I->second.first == (unsigned) currentBlock
                           && I->second.second == currStmt) {
@@ -6355,12 +6396,12 @@ const Expr *CFGBlock::getLastCondition() const {
   return cast<Expr>(Cond)->IgnoreParens();
 }
 
-Stmt *CFGBlock::getTerminatorCondition(bool StripParens) {
-  Stmt *Terminator = getTerminatorStmt();
+const Stmt *CFGBlock::getTerminatorCondition(bool StripParens) const {
+  const Stmt *Terminator = getTerminatorStmt();
   if (!Terminator)
     return nullptr;
 
-  Expr *E = nullptr;
+  const Expr *E = nullptr;
 
   switch (Terminator->getStmtClass()) {
     default:

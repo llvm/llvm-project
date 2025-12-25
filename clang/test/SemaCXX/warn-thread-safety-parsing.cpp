@@ -3,6 +3,7 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -Wthread-safety -std=c++11 %s
 
 #define LOCKABLE            __attribute__ ((lockable))
+#define REENTRANT_CAPABILITY __attribute__ ((reentrant_capability))
 #define SCOPED_LOCKABLE     __attribute__ ((scoped_lockable))
 #define GUARDED_BY(x)       __attribute__ ((guarded_by(x)))
 #define GUARDED_VAR         __attribute__ ((guarded_var))
@@ -260,6 +261,17 @@ class LFoo {
 void l_function_params(int lvar LOCKABLE); // \
   // expected-warning {{'lockable' attribute only applies to}}
 
+class LOCKABLE REENTRANT_CAPABILITY LTestReentrant {
+};
+
+// Attribute order does matter.
+class REENTRANT_CAPABILITY LOCKABLE LTestReentrantWrongOrder { // \
+  // expected-warning {{'reentrant_capability' attribute on 'LTestReentrantWrongOrder' must be preceded by 'capability' attribute}}
+};
+
+class REENTRANT_CAPABILITY LTestReentrantOnly { // \
+  // expected-warning {{'reentrant_capability' attribute on 'LTestReentrantOnly' must be preceded by 'capability' attribute}}
+};
 
 //-----------------------------------------//
 //  Scoped Lockable Attribute (sl)

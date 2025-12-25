@@ -308,8 +308,7 @@ Legalizer::legalizeMachineFunction(MachineFunction &MF, const LegalizerInfo &LI,
 
 bool Legalizer::runOnMachineFunction(MachineFunction &MF) {
   // If the ISel pipeline failed, do not bother running that pass.
-  if (MF.getProperties().hasProperty(
-          MachineFunctionProperties::Property::FailedISel))
+  if (MF.getProperties().hasFailedISel())
     return false;
   LLVM_DEBUG(dbgs() << "Legalize Machine IR for: " << MF.getName() << '\n');
   init(MF);
@@ -349,7 +348,7 @@ bool Legalizer::runOnMachineFunction(MachineFunction &MF) {
                                             *MIRBuilder, VT);
 
   if (Result.FailedOn) {
-    reportGISelFailure(MF, TPC, MORE, "gisel-legalize",
+    reportGISelFailure(MF, MORE, "gisel-legalize",
                        "unable to legalize instruction", *Result.FailedOn);
     return false;
   }
@@ -361,7 +360,7 @@ bool Legalizer::runOnMachineFunction(MachineFunction &MF) {
     R << "lost "
       << ore::NV("NumLostDebugLocs", LocObserver.getNumLostDebugLocs())
       << " debug locations during pass";
-    reportGISelWarning(MF, TPC, MORE, R);
+    reportGISelWarning(MF, MORE, R);
     // Example remark:
     // --- !Missed
     // Pass:            gisel-legalize

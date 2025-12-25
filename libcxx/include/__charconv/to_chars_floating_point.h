@@ -18,10 +18,9 @@
 #  pragma GCC system_header
 #endif
 
-#if _LIBCPP_STD_VER >= 17
-
 _LIBCPP_BEGIN_NAMESPACE_STD
-_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
+
+#if _LIBCPP_STD_VER >= 17
 
 _LIBCPP_AVAILABILITY_TO_CHARS_FLOATING_POINT _LIBCPP_EXPORTED_FROM_ABI to_chars_result
 to_chars(char* __first, char* __last, float __value);
@@ -49,10 +48,8 @@ to_chars(char* __first, char* __last, double __value, chars_format __fmt, int __
 
 _LIBCPP_AVAILABILITY_TO_CHARS_FLOATING_POINT _LIBCPP_EXPORTED_FROM_ABI to_chars_result
 to_chars(char* __first, char* __last, long double __value, chars_format __fmt, int __precision);
-
-_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
-_LIBCPP_END_NAMESPACE_STD
-
 #endif // _LIBCPP_STD_VER >= 17
+
+_LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP___CHARCONV_TO_CHARS_FLOATING_POINT_H

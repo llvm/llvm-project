@@ -22,8 +22,8 @@ public:
   AMDGPUELFObjectWriter(bool Is64Bit, uint8_t OSABI, bool HasRelocationAddend);
 
 protected:
-  unsigned getRelocType(MCContext &Ctx, const MCValue &Target,
-                        const MCFixup &Fixup, bool IsPCRel) const override;
+  unsigned getRelocType(const MCFixup &, const MCValue &,
+                        bool IsPCRel) const override;
 };
 
 
@@ -34,9 +34,8 @@ AMDGPUELFObjectWriter::AMDGPUELFObjectWriter(bool Is64Bit, uint8_t OSABI,
     : MCELFObjectTargetWriter(Is64Bit, OSABI, ELF::EM_AMDGPU,
                               HasRelocationAddend) {}
 
-unsigned AMDGPUELFObjectWriter::getRelocType(MCContext &Ctx,
+unsigned AMDGPUELFObjectWriter::getRelocType(const MCFixup &Fixup,
                                              const MCValue &Target,
-                                             const MCFixup &Fixup,
                                              bool IsPCRel) const {
   if (const auto *SymA = Target.getAddSym()) {
     // SCRATCH_RSRC_DWORD[01] is a special global variable that represents
@@ -65,13 +64,13 @@ unsigned AMDGPUELFObjectWriter::getRelocType(MCContext &Ctx,
     return ELF::R_AMDGPU_ABS32_LO;
   case AMDGPUMCExpr::S_ABS32_HI:
     return ELF::R_AMDGPU_ABS32_HI;
+  case AMDGPUMCExpr::S_ABS64:
+    return ELF::R_AMDGPU_ABS64;
   }
 
   MCFixupKind Kind = Fixup.getKind();
   switch (Kind) {
   default: break;
-  case FK_PCRel_4:
-    return ELF::R_AMDGPU_REL32;
   case FK_Data_4:
   case FK_SecRel_4:
     return IsPCRel ? ELF::R_AMDGPU_REL32 : ELF::R_AMDGPU_ABS32;
@@ -79,13 +78,13 @@ unsigned AMDGPUELFObjectWriter::getRelocType(MCContext &Ctx,
     return IsPCRel ? ELF::R_AMDGPU_REL64 : ELF::R_AMDGPU_ABS64;
   }
 
-  if (Fixup.getTargetKind() == AMDGPU::fixup_si_sopp_br) {
+  if (Fixup.getKind() == AMDGPU::fixup_si_sopp_br) {
     const auto *SymA = Target.getAddSym();
     assert(SymA);
 
     if (SymA->isUndefined()) {
-      Ctx.reportError(Fixup.getLoc(),
-                      Twine("undefined label '") + SymA->getName() + "'");
+      reportError(Fixup.getLoc(),
+                  Twine("undefined label '") + SymA->getName() + "'");
       return ELF::R_AMDGPU_NONE;
     }
     return ELF::R_AMDGPU_REL16;

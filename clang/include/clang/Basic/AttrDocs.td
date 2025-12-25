@@ -13,16 +13,16 @@
 // version control.
 //
 // To run clang-tblgen to generate the .rst file:
-// clang-tblgen -gen-attr-docs -I <root>/llvm/tools/clang/include
-//   <root>/llvm/tools/clang/include/clang/Basic/Attr.td -o
-//   <root>/llvm/tools/clang/docs/AttributeReference.rst
+// clang-tblgen -gen-attr-docs -I <root>/clang/include
+//   <root>/clang/include/clang/Basic/Attr.td -o
+//   <root>/clang/docs/AttributeReference.rst
 //
 // To run sphinx to generate the .html files (note that sphinx-build must be
 // available on the PATH):
 // Windows (from within the clang\docs directory):
 //   make.bat html
-// Non-Windows (from within the clang\docs directory):
-//   sphinx-build -b html _build/html
+// Non-Windows (from within the clang/docs directory):
+//   sphinx-build -b html . _build/html
 
 def GlobalDocumentation {
   code Intro =[{..
@@ -398,6 +398,7 @@ any option of a multiversioned function is undefined.
 
 def SYCLKernelDocs : Documentation {
   let Category = DocCatFunction;
+  let Heading = "sycl_kernel";
   let Content = [{
 The ``sycl_kernel`` attribute specifies that a function template will be used
 to outline device code and to generate an OpenCL kernel.
@@ -469,6 +470,62 @@ function marked with the ``sycl_kernel`` attribute:
   generate the OpenCL kernel body, and the OpenCL kernel must return ``void``.
 
 The SYCL kernel in the previous code sample meets these expectations.
+  }];
+}
+
+def DeviceKernelDocs : Documentation {
+  let Category = DocCatFunction;
+  let Heading = "device_kernel, nvptx_kernel, amdgpu_kernel, "
+                "kernel, __kernel";
+  let Content = [{
+These attributes specify that the function represents a kernel for device offloading.
+The specific semantics depend on the offloading language, target, and attribute spelling.
+Here is a code example using the attribute to mark a function as a kernel:
+
+.. code-block:: c++
+
+  [[clang::device_kernel]] int foo(int x) { return ++x; }
+  }];
+}
+
+def SYCLExternalDocs : Documentation {
+  let Category = DocCatFunction;
+  let Heading = "sycl_external";
+  let Content = [{
+The ``sycl_external`` attribute indicates that a function defined in another
+translation unit may be called by a device function defined in the current
+translation unit or, if defined in the current translation unit, the function
+may be called by device functions defined in other translation units.
+The attribute is intended for use in the implementation of the ``SYCL_EXTERNAL``
+macro as specified in section 5.10.1, "SYCL functions and member functions
+linkage", of the SYCL 2020 specification.
+
+The attribute only appertains to functions and only those that meet the
+following requirements:
+
+* Has external linkage
+* Is not explicitly defined as deleted (the function may be an explicitly
+  defaulted function that is defined as deleted)
+
+The attribute shall be present on the first declaration of a function and
+may optionally be present on subsequent declarations.
+
+When compiling for a SYCL device target that does not support the generic
+address space, the function shall not specify a raw pointer or reference type
+as the return type or as a parameter type.
+See section 5.10, "SYCL offline linking", of the SYCL 2020 specification.
+The following examples demonstrate the use of this attribute:
+
+.. code-block:: c++
+
+  [[clang::sycl_external]] void Foo(); // Ok.
+
+  [[clang::sycl_external]] void Bar() { /* ... */ } // Ok.
+
+  [[clang::sycl_external]] extern void Baz(); // Ok.
+
+  [[clang::sycl_external]] static void Quux() { /* ... */ } // error:  Quux() has internal linkage.
+
   }];
 }
 
@@ -926,6 +983,21 @@ An example of how to use ``alloc_size``
     assert(__builtin_object_size(p, 0) == 100);
     void *const a = my_calloc(20, 5);
     assert(__builtin_object_size(a, 0) == 100);
+  }
+
+When ``-Walloc-size`` is enabled, this attribute allows the compiler to
+diagnose cases when the allocated memory is insufficient for the size of the
+type the returned pointer is cast to.
+
+.. code-block:: c
+
+  void *my_malloc(int a) __attribute__((alloc_size(1)));
+  void consumer_func(int *);
+
+  int main() {
+    int *ptr = my_malloc(sizeof(int)); // no warning
+    int *w = my_malloc(1); // warning: allocation of insufficient size '1' for type 'int' with size '4'
+    consumer_func(my_malloc(1)); // warning: allocation of insufficient size '1' for type 'int' with size '4'
   }
 
 .. Note:: This attribute works differently in clang than it does in GCC.
@@ -1746,9 +1818,9 @@ to guard against use of uninitialized memory.
 
 Rather, it is intended for use in "parameter-objects", used to simulate,
 for example, the passing of named parameters.
-The attribute generates a warning when explicit initializers for such
-variables are not provided (this occurs regardless of whether any in-class field
-initializers exist):
+Except inside unevaluated contexts, the attribute generates a warning when
+explicit initializers for such variables are not provided (this occurs
+regardless of whether any in-class field initializers exist):
 
 .. code-block:: c++
 
@@ -2901,9 +2973,12 @@ the backend to generate appropriate function entry/exit code so that it can be
 used directly as an interrupt service routine.
 
 Permissible values for this parameter are ``machine``, ``supervisor``,
-``qci-nest``, ``qci-nonest``, ``SiFive-CLIC-preemptible``, and
+``rnmi``, ``qci-nest``, ``qci-nonest``, ``SiFive-CLIC-preemptible``, and
 ``SiFive-CLIC-stack-swap``. If there is no parameter, then it defaults to
 ``machine``.
+
+The ``rnmi`` value is used for resumable non-maskable interrupts. It requires the
+standard Smrnmi extension.
 
 The ``qci-nest`` and ``qci-nonest`` values require Qualcomm's Xqciint extension
 and are used for Machine-mode Interrupts and Machine-mode Non-maskable
@@ -2930,7 +3005,7 @@ https://gcc.gnu.org/onlinedocs/gcc/RISC-V-Function-Attributes.html
 https://riscv.org/specifications/privileged-isa/
 The RISC-V Instruction Set Manual Volume II: Privileged Architecture
 Version 1.10.
-https://github.com/quic/riscv-unified-db/releases/tag/Xqci-0.7
+https://github.com/quic/riscv-unified-db/releases/tag/Xqci-0.13.0
 https://sifive.cdn.prismic.io/sifive/d1984d2b-c9b9-4c91-8de0-d68a5e64fa0f_sifive-interrupt-cookbook-v1p2.pdf
   }];
 }
@@ -3375,9 +3450,9 @@ Mac, and BSD. This attribute has no effect on other targets.
 def MSABIDocs : Documentation {
   let Category = DocCatCallingConvs;
   let Content = [{
-On non-Windows x86_64 targets, this attribute changes the calling convention of
-a function to match the default convention used on Windows x86_64. This
-attribute has no effect on Windows targets or non-x86_64 targets.
+On non-Windows x86_64 and aarch64 targets, this attribute changes the calling convention of
+a function to match the default convention used on Windows. This
+attribute has no effect on Windows targets or non-x86_64, non-aarch64 targets.
   }];
 }
 
@@ -3566,6 +3641,7 @@ instrumentations should not be applied.
 
 The attribute takes a list of string literals with the following accepted
 values:
+
 * all values accepted by ``-fno-sanitize=``;
 * ``coverage``, to disable SanitizerCoverage instrumentation.
 
@@ -3636,6 +3712,99 @@ def CFICanonicalJumpTableDocs : Documentation {
 Use ``__attribute__((cfi_canonical_jump_table))`` on a function declaration to
 make the function's CFI jump table canonical. See :ref:`the CFI documentation
 <cfi-canonical-jump-tables>` for more details.
+  }];
+}
+
+def CFISaltDocs : Documentation {
+  let Category = DocCatFunction;
+  let Heading = "cfi_salt";
+  let Label = "langext-cfi_salt";
+  let Content = [{
+The ``cfi_salt`` attribute specifies a string literal that is used as a salt
+for Control-Flow Integrity (CFI) checks to distinguish between functions with
+the same type signature. This attribute can be applied to function declarations,
+function definitions, and function pointer typedefs.
+
+The attribute prevents function pointers from being replaced with pointers to
+functions that have a compatible type, which can be a CFI bypass vector.
+
+**Syntax:**
+
+* GNU-style: ``__attribute__((cfi_salt("<salt_string>")))``
+* C++11-style: ``[[clang::cfi_salt("<salt_string>")]]``
+
+**Usage:**
+
+The attribute takes a single string literal argument that serves as the salt.
+Functions or function types with different salt values will have different CFI
+hashes, even if they have identical type signatures.
+
+**Motivation:**
+
+In large codebases like the Linux kernel, there are often hundreds of functions
+with identical type signatures that are called indirectly:
+
+.. code-block::
+
+  1662 functions with void (*)(void)
+  1179 functions with int (*)(void)
+   ...
+
+By salting the CFI hashes, you can make CFI more robust by ensuring that
+functions intended for different purposes have distinct CFI identities.
+
+**Type Compatibility:**
+
+* Functions with different salt values are considered to have incompatible types
+* Function pointers with different salt values cannot be assigned to each other
+* All declarations of the same function must use the same salt value
+
+**Example:**
+
+.. code-block:: c
+
+  // Header file - define convenience macros
+  #define __cfi_salt(s) __attribute__((cfi_salt(s)))
+
+  // Typedef for regular function pointers
+  typedef int (*fptr_t)(void);
+
+  // Typedef for salted function pointers
+  typedef int (*fptr_salted_t)(void) __cfi_salt("pepper");
+
+  struct widget_ops {
+    fptr_t init;          // Regular CFI
+    fptr_salted_t exec;   // Salted CFI
+    fptr_t cleanup;       // Regular CFI
+  };
+
+  // Function implementations
+  static int widget_init(void) { return 0; }
+  static int widget_exec(void) __cfi_salt("pepper") { return 1; }
+  static int widget_cleanup(void) { return 0; }
+
+  static struct widget_ops ops = {
+    .init = widget_init,      // OK - compatible types
+    .exec = widget_exec,      // OK - both use "pepper" salt
+    .cleanup = widget_cleanup // OK - compatible types
+  };
+
+  // Using C++11 attribute syntax
+  void secure_callback(void) [[clang::cfi_salt("secure")]];
+
+  // This would cause a compilation error:
+  // fptr_t bad_ptr = widget_exec;  // Error: incompatible types
+
+**Notes:**
+
+* The salt string can contain non-NULL ASCII characters, including spaces and
+  quotes
+* This attribute only applies to function types; using it on non-function
+  types will generate a warning
+* All declarations and definitions of the same function must use identical
+  salt values
+* The attribute affects type compatibility during compilation and CFI hash
+  generation during code generation
   }];
 }
 
@@ -3971,7 +4140,7 @@ of 2.
    .. code-block:: c
 
      typedef double * aligned_double_ptr __attribute__((align_value(64)));
-     void foo(double & x  __attribute__((align_value(128)),
+     void foo(double & x  __attribute__((align_value(128))),
               aligned_double_ptr y) { ... }
 
 If the pointer value does not have the specified alignment at runtime, the
@@ -4126,17 +4295,17 @@ used by other languages. (This prefix is also added to the standard Itanium
 C++ ABI prefix on "mangled" symbol names, so that e.g. on such targets the true
 symbol name for a C++ variable declared as ``int cppvar;`` would be
 ``__Z6cppvar``; note the two underscores.)  This prefix is *not* added to the
-symbol names specified by the ``asm`` attribute; programmers wishing to match a
-C symbol name must compensate for this.
+symbol names specified by the ``__asm`` attribute; programmers wishing to match
+a C symbol name must compensate for this.
 
 For example, consider the following C code:
 
 .. code-block:: c
 
-  int var1 asm("altvar") = 1;  // "altvar" in symbol table.
+  int var1 __asm("altvar") = 1;  // "altvar" in symbol table.
   int var2 = 1; // "_var2" in symbol table.
 
-  void func1(void) asm("altfunc");
+  void func1(void) __asm("altfunc");
   void func1(void) {} // "altfunc" in symbol table.
   void func2(void) {} // "_func2" in symbol table.
 
@@ -4392,8 +4561,6 @@ annotated parameter.
       addToSet(str, s); // Not detected.
     }
   }
-
-.. _`lifetimebound`: https://clang.llvm.org/docs/AttributeReference.html#lifetimebound
   }];
 }
 
@@ -4431,7 +4598,14 @@ destroy the object before returning. The lifetime of the copy of the parameter
 in the caller ends without a destructor call when the call begins.
 
 If a type is trivial for the purpose of calls, it is assumed to be trivially
-relocatable for the purpose of ``__is_trivially_relocatable``.
+relocatable for the purpose of ``__is_trivially_relocatable`` and
+``__builtin_is_cpp_trivially_relocatable``.
+When a type marked with ``[[trivial_abi]]`` is used as a function argument,
+the compiler may omit the call to the copy constructor.
+Thus, side effects of the copy constructor are potentially not performed.
+For example, objects that contain pointers to themselves or otherwise depend
+on their address (or the address or their subobjects) should not be declared
+``[[trivial_abi]]``.
 
 Attribute ``trivial_abi`` has no effect in the following cases:
 
@@ -5070,6 +5244,23 @@ deallocation function. When this form is used, it enables the compiler to
 diagnose when the incorrect deallocation function is used with this variable.
 However the associated warning, spelled `-Wmismatched-dealloc` in GCC, is not
 yet implemented in clang.
+  }];
+}
+
+def MallocSpanDocs : Documentation {
+  let Category = DocCatFunction;
+  let Heading = "malloc_span";
+  let Content = [{
+The ``malloc_span`` attribute can be used to mark that a function which acts
+like a system memory allocation function and returns a span-like structure,
+where the returned memory range does not alias storage from any other object
+accessible to the caller.
+
+In this context, a span-like structure is assumed to have two non-static data
+members, one of which is a pointer to the start of the allocated memory and
+the other one is either an integer type containing the size of the actually
+allocated memory or a pointer to the end of the allocated region. Note, static
+data members do not impact whether a type is span-like or not.
   }];
 }
 
@@ -6558,7 +6749,7 @@ if omitted.``Section`` defaults  to the ``-fpatchable-function-entry`` section n
 set, or to ``__patchable_function_entries`` otherwise.
 
 This attribute is only supported on
-aarch64/aarch64-be/loongarch32/loongarch64/riscv32/riscv64/i386/x86-64/ppc/ppc64 targets.
+aarch64/aarch64-be/loongarch32/loongarch64/riscv32/riscv64/i386/x86-64/ppc/ppc64/ppc64le targets.
 For ppc/ppc64 targets, AIX is still not supported.
 }];
 }
@@ -6866,6 +7057,56 @@ for references or Objective-C object pointers.
 .. code-block:: objc
 
   id __attribute__((noderef)) obj = [NSObject new]; // warning: 'noderef' can only be used on an array or pointer type
+}];
+}
+
+def CFIUncheckedCalleeDocs : Documentation {
+  let Category = DocCatType;
+  let Content = [{
+``cfi_unchecked_callee`` is a function type attribute which prevents the compiler from instrumenting
+`Control Flow Integrity <https://clang.llvm.org/docs/ControlFlowIntegrity.html>`_ checks on indirect
+function calls. This also includes control flow checks added by
+`-fsanitize=function <https://clang.llvm.org/docs/UndefinedBehaviorSanitizer.html#available-checks>`.
+Specifically, the attribute has the following semantics:
+
+1. Indirect calls to a function type with this attribute will not be instrumented with CFI. That is,
+   the indirect call will not be checked. Note that this only changes the behavior for indirect calls
+   on pointers to function types having this attribute. It does not prevent all indirect function calls
+   for a given type from being checked.
+2. All direct references to a function whose type has this attribute will always reference the
+   function definition rather than an entry in the CFI jump table.
+3. When a pointer to a function with this attribute is implicitly cast to a pointer to a function
+   without this attribute, the compiler will give a warning saying this attribute is discarded. This
+   warning can be silenced with an explicit cast. Note an explicit cast just disables the warning, so
+   direct references to a function with a ``cfi_unchecked_callee`` attribute will still reference the
+   function definition rather than the CFI jump table.
+
+.. code-block:: c
+
+  #define CFI_UNCHECKED_CALLEE __attribute__((cfi_unchecked_callee))
+
+  void no_cfi() CFI_UNCHECKED_CALLEE {}
+
+  void (*with_cfi)() = no_cfi;  // warning: implicit conversion discards `cfi_unchecked_callee` attribute.
+                                // `with_cfi` also points to the actual definition of `no_cfi` rather than
+                                // its jump table entry.
+
+  void invoke(void (CFI_UNCHECKED_CALLEE *func)()) {
+    func();  // CFI will not instrument this indirect call.
+
+    void (*func2)() = func;  // warning: implicit conversion discards `cfi_unchecked_callee` attribute.
+
+    func2();  // CFI will instrument this indirect call. Users should be careful however because if this
+              // references a function with type `cfi_unchecked_callee`, then the CFI check may incorrectly
+              // fail because the reference will be to the function definition rather than the CFI jump
+              // table entry.
+  }
+
+This attribute can only be applied on functions or member functions. This attribute can be a good
+alternative to ``no_sanitize("cfi")`` if you only want to disable innstrumentation for specific indirect
+calls rather than applying ``no_sanitize("cfi")`` on the whole function containing indirect call. Note
+that ``cfi_unchecked_attribute`` is a type attribute doesn't disable CFI instrumentation on a function
+body.
 }];
 }
 
@@ -7320,6 +7561,45 @@ A managed variable is emitted as an undefined global symbol in the device binary
 registered by ``__hipRegisterManagedVariable`` in init functions. The HIP runtime allocates
 managed memory and uses it to define the symbol when loading the device binary.
 A managed variable can be accessed in both device and host code.
+  }];
+}
+
+def CUDAClusterDimsAttrDoc : Documentation {
+  let Category = DocCatDecl;
+  let Content = [{
+In CUDA/HIP programming, the ``cluster_dims`` attribute, conventionally exposed as the
+``__cluster_dims__`` macro, can be applied to a kernel function to set the dimensions of a
+thread block cluster, which is an optional level of hierarchy and made up of thread blocks.
+``__cluster_dims__`` defines the cluster size as ``(X, Y, Z)``, where each value is the number
+of thread blocks in that dimension. The ``cluster_dims`` and `no_cluster`` attributes are
+mutually exclusive.
+
+.. code::
+
+  __global__ __cluster_dims__(2, 1, 1) void kernel(...) {
+    ...
+  }
+
+  }];
+}
+
+def CUDANoClusterAttrDoc : Documentation {
+  let Category = DocCatDecl;
+  let Content = [{
+In CUDA/HIP programming, a kernel function can still be launched with the cluster feature enabled
+at runtime, even without being annotated with ``__cluster_dims__``. The LLVM/Clang-exclusive
+``no_cluster`` attribute, conventionally exposed as the ``__no_cluster__`` macro, can be applied to
+a kernel function to explicitly indicate that the cluster feature will not be enabled either at
+compile time or at kernel launch time. This allows the compiler to apply certain optimizations
+without assuming that clustering could be enabled at runtime. It is undefined behavior to launch a
+kernel annotated with ``__no_cluster__`` if the cluster feature is enabled at runtime.
+The ``cluster_dims`` and ``no_cluster`` attributes are mutually exclusive.
+
+.. code::
+
+  __global__ __no_cluster__ void kernel(...) {
+    ...
+  }
   }];
 }
 
@@ -8158,6 +8438,23 @@ flag.
   }];
 }
 
+def DocHLSLSemantics : DocumentationCategory<"HLSL Semantics"> {
+  let Content = [{
+A semantic is a string attached to a shader input or output that conveys
+information about the intended use of a parameter. Semantics are required on
+all variables passed between shader stages. The syntax for adding a semantic
+to a shader variable is shown here (Variable Syntax (DirectX HLSL)).
+
+In general, data passed between pipeline stages is completely generic and is
+not uniquely interpreted by the system; arbitrary semantics are allowed which
+have no special meaning. Parameters (in Direct3D 10 and later) which contain
+these special semantics are referred to as System-Value Semantics.
+
+More information is available here:
+https://learn.microsoft.com/en-us/windows/win32/direct3dhlsl/dx-graphics-hlsl-semantics
+  }];
+}
+
 def WaveSizeDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{
@@ -8193,6 +8490,21 @@ to be the most optimal for this shader.
 The full documentation is available here: https://microsoft.github.io/DirectX-Specs/d3d/HLSL_SM_6_6_WaveSize.html
 and https://microsoft.github.io/hlsl-specs/proposals/0013-wave-size-range.html
   }];
+}
+
+def VkConstantIdDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+The ``vk::constant_id`` attribute specifies the id for a SPIR-V specialization
+constant. The attribute applies to const global scalar variables. The variable must be initialized with a C++11 constexpr.
+In SPIR-V, the
+variable will be replaced with an `OpSpecConstant` with the given id.
+The syntax is:
+
+.. code-block:: text
+
+  ``[[vk::constant_id(<Id>)]] const T Name = <Init>``
+}];
 }
 
 def RootSignatureDocs : Documentation {
@@ -8379,38 +8691,6 @@ randomized.
   }];
 }
 
-def HLSLSV_GroupThreadIDDocs : Documentation {
-  let Category = DocCatFunction;
-  let Content = [{
-The ``SV_GroupThreadID`` semantic, when applied to an input parameter, specifies which
-individual thread within a thread group is executing in. This attribute is
-only supported in compute shaders.
-
-The full documentation is available here: https://docs.microsoft.com/en-us/windows/win32/direct3dhlsl/sv-groupthreadid
-  }];
-}
-
-def HLSLSV_GroupIDDocs : Documentation {
-  let Category = DocCatFunction;
-  let Content = [{
-The ``SV_GroupID`` semantic, when applied to an input parameter, specifies which
-thread group a shader is executing in. This attribute is only supported in compute shaders.
-
-The full documentation is available here: https://docs.microsoft.com/en-us/windows/win32/direct3dhlsl/sv-groupid
-  }];
-}
-
-def HLSLSV_GroupIndexDocs : Documentation {
-  let Category = DocCatFunction;
-  let Content = [{
-The ``SV_GroupIndex`` semantic, when applied to an input parameter, specifies a
-data binding to map the group index to the specified parameter. This attribute
-is only supported in compute shaders.
-
-The full documentation is available here: https://docs.microsoft.com/en-us/windows/win32/direct3dhlsl/sv-groupindex
-  }];
-}
-
 def HLSLResourceBindingDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{
@@ -8457,21 +8737,6 @@ The full documentation is available here: https://learn.microsoft.com/en-us/wind
   }];
 }
 
-def HLSLSV_DispatchThreadIDDocs : Documentation {
-  let Category = DocCatFunction;
-  let Content = [{
-The ``SV_DispatchThreadID`` semantic, when applied to an input parameter,
-specifies a data binding to map the global thread offset within the Dispatch
-call (per dimension of the group) to the specified parameter.
-When applied to a field of a struct, the data binding is specified to the field
-when the struct is used as a parameter type.
-The semantic on the field is ignored when not used as a parameter.
-This attribute is only supported in compute shaders.
-
-The full documentation is available here: https://docs.microsoft.com/en-us/windows/win32/direct3dhlsl/sv-dispatchthreadid
-  }];
-}
-
 def HLSLGroupSharedAddressSpaceDocs : Documentation {
   let Category = DocCatVariable;
   let Content = [{
@@ -8506,6 +8771,45 @@ into the callee).
 Parameters annotated with `inout` are copied into the callee via a temporary,
 and copied back to the argument after the callee returns.
   }];
+}
+
+def HLSLVkExtBuiltinInputDocs : Documentation {
+  let Category = DocCatVariable;
+  let Content = [{
+Vulkan shaders have `Input` builtins. Those variables are externally
+initialized by the driver/pipeline, but each copy is private to the current
+lane.
+
+Those builtins can be declared using the `[[vk::ext_builtin_input]]` attribute
+like follows:
+
+.. code-block:: c++
+
+  [[vk::ext_builtin_input(/* WorkgroupId */ 26)]]
+  static const uint3 groupid;
+
+This variable will be lowered into a module-level variable, with the `Input`
+storage class, and the `BuiltIn 26` decoration.
+
+The full documentation for this inline SPIR-V attribute can be found here:
+https://github.com/microsoft/hlsl-specs/blob/main/proposals/0011-inline-spirv.md
+  }];
+}
+
+def HLSLVkPushConstantDocs : Documentation {
+  let Category = DocCatVariable;
+  let Content = [{
+Vulkan shaders have `PushConstants`
+
+The ``[[vk::push_constant]]`` attribute allows you to declare this
+global variable as a push constant when targeting Vulkan.
+This attribute is ignored otherwise.
+
+This attribute must be applied to the variable, not underlying type.
+The variable type must be a struct, per the requirements of Vulkan, "there
+must be no more than one push constant block statically used per shader entry
+point."
+}];
 }
 
 def AnnotateTypeDocs : Documentation {
@@ -8666,6 +8970,44 @@ def ReadOnlyPlacementDocs : Documentation {
      ``enforce_read_only_placement`` attribute.
   5. A type ``Q`` inherits from type ``T`` and it does not have the
      ``enforce_read_only_placement`` attribute.
+  }];
+}
+
+def HLSLVkBindingDocs : Documentation {
+  let Category = DocCatVariable;
+  let Content = [{
+The ``[[vk::binding]]`` attribute allows you to explicitly specify the descriptor
+set and binding for a resource when targeting SPIR-V. This is particularly
+useful when you need different bindings for SPIR-V and DXIL, as the ``register``
+attribute can be used for DXIL-specific bindings.
+
+The attribute takes two integer arguments: the binding and the descriptor set.
+The descriptor set is optional and defaults to 0 if not provided.
+
+.. code-block:: c++
+
+  // A structured buffer with binding 23 in descriptor set 102.
+  [[vk::binding(23, 102)]] StructuredBuffer<float> Buf;
+
+  // A structured buffer with binding 14 in descriptor set 0.
+  [[vk::binding(14)]] StructuredBuffer<float> Buf2;
+
+  // A cbuffer with binding 1 in descriptor set 2.
+  [[vk::binding(1, 2)]] cbuffer MyCBuffer {
+    float4x4 worldViewProj;
+  };
+  }];
+}
+
+def HLSLVkLocationDocs : Documentation {
+  let Category = DocCatVariable;
+  let Content = [{
+Attribute used for specifying the location number for the stage input/output
+variables. Allowed on function parameters, function returns, and struct
+fields. This parameter has no effect when used outside of an entrypoint
+parameter/parameter field/return value.
+
+This attribute maps to the 'Location' SPIR-V decoration.
   }];
 }
 
@@ -8967,14 +9309,14 @@ def CoroLifetimeBoundDoc : Documentation {
   let Category = DocCatDecl;
   let Content = [{
 The ``[[clang::coro_lifetimebound]]`` is a class attribute which can be applied
-to a coroutine return type (`CRT`_) (i.e.
+to a coroutine return type (`coro_return_type, coro_wrapper`_) (i.e.
 it should also be annotated with ``[[clang::coro_return_type]]``).
 
 All parameters of a function are considered to be lifetime bound if the function returns a
 coroutine return type (CRT) annotated with ``[[clang::coro_lifetimebound]]``.
 This lifetime bound analysis can be disabled for a coroutine wrapper or a coroutine by annotating the function
 with ``[[clang::coro_disable_lifetimebound]]`` function attribute .
-See `documentation`_ of ``[[clang::lifetimebound]]`` for details about lifetime bound analysis.
+See documentation of `lifetimebound`_ for details about lifetime bound analysis.
 
 
 Reference parameters of a coroutine are susceptible to capturing references to temporaries or local variables.
@@ -9034,9 +9376,6 @@ but do not pass them to the underlying coroutine or pass them by value.
   void use() {
     auto task = coro_wrapper(1); // use of temporary is fine as the argument is not lifetime bound.
   }
-
-.. _`documentation`: https://clang.llvm.org/docs/AttributeReference.html#lifetimebound
-.. _`CRT`: https://clang.llvm.org/docs/AttributeReference.html#coro-return-type
 }];
 }
 
@@ -9311,13 +9650,74 @@ def NonStringDocs : Documentation {
   let Category = DocCatDecl;
   let Content = [{
 The ``nonstring`` attribute can be applied to the declaration of a variable or
-a field whose type is a character array to specify that the character array is
-not intended to behave like a null-terminated string. This will silence
-diagnostics with code like:
+a field whose type is a character pointer or character array to specify that
+the buffer is not intended to behave like a null-terminated string. This will
+silence diagnostics with code like:
 
 .. code-block:: c
 
   char BadStr[3] = "foo"; // No space for the null terminator, diagnosed
   __attribute__((nonstring)) char NotAStr[3] = "foo"; // Not diagnosed
+  }];
+}
+
+def ModularFormatDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+The ``modular_format`` attribute can be applied to a function that bears the
+``format`` attribute (or standard library functions) to indicate that the
+implementation is "modular", that is, that the implementation is logically
+divided into a number of named aspects. When the compiler can determine that
+not all aspects of the implementation are needed for a given call, the compiler
+may redirect the call to the identifier given as the first argument to the
+attribute (the modular implementation function).
+
+The second argument is a implementation name, and the remaining arguments are
+aspects of the format string for the compiler to report. The implementation
+name is an unevaluated identifier be in the C namespace.
+
+The compiler reports that a call requires an aspect by issuing a relocation for
+the symbol ``<impl_name>_<aspect>`` at the point of the call. This arranges for
+code and data needed to support the aspect of the implementation to be brought
+into the link to satisfy weak references in the modular implemenation function.
+If the compiler does not understand an aspect, it must summarily consider any
+call to require that aspect. 
+
+For example, say ``printf`` is annotated with
+``modular_format(__modular_printf, "__printf", "float")``. Then, a call to
+``printf(var, 42)`` would be untouched. A call to ``printf("%d", 42)`` would
+become a call to ``__modular_printf`` with the same arguments, as would
+``printf("%f", 42.0)``. The latter would be accompanied with a strong
+relocation against the symbol ``__printf_float``, which would bring floating
+point support for ``printf`` into the link.
+
+If the attribute appears more than once on a declaration, or across a chain of
+redeclarations, it is an error for the attributes to have different arguments,
+excepting that the aspects may be in any order.
+
+The following aspects are currently supported:
+
+- ``float``: The call has a floating point argument
+  }];
+}
+
+def MSStructDocs : Documentation {
+  let Category = DocCatDecl;
+  let Content = [{
+The ``ms_struct`` and ``gcc_struct`` attributes request the compiler to enter a
+special record layout compatibility mode which mimics the layout of Microsoft or
+Itanium C++ ABI respectively. Obviously, if the current C++ ABI matches the
+requested ABI, the attribute does nothing. However, if it does not, annotated
+structure or class is laid out in a special compatibility mode, which slightly
+changes offsets for fields and bit-fields. The intention is to match the layout
+of the requested ABI for structures which only use C features.
+
+Note that the default behavior can be controlled by ``-mms-bitfields`` and
+``-mno-ms-bitfields`` switches and via ``#pragma ms_struct``.
+
+The primary difference is for bitfields, where the MS variant only packs
+adjacent fields into the same allocation unit if they have integral types
+of the same size, while the GCC/Itanium variant packs all fields in a bitfield
+tightly.
   }];
 }

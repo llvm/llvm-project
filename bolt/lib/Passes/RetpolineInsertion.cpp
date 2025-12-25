@@ -195,7 +195,7 @@ std::string createRetpolineFunctionTag(BinaryContext &BC,
 
   TagOS << "+";
   if (MemRef.DispExpr)
-    MemRef.DispExpr->print(TagOS, BC.AsmInfo.get());
+    BC.AsmInfo->printExpr(TagOS, *MemRef.DispExpr);
   else
     TagOS << MemRef.DispImm;
 

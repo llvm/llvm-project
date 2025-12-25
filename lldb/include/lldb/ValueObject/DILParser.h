@@ -9,8 +9,8 @@
 #ifndef LLDB_VALUEOBJECT_DILPARSER_H
 #define LLDB_VALUEOBJECT_DILPARSER_H
 
+#include "lldb/Host/common/DiagnosticsRendering.h"
 #include "lldb/Target/ExecutionContextScope.h"
-#include "lldb/Utility/DiagnosticsRendering.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/ValueObject/DILAST.h"
 #include "lldb/ValueObject/DILLexer.h"
@@ -71,6 +71,10 @@ public:
 
   bool UseSynthetic() { return m_use_synthetic; }
 
+  bool UseFragileIvar() { return m_fragile_ivar; }
+
+  bool CheckPtrVsMember() { return m_check_ptr_vs_member; }
+
   lldb::DynamicValueType UseDynamic() { return m_use_dynamic; }
 
 private:
@@ -84,16 +88,29 @@ private:
 
   ASTNodeUP ParseExpression();
   ASTNodeUP ParseUnaryExpression();
+  ASTNodeUP ParsePostfixExpression();
   ASTNodeUP ParsePrimaryExpression();
 
   std::string ParseNestedNameSpecifier();
 
   std::string ParseIdExpression();
   std::string ParseUnqualifiedId();
+  ASTNodeUP ParseNumericLiteral();
+  ASTNodeUP ParseIntegerLiteral();
+  ASTNodeUP ParseFloatingPointLiteral();
+  ASTNodeUP ParseBooleanLiteral();
+
+  ASTNodeUP ParseCastExpression();
+  std::optional<CompilerType> ParseBuiltinType();
+  std::optional<CompilerType> ParseTypeId();
+  CompilerType ResolveTypeDeclarators(CompilerType type,
+                                      const std::vector<Token> &ptr_operators);
 
   void BailOut(const std::string &error, uint32_t loc, uint16_t err_len);
 
   void Expect(Token::Kind kind);
+
+  void ExpectOneOf(std::vector<Token::Kind> kinds_vec);
 
   void TentativeParsingRollback(uint32_t saved_idx) {
     if (m_error)
@@ -117,6 +134,8 @@ private:
 
   lldb::DynamicValueType m_use_dynamic;
   bool m_use_synthetic;
+  bool m_fragile_ivar;
+  bool m_check_ptr_vs_member;
 }; // class DILParser
 
 } // namespace lldb_private::dil

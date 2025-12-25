@@ -33,7 +33,7 @@ using namespace sema;
 
 static bool hasMatchingEnvironmentOrNone(const ASTContext &Context,
                                          const AvailabilityAttr *AA) {
-  IdentifierInfo *IIEnvironment = AA->getEnvironment();
+  const IdentifierInfo *IIEnvironment = AA->getEnvironment();
   auto Environment = Context.getTargetInfo().getTriple().getEnvironment();
   if (!IIEnvironment || Environment == llvm::Triple::UnknownEnvironment)
     return true;
@@ -102,7 +102,7 @@ Sema::ShouldDiagnoseAvailabilityOfDecl(const NamedDecl *D, std::string *Message,
       break;
     for (const Type *T = TD->getUnderlyingType().getTypePtr(); /**/; /**/) {
       if (auto *TT = dyn_cast<TagType>(T)) {
-        D = TT->getDecl();
+        D = TT->getDecl()->getDefinitionOrSelf();
       } else if (isa<SubstTemplateTypeParmType>(T)) {
         // A Subst* node represents a use through a template.
         // Any uses of the underlying declaration happened through it's template
@@ -187,7 +187,9 @@ static bool ShouldDiagnoseAvailabilityInContext(
   // For libraries the availability will be checked later in
   // DiagnoseHLSLAvailability class once where the specific environment/shader
   // stage of the caller is known.
-  if (S.getLangOpts().HLSL) {
+  // We only do this for APIs that are not explicitly deprecated. Any API that
+  // is explicitly deprecated we always issue a diagnostic on.
+  if (S.getLangOpts().HLSL && K != AR_Deprecated) {
     if (!S.getLangOpts().HLSLStrictAvailability ||
         (DeclEnv != nullptr &&
          S.getASTContext().getTargetInfo().getTriple().getEnvironment() ==
@@ -547,8 +549,19 @@ static void DoEmitAvailabilityWarning(Sema &S, AvailabilityResult K,
     return;
   }
   case AR_Deprecated:
-    diag = !ObjCPropertyAccess ? diag::warn_deprecated
-                               : diag::warn_property_method_deprecated;
+    // Suppress -Wdeprecated-declarations in implicit
+    // functions.
+    if (const auto *FD = dyn_cast_or_null<FunctionDecl>(S.getCurFunctionDecl());
+        FD && FD->isImplicit())
+      return;
+
+    if (ObjCPropertyAccess)
+      diag = diag::warn_property_method_deprecated;
+    else if (S.currentEvaluationContext().IsCaseExpr)
+      diag = diag::warn_deprecated_switch_case;
+    else
+      diag = diag::warn_deprecated;
+
     diag_message = diag::warn_deprecated_message;
     diag_fwdclass_message = diag::warn_deprecated_fwdclass_message;
     property_note_select = /* deprecated */ 0;
@@ -1006,7 +1019,7 @@ bool DiagnoseUnguardedAvailability::VisitTypeLoc(TypeLoc Ty) {
     return true;
 
   if (const auto *TT = dyn_cast<TagType>(TyPtr)) {
-    TagDecl *TD = TT->getDecl();
+    TagDecl *TD = TT->getDecl()->getDefinitionOrSelf();
     DiagnoseDeclAvailability(TD, Range);
 
   } else if (const auto *TD = dyn_cast<TypedefType>(TyPtr)) {

@@ -1,4 +1,4 @@
-//===--- ImplicitBoolConversionCheck.h - clang-tidy--------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_IMPLICIT_BOOL_CONVERSION_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_IMPLICIT_BOOL_CONVERSION_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_IMPLICITBOOLCONVERSIONCHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_IMPLICITBOOLCONVERSIONCHECK_H
 
 #include "../ClangTidyCheck.h"
 
@@ -16,7 +16,7 @@ namespace clang::tidy::readability {
 /// Checks for use of implicit bool conversions in expressions.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/readability/implicit-bool-conversion.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/readability/implicit-bool-conversion.html
 class ImplicitBoolConversionCheck : public ClangTidyCheck {
 public:
   ImplicitBoolConversionCheck(StringRef Name, ClangTidyContext *Context);
@@ -41,4 +41,4 @@ private:
 
 } // namespace clang::tidy::readability
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_IMPLICIT_BOOL_CONVERSION_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_IMPLICITBOOLCONVERSIONCHECK_H

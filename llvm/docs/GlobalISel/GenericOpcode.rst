@@ -148,6 +148,33 @@ G_EXTRACT for scalar types, but acts elementwise on vectors.
 
   %1:_(s16) = G_TRUNC %0:_(s32)
 
+G_TRUNC_SSAT_S
+^^^^^^^^^^^^^^
+
+Truncate a signed input to a signed result with saturation.
+
+.. code-block:: none
+
+  %1:_(s16) = G_TRUNC_SSAT_S %0:_(s32)
+
+G_TRUNC_SSAT_U
+^^^^^^^^^^^^^^
+
+Truncate a signed input to an unsigned result with saturation.
+
+.. code-block:: none
+
+  %1:_(s16) = G_TRUNC_SSAT_U %0:_(s32)
+
+G_TRUNC_USAT_U
+^^^^^^^^^^^^^^
+
+Truncate a unsigned input to an unsigned result with saturation.
+
+.. code-block:: none
+
+  %1:_(s16) = G_TRUNC_USAT_U %0:_(s32)
+
 Type Conversions
 ----------------
 
@@ -477,12 +504,25 @@ undefined.
 G_ABDS, G_ABDU
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Compute the absolute difference (signed and unsigned), e.g. abs(x-y).
+Compute the absolute difference (signed and unsigned), e.g. trunc(abs(ext(x)-ext(y)).
 
 .. code-block:: none
 
   %0:_(s33) = G_ABDS %2, %3
   %1:_(s33) = G_ABDU %4, %5
+
+G_UAVGFLOOR, G_UAVGCEIL, G_SAVGFLOOR, G_SAVGCEIL
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Computes the average of corresponding elements in two vectors (signed and unsigned).
+Resulting vector contains values that are either rounded or truncated. e.g. trunc(shr(add(ext(a),ext(b)),1)).
+
+.. code-block:: none
+
+  %0:_(<4 x i16>) = G_UAVGFLOOR %4:_(<4 x i16>), %5:_(<4 x i16>)
+  %1:_(<4 x i16>) = G_UAVGCEIL %6:_(<4 x i16>), %7:_(<4 x i16>)
+  %2:_(<4 x i16>) = G_SAVGFLOOR %8:_(<4 x i16>), %9:_(<4 x i16>)
+  %3:_(<4 x i16>) = G_SAVGCEIL %10:_(<4 x i16>), %11:_(<4 x i16>)
 
 Floating Point Operations
 -------------------------
@@ -1078,7 +1118,7 @@ G_TRAP, G_DEBUGTRAP, G_UBSANTRAP
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Represents :ref:`llvm.trap <llvm.trap>`, :ref:`llvm.debugtrap <llvm.debugtrap>`
-and :ref:`llvm.ubsantrap <llvm.ubsantrap>` that generate a target dependent
+and :ref:`llvm.ubsantrap <llvm.ubsantrap>` that generate a target-dependent
 trap instructions.
 
 .. code-block:: none
@@ -1122,6 +1162,15 @@ An alignment value of `0` or `1` means no specific alignment.
 .. code-block:: none
 
   %8:_(p0) = G_DYN_STACKALLOC %7(s64), 32
+
+G_FREEZE
+^^^^^^^^
+
+G_FREEZE is used to stop propagation of undef and poison values.
+
+.. code-block:: none
+
+  %1:_(s32) = G_FREEZE %0(s32)
 
 Optimization Hints
 ------------------

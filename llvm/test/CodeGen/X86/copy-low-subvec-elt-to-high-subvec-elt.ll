@@ -342,7 +342,7 @@ define <4 x i64> @vec256_eltty_i64_source_subvec_1_target_subvec_mask_3_binary(<
 ; CHECK-LABEL: vec256_eltty_i64_source_subvec_1_target_subvec_mask_3_binary:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpermpd {{.*#+}} ymm1 = ymm1[2,2,2,2]
-; CHECK-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1],ymm1[2,3],ymm0[4,5],ymm1[6,7]
+; CHECK-NEXT:    vunpcklpd {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[2],ymm1[2]
 ; CHECK-NEXT:    retq
   %r = shufflevector <4 x i64> %x, <4 x i64> %y, <4 x i32> <i32 0, i32 6, i32 2, i32 6>
   ret <4 x i64> %r
@@ -597,8 +597,8 @@ define <8 x i32> @vec256_eltty_i32_source_subvec_1_target_subvec_mask_3_unary(<8
 define <8 x i32> @vec256_eltty_i32_source_subvec_1_target_subvec_mask_3_binary(<8 x i32> %x, <8 x i32> %y) nounwind {
 ; CHECK-SLOW-LABEL: vec256_eltty_i32_source_subvec_1_target_subvec_mask_3_binary:
 ; CHECK-SLOW:       # %bb.0:
-; CHECK-SLOW-NEXT:    vpermpd {{.*#+}} ymm1 = ymm1[2,3,2,3]
-; CHECK-SLOW-NEXT:    vshufps {{.*#+}} ymm1 = ymm1[0,0,0,0,4,4,4,4]
+; CHECK-SLOW-NEXT:    vextractf128 $1, %ymm1, %xmm1
+; CHECK-SLOW-NEXT:    vbroadcastss %xmm1, %ymm1
 ; CHECK-SLOW-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1,2],ymm1[3],ymm0[4,5,6],ymm1[7]
 ; CHECK-SLOW-NEXT:    retq
 ;

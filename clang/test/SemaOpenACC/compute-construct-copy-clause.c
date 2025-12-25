@@ -69,6 +69,19 @@ void uses(int IntParam, short *PointerParam, float ArrayParam[5], Complete Compo
   // expected-error@+1{{OpenACC 'present_or_copy' clause is not valid on 'loop' directive}}
 #pragma acc loop present_or_copy(LocalInt)
   for(int i = 5; i < 10;++i);
+
+  short *ArrayOfPtrs[5];
+#pragma acc parallel copy(ArrayOfPtrs[1:1])
+  ;
+  // expected-error@+1{{OpenACC sub-array length is unspecified and cannot be inferred because the subscripted value is not an array}}
+#pragma acc parallel copy(ArrayOfPtrs[1:1][1])
+  ;
+  // expected-error@+1{{OpenACC sub-array length is unspecified and cannot be inferred because the subscripted value is not an array}}
+#pragma acc parallel copy(ArrayOfPtrs[1:1][1:])
+  ;
+#pragma acc parallel copy(ArrayOfPtrs[1:1][1:2])
+  ;
+
 }
 void ModList() {
   int V1;
@@ -82,6 +95,8 @@ void ModList() {
   // expected-error@+1{{OpenACC 'zero' modifier not valid on 'copy' clause}}
 #pragma acc kernels copy(zero: V1)
   for(int i = 5; i < 10;++i);
-#pragma acc parallel copy(always, alwaysin, alwaysout: V1)
+#pragma acc parallel copy(capture:V1)
+  for(int i = 5; i < 10;++i);
+#pragma acc parallel copy(always, alwaysin, alwaysout, capture: V1)
   for(int i = 5; i < 10;++i);
 }

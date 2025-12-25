@@ -34,6 +34,12 @@ void uses() {
   // expected-error@+2{{OpenACC integer expression requires explicit conversion from 'struct ExplicitConvertOnly' to 'int'}}
   // expected-note@#EXPL_CONV{{conversion to integral type 'int'}}
 #pragma acc init device_num(Explicit)
+
+  // expected-error@+1{{OpenACC 'device_type' clause on a 'init' construct only permits one architecture}}
+#pragma acc init device_type(nvidia, radeon)
+
+  // expected-error@+1{{OpenACC 'device_type' clause on a 'init' construct only permits one architecture}}
+#pragma acc init  device_type(nonsense, nvidia, radeon)
 }
 
 template<typename T>

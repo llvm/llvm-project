@@ -25,6 +25,9 @@
 #include "llvm/IR/Module.h"
 #include "llvm/TargetParser/Host.h"
 
+#include "clang/Basic/Diagnostic.h"
+#include "clang/Basic/DiagnosticIDs.h"
+#include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/Passes.h"
@@ -82,12 +85,19 @@ llvm::LogicalResult prepareCIRModuleDataLayout(mlir::ModuleOp mod,
 
   // Data layout is fully determined by the target triple. Here we only pass the
   // triple to get the data layout.
+  llvm::IntrusiveRefCntPtr<clang::DiagnosticIDs> diagID(
+      new clang::DiagnosticIDs);
+  clang::DiagnosticOptions diagOpts;
+  llvm::IntrusiveRefCntPtr<clang::DiagnosticsEngine> diagnostics =
+      new clang::DiagnosticsEngine(diagID, diagOpts,
+                                   new clang::IgnoringDiagConsumer());
   llvm::Triple triple(rawTriple);
+  // TODO: Need to set various target options later to populate
+  // 'TargetInfo' properly.
   clang::TargetOptions targetOptions;
   targetOptions.Triple = rawTriple;
-  // FIXME: AllocateTarget is a big deal. Better make it a global state.
-  std::unique_ptr<clang::TargetInfo> targetInfo =
-      clang::targets::AllocateTarget(llvm::Triple(rawTriple), targetOptions);
+  llvm::IntrusiveRefCntPtr<clang::TargetInfo> targetInfo =
+      clang::TargetInfo::CreateTargetInfo(*diagnostics, targetOptions);
   if (!targetInfo) {
     mod.emitError() << "error: invalid target triple '" << rawTriple << "'\n";
     return llvm::failure();

@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Preamble.h"
+#include "AST.h"
 #include "CollectMacros.h"
 #include "Compiler.h"
 #include "Config.h"
@@ -164,27 +165,6 @@ public:
     return std::make_unique<PPChainedCallbacks>(
         std::make_unique<CollectMainFileMacros>(*PP, Macros),
         collectPragmaMarksCallback(*SourceMgr, Marks));
-  }
-
-  static bool isLikelyForwardingFunction(FunctionTemplateDecl *FT) {
-    const auto *FD = FT->getTemplatedDecl();
-    const auto NumParams = FD->getNumParams();
-    // Check whether its last parameter is a parameter pack...
-    if (NumParams > 0) {
-      const auto *LastParam = FD->getParamDecl(NumParams - 1);
-      if (const auto *PET = dyn_cast<PackExpansionType>(LastParam->getType())) {
-        // ... of the type T&&... or T...
-        const auto BaseType = PET->getPattern().getNonReferenceType();
-        if (const auto *TTPT =
-                dyn_cast<TemplateTypeParmType>(BaseType.getTypePtr())) {
-          // ... whose template parameter comes from the function directly
-          if (FT->getTemplateParameters()->getDepth() == TTPT->getDepth()) {
-            return true;
-          }
-        }
-      }
-    }
-    return false;
   }
 
   bool shouldSkipFunctionBody(Decl *D) override {
@@ -615,7 +595,7 @@ buildPreamble(PathRef FileName, CompilerInvocation CI,
       });
   auto VFS = Inputs.TFS->view(Inputs.CompileCommand.Directory);
   llvm::IntrusiveRefCntPtr<DiagnosticsEngine> PreambleDiagsEngine =
-      CompilerInstance::createDiagnostics(*VFS, &CI.getDiagnosticOpts(),
+      CompilerInstance::createDiagnostics(*VFS, CI.getDiagnosticOpts(),
                                           &PreambleDiagnostics,
                                           /*ShouldOwnClient=*/false);
   const Config &Cfg = Config::current();
@@ -659,7 +639,7 @@ buildPreamble(PathRef FileName, CompilerInvocation CI,
   WallTimer PreambleTimer;
   PreambleTimer.startTimer();
   auto BuiltPreamble = PrecompiledPreamble::Build(
-      CI, ContentsBuffer.get(), Bounds, *PreambleDiagsEngine,
+      CI, ContentsBuffer.get(), Bounds, PreambleDiagsEngine,
       Stats ? TimedFS : StatCacheFS, std::make_shared<PCHContainerOperations>(),
       StoreInMemory, /*StoragePath=*/"", CapturedInfo);
 

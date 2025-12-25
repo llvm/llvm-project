@@ -93,7 +93,8 @@ intrinsics), adding language extensions in Clang, and so on, require an RFC
 first. For changes that promise significant impact on users and/or downstream
 code bases, reviewers can request an RFC achieving consensus before proceeding
 with code review. That having been said, posting initial patches can help with
-discussions on an RFC.
+discussions on an RFC. See the :doc:`RFC process <RFCProcess>` documentation
+for more details.
 
 Code-Review Workflow
 ====================

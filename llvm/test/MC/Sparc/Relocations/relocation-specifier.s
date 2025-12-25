@@ -1,20 +1,21 @@
 # RUN: llvm-mc %s -triple=sparc | FileCheck %s --check-prefix=ASM
-# RUN: llvm-mc %s -triple=sparcv9 | FileCheck %s --check-prefix=ASM
+# RUN: llvm-mc %s --defsym V9=1 -triple=sparcv9 | FileCheck %s --check-prefixes=ASM,ASM-V9
 
 # RUN: llvm-mc %s -triple=sparc -filetype=obj -o %t
 # RUN: llvm-objdump -dr %t | FileCheck %s --check-prefix=OBJDUMP
-# RUN: llvm-mc %s -triple=sparcv9 -filetype=obj -o %t
-# RUN: llvm-objdump -dr %t | FileCheck %s --check-prefix=OBJDUMP
 # RUN: llvm-readelf -s - < %t | FileCheck %s --check-prefix=READELF --implicit-check-not=TLS
+# RUN: llvm-mc %s --defsym V9=1 -triple=sparcv9 -filetype=obj -o %t
+# RUN: llvm-objdump -dr %t | FileCheck %s --check-prefixes=OBJDUMP,OBJDUMP-V9
+# RUN: llvm-readelf -s - < %t | FileCheck %s --check-prefixes=READELF,READELF-V9 --implicit-check-not=TLS
 
 # READELF: TLS     LOCAL  DEFAULT [[#]] s_tle_hix22
 # READELF: TLS     LOCAL  DEFAULT [[#]] s_tldo_hix22
 # READELF: TLS     GLOBAL DEFAULT   UND s_tle_lox10
-# READELF: TLS     GLOBAL DEFAULT   UND s_tie_hi22
-# READELF: TLS     GLOBAL DEFAULT   UND s_tie_lo10
-# READELF: TLS     GLOBAL DEFAULT   UND s_tie_ld
-# READELF: TLS     GLOBAL DEFAULT   UND s_tie_ldx
-# READELF: TLS     GLOBAL DEFAULT   UND s_tie_add
+# READELF-V9: TLS     GLOBAL DEFAULT   UND s_tie_hi22
+# READELF-V9: TLS     GLOBAL DEFAULT   UND s_tie_lo10
+# READELF-V9: TLS     GLOBAL DEFAULT   UND s_tie_ld
+# READELF-V9: TLS     GLOBAL DEFAULT   UND s_tie_ldx
+# READELF-V9: TLS     GLOBAL DEFAULT   UND s_tie_add
 # READELF: TLS     GLOBAL DEFAULT   UND s_tldm_hi22
 # READELF: TLS     GLOBAL DEFAULT   UND s_tldm_lo10
 # READELF: TLS     GLOBAL DEFAULT   UND s_tldm_add
@@ -72,23 +73,24 @@ or %g1, %hm(sym), %g3
 or %g1, %ulo(sym), %g3
 sethi %lm(sym), %l0
 
-# ASM:      sethi %hix(sym), %g1
-# ASM-NEXT: xor %g1, %lox(sym), %g1
-# ASM-NEXT: sethi %gdop_hix22(sym), %l1
-# ASM-NEXT: or %l1, %gdop_lox10(sym), %l1
-# ASM-NEXT: ldx [%l7+%l1], %l2, %gdop(sym)
-# OBJDUMP:      sethi 0x3fffff, %g0
-# OBJDUMP-NEXT: xor %g0, -0x400, %g0
-# OBJDUMP-NEXT: sethi 0x0, %g1
-# OBJDUMP-NEXT:   R_SPARC_HIX22 sym
-# OBJDUMP-NEXT: xor %g1, 0x0, %g1
-# OBJDUMP-NEXT:   R_SPARC_LOX10 sym
-# OBJDUMP-NEXT: sethi 0x0, %l1
-# OBJDUMP-NEXT:   R_SPARC_GOTDATA_OP_HIX22 sym
-# OBJDUMP-NEXT: or %l1, 0x0, %l1
-# OBJDUMP-NEXT:   R_SPARC_GOTDATA_OP_LOX10 sym
-# OBJDUMP-NEXT: ldx [%l7+%l1], %l2
-# OBJDUMP-NEXT:   R_SPARC_GOTDATA_OP sym
+.ifdef V9
+# ASM-V9:      sethi %hix(sym), %g1
+# ASM-V9-NEXT: xor %g1, %lox(sym), %g1
+# ASM-V9-NEXT: sethi %gdop_hix22(sym), %l1
+# ASM-V9-NEXT: or %l1, %gdop_lox10(sym), %l1
+# ASM-V9-NEXT: ldx [%l7+%l1], %l2, %gdop(sym)
+# OBJDUMP-V9:      sethi 0x3fffff, %g0
+# OBJDUMP-V9-NEXT: xor %g0, -0x400, %g0
+# OBJDUMP-V9-NEXT: sethi 0x0, %g1
+# OBJDUMP-V9-NEXT:   R_SPARC_HIX22 sym
+# OBJDUMP-V9-NEXT: xor %g1, 0x0, %g1
+# OBJDUMP-V9-NEXT:   R_SPARC_LOX10 sym
+# OBJDUMP-V9-NEXT: sethi 0x0, %l1
+# OBJDUMP-V9-NEXT:   R_SPARC_GOTDATA_OP_HIX22 sym
+# OBJDUMP-V9-NEXT: or %l1, 0x0, %l1
+# OBJDUMP-V9-NEXT:   R_SPARC_GOTDATA_OP_LOX10 sym
+# OBJDUMP-V9-NEXT: ldx [%l7+%l1], %l2
+# OBJDUMP-V9-NEXT:   R_SPARC_GOTDATA_OP sym
 sethi %hix(zero), %g0
 xor %g0, %lox(zero), %g0
 sethi %hix(sym), %g1
@@ -96,6 +98,7 @@ xor %g1, %lox(sym), %g1
 sethi %gdop_hix22(sym), %l1
 or %l1, %gdop_lox10(sym), %l1
 ldx [%l7 + %l1], %l2, %gdop(sym)
+.endif
 
 .set abs, 0xfedcba98
 .set abs48, 0xfedcba987654
@@ -147,23 +150,25 @@ xor %o0, %lox(abs), %o0
         sethi %tle_hix22(s_tle_hix22), %i0
         xor %i0, %tle_lox10(s_tle_lox10), %i0
 
+.ifdef V9
 ## Initial Executable model
-# ASM:      sethi %tie_hi22(s_tie_hi22), %i1
-# ASM-NEXT: add %i1, %tie_lo10(s_tie_lo10), %i1
-# ASM-NEXT: ld [%i0+%i1], %i0, %tie_ld(s_tie_ld)
-# ASM-NEXT: ldx [%i0+%i1], %i0, %tie_ldx(s_tie_ldx)
-# ASM-NEXT: add %g7, %i0, %o0, %tie_add(s_tie_add)
+# ASM-V9:      sethi %tie_hi22(s_tie_hi22), %i1
+# ASM-V9-NEXT: add %i1, %tie_lo10(s_tie_lo10), %i1
+# ASM-V9-NEXT: ld [%i0+%i1], %i0, %tie_ld(s_tie_ld)
+# ASM-V9-NEXT: ldx [%i0+%i1], %i0, %tie_ldx(s_tie_ldx)
+# ASM-V9-NEXT: add %g7, %i0, %o0, %tie_add(s_tie_add)
 
-# OBJDUMP:      R_SPARC_TLS_IE_HI22	s_tie_hi22
-# OBJDUMP:      R_SPARC_TLS_IE_LO10	s_tie_lo10
-# OBJDUMP:      R_SPARC_TLS_IE_LD	s_tie_ld
-# OBJDUMP:      R_SPARC_TLS_IE_LDX	s_tie_ldx
-# OBJDUMP:      R_SPARC_TLS_IE_ADD	s_tie_add
+# OBJDUMP-V9:      R_SPARC_TLS_IE_HI22	s_tie_hi22
+# OBJDUMP-V9:      R_SPARC_TLS_IE_LO10	s_tie_lo10
+# OBJDUMP-V9:      R_SPARC_TLS_IE_LD	s_tie_ld
+# OBJDUMP-V9:      R_SPARC_TLS_IE_LDX	s_tie_ldx
+# OBJDUMP-V9:      R_SPARC_TLS_IE_ADD	s_tie_add
 	sethi %tie_hi22(s_tie_hi22), %i1
         add %i1, %tie_lo10(s_tie_lo10), %i1
         ld [%i0+%i1], %i0, %tie_ld(s_tie_ld)
         ldx [%i0+%i1], %i0, %tie_ldx(s_tie_ldx)
         add %g7, %i0, %o0, %tie_add(s_tie_add)
+.endif
 
 ## Local Dynamic model
 # ASM:      sethi %tldo_hix22(s_tldo_hix22), %i1

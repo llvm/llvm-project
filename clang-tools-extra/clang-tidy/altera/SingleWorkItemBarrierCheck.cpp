@@ -1,4 +1,4 @@
-//===--- SingleWorkItemBarrierCheck.cpp - clang-tidy-----------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -16,14 +16,14 @@ namespace clang::tidy::altera {
 
 void SingleWorkItemBarrierCheck::registerMatchers(MatchFinder *Finder) {
   // Find any function that calls barrier but does not call an ID function.
-  // hasAttr(attr::Kind::OpenCLKernel) restricts it to only kernel functions.
+  // hasAttr(attr::Kind::DeviceKernel) restricts it to only kernel functions.
   // FIXME: Have it accept all functions but check for a parameter that gets an
   // ID from one of the four ID functions.
   Finder->addMatcher(
       // Find function declarations...
       functionDecl(
-          // That are OpenCL kernels...
-          hasAttr(attr::Kind::OpenCLKernel),
+          // That are device kernels...
+          hasAttr(attr::Kind::DeviceKernel),
           // And call a barrier function (either 1.x or 2.x version)...
           forEachDescendant(callExpr(callee(functionDecl(hasAnyName(
                                          "barrier", "work_group_barrier"))))

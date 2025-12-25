@@ -13,6 +13,9 @@ SYMBOL(consume_header, std::, <codecvt>)
 SYMBOL(generate_header, std::, <codecvt>)
 SYMBOL(little_endian, std::, <codecvt>)
 
+SYMBOL(compare_three_way, std::, <compare>)
+SYMBOL(compare_three_way, std::, <functional>)
+
 SYMBOL(mbstate_t, std::, <cwchar>)
 SYMBOL(mbstate_t, std::, <cuchar>)
 SYMBOL(size_t, std::, <cstddef>)
@@ -451,6 +454,8 @@ SYMBOL(binary_search, std::ranges::, <algorithm>)
 SYMBOL(equal_range, std::ranges::, <algorithm>)
 SYMBOL(lower_bound, std::ranges::, <algorithm>)
 SYMBOL(upper_bound, std::ranges::, <algorithm>)
+
+SYMBOL(unwrap_reference_t, std::, <type_traits>)
 
 // These are C symbols that are not under std namespace.
 SYMBOL(localtime_r, None, <ctime>)

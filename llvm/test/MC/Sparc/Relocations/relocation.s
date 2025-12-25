@@ -7,9 +7,9 @@
 # ASM:      call local1
 # ASM-NEXT: call undef
 # OBJDUMP:      call 0x14
-# OBJDUMP-NEXT: call 0x0
+# OBJDUMP-NEXT: call 0x4
 # OBJDUMP-NEXT:   R_SPARC_WDISP30 .text1+0x4
-# OBJDUMP-NEXT: call 0x0
+# OBJDUMP-NEXT: call 0x8
 # OBJDUMP-NEXT:   R_SPARC_WDISP30 undef{{$}}
 call local
 call local1
@@ -28,15 +28,15 @@ local:
 
 # ASM:      brz %g1, undef
 # ASM:      brlz %g1, .Ltmp{{.}}-8
-# OBJDUMP:      brz %g1, 0x0
+# OBJDUMP:      brz %g1, 0x14
 # OBJDUMP-NEXT:   R_SPARC_WDISP16 undef
-# OBJDUMP-NEXT: brlz %g1, 0xfffe
-# OBJDUMP-NEXT: bg %icc, 0x0
+# OBJDUMP-NEXT: brlz %g1, 0x10
+# OBJDUMP-NEXT: bg %icc, 0x1c
 # OBJDUMP-NEXT:   R_SPARC_WDISP19 undef
-# OBJDUMP-NEXT: bg %icc, 0x7fffe
-# OBJDUMP-NEXT: cbn 0x0
+# OBJDUMP-NEXT: bg %icc, 0x18
+# OBJDUMP-NEXT: cbn 0x24
 # OBJDUMP-NEXT:   R_SPARC_WDISP22 undef
-# OBJDUMP-NEXT: cbn 0x3ffffe
+# OBJDUMP-NEXT: cbn 0x20
 brz %g1, undef
 brlz %g1, .-8
 bg %icc, undef

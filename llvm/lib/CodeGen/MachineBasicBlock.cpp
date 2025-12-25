@@ -22,7 +22,6 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
-#include "llvm/CodeGen/MachinePostDominators.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/SlotIndexes.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
@@ -31,7 +30,6 @@
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/BasicBlock.h"
-#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/ModuleSlotTracker.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
@@ -608,6 +606,26 @@ void MachineBasicBlock::removeLiveIn(MCRegister Reg, LaneBitmask LaneMask) {
     LiveIns.erase(I);
 }
 
+void MachineBasicBlock::removeLiveInOverlappedWith(MCRegister Reg) {
+  const MachineFunction *MF = getParent();
+  const TargetRegisterInfo *TRI = MF->getSubtarget().getRegisterInfo();
+  // Remove Reg and its subregs from live in set.
+  for (MCPhysReg S : TRI->subregs_inclusive(Reg))
+    removeLiveIn(S);
+
+  // Remove live-in bitmask in super registers as well.
+  for (MCPhysReg Super : TRI->superregs(Reg)) {
+    for (MCSubRegIndexIterator SRI(Super, TRI); SRI.isValid(); ++SRI) {
+      if (Reg == SRI.getSubReg()) {
+        unsigned SubRegIndex = SRI.getSubRegIndex();
+        LaneBitmask SubRegLaneMask = TRI->getSubRegIndexLaneMask(SubRegIndex);
+        removeLiveIn(Super, SubRegLaneMask);
+        break;
+      }
+    }
+  }
+}
+
 MachineBasicBlock::livein_iterator
 MachineBasicBlock::removeLiveIn(MachineBasicBlock::livein_iterator I) {
   // Get non-const version of iterator.
@@ -1119,7 +1137,7 @@ public:
     MF.setDelegate(this);
   }
 
-  ~SlotIndexUpdateDelegate() {
+  ~SlotIndexUpdateDelegate() override {
     MF.resetDelegate(this);
     for (auto MI : Insertions)
       Indexes->insertMachineInstrInMaps(*MI);
@@ -1162,7 +1180,7 @@ MachineBasicBlock *MachineBasicBlock::SplitCriticalEdge(
 MachineBasicBlock *MachineBasicBlock::SplitCriticalEdge(
     MachineBasicBlock *Succ, const SplitCriticalEdgeAnalyses &Analyses,
     std::vector<SparseBitVector<>> *LiveInSets, MachineDomTreeUpdater *MDTU) {
-  if (!canSplitCriticalEdge(Succ))
+  if (!canSplitCriticalEdge(Succ, Analyses.MLI))
     return nullptr;
 
   MachineFunction *MF = getParent();
@@ -1390,8 +1408,8 @@ MachineBasicBlock *MachineBasicBlock::SplitCriticalEdge(
   return NMBB;
 }
 
-bool MachineBasicBlock::canSplitCriticalEdge(
-    const MachineBasicBlock *Succ) const {
+bool MachineBasicBlock::canSplitCriticalEdge(const MachineBasicBlock *Succ,
+                                             const MachineLoopInfo *MLI) const {
   // Splitting the critical edge to a landing pad block is non-trivial. Don't do
   // it in this generic function.
   if (Succ->isEHPad())
@@ -1405,8 +1423,17 @@ bool MachineBasicBlock::canSplitCriticalEdge(
   const MachineFunction *MF = getParent();
   // Performance might be harmed on HW that implements branching using exec mask
   // where both sides of the branches are always executed.
-  if (MF->getTarget().requiresStructuredCFG())
-    return false;
+
+  if (MF->getTarget().requiresStructuredCFG()) {
+    if (!MLI)
+      return false;
+    const MachineLoop *L = MLI->getLoopFor(Succ);
+    // Only if `Succ` is a loop header, splitting the critical edge will not
+    // break structured CFG. And fallthrough to check if this's terminator is
+    // analyzable.
+    if (!L || L->getHeader() != Succ)
+      return false;
+  }
 
   // Do we have an Indirect jump with a jumptable that we can rewrite?
   int JTI = findJumpTableIndex(*this);
@@ -1575,7 +1602,7 @@ MachineBasicBlock::findBranchDebugLoc() {
     DL = TI->getDebugLoc();
     for (++TI ; TI != end() ; ++TI)
       if (TI->isBranch())
-        DL = DILocation::getMergedLocation(DL, TI->getDebugLoc());
+        DL = DebugLoc::getMergedLocation(DL, TI->getDebugLoc());
   }
   return DL;
 }
@@ -1776,18 +1803,13 @@ void MachineBasicBlock::clearLiveIns(
 }
 
 MachineBasicBlock::livein_iterator MachineBasicBlock::livein_begin() const {
-  assert(getParent()->getProperties().hasProperty(
-      MachineFunctionProperties::Property::TracksLiveness) &&
-      "Liveness information is accurate");
+  assert(getParent()->getProperties().hasTracksLiveness() &&
+         "Liveness information is accurate");
   return LiveIns.begin();
 }
 
 MachineBasicBlock::liveout_iterator MachineBasicBlock::liveout_begin() const {
   const MachineFunction &MF = *getParent();
-  assert(MF.getProperties().hasProperty(
-      MachineFunctionProperties::Property::TracksLiveness) &&
-      "Liveness information is accurate");
-
   const TargetLowering &TLI = *MF.getSubtarget().getTargetLowering();
   MCRegister ExceptionPointer, ExceptionSelector;
   if (MF.getFunction().hasPersonalityFn()) {
@@ -1807,6 +1829,12 @@ bool MachineBasicBlock::sizeWithoutDebugLargerThan(unsigned Limit) const {
       return true;
   }
   return false;
+}
+
+void MachineBasicBlock::removePHIsIncomingValuesForPredecessor(
+    const MachineBasicBlock &PredMBB) {
+  for (MachineInstr &Phi : phis())
+    Phi.removePHIIncomingValueFor(PredMBB);
 }
 
 const MBBSectionID MBBSectionID::ColdSectionID(MBBSectionID::SectionType::Cold);

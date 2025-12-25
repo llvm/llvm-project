@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -fopenacc -ast-dump | FileCheck %s
+// RUN: %clang_cc1 %s -fopenacc -Wno-openacc-cache-var-inside-loop -ast-dump | FileCheck %s
 
 // Test this with PCH.
 // RUN: %clang_cc1 %s -fopenacc -emit-pch -o %t %s
@@ -14,6 +14,21 @@ void use() {
   // CHECK-NEXT: DeclStmt
   // CHECK-NEXT: VarDecl{{.*}}Array 'int[5]'
 
+#pragma acc loop
+  // CHECK-NEXT: OpenACCLoopConstruct
+  for (int i = 0; i < 5; ++i) {
+  // CHECK-NEXT: ForStmt
+  // CHECK-NEXT: DeclStmt
+  // CHECK-NEXT: VarDecl{{.*}}i 'int'
+  // CHECK-NEXT: IntegerLiteral
+  // CHECK-NEXT: <<<NULL>>>
+  // CHECK-NEXT: BinaryOperator
+  // CHECK-NEXT: ImplicitCastExpr
+  // CHECK-NEXT: DeclRefExpr
+  // CHECK-NEXT: IntegerLiteral
+  // CHECK-NEXT: UnaryOperator
+  // CHECK-NEXT: DeclRefExpr
+  // CHECK-NEXT: CompoundStmt
 #pragma acc cache(Array[1])
   // CHECK-NEXT: OpenACCCacheConstruct{{.*}} cache
   // CHECK-NEXT: ArraySubscriptExpr{{.*}}'int' lvalue
@@ -33,6 +48,18 @@ _Pragma("acc cache(Array[1])")
   // CHECK-NEXT: DeclRefExpr{{.*}}'Array' 'int[5]'
   // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 1
   // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 2
+
+  // No vars here, since they are bad references.
+#pragma acc cache (Array[i])
+  // CHECK-NEXT: OpenACCCacheConstruct{{.*}} cache
+  }
+
+  // No vars here, since they are bad references.
+#pragma acc cache(Array[1:2])
+  // CHECK-NEXT: OpenACCCacheConstruct{{.*}} cache
+
+  return;
+  // CHECK-NEXT: ReturnStmt
 }
 
 struct S {
@@ -42,6 +69,21 @@ struct S {
   void StructUse() {
     // CHECK: CXXMethodDecl{{.*}}StructUse 'void ()'
     // CHECK-NEXT: CompoundStmt
+#pragma acc loop
+  // CHECK-NEXT: OpenACCLoopConstruct
+  for (int i = 0; i < 5; ++i) {
+  // CHECK-NEXT: ForStmt
+  // CHECK-NEXT: DeclStmt
+  // CHECK-NEXT: VarDecl{{.*}}i 'int'
+  // CHECK-NEXT: IntegerLiteral
+  // CHECK-NEXT: <<<NULL>>>
+  // CHECK-NEXT: BinaryOperator
+  // CHECK-NEXT: ImplicitCastExpr
+  // CHECK-NEXT: DeclRefExpr
+  // CHECK-NEXT: IntegerLiteral
+  // CHECK-NEXT: UnaryOperator
+  // CHECK-NEXT: DeclRefExpr
+  // CHECK-NEXT: CompoundStmt
 #pragma acc cache(Array[1])
     // CHECK-NEXT: OpenACCCacheConstruct{{.*}} cache
     // CHECK-NEXT: ArraySubscriptExpr{{.*}}'int' lvalue
@@ -79,6 +121,7 @@ struct S {
     // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 1
     // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 2
   }
+  }
 };
 
 template<typename T>
@@ -89,6 +132,21 @@ void templ_use() {
   // CHECK-NEXT: DeclStmt
   // CHECK-NEXT: VarDecl{{.*}}Array 'T[5]'
 
+#pragma acc loop
+  // CHECK-NEXT: OpenACCLoopConstruct
+  for (int i = 0; i < 5; ++i) {
+  // CHECK-NEXT: ForStmt
+  // CHECK-NEXT: DeclStmt
+  // CHECK-NEXT: VarDecl{{.*}}i 'int'
+  // CHECK-NEXT: IntegerLiteral
+  // CHECK-NEXT: <<<NULL>>>
+  // CHECK-NEXT: BinaryOperator
+  // CHECK-NEXT: ImplicitCastExpr
+  // CHECK-NEXT: DeclRefExpr
+  // CHECK-NEXT: IntegerLiteral
+  // CHECK-NEXT: UnaryOperator
+  // CHECK-NEXT: DeclRefExpr
+  // CHECK-NEXT: CompoundStmt
 #pragma acc cache(Array[1])
   // CHECK-NEXT: OpenACCCacheConstruct{{.*}} cache
   // CHECK-NEXT: ArraySubscriptExpr{{.*}}'T' lvalue
@@ -101,6 +159,17 @@ void templ_use() {
   // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 1
   // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 2
 
+    // No vars here, since they are bad references.
+#pragma acc cache(Array[i])
+  // CHECK-NEXT: OpenACCCacheConstruct{{.*}} cache
+  }
+  // No vars here, since they are bad references.
+#pragma acc cache(Array[1])
+  // CHECK-NEXT: OpenACCCacheConstruct{{.*}} cache
+
+  return;
+  // CHECK-NEXT: ReturnStmt
+
   // Instantiation:
   // CHECK: FunctionDecl{{.*}} templ_use 'void ()' implicit_instantiation
   // CHECK-NEXT: TemplateArgument type 'int'
@@ -108,6 +177,21 @@ void templ_use() {
   // CHECK-NEXT: CompoundStmt
   // CHECK-NEXT: DeclStmt
   // CHECK-NEXT: VarDecl{{.*}}Array 'int[5]'
+
+  // CHECK-NEXT: OpenACCLoopConstruct
+  // CHECK-NEXT: ForStmt
+  // CHECK-NEXT: DeclStmt
+  // CHECK-NEXT: VarDecl{{.*}}i 'int'
+  // CHECK-NEXT: IntegerLiteral
+  // CHECK-NEXT: <<<NULL>>>
+  // CHECK-NEXT: BinaryOperator
+  // CHECK-NEXT: ImplicitCastExpr
+  // CHECK-NEXT: DeclRefExpr
+  // CHECK-NEXT: IntegerLiteral
+  // CHECK-NEXT: UnaryOperator
+  // CHECK-NEXT: DeclRefExpr
+  // CHECK-NEXT: CompoundStmt
+  //
   // CHECK-NEXT: OpenACCCacheConstruct{{.*}} cache
   // CHECK-NEXT: ArraySubscriptExpr{{.*}}'int' lvalue
   // CHECK-NEXT: ImplicitCastExpr{{.*}}'int *' <ArrayToPointerDecay>
@@ -119,6 +203,11 @@ void templ_use() {
   // CHECK-NEXT: DeclRefExpr{{.*}}'Array' 'int[5]'
   // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 1
   // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 2
+
+  // No vars here, since they are bad references.
+  // CHECK-NEXT: OpenACCCacheConstruct{{.*}} cache
+  // CHECK-NEXT: OpenACCCacheConstruct{{.*}} cache
+  // CHECK-NEXT: ReturnStmt
 }
 
 void foo() {

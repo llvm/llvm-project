@@ -49,7 +49,7 @@ static StringRef getRCPrefix(dxil::ResourceClass RC) {
 
 static StringRef getFormatName(const dxil::ResourceTypeInfo &RI) {
   if (RI.isTyped()) {
-    switch (RI.getTyped().ElementTy) {
+    switch (RI.getTyped().DXILStorageTy) {
     case dxil::ElementType::I1:
       return "i1";
     case dxil::ElementType::I16:

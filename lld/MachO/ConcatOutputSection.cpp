@@ -15,8 +15,6 @@
 #include "Target.h"
 #include "lld/Common/CommonLinkerContext.h"
 #include "llvm/BinaryFormat/MachO.h"
-#include "llvm/Support/ScopedPrinter.h"
-#include "llvm/Support/TimeProfiler.h"
 
 using namespace llvm;
 using namespace llvm::MachO;
@@ -308,7 +306,7 @@ void TextOutputSection::finalize() {
     // contains several branch instructions in succession, then the distance
     // from the current position to the position where the thunks are inserted
     // grows. So leave room for a bunch of thunks.
-    unsigned slop = 256 * thunkSize;
+    unsigned slop = config->slopScale * thunkSize;
     while (finalIdx < endIdx) {
       uint64_t expectedNewSize =
           alignToPowerOf2(addr + size, inputs[finalIdx]->align) +
@@ -386,7 +384,9 @@ void TextOutputSection::finalize() {
         // above. If you hit this: For the current algorithm, just bumping up
         // slop above and trying again is probably simplest. (See also PR51578
         // comment 5).
-        fatal(Twine(__FUNCTION__) + ": FIXME: thunk range overrun");
+        fatal(Twine(__FUNCTION__) +
+              ": FIXME: thunk range overrun. Consider increasing the "
+              "slop-scale with `--slop-scale=<unsigned_int>`.");
       }
       thunkInfo.isec =
           makeSyntheticInputSection(isec->getSegName(), isec->getName());

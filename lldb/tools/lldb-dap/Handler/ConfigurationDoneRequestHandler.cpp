@@ -8,8 +8,9 @@
 
 #include "DAP.h"
 #include "EventHelper.h"
-#include "JSONUtils.h"
+#include "LLDBUtils.h"
 #include "Protocol/ProtocolRequests.h"
+#include "ProtocolUtils.h"
 #include "RequestHandler.h"
 #include "lldb/API/SBDebugger.h"
 
@@ -40,6 +41,14 @@ ConfigurationDoneRequestHandler::Run(const ConfigurationDoneArguments &) const {
         "any debugger command scripts are not resuming the process during the "
         "launch sequence.");
 
+  // Waiting until 'configurationDone' to send target based capabilities in case
+  // the launch or attach scripts adjust the target. The initial dummy target
+  // may have different capabilities than the final target.
+
+  /// Also send here custom capabilities to the client, which is consumed by the
+  /// lldb-dap specific editor extension.
+  SendExtraCapabilities(dap);
+
   // Clients can request a baseline of currently existing threads after
   // we acknowledge the configurationDone request.
   // Client requests the baseline of currently existing threads after
@@ -51,11 +60,18 @@ ConfigurationDoneRequestHandler::Run(const ConfigurationDoneArguments &) const {
   SendProcessEvent(dap, dap.is_attach ? Attach : Launch);
 
   if (dap.stop_at_entry)
-    SendThreadStoppedEvent(dap);
-  else
-    process.Continue();
+    return SendThreadStoppedEvent(dap, /*on_entry=*/true);
 
-  return Error::success();
+  return ToError(process.Continue());
+}
+
+void ConfigurationDoneRequestHandler::PostRun() const {
+  if (!dap.on_configuration_done)
+    return;
+
+  dap.on_configuration_done();
+  // Clear the callback to ensure any captured resources are released.
+  dap.on_configuration_done = nullptr;
 }
 
 } // namespace lldb_dap

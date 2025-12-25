@@ -554,8 +554,11 @@ define i32 @inlineasm(i32 %arg1) {
 define void @inlineasm2() {
   %p = alloca ptr, align 8
   ; CHECK: {{.*}} = llvm.alloca %0 x !llvm.ptr {alignment = 8 : i64} : (i32) -> !llvm.ptr
-  ; CHECK-NEXT: llvm.inline_asm has_side_effects asm_dialect = att operand_attrs = [{elementtype = !llvm.ptr}] "", "*m,~{memory}" {{.*}} : (!llvm.ptr) -> !llvm.void
-  call void asm sideeffect "", "*m,~{memory}"(ptr elementtype(ptr) %p)
+  ; CHECK-NEXT: llvm.inline_asm has_side_effects tail_call_kind = <tail> asm_dialect = att operand_attrs = [{elementtype = !llvm.ptr}] "", "*m,~{memory}" {{.*}} : (!llvm.ptr) -> !llvm.void
+  tail call void asm sideeffect "", "*m,~{memory}"(ptr elementtype(ptr) %p)
+
+  ; CHECK: llvm.inline_asm has_side_effects tail_call_kind = <notail> asm_dialect = att operand_attrs = [{elementtype = !llvm.ptr}] "", "*m,~{memory}" {{.*}} : (!llvm.ptr) -> !llvm.void
+  notail call void asm sideeffect "", "*m,~{memory}"(ptr elementtype(ptr) %p)
   ret void
 }
 
@@ -700,13 +703,13 @@ declare void @f()
 
 ; CHECK-LABEL: @call_memory_effects
 define void @call_memory_effects() {
-; CHECK: llvm.call @f() {memory_effects = #llvm.memory_effects<other = none, argMem = none, inaccessibleMem = none>}
+; CHECK: llvm.call @f() {memory_effects = #llvm.memory_effects<other = none, argMem = none, inaccessibleMem = none, errnoMem = none, targetMem0 = none, targetMem1 = none>}
   call void @f() memory(none)
-; CHECK: llvm.call @f() {memory_effects = #llvm.memory_effects<other = none, argMem = write, inaccessibleMem = read>}
+; CHECK: llvm.call @f() {memory_effects = #llvm.memory_effects<other = none, argMem = write, inaccessibleMem = read, errnoMem = none, targetMem0 = none, targetMem1 = none>}
   call void @f() memory(none, argmem: write, inaccessiblemem: read)
-; CHECK: llvm.call @f() {memory_effects = #llvm.memory_effects<other = write, argMem = none, inaccessibleMem = write>}
+; CHECK: llvm.call @f() {memory_effects = #llvm.memory_effects<other = write, argMem = none, inaccessibleMem = write, errnoMem = write, targetMem0 = write, targetMem1 = write>}
   call void @f() memory(write, argmem: none)
-; CHECK: llvm.call @f() {memory_effects = #llvm.memory_effects<other = readwrite, argMem = readwrite, inaccessibleMem = read>}
+; CHECK: llvm.call @f() {memory_effects = #llvm.memory_effects<other = readwrite, argMem = readwrite, inaccessibleMem = read, errnoMem = readwrite, targetMem0 = readwrite, targetMem1 = readwrite>}
   call void @f() memory(readwrite, inaccessiblemem: read)
 ; CHECK: llvm.call @f()
 ; CHECK-NOT: #llvm.memory_effects

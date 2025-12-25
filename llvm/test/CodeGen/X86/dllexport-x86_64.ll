@@ -105,23 +105,23 @@ define weak_odr dllexport void @weak1() {
 ; MINGW: .ascii " -export:blob_alias"
 
 ; CHECK: .globl alias
-; CHECK: .set alias, notExported
+; CHECK: alias = notExported
 @alias = dllexport alias void(), ptr @notExported
 
 ; CHECK: .globl aliasNotExported
-; CHECK: .set aliasNotExported, f1
+; CHECK: aliasNotExported = f1
 @aliasNotExported = alias void(), ptr @f1
 
 ; CHECK: .globl alias2
-; CHECK: .set alias2, f1
+; CHECK: alias2 = f1
 @alias2 = dllexport alias void(), ptr @f1
 
 ; CHECK: .globl alias3
-; CHECK: .set alias3, notExported
+; CHECK: alias3 = notExported
 @alias3 = dllexport alias void(), ptr @notExported
 
 ; CHECK: .weak weak_alias
-; CHECK: .set weak_alias, f1
+; CHECK: weak_alias = f1
 @weak_alias = weak_odr dllexport alias void(), ptr @f1
 
 @blob = global [6 x i8] c"\B8*\00\00\00\C3", section ".text", align 16

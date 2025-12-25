@@ -4,8 +4,6 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+v,+m -target-abi=lp64d \
 ; RUN:   -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,RV64
 
-declare <2 x i16> @llvm.vp.bswap.v2i16(<2 x i16>, <2 x i1>, i32)
-
 define <2 x i16> @vp_bswap_v2i16(<2 x i16> %va, <2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_bswap_v2i16:
 ; CHECK:       # %bb.0:
@@ -29,8 +27,6 @@ define <2 x i16> @vp_bswap_v2i16_unmasked(<2 x i16> %va, i32 zeroext %evl) {
   %v = call <2 x i16> @llvm.vp.bswap.v2i16(<2 x i16> %va, <2 x i1> splat (i1 true), i32 %evl)
   ret <2 x i16> %v
 }
-
-declare <4 x i16> @llvm.vp.bswap.v4i16(<4 x i16>, <4 x i1>, i32)
 
 define <4 x i16> @vp_bswap_v4i16(<4 x i16> %va, <4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_bswap_v4i16:
@@ -56,8 +52,6 @@ define <4 x i16> @vp_bswap_v4i16_unmasked(<4 x i16> %va, i32 zeroext %evl) {
   ret <4 x i16> %v
 }
 
-declare <8 x i16> @llvm.vp.bswap.v8i16(<8 x i16>, <8 x i1>, i32)
-
 define <8 x i16> @vp_bswap_v8i16(<8 x i16> %va, <8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_bswap_v8i16:
 ; CHECK:       # %bb.0:
@@ -82,8 +76,6 @@ define <8 x i16> @vp_bswap_v8i16_unmasked(<8 x i16> %va, i32 zeroext %evl) {
   ret <8 x i16> %v
 }
 
-declare <16 x i16> @llvm.vp.bswap.v16i16(<16 x i16>, <16 x i1>, i32)
-
 define <16 x i16> @vp_bswap_v16i16(<16 x i16> %va, <16 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_bswap_v16i16:
 ; CHECK:       # %bb.0:
@@ -107,8 +99,6 @@ define <16 x i16> @vp_bswap_v16i16_unmasked(<16 x i16> %va, i32 zeroext %evl) {
   %v = call <16 x i16> @llvm.vp.bswap.v16i16(<16 x i16> %va, <16 x i1> splat (i1 true), i32 %evl)
   ret <16 x i16> %v
 }
-
-declare <2 x i32> @llvm.vp.bswap.v2i32(<2 x i32>, <2 x i1>, i32)
 
 define <2 x i32> @vp_bswap_v2i32(<2 x i32> %va, <2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_bswap_v2i32:
@@ -150,8 +140,6 @@ define <2 x i32> @vp_bswap_v2i32_unmasked(<2 x i32> %va, i32 zeroext %evl) {
   ret <2 x i32> %v
 }
 
-declare <4 x i32> @llvm.vp.bswap.v4i32(<4 x i32>, <4 x i1>, i32)
-
 define <4 x i32> @vp_bswap_v4i32(<4 x i32> %va, <4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_bswap_v4i32:
 ; CHECK:       # %bb.0:
@@ -191,8 +179,6 @@ define <4 x i32> @vp_bswap_v4i32_unmasked(<4 x i32> %va, i32 zeroext %evl) {
   %v = call <4 x i32> @llvm.vp.bswap.v4i32(<4 x i32> %va, <4 x i1> splat (i1 true), i32 %evl)
   ret <4 x i32> %v
 }
-
-declare <8 x i32> @llvm.vp.bswap.v8i32(<8 x i32>, <8 x i1>, i32)
 
 define <8 x i32> @vp_bswap_v8i32(<8 x i32> %va, <8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_bswap_v8i32:
@@ -234,8 +220,6 @@ define <8 x i32> @vp_bswap_v8i32_unmasked(<8 x i32> %va, i32 zeroext %evl) {
   ret <8 x i32> %v
 }
 
-declare <16 x i32> @llvm.vp.bswap.v16i32(<16 x i32>, <16 x i1>, i32)
-
 define <16 x i32> @vp_bswap_v16i32(<16 x i32> %va, <16 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_bswap_v16i32:
 ; CHECK:       # %bb.0:
@@ -275,8 +259,6 @@ define <16 x i32> @vp_bswap_v16i32_unmasked(<16 x i32> %va, i32 zeroext %evl) {
   %v = call <16 x i32> @llvm.vp.bswap.v16i32(<16 x i32> %va, <16 x i1> splat (i1 true), i32 %evl)
   ret <16 x i32> %v
 }
-
-declare <2 x i64> @llvm.vp.bswap.v2i64(<2 x i64>, <2 x i1>, i32)
 
 define <2 x i64> @vp_bswap_v2i64(<2 x i64> %va, <2 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vp_bswap_v2i64:
@@ -331,7 +313,7 @@ define <2 x i64> @vp_bswap_v2i64(<2 x i64> %va, <2 x i1> %m, i32 zeroext %evl) {
 ; RV64-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
 ; RV64-NEXT:    vand.vx v9, v8, a1, v0.t
 ; RV64-NEXT:    slli a2, a2, 24
-; RV64-NEXT:    addiw a0, a4, -256
+; RV64-NEXT:    addi a0, a4, -256
 ; RV64-NEXT:    vsll.vi v9, v9, 24, v0.t
 ; RV64-NEXT:    vand.vx v10, v8, a2, v0.t
 ; RV64-NEXT:    vsll.vi v10, v10, 8, v0.t
@@ -410,7 +392,7 @@ define <2 x i64> @vp_bswap_v2i64_unmasked(<2 x i64> %va, i32 zeroext %evl) {
 ; RV64-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
 ; RV64-NEXT:    vsrl.vi v9, v8, 24
 ; RV64-NEXT:    vsrl.vi v10, v8, 8
-; RV64-NEXT:    addiw a0, a4, -256
+; RV64-NEXT:    addi a0, a4, -256
 ; RV64-NEXT:    vsrl.vx v11, v8, a3
 ; RV64-NEXT:    vsrl.vx v12, v8, a5
 ; RV64-NEXT:    vand.vx v12, v12, a0
@@ -435,8 +417,6 @@ define <2 x i64> @vp_bswap_v2i64_unmasked(<2 x i64> %va, i32 zeroext %evl) {
   %v = call <2 x i64> @llvm.vp.bswap.v2i64(<2 x i64> %va, <2 x i1> splat (i1 true), i32 %evl)
   ret <2 x i64> %v
 }
-
-declare <4 x i64> @llvm.vp.bswap.v4i64(<4 x i64>, <4 x i1>, i32)
 
 define <4 x i64> @vp_bswap_v4i64(<4 x i64> %va, <4 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vp_bswap_v4i64:
@@ -491,7 +471,7 @@ define <4 x i64> @vp_bswap_v4i64(<4 x i64> %va, <4 x i1> %m, i32 zeroext %evl) {
 ; RV64-NEXT:    vsetvli zero, a0, e64, m2, ta, ma
 ; RV64-NEXT:    vand.vx v10, v8, a1, v0.t
 ; RV64-NEXT:    slli a2, a2, 24
-; RV64-NEXT:    addiw a0, a4, -256
+; RV64-NEXT:    addi a0, a4, -256
 ; RV64-NEXT:    vsll.vi v10, v10, 24, v0.t
 ; RV64-NEXT:    vand.vx v12, v8, a2, v0.t
 ; RV64-NEXT:    vsll.vi v12, v12, 8, v0.t
@@ -570,7 +550,7 @@ define <4 x i64> @vp_bswap_v4i64_unmasked(<4 x i64> %va, i32 zeroext %evl) {
 ; RV64-NEXT:    vsetvli zero, a0, e64, m2, ta, ma
 ; RV64-NEXT:    vsrl.vi v10, v8, 24
 ; RV64-NEXT:    vsrl.vi v12, v8, 8
-; RV64-NEXT:    addiw a0, a4, -256
+; RV64-NEXT:    addi a0, a4, -256
 ; RV64-NEXT:    vsrl.vx v14, v8, a3
 ; RV64-NEXT:    vsrl.vx v16, v8, a5
 ; RV64-NEXT:    vand.vx v16, v16, a0
@@ -595,8 +575,6 @@ define <4 x i64> @vp_bswap_v4i64_unmasked(<4 x i64> %va, i32 zeroext %evl) {
   %v = call <4 x i64> @llvm.vp.bswap.v4i64(<4 x i64> %va, <4 x i1> splat (i1 true), i32 %evl)
   ret <4 x i64> %v
 }
-
-declare <8 x i64> @llvm.vp.bswap.v8i64(<8 x i64>, <8 x i1>, i32)
 
 define <8 x i64> @vp_bswap_v8i64(<8 x i64> %va, <8 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vp_bswap_v8i64:
@@ -651,7 +629,7 @@ define <8 x i64> @vp_bswap_v8i64(<8 x i64> %va, <8 x i1> %m, i32 zeroext %evl) {
 ; RV64-NEXT:    vsetvli zero, a0, e64, m4, ta, ma
 ; RV64-NEXT:    vand.vx v12, v8, a1, v0.t
 ; RV64-NEXT:    slli a2, a2, 24
-; RV64-NEXT:    addiw a0, a4, -256
+; RV64-NEXT:    addi a0, a4, -256
 ; RV64-NEXT:    vsll.vi v12, v12, 24, v0.t
 ; RV64-NEXT:    vand.vx v16, v8, a2, v0.t
 ; RV64-NEXT:    vsll.vi v16, v16, 8, v0.t
@@ -730,7 +708,7 @@ define <8 x i64> @vp_bswap_v8i64_unmasked(<8 x i64> %va, i32 zeroext %evl) {
 ; RV64-NEXT:    vsetvli zero, a0, e64, m4, ta, ma
 ; RV64-NEXT:    vsrl.vi v12, v8, 24
 ; RV64-NEXT:    vsrl.vi v16, v8, 8
-; RV64-NEXT:    addiw a0, a4, -256
+; RV64-NEXT:    addi a0, a4, -256
 ; RV64-NEXT:    vsrl.vx v20, v8, a3
 ; RV64-NEXT:    vsrl.vx v24, v8, a5
 ; RV64-NEXT:    vand.vx v24, v24, a0
@@ -755,8 +733,6 @@ define <8 x i64> @vp_bswap_v8i64_unmasked(<8 x i64> %va, i32 zeroext %evl) {
   %v = call <8 x i64> @llvm.vp.bswap.v8i64(<8 x i64> %va, <8 x i1> splat (i1 true), i32 %evl)
   ret <8 x i64> %v
 }
-
-declare <15 x i64> @llvm.vp.bswap.v15i64(<15 x i64>, <15 x i1>, i32)
 
 define <15 x i64> @vp_bswap_v15i64(<15 x i64> %va, <15 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vp_bswap_v15i64:
@@ -866,7 +842,7 @@ define <15 x i64> @vp_bswap_v15i64(<15 x i64> %va, <15 x i1> %m, i32 zeroext %ev
 ; RV64-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
 ; RV64-NEXT:    vand.vx v16, v8, a1, v0.t
 ; RV64-NEXT:    slli a2, a2, 24
-; RV64-NEXT:    addiw a0, a4, -256
+; RV64-NEXT:    addi a0, a4, -256
 ; RV64-NEXT:    vsll.vi v16, v16, 24, v0.t
 ; RV64-NEXT:    vand.vx v24, v8, a2, v0.t
 ; RV64-NEXT:    vsll.vi v24, v24, 8, v0.t
@@ -984,7 +960,7 @@ define <15 x i64> @vp_bswap_v15i64_unmasked(<15 x i64> %va, i32 zeroext %evl) {
 ; RV64-NEXT:    li a5, 40
 ; RV64-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
 ; RV64-NEXT:    vsrl.vi v24, v8, 24
-; RV64-NEXT:    addiw a0, a4, -256
+; RV64-NEXT:    addi a0, a4, -256
 ; RV64-NEXT:    vsrl.vx v16, v8, a3
 ; RV64-NEXT:    vsrl.vx v0, v8, a5
 ; RV64-NEXT:    vand.vx v0, v0, a0
@@ -1020,8 +996,6 @@ define <15 x i64> @vp_bswap_v15i64_unmasked(<15 x i64> %va, i32 zeroext %evl) {
   %v = call <15 x i64> @llvm.vp.bswap.v15i64(<15 x i64> %va, <15 x i1> splat (i1 true), i32 %evl)
   ret <15 x i64> %v
 }
-
-declare <16 x i64> @llvm.vp.bswap.v16i64(<16 x i64>, <16 x i1>, i32)
 
 define <16 x i64> @vp_bswap_v16i64(<16 x i64> %va, <16 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vp_bswap_v16i64:
@@ -1131,7 +1105,7 @@ define <16 x i64> @vp_bswap_v16i64(<16 x i64> %va, <16 x i1> %m, i32 zeroext %ev
 ; RV64-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
 ; RV64-NEXT:    vand.vx v16, v8, a1, v0.t
 ; RV64-NEXT:    slli a2, a2, 24
-; RV64-NEXT:    addiw a0, a4, -256
+; RV64-NEXT:    addi a0, a4, -256
 ; RV64-NEXT:    vsll.vi v16, v16, 24, v0.t
 ; RV64-NEXT:    vand.vx v24, v8, a2, v0.t
 ; RV64-NEXT:    vsll.vi v24, v24, 8, v0.t
@@ -1249,7 +1223,7 @@ define <16 x i64> @vp_bswap_v16i64_unmasked(<16 x i64> %va, i32 zeroext %evl) {
 ; RV64-NEXT:    li a5, 40
 ; RV64-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
 ; RV64-NEXT:    vsrl.vi v24, v8, 24
-; RV64-NEXT:    addiw a0, a4, -256
+; RV64-NEXT:    addi a0, a4, -256
 ; RV64-NEXT:    vsrl.vx v16, v8, a3
 ; RV64-NEXT:    vsrl.vx v0, v8, a5
 ; RV64-NEXT:    vand.vx v0, v0, a0
@@ -1285,8 +1259,6 @@ define <16 x i64> @vp_bswap_v16i64_unmasked(<16 x i64> %va, i32 zeroext %evl) {
   %v = call <16 x i64> @llvm.vp.bswap.v16i64(<16 x i64> %va, <16 x i1> splat (i1 true), i32 %evl)
   ret <16 x i64> %v
 }
-
-declare <128 x i16> @llvm.vp.bswap.v128i16(<128 x i16>, <128 x i1>, i32)
 
 define <128 x i16> @vp_bswap_v128i16(<128 x i16> %va, <128 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_bswap_v128i16:

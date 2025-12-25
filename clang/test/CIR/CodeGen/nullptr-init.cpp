@@ -11,16 +11,16 @@ void t1() {
   int *p3 = (int*)0;
 }
 
-// CIR:      cir.func @_Z2t1v()
+// CIR:      cir.func{{.*}} @_Z2t1v()
 // CIR-NEXT:     %[[P1:.*]] = cir.alloca !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>, ["p1", init] {alignment = 8 : i64}
 // CIR-NEXT:     %[[P2:.*]] = cir.alloca !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>, ["p2", init] {alignment = 8 : i64}
 // CIR-NEXT:     %[[P3:.*]] = cir.alloca !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>, ["p3", init] {alignment = 8 : i64}
 // CIR-NEXT:     %[[NULLPTR1:.*]] = cir.const #cir.ptr<null> : !cir.ptr<!s32i>
-// CIR-NEXT:     cir.store %[[NULLPTR1]], %[[P1]] : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>
+// CIR-NEXT:     cir.store{{.*}} %[[NULLPTR1]], %[[P1]] : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>
 // CIR-NEXT:     %[[NULLPTR2:.*]] = cir.const #cir.ptr<null> : !cir.ptr<!s32i>
-// CIR-NEXT:     cir.store %[[NULLPTR2]], %[[P2]] : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>
+// CIR-NEXT:     cir.store{{.*}} %[[NULLPTR2]], %[[P2]] : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>
 // CIR-NEXT:     %[[NULLPTR3:.*]] = cir.const #cir.ptr<null> : !cir.ptr<!s32i>
-// CIR-NEXT:     cir.store %[[NULLPTR3]], %[[P3]] : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>
+// CIR-NEXT:     cir.store{{.*}} %[[NULLPTR3]], %[[P3]] : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>
 // CIR-NEXT:     cir.return
 // CIR-NEXT: }
 

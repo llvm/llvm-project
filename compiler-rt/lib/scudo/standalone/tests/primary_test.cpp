@@ -230,9 +230,11 @@ SCUDO_TYPED_TEST(ScudoPrimaryTest, BasicPrimary) {
   }
   SizeClassAllocator.destroy(nullptr);
   Allocator->releaseToOS(scudo::ReleaseToOS::Force);
-  scudo::ScopedString Str;
-  Allocator->getStats(&Str);
-  Str.output();
+  if (TEST_HAS_FAILURE) {
+    scudo::ScopedString Str;
+    Allocator->getStats(&Str);
+    Str.output();
+  }
 }
 
 struct SmallRegionsConfig {
@@ -289,10 +291,12 @@ TEST(ScudoPrimaryTest, Primary64OOM) {
 
   SizeClassAllocator.destroy(nullptr);
   Allocator.releaseToOS(scudo::ReleaseToOS::Force);
-  scudo::ScopedString Str;
-  Allocator.getStats(&Str);
-  Str.output();
   EXPECT_EQ(AllocationFailed, true);
+  if (TEST_HAS_FAILURE) {
+    scudo::ScopedString Str;
+    Allocator.getStats(&Str);
+    Str.output();
+  }
   Allocator.unmapTestOnly();
 }
 
@@ -328,9 +332,11 @@ SCUDO_TYPED_TEST(ScudoPrimaryTest, PrimaryIterate) {
   }
   SizeClassAllocator.destroy(nullptr);
   Allocator->releaseToOS(scudo::ReleaseToOS::Force);
-  scudo::ScopedString Str;
-  Allocator->getStats(&Str);
-  Str.output();
+  if (TEST_HAS_FAILURE) {
+    scudo::ScopedString Str;
+    Allocator->getStats(&Str);
+    Str.output();
+  }
 }
 
 SCUDO_TYPED_TEST(ScudoPrimaryTest, PrimaryThreaded) {
@@ -369,8 +375,8 @@ SCUDO_TYPED_TEST(ScudoPrimaryTest, PrimaryThreaded) {
         auto Pair = V.back();
         SizeClassAllocator.deallocate(Pair.first, Pair.second);
         V.pop_back();
-        // This increases the chance of having non-full TransferBatches and it
-        // will jump into the code path of merging TransferBatches.
+        // This increases the chance of having non-full Batches and it will jump
+        // into the code path of merging Batches.
         if (std::rand() % 8 == 0)
           SizeClassAllocator.drain();
       }
@@ -385,11 +391,13 @@ SCUDO_TYPED_TEST(ScudoPrimaryTest, PrimaryThreaded) {
   for (auto &T : Threads)
     T.join();
   Allocator->releaseToOS(scudo::ReleaseToOS::Force);
-  scudo::ScopedString Str;
-  Allocator->getStats(&Str);
-  Allocator->getFragmentationInfo(&Str);
-  Allocator->getMemoryGroupFragmentationInfo(&Str);
-  Str.output();
+  if (TEST_HAS_FAILURE) {
+    scudo::ScopedString Str;
+    Allocator->getStats(&Str);
+    Allocator->getFragmentationInfo(&Str);
+    Allocator->getMemoryGroupFragmentationInfo(&Str);
+    Str.output();
+  }
 }
 
 // Through a simple allocation that spans two pages, verify that releaseToOS

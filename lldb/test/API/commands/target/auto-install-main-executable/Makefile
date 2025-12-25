@@ -6,4 +6,4 @@ a.out: a.device.out
 include Makefile.rules
 
 a.device.out:
-	$(CXX) $(CXXFLAGS) -DBUILD=74 -o $@ $(SRCDIR)/main.cpp
+	$(CXX) $(ASAN_LDFLAGS) $(CXXFLAGS) -DBUILD=74 -o $@ $(SRCDIR)/main.cpp

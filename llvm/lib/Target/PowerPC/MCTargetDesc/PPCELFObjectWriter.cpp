@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "MCTargetDesc/PPCFixupKinds.h"
-#include "MCTargetDesc/PPCMCExpr.h"
+#include "MCTargetDesc/PPCMCAsmInfo.h"
 #include "MCTargetDesc/PPCMCTargetDesc.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCELFObjectWriter.h"
@@ -25,11 +25,10 @@ namespace {
     PPCELFObjectWriter(bool Is64Bit, uint8_t OSABI);
 
   protected:
-    unsigned getRelocType(MCContext &Ctx, const MCValue &Target,
-                          const MCFixup &Fixup, bool IsPCRel) const override;
+    unsigned getRelocType(const MCFixup &Fixup, const MCValue &Target,
+                          bool IsPCRel) const override;
 
-    bool needsRelocateWithSymbol(const MCValue &Val, const MCSymbol &Sym,
-                                 unsigned Type) const override;
+    bool needsRelocateWithSymbol(const MCValue &, unsigned Type) const override;
   };
 }
 
@@ -38,57 +37,57 @@ PPCELFObjectWriter::PPCELFObjectWriter(bool Is64Bit, uint8_t OSABI)
                             Is64Bit ?  ELF::EM_PPC64 : ELF::EM_PPC,
                             /*HasRelocationAddend*/ true) {}
 
-unsigned PPCELFObjectWriter::getRelocType(MCContext &Ctx, const MCValue &Target,
-                                          const MCFixup &Fixup,
+unsigned PPCELFObjectWriter::getRelocType(const MCFixup &Fixup,
+                                          const MCValue &Target,
                                           bool IsPCRel) const {
   SMLoc Loc = Fixup.getValue()->getLoc();
   auto Spec = static_cast<PPCMCExpr::Specifier>(Target.getSpecifier());
   switch (Spec) {
-  case PPCMCExpr::VK_DTPMOD:
-  case PPCMCExpr::VK_DTPREL:
-  case PPCMCExpr::VK_DTPREL_HA:
-  case PPCMCExpr::VK_DTPREL_HI:
-  case PPCMCExpr::VK_DTPREL_HIGH:
-  case PPCMCExpr::VK_DTPREL_HIGHA:
-  case PPCMCExpr::VK_DTPREL_HIGHER:
-  case PPCMCExpr::VK_DTPREL_HIGHERA:
-  case PPCMCExpr::VK_DTPREL_HIGHEST:
-  case PPCMCExpr::VK_DTPREL_HIGHESTA:
-  case PPCMCExpr::VK_DTPREL_LO:
-  case PPCMCExpr::VK_GOT_DTPREL:
-  case PPCMCExpr::VK_GOT_DTPREL_HA:
-  case PPCMCExpr::VK_GOT_DTPREL_HI:
-  case PPCMCExpr::VK_GOT_DTPREL_LO:
-  case PPCMCExpr::VK_GOT_TLSGD:
-  case PPCMCExpr::VK_GOT_TLSGD_HA:
-  case PPCMCExpr::VK_GOT_TLSGD_HI:
-  case PPCMCExpr::VK_GOT_TLSGD_LO:
-  case PPCMCExpr::VK_GOT_TLSGD_PCREL:
-  case PPCMCExpr::VK_GOT_TLSLD:
-  case PPCMCExpr::VK_GOT_TLSLD_HA:
-  case PPCMCExpr::VK_GOT_TLSLD_HI:
-  case PPCMCExpr::VK_GOT_TLSLD_LO:
-  case PPCMCExpr::VK_GOT_TPREL:
-  case PPCMCExpr::VK_GOT_TPREL_HA:
-  case PPCMCExpr::VK_GOT_TPREL_HI:
-  case PPCMCExpr::VK_GOT_TPREL_LO:
-  case PPCMCExpr::VK_GOT_TPREL_PCREL:
-  case PPCMCExpr::VK_TLS:
-  case PPCMCExpr::VK_TLSGD:
-  case PPCMCExpr::VK_TLSLD:
-  case PPCMCExpr::VK_TLS_PCREL:
-  case PPCMCExpr::VK_TPREL:
-  case PPCMCExpr::VK_TPREL_HA:
-  case PPCMCExpr::VK_TPREL_HI:
-  case PPCMCExpr::VK_TPREL_HIGH:
-  case PPCMCExpr::VK_TPREL_HIGHA:
-  case PPCMCExpr::VK_TPREL_HIGHER:
-  case PPCMCExpr::VK_TPREL_HIGHERA:
-  case PPCMCExpr::VK_TPREL_HIGHEST:
-  case PPCMCExpr::VK_TPREL_HIGHESTA:
-  case PPCMCExpr::VK_TPREL_LO:
-    if (auto *SA = Target.getAddSym())
-      cast<MCSymbolELF>(SA)->setType(ELF::STT_TLS);
+  case PPC::S_DTPMOD:
+  case PPC::S_DTPREL:
+  case PPC::S_DTPREL_HA:
+  case PPC::S_DTPREL_HI:
+  case PPC::S_DTPREL_HIGH:
+  case PPC::S_DTPREL_HIGHA:
+  case PPC::S_DTPREL_HIGHER:
+  case PPC::S_DTPREL_HIGHERA:
+  case PPC::S_DTPREL_HIGHEST:
+  case PPC::S_DTPREL_HIGHESTA:
+  case PPC::S_DTPREL_LO:
+  case PPC::S_GOT_DTPREL:
+  case PPC::S_GOT_DTPREL_HA:
+  case PPC::S_GOT_DTPREL_HI:
+  case PPC::S_GOT_DTPREL_LO:
+  case PPC::S_GOT_TLSGD:
+  case PPC::S_GOT_TLSGD_HA:
+  case PPC::S_GOT_TLSGD_HI:
+  case PPC::S_GOT_TLSGD_LO:
+  case PPC::S_GOT_TLSGD_PCREL:
+  case PPC::S_GOT_TLSLD:
+  case PPC::S_GOT_TLSLD_HA:
+  case PPC::S_GOT_TLSLD_HI:
+  case PPC::S_GOT_TLSLD_LO:
+  case PPC::S_GOT_TPREL:
+  case PPC::S_GOT_TPREL_HA:
+  case PPC::S_GOT_TPREL_HI:
+  case PPC::S_GOT_TPREL_LO:
+  case PPC::S_GOT_TPREL_PCREL:
+  case PPC::S_TLS:
+  case PPC::S_TLSGD:
+  case PPC::S_TLSLD:
+  case PPC::S_TLS_PCREL:
+  case PPC::S_TPREL:
+  case PPC::S_TPREL_HA:
+  case PPC::S_TPREL_HI:
+  case PPC::S_TPREL_HIGH:
+  case PPC::S_TPREL_HIGHA:
+  case PPC::S_TPREL_HIGHER:
+  case PPC::S_TPREL_HIGHERA:
+  case PPC::S_TPREL_HIGHEST:
+  case PPC::S_TPREL_HIGHESTA:
+  case PPC::S_TPREL_LO:
+    if (auto *SA = const_cast<MCSymbol *>(Target.getAddSym()))
+      static_cast<MCSymbolELF *>(SA)->setType(ELF::STT_TLS);
     break;
   default:
     break;
@@ -97,7 +96,7 @@ unsigned PPCELFObjectWriter::getRelocType(MCContext &Ctx, const MCValue &Target,
   // determine the type of the relocation
   unsigned Type = 0;
   if (IsPCRel) {
-    switch (Fixup.getTargetKind()) {
+    switch (Fixup.getKind()) {
     default:
       llvm_unreachable("Unimplemented");
     case PPC::fixup_ppc_br24:
@@ -105,18 +104,18 @@ unsigned PPCELFObjectWriter::getRelocType(MCContext &Ctx, const MCValue &Target,
     case PPC::fixup_ppc_br24_notoc:
       switch (Spec) {
       default:
-        Ctx.reportError(Loc, "unsupported relocation type");
+        reportError(Loc, "unsupported relocation type");
         break;
-      case PPCMCExpr::VK_None:
+      case PPC::S_None:
         Type = ELF::R_PPC_REL24;
         break;
-      case PPCMCExpr::VK_PLT:
+      case PPC::S_PLT:
         Type = ELF::R_PPC_PLTREL24;
         break;
-      case PPCMCExpr::VK_LOCAL:
+      case PPC::S_LOCAL:
         Type = ELF::R_PPC_LOCAL24PC;
         break;
-      case PPCMCExpr::VK_NOTOC:
+      case PPC::S_NOTOC:
         Type = ELF::R_PPC64_REL24_NOTOC;
         break;
       }
@@ -128,56 +127,55 @@ unsigned PPCELFObjectWriter::getRelocType(MCContext &Ctx, const MCValue &Target,
     case PPC::fixup_ppc_half16:
       switch (Spec) {
       default:
-        Ctx.reportError(Loc, "unsupported relocation type");
+        reportError(Loc, "unsupported relocation type");
         return ELF::R_PPC_NONE;
-      case PPCMCExpr::VK_None:
+      case PPC::S_None:
         return ELF::R_PPC_REL16;
-      case PPCMCExpr::VK_LO:
+      case PPC::S_LO:
         return ELF::R_PPC_REL16_LO;
-      case PPCMCExpr::VK_HI:
+      case PPC::S_HI:
         return ELF::R_PPC_REL16_HI;
-      case PPCMCExpr::VK_HA:
+      case PPC::S_HA:
         return ELF::R_PPC_REL16_HA;
       }
       break;
     case PPC::fixup_ppc_half16ds:
     case PPC::fixup_ppc_half16dq:
-      Ctx.reportError(Loc, "unsupported relocation type");
+      reportError(Loc, "unsupported relocation type");
       break;
     case PPC::fixup_ppc_pcrel34:
       switch (Spec) {
       default:
-        Ctx.reportError(Loc, "unsupported relocation type");
+        reportError(Loc, "unsupported relocation type");
         break;
-      case PPCMCExpr::VK_PCREL:
+      case PPC::S_PCREL:
         Type = ELF::R_PPC64_PCREL34;
         break;
-      case PPCMCExpr::VK_GOT_PCREL:
+      case PPC::S_GOT_PCREL:
         Type = ELF::R_PPC64_GOT_PCREL34;
         break;
-      case PPCMCExpr::VK_GOT_TLSGD_PCREL:
+      case PPC::S_GOT_TLSGD_PCREL:
         Type = ELF::R_PPC64_GOT_TLSGD_PCREL34;
         break;
-      case PPCMCExpr::VK_GOT_TLSLD_PCREL:
+      case PPC::S_GOT_TLSLD_PCREL:
         Type = ELF::R_PPC64_GOT_TLSLD_PCREL34;
         break;
-      case PPCMCExpr::VK_GOT_TPREL_PCREL:
+      case PPC::S_GOT_TPREL_PCREL:
         Type = ELF::R_PPC64_GOT_TPREL_PCREL34;
         break;
       }
       break;
     case FK_Data_4:
-    case FK_PCRel_4:
       Type = ELF::R_PPC_REL32;
       break;
     case FK_Data_8:
-    case FK_PCRel_8:
       Type = ELF::R_PPC64_REL64;
       break;
     }
   } else {
-    switch (Fixup.getTargetKind()) {
-      default: llvm_unreachable("invalid fixup kind!");
+    switch (Fixup.getKind()) {
+    default:
+      llvm_unreachable("invalid fixup kind!");
     case PPC::fixup_ppc_br24abs:
       Type = ELF::R_PPC_ADDR24;
       break;
@@ -187,174 +185,174 @@ unsigned PPCELFObjectWriter::getRelocType(MCContext &Ctx, const MCValue &Target,
     case PPC::fixup_ppc_half16:
       switch (Spec) {
       default:
-        Ctx.reportError(Loc, "unsupported relocation type");
+        reportError(Loc, "unsupported relocation type");
         break;
-      case PPCMCExpr::VK_LO:
+      case PPC::S_LO:
         return ELF::R_PPC_ADDR16_LO;
-      case PPCMCExpr::VK_HI:
+      case PPC::S_HI:
         return ELF::R_PPC_ADDR16_HI;
-      case PPCMCExpr::VK_HA:
+      case PPC::S_HA:
         return ELF::R_PPC_ADDR16_HA;
-      case PPCMCExpr::VK_HIGH:
+      case PPC::S_HIGH:
         return ELF::R_PPC64_ADDR16_HIGH;
-      case PPCMCExpr::VK_HIGHA:
+      case PPC::S_HIGHA:
         return ELF::R_PPC64_ADDR16_HIGHA;
-      case PPCMCExpr::VK_HIGHER:
+      case PPC::S_HIGHER:
         return ELF::R_PPC64_ADDR16_HIGHER;
-      case PPCMCExpr::VK_HIGHERA:
+      case PPC::S_HIGHERA:
         return ELF::R_PPC64_ADDR16_HIGHERA;
-      case PPCMCExpr::VK_HIGHEST:
+      case PPC::S_HIGHEST:
         return ELF::R_PPC64_ADDR16_HIGHEST;
-      case PPCMCExpr::VK_HIGHESTA:
+      case PPC::S_HIGHESTA:
         return ELF::R_PPC64_ADDR16_HIGHESTA;
 
-      case PPCMCExpr::VK_None:
+      case PPC::S_None:
         Type = ELF::R_PPC_ADDR16;
         break;
-      case PPCMCExpr::VK_GOT:
+      case PPC::S_GOT:
         Type = ELF::R_PPC_GOT16;
         break;
-      case PPCMCExpr::VK_GOT_LO:
+      case PPC::S_GOT_LO:
         Type = ELF::R_PPC_GOT16_LO;
         break;
-      case PPCMCExpr::VK_GOT_HI:
+      case PPC::S_GOT_HI:
         Type = ELF::R_PPC_GOT16_HI;
         break;
-      case PPCMCExpr::VK_GOT_HA:
+      case PPC::S_GOT_HA:
         Type = ELF::R_PPC_GOT16_HA;
         break;
-      case PPCMCExpr::VK_TOC:
+      case PPC::S_TOC:
         Type = ELF::R_PPC64_TOC16;
         break;
-      case PPCMCExpr::VK_TOC_LO:
+      case PPC::S_TOC_LO:
         Type = ELF::R_PPC64_TOC16_LO;
         break;
-      case PPCMCExpr::VK_TOC_HI:
+      case PPC::S_TOC_HI:
         Type = ELF::R_PPC64_TOC16_HI;
         break;
-      case PPCMCExpr::VK_TOC_HA:
+      case PPC::S_TOC_HA:
         Type = ELF::R_PPC64_TOC16_HA;
         break;
-      case PPCMCExpr::VK_TPREL:
+      case PPC::S_TPREL:
         Type = ELF::R_PPC_TPREL16;
         break;
-      case PPCMCExpr::VK_TPREL_LO:
+      case PPC::S_TPREL_LO:
         Type = ELF::R_PPC_TPREL16_LO;
         break;
-      case PPCMCExpr::VK_TPREL_HI:
+      case PPC::S_TPREL_HI:
         Type = ELF::R_PPC_TPREL16_HI;
         break;
-      case PPCMCExpr::VK_TPREL_HA:
+      case PPC::S_TPREL_HA:
         Type = ELF::R_PPC_TPREL16_HA;
         break;
-      case PPCMCExpr::VK_TPREL_HIGH:
+      case PPC::S_TPREL_HIGH:
         Type = ELF::R_PPC64_TPREL16_HIGH;
         break;
-      case PPCMCExpr::VK_TPREL_HIGHA:
+      case PPC::S_TPREL_HIGHA:
         Type = ELF::R_PPC64_TPREL16_HIGHA;
         break;
-      case PPCMCExpr::VK_TPREL_HIGHER:
+      case PPC::S_TPREL_HIGHER:
         Type = ELF::R_PPC64_TPREL16_HIGHER;
         break;
-      case PPCMCExpr::VK_TPREL_HIGHERA:
+      case PPC::S_TPREL_HIGHERA:
         Type = ELF::R_PPC64_TPREL16_HIGHERA;
         break;
-      case PPCMCExpr::VK_TPREL_HIGHEST:
+      case PPC::S_TPREL_HIGHEST:
         Type = ELF::R_PPC64_TPREL16_HIGHEST;
         break;
-      case PPCMCExpr::VK_TPREL_HIGHESTA:
+      case PPC::S_TPREL_HIGHESTA:
         Type = ELF::R_PPC64_TPREL16_HIGHESTA;
         break;
-      case PPCMCExpr::VK_DTPREL:
+      case PPC::S_DTPREL:
         Type = ELF::R_PPC64_DTPREL16;
         break;
-      case PPCMCExpr::VK_DTPREL_LO:
+      case PPC::S_DTPREL_LO:
         Type = ELF::R_PPC64_DTPREL16_LO;
         break;
-      case PPCMCExpr::VK_DTPREL_HI:
+      case PPC::S_DTPREL_HI:
         Type = ELF::R_PPC64_DTPREL16_HI;
         break;
-      case PPCMCExpr::VK_DTPREL_HA:
+      case PPC::S_DTPREL_HA:
         Type = ELF::R_PPC64_DTPREL16_HA;
         break;
-      case PPCMCExpr::VK_DTPREL_HIGH:
+      case PPC::S_DTPREL_HIGH:
         Type = ELF::R_PPC64_DTPREL16_HIGH;
         break;
-      case PPCMCExpr::VK_DTPREL_HIGHA:
+      case PPC::S_DTPREL_HIGHA:
         Type = ELF::R_PPC64_DTPREL16_HIGHA;
         break;
-      case PPCMCExpr::VK_DTPREL_HIGHER:
+      case PPC::S_DTPREL_HIGHER:
         Type = ELF::R_PPC64_DTPREL16_HIGHER;
         break;
-      case PPCMCExpr::VK_DTPREL_HIGHERA:
+      case PPC::S_DTPREL_HIGHERA:
         Type = ELF::R_PPC64_DTPREL16_HIGHERA;
         break;
-      case PPCMCExpr::VK_DTPREL_HIGHEST:
+      case PPC::S_DTPREL_HIGHEST:
         Type = ELF::R_PPC64_DTPREL16_HIGHEST;
         break;
-      case PPCMCExpr::VK_DTPREL_HIGHESTA:
+      case PPC::S_DTPREL_HIGHESTA:
         Type = ELF::R_PPC64_DTPREL16_HIGHESTA;
         break;
-      case PPCMCExpr::VK_GOT_TLSGD:
+      case PPC::S_GOT_TLSGD:
         if (is64Bit())
           Type = ELF::R_PPC64_GOT_TLSGD16;
         else
           Type = ELF::R_PPC_GOT_TLSGD16;
         break;
-      case PPCMCExpr::VK_GOT_TLSGD_LO:
+      case PPC::S_GOT_TLSGD_LO:
         Type = ELF::R_PPC64_GOT_TLSGD16_LO;
         break;
-      case PPCMCExpr::VK_GOT_TLSGD_HI:
+      case PPC::S_GOT_TLSGD_HI:
         Type = ELF::R_PPC64_GOT_TLSGD16_HI;
         break;
-      case PPCMCExpr::VK_GOT_TLSGD_HA:
+      case PPC::S_GOT_TLSGD_HA:
         Type = ELF::R_PPC64_GOT_TLSGD16_HA;
         break;
-      case PPCMCExpr::VK_GOT_TLSLD:
+      case PPC::S_GOT_TLSLD:
         if (is64Bit())
           Type = ELF::R_PPC64_GOT_TLSLD16;
         else
           Type = ELF::R_PPC_GOT_TLSLD16;
         break;
-      case PPCMCExpr::VK_GOT_TLSLD_LO:
+      case PPC::S_GOT_TLSLD_LO:
         Type = ELF::R_PPC64_GOT_TLSLD16_LO;
         break;
-      case PPCMCExpr::VK_GOT_TLSLD_HI:
+      case PPC::S_GOT_TLSLD_HI:
         Type = ELF::R_PPC64_GOT_TLSLD16_HI;
         break;
-      case PPCMCExpr::VK_GOT_TLSLD_HA:
+      case PPC::S_GOT_TLSLD_HA:
         Type = ELF::R_PPC64_GOT_TLSLD16_HA;
         break;
-      case PPCMCExpr::VK_GOT_TPREL:
+      case PPC::S_GOT_TPREL:
         /* We don't have R_PPC64_GOT_TPREL16, but since GOT offsets
            are always 4-aligned, we can use R_PPC64_GOT_TPREL16_DS.  */
         Type = ELF::R_PPC64_GOT_TPREL16_DS;
         break;
-      case PPCMCExpr::VK_GOT_TPREL_LO:
+      case PPC::S_GOT_TPREL_LO:
         /* We don't have R_PPC64_GOT_TPREL16_LO, but since GOT offsets
            are always 4-aligned, we can use R_PPC64_GOT_TPREL16_LO_DS.  */
         Type = ELF::R_PPC64_GOT_TPREL16_LO_DS;
         break;
-      case PPCMCExpr::VK_GOT_TPREL_HI:
+      case PPC::S_GOT_TPREL_HI:
         Type = ELF::R_PPC64_GOT_TPREL16_HI;
         break;
-      case PPCMCExpr::VK_GOT_DTPREL:
+      case PPC::S_GOT_DTPREL:
         /* We don't have R_PPC64_GOT_DTPREL16, but since GOT offsets
            are always 4-aligned, we can use R_PPC64_GOT_DTPREL16_DS.  */
         Type = ELF::R_PPC64_GOT_DTPREL16_DS;
         break;
-      case PPCMCExpr::VK_GOT_DTPREL_LO:
+      case PPC::S_GOT_DTPREL_LO:
         /* We don't have R_PPC64_GOT_DTPREL16_LO, but since GOT offsets
            are always 4-aligned, we can use R_PPC64_GOT_DTPREL16_LO_DS.  */
         Type = ELF::R_PPC64_GOT_DTPREL16_LO_DS;
         break;
-      case PPCMCExpr::VK_GOT_TPREL_HA:
+      case PPC::S_GOT_TPREL_HA:
         Type = ELF::R_PPC64_GOT_TPREL16_HA;
         break;
-      case PPCMCExpr::VK_GOT_DTPREL_HI:
+      case PPC::S_GOT_DTPREL_HI:
         Type = ELF::R_PPC64_GOT_DTPREL16_HI;
         break;
-      case PPCMCExpr::VK_GOT_DTPREL_HA:
+      case PPC::S_GOT_DTPREL_HA:
         Type = ELF::R_PPC64_GOT_DTPREL16_HA;
         break;
       }
@@ -363,47 +361,47 @@ unsigned PPCELFObjectWriter::getRelocType(MCContext &Ctx, const MCValue &Target,
     case PPC::fixup_ppc_half16dq:
       switch (Spec) {
       default:
-        Ctx.reportError(Loc, "unsupported relocation type");
+        reportError(Loc, "unsupported relocation type");
         break;
-      case PPCMCExpr::VK_LO:
+      case PPC::S_LO:
         return ELF::R_PPC64_ADDR16_LO_DS;
-      case PPCMCExpr::VK_None:
+      case PPC::S_None:
         Type = ELF::R_PPC64_ADDR16_DS;
         break;
-      case PPCMCExpr::VK_GOT:
+      case PPC::S_GOT:
         Type = ELF::R_PPC64_GOT16_DS;
         break;
-      case PPCMCExpr::VK_GOT_LO:
+      case PPC::S_GOT_LO:
         Type = ELF::R_PPC64_GOT16_LO_DS;
         break;
-      case PPCMCExpr::VK_TOC:
+      case PPC::S_TOC:
         Type = ELF::R_PPC64_TOC16_DS;
         break;
-      case PPCMCExpr::VK_TOC_LO:
+      case PPC::S_TOC_LO:
         Type = ELF::R_PPC64_TOC16_LO_DS;
         break;
-      case PPCMCExpr::VK_TPREL:
+      case PPC::S_TPREL:
         Type = ELF::R_PPC64_TPREL16_DS;
         break;
-      case PPCMCExpr::VK_TPREL_LO:
+      case PPC::S_TPREL_LO:
         Type = ELF::R_PPC64_TPREL16_LO_DS;
         break;
-      case PPCMCExpr::VK_DTPREL:
+      case PPC::S_DTPREL:
         Type = ELF::R_PPC64_DTPREL16_DS;
         break;
-      case PPCMCExpr::VK_DTPREL_LO:
+      case PPC::S_DTPREL_LO:
         Type = ELF::R_PPC64_DTPREL16_LO_DS;
         break;
-      case PPCMCExpr::VK_GOT_TPREL:
+      case PPC::S_GOT_TPREL:
         Type = ELF::R_PPC64_GOT_TPREL16_DS;
         break;
-      case PPCMCExpr::VK_GOT_TPREL_LO:
+      case PPC::S_GOT_TPREL_LO:
         Type = ELF::R_PPC64_GOT_TPREL16_LO_DS;
         break;
-      case PPCMCExpr::VK_GOT_DTPREL:
+      case PPC::S_GOT_DTPREL:
         Type = ELF::R_PPC64_GOT_DTPREL16_DS;
         break;
-      case PPCMCExpr::VK_GOT_DTPREL_LO:
+      case PPC::S_GOT_DTPREL_LO:
         Type = ELF::R_PPC64_GOT_DTPREL16_LO_DS;
         break;
       }
@@ -411,27 +409,27 @@ unsigned PPCELFObjectWriter::getRelocType(MCContext &Ctx, const MCValue &Target,
     case PPC::fixup_ppc_nofixup:
       switch (Spec) {
       default:
-        Ctx.reportError(Loc, "unsupported relocation type");
+        reportError(Loc, "unsupported relocation type");
         break;
-      case PPCMCExpr::VK_TLSGD:
+      case PPC::S_TLSGD:
         if (is64Bit())
           Type = ELF::R_PPC64_TLSGD;
         else
           Type = ELF::R_PPC_TLSGD;
         break;
-      case PPCMCExpr::VK_TLSLD:
+      case PPC::S_TLSLD:
         if (is64Bit())
           Type = ELF::R_PPC64_TLSLD;
         else
           Type = ELF::R_PPC_TLSLD;
         break;
-      case PPCMCExpr::VK_TLS:
+      case PPC::S_TLS:
         if (is64Bit())
           Type = ELF::R_PPC64_TLS;
         else
           Type = ELF::R_PPC_TLS;
         break;
-      case PPCMCExpr::VK_TLS_PCREL:
+      case PPC::S_TLS_PCREL:
         Type = ELF::R_PPC64_TLS;
         break;
       }
@@ -439,12 +437,12 @@ unsigned PPCELFObjectWriter::getRelocType(MCContext &Ctx, const MCValue &Target,
     case PPC::fixup_ppc_imm34:
       switch (Spec) {
       default:
-        Ctx.reportError(Loc, "unsupported relocation type");
+        reportError(Loc, "unsupported relocation type");
         break;
-      case PPCMCExpr::VK_DTPREL:
+      case PPC::S_DTPREL:
         Type = ELF::R_PPC64_DTPREL34;
         break;
-      case PPCMCExpr::VK_TPREL:
+      case PPC::S_TPREL:
         Type = ELF::R_PPC64_TPREL34;
         break;
       }
@@ -452,28 +450,28 @@ unsigned PPCELFObjectWriter::getRelocType(MCContext &Ctx, const MCValue &Target,
     case FK_Data_8:
       switch (Spec) {
       default:
-        Ctx.reportError(Loc, "unsupported relocation type");
+        reportError(Loc, "unsupported relocation type");
         break;
-      case PPCMCExpr::VK_TOCBASE:
+      case PPC::S_TOCBASE:
         Type = ELF::R_PPC64_TOC;
         break;
-      case PPCMCExpr::VK_None:
+      case PPC::S_None:
         Type = ELF::R_PPC64_ADDR64;
         break;
-      case PPCMCExpr::VK_DTPMOD:
+      case PPC::S_DTPMOD:
         Type = ELF::R_PPC64_DTPMOD64;
         break;
-      case PPCMCExpr::VK_TPREL:
+      case PPC::S_TPREL:
         Type = ELF::R_PPC64_TPREL64;
         break;
-      case PPCMCExpr::VK_DTPREL:
+      case PPC::S_DTPREL:
         Type = ELF::R_PPC64_DTPREL64;
         break;
       }
       break;
     case FK_Data_4:
       switch (Spec) {
-      case PPCMCExpr::VK_DTPREL:
+      case PPC::S_DTPREL:
         Type = ELF::R_PPC_DTPREL32;
         break;
       default:
@@ -488,8 +486,7 @@ unsigned PPCELFObjectWriter::getRelocType(MCContext &Ctx, const MCValue &Target,
   return Type;
 }
 
-bool PPCELFObjectWriter::needsRelocateWithSymbol(const MCValue &,
-                                                 const MCSymbol &Sym,
+bool PPCELFObjectWriter::needsRelocateWithSymbol(const MCValue &V,
                                                  unsigned Type) const {
   switch (Type) {
     default:
@@ -502,7 +499,8 @@ bool PPCELFObjectWriter::needsRelocateWithSymbol(const MCValue &,
       // The "other" values are stored in the last 6 bits of the second byte.
       // The traditional defines for STO values assume the full byte and thus
       // the shift to pack it.
-      unsigned Other = cast<MCSymbolELF>(Sym).getOther() << 2;
+      unsigned Other =
+          static_cast<const MCSymbolELF *>(V.getAddSym())->getOther() << 2;
       return (Other & ELF::STO_PPC64_LOCAL_MASK) != 0;
     }
 

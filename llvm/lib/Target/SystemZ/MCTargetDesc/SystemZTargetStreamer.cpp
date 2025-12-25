@@ -13,6 +13,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "SystemZTargetStreamer.h"
+#include "SystemZHLASMAsmStreamer.h"
+#include "llvm/MC/MCAsmInfo.h"
+#include "llvm/MC/MCGOFFStreamer.h"
 #include "llvm/MC/MCObjectFileInfo.h"
 
 using namespace llvm;
@@ -32,8 +35,8 @@ void SystemZTargetStreamer::emitConstantPools() {
   EXRLTargets2Sym.clear();
 }
 
-void SystemZTargetHLASMStreamer::emitExtern(StringRef Sym) {
-  getStreamer().emitRawText(Twine(" EXTRN ") + Twine(Sym));
+SystemZHLASMAsmStreamer &SystemZTargetHLASMStreamer::getHLASMStreamer() {
+  return static_cast<SystemZHLASMAsmStreamer &>(getStreamer());
 }
 
 // HLASM statements can only perform a single operation at a time
@@ -44,7 +47,7 @@ const MCExpr *SystemZTargetHLASMStreamer::createWordDiffExpr(
   OS << Temp->getName() << " EQU ";
   const MCBinaryExpr *TempExpr = MCBinaryExpr::createSub(
       MCSymbolRefExpr::create(Hi, Ctx), MCSymbolRefExpr::create(Lo, Ctx), Ctx);
-  TempExpr->print(OS, Ctx.getAsmInfo());
+  Ctx.getAsmInfo()->printExpr(OS, *TempExpr);
   OS << "\n";
   return MCBinaryExpr::createLShr(MCSymbolRefExpr::create(Temp, Ctx),
                                   MCConstantExpr::create(1, Ctx), Ctx);

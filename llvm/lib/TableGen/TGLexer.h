@@ -19,7 +19,6 @@
 #include "llvm/Support/DataTypes.h"
 #include "llvm/Support/SMLoc.h"
 #include <cassert>
-#include <memory>
 #include <set>
 #include <string>
 
@@ -61,7 +60,7 @@ enum TokKind {
   // Integer value.
   IntVal,
 
-  // Binary constant.  Note that these are sized according to the number of
+  // Binary constant. Note that these are sized according to the number of
   // bits given.
   BinaryIntVal,
 
@@ -150,6 +149,8 @@ enum TokKind {
   XGt,
   XSetDagOp,
   XGetDagOp,
+  XSetDagOpName,
+  XGetDagOpName,
   XExists,
   XListRemove,
   XToLower,
@@ -214,13 +215,9 @@ private:
 public:
   TGLexer(SourceMgr &SrcMgr, ArrayRef<std::string> Macros);
 
-  tgtok::TokKind Lex() {
-    return CurCode = LexToken(CurPtr == CurBuf.begin());
-  }
+  tgtok::TokKind Lex() { return CurCode = LexToken(CurPtr == CurBuf.begin()); }
 
-  const DependenciesSetTy &getDependencies() const {
-    return Dependencies;
-  }
+  const DependenciesSetTy &getDependencies() const { return Dependencies; }
 
   tgtok::TokKind getCode() const { return CurCode; }
 
@@ -280,7 +277,7 @@ private:
   //
   // An ordered list of preprocessing controls defined by #ifdef/#else
   // directives that are in effect currently is called preprocessing
-  // control stack.  It is represented as a vector of PreprocessorControlDesc's.
+  // control stack. It is represented as a vector of PreprocessorControlDesc's.
   //
   // The control stack is updated according to the following rules:
   //
@@ -321,9 +318,9 @@ private:
   //     EOF
   //
   // To do this, we clear the preprocessing control stack on entry
-  // to each of the included file.  PrepIncludeStack is used to store
+  // to each of the included file. PrepIncludeStack is used to store
   // preprocessing control stacks for the current file and all its
-  // parent files.  The back() element is the preprocessing control
+  // parent files. The back() element is the preprocessing control
   // stack for the current file.
   SmallVector<SmallVector<PreprocessorControlDesc>> PrepIncludeStack;
 
@@ -332,7 +329,7 @@ private:
   //
   // If IncludeStackMustBeEmpty is true, the include stack must be empty
   // after the popping, otherwise, the include stack must not be empty
-  // after the popping.  Basically, the include stack must be empty
+  // after the popping. Basically, the include stack must be empty
   // only if we exit the "top-level" file (i.e. finish lexing).
   //
   // The method returns false, if the current preprocessing control stack
@@ -340,8 +337,8 @@ private:
   // true - otherwise.
   bool prepExitInclude(bool IncludeStackMustBeEmpty);
 
-  // Look ahead for a preprocessing directive starting from CurPtr.  The caller
-  // must only call this method, if *(CurPtr - 1) is '#'.  If the method matches
+  // Look ahead for a preprocessing directive starting from CurPtr. The caller
+  // must only call this method, if *(CurPtr - 1) is '#'. If the method matches
   // a preprocessing directive word followed by a whitespace, then it returns
   // one of the internal token kinds, i.e. Ifdef, Else, Endif, Define.
   //
@@ -353,26 +350,26 @@ private:
   //
   // We use look-ahead prepIsDirective() and prepEatPreprocessorDirective()
   // to avoid adjusting CurPtr before we are sure that '#' is followed
-  // by a preprocessing directive.  If it is not, then we fall back to
+  // by a preprocessing directive. If it is not, then we fall back to
   // tgtok::paste interpretation of '#'.
   void prepEatPreprocessorDirective(tgtok::TokKind Kind);
 
   // The main "exit" point from the token parsing to preprocessor.
   //
   // The method is called for CurPtr, when prepIsDirective() returns
-  // true.  The first parameter matches the result of prepIsDirective(),
+  // true. The first parameter matches the result of prepIsDirective(),
   // denoting the actual preprocessor directive to be processed.
   //
   // If the preprocessing directive disables the tokens processing, e.g.:
   //     #ifdef NAME // NAME is undefined
   // then lexPreprocessor() enters the lines-skipping mode.
   // In this mode, it does not parse any tokens, because the code under
-  // the #ifdef may not even be a correct tablegen code.  The preprocessor
+  // the #ifdef may not even be a correct tablegen code. The preprocessor
   // looks for lines containing other preprocessing directives, which
-  // may be prepended with whitespaces and C-style comments.  If the line
+  // may be prepended with whitespaces and C-style comments. If the line
   // does not contain a preprocessing directive, it is skipped completely.
   // Otherwise, the preprocessing directive is processed by recursively
-  // calling lexPreprocessor().  The processing of the encountered
+  // calling lexPreprocessor(). The processing of the encountered
   // preprocessing directives includes updating preprocessing control stack
   // and adding new macros into DefinedMacros set.
   //
@@ -390,38 +387,38 @@ private:
 
   // Worker method for lexPreprocessor() to skip lines after some
   // preprocessing directive up to the buffer end or to the directive
-  // that re-enables token processing.  The method returns true
+  // that re-enables token processing. The method returns true
   // upon processing the next directive that re-enables tokens
-  // processing.  False is returned if an error was encountered.
+  // processing. False is returned if an error was encountered.
   //
   // Note that prepSkipRegion() calls lexPreprocessor() to process
-  // encountered preprocessing directives.  In this case, the second
-  // parameter to lexPreprocessor() is set to false.  Being passed
+  // encountered preprocessing directives. In this case, the second
+  // parameter to lexPreprocessor() is set to false. Being passed
   // false ReturnNextLiveToken, lexPreprocessor() must never call
-  // prepSkipRegion().  We assert this by passing ReturnNextLiveToken
+  // prepSkipRegion(). We assert this by passing ReturnNextLiveToken
   // to prepSkipRegion() and checking that it is never set to false.
   bool prepSkipRegion(bool MustNeverBeFalse);
 
-  // Lex name of the macro after either #ifdef or #define.  We could have used
+  // Lex name of the macro after either #ifdef or #define. We could have used
   // LexIdentifier(), but it has special handling of "include" word, which
-  // could result in awkward diagnostic errors.  Consider:
+  // could result in awkward diagnostic errors. Consider:
   // ----
   // #ifdef include
   // class ...
   // ----
   // LexIdentifier() will engage LexInclude(), which will complain about
-  // missing file with name "class".  Instead, prepLexMacroName() will treat
+  // missing file with name "class". Instead, prepLexMacroName() will treat
   // "include" as a normal macro name.
   //
   // On entry, CurPtr points to the end of a preprocessing directive word.
   // The method allows for whitespaces between the preprocessing directive
-  // and the macro name.  The allowed whitespaces are ' ' and '\t'.
+  // and the macro name. The allowed whitespaces are ' ' and '\t'.
   //
   // If the first non-whitespace symbol after the preprocessing directive
   // is a valid start symbol for an identifier (i.e. [a-zA-Z_]), then
   // the method updates TokStart to the position of the first non-whitespace
   // symbol, sets CurPtr to the position of the macro name's last symbol,
-  // and returns a string reference to the macro name.  Otherwise,
+  // and returns a string reference to the macro name. Otherwise,
   // TokStart is set to the first non-whitespace symbol after the preprocessing
   // directive, and the method returns an empty string reference.
   //
@@ -429,10 +426,10 @@ private:
   // the preprocessing directive.
   StringRef prepLexMacroName();
 
-  // Skip any whitespaces starting from CurPtr.  The method is used
+  // Skip any whitespaces starting from CurPtr. The method is used
   // only in the lines-skipping mode to find the first non-whitespace
-  // symbol after or at CurPtr.  Allowed whitespaces are ' ', '\t', '\n'
-  // and '\r'.  The method skips C-style comments as well, because
+  // symbol after or at CurPtr. Allowed whitespaces are ' ', '\t', '\n'
+  // and '\r'. The method skips C-style comments as well, because
   // it is used to find the beginning of the preprocessing directive.
   // If we do not handle C-style comments the following code would
   // result in incorrect detection of a preprocessing directive:
@@ -445,13 +442,13 @@ private:
   //        second line comment */ #ifdef NAME
   //
   // The method returns true upon reaching the first non-whitespace symbol
-  // or EOF, CurPtr is set to point to this symbol.  The method returns false,
+  // or EOF, CurPtr is set to point to this symbol. The method returns false,
   // if an error occurred during skipping of a C-style comment.
   bool prepSkipLineBegin();
 
   // Skip any whitespaces or comments after a preprocessing directive.
   // The method returns true upon reaching either end of the line
-  // or end of the file.  If there is a multiline C-style comment
+  // or end of the file. If there is a multiline C-style comment
   // after the preprocessing directive, the method skips
   // the comment, so the final CurPtr may point to one of the next lines.
   // The method returns false, if an error occurred during skipping
@@ -459,7 +456,7 @@ private:
   // after the preprocessing directive.
   //
   // The method maybe called both during lines-skipping and tokens
-  // processing.  It actually verifies that only whitespaces or/and
+  // processing. It actually verifies that only whitespaces or/and
   // comments follow a preprocessing directive.
   //
   // After the execution of this mehod, CurPtr points either to new line
@@ -475,7 +472,7 @@ private:
   bool prepIsProcessingEnabled();
 
   // Report an error, if we reach EOF with non-empty preprocessing control
-  // stack.  This means there is no matching #endif for the previous
+  // stack. This means there is no matching #endif for the previous
   // #ifdef/#else.
   void prepReportPreprocessorStackError();
 };

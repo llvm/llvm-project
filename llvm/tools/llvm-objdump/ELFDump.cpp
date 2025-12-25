@@ -291,6 +291,9 @@ template <class ELFT> void ELFDumper<ELFT>::printProgramHeaders() {
     case ELF::PT_GNU_STACK:
       outs() << "   STACK ";
       break;
+    case ELF::PT_GNU_SFRAME:
+      outs() << "  SFRAME ";
+      break;
     case ELF::PT_INTERP:
       outs() << "  INTERP ";
       break;
