@@ -1219,7 +1219,7 @@ bool LoopInterchangeLegality::findInductionAndReductions(
   }
 
   // For now we only support at most one reduction.
-  if (InnerSimpleReductions.size() > 1){
+  if (InnerSimpleReductions.size() > 1) {
     ORE->emit([&]() {
       return OptimizationRemarkMissed(DEBUG_TYPE, "UnsupportedSimpleReduction",
                                       L->getStartLoc(), L->getHeader())
