@@ -1,5 +1,4 @@
 add_mlir_dialect_library(MLIROpenACCTransforms
-  ACCIfClauseLowering.cpp
   ACCImplicitData.cpp
   ACCLoopTiling.cpp
   ACCImplicitDeclare.cpp
