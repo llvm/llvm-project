@@ -72,7 +72,7 @@ __AlpinePackages+=" krb5-dev"
 __AlpinePackages+=" openssl-dev"
 __AlpinePackages+=" zlib-dev"
 
-__FreeBSDBase="13.4-RELEASE"
+__FreeBSDBase="13.5-RELEASE"
 __FreeBSDPkg="1.21.3"
 __FreeBSDABI="13"
 __FreeBSDPackages="libunwind"
@@ -383,7 +383,7 @@ while :; do
             ;;
         freebsd14)
             __CodeName=freebsd
-            __FreeBSDBase="14.2-RELEASE"
+            __FreeBSDBase="14.3-RELEASE"
             __FreeBSDABI="14"
             __SkipUnmount=1
             ;;
