@@ -9,6 +9,7 @@
 
 __m128 test_vcvtph2ps_mask(__m128i a, __m128 src, __mmask8 k) {
   // CIR-LABEL: cir.func no_inline dso_local @test_vcvtph2ps_mask 
+  // CIR: cir.store {{.*}} : !u8i, !cir.ptr<!u8i>
   // CIR: %[[LOAD_A:.*]] = cir.load {{.*}} : !cir.ptr<!cir.vector<2 x !s64i>>, !cir.vector<2 x !s64i>
   // CIR: %[[VEC_I:.*]] = cir.cast bitcast %[[LOAD_A]] : !cir.vector<2 x !s64i> -> !cir.vector<8 x !s16i>
   // CIR: %[[LOAD_SRC:.*]] = cir.load {{.*}} : !cir.ptr<!cir.vector<4 x !cir.float>>, !cir.vector<4 x !cir.float>
@@ -43,6 +44,7 @@ __m128 test_vcvtph2ps_mask(__m128i a, __m128 src, __mmask8 k) {
 
 __m256 test_vcvtph2ps256_mask(__m128i a, __m256 src, __mmask8 k) {
   // CIR-LABEL: cir.func no_inline dso_local @test_vcvtph2ps256_mask
+  // CIR: cir.store {{.*}} : !u8i, !cir.ptr<!u8i>
   // CIR: %[[LOAD_A:.*]] = cir.load {{.*}} : !cir.ptr<!cir.vector<2 x !s64i>>, !cir.vector<2 x !s64i>
   // CIR: %[[VEC_I:.*]] = cir.cast bitcast %[[LOAD_A]] : !cir.vector<2 x !s64i> -> !cir.vector<8 x !s16i>
   // CIR: %[[LOAD_SRC:.*]] = cir.load {{.*}} : !cir.ptr<!cir.vector<8 x !cir.float>>, !cir.vector<8 x !cir.float>
@@ -73,6 +75,7 @@ __m256 test_vcvtph2ps256_mask(__m128i a, __m256 src, __mmask8 k) {
 
 __m512 test_vcvtph2ps512_mask(__m256i a, __m512 src, __mmask16 k) {
   // CIR-LABEL: cir.func no_inline dso_local @test_vcvtph2ps512_mask
+  // CIR: cir.store {{.*}} : !u16i, !cir.ptr<!u16i>
   // CIR: %[[LOAD_A:.*]] = cir.load {{.*}} : !cir.ptr<!cir.vector<4 x !s64i>>, !cir.vector<4 x !s64i>
   // CIR: %[[VEC_I:.*]] = cir.cast bitcast %[[LOAD_A]] : !cir.vector<4 x !s64i> -> !cir.vector<16 x !s16i>
   // CIR: %[[LOAD_SRC:.*]] = cir.load {{.*}} : !cir.ptr<!cir.vector<16 x !cir.float>>, !cir.vector<16 x !cir.float>
@@ -102,7 +105,7 @@ __m512 test_vcvtph2ps512_mask(__m256i a, __m512 src, __mmask16 k) {
 }
 
 __m128 test_vcvtph2ps_maskz(__m128i a, __mmask8 k) {
-  // CIR-LABEL: cir.func always_inline internal private dso_local @_mm_maskz_cvtph_ps
+  // CIR-LABEL: cir.func {{.*}} @_mm_maskz_cvtph_ps
   // CIR: %[[LOAD_VAL:.*]] = cir.load {{.*}} : !cir.ptr<!cir.vector<2 x !s64i>>, !cir.vector<2 x !s64i>
   // CIR: %[[VEC:.*]] = cir.cast bitcast %[[LOAD_VAL]] : !cir.vector<2 x !s64i> -> !cir.vector<8 x !s16i>
   // CIR: %[[ZERO:.*]] = cir.call @_mm_setzero_ps()
@@ -114,7 +117,7 @@ __m128 test_vcvtph2ps_maskz(__m128i a, __mmask8 k) {
   // CIR: %[[FINAL_MASK:.*]] = cir.vec.shuffle(%[[BOOL_VEC]], %[[BOOL_VEC]] : !cir.vector<8 x !cir.bool>) {{.*}} : !cir.vector<4 x !cir.bool>
   // CIR: cir.select if %[[FINAL_MASK]] then %[[CONV]] else %[[ZERO]]
 
-  // CIR-LABEL: cir.func no_inline dso_local @test_vcvtph2ps_maskz
+  // CIR-LABEL: cir.func {{.*}} @test_vcvtph2ps_maskz
   // CIR: cir.call @_mm_maskz_cvtph_ps({{.*}}, {{.*}})
 
   // LLVM-LABEL: @test_vcvtph2ps_maskz
@@ -139,14 +142,14 @@ __m128 test_vcvtph2ps_maskz(__m128i a, __mmask8 k) {
 }
 
 __m256 test_vcvtph2ps256_maskz(__m128i a, __mmask8 k) {
-  // CIR-LABEL: cir.func always_inline internal private dso_local @_mm256_maskz_cvtph_ps
+  // CIR-LABEL: cir.func {{.*}} @_mm256_maskz_cvtph_ps
   // CIR: %[[LOAD_VAL:.*]] = cir.load {{.*}} : !cir.ptr<!cir.vector<2 x !s64i>>, !cir.vector<2 x !s64i>
   // CIR: %[[VEC_I:.*]] = cir.cast bitcast %[[LOAD_VAL]] : !cir.vector<2 x !s64i> -> !cir.vector<8 x !s16i>
   // CIR: %[[ZERO:.*]] = cir.call @_mm256_setzero_ps()
   // CIR: %[[MASK_VAL:.*]] = cir.load {{.*}} : !cir.ptr<!u8i>, !u8i
   // CIR: %[[CONV_H:.*]] = cir.cast bitcast %[[VEC_I]] : !cir.vector<8 x !s16i> -> !cir.vector<8 x !cir.f16>
 
-  // CIR-LABEL: cir.func no_inline dso_local @test_vcvtph2ps256_maskz
+  // CIR-LABEL: cir.func {{.*}} @test_vcvtph2ps256_maskz
   // CIR: cir.call @_mm256_maskz_cvtph_ps({{.*}}, {{.*}}) 
 
 
@@ -169,14 +172,14 @@ __m256 test_vcvtph2ps256_maskz(__m128i a, __mmask8 k) {
 }
 
 __m512 test_vcvtph2ps512_maskz(__m256i a, __mmask16 k) {
-  // CIR-LABEL: cir.func always_inline internal private dso_local @_mm512_maskz_cvtph_ps
+  // CIR-LABEL: cir.func {{.*}} @_mm512_maskz_cvtph_ps
   // CIR: %[[LOAD_VAL:.*]] = cir.load {{.*}} : !cir.ptr<!cir.vector<4 x !s64i>>, !cir.vector<4 x !s64i>
   // CIR: %[[VEC_I:.*]] = cir.cast bitcast %[[LOAD_VAL]] : !cir.vector<4 x !s64i> -> !cir.vector<16 x !s16i>
   // CIR: %[[ZERO:.*]] = cir.call @_mm512_setzero_ps()
   // CIR: %[[MASK_VAL:.*]] = cir.load {{.*}} : !cir.ptr<!u16i>, !u16i
   // CIR: %[[CONV_H:.*]] = cir.cast bitcast %[[VEC_I]] : !cir.vector<16 x !s16i> -> !cir.vector<16 x !cir.f16>
 
-  // CIR-LABEL: cir.func no_inline dso_local @test_vcvtph2ps512_maskz
+  // CIR-LABEL: cir.func {{.*}} @test_vcvtph2ps512_maskz
   // CIR: cir.call @_mm512_maskz_cvtph_ps({{.*}}, {{.*}})
 
   // LLVM-LABEL: @test_vcvtph2ps512_maskz
