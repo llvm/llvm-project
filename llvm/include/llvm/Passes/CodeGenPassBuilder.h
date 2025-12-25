@@ -506,24 +506,26 @@ protected:
   void addTargetRegisterAllocator(PassManagerWrapper &PMW,
                                   bool Optimized) const;
 
-  /// addMachinePasses helper to create the target-selected or overriden
+  /// addMachinePasses helper to create the target-selected or overridden
   /// regalloc pass.
   Error addRegAllocPass(PassManagerWrapper &PMW, bool Optimized) const;
-  /// Read the --regalloc-npm-pipeline option to add the next pass in line.
+
+  /// Parse the next pass from the --regalloc-npm option and add it.
   /// If MatchPassTo is specified, ensures the pass matches the expected class.
   /// Returns an error if parsing fails or validation fails.
   Error addRegAllocPassFromOpt(PassManagerWrapper &PMW,
                                StringRef MatchPassTo = StringRef{}) const;
-  /// Add the next pass in the cli option or the pass specified if no pass is
-  /// left in the option.
+
+  /// Add the next pass from the --regalloc-npm option if available,
+  /// otherwise add the pass created by PassBuilder.
   template <typename RegAllocPassBuilderT>
   Error addRegAllocPassOrOpt(PassManagerWrapper &PMW,
                              RegAllocPassBuilderT PassBuilder) const;
 
-  /// Add core register alloator passes which do the actual register assignment
-  /// and rewriting. \returns true if any passes were added.
+  /// Add core register allocator passes which do the actual register assignment
+  /// and rewriting.
   Error addRegAssignmentFast(PassManagerWrapper &PMW) const;
-  Error addRegAssignmentOptimized(PassManagerWrapper &PMWM) const;
+  Error addRegAssignmentOptimized(PassManagerWrapper &PMW) const;
 
   /// Allow the target to disable a specific pass by default.
   /// Backend can declare unwanted passes in constructor.
@@ -1213,15 +1215,15 @@ Error CodeGenPassBuilder<Derived, TargetMachineT>::addRegAllocPassFromOpt(
 /// at the current optimization level.  Different register allocators are
 /// defined as separate passes because they may require different analysis.
 ///
-/// This helper ensures that the -regalloc-npm-pipeline= option is always
-/// available, even for targets that override the default allocator.
+/// This helper ensures that the --regalloc-npm option is always available,
+/// even for targets that override the default allocator.
 template <typename Derived, typename TargetMachineT>
 Error CodeGenPassBuilder<Derived, TargetMachineT>::addRegAllocPass(
     PassManagerWrapper &PMW, bool Optimized) const {
   // At O0 (not optimized), only regallocfast is allowed
   StringRef MatchPassTo = Optimized ? StringRef{} : "RegAllocFastPass";
 
-  // Use the specified -regalloc-npm-pipeline= option if provided
+  // Use the specified --regalloc-npm option if provided
   if (auto Err = addRegAllocPassFromOpt(PMW, MatchPassTo))
     return std::move(Err);
 
