@@ -20829,7 +20829,7 @@ of integers whose elements contain a linear sequence of values starting from 0
 with a step of 1. This intrinsic can only be used for vectors with integer
 elements that are at least 8 bits in size. If the sequence value exceeds
 the allowed limit for the element type then the result for that lane is
-a poison value.
+truncated.
 
 These intrinsics work for both fixed and scalable vectors. While this intrinsic
 supports all vector types, the recommended way to express this operation for
