@@ -19,7 +19,7 @@ define i32 @testmuwh(half %a) {
 ; CHECK-FP16-NEXT:    fcvtmu w0, h0
 ; CHECK-FP16-NEXT:    ret
 entry:
-  %r = call half @llvm.floor.f16(half %a) nounwind readnone
+  %r = call half @llvm.floor.f16(half %a)
   %i = call i32 @llvm.fptoui.sat.i32.f16(half %r)
   ret i32 %i
 }
@@ -39,7 +39,7 @@ define i64 @testmuxh(half %a) {
 ; CHECK-FP16-NEXT:    fcvtmu x0, h0
 ; CHECK-FP16-NEXT:    ret
 entry:
-  %r = call half @llvm.floor.f16(half %a) nounwind readnone
+  %r = call half @llvm.floor.f16(half %a)
   %i = call i64 @llvm.fptoui.sat.i64.f16(half %r)
   ret i64 %i
 }
@@ -50,7 +50,7 @@ define i32 @testmuws(float %a) {
 ; CHECK-NEXT:    fcvtmu w0, s0
 ; CHECK-NEXT:    ret
 entry:
-  %r = call float @llvm.floor.f32(float %a) nounwind readnone
+  %r = call float @llvm.floor.f32(float %a)
   %i = call i32 @llvm.fptoui.sat.i32.f32(float %r)
   ret i32 %i
 }
@@ -61,7 +61,7 @@ define i64 @testmuxs(float %a) {
 ; CHECK-NEXT:    fcvtmu x0, s0
 ; CHECK-NEXT:    ret
 entry:
-  %r = call float @llvm.floor.f32(float %a) nounwind readnone
+  %r = call float @llvm.floor.f32(float %a)
   %i = call i64 @llvm.fptoui.sat.i64.f32(float %r)
   ret i64 %i
 }
@@ -72,7 +72,7 @@ define i32 @testmuwd(double %a) {
 ; CHECK-NEXT:    fcvtmu w0, d0
 ; CHECK-NEXT:    ret
 entry:
-  %r = call double @llvm.floor.f64(double %a) nounwind readnone
+  %r = call double @llvm.floor.f64(double %a)
   %i = call i32 @llvm.fptoui.sat.i32.f64(double %r)
   ret i32 %i
 }
@@ -83,7 +83,7 @@ define i64 @testmuxd(double %a) {
 ; CHECK-NEXT:    fcvtmu x0, d0
 ; CHECK-NEXT:    ret
 entry:
-  %r = call double @llvm.floor.f64(double %a) nounwind readnone
+  %r = call double @llvm.floor.f64(double %a)
   %i = call i64 @llvm.fptoui.sat.i64.f64(double %r)
   ret i64 %i
 }
@@ -105,7 +105,7 @@ define i32 @testpuwh(half %a) {
 ; CHECK-FP16-NEXT:    fcvtpu w0, h0
 ; CHECK-FP16-NEXT:    ret
 entry:
-  %r = call half @llvm.ceil.f16(half %a) nounwind readnone
+  %r = call half @llvm.ceil.f16(half %a)
   %i = call i32 @llvm.fptoui.sat.i32.f16(half %r)
   ret i32 %i
 }
@@ -125,7 +125,7 @@ define i64 @testpuxh(half %a) {
 ; CHECK-FP16-NEXT:    fcvtpu x0, h0
 ; CHECK-FP16-NEXT:    ret
 entry:
-  %r = call half @llvm.ceil.f16(half %a) nounwind readnone
+  %r = call half @llvm.ceil.f16(half %a)
   %i = call i64 @llvm.fptoui.sat.i64.f16(half %r)
   ret i64 %i
 }
@@ -136,7 +136,7 @@ define i32 @testpuws(float %a) {
 ; CHECK-NEXT:    fcvtpu w0, s0
 ; CHECK-NEXT:    ret
 entry:
-  %r = call float @llvm.ceil.f32(float %a) nounwind readnone
+  %r = call float @llvm.ceil.f32(float %a)
   %i = call i32 @llvm.fptoui.sat.i32.f32(float %r)
   ret i32 %i
 }
@@ -147,7 +147,7 @@ define i64 @testpuxs(float %a) {
 ; CHECK-NEXT:    fcvtpu x0, s0
 ; CHECK-NEXT:    ret
 entry:
-  %r = call float @llvm.ceil.f32(float %a) nounwind readnone
+  %r = call float @llvm.ceil.f32(float %a)
   %i = call i64 @llvm.fptoui.sat.i64.f32(float %r)
   ret i64 %i
 }
@@ -158,7 +158,7 @@ define i32 @testpuwd(double %a) {
 ; CHECK-NEXT:    fcvtpu w0, d0
 ; CHECK-NEXT:    ret
 entry:
-  %r = call double @llvm.ceil.f64(double %a) nounwind readnone
+  %r = call double @llvm.ceil.f64(double %a)
   %i = call i32 @llvm.fptoui.sat.i32.f64(double %r)
   ret i32 %i
 }
@@ -169,7 +169,7 @@ define i64 @testpuxd(double %a) {
 ; CHECK-NEXT:    fcvtpu x0, d0
 ; CHECK-NEXT:    ret
 entry:
-  %r = call double @llvm.ceil.f64(double %a) nounwind readnone
+  %r = call double @llvm.ceil.f64(double %a)
   %i = call i64 @llvm.fptoui.sat.i64.f64(double %r)
   ret i64 %i
 }
@@ -191,7 +191,7 @@ define i32 @testzuwh(half %a) {
 ; CHECK-FP16-NEXT:    fcvtzu w0, h0
 ; CHECK-FP16-NEXT:    ret
 entry:
-  %r = call half @llvm.trunc.f16(half %a) nounwind readnone
+  %r = call half @llvm.trunc.f16(half %a)
   %i = call i32 @llvm.fptoui.sat.i32.f16(half %r)
   ret i32 %i
 }
@@ -211,7 +211,7 @@ define i64 @testzuxh(half %a) {
 ; CHECK-FP16-NEXT:    fcvtzu x0, h0
 ; CHECK-FP16-NEXT:    ret
 entry:
-  %r = call half @llvm.trunc.f16(half %a) nounwind readnone
+  %r = call half @llvm.trunc.f16(half %a)
   %i = call i64 @llvm.fptoui.sat.i64.f16(half %r)
   ret i64 %i
 }
@@ -222,7 +222,7 @@ define i32 @testzuws(float %a) {
 ; CHECK-NEXT:    fcvtzu w0, s0
 ; CHECK-NEXT:    ret
 entry:
-  %r = call float @llvm.trunc.f32(float %a) nounwind readnone
+  %r = call float @llvm.trunc.f32(float %a)
   %i = call i32 @llvm.fptoui.sat.i32.f32(float %r)
   ret i32 %i
 }
@@ -233,7 +233,7 @@ define i64 @testzuxs(float %a) {
 ; CHECK-NEXT:    fcvtzu x0, s0
 ; CHECK-NEXT:    ret
 entry:
-  %r = call float @llvm.trunc.f32(float %a) nounwind readnone
+  %r = call float @llvm.trunc.f32(float %a)
   %i = call i64 @llvm.fptoui.sat.i64.f32(float %r)
   ret i64 %i
 }
@@ -244,7 +244,7 @@ define i32 @testzuwd(double %a) {
 ; CHECK-NEXT:    fcvtzu w0, d0
 ; CHECK-NEXT:    ret
 entry:
-  %r = call double @llvm.trunc.f64(double %a) nounwind readnone
+  %r = call double @llvm.trunc.f64(double %a)
   %i = call i32 @llvm.fptoui.sat.i32.f64(double %r)
   ret i32 %i
 }
@@ -255,7 +255,7 @@ define i64 @testzuxd(double %a) {
 ; CHECK-NEXT:    fcvtzu x0, d0
 ; CHECK-NEXT:    ret
 entry:
-  %r = call double @llvm.trunc.f64(double %a) nounwind readnone
+  %r = call double @llvm.trunc.f64(double %a)
   %i = call i64 @llvm.fptoui.sat.i64.f64(double %r)
   ret i64 %i
 }
@@ -277,7 +277,7 @@ define i32 @testauwh(half %a) {
 ; CHECK-FP16-NEXT:    fcvtau w0, h0
 ; CHECK-FP16-NEXT:    ret
 entry:
-  %r = call half @llvm.round.f16(half %a) nounwind readnone
+  %r = call half @llvm.round.f16(half %a)
   %i = call i32 @llvm.fptoui.sat.i32.f16(half %r)
   ret i32 %i
 }
@@ -297,7 +297,7 @@ define i64 @testauxh(half %a) {
 ; CHECK-FP16-NEXT:    fcvtau x0, h0
 ; CHECK-FP16-NEXT:    ret
 entry:
-  %r = call half @llvm.round.f16(half %a) nounwind readnone
+  %r = call half @llvm.round.f16(half %a)
   %i = call i64 @llvm.fptoui.sat.i64.f16(half %r)
   ret i64 %i
 }
@@ -308,7 +308,7 @@ define i32 @testauws(float %a) {
 ; CHECK-NEXT:    fcvtau w0, s0
 ; CHECK-NEXT:    ret
 entry:
-  %r = call float @llvm.round.f32(float %a) nounwind readnone
+  %r = call float @llvm.round.f32(float %a)
   %i = call i32 @llvm.fptoui.sat.i32.f32(float %r)
   ret i32 %i
 }
@@ -319,7 +319,7 @@ define i64 @testauxs(float %a) {
 ; CHECK-NEXT:    fcvtau x0, s0
 ; CHECK-NEXT:    ret
 entry:
-  %r = call float @llvm.round.f32(float %a) nounwind readnone
+  %r = call float @llvm.round.f32(float %a)
   %i = call i64 @llvm.fptoui.sat.i64.f32(float %r)
   ret i64 %i
 }
@@ -330,7 +330,7 @@ define i32 @testauwd(double %a) {
 ; CHECK-NEXT:    fcvtau w0, d0
 ; CHECK-NEXT:    ret
 entry:
-  %r = call double @llvm.round.f64(double %a) nounwind readnone
+  %r = call double @llvm.round.f64(double %a)
   %i = call i32 @llvm.fptoui.sat.i32.f64(double %r)
   ret i32 %i
 }
@@ -341,27 +341,7 @@ define i64 @testauxd(double %a) {
 ; CHECK-NEXT:    fcvtau x0, d0
 ; CHECK-NEXT:    ret
 entry:
-  %r = call double @llvm.round.f64(double %a) nounwind readnone
+  %r = call double @llvm.round.f64(double %a)
   %i = call i64 @llvm.fptoui.sat.i64.f64(double %r)
   ret i64 %i
 }
-
-declare i32 @llvm.fptoui.sat.i32.f16 (half)
-declare i64 @llvm.fptoui.sat.i64.f16 (half)
-declare i32 @llvm.fptoui.sat.i32.f32 (float)
-declare i64 @llvm.fptoui.sat.i64.f32 (float)
-declare i32 @llvm.fptoui.sat.i32.f64 (double)
-declare i64 @llvm.fptoui.sat.i64.f64 (double)
-
-declare half @llvm.floor.f16(half) nounwind readnone
-declare half @llvm.ceil.f16(half) nounwind readnone
-declare half @llvm.trunc.f16(half) nounwind readnone
-declare half @llvm.round.f16(half) nounwind readnone
-declare float @llvm.floor.f32(float) nounwind readnone
-declare float @llvm.ceil.f32(float) nounwind readnone
-declare float @llvm.trunc.f32(float) nounwind readnone
-declare float @llvm.round.f32(float) nounwind readnone
-declare double @llvm.floor.f64(double) nounwind readnone
-declare double @llvm.ceil.f64(double) nounwind readnone
-declare double @llvm.trunc.f64(double) nounwind readnone
-declare double @llvm.round.f64(double) nounwind readnone

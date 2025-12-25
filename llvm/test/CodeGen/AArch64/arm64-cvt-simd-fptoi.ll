@@ -1153,7 +1153,7 @@ define float @fcvtas_sh_simd(half %a) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fcvtas s0, h0
 ; CHECK-NEXT:    ret
-  %r = call half @llvm.round.f16(half %a) nounwind readnone
+  %r = call half @llvm.round.f16(half %a)
   %i = call i32 @llvm.fptosi.sat.i32.f16(half %r)
   %bc = bitcast i32 %i to float
   ret float %bc
@@ -1170,7 +1170,7 @@ define double @fcvtas_dh_simd(half %a) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fcvtas d0, h0
 ; CHECK-NEXT:    ret
-  %r = call half @llvm.round.f16(half %a) nounwind readnone
+  %r = call half @llvm.round.f16(half %a)
   %i = call i64 @llvm.fptosi.sat.i64.f16(half %r)
   %bc = bitcast i64 %i to double
   ret double %bc
@@ -1253,7 +1253,7 @@ define float @fcvtau_sh_simd(half %a) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fcvtau s0, h0
 ; CHECK-NEXT:    ret
-  %r = call half @llvm.round.f16(half %a) nounwind readnone
+  %r = call half @llvm.round.f16(half %a)
   %i = call i32 @llvm.fptoui.sat.i32.f16(half %r)
   %bc = bitcast i32 %i to float
   ret float %bc
@@ -1270,7 +1270,7 @@ define double @fcvtau_dh_simd(half %a) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fcvtau d0, h0
 ; CHECK-NEXT:    ret
-  %r = call half @llvm.round.f16(half %a) nounwind readnone
+  %r = call half @llvm.round.f16(half %a)
   %i = call i64 @llvm.fptoui.sat.i64.f16(half %r)
   %bc = bitcast i64 %i to double
   ret double %bc
@@ -1353,7 +1353,7 @@ define float @fcvtms_sh_simd(half %a) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fcvtms s0, h0
 ; CHECK-NEXT:    ret
-  %r = call half @llvm.floor.f16(half %a) nounwind readnone
+  %r = call half @llvm.floor.f16(half %a)
   %i = call i32 @llvm.fptosi.sat.i32.f16(half %r)
   %bc = bitcast i32 %i to float
   ret float %bc
@@ -1370,7 +1370,7 @@ define double @fcvtms_dh_simd(half %a) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fcvtms d0, h0
 ; CHECK-NEXT:    ret
-  %r = call half @llvm.floor.f16(half %a) nounwind readnone
+  %r = call half @llvm.floor.f16(half %a)
   %i = call i64 @llvm.fptosi.sat.i64.f16(half %r)
   %bc = bitcast i64 %i to double
   ret double %bc
@@ -1453,7 +1453,7 @@ define float @fcvtmu_sh_simd(half %a) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fcvtmu s0, h0
 ; CHECK-NEXT:    ret
-  %r = call half @llvm.floor.f16(half %a) nounwind readnone
+  %r = call half @llvm.floor.f16(half %a)
   %i = call i32 @llvm.fptoui.sat.i32.f16(half %r)
   %bc = bitcast i32 %i to float
   ret float %bc
@@ -1470,7 +1470,7 @@ define double @fcvtmu_dh_simd(half %a) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fcvtmu d0, h0
 ; CHECK-NEXT:    ret
-  %r = call half @llvm.floor.f16(half %a) nounwind readnone
+  %r = call half @llvm.floor.f16(half %a)
   %i = call i64 @llvm.fptoui.sat.i64.f16(half %r)
   %bc = bitcast i64 %i to double
   ret double %bc
@@ -1553,7 +1553,7 @@ define float @fcvtps_sh_simd(half %a) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fcvtps s0, h0
 ; CHECK-NEXT:    ret
-  %r = call half @llvm.ceil.f16(half %a) nounwind readnone
+  %r = call half @llvm.ceil.f16(half %a)
   %i = call i32 @llvm.fptosi.sat.i32.f16(half %r)
   %bc = bitcast i32 %i to float
   ret float %bc
@@ -1570,7 +1570,7 @@ define double @fcvtps_dh_simd(half %a) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fcvtps d0, h0
 ; CHECK-NEXT:    ret
-  %r = call half @llvm.ceil.f16(half %a) nounwind readnone
+  %r = call half @llvm.ceil.f16(half %a)
   %i = call i64 @llvm.fptosi.sat.i64.f16(half %r)
   %bc = bitcast i64 %i to double
   ret double %bc
@@ -1653,7 +1653,7 @@ define float @fcvtpu_sh_simd(half %a) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fcvtpu s0, h0
 ; CHECK-NEXT:    ret
-  %r = call half @llvm.ceil.f16(half %a) nounwind readnone
+  %r = call half @llvm.ceil.f16(half %a)
   %i = call i32 @llvm.fptoui.sat.i32.f16(half %r)
   %bc = bitcast i32 %i to float
   ret float %bc
@@ -1670,7 +1670,7 @@ define double @fcvtpu_dh_simd(half %a) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fcvtpu d0, h0
 ; CHECK-NEXT:    ret
-  %r = call half @llvm.ceil.f16(half %a) nounwind readnone
+  %r = call half @llvm.ceil.f16(half %a)
   %i = call i64 @llvm.fptoui.sat.i64.f16(half %r)
   %bc = bitcast i64 %i to double
   ret double %bc
@@ -1753,7 +1753,7 @@ define float @fcvtzs_sh_simd(half %a) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fcvtzs s0, h0
 ; CHECK-NEXT:    ret
-  %r = call half @llvm.trunc.f16(half %a) nounwind readnone
+  %r = call half @llvm.trunc.f16(half %a)
   %i = call i32 @llvm.fptosi.sat.i32.f16(half %r)
   %bc = bitcast i32 %i to float
   ret float %bc
@@ -1770,7 +1770,7 @@ define double @fcvtzs_dh_simd(half %a) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fcvtzs d0, h0
 ; CHECK-NEXT:    ret
-  %r = call half @llvm.trunc.f16(half %a) nounwind readnone
+  %r = call half @llvm.trunc.f16(half %a)
   %i = call i64 @llvm.fptosi.sat.i64.f16(half %r)
   %bc = bitcast i64 %i to double
   ret double %bc
@@ -1853,7 +1853,7 @@ define float @fcvtzu_sh_simd(half %a) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fcvtzu s0, h0
 ; CHECK-NEXT:    ret
-  %r = call half @llvm.trunc.f16(half %a) nounwind readnone
+  %r = call half @llvm.trunc.f16(half %a)
   %i = call i32 @llvm.fptoui.sat.i32.f16(half %r)
   %bc = bitcast i32 %i to float
   ret float %bc
@@ -1870,7 +1870,7 @@ define double @fcvtzu_dh_simd(half %a) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fcvtzu d0, h0
 ; CHECK-NEXT:    ret
-  %r = call half @llvm.trunc.f16(half %a) nounwind readnone
+  %r = call half @llvm.trunc.f16(half %a)
   %i = call i64 @llvm.fptoui.sat.i64.f16(half %r)
   %bc = bitcast i64 %i to double
   ret double %bc
