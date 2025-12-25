@@ -136,5 +136,35 @@ define i32 @adc_merge_sub(i32 %a0) nounwind {
   ret i32 %result
 }
 
+define i32 @optimize_adc(i32 %0, i32 %1, i32 %2) {
+; X86-LABEL: optimize_adc:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    cmpl %eax, %ecx
+; X86-NEXT:    adcl $42, %edx
+; X86-NEXT:    js .LBB4_2
+; X86-NEXT:  # %bb.1:
+; X86-NEXT:    movl %ecx, %eax
+; X86-NEXT:  .LBB4_2:
+; X86-NEXT:    retl
+;
+; X64-LABEL: optimize_adc:
+; X64:       # %bb.0:
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    cmpl %esi, %edi
+; X64-NEXT:    adcl $42, %edx
+; X64-NEXT:    cmovsl %esi, %eax
+; X64-NEXT:    retq
+  %4 = icmp ult i32 %0, %1
+  %5 = zext i1 %4 to i32
+  %6 = add i32 %2, 42
+  %7 = add i32 %6, %5
+  %8 = icmp slt i32 %7, 0
+  %9 = select i1 %8, i32 %1, i32 %0
+  ret i32 %9
+}
+
 declare { i8, i32 } @llvm.x86.addcarry.32(i8, i32, i32)
 declare void @use(i8)

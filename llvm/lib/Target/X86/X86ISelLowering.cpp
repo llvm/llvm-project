@@ -58164,6 +58164,13 @@ static SDValue combineX86AddSub(SDNode *N, SelectionDAG &DAG,
     }
   }
 
+  // Fold ADD(ADC(Y,0,CF), C) -> ADC(Y, C, CF)
+  if (!IsSub && LHS.getOpcode() == X86ISD::ADC &&
+      X86::isZeroNode(LHS.getOperand(1)) && isa<ConstantSDNode>(RHS)) {
+    return DAG.getNode(X86ISD::ADC, DL, N->getVTList(), LHS.getOperand(0), RHS,
+                       LHS.getOperand(2));
+  }
+
   // TODO: Can we drop the ZeroSecondOpOnly limit? This is to guarantee that the
   // EFLAGS result doesn't change.
   return combineAddOrSubToADCOrSBB(IsSub, DL, VT, LHS, RHS, DAG,
