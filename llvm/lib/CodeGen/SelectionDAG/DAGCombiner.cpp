@@ -20479,12 +20479,7 @@ SDValue DAGCombiner::ForwardStoreValueToDirectLoad(LoadSDNode *LD) {
     if (STMemType != LDMemType) {
       // TODO: Support vectors? This requires extract_subvector/bitcast.
       if (LdMemSize == StMemSize) {
-        bool IsConstantOrUndef =
-            Val.isUndef() || DAG.isConstantIntBuildVectorOrConstantInt(Val) ||
-            DAG.isConstantFPBuildVectorOrConstantFP(Val);
-
-        if (IsConstantOrUndef && isTypeLegal(Val.getValueType()) &&
-            TLI.isOperationLegalOrCustom(ISD::BITCAST, LDMemType))
+        if (DAG.isConstantValueOfAnyType(Val) && isTypeLegal(STMemType))
           Val = DAG.getBitcast(LDMemType, Val);
         else
           break;
