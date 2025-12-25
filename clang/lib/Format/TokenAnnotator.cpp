@@ -3037,10 +3037,8 @@ private:
     auto *NextToken = Tok.getNextNonComment();
     if (!NextToken)
       return TT_PointerOrReference;
-    if (NextToken->is(tok::greater)) {
-      NextToken->setFinalizedType(TT_TemplateCloser);
+    if (NextToken->is(tok::greater))
       return TT_PointerOrReference;
-    }
 
     if (InTemplateArgument && NextToken->is(tok::kw_noexcept))
       return TT_BinaryOperator;
