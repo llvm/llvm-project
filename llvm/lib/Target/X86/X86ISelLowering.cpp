@@ -2789,7 +2789,8 @@ X86TargetLowering::getPreferredVectorAction(MVT VT) const {
     return TypeSplitVector;
 
   if (!VT.isScalableVector() && VT.getVectorNumElements() != 1 &&
-      VT.getVectorElementType() != MVT::i1)
+      VT.getVectorElementType() != MVT::i1 &&
+      VT.getVectorElementType() != MVT::i4)
     return TypeWidenVector;
 
   return TargetLoweringBase::getPreferredVectorAction(VT);
