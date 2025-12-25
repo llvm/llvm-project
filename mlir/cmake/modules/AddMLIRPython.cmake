@@ -371,6 +371,9 @@ function(add_mlir_python_modules name)
 
   # TODO(max): do the same for MLIR_PYTHON_PACKAGE_PREFIX?
   if(NOT MLIR_BINDINGS_PYTHON_NB_DOMAIN)
+    message(WARNING "MLIR_BINDINGS_PYTHON_NB_DOMAIN CMake var is not set - setting to a default `mlir`.\
+      It is highly recommend to set this to something unique so that your project's Python bindings do not collide with\
+      others'. See https://github.com/llvm/llvm-project/pull/171775 for more information.")
     set(MLIR_BINDINGS_PYTHON_NB_DOMAIN "mlir" CACHE STRING "" FORCE)
   endif()
 
@@ -858,13 +861,17 @@ function(add_mlir_python_extension libname extname nb_library_target_name)
   if(ARG_SUPPORT_LIB)
     add_library(${libname} SHARED ${ARG_SOURCES})
     if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
-      target_link_options(${libname} PRIVATE "-Wl,-z,undefs")
+      # nanobind handles this correctly for MacOS by explicitly setting -U for all the necessary Python symbols
+      # (see https://github.com/wjakob/nanobind/blob/master/cmake/darwin-ld-cpython.sym)
+      # but since we set -z,defs in llvm/cmake/modules/HandleLLVMOptions.cmake:340 for all Linux shlibs
+      # we need to negate it here (we could have our own linux-ld-cpython.sym but that would be too much
+      # maintenance - and this shlib is the only one where we do this).
+      target_link_options(${libname} PRIVATE "LINKER:-z,undefs")
     endif()
     nanobind_link_options(${libname})
     target_compile_definitions(${libname}
       PRIVATE
       NB_DOMAIN=${MLIR_BINDINGS_PYTHON_NB_DOMAIN}
-      MLIR_BINDINGS_PYTHON_DOMAIN=${MLIR_BINDINGS_PYTHON_NB_DOMAIN}
       MLIR_CAPI_BUILDING_LIBRARY=1
     )
     if(MSVC)
@@ -877,12 +884,12 @@ function(add_mlir_python_extension libname extname nb_library_target_name)
       NB_SHARED
       ${ARG_SOURCES}
     )
-    target_compile_definitions(${libname}
-      PRIVATE
-      MLIR_BINDINGS_PYTHON_DOMAIN=${MLIR_BINDINGS_PYTHON_NB_DOMAIN}
-    )
   endif()
   target_link_libraries(${libname} PRIVATE ${nb_library_target_name})
+  target_compile_definitions(${libname}
+    PRIVATE
+    MLIR_BINDINGS_PYTHON_DOMAIN=${MLIR_BINDINGS_PYTHON_NB_DOMAIN}
+  )
 
   if (NOT MLIR_DISABLE_CONFIGURE_PYTHON_DEV_PACKAGES
       AND (LLVM_COMPILER_IS_GCC_COMPATIBLE OR CLANG_CL))
