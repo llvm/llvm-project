@@ -7,29 +7,30 @@
 //===----------------------------------------------------------------------===//
 //
 // This pass lowers FIR dialect memory operations to the MemRef dialect.
-// It is adapted from the NVHPC FIRToMemRef implementation so that it can
-// be used as a regular flang/MLIR transform pass.
-//
 // In particular it:
 //
 //  - Rewrites `fir.alloca` to `memref.alloca`.
 //
 //  - Rewrites `fir.load` / `fir.store` to `memref.load` / `memref.store`.
 //
-//  - Marshals FIR reference-like values (boxes, array coordinates,
-//    embox/rebox, and optionals) into MemRef descriptors by introducing
-//    `fir.convert` at use sites. For example:
+//  - Allows FIR and MemRef to coexist by introducing `fir.convert` at
+//    memory-use sites. Memory operations (`memref.load`, `memref.store`,
+//    `memref.reinterpret_cast`, etc.) see MemRef-typed values, while the
+//    original FIR-typed values remain available for non-memory uses. For
+//    example:
 //
 //        %fir_ref = ... : !fir.ref<!fir.array<...>>
-//        %memref = fir.convert %fir_ref : !fir.ref<!fir.array<...>> ->
-//        memref<...> %val = memref.load %memref[...] : memref<...> fir.call
-//        @callee(%fir_ref) : (!fir.ref<!fir.array<...>>) -> ()
+//        %memref = fir.convert %fir_ref
+//                    : !fir.ref<!fir.array<...>> -> memref<...>
+//        %val = memref.load %memref[...] : memref<...>
+//        fir.call @callee(%fir_ref) : (!fir.ref<!fir.array<...>>) -> ()
 //
-//    Here the MemRef-typed value is used for `memref.load`, while the original
-//    FIR-typed value is preserved for `fir.call`.
+//    Here the MemRef-typed value is used for `memref.load`, while the
+//    original FIR-typed value is preserved for `fir.call`.
 //
 //  - Computes shapes, strides, and indices as needed for slices and shifts
-//    and emits `memref.reinterpret_cast` when dynamic layout is required.
+//    and emits `memref.reinterpret_cast` when dynamic layout is required
+//    (TODO: use memref.cast instead).
 //
 //===----------------------------------------------------------------------===//
 
