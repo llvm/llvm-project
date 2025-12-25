@@ -86,6 +86,10 @@ Potentially Breaking Changes
   `-header-filter='.*'`. To disable warnings from non-system, set `-header-filter`
   to an empty string.
 
+- The ``clang-tidy/ClangTidyModuleRegistry.h`` header has been deprecated and will
+  be removed in LLVM 24. All of the symbols it used to define have been moved into
+  ``clang-tidy/ClangTidyModule.h``.
+
 Improvements to clangd
 ----------------------
 
@@ -427,8 +431,9 @@ Changes in existing checks
 - Improved :doc:`bugprone-unchecked-optional-access
   <clang-tidy/checks/bugprone/unchecked-optional-access>` check by supporting
   ``NullableValue::makeValue`` and ``NullableValue::makeValueInplace`` to
-  prevent false-positives for ``BloombergLP::bdlb::NullableValue`` type, and by
-  adding the `IgnoreValueCalls` option to suppress diagnostics for
+  prevent false-positives for ``BloombergLP::bdlb::NullableValue``. Fixed
+  false-positives for ``bsl::optional`` containing allocator-aware type.
+  Added the `IgnoreValueCalls` option to suppress diagnostics for
   ``optional::value()`` and the `IgnoreSmartPointerDereference` option to
   ignore optionals reached via smart-pointer-like dereference, while still
   diagnosing UB-prone dereferences via ``operator*`` and ``operator->``.
@@ -445,7 +450,9 @@ Changes in existing checks
 
 - Improved :doc:`bugprone-use-after-move
   <clang-tidy/checks/bugprone/use-after-move>` check by adding
-  `InvalidationFunctions` option to support custom invalidation functions.
+  `InvalidationFunctions` option to support custom invalidation functions
+  and `ReinitializationFunctions` option to support custom reinitialization
+  functions.
 
 - Improved :doc:`cppcoreguidelines-avoid-non-const-global-variables
   <clang-tidy/checks/cppcoreguidelines/avoid-non-const-global-variables>` check
@@ -515,6 +522,12 @@ Changes in existing checks
 
 - Improved :doc:`misc-header-include-cycle
   <clang-tidy/checks/misc/header-include-cycle>` check performance.
+
+- Improved :doc:`misc-use-internal-linkage
+  <clang-tidy/checks/misc/use-internal-linkage>` to suggest giving
+  user-defined types (structs, classes, unions, and enums) internal
+  linkage. Added fine-grained options to control whether the check
+  should diagnose functions, variables, and/or user-defined types.
 
 - Improved :doc:`modernize-avoid-c-arrays
   <clang-tidy/checks/modernize/avoid-c-arrays>` to not diagnose array types
@@ -606,7 +619,9 @@ Changes in existing checks
   <clang-tidy/checks/readability/identifier-naming>` check by ignoring
   declarations and macros in system headers. The documentation is also improved
   to differentiate the general options from the specific ones. Options for
-  fine-grained control over ``constexpr`` variables were added.
+  fine-grained control over ``constexpr`` variables were added. Added default
+  options which simplify configs by removing the need to specify each
+  identifier kind separately.
 
 - Improved :doc:`readability-implicit-bool-conversion
   <clang-tidy/checks/readability/implicit-bool-conversion>` check by correctly
@@ -617,6 +632,10 @@ Changes in existing checks
   <clang-tidy/checks/readability/inconsistent-declaration-parameter-name>` check
   by not enforcing parameter name consistency between a variadic parameter pack
   in the primary template and specific parameters in its specializations.
+
+- Improved :doc:`readability-math-missing-parentheses
+  <clang-tidy/checks/readability/math-missing-parentheses>` check by correctly
+  diagnosing operator precedence issues inside parenthesized expressions.
 
 - Improved :doc:`readability-qualified-auto
   <clang-tidy/checks/readability/qualified-auto>` check by adding the option

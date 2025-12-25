@@ -201,6 +201,7 @@ clang_tidy_library(
     deps = [
         ":lib",
         ":utils",
+        "//clang:analysis",
         "//clang:tooling",
         "//clang:transformer",
     ],

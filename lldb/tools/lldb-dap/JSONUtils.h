@@ -316,7 +316,7 @@ llvm::json::Value CreateThreadStopped(DAP &dap, lldb::SBThread &thread,
 
 /// \return
 ///     The variable name of \a value or a default placeholder.
-const char *GetNonNullVariableName(lldb::SBValue &value);
+llvm::StringRef GetNonNullVariableName(lldb::SBValue &value);
 
 /// VSCode can't display two variables with the same name, so we need to
 /// distinguish them by using a suffix.
@@ -338,21 +338,21 @@ struct VariableDescription {
   // The variable path for this variable.
   std::string evaluate_name;
   // The output of SBValue.GetValue() if it doesn't fail. It might be empty.
-  std::string value;
+  llvm::StringRef value;
   // The summary string of this variable. It might be empty.
-  std::string summary;
+  llvm::StringRef summary;
   // The auto summary if using `enableAutoVariableSummaries`.
   std::optional<std::string> auto_summary;
   // The type of this variable.
   lldb::SBType type_obj;
   // The display type name of this variable.
-  std::string display_type_name;
+  llvm::StringRef display_type_name;
   /// The SBValue for this variable.
-  lldb::SBValue v;
+  lldb::SBValue val;
 
   VariableDescription(lldb::SBValue v, bool auto_variable_summaries,
                       bool format_hex = false, bool is_name_duplicated = false,
-                      std::optional<std::string> custom_name = {});
+                      std::optional<llvm::StringRef> custom_name = {});
 
   /// Returns a description of the value appropriate for the specified context.
   std::string GetResult(protocol::EvaluateContext context);
@@ -367,8 +367,6 @@ int64_t PackLocation(int64_t var_ref, bool is_value_location);
 
 /// Reverse of `PackLocation`
 std::pair<int64_t, bool> UnpackLocation(int64_t location_id);
-
-llvm::json::Value CreateCompileUnit(lldb::SBCompileUnit &unit);
 
 /// Create a runInTerminal reverse request object
 ///

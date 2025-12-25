@@ -7,6 +7,7 @@
 #include "clang/AST/GlobalDecl.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/TargetInfo.h"
+#include "clang/CIR/Dialect/IR/CIRTypes.h"
 
 #include <cassert>
 
@@ -33,8 +34,10 @@ mlir::MLIRContext &CIRGenTypes::getMLIRContext() const {
 /// expanding the type because we're in a recursive context.
 bool CIRGenTypes::isFuncParamTypeConvertible(clang::QualType type) {
   // Some ABIs cannot have their member pointers represented in LLVM IR unless
-  // certain circumstances have been reached.
-  assert(!type->getAs<MemberPointerType>() && "NYI");
+  // certain circumstances have been reached, but in CIR we represent member
+  // pointer types abstractly at this point so they are always convertible.
+  if (type->getAs<MemberPointerType>())
+    return true;
 
   // If this isn't a tag type, we can convert it.
   const TagType *tagType = type->getAs<TagType>();
@@ -320,6 +323,57 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
           cir::IntType::get(&getMLIRContext(), astContext.getTypeSize(ty),
                             /*isSigned=*/true);
       break;
+
+    // SVE types
+    case BuiltinType::SveInt8:
+      resultType =
+          cir::VectorType::get(builder.getSInt8Ty(), 16, /*is_scalable=*/true);
+      break;
+    case BuiltinType::SveUint8:
+      resultType =
+          cir::VectorType::get(builder.getUInt8Ty(), 16, /*is_scalable=*/true);
+      break;
+    case BuiltinType::SveInt16:
+      resultType =
+          cir::VectorType::get(builder.getSInt16Ty(), 8, /*is_scalable=*/true);
+      break;
+    case BuiltinType::SveUint16:
+      resultType =
+          cir::VectorType::get(builder.getUInt16Ty(), 8, /*is_scalable=*/true);
+      break;
+    case BuiltinType::SveFloat16:
+      resultType = cir::VectorType::get(builder.getFp16Ty(), 8,
+                                        /*is_scalable=*/true);
+      break;
+    case BuiltinType::SveBFloat16:
+      resultType = cir::VectorType::get(builder.getFp16Ty(), 8,
+                                        /*is_scalable=*/true);
+      break;
+    case BuiltinType::SveInt32:
+      resultType =
+          cir::VectorType::get(builder.getSInt32Ty(), 4, /*is_scalable=*/true);
+      break;
+    case BuiltinType::SveUint32:
+      resultType =
+          cir::VectorType::get(builder.getUInt32Ty(), 4, /*is_scalable=*/true);
+      break;
+    case BuiltinType::SveFloat32:
+      resultType = cir::VectorType::get(builder.getSingleTy(), 4,
+                                        /*is_scalable=*/true);
+      break;
+    case BuiltinType::SveInt64:
+      resultType =
+          cir::VectorType::get(builder.getSInt64Ty(), 2, /*is_scalable=*/true);
+      break;
+    case BuiltinType::SveUint64:
+      resultType =
+          cir::VectorType::get(builder.getUInt64Ty(), 2, /*is_scalable=*/true);
+      break;
+    case BuiltinType::SveFloat64:
+      resultType = cir::VectorType::get(builder.getDoubleTy(), 2,
+                                        /*is_scalable=*/true);
+      break;
+
     // Unsigned integral types.
     case BuiltinType::Char8:
     case BuiltinType::Char16:

@@ -31,6 +31,7 @@
 #include <cstdint>
 #include <optional>
 #include <string>
+#include <variant>
 #include <vector>
 
 namespace lldb_dap::protocol {
@@ -1229,6 +1230,43 @@ struct LocationsResponseBody {
   uint32_t endColumn = LLDB_INVALID_COLUMN_NUMBER;
 };
 llvm::json::Value toJSON(const LocationsResponseBody &);
+
+/// Arguments for `compileUnits` request.
+struct CompileUnitsArguments {
+  /// The ID of the module.
+  std::string moduleId;
+};
+bool fromJSON(const llvm::json::Value &, CompileUnitsArguments &,
+              llvm::json::Path);
+
+/// Response to `compileUnits` request.
+struct CompileUnitsResponseBody {
+  /// Array of compile units.
+  std::vector<CompileUnit> compileUnits;
+};
+llvm::json::Value toJSON(const CompileUnitsResponseBody &);
+
+/// Arguments for `testGetTargetBreakpoints` request.
+using TestGetTargetBreakpointsArguments = EmptyArguments;
+
+/// Response to `testGetTargetBreakpoints` request.
+struct TestGetTargetBreakpointsResponseBody {
+  /// Array of all breakpoints that are currently set in the target.
+  std::vector<Breakpoint> breakpoints;
+};
+llvm::json::Value toJSON(const TestGetTargetBreakpointsResponseBody &);
+
+/// Arguments for `restart` request.
+struct RestartArguments {
+  /// The latest version of the `launch` or `attach` configuration.
+  std::variant<std::monostate, LaunchRequestArguments, AttachRequestArguments>
+      arguments = std::monostate{};
+};
+bool fromJSON(const llvm::json::Value &, RestartArguments &, llvm::json::Path);
+
+/// Response to `restart` request. This is just an acknowledgement, so no body
+/// field is required.
+using RestartResponse = VoidResponse;
 
 } // namespace lldb_dap::protocol
 

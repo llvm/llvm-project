@@ -32,7 +32,6 @@ template<typename T> requires (Incrementable<T> && Decrementable<T>) || PreIncre
 // CHECK-NEXT:        {
 // CHECK-NEXT:          "Expression": "Incrementable<T>",
 // CHECK-NEXT:          "Name": "Incrementable",
-// CHECK-NEXT:          "Path": "",
 // CHECK-NEXT:          "QualName": "Incrementable",
 // CHECK-NEXT:          "USR": "{{[0-9A-F]*}}"
 // CHECK-NEXT:        },
@@ -40,7 +39,6 @@ template<typename T> requires (Incrementable<T> && Decrementable<T>) || PreIncre
 // CHECK-NEXT:          "End": true,
 // CHECK-NEXT:          "Expression": "Decrementable<T>",
 // CHECK-NEXT:          "Name": "Decrementable",
-// CHECK-NEXT:          "Path": "",
 // CHECK-NEXT:          "QualName": "Decrementable",
 // CHECK-NEXT:          "USR": "{{[0-9A-F]*}}"
 // CHECK-NEXT:        }
@@ -51,7 +49,6 @@ template<typename T> requires (Incrementable<T> && Decrementable<T>) || PreIncre
 // CHECK-NEXT:        {
 // CHECK-NEXT:          "Expression": "Incrementable<T>",
 // CHECK-NEXT:          "Name": "Incrementable",
-// CHECK-NEXT:          "Path": "",
 // CHECK-NEXT:          "QualName": "Incrementable",
 // CHECK-NEXT:          "USR": "{{[0-9A-F]*}}"
 // CHECK-NEXT:        },
@@ -59,7 +56,6 @@ template<typename T> requires (Incrementable<T> && Decrementable<T>) || PreIncre
 // CHECK-NEXT:          "End": true,
 // CHECK-NEXT:          "Expression": "Decrementable<T>",
 // CHECK-NEXT:          "Name": "Decrementable",
-// CHECK-NEXT:          "Path": "",
 // CHECK-NEXT:          "QualName": "Decrementable",
 // CHECK-NEXT:          "USR": "{{[0-9A-F]*}}"
 // CHECK-NEXT:        }
@@ -70,21 +66,18 @@ template<typename T> requires (Incrementable<T> && Decrementable<T>) || PreIncre
 // CHECK-NEXT:        {
 // CHECK-NEXT:          "Expression": "Incrementable<T>",
 // CHECK-NEXT:          "Name": "Incrementable",
-// CHECK-NEXT:          "Path": "",
 // CHECK-NEXT:          "QualName": "Incrementable",
 // CHECK-NEXT:          "USR": "{{[0-9A-F]*}}"
 // CHECK-NEXT:        },
 // CHECK-NEXT:        {
 // CHECK-NEXT:          "Expression": "Decrementable<T>",
 // CHECK-NEXT:          "Name": "Decrementable",
-// CHECK-NEXT:          "Path": "",
 // CHECK-NEXT:          "QualName": "Decrementable",
 // CHECK-NEXT:          "USR": "{{[0-9A-F]*}}"
 // CHECK-NEXT:        },
 // CHECK-NEXT:        {
 // CHECK-NEXT:          "Expression": "PreIncrementable<T>",
 // CHECK-NEXT:          "Name": "PreIncrementable",
-// CHECK-NEXT:          "Path": "",
 // CHECK-NEXT:          "QualName": "PreIncrementable",
 // CHECK-NEXT:          "USR": "{{[0-9A-F]*}}"
 // CHECK-NEXT:        },
@@ -92,7 +85,6 @@ template<typename T> requires (Incrementable<T> && Decrementable<T>) || PreIncre
 // CHECK-NEXT:          "End": true,
 // CHECK-NEXT:          "Expression": "PreDecrementable<T>",
 // CHECK-NEXT:          "Name": "PreDecrementable",
-// CHECK-NEXT:          "Path": "",
 // CHECK-NEXT:          "QualName": "PreDecrementable",
 // CHECK-NEXT:          "USR": "{{[0-9A-F]*}}"
 // CHECK-NEXT:        }
@@ -103,14 +95,12 @@ template<typename T> requires (Incrementable<T> && Decrementable<T>) || PreIncre
 // CHECK-NEXT:        {
 // CHECK-NEXT:          "Expression": "Incrementable<T>",
 // CHECK-NEXT:          "Name": "Incrementable",
-// CHECK-NEXT:          "Path": "",
 // CHECK-NEXT:          "QualName": "Incrementable",
 // CHECK-NEXT:          "USR": "{{[0-9A-F]*}}"
 // CHECK-NEXT:        },
 // CHECK-NEXT:        {
 // CHECK-NEXT:          "Expression": "Decrementable<T>",
 // CHECK-NEXT:          "Name": "Decrementable",
-// CHECK-NEXT:          "Path": "",
 // CHECK-NEXT:          "QualName": "Decrementable",
 // CHECK-NEXT:          "USR": "{{[0-9A-F]*}}"
 // CHECK-NEXT:        },
@@ -118,7 +108,6 @@ template<typename T> requires (Incrementable<T> && Decrementable<T>) || PreIncre
 // CHECK-NEXT:          "End": true,
 // CHECK-NEXT:          "Expression": "PreIncrementable<T>",
 // CHECK-NEXT:          "Name": "PreIncrementable",
-// CHECK-NEXT:          "Path": "",
 // CHECK-NEXT:          "QualName": "PreIncrementable",
 // CHECK-NEXT:          "USR": "{{[0-9A-F]*}}"
 // CHECK-NEXT:        }
