@@ -8,10 +8,6 @@ import platform
 import sys
 import json
 
-# TODO(boomanaiden154): Remove the optional call once we can require Python
-# 3.10.
-from typing import Optional
-
 import requests
 import github
 import github.PullRequest
@@ -24,7 +20,7 @@ PREMERGE_ADVISOR_URL = (
 COMMENT_TAG = "<!--PREMERGE ADVISOR COMMENT: {platform}-->"
 
 
-def get_comment_id(platform: str, pr: github.PullRequest.PullRequest) -> Optional[int]:
+def get_comment_id(platform: str, pr: github.PullRequest.PullRequest) -> int | None:
     platform_comment_tag = COMMENT_TAG.format(platform=platform)
     for comment in pr.as_issue().get_comments():
         if platform_comment_tag in comment.body:
