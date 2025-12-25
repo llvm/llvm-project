@@ -15,7 +15,6 @@ add_clang_library(clangTidyMain STATIC
 
   LINK_LIBS
   clangTidy
-  ${ALL_CLANG_TIDY_CHECKS}
 
   DEPENDS
   omp_gen
@@ -55,7 +54,6 @@ target_link_libraries(clang-tidy
   PRIVATE
   clangTidy
   clangTidyMain
-  ${ALL_CLANG_TIDY_CHECKS}
   )
 
 if(CLANG_PLUGIN_SUPPORT)
