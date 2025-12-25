@@ -5,10 +5,10 @@ misc-anonymous-namespace-in-header
 
 Finds anonymous namespaces in headers.
 
-Anonymous namespaces in headers can lead to One Definition Rule (ODR) violations
-because each translation unit including the header will get its own unique
-version of the symbols. This increases binary size and can cause confusing
-link-time errors.
+Anonymous namespaces in headers can lead to One Definition Rule (ODR)
+violations because each translation unit including the header will get its
+own unique version of the symbols. This increases binary size and can cause
+confusing link-time errors.
 
 References
 ----------
