@@ -1303,6 +1303,9 @@ public:
     return Islands->FunctionColdConstantIslandLabel;
   }
 
+  /// Insert plt instructions
+  void disassemblePLT(InstructionListType &Instructions);
+
   /// Return true if this is a function representing a PLT entry.
   bool isPLTFunction() const { return PLTSymbol != nullptr; }
 

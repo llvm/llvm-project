@@ -147,11 +147,6 @@ static cl::opt<bool> TrapOnAVX512(
     cl::init(false), cl::ZeroOrMore, cl::Hidden, cl::cat(BoltCategory));
 
 bool shouldPrint(const BinaryFunction &Function) {
-  // PLT stubs are disassembled for BTI binaries, therefore they should be
-  // printed.
-  if (Function.getBinaryContext().usesBTI() && Function.isPLTFunction())
-    return true;
-
   if (Function.isIgnored())
     return false;
 
@@ -4457,7 +4452,47 @@ void BinaryFunction::calculateLoopInfo() {
   }
 }
 
+void BinaryFunction::disassemblePLT(InstructionListType &Instructions) {
+  if (Instructions.empty())
+    return;
+
+  BC.SymbolicDisAsm->setSymbolizer(BC.MIB->createTargetSymbolizer(*this));
+  // Insert a label at the beginning of the function. This will be our first
+  // basic block.
+  Labels[0] = BC.Ctx->createNamedTempSymbol("BB0");
+
+  if (!BC.MIB->handlePLTEntry(Instructions.begin(), Instructions.end(),
+                              getPLTSymbol(), BC.Ctx.get())) {
+    if (opts::Verbosity)
+      outs() << "BOLT-INFO: can't handle plt entry in function "
+             << getPrintName() << " for entry "
+             << getPLTSymbol() << "\n";
+    // Reset symbolizer for the disassembler.
+    BC.SymbolicDisAsm->setSymbolizer(nullptr);
+    return;
+  }
+
+  uint64_t Offset{0};
+  for (MCInst Inst : Instructions) {
+    addInstruction(Offset, std::move(Inst));
+    if (BC.keepOffsetForInstruction(Inst))
+      BC.MIB->setOffset(Inst, static_cast<uint32_t>(Offset));
+    Offset += BC.computeInstructionSize(Inst);
+  }
+
+  // Reset symbolizer for the disassembler.
+  BC.SymbolicDisAsm->setSymbolizer(nullptr);
+
+  updateState(State::Disassembled);
+}
+
 void BinaryFunction::updateOutputValues(const BOLTLinker &Linker) {
+  if (BC.usesBTI() && isPLTFunction()) {
+    const uint64_t Offset = getAddress() - OriginSection->getAddress();
+    setOutputAddress(OriginSection->getOutputAddress() + Offset);
+    return;
+  }
+
   if (!isEmitted()) {
     assert(!isInjected() && "injected function should be emitted");
     setOutputAddress(getAddress());

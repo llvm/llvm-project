@@ -1730,6 +1730,26 @@ public:
     BC.createInstructionPatch(PLTFunction.getAddress(), NewPLTSeq);
   }
 
+  bool handlePLTEntry(InstructionIterator Begin,
+                      InstructionIterator End,
+                      const MCSymbol *PLTSymbol,
+                      MCContext *Ctx) override {
+    int64_t Val;
+    int Count = 0;
+    for (auto I = Begin; I != End; ++I) {
+      if (isADRP(*I))
+        Count += replaceImmWithSymbolRef(*I, PLTSymbol, 0, Ctx, Val,
+                                         ELF::R_AARCH64_ADR_PREL_PG_HI21);
+      else if (isADD(*I))
+        Count += replaceImmWithSymbolRef(*I, PLTSymbol, 0, Ctx, Val,
+                                         ELF::R_AARCH64_ADD_ABS_LO12_NC);
+      else if (mayLoad(*I))
+        Count += replaceImmWithSymbolRef(*I, PLTSymbol, 0, Ctx, Val,
+                                         ELF::R_AARCH64_LDST64_ABS_LO12_NC);
+    }
+    return Count == 3;
+  }
+
   unsigned getInvertedBranchOpcode(unsigned Opcode) const {
     switch (Opcode) {
     default:

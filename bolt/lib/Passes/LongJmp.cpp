@@ -977,6 +977,11 @@ Error LongJmpPass::runOnFunctions(BinaryContext &BC) {
 
   BC.outs() << "BOLT-INFO: Starting stub-insertion pass\n";
   BinaryFunctionListType Sorted = BC.getOutputBinaryFunctions();
+  if (BC.usesBTI()) {
+    llvm::erase_if(Sorted,
+                   [](BinaryFunction *BF) { return BF->isPLTFunction(); });
+  }
+
   bool Modified;
   uint32_t Iterations = 0;
   do {

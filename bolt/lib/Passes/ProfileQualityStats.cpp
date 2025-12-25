@@ -477,6 +477,9 @@ void computeFlowMappings(const BinaryContext &BC, FlowInfo &TotalFlowMap) {
   TotalFlowMapTy &TotalOutgoingFlows = TotalFlowMap.TotalOutgoingFlows;
   for (const auto &BFI : BC.getBinaryFunctions()) {
     const BinaryFunction *Function = &BFI.second;
+    if (Function->isPLTFunction())
+      continue;
+
     std::vector<uint64_t> &IncomingFlows =
         TotalIncomingFlows[Function->getFunctionNumber()];
     std::vector<uint64_t> &OutgoingFlows =
@@ -505,6 +508,9 @@ void computeFlowMappings(const BinaryContext &BC, FlowInfo &TotalFlowMap) {
   TotalFlowMapTy &TotalMinCountMaps = TotalFlowMap.TotalMinCountMaps;
   for (const auto &BFI : BC.getBinaryFunctions()) {
     const BinaryFunction *Function = &BFI.second;
+    if (Function->isPLTFunction())
+      continue;
+
     uint64_t FunctionNum = Function->getFunctionNumber();
     std::vector<uint64_t> &IncomingFlows = TotalIncomingFlows[FunctionNum];
     std::vector<uint64_t> &OutgoingFlows = TotalOutgoingFlows[FunctionNum];
@@ -528,6 +534,9 @@ void computeFlowMappings(const BinaryContext &BC, FlowInfo &TotalFlowMap) {
       TotalFlowMap.CallGraphIncomingFlows;
   for (const auto &BFI : BC.getBinaryFunctions()) {
     const BinaryFunction *Function = &BFI.second;
+    if (Function->isPLTFunction())
+      continue;
+
     uint64_t FunctionNum = Function->getFunctionNumber();
     std::vector<uint64_t> &MaxCountMap = TotalMaxCountMaps[FunctionNum];
     std::vector<uint64_t> &MinCountMap = TotalMinCountMaps[FunctionNum];
@@ -667,7 +676,7 @@ void printAll(BinaryContext &BC, FunctionListType &ValidFunctions,
 } // namespace
 
 bool PrintProfileQualityStats::shouldOptimize(const BinaryFunction &BF) const {
-  if (BF.empty() || !BF.hasValidProfile())
+  if (BF.empty() || !BF.hasValidProfile() || BF.isPLTFunction())
     return false;
 
   return BinaryFunctionPass::shouldOptimize(BF);

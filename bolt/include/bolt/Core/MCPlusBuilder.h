@@ -1788,6 +1788,15 @@ public:
     llvm_unreachable("not implemented");
   }
 
+  /// Replace Immediate values in PLT entry to symbol reference
+  virtual bool handlePLTEntry(InstructionIterator Begin,
+                              InstructionIterator End,
+                              const MCSymbol *PLTSymbol,
+                              MCContext *Ctx) {
+    llvm_unreachable("not implemented");
+    return false;
+  }
+
   virtual bool analyzeVirtualMethodCall(InstructionIterator Begin,
                                         InstructionIterator End,
                                         std::vector<MCInst *> &MethodFetchInsns,

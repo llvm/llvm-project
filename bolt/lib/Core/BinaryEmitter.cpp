@@ -275,6 +275,27 @@ void BinaryEmitter::emitFunctions() {
     }
   };
 
+  // emit PLT section
+  if (BC.usesBTI()) {
+    std::vector<BinaryFunction *> PLTFunctions = BC.getOutputBinaryFunctions();
+    llvm::erase_if(PLTFunctions,
+                  [](BinaryFunction *BF) { return !BF->isPLTFunction(); });
+
+    const bool OriginalAllowAutoPadding = Streamer.getAllowAutoPadding();
+    for (BinaryFunction *BF : PLTFunctions) {
+      MCSection *Section = BC.getCodeSection(BF->getOriginSection()->getName());
+      Streamer.switchSection(Section);
+      Section->setAlignment(Align(BF->getOriginSection()->getAlignment()));
+      Section->setHasInstructions(true);
+      for (auto &BB : *BF) {
+        for (auto Inst : BB)
+          Streamer.emitInstruction(Inst, *BC.STI);
+      }
+      BF->setEmitted(/*KeepCFG=*/false);
+      Streamer.setAllowAutoPadding(OriginalAllowAutoPadding);
+    }
+  }
+
   // Mark the start of hot text.
   if (opts::HotText) {
     Streamer.switchSection(BC.getTextSection());
@@ -282,7 +303,13 @@ void BinaryEmitter::emitFunctions() {
   }
 
   // Emit functions in sorted order.
-  emit(BC.getOutputBinaryFunctions());
+  std::vector<BinaryFunction *> SortedFunctions = BC.getOutputBinaryFunctions();
+  if (BC.usesBTI()) {
+    llvm::erase_if(SortedFunctions,
+                   [](BinaryFunction *BF) { return BF->isPLTFunction(); });
+  }
+
+  emit(SortedFunctions);
 
   // Mark the end of hot text.
   if (opts::HotText) {

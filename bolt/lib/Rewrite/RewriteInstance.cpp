@@ -1835,6 +1835,19 @@ void RewriteInstance::createPLTBinaryFunction(uint64_t TargetAddress,
     return;
   }
 
+  if (BC->isAArch64()) {
+    const Relocation *Rel = BC->getDynamicRelocationAt(TargetAddress);
+    ErrorOr<BinarySection &> Section = BC->getSectionForAddress(EntryAddress);
+    if (!Rel && EntryAddress == Section->getAddress()) {
+      BF = BC->createBinaryFunction("__BOLT_PSEUDO_" + Section->getName().str(),
+                                    *Section, EntryAddress, 0, EntrySize,
+                                    Section->getAlignment());
+
+      BF->setPLTSymbol(BC->getOrCreateGlobalSymbol(TargetAddress, "FUNCat"));
+      return;
+    }
+  }
+
   const Relocation *Rel = BC->getDynamicRelocationAt(TargetAddress);
   if (!Rel)
     return;
@@ -1897,37 +1910,35 @@ void RewriteInstance::disassemblePLTSectionAArch64(BinarySection &Section) {
   while (InstrOffset < SectionSize) {
     InstructionListType Instructions;
     MCInst Instruction;
-    uint64_t EntryOffset = InstrOffset;
     uint64_t EntrySize = 0;
-    uint64_t InstrSize;
+    uint64_t TargetAddress = 0;
+    const uint64_t EntryAddress = SectionAddress + InstrOffset;
     // Loop through entry instructions
     while (InstrOffset < SectionSize) {
+      uint64_t InstrSize;
       disassemblePLTInstruction(Section, InstrOffset, Instruction, InstrSize);
+      if (TargetAddress && !BC->MIB->isNoop(Instruction))
+        break;
       EntrySize += InstrSize;
-      if (!BC->MIB->isIndirectBranch(Instruction)) {
-        Instructions.emplace_back(Instruction);
-        InstrOffset += InstrSize;
-        continue;
+      if (BC->MIB->isIndirectBranch(Instruction)) {
+        TargetAddress = BC->MIB->analyzePLTEntry(Instruction,
+                                                 Instructions.begin(),
+                                                 Instructions.end(),
+                                                 EntryAddress);
       }
-
-      const uint64_t EntryAddress = SectionAddress + EntryOffset;
-      const uint64_t TargetAddress = BC->MIB->analyzePLTEntry(
-          Instruction, Instructions.begin(), Instructions.end(), EntryAddress);
-
-      createPLTBinaryFunction(TargetAddress, EntryAddress, EntrySize);
-      break;
+      Instructions.emplace_back(Instruction);
+      InstrOffset += InstrSize;
     }
 
-    // Branch instruction
-    InstrOffset += InstrSize;
+    createPLTBinaryFunction(TargetAddress, EntryAddress, EntrySize);
 
-    // Skip nops if any
-    while (InstrOffset < SectionSize) {
-      disassemblePLTInstruction(Section, InstrOffset, Instruction, InstrSize);
-      if (!BC->MIB->isNoop(Instruction))
-        break;
-
-      InstrOffset += InstrSize;
+    if (BC->usesBTI()) {
+      BinaryFunction *BF = BC->getBinaryFunctionAtAddress(EntryAddress);
+      if (BF) {
+        BF->disassemblePLT(Instructions);
+        // setPLTSymbol sets a fucntion pseudo, need to reset this attriabute
+        BF->setPseudo(false);
+      }
     }
   }
 }
@@ -2044,8 +2055,8 @@ void RewriteInstance::disassemblePLT() {
       PltBF = BC->createBinaryFunction(
           "__BOLT_PSEUDO_" + Section.getName().str(), Section,
           Section.getAddress(), 0, PLTSI->EntrySize, Section.getAlignment());
+      PltBF->setSimple(false);
     }
-    PltBF->setPseudo(true);
   }
 }
 
@@ -3634,8 +3645,15 @@ void RewriteInstance::processProfileData() {
 void RewriteInstance::disassembleFunctions() {
   NamedRegionTimer T("disassembleFunctions", "disassemble functions",
                      TimerGroupName, TimerGroupDesc, opts::TimeRewrite);
-  for (auto &BFI : BC->getBinaryFunctions()) {
-    BinaryFunction &Function = BFI.second;
+  BinaryFunctionListType BFs;
+  BFs.reserve(BC->getBinaryFunctions().size());
+  llvm::transform(llvm::make_second_range(BC->getBinaryFunctions()),
+                  std::back_inserter(BFs),
+                  [](BinaryFunction &BF) { return &BF; });
+  llvm::erase_if(BFs,
+                 [](BinaryFunction *BF) { return BF->isPLTFunction(); });
+  for (BinaryFunction *BF : BFs) {
+    BinaryFunction &Function = *BF;
 
     ErrorOr<ArrayRef<uint8_t>> FunctionData = Function.getData();
     if (!FunctionData) {
@@ -3692,11 +3710,21 @@ void RewriteInstance::disassembleFunctions() {
       Function.print(BC->outs(), "after disassembly");
   }
 
+  if (opts::PrintAll || opts::PrintDisasm) {
+      std::for_each(BC->getBinaryFunctions().begin(),
+                    BC->getBinaryFunctions().end(),
+          [&](auto& BFI) {
+            BinaryFunction &Function = BFI.second;
+              if (Function.isPLTFunction())
+                Function.print(BC->outs(), "after disassembly");
+          });
+    }
+
   BC->processInterproceduralReferences();
   BC->populateJumpTables();
 
-  for (auto &BFI : BC->getBinaryFunctions()) {
-    BinaryFunction &Function = BFI.second;
+  for (BinaryFunction *BF : BFs) {
+    BinaryFunction &Function = *BF;
 
     if (!shouldDisassemble(Function))
       continue;
@@ -3709,8 +3737,8 @@ void RewriteInstance::disassembleFunctions() {
   BC->clearJumpTableTempData();
   BC->adjustCodePadding();
 
-  for (auto &BFI : BC->getBinaryFunctions()) {
-    BinaryFunction &Function = BFI.second;
+  for (BinaryFunction *BF : BFs) {
+    BinaryFunction &Function = *BF;
 
     if (!shouldDisassemble(Function))
       continue;
