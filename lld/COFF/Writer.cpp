@@ -77,6 +77,12 @@ static unsigned char dosProgram[] = {
 static_assert(sizeof(dosProgram) % 8 == 0,
               "DOSProgram size must be multiple of 8");
 
+static char ltcg[] = "LTCG";
+static char pgi[] = "PGI";
+static char pgu[] = "PGU";
+static char pgiSectionName[] = ".pgi";
+static char pguSectionName[] = ".pgu";
+
 static const int dosStubSize = sizeof(dos_header) + sizeof(dosProgram);
 static_assert(dosStubSize % 8 == 0, "DOSStub size must be multiple of 8");
 
@@ -179,6 +185,54 @@ public:
   uint32_t characteristics = 0;
 };
 
+class DebugDirPOGOChunk : public NonSectionChunk {
+  std::vector<char> str;
+  size_t initSize = 0;
+  size_t COFFGroupSize = 0;
+
+public:
+  DebugDirPOGOChunk(std::string s) {
+    std::string strReverse = s;
+    while (strReverse.size() % 4 != 0)
+      strReverse.push_back(0);
+    std::reverse(strReverse.begin(), strReverse.end());
+    str.assign(strReverse.begin(), strReverse.end());
+    initSize = str.size();
+  }
+
+  size_t getSize() const override { return initSize + COFFGroupSize; }
+  void setCOFFGroupSize(size_t sz) { COFFGroupSize = sz; }
+
+  void writeTo(uint8_t *b) const override {
+    // may skip some empty section
+    assert(str.size() <= getSize());
+    char *p = reinterpret_cast<char *>(b);
+    memcpy(p, str.data(), str.size());
+  }
+
+  void add(uint32_t ui32) {
+    union {
+      uint32_t uint32;
+      char c[4];
+    } uv;
+    uv.uint32 = ui32;
+    str.insert(str.end(), uv.c, uv.c + 4);
+  }
+
+  void add(const StringRef &s) {
+    int cnt = 0;
+    for (auto &c : s) {
+      str.push_back(c);
+      cnt++;
+    }
+    str.push_back(0);
+    cnt++;
+    // Align length of section name to 4 byte.
+    while (cnt++ % 4 != 0)
+      str.push_back(0);
+  }
+};
+
 // PartialSection represents a group of chunks that contribute to an
 // OutputSection. Collating a collection of PartialSections of same name and
 // characteristics constitutes the OutputSection.
@@ -254,6 +308,8 @@ private:
   void writeSections();
   void writeBuildId();
   void writePEChecksum();
+  void createCOFFGroup();
+  void computeCOFFGroupSize();
   void sortSections();
   template <typename T> void sortExceptionTable(ChunkRange &exceptionTable);
   void sortExceptionTables();
@@ -325,6 +381,7 @@ private:
   OutputSection *dtorsSec;
   // Either .rdata section or .buildid section.
   OutputSection *debugInfoSec;
+  DebugDirPOGOChunk *pogoChunk = nullptr;
 
   // The range of .pdata sections in the output file.
   //
@@ -748,6 +805,77 @@ void Writer::writePEChecksum() {
   peHeader->CheckSum = sum;
 }
 
+void Writer::computeCOFFGroupSize() {
+  if (!pogoChunk)
+    return;
+
+  log("Compute COFF Group Size\n");
+  size_t sz = 0;
+  for (OutputSection *sec : ctx.outputSections) {
+    // Merge display of chunks with same sectionName
+    std::vector<std::pair<SectionChunk *, SectionChunk *>> ChunkRanges;
+    for (Chunk *c : sec->chunks) {
+      auto *sc = dyn_cast<SectionChunk>(c);
+      if (!sc)
+        continue;
+
+      if (ChunkRanges.empty() ||
+          c->getSectionName() != ChunkRanges.back().first->getSectionName()) {
+        ChunkRanges.emplace_back(sc, sc);
+      } else {
+        ChunkRanges.back().second = sc;
+      }
+    }
+
+    for (auto &cr : ChunkRanges) {
+      if (sec->chunks.size() == 1) {
+        size_t size =
+            cr.second->getRVA() + cr.second->getSize() - cr.first->getRVA();
+        if (!size)
+          continue; // Skip empty section
+      }
+      sz += 8; // RVA + SIZE
+      size_t name_length = cr.first->getSectionName().size() + 1;
+      sz += alignTo(name_length, 4);
+    }
+  }
+  pogoChunk->setCOFFGroupSize(sz);
+}
+
+void Writer::createCOFFGroup() {
+  if (!pogoChunk)
+    return;
+
+  log("Create COFF Group\n");
+  for (OutputSection *sec : ctx.outputSections) {
+    // Merge display of chunks with same sectionName
+    std::vector<std::pair<SectionChunk *, SectionChunk *>> ChunkRanges;
+    for (Chunk *c : sec->chunks) {
+      auto *sc = dyn_cast<SectionChunk>(c);
+      if (!sc)
+        continue;
+
+      if (ChunkRanges.empty() ||
+          c->getSectionName() != ChunkRanges.back().first->getSectionName()) {
+        ChunkRanges.emplace_back(sc, sc);
+      } else {
+        ChunkRanges.back().second = sc;
+      }
+    }
+
+    for (auto &cr : ChunkRanges) {
+      size_t size =
+          cr.second->getRVA() + cr.second->getSize() - cr.first->getRVA();
+      auto address = cr.first->getRVA();
+      log(Twine(address) + "\t" + Twine(size) + "\t" +
+          cr.first->getSectionName() + "\n");
+      pogoChunk->add((uint32_t)address);
+      pogoChunk->add((uint32_t)size);
+      pogoChunk->add(cr.first->getSectionName());
+    }
+  }
+}
+
 // The main function of the writer.
 void Writer::run() {
   {
@@ -765,6 +893,7 @@ void Writer::run() {
     sortECChunks();
     appendECImportTables();
     removeUnusedSections();
+    computeCOFFGroupSize();
     finalizeAddresses();
     removeEmptySections();
     assignOutputSectionIndices();
@@ -782,6 +911,7 @@ void Writer::run() {
     } else {
       writeHeader<pe32_header>();
     }
+    createCOFFGroup();
     writeSections();
     prepareLoadConfig();
     sortExceptionTables();
@@ -1165,6 +1295,22 @@ void Writer::createMiscChunks() {
   llvm::TimeTraceScope timeScope("Misc chunks");
   Configuration *config = &ctx.config;
 
+  auto searchForPgoMagicSection = [this](char sectionName[]) {
+    for (auto *obj : ctx.objFileInstances) {
+      for (auto &chunk : obj->getChunks()) {
+        if (chunk->kind() == Chunk::SectionKind &&
+            chunk->getSectionName() == sectionName) {
+          return true;
+        }
+      }
+    }
+    return false;
+  };
+
+  bool writePgi = searchForPgoMagicSection(pgiSectionName);
+  bool writePgu = !writePgi && searchForPgoMagicSection(pguSectionName);
+  bool writeLTO = ctx.bitcodeFileInstances.size();
+
   for (MergeChunk *p : ctx.mergeChunkInstances) {
     if (p) {
       p->finalizeContents();
@@ -1181,7 +1327,7 @@ void Writer::createMiscChunks() {
   // Create Debug Information Chunks
   debugInfoSec = config->mingw ? buildidSec : rdataSec;
   if (config->buildIDHash != BuildIDHash::None || config->debug ||
-      config->repro || config->cetCompat) {
+      config->repro || config->cetCompat || writePgi || writePgu || writeLTO) {
     debugDirectory =
         make<DebugDirectoryChunk>(ctx, debugRecords, config->repro);
     debugDirectory->setAlignment(4);
@@ -1204,6 +1350,17 @@ void Writer::createMiscChunks() {
     debugRecords.emplace_back(COFF::IMAGE_DEBUG_TYPE_EX_DLLCHARACTERISTICS,
                               make<ExtendedDllCharacteristicsChunk>(
                                   IMAGE_DLL_CHARACTERISTICS_EX_CET_COMPAT));
+  }
+
+  if (writePgu) {
+    pogoChunk = make<DebugDirPOGOChunk>(pgu);
+    debugRecords.emplace_back(COFF::IMAGE_DEBUG_TYPE_POGO, pogoChunk);
+  } else if (writePgi) {
+    pogoChunk = make<DebugDirPOGOChunk>(pgi);
+    debugRecords.emplace_back(COFF::IMAGE_DEBUG_TYPE_POGO, pogoChunk);
+  } else if (writeLTO) {
+    pogoChunk = make<DebugDirPOGOChunk>(ltcg);
+    debugRecords.emplace_back(COFF::IMAGE_DEBUG_TYPE_POGO, pogoChunk);
   }
 
   // Align and add each chunk referenced by the debug data directory.

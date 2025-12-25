@@ -525,6 +525,9 @@ static bool initTargetOptions(DiagnosticsEngine &Diags,
   Options.MCOptions.PPCUseFullRegisterNames =
       CodeGenOpts.PPCUseFullRegisterNames;
   Options.MisExpect = CodeGenOpts.MisExpect;
+  Options.MCOptions.PgoInstrumentation = CodeGenOpts.getProfileInstr() > 0;
+  Options.MCOptions.PgoUse =
+      CodeGenOpts.getProfileUse() > 0 || !CodeGenOpts.SampleProfileFile.empty();
 
   return true;
 }

@@ -28,6 +28,7 @@
 #include "llvm/MC/MCSectionCOFF.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCSymbolCOFF.h"
+#include "llvm/MC/MCTargetOptions.h"
 #include "llvm/MC/MCValue.h"
 #include "llvm/MC/MCWinCOFFObjectWriter.h"
 #include "llvm/MC/StringTableBuilder.h"
@@ -980,6 +981,20 @@ static std::time_t getTime() {
 
 uint64_t WinCOFFWriter::writeObject(MCAssembler &Asm) {
   uint64_t StartOffset = W.OS.tell();
+
+  const auto *Options = Asm.getContext().getTargetOptions();
+
+  if (Mode != DwoOnly && Options && Options->PgoInstrumentation) {
+    auto *Section = Asm.getContext().getCOFFSection(
+        ".pgi", COFF::IMAGE_SCN_MEM_DISCARDABLE);
+    defineSection(Asm, *Section);
+  }
+
+  if (Mode != DwoOnly && Options && Options->PgoUse) {
+    auto *Section = Asm.getContext().getCOFFSection(
+        ".pgu", COFF::IMAGE_SCN_MEM_DISCARDABLE);
+    defineSection(Asm, *Section);
+  }
 
   if (Sections.size() > INT32_MAX)
     report_fatal_error(
