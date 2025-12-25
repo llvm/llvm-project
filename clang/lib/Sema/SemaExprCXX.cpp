@@ -644,8 +644,12 @@ Sema::ActOnCXXTypeid(SourceLocation OpLoc, SourceLocation LParenLoc,
   }
 
   // Find the std::type_info type.
-  if (!getStdNamespace())
-    return ExprError(Diag(OpLoc, diag::err_need_header_before_typeid));
+  if (!getStdNamespace()){
+    auto DiagID = getLangOpts().CPlusPlus20
+                      ? diag::err_need_header_or_std_before_typeid
+                      : diag::err_need_header_before_typeid;
+    return ExprError(Diag(OpLoc, DiagID));
+  }
 
   if (!CXXTypeInfoDecl) {
     IdentifierInfo *TypeInfoII = &PP.getIdentifierTable().get("type_info");
