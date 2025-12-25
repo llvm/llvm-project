@@ -321,6 +321,8 @@ MLIR_CAPI_EXPORTED MlirLogicalResult mlirApplyPatternsAndFoldGreedily(
     MlirModule op, MlirFrozenRewritePatternSet patterns,
     MlirGreedyRewriteDriverConfig);
 
+/// Applies the given patterns to the given op by a fast walk-based pattern
+/// rewrite driver.
 MLIR_CAPI_EXPORTED void
 mlirWalkAndApplyPatterns(MlirOperation op,
                          MlirFrozenRewritePatternSet patterns);

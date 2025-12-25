@@ -297,8 +297,6 @@ mlirApplyPatternsAndFoldGreedilyWithOp(MlirOperation op,
   return wrap(mlir::applyPatternsGreedily(unwrap(op), *unwrap(patterns)));
 }
 
-/// Applies the given patterns to the given op by a fast walk-based pattern
-/// rewrite driver.
 void mlirWalkAndApplyPatterns(MlirOperation op,
                               MlirFrozenRewritePatternSet patterns) {
   mlir::walkAndApplyPatterns(unwrap(op), *unwrap(patterns));
