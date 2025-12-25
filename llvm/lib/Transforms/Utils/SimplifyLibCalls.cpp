@@ -3188,18 +3188,6 @@ Value *LibCallSimplifier::optimizeRemquo(CallInst *CI, IRBuilderBase &B) {
   return ConstantFP::get(CI->getType(), Rem);
 }
 
-/// Constant folds fdim
-Value *LibCallSimplifier::optimizeFdim(CallInst *CI, IRBuilderBase &B) {
-  // Cannot perform the fold unless the call has attribute memory(none)
-  if (!CI->doesNotAccessMemory())
-    return nullptr;
-
-  // TODO : Handle undef values
-
-  // Constant folding will be handled by ConstantFoldLibCall2
-  return nullptr;
-}
-
 //===----------------------------------------------------------------------===//
 // Integer Library Call Optimizations
 //===----------------------------------------------------------------------===//

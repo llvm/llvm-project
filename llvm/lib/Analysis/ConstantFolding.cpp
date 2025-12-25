@@ -3248,7 +3248,7 @@ static Constant *ConstantFoldLibCall2(StringRef Name, Type *Ty,
     Difference.subtract(Op2V, RoundingMode::NearestTiesToEven);
 
     APFloat MaxVal =
-      maximum(Difference, APFloat::getZero(Ty->getFltSemantics()));
+      	maximum(Difference, APFloat::getZero(Ty->getFltSemantics()));
     return ConstantFP::get(Ty->getContext(), MaxVal);
     break;
   }
