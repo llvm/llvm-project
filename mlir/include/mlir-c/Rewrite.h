@@ -39,6 +39,7 @@ DEFINE_C_API_STRUCT(MlirGreedyRewriteDriverConfig, void);
 DEFINE_C_API_STRUCT(MlirRewritePatternSet, void);
 DEFINE_C_API_STRUCT(MlirPatternRewriter, void);
 DEFINE_C_API_STRUCT(MlirRewritePattern, const void);
+DEFINE_C_API_STRUCT(MlirRewriterBaseListener, void);
 
 //===----------------------------------------------------------------------===//
 /// RewriterBase API inherited from OpBuilder
@@ -47,6 +48,15 @@ DEFINE_C_API_STRUCT(MlirRewritePattern, const void);
 /// Get the MLIR context referenced by the rewriter.
 MLIR_CAPI_EXPORTED MlirContext
 mlirRewriterBaseGetContext(MlirRewriterBase rewriter);
+
+/// Get the listener of the rewriter.
+MLIR_CAPI_EXPORTED MlirRewriterBaseListener
+mlirRewriterBaseGetListener(MlirRewriterBase rewriter);
+
+/// Notify the listener that the specified operation was inserted.
+MLIR_CAPI_EXPORTED void mlirRewriterBaseListenerNotifyOperationInserted(
+    MlirRewriterBaseListener listener, MlirOperation op,
+    MlirOperation insertionPoint);
 
 //===----------------------------------------------------------------------===//
 /// Insertion points methods

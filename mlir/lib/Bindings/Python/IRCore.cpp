@@ -697,11 +697,11 @@ PyThreadContextEntry *PyThreadContextEntry::getTopOfStack() {
 }
 
 void PyThreadContextEntry::push(FrameKind frameKind, nb::object context,
-                                nb::object insertionPoint,
-                                nb::object location) {
+                                nb::object insertionPoint, nb::object location,
+                                nb::object listener) {
   auto &stack = getStack();
   stack.emplace_back(frameKind, std::move(context), std::move(insertionPoint),
-                     std::move(location));
+                     std::move(location), std::move(listener));
   // If the new stack has more than one entry and the context of the new top
   // entry matches the previous, copy the insertionPoint and location from the
   // previous entry if missing from the new top entry.
@@ -714,6 +714,8 @@ void PyThreadContextEntry::push(FrameKind frameKind, nb::object context,
         current.insertionPoint = prev.insertionPoint;
       if (!current.location)
         current.location = prev.location;
+      if (!current.listener)
+        current.listener = prev.listener;
     }
   }
 }
@@ -736,6 +738,12 @@ PyLocation *PyThreadContextEntry::getLocation() {
   return nb::cast<PyLocation *>(location);
 }
 
+PyRewriterBaseListener *PyThreadContextEntry::getListener() {
+  if (!listener)
+    return nullptr;
+  return nb::cast<PyRewriterBaseListener *>(listener);
+}
+
 PyMlirContext *PyThreadContextEntry::getDefaultContext() {
   auto *tos = getTopOfStack();
   return tos ? tos->getContext() : nullptr;
@@ -751,10 +759,16 @@ PyLocation *PyThreadContextEntry::getDefaultLocation() {
   return tos ? tos->getLocation() : nullptr;
 }
 
+PyRewriterBaseListener *PyThreadContextEntry::getDefaultListener() {
+  auto *tos = getTopOfStack();
+  return tos ? tos->getListener() : nullptr;
+}
+
 nb::object PyThreadContextEntry::pushContext(nb::object context) {
   push(FrameKind::Context, /*context=*/context,
        /*insertionPoint=*/nb::object(),
-       /*location=*/nb::object());
+       /*location=*/nb::object(),
+       /*listener=*/nb::object());
   return context;
 }
 
@@ -777,7 +791,8 @@ PyThreadContextEntry::pushInsertionPoint(nb::object insertionPointObj) {
   push(FrameKind::InsertionPoint,
        /*context=*/contextObj,
        /*insertionPoint=*/insertionPointObj,
-       /*location=*/nb::object());
+       /*location=*/nb::object(),
+       /*listener=*/nb::object());
   return insertionPointObj;
 }
 
@@ -797,7 +812,8 @@ nb::object PyThreadContextEntry::pushLocation(nb::object locationObj) {
   nb::object contextObj = location.getContext().getObject();
   push(FrameKind::Location, /*context=*/contextObj,
        /*insertionPoint=*/nb::object(),
-       /*location=*/locationObj);
+       /*location=*/locationObj,
+       /*listener=*/nb::object());
   return locationObj;
 }
 
@@ -808,6 +824,27 @@ void PyThreadContextEntry::popLocation(PyLocation &location) {
   auto &tos = stack.back();
   if (tos.frameKind != FrameKind::Location && tos.getLocation() != &location)
     throw std::runtime_error("Unbalanced Location enter/exit");
+  stack.pop_back();
+}
+
+nb::object PyThreadContextEntry::pushListener(nb::object listenerObj) {
+  PyRewriterBaseListener &listener =
+      nb::cast<PyRewriterBaseListener &>(listenerObj);
+  nb::object contextObj = listener.getContext().getObject();
+  push(FrameKind::Location, /*context=*/contextObj,
+       /*insertionPoint=*/nb::object(),
+       /*location=*/nb::object(),
+       /*listener=*/listenerObj);
+  return listenerObj;
+}
+
+void PyThreadContextEntry::popListener(PyRewriterBaseListener &listener) {
+  auto &stack = getStack();
+  if (stack.empty())
+    throw std::runtime_error("Unbalanced Listener enter/exit");
+  auto &tos = stack.back();
+  if (tos.frameKind != FrameKind::Listener && tos.getListener() != &listener)
+    throw std::runtime_error("Unbalanced Listener enter/exit");
   stack.pop_back();
 }
 
@@ -1303,6 +1340,10 @@ static void maybeInsertOperation(PyOperationRef &op,
     }
     if (ip)
       ip->insert(*op.get());
+  }
+  if (PyRewriterBaseListener *listener =
+          PyThreadContextEntry::getDefaultListener()) {
+    listener->notifyOperationInserted(*op.get());
   }
 }
 
@@ -1937,6 +1978,19 @@ PyOpView::PyOpView(const nb::object &operationObject)
     // Operation lets us accept any PyOperationBase subclass.
     : operation(nb::cast<PyOperationBase &>(operationObject).getOperation()),
       operationObject(operation.getRef().getObject()) {}
+
+//------------------------------------------------------------------------------
+// PyRewriterBaseListener.
+//------------------------------------------------------------------------------
+
+nb::object PyRewriterBaseListener::contextEnter(nb::object listener) {
+  return PyThreadContextEntry::pushListener(std::move(listener));
+}
+
+void PyRewriterBaseListener::contextExit(nb::handle excType, nb::handle excVal,
+                                         nb::handle excTb) {
+  PyThreadContextEntry::popListener(*this);
+}
 
 //------------------------------------------------------------------------------
 // PyInsertionPoint.
@@ -4273,6 +4327,15 @@ void mlir::python::populateIRCore(nb::module_ &m) {
             return PyBlockPredecessors(self, self.getParentOperation());
           },
           "Returns the list of Block predecessors.");
+
+  //----------------------------------------------------------------------------
+  // Mapping of PyRewriterBaseListener.
+  //----------------------------------------------------------------------------
+  nb::class_<PyRewriterBaseListener>(m, "RewriterBaseListener")
+      .def("__enter__", &PyRewriterBaseListener::contextEnter)
+      .def("__exit__", &PyRewriterBaseListener::contextExit,
+           nb::arg("exc_type").none(), nb::arg("exc_value").none(),
+           nb::arg("traceback").none());
 
   //----------------------------------------------------------------------------
   // Mapping of PyInsertionPoint.

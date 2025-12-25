@@ -46,6 +46,7 @@ class PyOperationBase;
 class PyType;
 class PySymbolTable;
 class PyValue;
+class PyRewriterBaseListener;
 
 /// Template for a reference to a concrete type which captures a python
 /// reference to its underlying python object.
@@ -115,13 +116,15 @@ public:
     Context,
     InsertionPoint,
     Location,
+    Listener,
   };
 
   PyThreadContextEntry(FrameKind frameKind, nanobind::object context,
                        nanobind::object insertionPoint,
-                       nanobind::object location)
+                       nanobind::object location, nanobind::object listener)
       : context(std::move(context)), insertionPoint(std::move(insertionPoint)),
-        location(std::move(location)), frameKind(frameKind) {}
+        location(std::move(location)), listener(std::move(listener)),
+        frameKind(frameKind) {}
 
   /// Gets the top of stack context and return nullptr if not defined.
   static PyMlirContext *getDefaultContext();
@@ -132,9 +135,12 @@ public:
   /// Gets the top of stack location and returns nullptr if not defined.
   static PyLocation *getDefaultLocation();
 
+  static PyRewriterBaseListener *getDefaultListener();
+
   PyMlirContext *getContext();
   PyInsertionPoint *getInsertionPoint();
   PyLocation *getLocation();
+  PyRewriterBaseListener *getListener();
   FrameKind getFrameKind() { return frameKind; }
 
   /// Stack management.
@@ -145,13 +151,16 @@ public:
   static void popInsertionPoint(PyInsertionPoint &insertionPoint);
   static nanobind::object pushLocation(nanobind::object location);
   static void popLocation(PyLocation &location);
+  static nanobind::object pushListener(nanobind::object listener);
+  static void popListener(PyRewriterBaseListener &listener);
 
   /// Gets the thread local stack.
   static std::vector<PyThreadContextEntry> &getStack();
 
 private:
   static void push(FrameKind frameKind, nanobind::object context,
-                   nanobind::object insertionPoint, nanobind::object location);
+                   nanobind::object insertionPoint, nanobind::object location,
+                   nanobind::object listener);
 
   /// An object reference to the PyContext.
   nanobind::object context;
@@ -159,6 +168,8 @@ private:
   nanobind::object insertionPoint;
   /// An object reference to the current location.
   nanobind::object location;
+  /// An object reference to the current listener.
+  nanobind::object listener;
   // The kind of push that was performed.
   FrameKind frameKind;
 };
@@ -828,6 +839,31 @@ public:
 private:
   PyOperationRef parentOperation;
   MlirBlock block;
+};
+
+/// Wrapper around a MlirRewriterBaseListener.
+class PyRewriterBaseListener {
+public:
+  PyRewriterBaseListener(MlirRewriterBaseListener listener,
+                         PyMlirContextRef ctx)
+      : listener(listener), ctx(std::move(ctx)) {}
+
+  MlirRewriterBaseListener get() { return listener; }
+
+  void notifyOperationInserted(PyOperationBase &op) {
+    mlirRewriterBaseListenerNotifyOperationInserted(get(), op.getOperation(),
+                                                    MlirOperation{nullptr});
+  }
+
+  PyMlirContextRef getContext() { return ctx; }
+
+  static nanobind::object contextEnter(nanobind::object listener);
+  void contextExit(nanobind::handle excType, nanobind::handle excVal,
+                   nanobind::handle excTb);
+
+private:
+  MlirRewriterBaseListener listener;
+  PyMlirContextRef ctx;
 };
 
 /// An insertion point maintains a pointer to a Block and a reference operation.
