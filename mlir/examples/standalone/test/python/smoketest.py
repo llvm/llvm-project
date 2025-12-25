@@ -1,8 +1,9 @@
-# RUN: %python %s nanobind | FileCheck %s
-import sys
+# RUN: %python %s 2>&1 | FileCheck %s
 
 from mlir_standalone.ir import *
 from mlir_standalone.dialects import standalone_nanobind as standalone_d
+
+# CHECK-NOT: RuntimeWarning: nanobind: type '{{.*}}' was already registered!
 
 with Context():
     standalone_d.register_dialects()
@@ -20,5 +21,4 @@ with Context():
     # CHECK: !standalone.custom<"foo">
     print(custom_type)
 
-if len(sys.argv) > 1 and sys.argv[1] == "test-upstream":
-    from mlir.ir import *
+from mlir.ir import *
