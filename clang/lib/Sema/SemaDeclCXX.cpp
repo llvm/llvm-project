@@ -19119,18 +19119,21 @@ bool Sema::DefineUsedVTables() {
         }
       }
 
-      if (IsExplicitInstantiationDeclaration &&
-          llvm::none_of(Class->decls(), [](Decl *decl) {
-            // If the class has a virtual member function declared with
-            // `__attribute__((exclude_from_explicit_instantiation))`, the
-            // explicit instantiation declaration shouldn't suppress emitting
-            // the vtable to ensure that the excluded member function is
-            // accessible through the vtable.
-            auto *Method = dyn_cast<CXXMethodDecl>(decl);
-            return Method && Method->isVirtual() &&
-                   Method->hasAttr<ExcludeFromExplicitInstantiationAttr>();
-          }))
-        DefineVTable = false;
+      if (IsExplicitInstantiationDeclaration) {
+        const bool HasExcludeFromExplicitInstantiation =
+            llvm::any_of(Class->decls(), [](Decl *decl) {
+              // If the class has a virtual member function declared with
+              // `__attribute__((exclude_from_explicit_instantiation))`, the
+              // explicit instantiation declaration shouldn't suppress emitting
+              // the vtable to ensure that the excluded member function is
+              // accessible through the vtable.
+              auto *Method = dyn_cast<CXXMethodDecl>(decl);
+              return Method && Method->isVirtual() &&
+                     Method->hasAttr<ExcludeFromExplicitInstantiationAttr>();
+            });
+        if (!HasExcludeFromExplicitInstantiation)
+          DefineVTable = false;
+      }
     }
 
     // The exception specifications for all virtual members may be needed even
