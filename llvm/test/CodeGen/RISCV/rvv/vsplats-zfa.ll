@@ -33,3 +33,14 @@ define <vscale x 8 x double> @vsplat_f64_neg1() {
 ; CHECK-NEXT:    ret
   ret <vscale x 8 x double> splat (double -1.0)
 }
+
+define <vscale x 8 x float> @vfsub_vf_nxv8f32(<vscale x 8 x float> %va) {
+; CHECK-LABEL: vfsub_vf_nxv8f32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    fli.s fa5, 2.0
+; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
+; CHECK-NEXT:    vfsub.vf v8, v8, fa5
+; CHECK-NEXT:    ret
+  %vd = fadd <vscale x 8 x float> %va, splat (float -2.000000e+00)
+  ret <vscale x 8 x float> %vd
+}

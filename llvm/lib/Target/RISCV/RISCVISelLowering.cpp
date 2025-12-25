@@ -21021,7 +21021,23 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
       return SDValue();
     return DAG.getNode(RISCVISD::FSGNJX, DL, VT, N1, N0->getOperand(1));
   }
-  case ISD::FADD:
+  case ISD::FADD: {
+    if (SDValue V = combineBinOpToReduce(N, DAG, Subtarget))
+      return V;
+    if (SDValue V = combineBinOpOfExtractToReduceTree(N, DAG, Subtarget))
+      return V;
+    SDValue N1 = N->getOperand(1);
+    if (!Subtarget.hasStdExtZfa() || N1.getOpcode() != ISD::SPLAT_VECTOR)
+      return SDValue();
+    SDValue SplatN0 = N1->getOperand(0);
+    if (!SplatN0.hasOneUse() || SplatN0.getOpcode() != ISD::FNEG)
+      return SDValue();
+    SDLoc DL(N);
+    EVT VT = N->getValueType(0);
+    SDValue Splat =
+        DAG.getNode(ISD::SPLAT_VECTOR, DL, VT, SplatN0->getOperand(0));
+    return DAG.getNode(ISD::FSUB, DL, VT, N->getOperand(0), Splat);
+  }
   case ISD::UMAX:
   case ISD::UMIN:
   case ISD::SMAX:
