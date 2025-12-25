@@ -388,8 +388,8 @@ static mlir::Value emitX86CvtF16ToFloatExpr(CIRGenBuilderTy &builder,
   }
 
   // Bitcast from vXi16 to vXf16.
-  cir::VectorType halfTy = cir::VectorType::get(
-      cir::FP16Type::get(builder.getContext()), numElts);
+  cir::VectorType halfTy =
+      cir::VectorType::get(cir::FP16Type::get(builder.getContext()), numElts);
 
   src = builder.createCast(cir::CastKind::bitcast, src, halfTy);
 
