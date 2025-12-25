@@ -35,7 +35,7 @@ define i32 @foo(ptr %ssl, ptr %name, ptr %iv, ptr %ectx, ptr %hctx, i32 %enc) {
 ; CHECK-NEXT:    [[CMP23:%.*]] = icmp slt i32 [[CALL22]], 1
 ; CHECK-NEXT:    br i1 [[CMP23]], label [[RETURN]], label [[COMMON:%.*]]
 ; CHECK:       return:
-; CHECK-NEXT:    [[RETVAL_0:%.*]] = phi i32 [ [[SPEC_SELECT11]], [[COMMON]] ], [ 0, [[IF_END]] ], [ -1, [[IF_THEN]] ], [ -1, [[COND_PRED1]] ]
+; CHECK-NEXT:    [[RETVAL_0:%.*]] = phi i32 [ 0, [[IF_END]] ], [ [[SPEC_SELECT11]], [[COMMON]] ], [ -1, [[IF_THEN]] ], [ -1, [[COND_PRED1]] ]
 ; CHECK-NEXT:    ret i32 [[RETVAL_0]]
 ;
 entry:
