@@ -136,7 +136,11 @@ aliasingFuncOpBBArgsAnalysis(FuncOp funcOp, OneShotAnalysisState &state,
 
   // Find all func.return ops.
   SmallVector<func::ReturnOp> returnOps = getReturnOps(funcOp);
-  assert(!returnOps.empty() && "expected at least one ReturnOp");
+  // TODO: throw error when there is any non-func.return op that has the
+  // ReturnLike trait
+  if (returnOps.empty()) {
+    return funcOp.emitError("cannot bufferize func.func without func.return");
+  }
 
   // Build alias sets. Merge all aliases from all func.return ops.
   for (BlockArgument bbArg : funcOp.getArguments()) {

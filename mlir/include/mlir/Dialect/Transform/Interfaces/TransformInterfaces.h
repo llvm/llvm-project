@@ -700,7 +700,7 @@ private:
   ///  - `throughValue` is the payload value the handle to which is consumed,
   ///     when it is the case, null when the operation handle is consumed
   ///     directly.
-  /// Looks at the payload opreations associated with `otherHandle` and if any
+  /// Looks at the payload operations associated with `otherHandle` and if any
   /// of these operations has an ancestor (or is itself) listed in
   /// `potentialAncestors`, records the error message describing the use of the
   /// invalidated handle. Does nothing if `otherHandle` already has a reporter
