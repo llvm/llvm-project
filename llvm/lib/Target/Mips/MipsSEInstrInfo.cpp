@@ -73,6 +73,70 @@ Register MipsSEInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
   return 0;
 }
 
+static std::pair<bool, bool> readsWritesFloatRegister(MachineInstr &MI,
+                                                      Register Reg) {
+  bool Reads = false;
+  bool Writes = false;
+  unsigned Idx = 0;
+  Register RegF32 = getFloatRegFromFReg(Reg);
+  assert(RegF32 != Mips::NoRegister && "Reg is not a Float Register");
+  for (llvm::MachineOperand &MO : MI.operands()) {
+    if (!MO.isReg())
+      continue;
+    Register MORegF32 = getFloatRegFromFReg(MO.getReg());
+    if (MORegF32 == Mips::NoRegister)
+      continue;
+    if (MORegF32 == RegF32) {
+      if (Idx == 0)
+        Writes = true;
+      else
+        Reads = true;
+    }
+    Idx++;
+  }
+  return std::make_pair(Reads, Writes);
+}
+
+static bool isWritedByFCMP(MachineBasicBlock::iterator I, Register Reg) {
+  MachineBasicBlock *MBB = I->getParent();
+  if (I == MBB->begin())
+    return false;
+  MachineBasicBlock::reverse_iterator RevI = std::prev(I)->getReverseIterator();
+  for (; RevI != MBB->rend(); RevI++) {
+    bool Reads, Writes;
+    std::tie(Reads, Writes) = readsWritesFloatRegister(*RevI, Reg);
+    unsigned Opcode = RevI->getOpcode();
+    if (Writes) {
+      if (Opcode >= Mips::CMP_AF_D_MMR6 && Opcode <= Mips::CMP_UN_S_MMR6)
+        return true;
+      return false;
+    }
+  }
+  return false;
+}
+
+static bool isOnlyReadsBySEL(MachineBasicBlock::iterator I, Register Reg) {
+  MachineBasicBlock *MBB = I->getParent();
+  MachineBasicBlock::iterator NextI = std::next(I);
+  bool MaybeOK = false;
+  for (; NextI != MBB->end(); NextI++) {
+    bool Reads, Writes;
+    std::tie(Reads, Writes) = readsWritesFloatRegister(*NextI, Reg);
+    unsigned Opcode = NextI->getOpcode();
+    if (Reads) {
+      if (Opcode < Mips::SEL_D || Opcode > Mips::SEL_S_MMR6)
+        return false;
+      else if (I->getOperand(1).isKill())
+        return true;
+      else
+        MaybeOK = true;
+    }
+    if (Writes)
+      return MaybeOK;
+  }
+  return false;
+}
+
 void MipsSEInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                   MachineBasicBlock::iterator I,
                                   const DebugLoc &DL, Register DestReg,
@@ -132,6 +196,9 @@ void MipsSEInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
           .addReg(DestReg)
           .addReg(SrcReg, getKillRegState(KillSrc));
       return;
+    } else if (Mips::FGR64RegClass.contains(DestReg) &&
+               isOnlyReadsBySEL(I, DestReg)) {
+      Opc = Mips::MTC1_D64;
     }
   }
   else if (Mips::FGR32RegClass.contains(DestReg, SrcReg))
@@ -157,12 +224,25 @@ void MipsSEInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
       Opc = Mips::MTLO64, DestReg = 0;
     else if (Mips::FGR64RegClass.contains(DestReg))
       Opc = Mips::DMTC1;
-  }
-  else if (Mips::MSA128BRegClass.contains(DestReg)) { // Copy to MSA reg
+  } else if (Mips::MSA128BRegClass.contains(DestReg)) { // Copy to MSA reg
     if (Mips::MSA128BRegClass.contains(SrcReg))
       Opc = Mips::MOVE_V;
   }
 
+  // FCMP + FSEL for MIPSr6 may emit
+  // $d0_64 = COPY killed renamable $f0
+  if (Opc == 0 && Mips::FGR32RegClass.contains(SrcReg) &&
+      Mips::FGR64RegClass.contains(DestReg) && I != MBB.begin()) {
+    // Who produces SrcReg? If SrcReg is produced by CMP_*, then it's OK.
+    // Who uses DestReg? If DestReg is only used by SEL_*, then it's OK.
+    if (isWritedByFCMP(I, SrcReg) || isOnlyReadsBySEL(I, DestReg)) {
+      Opc = Mips::FMOV_D64;
+      unsigned DestRegOff = DestReg.id() - Mips::D0_64;
+      unsigned SrcRegOff = SrcReg.id() - Mips::F0;
+      if (SrcRegOff == DestRegOff && SrcRegOff >= 0 && SrcRegOff <= 31)
+        return;
+    }
+  }
   assert(Opc && "Cannot copy registers");
 
   MachineInstrBuilder MIB = BuildMI(MBB, I, DL, get(Opc));
