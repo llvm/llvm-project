@@ -413,7 +413,7 @@ void PassBuilder::invokePipelineEarlySimplificationEPCallbacks(
 // Helper to add AnnotationRemarksPass.
 static void addAnnotationRemarksPass(ModulePassManager &MPM) {
   MPM.addPass(createModuleToFunctionPassAdaptor(AnnotationRemarksPass()));
-  // Count the types of instructions used in a module if statistics are enabled.
+  // Count the stats for InstCount and FunctionPropertiesAnalysis
   if (AreStatisticsEnabled()) {
     MPM.addPass(createModuleToFunctionPassAdaptor(InstCountPass()));
     MPM.addPass(

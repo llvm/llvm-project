@@ -27,7 +27,7 @@
 
 using namespace llvm;
 
-#define DEBUG_TYPE "func-properties-count"
+#define DEBUG_TYPE "func-properties-stats"
 
 STATISTIC(TotalBlocks, "Number of basic blocks");
 STATISTIC(TotalInsts, "Number of instructions (of all types)");
@@ -427,10 +427,10 @@ FunctionPropertiesPrinterPass::run(Function &F, FunctionAnalysisManager &AM) {
 
 PreservedAnalyses
 FunctionPropertiesStatisticsPass::run(Function &F,
-                                      FunctionAnalysisManager &AM) {
+                                      FunctionAnalysisManager &FAM) {
   LLVM_DEBUG(dbgs() << "STATSCOUNT: running on function " << F.getName()
                     << "\n");
-  auto &AnalysisResults = AM.getResult<FunctionPropertiesAnalysis>(F);
+  auto &AnalysisResults = FAM.getResult<FunctionPropertiesAnalysis>(F);
   TotalBlocks += AnalysisResults.BasicBlockCount;
   TotalInsts += AnalysisResults.TotalInstructionCount;
   TotalSuccs += AnalysisResults.ControlFlowEdgeCount;

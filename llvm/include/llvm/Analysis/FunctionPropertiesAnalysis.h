@@ -187,7 +187,7 @@ public:
 /// Statistics pass for the FunctionPropertiesAnalysis results.
 struct FunctionPropertiesStatisticsPass
     : PassInfoMixin<FunctionPropertiesStatisticsPass> {
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
 };
 
 /// Correctly update FunctionPropertiesInfo post-inlining. A
