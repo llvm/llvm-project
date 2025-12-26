@@ -17,6 +17,7 @@
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
 #include <optional>
+#include <thread>
 
 using namespace llvm;
 
@@ -645,6 +646,45 @@ TEST(raw_ostreamTest, writeToStdOut) {
 
   std::string CapturedStdOut = testing::internal::GetCapturedStdout();
   EXPECT_EQ(CapturedStdOut, "HelloWorld");
+}
+
+TEST(raw_ostreamTest, DISABLED_writeToOutputLoadTest) {
+  // Create 10 temporary directories
+  std::vector<std::unique_ptr<llvm::unittest::TempDir>> TempDirs;
+  for (int i = 0; i < 10; ++i) {
+    TempDirs.push_back(
+        std::make_unique<llvm::unittest::TempDir>("loadtest", /*Unique*/ true));
+  }
+
+  // Launch 10 threads, each writing 10,000 files (100,000 total)
+  std::vector<std::thread> Threads;
+  for (int threadIdx = 0; threadIdx < 10; ++threadIdx) {
+    Threads.emplace_back([&, threadIdx]() {
+      const auto &TempDir = TempDirs[threadIdx];
+      for (int fileIdx = 0; fileIdx < 10000; ++fileIdx) {
+        SmallString<128> Path(TempDir->path());
+        sys::path::append(Path, "file_" + std::to_string(fileIdx) + ".bin");
+
+        ASSERT_THAT_ERROR(
+            writeToOutput(Path,
+                          [](raw_ostream &Out) -> Error {
+                            // Write 10,000 32-bit integers (0-9999) = ~40KB per
+                            // file
+                            for (int32_t i = 0; i < 10000; ++i) {
+                              Out.write(reinterpret_cast<const char *>(&i),
+                                        sizeof(i));
+                            }
+                            return Error::success();
+                          }),
+            Succeeded());
+      }
+    });
+  }
+
+  // Wait for all threads to complete
+  for (auto &Thread : Threads) {
+    Thread.join();
+  }
 }
 
 } // namespace
