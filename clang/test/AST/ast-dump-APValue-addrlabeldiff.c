@@ -12,7 +12,7 @@
 
 // CHECK:  |   |-value: AddrLabelDiff &&l2 - &&l1
 int Test(void) {
-  constexpr char ar = &&l2 - &&l1;
+  constexpr long long ar = &&l2 - &&l1;
 l1:
   return 10;
 l2:
