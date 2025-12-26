@@ -361,7 +361,8 @@ let Defs = [SP, SREG], Uses = [SP] in {
 //===----------------------------------------------------------------------===//
 // Addition
 //===----------------------------------------------------------------------===//
-let isCommutable = 1, Constraints = "$src = $rd", Defs = [SREG] in {
+let hasSideEffects = 0, isCommutable = 1, Constraints = "$src = $rd",
+    Defs = [SREG] in {
   // ADD Rd, Rr
   // Adds two 8-bit registers.
   def ADDRdRr : FRdRr<0b0000, 0b11, (outs GPR8:$rd),(ins GPR8:$src, GPR8:$rr),
@@ -408,7 +409,7 @@ let isCommutable = 1, Constraints = "$src = $rd", Defs = [SREG] in {
 //===----------------------------------------------------------------------===//
 // Subtraction
 //===----------------------------------------------------------------------===//
-let Constraints = "$rs = $rd", Defs = [SREG] in {
+let hasSideEffects = 0, Constraints = "$rs = $rd", Defs = [SREG] in {
   // SUB Rd, Rr
   // Subtracts the 8-bit value of Rr from Rd and places the value in Rd.
   def SUBRdRr : FRdRr<0b0001, 0b10, (outs GPR8:$rd), (ins GPR8:$rs, GPR8:$rr),
@@ -474,7 +475,7 @@ let Constraints = "$rs = $rd", Defs = [SREG] in {
 //===----------------------------------------------------------------------===//
 // Increment and Decrement
 //===----------------------------------------------------------------------===//
-let Constraints = "$src = $rd", Defs = [SREG] in {
+let hasSideEffects = 0, Constraints = "$src = $rd", Defs = [SREG] in {
   def INCRd : FRd<0b1001, 0b0100011, (outs GPR8:$rd), (ins GPR8:$src),
                   "inc\t$rd",
                   [(set i8:$rd, (add i8:$src, 1))]>;
@@ -488,7 +489,7 @@ let Constraints = "$src = $rd", Defs = [SREG] in {
 // Multiplication
 //===----------------------------------------------------------------------===//
 
-let isCommutable = 1, Defs = [R1, R0, SREG] in {
+let hasSideEffects = 0, isCommutable = 1, Defs = [R1, R0, SREG] in {
   // MUL Rd, Rr
   // Multiplies Rd by Rr and places the result into R1:R0.
   let usesCustomInserter = 1 in {
@@ -518,14 +519,15 @@ let isCommutable = 1, Defs = [R1, R0, SREG] in {
                Requires<[SupportsMultiplication]>;
 }
 
-let Defs =
+// Set hasSideEffects = 1 to prevent it is considered dead.
+let hasSideEffects = 1, Defs =
     [R15, R14, R13, R12, R11, R10, R9, R8, R7, R6, R5, R4, R3, R2, R1, R0] in
 def DESK : FDES<(outs), (ins i8imm:$k), "des\t$k", []>, Requires<[HasDES]>;
 
 //===----------------------------------------------------------------------===//
 // Logic
 //===----------------------------------------------------------------------===//
-let Constraints = "$src = $rd", Defs = [SREG] in {
+let hasSideEffects = 0, Constraints = "$src = $rd", Defs = [SREG] in {
   // Register-Register logic instructions (which have the
   // property of commutativity).
   let isCommutable = 1 in {
@@ -599,7 +601,7 @@ let Constraints = "$src = $rd", Defs = [SREG] in {
 //===----------------------------------------------------------------------===//
 // One's/Two's Complement
 //===----------------------------------------------------------------------===//
-let Constraints = "$src = $rd", Defs = [SREG] in {
+let hasSideEffects = 0, Constraints = "$src = $rd", Defs = [SREG] in {
   def COMRd : FRd<0b1001, 0b0100000, (outs GPR8:$rd), (ins GPR8:$src),
                   "com\t$rd", [(set i8:$rd, (not i8:$src))]>;
 
@@ -620,7 +622,6 @@ let Constraints = "$src = $rd", Defs = [SREG] in {
   // neg Rd+1
   // neg Rd
   // sbc Rd+1, r1
-  let hasSideEffects=0 in
   def NEGWRd : Pseudo<(outs DREGS:$rd), (ins DREGS:$src, GPR8:$zero),
                       "negw\t$rd", []>;
 }
@@ -701,7 +702,7 @@ let isTerminator = 1, isReturn = 1, isBarrier = 1 in {
 //===----------------------------------------------------------------------===//
 // Compare operations.
 //===----------------------------------------------------------------------===//
-let Defs = [SREG] in {
+let hasSideEffects = 0, Defs = [SREG] in {
   // CPSE Rd, Rr
   // Compare Rd and Rr, skipping the next instruction if they are equal.
   let isBarrier = 1, isBranch = 1, isTerminator = 1 in
@@ -861,7 +862,7 @@ let hasSideEffects = 0 in {
 }
 
 // Load immediate values into registers.
-let isReMaterializable = 1 in {
+let hasSideEffects = 0, isReMaterializable = 1 in {
   def LDIRdK : FRdK<0b1110, (outs LD8:$rd), (ins imm_ldi8:$k), "ldi\t$rd, $k",
                     [(set i8:$rd, imm:$k)]>;
 
@@ -875,7 +876,7 @@ let isReMaterializable = 1 in {
 }
 
 // Load from data space into register.
-let mayLoad = 1, isReMaterializable = 1 in {
+let hasSideEffects = 0, mayLoad = 1, isReMaterializable = 1 in {
   def LDSRdK : F32DM<0b0, (outs GPR8:$rd), (ins imm16:$k), "lds\t$rd, $k",
                      [(set i8:$rd, (load imm:$k))]>,
                Requires<[HasSRAM, HasNonTinyEncoding]>;
@@ -896,7 +897,7 @@ let mayLoad = 1, isReMaterializable = 1 in {
 }
 
 // Indirect loads.
-let mayLoad = 1, isReMaterializable = 1 in {
+let hasSideEffects = 0, mayLoad = 1, isReMaterializable = 1 in {
   def LDRdPtr : FSTLD<0, 0b00, (outs GPR8:$reg), (ins PTRREGS:$ptrreg),
                       "ld\t$reg, $ptrreg",
                       [(set GPR8:$reg, (load i16:$ptrreg))]>,
@@ -948,7 +949,7 @@ let mayLoad = 1, hasSideEffects = 0,
 }
 
 // Load indirect with displacement operations.
-let mayLoad = 1, isReMaterializable = 1 in {
+let hasSideEffects = 0, mayLoad = 1, isReMaterializable = 1 in {
   def LDDRdPtrQ : FSTDLDD<0, (outs GPR8:$reg), (ins memri:$memri),
                           "ldd\t$reg, $memri",
                           [(set i8:$reg, (load addr:$memri))]>,
@@ -986,23 +987,22 @@ let mayLoad = 1, isReMaterializable = 1 in {
   // The pseudo expansion pass trivially expands this into LDDWRdPtrQ.
   //
   // This instruction may be removed once PR13375 is fixed.
-  let hasSideEffects = 0 in
   def LDDWRdYQ : Pseudo<(outs DREGS:$dst), (ins memri:$memri),
                         "lddw\t$dst, $memri", []>,
                  Requires<[HasSRAM]>;
 }
 
-let mayLoad = 1, isReMaterializable = 1 in
+let hasSideEffects = 0, mayLoad = 1, isReMaterializable = 1 in
 class AtomicLoad<PatFrag Op, RegisterClass DRC, RegisterClass PTRRC>
     : Pseudo<(outs DRC:$rd), (ins PTRRC:$rr), "atomic_op",
              [(set DRC:$rd, (Op i16:$rr))]>;
 
-let mayStore = 1 in
+let hasSideEffects = 0, mayStore = 1 in
 class AtomicStore<PatFrag Op, RegisterClass DRC, RegisterClass PTRRC>
     : Pseudo<(outs), (ins PTRRC:$rd, DRC:$rr), "atomic_op",
              [(Op DRC:$rr, i16:$rd)]>;
 
-let mayLoad = 1, mayStore = 1 in
+let hasSideEffects = 0, mayLoad = 1, mayStore = 1 in
 class AtomicLoadOp<PatFrag Op, RegisterClass DRC, RegisterClass PTRRC>
     : Pseudo<(outs DRC:$rd), (ins PTRRC:$rr, DRC:$operand), "atomic_op",
              [(set DRC:$rd, (Op i16:$rr, DRC:$operand))]>;
@@ -1025,7 +1025,7 @@ def AtomicStore16 : AtomicStore<atomic_store_16, DREGS, PTRDISPREGS>;
 class AtomicLoadOp8<PatFrag Op> : AtomicLoadOp<Op, GPR8, PTRREGS>;
 class AtomicLoadOp16<PatFrag Op> : AtomicLoadOp<Op, DREGS, PTRDISPREGS>;
 
-let usesCustomInserter=1 in {
+let usesCustomInserter = 1, Defs = [SREG] in {
   def AtomicLoadAdd8 : AtomicLoadOp8<atomic_load_add_i8>;
   def AtomicLoadAdd16 : AtomicLoadOp16<atomic_load_add_i16>;
   def AtomicLoadSub8 : AtomicLoadOp8<atomic_load_sub_i8>;
@@ -1038,11 +1038,12 @@ let usesCustomInserter=1 in {
   def AtomicLoadXor16 : AtomicLoadOp16<atomic_load_xor_i16>;
 }
 
+let hasSideEffects = 1 in
 def AtomicFence
     : Pseudo<(outs), (ins), "atomic_fence", [(atomic_fence timm, timm)]>;
 
 // Indirect store from register to data space.
-let mayStore = 1 in {
+let hasSideEffects = 0, mayStore = 1 in {
   def STSKRr : F32DM<0b1, (outs), (ins imm16:$k, GPR8:$rd), "sts\t$k, $rd",
                      [(store i8:$rd, imm:$k)]>,
                Requires<[HasSRAM, HasNonTinyEncoding]>;
@@ -1058,7 +1059,7 @@ let mayStore = 1 in {
 // Expands to:
 // sts Rr+1, (K+1:K) + 1
 // sts Rr,   (K+1:K)
-let mayStore = 1 in
+let hasSideEffects = 0, mayStore = 1 in
 def STSWKRr : Pseudo<(outs), (ins i16imm:$dst, DREGS:$src),
                      "stsw\t$dst, $src", [(store i16:$src, imm:$dst)]>,
               Requires<[HasSRAM, HasNonTinyEncoding]>;
@@ -1066,7 +1067,7 @@ def STSWKRr : Pseudo<(outs), (ins i16imm:$dst, DREGS:$src),
 // Indirect stores.
 // ST P, Rr
 // Stores the value of Rr into the location addressed by pointer P.
-let mayStore = 1 in
+let hasSideEffects = 0, mayStore = 1 in
 def STPtrRr : FSTLD<1, 0b00, (outs), (ins PTRREGS:$ptrreg, GPR8:$reg),
                     "st\t$ptrreg, $reg", [(store GPR8:$reg, i16:$ptrreg)]>,
               Requires<[HasSRAM]>;
@@ -1081,14 +1082,14 @@ def STPtrRr : FSTLD<1, 0b00, (outs), (ins PTRREGS:$ptrreg, GPR8:$reg),
 //   st    P+, Rr
 //   st    P+, Rr+1
 //   subiw P,  q+2
-let mayStore = 1 in
+let hasSideEffects = 0, mayStore = 1 in
 def STWPtrRr : Pseudo<(outs), (ins PTRDISPREGS:$ptrreg, DREGS:$reg),
                       "stw\t$ptrreg, $reg", [(store i16:$reg, i16:$ptrreg)]>,
                Requires<[HasSRAM]>;
 
 // Indirect stores (with postincrement or predecrement).
-let mayStore = 1, Constraints = "$ptrreg = $base_wb,@earlyclobber $base_wb" in {
-
+let hasSideEffects = 0, mayStore = 1,
+    Constraints = "$ptrreg = $base_wb,@earlyclobber $base_wb" in {
   // ST P+, Rr
   // Stores the value of Rr into the location addressed by pointer P.
   // Post increments P.
@@ -1143,7 +1144,7 @@ let mayStore = 1, Constraints = "$ptrreg = $base_wb,@earlyclobber $base_wb" in {
 // STD P+q, Rr
 // Stores the value of Rr into the location addressed by pointer P with a
 // displacement of q. Does not modify P.
-let mayStore = 1 in
+let hasSideEffects = 0, mayStore = 1 in
 def STDPtrQRr : FSTDLDD<1, (outs), (ins memri:$memri, GPR8:$reg),
                         "std\t$memri, $reg", [(store i8:$reg, addr:$memri)]>,
                 Requires<[HasSRAM, HasNonTinyEncoding]>;
@@ -1160,7 +1161,7 @@ def STDPtrQRr : FSTDLDD<1, (outs), (ins memri:$memri, GPR8:$reg),
 //   st    P+, Rr
 //   st    P+, Rr+1
 //   subiw P,  q+2
-let mayStore = 1 in
+let hasSideEffects = 0, mayStore = 1 in
 def STDWPtrQRr : Pseudo<(outs), (ins memri:$memri, DREGS:$src),
                         "stdw\t$memri, $src", [(store i16:$src, addr:$memri)]>,
                  Requires<[HasSRAM]>;
@@ -1226,7 +1227,7 @@ let mayLoad = 1, hasSideEffects = 0 in {
   }
 
   // These pseudos are combination of the OUT and ELPM instructions.
-  let Defs = [R31R30], hasSideEffects = 1 in {
+  let Defs = [R31R30], mayStore = 1 in {
     def ELPMBRdZPi : Pseudo<(outs GPR8:$dst), (ins ZREG:$z, LD8:$p),
                             "elpmb\t$dst, $z+, $p", []>,
                      Requires<[HasELPMX]>;
@@ -1238,12 +1239,12 @@ let mayLoad = 1, hasSideEffects = 0 in {
 }
 
 // Store program memory operations.
-let Uses = [R1, R0], mayStore = 1 in {
+let Uses = [R1, R0], mayStore = 1, hasSideEffects = 0 in {
   let Uses = [R31R30] in
   def SPM : F16<0b1001010111101000, (outs), (ins), "spm", []>,
             Requires<[HasSPM]>;
 
-  let Defs = [R31R30] in 
+  let Defs = [R31R30] in
   def SPMZPi : F16<0b1001010111111000, (outs), (ins ZREG:$z), "spm $z+", []>,
                Requires<[HasSPMX]> {
     bits<0> z;
@@ -1251,7 +1252,7 @@ let Uses = [R1, R0], mayStore = 1 in {
 }
 
 // Read data from IO location operations.
-let mayLoad = 1 in {
+let hasSideEffects = 1, mayLoad = 1 in {
   def INRdA : FIORdA<(outs GPR8:$rd), (ins imm_port6:$A), "in\t$rd, $A",
                      [(set i8:$rd, (load ioaddr8:$A))]>;
 
@@ -1260,7 +1261,7 @@ let mayLoad = 1 in {
 }
 
 // Write data to IO location operations.
-let mayStore = 1 in {
+let hasSideEffects = 1, mayStore = 1 in {
   def OUTARr : FIOARr<(outs), (ins imm_port6:$A, GPR8:$rr), "out\t$A, $rr",
                       [(store i8:$rr, ioaddr8:$A)]>;
 
@@ -1291,7 +1292,7 @@ let Defs = [SP], Uses = [SP], hasSideEffects = 0 in {
 }
 
 // Read-Write-Modify (RMW) instructions.
-let mayLoad = 1, mayStore = 1 in {
+let hasSideEffects = 0, mayLoad = 1, mayStore = 1 in {
   def XCHZRd : FZRd<0b100, (outs GPR8:$rd), (ins ZREG:$z), "xch\t$z, $rd", []>,
                Requires<[SupportsRMW]>;
 
@@ -1310,7 +1311,7 @@ let mayLoad = 1, mayStore = 1 in {
 //===----------------------------------------------------------------------===//
 
 // Bit shift/rotate operations.
-let Constraints = "$src = $rd", Defs = [SREG] in {
+let hasSideEffects = 0, Constraints = "$src = $rd", Defs = [SREG] in {
   // 8-bit LSL is an alias of ADD Rd, Rd
 
   def LSLWRd : Pseudo<(outs DREGS:$rd), (ins DREGS:$src), "lslw\t$rd",
@@ -1389,14 +1390,14 @@ let Constraints = "$src = $rd", Defs = [SREG] in {
 
 // SWAP Rd
 // Swaps the high and low nibbles in a register.
-let Constraints = "$src = $rd" in
+let hasSideEffects = 0, Constraints = "$src = $rd" in
 def SWAPRd : FRd<0b1001, 0b0100010, (outs GPR8:$rd), (ins GPR8:$src),
                  "swap\t$rd", [(set i8:$rd, (AVRSwap i8:$src))]>;
 
 // IO register bit set/clear operations.
 //: TODO: add patterns when popcount(imm)==2 to be expanded with 2 sbi/cbi
 // instead of in+ori+out which requires one more instr.
-let mayStore = 1 in {
+let hasSideEffects = 1, mayStore = 1 in {
   def SBIAb : FIOBIT<0b10, (outs), (ins imm_port5:$addr, i8imm:$b),
                      "sbi\t$addr, $b",
                      [(store(or(i8(load lowioaddr8:$addr)), iobitpos8:$b),
@@ -1483,6 +1484,7 @@ def : InstAlias<"cli", (BCLRs 7)>;
 // Breakpoint instruction
 // ---------
 // <|1001|0101|1001|1000>
+let hasSideEffects = 1 in
 def BREAK : F16<0b1001010110011000, (outs), (ins), "break", []>,
             Requires<[HasBREAK]>;
 
@@ -1490,18 +1492,22 @@ def BREAK : F16<0b1001010110011000, (outs), (ins), "break", []>,
 // No-operation instruction
 // ---------
 // <|0000|0000|0000|0000>
+// Set `hasSideEffects = 1` in case it is considered dead.
+let hasSideEffects = 1 in
 def NOP : F16<0b0000000000000000, (outs), (ins), "nop", []>;
 
 // SLEEP
 // Sleep instruction
 // ---------
 // <|1001|0101|1000|1000>
+let hasSideEffects = 1 in
 def SLEEP : F16<0b1001010110001000, (outs), (ins), "sleep", []>;
 
 // WDR
 // Watchdog reset
 // ---------
 // <|1001|0101|1010|1000>
+let hasSideEffects = 1 in
 def WDR : F16<0b1001010110101000, (outs), (ins), "wdr", []>;
 
 //===----------------------------------------------------------------------===//
@@ -1625,7 +1631,7 @@ def Asr32 : ShiftPseudo<(outs DREGS:$dstlo, DREGS:$dsthi),
                           (AVRasrw i16:$srclo, i16:$srchi, i8:$cnt))]>;
 
 // lowered to a copy from the zero register.
-let usesCustomInserter=1 in
+let usesCustomInserter = 1, hasSideEffects = 0 in
 def CopyZero : Pseudo<(outs GPR8:$rd), (ins), "clrz\t$rd", [(set i8:$rd, 0)]>;
 
 //===----------------------------------------------------------------------===//
