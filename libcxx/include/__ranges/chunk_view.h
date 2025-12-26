@@ -128,11 +128,12 @@ public:
   _LIBCPP_HIDE_FROM_ABI __outer_iterator& operator=(__outer_iterator&&) = default;
 
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr value_type operator*() const {
-    _LIBCPP_ASSERT_PEDANTIC(*this != default_sentinel, "Trying to dereference past-the-end chunk_view iterator.");
+    _LIBCPP_ASSERT_PEDANTIC(*this != default_sentinel, "Trying to dereference past-the-end chunk_view iterator");
     return value_type(*__parent_);
   }
 
   _LIBCPP_HIDE_FROM_ABI constexpr __outer_iterator& operator++() {
+    _LIBCPP_ASSERT_PEDANTIC(*this != default_sentinel, "Trying to increment past-the-end chunk_view iterator");
     ranges::advance(*__parent_->__current_, __parent_->__remainder_, ranges::end(__parent_->__base_));
     __parent_->__remainder_ = __parent_->__n_;
     return *this;
@@ -214,6 +215,7 @@ public:
   }
 
   _LIBCPP_HIDE_FROM_ABI constexpr __inner_iterator& operator++() {
+    _LIBCPP_ASSERT_PEDANTIC(*this != default_sentinel, "Trying to increment past-the-end chunk_view iterator");
     ++*__parent_->__current_;
     if (*__parent_->__current_ == ranges::end(__parent_->__base_))
       __parent_->__remainder_ = 0;
@@ -386,7 +388,7 @@ public:
   }
 
   _LIBCPP_HIDE_FROM_ABI constexpr __iterator& operator++() {
-    _LIBCPP_ASSERT_PEDANTIC(__current_ != __end_, "Trying to advance past-the-end chunk_view iterator");
+    _LIBCPP_ASSERT_PEDANTIC(__current_ != __end_, "Trying to increment past-the-end chunk_view iterator");
     __missing_ = ranges::advance(__current_, __n_, __end_);
     return *this;
   }
