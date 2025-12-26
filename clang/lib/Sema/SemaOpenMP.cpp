@@ -6366,11 +6366,12 @@ StmtResult SemaOpenMP::ActOnOpenMPExecutableDirective(
         ArrayRef<Expr *> Exprs = ImplicitExprs;
         CXXScopeSpec MapperIdScopeSpec;
         DeclarationNameInfo MapperId;
+        OMPVarListLocTy Locs(StartLoc, StartLoc, StartLoc);
         if (OMPClause *Implicit = ActOnOpenMPMapClause(
                 nullptr, OMPC_MAP_MODIFIER_unknown, SourceLocation(),
                 MapperIdScopeSpec, MapperId, OMPC_MAP_tofrom,
                 /*IsMapTypeImplicit=*/true, SourceLocation(), SourceLocation(),
-                Exprs, OMPVarListLocTy(), /*NoDiagnose=*/true))
+                Exprs, Locs, /*NoDiagnose=*/true))
           ClausesWithImplicit.emplace_back(Implicit);
       }
     }
@@ -6383,12 +6384,12 @@ StmtResult SemaOpenMP::ActOnOpenMPExecutableDirective(
           continue;
         CXXScopeSpec MapperIdScopeSpec;
         DeclarationNameInfo MapperId;
+        OMPVarListLocTy Locs(StartLoc, StartLoc, StartLoc);
         auto K = static_cast<OpenMPMapClauseKind>(ClauseKindCnt);
         if (OMPClause *Implicit = ActOnOpenMPMapClause(
                 nullptr, ImpInfo.MapModifiers[I], ImplicitMapModifiersLoc[I],
                 MapperIdScopeSpec, MapperId, K, /*IsMapTypeImplicit=*/true,
-                SourceLocation(), SourceLocation(), ImplicitMap,
-                OMPVarListLocTy())) {
+                SourceLocation(), SourceLocation(), ImplicitMap, Locs)) {
           ClausesWithImplicit.emplace_back(Implicit);
           ErrorFound |= cast<OMPMapClause>(Implicit)->varlist_size() !=
                         ImplicitMap.size();
