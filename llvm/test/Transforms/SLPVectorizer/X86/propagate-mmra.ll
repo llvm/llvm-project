@@ -5,9 +5,9 @@ define void @foo() {
 ; CHECK-LABEL: define void @foo() {
 ; CHECK-NEXT:  [[_PREHEADER16_PREHEADER:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr null, align 4, !mmra [[META0:![0-9]+]]
-; CHECK-NEXT:    [[TMP2:%.*]] = fmul float [[TMP0]], 0.000000e+00
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> poison, float [[TMP0]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x float> [[TMP1]], float [[TMP2]], i32 1
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x float> [[TMP1]], <2 x float> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = fmul <2 x float> [[TMP2]], <float 1.000000e+00, float 0.000000e+00>
 ; CHECK-NEXT:    [[TMP4:%.*]] = fadd <2 x float> [[TMP3]], zeroinitializer
 ; CHECK-NEXT:    [[TMP5:%.*]] = select <2 x i1> zeroinitializer, <2 x float> [[TMP4]], <2 x float> zeroinitializer
 ; CHECK-NEXT:    store <2 x float> [[TMP5]], ptr null, align 16

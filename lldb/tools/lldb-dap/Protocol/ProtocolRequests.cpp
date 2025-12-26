@@ -802,4 +802,22 @@ bool fromJSON(const llvm::json::Value &Params, RestartArguments &Args,
   return false;
 }
 
+bool fromJSON(const llvm::json::Value &Params, StackTraceArguments &Args,
+              llvm::json::Path Path) {
+  json::ObjectMapper O(Params, Path);
+  return O && O.map("threadId", Args.threadId) &&
+         O.mapOptional("startFrame", Args.startFrame) &&
+         O.mapOptional("levels", Args.levels) &&
+         O.mapOptional("format", Args.format);
+}
+
+llvm::json::Value toJSON(const StackTraceResponseBody &Body) {
+  json::Object result{{"stackFrames", Body.stackFrames}};
+
+  if (Body.totalFrames)
+    result.insert({"totalFrames", Body.totalFrames});
+
+  return result;
+}
+
 } // namespace lldb_dap::protocol
