@@ -51,17 +51,17 @@ define i1 @select_exit_cond(ptr %start, ptr %end, i64 %N) {
 ; CHECK-NEXT:    [[STEP_ADD_10:%.*]] = add <2 x i64> [[STEP_ADD_9]], splat (i64 2)
 ; CHECK-NEXT:    [[STEP_ADD_11:%.*]] = add <2 x i64> [[STEP_ADD_10]], splat (i64 2)
 ; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[START]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i32 2
-; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i32 4
-; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i32 6
-; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i32 8
-; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i32 10
-; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i32 12
-; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i32 14
-; CHECK-NEXT:    [[TMP68:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i32 16
-; CHECK-NEXT:    [[TMP69:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i32 18
-; CHECK-NEXT:    [[TMP70:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i32 20
-; CHECK-NEXT:    [[TMP71:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i32 22
+; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i64 2
+; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i64 4
+; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i64 6
+; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i64 8
+; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i64 10
+; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i64 12
+; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i64 14
+; CHECK-NEXT:    [[TMP68:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i64 16
+; CHECK-NEXT:    [[TMP69:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i64 18
+; CHECK-NEXT:    [[TMP70:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i64 20
+; CHECK-NEXT:    [[TMP71:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i64 22
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i8>, ptr [[NEXT_GEP]], align 1
 ; CHECK-NEXT:    [[WIDE_LOAD25:%.*]] = load <2 x i8>, ptr [[TMP12]], align 1
 ; CHECK-NEXT:    [[WIDE_LOAD26:%.*]] = load <2 x i8>, ptr [[TMP13]], align 1
@@ -193,6 +193,7 @@ define i1 @select_exit_cond(ptr %start, ptr %end, i64 %N) {
 ; CHECK-NEXT:    [[CMP_I166_I:%.*]] = icmp ult ptr [[PTR_IV]], [[END]]
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp ne i64 [[IV]], [[N]]
 ; CHECK-NEXT:    [[AND:%.*]] = select i1 [[CMP_I166_I]], i1 [[CMP2]], i1 false
+; CHECK-NEXT:    br i1 [[AND]], label %[[LOOP]], label %[[EXIT]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    [[RED_NEXT_LCSSA:%.*]] = phi i64 [ [[RED_NEXT]], %[[LOOP]] ], [ [[TMP52]], %[[MIDDLE_BLOCK]] ], [ [[TMP55]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    [[RES:%.*]] = icmp eq i64 [[RED_NEXT_LCSSA]], 0
@@ -226,4 +227,6 @@ exit:
 ; CHECK: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
 ; CHECK: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
 ; CHECK: [[PROF3]] = !{!"branch_weights", i32 2, i32 22}
+; CHECK: [[LOOP4]] = distinct !{[[LOOP4]], [[META1]], [[META2]]}
+; CHECK: [[LOOP5]] = distinct !{[[LOOP5]], [[META2]], [[META1]]}
 ;.

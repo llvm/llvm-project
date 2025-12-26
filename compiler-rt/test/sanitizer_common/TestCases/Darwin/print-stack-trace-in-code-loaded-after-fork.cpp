@@ -6,6 +6,8 @@
 // rdar://problem/61793759 and rdar://problem/62126022.
 // UNSUPPORTED: lsan
 
+// XFAIL: iossim
+
 #include <stdio.h>
 
 #ifdef SHARED_LIB

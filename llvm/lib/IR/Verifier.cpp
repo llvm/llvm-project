@@ -190,6 +190,9 @@ private:
     case DbgVariableRecord::LocationType::Declare:
       *OS << "declare";
       break;
+    case DbgVariableRecord::LocationType::DeclareValue:
+      *OS << "declare_value";
+      break;
     case DbgVariableRecord::LocationType::Assign:
       *OS << "assign";
       break;
@@ -1158,6 +1161,7 @@ void Verifier::visitMetadataAsValue(const MetadataAsValue &MDV, Function *F) {
 static bool isType(const Metadata *MD) { return !MD || isa<DIType>(MD); }
 static bool isScope(const Metadata *MD) { return !MD || isa<DIScope>(MD); }
 static bool isDINode(const Metadata *MD) { return !MD || isa<DINode>(MD); }
+static bool isMDTuple(const Metadata *MD) { return !MD || isa<MDTuple>(MD); }
 
 void Verifier::visitDILocation(const DILocation &N) {
   CheckDI(N.getRawScope() && isa<DILocalScope>(N.getRawScope()),
@@ -1183,13 +1187,17 @@ void Verifier::visitDISubrangeType(const DISubrangeType &N) {
   CheckDI(!BaseType || isType(BaseType), "BaseType must be a type");
   auto *LBound = N.getRawLowerBound();
   CheckDI(!LBound || isa<ConstantAsMetadata>(LBound) ||
-              isa<DIVariable>(LBound) || isa<DIExpression>(LBound),
-          "LowerBound must be signed constant or DIVariable or DIExpression",
+              isa<DIVariable>(LBound) || isa<DIExpression>(LBound) ||
+              isa<DIDerivedType>(LBound),
+          "LowerBound must be signed constant or DIVariable or DIExpression or "
+          "DIDerivedType",
           &N);
   auto *UBound = N.getRawUpperBound();
   CheckDI(!UBound || isa<ConstantAsMetadata>(UBound) ||
-              isa<DIVariable>(UBound) || isa<DIExpression>(UBound),
-          "UpperBound must be signed constant or DIVariable or DIExpression",
+              isa<DIVariable>(UBound) || isa<DIExpression>(UBound) ||
+              isa<DIDerivedType>(UBound),
+          "UpperBound must be signed constant or DIVariable or DIExpression or "
+          "DIDerivedType",
           &N);
   auto *Stride = N.getRawStride();
   CheckDI(!Stride || isa<ConstantAsMetadata>(Stride) ||
@@ -1320,6 +1328,30 @@ void Verifier::visitDIDerivedType(const DIDerivedType &N) {
   if (N.getTag() == dwarf::DW_TAG_ptr_to_member_type) {
     CheckDI(isType(N.getRawExtraData()), "invalid pointer to member type", &N,
             N.getRawExtraData());
+  } else if (N.getTag() == dwarf::DW_TAG_template_alias) {
+    CheckDI(isMDTuple(N.getRawExtraData()), "invalid template parameters", &N,
+            N.getRawExtraData());
+  } else if (N.getTag() == dwarf::DW_TAG_inheritance ||
+             N.getTag() == dwarf::DW_TAG_member ||
+             N.getTag() == dwarf::DW_TAG_variable) {
+    auto *ExtraData = N.getRawExtraData();
+    auto IsValidExtraData = [&]() {
+      if (ExtraData == nullptr)
+        return true;
+      if (isa<ConstantAsMetadata>(ExtraData) || isa<MDString>(ExtraData) ||
+          isa<DIObjCProperty>(ExtraData))
+        return true;
+      if (auto *Tuple = dyn_cast<MDTuple>(ExtraData)) {
+        if (Tuple->getNumOperands() != 1)
+          return false;
+        return isa_and_nonnull<ConstantAsMetadata>(Tuple->getOperand(0).get());
+      }
+      return false;
+    };
+    CheckDI(IsValidExtraData(),
+            "extraData must be ConstantAsMetadata, MDString, DIObjCProperty, "
+            "or MDTuple with single ConstantAsMetadata operand",
+            &N, ExtraData);
   }
 
   if (N.getTag() == dwarf::DW_TAG_set_type) {
@@ -1559,11 +1591,27 @@ void Verifier::visitDISubprogram(const DISubprogram &N) {
     auto *Node = dyn_cast<MDTuple>(RawNode);
     CheckDI(Node, "invalid retained nodes list", &N, RawNode);
     for (Metadata *Op : Node->operands()) {
-      CheckDI(Op && (isa<DILocalVariable>(Op) || isa<DILabel>(Op) ||
-                     isa<DIImportedEntity>(Op)),
+      CheckDI(Op, "nullptr in retained nodes", &N, Node);
+
+      auto True = [](const Metadata *) { return true; };
+      auto False = [](const Metadata *) { return false; };
+      bool IsTypeCorrect =
+          DISubprogram::visitRetainedNode<bool>(Op, True, True, True, False);
+      CheckDI(IsTypeCorrect,
               "invalid retained nodes, expected DILocalVariable, DILabel or "
               "DIImportedEntity",
               &N, Node, Op);
+
+      auto *RetainedNode = cast<DINode>(Op);
+      auto *RetainedNodeScope = dyn_cast_or_null<DILocalScope>(
+          DISubprogram::getRawRetainedNodeScope(RetainedNode));
+      CheckDI(RetainedNodeScope,
+              "invalid retained nodes, retained node is not local", &N, Node,
+              RetainedNode);
+      CheckDI(
+          RetainedNodeScope->getSubprogram() == &N,
+          "invalid retained nodes, retained node does not belong to subprogram",
+          &N, Node, RetainedNode, RetainedNodeScope);
     }
   }
   CheckDI(!hasConflictingReferenceFlags(N.getFlags()),
@@ -2480,7 +2528,8 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
 
   if (Attribute FPAttr = Attrs.getFnAttr("frame-pointer"); FPAttr.isValid()) {
     StringRef FP = FPAttr.getValueAsString();
-    if (FP != "all" && FP != "non-leaf" && FP != "none" && FP != "reserved")
+    if (FP != "all" && FP != "non-leaf" && FP != "none" && FP != "reserved" &&
+        FP != "non-leaf-no-reserve")
       CheckFailed("invalid value for 'frame-pointer' attribute: " + FP, V);
   }
 
@@ -2550,6 +2599,20 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
       CheckFailed("invalid value for 'denormal-fp-math-f32' attribute: " + S,
                   V);
   }
+
+  if (auto A = Attrs.getFnAttr("modular-format"); A.isValid()) {
+    StringRef S = A.getValueAsString();
+    SmallVector<StringRef> Args;
+    S.split(Args, ',');
+    Check(Args.size() >= 5,
+          "modular-format attribute requires at least 5 arguments", V);
+    unsigned FirstArgIdx;
+    Check(!Args[2].getAsInteger(10, FirstArgIdx),
+          "modular-format attribute first arg index is not an integer", V);
+    unsigned UpperBound = FT->getNumParams() + (FT->isVarArg() ? 1 : 0);
+    Check(FirstArgIdx > 0 && FirstArgIdx <= UpperBound,
+          "modular-format attribute first arg index is out of bounds", V);
+  }
 }
 void Verifier::verifyUnknownProfileMetadata(MDNode *MD) {
   Check(MD->getNumOperands() == 2,
@@ -2613,6 +2676,9 @@ void Verifier::verifyFunctionMetadata(
 }
 
 void Verifier::visitConstantExprsRecursively(const Constant *EntryC) {
+  if (EntryC->getNumOperands() == 0)
+    return;
+
   if (!ConstantExprVisited.insert(EntryC).second)
     return;
 
@@ -2673,6 +2739,14 @@ void Verifier::visitConstantPtrAuth(const ConstantPtrAuth *CPA) {
 
   Check(CPA->getDiscriminator()->getBitWidth() == 64,
         "signed ptrauth constant discriminator must be i64 constant integer");
+
+  Check(CPA->getDeactivationSymbol()->getType()->isPointerTy(),
+        "signed ptrauth constant deactivation symbol must be a pointer");
+
+  Check(isa<GlobalValue>(CPA->getDeactivationSymbol()) ||
+            CPA->getDeactivationSymbol()->isNullValue(),
+        "signed ptrauth constant deactivation symbol must be a global value "
+        "or null");
 }
 
 bool Verifier::verifyAttributeCount(AttributeList Attrs, unsigned Params) {
@@ -3353,7 +3427,7 @@ void Verifier::visitSwitchInst(SwitchInst &SI) {
   Type *SwitchTy = SI.getCondition()->getType();
   SmallPtrSet<ConstantInt*, 32> Constants;
   for (auto &Case : SI.cases()) {
-    Check(isa<ConstantInt>(SI.getOperand(Case.getCaseIndex() * 2 + 2)),
+    Check(isa<ConstantInt>(Case.getCaseValue()),
           "Case value is not a constant integer.", &SI);
     Check(Case.getCaseValue()->getType() == SwitchTy,
           "Switch constants must all be same type as switch value!", &SI);
@@ -3375,11 +3449,34 @@ void Verifier::visitIndirectBrInst(IndirectBrInst &BI) {
 }
 
 void Verifier::visitCallBrInst(CallBrInst &CBI) {
-  Check(CBI.isInlineAsm(), "Callbr is currently only used for asm-goto!", &CBI);
-  const InlineAsm *IA = cast<InlineAsm>(CBI.getCalledOperand());
-  Check(!IA->canThrow(), "Unwinding from Callbr is not allowed");
+  if (!CBI.isInlineAsm()) {
+    Check(CBI.getCalledFunction(),
+          "Callbr: indirect function / invalid signature");
+    Check(!CBI.hasOperandBundles(),
+          "Callbr for intrinsics currently doesn't support operand bundles");
 
-  verifyInlineAsmCall(CBI);
+    switch (CBI.getIntrinsicID()) {
+    case Intrinsic::amdgcn_kill: {
+      Check(CBI.getNumIndirectDests() == 1,
+            "Callbr amdgcn_kill only supports one indirect dest");
+      bool Unreachable = isa<UnreachableInst>(CBI.getIndirectDest(0)->begin());
+      CallInst *Call = dyn_cast<CallInst>(CBI.getIndirectDest(0)->begin());
+      Check(Unreachable || (Call && Call->getIntrinsicID() ==
+                                        Intrinsic::amdgcn_unreachable),
+            "Callbr amdgcn_kill indirect dest needs to be unreachable");
+      break;
+    }
+    default:
+      CheckFailed(
+          "Callbr currently only supports asm-goto and selected intrinsics");
+    }
+    visitIntrinsicCall(CBI.getIntrinsicID(), CBI);
+  } else {
+    const InlineAsm *IA = cast<InlineAsm>(CBI.getCalledOperand());
+    Check(!IA->canThrow(), "Unwinding from Callbr is not allowed");
+
+    verifyInlineAsmCall(CBI);
+  }
   visitTerminator(CBI);
 }
 
@@ -5475,7 +5572,7 @@ void Verifier::visitInstruction(Instruction &I) {
              (CBI && &CBI->getCalledOperandUse() == &I.getOperandUse(i)) ||
              IsAttachedCallOperand(F, CBI, i)),
             "Cannot take the address of an intrinsic!", &I);
-      Check(!F->isIntrinsic() || isa<CallInst>(I) ||
+      Check(!F->isIntrinsic() || isa<CallInst>(I) || isa<CallBrInst>(I) ||
                 F->getIntrinsicID() == Intrinsic::donothing ||
                 F->getIntrinsicID() == Intrinsic::seh_try_begin ||
                 F->getIntrinsicID() == Intrinsic::seh_try_end ||
@@ -5516,14 +5613,8 @@ void Verifier::visitInstruction(Instruction &I) {
     } else if (isa<InlineAsm>(I.getOperand(i))) {
       Check(CBI && &CBI->getCalledOperandUse() == &I.getOperandUse(i),
             "Cannot take the address of an inline asm!", &I);
-    } else if (auto *CPA = dyn_cast<ConstantPtrAuth>(I.getOperand(i))) {
-      visitConstantExprsRecursively(CPA);
-    } else if (ConstantExpr *CE = dyn_cast<ConstantExpr>(I.getOperand(i))) {
-      if (CE->getType()->isPtrOrPtrVectorTy()) {
-        // If we have a ConstantExpr pointer, we need to see if it came from an
-        // illegal bitcast.
-        visitConstantExprsRecursively(CE);
-      }
+    } else if (auto *C = dyn_cast<Constant>(I.getOperand(i))) {
+      visitConstantExprsRecursively(C);
     }
   }
 
@@ -6476,7 +6567,8 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     VectorType *VecTy = cast<VectorType>(Call.getType());
     int64_t Idx = cast<ConstantInt>(Call.getArgOperand(2))->getSExtValue();
     int64_t KnownMinNumElements = VecTy->getElementCount().getKnownMinValue();
-    if (Call.getParent() && Call.getParent()->getParent()) {
+    if (VecTy->isScalableTy() && Call.getParent() &&
+        Call.getParent()->getParent()) {
       AttributeList Attrs = Call.getParent()->getParent()->getAttributes();
       if (Attrs.hasFnAttr(Attribute::VScaleRange))
         KnownMinNumElements *= Attrs.getFnAttrs().getVScaleRangeMin();
@@ -6666,11 +6758,15 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     case CallingConv::AMDGPU_CS:
     case CallingConv::AMDGPU_CS_Chain:
     case CallingConv::AMDGPU_CS_ChainPreserve:
+    case CallingConv::AMDGPU_ES:
+    case CallingConv::AMDGPU_GS:
+    case CallingConv::AMDGPU_HS:
+    case CallingConv::AMDGPU_LS:
+    case CallingConv::AMDGPU_VS:
       break;
     default:
-      CheckFailed("Intrinsic can only be used from functions with the "
-                  "amdgpu_cs, amdgpu_cs_chain or amdgpu_cs_chain_preserve "
-                  "calling conventions",
+      CheckFailed("Intrinsic cannot be called from functions with this "
+                  "calling convention",
                   &Call);
       break;
     }
@@ -7027,6 +7123,7 @@ void Verifier::visit(DbgVariableRecord &DVR) {
 
   CheckDI(DVR.getType() == DbgVariableRecord::LocationType::Value ||
               DVR.getType() == DbgVariableRecord::LocationType::Declare ||
+              DVR.getType() == DbgVariableRecord::LocationType::DeclareValue ||
               DVR.getType() == DbgVariableRecord::LocationType::Assign,
           "invalid #dbg record type", &DVR, DVR.getType(), BB, F);
 

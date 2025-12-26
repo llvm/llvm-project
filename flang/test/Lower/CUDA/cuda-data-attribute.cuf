@@ -54,28 +54,28 @@ subroutine dummy_arg_device(dd)
 end subroutine
 ! CHECK-LABEL: func.func @_QMcuda_varPdummy_arg_device(
 ! CHECK-SAME: %[[ARG0:.*]]: !fir.ref<f32> {cuf.data_attr = #cuf.cuda<device>, fir.bindc_name = "dd"}) {
-! CHECK: %{{.*}}:2 = hlfir.declare %[[ARG0]] dummy_scope %{{[0-9]+}} {data_attr = #cuf.cuda<device>, uniq_name = "_QMcuda_varFdummy_arg_deviceEdd"} : (!fir.ref<f32>, !fir.dscope) -> (!fir.ref<f32>, !fir.ref<f32>)
+! CHECK: %{{.*}}:2 = hlfir.declare %[[ARG0]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {data_attr = #cuf.cuda<device>, uniq_name = "_QMcuda_varFdummy_arg_deviceEdd"} : (!fir.ref<f32>, !fir.dscope) -> (!fir.ref<f32>, !fir.ref<f32>)
 
 subroutine dummy_arg_managed(dm)
   real, allocatable, managed :: dm
 end subroutine
 ! CHECK-LABEL: func.func @_QMcuda_varPdummy_arg_managed(
 ! CHECK-SAME: %[[ARG0:.*]]: !fir.ref<!fir.box<!fir.heap<f32>>> {cuf.data_attr = #cuf.cuda<managed>, fir.bindc_name = "dm"}) {
-! CHECK: %{{.*}}:2 = hlfir.declare %[[ARG0]] dummy_scope %{{[0-9]+}} {data_attr = #cuf.cuda<managed>, fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QMcuda_varFdummy_arg_managedEdm"} : (!fir.ref<!fir.box<!fir.heap<f32>>>, !fir.dscope) -> (!fir.ref<!fir.box<!fir.heap<f32>>>, !fir.ref<!fir.box<!fir.heap<f32>>>)
+! CHECK: %{{.*}}:2 = hlfir.declare %[[ARG0]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {data_attr = #cuf.cuda<managed>, fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QMcuda_varFdummy_arg_managedEdm"} : (!fir.ref<!fir.box<!fir.heap<f32>>>, !fir.dscope) -> (!fir.ref<!fir.box<!fir.heap<f32>>>, !fir.ref<!fir.box<!fir.heap<f32>>>)
 
 subroutine dummy_arg_pinned(dp)
   real, allocatable, pinned :: dp
 end subroutine
 ! CHECK-LABEL: func.func @_QMcuda_varPdummy_arg_pinned(
 ! CHECK-SAME: %[[ARG0:.*]]: !fir.ref<!fir.box<!fir.heap<f32>>> {cuf.data_attr = #cuf.cuda<pinned>, fir.bindc_name = "dp"}) {
-! CHECK: %{{.*}}:2 = hlfir.declare %[[ARG0]] dummy_scope %{{[0-9]+}} {data_attr = #cuf.cuda<pinned>, fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QMcuda_varFdummy_arg_pinnedEdp"} : (!fir.ref<!fir.box<!fir.heap<f32>>>, !fir.dscope) -> (!fir.ref<!fir.box<!fir.heap<f32>>>, !fir.ref<!fir.box<!fir.heap<f32>>>)
+! CHECK: %{{.*}}:2 = hlfir.declare %[[ARG0]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {data_attr = #cuf.cuda<pinned>, fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QMcuda_varFdummy_arg_pinnedEdp"} : (!fir.ref<!fir.box<!fir.heap<f32>>>, !fir.dscope) -> (!fir.ref<!fir.box<!fir.heap<f32>>>, !fir.ref<!fir.box<!fir.heap<f32>>>)
 
 subroutine dummy_arg_unified(du)
   real, unified :: du
 end subroutine
 ! CHECK-LABEL: func.func @_QMcuda_varPdummy_arg_unified(
 ! CHECK-SAME: %[[ARG0:.*]]: !fir.ref<f32> {cuf.data_attr = #cuf.cuda<unified>, fir.bindc_name = "du"})
-! CHECK: %{{.*}}:2 = hlfir.declare %[[ARG0]] dummy_scope %{{[0-9]+}} {data_attr = #cuf.cuda<unified>, uniq_name = "_QMcuda_varFdummy_arg_unifiedEdu"} : (!fir.ref<f32>, !fir.dscope) -> (!fir.ref<f32>, !fir.ref<f32>)
+! CHECK: %{{.*}}:2 = hlfir.declare %[[ARG0]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {data_attr = #cuf.cuda<unified>, uniq_name = "_QMcuda_varFdummy_arg_unifiedEdu"} : (!fir.ref<f32>, !fir.dscope) -> (!fir.ref<f32>, !fir.ref<f32>)
 
 subroutine cuda_alloc_free(n)
   integer :: n

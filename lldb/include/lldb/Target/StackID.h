@@ -52,6 +52,7 @@ public:
 
 protected:
   friend class StackFrame;
+  friend class SyntheticStackFrameList;
 
   void SetPC(lldb::addr_t pc, Process *process);
   void SetCFA(lldb::addr_t cfa, Process *process);

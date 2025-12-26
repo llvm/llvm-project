@@ -31,8 +31,6 @@
 #include <__type_traits/is_implicitly_default_constructible.h>
 #include <__type_traits/is_nothrow_assignable.h>
 #include <__type_traits/is_nothrow_constructible.h>
-#include <__type_traits/is_replaceable.h>
-#include <__type_traits/is_same.h>
 #include <__type_traits/is_swappable.h>
 #include <__type_traits/is_trivially_relocatable.h>
 #include <__type_traits/nat.h>
@@ -102,7 +100,6 @@ struct pair
       __conditional_t<__libcpp_is_trivially_relocatable<_T1>::value && __libcpp_is_trivially_relocatable<_T2>::value,
                       pair,
                       void>;
-  using __replaceable _LIBCPP_NODEBUG = __conditional_t<__is_replaceable_v<_T1> && __is_replaceable_v<_T2>, pair, void>;
 
   _LIBCPP_HIDE_FROM_ABI pair(pair const&) = default;
   _LIBCPP_HIDE_FROM_ABI pair(pair&&)      = default;
@@ -222,11 +219,7 @@ struct pair
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
   pair(piecewise_construct_t __pc, tuple<_Args1...> __first_args, tuple<_Args2...> __second_args) noexcept(
       is_nothrow_constructible<first_type, _Args1...>::value && is_nothrow_constructible<second_type, _Args2...>::value)
-      : pair(__pc,
-             __first_args,
-             __second_args,
-             __make_index_sequence<sizeof...(_Args1)>(),
-             __make_index_sequence<sizeof...(_Args2)>()) {}
+      : pair(__pc, __first_args, __second_args, __index_sequence_for<_Args1...>(), __index_sequence_for<_Args2...>()) {}
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 pair&
   operator=(__conditional_t<is_copy_assignable<first_type>::value && is_copy_assignable<second_type>::value,

@@ -688,7 +688,7 @@ public:
             LiveElementPrinter &LEP) {
     if (SP && (PrintSource || PrintLines))
       SP->printSourceLine(OS, Address, ObjectFilename, LEP);
-    LEP.printStartLine(OS, Address);
+    LEP.printBoundaryLine(OS, Address, false);
     LEP.printBetweenInsts(OS, false);
 
     printRawData(Bytes, Address.Address, OS, STI);
@@ -941,7 +941,7 @@ public:
                  LiveElementPrinter &LEP) override {
     if (SP && (PrintSource || PrintLines))
       SP->printSourceLine(OS, Address, ObjectFilename, LEP);
-    LEP.printStartLine(OS, Address);
+    LEP.printBoundaryLine(OS, Address, false);
     LEP.printBetweenInsts(OS, false);
 
     size_t Start = OS.tell();
@@ -996,7 +996,7 @@ public:
                  LiveElementPrinter &LEP) override {
     if (SP && (PrintSource || PrintLines))
       SP->printSourceLine(OS, Address, ObjectFilename, LEP);
-    LEP.printStartLine(OS, Address);
+    LEP.printBoundaryLine(OS, Address, false);
     LEP.printBetweenInsts(OS, false);
 
     size_t Start = OS.tell();
@@ -1035,7 +1035,7 @@ public:
                  LiveElementPrinter &LEP) override {
     if (SP && (PrintSource || PrintLines))
       SP->printSourceLine(OS, Address, ObjectFilename, LEP);
-    LEP.printStartLine(OS, Address);
+    LEP.printBoundaryLine(OS, Address, false);
     LEP.printBetweenInsts(OS, false);
 
     size_t Start = OS.tell();
@@ -2601,7 +2601,7 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
 
         object::SectionedAddress NextAddr = {
             SectionAddr + Index + VMAAdjustment + Size, Section.getIndex()};
-        LEP.printEndLine(FOS, NextAddr);
+        LEP.printBoundaryLine(FOS, NextAddr, true);
 
         Index += Size;
       }

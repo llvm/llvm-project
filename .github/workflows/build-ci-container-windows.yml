@@ -25,7 +25,7 @@ jobs:
       container-filename: ${{ steps.vars.outputs.container-filename }}
     steps:
       - name: Checkout LLVM
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
         with:
           sparse-checkout: .github/workflows/containers/github-action-ci-windows
       - name: Write Variables
@@ -56,7 +56,7 @@ jobs:
       - build-ci-container-windows
     permissions:
       packages: write
-    runs-on: windows-2022
+    runs-on: ubuntu-24.04
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
@@ -66,8 +66,12 @@ jobs:
           name: container
       - name: Push Container
         run: |
-          docker load -i ${{ needs.build-ci-container-windows.outputs.container-filename }}
-          docker tag ${{ needs.build-ci-container-windows.outputs.container-name-tag }} ${{ needs.build-ci-container-windows.outputs.container-name }}:latest
-          docker login -u ${{ github.actor }} -p $env:GITHUB_TOKEN ghcr.io
-          docker push ${{ needs.build-ci-container-windows.outputs.container-name-tag }}
-          docker push ${{ needs.build-ci-container-windows.outputs.container-name }}:latest
+          sudo apt-get update
+          sudo apt-get install -y skopeo
+          skopeo login -u ${{ github.actor }} -p ${{ secrets.GITHUB_TOKEN }} ghcr.io
+          skopeo copy docker-archive:${{ needs.build-ci-container-windows.outputs.container-filename }} \
+            --dest-compress-format zstd \
+            docker://${{ needs.build-ci-container-windows.outputs.container-name-tag }}
+          skopeo copy docker-archive:${{ needs.build-ci-container-windows.outputs.container-filename }} \
+            --dest-compress-format zstd \
+            docker://${{ needs.build-ci-container-windows.outputs.container-name }}:latest

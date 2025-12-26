@@ -41,9 +41,8 @@ namespace tooling {
 /// non-modular way.
 class ExpandModularHeadersPPCallbacks : public PPCallbacks {
 public:
-  ExpandModularHeadersPPCallbacks(
-      CompilerInstance *CI,
-      IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFS);
+  ExpandModularHeadersPPCallbacks(CompilerInstance *CI,
+                                  llvm::vfs::OverlayFileSystem &OverlayFS);
   ~ExpandModularHeadersPPCallbacks() override;
 
   /// Returns the preprocessor that provides callbacks for the whole
@@ -138,7 +137,7 @@ private:
   std::unique_ptr<Preprocessor> PP;
   bool EnteredMainFile = false;
   bool StartedLexing = false;
-  Token CurrentToken;
+  Token CurrentToken = Token();
 };
 
 } // namespace tooling

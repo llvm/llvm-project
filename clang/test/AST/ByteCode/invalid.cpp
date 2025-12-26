@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -fcxx-exceptions -std=c++20 -fexperimental-new-constant-interpreter -verify=expected,both %s
-// RUN: %clang_cc1 -fcxx-exceptions -std=c++20                                         -verify=ref,both %s
+// RUN: %clang_cc1 -triple x86_64 -fcxx-exceptions -std=c++20 -fexperimental-new-constant-interpreter -verify=expected,both %s
+// RUN: %clang_cc1 -triple x86_64 -fcxx-exceptions -std=c++20                                         -verify=ref,both %s
 
 namespace Throw {
 
@@ -88,4 +88,38 @@ namespace InvalidBitCast {
                              // both-note {{in call to}}
 
 
+  struct sockaddr
+  {
+    char sa_data[8];
+  };
+  struct in_addr
+  {
+    unsigned int s_addr;
+  };
+  struct sockaddr_in
+  {
+    unsigned short int sin_port;
+    struct in_addr sin_addr;
+  };
+  /// Bitcast from sockaddr to sockaddr_in. Used to crash.
+  unsigned int get_addr(sockaddr addr) {
+      return ((sockaddr_in *)&addr)->sin_addr.s_addr;
+  }
+
+
+  struct s { int a; int b[1]; };
+  struct s myx;
+  int *myy = ((struct s *)&myx.a)->b;
+}
+
+namespace InvalidIntPtrRecord {
+  typedef __SIZE_TYPE__ Size_t;
+
+#define bufsize ((1LL << (8 * sizeof(Size_t) - 2)) - 256)
+
+  struct S {
+    short buf[bufsize]; // both-error {{array is too large}}
+    int a;
+  };
+  Size_t foo() { return (Size_t)(&((struct S *)0)->a); }
 }

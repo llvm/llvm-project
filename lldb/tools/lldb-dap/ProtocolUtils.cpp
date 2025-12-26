@@ -27,7 +27,7 @@ using namespace lldb_dap::protocol;
 namespace lldb_dap {
 
 static bool ShouldDisplayAssemblySource(
-    lldb::SBAddress address,
+    lldb::SBLineEntry line_entry,
     lldb::StopDisassemblyType stop_disassembly_display) {
   if (stop_disassembly_display == lldb::eStopDisassemblyTypeNever)
     return false;
@@ -37,7 +37,6 @@ static bool ShouldDisplayAssemblySource(
 
   // A line entry of 0 indicates the line is compiler generated i.e. no source
   // file is associated with the frame.
-  auto line_entry = address.GetLineEntry();
   auto file_spec = line_entry.GetFileSpec();
   if (!file_spec.IsValid() || line_entry.GetLine() == 0 ||
       line_entry.GetLine() == LLDB_INVALID_LINE_NUMBER)
@@ -174,10 +173,10 @@ bool IsAssemblySource(const protocol::Source &source) {
 }
 
 bool DisplayAssemblySource(lldb::SBDebugger &debugger,
-                           lldb::SBAddress address) {
+                           lldb::SBLineEntry line_entry) {
   const lldb::StopDisassemblyType stop_disassembly_display =
       GetStopDisassemblyDisplay(debugger);
-  return ShouldDisplayAssemblySource(address, stop_disassembly_display);
+  return ShouldDisplayAssemblySource(line_entry, stop_disassembly_display);
 }
 
 std::string GetLoadAddressString(const lldb::addr_t addr) {

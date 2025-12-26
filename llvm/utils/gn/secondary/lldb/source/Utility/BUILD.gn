@@ -21,7 +21,6 @@ static_library("Utility") {
     "DataEncoder.cpp",
     "DataExtractor.cpp",
     "Diagnostics.cpp",
-    "DiagnosticsRendering.cpp",
     "Environment.cpp",
     "ErrorMessages.cpp",
     "Event.cpp",
@@ -61,6 +60,7 @@ static_library("Utility") {
     "UserIDResolver.cpp",
     "VASprintf.cpp",
     "VMRange.cpp",
+    "VirtualDataExtractor.cpp",
     "XcodeSDK.cpp",
     "ZipFile.cpp",
   ]

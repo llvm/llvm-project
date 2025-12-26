@@ -29,8 +29,21 @@
 
 #define INADDR_ANY __LLVM_LIBC_CAST(static_cast, in_addr_t, 0x00000000)
 #define INADDR_BROADCAST __LLVM_LIBC_CAST(static_cast, in_addr_t, 0xffffffff)
+#define INADDR_NONE __LLVM_LIBC_CAST(static_cast, in_addr_t, 0xffffffff)
 
 #define INET_ADDRSTRLEN 16
 #define INET6_ADDRSTRLEN 46
+
+// The following macros test for special IPv6 addresses. Each macro is of type
+// int and takes a single argument of type const struct in6_addr *:
+// https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/netinet_in.h.html
+
+#define IN6_IS_ADDR_LINKLOCAL(a)                                               \
+  ((__LLVM_LIBC_CAST(reinterpret_cast, uint8_t *, a)[0]) == 0xfe &&            \
+   (__LLVM_LIBC_CAST(reinterpret_cast, uint8_t *, a)[1] & 0xc0) == 0x80)
+
+#define IN6_IS_ADDR_SITELOCAL(a)                                               \
+  ((__LLVM_LIBC_CAST(reinterpret_cast, uint8_t *, a)[0]) == 0xfe &&            \
+   (__LLVM_LIBC_CAST(reinterpret_cast, uint8_t *, a)[1] & 0xc0) == 0xc0)
 
 #endif // LLVM_LIBC_MACROS_NETINET_IN_MACROS_H

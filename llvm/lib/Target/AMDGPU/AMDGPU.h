@@ -298,6 +298,15 @@ private:
   bool GlobalOpt;
 };
 
+void initializeAMDGPULowerExecSyncLegacyPass(PassRegistry &);
+extern char &AMDGPULowerExecSyncLegacyPassID;
+ModulePass *createAMDGPULowerExecSyncLegacyPass();
+
+struct AMDGPULowerExecSyncPass : PassInfoMixin<AMDGPULowerExecSyncPass> {
+  AMDGPULowerExecSyncPass() {}
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+};
+
 void initializeAMDGPUSwLowerLDSLegacyPass(PassRegistry &);
 extern char &AMDGPUSwLowerLDSLegacyPassID;
 ModulePass *
@@ -527,7 +536,7 @@ void initializeAMDGPUAAWrapperPassPass(PassRegistry&);
 ImmutablePass *createAMDGPUExternalAAWrapperPass();
 void initializeAMDGPUExternalAAWrapperPass(PassRegistry&);
 
-void initializeAMDGPUArgumentUsageInfoPass(PassRegistry &);
+void initializeAMDGPUArgumentUsageInfoWrapperLegacyPass(PassRegistry &);
 
 ModulePass *createAMDGPUExportKernelRuntimeHandlesLegacyPass();
 void initializeAMDGPUExportKernelRuntimeHandlesLegacyPass(PassRegistry &);

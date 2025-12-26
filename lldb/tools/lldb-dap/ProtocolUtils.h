@@ -53,7 +53,8 @@ std::optional<protocol::Source> CreateSource(const lldb::SBFileSpec &file);
 /// Checks if the given source is for assembly code.
 bool IsAssemblySource(const protocol::Source &source);
 
-bool DisplayAssemblySource(lldb::SBDebugger &debugger, lldb::SBAddress address);
+bool DisplayAssemblySource(lldb::SBDebugger &debugger,
+                           lldb::SBLineEntry line_entry);
 
 /// Get the address as a 16-digit hex string, e.g. "0x0000000000012345"
 std::string GetLoadAddressString(const lldb::addr_t addr);

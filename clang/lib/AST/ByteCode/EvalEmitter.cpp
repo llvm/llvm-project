@@ -113,7 +113,7 @@ Scope::Local EvalEmitter::createLocal(Descriptor *D) {
   InlineDescriptor &Desc = *reinterpret_cast<InlineDescriptor *>(B->rawData());
   Desc.Desc = D;
   Desc.Offset = sizeof(InlineDescriptor);
-  Desc.IsActive = true;
+  Desc.IsActive = false;
   Desc.IsBase = false;
   Desc.IsFieldMutable = false;
   Desc.IsConst = false;
@@ -319,6 +319,33 @@ bool EvalEmitter::emitDestroy(uint32_t I, SourceInfo Info) {
     S.deallocate(B);
   }
 
+  return true;
+}
+
+bool EvalEmitter::emitGetLocalEnabled(uint32_t I, SourceInfo Info) {
+  if (!isActive())
+    return true;
+
+  Block *B = getLocal(I);
+  const InlineDescriptor &Desc =
+      *reinterpret_cast<InlineDescriptor *>(B->rawData());
+
+  S.Stk.push<bool>(Desc.IsActive);
+  return true;
+}
+
+bool EvalEmitter::emitEnableLocal(uint32_t I, SourceInfo Info) {
+  if (!isActive())
+    return true;
+
+  // FIXME: This is a little dirty, but to avoid adding a flag to
+  // InlineDescriptor that's only ever useful on the toplevel of local
+  // variables, we reuse the IsActive flag for the enabled state. We should
+  // probably use a different struct than InlineDescriptor for the block-level
+  // inline descriptor of local varaibles.
+  Block *B = getLocal(I);
+  InlineDescriptor &Desc = *reinterpret_cast<InlineDescriptor *>(B->rawData());
+  Desc.IsActive = true;
   return true;
 }
 

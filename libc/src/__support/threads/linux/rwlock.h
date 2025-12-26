@@ -35,7 +35,7 @@
 #endif
 
 #if LIBC_COPT_TIMEOUT_ENSURE_MONOTONICITY
-#include "src/__support/time/linux/monotonicity.h"
+#include "src/__support/time/monotonicity.h"
 #endif
 
 namespace LIBC_NAMESPACE_DECL {

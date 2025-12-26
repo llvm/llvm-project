@@ -34,8 +34,6 @@ entry:
   ret void
 }
 
-declare void @llvm.memset.p0.i32(ptr nocapture writeonly, i8, i32, i1)
-
 define void @test2(ptr nocapture %p) nounwind {
 ; RV32I-LABEL: test2:
 ; RV32I:       # %bb.0: # %entry
@@ -142,7 +140,6 @@ entry:
   ret void
 }
 
-
 define ptr @test3(ptr %p) nounwind {
 ; RV32I-LABEL: test3:
 ; RV32I:       # %bb.0: # %entry
@@ -214,10 +211,6 @@ entry:
   tail call void @llvm.memset.p0.i32(ptr align 4 %s, i8 -90, i32 64, i1 false)
   ret void
 }
-
-declare void @llvm.lifetime.start.p0(i64, ptr nocapture)
-
-declare void @llvm.lifetime.end.p0(i64, ptr nocapture)
 
 define void @test4b() nounwind {
 ; RV32I-LABEL: test4b:

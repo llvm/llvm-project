@@ -8,7 +8,6 @@
 
 #include "mlir/Dialect/Affine/Utils.h"
 #include "mlir/Dialect/Arith/Utils/Utils.h"
-#include "mlir/Dialect/Index/IR/IndexOps.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
 #include "mlir/Dialect/XeGPU/uArch/IntelGpuXe2.h"
@@ -61,7 +60,7 @@ genCoordinates(OpBuilder &builder, Location loc,
   // Get the offset of `subShape` within a distribution unit.
   SmallVector<Value> distUnitLocalOffset = llvm::map_to_vector(
       llvm::zip(delinearizedId, subShape), [&](const auto &t) -> Value {
-        return builder.createOrFold<index::MulOp>(
+        return builder.createOrFold<arith::MulIOp>(
             loc, std::get<0>(t),
             builder.createOrFold<arith::ConstantIndexOp>(loc, std::get<1>(t)));
       });
@@ -84,7 +83,7 @@ genCoordinates(OpBuilder &builder, Location loc,
     // Do not go beyond `srcShape` bounds.
     SmallVector<Value> mods = llvm::map_to_vector(
         llvm::zip_equal(adds, srcShape), [&](const auto &t) -> Value {
-          return builder.createOrFold<index::RemUOp>(
+          return builder.createOrFold<arith::RemUIOp>(
               loc, std::get<0>(t),
               arith::ConstantIndexOp::create(builder, loc, std::get<1>(t)));
         });
@@ -343,7 +342,7 @@ LayoutAttr::delinearizeId(OpBuilder &builder, Location loc, Value linearId) {
     /// e.g., linearId=22, dimSize=4: 22 % 4 = 2 (we're at position 2 within
     /// this dimension)
     result[dimIdx] =
-        builder.createOrFold<index::RemUOp>(loc, remaining, dimSizeVal);
+        builder.createOrFold<arith::RemUIOp>(loc, remaining, dimSizeVal);
 
     /// Update remaining for the next dimension by removing what we've already
     /// processed. Division tells us "how many complete groups of this dimension
@@ -352,7 +351,7 @@ LayoutAttr::delinearizeId(OpBuilder &builder, Location loc, Value linearId) {
     /// no next dimension to process
     if (i < order.size() - 1) {
       remaining =
-          builder.createOrFold<index::DivUOp>(loc, remaining, dimSizeVal);
+          builder.createOrFold<arith::DivUIOp>(loc, remaining, dimSizeVal);
     }
   }
   return result;
@@ -389,6 +388,86 @@ LayoutAttr::computeDistributedCoords(OpBuilder &builder, Location loc,
   SmallVector<Value> ids = *maybeIds;
 
   return genCoordinates(builder, loc, ids, layout, subShape, shape);
+}
+
+bool LayoutAttr::isEqualTo(const xegpu::DistributeLayoutAttr &other) {
+  if (dyn_cast<xegpu::SliceAttr>(other))
+    return false;
+
+  return *this == dyn_cast<xegpu::LayoutAttr>(other);
+}
+
+// set the layout for unit dims: sg_data, inst_data and lane_data to 1
+DistributeLayoutAttr LayoutAttr::setUnitDimData(SetVector<int64_t> unitDims) {
+  auto sgDataOpt = getSgData();
+  auto instDataOpt = getInstData();
+  auto laneDataOpt = getLaneData();
+
+  SmallVector<int32_t> sgData;
+  SmallVector<int32_t> instData;
+  SmallVector<int32_t> laneData;
+
+  if (sgDataOpt) {
+    sgData = llvm::to_vector(sgDataOpt.asArrayRef());
+  }
+  if (instDataOpt) {
+    instData = llvm::to_vector(instDataOpt.asArrayRef());
+  }
+  if (laneDataOpt) {
+    laneData = llvm::to_vector(laneDataOpt.asArrayRef());
+  }
+
+  for (auto dim : unitDims) {
+    if (dim < static_cast<int64_t>(sgData.size()))
+      sgData[dim] = 1;
+    if (dim < static_cast<int64_t>(instData.size()))
+      instData[dim] = 1;
+    if (dim < static_cast<int64_t>(laneData.size()))
+      laneData[dim] = 1;
+  }
+
+  return LayoutAttr::get(
+      getContext(), getSgLayout(),
+      sgData.empty() ? DenseI32ArrayAttr()
+                     : DenseI32ArrayAttr::get(getContext(), sgData),
+      instData.empty() ? DenseI32ArrayAttr()
+                       : DenseI32ArrayAttr::get(getContext(), instData),
+      getLaneLayout(),
+      laneData.empty() ? DenseI32ArrayAttr()
+                       : DenseI32ArrayAttr::get(getContext(), laneData),
+      getOrder());
+}
+
+// set the layout for the sepcified unit dims: sg_lane and lane_layout to 1
+DistributeLayoutAttr LayoutAttr::setUnitDimLayout(SetVector<int64_t> unitDims) {
+  auto sgLayoutOpt = getSgLayout();
+  auto laneLayoutOpt = getLaneLayout();
+
+  SmallVector<int32_t> sgLayout;
+  SmallVector<int32_t> laneLayout;
+
+  if (sgLayoutOpt) {
+    sgLayout = llvm::to_vector(sgLayoutOpt.asArrayRef());
+  }
+  if (laneLayoutOpt) {
+    laneLayout = llvm::to_vector(laneLayoutOpt.asArrayRef());
+  }
+
+  for (auto dim : unitDims) {
+    if (dim < static_cast<int64_t>(sgLayout.size()))
+      sgLayout[dim] = 1;
+    if (dim < static_cast<int64_t>(laneLayout.size()))
+      laneLayout[dim] = 1;
+  }
+
+  return LayoutAttr::get(
+      getContext(),
+      sgLayout.empty() ? DenseI32ArrayAttr()
+                       : DenseI32ArrayAttr::get(getContext(), sgLayout),
+      getSgData(), getInstData(),
+      laneLayout.empty() ? DenseI32ArrayAttr()
+                         : DenseI32ArrayAttr::get(getContext(), laneLayout),
+      getLaneData(), getOrder());
 }
 
 //===----------------------------------------------------------------------===//
@@ -509,6 +588,69 @@ bool SliceAttr::isSliceOf(const xegpu::DistributeLayoutAttr &other) {
       flattenedThis.getDims().asArrayRef().end());
   return llvm::all_of(flattenedOther.getDims().asArrayRef(),
                       [&](int64_t dim) { return thisDims.contains(dim); });
+}
+
+bool SliceAttr::isEqualTo(const xegpu::DistributeLayoutAttr &other) {
+  if (dyn_cast<xegpu::LayoutAttr>(other))
+    return false;
+
+  auto flattenedThis = flatten();
+  auto flattenedOther = dyn_cast<xegpu::SliceAttr>(other).flatten();
+
+  return ((flattenedThis.getParent() == flattenedOther.getParent()) &&
+          (flattenedThis.getDims() == flattenedOther.getDims()));
+}
+
+// Helper function to adjust unit dimensions from sliced space to parent space
+static SetVector<int64_t>
+adjustUnitDimsWithSliceDims(const SetVector<int64_t> &unitDims,
+                            ArrayRef<int64_t> sliceDims) {
+  // Reconstruct parent's non-sliced dimensions
+
+  int64_t parentRank = sliceDims.size() + unitDims.size();
+  llvm::SmallDenseSet<int64_t> slicedDimsSet(sliceDims.begin(),
+                                             sliceDims.end());
+  SmallVector<int64_t> nonSlicedDims;
+  for (int64_t i = 0; i < parentRank; ++i) {
+    if (!slicedDimsSet.contains(i))
+      nonSlicedDims.push_back(i);
+  }
+
+  // Map unit dims from sliced space to parent space
+  SetVector<int64_t> adjustUnitDims;
+  for (auto dim : unitDims) {
+    if (dim < static_cast<int64_t>(nonSlicedDims.size())) {
+      adjustUnitDims.insert(nonSlicedDims[dim]);
+    }
+  }
+
+  return adjustUnitDims;
+}
+
+// set the layout for unit dims: sg_data, inst_data and lane_data to 1
+DistributeLayoutAttr SliceAttr::setUnitDimData(SetVector<int64_t> unitDims) {
+  SliceAttr attr = flatten();
+  ArrayRef<int64_t> sliceDims = attr.getDims().asArrayRef();
+  auto parent = dyn_cast<LayoutAttr>(attr.getParent());
+
+  SetVector<int64_t> adjustUnitDims =
+      adjustUnitDimsWithSliceDims(unitDims, sliceDims);
+
+  return SliceAttr::get(getContext(), parent.setUnitDimData(adjustUnitDims),
+                        attr.getDims());
+}
+
+// set the layout for the sepcified unit dims: sg_lane and lane_layout to 1
+DistributeLayoutAttr SliceAttr::setUnitDimLayout(SetVector<int64_t> unitDims) {
+  SliceAttr attr = flatten();
+  ArrayRef<int64_t> sliceDims = attr.getDims().asArrayRef();
+  auto parent = dyn_cast<LayoutAttr>(attr.getParent());
+
+  SetVector<int64_t> adjustUnitDims =
+      adjustUnitDimsWithSliceDims(unitDims, sliceDims);
+
+  return SliceAttr::get(getContext(), parent.setUnitDimLayout(adjustUnitDims),
+                        attr.getDims());
 }
 
 //===----------------------------------------------------------------------===//

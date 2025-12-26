@@ -41,8 +41,9 @@ using namespace llvm;
 using namespace llvm::SDPatternMatch;
 
 /// NOTE: The TargetMachine owns TLOF.
-TargetLowering::TargetLowering(const TargetMachine &tm)
-    : TargetLoweringBase(tm) {}
+TargetLowering::TargetLowering(const TargetMachine &tm,
+                               const TargetSubtargetInfo &STI)
+    : TargetLoweringBase(tm, STI) {}
 
 // Define the virtual destructor out-of-line for build efficiency.
 TargetLowering::~TargetLowering() = default;
@@ -151,11 +152,13 @@ void TargetLoweringBase::ArgListEntry::setAttributes(const CallBase *Call,
 /// Generate a libcall taking the given operands as arguments and returning a
 /// result of type RetVT.
 std::pair<SDValue, SDValue>
-TargetLowering::makeLibCall(SelectionDAG &DAG, RTLIB::Libcall LC, EVT RetVT,
-                            ArrayRef<SDValue> Ops,
-                            MakeLibCallOptions CallOptions,
-                            const SDLoc &dl,
+TargetLowering::makeLibCall(SelectionDAG &DAG, RTLIB::LibcallImpl LibcallImpl,
+                            EVT RetVT, ArrayRef<SDValue> Ops,
+                            MakeLibCallOptions CallOptions, const SDLoc &dl,
                             SDValue InChain) const {
+  if (LibcallImpl == RTLIB::Unsupported)
+    reportFatalInternalError("unsupported library call operation");
+
   if (!InChain)
     InChain = DAG.getEntryNode();
 
@@ -184,12 +187,8 @@ TargetLowering::makeLibCall(SelectionDAG &DAG, RTLIB::Libcall LC, EVT RetVT,
     Args.push_back(Entry);
   }
 
-  const char *LibcallName = getLibcallName(LC);
-  if (LC == RTLIB::UNKNOWN_LIBCALL || !LibcallName)
-    reportFatalInternalError("unsupported library call operation");
-
   SDValue Callee =
-      DAG.getExternalSymbol(LibcallName, getPointerTy(DAG.getDataLayout()));
+      DAG.getExternalSymbol(LibcallImpl, getPointerTy(DAG.getDataLayout()));
 
   Type *RetTy = RetVT.getTypeForEVT(*DAG.getContext());
   Type *OrigRetTy = RetTy;
@@ -205,8 +204,8 @@ TargetLowering::makeLibCall(SelectionDAG &DAG, RTLIB::Libcall LC, EVT RetVT,
 
   CLI.setDebugLoc(dl)
       .setChain(InChain)
-      .setLibCallee(getLibcallCallingConv(LC), RetTy, OrigRetTy, Callee,
-                    std::move(Args))
+      .setLibCallee(getLibcallImplCallingConv(LibcallImpl), RetTy, OrigRetTy,
+                    Callee, std::move(Args))
       .setNoReturn(CallOptions.DoesNotReturn)
       .setDiscardResult(!CallOptions.IsReturnValueUsed)
       .setIsPostTypeLegalization(CallOptions.IsPostTypeLegalization)
@@ -631,7 +630,7 @@ bool TargetLowering::ShrinkDemandedOp(SDValue Op, unsigned BitWidth,
   for (unsigned SmallVTBits = llvm::bit_ceil(DemandedSize);
        SmallVTBits < BitWidth; SmallVTBits = NextPowerOf2(SmallVTBits)) {
     EVT SmallVT = EVT::getIntegerVT(*DAG.getContext(), SmallVTBits);
-    if (isTruncateFree(VT, SmallVT) && isZExtFree(SmallVT, VT)) {
+    if (isTruncateFree(Op, SmallVT) && isZExtFree(SmallVT, VT)) {
       // We found a type with free casts.
 
       // If the operation has the 'disjoint' flag, then the
@@ -6344,7 +6343,6 @@ static SDValue BuildExactSDIV(const TargetLowering &TLI, SDNode *N,
   SDValue Op0 = N->getOperand(0);
   SDValue Op1 = N->getOperand(1);
   EVT VT = N->getValueType(0);
-  EVT SVT = VT.getScalarType();
   EVT ShVT = TLI.getShiftAmountTy(VT, DAG.getDataLayout());
   EVT ShSVT = ShVT.getScalarType();
 
@@ -6354,6 +6352,8 @@ static SDValue BuildExactSDIV(const TargetLowering &TLI, SDNode *N,
   auto BuildSDIVPattern = [&](ConstantSDNode *C) {
     if (C->isZero())
       return false;
+
+    EVT CT = C->getValueType(0);
     APInt Divisor = C->getAPIntValue();
     unsigned Shift = Divisor.countr_zero();
     if (Shift) {
@@ -6362,12 +6362,13 @@ static SDValue BuildExactSDIV(const TargetLowering &TLI, SDNode *N,
     }
     APInt Factor = Divisor.multiplicativeInverse();
     Shifts.push_back(DAG.getConstant(Shift, dl, ShSVT));
-    Factors.push_back(DAG.getConstant(Factor, dl, SVT));
+    Factors.push_back(DAG.getConstant(Factor, dl, CT));
     return true;
   };
 
   // Collect all magic values from the build vector.
-  if (!ISD::matchUnaryPredicate(Op1, BuildSDIVPattern))
+  if (!ISD::matchUnaryPredicate(Op1, BuildSDIVPattern, /*AllowUndefs=*/false,
+                                /*AllowTruncation=*/true))
     return SDValue();
 
   SDValue Shift, Factor;
@@ -6402,7 +6403,6 @@ static SDValue BuildExactUDIV(const TargetLowering &TLI, SDNode *N,
                               const SDLoc &dl, SelectionDAG &DAG,
                               SmallVectorImpl<SDNode *> &Created) {
   EVT VT = N->getValueType(0);
-  EVT SVT = VT.getScalarType();
   EVT ShVT = TLI.getShiftAmountTy(VT, DAG.getDataLayout());
   EVT ShSVT = ShVT.getScalarType();
 
@@ -6412,6 +6412,8 @@ static SDValue BuildExactUDIV(const TargetLowering &TLI, SDNode *N,
   auto BuildUDIVPattern = [&](ConstantSDNode *C) {
     if (C->isZero())
       return false;
+
+    EVT CT = C->getValueType(0);
     APInt Divisor = C->getAPIntValue();
     unsigned Shift = Divisor.countr_zero();
     if (Shift) {
@@ -6421,14 +6423,15 @@ static SDValue BuildExactUDIV(const TargetLowering &TLI, SDNode *N,
     // Calculate the multiplicative inverse modulo BW.
     APInt Factor = Divisor.multiplicativeInverse();
     Shifts.push_back(DAG.getConstant(Shift, dl, ShSVT));
-    Factors.push_back(DAG.getConstant(Factor, dl, SVT));
+    Factors.push_back(DAG.getConstant(Factor, dl, CT));
     return true;
   };
 
   SDValue Op1 = N->getOperand(1);
 
   // Collect all magic values from the build vector.
-  if (!ISD::matchUnaryPredicate(Op1, BuildUDIVPattern))
+  if (!ISD::matchUnaryPredicate(Op1, BuildUDIVPattern, /*AllowUndefs=*/false,
+                                /*AllowTruncation=*/true))
     return SDValue();
 
   SDValue Shift, Factor;
@@ -6561,8 +6564,9 @@ SDValue TargetLowering::BuildSDIV(SDNode *N, SelectionDAG &DAG,
   auto BuildSDIVPattern = [&](ConstantSDNode *C) {
     if (C->isZero())
       return false;
-
-    const APInt &Divisor = C->getAPIntValue();
+    // Truncate the divisor to the target scalar type in case it was promoted
+    // during type legalization.
+    APInt Divisor = C->getAPIntValue().trunc(EltBits);
     SignedDivisionByConstantInfo magics = SignedDivisionByConstantInfo::get(Divisor);
     int NumeratorFactor = 0;
     int ShiftMask = -1;
@@ -6592,7 +6596,8 @@ SDValue TargetLowering::BuildSDIV(SDNode *N, SelectionDAG &DAG,
   SDValue N1 = N->getOperand(1);
 
   // Collect the shifts / magic values from each element.
-  if (!ISD::matchUnaryPredicate(N1, BuildSDIVPattern))
+  if (!ISD::matchUnaryPredicate(N1, BuildSDIVPattern, /*AllowUndefs=*/false,
+                                /*AllowTruncation=*/true))
     return SDValue();
 
   SDValue MagicFactor, Factor, Shift, ShiftMask;
@@ -6737,7 +6742,9 @@ SDValue TargetLowering::BuildUDIV(SDNode *N, SelectionDAG &DAG,
   auto BuildUDIVPattern = [&](ConstantSDNode *C) {
     if (C->isZero())
       return false;
-    const APInt& Divisor = C->getAPIntValue();
+    // Truncate the divisor to the target scalar type in case it was promoted
+    // during type legalization.
+    APInt Divisor = C->getAPIntValue().trunc(EltBits);
 
     SDValue PreShift, MagicFactor, NPQFactor, PostShift;
 
@@ -6778,7 +6785,8 @@ SDValue TargetLowering::BuildUDIV(SDNode *N, SelectionDAG &DAG,
   };
 
   // Collect the shifts/magic values from each element.
-  if (!ISD::matchUnaryPredicate(N1, BuildUDIVPattern))
+  if (!ISD::matchUnaryPredicate(N1, BuildUDIVPattern, /*AllowUndefs=*/false,
+                                /*AllowTruncation=*/true))
     return SDValue();
 
   SDValue PreShift, PostShift, MagicFactor, NPQFactor;
@@ -8851,6 +8859,7 @@ SDValue TargetLowering::expandFMINIMUMNUM_FMAXIMUMNUM(SDNode *Node,
     RHS = DAG.getSelectCC(DL, RHS, RHS, LHS, RHS, ISD::SETUO);
   }
 
+  // Always prefer RHS if equal.
   SDValue MinMax =
       DAG.getSelectCC(DL, LHS, RHS, LHS, RHS, IsMax ? ISD::SETGT : ISD::SETLT);
 
@@ -8865,13 +8874,19 @@ SDValue TargetLowering::expandFMINIMUMNUM_FMAXIMUMNUM(SDNode *Node,
       DAG.getTargetConstant(IsMax ? fcPosZero : fcNegZero, DL, MVT::i32);
   SDValue IsZero = DAG.getSetCC(DL, CCVT, MinMax,
                                 DAG.getConstantFP(0.0, DL, VT), ISD::SETEQ);
-  SDValue LCmp = DAG.getSelect(
-      DL, VT, DAG.getNode(ISD::IS_FPCLASS, DL, CCVT, LHS, TestZero), LHS,
+  EVT IntVT = VT.changeTypeToInteger();
+  EVT FloatVT = VT.changeElementType(MVT::f32);
+  SDValue LHSTrunc = LHS;
+  if (!isTypeLegal(IntVT) && !isOperationLegalOrCustom(ISD::IS_FPCLASS, VT)) {
+    LHSTrunc = DAG.getNode(ISD::FP_ROUND, DL, FloatVT, LHS,
+                           DAG.getIntPtrConstant(0, DL, /*isTarget=*/true));
+  }
+  // It's OK to select from LHS and MinMax, with only one ISD::IS_FPCLASS, as
+  // we preferred RHS when generate MinMax, if the operands are equal.
+  SDValue RetZero = DAG.getSelect(
+      DL, VT, DAG.getNode(ISD::IS_FPCLASS, DL, CCVT, LHSTrunc, TestZero), LHS,
       MinMax, Flags);
-  SDValue RCmp = DAG.getSelect(
-      DL, VT, DAG.getNode(ISD::IS_FPCLASS, DL, CCVT, RHS, TestZero), RHS, LCmp,
-      Flags);
-  return DAG.getSelect(DL, VT, IsZero, RCmp, MinMax, Flags);
+  return DAG.getSelect(DL, VT, IsZero, RetZero, MinMax, Flags);
 }
 
 /// Returns a true value if if this FPClassTest can be performed with an ordered
@@ -10606,30 +10621,29 @@ TargetLowering::IncrementMemoryAddress(SDValue Addr, SDValue Mask,
   assert(DataVT.getVectorElementCount() == MaskVT.getVectorElementCount() &&
          "Incompatible types of Data and Mask");
   if (IsCompressedMemory) {
-    if (DataVT.isScalableVector())
-      report_fatal_error(
-          "Cannot currently handle compressed memory with scalable vectors");
     // Incrementing the pointer according to number of '1's in the mask.
-    EVT MaskIntVT = EVT::getIntegerVT(*DAG.getContext(), MaskVT.getSizeInBits());
-    SDValue MaskInIntReg = DAG.getBitcast(MaskIntVT, Mask);
-    if (MaskIntVT.getSizeInBits() < 32) {
-      MaskInIntReg = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i32, MaskInIntReg);
-      MaskIntVT = MVT::i32;
+    if (DataVT.isScalableVector()) {
+      EVT MaskExtVT = MaskVT.changeElementType(MVT::i32);
+      SDValue MaskExt = DAG.getNode(ISD::ZERO_EXTEND, DL, MaskExtVT, Mask);
+      Increment = DAG.getNode(ISD::VECREDUCE_ADD, DL, MVT::i32, MaskExt);
+    } else {
+      EVT MaskIntVT =
+          EVT::getIntegerVT(*DAG.getContext(), MaskVT.getSizeInBits());
+      SDValue MaskInIntReg = DAG.getBitcast(MaskIntVT, Mask);
+      if (MaskIntVT.getSizeInBits() < 32) {
+        MaskInIntReg =
+            DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i32, MaskInIntReg);
+        MaskIntVT = MVT::i32;
+      }
+      Increment = DAG.getNode(ISD::CTPOP, DL, MaskIntVT, MaskInIntReg);
     }
-
-    // Count '1's with POPCNT.
-    Increment = DAG.getNode(ISD::CTPOP, DL, MaskIntVT, MaskInIntReg);
-    Increment = DAG.getZExtOrTrunc(Increment, DL, AddrVT);
     // Scale is an element size in bytes.
     SDValue Scale = DAG.getConstant(DataVT.getScalarSizeInBits() / 8, DL,
                                     AddrVT);
+    Increment = DAG.getZExtOrTrunc(Increment, DL, AddrVT);
     Increment = DAG.getNode(ISD::MUL, DL, AddrVT, Increment, Scale);
-  } else if (DataVT.isScalableVector()) {
-    Increment = DAG.getVScale(DL, AddrVT,
-                              APInt(AddrVT.getFixedSizeInBits(),
-                                    DataVT.getStoreSize().getKnownMinValue()));
   } else
-    Increment = DAG.getConstant(DataVT.getStoreSize(), DL, AddrVT);
+    Increment = DAG.getTypeSize(DL, AddrVT, DataVT.getStoreSize());
 
   return DAG.getNode(ISD::ADD, DL, AddrVT, Addr, Increment);
 }
@@ -11121,7 +11135,8 @@ void TargetLowering::forceExpandWideMUL(SelectionDAG &DAG, const SDLoc &dl,
   else if (WideVT == MVT::i128)
     LC = RTLIB::MUL_I128;
 
-  if (LC == RTLIB::UNKNOWN_LIBCALL || !getLibcallName(LC)) {
+  RTLIB::LibcallImpl LibcallImpl = getLibcallImpl(LC);
+  if (LibcallImpl == RTLIB::Unsupported) {
     forceExpandMultiply(DAG, dl, Signed, Lo, Hi, LHS, RHS);
     return;
   }
@@ -11922,10 +11937,8 @@ SDValue TargetLowering::expandVectorSplice(SDNode *Node,
   // Store the lo part of CONCAT_VECTORS(V1, V2)
   SDValue StoreV1 = DAG.getStore(DAG.getEntryNode(), DL, V1, StackPtr, PtrInfo);
   // Store the hi part of CONCAT_VECTORS(V1, V2)
-  SDValue OffsetToV2 = DAG.getVScale(
-      DL, PtrVT,
-      APInt(PtrVT.getFixedSizeInBits(), VT.getStoreSize().getKnownMinValue()));
-  SDValue StackPtr2 = DAG.getNode(ISD::ADD, DL, PtrVT, StackPtr, OffsetToV2);
+  SDValue VTBytes = DAG.getTypeSize(DL, PtrVT, VT.getStoreSize());
+  SDValue StackPtr2 = DAG.getNode(ISD::ADD, DL, PtrVT, StackPtr, VTBytes);
   SDValue StoreV2 = DAG.getStore(StoreV1, DL, V2, StackPtr2, PtrInfo);
 
   if (Imm >= 0) {
@@ -11944,13 +11957,8 @@ SDValue TargetLowering::expandVectorSplice(SDNode *Node,
   SDValue TrailingBytes =
       DAG.getConstant(TrailingElts * EltByteSize, DL, PtrVT);
 
-  if (TrailingElts > VT.getVectorMinNumElements()) {
-    SDValue VLBytes =
-        DAG.getVScale(DL, PtrVT,
-                      APInt(PtrVT.getFixedSizeInBits(),
-                            VT.getStoreSize().getKnownMinValue()));
-    TrailingBytes = DAG.getNode(ISD::UMIN, DL, PtrVT, TrailingBytes, VLBytes);
-  }
+  if (TrailingElts > VT.getVectorMinNumElements())
+    TrailingBytes = DAG.getNode(ISD::UMIN, DL, PtrVT, TrailingBytes, VTBytes);
 
   // Calculate the start address of the spliced result.
   StackPtr2 = DAG.getNode(ISD::SUB, DL, PtrVT, StackPtr2, TrailingBytes);
@@ -12124,6 +12132,167 @@ SDValue TargetLowering::expandPartialReduceMLA(SDNode *N,
          "There should only be one subvector after tree flattening");
 
   return Subvectors[0];
+}
+
+/// Given a store node \p StoreNode, return true if it is safe to fold that node
+/// into \p FPNode, which expands to a library call with output pointers.
+static bool canFoldStoreIntoLibCallOutputPointers(StoreSDNode *StoreNode,
+                                                  SDNode *FPNode) {
+  SmallVector<const SDNode *, 8> Worklist;
+  SmallVector<const SDNode *, 8> DeferredNodes;
+  SmallPtrSet<const SDNode *, 16> Visited;
+
+  // Skip FPNode use by StoreNode (that's the use we want to fold into FPNode).
+  for (SDValue Op : StoreNode->ops())
+    if (Op.getNode() != FPNode)
+      Worklist.push_back(Op.getNode());
+
+  unsigned MaxSteps = SelectionDAG::getHasPredecessorMaxSteps();
+  while (!Worklist.empty()) {
+    const SDNode *Node = Worklist.pop_back_val();
+    auto [_, Inserted] = Visited.insert(Node);
+    if (!Inserted)
+      continue;
+
+    if (MaxSteps > 0 && Visited.size() >= MaxSteps)
+      return false;
+
+    // Reached the FPNode (would result in a cycle).
+    // OR Reached CALLSEQ_START (would result in nested call sequences).
+    if (Node == FPNode || Node->getOpcode() == ISD::CALLSEQ_START)
+      return false;
+
+    if (Node->getOpcode() == ISD::CALLSEQ_END) {
+      // Defer looking into call sequences (so we can check we're outside one).
+      // We still need to look through these for the predecessor check.
+      DeferredNodes.push_back(Node);
+      continue;
+    }
+
+    for (SDValue Op : Node->ops())
+      Worklist.push_back(Op.getNode());
+  }
+
+  // True if we're outside a call sequence and don't have the FPNode as a
+  // predecessor. No cycles or nested call sequences possible.
+  return !SDNode::hasPredecessorHelper(FPNode, Visited, DeferredNodes,
+                                       MaxSteps);
+}
+
+bool TargetLowering::expandMultipleResultFPLibCall(
+    SelectionDAG &DAG, RTLIB::Libcall LC, SDNode *Node,
+    SmallVectorImpl<SDValue> &Results,
+    std::optional<unsigned> CallRetResNo) const {
+  if (LC == RTLIB::UNKNOWN_LIBCALL)
+    return false;
+
+  RTLIB::LibcallImpl LibcallImpl = getLibcallImpl(LC);
+  if (LibcallImpl == RTLIB::Unsupported)
+    return false;
+
+  LLVMContext &Ctx = *DAG.getContext();
+  EVT VT = Node->getValueType(0);
+  unsigned NumResults = Node->getNumValues();
+
+  // Find users of the node that store the results (and share input chains). The
+  // destination pointers can be used instead of creating stack allocations.
+  SDValue StoresInChain;
+  SmallVector<StoreSDNode *, 2> ResultStores(NumResults);
+  for (SDNode *User : Node->users()) {
+    if (!ISD::isNormalStore(User))
+      continue;
+    auto *ST = cast<StoreSDNode>(User);
+    SDValue StoreValue = ST->getValue();
+    unsigned ResNo = StoreValue.getResNo();
+    // Ensure the store corresponds to an output pointer.
+    if (CallRetResNo == ResNo)
+      continue;
+    // Ensure the store to the default address space and not atomic or volatile.
+    if (!ST->isSimple() || ST->getAddressSpace() != 0)
+      continue;
+    // Ensure all store chains are the same (so they don't alias).
+    if (StoresInChain && ST->getChain() != StoresInChain)
+      continue;
+    // Ensure the store is properly aligned.
+    Type *StoreType = StoreValue.getValueType().getTypeForEVT(Ctx);
+    if (ST->getAlign() <
+        DAG.getDataLayout().getABITypeAlign(StoreType->getScalarType()))
+      continue;
+    // Avoid:
+    //  1. Creating cyclic dependencies.
+    //  2. Expanding the node to a call within a call sequence.
+    if (!canFoldStoreIntoLibCallOutputPointers(ST, Node))
+      continue;
+    ResultStores[ResNo] = ST;
+    StoresInChain = ST->getChain();
+  }
+
+  ArgListTy Args;
+
+  // Pass the arguments.
+  for (const SDValue &Op : Node->op_values()) {
+    EVT ArgVT = Op.getValueType();
+    Type *ArgTy = ArgVT.getTypeForEVT(Ctx);
+    Args.emplace_back(Op, ArgTy);
+  }
+
+  // Pass the output pointers.
+  SmallVector<SDValue, 2> ResultPtrs(NumResults);
+  Type *PointerTy = PointerType::getUnqual(Ctx);
+  for (auto [ResNo, ST] : llvm::enumerate(ResultStores)) {
+    if (ResNo == CallRetResNo)
+      continue;
+    EVT ResVT = Node->getValueType(ResNo);
+    SDValue ResultPtr = ST ? ST->getBasePtr() : DAG.CreateStackTemporary(ResVT);
+    ResultPtrs[ResNo] = ResultPtr;
+    Args.emplace_back(ResultPtr, PointerTy);
+  }
+
+  SDLoc DL(Node);
+
+  if (RTLIB::RuntimeLibcallsInfo::hasVectorMaskArgument(LibcallImpl)) {
+    // Pass the vector mask (if required).
+    EVT MaskVT = getSetCCResultType(DAG.getDataLayout(), Ctx, VT);
+    SDValue Mask = DAG.getBoolConstant(true, DL, MaskVT, VT);
+    Args.emplace_back(Mask, MaskVT.getTypeForEVT(Ctx));
+  }
+
+  Type *RetType = CallRetResNo.has_value()
+                      ? Node->getValueType(*CallRetResNo).getTypeForEVT(Ctx)
+                      : Type::getVoidTy(Ctx);
+  SDValue InChain = StoresInChain ? StoresInChain : DAG.getEntryNode();
+  SDValue Callee =
+      DAG.getExternalSymbol(LibcallImpl, getPointerTy(DAG.getDataLayout()));
+  TargetLowering::CallLoweringInfo CLI(DAG);
+  CLI.setDebugLoc(DL).setChain(InChain).setLibCallee(
+      getLibcallImplCallingConv(LibcallImpl), RetType, Callee, std::move(Args));
+
+  auto [Call, CallChain] = LowerCallTo(CLI);
+
+  for (auto [ResNo, ResultPtr] : llvm::enumerate(ResultPtrs)) {
+    if (ResNo == CallRetResNo) {
+      Results.push_back(Call);
+      continue;
+    }
+    MachinePointerInfo PtrInfo;
+    SDValue LoadResult = DAG.getLoad(Node->getValueType(ResNo), DL, CallChain,
+                                     ResultPtr, PtrInfo);
+    SDValue OutChain = LoadResult.getValue(1);
+
+    if (StoreSDNode *ST = ResultStores[ResNo]) {
+      // Replace store with the library call.
+      DAG.ReplaceAllUsesOfValueWith(SDValue(ST, 0), OutChain);
+      PtrInfo = ST->getPointerInfo();
+    } else {
+      PtrInfo = MachinePointerInfo::getFixedStack(
+          DAG.getMachineFunction(),
+          cast<FrameIndexSDNode>(ResultPtr)->getIndex());
+    }
+
+    Results.push_back(LoadResult);
+  }
+
+  return true;
 }
 
 bool TargetLowering::LegalizeSetCCCondCode(SelectionDAG &DAG, EVT VT,

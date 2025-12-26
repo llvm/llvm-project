@@ -13,6 +13,7 @@
 #include "CodeGenIntrinsics.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/TableGen/Error.h"
@@ -377,7 +378,19 @@ void CodeGenIntrinsic::setProperty(const Record *R) {
     ME &= MemoryEffects::argMemOnly();
   else if (R->getName() == "IntrInaccessibleMemOnly")
     ME &= MemoryEffects::inaccessibleMemOnly();
-  else if (R->getName() == "IntrInaccessibleMemOrArgMemOnly")
+  else if (R->isSubClassOf("IntrRead")) {
+    MemoryEffects ReadMask = MemoryEffects::writeOnly();
+    for (const Record *RLoc : R->getValueAsListOfDefs("MemLoc"))
+      ReadMask = ReadMask.getWithModRef(getValueAsIRMemLocation(RLoc),
+                                        ModRefInfo::ModRef);
+    ME &= ReadMask;
+  } else if (R->isSubClassOf("IntrWrite")) {
+    MemoryEffects WriteMask = MemoryEffects::readOnly();
+    for (const Record *WLoc : R->getValueAsListOfDefs("MemLoc"))
+      WriteMask = WriteMask.getWithModRef(getValueAsIRMemLocation(WLoc),
+                                          ModRefInfo::ModRef);
+    ME &= WriteMask;
+  } else if (R->getName() == "IntrInaccessibleMemOrArgMemOnly")
     ME &= MemoryEffects::inaccessibleOrArgMemOnly();
   else if (R->getName() == "Commutative")
     isCommutative = true;
@@ -449,9 +462,48 @@ void CodeGenIntrinsic::setProperty(const Record *R) {
     int64_t Lower = R->getValueAsInt("Lower");
     int64_t Upper = R->getValueAsInt("Upper");
     addArgAttribute(ArgNo, Range, Lower, Upper);
+  } else if (R->isSubClassOf("ArgInfo")) {
+    unsigned ArgNo = R->getValueAsInt("ArgNo");
+    if (ArgNo < 1)
+      PrintFatalError(R->getLoc(),
+                      "ArgInfo requires ArgNo >= 1 (0 is return value)");
+    const ListInit *Properties = R->getValueAsListInit("Properties");
+    StringRef ArgName;
+    StringRef FuncName;
+
+    for (const Init *PropInit : Properties->getElements()) {
+      if (const auto *PropDef = dyn_cast<DefInit>(PropInit)) {
+        const Record *PropRec = PropDef->getDef();
+
+        if (PropRec->isSubClassOf("ArgName"))
+          ArgName = PropRec->getValueAsString("Name");
+        else if (PropRec->isSubClassOf("ImmArgPrinter"))
+          FuncName = PropRec->getValueAsString("FuncName");
+        else
+          PrintFatalError(PropRec->getLoc(),
+                          "Unknown ArgProperty type: " + PropRec->getName());
+      }
+    }
+    addPrettyPrintFunction(ArgNo - 1, ArgName, FuncName);
   } else {
     llvm_unreachable("Unknown property!");
   }
+}
+
+llvm::IRMemLocation
+CodeGenIntrinsic::getValueAsIRMemLocation(const Record *R) const {
+  StringRef Name = R->getName();
+  IRMemLocation Loc =
+      StringSwitch<IRMemLocation>(Name)
+          .Case("TargetMem0", IRMemLocation::TargetMem0)
+          .Case("TargetMem1", IRMemLocation::TargetMem1)
+          .Case("InaccessibleMem", IRMemLocation::InaccessibleMem)
+          .Default(IRMemLocation::Other); // fallback enum
+
+  if (Loc == IRMemLocation::Other)
+    PrintFatalError(R->getLoc(), "unknown IRMemLocation: " + Name);
+
+  return Loc;
 }
 
 bool CodeGenIntrinsic::isParamAPointer(unsigned ParamIdx) const {
@@ -475,4 +527,17 @@ void CodeGenIntrinsic::addArgAttribute(unsigned Idx, ArgAttrKind AK, uint64_t V,
   if (Idx >= ArgumentAttributes.size())
     ArgumentAttributes.resize(Idx + 1);
   ArgumentAttributes[Idx].emplace_back(AK, V, V2);
+}
+
+void CodeGenIntrinsic::addPrettyPrintFunction(unsigned ArgIdx,
+                                              StringRef ArgName,
+                                              StringRef FuncName) {
+  auto It = llvm::find_if(PrettyPrintFunctions, [ArgIdx](const auto &Info) {
+    return Info.ArgIdx == ArgIdx;
+  });
+  if (It != PrettyPrintFunctions.end())
+    PrintFatalError(TheDef->getLoc(), "ArgInfo for argument " + Twine(ArgIdx) +
+                                          " is already defined as '" +
+                                          It->FuncName + "'");
+  PrettyPrintFunctions.emplace_back(ArgIdx, ArgName, FuncName);
 }

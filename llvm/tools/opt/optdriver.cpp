@@ -17,6 +17,7 @@
 #include "llvm/Analysis/CallGraphSCCPass.h"
 #include "llvm/Analysis/LoopPass.h"
 #include "llvm/Analysis/RegionPass.h"
+#include "llvm/Analysis/RuntimeLibcallInfo.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/AsmParser/Parser.h"
@@ -36,6 +37,7 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/LinkAllIR.h"
 #include "llvm/LinkAllPasses.h"
+#include "llvm/MC/MCTargetOptionsCommandFlags.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Passes/PassPlugin.h"
 #include "llvm/Remarks/HotnessThresholdParser.h"
@@ -64,6 +66,7 @@ using namespace llvm;
 using namespace opt_tool;
 
 static codegen::RegisterCodeGenFlags CFG;
+static codegen::RegisterSaveStatsFlag SSF;
 
 // The OptimizationList is automatically populated with registered Passes by the
 // PassNameParser.
@@ -512,6 +515,10 @@ optMain(int argc, char **argv,
   }
   LLVMRemarkFileHandle RemarksFile = std::move(*RemarksFileOrErr);
 
+  codegen::MaybeEnableStatistics();
+
+  StringRef ABIName = mc::getABIName(); // FIXME: Handle module flag.
+
   // Load the input module...
   auto SetDataLayout = [&](StringRef IRTriple,
                            StringRef IRLayout) -> std::optional<std::string> {
@@ -534,15 +541,16 @@ optMain(int argc, char **argv,
     // the IR, we should default to an empty (default) DataLayout.
     if (TripleStr.empty())
       return std::nullopt;
-    // Otherwise we infer the DataLayout from the target machine.
-    Expected<std::unique_ptr<TargetMachine>> ExpectedTM =
-        codegen::createTargetMachineForTriple(TripleStr, GetCodeGenOptLevel());
-    if (!ExpectedTM) {
-      errs() << argv[0] << ": warning: failed to infer data layout: "
-             << toString(ExpectedTM.takeError()) << "\n";
+
+    Triple TT(TripleStr);
+
+    std::string Str = TT.computeDataLayout(ABIName);
+    if (Str.empty()) {
+      errs() << argv[0]
+             << ": warning: failed to infer data layout from target triple\n";
       return std::nullopt;
     }
-    return (*ExpectedTM)->createDataLayout().getStringRepresentation();
+    return Str;
   };
   std::unique_ptr<Module> M;
   if (NoUpgradeDebugInfo)
@@ -649,6 +657,13 @@ optMain(int argc, char **argv,
     return 1;
   }
 
+  TargetOptions CodeGenFlagsOptions;
+  const TargetOptions *Options = TM ? &TM->Options : &CodeGenFlagsOptions;
+  if (!TM) {
+    CodeGenFlagsOptions =
+        codegen::InitTargetOptionsFromCodeGenFlags(ModuleTriple);
+  }
+
   // Override function attributes based on CPUStr, FeaturesStr, and command line
   // flags.
   codegen::setFunctionAttributes(CPUStr, FeaturesStr, *M);
@@ -667,7 +682,7 @@ optMain(int argc, char **argv,
   }
 
   // Add an appropriate TargetLibraryInfo pass for the module's triple.
-  TargetLibraryInfoImpl TLII(ModuleTriple);
+  TargetLibraryInfoImpl TLII(ModuleTriple, Options->VecLib);
 
   // The -disable-simplify-libcalls flag actually disables all builtin optzns.
   if (DisableSimplifyLibCalls)
@@ -742,15 +757,15 @@ optMain(int argc, char **argv,
     // The user has asked to use the new pass manager and provided a pipeline
     // string. Hand off the rest of the functionality to the new code for that
     // layer.
-    return runPassPipeline(
-               argv[0], *M, TM.get(), &TLII, Out.get(), ThinLinkOut.get(),
-               RemarksFile.get(), Pipeline, PluginList, PassBuilderCallbacks,
-               OK, VK, /* ShouldPreserveAssemblyUseListOrder */ false,
-               /* ShouldPreserveBitcodeUseListOrder */ true, EmitSummaryIndex,
-               EmitModuleHash, EnableDebugify, VerifyDebugInfoPreserve,
-               EnableProfileVerification, UnifiedLTO)
-               ? 0
-               : 1;
+    if (!runPassPipeline(
+            argv[0], *M, TM.get(), &TLII, Out.get(), ThinLinkOut.get(),
+            RemarksFile.get(), Pipeline, PluginList, PassBuilderCallbacks, OK,
+            VK, /* ShouldPreserveAssemblyUseListOrder */ false,
+            /* ShouldPreserveBitcodeUseListOrder */ true, EmitSummaryIndex,
+            EmitModuleHash, EnableDebugify, VerifyDebugInfoPreserve,
+            EnableProfileVerification, UnifiedLTO))
+      return 1;
+    return codegen::MaybeSaveStatistics(OutputFilename, "opt");
   }
 
   if (OptLevelO0 || OptLevelO1 || OptLevelO2 || OptLevelOs || OptLevelOz ||
@@ -791,6 +806,9 @@ optMain(int argc, char **argv,
       (VerifyDebugInfoPreserve && !VerifyEachDebugInfoPreserve);
 
   Passes.add(new TargetLibraryInfoWrapperPass(TLII));
+  Passes.add(new RuntimeLibraryInfoWrapper(
+      ModuleTriple, Options->ExceptionModel, Options->FloatABIType,
+      Options->EABIVersion, Options->MCOptions.ABIName, Options->VecLib));
 
   // Add internal analysis passes from the target machine.
   Passes.add(createTargetTransformInfoWrapperPass(TM ? TM->getTargetIRAnalysis()
@@ -928,5 +946,5 @@ optMain(int argc, char **argv,
   if (ThinLinkOut)
     ThinLinkOut->keep();
 
-  return 0;
+  return codegen::MaybeSaveStatistics(OutputFilename, "opt");
 }

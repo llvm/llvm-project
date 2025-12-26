@@ -31,6 +31,8 @@ set(assets
   function-template.mustache
   namespace-template.mustache
   template.mustache
+  head-template.mustache
+  navbar-template.mustache
 )
 
 set(asset_dir "${CMAKE_CURRENT_SOURCE_DIR}/../assets")

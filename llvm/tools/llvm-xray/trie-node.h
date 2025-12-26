@@ -15,7 +15,6 @@
 #define LLVM_TOOLS_LLVM_XRAY_STACK_TRIE_H
 
 #include <forward_list>
-#include <numeric>
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"

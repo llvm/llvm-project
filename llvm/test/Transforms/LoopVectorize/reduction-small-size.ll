@@ -28,7 +28,7 @@ define i8 @PR34687(i1 %c, i32 %x, i32 %n, i32 %divisor) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = trunc <4 x i32> [[TMP2]] to <4 x i8>
 ; CHECK-NEXT:    [[TMP4]] = zext <4 x i8> [[TMP3]] to <4 x i32>
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i32> [[VEC_IND]], splat (i32 4)
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nsw <4 x i32> [[VEC_IND]], splat (i32 4)
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP5]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:

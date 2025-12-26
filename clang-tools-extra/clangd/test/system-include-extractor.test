@@ -5,7 +5,8 @@
 
 # Create a bin directory to store the mock-driver and add it to the path
 # RUN: mkdir -p %t.dir/bin
-# RUN: export PATH=%t.dir/bin:$PATH
+# RUN: %python -c "print(__import__('os').environ['PATH'])" | tr -d '\n' > %t.path
+# RUN: export PATH=%t.dir/bin:%{readfile:%t.path}
 # Generate a mock-driver that will print %temp_dir%/my/dir and
 # %temp_dir%/my/dir2 as include search paths.
 # RUN: echo '#!/bin/sh' >> %t.dir/bin/my_driver.sh

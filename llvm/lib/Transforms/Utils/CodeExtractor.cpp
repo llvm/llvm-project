@@ -63,7 +63,6 @@
 #include <cstdint>
 #include <iterator>
 #include <map>
-#include <utility>
 #include <vector>
 
 using namespace llvm;

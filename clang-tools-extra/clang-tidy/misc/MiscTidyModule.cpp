@@ -19,11 +19,13 @@
 #include "MisleadingBidirectionalCheck.h"
 #include "MisleadingIdentifierCheck.h"
 #include "MisplacedConstCheck.h"
+#include "MultipleInheritanceCheck.h"
 #include "NewDeleteOverloadsCheck.h"
 #include "NoRecursionCheck.h"
 #include "NonCopyableObjectsCheck.h"
 #include "NonPrivateMemberVariablesInClassesCheck.h"
 #include "OverrideWithDifferentVisibilityCheck.h"
+#include "PredictableRandCheck.h"
 #include "RedundantExpressionCheck.h"
 #include "StaticAssertCheck.h"
 #include "ThrowByValueCatchByReferenceCheck.h"
@@ -59,6 +61,8 @@ public:
     CheckFactories.registerCheck<MisleadingIdentifierCheck>(
         "misc-misleading-identifier");
     CheckFactories.registerCheck<MisplacedConstCheck>("misc-misplaced-const");
+    CheckFactories.registerCheck<MultipleInheritanceCheck>(
+        "misc-multiple-inheritance");
     CheckFactories.registerCheck<NewDeleteOverloadsCheck>(
         "misc-new-delete-overloads");
     CheckFactories.registerCheck<NoRecursionCheck>("misc-no-recursion");
@@ -66,6 +70,9 @@ public:
         "misc-non-copyable-objects");
     CheckFactories.registerCheck<NonPrivateMemberVariablesInClassesCheck>(
         "misc-non-private-member-variables-in-classes");
+    CheckFactories.registerCheck<OverrideWithDifferentVisibilityCheck>(
+        "misc-override-with-different-visibility");
+    CheckFactories.registerCheck<PredictableRandCheck>("misc-predictable-rand");
     CheckFactories.registerCheck<RedundantExpressionCheck>(
         "misc-redundant-expression");
     CheckFactories.registerCheck<StaticAssertCheck>("misc-static-assert");
@@ -85,8 +92,6 @@ public:
         "misc-use-anonymous-namespace");
     CheckFactories.registerCheck<UseInternalLinkageCheck>(
         "misc-use-internal-linkage");
-    CheckFactories.registerCheck<OverrideWithDifferentVisibilityCheck>(
-        "misc-override-with-different-visibility");
   }
 };
 

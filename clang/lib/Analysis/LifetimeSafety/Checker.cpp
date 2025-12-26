@@ -43,32 +43,58 @@ namespace {
 /// Struct to store the complete context for a potential lifetime violation.
 struct PendingWarning {
   SourceLocation ExpiryLoc; // Where the loan expired.
-  const Expr *UseExpr;      // Where the origin holding this loan was used.
+  llvm::PointerUnion<const UseFact *, const OriginEscapesFact *> CausingFact;
   Confidence ConfidenceLevel;
 };
 
 class LifetimeChecker {
 private:
   llvm::DenseMap<LoanID, PendingWarning> FinalWarningsMap;
+  llvm::DenseMap<const ParmVarDecl *, const Expr *> AnnotationWarningsMap;
   const LoanPropagationAnalysis &LoanPropagation;
   const LiveOriginsAnalysis &LiveOrigins;
   const FactManager &FactMgr;
   LifetimeSafetyReporter *Reporter;
+  ASTContext &AST;
 
 public:
   LifetimeChecker(const LoanPropagationAnalysis &LoanPropagation,
                   const LiveOriginsAnalysis &LiveOrigins, const FactManager &FM,
                   AnalysisDeclContext &ADC, LifetimeSafetyReporter *Reporter)
       : LoanPropagation(LoanPropagation), LiveOrigins(LiveOrigins), FactMgr(FM),
-        Reporter(Reporter) {
+        Reporter(Reporter), AST(ADC.getASTContext()) {
     for (const CFGBlock *B : *ADC.getAnalysis<PostOrderCFGView>())
       for (const Fact *F : FactMgr.getFacts(B))
         if (const auto *EF = F->getAs<ExpireFact>())
           checkExpiry(EF);
+        else if (const auto *OEF = F->getAs<OriginEscapesFact>())
+          checkAnnotations(OEF);
     issuePendingWarnings();
+    suggestAnnotations();
+    //  Annotation inference is currently guarded by a frontend flag. In the
+    //  future, this might be replaced by a design that differentiates between
+    //  explicit and inferred findings with separate warning groups.
+    if (AST.getLangOpts().EnableLifetimeSafetyInference)
+      inferAnnotations();
   }
 
-  /// Checks for use-after-free errors when a loan expires.
+  /// Checks if an escaping origin holds a placeholder loan, indicating a
+  /// missing [[clang::lifetimebound]] annotation.
+  void checkAnnotations(const OriginEscapesFact *OEF) {
+    OriginID EscapedOID = OEF->getEscapedOriginID();
+    LoanSet EscapedLoans = LoanPropagation.getLoans(EscapedOID, OEF);
+    for (LoanID LID : EscapedLoans) {
+      const Loan *L = FactMgr.getLoanMgr().getLoan(LID);
+      if (const auto *PL = dyn_cast<PlaceholderLoan>(L)) {
+        const ParmVarDecl *PVD = PL->getParmVarDecl();
+        if (PVD->hasAttr<LifetimeBoundAttr>())
+          continue;
+        AnnotationWarningsMap.try_emplace(PVD, OEF->getEscapeExpr());
+      }
+    }
+  }
+
+  /// Checks for use-after-free & use-after-return errors when a loan expires.
   ///
   /// This method examines all live origins at the expiry point and determines
   /// if any of them hold the expiring loan. If so, it creates a pending
@@ -83,7 +109,11 @@ public:
     LoanID ExpiredLoan = EF->getLoanID();
     LivenessMap Origins = LiveOrigins.getLiveOriginsAt(EF);
     Confidence CurConfidence = Confidence::None;
-    const UseFact *BadUse = nullptr;
+    // The UseFact or OriginEscapesFact most indicative of a lifetime error,
+    // prioritized by earlier source location.
+    llvm::PointerUnion<const UseFact *, const OriginEscapesFact *>
+        BestCausingFact = nullptr;
+
     for (auto &[OID, LiveInfo] : Origins) {
       LoanSet HeldLoans = LoanPropagation.getLoans(OID, EF);
       if (!HeldLoans.contains(ExpiredLoan))
@@ -92,17 +122,17 @@ public:
       Confidence NewConfidence = livenessKindToConfidence(LiveInfo.Kind);
       if (CurConfidence < NewConfidence) {
         CurConfidence = NewConfidence;
-        BadUse = LiveInfo.CausingUseFact;
+        BestCausingFact = LiveInfo.CausingFact;
       }
     }
-    if (!BadUse)
+    if (!BestCausingFact)
       return;
     // We have a use-after-free.
     Confidence LastConf = FinalWarningsMap.lookup(ExpiredLoan).ConfidenceLevel;
     if (LastConf >= CurConfidence)
       return;
     FinalWarningsMap[ExpiredLoan] = {/*ExpiryLoc=*/EF->getExpiryLoc(),
-                                     /*UseExpr=*/BadUse->getUseExpr(),
+                                     /*BestCausingFact=*/BestCausingFact,
                                      /*ConfidenceLevel=*/CurConfidence};
   }
 
@@ -110,10 +140,44 @@ public:
     if (!Reporter)
       return;
     for (const auto &[LID, Warning] : FinalWarningsMap) {
-      const Loan &L = FactMgr.getLoanMgr().getLoan(LID);
-      const Expr *IssueExpr = L.IssueExpr;
-      Reporter->reportUseAfterFree(IssueExpr, Warning.UseExpr,
-                                   Warning.ExpiryLoc, Warning.ConfidenceLevel);
+      const Loan *L = FactMgr.getLoanMgr().getLoan(LID);
+      const auto *BL = cast<PathLoan>(L);
+      const Expr *IssueExpr = BL->getIssueExpr();
+      llvm::PointerUnion<const UseFact *, const OriginEscapesFact *>
+          CausingFact = Warning.CausingFact;
+      Confidence Confidence = Warning.ConfidenceLevel;
+      SourceLocation ExpiryLoc = Warning.ExpiryLoc;
+
+      if (const auto *UF = CausingFact.dyn_cast<const UseFact *>())
+        Reporter->reportUseAfterFree(IssueExpr, UF->getUseExpr(), ExpiryLoc,
+                                     Confidence);
+      else if (const auto *OEF =
+                   CausingFact.dyn_cast<const OriginEscapesFact *>())
+        Reporter->reportUseAfterReturn(IssueExpr, OEF->getEscapeExpr(),
+                                       ExpiryLoc, Confidence);
+      else
+        llvm_unreachable("Unhandled CausingFact type");
+    }
+  }
+
+  void suggestAnnotations() {
+    if (!Reporter)
+      return;
+    for (const auto &[PVD, EscapeExpr] : AnnotationWarningsMap)
+      Reporter->suggestAnnotation(PVD, EscapeExpr);
+  }
+
+  void inferAnnotations() {
+    // FIXME: To maximise inference propagation, functions should be analyzed in
+    // post-order of the call graph, allowing inferred annotations to propagate
+    // through the call chain
+    // FIXME: Add the inferred attribute to all redeclarations of the function,
+    // not just the definition being analyzed.
+    for (const auto &[ConstPVD, EscapeExpr] : AnnotationWarningsMap) {
+      ParmVarDecl *PVD = const_cast<ParmVarDecl *>(ConstPVD);
+      if (!PVD->hasAttr<LifetimeBoundAttr>())
+        PVD->addAttr(
+            LifetimeBoundAttr::CreateImplicit(AST, PVD->getLocation()));
     }
   }
 };

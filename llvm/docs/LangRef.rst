@@ -333,11 +333,14 @@ added in the future:
     (e.g., by passing things in registers). This calling convention
     allows the target to use whatever tricks it wants to produce fast
     code for the target, without having to conform to an externally
-    specified ABI (Application Binary Interface). `Tail calls can only
-    be optimized when this, the tailcc, the GHC or the HiPE convention is
-    used. <CodeGenerator.html#tail-call-optimization>`_ This calling
-    convention does not support varargs and requires the prototype of all
-    callees to exactly match the prototype of the function definition.
+    specified ABI (Application Binary Interface). Targets may use different
+    implementations according to different features. In this case, a
+    TTI interface ``useFastCCForInternalCall`` must return false when
+    any caller functions and the callee belong to different implementations.
+    `Tail calls can only be optimized when this, the tailcc, the GHC or the
+    HiPE convention is used. <CodeGenerator.html#tail-call-optimization>`_
+    This calling convention does not support varargs and requires the prototype
+    of all callees to exactly match the prototype of the function definition.
 "``coldcc``" - The cold calling convention
     This calling convention attempts to make code in the caller as
     efficient as possible under the assumption that the call is not
@@ -439,7 +442,7 @@ added in the future:
 "``preserve_allcc``" - The `PreserveAll` calling convention
     This calling convention attempts to make the code in the caller even less
     intrusive than the `PreserveMost` calling convention. This calling
-    convention also behaves identical to the `C` calling convention on how
+    convention also behaves identically to the `C` calling convention on how
     arguments and return values are passed, but it uses a different set of
     caller/callee-saved registers. This removes the burden of saving and
     recovering a large register set before and after the call in the caller. If
@@ -479,7 +482,7 @@ added in the future:
     preserving as many registers as possible (all the registers that are
     preserved on the fast path, composed of the entry and exit blocks).
 
-    This calling convention behaves identical to the `C` calling convention on
+    This calling convention behaves identically to the `C` calling convention on
     how arguments and return values are passed, but it uses a different set of
     caller/callee-saved registers.
 
@@ -691,7 +694,7 @@ correctly in a target-specific way.
 
 An example of pointers with non-address bits are the AMDGPU buffer descriptors
 which are 160 bits: a 128-bit fat pointer and a 32-bit offset.
-Similarly, CHERI capabilities contain a 32 or 64 bit address as well as the
+Similarly, CHERI capabilities contain a 32- or 64-bit address as well as the
 same number of metadata bits, but unlike the AMDGPU buffer descriptors they have
 external state in addition to non-address bits.
 
@@ -1553,6 +1556,9 @@ Currently, only the following parameter attributes are defined:
     attribute may only be applied to pointer-typed parameters. This is not
     checked or enforced by LLVM; if the parameter or return pointer is null,
     :ref:`poison value <poisonvalues>` is returned or passed instead.
+    The ``nonnull`` attribute only refers to the address bits of the pointers.
+    If all the address bits are zero, the result will be a poison value, even
+    if the pointer has non-zero non-address bits or non-zero external state.
     The ``nonnull`` attribute should be combined with the ``noundef`` attribute
     to ensure a pointer is not null or otherwise the behavior is undefined.
 
@@ -2178,7 +2184,8 @@ For example:
     This attribute specifies the possible memory effects of the call-site or
     function. It allows specifying the possible access kinds (``none``,
     ``read``, ``write``, or ``readwrite``) for the possible memory location
-    kinds (``argmem``, ``inaccessiblemem``, ``errnomem``, as well as a default).
+    kinds (``argmem``, ``inaccessiblemem``, ``errnomem``, ``target_mem0``,
+    ``target_mem1``, as well as a default).
     It is best understood by example:
 
     - ``memory(none)``: Does not access any memory.
@@ -2220,6 +2227,11 @@ For example:
       accessing inaccessible memory itself). Inaccessible memory is often used
       to model control dependencies of intrinsics.
     - ``errnomem``: This refers to accesses to the ``errno`` variable.
+    - ``target_mem#`` : These refer to target specific state that cannot be
+      accessed by any other means. # is a number between 0 and 1 inclusive.
+      Note: The target_mem locations are experimental and intended for internal
+      testing only. They must not be used in production code.
+
     - The default access kind (specified without a location prefix) applies to
       all locations that haven't been specified explicitly, including those that
       don't currently have a dedicated location kind (e.g., accesses to globals
@@ -2747,6 +2759,27 @@ For example:
     all arguments are not undef and not poison. Otherwise, it is undefined
     behavior.
 
+``"modular-format"="<type>,<string_idx>,<first_arg_idx>,<modular_impl_fn>,<impl_name>,<aspects...>"``
+    This attribute indicates that the implementation is modular on a particular
+    format string argument. If the compiler can determine that not all aspects
+    of the implementation are needed, it can report which aspects were needed
+    and redirect the call to a modular implementation function instead.
+
+    The compiler reports that an implementation aspect is needed by issuing a
+    relocation for the symbol `<impl_name>_<aspect>``. This arranges for code
+    and data needed to support the aspect of the implementation to be brought
+    into the link to satisfy weak references in the modular implemenation
+    function.
+
+    The first three arguments have the same semantics as the arguments to the C
+    ``format`` attribute.
+
+    The following aspects are currently supported:
+
+    - ``float``: The call has a floating point argument
+
+
+
 Call Site Attributes
 ----------------------
 
@@ -3204,6 +3237,24 @@ A "convergencectrl" operand bundle is only valid on a ``convergent`` operation.
 When present, the operand bundle must contain exactly one value of token type.
 See the :doc:`ConvergentOperations` document for details.
 
+.. _deactivationsymbol:
+
+Deactivation Symbol Operand Bundles
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+A ``"deactivation-symbol"`` operand bundle is valid on the following
+instructions (AArch64 only):
+
+- Call to a normal function with ``notail`` attribute and a first argument and
+  return value of type ``ptr``.
+- Call to ``llvm.ptrauth.sign`` or ``llvm.ptrauth.auth`` intrinsics.
+
+This operand bundle specifies that if the deactivation symbol is defined
+to a valid value for the target, the marked instruction will return the
+value of its first argument instead of calling the specified function
+or intrinsic. This is achieved with ``PATCHINST`` relocations on the
+target instructions (see the AArch64 psABI for details).
+
 .. _moduleasm:
 
 Module-Level Inline Assembly
@@ -3283,7 +3334,7 @@ as follows:
 ``A<address space>``
     Specifies the address space of objects created by '``alloca``'.
     Defaults to the default address space of 0.
-``p[<flags>][<as>]:<size>:<abi>[:<pref>[:<idx>]]``
+``p[<flags>][<as>][(<name>)]:<size>:<abi>[:<pref>[:<idx>]]``
     This specifies the properties of a pointer in address space ``as``.
     The ``<size>`` parameter specifies the size of the bitwise representation.
     For :ref:`non-integral pointers <nointptrtype>` the representation size may
@@ -3302,7 +3353,11 @@ as follows:
     The optional ``<flags>`` are used to specify properties of pointers in this
     address space: the character ``u`` marks pointers as having an unstable
     representation, and ``e`` marks pointers having external state. See
-    :ref:`Non-Integral Pointer Types <nointptrtype>`.
+    :ref:`Non-Integral Pointer Types <nointptrtype>`. The ``<name>`` is an
+    optional name of that address space, surrounded by ``(`` and ``)``. If the
+    name is specified, it must be unique to that address space and cannot be
+    ``A``, ``G``, or ``P`` which are pre-defined names used to denote alloca,
+    global, and program address space respectively.
 
 ``i<size>:<abi>[:<pref>]``
     This specifies the alignment for an integer type of a given bit
@@ -5254,7 +5309,7 @@ need to refer to the actual function body.
 Pointer Authentication Constants
 --------------------------------
 
-``ptrauth (ptr CST, i32 KEY[, i64 DISC[, ptr ADDRDISC]?]?)``
+``ptrauth (ptr CST, i32 KEY[, i64 DISC[, ptr ADDRDISC[, ptr DS]?]?]?)``
 
 A '``ptrauth``' constant represents a pointer with a cryptographic
 authentication signature embedded into some bits, as described in the
@@ -5282,6 +5337,11 @@ Otherwise, the expression is equivalent to:
     %tmp1 = call i64 @llvm.ptrauth.blend(i64 ptrtoint (ptr ADDRDISC to i64), i64 DISC)
     %tmp2 = call i64 @llvm.ptrauth.sign(i64 ptrtoint (ptr CST to i64), i32 KEY, i64 %tmp1)
     %val = inttoptr i64 %tmp2 to ptr
+
+If the deactivation symbol operand ``DS`` has a non-null value,
+the semantics are as if a :ref:`deactivation-symbol operand bundle
+<deactivationsymbol>` were added to the ``llvm.ptrauth.sign`` intrinsic
+calls above, with ``DS`` as the only operand.
 
 .. _constantexprs:
 
@@ -8033,6 +8093,21 @@ pass should record the new estimates by calling
 loop, ``llvm::getLoopEstimatedTripCount`` returns its value instead of
 estimating the trip count from the loop's ``branch_weights`` metadata.
 
+Zero
+""""
+
+Some passes set ``llvm.loop.estimated_trip_count`` to 0.  For example, after
+peeling 10 or more iterations from a loop with an estimated trip count of 10,
+``llvm.loop.estimated_trip_count`` becomes 0 on the remaining loop.  It
+indicates that, each time execution reaches the peeled iterations, execution is
+estimated to exit them without reaching the remaining loop's header.
+
+Even if the probability of reaching a loop's header is low, if it is reached, it
+is the start of an iteration.  Consequently, some passes historically assume
+that ``llvm::getLoopEstimatedTripCount`` always returns a positive count or
+``std::nullopt``.  Thus, it returns ``std::nullopt`` when
+``llvm.loop.estimated_trip_count`` is 0.
+
 '``llvm.licm.disable``' Metadata
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -9793,8 +9868,12 @@ The '``callbr``' instruction causes control to transfer to a specified
 function, with the possibility of control flow transfer to either the
 '``fallthrough``' label or one of the '``indirect``' labels.
 
-This instruction should only be used to implement the "goto" feature of gcc
-style inline assembly. Any other usage is an error in the IR verifier.
+This instruction can currently only be used
+
+#. to implement the "goto" feature of gcc style inline assembly or
+#. to call selected intrinsics.
+
+Any other usage is an error in the IR verifier.
 
 Note that in order to support outputs along indirect edges, LLVM may need to
 split critical edges, which may require synthesizing a replacement block for
@@ -9843,7 +9922,7 @@ This instruction requires several arguments:
    indicates the function accepts a variable number of arguments, the
    extra arguments can be specified.
 #. '``fallthrough label``': the label reached when the inline assembly's
-   execution exits the bottom.
+   execution exits the bottom / the intrinsic call returns.
 #. '``indirect labels``': the labels reached when a callee transfers control
    to a location other than the '``fallthrough label``'. Label constraints
    refer to these destinations.
@@ -9861,9 +9940,12 @@ flow goes after the call.
 The output values of a '``callbr``' instruction are available both in the
 the '``fallthrough``' block, and any '``indirect``' blocks(s).
 
-The only use of this today is to implement the "goto" feature of gcc inline
-assembly where additional labels can be provided as locations for the inline
-assembly to jump to.
+The only current uses of this are:
+
+#. implement the "goto" feature of gcc inline assembly where additional
+   labels can be provided as locations for the inline assembly to jump to.
+#. support selected intrinsics which manipulate control flow and should
+   be chained to specific terminators, such as '``unreachable``'.
 
 Example:
 """"""""
@@ -9877,6 +9959,14 @@ Example:
       ; "asm goto" with output constraints.
       <result> = callbr i32 asm "", "=r,r,!i"(i32 %x)
                   to label %fallthrough [label %indirect]
+
+      ; intrinsic which should be followed by unreachable (the order of the
+      ; blocks after the callbr instruction doesn't matter)
+        callbr void @llvm.amdgcn.kill(i1 %c) to label %cont [label %kill]
+      cont:
+        ...
+      kill:
+        unreachable
 
 .. _i_resume:
 
@@ -12981,8 +13071,10 @@ code given as ``cond``. The comparison performed always yields either an
 #. ``sle``: interprets the operands as signed values and yields ``true``
    if ``op1`` is less than or equal to ``op2``.
 
-If the operands are :ref:`pointer <t_pointer>` typed, the pointer values
-are compared as if they were integers.
+If the operands are :ref:`pointer <t_pointer>` typed, the address bits of the
+pointers are compared as if they were integers. Non-address bits or external
+state are not compared. That is, ``icmp`` on pointers is equivalent to ``icmp``
+on the ``ptrtoaddr`` of the pointers.
 
 If the operands are integer vectors, then they are compared element by
 element. The result is an ``i1`` vector with the same number of elements
@@ -16201,6 +16293,13 @@ Semantics:
 This function returns the first value raised to the second power with an
 unspecified sequence of rounding operations.
 
+Note that the `powi` function is unusual in that NaN inputs can lead to non-NaN
+results, and this depends on the kind of NaN (quiet vs signaling). Due to how
+:ref:`LLVM treats NaN values <floatnan>` in non-constrained functions, the
+function may non-deterministically treat signaling NaNs as quiet NaNs. For
+example, `powi(QNaN, 0)` returns `1.0`, and `powi(SNaN, 0)` may
+non-deterministically return `1.0` or a NaN.
+
 .. _t_llvm_sin:
 
 '``llvm.sin.*``' Intrinsic
@@ -16762,6 +16861,13 @@ trapping or setting ``errno``.
 
 When specified with the fast-math-flag 'afn', the result may be approximated
 using a less accurate calculation.
+
+Note that the `pow` function is unusual in that NaN inputs can lead to non-NaN
+results, and this depends on the kind of NaN (quiet vs signaling). Due to how
+:ref:`LLVM treats NaN values <floatnan>` in non-constrained functions, the
+function may non-deterministically treat signaling NaNs as quiet NaNs. For
+example, `pow(QNaN, 0.0)` returns `1.0`, and `pow(SNaN, 0.0)` may
+non-deterministically return `1.0` or a NaN.
 
 .. _int_exp:
 
@@ -19579,7 +19685,7 @@ Syntax:
 Overview:
 """""""""
 
-The '``llvm.canonicalize.*``' intrinsic returns the platform specific canonical
+The '``llvm.canonicalize.*``' intrinsic returns the platform-specific canonical
 encoding of a floating-point number. This canonicalization is useful for
 implementing certain numeric primitives such as frexp. The canonical encoding is
 defined by IEEE-754-2008 to be:
@@ -20439,6 +20545,9 @@ contraction can be leveraged to implement the reduction, which may result in
 variations to the results due to reordering or by lowering to different
 instructions (including combining multiple instructions into a single one).
 
+Vector Manipulation Intrinsics
+------------------------------
+
 '``llvm.vector.insert``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -20638,45 +20747,6 @@ Arguments:
 All arguments must be vectors of the same type whereby their logical
 concatenation matches the result type.
 
-'``llvm.experimental.cttz.elts``' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Syntax:
-"""""""
-
-This is an overloaded intrinsic. You can use ```llvm.experimental.cttz.elts```
-on any vector of integer elements, both fixed width and scalable.
-
-::
-
-      declare i8 @llvm.experimental.cttz.elts.i8.v8i1(<8 x i1> <src>, i1 <is_zero_poison>)
-
-Overview:
-"""""""""
-
-The '``llvm.experimental.cttz.elts``' intrinsic counts the number of trailing
-zero elements of a vector.
-
-Arguments:
-""""""""""
-
-The first argument is the vector to be counted. This argument must be a vector
-with integer element type. The return type must also be an integer type which is
-wide enough to hold the maximum number of elements of the source vector. The
-behavior of this intrinsic is undefined if the return type is not wide enough
-for the number of elements in the input vector.
-
-The second argument is a constant flag that indicates whether the intrinsic
-returns a valid result if the first argument is all zero. If the first argument
-is all zero and the second argument is true, the result is poison.
-
-Semantics:
-""""""""""
-
-The '``llvm.experimental.cttz.elts``' intrinsic counts the trailing (least
-significant) zero elements in a vector. If ``src == 0`` the result is the
-number of elements in the input vector.
-
 '``llvm.vector.splice``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -20752,6 +20822,48 @@ Arguments:
 """"""""""
 
 None.
+
+Experimental Vector Intrinsics
+------------------------------
+
+'``llvm.experimental.cttz.elts``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+This is an overloaded intrinsic. You can use ```llvm.experimental.cttz.elts```
+on any vector of integer elements, both fixed width and scalable.
+
+::
+
+      declare i8 @llvm.experimental.cttz.elts.i8.v8i1(<8 x i1> <src>, i1 <is_zero_poison>)
+
+Overview:
+"""""""""
+
+The '``llvm.experimental.cttz.elts``' intrinsic counts the number of trailing
+zero elements of a vector.
+
+Arguments:
+""""""""""
+
+The first argument is the vector to be counted. This argument must be a vector
+with integer element type. The return type must also be an integer type which is
+wide enough to hold the maximum number of elements of the source vector. The
+behavior of this intrinsic is undefined if the return type is not wide enough
+for the number of elements in the input vector.
+
+The second argument is a constant flag that indicates whether the intrinsic
+returns a valid result if the first argument is all zero. If the first argument
+is all zero and the second argument is true, the result is poison.
+
+Semantics:
+""""""""""
+
+The '``llvm.experimental.cttz.elts``' intrinsic counts the trailing (least
+significant) zero elements in a vector. If ``src == 0`` the result is the
+number of elements in the input vector.
 
 
 '``llvm.experimental.get.vector.length``' Intrinsic
@@ -24514,54 +24626,6 @@ Examples:
  llvm.experimental.vp.splice(<A,B,C,D>, <E,F,G,H>, 1, 2, 3);  ==> <B, E, F, poison> index
  llvm.experimental.vp.splice(<A,B,C,D>, <E,F,G,H>, -2, 3, 2); ==> <B, C, poison, poison> trailing elements
 
-
-.. _int_experimental_vp_splat:
-
-
-'``llvm.experimental.vp.splat``' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Syntax:
-"""""""
-This is an overloaded intrinsic.
-
-::
-
-      declare <2 x double> @llvm.experimental.vp.splat.v2f64(double %scalar, <2 x i1> %mask, i32 %evl)
-      declare <vscale x 4 x i32> @llvm.experimental.vp.splat.nxv4i32(i32 %scalar, <vscale x 4 x i1> %mask, i32 %evl)
-
-Overview:
-"""""""""
-
-The '``llvm.experimental.vp.splat.*``' intrinsic is to create a predicated splat
-with specific effective vector length.
-
-Arguments:
-""""""""""
-
-The result is a vector and it is a splat of the first scalar argument. The
-second argument ``mask`` is a vector mask and has the same number of elements as
-the result. The third argument is the explicit vector length of the operation.
-
-Semantics:
-""""""""""
-
-This intrinsic splats a vector with ``evl`` elements of a scalar argument.
-The lanes in the result vector disabled by ``mask`` are ``poison``. The
-elements past ``evl`` are poison.
-
-Examples:
-"""""""""
-
-.. code-block:: llvm
-
-      %r = call <4 x float> @llvm.vp.splat.v4f32(float %a, <4 x i1> %mask, i32 %evl)
-      ;; For all lanes below %evl, %r is lane-wise equivalent to %also.r
-      %e = insertelement <4 x float> poison, float %a, i32 0
-      %s = shufflevector <4 x float> %e, <4 x float> poison, <4 x i32> zeroinitializer
-      %also.r = select <4 x i1> %mask, <4 x float> %s, <4 x float> poison
-
-
 .. _int_experimental_vp_reverse:
 
 
@@ -24656,7 +24720,7 @@ Examples:
 
 .. _int_vp_load_ff:
 
-'``llvm.vp.load_ff``' Intrinsic
+'``llvm.vp.load.ff``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Syntax:
@@ -31647,3 +31711,55 @@ Semantics:
 
 The '``llvm.preserve.struct.access.index``' intrinsic produces the same result
 as a getelementptr with base ``base`` and access operands ``{0, gep_index}``.
+
+'``llvm.protected.field.ptr``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+::
+
+      declare ptr @llvm.protected.field.ptr(ptr ptr, i64 disc, i1 use_hw_encoding)
+
+Overview:
+"""""""""
+
+The '``llvm.protected.field.ptr``' intrinsic returns a pointer to the
+storage location of a pointer that has special properties as described
+below.
+
+Arguments:
+""""""""""
+
+The first argument is the pointer specifying the location to store the
+pointer. The second argument is the discriminator, which is used as an
+input for the pointer encoding. The third argument specifies whether to
+use a target-specific mechanism to encode the pointer.
+
+Semantics:
+""""""""""
+
+This intrinsic returns a pointer which may be used to store a
+pointer at the specified address that is encoded using the specified
+discriminator. Stores via the pointer will cause the stored pointer to be
+blended with the second argument before being stored. The blend operation
+shall be either a weak but cheap and target-independent operation (if
+the third argument is 0) or a stronger target-specific operation (if the
+third argument is 1). When loading from the pointer, the inverse operation
+is done on the loaded pointer after it is loaded. Specifically, when the
+third argument is 1, the pointer is signed (using pointer authentication
+instructions or emulated PAC if not supported by the hardware) using
+the discriminator before being stored, and authenticated after being
+loaded. Note that it is currently unsupported to have the third argument
+be 1 on targets other than AArch64, and it is also currently unsupported
+to have the third argument be 0 at all.
+
+If the pointer is used other than for loading or storing (e.g. its
+address escapes), that will disable all blending operations using
+the deactivation symbol specified in the intrinsic's operand bundle.
+The deactivation symbol operand bundle is copied onto any sign and auth
+intrinsics that this intrinsic is lowered into. The intent is that the
+deactivation symbol represents a field identifier.
+
+This intrinsic is used to implement structure protection.

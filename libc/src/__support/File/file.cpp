@@ -15,6 +15,7 @@
 #include "src/__support/CPP/span.h"
 #include "src/__support/libc_errno.h" // For error macros
 #include "src/__support/macros/config.h"
+#include "src/string/memory_utils/inline_memcpy.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -85,9 +86,7 @@ FileIOResult File::write_unlocked_fbf(const uint8_t *data, size_t len) {
   cpp::span<uint8_t> bufref(static_cast<uint8_t *>(buf), bufsize);
 
   // Copy the first piece into the buffer.
-  // TODO: Replace the for loop below with a call to internal memcpy.
-  for (size_t i = 0; i < primary.size(); ++i)
-    bufref[pos + i] = primary[i];
+  inline_memcpy(bufref.data() + pos, primary.data(), primary.size());
   pos += primary.size();
 
   // If there is no remainder, we can return early, since the first piece has
@@ -115,9 +114,7 @@ FileIOResult File::write_unlocked_fbf(const uint8_t *data, size_t len) {
   // know that if the second piece has data in it then the buffer has been
   // flushed, meaning that pos is always 0.
   if (remainder.size() < bufsize) {
-    // TODO: Replace the for loop below with a call to internal memcpy.
-    for (size_t i = 0; i < remainder.size(); ++i)
-      bufref[i] = remainder[i];
+    inline_memcpy(bufref.data(), remainder.data(), remainder.size());
     pos = remainder.size();
   } else {
 
@@ -209,9 +206,7 @@ size_t File::copy_data_from_buf(uint8_t *data, size_t len) {
   // available_data is never a wrapped around value.
   size_t available_data = read_limit - pos;
   if (len <= available_data) {
-    // TODO: Replace the for loop below with a call to internal memcpy.
-    for (size_t i = 0; i < len; ++i)
-      dataref[i] = bufref[i + pos];
+    inline_memcpy(dataref.data(), bufref.data() + pos, len);
     pos += len;
     return len;
   }
@@ -255,8 +250,7 @@ FileIOResult File::read_unlocked_fbf(uint8_t *data, size_t len) {
   size_t fetched_size = result.value;
   read_limit += fetched_size;
   size_t transfer_size = fetched_size >= to_fetch ? to_fetch : fetched_size;
-  for (size_t i = 0; i < transfer_size; ++i)
-    dataref[i] = buf[i];
+  inline_memcpy(dataref.data(), buf, transfer_size);
   pos += transfer_size;
   if (result.has_error() || fetched_size < to_fetch) {
     if (!result.has_error())

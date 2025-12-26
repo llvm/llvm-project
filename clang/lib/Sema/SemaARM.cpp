@@ -1183,7 +1183,6 @@ bool SemaARM::CheckAArch64BuiltinFunctionCall(const TargetInfo &TI,
     l = 0;
     u = 15;
     break;
-  case AArch64::BI__builtin_arm_tcancel: l = 0; u = 65535; break;
   }
 
   return SemaRef.BuiltinConstantArgRange(TheCall, i, l, u + l);
@@ -1594,19 +1593,54 @@ bool SemaARM::areLaxCompatibleSveTypes(QualType FirstType,
          IsLaxCompatible(SecondType, FirstType);
 }
 
+static void appendFeature(StringRef Feat, SmallString<64> &Buffer) {
+  if (!Buffer.empty())
+    Buffer.append("+");
+  Buffer.append(Feat);
+}
+
+static void convertPriorityString(unsigned Priority,
+                                  SmallString<64> &NewParam) {
+  StringRef PriorityString[8] = {"P0", "P1", "P2", "P3",
+                                 "P4", "P5", "P6", "P7"};
+
+  assert(Priority > 0 && Priority < 256 && "priority out of range");
+  // Convert priority=[1-255] -> P0 + ... + P7
+  for (unsigned BitPos = 0; BitPos < 8; ++BitPos)
+    if (Priority & (1U << BitPos))
+      appendFeature(PriorityString[BitPos], NewParam);
+}
+
 bool SemaARM::checkTargetVersionAttr(const StringRef Param,
-                                     const SourceLocation Loc) {
+                                     const SourceLocation Loc,
+                                     SmallString<64> &NewParam) {
   using namespace DiagAttrParams;
 
+  auto [LHS, RHS] = Param.split(';');
+  RHS = RHS.trim();
+  bool IsDefault = false;
   llvm::SmallVector<StringRef, 8> Features;
-  Param.split(Features, '+');
+  LHS.split(Features, '+');
   for (StringRef Feat : Features) {
     Feat = Feat.trim();
     if (Feat == "default")
-      continue;
-    if (!getASTContext().getTargetInfo().validateCpuSupports(Feat))
+      IsDefault = true;
+    else if (!getASTContext().getTargetInfo().validateCpuSupports(Feat))
       return Diag(Loc, diag::warn_unsupported_target_attribute)
              << Unsupported << None << Feat << TargetVersion;
+    appendFeature(Feat, NewParam);
+  }
+
+  if (!RHS.empty() && RHS.consume_front("priority=")) {
+    if (IsDefault)
+      Diag(Loc, diag::warn_invalid_default_version_priority);
+    else {
+      unsigned Digit;
+      if (RHS.getAsInteger(0, Digit) || Digit < 1 || Digit > 255)
+        Diag(Loc, diag::warn_version_priority_out_of_range) << RHS;
+      else
+        convertPriorityString(Digit, NewParam);
+    }
   }
   return false;
 }
@@ -1628,15 +1662,21 @@ bool SemaARM::checkTargetClonesAttr(
     const StringRef Param = Params[I].trim();
     const SourceLocation &Loc = Locs[I];
 
-    if (Param.empty())
+    auto [LHS, RHS] = Param.split(';');
+    RHS = RHS.trim();
+    bool HasPriority = !RHS.empty() && RHS.consume_front("priority=");
+
+    if (LHS.empty())
       return Diag(Loc, diag::warn_unsupported_target_attribute)
              << Unsupported << None << "" << TargetClones;
 
-    if (Param == "default") {
+    if (LHS == "default") {
       if (HasDefault)
         Diag(Loc, diag::warn_target_clone_duplicate_options);
       else {
-        NewParams.push_back(Param);
+        if (HasPriority)
+          Diag(Loc, diag::warn_invalid_default_version_priority);
+        NewParams.push_back(LHS);
         HasDefault = true;
       }
       continue;
@@ -1645,7 +1685,7 @@ bool SemaARM::checkTargetClonesAttr(
     bool HasCodeGenImpact = false;
     llvm::SmallVector<StringRef, 8> Features;
     llvm::SmallVector<StringRef, 8> ValidFeatures;
-    Param.split(Features, '+');
+    LHS.split(Features, '+');
     for (StringRef Feat : Features) {
       Feat = Feat.trim();
       if (!getASTContext().getTargetInfo().validateCpuSupports(Feat)) {
@@ -1675,6 +1715,14 @@ bool SemaARM::checkTargetClonesAttr(
       continue;
     }
 
+    if (HasPriority) {
+      unsigned Digit;
+      if (RHS.getAsInteger(0, Digit) || Digit < 1 || Digit > 255)
+        Diag(Loc, diag::warn_version_priority_out_of_range) << RHS;
+      else
+        convertPriorityString(Digit, NewParam);
+    }
+
     // Valid non-default argument.
     NewParams.push_back(NewParam);
     HasNonDefault = true;
@@ -1685,4 +1733,24 @@ bool SemaARM::checkTargetClonesAttr(
   return false;
 }
 
+bool SemaARM::checkSVETypeSupport(QualType Ty, SourceLocation Loc,
+                                  const FunctionDecl *FD,
+                                  const llvm::StringMap<bool> &FeatureMap) {
+  if (!Ty->isSVESizelessBuiltinType())
+    return false;
+
+  if (FeatureMap.lookup("sve"))
+    return false;
+
+  // No SVE environment available.
+  if (!FeatureMap.lookup("sme"))
+    return Diag(Loc, diag::err_sve_vector_in_non_sve_target) << Ty;
+
+  // SVE environment only available to streaming functions.
+  if (FD && !FD->getType().isNull() &&
+      !IsArmStreamingFunction(FD, /*IncludeLocallyStreaming=*/true))
+    return Diag(Loc, diag::err_sve_vector_in_non_streaming_function) << Ty;
+
+  return false;
+}
 } // namespace clang

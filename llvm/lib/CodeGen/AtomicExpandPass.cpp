@@ -853,8 +853,8 @@ static PartwordMaskValues createMaskInstrs(IRBuilderBase &Builder,
   if (AddrAlign < MinWordSize) {
     PMV.AlignedAddr = Builder.CreateIntrinsic(
         Intrinsic::ptrmask, {PtrTy, IntTy},
-        {Addr, ConstantInt::get(IntTy, ~(uint64_t)(MinWordSize - 1))}, nullptr,
-        "AlignedAddr");
+        {Addr, ConstantInt::getSigned(IntTy, ~(uint64_t)(MinWordSize - 1))},
+        nullptr, "AlignedAddr");
 
     Value *AddrInt = Builder.CreatePtrToInt(Addr, IntTy);
     PtrLSB = Builder.CreateAnd(AddrInt, MinWordSize - 1, "PtrLSB");

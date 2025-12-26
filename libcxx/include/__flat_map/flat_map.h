@@ -409,41 +409,45 @@ public:
   }
 
   // iterators
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 iterator begin() noexcept {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 iterator begin() noexcept {
     return iterator(__containers_.keys.begin(), __containers_.values.begin());
   }
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 const_iterator begin() const noexcept {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 const_iterator begin() const noexcept {
     return const_iterator(__containers_.keys.begin(), __containers_.values.begin());
   }
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 iterator end() noexcept {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 iterator end() noexcept {
     return iterator(__containers_.keys.end(), __containers_.values.end());
   }
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 const_iterator end() const noexcept {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 const_iterator end() const noexcept {
     return const_iterator(__containers_.keys.end(), __containers_.values.end());
   }
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 reverse_iterator rbegin() noexcept {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 reverse_iterator rbegin() noexcept {
     return reverse_iterator(end());
   }
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 const_reverse_iterator rbegin() const noexcept {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 const_reverse_iterator rbegin() const noexcept {
     return const_reverse_iterator(end());
   }
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 reverse_iterator rend() noexcept {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 reverse_iterator rend() noexcept {
     return reverse_iterator(begin());
   }
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 const_reverse_iterator rend() const noexcept {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 const_reverse_iterator rend() const noexcept {
     return const_reverse_iterator(begin());
   }
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 const_iterator cbegin() const noexcept { return begin(); }
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 const_iterator cend() const noexcept { return end(); }
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 const_reverse_iterator crbegin() const noexcept {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 const_iterator cbegin() const noexcept {
+    return begin();
+  }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 const_iterator cend() const noexcept {
+    return end();
+  }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 const_reverse_iterator crbegin() const noexcept {
     return const_reverse_iterator(end());
   }
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 const_reverse_iterator crend() const noexcept {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 const_reverse_iterator crend() const noexcept {
     return const_reverse_iterator(begin());
   }
 
@@ -452,22 +456,22 @@ public:
     return __containers_.keys.empty();
   }
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 size_type size() const noexcept {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 size_type size() const noexcept {
     return __containers_.keys.size();
   }
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 size_type max_size() const noexcept {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 size_type max_size() const noexcept {
     return std::min<size_type>(__containers_.keys.max_size(), __containers_.values.max_size());
   }
 
   // [flat.map.access], element access
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 mapped_type& operator[](const key_type& __x)
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 mapped_type& operator[](const key_type& __x)
     requires is_constructible_v<mapped_type>
   {
     return try_emplace(__x).first->second;
   }
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 mapped_type& operator[](key_type&& __x)
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 mapped_type& operator[](key_type&& __x)
     requires is_constructible_v<mapped_type>
   {
     return try_emplace(std::move(__x)).first->second;
@@ -476,11 +480,11 @@ public:
   template <class _Kp>
     requires(__is_compare_transparent && is_constructible_v<key_type, _Kp> && is_constructible_v<mapped_type> &&
              !is_convertible_v<_Kp &&, const_iterator> && !is_convertible_v<_Kp &&, iterator>)
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 mapped_type& operator[](_Kp&& __x) {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 mapped_type& operator[](_Kp&& __x) {
     return try_emplace(std::forward<_Kp>(__x)).first->second;
   }
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 mapped_type& at(const key_type& __x) {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 mapped_type& at(const key_type& __x) {
     auto __it = find(__x);
     if (__it == end()) {
       std::__throw_out_of_range("flat_map::at(const key_type&): Key does not exist");
@@ -488,7 +492,7 @@ public:
     return __it->second;
   }
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 const mapped_type& at(const key_type& __x) const {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 const mapped_type& at(const key_type& __x) const {
     auto __it = find(__x);
     if (__it == end()) {
       std::__throw_out_of_range("flat_map::at(const key_type&) const: Key does not exist");
@@ -498,7 +502,7 @@ public:
 
   template <class _Kp>
     requires __is_compare_transparent
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 mapped_type& at(const _Kp& __x) {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 mapped_type& at(const _Kp& __x) {
     auto __it = find(__x);
     if (__it == end()) {
       std::__throw_out_of_range("flat_map::at(const K&): Key does not exist");
@@ -508,7 +512,7 @@ public:
 
   template <class _Kp>
     requires __is_compare_transparent
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 const mapped_type& at(const _Kp& __x) const {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 const mapped_type& at(const _Kp& __x) const {
     auto __it = find(__x);
     if (__it == end()) {
       std::__throw_out_of_range("flat_map::at(const K&) const: Key does not exist");
@@ -596,7 +600,7 @@ public:
     insert(sorted_unique, __il.begin(), __il.end());
   }
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 containers extract() && {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 containers extract() && {
     auto __guard = std::__make_scope_guard([&]() noexcept { clear() /* noexcept */; });
     auto __ret   = std::move(__containers_);
     return __ret;
@@ -753,116 +757,121 @@ public:
   }
 
   // observers
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 key_compare key_comp() const { return __compare_; }
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 value_compare value_comp() const {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 key_compare key_comp() const { return __compare_; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 value_compare value_comp() const {
     return value_compare(__compare_);
   }
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 const key_container_type& keys() const noexcept {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 const key_container_type& keys() const noexcept {
     return __containers_.keys;
   }
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 const mapped_container_type& values() const noexcept {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 const mapped_container_type&
+  values() const noexcept {
     return __containers_.values;
   }
 
   // map operations
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 iterator find(const key_type& __x) {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 iterator find(const key_type& __x) {
     return __find_impl(*this, __x);
   }
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 const_iterator find(const key_type& __x) const {
-    return __find_impl(*this, __x);
-  }
-
-  template <class _Kp>
-    requires __is_compare_transparent
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 iterator find(const _Kp& __x) {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 const_iterator find(const key_type& __x) const {
     return __find_impl(*this, __x);
   }
 
   template <class _Kp>
     requires __is_compare_transparent
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 const_iterator find(const _Kp& __x) const {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 iterator find(const _Kp& __x) {
     return __find_impl(*this, __x);
   }
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 size_type count(const key_type& __x) const {
+  template <class _Kp>
+    requires __is_compare_transparent
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 const_iterator find(const _Kp& __x) const {
+    return __find_impl(*this, __x);
+  }
+
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 size_type count(const key_type& __x) const {
     return contains(__x) ? 1 : 0;
   }
 
   template <class _Kp>
     requires __is_compare_transparent
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 size_type count(const _Kp& __x) const {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 size_type count(const _Kp& __x) const {
     return contains(__x) ? 1 : 0;
   }
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 bool contains(const key_type& __x) const {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 bool contains(const key_type& __x) const {
     return find(__x) != end();
   }
 
   template <class _Kp>
     requires __is_compare_transparent
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 bool contains(const _Kp& __x) const {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 bool contains(const _Kp& __x) const {
     return find(__x) != end();
   }
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 iterator lower_bound(const key_type& __x) {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 iterator lower_bound(const key_type& __x) {
     return __lower_bound<iterator>(*this, __x);
   }
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 const_iterator lower_bound(const key_type& __x) const {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 const_iterator
+  lower_bound(const key_type& __x) const {
     return __lower_bound<const_iterator>(*this, __x);
   }
 
   template <class _Kp>
     requires __is_compare_transparent
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 iterator lower_bound(const _Kp& __x) {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 iterator lower_bound(const _Kp& __x) {
     return __lower_bound<iterator>(*this, __x);
   }
 
   template <class _Kp>
     requires __is_compare_transparent
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 const_iterator lower_bound(const _Kp& __x) const {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 const_iterator lower_bound(const _Kp& __x) const {
     return __lower_bound<const_iterator>(*this, __x);
   }
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 iterator upper_bound(const key_type& __x) {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 iterator upper_bound(const key_type& __x) {
     return __upper_bound<iterator>(*this, __x);
   }
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 const_iterator upper_bound(const key_type& __x) const {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 const_iterator
+  upper_bound(const key_type& __x) const {
     return __upper_bound<const_iterator>(*this, __x);
   }
 
   template <class _Kp>
     requires __is_compare_transparent
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 iterator upper_bound(const _Kp& __x) {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 iterator upper_bound(const _Kp& __x) {
     return __upper_bound<iterator>(*this, __x);
   }
 
   template <class _Kp>
     requires __is_compare_transparent
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 const_iterator upper_bound(const _Kp& __x) const {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 const_iterator upper_bound(const _Kp& __x) const {
     return __upper_bound<const_iterator>(*this, __x);
   }
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 pair<iterator, iterator> equal_range(const key_type& __x) {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 pair<iterator, iterator>
+  equal_range(const key_type& __x) {
     return __equal_range_impl(*this, __x);
   }
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 pair<const_iterator, const_iterator>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 pair<const_iterator, const_iterator>
   equal_range(const key_type& __x) const {
     return __equal_range_impl(*this, __x);
   }
 
   template <class _Kp>
     requires __is_compare_transparent
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 pair<iterator, iterator> equal_range(const _Kp& __x) {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 pair<iterator, iterator>
+  equal_range(const _Kp& __x) {
     return __equal_range_impl(*this, __x);
   }
   template <class _Kp>
     requires __is_compare_transparent
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 pair<const_iterator, const_iterator>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 pair<const_iterator, const_iterator>
   equal_range(const _Kp& __x) const {
     return __equal_range_impl(*this, __x);
   }

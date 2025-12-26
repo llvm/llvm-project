@@ -10,7 +10,7 @@
 #define LLDB_TOOLS_LLDB_DAP_JSONUTILS_H
 
 #include "DAPForward.h"
-#include "Protocol/ProtocolTypes.h"
+#include "Protocol/ProtocolRequests.h"
 #include "lldb/API/SBCompileUnit.h"
 #include "lldb/API/SBFormat.h"
 #include "lldb/API/SBType.h"
@@ -28,7 +28,7 @@
 
 namespace lldb_dap {
 
-/// Emplace a StringRef in a json::Object after enusring that the
+/// Emplace a StringRef in a json::Object after ensuring that the
 /// string is valid UTF8. If not, first call llvm::json::fixUTF8
 /// before emplacing.
 ///
@@ -156,11 +156,15 @@ DecodeMemoryReference(llvm::StringRef memoryReference);
 ///    Indicates if the key is required to be present, otherwise report an error
 ///    if the key is missing.
 ///
+/// \param[in] allow_empty
+///    Interpret empty string as a valid value, don't report an error (see
+///    VS Code issue https://github.com/microsoft/vscode/issues/270593).
+///
 /// \return
 ///    Returns \b true if the address was decoded successfully.
 bool DecodeMemoryReference(const llvm::json::Value &v, llvm::StringLiteral key,
                            lldb::addr_t &out, llvm::json::Path path,
-                           bool required);
+                           bool required, bool allow_empty = false);
 
 /// Extract an array of strings for the specified key from an object.
 ///
@@ -351,7 +355,7 @@ struct VariableDescription {
                       std::optional<std::string> custom_name = {});
 
   /// Returns a description of the value appropriate for the specified context.
-  std::string GetResult(llvm::StringRef context);
+  std::string GetResult(protocol::EvaluateContext context);
 };
 
 /// Does the given variable have an associated value location?

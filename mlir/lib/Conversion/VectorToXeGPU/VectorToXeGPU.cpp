@@ -519,8 +519,13 @@ struct TransferReadLowering : public OpRewritePattern<vector::TransferReadOp> {
       return lowerToScatteredLoadOp(readOp, rewriter);
     }
 
-    // Perform common data transfer checks.
     VectorType vecTy = readOp.getVectorType();
+
+    // Lower using load.gather in 1D case
+    if (vecTy.getRank() == 1 && !readOp.hasOutOfBoundsDim())
+      return lowerToScatteredLoadOp(readOp, rewriter);
+
+    // Perform common data transfer checks.
     if (failed(storeLoadPreconditions(rewriter, readOp, vecTy)))
       return failure();
 
@@ -562,7 +567,8 @@ struct TransferReadLowering : public OpRewritePattern<vector::TransferReadOp> {
     auto loadOp = xegpu::LoadNdOp::create(rewriter, loc, vecTy, ndDesc, indices,
                                           /*packed=*/nullptr, transposeAttr,
                                           /*l1_hint=*/hint,
-                                          /*l2_hint=*/hint, /*l3_hint=*/hint);
+                                          /*l2_hint=*/hint, /*l3_hint=*/hint,
+                                          /*layout=*/nullptr);
     rewriter.replaceOp(readOp, loadOp);
 
     return success();
@@ -616,7 +622,8 @@ struct TransferWriteLowering
     auto storeOp = xegpu::StoreNdOp::create(rewriter, loc, writeOp.getVector(),
                                             ndDesc, indices,
                                             /*l1_hint=*/hint,
-                                            /*l2_hint=*/hint, /*l3_hint=*/hint);
+                                            /*l2_hint=*/hint, /*l3_hint=*/hint,
+                                            /*layout=*/nullptr);
     rewriter.replaceOp(writeOp, storeOp);
 
     return success();
@@ -720,7 +727,8 @@ struct LoadLowering : public OpRewritePattern<vector::LoadOp> {
         xegpu::LoadNdOp::create(rewriter, loc, vecTy, ndDesc, indices,
                                 /*packed=*/nullptr, /*transpose=*/nullptr,
                                 /*l1_hint=*/hint,
-                                /*l2_hint=*/hint, /*l3_hint=*/hint);
+                                /*l2_hint=*/hint, /*l3_hint=*/hint,
+                                /*layout=*/nullptr);
     rewriter.replaceOp(loadOp, loadNdOp);
 
     return success();
@@ -758,7 +766,8 @@ struct StoreLowering : public OpRewritePattern<vector::StoreOp> {
     auto storeNdOp =
         xegpu::StoreNdOp::create(rewriter, loc, vector, ndDesc, indices,
                                  /*l1_hint=*/hint,
-                                 /*l2_hint=*/hint, /*l3_hint=*/hint);
+                                 /*l2_hint=*/hint, /*l3_hint=*/hint,
+                                 /*layout=*/nullptr);
 
     rewriter.replaceOp(storeOp, storeNdOp);
 

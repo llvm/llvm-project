@@ -2452,8 +2452,10 @@ size_t Process::ReadScalarIntegerFromMemory(addr_t addr, uint32_t byte_size,
         scalar = data.GetMaxU32(&offset, byte_size);
       else
         scalar = data.GetMaxU64(&offset, byte_size);
-      if (is_signed)
+      if (is_signed) {
+        scalar.MakeSigned();
         scalar.SignExtend(byte_size * 8);
+      }
       return bytes_read;
     }
   } else {
@@ -6545,7 +6547,7 @@ Status Process::WriteMemoryTags(lldb::addr_t addr, size_t len,
 
 // Create a CoreFileMemoryRange from a MemoryRegionInfo
 static CoreFileMemoryRange
-CreateCoreFileMemoryRange(const MemoryRegionInfo &region) {
+CreateCoreFileMemoryRange(const lldb_private::MemoryRegionInfo &region) {
   const addr_t addr = region.GetRange().GetRangeBase();
   llvm::AddressRange range(addr, addr + region.GetRange().GetByteSize());
   return {range, region.GetLLDBPermissions()};
@@ -6554,7 +6556,7 @@ CreateCoreFileMemoryRange(const MemoryRegionInfo &region) {
 // Add dirty pages to the core file ranges and return true if dirty pages
 // were added. Return false if the dirty page information is not valid or in
 // the region.
-static bool AddDirtyPages(const MemoryRegionInfo &region,
+static bool AddDirtyPages(const lldb_private::MemoryRegionInfo &region,
                           CoreFileMemoryRanges &ranges) {
   const auto &dirty_page_list = region.GetDirtyPageList();
   if (!dirty_page_list)
@@ -6593,8 +6595,8 @@ static bool AddDirtyPages(const MemoryRegionInfo &region,
 // given region. If the region has dirty page information, only dirty pages
 // will be added to \a ranges, else the entire range will be added to \a
 // ranges.
-static void AddRegion(const MemoryRegionInfo &region, bool try_dirty_pages,
-                      CoreFileMemoryRanges &ranges) {
+static void AddRegion(const lldb_private::MemoryRegionInfo &region,
+                      bool try_dirty_pages, CoreFileMemoryRanges &ranges) {
   // Don't add empty ranges.
   if (region.GetRange().GetByteSize() == 0)
     return;
@@ -6617,7 +6619,7 @@ static void SaveDynamicLoaderSections(Process &process,
   if (!dyld)
     return;
 
-  std::vector<MemoryRegionInfo> dynamic_loader_mem_regions;
+  std::vector<lldb_private::MemoryRegionInfo> dynamic_loader_mem_regions;
   std::function<bool(const lldb_private::Thread &)> save_thread_predicate =
       [&](const lldb_private::Thread &t) -> bool {
     return options.ShouldThreadBeSaved(t.GetID());
@@ -6742,10 +6744,11 @@ static void GetCoreFileSaveRangesStackOnly(Process &process,
 
 // TODO: We should refactor CoreFileMemoryRanges to use the lldb range type, and
 // then add an intersect method on it, or MemoryRegionInfo.
-static MemoryRegionInfo Intersect(const MemoryRegionInfo &lhs,
-                                  const MemoryRegionInfo::RangeType &rhs) {
+static lldb_private::MemoryRegionInfo
+Intersect(const lldb_private::MemoryRegionInfo &lhs,
+          const lldb_private::MemoryRegionInfo::RangeType &rhs) {
 
-  MemoryRegionInfo region_info;
+  lldb_private::MemoryRegionInfo region_info;
   region_info.SetLLDBPermissions(lhs.GetLLDBPermissions());
   region_info.GetRange() = lhs.GetRange().Intersect(rhs);
 

@@ -5,9 +5,11 @@
 
 ; CHECK-LABEL: Pass Arguments:
 ; CHECK-NEXT: Target Library Information
+; CHECK-NEXT: Runtime Library Function Analysis
 ; CHECK-NEXT: Target Pass Configuration
 ; CHECK-NEXT: Machine Module Information
 ; CHECK-NEXT: Target Transform Information
+; CHECK-NEXT: Library Function Lowering Analysis
 ; CHECK-NEXT: Assumption Cache Tracker
 ; CHECK-NEXT: Profile summary info
 ; CHECK-NEXT: Type-Based Alias Analysis
@@ -227,6 +229,7 @@
 ; CHECK-NEXT:       Implement the 'patchable-function' attribute
 ; CHECK-NEXT:       AArch64 load / store optimization pass
 ; CHECK-NEXT:       Machine Copy Propagation Pass
+; CHECK-NEXT:       AArch64 Redundant Conditional Branch Elimination
 ; CHECK-NEXT:       Workaround A53 erratum 835769 pass
 ; CHECK-NEXT:       Contiguously Lay Out Funclets
 ; CHECK-NEXT:       Remove Loads Into Fake Uses

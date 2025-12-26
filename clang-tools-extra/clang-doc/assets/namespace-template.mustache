@@ -7,49 +7,19 @@
 }}
 <!DOCTYPE html>
 <html lang="en-US">
-    <head>
-        <meta charset="utf-8"/>
-        <title>{{NamespaceTitle}}</title>
-        {{#Stylesheets}}
-        <link rel="stylesheet" type="text/css" href="{{.}}"/>
-        {{/Stylesheets}}
-        {{#Scripts}}
-        <script src="{{.}}"></script>
-        {{/Scripts}}
-        {{! Highlight.js dependency for syntax highlighting }}
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/default.min.css">
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/cpp.min.js"></script>
-    </head>
-    <body>
-        <nav class="navbar">
-            <div class="navbar__container">
-                {{#ProjectName}}
-                <div class="navbar__logo">
-                    {{ProjectName}}
-                </div>
-                {{/ProjectName}}
-                <div class="navbar__menu">
-                    <ul class="navbar__links">
-                        <li class="navbar__item">
-                            <a href="/" class="navbar__link">Namespace</a>
-                        </li>
-                        <li class="navbar__item">
-                            <a href="/" class="navbar__link">Class</a>
-                        </li>
-                    </ul>
-                </div>
-            </div>
-        </nav>
-        <main>
-            <div class="container">
-                <div class="sidebar">
-                    <h2>{{RecordType}} {{Name}}</h2>
-                    <ul>
-                        {{#HasEnums}}
-                        <li class="sidebar-section">
-                            <a class="sidebar-item" href="#Enums">Enums</a>
-                        </li>
+{{>HeadPartial}}
+<body>
+    {{>NavbarPartial}}
+    <main>
+        <div class="container">
+            <div class="sidebar">
+                <h2>{{#RecordType}}{{RecordType}} {{/RecordType}}{{Name}}</h2>
+                <ul>
+                    {{#HasEnums}}
+                    <li class="sidebar-section">
+                        <a class="sidebar-item" href="#Enums">Enums</a>
+                    </li>
+                    <li>
                         <ul>
                             {{#Enums}}
                             <li class="sidebar-item-container">
@@ -57,11 +27,13 @@
                             </li>
                             {{/Enums}}
                         </ul>
-                        {{/HasEnums}}
-                        {{#HasRecords}}
-                        <li class="sidebar-section">
-                            <a class="sidebar-item" href="#Classes">Inner Classes</a>
-                        </li>
+                    </li>
+                    {{/HasEnums}}
+                    {{#HasRecords}}
+                    <li class="sidebar-section">
+                        <a class="sidebar-item" href="#Classes">Inner Classes</a>
+                    </li>
+                    <li>
                         <ul>
                             {{#Records}}
                             <li class="sidebar-item-container">
@@ -69,38 +41,64 @@
                             </li>
                             {{/Records}}
                         </ul>
-                        {{/HasRecrods}}
-                    </ul>
-                </div>
-                <div class="resizer" id="resizer"></div>
-                <div class="content">
-                    {{#HasEnums}}
-                    <section id="Enums" class="section-container">
-                        <h2>Enumerations</h2>
-                        <div>
-                            {{#Enums}}
-                            {{>EnumPartial}}
-                            {{/Enums}}
-                        </div>
-                    </section>
-                    {{/HasEnums}}
-
-                    {{#HasRecords}}
-                    <section id="Classes" class="section-container">
-                        <h2>Inner Classes</h2>
-                        <ul class="class-container">
-                        {{#Records}}
-                            <li id="{{USR}}" style="max-height: 40px;">
-                                <a href="{{DocumentationFileName}}.html">
-                                    <pre><code class="language-cpp code-clang-doc">class {{Name}}</code></pre>
-                                </a>
-                            </li>
-                        {{/Records}}
-                        </ul>
+                    </li>
                     {{/HasRecords}}
-                    </section>
-                </div>
+                    {{#HasFunctions}}
+                    <li class="sidebar-section">
+                        <a class="sidebar-item" href="#Functions">Functions</a>
+                    </li>
+                    <li>
+                        <ul>
+                            {{#Functions}}
+                            <li class="sidebar-item-container">
+                                <a class="sidebar-item" href="#{{USR}}">{{Name}}{{#Template}}{{#Specialization}}&lt;{{#Parameters}}{{Param}}{{^End}}, {{/End}}{{/Parameters}}&gt;{{/Specialization}}{{/Template}}</a>
+                            </li>
+                            {{/Functions}}
+                        </ul>
+                    </li>
+                    {{/HasFunctions}}
+                </ul>
             </div>
-        </main>
-    </body>
+            <div class="resizer" id="resizer"></div>
+            <div class="content">
+                {{#HasEnums}}
+                <section id="Enums" class="section-container">
+                    <h2>Enumerations</h2>
+                    <div>
+                        {{#Enums}}
+                        {{>EnumPartial}}
+                        {{/Enums}}
+                    </div>
+                </section>
+                {{/HasEnums}}
+                {{#HasRecords}}
+                <section id="Classes" class="section-container">
+                    <h2>Inner Classes</h2>
+                    <ul class="class-container">
+                        {{#Records}}
+                        <li id="{{USR}}" style="max-height: 40px;">
+                            <a href="{{DocumentationFileName}}.html">
+                                <pre><code class="language-cpp code-clang-doc">class {{Name}}</code></pre>
+                            </a>
+                        </li>
+                        {{/Records}}
+                    </ul>
+                </section>
+                {{/HasRecords}}
+                {{#HasFunctions}}
+                <section id="Functions" class="section-container">
+                    <h2>Functions</h2>
+                    <ul class="class-container">
+                        {{#Functions}}
+                        <li>
+                            {{>FunctionPartial}}
+                        </li>
+                        {{/Functions}}
+                    </ul>
+                </section>
+                {{/HasFunctions}}
+            </div>
+        </div>
+    </main>
+</body>
 </html>

@@ -30,8 +30,8 @@ define i64 @test_value_in_exit_compare_chain_used_outside(ptr %src, i64 %x, i64 
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <8 x i8> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP29:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP18:%.*]] = and i64 [[TMP10]], 1
 ; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[TMP18]]
-; CHECK-NEXT:    [[TMP27:%.*]] = getelementptr i8, ptr [[TMP26]], i32 0
-; CHECK-NEXT:    [[TMP28:%.*]] = getelementptr i8, ptr [[TMP27]], i32 -7
+; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr i8, ptr [[TMP26]], i64 0
+; CHECK-NEXT:    [[TMP28:%.*]] = getelementptr i8, ptr [[TMP12]], i64 -7
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i8>, ptr [[TMP28]], align 1
 ; CHECK-NEXT:    [[REVERSE:%.*]] = shufflevector <8 x i8> [[WIDE_LOAD]], <8 x i8> poison, <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    [[TMP29]] = xor <8 x i8> [[REVERSE]], [[VEC_PHI]]

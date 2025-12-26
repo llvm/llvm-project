@@ -1428,7 +1428,7 @@ TEST_F(FileSystemTest, FileMapping) {
     fs::mapped_file_region mfr(fs::convertFDToNativeFile(FileDescriptor),
                                fs::mapped_file_region::readwrite, Size, 0, EC);
     ASSERT_NO_ERROR(EC);
-    std::copy(Val.begin(), Val.end(), mfr.data());
+    llvm::copy(Val, mfr.data());
     // Explicitly add a 0.
     mfr.data()[Val.size()] = 0;
 
@@ -1494,7 +1494,7 @@ TEST_F(FileSystemTest, FileMappingSync) {
 
     // Write content through mapped memory.
     ASSERT_NO_ERROR(EC);
-    std::copy(Content.begin(), Content.end(), MFR.data());
+    llvm::copy(Content, MFR.data());
 
     // Synchronize to file system.
     ASSERT_FALSE((bool)MFR.sync());

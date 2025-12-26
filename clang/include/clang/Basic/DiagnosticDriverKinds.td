@@ -126,6 +126,9 @@ def err_drv_bad_offload_arch_combo : Error<
   "invalid offload arch combinations: '%0' and '%1' (for a specific processor, "
   "a feature should either exist in all offload archs, or not exist in any "
   "offload archs)">;
+def err_drv_unsupported_option_for_offload_arch_req_feature : Error<
+  "'%0' option for offload arch '%1' is not currently supported "
+  "there. Use it with an offload arch containing '%2' instead">;
 def warn_drv_unsupported_option_for_offload_arch_req_feature : Warning<
   "ignoring '%0' option for offload arch '%1' as it is not currently supported "
   "there. Use it with an offload arch containing '%2' instead">,
@@ -133,6 +136,13 @@ def warn_drv_unsupported_option_for_offload_arch_req_feature : Warning<
 def warn_drv_unsupported_option_for_target : Warning<
   "ignoring '%0' option as it is not currently supported for target '%1'">,
   InGroup<OptionIgnored>;
+def err_drv_unsupported_option_for_target : Error<
+  "'%0' option is not currently supported for target '%1'">;
+def warn_drv_unsupported_option_part_for_target : Warning<
+  "ignoring '%0' in '%1' option as it is not currently supported for target '%2'">,
+  InGroup<OptionIgnored>;
+def err_drv_unsupported_option_part_for_target : Error<
+  "'%0' in '%1' option is not currently supported for target '%2'">;
 def warn_drv_invalid_argument_for_flang : Warning<
   "'%0' is not valid for Fortran">,
   InGroup<OptionIgnored>;
@@ -782,6 +792,9 @@ def err_cc1_round_trip_mismatch : Error<
 def err_cc1_unbounded_vscale_min : Error<
   "minimum vscale must be an unsigned integer greater than 0">;
 
+def err_conflicting_matrix_layout_flags: Error<
+  "-fmatrix-memory-layout=%0 conflicts with -mllvm -matrix-default-layout=%1">;
+
 def err_drv_using_omit_rtti_component_without_no_rtti : Error<
   "-fexperimental-omit-vtable-rtti call only be used with -fno-rtti">;
 
@@ -813,6 +826,8 @@ def err_drv_target_variant_invalid : Error<
 
 def err_drv_invalid_directx_shader_module : Error<
   "invalid profile : %0">;
+def err_drv_dxc_invalid_matrix_layout : Error<
+  "cannot specify /Zpr and /Zpc together">;
 def err_drv_dxc_missing_target_profile : Error<
   "target profile option (-T) is missing">;
 def err_drv_hlsl_unsupported_target : Error<
@@ -840,9 +855,6 @@ def err_drv_invalid_empty_dxil_validator_version : Error<
 def warn_drv_sarif_format_unstable : Warning<
   "diagnostic formatting in SARIF mode is currently unstable">,
   InGroup<DiagGroup<"sarif-format-unstable">>;
-
-def err_drv_riscv_unsupported_with_linker_relaxation : Error<
-  "%0 is unsupported with RISC-V linker relaxation (-mrelax)">;
 
 def warn_drv_loongarch_conflicting_implied_val : Warning<
   "ignoring '%0' as it conflicts with that implied by '%1' (%2)">,

@@ -26,6 +26,11 @@
 using namespace mlir;
 using namespace cir;
 
+namespace mlir {
+#define GEN_PASS_DEF_CIRCANONICALIZE
+#include "clang/CIR/Dialect/Passes.h.inc"
+} // namespace mlir
+
 namespace {
 
 /// Removes branches between two blocks if it is the only branch.
@@ -47,7 +52,7 @@ struct RemoveRedundantBranches : public OpRewritePattern<BrOp> {
     Block *block = op.getOperation()->getBlock();
     Block *dest = op.getDest();
 
-    if (isa<cir::LabelOp>(dest->front()))
+    if (isa<cir::LabelOp, cir::IndirectBrOp>(dest->front()))
       return failure();
     // Single edge between blocks: merge it.
     if (block->getNumSuccessors() == 1 &&
@@ -101,7 +106,8 @@ struct RemoveEmptySwitch : public OpRewritePattern<SwitchOp> {
 // CIRCanonicalizePass
 //===----------------------------------------------------------------------===//
 
-struct CIRCanonicalizePass : public CIRCanonicalizeBase<CIRCanonicalizePass> {
+struct CIRCanonicalizePass
+    : public impl::CIRCanonicalizeBase<CIRCanonicalizePass> {
   using CIRCanonicalizeBase::CIRCanonicalizeBase;
 
   // The same operation rewriting done here could have been performed

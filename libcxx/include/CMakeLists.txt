@@ -194,6 +194,7 @@ set(files
   __algorithm/simd_utils.h
   __algorithm/sort.h
   __algorithm/sort_heap.h
+  __algorithm/specialized_algorithms.h
   __algorithm/stable_partition.h
   __algorithm/stable_sort.h
   __algorithm/swap_ranges.h
@@ -328,6 +329,8 @@ set(files
   __configuration/abi.h
   __configuration/availability.h
   __configuration/compiler.h
+  __configuration/experimental.h
+  __configuration/hardening.h
   __configuration/language.h
   __configuration/platform.h
   __coroutine/coroutine_handle.h
@@ -518,7 +521,6 @@ set(files
   __locale_dir/locale_base_api.h
   __locale_dir/locale_base_api/bsd_locale_fallbacks.h
   __locale_dir/locale_base_api/ibm.h
-  __locale_dir/locale_base_api/musl.h
   __locale_dir/locale_base_api/openbsd.h
   __locale_dir/messages.h
   __locale_dir/money.h
@@ -531,6 +533,7 @@ set(files
   __locale_dir/support/fuchsia.h
   __locale_dir/support/linux.h
   __locale_dir/support/netbsd.h
+  __locale_dir/support/newlib.h
   __locale_dir/support/no_locale/characters.h
   __locale_dir/support/no_locale/strtonum.h
   __locale_dir/support/windows.h
@@ -568,7 +571,6 @@ set(files
   __mdspan/mdspan.h
   __memory/addressof.h
   __memory/align.h
-  __memory/aligned_alloc.h
   __memory/allocate_at_least.h
   __memory/allocation_guard.h
   __memory/allocator.h
@@ -698,6 +700,7 @@ set(files
   __random/uniform_real_distribution.h
   __random/weibull_distribution.h
   __ranges/access.h
+  __ranges/adjacent_view.h
   __ranges/all.h
   __ranges/as_rvalue_view.h
   __ranges/chunk_by_view.h
@@ -709,6 +712,7 @@ set(files
   __ranges/data.h
   __ranges/drop_view.h
   __ranges/drop_while_view.h
+  __ranges/elements_of.h
   __ranges/elements_view.h
   __ranges/empty.h
   __ranges/empty_view.h
@@ -786,7 +790,7 @@ set(files
   __tuple/tuple_like.h
   __tuple/tuple_like_no_subrange.h
   __tuple/tuple_size.h
-  __tuple/tuple_types.h
+  __tuple/tuple_transform.h
   __type_traits/add_cv_quals.h
   __type_traits/add_pointer.h
   __type_traits/add_reference.h
@@ -821,7 +825,6 @@ set(files
   __type_traits/is_array.h
   __type_traits/is_assignable.h
   __type_traits/is_base_of.h
-  __type_traits/is_bounded_array.h
   __type_traits/is_callable.h
   __type_traits/is_char_like_type.h
   __type_traits/is_class.h
@@ -858,7 +861,6 @@ set(files
   __type_traits/is_reference.h
   __type_traits/is_reference_wrapper.h
   __type_traits/is_referenceable.h
-  __type_traits/is_replaceable.h
   __type_traits/is_same.h
   __type_traits/is_scalar.h
   __type_traits/is_signed.h
@@ -872,7 +874,6 @@ set(files
   __type_traits/is_trivially_destructible.h
   __type_traits/is_trivially_lexicographically_comparable.h
   __type_traits/is_trivially_relocatable.h
-  __type_traits/is_unbounded_array.h
   __type_traits/is_union.h
   __type_traits/is_unqualified.h
   __type_traits/is_unsigned.h
@@ -1066,7 +1067,6 @@ set(files
   sstream
   stack
   stdatomic.h
-  stdbool.h
   stddef.h
   stdexcept
   stdio.h
@@ -1754,10 +1754,8 @@ if (LIBCXX_INSTALL_HEADERS)
 
   if (NOT CMAKE_CONFIGURATION_TYPES)
     add_custom_target(install-cxx-headers
-                      DEPENDS cxx-headers
-                      COMMAND "${CMAKE_COMMAND}"
-                              -DCMAKE_INSTALL_COMPONENT=cxx-headers
-                              -P "${CMAKE_BINARY_DIR}/cmake_install.cmake")
+      DEPENDS cxx-headers
+      COMMAND "${CMAKE_COMMAND}" --install "${CMAKE_BINARY_DIR}" --component cxx-headers)
     # Stripping is a no-op for headers
     add_custom_target(install-cxx-headers-stripped DEPENDS install-cxx-headers)
   endif()
