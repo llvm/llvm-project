@@ -48,8 +48,8 @@ public:
       return;
 
     // Record #ifndefs that succeeded. We also need the Location of the Name.
-    Ifndefs[MacroNameTok.getIdentifierInfo()] =
-        std::make_pair(Loc, MacroNameTok.getLocation());
+    Ifndefs[MacroNameTok.getIdentifierInfo()] = {Loc,
+                                                 MacroNameTok.getLocation()};
   }
 
   void MacroDefined(const Token &MacroNameTok,

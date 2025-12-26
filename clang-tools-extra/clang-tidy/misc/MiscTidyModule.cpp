@@ -8,7 +8,6 @@
 
 #include "../ClangTidy.h"
 #include "../ClangTidyModule.h"
-#include "../ClangTidyModuleRegistry.h"
 #include "ConfusableIdentifierCheck.h"
 #include "ConstCorrectnessCheck.h"
 #include "CoroutineHostileRAIICheck.h"
@@ -38,6 +37,7 @@
 
 namespace clang::tidy {
 namespace misc {
+namespace {
 
 class MiscModule : public ClangTidyModule {
 public:
@@ -92,6 +92,7 @@ public:
   }
 };
 
+} // namespace
 } // namespace misc
 
 // Register the MiscTidyModule using this statically initialized variable.

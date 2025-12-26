@@ -9,17 +9,13 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CLANGTIDYMODULEREGISTRY_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CLANGTIDYMODULEREGISTRY_H
 
+// NOLINTBEGIN
+
+// TODO(LLVM 24) Delete this header.
+#warning The ClangTidyModuleRegistry.h header is deprecated and will be removed in LLVM 24. All of the symbols it used to define have been moved into ClangTidyModule.h.
+
 #include "ClangTidyModule.h"
-#include "llvm/Support/Registry.h"
 
-namespace clang::tidy {
-
-using ClangTidyModuleRegistry = llvm::Registry<ClangTidyModule>;
-
-} // namespace clang::tidy
-
-namespace llvm {
-extern template class Registry<clang::tidy::ClangTidyModule>;
-} // namespace llvm
+// NOLINTEND
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CLANGTIDYMODULEREGISTRY_H
