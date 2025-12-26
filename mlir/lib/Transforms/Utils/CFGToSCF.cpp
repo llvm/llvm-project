@@ -1156,8 +1156,10 @@ static FailureOr<SmallVector<Block *>> transformToStructuredCFBranches(
     FailureOr<Operation *> result = interface.createStructuredBranchRegionOp(
         opBuilder, regionEntry->getTerminator(),
         continuation->getArgumentTypes(), conditionalRegions);
-    if (failed(result))
+    if (failed(result)) {
+      regionEntry->getTerminator()->dropAllReferences();
       return failure();
+    }
     structuredCondOp = *result;
     regionEntry->getTerminator()->erase();
   }
