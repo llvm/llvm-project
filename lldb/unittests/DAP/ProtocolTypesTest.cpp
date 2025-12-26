@@ -1176,3 +1176,89 @@ TEST(ProtocolTypesTest, ExceptionDetails) {
   ASSERT_THAT_EXPECTED(expected_opt, llvm::Succeeded());
   EXPECT_EQ(pp(*expected_opt), pp(details));
 }
+
+TEST(ProtocolTypesTest, StackFramePresentationHint) {
+  // Test all PresentationHint values.
+  std::vector<std::pair<StackFrame::PresentationHint, llvm::StringRef>>
+      test_cases = {{StackFrame::ePresentationHintNormal, "normal"},
+                    {StackFrame::ePresentationHintLabel, "label"},
+                    {StackFrame::ePresentationHintSubtle, "subtle"}};
+
+  for (const auto &test_case : test_cases) {
+    // Serialize the PresentationHint to JSON.
+    llvm::json::Value serialized = toJSON(test_case.first);
+    ASSERT_EQ(serialized.kind(), llvm::json::Value::Kind::String);
+    EXPECT_EQ(serialized.getAsString(), test_case.second);
+  }
+}
+
+TEST(ProtocolTypesTest, StackFrameFormat) {
+  llvm::Expected<StackFrameFormat> expected = parse<StackFrameFormat>(R"({})");
+  ASSERT_THAT_EXPECTED(expected, llvm::Succeeded());
+  EXPECT_EQ(expected->parameters, false);
+  EXPECT_EQ(expected->parameterTypes, false);
+  EXPECT_EQ(expected->parameterNames, false);
+  EXPECT_EQ(expected->parameterValues, false);
+  EXPECT_EQ(expected->line, false);
+  EXPECT_EQ(expected->module, false);
+  EXPECT_EQ(expected->includeAll, false);
+
+  expected = parse<StackFrameFormat>(R"({
+    "line": true,
+    "parameterNames": true
+  })");
+  ASSERT_THAT_EXPECTED(expected, llvm::Succeeded());
+  EXPECT_EQ(expected->parameters, false);
+  EXPECT_EQ(expected->parameterTypes, false);
+  EXPECT_EQ(expected->parameterNames, true);
+  EXPECT_EQ(expected->parameterValues, false);
+  EXPECT_EQ(expected->line, true);
+  EXPECT_EQ(expected->module, false);
+  EXPECT_EQ(expected->includeAll, false);
+}
+
+TEST(ProtocolTypesTest, StackFrame) {
+  StackFrame frame;
+  frame.id = 1;
+  frame.name = "test";
+  frame.source = Source{};
+  frame.source->name = "test.cpp";
+  frame.source->sourceReference = 23;
+  frame.line = 10;
+  frame.column = 1;
+  frame.presentationHint = StackFrame::ePresentationHintNormal;
+
+  Expected<json::Value> expected_frame = parse(R"({
+    "id": 1,
+    "name": "test",
+    "source": {
+      "name": "test.cpp",
+      "sourceReference": 23
+    },
+    "line": 10,
+    "column": 1,
+    "presentationHint": "normal"
+  })");
+
+  ASSERT_THAT_EXPECTED(expected_frame, llvm::Succeeded());
+  EXPECT_EQ(pp(*expected_frame), pp(frame));
+
+  frame.id = 2;
+  frame.canRestart = true;
+  frame.source = std::nullopt;
+  frame.presentationHint = StackFrame::ePresentationHintSubtle;
+  frame.name = "foo";
+  frame.instructionPointerReference = 12345;
+  expected_frame = parse(R"({
+    "id": 2,
+    "name": "foo",
+    "line": 0,
+    "column": 0,
+    "canRestart": true,
+    "instructionPointerReference": "0x3039",
+    "presentationHint": "subtle"
+  })");
+
+  ASSERT_THAT_EXPECTED(expected_frame, llvm::Succeeded());
+  EXPECT_EQ(pp(*expected_frame), pp(frame));
+}

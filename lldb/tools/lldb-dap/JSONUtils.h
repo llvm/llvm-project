@@ -234,56 +234,6 @@ void FillResponse(const llvm::json::Object &request,
 ///     definition outlined by Microsoft.
 llvm::json::Object CreateEventObject(const llvm::StringRef event_name);
 
-/// Create a "StackFrame" object for a LLDB frame object.
-///
-/// This function will fill in the following keys in the returned
-/// object:
-///   "id" - the stack frame ID as an integer
-///   "name" - the function name as a string
-///   "source" - source file information as a "Source" DAP object
-///   "line" - the source file line number as an integer
-///   "column" - the source file column number as an integer
-///
-/// \param[in] dap
-///     The DAP session associated with the stopped thread.
-///
-/// \param[in] frame
-///     The LLDB stack frame to use when populating out the "StackFrame"
-///     object.
-///
-/// \param[in] format
-///     The LLDB format to use when populating out the "StackFrame"
-///     object.
-///
-/// \return
-///     A "StackFrame" JSON object with that follows the formal JSON
-///     definition outlined by Microsoft.
-llvm::json::Value CreateStackFrame(DAP &dap, lldb::SBFrame &frame,
-                                   lldb::SBFormat &format);
-
-/// Create a "StackFrame" label object for a LLDB thread.
-///
-/// This function will fill in the following keys in the returned
-/// object:
-///   "id" - the thread ID as an integer
-///   "name" - the thread name as a string which combines the LLDB
-///            thread index ID along with the string name of the thread
-///            from the OS if it has a name.
-///   "presentationHint" - "label"
-///
-/// \param[in] thread
-///     The LLDB thread to use when populating out the "Thread"
-///     object.
-///
-/// \param[in] format
-///     The configured formatter for the DAP session.
-///
-/// \return
-///     A "StackFrame" JSON object with that follows the formal JSON
-///     definition outlined by Microsoft.
-llvm::json::Value CreateExtendedStackFrameLabel(lldb::SBThread &thread,
-                                                lldb::SBFormat &format);
-
 /// Create a "StoppedEvent" object for a LLDB thread object.
 ///
 /// This function will fill in the following keys in the returned
