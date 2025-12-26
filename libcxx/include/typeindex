@@ -14,6 +14,9 @@
 
     typeindex synopsis
 
+#include <compare>
+#include <typeinfo>
+
 namespace std
 {
 
@@ -50,11 +53,11 @@ struct hash<type_index>
 #else
 #  include <__config>
 #  include <__functional/unary_function.h>
-#  include <typeinfo>
 #  include <version>
 
 // standard-mandated includes
 #  include <compare>
+#  include <typeinfo>
 
 #  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #    pragma GCC system_header

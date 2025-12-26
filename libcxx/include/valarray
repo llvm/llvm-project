@@ -13,6 +13,8 @@
 /*
     valarray synopsis
 
+#include <initializer_list>
+
 namespace std
 {
 
@@ -21,6 +23,8 @@ class valarray
 {
 public:
     typedef T value_type;
+    typedef unspecified iterator;
+    typedef unspecified const_iterator;
 
     // construct/destroy:
     valarray();
@@ -90,6 +94,10 @@ public:
     valarray& operator>>=(const valarray& v);
 
     // member functions:
+    iterator begin();
+    iterator end();
+    const_iterator begin() const;
+    const_iterator end() const;
     void swap(valarray& v) noexcept;
 
     size_t size() const;
@@ -334,11 +342,6 @@ template<class T> valarray<T> sqrt (const valarray<T>& x);
 template<class T> valarray<T> tan (const valarray<T>& x);
 template<class T> valarray<T> tanh (const valarray<T>& x);
 
-template <class T> unspecified1 begin(valarray<T>& v);
-template <class T> unspecified2 begin(const valarray<T>& v);
-template <class T> unspecified1 end(valarray<T>& v);
-template <class T> unspecified2 end(const valarray<T>& v);
-
 }  // std
 
 */
@@ -368,10 +371,21 @@ template <class T> unspecified2 end(const valarray<T>& v);
 #  include <cmath>
 #  include <version>
 
+#  if _LIBCPP_STD_VER >= 14
+#    include <__iterator/reverse_iterator.h>
+#  endif
+
 // standard-mandated includes
 
 // [valarray.syn]
 #  include <initializer_list>
+
+// [iterator.range]
+#  include <__iterator/access.h>
+#  include <__iterator/data.h>
+#  include <__iterator/empty.h>
+#  include <__iterator/reverse_access.h>
+#  include <__iterator/size.h>
 
 #  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #    pragma GCC system_header
@@ -418,18 +432,6 @@ template <class _Tp>
 class mask_array;
 template <class _Tp>
 class indirect_array;
-
-template <class _Tp>
-_LIBCPP_HIDE_FROM_ABI _Tp* begin(valarray<_Tp>& __v);
-
-template <class _Tp>
-_LIBCPP_HIDE_FROM_ABI const _Tp* begin(const valarray<_Tp>& __v);
-
-template <class _Tp>
-_LIBCPP_HIDE_FROM_ABI _Tp* end(valarray<_Tp>& __v);
-
-template <class _Tp>
-_LIBCPP_HIDE_FROM_ABI const _Tp* end(const valarray<_Tp>& __v);
 
 template <class _Op, class _A0>
 struct _UnaryOp {
@@ -786,6 +788,9 @@ public:
   typedef _Tp value_type;
   typedef _Tp __result_type;
 
+  typedef _Tp* iterator;
+  typedef const _Tp* const_iterator;
+
 private:
   value_type* __begin_;
   value_type* __end_;
@@ -908,6 +913,11 @@ public:
   _LIBCPP_HIDE_FROM_ABI valarray& operator>>=(const _Expr& __v);
 
   // member functions:
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI iterator begin() { return __begin_; }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI iterator end() { return __end_; }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI const_iterator begin() const { return __begin_; }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI const_iterator end() const { return __end_; }
+
   _LIBCPP_HIDE_FROM_ABI void swap(valarray& __v) _NOEXCEPT;
 
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI size_t size() const { return static_cast<size_t>(__end_ - __begin_); }
@@ -939,18 +949,6 @@ private:
   friend class __indirect_expr;
   template <class>
   friend class __val_expr;
-
-  template <class _Up>
-  friend _Up* begin(valarray<_Up>& __v);
-
-  template <class _Up>
-  friend const _Up* begin(const valarray<_Up>& __v);
-
-  template <class _Up>
-  friend _Up* end(valarray<_Up>& __v);
-
-  template <class _Up>
-  friend const _Up* end(const valarray<_Up>& __v);
 
   _LIBCPP_HIDE_FROM_ABI void __clear(size_t __capacity);
   valarray& __assign_range(const value_type* __f, const value_type* __l);
@@ -3278,26 +3276,6 @@ tanh(const _Expr& __x) {
   typedef typename _Expr::value_type value_type;
   typedef _UnaryOp<__tanh_expr<value_type>, _Expr> _Op;
   return __val_expr<_Op>(_Op(__tanh_expr<value_type>(), __x));
-}
-
-template <class _Tp>
-[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI _Tp* begin(valarray<_Tp>& __v) {
-  return __v.__begin_;
-}
-
-template <class _Tp>
-[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI const _Tp* begin(const valarray<_Tp>& __v) {
-  return __v.__begin_;
-}
-
-template <class _Tp>
-[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI _Tp* end(valarray<_Tp>& __v) {
-  return __v.__end_;
-}
-
-template <class _Tp>
-[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI const _Tp* end(const valarray<_Tp>& __v) {
-  return __v.__end_;
 }
 
 _LIBCPP_END_NAMESPACE_STD

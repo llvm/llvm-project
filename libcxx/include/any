@@ -13,6 +13,9 @@
 /*
    any synopsis
 
+#include <initializer_list>
+#include <typeinfo>
+
 namespace std {
 
   class bad_any_cast : public bad_cast
@@ -106,9 +109,11 @@ namespace std {
 #  include <__utility/move.h>
 #  include <__utility/unreachable.h>
 #  include <__verbose_abort>
+#  include <version>
+
+// standard-mandated includes
 #  include <initializer_list>
 #  include <typeinfo>
-#  include <version>
 
 #  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #    pragma GCC system_header

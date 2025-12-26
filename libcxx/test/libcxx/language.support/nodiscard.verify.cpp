@@ -123,7 +123,9 @@ void test() {
   { // <initializer_list>
     std::initializer_list<int> il{94, 82, 49};
 
+    il.data();  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
     il.size();  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+    il.empty(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
     il.begin(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
     il.end();   // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   }

@@ -272,6 +272,7 @@ namespace std {
 #  include <__functional/unary_function.h>
 #  include <__fwd/functional.h>
 #  include <__iterator/bounded_iter.h>
+#  include <__iterator/reverse_iterator.h>
 #  include <__iterator/wrap_iter.h>
 #  include <__memory/addressof.h>
 #  include <__memory/construct_at.h>
@@ -322,6 +323,13 @@ namespace std {
 
 // [optional.syn]
 #  include <compare>
+
+// [iterator.range]
+#  include <__iterator/access.h>
+#  include <__iterator/data.h>
+#  include <__iterator/empty.h>
+#  include <__iterator/reverse_access.h>
+#  include <__iterator/size.h>
 
 #  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #    pragma GCC system_header
