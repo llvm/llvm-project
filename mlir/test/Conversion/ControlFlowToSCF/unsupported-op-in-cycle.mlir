@@ -1,20 +1,17 @@
-// RUN: not mlir-opt %s -lift-cf-to-scf 2>&1 | FileCheck %s
+// RUN: mlir-opt %s -lift-cf-to-scf -verify-diagnostics
 
-// This test verifies that the pass does not crash when encountering unsupported
-// control flow operations within a cycle (e.g., SPIR-V loops). (issue #173566)
-// It ensures that temporary regions are cleaned up correctly upon failure.
+// verify faliure for unsupported ops in cycles (issue #173566)
 
-// CHECK: Cannot convert unknown control flow op to structured control flow
 module {
   func.func @spirv_loop_crash_repro(%arg0: index) {
     %0 = builtin.unrealized_conversion_cast %arg0 : index to i32
     %cst8 = spirv.Constant 8 : i32
     
-    // spirv.mlir.loop creates a CFG cycle. 
     spirv.mlir.loop {
       spirv.Branch ^bb1(%0 : i32)
     ^bb1(%2: i32):
       %3 = spirv.SLessThan %2, %cst8 : i32
+      // expected-error @+1 {{Cannot convert unknown control flow op to structured control flow}}
       spirv.BranchConditional %3, ^bb2, ^bb3
     ^bb2:
       %4 = spirv.IAdd %2, %0 : i32
