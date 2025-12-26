@@ -640,7 +640,7 @@ define double @tst_select_fcmp_one_double(double %x, double %y) {
 ; 32R6:       # %bb.0: # %entry
 ; 32R6-NEXT:    cmp.ueq.d $f0, $f12, $f14
 ; 32R6-NEXT:    mfc1 $1, $f0
-; 32R6-NEXT:    not $1, $1
+; 32R6-NEXT:    xori $1, $1, 1
 ; 32R6-NEXT:    mtc1 $1, $f0
 ; 32R6-NEXT:    jr $ra
 ; 32R6-NEXT:    sel.d $f0, $f14, $f12
@@ -668,7 +668,7 @@ define double @tst_select_fcmp_one_double(double %x, double %y) {
 ; 64R6:       # %bb.0: # %entry
 ; 64R6-NEXT:    cmp.ueq.d $f0, $f12, $f13
 ; 64R6-NEXT:    mfc1 $1, $f0
-; 64R6-NEXT:    not $1, $1
+; 64R6-NEXT:    xori $1, $1, 1
 ; 64R6-NEXT:    mtc1 $1, $f0
 ; 64R6-NEXT:    jr $ra
 ; 64R6-NEXT:    sel.d $f0, $f13, $f12
@@ -684,7 +684,7 @@ define double @tst_select_fcmp_one_double(double %x, double %y) {
 ; MM32R6:       # %bb.0: # %entry
 ; MM32R6-NEXT:    cmp.ueq.d $f0, $f12, $f14
 ; MM32R6-NEXT:    mfc1 $1, $f0
-; MM32R6-NEXT:    not $1, $1
+; MM32R6-NEXT:    xori $1, $1, 1
 ; MM32R6-NEXT:    mtc1 $1, $f0
 ; MM32R6-NEXT:    sel.d $f0, $f14, $f12
 ; MM32R6-NEXT:    jrc $ra

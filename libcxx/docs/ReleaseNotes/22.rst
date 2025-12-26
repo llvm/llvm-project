@@ -53,6 +53,7 @@ Implemented Papers
 - P3168R2: Give ``std::optional`` Range Support (`Github <https://llvm.org/PR105430>`__)
 - P3567R2: ``flat_meow`` Fixes (`Github <https://llvm.org/PR162022>`__)
 - P3836R2: Make ``optional<T&>`` trivially copyable (`Github <https://llvm.org/PR171275>`__)
+- P1789R3: Library Support for Expansion Statements (`Github <https://llvm.org/PR167184>`__)
 
 Improvements and New Features
 -----------------------------
