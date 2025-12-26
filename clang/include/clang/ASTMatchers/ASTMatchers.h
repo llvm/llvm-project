@@ -5911,7 +5911,6 @@ AST_POLYMORPHIC_MATCHER_P(hasAnySubstatement,
                                           Builder) != CS->body_end();
 }
 
-
 /// Matches compound statements where one ore more sets of adjacent
 /// substatements matching the provided sequence of matchers. Also matches
 /// StmtExprs that have CompoundStmt as children.

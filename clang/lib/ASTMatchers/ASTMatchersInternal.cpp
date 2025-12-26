@@ -487,7 +487,8 @@ static BoundNodesTreeBuilder extendBuilder(BoundNodesTreeBuilder &&Builder) {
 
 ForEachAdjacentSubstatementsMatcherType
 forEachAdjSubstatementsFunc(ArrayRef<const Matcher<Stmt> *> MatcherRefs) {
-  return ForEachAdjacentSubstatementsMatcherType(vectorFromMatcherRefs(MatcherRefs));
+  return ForEachAdjacentSubstatementsMatcherType(
+      vectorFromMatcherRefs(MatcherRefs));
 }
 
 template <typename T, typename ArgT>
@@ -507,8 +508,9 @@ bool ForEachAdjacentSubstatementsMatcher<T, ArgT>::matches(
   DynTypedMatcher MatcherWrapper(this);
 
   // Use memoization to avoid re-running the same matcher on the same node.
-  return Finder->matchesChildOf(static_cast<const Stmt&>(*CS),
-      MatcherWrapper, Builder, ASTMatchFinder::BK_All,
+  return Finder->matchesChildOf(
+      static_cast<const Stmt &>(*CS), MatcherWrapper, Builder,
+      ASTMatchFinder::BK_All,
       [this, CS, Finder](BoundNodesTreeBuilder *MemoBuilder) -> bool {
         // Search for all sequences of adjacent substatements that match the
         // matchers
@@ -527,9 +529,9 @@ bool ForEachAdjacentSubstatementsMatcher<T, ArgT>::matches(
           // Start with a fresh builder for this sequence
           BoundNodesTreeBuilder SequenceBuilder;
 
-          // Use enumerate to iterate over matchers and statements simultaneously
-          auto StmtRange =
-              llvm::make_range(StartIt, StartIt + Matchers.size());
+          // Use enumerate to iterate over matchers and statements
+          // simultaneously
+          auto StmtRange = llvm::make_range(StartIt, StartIt + Matchers.size());
           for (auto [Idx, Matcher, StmtPtr] :
                llvm::enumerate(Matchers, StmtRange)) {
             // Extend the builder before matching each statement
@@ -1134,9 +1136,9 @@ const internal::VariadicFunction<internal::Matcher<NamedDecl>, StringRef,
 const internal::VariadicFunction<internal::HasOpNameMatcher, StringRef,
                                  internal::hasAnyOperatorNameFunc>
     hasAnyOperatorName = {};
-const internal::VariadicFunction<internal::ForEachAdjacentSubstatementsMatcherType,
-                                 internal::Matcher<Stmt>,
-                                 internal::forEachAdjSubstatementsFunc>
+const internal::VariadicFunction<
+    internal::ForEachAdjacentSubstatementsMatcherType, internal::Matcher<Stmt>,
+    internal::forEachAdjSubstatementsFunc>
     forEachAdjacentSubstatements = {};
 const internal::VariadicFunction<internal::HasOverloadOpNameMatcher, StringRef,
                                  internal::hasAnyOverloadedOperatorNameFunc>

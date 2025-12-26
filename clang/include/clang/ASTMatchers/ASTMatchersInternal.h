@@ -413,8 +413,7 @@ public:
   template <typename T>
   DynTypedMatcher(const MatcherInterface<T> *Implementation)
       : SupportedKind(ASTNodeKind::getFromNodeKind<T>()),
-        RestrictKind(SupportedKind),
-        Implementation(Implementation) {}
+        RestrictKind(SupportedKind), Implementation(Implementation) {}
 
   /// Construct from a variadic function.
   enum VariadicOperator {
@@ -744,9 +743,10 @@ public:
                                       bool Directly) = 0;
 
   template <typename T>
-  bool matchesChildOf(const T &Node, const DynTypedMatcher &Matcher,
-                      BoundNodesTreeBuilder *Builder, BindKind Bind,
-                      llvm::function_ref<bool(BoundNodesTreeBuilder*)> MatchCallback) {
+  bool matchesChildOf(
+      const T &Node, const DynTypedMatcher &Matcher,
+      BoundNodesTreeBuilder *Builder, BindKind Bind,
+      llvm::function_ref<bool(BoundNodesTreeBuilder *)> MatchCallback) {
     static_assert(std::is_base_of<Decl, T>::value ||
                       std::is_base_of<Stmt, T>::value ||
                       std::is_base_of<NestedNameSpecifier, T>::value ||
@@ -763,12 +763,12 @@ public:
   bool matchesChildOf(const T &Node, const DynTypedMatcher &Matcher,
                       BoundNodesTreeBuilder *Builder, BindKind Bind) {
     static_assert(std::is_base_of<Decl, T>::value ||
-                  std::is_base_of<Stmt, T>::value ||
-                  std::is_base_of<NestedNameSpecifier, T>::value ||
-                  std::is_base_of<NestedNameSpecifierLoc, T>::value ||
-                  std::is_base_of<TypeLoc, T>::value ||
-                  std::is_base_of<QualType, T>::value ||
-                  std::is_base_of<Attr, T>::value,
+                      std::is_base_of<Stmt, T>::value ||
+                      std::is_base_of<NestedNameSpecifier, T>::value ||
+                      std::is_base_of<NestedNameSpecifierLoc, T>::value ||
+                      std::is_base_of<TypeLoc, T>::value ||
+                      std::is_base_of<QualType, T>::value ||
+                      std::is_base_of<Attr, T>::value,
                   "unsupported type for recursive matching");
     return matchesChildOf(DynTypedNode::create(Node), getASTContext(), Matcher,
                           Builder, Bind);
@@ -813,11 +813,10 @@ public:
   bool isTraversalIgnoringImplicitNodes() const;
 
 protected:
-  virtual bool matchesChildOf(const DynTypedNode &Node, ASTContext &Ctx,
-                              const DynTypedMatcher &Matcher,
-                              BoundNodesTreeBuilder *Builder,
-                              BindKind Bind,
-                              llvm::function_ref<bool(BoundNodesTreeBuilder *)> MatchCallback) = 0;
+  virtual bool matchesChildOf(
+      const DynTypedNode &Node, ASTContext &Ctx, const DynTypedMatcher &Matcher,
+      BoundNodesTreeBuilder *Builder, BindKind Bind,
+      llvm::function_ref<bool(BoundNodesTreeBuilder *)> MatchCallback) = 0;
 
   virtual bool matchesChildOf(const DynTypedNode &Node, ASTContext &Ctx,
                               const DynTypedMatcher &Matcher,
@@ -2321,7 +2320,8 @@ class ForEachAdjacentSubstatementsMatcher : public MatcherInterface<T> {
                 "Matcher ArgT must be std::vector<Matcher<Stmt>>");
 
 public:
-  explicit ForEachAdjacentSubstatementsMatcher(std::vector<Matcher<Stmt>> Matchers)
+  explicit ForEachAdjacentSubstatementsMatcher(
+      std::vector<Matcher<Stmt>> Matchers)
       : Matchers(std::move(Matchers)) {}
 
   bool matches(const T &Node, ASTMatchFinder *Finder,

@@ -2410,13 +2410,13 @@ TEST(ForEachAdjSubstatements, MatchesMultipleAdjacentPairs) {
   // When multiple adjacent pairs exist, should match all of them
   EXPECT_TRUE(matchAndVerifyResultTrue(
       "void f() { {} 1+2; {} 3+4; }",
-      compoundStmt(forEachAdjacentSubstatements(
-          compoundStmt().bind("cs"), binaryOperator().bind("bo"))),
+      compoundStmt(forEachAdjacentSubstatements(compoundStmt().bind("cs"),
+                                                binaryOperator().bind("bo"))),
       std::make_unique<VerifyIdIsBoundTo<CompoundStmt>>("cs", 2)));
   EXPECT_TRUE(matchAndVerifyResultTrue(
       "void f() { {} 1+2; {} 3+4; }",
-      compoundStmt(forEachAdjacentSubstatements(
-          compoundStmt().bind("cs"), binaryOperator().bind("bo"))),
+      compoundStmt(forEachAdjacentSubstatements(compoundStmt().bind("cs"),
+                                                binaryOperator().bind("bo"))),
       std::make_unique<VerifyIdIsBoundTo<BinaryOperator>>("bo", 2)));
 }
 
@@ -2438,8 +2438,8 @@ TEST(ForEachAdjSubstatements, MatchesAllAdjacentPairs) {
   // When multiple adjacent pairs exist, should match all of them
   EXPECT_TRUE(matchAndVerifyResultTrue(
       "void f() { {} 1+2; int x; {} 3+4; }",
-      compoundStmt(forEachAdjacentSubstatements(
-          compoundStmt().bind("cs"), binaryOperator().bind("bo"))),
+      compoundStmt(forEachAdjacentSubstatements(compoundStmt().bind("cs"),
+                                                binaryOperator().bind("bo"))),
       std::make_unique<VerifyIdIsBoundTo<CompoundStmt>>("cs", 2)));
 }
 
@@ -2459,9 +2459,9 @@ TEST(ForEachAdjSubstatements, DoesNotMatchSingleStatement) {
 
 TEST(ForEachAdjSubstatements, MatchesDifferentStatementTypes) {
   // Test with different statement types
-  EXPECT_TRUE(
-      matches("void f() { for (;;); while (true); }",
-              compoundStmt(forEachAdjacentSubstatements(forStmt(), whileStmt()))));
+  EXPECT_TRUE(matches(
+      "void f() { for (;;); while (true); }",
+      compoundStmt(forEachAdjacentSubstatements(forStmt(), whileStmt()))));
 
   EXPECT_TRUE(matches(
       "void f() { int x; return; }",
@@ -2470,9 +2470,9 @@ TEST(ForEachAdjSubstatements, MatchesDifferentStatementTypes) {
 
 TEST(ForEachAdjSubstatements, WorksWithStmtExpr) {
   // Test that it works with StmtExpr (polymorphic support)
-  EXPECT_TRUE(matches(
-      "void f() { int x = ({ {} 1+2; }); }",
-      stmtExpr(forEachAdjacentSubstatements(compoundStmt(), binaryOperator()))));
+  EXPECT_TRUE(matches("void f() { int x = ({ {} 1+2; }); }",
+                      stmtExpr(forEachAdjacentSubstatements(
+                          compoundStmt(), binaryOperator()))));
 }
 
 TEST(ForEachAdjSubstatements, DoesNotMatchWrongOrder) {
@@ -2494,10 +2494,12 @@ TEST(ForEachAdjSubstatements, MatchesMultipleSequencesWithStatementsBetween) {
   constexpr llvm::StringRef Code =
       "void f() { {} 1+2; int x; {} 3+4; int y; {} 5+6; }";
   const auto Matcher = compoundStmt(forEachAdjacentSubstatements(
-          compoundStmt().bind("cs"), binaryOperator().bind("bo")));
-  EXPECT_TRUE(matchAndVerifyResultTrue(Code, Matcher,
+      compoundStmt().bind("cs"), binaryOperator().bind("bo")));
+  EXPECT_TRUE(matchAndVerifyResultTrue(
+      Code, Matcher,
       std::make_unique<VerifyIdIsBoundTo<CompoundStmt>>("cs", 3)));
-  EXPECT_TRUE(matchAndVerifyResultTrue(Code, Matcher,
+  EXPECT_TRUE(matchAndVerifyResultTrue(
+      Code, Matcher,
       std::make_unique<VerifyIdIsBoundTo<BinaryOperator>>("bo", 3)));
 }
 
@@ -2513,9 +2515,9 @@ TEST(ForEachAdjSubstatements, VariadicMatchesMultipleSequences) {
   // Test variadic version matches all sequences
   EXPECT_TRUE(matchAndVerifyResultTrue(
       "void f() { {} 1+2; 3+4; int x; {} 5+6; 7+8; }",
-      compoundStmt(forEachAdjacentSubstatements(
-          compoundStmt().bind("cs"), binaryOperator().bind("bo1"),
-          binaryOperator().bind("bo2"))),
+      compoundStmt(forEachAdjacentSubstatements(compoundStmt().bind("cs"),
+                                                binaryOperator().bind("bo1"),
+                                                binaryOperator().bind("bo2"))),
       std::make_unique<VerifyIdIsBoundTo<CompoundStmt>>("cs", 2)));
 }
 
@@ -2531,8 +2533,8 @@ TEST(ForEachAdjSubstatements, VariadicMatchesFiveAdjacentSubstatements) {
   // Test variadic version with 5 matchers
   EXPECT_TRUE(matches(
       "void f() { for (;;); while (true); if (true) {} return; 1+2; }",
-      compoundStmt(forEachAdjacentSubstatements(forStmt(), whileStmt(), ifStmt(),
-                                            returnStmt(), binaryOperator()))));
+      compoundStmt(forEachAdjacentSubstatements(
+          forStmt(), whileStmt(), ifStmt(), returnStmt(), binaryOperator()))));
 }
 
 TEST(ForEachAdjSubstatements, VariadicDoesNotMatchNonAdjacentSequence) {
@@ -2578,9 +2580,9 @@ TEST(ForEachAdjSubstatements, VariadicMatchesAllSequences) {
   // When multiple sequences exist, should match all of them
   EXPECT_TRUE(matchAndVerifyResultTrue(
       "void f() { {} 1+2; 3+4; int x; {} 5+6; 7+8; }",
-      compoundStmt(forEachAdjacentSubstatements(
-          compoundStmt().bind("cs"), binaryOperator().bind("bo1"),
-          binaryOperator().bind("bo2"))),
+      compoundStmt(forEachAdjacentSubstatements(compoundStmt().bind("cs"),
+                                                binaryOperator().bind("bo1"),
+                                                binaryOperator().bind("bo2"))),
       std::make_unique<VerifyIdIsBoundTo<CompoundStmt>>("cs", 2)));
 }
 
@@ -2637,19 +2639,19 @@ TEST(ForEachAdjSubstatements, MatchesOverlappingSequences) {
   // { {}; 1+2; {}; } has two sequences: {}->1+2 and 1+2->{}
   EXPECT_TRUE(matchAndVerifyResultTrue(
       "void f() { {} 1+2; {}; }",
-      compoundStmt(forEachAdjacentSubstatements(
-          compoundStmt().bind("cs"), binaryOperator().bind("bo"))),
+      compoundStmt(forEachAdjacentSubstatements(compoundStmt().bind("cs"),
+                                                binaryOperator().bind("bo"))),
       std::make_unique<VerifyIdIsBoundTo<CompoundStmt>>("cs", 1)));
   // The second sequence: binaryOperator followed by compoundStmt
   EXPECT_TRUE(matchAndVerifyResultTrue(
       "void f() { {} 1+2; {}; }",
-      compoundStmt(forEachAdjacentSubstatements(
-          binaryOperator().bind("bo"), compoundStmt().bind("cs"))),
+      compoundStmt(forEachAdjacentSubstatements(binaryOperator().bind("bo"),
+                                                compoundStmt().bind("cs"))),
       std::make_unique<VerifyIdIsBoundTo<BinaryOperator>>("bo", 1)));
   EXPECT_TRUE(matchAndVerifyResultTrue(
       "void f() { {} 1+2; {}; }",
-      compoundStmt(forEachAdjacentSubstatements(
-          binaryOperator().bind("bo"), compoundStmt().bind("cs"))),
+      compoundStmt(forEachAdjacentSubstatements(binaryOperator().bind("bo"),
+                                                compoundStmt().bind("cs"))),
       std::make_unique<VerifyIdIsBoundTo<CompoundStmt>>("cs", 1)));
 }
 
