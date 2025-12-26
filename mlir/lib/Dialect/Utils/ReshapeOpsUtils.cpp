@@ -451,7 +451,9 @@ mlir::getSymbolLessAffineMaps(ArrayRef<ReassociationExprs> reassociation) {
   SmallVector<AffineMap, 4> maps;
   maps.reserve(reassociation.size());
   for (const auto &exprs : reassociation) {
-    assert(!exprs.empty());
+    if (exprs.empty()) {
+      return {};
+    }
     maps.push_back(AffineMap::get(maxDim + 1, 0, exprs, exprs[0].getContext()));
   }
   return maps;
