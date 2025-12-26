@@ -276,8 +276,8 @@ define float @contradictory_assume_after_gep_same_block(ptr %p) {
 ; CHECK-NEXT:    [[WORKITEM_ID_X:%.*]] = tail call i32 @llvm.amdgcn.workitem.id.x()
 ; CHECK-NEXT:    [[IDXPROM:%.*]] = zext i32 [[WORKITEM_ID_X]] to i64
 ; CHECK-NEXT:    [[TMP1:%.*]] = addrspacecast ptr [[P]] to ptr addrspace(3)
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds float, ptr addrspace(3) [[TMP1]], i64 [[IDXPROM]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds float, ptr [[P]], i64 [[IDXPROM]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds float, ptr addrspace(3) [[TMP1]], i64 [[IDXPROM]]
 ; CHECK-NEXT:    [[IS_PRIVATE:%.*]] = call i1 @llvm.amdgcn.is.private(ptr [[TMP2]])
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 false)
 ; CHECK-NEXT:    [[LOAD:%.*]] = load float, ptr addrspace(3) [[GEP]], align 4

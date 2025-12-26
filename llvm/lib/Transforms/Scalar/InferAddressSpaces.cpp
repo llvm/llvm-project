@@ -189,6 +189,7 @@ class InferAddressSpacesImpl {
   const DominatorTree *DT = nullptr;
   const TargetTransformInfo *TTI = nullptr;
   const DataLayout *DL = nullptr;
+  GVToLoadStoreMapTy GVToLdSt;
 
   /// Target specific address space which uses of should be replaced if
   /// possible.
@@ -198,15 +199,13 @@ class InferAddressSpacesImpl {
   // false otherwise.
   bool updateAddressSpace(const Value &V,
                           ValueToAddrSpaceMapTy &InferredAddrSpace,
-                          PredicatedAddrSpaceMapTy &PredicatedAS,
-                          const GVToLoadStoreMapTy &GVToLdSt) const;
+                          PredicatedAddrSpaceMapTy &PredicatedAS) const;
 
   // Tries to infer the specific address space of each address expression in
   // Postorder.
   void inferAddressSpaces(ArrayRef<WeakTrackingVH> Postorder,
                           ValueToAddrSpaceMapTy &InferredAddrSpace,
-                          PredicatedAddrSpaceMapTy &PredicatedAS,
-                          const GVToLoadStoreMapTy &GVToLdSt) const;
+                          PredicatedAddrSpaceMapTy &PredicatedAS) const;
 
   bool isSafeToCastConstAddrSpace(Constant *C, unsigned NewAS) const;
 
@@ -238,8 +237,7 @@ class InferAddressSpacesImpl {
                                           PostorderStackTy &PostorderStack,
                                           DenseSet<Value *> &Visited) const;
 
-  std::pair<std::vector<WeakTrackingVH>, GVToLoadStoreMapTy>
-  collectFlatAddressExpressions(Function &F) const;
+  std::vector<WeakTrackingVH> collectFlatAddressExpressions(Function &F);
 
   Value *cloneValueWithNewAddressSpace(
       Value *V, unsigned NewAddrSpace,
@@ -314,8 +312,9 @@ static bool isNoopPtrIntCastPair(const Operator *I2P, const DataLayout &DL,
 //   - arguments
 //   - phi, bitcast, addrspacecast, and getelementptr operators
 //   - load
-static bool isAddressExpression(const Value &V, const DataLayout &DL,
-                                const TargetTransformInfo *TTI) {
+static bool isAddressExpression(
+    const Value &V, const DataLayout &DL, const TargetTransformInfo *TTI,
+    const DenseMap<GlobalVariable *, SmallVector<Instruction *, 4>> &GVToLdSt) {
 
   if (const Argument *Arg = dyn_cast<Argument>(&V))
     return Arg->getType()->isPointerTy() &&
@@ -334,7 +333,6 @@ static bool isAddressExpression(const Value &V, const DataLayout &DL,
   case Instruction::GetElementPtr:
     return true;
   case Instruction::Select:
-  case Instruction::Load:
     return Op->getType()->isPtrOrPtrVectorTy();
   case Instruction::Call: {
     const IntrinsicInst *II = dyn_cast<IntrinsicInst>(&V);
@@ -342,6 +340,23 @@ static bool isAddressExpression(const Value &V, const DataLayout &DL,
   }
   case Instruction::IntToPtr:
     return isNoopPtrIntCastPair(Op, DL, TTI);
+  case Instruction::Load: {
+    if (TTI->getAssumedAddrSpace(&V) != UninitializedAddressSpace)
+      return true;
+    if (auto *GV = dyn_cast<GlobalVariable>(Op->getOperand(0))) {
+      const SmallVectorImpl<Instruction *> &LdSts = GVToLdSt.at(GV);
+      if (GV->getNumUses() != LdSts.size())
+        return false;
+      bool StorePrecedesFirstLoad = false;
+      for (Instruction *I : LdSts) {
+        if (isa<StoreInst>(I))
+          StorePrecedesFirstLoad = true;
+        else
+          return StorePrecedesFirstLoad;
+      }
+    }
+    return false;
+  }
   default:
     // That value is an address expression if it has an assumed address space.
     return TTI->getAssumedAddrSpace(&V) != UninitializedAddressSpace;
@@ -381,7 +396,7 @@ getPointerOperands(const Value &V, const DataLayout &DL,
     return {P2I->getOperand(0)};
   }
   case Instruction::Load: {
-    assert(Op.getType()->isPtrOrPtrVectorTy());
+    // Pointer operands are collected in function getStoredPointerOperands.
     return {};
   }
   default:
@@ -397,20 +412,14 @@ static SmallVector<Value *, 2> getStoredPointerOperands(
   const Operator &Op = cast<Operator>(V);
   if (Op.getOpcode() != Instruction::Load)
     return {};
-  auto *GV = dyn_cast<GlobalVariable>(Op.getOperand(0));
-  if (!GV)
-    return {};
-
-  SmallVector<Value *, 2> PtrOps;
-  // Only consider GV that is exclusively used within current function.
-  auto It = GVToLdSt.find(GV);
-  assert(It != GVToLdSt.end() && "Expected GV to be in the map");
-  if (GV->getNumUses() == It->second.size()) {
-    for (auto *I : It->second)
+  if (auto *GV = dyn_cast<GlobalVariable>(Op.getOperand(0))) {
+    SmallVector<Value *, 2> PtrOps;
+    for (Instruction *I : GVToLdSt.at(GV))
       if (auto *SI = dyn_cast<StoreInst>(I))
         PtrOps.push_back(SI->getValueOperand());
+    return PtrOps;
   }
-  return PtrOps;
+  return {};
 }
 
 bool InferAddressSpacesImpl::rewriteIntrinsicOperands(IntrinsicInst *II,
@@ -554,21 +563,23 @@ void InferAddressSpacesImpl::appendsFlatAddressExpressionToPostorderStack(
   // expressions.
   if (ConstantExpr *CE = dyn_cast<ConstantExpr>(V)) {
     // TODO: Look in non-address parts, like icmp operands.
-    if (isAddressExpression(*CE, *DL, TTI) && Visited.insert(CE).second)
+    if (isAddressExpression(*CE, *DL, TTI, GVToLdSt) &&
+        Visited.insert(CE).second)
       PostorderStack.emplace_back(CE, false);
 
     return;
   }
 
   if (V->getType()->getPointerAddressSpace() == FlatAddrSpace &&
-      isAddressExpression(*V, *DL, TTI)) {
+      isAddressExpression(*V, *DL, TTI, GVToLdSt)) {
     if (Visited.insert(V).second) {
       PostorderStack.emplace_back(V, false);
 
       if (auto *Op = dyn_cast<Operator>(V))
         for (auto &O : Op->operands())
           if (ConstantExpr *CE = dyn_cast<ConstantExpr>(O))
-            if (isAddressExpression(*CE, *DL, TTI) && Visited.insert(CE).second)
+            if (isAddressExpression(*CE, *DL, TTI, GVToLdSt) &&
+                Visited.insert(CE).second)
               PostorderStack.emplace_back(CE, false);
     }
   }
@@ -576,14 +587,13 @@ void InferAddressSpacesImpl::appendsFlatAddressExpressionToPostorderStack(
 
 // Returns all flat address expressions in function F. The elements are ordered
 // in postorder.
-std::pair<std::vector<WeakTrackingVH>, GVToLoadStoreMapTy>
-InferAddressSpacesImpl::collectFlatAddressExpressions(Function &F) const {
+std::vector<WeakTrackingVH>
+InferAddressSpacesImpl::collectFlatAddressExpressions(Function &F) {
   // This function implements a non-recursive postorder traversal of a partial
   // use-def graph of function F.
   PostorderStackTy PostorderStack;
   // The set of visited expressions.
   DenseSet<Value *> Visited;
-  GVToLoadStoreMapTy GVToLdSt;
 
   auto PushPtrOperand = [&](Value *Ptr) {
     appendsFlatAddressExpressionToPostorderStack(Ptr, PostorderStack, Visited);
@@ -659,7 +669,7 @@ InferAddressSpacesImpl::collectFlatAddressExpressions(Function &F) const {
       }
     }
   }
-  return std::make_pair(Postorder, GVToLdSt);
+  return Postorder;
 }
 
 // Inserts an addrspacecast for a phi node operand, handling the proper
@@ -933,7 +943,7 @@ Value *InferAddressSpacesImpl::cloneValueWithNewAddressSpace(
     SmallVectorImpl<const Use *> *PoisonUsesToFix) const {
   // All values in Postorder are flat address expressions.
   assert(V->getType()->getPointerAddressSpace() == FlatAddrSpace &&
-         isAddressExpression(*V, *DL, TTI));
+         isAddressExpression(*V, *DL, TTI, GVToLdSt));
 
   if (auto *Arg = dyn_cast<Argument>(V)) {
     // Arguments are address space casted in the function body, as we do not
@@ -994,13 +1004,13 @@ bool InferAddressSpacesImpl::run(Function &CurFn) {
   }
 
   // Collects all flat address expressions in postorder.
-  auto [Postorder, GVToLdSt] = collectFlatAddressExpressions(*F);
+  std::vector<WeakTrackingVH> Postorder = collectFlatAddressExpressions(*F);
 
   // Runs a data-flow analysis to refine the address spaces of every expression
   // in Postorder.
   ValueToAddrSpaceMapTy InferredAddrSpace;
   PredicatedAddrSpaceMapTy PredicatedAS;
-  inferAddressSpaces(Postorder, InferredAddrSpace, PredicatedAS, GVToLdSt);
+  inferAddressSpaces(Postorder, InferredAddrSpace, PredicatedAS);
 
   // Changes the address spaces of the flat address expressions who are inferred
   // to point to a specific address space.
@@ -1013,8 +1023,7 @@ bool InferAddressSpacesImpl::run(Function &CurFn) {
 void InferAddressSpacesImpl::inferAddressSpaces(
     ArrayRef<WeakTrackingVH> Postorder,
     ValueToAddrSpaceMapTy &InferredAddrSpace,
-    PredicatedAddrSpaceMapTy &PredicatedAS,
-    const GVToLoadStoreMapTy &GVToLdSt) const {
+    PredicatedAddrSpaceMapTy &PredicatedAS) const {
   SetVector<Value *> Worklist(llvm::from_range, Postorder);
   // Initially, all expressions are in the uninitialized address space.
   for (Value *V : Postorder)
@@ -1025,7 +1034,7 @@ void InferAddressSpacesImpl::inferAddressSpaces(
 
     // Try to update the address space of the stack top according to the
     // address spaces of its operands.
-    if (!updateAddressSpace(*V, InferredAddrSpace, PredicatedAS, GVToLdSt))
+    if (!updateAddressSpace(*V, InferredAddrSpace, PredicatedAS))
       continue;
 
     for (Value *User : V->users()) {
@@ -1077,8 +1086,7 @@ InferAddressSpacesImpl::getPredicatedAddrSpace(const Value &Ptr,
 
 bool InferAddressSpacesImpl::updateAddressSpace(
     const Value &V, ValueToAddrSpaceMapTy &InferredAddrSpace,
-    PredicatedAddrSpaceMapTy &PredicatedAS,
-    const GVToLoadStoreMapTy &GVToLdSt) const {
+    PredicatedAddrSpaceMapTy &PredicatedAS) const {
   assert(InferredAddrSpace.count(&V));
 
   LLVM_DEBUG(dbgs() << "Updating the address space of\n  " << V << '\n');
