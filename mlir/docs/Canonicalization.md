@@ -63,30 +63,36 @@ Some important things to think about w.r.t. canonicalization patterns:
 *   Canonicalize shouldn't lose the semantic of original operation: the original
     information should always be recoverable from the transformed IR.
 
-For example, a pattern that transform
+## What is a Canonical Form?
 
-```
-  %transpose = linalg.transpose
-      ins(%input : tensor<1x2x3xf32>)
-      outs(%init1 : tensor<2x1x3xf32>)
-      dimensions = [1, 0, 2]
-  %out = linalg.transpose
-      ins(%transpose: tensor<2x1x3xf32>)
-      outs(%init2 : tensor<3x1x2xf32>)
-      permutation = [2, 1, 0]
-```
+There is no formally defined canonical form in MLIR. The de-facto canonical
+form keeps evolving, as canonicalization patterns and folders are getting
+added / removed / modified by the community.
 
-to
+The canonicalizer pass is integral to many downstream projects but offers no
+fine-grained control over individual patterns or foldings, making changes to
+the canonical form potentially contentious. Whether a transformation belongs
+in the canonical form must be decided on a case-by-case basis, but common
+community-agreed canonicalizations include:
 
-```
-  %out= linalg.transpose
-      ins(%input : tensor<1x2x3xf32>)
-      outs(%init2: tensor<3x1x2xf32>)
-      permutation = [2, 0, 1]
-```
-
-is a good canonicalization pattern because it removes a redundant operation,
-making other analysis optimizations and more efficient.
+* Identity / no-op elimination. E.g., folding `arith.addi %x, %c0` to `%x` or
+  erasing `memref.copy %x, %x`.
+* Constant folding. E.g., folding `arith.addi %c1, %c2` to `%c3`.
+* Folding inverse ops. E.g., folding `arith.xori(arith.xori(%x, %a), %a)` to
+  `%x`.
+* Unused/redundant value elimination. E.g., removing unused loop-carried
+  variables of an `scf.for` op or removing redundant `scf.if` results (when
+  both branches yield the same value).
+* Trivial control flow simplications. E.g., inlining the "then" body of an
+  `scf.if %true` op and erasing the `scf.if` op.
+* Folding chained metadata / shape ops of the same type. E.g., replacing
+  `linalg.transpose(linalg.transpose(%x))` with a single `linalg.transpose(%x)`.
+* Dynamic to static type refinement such as folding constant sizes into
+  shaped types. E.g., rewriting `%v = tensor.empty(%c5) : tensor<?xf32>` as
+  `%0 = tensor.empty() : tensor<5xf32>` and
+  `%v = tensor.cast %0 : tensor<5xf32> to tensor<?xf32>`.
+* Cast propagation / folding. E.g., pushing casts through operations or folding
+  them away if it introduces more static type information.
 
 ## Globally Applied Rules
 
