@@ -246,7 +246,7 @@ void MipsSEInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
         return;
     }
   } else if (Opc == 0 && Mips::FGR32RegClass.contains(DestReg) &&
-      Mips::FGR64RegClass.contains(SrcReg) && I != MBB.begin()) {
+             Mips::FGR64RegClass.contains(SrcReg) && I != MBB.begin()) {
     // Who produces SrcReg? If SrcReg is produced by CMP_*, then it's OK.
     // Who uses DestReg? If DestReg is only used by SEL_*, then it's OK.
     if (isWritedByFCMP(I, SrcReg) || isOnlyReadsBySEL(I, DestReg)) {
