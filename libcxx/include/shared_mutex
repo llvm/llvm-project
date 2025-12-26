@@ -164,7 +164,11 @@ struct _LIBCPP_EXPORTED_FROM_ABI __shared_mutex_base {
   static const unsigned __n_readers_     = ~__write_entered_;
 
   __shared_mutex_base();
+#      if defined(_LIBCPP_BUILDING_LIBRARY) || _LIBCPP_AVAILABILITY_HAS_SHARED_MUTEX_BASE_DESTRUCTOR
+  ~__shared_mutex_base();
+#      else
   _LIBCPP_HIDE_FROM_ABI ~__shared_mutex_base() = default;
+#      endif
 
   __shared_mutex_base(const __shared_mutex_base&)            = delete;
   __shared_mutex_base& operator=(const __shared_mutex_base&) = delete;

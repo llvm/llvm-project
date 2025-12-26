@@ -1546,6 +1546,8 @@
 {'is_defined': True, 'name': '__ZNSt3__119__shared_mutex_base8try_lockEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__119__shared_mutex_baseC1Ev', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__119__shared_mutex_baseC2Ev', 'type': 'FUNC'}
+{'is_defined': True, 'name': '__ZNSt3__119__shared_mutex_baseD1Ev', 'type': 'FUNC'}
+{'is_defined': True, 'name': '__ZNSt3__119__shared_mutex_baseD2Ev', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__119__shared_weak_count10__add_weakEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__119__shared_weak_count12__add_sharedEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__119__shared_weak_count14__release_weakEv', 'type': 'FUNC'}

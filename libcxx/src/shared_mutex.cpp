@@ -16,6 +16,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 // Shared Mutex Base
 __shared_mutex_base::__shared_mutex_base() : __state_(0) {}
+__shared_mutex_base::~__shared_mutex_base() {}
 
 // Exclusive ownership
 

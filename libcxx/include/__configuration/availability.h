@@ -287,6 +287,12 @@
 #define _LIBCPP_AVAILABILITY_HAS_BAD_FUNCTION_CALL_GOOD_WHAT_MESSAGE _LIBCPP_INTRODUCED_IN_LLVM_21
 // No attribute, since we've had bad_function_call::what() in the headers before
 
+// This controls whether we assume that __shared_mutex_base::~__shared_mutex_base() is defined in the dylib.
+// Defining that function in the dylib provides additional flexibility for changing the representation of the
+// class, which may eventually be used to provide a better implementation.
+#define _LIBCPP_AVAILABILITY_HAS_SHARED_MUTEX_BASE_DESTRUCTOR _LIBCPP_INTRODUCED_IN_LLVM_21
+// No attribute, since we define the destructor in the headers otherwise
+
 // Define availability attributes that depend on both
 // _LIBCPP_HAS_EXCEPTIONS and _LIBCPP_HAS_RTTI.
 #if !_LIBCPP_HAS_EXCEPTIONS || !_LIBCPP_HAS_RTTI
