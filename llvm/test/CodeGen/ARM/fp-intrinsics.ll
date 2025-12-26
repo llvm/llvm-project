@@ -76,7 +76,6 @@ define i32 @fptosi_f32(float %x) #0 {
 ; CHECK-NOSP: bl __aeabi_f2iz
 ; CHECK-NOSP: bl __aeabi_f2iz
 ; CHECK-SP: vcvt.s32.f32
-; FIXME-CHECK-SP: vcvt.s32.f32
 define void @fptosi_f32_twice(float %arg, ptr %ptr) #0 {
 entry:
   %conv = call i32 @llvm.experimental.constrained.fptosi.i32.f32(float %arg, metadata !"fpexcept.strict") #0

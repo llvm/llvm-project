@@ -98,12 +98,18 @@ define i32 @test_fptosi_i32(ptr %p) {
   ret i32 %r
 }
 
-; FIXME
-;define i64 @test_fptosi_i64(ptr %p) {
-;  %a = load half, ptr %p, align 2
-;  %r = fptosi half %a to i64
-;  ret i64 %r
-;}
+define i64 @test_fptosi_i64(ptr %p) {
+; CHECK-LABEL: test_fptosi_i64:
+; CHECK:         .save {r11, lr}
+; CHECK-NEXT:    push {r11, lr}
+; CHECK-NEXT:    ldrh r0, [r0]
+; CHECK-NEXT:    vmov s0, r0
+; CHECK-NEXT:    bl __fixhfdi
+; CHECK-NEXT:    pop {r11, pc}
+  %a = load half, ptr %p, align 2
+  %r = fptosi half %a to i64
+  ret i64 %r
+}
 
 define i32 @test_fptoui_i32(ptr %p) {
 ; CHECK-LABEL: test_fptoui_i32:
@@ -116,12 +122,18 @@ define i32 @test_fptoui_i32(ptr %p) {
   ret i32 %r
 }
 
-; FIXME
-;define i64 @test_fptoui_i64(ptr %p) {
-;  %a = load half, ptr %p, align 2
-;  %r = fptoui half %a to i64
-;  ret i64 %r
-;}
+define i64 @test_fptoui_i64(ptr %p) {
+; CHECK-LABEL: test_fptoui_i64:
+; CHECK:         .save {r11, lr}
+; CHECK-NEXT:    push {r11, lr}
+; CHECK-NEXT:    ldrh r0, [r0]
+; CHECK-NEXT:    vmov s0, r0
+; CHECK-NEXT:    bl __fixunshfdi
+; CHECK-NEXT:    pop {r11, pc}
+  %a = load half, ptr %p, align 2
+  %r = fptoui half %a to i64
+  ret i64 %r
+}
 
 define void @test_sitofp_i32(i32 %a, ptr %p) {
 ; CHECK-LABEL: test_sitofp_i32:
@@ -145,19 +157,31 @@ define void @test_uitofp_i32(i32 %a, ptr %p) {
   ret void
 }
 
-; FIXME
-;define void @test_sitofp_i64(i64 %a, ptr %p) {
-;  %r = sitofp i64 %a to half
-;  store half %r, ptr %p
-;  ret void
-;}
+define void @test_sitofp_i64(i64 %a, ptr %p) {
+; CHECK-LABEL: test_sitofp_i64:
+; CHECK:         .save {r4, lr}
+; CHECK-NEXT:    push {r4, lr}
+; CHECK-NEXT:    mov r4, r2
+; CHECK-NEXT:    bl __floatdihf
+; CHECK-NEXT:    vstr.16 s0, [r4]
+; CHECK-NEXT:    pop {r4, pc}
+  %r = sitofp i64 %a to half
+  store half %r, ptr %p
+  ret void
+}
 
-; FIXME
-;define void @test_uitofp_i64(i64 %a, ptr %p) {
-;  %r = uitofp i64 %a to half
-;  store half %r, ptr %p
-;  ret void
-;}
+define void @test_uitofp_i64(i64 %a, ptr %p) {
+; CHECK-LABEL: test_uitofp_i64:
+; CHECK:         .save {r4, lr}
+; CHECK-NEXT:    push {r4, lr}
+; CHECK-NEXT:    mov r4, r2
+; CHECK-NEXT:    bl __floatundihf
+; CHECK-NEXT:    vstr.16 s0, [r4]
+; CHECK-NEXT:    pop {r4, pc}
+  %r = uitofp i64 %a to half
+  store half %r, ptr %p
+  ret void
+}
 
 define void @test_fptrunc_float(float %f, ptr %p) {
 ; CHECK-LABEL: test_fptrunc_float:
@@ -729,14 +753,14 @@ define half @sitofp_f16_i32(i32 %x) #0 {
 ; CHECK-NEXT:    movt r1, #17200
 ; CHECK-NEXT:    str r0, [sp]
 ; CHECK-NEXT:    str r1, [sp, #4]
-; CHECK-NEXT:    vldr d16, .LCPI53_0
+; CHECK-NEXT:    vldr d16, .LCPI57_0
 ; CHECK-NEXT:    vldr d17, [sp]
 ; CHECK-NEXT:    vsub.f64 d16, d17, d16
 ; CHECK-NEXT:    vcvtb.f16.f64 s0, d16
 ; CHECK-NEXT:    add sp, sp, #8
 ; CHECK-NEXT:    bx lr
 ; CHECK-NEXT:    .p2align 3
-; CHECK-NEXT:  .LCPI53_0:
+; CHECK-NEXT:  .LCPI57_0:
 ; CHECK-NEXT:    .long 2147483648
 ; CHECK-NEXT:    .long 1127219200
   %val = call half @llvm.experimental.constrained.sitofp.f16.i32(i32 %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
@@ -750,7 +774,7 @@ define half @uitofp_f16_i32(i32 %x) #0 {
 ; CHECK-NEXT:    movw r1, #0
 ; CHECK-NEXT:    str r0, [sp]
 ; CHECK-NEXT:    movt r1, #17200
-; CHECK-NEXT:    vldr d16, .LCPI54_0
+; CHECK-NEXT:    vldr d16, .LCPI58_0
 ; CHECK-NEXT:    str r1, [sp, #4]
 ; CHECK-NEXT:    vldr d17, [sp]
 ; CHECK-NEXT:    vsub.f64 d16, d17, d16
@@ -758,7 +782,7 @@ define half @uitofp_f16_i32(i32 %x) #0 {
 ; CHECK-NEXT:    add sp, sp, #8
 ; CHECK-NEXT:    bx lr
 ; CHECK-NEXT:    .p2align 3
-; CHECK-NEXT:  .LCPI54_0:
+; CHECK-NEXT:  .LCPI58_0:
 ; CHECK-NEXT:    .long 0
 ; CHECK-NEXT:    .long 1127219200
   %val = call half @llvm.experimental.constrained.uitofp.f16.i32(i32 %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
