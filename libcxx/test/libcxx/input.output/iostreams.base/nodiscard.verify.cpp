@@ -46,11 +46,6 @@ void test() {
   {
     std::ios& ref = stream;
 
-#if TEST_STD_VER >= 11
-    ref.operator bool(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-#else
-    ref.operator void*(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-#endif
     !ref;             // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
     ref.rdstate();    // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
     ref.good();       // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
@@ -70,8 +65,6 @@ void test() {
   {
     std::fpos<std::mbstate_t> pos;
 
-    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-    pos.operator std::streamoff();
     pos.state(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
     // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
     pos + std::streamoff(0);
