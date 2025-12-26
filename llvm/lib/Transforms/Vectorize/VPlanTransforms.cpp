@@ -3747,9 +3747,10 @@ void VPlanTransforms::expandBranchOnTwoConds(VPlan &Plan) {
 
   // Expand BranchOnTwoConds instructions into explicit CFG with
   // single-condition branches, by introducing a new branch in VPBB that jumps
-  // to a new intermediate block if either condition is true and to the
-  // third successor otherwise. The intermediate block jumps to the first or
-  // second successor, depending on the first condition.
+  // to the first successor if the first condition is true, and a new
+  // intermediate block otherwise. The intermediate block jumps to the second
+  // successor if the second condition is true, otherwise to the third
+  // successor.
   for (VPInstruction *Br : WorkList) {
     assert(Br->getNumOperands() == 2 &&
            "BranchOnTwoConds must have exactly 2 conditions");
@@ -3768,20 +3769,18 @@ void VPlanTransforms::expandBranchOnTwoConds(VPlan &Plan) {
     VPBlockBase *LateExitBB = Successors[1];
     VPBlockBase *Header = Successors[2];
 
-    VPBasicBlock *MiddleSplit = Plan.createVPBasicBlock("middle.split");
-    MiddleSplit->setParent(LateExitBB->getParent());
+    VPBasicBlock *Cond0BB = Plan.createVPBasicBlock("cond.0");
+    Cond0BB->setParent(LateExitBB->getParent());
 
-    VPBuilder Builder(Latch);
-    VPValue *AnyExitTaken = Builder.createNaryOp(
-        Instruction::Or, {EarlyExitingCond, LateExitingCond}, DL);
-    Builder.createNaryOp(VPInstruction::BranchOnCond, {AnyExitTaken}, DL);
-    VPBlockUtils::connectBlocks(Latch, MiddleSplit);
-    VPBlockUtils::connectBlocks(Latch, Header);
+    VPBuilder(Latch).createNaryOp(VPInstruction::BranchOnCond,
+                                  {EarlyExitingCond}, DL);
+    VPBlockUtils::connectBlocks(Latch, EarlyExitBB);
+    VPBlockUtils::connectBlocks(Latch, Cond0BB);
 
-    VPBuilder(MiddleSplit)
-        .createNaryOp(VPInstruction::BranchOnCond, {EarlyExitingCond}, DL);
-    VPBlockUtils::connectBlocks(MiddleSplit, EarlyExitBB);
-    VPBlockUtils::connectBlocks(MiddleSplit, LateExitBB);
+    VPBuilder(Cond0BB).createNaryOp(VPInstruction::BranchOnCond,
+                                    {LateExitingCond}, DL);
+    VPBlockUtils::connectBlocks(Cond0BB, LateExitBB);
+    VPBlockUtils::connectBlocks(Cond0BB, Header);
 
     Br->eraseFromParent();
   }
