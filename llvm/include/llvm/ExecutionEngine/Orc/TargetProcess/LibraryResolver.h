@@ -423,14 +423,14 @@ public:
                           [&](const Entry &E) { return E.Name == Name; });
     }
 
-    SmallVector<StringRef> getUnresolvedSymbols() const {
-      SmallVector<StringRef> Unresolved;
+    using SymbolFilterFn = unique_function<bool(StringRef)>;
+    void getUnresolvedSymbols(SmallVectorImpl<StringRef> &Unresolved,
+                              SymbolFilterFn Allow) const {
       std::shared_lock<std::shared_mutex> Lock(Mtx);
       for (const auto &E : Entries) {
-        if (E.ResolvedLibPath.empty())
+        if (E.ResolvedLibPath.empty() && Allow(E.Name))
           Unresolved.push_back(E.Name);
       }
-      return Unresolved;
     }
 
     void resolve(StringRef Sym, const std::string &LibPath) {

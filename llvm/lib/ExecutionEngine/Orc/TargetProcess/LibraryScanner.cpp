@@ -284,7 +284,7 @@ void DylibSubstitutor::configure(StringRef LoaderPath) {
 #ifdef __APPLE__
   Placeholders.push_back({"@loader_path", std::string(LoaderDir)});
   Placeholders.push_back({"@executable_path", std::string(ExecPath)});
-  #else
+#else
   Placeholders.push_back({"$origin", std::string(LoaderDir)});
 #endif
 }
@@ -425,7 +425,7 @@ mode_t PathResolver::lstatCached(StringRef Path) {
     return *Cache;
 
   // Not cached: perform lstat and store
-  struct stat buf {};
+  struct stat buf{};
   mode_t st_mode = (lstat(Path.str().c_str(), &buf) == -1) ? 0 : buf.st_mode;
 
   LibPathCache->insert_lstat(Path, st_mode);
@@ -678,9 +678,9 @@ void LibraryScanHelper::addBasePath(const std::string &Path, PathType K) {
   }
 }
 
-SmallVector<const LibrarySearchPath *>
-LibraryScanHelper::getNextBatch(PathType K, size_t BatchSize) {
-  SmallVector<const LibrarySearchPath *> Result;
+void LibraryScanHelper::getNextBatch(
+    PathType K, size_t BatchSize,
+    SmallVectorImpl<const LibrarySearchPath *> &Result) {
   auto &Queue = (K == PathType::User) ? UnscannedUsr : UnscannedSys;
 
   std::unique_lock<std::shared_mutex> Lock(Mtx);
@@ -697,8 +697,6 @@ LibraryScanHelper::getNextBatch(PathType K, size_t BatchSize) {
     }
     Queue.pop_front();
   }
-
-  return Result;
 }
 
 bool LibraryScanHelper::isTrackedBasePath(StringRef Path) const {
@@ -734,16 +732,6 @@ void LibraryScanHelper::resetToScan() {
         (SP->Kind == PathType::User) ? UnscannedUsr : UnscannedSys;
     TargetList.emplace_back(SP->BasePath);
   }
-}
-
-SmallVector<const LibrarySearchPath *> LibraryScanHelper::getAllUnits() const {
-  std::shared_lock<std::shared_mutex> Lock(Mtx);
-  SmallVector<const LibrarySearchPath *> Result;
-  Result.reserve(LibSearchPaths.size());
-  for (const auto &[_, SP] : LibSearchPaths) {
-    Result.push_back(SP.get());
-  }
-  return Result;
 }
 
 std::string LibraryScanHelper::resolveCanonical(StringRef Path,
@@ -1148,7 +1136,8 @@ void LibraryScanner::scanNext(PathType K, size_t BatchSize) {
                     << BatchSize << " for kind "
                     << (K == PathType::User ? "User" : "System") << "\n";);
 
-  auto SearchPaths = ScanHelper.getNextBatch(K, BatchSize);
+  SmallVector<const LibrarySearchPath *> SearchPaths;
+  ScanHelper.getNextBatch(K, BatchSize, SearchPaths);
   for (const auto *SP : SearchPaths) {
     LLVM_DEBUG(dbgs() << "  Scanning unit with basePath: " << SP->BasePath
                       << "\n";);

@@ -40,7 +40,7 @@ LibraryResolver::LibraryResolver(const LibraryResolver::Setup &S)
                                       : [](StringRef) -> bool { return true; }),
       scanBatchSize(S.ScanBatchSize) {
 
-  if (ScanHelper.getAllUnits().empty()) {
+  if (!ScanHelper.hasSearchPath()) {
     LLVM_DEBUG(dbgs() << "Warning: No base paths provided for scanning.\n");
   }
 }
@@ -227,12 +227,11 @@ static bool MayExistInElfObjectFile(llvm::object::ObjectFile *soFile,
 }
 
 void LibraryResolver::resolveSymbolsInLibrary(
-    LibraryInfo *Lib, SymbolQuery &UnresolvedSymbols,
-    const SymbolEnumeratorOptions &Opts) {
+    LibraryInfo *Lib, SymbolQuery &Query, const SymbolEnumeratorOptions &Opts) {
   LLVM_DEBUG(dbgs() << "Checking unresolved symbols "
                     << " in library : " << Lib->getFileName() << "\n";);
 
-  if (!UnresolvedSymbols.hasUnresolved()) {
+  if (!Query.hasUnresolved()) {
     LLVM_DEBUG(dbgs() << "Skipping library: " << Lib->getFullPath()
                       << " — unresolved symbols exist.\n";);
     return;
@@ -240,18 +239,15 @@ void LibraryResolver::resolveSymbolsInLibrary(
 
   bool HadAnySym = false;
 
-  const auto &Unresolved = UnresolvedSymbols.getUnresolvedSymbols();
-  LLVM_DEBUG(dbgs() << "Total unresolved symbols : " << Unresolved.size()
-                    << "\n";);
-
   // Build candidate vector
   SmallVector<StringRef, 24> CandidateVec;
-  CandidateVec.reserve(Unresolved.size());
-  for (const auto &Sym : Unresolved) {
-    if (!Lib->hasFilter() || Lib->mayContain(Sym))
-      CandidateVec.push_back(Sym);
-  }
 
+  Query.getUnresolvedSymbols(CandidateVec, [&](StringRef S) {
+    return !Lib->hasFilter() || Lib->mayContain(S);
+  });
+
+  LLVM_DEBUG(dbgs() << "Total candidate symbols : " << CandidateVec.size()
+                    << "\n";);
   if (CandidateVec.empty()) {
     LLVM_DEBUG(dbgs() << "No symbol Exist "
                          " in library: "
@@ -300,17 +296,17 @@ void LibraryResolver::resolveSymbolsInLibrary(
           // Resolve and remove from CandidateVec
           LLVM_DEBUG(dbgs() << "Symbol '" << S << "' resolved in library: "
                             << Lib->getFullPath() << "\n";);
-          UnresolvedSymbols.resolve(S, Lib->getFullPath());
+          Query.resolve(S, Lib->getFullPath());
           HadAnySym = true;
-
-          CandidateVec.erase(It);
+          *It = CandidateVec.back();
+          CandidateVec.pop_back();
 
           // EARLY STOP — if nothing remains, stop enumeration
           if (!BuildingFilter && CandidateVec.empty()) {
             return EnumerateResult::Stop;
           }
           // Also stop if UnresolvedSymbols has no more unresolved symbols
-          if (!BuildingFilter && !UnresolvedSymbols.hasUnresolved())
+          if (!BuildingFilter && !Query.hasUnresolved())
             return EnumerateResult::Stop;
         }
 
