@@ -611,9 +611,9 @@ InferAddressSpacesImpl::collectFlatAddressExpressions(Function &F) {
       if (auto *GV = dyn_cast<GlobalVariable>(PtrOp))
         GVToLdSt[GV].push_back(LI);
     } else if (auto *SI = dyn_cast<StoreInst>(&I)) {
-      Value *V = SI->getValueOperand();
-      if (V->getType()->isPtrOrPtrVectorTy())
-        PushPtrOperand(V);
+      Value *StoreVal = SI->getValueOperand();
+      if (StoreVal->getType()->isPtrOrPtrVectorTy())
+        PushPtrOperand(StoreVal);
       Value *PtrOp = SI->getPointerOperand();
       PushPtrOperand(PtrOp);
       if (auto *GV = dyn_cast<GlobalVariable>(PtrOp))
