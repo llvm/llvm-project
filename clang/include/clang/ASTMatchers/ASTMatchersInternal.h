@@ -745,7 +745,8 @@ public:
 
   template <typename T>
   bool matchesChildOf(const T &Node, const DynTypedMatcher &Matcher,
-                      BoundNodesTreeBuilder *Builder, BindKind Bind) {
+                      BoundNodesTreeBuilder *Builder, BindKind Bind,
+                      llvm::function_ref<bool(BoundNodesTreeBuilder*)> MatchCallback) {
     static_assert(std::is_base_of<Decl, T>::value ||
                       std::is_base_of<Stmt, T>::value ||
                       std::is_base_of<NestedNameSpecifier, T>::value ||
@@ -753,6 +754,21 @@ public:
                       std::is_base_of<TypeLoc, T>::value ||
                       std::is_base_of<QualType, T>::value ||
                       std::is_base_of<Attr, T>::value,
+                  "unsupported type for recursive matching");
+    return matchesChildOf(DynTypedNode::create(Node), getASTContext(), Matcher,
+                          Builder, Bind, MatchCallback);
+  }
+
+  template <typename T>
+  bool matchesChildOf(const T &Node, const DynTypedMatcher &Matcher,
+                      BoundNodesTreeBuilder *Builder, BindKind Bind) {
+    static_assert(std::is_base_of<Decl, T>::value ||
+                  std::is_base_of<Stmt, T>::value ||
+                  std::is_base_of<NestedNameSpecifier, T>::value ||
+                  std::is_base_of<NestedNameSpecifierLoc, T>::value ||
+                  std::is_base_of<TypeLoc, T>::value ||
+                  std::is_base_of<QualType, T>::value ||
+                  std::is_base_of<Attr, T>::value,
                   "unsupported type for recursive matching");
     return matchesChildOf(DynTypedNode::create(Node), getASTContext(), Matcher,
                           Builder, Bind);
@@ -788,16 +804,6 @@ public:
                              Matcher, Builder, MatchMode);
   }
 
-  template <typename T>
-  bool memoizedMatch(
-      const T &Node, const DynTypedMatcher &Matcher,
-      BoundNodesTreeBuilder *Builder,
-      llvm::function_ref<bool(BoundNodesTreeBuilder *)> MatchCallback) {
-    static_assert(std::is_base_of<Stmt, T>::value,
-                  "type not allowed for recursive matching");
-    return memoizedMatch(Matcher, DynTypedNode::create(Node), Builder, MatchCallback);
-  }
-
   virtual ASTContext &getASTContext() const = 0;
 
   virtual bool IsMatchingInASTNodeNotSpelledInSource() const = 0;
@@ -807,6 +813,12 @@ public:
   bool isTraversalIgnoringImplicitNodes() const;
 
 protected:
+  virtual bool matchesChildOf(const DynTypedNode &Node, ASTContext &Ctx,
+                              const DynTypedMatcher &Matcher,
+                              BoundNodesTreeBuilder *Builder,
+                              BindKind Bind,
+                              llvm::function_ref<bool(BoundNodesTreeBuilder *)> MatchCallback) = 0;
+
   virtual bool matchesChildOf(const DynTypedNode &Node, ASTContext &Ctx,
                               const DynTypedMatcher &Matcher,
                               BoundNodesTreeBuilder *Builder,
@@ -821,11 +833,6 @@ protected:
                                  const DynTypedMatcher &Matcher,
                                  BoundNodesTreeBuilder *Builder,
                                  AncestorMatchMode MatchMode) = 0;
-
-  virtual bool memoizedMatch(
-      const DynTypedMatcher &Matcher,
-      const DynTypedNode &Node, BoundNodesTreeBuilder *Builder,
-      llvm::function_ref<bool(BoundNodesTreeBuilder *)> MatchCallback) = 0;
 
 private:
   friend struct ASTChildrenNotSpelledInSourceScope;

@@ -507,8 +507,8 @@ bool ForEachAdjacentSubstatementsMatcher<T, ArgT>::matches(
   DynTypedMatcher MatcherWrapper(this);
 
   // Use memoization to avoid re-running the same matcher on the same node.
-  return Finder->memoizedMatch(static_cast<const Stmt&>(*CS),
-      MatcherWrapper, Builder,
+  return Finder->matchesChildOf(static_cast<const Stmt&>(*CS),
+      MatcherWrapper, Builder, ASTMatchFinder::BK_All,
       [this, CS, Finder](BoundNodesTreeBuilder *MemoBuilder) -> bool {
         // Search for all sequences of adjacent substatements that match the
         // matchers
