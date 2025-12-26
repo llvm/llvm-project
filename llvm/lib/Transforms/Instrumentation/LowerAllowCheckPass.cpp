@@ -25,6 +25,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/RandomNumberGenerator.h"
 #include <memory>
+#include <optional>
 #include <random>
 
 using namespace llvm;
@@ -72,10 +73,30 @@ static void emitRemark(IntrinsicInst *II, OptimizationRemarkEmitter &ORE,
   }
 }
 
-static bool lowerAllowChecks(Function &F, const BlockFrequencyInfo &BFI,
-                             const ProfileSummaryInfo *PSI,
-                             OptimizationRemarkEmitter &ORE,
+static bool lowerAllowChecks(Function &F, FunctionAnalysisManager &AM,
                              const LowerAllowCheckPass::Options &Opts) {
+  // Lazy analysis getters.
+  auto GetBFI = [&AM, &F, BFI = (BlockFrequencyInfo *)nullptr]() mutable
+      -> const BlockFrequencyInfo & {
+    if (!BFI)
+      BFI = &AM.getResult<BlockFrequencyAnalysis>(F);
+    return *BFI;
+  };
+  auto GetPSI = [&AM, &F, PSI = std::optional<ProfileSummaryInfo *>()]() mutable
+      -> const ProfileSummaryInfo * {
+    if (!PSI.has_value()) {
+      auto &MAMProxy = AM.getResult<ModuleAnalysisManagerFunctionProxy>(F);
+      PSI = MAMProxy.getCachedResult<ProfileSummaryAnalysis>(*F.getParent());
+    }
+    return *PSI;
+  };
+  auto GetORE = [&AM, &F, ORE = (OptimizationRemarkEmitter *)nullptr]() mutable
+      -> OptimizationRemarkEmitter & {
+    if (!ORE)
+      ORE = &AM.getResult<OptimizationRemarkEmitterAnalysis>(F);
+    return *ORE;
+  };
+
   // List of intrinsics and the constant value they should be lowered to.
   SmallVector<std::pair<IntrinsicInst *, bool>, 16> ReplaceWithValue;
   std::unique_ptr<RandomNumberGenerator> Rng;
@@ -101,9 +122,11 @@ static bool lowerAllowChecks(Function &F, const BlockFrequencyInfo &BFI,
   };
 
   auto ShouldRemoveHot = [&](const BasicBlock &BB, unsigned int cutoff) {
-    return (cutoff == 1000000) ||
-           (PSI && PSI->isHotCountNthPercentile(
-                       cutoff, BFI.getBlockProfileCount(&BB).value_or(0)));
+    if (cutoff == 1000000)
+      return true;
+    const ProfileSummaryInfo *PSI = GetPSI();
+    return PSI && PSI->isHotCountNthPercentile(
+                      cutoff, GetBFI().getBlockProfileCount(&BB).value_or(0));
   };
 
   auto ShouldRemoveRandom = [&]() {
@@ -130,7 +153,7 @@ static bool lowerAllowChecks(Function &F, const BlockFrequencyInfo &BFI,
           II,
           !ToRemove,
       });
-      emitRemark(II, ORE, ToRemove);
+      emitRemark(II, GetORE(), ToRemove);
       break;
     }
     case Intrinsic::allow_sanitize_address:
@@ -169,14 +192,8 @@ PreservedAnalyses LowerAllowCheckPass::run(Function &F,
                                            FunctionAnalysisManager &AM) {
   if (F.isDeclaration())
     return PreservedAnalyses::all();
-  auto &MAMProxy = AM.getResult<ModuleAnalysisManagerFunctionProxy>(F);
-  ProfileSummaryInfo *PSI =
-      MAMProxy.getCachedResult<ProfileSummaryAnalysis>(*F.getParent());
-  BlockFrequencyInfo &BFI = AM.getResult<BlockFrequencyAnalysis>(F);
-  OptimizationRemarkEmitter &ORE =
-      AM.getResult<OptimizationRemarkEmitterAnalysis>(F);
 
-  return lowerAllowChecks(F, BFI, PSI, ORE, Opts)
+  return lowerAllowChecks(F, AM, Opts)
              // We do not change the CFG, we only replace the intrinsics with
              // true or false.
              ? PreservedAnalyses::none().preserveSet<CFGAnalyses>()

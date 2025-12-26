@@ -488,27 +488,30 @@ static void InstantiateDeclareReduction(OmpDirectiveSpecification &spec) {
     return;
   }
 
-  const OmpTypeNameList *typeNames{nullptr};
+  const OmpTypeNameList &typeNames{std::get<OmpTypeNameList>(rspec->t)};
 
   if (auto *cexpr{
           const_cast<OmpCombinerExpression *>(GetCombinerExpr(*rspec))}) {
-    typeNames = &std::get<OmpTypeNameList>(rspec->t);
-
-    InstantiateForTypes(*cexpr, *typeNames, OmpCombinerExpression::Variables());
+    InstantiateForTypes(*cexpr, typeNames, OmpCombinerExpression::Variables());
     delete cexpr->state;
     cexpr->state = nullptr;
-  } else {
-    // If there are no types, there is nothing else to do.
-    return;
   }
 
   for (const OmpClause &clause : spec.Clauses().v) {
     llvm::omp::Clause id{clause.Id()};
-    if (id == llvm::omp::Clause::OMPC_initializer) {
+    if (id == llvm::omp::Clause::OMPC_combiner) {
+      if (auto *cexpr{
+              const_cast<OmpCombinerExpression *>(GetCombinerExpr(clause))}) {
+        InstantiateForTypes(
+            *cexpr, typeNames, OmpCombinerExpression::Variables());
+        delete cexpr->state;
+        cexpr->state = nullptr;
+      }
+    } else if (id == llvm::omp::Clause::OMPC_initializer) {
       if (auto *iexpr{const_cast<OmpInitializerExpression *>(
               GetInitializerExpr(clause))}) {
         InstantiateForTypes(
-            *iexpr, *typeNames, OmpInitializerExpression::Variables());
+            *iexpr, typeNames, OmpInitializerExpression::Variables());
         delete iexpr->state;
         iexpr->state = nullptr;
       }
@@ -1316,6 +1319,8 @@ TYPE_PARSER(construct<OmpDetachClause>(Parser<OmpObject>{}))
 
 TYPE_PARSER(construct<OmpHintClause>(scalarIntConstantExpr))
 
+TYPE_PARSER(construct<OmpCombinerClause>(Parser<OmpCombinerExpression>{}))
+
 // init clause
 TYPE_PARSER(construct<OmpInitClause>(
     maybe(nonemptyList(Parser<OmpInitClause::Modifier>{}) / ":"),
@@ -1426,6 +1431,8 @@ TYPE_PARSER( //
     "CAPTURE" >> construct<OmpClause>(construct<OmpClause::Capture>()) ||
     "COLLAPSE" >> construct<OmpClause>(construct<OmpClause::Collapse>(
                       parenthesized(scalarIntConstantExpr))) ||
+    "COMBINER" >> construct<OmpClause>(construct<OmpClause::Combiner>(
+                      parenthesized(Parser<OmpCombinerClause>{}))) ||
     "COMPARE" >> construct<OmpClause>(construct<OmpClause::Compare>()) ||
     "CONTAINS" >> construct<OmpClause>(construct<OmpClause::Contains>(
                       parenthesized(Parser<OmpContainsClause>{}))) ||

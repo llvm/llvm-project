@@ -371,7 +371,7 @@ static void generateRegionConstraintVerifiers(
     std::string textualConditionName = "any region";
 
     if (auto regionDefOp =
-            dyn_cast<irdl::RegionOp>(regionsOp->getArgs()[i].getDefiningOp())) {
+            regionsOp->getArgs()[i].getDefiningOp<irdl::RegionOp>()) {
       // Generate constraint condition based on RegionOp attributes
       SmallVector<std::string> conditionParts;
       SmallVector<std::string> descriptionParts;
@@ -711,9 +711,11 @@ irdl::translateIRDLDialectToCpp(llvm::ArrayRef<irdl::DialectOp> dialects,
     llvm::raw_string_ostream namespacePathStream(namespacePath);
     for (auto &pathElement : namespaceAbsolutePath) {
       namespaceOpenStream << "namespace " << pathElement << " {\n";
-      namespaceCloseStream << "} // namespace " << pathElement << "\n";
       namespacePathStream << "::" << pathElement;
     }
+
+    for (auto &pathElement : llvm::reverse(namespaceAbsolutePath))
+      namespaceCloseStream << "} // namespace " << pathElement << "\n";
 
     std::string cppShortName =
         llvm::convertToCamelFromSnakeCase(dialectName, true);

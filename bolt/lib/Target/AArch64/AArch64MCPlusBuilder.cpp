@@ -2775,21 +2775,26 @@ public:
     return Insts;
   }
 
-  void createBTI(MCInst &Inst, bool CallTarget,
-                 bool JumpTarget) const override {
+  void createBTI(MCInst &Inst, BTIKind BTI) const override {
     Inst.setOpcode(AArch64::HINT);
+    Inst.clear();
+    bool CallTarget = BTI == BTIKind::C || BTI == BTIKind::JC;
+    bool JumpTarget = BTI == BTIKind::J || BTI == BTIKind::JC;
     unsigned HintNum = getBTIHintNum(CallTarget, JumpTarget);
     Inst.addOperand(MCOperand::createImm(HintNum));
   }
 
-  bool isBTILandingPad(MCInst &Inst, bool CallTarget,
-                       bool JumpTarget) const override {
+  bool isBTILandingPad(MCInst &Inst, BTIKind BTI) const override {
+    bool CallTarget = BTI == BTIKind::C || BTI == BTIKind::JC;
+    bool JumpTarget = BTI == BTIKind::J || BTI == BTIKind::JC;
     unsigned HintNum = getBTIHintNum(CallTarget, JumpTarget);
     bool IsExplicitBTI =
         Inst.getOpcode() == AArch64::HINT && Inst.getNumOperands() == 1 &&
         Inst.getOperand(0).isImm() && Inst.getOperand(0).getImm() == HintNum;
 
-    bool IsImplicitBTI = HintNum == 34 && isImplicitBTIC(Inst);
+    // Only "BTI C" can be implicit.
+    bool IsImplicitBTI =
+        HintNum == getBTIHintNum(true, false) && isImplicitBTIC(Inst);
     return IsExplicitBTI || IsImplicitBTI;
   }
 
@@ -2800,22 +2805,14 @@ public:
            Inst.getOpcode() == AArch64::PACIBSP;
   }
 
-  void updateBTIVariant(MCInst &Inst, bool CallTarget,
-                        bool JumpTarget) const override {
-    assert(Inst.getOpcode() == AArch64::HINT && "Not a BTI instruction.");
-    unsigned HintNum = getBTIHintNum(CallTarget, JumpTarget);
-    Inst.clear();
-    Inst.addOperand(MCOperand::createImm(HintNum));
-  }
-
   bool isCallCoveredByBTI(MCInst &Call, MCInst &Pad) const override {
     assert((isIndirectCall(Call) || isIndirectBranch(Call)) &&
            "Not an indirect call or branch.");
 
     // A BLR can be accepted by a BTI c.
     if (isIndirectCall(Call))
-      return isBTILandingPad(Pad, true, false) ||
-             isBTILandingPad(Pad, true, true);
+      return isBTILandingPad(Pad, BTIKind::C) ||
+             isBTILandingPad(Pad, BTIKind::JC);
 
     // A BR can be accepted by a BTI j or BTI c (and BTI jc) IF the operand is
     // x16 or x17. If the operand is not x16 or x17, it can be accepted by a BTI
@@ -2827,11 +2824,11 @@ public:
              "Indirect branch does not have a register operand.");
       MCPhysReg Reg = Call.getOperand(0).getReg();
       if (Reg == AArch64::X16 || Reg == AArch64::X17)
-        return isBTILandingPad(Pad, true, false) ||
-               isBTILandingPad(Pad, false, true) ||
-               isBTILandingPad(Pad, true, true);
-      return isBTILandingPad(Pad, false, true) ||
-             isBTILandingPad(Pad, true, true);
+        return isBTILandingPad(Pad, BTIKind::C) ||
+               isBTILandingPad(Pad, BTIKind::J) ||
+               isBTILandingPad(Pad, BTIKind::JC);
+      return isBTILandingPad(Pad, BTIKind::J) ||
+             isBTILandingPad(Pad, BTIKind::JC);
     }
     return false;
   }
@@ -2846,11 +2843,11 @@ public:
     if (isIndirectCall(Call)) {
       // if we have a BTI j at the start, extend it to a BTI jc,
       // otherwise insert a new BTI c.
-      if (!Empty && isBTILandingPad(*II, false, true)) {
-        updateBTIVariant(*II, true, true);
+      if (!Empty && isBTILandingPad(*II, BTIKind::J)) {
+        createBTI(*II, BTIKind::JC);
       } else {
         MCInst BTIInst;
-        createBTI(BTIInst, true, false);
+        createBTI(BTIInst, BTIKind::C);
         BB.insertInstruction(II, BTIInst);
       }
     }
@@ -2867,16 +2864,16 @@ public:
       if (Reg == AArch64::X16 || Reg == AArch64::X17) {
         // Add a new BTI c
         MCInst BTIInst;
-        createBTI(BTIInst, true, false);
+        createBTI(BTIInst, BTIKind::C);
         BB.insertInstruction(II, BTIInst);
       } else {
         // If BB starts with a BTI c, extend it to BTI jc,
         // otherwise insert a new BTI j.
-        if (!Empty && isBTILandingPad(*II, true, false)) {
-          updateBTIVariant(*II, true, true);
+        if (!Empty && isBTILandingPad(*II, BTIKind::C)) {
+          createBTI(*II, BTIKind::JC);
         } else {
           MCInst BTIInst;
-          createBTI(BTIInst, false, true);
+          createBTI(BTIInst, BTIKind::J);
           BB.insertInstruction(II, BTIInst);
         }
       }
@@ -2902,53 +2899,6 @@ public:
     Insts[1].addOperand(MCOperand::createImm(0));
     setOperandToSymbolRef(Insts[1], /* OpNum */ 2, Target, Addend, Ctx,
                           ELF::R_AARCH64_ADD_ABS_LO12_NC);
-    return Insts;
-  }
-
-  InstructionListType materializeConstant(BinaryContext &BC, const MCInst &Inst,
-                                          StringRef ConstantData,
-                                          uint64_t Offset) const override {
-    struct InstInfo {
-      // Size in bytes that Inst loads from memory.
-      uint8_t DataSize;
-      // Number of instructions needed to materialize the constant.
-      uint8_t NumInstrs;
-      // Opcode to use for materializing the constant.
-      unsigned Opcode;
-    };
-
-    InstInfo II;
-    InstructionListType Insts(0);
-    switch (Inst.getOpcode()) {
-    case AArch64::LDRWl:
-      II = {4, 2, AArch64::MOVKWi};
-      break;
-    case AArch64::LDRXl:
-      II = {8, 4, AArch64::MOVKXi};
-      break;
-    default:
-      return Insts;
-    }
-
-    if (ConstantData.size() - Offset < II.DataSize)
-      return Insts;
-
-    DataExtractor DE(ConstantData, BC.AsmInfo->isLittleEndian(),
-                     BC.AsmInfo->getCodePointerSize());
-    const uint64_t ImmVal = DE.getUnsigned(&Offset, II.DataSize);
-
-    Insts.resize(II.NumInstrs);
-    unsigned Shift = (Insts.size() - 1) * 16;
-    MCPhysReg Reg = Inst.getOperand(0).getReg();
-    for (unsigned I = 0; I < Insts.size(); ++I, Shift -= 16) {
-      Insts[I].setOpcode(II.Opcode);
-      Insts[I].clear();
-      Insts[I].addOperand(MCOperand::createReg(Reg));
-      Insts[I].addOperand(MCOperand::createReg(Reg));
-      Insts[I].addOperand(MCOperand::createImm((ImmVal >> Shift) & 0xFFFF));
-      Insts[I].addOperand(MCOperand::createImm(Shift));
-    }
-
     return Insts;
   }
 

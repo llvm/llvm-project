@@ -563,7 +563,7 @@ define <vscale x 16 x i8> @splice_nxv16i8_neg128(<vscale x 16 x i8> %a, <vscale 
 define <vscale x 16 x i8> @splice_nxv16i8_neg256(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b) vscale_range(16,16) #0 {
 ; CHECK-LABEL: splice_nxv16i8_neg256:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.b, vl256
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    rev p0.b, p0.b
 ; CHECK-NEXT:    splice z0.b, p0, z0.b, z1.b
 ; CHECK-NEXT:    ret
