@@ -228,15 +228,15 @@ endfunction()
 #     aggregate dylib that is linked against.
 function(declare_mlir_python_extension name)
   cmake_parse_arguments(ARG
-    "SUPPORT_LIB"
-    "ROOT_DIR;MODULE_NAME;ADD_TO_PARENT;SOURCES_TYPE"
+    "_PRIVATE_SUPPORT_LIB"
+    "ROOT_DIR;MODULE_NAME;ADD_TO_PARENT"
     "SOURCES;PRIVATE_LINK_LIBS;EMBED_CAPI_LINK_LIBS"
     ${ARGN})
 
   if(NOT ARG_ROOT_DIR)
     set(ARG_ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
   endif()
-  if(ARG_SUPPORT_LIB)
+  if(ARG__PRIVATE_SUPPORT_LIB)
     set(SOURCES_TYPE "support")
   else()
     set(SOURCES_TYPE "extension")
@@ -309,6 +309,8 @@ function(build_nanobind_lib)
     ""
     ${ARGN})
 
+  # Only build in free-threaded mode if the Python ABI supports it.
+  # See https://github.com/wjakob/nanobind/blob/4ba51fcf795971c5d603d875ae4184bc0c9bd8e6/cmake/nanobind-config.cmake#L363-L371.
   if (NB_ABI MATCHES "[0-9]t")
     set(_ft "-ft")
   endif()
@@ -321,6 +323,14 @@ function(build_nanobind_lib)
     PRIVATE
     NB_DOMAIN=${ARG_MLIR_BINDINGS_PYTHON_NB_DOMAIN}
   )
+  if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    # nanobind handles this correctly for MacOS by explicitly setting -U for all the necessary Python symbols
+    # (see https://github.com/wjakob/nanobind/blob/master/cmake/darwin-ld-cpython.sym)
+    # but since we set -z,defs in llvm/cmake/modules/HandleLLVMOptions.cmake:340 for all Linux shlibs
+    # we need to negate it here (we could have our own linux-ld-cpython.sym but that would be too much
+    # maintenance).
+    target_link_options(${NB_LIBRARY_TARGET_NAME} PRIVATE "LINKER:-z,undefs")
+  endif()
   # nanobind configures with LTO for shared build which doesn't work everywhere
   # (see https://github.com/llvm/llvm-project/issues/139602).
   if(NOT LLVM_ENABLE_LTO)
@@ -329,13 +339,10 @@ function(build_nanobind_lib)
       INTERPROCEDURAL_OPTIMIZATION_MINSIZEREL OFF
     )
   endif()
-  if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
-    target_link_options(${NB_LIBRARY_TARGET_NAME} PRIVATE "-Wl,-z,undefs")
-  endif()
   set_target_properties(${NB_LIBRARY_TARGET_NAME} PROPERTIES
     LIBRARY_OUTPUT_DIRECTORY "${ARG_OUTPUT_DIRECTORY}"
     BINARY_OUTPUT_DIRECTORY "${ARG_OUTPUT_DIRECTORY}"
-    # Needed for windows (and don't hurt others).
+    # Needed for windows (and doesn't hurt others).
     RUNTIME_OUTPUT_DIRECTORY "${ARG_OUTPUT_DIRECTORY}"
     ARCHIVE_OUTPUT_DIRECTORY "${ARG_OUTPUT_DIRECTORY}"
   )
@@ -358,6 +365,11 @@ endfunction()
 #     for non-relocatable modules or a deeper directory tree for relocatable.
 #   INSTALL_PREFIX: Prefix into the install tree for installing the package.
 #     Typically mirrors the path above but without an absolute path.
+#   MLIR_BINDINGS_PYTHON_NB_DOMAIN: nanobind (and MLIR) domain within which
+#     extensions will be compiled. This determines whether this package
+#     will share nanobind types with other bindings packages. Most likely
+#     you want this to be unique to your project (and a specific set of bindings,
+#     if your project builds several bindings packages).
 #   DECLARED_SOURCES: List of declared source groups to include. The entire
 #     DAG of source modules is included.
 #   COMMON_CAPI_LINK_LIBS: List of dylibs (typically one) to make every
@@ -446,10 +458,9 @@ function(add_mlir_python_modules name)
         INSTALL_DIR "${ARG_INSTALL_PREFIX}/_mlir_libs"
         OUTPUT_DIRECTORY "${ARG_ROOT_PREFIX}/_mlir_libs"
         MLIR_BINDINGS_PYTHON_NB_DOMAIN ${ARG_MLIR_BINDINGS_PYTHON_NB_DOMAIN}
-        SUPPORT_LIB
+        _PRIVATE_SUPPORT_LIB
         LINK_LIBS PRIVATE
           LLVMSupport
-          Python::Module
           ${sources_target}
           ${ARG_COMMON_CAPI_LINK_LIBS}
       )
@@ -726,7 +737,7 @@ function(add_mlir_python_common_capi_library name)
   set_target_properties(${name} PROPERTIES
     LIBRARY_OUTPUT_DIRECTORY "${ARG_OUTPUT_DIRECTORY}"
     BINARY_OUTPUT_DIRECTORY "${ARG_OUTPUT_DIRECTORY}"
-    # Needed for windows (and don't hurt others).
+    # Needed for windows (and doesn't hurt others).
     RUNTIME_OUTPUT_DIRECTORY "${ARG_OUTPUT_DIRECTORY}"
     ARCHIVE_OUTPUT_DIRECTORY "${ARG_OUTPUT_DIRECTORY}"
   )
@@ -848,7 +859,7 @@ endfunction()
 ################################################################################
 function(add_mlir_python_extension libname extname nb_library_target_name)
   cmake_parse_arguments(ARG
-  "SUPPORT_LIB"
+  "_PRIVATE_SUPPORT_LIB"
   "INSTALL_COMPONENT;INSTALL_DIR;OUTPUT_DIRECTORY;MLIR_BINDINGS_PYTHON_NB_DOMAIN"
   "SOURCES;LINK_LIBS"
   ${ARGN})
@@ -865,14 +876,14 @@ function(add_mlir_python_extension libname extname nb_library_target_name)
     set(eh_rtti_enable -frtti -fexceptions)
   endif ()
 
-  if(ARG_SUPPORT_LIB)
+  if(ARG__PRIVATE_SUPPORT_LIB)
     add_library(${libname} SHARED ${ARG_SOURCES})
     if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
       # nanobind handles this correctly for MacOS by explicitly setting -U for all the necessary Python symbols
       # (see https://github.com/wjakob/nanobind/blob/master/cmake/darwin-ld-cpython.sym)
       # but since we set -z,defs in llvm/cmake/modules/HandleLLVMOptions.cmake:340 for all Linux shlibs
       # we need to negate it here (we could have our own linux-ld-cpython.sym but that would be too much
-      # maintenance - and this shlib is the only one where we do this).
+      # maintenance).
       target_link_options(${libname} PRIVATE "LINKER:-z,undefs")
     endif()
     nanobind_link_options(${libname})
@@ -942,12 +953,21 @@ function(add_mlir_python_extension libname extname nb_library_target_name)
 
   target_compile_options(${libname} PRIVATE ${eh_rtti_enable})
 
-  # Configure the output to match python expectations.
-  if (ARG_SUPPORT_LIB)
+  # Quoting CMake:
+  #
+  # "If you use it on normal shared libraries which other targets link against, on some platforms a
+  # linker will insert a full path to the library (as specified at link time) into the dynamic section of the
+  # dependent binary. Therefore, once installed, dynamic loader may eventually fail to locate the library
+  # for the binary."
+  #
+  # So for support libs we do need an SO name but for extensions we do not (they're MODULEs anyway -
+  # i.e., can't be linked against, only loaded).
+  if (ARG__PRIVATE_SUPPORT_LIB)
     set(_no_soname OFF)
   else ()
     set(_no_soname ON)
   endif ()
+  # Configure the output to match python expectations.
   set_target_properties(
     ${libname} PROPERTIES
     LIBRARY_OUTPUT_DIRECTORY ${ARG_OUTPUT_DIRECTORY}

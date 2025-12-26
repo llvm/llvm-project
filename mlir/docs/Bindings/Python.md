@@ -25,6 +25,13 @@
     multiple Python implementations, setting this explicitly to the preferred
     `python3` executable is strongly recommended.
 
+*   **`MLIR_BINDINGS_PYTHON_NB_DOMAIN`**: `STRING`
+
+    nanobind (and MLIR) domain within which extensions will be compiled. 
+    This determines whether this package will share nanobind types with other bindings packages. 
+    Most likely you want this to be unique to your project (and a specific set of bindings).
+    This can also be passed explicitly to `add_mlir_python_modules` if your project builds several bindings packages.
+
 ### Recommended development practices
 
 It is recommended to use a Python virtual environment. Many ways exist for this,

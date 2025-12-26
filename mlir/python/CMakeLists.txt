@@ -841,7 +841,7 @@ if(MLIR_INCLUDE_TESTS)
 endif()
 
 declare_mlir_python_extension(MLIRPythonExtension.MLIRPythonSupport
-  SUPPORT_LIB
+  _PRIVATE_SUPPORT_LIB
   MODULE_NAME MLIRPythonSupport
   ADD_TO_PARENT MLIRPythonSources.Core
   ROOT_DIR "${PYTHON_SOURCE_DIR}"
