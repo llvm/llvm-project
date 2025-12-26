@@ -689,7 +689,9 @@ class VRegList<list<dag> LIn, int start, int nf, int lmul, bit isV0> {
 //===----------------------------------------------------------------------===//
 
 foreach Index = !range(0, 32, 1) in {
-  def V#Index : RISCVReg<Index, "v"#Index>, DwarfRegNum<[!add(Index, 96)]>;
+  def V#Index : RISCVReg<Index, "v"#Index>, DwarfRegNum<[!add(Index, 96)]> {
+    let CostPerUse = [!if(!eq(Index, 0), 1, 0)];
+  }
 }
 
 foreach Index = !range(0, 32, 2) in {
@@ -698,6 +700,7 @@ foreach Index = !range(0, 32, 2) in {
                       !cast<Register>("V"#!add(Index, 1))]>,
                    DwarfRegAlias<!cast<Register>("V"#Index)> {
     let SubRegIndices = [sub_vrm1_0, sub_vrm1_1];
+    let CostPerUse = [!if(!eq(Index, 0), 1, 0)];
   }
 }
 
@@ -707,6 +710,7 @@ foreach Index = !range(0, 32, 4) in {
                       !cast<Register>("V"#!add(Index, 2)#"M2")]>,
                    DwarfRegAlias<!cast<Register>("V"#Index)> {
     let SubRegIndices = [sub_vrm2_0, sub_vrm2_1];
+    let CostPerUse = [!if(!eq(Index, 0), 1, 0)];
   }
 }
 
@@ -716,6 +720,7 @@ foreach Index = !range(0, 32, 8) in {
                       !cast<Register>("V"#!add(Index, 4)#"M4")]>,
                    DwarfRegAlias<!cast<Register>("V"#Index)> {
     let SubRegIndices = [sub_vrm4_0, sub_vrm4_1];
+    let CostPerUse = [!if(!eq(Index, 0), 1, 0)];
   }
 }
 

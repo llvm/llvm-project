@@ -616,11 +616,11 @@ define <vscale x 16 x float> @vfmacc_vv_nxv16f32_unmasked(<vscale x 16 x half> %
 ; ZVFHMIN-LABEL: vfmacc_vv_nxv16f32_unmasked:
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
-; ZVFHMIN-NEXT:    vmv4r.v v24, v12
-; ZVFHMIN-NEXT:    vfwcvt.f.f.v v0, v8
-; ZVFHMIN-NEXT:    vfwcvt.f.f.v v8, v24
+; ZVFHMIN-NEXT:    vmv4r.v v4, v12
+; ZVFHMIN-NEXT:    vfwcvt.f.f.v v24, v8
+; ZVFHMIN-NEXT:    vfwcvt.f.f.v v8, v4
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
-; ZVFHMIN-NEXT:    vfmadd.vv v8, v0, v16
+; ZVFHMIN-NEXT:    vfmadd.vv v8, v24, v16
 ; ZVFHMIN-NEXT:    ret
   %aext = call <vscale x 16 x float> @llvm.vp.fpext.nxv16f32.nxv16f16(<vscale x 16 x half> %a, <vscale x 16 x i1> splat (i1 -1), i32 %evl)
   %bext = call <vscale x 16 x float> @llvm.vp.fpext.nxv16f32.nxv16f16(<vscale x 16 x half> %b, <vscale x 16 x i1> splat (i1 -1), i32 %evl)

@@ -237,25 +237,37 @@ define <64 x float> @interleave_v32f32(<32 x float> %x, <32 x float> %y) {
 ; V128-NEXT:    addi sp, sp, -16
 ; V128-NEXT:    .cfi_def_cfa_offset 16
 ; V128-NEXT:    csrr a0, vlenb
-; V128-NEXT:    slli a0, a0, 3
+; V128-NEXT:    slli a0, a0, 4
 ; V128-NEXT:    sub sp, sp, a0
-; V128-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 8 * vlenb
-; V128-NEXT:    addi a0, sp, 16
+; V128-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x10, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 16 * vlenb
+; V128-NEXT:    csrr a0, vlenb
+; V128-NEXT:    slli a0, a0, 3
+; V128-NEXT:    add a0, sp, a0
+; V128-NEXT:    addi a0, a0, 16
 ; V128-NEXT:    vs8r.v v8, (a0) # vscale x 64-byte Folded Spill
 ; V128-NEXT:    vsetivli zero, 16, e32, m8, ta, ma
-; V128-NEXT:    vslidedown.vi v24, v16, 16
+; V128-NEXT:    vslidedown.vi v0, v16, 16
 ; V128-NEXT:    li a0, 32
 ; V128-NEXT:    lui a1, 699051
-; V128-NEXT:    vslidedown.vi v0, v8, 16
+; V128-NEXT:    vslidedown.vi v24, v8, 16
+; V128-NEXT:    vmv4r.v v8, v0
 ; V128-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
-; V128-NEXT:    vzext.vf2 v8, v24
+; V128-NEXT:    vzext.vf2 v0, v8
 ; V128-NEXT:    addi a1, a1, -1366
-; V128-NEXT:    vzext.vf2 v24, v0
-; V128-NEXT:    vmv.s.x v0, a1
-; V128-NEXT:    vsll.vx v8, v8, a0
+; V128-NEXT:    vzext.vf2 v8, v24
+; V128-NEXT:    addi a2, sp, 16
+; V128-NEXT:    vs8r.v v8, (a2) # vscale x 64-byte Folded Spill
+; V128-NEXT:    vmv.s.x v20, a1
+; V128-NEXT:    vsll.vx v8, v0, a0
+; V128-NEXT:    vmv1r.v v0, v20
+; V128-NEXT:    addi a1, sp, 16
+; V128-NEXT:    vl8r.v v24, (a1) # vscale x 64-byte Folded Reload
 ; V128-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
 ; V128-NEXT:    vmerge.vvm v24, v24, v8, v0
-; V128-NEXT:    addi a0, sp, 16
+; V128-NEXT:    csrr a0, vlenb
+; V128-NEXT:    slli a0, a0, 3
+; V128-NEXT:    add a0, sp, a0
+; V128-NEXT:    addi a0, a0, 16
 ; V128-NEXT:    vl8r.v v8, (a0) # vscale x 64-byte Folded Reload
 ; V128-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
 ; V128-NEXT:    vwaddu.vv v0, v8, v16
@@ -264,7 +276,7 @@ define <64 x float> @interleave_v32f32(<32 x float> %x, <32 x float> %y) {
 ; V128-NEXT:    vmv8r.v v8, v0
 ; V128-NEXT:    vmv8r.v v16, v24
 ; V128-NEXT:    csrr a0, vlenb
-; V128-NEXT:    slli a0, a0, 3
+; V128-NEXT:    slli a0, a0, 4
 ; V128-NEXT:    add sp, sp, a0
 ; V128-NEXT:    .cfi_def_cfa sp, 16
 ; V128-NEXT:    addi sp, sp, 16
