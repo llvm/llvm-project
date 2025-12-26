@@ -169,9 +169,12 @@ void MipsSEInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
       BuildMI(MBB, I, DL, get(Mips::RDDSP), DestReg).addImm(1 << 4)
         .addReg(SrcReg, RegState::Implicit | getKillRegState(KillSrc));
       return;
-    }
-    else if (Mips::MSACtrlRegClass.contains(SrcReg))
+    } else if (Mips::MSACtrlRegClass.contains(SrcReg)) {
       Opc = Mips::CFCMSA;
+    } else if (Mips::FGR64RegClass.contains(SrcReg) &&
+               isWritedByFCMP(I, SrcReg)) {
+      Opc = Mips::MFC1_D64;
+    }
   }
   else if (Mips::GPR32RegClass.contains(SrcReg)) { // Copy from CPU Reg.
     if (Mips::CCRRegClass.contains(DestReg))
@@ -239,6 +242,17 @@ void MipsSEInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
       Opc = Mips::FMOV_D64;
       unsigned DestRegOff = DestReg.id() - Mips::D0_64;
       unsigned SrcRegOff = SrcReg.id() - Mips::F0;
+      if (SrcRegOff == DestRegOff && SrcRegOff >= 0 && SrcRegOff <= 31)
+        return;
+    }
+  } else if (Opc == 0 && Mips::FGR32RegClass.contains(DestReg) &&
+      Mips::FGR64RegClass.contains(SrcReg) && I != MBB.begin()) {
+    // Who produces SrcReg? If SrcReg is produced by CMP_*, then it's OK.
+    // Who uses DestReg? If DestReg is only used by SEL_*, then it's OK.
+    if (isWritedByFCMP(I, SrcReg) || isOnlyReadsBySEL(I, DestReg)) {
+      Opc = Mips::FMOV_D32;
+      unsigned DestRegOff = DestReg.id() - Mips::F0;
+      unsigned SrcRegOff = SrcReg.id() - Mips::D0_64;
       if (SrcRegOff == DestRegOff && SrcRegOff >= 0 && SrcRegOff <= 31)
         return;
     }
