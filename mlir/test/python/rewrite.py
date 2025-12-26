@@ -68,3 +68,19 @@ def testRewritePattern():
         # CHECK: %c3_i64 = arith.constant 3 : i64
         # CHECK: return %c2_i64, %c3_i64 : i64, i64
         print(module)
+
+        module = ModuleOp.parse(
+            r"""
+            module {
+              func.func @add(%a: i64, %b: i64) -> i64 {
+                %sum = arith.addi %a, %b : i64
+                return %sum : i64
+              }
+            }
+            """
+        )
+
+        walk_and_apply_patterns(module, frozen)
+        # CHECK: %0 = arith.muli %arg0, %arg1 : i64
+        # CHECK: return %0 : i64
+        print(module)
