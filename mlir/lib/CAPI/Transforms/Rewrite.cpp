@@ -18,6 +18,7 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Rewrite/FrozenRewritePatternSet.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+#include "mlir/Transforms/WalkPatternRewriteDriver.h"
 
 using namespace mlir;
 
@@ -294,6 +295,11 @@ mlirApplyPatternsAndFoldGreedilyWithOp(MlirOperation op,
                                        MlirFrozenRewritePatternSet patterns,
                                        MlirGreedyRewriteDriverConfig) {
   return wrap(mlir::applyPatternsGreedily(unwrap(op), *unwrap(patterns)));
+}
+
+void mlirWalkAndApplyPatterns(MlirOperation op,
+                              MlirFrozenRewritePatternSet patterns) {
+  mlir::walkAndApplyPatterns(unwrap(op), *unwrap(patterns));
 }
 
 //===----------------------------------------------------------------------===//
