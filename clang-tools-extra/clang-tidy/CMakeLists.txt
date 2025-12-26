@@ -569,3 +569,43 @@ if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
                              COMPONENT clang-tidy-headers)
   endif()
 endif()
+
+# TODO(LLVM 24): Remove these targets.
+foreach(deprecated_target IN ITEMS
+  clangTidyAndroidModule
+  clangTidyAbseilModule
+  clangTidyAlteraModule
+  clangTidyBoostModule
+  clangTidyBugproneModule
+  clangTidyCERTModule
+  clangTidyConcurrencyModule
+  clangTidyCppCoreGuidelinesModule
+  clangTidyCustomModule
+  clangTidyDarwinModule
+  clangTidyFuchsiaModule
+  clangTidyGoogleModule
+  clangTidyHICPPModule
+  clangTidyLinuxKernelModule
+  clangTidyLLVMModule
+  clangTidyLLVMLibcModule
+  clangTidyMiscModule
+  clangTidyMPIModule
+  clangTidyModernizeModule
+  clangTidyObjCModule
+  clangTidyOpenMPModule
+  clangTidyPerformanceModule
+  clangTidyPortabilityModule
+  clangTidyReadabilityModule
+  clangTidyZirconModule
+
+  clangTidyPlugin
+  clangTidyUtils
+)
+  add_library(${deprecated_target} INTERFACE)
+  target_link_libraries(${deprecated_target} INTERFACE clangTidy)
+  set_target_properties(${deprecated_target} PROPERTIES DEPRECATION 
+    "This target is deprecated and will be removed in LLVM 24. All of the \
+symbols it used to provide have been moved into the main 'clangTidy' \
+target, which you should link to instead."
+  )
+endforeach()
