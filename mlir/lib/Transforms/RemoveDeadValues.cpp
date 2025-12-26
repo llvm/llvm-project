@@ -86,7 +86,12 @@ struct FunctionToCleanUp {
   BitVector nonLiveRets;
 };
 
-struct OperationToCleanup {
+struct ResultsToCleanup {
+  Operation *op;
+  BitVector nonLive;
+};
+
+struct OperandsToCleanup {
   Operation *op;
   BitVector nonLive;
   Operation *callee =
@@ -108,8 +113,8 @@ struct RDVFinalCleanupList {
   SmallVector<Operation *> operations;
   SmallVector<Value> values;
   SmallVector<FunctionToCleanUp> functions;
-  SmallVector<OperationToCleanup> operands;
-  SmallVector<OperationToCleanup> results;
+  SmallVector<OperandsToCleanup> operands;
+  SmallVector<ResultsToCleanup> results;
   SmallVector<BlockArgsToCleanup> blocks;
   SmallVector<SuccessorOperandsToCleanup> successorOperands;
 };
@@ -206,21 +211,17 @@ static void dropUsesAndEraseResults(Operation *op, BitVector toErase) {
   for (OpResult result : op->getResults())
     if (!toErase[result.getResultNumber()])
       newResultTypes.push_back(result.getType());
-  OpBuilder builder(op);
-  builder.setInsertionPointAfter(op);
+  IRRewriter rewriter(op);
+  rewriter.setInsertionPointAfter(op);
   OperationState state(op->getLoc(), op->getName().getStringRef(),
                        op->getOperands(), newResultTypes, op->getAttrs());
   for (unsigned i = 0, e = op->getNumRegions(); i < e; ++i)
     state.addRegion();
-  Operation *newOp = builder.create(state);
+  Operation *newOp = rewriter.create(state);
   for (const auto &[index, region] : llvm::enumerate(op->getRegions())) {
-    Region &newRegion = newOp->getRegion(index);
     // Move all blocks of `region` into `newRegion`.
-    Block *temp = new Block();
-    newRegion.push_back(temp);
-    while (!region.empty())
-      region.front().moveBefore(temp);
-    temp->erase();
+    Region &newRegion = newOp->getRegion(index);
+    rewriter.inlineRegionBefore(region, newRegion, newRegion.begin());
   }
 
   unsigned indexOfNextNewCallOpResultToReplace = 0;
@@ -886,7 +887,7 @@ static void cleanUpDeadVals(RDVFinalCleanupList &list) {
 
   // 6. Operands
   LDBG() << "Cleaning up " << list.operands.size() << " operand lists";
-  for (OperationToCleanup &o : list.operands) {
+  for (OperandsToCleanup &o : list.operands) {
     // Handle call-specific cleanup only when we have a cached callee reference.
     // This avoids expensive symbol lookup and is defensive against future
     // changes.

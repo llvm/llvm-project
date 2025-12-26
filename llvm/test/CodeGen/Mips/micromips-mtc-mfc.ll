@@ -27,7 +27,7 @@ define double @foo(double %a, double %b) {
 ; MM6-NEXT:    mtc1 $zero, $f1 # encoding: [0x54,0x01,0x28,0x3b]
 ; MM6-NEXT:    mthc1 $zero, $f1 # encoding: [0x54,0x01,0x38,0x3b]
 ; MM6-NEXT:    cmp.ule.d $f1, $f12, $f1 # encoding: [0x54,0x2c,0x09,0xd5]
-; MM6-NEXT:    mfc1 $2, $f1 # encoding: [0x54,0x41,0x20,0x3b]
+; MM6-NEXT:    mfc1 $2, $f1 # encoding: [0x44,0x02,0x08,0x00]
 ; MM6-NEXT:    andi16 $2, $2, 1 # encoding: [0x2d,0x21]
 ; MM6-NEXT:    jrc $ra # encoding: [0x45,0xbf]
 entry:
@@ -56,8 +56,6 @@ define double @bar(double %x, double %y) {
 ; MM6-LABEL: bar:
 ; MM6:       # %bb.0: # %entry
 ; MM6-NEXT:    cmp.lt.d $f0, $f12, $f14 # encoding: [0x55,0xcc,0x01,0x15]
-; MM6-NEXT:    mfc1 $1, $f0 # encoding: [0x54,0x20,0x20,0x3b]
-; MM6-NEXT:    mtc1 $1, $f0 # encoding: [0x54,0x20,0x28,0x3b]
 ; MM6-NEXT:    sel.d $f0, $f14, $f12 # encoding: [0x55,0x8e,0x02,0xb8]
 ; MM6-NEXT:    jrc $ra # encoding: [0x45,0xbf]
 entry:
