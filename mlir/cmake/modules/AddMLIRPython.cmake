@@ -454,7 +454,7 @@ function(add_mlir_python_modules name)
 
   # Build extensions.
   foreach(sources_target ${_flat_targets})
-    _process_target(${name} ${sources_target} ${_mlir_python_support_libs})
+    _process_target(${name} ${sources_target} "${_mlir_python_support_libs}")
   endforeach()
 
   # Create an install target.
