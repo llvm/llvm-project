@@ -1235,13 +1235,7 @@ ComplexDeinterleavingGraph::identifyReassocNodes(Instruction *Real,
 
   std::optional<FastMathFlags> Flags;
   if (isa<FPMathOperator>(Real)) {
-    if (Real->getFastMathFlags() != Imag->getFastMathFlags()) {
-      LLVM_DEBUG(dbgs() << "The flags in Real and Imaginary instructions are "
-                           "not identical\n");
-      return nullptr;
-    }
-
-    Flags = Real->getFastMathFlags();
+    Flags = Real->getFastMathFlags() & Imag->getFastMathFlags();
     if (!Flags->allowReassoc()) {
       LLVM_DEBUG(
           dbgs()
@@ -1250,11 +1244,23 @@ ComplexDeinterleavingGraph::identifyReassocNodes(Instruction *Real,
     }
   }
 
+  auto UpdateFlags = [&Flags](Instruction *I) {
+    if (!Flags)
+      return true;
+    if (!isa<FPMathOperator>(I))
+      return false;
+    auto NewFlags = I->getFastMathFlags();
+    if (!NewFlags.allowReassoc())
+      return false;
+    *Flags &= NewFlags;
+    return true;
+  };
+
   // Collect multiplications and addend instructions from the given instruction
   // while traversing it operands. Additionally, verify that all instructions
   // have the same fast math flags.
-  auto Collect = [&Flags](Instruction *Insn, SmallVectorImpl<Product> &Muls,
-                          AddendList &Addends) -> bool {
+  auto Collect = [&UpdateFlags](Instruction *Insn, SmallVectorImpl<Product> &Muls,
+                                AddendList &Addends) -> bool {
     SmallVector<PointerIntPair<Value *, 1, bool>> Worklist = {{Insn, true}};
     SmallPtrSet<Value *, 8> Visited;
     while (!Worklist.empty()) {
@@ -1279,6 +1285,15 @@ ComplexDeinterleavingGraph::identifyReassocNodes(Instruction *Real,
         Addends.emplace_back(I, IsPositive);
         continue;
       }
+
+      if (!UpdateFlags(I)) {
+        LLVM_DEBUG(dbgs() << "The instruction's fast math flags miss "
+                             "the 'Reassoc' attribute: "
+                          << *I << "\n");
+        Addends.emplace_back(I, IsPositive);
+        continue;
+      }
+
       switch (I->getOpcode()) {
       case Instruction::FAdd:
       case Instruction::Add:
@@ -1322,13 +1337,6 @@ ComplexDeinterleavingGraph::identifyReassocNodes(Instruction *Real,
       default:
         Addends.emplace_back(I, IsPositive);
         continue;
-      }
-
-      if (Flags && I->getFastMathFlags() != *Flags) {
-        LLVM_DEBUG(dbgs() << "The instruction's fast math flags are "
-                             "inconsistent with the root instructions' flags: "
-                          << *I << "\n");
-        return false;
       }
     }
     return true;
