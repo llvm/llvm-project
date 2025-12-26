@@ -18,6 +18,7 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 namespace _Algorithm {
+struct __copy {};
 struct __fill_n {};
 struct __for_each {};
 } // namespace _Algorithm

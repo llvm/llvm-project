@@ -49,11 +49,9 @@ define void @test() {
 ; CHECK-NEXT:    [[TMP22:%.*]] = phi <8 x float> [ [[TMP14]], %[[BB77]] ], [ [[TMP31:%.*]], %[[BB78]] ]
 ; CHECK-NEXT:    [[TMP32:%.*]] = phi <2 x float> [ [[TMP16]], %[[BB77]] ], [ [[TMP37:%.*]], %[[BB78]] ]
 ; CHECK-NEXT:    [[TMP25:%.*]] = shufflevector <8 x float> [[TMP22]], <8 x float> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 1, i32 0, i32 3, i32 1, i32 3, i32 5, i32 3, i32 1, i32 0, i32 4, i32 5, i32 5>
-; CHECK-NEXT:    [[TMP38:%.*]] = shufflevector <8 x float> [[TMP22]], <8 x float> poison, <8 x i32> <i32 2, i32 poison, i32 0, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP38:%.*]] = shufflevector <8 x float> [[TMP22]], <8 x float> poison, <8 x i32> <i32 2, i32 poison, i32 0, i32 poison, i32 5, i32 4, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP23:%.*]] = shufflevector <2 x float> [[TMP32]], <2 x float> poison, <8 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP39:%.*]] = shufflevector <8 x float> [[TMP38]], <8 x float> [[TMP23]], <8 x i32> <i32 0, i32 9, i32 2, i32 8, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP40:%.*]] = shufflevector <8 x float> [[TMP22]], <8 x float> poison, <8 x i32> <i32 poison, i32 poison, i32 poison, i32 poison, i32 5, i32 4, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP41:%.*]] = shufflevector <8 x float> [[TMP39]], <8 x float> [[TMP40]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 12, i32 13, i32 6, i32 7>
+; CHECK-NEXT:    [[TMP41:%.*]] = shufflevector <8 x float> [[TMP38]], <8 x float> [[TMP23]], <8 x i32> <i32 0, i32 9, i32 2, i32 8, i32 4, i32 5, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP24:%.*]] = shufflevector <8 x float> [[TMP41]], <8 x float> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 1, i32 0, i32 3, i32 1, i32 3, i32 5, i32 3, i32 1, i32 0, i32 4, i32 5, i32 5>
 ; CHECK-NEXT:    [[TMP26:%.*]] = fmul fast <16 x float> [[TMP24]], [[TMP21]]
 ; CHECK-NEXT:    [[TMP27:%.*]] = fmul fast <16 x float> [[TMP25]], [[TMP0]]

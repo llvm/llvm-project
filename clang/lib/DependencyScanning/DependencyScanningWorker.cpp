@@ -40,21 +40,6 @@ DependencyScanningWorker::DependencyScanningWorker(
 DependencyScanningWorker::~DependencyScanningWorker() = default;
 DependencyActionController::~DependencyActionController() = default;
 
-llvm::Error DependencyScanningWorker::computeDependencies(
-    StringRef WorkingDirectory, ArrayRef<std::string> CommandLine,
-    DependencyConsumer &Consumer, DependencyActionController &Controller,
-    std::optional<llvm::MemoryBufferRef> TUBuffer) {
-  // Capture the emitted diagnostics and report them to the client
-  // in the case of a failure.
-  TextDiagnosticsPrinterWithOutput DiagPrinterWithOS(CommandLine);
-
-  if (computeDependencies(WorkingDirectory, CommandLine, Consumer, Controller,
-                          DiagPrinterWithOS.DiagPrinter, TUBuffer))
-    return llvm::Error::success();
-  return llvm::make_error<llvm::StringError>(
-      DiagPrinterWithOS.DiagnosticsOS.str(), llvm::inconvertibleErrorCode());
-}
-
 static bool forEachDriverJob(
     ArrayRef<std::string> ArgStrs, DiagnosticsEngine &Diags,
     IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS,
@@ -170,15 +155,11 @@ bool DependencyScanningWorker::computeDependencies(
 
 bool DependencyScanningWorker::initializeCompilerInstanceWithContext(
     StringRef CWD, ArrayRef<std::string> CommandLine, DiagnosticConsumer &DC) {
-  auto OverlayFSAndArgs =
+  auto [OverlayFS, ModifiedCommandLine] =
       initVFSForByNameScanning(DepFS, CommandLine, CWD, "ScanningByName");
-  auto &OverlayFS = OverlayFSAndArgs.first;
-  const auto &ModifiedCommandLine = OverlayFSAndArgs.second;
-
   auto DiagEngineWithCmdAndOpts =
       std::make_unique<DiagnosticsEngineWithDiagOpts>(ModifiedCommandLine,
                                                       OverlayFS, DC);
-
   return initializeCompilerInstanceWithContext(
       CWD, ModifiedCommandLine, std::move(DiagEngineWithCmdAndOpts), OverlayFS);
 }

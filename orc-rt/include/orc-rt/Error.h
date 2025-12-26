@@ -9,6 +9,7 @@
 #ifndef ORC_RT_ERROR_H
 #define ORC_RT_ERROR_H
 
+#include "orc-rt-c/config.h"
 #include "orc-rt/CallableTraitsHelper.h"
 #include "orc-rt/Compiler.h"
 #include "orc-rt/RTTI.h"
@@ -19,20 +20,71 @@
 #include <string>
 #include <type_traits>
 
+#if ORC_RT_ENABLE_EXCEPTIONS
+#include <exception>
+#endif // ORC_RT_ENABLE_EXCEPTIONS
+
 namespace orc_rt {
+
+class Error;
 
 /// Base class for all errors.
 class ErrorInfoBase : public RTTIExtends<ErrorInfoBase, RTTIRoot> {
 public:
-  virtual std::string toString() const = 0;
+  virtual std::string toString() const noexcept = 0;
+
+private:
+#if ORC_RT_ENABLE_EXCEPTIONS
+  friend class Error;
+  friend Error restore_error(ErrorInfoBase &&);
+
+  virtual void throwAsException() = 0;
+
+  virtual Error restoreError() noexcept = 0;
+#endif // ORC_RT_ENABLE_EXCEPTIONS
 };
+
+/// Like RTTI-extends, but injects error-related helper methods.
+template <typename ThisT, typename ParentT>
+class ErrorExtends : public ParentT {
+public:
+  static_assert(std::is_base_of_v<ErrorInfoBase, ParentT>,
+                "ErrorExtends must extend ErrorInfoBase derivatives");
+
+  // Inherit constructors and isA methods from ParentT.
+  using ParentT::isA;
+  using ParentT::ParentT;
+
+  static char ID;
+
+  static const void *classID() noexcept { return &ThisT::ID; }
+
+  const void *dynamicClassID() const noexcept override { return &ThisT::ID; }
+
+  bool isA(const void *const ClassID) const noexcept override {
+    return ClassID == classID() || ParentT::isA(ClassID);
+  }
+
+  static bool classof(const RTTIRoot *R) { return R->isA<ThisT>(); }
+
+#if ORC_RT_ENABLE_EXCEPTIONS
+  void throwAsException() override {
+    throw ThisT(std::move(static_cast<ThisT &>(*this)));
+  }
+
+  Error restoreError() noexcept override;
+#endif // ORC_RT_ENABLE_EXCEPTIONS
+};
+
+template <typename ThisT, typename ParentT>
+char ErrorExtends<ThisT, ParentT>::ID = 0;
 
 /// Represents an environmental error.
 class ORC_RT_NODISCARD Error {
 
   template <typename T> friend class Expected;
 
-  friend Error make_error(std::unique_ptr<ErrorInfoBase> Payload);
+  friend Error make_error(std::unique_ptr<ErrorInfoBase> Payload) noexcept;
 
   template <typename... HandlerTs>
   friend Error handleErrors(Error E, HandlerTs &&...Hs);
@@ -48,7 +100,7 @@ public:
   /// Move-construct an error. The newly constructed error is considered
   /// unchecked, even if the source error had been checked. The original error
   /// becomes a checked success value.
-  Error(Error &&Other) {
+  Error(Error &&Other) noexcept {
     setChecked(true);
     *this = std::move(Other);
   }
@@ -57,7 +109,7 @@ public:
   /// you cannot overwrite an unhandled error. The current error is then
   /// considered unchecked. The source error becomes a checked success value,
   /// regardless of its original state.
-  Error &operator=(Error &&Other) {
+  Error &operator=(Error &&Other) noexcept {
     // Don't allow overwriting of unchecked values.
     assertIsChecked();
     setPtr(Other.getPtr());
@@ -73,48 +125,58 @@ public:
   }
 
   /// Create a success value.
-  static Error success() { return Error(); }
+  static Error success() noexcept { return Error(); }
 
   /// Error values convert to true for failure values, false otherwise.
-  explicit operator bool() {
+  explicit operator bool() noexcept {
     setChecked(getPtr() == nullptr);
     return getPtr() != nullptr;
   }
 
   /// Return true if this Error contains a failure value of the given type.
-  template <typename ErrT> bool isA() const {
+  template <typename ErrT> bool isA() const noexcept {
     return getPtr() && getPtr()->isA<ErrT>();
   }
 
-private:
-  Error() = default;
+#if ORC_RT_ENABLE_EXCEPTIONS
+  void throwOnFailure() {
+    if (auto P = takePayload())
+      P->throwAsException();
+  }
+#endif // ORC_RT_ENABLE_EXCEPTIONS
 
-  Error(std::unique_ptr<ErrorInfoBase> ErrInfo) {
+private:
+  Error() noexcept = default;
+
+  Error(std::unique_ptr<ErrorInfoBase> ErrInfo) noexcept {
     auto RawErrPtr = reinterpret_cast<uintptr_t>(ErrInfo.release());
     assert((RawErrPtr & 0x1) == 0 && "ErrorInfo is insufficiently aligned");
     ErrPtr = RawErrPtr | 0x1;
   }
 
-  void assertIsChecked() {
+  void assertIsChecked() noexcept {
     if (ORC_RT_UNLIKELY(!isChecked() || getPtr())) {
       fprintf(stderr, "Error must be checked prior to destruction.\n");
       abort(); // Some sort of JIT program abort?
     }
   }
 
-  template <typename ErrT = ErrorInfoBase> ErrT *getPtr() const {
+  template <typename ErrT = ErrorInfoBase> ErrT *getPtr() const noexcept {
     return reinterpret_cast<ErrT *>(ErrPtr & ~uintptr_t(1));
   }
 
-  void setPtr(ErrorInfoBase *Ptr) {
+  void setPtr(ErrorInfoBase *Ptr) noexcept {
     ErrPtr = (reinterpret_cast<uintptr_t>(Ptr) & ~uintptr_t(1)) | (ErrPtr & 1);
   }
 
-  bool isChecked() const { return ErrPtr & 0x1; }
+  bool isChecked() const noexcept { return ErrPtr & 0x1; }
 
-  void setChecked(bool Checked) { ErrPtr = (ErrPtr & ~uintptr_t(1)) | Checked; }
+  void setChecked(bool Checked) noexcept {
+    ErrPtr = (ErrPtr & ~uintptr_t(1)) | Checked;
+  }
 
-  template <typename ErrT = ErrorInfoBase> std::unique_ptr<ErrT> takePayload() {
+  template <typename ErrT = ErrorInfoBase>
+  std::unique_ptr<ErrT> takePayload() noexcept {
     static_assert(std::is_base_of_v<ErrorInfoBase, ErrT>,
                   "ErrT is not an ErrorInfoBase subclass");
     std::unique_ptr<ErrT> Tmp(getPtr<ErrT>());
@@ -127,9 +189,21 @@ private:
 };
 
 /// Create an Error from an ErrorInfoBase.
-inline Error make_error(std::unique_ptr<ErrorInfoBase> Payload) {
+inline Error make_error(std::unique_ptr<ErrorInfoBase> Payload) noexcept {
   return Error(std::move(Payload));
 }
+
+#if ORC_RT_ENABLE_EXCEPTIONS
+
+template <typename ThisT, typename ParentT>
+Error ErrorExtends<ThisT, ParentT>::restoreError() noexcept {
+  return make_error(
+      std::make_unique<ThisT>(std::move(*static_cast<ThisT *>(this))));
+}
+
+inline Error restore_error(ErrorInfoBase &&EIB) { return EIB.restoreError(); }
+
+#endif // ORC_RT_ENABLE_EXCEPTIONS
 
 /// Construct an error of ErrT with the given arguments.
 template <typename ErrT, typename... ArgTs> Error make_error(ArgTs &&...Args) {
@@ -497,7 +571,7 @@ template <typename T> T &cantFail(Expected<T &> E) {
 
 /// Convert the given error to a string. The error value is consumed in the
 /// process.
-inline std::string toString(Error Err) {
+inline std::string toString(Error Err) noexcept {
   assert(Err && "Cannot convert success value to string");
   std::string ErrMsg;
   handleAllErrors(std::move(Err),
@@ -506,14 +580,110 @@ inline std::string toString(Error Err) {
 }
 
 /// Simple string error type.
-class StringError : public RTTIExtends<StringError, ErrorInfoBase> {
+class StringError : public ErrorExtends<StringError, ErrorInfoBase> {
 public:
   StringError(std::string ErrMsg) : ErrMsg(std::move(ErrMsg)) {}
-  std::string toString() const override { return ErrMsg; }
+  std::string toString() const noexcept override { return ErrMsg; }
 
 private:
   std::string ErrMsg;
 };
+
+/// APIs for C++ exception interop.
+#if ORC_RT_ENABLE_EXCEPTIONS
+
+class ExceptionError : public ErrorExtends<ExceptionError, ErrorInfoBase> {
+public:
+  ExceptionError(std::exception_ptr E) : E(std::move(E)) {}
+  std::string toString() const noexcept override;
+  void throwAsException() override { std::rethrow_exception(E); }
+
+private:
+  mutable std::exception_ptr E;
+};
+
+namespace detail {
+
+// In general we need to wrap a return type of T with an Expected.
+template <typename RetT> struct ErrorWrapImpl {
+  typedef Expected<RetT> return_type;
+
+  template <typename OpFn> static return_type run(OpFn &&Op) { return Op(); }
+};
+
+// If the return is already an Expected value then we don't need to add
+// an additional level of wrapping.
+template <typename RetT> struct ErrorWrapImpl<Expected<RetT>> {
+  typedef Expected<RetT> return_type;
+
+  template <typename OpFn> static return_type run(OpFn &&Op) { return Op(); }
+};
+
+// Errors stay errors.
+template <> struct ErrorWrapImpl<Error> {
+  typedef Error return_type;
+
+  template <typename OpFn> static return_type run(OpFn &&Op) { return Op(); }
+};
+
+// void returns become Error returns.
+template <> struct ErrorWrapImpl<void> {
+  typedef Error return_type;
+
+  template <typename OpFn> static return_type run(OpFn &&Op) {
+    Op();
+    return Error::success();
+  }
+};
+
+template <typename Callable>
+struct ErrorWrap
+    : public CallableTraitsHelper<detail::ErrorWrapImpl, Callable> {};
+
+} // namespace detail
+
+/// Run the given callback capturing any exceptions thrown into an
+/// Error / Expected failure value.
+///
+/// The return type depends on the return type of the callback:
+///   - void callbacks return Error
+///   - Error callbacks return Error
+///   - Expected<T> callbacks return Expected<T>
+///   - other T callbacks return Expected<T>
+///
+/// If the operation succeeds then...
+///   - If its result is non-void it is returned as an Expected<T> success
+///     value
+///   - If its result is void then Error::success() is retured
+///
+/// If the operation fails then...
+///   - If the exception type is std::unique_ptr<ErrorInfoBase> (i.e. a throw
+///     orc_rt failure value) then an Error is constructed to hold the
+///     failure value.
+///   - If the exception has any other type then it's captured as an
+///     ExceptionError.
+///
+/// The scheme allaws...
+///   1. orc_rt::Error values that have been converted to exceptions via
+///      Error::throwOnFailure to be converted back into Errors without loss
+///      of dynamic type info.
+///   2. Other Exceptions caught by this function to be converted back into
+///      exceptions via Error::throwOnFailure without loss of dynamic
+///      type info.
+
+template <typename OpFn>
+typename detail::ErrorWrap<OpFn>::return_type
+runCapturingExceptions(OpFn &&Op) noexcept {
+  try {
+    return detail::ErrorWrap<OpFn>::run(std::forward<OpFn>(Op));
+  } catch (ErrorInfoBase &EIB) {
+    return restore_error(std::move(EIB));
+  } catch (...) {
+    return make_error<ExceptionError>(std::current_exception());
+  }
+}
+
+#endif // ORC_RT_ENABLE_EXCEPTIONS
 
 } // namespace orc_rt
 

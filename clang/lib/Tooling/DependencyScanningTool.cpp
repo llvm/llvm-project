@@ -74,23 +74,23 @@ protected:
 };
 } // anonymous namespace
 
-llvm::Expected<std::string>
+std::optional<std::string>
 DependencyScanningTool::getDependencyFile(ArrayRef<std::string> CommandLine,
-                                          StringRef CWD) {
-  MakeDependencyPrinterConsumer Consumer;
+                                          StringRef CWD,
+                                          DiagnosticConsumer &DiagConsumer) {
+  MakeDependencyPrinterConsumer DepConsumer;
   CallbackActionController Controller(nullptr);
-  auto Result =
-      Worker.computeDependencies(CWD, CommandLine, Consumer, Controller);
-  if (Result)
-    return std::move(Result);
+  if (!Worker.computeDependencies(CWD, CommandLine, DepConsumer, Controller,
+                                  DiagConsumer))
+    return std::nullopt;
   std::string Output;
-  Consumer.printDependencies(Output);
+  DepConsumer.printDependencies(Output);
   return Output;
 }
 
-llvm::Expected<P1689Rule> DependencyScanningTool::getP1689ModuleDependencyFile(
+std::optional<P1689Rule> DependencyScanningTool::getP1689ModuleDependencyFile(
     const CompileCommand &Command, StringRef CWD, std::string &MakeformatOutput,
-    std::string &MakeformatOutputPath) {
+    std::string &MakeformatOutputPath, DiagnosticConsumer &DiagConsumer) {
   class P1689ModuleDependencyPrinterConsumer
       : public MakeDependencyPrinterConsumer {
   public:
@@ -132,10 +132,9 @@ llvm::Expected<P1689Rule> DependencyScanningTool::getP1689ModuleDependencyFile(
   P1689Rule Rule;
   P1689ModuleDependencyPrinterConsumer Consumer(Rule, Command);
   P1689ActionController Controller;
-  auto Result = Worker.computeDependencies(CWD, Command.CommandLine, Consumer,
-                                           Controller);
-  if (Result)
-    return std::move(Result);
+  if (!Worker.computeDependencies(CWD, Command.CommandLine, Consumer,
+                                  Controller, DiagConsumer))
+    return std::nullopt;
 
   MakeformatOutputPath = Consumer.getMakeFormatDependencyOutputPath();
   if (!MakeformatOutputPath.empty())
@@ -143,19 +142,19 @@ llvm::Expected<P1689Rule> DependencyScanningTool::getP1689ModuleDependencyFile(
   return Rule;
 }
 
-llvm::Expected<TranslationUnitDeps>
+std::optional<TranslationUnitDeps>
 DependencyScanningTool::getTranslationUnitDependencies(
     ArrayRef<std::string> CommandLine, StringRef CWD,
+    DiagnosticConsumer &DiagConsumer,
     const llvm::DenseSet<ModuleID> &AlreadySeen,
     LookupModuleOutputCallback LookupModuleOutput,
     std::optional<llvm::MemoryBufferRef> TUBuffer) {
   FullDependencyConsumer Consumer(AlreadySeen);
   CallbackActionController Controller(LookupModuleOutput);
-  llvm::Error Result = Worker.computeDependencies(CWD, CommandLine, Consumer,
-                                                  Controller, TUBuffer);
 
-  if (Result)
-    return std::move(Result);
+  if (!Worker.computeDependencies(CWD, CommandLine, Consumer, Controller,
+                                  DiagConsumer, TUBuffer))
+    return std::nullopt;
   return Consumer.takeTranslationUnitDeps();
 }
 
@@ -217,40 +216,43 @@ static llvm::Error makeErrorFromDiagnosticsOS(
       DiagPrinterWithOS.DiagnosticsOS.str(), llvm::inconvertibleErrorCode());
 }
 
+bool DependencyScanningTool::initializeWorkerCIWithContextFromCommandline(
+    DependencyScanningWorker &Worker, StringRef CWD,
+    ArrayRef<std::string> CommandLine, DiagnosticConsumer &DC) {
+  if (CommandLine.size() >= 2 && CommandLine[1] == "-cc1") {
+    // The input command line is already a -cc1 invocation; initialize the
+    // compiler instance directly from it.
+    return Worker.initializeCompilerInstanceWithContext(CWD, CommandLine, DC);
+  }
+
+  // The input command line is either a driver-style command line, or
+  // ill-formed. In this case, we will first call the Driver to build a -cc1
+  // command line for this compilation or diagnose any ill-formed input.
+  auto [OverlayFS, ModifiedCommandLine] = initVFSForByNameScanning(
+      &Worker.getVFS(), CommandLine, CWD, "ScanningByName");
+  auto DiagEngineWithCmdAndOpts =
+      std::make_unique<DiagnosticsEngineWithDiagOpts>(ModifiedCommandLine,
+                                                      OverlayFS, DC);
+
+  const auto MaybeFirstCC1 = getFirstCC1CommandLine(
+      ModifiedCommandLine, *DiagEngineWithCmdAndOpts->DiagEngine, OverlayFS);
+  if (!MaybeFirstCC1)
+    return false;
+
+  return Worker.initializeCompilerInstanceWithContext(
+      CWD, *MaybeFirstCC1, std::move(DiagEngineWithCmdAndOpts), OverlayFS);
+}
+
 llvm::Error
 DependencyScanningTool::initializeCompilerInstanceWithContextOrError(
     StringRef CWD, ArrayRef<std::string> CommandLine) {
   DiagPrinterWithOS =
       std::make_unique<TextDiagnosticsPrinterWithOutput>(CommandLine);
 
-  if (CommandLine.size() >= 2 && CommandLine[1] == "-cc1") {
-    // The input command line is already a -cc1 invocation; initialize the
-    // compiler instance directly from it.
-    if (Worker.initializeCompilerInstanceWithContext(
-            CWD, CommandLine, DiagPrinterWithOS->DiagPrinter))
-      return llvm::Error::success();
-    return makeErrorFromDiagnosticsOS(*DiagPrinterWithOS);
-  }
+  bool Result = initializeWorkerCIWithContextFromCommandline(
+      Worker, CWD, CommandLine, DiagPrinterWithOS->DiagPrinter);
 
-  // The input command line is either a driver-style command line, or
-  // ill-formed. In this case, we will first call the Driver to build a -cc1
-  // command line for this compilation or diagnose any ill-formed input.
-  auto OverlayFSAndArgs = initVFSForByNameScanning(
-      &Worker.getVFS(), CommandLine, CWD, "ScanningByName");
-  auto &OverlayFS = OverlayFSAndArgs.first;
-  const auto &ModifiedCommandLine = OverlayFSAndArgs.second;
-
-  auto DiagEngineWithCmdAndOpts =
-      std::make_unique<DiagnosticsEngineWithDiagOpts>(
-          ModifiedCommandLine, OverlayFS, DiagPrinterWithOS->DiagPrinter);
-
-  const auto MaybeFirstCC1 = getFirstCC1CommandLine(
-      ModifiedCommandLine, *DiagEngineWithCmdAndOpts->DiagEngine, OverlayFS);
-  if (!MaybeFirstCC1)
-    return makeErrorFromDiagnosticsOS(*DiagPrinterWithOS);
-
-  if (Worker.initializeCompilerInstanceWithContext(
-          CWD, *MaybeFirstCC1, std::move(DiagEngineWithCmdAndOpts), OverlayFS))
+  if (Result)
     return llvm::Error::success();
   return makeErrorFromDiagnosticsOS(*DiagPrinterWithOS);
 }

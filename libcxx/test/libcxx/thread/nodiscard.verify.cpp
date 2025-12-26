@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03
 // UNSUPPORTED: no-threads
 
 // Check that functions are marked [[nodiscard]]
@@ -65,7 +64,7 @@ void test() {
     // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
     m.try_lock();
     // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-    m.try_lock_for(std::chrono::nanoseconds{82});
+    m.try_lock_for(std::chrono::nanoseconds(82));
     // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
     m.try_lock_until(timePoint);
   }
@@ -75,7 +74,7 @@ void test() {
     // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
     m.try_lock();
     // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-    m.try_lock_for(std::chrono::nanoseconds{82});
+    m.try_lock_for(std::chrono::nanoseconds(82));
     // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
     m.try_lock_until(timePoint);
   }
@@ -86,8 +85,10 @@ void test() {
 
     // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
     std::try_lock(m1, m2);
+#if TEST_STD_VER >= 11
     // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
     std::try_lock(m1, m2, m3);
+#endif
   }
 
   // Condition variables
