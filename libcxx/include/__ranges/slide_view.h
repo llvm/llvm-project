@@ -81,7 +81,9 @@ public:
 
 public:
   _LIBCPP_HIDE_FROM_ABI constexpr explicit slide_view(_View __base, range_difference_t<_View> __n)
-      : __base_(std::move(__base)), __n_(__n) {}
+      : __base_(std::move(__base)), __n_(__n) {
+    _LIBCPP_ASSERT_PEDANTIC(__n > 0, "Trying to construct a slide_view with slide size <= 0");
+  }
 
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _View base() const&
     requires copy_constructible<_View>
@@ -154,9 +156,10 @@ class slide_view<_View>::__iterator {
   friend slide_view;
   using _Base = _If<_Const, const _View, _View>;
 
-  _LIBCPP_NO_UNIQUE_ADDRESS iterator_t<_Base> __current_;
-  _LIBCPP_NO_UNIQUE_ADDRESS _If<__slide_caches_first<_Base>, iterator_t<_Base>, __empty_cache> __last_ele_;
-  _LIBCPP_NO_UNIQUE_ADDRESS range_difference_t<_Base> __n_;
+  _LIBCPP_NO_UNIQUE_ADDRESS iterator_t<_Base> __current_ = iterator_t<_Base>();
+  _LIBCPP_NO_UNIQUE_ADDRESS _If<__slide_caches_first<_Base>, iterator_t<_Base>, __empty_cache> __last_ele_ =
+      _If<__slide_caches_first<_Base>, iterator_t<_Base>, __empty_cache>();
+  _LIBCPP_NO_UNIQUE_ADDRESS range_difference_t<_Base> __n_ = 0;
 
   _LIBCPP_HIDE_FROM_ABI constexpr __iterator(iterator_t<_Base> __current, range_difference_t<_Base> __n)
     requires(!__slide_caches_first<_Base>)
@@ -182,12 +185,9 @@ public:
   using value_type        = decltype(views::counted(__current_, __n_));
   using difference_type   = range_difference_t<_Base>;
 
-  _LIBCPP_HIDE_FROM_ABI __iterator()
-      : __current_(iterator_t<_Base>()),
-        __last_ele_(_If<__slide_caches_first<_Base>, iterator_t<_Base>, __empty_cache>()),
-        __n_(0) {}
+  _LIBCPP_HIDE_FROM_ABI __iterator() = default;
 
-  _LIBCPP_HIDE_FROM_ABI __iterator(__iterator<!_Const> __i)
+  _LIBCPP_HIDE_FROM_ABI constexpr __iterator(__iterator<!_Const> __i)
     requires _Const && convertible_to<iterator_t<_View>, iterator_t<_Base>>
       : __current_(std::move(__i.__current_)), __n_(__i.__n_) {}
 
