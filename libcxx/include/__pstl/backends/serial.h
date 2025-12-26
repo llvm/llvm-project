@@ -175,6 +175,15 @@ struct __transform_reduce_binary<__serial_backend_tag, _ExecutionPolicy> {
   }
 };
 
+template <class _ExecutionPolicy>
+struct __min_element<__serial_backend_tag, _ExecutionPolicy> {
+  template <class _Policy, class _ForwardIterator, class _Comp>
+  _LIBCPP_HIDE_FROM_ABI optional<_ForwardIterator>
+  operator()(_Policy&&, _ForwardIterator __first, _ForwardIterator __last, _Comp&& __comp) const noexcept {
+    return std::min_element(std::move(__first), std::move(__last), std::forward<_Comp>(__comp));
+  }
+};
+
 } // namespace __pstl
 _LIBCPP_END_NAMESPACE_STD
 

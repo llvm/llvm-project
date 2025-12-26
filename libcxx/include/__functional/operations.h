@@ -462,6 +462,9 @@ _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(greater);
 template <class _Tp>
 inline const bool __desugars_to_v<__greater_tag, greater<_Tp>, _Tp, _Tp> = true;
 
+template <class _Tp>
+inline const bool __desugars_to_v<__totally_ordered_greater_tag, greater<_Tp>, _Tp, _Tp> = is_integral<_Tp>::value;
+
 #if _LIBCPP_STD_VER >= 14
 template <>
 struct greater<void> {
@@ -476,6 +479,9 @@ struct greater<void> {
 
 template <class _Tp, class _Up>
 inline const bool __desugars_to_v<__greater_tag, greater<>, _Tp, _Up> = true;
+
+template <class _Tp>
+inline const bool __desugars_to_v<__totally_ordered_greater_tag, greater<>, _Tp, _Tp> = is_integral<_Tp>::value;
 
 template <class _Tp>
 struct __make_transparent<greater<_Tp>> {
