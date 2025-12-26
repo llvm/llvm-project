@@ -612,13 +612,13 @@ InferAddressSpacesImpl::collectFlatAddressExpressions(Function &F) {
       if (auto *GV = dyn_cast<GlobalVariable>(PtrOp))
         GVToLdSt[GV].push_back(LI);
     } else if (auto *SI = dyn_cast<StoreInst>(&I)) {
-      Value *StoreVal = SI->getValueOperand();
-      if (StoreVal->getType()->isPtrOrPtrVectorTy())
-        PushPtrOperand(StoreVal);
       Value *PtrOp = SI->getPointerOperand();
       PushPtrOperand(PtrOp);
       if (auto *GV = dyn_cast<GlobalVariable>(PtrOp))
         GVToLdSt[GV].push_back(SI);
+      Value *StoreVal = SI->getValueOperand();
+      if (StoreVal->getType()->isPtrOrPtrVectorTy())
+        PushPtrOperand(StoreVal);
     } else if (auto *RMW = dyn_cast<AtomicRMWInst>(&I))
       PushPtrOperand(RMW->getPointerOperand());
     else if (auto *CmpX = dyn_cast<AtomicCmpXchgInst>(&I))
