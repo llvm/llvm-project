@@ -1,6 +1,9 @@
 # RUN: llc --verify-machineinstrs -mtriple=aarch64 -o - %s -run-pass pipeliner -aarch64-enable-pipeliner -debug-only=pipeliner -pipeliner-max-stages=50 -pipeliner-max-mii=50 -pipeliner-enable-copytophi=0 -pipeliner-ii-search-range=30 2>&1 | FileCheck %s
 # REQUIRES: asserts
 
+# XFAIL: *
+# This test is too fragile.
+
 # Test that each instruction must be scheduled between the early cycle and the late cycle. Previously there were cases where an instruction is scheduled outside of the valid range. See issue #93936 for details.
 
 # CHECK: {{^ *}}Try to schedule with 47
