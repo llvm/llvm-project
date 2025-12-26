@@ -6191,11 +6191,27 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       if ((Triple.isX86() || Triple.isAArch64()) && Triple.isOSBinFormatELF()) {
         A->render(Args, CmdArgs);
         // Turn on -memprof-annotate-static-data-prefix.
-        // When the memory profile (specified by --fmemory-profile-use) has
-        // static data access profiles, global variable hotness are inferrred
-        // from the profile. Otherwise this option is no-op.
+        // * When the memory profile (specified by -fmemory-profile-use) has
+        //   static data access profiles, global variable hotness are inferred
+        //   from a combination of PGO profile and data access profile:
+        //   - For data covered by both profiles (e.g., module-internal data
+        //   with
+        //     symbols in the executable), the hotness is the max of PGO profile
+        //     hotness and data access profile hotness.
+        //   - For data covered by only one profile, the hotness is inferred
+        //     from that profile. Most notably, symbolizable data with external
+        //     linkage is only covered by data access profile, and
+        //     module-internal unsymbolizable data is only covered by PGO
+        //     profile.
+        // * When -fmemory-profile-use is not specified, this LLVM flag is a
+        // no-op.
         CmdArgs.push_back("-mllvm");
         CmdArgs.push_back("-memprof-annotate-static-data-prefix");
+        // Note that the Clang driver PGO options don't typically imply
+        // linker options (e.g., -fprofile-use and
+        // -Wl,-z,-keep-text-section-prefix are specified together); similarly
+        // -fpartition-static-data-sections doesn't imply
+        // `-Wl,-z,-keep-data-section-prefix` if the specified linker is lld.
       } else
         D.Diag(diag::err_drv_unsupported_opt_for_target)
             << A->getAsString(Args) << TripleStr;
