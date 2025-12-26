@@ -82,9 +82,67 @@ define <4 x i64> @test3(ptr %in) nounwind {
 define <16 x i4> @test4(ptr %in) nounwind {
 ; CHECK-LABEL: test4:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movq %rdi, %rax
-; CHECK-NEXT:    movq (%rsi), %rcx
-; CHECK-NEXT:    movq %rcx, (%rdi)
+; CHECK-NEXT:    movq (%rdi), %rax
+; CHECK-NEXT:    movl %eax, %ecx
+; CHECK-NEXT:    shrl $4, %ecx
+; CHECK-NEXT:    andl $15, %ecx
+; CHECK-NEXT:    movl %eax, %edx
+; CHECK-NEXT:    andl $15, %edx
+; CHECK-NEXT:    vmovd %edx, %xmm0
+; CHECK-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; CHECK-NEXT:    movl %eax, %ecx
+; CHECK-NEXT:    shrl $8, %ecx
+; CHECK-NEXT:    andl $15, %ecx
+; CHECK-NEXT:    vpinsrb $2, %ecx, %xmm0, %xmm0
+; CHECK-NEXT:    movl %eax, %ecx
+; CHECK-NEXT:    shrl $12, %ecx
+; CHECK-NEXT:    andl $15, %ecx
+; CHECK-NEXT:    vpinsrb $3, %ecx, %xmm0, %xmm0
+; CHECK-NEXT:    movl %eax, %ecx
+; CHECK-NEXT:    shrl $16, %ecx
+; CHECK-NEXT:    andl $15, %ecx
+; CHECK-NEXT:    vpinsrb $4, %ecx, %xmm0, %xmm0
+; CHECK-NEXT:    movl %eax, %ecx
+; CHECK-NEXT:    shrl $20, %ecx
+; CHECK-NEXT:    andl $15, %ecx
+; CHECK-NEXT:    vpinsrb $5, %ecx, %xmm0, %xmm0
+; CHECK-NEXT:    movl %eax, %ecx
+; CHECK-NEXT:    shrl $24, %ecx
+; CHECK-NEXT:    andl $15, %ecx
+; CHECK-NEXT:    vpinsrb $6, %ecx, %xmm0, %xmm0
+; CHECK-NEXT:    movl %eax, %ecx
+; CHECK-NEXT:    shrl $28, %ecx
+; CHECK-NEXT:    vpinsrb $7, %ecx, %xmm0, %xmm0
+; CHECK-NEXT:    movq %rax, %rcx
+; CHECK-NEXT:    shrq $32, %rcx
+; CHECK-NEXT:    andl $15, %ecx
+; CHECK-NEXT:    vpinsrb $8, %ecx, %xmm0, %xmm0
+; CHECK-NEXT:    movq %rax, %rcx
+; CHECK-NEXT:    shrq $36, %rcx
+; CHECK-NEXT:    andl $15, %ecx
+; CHECK-NEXT:    vpinsrb $9, %ecx, %xmm0, %xmm0
+; CHECK-NEXT:    movq %rax, %rcx
+; CHECK-NEXT:    shrq $40, %rcx
+; CHECK-NEXT:    andl $15, %ecx
+; CHECK-NEXT:    vpinsrb $10, %ecx, %xmm0, %xmm0
+; CHECK-NEXT:    movq %rax, %rcx
+; CHECK-NEXT:    shrq $44, %rcx
+; CHECK-NEXT:    andl $15, %ecx
+; CHECK-NEXT:    vpinsrb $11, %ecx, %xmm0, %xmm0
+; CHECK-NEXT:    movq %rax, %rcx
+; CHECK-NEXT:    shrq $48, %rcx
+; CHECK-NEXT:    andl $15, %ecx
+; CHECK-NEXT:    vpinsrb $12, %ecx, %xmm0, %xmm0
+; CHECK-NEXT:    movq %rax, %rcx
+; CHECK-NEXT:    shrq $52, %rcx
+; CHECK-NEXT:    andl $15, %ecx
+; CHECK-NEXT:    vpinsrb $13, %ecx, %xmm0, %xmm0
+; CHECK-NEXT:    movq %rax, %rcx
+; CHECK-NEXT:    shrq $56, %rcx
+; CHECK-NEXT:    andl $15, %ecx
+; CHECK-NEXT:    vpinsrb $14, %ecx, %xmm0, %xmm0
+; CHECK-NEXT:    shrq $60, %rax
+; CHECK-NEXT:    vpinsrb $15, %eax, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %ret = load <16 x i4>, ptr %in, align 1
   ret <16 x i4> %ret

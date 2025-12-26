@@ -1041,6 +1041,9 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       if (VT.getVectorElementType() == MVT::f16 ||
           VT.getVectorElementType() == MVT::bf16)
         setLoadExtAction(ISD::EXTLOAD, InnerVT, VT, Expand);
+
+      if (VT.getVectorElementType() == MVT::i4)
+        setLoadExtAction(ISD::EXTLOAD, InnerVT, VT, Expand);
     }
   }
 
