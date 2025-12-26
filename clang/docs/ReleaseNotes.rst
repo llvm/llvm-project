@@ -383,6 +383,7 @@ clang-format
 
 libclang
 --------
+- Visit switch initializer statements (https://bugs.kde.org/show_bug.cgi?id=415537#c2)
 
 Code Completion
 ---------------
