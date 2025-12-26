@@ -83,8 +83,8 @@ constexpr OptionEnumValueElement g_pdb_reader_enums[] = {
     {
         ePDBReaderDefault,
         "default",
-        "Use DIA PDB reader unless LLDB_USE_NATIVE_PDB_READER environment "
-        "variable is set",
+        "Use native PDB reader unless LLDB_USE_NATIVE_PDB_READER environment "
+        "is set to 0",
     },
     {
         ePDBReaderDIA,
@@ -109,16 +109,10 @@ enum {
 static const bool g_should_use_native_reader_by_default = [] {
   llvm::StringRef env_value = ::getenv("LLDB_USE_NATIVE_PDB_READER");
 
-#if !LLVM_ENABLE_DIA_SDK || !defined(_WIN32)
-  // if the environment value is unset, the native reader is requested
-  if (env_value.empty())
-    return true;
-#endif
-
-  return env_value.equals_insensitive("on") ||
-         env_value.equals_insensitive("yes") ||
-         env_value.equals_insensitive("1") ||
-         env_value.equals_insensitive("true");
+  return !env_value.equals_insensitive("off") &&
+         !env_value.equals_insensitive("no") &&
+         !env_value.equals_insensitive("0") &&
+         !env_value.equals_insensitive("false");
 }();
 
 class PluginProperties : public Properties {
@@ -293,8 +287,10 @@ uint32_t SymbolFilePDB::CalculateAbilities() {
 }
 
 void SymbolFilePDB::InitializeObject() {
-  lldb::addr_t obj_load_address =
-      m_objfile_sp->GetBaseAddress().GetFileAddress();
+  lldb::addr_t obj_load_address = m_objfile_sp->GetModule()
+                                      ->GetObjectFile()
+                                      ->GetBaseAddress()
+                                      .GetFileAddress();
   lldbassert(obj_load_address && obj_load_address != LLDB_INVALID_ADDRESS);
   m_session_up->setLoadAddress(obj_load_address);
   if (!m_global_scope_up)
@@ -1485,7 +1481,8 @@ void SymbolFilePDB::AddSymbols(lldb_private::Symtab &symtab) {
   if (!results)
     return;
 
-  auto section_list = m_objfile_sp->GetSectionList();
+  auto section_list =
+      m_objfile_sp->GetModule()->GetObjectFile()->GetSectionList();
   if (!section_list)
     return;
 

@@ -58,32 +58,34 @@ BasicBlockSectionsProfileReader::parseUniqueBBID(StringRef S) const {
 }
 
 bool BasicBlockSectionsProfileReader::isFunctionHot(StringRef FuncName) const {
-  return getClusterInfoForFunction(FuncName).first;
+  return !getClusterInfoForFunction(FuncName).empty();
 }
 
-std::pair<bool, SmallVector<BBClusterInfo>>
+SmallVector<BBClusterInfo>
 BasicBlockSectionsProfileReader::getClusterInfoForFunction(
     StringRef FuncName) const {
-  auto R = ProgramPathAndClusterInfo.find(getAliasName(FuncName));
-  return R != ProgramPathAndClusterInfo.end()
-             ? std::pair(true, R->second.ClusterInfo)
-             : std::pair(false, SmallVector<BBClusterInfo>());
+  auto R = ProgramOptimizationProfile.find(getAliasName(FuncName));
+  return R != ProgramOptimizationProfile.end() ? R->second.ClusterInfo
+                                               : SmallVector<BBClusterInfo>();
 }
 
 SmallVector<SmallVector<unsigned>>
 BasicBlockSectionsProfileReader::getClonePathsForFunction(
     StringRef FuncName) const {
-  return ProgramPathAndClusterInfo.lookup(getAliasName(FuncName)).ClonePaths;
+  auto R = ProgramOptimizationProfile.find(getAliasName(FuncName));
+  return R != ProgramOptimizationProfile.end()
+             ? R->second.ClonePaths
+             : SmallVector<SmallVector<unsigned>>();
 }
 
 uint64_t BasicBlockSectionsProfileReader::getEdgeCount(
     StringRef FuncName, const UniqueBBID &SrcBBID,
     const UniqueBBID &SinkBBID) const {
-  auto It = ProgramPathAndClusterInfo.find(getAliasName(FuncName));
-  if (It == ProgramPathAndClusterInfo.end())
+  const CFGProfile *CFG = getFunctionCFGProfile(FuncName);
+  if (CFG == nullptr)
     return 0;
-  auto NodeIt = It->second.EdgeCounts.find(SrcBBID);
-  if (NodeIt == It->second.EdgeCounts.end())
+  auto NodeIt = CFG->EdgeCounts.find(SrcBBID);
+  if (NodeIt == CFG->EdgeCounts.end())
     return 0;
   auto EdgeIt = NodeIt->second.find(SinkBBID);
   if (EdgeIt == NodeIt->second.end())
@@ -147,7 +149,7 @@ uint64_t BasicBlockSectionsProfileReader::getEdgeCount(
 //                                ....
 // ****************************************************************************
 Error BasicBlockSectionsProfileReader::ReadV1Profile() {
-  auto FI = ProgramPathAndClusterInfo.end();
+  auto FI = ProgramOptimizationProfile.end();
 
   // Current cluster ID corresponding to this function.
   unsigned CurrentCluster = 0;
@@ -191,7 +193,7 @@ Error BasicBlockSectionsProfileReader::ReadV1Profile() {
       if (!FunctionFound) {
         // Skip the following profile by setting the profile iterator (FI) to
         // the past-the-end element.
-        FI = ProgramPathAndClusterInfo.end();
+        FI = ProgramOptimizationProfile.end();
         DIFilename = "";
         continue;
       }
@@ -200,7 +202,7 @@ Error BasicBlockSectionsProfileReader::ReadV1Profile() {
 
       // Prepare for parsing clusters of this function name.
       // Start a new cluster map for this function name.
-      auto R = ProgramPathAndClusterInfo.try_emplace(Values.front());
+      auto R = ProgramOptimizationProfile.try_emplace(Values.front());
       // Report error when multiple profiles have been specified for the same
       // function.
       if (!R.second)
@@ -217,7 +219,7 @@ Error BasicBlockSectionsProfileReader::ReadV1Profile() {
     case 'c': // Basic block cluster specifier.
       // Skip the profile when we the profile iterator (FI) refers to the
       // past-the-end element.
-      if (FI == ProgramPathAndClusterInfo.end())
+      if (FI == ProgramOptimizationProfile.end())
         continue;
       // Reset current cluster position.
       CurrentPosition = 0;
@@ -238,7 +240,7 @@ Error BasicBlockSectionsProfileReader::ReadV1Profile() {
     case 'p': { // Basic block cloning path specifier.
       // Skip the profile when we the profile iterator (FI) refers to the
       // past-the-end element.
-      if (FI == ProgramPathAndClusterInfo.end())
+      if (FI == ProgramOptimizationProfile.end())
         continue;
       SmallSet<unsigned, 5> BBsInPath;
       FI->second.ClonePaths.push_back({});
@@ -258,7 +260,7 @@ Error BasicBlockSectionsProfileReader::ReadV1Profile() {
     case 'g': { // CFG profile specifier.
       // Skip the profile when we the profile iterator (FI) refers to the
       // past-the-end element.
-      if (FI == ProgramPathAndClusterInfo.end())
+      if (FI == ProgramOptimizationProfile.end())
         continue;
       // For each node, its CFG profile is encoded as
       // <src>:<count>,<sink_1>:<count_1>,<sink_2>:<count_2>,...
@@ -279,11 +281,30 @@ Error BasicBlockSectionsProfileReader::ReadV1Profile() {
                 Twine("unsigned integer expected: '") + CountStr + "'");
           if (i == 0) {
             // The first element represents the source and its total count.
-            FI->second.NodeCounts[SrcBBID = *BBID] = Count;
+            FI->second.CFG.NodeCounts[SrcBBID = *BBID] = Count;
             continue;
           }
-          FI->second.EdgeCounts[SrcBBID][*BBID] = Count;
+          FI->second.CFG.EdgeCounts[SrcBBID][*BBID] = Count;
         }
+      }
+      continue;
+    }
+    case 'h': { // Basic block hash secifier.
+      // Skip the profile when the profile iterator (FI) refers to the
+      // past-the-end element.
+      if (FI == ProgramOptimizationProfile.end())
+        continue;
+      for (auto BBIDHashStr : Values) {
+        auto [BBIDStr, HashStr] = BBIDHashStr.split(':');
+        unsigned long long BBID = 0, Hash = 0;
+        if (getAsUnsignedInteger(BBIDStr, 10, BBID))
+          return createProfileParseError(Twine("unsigned integer expected: '") +
+                                         BBIDStr + "'");
+        if (getAsUnsignedInteger(HashStr, 16, Hash))
+          return createProfileParseError(
+              Twine("unsigned integer expected in hex format: '") + HashStr +
+              "'");
+        FI->second.CFG.BBHashes[BBID] = Hash;
       }
       continue;
     }
@@ -297,7 +318,7 @@ Error BasicBlockSectionsProfileReader::ReadV1Profile() {
 }
 
 Error BasicBlockSectionsProfileReader::ReadV0Profile() {
-  auto FI = ProgramPathAndClusterInfo.end();
+  auto FI = ProgramOptimizationProfile.end();
   // Current cluster ID corresponding to this function.
   unsigned CurrentCluster = 0;
   // Current position in the current cluster.
@@ -318,7 +339,7 @@ Error BasicBlockSectionsProfileReader::ReadV0Profile() {
     if (S.consume_front("!")) {
       // Skip the profile when we the profile iterator (FI) refers to the
       // past-the-end element.
-      if (FI == ProgramPathAndClusterInfo.end())
+      if (FI == ProgramOptimizationProfile.end())
         continue;
       SmallVector<StringRef, 4> BBIDs;
       S.split(BBIDs, ' ');
@@ -370,7 +391,7 @@ Error BasicBlockSectionsProfileReader::ReadV0Profile() {
       if (!FunctionFound) {
         // Skip the following profile by setting the profile iterator (FI) to
         // the past-the-end element.
-        FI = ProgramPathAndClusterInfo.end();
+        FI = ProgramOptimizationProfile.end();
         continue;
       }
       for (size_t i = 1; i < Aliases.size(); ++i)
@@ -378,7 +399,7 @@ Error BasicBlockSectionsProfileReader::ReadV0Profile() {
 
       // Prepare for parsing clusters of this function name.
       // Start a new cluster map for this function name.
-      auto R = ProgramPathAndClusterInfo.try_emplace(Aliases.front());
+      auto R = ProgramOptimizationProfile.try_emplace(Aliases.front());
       // Report error when multiple profiles have been specified for the same
       // function.
       if (!R.second)
@@ -475,7 +496,7 @@ bool BasicBlockSectionsProfileReaderWrapperPass::isFunctionHot(
   return BBSPR.isFunctionHot(FuncName);
 }
 
-std::pair<bool, SmallVector<BBClusterInfo>>
+SmallVector<BBClusterInfo>
 BasicBlockSectionsProfileReaderWrapperPass::getClusterInfoForFunction(
     StringRef FuncName) const {
   return BBSPR.getClusterInfoForFunction(FuncName);
@@ -485,6 +506,12 @@ SmallVector<SmallVector<unsigned>>
 BasicBlockSectionsProfileReaderWrapperPass::getClonePathsForFunction(
     StringRef FuncName) const {
   return BBSPR.getClonePathsForFunction(FuncName);
+}
+
+const CFGProfile *
+BasicBlockSectionsProfileReaderWrapperPass::getFunctionCFGProfile(
+    StringRef FuncName) const {
+  return BBSPR.getFunctionCFGProfile(FuncName);
 }
 
 uint64_t BasicBlockSectionsProfileReaderWrapperPass::getEdgeCount(

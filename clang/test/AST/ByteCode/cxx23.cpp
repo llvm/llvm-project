@@ -449,3 +449,50 @@ namespace VolatileWrites {
   static_assert(test7(12)); // all-error {{not an integral constant expression}} \
                             // all-note {{in call to}}
 }
+
+namespace AIEWithIndex0Narrows {
+  template <class _Tp> struct greater {
+    constexpr void operator()(_Tp, _Tp) {}
+  };
+  struct S {
+    constexpr S() : i_() {}
+    int i_;
+  };
+
+  constexpr void sort(S *__first) {
+    for (int __start = 0; __start >= 0; --__start) {
+      greater<S>{}(__first[0], __first[0]);
+    }
+  }
+  constexpr bool test() {
+    S *ia = new S[2];
+
+    sort(ia + 1);
+    delete[] ia;
+    return true;
+  }
+  static_assert(test());
+}
+
+#if __cplusplus >= 202302L
+namespace InactiveLocalsInConditionalOp {
+  struct A { constexpr A(){}; ~A(); constexpr int get() { return 10; } }; // all-note 2{{declared here}}
+  constexpr int get(bool b) {
+    return b ? A().get() : 1; // all-note {{non-constexpr function '~A' cannot be used in a constant expression}}
+  }
+  static_assert(get(false) == 1, "");
+  static_assert(get(true) == 10, ""); // all-error {{not an integral constant expression}} \
+                                      // all-note {{in call to}}
+
+  static_assert( (false ? A().get() : 1) == 1);
+  static_assert( (true ? A().get() : 1) == 1); // all-error {{not an integral constant expression}} \
+                                               // all-note {{non-constexpr function '~A' cannot be used in a constant expression}}
+
+  constexpr bool test2(bool b) {
+    unsigned long __ms = b ? (const unsigned long &)0 : __ms;
+    return true;
+  }
+  static_assert(test2(true));
+
+}
+#endif

@@ -426,15 +426,15 @@ class ARMAsmParser : public MCTargetAsmParser {
       VPTState.CurPosition = ~0U;
   }
 
-  void Note(SMLoc L, const Twine &Msg, SMRange Range = std::nullopt) {
+  void Note(SMLoc L, const Twine &Msg, SMRange Range = {}) {
     return getParser().Note(L, Msg, Range);
   }
 
-  bool Warning(SMLoc L, const Twine &Msg, SMRange Range = std::nullopt) {
+  bool Warning(SMLoc L, const Twine &Msg, SMRange Range = {}) {
     return getParser().Warning(L, Msg, Range);
   }
 
-  bool Error(SMLoc L, const Twine &Msg, SMRange Range = std::nullopt) {
+  bool Error(SMLoc L, const Twine &Msg, SMRange Range = {}) {
     return getParser().Error(L, Msg, Range);
   }
 

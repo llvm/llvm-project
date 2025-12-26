@@ -521,7 +521,7 @@ class VPseudoVLN8Mask<VReg RetClass, bit U> :
       RISCVVPseudo<(outs GetVRegNoV0<RetClass>.R:$rd),
                    (ins GetVRegNoV0<RetClass>.R:$passthru,
                         GPRMemZeroOffset:$rs1,
-                        VMaskOp:$vm, AVL:$vl, sew:$sew, vec_policy:$policy),
+                        VMV0:$vm, AVL:$vl, sew:$sew, vec_policy:$policy),
                    []>,
       RISCVNDSVLN</*Masked*/1, /*Unsigned*/U, !logtwo(8), VLMul> {
   let mayLoad = 1;
@@ -833,12 +833,22 @@ def : Sh2AddPat<NDS_LEA_W_ZE>;
 def : Sh3AddPat<NDS_LEA_D_ZE>;
 } // Predicates = [HasVendorXAndesPerf, IsRV64]
 
+let Predicates = [HasVendorXAndesPerf] in {
+def : Pat<(XLenVT (int_riscv_nds_ffb (XLenVT GPR:$rs1), (XLenVT GPR:$rs2))),
+          (NDS_FFB GPR:$rs1, GPR:$rs2)>;
+def : Pat<(XLenVT (int_riscv_nds_ffzmism (XLenVT GPR:$rs1), (XLenVT GPR:$rs2))),
+          (NDS_FFZMISM GPR:$rs1, GPR:$rs2)>;
+def : Pat<(XLenVT (int_riscv_nds_ffmism (XLenVT GPR:$rs1), (XLenVT GPR:$rs2))),
+          (NDS_FFMISM GPR:$rs1, GPR:$rs2)>;
+def : Pat<(XLenVT (int_riscv_nds_flmism (XLenVT GPR:$rs1), (XLenVT GPR:$rs2))),
+          (NDS_FLMISM GPR:$rs1, GPR:$rs2)>;
+} // Predicates = [HasVendorXAndesPerf]
+
 let Predicates = [HasVendorXAndesBFHCvt] in {
 def : Pat<(fpextend (bf16 FPR16:$rs)),
           (NDS_FCVT_S_BF16 (bf16 FPR16:$rs))>;
 def : Pat<(bf16 (fpround FPR32:$rs)),
           (NDS_FCVT_BF16_S FPR32:$rs)>;
-} // Predicates = [HasVendorXAndesBFHCvt]
 
 let isCodeGenOnly = 1 in {
 def NDS_FMV_BF16_X : FPUnaryOp_r<0b1111000, 0b00000, 0b000, FPR16, GPR, "fmv.w.x">,
@@ -847,7 +857,6 @@ def NDS_FMV_X_BF16 : FPUnaryOp_r<0b1110000, 0b00000, 0b000, GPR, FPR16, "fmv.x.w
                      Sched<[WriteFMovF32ToI32, ReadFMovF32ToI32]>;
 }
 
-let Predicates = [HasVendorXAndesBFHCvt] in {
 def : Pat<(riscv_nds_fmv_bf16_x GPR:$src), (NDS_FMV_BF16_X GPR:$src)>;
 def : Pat<(riscv_nds_fmv_x_anyextbf16 (bf16 FPR16:$src)),
           (NDS_FMV_X_BF16 (bf16 FPR16:$src))>;
@@ -914,7 +923,7 @@ defm : VPatTernaryVD4DOT_VV<"int_riscv_nds_vd4dotsu", "PseudoNDS_VD4DOTSU",
 // Pseudo-instructions for SFB (Short Forward Branch)
 //===----------------------------------------------------------------------===//
 
-let Predicates = [HasShortForwardBranchOpt], hasSideEffects = 0,
+let Predicates = [HasShortForwardBranchIALU], hasSideEffects = 0,
     mayLoad = 0, mayStore = 0, Size = 8, Constraints = "$dst = $falsev" in {
 def PseudoCCNDS_BFOS : Pseudo<(outs GPR:$dst),
                               (ins GPR:$lhs, GPR:$rhs, cond_code:$cc,

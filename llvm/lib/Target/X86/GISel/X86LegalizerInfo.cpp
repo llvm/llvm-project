@@ -269,6 +269,7 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
   getActionDefinitionsBuilder(G_ICMP)
       .legalForCartesianProduct({s8}, Is64Bit ? IntTypes64 : IntTypes32)
       .clampScalar(0, s8, s8)
+      .widenScalarToNextPow2(1, /*Min=*/8)
       .clampScalar(1, s8, sMaxScalar);
 
   // bswap

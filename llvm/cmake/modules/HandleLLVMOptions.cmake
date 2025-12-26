@@ -232,25 +232,17 @@ if( LLVM_REVERSE_ITERATION )
   set( LLVM_ENABLE_REVERSE_ITERATION 1 )
 endif()
 
-if(WIN32 OR CYGWIN)
+if(WIN32)
   set(LLVM_HAVE_LINK_VERSION_SCRIPT 0)
-  if(CYGWIN)
-    set(LLVM_ON_WIN32 0)
-    set(LLVM_ON_UNIX 1)
-  else()
-    set(LLVM_ON_WIN32 1)
-    set(LLVM_ON_UNIX 0)
-  endif()
-elseif(FUCHSIA OR UNIX)
-  set(LLVM_ON_WIN32 0)
+  set(LLVM_ON_UNIX 0)
+elseif(FUCHSIA OR UNIX OR CYGWIN)
   set(LLVM_ON_UNIX 1)
-  if(APPLE OR "${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
+  if(APPLE OR CYGWIN OR "${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
     set(LLVM_HAVE_LINK_VERSION_SCRIPT 0)
   else()
     set(LLVM_HAVE_LINK_VERSION_SCRIPT 1)
   endif()
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Generic")
-  set(LLVM_ON_WIN32 0)
   set(LLVM_ON_UNIX 0)
   set(LLVM_HAVE_LINK_VERSION_SCRIPT 0)
 else()
@@ -450,13 +442,16 @@ if( LLVM_ENABLE_PIC )
     # Enable interprocedural optimizations for non-inline functions which would
     # otherwise be disabled due to GCC -fPIC's default.
     # Note: GCC<10.3 has a bug on SystemZ.
-    #
+    # Note: Default on AIX is "no semantic interposition".
     # Note: Clang allows IPO for -fPIC so this optimization is less effective.
     # Clang 13 has a bug related to -fsanitize-coverage
     # -fno-semantic-interposition (https://reviews.llvm.org/D117183).
-    if ((CMAKE_COMPILER_IS_GNUCXX AND
-         NOT (LLVM_NATIVE_ARCH STREQUAL "SystemZ" AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 10.3))
-       OR (CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND CMAKE_CXX_COMPILER_VERSION GREATER_EQUAL 14))
+    if ((NOT ("${CMAKE_SYSTEM_NAME}" MATCHES "AIX"))
+        AND ((CMAKE_COMPILER_IS_GNUCXX AND
+              NOT (LLVM_NATIVE_ARCH STREQUAL "SystemZ"
+                   AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 10.3))
+             OR (CMAKE_CXX_COMPILER_ID MATCHES "Clang"
+                 AND CMAKE_CXX_COMPILER_VERSION GREATER_EQUAL 14)))
       add_flag_if_supported("-fno-semantic-interposition" FNO_SEMANTIC_INTERPOSITION)
     endif()
   endif()
@@ -709,16 +704,6 @@ endif( LLVM_COMPILER_IS_GCC_COMPATIBLE OR CMAKE_CXX_COMPILER_ID MATCHES "XL" )
 if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   append("-Werror=unguarded-availability-new" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
 endif()
-
-if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND LLVM_ENABLE_LTO)
-  # LLVM data structures like llvm::User and llvm::MDNode rely on
-  # the value of object storage persisting beyond the lifetime of the
-  # object (#24952).  This is not standard compliant and causes a runtime
-  # crash if LLVM is built with GCC and LTO enabled (#57740).  Until
-  # these bugs are fixed, we need to disable dead store eliminations
-  # based on object lifetime.
-  append("-fno-lifetime-dse" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
-endif ()
 
 # Modules enablement for GCC-compatible compilers:
 if ( LLVM_COMPILER_IS_GCC_COMPATIBLE AND LLVM_ENABLE_MODULES )
@@ -1321,7 +1306,7 @@ endif()
 
 set(LLVM_THINLTO_CACHE_PATH "${PROJECT_BINARY_DIR}/lto.cache" CACHE STRING "Set ThinLTO cache path. This can be used when building LLVM from several different directiories.")
 
-if(LLVM_ENABLE_LTO AND LLVM_ON_WIN32 AND NOT LINKER_IS_LLD_LINK AND NOT MINGW)
+if(LLVM_ENABLE_LTO AND WIN32 AND NOT LINKER_IS_LLD_LINK AND NOT MINGW)
   message(FATAL_ERROR "When compiling for Windows, LLVM_ENABLE_LTO requires using lld as the linker (point CMAKE_LINKER at lld-link.exe)")
 endif()
 if(uppercase_LLVM_ENABLE_LTO STREQUAL "THIN")
@@ -1335,6 +1320,9 @@ if(uppercase_LLVM_ENABLE_LTO STREQUAL "THIN")
   # FIXME: We should move all this logic into the clang driver.
   if(APPLE)
     append("-Wl,-cache_path_lto,${LLVM_THINLTO_CACHE_PATH}"
+           CMAKE_EXE_LINKER_FLAGS CMAKE_SHARED_LINKER_FLAGS)
+  elseif("${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
+    append("-bplugin_opt:-legacy-thinlto-cache-dir=${LLVM_THINLTO_CACHE_PATH}"
            CMAKE_EXE_LINKER_FLAGS CMAKE_SHARED_LINKER_FLAGS)
   elseif((UNIX OR MINGW) AND LLVM_USE_LINKER STREQUAL "lld")
     append("-Wl,--thinlto-cache-dir=${LLVM_THINLTO_CACHE_PATH}"
@@ -1503,7 +1491,7 @@ endif()
 
 check_symbol_exists(flock "sys/file.h" HAVE_FLOCK)
 set(LLVM_ENABLE_ONDISK_CAS_default OFF)
-if(HAVE_FLOCK OR LLVM_ON_WIN32)
+if(HAVE_FLOCK OR WIN32)
   # LLVM OnDisk CAS currently requires flock on Unix.
   set(LLVM_ENABLE_ONDISK_CAS_default ON)
 endif()

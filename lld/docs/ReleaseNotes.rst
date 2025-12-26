@@ -38,6 +38,9 @@ Breaking changes
 COFF Improvements
 -----------------
 
+* ``/fat-lto-objects`` addded to support FatLTO. Without ``/fat-lto-objects`` or with ``/fat-lto-objects:no``, LLD will link LLVM FatLTO objects using the relocatable object file.
+  (`#165529 <https://github.com/llvm/llvm-project/pull/165529>`_)
+
 MinGW Improvements
 ------------------
 
@@ -51,6 +54,9 @@ MachO Improvements
 
 WebAssembly Improvements
 ------------------------
+
+* The ``--stack-first`` flag is now enabled by default. The old
+  behavior can be enabled using ``--no-stack-first``.
 
 Fixes
 #####

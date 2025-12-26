@@ -18,7 +18,7 @@ entry:
 for.cond:                                         ; preds = %for.cond, %entry
   %i.0 = phi i32 [ poison, %entry ], [ %inc, %for.cond ]
   %cmp = icmp slt i32 %i.0, 0
-  %fsub = fsub double undef, undef
+  %fsub = fsub double 0.0e+00, 0.0e+00
   %fadd = fadd double %fsub, 1.000000e+00
   %call = tail call i32 @fn2(double %fadd) #2
   %inc = add nsw i32 %i.0, 1
@@ -104,8 +104,8 @@ for.end26:                                        ; preds = %for.cond4.for.end26
 }
 declare i32 @fn2(double) #1
 
-attributes #0 = { nounwind ssp uwtable "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #1 = { "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #0 = { nounwind ssp uwtable "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "use-soft-float"="false" }
+attributes #1 = { "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "use-soft-float"="false" }
 
 !0 = !{!"int", !1}
 !1 = !{!"omnipotent char", !2}

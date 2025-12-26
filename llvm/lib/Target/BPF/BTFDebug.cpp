@@ -25,6 +25,7 @@
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/IOSandbox.h"
 #include "llvm/Support/LineIterator.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
@@ -95,7 +96,24 @@ void BTFTypeDerived::completeType(BTFDebug &BDebug) {
     return;
   IsCompleted = true;
 
-  BTFType.NameOff = BDebug.addString(Name);
+  switch (Kind) {
+  case BTF::BTF_KIND_PTR:
+  case BTF::BTF_KIND_CONST:
+  case BTF::BTF_KIND_VOLATILE:
+  case BTF::BTF_KIND_RESTRICT:
+    // Debug info might contain names for these types, but given that we want
+    // to keep BTF minimal and naming reference types doesn't bring any value
+    // (what matters is the completeness of the base type), we don't emit them.
+    //
+    // Furthermore, the Linux kernel refuses to load BPF programs that contain
+    // BTF with these types named:
+    // https://elixir.bootlin.com/linux/v6.17.1/source/kernel/bpf/btf.c#L2586
+    BTFType.NameOff = 0;
+    break;
+  default:
+    BTFType.NameOff = BDebug.addString(Name);
+    break;
+  }
 
   if (NeedsFixup || !DTy)
     return;
@@ -1091,12 +1109,17 @@ std::string BTFDebug::populateFileContent(const DIFile *File) {
   std::string Line;
   Content.push_back(Line); // Line 0 for empty string
 
+  auto LoadFile = [](StringRef FileName) {
+    // FIXME(sandboxing): Propagating vfs::FileSystem here is lots of work.
+    auto BypassSandbox = sys::sandbox::scopedDisable();
+    return MemoryBuffer::getFile(FileName);
+  };
+
   std::unique_ptr<MemoryBuffer> Buf;
   auto Source = File->getSource();
   if (Source)
     Buf = MemoryBuffer::getMemBufferCopy(*Source);
-  else if (ErrorOr<std::unique_ptr<MemoryBuffer>> BufOrErr =
-               MemoryBuffer::getFile(FileName))
+  else if (ErrorOr<std::unique_ptr<MemoryBuffer>> BufOrErr = LoadFile(FileName))
     Buf = std::move(*BufOrErr);
   if (Buf)
     for (line_iterator I(*Buf, false), E; I != E; ++I)

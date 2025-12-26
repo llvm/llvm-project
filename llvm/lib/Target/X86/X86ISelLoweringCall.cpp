@@ -546,14 +546,14 @@ unsigned X86TargetLowering::getAddressSpace() const {
 }
 
 static bool hasStackGuardSlotTLS(const Triple &TargetTriple) {
-  return TargetTriple.isOSGlibc() || TargetTriple.isOSFuchsia() ||
-         TargetTriple.isAndroid();
+  return TargetTriple.isOSGlibc() || TargetTriple.isMusl() ||
+         TargetTriple.isOSFuchsia() || TargetTriple.isAndroid();
 }
 
 static Constant* SegmentOffset(IRBuilderBase &IRB,
                                int Offset, unsigned AddressSpace) {
   return ConstantExpr::getIntToPtr(
-      ConstantInt::get(Type::getInt32Ty(IRB.getContext()), Offset),
+      ConstantInt::getSigned(Type::getInt32Ty(IRB.getContext()), Offset),
       IRB.getPtrTy(AddressSpace));
 }
 
@@ -638,15 +638,6 @@ void X86TargetLowering::insertSSPDeclarations(Module &M) const {
       hasStackGuardSlotTLS(Subtarget.getTargetTriple()))
     return;
   TargetLowering::insertSSPDeclarations(M);
-}
-
-Function *X86TargetLowering::getSSPStackGuardCheck(const Module &M) const {
-  // MSVC CRT has a function to validate security cookie.
-  if (Subtarget.getTargetTriple().isWindowsMSVCEnvironment() ||
-      Subtarget.getTargetTriple().isWindowsItaniumEnvironment()) {
-    return M.getFunction("__security_check_cookie");
-  }
-  return TargetLowering::getSSPStackGuardCheck(M);
 }
 
 Value *

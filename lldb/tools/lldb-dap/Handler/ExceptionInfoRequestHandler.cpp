@@ -50,20 +50,18 @@ ExceptionInfoRequestHandler::Run(const ExceptionInfoArguments &args) const {
     response.exceptionId = "exception";
   }
 
+  lldb::SBStream stream;
   if (response.description.empty()) {
-    const size_t buffer_size = thread.GetStopDescription(nullptr, 0);
-    if (buffer_size > 0) {
-      std::string &buffer = response.description;
-      buffer.resize(buffer_size);
-      thread.GetStopDescription(buffer.data(), buffer.size());
+    if (thread.GetStopDescription(stream)) {
+      response.description = {stream.GetData(), stream.GetSize()};
     }
   }
 
   if (lldb::SBValue exception = thread.GetCurrentException()) {
-    lldb::SBStream stream;
+    stream.Clear();
     response.details = ExceptionDetails{};
     if (exception.GetDescription(stream)) {
-      response.details->message = stream.GetData();
+      response.details->message = {stream.GetData(), stream.GetSize()};
     }
 
     if (lldb::SBThread exception_backtrace =
@@ -75,7 +73,7 @@ ExceptionInfoRequestHandler::Run(const ExceptionInfoArguments &args) const {
         lldb::SBFrame frame = exception_backtrace.GetFrameAtIndex(idx);
         frame.GetDescription(stream);
       }
-      response.details->stackTrace = stream.GetData();
+      response.details->stackTrace = {stream.GetData(), stream.GetSize()};
     }
   }
   return response;
