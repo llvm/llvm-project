@@ -3034,6 +3034,15 @@ genStandaloneSimd(lower::AbstractConverter &converter, lower::SymMap &symTable,
                      simdClauseOps.linearVarTypes.end());
 
   for (auto [loopVar, loopStep] : llvm::zip(iv, loopNestClauseOps.loopSteps)) {
+    const mlir::Value variable = converter.getSymbolAddress(*loopVar);
+
+    // If the loop variable is already linearized (through an explicit
+    // `linear()` clause, skip.
+    if (std::find(simdClauseOps.linearVars.begin(),
+                  simdClauseOps.linearVars.end(),
+                  variable) != simdClauseOps.linearVars.end())
+      continue;
+
     // TODO: Implicit linearization is skipped if iv is a pointer
     // or an allocatable, due to potential mismatch between the linear
     // variable type (example !fir.ref<!fir.box<!fir.heap<i32>>>)
@@ -3042,7 +3051,6 @@ genStandaloneSimd(lower::AbstractConverter &converter, lower::SymMap &symTable,
     if (loopVar->test(Fortran::semantics::Symbol::Flag::OmpLinear) &&
         !(Fortran::semantics::IsAllocatableOrPointer(*loopVar) ||
           Fortran::semantics::IsAllocatableOrPointer(loopVar->GetUltimate()))) {
-      const mlir::Value variable = converter.getSymbolAddress(*loopVar);
       mlir::Type ty = converter.genType(*loopVar);
       typeAttrs.push_back(mlir::TypeAttr::get(ty));
       simdClauseOps.linearVars.push_back(variable);
