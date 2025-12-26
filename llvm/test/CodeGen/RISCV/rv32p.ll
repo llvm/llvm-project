@@ -146,3 +146,59 @@ define i64 @srxi_i64(i64 %x) {
   %a = lshr i64 %x, 25
   ret i64 %a
 }
+
+define i8 @shlsat_i8(i8 %a, i8 %b) {
+; CHECK-LABEL: shlsat_i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    slli a2, a0, 24
+; CHECK-NEXT:    sll a0, a2, a1
+; CHECK-NEXT:    sra a1, a0, a1
+; CHECK-NEXT:    beq a2, a1, .LBB13_2
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    srai a2, a2, 31
+; CHECK-NEXT:    lui a0, 524288
+; CHECK-NEXT:    addi a0, a0, -1
+; CHECK-NEXT:    xor a0, a2, a0
+; CHECK-NEXT:  .LBB13_2:
+; CHECK-NEXT:    srai a0, a0, 24
+; CHECK-NEXT:    ret
+ %sshlsat = tail call i8 @llvm.sshl.sat.i8(i8 %a,i8 %b)
+ ret i8 %sshlsat
+}
+
+define i16 @shlsat_i16(i16 %a, i16 %b) {
+; CHECK-LABEL: shlsat_i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    slli a2, a0, 16
+; CHECK-NEXT:    sll a0, a2, a1
+; CHECK-NEXT:    sra a1, a0, a1
+; CHECK-NEXT:    beq a2, a1, .LBB14_2
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    srai a2, a2, 31
+; CHECK-NEXT:    lui a0, 524288
+; CHECK-NEXT:    addi a0, a0, -1
+; CHECK-NEXT:    xor a0, a2, a0
+; CHECK-NEXT:  .LBB14_2:
+; CHECK-NEXT:    srai a0, a0, 16
+; CHECK-NEXT:    ret
+ %sshlsat = tail call i16 @llvm.sshl.sat.i16(i16 %a,i16 %b)
+ ret i16 %sshlsat
+}
+
+define i32 @shlsat_i32(i32 %a, i32 %b) {
+; CHECK-LABEL: shlsat_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mv a2, a0
+; CHECK-NEXT:    sll a0, a0, a1
+; CHECK-NEXT:    sra a1, a0, a1
+; CHECK-NEXT:    beq a2, a1, .LBB15_2
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    srai a2, a2, 31
+; CHECK-NEXT:    lui a0, 524288
+; CHECK-NEXT:    addi a0, a0, -1
+; CHECK-NEXT:    xor a0, a2, a0
+; CHECK-NEXT:  .LBB15_2:
+; CHECK-NEXT:    ret
+ %sshlsat = tail call i32 @llvm.sshl.sat.i32(i32 %a,i32 %b)
+ ret i32 %sshlsat
+}
