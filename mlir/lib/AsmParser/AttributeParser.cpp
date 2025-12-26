@@ -883,6 +883,8 @@ ParseResult DenseArrayElementParser::parseIntegerElement(Parser &p) {
                   !type.isUnsignedInteger());
     p.consumeToken();
   } else if (p.consumeIf(Token::integer)) {
+    if (type.isInteger(1))
+      return p.emitError("expected 'true' or 'false' values for i1 type");
     value = buildAttributeAPInt(type, isNegative, spelling);
     if (!value)
       return p.emitError("integer constant out of range");

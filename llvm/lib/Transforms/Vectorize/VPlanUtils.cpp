@@ -92,6 +92,31 @@ const SCEV *vputils::getSCEVExprForVPValue(const VPValue *V,
     return SE.getCouldNotCompute();
   }
 
+  // Helper to create SCEVs for binary and unary operations.
+  auto CreateSCEV =
+      [&](ArrayRef<VPValue *> Ops,
+          function_ref<const SCEV *(ArrayRef<const SCEV *>)> CreateFn)
+      -> const SCEV * {
+    SmallVector<const SCEV *, 2> SCEVOps;
+    for (VPValue *Op : Ops) {
+      const SCEV *S = getSCEVExprForVPValue(Op, PSE, L);
+      if (isa<SCEVCouldNotCompute>(S))
+        return SE.getCouldNotCompute();
+      SCEVOps.push_back(S);
+    }
+    return CreateFn(SCEVOps);
+  };
+
+  VPValue *LHSVal, *RHSVal;
+  if (match(V, m_Add(m_VPValue(LHSVal), m_VPValue(RHSVal))))
+    return CreateSCEV({LHSVal, RHSVal}, [&](ArrayRef<const SCEV *> Ops) {
+      return SE.getAddExpr(Ops[0], Ops[1], SCEV::FlagAnyWrap, 0);
+    });
+  if (match(V, m_Sub(m_VPValue(LHSVal), m_VPValue(RHSVal))))
+    return CreateSCEV({LHSVal, RHSVal}, [&](ArrayRef<const SCEV *> Ops) {
+      return SE.getMinusSCEV(Ops[0], Ops[1], SCEV::FlagAnyWrap, 0);
+    });
+
   // TODO: Support constructing SCEVs for more recipes as needed.
   const VPRecipeBase *DefR = V->getDefiningRecipe();
   const SCEV *Expr = TypeSwitch<const VPRecipeBase *, const SCEV *>(DefR)
@@ -112,7 +137,11 @@ const SCEV *vputils::getSCEVExprForVPValue(const VPValue *V,
               return SE.getCouldNotCompute();
             const SCEV *Start =
                 getSCEVExprForVPValue(R->getStartValue(), PSE, L);
-            return SE.getAddRecExpr(Start, Step, L, SCEV::FlagAnyWrap);
+            const SCEV *AddRec =
+                SE.getAddRecExpr(Start, Step, L, SCEV::FlagAnyWrap);
+            if (R->getTruncInst())
+              return SE.getTruncateExpr(AddRec, R->getScalarType());
+            return AddRec;
           })
       .Case<VPDerivedIVRecipe>([&SE, &PSE, L](const VPDerivedIVRecipe *R) {
         const SCEV *Start = getSCEVExprForVPValue(R->getOperand(0), PSE, L);
