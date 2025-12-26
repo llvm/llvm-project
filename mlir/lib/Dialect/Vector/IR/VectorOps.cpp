@@ -874,12 +874,20 @@ ParseResult ContractionOp::parse(OpAsmParser &parser, OperationState &result) {
   result.attributes.set(getIteratorTypesAttrName(result.name),
                         parser.getBuilder().getArrayAttr(iteratorTypeAttrs));
 
-  if (!result.attributes.get(getKindAttrName(result.name))) {
+  StringAttr kindAttrName = getKindAttrName(result.name);
+  auto kindAttr = result.attributes.get(kindAttrName);
+  if (!kindAttr) {
     result.addAttribute(
-        getKindAttrName(result.name),
-        CombiningKindAttr::get(result.getContext(),
-                               ContractionOp::getDefaultKind()));
+        kindAttrName, CombiningKindAttr::get(result.getContext(),
+                                             ContractionOp::getDefaultKind()));
+  } else {
+    if (!isa<CombiningKindAttr>(kindAttr)) {
+      return parser.emitError(parser.getNameLoc())
+             << "expected " << kindAttrName
+             << " attribute of type CombiningKind(e.g. 'vector.kind<add>')";
+    }
   }
+
   if (masksInfo.empty())
     return success();
   if (masksInfo.size() != 2)
@@ -4056,11 +4064,18 @@ ParseResult OuterProductOp::parse(OpAsmParser &parser, OperationState &result) {
                               scalableDimsRes);
   }
 
-  if (!result.attributes.get(OuterProductOp::getKindAttrName(result.name))) {
-    result.attributes.append(
-        OuterProductOp::getKindAttrName(result.name),
-        CombiningKindAttr::get(result.getContext(),
-                               OuterProductOp::getDefaultKind()));
+  StringAttr kindAttrName = getKindAttrName(result.name);
+  auto kindAttr = result.attributes.get(kindAttrName);
+  if (!kindAttr) {
+    result.addAttribute(
+        kindAttrName, CombiningKindAttr::get(result.getContext(),
+                                             OuterProductOp::getDefaultKind()));
+  } else {
+    if (!isa<CombiningKindAttr>(kindAttr)) {
+      return parser.emitError(parser.getNameLoc())
+             << "expected " << kindAttrName
+             << " attribute of type CombiningKind(e.g. 'vector.kind<add>')";
+    }
   }
 
   return failure(
