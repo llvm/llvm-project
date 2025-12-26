@@ -104,6 +104,8 @@ class FileToRemoveList {
   std::atomic<char *> Filename = nullptr;
   std::atomic<FileToRemoveList *> Next = nullptr;
 
+  static std::atomic<FileToRemoveList *> NodesToRecycle;
+
   FileToRemoveList() = default;
   // Not signal-safe.
   FileToRemoveList(const std::string &str) : Filename(strdup(str.c_str())) {}
@@ -117,11 +119,34 @@ public:
       free(F);
   }
 
+  /// Allocate a new node or pull one off the free list.
+  static FileToRemoveList *allocateNode(const std::string &Filename) {
+    // Try to get a node from the recycle list first.
+    FileToRemoveList *NewHead = nullptr;
+    FileToRemoveList *RecycleHead = NodesToRecycle.load();
+    while (RecycleHead) {
+      FileToRemoveList *Next = RecycleHead->Next.load();
+      if (NodesToRecycle.compare_exchange_weak(RecycleHead, Next)) {
+        // Successfully took a node from the recycle list.
+        NewHead = RecycleHead;
+        NewHead->Filename.store(strdup(Filename.c_str()));
+        NewHead->Next.store(nullptr);
+        break;
+      }
+      // CAS failed, RecycleHead was updated by compare_exchange_weak, retry.
+    }
+
+    // If no recycled node was available, allocate a new one.
+    if (!NewHead)
+      NewHead = new FileToRemoveList(Filename);
+    return NewHead;
+  }
+
   // Not signal-safe.
   static void insert(std::atomic<FileToRemoveList *> &Head,
                      const std::string &Filename) {
     // Insert the new file at the end of the list.
-    FileToRemoveList *NewHead = new FileToRemoveList(Filename);
+    FileToRemoveList *NewHead = allocateNode(Filename);
     std::atomic<FileToRemoveList *> *InsertionPoint = &Head;
     FileToRemoveList *OldHead = nullptr;
     while (!InsertionPoint->compare_exchange_strong(OldHead, NewHead)) {
@@ -138,19 +163,44 @@ public:
     static ManagedStatic<sys::SmartMutex<true>> Lock;
     sys::SmartScopedLock<true> Writer(*Lock);
 
-    for (FileToRemoveList *Current = Head.load(); Current;
-         Current = Current->Next.load()) {
+    FileToRemoveList *Current = nullptr;
+    std::atomic<FileToRemoveList *> *PrevNext = &Head;
+    for (Current = Head.load(); Current; Current = Current->Next.load()) {
       if (char *OldFilename = Current->Filename.load()) {
-        if (OldFilename != Filename)
-          continue;
-        // Leave an empty filename.
-        OldFilename = Current->Filename.exchange(nullptr);
-        // The filename might have become null between the time we
-        // compared it and we exchanged it.
-        if (OldFilename)
-          free(OldFilename);
+        if (OldFilename == Filename) {
+          break;
+        }
       }
+      PrevNext = &Current->Next;
     }
+    if (Current == nullptr)
+      return; // No matching file.
+
+    // Found a match. First, unlink the node from the list by swapping
+    // the previous next pointer with the current node's next pointer.
+    FileToRemoveList *CurrentNext = Current->Next.load();
+    PrevNext->store(CurrentNext);
+
+    // Leave an empty filename.
+    char *OldFilename = Current->Filename.exchange(nullptr);
+    // The filename might have become null between the time we
+    // compared it and we exchanged it.
+    if (OldFilename)
+      free(OldFilename);
+
+    // Ideally, we'd deallocate the node at this point, but we have no way to
+    // synchronize with pending signals. Any other thread in the process
+    // could have taken a signal and captured the address of the node in a
+    // register and be in the process of removing files, and we have no way
+    // to safely wait until that is done. To avoid the problem altogether,
+    // recycle the nodes. In the rare case that a signal handler races with
+    // us and chases these links, it proceed down the recycled nodes list and
+    // will leak some temporary files, which is better than crashing.
+    // Add the node to the recycle list using a CAS loop.
+    FileToRemoveList *RecycleHead = NodesToRecycle.load();
+    do {
+      Current->Next.store(RecycleHead);
+    } while (!NodesToRecycle.compare_exchange_weak(RecycleHead, Current));
   }
 
   static void removeFile(char *path) {
@@ -195,7 +245,10 @@ public:
     Head.exchange(OldHead);
   }
 };
+
 static std::atomic<FileToRemoveList *> FilesToRemove = nullptr;
+
+std::atomic<FileToRemoveList *> FileToRemoveList::NodesToRecycle = nullptr;
 
 /// Clean up the list in a signal-friendly manner.
 /// Recall that signals can fire during llvm_shutdown. If this occurs we should
