@@ -405,7 +405,8 @@ getPointerOperands(const Value &V, const DataLayout &DL,
 }
 
 // Given a load from a global variable G, collect the pointer values
-// stored into G.
+// stored into G. This only returns stored pointer operands when G is used
+// exclusively within the current function, as captured in GVToLdSt.
 static SmallVector<Value *, 2> getStoredPointerOperands(
     const Value &V,
     const DenseMap<GlobalVariable *, SmallVector<Instruction *, 4>> &GVToLdSt) {
