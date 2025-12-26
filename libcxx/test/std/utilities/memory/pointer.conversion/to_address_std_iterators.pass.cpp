@@ -37,8 +37,8 @@ void test_container_iterators(C c)
 void test_valarray_iterators()
 {
     std::valarray<int> v(100);
-    int *p = std::to_address(std::begin(v));
-    int *q = std::to_address(std::end(v));
+    int* p = std::to_address(v.begin());
+    int* q = std::to_address(v.end());
     assert(q - p == 100);
 }
 

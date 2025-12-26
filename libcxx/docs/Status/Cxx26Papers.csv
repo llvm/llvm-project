@@ -158,7 +158,7 @@
 "`P1317R2 <https://wg21.link/P1317R2>`__","Remove return type deduction in ``std::apply``","2025-06 (Sofia)","","","`#148183 <https://github.com/llvm/llvm-project/issues/148183>`__",""
 "","","","","","",""
 "`P3920R0 <https://wg21.link/P3920R0>`__","Wording for NB comment resolution on trivial relocation","2025-11 (Kona)","|Nothing To Do|","","`#171269 <https://github.com/llvm/llvm-project/issues/171269>`__",""
-"`P3016R6 <https://wg21.link/P3016R6>`__","Resolve inconsistencies in begin/end for ``valarray`` and braced initializer lists","2025-11 (Kona)","","","`#171271 <https://github.com/llvm/llvm-project/issues/171271>`__",""
+"`P3016R6 <https://wg21.link/P3016R6>`__","Resolve inconsistencies in begin/end for ``valarray`` and braced initializer lists","2025-11 (Kona)","|Complete|","22","`#171271 <https://github.com/llvm/llvm-project/issues/171271>`__","Implemented as a DR against C++11. Change of ``<stacktrace>`` is blocked on `P0881R7 <https://wg21.link/P0881R7>`__."
 "`P3567R2 <https://wg21.link/P3567R2>`__","``flat_meow`` Fixes","2025-11 (Kona)","|Complete|","22","`#171272 <https://github.com/llvm/llvm-project/issues/171272>`__",""
 "`P3663R3 <https://wg21.link/P3663R3>`__","Future-proof ``submdspan_mapping``","2025-11 (Kona)","","","`#166089 <https://github.com/llvm/llvm-project/issues/166089>`__",""
 "`P3914R0 <https://wg21.link/P3914R0>`__","Assorted NB comment resolutions for Kona 2025","2025-11 (Kona)","","","`#171274 <https://github.com/llvm/llvm-project/issues/171274>`__",""
