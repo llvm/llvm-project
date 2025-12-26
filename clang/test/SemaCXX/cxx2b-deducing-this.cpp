@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -std=c++2b -Woverloaded-virtual %s -verify
+// RUN: %clang_cc1 -fsyntax-only -std=c++2b -Woverloaded-virtual %s -verify -fexperimental-new-constant-interpreter
 
 
 // FIXME: can we improve these diagnostics?

@@ -182,7 +182,10 @@ public:
   const VarDecl *EvaluatingDecl = nullptr;
   /// Things needed to do speculative execution.
   SmallVectorImpl<PartialDiagnosticAt> *PrevDiags = nullptr;
+#ifndef NDEBUG
   unsigned SpeculationDepth = 0;
+#endif
+  unsigned DiagIgnoreDepth = 0;
   std::optional<bool> ConstantContextOverride;
 
   llvm::SmallVector<
