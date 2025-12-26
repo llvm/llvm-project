@@ -305,7 +305,7 @@ endfunction()
 function(build_nanobind_lib)
   cmake_parse_arguments(ARG
     ""
-    "INSTALL_COMPONENT;INSTALL_DESTINATION;OUTPUT_DIRECTORY"
+    "INSTALL_COMPONENT;INSTALL_DESTINATION;OUTPUT_DIRECTORY;MLIR_BINDINGS_PYTHON_NB_DOMAIN"
     ""
     ${ARGN})
 
@@ -314,12 +314,12 @@ function(build_nanobind_lib)
   endif()
   # nanobind does a string match on the suffix to figure out whether to build
   # the lib with free threading...
-  set(NB_LIBRARY_TARGET_NAME "nanobind${_ft}-${MLIR_BINDINGS_PYTHON_NB_DOMAIN}")
+  set(NB_LIBRARY_TARGET_NAME "nanobind${_ft}-${ARG_MLIR_BINDINGS_PYTHON_NB_DOMAIN}")
   set(NB_LIBRARY_TARGET_NAME "${NB_LIBRARY_TARGET_NAME}" PARENT_SCOPE)
   nanobind_build_library(${NB_LIBRARY_TARGET_NAME} AS_SYSINCLUDE)
   target_compile_definitions(${NB_LIBRARY_TARGET_NAME}
     PRIVATE
-    NB_DOMAIN=${MLIR_BINDINGS_PYTHON_NB_DOMAIN}
+    NB_DOMAIN=${ARG_MLIR_BINDINGS_PYTHON_NB_DOMAIN}
   )
   # nanobind configures with LTO for shared build which doesn't work everywhere
   # (see https://github.com/llvm/llvm-project/issues/139602).
@@ -365,16 +365,20 @@ endfunction()
 function(add_mlir_python_modules name)
   cmake_parse_arguments(ARG
     ""
-    "ROOT_PREFIX;INSTALL_PREFIX"
+    "ROOT_PREFIX;INSTALL_PREFIX;MLIR_BINDINGS_PYTHON_NB_DOMAIN"
     "COMMON_CAPI_LINK_LIBS;DECLARED_SOURCES"
     ${ARGN})
 
   # TODO(max): do the same for MLIR_PYTHON_PACKAGE_PREFIX?
-  if(NOT MLIR_BINDINGS_PYTHON_NB_DOMAIN)
+  if((NOT ARG_MLIR_BINDINGS_PYTHON_NB_DOMAIN) AND MLIR_BINDINGS_PYTHON_NB_DOMAIN)
+    set(ARG_MLIR_BINDINGS_PYTHON_NB_DOMAIN ${MLIR_BINDINGS_PYTHON_NB_DOMAIN})
+  endif()
+  if((NOT ARG_MLIR_BINDINGS_PYTHON_NB_DOMAIN) OR ("${ARG_MLIR_BINDINGS_PYTHON_NB_DOMAIN}" STREQUAL ""))
     message(WARNING "MLIR_BINDINGS_PYTHON_NB_DOMAIN CMake var is not set - setting to a default `mlir`.\
       It is highly recommend to set this to something unique so that your project's Python bindings do not collide with\
-      others'. See https://github.com/llvm/llvm-project/pull/171775 for more information.")
-    set(MLIR_BINDINGS_PYTHON_NB_DOMAIN "mlir" CACHE STRING "" FORCE)
+      others'. You also pass explicitly to `add_mlir_python_modules`.\
+      See https://github.com/llvm/llvm-project/pull/171775 for more information.")
+    set(ARG_MLIR_BINDINGS_PYTHON_NB_DOMAIN "mlir")
   endif()
 
   # This call sets NB_LIBRARY_TARGET_NAME.
@@ -382,6 +386,7 @@ function(add_mlir_python_modules name)
     INSTALL_COMPONENT ${name}
     INSTALL_DESTINATION "${ARG_INSTALL_PREFIX}/_mlir_libs"
     OUTPUT_DIRECTORY "${ARG_ROOT_PREFIX}/_mlir_libs"
+    MLIR_BINDINGS_PYTHON_NB_DOMAIN ${ARG_MLIR_BINDINGS_PYTHON_NB_DOMAIN}
   )
 
   # Helper to process an individual target.
@@ -407,6 +412,7 @@ function(add_mlir_python_modules name)
         INSTALL_COMPONENT ${modules_target}
         INSTALL_DIR "${ARG_INSTALL_PREFIX}/_mlir_libs"
         OUTPUT_DIRECTORY "${ARG_ROOT_PREFIX}/_mlir_libs"
+        MLIR_BINDINGS_PYTHON_NB_DOMAIN ${ARG_MLIR_BINDINGS_PYTHON_NB_DOMAIN}
         LINK_LIBS PRIVATE
           ${sources_target}
           ${ARG_COMMON_CAPI_LINK_LIBS}
@@ -433,12 +439,13 @@ function(add_mlir_python_modules name)
     if(_source_type STREQUAL "support")
       get_target_property(_module_name ${sources_target} mlir_python_EXTENSION_MODULE_NAME)
       # Use a similar mechanism as nanobind to help the runtime loader pick the correct lib.
-      set(_module_name "${_module_name}-${MLIR_BINDINGS_PYTHON_NB_DOMAIN}")
+      set(_module_name "${_module_name}-${ARG_MLIR_BINDINGS_PYTHON_NB_DOMAIN}")
       set(_extension_target "${name}.extension.${_module_name}.dso")
       add_mlir_python_extension(${_extension_target} "${_module_name}" ${NB_LIBRARY_TARGET_NAME}
         INSTALL_COMPONENT ${name}
         INSTALL_DIR "${ARG_INSTALL_PREFIX}/_mlir_libs"
         OUTPUT_DIRECTORY "${ARG_ROOT_PREFIX}/_mlir_libs"
+        MLIR_BINDINGS_PYTHON_NB_DOMAIN ${ARG_MLIR_BINDINGS_PYTHON_NB_DOMAIN}
         SUPPORT_LIB
         LINK_LIBS PRIVATE
           LLVMSupport
@@ -842,7 +849,7 @@ endfunction()
 function(add_mlir_python_extension libname extname nb_library_target_name)
   cmake_parse_arguments(ARG
   "SUPPORT_LIB"
-  "INSTALL_COMPONENT;INSTALL_DIR;OUTPUT_DIRECTORY"
+  "INSTALL_COMPONENT;INSTALL_DIR;OUTPUT_DIRECTORY;MLIR_BINDINGS_PYTHON_NB_DOMAIN"
   "SOURCES;LINK_LIBS"
   ${ARGN})
   if(ARG_UNPARSED_ARGUMENTS)
@@ -871,7 +878,7 @@ function(add_mlir_python_extension libname extname nb_library_target_name)
     nanobind_link_options(${libname})
     target_compile_definitions(${libname}
       PRIVATE
-      NB_DOMAIN=${MLIR_BINDINGS_PYTHON_NB_DOMAIN}
+      NB_DOMAIN=${ARG_MLIR_BINDINGS_PYTHON_NB_DOMAIN}
       MLIR_CAPI_BUILDING_LIBRARY=1
     )
     if(MSVC)
@@ -879,7 +886,7 @@ function(add_mlir_python_extension libname extname nb_library_target_name)
     endif()
   else()
     nanobind_add_module(${libname}
-      NB_DOMAIN ${MLIR_BINDINGS_PYTHON_NB_DOMAIN}
+      NB_DOMAIN ${ARG_MLIR_BINDINGS_PYTHON_NB_DOMAIN}
       FREE_THREADED
       NB_SHARED
       ${ARG_SOURCES}
@@ -888,7 +895,7 @@ function(add_mlir_python_extension libname extname nb_library_target_name)
   target_link_libraries(${libname} PRIVATE ${nb_library_target_name})
   target_compile_definitions(${libname}
     PRIVATE
-    MLIR_BINDINGS_PYTHON_DOMAIN=${MLIR_BINDINGS_PYTHON_NB_DOMAIN}
+    MLIR_BINDINGS_PYTHON_DOMAIN=${ARG_MLIR_BINDINGS_PYTHON_NB_DOMAIN}
   )
 
   if (NOT MLIR_DISABLE_CONFIGURE_PYTHON_DEV_PACKAGES
