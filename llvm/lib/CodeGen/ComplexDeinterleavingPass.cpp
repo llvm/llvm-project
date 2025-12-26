@@ -1236,12 +1236,23 @@ ComplexDeinterleavingGraph::identifyReassocNodes(Instruction *Real,
     }
   }
 
+  auto UpdateFlags = [&Flags](Instruction *I) {
+    if (!Flags)
+      return true;
+    if (!isa<FPMathOperator>(I))
+      return false;
+    auto NewFlags = I->getFastMathFlags();
+    if (!NewFlags.allowReassoc())
+      return false;
+    *Flags &= NewFlags;
+    return true;
+  };
+
   // Collect multiplications and addend instructions from the given instruction
   // while traversing it operands. Additionally, verify that all instructions
-  // allow reassociation, and narrow \p Flags to the intersection of their
-  // flags.
-  auto Collect = [&Flags](Instruction *Insn, SmallVectorImpl<Product> &Muls,
-                          AddendList &Addends) -> bool {
+  // have the same fast math flags.
+  auto Collect = [&UpdateFlags](Instruction *Insn, SmallVectorImpl<Product> &Muls,
+                                AddendList &Addends) -> bool {
     SmallVector<PointerIntPair<Value *, 1, bool>> Worklist = {{Insn, true}};
     while (!Worklist.empty()) {
       auto [V, IsPositive] = Worklist.pop_back_val();
@@ -1263,6 +1274,15 @@ ComplexDeinterleavingGraph::identifyReassocNodes(Instruction *Real,
         Addends.emplace_back(I, IsPositive);
         continue;
       }
+
+      if (!UpdateFlags(I)) {
+        LLVM_DEBUG(dbgs() << "The instruction's fast math flags miss "
+                             "the 'Reassoc' attribute: "
+                          << *I << "\n");
+        Addends.emplace_back(I, IsPositive);
+        continue;
+      }
+
       switch (I->getOpcode()) {
       case Instruction::FAdd:
       case Instruction::Add:
@@ -1331,15 +1351,6 @@ ComplexDeinterleavingGraph::identifyReassocNodes(Instruction *Real,
       default:
         Addends.emplace_back(I, IsPositive);
         continue;
-      }
-
-      if (Flags) {
-        if (!I->getFastMathFlags().allowReassoc()) {
-          LLVM_DEBUG(dbgs() << "The instruction does not allow reassociation: "
-                            << *I << "\n");
-          return false;
-        }
-        *Flags &= I->getFastMathFlags();
       }
     }
     return true;
