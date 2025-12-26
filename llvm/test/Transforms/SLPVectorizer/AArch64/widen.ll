@@ -13,13 +13,13 @@ define void @PR50256(ptr %a, ptr %b, i32 %n) {
 ; CHECK-NEXT:    [[ARRAYIDX_8:%.*]] = getelementptr inbounds i8, ptr [[A:%.*]], i64 8
 ; CHECK-NEXT:    [[ARRAYIDX3_8:%.*]] = getelementptr inbounds i16, ptr [[B:%.*]], i64 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i8>, ptr [[A]], align 1
-; CHECK-NEXT:    [[TMP3:%.*]] = zext <8 x i8> [[TMP2]] to <8 x i16>
-; CHECK-NEXT:    [[TMP4:%.*]] = shl nuw <8 x i16> [[TMP3]], splat (i16 8)
 ; CHECK-NEXT:    [[TMP7:%.*]] = load <8 x i8>, ptr [[ARRAYIDX_8]], align 1
-; CHECK-NEXT:    [[TMP8:%.*]] = zext <8 x i8> [[TMP7]] to <8 x i16>
+; CHECK-NEXT:    [[TMP8:%.*]] = zext <8 x i8> [[TMP2]] to <8 x i16>
+; CHECK-NEXT:    [[TMP4:%.*]] = zext <8 x i8> [[TMP7]] to <8 x i16>
 ; CHECK-NEXT:    [[TMP9:%.*]] = shl nuw <8 x i16> [[TMP8]], splat (i16 8)
-; CHECK-NEXT:    store <8 x i16> [[TMP4]], ptr [[B]], align 2
-; CHECK-NEXT:    store <8 x i16> [[TMP9]], ptr [[ARRAYIDX3_8]], align 2
+; CHECK-NEXT:    [[TMP6:%.*]] = shl nuw <8 x i16> [[TMP4]], splat (i16 8)
+; CHECK-NEXT:    store <8 x i16> [[TMP9]], ptr [[B]], align 2
+; CHECK-NEXT:    store <8 x i16> [[TMP6]], ptr [[ARRAYIDX3_8]], align 2
 ; CHECK-NEXT:    ret void
 ;
   %arrayidx.1 = getelementptr inbounds i8, ptr %a, i64 1

@@ -1125,24 +1125,24 @@ define void @store_blockstrided4x4(ptr nocapture noundef readonly %p1, i32 nound
 ; CHECK-NEXT:    [[DST12:%.*]] = getelementptr inbounds i32, ptr [[DST0]], i64 12
 ; CHECK-NEXT:    [[TMP32:%.*]] = load <4 x i8>, ptr [[P1]], align 1
 ; CHECK-NEXT:    [[TMP33:%.*]] = zext <4 x i8> [[TMP32]] to <4 x i32>
-; CHECK-NEXT:    [[TMP34:%.*]] = load <4 x i8>, ptr [[ARRAYIDX3]], align 1
+; CHECK-NEXT:    [[TMP34:%.*]] = load <4 x i8>, ptr [[P2]], align 1
 ; CHECK-NEXT:    [[TMP35:%.*]] = zext <4 x i8> [[TMP34]] to <4 x i32>
-; CHECK-NEXT:    [[TMP36:%.*]] = mul <4 x i32> [[TMP33]], [[TMP35]]
-; CHECK-NEXT:    [[TMP37:%.*]] = load <4 x i8>, ptr [[P2]], align 1
+; CHECK-NEXT:    [[TMP37:%.*]] = load <4 x i8>, ptr [[ARRAYIDX3]], align 1
 ; CHECK-NEXT:    [[TMP38:%.*]] = zext <4 x i8> [[TMP37]] to <4 x i32>
 ; CHECK-NEXT:    [[TMP39:%.*]] = load <4 x i8>, ptr [[ARRAYIDX5]], align 1
 ; CHECK-NEXT:    [[TMP40:%.*]] = zext <4 x i8> [[TMP39]] to <4 x i32>
-; CHECK-NEXT:    [[TMP41:%.*]] = mul <4 x i32> [[TMP38]], [[TMP40]]
 ; CHECK-NEXT:    [[TMP42:%.*]] = load <4 x i8>, ptr [[ADD_PTR]], align 1
 ; CHECK-NEXT:    [[TMP43:%.*]] = zext <4 x i8> [[TMP42]] to <4 x i32>
-; CHECK-NEXT:    [[TMP44:%.*]] = load <4 x i8>, ptr [[ARRAYIDX3_1]], align 1
+; CHECK-NEXT:    [[TMP44:%.*]] = load <4 x i8>, ptr [[ADD_PTR64]], align 1
 ; CHECK-NEXT:    [[TMP45:%.*]] = zext <4 x i8> [[TMP44]] to <4 x i32>
-; CHECK-NEXT:    [[TMP46:%.*]] = mul <4 x i32> [[TMP43]], [[TMP45]]
-; CHECK-NEXT:    [[TMP47:%.*]] = load <4 x i8>, ptr [[ADD_PTR64]], align 1
+; CHECK-NEXT:    [[TMP47:%.*]] = load <4 x i8>, ptr [[ARRAYIDX3_1]], align 1
 ; CHECK-NEXT:    [[TMP48:%.*]] = zext <4 x i8> [[TMP47]] to <4 x i32>
 ; CHECK-NEXT:    [[TMP49:%.*]] = load <4 x i8>, ptr [[ARRAYIDX5_1]], align 1
 ; CHECK-NEXT:    [[TMP50:%.*]] = zext <4 x i8> [[TMP49]] to <4 x i32>
-; CHECK-NEXT:    [[TMP51:%.*]] = mul <4 x i32> [[TMP48]], [[TMP50]]
+; CHECK-NEXT:    [[TMP36:%.*]] = mul <4 x i32> [[TMP33]], [[TMP38]]
+; CHECK-NEXT:    [[TMP41:%.*]] = mul <4 x i32> [[TMP35]], [[TMP40]]
+; CHECK-NEXT:    [[TMP46:%.*]] = mul <4 x i32> [[TMP43]], [[TMP48]]
+; CHECK-NEXT:    [[TMP51:%.*]] = mul <4 x i32> [[TMP45]], [[TMP50]]
 ; CHECK-NEXT:    store <4 x i32> [[TMP36]], ptr [[DST0]], align 4
 ; CHECK-NEXT:    store <4 x i32> [[TMP41]], ptr [[DST4]], align 4
 ; CHECK-NEXT:    store <4 x i32> [[TMP46]], ptr [[DST8]], align 4

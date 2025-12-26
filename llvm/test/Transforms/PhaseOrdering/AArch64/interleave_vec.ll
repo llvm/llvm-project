@@ -823,16 +823,16 @@ define void @same_op8(ptr noalias noundef %a, ptr noundef %b, ptr noundef %c) {
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw float, ptr [[C]], i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds nuw float, ptr [[B]], i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    [[ARRAYIDX9:%.*]] = getelementptr inbounds nuw float, ptr [[A]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[TMP5:%.*]] = or disjoint i64 [[INDVARS_IV]], 4
+; CHECK-NEXT:    [[ARRAYIDX_4:%.*]] = getelementptr inbounds nuw float, ptr [[C]], i64 [[TMP5]]
+; CHECK-NEXT:    [[ARRAYIDX6_4:%.*]] = getelementptr inbounds nuw float, ptr [[B]], i64 [[TMP5]]
+; CHECK-NEXT:    [[ARRAYIDX9_4:%.*]] = getelementptr inbounds nuw float, ptr [[A]], i64 [[TMP5]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[ARRAYIDX6]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = fmul fast <4 x float> [[TMP1]], [[TMP0]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x float>, ptr [[ARRAYIDX9]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = fadd fast <4 x float> [[TMP3]], [[TMP2]]
 ; CHECK-NEXT:    store <4 x float> [[TMP4]], ptr [[ARRAYIDX9]], align 4
-; CHECK-NEXT:    [[TMP5:%.*]] = or disjoint i64 [[INDVARS_IV]], 4
-; CHECK-NEXT:    [[ARRAYIDX_4:%.*]] = getelementptr inbounds nuw float, ptr [[C]], i64 [[TMP5]]
-; CHECK-NEXT:    [[ARRAYIDX6_4:%.*]] = getelementptr inbounds nuw float, ptr [[B]], i64 [[TMP5]]
-; CHECK-NEXT:    [[ARRAYIDX9_4:%.*]] = getelementptr inbounds nuw float, ptr [[A]], i64 [[TMP5]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = load <4 x float>, ptr [[ARRAYIDX_4]], align 4
 ; CHECK-NEXT:    [[TMP7:%.*]] = load <4 x float>, ptr [[ARRAYIDX6_4]], align 4
 ; CHECK-NEXT:    [[TMP8:%.*]] = fmul fast <4 x float> [[TMP7]], [[TMP6]]

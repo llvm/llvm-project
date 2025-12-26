@@ -8960,7 +8960,8 @@ void BoUpSLP::buildExternalUses(
   const size_t NumVectScalars = ScalarToTreeEntries.size() + 1;
   DenseMap<Value *, unsigned> ScalarToExtUses;
   // Collect the values that we need to extract from the tree.
-  for (auto &TEPtr : VectorizableTree.back()) {
+  for (auto &VT : VectorizableTree) {
+  for (auto &TEPtr : VT) {
     TreeEntry *Entry = TEPtr.get();
 
     // No need to handle users of gathered values.
@@ -9053,7 +9054,7 @@ void BoUpSLP::buildExternalUses(
           break;
       }
     }
-  }
+  }}
 }
 
 SmallVector<SmallVector<StoreInst *>>
@@ -23267,7 +23268,6 @@ SLPVectorizerPass::vectorizeStoreChain(ArrayRef<Value *> Chain, BoUpSLP &R,
     R.reorderBottomToTop();
   }
   R.transformNodes();
-  R.buildExternalUses();
 
   R.computeMinimumValueSizes();
 
@@ -23602,6 +23602,7 @@ bool SLPVectorizerPass::vectorizeStores(
               }
               if (Res && *Res) {
                 if (TreeSize) {
+                  R.buildExternalUses();
                   InstructionCost Cost = R.getTreeCost();
 
                   LLVM_DEBUG(dbgs() << "SLP: Found cost = " << Cost
