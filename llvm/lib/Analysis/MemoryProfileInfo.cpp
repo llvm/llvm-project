@@ -182,12 +182,12 @@ void CallStackTrie::addCallStack(
   }
   assert(Curr);
   // Append all of the ContextSizeInfo, along with their original AllocType.
-  llvm::append_range(
-      Curr->ContextInfo,
-      llvm::map_range(
-          ContextSizeInfo, [AllocType](const ContextTotalSize &CTS) {
-            return std::pair<ContextTotalSize, AllocationType>(CTS, AllocType);
-          }));
+  llvm::append_range(Curr->ContextInfo,
+                     llvm::map_range(ContextSizeInfo,
+                                     [AllocType](const ContextTotalSize &CTS) {
+                                       return ContextSizeTypePair(CTS,
+                                                                  AllocType);
+                                     }));
 }
 
 void CallStackTrie::addCallStack(MDNode *MIB) {
@@ -220,12 +220,12 @@ void CallStackTrie::addCallStack(MDNode *MIB) {
   addCallStack(getMIBAllocType(MIB), CallStack, std::move(ContextSizeInfo));
 }
 
-static MDNode *
-createMIBNode(LLVMContext &Ctx, ArrayRef<uint64_t> MIBCallStack,
-              AllocationType AllocType,
-              ArrayRef<std::pair<ContextTotalSize, AllocationType>> ContextInfo,
-              const uint64_t MaxColdSize, bool BuiltFromExistingMetadata,
-              uint64_t &TotalBytes, uint64_t &ColdBytes) {
+static MDNode *createMIBNode(LLVMContext &Ctx, ArrayRef<uint64_t> MIBCallStack,
+                             AllocationType AllocType,
+                             ArrayRef<ContextSizeTypePair> ContextInfo,
+                             const uint64_t MaxColdSize,
+                             bool BuiltFromExistingMetadata,
+                             uint64_t &TotalBytes, uint64_t &ColdBytes) {
   SmallVector<Metadata *> MIBPayload(
       {buildCallstackMetadata(MIBCallStack, Ctx)});
   MIBPayload.push_back(
@@ -275,8 +275,7 @@ createMIBNode(LLVMContext &Ctx, ArrayRef<uint64_t> MIBCallStack,
 }
 
 void CallStackTrie::collectContextInfo(
-    CallStackTrieNode *Node,
-    std::vector<std::pair<ContextTotalSize, AllocationType>> &ContextInfo) {
+    CallStackTrieNode *Node, std::vector<ContextSizeTypePair> &ContextInfo) {
   llvm::append_range(ContextInfo, Node->ContextInfo);
   for (auto &Caller : Node->Callers)
     collectContextInfo(Caller.second, ContextInfo);
@@ -447,7 +446,7 @@ bool CallStackTrie::buildMIBNodes(CallStackTrieNode *Node, LLVMContext &Ctx,
   // Trim context below the first node in a prefix with a single alloc type.
   // Add an MIB record for the current call stack prefix.
   if (hasSingleAllocType(Node->AllocTypes)) {
-    std::vector<std::pair<ContextTotalSize, AllocationType>> ContextInfo;
+    std::vector<ContextSizeTypePair> ContextInfo;
     collectContextInfo(Node, ContextInfo);
     MIBNodes.push_back(createMIBNode(
         Ctx, MIBCallStack, (AllocationType)Node->AllocTypes, ContextInfo,
@@ -503,7 +502,7 @@ bool CallStackTrie::buildMIBNodes(CallStackTrieNode *Node, LLVMContext &Ctx,
   // non-cold allocation type.
   if (!CalleeHasAmbiguousCallerContext)
     return false;
-  std::vector<std::pair<ContextTotalSize, AllocationType>> ContextInfo;
+  std::vector<ContextSizeTypePair> ContextInfo;
   collectContextInfo(Node, ContextInfo);
   MIBNodes.push_back(createMIBNode(
       Ctx, MIBCallStack, AllocationType::NotCold, ContextInfo, MaxColdSize,
@@ -520,7 +519,7 @@ void CallStackTrie::addSingleAllocTypeAttribute(CallBase *CI, AllocationType AT,
   removeAnyExistingAmbiguousAttribute(CI);
   CI->addFnAttr(A);
   if (MemProfReportHintedSizes) {
-    std::vector<std::pair<ContextTotalSize, AllocationType>> ContextInfo;
+    std::vector<ContextSizeTypePair> ContextInfo;
     collectContextInfo(Alloc, ContextInfo);
     for (const auto &[CSI, OrigAT] : ContextInfo) {
       const auto &[FullStackId, TotalSize] = CSI;

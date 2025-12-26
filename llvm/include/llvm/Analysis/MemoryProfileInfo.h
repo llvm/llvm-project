@@ -61,6 +61,15 @@ LLVM_ABI void removeAnyExistingAmbiguousAttribute(CallBase *CB);
 /// profile but that we haven't yet been able to disambiguate.
 LLVM_ABI void addAmbiguousAttribute(CallBase *CB);
 
+// During matching we also keep the AllocationType along with the
+// ContextTotalSize in the Trie for the most accurate reporting when we decide
+// to hint unambiguously where there is a dominant type. We don't put the
+// AllocationType in the ContextTotalSize struct as it isn't needed there
+// during the LTO step, because due to context trimming a summarized
+// context with its allocation type can correspond to multiple context/size
+// pairs. Here the redundancy is a short-lived convenience.
+using ContextSizeTypePair = std::pair<ContextTotalSize, AllocationType>;
+
 /// Class to build a trie of call stack contexts for a particular profiled
 /// allocation call, along with their associated allocation types.
 /// The allocation will be at the root of the trie, which is then used to
@@ -77,7 +86,7 @@ private:
     // after trimming (e.g. when building from metadata). This is only placed on
     // the last (root-most) trie node for each allocation context. Also
     // track the original allocation type of the context.
-    std::vector<std::pair<ContextTotalSize, AllocationType>> ContextInfo;
+    std::vector<ContextSizeTypePair> ContextInfo;
     // Map of caller stack id to the corresponding child Trie node.
     std::map<uint64_t, CallStackTrieNode *> Callers;
     CallStackTrieNode(AllocationType Type)
@@ -122,9 +131,8 @@ private:
   // Recursively build up a complete list of context information from the
   // trie nodes reached form the given Node, including each context's
   // ContextTotalSize and AllocationType, for hint size reporting.
-  void collectContextInfo(
-      CallStackTrieNode *Node,
-      std::vector<std::pair<ContextTotalSize, AllocationType>> &ContextInfo);
+  void collectContextInfo(CallStackTrieNode *Node,
+                          std::vector<ContextSizeTypePair> &ContextInfo);
 
   // Recursively convert hot allocation types to notcold, since we don't
   // actually do any cloning for hot contexts, to facilitate more aggressive
