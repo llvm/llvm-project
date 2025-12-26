@@ -211,7 +211,7 @@ define <1 x i16> @saturating_1xi16(<1 x i16> %a, <1 x i16> %b) {
 ; CHECK-NEXT:    movi v1.2s, #127, msl #8
 ; CHECK-NEXT:    sshr v0.2s, v0.2s, #15
 ; CHECK-NEXT:    smin v0.2s, v0.2s, v1.2s
-; CHECK-NEXT:    uzp1 v0.4h, v0.4h, v0.4h
+; CHECK-NEXT:    xtn v0.4h, v0.4s
 ; CHECK-NEXT:    ret
   %as = sext <1 x i16> %a to <1 x i32>
   %bs = sext <1 x i16> %b to <1 x i32>
