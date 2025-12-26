@@ -15,6 +15,10 @@ using namespace clang::ast_matchers;
 namespace clang::tidy::modernize {
 
 void RedundantVoidArgCheck::registerMatchers(MatchFinder *Finder) {
+  static const ast_matchers::internal::VariadicDynCastAllOfMatcher<
+      TypeLoc, FunctionTypeLoc>
+      functionTypeLoc; // NOLINT(readability-identifier-naming)
+
   Finder->addMatcher(
       traverse(TK_IgnoreUnlessSpelledInSource,
                functionTypeLoc(unless(hasParent(functionDecl(isExternC()))))
