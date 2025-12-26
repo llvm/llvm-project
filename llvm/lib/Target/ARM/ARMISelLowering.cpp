@@ -1368,9 +1368,8 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
 
     // Round-to-integer need custom lowering for fp16, as Promote doesn't work
     // because the result type is integer.
-    for (auto Op : {ISD::LROUND, ISD::LLROUND, ISD::LRINT, ISD::LLRINT,
-                    ISD::STRICT_LROUND, ISD::STRICT_LLROUND, ISD::STRICT_LRINT,
-                    ISD::STRICT_LLRINT})
+    for (auto Op : {ISD::LROUND, ISD::LLROUND, ISD::LLRINT, ISD::STRICT_LROUND, 
+                    ISD::STRICT_LLROUND, ISD::STRICT_LRINT, ISD::STRICT_LLRINT})
       setOperationAction(Op, MVT::f16, Custom);
   
     for (auto Op : {ISD::FROUND,         ISD::FROUNDEVEN,        ISD::FTRUNC,
