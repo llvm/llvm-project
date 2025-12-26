@@ -354,6 +354,7 @@ static bool isAddressExpression(
         else
           return StorePrecedesFirstLoad;
       }
+      llvm_unreachable("Should not reach here.");
     }
     return false;
   }
