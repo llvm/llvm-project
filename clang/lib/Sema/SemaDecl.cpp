@@ -16846,7 +16846,7 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body, bool IsInstantiation,
           getDiagnostics().getSuppressAllDiagnostics()) {
         DiscardCleanupsInEvaluationContext();
       }
-      if (!hasUncompilableErrorOccurred() && !isa<FunctionTemplateDecl>(dcl)) {
+      if (!hasUncompilableErrorOccurred()) {
         // Since the body is valid, issue any analysis-based warnings that are
         // enabled.
         ActivePolicy = &WP;
@@ -16903,7 +16903,11 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body, bool IsInstantiation,
     PopDeclContext();
 
   if (!RetainFunctionScopeInfo)
-    PopFunctionScopeInfo(ActivePolicy, dcl);
+    // If `dcl` is `FunctionTemplateDecl`, pass its corresponding
+    // `FunctionDecl`, otherwise (e.g., `ObjCMethodDecl`), pass `dcl`,
+    // so that we can emit some diagnostics in
+    // `AnalysisBasedWarnings::IssueWarnings()`
+    PopFunctionScopeInfo(ActivePolicy, FD ? FD : dcl);
   // If any errors have occurred, clear out any temporaries that may have
   // been leftover. This ensures that these temporaries won't be picked up for
   // deletion in some later function.

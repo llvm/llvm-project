@@ -2989,9 +2989,17 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
        S.SourceMgr.isInSystemHeader(D->getLocation())))
     return;
 
-  // For code in dependent contexts, we'll do this at instantiation time.
-  if (cast<DeclContext>(D)->isDependentContext())
+  // For instantiation-dependent exprs, we'll do this at instantiation time.
+  if (cast<DeclContext>(D)->isDependentContext()) {
+    for (const auto &[PD, Loc, Stmts] : fscope->PossiblyUnreachableDiags)
+      if (llvm::all_of(Stmts, [](const Stmt *S) {
+            const auto *E = dyn_cast<Expr>(S);
+            return E && !E->isInstantiationDependent();
+          }))
+        S.Diag(Loc, PD);
+
     return;
+  }
 
   if (S.hasUncompilableErrorOccurred()) {
     // Flush out any possibly unreachable diagnostics.
