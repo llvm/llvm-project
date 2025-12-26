@@ -30,13 +30,10 @@ static bool isOverrideMethod(const FunctionDecl *Function) {
 
 static bool hasAttrAfterParam(const SourceManager *SourceManager,
                               const ParmVarDecl *Param) {
-  for (const auto *Attr : Param->attrs()) {
-    if (SourceManager->isBeforeInTranslationUnit(Param->getLocation(),
-                                                 Attr->getLocation())) {
-      return true;
-    }
-  }
-  return false;
+  return llvm::any_of(Param->attrs(), [&](const Attr *Attr) {
+    return SourceManager->isBeforeInTranslationUnit(Param->getLocation(),
+                                                    Attr->getLocation());
+  });
 }
 
 void UnusedParametersCheck::registerMatchers(MatchFinder *Finder) {
@@ -151,9 +148,8 @@ void UnusedParametersCheck::warnOnUnusedParameter(
     return;
   auto MyDiag = diag(Param->getLocation(), "parameter %0 is unused") << Param;
 
-  if (!Indexer) {
+  if (!Indexer)
     Indexer = std::make_unique<IndexerVisitor>(*Result.Context);
-  }
 
   // Cannot remove parameter for non-local functions.
   if (Function->isExternallyVisible() ||

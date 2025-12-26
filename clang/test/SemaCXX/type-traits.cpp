@@ -1812,6 +1812,11 @@ union Union {};
 union UnionIncomplete;
 struct StructIncomplete; // #StructIncomplete
 
+#if __cplusplus >= 201402L
+template<class _Base, class _Derived>
+inline constexpr bool IsPointerInterconvertibleBaseOfV = __is_pointer_interconvertible_base_of(_Base, _Derived);
+#endif
+
 void is_pointer_interconvertible_base_of(int n)
 {
   static_assert(__is_pointer_interconvertible_base_of(Base, Derived));
@@ -1880,6 +1885,11 @@ void is_pointer_interconvertible_base_of(int n)
   static_assert(!__is_pointer_interconvertible_base_of(void(&)(int), void(&)(char)));
   static_assert(!__is_pointer_interconvertible_base_of(void(*)(int), void(*)(int)));
   static_assert(!__is_pointer_interconvertible_base_of(void(*)(int), void(*)(char)));
+
+#if __cplusplus >= 201402L
+  static_assert(IsPointerInterconvertibleBaseOfV<const Base, Base>);
+  static_assert(IsPointerInterconvertibleBaseOfV<const Base, Derived>);
+#endif
 }
 }
 

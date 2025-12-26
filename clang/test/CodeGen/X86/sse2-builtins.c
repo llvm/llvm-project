@@ -573,6 +573,8 @@ __m128 test_mm_cvtpd_ps(__m128d A) {
   return _mm_cvtpd_ps(A);
 }
 
+TEST_CONSTEXPR(match_m128(_mm_cvtpd_ps((__m128d){ -1.0, +2.0 }), -1.0f, +2.0f, 0.0f, 0.0f));
+
 __m128i test_mm_cvtps_epi32(__m128 A) {
   // CHECK-LABEL: test_mm_cvtps_epi32
   // CHECK: call <4 x i32> @llvm.x86.sse2.cvtps2dq(<4 x float> %{{.*}})
@@ -613,6 +615,8 @@ __m128 test_mm_cvtsd_ss(__m128 A, __m128d B) {
   // CHECK: call {{.*}}<4 x float> @llvm.x86.sse2.cvtsd2ss(<4 x float> %{{.*}}, <2 x double> %{{.*}})
   return _mm_cvtsd_ss(A, B);
 }
+
+TEST_CONSTEXPR(match_m128(_mm_cvtsd_ss((__m128){ 9.0f, 5.0f, 6.0f, 7.0f }, (__m128d){ -1.0, 42.0 }), -1.0f, 5.0f, 6.0f, 7.0f));
 
 int test_mm_cvtsi128_si32(__m128i A) {
   // CHECK-LABEL: test_mm_cvtsi128_si32

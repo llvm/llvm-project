@@ -9,4 +9,3 @@ subroutine f00
   !$omp target map(x)
   !$omp end target
 end
-  

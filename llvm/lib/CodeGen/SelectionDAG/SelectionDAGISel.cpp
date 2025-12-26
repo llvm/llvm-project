@@ -1837,6 +1837,14 @@ void SelectionDAGISel::SelectAllBasicBlocks(const Function &Fn) {
 
           reportFastISelFailure(*MF, *ORE, R, EnableFastISelAbort > 2);
 
+          // If the call has operand bundles, then it's best if they are handled
+          // together with the call instead of selecting the call as its own
+          // block.
+          if (cast<CallInst>(Inst)->hasOperandBundles()) {
+            NumFastIselFailures += NumFastIselRemaining;
+            break;
+          }
+
           if (!Inst->getType()->isVoidTy() && !Inst->getType()->isTokenTy() &&
               !Inst->use_empty()) {
             Register &R = FuncInfo->ValueMap[Inst];

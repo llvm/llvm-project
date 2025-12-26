@@ -5,6 +5,7 @@
 ; RUN: llc -mcpu=pwr8 -ppc-asm-full-reg-names -verify-machineinstrs \
 ; RUN:   -mtriple=powerpc64le-unknown-unknown < %s | FileCheck %s \
 ; RUN:   --check-prefix=P8
+
 define dso_local float @testfmax(float %a, float %b) local_unnamed_addr {
 ; P9-LABEL: testfmax:
 ; P9:       # %bb.0: # %entry
@@ -24,19 +25,19 @@ entry:
   ret float %cond
 }
 
-define dso_local double @testdmax(double %a, double %b) local_unnamed_addr {
-; P9-LABEL: testdmax:
-; P9:       # %bb.0: # %entry
-; P9-NEXT:    xsmaxcdp f1, f1, f2
-; P9-NEXT:    blr
+define double @testdmax(double %a, double %b) local_unnamed_addr {
+; NO-FAST-P9-LABEL: testdmax:
+; NO-FAST-P9:       # %bb.0: # %entry
+; NO-FAST-P9-NEXT:    xsmaxcdp f1, f1, f2
+; NO-FAST-P9-NEXT:    blr
 ;
-; P8-LABEL: testdmax:
-; P8:       # %bb.0: # %entry
-; P8-NEXT:    xscmpudp cr0, f1, f2
-; P8-NEXT:    bgtlr cr0
-; P8-NEXT:  # %bb.1: # %entry
-; P8-NEXT:    fmr f1, f2
-; P8-NEXT:    blr
+; NO-FAST-P8-LABEL: testdmax:
+; NO-FAST-P8:       # %bb.0: # %entry
+; NO-FAST-P8-NEXT:    xscmpudp cr0, f1, f2
+; NO-FAST-P8-NEXT:    bgtlr cr0
+; NO-FAST-P8-NEXT:  # %bb.1: # %entry
+; NO-FAST-P8-NEXT:    fmr f1, f2
+; NO-FAST-P8-NEXT:    blr
 entry:
   %cmp = fcmp ogt double %a, %b
   %cond = select i1 %cmp, double %a, double %b
@@ -82,62 +83,242 @@ entry:
 }
 
 define dso_local float @testfmax_fast(float %a, float %b) local_unnamed_addr {
-; P9-LABEL: testfmax_fast:
-; P9:       # %bb.0: # %entry
-; P9-NEXT:    xsmaxdp f1, f1, f2
-; P9-NEXT:    blr
+; NO-FAST-P9-LABEL: testfmax_fast:
+; NO-FAST-P9:       # %bb.0: # %entry
+; NO-FAST-P9-NEXT:    xsmaxdp f1, f1, f2
+; NO-FAST-P9-NEXT:    blr
 ;
-; P8-LABEL: testfmax_fast:
-; P8:       # %bb.0: # %entry
-; P8-NEXT:    xsmaxdp f1, f1, f2
-; P8-NEXT:    blr
+; NO-FAST-P8-LABEL: testfmax_fast:
+; NO-FAST-P8:       # %bb.0: # %entry
+; NO-FAST-P8-NEXT:    xsmaxdp f1, f1, f2
+; NO-FAST-P8-NEXT:    blr
 entry:
   %cmp = fcmp nnan ninf ogt float %a, %b
   %cond = select nnan nsz i1 %cmp, float %a, float %b
   ret float %cond
 }
 define dso_local double @testdmax_fast(double %a, double %b) local_unnamed_addr {
-; P9-LABEL: testdmax_fast:
-; P9:       # %bb.0: # %entry
-; P9-NEXT:    xsmaxdp f1, f1, f2
-; P9-NEXT:    blr
+; NO-FAST-P9-LABEL: testdmax_fast:
+; NO-FAST-P9:       # %bb.0: # %entry
+; NO-FAST-P9-NEXT:    xsmaxdp f1, f1, f2
+; NO-FAST-P9-NEXT:    blr
 ;
-; P8-LABEL: testdmax_fast:
-; P8:       # %bb.0: # %entry
-; P8-NEXT:    xsmaxdp f1, f1, f2
-; P8-NEXT:    blr
+; NO-FAST-P8-LABEL: testdmax_fast:
+; NO-FAST-P8:       # %bb.0: # %entry
+; NO-FAST-P8-NEXT:    xsmaxdp f1, f1, f2
+; NO-FAST-P8-NEXT:    blr
 entry:
   %cmp = fcmp nnan ninf ogt double %a, %b
   %cond = select nnan nsz i1 %cmp, double %a, double %b
   ret double %cond
 }
 define dso_local float @testfmin_fast(float %a, float %b) local_unnamed_addr {
-; P9-LABEL: testfmin_fast:
-; P9:       # %bb.0: # %entry
-; P9-NEXT:    xsmindp f1, f1, f2
-; P9-NEXT:    blr
+; NO-FAST-P9-LABEL: testfmin_fast:
+; NO-FAST-P9:       # %bb.0: # %entry
+; NO-FAST-P9-NEXT:    xsmindp f1, f1, f2
+; NO-FAST-P9-NEXT:    blr
 ;
-; P8-LABEL: testfmin_fast:
-; P8:       # %bb.0: # %entry
-; P8-NEXT:    xsmindp f1, f1, f2
-; P8-NEXT:    blr
+; NO-FAST-P8-LABEL: testfmin_fast:
+; NO-FAST-P8:       # %bb.0: # %entry
+; NO-FAST-P8-NEXT:    xsmindp f1, f1, f2
+; NO-FAST-P8-NEXT:    blr
 entry:
   %cmp = fcmp nnan ninf olt float %a, %b
   %cond = select nnan nsz i1 %cmp, float %a, float %b
   ret float %cond
 }
 define dso_local double @testdmin_fast(double %a, double %b) local_unnamed_addr {
-; P9-LABEL: testdmin_fast:
-; P9:       # %bb.0: # %entry
-; P9-NEXT:    xsmindp f1, f1, f2
-; P9-NEXT:    blr
+; NO-FAST-P9-LABEL: testdmin_fast:
+; NO-FAST-P9:       # %bb.0: # %entry
+; NO-FAST-P9-NEXT:    xsmindp f1, f1, f2
+; NO-FAST-P9-NEXT:    blr
 ;
-; P8-LABEL: testdmin_fast:
-; P8:       # %bb.0: # %entry
-; P8-NEXT:    xsmindp f1, f1, f2
-; P8-NEXT:    blr
+; NO-FAST-P8-LABEL: testdmin_fast:
+; NO-FAST-P8:       # %bb.0: # %entry
+; NO-FAST-P8-NEXT:    xsmindp f1, f1, f2
+; NO-FAST-P8-NEXT:    blr
 entry:
   %cmp = fcmp nnan ninf olt double %a, %b
   %cond = select nnan nsz i1 %cmp, double %a, double %b
   ret double %cond
+}
+
+define float @testfminnum(float %a, float %b) {
+; NO-FAST-P9-LABEL: testfminnum:
+; NO-FAST-P9:       # %bb.0: # %entry
+; NO-FAST-P9-NEXT:    xsmindp f1, f1, f2
+; NO-FAST-P9-NEXT:    blr
+;
+; NO-FAST-P8-LABEL: testfminnum:
+; NO-FAST-P8:       # %bb.0: # %entry
+; NO-FAST-P8-NEXT:    xsmindp f1, f1, f2
+; NO-FAST-P8-NEXT:    blr
+entry:
+  %0 = tail call float @llvm.minnum.f32(float %a, float %b)
+  ret float %0
+}
+
+define float @testfmaxnum(float %a, float %b) {
+; NO-FAST-P9-LABEL: testfmaxnum:
+; NO-FAST-P9:       # %bb.0: # %entry
+; NO-FAST-P9-NEXT:    xsmaxdp f1, f1, f2
+; NO-FAST-P9-NEXT:    blr
+;
+; NO-FAST-P8-LABEL: testfmaxnum:
+; NO-FAST-P8:       # %bb.0: # %entry
+; NO-FAST-P8-NEXT:    xsmaxdp f1, f1, f2
+; NO-FAST-P8-NEXT:    blr
+entry:
+  %0 = tail call float @llvm.maxnum.f32(float %a, float %b)
+  ret float %0
+}
+
+define float @testfcanonicalize(float %a) {
+; NO-FAST-P9-LABEL: testfcanonicalize:
+; NO-FAST-P9:       # %bb.0: # %entry
+; NO-FAST-P9-NEXT:    xsmaxdp f1, f1, f1
+; NO-FAST-P9-NEXT:    blr
+;
+; NO-FAST-P8-LABEL: testfcanonicalize:
+; NO-FAST-P8:       # %bb.0: # %entry
+; NO-FAST-P8-NEXT:    xsmaxdp f1, f1, f1
+; NO-FAST-P8-NEXT:    blr
+entry:
+  %canonicalize = tail call float @llvm.canonicalize.f32(float %a)
+  ret float %canonicalize
+}
+
+define double @testdminnum(double %a, double %b) {
+; NO-FAST-P9-LABEL: testdminnum:
+; NO-FAST-P9:       # %bb.0: # %entry
+; NO-FAST-P9-NEXT:    xsmindp f1, f1, f2
+; NO-FAST-P9-NEXT:    blr
+;
+; NO-FAST-P8-LABEL: testdminnum:
+; NO-FAST-P8:       # %bb.0: # %entry
+; NO-FAST-P8-NEXT:    xsmindp f1, f1, f2
+; NO-FAST-P8-NEXT:    blr
+entry:
+  %0 = tail call double @llvm.minnum.f64(double %a, double %b)
+  ret double %0
+}
+
+define double @testdmaxnum(double %a, double %b) {
+; NO-FAST-P9-LABEL: testdmaxnum:
+; NO-FAST-P9:       # %bb.0: # %entry
+; NO-FAST-P9-NEXT:    xsmaxdp f1, f1, f2
+; NO-FAST-P9-NEXT:    blr
+;
+; NO-FAST-P8-LABEL: testdmaxnum:
+; NO-FAST-P8:       # %bb.0: # %entry
+; NO-FAST-P8-NEXT:    xsmaxdp f1, f1, f2
+; NO-FAST-P8-NEXT:    blr
+entry:
+  %0 = tail call double @llvm.maxnum.f64(double %a, double %b)
+  ret double %0
+}
+
+define double @testdcanonicalize(double %a) {
+; NO-FAST-P9-LABEL: testdcanonicalize:
+; NO-FAST-P9:       # %bb.0: # %entry
+; NO-FAST-P9-NEXT:    xsmaxdp f1, f1, f1
+; NO-FAST-P9-NEXT:    blr
+;
+; NO-FAST-P8-LABEL: testdcanonicalize:
+; NO-FAST-P8:       # %bb.0: # %entry
+; NO-FAST-P8-NEXT:    xsmaxdp f1, f1, f1
+; NO-FAST-P8-NEXT:    blr
+entry:
+  %canonicalize = tail call double @llvm.canonicalize.f64(double %a)
+  ret double %canonicalize
+}
+
+define <4 x float> @testfminnum_v4f32(<4 x float> %a, <4 x float> %b) {
+; NO-FAST-P9-LABEL: testfminnum_v4f32:
+; NO-FAST-P9:       # %bb.0: # %entry
+; NO-FAST-P9-NEXT:    xvminsp vs34, vs34, vs35
+; NO-FAST-P9-NEXT:    blr
+;
+; NO-FAST-P8-LABEL: testfminnum_v4f32:
+; NO-FAST-P8:       # %bb.0: # %entry
+; NO-FAST-P8-NEXT:    xvminsp vs34, vs34, vs35
+; NO-FAST-P8-NEXT:    blr
+entry:
+  %0 = tail call <4 x float> @llvm.minnum.v4f32(<4 x float> %a, <4 x float> %b)
+  ret <4 x float> %0
+}
+
+define <4 x float> @testfmaxnum_v4f32(<4 x float> %a, <4 x float> %b) {
+; NO-FAST-P9-LABEL: testfmaxnum_v4f32:
+; NO-FAST-P9:       # %bb.0: # %entry
+; NO-FAST-P9-NEXT:    xvmaxsp vs34, vs34, vs35
+; NO-FAST-P9-NEXT:    blr
+;
+; NO-FAST-P8-LABEL: testfmaxnum_v4f32:
+; NO-FAST-P8:       # %bb.0: # %entry
+; NO-FAST-P8-NEXT:    xvmaxsp vs34, vs34, vs35
+; NO-FAST-P8-NEXT:    blr
+entry:
+  %0 = tail call <4 x float> @llvm.maxnum.v4f32(<4 x float> %a, <4 x float> %b)
+  ret <4 x float> %0
+}
+
+define <4 x float> @testfcanonicalize_v4f32(<4 x float> %a) {
+; NO-FAST-P9-LABEL: testfcanonicalize_v4f32:
+; NO-FAST-P9:       # %bb.0: # %entry
+; NO-FAST-P9-NEXT:    xvmaxsp vs34, vs34, vs34
+; NO-FAST-P9-NEXT:    blr
+;
+; NO-FAST-P8-LABEL: testfcanonicalize_v4f32:
+; NO-FAST-P8:       # %bb.0: # %entry
+; NO-FAST-P8-NEXT:    xvmaxsp vs34, vs34, vs34
+; NO-FAST-P8-NEXT:    blr
+entry:
+  %0 = tail call <4 x float> @llvm.canonicalize.v4f32(<4 x float> %a)
+  ret <4 x float> %0
+}
+
+define <2 x double> @testdminnum_v2f64(<2 x double> %a, <2 x double> %b) {
+; NO-FAST-P9-LABEL: testdminnum_v2f64:
+; NO-FAST-P9:       # %bb.0: # %entry
+; NO-FAST-P9-NEXT:    xvmindp vs34, vs34, vs35
+; NO-FAST-P9-NEXT:    blr
+;
+; NO-FAST-P8-LABEL: testdminnum_v2f64:
+; NO-FAST-P8:       # %bb.0: # %entry
+; NO-FAST-P8-NEXT:    xvmindp vs34, vs34, vs35
+; NO-FAST-P8-NEXT:    blr
+entry:
+  %0 = tail call <2 x double> @llvm.minnum.v2f64(<2 x double> %a, <2 x double> %b)
+  ret <2 x double> %0
+}
+
+define <2 x double> @testdmaxnum_v2f64(<2 x double> %a, <2 x double> %b) {
+; NO-FAST-P9-LABEL: testdmaxnum_v2f64:
+; NO-FAST-P9:       # %bb.0: # %entry
+; NO-FAST-P9-NEXT:    xvmaxdp vs34, vs34, vs35
+; NO-FAST-P9-NEXT:    blr
+;
+; NO-FAST-P8-LABEL: testdmaxnum_v2f64:
+; NO-FAST-P8:       # %bb.0: # %entry
+; NO-FAST-P8-NEXT:    xvmaxdp vs34, vs34, vs35
+; NO-FAST-P8-NEXT:    blr
+entry:
+  %0 = tail call <2 x double> @llvm.maxnum.v2f64(<2 x double> %a, <2 x double> %b)
+  ret <2 x double> %0
+}
+
+define <2 x double> @testdcanonicalize_v2f64(<2 x double> %a) {
+; NO-FAST-P9-LABEL: testdcanonicalize_v2f64:
+; NO-FAST-P9:       # %bb.0: # %entry
+; NO-FAST-P9-NEXT:    xvmaxdp vs34, vs34, vs34
+; NO-FAST-P9-NEXT:    blr
+;
+; NO-FAST-P8-LABEL: testdcanonicalize_v2f64:
+; NO-FAST-P8:       # %bb.0: # %entry
+; NO-FAST-P8-NEXT:    xvmaxdp vs34, vs34, vs34
+; NO-FAST-P8-NEXT:    blr
+entry:
+  %0 = tail call <2 x double> @llvm.canonicalize.v2f64(<2 x double> %a)
+  ret <2 x double> %0
 }

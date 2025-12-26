@@ -230,7 +230,7 @@ void VETargetLowering::initSPUActions() {
   // VE doesn't have following floating point operations.
   for (MVT VT : MVT::fp_valuetypes()) {
     setOperationAction(ISD::FNEG, VT, Expand);
-    setOperationAction(ISD::FREM, VT, Expand);
+    setOperationAction(ISD::FREM, VT, LibCall);
   }
 
   // VE doesn't have fdiv of f128.

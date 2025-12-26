@@ -57,6 +57,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/IOSandbox.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
@@ -1109,10 +1110,11 @@ ObjectID OnDiskGraphDB::getExternalReference(const IndexProxy &I) {
 }
 
 std::optional<ObjectID>
-OnDiskGraphDB::getExistingReference(ArrayRef<uint8_t> Digest) {
+OnDiskGraphDB::getExistingReference(ArrayRef<uint8_t> Digest,
+                                    bool CheckUpstream) {
   auto tryUpstream =
       [&](std::optional<IndexProxy> I) -> std::optional<ObjectID> {
-    if (!UpstreamDB)
+    if (!CheckUpstream || !UpstreamDB)
       return std::nullopt;
     std::optional<ObjectID> UpstreamID =
         UpstreamDB->getExistingReference(Digest);
@@ -1225,6 +1227,8 @@ OnDiskGraphDB::load(ObjectID ExternalRef) {
   SmallString<256> Path;
   getStandalonePath(TrieRecord::getStandaloneFilePrefix(Object.SK), *I, Path);
 
+  auto BypassSandbox = sys::sandbox::scopedDisable();
+
   auto File = sys::fs::openNativeFileForRead(Path);
   if (!File)
     return createFileError(Path, File.takeError());
@@ -1328,6 +1332,8 @@ OnDiskContent StandaloneDataInMemory::getContent() const {
 
 static Expected<MappedTempFile> createTempFile(StringRef FinalPath,
                                                uint64_t Size) {
+  auto BypassSandbox = sys::sandbox::scopedDisable();
+
   assert(Size && "Unexpected request for an empty temp file");
   Expected<TempFile> File = TempFile::create(FinalPath + ".%%%%%%");
   if (!File)
@@ -1364,6 +1370,8 @@ Error OnDiskGraphDB::createStandaloneLeaf(IndexProxy &I, ArrayRef<char> Data) {
   SmallString<256> Path;
   int64_t FileSize = Data.size() + Leaf0;
   getStandalonePath(TrieRecord::getStandaloneFilePrefix(SK), I, Path);
+
+  auto BypassSandbox = sys::sandbox::scopedDisable();
 
   // Write the file. Don't reuse this mapped_file_region, which is read/write.
   // Let load() pull up one that's read-only.

@@ -814,7 +814,7 @@ def VCVTBHS: ASuI<0b11101, 0b11, 0b0010, 0b01, 0, (outs SPR:$Sd), (ins SPR:$Sm),
 
 def : FP16Pat<(f32 (any_fpextend (f16 HPR:$Sm))),
               (VCVTBHS (COPY_TO_REGCLASS (f16 HPR:$Sm), SPR))>;
-def : FP16Pat<(f16_to_fp GPR:$a),
+def : FP16Pat<(any_f16_to_fp GPR:$a),
               (VCVTBHS (COPY_TO_REGCLASS GPR:$a, SPR))>;
 
 let hasSideEffects = 0, mayRaiseFPException = 1, Uses = [FPSCR_RM] in
@@ -826,7 +826,7 @@ def VCVTBSH: ASuI<0b11101, 0b11, 0b0011, 0b01, 0, (outs SPR:$Sd), (ins SPR:$Sda,
 
 def : FP16Pat<(f16 (any_fpround SPR:$Sm)),
               (COPY_TO_REGCLASS (VCVTBSH (IMPLICIT_DEF), SPR:$Sm), HPR)>;
-def : FP16Pat<(fp_to_f16 SPR:$a),
+def : FP16Pat<(any_fp_to_f16 SPR:$a),
               (i32 (COPY_TO_REGCLASS (VCVTBSH (IMPLICIT_DEF), SPR:$a), GPR))>;
 def : FP16Pat<(insertelt (v8f16 MQPR:$src1), (f16 (any_fpround (f32 SPR:$src2))), imm_even:$lane),
               (v8f16 (INSERT_SUBREG (v8f16 MQPR:$src1),
@@ -891,7 +891,7 @@ def VCVTBHD : ADuI<0b11101, 0b11, 0b0010, 0b01, 0,
 def : FullFP16Pat<(f64 (any_fpextend (f16 HPR:$Sm))),
                   (VCVTBHD (COPY_TO_REGCLASS (f16 HPR:$Sm), SPR))>,
                   Requires<[HasFPARMv8, HasDPVFP]>;
-def : FP16Pat<(f64 (f16_to_fp GPR:$a)),
+def : FP16Pat<(f64 (any_f16_to_fp GPR:$a)),
               (VCVTBHD (COPY_TO_REGCLASS GPR:$a, SPR))>,
               Requires<[HasFPARMv8, HasDPVFP]>;
 
@@ -917,7 +917,7 @@ def VCVTBDH : ADuI<0b11101, 0b11, 0b0011, 0b01, 0,
 def : FullFP16Pat<(f16 (any_fpround DPR:$Dm)),
                   (COPY_TO_REGCLASS (VCVTBDH (IMPLICIT_DEF), DPR:$Dm), HPR)>,
                   Requires<[HasFPARMv8, HasDPVFP]>;
-def : FP16Pat<(fp_to_f16 (f64 DPR:$a)),
+def : FP16Pat<(any_fp_to_f16 (f64 DPR:$a)),
               (i32 (COPY_TO_REGCLASS (VCVTBDH (IMPLICIT_DEF), DPR:$a), GPR))>,
                    Requires<[HasFPARMv8, HasDPVFP]>;
 

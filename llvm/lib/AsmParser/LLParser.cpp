@@ -1958,13 +1958,16 @@ bool LLParser::parseOptionalAddrSpace(unsigned &AddrSpace, unsigned DefaultAS) {
 
   auto ParseAddrspaceValue = [&](unsigned &AddrSpace) -> bool {
     if (Lex.getKind() == lltok::StringConstant) {
-      auto AddrSpaceStr = Lex.getStrVal();
+      const std::string &AddrSpaceStr = Lex.getStrVal();
       if (AddrSpaceStr == "A") {
         AddrSpace = M->getDataLayout().getAllocaAddrSpace();
       } else if (AddrSpaceStr == "G") {
         AddrSpace = M->getDataLayout().getDefaultGlobalsAddressSpace();
       } else if (AddrSpaceStr == "P") {
         AddrSpace = M->getDataLayout().getProgramAddressSpace();
+      } else if (std::optional<unsigned> AS =
+                     M->getDataLayout().getNamedAddressSpace(AddrSpaceStr)) {
+        AddrSpace = *AS;
       } else {
         return tokError("invalid symbolic addrspace '" + AddrSpaceStr + "'");
       }
@@ -9994,24 +9997,25 @@ bool LLParser::parseAliasSummary(std::string Name, GlobalValue::GUID GUID,
 
   ValueInfo AliaseeVI;
   unsigned GVId;
-  if (parseGVReference(AliaseeVI, GVId))
-    return true;
+  auto AS = std::make_unique<AliasSummary>(GVFlags);
+  AS->setModulePath(ModulePath);
+
+  if (!EatIfPresent(lltok::kw_null)) {
+    if (parseGVReference(AliaseeVI, GVId))
+      return true;
+
+    // Record forward reference if the aliasee is not parsed yet.
+    if (AliaseeVI.getRef() == FwdVIRef) {
+      ForwardRefAliasees[GVId].emplace_back(AS.get(), Loc);
+    } else {
+      auto Summary = Index->findSummaryInModule(AliaseeVI, ModulePath);
+      assert(Summary && "Aliasee must be a definition");
+      AS->setAliasee(AliaseeVI, Summary);
+    }
+  }
 
   if (parseToken(lltok::rparen, "expected ')' here"))
     return true;
-
-  auto AS = std::make_unique<AliasSummary>(GVFlags);
-
-  AS->setModulePath(ModulePath);
-
-  // Record forward reference if the aliasee is not parsed yet.
-  if (AliaseeVI.getRef() == FwdVIRef) {
-    ForwardRefAliasees[GVId].emplace_back(AS.get(), Loc);
-  } else {
-    auto Summary = Index->findSummaryInModule(AliaseeVI, ModulePath);
-    assert(Summary && "Aliasee must be a definition");
-    AS->setAliasee(AliaseeVI, Summary);
-  }
 
   return addGlobalValueToIndex(Name, GUID,
                                (GlobalValue::LinkageTypes)GVFlags.Linkage, ID,
