@@ -16253,43 +16253,44 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals,
                     << VectorizableTree.back().size() << ".\n");
 
   for (auto &VT : VectorizableTree) {
-  SmallPtrSet<Value *, 4> CheckedExtracts;
-  for (unsigned I = 0, E = VT.size(); I < E; ++I) {
-    TreeEntry &TE = *VT[I];
-    // No need to count the cost for combined entries, they are combined and
-    // just skip their cost.
-    if (TE.State == TreeEntry::CombinedVectorize) {
-      LLVM_DEBUG(
-          dbgs() << "SLP: Skipping cost for combined node that starts with "
-                 << *TE.Scalars[0] << ".\n";
-          TE.dump(); dbgs() << "SLP: Current total cost = " << Cost << "\n");
-      continue;
-    }
-    if (TE.hasState() &&
-        (TE.isGather() || TE.State == TreeEntry::SplitVectorize)) {
-      if (const TreeEntry *E =
-              getSameValuesTreeEntry(TE.getMainOp(), TE.Scalars);
-          E && E->getVectorFactor() == TE.getVectorFactor()) {
-        // Some gather nodes might be absolutely the same as some vectorizable
-        // nodes after reordering, need to handle it.
-        LLVM_DEBUG(dbgs() << "SLP: Adding cost 0 for bundle "
-                          << shortBundleName(TE.Scalars, TE.Idx) << ".\n"
-                          << "SLP: Current total cost = " << Cost << "\n");
+    SmallPtrSet<Value *, 4> CheckedExtracts;
+    for (unsigned I = 0, E = VT.size(); I < E; ++I) {
+      TreeEntry &TE = *VT[I];
+      // No need to count the cost for combined entries, they are combined and
+      // just skip their cost.
+      if (TE.State == TreeEntry::CombinedVectorize) {
+        LLVM_DEBUG(
+            dbgs() << "SLP: Skipping cost for combined node that starts with "
+                   << *TE.Scalars[0] << ".\n";
+            TE.dump(); dbgs() << "SLP: Current total cost = " << Cost << "\n");
         continue;
       }
+      if (TE.hasState() &&
+          (TE.isGather() || TE.State == TreeEntry::SplitVectorize)) {
+        if (const TreeEntry *E =
+                getSameValuesTreeEntry(TE.getMainOp(), TE.Scalars);
+            E && E->getVectorFactor() == TE.getVectorFactor()) {
+          // Some gather nodes might be absolutely the same as some vectorizable
+          // nodes after reordering, need to handle it.
+          LLVM_DEBUG(dbgs() << "SLP: Adding cost 0 for bundle "
+                            << shortBundleName(TE.Scalars, TE.Idx) << ".\n"
+                            << "SLP: Current total cost = " << Cost << "\n");
+          continue;
+        }
+      }
+
+      // Exclude cost of gather loads nodes which are not used. These nodes were
+      // built as part of the final attempt to vectorize gathered loads.
+      assert((!TE.isGather() || TE.Idx == 0 || TE.UserTreeIndex) &&
+             "Expected gather nodes with users only.");
+
+      InstructionCost C = getEntryCost(&TE, VectorizedVals, CheckedExtracts);
+      Cost += C;
+      LLVM_DEBUG(dbgs() << "SLP: Adding cost " << C << " for bundle "
+                        << shortBundleName(TE.Scalars, TE.Idx) << ".\n"
+                        << "SLP: Current total cost = " << Cost << "\n");
     }
-
-    // Exclude cost of gather loads nodes which are not used. These nodes were
-    // built as part of the final attempt to vectorize gathered loads.
-    assert((!TE.isGather() || TE.Idx == 0 || TE.UserTreeIndex) &&
-           "Expected gather nodes with users only.");
-
-    InstructionCost C = getEntryCost(&TE, VectorizedVals, CheckedExtracts);
-    Cost += C;
-    LLVM_DEBUG(dbgs() << "SLP: Adding cost " << C << " for bundle "
-                      << shortBundleName(TE.Scalars, TE.Idx) << ".\n"
-                      << "SLP: Current total cost = " << Cost << "\n");
-  }}
+  }
 
   if (Cost >= -SLPCostThreshold &&
       none_of(ExternalUses, [](const ExternalUser &EU) {
