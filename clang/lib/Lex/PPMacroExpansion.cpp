@@ -1133,9 +1133,8 @@ static bool HasExtension(const Preprocessor &PP, StringRef Extension) {
 
 /// EvaluateHasIncludeCommon - Process a '__has_include("path")'
 /// or '__has_include_next("path")' expression.
-/// Returns true if successful.
-/// If SkipLookup is true, only consume the tokens without performing the
-/// actual file lookup (used when we know the result should be false anyway).
+/// Returns true if successful.  If \p SkipLookup is true, only consume the
+/// tokens without performing the file lookup.
 static bool EvaluateHasIncludeCommon(Token &Tok, IdentifierInfo *II,
                                      Preprocessor &PP,
                                      ConstSearchDirIterator LookupFrom,
@@ -1207,8 +1206,7 @@ static bool EvaluateHasIncludeCommon(Token &Tok, IdentifierInfo *II,
   if (Filename.empty())
     return false;
 
-  // If SkipLookup is set, we've already consumed the tokens - just return false
-  // without performing the actual file lookup.
+  // Tokens consumed; skip the lookup if requested.
   if (SkipLookup)
     return false;
 
@@ -1341,17 +1339,9 @@ bool Preprocessor::EvaluateHasIncludeNext(Token &Tok, IdentifierInfo *II) {
   const FileEntry *LookupFromFile;
   std::tie(Lookup, LookupFromFile) = getIncludeNextStart(Tok);
 
-  // If getIncludeNextStart returns {nullptr, nullptr} AND we're not in the
-  // primary file, the current file was found via absolute path or relative to
-  // such a file. In this case, there's no valid "next" directory to search
-  // from, so __has_include_next should return false. We pass SkipLookup=true
-  // to consume the tokens without performing the file lookup (which would
-  // incorrectly search from the start of the include path and potentially
-  // find the wrong file or cause errors).
-  //
-  // Note: When in the primary file, we still allow the search to proceed
-  // (with a warning emitted by getIncludeNextStart). This preserves existing
-  // behavior where __has_include_next in primary files can still find headers.
+  // If there's no valid "next" search location, skip the lookup and return
+  // false.  This happens when the file was found via absolute path.
+  // Primary file case is excluded to preserve existing behavior.
   bool SkipLookup = !Lookup && !LookupFromFile && !isInPrimaryFile();
   return EvaluateHasIncludeCommon(Tok, II, *this, Lookup, LookupFromFile,
                                   SkipLookup);
