@@ -18,8 +18,10 @@
 #include "clang/Analysis/Analyses/LifetimeSafety/Checker.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/Facts.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/FactsGenerator.h"
+#include "clang/Analysis/Analyses/LifetimeSafety/LifetimeStats.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/LiveOrigins.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/LoanPropagation.h"
+#include "clang/Analysis/Analyses/LifetimeSafety/Origins.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Analysis/CFG.h"
 #include "llvm/ADT/FoldingSet.h"
@@ -90,11 +92,22 @@ void LifetimeSafetyAnalysis::run() {
 
   runLifetimeChecker(*LoanPropagation, *LiveOrigins, *FactMgr, AC, Reporter);
 }
+
+void collectLifetimeStats(AnalysisDeclContext &AC, OriginManager &OM,
+                          LifetimeSafetyStats &Stats) {
+  Stmt *FunctionBody = AC.getBody();
+  if (FunctionBody == nullptr)
+    return;
+  OM.collectMissingOrigins(*FunctionBody, Stats);
+}
 } // namespace internal
 
 void runLifetimeSafetyAnalysis(AnalysisDeclContext &AC,
-                               LifetimeSafetyReporter *Reporter) {
+                               LifetimeSafetyReporter *Reporter,
+                               LifetimeSafetyStats &Stats, bool CollectStats) {
   internal::LifetimeSafetyAnalysis Analysis(AC, Reporter);
   Analysis.run();
+  if (CollectStats)
+    collectLifetimeStats(AC, Analysis.getFactManager().getOriginMgr(), Stats);
 }
 } // namespace clang::lifetimes
