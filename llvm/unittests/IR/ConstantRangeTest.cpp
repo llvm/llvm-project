@@ -696,6 +696,65 @@ TEST_F(ConstantRangeTest, UnionWith) {
             ConstantRange::getFull(16));
 }
 
+TEST_F(ConstantRangeTest, UnionOf) {
+  EXPECT_EQ(ConstantRange::unionOf({Wrap, One}),
+            ConstantRange(APInt(16, 0xaaa), APInt(16, 0xb)));
+  EXPECT_EQ(ConstantRange::unionOf({One, Wrap}),
+            ConstantRange::unionOf({Wrap, One}));
+  EXPECT_EQ(ConstantRange::unionOf({Empty, Empty}), Empty);
+  EXPECT_EQ(ConstantRange::unionOf({Full, Full}), Full);
+  EXPECT_EQ(ConstantRange::unionOf({Some, Wrap}), Full);
+
+#define CR(L, R) ConstantRange(APInt(8, L), APInt(8, R))
+  // Order-irrelevance:
+  EXPECT_EQ(ConstantRange::unionOf({CR(1, 40), CR(50, 100), CR(150, 160)}),
+            CR(1, 160));
+  EXPECT_EQ(CR(1, 40).unionWith(CR(50, 100)).unionWith(CR(150, 160)),
+            CR(1, 160));
+  EXPECT_EQ(ConstantRange::unionOf({CR(1, 40), CR(150, 160), CR(50, 100)}),
+            CR(1, 160));
+  EXPECT_EQ(CR(1, 40).unionWith(CR(150, 160)).unionWith(CR(50, 100)),
+            CR(150, 100));
+
+  // Preference:
+  auto Ranges1 = {CR(1, 2), CR(200, 244), CR(254, 255)};
+  EXPECT_EQ(ConstantRange::unionOf(Ranges1,
+                                   /* default */ ConstantRange::Smallest),
+            CR(200, 2));
+  EXPECT_EQ(ConstantRange::unionOf(Ranges1, ConstantRange::Unsigned),
+            CR(1, 255));
+  auto Ranges2 = {CR(80, 90), CR(100, 126), CR(/* -127 */ 129, /* -1 */ 255)};
+  EXPECT_EQ(ConstantRange::unionOf(Ranges2,
+                                   /* default */ ConstantRange::Smallest),
+            CR(80, 255 /* -1 */));
+  EXPECT_EQ(ConstantRange::unionOf(Ranges2, ConstantRange::Signed),
+            CR(/* -127 */ 129, 126));
+  // We have no choice except to prefer the smallest range:
+  auto Ranges3 = {CR(0, 90), CR(100, 255), CR(250, 0)};
+  EXPECT_EQ(ConstantRange::unionOf(Ranges3, ConstantRange::Smallest),
+            CR(100, 90));
+  EXPECT_EQ(ConstantRange::unionOf(Ranges3, ConstantRange::Unsigned),
+            CR(100, 90));
+  EXPECT_EQ(ConstantRange::unionOf(Ranges3, ConstantRange::Signed),
+            CR(100, 90));
+  // Merge the same ranges:
+  auto Range = CR(4, 3);
+  EXPECT_EQ(ConstantRange::unionOf({Range, Range, Range}), Range);
+  // Merge L--------------------R
+  //  with   L--[R|L]--R
+  EXPECT_EQ(ConstantRange::unionOf({CR(0, 255), CR(1, 2), CR(2, 3)}),
+            CR(0, 255));
+
+  // true ∪ false = overdefined
+  EXPECT_EQ(ConstantRange::unionOf(
+                {/* true */ ConstantRange(APInt(1, 1), APInt(1, 0)),
+
+                 /* false */ ConstantRange(APInt(1, 0), APInt(1, 1))}),
+            ConstantRange::getFull(1));
+
+#undef CR
+}
+
 TEST_F(ConstantRangeTest, SetDifference) {
   EXPECT_EQ(Full.difference(Empty), Full);
   EXPECT_EQ(Full.difference(Full), Empty);

@@ -22,6 +22,7 @@
 
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/ADT/APInt.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/InstrTypes.h"
@@ -1097,6 +1098,96 @@ ConstantRange ConstantRange::intrinsic(Intrinsic::ID IntrinsicID,
     assert(!isIntrinsicSupported(IntrinsicID) && "Shouldn't be supported");
     llvm_unreachable("Unsupported intrinsic");
   }
+}
+
+ConstantRange ConstantRange::unionOf(ArrayRef<ConstantRange> Ranges,
+                                     PreferredRangeType Type) {
+  assert(!Ranges.empty() && "Cannot union an empty set of ranges");
+  ConstantRange Rng0 = Ranges[0];
+  unsigned NumWrapped = count_if(
+      Ranges, [](const ConstantRange &CR) { return CR.isWrappedSet(); });
+  unsigned BitWidth = Rng0.getBitWidth();
+  APInt Zero = APInt::getZero(BitWidth);
+  SmallVector<ConstantRange, 16> Segs;
+  Segs.reserve(Ranges.size() + NumWrapped);
+
+  // The left end and the right end of the unioned range.
+  APInt LL, RR = Zero + 1;
+
+  for (const ConstantRange &CR : Ranges) {
+    assert(CR.getBitWidth() == BitWidth &&
+           "All ranges must have the same bitwidth");
+    if (CR.isFullSet())
+      return CR;
+    if (CR.isEmptySet())
+      continue;
+    APInt Upper = CR.getUpper();
+    if (CR.isWrappedSet()) {
+      // We need to split the wrapped set into two parts: [0, R) and [L, 0)
+      APInt Lower = CR.getLower();
+      Segs.push_back(ConstantRange(Zero, Upper));
+      Segs.push_back(ConstantRange(Lower, Zero));
+      RR = Zero;
+    } else {
+      Segs.push_back(CR);
+      // Update the right end of the unioned range.
+      if (!RR.isZero() && (Upper.ugt(RR) || Upper.isZero()))
+        RR = Upper;
+    }
+  }
+
+  if (Segs.empty())
+    return getEmpty(BitWidth);
+
+  if (Segs.size() == 1)
+    return Segs[0];
+
+  llvm::sort(Segs, [](const ConstantRange &A, const ConstantRange &B) {
+    APInt LA = A.getLower(), LB = B.getLower();
+    return LA.ult(LB) || (LA == LB && (A.getUpper() - 1).ult(B.getUpper() - 1));
+  });
+
+  LL = Segs.front().getLower();
+
+  // If RR is zero, just return [LL, 0) is meaningless for
+  // PreferredRangeType::Unsigned
+  if (!RR.isZero() && Type == PreferredRangeType::Unsigned) {
+    // We prefer wrapped gap, i.e., non-wrapped range here.
+    return ConstantRange(LL, RR);
+  }
+
+  // Init with the gap wrapping around the unsigned domain)
+  // LL - RR = 0 - RR + LL = (0xff..ff + 1) - RR + LL = gap size
+  // APInt MaxGapL = RR, MaxGap = LL - RR;
+  ConstantRange MaxGap(RR, LL);
+
+  // Find maximal gap between segments.
+  APInt GapL = Segs.front().getUpper();
+  for (const ConstantRange &Cur : Segs) {
+    APInt L = Cur.getLower(), R = Cur.getUpper();
+    // Fond a new gap if Cur.L > GapL (i.e., Last.R).
+    if (L.ugt(GapL)) {
+      // If Cur.L > Last.R && Cur.L s< Last.R, we found a signed wrapped gap.
+      if (Type == PreferredRangeType::Signed && L.slt(GapL)) {
+        // We prefer signed wrapped gap, i.e., signed non-wrapped range here.
+        return ConstantRange(L, GapL);
+      }
+      ConstantRange Gap(GapL, L);
+      // if (Gap.ugt(MaxGap) ) {
+      if (MaxGap.isSizeStrictlySmallerThan(Gap))
+        MaxGap = Gap;
+      GapL = R;
+    } else if (R.ugt(GapL)) {
+      GapL = R;
+    }
+
+    // We reach the end of the unioned ranges.
+    if (R == RR)
+      break;
+  }
+
+  // Smallest union <--> Maximal gap.
+  return MaxGap.inverse();
 }
 
 ConstantRange

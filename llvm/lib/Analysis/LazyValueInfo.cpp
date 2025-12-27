@@ -12,8 +12,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/LazyValueInfo.h"
+#include "llvm/ADT/APInt.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/InstructionSimplify.h"
@@ -40,6 +42,7 @@
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/raw_ostream.h"
+#include <map>
 #include <optional>
 using namespace llvm;
 using namespace PatternMatch;
@@ -717,6 +720,248 @@ bool LazyValueInfoImpl::isNonNullAtEndOfBlock(Value *Val, BasicBlock *BB) {
   });
 }
 
+/// RAII helper for merging ValueLatticeElement into \p Result with a stable and
+/// precise ConstantRange.
+///
+/// Instead of incrementally unioning ConstantRanges (which is order-dependent
+/// and may over-approximate), this merger *collects* intervals and defers the
+/// actual union to destruction, where \c ConstantRange::unionOf is used to
+/// compute a deterministic and most-accurate result.
+///
+/// Example:
+///   Incremental merge:
+///     [0,1) \/ [2,3) \/ [3,0)  -> overdefined (order-dependent)
+///   Collected + unionOf:
+///     {[0,1), [2,3), [3,0)}    -> exact [2,1)
+///
+/// The merger updates \p Result eagerly (without deferring to destruction) in
+/// the following cases:
+///  (1) Collected ranges already form the full set exactly, in which case
+///      \p Result is immediately marked overdefined.
+///  (2) \p RHS cannot be represented as a ConstantRange, so it is merged
+///      directly via \c Result.mergeIn(RHS).
+///  (3) Merging a ConstantRange with a \c constant or \c notconstant lattice
+///      state, which by definition yields overdefined.
+///
+/// Wrapped ConstantRanges are split during collection; the final union is
+/// reconstructed reliably by \c ConstantRange::unionOf.
+class ValueLatticeMerger {
+  using MergeOptions = ValueLatticeElement::MergeOptions;
+
+public:
+  ValueLatticeMerger(ValueLatticeElement &Result) : Result(Result) {
+    // Try to collect some ranges from initial Result
+    InitialResultAsCR = tryToInsertRange(Result);
+  }
+  ~ValueLatticeMerger() {
+    assert((InitialResultAsCR || !Result.isConstantRange()) &&
+           "Result should not be constantrange without merging any constrange");
+    if (Result.isOverdefined() || Intervals.empty())
+      return;
+    RangeIncludingUndef |= Result.isUndef();
+    SmallVector<ConstantRange, 8> Ranges;
+    Ranges.reserve(Intervals.size());
+    for (const auto &[L, U] : Intervals)
+      Ranges.emplace_back(L, U);
+    // Get the most accurate approximation reliably
+    ConstantRange UnionCR = ConstantRange::unionOf(Ranges);
+    Result.markConstantRange(
+        std::move(UnionCR),
+        MergeOptions().setMayIncludeUndef(RangeIncludingUndef));
+  }
+  void mergeIn(const ValueLatticeElement &RHS) {
+    if (Result.isOverdefined())
+      return;
+    if (tryToInsertRange(RHS))
+      return;
+
+    // [constant | notconstant] \/ constantrange = overdefined
+    if (!Intervals.empty() && (RHS.isConstant() || RHS.isNotConstant())) {
+      Result.markOverdefined();
+      return;
+    }
+
+    // If EdgeResult is not a constant range, we can merge it directly into
+    // result, which should be precise enough.
+    Result.mergeIn(RHS);
+  }
+
+private:
+  struct APIntULTComparator {
+    bool operator()(const APInt &A, const APInt &B) const { return A.ult(B); }
+  };
+
+  // This is a precise version of Constant::toConstantRange
+  static bool collectAPInts(const Constant *C, SmallVectorImpl<APInt> &Ints) {
+    if (auto *CI = dyn_cast<ConstantInt>(C)) {
+      Ints.push_back(CI->getValue());
+      return true;
+    }
+
+    if (!C->getType()->isVectorTy())
+      return false;
+
+    if (auto *CI = dyn_cast_or_null<ConstantInt>(
+            C->getSplatValue(/*AllowPoison=*/true))) {
+      Ints.push_back(CI->getValue());
+      return true;
+    }
+
+    if (auto *CDV = dyn_cast<ConstantDataVector>(C)) {
+      unsigned NumElements = CDV->getNumElements();
+      Ints.reserve(Ints.size() + NumElements);
+      for (unsigned I = 0, E = NumElements; I < E; ++I)
+        Ints.push_back(CDV->getElementAsAPInt(I));
+      return true;
+    }
+
+    if (auto *CV = dyn_cast<ConstantVector>(C)) {
+      bool AnyNotAPIInt = false;
+      unsigned NumOperands = CV->getNumOperands();
+      Ints.reserve(Ints.size() + NumOperands);
+      for (unsigned I = 0, E = NumOperands; I < E; ++I) {
+        Constant *Elem = CV->getOperand(I);
+        if (!Elem) {
+          AnyNotAPIInt = true;
+          continue;
+        }
+        if (isa<PoisonValue>(Elem))
+          continue;
+        auto *CI = dyn_cast<ConstantInt>(Elem);
+        if (!CI) {
+          AnyNotAPIInt = true;
+          continue;
+        }
+        Ints.push_back(CI->getValue());
+      }
+      return AnyNotAPIInt;
+    }
+
+    return false;
+  }
+
+  /// Try to insert ranges extracted from constantrange / const lattice. Return
+  /// false if failed to insert.
+  bool tryToInsertRange(const ValueLatticeElement &IV) {
+    if (IV.isConstantRange()) {
+      RangeIncludingUndef |= IV.isConstantRangeIncludingUndef();
+      insertRange(IV.getConstantRange());
+      return true;
+    }
+    assert(!IV.isConstantRange() &&
+           "Constant range RHS should be handled earlier");
+    if (/*int vec*/ IV.isConstant(true)) {
+      IntsInVec.clear(); // Reuse the vector to avoid reallocations
+      if (!collectAPInts(IV.getConstant(), IntsInVec))
+        Result.markOverdefined();
+      for (const APInt &Int : IntsInVec)
+        insertRange(Int);
+      return true;
+    }
+    return false;
+  }
+
+  void insertRange(const ConstantRange &Range) {
+    assert(!Range.isFullSet() && !Range.isEmptySet() &&
+           "Unexpected full/empty set");
+    // [constant | notconstant] \/ constantrange = overdefined
+    if ((Result.isConstant() && !Result.isConstant(true)) ||
+        Result.isNotConstant())
+      Result.markOverdefined();
+
+    if (Result.isOverdefined())
+      return;
+
+    if (Range.isWrappedSet()) {
+      unsigned BitWidth = Range.getBitWidth();
+      insertRange(Range.getLower(), APInt::getZero(BitWidth));
+      insertRange(APInt::getZero(BitWidth), Range.getUpper());
+    } else {
+      insertRange(Range.getLower(), Range.getUpper());
+    }
+  }
+
+  void insertRange(APInt L, APInt U) {
+    assert(L.ule(U - 1) && "Unexpected wrapped range");
+    assert(L != U && "Unexpected empty/full range");
+
+    // Find the first interval with start > L
+    auto It = Intervals.upper_bound(L);
+
+    // Try to merge with the previous interval
+    if (It != Intervals.begin()) {
+      auto Prev = std::prev(It);
+      const auto &[PrevL, PrevU] = *Prev;
+      assert(PrevL.ule(L) && "Prev.L should be <= Cur.L");
+      //  L---------U      : PrevR
+      //     L----U        : this
+      // return early as nothing changes
+      if (PrevU.isZero() || (PrevU.uge(U) && !U.isZero()))
+        return;
+      assert((PrevU.ule(U - 1)) && "PrevU >= U should be handled earlier");
+      //  L-------U      : PrevR
+      //        L------U : this
+      //  results
+      //  L------------U : NewR
+      if (PrevU.uge(L)) {
+        L = Prev->first;
+        It = Intervals.erase(Prev);
+      }
+    }
+
+    if (U.isZero()) {
+      // Remove all intervals with NextR.L > L
+      //    L-------------- : this
+      //      L-R L--R L-R  : NextRs
+      It = Intervals.erase(It, Intervals.end());
+      assert(It == Intervals.end());
+    }
+
+    // Merge all Next intervals with NextR.L <= U
+    while (It != Intervals.end()) {
+      assert(!U.isZero() && "U is zero should be handled earlier");
+      const auto &[NextL, NextU] = *It;
+      // If U < NextL, stop
+      if (U.ult(NextL))
+        break;
+      assert(U.uge(NextL) && "U < NextL should be handled earlier");
+      It = Intervals.erase(It);
+      //  L----------U   : this
+      //     L----U      : NextR
+      //  results
+      //  L----------U   : NewR
+      if (U.uge(NextU) && !NextU.isZero())
+        continue;
+      assert((U.ult(NextU) || NextU.isZero()) &&
+             "U >= NextU should be handled earlier");
+      //  L------U       : this
+      //     L-------U   : NextR
+      //  results
+      //  L----------U   : NewR
+      U = NextU;
+      assert((It == Intervals.end() || NextU.ult(It->first)) &&
+             "Unexpected non-disjoint interval");
+      break;
+    }
+
+    // Already overdefined, i.e., [0, MAX]
+    if (Intervals.empty() && L.isZero() && U.isZero()) {
+      Result.markOverdefined();
+      return;
+    }
+
+    // Insert the new merged interval
+    Intervals.emplace(std::move(L), std::move(U));
+  }
+
+  // L as key, U as value, ult as comparator
+  std::map<APInt, APInt, APIntULTComparator> Intervals;
+  SmallVector<APInt, 8> IntsInVec;
+  ValueLatticeElement &Result;
+  bool RangeIncludingUndef = false;
+  bool InitialResultAsCR = false;
+};
+
 std::optional<ValueLatticeElement>
 LazyValueInfoImpl::solveBlockValueNonLocal(Value *Val, BasicBlock *BB) {
   ValueLatticeElement Result;  // Start Undefined.
@@ -741,27 +986,32 @@ LazyValueInfoImpl::solveBlockValueNonLocal(Value *Val, BasicBlock *BB) {
   std::optional<BBLatticeElementMap> PredLatticeElements;
   if (PerPredRanges)
     PredLatticeElements = std::make_optional<BBLatticeElementMap>();
-  for (BasicBlock *Pred : predecessors(BB)) {
-    // Skip self loops.
-    if (Pred == BB)
-      continue;
-    std::optional<ValueLatticeElement> EdgeResult = getEdgeValue(Val, Pred, BB);
-    if (!EdgeResult)
-      // Explore that input, then return here
-      return std::nullopt;
 
-    Result.mergeIn(*EdgeResult);
+  {
+    ValueLatticeMerger Merger(Result);
+    for (BasicBlock *Pred : predecessors(BB)) {
+      // Skip self loops.
+      if (Pred == BB)
+        continue;
+      std::optional<ValueLatticeElement> EdgeResult =
+          getEdgeValue(Val, Pred, BB);
+      if (!EdgeResult)
+        // Explore that input, then return here
+        return std::nullopt;
 
-    // If we hit overdefined, exit early.  The BlockVals entry is already set
-    // to overdefined.
-    if (Result.isOverdefined()) {
-      LLVM_DEBUG(dbgs() << " compute BB '" << BB->getName()
-                        << "' - overdefined because of pred '"
-                        << Pred->getName() << "' (non local).\n");
-      return Result;
+      Merger.mergeIn(*EdgeResult);
+
+      // If we hit overdefined, exit early.  The BlockVals entry is already set
+      // to overdefined.
+      if (Result.isOverdefined()) {
+        LLVM_DEBUG(dbgs() << " compute BB '" << BB->getName()
+                          << "' - overdefined because of pred '"
+                          << Pred->getName() << "' (non local).\n");
+        return Result;
+      }
+      if (PerPredRanges)
+        PredLatticeElements->insert({Pred, *EdgeResult});
     }
-    if (PerPredRanges)
-      PredLatticeElements->insert({Pred, *EdgeResult});
   }
 
   if (PerPredRanges)
@@ -774,7 +1024,7 @@ LazyValueInfoImpl::solveBlockValueNonLocal(Value *Val, BasicBlock *BB) {
 
 std::optional<ValueLatticeElement>
 LazyValueInfoImpl::solveBlockValuePHINode(PHINode *PN, BasicBlock *BB) {
-  ValueLatticeElement Result;  // Start Undefined.
+  ValueLatticeElement Result; // Start Undefined.
 
   // Loop over all of our predecessors, merging what we know from them into
   // result.  See the comment about the chosen traversal order in
@@ -782,31 +1032,34 @@ LazyValueInfoImpl::solveBlockValuePHINode(PHINode *PN, BasicBlock *BB) {
   std::optional<BBLatticeElementMap> PredLatticeElements;
   if (PerPredRanges)
     PredLatticeElements = std::make_optional<BBLatticeElementMap>();
-  for (unsigned i = 0, e = PN->getNumIncomingValues(); i != e; ++i) {
-    BasicBlock *PhiBB = PN->getIncomingBlock(i);
-    Value *PhiVal = PN->getIncomingValue(i);
-    // Note that we can provide PN as the context value to getEdgeValue, even
-    // though the results will be cached, because PN is the value being used as
-    // the cache key in the caller.
-    std::optional<ValueLatticeElement> EdgeResult =
-        getEdgeValue(PhiVal, PhiBB, BB, PN);
-    if (!EdgeResult)
-      // Explore that input, then return here
-      return std::nullopt;
+  {
+    ValueLatticeMerger Merger(Result);
+    for (unsigned i = 0, e = PN->getNumIncomingValues(); i != e; ++i) {
+      BasicBlock *PhiBB = PN->getIncomingBlock(i);
+      Value *PhiVal = PN->getIncomingValue(i);
+      // Note that we can provide PN as the context value to getEdgeValue, even
+      // though the results will be cached, because PN is the value being used
+      // as the cache key in the caller.
+      std::optional<ValueLatticeElement> EdgeResult =
+          getEdgeValue(PhiVal, PhiBB, BB, PN);
+      if (!EdgeResult)
+        // Explore that input, then return here
+        return std::nullopt;
 
-    Result.mergeIn(*EdgeResult);
+      Merger.mergeIn(*EdgeResult);
 
-    // If we hit overdefined, exit early.  The BlockVals entry is already set
-    // to overdefined.
-    if (Result.isOverdefined()) {
-      LLVM_DEBUG(dbgs() << " compute BB '" << BB->getName()
-                        << "' - overdefined because of pred (local).\n");
+      // If we hit overdefined, exit early.  The BlockVals entry is already set
+      // to overdefined.
+      if (Result.isOverdefined()) {
+        LLVM_DEBUG(dbgs() << " compute BB '" << BB->getName()
+                          << "' - overdefined because of pred (local).\n");
 
-      return Result;
+        return Result;
+      }
+
+      if (PerPredRanges)
+        PredLatticeElements->insert({PhiBB, *EdgeResult});
     }
-
-    if (PerPredRanges)
-      PredLatticeElements->insert({PhiBB, *EdgeResult});
   }
 
   if (PerPredRanges)

@@ -235,7 +235,14 @@ public:
   bool isUndef() const { return Tag == undef; }
   bool isUnknown() const { return Tag == unknown; }
   bool isUnknownOrUndef() const { return Tag == unknown || Tag == undef; }
-  bool isConstant() const { return Tag == constant; }
+  /// Return true if this value is a constant. If \p IntVecOnly is true, only
+  /// integer vector constants are considered.
+  bool isConstant(bool IntVecOnly = false) const {
+    return Tag == constant &&
+           (!IntVecOnly ||
+            (ConstVal->getType()->isVectorTy() &&
+             ConstVal->getType()->getScalarType()->isIntegerTy()));
+  }
   bool isNotConstant() const { return Tag == notconstant; }
   bool isConstantRangeIncludingUndef() const {
     return Tag == constantrange_including_undef;
@@ -430,8 +437,7 @@ public:
       if (RHS.isUndef())
         return false;
       // If the constant is a vector of integers, try to treat it as a range.
-      if (getConstant()->getType()->isVectorTy() &&
-          getConstant()->getType()->getScalarType()->isIntegerTy()) {
+      if (isConstant(/*IntVecOnly*/ true)) {
         ConstantRange L = getConstant()->toConstantRange();
         ConstantRange NewR = L.unionWith(
             RHS.asConstantRange(L.getBitWidth(), /*UndefAllowed=*/true));
