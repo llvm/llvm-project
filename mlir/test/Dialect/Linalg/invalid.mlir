@@ -202,7 +202,6 @@ func.func @generic_index_domain_error(%arg0: tensor<4xf32>) -> tensor<4xf32> {
 
 // -----
 
-
 #map_with_symbol = affine_map<(d0)[s0] -> (d0 + s0)>
 
 func.func @generic_indexing_map_with_symbol(%arg0: tensor<8xf32>) -> tensor<8xf32> {
