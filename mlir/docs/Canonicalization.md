@@ -63,11 +63,12 @@ Some important things to think about w.r.t. canonicalization patterns:
 *   Canonicalize shouldn't lose the semantic of original operation: the original
     information should always be recoverable from the transformed IR.
 
-## What is a Canonical Form?
+## What is the Canonical Form?
 
-There is no formally defined canonical form in MLIR. The de-facto canonical
-form keeps evolving, as canonicalization patterns and folders are getting
-added / removed / modified by the community.
+There is no single formally defined canonical form in MLIR. Some dialects
+define multiple forms, depending on the transformation ([example](https://mlir.llvm.org/docs/Rationale/RationaleLinalgDialect/#interchangeability-of-formsa-nameformsa)).
+The de-facto canonical form keeps evolving, as canonicalization patterns and
+folders are getting added / removed / modified by the community.
 
 The canonicalizer pass is integral to many downstream projects but offers no
 fine-grained control over individual patterns or foldings, making changes to
