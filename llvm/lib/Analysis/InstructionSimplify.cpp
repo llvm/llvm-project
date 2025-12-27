@@ -4274,14 +4274,8 @@ static Value *simplifyFCmpInst(CmpPredicate Pred, Value *LHS, Value *RHS,
         // maxnum(X, GreaterC) <= C --> false
         // maxnum(X, GreaterC) <  C --> false
         return ConstantInt::get(RetTy, !IsMaxNum);
-      case FCmpInst::FCMP_FALSE:
-        return getFalse(RetTy);
-      case FCmpInst::FCMP_TRUE:
-        return getTrue(RetTy);
-      case FCmpInst::FCMP_ORD:
-      case FCmpInst::FCMP_UNO:
-        return nullptr;
       default:
+        // TRUE/FALSE/ORD/UNO should be handled before this.
         llvm_unreachable("Unexpected fcmp predicate");
       }
     }
