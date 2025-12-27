@@ -200,6 +200,24 @@ func.func @generic_index_domain_error(%arg0: tensor<4xf32>) -> tensor<4xf32> {
   return %0 : tensor<4xf32>
 }
 
+// -----
+
+
+#map_with_symbol = affine_map<(d0)[s0] -> (d0 + s0)>
+
+func.func @generic_indexing_map_with_symbol(%arg0: tensor<8xf32>) -> tensor<8xf32> {
+  // expected-error @+1 {{unexpected symbols in indexing_map #0}}
+  %0 = linalg.generic {
+    indexing_maps = [#map_with_symbol, #map_with_symbol],
+    iterator_types = ["parallel"]
+  } ins(%arg0 : tensor<8xf32>)
+    outs(%arg0 : tensor<8xf32>) {
+  ^bb0(%in: f32, %out: f32):
+    linalg.yield %in : f32
+  } -> tensor<8xf32>
+  return %0 : tensor<8xf32>
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////// Region tests /////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////

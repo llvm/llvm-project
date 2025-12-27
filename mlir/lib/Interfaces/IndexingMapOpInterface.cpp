@@ -23,15 +23,6 @@ LogicalResult mlir::IndexingMapOpInterface::verifyImpl() {
            << ") to be equal to the number of input/output operands ("
            << getOperation()->getNumOperands() << ")";
 
-  AffineMap invertedMap = getShapesToLoopsMap();
-  if (!invertedMap) {
-    std::string str;
-    llvm::raw_string_ostream os(str);
-    getLoopsToShapesMap().print(os);
-    return this->emitOpError("invalid indexing maps are non-invertible: ")
-           << "(" << str << ")";
-  }
-
   SmallVector<int64_t> allShapesSizes;
 
   for (OpOperand &opOperand : getOperation()->getOpOperands()) {
@@ -41,17 +32,26 @@ LogicalResult mlir::IndexingMapOpInterface::verifyImpl() {
 
     // Symbols disallowed.
     if (indexingMap.getNumSymbols() != 0)
-      return getOperation()->emitOpError("unexpected symbols in indexing_map #")
+      return this->emitOpError("unexpected symbols in indexing_map #")
              << opOperand.getOperandNumber();
 
     // Result rank must match operand rank.
     if (indexingMap.getNumResults() != rank)
-      return getOperation()->emitOpError("expected operand rank (")
+      return this->emitOpError("expected operand rank (")
              << rank << ") to match the result rank of indexing_map #"
              << opOperand.getOperandNumber() << " ("
              << indexingMap.getNumResults() << ")";
 
     llvm::append_range(allShapesSizes, shape);
+  }
+
+  AffineMap invertedMap = getShapesToLoopsMap();
+  if (!invertedMap) {
+    std::string str;
+    llvm::raw_string_ostream os(str);
+    getLoopsToShapesMap().print(os);
+    return this->emitOpError("invalid indexing maps are non-invertible: ")
+           << "(" << str << ")";
   }
 
   SmallVector<int64_t> endLoopRangeValues = invertedMap.compose(allShapesSizes);
