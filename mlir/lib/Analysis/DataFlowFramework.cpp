@@ -70,7 +70,9 @@ void ProgramPoint::print(raw_ostream &os) const {
   if (!isBlockEnd()) {
     os << "<before operation>:"
        << OpWithFlags(getNextOp(), OpPrintingFlags().skipRegions());
+    return;
   }
+  os << "<beginning of empty block>";
 }
 
 //===----------------------------------------------------------------------===//
