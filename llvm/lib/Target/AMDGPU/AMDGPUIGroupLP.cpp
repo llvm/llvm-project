@@ -957,8 +957,6 @@ private:
       auto *DAG = SyncPipe[0].DAG;
 
       if (Cache->empty()) {
-        SmallVector<SUnit *, 8> Worklist;
-
         auto I = DAG->SUnits.begin();
         auto E = DAG->SUnits.end();
         for (; I != E; I++) {
@@ -1046,7 +1044,7 @@ private:
       if (!SyncPipe.size())
         return false;
 
-      auto SuccSize = llvm::count_if(SU->Succs, [](const SDep &Succ) {
+      unsigned SuccSize = llvm::count_if(SU->Succs, [](const SDep &Succ) {
         return Succ.getKind() == SDep::Data;
       });
       if (SuccSize >= Size)
@@ -1054,7 +1052,7 @@ private:
 
       if (HasIntermediary) {
         for (auto Succ : SU->Succs) {
-          auto SuccSize =
+          unsigned SuccSize =
               llvm::count_if(Succ.getSUnit()->Succs, [](const SDep &SuccSucc) {
                 return SuccSucc.getKind() == SDep::Data;
               });
@@ -1086,7 +1084,7 @@ private:
       if (!SyncPipe.size())
         return false;
 
-      auto SuccSize = llvm::count_if(SU->Succs, [](const SDep &Succ) {
+      unsigned SuccSize = llvm::count_if(SU->Succs, [](const SDep &Succ) {
         return Succ.getKind() == SDep::Data;
       });
       if (SuccSize >= Size)
@@ -1094,7 +1092,7 @@ private:
 
       if (HasIntermediary) {
         for (auto Succ : SU->Succs) {
-          auto SuccSize =
+          unsigned SuccSize =
               llvm::count_if(Succ.getSUnit()->Succs, [](const SDep &SuccSucc) {
                 return SuccSucc.getKind() == SDep::Data;
               });
@@ -1290,7 +1288,6 @@ private:
     bool apply(const SUnit *SU, const ArrayRef<SUnit *> Collection,
                SmallVectorImpl<SchedGroup> &SyncPipe) override {
 
-      SmallVector<SUnit *, 12> Worklist;
       auto *DAG = SyncPipe[0].DAG;
       if (Cache->empty()) {
         for (auto &SU : DAG->SUnits)
@@ -1971,7 +1968,7 @@ private:
       int NumBits = 0;
 
       auto TRI = TII->getRegisterInfo();
-      auto &MRI = MI->getParent()->getParent()->getRegInfo();
+      auto &MRI = MI->getMF()->getRegInfo();
       for (auto &Elt : Collection) {
         auto Op = Elt->getInstr()->getOperand(0);
         auto Size =
@@ -2186,7 +2183,7 @@ bool MFMASmallGemmSingleWaveOpt::applyIGLPStrategy(
   SG->initSchedGroup(SyncedInstrs[SG->getSyncID()]);
 
   // Interleave MFMA with DS_READ prefetch
-  for (unsigned I = 0; I < DSRCount - 4; ++I) {
+  for (unsigned I = 4; I < DSRCount; ++I) {
     SG = &SyncedSchedGroups[PipelineSyncID].emplace_back(
         SchedGroupMask::DS_READ, 1, PipelineSyncID, DAG, TII);
     SG->initSchedGroup(SyncedInstrs[SG->getSyncID()]);
@@ -2199,7 +2196,7 @@ bool MFMASmallGemmSingleWaveOpt::applyIGLPStrategy(
   // Phase 2a: Loop carried dependency with V_PERM
   // Schedule VPerm & DS_WRITE as closely as possible to the VMEM_READ they
   // depend on. Interleave MFMA to keep XDL unit busy throughout.
-  for (unsigned I = 0; I < DSWWithPermCount - DSWWithSharedVMEMCount; ++I) {
+  for (unsigned I = DSWWithSharedVMEMCount; I < DSWWithPermCount; ++I) {
     SG = &SyncedSchedGroups[PipelineSyncID].emplace_back(
         SchedGroupMask::VALU, 4, PipelineSyncID, DAG, TII);
     SG->addRule(std::make_shared<IsPermForDSW>(TII, SG->getSGID(), true));
@@ -2236,7 +2233,7 @@ bool MFMASmallGemmSingleWaveOpt::applyIGLPStrategy(
   // Phase 2b: Loop carried dependency without V_PERM
   // Schedule DS_WRITE as closely as possible to the VMEM_READ they depend on.
   // Interleave MFMA to keep XDL unit busy throughout.
-  for (unsigned I = 0; I < DSWCount - DSWWithPermCount; I++) {
+  for (unsigned I = DSWWithPermCount; I < DSWCount; I++) {
     SG = &SyncedSchedGroups[PipelineSyncID].emplace_back(
         SchedGroupMask::DS_WRITE, 1, PipelineSyncID, DAG, TII);
     SG->initSchedGroup(SyncedInstrs[SG->getSyncID()]);
@@ -2397,32 +2394,34 @@ bool SchedGroup::canAddMI(const MachineInstr &MI) const {
   else if (((SGMask & SchedGroupMask::ALU) != SchedGroupMask::NONE) &&
            (TII->isVALU(MI) || TII->isMFMAorWMMA(MI) || TII->isSALU(MI) ||
             TII->isTRANS(MI)))
-    Result = true;
+    Result = !MI.mayLoadOrStore();
 
   else if (((SGMask & SchedGroupMask::VALU) != SchedGroupMask::NONE) &&
-           TII->isVALU(MI) && !TII->isMFMAorWMMA(MI) && !TII->isTRANS(MI))
-    Result = true;
+           TII->isVALU(MI) && !TII->isMFMAorWMMA(MI) && !TII->isTRANS(MI)) {
+    // Some memory instructions may be marked as VALU (e.g. BUFFER_LOAD_*_LDS).
+    // For our purposes, these shall not be classified as VALU as this results
+    // in unexpected behavior.
+    Result = !MI.mayLoadOrStore();
+  }
 
   else if (((SGMask & SchedGroupMask::SALU) != SchedGroupMask::NONE) &&
            TII->isSALU(MI))
-    Result = true;
+    Result = !MI.mayLoadOrStore();
 
   else if (((SGMask & SchedGroupMask::MFMA) != SchedGroupMask::NONE) &&
            TII->isMFMAorWMMA(MI))
     Result = true;
 
   else if (((SGMask & SchedGroupMask::VMEM) != SchedGroupMask::NONE) &&
-           (TII->isVMEM(MI) || (TII->isFLAT(MI) && !TII->isDS(MI))))
+           TII->isVMEM(MI))
     Result = true;
 
   else if (((SGMask & SchedGroupMask::VMEM_READ) != SchedGroupMask::NONE) &&
-           MI.mayLoad() &&
-           (TII->isVMEM(MI) || (TII->isFLAT(MI) && !TII->isDS(MI))))
+           MI.mayLoad() && TII->isVMEM(MI))
     Result = true;
 
   else if (((SGMask & SchedGroupMask::VMEM_WRITE) != SchedGroupMask::NONE) &&
-           MI.mayStore() &&
-           (TII->isVMEM(MI) || (TII->isFLAT(MI) && !TII->isDS(MI))))
+           MI.mayStore() && TII->isVMEM(MI))
     Result = true;
 
   else if (((SGMask & SchedGroupMask::DS) != SchedGroupMask::NONE) &&

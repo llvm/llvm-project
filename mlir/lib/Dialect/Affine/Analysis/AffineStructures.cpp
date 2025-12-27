@@ -12,17 +12,12 @@
 
 #include "mlir/Dialect/Affine/Analysis/AffineStructures.h"
 #include "mlir/Analysis/Presburger/IntegerRelation.h"
-#include "mlir/Analysis/Presburger/LinearTransform.h"
-#include "mlir/Analysis/Presburger/Simplex.h"
 #include "mlir/Analysis/Presburger/Utils.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/IR/AffineValueMap.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
-#include "mlir/IR/AffineExprVisitor.h"
 #include "mlir/IR/IntegerSet.h"
 #include "mlir/Support/LLVM.h"
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
@@ -98,13 +93,13 @@ FlatAffineValueConstraints::addAffineForOpDomain(AffineForOp forOp) {
       int64_t lb = forOp.getConstantLowerBound();
       dividend[pos] = 1;
       dividend.back() -= lb;
-      addLocalFloorDiv(dividend, step);
+      unsigned qPos = addLocalFloorDiv(dividend, step);
       // Second constraint: (iv - lb) - step * q = 0.
       SmallVector<int64_t, 8> eq(getNumCols(), 0);
       eq[pos] = 1;
       eq.back() -= lb;
       // For the local var just added above.
-      eq[getNumCols() - 2] = -step;
+      eq[qPos] = -step;
       addEquality(eq);
     }
   }
@@ -347,8 +342,7 @@ void FlatAffineValueConstraints::getIneqAsAffineValueMap(
 
   if (inequality[pos] > 0)
     // Lower bound.
-    std::transform(bound.begin(), bound.end(), bound.begin(),
-                   std::negate<int64_t>());
+    llvm::transform(bound, bound.begin(), std::negate<int64_t>());
   else
     // Upper bound (which is exclusive).
     bound.back() += 1;
@@ -526,7 +520,7 @@ LogicalResult mlir::affine::getRelationFromMap(AffineMap &map,
   SmallVector<int64_t, 8> eq(localVarCst.getNumCols());
   for (unsigned i = 0, e = map.getNumResults(); i < e; ++i) {
     // Zero fill.
-    std::fill(eq.begin(), eq.end(), 0);
+    llvm::fill(eq, 0);
     // Fill equality.
     for (unsigned j = 0, f = oldDimNum; j < f; ++j)
       eq[j] = flatExprs[i][j];

@@ -135,11 +135,9 @@ int __kmp_tp_cached = 0;
 int __kmp_dispatch_num_buffers = KMP_DFLT_DISP_NUM_BUFF;
 int __kmp_dflt_max_active_levels = 1; // Nesting off by default
 bool __kmp_dflt_max_active_levels_set = false; // Don't override set value
-#if KMP_NESTED_HOT_TEAMS
 int __kmp_hot_teams_mode = 0; /* 0 - free extra threads when reduced */
 /* 1 - keep extra threads when reduced */
 int __kmp_hot_teams_max_level = 1; /* nesting level of hot teams */
-#endif
 enum library_type __kmp_library = library_none;
 enum sched_type __kmp_sched =
     kmp_sch_default; /* scheduling method for runtime scheduling */
@@ -172,7 +170,7 @@ int __kmp_ncores = 0;
 int __kmp_chunk = 0;
 int __kmp_force_monotonic = 0;
 int __kmp_abort_delay = 0;
-#if (KMP_OS_LINUX || KMP_OS_AIX) && defined(KMP_TDATA_GTID)
+#if (KMP_OS_LINUX || KMP_OS_AIX || KMP_OS_SOLARIS) && defined(KMP_TDATA_GTID)
 int __kmp_gtid_mode = 3; /* use __declspec(thread) TLS to store gtid */
 int __kmp_adjust_gtid_mode = FALSE;
 #elif KMP_OS_WINDOWS
@@ -250,10 +248,10 @@ enum mic_type __kmp_mic_type = non_mic;
 
 KMPAffinity *__kmp_affinity_dispatch = NULL;
 
-#if KMP_USE_HWLOC
+#if KMP_HWLOC_ENABLED
 int __kmp_hwloc_error = FALSE;
 hwloc_topology_t __kmp_hwloc_topology = NULL;
-#endif
+#endif // KMP_HWLOC_ENABLED
 
 #if KMP_OS_WINDOWS
 #if KMP_GROUP_AFFINITY

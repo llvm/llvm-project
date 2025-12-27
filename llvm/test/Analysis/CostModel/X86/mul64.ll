@@ -327,11 +327,11 @@ define void @mul_zext_vXi8(<2 x i8> %a2, <2 x i8> %b2, <4 x i8> %a4, <4 x i8> %b
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:50 CodeSize:1 Lat:1 SizeLat:1 for: %xa64 = zext <64 x i8> %a64 to <64 x i64>
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:50 CodeSize:1 Lat:1 SizeLat:1 for: %xb64 = zext <64 x i8> %b64 to <64 x i64>
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:5 SizeLat:1 for: %res2 = mul <2 x i64> %xa2, %xb2
-; AVX1-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %res4 = mul <4 x i64> %xa4, %xb4
-; AVX1-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:1 SizeLat:1 for: %res8 = mul <8 x i64> %xa8, %xb8
-; AVX1-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:1 Lat:1 SizeLat:1 for: %res16 = mul <16 x i64> %xa16, %xb16
-; AVX1-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:1 Lat:1 SizeLat:1 for: %res32 = mul <32 x i64> %xa32, %xb32
-; AVX1-NEXT:  Cost Model: Found costs of RThru:32 CodeSize:1 Lat:1 SizeLat:1 for: %res64 = mul <64 x i64> %xa64, %xb64
+; AVX1-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:5 Lat:5 SizeLat:6 for: %res4 = mul <4 x i64> %xa4, %xb4
+; AVX1-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:10 Lat:10 SizeLat:12 for: %res8 = mul <8 x i64> %xa8, %xb8
+; AVX1-NEXT:  Cost Model: Found costs of RThru:12 CodeSize:20 Lat:20 SizeLat:24 for: %res16 = mul <16 x i64> %xa16, %xb16
+; AVX1-NEXT:  Cost Model: Found costs of RThru:24 CodeSize:40 Lat:40 SizeLat:48 for: %res32 = mul <32 x i64> %xa32, %xb32
+; AVX1-NEXT:  Cost Model: Found costs of RThru:48 CodeSize:80 Lat:80 SizeLat:96 for: %res64 = mul <64 x i64> %xa64, %xb64
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX2-LABEL: 'mul_zext_vXi8'
@@ -985,11 +985,11 @@ define void @mul_zext_vXi16(<2 x i16> %a2, <2 x i16> %b2, <4 x i16> %a4, <4 x i1
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:52 CodeSize:1 Lat:1 SizeLat:1 for: %xa64 = zext <64 x i16> %a64 to <64 x i64>
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:52 CodeSize:1 Lat:1 SizeLat:1 for: %xb64 = zext <64 x i16> %b64 to <64 x i64>
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:5 SizeLat:1 for: %res2 = mul <2 x i64> %xa2, %xb2
-; AVX1-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %res4 = mul <4 x i64> %xa4, %xb4
-; AVX1-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:1 SizeLat:1 for: %res8 = mul <8 x i64> %xa8, %xb8
-; AVX1-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:1 Lat:1 SizeLat:1 for: %res16 = mul <16 x i64> %xa16, %xb16
-; AVX1-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:1 Lat:1 SizeLat:1 for: %res32 = mul <32 x i64> %xa32, %xb32
-; AVX1-NEXT:  Cost Model: Found costs of RThru:32 CodeSize:1 Lat:1 SizeLat:1 for: %res64 = mul <64 x i64> %xa64, %xb64
+; AVX1-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:5 Lat:5 SizeLat:6 for: %res4 = mul <4 x i64> %xa4, %xb4
+; AVX1-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:10 Lat:10 SizeLat:12 for: %res8 = mul <8 x i64> %xa8, %xb8
+; AVX1-NEXT:  Cost Model: Found costs of RThru:12 CodeSize:20 Lat:20 SizeLat:24 for: %res16 = mul <16 x i64> %xa16, %xb16
+; AVX1-NEXT:  Cost Model: Found costs of RThru:24 CodeSize:40 Lat:40 SizeLat:48 for: %res32 = mul <32 x i64> %xa32, %xb32
+; AVX1-NEXT:  Cost Model: Found costs of RThru:48 CodeSize:80 Lat:80 SizeLat:96 for: %res64 = mul <64 x i64> %xa64, %xb64
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX2-LABEL: 'mul_zext_vXi16'
@@ -1643,11 +1643,11 @@ define void @mul_zext_vXi32(<2 x i32> %a2, <2 x i32> %b2, <4 x i32> %a4, <4 x i3
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:56 CodeSize:1 Lat:1 SizeLat:1 for: %xa64 = zext <64 x i32> %a64 to <64 x i64>
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:56 CodeSize:1 Lat:1 SizeLat:1 for: %xb64 = zext <64 x i32> %b64 to <64 x i64>
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:5 SizeLat:1 for: %res2 = mul <2 x i64> %xa2, %xb2
-; AVX1-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %res4 = mul <4 x i64> %xa4, %xb4
-; AVX1-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:1 SizeLat:1 for: %res8 = mul <8 x i64> %xa8, %xb8
-; AVX1-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:1 Lat:1 SizeLat:1 for: %res16 = mul <16 x i64> %xa16, %xb16
-; AVX1-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:1 Lat:1 SizeLat:1 for: %res32 = mul <32 x i64> %xa32, %xb32
-; AVX1-NEXT:  Cost Model: Found costs of RThru:32 CodeSize:1 Lat:1 SizeLat:1 for: %res64 = mul <64 x i64> %xa64, %xb64
+; AVX1-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:5 Lat:5 SizeLat:6 for: %res4 = mul <4 x i64> %xa4, %xb4
+; AVX1-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:10 Lat:10 SizeLat:12 for: %res8 = mul <8 x i64> %xa8, %xb8
+; AVX1-NEXT:  Cost Model: Found costs of RThru:12 CodeSize:20 Lat:20 SizeLat:24 for: %res16 = mul <16 x i64> %xa16, %xb16
+; AVX1-NEXT:  Cost Model: Found costs of RThru:24 CodeSize:40 Lat:40 SizeLat:48 for: %res32 = mul <32 x i64> %xa32, %xb32
+; AVX1-NEXT:  Cost Model: Found costs of RThru:48 CodeSize:80 Lat:80 SizeLat:96 for: %res64 = mul <64 x i64> %xa64, %xb64
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX2-LABEL: 'mul_zext_vXi32'

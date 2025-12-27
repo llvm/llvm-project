@@ -98,6 +98,14 @@ llvm::raw_ostream &ConstantBase<RESULT, VALUE>::AsFortran(
   return o;
 }
 
+template <typename RESULT, typename VALUE>
+std::string ConstantBase<RESULT, VALUE>::AsFortran() const {
+  std::string result;
+  llvm::raw_string_ostream sstream(result);
+  AsFortran(sstream);
+  return result;
+}
+
 template <int KIND>
 llvm::raw_ostream &Constant<Type<TypeCategory::Character, KIND>>::AsFortran(
     llvm::raw_ostream &o) const {
@@ -124,6 +132,14 @@ llvm::raw_ostream &Constant<Type<TypeCategory::Character, KIND>>::AsFortran(
   }
   ShapeAsFortran(o, shape(), lbounds(), hasNonDefaultLowerBound);
   return o;
+}
+
+template <int KIND>
+std::string Constant<Type<TypeCategory::Character, KIND>>::AsFortran() const {
+  std::string result;
+  llvm::raw_string_ostream sstream(result);
+  AsFortran(sstream);
+  return result;
 }
 
 llvm::raw_ostream &EmitVar(llvm::raw_ostream &o, const Symbol &symbol,
@@ -234,6 +250,13 @@ llvm::raw_ostream &ActualArgument::AsFortran(llvm::raw_ostream &o) const {
     o << ')';
   }
   return o;
+}
+
+std::string ActualArgument::AsFortran() const {
+  std::string result;
+  llvm::raw_string_ostream sstream(result);
+  AsFortran(sstream);
+  return result;
 }
 
 llvm::raw_ostream &SpecificIntrinsic::AsFortran(llvm::raw_ostream &o) const {
@@ -723,24 +746,8 @@ llvm::raw_ostream &ArrayRef::AsFortran(llvm::raw_ostream &o) const {
 }
 
 llvm::raw_ostream &CoarrayRef::AsFortran(llvm::raw_ostream &o) const {
-  bool first{true};
-  for (const Symbol &part : base_) {
-    if (first) {
-      first = false;
-    } else {
-      o << '%';
-    }
-    EmitVar(o, part);
-  }
-  char separator{'('};
-  for (const auto &sscript : subscript_) {
-    EmitVar(o << separator, sscript);
-    separator = ',';
-  }
-  if (separator == ',') {
-    o << ')';
-  }
-  separator = '[';
+  base().AsFortran(o);
+  char separator{'['};
   for (const auto &css : cosubscript_) {
     EmitVar(o << separator, css);
     separator = ',';
@@ -750,8 +757,10 @@ llvm::raw_ostream &CoarrayRef::AsFortran(llvm::raw_ostream &o) const {
     separator = ',';
   }
   if (team_) {
-    EmitVar(
-        o << separator, team_, teamIsTeamNumber_ ? "TEAM_NUMBER=" : "TEAM=");
+    EmitVar(o << separator, team_,
+        std::holds_alternative<Expr<SomeInteger>>(team_->value().u)
+            ? "TEAM_NUMBER="
+            : "TEAM=");
   }
   return o << ']';
 }

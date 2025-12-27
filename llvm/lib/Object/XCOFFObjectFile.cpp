@@ -93,8 +93,8 @@ uint8_t XCOFFRelocation<AddressType>::getRelocatedLength() const {
   return (Info & XR_BIASED_LENGTH_MASK) + 1;
 }
 
-template struct ExceptionSectionEntry<support::ubig32_t>;
-template struct ExceptionSectionEntry<support::ubig64_t>;
+template struct LLVM_EXPORT_TEMPLATE ExceptionSectionEntry<support::ubig32_t>;
+template struct LLVM_EXPORT_TEMPLATE ExceptionSectionEntry<support::ubig64_t>;
 
 template <typename T>
 Expected<StringRef> getLoaderSecSymNameInStrTbl(const T *LoaderSecHeader,
@@ -379,7 +379,7 @@ Expected<StringRef> XCOFFObjectFile::getSectionName(DataRefImpl Sec) const {
 }
 
 uint64_t XCOFFObjectFile::getSectionAddress(DataRefImpl Sec) const {
-  // Avoid ternary due to failure to convert the ubig32_t value to a unit64_t
+  // Avoid ternary due to failure to convert the ubig32_t value to a uint64_t
   // with MSVC.
   if (is64Bit())
     return toSection64(Sec)->VirtualAddress;
@@ -397,7 +397,7 @@ uint64_t XCOFFObjectFile::getSectionIndex(DataRefImpl Sec) const {
 }
 
 uint64_t XCOFFObjectFile::getSectionSize(DataRefImpl Sec) const {
-  // Avoid ternary due to failure to convert the ubig32_t value to a unit64_t
+  // Avoid ternary due to failure to convert the ubig32_t value to a uint64_t
   // with MSVC.
   if (is64Bit())
     return toSection64(Sec)->SectionSize;
@@ -1375,11 +1375,11 @@ Expected<StringRef> XCOFFSymbolRef::getName() const {
 }
 
 // Explicitly instantiate template classes.
-template struct XCOFFSectionHeader<XCOFFSectionHeader32>;
-template struct XCOFFSectionHeader<XCOFFSectionHeader64>;
+template struct LLVM_EXPORT_TEMPLATE XCOFFSectionHeader<XCOFFSectionHeader32>;
+template struct LLVM_EXPORT_TEMPLATE XCOFFSectionHeader<XCOFFSectionHeader64>;
 
-template struct XCOFFRelocation<llvm::support::ubig32_t>;
-template struct XCOFFRelocation<llvm::support::ubig64_t>;
+template struct LLVM_EXPORT_TEMPLATE XCOFFRelocation<llvm::support::ubig32_t>;
+template struct LLVM_EXPORT_TEMPLATE XCOFFRelocation<llvm::support::ubig64_t>;
 
 template LLVM_EXPORT_TEMPLATE
     llvm::Expected<llvm::ArrayRef<llvm::object::XCOFFRelocation64>>
@@ -1568,7 +1568,7 @@ uint8_t XCOFFTracebackTable::getLanguageID() const {
 }
 
 bool XCOFFTracebackTable::isGlobalLinkage() const {
-  return GETBITWITHMASK(0, IsGlobaLinkageMask);
+  return GETBITWITHMASK(0, IsGlobalLinkageMask);
 }
 
 bool XCOFFTracebackTable::isOutOfLineEpilogOrPrologue() const {

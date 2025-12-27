@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy --match-partial-fixes -std=c++11-or-later %s abseil-time-subtraction %t -- -- -I %S/Inputs
+// RUN: %check_clang_tidy -std=c++11-or-later %s abseil-time-subtraction %t -- -- -I %S/Inputs
 
 #include "absl/time/time.h"
 
@@ -89,7 +89,7 @@ void f() {
 #define SECONDS(z) absl::Seconds(z)
   d = SECONDS(x - absl::ToUnixSeconds(t));
   // CHECK-MESSAGES: [[@LINE-1]]:15: warning: perform subtraction in the time domain [abseil-time-subtraction]
-  // CHECK-FIXES: SECONDS(absl::ToInt64Seconds(absl::FromUnixSeconds(x) - t))
+  // CHECK-FIXES: d = SECONDS(absl::ToInt64Seconds(absl::FromUnixSeconds(x) - t));
 #undef SECONDS
 }
 

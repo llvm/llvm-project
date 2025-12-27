@@ -10,15 +10,17 @@
 #include <cassert>
 #include <mlir/Analysis/DataFlow/LivenessAnalysis.h>
 
-#include <mlir/Analysis/DataFlow/ConstantPropagationAnalysis.h>
-#include <mlir/Analysis/DataFlow/DeadCodeAnalysis.h>
+#include <llvm/Support/DebugLog.h>
 #include <mlir/Analysis/DataFlow/SparseAnalysis.h>
+#include <mlir/Analysis/DataFlow/Utils.h>
 #include <mlir/Analysis/DataFlowFramework.h>
 #include <mlir/IR/Operation.h>
 #include <mlir/IR/Value.h>
 #include <mlir/Interfaces/CallInterfaces.h>
 #include <mlir/Interfaces/SideEffectInterfaces.h>
 #include <mlir/Support/LLVM.h>
+
+#define DEBUG_TYPE "liveness-analysis"
 
 using namespace mlir;
 using namespace mlir::dataflow;
@@ -51,7 +53,11 @@ ChangeResult Liveness::meet(const AbstractSparseLattice &other) {
 /// A value is considered "live" iff it:
 ///   (1) has memory effects OR
 ///   (2) is returned by a public function OR
-///   (3) is used to compute a value of type (1) or (2).
+///   (3) is used to compute a value of type (1) or (2) OR
+///   (4) is returned by a return-like op whose parent isn't a callable
+///       nor a RegionBranchOpInterface (e.g.: linalg.yield, gpu.yield,...)
+///       These ops have their own semantics, so we conservatively mark the
+///       the yield value as live.
 /// It is also to be noted that a value could be of multiple types (1/2/3) at
 /// the same time.
 ///
@@ -73,32 +79,49 @@ ChangeResult Liveness::meet(const AbstractSparseLattice &other) {
 LogicalResult
 LivenessAnalysis::visitOperation(Operation *op, ArrayRef<Liveness *> operands,
                                  ArrayRef<const Liveness *> results) {
-  // This marks values of type (1.a) liveness as "live".
-  if (!isMemoryEffectFree(op)) {
-    for (auto *operand : operands)
+  LDBG() << "[visitOperation] Enter: "
+         << OpWithFlags(op, OpPrintingFlags().skipRegions());
+  // This marks values of type (1.a) and (4) liveness as "live".
+  if (!isMemoryEffectFree(op) || op->hasTrait<OpTrait::ReturnLike>()) {
+    LDBG() << "[visitOperation] Operation has memory effects or is "
+              "return-like, marking operands live";
+    for (auto *operand : operands) {
+      LDBG() << " [visitOperation] Marking operand live: " << operand << " ("
+             << operand->isLive << ")";
       propagateIfChanged(operand, operand->markLive());
+    }
   }
 
   // This marks values of type (3) liveness as "live".
   bool foundLiveResult = false;
   for (const Liveness *r : results) {
     if (r->isLive && !foundLiveResult) {
+      LDBG() << "[visitOperation] Found live result, "
+                "meeting all operands with result: "
+             << r;
       // It is assumed that each operand is used to compute each result of an
       // op. Thus, if at least one result is live, each operand is live.
-      for (Liveness *operand : operands)
+      for (Liveness *operand : operands) {
+        LDBG() << " [visitOperation] Meeting operand: " << operand
+               << " with result: " << r;
         meet(operand, *r);
+      }
       foundLiveResult = true;
     }
+    LDBG() << "[visitOperation] Adding dependency for result: " << r
+           << " after op: " << OpWithFlags(op, OpPrintingFlags().skipRegions());
     addDependency(const_cast<Liveness *>(r), getProgramPointAfter(op));
   }
   return success();
 }
 
 void LivenessAnalysis::visitBranchOperand(OpOperand &operand) {
+  Operation *op = operand.getOwner();
+  LDBG() << "Visiting branch operand: " << operand.get()
+         << " in op: " << OpWithFlags(op, OpPrintingFlags().skipRegions());
   // We know (at the moment) and assume (for the future) that `operand` is a
   // non-forwarded branch operand of a `RegionBranchOpInterface`,
   // `BranchOpInterface`, `RegionBranchTerminatorOpInterface` or return-like op.
-  Operation *op = operand.getOwner();
   assert((isa<RegionBranchOpInterface>(op) || isa<BranchOpInterface>(op) ||
           isa<RegionBranchTerminatorOpInterface>(op)) &&
          "expected the op to be `RegionBranchOpInterface`, "
@@ -114,7 +137,8 @@ void LivenessAnalysis::visitBranchOperand(OpOperand &operand) {
   // Populating such blocks in `blocks`.
   bool mayLive = false;
   SmallVector<Block *, 4> blocks;
-  if (isa<RegionBranchOpInterface>(op)) {
+  SmallVector<BlockArgument> argumentNotOperand;
+  if (auto regionBranchOp = dyn_cast<RegionBranchOpInterface>(op)) {
     if (op->getNumResults() != 0) {
       // This mark value of type 1.c liveness as may live, because the region
       // branch operation has a return value, and the non-forwarded operand can
@@ -123,9 +147,13 @@ void LivenessAnalysis::visitBranchOperand(OpOperand &operand) {
       // Therefore, if the result value is live, we conservatively consider the
       // non-forwarded operand of the region branch operation with result may
       // live and record all result.
-      for (Value result : op->getResults()) {
+      for (auto [resultIndex, result] : llvm::enumerate(op->getResults())) {
         if (getLatticeElement(result)->isLive) {
           mayLive = true;
+          LDBG() << "[visitBranchOperand] Non-forwarded branch operand may be "
+                    "live due to live result #"
+                 << resultIndex << ": "
+                 << OpWithFlags(op, OpPrintingFlags().skipRegions());
           break;
         }
       }
@@ -138,6 +166,25 @@ void LivenessAnalysis::visitBranchOperand(OpOperand &operand) {
           blocks.push_back(&block);
       }
     }
+
+    // In the block of the successor block argument of RegionBranchOpInterface,
+    // there may be arguments of RegionBranchOpInterface, such as the IV of
+    // scf.forOp. Explicitly set this argument to live.
+    for (Region &region : op->getRegions()) {
+      SmallVector<RegionSuccessor> successors;
+      regionBranchOp.getSuccessorRegions(region, successors);
+      for (RegionSuccessor successor : successors) {
+        if (successor.isParent())
+          continue;
+        auto arguments = successor.getSuccessor()->getArguments();
+        ValueRange regionInputs = successor.getSuccessorInputs();
+        for (auto argument : arguments) {
+          if (llvm::find(regionInputs, argument) == regionInputs.end()) {
+            argumentNotOperand.push_back(argument);
+          }
+        }
+      }
+    }
   } else if (isa<BranchOpInterface>(op)) {
     // We cannot track all successor blocks of the branch operation(More
     // specifically, it's the successor's successor). Additionally, different
@@ -145,6 +192,8 @@ void LivenessAnalysis::visitBranchOperand(OpOperand &operand) {
     // Therefore, we conservatively consider the non-forwarded operand of the
     // branch operation may live.
     mayLive = true;
+    LDBG() << "[visitBranchOperand] Non-forwarded branch operand may "
+              "be live due to branch op interface";
   } else {
     Operation *parentOp = op->getParentOp();
     assert(isa<RegionBranchOpInterface>(parentOp) &&
@@ -160,6 +209,9 @@ void LivenessAnalysis::visitBranchOperand(OpOperand &operand) {
       for (Value result : parentOp->getResults()) {
         if (getLatticeElement(result)->isLive) {
           mayLive = true;
+          LDBG() << "[visitBranchOperand] Non-forwarded branch "
+                    "operand may be live due to parent live result: "
+                 << result;
           break;
         }
       }
@@ -180,6 +232,9 @@ void LivenessAnalysis::visitBranchOperand(OpOperand &operand) {
     for (Operation &nestedOp : *block) {
       if (!isMemoryEffectFree(&nestedOp)) {
         mayLive = true;
+        LDBG() << "Non-forwarded branch operand may be "
+                  "live due to memory effect in block: "
+               << block;
         break;
       }
     }
@@ -187,7 +242,17 @@ void LivenessAnalysis::visitBranchOperand(OpOperand &operand) {
 
   if (mayLive) {
     Liveness *operandLiveness = getLatticeElement(operand.get());
+    LDBG() << "Marking branch operand live: " << operand.get();
     propagateIfChanged(operandLiveness, operandLiveness->markLive());
+    for (BlockArgument argument : argumentNotOperand) {
+      Liveness *argumentLiveness = getLatticeElement(argument);
+      LDBG() << "Marking RegionBranchOp's argument live: " << argument;
+      // TODO: this is overly conservative: we should be able to eliminate
+      // unused values in a RegionBranchOpInterface operation but that may
+      // requires removing operation results which is beyond current
+      // capabilities of this pass right now.
+      propagateIfChanged(argumentLiveness, argumentLiveness->markLive());
+    }
   }
 
   // Now that we have checked for memory-effecting ops in the blocks of concern,
@@ -195,9 +260,13 @@ void LivenessAnalysis::visitBranchOperand(OpOperand &operand) {
   // mark it "live" due to type (1.a/3) liveness.
   SmallVector<Liveness *, 4> operandLiveness;
   operandLiveness.push_back(getLatticeElement(operand.get()));
+  for (BlockArgument argument : argumentNotOperand)
+    operandLiveness.push_back(getLatticeElement(argument));
   SmallVector<const Liveness *, 4> resultsLiveness;
   for (const Value result : op->getResults())
     resultsLiveness.push_back(getLatticeElement(result));
+  LDBG() << "Visiting operation for non-forwarded branch operand: "
+         << OpWithFlags(op, OpPrintingFlags().skipRegions());
   (void)visitOperation(op, operandLiveness, resultsLiveness);
 
   // We also visit the parent op with the parent's results and this operand if
@@ -210,10 +279,14 @@ void LivenessAnalysis::visitBranchOperand(OpOperand &operand) {
   SmallVector<const Liveness *, 4> parentResultsLiveness;
   for (const Value parentResult : parentOp->getResults())
     parentResultsLiveness.push_back(getLatticeElement(parentResult));
+  LDBG() << "Visiting parent operation for non-forwarded branch operand: "
+         << *parentOp;
   (void)visitOperation(parentOp, operandLiveness, parentResultsLiveness);
 }
 
 void LivenessAnalysis::visitCallOperand(OpOperand &operand) {
+  LDBG() << "Visiting call operand: " << operand.get()
+         << " in op: " << *operand.getOwner();
   // We know (at the moment) and assume (for the future) that `operand` is a
   // non-forwarded call operand of an op implementing `CallOpInterface`.
   assert(isa<CallOpInterface>(operand.getOwner()) &&
@@ -226,14 +299,18 @@ void LivenessAnalysis::visitCallOperand(OpOperand &operand) {
   // This marks values of type (1.c) liveness as "live". A non-forwarded
   // call operand is live.
   Liveness *operandLiveness = getLatticeElement(operand.get());
+  LDBG() << "Marking call operand live: " << operand.get();
   propagateIfChanged(operandLiveness, operandLiveness->markLive());
 }
 
 void LivenessAnalysis::setToExitState(Liveness *lattice) {
+  LDBG() << "setToExitState for lattice: " << lattice;
   if (lattice->isLive) {
+    LDBG() << "Lattice already live, nothing to do";
     return;
   }
   // This marks values of type (2) liveness as "live".
+  LDBG() << "Marking lattice live due to exit state";
   (void)lattice->markLive();
   propagateIfChanged(lattice, ChangeResult::Change);
 }
@@ -243,12 +320,39 @@ void LivenessAnalysis::setToExitState(Liveness *lattice) {
 //===----------------------------------------------------------------------===//
 
 RunLivenessAnalysis::RunLivenessAnalysis(Operation *op) {
+  LDBG() << "Constructing RunLivenessAnalysis for op: " << op->getName();
   SymbolTableCollection symbolTable;
 
-  solver.load<DeadCodeAnalysis>();
-  solver.load<SparseConstantPropagation>();
+  loadBaselineAnalyses(solver);
   solver.load<LivenessAnalysis>(symbolTable);
+  LDBG() << "Initializing and running solver";
   (void)solver.initializeAndRun(op);
+  LDBG() << "RunLivenessAnalysis initialized for op: " << op->getName()
+         << " check on unreachable code now:";
+  // The framework doesn't visit operations in dead blocks, so we need to
+  // explicitly mark them as dead.
+  op->walk([&](Operation *op) {
+    for (auto result : llvm::enumerate(op->getResults())) {
+      if (getLiveness(result.value()))
+        continue;
+      LDBG() << "Result: " << result.index() << " of "
+             << OpWithFlags(op, OpPrintingFlags().skipRegions())
+             << " has no liveness info (unreachable), mark dead";
+      solver.getOrCreateState<Liveness>(result.value());
+    }
+    for (auto &region : op->getRegions()) {
+      for (auto &block : region) {
+        for (auto blockArg : llvm::enumerate(block.getArguments())) {
+          if (getLiveness(blockArg.value()))
+            continue;
+          LDBG() << "Block argument: " << blockArg.index() << " of "
+                 << OpWithFlags(op, OpPrintingFlags().skipRegions())
+                 << " has no liveness info, mark dead";
+          solver.getOrCreateState<Liveness>(blockArg.value());
+        }
+      }
+    }
+  });
 }
 
 const Liveness *RunLivenessAnalysis::getLiveness(Value val) {

@@ -10,6 +10,7 @@
 #define LLVM_SUPPORT_ELFCOMPACTATTRPARSER_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/ELFAttributeParser.h"
 #include "llvm/Support/ELFAttributes.h"
@@ -22,7 +23,7 @@ namespace llvm {
 class StringRef;
 class ScopedPrinter;
 
-class ELFCompactAttrParser : public ELFAttributeParser {
+class LLVM_ABI ELFCompactAttrParser : public ELFAttributeParser {
   StringRef vendor;
   std::unordered_map<unsigned, unsigned> attributes;
   std::unordered_map<unsigned, StringRef> attributesStr;
@@ -48,7 +49,7 @@ protected:
   }
 
 public:
-  virtual ~ELFCompactAttrParser() { static_cast<void>(!cursor.takeError()); }
+  ~ELFCompactAttrParser() override { static_cast<void>(!cursor.takeError()); }
   Error integerAttribute(unsigned tag);
   Error stringAttribute(unsigned tag);
 

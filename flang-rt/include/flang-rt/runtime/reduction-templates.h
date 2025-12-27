@@ -347,7 +347,7 @@ inline RT_API_ATTRS void DoMaxMinNorm2(Descriptor &result, const Descriptor &x,
     // as the element size of the source.
     result.Establish(x.type(), x.ElementBytes(), nullptr, 0, nullptr,
         CFI_attribute_allocatable);
-    if (int stat{result.Allocate(kNoAsyncId)}) {
+    if (int stat{result.Allocate(kNoAsyncObject)}) {
       terminator.Crash(
           "%s: could not allocate memory for result; STAT=%d", intrinsic, stat);
     }

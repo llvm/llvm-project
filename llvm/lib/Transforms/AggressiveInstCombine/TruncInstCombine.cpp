@@ -110,7 +110,7 @@ bool TruncInstCombine::buildTruncExpressionGraph() {
       Worklist.pop_back();
       Stack.pop_back();
       // Insert I to the Info map.
-      InstInfoMap.insert(std::make_pair(I, Info()));
+      InstInfoMap.try_emplace(I);
       continue;
     }
 
@@ -459,7 +459,7 @@ void TruncInstCombine::ReduceExpressionGraph(Type *SclTy) {
       Value *Op0 = I->getOperand(0);
       Value *LHS = getReducedOperand(I->getOperand(1), SclTy);
       Value *RHS = getReducedOperand(I->getOperand(2), SclTy);
-      Res = Builder.CreateSelect(Op0, LHS, RHS);
+      Res = Builder.CreateSelect(Op0, LHS, RHS, "", I);
       break;
     }
     case Instruction::PHI: {

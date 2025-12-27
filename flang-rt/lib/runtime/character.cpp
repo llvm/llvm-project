@@ -14,6 +14,7 @@
 #include "flang/Common/uint128.h"
 #include "flang/Runtime/character.h"
 #include "flang/Runtime/cpp-type.h"
+#include "flang/Runtime/freestanding-tools.h"
 #include <algorithm>
 #include <cstring>
 
@@ -117,7 +118,7 @@ static RT_API_ATTRS void Compare(Descriptor &result, const Descriptor &x,
   for (int j{0}; j < rank; ++j) {
     result.GetDimension(j).SetBounds(1, ub[j]);
   }
-  if (result.Allocate(kNoAsyncId) != CFI_SUCCESS) {
+  if (result.Allocate(kNoAsyncObject) != CFI_SUCCESS) {
     terminator.Crash("Compare: could not allocate storage for result");
   }
   std::size_t xChars{x.ElementBytes() >> shift<CHAR>};
@@ -172,7 +173,7 @@ static RT_API_ATTRS void AdjustLRHelper(Descriptor &result,
   for (int j{0}; j < rank; ++j) {
     result.GetDimension(j).SetBounds(1, ub[j]);
   }
-  if (result.Allocate(kNoAsyncId) != CFI_SUCCESS) {
+  if (result.Allocate(kNoAsyncObject) != CFI_SUCCESS) {
     terminator.Crash("ADJUSTL/R: could not allocate storage for result");
   }
   for (SubscriptValue resultAt{0}; elements-- > 0;
@@ -226,7 +227,7 @@ static RT_API_ATTRS void LenTrim(Descriptor &result, const Descriptor &string,
   for (int j{0}; j < rank; ++j) {
     result.GetDimension(j).SetBounds(1, ub[j]);
   }
-  if (result.Allocate(kNoAsyncId) != CFI_SUCCESS) {
+  if (result.Allocate(kNoAsyncObject) != CFI_SUCCESS) {
     terminator.Crash("LEN_TRIM: could not allocate storage for result");
   }
   std::size_t stringElementChars{string.ElementBytes() >> shift<CHAR>};
@@ -289,6 +290,24 @@ inline RT_API_ATTRS std::size_t Index(const CHAR *x, std::size_t xLen,
       }
       if (j > wantLen) {
         return at;
+      }
+    }
+    return 0;
+  }
+  if (wantLen == 1) {
+    // Trivial case for single character lookup.
+    // We can use simple forward search.
+    CHAR ch{want[0]};
+    if constexpr (std::is_same_v<CHAR, char>) {
+      if (auto pos{reinterpret_cast<const CHAR *>(
+              Fortran::runtime::memchr(x, ch, xLen))}) {
+        return pos - x + 1;
+      }
+    } else {
+      for (std::size_t at{0}; at < xLen; ++at) {
+        if (x[at] == ch) {
+          return at + 1;
+        }
       }
     }
     return 0;
@@ -408,8 +427,9 @@ static RT_API_ATTRS void GeneralCharFunc(Descriptor &result,
   for (int j{0}; j < rank; ++j) {
     result.GetDimension(j).SetBounds(1, ub[j]);
   }
-  if (result.Allocate(kNoAsyncId) != CFI_SUCCESS) {
-    terminator.Crash("SCAN/VERIFY: could not allocate storage for result");
+  if (result.Allocate(kNoAsyncObject) != CFI_SUCCESS) {
+    terminator.Crash(
+        "INDEX/SCAN/VERIFY: could not allocate storage for result");
   }
   std::size_t stringElementChars{string.ElementBytes() >> shift<CHAR>};
   std::size_t argElementChars{arg.ElementBytes() >> shift<CHAR>};
@@ -511,7 +531,8 @@ static RT_API_ATTRS void MaxMinHelper(Descriptor &accumulator,
     for (int j{0}; j < rank; ++j) {
       accumulator.GetDimension(j).SetBounds(1, ub[j]);
     }
-    RUNTIME_CHECK(terminator, accumulator.Allocate(kNoAsyncId) == CFI_SUCCESS);
+    RUNTIME_CHECK(
+        terminator, accumulator.Allocate(kNoAsyncObject) == CFI_SUCCESS);
   }
   for (CHAR *result{accumulator.OffsetElement<CHAR>()}; elements-- > 0;
        accumData += accumChars, result += chars, x.IncrementSubscripts(xAt)) {
@@ -587,7 +608,7 @@ void RTDEF(CharacterConcatenate)(Descriptor &accumulator,
   for (int j{0}; j < rank; ++j) {
     accumulator.GetDimension(j).SetBounds(1, ub[j]);
   }
-  if (accumulator.Allocate(kNoAsyncId) != CFI_SUCCESS) {
+  if (accumulator.Allocate(kNoAsyncObject) != CFI_SUCCESS) {
     terminator.Crash(
         "CharacterConcatenate: could not allocate storage for result");
   }
@@ -596,8 +617,8 @@ void RTDEF(CharacterConcatenate)(Descriptor &accumulator,
   from.GetLowerBounds(fromAt);
   for (; elements-- > 0;
        to += newBytes, p += oldBytes, from.IncrementSubscripts(fromAt)) {
-    std::memcpy(to, p, oldBytes);
-    std::memcpy(to + oldBytes, from.Element<char>(fromAt), fromBytes);
+    runtime::memcpy(to, p, oldBytes);
+    runtime::memcpy(to + oldBytes, from.Element<char>(fromAt), fromBytes);
   }
   FreeMemory(old);
 }
@@ -610,7 +631,8 @@ void RTDEF(CharacterConcatenateScalar1)(
   accumulator.set_base_addr(nullptr);
   std::size_t oldLen{accumulator.ElementBytes()};
   accumulator.raw().elem_len += chars;
-  RUNTIME_CHECK(terminator, accumulator.Allocate(kNoAsyncId) == CFI_SUCCESS);
+  RUNTIME_CHECK(
+      terminator, accumulator.Allocate(kNoAsyncObject) == CFI_SUCCESS);
   std::memcpy(accumulator.OffsetElement<char>(oldLen), from, chars);
   FreeMemory(old);
 }
@@ -677,7 +699,7 @@ void RTDEF(CharacterCompare)(
 std::size_t RTDEF(CharacterAppend1)(char *lhs, std::size_t lhsBytes,
     std::size_t offset, const char *rhs, std::size_t rhsBytes) {
   if (auto n{std::min(lhsBytes - offset, rhsBytes)}) {
-    std::memcpy(lhs + offset, rhs, n);
+    runtime::memcpy(lhs + offset, rhs, n);
     offset += n;
   }
   return offset;
@@ -685,7 +707,7 @@ std::size_t RTDEF(CharacterAppend1)(char *lhs, std::size_t lhsBytes,
 
 void RTDEF(CharacterPad1)(char *lhs, std::size_t bytes, std::size_t offset) {
   if (bytes > offset) {
-    std::memset(lhs + offset, ' ', bytes - offset);
+    runtime::memset(lhs + offset, ' ', bytes - offset);
   }
 }
 
@@ -768,7 +790,7 @@ void RTDEF(LenTrim)(Descriptor &result, const Descriptor &string, int kind,
 
 std::size_t RTDEF(Scan1)(const char *x, std::size_t xLen, const char *set,
     std::size_t setLen, bool back) {
-  return ScanVerify<char, CharFunc::Scan>(x, xLen, set, setLen, back);
+  return ScanVerify<false>(x, xLen, set, setLen, back);
 }
 std::size_t RTDEF(Scan2)(const char16_t *x, std::size_t xLen,
     const char16_t *set, std::size_t setLen, bool back) {
@@ -812,12 +834,12 @@ void RTDEF(Repeat)(Descriptor &result, const Descriptor &string,
   std::size_t origBytes{string.ElementBytes()};
   result.Establish(string.type(), origBytes * ncopies, nullptr, 0, nullptr,
       CFI_attribute_allocatable);
-  if (result.Allocate(kNoAsyncId) != CFI_SUCCESS) {
+  if (result.Allocate(kNoAsyncObject) != CFI_SUCCESS) {
     terminator.Crash("REPEAT could not allocate storage for result");
   }
   const char *from{string.OffsetElement()};
   for (char *to{result.OffsetElement()}; ncopies-- > 0; to += origBytes) {
-    std::memcpy(to, from, origBytes);
+    runtime::memcpy(to, from, origBytes);
   }
 }
 
@@ -846,13 +868,13 @@ void RTDEF(Trim)(Descriptor &result, const Descriptor &string,
   }
   result.Establish(string.type(), resultBytes, nullptr, 0, nullptr,
       CFI_attribute_allocatable);
-  RUNTIME_CHECK(terminator, result.Allocate(kNoAsyncId) == CFI_SUCCESS);
+  RUNTIME_CHECK(terminator, result.Allocate(kNoAsyncObject) == CFI_SUCCESS);
   std::memcpy(result.OffsetElement(), string.OffsetElement(), resultBytes);
 }
 
 std::size_t RTDEF(Verify1)(const char *x, std::size_t xLen, const char *set,
     std::size_t setLen, bool back) {
-  return ScanVerify<char, CharFunc::Verify>(x, xLen, set, setLen, back);
+  return ScanVerify<true>(x, xLen, set, setLen, back);
 }
 std::size_t RTDEF(Verify2)(const char16_t *x, std::size_t xLen,
     const char16_t *set, std::size_t setLen, bool back) {

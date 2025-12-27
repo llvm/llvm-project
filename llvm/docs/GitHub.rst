@@ -82,7 +82,8 @@ Updating Pull Requests
 ----------------------
 In order to update your pull request, the only thing you need to do is to push
 your new commits to the branch in your fork. That will automatically update
-the pull request.
+the pull request. You can also use the Update Branch button in GitHub's Pull
+Request UI, but be aware that it will create a merge commit on your branch.
 
 When updating a pull request, you should push additional "fix up" commits to
 your branch instead of force pushing. This makes it easier for GitHub to
@@ -90,10 +91,11 @@ track the context of previous review comments. Consider using the
 `built-in support for fixups <https://git-scm.com/docs/git-commit#Documentation/git-commit.txt---fixupamendrewordltcommitgt>`_
 in git.
 
-If you do this, you must squash and merge before landing the PR and
-you must use the pull request title and description as the commit message.
-You can do this manually with an interactive git rebase or with GitHub's
-built-in tool. See the section about landing your fix below.
+If you create fix up or merge commits, you must squash and merge before
+landing the PR and you must use the pull request title and description as
+the commit message. You can do this manually with an interactive git
+rebase or with GitHub's built-in tool. See the section about landing your
+fix below.
 
 When pushing to your branch, make sure you push to the correct fork. Check your
 remotes with:
@@ -108,7 +110,9 @@ Rebasing Pull Requests and Force Pushes
 ---------------------------------------
 In general, you should avoid rebasing a Pull Request and force pushing to the
 branch that's the root of the Pull Request during the review. This action will
-make the context of the old changes and comments harder to find and read.
+make the context of the old changes and comments harder to find and read. If
+you want to make your pull request up-to-date with main, you might consider
+updating your branch, as described in the previous section.
 
 Sometimes, a rebase might be needed to update your branch with a fix for a test
 or in some dependent code.
@@ -254,16 +258,6 @@ To illustrate, assume that you are working on two branches in your fork of the
 
 Your options are as follows:
 
-#. Two PRs with a dependency note
-
-   Create PR_1 for `feature_1` and PR_2 for `feature_2`. In PR_2, include a
-   note in the PR summary indicating that it depends on PR_1 (e.g.,
-   “Depends on #PR_1”).
-
-   To make review easier, make it clear which commits are part of the base PR
-   and which are new, e.g. "The first N commits are from the base PR". This
-   helps reviewers focus only on the incremental changes.
-
 #. Use user branches in ``llvm/llvm-project``
 
    Create user branches in the main repository, as described
@@ -274,8 +268,22 @@ Your options are as follows:
 
    This approach allows GitHub to display clean, incremental diffs for each PR
    in the stack, making it much easier for reviewers to see what has changed at
-   each step. Once `feature_1` is merged, you can rebase and re-target
-   `feature_2` to `main`.
+   each step. Once `feature_1` is merged, GitHub will automatically rebase and
+   re-target your branch `feature_2` to `main`. For more complex stacks, you can
+   perform this step using the web interface.
+
+   This approach requires commit access. See how to obtain it
+   `here <https://llvm.org/docs/DeveloperPolicy.html#obtaining-commit-access>`_.
+
+#. Two PRs with a dependency note
+
+   Create PR_1 for `feature_1` and PR_2 for `feature_2`. In PR_2, include a
+   note in the PR summary indicating that it depends on PR_1 (e.g.,
+   “Depends on #PR_1”).
+
+   To make review easier, make it clear which commits are part of the base PR
+   and which are new, e.g. "The first N commits are from the base PR". This
+   helps reviewers focus only on the incremental changes.
 
 #. Use a stacked PR tool
 
@@ -288,9 +296,9 @@ Your options are as follows:
    subsequent PRs in a stack. Instead, it will show a combined diff that
    includes all commits from earlier PRs.
 
-   As described in the first option above, in such cases it is the PR author’s
-   responsibility to clearly indicate which commits are relevant to the
-   current PR. For example: “The first N commits are from the base PR.”
+   As described above, it is the PR author’s responsibility to clearly indicate
+   which commits are relevant to the current PR.
+   For example: “The first N commits are from the base PR.”
 
    You can avoid this issue by using user branches directly in the
    ``llvm/llvm-project`` repository.
@@ -445,9 +453,9 @@ interface.
 
 Here is an example of making a PR using git and the GitHub web interface:
 
-First follow the instructions to [fork the repository](https://docs.github.com/en/get-started/quickstart/fork-a-repo?tool=webui#forking-a-repository).
+First follow the instructions to `fork the repository <https://docs.github.com/en/get-started/quickstart/fork-a-repo?tool=webui#forking-a-repository>`_.
 
-Next follow the instructions to [clone your forked repository](https://docs.github.com/en/get-started/quickstart/fork-a-repo?tool=webui#cloning-your-forked-repository).
+Next follow the instructions to `clone your forked repository <https://docs.github.com/en/get-started/quickstart/fork-a-repo?tool=webui#cloning-your-forked-repository>`_.
 
 Once you've cloned your forked repository,
 
@@ -533,6 +541,8 @@ See more in-depth information about how to contribute in the following documenta
 Releases
 ========
 
+.. _backporting:
+
 Backporting Fixes to the Release Branches
 -----------------------------------------
 You can use special comments on issues or pull requests to make backport
@@ -561,8 +571,11 @@ branch.  Just make sure to add the release milestone to the pull request.
 Getting admin access to CI infrastructure
 =========================================
 
-Any individual who is responsible for setting up and/or maintaining CI infrastructure for a LLVM project can
-request to be granted the CI/CD role to the LLVM organization admins. The request can be made by creating
-`a Github issue <https://github.com/llvm/llvm-project/issues/new>`_ and using the ``infrastructure`` label.
-Applicants must include a justification for why the role is being requested. Applications are reviewed on a
-case-by-case basis by the LLVM admins and the role can be revoked at any point as the LLVM admins see fit.
+Any individual who is responsible for setting up and/or maintaining CI
+infrastructure for a LLVM project can request to be granted the CI/CD role by
+the LLVM infrastructure area team. The request can be made by creating `a
+Github issue <https://github.com/llvm/llvm-project/issues/new>`_ and using the
+``infrastructure`` label.  Applicants must include a justification for why the
+role is being requested. Applications are reviewed on a case-by-case basis by
+the LLVM infrastructure area team and the role can be revoked at any point as
+the area team sees fit.

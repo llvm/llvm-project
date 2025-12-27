@@ -37,9 +37,6 @@ public:
 
 private:
   SemanticsContext &context_;
-  bool haveStat_;
-  bool haveTeam_;
-  bool haveTeamNumber_;
 
   void CheckNamesAreDistinct(const std::list<parser::CoarrayAssociation> &);
   void Say2(const parser::CharBlock &, parser::MessageFixedText &&,

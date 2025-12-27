@@ -19,6 +19,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/BinaryFormat/MachO.h"
@@ -38,10 +39,10 @@
 #include "llvm/DebugInfo/DWARF/DWARFDebugLine.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugRangeList.h"
 #include "llvm/DebugInfo/DWARF/DWARFDie.h"
-#include "llvm/DebugInfo/DWARF/DWARFExpression.h"
 #include "llvm/DebugInfo/DWARF/DWARFFormValue.h"
 #include "llvm/DebugInfo/DWARF/DWARFSection.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
+#include "llvm/DebugInfo/DWARF/LowLevel/DWARFExpression.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCCodeEmitter.h"
@@ -89,7 +90,6 @@
 #include <cstdlib>
 #include <cstring>
 #include <limits>
-#include <map>
 #include <memory>
 #include <optional>
 #include <string>
@@ -202,7 +202,6 @@ Error DwarfLinkerForBinary::emitRelocations(
     Obj.OutRelocs->addValidRelocs(RM);
   }
 
-  SmallString<128> InputPath;
   SmallString<128> Path;
   // Create the "Relocations" directory in the "Resources" directory, and
   // create an architecture-specific directory in the "Relocations" directory.
@@ -233,7 +232,6 @@ static Error emitRemarks(const LinkOptions &Options, StringRef BinaryPath,
   if (RL.empty())
     return Error::success();
 
-  SmallString<128> InputPath;
   SmallString<128> Path;
   // Create the "Remarks" directory in the "Resources" directory.
   sys::path::append(Path, *Options.ResourceDir, "Remarks");
@@ -292,6 +290,7 @@ ErrorOr<std::unique_ptr<DWARFFile>> DwarfLinkerForBinary::loadObject(
         [&](StringRef FileName) { BinHolder.eraseObjectEntry(FileName); });
 
     Error E = RL.link(*ErrorOrObj);
+    // FIXME: Remark parsing errors are not propagated to the user.
     if (Error NewE = handleErrors(
             std::move(E), [&](std::unique_ptr<FileError> EC) -> Error {
               return remarksErrorHandler(Obj, *this, std::move(EC));
@@ -771,6 +770,7 @@ bool DwarfLinkerForBinary::linkImpl(
         MaxDWARFVersion = std::max(Unit.getVersion(), MaxDWARFVersion);
       };
 
+  llvm::StringSet<> SwiftModules;
   for (const auto &Obj : Map.objects()) {
     // N_AST objects (swiftmodule files) should get dumped directly into the
     // appropriate DWARF section.
@@ -779,6 +779,9 @@ bool DwarfLinkerForBinary::linkImpl(
         outs() << "DEBUG MAP OBJECT: " << Obj->getObjectFilename() << "\n";
 
       StringRef File = Obj->getObjectFilename();
+      if (!SwiftModules.insert(File).second)
+        continue;
+
       auto ErrorOrMem = MemoryBuffer::getFile(File);
       if (!ErrorOrMem) {
         reportWarning("Could not open '" + File + "'");
@@ -790,9 +793,10 @@ bool DwarfLinkerForBinary::linkImpl(
         reportWarning("Could not parse binary Swift module: " +
                           toString(FromInterfaceOrErr.takeError()),
                       Obj->getObjectFilename());
-        // Only skip swiftmodules that could be parsed and are
-        // positively identified as textual.
-      } else if (*FromInterfaceOrErr) {
+        // Only skip swiftmodules that could be parsed and are positively
+        // identified as textual. Do so only when the option allows.
+      } else if (*FromInterfaceOrErr &&
+                 !Options.IncludeSwiftModulesFromInterface) {
         if (Options.Verbose)
           outs() << "Skipping compiled textual Swift interface: "
                  << Obj->getObjectFilename() << "\n";

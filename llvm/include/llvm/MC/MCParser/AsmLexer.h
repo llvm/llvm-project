@@ -17,10 +17,10 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCAsmMacro.h"
+#include "llvm/Support/Compiler.h"
 #include <cassert>
 #include <cstddef>
 #include <string>
-#include <utility>
 
 namespace llvm {
 
@@ -44,6 +44,7 @@ class AsmLexer {
   SmallVector<AsmToken, 1> CurTok;
 
   const char *CurPtr = nullptr;
+  /// NULL-terminated buffer. NULL terminator must reside at `CurBuf.end()`.
   StringRef CurBuf;
 
   /// The location and description of the current error
@@ -72,7 +73,7 @@ class AsmLexer {
   bool LexHLASMStrings = false;
   AsmCommentConsumer *CommentConsumer = nullptr;
 
-  AsmToken LexToken();
+  LLVM_ABI AsmToken LexToken();
 
   void SetError(SMLoc errLoc, const std::string &err) {
     ErrLoc = errLoc;
@@ -80,7 +81,7 @@ class AsmLexer {
   }
 
 public:
-  AsmLexer(const MCAsmInfo &MAI);
+  LLVM_ABI AsmLexer(const MCAsmInfo &MAI);
   AsmLexer(const AsmLexer &) = delete;
   AsmLexer &operator=(const AsmLexer &) = delete;
 
@@ -108,7 +109,7 @@ public:
 
   bool justConsumedEOL() { return JustConsumedEOL; }
 
-  StringRef LexUntilEndOfStatement();
+  LLVM_ABI StringRef LexUntilEndOfStatement();
 
   /// Get the current source location.
   SMLoc getLoc() const { return SMLoc::getFromPointer(TokStart); }
@@ -130,7 +131,8 @@ public:
   }
 
   /// Look ahead an arbitrary number of tokens.
-  size_t peekTokens(MutableArrayRef<AsmToken> Buf, bool ShouldSkipSpace = true);
+  LLVM_ABI size_t peekTokens(MutableArrayRef<AsmToken> Buf,
+                             bool ShouldSkipSpace = true);
 
   /// Get the current error location
   SMLoc getErrLoc() { return ErrLoc; }
@@ -189,8 +191,14 @@ public:
   /// literals.
   void setLexHLASMStrings(bool V) { LexHLASMStrings = V; }
 
-  void setBuffer(StringRef Buf, const char *ptr = nullptr,
-                 bool EndStatementAtEOF = true);
+  /// Set buffer to be lexed.
+  /// `Buf` must be NULL-terminated. NULL terminator must reside at `Buf.end()`.
+  /// `ptr` if provided must be in range [`Buf.begin()`, `buf.end()`] or NULL.
+  /// Specifies where lexing of buffer should begin.
+  /// `EndStatementAtEOF` specifies whether `AsmToken::EndOfStatement` should be
+  /// returned upon reaching end of buffer.
+  LLVM_ABI void setBuffer(StringRef Buf, const char *ptr = nullptr,
+                          bool EndStatementAtEOF = true);
 
   const MCAsmInfo &getMAI() const { return MAI; }
 
@@ -212,8 +220,6 @@ private:
 
   StringRef LexUntilEndOfLine();
 };
-
-using MCAsmLexer = AsmLexer;
 
 } // end namespace llvm
 

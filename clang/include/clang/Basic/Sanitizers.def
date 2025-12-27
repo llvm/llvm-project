@@ -195,6 +195,9 @@ SANITIZER_GROUP("bounds", Bounds, ArrayBounds | LocalBounds)
 // Scudo hardened allocator
 SANITIZER("scudo", Scudo)
 
+// AllocToken
+SANITIZER("alloc-token", AllocToken)
+
 // Magic group, containing all sanitizers. For example, "-fno-sanitize=all"
 // can be used to disable all the sanitizers.
 SANITIZER_GROUP("all", All, ~SanitizerMask())

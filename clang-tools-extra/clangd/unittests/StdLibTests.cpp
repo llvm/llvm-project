@@ -13,9 +13,11 @@
 #include "Config.h"
 #include "SyncAPI.h"
 #include "TestFS.h"
+#include "index/Index.h"
 #include "index/StdLib.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceManager.h"
+#include "llvm/Testing/Support/Error.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <memory>
@@ -156,6 +158,52 @@ TEST(StdLibTests, EndToEnd) {
   EXPECT_THAT(
       Completions.Completions,
       UnorderedElementsAre(StdlibSymbol("list"), StdlibSymbol("vector")));
+}
+
+TEST(StdLibTests, StdLibDocComments) {
+  Config Cfg;
+  Cfg.Index.StandardLibrary = true;
+  WithContextValue Enabled(Config::Key, std::move(Cfg));
+
+  MockFS FS;
+  FS.Files["stdlib/vector"] = R"cpp(
+    namespace std {
+      struct vector {
+        /**doc comment*/
+        struct inner {};
+      };
+    }
+  )cpp";
+  MockCompilationDatabase CDB;
+  CDB.ExtraClangFlags.push_back("-isystem" + testPath("stdlib"));
+  ClangdServer::Options Opts = ClangdServer::optsForTest();
+  Opts.BuildDynamicSymbolIndex = true; // also used for stdlib index
+  ClangdServer Server(CDB, FS, Opts);
+
+  // Open an empty file. <vector> will not be part of the preamble index,
+  // but it will be part of the stdlib index.
+  Server.addDocument(testPath("foo.cc"), "");
+
+  // Wait for the stdlib index to be built.
+  ASSERT_TRUE(Server.blockUntilIdleForTest());
+
+  // Check that the index contains the doc comment.
+  SymbolSlab Result;
+  EXPECT_THAT_ERROR(runCustomAction(Server, testPath("foo.cc"),
+                                    [&](InputsAndAST Inputs) {
+                                      FuzzyFindRequest Req;
+                                      Req.Query = "inner";
+                                      Req.Scopes = {"std::vector::"};
+                                      SymbolSlab::Builder Builder;
+                                      Inputs.Inputs.Index->fuzzyFind(
+                                          Req, [&](const Symbol &Sym) {
+                                            Builder.insert(Sym);
+                                          });
+                                      Result = std::move(Builder).build();
+                                    }),
+                    llvm::Succeeded());
+  ASSERT_EQ(Result.size(), 1u);
+  EXPECT_EQ(Result.begin()->Documentation, "doc comment");
 }
 
 } // namespace

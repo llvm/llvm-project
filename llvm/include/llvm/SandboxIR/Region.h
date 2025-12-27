@@ -9,6 +9,7 @@
 #ifndef LLVM_SANDBOXIR_REGION_H
 #define LLVM_SANDBOXIR_REGION_H
 
+#include "llvm/Support/Compiler.h"
 #include <memory>
 
 #include "llvm/ADT/SetVector.h"
@@ -30,7 +31,7 @@ class ScoreBoard {
   /// The cost of all instructions that got removed and replaced by new ones.
   InstructionCost BeforeCost = 0;
   /// Helper for both add() and remove(). \Returns the TTI cost of \p I.
-  InstructionCost getCost(Instruction *I) const;
+  LLVM_ABI InstructionCost getCost(Instruction *I) const;
   /// No need to allow copies.
   ScoreBoard(const ScoreBoard &) = delete;
   const ScoreBoard &operator=(const ScoreBoard &) = delete;
@@ -40,7 +41,7 @@ public:
   /// Mark \p I as a newly added instruction to the region.
   void add(Instruction *I) { AfterCost += getCost(I); }
   /// Mark \p I as a deleted instruction from the region.
-  void remove(Instruction *I);
+  LLVM_ABI void remove(Instruction *I);
   /// \Returns the cost of the newly added instructions.
   InstructionCost getAfterCost() const { return AfterCost; }
   /// \Returns the cost of the Removed instructions.
@@ -114,10 +115,20 @@ class Region {
   /// ID (for later deregistration) of the "erase instruction" callback.
   Context::CallbackID EraseInstCB;
 
-  /// Adds I to the set.
-  void add(Instruction *I);
+  /// Adds \p I to the set but also don't track the instruction's score if \p
+  /// IgnoreCost is true. Only to be used when adding an instruction to the
+  /// auxiliary vector.
+  /// NOTE: When an instruction is added to the region we track it cost in the
+  /// scoreboard, which currently resides in the region class. However, when we
+  /// add an instruction to the auxiliary vector it does get tagged as being a
+  /// member of the region (for ownership reasons), but its cost does not get
+  /// counted because the instruction hasn't been added in the "normal" way.
+  LLVM_ABI void addImpl(Instruction *I, bool IgnoreCost);
+  /// Adds I to the set. This is the main API for adding an instruction to the
+  /// region.
+  void add(Instruction *I) { addImpl(I, /*IgnoreCost=*/false); }
   /// Removes I from the set.
-  void remove(Instruction *I);
+  LLVM_ABI void remove(Instruction *I);
   friend class Context; // The callbacks need to call add() and remove().
   friend class RegionInternalsAttorney; // For unit tests.
   friend class RegionsFromBBs;          // For add().
@@ -131,8 +142,8 @@ class Region {
   void removeFromAux(Instruction *I);
 
 public:
-  Region(Context &Ctx, TargetTransformInfo &TTI);
-  ~Region();
+  LLVM_ABI Region(Context &Ctx, TargetTransformInfo &TTI);
+  LLVM_ABI ~Region();
 
   Context &getContext() const { return Ctx; }
   /// Returns true if I is in the Region.
@@ -140,28 +151,28 @@ public:
   /// Returns true if the Region has no instructions.
   bool empty() const { return Insts.empty(); }
   /// Set the auxiliary vector.
-  void setAux(ArrayRef<Instruction *> Aux);
+  LLVM_ABI void setAux(ArrayRef<Instruction *> Aux);
   /// \Returns the auxiliary vector.
   const SmallVector<Instruction *> &getAux() const { return Aux; }
   /// Clears all auxiliary data.
-  void clearAux();
+  LLVM_ABI void clearAux();
 
   using iterator = decltype(Insts.begin());
   iterator begin() { return Insts.begin(); }
   iterator end() { return Insts.end(); }
   iterator_range<iterator> insts() { return make_range(begin(), end()); }
 
-  static SmallVector<std::unique_ptr<Region>>
+  LLVM_ABI static SmallVector<std::unique_ptr<Region>>
   createRegionsFromMD(Function &F, TargetTransformInfo &TTI);
   /// \Returns the ScoreBoard data structure that keeps track of instr costs.
   const ScoreBoard &getScoreboard() const { return Scoreboard; }
 
 #ifndef NDEBUG
   /// This is an expensive check, meant for testing.
-  bool operator==(const Region &Other) const;
+  LLVM_ABI_FOR_TEST bool operator==(const Region &Other) const;
   bool operator!=(const Region &other) const { return !(*this == other); }
 
-  void dump(raw_ostream &OS) const;
+  LLVM_ABI_FOR_TEST void dump(raw_ostream &OS) const;
   void dump() const;
   friend raw_ostream &operator<<(raw_ostream &OS, const Region &Rgn) {
     Rgn.dump(OS);

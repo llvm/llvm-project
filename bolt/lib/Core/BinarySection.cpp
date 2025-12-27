@@ -112,8 +112,10 @@ void BinarySection::emitAsData(MCStreamer &Streamer,
       RI = ROE;
 
       // Skip undefined symbols.
-      auto HasUndefSym = [this](const auto &Relocation) {
-        return BC.UndefinedSymbols.count(Relocation.Symbol);
+      auto HasUndefSym = [](const auto &Relocation) {
+        return Relocation.Symbol && Relocation.Symbol->isTemporary() &&
+               Relocation.Symbol->isUndefined() &&
+               !Relocation.Symbol->isRegistered();
       };
 
       if (std::any_of(ROI, ROE, HasUndefSym))
@@ -185,16 +187,6 @@ void BinarySection::flushPendingRelocations(raw_pwrite_stream &OS,
     if (Reloc.isOptional() &&
         !Relocation::canEncodeValue(Reloc.Type, Value,
                                     SectionAddress + Reloc.Offset)) {
-
-      // A successful run of 'scanExternalRefs' means that all pending
-      // relocations are flushed. Otherwise, PatchEntries should run.
-      if (!opts::ForcePatch) {
-        BC.errs()
-            << "BOLT-ERROR: cannot encode relocation for symbol "
-            << Reloc.Symbol->getName()
-            << " as it is out-of-range. To proceed must use -force-patch\n";
-        exit(1);
-      }
 
       ++SkippedPendingRelocations;
       continue;

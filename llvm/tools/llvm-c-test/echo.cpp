@@ -823,9 +823,11 @@ struct FunCloner {
       }
       case LLVMICmp: {
         LLVMIntPredicate Pred = LLVMGetICmpPredicate(Src);
+        LLVMBool IsSameSign = LLVMGetICmpSameSign(Src);
         LLVMValueRef LHS = CloneValue(LLVMGetOperand(Src, 0));
         LLVMValueRef RHS = CloneValue(LLVMGetOperand(Src, 1));
         Dst = LLVMBuildICmp(Builder, Pred, LHS, RHS, Name);
+        LLVMSetICmpSameSign(Dst, IsSameSign);
         break;
       }
       case LLVMPHI: {
@@ -984,9 +986,10 @@ struct FunCloner {
         for (unsigned i = 0; i < NumMaskElts; i++) {
           int Val = LLVMGetMaskValue(Src, i);
           if (Val == LLVMGetUndefMaskElem()) {
-            MaskElts.push_back(LLVMGetUndef(LLVMInt64Type()));
+            MaskElts.push_back(LLVMGetUndef(LLVMInt64TypeInContext(Ctx)));
           } else {
-            MaskElts.push_back(LLVMConstInt(LLVMInt64Type(), Val, true));
+            MaskElts.push_back(
+                LLVMConstInt(LLVMInt64TypeInContext(Ctx), Val, true));
           }
         }
         LLVMValueRef Mask = LLVMConstVector(MaskElts.data(), NumMaskElts);
@@ -1113,7 +1116,8 @@ struct FunCloner {
     if (Name != VName)
       report_fatal_error("Basic block name mismatch");
 
-    LLVMBasicBlockRef BB = LLVMAppendBasicBlock(Fun, Name);
+    LLVMContextRef Ctx = LLVMGetModuleContext(M);
+    LLVMBasicBlockRef BB = LLVMAppendBasicBlockInContext(Ctx, Fun, Name);
     return BBMap[Src] = BB;
   }
 

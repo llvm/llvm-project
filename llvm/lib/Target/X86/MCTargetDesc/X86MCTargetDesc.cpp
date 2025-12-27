@@ -17,6 +17,7 @@
 #include "X86IntelInstPrinter.h"
 #include "X86MCAsmInfo.h"
 #include "X86TargetStreamer.h"
+#include "llvm-c/Visibility.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/MC/MCDwarf.h"
@@ -47,18 +48,21 @@ std::string X86_MC::ParseX86Triple(const Triple &TT) {
   std::string FS;
   // SSE2 should default to enabled in 64-bit mode, but can be turned off
   // explicitly.
-  if (TT.isArch64Bit())
+  if (TT.isX86_64())
     FS = "+64bit-mode,-32bit-mode,-16bit-mode,+sse2";
   else if (TT.getEnvironment() != Triple::CODE16)
     FS = "-64bit-mode,+32bit-mode,-16bit-mode";
   else
     FS = "-64bit-mode,-32bit-mode,+16bit-mode";
 
+  if (TT.isX32())
+    FS += ",+x32";
+
   return FS;
 }
 
 unsigned X86_MC::getDwarfRegFlavour(const Triple &TT, bool isEH) {
-  if (TT.getArch() == Triple::x86_64)
+  if (TT.isX86_64())
     return DWARFFlavour::X86_64;
 
   if (TT.isOSDarwin())
@@ -396,18 +400,6 @@ MCSubtargetInfo *X86_MC::createX86MCSubtargetInfo(const Triple &TT,
   if (CPU.empty())
     CPU = "generic";
 
-  size_t posNoEVEX512 = FS.rfind("-evex512");
-  // Make sure we won't be cheated by "-avx512fp16".
-  size_t posNoAVX512F =
-      FS.ends_with("-avx512f") ? FS.size() - 8 : FS.rfind("-avx512f,");
-  size_t posEVEX512 = FS.rfind("+evex512");
-  size_t posAVX512F = FS.rfind("+avx512"); // Any AVX512XXX will enable AVX512F.
-
-  if (posAVX512F != StringRef::npos &&
-      (posNoAVX512F == StringRef::npos || posNoAVX512F < posAVX512F))
-    if (posEVEX512 == StringRef::npos && posNoEVEX512 == StringRef::npos)
-      ArchFS += ",+evex512";
-
   return createX86MCSubtargetInfoImpl(TT, CPU, /*TuneCPU*/ CPU, ArchFS);
 }
 
@@ -418,9 +410,8 @@ static MCInstrInfo *createX86MCInstrInfo() {
 }
 
 static MCRegisterInfo *createX86MCRegisterInfo(const Triple &TT) {
-  unsigned RA = (TT.getArch() == Triple::x86_64)
-                    ? X86::RIP  // Should have dwarf #16.
-                    : X86::EIP; // Should have dwarf #8.
+  unsigned RA = TT.isX86_64() ? X86::RIP  // Should have dwarf #16.
+                              : X86::EIP; // Should have dwarf #8.
 
   MCRegisterInfo *X = new MCRegisterInfo();
   InitX86MCRegisterInfo(X, RA, X86_MC::getDwarfRegFlavour(TT, false),
@@ -432,7 +423,7 @@ static MCRegisterInfo *createX86MCRegisterInfo(const Triple &TT) {
 static MCAsmInfo *createX86MCAsmInfo(const MCRegisterInfo &MRI,
                                      const Triple &TheTriple,
                                      const MCTargetOptions &Options) {
-  bool is64Bit = TheTriple.getArch() == Triple::x86_64;
+  bool is64Bit = TheTriple.isX86_64();
 
   MCAsmInfo *MAI;
   if (TheTriple.isOSBinFormatMachO()) {
@@ -500,7 +491,7 @@ namespace X86_MC {
 class X86MCInstrAnalysis : public MCInstrAnalysis {
   X86MCInstrAnalysis(const X86MCInstrAnalysis &) = delete;
   X86MCInstrAnalysis &operator=(const X86MCInstrAnalysis &) = delete;
-  virtual ~X86MCInstrAnalysis() = default;
+  ~X86MCInstrAnalysis() override = default;
 
 public:
   X86MCInstrAnalysis(const MCInstrInfo *MCII) : MCInstrAnalysis(MCII) {}
@@ -544,7 +535,7 @@ bool X86MCInstrAnalysis::clearsSuperRegisters(const MCRegisterInfo &MRI,
   const MCRegisterClass &VR128XRC = MRI.getRegClass(X86::VR128XRegClassID);
   const MCRegisterClass &VR256XRC = MRI.getRegClass(X86::VR256XRegClassID);
 
-  auto ClearsSuperReg = [=](unsigned RegID) {
+  auto ClearsSuperReg = [=](MCRegister RegID) {
     // On X86-64, a general purpose integer register is viewed as a 64-bit
     // register internal to the processor.
     // An update to the lower 32 bits of a 64 bit integer register is

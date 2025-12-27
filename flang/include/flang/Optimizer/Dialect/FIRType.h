@@ -47,14 +47,26 @@ public:
   /// Returns the element type of this box type.
   mlir::Type getEleTy() const;
 
+  /// Get the raw address type of the memory described by the box.
+  mlir::Type getBaseAddressType() const;
+
   /// Unwrap element type from fir.heap, fir.ptr and fir.array.
   mlir::Type unwrapInnerType() const;
+
+  // Get the element type or the fir.array
+  mlir::Type getElementOrSequenceType() const;
 
   /// Is this the box for an assumed rank?
   bool isAssumedRank() const;
 
   /// Is this a box for a pointer?
   bool isPointer() const;
+
+  /// Does this box for a pointer or allocatable?
+  bool isPointerOrAllocatable() const;
+
+  /// Is this a box describing volatile memory?
+  bool isVolatile() const;
 
   /// Return the same type, except for the shape, that is taken the shape
   /// of shapeMold.
@@ -380,6 +392,9 @@ bool isPolymorphicType(mlir::Type ty);
 /// value.
 bool isUnlimitedPolymorphicType(mlir::Type ty);
 
+/// Return true if CLASS(*)
+bool isClassStarType(mlir::Type ty);
+
 /// Return true iff `ty` is the type of an assumed type. In FIR,
 /// assumed types are of the form `[fir.ref|ptr|heap]fir.box<[fir.array]none>`,
 /// or `fir.ref|ptr|heap<[fir.array]none>`.
@@ -456,6 +471,10 @@ inline mlir::Type wrapInClassOrBoxType(mlir::Type eleTy,
     return fir::ClassType::get(eleTy);
   return fir::BoxType::get(eleTy);
 }
+
+/// Re-create the given type with the given volatility, if this is a type
+/// that can represent volatility.
+mlir::Type updateTypeWithVolatility(mlir::Type type, bool isVolatile);
 
 /// Return the elementType where intrinsic types are replaced with none for
 /// unlimited polymorphic entities.
@@ -538,6 +557,7 @@ std::optional<std::pair<uint64_t, unsigned short>>
 getTypeSizeAndAlignment(mlir::Location loc, mlir::Type ty,
                         const mlir::DataLayout &dl,
                         const fir::KindMapping &kindMap);
+
 } // namespace fir
 
 #endif // FORTRAN_OPTIMIZER_DIALECT_FIRTYPE_H

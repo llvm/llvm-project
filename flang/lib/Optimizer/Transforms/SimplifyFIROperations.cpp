@@ -88,18 +88,18 @@ mlir::LogicalResult IsContiguousBoxCoversion::matchAndRewrite(
     // The scalar cases are supposed to be optimized by the canonicalization.
     if (rank == 1 || (op.getInnermost() && rank > 0)) {
       mlir::Type idxTy = builder.getIndexType();
-      auto eleSize = builder.create<fir::BoxEleSizeOp>(loc, idxTy, box);
+      auto eleSize = fir::BoxEleSizeOp::create(builder, loc, idxTy, box);
       mlir::Value zero = fir::factory::createZeroValue(builder, loc, idxTy);
       auto dimInfo =
-          builder.create<fir::BoxDimsOp>(loc, idxTy, idxTy, idxTy, box, zero);
+          fir::BoxDimsOp::create(builder, loc, idxTy, idxTy, idxTy, box, zero);
       mlir::Value stride = dimInfo.getByteStride();
-      mlir::Value pred1 = builder.create<mlir::arith::CmpIOp>(
-          loc, mlir::arith::CmpIPredicate::eq, eleSize, stride);
+      mlir::Value pred1 = mlir::arith::CmpIOp::create(
+          builder, loc, mlir::arith::CmpIPredicate::eq, eleSize, stride);
       mlir::Value extent = dimInfo.getExtent();
-      mlir::Value pred2 = builder.create<mlir::arith::CmpIOp>(
-          loc, mlir::arith::CmpIPredicate::eq, extent, zero);
+      mlir::Value pred2 = mlir::arith::CmpIOp::create(
+          builder, loc, mlir::arith::CmpIPredicate::eq, extent, zero);
       mlir::Value result =
-          builder.create<mlir::arith::OrIOp>(loc, pred1, pred2);
+          mlir::arith::OrIOp::create(builder, loc, pred1, pred2);
       result = builder.createConvert(loc, op.getType(), result);
       rewriter.replaceOp(op, result);
       return mlir::success();
@@ -149,6 +149,17 @@ mlir::LogicalResult BoxTotalElementsConversion::matchAndRewrite(
 
 class DoConcurrentConversion
     : public mlir::OpRewritePattern<fir::DoConcurrentOp> {
+  /// Looks up from the operation from and returns the LocalitySpecifierOp with
+  /// name symbolName
+  static fir::LocalitySpecifierOp
+  findLocalizer(mlir::Operation *from, mlir::SymbolRefAttr symbolName) {
+    fir::LocalitySpecifierOp localizer =
+        mlir::SymbolTable::lookupNearestSymbolFrom<fir::LocalitySpecifierOp>(
+            from, symbolName);
+    assert(localizer && "localizer not found in the symbol table");
+    return localizer;
+  }
+
 public:
   using mlir::OpRewritePattern<fir::DoConcurrentOp>::OpRewritePattern;
 
@@ -162,7 +173,86 @@ public:
     assert(loop.getRegion().hasOneBlock());
     mlir::Block &loopBlock = loop.getRegion().getBlocks().front();
 
-    // Collect iteration variable(s) allocations do that we can move them
+    // Handle localization
+    if (!loop.getLocalVars().empty()) {
+      mlir::OpBuilder::InsertionGuard guard(rewriter);
+      rewriter.setInsertionPointToStart(&loop.getRegion().front());
+
+      std::optional<mlir::ArrayAttr> localSyms = loop.getLocalSyms();
+
+      for (auto localInfo : llvm::zip_equal(
+               loop.getLocalVars(), loop.getRegionLocalArgs(), *localSyms)) {
+        mlir::Value localVar = std::get<0>(localInfo);
+        mlir::BlockArgument localArg = std::get<1>(localInfo);
+        mlir::Attribute localizerSym = std::get<2>(localInfo);
+        mlir::SymbolRefAttr localizerName =
+            llvm::cast<mlir::SymbolRefAttr>(localizerSym);
+        fir::LocalitySpecifierOp localizer = findLocalizer(loop, localizerName);
+
+        // TODO Should this be a heap allocation instead? For now, we allocate
+        // on the stack for each loop iteration.
+        mlir::Value localAlloc =
+            fir::AllocaOp::create(rewriter, loop.getLoc(), localizer.getType());
+
+        auto cloneLocalizerRegion = [&](mlir::Region &region,
+                                        mlir::ValueRange regionArgs,
+                                        mlir::Block::iterator insertionPoint) {
+          // It is reasonable to make this assumption since, at this stage,
+          // control-flow ops are not converted yet. Therefore, things like `if`
+          // conditions will still be represented by their encapsulating `fir`
+          // dialect ops.
+          assert(region.hasOneBlock() &&
+                 "Expected localizer region to have a single block.");
+          mlir::OpBuilder::InsertionGuard guard(rewriter);
+          rewriter.setInsertionPoint(rewriter.getInsertionBlock(),
+                                     insertionPoint);
+          mlir::IRMapping mapper;
+          mapper.map(region.getArguments(), regionArgs);
+          for (mlir::Operation &op : region.front().without_terminator())
+            (void)rewriter.clone(op, mapper);
+
+          auto yield = mlir::cast<fir::YieldOp>(region.front().getTerminator());
+          assert(yield.getResults().size() < 2);
+
+          return yield.getResults().empty()
+                     ? mlir::Value{}
+                     : mapper.lookup(yield.getResults()[0]);
+        };
+
+        if (!localizer.getInitRegion().empty()) {
+          // Prefer the value yielded from the init region to the allocated
+          // private variable in case the region is operating on arguments
+          // by-value (e.g. Fortran character boxes).
+          localAlloc = cloneLocalizerRegion(localizer.getInitRegion(),
+                                            {localVar, localAlloc},
+                                            rewriter.getInsertionPoint());
+          assert(localAlloc);
+        }
+
+        if (localizer.getLocalitySpecifierType() ==
+            fir::LocalitySpecifierType::LocalInit)
+          cloneLocalizerRegion(localizer.getCopyRegion(),
+                               {localVar, localAlloc},
+                               rewriter.getInsertionPoint());
+
+        if (!localizer.getDeallocRegion().empty())
+          cloneLocalizerRegion(localizer.getDeallocRegion(), {localAlloc},
+                               rewriter.getInsertionBlock()->end());
+
+        rewriter.replaceAllUsesWith(localArg, localAlloc);
+      }
+
+      loop.getRegion().front().eraseArguments(loop.getNumInductionVars(),
+                                              loop.getNumLocalOperands());
+      loop.getLocalVarsMutable().clear();
+      loop.setLocalSymsAttr(nullptr);
+    }
+
+    for (auto [reduceVar, reduceArg] :
+         llvm::zip_equal(loop.getReduceVars(), loop.getRegionReduceArgs()))
+      rewriter.replaceAllUsesWith(reduceArg, reduceVar);
+
+    // Collect iteration variable(s) allocations so that we can move them
     // outside the `fir.do_concurrent` wrapper.
     llvm::SmallVector<mlir::Operation *> opsToMove;
     for (mlir::Operation &op : llvm::drop_end(wrapperBlock))
@@ -182,14 +272,18 @@ public:
     for (auto [lb, ub, st, iv] :
          llvm::zip_equal(loop.getLowerBound(), loop.getUpperBound(),
                          loop.getStep(), *loop.getLoopInductionVars())) {
-      innermostUnorderdLoop = rewriter.create<fir::DoLoopOp>(
-          doConcurentOp.getLoc(), lb, ub, st,
+      innermostUnorderdLoop = fir::DoLoopOp::create(
+          rewriter, doConcurentOp.getLoc(), lb, ub, st,
           /*unordred=*/true, /*finalCountValue=*/false,
-          /*iterArgs=*/std::nullopt, loop.getReduceOperands(),
+          /*iterArgs=*/mlir::ValueRange{}, loop.getReduceVars(),
           loop.getReduceAttrsAttr());
       ivArgs.push_back(innermostUnorderdLoop.getInductionVar());
       rewriter.setInsertionPointToStart(innermostUnorderdLoop.getBody());
     }
+
+    loop.getRegion().front().eraseArguments(loop.getNumInductionVars() +
+                                                loop.getNumLocalOperands(),
+                                            loop.getNumReduceOperands());
 
     rewriter.inlineBlockBefore(
         &loopBlock, innermostUnorderdLoop.getBody()->getTerminator(), ivArgs);

@@ -26,6 +26,7 @@
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Transforms/Scalar.h"
 #include <optional>
 
@@ -174,11 +175,13 @@ static Reloc::Model getEffectiveRelocModel(std::optional<Reloc::Model> RM) {
   return RM.value_or(Reloc::Static);
 }
 
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeHexagonTarget() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializeHexagonTarget() {
   // Register the target.
   RegisterTargetMachine<HexagonTargetMachine> X(getTheHexagonTarget());
 
   PassRegistry &PR = *PassRegistry::getPassRegistry();
+  initializeHexagonAsmPrinterPass(PR);
   initializeHexagonBitSimplifyPass(PR);
   initializeHexagonConstExtendersPass(PR);
   initializeHexagonConstPropagationPass(PR);
@@ -217,6 +220,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeHexagonTarget() {
   initializeHexagonPeepholePass(PR);
   initializeHexagonSplitConst32AndConst64Pass(PR);
   initializeHexagonVectorPrintPass(PR);
+  initializeHexagonQFPOptimizerPass(PR);
 }
 
 HexagonTargetMachine::HexagonTargetMachine(const Target &T, const Triple &TT,
@@ -228,14 +232,10 @@ HexagonTargetMachine::HexagonTargetMachine(const Target &T, const Triple &TT,
     // Specify the vector alignment explicitly. For v512x1, the calculated
     // alignment would be 512*alignment(i1), which is 512 bytes, instead of
     // the required minimum of 64 bytes.
-    : CodeGenTargetMachineImpl(
-          T,
-          "e-m:e-p:32:32:32-a:0-n16:32-"
-          "i64:64:64-i32:32:32-i16:16:16-i1:8:8-f32:32:32-f64:64:64-"
-          "v32:32:32-v64:64:64-v512:512:512-v1024:1024:1024-v2048:2048:2048",
-          TT, CPU, FS, Options, getEffectiveRelocModel(RM),
-          getEffectiveCodeModel(CM, CodeModel::Small),
-          (HexagonNoOpt ? CodeGenOptLevel::None : OL)),
+    : CodeGenTargetMachineImpl(T, TT.computeDataLayout(), TT, CPU, FS, Options,
+                               getEffectiveRelocModel(RM),
+                               getEffectiveCodeModel(CM, CodeModel::Small),
+                               (HexagonNoOpt ? CodeGenOptLevel::None : OL)),
       TLOF(std::make_unique<HexagonTargetObjectFile>()),
       Subtarget(Triple(TT), CPU, FS, *this) {
   initAsmInfo();
@@ -251,13 +251,6 @@ HexagonTargetMachine::getSubtargetImpl(const Function &F) const {
       CPUAttr.isValid() ? CPUAttr.getValueAsString().str() : TargetCPU;
   std::string FS =
       FSAttr.isValid() ? FSAttr.getValueAsString().str() : TargetFS;
-  // Append the preexisting target features last, so that +mattr overrides
-  // the "unsafe-fp-math" function attribute.
-  // Creating a separate target feature is not strictly necessary, it only
-  // exists to make "unsafe-fp-math" force creating a new subtarget.
-
-  if (F.getFnAttribute("unsafe-fp-math").getValueAsBool())
-    FS = FS.empty() ? "+unsafe-fp" : "+unsafe-fp," + FS;
 
   auto &I = SubtargetMap[CPU + FS];
   if (!I) {
@@ -394,6 +387,7 @@ bool HexagonPassConfig::addInstSelector() {
       addPass(createHexagonGenInsert());
     if (EnableEarlyIf)
       addPass(createHexagonEarlyIfConversion());
+    addPass(createHexagonQFPOptimizer());
   }
 
   return false;

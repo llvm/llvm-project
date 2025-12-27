@@ -10,6 +10,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/CodeGen/LiveIntervals.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
@@ -423,7 +424,7 @@ void ModuloScheduleExpander::generateExistingPhis(
     // potentially define two values.
     unsigned MaxPhis = PrologStage + 2;
     if (!InKernel && (int)PrologStage <= LoopValStage)
-      MaxPhis = std::max((int)MaxPhis - (int)LoopValStage, 1);
+      MaxPhis = std::max((int)MaxPhis - LoopValStage, 1);
     unsigned NumPhis = std::min(NumStages, MaxPhis);
 
     Register NewReg;
@@ -859,20 +860,6 @@ void ModuloScheduleExpander::splitLifetimes(MachineBasicBlock *KernelBB,
   }
 }
 
-/// Remove the incoming block from the Phis in a basic block.
-static void removePhis(MachineBasicBlock *BB, MachineBasicBlock *Incoming) {
-  for (MachineInstr &MI : *BB) {
-    if (!MI.isPHI())
-      break;
-    for (unsigned i = 1, e = MI.getNumOperands(); i != e; i += 2)
-      if (MI.getOperand(i + 1).getMBB() == Incoming) {
-        MI.removeOperand(i + 1);
-        MI.removeOperand(i);
-        break;
-      }
-  }
-}
-
 /// Create branches from each prolog basic block to the appropriate epilog
 /// block.  These edges are needed if the loop ends before reaching the
 /// kernel.
@@ -887,7 +874,6 @@ void ModuloScheduleExpander::addBranches(MachineBasicBlock &PreheaderBB,
 
   // Start from the blocks connected to the kernel and work "out"
   // to the first prolog and the last epilog blocks.
-  SmallVector<MachineInstr *, 4> PrevInsts;
   unsigned MaxIter = PrologBBs.size() - 1;
   for (unsigned i = 0, j = MaxIter; i <= MaxIter; ++i, --j) {
     // Add branches to the prolog that go to the corresponding
@@ -907,7 +893,7 @@ void ModuloScheduleExpander::addBranches(MachineBasicBlock &PreheaderBB,
       Prolog->removeSuccessor(LastPro);
       LastEpi->removeSuccessor(Epilog);
       numAdded = TII->insertBranch(*Prolog, Epilog, nullptr, Cond, DebugLoc());
-      removePhis(Epilog, LastEpi);
+      Epilog->removePHIsIncomingValuesForPredecessor(*LastEpi);
       // Remove the blocks that are no longer referenced.
       if (LastPro != LastEpi) {
         for (auto &MI : *LastEpi)
@@ -925,7 +911,7 @@ void ModuloScheduleExpander::addBranches(MachineBasicBlock &PreheaderBB,
       LastPro->eraseFromParent();
     } else {
       numAdded = TII->insertBranch(*Prolog, LastPro, nullptr, Cond, DebugLoc());
-      removePhis(Epilog, Prolog);
+      Epilog->removePHIsIncomingValuesForPredecessor(*Prolog);
     }
     LastPro = Prolog;
     LastEpi = Epilog;
@@ -2590,7 +2576,6 @@ void ModuloScheduleExpanderMVE::generateKernel(
   SmallVector<ValueMapTy> PhiVRMap;
   PhiVRMap.resize(NumUnroll);
   DenseMap<MachineInstr *, std::pair<int, int>> NewMIMap;
-  DenseMap<MachineInstr *, MachineInstr *> MIMapLastStage0;
   for (int UnrollNum = 0; UnrollNum < NumUnroll; ++UnrollNum) {
     for (MachineInstr *MI : Schedule.getInstructions()) {
       if (MI->isPHI())

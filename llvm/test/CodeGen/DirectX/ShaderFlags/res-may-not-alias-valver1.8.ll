@@ -11,14 +11,14 @@ target triple = "dxil-pc-shadermodel6.7-library"
 ; CHECK-NEXT: Shader Flags Value: 0x200000010
 
 ; CHECK: Note: extra DXIL module flags:
-; CHECK:       Raw and Structured buffers
+; CHECK:       Raw and structured buffers
 ; CHECK:       Any UAV may not alias any other UAV
 ;
 
 ; CHECK: Function loadUAV : 0x20000000
 define float @loadUAV() #0 {
   %res = call target("dx.TypedBuffer", float, 1, 0, 0)
-      @llvm.dx.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, i1 false)
+      @llvm.dx.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, ptr null)
   %load = call {float, i1} @llvm.dx.resource.load.typedbuffer(
       target("dx.TypedBuffer", float, 1, 0, 0) %res, i32 0)
   %val = extractvalue {float, i1} %load, 0
@@ -28,14 +28,14 @@ define float @loadUAV() #0 {
 ; CHECK: Function loadSRV : 0x00000010
 define float @loadSRV() #0 {
   %res = tail call target("dx.RawBuffer", float, 0, 0)
-      @llvm.dx.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, i1 false)
+      @llvm.dx.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, ptr null)
   %load = call {float, i1} @llvm.dx.resource.load.rawbuffer(
       target("dx.RawBuffer", float, 0, 0) %res, i32 0, i32 0)
   %val = extractvalue { float, i1 } %load, 0
   ret float %val
 }
 
-!dx.valver = !{!1}
-!1 = !{i32 1, i32 8}
+!dx.valver = !{!0}
+!0 = !{i32 1, i32 8}
 
 attributes #0 = { convergent norecurse nounwind "hlsl.export"}

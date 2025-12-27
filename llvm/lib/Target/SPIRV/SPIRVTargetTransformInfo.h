@@ -22,7 +22,7 @@
 #include "llvm/CodeGen/BasicTTIImpl.h"
 
 namespace llvm {
-class SPIRVTTIImpl : public BasicTTIImplBase<SPIRVTTIImpl> {
+class SPIRVTTIImpl final : public BasicTTIImplBase<SPIRVTTIImpl> {
   using BaseT = BasicTTIImplBase<SPIRVTTIImpl>;
   using TTI = TargetTransformInfo;
 
@@ -48,6 +48,19 @@ public:
       return TTI::PSK_Software; // Arbitrary bit-width INT is not core SPIR-V.
     return TTI::PSK_FastHardware;
   }
+
+  unsigned getFlatAddressSpace() const override {
+    // Clang has 2 distinct address space maps. One where
+    // default=4=Generic, and one with default=0=Function. This depends on the
+    // environment.
+    return ST->isShader() ? 0 : 4;
+  }
+  bool collectFlatAddressOperands(SmallVectorImpl<int> &OpIndexes,
+                                  Intrinsic::ID IID) const override;
+  Value *rewriteIntrinsicWithAddressSpace(IntrinsicInst *II, Value *OldV,
+                                          Value *NewV) const override;
+
+  bool allowVectorElementIndexingUsingGEP() const override { return false; }
 };
 
 } // namespace llvm

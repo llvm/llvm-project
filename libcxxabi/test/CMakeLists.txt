@@ -8,56 +8,21 @@ macro(pythonize_bool var)
   endif()
 endmacro()
 
+# Install the library and its dependencies at a fake location so we can run the test
+# suite against it. This ensures that we run the test suite against a setup that matches
+# what we ship in production as closely as possible (in terms of file paths, rpaths, etc).
 set(LIBCXXABI_TESTING_INSTALL_PREFIX "${LIBCXXABI_BINARY_DIR}/test-suite-install")
-add_custom_target(libcxxabi-install-cxx-for-testing
-                      DEPENDS cxx-headers
-                              cxx
-                              cxx_experimental
-                              cxx-modules
-                      COMMAND ${CMAKE_COMMAND} -E make_directory "${LIBCXXABI_TESTING_INSTALL_PREFIX}"
-                      COMMAND "${CMAKE_COMMAND}"
-                              -DCMAKE_INSTALL_COMPONENT=cxx-headers
-                              -DCMAKE_INSTALL_PREFIX="${LIBCXXABI_TESTING_INSTALL_PREFIX}"
-                              -P "${CMAKE_BINARY_DIR}/cmake_install.cmake"
-                      COMMAND "${CMAKE_COMMAND}"
-                              -DCMAKE_INSTALL_COMPONENT=cxx-modules
-                              -DCMAKE_INSTALL_PREFIX="${LIBCXXABI_TESTING_INSTALL_PREFIX}"
-                              -P "${CMAKE_BINARY_DIR}/cmake_install.cmake"
-                      COMMAND "${CMAKE_COMMAND}"
-                              -DCMAKE_INSTALL_COMPONENT=cxx
-                              -DCMAKE_INSTALL_PREFIX="${LIBCXXABI_TESTING_INSTALL_PREFIX}"
-                              -P "${CMAKE_BINARY_DIR}/cmake_install.cmake")
-add_dependencies(cxxabi-test-depends libcxxabi-install-cxx-for-testing)
-
-add_custom_target(libcxxabi-install-cxxabi-for-testing
-                      DEPENDS cxxabi-headers
-                              cxxabi
-                      COMMAND ${CMAKE_COMMAND} -E make_directory "${LIBCXXABI_TESTING_INSTALL_PREFIX}"
-                      COMMAND "${CMAKE_COMMAND}"
-                              -DCMAKE_INSTALL_COMPONENT=cxxabi-headers
-                              -DCMAKE_INSTALL_PREFIX="${LIBCXXABI_TESTING_INSTALL_PREFIX}"
-                              -P "${CMAKE_BINARY_DIR}/cmake_install.cmake"
-                      COMMAND "${CMAKE_COMMAND}"
-                              -DCMAKE_INSTALL_COMPONENT=cxxabi
-                              -DCMAKE_INSTALL_PREFIX="${LIBCXXABI_TESTING_INSTALL_PREFIX}"
-                              -P "${CMAKE_BINARY_DIR}/cmake_install.cmake")
-add_dependencies(cxxabi-test-depends libcxxabi-install-cxxabi-for-testing)
-
+set(libcxxabi_test_suite_install_targets cxx-headers cxx cxx-modules cxxabi-headers cxxabi)
 if (LIBCXXABI_USE_LLVM_UNWINDER AND TARGET unwind)
-  add_custom_target(libcxxabi-install-unwind-for-testing
-    DEPENDS unwind-headers
-            unwind
-    COMMAND ${CMAKE_COMMAND} -E make_directory "${LIBCXXABI_TESTING_INSTALL_PREFIX}"
-    COMMAND "${CMAKE_COMMAND}"
-            -DCMAKE_INSTALL_COMPONENT=unwind-headers
-            -DCMAKE_INSTALL_PREFIX="${LIBCXXABI_TESTING_INSTALL_PREFIX}"
-            -P "${CMAKE_BINARY_DIR}/cmake_install.cmake"
-    COMMAND "${CMAKE_COMMAND}"
-            -DCMAKE_INSTALL_COMPONENT=unwind
-            -DCMAKE_INSTALL_PREFIX="${LIBCXXABI_TESTING_INSTALL_PREFIX}"
-            -P "${CMAKE_BINARY_DIR}/cmake_install.cmake")
-  add_dependencies(cxxabi-test-depends libcxxabi-install-unwind-for-testing)
+  list(APPEND libcxxabi_test_suite_install_targets unwind-headers unwind)
 endif()
+foreach(target IN LISTS libcxxabi_test_suite_install_targets)
+  add_custom_target(libcxxabi-test-suite-install-${target} DEPENDS "${target}"
+                    COMMAND "${CMAKE_COMMAND}" --install "${CMAKE_BINARY_DIR}"
+                                               --prefix "${LIBCXXABI_TESTING_INSTALL_PREFIX}"
+                                               --component "${target}")
+  add_dependencies(cxxabi-test-depends libcxxabi-test-suite-install-${target})
+endforeach()
 
 pythonize_bool(LIBCXXABI_USE_LLVM_UNWINDER)
 

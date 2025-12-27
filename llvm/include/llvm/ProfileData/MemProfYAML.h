@@ -1,6 +1,8 @@
 #ifndef LLVM_PROFILEDATA_MEMPROFYAML_H_
 #define LLVM_PROFILEDATA_MEMPROFYAML_H_
 
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ProfileData/DataAccessProf.h"
 #include "llvm/ProfileData/MemProf.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/YAMLTraits.h"
@@ -19,17 +21,33 @@ struct GUIDMemProfRecordPair {
   MemProfRecord Record;
 };
 
+// Helper struct to yamlify memprof::DataAccessProfData. The struct
+// members use owned strings. This is for simplicity and assumes that most real
+// world use cases do look-ups and regression test scale is small.
+struct YamlDataAccessProfData {
+  std::vector<memprof::DataAccessProfRecord> Records;
+  std::vector<uint64_t> KnownColdStrHashes;
+  std::vector<std::string> KnownColdSymbols;
+
+  bool isEmpty() const {
+    return Records.empty() && KnownColdStrHashes.empty() &&
+           KnownColdSymbols.empty();
+  }
+};
+
 // The top-level data structure, only used with YAML for now.
 struct AllMemProfData {
   std::vector<GUIDMemProfRecordPair> HeapProfileRecords;
+  YamlDataAccessProfData YamlifiedDataAccessProfiles;
 };
 } // namespace memprof
 
 namespace yaml {
 template <> struct ScalarTraits<memprof::GUIDHex64> {
   static void output(const memprof::GUIDHex64 &Val, void *, raw_ostream &Out) {
-    // Print GUID as a 16-digit hexadecimal number.
-    Out << format("0x%016" PRIx64, (uint64_t)Val);
+    // Print GUID as a hexadecimal number with 0x prefix, no padding to keep
+    // test strings compact.
+    Out << format("0x%" PRIx64, (uint64_t)Val);
   }
   static StringRef input(StringRef Scalar, void *, memprof::GUIDHex64 &Val) {
     // Reject decimal GUIDs.
@@ -44,7 +62,7 @@ template <> struct ScalarTraits<memprof::GUIDHex64> {
       Val = Num;
     } else {
       // Otherwise, treat the input as a string containing a function name.
-      Val = memprof::IndexedMemProfRecord::getGUID(Scalar);
+      Val = memprof::getGUID(Scalar);
     }
     return StringRef();
   }
@@ -123,7 +141,7 @@ template <> struct CustomMappingTraits<memprof::PortableMemInfoBlock> {
 #define MIBEntryDef(NameTag, Name, Type)                                       \
   if (KeyStr == #Name) {                                                       \
     uint64_t Value;                                                            \
-    Io.mapRequired(KeyStr.str().c_str(), Value);                               \
+    Io.mapRequired(KeyStr, Value);                                             \
     MIB.Name = static_cast<Type>(Value);                                       \
     MIB.Schema.set(llvm::to_underlying(memprof::Meta::Name));                  \
     return;                                                                    \
@@ -156,26 +174,117 @@ template <> struct MappingTraits<memprof::AllocationInfo> {
 // treat the GUID and the fields within MemProfRecord at the same level as if
 // the GUID were part of MemProfRecord.
 template <> struct MappingTraits<memprof::CallSiteInfo> {
+  // Helper class to normalize CalleeGuids to use GUIDHex64 for YAML I/O.
+  class CallSiteInfoWithHex64Guids {
+  public:
+    CallSiteInfoWithHex64Guids(IO &) {}
+    CallSiteInfoWithHex64Guids(IO &, const memprof::CallSiteInfo &CS)
+        : Frames(CS.Frames) {
+      // Convert uint64_t GUIDs to GUIDHex64 for serialization.
+      CalleeGuids.reserve(CS.CalleeGuids.size());
+      for (uint64_t Guid : CS.CalleeGuids)
+        CalleeGuids.push_back(memprof::GUIDHex64(Guid));
+    }
+
+    memprof::CallSiteInfo denormalize(IO &) {
+      memprof::CallSiteInfo CS;
+      CS.Frames = Frames;
+      // Convert GUIDHex64 back to uint64_t GUIDs after deserialization.
+      CS.CalleeGuids.reserve(CalleeGuids.size());
+      for (memprof::GUIDHex64 HexGuid : CalleeGuids)
+        CS.CalleeGuids.push_back(HexGuid.value);
+      return CS;
+    }
+
+    // Keep Frames as is, since MappingTraits<memprof::Frame> handles its
+    // Function GUID.
+    decltype(memprof::CallSiteInfo::Frames) Frames;
+    // Use a vector of GUIDHex64 for CalleeGuids to leverage its ScalarTraits.
+    SmallVector<memprof::GUIDHex64> CalleeGuids;
+  };
+
   static void mapping(IO &Io, memprof::CallSiteInfo &CS) {
-    Io.mapRequired("Frames", CS.Frames);
-    // Keep this optional to make it easier to write tests.
-    Io.mapOptional("CalleeGuids", CS.CalleeGuids);
+    // Use MappingNormalization to handle the conversion between
+    // memprof::CallSiteInfo and CallSiteInfoWithHex64Guids.
+    MappingNormalization<CallSiteInfoWithHex64Guids, memprof::CallSiteInfo>
+        Keys(Io, CS);
+    Io.mapRequired("Frames", Keys->Frames);
+    // Map the normalized CalleeGuids (which are now GUIDHex64).
+    Io.mapOptional("CalleeGuids", Keys->CalleeGuids);
   }
 };
 
 template <> struct MappingTraits<memprof::GUIDMemProfRecordPair> {
   static void mapping(IO &Io, memprof::GUIDMemProfRecordPair &Pair) {
     Io.mapRequired("GUID", Pair.GUID);
-    Io.mapRequired("AllocSites", Pair.Record.AllocSites);
-    Io.mapRequired("CallSites", Pair.Record.CallSites);
+    Io.mapOptional("AllocSites", Pair.Record.AllocSites);
+    Io.mapOptional("CallSites", Pair.Record.CallSites);
+  }
+};
+
+template <> struct MappingTraits<memprof::SourceLocation> {
+  static void mapping(IO &Io, memprof::SourceLocation &Loc) {
+    Io.mapOptional("FileName", Loc.FileName);
+    Io.mapOptional("Line", Loc.Line);
+  }
+};
+
+template <> struct MappingTraits<memprof::DataAccessProfRecord> {
+  static void mapping(IO &Io, memprof::DataAccessProfRecord &Rec) {
+    if (Io.outputting()) {
+      if (std::holds_alternative<std::string>(Rec.SymHandle)) {
+        Io.mapOptional("Symbol", std::get<std::string>(Rec.SymHandle));
+      } else {
+        Io.mapOptional("Hash", std::get<uint64_t>(Rec.SymHandle));
+      }
+    } else {
+      std::string SymName;
+      uint64_t Hash = 0;
+      Io.mapOptional("Symbol", SymName);
+      Io.mapOptional("Hash", Hash);
+      if (!SymName.empty()) {
+        Rec.SymHandle = SymName;
+      } else {
+        Rec.SymHandle = Hash;
+      }
+    }
+    Io.mapRequired("AccessCount", Rec.AccessCount);
+    Io.mapOptional("Locations", Rec.Locations);
+  }
+};
+
+template <> struct MappingTraits<memprof::YamlDataAccessProfData> {
+  static void mapping(IO &Io, memprof::YamlDataAccessProfData &Data) {
+    Io.mapOptional("SampledRecords", Data.Records);
+    Io.mapOptional("KnownColdSymbols", Data.KnownColdSymbols);
+    Io.mapOptional("KnownColdStrHashes", Data.KnownColdStrHashes);
   }
 };
 
 template <> struct MappingTraits<memprof::AllMemProfData> {
   static void mapping(IO &Io, memprof::AllMemProfData &Data) {
-    Io.mapRequired("HeapProfileRecords", Data.HeapProfileRecords);
+    if (!Io.outputting() || !Data.HeapProfileRecords.empty())
+      Io.mapOptional("HeapProfileRecords", Data.HeapProfileRecords);
+    // Map data access profiles if reading input, or if writing output &&
+    // the struct is populated.
+    if (!Io.outputting() || !Data.YamlifiedDataAccessProfiles.isEmpty())
+      Io.mapOptional("DataAccessProfiles", Data.YamlifiedDataAccessProfiles);
   }
 };
+
+template <> struct SequenceTraits<SmallVector<memprof::GUIDHex64>> {
+  static size_t size(IO &io, SmallVector<memprof::GUIDHex64> &Seq) {
+    return Seq.size();
+  }
+  static memprof::GUIDHex64 &
+  element(IO &io, SmallVector<memprof::GUIDHex64> &Seq, size_t Index) {
+    if (Index >= Seq.size())
+      Seq.resize(Index + 1);
+    return Seq[Index];
+  }
+  static const bool flow = true;
+};
+
 } // namespace yaml
 } // namespace llvm
 
@@ -184,5 +293,8 @@ LLVM_YAML_IS_SEQUENCE_VECTOR(std::vector<memprof::Frame>)
 LLVM_YAML_IS_SEQUENCE_VECTOR(memprof::AllocationInfo)
 LLVM_YAML_IS_SEQUENCE_VECTOR(memprof::CallSiteInfo)
 LLVM_YAML_IS_SEQUENCE_VECTOR(memprof::GUIDMemProfRecordPair)
+LLVM_YAML_IS_SEQUENCE_VECTOR(memprof::GUIDHex64) // Used for CalleeGuids
+LLVM_YAML_IS_SEQUENCE_VECTOR(memprof::DataAccessProfRecord)
+LLVM_YAML_IS_SEQUENCE_VECTOR(memprof::SourceLocation)
 
 #endif // LLVM_PROFILEDATA_MEMPROFYAML_H_

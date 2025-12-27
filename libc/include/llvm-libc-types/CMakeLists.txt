@@ -10,6 +10,7 @@ add_header(__exec_envp_t HDR __exec_envp_t.h)
 add_header(__futex_word HDR __futex_word.h)
 add_header(pid_t HDR pid_t.h)
 add_header(__mutex_type HDR __mutex_type.h DEPENDS .__futex_word .pid_t)
+add_header(__barrier_type HDR __barrier_type.h)
 add_header(__pthread_once_func_t HDR __pthread_once_func_t.h)
 add_header(__pthread_start_t HDR __pthread_start_t.h)
 add_header(__pthread_tss_dtor_t HDR __pthread_tss_dtor_t.h)
@@ -38,12 +39,14 @@ add_header(float_t HDR float_t.h)
 add_header(gid_t HDR gid_t.h)
 add_header(uid_t HDR uid_t.h)
 add_header(imaxdiv_t HDR imaxdiv_t.h)
+add_header(in_addr_t HDR in_addr_t.h)
+add_header(in_addr HDR in_addr.h DEPENDS .in_addr_t)
 add_header(ino_t HDR ino_t.h)
-add_header(jmp_buf HDR jmp_buf.h)
 add_header(mbstate_t HDR mbstate_t.h)
 add_header(mode_t HDR mode_t.h)
 add_header(mtx_t HDR mtx_t.h DEPENDS .__futex_word .__mutex_type)
 add_header(nfds_t HDR nfds_t.h)
+add_header(nl_catd HDR nl_catd.h)
 add_header(nlink_t HDR nlink_t.h)
 add_header(off_t HDR off_t.h)
 add_header(once_flag HDR once_flag.h DEPENDS .__futex_word)
@@ -54,6 +57,8 @@ add_header(pthread_condattr_t HDR pthread_condattr_t.h DEPENDS .clockid_t)
 add_header(pthread_key_t HDR pthread_key_t.h)
 add_header(pthread_mutex_t HDR pthread_mutex_t.h DEPENDS .__futex_word .__mutex_type)
 add_header(pthread_mutexattr_t HDR pthread_mutexattr_t.h)
+add_header(pthread_barrier_t HDR pthread_barrier_t.h DEPENDS .__barrier_type)
+add_header(pthread_barrierattr_t HDR pthread_barrierattr_t.h)
 add_header(pthread_once_t HDR pthread_once_t.h DEPENDS .__futex_word)
 add_header(pthread_rwlock_t HDR pthread_rwlock_t.h DEPENDS .__futex_word .pid_t)
 add_header(pthread_rwlockattr_t HDR pthread_rwlockattr_t.h)
@@ -70,6 +75,7 @@ add_header(stack_t HDR stack_t.h DEPENDS .size_t)
 add_header(suseconds_t HDR suseconds_t.h)
 add_header(struct_dirent HDR struct_dirent.h DEPENDS .ino_t .off_t)
 add_header(struct_dl_phdr_info HDR struct_dl_phdr_info.h DEPENDS .size_t libc.include.llvm-libc-macros.link_macros)
+add_header(dl_info HDR Dl_info.h)
 add_header(struct_f_owner_ex HDR struct_f_owner_ex.h DEPENDS .pid_t)
 add_header(struct_flock HDR struct_flock.h DEPENDS .off_t .pid_t)
 add_header(struct_flock64 HDR struct_flock64.h DEPENDS .off64_t .pid_t)
@@ -83,6 +89,9 @@ add_header(union_sigval HDR union_sigval.h)
 add_header(siginfo_t HDR siginfo_t.h DEPENDS .union_sigval .pid_t .uid_t .clock_t)
 add_header(sig_atomic_t HDR sig_atomic_t.h)
 add_header(sigset_t HDR sigset_t.h DEPENDS libc.include.llvm-libc-macros.signal_macros)
+add_header(__jmp_buf HDR __jmp_buf.h DEPENDS .sigset_t)
+add_header(jmp_buf HDR jmp_buf.h DEPENDS .__jmp_buf)
+add_header(sigjmp_buf HDR sigjmp_buf.h DEPENDS .__jmp_buf)
 add_header(struct_sigaction HDR struct_sigaction.h DEPENDS .sigset_t .siginfo_t)
 add_header(struct_timespec HDR struct_timespec.h DEPENDS .time_t)
 add_header(
@@ -144,9 +153,15 @@ add_header(
   HDR
     cfloat128.h
   DEPENDS
-    libc.include.llvm-libc-macros.float_macros
+    libc.include.llvm-libc-macros.cfloat128_macros
 )
-add_header(cfloat16 HDR cfloat16.h)
+add_header(
+  cfloat16
+  HDR
+    cfloat16.h
+  DEPENDS
+    libc.include.llvm-libc-macros.cfloat16_macros
+)
 add_header(fsblkcnt_t HDR fsblkcnt_t.h)
 add_header(fsfilcnt_t HDR fsfilcnt_t.h)
 add_header(
@@ -159,7 +174,18 @@ DEPENDS
 )
 add_header(locale_t HDR locale_t.h)
 add_header(struct_lconv HDR struct_lconv.h)
-add_header(stdfix-types HDR stdfix-types.h)
+add_header(int_hk_t HDR int_hk_t.h)
+add_header(int_hr_t HDR int_hr_t.h)
+add_header(int_k_t HDR int_k_t.h)
+add_header(int_lk_t HDR int_lk_t.h)
+add_header(int_lr_t HDR int_lr_t.h)
+add_header(int_r_t HDR int_r_t.h)
+add_header(uint_uhk_t HDR uint_uhk_t.h)
+add_header(uint_uhr_t HDR uint_uhr_t.h)
+add_header(uint_uk_t HDR uint_uk_t.h)
+add_header(uint_ulk_t HDR uint_ulk_t.h)
+add_header(uint_ulr_t HDR uint_ulr_t.h)
+add_header(uint_ur_t HDR uint_ur_t.h)
 
 # UEFI
 add_header(EFI_GUID HDR EFI_GUID.h DEPENDS libc.include.llvm-libc-macros.stdint_macros)
@@ -186,7 +212,7 @@ add_header(EFI_HANDLE HDR EFI_HANDLE.h)
 add_header(EFI_TIME HDR EFI_TIME.h DEPENDS libc.include.llvm-libc-macros.stdint_macros)
 add_header(EFI_TIMER_DELAY HDR EFI_TIMER_DELAY.h)
 add_header(EFI_TPL HDR EFI_TPL.h DEPENDS .size_t)
-add_header(EFI_STATUS HDR EFI_STATUS.h DEPENDS .size_t)
+add_header(EFI_STATUS HDR EFI_STATUS.h DEPENDS libc.include.llvm-libc-macros.stdint_macros)
 
 add_header(EFI_OPEN_PROTOCOL_INFORMATION_ENTRY
   HDR

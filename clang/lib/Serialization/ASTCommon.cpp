@@ -15,10 +15,7 @@
 #include "clang/AST/DeclObjC.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Serialization/ASTDeserializationListener.h"
-#include "clang/Serialization/ModuleFile.h"
 #include "llvm/Support/DJB.h"
-#include "llvm/Support/FileSystem.h"
-#include "llvm/Support/raw_ostream.h"
 
 using namespace clang;
 
@@ -245,7 +242,7 @@ serialization::TypeIdxFromBuiltin(const BuiltinType *BT) {
   case BuiltinType::Id: \
     ID = PREDEF_TYPE_##Id##_ID; \
     break;
-#include "clang/Basic/AArch64SVEACLETypes.def"
+#include "clang/Basic/AArch64ACLETypes.def"
 #define PPC_VECTOR_TYPE(Name, Id, Size) \
   case BuiltinType::Id: \
     ID = PREDEF_TYPE_##Id##_ID; \
@@ -444,6 +441,7 @@ bool serialization::isRedeclarableDeclKind(unsigned Kind) {
   case Decl::Captured:
   case Decl::Import:
   case Decl::OMPThreadPrivate:
+  case Decl::OMPGroupPrivate:
   case Decl::OMPAllocate:
   case Decl::OMPRequires:
   case Decl::OMPCapturedExpr:
@@ -458,6 +456,7 @@ bool serialization::isRedeclarableDeclKind(unsigned Kind) {
   case Decl::RequiresExprBody:
   case Decl::UnresolvedUsingIfExists:
   case Decl::HLSLBuffer:
+  case Decl::HLSLRootSignature:
   case Decl::OpenACCDeclare:
   case Decl::OpenACCRoutine:
     return false;
@@ -509,16 +508,4 @@ bool serialization::needsAnonymousDeclarationNumber(const NamedDecl *D) {
   if (!isa<RecordDecl, ObjCInterfaceDecl>(D->getLexicalDeclContext()))
     return false;
   return isa<TagDecl, FieldDecl>(D);
-}
-
-void serialization::updateModuleTimestamp(StringRef ModuleFilename) {
-  // Overwrite the timestamp file contents so that file's mtime changes.
-  std::error_code EC;
-  llvm::raw_fd_ostream OS(ModuleFile::getTimestampFilename(ModuleFilename), EC,
-                          llvm::sys::fs::OF_TextWithCRLF);
-  if (EC)
-    return;
-  OS << "Timestamp file\n";
-  OS.close();
-  OS.clear_error(); // Avoid triggering a fatal error.
 }

@@ -8,14 +8,17 @@
 
 #include "Handler/RequestHandler.h"
 #include "DAP.h"
+#include "EventHelper.h"
 #include "Handler/ResponseHandler.h"
 #include "JSONUtils.h"
+#include "LLDBUtils.h"
 #include "Protocol/ProtocolBase.h"
 #include "Protocol/ProtocolRequests.h"
 #include "RunInTerminal.h"
 #include "lldb/API/SBDefines.h"
 #include "lldb/API/SBEnvironment.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/JSON.h"
 #include <mutex>
 
 #if !defined(_WIN32)
@@ -49,53 +52,30 @@ static uint32_t SetLaunchFlag(uint32_t flags, bool flag,
   return flags;
 }
 
-// Both attach and launch take either a sourcePath or a sourceMap
-// argument (or neither), from which we need to set the target.source-map.
-void BaseRequestHandler::SetSourceMapFromArguments(
-    const llvm::json::Object &arguments) const {
-  const char *sourceMapHelp =
-      "source must be be an array of two-element arrays, "
-      "each containing a source and replacement path string.\n";
-
-  std::string sourceMapCommand;
-  llvm::raw_string_ostream strm(sourceMapCommand);
-  strm << "settings set target.source-map ";
-  const auto sourcePath = GetString(arguments, "sourcePath").value_or("");
-
-  // sourceMap is the new, more general form of sourcePath and overrides it.
-  constexpr llvm::StringRef sourceMapKey = "sourceMap";
-
-  if (const auto *sourceMapArray = arguments.getArray(sourceMapKey)) {
-    for (const auto &value : *sourceMapArray) {
-      const auto *mapping = value.getAsArray();
-      if (mapping == nullptr || mapping->size() != 2 ||
-          (*mapping)[0].kind() != llvm::json::Value::String ||
-          (*mapping)[1].kind() != llvm::json::Value::String) {
-        dap.SendOutput(OutputType::Console, llvm::StringRef(sourceMapHelp));
-        return;
-      }
-      const auto mapFrom = GetAsString((*mapping)[0]);
-      const auto mapTo = GetAsString((*mapping)[1]);
-      strm << "\"" << mapFrom << "\" \"" << mapTo << "\" ";
+static void
+SetupIORedirection(const std::vector<std::optional<std::string>> &stdio,
+                   lldb::SBLaunchInfo &launch_info) {
+  size_t n = std::max(stdio.size(), static_cast<size_t>(3));
+  for (size_t i = 0; i < n; i++) {
+    std::optional<std::string> path;
+    if (stdio.size() <= i)
+      path = stdio.back();
+    else
+      path = stdio[i];
+    if (!path)
+      continue;
+    switch (i) {
+    case 0:
+      launch_info.AddOpenFileAction(i, path->c_str(), true, false);
+      break;
+    case 1:
+    case 2:
+      launch_info.AddOpenFileAction(i, path->c_str(), false, true);
+      break;
+    default:
+      launch_info.AddOpenFileAction(i, path->c_str(), true, true);
+      break;
     }
-  } else if (const auto *sourceMapObj = arguments.getObject(sourceMapKey)) {
-    for (const auto &[key, value] : *sourceMapObj) {
-      if (value.kind() == llvm::json::Value::String) {
-        strm << "\"" << key.str() << "\" \"" << GetAsString(value) << "\" ";
-      }
-    }
-  } else {
-    if (ObjectContainsKey(arguments, sourceMapKey)) {
-      dap.SendOutput(OutputType::Console, llvm::StringRef(sourceMapHelp));
-      return;
-    }
-    if (sourcePath.empty())
-      return;
-    // Do any source remapping needed before we create our targets
-    strm << "\".\" \"" << sourcePath << "\"";
-  }
-  if (!sourceMapCommand.empty()) {
-    dap.RunLLDBCommands("Setting source map:", {sourceMapCommand});
   }
 }
 
@@ -106,8 +86,7 @@ RunInTerminal(DAP &dap, const protocol::LaunchRequestArguments &arguments) {
     return llvm::make_error<DAPError>("Cannot use runInTerminal, feature is "
                                       "not supported by the connected client");
 
-  if (!arguments.configuration.program ||
-      arguments.configuration.program->empty())
+  if (arguments.configuration.program.empty())
     return llvm::make_error<DAPError>(
         "program must be set to when using runInTerminal");
 
@@ -128,8 +107,9 @@ RunInTerminal(DAP &dap, const protocol::LaunchRequestArguments &arguments) {
 #endif
 
   llvm::json::Object reverse_request = CreateRunInTerminalReverseRequest(
-      *arguments.configuration.program, arguments.args, arguments.env,
-      arguments.cwd.value_or(""), comm_file.m_path, debugger_pid);
+      arguments.configuration.program, arguments.args, arguments.env,
+      arguments.cwd, comm_file.m_path, debugger_pid, arguments.stdio,
+      arguments.console == protocol::eConsoleExternalTerminal);
   dap.SendReverseRequest<LogFailureResponseHandler>("runInTerminal",
                                                     std::move(reverse_request));
 
@@ -138,7 +118,7 @@ RunInTerminal(DAP &dap, const protocol::LaunchRequestArguments &arguments) {
   else
     return pid.takeError();
 
-  dap.debugger.SetAsync(false);
+  std::optional<ScopeSyncMode> scope_sync_mode(dap.debugger);
   lldb::SBError error;
   dap.target.Attach(attach_info, error);
 
@@ -161,8 +141,8 @@ RunInTerminal(DAP &dap, const protocol::LaunchRequestArguments &arguments) {
   dap.target.GetProcess().Continue();
 
   // Now that the actual target is just starting (i.e. exec was just invoked),
-  // we return the debugger to its async state.
-  dap.debugger.SetAsync(true);
+  // we return the debugger to its sync state.
+  scope_sync_mode.reset();
 
   // If sending the notification failed, the launcher should be dead by now and
   // the async didAttach notification should have an error message, so we
@@ -178,11 +158,12 @@ RunInTerminal(DAP &dap, const protocol::LaunchRequestArguments &arguments) {
 void BaseRequestHandler::Run(const Request &request) {
   // If this request was cancelled, send a cancelled response.
   if (dap.IsCancelled(request)) {
-    Response cancelled{/*request_seq=*/request.seq,
-                       /*command=*/request.command,
-                       /*success=*/false,
-                       /*message=*/eResponseMessageCancelled,
-                       /*body=*/std::nullopt};
+    Response cancelled{
+        /*request_seq=*/request.seq,
+        /*command=*/request.command,
+        /*success=*/false,
+        /*message=*/eResponseMessageCancelled,
+    };
     dap.Send(cancelled);
     return;
   }
@@ -202,16 +183,15 @@ void BaseRequestHandler::Run(const Request &request) {
 
 llvm::Error BaseRequestHandler::LaunchProcess(
     const protocol::LaunchRequestArguments &arguments) const {
-  auto launchCommands = arguments.launchCommands;
+  const std::vector<std::string> &launchCommands = arguments.launchCommands;
 
   // Instantiate a launch info instance for the target.
   auto launch_info = dap.target.GetLaunchInfo();
 
   // Grab the current working directory if there is one and set it in the
   // launch info.
-  const auto cwd = arguments.cwd.value_or("");
-  if (!cwd.empty())
-    launch_info.SetWorkingDirectory(cwd.data());
+  if (!arguments.cwd.empty())
+    launch_info.SetWorkingDirectory(arguments.cwd.data());
 
   // Extract any extra arguments and append them to our program arguments for
   // when we launch
@@ -226,6 +206,9 @@ llvm::Error BaseRequestHandler::LaunchProcess(
     launch_info.SetEnvironment(env, true);
   }
 
+  if (!arguments.stdio.empty() && !arguments.disableSTDIO)
+    SetupIORedirection(arguments.stdio, launch_info);
+
   launch_info.SetDetachOnError(arguments.detachOnError);
   launch_info.SetShellExpandArguments(arguments.shellExpandArguments);
 
@@ -237,42 +220,45 @@ llvm::Error BaseRequestHandler::LaunchProcess(
   launch_info.SetLaunchFlags(flags | lldb::eLaunchFlagDebug |
                              lldb::eLaunchFlagStopAtEntry);
 
-  if (arguments.runInTerminal) {
-    if (llvm::Error err = RunInTerminal(dap, arguments))
-      return err;
-  } else if (launchCommands.empty()) {
-    lldb::SBError error;
-    // Disable async events so the launch will be successful when we return from
-    // the launch call and the launch will happen synchronously
-    dap.debugger.SetAsync(false);
-    dap.target.Launch(launch_info, error);
-    dap.debugger.SetAsync(true);
-    if (error.Fail())
-      return llvm::make_error<DAPError>(error.GetCString());
-  } else {
-    // Set the launch info so that run commands can access the configured
-    // launch details.
-    dap.target.SetLaunchInfo(launch_info);
-    if (llvm::Error err = dap.RunLaunchCommands(launchCommands))
-      return err;
+  {
+    // Perform the launch in synchronous mode so that we don't have to worry
+    // about process state changes during the launch.
+    ScopeSyncMode scope_sync_mode(dap.debugger);
 
-    // The custom commands might have created a new target so we should use the
-    // selected target after these commands are run.
-    dap.target = dap.debugger.GetSelectedTarget();
-    // Make sure the process is launched and stopped at the entry point before
-    // proceeding as the launch commands are not run using the synchronous
-    // mode.
-    lldb::SBError error = dap.WaitForProcessToStop(arguments.timeout);
-    if (error.Fail())
-      return llvm::make_error<DAPError>(error.GetCString());
+    if (arguments.console != protocol::eConsoleInternal) {
+      if (llvm::Error err = RunInTerminal(dap, arguments))
+        return err;
+    } else if (launchCommands.empty()) {
+      lldb::SBError error;
+      dap.target.Launch(launch_info, error);
+      if (error.Fail())
+        return ToError(error);
+    } else {
+      // Set the launch info so that run commands can access the configured
+      // launch details.
+      dap.target.SetLaunchInfo(launch_info);
+      if (llvm::Error err = dap.RunLaunchCommands(launchCommands))
+        return err;
+
+      // The custom commands might have created a new target so we should use
+      // the selected target after these commands are run.
+      dap.target = dap.debugger.GetSelectedTarget();
+    }
   }
+
+  // Make sure the process is launched and stopped at the entry point before
+  // proceeding.
+  lldb::SBError error =
+      dap.WaitForProcessToStop(arguments.configuration.timeout);
+  if (error.Fail())
+    return ToError(error);
 
   return llvm::Error::success();
 }
 
 void BaseRequestHandler::PrintWelcomeMessage() const {
 #ifdef LLDB_DAP_WELCOME_MESSAGE
-  dap.SendOutput(OutputType::Console, LLDB_DAP_WELCOME_MESSAGE);
+  dap.SendOutput(eOutputCategoryConsole, LLDB_DAP_WELCOME_MESSAGE);
 #endif
 }
 
@@ -281,6 +267,74 @@ bool BaseRequestHandler::HasInstructionGranularity(
   if (std::optional<llvm::StringRef> value = arguments.getString("granularity"))
     return value == "instruction";
   return false;
+}
+
+void BaseRequestHandler::BuildErrorResponse(
+    llvm::Error err, protocol::Response &response) const {
+  // Handle the ErrorSuccess case.
+  if (!err) {
+    response.success = true;
+    return;
+  }
+
+  response.success = false;
+
+  llvm::handleAllErrors(
+      std::move(err),
+      [&](const NotStoppedError &err) {
+        response.message = lldb_dap::protocol::eResponseMessageNotStopped;
+      },
+      [&](const DAPError &err) {
+        protocol::ErrorMessage error_message;
+        error_message.sendTelemetry = false;
+        error_message.format = err.getMessage();
+        error_message.showUser = err.getShowUser();
+        error_message.id = err.convertToErrorCode().value();
+        error_message.url = err.getURL();
+        error_message.urlLabel = err.getURLLabel();
+        protocol::ErrorResponseBody body;
+        body.error = error_message;
+
+        response.body = body;
+      },
+      [&](const llvm::ErrorInfoBase &err) {
+        protocol::ErrorMessage error_message;
+        error_message.showUser = true;
+        error_message.sendTelemetry = false;
+        error_message.format = err.message();
+        error_message.id = err.convertToErrorCode().value();
+        protocol::ErrorResponseBody body;
+        body.error = error_message;
+
+        response.body = body;
+      });
+}
+
+void BaseRequestHandler::SendError(llvm::Error err,
+                                   protocol::Response &response) const {
+  BuildErrorResponse(std::move(err), response);
+  Send(response);
+}
+
+void BaseRequestHandler::SendSuccess(
+    protocol::Response &response, std::optional<llvm::json::Value> body) const {
+  response.success = true;
+  if (body)
+    response.body = std::move(*body);
+
+  Send(response);
+}
+
+void BaseRequestHandler::Send(protocol::Response &response) const {
+  // Mark the request as 'cancelled' if the debugger was interrupted while
+  // evaluating this handler.
+  if (dap.debugger.InterruptRequested()) {
+    response.success = false;
+    response.message = protocol::eResponseMessageCancelled;
+    response.body = std::nullopt;
+  }
+
+  dap.Send(response);
 }
 
 } // namespace lldb_dap

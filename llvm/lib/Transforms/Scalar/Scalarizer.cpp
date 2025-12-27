@@ -50,9 +50,7 @@ using namespace llvm;
 
 #define DEBUG_TYPE "scalarizer"
 
-namespace {
-
-BasicBlock::iterator skipPastPhiNodesAndDbg(BasicBlock::iterator Itr) {
+static BasicBlock::iterator skipPastPhiNodesAndDbg(BasicBlock::iterator Itr) {
   BasicBlock *BB = Itr->getParent();
   if (isa<PHINode>(Itr))
     Itr = BB->getFirstInsertionPt();
@@ -75,6 +73,8 @@ using ScatterMap = std::map<std::pair<Value *, Type *>, ValueVector>;
 // Lists Instructions that have been replaced with scalar implementations,
 // along with a pointer to their scattered forms.
 using GatherList = SmallVector<std::pair<Instruction *, ValueVector *>, 16>;
+
+namespace {
 
 struct VectorSplit {
   // The type of the vector.
@@ -196,6 +196,7 @@ struct VectorLayout {
   // The size of each (non-remainder) fragment in bytes.
   uint64_t SplitSize = 0;
 };
+} // namespace
 
 static bool isStructOfMatchingFixedVectors(Type *Ty) {
   if (!isa<StructType>(Ty))
@@ -251,7 +252,14 @@ static Value *concatenate(IRBuilder<> &Builder, ArrayRef<Value *> Fragments,
       Res = Builder.CreateInsertElement(Res, Fragment, I * VS.NumPacked,
                                         Name + ".upto" + Twine(I));
     } else {
-      Fragment = Builder.CreateShuffleVector(Fragment, Fragment, ExtendMask);
+      if (NumPacked < VS.NumPacked) {
+        // If last pack of remained bits not match current ExtendMask size.
+        ExtendMask.truncate(NumPacked);
+        ExtendMask.resize(NumElements, -1);
+      }
+
+      Fragment = Builder.CreateShuffleVector(
+          Fragment, PoisonValue::get(Fragment->getType()), ExtendMask);
       if (I == 0) {
         Res = Fragment;
       } else {
@@ -268,6 +276,7 @@ static Value *concatenate(IRBuilder<> &Builder, ArrayRef<Value *> Fragments,
   return Res;
 }
 
+namespace {
 class ScalarizerVisitor : public InstVisitor<ScalarizerVisitor, bool> {
 public:
   ScalarizerVisitor(DominatorTree *DT, const TargetTransformInfo *TTI,
@@ -458,8 +467,10 @@ bool ScalarizerVisitor::visit(Function &F) {
       Instruction *I = &*II;
       bool Done = InstVisitor::visit(I);
       ++II;
-      if (Done && I->getType()->isVoidTy())
+      if (Done && I->getType()->isVoidTy()) {
         I->eraseFromParent();
+        Scalarized = true;
+      }
     }
   }
   return finish();
@@ -1105,7 +1116,9 @@ bool ScalarizerVisitor::visitExtractValueInst(ExtractValueInst &EVI) {
     Res.push_back(ResElem);
   }
 
-  gather(&EVI, Res, *VS);
+  Type *ActualVecType = cast<FixedVectorType>(OpTy->getContainedType(Index));
+  std::optional<VectorSplit> AVS = getVectorSplit(ActualVecType);
+  gather(&EVI, Res, *AVS);
   return true;
 }
 

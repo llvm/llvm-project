@@ -15,7 +15,7 @@
 
 namespace llvm {
 
-class SystemZTTIImpl : public BasicTTIImplBase<SystemZTTIImpl> {
+class SystemZTTIImpl final : public BasicTTIImplBase<SystemZTTIImpl> {
   typedef BasicTTIImplBase<SystemZTTIImpl> BaseT;
   typedef TargetTransformInfo TTI;
   friend BaseT;
@@ -65,9 +65,6 @@ public:
   bool isLSRCostLess(const TargetTransformInfo::LSRCost &C1,
                      const TargetTransformInfo::LSRCost &C2) const override;
 
-  bool areInlineCompatible(const Function *Caller,
-                           const Function *Callee) const override;
-
   /// @}
 
   /// \name Vector TTI Implementations
@@ -90,7 +87,8 @@ public:
   bool LSRWithInstrQueries() const override { return true; }
   InstructionCost getScalarizationOverhead(
       VectorType *Ty, const APInt &DemandedElts, bool Insert, bool Extract,
-      TTI::TargetCostKind CostKind, ArrayRef<Value *> VL = {}) const override;
+      TTI::TargetCostKind CostKind, bool ForPoisonSrc = true,
+      ArrayRef<Value *> VL = {}) const override;
   bool supportsEfficientVectorElementLoadStore() const override { return true; }
   bool enableInterleavedAccessVectorization() const override { return true; }
 
@@ -101,9 +99,9 @@ public:
       ArrayRef<const Value *> Args = {},
       const Instruction *CxtI = nullptr) const override;
   InstructionCost
-  getShuffleCost(TTI::ShuffleKind Kind, VectorType *Tp, ArrayRef<int> Mask,
-                 TTI::TargetCostKind CostKind, int Index, VectorType *SubTp,
-                 ArrayRef<const Value *> Args = {},
+  getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy,
+                 ArrayRef<int> Mask, TTI::TargetCostKind CostKind, int Index,
+                 VectorType *SubTp, ArrayRef<const Value *> Args = {},
                  const Instruction *CxtI = nullptr) const override;
   unsigned getVectorTruncCost(Type *SrcTy, Type *DstTy) const;
   unsigned getVectorBitmaskConversionCost(Type *SrcTy, Type *DstTy) const;
@@ -122,8 +120,8 @@ public:
   using BaseT::getVectorInstrCost;
   InstructionCost getVectorInstrCost(unsigned Opcode, Type *Val,
                                      TTI::TargetCostKind CostKind,
-                                     unsigned Index, Value *Op0,
-                                     Value *Op1) const override;
+                                     unsigned Index, const Value *Op0,
+                                     const Value *Op1) const override;
   bool isFoldableLoad(const LoadInst *Ld,
                       const Instruction *&FoldedValue) const;
   InstructionCost getMemoryOpCost(

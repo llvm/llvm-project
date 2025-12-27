@@ -21,7 +21,7 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Type.h"
-#include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 
 #include "LLVMContextImpl.h"
 
@@ -30,33 +30,7 @@ using namespace llvm;
 #define DEBUG_TYPE "ir"
 STATISTIC(NumInstrRenumberings, "Number of renumberings across all blocks");
 
-// This cl-opt exists to control whether variable-location information is
-// produced using intrinsics, or whether DbgRecords are produced. However,
-// it's imminently being phased out, so give it a flag-name that is very
-// unlikely to be used anywhere.
-//
-// If you find yourself needing to use this flag for any period longer than
-// five minutes, please revert the patch making this change, and make contact
-// in this discourse post, where we can discuss any further transition work
-// that might be needed to remove debug intrinsics.
-//
-// https://discourse.llvm.org/t/psa-ir-output-changing-from-debug-intrinsics-to-debug-records/79578
-cl::opt<bool> UseNewDbgInfoFormat(
-    "dont-pass-this-flag-please-experimental-debuginfo", cl::Hidden,
-    cl::init(true));
-
-// This cl-opt collects the --experimental-debuginfo-iterators flag and then
-// does nothing with it (because the it gets stored into an otherwise unused
-// cl-opt), so that we can disable debug-intrinsic production without
-// immediately modifying lots of tests. If your tests break because of this
-// change, please see the next comment up.
-static cl::opt<bool> DeliberatelyUnseenDbgInfoFlag(
-    "experimental-debuginfo-iterators", cl::Hidden,
-    cl::init(true));
-
 DbgMarker *BasicBlock::createMarker(Instruction *I) {
-  assert(IsNewDbgInfoFormat &&
-         "Tried to create a marker in a non new debug-info block!");
   if (I->DebugMarker)
     return I->DebugMarker;
   DbgMarker *Marker = new DbgMarker();
@@ -66,8 +40,6 @@ DbgMarker *BasicBlock::createMarker(Instruction *I) {
 }
 
 DbgMarker *BasicBlock::createMarker(InstListType::iterator It) {
-  assert(IsNewDbgInfoFormat &&
-         "Tried to create a marker in a non new debug-info block!");
   if (It != end())
     return createMarker(&*It);
   DbgMarker *DM = getTrailingDbgRecords();
@@ -79,15 +51,12 @@ DbgMarker *BasicBlock::createMarker(InstListType::iterator It) {
 }
 
 void BasicBlock::convertToNewDbgValues() {
-  IsNewDbgInfoFormat = true;
-
   // Iterate over all instructions in the instruction list, collecting debug
   // info intrinsics and converting them to DbgRecords. Once we find a "real"
   // instruction, attach all those DbgRecords to a DbgMarker in that
   // instruction.
   SmallVector<DbgRecord *, 4> DbgVarRecs;
   for (Instruction &I : make_early_inc_range(InstList)) {
-    assert(!I.DebugMarker && "DebugMarker already set on old-format instrs?");
     if (DbgVariableIntrinsic *DVI = dyn_cast<DbgVariableIntrinsic>(&I)) {
       // Convert this dbg.value to a DbgVariableRecord.
       DbgVariableRecord *Value = new DbgVariableRecord(DVI);
@@ -119,7 +88,6 @@ void BasicBlock::convertToNewDbgValues() {
 
 void BasicBlock::convertFromNewDbgValues() {
   invalidateOrders();
-  IsNewDbgInfoFormat = false;
 
   // Iterate over the block, finding instructions annotated with DbgMarkers.
   // Convert any attached DbgRecords to debug intrinsics and insert ahead of the
@@ -154,16 +122,6 @@ void BasicBlock::dumpDbgValues() const {
 }
 #endif
 
-void BasicBlock::setIsNewDbgInfoFormat(bool NewFlag) {
-  if (NewFlag && !IsNewDbgInfoFormat)
-    convertToNewDbgValues();
-  else if (!NewFlag && IsNewDbgInfoFormat)
-    convertFromNewDbgValues();
-}
-void BasicBlock::setNewDbgInfoFormatFlag(bool NewFlag) {
-  IsNewDbgInfoFormat = NewFlag;
-}
-
 ValueSymbolTable *BasicBlock::getValueSymbolTable() {
   if (Function *F = getParent())
     return F->getValueSymbolTable();
@@ -185,8 +143,7 @@ template class llvm::SymbolTableListTraits<
 
 BasicBlock::BasicBlock(LLVMContext &C, const Twine &Name, Function *NewParent,
                        BasicBlock *InsertBefore)
-    : Value(Type::getLabelTy(C), Value::BasicBlockVal),
-      IsNewDbgInfoFormat(UseNewDbgInfoFormat), Parent(nullptr) {
+    : Value(Type::getLabelTy(C), Value::BasicBlockVal), Parent(nullptr) {
 
   if (NewParent)
     insertInto(NewParent, InsertBefore);
@@ -196,8 +153,6 @@ BasicBlock::BasicBlock(LLVMContext &C, const Twine &Name, Function *NewParent,
 
   end().getNodePtr()->setParent(this);
   setName(Name);
-  if (NewParent)
-    setIsNewDbgInfoFormat(NewParent->IsNewDbgInfoFormat);
 }
 
 void BasicBlock::insertInto(Function *NewParent, BasicBlock *InsertBefore) {
@@ -208,8 +163,6 @@ void BasicBlock::insertInto(Function *NewParent, BasicBlock *InsertBefore) {
     NewParent->insert(InsertBefore->getIterator(), this);
   else
     NewParent->insert(NewParent->end(), this);
-
-  setIsNewDbgInfoFormat(NewParent->IsNewDbgInfoFormat);
 }
 
 BasicBlock::~BasicBlock() {
@@ -613,6 +566,9 @@ BasicBlock *BasicBlock::splitBasicBlock(iterator I, const Twine &BBName,
 
   // Save DebugLoc of split point before invalidating iterator.
   DebugLoc Loc = I->getStableDebugLoc();
+  if (Loc)
+    Loc = Loc->getWithoutAtom();
+
   // Move all of the specified instructions from the original basic block into
   // the new basic block.
   New->splice(New->end(), this, I, end());
@@ -642,6 +598,9 @@ BasicBlock *BasicBlock::splitBasicBlockBefore(iterator I, const Twine &BBName) {
   BasicBlock *New = BasicBlock::Create(getContext(), BBName, getParent(), this);
   // Save DebugLoc of split point before invalidating iterator.
   DebugLoc Loc = I->getDebugLoc();
+  if (Loc)
+    Loc = Loc->getWithoutAtom();
+
   // Move all of the specified instructions from the original basic block into
   // the new basic block.
   New->splice(New->end(), this, begin(), I);
@@ -732,9 +691,7 @@ void BasicBlock::renumberInstructions() {
     I.Order = Order++;
 
   // Set the bit to indicate that the instruction order valid and cached.
-  BasicBlockBits Bits = getBasicBlockBits();
-  Bits.InstrOrderValid = true;
-  setBasicBlockBits(Bits);
+  SubclassOptionalData |= InstrOrderValid;
 
   NumInstrRenumberings++;
 }
@@ -748,10 +705,6 @@ void BasicBlock::flushTerminatorDbgRecords() {
   // To get out of this unfortunate form, whenever we insert a terminator,
   // check whether there's anything trailing at the end and move those
   // DbgRecords in front of the terminator.
-
-  // Do nothing if we're not in new debug-info format.
-  if (!IsNewDbgInfoFormat)
-    return;
 
   // If there's no terminator, there's nothing to do.
   Instruction *Term = getTerminator();
@@ -788,10 +741,6 @@ void BasicBlock::spliceDebugInfoEmptyBlock(BasicBlock::iterator Dest,
   // single instruction in the block. We must piece together from the bits set
   // in the iterators whether there was the intention to transfer any debug
   // info.
-
-  // If we're not in "new" debug-info format, do nothing.
-  if (!IsNewDbgInfoFormat)
-    return;
 
   assert(First == Last);
   bool InsertAtHead = Dest.getHeadBit();
@@ -1053,8 +1002,6 @@ void BasicBlock::spliceDebugInfoImpl(BasicBlock::iterator Dest, BasicBlock *Src,
 
 void BasicBlock::splice(iterator Dest, BasicBlock *Src, iterator First,
                         iterator Last) {
-  assert(Src->IsNewDbgInfoFormat == IsNewDbgInfoFormat);
-
 #ifdef EXPENSIVE_CHECKS
   // Check that First is before Last.
   auto FromBBEnd = Src->end();
@@ -1069,9 +1016,7 @@ void BasicBlock::splice(iterator Dest, BasicBlock *Src, iterator First,
     return;
   }
 
-  // Handle non-instr debug-info specific juggling.
-  if (IsNewDbgInfoFormat)
-    spliceDebugInfo(Dest, Src, First, Last);
+  spliceDebugInfo(Dest, Src, First, Last);
 
   // And move the instructions.
   getInstList().splice(Dest, Src->getInstList(), First, Last);
@@ -1080,7 +1025,6 @@ void BasicBlock::splice(iterator Dest, BasicBlock *Src, iterator First,
 }
 
 void BasicBlock::insertDbgRecordAfter(DbgRecord *DR, Instruction *I) {
-  assert(IsNewDbgInfoFormat);
   assert(I->getParent() == this);
 
   iterator NextIt = std::next(I->getIterator());

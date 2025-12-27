@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "LLDBUtils.h"
+#include "DAPError.h"
 #include "JSONUtils.h"
 #include "lldb/API/SBCommandInterpreter.h"
 #include "lldb/API/SBCommandReturnObject.h"
@@ -17,9 +18,12 @@
 #include "lldb/API/SBThread.h"
 #include "lldb/lldb-enumerations.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/raw_ostream.h"
 
+#include <cstdint>
+#include <cstring>
 #include <mutex>
 #include <system_error>
 
@@ -156,8 +160,8 @@ uint32_t GetLLDBFrameID(uint64_t dap_frame_id) {
   return dap_frame_id & ((1u << THREAD_INDEX_SHIFT) - 1);
 }
 
-int64_t MakeDAPFrameID(lldb::SBFrame &frame) {
-  return ((int64_t)frame.GetThread().GetIndexID() << THREAD_INDEX_SHIFT) |
+uint64_t MakeDAPFrameID(lldb::SBFrame &frame) {
+  return ((uint64_t)frame.GetThread().GetIndexID() << THREAD_INDEX_SHIFT) |
          frame.GetFrameID();
 }
 
@@ -213,13 +217,14 @@ GetStopDisassemblyDisplay(lldb::SBDebugger &debugger) {
   return result;
 }
 
-llvm::Error ToError(const lldb::SBError &error) {
+llvm::Error ToError(const lldb::SBError &error, bool show_user) {
   if (error.Success())
     return llvm::Error::success();
 
-  return llvm::createStringError(
-      std::error_code(error.GetError(), std::generic_category()),
-      error.GetCString());
+  return llvm::make_error<DAPError>(
+      /*message=*/error.GetCString(),
+      /*EC=*/std::error_code(error.GetError(), std::generic_category()),
+      /*show_user=*/show_user);
 }
 
 std::string GetStringValue(const lldb::SBStructuredData &data) {
@@ -233,6 +238,29 @@ std::string GetStringValue(const lldb::SBStructuredData &data) {
   std::string str(str_length, 0);
   data.GetStringValue(str.data(), str_length + 1);
   return str;
+}
+
+ScopeSyncMode::ScopeSyncMode(lldb::SBDebugger &debugger)
+    : m_debugger(debugger), m_async(m_debugger.GetAsync()) {
+  m_debugger.SetAsync(false);
+}
+
+ScopeSyncMode::~ScopeSyncMode() { m_debugger.SetAsync(m_async); }
+
+std::string GetSBFileSpecPath(const lldb::SBFileSpec &file_spec) {
+  const auto directory_length = ::strlen(file_spec.GetDirectory());
+  const auto file_name_length = ::strlen(file_spec.GetFilename());
+
+  std::string path(directory_length + file_name_length + 1, '\0');
+  file_spec.GetPath(path.data(), path.length() + 1);
+  return path;
+}
+
+lldb::SBLineEntry GetLineEntryForAddress(lldb::SBTarget &target,
+                                         const lldb::SBAddress &address) {
+  lldb::SBSymbolContext sc = target.ResolveSymbolContextForAddress(
+      address, lldb::eSymbolContextLineEntry);
+  return sc.GetLineEntry();
 }
 
 } // namespace lldb_dap

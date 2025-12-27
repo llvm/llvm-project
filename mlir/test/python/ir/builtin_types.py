@@ -330,8 +330,29 @@ def testConcreteShapedType():
         print("dim size:", vector.get_dim_size(1))
         # CHECK: is_dynamic_size: False
         print("is_dynamic_size:", vector.is_dynamic_size(3))
+        # CHECK: is_static_size: True
+        print("is_static_size:", vector.is_static_size(3))
         # CHECK: is_dynamic_stride_or_offset: False
         print("is_dynamic_stride_or_offset:", vector.is_dynamic_stride_or_offset(1))
+        # CHECK: is_static_stride_or_offset: True
+        print("is_static_stride_or_offset:", vector.is_static_stride_or_offset(1))
+
+        dynamic_size_val = vector.get_dynamic_size()
+        dynamic_stride_val = vector.get_dynamic_stride_or_offset()
+        # CHECK: is_dynamic_size_with_dynamic: True
+        print("is_dynamic_size_with_dynamic:", vector.is_dynamic_size(dynamic_size_val))
+        # CHECK: is_static_size_with_dynamic: False
+        print("is_static_size_with_dynamic:", vector.is_static_size(dynamic_size_val))
+        # CHECK: is_dynamic_stride_or_offset_with_dynamic: True
+        print(
+            "is_dynamic_stride_or_offset_with_dynamic:",
+            vector.is_dynamic_stride_or_offset(dynamic_stride_val),
+        )
+        # CHECK: is_static_stride_or_offset_with_dynamic: False
+        print(
+            "is_static_stride_or_offset_with_dynamic:",
+            vector.is_static_stride_or_offset(dynamic_stride_val),
+        )
         # CHECK: isinstance(ShapedType): True
         print("isinstance(ShapedType):", isinstance(vector, ShapedType))
 
@@ -350,11 +371,16 @@ def testAbstractShapedType():
 # CHECK-LABEL: TEST: testVectorType
 @run
 def testVectorType():
+    shape = [2, 3]
+    with Context():
+        f32 = F32Type.get()
+        # CHECK: unchecked vector type: vector<2x3xf32>
+        print("unchecked vector type:", VectorType.get_unchecked(shape, f32))
+
     with Context(), Location.unknown():
         f32 = F32Type.get()
-        shape = [2, 3]
-        # CHECK: vector type: vector<2x3xf32>
-        print("vector type:", VectorType.get(shape, f32))
+        # CHECK: checked vector type: vector<2x3xf32>
+        print("checked vector type:", VectorType.get(shape, f32))
 
         none = NoneType.get()
         try:

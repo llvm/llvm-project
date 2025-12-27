@@ -1,6 +1,8 @@
 // RUN: %clang -### -c -fveclib=none %s 2>&1 | FileCheck --check-prefix=CHECK-NOLIB %s
 // RUN: %clang -### -c -fveclib=Accelerate %s 2>&1 | FileCheck --check-prefix=CHECK-ACCELERATE %s
-// RUN: %clang -### -c -fveclib=libmvec %s 2>&1 | FileCheck --check-prefix=CHECK-libmvec %s
+// RUN: %clang -### -c --target=x86_64-unknown-linux-gnu -fveclib=libmvec %s 2>&1 | FileCheck --check-prefix=CHECK-libmvec %s
+// RUN: %clang -### -c --target=aarch64-linux-gnu -fveclib=libmvec %s 2>&1 | FileCheck --check-prefix=CHECK-LIBMVEC-AARCH64 %s
+// RUN: %clang -### -c --target=x86_64-unknown-linux-gnu -fveclib=AMDLIBM %s 2>&1 | FileCheck --check-prefix=CHECK-AMDLIBM %s
 // RUN: %clang -### -c -fveclib=MASSV %s 2>&1 | FileCheck --check-prefix=CHECK-MASSV %s
 // RUN: %clang -### -c -fveclib=Darwin_libsystem_m %s 2>&1 | FileCheck --check-prefix=CHECK-DARWIN_LIBSYSTEM_M %s
 // RUN: %clang -### -c --target=aarch64 -fveclib=SLEEF %s 2>&1 | FileCheck --check-prefix=CHECK-SLEEF %s
@@ -11,6 +13,8 @@
 // CHECK-NOLIB: "-fveclib=none"
 // CHECK-ACCELERATE: "-fveclib=Accelerate"
 // CHECK-libmvec: "-fveclib=libmvec"
+// CHECK-LIBMVEC-AARCH64: "-fveclib=libmvec"
+// CHECK-AMDLIBM: "-fveclib=AMDLIBM"
 // CHECK-MASSV: "-fveclib=MASSV"
 // CHECK-DARWIN_LIBSYSTEM_M: "-fveclib=Darwin_libsystem_m"
 // CHECK-SLEEF: "-fveclib=SLEEF"
@@ -21,8 +25,8 @@
 
 // RUN: not %clang --target=x86 -c -fveclib=SLEEF %s 2>&1 | FileCheck --check-prefix=CHECK-ERROR %s
 // RUN: not %clang --target=x86 -c -fveclib=ArmPL %s 2>&1 | FileCheck --check-prefix=CHECK-ERROR %s
-// RUN: not %clang --target=aarch64 -c -fveclib=LIBMVEC-X86 %s 2>&1 | FileCheck --check-prefix=CHECK-ERROR %s
 // RUN: not %clang --target=aarch64 -c -fveclib=SVML %s 2>&1 | FileCheck --check-prefix=CHECK-ERROR %s
+// RUN: not %clang --target=aarch64 -c -fveclib=AMDLIBM %s 2>&1 | FileCheck --check-prefix=CHECK-ERROR %s
 // CHECK-ERROR: unsupported option {{.*}} for target
 
 // RUN: %clang -fveclib=Accelerate %s -target arm64-apple-ios8.0.0 -### 2>&1 | FileCheck --check-prefix=CHECK-LINK %s
@@ -37,8 +41,14 @@
 
 /* Verify that the correct vector library is passed to LTO flags. */
 
-// RUN: %clang -### --target=x86_64-unknown-linux-gnu -fveclib=LIBMVEC -flto %s 2>&1 | FileCheck --check-prefix=CHECK-LTO-LIBMVEC %s
-// CHECK-LTO-LIBMVEC: "-plugin-opt=-vector-library=LIBMVEC-X86"
+// RUN: %clang -### --target=x86_64-unknown-linux-gnu -fveclib=libmvec -flto %s 2>&1 | FileCheck --check-prefix=CHECK-LTO-LIBMVEC %s
+// CHECK-LTO-LIBMVEC: "-plugin-opt=-vector-library=LIBMVEC"
+
+// RUN: %clang -### --target=aarch64-linux-gnu -fveclib=libmvec -flto %s 2>&1 | FileCheck --check-prefix=CHECK-LTO-LIBMVEC-AARCH64 %s
+// CHECK-LTO-LIBMVEC-AARCH64: "-plugin-opt=-vector-library=LIBMVEC"
+
+// RUN: %clang -### --target=x86_64-unknown-linux-gnu -fveclib=AMDLIBM -flto %s 2>&1 | FileCheck --check-prefix=CHECK-LTO-AMDLIBM %s
+// CHECK-LTO-AMDLIBM: "-plugin-opt=-vector-library=AMDLIBM"
 
 // RUN: %clang -### --target=powerpc64-unknown-linux-gnu -fveclib=MASSV -flto %s 2>&1 | FileCheck --check-prefix=CHECK-LTO-MASSV %s
 // CHECK-LTO-MASSV: "-plugin-opt=-vector-library=MASSV"
@@ -58,9 +68,17 @@
 
 /* Verify that -fmath-errno is set correctly for the vector library. */
 
-// RUN: %clang -### --target=x86_64-unknown-linux-gnu -fveclib=LIBMVEC %s 2>&1 | FileCheck --check-prefix=CHECK-ERRNO-LIBMVEC %s
-// CHECK-ERRNO-LIBMVEC: "-fveclib=LIBMVEC"
+// RUN: %clang -### --target=x86_64-unknown-linux-gnu -fveclib=libmvec %s 2>&1 | FileCheck --check-prefix=CHECK-ERRNO-LIBMVEC %s
+// CHECK-ERRNO-LIBMVEC: "-fveclib=libmvec"
 // CHECK-ERRNO-LIBMVEC-SAME: "-fmath-errno"
+
+// RUN: %clang -### --target=aarch64-linux-gnu -fveclib=libmvec %s 2>&1 | FileCheck --check-prefix=CHECK-ERRNO-LIBMVEC-AARCH64 %s
+// CHECK-ERRNO-LIBMVEC-AARCH64: "-fveclib=libmvec"
+// CHECK-ERRNO-LIBMVEC-AARCH64-SAME: "-fmath-errno"
+
+// RUN: %clang -### --target=x86_64-unknown-linux-gnu -fveclib=AMDLIBM %s 2>&1 | FileCheck --check-prefix=CHECK-ERRNO-AMDLIBM %s
+// CHECK-ERRNO-AMDLIBM: "-fveclib=AMDLIBM"
+// CHECK-ERRNO-AMDLIBM-SAME: "-fmath-errno"
 
 // RUN: %clang -### --target=powerpc64-unknown-linux-gnu -fveclib=MASSV %s 2>&1 | FileCheck --check-prefix=CHECK-ERRNO-MASSV %s
 // CHECK-ERRNO-MASSV: "-fveclib=MASSV"
@@ -110,7 +128,7 @@
 // CHECK-ENABLED-LAST: math errno enabled by '-ffp-model=strict' after it was implicitly disabled by '-fveclib=ArmPL', this may limit the utilization of the vector library [-Wmath-errno-enabled-with-veclib]
 
 /* Verify no warning when math-errno is re-enabled for a different veclib (that does not imply -fno-math-errno). */
-// RUN: %clang -### --target=aarch64-linux-gnu -fveclib=ArmPL -fmath-errno -fveclib=LIBMVEC %s 2>&1 | FileCheck --check-prefix=CHECK-REPEAT-VECLIB %s
+// RUN: %clang -### --target=aarch64-linux-gnu -fveclib=ArmPL -fmath-errno -fveclib=Accelerate %s 2>&1 | FileCheck --check-prefix=CHECK-REPEAT-VECLIB %s
 // CHECK-REPEAT-VECLIB-NOT: math errno enabled
 
 /// Verify that vectorized routines library is being linked in.

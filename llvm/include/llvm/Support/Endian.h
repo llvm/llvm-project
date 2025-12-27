@@ -49,7 +49,9 @@ template <typename value_type>
 
 /// Swap the bytes of value to match the given endianness.
 template <typename value_type, endianness endian>
-[[nodiscard]] inline value_type byte_swap(value_type value) {
+[[nodiscard]]
+LLVM_DEPRECATED("Pass endian as a function argument instead",
+                "byte_swap") inline value_type byte_swap(value_type value) {
   return byte_swap(value, endian);
 }
 
@@ -66,7 +68,9 @@ template <typename value_type, std::size_t alignment = unaligned>
 }
 
 template <typename value_type, endianness endian, std::size_t alignment>
-[[nodiscard]] inline value_type read(const void *memory) {
+[[nodiscard]] LLVM_DEPRECATED("Pass endian as a function argument instead",
+                              "read") inline value_type
+    read(const void *memory) {
   return read<value_type, alignment>(memory, endian);
 }
 
@@ -96,9 +100,8 @@ inline void write(void *memory, value_type value, endianness endian) {
          &value, sizeof(value_type));
 }
 
-template<typename value_type,
-         endianness endian,
-         std::size_t alignment>
+template <typename value_type, endianness endian, std::size_t alignment>
+LLVM_DEPRECATED("Pass endian as a function argument instead", "write")
 inline void write(void *memory, value_type value) {
   write<value_type, alignment>(memory, value, endian);
 }
@@ -128,7 +131,7 @@ template <typename value_type, endianness endian, std::size_t alignment>
                                                    uint64_t startBit) {
   assert(startBit < 8);
   if (startBit == 0)
-    return read<value_type, endian, alignment>(memory);
+    return read<value_type, alignment>(memory, endian);
   else {
     // Read two values and compose the result from them.
     value_type val[2];
@@ -136,8 +139,8 @@ template <typename value_type, endianness endian, std::size_t alignment>
            LLVM_ASSUME_ALIGNED(
                memory, (detail::PickAlignment<value_type, alignment>::value)),
            sizeof(value_type) * 2);
-    val[0] = byte_swap<value_type, endian>(val[0]);
-    val[1] = byte_swap<value_type, endian>(val[1]);
+    val[0] = byte_swap<value_type>(val[0], endian);
+    val[1] = byte_swap<value_type>(val[1], endian);
 
     // Shift bits from the lower value into place.
     make_unsigned_t<value_type> lowerVal = val[0] >> startBit;
@@ -163,7 +166,7 @@ inline void writeAtBitAlignment(void *memory, value_type value,
                                 uint64_t startBit) {
   assert(startBit < 8);
   if (startBit == 0)
-    write<value_type, endian, alignment>(memory, value);
+    write<value_type, alignment>(memory, value, endian);
   else {
     // Read two values and shift the result into them.
     value_type val[2];
@@ -171,8 +174,8 @@ inline void writeAtBitAlignment(void *memory, value_type value,
            LLVM_ASSUME_ALIGNED(
                memory, (detail::PickAlignment<value_type, alignment>::value)),
            sizeof(value_type) * 2);
-    val[0] = byte_swap<value_type, endian>(val[0]);
-    val[1] = byte_swap<value_type, endian>(val[1]);
+    val[0] = byte_swap<value_type>(val[0], endian);
+    val[1] = byte_swap<value_type>(val[1], endian);
 
     // Mask off any existing bits in the upper part of the lower value that
     // we want to replace.
@@ -200,8 +203,8 @@ inline void writeAtBitAlignment(void *memory, value_type value,
     val[1] |= upperVal;
 
     // Finally, rewrite values.
-    val[0] = byte_swap<value_type, endian>(val[0]);
-    val[1] = byte_swap<value_type, endian>(val[1]);
+    val[0] = byte_swap<value_type>(val[0], endian);
+    val[1] = byte_swap<value_type>(val[1], endian);
     memcpy(LLVM_ASSUME_ALIGNED(
                memory, (detail::PickAlignment<value_type, alignment>::value)),
            &val[0], sizeof(value_type) * 2);
@@ -223,14 +226,15 @@ struct packed_endian_specific_integral {
 
   explicit packed_endian_specific_integral(value_type val) { *this = val; }
 
-  operator value_type() const {
-    return endian::read<value_type, endian, alignment>(
-      (const void*)Value.buffer);
+  value_type value() const {
+    return endian::read<value_type, alignment>((const void *)Value.buffer,
+                                               endian);
   }
+  operator value_type() const { return value(); }
 
   void operator=(value_type newValue) {
-    endian::write<value_type, endian, alignment>(
-      (void*)Value.buffer, newValue);
+    endian::write<value_type, alignment>((void *)Value.buffer, newValue,
+                                         endian);
   }
 
   packed_endian_specific_integral &operator+=(value_type newValue) {
@@ -263,11 +267,11 @@ public:
     explicit ref(void *Ptr) : Ptr(Ptr) {}
 
     operator value_type() const {
-      return endian::read<value_type, endian, alignment>(Ptr);
+      return endian::read<value_type, alignment>(Ptr, endian);
     }
 
     void operator=(value_type NewValue) {
-      endian::write<value_type, endian, alignment>(Ptr, NewValue);
+      endian::write<value_type, alignment>(Ptr, NewValue, endian);
     }
 
   private:

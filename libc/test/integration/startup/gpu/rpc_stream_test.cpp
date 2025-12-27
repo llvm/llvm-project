@@ -6,12 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "include/llvm-libc-types/test_rpc_opcodes_t.h"
 #include "src/__support/GPU/utils.h"
 #include "src/__support/RPC/rpc_client.h"
 #include "src/__support/integer_to_string.h"
 #include "src/string/memory_utils/inline_memcmp.h"
 #include "src/string/memory_utils/inline_memcpy.h"
+#include "src/string/memory_utils/inline_memset.h"
 #include "src/string/string_utils.h"
 #include "test/IntegrationTest/test.h"
 
@@ -35,7 +35,7 @@ static void test_stream() {
   inline_memcpy(send_ptr, str, send_size);
   ASSERT_TRUE(inline_memcmp(send_ptr, str, send_size) == 0 && "Data mismatch");
   LIBC_NAMESPACE::rpc::Client::Port port =
-      LIBC_NAMESPACE::rpc::client.open<RPC_TEST_STREAM>();
+      LIBC_NAMESPACE::rpc::client.open<LIBC_TEST_STREAM>();
   port.send_n(send_ptr, send_size);
   port.recv_n(&recv_ptr, &recv_size,
               [](uint64_t size) { return malloc(size); });
@@ -79,7 +79,7 @@ static void test_divergent() {
   ASSERT_TRUE(inline_memcmp(buffer, &data[offset], offset) == 0 &&
               "Data mismatch");
   LIBC_NAMESPACE::rpc::Client::Port port =
-      LIBC_NAMESPACE::rpc::client.open<RPC_TEST_STREAM>();
+      LIBC_NAMESPACE::rpc::client.open<LIBC_TEST_STREAM>();
   port.send_n(buffer, offset);
   inline_memset(buffer, 0, offset);
   port.recv_n(&recv_ptr, &recv_size, [&](uint64_t) { return buffer; });
@@ -90,7 +90,7 @@ static void test_divergent() {
   ASSERT_TRUE(recv_size == offset && "Data size mismatch");
 }
 
-TEST_MAIN(int argc, char **argv, char **envp) {
+TEST_MAIN(int, char **, char **) {
   test_stream();
   test_divergent();
 

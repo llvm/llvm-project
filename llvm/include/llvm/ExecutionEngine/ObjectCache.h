@@ -9,6 +9,7 @@
 #ifndef LLVM_EXECUTIONENGINE_OBJECTCACHE_H
 #define LLVM_EXECUTIONENGINE_OBJECTCACHE_H
 
+#include "llvm/Support/Compiler.h"
 #include <memory>
 
 namespace llvm {
@@ -20,7 +21,7 @@ class Module;
 /// This is the base ObjectCache type which can be provided to an
 /// ExecutionEngine for the purpose of avoiding compilation for Modules that
 /// have already been compiled and an object file is available.
-class ObjectCache {
+class LLVM_ABI ObjectCache {
   virtual void anchor();
 
 public:

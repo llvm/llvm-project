@@ -18,15 +18,14 @@ func.func @_QPsub1() {
 
 func.func @_QPsub1() {
   %0 = fir.alloca !fir.box<!fir.heap<!fir.array<?xf32>>> {bindc_name = "a", uniq_name = "_QFsub1Ea"}
-  %1 = fir.alloca i32
+  %1 = fir.alloca i64
   %4:2 = hlfir.declare %0 {data_attr = #cuf.cuda<device>, fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFsub1Ea"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>)
   %11 = fir.convert %4#1 : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<none>>
-  %s = fir.load %1 : !fir.ref<i32>
-  %13 = cuf.allocate %11 : !fir.ref<!fir.box<none>> stream(%s : i32) {data_attr = #cuf.cuda<device>} -> i32
+  %13 = cuf.allocate %11 : !fir.ref<!fir.box<none>> stream(%1 : !fir.ref<i64>) {data_attr = #cuf.cuda<device>} -> i32
   return
 }
 
-// CHECK: cuf.allocate %{{.*}} : !fir.ref<!fir.box<none>> stream(%{{.*}} : i32) {data_attr = #cuf.cuda<device>} -> i32
+// CHECK: cuf.allocate %{{.*}} : !fir.ref<!fir.box<none>> stream(%{{.*}} : !fir.ref<i64>) {data_attr = #cuf.cuda<device>} -> i32
 
 // -----
 

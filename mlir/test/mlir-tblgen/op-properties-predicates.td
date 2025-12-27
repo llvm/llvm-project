@@ -35,39 +35,74 @@ def OpWithPredicates : NS_Op<"op_with_predicates"> {
   );
 }
 
+// CHECK-LABEL: static ::llvm::LogicalResult __mlir_ods_local_prop_constraint_op2Dproperties2Dpredicates1
+// CHECK-NEXT: int64_t prop
+// CHECK-NEXT: if (!((prop >= 0)))
+// CHECK: failed to satisfy constraint: non-negative int64_t
+
+// CHECK-LABEL: static ::llvm::LogicalResult __mlir_ods_local_prop_constraint_op2Dproperties2Dpredicates2
+// CHECK-NEXT: std::optional<int64_t> prop
+// CHECK-NEXT: if (!(((!prop.has_value())) || (((*(prop)) >= 0))))
+// CHECK: failed to satisfy constraint: optional non-negative int64_t
+
+// CHECK-LABEL: static ::llvm::LogicalResult __mlir_ods_local_prop_constraint_op2Dproperties2Dpredicates3
+// CHECK-NEXT: int64_t prop
+// CHECK-NEXT: if (!(((prop >= 0)) && ((prop <= 5))))
+// CHECK: failed to satisfy constraint: between 0 and 5
+
+// CHECK-LABEL: static ::llvm::LogicalResult __mlir_ods_local_prop_constraint_op2Dproperties2Dpredicates4
+// CHECK-NEXT: ::llvm::ArrayRef<int64_t> prop
+// CHECK-NEXT: (!(::llvm::all_of(prop, [](const int64_t& baseStore) -> bool { return [](int64_t baseIface) -> bool { return ((baseIface >= 0)); }(baseStore); })))
+// CHECK: failed to satisfy constraint: array of non-negative int64_t
+
+// CHECK-LABEL: static ::llvm::LogicalResult __mlir_ods_local_prop_constraint_op2Dproperties2Dpredicates5
+// CHECK-NEXT: ::llvm::ArrayRef<int64_t> prop
+// CHECK-NEXT: if (!(!((prop.empty()))))
+// CHECK: failed to satisfy constraint: non-empty array of int64_t
+
+// CHECK-LABEL: static ::llvm::LogicalResult __mlir_ods_local_prop_constraint_op2Dproperties2Dpredicates6
+// CHECK-NEXT: ::llvm::ArrayRef<int64_t> prop
+// CHECX-NEXT: if (!((::llvm::all_of(prop, [](const int64_t& baseStore) -> bool { return [](int64_t baseIface) -> bool { return ((baseIface >= 0)); }(baseStore); })) && (!((prop.empty())))))
+// CHECK: failed to satisfy constraint: non-empty array of non-negative int64_t
+
+// CHECK-LABEL: static ::llvm::LogicalResult __mlir_ods_local_prop_constraint_op2Dproperties2Dpredicates7
+// CHECK-NEXT: std::optional<::llvm::ArrayRef<int64_t>> prop
+// CHECK-NEXT: if (!(((!prop.has_value())) || ((::llvm::all_of((*(prop)), [](const int64_t& baseStore) -> bool { return [](int64_t baseIface) -> bool { return ((baseIface >= 0)); }(baseStore); })) && (!(((*(prop)).empty()))))))
+// CHECK: failed to satisfy constraint: optional non-empty array of non-negative int64_
+
+// CHECK-LABEL: ::llvm::LogicalResult OpWithPredicatesAdaptor::verify
+// Note: comprehensive emission of verifiers is tested in verifyINvariantsImpl() below
+// CHECK: int64_t tblgen_scalar = this->getScalar();
+// CHECK: if (!((tblgen_scalar >= 0)))
+// CHECK: return emitError(loc, "'test.op_with_predicates' op property 'scalar' failed to satisfy constraint: non-negative int64_t");
+
 // CHECK-LABEL: OpWithPredicates::verifyInvariantsImpl()
 // Note: for test readability, we capture [[maybe_unused]] into the variable maybe_unused
 // CHECK: [[maybe_unused:\[\[maybe_unused\]\]]] int64_t tblgen_scalar = this->getScalar();
-// CHECK: if (!((tblgen_scalar >= 0)))
-// CHECK-NEXT:  return emitOpError("property 'scalar' failed to satisfy constraint: non-negative int64_t");
+// CHECK: if (::mlir::failed(__mlir_ods_local_prop_constraint_op2Dproperties2Dpredicates1(*this, tblgen_scalar, "scalar")))
+// CHECK-NEXT:  return ::mlir::failure()
 
 // CHECK: [[maybe_unused]] std::optional<int64_t> tblgen_optional = this->getOptional();
-// CHECK: if (!(((!tblgen_optional.has_value())) || (((*(tblgen_optional)) >= 0))))
-// CHECK-NEXT:   return emitOpError("property 'optional' failed to satisfy constraint: optional non-negative int64_t");
+// CHECK: if (::mlir::failed(__mlir_ods_local_prop_constraint_op2Dproperties2Dpredicates2(*this, tblgen_optional, "optional")))
 
+// COM: The predicates for "scalar" and "defaulted" are uniqued
 // CHECK: [[maybe_unused]] int64_t tblgen_defaulted = this->getDefaulted();
-// CHECK: if (!((tblgen_defaulted >= 0)))
-// CHECK-NEXT:  return emitOpError("property 'defaulted' failed to satisfy constraint: non-negative int64_t");
+// CHECK: if (::mlir::failed(__mlir_ods_local_prop_constraint_op2Dproperties2Dpredicates1(*this, tblgen_defaulted, "defaulted")))
 
 // CHECK: [[maybe_unused]] int64_t tblgen_moreConstrained = this->getMoreConstrained();
-// CHECK: if (!(((tblgen_moreConstrained >= 0)) && ((tblgen_moreConstrained <= 5))))
-// CHECK-NEXT:  return emitOpError("property 'moreConstrained' failed to satisfy constraint: between 0 and 5");
+// CHECK: if (::mlir::failed(__mlir_ods_local_prop_constraint_op2Dproperties2Dpredicates3(*this, tblgen_moreConstrained, "moreConstrained")))
 
 // CHECK: [[maybe_unused]] ::llvm::ArrayRef<int64_t> tblgen_array = this->getArray();
-// CHECK: if (!(::llvm::all_of(tblgen_array, [](const int64_t& baseStore) -> bool { return [](int64_t baseIface) -> bool { return ((baseIface >= 0)); }(baseStore); })))
-// CHECK-NEXT: return emitOpError("property 'array' failed to satisfy constraint: array of non-negative int64_t");
+// CHECK: if (::mlir::failed(__mlir_ods_local_prop_constraint_op2Dproperties2Dpredicates4(*this, tblgen_array, "array")))
 
 // CHECK: [[maybe_unused]] ::llvm::ArrayRef<int64_t> tblgen_nonEmptyUnconstrained = this->getNonEmptyUnconstrained();
-// CHECK: if (!(!((tblgen_nonEmptyUnconstrained.empty()))))
-// CHECK-NEXT: return emitOpError("property 'non_empty_unconstrained' failed to satisfy constraint: non-empty array of int64_t");
+// CHECK: if (::mlir::failed(__mlir_ods_local_prop_constraint_op2Dproperties2Dpredicates5(*this, tblgen_nonEmptyUnconstrained, "non_empty_unconstrained")))
 
 // CHECK: [[maybe_unused]] ::llvm::ArrayRef<int64_t> tblgen_nonEmptyConstrained = this->getNonEmptyConstrained();
-// CHECK: if (!((::llvm::all_of(tblgen_nonEmptyConstrained, [](const int64_t& baseStore) -> bool { return [](int64_t baseIface) -> bool { return ((baseIface >= 0)); }(baseStore); })) && (!((tblgen_nonEmptyConstrained.empty())))))
-// CHECK-NEXT:   return emitOpError("property 'non_empty_constrained' failed to satisfy constraint: non-empty array of non-negative int64_t");
+// CHECK: if (::mlir::failed(__mlir_ods_local_prop_constraint_op2Dproperties2Dpredicates6(*this, tblgen_nonEmptyConstrained, "non_empty_constrained")))
 
 // CHECK: [[maybe_unused]] std::optional<::llvm::ArrayRef<int64_t>> tblgen_nonEmptyOptional = this->getNonEmptyOptional();
-// CHECK: (!(((!tblgen_nonEmptyOptional.has_value())) || ((::llvm::all_of((*(tblgen_nonEmptyOptional)), [](const int64_t& baseStore) -> bool { return [](int64_t baseIface) -> bool { return ((baseIface >= 0)); }(baseStore); })) && (!(((*(tblgen_nonEmptyOptional)).empty()))))))
-// CHECK-NEXT:   return emitOpError("property 'non_empty_optional' failed to satisfy constraint: optional non-empty array of non-negative int64_t");
+// CHECK: if (::mlir::failed(__mlir_ods_local_prop_constraint_op2Dproperties2Dpredicates7(*this, tblgen_nonEmptyOptional, "non_empty_optional")))
 
 // CHECK-NOT: int64_t tblgen_unconstrained
 // CHECK: return ::mlir::success();

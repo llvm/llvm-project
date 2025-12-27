@@ -101,6 +101,14 @@ class GCNTTIImpl final : public BasicTTIImplBase<GCNTTIImpl> {
 
   std::pair<InstructionCost, MVT> getTypeLegalizationCost(Type *Ty) const;
 
+  /// \returns true if V might be divergent even when all of its operands
+  /// are uniform.
+  bool isSourceOfDivergence(const Value *V) const;
+
+  /// Returns true for the target specific set of operations which produce
+  /// uniform result even taking non-uniform arguments.
+  bool isAlwaysUniform(const Value *V) const;
+
 public:
   explicit GCNTTIImpl(const AMDGPUTargetMachine *TM, const Function &F);
 
@@ -170,32 +178,18 @@ public:
   using BaseT::getVectorInstrCost;
   InstructionCost getVectorInstrCost(unsigned Opcode, Type *ValTy,
                                      TTI::TargetCostKind CostKind,
-                                     unsigned Index, Value *Op0,
-                                     Value *Op1) const override;
+                                     unsigned Index, const Value *Op0,
+                                     const Value *Op1) const override;
 
   bool isReadRegisterSourceOfDivergence(const IntrinsicInst *ReadReg) const;
-  bool isSourceOfDivergence(const Value *V) const override;
-  bool isAlwaysUniform(const Value *V) const override;
 
   bool isValidAddrSpaceCast(unsigned FromAS, unsigned ToAS) const override {
     // Address space casts must cast between different address spaces.
     if (FromAS == ToAS)
       return false;
 
-    if (FromAS == AMDGPUAS::FLAT_ADDRESS)
-      return AMDGPU::isExtendedGlobalAddrSpace(ToAS) ||
-             ToAS == AMDGPUAS::LOCAL_ADDRESS ||
-             ToAS == AMDGPUAS::PRIVATE_ADDRESS;
-
-    if (AMDGPU::isExtendedGlobalAddrSpace(FromAS))
-      return AMDGPU::isFlatGlobalAddrSpace(ToAS) ||
-             ToAS == AMDGPUAS::CONSTANT_ADDRESS_32BIT;
-
-    if (FromAS == AMDGPUAS::LOCAL_ADDRESS ||
-        FromAS == AMDGPUAS::PRIVATE_ADDRESS)
-      return ToAS == AMDGPUAS::FLAT_ADDRESS;
-
-    return false;
+    // Casts between any aliasing address spaces are valid.
+    return AMDGPU::addrspacesMayAlias(FromAS, ToAS);
   }
 
   bool addrspacesMayAlias(unsigned AS0, unsigned AS1) const override {
@@ -236,6 +230,9 @@ public:
                                              const APInt &DemandedElts,
                                              APInt &UndefElts) const;
 
+  Instruction *hoistLaneIntrinsicThroughOperand(InstCombiner &IC,
+                                                IntrinsicInst &II) const;
+
   std::optional<Value *> simplifyDemandedVectorEltsIntrinsic(
       InstCombiner &IC, IntrinsicInst &II, APInt DemandedElts, APInt &UndefElts,
       APInt &UndefElts2, APInt &UndefElts3,
@@ -245,9 +242,9 @@ public:
   InstructionCost getVectorSplitCost() const { return 0; }
 
   InstructionCost
-  getShuffleCost(TTI::ShuffleKind Kind, VectorType *Tp, ArrayRef<int> Mask,
-                 TTI::TargetCostKind CostKind, int Index, VectorType *SubTp,
-                 ArrayRef<const Value *> Args = {},
+  getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy,
+                 ArrayRef<int> Mask, TTI::TargetCostKind CostKind, int Index,
+                 VectorType *SubTp, ArrayRef<const Value *> Args = {},
                  const Instruction *CxtI = nullptr) const override;
 
   bool isProfitableToSinkOperands(Instruction *I,
@@ -290,6 +287,29 @@ public:
   void collectKernelLaunchBounds(
       const Function &F,
       SmallVectorImpl<std::pair<StringRef, int64_t>> &LB) const override;
+
+  enum class KnownIEEEMode { Unknown, On, Off };
+
+  /// Return KnownIEEEMode::On if we know if the use context can assume
+  /// "amdgpu-ieee"="true" and KnownIEEEMode::Off if we can assume
+  /// "amdgpu-ieee"="false".
+  KnownIEEEMode fpenvIEEEMode(const Instruction &I) const;
+
+  /// Account for loads of i8 vector types to have reduced cost. For
+  /// example the cost of load 4 i8s values is one is the cost of loading
+  /// a single i32 value.
+  InstructionCost getMemoryOpCost(
+      unsigned Opcode, Type *Src, Align Alignment, unsigned AddressSpace,
+      TTI::TargetCostKind CostKind,
+      TTI::OperandValueInfo OpInfo = {TTI::OK_AnyValue, TTI::OP_None},
+      const Instruction *I = nullptr) const override;
+
+  /// When counting parts on AMD GPUs, account for i8s being grouped
+  /// together under a single i32 value. Otherwise fall back to base
+  /// implementation.
+  unsigned getNumberOfParts(Type *Tp) const override;
+
+  InstructionUniformity getInstructionUniformity(const Value *V) const override;
 };
 
 } // end namespace llvm

@@ -26,8 +26,6 @@ using namespace llvm;
 using namespace llvm::opt;
 using namespace llvm::MachO;
 
-namespace drv = clang::driver::options;
-
 namespace clang {
 namespace installapi {
 
@@ -100,8 +98,8 @@ getArgListFromJSON(const StringRef Input, llvm::opt::OptTable *Table,
   }
 
   std::vector<const char *> CArgs(Storage.size());
-  llvm::for_each(Storage,
-                 [&CArgs](StringRef Str) { CArgs.emplace_back(Str.data()); });
+  for (StringRef Str : Storage)
+    CArgs.emplace_back(Str.data());
 
   unsigned MissingArgIndex, MissingArgCount;
   return Table->ParseArgs(CArgs, MissingArgIndex, MissingArgCount);
@@ -109,7 +107,7 @@ getArgListFromJSON(const StringRef Input, llvm::opt::OptTable *Table,
 
 bool Options::processDriverOptions(InputArgList &Args) {
   // Handle inputs.
-  for (const StringRef Path : Args.getAllArgValues(drv::OPT_INPUT)) {
+  for (const StringRef Path : Args.getAllArgValues(options::OPT_INPUT)) {
     // Assume any input that is not a directory is a filelist.
     // InstallAPI does not accept multiple directories, so retain the last one.
     if (FM->getOptionalDirectoryRef(Path))
@@ -120,7 +118,7 @@ bool Options::processDriverOptions(InputArgList &Args) {
 
   // Handle output.
   SmallString<PATH_MAX> OutputPath;
-  if (auto *Arg = Args.getLastArg(drv::OPT_o)) {
+  if (auto *Arg = Args.getLastArg(options::OPT_o)) {
     OutputPath = Arg->getValue();
     if (OutputPath != "-")
       FM->makeAbsolutePath(OutputPath);
@@ -132,10 +130,10 @@ bool Options::processDriverOptions(InputArgList &Args) {
   }
 
   // Do basic error checking first for mixing -target and -arch options.
-  auto *ArgArch = Args.getLastArgNoClaim(drv::OPT_arch);
-  auto *ArgTarget = Args.getLastArgNoClaim(drv::OPT_target);
+  auto *ArgArch = Args.getLastArgNoClaim(options::OPT_arch);
+  auto *ArgTarget = Args.getLastArgNoClaim(options::OPT_target);
   auto *ArgTargetVariant =
-      Args.getLastArgNoClaim(drv::OPT_darwin_target_variant);
+      Args.getLastArgNoClaim(options::OPT_darwin_target_variant);
   if (ArgArch && (ArgTarget || ArgTargetVariant)) {
     Diags->Report(clang::diag::err_drv_argument_not_allowed_with)
         << ArgArch->getAsString(Args)
@@ -143,7 +141,7 @@ bool Options::processDriverOptions(InputArgList &Args) {
     return false;
   }
 
-  auto *ArgMinTargetOS = Args.getLastArgNoClaim(drv::OPT_mtargetos_EQ);
+  auto *ArgMinTargetOS = Args.getLastArgNoClaim(options::OPT_mtargetos_EQ);
   if ((ArgTarget || ArgTargetVariant) && ArgMinTargetOS) {
     Diags->Report(clang::diag::err_drv_cannot_mix_options)
         << ArgTarget->getAsString(Args) << ArgMinTargetOS->getAsString(Args);
@@ -152,7 +150,7 @@ bool Options::processDriverOptions(InputArgList &Args) {
 
   // Capture target triples first.
   if (ArgTarget) {
-    for (const Arg *A : Args.filtered(drv::OPT_target)) {
+    for (const Arg *A : Args.filtered(options::OPT_target)) {
       A->claim();
       llvm::Triple TargetTriple(A->getValue());
       Target TAPITarget = Target(TargetTriple);
@@ -168,7 +166,7 @@ bool Options::processDriverOptions(InputArgList &Args) {
 
   // Capture target variants.
   DriverOpts.Zippered = ArgTargetVariant != nullptr;
-  for (Arg *A : Args.filtered(drv::OPT_darwin_target_variant)) {
+  for (Arg *A : Args.filtered(options::OPT_darwin_target_variant)) {
     A->claim();
     Triple Variant(A->getValue());
     if (Variant.getVendor() != Triple::Apple) {
@@ -213,7 +211,7 @@ bool Options::processDriverOptions(InputArgList &Args) {
     DriverOpts.Targets[TAPIVariant] = Variant;
   }
 
-  DriverOpts.Verbose = Args.hasArgNoClaim(drv::OPT_v);
+  DriverOpts.Verbose = Args.hasArgNoClaim(options::OPT_v);
 
   return true;
 }
@@ -407,7 +405,7 @@ bool Options::processOptionList(InputArgList &Args,
 
 bool Options::processLinkerOptions(InputArgList &Args) {
   // Handle required arguments.
-  if (const Arg *A = Args.getLastArg(drv::OPT_install__name))
+  if (const Arg *A = Args.getLastArg(options::OPT_install__name))
     LinkerOpts.InstallName = A->getValue();
   if (LinkerOpts.InstallName.empty()) {
     Diags->Report(diag::err_no_install_name);
@@ -415,28 +413,29 @@ bool Options::processLinkerOptions(InputArgList &Args) {
   }
 
   // Defaulted or optional arguments.
-  if (auto *Arg = Args.getLastArg(drv::OPT_current__version))
+  if (auto *Arg = Args.getLastArg(options::OPT_current__version))
     LinkerOpts.CurrentVersion.parse64(Arg->getValue());
 
-  if (auto *Arg = Args.getLastArg(drv::OPT_compatibility__version))
+  if (auto *Arg = Args.getLastArg(options::OPT_compatibility__version))
     LinkerOpts.CompatVersion.parse64(Arg->getValue());
 
-  if (auto *Arg = Args.getLastArg(drv::OPT_compatibility__version))
+  if (auto *Arg = Args.getLastArg(options::OPT_compatibility__version))
     LinkerOpts.CompatVersion.parse64(Arg->getValue());
 
-  if (auto *Arg = Args.getLastArg(drv::OPT_umbrella))
+  if (auto *Arg = Args.getLastArg(options::OPT_umbrella))
     LinkerOpts.ParentUmbrella = Arg->getValue();
 
-  LinkerOpts.IsDylib = Args.hasArg(drv::OPT_dynamiclib);
+  LinkerOpts.IsDylib = Args.hasArg(options::OPT_dynamiclib);
 
-  for (auto *Arg : Args.filtered(drv::OPT_alias_list)) {
+  for (auto *Arg : Args.filtered(options::OPT_alias_list)) {
     LinkerOpts.AliasLists.emplace_back(Arg->getValue());
     Arg->claim();
   }
 
-  LinkerOpts.AppExtensionSafe = Args.hasFlag(
-      drv::OPT_fapplication_extension, drv::OPT_fno_application_extension,
-      /*Default=*/LinkerOpts.AppExtensionSafe);
+  LinkerOpts.AppExtensionSafe =
+      Args.hasFlag(options::OPT_fapplication_extension,
+                   options::OPT_fno_application_extension,
+                   /*Default=*/LinkerOpts.AppExtensionSafe);
 
   if (::getenv("LD_NO_ENCRYPT") != nullptr)
     LinkerOpts.AppExtensionSafe = true;
@@ -446,7 +445,7 @@ bool Options::processLinkerOptions(InputArgList &Args) {
 
   // Capture library paths.
   PathSeq LibraryPaths;
-  for (const Arg *A : Args.filtered(drv::OPT_L)) {
+  for (const Arg *A : Args.filtered(options::OPT_L)) {
     LibraryPaths.emplace_back(A->getValue());
     A->claim();
   }
@@ -461,7 +460,7 @@ bool Options::processLinkerOptions(InputArgList &Args) {
 // invocations.
 bool Options::processFrontendOptions(InputArgList &Args) {
   // Capture language mode.
-  if (auto *A = Args.getLastArgNoClaim(drv::OPT_x)) {
+  if (auto *A = Args.getLastArgNoClaim(options::OPT_x)) {
     FEOpts.LangMode = llvm::StringSwitch<clang::Language>(A->getValue())
                           .Case("c", clang::Language::C)
                           .Case("c++", clang::Language::CXX)
@@ -475,15 +474,15 @@ bool Options::processFrontendOptions(InputArgList &Args) {
       return false;
     }
   }
-  for (auto *A : Args.filtered(drv::OPT_ObjC, drv::OPT_ObjCXX)) {
-    if (A->getOption().matches(drv::OPT_ObjC))
+  for (auto *A : Args.filtered(options::OPT_ObjC, options::OPT_ObjCXX)) {
+    if (A->getOption().matches(options::OPT_ObjC))
       FEOpts.LangMode = clang::Language::ObjC;
     else
       FEOpts.LangMode = clang::Language::ObjCXX;
   }
 
   // Capture Sysroot.
-  if (const Arg *A = Args.getLastArgNoClaim(drv::OPT_isysroot)) {
+  if (const Arg *A = Args.getLastArgNoClaim(options::OPT_isysroot)) {
     SmallString<PATH_MAX> Path(A->getValue());
     FM->makeAbsolutePath(Path);
     if (!FM->getOptionalDirectoryRef(Path)) {
@@ -502,13 +501,13 @@ bool Options::processFrontendOptions(InputArgList &Args) {
   }
 
   // Capture system frameworks for all platforms.
-  for (const Arg *A : Args.filtered(drv::OPT_iframework))
+  for (const Arg *A : Args.filtered(options::OPT_iframework))
     FEOpts.SystemFwkPaths.emplace_back(A->getValue(),
                                        std::optional<PlatformType>{});
 
   // Capture framework paths.
   PathSeq FrameworkPaths;
-  for (const Arg *A : Args.filtered(drv::OPT_F))
+  for (const Arg *A : Args.filtered(options::OPT_F))
     FrameworkPaths.emplace_back(A->getValue());
 
   if (!FrameworkPaths.empty())
@@ -610,35 +609,35 @@ Options::processAndFilterOutInstallAPIOptions(ArrayRef<const char *> Args) {
 
   for (const Arg *A : ParsedArgs.filtered(OPT_allowable_client)) {
     auto It = ArgToArchMap.find(A);
-    LinkerOpts.AllowableClients[A->getValue()] =
+    LinkerOpts.AllowableClients.getArchSet(A->getValue()) =
         It != ArgToArchMap.end() ? It->second : ArchitectureSet();
     A->claim();
   }
 
   for (const Arg *A : ParsedArgs.filtered(OPT_reexport_l)) {
     auto It = ArgToArchMap.find(A);
-    LinkerOpts.ReexportedLibraries[A->getValue()] =
+    LinkerOpts.ReexportedLibraries.getArchSet(A->getValue()) =
         It != ArgToArchMap.end() ? It->second : ArchitectureSet();
     A->claim();
   }
 
   for (const Arg *A : ParsedArgs.filtered(OPT_reexport_library)) {
     auto It = ArgToArchMap.find(A);
-    LinkerOpts.ReexportedLibraryPaths[A->getValue()] =
+    LinkerOpts.ReexportedLibraryPaths.getArchSet(A->getValue()) =
         It != ArgToArchMap.end() ? It->second : ArchitectureSet();
     A->claim();
   }
 
   for (const Arg *A : ParsedArgs.filtered(OPT_reexport_framework)) {
     auto It = ArgToArchMap.find(A);
-    LinkerOpts.ReexportedFrameworks[A->getValue()] =
+    LinkerOpts.ReexportedFrameworks.getArchSet(A->getValue()) =
         It != ArgToArchMap.end() ? It->second : ArchitectureSet();
     A->claim();
   }
 
   for (const Arg *A : ParsedArgs.filtered(OPT_rpath)) {
     auto It = ArgToArchMap.find(A);
-    LinkerOpts.RPaths[A->getValue()] =
+    LinkerOpts.RPaths.getArchSet(A->getValue()) =
         It != ArgToArchMap.end() ? It->second : ArchitectureSet();
     A->claim();
   }
@@ -730,12 +729,12 @@ Options::Options(DiagnosticsEngine &Diag, FileManager *FM,
   // After all InstallAPI necessary arguments have been collected. Go back and
   // assign values that were unknown before the clang driver opt table was used.
   ArchitectureSet AllArchs;
-  llvm::for_each(DriverOpts.Targets,
-                 [&AllArchs](const auto &T) { AllArchs.set(T.first.Arch); });
+  for (const auto &T : DriverOpts.Targets)
+    AllArchs.set(T.first.Arch);
   auto assignDefaultLibAttrs = [&AllArchs](LibAttrs &Attrs) {
-    for (StringMapEntry<ArchitectureSet> &Entry : Attrs)
-      if (Entry.getValue().empty())
-        Entry.setValue(AllArchs);
+    for (auto &[_, Archs] : Attrs.get())
+      if (Archs.empty())
+        Archs = AllArchs;
   };
   assignDefaultLibAttrs(LinkerOpts.AllowableClients);
   assignDefaultLibAttrs(LinkerOpts.ReexportedFrameworks);
@@ -763,7 +762,6 @@ getInterfaceFile(const StringRef Filename) {
     return errorCodeToError(std::move(Err));
 
   auto Buffer = std::move(*BufferOrErr);
-  std::unique_ptr<InterfaceFile> IF;
   switch (identify_magic(Buffer->getBuffer())) {
   case file_magic::macho_dynamically_linked_shared_lib:
   case file_magic::macho_dynamically_linked_shared_lib_stub:
@@ -789,52 +787,49 @@ std::pair<LibAttrs, ReexportedInterfaces> Options::getReexportedLibraries() {
     std::unique_ptr<InterfaceFile> Reexport = std::move(*ReexportIFOrErr);
     StringRef InstallName = Reexport->getInstallName();
     assert(!InstallName.empty() && "Parse error for install name");
-    Reexports.insert({InstallName, Archs});
+    Reexports.getArchSet(InstallName) = Archs;
     ReexportIFs.emplace_back(std::move(*Reexport));
     return true;
   };
 
   PlatformSet Platforms;
-  llvm::for_each(DriverOpts.Targets,
-                 [&](const auto &T) { Platforms.insert(T.first.Platform); });
+  for (const auto &T : DriverOpts.Targets)
+    Platforms.insert(T.first.Platform);
   // Populate search paths by looking at user paths before system ones.
   PathSeq FwkSearchPaths(FEOpts.FwkPaths.begin(), FEOpts.FwkPaths.end());
   for (const PlatformType P : Platforms) {
     PathSeq PlatformSearchPaths = getPathsForPlatform(FEOpts.SystemFwkPaths, P);
     llvm::append_range(FwkSearchPaths, PlatformSearchPaths);
-    for (const StringMapEntry<ArchitectureSet> &Lib :
-         LinkerOpts.ReexportedFrameworks) {
-      std::string Name = (Lib.getKey() + ".framework/" + Lib.getKey()).str();
+    for (const auto &[Lib, Archs] : LinkerOpts.ReexportedFrameworks.get()) {
+      std::string Name = (Lib + ".framework/" + Lib);
       std::string Path = findLibrary(Name, *FM, FwkSearchPaths, {}, {});
       if (Path.empty()) {
-        Diags->Report(diag::err_cannot_find_reexport) << false << Lib.getKey();
+        Diags->Report(diag::err_cannot_find_reexport) << false << Lib;
         return {};
       }
       if (DriverOpts.TraceLibraryLocation)
         errs() << Path << "\n";
 
-      AccumulateReexports(Path, Lib.getValue());
+      AccumulateReexports(Path, Archs);
     }
     FwkSearchPaths.resize(FwkSearchPaths.size() - PlatformSearchPaths.size());
   }
 
-  for (const StringMapEntry<ArchitectureSet> &Lib :
-       LinkerOpts.ReexportedLibraries) {
-    std::string Name = "lib" + Lib.getKey().str() + ".dylib";
+  for (const auto &[Lib, Archs] : LinkerOpts.ReexportedLibraries.get()) {
+    std::string Name = "lib" + Lib + ".dylib";
     std::string Path = findLibrary(Name, *FM, {}, LinkerOpts.LibPaths, {});
     if (Path.empty()) {
-      Diags->Report(diag::err_cannot_find_reexport) << true << Lib.getKey();
+      Diags->Report(diag::err_cannot_find_reexport) << true << Lib;
       return {};
     }
     if (DriverOpts.TraceLibraryLocation)
       errs() << Path << "\n";
 
-    AccumulateReexports(Path, Lib.getValue());
+    AccumulateReexports(Path, Archs);
   }
 
-  for (const StringMapEntry<ArchitectureSet> &Lib :
-       LinkerOpts.ReexportedLibraryPaths)
-    AccumulateReexports(Lib.getKey(), Lib.getValue());
+  for (const auto &[Lib, Archs] : LinkerOpts.ReexportedLibraryPaths.get())
+    AccumulateReexports(Lib, Archs);
 
   return {std::move(Reexports), std::move(ReexportIFs)};
 }
@@ -1087,10 +1082,10 @@ void Options::addConditionalCC1Args(std::vector<std::string> &ArgStrings,
   // Add specific to platform arguments.
   PathSeq PlatformSearchPaths =
       getPathsForPlatform(FEOpts.SystemFwkPaths, mapToPlatformType(Targ));
-  llvm::for_each(PlatformSearchPaths, [&ArgStrings](const StringRef Path) {
+  for (StringRef Path : PlatformSearchPaths) {
     ArgStrings.push_back("-iframework");
     ArgStrings.push_back(Path.str());
-  });
+  }
 
   // Add specific to header type arguments.
   if (Type == HeaderType::Project)

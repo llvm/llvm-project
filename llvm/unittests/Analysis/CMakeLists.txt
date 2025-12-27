@@ -5,6 +5,7 @@ set(LLVM_LINK_COMPONENTS
   Core
   Instrumentation
   Passes
+  Plugins
   Support
   TargetParser
   TransformUtils
@@ -32,6 +33,7 @@ set(ANALYSIS_TEST_SOURCES
   GlobalsModRefTest.cpp
   FunctionPropertiesAnalysisTest.cpp
   InlineCostTest.cpp
+  IR2VecTest.cpp
   IRSimilarityIdentifierTest.cpp
   IVDescriptorsTest.cpp
   LastRunTrackingAnalysisTest.cpp

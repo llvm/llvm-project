@@ -138,28 +138,25 @@ public:
 
   /// Meet (intersect) the information contained in the 'rhs' value with this
   /// lattice. Returns if the state of the current lattice changed.  If the
-  /// lattice elements don't have a `meet` method, this is a no-op (see below.)
-  template <typename VT,
-            std::enable_if_t<lattice_has_meet<VT>::value> * = nullptr>
+  /// lattice elements don't have a `meet` method, this is a no-op.
+  template <typename VT>
   ChangeResult meet(const VT &rhs) {
-    ValueT newValue = ValueT::meet(value, rhs);
-    assert(ValueT::meet(newValue, value) == newValue &&
-           "expected `meet` to be monotonic");
-    assert(ValueT::meet(newValue, rhs) == newValue &&
-           "expected `meet` to be monotonic");
-
-    // Update the current optimistic value if something changed.
-    if (newValue == value)
+    if constexpr (!lattice_has_meet<VT>::value) {
       return ChangeResult::NoChange;
+    } else {
+      ValueT newValue = ValueT::meet(value, rhs);
+      assert(ValueT::meet(newValue, value) == newValue &&
+             "expected `meet` to be monotonic");
+      assert(ValueT::meet(newValue, rhs) == newValue &&
+             "expected `meet` to be monotonic");
 
-    value = newValue;
-    return ChangeResult::Change;
-  }
+      // Update the current optimistic value if something changed.
+      if (newValue == value)
+        return ChangeResult::NoChange;
 
-  template <typename VT,
-            std::enable_if_t<!lattice_has_meet<VT>::value> * = nullptr>
-  ChangeResult meet(const VT &rhs) {
-    return ChangeResult::NoChange;
+      value = newValue;
+      return ChangeResult::Change;
+    }
   }
 
   /// Print the lattice element.
@@ -235,6 +232,30 @@ protected:
   /// Join the lattice element and propagate and update if it changed.
   void join(AbstractSparseLattice *lhs, const AbstractSparseLattice &rhs);
 
+  /// Visits a call operation. Given the operand lattices, sets the result
+  /// lattices. Performs interprocedural data flow as follows: if the call
+  /// operation targets an external function, or if the solver is not
+  /// interprocedural, attempts to infer the results from the call arguments
+  /// using the user-provided `visitExternalCallImpl`. Otherwise, computes the
+  /// result lattices from the return sites if all return sites are known;
+  /// otherwise, conservatively marks the result lattices as having reached
+  /// their pessimistic fixpoints.
+  /// This method can be overridden to, for example, be less conservative and
+  /// propagate the information even if some return sites are unknown.
+  virtual LogicalResult
+  visitCallOperation(CallOpInterface call,
+                     ArrayRef<const AbstractSparseLattice *> operandLattices,
+                     ArrayRef<AbstractSparseLattice *> resultLattices);
+
+  /// Visits a callable operation. Computes the argument lattices from call
+  /// sites if all call sites are known; otherwise, conservatively marks them
+  /// as having reached their pessimistic fixpoints.
+  /// This method can be overridden to, for example, be less conservative and
+  /// propagate the information even if some call sites are unknown.
+  virtual void
+  visitCallableOperation(CallableOpInterface callable,
+                         ArrayRef<AbstractSparseLattice *> argLattices);
+
 private:
   /// Recursively initialize the analysis on nested operations and blocks.
   LogicalResult initializeRecursively(Operation *op);
@@ -262,7 +283,7 @@ private:
   /// and propagating therefrom.
   virtual void
   visitRegionSuccessors(ProgramPoint *point, RegionBranchOpInterface branch,
-                        RegionBranchPoint successor,
+                        RegionSuccessor successor,
                         ArrayRef<AbstractSparseLattice *> lattices);
 };
 
@@ -430,6 +451,16 @@ protected:
   /// Join the lattice element and propagate and update if it changed.
   void meet(AbstractSparseLattice *lhs, const AbstractSparseLattice &rhs);
 
+  /// Visits a callable operation. If all the call sites are known computes the
+  /// operand lattices of `op` from the result lattices of all the call sites;
+  /// otherwise, conservatively marks them as having reached their pessimistic
+  /// fixpoints.
+  /// This method can be overridden to, for example, be less conservative and
+  /// propagate the information even if some call sites are unknown.
+  virtual LogicalResult
+  visitCallableOperation(Operation *op, CallableOpInterface callable,
+                         ArrayRef<AbstractSparseLattice *> operandLattices);
+
 private:
   /// Recursively initialize the analysis on nested operations and blocks.
   LogicalResult initializeRecursively(Operation *op);
@@ -484,6 +515,10 @@ private:
 template <typename StateT>
 class SparseBackwardDataFlowAnalysis
     : public AbstractSparseBackwardDataFlowAnalysis {
+  static_assert(
+      std::is_base_of<AbstractSparseLattice, StateT>::value,
+      "analysis state class expected to subclass AbstractSparseLattice");
+
 public:
   explicit SparseBackwardDataFlowAnalysis(DataFlowSolver &solver,
                                           SymbolTableCollection &symbolTable)

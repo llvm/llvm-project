@@ -16,6 +16,9 @@ bar:
 ; CHECK: brlt bar            ; encoding: [0bAAAAA100,0b111100AA]
 
 ; INST-LABEL: <foo>:
-; INST-NEXT: 44 f0    brlt .+16
-; INST-NEXT: 0c f0    brlt .+2
-; INST-NEXT: 04 f0    brlt .+0
+; INST-NEXT: fc f3    brlt .-2
+; INST-NEXT: R_AVR_7_PCREL .text+0x12
+; INST-NEXT: fc f3    brlt .-2
+; INST-NEXT: R_AVR_7_PCREL .text+0x6
+; INST-NEXT: fc f3    brlt .-2
+; INST-NEXT: R_AVR_7_PCREL .text+0x6
