@@ -1134,10 +1134,13 @@ static bool HasExtension(const Preprocessor &PP, StringRef Extension) {
 /// EvaluateHasIncludeCommon - Process a '__has_include("path")'
 /// or '__has_include_next("path")' expression.
 /// Returns true if successful.
+/// If SkipLookup is true, only consume the tokens without performing the
+/// actual file lookup (used when we know the result should be false anyway).
 static bool EvaluateHasIncludeCommon(Token &Tok, IdentifierInfo *II,
                                      Preprocessor &PP,
                                      ConstSearchDirIterator LookupFrom,
-                                     const FileEntry *LookupFromFile) {
+                                     const FileEntry *LookupFromFile,
+                                     bool SkipLookup = false) {
   // Save the location of the current token.  If a '(' is later found, use
   // that location.  If not, use the end of this location instead.
   SourceLocation LParenLoc = Tok.getLocation();
@@ -1202,6 +1205,11 @@ static bool EvaluateHasIncludeCommon(Token &Tok, IdentifierInfo *II,
   // If GetIncludeFilenameSpelling set the start ptr to null, there was an
   // error.
   if (Filename.empty())
+    return false;
+
+  // If SkipLookup is set, we've already consumed the tokens - just return false
+  // without performing the actual file lookup.
+  if (SkipLookup)
     return false;
 
   // Passing this to LookupFile forces header search to check whether the found
@@ -1333,7 +1341,20 @@ bool Preprocessor::EvaluateHasIncludeNext(Token &Tok, IdentifierInfo *II) {
   const FileEntry *LookupFromFile;
   std::tie(Lookup, LookupFromFile) = getIncludeNextStart(Tok);
 
-  return EvaluateHasIncludeCommon(Tok, II, *this, Lookup, LookupFromFile);
+  // If getIncludeNextStart returns {nullptr, nullptr} AND we're not in the
+  // primary file, the current file was found via absolute path or relative to
+  // such a file. In this case, there's no valid "next" directory to search
+  // from, so __has_include_next should return false. We pass SkipLookup=true
+  // to consume the tokens without performing the file lookup (which would
+  // incorrectly search from the start of the include path and potentially
+  // find the wrong file or cause errors).
+  //
+  // Note: When in the primary file, we still allow the search to proceed
+  // (with a warning emitted by getIncludeNextStart). This preserves existing
+  // behavior where __has_include_next in primary files can still find headers.
+  bool SkipLookup = !Lookup && !LookupFromFile && !isInPrimaryFile();
+  return EvaluateHasIncludeCommon(Tok, II, *this, Lookup, LookupFromFile,
+                                  SkipLookup);
 }
 
 /// Process single-argument builtin feature-like macros that return
