@@ -471,7 +471,6 @@ define float @pr64937_preserve_min_idiom(float %a) {
   ret float %res
 }
 
-; NOTE: Regression test for foldMinimumMaximumSharedOp crash.
 define float @minnum_shared_op_mixed(float %x) {
 ; CHECK-LABEL: @minnum_shared_op_mixed(
 ; CHECK-NEXT:    [[M0:%.*]] = call float @llvm.minnum.f32(float [[X:%.*]], float 0.000000e+00)
