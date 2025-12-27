@@ -1180,7 +1180,6 @@ filegroup(
         "lib/Bindings/Python/IRTypes.cpp",
         "lib/Bindings/Python/Pass.cpp",
         "lib/Bindings/Python/Rewrite.cpp",
-
     ],
 )
 
