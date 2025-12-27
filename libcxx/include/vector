@@ -152,12 +152,16 @@ public:
     class reference
     {
     public:
-        reference(const reference&) noexcept;
-        operator bool() const noexcept;
-        reference& operator=(bool x) noexcept;
-        reference& operator=(const reference& x) noexcept;
+        reference(const reference&) noexcept;                  // constexpr since C++20
+        operator bool() const noexcept;                        // constexpr since C++20
+        reference& operator=(bool x) noexcept;                 // constexpr since C++20
+        reference& operator=(const reference& x) noexcept;     // constexpr since C++20
+        constexpr reference& operator=(bool x) const noexcept; // since C++23
         iterator operator&() const noexcept;
-        void flip() noexcept;
+        void flip() noexcept;                                  // constexpr since C++20
+        friend void swap(reference x, reference y) noexcept;   // constexpr since C++20
+        friend void swap(reference x, bool& y) noexcept;       // constexpr since C++20
+        friend void swap(bool& x, reference y) noexcept;       // constexpr since C++20
     };
 
     class const_reference
@@ -255,6 +259,7 @@ public:
     void swap(vector&)
         noexcept(allocator_traits<allocator_type>::propagate_on_container_swap::value ||
                  allocator_traits<allocator_type>::is_always_equal::value);  // C++17
+    static void swap(reference x, reference, y) noexcept;                    // deprecated in C++26
     void flip() noexcept;
 
     bool __invariants() const;
