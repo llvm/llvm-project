@@ -2870,10 +2870,31 @@ X86TTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
   case Intrinsic::x86_avx_blendv_ps_256:
   case Intrinsic::x86_avx_blendv_pd_256:
   case Intrinsic::x86_avx2_pblendvb: {
+
+    Value *Mask = II.getArgOperand(2);
+
+    unsigned BitWidth = Mask->getType()->getScalarSizeInBits();
+    KnownBits Known(BitWidth);
+
+    if (Mask->getType()->isIntOrIntVectorTy()) {
+      if (IC.SimplifyDemandedBits(&II, 2, APInt::getSignMask(BitWidth), Known))
+        return &II;
+    }
+
+    else if (auto *BC = dyn_cast<BitCastInst>(Mask)) {
+      Value *Src = BC->getOperand(0);
+      if (Src->getType()->isIntOrIntVectorTy()) {
+        unsigned SrcBitWidth = Src->getType()->getScalarSizeInBits();
+        KnownBits KnownSrc(SrcBitWidth);
+        if (IC.SimplifyDemandedBits(BC, 0, APInt::getSignMask(SrcBitWidth),
+                                    KnownSrc))
+          return &II;
+      }
+    }
     // fold (blend A, A, Mask) -> A
     Value *Op0 = II.getArgOperand(0);
     Value *Op1 = II.getArgOperand(1);
-    Value *Mask = II.getArgOperand(2);
+    Mask = II.getArgOperand(2);
     if (Op0 == Op1) {
       return IC.replaceInstUsesWith(II, Op0);
     }

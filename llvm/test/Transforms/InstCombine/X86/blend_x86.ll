@@ -357,6 +357,52 @@ define <4 x double> @shl_blendvpd_v4f64(<4 x double> %a0, <4 x double> %a1, <4 x
   ret <4 x double> %r
 }
 
+define <16 x i8> @pblendvb_demanded_msb(<16 x i8> %a, <16 x i8> %b, <16 x i8> %m) {
+; CHECK-LABEL: @pblendvb_demanded_msb(
+; CHECK-NEXT:    [[OR:%.*]] = or <16 x i8> [[M:%.*]], splat (i8 1)
+; CHECK-NEXT:    [[R:%.*]] = call <16 x i8> @llvm.x86.sse41.pblendvb(<16 x i8> [[A:%.*]], <16 x i8> [[B:%.*]], <16 x i8> [[OR]])
+; CHECK-NEXT:    ret <16 x i8> [[R]]
+;
+  %or = or <16 x i8> %m, splat (i8 1)
+  %r = call <16 x i8> @llvm.x86.sse41.pblendvb(<16 x i8> %a, <16 x i8> %b, <16 x i8> %or)
+  ret <16 x i8> %r
+}
+
+define <8 x float> @blendvps_demanded_msb(<8 x float> %a, <8 x float> %b, <8 x i32> %m) {
+; CHECK-LABEL: @blendvps_demanded_msb(
+; CHECK-NEXT:    [[OR:%.*]] = or <8 x i32> [[M:%.*]], splat (i32 1)
+; CHECK-NEXT:    [[MASK:%.*]] = bitcast <8 x i32> [[OR]] to <8 x float>
+; CHECK-NEXT:    [[R:%.*]] = call <8 x float> @llvm.x86.avx.blendv.ps.256(<8 x float> [[A:%.*]], <8 x float> [[B:%.*]], <8 x float> [[MASK]])
+; CHECK-NEXT:    ret <8 x float> [[R]]
+;
+  %or = or <8 x i32> %m, splat (i32 1)
+  %mask = bitcast <8 x i32> %or to <8 x float>
+  %r = call <8 x float> @llvm.x86.avx.blendv.ps.256(<8 x float> %a, <8 x float> %b, <8 x float> %mask)
+  ret <8 x float> %r
+}
+
+define <16 x i8> @pblendvb_or_affects_msb(<16 x i8> %a, <16 x i8> %b, <16 x i8> %m) {
+; CHECK-LABEL: @pblendvb_or_affects_msb(
+; CHECK-NEXT:    [[OR:%.*]] = or <16 x i8> [[M:%.*]], splat (i8 -128)
+; CHECK-NEXT:    [[R:%.*]] = call <16 x i8> @llvm.x86.sse41.pblendvb(<16 x i8> [[A:%.*]], <16 x i8> [[B:%.*]], <16 x i8> [[OR]])
+; CHECK-NEXT:    ret <16 x i8> [[R]]
+;
+  %or = or <16 x i8> %m, splat (i8 128)
+  %r = call <16 x i8> @llvm.x86.sse41.pblendvb(<16 x i8> %a, <16 x i8> %b, <16 x i8> %or)
+  ret <16 x i8> %r
+}
+
+define <32 x i8> @pblendvb_demanded_msb_avx2(<32 x i8> %a, <32 x i8> %b, <32 x i8> %m) {
+; CHECK-LABEL: @pblendvb_demanded_msb_avx2(
+; CHECK-NEXT:    [[OR:%.*]] = or <32 x i8> [[M:%.*]], splat (i8 1)
+; CHECK-NEXT:    [[R:%.*]] = call <32 x i8> @llvm.x86.avx2.pblendvb(<32 x i8> [[A:%.*]], <32 x i8> [[B:%.*]], <32 x i8> [[OR]])
+; CHECK-NEXT:    ret <32 x i8> [[R]]
+;
+  %or = or <32 x i8> %m, splat (i8 1)
+  %r  = call <32 x i8> @llvm.x86.avx2.pblendvb(<32 x i8> %a, <32 x i8> %b, <32 x i8> %or)
+  ret <32 x i8> %r
+}
+
 declare <16 x i8> @llvm.x86.sse41.pblendvb(<16 x i8>, <16 x i8>, <16 x i8>)
 declare <4 x float> @llvm.x86.sse41.blendvps(<4 x float>, <4 x float>, <4 x float>)
 declare <2 x double> @llvm.x86.sse41.blendvpd(<2 x double>, <2 x double>, <2 x double>)
