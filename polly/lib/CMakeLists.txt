@@ -24,6 +24,7 @@ set(POLLY_COMPONENTS
     ipo
     MC
     Passes
+    Plugins
     Linker
     IRReader
     Analysis
