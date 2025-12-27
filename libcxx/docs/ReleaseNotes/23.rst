@@ -42,6 +42,7 @@ Implemented Papers
 - P1885R12: Naming Text Encodings to Demystify Them (`Github <https://llvm.org/PR105373>`__)
 - P1899R3: ``stride_view`` (`Github <https://llvm.org/PR105198>`__)
 - P2862R1: ``text_encoding::name()`` should never return null values (`Github <https://llvm.org/PR118371>`__)
+- P3612R1: Harmonize proxy-reference operations (LWG 3638 and 4187) (`Github <https://llvm.org/PR171281>`__)
 - P3936R1: Safer ``atomic_ref::address`` (`Github <https://llvm.org/PR189594>`__)
 - P3953R3: Rename ``std::runtime_format`` (`Github <https://llvm.org/PR189624>`__)
 - P4052R0: Renaming saturation arithmetic functions (`Github <https://llvm.org/PR189589>`__)
