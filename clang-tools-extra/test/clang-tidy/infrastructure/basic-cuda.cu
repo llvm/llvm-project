@@ -1,6 +1,13 @@
-// RUN: clang-tidy %s -checks='-*,modernize-use-nullptr' -- -nocudainc -nocudalib --cuda-host-only | FileCheck %s
+// RUN: clang-tidy %s -checks='-*,modernize-use-nullptr' -- \
+// RUN:   --cuda-path=%S/Inputs/CUDA/usr/local/cuda \
+// RUN:   -nocudalib -nocudainc -I %S/Inputs/CUDA/usr/local/cuda/include \
+// RUN:   --cuda-host-only | FileCheck %s
+// RUN: clang-tidy %s -checks='-*,modernize-use-nullptr' -- \
+// RUN:   --cuda-path=%S/Inputs/CUDA/usr/local/cuda \
+// RUN:   -nocudalib -nocudainc -I %S/Inputs/CUDA/usr/local/cuda/include \
+// RUN:   --cuda-device-only | FileCheck %s
 
-#define __global__ __attribute__((global))
+#include <cuda_runtime.h>
 
 // CHECK: :[[@LINE+1]]:38: warning: use nullptr [modernize-use-nullptr]
 __global__ void kernel(int *p) { p = 0; }
