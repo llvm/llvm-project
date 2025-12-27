@@ -148,20 +148,21 @@ void UseInternalLinkageCheck::registerMatchers(MatchFinder *Finder) {
         functionDecl(
             Common, hasBody(),
             unless(anyOf(
-                isExplicitlyExternC(), isStaticStorageClass(), isExternStorageClass(),
-                isExplicitTemplateSpecialization(), cxxMethodDecl(),
-                isConsteval(), isAllocationOrDeallocationOverloadedFunction(),
-                isMain())))
+                isExplicitlyExternC(), isStaticStorageClass(),
+                isExternStorageClass(), isExplicitTemplateSpecialization(),
+                cxxMethodDecl(), isConsteval(),
+                isAllocationOrDeallocationOverloadedFunction(), isMain())))
             .bind("fn"),
         this);
   if (AnalyzeVariables)
-    Finder->addMatcher(varDecl(Common, hasGlobalStorage(),
-                               unless(anyOf(isExplicitlyExternC(), isStaticStorageClass(),
-                                            isExternStorageClass(),
-                                            isExplicitTemplateSpecialization(),
-                                            hasThreadStorageDuration())))
-                           .bind("var"),
-                       this);
+    Finder->addMatcher(
+        varDecl(Common, hasGlobalStorage(),
+                unless(anyOf(isExplicitlyExternC(), isStaticStorageClass(),
+                             isExternStorageClass(),
+                             isExplicitTemplateSpecialization(),
+                             hasThreadStorageDuration())))
+            .bind("var"),
+        this);
   if (getLangOpts().CPlusPlus && AnalyzeTypes)
     Finder->addMatcher(
         tagDecl(Common, isDefinition(), hasNameForLinkage(),
