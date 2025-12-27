@@ -4793,13 +4793,13 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
   auto Zero = [&]() { return ConstantInt::get(SelType, 0); };
   auto One = [&]() { return ConstantInt::get(SelType, 1); };
   auto MinusOne = [&]() { return ConstantInt::getAllOnesValue(SelType); };
-  if (match(CondVal, m_NUWTrunc(m_Value(Trunc)))) {
+  if (match(CondVal, m_NUWTrunc(m_Value(Trunc))) && !isa<Constant>(Trunc)) {
     if (TrueVal == Trunc && TrueVal != One())
       return replaceOperand(SI, 1, One());
     if (FalseVal == Trunc && FalseVal != Zero())
       return replaceOperand(SI, 2, Zero());
   }
-  if (match(CondVal, m_NSWTrunc(m_Value(Trunc)))) {
+  if (match(CondVal, m_NSWTrunc(m_Value(Trunc))) && !isa<Constant>(Trunc)) {
     if (TrueVal == Trunc && TrueVal != MinusOne())
       return replaceOperand(SI, 1, MinusOne());
     if (FalseVal == Trunc && FalseVal != Zero())
