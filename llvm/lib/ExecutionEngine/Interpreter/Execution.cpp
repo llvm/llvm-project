@@ -1084,7 +1084,7 @@ void Interpreter::visitVAStartInst(VAStartInst &I) {
   GenericValue ArgIndex;
   ArgIndex.UIntPairVal.first = ECStack.size() - 1;
   ArgIndex.UIntPairVal.second = 0;
-  SetValue(&I, ArgIndex, SF);
+  SetValue(I.getArgList(), ArgIndex, SF);
 }
 
 void Interpreter::visitVAEndInst(VAEndInst &I) {
@@ -1731,7 +1731,8 @@ void Interpreter::visitVAArgInst(VAArgInst &I) {
 
   // Get the incoming valist parameter.  LLI treats the valist as a
   // (ec-stack-depth var-arg-index) pair.
-  GenericValue VAList = getOperandValue(I.getOperand(0), SF);
+  Value *V = I.getOperand(0);
+  GenericValue VAList = getOperandValue(V, SF);
   GenericValue Dest;
   GenericValue Src = ECStack[VAList.UIntPairVal.first]
                       .VarArgs[VAList.UIntPairVal.second];
@@ -1751,8 +1752,9 @@ void Interpreter::visitVAArgInst(VAArgInst &I) {
   // Set the Value of this Instruction.
   SetValue(&I, Dest, SF);
 
-  // Move the pointer to the next vararg.
+  // Move the pointer to the next vararg and set new value back.
   ++VAList.UIntPairVal.second;
+  SetValue(V, VAList, SF);
 }
 
 void Interpreter::visitExtractElementInst(ExtractElementInst &I) {
