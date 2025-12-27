@@ -545,6 +545,7 @@ static bool isCommutative(Instruction *I, Value *ValWithUses,
   if (auto *BO = dyn_cast<BinaryOperator>(I))
     return BO->isCommutative() ||
            (BO->getOpcode() == Instruction::Sub &&
+            ValWithUses->hasUseList() &&
             !ValWithUses->hasNUsesOrMore(UsesLimit) &&
             all_of(
                 ValWithUses->uses(),
@@ -565,6 +566,7 @@ static bool isCommutative(Instruction *I, Value *ValWithUses,
                           Flag->isOne());
                 })) ||
            (BO->getOpcode() == Instruction::FSub &&
+            ValWithUses->hasUseList() &&
             !ValWithUses->hasNUsesOrMore(UsesLimit) &&
             all_of(ValWithUses->uses(), [](const Use &U) {
               return match(U.getUser(),
@@ -5679,13 +5681,17 @@ private:
                 auto It = OperandsUses.find(I);
                 assert(It != OperandsUses.end() && "Operand not found");
                 if (It->second > 0) {
-                  --It->getSecond();
-                  assert(TotalOpCount > 0 && "No more operands to decrement");
-                  --TotalOpCount;
                   if (ScheduleData *OpSD = getScheduleData(I)) {
                     if (!Checked.insert(std::make_pair(OpSD, OpIdx)).second)
                       return;
+                    --It->getSecond();
+                    assert(TotalOpCount > 0 && "No more operands to decrement");
+                    --TotalOpCount;
                     DecrUnsched(OpSD, /*IsControl=*/false);
+                  } else {
+                    --It->getSecond();
+                    assert(TotalOpCount > 0 && "No more operands to decrement");
+                    --TotalOpCount;
                   }
                 }
               };
@@ -5937,7 +5943,8 @@ private:
     /// bundles which depend on the original bundle.
     void calculateDependencies(ScheduleBundle &Bundle, bool InsertInReadyList,
                                BoUpSLP *SLP,
-                               ArrayRef<ScheduleData *> ControlDeps = {});
+                               ArrayRef<ScheduleData *> ControlDeps = {},
+                               bool NonSchedulable = false);
 
     /// Sets all instruction in the scheduling region to un-scheduled.
     void resetSchedule();
@@ -15657,17 +15664,6 @@ bool BoUpSLP::isTreeTinyAndNotFullyVectorizable(bool ForReduction) const {
          allConstant(VectorizableTree[1]->Scalars))))
     return true;
 
-  // Buildvector with externally used scalars, which should remain as scalars,
-  // should not be vectorized, the compiler may hang.
-  if (SLPCostThreshold < 0 && VectorizableTree.size() > 1 &&
-      isa<InsertElementInst>(VectorizableTree[0]->Scalars[0]) &&
-      VectorizableTree[1]->hasState() &&
-      VectorizableTree[1]->State == TreeEntry::Vectorize &&
-      all_of(VectorizableTree[1]->Scalars, [&](Value *V) {
-        return ExternalUsesAsOriginalScalar.contains(V);
-      }))
-    return true;
-
   // If the graph includes only PHI nodes and gathers, it is defnitely not
   // profitable for the vectorization, we can skip it, if the cost threshold is
   // default. The cost of vectorized PHI nodes is almost always 0 + the cost of
@@ -16619,6 +16615,17 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals,
       }
     }
   }
+
+  // Buildvector with externally used scalars, which should remain as scalars,
+  // should not be vectorized, the compiler may hang.
+  if (SLPCostThreshold < 0 && VectorizableTree.size() > 1 &&
+      isa<InsertElementInst>(VectorizableTree[0]->Scalars[0]) &&
+      VectorizableTree[1]->hasState() &&
+      VectorizableTree[1]->State == TreeEntry::Vectorize &&
+      all_of(VectorizableTree[1]->Scalars, [&](Value *V) {
+        return ExternalUsesAsOriginalScalar.contains(V);
+      }))
+    return InstructionCost::getInvalid();
 
   Cost += ExtractCost;
   auto &&ResizeToVF = [this, &Cost](const TreeEntry *TE, ArrayRef<int> Mask,
@@ -21307,9 +21314,7 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
           if (ScheduleData *OpSD = getScheduleData(Op);
               OpSD && OpSD->hasValidDependencies()) {
             OpSD->clearDirectDependencies();
-            if (RegionHasStackSave ||
-                !isGuaranteedToTransferExecutionToSuccessor(OpSD->getInst()))
-              ControlDependentMembers.push_back(OpSD);
+            ControlDependentMembers.push_back(OpSD);
           }
         }
       }
@@ -21317,7 +21322,7 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
     if (!ControlDependentMembers.empty()) {
       ScheduleBundle Invalid = ScheduleBundle::invalid();
       calculateDependencies(Invalid, /*InsertInReadyList=*/true, SLP,
-                            ControlDependentMembers);
+                            ControlDependentMembers, /*NonSchedulable=*/true);
     }
     return nullptr;
   }
@@ -21701,7 +21706,7 @@ void BoUpSLP::BlockScheduling::initScheduleData(Instruction *FromI,
 
 void BoUpSLP::BlockScheduling::calculateDependencies(
     ScheduleBundle &Bundle, bool InsertInReadyList, BoUpSLP *SLP,
-    ArrayRef<ScheduleData *> ControlDeps) {
+    ArrayRef<ScheduleData *> ControlDeps, bool NonSchedulable) {
   SmallVector<ScheduleEntity *> WorkList;
   auto ProcessNode = [&](ScheduleEntity *SE) {
     if (auto *CD = dyn_cast<ScheduleCopyableData>(SE)) {
@@ -21786,7 +21791,8 @@ void BoUpSLP::BlockScheduling::calculateDependencies(
         // The operand is a copyable element - skip.
         unsigned &NumOps = UserToNumOps.try_emplace(U, 0).first->getSecond();
         ++NumOps;
-        if (areAllOperandsReplacedByCopyableData(
+        if (!NonSchedulable &&
+            areAllOperandsReplacedByCopyableData(
                 cast<Instruction>(U), BundleMember->getInst(), *SLP, NumOps))
           continue;
         BundleMember->incDependencies();
