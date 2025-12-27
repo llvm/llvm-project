@@ -849,7 +849,7 @@ struct __specialized_algorithm<_Alg, __iterator_pair<__map_iterator<_TreeIterato
   using __iterator _LIBCPP_NODEBUG = __map_iterator<_TreeIterator>;
 
   template <class... _Args>
-  _LIBCPP_HIDE_FROM_ABI static void operator()(__iterator __first, __iterator __last, _Args&&... __args) {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 static void operator()(__iterator __first, __iterator __last, _Args&&... __args) {
     __base()(__first.__i_, __last.__i_, std::forward<_Args>(__args)...);
   }
 };
@@ -929,7 +929,7 @@ struct __specialized_algorithm<
   using __iterator _LIBCPP_NODEBUG = __map_const_iterator<_TreeIterator>;
 
   template <class... _Args>
-  _LIBCPP_HIDE_FROM_ABI static void operator()(__iterator __first, __iterator __last, _Args&&... __args) {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 static void operator()(__iterator __first, __iterator __last, _Args&&... __args) {
     __base()(__first.__i_, __last.__i_, std::forward<_Args>(__args)...);
   }
 };
@@ -1551,7 +1551,7 @@ struct __specialized_algorithm<_Algorithm::__for_each, __single_range<map<_Key, 
   static const bool __has_algorithm = true;
 
   template <class _Map, class _Func, class _Proj>
-  _LIBCPP_HIDE_FROM_ABI static auto operator()(_Map&& __map, _Func __func, _Proj __proj) {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 static auto operator()(_Map&& __map, _Func __func, _Proj __proj) {
     auto [_, __func2] = __specialized_algorithm<_Algorithm::__for_each, __single_range<typename __map::__base>>()(
         __map.__tree_, std::move(__func), std::move(__proj));
     return std::make_pair(__map.end(), std::move(__func2));

@@ -685,7 +685,8 @@ template <class _Reference, class _Break, class _NodePtr, class _Func, class _Pr
 #ifndef _LIBCPP_COMPILER_GCC // This function is recursive, so GCC complains about always_inline.
 _LIBCPP_HIDE_FROM_ABI
 #endif
-bool __tree_iterate_from_root(_Break __break, _NodePtr __root, _Func& __func, _Proj& __proj) {
+_LIBCPP_CONSTEXPR_SINCE_CXX26 bool
+__tree_iterate_from_root(_Break __break, _NodePtr __root, _Func& __func, _Proj& __proj) {
   if (__root->__left_) {
     if (std::__tree_iterate_from_root<_Reference>(__break, static_cast<_NodePtr>(__root->__left_), __func, __proj))
       return true;
@@ -700,7 +701,7 @@ bool __tree_iterate_from_root(_Break __break, _NodePtr __root, _Func& __func, _P
 
 // Do an in-order traversal of the tree from __first to __last.
 template <class _NodeIter, class _Func, class _Proj>
-_LIBCPP_HIDE_FROM_ABI void
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void
 __tree_iterate_subrange(_NodeIter __first_it, _NodeIter __last_it, _Func& __func, _Proj& __proj) {
   using _NodePtr   = typename _NodeIter::__node_pointer;
   using _Reference = typename _NodeIter::reference;
@@ -794,7 +795,7 @@ private:
   friend class __tree_const_iterator;
 
   template <class _NodeIter, class _Func, class _Proj>
-  friend void __tree_iterate_subrange(_NodeIter, _NodeIter, _Func&, _Proj&);
+  _LIBCPP_CONSTEXPR_SINCE_CXX26 friend void __tree_iterate_subrange(_NodeIter, _NodeIter, _Func&, _Proj&);
 };
 
 #ifndef _LIBCPP_CXX03_LANG
@@ -808,7 +809,8 @@ struct __specialized_algorithm<
   using __iterator _LIBCPP_NODEBUG = __tree_iterator<_Tp, _NodePtr, _DiffType>;
 
   template <class _Func, class _Proj>
-  _LIBCPP_HIDE_FROM_ABI static void operator()(__iterator __first, __iterator __last, _Func& __func, _Proj& __proj) {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 static void
+  operator()(__iterator __first, __iterator __last, _Func& __func, _Proj& __proj) {
     std::__tree_iterate_subrange(__first, __last, __func, __proj);
   }
 };
@@ -886,7 +888,7 @@ private:
   friend class __tree;
 
   template <class _NodeIter, class _Func, class _Proj>
-  friend void __tree_iterate_subrange(_NodeIter, _NodeIter, _Func&, _Proj&);
+  _LIBCPP_CONSTEXPR_SINCE_CXX26 friend void __tree_iterate_subrange(_NodeIter, _NodeIter, _Func&, _Proj&);
 };
 
 #ifndef _LIBCPP_CXX03_LANG
@@ -900,7 +902,8 @@ struct __specialized_algorithm<
   using __iterator _LIBCPP_NODEBUG = __tree_const_iterator<_Tp, _NodePtr, _DiffType>;
 
   template <class _Func, class _Proj>
-  _LIBCPP_HIDE_FROM_ABI static void operator()(__iterator __first, __iterator __last, _Func& __func, _Proj& __proj) {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 static void
+  operator()(__iterator __first, __iterator __last, _Func& __func, _Proj& __proj) {
     std::__tree_iterate_subrange(__first, __last, __func, __proj);
   }
 };
@@ -1658,7 +1661,8 @@ struct __specialized_algorithm<_Algorithm::__for_each, __single_range<__tree<_Tp
   using __node_pointer _LIBCPP_NODEBUG = typename __tree<_Tp, _Compare, _Allocator>::__node_pointer;
 
   template <class _Tree, class _Func, class _Proj>
-  _LIBCPP_HIDE_FROM_ABI static auto operator()(_Tree&& __range, _Func __func, _Proj __proj) {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 static auto
+  operator()(_Tree&& __range, _Func __func, _Proj __proj) {
     if (__range.size() != 0)
       std::__tree_iterate_from_root<__copy_cvref_t<_Tree, typename __remove_cvref_t<_Tree>::value_type>>(
           [](__node_pointer) { return false; }, __range.__root(), __func, __proj);
