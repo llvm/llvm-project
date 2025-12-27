@@ -179,6 +179,8 @@ Clang Python Bindings Potentially Breaking Changes
 - Allow setting the path to the libclang library via environment variables: ``LIBCLANG_LIBRARY_PATH``
   to specifiy the path to the containing folder, or ``LIBCLANG_LIBRARY_FILE`` to specify the path to
   the library file
+- ``TranslationUnit.reparse`` will now throw an exception when an error occurs.
+  Previously, errors were silently ignored.
 
 What's New in Clang |release|?
 ==============================
@@ -493,6 +495,9 @@ Improvements to Clang's diagnostics
   carries messages like 'In file included from ...' or 'In module ...'.
   Now the include/import locations are written into `sarif.run.result.relatedLocations`.
 
+- Clang now generates a fix-it for C++20 designated initializers when the 
+  initializers do not match the declaration order in the structure. 
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -613,6 +618,7 @@ Bug Fixes to C++ Support
 - Fix a crash when extracting unavailable member type from alias in template deduction. (#GH165560)
 - Fix incorrect diagnostics for lambdas with init-captures inside braced initializers. (#GH163498)
 - Fixed an issue where templates prevented nested anonymous records from checking the deletion of special members. (#GH167217)
+- Fixed serialization of pack indexing types, where we failed to expand those packs from a PCH/module. (#GH172464)
 - Fixed spurious diagnoses of certain nested lambda expressions. (#GH149121) (#GH156579)
 - Fix the result of ``__is_pointer_interconvertible_base_of`` when arguments are qualified and passed via template parameters. (#GH135273)
 - Fixed a crash when evaluating nested requirements in requires-expressions that reference invented parameters. (#GH166325)
