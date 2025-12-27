@@ -130,6 +130,7 @@ public:
                      Expr *exprToVisit, ArrayRef<Expr *> args,
                      Expr *arrayFiller);
 
+  void emitFinalDestCopy(QualType type, RValue src);
   /// Perform the final copy to DestPtr, if desired.
   void emitFinalDestCopy(QualType type, const LValue &src);
 
@@ -397,7 +398,8 @@ public:
     cgf.cgm.errorNYI(e->getSourceRange(), "AggExprEmitter: VisitCXXThrowExpr");
   }
   void VisitAtomicExpr(AtomicExpr *e) {
-    cgf.cgm.errorNYI(e->getSourceRange(), "AggExprEmitter: VisitAtomicExpr");
+    RValue result = cgf.emitAtomicExpr(e);
+    emitFinalDestCopy(e->getType(), result);
   }
 };
 
@@ -585,6 +587,13 @@ void AggExprEmitter::emitArrayInit(Address destPtr, cir::ArrayType arrayTy,
           builder.createYield(loc);
         });
   }
+}
+
+/// EmitFinalDestCopy - Perform the final copy to DestPtr, if desired.
+void AggExprEmitter::emitFinalDestCopy(QualType type, RValue src) {
+  assert(src.isAggregate() && "value must be aggregate value!");
+  LValue srcLV = cgf.makeAddrLValue(src.getAggregateAddress(), type);
+  emitFinalDestCopy(type, srcLV);
 }
 
 /// Perform the final copy to destPtr, if desired.
