@@ -412,7 +412,7 @@ define float @select_nnan_fdiv_invalid(i1 %cond, float %A, float %B) {
 
 define float @select_fpclass_fdiv_nnan_ninf(i1 %cond, float %A, float %B) {
 ; CHECK-LABEL: @select_fpclass_fdiv_nnan_ninf(
-; CHECK-NEXT:    [[C:%.*]] = select nnan ninf i1 [[COND:%.*]], float [[B:%.*]], float 1.000000e+00
+; CHECK-NEXT:    [[C:%.*]] = select nnan i1 [[COND:%.*]], float [[B:%.*]], float 1.000000e+00
 ; CHECK-NEXT:    [[D:%.*]] = fdiv float [[A:%.*]], [[C]]
 ; CHECK-NEXT:    ret float [[D]]
 ;
