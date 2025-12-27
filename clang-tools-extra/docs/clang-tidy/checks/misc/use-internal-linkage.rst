@@ -53,3 +53,16 @@ Options
 
   - `UseStatic`
     Add ``static`` for internal linkage variable and function.
+
+.. option:: AnalyzeFunctions
+
+  Whether to suggest giving functions internal linkage. Default is `true`.
+
+.. option:: AnalyzeVariables
+
+  Whether to suggest giving variables internal linkage. Default is `true`.
+
+.. option:: AnalyzeTypes
+
+  (C++ only) Whether to suggest giving user-defined types (structs,
+  classes, unions, and enums) internal linkage. Default is `true`.
