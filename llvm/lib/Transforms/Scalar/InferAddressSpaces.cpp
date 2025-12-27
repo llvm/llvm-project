@@ -347,14 +347,7 @@ static bool isAddressExpression(
       const SmallVectorImpl<Instruction *> &LdSts = GVToLdSt.at(GV);
       if (GV->getNumUses() != LdSts.size())
         return false;
-      bool StorePrecedesFirstLoad = false;
-      for (Instruction *I : LdSts) {
-        if (isa<StoreInst>(I))
-          StorePrecedesFirstLoad = true;
-        else
-          return StorePrecedesFirstLoad;
-      }
-      llvm_unreachable("Should not reach here.");
+      return any_of(LdSts, [](Instruction *I) { return isa<StoreInst>(I); });
     }
     return false;
   }
