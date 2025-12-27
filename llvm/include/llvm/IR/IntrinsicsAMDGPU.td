@@ -3968,8 +3968,9 @@ class AMDGPUWmmaIntrinsicModsAB<LLVMType AB, LLVMType CD> :
       LLVMMatchType<0>,               // %C
       llvm_i1_ty,       // matrix_a_reuse
       llvm_i1_ty,       // matrix_b_reuse
+      llvm_i1_ty,       // %clamp
     ],
-    [IntrNoMem, IntrConvergent, ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<5>>, ImmArg<ArgIndex<6>>,
+    [IntrNoMem, IntrConvergent, ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<5>>, ImmArg<ArgIndex<6>>, ImmArg<ArgIndex<7>>,
      IntrWillReturn, IntrNoCallback, IntrNoFree]
 >;
 
