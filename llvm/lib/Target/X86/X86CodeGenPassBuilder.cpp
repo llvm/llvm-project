@@ -65,8 +65,8 @@ void X86TargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
 #include "llvm/Passes/TargetPassRegistry.inc"
   // TODO(boomanaiden154): Move this into the subclass once all targets that
   // currently implement it have a ported asm-printer pass.
-  PB.getPassInstrumentationCallbacks()->addClassToPassName(
-      X86AsmPrinterPass::name(), "x86-asm-printer");
+  if (PIC)
+    PIC->addClassToPassName(X86AsmPrinterPass::name(), "x86-asm-printer");
 }
 
 Error X86TargetMachine::buildCodeGenPipeline(
