@@ -1,10 +1,10 @@
 // RUN: clang-tidy %s -checks='-*,modernize-use-nullptr' -- \
-// RUN:   --cuda-path=%S/Inputs/CUDA/usr/local/cuda \
-// RUN:   -nocudalib -nocudainc -I %S/Inputs/CUDA/usr/local/cuda/include \
+// RUN:   --cuda-path=%S/Inputs/CUDA \
+// RUN:   -nocudalib -nocudainc -I %S/Inputs/CUDA \
 // RUN:   --cuda-host-only | FileCheck %s
 // RUN: clang-tidy %s -checks='-*,modernize-use-nullptr' -- \
-// RUN:   --cuda-path=%S/Inputs/CUDA/usr/local/cuda \
-// RUN:   -nocudalib -nocudainc -I %S/Inputs/CUDA/usr/local/cuda/include \
+// RUN:   --cuda-path=%S/Inputs/CUDA \
+// RUN:   -nocudalib -nocudainc -I %S/Inputs/CUDA \
 // RUN:   --cuda-device-only | FileCheck %s
 
 #include <cuda_runtime.h>
