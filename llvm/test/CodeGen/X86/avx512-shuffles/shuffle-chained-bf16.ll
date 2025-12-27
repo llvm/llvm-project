@@ -37,11 +37,8 @@ define <2 x bfloat> @shuffle_chained_v16bf16(<16 x bfloat> %a) {
 ; CHECK-NEXT:    .cfi_def_cfa_register %rbp
 ; CHECK-NEXT:    andq $-32, %rsp
 ; CHECK-NEXT:    subq $96, %rsp
-; CHECK-NEXT:    vmovaps %ymm0, (%rsp)
-; CHECK-NEXT:    vmovdqa (%rsp), %xmm0
+; CHECK-NEXT:    vmovdqa %ymm0, (%rsp)
 ; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm0[0],mem[0],xmm0[1],mem[1],xmm0[2],mem[2],xmm0[3],mem[3]
-; CHECK-NEXT:    vmovdqa %ymm0, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    vmovaps {{[0-9]+}}(%rsp), %xmm0
 ; CHECK-NEXT:    movq %rbp, %rsp
 ; CHECK-NEXT:    popq %rbp
 ; CHECK-NEXT:    .cfi_def_cfa %rsp, 8

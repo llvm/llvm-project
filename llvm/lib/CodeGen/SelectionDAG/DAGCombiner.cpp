@@ -20483,6 +20483,23 @@ SDValue DAGCombiner::ForwardStoreValueToDirectLoad(LoadSDNode *LD) {
           Val = DAG.getBitcast(LDMemType, Val);
         else
           break;
+      } else if (LDMemType.isVector()) {
+        EVT EltVT = LDMemType.getVectorElementType();
+        uint64_t EltSize = EltVT.getFixedSizeInBits();
+        uint64_t StSize = StMemSize.getFixedValue();
+
+        if (StSize % EltSize != 0)
+          break;
+
+        EVT InterVT =
+            EVT::getVectorVT(*DAG.getContext(), EltVT, StSize / EltSize);
+        if (!isTypeLegal(InterVT) ||
+            !TLI.isOperationLegalOrCustom(ISD::EXTRACT_SUBVECTOR, InterVT))
+          break;
+
+        Val = DAG.getNode(ISD::EXTRACT_SUBVECTOR, SDLoc(LD), LDMemType,
+                          DAG.getBitcast(InterVT, Val),
+                          DAG.getVectorIdxConstant(0, SDLoc(LD)));
       } else if (!STMemType.isVector() && !LDMemType.isVector() &&
                  STMemType.isInteger() && LDMemType.isInteger())
         Val = DAG.getNode(ISD::TRUNCATE, SDLoc(LD), LDMemType, Val);
