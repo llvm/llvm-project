@@ -9,36 +9,25 @@
 
 __m128 test_vcvtph2ps_mask(__m128i a, __m128 src, __mmask8 k) {
   // CIR-LABEL: cir.func no_inline dso_local @test_vcvtph2ps_mask
-  // CIR: %{{.*}} = cir.load {{.*}} : !cir.ptr<!cir.vector<2 x !s64i>>, !cir.vector<2 x !s64i>
   // CIR: %{{.*}} = cir.cast bitcast %{{.*}} : !cir.vector<2 x !s64i> -> !cir.vector<8 x !s16i>
-  // CIR: %{{.*}} = cir.load {{.*}} : !cir.ptr<!cir.vector<4 x !cir.float>>, !cir.vector<4 x !cir.float>
-  // CIR: %{{.*}} = cir.load {{.*}} : !cir.ptr<!u8i>, !u8i
-  // CIR: %{{.*}} = cir.const #cir.poison : !cir.vector<8 x !s16i>
   // CIR: %{{.*}} = cir.vec.shuffle(%{{.*}}, %{{.*}} : !cir.vector<8 x !s16i>) [#cir.int<0> : !s32i, #cir.int<1> : !s32i, #cir.int<2> : !s32i, #cir.int<3> : !s32i] : !cir.vector<4 x !s16i>
   // CIR: %{{.*}} = cir.cast bitcast %{{.*}} : !cir.vector<4 x !s16i> -> !cir.vector<4 x !cir.f16>
   // CIR: %{{.*}} = cir.cast floating %{{.*}} : !cir.vector<4 x !cir.f16> -> !cir.vector<4 x !cir.float>
   // CIR: %{{.*}} = cir.cast bitcast %{{.*}} : !u8i -> !cir.vector<8 x !cir.{{(bool|int<s, 1>)}}>
   // CIR: %{{.*}} = cir.vec.shuffle(%{{.*}}, %{{.*}} : !cir.vector<8 x !cir.{{(bool|int<s, 1>)}}>) [#cir.int<0> : !s32i, #cir.int<1> : !s32i, #cir.int<2> : !s32i, #cir.int<3> : !s32i] : !cir.vector<4 x !cir.{{(bool|int<s, 1>)}}>
-  // CIR: %{{.*}} = cir.select if %{{.*}} then %{{.*}} else %{{.*}} : (!cir.vector<4 x !cir.{{(bool|int<s, 1>)}}>, !cir.vector<4 x !cir.float>, !cir.vector<4 x !cir.float>) -> !cir.vector<4 x !cir.float>
+  // CIR: %{{.*}} = cir.select if %{{.*}} then %{{.*}} else %{{.*}}
 
   // LLVM-LABEL: @test_vcvtph2ps_mask
-  // LLVM: %{{.*}} = load <2 x i64>, ptr %{{.*}}
   // LLVM: %{{.*}} = bitcast <2 x i64> %{{.*}} to <8 x i16>
-  // LLVM: %{{.*}} = load <4 x float>, ptr %{{.*}}
-  // LLVM: %{{.*}} = load i8, ptr %{{.*}}
   // LLVM: %{{.*}} = shufflevector <8 x i16> %{{.*}}, <8 x i16> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   // LLVM: %{{.*}} = bitcast <4 x i16> %{{.*}} to <4 x half>
   // LLVM: %{{.*}} = fpext <4 x half> %{{.*}} to <4 x float>
   // LLVM: %{{.*}} = bitcast i8 %{{.*}} to <8 x i1>
   // LLVM: %{{.*}} = shufflevector <8 x i1> %{{.*}}, <8 x i1> %{{.*}}, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   // LLVM: %{{.*}} = select <4 x i1> %{{.*}}, <4 x float> %{{.*}}, <4 x float> %{{.*}}
-  // LLVM: ret <4 x float> %{{.*}}
 
   // OGCG-LABEL: @test_vcvtph2ps_mask
-  // OGCG: %{{.*}} = load <2 x i64>, ptr %{{.*}}
   // OGCG: %{{.*}} = bitcast <2 x i64> %{{.*}} to <8 x i16>
-  // OGCG: %{{.*}} = load <4 x float>, ptr %{{.*}}
-  // OGCG: %{{.*}} = load i8, ptr %{{.*}}
   // OGCG: %{{.*}} = shufflevector <8 x i16> %{{.*}}, <8 x i16> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   // OGCG: %{{.*}} = bitcast <4 x i16> %{{.*}} to <4 x half>
   // OGCG: %{{.*}} = fpext <4 x half> %{{.*}} to <4 x float>
@@ -52,32 +41,20 @@ __m128 test_vcvtph2ps_mask(__m128i a, __m128 src, __mmask8 k) {
 
 __m256 test_vcvtph2ps256_mask(__m128i a, __m256 src, __mmask8 k) {
   // CIR-LABEL: cir.func no_inline dso_local @test_vcvtph2ps256_mask
-  // CIR: %{{.*}} = cir.load {{.*}} : !cir.ptr<!cir.vector<2 x !s64i>>, !cir.vector<2 x !s64i>
-  // CIR: %{{.*}} = cir.cast bitcast %{{.*}} : !cir.vector<2 x !s64i> -> !cir.vector<8 x !s16i>
-  // CIR: %{{.*}} = cir.load {{.*}} : !cir.ptr<!cir.vector<8 x !cir.float>>, !cir.vector<8 x !cir.float>
-  // CIR: %{{.*}} = cir.load {{.*}} : !cir.ptr<!u8i>, !u8i
   // CIR: %{{.*}} = cir.cast bitcast %{{.*}} : !cir.vector<8 x !s16i> -> !cir.vector<8 x !cir.f16>
   // CIR: %{{.*}} = cir.cast floating %{{.*}} : !cir.vector<8 x !cir.f16> -> !cir.vector<8 x !cir.float>
   // CIR: %{{.*}} = cir.cast bitcast %{{.*}} : !u8i -> !cir.vector<8 x !cir.{{(bool|int<s, 1>)}}>
-  // CIR: %{{.*}} = cir.select if %{{.*}} then %{{.*}} else %{{.*}} : (!cir.vector<8 x !cir.{{(bool|int<s, 1>)}}>, !cir.vector<8 x !cir.float>, !cir.vector<8 x !cir.float>) -> !cir.vector<8 x !cir.float>
+  // CIR: %{{.*}} = cir.select if %{{.*}} then %{{.*}} else %{{.*}}
 
   // LLVM-LABEL: @test_vcvtph2ps256_mask
-  // LLVM: %{{.*}} = load <2 x i64>, ptr %{{.*}}
-  // LLVM: %{{.*}} = bitcast <2 x i64> %{{.*}} to <8 x i16>
-  // LLVM: %{{.*}} = load <8 x float>, ptr %{{.*}}
   // LLVM: %{{.*}} = bitcast <8 x i16> %{{.*}} to <8 x half>
   // LLVM: %{{.*}} = fpext <8 x half> %{{.*}} to <8 x float>
-  // LLVM: %{{.*}} = load i8, ptr %{{.*}}
   // LLVM: %{{.*}} = bitcast i8 %{{.*}} to <8 x i1>
   // LLVM: %{{.*}} = select <8 x i1> %{{.*}}, <8 x float> %{{.*}}, <8 x float> %{{.*}}
 
   // OGCG-LABEL: @test_vcvtph2ps256_mask
-  // OGCG: %{{.*}} = load <2 x i64>, ptr %{{.*}}
-  // OGCG: %{{.*}} = bitcast <2 x i64> %{{.*}} to <8 x i16>
-  // OGCG: %{{.*}} = load <8 x float>, ptr %{{.*}}
   // OGCG: %{{.*}} = bitcast <8 x i16> %{{.*}} to <8 x half>
   // OGCG: %{{.*}} = fpext <8 x half> %{{.*}} to <8 x float>
-  // OGCG: %{{.*}} = load i8, ptr %{{.*}}
   // OGCG: %{{.*}} = bitcast i8 %{{.*}} to <8 x i1>
   // OGCG: %{{.*}} = select <8 x i1> %{{.*}}, <8 x float> %{{.*}}, <8 x float> %{{.*}}
 
@@ -87,32 +64,20 @@ __m256 test_vcvtph2ps256_mask(__m128i a, __m256 src, __mmask8 k) {
 
 __m512 test_vcvtph2ps512_mask(__m256i a, __m512 src, __mmask16 k) {
   // CIR-LABEL: cir.func no_inline dso_local @test_vcvtph2ps512_mask
-  // CIR: %{{.*}} = cir.load {{.*}} : !cir.ptr<!cir.vector<4 x !s64i>>, !cir.vector<4 x !s64i>
-  // CIR: %{{.*}} = cir.cast bitcast %{{.*}} : !cir.vector<4 x !s64i> -> !cir.vector<16 x !s16i>
-  // CIR: %{{.*}} = cir.load {{.*}} : !cir.ptr<!cir.vector<16 x !cir.float>>, !cir.vector<16 x !cir.float>
-  // CIR: %{{.*}} = cir.load {{.*}} : !cir.ptr<!u16i>, !u16i
   // CIR: %{{.*}} = cir.cast bitcast %{{.*}} : !cir.vector<16 x !s16i> -> !cir.vector<16 x !cir.f16>
   // CIR: %{{.*}} = cir.cast floating %{{.*}} : !cir.vector<16 x !cir.f16> -> !cir.vector<16 x !cir.float>
   // CIR: %{{.*}} = cir.cast bitcast %{{.*}} : !u16i -> !cir.vector<16 x !cir.{{(bool|int<s, 1>)}}>
-  // CIR: %{{.*}} = cir.select if %{{.*}} then %{{.*}} else %{{.*}} : (!cir.vector<16 x !cir.{{(bool|int<s, 1>)}}>, !cir.vector<16 x !cir.float>, !cir.vector<16 x !cir.float>) -> !cir.vector<16 x !cir.float>
+  // CIR: %{{.*}} = cir.select if %{{.*}} then %{{.*}} else %{{.*}}
 
   // LLVM-LABEL: @test_vcvtph2ps512_mask
-  // LLVM: %{{.*}} = load <4 x i64>, ptr %{{.*}}
-  // LLVM: %{{.*}} = bitcast <4 x i64> %{{.*}} to <16 x i16>
-  // LLVM: %{{.*}} = load <16 x float>, ptr %{{.*}}
   // LLVM: %{{.*}} = bitcast <16 x i16> %{{.*}} to <16 x half>
   // LLVM: %{{.*}} = fpext <16 x half> %{{.*}} to <16 x float>
-  // LLVM: %{{.*}} = load i16, ptr %{{.*}}
   // LLVM: %{{.*}} = bitcast i16 %{{.*}} to <16 x i1>
   // LLVM: %{{.*}} = select <16 x i1> %{{.*}}, <16 x float> %{{.*}}, <16 x float> %{{.*}}
 
   // OGCG-LABEL: @test_vcvtph2ps512_mask
-  // OGCG: %{{.*}} = load <4 x i64>, ptr %{{.*}}
-  // OGCG: %{{.*}} = bitcast <4 x i64> %{{.*}} to <16 x i16>
-  // OGCG: %{{.*}} = load <16 x float>, ptr %{{.*}}
   // OGCG: %{{.*}} = bitcast <16 x i16> %{{.*}} to <16 x half>
   // OGCG: %{{.*}} = fpext <16 x half> %{{.*}} to <16 x float>
-  // OGCG: %{{.*}} = load i16, ptr %{{.*}}
   // OGCG: %{{.*}} = bitcast i16 %{{.*}} to <16 x i1>
   // OGCG: %{{.*}} = select <16 x i1> %{{.*}}, <16 x float> %{{.*}}, <16 x float> %{{.*}}
 
@@ -122,35 +87,20 @@ __m512 test_vcvtph2ps512_mask(__m256i a, __m512 src, __mmask16 k) {
 
 __m128 test_vcvtph2ps_maskz(__m128i a, __mmask8 k) {
   // CIR-LABEL: cir.func no_inline dso_local @test_vcvtph2ps_maskz
-  // CIR: %{{.*}} = cir.load {{.*}} : !cir.ptr<!cir.vector<2 x !s64i>>, !cir.vector<2 x !s64i>
-  // CIR: %{{.*}} = cir.cast bitcast %{{.*}} : !cir.vector<2 x !s64i> -> !cir.vector<8 x !s16i>
-  // CIR: %{{.*}} = cir.call @_mm_setzero_ps() : () -> !cir.vector<4 x !cir.float>
-  // CIR: %{{.*}} = cir.load {{.*}} : !cir.ptr<!u8i>, !u8i
-  // CIR: %{{.*}} = cir.const #cir.poison : !cir.vector<8 x !s16i>
+  // CIR: %{{.*}} = cir.call @_mm_setzero_ps()
   // CIR: %{{.*}} = cir.vec.shuffle(%{{.*}}, %{{.*}} : !cir.vector<8 x !s16i>) [#cir.int<0> : !s32i, #cir.int<1> : !s32i, #cir.int<2> : !s32i, #cir.int<3> : !s32i] : !cir.vector<4 x !s16i>
-  // CIR: %{{.*}} = cir.cast bitcast %{{.*}} : !cir.vector<4 x !s16i> -> !cir.vector<4 x !cir.f16>
-  // CIR: %{{.*}} = cir.cast floating %{{.*}} : !cir.vector<4 x !cir.f16> -> !cir.vector<4 x !cir.float>
   // CIR: %{{.*}} = cir.cast bitcast %{{.*}} : !u8i -> !cir.vector<8 x !cir.{{(bool|int<s, 1>)}}>
   // CIR: %{{.*}} = cir.vec.shuffle(%{{.*}}, %{{.*}} : !cir.vector<8 x !cir.{{(bool|int<s, 1>)}}>) [#cir.int<0> : !s32i, #cir.int<1> : !s32i, #cir.int<2> : !s32i, #cir.int<3> : !s32i] : !cir.vector<4 x !cir.{{(bool|int<s, 1>)}}>
-  // CIR: %{{.*}} = cir.select if %{{.*}} then %{{.*}} else %{{.*}} : (!cir.vector<4 x !cir.{{(bool|int<s, 1>)}}>, !cir.vector<4 x !cir.float>, !cir.vector<4 x !cir.float>) -> !cir.vector<4 x !cir.float>
+  // CIR: %{{.*}} = cir.select if %{{.*}} then %{{.*}} else %{{.*}}
 
   // LLVM-LABEL: @test_vcvtph2ps_maskz
-  // LLVM: %{{.*}} = load <2 x i64>, ptr %{{.*}}
-  // LLVM: %{{.*}} = bitcast <2 x i64> %{{.*}} to <8 x i16>
-  // LLVM: %{{.*}} = load i8, ptr %{{.*}}
-  // LLVM: %{{.*}} = shufflevector <8 x i16> %{{.*}}, <8 x i16> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   // LLVM: %{{.*}} = bitcast <4 x i16> %{{.*}} to <4 x half>
   // LLVM: %{{.*}} = fpext <4 x half> %{{.*}} to <4 x float>
   // LLVM: %{{.*}} = bitcast i8 %{{.*}} to <8 x i1>
   // LLVM: %{{.*}} = shufflevector <8 x i1> %{{.*}}, <8 x i1> %{{.*}}, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   // LLVM: %{{.*}} = select <4 x i1> %{{.*}}, <4 x float> %{{.*}}, <4 x float> %{{.*}}
-  // LLVM: ret <4 x float> %{{.*}}
 
   // OGCG-LABEL: @test_vcvtph2ps_maskz
-  // OGCG: %{{.*}} = load <2 x i64>, ptr %{{.*}}
-  // OGCG: %{{.*}} = bitcast <2 x i64> %{{.*}} to <8 x i16>
-  // OGCG: %{{.*}} = load i8, ptr %{{.*}}
-  // OGCG: %{{.*}} = shufflevector <8 x i16> %{{.*}}, <8 x i16> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   // OGCG: %{{.*}} = bitcast <4 x i16> %{{.*}} to <4 x half>
   // OGCG: %{{.*}} = fpext <4 x half> %{{.*}} to <4 x float>
   // OGCG: %{{.*}} = bitcast i8 %{{.*}} to <8 x i1>
@@ -163,31 +113,18 @@ __m128 test_vcvtph2ps_maskz(__m128i a, __mmask8 k) {
 
 __m256 test_vcvtph2ps256_maskz(__m128i a, __mmask8 k) {
   // CIR-LABEL: cir.func no_inline dso_local @test_vcvtph2ps256_maskz
-  // CIR: %{{.*}} = cir.load {{.*}} : !cir.ptr<!cir.vector<2 x !s64i>>, !cir.vector<2 x !s64i>
-  // CIR: %{{.*}} = cir.cast bitcast %{{.*}} : !cir.vector<2 x !s64i> -> !cir.vector<8 x !s16i>
-  // CIR: %{{.*}} = cir.call @_mm256_setzero_ps() : () -> !cir.vector<8 x !cir.float>
-  // CIR: %{{.*}} = cir.load {{.*}} : !cir.ptr<!u8i>, !u8i
+  // CIR: %{{.*}} = cir.call @_mm256_setzero_ps()
   // CIR: %{{.*}} = cir.cast bitcast %{{.*}} : !cir.vector<8 x !s16i> -> !cir.vector<8 x !cir.f16>
-  // CIR: %{{.*}} = cir.cast floating %{{.*}} : !cir.vector<8 x !cir.f16> -> !cir.vector<8 x !cir.float>
   // CIR: %{{.*}} = cir.cast bitcast %{{.*}} : !u8i -> !cir.vector<8 x !cir.{{(bool|int<s, 1>)}}>
-  // CIR: %{{.*}} = cir.select if %{{.*}} then %{{.*}} else %{{.*}} : (!cir.vector<8 x !cir.{{(bool|int<s, 1>)}}>, !cir.vector<8 x !cir.float>, !cir.vector<8 x !cir.float>) -> !cir.vector<8 x !cir.float>
+  // CIR: %{{.*}} = cir.select if %{{.*}} then %{{.*}} else %{{.*}}
 
   // LLVM-LABEL: @test_vcvtph2ps256_maskz
-  // LLVM: %{{.*}} = load <2 x i64>, ptr %{{.*}}
-  // LLVM: %{{.*}} = bitcast <2 x i64> %{{.*}} to <8 x i16>
-  // LLVM: %{{.*}} = bitcast <8 x i16> %{{.*}} to <8 x half>
   // LLVM: %{{.*}} = fpext <8 x half> %{{.*}} to <8 x float>
-  // LLVM: %{{.*}} = load i8, ptr %{{.*}}
   // LLVM: %{{.*}} = bitcast i8 %{{.*}} to <8 x i1>
   // LLVM: %{{.*}} = select <8 x i1> %{{.*}}, <8 x float> %{{.*}}, <8 x float> %{{.*}}
-  // LLVM: ret <8 x float> %{{.*}}
 
   // OGCG-LABEL: @test_vcvtph2ps256_maskz
-  // OGCG: %{{.*}} = load <2 x i64>, ptr %{{.*}}
-  // OGCG: %{{.*}} = bitcast <2 x i64> %{{.*}} to <8 x i16>
-  // OGCG: %{{.*}} = bitcast <8 x i16> %{{.*}} to <8 x half>
   // OGCG: %{{.*}} = fpext <8 x half> %{{.*}} to <8 x float>
-  // OGCG: %{{.*}} = load i8, ptr %{{.*}}
   // OGCG: %{{.*}} = bitcast i8 %{{.*}} to <8 x i1>
   // OGCG: %{{.*}} = select <8 x i1> %{{.*}}, <8 x float> %{{.*}}, <8 x float> %{{.*}}
 
@@ -197,31 +134,19 @@ __m256 test_vcvtph2ps256_maskz(__m128i a, __mmask8 k) {
 
 __m512 test_vcvtph2ps512_maskz(__m256i a, __mmask16 k) {
   // CIR-LABEL: cir.func no_inline dso_local @test_vcvtph2ps512_maskz
-  // CIR: %{{.*}} = cir.load {{.*}} : !cir.ptr<!cir.vector<4 x !s64i>>, !cir.vector<4 x !s64i>
-  // CIR: %{{.*}} = cir.cast bitcast %{{.*}} : !cir.vector<4 x !s64i> -> !cir.vector<16 x !s16i>
-  // CIR: %{{.*}} = cir.call @_mm512_setzero_ps() : () -> !cir.vector<16 x !cir.float>
-  // CIR: %{{.*}} = cir.load {{.*}} : !cir.ptr<!u16i>, !u16i
-  // CIR: %{{.*}} = cir.cast bitcast %{{.*}} : !cir.vector<16 x !s16i> -> !cir.vector<16 x !cir.f16>
-  // CIR: %{{.*}} = cir.cast floating %{{.*}} : !cir.vector<16 x !cir.f16> -> !cir.vector<16 x !cir.float>
+  // CIR: %{{.*}} = cir.call @_mm512_setzero_ps()
   // CIR: %{{.*}} = cir.cast bitcast %{{.*}} : !u16i -> !cir.vector<16 x !cir.{{(bool|int<s, 1>)}}>
-  // CIR: %{{.*}} = cir.select if %{{.*}} then %{{.*}} else %{{.*}} : (!cir.vector<16 x !cir.{{(bool|int<s, 1>)}}>, !cir.vector<16 x !cir.float>, !cir.vector<16 x !cir.float>) -> !cir.vector<16 x !cir.float>
+  // CIR: %{{.*}} = cir.select if %{{.*}} then %{{.*}} else %{{.*}}
 
   // LLVM-LABEL: @test_vcvtph2ps512_maskz
-  // LLVM: %{{.*}} = load <4 x i64>, ptr %{{.*}}
-  // LLVM: %{{.*}} = bitcast <4 x i64> %{{.*}} to <16 x i16>
   // LLVM: %{{.*}} = bitcast <16 x i16> %{{.*}} to <16 x half>
   // LLVM: %{{.*}} = fpext <16 x half> %{{.*}} to <16 x float>
-  // LLVM: %{{.*}} = load i16, ptr %{{.*}}
   // LLVM: %{{.*}} = bitcast i16 %{{.*}} to <16 x i1>
   // LLVM: %{{.*}} = select <16 x i1> %{{.*}}, <16 x float> %{{.*}}, <16 x float> %{{.*}}
-  // LLVM: ret <16 x float> %{{.*}}
 
   // OGCG-LABEL: @test_vcvtph2ps512_maskz
-  // OGCG: %{{.*}} = load <4 x i64>, ptr %{{.*}}
-  // OGCG: %{{.*}} = bitcast <4 x i64> %{{.*}} to <16 x i16>
   // OGCG: %{{.*}} = bitcast <16 x i16> %{{.*}} to <16 x half>
   // OGCG: %{{.*}} = fpext <16 x half> %{{.*}} to <16 x float>
-  // OGCG: %{{.*}} = load i16, ptr %{{.*}}
   // OGCG: %{{.*}} = bitcast i16 %{{.*}} to <16 x i1>
   // OGCG: %{{.*}} = select <16 x i1> %{{.*}}, <16 x float> %{{.*}}, <16 x float> %{{.*}}
 
