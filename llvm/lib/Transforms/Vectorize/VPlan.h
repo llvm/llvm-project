@@ -2162,6 +2162,7 @@ public:
   /// incoming value, its start value.
   unsigned getNumIncoming() const override { return 1; }
 
+  /// Returns the underlying PHINode if one exists, or null otherwise.
   PHINode *getPHINode() const {
     return cast_if_present<PHINode>(getUnderlyingValue());
   }

@@ -34,13 +34,13 @@ define i64 @test_vectorize_select_umin_idx(ptr %src, i64 %n) {
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq <4 x i64> [[TMP2]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = select <4 x i1> [[TMP6]], <4 x i64> [[TMP3]], <4 x i64> splat (i64 -1)
 ; CHECK-NEXT:    [[TMP8:%.*]] = call i64 @llvm.vector.reduce.umin.v4i64(<4 x i64> [[TMP7]])
-; CHECK-NEXT:    [[RDX_SELECT_CMP:%.*]] = icmp eq i64 -1, [[TMP5]]
-; CHECK-NEXT:    [[RDX_SELECT:%.*]] = select i1 [[RDX_SELECT_CMP]], i64 [[TMP8]], i64 0
+; CHECK-NEXT:    [[RDX_SELECT_CMP:%.*]] = icmp eq i64 [[TMP5]], -1
+; CHECK-NEXT:    [[TMP10:%.*]] = select i1 [[RDX_SELECT_CMP]], i64 0, i64 [[TMP8]]
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
-; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i64 [ [[RDX_SELECT]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i64 [ [[TMP10]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    [[BC_MERGE_RDX2:%.*]] = phi i64 [ [[TMP5]], %[[MIDDLE_BLOCK]] ], [ -1, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
@@ -56,7 +56,7 @@ define i64 @test_vectorize_select_umin_idx(ptr %src, i64 %n) {
 ; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
 ; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[RES:%.*]] = phi i64 [ [[MIN_IDX_NEXT]], %[[LOOP]] ], [ [[RDX_SELECT]], %[[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[RES:%.*]] = phi i64 [ [[MIN_IDX_NEXT]], %[[LOOP]] ], [ [[TMP10]], %[[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    ret i64 [[RES]]
 ;
 entry:
@@ -108,8 +108,8 @@ define i64 @test_vectorize_select_umin_idx_signed_sentinel_possible(ptr %src, i6
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq <4 x i64> [[TMP2]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = select <4 x i1> [[TMP6]], <4 x i64> [[TMP3]], <4 x i64> splat (i64 -1)
 ; CHECK-NEXT:    [[TMP8:%.*]] = call i64 @llvm.vector.reduce.umin.v4i64(<4 x i64> [[TMP7]])
-; CHECK-NEXT:    [[RDX_SELECT_CMP:%.*]] = icmp eq i64 -2, [[TMP5]]
-; CHECK-NEXT:    [[RDX_SELECT:%.*]] = select i1 [[RDX_SELECT_CMP]], i64 [[TMP8]], i64 0
+; CHECK-NEXT:    [[RDX_SELECT_CMP:%.*]] = icmp eq i64 [[TMP5]], -2
+; CHECK-NEXT:    [[RDX_SELECT:%.*]] = select i1 [[RDX_SELECT_CMP]], i64 0, i64 [[TMP8]]
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret i64 [[RDX_SELECT]]
@@ -166,13 +166,13 @@ define i64 @test_vectorize_select_umin_idx_cond_flipped(ptr %src, i64 %n) {
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq <4 x i64> [[TMP2]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = select <4 x i1> [[TMP6]], <4 x i64> [[TMP3]], <4 x i64> splat (i64 -1)
 ; CHECK-NEXT:    [[TMP8:%.*]] = call i64 @llvm.vector.reduce.umin.v4i64(<4 x i64> [[TMP7]])
-; CHECK-NEXT:    [[RDX_SELECT_CMP:%.*]] = icmp eq i64 -1, [[TMP5]]
-; CHECK-NEXT:    [[RDX_SELECT:%.*]] = select i1 [[RDX_SELECT_CMP]], i64 [[TMP8]], i64 0
+; CHECK-NEXT:    [[RDX_SELECT_CMP:%.*]] = icmp eq i64 [[TMP5]], -1
+; CHECK-NEXT:    [[TMP10:%.*]] = select i1 [[RDX_SELECT_CMP]], i64 0, i64 [[TMP8]]
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
-; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i64 [ [[RDX_SELECT]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i64 [ [[TMP10]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    [[BC_MERGE_RDX2:%.*]] = phi i64 [ [[TMP5]], %[[MIDDLE_BLOCK]] ], [ -1, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
@@ -188,7 +188,7 @@ define i64 @test_vectorize_select_umin_idx_cond_flipped(ptr %src, i64 %n) {
 ; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
 ; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[RES:%.*]] = phi i64 [ [[MIN_IDX_NEXT]], %[[LOOP]] ], [ [[RDX_SELECT]], %[[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[RES:%.*]] = phi i64 [ [[MIN_IDX_NEXT]], %[[LOOP]] ], [ [[TMP10]], %[[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    ret i64 [[RES]]
 ;
 entry:
@@ -373,13 +373,13 @@ define i64 @test_vectorize_select_umin_idx_min_ops_switched(ptr %src, i64 %n) {
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq <4 x i64> [[TMP2]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = select <4 x i1> [[TMP6]], <4 x i64> [[TMP3]], <4 x i64> splat (i64 -1)
 ; CHECK-NEXT:    [[TMP8:%.*]] = call i64 @llvm.vector.reduce.umin.v4i64(<4 x i64> [[TMP7]])
-; CHECK-NEXT:    [[RDX_SELECT_CMP:%.*]] = icmp eq i64 -1, [[TMP5]]
-; CHECK-NEXT:    [[RDX_SELECT:%.*]] = select i1 [[RDX_SELECT_CMP]], i64 [[TMP8]], i64 0
+; CHECK-NEXT:    [[RDX_SELECT_CMP:%.*]] = icmp eq i64 [[TMP5]], -1
+; CHECK-NEXT:    [[TMP10:%.*]] = select i1 [[RDX_SELECT_CMP]], i64 0, i64 [[TMP8]]
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
-; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i64 [ [[RDX_SELECT]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i64 [ [[TMP10]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    [[BC_MERGE_RDX2:%.*]] = phi i64 [ [[TMP5]], %[[MIDDLE_BLOCK]] ], [ -1, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
@@ -395,7 +395,7 @@ define i64 @test_vectorize_select_umin_idx_min_ops_switched(ptr %src, i64 %n) {
 ; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
 ; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP8:![0-9]+]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[RES:%.*]] = phi i64 [ [[MIN_IDX_NEXT]], %[[LOOP]] ], [ [[RDX_SELECT]], %[[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[RES:%.*]] = phi i64 [ [[MIN_IDX_NEXT]], %[[LOOP]] ], [ [[TMP10]], %[[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    ret i64 [[RES]]
 ;
 entry:
@@ -833,8 +833,8 @@ define i64 @test_vectorize_select_umin_idx_iv_start_different(ptr %src, i64 %n) 
 ; CHECK-NEXT:    [[TMP7:%.*]] = select <4 x i1> [[TMP6]], <4 x i64> [[TMP3]], <4 x i64> splat (i64 -1)
 ; CHECK-NEXT:    [[TMP8:%.*]] = call i64 @llvm.vector.reduce.umin.v4i64(<4 x i64> [[TMP7]])
 ; CHECK-NEXT:    [[DERIVED_IV_RESULT:%.*]] = add i64 10, [[TMP8]]
-; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 -1, [[TMP5]]
-; CHECK-NEXT:    [[TMP10:%.*]] = select i1 [[TMP9]], i64 [[DERIVED_IV_RESULT]], i64 0
+; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[TMP5]], -1
+; CHECK-NEXT:    [[TMP10:%.*]] = select i1 [[TMP9]], i64 0, i64 [[DERIVED_IV_RESULT]]
 ; CHECK-NEXT:    br label %[[SCALAR_PH:.*]]
 ; CHECK:       [[SCALAR_PH]]:
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
