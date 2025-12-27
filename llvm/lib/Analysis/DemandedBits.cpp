@@ -153,6 +153,48 @@ void DemandedBits::determineLiveOperandBits(
             AB = AOut.lshr(ShiftAmt);
           else if (OperandNo == 1)
             AB = AOut.shl(BitWidth - ShiftAmt);
+        } else {
+          ComputeKnownBits(BitWidth, UserI->getOperand(2), nullptr);
+          if (!Known.getMaxValue().ult(BitWidth)) {
+            AB = APInt::getAllOnes(BitWidth);
+            return;
+          }
+          uint64_t Min = Known.getMinValue().getLimitedValue(BitWidth - 1);
+          uint64_t Max = Known.getMaxValue().getLimitedValue(BitWidth - 1);
+          bool IsFShl = II->getIntrinsicID() == Intrinsic::fshl;
+          bool ShiftLeft;
+          uint64_t SMin = Min, SMax = Max;
+          // fshl(a, b, k ) is defined by concatenating a . b
+          // then doing a left shift by k and then extracting the upper bits.
+          // For BW = 4, k = 2 we have
+          // a4 a3 a2 a1 b4 b3 b2 b1, shift by k = 2 we get
+          // a2 a1 b4 b3.
+          // fshl(a,b,k) = (a << k) | (b >> (BW - k))
+          //
+          // Suppose AOut == 0b0000 0001
+          // [min, max] = [1, 3]
+          // iteration 1 shift by 1 mask is 0b0000 0011
+          // iteration 2 shift by 2 mask is 0b0000 1111
+          // iteration 3, shiftAmnt = 4 > max - min, we stop.
+          //
+          // fshr is defined in a similar way from fshl.
+          // a16 a15 .. a2 a1 b16 b15 ... b2 b1
+          //
+          // doing a right shift by (bw - k) and then extracting the lower bits.
+          // a4 a3 a2 a1 b4 b3 b2 b1, shift right by k = 2 we get
+          // a4 a3 a2 a1 b4 b3, then exracting the lower bits
+          // a2 a1 b4 b3
+          // fshr(a,b,k) = (a >> k) | (b << (BW - k))
+          //
+          if (OperandNo == 0) {
+            // We shift left for a only for fshr
+            ShiftLeft = !IsFShl;
+          } else {
+            SMin = BitWidth - Max;
+            SMax = BitWidth - Min;
+            ShiftLeft = IsFShl;
+          }
+          GetShiftedRange(SMin, SMax, ShiftLeft);
         }
         break;
       }
