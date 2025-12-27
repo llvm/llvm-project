@@ -906,6 +906,9 @@ else ()
   append_list_if(COMPILER_RT_HAS_NOSTDINCXX_FLAG -nostdinc++ BUILTIN_CFLAGS)
   append_list_if(COMPILER_RT_HAS_WBUILTIN_DECLARATION_MISMATCH_FLAG -Werror=builtin-declaration-mismatch BUILTIN_CFLAGS)
 
+  # Builtins use __COUNTER__
+  append_list_if(COMPILER_RT_HAS_WNO_C2Y_EXTENSIONS -Wno-c2y-extensions BUILTIN_CFLAGS)
+
   # Don't embed directives for picking any specific CRT
   if (MSVC)
     set(CMAKE_MSVC_RUNTIME_LIBRARY "")
@@ -1094,7 +1097,6 @@ if (COMPILER_RT_BUILD_CRT)
   append_list_if(COMPILER_RT_HAS_INITFINI_ARRAY -DCRT_HAS_INITFINI_ARRAY CRT_CFLAGS)
   append_list_if(COMPILER_RT_CRT_USE_EH_FRAME_REGISTRY -DEH_USE_FRAME_REGISTRY CRT_CFLAGS)
   append_list_if(COMPILER_RT_HAS_FPIC_FLAG -fPIC CRT_CFLAGS)
-  append_list_if(COMPILER_RT_HAS_WNO_C2Y_EXTENSIONS -Wno-c2y-extensions CRT_CFLAGS)
   append_list_if(COMPILER_RT_HAS_WNO_PEDANTIC -Wno-pedantic CRT_CFLAGS)
   if (COMPILER_RT_HAS_FCF_PROTECTION_FLAG)
     append_list_if(COMPILER_RT_ENABLE_CET -fcf-protection=full CRT_CFLAGS)
