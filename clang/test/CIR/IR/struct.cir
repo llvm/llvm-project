@@ -84,8 +84,8 @@ cir.func @struct_extract_member_test() {
 }
 
 // CHECK: cir.func{{.*}} @struct_extract_member_test() {
-// CHECK: %0 = cir.const #cir.const_record<{#cir.int<1> : !u8i, #cir.int<2> : !u16i, #cir.int<3> : !u32i}> : !rec_Sc
-// CHECK: %1 = cir.extract_member %0[0] : !rec_Sc -> !u8i
+// CHECK: %[[RECORD:.*]] = cir.const #cir.const_record<{#cir.int<1> : !u8i, #cir.int<2> : !u16i, #cir.int<3> : !u32i}> : !rec_Sc
+// CHECK: %[[ELEM_0:.*]] = cir.extract_member %[[RECORD]][0] : !rec_Sc -> !u8i
 // CHECK: cir.return
 // CHECK: }
 
