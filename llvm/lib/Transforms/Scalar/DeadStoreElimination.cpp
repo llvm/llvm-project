@@ -1214,7 +1214,8 @@ struct DSEState {
     return OW_None;
   }
 
-  bool isInvisibleToCallerAfterRet(const Value *V, const Value *Ptr, const LocationSize StoreSize) {
+  bool isInvisibleToCallerAfterRet(const Value *V, const Value *Ptr,
+                                   const LocationSize StoreSize) {
     if (isa<AllocaInst>(V))
       return true;
 
@@ -1774,7 +1775,8 @@ struct DSEState {
           BasicBlock *MaybeKillingBlock = UseInst->getParent();
           if (PostOrderNumbers.find(MaybeKillingBlock)->second <
               PostOrderNumbers.find(MaybeDeadAccess->getBlock())->second) {
-            if (!isInvisibleToCallerAfterRet(KillingUndObj, KillingLoc.Ptr, KillingLoc.Size)) {
+            if (!isInvisibleToCallerAfterRet(KillingUndObj, KillingLoc.Ptr,
+                                             KillingLoc.Size)) {
               LLVM_DEBUG(dbgs()
                          << "    ... found killing def " << *UseInst << "\n");
               KillingDefs.insert(UseInst);
@@ -1792,7 +1794,8 @@ struct DSEState {
     // For accesses to locations visible after the function returns, make sure
     // that the location is dead (=overwritten) along all paths from
     // MaybeDeadAccess to the exit.
-    if (!isInvisibleToCallerAfterRet(KillingUndObj, KillingLoc.Ptr, KillingLoc.Size)) {
+    if (!isInvisibleToCallerAfterRet(KillingUndObj, KillingLoc.Ptr,
+                                     KillingLoc.Size)) {
       SmallPtrSet<BasicBlock *, 16> KillingBlocks;
       for (Instruction *KD : KillingDefs)
         KillingBlocks.insert(KD->getParent());
