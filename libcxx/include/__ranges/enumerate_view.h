@@ -228,17 +228,16 @@ public:
     return __reference_type(__pos_ + __n, __current_[__n]);
   }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr bool
-  operator==(const __iterator& __x, const __iterator& __y) noexcept {
+  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(const __iterator& __x, const __iterator& __y) noexcept {
     return __x.__pos_ == __y.__pos_;
   }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr strong_ordering
+  _LIBCPP_HIDE_FROM_ABI friend constexpr strong_ordering
   operator<=>(const __iterator& __x, const __iterator& __y) noexcept {
     return __x.__pos_ <=> __y.__pos_;
   }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr __iterator operator+(const __iterator& __i, difference_type __n)
+  _LIBCPP_HIDE_FROM_ABI friend constexpr __iterator operator+(const __iterator& __i, difference_type __n)
     requires random_access_range<_Base>
   {
     auto __temp = __i;
@@ -296,8 +295,7 @@ public:
 
   template <bool _OtherConst>
     requires sentinel_for<sentinel_t<_Base>, iterator_t<__maybe_const<_OtherConst, _View>>>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr bool
-  operator==(const __iterator<_OtherConst>& __x, const __sentinel& __y) {
+  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(const __iterator<_OtherConst>& __x, const __sentinel& __y) {
     return __x.__current_ == __y.__end_;
   }
 
@@ -321,6 +319,8 @@ constexpr bool enable_borrowed_range<enumerate_view<_View>> = enable_borrowed_ra
 
 namespace views {
 namespace __enumerate {
+
+// [range.enumerate.overview]
 
 struct __fn : __range_adaptor_closure<__fn> {
   template <class _Range>
