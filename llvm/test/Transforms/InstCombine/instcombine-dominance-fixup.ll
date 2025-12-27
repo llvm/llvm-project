@@ -2,7 +2,7 @@
 ; NOTE: This test ensures InstCombine preserves dominance even when it
 ; reorders shifts through SimplifyDemandedBits/log2 folding.
 ;
-; RUN: opt -passes=instcombine,instnamer -S < %s | FileCheck %s
+; RUN: opt -passes=instcombine -S < %s | FileCheck %s
 
 define i64 @f(i64 %arg0, i64 %arg1) {
 ; CHECK-LABEL: define i64 @f(
