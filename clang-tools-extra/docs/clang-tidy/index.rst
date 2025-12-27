@@ -349,6 +349,20 @@ An overview of all the command-line options:
         some-check.SomeOption: 'some value'
       ...
 
+Running Clang-Tidy on CUDA Files
+--------------------------------
+
+:program:`clang-tidy` supports analyzing CUDA source files.
+To correctly process host-side code, specify the CUDA toolkit path using
+``--cuda-path`` and limit compilation to the host with ``--cuda-host-only``.
+
+.. code-block:: console
+
+  $ clang-tidy source.cu -- --cuda-path=/path/to/cuda --cuda-host-only
+
+Using ``--cuda-host-only`` is recommended as it skips device-side compilation,
+speeding up the analysis and avoiding potential device-specific errors.
+
 Clang-Tidy Automation
 =====================
 
