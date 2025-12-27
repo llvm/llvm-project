@@ -28,6 +28,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Transforms/InstCombine/InstCombiner.h"
+#include <cstdint>
 #include <iterator>
 #include <optional>
 
@@ -55,20 +56,10 @@ static Value *EvaluateInDifferentTypeImpl(Value *V, Type *Ty, bool isSigned,
   Instruction *Res = nullptr;
   unsigned Opc = I->getOpcode();
   switch (Opc) {
-  case Instruction::And: {
-    unsigned OrgiBitWidth = I->getType()->getScalarSizeInBits();
-    unsigned TargetBitWidth = Ty->getScalarSizeInBits();
-    if (OrgiBitWidth > TargetBitWidth) {
-      Value *LHS = IC.InsertNewInstWith(CastInst::CreateIntegerCast(I->getOperand(0), Ty, isSigned), I->getIterator());
-      Value *RHS = IC.InsertNewInstWith(CastInst::CreateIntegerCast(I->getOperand(1), Ty, isSigned), I->getIterator());
-      Res = BinaryOperator::Create(Instruction::And, LHS, RHS);
-      break;
-    }
-    [[fallthrough]];
-  }
   case Instruction::Add:
   case Instruction::Sub:
   case Instruction::Mul:
+  case Instruction::And:
   case Instruction::Or:
   case Instruction::Xor:
   case Instruction::AShr:
@@ -136,10 +127,8 @@ static Value *EvaluateInDifferentTypeImpl(Value *V, Type *Ty, bool isSigned,
       }
       case Intrinsic::umin:
       case Intrinsic::umax: {
-        Value *LHS = EvaluateInDifferentTypeImpl(I->getOperand(0), Ty, isSigned,
-                                                 IC, Processed);
-        Value *RHS = EvaluateInDifferentTypeImpl(I->getOperand(1), Ty, isSigned,
-                                                 IC, Processed);
+        Value *LHS = IC.InsertNewInstWith(CastInst::CreateIntegerCast(I->getOperand(0), Ty, isSigned), I->getIterator());
+        Value *RHS = IC.InsertNewInstWith(CastInst::CreateIntegerCast(I->getOperand(1), Ty, isSigned), I->getIterator());
         Function *Fn = Intrinsic::getOrInsertDeclaration(
             I->getModule(), II->getIntrinsicID(), {Ty});
         Res = CallInst::Create(Fn->getFunctionType(), Fn, {LHS, RHS});
@@ -512,21 +501,10 @@ bool TypeEvaluationHelper::canEvaluateTruncatedPred(Value *V, Type *Ty,
   auto *I = cast<Instruction>(V);
   Type *OrigTy = V->getType();
   switch (I->getOpcode()) {
-  case Instruction::And: {
-    // And can be truncated if all the truncated bits are zero.
-    uint32_t OrigBitWidth = OrigTy->getScalarSizeInBits();
-    uint32_t BitWidth = Ty->getScalarSizeInBits();
-    assert(BitWidth < OrigBitWidth && "Unexpected bitwidths!");
-    APInt Mask = APInt::getBitsSetFrom(OrigBitWidth, BitWidth);
-    if (IC.MaskedValueIsZero(I->getOperand(0), Mask, CxtI) ||
-        IC.MaskedValueIsZero(I->getOperand(1), Mask, CxtI)) {
-      return true;
-    }
-    [[fallthrough]];
-  }
   case Instruction::Add:
   case Instruction::Sub:
   case Instruction::Mul:
+  case Instruction::And:
   case Instruction::Or:
   case Instruction::Xor:
     // These operators can all arbitrarily be extended or truncated.
@@ -644,11 +622,22 @@ bool TypeEvaluationHelper::canEvaluateTruncatedPred(Value *V, Type *Ty,
   case Instruction::Call:
     if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(I)) {
       switch (II->getIntrinsicID()) {
+      case Intrinsic::umax:
       case Intrinsic::umin: {
-        Value *Op0 = II->getArgOperand(0);
-        Value *Op1 = II->getArgOperand(1);
-        return canEvaluateTruncatedImpl(Op0, Ty, IC, CxtI) &&
-               canEvaluateTruncatedImpl(Op1, Ty, IC, CxtI);
+        unsigned OrginalBitWidth = OrigTy->getScalarSizeInBits();
+        unsigned TargetBitWidth = Ty->getScalarSizeInBits();
+        assert(TargetBitWidth < OrginalBitWidth && "Unexpected bitwidths!");
+        APInt Mask = APInt::getBitsSetFrom(OrginalBitWidth, TargetBitWidth);
+        // If we know that all operands is always within the truncated
+        // range, we can perform the umin in the smaller type.
+        if (IC.MaskedValueIsZero(II->getArgOperand(0), Mask, CxtI) &&
+            IC.MaskedValueIsZero(II->getArgOperand(1), Mask, CxtI)) {
+          Value *Op0 = II->getArgOperand(0);
+          Value *Op1 = II->getArgOperand(1);
+          return canEvaluateTruncatedImpl(Op0, Ty, IC, CxtI) ||
+                 canEvaluateTruncatedImpl(Op1, Ty, IC, CxtI);
+        }
+        break;
       }
       default:
         break;
