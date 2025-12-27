@@ -82,6 +82,9 @@ SANITIZER("thread", Thread)
 // Numerical stability sanitizer.
 SANITIZER("numerical", NumericalStability)
 
+// NoAliasSanitizer
+SANITIZER("noalias", NoAlias)
+
 // RealtimeSanitizer
 SANITIZER("realtime", Realtime)
 

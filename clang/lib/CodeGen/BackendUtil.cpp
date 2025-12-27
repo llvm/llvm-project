@@ -78,6 +78,7 @@
 #include "llvm/Transforms/Instrumentation/MemProfInstrumentation.h"
 #include "llvm/Transforms/Instrumentation/MemProfUse.h"
 #include "llvm/Transforms/Instrumentation/MemorySanitizer.h"
+#include "llvm/Transforms/Instrumentation/NoAliasSanitizer.h"
 #include "llvm/Transforms/Instrumentation/NumericalStabilitySanitizer.h"
 #include "llvm/Transforms/Instrumentation/PGOInstrumentation.h"
 #include "llvm/Transforms/Instrumentation/RealtimeSanitizer.h"
@@ -756,6 +757,9 @@ static void addSanitizers(const Triple &TargetTriple,
 
     if (LangOpts.Sanitize.has(SanitizerKind::NumericalStability))
       MPM.addPass(NumericalStabilitySanitizerPass());
+
+    if (LangOpts.Sanitize.has(SanitizerKind::NoAlias))
+      MPM.addPass(NoAliasSanitizerPass());
 
     if (LangOpts.Sanitize.has(SanitizerKind::Realtime))
       MPM.addPass(RealtimeSanitizerPass());

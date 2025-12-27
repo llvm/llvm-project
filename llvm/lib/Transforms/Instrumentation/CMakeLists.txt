@@ -10,6 +10,7 @@ add_llvm_component_library(LLVMInstrumentation
   MemProfInstrumentation.cpp
   MemProfUse.cpp
   MemorySanitizer.cpp
+  NoAliasSanitizer.cpp
   NumericalStabilitySanitizer.cpp
   IndirectCallPromotion.cpp
   InstrProfiling.cpp

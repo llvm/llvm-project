@@ -937,6 +937,8 @@ SanitizerMask Linux::getSupportedSanitizers() const {
   }
   if (IsX86_64)
     Res |= SanitizerKind::NumericalStability;
+  if (IsX86_64 || IsAArch64)
+    Res |= SanitizerKind::NoAlias;
   if (!IsAndroid)
     Res |= SanitizerKind::Memory;
 
