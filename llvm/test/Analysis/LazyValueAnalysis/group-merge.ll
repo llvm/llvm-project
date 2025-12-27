@@ -79,10 +79,8 @@ define void @foo_with_diff_IV_order(i32 %v) {
 ; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ 2, %[[CASE2]] ], [ [[V]], %[[IF_ELSE]] ], [ 1, %[[CASE1]] ]
 ; CHECK-NEXT:    br label %[[SWITCH:.*]]
 ; CHECK:       [[SWITCH]]:
-; CHECK-NEXT:    switch i32 [[PHI]], label %[[EXIT]] [
-; CHECK-NEXT:      i32 3, label %[[UNREACH:.*]]
-; CHECK-NEXT:    ]
-; CHECK:       [[UNREACH]]:
+; CHECK-NEXT:    br label %[[EXIT]]
+; CHECK:       [[UNREACH:.*:]]
 ; CHECK-NEXT:    br label %[[EXIT]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
@@ -185,10 +183,8 @@ define void @foo_with_diff_pred_order(i32 %v) {
 ; CHECK:       [[DEFAULT]]:
 ; CHECK-NEXT:    br label %[[CASE1]]
 ; CHECK:       [[SWITCH]]:
-; CHECK-NEXT:    switch i32 [[V]], label %[[EXIT]] [
-; CHECK-NEXT:      i32 3, label %[[UNREACH:.*]]
-; CHECK-NEXT:    ]
-; CHECK:       [[UNREACH]]:
+; CHECK-NEXT:    br label %[[EXIT]]
+; CHECK:       [[UNREACH:.*:]]
 ; CHECK-NEXT:    br label %[[EXIT]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
@@ -222,7 +218,7 @@ exit:                                             ; preds = %unreach, %switch, %
 }
 
 define i32 @bar(i32 range(i32 4, 1) %v1, i8 %v2) {
-; CHECK-LABEL: define i32 @bar(
+; CHECK-LABEL: define range(i32 4, 3) i32 @bar(
 ; CHECK-SAME: i32 range(i32 4, 1) [[V1:%.*]], i8 [[V2:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    switch i8 [[V2]], label %[[DEFAULT:.*]] [
@@ -255,7 +251,7 @@ default:                                          ; preds = %case1, %case0, %ent
 }
 
 define <2 x i8> @phi_vector_merge(i1 %c) {
-; CHECK-LABEL: define range(i8 62, 4) <2 x i8> @phi_vector_merge(
+; CHECK-LABEL: define range(i8 2, -72) <2 x i8> @phi_vector_merge(
 ; CHECK-SAME: i1 [[C:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br i1 [[C]], label %[[IF:.*]], label %[[JOIN:.*]]
@@ -263,7 +259,7 @@ define <2 x i8> @phi_vector_merge(i1 %c) {
 ; CHECK-NEXT:    br label %[[JOIN]]
 ; CHECK:       [[JOIN]]:
 ; CHECK-NEXT:    [[PHI:%.*]] = phi <2 x i8> [ <i8 0, i8 -76>, %[[ENTRY]] ], [ <i8 60, i8 120>, %[[IF]] ]
-; CHECK-NEXT:    [[ADD:%.*]] = add <2 x i8> [[PHI]], <i8 2, i8 3>
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw <2 x i8> [[PHI]], <i8 2, i8 3>
 ; CHECK-NEXT:    ret <2 x i8> [[ADD]]
 ;
 entry:
