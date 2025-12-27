@@ -4790,20 +4790,17 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
   // select (trunc nsw X to i1), X, Y --> select (trunc nsw X to i1), -1, Y
   // select (trunc nsw X to i1), Y, X --> select (trunc nsw X to i1), Y, 0
   Value *Trunc;
-  auto Zero = [&]() { return ConstantInt::get(SelType, 0); };
-  auto One = [&]() { return ConstantInt::get(SelType, 1); };
-  auto MinusOne = [&]() { return ConstantInt::getAllOnesValue(SelType); };
   if (match(CondVal, m_NUWTrunc(m_Value(Trunc))) && !isa<Constant>(Trunc)) {
-    if (TrueVal == Trunc && TrueVal != One())
-      return replaceOperand(SI, 1, One());
-    if (FalseVal == Trunc && FalseVal != Zero())
-      return replaceOperand(SI, 2, Zero());
+    if (TrueVal == Trunc && TrueVal != ConstantInt::get(SelType, 1))
+      return replaceOperand(SI, 1, ConstantInt::get(SelType, 1));
+    if (FalseVal == Trunc && FalseVal != ConstantInt::get(SelType, 0))
+      return replaceOperand(SI, 2, ConstantInt::get(SelType, 0));
   }
   if (match(CondVal, m_NSWTrunc(m_Value(Trunc))) && !isa<Constant>(Trunc)) {
-    if (TrueVal == Trunc && TrueVal != MinusOne())
-      return replaceOperand(SI, 1, MinusOne());
-    if (FalseVal == Trunc && FalseVal != Zero())
-      return replaceOperand(SI, 2, Zero());
+    if (TrueVal == Trunc && TrueVal != ConstantInt::getAllOnesValue(SelType))
+      return replaceOperand(SI, 1, ConstantInt::getAllOnesValue(SelType));
+    if (FalseVal == Trunc && FalseVal != ConstantInt::get(SelType, 0))
+      return replaceOperand(SI, 2, ConstantInt::get(SelType, 0));
   }
 
   Value *MaskedLoadPtr;
