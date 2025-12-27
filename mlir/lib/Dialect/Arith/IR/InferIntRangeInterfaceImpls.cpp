@@ -329,7 +329,11 @@ void arith::SelectOp::inferResultRangesFromOptional(
       setResultRange(getResult(), trueCase);
     return;
   }
-  setResultRange(getResult(), IntegerValueRange::join(trueCase, falseCase));
+
+  if (trueCase.isUninitialized() || falseCase.isUninitialized())
+    setResultRange(getResult(), IntegerValueRange{});
+  else
+    setResultRange(getResult(), IntegerValueRange::join(trueCase, falseCase));
 }
 
 //===----------------------------------------------------------------------===//

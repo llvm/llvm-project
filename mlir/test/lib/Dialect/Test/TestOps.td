@@ -3182,6 +3182,23 @@ def TestWithBoundsOp : TEST_Op<"with_bounds",
   let assemblyFormat = "attr-dict `:` type($fakeVal)";
 }
 
+def TestWithoutBoundsOp : TEST_Op<"without_bounds",
+                         [DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRangesFromOptional"]>,
+                         NoMemoryEffect]> {
+  let description = [{
+    Creates a value with uninitialized range for integer range analysis tests.
+
+    Example:
+
+    ```mlir
+    %0 = test.without_bounds : index
+    ```
+  }];
+  let results = (outs InferIntRangeType:$result);
+
+  let assemblyFormat = "attr-dict `:` type($result)";
+}
+
 def TestWithBoundsRegionOp : TEST_Op<"with_bounds_region",
                           [DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>,
                            SingleBlock, NoTerminator]> {
