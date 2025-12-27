@@ -2673,8 +2673,8 @@ Instruction *InstCombinerImpl::foldICmpSRemConstant(ICmpInst &Cmp,
 
     APInt NormalizedC = C;
     if (Pred == ICmpInst::ICMP_ULT) {
-      if (NormalizedC.isZero())
-        return nullptr;
+      assert(!NormalizedC.isZero() &&
+             "ult X, 0 should have been simplified already.");
       --NormalizedC;
     }
     if (C.isNegative())
