@@ -470,3 +470,20 @@ define float @pr64937_preserve_min_idiom(float %a) {
   %res = fmul nnan float %sel, 6.553600e+04
   ret float %res
 }
+
+; NOTE: Regression test for foldMinimumMaximumSharedOp crash.
+define float @minnum_shared_op_mixed(float %x) {
+; CHECK-LABEL: @minnum_shared_op_mixed(
+; CHECK-NEXT:    [[M0:%.*]] = call float @llvm.minnum.f32(float [[X:%.*]], float 0.000000e+00)
+; CHECK-NEXT:    [[F:%.*]] = call float @llvm.fma.f32(float [[X]], float 0.000000e+00, float [[X]])
+; CHECK-NEXT:    [[M2:%.*]] = call float @llvm.minnum.f32(float [[F]], float [[M0]])
+; CHECK-NEXT:    ret float [[M2]]
+;
+  %m0 = call float @llvm.minnum.f32(float %x, float 0.000000e+00)
+  %f = call float @llvm.fma.f32(float %x, float 0.000000e+00, float %x)
+  %m2 = call float @llvm.minnum.f32(float %f, float %m0)
+  ret float %m2
+}
+
+declare float @llvm.minnum.f32(float, float)
+declare float @llvm.fma.f32(float, float, float)
