@@ -371,7 +371,6 @@ void functional_casts() {
 void f(int *);
 
 void f(double *);
-
 void test_nullptr_cast() {
   f((int*)nullptr);
 }
