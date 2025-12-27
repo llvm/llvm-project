@@ -434,7 +434,7 @@ public:
     }
 
     void resolve(StringRef Sym, const std::string &LibPath) {
-      std::unique_lock Lock(Mtx);
+      std::unique_lock<std::shared_mutex> Lock(Mtx);
       for (auto &E : Entries) {
         if (E.Name == Sym && E.ResolvedLibPath.empty()) {
           E.ResolvedLibPath = LibPath;
@@ -453,7 +453,7 @@ public:
     }
 
     std::optional<StringRef> getResolvedLib(StringRef Sym) const {
-      std::shared_lock Lock(Mtx);
+      std::shared_lock<std::shared_mutex> Lock(Mtx);
       for (const auto &E : Entries)
         if (E.Name == Sym && !E.ResolvedLibPath.empty())
           return E.ResolvedLibPath;
@@ -461,7 +461,7 @@ public:
     }
 
     bool isResolved(StringRef Sym) const {
-      std::shared_lock Lock(Mtx);
+      std::shared_lock<std::shared_mutex> Lock(Mtx);
       for (const auto &E : Entries)
         if (E.Name == Sym && !E.ResolvedLibPath.empty())
           return true;
