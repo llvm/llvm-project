@@ -42,6 +42,7 @@ constexpr void test() {
     auto it = ev.begin();
 
     using DiffT = std::iter_difference_t<decltype(it)>;
+
     std::same_as<DiffT> decltype(auto) index = it.index();
 
     static_assert(noexcept(it.index()));
@@ -61,6 +62,7 @@ constexpr void test() {
     auto it = std::as_const(ev).begin();
 
     using DiffT = std::iter_difference_t<decltype(it)>;
+
     std::same_as<DiffT> decltype(auto) index = it.index();
 
     static_assert(noexcept(it.index()));
