@@ -170,6 +170,23 @@ public:
     return __bit_iterator<_Cp, false>(__seg_, static_cast<unsigned>(std::__countr_zero(__mask_)));
   }
 
+  _LIBCPP_HIDE_FROM_ABI friend _LIBCPP_CONSTEXPR_SINCE_CXX20 void
+  swap(__bit_reference __x, __bit_reference __y) _NOEXCEPT {
+    bool __t = __x;
+    __x      = __y;
+    __y      = __t;
+  }
+  _LIBCPP_HIDE_FROM_ABI friend _LIBCPP_CONSTEXPR_SINCE_CXX20 void swap(__bit_reference __x, bool& __y) _NOEXCEPT {
+    bool __t = __x;
+    __x      = __y;
+    __y      = __t;
+  }
+  _LIBCPP_HIDE_FROM_ABI friend _LIBCPP_CONSTEXPR_SINCE_CXX20 void swap(bool& __x, __bit_reference __y) _NOEXCEPT {
+    bool __t = __x;
+    __x      = __y;
+    __y      = __t;
+  }
+
 private:
   _LIBCPP_HIDE_FROM_ABI
   _LIBCPP_CONSTEXPR_SINCE_CXX20 explicit __bit_reference(__storage_pointer __s, __storage_type __m) _NOEXCEPT
@@ -179,36 +196,6 @@ private:
 
 template <class _Cp>
 class __bit_reference<_Cp, false> {};
-
-template <class _Cp>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void
-swap(__bit_reference<_Cp> __x, __bit_reference<_Cp> __y) _NOEXCEPT {
-  bool __t = __x;
-  __x      = __y;
-  __y      = __t;
-}
-
-template <class _Cp, class _Dp>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void
-swap(__bit_reference<_Cp> __x, __bit_reference<_Dp> __y) _NOEXCEPT {
-  bool __t = __x;
-  __x      = __y;
-  __y      = __t;
-}
-
-template <class _Cp>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void swap(__bit_reference<_Cp> __x, bool& __y) _NOEXCEPT {
-  bool __t = __x;
-  __x      = __y;
-  __y      = __t;
-}
-
-template <class _Cp>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void swap(bool& __x, __bit_reference<_Cp> __y) _NOEXCEPT {
-  bool __t = __x;
-  __x      = __y;
-  __y      = __t;
-}
 
 template <class _Cp>
 class __bit_const_reference {

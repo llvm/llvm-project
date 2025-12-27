@@ -398,8 +398,11 @@ public:
 #else
       _NOEXCEPT_(!__alloc_traits::propagate_on_container_swap::value || __is_nothrow_swappable_v<allocator_type>);
 #endif
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 static void swap(reference __x, reference __y) _NOEXCEPT {
-    std::swap(__x, __y);
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_DEPRECATED_IN_CXX26
+      _LIBCPP_CONSTEXPR_SINCE_CXX20 static void swap(reference __x, reference __y) _NOEXCEPT {
+    bool __t = __x;
+    __x      = __y;
+    __y      = __t;
   }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void resize(size_type __sz, value_type __x = false);
