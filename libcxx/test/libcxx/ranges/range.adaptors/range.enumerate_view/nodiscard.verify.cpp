@@ -40,8 +40,8 @@ void test() {
 
   // [range.enumerate.iterator]
 
-  auto it       = ev.begin();
-  auto const_it = std::as_const(ev).begin();
+  auto it = ev.begin();
+  // auto const_it = std::as_const(ev).begin();
 
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   it.base();
@@ -53,7 +53,6 @@ void test() {
   *std::as_const(it);
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   it[2];
-  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
 
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   it + 1;
@@ -65,7 +64,8 @@ void test() {
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   iter_move(it);
 
-  // class enumerate_view<>::__sentinel
+  // [range.enumerate.sentinel]
+
   auto st = ev.end();
   //   auto const_st = std::as_const(ev).end();
 
