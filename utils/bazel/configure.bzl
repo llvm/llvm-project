@@ -25,7 +25,6 @@ DEFAULT_TARGETS = [
     "WebAssembly",
     "X86",
     "XCore",
-    "Xtensa",
 ]
 
 MAX_TRAVERSAL_STEPS = 1000000  # "big number" upper bound on total visited dirs
