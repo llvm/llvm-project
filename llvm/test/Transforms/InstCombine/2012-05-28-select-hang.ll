@@ -38,7 +38,6 @@ land.end:                                         ; preds = %land.rhs, %entry
 ; CHECK-NOT: select
 }
 
-; NOTE: Regression test for an InstCombine infinite loop.
 define i1 @select_no_infinite_loop(i2 %arg0, i2 %arg1, i1 %arg2, i2 %arg3) {
 ; CHECK-LABEL: define i1 @select_no_infinite_loop(
 ; CHECK-SAME: i2 [[ARG0:%.*]], i2 [[ARG1:%.*]], i1 [[ARG2:%.*]], i2 [[ARG3:%.*]]) {
