@@ -119,6 +119,7 @@ add_lldb_library(liblldb SHARED ${option_framework}
   SBUnixSignals.cpp
   SBValue.cpp
   SBValueList.cpp
+  SBVariableAnnotator.cpp
   SBVariablesOptions.cpp
   SBWatchpoint.cpp
   SBWatchpointOptions.cpp
