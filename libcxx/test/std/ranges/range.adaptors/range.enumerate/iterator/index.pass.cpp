@@ -33,38 +33,46 @@ constexpr void test() {
   using View          = MinimalView<Iterator, Sentinel>;
   using EnumerateView = std::ranges::enumerate_view<View>;
 
-  std::array array{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+  std::array array{94, 82, 47};
 
   View mv{Iterator(std::to_address(base(array.begin()))), Sentinel(Iterator(std::to_address(base(array.end()))))};
   EnumerateView ev(std::move(mv));
 
   {
     auto it = ev.begin();
-    ASSERT_NOEXCEPT(it.index());
 
-    static_assert(std::same_as<typename decltype(it)::difference_type, decltype(it.index())>);
-    for (std::size_t index = 0; index < array.size(); ++index) {
-      assert(std::cmp_equal(index, it.index()));
+    using DiffT = std::iter_difference_t<decltype(it)>;
+    std::same_as<DiffT> decltype(auto) index = it.index();
 
-      ++it;
-    }
+    static_assert(noexcept(it.index()));
+
+    assert(std::cmp_equal(0, index));
+    ++it;
+    assert(std::cmp_equal(1, it.index()));
+    ++it;
+    assert(std::cmp_equal(2, it.index()));
+    ++it;
 
     assert(it == ev.end());
   }
 
   // const
   {
-    auto constIt = std::as_const(ev).begin();
-    ASSERT_NOEXCEPT(constIt.index());
+    auto it = std::as_const(ev).begin();
 
-    static_assert(std::same_as<typename decltype(constIt)::difference_type, decltype(constIt.index())>);
-    for (std::size_t index = 0; index < array.size(); ++index) {
-      assert(std::cmp_equal(index, constIt.index()));
+    using DiffT = std::iter_difference_t<decltype(it)>;
+    std::same_as<DiffT> decltype(auto) index = it.index();
 
-      ++constIt;
-    }
+    static_assert(noexcept(it.index()));
 
-    assert(constIt == ev.end());
+    assert(std::cmp_equal(0, index));
+    ++it;
+    assert(std::cmp_equal(1, it.index()));
+    ++it;
+    assert(std::cmp_equal(2, it.index()));
+    ++it;
+
+    assert(it == ev.end());
   }
 }
 
@@ -77,13 +85,13 @@ constexpr bool tests() {
   test<contiguous_iterator<int*>>();
   test<int*>();
 
-  test<cpp17_input_iterator<int const*>, int const>();
-  test<cpp20_input_iterator<int const*>, int const>();
-  test<forward_iterator<int const*>, int const>();
-  test<bidirectional_iterator<int const*>, int const>();
-  test<random_access_iterator<int const*>, int const>();
-  test<contiguous_iterator<int const*>, int const>();
-  test<int const*, int const>();
+  test<cpp17_input_iterator<const int*>, const int>();
+  test<cpp20_input_iterator<const int*>, const int>();
+  test<forward_iterator<const int*>, const int>();
+  test<bidirectional_iterator<const int*>, const int>();
+  test<random_access_iterator<const int*>, const int>();
+  test<contiguous_iterator<const int*>, const int>();
+  test<const int*, const int>();
 
   return true;
 }
