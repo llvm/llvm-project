@@ -611,6 +611,14 @@ Value *getNegOperand(Value *V) {
   return I->getOperand(1);
 }
 
+static const IntrinsicInst *getFMAOrMulAdd(const Instruction *I) {
+  if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(I)) {
+    auto IID = II->getIntrinsicID();
+    return IID == Intrinsic::fmuladd || IID == Intrinsic::fma ? II : nullptr;
+  }
+  return nullptr;
+}
+
 bool ComplexDeinterleaving::evaluateBasicBlock(BasicBlock *B, unsigned Factor) {
   ComplexDeinterleavingGraph Graph(TL, TLI, Factor);
   if (Graph.collectPotentialReductions(B))
@@ -1216,7 +1224,7 @@ ComplexDeinterleavingGraph::identifyReassocNodes(Instruction *Real,
                                                  Instruction *Imag) {
   auto IsOperationSupported = [](Instruction *I) -> bool {
     unsigned Opcode = I->getOpcode();
-    return match(I, m_AnyIntrinsic<Intrinsic::fma, Intrinsic::fmuladd>()) ||
+    return getFMAOrMulAdd(I) ||
            Opcode == Instruction::FAdd || Opcode == Instruction::FSub ||
            Opcode == Instruction::FNeg || Opcode == Instruction::Add ||
            Opcode == Instruction::Sub;
@@ -1283,6 +1291,24 @@ ComplexDeinterleavingGraph::identifyReassocNodes(Instruction *Real,
         continue;
       }
 
+      auto addMul = [&Muls](Value *V0, Value *V1, bool IsPositive) {
+        Value *A, *B;
+        if (isNeg(V0)) {
+          A = getNegOperand(V0);
+          IsPositive = !IsPositive;
+        } else {
+          A = V0;
+        }
+
+        if (isNeg(V1)) {
+          B = getNegOperand(V1);
+          IsPositive = !IsPositive;
+        } else {
+          B = V1;
+        }
+        Muls.push_back(Product{A, B, IsPositive});
+      };
+
       switch (I->getOpcode()) {
       case Instruction::FAdd:
       case Instruction::Add:
@@ -1302,54 +1328,19 @@ ComplexDeinterleavingGraph::identifyReassocNodes(Instruction *Real,
         }
         break;
       case Instruction::FMul:
-      case Instruction::Mul: {
-        Value *A, *B;
-        if (isNeg(I->getOperand(0))) {
-          A = getNegOperand(I->getOperand(0));
-          IsPositive = !IsPositive;
-        } else {
-          A = I->getOperand(0);
-        }
-
-        if (isNeg(I->getOperand(1))) {
-          B = getNegOperand(I->getOperand(1));
-          IsPositive = !IsPositive;
-        } else {
-          B = I->getOperand(1);
-        }
-        Muls.push_back(Product{A, B, IsPositive});
+      case Instruction::Mul:
+        addMul(I->getOperand(0), I->getOperand(1), IsPositive);
         break;
-      }
       case Instruction::FNeg:
         Worklist.emplace_back(I->getOperand(0), !IsPositive);
         break;
-      case Instruction::Call: {
-        Value *A, *B, *C;
-        if (!match(I, m_Intrinsic<Intrinsic::fma>(m_Value(A), m_Value(B),
-                                                  m_Value(C))) &&
-            !match(I, m_Intrinsic<Intrinsic::fmuladd>(m_Value(A), m_Value(B),
-                                                      m_Value(C)))) {
-          Addends.emplace_back(I, IsPositive);
-          continue;
-        }
-
-        bool IsProductPositive = IsPositive;
-        if (isNeg(A)) {
-          A = getNegOperand(A);
-          IsProductPositive = !IsProductPositive;
-        }
-
-        if (isNeg(B)) {
-          B = getNegOperand(B);
-          IsProductPositive = !IsProductPositive;
-        }
-
-        Muls.push_back(Product{A, B, IsProductPositive});
-        Worklist.emplace_back(C, IsPositive);
-        break;
-      }
       default:
-        Addends.emplace_back(I, IsPositive);
+        if (auto II = getFMAOrMulAdd(I)) {
+          Worklist.emplace_back(II->getArgOperand(2), IsPositive);
+          addMul(II->getArgOperand(0), II->getArgOperand(1), IsPositive);
+        } else {
+          Addends.emplace_back(I, IsPositive);
+        }
         continue;
       }
     }
