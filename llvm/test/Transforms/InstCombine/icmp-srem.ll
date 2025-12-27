@@ -119,7 +119,6 @@ define i1 @icmp_ugt_srem5_m5(i32 %x) {
   ret i1 %c
 }
 
-; NOTE: Regression test for avoiding srem fold with zero divisor.
 define i64 @srem_zero_ult_poison(i1 %c) {
 ; CHECK-LABEL: define i64 @srem_zero_ult_poison(
 ; CHECK-SAME: i1 [[C:%.*]]) {
