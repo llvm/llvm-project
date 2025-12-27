@@ -886,5 +886,48 @@ define ptr @test_dead_on_return_ptr_returned(ptr dead_on_return %p) {
   ret ptr %p
 }
 
+define void @test_dead_on_return_oob(ptr dead_on_return(4) %p) {
+; CHECK-LABEL: @test_dead_on_return_oob(
+; CHECK-NEXT:    [[LOCAL_VAR:%.*]] = alloca ptr, align 8
+; CHECK-NEXT:    call void @opaque(ptr [[LOCAL_VAR]])
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 8
+; CHECK-NEXT:    store ptr [[LOCAL_VAR]], ptr [[P1]], align 8
+; CHECK-NEXT:    ret void
+;
+  %local.var = alloca ptr
+  call void @opaque(ptr %local.var)
+  %p1 = getelementptr i8, ptr %p, i64 8
+  store ptr %local.var, ptr %p1
+  ret void
+}
+
+define void @test_dead_on_return_inbounds(ptr dead_on_return(16) %p) {
+; CHECK-LABEL: @test_dead_on_return_inbounds(
+; CHECK-NEXT:    [[LOCAL_VAR:%.*]] = alloca ptr, align 8
+; CHECK-NEXT:    call void @opaque(ptr [[LOCAL_VAR]])
+; CHECK-NEXT:    ret void
+;
+  %local.var = alloca ptr
+  call void @opaque(ptr %local.var)
+  %p1 = getelementptr inbounds i8, ptr %p, i64 2
+  store ptr %local.var, ptr %p1
+  ret void
+}
+
+define void @test_on_return_overlapping_oob(ptr dead_on_return(8) %p) {
+; CHECK-LABEL: @test_on_return_overlapping_oob(
+; CHECK-NEXT:    [[LOCAL_VAR:%.*]] = alloca ptr, align 8
+; CHECK-NEXT:    call void @opaque(ptr [[LOCAL_VAR]])
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds i8, ptr [[P:%.*]], i64 4
+; CHECK-NEXT:    store ptr [[LOCAL_VAR]], ptr [[P1]], align 8
+; CHECK-NEXT:    ret void
+;
+  %local.var = alloca ptr
+  call void @opaque(ptr %local.var)
+  %p1 = getelementptr inbounds i8, ptr %p, i64 4
+  store ptr %local.var, ptr %p1
+  ret void
+}
+
 declare void @opaque(ptr)
 declare void @maythrow() memory(none)
