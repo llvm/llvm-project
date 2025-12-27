@@ -367,9 +367,9 @@ endfunction()
 #     Typically mirrors the path above but without an absolute path.
 #   MLIR_BINDINGS_PYTHON_NB_DOMAIN: nanobind (and MLIR) domain within which
 #     extensions will be compiled. This determines whether this package
-#     will share nanobind types with other bindings packages. Most likely
-#     you want this to be unique to your project (and a specific set of bindings,
-#     if your project builds several bindings packages).
+#     will share nanobind types with other bindings packages. Expected to be unique
+#     per project (and per specific set of bindings, for projects with multiple
+#     bindings packages).
 #   DECLARED_SOURCES: List of declared source groups to include. The entire
 #     DAG of source modules is included.
 #   COMMON_CAPI_LINK_LIBS: List of dylibs (typically one) to make every
@@ -452,7 +452,7 @@ function(add_mlir_python_modules name)
       get_target_property(_module_name ${sources_target} mlir_python_EXTENSION_MODULE_NAME)
       # Use a similar mechanism as nanobind to help the runtime loader pick the correct lib.
       set(_module_name "${_module_name}-${ARG_MLIR_BINDINGS_PYTHON_NB_DOMAIN}")
-      set(_extension_target "${name}.extension.${_module_name}.dso")
+      set(_extension_target "${name}.extension.${_module_name}.so")
       add_mlir_python_extension(${_extension_target} "${_module_name}" ${NB_LIBRARY_TARGET_NAME}
         INSTALL_COMPONENT ${name}
         INSTALL_DIR "${ARG_INSTALL_PREFIX}/_mlir_libs"

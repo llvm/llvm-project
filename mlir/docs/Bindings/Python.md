@@ -29,8 +29,8 @@
 
     nanobind (and MLIR) domain within which extensions will be compiled. 
     This determines whether this package will share nanobind types with other bindings packages. 
-    Most likely you want this to be unique to your project (and a specific set of bindings).
-    This can also be passed explicitly to `add_mlir_python_modules` if your project builds several bindings packages.
+    Expected to be unique per project (and per specific set of bindings, for projects with multiple bindings packages).
+    Can also be passed explicitly to `add_mlir_python_modules`.
 
 ### Recommended development practices
 

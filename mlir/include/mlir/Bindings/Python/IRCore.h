@@ -29,6 +29,7 @@
 #include "mlir/Bindings/Python/NanobindAdaptors.h"
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/ThreadPool.h"
 
 namespace mlir {
@@ -1403,11 +1404,13 @@ createBlock(const nanobind::sequence &pyArgTypes,
     argLocs.assign(argTypes.size(), DefaultingPyLocation::resolve());
   }
 
-  if (argTypes.size() != argLocs.size())
-    throw nanobind::value_error(("Expected " + Twine(argTypes.size()) +
-                                 " locations, got: " + Twine(argLocs.size()))
-                                    .str()
-                                    .c_str());
+  if (argTypes.size() != argLocs.size()) {
+    throw nanobind::value_error(
+        llvm::formatv("Expected {0} locations, got: {1}", argTypes.size(),
+                      argLocs.size())
+            .str()
+            .c_str());
+  }
   return mlirBlockCreate(argTypes.size(), argTypes.data(), argLocs.data());
 }
 
