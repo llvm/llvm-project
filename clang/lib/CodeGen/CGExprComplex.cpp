@@ -515,7 +515,12 @@ ComplexPairTy ComplexExprEmitter::EmitComplexToComplexCast(ComplexPairTy Val,
                                                            QualType DestType,
                                                            SourceLocation Loc) {
   // Get the src/dest element type.
+  if (SrcType->isAtomicType())
+    SrcType = SrcType->castAs<AtomicType>()->getValueType();
   SrcType = SrcType->castAs<ComplexType>()->getElementType();
+
+  if (DestType->isAtomicType())
+    DestType = DestType->castAs<AtomicType>()->getValueType();
   DestType = DestType->castAs<ComplexType>()->getElementType();
 
   // C99 6.3.1.6: When a value of complex type is converted to another

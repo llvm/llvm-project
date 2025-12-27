@@ -820,6 +820,7 @@ Crash and bug fixes
   containing a single colon. (#GH167905)
 - Fixed a crash when parsing malformed #pragma clang loop vectorize_width(4,8,16)
   by diagnosing invalid comma-separated argument lists. (#GH166325)
+- Fixed a crash when explicitly casting a complex type to or from an atomic complex type. (#GH172208)
 
 Improvements
 ^^^^^^^^^^^^

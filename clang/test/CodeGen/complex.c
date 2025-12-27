@@ -593,3 +593,87 @@ void imag_on_scalar_with_type_promotion() {
   _Float16 _Complex a;
   _Float16 b = __real__(__imag__ a);
 }
+
+// CHECK-LABEL: define dso_local void @explicit_cast_atomic_complex_to_atomic_complex(
+// CHECK-SAME: ) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[A:%.*]] = alloca { float, float }, align 8
+// CHECK-NEXT:    [[B:%.*]] = alloca { i32, i32 }, align 8
+// CHECK-NEXT:    [[ATOMIC_TEMP:%.*]] = alloca { float, float }, align 8
+// CHECK-NEXT:    [[A_REALP:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[A]], i32 0, i32 0
+// CHECK-NEXT:    [[A_IMAGP:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[A]], i32 0, i32 1
+// CHECK-NEXT:    store float 2.000000e+00, ptr [[A_REALP]], align 8
+// CHECK-NEXT:    store float 0.000000e+00, ptr [[A_IMAGP]], align 4
+// CHECK-NEXT:    [[ATOMIC_LOAD:%.*]] = load atomic i64, ptr [[A]] seq_cst, align 8
+// CHECK-NEXT:    store i64 [[ATOMIC_LOAD]], ptr [[ATOMIC_TEMP]], align 8
+// CHECK-NEXT:    [[ATOMIC_TEMP_REALP:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[ATOMIC_TEMP]], i32 0, i32 0
+// CHECK-NEXT:    [[ATOMIC_TEMP_REAL:%.*]] = load float, ptr [[ATOMIC_TEMP_REALP]], align 8
+// CHECK-NEXT:    [[ATOMIC_TEMP_IMAGP:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[ATOMIC_TEMP]], i32 0, i32 1
+// CHECK-NEXT:    [[ATOMIC_TEMP_IMAG:%.*]] = load float, ptr [[ATOMIC_TEMP_IMAGP]], align 4
+// CHECK-NEXT:    [[CONV:%.*]] = fptosi float [[ATOMIC_TEMP_REAL]] to i32
+// CHECK-NEXT:    [[CONV1:%.*]] = fptosi float [[ATOMIC_TEMP_IMAG]] to i32
+// CHECK-NEXT:    [[B_REALP:%.*]] = getelementptr inbounds nuw { i32, i32 }, ptr [[B]], i32 0, i32 0
+// CHECK-NEXT:    [[B_IMAGP:%.*]] = getelementptr inbounds nuw { i32, i32 }, ptr [[B]], i32 0, i32 1
+// CHECK-NEXT:    store i32 [[CONV]], ptr [[B_REALP]], align 8
+// CHECK-NEXT:    store i32 [[CONV1]], ptr [[B_IMAGP]], align 4
+// CHECK-NEXT:    ret void
+//
+void explicit_cast_atomic_complex_to_atomic_complex() {
+  _Atomic _Complex float a = 2.0f;
+  _Atomic _Complex int b = (_Atomic _Complex int)a;
+}
+
+// CHECK-LABEL: define dso_local void @explicit_cast_atomic_complex_to_complex(
+// CHECK-SAME: ) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[A:%.*]] = alloca { float, float }, align 8
+// CHECK-NEXT:    [[B:%.*]] = alloca { i32, i32 }, align 4
+// CHECK-NEXT:    [[ATOMIC_TEMP:%.*]] = alloca { float, float }, align 8
+// CHECK-NEXT:    [[A_REALP:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[A]], i32 0, i32 0
+// CHECK-NEXT:    [[A_IMAGP:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[A]], i32 0, i32 1
+// CHECK-NEXT:    store float 2.000000e+00, ptr [[A_REALP]], align 8
+// CHECK-NEXT:    store float 0.000000e+00, ptr [[A_IMAGP]], align 4
+// CHECK-NEXT:    [[ATOMIC_LOAD:%.*]] = load atomic i64, ptr [[A]] seq_cst, align 8
+// CHECK-NEXT:    store i64 [[ATOMIC_LOAD]], ptr [[ATOMIC_TEMP]], align 8
+// CHECK-NEXT:    [[ATOMIC_TEMP_REALP:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[ATOMIC_TEMP]], i32 0, i32 0
+// CHECK-NEXT:    [[ATOMIC_TEMP_REAL:%.*]] = load float, ptr [[ATOMIC_TEMP_REALP]], align 8
+// CHECK-NEXT:    [[ATOMIC_TEMP_IMAGP:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[ATOMIC_TEMP]], i32 0, i32 1
+// CHECK-NEXT:    [[ATOMIC_TEMP_IMAG:%.*]] = load float, ptr [[ATOMIC_TEMP_IMAGP]], align 4
+// CHECK-NEXT:    [[CONV:%.*]] = fptosi float [[ATOMIC_TEMP_REAL]] to i32
+// CHECK-NEXT:    [[CONV1:%.*]] = fptosi float [[ATOMIC_TEMP_IMAG]] to i32
+// CHECK-NEXT:    [[B_REALP:%.*]] = getelementptr inbounds nuw { i32, i32 }, ptr [[B]], i32 0, i32 0
+// CHECK-NEXT:    [[B_IMAGP:%.*]] = getelementptr inbounds nuw { i32, i32 }, ptr [[B]], i32 0, i32 1
+// CHECK-NEXT:    store i32 [[CONV]], ptr [[B_REALP]], align 4
+// CHECK-NEXT:    store i32 [[CONV1]], ptr [[B_IMAGP]], align 4
+// CHECK-NEXT:    ret void
+//
+void explicit_cast_atomic_complex_to_complex() {
+  _Atomic _Complex float a = 2.0f;
+  _Complex int b = (_Complex int)a;
+}
+
+// CHECK-LABEL: define dso_local void @explicit_cast_complex_to_atomic_complex(
+// CHECK-SAME: ) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[A:%.*]] = alloca { float, float }, align 4
+// CHECK-NEXT:    [[B:%.*]] = alloca { i32, i32 }, align 8
+// CHECK-NEXT:    [[A_REALP:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[A]], i32 0, i32 0
+// CHECK-NEXT:    [[A_IMAGP:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[A]], i32 0, i32 1
+// CHECK-NEXT:    store float 2.000000e+00, ptr [[A_REALP]], align 4
+// CHECK-NEXT:    store float 0.000000e+00, ptr [[A_IMAGP]], align 4
+// CHECK-NEXT:    [[A_REALP1:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[A]], i32 0, i32 0
+// CHECK-NEXT:    [[A_REAL:%.*]] = load float, ptr [[A_REALP1]], align 4
+// CHECK-NEXT:    [[A_IMAGP2:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[A]], i32 0, i32 1
+// CHECK-NEXT:    [[A_IMAG:%.*]] = load float, ptr [[A_IMAGP2]], align 4
+// CHECK-NEXT:    [[CONV:%.*]] = fptosi float [[A_REAL]] to i32
+// CHECK-NEXT:    [[CONV3:%.*]] = fptosi float [[A_IMAG]] to i32
+// CHECK-NEXT:    [[B_REALP:%.*]] = getelementptr inbounds nuw { i32, i32 }, ptr [[B]], i32 0, i32 0
+// CHECK-NEXT:    [[B_IMAGP:%.*]] = getelementptr inbounds nuw { i32, i32 }, ptr [[B]], i32 0, i32 1
+// CHECK-NEXT:    store i32 [[CONV]], ptr [[B_REALP]], align 8
+// CHECK-NEXT:    store i32 [[CONV3]], ptr [[B_IMAGP]], align 4
+// CHECK-NEXT:    ret void
+//
+void explicit_cast_complex_to_atomic_complex() {
+  _Complex float a = 2.0f;
+  _Atomic _Complex int b = (_Atomic _Complex int)a;
+}
