@@ -127,8 +127,12 @@ static Value *EvaluateInDifferentTypeImpl(Value *V, Type *Ty, bool isSigned,
       }
       case Intrinsic::umin:
       case Intrinsic::umax: {
-        Value *LHS = IC.InsertNewInstWith(CastInst::CreateIntegerCast(I->getOperand(0), Ty, isSigned), I->getIterator());
-        Value *RHS = IC.InsertNewInstWith(CastInst::CreateIntegerCast(I->getOperand(1), Ty, isSigned), I->getIterator());
+        Value *LHS = IC.InsertNewInstWith(
+            CastInst::CreateIntegerCast(I->getOperand(0), Ty, isSigned),
+            I->getIterator());
+        Value *RHS = IC.InsertNewInstWith(
+            CastInst::CreateIntegerCast(I->getOperand(1), Ty, isSigned),
+            I->getIterator());
         Function *Fn = Intrinsic::getOrInsertDeclaration(
             I->getModule(), II->getIntrinsicID(), {Ty});
         Res = CallInst::Create(Fn->getFunctionType(), Fn, {LHS, RHS});
