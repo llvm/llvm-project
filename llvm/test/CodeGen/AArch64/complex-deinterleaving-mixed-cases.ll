@@ -38,25 +38,16 @@ entry:
   ret <4 x float> %interleaved.vec
 }
 
-; Expected to not transform
+; Expected to transform
 define <4 x float> @add_mul(<4 x float> %a, <4 x float> %b, <4 x float> %c) {
 ; CHECK-LABEL: add_mul:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fsub v4.4s, v1.4s, v2.4s
+; CHECK-NEXT:    movi v3.2d, #0000000000000000
 ; CHECK-NEXT:    fsub v0.4s, v1.4s, v0.4s
-; CHECK-NEXT:    fsub v1.4s, v1.4s, v2.4s
-; CHECK-NEXT:    ext v3.16b, v2.16b, v2.16b, #8
-; CHECK-NEXT:    ext v4.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    ext v5.16b, v1.16b, v1.16b, #8
-; CHECK-NEXT:    zip2 v0.2s, v0.2s, v4.2s
-; CHECK-NEXT:    zip2 v4.2s, v2.2s, v3.2s
-; CHECK-NEXT:    zip1 v1.2s, v1.2s, v5.2s
-; CHECK-NEXT:    zip1 v2.2s, v2.2s, v3.2s
-; CHECK-NEXT:    fmul v5.2s, v4.2s, v0.2s
-; CHECK-NEXT:    fmul v3.2s, v1.2s, v4.2s
-; CHECK-NEXT:    fneg v4.2s, v5.2s
-; CHECK-NEXT:    fmla v3.2s, v0.2s, v2.2s
-; CHECK-NEXT:    fmla v4.2s, v1.2s, v2.2s
-; CHECK-NEXT:    zip1 v0.4s, v4.4s, v3.4s
+; CHECK-NEXT:    fcmla v3.4s, v4.4s, v2.4s, #0
+; CHECK-NEXT:    fcmla v3.4s, v0.4s, v2.4s, #90
+; CHECK-NEXT:    mov v0.16b, v3.16b
 ; CHECK-NEXT:    ret
 entry:
   %0 = fsub fast <4 x float> %b, %c

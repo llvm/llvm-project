@@ -1175,15 +1175,15 @@ ComplexDeinterleavingGraph::identifyNode(ComplexValues &Vals) {
   if (CompositeNode *CN = identifySplat(Vals))
     return CN;
 
+  if (CompositeNode *CN = identifyDeinterleave(Vals))
+    return CN;
+
   for (auto &V : Vals) {
     auto *Real = dyn_cast<Instruction>(V.Real);
     auto *Imag = dyn_cast<Instruction>(V.Imag);
     if (!Real || !Imag)
       return nullptr;
   }
-
-  if (CompositeNode *CN = identifyDeinterleave(Vals))
-    return CN;
 
   if (Vals.size() == 1) {
     assert(Factor == 2 && "Can only handle interleave factors of 2");
@@ -1485,6 +1485,20 @@ ComplexDeinterleavingGraph::identifyMultiplications(
       CommonToNode[InfoImag->Common] = NodeFromCommon;
       Processed[I] = true;
       Processed[J] = true;
+      break;
+    }
+
+    if (!Processed[I]) {
+      auto PoisonCommon = PoisonValue::get(InfoA.Common->getType());
+      auto NodeFromCommon = identifyNode(InfoA.Common, PoisonCommon);
+      if (!NodeFromCommon) {
+        NodeFromCommon = identifyNode(PoisonCommon, InfoA.Common);
+      }
+      if (!NodeFromCommon)
+        continue;
+
+      CommonToNode[InfoA.Common] = NodeFromCommon;
+      Processed[I] = true;
     }
   }
 
@@ -1555,10 +1569,18 @@ ComplexDeinterleavingGraph::identifyMultiplications(
 
     LLVM_DEBUG({
       dbgs() << "Identified partial multiplication (X, Y) * (U, V):\n";
-      dbgs().indent(4) << "X: " << *NodeA->Vals[0].Real << "\n";
-      dbgs().indent(4) << "Y: " << *NodeA->Vals[0].Imag << "\n";
-      dbgs().indent(4) << "U: " << *NodeB->Vals[0].Real << "\n";
-      dbgs().indent(4) << "V: " << *NodeB->Vals[0].Imag << "\n";
+      auto PrintValue = [](const char *Name, Value *V) {
+        auto &OS = dbgs().indent(4) << Name << ": ";
+        if (V) {
+          OS << *V << "\n";
+        } else {
+          OS << "nullptr\n";
+        }
+      };
+      PrintValue("X", NodeA->Vals[0].Real);
+      PrintValue("Y", NodeA->Vals[0].Imag);
+      PrintValue("U", NodeB->Vals[0].Real);
+      PrintValue("V", NodeB->Vals[0].Imag);
       dbgs().indent(4) << "Rotation - " << (int)Rotation * 90 << "\n";
     });
 
@@ -2060,12 +2082,22 @@ ComplexDeinterleavingGraph::identifyDeinterleave(ComplexValues &Vals) {
     return EVI;
   };
 
+  auto CheckValue = [&](Value *V, unsigned ExpectedIdx) {
+      if (isa<PoisonValue>(V))
+        return true;
+      auto EVI = CheckExtract(V, ExpectedIdx, II);
+      if (!EVI) {
+        II = nullptr;
+        return false;
+      }
+      if (!II)
+        II = cast<Instruction>(EVI->getAggregateOperand());
+      return true;
+  };
+
   for (unsigned Idx = 0; Idx < Vals.size(); Idx++) {
-    ExtractValueInst *RealEVI = CheckExtract(Vals[Idx].Real, Idx * 2, II);
-    if (RealEVI && Idx == 0)
-      II = cast<Instruction>(RealEVI->getAggregateOperand());
-    if (!RealEVI || !CheckExtract(Vals[Idx].Imag, (Idx * 2) + 1, II)) {
-      II = nullptr;
+    if (!CheckValue(Vals[Idx].Real, Idx * 2) ||
+        !CheckValue(Vals[Idx].Imag, (Idx * 2) + 1)) {
       break;
     }
   }
@@ -2080,8 +2112,12 @@ ComplexDeinterleavingGraph::identifyDeinterleave(ComplexValues &Vals) {
         llvm::ComplexDeinterleavingOperation::Deinterleave, Vals);
     PlaceholderNode->ReplacementNode = II->getOperand(0);
     for (auto &V : Vals) {
-      FinalInstructions.insert(cast<Instruction>(V.Real));
-      FinalInstructions.insert(cast<Instruction>(V.Imag));
+      if (!isa<PoisonValue>(V.Real)) {
+        FinalInstructions.insert(cast<Instruction>(V.Real));
+      }
+      if (!isa<PoisonValue>(V.Imag)) {
+        FinalInstructions.insert(cast<Instruction>(V.Imag));
+      }
     }
     return submitCompositeNode(PlaceholderNode);
   }
@@ -2091,95 +2127,87 @@ ComplexDeinterleavingGraph::identifyDeinterleave(ComplexValues &Vals) {
 
   Value *Real = Vals[0].Real;
   Value *Imag = Vals[0].Imag;
+  bool RealPoison = isa<PoisonValue>(Real);
+  bool ImagPoison = isa<PoisonValue>(Imag);
   auto *RealShuffle = dyn_cast<ShuffleVectorInst>(Real);
   auto *ImagShuffle = dyn_cast<ShuffleVectorInst>(Imag);
-  if (!RealShuffle || !ImagShuffle) {
+  if (!(RealShuffle || RealPoison) || !(ImagShuffle || ImagPoison)) {
     if (RealShuffle || ImagShuffle)
       LLVM_DEBUG(dbgs() << " - There's a shuffle where there shouldn't be.\n");
     return nullptr;
   }
-
-  Value *RealOp1 = RealShuffle->getOperand(1);
-  if (!isa<UndefValue>(RealOp1) && !isa<ConstantAggregateZero>(RealOp1)) {
-    LLVM_DEBUG(dbgs() << " - RealOp1 is not undef or zero.\n");
-    return nullptr;
+  Value *Op0;
+  FixedVectorType *ShuffleTy;
+  if (!RealShuffle) {
+    Op0 = ImagShuffle->getOperand(0);
+    ShuffleTy = cast<FixedVectorType>(ImagShuffle->getType());
   }
-  Value *ImagOp1 = ImagShuffle->getOperand(1);
-  if (!isa<UndefValue>(ImagOp1) && !isa<ConstantAggregateZero>(ImagOp1)) {
-    LLVM_DEBUG(dbgs() << " - ImagOp1 is not undef or zero.\n");
-    return nullptr;
-  }
-
-  Value *RealOp0 = RealShuffle->getOperand(0);
-  Value *ImagOp0 = ImagShuffle->getOperand(0);
-
-  if (RealOp0 != ImagOp0) {
-    LLVM_DEBUG(dbgs() << " - Shuffle operands are not equal.\n");
-    return nullptr;
-  }
-
-  ArrayRef<int> RealMask = RealShuffle->getShuffleMask();
-  ArrayRef<int> ImagMask = ImagShuffle->getShuffleMask();
-  if (!isDeinterleavingMask(RealMask) || !isDeinterleavingMask(ImagMask)) {
-    LLVM_DEBUG(dbgs() << " - Masks are not deinterleaving.\n");
-    return nullptr;
-  }
-
-  if (RealMask[0] != 0 || ImagMask[0] != 1) {
-    LLVM_DEBUG(dbgs() << " - Masks do not have the correct initial value.\n");
-    return nullptr;
+  else {
+    Op0 = RealShuffle->getOperand(0);
+    ShuffleTy = cast<FixedVectorType>(RealShuffle->getType());
+    if (ImagShuffle) {
+      if (RealShuffle->getType() != ImagShuffle->getType()) {
+        LLVM_DEBUG(dbgs() << " - Shuffle types aren't equal.\n");
+        return nullptr;
+      }
+      if (Op0 != ImagShuffle->getOperand(0)) {
+        LLVM_DEBUG(dbgs() << " - Shuffle operands aren't equal.\n");
+        return nullptr;
+      }
+    }
   }
 
   // Type checking, the shuffle type should be a vector type of the same
   // scalar type, but half the size
-  auto CheckType = [&](ShuffleVectorInst *Shuffle) {
-    Value *Op = Shuffle->getOperand(0);
-    auto *ShuffleTy = cast<FixedVectorType>(Shuffle->getType());
-    auto *OpTy = cast<FixedVectorType>(Op->getType());
+  auto *Op0Ty = cast<FixedVectorType>(Op0->getType());
+  int NumElements = Op0Ty->getNumElements();
+  if (ShuffleTy->getScalarType() != Op0Ty->getScalarType() ||
+      (ShuffleTy->getNumElements() * 2) != Op0Ty->getNumElements()) {
+    LLVM_DEBUG(dbgs() << " - Shuffle is invalid type.\n");
+    return nullptr;
+  }
 
-    if (OpTy->getScalarType() != ShuffleTy->getScalarType())
+  auto CheckShuffle = [&](ShuffleVectorInst *Shuffle, int Mask0, const char *Name) -> bool {
+    if (!Shuffle) // Poison value
+      return true;
+    Value *Op1 = Shuffle->getOperand(1);
+    if (!isa<UndefValue>(Op1) && !isa<ConstantAggregateZero>(Op1)) {
+        LLVM_DEBUG(dbgs() << " - " << Name << "Op1 is not undef or zero.\n");
       return false;
-    if ((ShuffleTy->getNumElements() * 2) != OpTy->getNumElements())
+    }
+    ArrayRef<int> Mask = Shuffle->getShuffleMask();
+    if (!isDeinterleavingMask(Mask)) {
+      LLVM_DEBUG(dbgs() << " - " << Name << "Masks are not deinterleaving.\n");
       return false;
-
+    }
+    if (Mask[0] != Mask0) {
+      LLVM_DEBUG(dbgs() << " - " << Name << "Masks do not have the correct initial value.\n");
+      return false;
+    }
+    // Ensure that the deinterleaving shuffle only pulls from the first
+    // shuffle operand.
+    int Last = *Mask.rbegin();
+    if (Last >= NumElements) {
+      LLVM_DEBUG(dbgs() << " - " << Name << "Masks are out of bound.\n");
+      return false;
+    }
     return true;
   };
 
-  auto CheckDeinterleavingShuffle = [&](ShuffleVectorInst *Shuffle) -> bool {
-    if (!CheckType(Shuffle))
-      return false;
-
-    ArrayRef<int> Mask = Shuffle->getShuffleMask();
-    int Last = *Mask.rbegin();
-
-    Value *Op = Shuffle->getOperand(0);
-    auto *OpTy = cast<FixedVectorType>(Op->getType());
-    int NumElements = OpTy->getNumElements();
-
-    // Ensure that the deinterleaving shuffle only pulls from the first
-    // shuffle operand.
-    return Last < NumElements;
-  };
-
-  if (RealShuffle->getType() != ImagShuffle->getType()) {
-    LLVM_DEBUG(dbgs() << " - Shuffle types aren't equal.\n");
+  if (!CheckShuffle(RealShuffle, 0, "Real") ||
+      !CheckShuffle(ImagShuffle, 1, "Imag"))
     return nullptr;
-  }
-  if (!CheckDeinterleavingShuffle(RealShuffle)) {
-    LLVM_DEBUG(dbgs() << " - RealShuffle is invalid type.\n");
-    return nullptr;
-  }
-  if (!CheckDeinterleavingShuffle(ImagShuffle)) {
-    LLVM_DEBUG(dbgs() << " - ImagShuffle is invalid type.\n");
-    return nullptr;
-  }
 
   CompositeNode *PlaceholderNode =
       prepareCompositeNode(llvm::ComplexDeinterleavingOperation::Deinterleave,
                            RealShuffle, ImagShuffle);
-  PlaceholderNode->ReplacementNode = RealShuffle->getOperand(0);
-  FinalInstructions.insert(RealShuffle);
-  FinalInstructions.insert(ImagShuffle);
+  PlaceholderNode->ReplacementNode = Op0;
+  if (RealShuffle) {
+    FinalInstructions.insert(RealShuffle);
+  }
+  if (ImagShuffle) {
+    FinalInstructions.insert(ImagShuffle);
+  }
   return submitCompositeNode(PlaceholderNode);
 }
 

@@ -35,30 +35,14 @@ entry:
   ret <4 x float> %interleaved.vec
 }
 
-; Expected to not transform
+; Expected to transform
 define arm_aapcs_vfpcc <4 x float> @add_mul(<4 x float> %a, <4 x float> %b, <4 x float> %c) {
 ; CHECK-LABEL: add_mul:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    .vsave {d8, d9}
-; CHECK-NEXT:    vpush {d8, d9}
 ; CHECK-NEXT:    vsub.f32 q3, q1, q2
-; CHECK-NEXT:    vsub.f32 q0, q1, q0
-; CHECK-NEXT:    vmov.f32 s4, s9
-; CHECK-NEXT:    vmov.f32 s13, s14
-; CHECK-NEXT:    vmov.f32 s5, s11
-; CHECK-NEXT:    vmov.f32 s0, s1
-; CHECK-NEXT:    vmul.f32 q4, q3, q1
-; CHECK-NEXT:    vmov.f32 s1, s3
-; CHECK-NEXT:    vmov.f32 s9, s10
-; CHECK-NEXT:    vfma.f32 q4, q2, q0
-; CHECK-NEXT:    vmul.f32 q0, q1, q0
-; CHECK-NEXT:    vneg.f32 q1, q0
-; CHECK-NEXT:    vmov.f32 s1, s16
-; CHECK-NEXT:    vfma.f32 q1, q2, q3
-; CHECK-NEXT:    vmov.f32 s3, s17
-; CHECK-NEXT:    vmov.f32 s0, s4
-; CHECK-NEXT:    vmov.f32 s2, s5
-; CHECK-NEXT:    vpop {d8, d9}
+; CHECK-NEXT:    vsub.f32 q1, q1, q0
+; CHECK-NEXT:    vcmul.f32 q0, q2, q3, #0
+; CHECK-NEXT:    vcmla.f32 q0, q2, q1, #90
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = fsub fast <4 x float> %b, %c
