@@ -4085,8 +4085,11 @@ bool AArch64InstructionSelector::selectUnmergeValues(MachineInstr &I,
   const LLT NarrowTy = MRI.getType(I.getOperand(0).getReg());
   const LLT WideTy = MRI.getType(SrcReg);
   (void)WideTy;
-  assert((WideTy.isVector() || WideTy.getSizeInBits() == 128) &&
-         "can only unmerge from vector or s128 types!");
+  if (!(WideTy.isVector() || WideTy.getSizeInBits() == 128)) {
+    LLVM_DEBUG(dbgs() << "can only unmerge from vector or s128 types!.\n");
+    return false;
+  }
+
   assert(WideTy.getSizeInBits() > NarrowTy.getSizeInBits() &&
          "source register size too small!");
 
