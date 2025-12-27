@@ -137,7 +137,6 @@
 ; LAXX-NEXT:       Machine Optimization Remark Emitter
 ; LAXX-NEXT:       Greedy Register Allocator
 ; LAXX-NEXT:       Virtual Register Rewriter
-; LAXX-NEXT:       Register Allocation Pass Scoring
 ; LAXX-NEXT:       Stack Slot Coloring
 ; LAXX-NEXT:       Machine Copy Propagation Pass
 ; LAXX-NEXT:       Machine Loop Invariant Code Motion

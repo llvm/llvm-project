@@ -54,7 +54,6 @@ using CompiledModelType = NoopSavedModelImpl;
 
 // Options that only make sense in development mode
 #ifdef LLVM_HAVE_TFLITE
-#include "RegAllocScore.h"
 #include "llvm/Analysis/Utils/TFUtils.h"
 
 static cl::opt<std::string> TrainingLog(

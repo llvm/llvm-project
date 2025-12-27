@@ -1450,9 +1450,6 @@ bool TargetPassConfig::addRegAssignAndRewriteOptimized() {
   // Finally rewrite virtual registers.
   addPass(&VirtRegRewriterID);
 
-  // Regalloc scoring for ML-driven eviction - noop except when learning a new
-  // eviction policy.
-  addPass(createRegAllocScoringPass());
   return true;
 }
 

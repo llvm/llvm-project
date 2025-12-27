@@ -190,7 +190,6 @@ add_llvm_component_library(LLVMCodeGen
   RegAllocGreedy.cpp
   RegAllocPBQP.cpp
   RegAllocPriorityAdvisor.cpp
-  RegAllocScore.cpp
   RegisterClassInfo.cpp
   RegisterCoalescer.cpp
   RegisterPressure.cpp
