@@ -1,4 +1,6 @@
-# TODO: Remove this and use gc-empty-basic-blocks.ll directly.
+# TODO(boomanaiden154): Remove this and use gc-empty-basic-blocks.ll directly.
+# This should be trivial once we have an asm printer setup for X86 and at least
+# a pipeline skeleton.
 # RUN: llc %s -mtriple=x86_64 -passes=gc-empty-basic-blocks -o - | FileCheck %s
 --- |
   define void @foo(i1 zeroext %0) #0 {
