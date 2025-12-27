@@ -122,13 +122,13 @@ STATISTIC(NumThreeIterations, "Number of functions with three iterations");
 STATISTIC(NumFourOrMoreIterations,
           "Number of functions with four or more iterations");
 
-STATISTIC(NumCombined , "Number of insts combined");
+STATISTIC(NumCombined, "Number of insts combined");
 STATISTIC(NumConstProp, "Number of constant folds");
-STATISTIC(NumDeadInst , "Number of dead inst eliminated");
-STATISTIC(NumSunkInst , "Number of instructions sunk");
-STATISTIC(NumExpand,    "Number of expansions");
-STATISTIC(NumFactor   , "Number of factorizations");
-STATISTIC(NumReassoc  , "Number of reassociations");
+STATISTIC(NumDeadInst, "Number of dead inst eliminated");
+STATISTIC(NumSunkInst, "Number of instructions sunk");
+STATISTIC(NumExpand, "Number of expansions");
+STATISTIC(NumFactor, "Number of factorizations");
+STATISTIC(NumReassoc, "Number of reassociations");
 DEBUG_COUNTER(VisitCounter, "instcombine-visit",
               "Controls which instructions are visited");
 
@@ -140,9 +140,9 @@ static cl::opt<unsigned> MaxSinkNumUsers(
     "instcombine-max-sink-users", cl::init(32),
     cl::desc("Maximum number of undroppable users for instruction sinking"));
 
-static cl::opt<unsigned>
-MaxArraySize("instcombine-maxarray-size", cl::init(1024),
-             cl::desc("Maximum array size considered when doing a combine"));
+static cl::opt<unsigned> MaxArraySize(
+    "instcombine-maxarray-size", cl::init(1024),
+    cl::desc("Maximum array size considered when doing a combine"));
 
 namespace llvm {
 extern cl::opt<bool> ProfcheckDisableMetadataFixes;
@@ -504,8 +504,8 @@ bool InstCombinerImpl::SimplifyAssociativeOrCommutative(BinaryOperator &I) {
     // Order operands such that they are listed from right (least complex) to
     // left (most complex).  This puts constants before unary operators before
     // binary operators.
-    if (I.isCommutative() && getComplexity(I.getOperand(0)) <
-        getComplexity(I.getOperand(1)))
+    if (I.isCommutative() &&
+        getComplexity(I.getOperand(0)) < getComplexity(I.getOperand(1)))
       Changed = !I.swapOperands();
 
     if (I.isCommutative()) {
@@ -625,23 +625,21 @@ bool InstCombinerImpl::SimplifyAssociativeOrCommutative(BinaryOperator &I) {
       // if C1 and C2 are constants.
       Value *A, *B;
       Constant *C1, *C2, *CRes;
-      if (Op0 && Op1 &&
-          Op0->getOpcode() == Opcode && Op1->getOpcode() == Opcode &&
+      if (Op0 && Op1 && Op0->getOpcode() == Opcode &&
+          Op1->getOpcode() == Opcode &&
           match(Op0, m_OneUse(m_BinOp(m_Value(A), m_Constant(C1)))) &&
           match(Op1, m_OneUse(m_BinOp(m_Value(B), m_Constant(C2)))) &&
           (CRes = ConstantFoldBinaryOpOperands(Opcode, C1, C2, DL))) {
-        bool IsNUW = hasNoUnsignedWrap(I) &&
-           hasNoUnsignedWrap(*Op0) &&
-           hasNoUnsignedWrap(*Op1);
-         BinaryOperator *NewBO = (IsNUW && Opcode == Instruction::Add) ?
-           BinaryOperator::CreateNUW(Opcode, A, B) :
-           BinaryOperator::Create(Opcode, A, B);
+        bool IsNUW = hasNoUnsignedWrap(I) && hasNoUnsignedWrap(*Op0) &&
+                     hasNoUnsignedWrap(*Op1);
+        BinaryOperator *NewBO = (IsNUW && Opcode == Instruction::Add)
+                                    ? BinaryOperator::CreateNUW(Opcode, A, B)
+                                    : BinaryOperator::Create(Opcode, A, B);
 
-         if (isa<FPMathOperator>(NewBO)) {
-           FastMathFlags Flags = I.getFastMathFlags() &
-                                 Op0->getFastMathFlags() &
-                                 Op1->getFastMathFlags();
-           NewBO->setFastMathFlags(Flags);
+        if (isa<FPMathOperator>(NewBO)) {
+          FastMathFlags Flags = I.getFastMathFlags() & Op0->getFastMathFlags() &
+                                Op1->getFastMathFlags();
+          NewBO->setFastMathFlags(Flags);
         }
         InsertNewInstWith(NewBO, I.getIterator());
         NewBO->takeName(Op1);
@@ -1833,6 +1831,44 @@ Instruction *InstCombinerImpl::FoldOpIntoSelect(Instruction &Op, SelectInst *SI,
   return SelectInst::Create(SI->getCondition(), NewTV, NewFV, "", nullptr, SI);
 }
 
+Instruction *InstCombinerImpl::foldBinOpIntoMinMax(BinaryOperator &I) {
+  Value *LHS = I.getOperand(0);
+  Value *RHS = I.getOperand(1);
+  MinMaxIntrinsic *MinMax = dyn_cast<MinMaxIntrinsic>(LHS);
+  Value *OtherOp = RHS;
+  if (!MinMax) {
+    MinMax = dyn_cast<MinMaxIntrinsic>(RHS);
+    OtherOp = LHS;
+  }
+  // Neither operand is a min/max intrinsic
+  if (!MinMax)
+    return nullptr;
+
+  Value *X = MinMax->getLHS();
+  Value *Y = MinMax->getRHS();
+
+  // Attempt to fold OtherOp +/- X and OtherOp +/- Y
+  Value *NewX =
+      simplifyBinOp(I.getOpcode(), OtherOp, X, SQ.getWithInstruction(&I));
+  Value *NewY =
+      simplifyBinOp(I.getOpcode(), OtherOp, Y, SQ.getWithInstruction(&I));
+  if (!NewX && !NewY)
+    return nullptr;
+
+  if (!NewX) {
+    NewX = InsertNewInstBefore(
+        BinaryOperator::Create(I.getOpcode(), X, OtherOp), I.getIterator());
+  }
+  if (!NewY) {
+    NewY = InsertNewInstBefore(
+        BinaryOperator::Create(I.getOpcode(), Y, OtherOp), I.getIterator());
+  }
+
+  Function *F = Intrinsic::getOrInsertDeclaration(
+      I.getModule(), MinMax->getIntrinsicID(), {I.getType()});
+  return CallInst::Create(F, {NewX, NewY});
+}
+
 static Value *simplifyInstructionWithPHI(Instruction &I, PHINode *PN,
                                          Value *InValue, BasicBlock *InBB,
                                          const DataLayout &DL,
@@ -2278,8 +2314,7 @@ static bool shouldMergeGEPs(GEPOperator &GEP, GEPOperator &Src) {
   // If this GEP has only 0 indices, it is the same pointer as
   // Src. If Src is not a trivial GEP too, don't combine
   // the indices.
-  if (GEP.hasAllZeroIndices() && !Src.hasAllZeroIndices() &&
-      !Src.hasOneUse())
+  if (GEP.hasAllZeroIndices() && !Src.hasAllZeroIndices() && !Src.hasOneUse())
     return false;
   return true;
 }
@@ -3083,7 +3118,7 @@ static Instruction *foldGEPOfPhi(GetElementPtrInst &GEP, PHINode *PN,
 
   int DI = -1;
 
-  for (auto I = PN->op_begin()+1, E = PN->op_end(); I !=E; ++I) {
+  for (auto I = PN->op_begin() + 1, E = PN->op_end(); I != E; ++I) {
     auto *Op2 = dyn_cast<GetElementPtrInst>(*I);
     if (!Op2 || Op1->getNumOperands() != Op2->getNumOperands() ||
         Op1->getSourceElementType() != Op2->getSourceElementType())
@@ -3131,8 +3166,7 @@ static Instruction *foldGEPOfPhi(GetElementPtrInst &GEP, PHINode *PN,
         if (J == 1) {
           CurTy = Op1->getSourceElementType();
         } else {
-          CurTy =
-              GetElementPtrInst::getTypeAtIndex(CurTy, Op1->getOperand(J));
+          CurTy = GetElementPtrInst::getTypeAtIndex(CurTy, Op1->getOperand(J));
         }
       }
     }
@@ -3171,7 +3205,8 @@ static Instruction *foldGEPOfPhi(GetElementPtrInst &GEP, PHINode *PN,
     NewGEP->setOperand(DI, NewPN);
   }
 
-  NewGEP->insertBefore(*GEP.getParent(), GEP.getParent()->getFirstInsertionPt());
+  NewGEP->insertBefore(*GEP.getParent(),
+                       GEP.getParent()->getFirstInsertionPt());
   return NewGEP;
 }
 
@@ -3192,8 +3227,8 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
     auto VWidth = GEPFVTy->getNumElements();
     APInt PoisonElts(VWidth, 0);
     APInt AllOnesEltMask(APInt::getAllOnes(VWidth));
-    if (Value *V = SimplifyDemandedVectorElts(&GEP, AllOnesEltMask,
-                                              PoisonElts)) {
+    if (Value *V =
+            SimplifyDemandedVectorElts(&GEP, AllOnesEltMask, PoisonElts)) {
       if (V != &GEP)
         return replaceInstUsesWith(GEP, V);
       return &GEP;
@@ -3562,7 +3597,7 @@ static bool isRemovableWrite(CallBase &CB, Value *UsedV,
 static std::optional<ModRefInfo>
 isAllocSiteRemovable(Instruction *AI, SmallVectorImpl<WeakTrackingVH> &Users,
                      const TargetLibraryInfo &TLI, bool KnowInit) {
-  SmallVector<Instruction*, 4> Worklist;
+  SmallVector<Instruction *, 4> Worklist;
   const std::optional<StringRef> Family = getAllocationFamily(AI, &TLI);
   Worklist.push_back(AI);
   ModRefInfo Access = KnowInit ? ModRefInfo::NoModRef : ModRefInfo::Mod;
@@ -4308,9 +4343,11 @@ Instruction *InstCombinerImpl::visitSwitchInst(SwitchInst &SI) {
   uint64_t ShiftAmt;
   if (match(Cond, m_Shl(m_Value(Op0), m_ConstantInt(ShiftAmt))) &&
       ShiftAmt < Op0->getType()->getScalarSizeInBits() &&
-      all_of(SI.cases(), [&](const auto &Case) {
-        return Case.getCaseValue()->getValue().countr_zero() >= ShiftAmt;
-      })) {
+      all_of(
+          SI.cases(),
+          [&](const auto &Case) {
+            return Case.getCaseValue()->getValue().countr_zero() >= ShiftAmt;
+          })) {
     // Change 'switch (X << 2) case 4:' into 'switch (X) case 1:'.
     OverflowingBinaryOperator *Shl = cast<OverflowingBinaryOperator>(Cond);
     if (Shl->hasNoUnsignedWrap() || Shl->hasNoSignedWrap() ||
@@ -4374,7 +4411,8 @@ Instruction *InstCombinerImpl::visitSwitchInst(SwitchInst &SI) {
         std::min(LeadingKnownOnes, C.getCaseValue()->getValue().countl_one());
   }
 
-  unsigned NewWidth = Known.getBitWidth() - std::max(LeadingKnownZeros, LeadingKnownOnes);
+  unsigned NewWidth =
+      Known.getBitWidth() - std::max(LeadingKnownZeros, LeadingKnownOnes);
 
   // Shrink the condition operand if the new type is smaller than the old type.
   // But do not shrink to a non-standard type, because backend can't generate
@@ -4557,10 +4595,9 @@ Instruction *InstCombinerImpl::visitExtractValueInst(ExtractValueInst &EV) {
   if (InsertValueInst *IV = dyn_cast<InsertValueInst>(Agg)) {
     // We're extracting from an insertvalue instruction, compare the indices
     const unsigned *exti, *exte, *insi, *inse;
-    for (exti = EV.idx_begin(), insi = IV->idx_begin(),
-         exte = EV.idx_end(), inse = IV->idx_end();
-         exti != exte && insi != inse;
-         ++exti, ++insi) {
+    for (exti = EV.idx_begin(), insi = IV->idx_begin(), exte = EV.idx_end(),
+        inse = IV->idx_end();
+         exti != exte && insi != inse; ++exti, ++insi) {
       if (*insi != *exti)
         // The insert and extract both reference distinctly different elements.
         // This means the extract is not influenced by the insert, and we can
@@ -4622,7 +4659,7 @@ Instruction *InstCombinerImpl::visitExtractValueInst(ExtractValueInst &EV) {
     // don't want to do the transformation as it loses padding knowledge.
     if (L->isSimple() && L->hasOneUse()) {
       // extractvalue has integer indices, getelementptr has Value*s. Convert.
-      SmallVector<Value*, 4> Indices;
+      SmallVector<Value *, 4> Indices;
       // Prefix an i32 0 since we need the first element.
       Indices.push_back(Builder.getInt32(0));
       for (unsigned Idx : EV.indices())
@@ -4695,10 +4732,8 @@ static bool isCatchAll(EHPersonality Personality, Constant *TypeInfo) {
 }
 
 static bool shorter_filter(const Value *LHS, const Value *RHS) {
-  return
-    cast<ArrayType>(LHS->getType())->getNumElements()
-  <
-    cast<ArrayType>(RHS->getType())->getNumElements();
+  return cast<ArrayType>(LHS->getType())->getNumElements() <
+         cast<ArrayType>(RHS->getType())->getNumElements();
 }
 
 Instruction *InstCombinerImpl::visitLandingPadInst(LandingPadInst &LI) {
@@ -4712,7 +4747,7 @@ Instruction *InstCombinerImpl::visitLandingPadInst(LandingPadInst &LI) {
   // (these are often created by inlining).
   bool MakeNewInstruction = false; // If true, recreate using the following:
   SmallVector<Constant *, 16> NewClauses; // - Clauses for the new instruction;
-  bool CleanupFlag = LI.isCleanup();   // - The new instruction is a cleanup.
+  bool CleanupFlag = LI.isCleanup();      // - The new instruction is a cleanup.
 
   SmallPtrSet<Value *, 16> AlreadyCaught; // Typeinfos known caught already.
   for (unsigned i = 0, e = LI.getNumClauses(); i != e; ++i) {
@@ -4764,13 +4799,13 @@ Instruction *InstCombinerImpl::visitLandingPadInst(LandingPadInst &LI) {
         break;
       }
 
-      bool MakeNewFilter = false; // If true, make a new filter.
+      bool MakeNewFilter = false;                // If true, make a new filter.
       SmallVector<Constant *, 16> NewFilterElts; // New elements.
       if (isa<ConstantAggregateZero>(FilterClause)) {
         // Not an empty filter - it contains at least one null typeinfo.
         assert(NumTypeInfos > 0 && "Should have handled empty filter already!");
         Constant *TypeInfo =
-          Constant::getNullValue(FilterType->getElementType());
+            Constant::getNullValue(FilterType->getElementType());
         // If this typeinfo is a catch-all then the filter can never match.
         if (isCatchAll(Personality, TypeInfo)) {
           // Throw the filter away.
@@ -4835,8 +4870,8 @@ Instruction *InstCombinerImpl::visitLandingPadInst(LandingPadInst &LI) {
           MakeNewFilter = true;
       }
       if (MakeNewFilter) {
-        FilterType = ArrayType::get(FilterType->getElementType(),
-                                    NewFilterElts.size());
+        FilterType =
+            ArrayType::get(FilterType->getElementType(), NewFilterElts.size());
         FilterClause = ConstantArray::get(FilterType, NewFilterElts);
         MakeNewInstruction = true;
       }
@@ -4860,7 +4895,7 @@ Instruction *InstCombinerImpl::visitLandingPadInst(LandingPadInst &LI) {
   // advantageous because shorter filters are more likely to match, speeding up
   // unwinding, but mostly because it increases the effectiveness of the other
   // filter optimizations below.
-  for (unsigned i = 0, e = NewClauses.size(); i + 1 < e; ) {
+  for (unsigned i = 0, e = NewClauses.size(); i + 1 < e;) {
     unsigned j;
     // Find the maximal 'j' s.t. the range [i, j) consists entirely of filters.
     for (j = i; j != e; ++j)
@@ -4871,7 +4906,7 @@ Instruction *InstCombinerImpl::visitLandingPadInst(LandingPadInst &LI) {
     // if sorting them is actually going to do anything so that we only make a
     // new landingpad instruction if it does.
     for (unsigned k = i; k + 1 < j; ++k)
-      if (shorter_filter(NewClauses[k+1], NewClauses[k])) {
+      if (shorter_filter(NewClauses[k + 1], NewClauses[k])) {
         // Not sorted, so sort the filters now.  Doing an unstable sort would be
         // correct too but reordering filters pointlessly might confuse users.
         std::stable_sort(NewClauses.begin() + i, NewClauses.begin() + j,
@@ -4986,8 +5021,8 @@ Instruction *InstCombinerImpl::visitLandingPadInst(LandingPadInst &LI) {
   // If we changed any of the clauses, replace the old landingpad instruction
   // with a new one.
   if (MakeNewInstruction) {
-    LandingPadInst *NLI = LandingPadInst::Create(LI.getType(),
-                                                 NewClauses.size());
+    LandingPadInst *NLI =
+        LandingPadInst::Create(LI.getType(), NewClauses.size());
     for (Constant *C : NewClauses)
       NLI->addClause(C);
     // A landing pad with no clauses must have the cleanup flag set.  It is
@@ -5138,8 +5173,8 @@ Instruction *InstCombinerImpl::foldFreezeIntoRecurrence(FreezeInst &FI,
 
   if (StartNeedsFreeze) {
     Builder.SetInsertPoint(StartBB->getTerminator());
-    Value *FrozenStartV = Builder.CreateFreeze(StartV,
-                                               StartV->getName() + ".fr");
+    Value *FrozenStartV =
+        Builder.CreateFreeze(StartV, StartV->getName() + ".fr");
     replaceUse(*StartU, FrozenStartV);
   }
   return replaceInstUsesWith(FI, PN);
@@ -5598,7 +5633,8 @@ bool InstCombinerImpl::run() {
     }
 
     Instruction *I = Worklist.removeOne();
-    if (I == nullptr) continue;  // skip null values.
+    if (I == nullptr)
+      continue; // skip null values.
 
     // Check to see if we can DCE the instruction.
     if (isInstructionTriviallyDead(I, &TLI)) {
@@ -6072,8 +6108,9 @@ PreservedAnalyses InstCombinePass::run(Function &F,
   auto &MAMProxy = AM.getResult<ModuleAnalysisManagerFunctionProxy>(F);
   ProfileSummaryInfo *PSI =
       MAMProxy.getCachedResult<ProfileSummaryAnalysis>(*F.getParent());
-  auto *BFI = (PSI && PSI->hasProfileSummary()) ?
-      &AM.getResult<BlockFrequencyAnalysis>(F) : nullptr;
+  auto *BFI = (PSI && PSI->hasProfileSummary())
+                  ? &AM.getResult<BlockFrequencyAnalysis>(F)
+                  : nullptr;
   auto *BPI = AM.getCachedResult<BranchProbabilityAnalysis>(F);
 
   if (!combineInstructionsOverFunction(F, Worklist, AA, AC, TLI, TTI, DT, ORE,
@@ -6123,9 +6160,9 @@ bool InstructionCombiningPass::runOnFunction(Function &F) {
   ProfileSummaryInfo *PSI =
       &getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
   BlockFrequencyInfo *BFI =
-      (PSI && PSI->hasProfileSummary()) ?
-      &getAnalysis<LazyBlockFrequencyInfoPass>().getBFI() :
-      nullptr;
+      (PSI && PSI->hasProfileSummary())
+          ? &getAnalysis<LazyBlockFrequencyInfoPass>().getBFI()
+          : nullptr;
   BranchProbabilityInfo *BPI = nullptr;
   if (auto *WrapperPass =
           getAnalysisIfAvailable<BranchProbabilityInfoWrapperPass>())

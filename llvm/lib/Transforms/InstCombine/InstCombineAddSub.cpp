@@ -1535,6 +1535,9 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
   if (Instruction *Phi = foldBinopWithPhiOperands(I))
     return Phi;
 
+  if (Instruction *R = foldBinOpIntoMinMax(I))
+    return R;
+
   // (A*B)+(A*C) -> A*(B+C) etc
   if (Value *V = foldUsingDistributiveLaws(I))
     return replaceInstUsesWith(I, V);
@@ -2037,6 +2040,20 @@ Instruction *InstCombinerImpl::visitFAdd(BinaryOperator &I) {
     return BinaryOperator::CreateFSubFMF(Z, XY, &I);
   }
 
+  // smin(-a, x - a) + a --> smin(x, 0) [2 commuted variants]
+  // smin(x - a, -a) + a --> smin(x, 0) [2 commuted variants]
+  if (match(&I,
+            m_c_FAdd(m_SMin(m_FNeg(m_Value(A)), m_FSub(m_Value(X), m_Value(A))),
+                     m_Value(A))) ||
+      match(&I,
+            m_c_FAdd(m_SMin(m_FSub(m_Value(X), m_Value(A)), m_FNeg(m_Value(A))),
+                     m_Value(A)))) {
+    Constant *Zero = Constant::getNullValue(I.getType());
+    return replaceInstUsesWith(
+        I,
+        Builder.CreateIntrinsic(Intrinsic::smin, {I.getType()}, {X, Zero}, &I));
+  }
+
   // Check for (fadd double (sitofp x), y), see if we can merge this into an
   // integer add followed by a promotion.
   if (Instruction *R = foldFBinOpOfIntCasts(I))
@@ -2309,6 +2326,9 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
 
     return Res;
   }
+
+  if (Instruction *R = foldBinOpIntoMinMax(I))
+    return R;
 
   // Try this before Negator to preserve NSW flag.
   if (Instruction *R = factorizeMathWithShlOps(I, Builder))
