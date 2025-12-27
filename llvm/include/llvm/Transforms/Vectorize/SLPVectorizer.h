@@ -155,7 +155,7 @@ private:
   std::optional<bool> vectorizeStoreChain(ArrayRef<Value *> Chain,
                                           slpvectorizer::BoUpSLP &R,
                                           unsigned Idx, unsigned MinVF,
-                                          unsigned &Size);
+                                          unsigned &Size, bool DeleteTree);
 
   bool vectorizeStores(
       ArrayRef<StoreInst *> Stores, slpvectorizer::BoUpSLP &R,

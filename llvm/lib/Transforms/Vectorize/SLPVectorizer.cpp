@@ -2015,7 +2015,7 @@ public:
                  const SmallDenseSet<Value *> &UserIgnoreLst);
 
   /// Construct a vectorizable tree that starts at \p Roots.
-  void buildTree(ArrayRef<Value *> Roots);
+  void buildTree(ArrayRef<Value *> Roots, bool DeleteTree = true);
 
   /// Return the scalars of the root node.
   ArrayRef<Value *> getRootNodeScalars() const {
@@ -9211,8 +9211,9 @@ void BoUpSLP::buildTree(ArrayRef<Value *> Roots,
   buildTreeRec(Roots, 0, EdgeInfo());
 }
 
-void BoUpSLP::buildTree(ArrayRef<Value *> Roots) {
-  deleteTree();
+void BoUpSLP::buildTree(ArrayRef<Value *> Roots, bool DeleteTree) {
+  if (DeleteTree)
+    deleteTree();
   assert(TreeEntryToStridedPtrInfoMap.empty() &&
          "TreeEntryToStridedPtrInfoMap is not cleared");
   VectorizableTree.emplace_back();
@@ -23191,7 +23192,7 @@ bool SLPVectorizerPass::runImpl(Function &F, ScalarEvolution *SE_,
 std::optional<bool>
 SLPVectorizerPass::vectorizeStoreChain(ArrayRef<Value *> Chain, BoUpSLP &R,
                                        unsigned Idx, unsigned MinVF,
-                                       unsigned &Size) {
+                                       unsigned &Size, bool DeleteTree) {
   Size = 0;
   LLVM_DEBUG(dbgs() << "SLP: Analyzing a store chain of length " << Chain.size()
                     << "\n");
@@ -23243,7 +23244,7 @@ SLPVectorizerPass::vectorizeStoreChain(ArrayRef<Value *> Chain, BoUpSLP &R,
   }
   if (R.isLoadCombineCandidate(Chain))
     return true;
-  R.buildTree(Chain);
+  R.buildTree(Chain, DeleteTree);
   // Check if tree tiny and store itself or its value is not vectorized.
   if (R.isTreeTinyAndNotFullyVectorizable()) {
     if (R.isGathered(Chain.front()) ||
@@ -23553,8 +23554,8 @@ bool SLPVectorizerPass::vectorizeStores(
                 }
               }
               unsigned TreeSize;
-              std::optional<bool> Res =
-                  vectorizeStoreChain(Slice, R, SliceStartIdx, MinVF, TreeSize);
+              std::optional<bool> Res = vectorizeStoreChain(
+                  Slice, R, SliceStartIdx, MinVF, TreeSize, true);
               if (Res && *Res) {
                 if (TreeSize) {
                   InstructionCost Cost = R.getTreeCost();
