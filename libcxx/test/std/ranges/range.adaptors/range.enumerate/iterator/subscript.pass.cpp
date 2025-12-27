@@ -43,7 +43,7 @@ constexpr bool test() {
     auto view     = ts | std::views::enumerate;
     auto it       = view.begin();
 
-    using DifferenceT = std::iter_difference_t<std::iter_difference_t<decltype(it)>>;
+    using DifferenceT = std::iter_difference_t<decltype(it)>;
     static_assert(std::is_same_v<decltype(it[2]), std::tuple<DifferenceT, int&>>);
 
     assert((it[0] == std::tuple<DifferenceT, int>(0, 90)));
@@ -57,7 +57,7 @@ constexpr bool test() {
     auto view = std::views::iota(0, 4) | std::views::enumerate;
     auto it   = view.begin();
 
-    using DifferenceT = std::iter_difference_t<std::iter_difference_t<decltype(it)>>;
+    using DifferenceT = std::iter_difference_t<decltype(it)>;
     static_assert(std::is_same_v<decltype(it[2]), std::tuple<DifferenceT, int>>);
 
     assert((it[0] == std::tuple<DifferenceT, int>(0, 0)));

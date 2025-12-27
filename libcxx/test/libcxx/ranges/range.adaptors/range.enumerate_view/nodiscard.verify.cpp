@@ -48,9 +48,9 @@ void test() {
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   std::move(it).base();
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-  std::as_const(it).index();
+  it.index();
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-  *std::as_const(it);
+  *it;
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   it[2];
 
