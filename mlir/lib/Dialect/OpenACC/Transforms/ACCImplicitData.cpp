@@ -400,14 +400,13 @@ void ACCImplicitData::generateRecipes(ModuleOp &module, OpBuilder &builder,
   auto &accSupport = this->getAnalysis<acc::OpenACCSupport>();
   for (auto var : newOperands) {
     auto loc{var.getLoc()};
-    if (auto privateOp = dyn_cast<acc::PrivateOp>(var.getDefiningOp())) {
+    if (auto privateOp = var.getDefiningOp<acc::PrivateOp>()) {
       auto recipe = generatePrivateRecipe(
           module, acc::getVar(var.getDefiningOp()), loc, builder, accSupport);
       if (recipe)
         privateOp.setRecipeAttr(
             SymbolRefAttr::get(module->getContext(), recipe.getSymName()));
-    } else if (auto firstprivateOp =
-                   dyn_cast<acc::FirstprivateOp>(var.getDefiningOp())) {
+    } else if (auto firstprivateOp = var.getDefiningOp<acc::FirstprivateOp>()) {
       auto recipe = generateFirstprivateRecipe(
           module, acc::getVar(var.getDefiningOp()), loc, builder, accSupport);
       if (recipe)
