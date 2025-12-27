@@ -34,6 +34,34 @@ entry:
 }
 
 ; a * b + c
+define <4 x double> @mull_add_fma(<4 x double> %a, <4 x double> %b, <4 x double> %c) {
+; CHECK-LABEL: mull_add_fma:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fcmla v4.2d, v0.2d, v2.2d, #90
+; CHECK-NEXT:    fcmla v5.2d, v1.2d, v3.2d, #90
+; CHECK-NEXT:    fcmla v4.2d, v0.2d, v2.2d, #0
+; CHECK-NEXT:    fcmla v5.2d, v1.2d, v3.2d, #0
+; CHECK-NEXT:    mov v0.16b, v4.16b
+; CHECK-NEXT:    mov v1.16b, v5.16b
+; CHECK-NEXT:    ret
+entry:
+  %strided.vec = shufflevector <4 x double> %a, <4 x double> poison, <2 x i32> <i32 0, i32 2>
+  %strided.vec28 = shufflevector <4 x double> %a, <4 x double> poison, <2 x i32> <i32 1, i32 3>
+  %strided.vec30 = shufflevector <4 x double> %b, <4 x double> poison, <2 x i32> <i32 0, i32 2>
+  %strided.vec31 = shufflevector <4 x double> %b, <4 x double> poison, <2 x i32> <i32 1, i32 3>
+  %0 = fmul fast <2 x double> %strided.vec31, %strided.vec
+  %1 = call fast <2 x double> @llvm.fma.v2f64(<2 x double> %strided.vec30, <2 x double> %strided.vec28, <2 x double> %0)
+  %strided.vec33 = shufflevector <4 x double> %c, <4 x double> poison, <2 x i32> <i32 0, i32 2>
+  %strided.vec34 = shufflevector <4 x double> %c, <4 x double> poison, <2 x i32> <i32 1, i32 3>
+  %2 = call fast <2 x double> @llvm.fmuladd.v2f64(<2 x double> %strided.vec30, <2 x double> %strided.vec, <2 x double> %strided.vec33)
+  %3 = fneg fast <2 x double> %strided.vec31
+  %4 = call fast <2 x double> @llvm.fma.v2f64(<2 x double> %3, <2 x double> %strided.vec28, <2 x double> %2)
+  %5 = fadd fast <2 x double> %1, %strided.vec34
+  %interleaved.vec = shufflevector <2 x double> %4, <2 x double> %5, <4 x i32> <i32 0, i32 2, i32 1, i32 3>
+  ret <4 x double> %interleaved.vec
+}
+
+; a * b + c
 define <4 x double> @mull_add_mixed(<4 x double> %a, <4 x double> %b, <4 x double> %c) {
 ; CHECK-LABEL: mull_add_mixed:
 ; CHECK:       // %bb.0: // %entry
@@ -428,3 +456,6 @@ entry:
   %interleaved.vec = shufflevector <2 x double> %9, <2 x double> %13, <4 x i32> <i32 0, i32 2, i32 1, i32 3>
   ret <4 x double> %interleaved.vec
 }
+
+declare <2 x double> @llvm.fma.v2f64(<2 x double>, <2 x double>, <2 x double>)
+declare <2 x double> @llvm.fmuladd.v2f64(<2 x double>, <2 x double>, <2 x double>)
