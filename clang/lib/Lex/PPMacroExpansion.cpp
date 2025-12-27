@@ -1131,13 +1131,23 @@ static bool HasExtension(const Preprocessor &PP, StringRef Extension) {
 #undef EXTENSION
 }
 
-/// EvaluateHasIncludeCommon - Process a '__has_include("path")'
+/// Result of consuming __has_include/__has_include_next tokens.
+struct HasIncludeResult {
+  bool Valid;             // Whether token parsing succeeded.
+  StringRef Filename;     // The parsed filename.
+  SourceLocation FileLoc; // Location of the filename token.
+  bool IsAngled;          // True for <...>, false for "...".
+};
+
+/// ConsumeHasIncludeTokens - Consume the tokens for a '__has_include("path")'
 /// or '__has_include_next("path")' expression.
-/// Returns true if successful.
-static bool EvaluateHasIncludeCommon(Token &Tok, IdentifierInfo *II,
-                                     Preprocessor &PP,
-                                     ConstSearchDirIterator LookupFrom,
-                                     const FileEntry *LookupFromFile) {
+/// Returns a HasIncludeResult indicating whether parsing succeeded and
+/// providing the filename if so.
+static HasIncludeResult
+ConsumeHasIncludeTokens(Token &Tok, IdentifierInfo *II, Preprocessor &PP,
+                        SmallString<128> &FilenameBuffer) {
+  HasIncludeResult Result = {false, StringRef(), SourceLocation(), false};
+
   // Save the location of the current token.  If a '(' is later found, use
   // that location.  If not, use the end of this location instead.
   SourceLocation LParenLoc = Tok.getLocation();
@@ -1148,13 +1158,13 @@ static bool EvaluateHasIncludeCommon(Token &Tok, IdentifierInfo *II,
     // Return a valid identifier token.
     assert(Tok.is(tok::identifier));
     Tok.setIdentifierInfo(II);
-    return false;
+    return Result;
   }
 
   // Get '('. If we don't have a '(', try to form a header-name token.
   do {
     if (PP.LexHeaderName(Tok))
-      return false;
+      return Result;
   } while (Tok.getKind() == tok::comment);
 
   // Ensure we have a '('.
@@ -1165,25 +1175,24 @@ static bool EvaluateHasIncludeCommon(Token &Tok, IdentifierInfo *II,
     // If the next token looks like a filename or the start of one,
     // assume it is and process it as such.
     if (Tok.isNot(tok::header_name))
-      return false;
+      return Result;
   } else {
     // Save '(' location for possible missing ')' message.
     LParenLoc = Tok.getLocation();
     if (PP.LexHeaderName(Tok))
-      return false;
+      return Result;
   }
 
   if (Tok.isNot(tok::header_name)) {
     PP.Diag(Tok.getLocation(), diag::err_pp_expects_filename);
-    return false;
+    return Result;
   }
 
   // Reserve a buffer to get the spelling.
-  SmallString<128> FilenameBuffer;
   bool Invalid = false;
   StringRef Filename = PP.getSpelling(Tok, FilenameBuffer, &Invalid);
   if (Invalid)
-    return false;
+    return Result;
 
   SourceLocation FilenameLoc = Tok.getLocation();
 
@@ -1195,13 +1204,33 @@ static bool EvaluateHasIncludeCommon(Token &Tok, IdentifierInfo *II,
     PP.Diag(PP.getLocForEndOfToken(FilenameLoc), diag::err_pp_expected_after)
         << II << tok::r_paren;
     PP.Diag(LParenLoc, diag::note_matching) << tok::l_paren;
-    return false;
+    return Result;
   }
 
-  bool isAngled = PP.GetIncludeFilenameSpelling(Tok.getLocation(), Filename);
+  bool IsAngled = PP.GetIncludeFilenameSpelling(Tok.getLocation(), Filename);
   // If GetIncludeFilenameSpelling set the start ptr to null, there was an
   // error.
   if (Filename.empty())
+    return Result;
+
+  Result.Valid = true;
+  Result.Filename = Filename;
+  Result.FileLoc = FilenameLoc;
+  Result.IsAngled = IsAngled;
+  return Result;
+}
+
+/// EvaluateHasIncludeCommon - Process a '__has_include("path")'
+/// or '__has_include_next("path")' expression.
+/// Returns true if the file exists.
+static bool EvaluateHasIncludeCommon(Token &Tok, IdentifierInfo *II,
+                                     Preprocessor &PP,
+                                     ConstSearchDirIterator LookupFrom,
+                                     const FileEntry *LookupFromFile) {
+  SmallString<128> FilenameBuffer;
+  HasIncludeResult ParseResult =
+      ConsumeHasIncludeTokens(Tok, II, PP, FilenameBuffer);
+  if (!ParseResult.Valid)
     return false;
 
   // Passing this to LookupFile forces header search to check whether the found
@@ -1211,14 +1240,16 @@ static bool EvaluateHasIncludeCommon(Token &Tok, IdentifierInfo *II,
 
   // Search include directories.
   OptionalFileEntryRef File =
-      PP.LookupFile(FilenameLoc, Filename, isAngled, LookupFrom, LookupFromFile,
-                    nullptr, nullptr, nullptr, &KH, nullptr, nullptr);
+      PP.LookupFile(ParseResult.FileLoc, ParseResult.Filename,
+                    ParseResult.IsAngled, LookupFrom, LookupFromFile, nullptr,
+                    nullptr, nullptr, &KH, nullptr, nullptr);
 
   if (PPCallbacks *Callbacks = PP.getPPCallbacks()) {
     SrcMgr::CharacteristicKind FileType = SrcMgr::C_User;
     if (File)
       FileType = PP.getHeaderSearchInfo().getFileDirFlavor(*File);
-    Callbacks->HasInclude(FilenameLoc, Filename, isAngled, File, FileType);
+    Callbacks->HasInclude(ParseResult.FileLoc, ParseResult.Filename,
+                          ParseResult.IsAngled, File, FileType);
   }
 
   // Get the result value.  A result of true means the file exists.
@@ -1332,6 +1363,16 @@ bool Preprocessor::EvaluateHasIncludeNext(Token &Tok, IdentifierInfo *II) {
   ConstSearchDirIterator Lookup = nullptr;
   const FileEntry *LookupFromFile;
   std::tie(Lookup, LookupFromFile) = getIncludeNextStart(Tok);
+
+  // If there's no valid "next" search location (file was found via absolute
+  // path), consume the tokens but return false - there's no "next" to find.
+  // Primary file case is excluded to preserve existing behavior.
+  if (!Lookup && !LookupFromFile && !isInPrimaryFile()) {
+    // Still need to consume the tokens to maintain preprocessor state.
+    SmallString<128> FilenameBuffer;
+    ConsumeHasIncludeTokens(Tok, II, *this, FilenameBuffer);
+    return false;
+  }
 
   return EvaluateHasIncludeCommon(Tok, II, *this, Lookup, LookupFromFile);
 }
