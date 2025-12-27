@@ -764,9 +764,7 @@ void Generator::generate(Operation *op, ByteCodeWriter &writer) {
             pdl_interp::SwitchOperandCountOp, pdl_interp::SwitchOperationNameOp,
             pdl_interp::SwitchResultCountOp>(
           [&](auto interpOp) { this->generate(interpOp, writer); })
-      .Default([](Operation *) {
-        llvm_unreachable("unknown `pdl_interp` operation");
-      });
+      .DefaultUnreachable("unknown `pdl_interp` operation");
 }
 
 void Generator::generate(pdl_interp::ApplyConstraintOp op,
@@ -913,9 +911,7 @@ void Generator::generate(pdl_interp::ExtractOp op, ByteCodeWriter &writer) {
           .Case([](pdl::OperationType) { return OpCode::ExtractOp; })
           .Case([](pdl::ValueType) { return OpCode::ExtractValue; })
           .Case([](pdl::TypeType) { return OpCode::ExtractType; })
-          .Default([](Type) -> OpCode {
-            llvm_unreachable("unsupported element type");
-          });
+          .DefaultUnreachable("unsupported element type");
   writer.append(opCode, op.getRange(), op.getIndex(), op.getResult());
 }
 void Generator::generate(pdl_interp::FinalizeOp op, ByteCodeWriter &writer) {
@@ -1103,12 +1099,12 @@ public:
   MutableArrayRef<PDLValue> getResults() { return results; }
 
   /// Return the type ranges allocated by this list.
-  MutableArrayRef<llvm::OwningArrayRef<Type>> getAllocatedTypeRanges() {
+  MutableArrayRef<std::vector<Type>> getAllocatedTypeRanges() {
     return allocatedTypeRanges;
   }
 
   /// Return the value ranges allocated by this list.
-  MutableArrayRef<llvm::OwningArrayRef<Value>> getAllocatedValueRanges() {
+  MutableArrayRef<std::vector<Value>> getAllocatedValueRanges() {
     return allocatedValueRanges;
   }
 };
@@ -1116,19 +1112,20 @@ public:
 /// This class provides support for executing a bytecode stream.
 class ByteCodeExecutor {
 public:
-  ByteCodeExecutor(
-      const ByteCodeField *curCodeIt, MutableArrayRef<const void *> memory,
-      MutableArrayRef<llvm::OwningArrayRef<Operation *>> opRangeMemory,
-      MutableArrayRef<TypeRange> typeRangeMemory,
-      std::vector<llvm::OwningArrayRef<Type>> &allocatedTypeRangeMemory,
-      MutableArrayRef<ValueRange> valueRangeMemory,
-      std::vector<llvm::OwningArrayRef<Value>> &allocatedValueRangeMemory,
-      MutableArrayRef<unsigned> loopIndex, ArrayRef<const void *> uniquedMemory,
-      ArrayRef<ByteCodeField> code,
-      ArrayRef<PatternBenefit> currentPatternBenefits,
-      ArrayRef<PDLByteCodePattern> patterns,
-      ArrayRef<PDLConstraintFunction> constraintFunctions,
-      ArrayRef<PDLRewriteFunction> rewriteFunctions)
+  ByteCodeExecutor(const ByteCodeField *curCodeIt,
+                   MutableArrayRef<const void *> memory,
+                   MutableArrayRef<std::vector<Operation *>> opRangeMemory,
+                   MutableArrayRef<TypeRange> typeRangeMemory,
+                   std::vector<std::vector<Type>> &allocatedTypeRangeMemory,
+                   MutableArrayRef<ValueRange> valueRangeMemory,
+                   std::vector<std::vector<Value>> &allocatedValueRangeMemory,
+                   MutableArrayRef<unsigned> loopIndex,
+                   ArrayRef<const void *> uniquedMemory,
+                   ArrayRef<ByteCodeField> code,
+                   ArrayRef<PatternBenefit> currentPatternBenefits,
+                   ArrayRef<PDLByteCodePattern> patterns,
+                   ArrayRef<PDLConstraintFunction> constraintFunctions,
+                   ArrayRef<PDLRewriteFunction> rewriteFunctions)
       : curCodeIt(curCodeIt), memory(memory), opRangeMemory(opRangeMemory),
         typeRangeMemory(typeRangeMemory),
         allocatedTypeRangeMemory(allocatedTypeRangeMemory),
@@ -1371,13 +1368,9 @@ private:
       if (range.empty()) {
         rangeMemory[rangeIndex] = {};
       } else {
-        // Allocate a buffer for this type range.
-        llvm::OwningArrayRef<T> storage(llvm::size(range));
-        llvm::copy(range, storage.begin());
-
         // Assign this to the range slot and use the range as the value for the
         // memory index.
-        allocatedRangeMemory.emplace_back(std::move(storage));
+        allocatedRangeMemory.emplace_back(range.begin(), range.end());
         rangeMemory[rangeIndex] = allocatedRangeMemory.back();
       }
       memory[memIndex] = &rangeMemory[rangeIndex];
@@ -1401,11 +1394,11 @@ private:
 
   /// The current execution memory.
   MutableArrayRef<const void *> memory;
-  MutableArrayRef<OwningOpRange> opRangeMemory;
+  MutableArrayRef<std::vector<Operation *>> opRangeMemory;
   MutableArrayRef<TypeRange> typeRangeMemory;
-  std::vector<llvm::OwningArrayRef<Type>> &allocatedTypeRangeMemory;
+  std::vector<std::vector<Type>> &allocatedTypeRangeMemory;
   MutableArrayRef<ValueRange> valueRangeMemory;
-  std::vector<llvm::OwningArrayRef<Value>> &allocatedValueRangeMemory;
+  std::vector<std::vector<Value>> &allocatedValueRangeMemory;
 
   /// The current loop indices.
   MutableArrayRef<unsigned> loopIndex;
@@ -1839,8 +1832,7 @@ executeGetOperandsResults(RangeT values, Operation *op, unsigned index,
       return nullptr;
 
     ArrayRef<int32_t> segments = segmentAttr;
-    unsigned startIndex =
-        std::accumulate(segments.begin(), segments.begin() + index, 0);
+    unsigned startIndex = llvm::sum_of(segments.take_front(index));
     values = values.slice(startIndex, *std::next(segments.begin(), index));
 
     LDBG() << "  * Extracting range[" << startIndex << ", "
@@ -1912,10 +1904,10 @@ void ByteCodeExecutor::executeGetUsers() {
   LDBG() << "Executing GetUsers:";
   unsigned memIndex = read();
   unsigned rangeIndex = read();
-  OwningOpRange &range = opRangeMemory[rangeIndex];
+  std::vector<Operation *> &range = opRangeMemory[rangeIndex];
   memory[memIndex] = &range;
 
-  range = OwningOpRange();
+  range.clear();
   if (read<PDLValue::Kind>() == PDLValue::Kind::Value) {
     // Read the value.
     Value value = read<Value>();
@@ -1923,9 +1915,7 @@ void ByteCodeExecutor::executeGetUsers() {
       return;
     LDBG() << "  * Value: " << value;
 
-    // Extract the users of a single value.
-    range = OwningOpRange(std::distance(value.user_begin(), value.user_end()));
-    llvm::copy(value.getUsers(), range.begin());
+    range.assign(value.user_begin(), value.user_end());
   } else {
     // Read a range of values.
     ValueRange *values = read<ValueRange *>();
@@ -1934,12 +1924,8 @@ void ByteCodeExecutor::executeGetUsers() {
     LDBG() << "  * Values (" << values->size()
            << "): " << llvm::interleaved(*values);
 
-    // Extract all the users of a range of values.
-    SmallVector<Operation *> users;
     for (Value value : *values)
-      users.append(value.user_begin(), value.user_end());
-    range = OwningOpRange(users.size());
-    llvm::copy(users, range.begin());
+      range.insert(range.end(), value.user_begin(), value.user_end());
   }
 
   LDBG() << "  * Result: " << range.size() << " operations";
@@ -2179,7 +2165,8 @@ ByteCodeExecutor::execute(PatternRewriter &rewriter,
       executeEraseOp(rewriter);
       break;
     case ExtractOp:
-      executeExtract<Operation *, OwningOpRange, PDLValue::Kind::Operation>();
+      executeExtract<Operation *, std::vector<Operation *>,
+                     PDLValue::Kind::Operation>();
       break;
     case ExtractType:
       executeExtract<Type, TypeRange, PDLValue::Kind::Type>();

@@ -32,6 +32,8 @@ struct __atomic_base // false
 {
   mutable __cxx_atomic_impl<_Tp> __a_;
 
+  using value_type = _Tp;
+
   _LIBCPP_HIDE_FROM_ABI bool is_lock_free() const volatile _NOEXCEPT {
     return __cxx_atomic_is_lock_free(sizeof(__cxx_atomic_impl<_Tp>));
   }
@@ -126,6 +128,8 @@ struct __atomic_base // false
 template <class _Tp>
 struct __atomic_base<_Tp, true> : public __atomic_base<_Tp, false> {
   using __base = __atomic_base<_Tp, false>;
+
+  using difference_type = typename __base::value_type;
 
   _LIBCPP_HIDE_FROM_ABI __atomic_base() _NOEXCEPT = default;
 

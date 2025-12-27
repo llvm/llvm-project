@@ -121,6 +121,7 @@ void foo8(RefCountable* obj) {
     RefCountable *bar = foo->trivial() ? foo.get() : nullptr;
     // expected-warning@-1{{Local variable 'bar' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
     foo = nullptr;
+    foo = (RefCountable *)0;
     bar->method();
   }
 }
@@ -491,4 +492,49 @@ namespace virtual_function {
     auto* baz = &*obj;
     // expected-warning@-1{{Local variable 'baz' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
   }
+}
+
+namespace vardecl_in_if_condition {
+  RefCountable* provide();
+
+  RefCountable* get() {
+    if (auto* obj = provide())
+      return obj; // no warning
+    return nullptr;
+  }
+
+  RefCountable* get_non_trivial_then() {
+    if (auto* obj = provide()) // expected-warning{{Local variable 'obj' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+      return obj->next();
+    return nullptr;
+  }
+
+  RefCountable* get_non_trivial_else() {
+    if (auto* obj = provide())
+      return obj;
+    else
+      return provide()->next();
+    return nullptr;
+  }
+
+  RefCountable& get_ref() {
+    if (auto* obj = provide())
+      return *obj; // no warning
+    static Ref<RefCountable> empty = RefCountable::create();
+    return empty.get();
+  }
+
+  RefCountable* get_non_trivial_condition() {
+    if (auto* obj = provide(); obj && obj->next())
+      return obj; // expected-warning@-1{{Local variable 'obj' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+    return nullptr;
+  }
+
+  RefCountable* get_non_trivial_else2() {
+    if (auto* obj = provide(); !obj) // expected-warning{{Local variable 'obj' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+      return nullptr;
+    else
+      return obj->next();
+  }
+
 }

@@ -26,6 +26,8 @@ def main(argv):
     for file in args.filename:
         js = json.load(file)
         for bm in js['benchmarks']:
+            if args.timing not in bm:
+                raise RuntimeError(f'Benchmark does not contain key for {args.timing}: {bm}')
             row = [bm['name'], bm[args.timing]]
             rows.append(row)
 
@@ -39,7 +41,10 @@ def main(argv):
         benchmark = headers.index('Benchmark')
         time = headers.index(args.timing)
         for row in rows:
-            print(f'{row[benchmark].replace(".", "_")}.execution_time {row[time]}')
+            # LNT format uses '.' to separate the benchmark name from the metric, and ' '
+            # to separate the benchmark name + metric from the numerical value. Escape both.
+            escaped = row[benchmark].replace(".", "_").replace(" ", "_")
+            print(f'{escaped}.execution_time {row[time]}')
 
 if __name__ == '__main__':
     main(sys.argv[1:])

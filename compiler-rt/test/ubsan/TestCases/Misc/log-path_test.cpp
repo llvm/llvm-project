@@ -1,3 +1,5 @@
+// UNSUPPORTED: system-windows
+
 // FIXME: https://code.google.com/p/address-sanitizer/issues/detail?id=316
 // XFAIL: android
 
@@ -21,9 +23,6 @@
 
 // FIXME: log_path is not supported on Windows yet.
 // XFAIL: target={{.*windows-msvc.*}}
-
-// Issue #41838
-// XFAIL: sparc-target-arch && target={{.*solaris.*}}
 
 #include <stdio.h>
 #include <stdlib.h>

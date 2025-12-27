@@ -1503,3 +1503,51 @@ wrong:
 exit:
   ret void
 }
+
+; Allow the load to be made available on the edge (%entry, %if.end) as part of PRE,
+; but ensure `%identical.l` is not hoisted to its predecessor due to the local
+; dependency with the call.
+
+define i32 @test24(ptr noalias %p, ptr noalias %q, i1 %c) {
+; MDEP-LABEL: @test24(
+; MDEP-NEXT:  entry:
+; MDEP-NEXT:    br i1 [[C:%.*]], label [[ENTRY_IF_END_CRIT_EDGE:%.*]], label [[IF_THEN:%.*]]
+; MDEP:       entry.if.end_crit_edge:
+; MDEP-NEXT:    [[VV_PRE:%.*]] = load i32, ptr [[X:%.*]], align 4
+; MDEP-NEXT:    br label [[IF_END:%.*]]
+; MDEP:       if.then:
+; MDEP-NEXT:    call void @opaque(ptr [[X]])
+; MDEP-NEXT:    [[UU:%.*]] = load i32, ptr [[X]], align 4
+; MDEP-NEXT:    store i32 [[UU]], ptr [[R:%.*]], align 4
+; MDEP-NEXT:    br label [[IF_END]]
+; MDEP:       if.end:
+; MDEP-NEXT:    [[VV:%.*]] = phi i32 [ [[VV_PRE]], [[ENTRY_IF_END_CRIT_EDGE]] ], [ [[UU]], [[IF_THEN]] ]
+; MDEP-NEXT:    ret i32 [[VV]]
+;
+; MSSA-LABEL: @test24(
+; MSSA-NEXT:  entry:
+; MSSA-NEXT:    br i1 [[C:%.*]], label [[IF_END:%.*]], label [[IF_THEN:%.*]]
+; MSSA:       if.then:
+; MSSA-NEXT:    call void @opaque(ptr [[X:%.*]])
+; MSSA-NEXT:    [[UU:%.*]] = load i32, ptr [[X]], align 4
+; MSSA-NEXT:    store i32 [[UU]], ptr [[R:%.*]], align 4
+; MSSA-NEXT:    br label [[IF_END]]
+; MSSA:       if.end:
+; MSSA-NEXT:    [[VV:%.*]] = load i32, ptr [[X]], align 4
+; MSSA-NEXT:    ret i32 [[VV]]
+;
+entry:
+  br i1 %c, label %if.end, label %if.then
+
+if.then:
+  call void @opaque(ptr %p)
+  %identical.l = load i32, ptr %p, align 4
+  store i32 %identical.l, ptr %q, align 4
+  br label %if.end
+
+if.end:
+  %l = load i32, ptr %p, align 4
+  ret i32 %l
+}
+
+declare void @opaque(ptr) nounwind willreturn

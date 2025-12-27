@@ -36,7 +36,7 @@ subroutine process_a(n, a)
   return
 
   entry process_b(n, b)
-    
+
   !$omp parallel
   do i = 1, n
     a(i) = i * i

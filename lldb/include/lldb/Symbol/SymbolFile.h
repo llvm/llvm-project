@@ -297,7 +297,8 @@ public:
                        lldb::SymbolContextItem resolve_scope,
                        SymbolContextList &sc_list);
 
-  virtual void DumpClangAST(Stream &s, llvm::StringRef filter) {}
+  virtual void DumpClangAST(Stream &s, llvm::StringRef filter,
+                            bool show_colors) {}
   virtual void FindGlobalVariables(ConstString name,
                                    const CompilerDeclContext &parent_decl_ctx,
                                    uint32_t max_matches,
@@ -306,6 +307,9 @@ public:
                                    uint32_t max_matches,
                                    VariableList &variables);
   virtual void FindFunctions(const Module::LookupInfo &lookup_info,
+                             const CompilerDeclContext &parent_decl_ctx,
+                             bool include_inlines, SymbolContextList &sc_list);
+  virtual void FindFunctions(llvm::ArrayRef<Module::LookupInfo> lookup_infos,
                              const CompilerDeclContext &parent_decl_ctx,
                              bool include_inlines, SymbolContextList &sc_list);
   virtual void FindFunctions(const RegularExpression &regex,

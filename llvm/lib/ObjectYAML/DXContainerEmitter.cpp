@@ -274,13 +274,8 @@ Error DXContainerWriter::writeParts(raw_ostream &OS) {
       for (DXContainerYAML::RootParameterLocationYaml &L :
            P.RootSignature->Parameters.Locations) {
 
-        assert(dxbc::isValidParameterType(L.Header.Type) &&
-               "invalid DXContainer YAML");
-        assert(dxbc::isValidShaderVisibility(L.Header.Visibility) &&
-               "invalid DXContainer YAML");
-        dxbc::RootParameterType Type = dxbc::RootParameterType(L.Header.Type);
-        dxbc::ShaderVisibility Visibility =
-            dxbc::ShaderVisibility(L.Header.Visibility);
+        const dxbc::RootParameterType Type = L.Header.Type;
+        const dxbc::ShaderVisibility Visibility = L.Header.Visibility;
 
         switch (Type) {
         case dxbc::RootParameterType::Constants32Bit: {
@@ -313,10 +308,8 @@ Error DXContainerWriter::writeParts(raw_ostream &OS) {
               P.RootSignature->Parameters.getOrInsertTable(L);
           mcdxbc::DescriptorTable Table;
           for (const auto &R : TableYaml.Ranges) {
-            assert(dxbc::isValidRangeType(R.RangeType) &&
-                   "Invalid Descriptor Range Type");
             mcdxbc::DescriptorRange Range;
-            Range.RangeType = dxil::ResourceClass(R.RangeType);
+            Range.RangeType = R.RangeType;
             Range.NumDescriptors = R.NumDescriptors;
             Range.BaseShaderRegister = R.BaseShaderRegister;
             Range.RegisterSpace = R.RegisterSpace;
@@ -335,7 +328,7 @@ Error DXContainerWriter::writeParts(raw_ostream &OS) {
       }
 
       for (const auto &Param : P.RootSignature->samplers()) {
-        dxbc::RTS0::v1::StaticSampler NewSampler;
+        mcdxbc::StaticSampler NewSampler;
         NewSampler.Filter = Param.Filter;
         NewSampler.AddressU = Param.AddressU;
         NewSampler.AddressV = Param.AddressV;
@@ -349,6 +342,9 @@ Error DXContainerWriter::writeParts(raw_ostream &OS) {
         NewSampler.ShaderRegister = Param.ShaderRegister;
         NewSampler.RegisterSpace = Param.RegisterSpace;
         NewSampler.ShaderVisibility = Param.ShaderVisibility;
+
+        if (RS.Version > 2)
+          NewSampler.Flags = Param.getEncodedFlags();
 
         RS.StaticSamplers.push_back(NewSampler);
       }

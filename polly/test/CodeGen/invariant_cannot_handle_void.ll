@@ -1,5 +1,5 @@
-; RUN: opt %loadNPMPolly -polly-invariant-load-hoisting=true '-passes=print<polly-function-scops>' -disable-output < %s 2>&1 | FileCheck %s --check-prefix=SCOP
-; RUN: opt %loadNPMPolly -S -passes=polly-codegen -polly-invariant-load-hoisting=true %s | FileCheck %s
+; RUN: opt %loadNPMPolly -polly-invariant-load-hoisting=true '-passes=polly-custom<scops>' -polly-print-scops -disable-output < %s 2>&1 | FileCheck %s --check-prefix=SCOP
+; RUN: opt %loadNPMPolly -S '-passes=polly<no-default-opts>' -polly-invariant-load-hoisting=true %s | FileCheck %s
 ;
 ; The offset of the %tmp1 load wrt. to %buff (62 bytes) is not divisible
 ; by the type size (i32 = 4 bytes), thus we will have to represent %buff
@@ -24,7 +24,7 @@
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 ; Function Attrs: nounwind uwtable
-define void @sudecrypt(ptr %buff) #0 {
+define void @sudecrypt(ptr %buff) {
 entry:
   br i1 undef, label %cleanup, label %if.end
 
@@ -61,8 +61,6 @@ if.end.34:                                        ; preds = %if.end.16
 cleanup:                                          ; preds = %entry
   ret void
 }
-
-attributes #0 = { nounwind uwtable "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+mmx,+sse,+sse2" "unsafe-fp-math"="false" "use-soft-float"="false" }
 
 !llvm.ident = !{!0}
 

@@ -878,8 +878,9 @@ define signext i32 @select_fcmp_uge_1_2(half %a, half %b) nounwind {
 define half @CascadedSelect(half noundef %a) {
 ; CHECK-LABEL: CascadedSelect:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    lui a0, %hi(.LCPI20_0)
-; CHECK-NEXT:    flh fa5, %lo(.LCPI20_0)(a0)
+; CHECK-NEXT:    li a0, 15
+; CHECK-NEXT:    slli a0, a0, 10
+; CHECK-NEXT:    fmv.h.x fa5, a0
 ; CHECK-NEXT:    flt.h a0, fa5, fa0
 ; CHECK-NEXT:    bnez a0, .LBB20_3
 ; CHECK-NEXT:  # %bb.1: # %entry
@@ -910,23 +911,24 @@ define half @CascadedSelect(half noundef %a) {
 ;
 ; CHECKIZFHMIN-LABEL: CascadedSelect:
 ; CHECKIZFHMIN:       # %bb.0: # %entry
-; CHECKIZFHMIN-NEXT:    lui a0, %hi(.LCPI20_0)
-; CHECKIZFHMIN-NEXT:    flh fa5, %lo(.LCPI20_0)(a0)
-; CHECKIZFHMIN-NEXT:    fcvt.s.h fa3, fa5
-; CHECKIZFHMIN-NEXT:    fcvt.s.h fa4, fa0
-; CHECKIZFHMIN-NEXT:    flt.s a0, fa3, fa4
-; CHECKIZFHMIN-NEXT:    bnez a0, .LBB20_3
-; CHECKIZFHMIN-NEXT:  # %bb.1: # %entry
-; CHECKIZFHMIN-NEXT:    fmv.w.x fa5, zero
+; CHECKIZFHMIN-NEXT:    fcvt.s.h fa5, fa0
+; CHECKIZFHMIN-NEXT:    lui a0, 260096
+; CHECKIZFHMIN-NEXT:    fmv.w.x fa4, zero
+; CHECKIZFHMIN-NEXT:    flt.s a1, fa5, fa4
+; CHECKIZFHMIN-NEXT:    fmv.w.x fa4, a0
 ; CHECKIZFHMIN-NEXT:    flt.s a0, fa4, fa5
+; CHECKIZFHMIN-NEXT:    bnez a1, .LBB20_3
+; CHECKIZFHMIN-NEXT:  # %bb.1: # %entry
 ; CHECKIZFHMIN-NEXT:    bnez a0, .LBB20_4
-; CHECKIZFHMIN-NEXT:  # %bb.2: # %entry
-; CHECKIZFHMIN-NEXT:    fmv.s fa5, fa0
-; CHECKIZFHMIN-NEXT:  .LBB20_3: # %entry
-; CHECKIZFHMIN-NEXT:    fmv.s fa0, fa5
+; CHECKIZFHMIN-NEXT:  .LBB20_2: # %entry
 ; CHECKIZFHMIN-NEXT:    ret
-; CHECKIZFHMIN-NEXT:  .LBB20_4:
+; CHECKIZFHMIN-NEXT:  .LBB20_3:
 ; CHECKIZFHMIN-NEXT:    fmv.h.x fa0, zero
+; CHECKIZFHMIN-NEXT:    beqz a0, .LBB20_2
+; CHECKIZFHMIN-NEXT:  .LBB20_4:
+; CHECKIZFHMIN-NEXT:    li a0, 15
+; CHECKIZFHMIN-NEXT:    slli a0, a0, 10
+; CHECKIZFHMIN-NEXT:    fmv.h.x fa0, a0
 ; CHECKIZFHMIN-NEXT:    ret
 ;
 ; CHECKIZHINXMIN-LABEL: CascadedSelect:

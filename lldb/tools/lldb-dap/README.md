@@ -44,6 +44,34 @@ adds `FOO=1` and `bar` to the environment:
 }
 ```
 
+#### Launch in integrated terminal
+
+This will launch process in IDE's integrated terminal.
+
+```javascript
+{
+  "type": "lldb-dap",
+  "request": "launch",
+  "name": "Debug",
+  "program": "/tmp/a.out",
+  "console": "integratedTerminal"
+}
+```
+
+#### Setup IO redirection
+
+This will launch process and connect `stdin` to `in.txt`, both of `stdout` and `stderr` to `out.txt`.
+
+```javascript
+{
+  "type": "lldb-dap",
+  "request": "launch",
+  "name": "Debug",
+  "program": "/tmp/a.out",
+  "stdio": ["in.txt", "out.txt"]
+}
+```
+
 ### Attaching to a process
 
 When attaching to a process using LLDB, you can attach in multiple ways:
@@ -237,6 +265,7 @@ contain the following key/value pairs:
 | **stopOnEntry**                   | boolean     |     | Whether to stop program immediately after launching.
 | **runInTerminal** (deprecated)    | boolean     |     | Launch the program inside an integrated terminal in the IDE. Useful for debugging interactive command line programs.
 | **console**                       | string      |     | Specify where to launch the program: internal console (`internalConsole`), integrated terminal (`integratedTerminal`) or external terminal (`externalTerminal`). Supported from lldb-dap 21.0 version.
+| **stdio**                         | [string]    |     | The stdio property specifies the redirection targets for the debuggee's stdio streams. A null value redirects a stream to the default debug terminal. String can be a path to file, named pipe or TTY device. If less than three values are provided, the list will be padded with the last value. Specifying more than three values will create additional file descriptors (4, 5, etc.). Supported from lldb-dap 22.0 version.
 | **launchCommands**                | [string]    |     | LLDB commands executed to launch the program.
 
 For JSON configurations of `"type": "attach"`, the JSON configuration can contain
@@ -247,6 +276,7 @@ the following `lldb-dap` specific key/value pairs:
 | **program**                       | string      |     | Path to the executable to attach to. This value is optional but can help to resolve breakpoints prior the attaching to the program.
 | **pid**                           | number      |     | The process id of the process you wish to attach to. If **pid** is omitted, the debugger will attempt to attach to the program by finding a process whose file name matches the file name from **program**. Setting this value to `${command:pickMyProcess}` will allow interactive process selection in the IDE.
 | **waitFor**                       | boolean     |     | Wait for the process to launch.
+| **stopOnEntry**                   | boolean     |     | Whether to stop program immediately after attaching.
 | **attachCommands**                | [string]    |     | LLDB commands that will be executed after **preRunCommands** which take place of the code that normally does the attach. The commands can create a new target and attach or launch it however desired. This allows custom launch and attach configurations. Core files can use `target create --core /path/to/core` to attach to core files.
 
 ### Configuring `lldb-dap` defaults

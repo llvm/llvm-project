@@ -251,10 +251,18 @@ static Type parseAndVerifySampledImageType(SPIRVDialect const &dialect,
   if (parser.parseType(type))
     return Type();
 
-  if (!llvm::isa<ImageType>(type)) {
+  auto imageType = dyn_cast<ImageType>(type);
+  if (!imageType) {
     parser.emitError(typeLoc,
                      "sampled image must be composed using image type, got ")
         << type;
+    return Type();
+  }
+
+  if (llvm::is_contained({Dim::SubpassData, Dim::Buffer}, imageType.getDim())) {
+    parser.emitError(
+        typeLoc, "sampled image Dim must not be SubpassData or Buffer, got ")
+        << stringifyDim(imageType.getDim());
     return Type();
   }
 
@@ -979,7 +987,7 @@ void SPIRVDialect::printType(Type type, DialectAsmPrinter &os) const {
       .Case<ArrayType, CooperativeMatrixType, PointerType, RuntimeArrayType,
             ImageType, SampledImageType, StructType, MatrixType, TensorArmType>(
           [&](auto type) { print(type, os); })
-      .Default([](Type) { llvm_unreachable("unhandled SPIR-V type"); });
+      .DefaultUnreachable("Unhandled SPIR-V type");
 }
 
 //===----------------------------------------------------------------------===//
@@ -1066,7 +1074,12 @@ LogicalResult SPIRVDialect::verifyRegionArgAttribute(Operation *op,
 }
 
 LogicalResult SPIRVDialect::verifyRegionResultAttribute(
-    Operation *op, unsigned /*regionIndex*/, unsigned /*resultIndex*/,
+    Operation *op, unsigned /*regionIndex*/, unsigned resultIndex,
     NamedAttribute attribute) {
-  return op->emitError("cannot attach SPIR-V attributes to region result");
+  if (auto graphOp = dyn_cast<spirv::GraphARMOp>(op))
+    return verifyRegionAttribute(
+        op->getLoc(), graphOp.getResultTypes()[resultIndex], attribute);
+  return op->emitError(
+      "cannot attach SPIR-V attributes to region result which is "
+      "not part of a spirv::GraphARMOp type");
 }

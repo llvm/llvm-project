@@ -349,19 +349,7 @@ struct LowerGpuOpsToROCDLOpsPass final
     }
 
     LLVMTypeConverter converter(ctx, options);
-    populateGpuMemorySpaceAttributeConversions(
-        converter, [](gpu::AddressSpace space) {
-          switch (space) {
-          case gpu::AddressSpace::Global:
-            return 1;
-          case gpu::AddressSpace::Workgroup:
-            return 3;
-          case gpu::AddressSpace::Private:
-            return 5;
-          }
-          llvm_unreachable("unknown address space enum value");
-          return 0;
-        });
+    amdgpu::populateCommonGPUTypeAndAttributeConversions(converter);
 
     RewritePatternSet llvmPatterns(ctx);
     LLVMConversionTarget target(getContext());
@@ -374,7 +362,7 @@ struct LowerGpuOpsToROCDLOpsPass final
       if (!allowedDialectsSet.empty() && !allowed)
         continue;
 
-      auto iface = dyn_cast<ConvertToLLVMPatternInterface>(dialect);
+      auto *iface = dyn_cast<ConvertToLLVMPatternInterface>(dialect);
       if (!iface) {
         // Error out if dialect was explicily specified but doesn't implement
         // conversion interface.
@@ -484,5 +472,5 @@ void mlir::populateGpuToROCDLConversionPatterns(
                GPUSubgroupBroadcastOpToROCDL>(converter);
   patterns.add<GPUSubgroupSizeOpToROCDL>(converter, chipset);
 
-  populateMathToROCDLConversionPatterns(converter, patterns);
+  populateMathToROCDLConversionPatterns(converter, patterns, chipset);
 }

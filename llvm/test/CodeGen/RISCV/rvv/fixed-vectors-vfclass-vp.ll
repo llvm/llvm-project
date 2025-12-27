@@ -286,12 +286,3 @@ define <16 x i1> @isnotfinite_v16f64_unmasked(<16 x double> %x, i32 zeroext %evl
   ret <16 x i1> %1
 }
 
-declare <2 x i1> @llvm.vp.is.fpclass.v2f16(<2 x half>, i32, <2 x i1>, i32)
-declare <2 x i1> @llvm.vp.is.fpclass.v2f32(<2 x float>, i32, <2 x i1>, i32)
-declare <4 x i1> @llvm.vp.is.fpclass.v4f32(<4 x float>, i32, <4 x i1>, i32)
-declare <8 x i1> @llvm.vp.is.fpclass.v8f32(<8 x float>, i32, <8 x i1>, i32)
-declare <16 x i1> @llvm.vp.is.fpclass.v16f32(<16 x float>, i32, <16 x i1>, i32)
-declare <2 x i1> @llvm.vp.is.fpclass.v2f64(<2 x double>, i32, <2 x i1>, i32)
-declare <4 x i1> @llvm.vp.is.fpclass.v4f64(<4 x double>, i32, <4 x i1>, i32)
-declare <8 x i1> @llvm.vp.is.fpclass.v8f64(<8 x double>, i32, <8 x i1>, i32)
-declare <16 x i1> @llvm.vp.is.fpclass.v16f64(<16 x double>, i32, <16 x i1>, i32)

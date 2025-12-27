@@ -144,138 +144,6 @@ static_assert(__builtin_is_cpp_trivially_relocatable(U2));
 // expected-note@#tr-U2 {{'U2' defined here}}
 }
 
-namespace replaceable {
-
-extern int vla_size;
-static_assert(__builtin_is_replaceable(int[vla_size]));
-// expected-error@-1 {{static assertion failed due to requirement '__builtin_is_replaceable(int[vla_size])'}} \
-// expected-note@-1 {{'int[vla_size]' is not replaceable}} \
-// expected-note@-1 {{because it is a variably-modified type}}
-
-struct S; // expected-note {{forward declaration of 'replaceable::S'}}
-static_assert(__builtin_is_replaceable(S));
-// expected-error@-1 {{incomplete type 'S' used in type trait expression}}
-
-static_assert(__builtin_is_replaceable(const volatile int));
-// expected-error@-1 {{static assertion failed due to requirement '__builtin_is_replaceable(const volatile int)}} \
-// expected-note@-1 {{'const volatile int' is not replaceable}} \
-// expected-note@-1 {{because it is const}} \
-// expected-note@-1 {{because it is volatile}}
-
-
-static_assert(__builtin_is_replaceable(void()));
-// expected-error@-1 {{static assertion failed due to requirement '__builtin_is_replaceable(void ())}} \
-// expected-note@-1 {{'void ()' is not replaceable}} \
-// expected-note@-1 {{because it is not a scalar or class type}}
-
-struct B {
- virtual ~B();
-};
-struct S : virtual B { // #replaceable-S
-    S();
-    int & a;
-    const int ci;
-    B & b;
-    B c;
-    ~S();
-};
-static_assert(__builtin_is_replaceable(S));
-// expected-error@-1 {{static assertion failed due to requirement '__builtin_is_replaceable(replaceable::S)'}} \
-// expected-note@-1 {{'S' is not replaceable}} \
-// expected-note@-1 {{because it has a non-replaceable base 'B'}} \
-// expected-note@-1 {{because it has a non-replaceable member 'a' of type 'int &'}} \
-// expected-note@-1 {{because it has a non-replaceable member 'ci' of type 'const int'}} \
-// expected-note@-1 {{because it has a non-replaceable member 'b' of type 'B &'}} \
-// expected-note@-1 {{because it has a non-replaceable member 'c' of type 'B'}} \
-// expected-note@-1 {{because it has a user-provided destructor}} \
-// expected-note@-1 {{because it has a deleted copy assignment operator}}
-// expected-note@#replaceable-S {{'S' defined here}}
-
-struct S2 { // #replaceable-S2
-    S2(S2&&);
-    S2& operator=(const S2&);
-};
-static_assert(__builtin_is_replaceable(S2));
-// expected-error@-1 {{static assertion failed due to requirement '__builtin_is_replaceable(replaceable::S2)'}} \
-// expected-note@-1 {{'S2' is not replaceable}} \
-// expected-note@-1 {{because it has a user provided move constructor}} \
-// expected-note@-1 {{because it has a user provided copy assignment operator}} \
-// expected-note@#replaceable-S2 {{'S2' defined here}}
-
-
-struct S3 { // #replaceable-S3
-    ~S3() = delete;
-};
-static_assert(__builtin_is_replaceable(S3));
-// expected-error@-1 {{static assertion failed due to requirement '__builtin_is_replaceable(replaceable::S3)'}} \
-// expected-note@-1 {{'S3' is not replaceable}} \
-// expected-note@-1 {{because it has a deleted destructor}} \
-// expected-note@#replaceable-S3 {{'S3' defined here}}
-
-
-union U { // #replaceable-U
-    U(const U&);
-    U(U&&);
-    U& operator=(const U&);
-    U& operator=(U&&);
-};
-static_assert(__builtin_is_replaceable(U));
-// expected-error@-1 {{static assertion failed due to requirement '__builtin_is_replaceable(replaceable::U)'}} \
-// expected-note@-1 {{'U' is not replaceable}} \
-// expected-note@-1 {{because it is a union with a user-declared copy constructor}} \
-// expected-note@-1 {{because it is a union with a user-declared copy assignment operator}} \
-// expected-note@-1 {{because it is a union with a user-declared move constructor}} \
-// expected-note@-1 {{because it is a union with a user-declared move assignment operator}}
-// expected-note@#replaceable-U {{'U' defined here}}
-struct S4 replaceable_if_eligible { // #replaceable-S4
-    ~S4();
-    B b;
-};
-static_assert(__builtin_is_replaceable(S4));
-// expected-error@-1 {{static assertion failed due to requirement '__builtin_is_replaceable(replaceable::S4)'}} \
-// expected-note@-1 {{'S4' is not replaceable}} \
-// expected-note@-1 {{because it has a non-replaceable member 'b' of type 'B'}} \
-// expected-note@#replaceable-S4 {{'S4' defined here}}
-
-union U2 replaceable_if_eligible { // #replaceable-U2
-    U2(const U2&);
-    U2(U2&&);
-    B b;
-};
-static_assert(__builtin_is_replaceable(U2));
-// expected-error@-1 {{static assertion failed due to requirement '__builtin_is_replaceable(replaceable::U2)'}} \
-// expected-note@-1 {{'U2' is not replaceable}} \
-// expected-note@-1 {{because it has a deleted destructor}} \
-// expected-note@-1 {{because it has a non-replaceable member 'b' of type 'B'}} \
-// expected-note@-1 {{because it has a deleted copy assignment operator}} \
-// expected-note@#replaceable-U2 {{'U2' defined here}}
-
-struct UD1 {  // #replaceable-UD1
-    UD1(const UD1&) = delete;
-    UD1 & operator=(const UD1&) = delete;
-
-};
-static_assert(__builtin_is_replaceable(UD1));
-// expected-error@-1 {{static assertion failed due to requirement '__builtin_is_replaceable(replaceable::UD1)'}} \
-// expected-note@-1 {{'UD1' is not replaceable}} \
-// expected-note@-1 {{because it has a deleted copy constructor}} \
-// expected-note@-1 {{because it has a deleted copy assignment operator}} \
-// expected-note@#replaceable-UD1 {{'UD1' defined here}}
-
-
-struct UD2 {  // #replaceable-UD2
-    UD2(UD2&&) = delete;
-    UD2 & operator=(UD2&&) = delete;
-};
-static_assert(__builtin_is_replaceable(UD2));
-// expected-error@-1 {{static assertion failed due to requirement '__builtin_is_replaceable(replaceable::UD2)'}} \
-// expected-note@-1 {{'UD2' is not replaceable}} \
-// expected-note@-1 {{because it has a deleted move constructor}} \
-// expected-note@-1 {{because it has a deleted move assignment operator}} \
-// expected-note@#replaceable-UD2 {{'UD2' defined here}}
-
-}
-
 
 namespace GH143325 {
 struct Foo  { // expected-note {{previous definition is here}}
@@ -320,7 +188,7 @@ static_assert(__builtin_is_cpp_trivially_relocatable(UnionOfPolymorphic));
 
 }
 
-struct GH143599 {  // expected-note 2 {{'GH143599' defined here}}
+struct GH143599 {  // expected-note {{'GH143599' defined here}}
     ~GH143599 ();
      GH143599(const GH143599&);
      GH143599& operator=(const GH143599&);
@@ -332,13 +200,6 @@ GH143599& GH143599::operator=(const GH143599&) = default;
 static_assert (__builtin_is_cpp_trivially_relocatable(GH143599));
 // expected-error@-1 {{static assertion failed due to requirement '__builtin_is_cpp_trivially_relocatable(GH143599)'}} \
 // expected-note@-1 {{'GH143599' is not trivially relocatable}} \
-// expected-note@-1 {{because it has a user provided copy constructor}} \
-// expected-note@-1 {{because it has a user provided copy assignment operator}} \
-// expected-note@-1 {{because it has a user-provided destructor}}
-
-static_assert (__builtin_is_replaceable(GH143599));
-// expected-error@-1 {{static assertion failed due to requirement '__builtin_is_replaceable(GH143599)'}} \
-// expected-note@-1 {{'GH143599' is not replaceable}} \
 // expected-note@-1 {{because it has a user provided copy constructor}} \
 // expected-note@-1 {{because it has a user provided copy assignment operator}} \
 // expected-note@-1 {{because it has a user-provided destructor}}
@@ -663,7 +524,7 @@ namespace is_empty_tests {
     // expected-error@-1 {{static assertion failed due to requirement '__is_empty(is_empty_tests::Derived)'}} \
     // expected-note@-1 {{'Derived' is not empty}} \
     // expected-note@-1 {{because it has a base class 'Base' that is not empty}} \
-    // expected-note@#e-Derived {{'Derived' defined here}} 
+    // expected-note@#e-Derived {{'Derived' defined here}}
 
     // Combination of the above.
     struct Multi : Base, virtual EB { // #e-Multi
@@ -681,15 +542,15 @@ namespace is_empty_tests {
 
     // Zero-width bit-field.
     struct BitField { int : 0; }; // #e-BitField
-    static_assert(__is_empty(BitField)); // no diagnostics  
+    static_assert(__is_empty(BitField)); // no diagnostics
 
-    // Dependent bit-field width. 
+    // Dependent bit-field width.
     template <int N>
     struct DependentBitField { int : N; }; // #e-DependentBitField
 
     static_assert(__is_empty(DependentBitField<0>)); // no diagnostics
 
-    static_assert(__is_empty(DependentBitField<2>)); 
+    static_assert(__is_empty(DependentBitField<2>));
     // expected-error@-1 {{static assertion failed due to requirement '__is_empty(is_empty_tests::DependentBitField<2>)'}} \
     // expected-note@-1 {{'DependentBitField<2>' is not empty}} \
     // expected-note@-1 {{because it field '' is a non-zero-length bit-field}} \
@@ -738,7 +599,7 @@ public:
     int x; // #sl-UF1
 private:
     int y; // #sl-UF2
-};                                                       
+};
 static_assert(__is_standard_layout(U));
 // expected-error@-1 {{static assertion failed due to requirement '__is_standard_layout(standard_layout_tests::U)'}} \
 // expected-note@-1 {{'U' is not standard-layout}} \
@@ -750,7 +611,7 @@ static_assert(__is_standard_layout(U));
 // Single base class is OK
 struct BaseClass{ int a; };                                   // #sl-BaseClass
 struct DerivedOK : BaseClass {};                                // #sl-DerivedOK
-static_assert(__is_standard_layout(DerivedOK));    
+static_assert(__is_standard_layout(DerivedOK));
 
 // Primitive types should be standard layout
 static_assert(__is_standard_layout(int));                     // #sl-Int
@@ -760,11 +621,11 @@ static_assert(__is_standard_layout(float));                   // #sl-Float
 struct Base1 { int a; };                                      // #sl-Base1
 struct Base2 { int b; };                                      // #sl-Base2
 struct DerivedClass : Base1, Base2 {};                        // #sl-DerivedClass
-static_assert(__is_standard_layout(DerivedClass));               
+static_assert(__is_standard_layout(DerivedClass));
 // expected-error@-1 {{static assertion failed due to requirement '__is_standard_layout(standard_layout_tests::DerivedClass)'}} \
 // expected-note@-1 {{'DerivedClass' is not standard-layout}} \
 // expected-note@-1 {{because it has multiple base classes with data members}} \
-// expected-note@#sl-DerivedClass {{'DerivedClass' defined here}} 
+// expected-note@#sl-DerivedClass {{'DerivedClass' defined here}}
 
 // Inheritance hierarchy with multiple classes having data members
 struct BaseA { int a; };                                      // #sl-BaseA
@@ -809,7 +670,7 @@ static_assert(__is_standard_layout(E));
 // expected-note@#sl-E {{'E' defined here}}
 
 // F inherits D but only an unnamed bitfield
-// This should still fail because F ends up with a 
+// This should still fail because F ends up with a
 // base class with a data member and its own unnamed bitfield
 // which is not allowed in standard layout
 struct F : D { int : 0; }; // #sl-F
@@ -963,4 +824,92 @@ namespace is_aggregate {
   // expected-note@#ag-S7 {{'S7' defined here}}
 
   static_assert(__is_aggregate(S7[10]));
+}
+
+namespace is_abstract_tests {
+struct Abstract1 {
+  virtual void fn1() = 0;
+};
+
+struct Abstract2 {
+   virtual void fn2() = 0;
+};
+
+struct NonAbstract
+{
+   virtual void f() {}
+};
+
+// Multiple inheritance reports all abstract base classes that had their pure virtual functions overridden.
+struct Overrides : Abstract1, Abstract2, NonAbstract {
+  void fn1() override {}
+  void fn2() override {}
+};
+
+static_assert(__is_abstract(Overrides));
+// expected-error@-1 {{static assertion failed due to requirement '__is_abstract(is_abstract_tests::Overrides)'}} \
+// expected-note@-1 {{'Overrides' is not abstract}} \
+// expected-note@-1 {{because it overrides all pure virtual functions from base class 'Abstract1'}} \
+// expected-note@-1 {{because it overrides all pure virtual functions from base class 'Abstract2'}} \
+
+static_assert(__is_abstract(NonAbstract));
+// expected-error@-1 {{static assertion failed due to requirement '__is_abstract(is_abstract_tests::NonAbstract)'}} \
+// expected-note@-1 {{'NonAbstract' is not abstract}}
+
+// Inheriting over two levels reports the last class only although the source of the pure virtual function
+// is the top-most base.
+struct Derived : Abstract1 {
+};
+
+struct Derived2 : Derived {
+   void fn1() override {}
+};
+
+static_assert(__is_abstract(Derived2));
+// expected-error@-1 {{static assertion failed due to requirement '__is_abstract(is_abstract_tests::Derived2)'}} \
+// expected-note@-1 {{'Derived2' is not abstract}} \
+// expected-note@-1 {{because it overrides all pure virtual functions from base class 'Derived'}} \
+
+
+using I = int;
+static_assert(__is_abstract(I));
+// expected-error@-1 {{static assertion failed due to requirement '__is_abstract(int)'}} \
+// expected-note@-1 {{'I' (aka 'int') is not abstract}} \
+// expected-note@-1 {{because it is not a struct or class type}}
+
+using Fty = void();
+static_assert(__is_abstract(Fty));
+// expected-error@-1 {{static assertion failed due to requirement '__is_abstract(void ())'}} \
+// expected-note@-1 {{'Fty' (aka 'void ()') is not abstract}} \
+// expected-note@-1 {{because it is a function type}} \
+// expected-note@-1 {{because it is not a struct or class type}}
+
+using Arr = int[3];
+static_assert(__is_abstract(Arr));
+// expected-error@-1 {{static assertion failed due to requirement '__is_abstract(int[3])'}} \
+// expected-note@-1 {{'Arr' (aka 'int[3]') is not abstract}} \
+// expected-note@-1 {{because it is an array type}} \
+// expected-note@-1 {{because it is not a struct or class type}}
+
+using Ref = int&;
+static_assert(__is_abstract(Ref));
+// expected-error@-1 {{static assertion failed due to requirement '__is_abstract(int &)'}} \
+// expected-note@-1 {{'Ref' (aka 'int &') is not abstract}} \
+// expected-note@-1 {{because it is a reference type}} \
+// expected-note@-1 {{because it is not a struct or class type}}
+
+using Ptr = int*;
+static_assert(__is_abstract(Ptr));
+// expected-error@-1 {{static assertion failed due to requirement '__is_abstract(int *)'}} \
+// expected-note@-1 {{'Ptr' (aka 'int *') is not abstract}} \
+// expected-note@-1 {{because it is a pointer type}} \
+// expected-note@-1 {{because it is not a struct or class type}}
+
+union U { int x; float y;};
+static_assert(__is_abstract(U));
+// expected-error@-1 {{static assertion failed due to requirement '__is_abstract(is_abstract_tests::U)'}} \
+// expected-note@-1 {{'U' is not abstract}} \
+// expected-note@-1 {{because it is a union type}} \
+// expected-note@-1 {{because it is not a struct or class type}}
+
 }

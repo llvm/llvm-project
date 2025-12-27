@@ -29,7 +29,6 @@ define void @test(i32 %arg, i32 %L1.limit, i32 %L2.switch, i1 %c, ptr %dst) {
 ; CHECK:       L1.early.exit:
 ; CHECK-NEXT:    ret void
 ; CHECK:       L1.exit:
-; CHECK-NEXT:    [[INDUCTION_IV_LCSSA1:%.*]] = phi i32 [ [[INDUCTION_IV]], [[L1_BACKEDGE]] ]
 ; CHECK-NEXT:    [[L1_EXIT_VAL:%.*]] = phi i32 [ [[L1_SUM_NEXT]], [[L1_BACKEDGE]] ]
 ; CHECK-NEXT:    br label [[L2_HEADER:%.*]]
 ; CHECK:       L2.header.loopexit:
@@ -42,15 +41,15 @@ define void @test(i32 %arg, i32 %L1.limit, i32 %L2.switch, i1 %c, ptr %dst) {
 ; CHECK:       L2.header.backedge:
 ; CHECK-NEXT:    br label [[L2_HEADER]]
 ; CHECK:       L2.Inner.header.preheader:
-; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[L1_EXIT_VAL]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <4 x i32> [[DOTSPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[DOTSPLATINSERT1:%.*]] = insertelement <4 x i32> poison, i32 [[INDUCTION_IV_LCSSA1]], i64 0
+; CHECK-NEXT:    [[DOTSPLATINSERT1:%.*]] = insertelement <4 x i32> poison, i32 [[INDUCTION_IV]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT1:%.*]] = shufflevector <4 x i32> [[DOTSPLATINSERT1]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP4:%.*]] = mul <4 x i32> <i32 0, i32 1, i32 2, i32 3>, [[DOTSPLAT1]]
 ; CHECK-NEXT:    [[INDUCTION:%.*]] = add <4 x i32> splat (i32 1), [[TMP4]]
-; CHECK-NEXT:    [[TMP5:%.*]] = mul i32 [[INDUCTION_IV_LCSSA1]], 4
+; CHECK-NEXT:    [[TMP5:%.*]] = mul i32 [[INDUCTION_IV]], 4
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[TMP5]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -67,19 +66,7 @@ define void @test(i32 %arg, i32 %L1.limit, i32 %L2.switch, i1 %c, ptr %dst) {
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], 12
 ; CHECK-NEXT:    br i1 [[TMP11]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br label [[L2_HEADER_LOOPEXIT:%.*]]
-; CHECK:       scalar.ph:
 ; CHECK-NEXT:    br label [[L2_INNER_HEADER:%.*]]
-; CHECK:       L2.Inner.header:
-; CHECK-NEXT:    [[L2_ACCUM:%.*]] = phi i32 [ [[L2_ACCUM_NEXT:%.*]], [[L2_INNER_HEADER]] ], [ 1, [[SCALAR_PH]] ]
-; CHECK-NEXT:    [[L2_IV:%.*]] = phi i64 [ [[L2_IV_NEXT:%.*]], [[L2_INNER_HEADER]] ], [ 1, [[SCALAR_PH]] ]
-; CHECK-NEXT:    [[L2_ACCUM_NEXT]] = sub i32 [[L2_ACCUM]], [[L1_EXIT_VAL]]
-; CHECK-NEXT:    [[L2_DUMMY_BUT_NEED_IT:%.*]] = sext i32 [[L2_ACCUM_NEXT]] to i64
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i64, ptr [[DST]], i64 [[L2_IV]]
-; CHECK-NEXT:    store i64 [[L2_DUMMY_BUT_NEED_IT]], ptr [[GEP]], align 8
-; CHECK-NEXT:    [[L2_IV_NEXT]] = add nuw nsw i64 [[L2_IV]], 1
-; CHECK-NEXT:    [[L2_EXIT_COND:%.*]] = icmp ugt i64 [[L2_IV]], 11
-; CHECK-NEXT:    br i1 [[L2_EXIT_COND]], label [[L2_HEADER_LOOPEXIT]], label [[L2_INNER_HEADER]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       L2.exit:
 ; CHECK-NEXT:    ret void
 ;

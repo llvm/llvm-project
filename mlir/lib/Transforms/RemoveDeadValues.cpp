@@ -33,6 +33,7 @@
 
 #include "mlir/Analysis/DataFlow/DeadCodeAnalysis.h"
 #include "mlir/Analysis/DataFlow/LivenessAnalysis.h"
+#include "mlir/Dialect/UB/IR/UBOps.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/Dialect.h"
@@ -85,9 +86,16 @@ struct FunctionToCleanUp {
   BitVector nonLiveRets;
 };
 
-struct OperationToCleanup {
+struct ResultsToCleanup {
   Operation *op;
   BitVector nonLive;
+};
+
+struct OperandsToCleanup {
+  Operation *op;
+  BitVector nonLive;
+  Operation *callee =
+      nullptr; // Optional: For CallOpInterface ops, stores the callee function
 };
 
 struct BlockArgsToCleanup {
@@ -105,8 +113,8 @@ struct RDVFinalCleanupList {
   SmallVector<Operation *> operations;
   SmallVector<Value> values;
   SmallVector<FunctionToCleanUp> functions;
-  SmallVector<OperationToCleanup> operands;
-  SmallVector<OperationToCleanup> results;
+  SmallVector<OperandsToCleanup> operands;
+  SmallVector<ResultsToCleanup> results;
   SmallVector<BlockArgsToCleanup> blocks;
   SmallVector<SuccessorOperandsToCleanup> successorOperands;
 };
@@ -203,21 +211,17 @@ static void dropUsesAndEraseResults(Operation *op, BitVector toErase) {
   for (OpResult result : op->getResults())
     if (!toErase[result.getResultNumber()])
       newResultTypes.push_back(result.getType());
-  OpBuilder builder(op);
-  builder.setInsertionPointAfter(op);
+  IRRewriter rewriter(op);
+  rewriter.setInsertionPointAfter(op);
   OperationState state(op->getLoc(), op->getName().getStringRef(),
                        op->getOperands(), newResultTypes, op->getAttrs());
   for (unsigned i = 0, e = op->getNumRegions(); i < e; ++i)
     state.addRegion();
-  Operation *newOp = builder.create(state);
+  Operation *newOp = rewriter.create(state);
   for (const auto &[index, region] : llvm::enumerate(op->getRegions())) {
-    Region &newRegion = newOp->getRegion(index);
     // Move all blocks of `region` into `newRegion`.
-    Block *temp = new Block();
-    newRegion.push_back(temp);
-    while (!region.empty())
-      region.front().moveBefore(temp);
-    temp->erase();
+    Region &newRegion = newOp->getRegion(index);
+    rewriter.inlineRegionBefore(region, newRegion, newRegion.begin());
   }
 
   unsigned indexOfNextNewCallOpResultToReplace = 0;
@@ -258,17 +262,35 @@ static SmallVector<OpOperand *> operandsToOpOperands(OperandRange operands) {
 static void processSimpleOp(Operation *op, RunLivenessAnalysis &la,
                             DenseSet<Value> &nonLiveSet,
                             RDVFinalCleanupList &cl) {
+  // Operations that have dead operands can be erased regardless of their
+  // side effects. The liveness analysis would not have marked an SSA value as
+  // "dead" if it had a side-effecting user that is reachable.
+  bool hasDeadOperand =
+      markLives(op->getOperands(), nonLiveSet, la).flip().any();
+  if (hasDeadOperand) {
+    LDBG() << "Simple op has dead operands, so the op must be dead: "
+           << OpWithFlags(op,
+                          OpPrintingFlags().skipRegions().printGenericOpForm());
+    assert(!hasLive(op->getResults(), nonLiveSet, la) &&
+           "expected the op to have no live results");
+    cl.operations.push_back(op);
+    collectNonLiveValues(nonLiveSet, op->getResults(),
+                         BitVector(op->getNumResults(), true));
+    return;
+  }
+
   if (!isMemoryEffectFree(op) || hasLive(op->getResults(), nonLiveSet, la)) {
     LDBG() << "Simple op is not memory effect free or has live results, "
               "preserving it: "
-           << OpWithFlags(op, OpPrintingFlags().skipRegions());
+           << OpWithFlags(op,
+                          OpPrintingFlags().skipRegions().printGenericOpForm());
     return;
   }
 
   LDBG()
       << "Simple op has all dead results and is memory effect free, scheduling "
          "for removal: "
-      << OpWithFlags(op, OpPrintingFlags().skipRegions());
+      << OpWithFlags(op, OpPrintingFlags().skipRegions().printGenericOpForm());
   cl.operations.push_back(op);
   collectNonLiveValues(nonLiveSet, op->getResults(),
                        BitVector(op->getNumResults(), true));
@@ -287,7 +309,9 @@ static void processSimpleOp(Operation *op, RunLivenessAnalysis &la,
 static void processFuncOp(FunctionOpInterface funcOp, Operation *module,
                           RunLivenessAnalysis &la, DenseSet<Value> &nonLiveSet,
                           RDVFinalCleanupList &cl) {
-  LDBG() << "Processing function op: " << funcOp.getOperation()->getName();
+  LDBG() << "Processing function op: "
+         << OpWithFlags(funcOp,
+                        OpPrintingFlags().skipRegions().printGenericOpForm());
   if (funcOp.isPublic() || funcOp.isExternal()) {
     LDBG() << "Function is public or external, skipping: "
            << funcOp.getOperation()->getName();
@@ -306,19 +330,19 @@ static void processFuncOp(FunctionOpInterface funcOp, Operation *module,
       nonLiveSet.insert(arg);
     }
 
-  // Do (2).
+  // Do (2). (Skip creating generic operand cleanup entries for call ops.
+  // Call arguments will be removed in the call-site specific segment-aware
+  // cleanup, avoiding generic eraseOperands bitvector mechanics.)
   SymbolTable::UseRange uses = *funcOp.getSymbolUses(module);
   for (SymbolTable::SymbolUse use : uses) {
     Operation *callOp = use.getUser();
     assert(isa<CallOpInterface>(callOp) && "expected a call-like user");
-    // The number of operands in the call op may not match the number of
-    // arguments in the func op.
-    BitVector nonLiveCallOperands(callOp->getNumOperands(), false);
-    SmallVector<OpOperand *> callOpOperands =
-        operandsToOpOperands(cast<CallOpInterface>(callOp).getArgOperands());
-    for (int index : nonLiveArgs.set_bits())
-      nonLiveCallOperands.set(callOpOperands[index]->getOperandNumber());
-    cl.operands.push_back({callOp, nonLiveCallOperands});
+    // Push an empty operand cleanup entry so that call-site specific logic in
+    // cleanUpDeadVals runs (it keys off CallOpInterface). The BitVector is
+    // intentionally all false to avoid generic erasure.
+    // Store the funcOp as the callee to avoid expensive symbol lookup later.
+    cl.operands.push_back({callOp, BitVector(callOp->getNumOperands(), false),
+                           funcOp.getOperation()});
   }
 
   // Do (3).
@@ -358,6 +382,8 @@ static void processFuncOp(FunctionOpInterface funcOp, Operation *module,
   // block other than the entry block, because every block has a terminator.
   for (Block &block : funcOp.getBlocks()) {
     Operation *returnOp = block.getTerminator();
+    if (!returnOp->hasTrait<OpTrait::ReturnLike>())
+      continue;
     if (returnOp && returnOp->getNumOperands() == numReturns)
       cl.operands.push_back({returnOp, nonLiveRets});
   }
@@ -410,7 +436,21 @@ static void processRegionBranchOp(RegionBranchOpInterface regionBranchOp,
                                   DenseSet<Value> &nonLiveSet,
                                   RDVFinalCleanupList &cl) {
   LDBG() << "Processing region branch op: "
-         << OpWithFlags(regionBranchOp, OpPrintingFlags().skipRegions());
+         << OpWithFlags(regionBranchOp,
+                        OpPrintingFlags().skipRegions().printGenericOpForm());
+
+  // Scenario 1. This is the only case where the entire `regionBranchOp`
+  // is removed. It will not happen in any other scenario. Note that in this
+  // case, a non-forwarded operand of `regionBranchOp` could be live/non-live.
+  // It could never be live because of this op but its liveness could have been
+  // attributed to something else.
+  // Do (1') and (2').
+  if (isMemoryEffectFree(regionBranchOp.getOperation()) &&
+      !hasLive(regionBranchOp->getResults(), nonLiveSet, la)) {
+    cl.operations.push_back(regionBranchOp.getOperation());
+    return;
+  }
+
   // Mark live results of `regionBranchOp` in `liveResults`.
   auto markLiveResults = [&](BitVector &liveResults) {
     liveResults = markLives(regionBranchOp->getResults(), nonLiveSet, la);
@@ -429,8 +469,7 @@ static void processRegionBranchOp(RegionBranchOpInterface regionBranchOp,
 
   // Return the successors of `region` if the latter is not null. Else return
   // the successors of `regionBranchOp`.
-  auto getSuccessors = [&](Region *region = nullptr) {
-    auto point = region ? region : RegionBranchPoint::parent();
+  auto getSuccessors = [&](RegionBranchPoint point) {
     SmallVector<RegionSuccessor> successors;
     regionBranchOp.getSuccessorRegions(point, successors);
     return successors;
@@ -453,7 +492,8 @@ static void processRegionBranchOp(RegionBranchOpInterface regionBranchOp,
   // `nonForwardedOperands`.
   auto markNonForwardedOperands = [&](BitVector &nonForwardedOperands) {
     nonForwardedOperands.resize(regionBranchOp->getNumOperands(), true);
-    for (const RegionSuccessor &successor : getSuccessors()) {
+    for (const RegionSuccessor &successor :
+         getSuccessors(RegionBranchPoint::parent())) {
       for (OpOperand *opOperand : getForwardedOpOperands(successor))
         nonForwardedOperands.reset(opOperand->getOperandNumber());
     }
@@ -466,10 +506,13 @@ static void processRegionBranchOp(RegionBranchOpInterface regionBranchOp,
         for (Region &region : regionBranchOp->getRegions()) {
           if (region.empty())
             continue;
+          // TODO: this isn't correct in face of multiple terminators.
           Operation *terminator = region.front().getTerminator();
           nonForwardedRets[terminator] =
               BitVector(terminator->getNumOperands(), true);
-          for (const RegionSuccessor &successor : getSuccessors(&region)) {
+          for (const RegionSuccessor &successor :
+               getSuccessors(RegionBranchPoint(
+                   cast<RegionBranchTerminatorOpInterface>(terminator)))) {
             for (OpOperand *opOperand :
                  getForwardedOpOperands(successor, terminator))
               nonForwardedRets[terminator].reset(opOperand->getOperandNumber());
@@ -486,8 +529,13 @@ static void processRegionBranchOp(RegionBranchOpInterface regionBranchOp,
           DenseMap<Region *, BitVector> &argsToKeep, Region *region = nullptr) {
         Operation *terminator =
             region ? region->front().getTerminator() : nullptr;
+        RegionBranchPoint point =
+            terminator
+                ? RegionBranchPoint(
+                      cast<RegionBranchTerminatorOpInterface>(terminator))
+                : RegionBranchPoint::parent();
 
-        for (const RegionSuccessor &successor : getSuccessors(region)) {
+        for (const RegionSuccessor &successor : getSuccessors(point)) {
           Region *successorRegion = successor.getSuccessor();
           for (auto [opOperand, input] :
                llvm::zip(getForwardedOpOperands(successor, terminator),
@@ -514,7 +562,8 @@ static void processRegionBranchOp(RegionBranchOpInterface regionBranchOp,
         resultsOrArgsToKeepChanged = false;
 
         // Recompute `resultsToKeep` and `argsToKeep` based on `operandsToKeep`.
-        for (const RegionSuccessor &successor : getSuccessors()) {
+        for (const RegionSuccessor &successor :
+             getSuccessors(RegionBranchPoint::parent())) {
           Region *successorRegion = successor.getSuccessor();
           for (auto [opOperand, input] :
                llvm::zip(getForwardedOpOperands(successor),
@@ -548,7 +597,9 @@ static void processRegionBranchOp(RegionBranchOpInterface regionBranchOp,
           if (region.empty())
             continue;
           Operation *terminator = region.front().getTerminator();
-          for (const RegionSuccessor &successor : getSuccessors(&region)) {
+          for (const RegionSuccessor &successor :
+               getSuccessors(RegionBranchPoint(
+                   cast<RegionBranchTerminatorOpInterface>(terminator)))) {
             Region *successorRegion = successor.getSuccessor();
             for (auto [opOperand, input] :
                  llvm::zip(getForwardedOpOperands(successor, terminator),
@@ -608,18 +659,6 @@ static void processRegionBranchOp(RegionBranchOpInterface regionBranchOp,
               terminatorOperandsToKeep, resultsOrArgsToKeepChanged);
         }
       };
-
-  // Scenario 1. This is the only case where the entire `regionBranchOp`
-  // is removed. It will not happen in any other scenario. Note that in this
-  // case, a non-forwarded operand of `regionBranchOp` could be live/non-live.
-  // It could never be live because of this op but its liveness could have been
-  // attributed to something else.
-  // Do (1') and (2').
-  if (isMemoryEffectFree(regionBranchOp.getOperation()) &&
-      !hasLive(regionBranchOp->getResults(), nonLiveSet, la)) {
-    cl.operations.push_back(regionBranchOp.getOperation());
-    return;
-  }
 
   // Scenario 2.
   // At this point, we know that every non-forwarded operand of `regionBranchOp`
@@ -686,7 +725,11 @@ static void processRegionBranchOp(RegionBranchOpInterface regionBranchOp,
 }
 
 /// Steps to process a `BranchOpInterface` operation:
-/// Iterate through each successor block of `branchOp`.
+///
+/// When a non-forwarded operand is dead (e.g., the condition value of a
+/// conditional branch op), the entire operation is dead.
+///
+/// Otherwise, iterate through each successor block of `branchOp`.
 /// (1) For each successor block, gather all operands from all successors.
 /// (2) Fetch their associated liveness analysis data and collect for future
 ///     removal.
@@ -697,7 +740,22 @@ static void processBranchOp(BranchOpInterface branchOp, RunLivenessAnalysis &la,
                             DenseSet<Value> &nonLiveSet,
                             RDVFinalCleanupList &cl) {
   LDBG() << "Processing branch op: " << *branchOp;
+
+  // Check for dead non-forwarded operands.
+  BitVector deadNonForwardedOperands =
+      markLives(branchOp->getOperands(), nonLiveSet, la).flip();
   unsigned numSuccessors = branchOp->getNumSuccessors();
+  for (unsigned succIdx = 0; succIdx < numSuccessors; ++succIdx) {
+    SuccessorOperands successorOperands =
+        branchOp.getSuccessorOperands(succIdx);
+    // Remove all non-forwarded operands from the bit vector.
+    for (OpOperand &opOperand : successorOperands.getMutableForwardedOperands())
+      deadNonForwardedOperands[opOperand.getOperandNumber()] = false;
+  }
+  if (deadNonForwardedOperands.any()) {
+    cl.operations.push_back(branchOp.getOperation());
+    return;
+  }
 
   for (unsigned succIdx = 0; succIdx < numSuccessors; ++succIdx) {
     Block *successorBlock = branchOp->getSuccessor(succIdx);
@@ -728,75 +786,32 @@ static void processBranchOp(BranchOpInterface branchOp, RunLivenessAnalysis &la,
 static void cleanUpDeadVals(RDVFinalCleanupList &list) {
   LDBG() << "Starting cleanup of dead values...";
 
-  // 1. Operations
-  LDBG() << "Cleaning up " << list.operations.size() << " operations";
-  for (auto &op : list.operations) {
-    LDBG() << "Erasing operation: "
-           << OpWithFlags(op, OpPrintingFlags().skipRegions());
-    op->dropAllUses();
-    op->erase();
-  }
-
-  // 2. Values
-  LDBG() << "Cleaning up " << list.values.size() << " values";
-  for (auto &v : list.values) {
-    LDBG() << "Dropping all uses of value: " << v;
-    v.dropAllUses();
-  }
-
-  // 3. Functions
-  LDBG() << "Cleaning up " << list.functions.size() << " functions";
-  for (auto &f : list.functions) {
-    LDBG() << "Cleaning up function: " << f.funcOp.getOperation()->getName();
-    LDBG() << "  Erasing " << f.nonLiveArgs.count() << " non-live arguments";
-    LDBG() << "  Erasing " << f.nonLiveRets.count()
-           << " non-live return values";
-    // Some functions may not allow erasing arguments or results. These calls
-    // return failure in such cases without modifying the function, so it's okay
-    // to proceed.
-    (void)f.funcOp.eraseArguments(f.nonLiveArgs);
-    (void)f.funcOp.eraseResults(f.nonLiveRets);
-  }
-
-  // 4. Operands
-  LDBG() << "Cleaning up " << list.operands.size() << " operand lists";
-  for (OperationToCleanup &o : list.operands) {
-    if (o.op->getNumOperands() > 0) {
-      LDBG() << "Erasing " << o.nonLive.count()
-             << " non-live operands from operation: "
-             << OpWithFlags(o.op, OpPrintingFlags().skipRegions());
-      o.op->eraseOperands(o.nonLive);
-    }
-  }
-
-  // 5. Results
-  LDBG() << "Cleaning up " << list.results.size() << " result lists";
-  for (auto &r : list.results) {
-    LDBG() << "Erasing " << r.nonLive.count()
-           << " non-live results from operation: "
-           << OpWithFlags(r.op, OpPrintingFlags().skipRegions());
-    dropUsesAndEraseResults(r.op, r.nonLive);
-  }
-
-  // 6. Blocks
+  // 1. Blocks, We must remove the block arguments and successor operands before
+  // deleting the operation, as they may reside in the region operation.
   LDBG() << "Cleaning up " << list.blocks.size() << " block argument lists";
   for (auto &b : list.blocks) {
     // blocks that are accessed via multiple codepaths processed once
     if (b.b->getNumArguments() != b.nonLiveArgs.size())
       continue;
-    LDBG() << "Erasing " << b.nonLiveArgs.count()
-           << " non-live arguments from block: " << b.b;
-    // it iterates backwards because erase invalidates all successor indexes
+    LDBG_OS([&](raw_ostream &os) {
+      os << "Erasing non-live arguments [";
+      llvm::interleaveComma(b.nonLiveArgs.set_bits(), os);
+      os << "] from block: " << b.b << " in region "
+         << b.b->getParent()->getRegionNumber() << " of operation "
+         << OpWithFlags(b.b->getParent()->getParentOp(),
+                        OpPrintingFlags().skipRegions().printGenericOpForm());
+    });
+    // Note: Iterate from the end to make sure that that indices of not yet
+    // processes arguments do not change.
     for (int i = b.nonLiveArgs.size() - 1; i >= 0; --i) {
       if (!b.nonLiveArgs[i])
         continue;
-      LDBG() << "  Erasing block argument " << i << ": " << b.b->getArgument(i);
       b.b->getArgument(i).dropAllUses();
       b.b->eraseArgument(i);
     }
   }
 
-  // 7. Successor Operands
+  // 2. Successor Operands
   LDBG() << "Cleaning up " << list.successorOperands.size()
          << " successor operand lists";
   for (auto &op : list.successorOperands) {
@@ -805,20 +820,132 @@ static void cleanUpDeadVals(RDVFinalCleanupList &list) {
     // blocks that are accessed via multiple codepaths processed once
     if (successorOperands.size() != op.nonLiveOperands.size())
       continue;
-    LDBG() << "Erasing " << op.nonLiveOperands.count()
-           << " non-live successor operands from successor "
-           << op.successorIndex << " of branch: "
-           << OpWithFlags(op.branch, OpPrintingFlags().skipRegions());
+    LDBG_OS([&](raw_ostream &os) {
+      os << "Erasing non-live successor operands [";
+      llvm::interleaveComma(op.nonLiveOperands.set_bits(), os);
+      os << "] from successor " << op.successorIndex << " of branch: "
+         << OpWithFlags(op.branch.getOperation(),
+                        OpPrintingFlags().skipRegions().printGenericOpForm());
+    });
     // it iterates backwards because erase invalidates all successor indexes
     for (int i = successorOperands.size() - 1; i >= 0; --i) {
       if (!op.nonLiveOperands[i])
         continue;
-      LDBG() << "  Erasing successor operand " << i << ": "
-             << successorOperands[i];
       successorOperands.erase(i);
     }
   }
 
+  // 3. Operations
+  LDBG() << "Cleaning up " << list.operations.size() << " operations";
+  for (Operation *op : list.operations) {
+    LDBG() << "Erasing operation: "
+           << OpWithFlags(op,
+                          OpPrintingFlags().skipRegions().printGenericOpForm());
+    if (op->hasTrait<OpTrait::IsTerminator>()) {
+      // When erasing a terminator, insert an unreachable op in its place.
+      OpBuilder b(op);
+      ub::UnreachableOp::create(b, op->getLoc());
+    }
+    op->dropAllUses();
+    op->erase();
+  }
+
+  // 4. Values
+  LDBG() << "Cleaning up " << list.values.size() << " values";
+  for (auto &v : list.values) {
+    LDBG() << "Dropping all uses of value: " << v;
+    v.dropAllUses();
+  }
+
+  // 5. Functions
+  LDBG() << "Cleaning up " << list.functions.size() << " functions";
+  // Record which function arguments were erased so we can shrink call-site
+  // argument segments for CallOpInterface operations (e.g. ops using
+  // AttrSizedOperandSegments) in the next phase.
+  DenseMap<Operation *, BitVector> erasedFuncArgs;
+  for (auto &f : list.functions) {
+    LDBG() << "Cleaning up function: " << f.funcOp.getOperation()->getName()
+           << " (" << f.funcOp.getOperation() << ")";
+    LDBG_OS([&](raw_ostream &os) {
+      os << "  Erasing non-live arguments [";
+      llvm::interleaveComma(f.nonLiveArgs.set_bits(), os);
+      os << "]\n";
+      os << "  Erasing non-live return values [";
+      llvm::interleaveComma(f.nonLiveRets.set_bits(), os);
+      os << "]";
+    });
+    // Some functions may not allow erasing arguments or results. These calls
+    // return failure in such cases without modifying the function, so it's okay
+    // to proceed.
+    if (succeeded(f.funcOp.eraseArguments(f.nonLiveArgs))) {
+      // Record only if we actually erased something.
+      if (f.nonLiveArgs.any())
+        erasedFuncArgs.try_emplace(f.funcOp.getOperation(), f.nonLiveArgs);
+    }
+    (void)f.funcOp.eraseResults(f.nonLiveRets);
+  }
+
+  // 6. Operands
+  LDBG() << "Cleaning up " << list.operands.size() << " operand lists";
+  for (OperandsToCleanup &o : list.operands) {
+    // Handle call-specific cleanup only when we have a cached callee reference.
+    // This avoids expensive symbol lookup and is defensive against future
+    // changes.
+    bool handledAsCall = false;
+    if (o.callee && isa<CallOpInterface>(o.op)) {
+      auto call = cast<CallOpInterface>(o.op);
+      auto it = erasedFuncArgs.find(o.callee);
+      if (it != erasedFuncArgs.end()) {
+        const BitVector &deadArgIdxs = it->second;
+        MutableOperandRange args = call.getArgOperandsMutable();
+        // First, erase the call arguments corresponding to erased callee
+        // args. We iterate backwards to preserve indices.
+        for (unsigned argIdx : llvm::reverse(deadArgIdxs.set_bits()))
+          args.erase(argIdx);
+        // If this operand cleanup entry also has a generic nonLive bitvector,
+        // clear bits for call arguments we already erased above to avoid
+        // double-erasing (which could impact other segments of ops with
+        // AttrSizedOperandSegments).
+        if (o.nonLive.any()) {
+          // Map the argument logical index to the operand number(s) recorded.
+          int operandOffset = call.getArgOperands().getBeginOperandIndex();
+          for (int argIdx : deadArgIdxs.set_bits()) {
+            int operandNumber = operandOffset + argIdx;
+            if (operandNumber < static_cast<int>(o.nonLive.size()))
+              o.nonLive.reset(operandNumber);
+          }
+        }
+        handledAsCall = true;
+      }
+    }
+    // Perform generic operand erasure for:
+    // - Non-call operations
+    // - Call operations without cached callee (where handledAsCall is false)
+    // But skip call operations that were already handled via segment-aware path
+    if (!handledAsCall && o.nonLive.any()) {
+      LDBG_OS([&](raw_ostream &os) {
+        os << "Erasing non-live operands [";
+        llvm::interleaveComma(o.nonLive.set_bits(), os);
+        os << "] from operation: "
+           << OpWithFlags(o.op,
+                          OpPrintingFlags().skipRegions().printGenericOpForm());
+      });
+      o.op->eraseOperands(o.nonLive);
+    }
+  }
+
+  // 7. Results
+  LDBG() << "Cleaning up " << list.results.size() << " result lists";
+  for (auto &r : list.results) {
+    LDBG_OS([&](raw_ostream &os) {
+      os << "Erasing non-live results [";
+      llvm::interleaveComma(r.nonLive.set_bits(), os);
+      os << "] from operation: "
+         << OpWithFlags(r.op,
+                        OpPrintingFlags().skipRegions().printGenericOpForm());
+    });
+    dropUsesAndEraseResults(r.op, r.nonLive);
+  }
   LDBG() << "Finished cleanup of dead values";
 }
 

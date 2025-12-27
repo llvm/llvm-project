@@ -21,6 +21,7 @@
 #include "llvm/CodeGen/FunctionLoweringInfo.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
+#include "llvm/CodeGen/PseudoSourceValueManager.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 
 #define DEBUG_TYPE "amdgpu-call-lowering"
@@ -414,7 +415,8 @@ void AMDGPUCallLowering::lowerParameter(MachineIRBuilder &B, ArgInfo &OrigArg,
   MachineFunction &MF = B.getMF();
   const Function &F = MF.getFunction();
   const DataLayout &DL = F.getDataLayout();
-  MachinePointerInfo PtrInfo(AMDGPUAS::CONSTANT_ADDRESS);
+  const SITargetLowering &TLI = *getTLI<SITargetLowering>();
+  MachinePointerInfo PtrInfo = TLI.getKernargSegmentPtrInfo(MF);
 
   LLT PtrTy = LLT::pointer(AMDGPUAS::CONSTANT_ADDRESS, 64);
 
@@ -809,15 +811,15 @@ bool AMDGPUCallLowering::passSpecialInputs(MachineIRBuilder &MIRBuilder,
     AMDGPUFunctionArgInfo::LDS_KERNEL_ID,
   };
 
-  static constexpr StringLiteral ImplicitAttrNames[] = {
-    "amdgpu-no-dispatch-ptr",
-    "amdgpu-no-queue-ptr",
-    "amdgpu-no-implicitarg-ptr",
-    "amdgpu-no-dispatch-id",
-    "amdgpu-no-workgroup-id-x",
-    "amdgpu-no-workgroup-id-y",
-    "amdgpu-no-workgroup-id-z",
-    "amdgpu-no-lds-kernel-id",
+  static constexpr StringLiteral ImplicitAttrNames[][2] = {
+      {"amdgpu-no-dispatch-ptr", ""},
+      {"amdgpu-no-queue-ptr", ""},
+      {"amdgpu-no-implicitarg-ptr", ""},
+      {"amdgpu-no-dispatch-id", ""},
+      {"amdgpu-no-workgroup-id-x", "amdgpu-no-cluster-id-x"},
+      {"amdgpu-no-workgroup-id-y", "amdgpu-no-cluster-id-y"},
+      {"amdgpu-no-workgroup-id-z", "amdgpu-no-cluster-id-z"},
+      {"amdgpu-no-lds-kernel-id", ""},
   };
 
   MachineRegisterInfo &MRI = MF.getRegInfo();
@@ -833,7 +835,9 @@ bool AMDGPUCallLowering::passSpecialInputs(MachineIRBuilder &MIRBuilder,
     LLT ArgTy;
 
     // If the callee does not use the attribute value, skip copying the value.
-    if (Info.CB->hasFnAttr(ImplicitAttrNames[I++]))
+    if (all_of(ImplicitAttrNames[I++], [&](StringRef AttrName) {
+          return AttrName.empty() || Info.CB->hasFnAttr(AttrName);
+        }))
       continue;
 
     std::tie(OutgoingArg, ArgRC, ArgTy) =

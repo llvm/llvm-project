@@ -1,7 +1,4 @@
-import os
-
 from clang.cindex import (
-    Config,
     CursorKind,
     PrintingPolicy,
     PrintingPolicyProperty,
@@ -10,8 +7,6 @@ from clang.cindex import (
     TypeKind,
 )
 
-if "CLANG_LIBRARY_PATH" in os.environ:
-    Config.set_library_path(os.environ["CLANG_LIBRARY_PATH"])
 
 import gc
 import unittest

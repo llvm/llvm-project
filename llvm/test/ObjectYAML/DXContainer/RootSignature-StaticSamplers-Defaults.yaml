@@ -22,7 +22,7 @@ Parts:
       Samplers: 
         - ShaderRegister: 31 
           RegisterSpace: 32
-          ShaderVisibility:  7
+          ShaderVisibility:  Mesh
       AllowInputAssemblerInputLayout: true
       DenyGeometryShaderRootAccess: true
 
@@ -36,18 +36,18 @@ Parts:
 #CHECK-NEXT:      StaticSamplersOffset: 24
 #CHECK-NEXT:      Parameters:      []
 #CHECK-NEXT:      Samplers:
-#CHECK-NEXT:      - Filter:          85
-#CHECK-NEXT:        AddressU:        1
-#CHECK-NEXT:        AddressV:        1
-#CHECK-NEXT:        AddressW:        1
+#CHECK-NEXT:      - Filter:          Anisotropic
+#CHECK-NEXT:        AddressU:        Wrap
+#CHECK-NEXT:        AddressV:        Wrap
+#CHECK-NEXT:        AddressW:        Wrap
 #CHECK-NEXT:        MipLODBias:      0
 #CHECK-NEXT:        MaxAnisotropy:   16
-#CHECK-NEXT:        ComparisonFunc:  4
-#CHECK-NEXT:        BorderColor:     2
+#CHECK-NEXT:        ComparisonFunc:  LessEqual
+#CHECK-NEXT:        BorderColor:     OpaqueWhite
 #CHECK-NEXT:        MinLOD:          0
 #CHECK-NEXT:        MaxLOD:          3.40282e+38
 #CHECK-NEXT:        ShaderRegister:  31
 #CHECK-NEXT:        RegisterSpace:   32
-#CHECK-NEXT:        ShaderVisibility: 7
+#CHECK-NEXT:        ShaderVisibility: Mesh
 #CHECK-NEXT:      AllowInputAssemblerInputLayout: true
 #CHECK-NEXT:      DenyGeometryShaderRootAccess: true

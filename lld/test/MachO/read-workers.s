@@ -1,4 +1,4 @@
-# REQUIRES: x86
+# REQUIRES: x86 && thread_support
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %s -o %t.o
 
 ## A non-negative integer is allowed.

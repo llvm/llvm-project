@@ -549,10 +549,10 @@ void foo3() {
 // CIR-AFTER-PROMOTED: %[[A_IMAG:.*]] = cir.complex.imag %[[TMP_A]] : !cir.complex<!cir.float> -> !cir.float
 // CIR-AFTER-PROMOTED: %[[B_REAL:.*]] = cir.complex.real %[[TMP_B]] : !cir.complex<!cir.float> -> !cir.float
 // CIR-AFTER-PROMOTED: %[[B_IMAG:.*]] = cir.complex.imag %[[TMP_B]] : !cir.complex<!cir.float> -> !cir.float
-// CIR-AFTER-PROMOTED: %[[A_REAL_F64:.*]] = cir.cast(floating, %[[A_REAL]] : !cir.float), !cir.double
-// CIR-AFTER-PROMOTED: %[[A_IMAG_F64:.*]] = cir.cast(floating, %[[A_IMAG]] : !cir.float), !cir.double
-// CIR-AFTER-PROMOTED: %[[B_REAL_F64:.*]] = cir.cast(floating, %[[B_REAL]] : !cir.float), !cir.double
-// CIR-AFTER-PROMOTED: %[[B_IMAG_F64:.*]] = cir.cast(floating, %[[B_IMAG]] : !cir.float), !cir.double
+// CIR-AFTER-PROMOTED: %[[A_REAL_F64:.*]] = cir.cast floating %[[A_REAL]] : !cir.float -> !cir.double
+// CIR-AFTER-PROMOTED: %[[A_IMAG_F64:.*]] = cir.cast floating %[[A_IMAG]] : !cir.float -> !cir.double
+// CIR-AFTER-PROMOTED: %[[B_REAL_F64:.*]] = cir.cast floating %[[B_REAL]] : !cir.float -> !cir.double
+// CIR-AFTER-PROMOTED: %[[B_IMAG_F64:.*]] = cir.cast floating %[[B_IMAG]] : !cir.float -> !cir.double
 // CIR-AFTER-PROMOTED: %[[MUL_AR_BR:.*]] = cir.binop(mul, %[[A_REAL_F64]], %[[B_REAL_F64]]) : !cir.double
 // CIR-AFTER-PROMOTED: %[[MUL_AI_BI:.*]] = cir.binop(mul, %[[A_IMAG_F64]], %[[B_IMAG_F64]]) : !cir.double
 // CIR-AFTER-PROMOTED: %[[MUL_BR_BR:.*]] = cir.binop(mul, %[[B_REAL_F64]], %[[B_REAL_F64]]) : !cir.double
@@ -567,8 +567,8 @@ void foo3() {
 // CIR-AFTER-PROMOTED: %[[RESULT_F64:.*]] = cir.complex.create %[[RESULT_REAL]], %[[RESULT_IMAG]] : !cir.double -> !cir.complex<!cir.double>
 // CIR-AFTER-PROMOTED: %[[RESULT_REAL_F64:.*]] = cir.complex.real %[[RESULT_F64]] : !cir.complex<!cir.double> -> !cir.double
 // CIR-AFTER-PROMOTED: %[[RESULT_IMAG_F64:.*]] = cir.complex.imag %[[RESULT_F64]] : !cir.complex<!cir.double> -> !cir.double
-// CIR-AFTER-PROMOTED: %[[RESULT_REAL_F32:.*]] = cir.cast(floating, %[[RESULT_REAL_F64]] : !cir.double), !cir.float
-// CIR-AFTER-PROMOTED: %[[RESULT_IMAG_F32:.*]] = cir.cast(floating, %[[RESULT_IMAG_F64]] : !cir.double), !cir.float
+// CIR-AFTER-PROMOTED: %[[RESULT_REAL_F32:.*]] = cir.cast floating %[[RESULT_REAL_F64]] : !cir.double -> !cir.float
+// CIR-AFTER-PROMOTED: %[[RESULT_IMAG_F32:.*]] = cir.cast floating %[[RESULT_IMAG_F64]] : !cir.double -> !cir.float
 // CIR-AFTER-PROMOTED: %[[RESULT_F32:.*]] = cir.complex.create %[[RESULT_REAL_F32]], %[[RESULT_IMAG_F32]] : !cir.float -> !cir.complex<!cir.float>
 // CIR-AFTER-PROMOTED: cir.store{{.*}} %[[RESULT_F32]], %[[C_ADDR]] : !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>
 
@@ -1044,10 +1044,10 @@ void foo6() {
 // CIR-AFTER-PROMOTED: %[[A_IMAG:.*]] = cir.complex.imag %[[COMPLEX_A]] : !cir.complex<!cir.float> -> !cir.float
 // CIR-AFTER-PROMOTED: %[[B_REAL:.*]] = cir.complex.real %[[TMP_B]] : !cir.complex<!cir.float> -> !cir.float
 // CIR-AFTER-PROMOTED: %[[B_IMAG:.*]] = cir.complex.imag %[[TMP_B]] : !cir.complex<!cir.float> -> !cir.float
-// CIR-AFTER-PROMOTED: %[[A_REAL_F64:.*]] = cir.cast(floating, %[[A_REAL]] : !cir.float), !cir.double
-// CIR-AFTER-PROMOTED: %[[A_IMAG_F64:.*]] = cir.cast(floating, %[[A_IMAG]] : !cir.float), !cir.double
-// CIR-AFTER-PROMOTED: %[[B_REAL_F64:.*]] = cir.cast(floating, %[[B_REAL]] : !cir.float), !cir.double
-// CIR-AFTER-PROMOTED: %[[B_IMAG_F64:.*]] = cir.cast(floating, %[[B_IMAG]] : !cir.float), !cir.double
+// CIR-AFTER-PROMOTED: %[[A_REAL_F64:.*]] = cir.cast floating %[[A_REAL]] : !cir.float -> !cir.double
+// CIR-AFTER-PROMOTED: %[[A_IMAG_F64:.*]] = cir.cast floating %[[A_IMAG]] : !cir.float -> !cir.double
+// CIR-AFTER-PROMOTED: %[[B_REAL_F64:.*]] = cir.cast floating %[[B_REAL]] : !cir.float -> !cir.double
+// CIR-AFTER-PROMOTED: %[[B_IMAG_F64:.*]] = cir.cast floating %[[B_IMAG]] : !cir.float -> !cir.double
 // CIR-AFTER-PROMOTED: %[[MUL_AR_BR:.*]] = cir.binop(mul, %[[A_REAL_F64]], %[[B_REAL_F64]]) : !cir.double
 // CIR-AFTER-PROMOTED: %[[MUL_AI_BI:.*]] = cir.binop(mul, %[[A_IMAG_F64]], %[[B_IMAG_F64]]) : !cir.double
 // CIR-AFTER-PROMOTED: %[[MUL_BR_BR:.*]] = cir.binop(mul, %[[B_REAL_F64]], %[[B_REAL_F64]]) : !cir.double
@@ -1062,8 +1062,8 @@ void foo6() {
 // CIR-AFTER-PROMOTED: %[[RESULT_F64:.*]] = cir.complex.create %[[RESULT_REAL]], %[[RESULT_IMAG]] : !cir.double -> !cir.complex<!cir.double>
 // CIR-AFTER-PROMOTED: %[[RESULT_REAL_F64:.*]] = cir.complex.real %[[RESULT_F64]] : !cir.complex<!cir.double> -> !cir.double
 // CIR-AFTER-PROMOTED: %[[RESULT_IMAG_F64:.*]] = cir.complex.imag %[[RESULT_F64]] : !cir.complex<!cir.double> -> !cir.double
-// CIR-AFTER-PROMOTED: %[[RESULT_REAL_F32:.*]] = cir.cast(floating, %[[RESULT_REAL_F64]] : !cir.double), !cir.float
-// CIR-AFTER-PROMOTED: %[[RESULT_IMAG_F32:.*]] = cir.cast(floating, %[[RESULT_IMAG_F64]] : !cir.double), !cir.float
+// CIR-AFTER-PROMOTED: %[[RESULT_REAL_F32:.*]] = cir.cast floating %[[RESULT_REAL_F64]] : !cir.double -> !cir.float
+// CIR-AFTER-PROMOTED: %[[RESULT_IMAG_F32:.*]] = cir.cast floating %[[RESULT_IMAG_F64]] : !cir.double -> !cir.float
 // CIR-AFTER-PROMOTED: %[[RESULT_F32:.*]] = cir.complex.create %[[RESULT_REAL_F32]], %[[RESULT_IMAG_F32]] : !cir.float -> !cir.complex<!cir.float>
 // CIR-AFTER-PROMOTED: cir.store{{.*}} %[[RESULT_F32]], %[[C_ADDR]] : !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>
 

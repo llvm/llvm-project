@@ -191,7 +191,7 @@ inline DenormalMode::DenormalModeKind
 parseDenormalFPAttributeComponent(StringRef Str) {
   // Assume ieee on unspecified attribute.
   return StringSwitch<DenormalMode::DenormalModeKind>(Str)
-      .Cases("", "ieee", DenormalMode::IEEE)
+      .Cases({"", "ieee"}, DenormalMode::IEEE)
       .Case("preserve-sign", DenormalMode::PreserveSign)
       .Case("positive-zero", DenormalMode::PositiveZero)
       .Case("dynamic", DenormalMode::Dynamic)

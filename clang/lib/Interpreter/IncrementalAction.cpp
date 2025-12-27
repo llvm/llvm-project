@@ -106,7 +106,8 @@ std::unique_ptr<llvm::Module> IncrementalAction::GenModule() {
     // around we created an empty module to make CodeGen happy. We should make
     // sure it always stays empty.
     assert(((!CachedInCodeGenModule ||
-             !CI.getPreprocessorOpts().Includes.empty()) ||
+             !CI.getPreprocessorOpts().Includes.empty() ||
+             !CI.getPreprocessorOpts().ImplicitPCHInclude.empty()) ||
             (CachedInCodeGenModule->empty() &&
              CachedInCodeGenModule->global_empty() &&
              CachedInCodeGenModule->alias_empty() &&
@@ -132,6 +133,11 @@ InProcessPrintingASTConsumer::InProcessPrintingASTConsumer(
 
 bool InProcessPrintingASTConsumer::HandleTopLevelDecl(DeclGroupRef DGR) {
   if (DGR.isNull())
+    return true;
+
+  CompilerInstance *CI = Interp.getCompilerInstance();
+  DiagnosticsEngine &Diags = CI->getDiagnostics();
+  if (Diags.hasErrorOccurred())
     return true;
 
   for (Decl *D : DGR)

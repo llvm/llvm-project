@@ -277,7 +277,8 @@ public:
 
   void Dump(Stream &s) override;
 
-  void DumpClangAST(Stream &s, llvm::StringRef filter) override;
+  void DumpClangAST(Stream &s, llvm::StringRef filter,
+                    bool show_colors) override;
 
   /// List separate dwo files.
   bool GetSeparateDebugInfo(StructuredData::Dictionary &d, bool errors_only,

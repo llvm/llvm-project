@@ -144,12 +144,6 @@ if( LLVM_ENABLE_ASSERTIONS )
   endif()
 endif()
 
-# If we are targeting a GPU architecture in a runtimes build we want to ignore
-# all the standard flag handling.
-if(LLVM_RUNTIMES_GPU_BUILD)
-  return()
-endif()
-
 if(LLVM_ENABLE_EXPENSIVE_CHECKS)
   # When LLVM_ENABLE_EXPENSIVE_CHECKS is ON, LLVM will intercept errors
   # using assert(). An explicit check is performed here.
@@ -238,25 +232,17 @@ if( LLVM_REVERSE_ITERATION )
   set( LLVM_ENABLE_REVERSE_ITERATION 1 )
 endif()
 
-if(WIN32 OR CYGWIN)
+if(WIN32)
   set(LLVM_HAVE_LINK_VERSION_SCRIPT 0)
-  if(CYGWIN)
-    set(LLVM_ON_WIN32 0)
-    set(LLVM_ON_UNIX 1)
-  else()
-    set(LLVM_ON_WIN32 1)
-    set(LLVM_ON_UNIX 0)
-  endif()
-elseif(FUCHSIA OR UNIX)
-  set(LLVM_ON_WIN32 0)
+  set(LLVM_ON_UNIX 0)
+elseif(FUCHSIA OR UNIX OR CYGWIN)
   set(LLVM_ON_UNIX 1)
-  if(APPLE OR "${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
+  if(APPLE OR CYGWIN OR "${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
     set(LLVM_HAVE_LINK_VERSION_SCRIPT 0)
   else()
     set(LLVM_HAVE_LINK_VERSION_SCRIPT 1)
   endif()
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Generic")
-  set(LLVM_ON_WIN32 0)
   set(LLVM_ON_UNIX 0)
   set(LLVM_HAVE_LINK_VERSION_SCRIPT 0)
 else()
@@ -456,13 +442,16 @@ if( LLVM_ENABLE_PIC )
     # Enable interprocedural optimizations for non-inline functions which would
     # otherwise be disabled due to GCC -fPIC's default.
     # Note: GCC<10.3 has a bug on SystemZ.
-    #
+    # Note: Default on AIX is "no semantic interposition".
     # Note: Clang allows IPO for -fPIC so this optimization is less effective.
     # Clang 13 has a bug related to -fsanitize-coverage
     # -fno-semantic-interposition (https://reviews.llvm.org/D117183).
-    if ((CMAKE_COMPILER_IS_GNUCXX AND
-         NOT (LLVM_NATIVE_ARCH STREQUAL "SystemZ" AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 10.3))
-       OR (CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND CMAKE_CXX_COMPILER_VERSION GREATER_EQUAL 14))
+    if ((NOT ("${CMAKE_SYSTEM_NAME}" MATCHES "AIX"))
+        AND ((CMAKE_COMPILER_IS_GNUCXX AND
+              NOT (LLVM_NATIVE_ARCH STREQUAL "SystemZ"
+                   AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 10.3))
+             OR (CMAKE_CXX_COMPILER_ID MATCHES "Clang"
+                 AND CMAKE_CXX_COMPILER_VERSION GREATER_EQUAL 14)))
       add_flag_if_supported("-fno-semantic-interposition" FNO_SEMANTIC_INTERPOSITION)
     endif()
   endif()
@@ -716,16 +705,6 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   append("-Werror=unguarded-availability-new" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
 endif()
 
-if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND LLVM_ENABLE_LTO)
-  # LLVM data structures like llvm::User and llvm::MDNode rely on
-  # the value of object storage persisting beyond the lifetime of the
-  # object (#24952).  This is not standard compliant and causes a runtime
-  # crash if LLVM is built with GCC and LTO enabled (#57740).  Until
-  # these bugs are fixed, we need to disable dead store eliminations
-  # based on object lifetime.
-  append("-fno-lifetime-dse" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
-endif ()
-
 # Modules enablement for GCC-compatible compilers:
 if ( LLVM_COMPILER_IS_GCC_COMPATIBLE AND LLVM_ENABLE_MODULES )
   set(OLD_CMAKE_REQUIRED_FLAGS ${CMAKE_REQUIRED_FLAGS})
@@ -876,38 +855,44 @@ if (LLVM_ENABLE_WARNINGS AND (LLVM_COMPILER_IS_GCC_COMPATIBLE OR CLANG_CL))
   append_if(USE_NO_UNINITIALIZED "-Wno-uninitialized" CMAKE_CXX_FLAGS)
   append_if(USE_NO_MAYBE_UNINITIALIZED "-Wno-maybe-uninitialized" CMAKE_CXX_FLAGS)
 
-  # Disable -Wnonnull for GCC warning as it is emitting a lot of false positives.
   if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    # Disable -Wnonnull for GCC warning as it is emitting a lot of false positives.
     append("-Wno-nonnull" CMAKE_CXX_FLAGS)
-  endif()
 
-  # Disable -Wclass-memaccess, a C++-only warning from GCC 8 that fires on
-  # LLVM's ADT classes.
-  if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    # Disable -Wclass-memaccess, a C++-only warning from GCC 8 that fires on
+    # LLVM's ADT classes.
     if (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 8.1)
       append("-Wno-class-memaccess" CMAKE_CXX_FLAGS)
     endif()
-  endif()
 
-  # Disable -Wdangling-reference, a C++-only warning from GCC 13 that seems
-  # to produce a large number of false positives.
-  if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    # Disable -Wdangling-reference, a C++-only warning from GCC 13 that seems
+    # to produce a large number of false positives.
     if (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 13.1)
       append("-Wno-dangling-reference" CMAKE_CXX_FLAGS)
     endif()
-  endif()
 
-  # Disable -Wredundant-move and -Wpessimizing-move on GCC>=9. GCC wants to
-  # remove std::move in code like
-  # "A foo(ConvertibleToA a) { return std::move(a); }",
-  # but this code does not compile (or uses the copy
-  # constructor instead) on clang<=3.8. Clang also has a -Wredundant-move and
-  # -Wpessimizing-move, but they only fire when the types match exactly, so we
-  # can keep them here.
-  if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    # Disable -Wredundant-move and -Wpessimizing-move on GCC>=9. GCC wants to
+    # remove std::move in code like
+    # "A foo(ConvertibleToA a) { return std::move(a); }",
+    # but this code does not compile (or uses the copy
+    # constructor instead) on clang<=3.8. Clang also has a -Wredundant-move and
+    # -Wpessimizing-move, but they only fire when the types match exactly, so we
+    # can keep them here.
     if (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 9.1)
       append("-Wno-redundant-move" CMAKE_CXX_FLAGS)
       append("-Wno-pessimizing-move" CMAKE_CXX_FLAGS)
+    endif()
+
+    # Disable -Warray-bounds on GCC; this warning exists since a very long time,
+    # but since GCC 11, it produces a lot of very noisy, seemingly false positive
+    # warnings (potentially originating in libstdc++).
+    append("-Wno-array-bounds" CMAKE_CXX_FLAGS)
+
+    # Disable -Wstringop-overread on GCC; this warning produces a number of very
+    # noisy diagnostics when -Warray-bounds is disabled above; this option exists
+    # since GCC 11.
+    if (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 11.1)
+      append("-Wno-stringop-overread" CMAKE_CXX_FLAGS)
     endif()
   endif()
 
@@ -948,6 +933,15 @@ if (LLVM_ENABLE_WARNINGS AND (LLVM_COMPILER_IS_GCC_COMPATIBLE OR CLANG_CL))
   # Enable -Wstring-conversion to catch misuse of string literals.
   if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     append("-Wstring-conversion" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
+
+    # Disable -Wno-pass-failed flag, which reports failure to perform
+    # optimizations suggested by pragmas. This warning is not relevant for LLVM
+    # projects and may be injected by pragmas in libstdc++.
+    # FIXME: Reconsider this choice if warnings from STL headers can be reliably
+    # avoided (https://github.com/llvm/llvm-project/issues/157666).
+    # This option has been available since Clang 3.5, and we do require a newer
+    # version.
+    append("-Wno-pass-failed" CMAKE_CXX_FLAGS)
   endif()
 
   if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
@@ -1141,7 +1135,7 @@ if (UNIX AND
 endif()
 
 # lld doesn't print colored diagnostics when invoked from Ninja
-if (UNIX AND CMAKE_GENERATOR MATCHES "Ninja")
+if (UNIX AND CMAKE_GENERATOR MATCHES "Ninja" AND NOT "${LLVM_RUNTIMES_TARGET}" MATCHES "^nvptx64")
   include(CheckLinkerFlag)
   check_linker_flag(CXX "-Wl,--color-diagnostics" LINKER_SUPPORTS_COLOR_DIAGNOSTICS)
   append_if(LINKER_SUPPORTS_COLOR_DIAGNOSTICS "-Wl,--color-diagnostics"
@@ -1184,7 +1178,7 @@ if(LLVM_ENABLE_EH AND NOT LLVM_ENABLE_RTTI)
   message(FATAL_ERROR "Exception handling requires RTTI. You must set LLVM_ENABLE_RTTI to ON")
 endif()
 
-set(LLVM_BUILD_INSTRUMENTED OFF CACHE STRING "Build LLVM and tools with PGO instrumentation. May be specified as IR or Frontend")
+set(LLVM_BUILD_INSTRUMENTED OFF CACHE STRING "Build LLVM and tools with PGO instrumentation. May be specified as IR, Frontend, CSIR, CSSPGO")
 set(LLVM_VP_COUNTERS_PER_SITE "1.5" CACHE STRING "Value profile counters to use per site for IR PGO with Clang")
 mark_as_advanced(LLVM_BUILD_INSTRUMENTED LLVM_VP_COUNTERS_PER_SITE)
 string(TOUPPER "${LLVM_BUILD_INSTRUMENTED}" uppercase_LLVM_BUILD_INSTRUMENTED)
@@ -1216,6 +1210,19 @@ if (LLVM_BUILD_INSTRUMENTED)
       append("-fcs-profile-generate=\"${LLVM_CSPROFILE_DATA_DIR}\""
         CMAKE_EXE_LINKER_FLAGS
         CMAKE_SHARED_LINKER_FLAGS)
+    endif()
+  elseif(uppercase_LLVM_BUILD_INSTRUMENTED STREQUAL "CSSPGO")
+    if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+      append("-fno-omit-frame-pointer -mno-omit-leaf-frame-pointer -fno-optimize-sibling-calls -fpseudo-probe-for-profiling -fdebug-info-for-profiling"
+        CMAKE_CXX_FLAGS
+        CMAKE_C_FLAGS)
+      if(NOT LINKER_IS_LLD_LINK)
+        append("-fno-omit-frame-pointer -mno-omit-leaf-frame-pointer -fno-optimize-sibling-calls -fpseudo-probe-for-profiling -fdebug-info-for-profiling"
+          CMAKE_EXE_LINKER_FLAGS
+          CMAKE_SHARED_LINKER_FLAGS)
+      endif()
+    else()
+      message(FATAL_ERROR "LLVM_BUILD_INSTRUMENTED=CSSPGO can only be specified when compiling with clang")
     endif()
   else()
     append("-fprofile-instr-generate=\"${LLVM_PROFILE_FILE_PATTERN}\""
@@ -1269,6 +1276,21 @@ elseif(LLVM_PROFDATA_FILE)
   message(WARNING "LLVM_PROFDATA_FILE specified, but ${LLVM_PROFDATA_FILE} not found")
 endif()
 
+if(LLVM_SPROFDATA_FILE AND EXISTS ${LLVM_SPROFDATA_FILE})
+  if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang" )
+    append("-fpseudo-probe-for-profiling -fprofile-sample-use=\"${LLVM_SPROFDATA_FILE}\""
+      CMAKE_CXX_FLAGS
+      CMAKE_C_FLAGS)
+    if(NOT LINKER_IS_LLD_LINK)
+      append("-fpseudo-probe-for-profiling -fprofile-sample-use=\"${LLVM_SPROFDATA_FILE}\""
+        CMAKE_EXE_LINKER_FLAGS
+        CMAKE_SHARED_LINKER_FLAGS)
+    endif()
+  else()
+    message(FATAL_ERROR "LLVM_SPROFDATA_FILE can only be specified when compiling with clang")
+  endif()
+endif()
+
 option(LLVM_BUILD_INSTRUMENTED_COVERAGE "Build LLVM and tools with Code Coverage instrumentation" Off)
 option(LLVM_INDIVIDUAL_TEST_COVERAGE "Emit individual coverage file for each test case." OFF)
 mark_as_advanced(LLVM_BUILD_INSTRUMENTED_COVERAGE)
@@ -1284,7 +1306,7 @@ endif()
 
 set(LLVM_THINLTO_CACHE_PATH "${PROJECT_BINARY_DIR}/lto.cache" CACHE STRING "Set ThinLTO cache path. This can be used when building LLVM from several different directiories.")
 
-if(LLVM_ENABLE_LTO AND LLVM_ON_WIN32 AND NOT LINKER_IS_LLD_LINK AND NOT MINGW)
+if(LLVM_ENABLE_LTO AND WIN32 AND NOT LINKER_IS_LLD_LINK AND NOT MINGW)
   message(FATAL_ERROR "When compiling for Windows, LLVM_ENABLE_LTO requires using lld as the linker (point CMAKE_LINKER at lld-link.exe)")
 endif()
 if(uppercase_LLVM_ENABLE_LTO STREQUAL "THIN")
@@ -1298,6 +1320,9 @@ if(uppercase_LLVM_ENABLE_LTO STREQUAL "THIN")
   # FIXME: We should move all this logic into the clang driver.
   if(APPLE)
     append("-Wl,-cache_path_lto,${LLVM_THINLTO_CACHE_PATH}"
+           CMAKE_EXE_LINKER_FLAGS CMAKE_SHARED_LINKER_FLAGS)
+  elseif("${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
+    append("-bplugin_opt:-legacy-thinlto-cache-dir=${LLVM_THINLTO_CACHE_PATH}"
            CMAKE_EXE_LINKER_FLAGS CMAKE_SHARED_LINKER_FLAGS)
   elseif((UNIX OR MINGW) AND LLVM_USE_LINKER STREQUAL "lld")
     append("-Wl,--thinlto-cache-dir=${LLVM_THINLTO_CACHE_PATH}"
@@ -1463,3 +1488,11 @@ if(LLVM_ENABLE_LLVM_LIBC)
     message(WARNING "Unable to link against LLVM libc. LLVM will be built without linking against the LLVM libc overlay.")
   endif()
 endif()
+
+check_symbol_exists(flock "sys/file.h" HAVE_FLOCK)
+set(LLVM_ENABLE_ONDISK_CAS_default OFF)
+if(HAVE_FLOCK OR WIN32)
+  # LLVM OnDisk CAS currently requires flock on Unix.
+  set(LLVM_ENABLE_ONDISK_CAS_default ON)
+endif()
+option(LLVM_ENABLE_ONDISK_CAS "Build OnDiskCAS." ${LLVM_ENABLE_ONDISK_CAS_default})

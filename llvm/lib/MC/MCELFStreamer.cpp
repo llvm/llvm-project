@@ -18,6 +18,7 @@
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCDirectives.h"
 #include "llvm/MC/MCELFObjectWriter.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCFixup.h"
@@ -54,7 +55,7 @@ void MCELFStreamer::initSections(bool NoExecStack, const MCSubtargetInfo &STI) {
                     &STI);
 
   if (NoExecStack)
-    switchSection(Ctx.getAsmInfo()->getNonexecutableStackSection(Ctx));
+    switchSection(Ctx.getAsmInfo()->getStackSection(Ctx, /*Exec=*/false));
 }
 
 void MCELFStreamer::emitLabel(MCSymbol *S, SMLoc Loc) {
@@ -151,6 +152,8 @@ bool MCELFStreamer::emitSymbolAttribute(MCSymbol *S, MCSymbolAttr Attribute) {
   case MCSA_IndirectSymbol:
   case MCSA_Exported:
   case MCSA_WeakAntiDep:
+  case MCSA_OSLinkage:
+  case MCSA_XPLinkage:
     return false;
 
   case MCSA_NoDeadStrip:
@@ -271,8 +274,7 @@ void MCELFStreamer::emitCommonSymbol(MCSymbol *S, uint64_t Size,
                          " redeclared as different type");
   }
 
-  static_cast<MCSymbolELF *>(Symbol)->setSize(
-      MCConstantExpr::create(Size, getContext()));
+  Symbol->setSize(MCConstantExpr::create(Size, getContext()));
 }
 
 void MCELFStreamer::emitELFSize(MCSymbol *Symbol, const MCExpr *Value) {
@@ -365,7 +367,7 @@ void MCELFStreamer::finishImpl() {
   }
 
   finalizeCGProfile();
-  emitFrames(nullptr);
+  emitFrames();
 
   this->MCObjectStreamer::finishImpl();
 }
