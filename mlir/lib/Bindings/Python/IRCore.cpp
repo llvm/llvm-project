@@ -40,6 +40,20 @@ namespace mlir {
 namespace python {
 namespace MLIR_BINDINGS_PYTHON_DOMAIN {
 //------------------------------------------------------------------------------
+// PyThreadPool
+//------------------------------------------------------------------------------
+
+PyThreadPool::PyThreadPool() {
+  ownedThreadPool = std::make_unique<llvm::DefaultThreadPool>();
+}
+
+std::string PyThreadPool::_mlir_thread_pool_ptr() const {
+  std::stringstream ss;
+  ss << ownedThreadPool.get();
+  return ss.str();
+}
+
+//------------------------------------------------------------------------------
 // PyMlirContext
 //------------------------------------------------------------------------------
 
@@ -62,6 +76,9 @@ PyMlirContext::~PyMlirContext() {
   mlirContextDestroy(context);
 }
 
+PyMlirContextRef PyMlirContext::getRef() {
+  return PyMlirContextRef(this, nanobind::cast(this));
+}
 nb::object PyMlirContext::getCapsule() {
   return nb::steal<nb::object>(mlirPythonContextToCapsule(get()));
 }
@@ -596,6 +613,31 @@ PyOperationRef PyOperation::parse(PyMlirContextRef contextRef,
   if (mlirOperationIsNull(op))
     throw MLIRError("Unable to parse operation assembly", errors.take());
   return PyOperation::createDetached(std::move(contextRef), op);
+}
+
+void PyOperation::detachFromParent() {
+  mlirOperationRemoveFromParent(getOperation());
+  setDetached();
+  parentKeepAlive = nanobind::object();
+}
+
+MlirOperation PyOperation::get() const {
+  checkValid();
+  return operation;
+}
+
+PyOperationRef PyOperation::getRef() {
+  return PyOperationRef(this, nanobind::borrow<nanobind::object>(handle));
+}
+
+void PyOperation::setAttached(const nanobind::object &parent) {
+  assert(!attached && "operation already attached");
+  attached = true;
+}
+
+void PyOperation::setDetached() {
+  assert(attached && "operation already detached");
+  attached = false;
 }
 
 void PyOperation::checkValid() const {
@@ -1293,6 +1335,36 @@ PyOpView::PyOpView(const nb::object &operationObject)
       operationObject(operation.getRef().getObject()) {}
 
 //------------------------------------------------------------------------------
+// PyBlock
+//------------------------------------------------------------------------------
+
+nanobind::object PyBlock::getCapsule() {
+  return nanobind::steal<nanobind::object>(mlirPythonBlockToCapsule(get()));
+}
+
+//------------------------------------------------------------------------------
+// PyAsmState
+//------------------------------------------------------------------------------
+
+PyAsmState::PyAsmState(MlirValue value, bool useLocalScope) {
+  flags = mlirOpPrintingFlagsCreate();
+  // The OpPrintingFlags are not exposed Python side, create locally and
+  // associate lifetime with the state.
+  if (useLocalScope)
+    mlirOpPrintingFlagsUseLocalScope(flags);
+  state = mlirAsmStateCreateForValue(value, flags);
+}
+
+PyAsmState::PyAsmState(PyOperationBase &operation, bool useLocalScope) {
+  flags = mlirOpPrintingFlagsCreate();
+  // The OpPrintingFlags are not exposed Python side, create locally and
+  // associate lifetime with the state.
+  if (useLocalScope)
+    mlirOpPrintingFlagsUseLocalScope(flags);
+  state = mlirAsmStateCreateForOperation(operation.getOperation().get(), flags);
+}
+
+//------------------------------------------------------------------------------
 // PyInsertionPoint.
 //------------------------------------------------------------------------------
 
@@ -1670,6 +1742,388 @@ void PySymbolTable::walkSymbolTables(PyOperationBase &from,
     std::string message("Exception raised in callback: ");
     message.append(userData.exceptionWhat);
     throw std::runtime_error(message);
+  }
+}
+
+MlirBlock createBlock(const nanobind::sequence &pyArgTypes,
+                      const std::optional<nanobind::sequence> &pyArgLocs) {
+  SmallVector<MlirType> argTypes;
+  argTypes.reserve(nanobind::len(pyArgTypes));
+  for (const auto &pyType : pyArgTypes)
+    argTypes.push_back(nanobind::cast<PyType &>(pyType));
+
+  SmallVector<MlirLocation> argLocs;
+  if (pyArgLocs) {
+    argLocs.reserve(nanobind::len(*pyArgLocs));
+    for (const auto &pyLoc : *pyArgLocs)
+      argLocs.push_back(nanobind::cast<PyLocation &>(pyLoc));
+  } else if (!argTypes.empty()) {
+    argLocs.assign(argTypes.size(), DefaultingPyLocation::resolve());
+  }
+
+  if (argTypes.size() != argLocs.size()) {
+    throw nanobind::value_error(("Expected " + Twine(argTypes.size()) +
+                                 " locations, got: " + Twine(argLocs.size()))
+                                    .str()
+                                    .c_str());
+  }
+  return mlirBlockCreate(argTypes.size(), argTypes.data(), argLocs.data());
+}
+
+//------------------------------------------------------------------------------
+// PyAttrBuilderMap
+//------------------------------------------------------------------------------
+
+bool PyAttrBuilderMap::dunderContains(const std::string &attributeKind) {
+  return PyGlobals::get().lookupAttributeBuilder(attributeKind).has_value();
+}
+
+nanobind::callable
+PyAttrBuilderMap::dunderGetItemNamed(const std::string &attributeKind) {
+  auto builder = PyGlobals::get().lookupAttributeBuilder(attributeKind);
+  if (!builder)
+    throw nanobind::key_error(attributeKind.c_str());
+  return *builder;
+}
+
+void PyAttrBuilderMap::dunderSetItemNamed(const std::string &attributeKind,
+                                          nanobind::callable func,
+                                          bool replace) {
+  PyGlobals::get().registerAttributeBuilder(attributeKind, std::move(func),
+                                            replace);
+}
+
+//------------------------------------------------------------------------------
+// Collections.
+//------------------------------------------------------------------------------
+
+PyRegion PyRegionIterator::dunderNext() {
+  operation->checkValid();
+  if (nextIndex >= mlirOperationGetNumRegions(operation->get())) {
+    throw nanobind::stop_iteration();
+  }
+  MlirRegion region = mlirOperationGetRegion(operation->get(), nextIndex++);
+  return PyRegion(operation, region);
+}
+
+PyRegionList::PyRegionList(PyOperationRef operation, intptr_t startIndex,
+                           intptr_t length, intptr_t step)
+    : Sliceable(startIndex,
+                length == -1 ? mlirOperationGetNumRegions(operation->get())
+                             : length,
+                step),
+      operation(std::move(operation)) {}
+
+PyRegionIterator PyRegionList::dunderIter() {
+  operation->checkValid();
+  return PyRegionIterator(operation, startIndex);
+}
+
+intptr_t PyRegionList::getRawNumElements() {
+  operation->checkValid();
+  return mlirOperationGetNumRegions(operation->get());
+}
+
+PyRegion PyRegionList::getRawElement(intptr_t pos) {
+  operation->checkValid();
+  return PyRegion(operation, mlirOperationGetRegion(operation->get(), pos));
+}
+
+PyRegionList PyRegionList::slice(intptr_t startIndex, intptr_t length,
+                                 intptr_t step) const {
+  return PyRegionList(operation, startIndex, length, step);
+}
+
+PyBlock PyBlockIterator::dunderNext() {
+  operation->checkValid();
+  if (mlirBlockIsNull(next)) {
+    throw nanobind::stop_iteration();
+  }
+
+  PyBlock returnBlock(operation, next);
+  next = mlirBlockGetNextInRegion(next);
+  return returnBlock;
+}
+
+PyBlockIterator PyBlockList::dunderIter() {
+  operation->checkValid();
+  return PyBlockIterator(operation, mlirRegionGetFirstBlock(region));
+}
+
+intptr_t PyBlockList::dunderLen() {
+  operation->checkValid();
+  intptr_t count = 0;
+  MlirBlock block = mlirRegionGetFirstBlock(region);
+  while (!mlirBlockIsNull(block)) {
+    count += 1;
+    block = mlirBlockGetNextInRegion(block);
+  }
+  return count;
+}
+
+PyBlock PyBlockList::dunderGetItem(intptr_t index) {
+  operation->checkValid();
+  if (index < 0) {
+    index += dunderLen();
+  }
+  if (index < 0) {
+    throw nanobind::index_error("attempt to access out of bounds block");
+  }
+  MlirBlock block = mlirRegionGetFirstBlock(region);
+  while (!mlirBlockIsNull(block)) {
+    if (index == 0) {
+      return PyBlock(operation, block);
+    }
+    block = mlirBlockGetNextInRegion(block);
+    index -= 1;
+  }
+  throw nanobind::index_error("attempt to access out of bounds block");
+}
+
+PyBlock
+PyBlockList::appendBlock(const nanobind::args &pyArgTypes,
+                         const std::optional<nanobind::sequence> &pyArgLocs) {
+  operation->checkValid();
+  MlirBlock block =
+      createBlock(nanobind::cast<nanobind::sequence>(pyArgTypes), pyArgLocs);
+  mlirRegionAppendOwnedBlock(region, block);
+  return PyBlock(operation, block);
+}
+
+nanobind::typed<nanobind::object, PyOpView> PyOperationIterator::dunderNext() {
+  parentOperation->checkValid();
+  if (mlirOperationIsNull(next)) {
+    throw nanobind::stop_iteration();
+  }
+
+  PyOperationRef returnOperation =
+      PyOperation::forOperation(parentOperation->getContext(), next);
+  next = mlirOperationGetNextInBlock(next);
+  return returnOperation->createOpView();
+}
+
+intptr_t PyOperationList::dunderLen() {
+  parentOperation->checkValid();
+  intptr_t count = 0;
+  MlirOperation childOp = mlirBlockGetFirstOperation(block);
+  while (!mlirOperationIsNull(childOp)) {
+    count += 1;
+    childOp = mlirOperationGetNextInBlock(childOp);
+  }
+  return count;
+}
+
+nanobind::typed<nanobind::object, PyOpView>
+PyOperationList::dunderGetItem(intptr_t index) {
+  parentOperation->checkValid();
+  if (index < 0) {
+    index += dunderLen();
+  }
+  if (index < 0) {
+    throw nanobind::index_error("attempt to access out of bounds operation");
+  }
+  MlirOperation childOp = mlirBlockGetFirstOperation(block);
+  while (!mlirOperationIsNull(childOp)) {
+    if (index == 0) {
+      return PyOperation::forOperation(parentOperation->getContext(), childOp)
+          ->createOpView();
+    }
+    childOp = mlirOperationGetNextInBlock(childOp);
+    index -= 1;
+  }
+  throw nanobind::index_error("attempt to access out of bounds operation");
+}
+
+nanobind::typed<nanobind::object, PyOpView> PyOpOperand::getOwner() const {
+  MlirOperation owner = mlirOpOperandGetOwner(opOperand);
+  PyMlirContextRef context =
+      PyMlirContext::forContext(mlirOperationGetContext(owner));
+  return PyOperation::forOperation(context, owner)->createOpView();
+}
+
+size_t PyOpOperand::getOperandNumber() const {
+  return mlirOpOperandGetOperandNumber(opOperand);
+}
+
+PyOpOperand PyOpOperandIterator::dunderNext() {
+  if (mlirOpOperandIsNull(opOperand))
+    throw nanobind::stop_iteration();
+
+  PyOpOperand returnOpOperand(opOperand);
+  opOperand = mlirOpOperandGetNextUse(opOperand);
+  return returnOpOperand;
+}
+
+//------------------------------------------------------------------------------
+// PyConcreteValue
+//------------------------------------------------------------------------------
+
+intptr_t PyOpResultList::getRawNumElements() {
+  operation->checkValid();
+  return mlirOperationGetNumResults(operation->get());
+}
+
+PyOpResult PyOpResultList::getRawElement(intptr_t index) {
+  PyValue value(operation, mlirOperationGetResult(operation->get(), index));
+  return PyOpResult(value);
+}
+
+PyOpResultList PyOpResultList::slice(intptr_t startIndex, intptr_t length,
+                                     intptr_t step) const {
+  return PyOpResultList(operation, startIndex, length, step);
+}
+
+intptr_t PyBlockArgumentList::getRawNumElements() {
+  operation->checkValid();
+  return mlirBlockGetNumArguments(block);
+}
+
+PyBlockArgument PyBlockArgumentList::getRawElement(intptr_t pos) const {
+  MlirValue argument = mlirBlockGetArgument(block, pos);
+  return PyBlockArgument(operation, argument);
+}
+
+PyBlockArgumentList PyBlockArgumentList::slice(intptr_t startIndex,
+                                               intptr_t length,
+                                               intptr_t step) const {
+  return PyBlockArgumentList(operation, block, startIndex, length, step);
+}
+
+void PyOpOperandList::dunderSetItem(intptr_t index, PyValue value) {
+  index = wrapIndex(index);
+  mlirOperationSetOperand(operation->get(), index, value.get());
+}
+
+intptr_t PyOpOperandList::getRawNumElements() {
+  operation->checkValid();
+  return mlirOperationGetNumOperands(operation->get());
+}
+
+PyValue PyOpOperandList::getRawElement(intptr_t pos) {
+  MlirValue operand = mlirOperationGetOperand(operation->get(), pos);
+  MlirOperation owner;
+  if (mlirValueIsAOpResult(operand))
+    owner = mlirOpResultGetOwner(operand);
+  else if (mlirValueIsABlockArgument(operand))
+    owner = mlirBlockGetParentOperation(mlirBlockArgumentGetOwner(operand));
+  else
+    assert(false && "Value must be an block arg or op result.");
+  PyOperationRef pyOwner =
+      PyOperation::forOperation(operation->getContext(), owner);
+  return PyValue(pyOwner, operand);
+}
+
+PyOpOperandList PyOpOperandList::slice(intptr_t startIndex, intptr_t length,
+                                       intptr_t step) const {
+  return PyOpOperandList(operation, startIndex, length, step);
+}
+
+void PyOpSuccessors::dunderSetItem(intptr_t index, PyBlock block) {
+  index = wrapIndex(index);
+  mlirOperationSetSuccessor(operation->get(), index, block.get());
+}
+
+intptr_t PyOpSuccessors::getRawNumElements() {
+  operation->checkValid();
+  return mlirOperationGetNumSuccessors(operation->get());
+}
+
+PyBlock PyOpSuccessors::getRawElement(intptr_t pos) {
+  MlirBlock block = mlirOperationGetSuccessor(operation->get(), pos);
+  return PyBlock(operation, block);
+}
+
+PyOpSuccessors PyOpSuccessors::slice(intptr_t startIndex, intptr_t length,
+                                     intptr_t step) const {
+  return PyOpSuccessors(operation, startIndex, length, step);
+}
+
+intptr_t PyBlockSuccessors::getRawNumElements() {
+  block.checkValid();
+  return mlirBlockGetNumSuccessors(block.get());
+}
+
+PyBlock PyBlockSuccessors::getRawElement(intptr_t pos) {
+  MlirBlock block = mlirBlockGetSuccessor(this->block.get(), pos);
+  return PyBlock(operation, block);
+}
+
+PyBlockSuccessors PyBlockSuccessors::slice(intptr_t startIndex, intptr_t length,
+                                           intptr_t step) const {
+  return PyBlockSuccessors(block, operation, startIndex, length, step);
+}
+
+intptr_t PyBlockPredecessors::getRawNumElements() {
+  block.checkValid();
+  return mlirBlockGetNumPredecessors(block.get());
+}
+
+PyBlock PyBlockPredecessors::getRawElement(intptr_t pos) {
+  MlirBlock block = mlirBlockGetPredecessor(this->block.get(), pos);
+  return PyBlock(operation, block);
+}
+
+PyBlockPredecessors PyBlockPredecessors::slice(intptr_t startIndex,
+                                               intptr_t length,
+                                               intptr_t step) const {
+  return PyBlockPredecessors(block, operation, startIndex, length, step);
+}
+
+nanobind::typed<nanobind::object, PyAttribute>
+PyOpAttributeMap::dunderGetItemNamed(const std::string &name) {
+  MlirAttribute attr =
+      mlirOperationGetAttributeByName(operation->get(), toMlirStringRef(name));
+  if (mlirAttributeIsNull(attr)) {
+    throw nanobind::key_error("attempt to access a non-existent attribute");
+  }
+  return PyAttribute(operation->getContext(), attr).maybeDownCast();
+}
+
+PyNamedAttribute PyOpAttributeMap::dunderGetItemIndexed(intptr_t index) {
+  if (index < 0) {
+    index += dunderLen();
+  }
+  if (index < 0 || index >= dunderLen()) {
+    throw nanobind::index_error("attempt to access out of bounds attribute");
+  }
+  MlirNamedAttribute namedAttr =
+      mlirOperationGetAttribute(operation->get(), index);
+  return PyNamedAttribute(
+      namedAttr.attribute,
+      std::string(mlirIdentifierStr(namedAttr.name).data,
+                  mlirIdentifierStr(namedAttr.name).length));
+}
+
+void PyOpAttributeMap::dunderSetItem(const std::string &name,
+                                     const PyAttribute &attr) {
+  mlirOperationSetAttributeByName(operation->get(), toMlirStringRef(name),
+                                  attr);
+}
+
+void PyOpAttributeMap::dunderDelItem(const std::string &name) {
+  int removed = mlirOperationRemoveAttributeByName(operation->get(),
+                                                   toMlirStringRef(name));
+  if (!removed)
+    throw nanobind::key_error("attempt to delete a non-existent attribute");
+}
+
+intptr_t PyOpAttributeMap::dunderLen() {
+  return mlirOperationGetNumAttributes(operation->get());
+}
+
+bool PyOpAttributeMap::dunderContains(const std::string &name) {
+  return !mlirAttributeIsNull(
+      mlirOperationGetAttributeByName(operation->get(), toMlirStringRef(name)));
+}
+
+void PyOpAttributeMap::forEachAttr(
+    MlirOperation op,
+    llvm::function_ref<void(MlirStringRef, MlirAttribute)> fn) {
+  intptr_t n = mlirOperationGetNumAttributes(op);
+  for (intptr_t i = 0; i < n; ++i) {
+    MlirNamedAttribute na = mlirOperationGetAttribute(op, i);
+    MlirStringRef name = mlirIdentifierStr(na.name);
+    fn(name, na.attribute);
   }
 }
 } // namespace MLIR_BINDINGS_PYTHON_DOMAIN

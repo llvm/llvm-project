@@ -171,20 +171,14 @@ private:
 /// Python object owns the C++ thread pool
 class MLIR_PYTHON_API_EXPORTED PyThreadPool {
 public:
-  PyThreadPool() {
-    ownedThreadPool = std::make_unique<llvm::DefaultThreadPool>();
-  }
+  PyThreadPool();
   PyThreadPool(const PyThreadPool &) = delete;
   PyThreadPool(PyThreadPool &&) = delete;
 
   int getMaxConcurrency() const { return ownedThreadPool->getMaxConcurrency(); }
   MlirLlvmThreadPool get() { return wrap(ownedThreadPool.get()); }
 
-  std::string _mlir_thread_pool_ptr() const {
-    std::stringstream ss;
-    ss << ownedThreadPool.get();
-    return ss.str();
-  }
+  std::string _mlir_thread_pool_ptr() const;
 
 private:
   std::unique_ptr<llvm::ThreadPoolInterface> ownedThreadPool;
@@ -209,9 +203,7 @@ public:
 
   /// Gets a strong reference to this context, which will ensure it is kept
   /// alive for the life of the reference.
-  PyMlirContextRef getRef() {
-    return PyMlirContextRef(this, nanobind::cast(this));
-  }
+  PyMlirContextRef getRef();
 
   /// Gets a capsule wrapping the void* within the MlirContext.
   nanobind::object getCapsule();
@@ -652,32 +644,17 @@ public:
 
   /// Detaches the operation from its parent block and updates its state
   /// accordingly.
-  void detachFromParent() {
-    mlirOperationRemoveFromParent(getOperation());
-    setDetached();
-    parentKeepAlive = nanobind::object();
-  }
+  void detachFromParent();
 
   /// Gets the backing operation.
   operator MlirOperation() const { return get(); }
-  MlirOperation get() const {
-    checkValid();
-    return operation;
-  }
+  MlirOperation get() const;
 
-  PyOperationRef getRef() {
-    return PyOperationRef(this, nanobind::borrow<nanobind::object>(handle));
-  }
+  PyOperationRef getRef();
 
   bool isAttached() { return attached; }
-  void setAttached(const nanobind::object &parent = nanobind::object()) {
-    assert(!attached && "operation already attached");
-    attached = true;
-  }
-  void setDetached() {
-    assert(attached && "operation already detached");
-    attached = false;
-  }
+  void setAttached(const nanobind::object &parent = nanobind::object());
+  void setDetached();
   void checkValid() const;
 
   /// Gets the owning block or raises an exception if the operation has no
@@ -802,24 +779,8 @@ private:
 /// Wrapper around an MlirAsmState.
 class MLIR_PYTHON_API_EXPORTED PyAsmState {
 public:
-  PyAsmState(MlirValue value, bool useLocalScope) {
-    flags = mlirOpPrintingFlagsCreate();
-    // The OpPrintingFlags are not exposed Python side, create locally and
-    // associate lifetime with the state.
-    if (useLocalScope)
-      mlirOpPrintingFlagsUseLocalScope(flags);
-    state = mlirAsmStateCreateForValue(value, flags);
-  }
-
-  PyAsmState(PyOperationBase &operation, bool useLocalScope) {
-    flags = mlirOpPrintingFlagsCreate();
-    // The OpPrintingFlags are not exposed Python side, create locally and
-    // associate lifetime with the state.
-    if (useLocalScope)
-      mlirOpPrintingFlagsUseLocalScope(flags);
-    state =
-        mlirAsmStateCreateForOperation(operation.getOperation().get(), flags);
-  }
+  PyAsmState(MlirValue value, bool useLocalScope);
+  PyAsmState(PyOperationBase &operation, bool useLocalScope);
   ~PyAsmState() { mlirOpPrintingFlagsDestroy(flags); }
   // Delete copy constructors.
   PyAsmState(PyAsmState &other) = delete;
@@ -898,6 +859,7 @@ private:
   std::optional<PyOperationRef> refOperation;
   PyBlock block;
 };
+
 /// Wrapper around the generic MlirType.
 /// The lifetime of a type is bound by the PyContext that created it.
 class MLIR_PYTHON_API_EXPORTED PyType : public BaseContextObject {
@@ -1353,26 +1315,6 @@ struct MLIR_PYTHON_API_EXPORTED MLIRError {
 // Utilities.
 //------------------------------------------------------------------------------
 
-/// Helper for creating an @classmethod.
-template <class Func, typename... Args>
-nanobind::object classmethod(Func f, Args... args) {
-  nanobind::object cf = nanobind::cpp_function(f, args...);
-  return nanobind::borrow<nanobind::object>((PyClassMethod_New(cf.ptr())));
-}
-
-inline nanobind::object
-createCustomDialectWrapper(const std::string &dialectNamespace,
-                           nanobind::object dialectDescriptor) {
-  auto dialectClass = PyGlobals::get().lookupDialectClass(dialectNamespace);
-  if (!dialectClass) {
-    // Use the base class.
-    return nanobind::cast(PyDialect(std::move(dialectDescriptor)));
-  }
-
-  // Create the custom implementation.
-  return (*dialectClass)(std::move(dialectDescriptor));
-}
-
 inline MlirStringRef toMlirStringRef(const std::string &s) {
   return mlirStringRefCreate(s.data(), s.size());
 }
@@ -1387,49 +1329,16 @@ inline MlirStringRef toMlirStringRef(const nanobind::bytes &s) {
 
 /// Create a block, using the current location context if no locations are
 /// specified.
-inline MlirBlock
+MlirBlock MLIR_PYTHON_API_EXPORTED
 createBlock(const nanobind::sequence &pyArgTypes,
-            const std::optional<nanobind::sequence> &pyArgLocs) {
-  SmallVector<MlirType> argTypes;
-  argTypes.reserve(nanobind::len(pyArgTypes));
-  for (const auto &pyType : pyArgTypes)
-    argTypes.push_back(nanobind::cast<PyType &>(pyType));
+            const std::optional<nanobind::sequence> &pyArgLocs);
 
-  SmallVector<MlirLocation> argLocs;
-  if (pyArgLocs) {
-    argLocs.reserve(nanobind::len(*pyArgLocs));
-    for (const auto &pyLoc : *pyArgLocs)
-      argLocs.push_back(nanobind::cast<PyLocation &>(pyLoc));
-  } else if (!argTypes.empty()) {
-    argLocs.assign(argTypes.size(), DefaultingPyLocation::resolve());
-  }
-
-  if (argTypes.size() != argLocs.size()) {
-    throw nanobind::value_error(
-        llvm::formatv("Expected {0} locations, got: {1}", argTypes.size(),
-                      argLocs.size())
-            .str()
-            .c_str());
-  }
-  return mlirBlockCreate(argTypes.size(), argTypes.data(), argLocs.data());
-}
-
-struct PyAttrBuilderMap {
-  static bool dunderContains(const std::string &attributeKind) {
-    return PyGlobals::get().lookupAttributeBuilder(attributeKind).has_value();
-  }
+struct MLIR_PYTHON_API_EXPORTED PyAttrBuilderMap {
+  static bool dunderContains(const std::string &attributeKind);
   static nanobind::callable
-  dunderGetItemNamed(const std::string &attributeKind) {
-    auto builder = PyGlobals::get().lookupAttributeBuilder(attributeKind);
-    if (!builder)
-      throw nanobind::key_error(attributeKind.c_str());
-    return *builder;
-  }
+  dunderGetItemNamed(const std::string &attributeKind);
   static void dunderSetItemNamed(const std::string &attributeKind,
-                                 nanobind::callable func, bool replace) {
-    PyGlobals::get().registerAttributeBuilder(attributeKind, std::move(func),
-                                              replace);
-  }
+                                 nanobind::callable func, bool replace);
 
   static void bind(nanobind::module_ &m) {
     nanobind::class_<PyAttrBuilderMap>(m, "AttrBuilder")
@@ -1451,14 +1360,6 @@ struct PyAttrBuilderMap {
 };
 
 //------------------------------------------------------------------------------
-// PyBlock
-//------------------------------------------------------------------------------
-
-inline nanobind::object PyBlock::getCapsule() {
-  return nanobind::steal<nanobind::object>(mlirPythonBlockToCapsule(get()));
-}
-
-//------------------------------------------------------------------------------
 // Collections.
 //------------------------------------------------------------------------------
 
@@ -1469,14 +1370,7 @@ public:
 
   PyRegionIterator &dunderIter() { return *this; }
 
-  PyRegion dunderNext() {
-    operation->checkValid();
-    if (nextIndex >= mlirOperationGetNumRegions(operation->get())) {
-      throw nanobind::stop_iteration();
-    }
-    MlirRegion region = mlirOperationGetRegion(operation->get(), nextIndex++);
-    return PyRegion(operation, region);
-  }
+  PyRegion dunderNext();
 
   static void bind(nanobind::module_ &m) {
     nanobind::class_<PyRegionIterator>(m, "RegionIterator")
@@ -1499,17 +1393,9 @@ public:
   static constexpr const char *pyClassName = "RegionSequence";
 
   PyRegionList(PyOperationRef operation, intptr_t startIndex = 0,
-               intptr_t length = -1, intptr_t step = 1)
-      : Sliceable(startIndex,
-                  length == -1 ? mlirOperationGetNumRegions(operation->get())
-                               : length,
-                  step),
-        operation(std::move(operation)) {}
+               intptr_t length = -1, intptr_t step = 1);
 
-  PyRegionIterator dunderIter() {
-    operation->checkValid();
-    return PyRegionIterator(operation, startIndex);
-  }
+  PyRegionIterator dunderIter();
 
   static void bindDerived(ClassTy &c) {
     c.def("__iter__", &PyRegionList::dunderIter,
@@ -1520,19 +1406,11 @@ private:
   /// Give the parent CRTP class access to hook implementations below.
   friend class Sliceable<PyRegionList, PyRegion>;
 
-  intptr_t getRawNumElements() {
-    operation->checkValid();
-    return mlirOperationGetNumRegions(operation->get());
-  }
+  intptr_t getRawNumElements();
 
-  PyRegion getRawElement(intptr_t pos) {
-    operation->checkValid();
-    return PyRegion(operation, mlirOperationGetRegion(operation->get(), pos));
-  }
+  PyRegion getRawElement(intptr_t pos);
 
-  PyRegionList slice(intptr_t startIndex, intptr_t length, intptr_t step) {
-    return PyRegionList(operation, startIndex, length, step);
-  }
+  PyRegionList slice(intptr_t startIndex, intptr_t length, intptr_t step) const;
 
   PyOperationRef operation;
 };
@@ -1544,16 +1422,7 @@ public:
 
   PyBlockIterator &dunderIter() { return *this; }
 
-  PyBlock dunderNext() {
-    operation->checkValid();
-    if (mlirBlockIsNull(next)) {
-      throw nanobind::stop_iteration();
-    }
-
-    PyBlock returnBlock(operation, next);
-    next = mlirBlockGetNextInRegion(next);
-    return returnBlock;
-  }
+  PyBlock dunderNext();
 
   static void bind(nanobind::module_ &m) {
     nanobind::class_<PyBlockIterator>(m, "BlockIterator")
@@ -1576,49 +1445,14 @@ public:
   PyBlockList(PyOperationRef operation, MlirRegion region)
       : operation(std::move(operation)), region(region) {}
 
-  PyBlockIterator dunderIter() {
-    operation->checkValid();
-    return PyBlockIterator(operation, mlirRegionGetFirstBlock(region));
-  }
+  PyBlockIterator dunderIter();
 
-  intptr_t dunderLen() {
-    operation->checkValid();
-    intptr_t count = 0;
-    MlirBlock block = mlirRegionGetFirstBlock(region);
-    while (!mlirBlockIsNull(block)) {
-      count += 1;
-      block = mlirBlockGetNextInRegion(block);
-    }
-    return count;
-  }
+  intptr_t dunderLen();
 
-  PyBlock dunderGetItem(intptr_t index) {
-    operation->checkValid();
-    if (index < 0) {
-      index += dunderLen();
-    }
-    if (index < 0) {
-      throw nanobind::index_error("attempt to access out of bounds block");
-    }
-    MlirBlock block = mlirRegionGetFirstBlock(region);
-    while (!mlirBlockIsNull(block)) {
-      if (index == 0) {
-        return PyBlock(operation, block);
-      }
-      block = mlirBlockGetNextInRegion(block);
-      index -= 1;
-    }
-    throw nanobind::index_error("attempt to access out of bounds block");
-  }
+  PyBlock dunderGetItem(intptr_t index);
 
   PyBlock appendBlock(const nanobind::args &pyArgTypes,
-                      const std::optional<nanobind::sequence> &pyArgLocs) {
-    operation->checkValid();
-    MlirBlock block =
-        createBlock(nanobind::cast<nanobind::sequence>(pyArgTypes), pyArgLocs);
-    mlirRegionAppendOwnedBlock(region, block);
-    return PyBlock(operation, block);
-  }
+                      const std::optional<nanobind::sequence> &pyArgLocs);
 
   static void bind(nanobind::module_ &m) {
     nanobind::class_<PyBlockList>(m, "BlockList")
@@ -1651,17 +1485,7 @@ public:
 
   PyOperationIterator &dunderIter() { return *this; }
 
-  nanobind::typed<nanobind::object, PyOpView> dunderNext() {
-    parentOperation->checkValid();
-    if (mlirOperationIsNull(next)) {
-      throw nanobind::stop_iteration();
-    }
-
-    PyOperationRef returnOperation =
-        PyOperation::forOperation(parentOperation->getContext(), next);
-    next = mlirOperationGetNextInBlock(next);
-    return returnOperation->createOpView();
-  }
+  nanobind::typed<nanobind::object, PyOpView> dunderNext();
 
   static void bind(nanobind::module_ &m) {
     nanobind::class_<PyOperationIterator>(m, "OperationIterator")
@@ -1691,36 +1515,9 @@ public:
                                mlirBlockGetFirstOperation(block));
   }
 
-  intptr_t dunderLen() {
-    parentOperation->checkValid();
-    intptr_t count = 0;
-    MlirOperation childOp = mlirBlockGetFirstOperation(block);
-    while (!mlirOperationIsNull(childOp)) {
-      count += 1;
-      childOp = mlirOperationGetNextInBlock(childOp);
-    }
-    return count;
-  }
+  intptr_t dunderLen();
 
-  nanobind::typed<nanobind::object, PyOpView> dunderGetItem(intptr_t index) {
-    parentOperation->checkValid();
-    if (index < 0) {
-      index += dunderLen();
-    }
-    if (index < 0) {
-      throw nanobind::index_error("attempt to access out of bounds operation");
-    }
-    MlirOperation childOp = mlirBlockGetFirstOperation(block);
-    while (!mlirOperationIsNull(childOp)) {
-      if (index == 0) {
-        return PyOperation::forOperation(parentOperation->getContext(), childOp)
-            ->createOpView();
-      }
-      childOp = mlirOperationGetNextInBlock(childOp);
-      index -= 1;
-    }
-    throw nanobind::index_error("attempt to access out of bounds operation");
-  }
+  nanobind::typed<nanobind::object, PyOpView> dunderGetItem(intptr_t index);
 
   static void bind(nanobind::module_ &m) {
     nanobind::class_<PyOperationList>(m, "OperationList")
@@ -1741,14 +1538,9 @@ class MLIR_PYTHON_API_EXPORTED PyOpOperand {
 public:
   PyOpOperand(MlirOpOperand opOperand) : opOperand(opOperand) {}
 
-  nanobind::typed<nanobind::object, PyOpView> getOwner() {
-    MlirOperation owner = mlirOpOperandGetOwner(opOperand);
-    PyMlirContextRef context =
-        PyMlirContext::forContext(mlirOperationGetContext(owner));
-    return PyOperation::forOperation(context, owner)->createOpView();
-  }
+  nanobind::typed<nanobind::object, PyOpView> getOwner() const;
 
-  size_t getOperandNumber() { return mlirOpOperandGetOperandNumber(opOperand); }
+  size_t getOperandNumber() const;
 
   static void bind(nanobind::module_ &m) {
     nanobind::class_<PyOpOperand>(m, "OpOperand")
@@ -1768,14 +1560,7 @@ public:
 
   PyOpOperandIterator &dunderIter() { return *this; }
 
-  PyOpOperand dunderNext() {
-    if (mlirOpOperandIsNull(opOperand))
-      throw nanobind::stop_iteration();
-
-    PyOpOperand returnOpOperand(opOperand);
-    opOperand = mlirOpOperandGetNextUse(opOperand);
-    return returnOpOperand;
-  }
+  PyOpOperand dunderNext();
 
   static void bind(nanobind::module_ &m) {
     nanobind::class_<PyOpOperandIterator>(m, "OpOperandIterator")
@@ -1931,19 +1716,12 @@ private:
   /// Give the parent CRTP class access to hook implementations below.
   friend class Sliceable<PyOpResultList, PyOpResult>;
 
-  intptr_t getRawNumElements() {
-    operation->checkValid();
-    return mlirOperationGetNumResults(operation->get());
-  }
+  intptr_t getRawNumElements();
 
-  PyOpResult getRawElement(intptr_t index) {
-    PyValue value(operation, mlirOperationGetResult(operation->get(), index));
-    return PyOpResult(value);
-  }
+  PyOpResult getRawElement(intptr_t index);
 
-  PyOpResultList slice(intptr_t startIndex, intptr_t length, intptr_t step) {
-    return PyOpResultList(operation, startIndex, length, step);
-  }
+  PyOpResultList slice(intptr_t startIndex, intptr_t length,
+                       intptr_t step) const;
 
   PyOperationRef operation;
 };
@@ -2017,22 +1795,14 @@ private:
   friend class Sliceable<PyBlockArgumentList, PyBlockArgument>;
 
   /// Returns the number of arguments in the list.
-  intptr_t getRawNumElements() {
-    operation->checkValid();
-    return mlirBlockGetNumArguments(block);
-  }
+  intptr_t getRawNumElements();
 
   /// Returns `pos`-the element in the list.
-  PyBlockArgument getRawElement(intptr_t pos) {
-    MlirValue argument = mlirBlockGetArgument(block, pos);
-    return PyBlockArgument(operation, argument);
-  }
+  PyBlockArgument getRawElement(intptr_t pos) const;
 
   /// Returns a sublist of this list.
   PyBlockArgumentList slice(intptr_t startIndex, intptr_t length,
-                            intptr_t step) {
-    return PyBlockArgumentList(operation, block, startIndex, length, step);
-  }
+                            intptr_t step) const;
 
   PyOperationRef operation;
   MlirBlock block;
@@ -2056,10 +1826,7 @@ public:
                   step),
         operation(operation) {}
 
-  void dunderSetItem(intptr_t index, PyValue value) {
-    index = wrapIndex(index);
-    mlirOperationSetOperand(operation->get(), index, value.get());
-  }
+  void dunderSetItem(intptr_t index, PyValue value);
 
   static void bindDerived(ClassTy &c) {
     c.def("__setitem__", &PyOpOperandList::dunderSetItem,
@@ -2071,28 +1838,12 @@ private:
   /// Give the parent CRTP class access to hook implementations below.
   friend class Sliceable<PyOpOperandList, PyValue>;
 
-  intptr_t getRawNumElements() {
-    operation->checkValid();
-    return mlirOperationGetNumOperands(operation->get());
-  }
+  intptr_t getRawNumElements();
 
-  PyValue getRawElement(intptr_t pos) {
-    MlirValue operand = mlirOperationGetOperand(operation->get(), pos);
-    MlirOperation owner;
-    if (mlirValueIsAOpResult(operand))
-      owner = mlirOpResultGetOwner(operand);
-    else if (mlirValueIsABlockArgument(operand))
-      owner = mlirBlockGetParentOperation(mlirBlockArgumentGetOwner(operand));
-    else
-      assert(false && "Value must be an block arg or op result.");
-    PyOperationRef pyOwner =
-        PyOperation::forOperation(operation->getContext(), owner);
-    return PyValue(pyOwner, operand);
-  }
+  PyValue getRawElement(intptr_t pos);
 
-  PyOpOperandList slice(intptr_t startIndex, intptr_t length, intptr_t step) {
-    return PyOpOperandList(operation, startIndex, length, step);
-  }
+  PyOpOperandList slice(intptr_t startIndex, intptr_t length,
+                        intptr_t step) const;
 
   PyOperationRef operation;
 };
@@ -2114,10 +1865,7 @@ public:
                   step),
         operation(operation) {}
 
-  void dunderSetItem(intptr_t index, PyBlock block) {
-    index = wrapIndex(index);
-    mlirOperationSetSuccessor(operation->get(), index, block.get());
-  }
+  void dunderSetItem(intptr_t index, PyBlock block);
 
   static void bindDerived(ClassTy &c) {
     c.def("__setitem__", &PyOpSuccessors::dunderSetItem, nanobind::arg("index"),
@@ -2129,19 +1877,12 @@ private:
   /// Give the parent CRTP class access to hook implementations below.
   friend class Sliceable<PyOpSuccessors, PyBlock>;
 
-  intptr_t getRawNumElements() {
-    operation->checkValid();
-    return mlirOperationGetNumSuccessors(operation->get());
-  }
+  intptr_t getRawNumElements();
 
-  PyBlock getRawElement(intptr_t pos) {
-    MlirBlock block = mlirOperationGetSuccessor(operation->get(), pos);
-    return PyBlock(operation, block);
-  }
+  PyBlock getRawElement(intptr_t pos);
 
-  PyOpSuccessors slice(intptr_t startIndex, intptr_t length, intptr_t step) {
-    return PyOpSuccessors(operation, startIndex, length, step);
-  }
+  PyOpSuccessors slice(intptr_t startIndex, intptr_t length,
+                       intptr_t step) const;
 
   PyOperationRef operation;
 };
@@ -2168,19 +1909,12 @@ private:
   /// Give the parent CRTP class access to hook implementations below.
   friend class Sliceable<PyBlockSuccessors, PyBlock>;
 
-  intptr_t getRawNumElements() {
-    block.checkValid();
-    return mlirBlockGetNumSuccessors(block.get());
-  }
+  intptr_t getRawNumElements();
 
-  PyBlock getRawElement(intptr_t pos) {
-    MlirBlock block = mlirBlockGetSuccessor(this->block.get(), pos);
-    return PyBlock(operation, block);
-  }
+  PyBlock getRawElement(intptr_t pos);
 
-  PyBlockSuccessors slice(intptr_t startIndex, intptr_t length, intptr_t step) {
-    return PyBlockSuccessors(block, operation, startIndex, length, step);
-  }
+  PyBlockSuccessors slice(intptr_t startIndex, intptr_t length,
+                          intptr_t step) const;
 
   PyOperationRef operation;
   PyBlock block;
@@ -2211,20 +1945,12 @@ private:
   /// Give the parent CRTP class access to hook implementations below.
   friend class Sliceable<PyBlockPredecessors, PyBlock>;
 
-  intptr_t getRawNumElements() {
-    block.checkValid();
-    return mlirBlockGetNumPredecessors(block.get());
-  }
+  intptr_t getRawNumElements();
 
-  PyBlock getRawElement(intptr_t pos) {
-    MlirBlock block = mlirBlockGetPredecessor(this->block.get(), pos);
-    return PyBlock(operation, block);
-  }
+  PyBlock getRawElement(intptr_t pos);
 
   PyBlockPredecessors slice(intptr_t startIndex, intptr_t length,
-                            intptr_t step) {
-    return PyBlockPredecessors(block, operation, startIndex, length, step);
-  }
+                            intptr_t step) const;
 
   PyOperationRef operation;
   PyBlock block;
@@ -2238,61 +1964,21 @@ public:
       : operation(std::move(operation)) {}
 
   nanobind::typed<nanobind::object, PyAttribute>
-  dunderGetItemNamed(const std::string &name) {
-    MlirAttribute attr = mlirOperationGetAttributeByName(operation->get(),
-                                                         toMlirStringRef(name));
-    if (mlirAttributeIsNull(attr)) {
-      throw nanobind::key_error("attempt to access a non-existent attribute");
-    }
-    return PyAttribute(operation->getContext(), attr).maybeDownCast();
-  }
+  dunderGetItemNamed(const std::string &name);
 
-  PyNamedAttribute dunderGetItemIndexed(intptr_t index) {
-    if (index < 0) {
-      index += dunderLen();
-    }
-    if (index < 0 || index >= dunderLen()) {
-      throw nanobind::index_error("attempt to access out of bounds attribute");
-    }
-    MlirNamedAttribute namedAttr =
-        mlirOperationGetAttribute(operation->get(), index);
-    return PyNamedAttribute(
-        namedAttr.attribute,
-        std::string(mlirIdentifierStr(namedAttr.name).data,
-                    mlirIdentifierStr(namedAttr.name).length));
-  }
+  PyNamedAttribute dunderGetItemIndexed(intptr_t index);
 
-  void dunderSetItem(const std::string &name, const PyAttribute &attr) {
-    mlirOperationSetAttributeByName(operation->get(), toMlirStringRef(name),
-                                    attr);
-  }
+  void dunderSetItem(const std::string &name, const PyAttribute &attr);
 
-  void dunderDelItem(const std::string &name) {
-    int removed = mlirOperationRemoveAttributeByName(operation->get(),
-                                                     toMlirStringRef(name));
-    if (!removed)
-      throw nanobind::key_error("attempt to delete a non-existent attribute");
-  }
+  void dunderDelItem(const std::string &name);
 
-  intptr_t dunderLen() {
-    return mlirOperationGetNumAttributes(operation->get());
-  }
+  intptr_t dunderLen();
 
-  bool dunderContains(const std::string &name) {
-    return !mlirAttributeIsNull(mlirOperationGetAttributeByName(
-        operation->get(), toMlirStringRef(name)));
-  }
+  bool dunderContains(const std::string &name);
 
   static void
   forEachAttr(MlirOperation op,
-              llvm::function_ref<void(MlirStringRef, MlirAttribute)> fn) {
-    intptr_t n = mlirOperationGetNumAttributes(op);
-    for (intptr_t i = 0; i < n; ++i) {
-      MlirNamedAttribute na = mlirOperationGetAttribute(op, i);
-      MlirStringRef name = mlirIdentifierStr(na.name);
-      fn(name, na.attribute);
-    }
-  }
+              llvm::function_ref<void(MlirStringRef, MlirAttribute)> fn);
 
   static void bind(nanobind::module_ &m) {
     nanobind::class_<PyOpAttributeMap>(m, "OpAttributeMap")

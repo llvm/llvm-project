@@ -235,6 +235,26 @@ maybeGetTracebackLocation(const std::optional<PyLocation> &location) {
   PyMlirContextRef ref = PyMlirContext::forContext(ctx.get());
   return {ref, mlirLoc};
 }
+
+/// Helper for creating an @classmethod.
+template <class Func, typename... Args>
+nanobind::object classmethod(Func f, Args... args) {
+  nanobind::object cf = nanobind::cpp_function(f, args...);
+  return nanobind::borrow<nanobind::object>((PyClassMethod_New(cf.ptr())));
+}
+
+nanobind::object
+createCustomDialectWrapper(const std::string &dialectNamespace,
+                           nanobind::object dialectDescriptor) {
+  auto dialectClass = PyGlobals::get().lookupDialectClass(dialectNamespace);
+  if (!dialectClass) {
+    // Use the base class.
+    return nanobind::cast(PyDialect(std::move(dialectDescriptor)));
+  }
+
+  // Create the custom implementation.
+  return (*dialectClass)(std::move(dialectDescriptor));
+}
 } // namespace
 
 //------------------------------------------------------------------------------
