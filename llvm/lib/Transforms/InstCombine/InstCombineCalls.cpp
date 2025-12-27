@@ -3074,6 +3074,33 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     }
     break;
   }
+  case Intrinsic::cosh: {
+    Value *X;
+    if (match(II->getArgOperand(0), m_OneUse(m_FNeg(m_Value(X))))) {
+      // cosh(-x) --> cosh(x)
+      Value *NewCosh = Builder.CreateUnaryIntrinsic(IID, X, II);
+      return replaceInstUsesWith(*II, NewCosh);
+    }
+    break;
+  }
+  case Intrinsic::sinh: {
+    Value *X;
+    if (match(II->getArgOperand(0), m_OneUse(m_FNeg(m_Value(X))))) {
+      // sinh(-x) --> -sinh(x)
+      Value *NewSinh = Builder.CreateUnaryIntrinsic(IID, X, II);
+      return UnaryOperator::CreateFNegFMF(NewSinh, II);
+    }
+    break;
+  }
+  case Intrinsic::tanh: {
+    Value *X;
+    if (match(II->getArgOperand(0), m_OneUse(m_FNeg(m_Value(X))))) {
+      // tanh(-x) --> -tanh(x)
+      Value *NewTanh = Builder.CreateUnaryIntrinsic(IID, X, II);
+      return UnaryOperator::CreateFNegFMF(NewTanh, II);
+    }
+    break;
+  }
   case Intrinsic::ldexp: {
     // ldexp(ldexp(x, a), b) -> ldexp(x, a + b)
     //
