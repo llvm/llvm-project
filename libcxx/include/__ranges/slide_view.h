@@ -136,7 +136,7 @@ public:
     auto __sz = ranges::distance(__base_) - __n_ + 1;
     if (__sz < 0)
       __sz = 0;
-    return __to_unsigned_like(__sz);
+    return std::__to_unsigned_like(__sz);
   }
 
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto size() const
@@ -145,7 +145,7 @@ public:
     auto __sz = ranges::distance(__base_) - __n_ + 1;
     if (__sz < 0)
       __sz = 0;
-    return __to_unsigned_like(__sz);
+    return std::__to_unsigned_like(__sz);
   }
 };
 
@@ -154,7 +154,7 @@ template <forward_range _View>
 template <bool _Const>
 class slide_view<_View>::__iterator {
   friend slide_view;
-  using _Base = _If<_Const, const _View, _View>;
+  using _Base _LIBCPP_NODEBUG = _If<_Const, const _View, _View>;
 
   _LIBCPP_NO_UNIQUE_ADDRESS iterator_t<_Base> __current_ = iterator_t<_Base>();
   _LIBCPP_NO_UNIQUE_ADDRESS _If<__slide_caches_first<_Base>, iterator_t<_Base>, __empty_cache> __last_ele_ =
