@@ -9,6 +9,7 @@
 #ifndef TEST_LIBCXX_RANGES_RANGE_ADAPTORS_RANGE_CHUNK_TYPES_H
 #define TEST_LIBCXX_RANGES_RANGE_ADAPTORS_RANGE_CHUNK_TYPES_H
 
+#include <cstddef>
 #include <iterator>
 #include <ranges>
 #include <span>
@@ -40,6 +41,9 @@ struct input_span : std::span<T> {
   constexpr iterator begin() { return iterator(std::span<T>::begin()); }
   constexpr iterator end() { return iterator(std::span<T>::end()); }
 };
+
+template <class T>
+input_span(T*, std::ptrdiff_t) -> input_span<T>;
 
 template <class T>
 inline constexpr bool std::ranges::enable_view<input_span<T>> = true;
