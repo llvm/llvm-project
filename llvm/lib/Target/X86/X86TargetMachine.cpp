@@ -75,7 +75,7 @@ extern "C" LLVM_C_ABI void LLVMInitializeX86Target() {
   initializeWinEHStatePassPass(PR);
   initializeFixupBWInstPassPass(PR);
   initializeCompressEVEXPassPass(PR);
-  initializeFixupLEAsLegacyPass(PR);
+  initializeFixupLEAPassPass(PR);
   initializeX86FPStackifierLegacyPass(PR);
   initializeX86FixupSetCCPassPass(PR);
   initializeX86CallFrameOptimizationPass(PR);
@@ -92,7 +92,7 @@ extern "C" LLVM_C_ABI void LLVMInitializeX86Target() {
   initializeX86AvoidTrailingCallLegacyPassPass(PR);
   initializeX86SpeculativeLoadHardeningPassPass(PR);
   initializeX86SpeculativeExecutionSideEffectSuppressionPass(PR);
-  initializeX86FlagsCopyLoweringLegacyPass(PR);
+  initializeX86FlagsCopyLoweringPassPass(PR);
   initializeX86LoadValueInjectionLoadHardeningPassPass(PR);
   initializeX86LoadValueInjectionRetHardeningPassPass(PR);
   initializeX86OptimizeLEAsLegacyPass(PR);
@@ -515,7 +515,7 @@ void X86PassConfig::addPreRegAlloc() {
   addPass(createX86SuppressAPXForRelocationPass());
 
   addPass(createX86SpeculativeLoadHardeningPass());
-  addPass(createX86FlagsCopyLoweringLegacyPass());
+  addPass(createX86FlagsCopyLoweringPass());
   addPass(createX86DynAllocaExpanderLegacyPass());
 
   if (getOptLevel() != CodeGenOptLevel::None)
@@ -558,7 +558,7 @@ void X86PassConfig::addPreEmitPass() {
   if (getOptLevel() != CodeGenOptLevel::None) {
     addPass(createX86FixupBWInsts());
     addPass(createX86PadShortFunctions());
-    addPass(createX86FixupLEAsLegacyPass());
+    addPass(createX86FixupLEAs());
     addPass(createX86FixupInstTuning());
     addPass(createX86FixupVectorConstants());
   }

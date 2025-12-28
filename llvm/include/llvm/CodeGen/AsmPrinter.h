@@ -23,19 +23,10 @@
 #include "llvm/Analysis/StaticDataProfileInfo.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/CodeGen/DwarfStringPoolEntry.h"
-#include "llvm/CodeGen/MachineDominators.h"
-#include "llvm/CodeGen/MachineFunctionAnalysis.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
-#include "llvm/CodeGen/MachineLoopInfo.h"
-#include "llvm/CodeGen/MachineModuleInfo.h"
-#include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
-#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/StackMaps.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
-#include "llvm/IR/Analysis.h"
 #include "llvm/IR/InlineAsm.h"
-#include "llvm/IR/Module.h"
-#include "llvm/IR/PassManager.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cstdint>
@@ -177,16 +168,6 @@ public:
     EH = 1,   ///< Emit .eh_frame
     Debug = 2 ///< Emit .debug_frame
   };
-
-  // Callbacks to get analyses to allow portability between the new and legacy
-  // pass managers.
-  std::function<MachineModuleInfo *()> GetMMI;
-  std::function<MachineOptimizationRemarkEmitter *(MachineFunction &)> GetORE;
-  std::function<MachineDominatorTree *(MachineFunction &)> GetMDT;
-  std::function<MachineLoopInfo *(MachineFunction &)> GetMLI;
-  std::function<void(Module &)> BeginGCAssembly;
-  std::function<void(Module &)> FinishGCAssembly;
-  std::function<void(Module &)> EmitStackMaps;
 
 private:
   MCSymbol *CurrentFnEnd = nullptr;
@@ -597,6 +578,9 @@ public:
   /// emit the proxies we previously omitted in EmitGlobalVariable.
   void emitGlobalGOTEquivs();
 
+  /// Emit the stack maps.
+  void emitStackMaps();
+
   //===------------------------------------------------------------------===//
   // Overridable Hooks
   //===------------------------------------------------------------------===//
@@ -1004,50 +988,6 @@ protected:
     return false;
   }
 };
-
-inline MachineFunctionAnalysisManager &
-getMFAM(Module &M, ModuleAnalysisManager &MAM, MachineFunction &MF) {
-  FunctionAnalysisManager &FAM =
-      MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
-  MachineFunctionAnalysisManager &MFAM =
-      FAM.getResult<MachineFunctionAnalysisManagerFunctionProxy>(
-             MF.getFunction())
-          .getManager();
-  return MFAM;
-}
-
-template <typename AsmPrinterT>
-PreservedAnalyses runOnModuleNewPM(Module &M, ModuleAnalysisManager &MAM,
-                                   AsmPrinterT &AsmPrinter) {
-  AsmPrinter.GetMMI = [&MAM, &M]() {
-    return &MAM.getResult<MachineModuleAnalysis>(M).getMMI();
-  };
-  AsmPrinter.GetORE = [&MAM, &M](MachineFunction &MF) {
-    return &getMFAM(M, MAM, MF)
-                .getResult<MachineOptimizationRemarkEmitterAnalysis>(MF);
-  };
-  AsmPrinter.GetMDT = [&MAM, &M](MachineFunction &MF) {
-    return &getMFAM(M, MAM, MF).getResult<MachineDominatorTreeAnalysis>(MF);
-  };
-  AsmPrinter.GetMLI = [&MAM, &M](MachineFunction &MF) {
-    return &getMFAM(M, MAM, MF).getResult<MachineLoopAnalysis>(MF);
-  };
-  // TODO(boomanaiden154): Get GC working with the new pass manager.
-  AsmPrinter.BeginGCAssembly = [](Module &M) {};
-  AsmPrinter.FinishGCAssembly = [](Module &M) {};
-  AsmPrinter.EmitStackMaps = [](Module &M) {};
-  AsmPrinter.doInitialization(M);
-  FunctionAnalysisManager &FAM =
-      MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
-  for (Function &F : M) {
-    if (F.isDeclaration())
-      continue;
-    MachineFunction &MF = FAM.getResult<MachineFunctionAnalysis>(F).getMF();
-    AsmPrinter.runOnMachineFunction(MF);
-  }
-  AsmPrinter.doFinalization(M);
-  return PreservedAnalyses::all();
-}
 
 } // end namespace llvm
 

@@ -419,56 +419,6 @@ AsmPrinter::AsmPrinter(TargetMachine &tm, std::unique_ptr<MCStreamer> Streamer,
   VerboseAsm = OutStreamer->isVerboseAsm();
   DwarfUsesRelocationsAcrossSections =
       MAI->doesDwarfUseRelocationsAcrossSections();
-  GetMMI = [this]() {
-    auto *MMIWP = getAnalysisIfAvailable<MachineModuleInfoWrapperPass>();
-    return MMIWP ? &MMIWP->getMMI() : nullptr;
-  };
-  GetORE = [this](MachineFunction &MF) {
-    return &getAnalysis<MachineOptimizationRemarkEmitterPass>().getORE();
-  };
-  GetMDT = [this](MachineFunction &MF) {
-    auto *MDTWrapper =
-        getAnalysisIfAvailable<MachineDominatorTreeWrapperPass>();
-    return MDTWrapper ? &MDTWrapper->getDomTree() : nullptr;
-  };
-  GetMLI = [this](MachineFunction &MF) {
-    auto *MLIWrapper = getAnalysisIfAvailable<MachineLoopInfoWrapperPass>();
-    return MLIWrapper ? &MLIWrapper->getLI() : nullptr;
-  };
-  BeginGCAssembly = [this](Module &M) {
-    GCModuleInfo *MI = getAnalysisIfAvailable<GCModuleInfo>();
-    assert(MI && "AsmPrinter didn't require GCModuleInfo?");
-    for (const auto &I : *MI)
-      if (GCMetadataPrinter *MP = getOrCreateGCPrinter(*I))
-        MP->beginAssembly(M, *MI, *this);
-  };
-  FinishGCAssembly = [this](Module &M) {
-    GCModuleInfo *MI = getAnalysisIfAvailable<GCModuleInfo>();
-    assert(MI && "AsmPrinter didn't require GCModuleInfo?");
-    for (GCModuleInfo::iterator I = MI->end(), E = MI->begin(); I != E;)
-      if (GCMetadataPrinter *MP = getOrCreateGCPrinter(**--I))
-        MP->finishAssembly(M, *MI, *this);
-  };
-  EmitStackMaps = [this](Module &M) {
-    GCModuleInfo *MI = getAnalysisIfAvailable<GCModuleInfo>();
-    assert(MI && "AsmPrinter didn't require GCModuleInfo?");
-    bool NeedsDefault = false;
-    if (MI->begin() == MI->end())
-      // No GC strategy, use the default format.
-      NeedsDefault = true;
-    else
-      for (const auto &I : *MI) {
-        if (GCMetadataPrinter *MP = getOrCreateGCPrinter(*I))
-          if (MP->emitStackMaps(SM, *this))
-            continue;
-        // The strategy doesn't have printer or doesn't emit custom stack maps.
-        // Use the default format.
-        NeedsDefault = true;
-      }
-
-    if (NeedsDefault)
-      SM.serializeToStackMapSection();
-  };
 }
 
 AsmPrinter::~AsmPrinter() {
@@ -540,7 +490,8 @@ void AsmPrinter::getAnalysisUsage(AnalysisUsage &AU) const {
 }
 
 bool AsmPrinter::doInitialization(Module &M) {
-  MMI = GetMMI();
+  auto *MMIWP = getAnalysisIfAvailable<MachineModuleInfoWrapperPass>();
+  MMI = MMIWP ? &MMIWP->getMMI() : nullptr;
   HasSplitStack = false;
   HasNoSplitStack = false;
   DbgInfoAvailable = !M.debug_compile_units().empty();
@@ -620,7 +571,11 @@ bool AsmPrinter::doInitialization(Module &M) {
       OutStreamer->emitXCOFFRenameDirective(XSym, XSym->getSymbolTableName());
   }
 
-  BeginGCAssembly(M);
+  GCModuleInfo *MI = getAnalysisIfAvailable<GCModuleInfo>();
+  assert(MI && "AsmPrinter didn't require GCModuleInfo?");
+  for (const auto &I : *MI)
+    if (GCMetadataPrinter *MP = getOrCreateGCPrinter(*I))
+      MP->beginAssembly(M, *MI, *this);
 
   // Emit module-level inline asm if it exists.
   if (!M.getModuleInlineAsm().empty()) {
@@ -2013,7 +1968,8 @@ void AsmPrinter::emitFunctionBody() {
 
   if (isVerbose()) {
     // Get MachineDominatorTree or compute it on the fly if it's unavailable
-    MDT = GetMDT(*MF);
+    auto MDTWrapper = getAnalysisIfAvailable<MachineDominatorTreeWrapperPass>();
+    MDT = MDTWrapper ? &MDTWrapper->getDomTree() : nullptr;
     if (!MDT) {
       OwnedMDT = std::make_unique<MachineDominatorTree>();
       OwnedMDT->recalculate(*MF);
@@ -2021,7 +1977,8 @@ void AsmPrinter::emitFunctionBody() {
     }
 
     // Get MachineLoopInfo or compute it on the fly if it's unavailable
-    MLI = GetMLI(*MF);
+    auto *MLIWrapper = getAnalysisIfAvailable<MachineLoopInfoWrapperPass>();
+    MLI = MLIWrapper ? &MLIWrapper->getLI() : nullptr;
     if (!MLI) {
       OwnedMLI = std::make_unique<MachineLoopInfo>();
       OwnedMLI->analyze(*MDT);
@@ -2875,7 +2832,7 @@ bool AsmPrinter::doFinalization(Module &M) {
   // text sections come after debug info has been emitted. This matters for
   // stack maps as they are arbitrary data, and may even have a custom format
   // through user plugins.
-  EmitStackMaps(M);
+  emitStackMaps();
 
   // Print aliases in topological order, that is, for each alias a = b,
   // b must be printed before a.
@@ -2942,7 +2899,11 @@ bool AsmPrinter::doFinalization(Module &M) {
     }
   }
 
-  FinishGCAssembly(M);
+  GCModuleInfo *MI = getAnalysisIfAvailable<GCModuleInfo>();
+  assert(MI && "AsmPrinter didn't require GCModuleInfo?");
+  for (GCModuleInfo::iterator I = MI->end(), E = MI->begin(); I != E; )
+    if (GCMetadataPrinter *MP = getOrCreateGCPrinter(**--I))
+      MP->finishAssembly(M, *MI, *this);
 
   // Emit llvm.ident metadata in an '.ident' directive.
   emitModuleIdents(M);
@@ -3082,7 +3043,7 @@ void AsmPrinter::SetupMachineFunction(MachineFunction &MF) {
       CurrentFnSymForSize = CurrentFnBegin;
   }
 
-  ORE = GetORE(MF);
+  ORE = &getAnalysis<MachineOptimizationRemarkEmitterPass>().getORE();
 }
 
 namespace {
@@ -4771,6 +4732,27 @@ GCMetadataPrinter *AsmPrinter::getOrCreateGCPrinter(GCStrategy &S) {
     }
 
   report_fatal_error("no GCMetadataPrinter registered for GC: " + Twine(Name));
+}
+
+void AsmPrinter::emitStackMaps() {
+  GCModuleInfo *MI = getAnalysisIfAvailable<GCModuleInfo>();
+  assert(MI && "AsmPrinter didn't require GCModuleInfo?");
+  bool NeedsDefault = false;
+  if (MI->begin() == MI->end())
+    // No GC strategy, use the default format.
+    NeedsDefault = true;
+  else
+    for (const auto &I : *MI) {
+      if (GCMetadataPrinter *MP = getOrCreateGCPrinter(*I))
+        if (MP->emitStackMaps(SM, *this))
+          continue;
+      // The strategy doesn't have printer or doesn't emit custom stack maps.
+      // Use the default format.
+      NeedsDefault = true;
+    }
+
+  if (NeedsDefault)
+    SM.serializeToStackMapSection();
 }
 
 void AsmPrinter::addAsmPrinterHandler(
