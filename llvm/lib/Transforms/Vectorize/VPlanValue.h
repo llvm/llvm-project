@@ -201,12 +201,11 @@ struct VPSymbolicValue : public VPValue {
   }
 };
 
-/// A VPValue defined by a recipe that produces multiple values.
+/// A VPValue defined by a recipe that produces one or more values.
 class VPDefValue : public VPValue {
   friend class VPValue;
   friend class VPDef;
-  /// Pointer to the VPDef that defines this VPValue. If it is nullptr, the
-  /// VPValue is not defined by any recipe modeled in VPlan.
+  /// Pointer to the VPDef that defines this VPValue.
   VPDef *Def;
 
 public:

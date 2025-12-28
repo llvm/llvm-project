@@ -79,7 +79,7 @@ bool VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(
           for (VPValue *Op : PhiR->operands())
             NewRecipe->addOperand(Op);
         } else {
-          VPValue *Start = Plan.getOrAddLiveIn(II->getStartValue());
+          VPLiveIn *Start = Plan.getOrAddLiveIn(II->getStartValue());
           VPValue *Step =
               vputils::getOrCreateVPValueForSCEVExpr(Plan, II->getStep());
           // It is always safe to copy over the NoWrap and FastMath flags. In
@@ -736,7 +736,7 @@ static VPScalarIVStepsRecipe *
 createScalarIVSteps(VPlan &Plan, InductionDescriptor::InductionKind Kind,
                     Instruction::BinaryOps InductionOpcode,
                     FPMathOperator *FPBinOp, Instruction *TruncI,
-                    VPValue *StartV, VPValue *Step, DebugLoc DL,
+                    VPLiveIn *StartV, VPValue *Step, DebugLoc DL,
                     VPBuilder &Builder) {
   VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
   VPBasicBlock *HeaderVPBB = LoopRegion->getEntryBasicBlock();
@@ -791,7 +791,7 @@ static VPValue *
 scalarizeVPWidenPointerInduction(VPWidenPointerInductionRecipe *PtrIV,
                                  VPlan &Plan, VPBuilder &Builder) {
   const InductionDescriptor &ID = PtrIV->getInductionDescriptor();
-  VPValue *StartV = Plan.getConstantInt(ID.getStep()->getType(), 0);
+  VPLiveIn *StartV = Plan.getConstantInt(ID.getStep()->getType(), 0);
   VPValue *StepV = PtrIV->getOperand(1);
   VPScalarIVStepsRecipe *Steps = createScalarIVSteps(
       Plan, InductionDescriptor::IK_IntInduction, Instruction::Add, nullptr,
@@ -996,7 +996,7 @@ static VPValue *optimizeEarlyExitInductionUser(VPlan &Plan,
 
   if (!WideIntOrFp || !WideIntOrFp->isCanonical()) {
     const InductionDescriptor &ID = WideIV->getInductionDescriptor();
-    VPValue *Start = WideIV->getStartValue();
+    VPLiveIn *Start = WideIV->getStartValue();
     VPValue *Step = WideIV->getStepValue();
     EndValue = B.createDerivedIV(
         ID.getKind(), dyn_cast_or_null<FPMathOperator>(ID.getInductionBinOp()),
@@ -4643,7 +4643,7 @@ void VPlanTransforms::materializeVectorTripCount(VPlan &Plan,
                                                  bool RequiresScalarEpilogue) {
   VPValue &VectorTC = Plan.getVectorTripCount();
   assert(isa<VPSymbolicValue>(VectorTC) &&
-         "vector-trip-count must be a live-in");
+         "vector-trip-count must be symbolic");
   // There's nothing to do if there are no users of the vector trip count or its
   // IR value has already been set.
   if (VectorTC.getNumUsers() == 0 || VectorTC.getUnderlyingValue())
@@ -5065,7 +5065,7 @@ static VPValue *tryToComputeEndValueForInduction(VPWidenInductionRecipe *WideIV,
   if (WideIntOrFp && WideIntOrFp->getTruncInst())
     return nullptr;
 
-  VPValue *Start = WideIV->getStartValue();
+  VPLiveIn *Start = WideIV->getStartValue();
   VPValue *Step = WideIV->getStepValue();
   const InductionDescriptor &ID = WideIV->getInductionDescriptor();
   VPValue *EndValue = VectorTC;

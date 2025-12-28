@@ -7426,11 +7426,11 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   DenseMap<const SCEV *, Value *> ExpandedSCEVs =
       VPlanTransforms::expandSCEVs(BestVPlan, *PSE.getSE());
   if (!ILV.getTripCount()) {
-    // After expandSCEVs, TripCount is always a VPLiveIn.
     ILV.setTripCount(cast<VPLiveIn>(BestVPlan.getTripCount())->getValue());
-  } else
+  } else {
     assert(VectorizingEpilogue && "should only re-use the existing trip "
                                   "count during epilogue vectorization");
+  }
 
   // Perform the actual loop transformation.
   VPTransformState State(&TTI, BestVF, LI, DT, ILV.AC, ILV.Builder, &BestVPlan,
@@ -7749,7 +7749,7 @@ VPRecipeBuilder::tryToOptimizeInductionTruncate(VPInstruction *VPI,
   auto *WidenIV = cast<VPWidenIntOrFpInductionRecipe>(
       VPI->getOperand(0)->getDefiningRecipe());
   PHINode *Phi = WidenIV->getPHINode();
-  VPValue *Start = WidenIV->getStartValue();
+  VPLiveIn *Start = WidenIV->getStartValue();
   const InductionDescriptor &IndDesc = WidenIV->getInductionDescriptor();
 
   // It is always safe to copy over the NoWrap and FastMath flags. In

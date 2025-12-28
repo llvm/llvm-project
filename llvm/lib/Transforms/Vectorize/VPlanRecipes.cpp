@@ -2348,12 +2348,12 @@ bool VPWidenIntOrFpInductionRecipe::isCanonical() const {
   // The step may be defined by a recipe in the preheader (e.g. if it requires
   // SCEV expansion), but for the canonical induction the step is required to be
   // 1, which is represented as live-in.
-  if (getStepValue()->getDefiningRecipe())
+  const VPLiveIn *Step = dyn_cast<VPLiveIn>(getStepValue());
+  if (!Step)
     return false;
-  auto *StepC =
-      dyn_cast<ConstantInt>(cast<VPLiveIn>(getStepValue())->getValue());
-  auto *StartC =
-      dyn_cast<ConstantInt>(cast<VPLiveIn>(getStartValue())->getValue());
+  ;
+  auto *StepC = dyn_cast<ConstantInt>(Step->getValue());
+  auto *StartC = dyn_cast<ConstantInt>(getStartValue()->getValue());
   return StartC && StartC->isZero() && StepC && StepC->isOne() &&
          getScalarType() == getRegion()->getCanonicalIVType();
 }

@@ -78,8 +78,6 @@ raw_ostream &llvm::operator<<(raw_ostream &OS, const VPRecipeBase &R) {
 }
 #endif
 
-Type *VPLiveIn::getType() const { return getUnderlyingValue()->getType(); }
-
 Value *VPLane::getAsRuntimeExpr(IRBuilderBase &Builder,
                                 const ElementCount &VF) const {
   switch (LaneKind) {
@@ -126,18 +124,21 @@ void VPDef::dump() const {
 #endif
 
 VPRecipeBase *VPValue::getDefiningRecipe() {
-  auto *Def = dyn_cast<VPDefValue>(this);
-  if (!Def)
+  auto *DefValue = dyn_cast<VPDefValue>(this);
+  if (!DefValue)
     return nullptr;
-  return cast<VPRecipeBase>(Def->Def);
+  return cast<VPRecipeBase>(DefValue->Def);
 }
 
 const VPRecipeBase *VPValue::getDefiningRecipe() const {
-  auto *Def = dyn_cast<VPDefValue>(this);
-  if (!Def)
+  auto *DefValue = dyn_cast<VPDefValue>(this);
+  if (!DefValue)
     return nullptr;
-  return cast<VPRecipeBase>(Def->Def);
+  assert(DefValue);
+  return cast<VPRecipeBase>(DefValue->Def);
 }
+
+Type *VPLiveIn::getType() const { return getUnderlyingValue()->getType(); }
 
 VPDefValue::VPDefValue(VPDef *Def, Value *UV)
     : VPValue(VPVDefValueSC, UV, nullptr), Def(Def) {

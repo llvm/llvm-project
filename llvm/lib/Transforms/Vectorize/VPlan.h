@@ -2148,6 +2148,8 @@ public:
 
   void execute(VPTransformState &State) override = 0;
 
+  VPLiveIn *getStartValue() const { return cast<VPLiveIn>(getOperand(0)); }
+
   /// Returns the step value of the induction.
   VPValue *getStepValue() { return getOperand(1); }
   const VPValue *getStepValue() const { return getOperand(1); }
@@ -2204,7 +2206,7 @@ class VPWidenIntOrFpInductionRecipe : public VPWidenInductionRecipe,
   bool isUnrolled() const { return getNumOperands() == 5; }
 
 public:
-  VPWidenIntOrFpInductionRecipe(PHINode *IV, VPValue *Start, VPValue *Step,
+  VPWidenIntOrFpInductionRecipe(PHINode *IV, VPLiveIn *Start, VPValue *Step,
                                 VPValue *VF, const InductionDescriptor &IndDesc,
                                 const VPIRFlags &Flags, DebugLoc DL)
       : VPWidenInductionRecipe(VPDef::VPWidenIntOrFpInductionSC, IV, Start,
@@ -2213,7 +2215,7 @@ public:
     addOperand(VF);
   }
 
-  VPWidenIntOrFpInductionRecipe(PHINode *IV, VPValue *Start, VPValue *Step,
+  VPWidenIntOrFpInductionRecipe(PHINode *IV, VPLiveIn *Start, VPValue *Step,
                                 VPValue *VF, const InductionDescriptor &IndDesc,
                                 TruncInst *Trunc, const VPIRFlags &Flags,
                                 DebugLoc DL)
@@ -2243,6 +2245,8 @@ public:
                      "expandVPWidenIntOrFpInductionRecipe");
   }
 
+  VPLiveIn *getStartValue() const { return cast<VPLiveIn>(getOperand(0)); }
+
   VPValue *getSplatVFValue() {
     // If the recipe has been unrolled return the VPValue for the induction
     // increment.
@@ -2266,8 +2270,7 @@ public:
 
   /// Returns the scalar type of the induction.
   Type *getScalarType() const {
-    return Trunc ? Trunc->getType()
-                 : cast<VPLiveIn>(getStartValue())->getValue()->getType();
+    return Trunc ? Trunc->getType() : getStartValue()->getType();
   }
 
   /// Returns the VPValue representing the value of this induction at
@@ -3567,13 +3570,13 @@ protected:
 /// canonical induction variable.
 class VPCanonicalIVPHIRecipe : public VPHeaderPHIRecipe {
 public:
-  VPCanonicalIVPHIRecipe(VPValue *StartV, DebugLoc DL)
+  VPCanonicalIVPHIRecipe(VPLiveIn *StartV, DebugLoc DL)
       : VPHeaderPHIRecipe(VPDef::VPCanonicalIVPHISC, nullptr, StartV, DL) {}
 
   ~VPCanonicalIVPHIRecipe() override = default;
 
   VPCanonicalIVPHIRecipe *clone() override {
-    auto *R = new VPCanonicalIVPHIRecipe(getOperand(0), getDebugLoc());
+    auto *R = new VPCanonicalIVPHIRecipe(getStartValue(), getDebugLoc());
     R->addOperand(getBackedgeValue());
     return R;
   }
@@ -3585,10 +3588,10 @@ public:
                      "scalar phi recipe");
   }
 
+  VPLiveIn *getStartValue() const { return cast<VPLiveIn>(getOperand(0)); }
+
   /// Returns the scalar type of the induction.
-  Type *getScalarType() const {
-    return cast<VPLiveIn>(getStartValue())->getValue()->getType();
-  }
+  Type *getScalarType() const { return getStartValue()->getType(); }
 
   /// Returns true if the recipe only uses the first lane of operand \p Op.
   bool usesFirstLaneOnly(const VPValue *Op) const override {
@@ -3743,7 +3746,7 @@ class VPDerivedIVRecipe : public VPSingleDefRecipe {
   std::string Name;
 
 public:
-  VPDerivedIVRecipe(const InductionDescriptor &IndDesc, VPValue *Start,
+  VPDerivedIVRecipe(const InductionDescriptor &IndDesc, VPLiveIn *Start,
                     VPCanonicalIVPHIRecipe *CanonicalIV, VPValue *Step,
                     const Twine &Name = "")
       : VPDerivedIVRecipe(
@@ -3752,7 +3755,7 @@ public:
             Start, CanonicalIV, Step, Name) {}
 
   VPDerivedIVRecipe(InductionDescriptor::InductionKind Kind,
-                    const FPMathOperator *FPBinOp, VPValue *Start, VPValue *IV,
+                    const FPMathOperator *FPBinOp, VPLiveIn *Start, VPValue *IV,
                     VPValue *Step, const Twine &Name = "")
       : VPSingleDefRecipe(VPDef::VPDerivedIVSC, {Start, IV, Step}), Kind(Kind),
         FPBinOp(FPBinOp), Name(Name.str()) {}
@@ -3777,11 +3780,9 @@ public:
     return 0;
   }
 
-  Type *getScalarType() const {
-    return cast<VPLiveIn>(getStartValue())->getValue()->getType();
-  }
+  Type *getScalarType() const { return getStartValue()->getType(); }
 
-  VPValue *getStartValue() const { return getOperand(0); }
+  VPLiveIn *getStartValue() const { return cast<VPLiveIn>(getOperand(0)); }
   VPValue *getStepValue() const { return getOperand(2); }
 
   /// Returns true if the recipe only uses the first lane of operand \p Op.
