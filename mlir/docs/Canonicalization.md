@@ -65,8 +65,7 @@ Some important things to think about w.r.t. canonicalization patterns:
 
 ## What is the Canonical Form?
 
-There is no single formally defined canonical form in MLIR. Some dialects
-define multiple forms, depending on the transformation ([example](https://mlir.llvm.org/docs/Rationale/RationaleLinalgDialect/#interchangeability-of-formsa-nameformsa)).
+There is no formally defined canonical form in MLIR.
 The de-facto canonical form keeps evolving, as canonicalization patterns and
 folders are getting added / removed / modified by the community.
 
@@ -78,7 +77,7 @@ community-agreed canonicalizations include:
 
 * Identity / no-op elimination. E.g., folding `arith.addi %x, %c0` to `%x` or
   erasing `memref.copy %x, %x`.
-* Constant folding. E.g., folding `arith.addi %c1, %c2` to `%c3`.
+* Scalar constant folding. E.g., folding `arith.addi %c1, %c2` to `%c3`. Note: this isn't true for "large" tensors where constant folding can lead to an IR-size explosion.
 * Folding inverse ops. E.g., folding `arith.xori(arith.xori(%x, %a), %a)` to
   `%x`.
 * Unused/redundant value elimination. E.g., removing unused loop-carried
