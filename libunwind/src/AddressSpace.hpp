@@ -202,10 +202,12 @@ public:
 
   pint_t getEncodedP(pint_t &addr, pint_t end, uint8_t encoding,
                      pint_t datarelBase = 0, pint_t *resultAddr = nullptr);
-  bool findFunctionName(pint_t addr, char *buf, size_t bufLen,
+  template <typename T>
+  bool findFunctionName(const T &addr, char *buf, size_t bufLen,
                         unw_word_t *offset);
-  bool findUnwindSections(pint_t targetAddr, UnwindInfoSections &info);
-  bool findOtherFDE(pint_t targetAddr, pint_t &fde);
+  template <typename T>
+  bool findUnwindSections(const T &targetAddr, UnwindInfoSections &info);
+  template <typename T> bool findOtherFDE(const T &targetAddr, pint_t &fde);
 
   static LocalAddressSpace sThisAddressSpace;
 };
@@ -497,8 +499,8 @@ static int findUnwindSectionsByPhdr(struct dl_phdr_info *pinfo,
 
 #endif  // defined(_LIBUNWIND_USE_DL_ITERATE_PHDR)
 
-
-inline bool LocalAddressSpace::findUnwindSections(pint_t targetAddr,
+template <typename T>
+inline bool LocalAddressSpace::findUnwindSections(const T &targetAddr,
                                                   UnwindInfoSections &info) {
 #ifdef __APPLE__
   dyld_unwind_sections dyldInfo;
@@ -669,14 +671,16 @@ inline bool LocalAddressSpace::findUnwindSections(pint_t targetAddr,
   return false;
 }
 
-inline bool LocalAddressSpace::findOtherFDE(pint_t targetAddr, pint_t &fde) {
+template <typename T>
+inline bool LocalAddressSpace::findOtherFDE(const T &targetAddr, pint_t &fde) {
   // TO DO: if OS has way to dynamically register FDEs, check that.
   (void)targetAddr;
   (void)fde;
   return false;
 }
 
-inline bool LocalAddressSpace::findFunctionName(pint_t addr, char *buf,
+template <typename T>
+inline bool LocalAddressSpace::findFunctionName(const T &addr, char *buf,
                                                 size_t bufLen,
                                                 unw_word_t *offset) {
 #if _LIBUNWIND_USE_DLADDR

@@ -121,7 +121,7 @@ class _LIBUNWIND_HIDDEN DwarfFDECache {
   typedef typename A::pint_t pint_t;
 public:
   static constexpr pint_t kSearchAll = static_cast<pint_t>(-1);
-  static pint_t findFDE(pint_t mh, pint_t pc);
+  template <typename T> static pint_t findFDE(pint_t mh, const T &pc);
   static void add(pint_t mh, pint_t ip_start, pint_t ip_end, pint_t fde);
   static void removeAllIn(pint_t mh);
   static void iterateCacheEntries(void (*func)(unw_word_t ip_start,
@@ -174,8 +174,9 @@ bool DwarfFDECache<A>::_registeredForDyldUnloads = false;
 #endif
 
 template <typename A>
+template <typename T>
 typename DwarfFDECache<A>::pint_t DwarfFDECache<A>::findFDE(pint_t mh,
-                                                            pint_t pc) {
+                                                            const T &pc) {
   pint_t result = 0;
   _LIBUNWIND_LOG_IF_FALSE(_lock.lock_shared());
   for (entry *p = _buffer; p < _bufferUsed; ++p) {
@@ -1060,7 +1061,7 @@ private:
 #if defined(_LIBUNWIND_SUPPORT_DWARF_UNWIND)
   bool getInfoFromFdeCie(const typename CFI_Parser<A>::FDE_Info &fdeInfo,
                          const typename CFI_Parser<A>::CIE_Info &cieInfo,
-                         pint_t pc, uintptr_t dso_base);
+                         const typename R::link_reg_t &pc, uintptr_t dso_base);
   bool getInfoFromDwarfSection(const typename R::link_reg_t &pc,
                                const UnwindInfoSections &sects,
                                uint32_t fdeSectionOffsetHint = 0);
@@ -1730,8 +1731,8 @@ bool UnwindCursor<A, R>::getInfoFromEHABISection(
 template <typename A, typename R>
 bool UnwindCursor<A, R>::getInfoFromFdeCie(
     const typename CFI_Parser<A>::FDE_Info &fdeInfo,
-    const typename CFI_Parser<A>::CIE_Info &cieInfo, pint_t pc,
-    uintptr_t dso_base) {
+    const typename CFI_Parser<A>::CIE_Info &cieInfo,
+    const typename R::link_reg_t &pc, uintptr_t dso_base) {
   typename CFI_Parser<A>::PrologInfo prolog;
   if (CFI_Parser<A>::parseFDEInstructions(_addressSpace, fdeInfo, cieInfo, pc,
                                           R::getArch(), &prolog)) {
