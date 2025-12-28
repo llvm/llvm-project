@@ -13,7 +13,8 @@
 #include <streambuf>
 
 void test() {
-  std::basic_streambuf<char> sbuf;
+  struct testbuf : public std::basic_streambuf<char> {
+  } sbuf;
 
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   sbuf.getloc();

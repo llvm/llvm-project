@@ -14,20 +14,16 @@
 
 #include <iostream>
 
-struct testbuf
-    : public std::basic_streambuf<char>
-{};
-
-
 void test() {
-  testbuf sbuf;
+  struct testbuf : public std::basic_streambuf<char> {
+  } sbuf;
 
   // [iostreamclass]
 
   // [istream]
 
   {
-    std::basic_istream<char> stream(sbuf);
+    std::basic_istream<char> stream(&sbuf);
 
     // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
     stream.gcount();
@@ -42,7 +38,7 @@ void test() {
   // [ostream]
 
   {
-    std::basic_ostream<char> stream(sbuf);
+    std::basic_ostream<char> stream(&sbuf);
 
     // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
     stream.tellp();
