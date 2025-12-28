@@ -12,9 +12,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/KnownFPClass.h"
+#include "llvm/ADT/APFloat.h"
 #include "llvm/Support/ErrorHandling.h"
 
 using namespace llvm;
+
+KnownFPClass::KnownFPClass(const APFloat &C)
+    : KnownFPClasses(C.classify()), SignBit(C.isNegative()) {}
 
 /// Return true if it's possible to assume IEEE treatment of input denormals in
 /// \p F for \p Val.
