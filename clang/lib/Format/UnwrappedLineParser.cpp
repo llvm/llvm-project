@@ -493,8 +493,7 @@ void UnwrappedLineParser::calculateBraceTypes(bool ExpectClassBody) {
 
   constexpr int MaxLookBack = 64;
   const auto IsAddressOfParenExpression = [](const FormatToken *RightParen) {
-    if (!RightParen || RightParen->isNot(tok::r_paren))
-      return false;
+    assert(RightParen && RightParen->is(tok::r_paren));
 
     int ParenDepth = 0;
     const FormatToken *Current = RightParen;
@@ -558,7 +557,7 @@ void UnwrappedLineParser::calculateBraceTypes(bool ExpectClassBody) {
         // for a block/function body and clang-format will reflow the macro with
         // backslashes and spaces (e.g. `&(type) { v }`).
         if (IsCpp && Line->InMacroBody && PrevTok &&
-            IsAddressOfParenExpression(PrevTok)) {
+            PrevTok->is(tok::r_paren) && IsAddressOfParenExpression(PrevTok)) {
           Tok->setBlockKind(BK_BracedInit);
         } else {
           Tok->setBlockKind(BK_Unknown);
