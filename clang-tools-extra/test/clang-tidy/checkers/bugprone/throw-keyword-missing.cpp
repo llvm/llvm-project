@@ -206,15 +206,22 @@ void placeMentNewTest() {
   new (expr) RegularException{};
 }
 
-void foo() {
+void lambdaAsVariableInitializerTest() {
   const auto var = [] {
     // CHECK-MESSAGES: :[[@LINE+1]]:5: warning: suspicious exception
     RegularException{0};
   };
 }
 
-struct Bar {
-  Bar() {
+void lambdaInReturnTest() {
+  return [] {
+    // CHECK-MESSAGES: :[[@LINE+1]]:5: warning: suspicious exception
+    RegularException{0};
+  }();
+}
+
+struct ExceptionInConstructorTest {
+  ExceptionInConstructorTest() {
     // CHECK-MESSAGES: :[[@LINE+1]]:5: warning: suspicious exception
     RegularException{0};
   }

@@ -17,8 +17,9 @@ namespace clang::tidy::bugprone {
 
 void ThrowKeywordMissingCheck::registerMatchers(MatchFinder *Finder) {
   const VariadicDynCastAllOfMatcher<Stmt, AttributedStmt> AttributedStmt;
-  // Matches an 'expression-statement' (not to be confused with a statement
-  // expression, the GNU extension!), as defined in [stmt.expr]/1.
+  // Matches an 'expression-statement', as defined in [stmt.expr]/1.
+  // Not to be confused with the similarly-named GNU extension, the
+  // statement expression.
   const auto ExprStmt = [&](const Matcher<Expr> &InnerMatcher) {
     return expr(hasParent(stmt(anyOf(doStmt(), whileStmt(), forStmt(),
                                      compoundStmt(), ifStmt(), switchStmt(),
