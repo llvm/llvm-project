@@ -17352,8 +17352,7 @@ static bool narrowIndex(SDValue &N, ISD::MemIndexType IndexType, SelectionDAG &D
     EVT ResultVT = EVT::getIntegerVT(C, ActiveBits).getRoundIntegerType(C);
     if (ResultVT.bitsLT(VT.getVectorElementType())) {
       N = DAG.getNode(ISD::TRUNCATE, DL,
-                      VT.changeVectorElementType(*DAG.getContext(), ResultVT),
-                      N);
+                      VT.changeVectorElementType(C, ResultVT), N);
       return true;
     }
   }

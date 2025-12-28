@@ -4261,8 +4261,7 @@ SDValue DAGCombiner::visitSUB(SDNode *N) {
     // sub 0, (and x, 1)  -->  SIGN_EXTEND_INREG x, i1
     if (N1.getOpcode() == ISD::AND && N1.hasOneUse() &&
         isOneOrOneSplat(N1->getOperand(1))) {
-      EVT ExtVT = VT.changeElementType(*DAG.getContext(),
-                                       EVT::getIntegerVT(*DAG.getContext(), 1));
+      EVT ExtVT = VT.changeElementType(*DAG.getContext(), MVT::i1);
       if (TLI.getOperationAction(ISD::SIGN_EXTEND_INREG, ExtVT) ==
           TargetLowering::Legal) {
         return DAG.getNode(ISD::SIGN_EXTEND_INREG, DL, VT, N1->getOperand(0),
