@@ -96,14 +96,15 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
   const LLT p10 = LLT::pointer(10, PSize); // Private
   const LLT p11 = LLT::pointer(11, PSize); // StorageBuffer
   const LLT p12 = LLT::pointer(12, PSize); // Uniform
+  const LLT p13 = LLT::pointer(13, PSize); // PushConstant
 
   // TODO: remove copy-pasting here by using concatenation in some way.
   auto allPtrsScalarsAndVectors = {
-      p0,    p1,    p2,    p3,    p4,     p5,     p6,    p7,    p8,
-      p9,    p10,   p11,   p12,   s1,     s8,     s16,   s32,   s64,
-      v2s1,  v2s8,  v2s16, v2s32, v2s64,  v3s1,   v3s8,  v3s16, v3s32,
-      v3s64, v4s1,  v4s8,  v4s16, v4s32,  v4s64,  v8s1,  v8s8,  v8s16,
-      v8s32, v8s64, v16s1, v16s8, v16s16, v16s32, v16s64};
+      p0,    p1,    p2,    p3,    p4,    p5,     p6,     p7,    p8,
+      p9,    p10,   p11,   p12,   p13,   s1,     s8,     s16,   s32,
+      s64,   v2s1,  v2s8,  v2s16, v2s32, v2s64,  v3s1,   v3s8,  v3s16,
+      v3s32, v3s64, v4s1,  v4s8,  v4s16, v4s32,  v4s64,  v8s1,  v8s8,
+      v8s16, v8s32, v8s64, v16s1, v16s8, v16s16, v16s32, v16s64};
 
   auto allVectors = {v2s1,  v2s8,   v2s16,  v2s32, v2s64, v3s1,  v3s8,
                      v3s16, v3s32,  v3s64,  v4s1,  v4s8,  v4s16, v4s32,
@@ -137,10 +138,11 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
       s16,   s32,   s64,   v2s16, v2s32, v2s64, v3s16,  v3s32,  v3s64,
       v4s16, v4s32, v4s64, v8s16, v8s32, v8s64, v16s16, v16s32, v16s64};
 
-  auto allFloatAndIntScalarsAndPtrs = {s8, s16, s32, s64, p0, p1,  p2,  p3, p4,
-                                       p5, p6,  p7,  p8,  p9, p10, p11, p12};
+  auto allFloatAndIntScalarsAndPtrs = {s8, s16, s32, s64, p0,  p1,
+                                       p2, p3,  p4,  p5,  p6,  p7,
+                                       p8, p9,  p10, p11, p12, p13};
 
-  auto allPtrs = {p0, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12};
+  auto allPtrs = {p0, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13};
 
   auto &allowedVectorTypes = ST.isShader() ? allShaderVectors : allVectors;
 
@@ -173,6 +175,7 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
   // non-shader contexts, vector sizes of 8 and 16 are also permitted, but
   // arbitrary sizes (e.g., 6 or 11) are not.
   uint32_t MaxVectorSize = ST.isShader() ? 4 : 16;
+  LLVM_DEBUG(dbgs() << "MaxVectorSize: " << MaxVectorSize << "\n");
 
   for (auto Opc : getTypeFoldingSupportedOpcodes()) {
     switch (Opc) {
@@ -221,8 +224,7 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
       .moreElementsToNextPow2(0)
       .lowerIf(vectorElementCountIsGreaterThan(0, MaxVectorSize))
       .moreElementsToNextPow2(1)
-      .lowerIf(vectorElementCountIsGreaterThan(1, MaxVectorSize))
-      .alwaysLegal();
+      .lowerIf(vectorElementCountIsGreaterThan(1, MaxVectorSize));
 
   getActionDefinitionsBuilder(G_EXTRACT_VECTOR_ELT)
       .moreElementsToNextPow2(1)
@@ -263,8 +265,7 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
 
   // If the result is still illegal, the combiner should be able to remove it.
   getActionDefinitionsBuilder(G_CONCAT_VECTORS)
-      .legalForCartesianProduct(allowedVectorTypes, allowedVectorTypes)
-      .moreElementsToNextPow2(0);
+      .legalForCartesianProduct(allowedVectorTypes, allowedVectorTypes);
 
   getActionDefinitionsBuilder(G_SPLAT_VECTOR)
       .legalFor(allowedVectorTypes)
