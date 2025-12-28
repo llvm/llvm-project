@@ -943,7 +943,7 @@ PreservedAnalyses X86FixupLEAsPass::run(MachineFunction &MF,
   bool Changed = PassImpl.runOnMachineFunction(MF);
   if (!Changed)
     return PreservedAnalyses::all();
-  PreservedAnalyses PA = PreservedAnalyses::none();
+  PreservedAnalyses PA = getMachineFunctionPassPreservedAnalyses();
   PA.preserveSet<CFGAnalyses>();
   return PA;
 }
