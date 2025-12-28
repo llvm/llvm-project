@@ -364,11 +364,12 @@ In this case, you should use the ``RemovedArgs`` configuration option (or
 ``--removed-arg`` command-line option) to remove these flags, and
 ``ExtraArgs`` (or ``--extra-arg``) to provide the ``--cuda-path``.
 
-For example, to remove the NVCC-specific ``-xcu`` flag:
+For example, to remove the NVCC-specific ``-gencode`` flag and provide the
+CUDA path:
 
 .. code-block:: console
 
-  $ clang-tidy source.cu --removed-arg="-xcu" --extra-arg="--cuda-path=/path/to/cuda"
+  $ clang-tidy source.cu --removed-arg="-gencode" --removed-arg="arch=.." --extra-arg="--cuda-path=/path/to/cuda"
 
 By default, :program:`clang-tidy` will use the host compilation, which is
 sufficient to analyze both host and device code. To specifically perform device
