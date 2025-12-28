@@ -455,4 +455,9 @@ namespace GH173732 {
   typedef char *ptr;
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use 'using' instead of 'typedef' [modernize-use-using]
   // CHECK-FIXES: using ptr = char *;
+
+  // multiple in one typedef
+  typedef char (&refArray)[2], (*ptrArray)[2];
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use 'using' instead of 'typedef' [modernize-use-using]
+  // CHECK-MESSAGES: :[[@LINE-2]]:29: warning: use 'using' instead of 'typedef' [modernize-use-using]
 }
