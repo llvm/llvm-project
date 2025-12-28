@@ -971,8 +971,8 @@ static bool isInstructionPairAdd(Instruction *A, Instruction *B) {
          (OpcA == Instruction::Add && OpcB == Instruction::Sub);
 }
 
-static bool isInstructionPotentiallySymmetric(Instruction *I) {
-  switch (I->getOpcode()) {
+static bool isInstructionPotentiallySymmetric(unsigned OpCode) {
+  switch (OpCode) {
   case Instruction::FAdd:
   case Instruction::FSub:
   case Instruction::FMul:
@@ -990,14 +990,12 @@ ComplexDeinterleavingGraph::CompositeNode *
 ComplexDeinterleavingGraph::identifySymmetricOperation(ComplexValues &Vals) {
   auto *FirstReal = cast<Instruction>(Vals[0].Real);
   unsigned FirstOpc = FirstReal->getOpcode();
+  if (!isInstructionPotentiallySymmetric(FirstOpc))
+    return nullptr;
   for (auto &V : Vals) {
     auto *Real = cast<Instruction>(V.Real);
     auto *Imag = cast<Instruction>(V.Imag);
     if (Real->getOpcode() != FirstOpc || Imag->getOpcode() != FirstOpc)
-      return nullptr;
-
-    if (!isInstructionPotentiallySymmetric(Real) ||
-        !isInstructionPotentiallySymmetric(Imag))
       return nullptr;
 
     if (isa<FPMathOperator>(FirstReal))
@@ -1032,7 +1030,7 @@ ComplexDeinterleavingGraph::identifySymmetricOperation(ComplexValues &Vals) {
 
   auto Node =
       prepareCompositeNode(ComplexDeinterleavingOperation::Symmetric, Vals);
-  Node->Opcode = FirstReal->getOpcode();
+  Node->Opcode = FirstOpc;
   if (isa<FPMathOperator>(FirstReal))
     Node->Flags = FirstReal->getFastMathFlags();
 
