@@ -46,9 +46,9 @@ class LLVM_ABI_FOR_TEST VPValue {
   friend class VPDef;
   friend struct VPDoubleValueDef;
   friend class VPlan;
-  friend struct VPLiveIn;
+  friend struct VPIRValue;
   friend struct VPSymbolicValue;
-  friend class VPDefValue;
+  friend class VPRecipeValue;
 
   const unsigned char SubclassID; ///< Subclass identifier (for isa/dyn_cast).
 
@@ -70,7 +70,7 @@ public:
   /// Return the underlying Value attached to this VPValue.
   Value *getUnderlyingValue() const { return UnderlyingVal; }
 
-  /// Return the underlying IR value for a VPLiveIn.
+  /// Return the underlying IR value for a VPIRValue.
   Value *getLiveInIRValue() const;
 
   /// An enumeration for keeping track of the concrete subclass of VPValue that
@@ -178,9 +178,9 @@ LLVM_ABI_FOR_TEST raw_ostream &operator<<(raw_ostream &OS,
 
 /// A VPValue representing a live-in from the input IR. It wraps an underlying
 /// IR Value.
-struct VPLiveIn : public VPValue {
-  VPLiveIn(Value *UV) : VPValue(VPVLiveInSC, UV, nullptr) {
-    assert(UV && "VPLiveIn requires an underlying IR value");
+struct VPIRValue : public VPValue {
+  VPIRValue(Value *UV) : VPValue(VPVLiveInSC, UV, nullptr) {
+    assert(UV && "VPIRValue requires an underlying IR value");
   }
 
   /// Returns the underlying IR value.
@@ -205,16 +205,16 @@ struct VPSymbolicValue : public VPValue {
 };
 
 /// A VPValue defined by a recipe that produces one or more values.
-class VPDefValue : public VPValue {
+class VPRecipeValue : public VPValue {
   friend class VPValue;
   friend class VPDef;
   /// Pointer to the VPDef that defines this VPValue.
   VPDef *Def;
 
 public:
-  VPDefValue(VPDef *Def, Value *UV = nullptr);
+  VPRecipeValue(VPDef *Def, Value *UV = nullptr);
 
-  virtual ~VPDefValue();
+  virtual ~VPRecipeValue();
 
   static bool classof(const VPValue *V) {
     return V->getVPValueID() == VPVDefValueSC;
@@ -328,16 +328,16 @@ public:
 /// from VPDef before VPValue.
 class VPDef {
   friend class VPValue;
-  friend class VPDefValue;
+  friend class VPRecipeValue;
 
   /// Subclass identifier (for isa/dyn_cast).
   const unsigned char SubclassID;
 
   /// The VPValues defined by this VPDef.
-  TinyPtrVector<VPDefValue *> DefinedValues;
+  TinyPtrVector<VPRecipeValue *> DefinedValues;
 
   /// Add \p V as a defined value by this VPDef.
-  void addDefinedValue(VPDefValue *V) {
+  void addDefinedValue(VPRecipeValue *V) {
     assert(V->Def == this &&
            "can only add VPValue already linked with this VPDef");
     DefinedValues.push_back(V);
@@ -345,7 +345,7 @@ class VPDef {
 
   /// Remove \p V from the values defined by this VPDef. \p V must be a defined
   /// value of this VPDef.
-  void removeDefinedValue(VPDefValue *V) {
+  void removeDefinedValue(VPRecipeValue *V) {
     assert(V->Def == this && "can only remove VPValue linked with this VPDef");
     assert(is_contained(DefinedValues, V) &&
            "VPValue to remove must be in DefinedValues");
@@ -409,7 +409,7 @@ public:
   VPDef(const unsigned char SC) : SubclassID(SC) {}
 
   virtual ~VPDef() {
-    for (VPDefValue *D : make_early_inc_range(DefinedValues)) {
+    for (VPRecipeValue *D : make_early_inc_range(DefinedValues)) {
       assert(D->Def == this &&
              "all defined VPValues should point to the containing VPDef");
       assert(D->getNumUsers() == 0 &&
@@ -443,9 +443,9 @@ public:
   }
 
   /// Returns an ArrayRef of the values defined by the VPDef.
-  ArrayRef<VPDefValue *> definedValues() { return DefinedValues; }
+  ArrayRef<VPRecipeValue *> definedValues() { return DefinedValues; }
   /// Returns an ArrayRef of the values defined by the VPDef.
-  ArrayRef<VPDefValue *> definedValues() const { return DefinedValues; }
+  ArrayRef<VPRecipeValue *> definedValues() const { return DefinedValues; }
 
   /// Returns the number of values defined by the VPDef.
   unsigned getNumDefinedValues() const { return DefinedValues.size(); }

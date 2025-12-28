@@ -4073,11 +4073,9 @@ void LoopVectorizationPlanner::emitInvalidCostRemarks(
         } else {
           auto *WidenCall = dyn_cast<VPWidenCallRecipe>(R);
           Function *CalledFn =
-              WidenCall
-                  ? WidenCall->getCalledScalarFunction()
-                  : cast<Function>(
-                        cast<VPLiveIn>(R->getOperand(R->getNumOperands() - 1))
-                            ->getValue());
+              WidenCall ? WidenCall->getCalledScalarFunction()
+                        : cast<Function>(R->getOperand(R->getNumOperands() - 1)
+                                             ->getLiveInIRValue());
           Name = CalledFn->getName();
         }
         OS << " call to " << Name;
@@ -4278,8 +4276,7 @@ VectorizationFactor LoopVectorizationPlanner::selectVectorizationFactor() {
           }
           case VPInstruction::ActiveLaneMask: {
             unsigned Multiplier =
-                cast<ConstantInt>(
-                    cast<VPLiveIn>(VPI->getOperand(2))->getValue())
+                cast<ConstantInt>(VPI->getOperand(2)->getLiveInIRValue())
                     ->getZExtValue();
             C += VPI->cost(VF * Multiplier, CostCtx);
             break;
@@ -7287,7 +7284,7 @@ static Value *getStartValueFromReductionResult(VPInstruction *RdxResult) {
          "RdxResult must be ComputeFindIVResult");
   VPValue *StartVPV = RdxResult->getOperand(1);
   match(StartVPV, m_Freeze(m_VPValue(StartVPV)));
-  return cast<VPLiveIn>(StartVPV)->getValue();
+  return StartVPV->getLiveInIRValue();
 }
 
 // If \p EpiResumePhiR is resume VPPhi for a reduction when vectorizing the
@@ -7321,7 +7318,7 @@ static void fixReductionScalarResumeWhenVectorizingEpilog(
     MainResumeValue = EpiRedHeaderPhi->getStartValue()->getUnderlyingValue();
   if (RecurrenceDescriptor::isAnyOfRecurrenceKind(Kind)) {
     [[maybe_unused]] Value *StartV =
-        cast<VPLiveIn>(EpiRedResult->getOperand(1))->getValue();
+        EpiRedResult->getOperand(1)->getLiveInIRValue();
     auto *Cmp = cast<ICmpInst>(MainResumeValue);
     assert(Cmp->getPredicate() == CmpInst::ICMP_NE &&
            "AnyOf expected to start with ICMP_NE");
@@ -7331,7 +7328,7 @@ static void fixReductionScalarResumeWhenVectorizingEpilog(
     MainResumeValue = Cmp->getOperand(0);
   } else if (RecurrenceDescriptor::isFindIVRecurrenceKind(Kind)) {
     Value *StartV = getStartValueFromReductionResult(EpiRedResult);
-    Value *SentinelV = cast<VPLiveIn>(EpiRedResult->getOperand(2))->getValue();
+    Value *SentinelV = EpiRedResult->getOperand(2)->getLiveInIRValue();
     using namespace llvm::PatternMatch;
     Value *Cmp, *OrigResumeV, *CmpOp;
     [[maybe_unused]] bool IsExpectedPattern =
@@ -7426,7 +7423,7 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   DenseMap<const SCEV *, Value *> ExpandedSCEVs =
       VPlanTransforms::expandSCEVs(BestVPlan, *PSE.getSE());
   if (!ILV.getTripCount()) {
-    ILV.setTripCount(cast<VPLiveIn>(BestVPlan.getTripCount())->getValue());
+    ILV.setTripCount(BestVPlan.getTripCount()->getLiveInIRValue());
   } else {
     assert(VectorizingEpilogue && "should only re-use the existing trip "
                                   "count during epilogue vectorization");
@@ -7749,7 +7746,7 @@ VPRecipeBuilder::tryToOptimizeInductionTruncate(VPInstruction *VPI,
   auto *WidenIV = cast<VPWidenIntOrFpInductionRecipe>(
       VPI->getOperand(0)->getDefiningRecipe());
   PHINode *Phi = WidenIV->getPHINode();
-  VPLiveIn *Start = WidenIV->getStartValue();
+  VPIRValue *Start = WidenIV->getStartValue();
   const InductionDescriptor &IndDesc = WidenIV->getInductionDescriptor();
 
   // It is always safe to copy over the NoWrap and FastMath flags. In
@@ -8919,8 +8916,8 @@ void VPDerivedIVRecipe::execute(VPTransformState &State) {
   Value *Step = State.get(getStepValue(), VPLane(0));
   Value *Index = State.get(getOperand(1), VPLane(0));
   Value *DerivedIV = emitTransformedIndex(
-      State.Builder, Index, cast<VPLiveIn>(getStartValue())->getValue(), Step,
-      Kind, cast_if_present<BinaryOperator>(FPBinOp));
+      State.Builder, Index, getStartValue()->getLiveInIRValue(), Step, Kind,
+      cast_if_present<BinaryOperator>(FPBinOp));
   DerivedIV->setName(Name);
   State.set(this, DerivedIV, VPLane(0));
 }
@@ -9268,8 +9265,7 @@ static void preparePlanForMainVectorLoop(VPlan &MainPlan, VPlan &EpiPlan) {
       if (!VPI || VPI->getOpcode() != VPInstruction::ComputeFindIVResult)
         continue;
       VPValue *OrigStart = VPI->getOperand(1);
-      if (isGuaranteedNotToBeUndefOrPoison(
-              cast<VPLiveIn>(OrigStart)->getValue()))
+      if (isGuaranteedNotToBeUndefOrPoison(OrigStart->getLiveInIRValue()))
         continue;
       VPInstruction *Freeze =
           Builder.createNaryOp(Instruction::Freeze, {OrigStart}, {}, "fr");
@@ -9392,7 +9388,7 @@ static SmallVector<Instruction *> preparePlanForEpilogueVectorLoop(
                     ->getIncomingValueForBlock(L->getLoopPreheader());
       RecurKind RK = ReductionPhi->getRecurrenceKind();
       if (RecurrenceDescriptor::isAnyOfRecurrenceKind(RK)) {
-        Value *StartV = cast<VPLiveIn>(RdxResult->getOperand(1))->getValue();
+        Value *StartV = RdxResult->getOperand(1)->getLiveInIRValue();
         // VPReductionPHIRecipes for AnyOf reductions expect a boolean as
         // start value; compare the final value from the main vector loop
         // to the start value.
@@ -9417,7 +9413,7 @@ static SmallVector<Instruction *> preparePlanForEpilogueVectorLoop(
         Value *Cmp = Builder.CreateICmpEQ(ResumeV, ToFrozen[StartV]);
         if (auto *I = dyn_cast<Instruction>(Cmp))
           InstsToMove.push_back(I);
-        Value *Sentinel = cast<VPLiveIn>(RdxResult->getOperand(2))->getValue();
+        Value *Sentinel = RdxResult->getOperand(2)->getLiveInIRValue();
         ResumeV = Builder.CreateSelect(Cmp, Sentinel, ResumeV);
         if (auto *I = dyn_cast<Instruction>(ResumeV))
           InstsToMove.push_back(I);
@@ -9455,7 +9451,7 @@ static SmallVector<Instruction *> preparePlanForEpilogueVectorLoop(
     auto *VPI = dyn_cast<VPInstruction>(&R);
     if (VPI && VPI->getOpcode() == Instruction::Freeze) {
       VPI->replaceAllUsesWith(Plan.getOrAddLiveIn(
-          ToFrozen.lookup(cast<VPLiveIn>(VPI->getOperand(0))->getValue())));
+          ToFrozen.lookup(VPI->getOperand(0)->getLiveInIRValue())));
       continue;
     }
 

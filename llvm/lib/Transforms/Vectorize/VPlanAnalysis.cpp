@@ -36,7 +36,7 @@ VPTypeAnalysis::VPTypeAnalysis(const VPlan &Plan) : Ctx(Plan.getContext()) {
   // If there's no canonical IV, retrieve the type from the trip count
   // expression.
   auto *TC = Plan.getTripCount();
-  if (auto *TCLI = dyn_cast<VPLiveIn>(TC)) {
+  if (auto *TCLI = dyn_cast<VPIRValue>(TC)) {
     CanonicalIVTy = TCLI->getType();
     return;
   }
@@ -265,7 +265,7 @@ Type *VPTypeAnalysis::inferScalarType(const VPValue *V) {
   if (Type *CachedTy = CachedTypes.lookup(V))
     return CachedTy;
 
-  if (auto *LI = dyn_cast<VPLiveIn>(V))
+  if (auto *LI = dyn_cast<VPIRValue>(V))
     return LI->getType();
 
   if (isa<VPSymbolicValue>(V)) {
@@ -449,7 +449,7 @@ SmallVector<VPRegisterUsage, 8> llvm::calculateRegisterUsageForPlan(
         // FIXME: Might need some motivation why these values are ignored. If
         // for example an argument is used inside the loop it will increase the
         // register pressure (so shouldn't we add it to LoopInvariants).
-        auto *LI = dyn_cast<VPLiveIn>(U);
+        auto *LI = dyn_cast<VPIRValue>(U);
         if (!DefR && (!LI || !isa<Instruction>(LI->getValue())))
           continue;
 

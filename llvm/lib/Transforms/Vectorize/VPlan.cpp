@@ -124,14 +124,14 @@ void VPDef::dump() const {
 #endif
 
 VPRecipeBase *VPValue::getDefiningRecipe() {
-  auto *DefValue = dyn_cast<VPDefValue>(this);
+  auto *DefValue = dyn_cast<VPRecipeValue>(this);
   if (!DefValue)
     return nullptr;
   return cast<VPRecipeBase>(DefValue->Def);
 }
 
 const VPRecipeBase *VPValue::getDefiningRecipe() const {
-  auto *DefValue = dyn_cast<VPDefValue>(this);
+  auto *DefValue = dyn_cast<VPRecipeValue>(this);
   if (!DefValue)
     return nullptr;
   assert(DefValue);
@@ -139,18 +139,18 @@ const VPRecipeBase *VPValue::getDefiningRecipe() const {
 }
 
 Value *VPValue::getLiveInIRValue() const {
-  return cast<VPLiveIn>(this)->getValue();
+  return cast<VPIRValue>(this)->getValue();
 }
 
-Type *VPLiveIn::getType() const { return getUnderlyingValue()->getType(); }
+Type *VPIRValue::getType() const { return getUnderlyingValue()->getType(); }
 
-VPDefValue::VPDefValue(VPDef *Def, Value *UV)
+VPRecipeValue::VPRecipeValue(VPDef *Def, Value *UV)
     : VPValue(VPVDefValueSC, UV, nullptr), Def(Def) {
-  assert(Def && "VPDefValue requires a defining recipe");
+  assert(Def && "VPRecipeValue requires a defining recipe");
   Def->addDefinedValue(this);
 }
 
-VPDefValue::~VPDefValue() {
+VPRecipeValue::~VPRecipeValue() {
   assert(Users.empty() && "trying to delete a VPValue with remaining users");
   if (Def)
     Def->removeDefinedValue(this);
@@ -249,7 +249,7 @@ VPTransformState::VPTransformState(const TargetTransformInfo *TTI,
       CurrentParentLoop(CurrentParentLoop), TypeAnalysis(*Plan), VPDT(*Plan) {}
 
 Value *VPTransformState::get(const VPValue *Def, const VPLane &Lane) {
-  if (isa<VPLiveIn, VPSymbolicValue>(Def))
+  if (isa<VPIRValue, VPSymbolicValue>(Def))
     return Def->getUnderlyingValue();
 
   if (hasScalarValue(Def, Lane))
@@ -282,7 +282,7 @@ Value *VPTransformState::get(const VPValue *Def, const VPLane &Lane) {
 
 Value *VPTransformState::get(const VPValue *Def, bool NeedsScalar) {
   if (NeedsScalar) {
-    assert((VF.isScalar() || isa<VPLiveIn, VPSymbolicValue>(Def) ||
+    assert((VF.isScalar() || isa<VPIRValue, VPSymbolicValue>(Def) ||
             hasVectorValue(Def) || !vputils::onlyFirstLaneUsed(Def) ||
             (hasScalarValue(Def, VPLane(0)) &&
              Data.VPV2Scalars[Def].size() == 1)) &&
@@ -304,7 +304,7 @@ Value *VPTransformState::get(const VPValue *Def, bool NeedsScalar) {
   };
 
   if (!hasScalarValue(Def, {0})) {
-    assert((isa<VPLiveIn, VPSymbolicValue>(Def)) && "expected a live-in");
+    assert((isa<VPIRValue, VPSymbolicValue>(Def)) && "expected a live-in");
     Value *IRV = Def->getUnderlyingValue();
     Value *B = GetBroadcastInstrs(IRV);
     set(Def, B);
@@ -1072,7 +1072,7 @@ void VPlan::printLiveIns(raw_ostream &O) const {
 
   O << "\n";
   if (TripCount) {
-    if (isa<VPLiveIn>(TripCount))
+    if (isa<VPIRValue>(TripCount))
       O << "Live-in ";
     TripCount->printAsOperand(O, SlotTracker);
     O << " = original trip-count";
@@ -1188,7 +1188,7 @@ VPlan *VPlan::duplicate() {
   // Create VPlan, clone live-ins and remap operands in the cloned blocks.
   auto *NewPlan = new VPlan(cast<VPBasicBlock>(NewEntry), NewScalarHeader);
   DenseMap<VPValue *, VPValue *> Old2NewVPValues;
-  for (VPLiveIn *OldLiveIn : getLiveIns()) {
+  for (VPIRValue *OldLiveIn : getLiveIns()) {
     Old2NewVPValues[OldLiveIn] = NewPlan->getOrAddLiveIn(OldLiveIn->getValue());
   }
   Old2NewVPValues[&VectorTripCount] = &NewPlan->VectorTripCount;
@@ -1198,7 +1198,7 @@ VPlan *VPlan::duplicate() {
     NewPlan->BackedgeTakenCount = new VPSymbolicValue();
     Old2NewVPValues[BackedgeTakenCount] = NewPlan->BackedgeTakenCount;
   }
-  if (auto *LI = dyn_cast_or_null<VPLiveIn>(TripCount))
+  if (auto *LI = dyn_cast_or_null<VPIRValue>(TripCount))
     Old2NewVPValues[LI] = NewPlan->getOrAddLiveIn(LI->getValue());
   // else NewTripCount will be created and inserted into Old2NewVPValues when
   // TripCount is cloned. In any case NewPlan->TripCount is updated below.
@@ -1467,7 +1467,7 @@ void VPSlotTracker::assignName(const VPValue *V) {
   const auto &[A, _] = VPValue2Name.try_emplace(V, BaseName);
   // Integer or FP constants with different types will result in he same string
   // due to stripping types.
-  if (isa<VPLiveIn>(V) && isa<ConstantInt, ConstantFP>(UV))
+  if (isa<VPIRValue>(V) && isa<ConstantInt, ConstantFP>(UV))
     return;
 
   // If it is already used by C > 0 other VPValues, increase the version counter
@@ -1744,7 +1744,7 @@ bool llvm::canConstantBeExtended(const APInt *C, Type *NarrowType,
 
 TargetTransformInfo::OperandValueInfo
 VPCostContext::getOperandInfo(VPValue *V) const {
-  if (auto *LI = dyn_cast<VPLiveIn>(V))
+  if (auto *LI = dyn_cast<VPIRValue>(V))
     return TTI::getOperandInfo(LI->getValue());
 
   return {};
@@ -1775,7 +1775,7 @@ InstructionCost VPCostContext::getScalarizationOverhead(
   SmallPtrSet<const VPValue *, 4> UniqueOperands;
   SmallVector<Type *> Tys;
   for (auto *Op : Operands) {
-    if (isa<VPLiveIn>(Op) ||
+    if (isa<VPIRValue>(Op) ||
         (!AlwaysIncludeReplicatingR &&
          isa<VPReplicateRecipe, VPPredInstPHIRecipe>(Op)) ||
         (isa<VPReplicateRecipe>(Op) &&

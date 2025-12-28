@@ -599,7 +599,7 @@ VPlanTransforms::buildVPlan0(Loop *TheLoop, LoopInfo &LI, Type *InductionTy,
 /// Creates a VPWidenIntOrFpInductionRecipe or VPWidenPointerInductionRecipe
 /// for \p Phi based on \p IndDesc.
 static VPHeaderPHIRecipe *
-createWidenInductionRecipe(PHINode *Phi, VPPhi *PhiR, VPLiveIn *Start,
+createWidenInductionRecipe(PHINode *Phi, VPPhi *PhiR, VPIRValue *Start,
                            const InductionDescriptor &IndDesc, VPlan &Plan,
                            PredicatedScalarEvolution &PSE, Loop &OrigLoop,
                            DebugLoc DL) {
@@ -660,7 +660,7 @@ void VPlanTransforms::createHeaderPhiRecipes(
            "Must have 2 operands for header phis");
 
     // Extract common values once.
-    VPLiveIn *Start = cast<VPLiveIn>(PhiR->getOperand(0));
+    VPIRValue *Start = cast<VPIRValue>(PhiR->getOperand(0));
     VPValue *BackedgeValue = PhiR->getOperand(1);
 
     if (FixedOrderRecurrences.contains(Phi)) {

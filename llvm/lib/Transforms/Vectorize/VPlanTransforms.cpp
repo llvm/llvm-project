@@ -79,7 +79,7 @@ bool VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(
           for (VPValue *Op : PhiR->operands())
             NewRecipe->addOperand(Op);
         } else {
-          VPLiveIn *Start = Plan.getOrAddLiveIn(II->getStartValue());
+          VPIRValue *Start = Plan.getOrAddLiveIn(II->getStartValue());
           VPValue *Step =
               vputils::getOrCreateVPValueForSCEVExpr(Plan, II->getStep());
           // It is always safe to copy over the NoWrap and FastMath flags. In
@@ -736,7 +736,7 @@ static VPScalarIVStepsRecipe *
 createScalarIVSteps(VPlan &Plan, InductionDescriptor::InductionKind Kind,
                     Instruction::BinaryOps InductionOpcode,
                     FPMathOperator *FPBinOp, Instruction *TruncI,
-                    VPLiveIn *StartV, VPValue *Step, DebugLoc DL,
+                    VPIRValue *StartV, VPValue *Step, DebugLoc DL,
                     VPBuilder &Builder) {
   VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
   VPBasicBlock *HeaderVPBB = LoopRegion->getEntryBasicBlock();
@@ -791,7 +791,7 @@ static VPValue *
 scalarizeVPWidenPointerInduction(VPWidenPointerInductionRecipe *PtrIV,
                                  VPlan &Plan, VPBuilder &Builder) {
   const InductionDescriptor &ID = PtrIV->getInductionDescriptor();
-  VPLiveIn *StartV = Plan.getConstantInt(ID.getStep()->getType(), 0);
+  VPIRValue *StartV = Plan.getConstantInt(ID.getStep()->getType(), 0);
   VPValue *StepV = PtrIV->getOperand(1);
   VPScalarIVStepsRecipe *Steps = createScalarIVSteps(
       Plan, InductionDescriptor::IK_IntInduction, Instruction::Add, nullptr,
@@ -996,7 +996,7 @@ static VPValue *optimizeEarlyExitInductionUser(VPlan &Plan,
 
   if (!WideIntOrFp || !WideIntOrFp->isCanonical()) {
     const InductionDescriptor &ID = WideIV->getInductionDescriptor();
-    VPLiveIn *Start = WideIV->getStartValue();
+    VPIRValue *Start = WideIV->getStartValue();
     VPValue *Step = WideIV->getStepValue();
     EndValue = B.createDerivedIV(
         ID.getKind(), dyn_cast_or_null<FPMathOperator>(ID.getInductionBinOp()),
@@ -1153,7 +1153,7 @@ static VPValue *tryToFoldLiveIns(VPSingleDefRecipe &R,
 
   SmallVector<Value *, 4> Ops;
   for (VPValue *Op : Operands) {
-    if (!isa<VPLiveIn, VPSymbolicValue>(Op))
+    if (!isa<VPIRValue, VPSymbolicValue>(Op))
       return nullptr;
     Value *V = Op->getUnderlyingValue();
     if (!V)
@@ -1229,7 +1229,7 @@ static void simplifyRecipe(VPSingleDefRecipe *Def, VPTypeAnalysis &TypeInfo) {
   // Fold PredPHI LiveIn -> LiveIn.
   if (auto *PredPHI = dyn_cast<VPPredInstPHIRecipe>(Def)) {
     VPValue *Op = PredPHI->getOperand(0);
-    if (isa<VPLiveIn>(Op))
+    if (isa<VPIRValue>(Op))
       PredPHI->replaceAllUsesWith(Op);
   }
 
@@ -1509,7 +1509,7 @@ static void simplifyRecipe(VPSingleDefRecipe *Def, VPTypeAnalysis &TypeInfo) {
     return;
 
   // Hoist an invariant increment Y of a phi X, by having X start at Y.
-  if (match(Def, m_c_Add(m_VPValue(X), m_VPValue(Y))) && isa<VPLiveIn>(Y) &&
+  if (match(Def, m_c_Add(m_VPValue(X), m_VPValue(Y))) && isa<VPIRValue>(Y) &&
       isa<VPPhi>(X)) {
     auto *Phi = cast<VPPhi>(X);
     if (Phi->getOperand(1) != Def && match(Phi->getOperand(0), m_ZeroInt()) &&
@@ -1669,7 +1669,7 @@ static void narrowToSingleScalarRecipes(VPlan &Plan) {
               return false;
             // Non-constant live-ins require broadcasts, while constants do not
             // need explicit broadcasts.
-            auto *LI = dyn_cast<VPLiveIn>(Op);
+            auto *LI = dyn_cast<VPIRValue>(Op);
             bool LiveInNeedsBroadcast = LI && !isa<Constant>(LI->getValue());
             auto *OpR = dyn_cast<VPReplicateRecipe>(Op);
             return LiveInNeedsBroadcast || (OpR && OpR->isSingleScalar());
@@ -2584,7 +2584,7 @@ void VPlanTransforms::truncateToMinimalBitwidths(
         }
 
         VPBuilder Builder;
-        if (isa<VPLiveIn>(Op))
+        if (isa<VPIRValue>(Op))
           Builder.setInsertPoint(PH);
         else
           Builder.setInsertPoint(&R);
@@ -3897,7 +3897,7 @@ void VPlanTransforms::handleUncountableEarlyExit(VPBasicBlock *EarlyExitingVPBB,
     }
 
     VPValue *IncomingFromEarlyExit = ExitIRI->getOperand(EarlyExitIdx);
-    if (!isa<VPLiveIn>(IncomingFromEarlyExit)) {
+    if (!isa<VPIRValue>(IncomingFromEarlyExit)) {
       // Update the incoming value from the early exit.
       VPValue *FirstActiveLane = EarlyExitB.createNaryOp(
           VPInstruction::FirstActiveLane, {CondToEarlyExit},
@@ -4067,7 +4067,7 @@ tryToMatchAndCreateMulAccumulateReduction(VPReductionRecipe *Red,
   auto ExtendAndReplaceConstantOp = [&Ctx](VPWidenCastRecipe *ExtA,
                                            VPWidenCastRecipe *&ExtB,
                                            VPValue *&ValB, VPWidenRecipe *Mul) {
-    if (!ExtA || ExtB || !isa<VPLiveIn>(ValB))
+    if (!ExtA || ExtB || !isa<VPIRValue>(ValB))
       return;
     Type *NarrowTy = Ctx.Types.inferScalarType(ExtA->getOperand(0));
     Instruction::CastOps ExtOpc = ExtA->getOpcode();
@@ -4207,7 +4207,7 @@ void VPlanTransforms::materializeBroadcasts(VPlan &Plan) {
   auto *VectorPreheader = Plan.getVectorPreheader();
   for (VPValue *VPV : VPValues) {
     if (vputils::onlyScalarValuesUsed(VPV) ||
-        (isa<VPLiveIn>(VPV) && isa<Constant>(VPV->getLiveInIRValue())))
+        (isa<VPIRValue>(VPV) && isa<Constant>(VPV->getLiveInIRValue())))
       continue;
 
     // Add explicit broadcast at the insert point that dominates all users.
@@ -4513,7 +4513,7 @@ void VPlanTransforms::materializeConstantVectorTripCount(
   if (!Plan.hasScalarTail() ||
       Plan.getMiddleBlock()->getSingleSuccessor() ==
           Plan.getScalarPreheader() ||
-      !isa<VPLiveIn>(TC))
+      !isa<VPIRValue>(TC))
     return;
 
   // Materialize vector trip counts for constants early if it can simply
@@ -4833,7 +4833,7 @@ static bool isConsecutiveInterleaveGroup(VPInterleaveRecipe *InterleaveR,
 
 /// Returns true if \p VPValue is a narrow VPValue.
 static bool isAlreadyNarrow(VPValue *VPV) {
-  if (isa<VPLiveIn>(VPV))
+  if (isa<VPIRValue>(VPV))
     return true;
   auto *RepR = dyn_cast<VPReplicateRecipe>(VPV);
   return RepR && RepR->isSingleScalar();
@@ -5065,7 +5065,7 @@ static VPValue *tryToComputeEndValueForInduction(VPWidenInductionRecipe *WideIV,
   if (WideIntOrFp && WideIntOrFp->getTruncInst())
     return nullptr;
 
-  VPLiveIn *Start = WideIV->getStartValue();
+  VPIRValue *Start = WideIV->getStartValue();
   VPValue *Step = WideIV->getStepValue();
   const InductionDescriptor &ID = WideIV->getInductionDescriptor();
   VPValue *EndValue = VectorTC;

@@ -395,8 +395,7 @@ VPUnrollPartAccessor<PartOpIdx>::getUnrollPartOperand(const VPUser &U) const {
 template <unsigned PartOpIdx>
 unsigned VPUnrollPartAccessor<PartOpIdx>::getUnrollPart(const VPUser &U) const {
   if (auto *UnrollPartOp = getUnrollPartOperand(U))
-    return cast<ConstantInt>(UnrollPartOp->getLiveInIRValue())
-        ->getZExtValue();
+    return cast<ConstantInt>(UnrollPartOp->getLiveInIRValue())->getZExtValue();
   return 0;
 }
 
@@ -535,7 +534,7 @@ Value *VPInstruction::generate(VPTransformState &State) {
   }
   case Instruction::ExtractElement: {
     assert(State.VF.isVector() && "Only extract elements from vectors");
-    if (auto *IdxLI = dyn_cast<VPLiveIn>(getOperand(1))) {
+    if (auto *IdxLI = dyn_cast<VPIRValue>(getOperand(1))) {
       unsigned IdxToExtract =
           cast<ConstantInt>(IdxLI->getValue())->getZExtValue();
       return State.get(getOperand(0), VPLane(IdxToExtract));
@@ -580,8 +579,7 @@ Value *VPInstruction::generate(VPTransformState &State) {
                                Name);
 
     ElementCount EC = State.VF.multiplyCoefficientBy(
-        cast<ConstantInt>(getOperand(2)->getLiveInIRValue())
-            ->getZExtValue());
+        cast<ConstantInt>(getOperand(2)->getLiveInIRValue())->getZExtValue());
     auto *PredTy = VectorType::get(Builder.getInt1Ty(), EC);
     return Builder.CreateIntrinsic(Intrinsic::get_active_lane_mask,
                                    {PredTy, ScalarTC->getType()},
@@ -698,8 +696,7 @@ Value *VPInstruction::generate(VPTransformState &State) {
     // If this start vector is scaled then it should produce a vector with fewer
     // elements than the VF.
     ElementCount VF = State.VF.divideCoefficientBy(
-        cast<ConstantInt>(getOperand(2)->getLiveInIRValue())
-            ->getZExtValue());
+        cast<ConstantInt>(getOperand(2)->getLiveInIRValue())->getZExtValue());
     auto *Iden = Builder.CreateVectorSplat(VF, State.get(getOperand(1), true));
     return Builder.CreateInsertElement(Iden, State.get(getOperand(0), true),
                                        Builder.getInt32(0));
@@ -1080,8 +1077,7 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
   case VPInstruction::ActiveLaneMask: {
     Type *ArgTy = Ctx.Types.inferScalarType(getOperand(0));
     unsigned Multiplier =
-        cast<ConstantInt>(getOperand(2)->getLiveInIRValue())
-            ->getZExtValue();
+        cast<ConstantInt>(getOperand(2)->getLiveInIRValue())->getZExtValue();
     Type *RetTy = toVectorTy(Type::getInt1Ty(Ctx.LLVMCtx), VF * Multiplier);
     IntrinsicCostAttributes Attrs(Intrinsic::get_active_lane_mask, RetTy,
                                   {ArgTy, ArgTy});
@@ -1507,7 +1503,7 @@ void VPIRInstruction::extractLastLaneOfLastPartOfFirstOperand(
          "can only update exiting operands to phi nodes");
   assert(getNumOperands() > 0 && "must have at least one operand");
   VPValue *Exiting = getOperand(0);
-  if (isa<VPLiveIn>(Exiting))
+  if (isa<VPIRValue>(Exiting))
     return;
 
   Exiting = Builder.createNaryOp(VPInstruction::ExtractLastPart, Exiting);
@@ -1872,7 +1868,7 @@ InstructionCost VPHistogramRecipe::computeCost(ElementCount VF,
   // a multiply, and add that into the cost.
   InstructionCost MulCost =
       Ctx.TTI.getArithmeticInstrCost(Instruction::Mul, VTy, Ctx.CostKind);
-  if (auto *IncAmtLI = dyn_cast<VPLiveIn>(IncAmt)) {
+  if (auto *IncAmtLI = dyn_cast<VPIRValue>(IncAmt)) {
     ConstantInt *CI = dyn_cast<ConstantInt>(IncAmtLI->getValue());
 
     if (CI && CI->getZExtValue() == 1)
@@ -1973,7 +1969,7 @@ InstructionCost VPWidenSelectRecipe::computeCost(ElementCount VF,
 
   llvm::CmpPredicate Pred;
   if (!match(getOperand(0), m_Cmp(Pred, m_VPValue(), m_VPValue())))
-    if (auto *LiveIn = dyn_cast<VPLiveIn>(getOperand(0)))
+    if (auto *LiveIn = dyn_cast<VPIRValue>(getOperand(0)))
       if (auto *Cmp = dyn_cast<CmpInst>(LiveIn->getValue()))
         Pred = Cmp->getPredicate();
   return Ctx.TTI.getCmpSelInstrCost(
@@ -2286,7 +2282,7 @@ InstructionCost VPWidenCastRecipe::computeCost(ElementCount VF,
   // For Z/Sext, get the context from the operand.
   else if (Opcode == Instruction::ZExt || Opcode == Instruction::SExt ||
            Opcode == Instruction::FPExt) {
-    if (isa<VPLiveIn>(Operand))
+    if (isa<VPIRValue>(Operand))
       CCH = TTI::CastContextHint::Normal;
     else if (auto *Recipe = Operand->getDefiningRecipe()) {
       VPValue *ReverseOp;
@@ -2348,7 +2344,7 @@ bool VPWidenIntOrFpInductionRecipe::isCanonical() const {
   // The step may be defined by a recipe in the preheader (e.g. if it requires
   // SCEV expansion), but for the canonical induction the step is required to be
   // 1, which is represented as live-in.
-  const VPLiveIn *Step = dyn_cast<VPLiveIn>(getStepValue());
+  const VPIRValue *Step = dyn_cast<VPIRValue>(getStepValue());
   if (!Step)
     return false;
   ;
@@ -3213,8 +3209,8 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
     // instruction cost.
     return 0;
   case Instruction::Call: {
-    auto *CalledFn = cast<Function>(
-        getOperand(getNumOperands() - 1)->getLiveInIRValue());
+    auto *CalledFn =
+        cast<Function>(getOperand(getNumOperands() - 1)->getLiveInIRValue());
 
     SmallVector<const VPValue *> ArgOps(drop_end(operands()));
     SmallVector<Type *, 4> Tys;
@@ -3891,7 +3887,7 @@ void VPInterleaveRecipe::execute(VPTransformState &State) {
     // TODO: Also manage existing metadata using VPIRMetadata.
     Group->addMetadata(NewLoad);
 
-    ArrayRef<VPDefValue *> VPDefs = definedValues();
+    ArrayRef<VPRecipeValue *> VPDefs = definedValues();
     if (VecTy->isScalableTy()) {
       // Scalable vectors cannot use arbitrary shufflevectors (only splats),
       // so must use intrinsics to deinterleave.
