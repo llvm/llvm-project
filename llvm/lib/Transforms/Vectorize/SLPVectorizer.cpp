@@ -25024,13 +25024,21 @@ public:
                                         getRdxOperand(RedOp1, 0) == LHS ||
                                         isGuaranteedNotToBePoison(LHS, AC)))
             return;
+          bool NeedFreeze = LHS != VectorizedTree;
           if (isBoolLogicOp(RedOp2) && ((!InitStep && RHS == VectorizedTree) ||
                                         getRdxOperand(RedOp2, 0) == RHS ||
                                         isGuaranteedNotToBePoison(RHS, AC))) {
-            std::swap(LHS, RHS);
-            return;
+            if ((InitStep || RHS != VectorizedTree) &&
+                getRdxOperand(RedOp2, 0) == RHS &&
+                (!isBoolLogicOp(RedOp1) ||
+                 getRdxOperand(RedOp1, 1) == RedOp2)) {
+              NeedFreeze = false;
+            } else {
+              std::swap(LHS, RHS);
+              return;
+            }
           }
-          if (LHS != VectorizedTree)
+          if (NeedFreeze)
             LHS = Builder.CreateFreeze(LHS);
         };
     // Finish the reduction.
