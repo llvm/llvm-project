@@ -102,10 +102,23 @@ static bool ignoreExtraCC1Commands(const driver::Compilation *Compilation) {
       if (isa<driver::BindArchAction>(A))
         A = *A->input_begin();
       if (isa<driver::OffloadAction>(A)) {
-        // For offload compilation, general tooling will consider host
-        // compilation only. For tooling on device compilation, device
-        // compilation only option, such as `--cuda-device-only`, needs
-        // specifying.
+        // Offload compilation has 2 top-level actions, one (at the front) is
+        // the original host compilation and the other is offload action
+        // composed of at least one device compilation. For such case, general
+        // tooling will consider host-compilation only. For tooling on device
+        // compilation, device compilation only option, such as
+        // `--cuda-device-only`, needs specifying.
+        if (Actions.size() > 1) {
+          assert(
+              isa<driver::CompileJobAction>(Actions.front()) ||
+              // On MacOSX real actions may end up being wrapped in
+              // BindArchAction.
+              (isa<driver::BindArchAction>(Actions.front()) &&
+               isa<driver::CompileJobAction>(*Actions.front()->input_begin())));
+        }
+        // FIXME: CUDA/HIP can produce a single top-level OffloadAction (e.g.
+        // -fsyntax-only, -E, -M), which contradicts the expectation of at least
+        // two top-level actions.
         OffloadCompilation = true;
         break;
       }
