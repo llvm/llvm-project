@@ -111,6 +111,7 @@ vectorizers:
     - any-glob-to-any-file:
       - llvm/lib/Transforms/Vectorize/**/*
       - llvm/include/llvm/Transforms/Vectorize/**/*
+      - llvm/docs/Vectorizers.rst
 
 # IMPORTED FROM CODEOWNERS
 LTO:
@@ -1447,3 +1448,8 @@ infrastructure:
   - changed-files:
     - any-glob-to-any-file:
       - .ci/**
+
+documentation:
+  - changed-files:
+    - any-glob-to-any-file:
+      - llvm/docs/**
