@@ -3433,7 +3433,7 @@ static bool interp__builtin_ia32_cvt_mask2vec(InterpState &S, CodePtr OpPC,
   unsigned NumElems = Vec.getNumElems();
   PrimType ElemT = Vec.getFieldDesc()->getPrimType();
 
-  for (unsigned i = 0; i < NumElems; ++i) {
+  for (unsigned I = 0; i != NumElems; ++i) {
     bool BitSet = Mask[i];
 
     INT_TYPE_SWITCH_NO_BOOL(
