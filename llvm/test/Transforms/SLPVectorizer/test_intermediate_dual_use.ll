@@ -13,7 +13,7 @@ define i1 @test_intermediate_dual_use(<4 x i32> %x) {
 ; CHECK-NEXT:    [[LEAF_P:%.*]] = icmp eq i32 [[P_VAL]], 0
 ; CHECK-NEXT:    [[LEAF_F:%.*]] = icmp ugt i32 [[X0]], -1
 ; CHECK-NEXT:    [[OP_RDX2:%.*]] = select i1 true, i1 [[LEAF_F]], i1 false
-; CHECK-NEXT:    [[OP_RDX3:%.*]] = select i1 [[LEAF_P]], i1 [[OP_RDX2]], i1 false
+; CHECK-NEXT:    [[OP_RDX3:%.*]] = select i1 [[OP_RDX2]], i1 [[LEAF_P]], i1 false
 ; CHECK-NEXT:    ret i1 [[OP_RDX3]]
 ;
   %x0 = extractelement <4 x i32> %x, i32 0
