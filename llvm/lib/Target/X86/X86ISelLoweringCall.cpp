@@ -127,7 +127,7 @@ MVT X86TargetLowering::getRegisterTypeForCallingConv(LLVMContext &Context,
   if (isTypeLegal(MVT::f16)) {
     if (VT.isVector() && VT.getVectorElementType() == MVT::bf16)
       return getRegisterTypeForCallingConv(
-          Context, CC, VT.changeVectorElementType(MVT::f16));
+          Context, CC, VT.changeVectorElementType(Context, MVT::f16));
 
     if (VT == MVT::bf16)
       return MVT::f16;
@@ -166,8 +166,8 @@ unsigned X86TargetLowering::getNumRegistersForCallingConv(LLVMContext &Context,
 
   if (VT.isVector() && VT.getVectorElementType() == MVT::bf16 &&
       isTypeLegal(MVT::f16))
-    return getNumRegistersForCallingConv(Context, CC,
-                                         VT.changeVectorElementType(MVT::f16));
+    return getNumRegistersForCallingConv(
+        Context, CC, VT.changeVectorElementType(Context, MVT::f16));
 
   return TargetLowering::getNumRegistersForCallingConv(Context, CC, VT);
 }
@@ -199,7 +199,7 @@ unsigned X86TargetLowering::getVectorTypeBreakdownForCallingConv(
   // Split vNbf16 vectors according to vNf16.
   if (VT.isVector() && VT.getVectorElementType() == MVT::bf16 &&
       isTypeLegal(MVT::f16))
-    VT = VT.changeVectorElementType(MVT::f16);
+    VT = VT.changeVectorElementType(Context, MVT::f16);
 
   return TargetLowering::getVectorTypeBreakdownForCallingConv(Context, CC, VT, IntermediateVT,
                                               NumIntermediates, RegisterVT);

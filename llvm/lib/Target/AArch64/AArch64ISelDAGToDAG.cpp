@@ -7461,7 +7461,7 @@ static EVT getMemVTFromNode(LLVMContext &Ctx, SDNode *Root) {
     else
       llvm_unreachable("Unexpected MemSDNode!");
 
-    return DataVT.changeVectorElementType(MemVT.getVectorElementType());
+    return DataVT.changeVectorElementType(Ctx, MemVT.getVectorElementType());
   }
 
   const unsigned Opcode = Root->getOpcode();

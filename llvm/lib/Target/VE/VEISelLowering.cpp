@@ -915,10 +915,10 @@ VETargetLowering::VETargetLowering(const TargetMachine &TM,
   computeRegisterProperties(Subtarget->getRegisterInfo());
 }
 
-EVT VETargetLowering::getSetCCResultType(const DataLayout &, LLVMContext &,
-                                         EVT VT) const {
+EVT VETargetLowering::getSetCCResultType(const DataLayout &,
+                                         LLVMContext &Context, EVT VT) const {
   if (VT.isVector())
-    return VT.changeVectorElementType(MVT::i1);
+    return VT.changeVectorElementType(Context, MVT::i1);
   return MVT::i32;
 }
 
