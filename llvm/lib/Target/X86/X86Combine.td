@@ -8,6 +8,18 @@
 
 include "llvm/Target/GlobalISel/Combine.td"
 
-def X86PostLegalizerCombiner : GICombiner<"X86PostLegalizerCombinerImpl", [redundant_or, constant_fold_fp_ops, identity_combines, copy_prop]> {
+// all_x86combines is based on generic all_combines, currently x86 gisel does not
+// have vector support and few open issue to address which resulted in failure with
+// combines. We will introduce more combines gradually.
+
+def all_x86combines : GICombineGroup<[identity_combines, reassocs, 
+    simplify_add_to_sub]>;
+
+def X86PreLegalizerCombiner : GICombiner<"X86PreLegalizerCombinerImpl", [all_x86combines]> {
+    let CombineAllMethodName = "tryCombineAllImpl";
+}
+
+def X86PostLegalizerCombiner : GICombiner<"X86PostLegalizerCombinerImpl", [redundant_or, 
+                                constant_fold_fp_ops, identity_combines, copy_prop]> {
     let CombineAllMethodName = "tryCombineAllImpl";
 }
