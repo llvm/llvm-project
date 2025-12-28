@@ -77,7 +77,7 @@ void InconsistentIfElseBracesCheck::emitDiagnostic(
     const MatchFinder::MatchResult &Result, const Stmt *S,
     SourceLocation StartLoc, SourceLocation EndLocHint) {
   if (StartLoc.isMacroID()) {
-    diag(StartLoc, "statement should have braces") << StartLoc.isMacroID();
+    diag(StartLoc, "statement should have braces");
     return;
   }
   const utils::BraceInsertionHints Hints = utils::getBraceInsertionsHints(
