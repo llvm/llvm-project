@@ -18814,10 +18814,10 @@ SDValue DAGCombiner::visitFDIV(SDNode *N) {
             A = Y;
           if (A) {
             // X / (fabs(A) * sqrt(Z)) -> X / sqrt(A*A*Z) ->
-	    // X * (1 / sqrt(A*A*Z)) -> X * rsqrt(A*A*Z)
+            // X * (1 / sqrt(A*A*Z)) -> X * rsqrt(A*A*Z)
 
-	    // X / (A * sqrt(A)) -> X / sqrt(A*A*A) ->
-	    // X * (1 / sqrt(A*A*A)) -> X * rsqrt(A*A*A)
+            // X / (A * sqrt(A)) -> X / sqrt(A*A*A) ->
+            // X * (1 / sqrt(A*A*A)) -> X * rsqrt(A*A*A)
             SDValue AA = DAG.getNode(ISD::FMUL, DL, VT, A, A);
             SDValue AAZ =
                 DAG.getNode(ISD::FMUL, DL, VT, AA, Sqrt.getOperand(0));
