@@ -357,12 +357,22 @@ header resolution, it is important to specify the CUDA toolkit path using
 ``--cuda-path``. For more details on how Clang handles CUDA, see
 `Compiling CUDA with Clang <https://llvm.org/docs/CompileCudaWithLLVM.html>`_.
 
+If you are using a GCC + NVCC build setup, the compiler command database will
+contain NVCC-specific flags that :program:`clang-tidy` does not understand.
+
+In this case, you should use the ``RemovedArgs`` configuration option (or
+``--removed-arg`` command-line option) to remove these flags, and
+``ExtraArgs`` (or ``--extra-arg``) to provide the ``--cuda-path``.
+
+For example, to remove the NVCC-specific ``-xcu`` flag:
+
 .. code-block:: console
 
-  $ clang-tidy source.cu -- --cuda-path=/path/to/cuda
+  $ clang-tidy source.cu --removed-arg="-xcu" --extra-arg="--cuda-path=/path/to/cuda"
 
-By default, :program:`clang-tidy` will compile the code for the host. To
-analyze device-side code, use the ``--cuda-device-only`` flag:
+By default, :program:`clang-tidy` will use the host compilation, which is
+sufficient to analyze both host and device code. To specifically perform device
+compilation, use the ``--cuda-device-only`` flag:
 
 .. code-block:: console
 
