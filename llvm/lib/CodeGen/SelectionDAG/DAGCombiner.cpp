@@ -18763,7 +18763,7 @@ SDValue DAGCombiner::visitFDIV(SDNode *N) {
                          DAG.getConstantFP(Recip, DL, VT));
   }
 
-  // Rewriting 1 / sqrt(x) to rsqrt(x) requires contract
+  // Rewriting 1 / sqrt(Y) to rsqrt(Y) requires contract
   if (Flags.hasAllowReciprocal() && Flags.hasAllowContract()) {
     // If this FDIV is part of a reciprocal square root, it may be folded
     // into a target-specific square root estimate instruction.
@@ -18830,7 +18830,8 @@ SDValue DAGCombiner::visitFDIV(SDNode *N) {
         }
 
         // We found a FSQRT, so try to make this fold:
-        // X / (Y * sqrt(Z)) -> X * (1 / (Y * sqrt(Z))) -> X * (rsqrt(Z) / Y)
+        // X / (Y * sqrt(Z)) -> X * (1 / (Y * sqrt(Z))) ->
+        // X * ((1 / sqrt(Z)) / Y) -> X * (rsqrt(Z) / Y)
         SDValue Rsqrt;
         if (Flags.hasAllowReassociation() &&
             N1->getFlags().hasAllowReassociation() &&
