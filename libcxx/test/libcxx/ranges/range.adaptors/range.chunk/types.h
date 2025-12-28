@@ -42,6 +42,9 @@ struct input_span : std::span<T> {
 };
 
 template <class T>
+input_span(T*, size_t) -> input_span<T>;
+
+template <class T>
 inline constexpr bool std::ranges::enable_view<input_span<T>> = true;
 
 static_assert(std::ranges::input_range<input_span<int>> && !std::ranges::forward_range<input_span<int>> &&
