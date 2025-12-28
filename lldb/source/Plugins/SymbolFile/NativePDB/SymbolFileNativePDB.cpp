@@ -422,6 +422,16 @@ void SymbolFileNativePDB::InitializeObject() {
                            ->GetObjectFile()
                            ->GetBaseAddress()
                            .GetFileAddress();
+
+  // For UEFI/PE binaries and other relocatable images lacking a predetermined
+  // load address, GetFileAddress() returns LLDB_INVALID_ADDRESS. Use base
+  // address 0 in this case to allow symbols to be loaded with RVA
+  // (Relative Virtual Address). To debug at runtime, the module's actual load
+  // address must be provided using 'target modules load --file <module> --slide <load_address>'.
+  if (m_obj_load_address == LLDB_INVALID_ADDRESS) {
+    m_obj_load_address = 0x0;
+  }
+
   m_index->SetLoadAddress(m_obj_load_address);
   m_index->ParseSectionContribs();
 
