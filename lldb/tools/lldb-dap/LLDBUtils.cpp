@@ -16,6 +16,7 @@
 #include "lldb/API/SBStringList.h"
 #include "lldb/API/SBStructuredData.h"
 #include "lldb/API/SBThread.h"
+#include "lldb/lldb-defines.h"
 #include "lldb/lldb-enumerations.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/Error.h"
@@ -129,7 +130,6 @@ bool ThreadHasStopReason(lldb::SBThread &thread) {
   switch (thread.GetStopReason()) {
   case lldb::eStopReasonTrace:
   case lldb::eStopReasonPlanComplete:
-  case lldb::eStopReasonBreakpoint:
   case lldb::eStopReasonWatchpoint:
   case lldb::eStopReasonInstrumentation:
   case lldb::eStopReasonSignal:
@@ -142,6 +142,18 @@ bool ThreadHasStopReason(lldb::SBThread &thread) {
   case lldb::eStopReasonInterrupt:
   case lldb::eStopReasonHistoryBoundary:
     return true;
+  case lldb::eStopReasonBreakpoint: {
+    // Internal breakpoints must not be considered as valid stop reason.
+    uint64_t data_count = thread.GetStopReasonDataCount();
+    if (data_count == 0)
+      return true;
+    for (uint64_t i = 0; i < data_count; i += 2) {
+      lldb::break_id_t bp_id = thread.GetStopReasonDataAtIndex(i);
+      if (!LLDB_BREAK_ID_IS_INTERNAL(bp_id))
+        return true;
+    }
+    return false;
+  }
   case lldb::eStopReasonThreadExiting:
   case lldb::eStopReasonInvalid:
   case lldb::eStopReasonNone:
