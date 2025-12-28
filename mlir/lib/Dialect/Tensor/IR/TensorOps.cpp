@@ -2072,6 +2072,11 @@ LogicalResult ExpandShapeOp::verify() {
 }
 
 LogicalResult CollapseShapeOp::verify() {
+  CollapseShapeOp op = *this;
+  if (llvm::any_of(op.getReassociationIndices(),
+                   [](auto &group) { return group.empty(); })) {
+    return op.emitOpError("reassociation indices must not be empty");
+  }
   return verifyTensorReshapeOp(*this, getSrcType(), getResultType());
 }
 
