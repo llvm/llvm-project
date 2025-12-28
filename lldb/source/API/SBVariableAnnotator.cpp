@@ -8,7 +8,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/API/SBVariableAnnotator.h"
-#include "SBVariableAnnotator.h"
 #include "lldb/API/SBInstruction.h"
 #include "lldb/API/SBStructuredData.h"
 #include "lldb/Core/Disassembler.h" // containts VariableAnnotator declaration
