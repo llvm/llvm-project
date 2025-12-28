@@ -5858,6 +5858,26 @@ TEST_F(FormatTest, RespectWhitespaceInMacroDefinitions) {
   verifyFormat("#define false((foo)0)", Style);
 }
 
+TEST_F(FormatTest, CompoundLiteralInMacroDefinition) {
+  // https://github.com/llvm/llvm-project/issues/173583
+  //
+  // A C compound literal `(type){...}` is not a function/block. When used in a
+  // macro definition, clang-format should not treat `&` as a function name and
+  // reformat it as if it were `&(type) { ... }`.
+  FormatStyle Style = getLLVMStyle();
+  Style.Language = FormatStyle::LK_Cpp;
+  Style.IndentWidth = 4;
+  Style.TabWidth = 4;
+  Style.UseTab = FormatStyle::UT_Never;
+  Style.AlignEscapedNewlines = FormatStyle::ENAS_LeftWithLastLine;
+  Style.AllowShortFunctionsOnASingleLine = FormatStyle::SFS_Empty;
+  Style.BreakBeforeBraces = FormatStyle::BS_Attach;
+
+  verifyNoChange("#define getAddr(v, type) &(type){v}", Style);
+  verifyNoChange("#define getAddr2(v, type) int &(type){v;}", Style);
+  verifyNoChange("#define ctos(c) (char[2]){c, '\\0'}", Style);
+}
+
 TEST_F(FormatTest, EmptyLinesInMacroDefinitions) {
   verifyFormat("#define A b;",
                "#define A \\\n"
