@@ -68,6 +68,8 @@ AGENTS.md
 .vs
 #zed config files
 .zed
+# Cursor IDE config files
+.cursor
 # pythonenv for github Codespaces
 pythonenv*
 # clangd index. (".clangd" is a config file now, thus trailing slash)
