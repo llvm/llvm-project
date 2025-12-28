@@ -623,6 +623,7 @@ Bug Fixes to C++ Support
 - Fix the result of ``__is_pointer_interconvertible_base_of`` when arguments are qualified and passed via template parameters. (#GH135273)
 - Fixed a crash when evaluating nested requirements in requires-expressions that reference invented parameters. (#GH166325)
 - Fixed a crash when standard comparison categories (e.g. ``std::partial_ordering``) are defined with incorrect static member types. (#GH170015) (#GH56571)
+- Fixed an assertion failure triggered by nested lambdas during capture handling. (#GH172814)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
