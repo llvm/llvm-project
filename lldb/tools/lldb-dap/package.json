@@ -22,7 +22,7 @@
     "LLDB"
   ],
   "engines": {
-    "vscode": "^1.75.0"
+    "vscode": "^1.95.0"
   },
   "categories": [
     "Debuggers"
@@ -33,7 +33,7 @@
   "devDependencies": {
     "@types/node": "^18.19.41",
     "@types/tabulator-tables": "^6.2.10",
-    "@types/vscode": "1.75.0",
+    "@types/vscode": "1.95.0",
     "@types/vscode-webview": "^1.57.5",
     "@vscode/debugprotocol": "^1.68.0",
     "@vscode/vsce": "^3.2.2",
@@ -946,6 +946,26 @@
           "icon": "$(symbol-module)"
         }
       ]
-    }
+    },
+    "languageModelTools": [
+			{
+				"name": "lldb_dap_command",
+				"displayName": "Run an lldb command.",
+				"modelDescription": "Run an lldb command.",
+				"canBeReferencedInPrompt": true,
+				"toolReferenceName": "lldb_dap_command",
+				"inputSchema": {
+					"type": "object",
+					"properties": {
+						"command": {
+							"type": "string",
+							"description": "The command and its arguments as a string."
+						}
+					},
+					"required": [ "command" ]
+				},
+				"when": "debugType == 'lldb-dap'"
+			}
+		]
   }
 }

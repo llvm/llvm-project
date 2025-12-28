@@ -1,6 +1,7 @@
 import * as path from "path";
 import * as vscode from "vscode";
 
+import { CommandTool } from "./command-tool";
 import { LLDBDapDescriptorFactory } from "./debug-adapter-factory";
 import { DisposableContext } from "./disposable-context";
 import { LaunchUriHandler } from "./uri-launch-handler";
@@ -52,6 +53,7 @@ export class LLDBDapExtension extends DisposableContext {
         new ModulesDataProvider(sessionTracker),
       ),
       vscode.window.registerUriHandler(new LaunchUriHandler()),
+      vscode.lm.registerTool("lldb_dap_command", new CommandTool()),
     );
 
     this.pushSubscription(vscode.commands.registerCommand(
