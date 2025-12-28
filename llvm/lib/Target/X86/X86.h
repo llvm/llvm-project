@@ -78,7 +78,13 @@ FunctionPass *createX86FixupVectorConstants();
 
 /// Return a pass that removes redundant LEA instructions and redundant address
 /// recalculations.
-FunctionPass *createX86OptimizeLEAs();
+class X86OptimizeLEAsPass : public PassInfoMixin<X86OptimizeLEAsPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *createX86OptimizeLEAsLegacyPass();
 
 /// Return a pass that transforms setcc + movzx pairs into xor + setcc.
 FunctionPass *createX86FixupSetCC();
@@ -262,7 +268,7 @@ void initializeX86LoadValueInjectionRetHardeningPassPass(PassRegistry &);
 void initializeX86LowerAMXIntrinsicsLegacyPassPass(PassRegistry &);
 void initializeX86LowerAMXTypeLegacyPassPass(PassRegistry &);
 void initializeX86LowerTileCopyPass(PassRegistry &);
-void initializeX86OptimizeLEAPassPass(PassRegistry &);
+void initializeX86OptimizeLEAsLegacyPass(PassRegistry &);
 void initializeX86PartialReductionLegacyPass(PassRegistry &);
 void initializeX86PreTileConfigPass(PassRegistry &);
 void initializeX86ReturnThunksPass(PassRegistry &);
