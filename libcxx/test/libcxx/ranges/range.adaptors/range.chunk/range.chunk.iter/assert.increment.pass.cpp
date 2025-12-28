@@ -19,7 +19,7 @@
 #include <vector>
 
 #include "check_assertion.h"
-#include "types.h"
+#include "../types.h"
 
 int main() {
   std::vector<int> vector = {1, 2, 3, 4, 5, 6, 7, 8};
