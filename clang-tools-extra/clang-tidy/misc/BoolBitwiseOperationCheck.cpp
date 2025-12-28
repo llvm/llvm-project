@@ -7,11 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "BoolBitwiseOperationCheck.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Lex/Lexer.h"
 #include <array>
 #include <optional>
 #include <utility>
+#include <vector>
 
 using namespace clang::ast_matchers;
 
@@ -261,30 +263,70 @@ void BoolBitwiseOperationCheck::emitWarningAndChangeOperatorsIfPossible(
                 << InsertBrace2;
 }
 
-void BoolBitwiseOperationCheck::visitBinaryTreesNode(
-    const BinaryOperator *BinOp, const BinaryOperator *ParentBinOp,
-    const clang::SourceManager &SM, clang::ASTContext &Ctx,
-    std::optional<bool> &RootAssignsToBoolean) {
-  if (!BinOp)
-    return;
+namespace {
+class BinaryOperatorVisitor : public clang::DynamicRecursiveASTVisitor {
+  clang::tidy::misc::BoolBitwiseOperationCheck &Check;
+  const clang::SourceManager &SM;
+  clang::ASTContext &Ctx;
+  std::optional<bool> &RootAssignsToBoolean;
+  // Stack to track parent binary operators during traversal
+  std::vector<const clang::BinaryOperator *> ParentStack;
 
-  if (isBooleanBitwise(BinOp, &Ctx, RootAssignsToBoolean))
-    emitWarningAndChangeOperatorsIfPossible(BinOp, ParentBinOp, SM, Ctx);
+public:
+  BinaryOperatorVisitor(clang::tidy::misc::BoolBitwiseOperationCheck &Check,
+                        const clang::SourceManager &SM,
+                        clang::ASTContext &Ctx,
+                        std::optional<bool> &RootAssignsToBoolean)
+      : Check(Check), SM(SM), Ctx(Ctx),
+        RootAssignsToBoolean(RootAssignsToBoolean) {}
 
-  visitBinaryTreesNode(
-      dyn_cast<BinaryOperator>(BinOp->getLHS()->IgnoreParenImpCasts()), BinOp,
-      SM, Ctx, RootAssignsToBoolean);
-  visitBinaryTreesNode(
-      dyn_cast<BinaryOperator>(BinOp->getRHS()->IgnoreParenImpCasts()), BinOp,
-      SM, Ctx, RootAssignsToBoolean);
-}
+  bool TraverseBinaryOperator(clang::BinaryOperator *BinOp) override {
+    if (!BinOp)
+      return true;
+
+    // Check if this BinOp is a direct child of the parent in the stack.
+    // If not, we skip processing it (don't add to stack).
+    if (!ParentStack.empty() && !(ParentStack.back()->getLHS()->IgnoreParenImpCasts() == BinOp || ParentStack.back()->getRHS()->IgnoreParenImpCasts() == BinOp)) {
+      return true;
+    }
+
+    // Push current binary operator as parent for children
+    ParentStack.push_back(BinOp);
+    // Traverse children
+    bool Result = clang::DynamicRecursiveASTVisitor::TraverseBinaryOperator(BinOp);
+    // Pop after traversal
+    ParentStack.pop_back();
+    return Result;
+  }
+
+  bool VisitBinaryOperator(clang::BinaryOperator *BinOp) override {
+    if (!BinOp)
+      return true;
+
+    const clang::BinaryOperator *ParentBinOp =
+        ParentStack.size() < 2 ? nullptr : ParentStack[ParentStack.size() - 2];
+
+    if (isBooleanBitwise(BinOp, &Ctx, RootAssignsToBoolean))
+      Check.emitWarningAndChangeOperatorsIfPossible(BinOp, ParentBinOp, SM,
+                                                    Ctx);
+
+    return true;
+  }
+};
+} // namespace
 
 void BoolBitwiseOperationCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *BinOpRoot = Result.Nodes.getNodeAs<BinaryOperator>("binOpRoot");
+  if (!BinOpRoot)
+    return;
+
   const SourceManager &SM = *Result.SourceManager;
   ASTContext &Ctx = *Result.Context;
   std::optional<bool> RootAssignsToBoolean = std::nullopt;
-  visitBinaryTreesNode(BinOpRoot, nullptr, SM, Ctx, RootAssignsToBoolean);
+
+  BinaryOperatorVisitor Visitor(*this, SM, Ctx, RootAssignsToBoolean);
+  // TraverseStmt requires non-const pointer, but we're only reading
+  Visitor.TraverseStmt(const_cast<BinaryOperator *>(BinOpRoot));
 }
 
 } // namespace clang::tidy::misc

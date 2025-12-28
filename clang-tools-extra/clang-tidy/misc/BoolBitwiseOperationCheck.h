@@ -32,16 +32,11 @@ public:
     return TK_IgnoreUnlessSpelledInSource;
   }
 
-private:
   void emitWarningAndChangeOperatorsIfPossible(
       const BinaryOperator *BinOp, const BinaryOperator *ParentBinOp,
       const clang::SourceManager &SM, clang::ASTContext &Ctx);
-  void visitBinaryTreesNode(const BinaryOperator *BinOp,
-                            const BinaryOperator *ParentBinOp,
-                            const clang::SourceManager &SM,
-                            clang::ASTContext &Ctx,
-                            std::optional<bool> &RootAssignsToBoolean);
 
+private:
   bool UnsafeMode;
   bool IgnoreMacros;
 };
