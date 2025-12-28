@@ -4035,17 +4035,24 @@ LexStart:
     // Notify MIOpt that we read a non-whitespace/non-comment token.
     MIOpt.ReadToken();
 
-    // The reason for saving and using CPlusPlusModules here is that EOF may be
+    // The reason for saving and using these members here is that EOF may be
     // encountered in LexIdentifierContinue and current Lexer might be
     // destructed in HandleEndOfFile, If the code after LexIdentifierContinue
     // try to access LangOps in this Lexer, it will hit undefined behavior.
-    bool CPlusPlusModules = LangOpts.CPlusPlusModules;
+    //
+    // FIXME: we introduce a new mechanism to delay the destruction of CurLexer,
+    // at least until the current Lexer::Lex function ends.
+    bool isCPlusPlusModules = LangOpts.CPlusPlusModules;
+    bool lexingRawMode = LexingRawMode;
+    bool is_PragmaLexer = Is_PragmaLexer;
+    bool parsingPreprocessorDirective = ParsingPreprocessorDirective;
+    auto *ThePP = PP;
     bool returnedToken = LexIdentifierContinue(Result, CurPtr);
 
-    if (returnedToken && !LexingRawMode && !Is_PragmaLexer &&
-        !ParsingPreprocessorDirective && CPlusPlusModules &&
+    if (returnedToken && !lexingRawMode && !is_PragmaLexer &&
+        !parsingPreprocessorDirective && isCPlusPlusModules &&
         Result.isModuleContextualKeyword() &&
-        PP->HandleModuleContextualKeyword(Result, TokAtPhysicalStartOfLine))
+        ThePP->HandleModuleContextualKeyword(Result, TokAtPhysicalStartOfLine))
       goto HandleDirective;
     return returnedToken;
   }
