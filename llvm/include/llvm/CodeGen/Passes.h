@@ -61,7 +61,7 @@ LLVM_ABI FunctionPass *createUnreachableBlockEliminationPass();
 /// instructions. These blocks confuscate profile analysis (e.g., basic block
 /// sections) since they will share the address of their fallthrough blocks.
 /// This pass garbage-collects such basic blocks.
-LLVM_ABI MachineFunctionPass *createGCEmptyBasicBlocksPass();
+LLVM_ABI MachineFunctionPass *createGCEmptyBasicBlocksLegacyPass();
 
 /// createBasicBlockSections Pass - This pass assigns sections to machine
 /// basic blocks and is enabled with -fbasic-block-sections.
