@@ -8961,100 +8961,101 @@ void BoUpSLP::buildExternalUses(
   DenseMap<Value *, unsigned> ScalarToExtUses;
   // Collect the values that we need to extract from the tree.
   for (auto &VT : VectorizableTree) {
-  for (auto &TEPtr : VT) {
-    TreeEntry *Entry = TEPtr.get();
+    for (auto &TEPtr : VT) {
+      TreeEntry *Entry = TEPtr.get();
 
-    // No need to handle users of gathered values.
-    if (Entry->isGather() || Entry->State == TreeEntry::SplitVectorize)
-      continue;
-
-    // For each lane:
-    for (int Lane = 0, LE = Entry->Scalars.size(); Lane != LE; ++Lane) {
-      Value *Scalar = Entry->Scalars[Lane];
-      if (!isa<Instruction>(Scalar) || Entry->isCopyableElement(Scalar))
+      // No need to handle users of gathered values.
+      if (Entry->isGather() || Entry->State == TreeEntry::SplitVectorize)
         continue;
 
-      // All uses must be replaced already? No need to do it again.
-      auto It = ScalarToExtUses.find(Scalar);
-      if (It != ScalarToExtUses.end() && !ExternalUses[It->second].User)
-        continue;
-
-      if (Scalar->hasNUsesOrMore(NumVectScalars)) {
-        unsigned FoundLane = Entry->findLaneForValue(Scalar);
-        LLVM_DEBUG(dbgs() << "SLP: Need to extract from lane " << FoundLane
-                          << " from " << *Scalar << "for many users.\n");
-        It = ScalarToExtUses.try_emplace(Scalar, ExternalUses.size()).first;
-        ExternalUses.emplace_back(Scalar, nullptr, *Entry, FoundLane);
-        ExternalUsesWithNonUsers.insert(Scalar);
-        continue;
-      }
-
-      // Check if the scalar is externally used as an extra arg.
-      const auto ExtI = ExternallyUsedValues.find(Scalar);
-      if (ExtI != ExternallyUsedValues.end()) {
-        unsigned FoundLane = Entry->findLaneForValue(Scalar);
-        LLVM_DEBUG(dbgs() << "SLP: Need to extract: Extra arg from lane "
-                          << FoundLane << " from " << *Scalar << ".\n");
-        ScalarToExtUses.try_emplace(Scalar, ExternalUses.size());
-        ExternalUses.emplace_back(Scalar, nullptr, *Entry, FoundLane);
-        continue;
-      }
-      for (User *U : Scalar->users()) {
-        LLVM_DEBUG(dbgs() << "SLP: Checking user:" << *U << ".\n");
-
-        Instruction *UserInst = dyn_cast<Instruction>(U);
-        if (!UserInst || isDeleted(UserInst))
+      // For each lane:
+      for (int Lane = 0, LE = Entry->Scalars.size(); Lane != LE; ++Lane) {
+        Value *Scalar = Entry->Scalars[Lane];
+        if (!isa<Instruction>(Scalar) || Entry->isCopyableElement(Scalar))
           continue;
 
-        // Ignore users in the user ignore list.
-        if (UserIgnoreList && UserIgnoreList->contains(UserInst))
+        // All uses must be replaced already? No need to do it again.
+        auto It = ScalarToExtUses.find(Scalar);
+        if (It != ScalarToExtUses.end() && !ExternalUses[It->second].User)
           continue;
 
-        // Skip in-tree scalars that become vectors
-        if (ArrayRef<TreeEntry *> UseEntries = getTreeEntries(U);
-            !UseEntries.empty()) {
-          // Some in-tree scalars will remain as scalar in vectorized
-          // instructions. If that is the case, the one in FoundLane will
-          // be used.
-          if (!((Scalar->getType()->getScalarType()->isPointerTy() &&
-                 isa<LoadInst, StoreInst>(UserInst)) ||
-                isa<CallInst>(UserInst)) ||
-              all_of(UseEntries, [&](TreeEntry *UseEntry) {
-                return UseEntry->State == TreeEntry::ScatterVectorize ||
-                       !doesInTreeUserNeedToExtract(
-                           Scalar, getRootEntryInstruction(*UseEntry), TLI,
-                           TTI);
-              })) {
-            LLVM_DEBUG(dbgs() << "SLP: \tInternal user will be removed:" << *U
-                              << ".\n");
-            assert(none_of(UseEntries,
-                           [](TreeEntry *UseEntry) {
-                             return UseEntry->isGather();
-                           }) &&
-                   "Bad state");
-            continue;
-          }
-          U = nullptr;
-          if (It != ScalarToExtUses.end()) {
-            ExternalUses[It->second].User = nullptr;
-            break;
-          }
+        if (Scalar->hasNUsesOrMore(NumVectScalars)) {
+          unsigned FoundLane = Entry->findLaneForValue(Scalar);
+          LLVM_DEBUG(dbgs() << "SLP: Need to extract from lane " << FoundLane
+                            << " from " << *Scalar << "for many users.\n");
+          It = ScalarToExtUses.try_emplace(Scalar, ExternalUses.size()).first;
+          ExternalUses.emplace_back(Scalar, nullptr, *Entry, FoundLane);
+          ExternalUsesWithNonUsers.insert(Scalar);
+          continue;
         }
 
-        if (U && Scalar->hasNUsesOrMore(UsesLimit))
-          U = nullptr;
-        unsigned FoundLane = Entry->findLaneForValue(Scalar);
-        LLVM_DEBUG(dbgs() << "SLP: Need to extract:" << *UserInst
-                          << " from lane " << FoundLane << " from " << *Scalar
-                          << ".\n");
-        It = ScalarToExtUses.try_emplace(Scalar, ExternalUses.size()).first;
-        ExternalUses.emplace_back(Scalar, U, *Entry, FoundLane);
-        ExternalUsesWithNonUsers.insert(Scalar);
-        if (!U)
-          break;
+        // Check if the scalar is externally used as an extra arg.
+        const auto ExtI = ExternallyUsedValues.find(Scalar);
+        if (ExtI != ExternallyUsedValues.end()) {
+          unsigned FoundLane = Entry->findLaneForValue(Scalar);
+          LLVM_DEBUG(dbgs() << "SLP: Need to extract: Extra arg from lane "
+                            << FoundLane << " from " << *Scalar << ".\n");
+          ScalarToExtUses.try_emplace(Scalar, ExternalUses.size());
+          ExternalUses.emplace_back(Scalar, nullptr, *Entry, FoundLane);
+          continue;
+        }
+        for (User *U : Scalar->users()) {
+          LLVM_DEBUG(dbgs() << "SLP: Checking user:" << *U << ".\n");
+
+          Instruction *UserInst = dyn_cast<Instruction>(U);
+          if (!UserInst || isDeleted(UserInst))
+            continue;
+
+          // Ignore users in the user ignore list.
+          if (UserIgnoreList && UserIgnoreList->contains(UserInst))
+            continue;
+
+          // Skip in-tree scalars that become vectors
+          if (ArrayRef<TreeEntry *> UseEntries = getTreeEntries(U);
+              !UseEntries.empty()) {
+            // Some in-tree scalars will remain as scalar in vectorized
+            // instructions. If that is the case, the one in FoundLane will
+            // be used.
+            if (!((Scalar->getType()->getScalarType()->isPointerTy() &&
+                   isa<LoadInst, StoreInst>(UserInst)) ||
+                  isa<CallInst>(UserInst)) ||
+                all_of(UseEntries, [&](TreeEntry *UseEntry) {
+                  return UseEntry->State == TreeEntry::ScatterVectorize ||
+                         !doesInTreeUserNeedToExtract(
+                             Scalar, getRootEntryInstruction(*UseEntry), TLI,
+                             TTI);
+                })) {
+              LLVM_DEBUG(dbgs() << "SLP: \tInternal user will be removed:" << *U
+                                << ".\n");
+              assert(none_of(UseEntries,
+                             [](TreeEntry *UseEntry) {
+                               return UseEntry->isGather();
+                             }) &&
+                     "Bad state");
+              continue;
+            }
+            U = nullptr;
+            if (It != ScalarToExtUses.end()) {
+              ExternalUses[It->second].User = nullptr;
+              break;
+            }
+          }
+
+          if (U && Scalar->hasNUsesOrMore(UsesLimit))
+            U = nullptr;
+          unsigned FoundLane = Entry->findLaneForValue(Scalar);
+          LLVM_DEBUG(dbgs()
+                     << "SLP: Need to extract:" << *UserInst << " from lane "
+                     << FoundLane << " from " << *Scalar << ".\n");
+          It = ScalarToExtUses.try_emplace(Scalar, ExternalUses.size()).first;
+          ExternalUses.emplace_back(Scalar, U, *Entry, FoundLane);
+          ExternalUsesWithNonUsers.insert(Scalar);
+          if (!U)
+            break;
+        }
       }
     }
-  }}
+  }
 }
 
 SmallVector<SmallVector<StoreInst *>>
