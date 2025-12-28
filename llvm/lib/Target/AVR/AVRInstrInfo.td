@@ -897,99 +897,101 @@ let hasSideEffects = 0, mayLoad = 1, isReMaterializable = 1 in {
 }
 
 // Indirect loads.
-let hasSideEffects = 0, mayLoad = 1, isReMaterializable = 1 in {
-  def LDRdPtr : FSTLD<0, 0b00, (outs GPR8:$reg), (ins PTRREGS:$ptrreg),
-                      "ld\t$reg, $ptrreg",
-                      [(set GPR8:$reg, (load i16:$ptrreg))]>,
-                Requires<[HasSRAM]>;
-
-  // LDW Rd+1:Rd, P
-  //
-  // Expands to:
-  //   ld  Rd,   P
-  //   ldd Rd+1, P+1
-  // On reduced tiny cores, this instruction expands to:
-  //   ld    Rd,   P+
-  //   ld    Rd+1, P+
-  //   subiw P,    2
-  let Constraints = "@earlyclobber $reg" in
-  def LDWRdPtr : Pseudo<(outs DREGS:$reg), (ins PTRDISPREGS:$ptrreg),
-                        "ldw\t$reg, $ptrreg",
-                        [(set i16:$reg, (load i16:$ptrreg))]>,
-                 Requires<[HasSRAM]>;
-}
-
-// Indirect loads (with postincrement or predecrement).
-let mayLoad = 1, hasSideEffects = 0,
-    Constraints = "$ptrreg = $base_wb,@earlyclobber $reg" in {
-  def LDRdPtrPi : FSTLD<0, 0b01, (outs GPR8:$reg, PTRREGS:$base_wb),
-                        (ins PTRREGS:$ptrreg), "ld\t$reg, $ptrreg+", []>,
+let hasSideEffects = 0, mayLoad = 1 in {
+  let isReMaterializable = 1 in {
+    def LDRdPtr : FSTLD<0, 0b00, (outs GPR8:$reg), (ins PTRREGS:$ptrreg),
+                        "ld\t$reg, $ptrreg",
+                        [(set GPR8:$reg, (load i16:$ptrreg))]>,
                   Requires<[HasSRAM]>;
 
-  // LDW Rd+1:Rd, P+
-  // Expands to:
-  // ld Rd,   P+
-  // ld Rd+1, P+
-  def LDWRdPtrPi : Pseudo<(outs DREGS:$reg, PTRREGS:$base_wb),
-                          (ins PTRREGS:$ptrreg), "ldw\t$reg, $ptrreg+", []>,
+    // LDW Rd+1:Rd, P
+    //
+    // Expands to:
+    //   ld  Rd,   P
+    //   ldd Rd+1, P+1
+    // On reduced tiny cores, this instruction expands to:
+    //   ld    Rd,   P+
+    //   ld    Rd+1, P+
+    //   subiw P,    2
+    let Constraints = "@earlyclobber $reg" in
+    def LDWRdPtr : Pseudo<(outs DREGS:$reg), (ins PTRDISPREGS:$ptrreg),
+                          "ldw\t$reg, $ptrreg",
+                          [(set i16:$reg, (load i16:$ptrreg))]>,
                    Requires<[HasSRAM]>;
+  }
 
-  def LDRdPtrPd : FSTLD<0, 0b10, (outs GPR8:$reg, PTRREGS:$base_wb),
-                        (ins PTRREGS:$ptrreg), "ld\t$reg, -$ptrreg", []>,
-                  Requires<[HasSRAM]>;
+  // Indirect loads (with postincrement or predecrement).
+  let isReMaterializable = 0,
+      Constraints = "$ptrreg = $base_wb,@earlyclobber $reg" in {
+    def LDRdPtrPi : FSTLD<0, 0b01, (outs GPR8:$reg, PTRREGS:$base_wb),
+                          (ins PTRREGS:$ptrreg), "ld\t$reg, $ptrreg+", []>,
+                    Requires<[HasSRAM]>;
 
-  // LDW Rd+1:Rd, -P
-  //
-  // Expands to:
-  // ld Rd+1, -P
-  // ld Rd,   -P
-  def LDWRdPtrPd : Pseudo<(outs DREGS:$reg, PTRREGS:$base_wb),
-                          (ins PTRREGS:$ptrreg), "ldw\t$reg, -$ptrreg", []>,
+    // LDW Rd+1:Rd, P+
+    // Expands to:
+    // ld Rd,   P+
+    // ld Rd+1, P+
+    def LDWRdPtrPi : Pseudo<(outs DREGS:$reg, PTRREGS:$base_wb),
+                            (ins PTRREGS:$ptrreg), "ldw\t$reg, $ptrreg+", []>,
+                     Requires<[HasSRAM]>;
+
+    def LDRdPtrPd : FSTLD<0, 0b10, (outs GPR8:$reg, PTRREGS:$base_wb),
+                          (ins PTRREGS:$ptrreg), "ld\t$reg, -$ptrreg", []>,
+                    Requires<[HasSRAM]>;
+
+    // LDW Rd+1:Rd, -P
+    //
+    // Expands to:
+    // ld Rd+1, -P
+    // ld Rd,   -P
+    def LDWRdPtrPd : Pseudo<(outs DREGS:$reg, PTRREGS:$base_wb),
+                            (ins PTRREGS:$ptrreg), "ldw\t$reg, -$ptrreg", []>,
+                     Requires<[HasSRAM]>;
+  }
+
+  // Load indirect with displacement operations.
+  let isReMaterializable = 1 in {
+    def LDDRdPtrQ : FSTDLDD<0, (outs GPR8:$reg), (ins memri:$memri),
+                            "ldd\t$reg, $memri",
+                            [(set i8:$reg, (load addr:$memri))]>,
+                    Requires<[HasSRAM, HasNonTinyEncoding]>;
+
+    // LDDW Rd+1:Rd, P+q
+    //
+    // Expands to:
+    //   ldd Rd,   P+q
+    //   ldd Rd+1, P+q+1
+    // On reduced tiny cores, this instruction expands to:
+    //   subiw P,    -q
+    //   ld    Rd,   P+
+    //   ld    Rd+1, P+
+    //   subiw P,    q+2
+    let Constraints = "@earlyclobber $dst" in
+    def LDDWRdPtrQ : Pseudo<(outs DREGS:$dst), (ins memri:$memri),
+                            "lddw\t$dst, $memri",
+                            [(set i16:$dst, (load addr:$memri))]>,
+                     Requires<[HasSRAM]>;
+
+    // An identical pseudo instruction to LDDWRdPtrQ, expect restricted to the Y
+    // register and without the @earlyclobber flag.
+    //
+    // Used to work around a bug caused by the register allocator not
+    // being able to handle the expansion of a COPY into an machine instruction
+    // that has an earlyclobber flag. This is because the register allocator will
+    // try expand a copy from a register slot into an earlyclobber instruction.
+    // Instructions that are earlyclobber need to be in a dedicated earlyclobber
+    // slot.
+    //
+    // This pseudo instruction can be used pre-AVR pseudo expansion in order to
+    // get a frame index load without directly using earlyclobber instructions.
+    //
+    // The pseudo expansion pass trivially expands this into LDDWRdPtrQ.
+    //
+    // This instruction may be removed once PR13375 is fixed.
+    def LDDWRdYQ : Pseudo<(outs DREGS:$dst), (ins memri:$memri),
+                          "lddw\t$dst, $memri", []>,
                    Requires<[HasSRAM]>;
-}
-
-// Load indirect with displacement operations.
-let hasSideEffects = 0, mayLoad = 1, isReMaterializable = 1 in {
-  def LDDRdPtrQ : FSTDLDD<0, (outs GPR8:$reg), (ins memri:$memri),
-                          "ldd\t$reg, $memri",
-                          [(set i8:$reg, (load addr:$memri))]>,
-                  Requires<[HasSRAM, HasNonTinyEncoding]>;
-
-  // LDDW Rd+1:Rd, P+q
-  //
-  // Expands to:
-  //   ldd Rd,   P+q
-  //   ldd Rd+1, P+q+1
-  // On reduced tiny cores, this instruction expands to:
-  //   subiw P,    -q
-  //   ld    Rd,   P+
-  //   ld    Rd+1, P+
-  //   subiw P,    q+2
-  let Constraints = "@earlyclobber $dst" in
-  def LDDWRdPtrQ : Pseudo<(outs DREGS:$dst), (ins memri:$memri),
-                          "lddw\t$dst, $memri",
-                          [(set i16:$dst, (load addr:$memri))]>,
-                   Requires<[HasSRAM]>;
-
-  // An identical pseudo instruction to LDDWRdPtrQ, expect restricted to the Y
-  // register and without the @earlyclobber flag.
-  //
-  // Used to work around a bug caused by the register allocator not
-  // being able to handle the expansion of a COPY into an machine instruction
-  // that has an earlyclobber flag. This is because the register allocator will
-  // try expand a copy from a register slot into an earlyclobber instruction.
-  // Instructions that are earlyclobber need to be in a dedicated earlyclobber
-  // slot.
-  //
-  // This pseudo instruction can be used pre-AVR pseudo expansion in order to
-  // get a frame index load without directly using earlyclobber instructions.
-  //
-  // The pseudo expansion pass trivially expands this into LDDWRdPtrQ.
-  //
-  // This instruction may be removed once PR13375 is fixed.
-  def LDDWRdYQ : Pseudo<(outs DREGS:$dst), (ins memri:$memri),
-                        "lddw\t$dst, $memri", []>,
-                 Requires<[HasSRAM]>;
+  }
 }
 
 let hasSideEffects = 0, mayLoad = 1, isReMaterializable = 1 in
