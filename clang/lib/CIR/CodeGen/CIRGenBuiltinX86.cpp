@@ -158,7 +158,6 @@ computeFullLaneShuffleMask(CIRGenFunction &cgf, const mlir::Value vec,
 
   outIndices.resize(numElts);
 }
-
 static mlir::Value emitX86CompressExpand(CIRGenBuilderTy &builder,
                                          mlir::Location loc, mlir::Value source,
                                          mlir::Value mask,
