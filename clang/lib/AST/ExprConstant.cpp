@@ -12412,8 +12412,8 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
     unsigned ElemWidth = Info.Ctx.getTypeSize(ElemTy);
 
     SmallVector<APValue, 16> Elems;
-    for (unsigned i = 0; i < VectorLen; ++i) {
-      bool BitSet = Mask[i];
+    for (unsigned I = 0; I != VectorLen; ++I) {
+      bool BitSet = Mask[I];
       APSInt ElemVal(ElemWidth, /*isUnsigned=*/false);
       if (BitSet) {
         ElemVal.setAllBits();
