@@ -450,9 +450,9 @@ namespace GH173732 {
 
   // pointer to array
   typedef char (*ptrarray)[2];
-  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use 'using' instead of 'typedef' [modernize-use-using]
   // CHECK-FIXES: using ptrarray = char (*)[2];
   typedef char *ptr;
-  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use 'using' instead of 'typedef' [modernize-use-using]
   // CHECK-FIXES: using ptr = char *;
 }
