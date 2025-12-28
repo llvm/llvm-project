@@ -18757,8 +18757,8 @@ SDValue DAGCombiner::visitFDIV(SDNode *N) {
     // If this FDIV is part of a reciprocal square root, it may be folded
     // into a target-specific square root estimate instruction.
     // X / sqrt(Y) -> X * (1 / sqrt(Y)) -> X * rsqrt(Y)
-    // X / fpext/fpround(sqrt(Y)) -> X * (fpext/fpround(1 / sqrt(Y))) -> X *
-    // fpext/fpround(rsqrt(Y))
+    // X / fpext/fpround(sqrt(Y)) -> X * (fpext/fpround(1 / sqrt(Y))) ->
+    // X * fpext/fpround(rsqrt(Y))
     if (N1.getOpcode() == ISD::FSQRT && FlagsN1.hasAllowContract()) {
       if (SDValue RV = buildRsqrtEstimate(N1.getOperand(0)))
         return DAG.getNode(ISD::FMUL, DL, VT, N0, RV);
@@ -18802,9 +18802,11 @@ SDValue DAGCombiner::visitFDIV(SDNode *N) {
           else if (Y == Sqrt.getOperand(0))
             A = Y;
           if (A) {
-            // X / (fabs(A) * sqrt(Z)) --> X / sqrt(A*A*Z) --> X * (1 /
-            // sqrt(A*A*Z)) -> X * rsqrt(A*A*Z) X / (A * sqrt(A))       --> X /
-            // sqrt(A*A*A) --> X * (1 / sqrt(A*A*A)) -> X * rsqrt(A*A*A)
+            // X / (fabs(A) * sqrt(Z)) -> X / sqrt(A*A*Z) ->
+	    // X * (1 / sqrt(A*A*Z)) -> X * rsqrt(A*A*Z)
+
+	    // X / (A * sqrt(A)) -> X / sqrt(A*A*A) ->
+	    // X * (1 / sqrt(A*A*A)) -> X * rsqrt(A*A*A)
             SDValue AA = DAG.getNode(ISD::FMUL, DL, VT, A, A);
             SDValue AAZ =
                 DAG.getNode(ISD::FMUL, DL, VT, AA, Sqrt.getOperand(0));
@@ -18837,7 +18839,7 @@ SDValue DAGCombiner::visitFDIV(SDNode *N) {
     if (SDValue RV = BuildDivEstimate(N0, N1, Flags))
       return RV;
 
-  // Fold X/Sqrt(X) -> Sqrt(X)
+  // Fold X / Sqrt(X) -> Sqrt(X)
   if ((Flags.hasNoSignedZeros() || DAG.canIgnoreSignBitOfZero(SDValue(N, 0))) &&
       Flags.hasAllowReassociation())
     if (N1.getOpcode() == ISD::FSQRT && N0 == N1.getOperand(0))
