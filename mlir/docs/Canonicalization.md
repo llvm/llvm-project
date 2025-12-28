@@ -65,19 +65,21 @@ Some important things to think about w.r.t. canonicalization patterns:
 
 ## What is the Canonical Form?
 
-There is no formally defined canonical form in MLIR.
-The de-facto canonical form keeps evolving, as canonicalization patterns and
-folders are getting added / removed / modified by the community.
+There is no formally defined canonical form in MLIR. The de-facto canonical
+form keeps evolving, as canonicalization patterns and folders are getting
+added / removed / modified by the community.
 
-The canonicalizer pass is integral to many downstream projects but offers no
-fine-grained control over individual patterns or foldings, making changes to
-the canonical form potentially contentious. Whether a transformation belongs
-in the canonical form must be decided on a case-by-case basis, but common
-community-agreed canonicalizations include:
+The canonicalizer pass is used in many projects but does not offer fine-grained
+control over individual patterns or foldings, making changes to the canonical
+form potentially contentious. Whether a transformation belongs in the canonical
+form must be decided on a case-by-case basis, but common community-agreed
+canonicalizations include:
 
 * Identity / no-op elimination. E.g., folding `arith.addi %x, %c0` to `%x` or
   erasing `memref.copy %x, %x`.
-* Scalar constant folding. E.g., folding `arith.addi %c1, %c2` to `%c3`. Note: this isn't true for "large" tensors where constant folding can lead to an IR-size explosion.
+* Scalar constant folding. E.g., folding `arith.addi %c1, %c2` to `%c3`. Note:
+  this is not true for "large" tensors where constant folding can lead to IR
+  size explosion.
 * Folding inverse ops. E.g., folding `arith.xori(arith.xori(%x, %a), %a)` to
   `%x`.
 * Unused/redundant value elimination. E.g., removing unused loop-carried
@@ -93,6 +95,10 @@ community-agreed canonicalizations include:
   `%v = tensor.cast %0 : tensor<5xf32> to tensor<?xf32>`.
 * Cast propagation / folding. E.g., pushing casts through operations or folding
   them away if it introduces more static type information.
+
+Note: Some dialects define multiple IR forms, sometimes depending on the
+follow-up transformation ([example](https://mlir.llvm.org/docs/Rationale/RationaleLinalgDialect/#interchangeability-of-formsa-nameformsa)).
+These forms are unrelated to MLIR's canonicalization mechanism.
 
 ## Globally Applied Rules
 
