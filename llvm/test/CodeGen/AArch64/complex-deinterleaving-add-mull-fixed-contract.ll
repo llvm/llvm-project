@@ -7,19 +7,14 @@ target triple = "aarch64"
 define <4 x double> @mull_add(<4 x double> %a, <4 x double> %b, <4 x double> %c) {
 ; CHECK-LABEL: mull_add:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    zip2 v4.2d, v2.2d, v3.2d
-; CHECK-NEXT:    zip2 v5.2d, v0.2d, v1.2d
-; CHECK-NEXT:    zip1 v0.2d, v0.2d, v1.2d
-; CHECK-NEXT:    zip1 v2.2d, v2.2d, v3.2d
-; CHECK-NEXT:    fmul v1.2d, v5.2d, v4.2d
-; CHECK-NEXT:    fmul v3.2d, v0.2d, v4.2d
-; CHECK-NEXT:    fneg v1.2d, v1.2d
-; CHECK-NEXT:    fmla v3.2d, v2.2d, v5.2d
-; CHECK-NEXT:    fmla v1.2d, v2.2d, v0.2d
-; CHECK-NEXT:    fadd v1.2d, v2.2d, v1.2d
-; CHECK-NEXT:    fadd v2.2d, v3.2d, v4.2d
-; CHECK-NEXT:    zip1 v0.2d, v1.2d, v2.2d
-; CHECK-NEXT:    zip2 v1.2d, v1.2d, v2.2d
+; CHECK-NEXT:    movi    v6.2d, #0000000000000000
+; CHECK-NEXT:    movi    v7.2d, #0000000000000000
+; CHECK-NEXT:    fcmla   v7.2d, v2.2d, v0.2d, #90
+; CHECK-NEXT:    fcmla   v6.2d, v3.2d, v1.2d, #90
+; CHECK-NEXT:    fcmla   v7.2d, v2.2d, v0.2d, #0
+; CHECK-NEXT:    fcmla   v6.2d, v3.2d, v1.2d, #0
+; CHECK-NEXT:    fadd    v0.2d, v4.2d, v7.2d
+; CHECK-NEXT:    fadd    v1.2d, v5.2d, v6.2d
 ; CHECK-NEXT:    ret
 entry:
   %strided.vec = shufflevector <4 x double> %a, <4 x double> poison, <2 x i32> <i32 0, i32 2>
@@ -32,8 +27,8 @@ entry:
   %3 = fmul contract <2 x double> %strided.vec, %strided.vec30
   %4 = fmul contract <2 x double> %strided.vec28, %strided.vec31
   %5 = fsub contract <2 x double> %3, %4
-  %strided.vec33 = shufflevector <4 x double> %b, <4 x double> poison, <2 x i32> <i32 0, i32 2>
-  %strided.vec34 = shufflevector <4 x double> %b, <4 x double> poison, <2 x i32> <i32 1, i32 3>
+  %strided.vec33 = shufflevector <4 x double> %c, <4 x double> poison, <2 x i32> <i32 0, i32 2>
+  %strided.vec34 = shufflevector <4 x double> %c, <4 x double> poison, <2 x i32> <i32 1, i32 3>
   %6 = fadd contract <2 x double> %strided.vec33, %5
   %7 = fadd contract <2 x double> %2, %strided.vec34
   %interleaved.vec = shufflevector <2 x double> %6, <2 x double> %7, <4 x i32> <i32 0, i32 2, i32 1, i32 3>

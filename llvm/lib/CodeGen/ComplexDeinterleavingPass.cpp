@@ -1012,15 +1012,28 @@ ComplexDeinterleavingGraph::identifySymmetricOperation(ComplexValues &Vals) {
   }
 
   CompositeNode *Op0 = identifyNode(OpVals);
-  CompositeNode *Op1 = nullptr;
-  if (Op0 == nullptr)
-    return nullptr;
+  bool FlipImag = false;
+  if (Op0 == nullptr) {
+    if (FirstOpc == Instruction::FAdd || FirstOpc == Instruction::FMul ||
+        FirstOpc == Instruction::Add || FirstOpc == Instruction::Mul) {
+      FlipImag = true;
+      unsigned NVals = Vals.size();
+      for (unsigned I = 0; I < NVals; I++) {
+        OpVals[I].Imag = cast<Instruction>(Vals[I].Imag)->getOperand(1);
+      }
+      Op0 = identifyNode(OpVals);
+    }
+    if (Op0 == nullptr) {
+      return nullptr;
+    }
+  }
 
+  CompositeNode *Op1 = nullptr;
   if (FirstReal->isBinaryOp()) {
     OpVals.clear();
     for (auto &V : Vals) {
       auto *R1 = cast<Instruction>(V.Real)->getOperand(1);
-      auto *I1 = cast<Instruction>(V.Imag)->getOperand(1);
+      auto *I1 = cast<Instruction>(V.Imag)->getOperand(FlipImag ? 0 : 1);
       OpVals.push_back({R1, I1});
     }
     Op1 = identifyNode(OpVals);

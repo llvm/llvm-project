@@ -7,21 +7,15 @@ target triple = "aarch64-unknown-linux-gnu"
 define <vscale x 4 x double> @mull_add(<vscale x 4 x double> %a, <vscale x 4 x double> %b, <vscale x 4 x double> %c) {
 ; CHECK-LABEL: mull_add:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    uzp2 z6.d, z0.d, z1.d
-; CHECK-NEXT:    uzp1 z0.d, z0.d, z1.d
-; CHECK-NEXT:    uzp2 z1.d, z2.d, z3.d
-; CHECK-NEXT:    uzp1 z2.d, z2.d, z3.d
-; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    fmul z7.d, z0.d, z1.d
-; CHECK-NEXT:    fmul z1.d, z6.d, z1.d
-; CHECK-NEXT:    fmad z6.d, p0/m, z2.d, z7.d
-; CHECK-NEXT:    fnmsb z0.d, p0/m, z2.d, z1.d
-; CHECK-NEXT:    uzp2 z1.d, z4.d, z5.d
-; CHECK-NEXT:    uzp1 z2.d, z4.d, z5.d
-; CHECK-NEXT:    fadd z2.d, z2.d, z0.d
-; CHECK-NEXT:    fadd z1.d, z6.d, z1.d
-; CHECK-NEXT:    zip1 z0.d, z2.d, z1.d
-; CHECK-NEXT:    zip2 z1.d, z2.d, z1.d
+; CHECK-NEXT:    movi    v6.2d, #0000000000000000
+; CHECK-NEXT:    movi    v7.2d, #0000000000000000
+; CHECK-NEXT:    ptrue   p0.d
+; CHECK-NEXT:    fcmla   z7.d, p0/m, z2.d, z0.d, #90
+; CHECK-NEXT:    fcmla   z6.d, p0/m, z3.d, z1.d, #90
+; CHECK-NEXT:    fcmla   z7.d, p0/m, z2.d, z0.d, #0
+; CHECK-NEXT:    fcmla   z6.d, p0/m, z3.d, z1.d, #0
+; CHECK-NEXT:    fadd    z0.d, z4.d, z7.d
+; CHECK-NEXT:    fadd    z1.d, z5.d, z6.d
 ; CHECK-NEXT:    ret
 entry:
   %strided.vec = tail call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.vector.deinterleave2.nxv4f64(<vscale x 4 x double> %a)
