@@ -3,6 +3,7 @@
 #  SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
 from ._python_test_ops_gen import *
+from ._python_test_ops_gen import _Dialect
 
 
 def register_python_test_dialect(registry):
