@@ -4673,6 +4673,33 @@ static Value *simplifySelectWithBitTest(Value *CondVal, Value *TrueVal,
   return nullptr;
 }
 
+// Transform
+// select(icmp(eq, X, Y), 0, llvm.cmp(X, Y))
+// ->
+// llvm.cmp(X, Y)
+static Value *simplifySelectWhenValInstrinsic(
+    ArrayRef<std::pair<Value *, Value *>> Replacements, Value *TrueVal,
+    Value *FalseVal) {
+  auto *CTrueVal = dyn_cast<ConstantInt>(TrueVal);
+  auto *FalseInstr = dyn_cast<CallInst>(FalseVal);
+
+  if (CTrueVal && FalseInstr && CTrueVal->isZero()) {
+    Function *F = FalseInstr->getCalledFunction();
+    if (!F || !F->isIntrinsic())
+      return nullptr;
+
+    Intrinsic::ID ID = F->getIntrinsicID();
+    if (ID != Intrinsic::scmp && ID != Intrinsic::ucmp)
+      return nullptr;
+
+    if (Replacements[0].first == FalseInstr->getOperand(0) &&
+        Replacements[0].second == FalseInstr->getOperand(1))
+      return FalseInstr;
+  }
+
+  return nullptr;
+}
+
 /// Try to simplify a select instruction when its condition operand is an
 /// integer equality or floating-point equivalence comparison.
 static Value *simplifySelectWithEquivalence(
@@ -4694,6 +4721,10 @@ static Value *simplifySelectWithEquivalence(
 
   if (SimplifiedFalseVal == SimplifiedTrueVal)
     return FalseVal;
+
+  if (auto *V = simplifySelectWhenValInstrinsic(Replacements, SimplifiedTrueVal,
+                                                SimplifiedFalseVal))
+    return V;
 
   return nullptr;
 }
