@@ -1040,6 +1040,8 @@ PreservedAnalyses runOnModuleNewPM(Module &M, ModuleAnalysisManager &MAM,
   FunctionAnalysisManager &FAM =
       MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
   for (Function &F : M) {
+    if (F.isDeclaration())
+      continue;
     MachineFunction &MF = FAM.getResult<MachineFunctionAnalysis>(F).getMF();
     AsmPrinter.runOnMachineFunction(MF);
   }
