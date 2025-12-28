@@ -84,7 +84,13 @@ FunctionPass *createX86FixupVectorConstants();
 
 /// Return a pass that removes redundant LEA instructions and redundant address
 /// recalculations.
-FunctionPass *createX86OptimizeLEAs();
+class X86OptimizeLEAsPass : public PassInfoMixin<X86OptimizeLEAsPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *createX86OptimizeLEAsLegacyPass();
 
 /// Return a pass that transforms setcc + movzx pairs into xor + setcc.
 FunctionPass *createX86FixupSetCC();
@@ -239,6 +245,7 @@ InstructionSelector *createX86InstructionSelector(const X86TargetMachine &TM,
                                                   const X86Subtarget &,
                                                   const X86RegisterBankInfo &);
 
+FunctionPass *createX86PreLegalizerCombiner();
 FunctionPass *createX86LoadValueInjectionLoadHardeningPass();
 FunctionPass *createX86LoadValueInjectionRetHardeningPass();
 FunctionPass *createX86SpeculativeLoadHardeningPass();
@@ -273,7 +280,7 @@ void initializeX86LoadValueInjectionRetHardeningPassPass(PassRegistry &);
 void initializeX86LowerAMXIntrinsicsLegacyPassPass(PassRegistry &);
 void initializeX86LowerAMXTypeLegacyPassPass(PassRegistry &);
 void initializeX86LowerTileCopyPass(PassRegistry &);
-void initializeX86OptimizeLEAPassPass(PassRegistry &);
+void initializeX86OptimizeLEAsLegacyPass(PassRegistry &);
 void initializeX86PartialReductionLegacyPass(PassRegistry &);
 void initializeX86PreTileConfigPass(PassRegistry &);
 void initializeX86ReturnThunksPass(PassRegistry &);
@@ -282,6 +289,7 @@ void initializeX86SpeculativeLoadHardeningPassPass(PassRegistry &);
 void initializeX86TileConfigPass(PassRegistry &);
 void initializeX86SuppressAPXForRelocationPassPass(PassRegistry &);
 void initializeX86WinEHUnwindV2Pass(PassRegistry &);
+void initializeX86PreLegalizerCombinerPass(PassRegistry &);
 
 namespace X86AS {
 enum : unsigned {

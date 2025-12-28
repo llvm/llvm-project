@@ -95,7 +95,7 @@ extern "C" LLVM_C_ABI void LLVMInitializeX86Target() {
   initializeX86FlagsCopyLoweringLegacyPass(PR);
   initializeX86LoadValueInjectionLoadHardeningPassPass(PR);
   initializeX86LoadValueInjectionRetHardeningPassPass(PR);
-  initializeX86OptimizeLEAPassPass(PR);
+  initializeX86OptimizeLEAsLegacyPass(PR);
   initializeX86PartialReductionLegacyPass(PR);
   initializePseudoProbeInserterPass(PR);
   initializeX86ReturnThunksPass(PR);
@@ -107,6 +107,7 @@ extern "C" LLVM_C_ABI void LLVMInitializeX86Target() {
   initializeX86DynAllocaExpanderLegacyPass(PR);
   initializeX86SuppressAPXForRelocationPassPass(PR);
   initializeX86WinEHUnwindV2Pass(PR);
+  initializeX86PreLegalizerCombinerPass(PR);
 }
 
 static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
@@ -373,6 +374,7 @@ public:
   bool addLegalizeMachineIR() override;
   bool addRegBankSelect() override;
   bool addGlobalInstructionSelect() override;
+  void addPreLegalizeMachineIR() override;
   bool addILPOpts() override;
   bool addPreISel() override;
   void addMachineSSAOptimization() override;
@@ -487,6 +489,12 @@ bool X86PassConfig::addGlobalInstructionSelect() {
   return false;
 }
 
+void X86PassConfig::addPreLegalizeMachineIR() {
+  if (getOptLevel() != CodeGenOptLevel::None) {
+    addPass(createX86PreLegalizerCombiner());
+  }
+}
+
 bool X86PassConfig::addILPOpts() {
   addPass(&EarlyIfConverterLegacyID);
   if (EnableMachineCombinerPass)
@@ -507,7 +515,7 @@ void X86PassConfig::addPreRegAlloc() {
   if (getOptLevel() != CodeGenOptLevel::None) {
     addPass(&LiveRangeShrinkID);
     addPass(createX86FixupSetCC());
-    addPass(createX86OptimizeLEAs());
+    addPass(createX86OptimizeLEAsLegacyPass());
     addPass(createX86CallFrameOptimization());
     addPass(createX86AvoidStoreForwardingBlocks());
   }
