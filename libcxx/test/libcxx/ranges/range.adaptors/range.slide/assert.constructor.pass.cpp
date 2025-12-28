@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+// REQUIRES: std=at-least-c++23
 // REQUIRES: has-unix-headers
 // REQUIRES: libcpp-hardening-mode={{extensive|debug}}
 // XFAIL: libcpp-hardening-mode=debug && availability-verbose_abort-missing
