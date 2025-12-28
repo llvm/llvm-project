@@ -26,9 +26,6 @@ void test() {
     stream.gcount();
 
     // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-    stream.get();
-
-    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
     stream.peek();
 
     // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}

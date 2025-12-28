@@ -266,7 +266,7 @@ public:
 
   // 27.7.1.3 Unformatted input:
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI streamsize gcount() const { return __gc_; }
-  [[__nodiscard__]] int_type get();
+  int_type get();
 
   inline _LIBCPP_HIDE_FROM_ABI_AFTER_V1 basic_istream& get(char_type& __c) {
     int_type __ch = get();
