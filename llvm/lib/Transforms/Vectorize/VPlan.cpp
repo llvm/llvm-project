@@ -138,6 +138,10 @@ const VPRecipeBase *VPValue::getDefiningRecipe() const {
   return cast<VPRecipeBase>(DefValue->Def);
 }
 
+Value *VPValue::getLiveInIRValue() const {
+  return cast<VPLiveIn>(this)->getValue();
+}
+
 Type *VPLiveIn::getType() const { return getUnderlyingValue()->getType(); }
 
 VPDefValue::VPDefValue(VPDef *Def, Value *UV)

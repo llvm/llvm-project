@@ -4207,7 +4207,7 @@ void VPlanTransforms::materializeBroadcasts(VPlan &Plan) {
   auto *VectorPreheader = Plan.getVectorPreheader();
   for (VPValue *VPV : VPValues) {
     if (vputils::onlyScalarValuesUsed(VPV) ||
-        (isa<VPLiveIn>(VPV) && isa<Constant>(cast<VPLiveIn>(VPV)->getValue())))
+        (isa<VPLiveIn>(VPV) && isa<Constant>(VPV->getLiveInIRValue())))
       continue;
 
     // Add explicit broadcast at the insert point that dominates all users.
@@ -4521,7 +4521,7 @@ void VPlanTransforms::materializeConstantVectorTripCount(
   // TODO: Compute vector trip counts for loops requiring a scalar epilogue and
   // tail-folded loops.
   ScalarEvolution &SE = *PSE.getSE();
-  auto *TCScev = SE.getSCEV(cast<VPLiveIn>(TC)->getValue());
+  auto *TCScev = SE.getSCEV(TC->getLiveInIRValue());
   if (!isa<SCEVConstant>(TCScev))
     return;
   const SCEV *VFxUF = SE.getElementCount(TCScev->getType(), BestVF * BestUF);

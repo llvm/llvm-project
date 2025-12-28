@@ -70,6 +70,9 @@ public:
   /// Return the underlying Value attached to this VPValue.
   Value *getUnderlyingValue() const { return UnderlyingVal; }
 
+  /// Return the underlying IR value for a VPLiveIn.
+  Value *getLiveInIRValue() const;
+
   /// An enumeration for keeping track of the concrete subclass of VPValue that
   /// are actually instantiated.
   enum {

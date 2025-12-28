@@ -1718,7 +1718,7 @@ public:
         VPIRMetadata(Metadata), Variant(Variant) {
     setUnderlyingValue(UV);
     assert(isa<Function>(
-               cast<VPLiveIn>(getOperand(getNumOperands() - 1))->getValue()) &&
+               getOperand(getNumOperands() - 1)->getLiveInIRValue()) &&
            "last operand must be the called function");
   }
 
@@ -1740,7 +1740,7 @@ public:
 
   Function *getCalledScalarFunction() const {
     return cast<Function>(
-        cast<VPLiveIn>(getOperand(getNumOperands() - 1))->getValue());
+        getOperand(getNumOperands() - 1)->getLiveInIRValue());
   }
 
   operand_range args() { return drop_end(operands()); }
@@ -3139,7 +3139,7 @@ public:
            "Expected an add reduction");
     assert(getNumOperands() >= 3 && "Expected at least three operands");
     [[maybe_unused]] auto *SubConst =
-        dyn_cast<ConstantInt>(cast<VPLiveIn>(getOperand(2))->getValue());
+        dyn_cast<ConstantInt>(getOperand(2)->getLiveInIRValue());
     assert(SubConst && SubConst->getValue() == 0 &&
            Sub->getOpcode() == Instruction::Sub && "Expected a negating sub");
   }
