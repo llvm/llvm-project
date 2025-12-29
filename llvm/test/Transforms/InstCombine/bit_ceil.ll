@@ -340,10 +340,12 @@ define i32 @test_drop_range_attr(i32 %x) {
 define i33 @test_bit_ceil_i33_non_pow2(i33 %x) {
 ; CHECK-LABEL: @test_bit_ceil_i33_non_pow2(
 ; CHECK-NEXT:    [[CTLZ:%.*]] = call range(i33 0, 34) i33 @llvm.ctlz.i33(i33 [[X:%.*]], i1 false)
-; CHECK-NEXT:    [[TMP1:%.*]] = sub nsw i33 0, [[CTLZ]]
-; CHECK-NEXT:    [[TMP2:%.*]] = and i33 [[TMP1]], 32
+; CHECK-NEXT:    [[TMP2:%.*]] = sub nuw nsw i33 33, [[CTLZ]]
 ; CHECK-NEXT:    [[SEL:%.*]] = shl nuw i33 1, [[TMP2]]
-; CHECK-NEXT:    ret i33 [[SEL]]
+; CHECK-NEXT:    [[DEC:%.*]] = add i33 [[X]], -1
+; CHECK-NEXT:    [[ULT:%.*]] = icmp ult i33 [[DEC]], -2
+; CHECK-NEXT:    [[SEL1:%.*]] = select i1 [[ULT]], i33 [[SEL]], i33 1
+; CHECK-NEXT:    ret i33 [[SEL1]]
 ;
   %ctlz = call i33 @llvm.ctlz.i33(i33 %x, i1 false)
   %sub = sub i33 33, %ctlz

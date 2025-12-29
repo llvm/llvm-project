@@ -3871,6 +3871,9 @@ static Instruction *foldBitCeil(SelectInst &SI, IRBuilderBase &Builder,
                                    ShouldDropNoWrap))
     return nullptr;
 
+  if (!isPowerOf2_32(BitWidth))
+    return nullptr;
+
   if (ShouldDropNoWrap) {
     cast<Instruction>(CtlzOp)->setHasNoUnsignedWrap(false);
     cast<Instruction>(CtlzOp)->setHasNoSignedWrap(false);
