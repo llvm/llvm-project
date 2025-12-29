@@ -116,3 +116,103 @@ class TestVariableAnnotationsDisassembler(TestBase):
         print(out)
         self.assertRegex(out, r"\b(i|argc)\s*=\s*(DW_OP_reg\d+\b|R[A-Z0-9]+)")
         self.assertNotIn("<decoding error>", out)
+
+    @no_debug_info_test
+    @skipIf(archs=no_match(["x86_64"]))
+    def test_structured_annotations_api(self):
+        """Test SBVariableAnnotator::AnnotateStructured API returns structured data"""
+        obj = self._build_obj("d_original_example.o")
+        target = self._create_target(obj)
+        annotator = lldb.SBVariableAnnotator()
+
+        main_symbols = target.FindSymbols("main")
+        self.assertTrue(
+            main_symbols.IsValid() and main_symbols.GetSize() > 0,
+            "Could not find 'main' symbol",
+        )
+
+        main_symbol = main_symbols.GetContextAtIndex(0).GetSymbol()
+        start_addr = main_symbol.GetStartAddress()
+        self.assertTrue(start_addr.IsValid(), "Invalid start address for main")
+
+        instructions = target.ReadInstructions(start_addr, 16)
+        self.assertGreater(instructions.GetSize(), 0, "No instructions read")
+
+        if self.TraceOn():
+            print(
+                f"\nTesting SBVariableAnnotator::AnnotateStructured API on {instructions.GetSize()} instructions"
+            )
+
+        expected_vars = ["argc", "argv", "i"]
+        found_variables = set()
+
+        # Test each instruction.
+        for i in range(instructions.GetSize()):
+            inst = instructions.GetInstructionAtIndex(i)
+            self.assertTrue(inst.IsValid(), f"Invalid instruction at index {i}")
+
+            # TODO use more python convinient get_annotations_list defined in Extensions file.
+            annotations = annotator.AnnotateStructured(inst)
+
+            self.assertIsInstance(
+                annotations,
+                lldb.SBStructuredData,
+                "AnnotateStructured should return SBStructuredData",
+            )
+
+            self.assertTrue(
+                annotations.GetSize() > 0,
+                "AnnotateStructured should return non empty array",
+            )
+
+            if annotations.GetSize() > 0:
+                # Validate each annotation.
+                for j in range(annotations.GetSize()):
+                    ann = annotations.GetItemAtIndex(j)
+                    self.assertTrue(ann.IsValid(), f"Invalid annotation at index {j}")
+
+                    self.assertEqual(
+                        ann.GetType(),
+                        lldb.eStructuredDataTypeDictionary,
+                        "Each annotation should be a dictionary",
+                    )
+
+                    var_name_obj = ann.GetValueForKey("variable_name")
+                    self.assertTrue(
+                        var_name_obj.IsValid(), "Missing 'variable_name' field"
+                    )
+
+                    location_obj = ann.GetValueForKey("location_description")
+                    self.assertTrue(
+                        location_obj.IsValid(), "Missing 'location_description' field"
+                    )
+
+                    is_live_obj = ann.GetValueForKey("is_live")
+                    self.assertTrue(is_live_obj.IsValid(), "Missing 'is_live' field")
+
+                    start_addr_obj = ann.GetValueForKey("start_address")
+                    self.assertTrue(
+                        start_addr_obj.IsValid(), "Missing 'start_address' field"
+                    )
+
+                    end_addr_obj = ann.GetValueForKey("end_address")
+                    self.assertTrue(
+                        end_addr_obj.IsValid(), "Missing 'end_address' field"
+                    )
+
+                    register_kind_obj = ann.GetValueForKey("register_kind")
+                    self.assertTrue(
+                        register_kind_obj.IsValid(), "Missing 'register_kind' field"
+                    )
+
+                    var_name = var_name_obj.GetStringValue(1024)
+
+                    # Check for expected variables in this function.
+                    self.assertIn(
+                        var_name, expected_vars, f"Unexpected variable name: {var_name}"
+                    )
+
+                    found_variables.add(var_name)
+
+        if self.TraceOn():
+            print(f"\nTest complete. Found variables: {found_variables}")
