@@ -2059,7 +2059,8 @@ static bool simplifyBranchConditionForVFAndUF(VPlan &Plan, ElementCount BestVF,
     for (VPBlockBase *Exit : Exits)
       VPBlockUtils::connectBlocks(ExitingVPBB, Exit);
 
-    // Replace terminating branch-on-two-conds with branch-on-cond to early exit.
+    // Replace terminating branch-on-two-conds with branch-on-cond to early
+    // exit.
     if (Exits.size() != 1) {
       assert(match(Term, m_BranchOnTwoConds()) && Exits.size() == 2 &&
              "BranchOnTwoConds needs 2 remaining exits");
@@ -3729,7 +3730,8 @@ void VPlanTransforms::dissolveLoopRegions(VPlan &Plan) {
 
 void VPlanTransforms::expandBranchOnTwoConds(VPlan &Plan) {
   SmallVector<VPInstruction *> WorkList;
-  // The transform runs after dissolving loop regions, so all VPBasicBlocks terminated with BranchOnTwoConds are reached via a shallow traversal.
+  // The transform runs after dissolving loop regions, so all VPBasicBlocks
+  // terminated with BranchOnTwoConds are reached via a shallow traversal.
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_shallow(Plan.getEntry()))) {
     if (!VPBB->empty() && match(&VPBB->back(), m_BranchOnTwoConds()))
@@ -3763,8 +3765,8 @@ void VPlanTransforms::expandBranchOnTwoConds(VPlan &Plan) {
     MiddleSplit->setParent(LateExitBB->getParent());
 
     VPBuilder Builder(Latch);
-    VPValue *AnyExitTaken =
-        Builder.createNaryOp(Instruction::Or, {EarlyExitingCond, LateExitingCond}, DL);
+    VPValue *AnyExitTaken = Builder.createNaryOp(
+        Instruction::Or, {EarlyExitingCond, LateExitingCond}, DL);
     Builder.createNaryOp(VPInstruction::BranchOnCond, {AnyExitTaken}, DL);
     VPBlockUtils::connectBlocks(Latch, MiddleSplit);
     VPBlockUtils::connectBlocks(Latch, Header);
