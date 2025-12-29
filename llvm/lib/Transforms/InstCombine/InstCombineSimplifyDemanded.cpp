@@ -175,6 +175,22 @@ bool InstCombinerImpl::SimplifyDemandedBits(Instruction *I, unsigned OpNo,
     return false;
   }
 
+  if (auto *BC = dyn_cast<BitCastInst>(VInst)) {
+    Value *Src = BC->getOperand(0);
+    Type *SrcTy = Src->getType();
+    Type *DstTy = BC->getType();
+
+    // Only push demanded bits through lossless bitcasts
+    if (SrcTy->getScalarSizeInBits() ==
+        DstTy->getScalarSizeInBits()) {
+      return SimplifyDemandedBits(I, OpNo,
+                                  DemandedMask,
+                                  Known,
+                                  Q,
+                                  Depth + 1);
+    }
+  }
+
   if (Depth == MaxAnalysisRecursionDepth)
     return false;
 
