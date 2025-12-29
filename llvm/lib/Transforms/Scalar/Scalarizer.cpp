@@ -721,10 +721,20 @@ bool ScalarizerVisitor::splitCall(CallInst &CI) {
   SmallVector<Scatterer, 8> Scattered(NumArgs);
   SmallVector<int> OverloadIdx(NumArgs, -1);
 
+  // Tys array structure:
+  //   [0 ... N-1]: Return type (if overloaded) + struct field types
+  //   [N ... M]:   Argument types (tracked via OverloadIdx)
   SmallVector<llvm::Type *, 3> Tys;
+
+  // Cache RemainderTy pointers for return type and struct fields only.
+  // Indices match Tys[0...N-1]. Argument types are handled separately via OverloadIdx.
+  SmallVector<Type *> CachedRemainderTypes;
+
   // Add return type if intrinsic is overloaded on it.
-  if (isVectorIntrinsicWithOverloadTypeAtArg(ID, -1, TTI))
+  if (isVectorIntrinsicWithOverloadTypeAtArg(ID, -1, TTI)) {
     Tys.push_back(VS->SplitTy);
+    CachedRemainderTypes.push_back(VS->RemainderTy);
+  }
 
   if (AreAllVectorsOfMatchingSize) {
     for (unsigned I = 1; I < CallType->getNumContainedTypes(); I++) {
@@ -738,8 +748,11 @@ bool ScalarizerVisitor::splitCall(CallInst &CI) {
       // the struct elements have the same bitness.
       if (!CurrVS || CurrVS->NumPacked != VS->NumPacked)
         return false;
-      if (isVectorIntrinsicWithStructReturnOverloadAtField(ID, I, TTI))
+      if (isVectorIntrinsicWithStructReturnOverloadAtField(ID, I, TTI)) {
+        // Add both SplitTy and RemainderTy in sync to maintain index alignment
+        CachedRemainderTypes.push_back(CurrVS->RemainderTy);
         Tys.push_back(CurrVS->SplitTy);
+      }
     }
   }
   // Assumes that any vector type has the same number of elements as the return
@@ -785,14 +798,21 @@ bool ScalarizerVisitor::splitCall(CallInst &CI) {
     bool IsRemainder = I == VS->NumFragments - 1 && VS->RemainderTy;
     ScalarCallOps.clear();
 
-    if (IsRemainder)
-      Tys[0] = VS->RemainderTy;
+    if (IsRemainder) {
+      // Update return type and struct field types with RemainderTy.
+      // CachedRemainderTypes indices align with Tys[0...N-1].
+      for (unsigned Idx = 0; Idx < CachedRemainderTypes.size(); ++Idx) {
+        if (CachedRemainderTypes[Idx])
+          Tys[Idx] = CachedRemainderTypes[Idx];
+      }
+    }
 
     for (unsigned J = 0; J != NumArgs; ++J) {
       if (isVectorIntrinsicWithScalarOpAtArg(ID, J, TTI)) {
         ScalarCallOps.push_back(ScalarOperands[J]);
       } else {
         ScalarCallOps.push_back(Scattered[J][I]);
+        // Update argument types separately using OverloadIdx (Tys[N...M])
         if (IsRemainder && OverloadIdx[J] >= 0)
           Tys[OverloadIdx[J]] = Scattered[J][I]->getType();
       }
