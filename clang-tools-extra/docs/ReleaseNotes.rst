@@ -533,6 +533,7 @@ Changes in existing checks
   user-defined types (structs, classes, unions, and enums) internal
   linkage. Added fine-grained options to control whether the check
   should diagnose functions, variables, and/or user-defined types.
+  Enabled the check for C.
 
 - Improved :doc:`modernize-avoid-c-arrays
   <clang-tidy/checks/modernize/avoid-c-arrays>` to not diagnose array types
