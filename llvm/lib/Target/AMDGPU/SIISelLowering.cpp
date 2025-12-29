@@ -512,21 +512,8 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   if (Subtarget->hasMadMacF32Insts())
     setOperationAction(ISD::FMAD, MVT::f32, Legal);
 
-  if (!Subtarget->hasBFI())
-    // fcopysign can be done in a single instruction with BFI.
-    setOperationAction(ISD::FCOPYSIGN, {MVT::f32, MVT::f64}, Expand);
-
-  if (!Subtarget->hasBCNT(32))
-    setOperationAction(ISD::CTPOP, MVT::i32, Expand);
-
-  if (!Subtarget->hasBCNT(64))
-    setOperationAction(ISD::CTPOP, MVT::i64, Expand);
-
-  if (Subtarget->hasFFBH())
-    setOperationAction({ISD::CTLZ, ISD::CTLZ_ZERO_UNDEF}, MVT::i32, Custom);
-
-  if (Subtarget->hasFFBL())
-    setOperationAction({ISD::CTTZ, ISD::CTTZ_ZERO_UNDEF}, MVT::i32, Custom);
+  setOperationAction({ISD::CTLZ, ISD::CTLZ_ZERO_UNDEF}, MVT::i32, Custom);
+  setOperationAction({ISD::CTTZ, ISD::CTTZ_ZERO_UNDEF}, MVT::i32, Custom);
 
   // We only really have 32-bit BFE instructions (and 16-bit on VI).
   //
@@ -536,8 +523,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   // have some pass reduce 64-bit extracts to 32-bit if possible. Extracts that
   // span the midpoint are probably relatively rare, so don't worry about them
   // for now.
-  if (Subtarget->hasBFE())
-    setHasExtractBitsInsn(true);
+  setHasExtractBitsInsn(true);
 
   // Clamp modifier on add/sub
   if (Subtarget->hasIntClamp())
@@ -6304,7 +6290,11 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   }
   case AMDGPU::SI_INDIRECT_SRC_V1:
   case AMDGPU::SI_INDIRECT_SRC_V2:
+  case AMDGPU::SI_INDIRECT_SRC_V3:
   case AMDGPU::SI_INDIRECT_SRC_V4:
+  case AMDGPU::SI_INDIRECT_SRC_V5:
+  case AMDGPU::SI_INDIRECT_SRC_V6:
+  case AMDGPU::SI_INDIRECT_SRC_V7:
   case AMDGPU::SI_INDIRECT_SRC_V8:
   case AMDGPU::SI_INDIRECT_SRC_V9:
   case AMDGPU::SI_INDIRECT_SRC_V10:
@@ -6315,7 +6305,11 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     return emitIndirectSrc(MI, *BB, *getSubtarget());
   case AMDGPU::SI_INDIRECT_DST_V1:
   case AMDGPU::SI_INDIRECT_DST_V2:
+  case AMDGPU::SI_INDIRECT_DST_V3:
   case AMDGPU::SI_INDIRECT_DST_V4:
+  case AMDGPU::SI_INDIRECT_DST_V5:
+  case AMDGPU::SI_INDIRECT_DST_V6:
+  case AMDGPU::SI_INDIRECT_DST_V7:
   case AMDGPU::SI_INDIRECT_DST_V8:
   case AMDGPU::SI_INDIRECT_DST_V9:
   case AMDGPU::SI_INDIRECT_DST_V10:
@@ -6891,6 +6885,12 @@ SDValue SITargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return splitTernaryVectorOp(Op, DAG);
   case ISD::FP_TO_SINT:
   case ISD::FP_TO_UINT:
+    if (Subtarget->getGeneration() >= AMDGPUSubtarget::GFX11 &&
+        Op.getValueType() == MVT::i16 &&
+        Op.getOperand(0).getValueType() == MVT::f32) {
+      // Make f32->i16 legal so we can select V_CVT_PK_[IU]16_F32.
+      return Op;
+    }
     return LowerFP_TO_INT(Op, DAG);
   case ISD::SHL:
   case ISD::SRA:
@@ -7806,8 +7806,7 @@ SDValue SITargetLowering::lowerFP_ROUND(SDValue Op, SelectionDAG &DAG) const {
 
   // Round-inexact-to-odd f64 to f32, then do the final rounding using the
   // hardware f32 -> bf16 instruction.
-  EVT F32VT = SrcVT.isVector() ? SrcVT.changeVectorElementType(MVT::f32) :
-                                 MVT::f32;
+  EVT F32VT = SrcVT.changeElementType(*DAG.getContext(), MVT::f32);
   SDValue Rod = expandRoundInexactToOdd(F32VT, Src, DL, DAG);
   return DAG.getNode(ISD::FP_ROUND, DL, DstVT, Rod,
                      DAG.getTargetConstant(0, DL, MVT::i32));
@@ -7954,13 +7953,12 @@ SDValue SITargetLowering::promoteUniformOpToI32(SDValue Op,
 
   EVT OpTy = (Opc != ISD::SETCC) ? Op.getValueType()
                                  : Op->getOperand(0).getValueType();
-  auto ExtTy = OpTy.changeElementType(MVT::i32);
+  auto &DAG = DCI.DAG;
+  auto ExtTy = OpTy.changeElementType(*DAG.getContext(), MVT::i32);
 
   if (DCI.isBeforeLegalizeOps() ||
       isNarrowingProfitable(Op.getNode(), ExtTy, OpTy))
     return SDValue();
-
-  auto &DAG = DCI.DAG;
 
   SDLoc DL(Op);
   SDValue LHS;
@@ -12322,7 +12320,10 @@ SDValue SITargetLowering::lowerFDIV_FAST(SDValue Op, SelectionDAG &DAG) const {
   SDValue LHS = Op.getOperand(1);
   SDValue RHS = Op.getOperand(2);
 
-  SDValue r1 = DAG.getNode(ISD::FABS, SL, MVT::f32, RHS, Flags);
+  // TODO: The combiner should probably handle elimination of redundant fabs.
+  SDValue r1 = DAG.SignBitIsZeroFP(RHS)
+                   ? RHS
+                   : DAG.getNode(ISD::FABS, SL, MVT::f32, RHS, Flags);
 
   const APFloat K0Val(0x1p+96f);
   const SDValue K0 = DAG.getConstantFP(K0Val, SL, MVT::f32);
@@ -16502,7 +16503,9 @@ SDValue SITargetLowering::performFDivCombine(SDNode *N,
   SelectionDAG &DAG = DCI.DAG;
   SDLoc SL(N);
   EVT VT = N->getValueType(0);
-  if ((VT != MVT::f16 && VT != MVT::bf16) || !Subtarget->has16BitInsts())
+
+  // fsqrt legality correlates to rsq availability.
+  if ((VT != MVT::f16 && VT != MVT::bf16) || !isOperationLegal(ISD::FSQRT, VT))
     return SDValue();
 
   SDValue LHS = N->getOperand(0);
@@ -16537,7 +16540,7 @@ SDValue SITargetLowering::performFMulCombine(SDNode *N,
   SelectionDAG &DAG = DCI.DAG;
   EVT VT = N->getValueType(0);
   EVT ScalarVT = VT.getScalarType();
-  EVT IntVT = VT.changeElementType(MVT::i32);
+  EVT IntVT = VT.changeElementType(*DAG.getContext(), MVT::i32);
 
   if (!N->isDivergent() && getSubtarget()->hasSALUFloatInsts() &&
       (ScalarVT == MVT::f32 || ScalarVT == MVT::f16)) {

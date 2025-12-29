@@ -243,7 +243,7 @@ bool areParensNeededForStatement(const Stmt &Node) {
       isa<BinaryConditionalOperator>(&Node))
     return true;
 
-  if (const auto *Op = dyn_cast<CXXOperatorCallExpr>(&Node)) {
+  if (const auto *Op = dyn_cast<CXXOperatorCallExpr>(&Node))
     switch (Op->getOperator()) {
     case OO_PlusPlus:
       [[fallthrough]];
@@ -258,7 +258,6 @@ bool areParensNeededForStatement(const Stmt &Node) {
     default:
       return true;
     };
-  }
 
   if (isa<CStyleCastExpr>(&Node))
     return true;
@@ -301,9 +300,8 @@ std::string formatDereference(const Expr &ExprNode, const ASTContext &Context) {
   Text.consume_back("->");
 
   // Add leading '*'.
-  if (needParensAfterUnaryOperator(ExprNode)) {
+  if (needParensAfterUnaryOperator(ExprNode))
     return (llvm::Twine("*(") + Text + ")").str();
-  }
   return (llvm::Twine("*") + Text).str();
 }
 

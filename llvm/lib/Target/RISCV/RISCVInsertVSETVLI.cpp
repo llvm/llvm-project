@@ -1991,7 +1991,7 @@ bool RISCVInsertVSETVLI::insertVSETMTK(MachineBasicBlock &MBB,
                      .addReg(RISCV::X0, RegState::Define | RegState::Dead)
                      .addReg(Op.getReg())
                      .addImm(Log2_32(CurrInfo.getSEW()))
-                     .addImm(Log2_32(CurrInfo.getTWiden()) + 1);
+                     .addImm(CurrInfo.getTWiden());
 
     Changed = true;
     Register Reg = Op.getReg();

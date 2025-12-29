@@ -29,6 +29,8 @@ static std::unique_ptr<MustacheTemplateFile> NamespaceTemplate = nullptr;
 
 static std::unique_ptr<MustacheTemplateFile> RecordTemplate = nullptr;
 
+static std::unique_ptr<MustacheTemplateFile> IndexTemplate = nullptr;
+
 class HTMLGenerator : public MustacheGenerator {
 public:
   static const char *Format;
@@ -60,21 +62,32 @@ Error HTMLGenerator::setupTemplateFiles(const ClangDocContext &CDCtx) {
       ConvertToNative(CDCtx.MustacheTemplates.lookup("namespace-template"));
   std::string ClassFilePath =
       ConvertToNative(CDCtx.MustacheTemplates.lookup("class-template"));
+  std::string IndexFilePath =
+      ConvertToNative(CDCtx.MustacheTemplates.lookup("index-template"));
   std::string CommentFilePath =
       ConvertToNative(CDCtx.MustacheTemplates.lookup("comment-template"));
   std::string FunctionFilePath =
       ConvertToNative(CDCtx.MustacheTemplates.lookup("function-template"));
   std::string EnumFilePath =
       ConvertToNative(CDCtx.MustacheTemplates.lookup("enum-template"));
+  std::string HeadFilePath =
+      ConvertToNative(CDCtx.MustacheTemplates.lookup("head-template"));
+  std::string NavbarFilePath =
+      ConvertToNative(CDCtx.MustacheTemplates.lookup("navbar-template"));
   std::vector<std::pair<StringRef, StringRef>> Partials = {
       {"Comments", CommentFilePath},
       {"FunctionPartial", FunctionFilePath},
-      {"EnumPartial", EnumFilePath}};
+      {"EnumPartial", EnumFilePath},
+      {"HeadPartial", HeadFilePath},
+      {"NavbarPartial", NavbarFilePath}};
 
   if (Error Err = setupTemplate(NamespaceTemplate, NamespaceFilePath, Partials))
     return Err;
 
   if (Error Err = setupTemplate(RecordTemplate, ClassFilePath, Partials))
+    return Err;
+
+  if (Error Err = setupTemplate(IndexTemplate, IndexFilePath, Partials))
     return Err;
 
   return Error::success();
@@ -107,6 +120,13 @@ Error HTMLGenerator::setupTemplateResources(const ClangDocContext &CDCtx,
     SCA->emplace_back(JsPath);
   }
   V.getAsObject()->insert({"Scripts", ScriptArr});
+  if (RelativeRootPath.empty()) {
+    RelativeRootPath = "";
+  } else {
+    sys::path::append(RelativeRootPath, "/index.html");
+    sys::path::native(RelativeRootPath, sys::path::Style::posix);
+  }
+  V.getAsObject()->insert({"Homepage", RelativeRootPath});
   return Error::success();
 }
 
@@ -124,6 +144,11 @@ Error HTMLGenerator::generateDocForJSON(json::Value &JSON, raw_fd_ostream &OS,
       return Err;
     assert(RecordTemplate && "RecordTemplate is nullptr.");
     RecordTemplate->render(JSON, OS);
+  } else if (ObjTypeStr == "index") {
+    if (auto Err = setupTemplateResources(CDCtx, JSON, RelativeRootPath))
+      return Err;
+    assert(IndexTemplate && "IndexTemplate is nullptr.");
+    IndexTemplate->render(JSON, OS);
   }
   return Error::success();
 }

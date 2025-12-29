@@ -1288,11 +1288,9 @@ define fp128 @libcall1_ceill() {
 ; CMP_CC_FMT-NEXT:    jrc $ra
 entry:
   %0 = load fp128, ptr @gld0, align 16
-  %call = tail call fp128 @ceill(fp128 %0) nounwind readnone
+  %call = tail call fp128 @llvm.ceil.f128(fp128 %0) nounwind readnone
   ret fp128 %call
 }
-
-declare fp128 @ceill(fp128) #1
 
 define fp128 @libcall1_sinl() {
 ; C_CC_FMT-LABEL: libcall1_sinl:
@@ -1790,11 +1788,9 @@ define fp128 @libcall1_floorl() {
 ; CMP_CC_FMT-NEXT:    jrc $ra
 entry:
   %0 = load fp128, ptr @gld0, align 16
-  %call = tail call fp128 @floorl(fp128 %0) nounwind readnone
+  %call = tail call fp128 @llvm.floor.f128(fp128 %0) nounwind readnone
   ret fp128 %call
 }
-
-declare fp128 @floorl(fp128) #1
 
 define fp128 @libcall1_sqrtl() {
 ; C_CC_FMT-LABEL: libcall1_sqrtl:
@@ -1902,11 +1898,9 @@ define fp128 @libcall1_rintl() {
 ; CMP_CC_FMT-NEXT:    jrc $ra
 entry:
   %0 = load fp128, ptr @gld0, align 16
-  %call = tail call fp128 @rintl(fp128 %0) nounwind readnone
+  %call = tail call fp128 @llvm.rint.f128(fp128 %0) nounwind readnone
   ret fp128 %call
 }
-
-declare fp128 @rintl(fp128) #1
 
 define fp128 @libcall_powil(fp128 %a, i32 %b) {
 ; C_CC_FMT-LABEL: libcall_powil:

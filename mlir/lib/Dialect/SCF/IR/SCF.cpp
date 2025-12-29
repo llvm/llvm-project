@@ -990,9 +990,8 @@ mlir::scf::replaceAndCastForOpIterArg(RewriterBase &rewriter, scf::ForOp forOp,
 
 namespace {
 // Fold away ForOp iter arguments when:
-// 1) The op yields the iter arguments.
-// 2) The argument's corresponding outer region iterators (inputs) are yielded.
-// 3) The iter arguments have no use and the corresponding (operation) results
+// 1) The argument's corresponding outer region iterators (inputs) are yielded.
+// 2) The iter arguments have no use and the corresponding (operation) results
 // have no use.
 //
 // These arguments must be defined outside of the ForOp region and can just be
@@ -1001,7 +1000,7 @@ namespace {
 // The implementation uses `inlineBlockBefore` to steal the content of the
 // original ForOp and avoid cloning.
 struct ForOpIterArgsFolder : public OpRewritePattern<scf::ForOp> {
-  using OpRewritePattern<scf::ForOp>::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(scf::ForOp forOp,
                                 PatternRewriter &rewriter) const final {
@@ -1030,12 +1029,11 @@ struct ForOpIterArgsFolder : public OpRewritePattern<scf::ForOp> {
                    forOp.getYieldedValues()   // iter yield
                    )) {
       // Forwarded is `true` when:
-      // 1) The region `iter` argument is yielded.
-      // 2) The region `iter` argument the corresponding input is yielded.
-      // 3) The region `iter` argument has no use, and the corresponding op
+      // 1) The region `iter` argument the corresponding input is yielded.
+      // 2) The region `iter` argument has no use, and the corresponding op
       // result has no use.
-      bool forwarded = (arg == yielded) || (init == yielded) ||
-                       (arg.use_empty() && result.use_empty());
+      bool forwarded =
+          (init == yielded) || (arg.use_empty() && result.use_empty());
       if (forwarded) {
         canonicalize = true;
         keepMask.push_back(false);
@@ -1133,7 +1131,7 @@ struct ForOpIterArgsFolder : public OpRewritePattern<scf::ForOp> {
 /// single-iteration loops with their bodies, and removes empty loops that
 /// iterate at least once and only return values defined outside of the loop.
 struct SimplifyTrivialLoops : public OpRewritePattern<ForOp> {
-  using OpRewritePattern<ForOp>::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(ForOp op,
                                 PatternRewriter &rewriter) const override {
@@ -1204,7 +1202,7 @@ struct SimplifyTrivialLoops : public OpRewritePattern<ForOp> {
 ///   use_of(%1)
 /// ```
 struct ForOpTensorCastFolder : public OpRewritePattern<ForOp> {
-  using OpRewritePattern<ForOp>::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(ForOp op,
                                 PatternRewriter &rewriter) const override {
@@ -1236,12 +1234,100 @@ struct ForOpTensorCastFolder : public OpRewritePattern<ForOp> {
   }
 };
 
+/// Rewriting pattern that folds away cycles in the yield of a scf.for op.
+///
+/// ```
+/// %res:2 = scf.for ... iter_args(%arg0 = %init, %arg1 = %init) {
+///   ...
+///   use %arg0, %arg1
+///   scf.yield %arg1, %arg0
+/// }
+/// return %res#0, %res#1
+/// ```
+///
+/// folds into:
+///
+/// ```
+/// scf.for ... iter_args() {
+///   ...
+///   use %init, %init
+///   scf.yield
+/// }
+/// return %init, %init
+/// ```
+struct ForOpYieldCyclesFolder : public OpRewritePattern<ForOp> {
+  using Base::Base;
+
+  LogicalResult matchAndRewrite(ForOp op,
+                                PatternRewriter &rewriter) const override {
+    ValueRange yieldedValues = op.getYieldedValues();
+    ValueRange initArgs = op.getInitArgs();
+    ValueRange results = op.getResults();
+    ValueRange regionIterArgs = op.getRegionIterArgs();
+    Block *body = op.getBody();
+
+    unsigned numYieldedValues = op.getNumRegionIterArgs();
+
+    bool changed = false;
+    SmallVector<unsigned> cycle;
+    llvm::SmallBitVector visited(numYieldedValues, false);
+
+    // Go through all possible start points for the cycle.
+    for (auto start : llvm::seq(numYieldedValues)) {
+      if (visited[start])
+        continue;
+
+      cycle.clear();
+      unsigned current = start;
+      bool validCycle = true;
+      Value initValue = initArgs[start];
+      // Go through yield -> block arg -> yield cycles and check if all values
+      // are always equal to the init.
+      while (!visited[current]) {
+        cycle.push_back(current);
+        visited[current] = true;
+
+        // Find whether this yield is from a region iter arg.
+        auto yieldedValue = yieldedValues[current];
+        if (auto arg = dyn_cast<BlockArgument>(yieldedValue);
+            !arg || arg.getOwner() != body) {
+          validCycle = false;
+          break;
+        }
+
+        // Next yield position.
+        current = cast<BlockArgument>(yieldedValue).getArgNumber() -
+                  op.getNumInductionVars();
+
+        // Check if next position has the same init value.
+        if (initArgs[current] != initValue) {
+          validCycle = false;
+          break;
+        }
+      }
+
+      // If we found a valid cycle (yielding own iter arg forms cycle of length
+      // 1), all values in it are always equal to initValue.
+      if (validCycle) {
+        changed = true;
+        for (unsigned idx : cycle) {
+          // This will leave region args and results dead so other
+          // canonicalization patterns can clean them up.
+          rewriter.replaceAllUsesWith(regionIterArgs[idx], initValue);
+          rewriter.replaceAllUsesWith(results[idx], initValue);
+        }
+      }
+    }
+    return success(changed);
+  }
+};
+
 } // namespace
 
 void ForOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                         MLIRContext *context) {
-  results.add<ForOpIterArgsFolder, SimplifyTrivialLoops, ForOpTensorCastFolder>(
-      context);
+  results.add<ForOpIterArgsFolder, SimplifyTrivialLoops, ForOpTensorCastFolder,
+              ForOpYieldCyclesFolder>(context);
 }
 
 std::optional<APInt> ForOp::getConstantStep() {
@@ -3152,6 +3238,9 @@ LogicalResult ParallelOp::verify() {
     return emitOpError() << "expects number of results: " << resultsSize
                          << " to be the same as number of initial values: "
                          << initValsSize;
+  if (reduceOp.getNumOperands() != initValsSize)
+    // Delegate error reporting to ReduceOp
+    return success();
 
   // Check that the types of the results and reductions are the same.
   for (int64_t i = 0; i < static_cast<int64_t>(reductionsSize); ++i) {
@@ -3454,6 +3543,11 @@ void ReduceOp::build(OpBuilder &builder, OperationState &result,
 }
 
 LogicalResult ReduceOp::verifyRegions() {
+  if (getReductions().size() != getOperands().size())
+    return emitOpError() << "expects number of reduction regions: "
+                         << getReductions().size()
+                         << " to be the same as number of reduction operands: "
+                         << getOperands().size();
   // The region of a ReduceOp has two arguments of the same type as its
   // corresponding operand.
   for (int64_t i = 0, e = getReductions().size(); i < e; ++i) {
@@ -4703,9 +4797,59 @@ struct FoldConstantCase : OpRewritePattern<scf::IndexSwitchOp> {
   }
 };
 
+/// Canonicalization patterns that folds away dead results of
+/// "scf.index_switch" ops.
+struct FoldUnusedIndexSwitchResults : OpRewritePattern<IndexSwitchOp> {
+  using OpRewritePattern<IndexSwitchOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(IndexSwitchOp op,
+                                PatternRewriter &rewriter) const override {
+    // Find dead results.
+    BitVector deadResults(op.getNumResults(), false);
+    SmallVector<Type> newResultTypes;
+    for (auto [idx, result] : llvm::enumerate(op.getResults())) {
+      if (!result.use_empty()) {
+        newResultTypes.push_back(result.getType());
+      } else {
+        deadResults[idx] = true;
+      }
+    }
+    if (!deadResults.any())
+      return rewriter.notifyMatchFailure(op, "no dead results to fold");
+
+    // Create new op without dead results and inline case regions.
+    auto newOp = IndexSwitchOp::create(rewriter, op.getLoc(), newResultTypes,
+                                       op.getArg(), op.getCases(),
+                                       op.getCaseRegions().size());
+    auto inlineCaseRegion = [&](Region &oldRegion, Region &newRegion) {
+      rewriter.inlineRegionBefore(oldRegion, newRegion, newRegion.begin());
+      // Remove respective operands from yield op.
+      Operation *terminator = newRegion.front().getTerminator();
+      assert(isa<YieldOp>(terminator) && "expected yield op");
+      rewriter.modifyOpInPlace(
+          terminator, [&]() { terminator->eraseOperands(deadResults); });
+    };
+    for (auto [oldRegion, newRegion] :
+         llvm::zip_equal(op.getCaseRegions(), newOp.getCaseRegions()))
+      inlineCaseRegion(oldRegion, newRegion);
+    inlineCaseRegion(op.getDefaultRegion(), newOp.getDefaultRegion());
+
+    // Replace op with new op.
+    SmallVector<Value> newResults(op.getNumResults(), Value());
+    unsigned nextNewResult = 0;
+    for (unsigned idx = 0; idx < op.getNumResults(); ++idx) {
+      if (deadResults[idx])
+        continue;
+      newResults[idx] = newOp.getResult(nextNewResult++);
+    }
+    rewriter.replaceOp(op, newResults);
+    return success();
+  }
+};
+
 void IndexSwitchOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                                 MLIRContext *context) {
-  results.add<FoldConstantCase>(context);
+  results.add<FoldConstantCase, FoldUnusedIndexSwitchResults>(context);
 }
 
 //===----------------------------------------------------------------------===//

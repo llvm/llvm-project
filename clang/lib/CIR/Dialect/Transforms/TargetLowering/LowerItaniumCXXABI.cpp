@@ -42,6 +42,11 @@ public:
   mlir::TypedAttr lowerDataMemberConstant(
       cir::DataMemberAttr attr, const mlir::DataLayout &layout,
       const mlir::TypeConverter &typeConverter) const override;
+
+  mlir::Operation *
+  lowerGetRuntimeMember(cir::GetRuntimeMemberOp op, mlir::Type loweredResultTy,
+                        mlir::Value loweredAddr, mlir::Value loweredMember,
+                        mlir::OpBuilder &builder) const override;
 };
 
 } // namespace
@@ -85,6 +90,22 @@ mlir::TypedAttr LowerItaniumCXXABI::lowerDataMemberConstant(
 
   mlir::Type abiTy = lowerDataMemberType(attr.getType(), typeConverter);
   return cir::IntAttr::get(abiTy, memberOffset);
+}
+
+mlir::Operation *LowerItaniumCXXABI::lowerGetRuntimeMember(
+    cir::GetRuntimeMemberOp op, mlir::Type loweredResultTy,
+    mlir::Value loweredAddr, mlir::Value loweredMember,
+    mlir::OpBuilder &builder) const {
+  auto byteTy = cir::IntType::get(op.getContext(), 8, true);
+  auto bytePtrTy = cir::PointerType::get(
+      byteTy,
+      mlir::cast<cir::PointerType>(op.getAddr().getType()).getAddrSpace());
+  auto objectBytesPtr = cir::CastOp::create(
+      builder, op.getLoc(), bytePtrTy, cir::CastKind::bitcast, op.getAddr());
+  auto memberBytesPtr = cir::PtrStrideOp::create(
+      builder, op.getLoc(), bytePtrTy, objectBytesPtr, loweredMember);
+  return cir::CastOp::create(builder, op.getLoc(), op.getType(),
+                             cir::CastKind::bitcast, memberBytesPtr);
 }
 
 } // namespace cir

@@ -289,6 +289,24 @@ const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpDependenceType>() {
 }
 
 template <>
+const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpDimsModifier>() {
+  static const OmpModifierDescriptor desc{
+      /*name=*/"dims-modifier",
+      /*props=*/
+      {
+          {61, {OmpProperty::Unique}},
+      },
+      /*clauses=*/
+      {
+          {61,
+              {Clause::OMPC_num_teams, Clause::OMPC_num_threads,
+                  Clause::OMPC_thread_limit}},
+      },
+  };
+  return desc;
+}
+
+template <>
 const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpDeviceModifier>() {
   static const OmpModifierDescriptor desc{
       /*name=*/"device-modifier",
@@ -348,22 +366,6 @@ const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpFallbackModifier>() {
       /*clauses=*/
       {
           {61, {Clause::OMPC_dyn_groupprivate}},
-      },
-  };
-  return desc;
-}
-
-template <>
-const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpInteropPreference>() {
-  static const OmpModifierDescriptor desc{
-      /*name=*/"interop-preference",
-      /*props=*/
-      {
-          {52, {OmpProperty::Unique}},
-      },
-      /*clauses=*/
-      {
-          {52, {Clause::OMPC_init}},
       },
   };
   return desc;
@@ -432,6 +434,22 @@ const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpLinearModifier>() {
       /*clauses=*/
       {
           {45, {Clause::OMPC_linear}},
+      },
+  };
+  return desc;
+}
+
+template <>
+const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpLowerBound>() {
+  static const OmpModifierDescriptor desc{
+      /*name=*/"lower-bound",
+      /*props=*/
+      {
+          {51, {OmpProperty::Unique, OmpProperty::Ultimate}},
+      },
+      /*clauses=*/
+      {
+          {51, {Clause::OMPC_num_teams}},
       },
   };
   return desc;
@@ -514,6 +532,22 @@ const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpOrderingModifier>() {
       /*clauses=*/
       {
           {45, {Clause::OMPC_schedule}},
+      },
+  };
+  return desc;
+}
+
+template <>
+const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpPreferType>() {
+  static const OmpModifierDescriptor desc{
+      /*name=*/"prefer-type",
+      /*props=*/
+      {
+          {52, {OmpProperty::Unique}},
+      },
+      /*clauses=*/
+      {
+          {52, {Clause::OMPC_init}},
       },
   };
   return desc;

@@ -1958,13 +1958,16 @@ bool LLParser::parseOptionalAddrSpace(unsigned &AddrSpace, unsigned DefaultAS) {
 
   auto ParseAddrspaceValue = [&](unsigned &AddrSpace) -> bool {
     if (Lex.getKind() == lltok::StringConstant) {
-      auto AddrSpaceStr = Lex.getStrVal();
+      const std::string &AddrSpaceStr = Lex.getStrVal();
       if (AddrSpaceStr == "A") {
         AddrSpace = M->getDataLayout().getAllocaAddrSpace();
       } else if (AddrSpaceStr == "G") {
         AddrSpace = M->getDataLayout().getDefaultGlobalsAddressSpace();
       } else if (AddrSpaceStr == "P") {
         AddrSpace = M->getDataLayout().getProgramAddressSpace();
+      } else if (std::optional<unsigned> AS =
+                     M->getDataLayout().getNamedAddressSpace(AddrSpaceStr)) {
+        AddrSpace = *AS;
       } else {
         return tokError("invalid symbolic addrspace '" + AddrSpaceStr + "'");
       }

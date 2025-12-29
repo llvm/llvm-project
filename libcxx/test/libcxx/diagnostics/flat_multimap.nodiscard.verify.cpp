@@ -6,17 +6,97 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
+// REQUIRES: std-at-least-c++23
 
 // <flat_map>
 
-// class flat_multimap
-
-// [[nodiscard]] bool empty() const noexcept;
+// Check that functions are marked [[nodiscard]]
 
 #include <flat_map>
+#include <utility>
 
-void f() {
-  std::flat_multimap<int, int> c;
-  c.empty(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+template <typename T>
+struct TransparentKey {
+  T t;
+
+  constexpr explicit operator T() const { return t; }
+};
+
+struct TransparentCompare {
+  using is_transparent = void; // This makes the comparator transparent
+
+  template <typename T>
+  constexpr bool operator()(const T& t, const TransparentKey<T>& transparent) const {
+    return t < transparent.t;
+  }
+
+  template <typename T>
+  constexpr bool operator()(const TransparentKey<T>& transparent, const T& t) const {
+    return transparent.t < t;
+  }
+
+  template <typename T>
+  constexpr bool operator()(const T& t1, const T& t2) const {
+    return t1 < t2;
+  }
+};
+
+void test() {
+  std::flat_multimap<int, int, TransparentCompare> mm;
+  const std::flat_multimap<int, int, TransparentCompare> cmm;
+
+  mm.begin();  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  cmm.begin(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  mm.end();    // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  cmm.end();   // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+
+  mm.rbegin();  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  cmm.rbegin(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  mm.rend();    // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  cmm.rend();   // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+
+  cmm.cbegin();  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  cmm.cend();    // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  cmm.crbegin(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  cmm.crend();   // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+
+  mm.empty();    // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  mm.size();     // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  mm.max_size(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+
+  mm.key_comp();   // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  mm.value_comp(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  mm.keys();       // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  mm.values();     // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+
+  int key = 0;
+  TransparentKey<int> tkey;
+
+  mm.find(key);   // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  cmm.find(key);  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  mm.find(tkey);  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  cmm.find(tkey); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+
+  mm.count(key);  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  mm.count(tkey); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+
+  mm.contains(key);   // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  cmm.contains(key);  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  mm.contains(tkey);  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  cmm.contains(tkey); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+
+  mm.lower_bound(key);   // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  cmm.lower_bound(key);  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  mm.lower_bound(tkey);  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  cmm.lower_bound(tkey); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+
+  mm.upper_bound(key);   // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  cmm.upper_bound(key);  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  mm.upper_bound(tkey);  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  cmm.upper_bound(tkey); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+
+  mm.equal_range(key);   // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  cmm.equal_range(key);  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  mm.equal_range(tkey);  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  cmm.equal_range(tkey); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 }
