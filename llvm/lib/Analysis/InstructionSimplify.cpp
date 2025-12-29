@@ -4461,44 +4461,20 @@ static Value *simplifyWithOpsReplaced(Value *V,
         return Absorber;
     }
 
-    if (auto *CI = dyn_cast<CallInst>(I)) {
-      Function *F = CI->getCalledFunction();
-
-      // `x == y ? 0 : ucmp(x, y)` where under the replacement y -> x, `ucmp(x,
-      // x)` becomes `0`.
-      if (F && F->isIntrinsic() &&
-          (F->getIntrinsicID() == Intrinsic::scmp ||
-           F->getIntrinsicID() == Intrinsic::ucmp)) {
-        // If the call contains (an invalid) range attribute then a replacement
-        // might produce an unexpected poison value.
-        if (CI->hasRetAttr(Attribute::AttrKind::Range)) {
-          const ConstantRange &CR =
-              CI->getRetAttr(Attribute::AttrKind::Range).getRange();
-
-          APInt Lo = CR.getLower();
-          APInt Hi = CR.getUpper();
-
-          if (!(Lo == llvm::APInt::getAllOnes(Lo.getBitWidth()) &&
-                Hi == llvm::APInt(Hi.getBitWidth(), 2)))
+    if (auto *II = dyn_cast<IntrinsicInst>(I)) {
+      // `x == y ? 0 : ucmp(x, y)` where under the replacement y -> x,
+      // `ucmp(x, x)` becomes `0`.
+      if (NewOps[0] == NewOps[1] && (II->getIntrinsicID() == Intrinsic::scmp ||
+                                     II->getIntrinsicID() == Intrinsic::ucmp)) {
+        if (II->hasPoisonGeneratingAnnotations()) {
+          if (!DropFlags)
             return nullptr;
+          else
+            DropFlags->push_back(II);
         }
 
-        // To apply this fold, we have to do the replacement and return `0` if
-        // the arguments are equal.
-        SmallVector<Value *, 2> ReplacedArgs;
-        for (auto &NewOp : NewOps) {
-          for (auto &[A, B] : Ops) {
-            if (NewOp == A)
-              ReplacedArgs.push_back(B);
-            else
-              ReplacedArgs.push_back(A);
-          }
-        }
-
-        if (ReplacedArgs[0] == ReplacedArgs[1])
-          return llvm::ConstantInt::get(F->getReturnType(), 0);
-        else
-          return nullptr;
+        return llvm::ConstantInt::get(II->getFunctionType()->getReturnType(),
+                                      0);
       }
     }
 
