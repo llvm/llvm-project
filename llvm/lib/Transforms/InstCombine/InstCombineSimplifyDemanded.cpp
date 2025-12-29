@@ -1107,6 +1107,8 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Instruction *I,
                                    Depth + 1)) {
             // Range attribute may no longer hold.
             I->dropPoisonGeneratingReturnAttributes();
+            // Metadata may also no longer hold.
+            I->dropPoisonGeneratingMetadata();
             return I;
           }
         } else { // fshl is a rotate

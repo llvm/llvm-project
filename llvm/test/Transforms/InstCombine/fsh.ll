@@ -1150,7 +1150,7 @@ define <2 x i8> @fshl_range_vec(<2 x i1> %x) {
 ; CHECK-LABEL: @fshl_range_vec(
 ; CHECK-NEXT:    [[ZEXT:%.*]] = zext <2 x i1> [[X:%.*]] to <2 x i32>
 ; CHECK-NEXT:    [[OR:%.*]] = or disjoint <2 x i32> [[ZEXT]], splat (i32 126)
-; CHECK-NEXT:    [[FSHL:%.*]] = call <2 x i32> @llvm.fshl.v2i32(<2 x i32> [[OR]], <2 x i32> splat (i32 -2), <2 x i32> splat (i32 1)), !range [[RNG0:![0-9]+]]
+; CHECK-NEXT:    [[FSHL:%.*]] = call <2 x i32> @llvm.fshl.v2i32(<2 x i32> [[OR]], <2 x i32> splat (i32 -2), <2 x i32> splat (i32 1))
 ; CHECK-NEXT:    [[TR:%.*]] = trunc nuw <2 x i32> [[FSHL]] to <2 x i8>
 ; CHECK-NEXT:    ret <2 x i8> [[TR]]
 ;
