@@ -81,19 +81,49 @@ template <typename T> inline OneUse_match<T> m_OneUse(const T &SubPattern) {
   return SubPattern;
 }
 
-template <typename SubPattern_t> struct AllowReassoc_match {
+template <typename SubPattern_t, int Flag> struct AllowFmf_match {
   SubPattern_t SubPattern;
 
-  AllowReassoc_match(const SubPattern_t &SP) : SubPattern(SP) {}
+  AllowFmf_match(const SubPattern_t &SP) : SubPattern(SP) {}
 
   template <typename OpTy> bool match(OpTy *V) const {
     auto *I = dyn_cast<FPMathOperator>(V);
-    return I && I->hasAllowReassoc() && SubPattern.match(I);
+    return I && (I->getFastMathFlags() & Flag) && SubPattern.match(I);
   }
 };
 
 template <typename T>
-inline AllowReassoc_match<T> m_AllowReassoc(const T &SubPattern) {
+inline AllowFmf_match<T, FastMathFlags::AllowReassoc> m_AllowReassoc(const T &SubPattern) {
+  return SubPattern;
+}
+
+template <typename T>
+inline AllowFmf_match<T, FastMathFlags::AllowReciprocal> m_AllowReciprocal(const T &SubPattern) {
+  return SubPattern;
+}
+
+template <typename T>
+inline AllowFmf_match<T, FastMathFlags::AllowContract> m_AllowContract(const T &SubPattern) {
+  return SubPattern;
+}
+
+template <typename T>
+inline AllowFmf_match<T, FastMathFlags::ApproxFunc> m_ApproxFunc(const T &SubPattern) {
+  return SubPattern;
+}
+
+template <typename T>
+inline AllowFmf_match<T, FastMathFlags::NoNaNs> m_NoNaNs(const T &SubPattern) {
+  return SubPattern;
+}
+
+template <typename T>
+inline AllowFmf_match<T, FastMathFlags::NoInfs> m_NoInfs(const T &SubPattern) {
+  return SubPattern;
+}
+
+template <typename T>
+inline AllowFmf_match<T, FastMathFlags::NoSignedZeros> m_NoSignedZeros(const T &SubPattern) {
   return SubPattern;
 }
 
