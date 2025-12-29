@@ -3846,6 +3846,8 @@ static Instruction *foldBitCeil(SelectInst &SI, IRBuilderBase &Builder,
                                 InstCombinerImpl &IC) {
   Type *SelType = SI.getType();
   unsigned BitWidth = SelType->getScalarSizeInBits();
+  if (!isPowerOf2_32(BitWidth))
+    return nullptr;
 
   Value *FalseVal = SI.getFalseValue();
   Value *TrueVal = SI.getTrueValue();
