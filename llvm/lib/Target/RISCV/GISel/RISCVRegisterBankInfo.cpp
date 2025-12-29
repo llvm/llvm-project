@@ -112,6 +112,19 @@ using namespace llvm;
 RISCVRegisterBankInfo::RISCVRegisterBankInfo(unsigned HwMode)
     : RISCVGenRegisterBankInfo(HwMode) {}
 
+const RegisterBank &
+RISCVRegisterBankInfo::getRegBankFromRegClass(const TargetRegisterClass &RC,
+                                              LLT Ty) const {
+  switch (RC.getID()) {
+  // Vector control and status register class
+  case RISCV::VCSRRegClassID:
+    return getRegBank(RISCV::GPRBRegBankID);
+  default:
+    // For all GPR register classes and others, use the default implementation
+    return RISCVGenRegisterBankInfo::getRegBankFromRegClass(RC, Ty);
+  }
+}
+
 static const RegisterBankInfo::ValueMapping *getFPValueMapping(unsigned Size) {
   unsigned Idx;
   switch (Size) {
