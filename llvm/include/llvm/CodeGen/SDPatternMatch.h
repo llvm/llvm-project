@@ -1299,6 +1299,32 @@ inline BinaryOpc_match<ValTy, AllOnes_match, true> m_Not(const ValTy &V) {
   return m_Xor(V, m_AllOnes());
 }
 
+struct SpecificNeg_match {
+  SDValue V;
+
+  explicit SpecificNeg_match(SDValue V) : V(V) {}
+
+  template <typename MatchContext>
+  bool match(const MatchContext &Ctx, SDValue N) {
+    if (sd_context_match(N, Ctx, m_Neg(m_Specific(V))))
+      return true;
+
+    return ISD::matchBinaryPredicate(
+        V, N,
+        [](ConstantSDNode *LHS, ConstantSDNode *RHS) {
+          return APInt::isSameValue(-LHS->getAPIntValue(),
+                                    RHS->getAPIntValue());
+        },
+        /*AllowUndefs=*/false, /*AllowTypeMismatch=*/false);
+  }
+};
+
+/// Match a negation of a specific value V, either as sub(0, V) or as
+/// constant(s) that are the negation of V's constant(s).
+inline SpecificNeg_match m_SpecificNeg(SDValue V) {
+  return SpecificNeg_match(V);
+}
+
 template <typename... PatternTs> struct ReassociatableOpc_match {
   unsigned Opcode;
   std::tuple<PatternTs...> Patterns;
