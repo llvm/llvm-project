@@ -7284,6 +7284,7 @@ private:
     const ValueDecl *Mapper = nullptr;
     const Expr *VarRef = nullptr;
     bool ForDeviceAddr = false;
+    bool FbNullify = false;
 
     MapInfo() = default;
     MapInfo(
@@ -7293,11 +7294,12 @@ private:
         ArrayRef<OpenMPMotionModifierKind> MotionModifiers,
         bool ReturnDevicePointer, bool IsImplicit,
         const ValueDecl *Mapper = nullptr, const Expr *VarRef = nullptr,
-        bool ForDeviceAddr = false)
+        bool ForDeviceAddr = false, bool FbNullify = false)
         : Components(Components), MapType(MapType), MapModifiers(MapModifiers),
           MotionModifiers(MotionModifiers),
           ReturnDevicePointer(ReturnDevicePointer), IsImplicit(IsImplicit),
-          Mapper(Mapper), VarRef(VarRef), ForDeviceAddr(ForDeviceAddr) {}
+          Mapper(Mapper), VarRef(VarRef), ForDeviceAddr(ForDeviceAddr),
+          FbNullify(FbNullify) {}
   };
 
   /// The target directive from where the mappable clauses were extracted. It
@@ -8918,7 +8920,8 @@ private:
 
     auto &&UseDeviceDataCombinedInfoGen =
         [&UseDeviceDataCombinedInfo](const ValueDecl *VD, llvm::Value *Ptr,
-                                     CodeGenFunction &CGF, bool IsDevAddr) {
+                                     CodeGenFunction &CGF, bool IsDevAddr,
+                                     bool FbNullify = false) {
           UseDeviceDataCombinedInfo.Exprs.push_back(VD);
           UseDeviceDataCombinedInfo.BasePointers.emplace_back(Ptr);
           UseDeviceDataCombinedInfo.DevicePtrDecls.emplace_back(VD);
@@ -8932,8 +8935,11 @@ private:
           UseDeviceDataCombinedInfo.Pointers.push_back(Ptr);
           UseDeviceDataCombinedInfo.Sizes.push_back(
               llvm::Constant::getNullValue(CGF.Int64Ty));
-          UseDeviceDataCombinedInfo.Types.push_back(
-              OpenMPOffloadMappingFlags::OMP_MAP_RETURN_PARAM);
+          OpenMPOffloadMappingFlags Flags =
+              OpenMPOffloadMappingFlags::OMP_MAP_RETURN_PARAM;
+          if (FbNullify)
+            Flags |= OpenMPOffloadMappingFlags::OMP_MAP_FB_NULLIFY;
+          UseDeviceDataCombinedInfo.Types.push_back(Flags);
           UseDeviceDataCombinedInfo.Mappers.push_back(nullptr);
         };
 
@@ -8942,7 +8948,8 @@ private:
             CodeGenFunction &CGF, const Expr *IE, const ValueDecl *VD,
             OMPClauseMappableExprCommon::MappableExprComponentListRef
                 Components,
-            bool IsDevAddr, bool IEIsAttachPtrForDevAddr = false) {
+            bool IsDevAddr, bool IEIsAttachPtrForDevAddr = false,
+            bool FbNullify = false) {
           // We didn't find any match in our map information - generate a zero
           // size array section.
           llvm::Value *Ptr;
@@ -8962,13 +8969,15 @@ private:
           // equivalent to
           //   ... use_device_ptr(p)
           UseDeviceDataCombinedInfoGen(VD, Ptr, CGF, /*IsDevAddr=*/IsDevAddr &&
-                                                         !TreatDevAddrAsDevPtr);
+                                                         !TreatDevAddrAsDevPtr,
+                                      FbNullify);
         };
 
     auto &&IsMapInfoExist = [&Info, this](CodeGenFunction &CGF,
                                           const ValueDecl *VD, const Expr *IE,
                                           const Expr *DesiredAttachPtrExpr,
-                                          bool IsDevAddr) -> bool {
+                                          bool IsDevAddr,
+                                          bool FbNullify = false) -> bool {
       // We potentially have map information for this declaration already.
       // Look for the first set of components that refer to it. If found,
       // return true.
@@ -9000,6 +9009,7 @@ private:
             if (IsDevAddr) {
               CI->ForDeviceAddr = true;
               CI->ReturnDevicePointer = true;
+              CI->FbNullify = FbNullify;
               Found = true;
               break;
             } else {
@@ -9016,6 +9026,7 @@ private:
                    VD == cast<DeclRefExpr>(AttachPtrExpr)->getDecl())) {
                 CI->ForDeviceAddr = IsDevAddr;
                 CI->ReturnDevicePointer = true;
+                CI->FbNullify = FbNullify;
                 Found = true;
                 break;
               }
@@ -9037,6 +9048,8 @@ private:
       const auto *C = dyn_cast<OMPUseDevicePtrClause>(Cl);
       if (!C)
         continue;
+      bool FbNullify = C->getFallbackModifier() ==
+                       OMPC_USE_DEVICE_PTR_FALLBACK_fb_nullify;
       for (const auto L : C->component_lists()) {
         OMPClauseMappableExprCommon::MappableExprComponentListRef Components =
             std::get<1>(L);
@@ -9056,9 +9069,10 @@ private:
             Components.front().getAssociatedExpression();
         if (IsMapInfoExist(CGF, VD, IE,
                            /*DesiredAttachPtrExpr=*/UDPOperandExpr,
-                           /*IsDevAddr=*/false))
+                           /*IsDevAddr=*/false, FbNullify))
           continue;
-        MapInfoGen(CGF, IE, VD, Components, /*IsDevAddr=*/false);
+        MapInfoGen(CGF, IE, VD, Components, /*IsDevAddr=*/false,
+                   /*IEIsAttachPtrForDevAddr=*/false, FbNullify);
       }
     }
 
@@ -9204,6 +9218,9 @@ private:
                                   : DeviceInfoTy::Pointer;
               GroupStructBaseCurInfo.Types[StructBasePointersIdx] |=
                   OpenMPOffloadMappingFlags::OMP_MAP_RETURN_PARAM;
+              if (L.FbNullify)
+                GroupStructBaseCurInfo.Types[StructBasePointersIdx] |=
+                    OpenMPOffloadMappingFlags::OMP_MAP_FB_NULLIFY;
             } else {
               GroupCurInfo.DevicePtrDecls[CurrentBasePointersIdx] = RelevantVD;
               GroupCurInfo.DevicePointers[CurrentBasePointersIdx] =
@@ -9211,6 +9228,9 @@ private:
                                   : DeviceInfoTy::Pointer;
               GroupCurInfo.Types[CurrentBasePointersIdx] |=
                   OpenMPOffloadMappingFlags::OMP_MAP_RETURN_PARAM;
+              if (L.FbNullify)
+                GroupCurInfo.Types[CurrentBasePointersIdx] |=
+                    OpenMPOffloadMappingFlags::OMP_MAP_FB_NULLIFY;
             }
           }
         }
