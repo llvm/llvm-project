@@ -4472,8 +4472,8 @@ static Value *simplifyWithOpsReplaced(Value *V,
         // If the call contains (an invalid) range attribute then a replacement
         // might produce an unexpected poison value.
         if (CI->hasRetAttr(Attribute::AttrKind::Range)) {
-          auto Attr = CI->getRetAttr(Attribute::AttrKind::Range);
-          const ConstantRange &CR = Attr.getRange();
+          const ConstantRange &CR =
+              CI->getRetAttr(Attribute::AttrKind::Range).getRange();
 
           APInt Lo = CR.getLower();
           APInt Hi = CR.getUpper();
