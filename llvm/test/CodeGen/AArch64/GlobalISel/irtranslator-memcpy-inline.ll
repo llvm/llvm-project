@@ -4,13 +4,14 @@
 define void @copy(ptr %dst, ptr %src) {
   ; CHECK-LABEL: name: copy
   ; CHECK: bb.1.entry:
-  ; CHECK:   liveins: $x0, $x1
-  ; CHECK:   [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-  ; CHECK:   [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
-  ; CHECK:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
-  ; CHECK:   [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[C]](s32)
-  ; CHECK:   G_MEMCPY [[COPY]](p0), [[COPY1]](p0), [[ZEXT]](s64), 0 :: (store (s8) into %ir.dst), (load (s8) from %ir.src)
-  ; CHECK:   RET_ReallyLR
+  ; CHECK-NEXT:   liveins: $x0, $x1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 4
+  ; CHECK-NEXT:   [[ZEXT:%[0-9]+]]:_(i64) = G_ZEXT [[C]](i32)
+  ; CHECK-NEXT:   G_MEMCPY [[COPY]](p0), [[COPY1]](p0), [[ZEXT]](i64), 0 :: (store (s8) into %ir.dst), (load (s8) from %ir.src)
+  ; CHECK-NEXT:   RET_ReallyLR
 entry:
   call void @llvm.memcpy.p0.p0.i32(ptr %dst, ptr %src, i32 4, i1 false)
   ret void
@@ -19,13 +20,14 @@ entry:
 define void @inline_copy(ptr %dst, ptr %src) {
   ; CHECK-LABEL: name: inline_copy
   ; CHECK: bb.1.entry:
-  ; CHECK:   liveins: $x0, $x1
-  ; CHECK:   [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-  ; CHECK:   [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
-  ; CHECK:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
-  ; CHECK:   [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[C]](s32)
-  ; CHECK:   G_MEMCPY_INLINE [[COPY]](p0), [[COPY1]](p0), [[ZEXT]](s64) :: (store (s8) into %ir.dst), (load (s8) from %ir.src)
-  ; CHECK:   RET_ReallyLR
+  ; CHECK-NEXT:   liveins: $x0, $x1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 4
+  ; CHECK-NEXT:   [[ZEXT:%[0-9]+]]:_(i64) = G_ZEXT [[C]](i32)
+  ; CHECK-NEXT:   G_MEMCPY_INLINE [[COPY]](p0), [[COPY1]](p0), [[ZEXT]](i64) :: (store (s8) into %ir.dst), (load (s8) from %ir.src)
+  ; CHECK-NEXT:   RET_ReallyLR
 entry:
   call void @llvm.memcpy.inline.p0.p0.i32(ptr %dst, ptr %src, i32 4, i1 false)
   ret void
@@ -34,13 +36,14 @@ entry:
 define void @copy_volatile(ptr %dst, ptr %src) {
   ; CHECK-LABEL: name: copy_volatile
   ; CHECK: bb.1.entry:
-  ; CHECK:   liveins: $x0, $x1
-  ; CHECK:   [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-  ; CHECK:   [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
-  ; CHECK:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
-  ; CHECK:   [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[C]](s32)
-  ; CHECK:   G_MEMCPY [[COPY]](p0), [[COPY1]](p0), [[ZEXT]](s64), 0 :: (volatile store (s8) into %ir.dst), (volatile load (s8) from %ir.src)
-  ; CHECK:   RET_ReallyLR
+  ; CHECK-NEXT:   liveins: $x0, $x1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 4
+  ; CHECK-NEXT:   [[ZEXT:%[0-9]+]]:_(i64) = G_ZEXT [[C]](i32)
+  ; CHECK-NEXT:   G_MEMCPY [[COPY]](p0), [[COPY1]](p0), [[ZEXT]](i64), 0 :: (volatile store (s8) into %ir.dst), (volatile load (s8) from %ir.src)
+  ; CHECK-NEXT:   RET_ReallyLR
 entry:
   call void @llvm.memcpy.p0.p0.i32(ptr %dst, ptr %src, i32 4, i1 true)
   ret void
@@ -49,13 +52,14 @@ entry:
 define void @inline_copy_volatile(ptr %dst, ptr %src) {
   ; CHECK-LABEL: name: inline_copy_volatile
   ; CHECK: bb.1.entry:
-  ; CHECK:   liveins: $x0, $x1
-  ; CHECK:   [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-  ; CHECK:   [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
-  ; CHECK:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
-  ; CHECK:   [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[C]](s32)
-  ; CHECK:   G_MEMCPY_INLINE [[COPY]](p0), [[COPY1]](p0), [[ZEXT]](s64) :: (volatile store (s8) into %ir.dst), (volatile load (s8) from %ir.src)
-  ; CHECK:   RET_ReallyLR
+  ; CHECK-NEXT:   liveins: $x0, $x1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 4
+  ; CHECK-NEXT:   [[ZEXT:%[0-9]+]]:_(i64) = G_ZEXT [[C]](i32)
+  ; CHECK-NEXT:   G_MEMCPY_INLINE [[COPY]](p0), [[COPY1]](p0), [[ZEXT]](i64) :: (volatile store (s8) into %ir.dst), (volatile load (s8) from %ir.src)
+  ; CHECK-NEXT:   RET_ReallyLR
 entry:
   call void @llvm.memcpy.inline.p0.p0.i32(ptr %dst, ptr %src, i32 4, i1 true)
   ret void
@@ -64,13 +68,14 @@ entry:
 define void @tail_copy(ptr %dst, ptr %src) {
   ; CHECK-LABEL: name: tail_copy
   ; CHECK: bb.1.entry:
-  ; CHECK:   liveins: $x0, $x1
-  ; CHECK:   [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-  ; CHECK:   [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
-  ; CHECK:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
-  ; CHECK:   [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[C]](s32)
-  ; CHECK:   G_MEMCPY [[COPY]](p0), [[COPY1]](p0), [[ZEXT]](s64), 1 :: (store (s8) into %ir.dst), (load (s8) from %ir.src)
-  ; CHECK:   RET_ReallyLR
+  ; CHECK-NEXT:   liveins: $x0, $x1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 4
+  ; CHECK-NEXT:   [[ZEXT:%[0-9]+]]:_(i64) = G_ZEXT [[C]](i32)
+  ; CHECK-NEXT:   G_MEMCPY [[COPY]](p0), [[COPY1]](p0), [[ZEXT]](i64), 1 :: (store (s8) into %ir.dst), (load (s8) from %ir.src)
+  ; CHECK-NEXT:   RET_ReallyLR
 entry:
   tail call void @llvm.memcpy.p0.p0.i32(ptr %dst, ptr %src, i32 4, i1 false)
   ret void
@@ -79,13 +84,14 @@ entry:
 define void @tail_inline_copy(ptr %dst, ptr %src) {
   ; CHECK-LABEL: name: tail_inline_copy
   ; CHECK: bb.1.entry:
-  ; CHECK:   liveins: $x0, $x1
-  ; CHECK:   [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-  ; CHECK:   [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
-  ; CHECK:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
-  ; CHECK:   [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[C]](s32)
-  ; CHECK:   G_MEMCPY_INLINE [[COPY]](p0), [[COPY1]](p0), [[ZEXT]](s64) :: (store (s8) into %ir.dst), (load (s8) from %ir.src)
-  ; CHECK:   RET_ReallyLR
+  ; CHECK-NEXT:   liveins: $x0, $x1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 4
+  ; CHECK-NEXT:   [[ZEXT:%[0-9]+]]:_(i64) = G_ZEXT [[C]](i32)
+  ; CHECK-NEXT:   G_MEMCPY_INLINE [[COPY]](p0), [[COPY1]](p0), [[ZEXT]](i64) :: (store (s8) into %ir.dst), (load (s8) from %ir.src)
+  ; CHECK-NEXT:   RET_ReallyLR
 entry:
   tail call void @llvm.memcpy.inline.p0.p0.i32(ptr %dst, ptr %src, i32 4, i1 false)
   ret void
@@ -94,13 +100,14 @@ entry:
 define void @tail_copy_volatile(ptr %dst, ptr %src) {
   ; CHECK-LABEL: name: tail_copy_volatile
   ; CHECK: bb.1.entry:
-  ; CHECK:   liveins: $x0, $x1
-  ; CHECK:   [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-  ; CHECK:   [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
-  ; CHECK:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
-  ; CHECK:   [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[C]](s32)
-  ; CHECK:   G_MEMCPY [[COPY]](p0), [[COPY1]](p0), [[ZEXT]](s64), 1 :: (volatile store (s8) into %ir.dst), (volatile load (s8) from %ir.src)
-  ; CHECK:   RET_ReallyLR
+  ; CHECK-NEXT:   liveins: $x0, $x1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 4
+  ; CHECK-NEXT:   [[ZEXT:%[0-9]+]]:_(i64) = G_ZEXT [[C]](i32)
+  ; CHECK-NEXT:   G_MEMCPY [[COPY]](p0), [[COPY1]](p0), [[ZEXT]](i64), 1 :: (volatile store (s8) into %ir.dst), (volatile load (s8) from %ir.src)
+  ; CHECK-NEXT:   RET_ReallyLR
 entry:
   tail call void @llvm.memcpy.p0.p0.i32(ptr %dst, ptr %src, i32 4, i1 true)
   ret void
@@ -109,13 +116,14 @@ entry:
 define void @tail_inline_copy_volatile(ptr %dst, ptr %src) {
   ; CHECK-LABEL: name: tail_inline_copy_volatile
   ; CHECK: bb.1.entry:
-  ; CHECK:   liveins: $x0, $x1
-  ; CHECK:   [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-  ; CHECK:   [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
-  ; CHECK:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
-  ; CHECK:   [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[C]](s32)
-  ; CHECK:   G_MEMCPY_INLINE [[COPY]](p0), [[COPY1]](p0), [[ZEXT]](s64) :: (volatile store (s8) into %ir.dst), (volatile load (s8) from %ir.src)
-  ; CHECK:   RET_ReallyLR
+  ; CHECK-NEXT:   liveins: $x0, $x1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 4
+  ; CHECK-NEXT:   [[ZEXT:%[0-9]+]]:_(i64) = G_ZEXT [[C]](i32)
+  ; CHECK-NEXT:   G_MEMCPY_INLINE [[COPY]](p0), [[COPY1]](p0), [[ZEXT]](i64) :: (volatile store (s8) into %ir.dst), (volatile load (s8) from %ir.src)
+  ; CHECK-NEXT:   RET_ReallyLR
 entry:
   tail call void @llvm.memcpy.inline.p0.p0.i32(ptr %dst, ptr %src, i32 4, i1 true)
   ret void

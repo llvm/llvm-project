@@ -20,9 +20,9 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr32 = COPY $s0
     ; CHECK-NEXT: [[FCVTHSr:%[0-9]+]]:fpr16 = nofpexcept FCVTHSr [[COPY]], implicit $fpcr
     ; CHECK-NEXT: $h0 = COPY [[FCVTHSr]]
-    %0(s32) = COPY $s0
-    %1(s16) = G_FPTRUNC %0
-    $h0 = COPY %1(s16)
+    %0(f32) = COPY $s0
+    %1(f16) = G_FPTRUNC %0
+    $h0 = COPY %1(f16)
 ...
 
 ---
@@ -44,9 +44,9 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr64 = COPY $d0
     ; CHECK-NEXT: [[FCVTHDr:%[0-9]+]]:fpr16 = nofpexcept FCVTHDr [[COPY]], implicit $fpcr
     ; CHECK-NEXT: $h0 = COPY [[FCVTHDr]]
-    %0(s64) = COPY $d0
-    %1(s16) = G_FPTRUNC %0
-    $h0 = COPY %1(s16)
+    %0(f64) = COPY $d0
+    %1(f16) = G_FPTRUNC %0
+    $h0 = COPY %1(f16)
 ...
 
 ---
@@ -68,9 +68,9 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr64 = COPY $d0
     ; CHECK-NEXT: [[FCVTSDr:%[0-9]+]]:fpr32 = nofpexcept FCVTSDr [[COPY]], implicit $fpcr
     ; CHECK-NEXT: $s0 = COPY [[FCVTSDr]]
-    %0(s64) = COPY $d0
-    %1(s32) = G_FPTRUNC %0
-    $s0 = COPY %1(s32)
+    %0(f64) = COPY $d0
+    %1(f32) = G_FPTRUNC %0
+    $s0 = COPY %1(f32)
 ...
 
 ---
@@ -91,9 +91,9 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr128 = COPY $q0
     ; CHECK-NEXT: [[FCVTNv4i16_:%[0-9]+]]:fpr64 = nofpexcept FCVTNv4i16 [[COPY]], implicit $fpcr
     ; CHECK-NEXT: $d0 = COPY [[FCVTNv4i16_]]
-    %0(<4 x s32>) = COPY $q0
-    %1(<4 x s16>) = G_FPTRUNC %0
-    $d0 = COPY %1(<4 x s16>)
+    %0(<4 x f32>) = COPY $q0
+    %1(<4 x f16>) = G_FPTRUNC %0
+    $d0 = COPY %1(<4 x f16>)
 ...
 
 ---
@@ -114,9 +114,9 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr128 = COPY $q0
     ; CHECK-NEXT: [[FCVTNv2i32_:%[0-9]+]]:fpr64 = nofpexcept FCVTNv2i32 [[COPY]], implicit $fpcr
     ; CHECK-NEXT: $d0 = COPY [[FCVTNv2i32_]]
-    %0(<2 x s64>) = COPY $q0
-    %1(<2 x s32>) = G_FPTRUNC %0
-    $d0 = COPY %1(<2 x s32>)
+    %0(<2 x f64>) = COPY $q0
+    %1(<2 x f32>) = G_FPTRUNC %0
+    $d0 = COPY %1(<2 x f32>)
 ...
 
 ---
@@ -138,9 +138,9 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr16 = COPY $h0
     ; CHECK-NEXT: [[FCVTSHr:%[0-9]+]]:fpr32 = nofpexcept FCVTSHr [[COPY]], implicit $fpcr
     ; CHECK-NEXT: $s0 = COPY [[FCVTSHr]]
-    %0(s16) = COPY $h0
-    %1(s32) = G_FPEXT %0
-    $s0 = COPY %1(s32)
+    %0(f16) = COPY $h0
+    %1(f32) = G_FPEXT %0
+    $s0 = COPY %1(f32)
 ...
 
 ---
@@ -162,9 +162,9 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr16 = COPY $h0
     ; CHECK-NEXT: [[FCVTDHr:%[0-9]+]]:fpr64 = nofpexcept FCVTDHr [[COPY]], implicit $fpcr
     ; CHECK-NEXT: $d0 = COPY [[FCVTDHr]]
-    %0(s16) = COPY $h0
-    %1(s64) = G_FPEXT %0
-    $d0 = COPY %1(s64)
+    %0(f16) = COPY $h0
+    %1(f64) = G_FPEXT %0
+    $d0 = COPY %1(f64)
 ...
 
 ---
@@ -186,9 +186,9 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr32 = COPY $s0
     ; CHECK-NEXT: [[FCVTDSr:%[0-9]+]]:fpr64 = nofpexcept FCVTDSr [[COPY]], implicit $fpcr
     ; CHECK-NEXT: $d0 = COPY [[FCVTDSr]]
-    %0(s32) = COPY $s0
-    %1(s64) = G_FPEXT %0
-    $d0 = COPY %1(s64)
+    %0(f32) = COPY $s0
+    %1(f64) = G_FPEXT %0
+    $d0 = COPY %1(f64)
 ...
 
 ---
@@ -209,9 +209,9 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr64 = COPY $d0
     ; CHECK-NEXT: [[FCVTLv4i16_:%[0-9]+]]:fpr128 = nofpexcept FCVTLv4i16 [[COPY]], implicit $fpcr
     ; CHECK-NEXT: $q0 = COPY [[FCVTLv4i16_]]
-    %0(<4 x s16>) = COPY $d0
-    %1(<4 x s32>) = G_FPEXT %0
-    $q0 = COPY %1(<4 x s32>)
+    %0(<4 x f16>) = COPY $d0
+    %1(<4 x f32>) = G_FPEXT %0
+    $q0 = COPY %1(<4 x f32>)
 ...
 
 ---
@@ -232,9 +232,9 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr64 = COPY $d0
     ; CHECK-NEXT: [[FCVTLv2i32_:%[0-9]+]]:fpr128 = nofpexcept FCVTLv2i32 [[COPY]], implicit $fpcr
     ; CHECK-NEXT: $q0 = COPY [[FCVTLv2i32_]]
-    %0(<2 x s32>) = COPY $d0
-    %1(<2 x s64>) = G_FPEXT %0
-    $q0 = COPY %1(<2 x s64>)
+    %0(<2 x f32>) = COPY $d0
+    %1(<2 x f64>) = G_FPEXT %0
+    $q0 = COPY %1(<2 x f64>)
 ...
 
 ---
@@ -256,9 +256,9 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr32 = COPY $w0
     ; CHECK-NEXT: [[SCVTFUWSri:%[0-9]+]]:fpr32 = nofpexcept SCVTFUWSri [[COPY]], implicit $fpcr
     ; CHECK-NEXT: $s0 = COPY [[SCVTFUWSri]]
-    %0(s32) = COPY $w0
-    %1(s32) = G_SITOFP %0
-    $s0 = COPY %1(s32)
+    %0(i32) = COPY $w0
+    %1(f32) = G_SITOFP %0
+    $s0 = COPY %1(f32)
 ...
 
 ---
@@ -280,9 +280,9 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr32 = COPY $s0
     ; CHECK-NEXT: [[SCVTFv1i32_:%[0-9]+]]:fpr32 = nofpexcept SCVTFv1i32 [[COPY]], implicit $fpcr
     ; CHECK-NEXT: $s0 = COPY [[SCVTFv1i32_]]
-    %0(s32) = COPY $s0
-    %1(s32) = G_SITOFP %0
-    $s0 = COPY %1(s32)
+    %0(i32) = COPY $s0
+    %1(f32) = G_SITOFP %0
+    $s0 = COPY %1(f32)
 ...
 
 ---
@@ -304,9 +304,9 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr32 = COPY $s0
     ; CHECK-NEXT: [[UCVTFv1i32_:%[0-9]+]]:fpr32 = nofpexcept UCVTFv1i32 [[COPY]], implicit $fpcr
     ; CHECK-NEXT: $s0 = COPY [[UCVTFv1i32_]]
-    %0(s32) = COPY $s0
-    %1(s32) = G_UITOFP %0
-    $s0 = COPY %1(s32)
+    %0(i32) = COPY $s0
+    %1(f32) = G_UITOFP %0
+    $s0 = COPY %1(f32)
 ...
 
 ---
@@ -328,9 +328,9 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
     ; CHECK-NEXT: [[SCVTFUXSri:%[0-9]+]]:fpr32 = nofpexcept SCVTFUXSri [[COPY]], implicit $fpcr
     ; CHECK-NEXT: $s0 = COPY [[SCVTFUXSri]]
-    %0(s64) = COPY $x0
-    %1(s32) = G_SITOFP %0
-    $s0 = COPY %1(s32)
+    %0(i64) = COPY $x0
+    %1(f32) = G_SITOFP %0
+    $s0 = COPY %1(f32)
 ...
 
 ---
@@ -352,9 +352,9 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr32 = COPY $w0
     ; CHECK-NEXT: [[SCVTFUWDri:%[0-9]+]]:fpr64 = nofpexcept SCVTFUWDri [[COPY]], implicit $fpcr
     ; CHECK-NEXT: $d0 = COPY [[SCVTFUWDri]]
-    %0(s32) = COPY $w0
-    %1(s64) = G_SITOFP %0
-    $d0 = COPY %1(s64)
+    %0(i32) = COPY $w0
+    %1(f64) = G_SITOFP %0
+    $d0 = COPY %1(f64)
 ...
 
 ---
@@ -376,9 +376,9 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
     ; CHECK-NEXT: [[SCVTFUXDri:%[0-9]+]]:fpr64 = nofpexcept SCVTFUXDri [[COPY]], implicit $fpcr
     ; CHECK-NEXT: $d0 = COPY [[SCVTFUXDri]]
-    %0(s64) = COPY $x0
-    %1(s64) = G_SITOFP %0
-    $d0 = COPY %1(s64)
+    %0(i64) = COPY $x0
+    %1(f64) = G_SITOFP %0
+    $d0 = COPY %1(f64)
 ...
 
 ---
@@ -400,9 +400,9 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr32 = COPY $w0
     ; CHECK-NEXT: [[UCVTFUWSri:%[0-9]+]]:fpr32 = nofpexcept UCVTFUWSri [[COPY]], implicit $fpcr
     ; CHECK-NEXT: $s0 = COPY [[UCVTFUWSri]]
-    %0(s32) = COPY $w0
-    %1(s32) = G_UITOFP %0
-    $s0 = COPY %1(s32)
+    %0(i32) = COPY $w0
+    %1(f32) = G_UITOFP %0
+    $s0 = COPY %1(f32)
 ...
 
 ---
@@ -424,9 +424,9 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
     ; CHECK-NEXT: [[UCVTFUXSri:%[0-9]+]]:fpr32 = nofpexcept UCVTFUXSri [[COPY]], implicit $fpcr
     ; CHECK-NEXT: $s0 = COPY [[UCVTFUXSri]]
-    %0(s64) = COPY $x0
-    %1(s32) = G_UITOFP %0
-    $s0 = COPY %1(s32)
+    %0(i64) = COPY $x0
+    %1(f32) = G_UITOFP %0
+    $s0 = COPY %1(f32)
 ...
 
 ---
@@ -448,9 +448,9 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr32 = COPY $w0
     ; CHECK-NEXT: [[UCVTFUWDri:%[0-9]+]]:fpr64 = nofpexcept UCVTFUWDri [[COPY]], implicit $fpcr
     ; CHECK-NEXT: $d0 = COPY [[UCVTFUWDri]]
-    %0(s32) = COPY $w0
-    %1(s64) = G_UITOFP %0
-    $d0 = COPY %1(s64)
+    %0(i32) = COPY $w0
+    %1(f64) = G_UITOFP %0
+    $d0 = COPY %1(f64)
 ...
 
 ---
@@ -472,9 +472,9 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
     ; CHECK-NEXT: [[UCVTFUXDri:%[0-9]+]]:fpr64 = nofpexcept UCVTFUXDri [[COPY]], implicit $fpcr
     ; CHECK-NEXT: $d0 = COPY [[UCVTFUXDri]]
-    %0(s64) = COPY $x0
-    %1(s64) = G_UITOFP %0
-    $d0 = COPY %1(s64)
+    %0(i64) = COPY $x0
+    %1(f64) = G_UITOFP %0
+    $d0 = COPY %1(f64)
 ...
 
 ---
@@ -496,9 +496,9 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr32 = COPY $s0
     ; CHECK-NEXT: [[FCVTZSUWSr:%[0-9]+]]:gpr32 = nofpexcept FCVTZSUWSr [[COPY]], implicit $fpcr
     ; CHECK-NEXT: $w0 = COPY [[FCVTZSUWSr]]
-    %0(s32) = COPY $s0
-    %1(s32) = G_FPTOSI %0
-    $w0 = COPY %1(s32)
+    %0(f32) = COPY $s0
+    %1(i32) = G_FPTOSI %0
+    $w0 = COPY %1(i32)
 ...
 
 ---
@@ -520,9 +520,9 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr64 = COPY $d0
     ; CHECK-NEXT: [[FCVTZSUWDr:%[0-9]+]]:gpr32 = nofpexcept FCVTZSUWDr [[COPY]], implicit $fpcr
     ; CHECK-NEXT: $w0 = COPY [[FCVTZSUWDr]]
-    %0(s64) = COPY $d0
-    %1(s32) = G_FPTOSI %0
-    $w0 = COPY %1(s32)
+    %0(f64) = COPY $d0
+    %1(i32) = G_FPTOSI %0
+    $w0 = COPY %1(i32)
 ...
 
 ---
@@ -544,9 +544,9 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr32 = COPY $s0
     ; CHECK-NEXT: [[FCVTZSUXSr:%[0-9]+]]:gpr64 = nofpexcept FCVTZSUXSr [[COPY]], implicit $fpcr
     ; CHECK-NEXT: $x0 = COPY [[FCVTZSUXSr]]
-    %0(s32) = COPY $s0
-    %1(s64) = G_FPTOSI %0
-    $x0 = COPY %1(s64)
+    %0(f32) = COPY $s0
+    %1(i64) = G_FPTOSI %0
+    $x0 = COPY %1(i64)
 ...
 
 ---
@@ -568,9 +568,9 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr64 = COPY $d0
     ; CHECK-NEXT: [[FCVTZSUXDr:%[0-9]+]]:gpr64 = nofpexcept FCVTZSUXDr [[COPY]], implicit $fpcr
     ; CHECK-NEXT: $x0 = COPY [[FCVTZSUXDr]]
-    %0(s64) = COPY $d0
-    %1(s64) = G_FPTOSI %0
-    $x0 = COPY %1(s64)
+    %0(f64) = COPY $d0
+    %1(i64) = G_FPTOSI %0
+    $x0 = COPY %1(i64)
 ...
 
 ---
@@ -592,9 +592,9 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr32 = COPY $s0
     ; CHECK-NEXT: [[FCVTZUUWSr:%[0-9]+]]:gpr32 = nofpexcept FCVTZUUWSr [[COPY]], implicit $fpcr
     ; CHECK-NEXT: $w0 = COPY [[FCVTZUUWSr]]
-    %0(s32) = COPY $s0
-    %1(s32) = G_FPTOUI %0
-    $w0 = COPY %1(s32)
+    %0(f32) = COPY $s0
+    %1(i32) = G_FPTOUI %0
+    $w0 = COPY %1(i32)
 ...
 
 ---
@@ -616,9 +616,9 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr64 = COPY $d0
     ; CHECK-NEXT: [[FCVTZUUWDr:%[0-9]+]]:gpr32 = nofpexcept FCVTZUUWDr [[COPY]], implicit $fpcr
     ; CHECK-NEXT: $w0 = COPY [[FCVTZUUWDr]]
-    %0(s64) = COPY $d0
-    %1(s32) = G_FPTOUI %0
-    $w0 = COPY %1(s32)
+    %0(f64) = COPY $d0
+    %1(i32) = G_FPTOUI %0
+    $w0 = COPY %1(i32)
 ...
 
 ---
@@ -640,9 +640,9 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr32 = COPY $s0
     ; CHECK-NEXT: [[FCVTZUUXSr:%[0-9]+]]:gpr64 = nofpexcept FCVTZUUXSr [[COPY]], implicit $fpcr
     ; CHECK-NEXT: $x0 = COPY [[FCVTZUUXSr]]
-    %0(s32) = COPY $s0
-    %1(s64) = G_FPTOUI %0
-    $x0 = COPY %1(s64)
+    %0(f32) = COPY $s0
+    %1(i64) = G_FPTOUI %0
+    $x0 = COPY %1(i64)
 ...
 
 ---
@@ -664,7 +664,7 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr64 = COPY $d0
     ; CHECK-NEXT: [[FCVTZUUXDr:%[0-9]+]]:gpr64 = nofpexcept FCVTZUUXDr [[COPY]], implicit $fpcr
     ; CHECK-NEXT: $x0 = COPY [[FCVTZUUXDr]]
-    %0(s64) = COPY $d0
-    %1(s64) = G_FPTOUI %0
-    $x0 = COPY %1(s64)
+    %0(f64) = COPY $d0
+    %1(i64) = G_FPTOUI %0
+    $x0 = COPY %1(i64)
 ...

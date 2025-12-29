@@ -125,9 +125,9 @@ define <4 x half> @concat9(<2 x half> %A, <2 x half> %B) {
 ;
 ; CHECK-GI-LABEL: concat9:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    fmov w8, s1
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-GI-NEXT:    mov v0.s[1], w8
+; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-GI-NEXT:    mov v0.s[1], v1.s[0]
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
    %v4half= shufflevector <2 x half> %A, <2 x half> %B, <4 x i32> <i32 0, i32 1, i32 2, i32 3>

@@ -43,10 +43,10 @@ body:             |
     ; LOWER-NEXT: %r:_(s32) = COPY $w0
     ; LOWER-NEXT: %q:_(s32) = COPY $w1
     ; LOWER-NEXT: [[DEF:%[0-9]+]]:_(<2 x s32>) = G_IMPLICIT_DEF
-    ; LOWER-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
-    ; LOWER-NEXT: [[IVEC:%[0-9]+]]:_(<2 x s32>) = G_INSERT_VECTOR_ELT [[DEF]], %r(s32), [[C]](s64)
-    ; LOWER-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
-    ; LOWER-NEXT: [[IVEC1:%[0-9]+]]:_(<2 x s32>) = G_INSERT_VECTOR_ELT [[IVEC]], %q(s32), [[C1]](s64)
+    ; LOWER-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 0
+    ; LOWER-NEXT: [[IVEC:%[0-9]+]]:_(<2 x s32>) = G_INSERT_VECTOR_ELT [[DEF]], %r(s32), [[C]](i64)
+    ; LOWER-NEXT: [[C1:%[0-9]+]]:_(i64) = G_CONSTANT i64 1
+    ; LOWER-NEXT: [[IVEC1:%[0-9]+]]:_(<2 x s32>) = G_INSERT_VECTOR_ELT [[IVEC]], %q(s32), [[C1]](i64)
     ; LOWER-NEXT: %build_vector:_(<2 x s32>) = COPY [[IVEC1]](<2 x s32>)
     ; LOWER-NEXT: $d0 = COPY %build_vector(<2 x s32>)
     ; LOWER-NEXT: RET_ReallyLR implicit $d0

@@ -6,36 +6,36 @@ define i32 @switch(i32 %argc) {
   ; CHECK: bb.1.entry:
   ; CHECK-NEXT:   liveins: $w0
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 100
-  ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 200
-  ; CHECK-NEXT:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 2
-  ; CHECK-NEXT:   [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
-  ; CHECK-NEXT:   [[C4:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; CHECK-NEXT:   [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[COPY]](s32), [[C]]
-  ; CHECK-NEXT:   G_BRCOND [[ICMP]](s1), %bb.3
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $w0
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 100
+  ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(i32) = G_CONSTANT i32 200
+  ; CHECK-NEXT:   [[C2:%[0-9]+]]:_(i32) = G_CONSTANT i32 2
+  ; CHECK-NEXT:   [[C3:%[0-9]+]]:_(i32) = G_CONSTANT i32 1
+  ; CHECK-NEXT:   [[C4:%[0-9]+]]:_(i32) = G_CONSTANT i32 0
+  ; CHECK-NEXT:   [[ICMP:%[0-9]+]]:_(i1) = G_ICMP intpred(eq), [[COPY]](i32), [[C]]
+  ; CHECK-NEXT:   G_BRCOND [[ICMP]](i1), %bb.3
   ; CHECK-NEXT:   G_BR %bb.6
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.6.entry:
-  ; CHECK-NEXT:   [[ICMP1:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[COPY]](s32), [[C1]]
-  ; CHECK-NEXT:   G_BRCOND [[ICMP1]](s1), %bb.4
+  ; CHECK-NEXT:   [[ICMP1:%[0-9]+]]:_(i1) = G_ICMP intpred(eq), [[COPY]](i32), [[C1]]
+  ; CHECK-NEXT:   G_BRCOND [[ICMP1]](i1), %bb.4
   ; CHECK-NEXT:   G_BR %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2.default:
-  ; CHECK-NEXT:   [[ADD:%[0-9]+]]:_(s32) = G_ADD [[COPY]], [[C4]]
+  ; CHECK-NEXT:   [[ADD:%[0-9]+]]:_(i32) = G_ADD [[COPY]], [[C4]]
   ; CHECK-NEXT:   G_BR %bb.5
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3.case100:
-  ; CHECK-NEXT:   [[ADD1:%[0-9]+]]:_(s32) = G_ADD [[COPY]], [[C3]]
+  ; CHECK-NEXT:   [[ADD1:%[0-9]+]]:_(i32) = G_ADD [[COPY]], [[C3]]
   ; CHECK-NEXT:   G_BR %bb.5
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.4.case200:
-  ; CHECK-NEXT:   [[ADD2:%[0-9]+]]:_(s32) = G_ADD [[COPY]], [[C2]]
+  ; CHECK-NEXT:   [[ADD2:%[0-9]+]]:_(i32) = G_ADD [[COPY]], [[C2]]
   ; CHECK-NEXT:   G_BR %bb.5
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.5.return:
-  ; CHECK-NEXT:   [[PHI:%[0-9]+]]:_(s32) = G_PHI [[ADD]](s32), %bb.2, [[ADD1]](s32), %bb.3, [[ADD2]](s32), %bb.4
-  ; CHECK-NEXT:   $w0 = COPY [[PHI]](s32)
+  ; CHECK-NEXT:   [[PHI:%[0-9]+]]:_(i32) = G_PHI [[ADD]](i32), %bb.2, [[ADD1]](i32), %bb.3, [[ADD2]](i32), %bb.4
+  ; CHECK-NEXT:   $w0 = COPY [[PHI]](i32)
   ; CHECK-NEXT:   RET_ReallyLR implicit $w0
 entry:
   switch i32 %argc, label %default [
@@ -65,30 +65,30 @@ define i32 @test_cfg_remap(i32 %in) {
   ; CHECK: bb.1.entry:
   ; CHECK-NEXT:   liveins: $w0
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
-  ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 57
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; CHECK-NEXT:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 42
-  ; CHECK-NEXT:   [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[COPY]](s32), [[C]]
-  ; CHECK-NEXT:   G_BRCOND [[ICMP]](s1), %bb.2
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $w0
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 1
+  ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(i32) = G_CONSTANT i32 57
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(i32) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[C2:%[0-9]+]]:_(i32) = G_CONSTANT i32 42
+  ; CHECK-NEXT:   [[ICMP:%[0-9]+]]:_(i1) = G_ICMP intpred(eq), [[COPY]](i32), [[C]]
+  ; CHECK-NEXT:   G_BRCOND [[ICMP]](i1), %bb.2
   ; CHECK-NEXT:   G_BR %bb.5
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.5.entry:
-  ; CHECK-NEXT:   [[ICMP1:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[COPY]](s32), [[C1]]
-  ; CHECK-NEXT:   G_BRCOND [[ICMP1]](s1), %bb.3
+  ; CHECK-NEXT:   [[ICMP1:%[0-9]+]]:_(i1) = G_ICMP intpred(eq), [[COPY]](i32), [[C1]]
+  ; CHECK-NEXT:   G_BRCOND [[ICMP1]](i1), %bb.3
   ; CHECK-NEXT:   G_BR %bb.4
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2.next:
   ; CHECK-NEXT:   G_BR %bb.4
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3.other:
-  ; CHECK-NEXT:   $w0 = COPY [[DEF]](s32)
+  ; CHECK-NEXT:   $w0 = COPY [[DEF]](i32)
   ; CHECK-NEXT:   RET_ReallyLR implicit $w0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.4.phi.block:
-  ; CHECK-NEXT:   [[PHI:%[0-9]+]]:_(s32) = G_PHI [[C]](s32), %bb.5, [[C2]](s32), %bb.2
-  ; CHECK-NEXT:   $w0 = COPY [[PHI]](s32)
+  ; CHECK-NEXT:   [[PHI:%[0-9]+]]:_(i32) = G_PHI [[C]](i32), %bb.5, [[C2]](i32), %bb.2
+  ; CHECK-NEXT:   $w0 = COPY [[PHI]](i32)
   ; CHECK-NEXT:   RET_ReallyLR implicit $w0
 entry:
   switch i32 %in, label %phi.block [i32 1, label %next
@@ -110,25 +110,25 @@ define i32 @test_cfg_remap_multiple_preds(i32 %in) {
   ; CHECK: bb.1.entry:
   ; CHECK-NEXT:   liveins: $w0
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
-  ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 57
-  ; CHECK-NEXT:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 128
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; CHECK-NEXT:   [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 12
-  ; CHECK-NEXT:   [[C4:%[0-9]+]]:_(s32) = G_CONSTANT i32 42
-  ; CHECK-NEXT:   [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[COPY]](s32), [[C]]
-  ; CHECK-NEXT:   G_BRCOND [[ICMP]](s1), %bb.3
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $w0
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 1
+  ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(i32) = G_CONSTANT i32 57
+  ; CHECK-NEXT:   [[C2:%[0-9]+]]:_(i32) = G_CONSTANT i32 128
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(i32) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[C3:%[0-9]+]]:_(i32) = G_CONSTANT i32 12
+  ; CHECK-NEXT:   [[C4:%[0-9]+]]:_(i32) = G_CONSTANT i32 42
+  ; CHECK-NEXT:   [[ICMP:%[0-9]+]]:_(i1) = G_ICMP intpred(eq), [[COPY]](i32), [[C]]
+  ; CHECK-NEXT:   G_BRCOND [[ICMP]](i1), %bb.3
   ; CHECK-NEXT:   G_BR %bb.6
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.6.entry:
-  ; CHECK-NEXT:   [[ICMP1:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[COPY]](s32), [[C1]]
-  ; CHECK-NEXT:   G_BRCOND [[ICMP1]](s1), %bb.4
+  ; CHECK-NEXT:   [[ICMP1:%[0-9]+]]:_(i1) = G_ICMP intpred(eq), [[COPY]](i32), [[C1]]
+  ; CHECK-NEXT:   G_BRCOND [[ICMP1]](i1), %bb.4
   ; CHECK-NEXT:   G_BR %bb.7
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.7.entry:
-  ; CHECK-NEXT:   [[ICMP2:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[COPY]](s32), [[C2]]
-  ; CHECK-NEXT:   G_BRCOND [[ICMP2]](s1), %bb.5
+  ; CHECK-NEXT:   [[ICMP2:%[0-9]+]]:_(i1) = G_ICMP intpred(eq), [[COPY]](i32), [[C2]]
+  ; CHECK-NEXT:   G_BRCOND [[ICMP2]](i1), %bb.5
   ; CHECK-NEXT:   G_BR %bb.8
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.8.entry:
@@ -141,12 +141,12 @@ define i32 @test_cfg_remap_multiple_preds(i32 %in) {
   ; CHECK-NEXT:   G_BR %bb.5
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.4.other:
-  ; CHECK-NEXT:   $w0 = COPY [[DEF]](s32)
+  ; CHECK-NEXT:   $w0 = COPY [[DEF]](i32)
   ; CHECK-NEXT:   RET_ReallyLR implicit $w0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.5.phi.block:
-  ; CHECK-NEXT:   [[PHI:%[0-9]+]]:_(s32) = G_PHI [[C]](s32), %bb.7, [[C]](s32), %bb.8, [[C4]](s32), %bb.3
-  ; CHECK-NEXT:   $w0 = COPY [[C3]](s32)
+  ; CHECK-NEXT:   [[PHI:%[0-9]+]]:_(i32) = G_PHI [[C]](i32), %bb.7, [[C]](i32), %bb.8, [[C4]](i32), %bb.3
+  ; CHECK-NEXT:   $w0 = COPY [[C3]](i32)
   ; CHECK-NEXT:   RET_ReallyLR implicit $w0
 entry:
   switch i32 %in, label %odd [i32 1, label %next
@@ -172,17 +172,17 @@ define i32 @jt_test(i32 %x) {
   ; CHECK: bb.1.entry:
   ; CHECK-NEXT:   liveins: $w0
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 71
-  ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 3
-  ; CHECK-NEXT:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 42
-  ; CHECK-NEXT:   [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; CHECK-NEXT:   [[C4:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
-  ; CHECK-NEXT:   [[SUB:%[0-9]+]]:_(s32) = G_SUB [[COPY]], [[C4]]
-  ; CHECK-NEXT:   [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[SUB]](s32)
-  ; CHECK-NEXT:   [[ZEXT1:%[0-9]+]]:_(s64) = G_ZEXT [[C]](s32)
-  ; CHECK-NEXT:   [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(ugt), [[ZEXT]](s64), [[ZEXT1]]
-  ; CHECK-NEXT:   G_BRCOND [[ICMP]](s1), %bb.4
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $w0
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 71
+  ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(i32) = G_CONSTANT i32 3
+  ; CHECK-NEXT:   [[C2:%[0-9]+]]:_(i32) = G_CONSTANT i32 42
+  ; CHECK-NEXT:   [[C3:%[0-9]+]]:_(i32) = G_CONSTANT i32 0
+  ; CHECK-NEXT:   [[C4:%[0-9]+]]:_(i32) = G_CONSTANT i32 4
+  ; CHECK-NEXT:   [[SUB:%[0-9]+]]:_(i32) = G_SUB [[COPY]], [[C4]]
+  ; CHECK-NEXT:   [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[SUB]](i32)
+  ; CHECK-NEXT:   [[ZEXT1:%[0-9]+]]:_(s64) = G_ZEXT [[C]](i32)
+  ; CHECK-NEXT:   [[ICMP:%[0-9]+]]:_(i1) = G_ICMP intpred(ugt), [[ZEXT]](s64), [[ZEXT1]]
+  ; CHECK-NEXT:   G_BRCOND [[ICMP]](i1), %bb.4
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.5.entry:
   ; CHECK-NEXT:   successors: %bb.3, %bb.4, %bb.2
@@ -191,16 +191,16 @@ define i32 @jt_test(i32 %x) {
   ; CHECK-NEXT:   G_BRJT [[JUMP_TABLE]](p0), %jump-table.0, [[ZEXT]](s64)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2.sw.bb:
-  ; CHECK-NEXT:   [[ADD:%[0-9]+]]:_(s32) = nsw G_ADD [[COPY]], [[C2]]
+  ; CHECK-NEXT:   [[ADD:%[0-9]+]]:_(i32) = nsw G_ADD [[COPY]], [[C2]]
   ; CHECK-NEXT:   G_BR %bb.4
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3.sw.bb1:
-  ; CHECK-NEXT:   [[MUL:%[0-9]+]]:_(s32) = nsw G_MUL [[COPY]], [[C1]]
+  ; CHECK-NEXT:   [[MUL:%[0-9]+]]:_(i32) = nsw G_MUL [[COPY]], [[C1]]
   ; CHECK-NEXT:   G_BR %bb.4
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.4.return:
-  ; CHECK-NEXT:   [[PHI:%[0-9]+]]:_(s32) = G_PHI [[MUL]](s32), %bb.3, [[ADD]](s32), %bb.2, [[C3]](s32), %bb.1, [[C3]](s32), %bb.5
-  ; CHECK-NEXT:   $w0 = COPY [[PHI]](s32)
+  ; CHECK-NEXT:   [[PHI:%[0-9]+]]:_(i32) = G_PHI [[MUL]](i32), %bb.3, [[ADD]](i32), %bb.2, [[C3]](i32), %bb.1, [[C3]](i32), %bb.5
+  ; CHECK-NEXT:   $w0 = COPY [[PHI]](i32)
   ; CHECK-NEXT:   RET_ReallyLR implicit $w0
 entry:
   switch i32 %x, label %return [
@@ -238,393 +238,393 @@ define void @jt_multiple_jump_tables(ptr %arg, i32 %arg1, ptr %arg2) {
   ; CHECK-NEXT:   liveins: $w1, $x0, $x2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $w1
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $w1
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(p0) = COPY $x2
-  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 3
-  ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
-  ; CHECK-NEXT:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 6
-  ; CHECK-NEXT:   [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 7
-  ; CHECK-NEXT:   [[C4:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
-  ; CHECK-NEXT:   [[C5:%[0-9]+]]:_(s32) = G_CONSTANT i32 9
-  ; CHECK-NEXT:   [[C6:%[0-9]+]]:_(s32) = G_CONSTANT i32 10
-  ; CHECK-NEXT:   [[C7:%[0-9]+]]:_(s32) = G_CONSTANT i32 11
-  ; CHECK-NEXT:   [[C8:%[0-9]+]]:_(s32) = G_CONSTANT i32 12
-  ; CHECK-NEXT:   [[C9:%[0-9]+]]:_(s32) = G_CONSTANT i32 13
-  ; CHECK-NEXT:   [[C10:%[0-9]+]]:_(s32) = G_CONSTANT i32 14
-  ; CHECK-NEXT:   [[C11:%[0-9]+]]:_(s32) = G_CONSTANT i32 15
-  ; CHECK-NEXT:   [[C12:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
-  ; CHECK-NEXT:   [[C13:%[0-9]+]]:_(s32) = G_CONSTANT i32 17
-  ; CHECK-NEXT:   [[C14:%[0-9]+]]:_(s32) = G_CONSTANT i32 18
-  ; CHECK-NEXT:   [[C15:%[0-9]+]]:_(s32) = G_CONSTANT i32 19
-  ; CHECK-NEXT:   [[C16:%[0-9]+]]:_(s32) = G_CONSTANT i32 20
-  ; CHECK-NEXT:   [[C17:%[0-9]+]]:_(s32) = G_CONSTANT i32 21
-  ; CHECK-NEXT:   [[C18:%[0-9]+]]:_(s32) = G_CONSTANT i32 22
-  ; CHECK-NEXT:   [[C19:%[0-9]+]]:_(s32) = G_CONSTANT i32 23
-  ; CHECK-NEXT:   [[C20:%[0-9]+]]:_(s32) = G_CONSTANT i32 24
-  ; CHECK-NEXT:   [[C21:%[0-9]+]]:_(s32) = G_CONSTANT i32 25
-  ; CHECK-NEXT:   [[C22:%[0-9]+]]:_(s32) = G_CONSTANT i32 26
-  ; CHECK-NEXT:   [[C23:%[0-9]+]]:_(s32) = G_CONSTANT i32 27
-  ; CHECK-NEXT:   [[C24:%[0-9]+]]:_(s32) = G_CONSTANT i32 28
-  ; CHECK-NEXT:   [[C25:%[0-9]+]]:_(s32) = G_CONSTANT i32 29
-  ; CHECK-NEXT:   [[C26:%[0-9]+]]:_(s32) = G_CONSTANT i32 30
-  ; CHECK-NEXT:   [[C27:%[0-9]+]]:_(s32) = G_CONSTANT i32 31
-  ; CHECK-NEXT:   [[C28:%[0-9]+]]:_(s32) = G_CONSTANT i32 32
-  ; CHECK-NEXT:   [[C29:%[0-9]+]]:_(s32) = G_CONSTANT i32 33
-  ; CHECK-NEXT:   [[C30:%[0-9]+]]:_(s32) = G_CONSTANT i32 34
-  ; CHECK-NEXT:   [[C31:%[0-9]+]]:_(s32) = G_CONSTANT i32 35
-  ; CHECK-NEXT:   [[C32:%[0-9]+]]:_(s32) = G_CONSTANT i32 36
-  ; CHECK-NEXT:   [[C33:%[0-9]+]]:_(s32) = G_CONSTANT i32 37
-  ; CHECK-NEXT:   [[C34:%[0-9]+]]:_(s32) = G_CONSTANT i32 38
-  ; CHECK-NEXT:   [[C35:%[0-9]+]]:_(s32) = G_CONSTANT i32 39
-  ; CHECK-NEXT:   [[C36:%[0-9]+]]:_(s32) = G_CONSTANT i32 41
-  ; CHECK-NEXT:   [[C37:%[0-9]+]]:_(s32) = G_CONSTANT i32 42
-  ; CHECK-NEXT:   [[C38:%[0-9]+]]:_(s32) = G_CONSTANT i32 43
-  ; CHECK-NEXT:   [[C39:%[0-9]+]]:_(s32) = G_CONSTANT i32 44
-  ; CHECK-NEXT:   [[C40:%[0-9]+]]:_(s32) = G_CONSTANT i32 45
-  ; CHECK-NEXT:   [[C41:%[0-9]+]]:_(s32) = G_CONSTANT i32 46
-  ; CHECK-NEXT:   [[C42:%[0-9]+]]:_(s32) = G_CONSTANT i32 47
-  ; CHECK-NEXT:   [[C43:%[0-9]+]]:_(s32) = G_CONSTANT i32 48
-  ; CHECK-NEXT:   [[C44:%[0-9]+]]:_(s32) = G_CONSTANT i32 49
-  ; CHECK-NEXT:   [[C45:%[0-9]+]]:_(s32) = G_CONSTANT i32 50
-  ; CHECK-NEXT:   [[C46:%[0-9]+]]:_(s32) = G_CONSTANT i32 51
-  ; CHECK-NEXT:   [[C47:%[0-9]+]]:_(s32) = G_CONSTANT i32 52
-  ; CHECK-NEXT:   [[C48:%[0-9]+]]:_(s32) = G_CONSTANT i32 53
-  ; CHECK-NEXT:   [[C49:%[0-9]+]]:_(s32) = G_CONSTANT i32 54
-  ; CHECK-NEXT:   [[C50:%[0-9]+]]:_(s32) = G_CONSTANT i32 55
-  ; CHECK-NEXT:   [[C51:%[0-9]+]]:_(s32) = G_CONSTANT i32 4352
-  ; CHECK-NEXT:   [[C52:%[0-9]+]]:_(s32) = G_CONSTANT i32 4353
-  ; CHECK-NEXT:   [[C53:%[0-9]+]]:_(s32) = G_CONSTANT i32 4354
-  ; CHECK-NEXT:   [[C54:%[0-9]+]]:_(s32) = G_CONSTANT i32 4355
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 3
+  ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(i32) = G_CONSTANT i32 4
+  ; CHECK-NEXT:   [[C2:%[0-9]+]]:_(i32) = G_CONSTANT i32 6
+  ; CHECK-NEXT:   [[C3:%[0-9]+]]:_(i32) = G_CONSTANT i32 7
+  ; CHECK-NEXT:   [[C4:%[0-9]+]]:_(i32) = G_CONSTANT i32 8
+  ; CHECK-NEXT:   [[C5:%[0-9]+]]:_(i32) = G_CONSTANT i32 9
+  ; CHECK-NEXT:   [[C6:%[0-9]+]]:_(i32) = G_CONSTANT i32 10
+  ; CHECK-NEXT:   [[C7:%[0-9]+]]:_(i32) = G_CONSTANT i32 11
+  ; CHECK-NEXT:   [[C8:%[0-9]+]]:_(i32) = G_CONSTANT i32 12
+  ; CHECK-NEXT:   [[C9:%[0-9]+]]:_(i32) = G_CONSTANT i32 13
+  ; CHECK-NEXT:   [[C10:%[0-9]+]]:_(i32) = G_CONSTANT i32 14
+  ; CHECK-NEXT:   [[C11:%[0-9]+]]:_(i32) = G_CONSTANT i32 15
+  ; CHECK-NEXT:   [[C12:%[0-9]+]]:_(i32) = G_CONSTANT i32 16
+  ; CHECK-NEXT:   [[C13:%[0-9]+]]:_(i32) = G_CONSTANT i32 17
+  ; CHECK-NEXT:   [[C14:%[0-9]+]]:_(i32) = G_CONSTANT i32 18
+  ; CHECK-NEXT:   [[C15:%[0-9]+]]:_(i32) = G_CONSTANT i32 19
+  ; CHECK-NEXT:   [[C16:%[0-9]+]]:_(i32) = G_CONSTANT i32 20
+  ; CHECK-NEXT:   [[C17:%[0-9]+]]:_(i32) = G_CONSTANT i32 21
+  ; CHECK-NEXT:   [[C18:%[0-9]+]]:_(i32) = G_CONSTANT i32 22
+  ; CHECK-NEXT:   [[C19:%[0-9]+]]:_(i32) = G_CONSTANT i32 23
+  ; CHECK-NEXT:   [[C20:%[0-9]+]]:_(i32) = G_CONSTANT i32 24
+  ; CHECK-NEXT:   [[C21:%[0-9]+]]:_(i32) = G_CONSTANT i32 25
+  ; CHECK-NEXT:   [[C22:%[0-9]+]]:_(i32) = G_CONSTANT i32 26
+  ; CHECK-NEXT:   [[C23:%[0-9]+]]:_(i32) = G_CONSTANT i32 27
+  ; CHECK-NEXT:   [[C24:%[0-9]+]]:_(i32) = G_CONSTANT i32 28
+  ; CHECK-NEXT:   [[C25:%[0-9]+]]:_(i32) = G_CONSTANT i32 29
+  ; CHECK-NEXT:   [[C26:%[0-9]+]]:_(i32) = G_CONSTANT i32 30
+  ; CHECK-NEXT:   [[C27:%[0-9]+]]:_(i32) = G_CONSTANT i32 31
+  ; CHECK-NEXT:   [[C28:%[0-9]+]]:_(i32) = G_CONSTANT i32 32
+  ; CHECK-NEXT:   [[C29:%[0-9]+]]:_(i32) = G_CONSTANT i32 33
+  ; CHECK-NEXT:   [[C30:%[0-9]+]]:_(i32) = G_CONSTANT i32 34
+  ; CHECK-NEXT:   [[C31:%[0-9]+]]:_(i32) = G_CONSTANT i32 35
+  ; CHECK-NEXT:   [[C32:%[0-9]+]]:_(i32) = G_CONSTANT i32 36
+  ; CHECK-NEXT:   [[C33:%[0-9]+]]:_(i32) = G_CONSTANT i32 37
+  ; CHECK-NEXT:   [[C34:%[0-9]+]]:_(i32) = G_CONSTANT i32 38
+  ; CHECK-NEXT:   [[C35:%[0-9]+]]:_(i32) = G_CONSTANT i32 39
+  ; CHECK-NEXT:   [[C36:%[0-9]+]]:_(i32) = G_CONSTANT i32 41
+  ; CHECK-NEXT:   [[C37:%[0-9]+]]:_(i32) = G_CONSTANT i32 42
+  ; CHECK-NEXT:   [[C38:%[0-9]+]]:_(i32) = G_CONSTANT i32 43
+  ; CHECK-NEXT:   [[C39:%[0-9]+]]:_(i32) = G_CONSTANT i32 44
+  ; CHECK-NEXT:   [[C40:%[0-9]+]]:_(i32) = G_CONSTANT i32 45
+  ; CHECK-NEXT:   [[C41:%[0-9]+]]:_(i32) = G_CONSTANT i32 46
+  ; CHECK-NEXT:   [[C42:%[0-9]+]]:_(i32) = G_CONSTANT i32 47
+  ; CHECK-NEXT:   [[C43:%[0-9]+]]:_(i32) = G_CONSTANT i32 48
+  ; CHECK-NEXT:   [[C44:%[0-9]+]]:_(i32) = G_CONSTANT i32 49
+  ; CHECK-NEXT:   [[C45:%[0-9]+]]:_(i32) = G_CONSTANT i32 50
+  ; CHECK-NEXT:   [[C46:%[0-9]+]]:_(i32) = G_CONSTANT i32 51
+  ; CHECK-NEXT:   [[C47:%[0-9]+]]:_(i32) = G_CONSTANT i32 52
+  ; CHECK-NEXT:   [[C48:%[0-9]+]]:_(i32) = G_CONSTANT i32 53
+  ; CHECK-NEXT:   [[C49:%[0-9]+]]:_(i32) = G_CONSTANT i32 54
+  ; CHECK-NEXT:   [[C50:%[0-9]+]]:_(i32) = G_CONSTANT i32 55
+  ; CHECK-NEXT:   [[C51:%[0-9]+]]:_(i32) = G_CONSTANT i32 4352
+  ; CHECK-NEXT:   [[C52:%[0-9]+]]:_(i32) = G_CONSTANT i32 4353
+  ; CHECK-NEXT:   [[C53:%[0-9]+]]:_(i32) = G_CONSTANT i32 4354
+  ; CHECK-NEXT:   [[C54:%[0-9]+]]:_(i32) = G_CONSTANT i32 4355
   ; CHECK-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @global
   ; CHECK-NEXT:   [[C55:%[0-9]+]]:_(p0) = G_CONSTANT i64 0
-  ; CHECK-NEXT:   [[C56:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
-  ; CHECK-NEXT:   [[C57:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
-  ; CHECK-NEXT:   [[C58:%[0-9]+]]:_(s64) = G_CONSTANT i64 2
-  ; CHECK-NEXT:   [[C59:%[0-9]+]]:_(s64) = G_CONSTANT i64 3
-  ; CHECK-NEXT:   [[C60:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
-  ; CHECK-NEXT:   [[C61:%[0-9]+]]:_(s64) = G_CONSTANT i64 5
-  ; CHECK-NEXT:   [[C62:%[0-9]+]]:_(s64) = G_CONSTANT i64 6
-  ; CHECK-NEXT:   [[C63:%[0-9]+]]:_(s64) = G_CONSTANT i64 7
-  ; CHECK-NEXT:   [[C64:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
-  ; CHECK-NEXT:   [[C65:%[0-9]+]]:_(s64) = G_CONSTANT i64 9
-  ; CHECK-NEXT:   [[C66:%[0-9]+]]:_(s64) = G_CONSTANT i64 10
-  ; CHECK-NEXT:   [[C67:%[0-9]+]]:_(s64) = G_CONSTANT i64 11
-  ; CHECK-NEXT:   [[C68:%[0-9]+]]:_(s64) = G_CONSTANT i64 12
-  ; CHECK-NEXT:   [[C69:%[0-9]+]]:_(s64) = G_CONSTANT i64 13
-  ; CHECK-NEXT:   [[C70:%[0-9]+]]:_(s64) = G_CONSTANT i64 14
-  ; CHECK-NEXT:   [[C71:%[0-9]+]]:_(s64) = G_CONSTANT i64 15
-  ; CHECK-NEXT:   [[C72:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
-  ; CHECK-NEXT:   [[C73:%[0-9]+]]:_(s64) = G_CONSTANT i64 17
-  ; CHECK-NEXT:   [[C74:%[0-9]+]]:_(s64) = G_CONSTANT i64 18
-  ; CHECK-NEXT:   [[C75:%[0-9]+]]:_(s64) = G_CONSTANT i64 19
-  ; CHECK-NEXT:   [[C76:%[0-9]+]]:_(s64) = G_CONSTANT i64 20
-  ; CHECK-NEXT:   [[C77:%[0-9]+]]:_(s64) = G_CONSTANT i64 21
-  ; CHECK-NEXT:   [[C78:%[0-9]+]]:_(s64) = G_CONSTANT i64 22
-  ; CHECK-NEXT:   [[C79:%[0-9]+]]:_(s64) = G_CONSTANT i64 23
-  ; CHECK-NEXT:   [[C80:%[0-9]+]]:_(s64) = G_CONSTANT i64 24
-  ; CHECK-NEXT:   [[C81:%[0-9]+]]:_(s64) = G_CONSTANT i64 25
-  ; CHECK-NEXT:   [[C82:%[0-9]+]]:_(s64) = G_CONSTANT i64 26
-  ; CHECK-NEXT:   [[C83:%[0-9]+]]:_(s64) = G_CONSTANT i64 27
-  ; CHECK-NEXT:   [[C84:%[0-9]+]]:_(s64) = G_CONSTANT i64 28
-  ; CHECK-NEXT:   [[C85:%[0-9]+]]:_(s64) = G_CONSTANT i64 29
-  ; CHECK-NEXT:   [[C86:%[0-9]+]]:_(s64) = G_CONSTANT i64 30
-  ; CHECK-NEXT:   [[C87:%[0-9]+]]:_(s64) = G_CONSTANT i64 31
-  ; CHECK-NEXT:   [[C88:%[0-9]+]]:_(s64) = G_CONSTANT i64 32
-  ; CHECK-NEXT:   [[C89:%[0-9]+]]:_(s64) = G_CONSTANT i64 33
-  ; CHECK-NEXT:   [[C90:%[0-9]+]]:_(s64) = G_CONSTANT i64 34
-  ; CHECK-NEXT:   [[C91:%[0-9]+]]:_(s64) = G_CONSTANT i64 35
-  ; CHECK-NEXT:   [[C92:%[0-9]+]]:_(s64) = G_CONSTANT i64 36
-  ; CHECK-NEXT:   [[C93:%[0-9]+]]:_(s64) = G_CONSTANT i64 37
-  ; CHECK-NEXT:   [[C94:%[0-9]+]]:_(s64) = G_CONSTANT i64 38
-  ; CHECK-NEXT:   [[C95:%[0-9]+]]:_(s64) = G_CONSTANT i64 39
-  ; CHECK-NEXT:   [[C96:%[0-9]+]]:_(s64) = G_CONSTANT i64 40
-  ; CHECK-NEXT:   [[C97:%[0-9]+]]:_(s64) = G_CONSTANT i64 41
-  ; CHECK-NEXT:   [[C98:%[0-9]+]]:_(s64) = G_CONSTANT i64 42
-  ; CHECK-NEXT:   [[C99:%[0-9]+]]:_(s64) = G_CONSTANT i64 43
-  ; CHECK-NEXT:   [[C100:%[0-9]+]]:_(s64) = G_CONSTANT i64 44
-  ; CHECK-NEXT:   [[C101:%[0-9]+]]:_(s64) = G_CONSTANT i64 45
-  ; CHECK-NEXT:   [[C102:%[0-9]+]]:_(s64) = G_CONSTANT i64 46
-  ; CHECK-NEXT:   [[C103:%[0-9]+]]:_(s64) = G_CONSTANT i64 47
-  ; CHECK-NEXT:   [[C104:%[0-9]+]]:_(s64) = G_CONSTANT i64 48
-  ; CHECK-NEXT:   [[C105:%[0-9]+]]:_(s64) = G_CONSTANT i64 49
-  ; CHECK-NEXT:   [[C106:%[0-9]+]]:_(s64) = G_CONSTANT i64 50
-  ; CHECK-NEXT:   [[C107:%[0-9]+]]:_(s64) = G_CONSTANT i64 51
-  ; CHECK-NEXT:   [[C108:%[0-9]+]]:_(s64) = G_CONSTANT i64 52
-  ; CHECK-NEXT:   [[C109:%[0-9]+]]:_(s64) = G_CONSTANT i64 53
-  ; CHECK-NEXT:   [[C110:%[0-9]+]]:_(s64) = G_CONSTANT i64 54
+  ; CHECK-NEXT:   [[C56:%[0-9]+]]:_(i64) = G_CONSTANT i64 0
+  ; CHECK-NEXT:   [[C57:%[0-9]+]]:_(i64) = G_CONSTANT i64 1
+  ; CHECK-NEXT:   [[C58:%[0-9]+]]:_(i64) = G_CONSTANT i64 2
+  ; CHECK-NEXT:   [[C59:%[0-9]+]]:_(i64) = G_CONSTANT i64 3
+  ; CHECK-NEXT:   [[C60:%[0-9]+]]:_(i64) = G_CONSTANT i64 4
+  ; CHECK-NEXT:   [[C61:%[0-9]+]]:_(i64) = G_CONSTANT i64 5
+  ; CHECK-NEXT:   [[C62:%[0-9]+]]:_(i64) = G_CONSTANT i64 6
+  ; CHECK-NEXT:   [[C63:%[0-9]+]]:_(i64) = G_CONSTANT i64 7
+  ; CHECK-NEXT:   [[C64:%[0-9]+]]:_(i64) = G_CONSTANT i64 8
+  ; CHECK-NEXT:   [[C65:%[0-9]+]]:_(i64) = G_CONSTANT i64 9
+  ; CHECK-NEXT:   [[C66:%[0-9]+]]:_(i64) = G_CONSTANT i64 10
+  ; CHECK-NEXT:   [[C67:%[0-9]+]]:_(i64) = G_CONSTANT i64 11
+  ; CHECK-NEXT:   [[C68:%[0-9]+]]:_(i64) = G_CONSTANT i64 12
+  ; CHECK-NEXT:   [[C69:%[0-9]+]]:_(i64) = G_CONSTANT i64 13
+  ; CHECK-NEXT:   [[C70:%[0-9]+]]:_(i64) = G_CONSTANT i64 14
+  ; CHECK-NEXT:   [[C71:%[0-9]+]]:_(i64) = G_CONSTANT i64 15
+  ; CHECK-NEXT:   [[C72:%[0-9]+]]:_(i64) = G_CONSTANT i64 16
+  ; CHECK-NEXT:   [[C73:%[0-9]+]]:_(i64) = G_CONSTANT i64 17
+  ; CHECK-NEXT:   [[C74:%[0-9]+]]:_(i64) = G_CONSTANT i64 18
+  ; CHECK-NEXT:   [[C75:%[0-9]+]]:_(i64) = G_CONSTANT i64 19
+  ; CHECK-NEXT:   [[C76:%[0-9]+]]:_(i64) = G_CONSTANT i64 20
+  ; CHECK-NEXT:   [[C77:%[0-9]+]]:_(i64) = G_CONSTANT i64 21
+  ; CHECK-NEXT:   [[C78:%[0-9]+]]:_(i64) = G_CONSTANT i64 22
+  ; CHECK-NEXT:   [[C79:%[0-9]+]]:_(i64) = G_CONSTANT i64 23
+  ; CHECK-NEXT:   [[C80:%[0-9]+]]:_(i64) = G_CONSTANT i64 24
+  ; CHECK-NEXT:   [[C81:%[0-9]+]]:_(i64) = G_CONSTANT i64 25
+  ; CHECK-NEXT:   [[C82:%[0-9]+]]:_(i64) = G_CONSTANT i64 26
+  ; CHECK-NEXT:   [[C83:%[0-9]+]]:_(i64) = G_CONSTANT i64 27
+  ; CHECK-NEXT:   [[C84:%[0-9]+]]:_(i64) = G_CONSTANT i64 28
+  ; CHECK-NEXT:   [[C85:%[0-9]+]]:_(i64) = G_CONSTANT i64 29
+  ; CHECK-NEXT:   [[C86:%[0-9]+]]:_(i64) = G_CONSTANT i64 30
+  ; CHECK-NEXT:   [[C87:%[0-9]+]]:_(i64) = G_CONSTANT i64 31
+  ; CHECK-NEXT:   [[C88:%[0-9]+]]:_(i64) = G_CONSTANT i64 32
+  ; CHECK-NEXT:   [[C89:%[0-9]+]]:_(i64) = G_CONSTANT i64 33
+  ; CHECK-NEXT:   [[C90:%[0-9]+]]:_(i64) = G_CONSTANT i64 34
+  ; CHECK-NEXT:   [[C91:%[0-9]+]]:_(i64) = G_CONSTANT i64 35
+  ; CHECK-NEXT:   [[C92:%[0-9]+]]:_(i64) = G_CONSTANT i64 36
+  ; CHECK-NEXT:   [[C93:%[0-9]+]]:_(i64) = G_CONSTANT i64 37
+  ; CHECK-NEXT:   [[C94:%[0-9]+]]:_(i64) = G_CONSTANT i64 38
+  ; CHECK-NEXT:   [[C95:%[0-9]+]]:_(i64) = G_CONSTANT i64 39
+  ; CHECK-NEXT:   [[C96:%[0-9]+]]:_(i64) = G_CONSTANT i64 40
+  ; CHECK-NEXT:   [[C97:%[0-9]+]]:_(i64) = G_CONSTANT i64 41
+  ; CHECK-NEXT:   [[C98:%[0-9]+]]:_(i64) = G_CONSTANT i64 42
+  ; CHECK-NEXT:   [[C99:%[0-9]+]]:_(i64) = G_CONSTANT i64 43
+  ; CHECK-NEXT:   [[C100:%[0-9]+]]:_(i64) = G_CONSTANT i64 44
+  ; CHECK-NEXT:   [[C101:%[0-9]+]]:_(i64) = G_CONSTANT i64 45
+  ; CHECK-NEXT:   [[C102:%[0-9]+]]:_(i64) = G_CONSTANT i64 46
+  ; CHECK-NEXT:   [[C103:%[0-9]+]]:_(i64) = G_CONSTANT i64 47
+  ; CHECK-NEXT:   [[C104:%[0-9]+]]:_(i64) = G_CONSTANT i64 48
+  ; CHECK-NEXT:   [[C105:%[0-9]+]]:_(i64) = G_CONSTANT i64 49
+  ; CHECK-NEXT:   [[C106:%[0-9]+]]:_(i64) = G_CONSTANT i64 50
+  ; CHECK-NEXT:   [[C107:%[0-9]+]]:_(i64) = G_CONSTANT i64 51
+  ; CHECK-NEXT:   [[C108:%[0-9]+]]:_(i64) = G_CONSTANT i64 52
+  ; CHECK-NEXT:   [[C109:%[0-9]+]]:_(i64) = G_CONSTANT i64 53
+  ; CHECK-NEXT:   [[C110:%[0-9]+]]:_(i64) = G_CONSTANT i64 54
   ; CHECK-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0.tmp
-  ; CHECK-NEXT:   [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[COPY1]](s32), [[C]]
-  ; CHECK-NEXT:   G_BRCOND [[ICMP]](s1), %bb.56
+  ; CHECK-NEXT:   [[ICMP:%[0-9]+]]:_(i1) = G_ICMP intpred(eq), [[COPY1]](i32), [[C]]
+  ; CHECK-NEXT:   G_BRCOND [[ICMP]](i1), %bb.56
   ; CHECK-NEXT:   G_BR %bb.61
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.61.bb:
-  ; CHECK-NEXT:   [[ICMP1:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[COPY1]](s32), [[C1]]
-  ; CHECK-NEXT:   G_BRCOND [[ICMP1]](s1), %bb.2
+  ; CHECK-NEXT:   [[ICMP1:%[0-9]+]]:_(i1) = G_ICMP intpred(eq), [[COPY1]](i32), [[C1]]
+  ; CHECK-NEXT:   G_BRCOND [[ICMP1]](i1), %bb.2
   ; CHECK-NEXT:   G_BR %bb.62
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.62.bb:
-  ; CHECK-NEXT:   [[ICMP2:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[COPY1]](s32), [[C2]]
-  ; CHECK-NEXT:   G_BRCOND [[ICMP2]](s1), %bb.3
+  ; CHECK-NEXT:   [[ICMP2:%[0-9]+]]:_(i1) = G_ICMP intpred(eq), [[COPY1]](i32), [[C2]]
+  ; CHECK-NEXT:   G_BRCOND [[ICMP2]](i1), %bb.3
   ; CHECK-NEXT:   G_BR %bb.63
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.63.bb:
-  ; CHECK-NEXT:   [[ICMP3:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[COPY1]](s32), [[C3]]
-  ; CHECK-NEXT:   G_BRCOND [[ICMP3]](s1), %bb.4
+  ; CHECK-NEXT:   [[ICMP3:%[0-9]+]]:_(i1) = G_ICMP intpred(eq), [[COPY1]](i32), [[C3]]
+  ; CHECK-NEXT:   G_BRCOND [[ICMP3]](i1), %bb.4
   ; CHECK-NEXT:   G_BR %bb.64
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.64.bb:
-  ; CHECK-NEXT:   [[ICMP4:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[COPY1]](s32), [[C4]]
-  ; CHECK-NEXT:   G_BRCOND [[ICMP4]](s1), %bb.5
+  ; CHECK-NEXT:   [[ICMP4:%[0-9]+]]:_(i1) = G_ICMP intpred(eq), [[COPY1]](i32), [[C4]]
+  ; CHECK-NEXT:   G_BRCOND [[ICMP4]](i1), %bb.5
   ; CHECK-NEXT:   G_BR %bb.65
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.65.bb:
-  ; CHECK-NEXT:   [[ICMP5:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[COPY1]](s32), [[C5]]
-  ; CHECK-NEXT:   G_BRCOND [[ICMP5]](s1), %bb.6
+  ; CHECK-NEXT:   [[ICMP5:%[0-9]+]]:_(i1) = G_ICMP intpred(eq), [[COPY1]](i32), [[C5]]
+  ; CHECK-NEXT:   G_BRCOND [[ICMP5]](i1), %bb.6
   ; CHECK-NEXT:   G_BR %bb.66
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.66.bb:
-  ; CHECK-NEXT:   [[ICMP6:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[COPY1]](s32), [[C6]]
-  ; CHECK-NEXT:   G_BRCOND [[ICMP6]](s1), %bb.7
+  ; CHECK-NEXT:   [[ICMP6:%[0-9]+]]:_(i1) = G_ICMP intpred(eq), [[COPY1]](i32), [[C6]]
+  ; CHECK-NEXT:   G_BRCOND [[ICMP6]](i1), %bb.7
   ; CHECK-NEXT:   G_BR %bb.67
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.67.bb:
-  ; CHECK-NEXT:   [[ICMP7:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[COPY1]](s32), [[C7]]
-  ; CHECK-NEXT:   G_BRCOND [[ICMP7]](s1), %bb.8
+  ; CHECK-NEXT:   [[ICMP7:%[0-9]+]]:_(i1) = G_ICMP intpred(eq), [[COPY1]](i32), [[C7]]
+  ; CHECK-NEXT:   G_BRCOND [[ICMP7]](i1), %bb.8
   ; CHECK-NEXT:   G_BR %bb.68
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.68.bb:
-  ; CHECK-NEXT:   [[ICMP8:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[COPY1]](s32), [[C8]]
-  ; CHECK-NEXT:   G_BRCOND [[ICMP8]](s1), %bb.9
+  ; CHECK-NEXT:   [[ICMP8:%[0-9]+]]:_(i1) = G_ICMP intpred(eq), [[COPY1]](i32), [[C8]]
+  ; CHECK-NEXT:   G_BRCOND [[ICMP8]](i1), %bb.9
   ; CHECK-NEXT:   G_BR %bb.69
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.69.bb:
-  ; CHECK-NEXT:   [[ICMP9:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[COPY1]](s32), [[C9]]
-  ; CHECK-NEXT:   G_BRCOND [[ICMP9]](s1), %bb.10
+  ; CHECK-NEXT:   [[ICMP9:%[0-9]+]]:_(i1) = G_ICMP intpred(eq), [[COPY1]](i32), [[C9]]
+  ; CHECK-NEXT:   G_BRCOND [[ICMP9]](i1), %bb.10
   ; CHECK-NEXT:   G_BR %bb.70
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.70.bb:
-  ; CHECK-NEXT:   [[ICMP10:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[COPY1]](s32), [[C10]]
-  ; CHECK-NEXT:   G_BRCOND [[ICMP10]](s1), %bb.11
+  ; CHECK-NEXT:   [[ICMP10:%[0-9]+]]:_(i1) = G_ICMP intpred(eq), [[COPY1]](i32), [[C10]]
+  ; CHECK-NEXT:   G_BRCOND [[ICMP10]](i1), %bb.11
   ; CHECK-NEXT:   G_BR %bb.71
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.71.bb:
-  ; CHECK-NEXT:   [[ICMP11:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[COPY1]](s32), [[C11]]
-  ; CHECK-NEXT:   G_BRCOND [[ICMP11]](s1), %bb.12
+  ; CHECK-NEXT:   [[ICMP11:%[0-9]+]]:_(i1) = G_ICMP intpred(eq), [[COPY1]](i32), [[C11]]
+  ; CHECK-NEXT:   G_BRCOND [[ICMP11]](i1), %bb.12
   ; CHECK-NEXT:   G_BR %bb.72
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.72.bb:
-  ; CHECK-NEXT:   [[ICMP12:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[COPY1]](s32), [[C12]]
-  ; CHECK-NEXT:   G_BRCOND [[ICMP12]](s1), %bb.13
+  ; CHECK-NEXT:   [[ICMP12:%[0-9]+]]:_(i1) = G_ICMP intpred(eq), [[COPY1]](i32), [[C12]]
+  ; CHECK-NEXT:   G_BRCOND [[ICMP12]](i1), %bb.13
   ; CHECK-NEXT:   G_BR %bb.73
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.73.bb:
-  ; CHECK-NEXT:   [[ICMP13:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[COPY1]](s32), [[C13]]
-  ; CHECK-NEXT:   G_BRCOND [[ICMP13]](s1), %bb.14
+  ; CHECK-NEXT:   [[ICMP13:%[0-9]+]]:_(i1) = G_ICMP intpred(eq), [[COPY1]](i32), [[C13]]
+  ; CHECK-NEXT:   G_BRCOND [[ICMP13]](i1), %bb.14
   ; CHECK-NEXT:   G_BR %bb.74
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.74.bb:
-  ; CHECK-NEXT:   [[ICMP14:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[COPY1]](s32), [[C14]]
-  ; CHECK-NEXT:   G_BRCOND [[ICMP14]](s1), %bb.15
+  ; CHECK-NEXT:   [[ICMP14:%[0-9]+]]:_(i1) = G_ICMP intpred(eq), [[COPY1]](i32), [[C14]]
+  ; CHECK-NEXT:   G_BRCOND [[ICMP14]](i1), %bb.15
   ; CHECK-NEXT:   G_BR %bb.75
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.75.bb:
-  ; CHECK-NEXT:   [[ICMP15:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[COPY1]](s32), [[C15]]
-  ; CHECK-NEXT:   G_BRCOND [[ICMP15]](s1), %bb.16
+  ; CHECK-NEXT:   [[ICMP15:%[0-9]+]]:_(i1) = G_ICMP intpred(eq), [[COPY1]](i32), [[C15]]
+  ; CHECK-NEXT:   G_BRCOND [[ICMP15]](i1), %bb.16
   ; CHECK-NEXT:   G_BR %bb.76
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.76.bb:
-  ; CHECK-NEXT:   [[ICMP16:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[COPY1]](s32), [[C16]]
-  ; CHECK-NEXT:   G_BRCOND [[ICMP16]](s1), %bb.17
+  ; CHECK-NEXT:   [[ICMP16:%[0-9]+]]:_(i1) = G_ICMP intpred(eq), [[COPY1]](i32), [[C16]]
+  ; CHECK-NEXT:   G_BRCOND [[ICMP16]](i1), %bb.17
   ; CHECK-NEXT:   G_BR %bb.77
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.77.bb:
-  ; CHECK-NEXT:   [[ICMP17:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[COPY1]](s32), [[C17]]
-  ; CHECK-NEXT:   G_BRCOND [[ICMP17]](s1), %bb.18
+  ; CHECK-NEXT:   [[ICMP17:%[0-9]+]]:_(i1) = G_ICMP intpred(eq), [[COPY1]](i32), [[C17]]
+  ; CHECK-NEXT:   G_BRCOND [[ICMP17]](i1), %bb.18
   ; CHECK-NEXT:   G_BR %bb.78
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.78.bb:
-  ; CHECK-NEXT:   [[ICMP18:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[COPY1]](s32), [[C18]]
-  ; CHECK-NEXT:   G_BRCOND [[ICMP18]](s1), %bb.19
+  ; CHECK-NEXT:   [[ICMP18:%[0-9]+]]:_(i1) = G_ICMP intpred(eq), [[COPY1]](i32), [[C18]]
+  ; CHECK-NEXT:   G_BRCOND [[ICMP18]](i1), %bb.19
   ; CHECK-NEXT:   G_BR %bb.79
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.79.bb:
-  ; CHECK-NEXT:   [[ICMP19:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[COPY1]](s32), [[C19]]
-  ; CHECK-NEXT:   G_BRCOND [[ICMP19]](s1), %bb.20
+  ; CHECK-NEXT:   [[ICMP19:%[0-9]+]]:_(i1) = G_ICMP intpred(eq), [[COPY1]](i32), [[C19]]
+  ; CHECK-NEXT:   G_BRCOND [[ICMP19]](i1), %bb.20
   ; CHECK-NEXT:   G_BR %bb.80
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.80.bb:
-  ; CHECK-NEXT:   [[ICMP20:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[COPY1]](s32), [[C20]]
-  ; CHECK-NEXT:   G_BRCOND [[ICMP20]](s1), %bb.21
+  ; CHECK-NEXT:   [[ICMP20:%[0-9]+]]:_(i1) = G_ICMP intpred(eq), [[COPY1]](i32), [[C20]]
+  ; CHECK-NEXT:   G_BRCOND [[ICMP20]](i1), %bb.21
   ; CHECK-NEXT:   G_BR %bb.81
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.81.bb:
-  ; CHECK-NEXT:   [[ICMP21:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[COPY1]](s32), [[C21]]
-  ; CHECK-NEXT:   G_BRCOND [[ICMP21]](s1), %bb.22
+  ; CHECK-NEXT:   [[ICMP21:%[0-9]+]]:_(i1) = G_ICMP intpred(eq), [[COPY1]](i32), [[C21]]
+  ; CHECK-NEXT:   G_BRCOND [[ICMP21]](i1), %bb.22
   ; CHECK-NEXT:   G_BR %bb.82
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.82.bb:
-  ; CHECK-NEXT:   [[ICMP22:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[COPY1]](s32), [[C22]]
-  ; CHECK-NEXT:   G_BRCOND [[ICMP22]](s1), %bb.23
+  ; CHECK-NEXT:   [[ICMP22:%[0-9]+]]:_(i1) = G_ICMP intpred(eq), [[COPY1]](i32), [[C22]]
+  ; CHECK-NEXT:   G_BRCOND [[ICMP22]](i1), %bb.23
   ; CHECK-NEXT:   G_BR %bb.83
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.83.bb:
-  ; CHECK-NEXT:   [[ICMP23:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[COPY1]](s32), [[C23]]
-  ; CHECK-NEXT:   G_BRCOND [[ICMP23]](s1), %bb.24
+  ; CHECK-NEXT:   [[ICMP23:%[0-9]+]]:_(i1) = G_ICMP intpred(eq), [[COPY1]](i32), [[C23]]
+  ; CHECK-NEXT:   G_BRCOND [[ICMP23]](i1), %bb.24
   ; CHECK-NEXT:   G_BR %bb.84
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.84.bb:
-  ; CHECK-NEXT:   [[ICMP24:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[COPY1]](s32), [[C24]]
-  ; CHECK-NEXT:   G_BRCOND [[ICMP24]](s1), %bb.25
+  ; CHECK-NEXT:   [[ICMP24:%[0-9]+]]:_(i1) = G_ICMP intpred(eq), [[COPY1]](i32), [[C24]]
+  ; CHECK-NEXT:   G_BRCOND [[ICMP24]](i1), %bb.25
   ; CHECK-NEXT:   G_BR %bb.85
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.85.bb:
-  ; CHECK-NEXT:   [[ICMP25:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[COPY1]](s32), [[C25]]
-  ; CHECK-NEXT:   G_BRCOND [[ICMP25]](s1), %bb.26
+  ; CHECK-NEXT:   [[ICMP25:%[0-9]+]]:_(i1) = G_ICMP intpred(eq), [[COPY1]](i32), [[C25]]
+  ; CHECK-NEXT:   G_BRCOND [[ICMP25]](i1), %bb.26
   ; CHECK-NEXT:   G_BR %bb.86
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.86.bb:
-  ; CHECK-NEXT:   [[ICMP26:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[COPY1]](s32), [[C26]]
-  ; CHECK-NEXT:   G_BRCOND [[ICMP26]](s1), %bb.27
+  ; CHECK-NEXT:   [[ICMP26:%[0-9]+]]:_(i1) = G_ICMP intpred(eq), [[COPY1]](i32), [[C26]]
+  ; CHECK-NEXT:   G_BRCOND [[ICMP26]](i1), %bb.27
   ; CHECK-NEXT:   G_BR %bb.87
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.87.bb:
-  ; CHECK-NEXT:   [[ICMP27:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[COPY1]](s32), [[C27]]
-  ; CHECK-NEXT:   G_BRCOND [[ICMP27]](s1), %bb.28
+  ; CHECK-NEXT:   [[ICMP27:%[0-9]+]]:_(i1) = G_ICMP intpred(eq), [[COPY1]](i32), [[C27]]
+  ; CHECK-NEXT:   G_BRCOND [[ICMP27]](i1), %bb.28
   ; CHECK-NEXT:   G_BR %bb.88
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.88.bb:
-  ; CHECK-NEXT:   [[ICMP28:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[COPY1]](s32), [[C28]]
-  ; CHECK-NEXT:   G_BRCOND [[ICMP28]](s1), %bb.29
+  ; CHECK-NEXT:   [[ICMP28:%[0-9]+]]:_(i1) = G_ICMP intpred(eq), [[COPY1]](i32), [[C28]]
+  ; CHECK-NEXT:   G_BRCOND [[ICMP28]](i1), %bb.29
   ; CHECK-NEXT:   G_BR %bb.89
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.89.bb:
-  ; CHECK-NEXT:   [[ICMP29:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[COPY1]](s32), [[C29]]
-  ; CHECK-NEXT:   G_BRCOND [[ICMP29]](s1), %bb.30
+  ; CHECK-NEXT:   [[ICMP29:%[0-9]+]]:_(i1) = G_ICMP intpred(eq), [[COPY1]](i32), [[C29]]
+  ; CHECK-NEXT:   G_BRCOND [[ICMP29]](i1), %bb.30
   ; CHECK-NEXT:   G_BR %bb.90
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.90.bb:
-  ; CHECK-NEXT:   [[ICMP30:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[COPY1]](s32), [[C30]]
-  ; CHECK-NEXT:   G_BRCOND [[ICMP30]](s1), %bb.31
+  ; CHECK-NEXT:   [[ICMP30:%[0-9]+]]:_(i1) = G_ICMP intpred(eq), [[COPY1]](i32), [[C30]]
+  ; CHECK-NEXT:   G_BRCOND [[ICMP30]](i1), %bb.31
   ; CHECK-NEXT:   G_BR %bb.91
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.91.bb:
-  ; CHECK-NEXT:   [[ICMP31:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[COPY1]](s32), [[C31]]
-  ; CHECK-NEXT:   G_BRCOND [[ICMP31]](s1), %bb.32
+  ; CHECK-NEXT:   [[ICMP31:%[0-9]+]]:_(i1) = G_ICMP intpred(eq), [[COPY1]](i32), [[C31]]
+  ; CHECK-NEXT:   G_BRCOND [[ICMP31]](i1), %bb.32
   ; CHECK-NEXT:   G_BR %bb.92
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.92.bb:
-  ; CHECK-NEXT:   [[ICMP32:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[COPY1]](s32), [[C32]]
-  ; CHECK-NEXT:   G_BRCOND [[ICMP32]](s1), %bb.33
+  ; CHECK-NEXT:   [[ICMP32:%[0-9]+]]:_(i1) = G_ICMP intpred(eq), [[COPY1]](i32), [[C32]]
+  ; CHECK-NEXT:   G_BRCOND [[ICMP32]](i1), %bb.33
   ; CHECK-NEXT:   G_BR %bb.93
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.93.bb:
-  ; CHECK-NEXT:   [[ICMP33:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[COPY1]](s32), [[C33]]
-  ; CHECK-NEXT:   G_BRCOND [[ICMP33]](s1), %bb.34
+  ; CHECK-NEXT:   [[ICMP33:%[0-9]+]]:_(i1) = G_ICMP intpred(eq), [[COPY1]](i32), [[C33]]
+  ; CHECK-NEXT:   G_BRCOND [[ICMP33]](i1), %bb.34
   ; CHECK-NEXT:   G_BR %bb.94
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.94.bb:
-  ; CHECK-NEXT:   [[ICMP34:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[COPY1]](s32), [[C34]]
-  ; CHECK-NEXT:   G_BRCOND [[ICMP34]](s1), %bb.35
+  ; CHECK-NEXT:   [[ICMP34:%[0-9]+]]:_(i1) = G_ICMP intpred(eq), [[COPY1]](i32), [[C34]]
+  ; CHECK-NEXT:   G_BRCOND [[ICMP34]](i1), %bb.35
   ; CHECK-NEXT:   G_BR %bb.95
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.95.bb:
-  ; CHECK-NEXT:   [[ICMP35:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[COPY1]](s32), [[C35]]
-  ; CHECK-NEXT:   G_BRCOND [[ICMP35]](s1), %bb.36
+  ; CHECK-NEXT:   [[ICMP35:%[0-9]+]]:_(i1) = G_ICMP intpred(eq), [[COPY1]](i32), [[C35]]
+  ; CHECK-NEXT:   G_BRCOND [[ICMP35]](i1), %bb.36
   ; CHECK-NEXT:   G_BR %bb.96
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.96.bb:
-  ; CHECK-NEXT:   [[ICMP36:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[COPY1]](s32), [[C36]]
-  ; CHECK-NEXT:   G_BRCOND [[ICMP36]](s1), %bb.37
+  ; CHECK-NEXT:   [[ICMP36:%[0-9]+]]:_(i1) = G_ICMP intpred(eq), [[COPY1]](i32), [[C36]]
+  ; CHECK-NEXT:   G_BRCOND [[ICMP36]](i1), %bb.37
   ; CHECK-NEXT:   G_BR %bb.97
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.97.bb:
-  ; CHECK-NEXT:   [[ICMP37:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[COPY1]](s32), [[C37]]
-  ; CHECK-NEXT:   G_BRCOND [[ICMP37]](s1), %bb.38
+  ; CHECK-NEXT:   [[ICMP37:%[0-9]+]]:_(i1) = G_ICMP intpred(eq), [[COPY1]](i32), [[C37]]
+  ; CHECK-NEXT:   G_BRCOND [[ICMP37]](i1), %bb.38
   ; CHECK-NEXT:   G_BR %bb.98
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.98.bb:
-  ; CHECK-NEXT:   [[ICMP38:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[COPY1]](s32), [[C38]]
-  ; CHECK-NEXT:   G_BRCOND [[ICMP38]](s1), %bb.39
+  ; CHECK-NEXT:   [[ICMP38:%[0-9]+]]:_(i1) = G_ICMP intpred(eq), [[COPY1]](i32), [[C38]]
+  ; CHECK-NEXT:   G_BRCOND [[ICMP38]](i1), %bb.39
   ; CHECK-NEXT:   G_BR %bb.99
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.99.bb:
-  ; CHECK-NEXT:   [[ICMP39:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[COPY1]](s32), [[C39]]
-  ; CHECK-NEXT:   G_BRCOND [[ICMP39]](s1), %bb.40
+  ; CHECK-NEXT:   [[ICMP39:%[0-9]+]]:_(i1) = G_ICMP intpred(eq), [[COPY1]](i32), [[C39]]
+  ; CHECK-NEXT:   G_BRCOND [[ICMP39]](i1), %bb.40
   ; CHECK-NEXT:   G_BR %bb.100
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.100.bb:
-  ; CHECK-NEXT:   [[ICMP40:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[COPY1]](s32), [[C40]]
-  ; CHECK-NEXT:   G_BRCOND [[ICMP40]](s1), %bb.41
+  ; CHECK-NEXT:   [[ICMP40:%[0-9]+]]:_(i1) = G_ICMP intpred(eq), [[COPY1]](i32), [[C40]]
+  ; CHECK-NEXT:   G_BRCOND [[ICMP40]](i1), %bb.41
   ; CHECK-NEXT:   G_BR %bb.101
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.101.bb:
-  ; CHECK-NEXT:   [[ICMP41:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[COPY1]](s32), [[C41]]
-  ; CHECK-NEXT:   G_BRCOND [[ICMP41]](s1), %bb.42
+  ; CHECK-NEXT:   [[ICMP41:%[0-9]+]]:_(i1) = G_ICMP intpred(eq), [[COPY1]](i32), [[C41]]
+  ; CHECK-NEXT:   G_BRCOND [[ICMP41]](i1), %bb.42
   ; CHECK-NEXT:   G_BR %bb.102
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.102.bb:
-  ; CHECK-NEXT:   [[ICMP42:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[COPY1]](s32), [[C42]]
-  ; CHECK-NEXT:   G_BRCOND [[ICMP42]](s1), %bb.43
+  ; CHECK-NEXT:   [[ICMP42:%[0-9]+]]:_(i1) = G_ICMP intpred(eq), [[COPY1]](i32), [[C42]]
+  ; CHECK-NEXT:   G_BRCOND [[ICMP42]](i1), %bb.43
   ; CHECK-NEXT:   G_BR %bb.103
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.103.bb:
-  ; CHECK-NEXT:   [[ICMP43:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[COPY1]](s32), [[C43]]
-  ; CHECK-NEXT:   G_BRCOND [[ICMP43]](s1), %bb.44
+  ; CHECK-NEXT:   [[ICMP43:%[0-9]+]]:_(i1) = G_ICMP intpred(eq), [[COPY1]](i32), [[C43]]
+  ; CHECK-NEXT:   G_BRCOND [[ICMP43]](i1), %bb.44
   ; CHECK-NEXT:   G_BR %bb.104
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.104.bb:
-  ; CHECK-NEXT:   [[ICMP44:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[COPY1]](s32), [[C44]]
-  ; CHECK-NEXT:   G_BRCOND [[ICMP44]](s1), %bb.45
+  ; CHECK-NEXT:   [[ICMP44:%[0-9]+]]:_(i1) = G_ICMP intpred(eq), [[COPY1]](i32), [[C44]]
+  ; CHECK-NEXT:   G_BRCOND [[ICMP44]](i1), %bb.45
   ; CHECK-NEXT:   G_BR %bb.105
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.105.bb:
-  ; CHECK-NEXT:   [[ICMP45:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[COPY1]](s32), [[C45]]
-  ; CHECK-NEXT:   G_BRCOND [[ICMP45]](s1), %bb.46
+  ; CHECK-NEXT:   [[ICMP45:%[0-9]+]]:_(i1) = G_ICMP intpred(eq), [[COPY1]](i32), [[C45]]
+  ; CHECK-NEXT:   G_BRCOND [[ICMP45]](i1), %bb.46
   ; CHECK-NEXT:   G_BR %bb.106
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.106.bb:
-  ; CHECK-NEXT:   [[ICMP46:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[COPY1]](s32), [[C46]]
-  ; CHECK-NEXT:   G_BRCOND [[ICMP46]](s1), %bb.47
+  ; CHECK-NEXT:   [[ICMP46:%[0-9]+]]:_(i1) = G_ICMP intpred(eq), [[COPY1]](i32), [[C46]]
+  ; CHECK-NEXT:   G_BRCOND [[ICMP46]](i1), %bb.47
   ; CHECK-NEXT:   G_BR %bb.107
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.107.bb:
-  ; CHECK-NEXT:   [[ICMP47:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[COPY1]](s32), [[C47]]
-  ; CHECK-NEXT:   G_BRCOND [[ICMP47]](s1), %bb.48
+  ; CHECK-NEXT:   [[ICMP47:%[0-9]+]]:_(i1) = G_ICMP intpred(eq), [[COPY1]](i32), [[C47]]
+  ; CHECK-NEXT:   G_BRCOND [[ICMP47]](i1), %bb.48
   ; CHECK-NEXT:   G_BR %bb.108
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.108.bb:
-  ; CHECK-NEXT:   [[ICMP48:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[COPY1]](s32), [[C48]]
-  ; CHECK-NEXT:   G_BRCOND [[ICMP48]](s1), %bb.49
+  ; CHECK-NEXT:   [[ICMP48:%[0-9]+]]:_(i1) = G_ICMP intpred(eq), [[COPY1]](i32), [[C48]]
+  ; CHECK-NEXT:   G_BRCOND [[ICMP48]](i1), %bb.49
   ; CHECK-NEXT:   G_BR %bb.109
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.109.bb:
-  ; CHECK-NEXT:   [[ICMP49:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[COPY1]](s32), [[C49]]
-  ; CHECK-NEXT:   G_BRCOND [[ICMP49]](s1), %bb.50
+  ; CHECK-NEXT:   [[ICMP49:%[0-9]+]]:_(i1) = G_ICMP intpred(eq), [[COPY1]](i32), [[C49]]
+  ; CHECK-NEXT:   G_BRCOND [[ICMP49]](i1), %bb.50
   ; CHECK-NEXT:   G_BR %bb.110
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.110.bb:
-  ; CHECK-NEXT:   [[ICMP50:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[COPY1]](s32), [[C50]]
-  ; CHECK-NEXT:   G_BRCOND [[ICMP50]](s1), %bb.51
+  ; CHECK-NEXT:   [[ICMP50:%[0-9]+]]:_(i1) = G_ICMP intpred(eq), [[COPY1]](i32), [[C50]]
+  ; CHECK-NEXT:   G_BRCOND [[ICMP50]](i1), %bb.51
   ; CHECK-NEXT:   G_BR %bb.111
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.111.bb:
-  ; CHECK-NEXT:   [[ICMP51:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[COPY1]](s32), [[C51]]
-  ; CHECK-NEXT:   G_BRCOND [[ICMP51]](s1), %bb.52
+  ; CHECK-NEXT:   [[ICMP51:%[0-9]+]]:_(i1) = G_ICMP intpred(eq), [[COPY1]](i32), [[C51]]
+  ; CHECK-NEXT:   G_BRCOND [[ICMP51]](i1), %bb.52
   ; CHECK-NEXT:   G_BR %bb.112
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.112.bb:
-  ; CHECK-NEXT:   [[ICMP52:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[COPY1]](s32), [[C52]]
-  ; CHECK-NEXT:   G_BRCOND [[ICMP52]](s1), %bb.53
+  ; CHECK-NEXT:   [[ICMP52:%[0-9]+]]:_(i1) = G_ICMP intpred(eq), [[COPY1]](i32), [[C52]]
+  ; CHECK-NEXT:   G_BRCOND [[ICMP52]](i1), %bb.53
   ; CHECK-NEXT:   G_BR %bb.113
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.113.bb:
-  ; CHECK-NEXT:   [[ICMP53:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[COPY1]](s32), [[C53]]
-  ; CHECK-NEXT:   G_BRCOND [[ICMP53]](s1), %bb.54
+  ; CHECK-NEXT:   [[ICMP53:%[0-9]+]]:_(i1) = G_ICMP intpred(eq), [[COPY1]](i32), [[C53]]
+  ; CHECK-NEXT:   G_BRCOND [[ICMP53]](i1), %bb.54
   ; CHECK-NEXT:   G_BR %bb.114
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.114.bb:
-  ; CHECK-NEXT:   [[ICMP54:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[COPY1]](s32), [[C54]]
-  ; CHECK-NEXT:   G_BRCOND [[ICMP54]](s1), %bb.55
+  ; CHECK-NEXT:   [[ICMP54:%[0-9]+]]:_(i1) = G_ICMP intpred(eq), [[COPY1]](i32), [[C54]]
+  ; CHECK-NEXT:   G_BRCOND [[ICMP54]](i1), %bb.55
   ; CHECK-NEXT:   G_BR %bb.60
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2.bb3:
@@ -790,12 +790,12 @@ define void @jt_multiple_jump_tables(ptr %arg, i32 %arg1, ptr %arg2) {
   ; CHECK-NEXT:   G_BR %bb.56
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.56.bb57:
-  ; CHECK-NEXT:   [[PHI:%[0-9]+]]:_(s64) = G_PHI [[C56]](s64), %bb.1, [[C57]](s64), %bb.2, [[C58]](s64), %bb.3, [[C59]](s64), %bb.4, [[C60]](s64), %bb.5, [[C61]](s64), %bb.6, [[C62]](s64), %bb.7, [[C63]](s64), %bb.8, [[C64]](s64), %bb.9, [[C65]](s64), %bb.10, [[C66]](s64), %bb.11, [[C67]](s64), %bb.12, [[C68]](s64), %bb.13, [[C69]](s64), %bb.14, [[C70]](s64), %bb.15, [[C71]](s64), %bb.16, [[C72]](s64), %bb.17, [[C73]](s64), %bb.18, [[C74]](s64), %bb.19, [[C75]](s64), %bb.20, [[C76]](s64), %bb.21, [[C77]](s64), %bb.22, [[C78]](s64), %bb.23, [[C79]](s64), %bb.24, [[C80]](s64), %bb.25, [[C81]](s64), %bb.26, [[C82]](s64), %bb.27, [[C83]](s64), %bb.28, [[C84]](s64), %bb.29, [[C85]](s64), %bb.30, [[C86]](s64), %bb.31, [[C87]](s64), %bb.32, [[C88]](s64), %bb.33, [[C89]](s64), %bb.34, [[C90]](s64), %bb.35, [[C91]](s64), %bb.36, [[C92]](s64), %bb.37, [[C93]](s64), %bb.38, [[C94]](s64), %bb.39, [[C95]](s64), %bb.40, [[C96]](s64), %bb.41, [[C97]](s64), %bb.42, [[C98]](s64), %bb.43, [[C99]](s64), %bb.44, [[C100]](s64), %bb.45, [[C101]](s64), %bb.46, [[C102]](s64), %bb.47, [[C103]](s64), %bb.48, [[C104]](s64), %bb.49, [[C105]](s64), %bb.50, [[C106]](s64), %bb.51, [[C107]](s64), %bb.52, [[C108]](s64), %bb.53, [[C109]](s64), %bb.54, [[C110]](s64), %bb.55
-  ; CHECK-NEXT:   [[C111:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
-  ; CHECK-NEXT:   [[MUL:%[0-9]+]]:_(s64) = nsw G_MUL [[PHI]], [[C111]]
-  ; CHECK-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = nusw inbounds G_PTR_ADD [[GV]], [[MUL]](s64)
-  ; CHECK-NEXT:   [[C112:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
-  ; CHECK-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = nuw nusw inbounds G_PTR_ADD [[PTR_ADD]], [[C112]](s64)
+  ; CHECK-NEXT:   [[PHI:%[0-9]+]]:_(i64) = G_PHI [[C56]](i64), %bb.1, [[C57]](i64), %bb.2, [[C58]](i64), %bb.3, [[C59]](i64), %bb.4, [[C60]](i64), %bb.5, [[C61]](i64), %bb.6, [[C62]](i64), %bb.7, [[C63]](i64), %bb.8, [[C64]](i64), %bb.9, [[C65]](i64), %bb.10, [[C66]](i64), %bb.11, [[C67]](i64), %bb.12, [[C68]](i64), %bb.13, [[C69]](i64), %bb.14, [[C70]](i64), %bb.15, [[C71]](i64), %bb.16, [[C72]](i64), %bb.17, [[C73]](i64), %bb.18, [[C74]](i64), %bb.19, [[C75]](i64), %bb.20, [[C76]](i64), %bb.21, [[C77]](i64), %bb.22, [[C78]](i64), %bb.23, [[C79]](i64), %bb.24, [[C80]](i64), %bb.25, [[C81]](i64), %bb.26, [[C82]](i64), %bb.27, [[C83]](i64), %bb.28, [[C84]](i64), %bb.29, [[C85]](i64), %bb.30, [[C86]](i64), %bb.31, [[C87]](i64), %bb.32, [[C88]](i64), %bb.33, [[C89]](i64), %bb.34, [[C90]](i64), %bb.35, [[C91]](i64), %bb.36, [[C92]](i64), %bb.37, [[C93]](i64), %bb.38, [[C94]](i64), %bb.39, [[C95]](i64), %bb.40, [[C96]](i64), %bb.41, [[C97]](i64), %bb.42, [[C98]](i64), %bb.43, [[C99]](i64), %bb.44, [[C100]](i64), %bb.45, [[C101]](i64), %bb.46, [[C102]](i64), %bb.47, [[C103]](i64), %bb.48, [[C104]](i64), %bb.49, [[C105]](i64), %bb.50, [[C106]](i64), %bb.51, [[C107]](i64), %bb.52, [[C108]](i64), %bb.53, [[C109]](i64), %bb.54, [[C110]](i64), %bb.55
+  ; CHECK-NEXT:   [[C111:%[0-9]+]]:_(i64) = G_CONSTANT i64 16
+  ; CHECK-NEXT:   [[MUL:%[0-9]+]]:_(i64) = nsw G_MUL [[PHI]], [[C111]]
+  ; CHECK-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = nusw inbounds G_PTR_ADD [[GV]], [[MUL]](i64)
+  ; CHECK-NEXT:   [[C112:%[0-9]+]]:_(i64) = G_CONSTANT i64 8
+  ; CHECK-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = nuw nusw inbounds G_PTR_ADD [[PTR_ADD]], [[C112]](i64)
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(p0) = G_LOAD [[PTR_ADD1]](p0) :: (load (p0) from %ir.tmp59)
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
   ; CHECK-NEXT:   $x0 = COPY [[COPY]](p0)
@@ -816,7 +816,7 @@ define void @jt_multiple_jump_tables(ptr %arg, i32 %arg1, ptr %arg2) {
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.58.bb64:
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
-  ; CHECK-NEXT:   $w0 = COPY [[COPY1]](s32)
+  ; CHECK-NEXT:   $w0 = COPY [[COPY1]](i32)
   ; CHECK-NEXT:   $x1 = COPY [[FRAME_INDEX]](p0)
   ; CHECK-NEXT:   BL @baz, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $w0, implicit $x1
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
@@ -832,8 +832,8 @@ define void @jt_multiple_jump_tables(ptr %arg, i32 %arg1, ptr %arg2) {
   ; CHECK-NEXT:   RET_ReallyLR
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.60.bb69:
-  ; CHECK-NEXT:   [[ICMP55:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[COPY2]](p0), [[C55]]
-  ; CHECK-NEXT:   G_BRCOND [[ICMP55]](s1), %bb.58
+  ; CHECK-NEXT:   [[ICMP55:%[0-9]+]]:_(i1) = G_ICMP intpred(eq), [[COPY2]](p0), [[C55]]
+  ; CHECK-NEXT:   G_BRCOND [[ICMP55]](i1), %bb.58
   ; CHECK-NEXT:   G_BR %bb.57
 bb:
   %tmp = alloca [16 x i32], align 4
@@ -1092,53 +1092,53 @@ define void @jt_2_tables_phi_edge_from_second() {
   ; CHECK-LABEL: name: jt_2_tables_phi_edge_from_second
   ; CHECK: bb.1.entry:
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p0) = G_IMPLICIT_DEF
-  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 123
-  ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 263
-  ; CHECK-NEXT:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 265
-  ; CHECK-NEXT:   [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 270
-  ; CHECK-NEXT:   [[C4:%[0-9]+]]:_(s32) = G_CONSTANT i32 279
-  ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; CHECK-NEXT:   [[C5:%[0-9]+]]:_(s32) = G_CONSTANT i32 37
-  ; CHECK-NEXT:   [[C6:%[0-9]+]]:_(s32) = G_CONSTANT i32 43
-  ; CHECK-NEXT:   [[C7:%[0-9]+]]:_(s32) = G_CONSTANT i32 45
-  ; CHECK-NEXT:   [[C8:%[0-9]+]]:_(s32) = G_CONSTANT i32 60
-  ; CHECK-NEXT:   [[C9:%[0-9]+]]:_(s32) = G_CONSTANT i32 278
-  ; CHECK-NEXT:   [[C10:%[0-9]+]]:_(s32) = G_CONSTANT i32 280
-  ; CHECK-NEXT:   [[C11:%[0-9]+]]:_(s32) = G_CONSTANT i32 281
-  ; CHECK-NEXT:   [[C12:%[0-9]+]]:_(s32) = G_CONSTANT i32 283
-  ; CHECK-NEXT:   [[DEF2:%[0-9]+]]:_(s1) = G_IMPLICIT_DEF
-  ; CHECK-NEXT:   [[C13:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; CHECK-NEXT:   [[C14:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
-  ; CHECK-NEXT:   [[C15:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
-  ; CHECK-NEXT:   [[C16:%[0-9]+]]:_(s32) = G_CONSTANT i32 6
-  ; CHECK-NEXT:   [[C17:%[0-9]+]]:_(s32) = G_CONSTANT i32 7
-  ; CHECK-NEXT:   [[C18:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
-  ; CHECK-NEXT:   [[C19:%[0-9]+]]:_(s32) = G_CONSTANT i32 9
-  ; CHECK-NEXT:   [[C20:%[0-9]+]]:_(s32) = G_CONSTANT i32 12
-  ; CHECK-NEXT:   [[C21:%[0-9]+]]:_(s32) = G_CONSTANT i32 15
-  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[DEF]](p0) :: (load (s32) from `ptr undef`, align 8)
-  ; CHECK-NEXT:   [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[LOAD]](s32), [[C]]
-  ; CHECK-NEXT:   G_BRCOND [[ICMP]](s1), %bb.6
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 123
+  ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(i32) = G_CONSTANT i32 263
+  ; CHECK-NEXT:   [[C2:%[0-9]+]]:_(i32) = G_CONSTANT i32 265
+  ; CHECK-NEXT:   [[C3:%[0-9]+]]:_(i32) = G_CONSTANT i32 270
+  ; CHECK-NEXT:   [[C4:%[0-9]+]]:_(i32) = G_CONSTANT i32 279
+  ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:_(i32) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[C5:%[0-9]+]]:_(i32) = G_CONSTANT i32 37
+  ; CHECK-NEXT:   [[C6:%[0-9]+]]:_(i32) = G_CONSTANT i32 43
+  ; CHECK-NEXT:   [[C7:%[0-9]+]]:_(i32) = G_CONSTANT i32 45
+  ; CHECK-NEXT:   [[C8:%[0-9]+]]:_(i32) = G_CONSTANT i32 60
+  ; CHECK-NEXT:   [[C9:%[0-9]+]]:_(i32) = G_CONSTANT i32 278
+  ; CHECK-NEXT:   [[C10:%[0-9]+]]:_(i32) = G_CONSTANT i32 280
+  ; CHECK-NEXT:   [[C11:%[0-9]+]]:_(i32) = G_CONSTANT i32 281
+  ; CHECK-NEXT:   [[C12:%[0-9]+]]:_(i32) = G_CONSTANT i32 283
+  ; CHECK-NEXT:   [[DEF2:%[0-9]+]]:_(i1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[C13:%[0-9]+]]:_(i32) = G_CONSTANT i32 0
+  ; CHECK-NEXT:   [[C14:%[0-9]+]]:_(i32) = G_CONSTANT i32 1
+  ; CHECK-NEXT:   [[C15:%[0-9]+]]:_(i32) = G_CONSTANT i32 4
+  ; CHECK-NEXT:   [[C16:%[0-9]+]]:_(i32) = G_CONSTANT i32 6
+  ; CHECK-NEXT:   [[C17:%[0-9]+]]:_(i32) = G_CONSTANT i32 7
+  ; CHECK-NEXT:   [[C18:%[0-9]+]]:_(i32) = G_CONSTANT i32 8
+  ; CHECK-NEXT:   [[C19:%[0-9]+]]:_(i32) = G_CONSTANT i32 9
+  ; CHECK-NEXT:   [[C20:%[0-9]+]]:_(i32) = G_CONSTANT i32 12
+  ; CHECK-NEXT:   [[C21:%[0-9]+]]:_(i32) = G_CONSTANT i32 15
+  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(i32) = G_LOAD [[DEF]](p0) :: (load (i32) from `ptr undef`, align 8)
+  ; CHECK-NEXT:   [[ICMP:%[0-9]+]]:_(i1) = G_ICMP intpred(eq), [[LOAD]](i32), [[C]]
+  ; CHECK-NEXT:   G_BRCOND [[ICMP]](i1), %bb.6
   ; CHECK-NEXT:   G_BR %bb.19
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.19.entry:
-  ; CHECK-NEXT:   [[ICMP1:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[LOAD]](s32), [[C1]]
-  ; CHECK-NEXT:   G_BRCOND [[ICMP1]](s1), %bb.4
+  ; CHECK-NEXT:   [[ICMP1:%[0-9]+]]:_(i1) = G_ICMP intpred(eq), [[LOAD]](i32), [[C1]]
+  ; CHECK-NEXT:   G_BRCOND [[ICMP1]](i1), %bb.4
   ; CHECK-NEXT:   G_BR %bb.20
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.20.entry:
-  ; CHECK-NEXT:   [[ICMP2:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[LOAD]](s32), [[C2]]
-  ; CHECK-NEXT:   G_BRCOND [[ICMP2]](s1), %bb.7
+  ; CHECK-NEXT:   [[ICMP2:%[0-9]+]]:_(i1) = G_ICMP intpred(eq), [[LOAD]](i32), [[C2]]
+  ; CHECK-NEXT:   G_BRCOND [[ICMP2]](i1), %bb.7
   ; CHECK-NEXT:   G_BR %bb.21
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.21.entry:
-  ; CHECK-NEXT:   [[ICMP3:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[LOAD]](s32), [[C3]]
-  ; CHECK-NEXT:   G_BRCOND [[ICMP3]](s1), %bb.2
+  ; CHECK-NEXT:   [[ICMP3:%[0-9]+]]:_(i1) = G_ICMP intpred(eq), [[LOAD]](i32), [[C3]]
+  ; CHECK-NEXT:   G_BRCOND [[ICMP3]](i1), %bb.2
   ; CHECK-NEXT:   G_BR %bb.22
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.22.entry:
-  ; CHECK-NEXT:   [[ICMP4:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[LOAD]](s32), [[C4]]
-  ; CHECK-NEXT:   G_BRCOND [[ICMP4]](s1), %bb.5
+  ; CHECK-NEXT:   [[ICMP4:%[0-9]+]]:_(i1) = G_ICMP intpred(eq), [[LOAD]](i32), [[C4]]
+  ; CHECK-NEXT:   G_BRCOND [[ICMP4]](i1), %bb.5
   ; CHECK-NEXT:   G_BR %bb.23
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.23.entry:
@@ -1160,43 +1160,43 @@ define void @jt_2_tables_phi_edge_from_second() {
   ; CHECK-NEXT:   successors:
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.7.sw.bb14.i48:
-  ; CHECK-NEXT:   [[ICMP5:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[DEF1]](s32), [[C5]]
-  ; CHECK-NEXT:   G_BRCOND [[ICMP5]](s1), %bb.10
+  ; CHECK-NEXT:   [[ICMP5:%[0-9]+]]:_(i1) = G_ICMP intpred(eq), [[DEF1]](i32), [[C5]]
+  ; CHECK-NEXT:   G_BRCOND [[ICMP5]](i1), %bb.10
   ; CHECK-NEXT:   G_BR %bb.24
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.24.sw.bb14.i48:
-  ; CHECK-NEXT:   [[ICMP6:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[DEF1]](s32), [[C6]]
-  ; CHECK-NEXT:   G_BRCOND [[ICMP6]](s1), %bb.16
+  ; CHECK-NEXT:   [[ICMP6:%[0-9]+]]:_(i1) = G_ICMP intpred(eq), [[DEF1]](i32), [[C6]]
+  ; CHECK-NEXT:   G_BRCOND [[ICMP6]](i1), %bb.16
   ; CHECK-NEXT:   G_BR %bb.25
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.25.sw.bb14.i48:
-  ; CHECK-NEXT:   [[ICMP7:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[DEF1]](s32), [[C7]]
-  ; CHECK-NEXT:   G_BRCOND [[ICMP7]](s1), %bb.9
+  ; CHECK-NEXT:   [[ICMP7:%[0-9]+]]:_(i1) = G_ICMP intpred(eq), [[DEF1]](i32), [[C7]]
+  ; CHECK-NEXT:   G_BRCOND [[ICMP7]](i1), %bb.9
   ; CHECK-NEXT:   G_BR %bb.26
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.26.sw.bb14.i48:
-  ; CHECK-NEXT:   [[ICMP8:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[DEF1]](s32), [[C8]]
-  ; CHECK-NEXT:   G_BRCOND [[ICMP8]](s1), %bb.14
+  ; CHECK-NEXT:   [[ICMP8:%[0-9]+]]:_(i1) = G_ICMP intpred(eq), [[DEF1]](i32), [[C8]]
+  ; CHECK-NEXT:   G_BRCOND [[ICMP8]](i1), %bb.14
   ; CHECK-NEXT:   G_BR %bb.27
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.27.sw.bb14.i48:
-  ; CHECK-NEXT:   [[ICMP9:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[DEF1]](s32), [[C9]]
-  ; CHECK-NEXT:   G_BRCOND [[ICMP9]](s1), %bb.11
+  ; CHECK-NEXT:   [[ICMP9:%[0-9]+]]:_(i1) = G_ICMP intpred(eq), [[DEF1]](i32), [[C9]]
+  ; CHECK-NEXT:   G_BRCOND [[ICMP9]](i1), %bb.11
   ; CHECK-NEXT:   G_BR %bb.28
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.28.sw.bb14.i48:
-  ; CHECK-NEXT:   [[ICMP10:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[DEF1]](s32), [[C10]]
-  ; CHECK-NEXT:   G_BRCOND [[ICMP10]](s1), %bb.13
+  ; CHECK-NEXT:   [[ICMP10:%[0-9]+]]:_(i1) = G_ICMP intpred(eq), [[DEF1]](i32), [[C10]]
+  ; CHECK-NEXT:   G_BRCOND [[ICMP10]](i1), %bb.13
   ; CHECK-NEXT:   G_BR %bb.29
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.29.sw.bb14.i48:
-  ; CHECK-NEXT:   [[ICMP11:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[DEF1]](s32), [[C11]]
-  ; CHECK-NEXT:   G_BRCOND [[ICMP11]](s1), %bb.15
+  ; CHECK-NEXT:   [[ICMP11:%[0-9]+]]:_(i1) = G_ICMP intpred(eq), [[DEF1]](i32), [[C11]]
+  ; CHECK-NEXT:   G_BRCOND [[ICMP11]](i1), %bb.15
   ; CHECK-NEXT:   G_BR %bb.30
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.30.sw.bb14.i48:
-  ; CHECK-NEXT:   [[ICMP12:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[DEF1]](s32), [[C12]]
-  ; CHECK-NEXT:   G_BRCOND [[ICMP12]](s1), %bb.12
+  ; CHECK-NEXT:   [[ICMP12:%[0-9]+]]:_(i1) = G_ICMP intpred(eq), [[DEF1]](i32), [[C12]]
+  ; CHECK-NEXT:   G_BRCOND [[ICMP12]](i1), %bb.12
   ; CHECK-NEXT:   G_BR %bb.18
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.8.sw.default.i49:
@@ -1224,8 +1224,8 @@ define void @jt_2_tables_phi_edge_from_second() {
   ; CHECK-NEXT:   G_BR %bb.16
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.16.land.rhs.lr.ph:
-  ; CHECK-NEXT:   [[PHI:%[0-9]+]]:_(s32) = G_PHI [[C13]](s32), %bb.24, [[C14]](s32), %bb.9, [[C15]](s32), %bb.10, [[C16]](s32), %bb.11, [[C17]](s32), %bb.12, [[C18]](s32), %bb.13, [[C19]](s32), %bb.14, [[C20]](s32), %bb.15
-  ; CHECK-NEXT:   G_BRCOND [[DEF2]](s1), %bb.17
+  ; CHECK-NEXT:   [[PHI:%[0-9]+]]:_(i32) = G_PHI [[C13]](i32), %bb.24, [[C14]](i32), %bb.9, [[C15]](i32), %bb.10, [[C16]](i32), %bb.11, [[C17]](i32), %bb.12, [[C18]](i32), %bb.13, [[C19]](i32), %bb.14, [[C20]](i32), %bb.15
+  ; CHECK-NEXT:   G_BRCOND [[DEF2]](i1), %bb.17
   ; CHECK-NEXT:   G_BR %bb.18
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.17.while.body:
@@ -1236,7 +1236,7 @@ define void @jt_2_tables_phi_edge_from_second() {
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.18.while.end:
-  ; CHECK-NEXT:   [[PHI1:%[0-9]+]]:_(s32) = G_PHI [[C21]](s32), %bb.30, [[PHI]](s32), %bb.16
+  ; CHECK-NEXT:   [[PHI1:%[0-9]+]]:_(i32) = G_PHI [[C21]](i32), %bb.30, [[PHI]](i32), %bb.16
   ; CHECK-NEXT:   RET_ReallyLR
 entry:
   %0 = load i32, ptr undef, align 8
@@ -1319,34 +1319,34 @@ define i32 @range_test(i32 %x) {
   ; CHECK: bb.1.entry:
   ; CHECK-NEXT:   liveins: $w0
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 6
-  ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 24
-  ; CHECK-NEXT:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 3
-  ; CHECK-NEXT:   [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 42
-  ; CHECK-NEXT:   [[C4:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; CHECK-NEXT:   [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[COPY]](s32), [[C]]
-  ; CHECK-NEXT:   G_BRCOND [[ICMP]](s1), %bb.3
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $w0
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 6
+  ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(i32) = G_CONSTANT i32 24
+  ; CHECK-NEXT:   [[C2:%[0-9]+]]:_(i32) = G_CONSTANT i32 3
+  ; CHECK-NEXT:   [[C3:%[0-9]+]]:_(i32) = G_CONSTANT i32 42
+  ; CHECK-NEXT:   [[C4:%[0-9]+]]:_(i32) = G_CONSTANT i32 0
+  ; CHECK-NEXT:   [[ICMP:%[0-9]+]]:_(i1) = G_ICMP intpred(eq), [[COPY]](i32), [[C]]
+  ; CHECK-NEXT:   G_BRCOND [[ICMP]](i1), %bb.3
   ; CHECK-NEXT:   G_BR %bb.5
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.5.entry:
-  ; CHECK-NEXT:   [[SUB:%[0-9]+]]:_(s32) = G_SUB [[COPY]], [[C1]]
-  ; CHECK-NEXT:   [[C5:%[0-9]+]]:_(s32) = G_CONSTANT i32 2
-  ; CHECK-NEXT:   [[ICMP1:%[0-9]+]]:_(s1) = G_ICMP intpred(ule), [[SUB]](s32), [[C5]]
-  ; CHECK-NEXT:   G_BRCOND [[ICMP1]](s1), %bb.2
+  ; CHECK-NEXT:   [[SUB:%[0-9]+]]:_(i32) = G_SUB [[COPY]], [[C1]]
+  ; CHECK-NEXT:   [[C5:%[0-9]+]]:_(i32) = G_CONSTANT i32 2
+  ; CHECK-NEXT:   [[ICMP1:%[0-9]+]]:_(i1) = G_ICMP intpred(ule), [[SUB]](i32), [[C5]]
+  ; CHECK-NEXT:   G_BRCOND [[ICMP1]](i1), %bb.2
   ; CHECK-NEXT:   G_BR %bb.4
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2.sw.bb:
-  ; CHECK-NEXT:   [[ADD:%[0-9]+]]:_(s32) = nsw G_ADD [[COPY]], [[C3]]
+  ; CHECK-NEXT:   [[ADD:%[0-9]+]]:_(i32) = nsw G_ADD [[COPY]], [[C3]]
   ; CHECK-NEXT:   G_BR %bb.4
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3.sw.bb1:
-  ; CHECK-NEXT:   [[MUL:%[0-9]+]]:_(s32) = nsw G_MUL [[COPY]], [[C2]]
+  ; CHECK-NEXT:   [[MUL:%[0-9]+]]:_(i32) = nsw G_MUL [[COPY]], [[C2]]
   ; CHECK-NEXT:   G_BR %bb.4
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.4.return:
-  ; CHECK-NEXT:   [[PHI:%[0-9]+]]:_(s32) = G_PHI [[MUL]](s32), %bb.3, [[ADD]](s32), %bb.2, [[C4]](s32), %bb.5
-  ; CHECK-NEXT:   $w0 = COPY [[PHI]](s32)
+  ; CHECK-NEXT:   [[PHI:%[0-9]+]]:_(i32) = G_PHI [[MUL]](i32), %bb.3, [[ADD]](i32), %bb.2, [[C4]](i32), %bb.5
+  ; CHECK-NEXT:   $w0 = COPY [[PHI]](i32)
   ; CHECK-NEXT:   RET_ReallyLR implicit $w0
 entry:
   switch i32 %x, label %return [
@@ -1372,29 +1372,29 @@ return:
 define ptr @test_range_phi_switch_cycle() {
   ; CHECK-LABEL: name: test_range_phi_switch_cycle
   ; CHECK: bb.1.bb:
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 305
-  ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 307
-  ; CHECK-NEXT:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 497
-  ; CHECK-NEXT:   [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
-  ; CHECK-NEXT:   [[C4:%[0-9]+]]:_(s32) = G_CONSTANT i32 3
-  ; CHECK-NEXT:   [[C5:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(i32) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 305
+  ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(i32) = G_CONSTANT i32 307
+  ; CHECK-NEXT:   [[C2:%[0-9]+]]:_(i32) = G_CONSTANT i32 497
+  ; CHECK-NEXT:   [[C3:%[0-9]+]]:_(i32) = G_CONSTANT i32 4
+  ; CHECK-NEXT:   [[C4:%[0-9]+]]:_(i32) = G_CONSTANT i32 3
+  ; CHECK-NEXT:   [[C5:%[0-9]+]]:_(i32) = G_CONSTANT i32 1
   ; CHECK-NEXT:   G_BR %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2.bb1:
-  ; CHECK-NEXT:   [[PHI:%[0-9]+]]:_(s32) = G_PHI [[DEF]](s32), %bb.1, [[C3]](s32), %bb.3, [[C4]](s32), %bb.4, [[C5]](s32), %bb.2
-  ; CHECK-NEXT:   [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[DEF]](s32), [[C]]
-  ; CHECK-NEXT:   G_BRCOND [[ICMP]](s1), %bb.2
+  ; CHECK-NEXT:   [[PHI:%[0-9]+]]:_(i32) = G_PHI [[DEF]](i32), %bb.1, [[C3]](i32), %bb.3, [[C4]](i32), %bb.4, [[C5]](i32), %bb.2
+  ; CHECK-NEXT:   [[ICMP:%[0-9]+]]:_(i1) = G_ICMP intpred(eq), [[DEF]](i32), [[C]]
+  ; CHECK-NEXT:   G_BRCOND [[ICMP]](i1), %bb.2
   ; CHECK-NEXT:   G_BR %bb.6
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.6.bb1:
-  ; CHECK-NEXT:   [[ICMP1:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[DEF]](s32), [[C1]]
-  ; CHECK-NEXT:   G_BRCOND [[ICMP1]](s1), %bb.3
+  ; CHECK-NEXT:   [[ICMP1:%[0-9]+]]:_(i1) = G_ICMP intpred(eq), [[DEF]](i32), [[C1]]
+  ; CHECK-NEXT:   G_BRCOND [[ICMP1]](i1), %bb.3
   ; CHECK-NEXT:   G_BR %bb.7
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.7.bb1:
-  ; CHECK-NEXT:   [[ICMP2:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[DEF]](s32), [[C2]]
-  ; CHECK-NEXT:   G_BRCOND [[ICMP2]](s1), %bb.4
+  ; CHECK-NEXT:   [[ICMP2:%[0-9]+]]:_(i1) = G_ICMP intpred(eq), [[DEF]](i32), [[C2]]
+  ; CHECK-NEXT:   G_BRCOND [[ICMP2]](i1), %bb.4
   ; CHECK-NEXT:   G_BR %bb.5
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3.bb2:
@@ -1405,7 +1405,7 @@ define ptr @test_range_phi_switch_cycle() {
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.5.bb4:
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
-  ; CHECK-NEXT:   $w0 = COPY [[PHI]](s32)
+  ; CHECK-NEXT:   $w0 = COPY [[PHI]](i32)
   ; CHECK-NEXT:   BL @ham, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $w0, implicit-def $x0
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x0
@@ -1444,14 +1444,14 @@ define i1 @i1_value_cmp_is_signed(i1) {
   ; CHECK: bb.1.Entry:
   ; CHECK-NEXT:   liveins: $w0
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[COPY]](s32)
-  ; CHECK-NEXT:   [[ASSERT_ZEXT:%[0-9]+]]:_(s8) = G_ASSERT_ZEXT [[TRUNC]], 1
-  ; CHECK-NEXT:   [[TRUNC1:%[0-9]+]]:_(s1) = G_TRUNC [[ASSERT_ZEXT]](s8)
-  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s1) = G_CONSTANT i1 true
-  ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s1) = G_CONSTANT i1 false
-  ; CHECK-NEXT:   [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(sle), [[TRUNC1]](s1), [[C1]]
-  ; CHECK-NEXT:   G_BRCOND [[ICMP]](s1), %bb.3
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $w0
+  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(i8) = G_TRUNC [[COPY]](i32)
+  ; CHECK-NEXT:   [[ASSERT_ZEXT:%[0-9]+]]:_(i8) = G_ASSERT_ZEXT [[TRUNC]], 1
+  ; CHECK-NEXT:   [[TRUNC1:%[0-9]+]]:_(i1) = G_TRUNC [[ASSERT_ZEXT]](i8)
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i1) = G_CONSTANT i1 true
+  ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(i1) = G_CONSTANT i1 false
+  ; CHECK-NEXT:   [[ICMP:%[0-9]+]]:_(i1) = G_ICMP intpred(sle), [[TRUNC1]](i1), [[C1]]
+  ; CHECK-NEXT:   G_BRCOND [[ICMP]](i1), %bb.3
   ; CHECK-NEXT:   G_BR %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2.BadValue:
@@ -1462,9 +1462,9 @@ define i1 @i1_value_cmp_is_signed(i1) {
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3.OkValue:
-  ; CHECK-NEXT:   [[ZEXT:%[0-9]+]]:_(s8) = G_ZEXT [[TRUNC1]](s1)
-  ; CHECK-NEXT:   [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[ZEXT]](s8)
-  ; CHECK-NEXT:   $w0 = COPY [[ANYEXT]](s32)
+  ; CHECK-NEXT:   [[ZEXT:%[0-9]+]]:_(i8) = G_ZEXT [[TRUNC1]](i1)
+  ; CHECK-NEXT:   [[ANYEXT:%[0-9]+]]:_(i32) = G_ANYEXT [[ZEXT]](i8)
+  ; CHECK-NEXT:   $w0 = COPY [[ANYEXT]](i32)
   ; CHECK-NEXT:   RET_ReallyLR implicit $w0
 Entry:
   switch i1 %0, label %BadValue [

@@ -7,13 +7,14 @@ target triple = "aarch64-apple-ios"
 define hidden fastcc <4 x float> @foo(<4 x i64> %arg) unnamed_addr #0 {
   ; CHECK-LABEL: name: foo
   ; CHECK: bb.1.bb:
-  ; CHECK:   liveins: $q0, $q1
-  ; CHECK:   [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $q0
-  ; CHECK:   [[COPY1:%[0-9]+]]:_(<2 x s64>) = COPY $q1
-  ; CHECK:   [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s64>) = G_CONCAT_VECTORS [[COPY]](<2 x s64>), [[COPY1]](<2 x s64>)
-  ; CHECK:   [[UITOFP:%[0-9]+]]:_(<4 x s32>) = G_UITOFP [[CONCAT_VECTORS]](<4 x s64>)
-  ; CHECK:   $q0 = COPY [[UITOFP]](<4 x s32>)
-  ; CHECK:   RET_ReallyLR implicit $q0
+  ; CHECK-NEXT:   liveins: $q0, $q1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<2 x i64>) = COPY $q0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(<2 x i64>) = COPY $q1
+  ; CHECK-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x i64>) = G_CONCAT_VECTORS [[COPY]](<2 x i64>), [[COPY1]](<2 x i64>)
+  ; CHECK-NEXT:   [[UITOFP:%[0-9]+]]:_(<4 x f32>) = G_UITOFP [[CONCAT_VECTORS]](<4 x i64>)
+  ; CHECK-NEXT:   $q0 = COPY [[UITOFP]](<4 x f32>)
+  ; CHECK-NEXT:   RET_ReallyLR implicit $q0
 bb:
   %tmp = uitofp <4 x i64> %arg to <4 x float>
   ret <4 x float> %tmp

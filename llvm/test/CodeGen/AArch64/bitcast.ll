@@ -498,10 +498,6 @@ define <4 x i64> @bitcast_v8i32_v4i64(<8 x i32> %a, <8 x i32> %b){
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    add v0.4s, v0.4s, v2.4s
 ; CHECK-GI-NEXT:    add v1.4s, v1.4s, v3.4s
-; CHECK-GI-NEXT:    mov x8, v0.d[1]
-; CHECK-GI-NEXT:    mov x9, v1.d[1]
-; CHECK-GI-NEXT:    mov v0.d[1], x8
-; CHECK-GI-NEXT:    mov v1.d[1], x9
 ; CHECK-GI-NEXT:    ret
   %c = add <8 x i32> %a, %b
   %d = bitcast <8 x i32> %c to <4 x i64>
@@ -557,10 +553,6 @@ define <4 x i64> @bitcast_v16i16_v4i64(<16 x i16> %a, <16 x i16> %b){
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    add v0.8h, v0.8h, v2.8h
 ; CHECK-GI-NEXT:    add v1.8h, v1.8h, v3.8h
-; CHECK-GI-NEXT:    mov x8, v0.d[1]
-; CHECK-GI-NEXT:    mov x9, v1.d[1]
-; CHECK-GI-NEXT:    mov v0.d[1], x8
-; CHECK-GI-NEXT:    mov v1.d[1], x9
 ; CHECK-GI-NEXT:    ret
   %c = add <16 x i16> %a, %b
   %d = bitcast <16 x i16> %c to <4 x i64>
@@ -599,14 +591,6 @@ define <8 x i64> @bitcast_v16i32_v8i64(<16 x i32> %a, <16 x i32> %b){
 ; CHECK-GI-NEXT:    add v1.4s, v1.4s, v5.4s
 ; CHECK-GI-NEXT:    add v2.4s, v2.4s, v6.4s
 ; CHECK-GI-NEXT:    add v3.4s, v3.4s, v7.4s
-; CHECK-GI-NEXT:    mov x8, v0.d[1]
-; CHECK-GI-NEXT:    mov x9, v1.d[1]
-; CHECK-GI-NEXT:    mov x10, v2.d[1]
-; CHECK-GI-NEXT:    mov x11, v3.d[1]
-; CHECK-GI-NEXT:    mov v0.d[1], x8
-; CHECK-GI-NEXT:    mov v1.d[1], x9
-; CHECK-GI-NEXT:    mov v2.d[1], x10
-; CHECK-GI-NEXT:    mov v3.d[1], x11
 ; CHECK-GI-NEXT:    ret
   %c = add <16 x i32> %a, %b
   %d = bitcast <16 x i32> %c to <8 x i64>

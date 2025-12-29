@@ -90,17 +90,17 @@ body:             |
     ; CHECK-NEXT: [[AND3:%[0-9]+]]:_(s64) = G_AND [[DEF]], [[C]]
     ; CHECK-NEXT: [[AND4:%[0-9]+]]:_(s64) = G_AND [[DEF]], [[C1]]
     ; CHECK-NEXT: G_STORE [[AND]](s64), %ptr(p0) :: (store (s64))
-    ; CHECK-NEXT: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
-    ; CHECK-NEXT: [[PTR_ADD:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD %ptr, [[C2]](s64)
+    ; CHECK-NEXT: [[C2:%[0-9]+]]:_(i64) = G_CONSTANT i64 8
+    ; CHECK-NEXT: [[PTR_ADD:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD %ptr, [[C2]](i64)
     ; CHECK-NEXT: G_STORE [[AND1]](s64), [[PTR_ADD]](p0) :: (store (s64) into unknown-address + 8)
-    ; CHECK-NEXT: [[C3:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
-    ; CHECK-NEXT: [[PTR_ADD1:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD %ptr, [[C3]](s64)
+    ; CHECK-NEXT: [[C3:%[0-9]+]]:_(i64) = G_CONSTANT i64 16
+    ; CHECK-NEXT: [[PTR_ADD1:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD %ptr, [[C3]](i64)
     ; CHECK-NEXT: G_STORE [[AND2]](s64), [[PTR_ADD1]](p0) :: (store (s64) into unknown-address + 16)
-    ; CHECK-NEXT: [[C4:%[0-9]+]]:_(s64) = G_CONSTANT i64 24
-    ; CHECK-NEXT: [[PTR_ADD2:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD %ptr, [[C4]](s64)
+    ; CHECK-NEXT: [[C4:%[0-9]+]]:_(i64) = G_CONSTANT i64 24
+    ; CHECK-NEXT: [[PTR_ADD2:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD %ptr, [[C4]](i64)
     ; CHECK-NEXT: G_STORE [[AND3]](s64), [[PTR_ADD2]](p0) :: (store (s64) into unknown-address + 24)
-    ; CHECK-NEXT: [[C5:%[0-9]+]]:_(s64) = G_CONSTANT i64 32
-    ; CHECK-NEXT: [[PTR_ADD3:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD %ptr, [[C5]](s64)
+    ; CHECK-NEXT: [[C5:%[0-9]+]]:_(i64) = G_CONSTANT i64 32
+    ; CHECK-NEXT: [[PTR_ADD3:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD %ptr, [[C5]](i64)
     ; CHECK-NEXT: G_STORE [[AND4]](s64), [[PTR_ADD3]](p0) :: (store (s64) into unknown-address + 32)
     ; CHECK-NEXT: RET_ReallyLR
     %ptr:_(p0) = COPY $x0
@@ -129,11 +129,11 @@ body:             |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY [[AND1]](s64)
     ; CHECK-NEXT: [[EXTRACT:%[0-9]+]]:_(s32) = G_EXTRACT [[AND2]](s64), 0
     ; CHECK-NEXT: G_STORE [[COPY]](s64), %ptr(p0) :: (store (s64))
-    ; CHECK-NEXT: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
-    ; CHECK-NEXT: [[PTR_ADD:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD %ptr, [[C2]](s64)
+    ; CHECK-NEXT: [[C2:%[0-9]+]]:_(i64) = G_CONSTANT i64 8
+    ; CHECK-NEXT: [[PTR_ADD:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD %ptr, [[C2]](i64)
     ; CHECK-NEXT: G_STORE [[COPY1]](s64), [[PTR_ADD]](p0) :: (store (s64) into unknown-address + 8)
-    ; CHECK-NEXT: [[C3:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
-    ; CHECK-NEXT: [[PTR_ADD1:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD %ptr, [[C3]](s64)
+    ; CHECK-NEXT: [[C3:%[0-9]+]]:_(i64) = G_CONSTANT i64 16
+    ; CHECK-NEXT: [[PTR_ADD1:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD %ptr, [[C3]](i64)
     ; CHECK-NEXT: G_STORE [[EXTRACT]](s32), [[PTR_ADD1]](p0) :: (store (s32) into unknown-address + 16, align 8)
     ; CHECK-NEXT: RET_ReallyLR
     %ptr:_(p0) = COPY $x0
@@ -162,11 +162,11 @@ body:             |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY [[AND1]](s64)
     ; CHECK-NEXT: [[EXTRACT:%[0-9]+]]:_(s16) = G_EXTRACT [[AND2]](s64), 0
     ; CHECK-NEXT: G_STORE [[COPY]](s64), %ptr(p0) :: (store (s64))
-    ; CHECK-NEXT: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
-    ; CHECK-NEXT: [[PTR_ADD:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD %ptr, [[C2]](s64)
+    ; CHECK-NEXT: [[C2:%[0-9]+]]:_(i64) = G_CONSTANT i64 8
+    ; CHECK-NEXT: [[PTR_ADD:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD %ptr, [[C2]](i64)
     ; CHECK-NEXT: G_STORE [[COPY1]](s64), [[PTR_ADD]](p0) :: (store (s64) into unknown-address + 8)
-    ; CHECK-NEXT: [[C3:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
-    ; CHECK-NEXT: [[PTR_ADD1:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD %ptr, [[C3]](s64)
+    ; CHECK-NEXT: [[C3:%[0-9]+]]:_(i64) = G_CONSTANT i64 16
+    ; CHECK-NEXT: [[PTR_ADD1:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD %ptr, [[C3]](i64)
     ; CHECK-NEXT: G_STORE [[EXTRACT]](s16), [[PTR_ADD1]](p0) :: (store (s16) into unknown-address + 16, align 8)
     ; CHECK-NEXT: RET_ReallyLR
     %ptr:_(p0) = COPY $x0
