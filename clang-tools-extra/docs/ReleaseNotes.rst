@@ -86,6 +86,10 @@ Potentially Breaking Changes
   `-header-filter='.*'`. To disable warnings from non-system, set `-header-filter`
   to an empty string.
 
+- The ``clang-tidy/ClangTidyModuleRegistry.h`` header has been deprecated and will
+  be removed in LLVM 24. All of the symbols it used to define have been moved into
+  ``clang-tidy/ClangTidyModule.h``.
+
 Improvements to clangd
 ----------------------
 
@@ -446,7 +450,9 @@ Changes in existing checks
 
 - Improved :doc:`bugprone-use-after-move
   <clang-tidy/checks/bugprone/use-after-move>` check by adding
-  `InvalidationFunctions` option to support custom invalidation functions.
+  `InvalidationFunctions` option to support custom invalidation functions
+  and `ReinitializationFunctions` option to support custom reinitialization
+  functions.
 
 - Improved :doc:`cppcoreguidelines-avoid-non-const-global-variables
   <clang-tidy/checks/cppcoreguidelines/avoid-non-const-global-variables>` check
@@ -519,7 +525,10 @@ Changes in existing checks
 
 - Improved :doc:`misc-use-internal-linkage
   <clang-tidy/checks/misc/use-internal-linkage>` to suggest giving
-  structs, classes, unions, and enums internal linkage.
+  user-defined types (structs, classes, unions, and enums) internal
+  linkage. Added fine-grained options to control whether the check
+  should diagnose functions, variables, and/or user-defined types.
+  Enabled the check for C.
 
 - Improved :doc:`modernize-avoid-c-arrays
   <clang-tidy/checks/modernize/avoid-c-arrays>` to not diagnose array types
@@ -574,6 +583,10 @@ Changes in existing checks
   constructor call, and fixed a crash when handling format strings
   containing non-ASCII characters.
 
+- Improved :doc:`modernize-use-using
+  <clang-tidy/checks/modernize/use-using>` check to correctly provide fix-its
+  for typedefs of pointers or references to array types.
+
 - Improved :doc:`performance-unnecessary-copy-initialization
   <clang-tidy/checks/performance/unnecessary-copy-initialization>` by printing
   the type of the diagnosed variable.
@@ -617,8 +630,10 @@ Changes in existing checks
 
 - Improved :doc:`readability-implicit-bool-conversion
   <clang-tidy/checks/readability/implicit-bool-conversion>` check by correctly
-  adding parentheses when the inner expression are implicitly converted
-  multiple times.
+  adding parentheses when inner expressions are implicitly converted multiple
+  times, enabling the check for C99 and later standards, and allowing implicit
+  conversions from ``bool`` to integer when used as operands of logical
+  operators (``&&``, ``||``) in C.
 
 - Improved :doc:`readability-inconsistent-declaration-parameter-name
   <clang-tidy/checks/readability/inconsistent-declaration-parameter-name>` check
