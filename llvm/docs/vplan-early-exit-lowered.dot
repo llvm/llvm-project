@@ -9,7 +9,7 @@ compound=true
   N1 -> N2 [ label=""]
   N2 [label ="vector.body"]
   N2 -> N4 [ label=""]
-  N2 -> N2 [ label=""]
+  N2 -> N2 [ label="" dir=back]
   N4 [label =
     "middle.split"
   ]
