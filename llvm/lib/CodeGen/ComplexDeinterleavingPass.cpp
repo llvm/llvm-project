@@ -731,12 +731,19 @@ ComplexDeinterleavingGraph::identifyPartialMul(Instruction *Real,
       return true;
     }
 
+    unsigned Opcode = I->getOpcode();
+    if (I->hasOneUse() &&
+        (Opcode == Instruction::FMul || Opcode == Instruction::Mul)) {
+      Muls.push_back(GetProduct(I->getOperand(0), I->getOperand(1),
+                                IsPositive));
+      return true;
+    }
+
     if (isa<FPMathOperator>(I) && !I->getFastMathFlags().allowContract()) {
       LLVM_DEBUG(dbgs() << "  - Contract is missing from the FastMath flags.\n");
       return false;
     }
 
-    unsigned Opcode = I->getOpcode();
     bool IsSub;
     if (Opcode == Instruction::FAdd || Opcode == Instruction::Add)
       IsSub = false;
@@ -906,6 +913,14 @@ ComplexDeinterleavingGraph::identifyPartialMul(Instruction *Real,
   };
 
   if (RealMuls.size() == 1) {
+    if (!RealAddend.first && !ImagAddend.first) {
+      return ForeachMatch(RealMuls[0], ImagMuls[0], PN, [&](PartialMulNode *PN) {
+        return MatchCommons(PN, nullptr, RealAddend.second);
+      });
+    }
+    if (!RealAddend.first || !ImagAddend.first) {
+      return nullptr;
+    }
     assert(RealAddend.first && ImagAddend.first);
     if (!isa<Instruction>(RealAddend.first) || !isa<Instruction>(ImagAddend.first)) {
       if (RealAddend.second != ImagAddend.second)
