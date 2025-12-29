@@ -283,9 +283,13 @@ static_assert(__is_same_as(int, helper<int>));
 } // namespace GH138018
 
 namespace GH172814 {
-auto t() {
+auto t1() {
   int x = 0;
   return [](auto w=[&] { x += w(); }); // expected-error {{lambda expression in default argument cannot capture any entity}} \
                                        // expected-error {{expected body of lambda expression}}
+};
+auto t2() {
+  int x = 0;
+  return [](auto w = [&] { return x; }) { }; // expected-error {{lambda expression in default argument cannot capture any entity}}
 };
 }
