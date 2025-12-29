@@ -1669,6 +1669,8 @@ public:
                            const MachineInstr &MI,
                            unsigned *PredCost = nullptr) const override;
 
+  const MachineOperand &getCalleeOperand(const MachineInstr &MI) const override;
+
   InstructionUniformity
   getInstructionUniformity(const MachineInstr &MI) const final;
 

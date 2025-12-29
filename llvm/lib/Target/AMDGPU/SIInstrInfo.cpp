@@ -10597,6 +10597,14 @@ unsigned SIInstrInfo::getInstrLatency(const InstrItineraryData *ItinData,
   return SchedModel.computeInstrLatency(&MI);
 }
 
+const MachineOperand &
+SIInstrInfo::getCalleeOperand(const MachineInstr &MI) const {
+  if (const MachineOperand *CallAddrOp =
+          getNamedOperand(MI, AMDGPU::OpName::src0))
+    return *CallAddrOp;
+  return TargetInstrInfo::getCalleeOperand(MI);
+}
+
 InstructionUniformity
 SIInstrInfo::getGenericInstructionUniformity(const MachineInstr &MI) const {
   const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
