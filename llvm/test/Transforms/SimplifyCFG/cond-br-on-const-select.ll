@@ -8,16 +8,8 @@ declare void @use()
 define fastcc i1 @foo(i1 %v) {
 ; CHECK-LABEL: define fastcc i1 @foo(
 ; CHECK-SAME: i1 [[V:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[V]], i8 3, i8 2
-; CHECK-NEXT:    [[COND:%.*]] = icmp eq i8 [[SELECT]], 0
-; CHECK-NEXT:    br i1 [[COND]], label %[[TRUEBB:.*]], label %[[COMMON_RET:.*]]
-; CHECK:       [[COMMON_RET]]:
-; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i1 [ true, %[[TRUEBB]] ], [ false, %[[ENTRY]] ]
-; CHECK-NEXT:    ret i1 [[COMMON_RET_OP]]
-; CHECK:       [[TRUEBB]]:
-; CHECK-NEXT:    call void @use()
-; CHECK-NEXT:    br label %[[COMMON_RET]]
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    ret i1 false
 ;
 entry:
   %select = select i1 %v, i8 3, i8 2
