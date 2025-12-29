@@ -491,30 +491,6 @@ void UnwrappedLineParser::calculateBraceTypes(bool ExpectClassBody) {
   SmallVector<StackEntry, 8> LBraceStack;
   assert(Tok->is(tok::l_brace));
 
-  constexpr int MaxLookBack = 64;
-  const auto IsAddressOfParenExpression = [](const FormatToken *RightParen) {
-    assert(RightParen && RightParen->is(tok::r_paren));
-
-    int ParenDepth = 0;
-    const FormatToken *Current = RightParen;
-    const FormatToken *LeftParen = nullptr;
-    for (int I = 0; I < MaxLookBack && Current; ++I) {
-      if (Current->is(tok::r_paren)) {
-        ++ParenDepth;
-      } else if (Current->is(tok::l_paren)) {
-        --ParenDepth;
-        if (ParenDepth == 0) {
-          LeftParen = Current;
-          break;
-        }
-      }
-      Current = Current->Previous;
-    }
-
-    return LeftParen && LeftParen->Previous &&
-           LeftParen->Previous->is(tok::amp);
-  };
-
   do {
     auto *NextTok = Tokens->getNextNonComment();
 
@@ -552,16 +528,7 @@ void UnwrappedLineParser::calculateBraceTypes(bool ExpectClassBody) {
           Tok->setBlockKind(BK_Block);
         }
       } else {
-        // In macro bodies we try to keep compound literal expressions like
-        // `&(type){v}` on a single line. Without this, the '{' can be mistaken
-        // for a block/function body and clang-format will reflow the macro with
-        // backslashes and spaces (e.g. `&(type) { v }`).
-        if (IsCpp && Line->InMacroBody && PrevTok &&
-            PrevTok->is(tok::r_paren) && IsAddressOfParenExpression(PrevTok)) {
-          Tok->setBlockKind(BK_BracedInit);
-        } else {
-          Tok->setBlockKind(BK_Unknown);
-        }
+        Tok->setBlockKind(BK_Unknown);
       }
       LBraceStack.push_back({Tok, PrevTok});
       break;
@@ -2596,10 +2563,7 @@ bool UnwrappedLineParser::parseBracedList(bool IsAngleBracket, bool IsEnum) {
       // lists (in so-called TypeMemberLists). Thus, the semicolon cannot be
       // used for error recovery if we have otherwise determined that this is
       // a braced list.
-      // In macro bodies we can also see non-syntactic braced lists (e.g.
-      // compound literal expressions) where clang-format should still remain
-      // stable.
-      if (Style.isJavaScript() || (IsCpp && Line->InMacroBody)) {
+      if (Style.isJavaScript()) {
         nextToken();
         break;
       }
@@ -2700,6 +2664,9 @@ bool UnwrappedLineParser::parseParens(TokenType AmpAmpTokenType,
           RParen->setFinalizedType(TT_TypeDeclarationParen);
         } else if (Prev->is(tok::greater) && RParen->Previous == LParen) {
           Prev->setFinalizedType(TT_TemplateCloser);
+        } else if (FormatTok->is(tok::l_brace) && Prev->is(tok::amp) &&
+                   !Prev->Previous) {
+          FormatTok->setBlockKind(BK_BracedInit);
         } else if (OptionalParens()) {
           LParen->Optional = true;
           RParen->Optional = true;
