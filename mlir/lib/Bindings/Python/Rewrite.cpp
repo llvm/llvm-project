@@ -291,7 +291,7 @@ void mlir::python::populateRewriteSubmodule(nb::module_ &m) {
           },
           "root"_a, "fn"_a, "benefit"_a = 1,
           // clang-format off
-          nb::sig("def add(self, root: type | str, fn: Callable[[" MAKE_MLIR_PYTHON_QUALNAME("ir.Operation") ", PatternRewriter], Any], benefit: int = 1) -> None"),
+          nb::sig("def add(self, root: type | str, fn: typing.Callable[[" MAKE_MLIR_PYTHON_QUALNAME("ir.Operation") ", PatternRewriter], typing.Any], benefit: int = 1) -> None"),
           // clang-format on
           R"(
             Add a new rewrite pattern on the given root operation with the
