@@ -41,8 +41,9 @@ constexpr _LIBCPP_HIDE_FROM_ABI _Result __abs_in_type(_Source __t) noexcept {
     if (__t == numeric_limits<_Source>::min())
       return -static_cast<_Result>(__t);
     return -__t;
-  } else
+  } else {
     return __t;
+  }
 }
 
 template <class _Tp, class _Up>
