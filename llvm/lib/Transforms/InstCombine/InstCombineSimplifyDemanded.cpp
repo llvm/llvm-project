@@ -2121,11 +2121,6 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Value *V,
         if ((DemandedMask & fcQNan) != fcNone)
           SrcDemandedMask |= fcSNan;
 
-        // This cannot have produced a signaling nan, so we can trim any snan
-        // inputs.
-        if ((DemandedMask & fcSNan) != fcNone)
-          SrcDemandedMask &= ~fcSNan;
-
         if (Mode != DenormalMode::getIEEE()) {
           // Any zero results may have come from flushed denormals.
           if (DemandedMask & fcPosZero)

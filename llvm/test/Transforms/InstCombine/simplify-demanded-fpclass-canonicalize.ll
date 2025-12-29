@@ -299,7 +299,8 @@ define nofpclass(qnan) float @ret_nofpclass_qnan__canonicalize_select_unknown_or
 ; CHECK-LABEL: define nofpclass(qnan) float @ret_nofpclass_qnan__canonicalize_select_unknown_or_snan(
 ; CHECK-SAME: float [[X:%.*]], i1 [[COND:%.*]]) {
 ; CHECK-NEXT:    [[SNAN:%.*]] = call float @returns_snan()
-; CHECK-NEXT:    [[CANON:%.*]] = call float @llvm.canonicalize.f32(float [[X]])
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[X]], float [[SNAN]]
+; CHECK-NEXT:    [[CANON:%.*]] = call float @llvm.canonicalize.f32(float [[SELECT]])
 ; CHECK-NEXT:    ret float [[CANON]]
 ;
   %snan = call float @returns_snan()
@@ -325,7 +326,8 @@ define nofpclass(zero) float @ret_nofpclass_zero_nnan_flag__canonicalize_select_
 ; CHECK-LABEL: define nofpclass(zero) float @ret_nofpclass_zero_nnan_flag__canonicalize_select_unknown_or_snan(
 ; CHECK-SAME: float [[X:%.*]], i1 [[COND:%.*]]) {
 ; CHECK-NEXT:    [[SNAN:%.*]] = call float @returns_snan()
-; CHECK-NEXT:    [[CANON:%.*]] = call float @llvm.canonicalize.f32(float [[X]])
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[X]], float [[SNAN]]
+; CHECK-NEXT:    [[CANON:%.*]] = call float @llvm.canonicalize.f32(float [[SELECT]])
 ; CHECK-NEXT:    ret float [[CANON]]
 ;
   %snan = call float @returns_snan()
