@@ -6,9 +6,9 @@ define i64 @expect_i64(i64 %arg0) {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $x0
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $x0
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s64) = COPY [[COPY]](s64)
-  ; CHECK-NEXT:   $x0 = COPY [[COPY1]](s64)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(i64) = COPY $x0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(i64) = COPY [[COPY]](i64)
+  ; CHECK-NEXT:   $x0 = COPY [[COPY1]](i64)
   ; CHECK-NEXT:   RET_ReallyLR implicit $x0
   %expval = call i64 @llvm.expect.i64(i64 %arg0, i64 1)
   ret i64 %expval
@@ -19,9 +19,9 @@ define i64 @expect_with_probability_i64(i64 %arg0) {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $x0
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $x0
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s64) = COPY [[COPY]](s64)
-  ; CHECK-NEXT:   $x0 = COPY [[COPY1]](s64)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(i64) = COPY $x0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(i64) = COPY [[COPY]](i64)
+  ; CHECK-NEXT:   $x0 = COPY [[COPY1]](i64)
   ; CHECK-NEXT:   RET_ReallyLR implicit $x0
   %expval = call i64 @llvm.expect.with.probability.i64(i64 %arg0, i64 1, double 0.5)
   ret i64 %expval
@@ -35,7 +35,7 @@ define ptr @ptr_annotate(ptr %arg0, ptr %arg1, ptr %arg2, i32 %arg3) {
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x0
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(p0) = COPY $x2
-  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $w3
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(i32) = COPY $w3
   ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:_(p0) = COPY [[COPY]](p0)
   ; CHECK-NEXT:   $x0 = COPY [[COPY4]](p0)
   ; CHECK-NEXT:   RET_ReallyLR implicit $x0
@@ -51,9 +51,9 @@ define i32 @annotation(i32 %a) {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $w0
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
-  ; CHECK-NEXT:   $w0 = COPY [[COPY1]](s32)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $w0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY [[COPY]](i32)
+  ; CHECK-NEXT:   $w0 = COPY [[COPY1]](i32)
   ; CHECK-NEXT:   RET_ReallyLR implicit $w0
   %call = call i32 @llvm.annotation.i32(i32 %a, ptr @.str, ptr @.str1, i32 2)
   ret i32 %call

@@ -16,8 +16,8 @@ define void @bar() personality ptr @__gxx_personality_v0 {
   ; CHECK-NEXT:   G_INVOKE_REGION_START
   ; CHECK-NEXT:   EH_LABEL <mcsymbol >
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
-  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 42
-  ; CHECK-NEXT:   $w0 = COPY [[C]](s32)
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 42
+  ; CHECK-NEXT:   $w0 = COPY [[C]](i32)
   ; CHECK-NEXT:   BL @foo, csr_darwin_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $w0, implicit-def $w0
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
   ; CHECK-NEXT:   EH_LABEL <mcsymbol >
@@ -30,12 +30,12 @@ define void @bar() personality ptr @__gxx_personality_v0 {
   ; CHECK-NEXT:   EH_LABEL <mcsymbol >
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x0
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
-  ; CHECK-NEXT:   [[PTRTOINT:%[0-9]+]]:_(s64) = G_PTRTOINT [[COPY1]](p0)
-  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[PTRTOINT]](s64)
+  ; CHECK-NEXT:   [[PTRTOINT:%[0-9]+]]:_(i64) = G_PTRTOINT [[COPY1]](p0)
+  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(i32) = G_TRUNC [[PTRTOINT]](i64)
   ; CHECK-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0.exn.slot
   ; CHECK-NEXT:   G_STORE [[COPY]](p0), [[FRAME_INDEX]](p0) :: (store (p0) into %ir.exn.slot)
   ; CHECK-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.1.ehselector.slot
-  ; CHECK-NEXT:   G_STORE [[TRUNC]](s32), [[FRAME_INDEX1]](p0) :: (store (s32) into %ir.ehselector.slot)
+  ; CHECK-NEXT:   G_STORE [[TRUNC]](i32), [[FRAME_INDEX1]](p0) :: (store (i32) into %ir.ehselector.slot)
   ; CHECK-NEXT:   G_BR %bb.4
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3.continue:

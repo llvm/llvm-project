@@ -136,8 +136,7 @@ define void @v4i8(ptr %p1) {
 ; CHECK-GI-NEXT:    and v0.8b, v2.8b, v0.8b
 ; CHECK-GI-NEXT:    uzp1 v0.8b, v0.8b, v0.8b
 ; CHECK-GI-NEXT:    cnt v0.8b, v0.8b
-; CHECK-GI-NEXT:    fmov w8, s0
-; CHECK-GI-NEXT:    str w8, [x0]
+; CHECK-GI-NEXT:    str s0, [x0]
 ; CHECK-GI-NEXT:    ret
 entry:
   %d = load <4 x i8>, ptr %p1

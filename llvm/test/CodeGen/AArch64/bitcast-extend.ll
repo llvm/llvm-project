@@ -2,10 +2,6 @@
 ; RUN: llc -mtriple=aarch64-linux-gnu < %s | FileCheck %s --check-prefixes=CHECK,CHECK-SD
 ; RUN: llc -mtriple=aarch64 -global-isel -global-isel-abort=2 -verify-machineinstrs %s -o - 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-GI
 
-; CHECK-GI:       warning: Instruction selection used fallback path for load_zext_i8_v4bf16
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for load_zext_i16_v4bf16
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for load_zext_i32_v4bf16
-
 define <4 x i16> @z_i32_v4i16(i32 %x) {
 ; CHECK-SD-LABEL: z_i32_v4i16:
 ; CHECK-SD:       // %bb.0:
@@ -575,11 +571,16 @@ define <2 x float> @load_zext_i32_v2f32(ptr %p) {
 }
 
 define <1 x double> @load_zext_i8_v1f64(ptr %p) {
-; CHECK-LABEL: load_zext_i8_v1f64:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldrb w8, [x0]
-; CHECK-NEXT:    fmov d0, x8
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: load_zext_i8_v1f64:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    ldrb w8, [x0]
+; CHECK-SD-NEXT:    fmov d0, x8
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: load_zext_i8_v1f64:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    ldr b0, [x0]
+; CHECK-GI-NEXT:    ret
     %l = load i8, ptr %p
     %z = zext i8 %l to i64
     %b = bitcast i64 %z to <1 x double>
@@ -587,11 +588,16 @@ define <1 x double> @load_zext_i8_v1f64(ptr %p) {
 }
 
 define <1 x double> @load_zext_i16_v1f64(ptr %p) {
-; CHECK-LABEL: load_zext_i16_v1f64:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldrh w8, [x0]
-; CHECK-NEXT:    fmov d0, x8
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: load_zext_i16_v1f64:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    ldrh w8, [x0]
+; CHECK-SD-NEXT:    fmov d0, x8
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: load_zext_i16_v1f64:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    ldr h0, [x0]
+; CHECK-GI-NEXT:    ret
     %l = load i16, ptr %p
     %z = zext i16 %l to i64
     %b = bitcast i64 %z to <1 x double>
@@ -599,11 +605,16 @@ define <1 x double> @load_zext_i16_v1f64(ptr %p) {
 }
 
 define <1 x double> @load_zext_i32_v1f64(ptr %p) {
-; CHECK-LABEL: load_zext_i32_v1f64:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr w8, [x0]
-; CHECK-NEXT:    fmov d0, x8
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: load_zext_i32_v1f64:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    ldr w8, [x0]
+; CHECK-SD-NEXT:    fmov d0, x8
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: load_zext_i32_v1f64:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    ldr s0, [x0]
+; CHECK-GI-NEXT:    ret
     %l = load i32, ptr %p
     %z = zext i32 %l to i64
     %b = bitcast i64 %z to <1 x double>

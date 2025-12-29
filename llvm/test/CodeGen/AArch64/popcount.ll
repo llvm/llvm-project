@@ -4,7 +4,7 @@
 ; RUN: llc < %s -mtriple=aarch64-unknown-unknown -mattr=+neon,+dotprod | FileCheck %s --check-prefixes=CHECK,DOT
 ; RUN: llc < %s -mtriple=aarch64-unknown-unknown -mattr=+sve | FileCheck %s --check-prefixes=CHECK,SVE
 ; RUN: llc < %s -mtriple=aarch64_be-unknown-unknown | FileCheck %s --check-prefixes=BE
-; RUN: llc < %s -global-isel -mtriple=aarch64-unknown-unknown | FileCheck %s --check-prefix=GISEL
+; RUN: llc < %s -global-isel -mtriple=aarch64-unknown-unknown | FileCheck %s --check-prefixes=GISEL,GISELO3
 ; RUN: llc < %s -O0 -global-isel -mtriple=aarch64-unknown-unknown | FileCheck %s --check-prefix=GISELO0
 ; RUN: llc < %s -global-isel -mtriple=aarch64-unknown-unknown -mattr=+neon | FileCheck %s --check-prefixes=GISEL,NEON-GISEL
 ; RUN: llc < %s -global-isel -mtriple=aarch64-unknown-unknown -mattr=+neon,+dotprod | FileCheck %s --check-prefixes=GISEL,DOT-GISEL
@@ -397,6 +397,14 @@ define <2 x i64> @popcount2x64(<2 x i64> %0) {
 ; BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
 ; BE-NEXT:    ret
 ;
+; GISELO3-LABEL: popcount2x64:
+; GISELO3:       // %bb.0: // %Entry
+; GISELO3-NEXT:    cnt v0.16b, v0.16b
+; GISELO3-NEXT:    uaddlp v0.8h, v0.16b
+; GISELO3-NEXT:    uaddlp v0.4s, v0.8h
+; GISELO3-NEXT:    uaddlp v0.2d, v0.4s
+; GISELO3-NEXT:    ret
+;
 ; GISELO0-LABEL: popcount2x64:
 ; GISELO0:       // %bb.0: // %Entry
 ; GISELO0-NEXT:    cnt v0.16b, v0.16b
@@ -429,6 +437,13 @@ define <2 x i64> @popcount2x64(<2 x i64> %0) {
 ; SVE-GISEL-NEXT:    uaddlp v0.4s, v0.8h
 ; SVE-GISEL-NEXT:    uaddlp v0.2d, v0.4s
 ; SVE-GISEL-NEXT:    ret
+; GISEL-O3-LABEL: popcount2x64:
+; GISEL-O3:       // %bb.0: // %Entry
+; GISEL-O3-NEXT:    cnt v0.16b, v0.16b
+; GISEL-O3-NEXT:    uaddlp v0.8h, v0.16b
+; GISEL-O3-NEXT:    uaddlp v0.4s, v0.8h
+; GISEL-O3-NEXT:    uaddlp v0.2d, v0.4s
+; GISEL-O3-NEXT:    ret
 Entry:
   %1 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
   ret <2 x i64> %1
@@ -550,6 +565,13 @@ define <4 x i32> @popcount4x32(<4 x i32> %0) {
 ; BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
 ; BE-NEXT:    ret
 ;
+; GISELO3-LABEL: popcount4x32:
+; GISELO3:       // %bb.0: // %Entry
+; GISELO3-NEXT:    cnt v0.16b, v0.16b
+; GISELO3-NEXT:    uaddlp v0.8h, v0.16b
+; GISELO3-NEXT:    uaddlp v0.4s, v0.8h
+; GISELO3-NEXT:    ret
+;
 ; GISELO0-LABEL: popcount4x32:
 ; GISELO0:       // %bb.0: // %Entry
 ; GISELO0-NEXT:    cnt v0.16b, v0.16b
@@ -579,6 +601,12 @@ define <4 x i32> @popcount4x32(<4 x i32> %0) {
 ; SVE-GISEL-NEXT:    uaddlp v0.8h, v0.16b
 ; SVE-GISEL-NEXT:    uaddlp v0.4s, v0.8h
 ; SVE-GISEL-NEXT:    ret
+; GISEL-O3-LABEL: popcount4x32:
+; GISEL-O3:       // %bb.0: // %Entry
+; GISEL-O3-NEXT:    cnt v0.16b, v0.16b
+; GISEL-O3-NEXT:    uaddlp v0.8h, v0.16b
+; GISEL-O3-NEXT:    uaddlp v0.4s, v0.8h
+; GISEL-O3-NEXT:    ret
 Entry:
   %1 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
   ret <4 x i32> %1
@@ -627,6 +655,13 @@ define <2 x i32> @popcount2x32(<2 x i32> %0) {
 ; BE-NEXT:    rev64 v0.2s, v0.2s
 ; BE-NEXT:    ret
 ;
+; GISELO3-LABEL: popcount2x32:
+; GISELO3:       // %bb.0: // %Entry
+; GISELO3-NEXT:    cnt v0.8b, v0.8b
+; GISELO3-NEXT:    uaddlp v0.4h, v0.8b
+; GISELO3-NEXT:    uaddlp v0.2s, v0.4h
+; GISELO3-NEXT:    ret
+;
 ; GISELO0-LABEL: popcount2x32:
 ; GISELO0:       // %bb.0: // %Entry
 ; GISELO0-NEXT:    cnt v0.8b, v0.8b
@@ -656,6 +691,12 @@ define <2 x i32> @popcount2x32(<2 x i32> %0) {
 ; SVE-GISEL-NEXT:    uaddlp v0.4h, v0.8b
 ; SVE-GISEL-NEXT:    uaddlp v0.2s, v0.4h
 ; SVE-GISEL-NEXT:    ret
+; GISEL-O3-LABEL: popcount2x32:
+; GISEL-O3:       // %bb.0: // %Entry
+; GISEL-O3-NEXT:    cnt v0.8b, v0.8b
+; GISEL-O3-NEXT:    uaddlp v0.4h, v0.8b
+; GISEL-O3-NEXT:    uaddlp v0.2s, v0.4h
+; GISEL-O3-NEXT:    ret
 Entry:
   %1 = tail call <2 x i32> @llvm.ctpop.v2i32(<2 x i32> %0)
   ret <2 x i32> %1

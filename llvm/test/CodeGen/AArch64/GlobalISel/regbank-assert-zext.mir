@@ -204,7 +204,7 @@ body:             |
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   successors: %bb.2(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   %bb1_val:gpr(s32) = COPY %copy2(s32)
+  ; CHECK-NEXT:   %bb1_val:fpr(s32) = COPY %copy2(s32)
   ; CHECK-NEXT:   G_BR %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
@@ -257,7 +257,7 @@ body:             |
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   successors: %bb.2(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   %bb1_val:gpr(s32) = COPY %copy2(s32)
+  ; CHECK-NEXT:   %bb1_val:fpr(s32) = COPY %copy2(s32)
   ; CHECK-NEXT:   G_BR %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:

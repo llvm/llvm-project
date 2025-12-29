@@ -185,7 +185,7 @@ define i64 @blend_and_sign_same_bb(i64 %addr) {
   ; GISEL-NEXT: {{  $}}
   ; GISEL-NEXT:   [[COPY:%[0-9]+]]:gpr64 = COPY $x0
   ; GISEL-NEXT:   [[ADRP:%[0-9]+]]:gpr64common = ADRP target-flags(aarch64-page) @discvar
-  ; GISEL-NEXT:   [[LDRXui:%[0-9]+]]:gpr64 = LDRXui [[ADRP]], target-flags(aarch64-pageoff, aarch64-nc) @discvar :: (dereferenceable load (s64) from @discvar)
+  ; GISEL-NEXT:   [[LDRXui:%[0-9]+]]:gpr64 = LDRXui [[ADRP]], target-flags(aarch64-pageoff, aarch64-nc) @discvar :: (dereferenceable load (i64) from @discvar)
   ; GISEL-NEXT:   [[MOVKXi:%[0-9]+]]:gpr64noip = MOVKXi [[LDRXui]], 42, 48
   ; GISEL-NEXT:   [[COPY1:%[0-9]+]]:gpr64noip = COPY [[LDRXui]]
   ; GISEL-NEXT:   [[PAC:%[0-9]+]]:gpr64 = PAC [[COPY]], 2, 42, [[COPY1]], implicit-def dead $x16, implicit-def dead $x17
@@ -237,7 +237,7 @@ define i64 @blend_and_sign_different_bbs(i64 %addr, i64 %cond) {
   ; GISEL-NEXT:   [[COPY:%[0-9]+]]:gpr64 = COPY $x0
   ; GISEL-NEXT:   [[COPY1:%[0-9]+]]:gpr64 = COPY $x1
   ; GISEL-NEXT:   [[ADRP:%[0-9]+]]:gpr64common = ADRP target-flags(aarch64-page) @discvar
-  ; GISEL-NEXT:   [[LDRXui:%[0-9]+]]:gpr64 = LDRXui [[ADRP]], target-flags(aarch64-pageoff, aarch64-nc) @discvar :: (dereferenceable load (s64) from @discvar)
+  ; GISEL-NEXT:   [[LDRXui:%[0-9]+]]:gpr64 = LDRXui [[ADRP]], target-flags(aarch64-pageoff, aarch64-nc) @discvar :: (dereferenceable load (i64) from @discvar)
   ; GISEL-NEXT:   [[MOVKXi:%[0-9]+]]:gpr64noip = MOVKXi [[LDRXui]], 42, 48
   ; GISEL-NEXT:   CBZX [[COPY1]], %bb.3
   ; GISEL-NEXT:   B %bb.2

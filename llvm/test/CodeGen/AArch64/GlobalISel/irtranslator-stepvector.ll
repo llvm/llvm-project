@@ -4,8 +4,8 @@
 define <vscale x 2 x i64> @call_step_vector_i64() {
   ; CHECK-LABEL: name: call_step_vector_i64
   ; CHECK: bb.1.entry:
-  ; CHECK-NEXT:   [[STEP_VECTOR:%[0-9]+]]:_(<vscale x 2 x s64>) = G_STEP_VECTOR i64 1
-  ; CHECK-NEXT:   $z0 = COPY [[STEP_VECTOR]](<vscale x 2 x s64>)
+  ; CHECK-NEXT:   [[STEP_VECTOR:%[0-9]+]]:_(<vscale x 2 x i64>) = G_STEP_VECTOR i64 1
+  ; CHECK-NEXT:   $z0 = COPY [[STEP_VECTOR]](<vscale x 2 x i64>)
   ; CHECK-NEXT:   RET_ReallyLR implicit $z0
 entry:
   %steps = call <vscale x 2 x i64> @llvm.stepvector.nxv2i64()
@@ -15,8 +15,8 @@ entry:
 define <vscale x 4 x i32> @call_step_vector_i32() {
   ; CHECK-LABEL: name: call_step_vector_i32
   ; CHECK: bb.1.entry:
-  ; CHECK-NEXT:   [[STEP_VECTOR:%[0-9]+]]:_(<vscale x 4 x s32>) = G_STEP_VECTOR i32 1
-  ; CHECK-NEXT:   $z0 = COPY [[STEP_VECTOR]](<vscale x 4 x s32>)
+  ; CHECK-NEXT:   [[STEP_VECTOR:%[0-9]+]]:_(<vscale x 4 x i32>) = G_STEP_VECTOR i32 1
+  ; CHECK-NEXT:   $z0 = COPY [[STEP_VECTOR]](<vscale x 4 x i32>)
   ; CHECK-NEXT:   RET_ReallyLR implicit $z0
 entry:
   %steps = call <vscale x 4 x i32> @llvm.stepvector.nxv4i32()
@@ -26,8 +26,8 @@ entry:
 define <vscale x 8 x i16> @call_step_vector_i16() {
   ; CHECK-LABEL: name: call_step_vector_i16
   ; CHECK: bb.1.entry:
-  ; CHECK-NEXT:   [[STEP_VECTOR:%[0-9]+]]:_(<vscale x 8 x s16>) = G_STEP_VECTOR i16 1
-  ; CHECK-NEXT:   $z0 = COPY [[STEP_VECTOR]](<vscale x 8 x s16>)
+  ; CHECK-NEXT:   [[STEP_VECTOR:%[0-9]+]]:_(<vscale x 8 x i16>) = G_STEP_VECTOR i16 1
+  ; CHECK-NEXT:   $z0 = COPY [[STEP_VECTOR]](<vscale x 8 x i16>)
   ; CHECK-NEXT:   RET_ReallyLR implicit $z0
 entry:
   %steps = call <vscale x 8 x i16> @llvm.stepvector.nxv8i16()
@@ -37,8 +37,8 @@ entry:
 define <vscale x 16 x i8> @call_step_vector_i8() {
   ; CHECK-LABEL: name: call_step_vector_i8
   ; CHECK: bb.1.entry:
-  ; CHECK-NEXT:   [[STEP_VECTOR:%[0-9]+]]:_(<vscale x 16 x s8>) = G_STEP_VECTOR i8 1
-  ; CHECK-NEXT:   $z0 = COPY [[STEP_VECTOR]](<vscale x 16 x s8>)
+  ; CHECK-NEXT:   [[STEP_VECTOR:%[0-9]+]]:_(<vscale x 16 x i8>) = G_STEP_VECTOR i8 1
+  ; CHECK-NEXT:   $z0 = COPY [[STEP_VECTOR]](<vscale x 16 x i8>)
   ; CHECK-NEXT:   RET_ReallyLR implicit $z0
 entry:
   %steps = call <vscale x 16 x i8> @llvm.stepvector.nxv16i8()

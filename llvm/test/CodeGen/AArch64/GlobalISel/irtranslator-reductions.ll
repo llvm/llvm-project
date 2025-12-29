@@ -6,11 +6,11 @@ define float @fadd_seq(float %start, <4 x float> %vec) {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $q1, $s0
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $s0
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(<2 x s64>) = COPY $q1
-  ; CHECK-NEXT:   [[BITCAST:%[0-9]+]]:_(<4 x s32>) = G_BITCAST [[COPY1]](<2 x s64>)
-  ; CHECK-NEXT:   [[VECREDUCE_SEQ_FADD:%[0-9]+]]:_(s32) = G_VECREDUCE_SEQ_FADD [[COPY]](s32), [[BITCAST]](<4 x s32>)
-  ; CHECK-NEXT:   $s0 = COPY [[VECREDUCE_SEQ_FADD]](s32)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(f32) = COPY $s0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(<2 x i64>) = COPY $q1
+  ; CHECK-NEXT:   [[BITCAST:%[0-9]+]]:_(<4 x f32>) = G_BITCAST [[COPY1]](<2 x i64>)
+  ; CHECK-NEXT:   [[VECREDUCE_SEQ_FADD:%[0-9]+]]:_(f32) = G_VECREDUCE_SEQ_FADD [[COPY]](f32), [[BITCAST]](<4 x f32>)
+  ; CHECK-NEXT:   $s0 = COPY [[VECREDUCE_SEQ_FADD]](f32)
   ; CHECK-NEXT:   RET_ReallyLR implicit $s0
   %res = call float @llvm.vector.reduce.fadd.v4f32(float %start, <4 x float> %vec)
   ret float %res
@@ -21,11 +21,12 @@ define float @fadd_seq_scalar(float %start, <1 x float> %vec) {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $d1, $s0
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $s0
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(<2 x s32>) = COPY $d1
-  ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY1]](<2 x s32>)
-  ; CHECK-NEXT:   [[FADD:%[0-9]+]]:_(s32) = G_FADD [[COPY]], [[UV]]
-  ; CHECK-NEXT:   $s0 = COPY [[FADD]](s32)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(f32) = COPY $s0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(<2 x i32>) = COPY $d1
+  ; CHECK-NEXT:   [[BITCAST:%[0-9]+]]:_(<2 x f32>) = G_BITCAST [[COPY1]](<2 x i32>)
+  ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(f32), [[UV1:%[0-9]+]]:_(f32) = G_UNMERGE_VALUES [[BITCAST]](<2 x f32>)
+  ; CHECK-NEXT:   [[FADD:%[0-9]+]]:_(f32) = G_FADD [[COPY]], [[UV]]
+  ; CHECK-NEXT:   $s0 = COPY [[FADD]](f32)
   ; CHECK-NEXT:   RET_ReallyLR implicit $s0
   %res = call float @llvm.vector.reduce.fadd.v1f32(float %start, <1 x float> %vec)
   ret float %res
@@ -36,12 +37,12 @@ define float @fadd_fast(float %start, <4 x float> %vec) {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $q1, $s0
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $s0
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(<2 x s64>) = COPY $q1
-  ; CHECK-NEXT:   [[BITCAST:%[0-9]+]]:_(<4 x s32>) = G_BITCAST [[COPY1]](<2 x s64>)
-  ; CHECK-NEXT:   [[VECREDUCE_FADD:%[0-9]+]]:_(s32) = reassoc G_VECREDUCE_FADD [[BITCAST]](<4 x s32>)
-  ; CHECK-NEXT:   [[FADD:%[0-9]+]]:_(s32) = reassoc G_FADD [[COPY]], [[VECREDUCE_FADD]]
-  ; CHECK-NEXT:   $s0 = COPY [[FADD]](s32)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(f32) = COPY $s0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(<2 x i64>) = COPY $q1
+  ; CHECK-NEXT:   [[BITCAST:%[0-9]+]]:_(<4 x f32>) = G_BITCAST [[COPY1]](<2 x i64>)
+  ; CHECK-NEXT:   [[VECREDUCE_FADD:%[0-9]+]]:_(f32) = reassoc G_VECREDUCE_FADD [[BITCAST]](<4 x f32>)
+  ; CHECK-NEXT:   [[FADD:%[0-9]+]]:_(f32) = reassoc G_FADD [[COPY]], [[VECREDUCE_FADD]]
+  ; CHECK-NEXT:   $s0 = COPY [[FADD]](f32)
   ; CHECK-NEXT:   RET_ReallyLR implicit $s0
   %res = call reassoc float @llvm.vector.reduce.fadd.v4f32(float %start, <4 x float> %vec)
   ret float %res
@@ -52,12 +53,14 @@ define double @fmul_seq(double %start, <4 x double> %vec) {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $d0, $q1, $q2
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $d0
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(<2 x s64>) = COPY $q1
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(<2 x s64>) = COPY $q2
-  ; CHECK-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s64>) = G_CONCAT_VECTORS [[COPY1]](<2 x s64>), [[COPY2]](<2 x s64>)
-  ; CHECK-NEXT:   [[VECREDUCE_SEQ_FMUL:%[0-9]+]]:_(s64) = G_VECREDUCE_SEQ_FMUL [[COPY]](s64), [[CONCAT_VECTORS]](<4 x s64>)
-  ; CHECK-NEXT:   $d0 = COPY [[VECREDUCE_SEQ_FMUL]](s64)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(f64) = COPY $d0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(<2 x i64>) = COPY $q1
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(<2 x i64>) = COPY $q2
+  ; CHECK-NEXT:   [[BITCAST:%[0-9]+]]:_(<2 x f64>) = G_BITCAST [[COPY1]](<2 x i64>)
+  ; CHECK-NEXT:   [[BITCAST1:%[0-9]+]]:_(<2 x f64>) = G_BITCAST [[COPY2]](<2 x i64>)
+  ; CHECK-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x f64>) = G_CONCAT_VECTORS [[BITCAST]](<2 x f64>), [[BITCAST1]](<2 x f64>)
+  ; CHECK-NEXT:   [[VECREDUCE_SEQ_FMUL:%[0-9]+]]:_(f64) = G_VECREDUCE_SEQ_FMUL [[COPY]](f64), [[CONCAT_VECTORS]](<4 x f64>)
+  ; CHECK-NEXT:   $d0 = COPY [[VECREDUCE_SEQ_FMUL]](f64)
   ; CHECK-NEXT:   RET_ReallyLR implicit $d0
   %res = call double @llvm.vector.reduce.fmul.v4f64(double %start, <4 x double> %vec)
   ret double %res
@@ -68,10 +71,10 @@ define double @fmul_seq_scalar(double %start, <1 x double> %vec) {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $d0, $d1
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $d0
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s64) = COPY $d1
-  ; CHECK-NEXT:   [[FMUL:%[0-9]+]]:_(s64) = G_FMUL [[COPY]], [[COPY1]]
-  ; CHECK-NEXT:   $d0 = COPY [[FMUL]](s64)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(f64) = COPY $d0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(f64) = COPY $d1
+  ; CHECK-NEXT:   [[FMUL:%[0-9]+]]:_(f64) = G_FMUL [[COPY]], [[COPY1]]
+  ; CHECK-NEXT:   $d0 = COPY [[FMUL]](f64)
   ; CHECK-NEXT:   RET_ReallyLR implicit $d0
   %res = call double @llvm.vector.reduce.fmul.v1f64(double %start, <1 x double> %vec)
   ret double %res
@@ -82,13 +85,15 @@ define double @fmul_fast(double %start, <4 x double> %vec) {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $d0, $q1, $q2
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $d0
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(<2 x s64>) = COPY $q1
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(<2 x s64>) = COPY $q2
-  ; CHECK-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s64>) = G_CONCAT_VECTORS [[COPY1]](<2 x s64>), [[COPY2]](<2 x s64>)
-  ; CHECK-NEXT:   [[VECREDUCE_FMUL:%[0-9]+]]:_(s64) = reassoc G_VECREDUCE_FMUL [[CONCAT_VECTORS]](<4 x s64>)
-  ; CHECK-NEXT:   [[FMUL:%[0-9]+]]:_(s64) = reassoc G_FMUL [[COPY]], [[VECREDUCE_FMUL]]
-  ; CHECK-NEXT:   $d0 = COPY [[FMUL]](s64)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(f64) = COPY $d0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(<2 x i64>) = COPY $q1
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(<2 x i64>) = COPY $q2
+  ; CHECK-NEXT:   [[BITCAST:%[0-9]+]]:_(<2 x f64>) = G_BITCAST [[COPY1]](<2 x i64>)
+  ; CHECK-NEXT:   [[BITCAST1:%[0-9]+]]:_(<2 x f64>) = G_BITCAST [[COPY2]](<2 x i64>)
+  ; CHECK-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x f64>) = G_CONCAT_VECTORS [[BITCAST]](<2 x f64>), [[BITCAST1]](<2 x f64>)
+  ; CHECK-NEXT:   [[VECREDUCE_FMUL:%[0-9]+]]:_(f64) = reassoc G_VECREDUCE_FMUL [[CONCAT_VECTORS]](<4 x f64>)
+  ; CHECK-NEXT:   [[FMUL:%[0-9]+]]:_(f64) = reassoc G_FMUL [[COPY]], [[VECREDUCE_FMUL]]
+  ; CHECK-NEXT:   $d0 = COPY [[FMUL]](f64)
   ; CHECK-NEXT:   RET_ReallyLR implicit $d0
   %res = call reassoc double @llvm.vector.reduce.fmul.v4f64(double %start, <4 x double> %vec)
   ret double %res
@@ -99,10 +104,10 @@ define float @fmax(<4 x float> %vec) {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $q0
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $q0
-  ; CHECK-NEXT:   [[BITCAST:%[0-9]+]]:_(<4 x s32>) = G_BITCAST [[COPY]](<2 x s64>)
-  ; CHECK-NEXT:   [[VECREDUCE_FMAX:%[0-9]+]]:_(s32) = G_VECREDUCE_FMAX [[BITCAST]](<4 x s32>)
-  ; CHECK-NEXT:   $s0 = COPY [[VECREDUCE_FMAX]](s32)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<2 x i64>) = COPY $q0
+  ; CHECK-NEXT:   [[BITCAST:%[0-9]+]]:_(<4 x f32>) = G_BITCAST [[COPY]](<2 x i64>)
+  ; CHECK-NEXT:   [[VECREDUCE_FMAX:%[0-9]+]]:_(f32) = G_VECREDUCE_FMAX [[BITCAST]](<4 x f32>)
+  ; CHECK-NEXT:   $s0 = COPY [[VECREDUCE_FMAX]](f32)
   ; CHECK-NEXT:   RET_ReallyLR implicit $s0
   %res = call float @llvm.vector.reduce.fmax.v4f32(<4 x float> %vec)
   ret float %res
@@ -113,10 +118,10 @@ define float @fmin(<4 x float> %vec) {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $q0
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $q0
-  ; CHECK-NEXT:   [[BITCAST:%[0-9]+]]:_(<4 x s32>) = G_BITCAST [[COPY]](<2 x s64>)
-  ; CHECK-NEXT:   [[VECREDUCE_FMIN:%[0-9]+]]:_(s32) = G_VECREDUCE_FMIN [[BITCAST]](<4 x s32>)
-  ; CHECK-NEXT:   $s0 = COPY [[VECREDUCE_FMIN]](s32)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<2 x i64>) = COPY $q0
+  ; CHECK-NEXT:   [[BITCAST:%[0-9]+]]:_(<4 x f32>) = G_BITCAST [[COPY]](<2 x i64>)
+  ; CHECK-NEXT:   [[VECREDUCE_FMIN:%[0-9]+]]:_(f32) = G_VECREDUCE_FMIN [[BITCAST]](<4 x f32>)
+  ; CHECK-NEXT:   $s0 = COPY [[VECREDUCE_FMIN]](f32)
   ; CHECK-NEXT:   RET_ReallyLR implicit $s0
   %res = call float @llvm.vector.reduce.fmin.v4f32(<4 x float> %vec)
   ret float %res
@@ -127,10 +132,10 @@ define float @fmin_nnan(<4 x float> %vec) {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $q0
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $q0
-  ; CHECK-NEXT:   [[BITCAST:%[0-9]+]]:_(<4 x s32>) = G_BITCAST [[COPY]](<2 x s64>)
-  ; CHECK-NEXT:   [[VECREDUCE_FMIN:%[0-9]+]]:_(s32) = nnan G_VECREDUCE_FMIN [[BITCAST]](<4 x s32>)
-  ; CHECK-NEXT:   $s0 = COPY [[VECREDUCE_FMIN]](s32)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<2 x i64>) = COPY $q0
+  ; CHECK-NEXT:   [[BITCAST:%[0-9]+]]:_(<4 x f32>) = G_BITCAST [[COPY]](<2 x i64>)
+  ; CHECK-NEXT:   [[VECREDUCE_FMIN:%[0-9]+]]:_(f32) = nnan G_VECREDUCE_FMIN [[BITCAST]](<4 x f32>)
+  ; CHECK-NEXT:   $s0 = COPY [[VECREDUCE_FMIN]](f32)
   ; CHECK-NEXT:   RET_ReallyLR implicit $s0
   %res = call nnan float @llvm.vector.reduce.fmin.v4f32(<4 x float> %vec)
   ret float %res
@@ -141,10 +146,10 @@ define float @fmaximum(<4 x float> %vec) {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $q0
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $q0
-  ; CHECK-NEXT:   [[BITCAST:%[0-9]+]]:_(<4 x s32>) = G_BITCAST [[COPY]](<2 x s64>)
-  ; CHECK-NEXT:   [[VECREDUCE_FMAXIMUM:%[0-9]+]]:_(s32) = G_VECREDUCE_FMAXIMUM [[BITCAST]](<4 x s32>)
-  ; CHECK-NEXT:   $s0 = COPY [[VECREDUCE_FMAXIMUM]](s32)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<2 x i64>) = COPY $q0
+  ; CHECK-NEXT:   [[BITCAST:%[0-9]+]]:_(<4 x f32>) = G_BITCAST [[COPY]](<2 x i64>)
+  ; CHECK-NEXT:   [[VECREDUCE_FMAXIMUM:%[0-9]+]]:_(f32) = G_VECREDUCE_FMAXIMUM [[BITCAST]](<4 x f32>)
+  ; CHECK-NEXT:   $s0 = COPY [[VECREDUCE_FMAXIMUM]](f32)
   ; CHECK-NEXT:   RET_ReallyLR implicit $s0
   %res = call float @llvm.vector.reduce.fmaximum.v4f32(<4 x float> %vec)
   ret float %res
@@ -155,10 +160,10 @@ define float @fminimum(<4 x float> %vec) {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $q0
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $q0
-  ; CHECK-NEXT:   [[BITCAST:%[0-9]+]]:_(<4 x s32>) = G_BITCAST [[COPY]](<2 x s64>)
-  ; CHECK-NEXT:   [[VECREDUCE_FMINIMUM:%[0-9]+]]:_(s32) = G_VECREDUCE_FMINIMUM [[BITCAST]](<4 x s32>)
-  ; CHECK-NEXT:   $s0 = COPY [[VECREDUCE_FMINIMUM]](s32)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<2 x i64>) = COPY $q0
+  ; CHECK-NEXT:   [[BITCAST:%[0-9]+]]:_(<4 x f32>) = G_BITCAST [[COPY]](<2 x i64>)
+  ; CHECK-NEXT:   [[VECREDUCE_FMINIMUM:%[0-9]+]]:_(f32) = G_VECREDUCE_FMINIMUM [[BITCAST]](<4 x f32>)
+  ; CHECK-NEXT:   $s0 = COPY [[VECREDUCE_FMINIMUM]](f32)
   ; CHECK-NEXT:   RET_ReallyLR implicit $s0
   %res = call float @llvm.vector.reduce.fminimum.v4f32(<4 x float> %vec)
   ret float %res
@@ -169,10 +174,10 @@ define float @fminimum_nnan(<4 x float> %vec) {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $q0
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $q0
-  ; CHECK-NEXT:   [[BITCAST:%[0-9]+]]:_(<4 x s32>) = G_BITCAST [[COPY]](<2 x s64>)
-  ; CHECK-NEXT:   [[VECREDUCE_FMINIMUM:%[0-9]+]]:_(s32) = nnan G_VECREDUCE_FMINIMUM [[BITCAST]](<4 x s32>)
-  ; CHECK-NEXT:   $s0 = COPY [[VECREDUCE_FMINIMUM]](s32)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<2 x i64>) = COPY $q0
+  ; CHECK-NEXT:   [[BITCAST:%[0-9]+]]:_(<4 x f32>) = G_BITCAST [[COPY]](<2 x i64>)
+  ; CHECK-NEXT:   [[VECREDUCE_FMINIMUM:%[0-9]+]]:_(f32) = nnan G_VECREDUCE_FMINIMUM [[BITCAST]](<4 x f32>)
+  ; CHECK-NEXT:   $s0 = COPY [[VECREDUCE_FMINIMUM]](f32)
   ; CHECK-NEXT:   RET_ReallyLR implicit $s0
   %res = call nnan float @llvm.vector.reduce.fminimum.v4f32(<4 x float> %vec)
   ret float %res
@@ -183,9 +188,9 @@ define i32 @add(<4 x i32> %vec) {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $q0
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $q0
-  ; CHECK-NEXT:   [[VECREDUCE_ADD:%[0-9]+]]:_(s32) = G_VECREDUCE_ADD [[COPY]](<4 x s32>)
-  ; CHECK-NEXT:   $w0 = COPY [[VECREDUCE_ADD]](s32)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<4 x i32>) = COPY $q0
+  ; CHECK-NEXT:   [[VECREDUCE_ADD:%[0-9]+]]:_(i32) = G_VECREDUCE_ADD [[COPY]](<4 x i32>)
+  ; CHECK-NEXT:   $w0 = COPY [[VECREDUCE_ADD]](i32)
   ; CHECK-NEXT:   RET_ReallyLR implicit $w0
   %res = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %vec)
   ret i32 %res
@@ -196,9 +201,9 @@ define i32 @mul(<4 x i32> %vec) {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $q0
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $q0
-  ; CHECK-NEXT:   [[VECREDUCE_MUL:%[0-9]+]]:_(s32) = G_VECREDUCE_MUL [[COPY]](<4 x s32>)
-  ; CHECK-NEXT:   $w0 = COPY [[VECREDUCE_MUL]](s32)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<4 x i32>) = COPY $q0
+  ; CHECK-NEXT:   [[VECREDUCE_MUL:%[0-9]+]]:_(i32) = G_VECREDUCE_MUL [[COPY]](<4 x i32>)
+  ; CHECK-NEXT:   $w0 = COPY [[VECREDUCE_MUL]](i32)
   ; CHECK-NEXT:   RET_ReallyLR implicit $w0
   %res = call i32 @llvm.vector.reduce.mul.v4i32(<4 x i32> %vec)
   ret i32 %res
@@ -209,9 +214,9 @@ define i32 @and(<4 x i32> %vec) {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $q0
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $q0
-  ; CHECK-NEXT:   [[VECREDUCE_AND:%[0-9]+]]:_(s32) = G_VECREDUCE_AND [[COPY]](<4 x s32>)
-  ; CHECK-NEXT:   $w0 = COPY [[VECREDUCE_AND]](s32)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<4 x i32>) = COPY $q0
+  ; CHECK-NEXT:   [[VECREDUCE_AND:%[0-9]+]]:_(i32) = G_VECREDUCE_AND [[COPY]](<4 x i32>)
+  ; CHECK-NEXT:   $w0 = COPY [[VECREDUCE_AND]](i32)
   ; CHECK-NEXT:   RET_ReallyLR implicit $w0
   %res = call i32 @llvm.vector.reduce.and.v4i32(<4 x i32> %vec)
   ret i32 %res
@@ -222,9 +227,9 @@ define i32 @or(<4 x i32> %vec) {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $q0
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $q0
-  ; CHECK-NEXT:   [[VECREDUCE_OR:%[0-9]+]]:_(s32) = G_VECREDUCE_OR [[COPY]](<4 x s32>)
-  ; CHECK-NEXT:   $w0 = COPY [[VECREDUCE_OR]](s32)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<4 x i32>) = COPY $q0
+  ; CHECK-NEXT:   [[VECREDUCE_OR:%[0-9]+]]:_(i32) = G_VECREDUCE_OR [[COPY]](<4 x i32>)
+  ; CHECK-NEXT:   $w0 = COPY [[VECREDUCE_OR]](i32)
   ; CHECK-NEXT:   RET_ReallyLR implicit $w0
   %res = call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> %vec)
   ret i32 %res
@@ -235,9 +240,9 @@ define i32 @xor(<4 x i32> %vec) {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $q0
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $q0
-  ; CHECK-NEXT:   [[VECREDUCE_XOR:%[0-9]+]]:_(s32) = G_VECREDUCE_XOR [[COPY]](<4 x s32>)
-  ; CHECK-NEXT:   $w0 = COPY [[VECREDUCE_XOR]](s32)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<4 x i32>) = COPY $q0
+  ; CHECK-NEXT:   [[VECREDUCE_XOR:%[0-9]+]]:_(i32) = G_VECREDUCE_XOR [[COPY]](<4 x i32>)
+  ; CHECK-NEXT:   $w0 = COPY [[VECREDUCE_XOR]](i32)
   ; CHECK-NEXT:   RET_ReallyLR implicit $w0
   %res = call i32 @llvm.vector.reduce.xor.v4i32(<4 x i32> %vec)
   ret i32 %res
@@ -248,9 +253,9 @@ define i32 @smax(<4 x i32> %vec) {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $q0
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $q0
-  ; CHECK-NEXT:   [[VECREDUCE_SMAX:%[0-9]+]]:_(s32) = G_VECREDUCE_SMAX [[COPY]](<4 x s32>)
-  ; CHECK-NEXT:   $w0 = COPY [[VECREDUCE_SMAX]](s32)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<4 x i32>) = COPY $q0
+  ; CHECK-NEXT:   [[VECREDUCE_SMAX:%[0-9]+]]:_(i32) = G_VECREDUCE_SMAX [[COPY]](<4 x i32>)
+  ; CHECK-NEXT:   $w0 = COPY [[VECREDUCE_SMAX]](i32)
   ; CHECK-NEXT:   RET_ReallyLR implicit $w0
   %res = call i32 @llvm.vector.reduce.smax.v4i32(<4 x i32> %vec)
   ret i32 %res
@@ -261,9 +266,9 @@ define i32 @smin(<4 x i32> %vec) {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $q0
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $q0
-  ; CHECK-NEXT:   [[VECREDUCE_SMIN:%[0-9]+]]:_(s32) = G_VECREDUCE_SMIN [[COPY]](<4 x s32>)
-  ; CHECK-NEXT:   $w0 = COPY [[VECREDUCE_SMIN]](s32)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<4 x i32>) = COPY $q0
+  ; CHECK-NEXT:   [[VECREDUCE_SMIN:%[0-9]+]]:_(i32) = G_VECREDUCE_SMIN [[COPY]](<4 x i32>)
+  ; CHECK-NEXT:   $w0 = COPY [[VECREDUCE_SMIN]](i32)
   ; CHECK-NEXT:   RET_ReallyLR implicit $w0
   %res = call i32 @llvm.vector.reduce.smin.v4i32(<4 x i32> %vec)
   ret i32 %res
@@ -274,9 +279,9 @@ define i32 @umax(<4 x i32> %vec) {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $q0
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $q0
-  ; CHECK-NEXT:   [[VECREDUCE_UMAX:%[0-9]+]]:_(s32) = G_VECREDUCE_UMAX [[COPY]](<4 x s32>)
-  ; CHECK-NEXT:   $w0 = COPY [[VECREDUCE_UMAX]](s32)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<4 x i32>) = COPY $q0
+  ; CHECK-NEXT:   [[VECREDUCE_UMAX:%[0-9]+]]:_(i32) = G_VECREDUCE_UMAX [[COPY]](<4 x i32>)
+  ; CHECK-NEXT:   $w0 = COPY [[VECREDUCE_UMAX]](i32)
   ; CHECK-NEXT:   RET_ReallyLR implicit $w0
   %res = call i32 @llvm.vector.reduce.umax.v4i32(<4 x i32> %vec)
   ret i32 %res
@@ -287,9 +292,9 @@ define i32 @umin(<4 x i32> %vec) {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $q0
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $q0
-  ; CHECK-NEXT:   [[VECREDUCE_UMIN:%[0-9]+]]:_(s32) = G_VECREDUCE_UMIN [[COPY]](<4 x s32>)
-  ; CHECK-NEXT:   $w0 = COPY [[VECREDUCE_UMIN]](s32)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<4 x i32>) = COPY $q0
+  ; CHECK-NEXT:   [[VECREDUCE_UMIN:%[0-9]+]]:_(i32) = G_VECREDUCE_UMIN [[COPY]](<4 x i32>)
+  ; CHECK-NEXT:   $w0 = COPY [[VECREDUCE_UMIN]](i32)
   ; CHECK-NEXT:   RET_ReallyLR implicit $w0
   %res = call i32 @llvm.vector.reduce.umin.v4i32(<4 x i32> %vec)
   ret i32 %res
