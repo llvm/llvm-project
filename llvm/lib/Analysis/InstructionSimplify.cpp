@@ -4461,6 +4461,47 @@ static Value *simplifyWithOpsReplaced(Value *V,
         return Absorber;
     }
 
+    if (auto *CI = dyn_cast<CallInst>(I)) {
+      Function *F = CI->getCalledFunction();
+
+      // `x == y ? 0 : ucmp(x, y)` where under the replacement y -> x, `ucmp(x,
+      // x)` becomes `0`.
+      if (F && F->isIntrinsic() &&
+          (F->getIntrinsicID() == Intrinsic::scmp ||
+           F->getIntrinsicID() == Intrinsic::ucmp)) {
+        // If the call contains (an invalid) range attribute then a replacement
+        // might produce an unexpected poison value.
+        if (CI->hasRetAttr(Attribute::AttrKind::Range)) {
+          auto Attr = CI->getRetAttr(Attribute::AttrKind::Range);
+          const ConstantRange &CR = Attr.getRange();
+
+          APInt Lo = CR.getLower();
+          APInt Hi = CR.getUpper();
+
+          if (!(Lo == llvm::APInt::getAllOnes(Lo.getBitWidth()) &&
+                Hi == llvm::APInt(Hi.getBitWidth(), 2)))
+            return nullptr;
+        }
+
+        // To apply this fold, we have to do the replacement and return `0` if
+        // the arguments are equal.
+        SmallVector<Value *, 2> ReplacedArgs;
+        for (auto &NewOp : NewOps) {
+          for (auto &[A, B] : Ops) {
+            if (NewOp == A)
+              ReplacedArgs.push_back(B);
+            else
+              ReplacedArgs.push_back(A);
+          }
+        }
+
+        if (ReplacedArgs[0] == ReplacedArgs[1])
+          return llvm::ConstantInt::get(F->getReturnType(), 0);
+        else
+          return nullptr;
+      }
+    }
+
     if (isa<GetElementPtrInst>(I)) {
       // getelementptr x, 0 -> x.
       // This never returns poison, even if inbounds is set.
@@ -4673,33 +4714,6 @@ static Value *simplifySelectWithBitTest(Value *CondVal, Value *TrueVal,
   return nullptr;
 }
 
-// Transform
-// select(icmp(eq, X, Y), 0, llvm.cmp(X, Y))
-// ->
-// llvm.cmp(X, Y)
-static Value *simplifySelectWhenValInstrinsic(
-    ArrayRef<std::pair<Value *, Value *>> Replacements, Value *TrueVal,
-    Value *FalseVal) {
-  auto *CTrueVal = dyn_cast<ConstantInt>(TrueVal);
-  auto *FalseInstr = dyn_cast<CallInst>(FalseVal);
-
-  if (CTrueVal && FalseInstr && CTrueVal->isZero()) {
-    Function *F = FalseInstr->getCalledFunction();
-    if (!F || !F->isIntrinsic())
-      return nullptr;
-
-    Intrinsic::ID ID = F->getIntrinsicID();
-    if (ID != Intrinsic::scmp && ID != Intrinsic::ucmp)
-      return nullptr;
-
-    if (Replacements[0].first == FalseInstr->getOperand(0) &&
-        Replacements[0].second == FalseInstr->getOperand(1))
-      return FalseInstr;
-  }
-
-  return nullptr;
-}
-
 /// Try to simplify a select instruction when its condition operand is an
 /// integer equality or floating-point equivalence comparison.
 static Value *simplifySelectWithEquivalence(
@@ -4721,10 +4735,6 @@ static Value *simplifySelectWithEquivalence(
 
   if (SimplifiedFalseVal == SimplifiedTrueVal)
     return FalseVal;
-
-  if (auto *V = simplifySelectWhenValInstrinsic(Replacements, SimplifiedTrueVal,
-                                                SimplifiedFalseVal))
-    return V;
 
   return nullptr;
 }

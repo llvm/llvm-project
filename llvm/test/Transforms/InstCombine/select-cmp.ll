@@ -856,5 +856,51 @@ define i32 @fold_scmp_negative_test(i32 %0, i32 %1) {
   ret i32 %5
 }
 
+define i32 @fold_ucmp_default_range(i32 %0, i32 %1) {
+; CHECK-LABEL: @fold_ucmp_default_range(
+; CHECK-NEXT:    [[TMP3:%.*]] = tail call range(i32 -1, 2) i32 @llvm.ucmp.i32.i32(i32 [[TMP0:%.*]], i32 [[TMP1:%.*]])
+; CHECK-NEXT:    ret i32 [[TMP3]]
+;
+  %3 = icmp eq i32 %0, %1
+  %4 = tail call range(i32 -1, 2) i32 @llvm.ucmp.i32.i32(i32 %0, i32 %1)
+  %5 = select i1 %3, i32 0, i32 %4
+  ret i32 %5
+}
+
+define i32 @fold_scmp_default_range(i32 %0, i32 %1) {
+; CHECK-LABEL: @fold_scmp_default_range(
+; CHECK-NEXT:    [[TMP3:%.*]] = tail call range(i32 -1, 2) i32 @llvm.scmp.i32.i32(i32 [[TMP0:%.*]], i32 [[TMP1:%.*]])
+; CHECK-NEXT:    ret i32 [[TMP3]]
+;
+  %3 = icmp eq i32 %0, %1
+  %4 = tail call range(i32 -1, 2) i32 @llvm.scmp.i32.i32(i32 %0, i32 %1)
+  %5 = select i1 %3, i32 0, i32 %4
+  ret i32 %5
+}
+
+define i32 @fold_ucmp_negative_test_updated_range(i32 %0, i32 %1) {
+; CHECK-LABEL: @fold_ucmp_negative_test_updated_range(
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i32 [[TMP0:%.*]], [[TMP1:%.*]]
+; CHECK-NEXT:    [[TMP4:%.*]] = zext i1 [[TMP3]] to i32
+; CHECK-NEXT:    ret i32 [[TMP4]]
+;
+  %3 = icmp eq i32 %0, %1
+  %4 = tail call range(i32 1, 2) i32 @llvm.ucmp.i32.i32(i32 %0, i32 %1)
+  %5 = select i1 %3, i32 0, i32 %4
+  ret i32 %5
+}
+
+define i32 @fold_scmp_negative_test_updated_range(i32 %0, i32 %1) {
+; CHECK-LABEL: @fold_scmp_negative_test_updated_range(
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i32 [[TMP0:%.*]], [[TMP1:%.*]]
+; CHECK-NEXT:    [[TMP4:%.*]] = zext i1 [[TMP3]] to i32
+; CHECK-NEXT:    ret i32 [[TMP4]]
+;
+  %3 = icmp eq i32 %0, %1
+  %4 = tail call range(i32 1, 2) i32 @llvm.scmp.i32.i32(i32 %0, i32 %1)
+  %5 = select i1 %3, i32 0, i32 %4
+  ret i32 %5
+}
+
 declare void @use(i1)
 declare void @use.i8(i8)
