@@ -277,15 +277,33 @@ void mlir::python::populateRewriteSubmodule(nb::module_ &m) {
           "add",
           [](PyRewritePatternSet &self, nb::handle root, const nb::callable &fn,
              unsigned benefit) {
-            std::string opName =
-                nb::cast<std::string>(root.attr("OPERATION_NAME"));
+            std::string opName;
+            if (root.is_type()) {
+              opName = nb::cast<std::string>(root.attr("OPERATION_NAME"));
+            } else if (nb::isinstance<nb::str>(root)) {
+              opName = nb::cast<std::string>(root);
+            } else {
+              throw nb::type_error(
+                  "the root argument must be a type or a string");
+            }
             self.add(mlirStringRefCreate(opName.data(), opName.size()), benefit,
                      fn);
           },
           "root"_a, "fn"_a, "benefit"_a = 1,
-          "Add a new rewrite pattern on the given root operation with the "
-          "callable as the matching and rewriting function and the given "
-          "benefit.")
+          // clang-format off
+          nb::sig("def add(self, root: type | str, fn: Callable[[" MAKE_MLIR_PYTHON_QUALNAME("ir.Operation") ", PatternRewriter], Any], benefit: int = 1) -> None"),
+          // clang-format on
+          R"(
+            Add a new rewrite pattern on the given root operation with the
+            callable as the matching and rewriting function and the given benefit.
+
+            Args:
+              root: The root operation to apply the pattern on,
+                    which can be an OpView class (type) or an operation name (str).
+              fn: The callable to use for matching and rewriting,
+                  which takes an operation and a pattern rewriter as arguments.
+                  The matching succeeds iff the callable returns a value castable to False (e.g. None).
+              benefit: The benefit of the pattern, defaults to 1.)")
       .def("freeze", &PyRewritePatternSet::freeze,
            "Freeze the pattern set into a frozen one.");
 
