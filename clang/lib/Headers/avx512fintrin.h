@@ -5355,9 +5355,8 @@ _mm_maskz_getexp_ss (__mmask8 __U, __m128 __A, __m128 __B)
                                                (__v4sf)_mm_setzero_ps(), \
                                                (__mmask8)(U), (int)(R)))
 
-static __inline__ __mmask16 __DEFAULT_FN_ATTRS
-_mm512_kmov (__mmask16 __A)
-{
+static __inline__ __mmask16
+    __DEFAULT_FN_ATTRS_CONSTEXPR _mm512_kmov(__mmask16 __A) {
   return  __A;
 }
 
