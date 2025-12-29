@@ -1506,6 +1506,8 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
   MaxStoresPerMemset = 8;
   MaxStoresPerMemsetOptSize = 4;
 
+  setTargetDAGCombine(ISD::VECREDUCE_ADD);
+
   //
   // Set up register classes.
   //
@@ -3408,7 +3410,12 @@ HexagonTargetLowering::PerformDAGCombine(SDNode *N,
   unsigned Opc = Op.getOpcode();
 
   // Combining transformations applicable for arbitrary vector sizes.
-  if (!DCI.isBeforeLegalizeOps()) {
+  if (DCI.isBeforeLegalizeOps()) {
+    switch (Opc) {
+    case ISD::VECREDUCE_ADD:
+      return expandVecReduceAdd(N, DCI.DAG);
+    }
+  } else {
     switch (Opc) {
     case ISD::VSELECT: {
       // (vselect (xor x, ptrue), v0, v1) -> (vselect x, v1, v0)
@@ -3751,6 +3758,78 @@ EVT HexagonTargetLowering::getOptimalMemOpType(
   if (Op.size() >= 2 && Op.isAligned(Align(2)))
     return MVT::i16;
   return MVT::Other;
+}
+
+// The helpers below are versions of llvm::getShuffleReduction and
+// llvm::getOrderedReduction, adapted to use during DAG passes and simplified as
+// follows:
+// - ICmp and FCmp are not handled;
+// - in every step in getShuffleReduction, the input is split into halves (not
+// pairwise).
+
+static SDValue getOrderedReduction(SDValue Vec, unsigned Op,
+                                   SelectionDAG &DAG) {
+  assert(Op != Instruction::ICmp && Op != Instruction::FCmp);
+
+  EVT VT = Vec.getValueType();
+  EVT EltT = VT.getVectorElementType();
+  unsigned VF = VT.getVectorNumElements();
+  assert(VF > 0 &&
+         "Reduction emission only supported for non-zero length vectors!");
+
+  SDLoc DL(Vec);
+  SDValue Result = DAG.getExtractVectorElt(DL, EltT, Vec, 0);
+  for (unsigned ExtractIdx = 1; ExtractIdx < VF; ++ExtractIdx) {
+    SDValue Ext = DAG.getExtractVectorElt(DL, EltT, Vec, ExtractIdx);
+    Result = DAG.getNode(Op, DL, EltT, {Result, Ext});
+  }
+
+  return Result;
+}
+
+static SDValue getShuffleReduction(SDValue Vec, unsigned Op,
+                                   SelectionDAG &DAG) {
+  assert(Op != Instruction::ICmp && Op != Instruction::FCmp);
+
+  EVT VT = Vec.getValueType();
+  unsigned VF = VT.getVectorNumElements();
+  if (VF == 0)
+    llvm_unreachable("Vector must be non-zero length");
+  // VF is a power of 2 so we can emit the reduction using log2(VF) shuffles
+  // and vector ops, reducing the set of values being computed by half each
+  // round.
+  assert(isPowerOf2_32(VF) &&
+         "Reduction emission only supported for pow2 vectors!");
+
+  SDLoc DL(Vec);
+  // TODO: Is it correct to create double-vector shuffle and fill 3/4 of it with
+  // undefs?
+  SmallVector<int, 32> ShuffleMask(VF);
+  for (unsigned i = VF; i > 1; i >>= 1) {
+    // Move the upper half of the vector to the lower half.
+    for (unsigned j = 0; j != i / 2; ++j)
+      ShuffleMask[j] = i / 2 + j;
+    // Fill the rest of the mask with undef.
+    std::fill(&ShuffleMask[i / 2], ShuffleMask.end(), -1);
+
+    SDValue Shuf =
+        DAG.getVectorShuffle(VT, DL, Vec, DAG.getUNDEF(VT), ShuffleMask);
+
+    Vec = DAG.getNode(Op, DL, VT, {Vec, Shuf});
+  }
+  // The result is in the first element of the vector.
+  return DAG.getExtractVectorElt(DL, VT.getVectorElementType(), Vec, 0);
+}
+
+SDValue HexagonTargetLowering::expandVecReduceAdd(SDNode *N,
+                                                  SelectionDAG &DAG) const {
+  // Since we disabled automatic reduction expansion, generate log2 ladder code
+  // if the vector is of a power-of-two length.
+  SDValue Input = N->getOperand(0);
+  if (isPowerOf2_32(Input.getValueType().getVectorNumElements()))
+    return getShuffleReduction(Input, ISD::ADD, DAG);
+  // Otherwise, reduction will be scalarized.
+  return getOrderedReduction(Input, ISD::ADD, DAG);
 }
 
 bool HexagonTargetLowering::allowsMemoryAccess(

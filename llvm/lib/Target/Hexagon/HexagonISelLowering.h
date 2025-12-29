@@ -517,9 +517,7 @@ private:
   SDValue combineTruncateBeforeLegal(SDValue Op, DAGCombinerInfo &DCI) const;
   SDValue combineConcatVectorsBeforeLegal(SDValue Op, DAGCombinerInfo & DCI)
       const;
-  SDValue combineVectorShuffleBeforeLegal(SDValue Op, DAGCombinerInfo & DCI)
-      const;
-
+  SDValue expandVecReduceAdd(SDNode *N, SelectionDAG &DAG) const;
   SDValue PerformHvxDAGCombine(SDNode * N, DAGCombinerInfo & DCI) const;
 };
 
