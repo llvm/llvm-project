@@ -288,8 +288,8 @@ static llvm::Error LaunchRunInTerminalTarget(llvm::opt::Arg &target_arg,
   if (!stdio.empty()) {
     llvm::SmallVector<llvm::StringRef, 3> files;
     stdio.split(files, ':');
-    while (files.size() < 3)
-      files.push_back(files.back());
+    constexpr size_t num_of_stdio = 3;
+    files.resize(std::max(num_of_stdio, files.size()));
     if (llvm::Error err = SetupIORedirection(files))
       return err;
   } else if ((isatty(STDIN_FILENO) != 0) &&
