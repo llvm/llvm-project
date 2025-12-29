@@ -3846,6 +3846,8 @@ static Instruction *foldBitCeil(SelectInst &SI, IRBuilderBase &Builder,
                                 InstCombinerImpl &IC) {
   Type *SelType = SI.getType();
   unsigned BitWidth = SelType->getScalarSizeInBits();
+  if (!isPowerOf2_32(BitWidth))
+    return nullptr;
 
   Value *FalseVal = SI.getFalseValue();
   Value *TrueVal = SI.getTrueValue();
@@ -3869,9 +3871,6 @@ static Instruction *foldBitCeil(SelectInst &SI, IRBuilderBase &Builder,
       !match(Ctlz, m_Intrinsic<Intrinsic::ctlz>(m_Value(CtlzOp), m_Value())) ||
       !isSafeToRemoveBitCeilSelect(Pred, Cond0, Cond1, CtlzOp, BitWidth,
                                    ShouldDropNoWrap))
-    return nullptr;
-
-  if (!isPowerOf2_32(BitWidth))
     return nullptr;
 
   if (ShouldDropNoWrap) {
