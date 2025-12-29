@@ -1627,6 +1627,13 @@ private:
 
   /// Device number identifier specified by the context selector.
   StringRef DeviceNumID;
+
+  enum class OpenMPImpexType {
+    OMP_NotImpex = 0,
+    OMP_Impex = 1,
+    OMP_Import = 2,
+    OMP_Export = 3
+  };
 };
 
 } // namespace clang

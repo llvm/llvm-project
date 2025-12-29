@@ -175,6 +175,12 @@ void TestTaskLoopImpex() {
 #pragma omp taskloop transparent(C)
   for (int i = 0; i < 10; ++i) {}
 }
+
+enum class TaskType {
+  TypeA,
+  TypeB,
+  TypeC
+};
 #endif
 
 int main(int argc, char **argv) {
@@ -241,7 +247,12 @@ int main(int argc, char **argv) {
   foo();
 
   TestTaskLoopImpex<1>();
+
+  TaskType task = TaskType::TypeA;
+#pragma omp task transparent(task)
+  foo();
 #endif
+
   // CHECK60: #pragma omp task threadset(omp_pool)
   // CHECK60: #pragma omp task threadset(omp_team)
   // CHECK60-NEXT: foo();
@@ -254,6 +265,8 @@ int main(int argc, char **argv) {
   // CHECK60-NEXT: #pragma omp task transparent(v ? omp_import : omp_export)
   // CHECK60-NEXT: #pragma omp task transparent(omp_import + 0)
   // CHECK60-NEXT: #pragma omp task transparent((v))
+  // CHECK60-NEXT: foo();
+  // CHECK60: #pragma omp task transparent(task)
   // CHECK60-NEXT: foo();
 
   return tmain<int, 5>(b, &b) + tmain<long, 1>(x, &x);

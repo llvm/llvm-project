@@ -1513,7 +1513,7 @@ class OMPTransparentClause final : public OMPClause {
   SourceLocation LParenLoc;
 
   /// Argument of the 'transparent' clause.
-  Stmt *ImpexType = nullptr;
+  Expr *ImpexType = nullptr;
 
   /// Sets the location of '('.
   void setLParenLoc(SourceLocation Loc) { LParenLoc = Loc; }
@@ -1552,7 +1552,7 @@ public:
   }
 
   const_child_range children() const {
-    return const_child_range(&ImpexType, &ImpexType + 1);
+    return const_cast<OMPTransparentClause *>(this)->children();
   }
 
   child_range used_children() {
