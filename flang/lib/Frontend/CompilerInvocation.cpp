@@ -1546,9 +1546,28 @@ static bool parseLangOptionsArgs(CompilerInvocation &invoc,
   return success;
 }
 
+static llvm::SmallVector<const char *>
+replaceClassicFlangArgs(llvm::ArrayRef<const char *> CommandLineArgs) {
+  llvm::SmallVector<const char *> NewArgs;
+  for (auto Arg : CommandLineArgs) {
+    // Process -mextend -> mapping to -ffixed-line-length=132
+    if (std::strcmp(Arg, "-Mextend") == 0) {
+      NewArgs.push_back("-ffixed-line-length=132");
+    }
+    else {
+    	NewArgs.push_back(Arg);
+    }
+  }
+  return NewArgs;
+}
+
 bool CompilerInvocation::createFromArgs(
-    CompilerInvocation &invoc, llvm::ArrayRef<const char *> commandLineArgs,
+    CompilerInvocation &invoc, llvm::ArrayRef<const char *> commandLineArgs0,
     clang::DiagnosticsEngine &diags, const char *argv0) {
+
+  auto NewCommandLineArgs =
+      replaceClassicFlangArgs(commandLineArgs0);
+  llvm::ArrayRef<const char *> commandLineArgs = NewCommandLineArgs;
 
   bool success = true;
 
