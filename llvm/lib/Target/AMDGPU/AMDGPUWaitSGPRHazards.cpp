@@ -556,6 +556,6 @@ PreservedAnalyses
 AMDGPUWaitSGPRHazardsPass::run(MachineFunction &MF,
                                MachineFunctionAnalysisManager &MFAM) {
   if (AMDGPUWaitSGPRHazards().run(MF))
-    return PreservedAnalyses::none();
+    return getMachineFunctionPassPreservedAnalyses();
   return PreservedAnalyses::all();
 }

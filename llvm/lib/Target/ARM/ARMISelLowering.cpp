@@ -16929,10 +16929,12 @@ static SDValue PerformVECREDUCE_ADDCombine(SDNode *N, SelectionDAG &DAG,
   auto ExtendIfNeeded = [&](SDValue A, unsigned ExtendCode) {
     EVT AVT = A.getValueType();
     if (!AVT.is128BitVector())
-      A = DAG.getNode(ExtendCode, dl,
-                      AVT.changeVectorElementType(MVT::getIntegerVT(
-                          128 / AVT.getVectorMinNumElements())),
-                      A);
+      A = DAG.getNode(
+          ExtendCode, dl,
+          AVT.changeVectorElementType(
+              *DAG.getContext(),
+              MVT::getIntegerVT(128 / AVT.getVectorMinNumElements())),
+          A);
     return A;
   };
   auto IsVADDV = [&](MVT RetTy, unsigned ExtendCode, ArrayRef<MVT> ExtTypes) {

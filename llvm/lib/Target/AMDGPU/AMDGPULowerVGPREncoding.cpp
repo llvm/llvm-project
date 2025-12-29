@@ -403,7 +403,5 @@ AMDGPULowerVGPREncodingPass::run(MachineFunction &MF,
   if (!AMDGPULowerVGPREncoding().run(MF))
     return PreservedAnalyses::all();
 
-  PreservedAnalyses PA;
-  PA.preserveSet<CFGAnalyses>();
-  return PA;
+  return getMachineFunctionPassPreservedAnalyses().preserveSet<CFGAnalyses>();
 }
