@@ -10,6 +10,7 @@ on:
       - 'users/**'
     paths:
       - 'clang-tools-extra/clang-tidy/**'
+      - 'clang-tools-extra/docs/clang-tidy/**'
       - '.github/workflows/pr-code-lint.yml'
 
 jobs:
