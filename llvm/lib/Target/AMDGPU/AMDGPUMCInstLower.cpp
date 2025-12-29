@@ -413,6 +413,16 @@ void AMDGPUAsmPrinter::emitInstruction(const MachineInstr *MI) {
       return;
     }
 
+    unsigned Opc = MI->getOpcode();
+    if (LLVM_UNLIKELY(Opc == TargetOpcode::STATEPOINT ||
+                      Opc == TargetOpcode::STACKMAP ||
+                      Opc == TargetOpcode::PATCHPOINT)) {
+      LLVMContext &Ctx = MI->getMF()->getFunction().getContext();
+      Ctx.emitError("unhandled statepoint-like instruction");
+      OutStreamer->emitRawComment("unsupported statepoint/stackmap/patchpoint");
+      return;
+    }
+
     if (isVerbose())
       if (STI.getInstrInfo()->isBlockLoadStore(MI->getOpcode()))
         emitVGPRBlockComment(MI, STI.getInstrInfo(), STI.getRegisterInfo(),
