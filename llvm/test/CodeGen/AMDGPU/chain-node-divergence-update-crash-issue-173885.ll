@@ -9,18 +9,18 @@ define void @chain_node_divergence_update_crash(ptr addrspace(5) %ptr) {
 ; CHECK-NEXT:    s_wait_samplecnt 0x0
 ; CHECK-NEXT:    s_wait_bvhcnt 0x0
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
-; CHECK-NEXT:    scratch_load_b32 v5, v0, off
+; CHECK-NEXT:    scratch_load_b32 v4, v0, off
 ; CHECK-NEXT:    s_mov_b32 s0, 0
 ; CHECK-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; CHECK-NEXT:    s_mov_b32 s3, s0
 ; CHECK-NEXT:    s_mov_b32 s1, s0
 ; CHECK-NEXT:    s_mov_b32 s2, s0
+; CHECK-NEXT:    s_mov_b32 s3, s0
 ; CHECK-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; CHECK-NEXT:    v_dual_mov_b32 v4, s3 :: v_dual_mov_b32 v3, s2
-; CHECK-NEXT:    v_dual_mov_b32 v2, s1 :: v_dual_mov_b32 v1, s0
+; CHECK-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; CHECK-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
 ; CHECK-NEXT:    s_wait_loadcnt 0x0
-; CHECK-NEXT:    scratch_store_b128 v5, v[1:4], off
-; CHECK-NEXT:    scratch_store_b128 v0, v[1:4], off
+; CHECK-NEXT:    scratch_store_b128 v4, v[0:3], off
+; CHECK-NEXT:    scratch_store_b128 off, v[0:3], s0
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %load = load ptr addrspace(5), ptr addrspace(5) %ptr, align 8
