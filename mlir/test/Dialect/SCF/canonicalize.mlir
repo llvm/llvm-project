@@ -1665,11 +1665,11 @@ func.func @func_execute_region_inline_multi_yield() {
 module {
 func.func private @foo()->()
 func.func private @execute_region_yeilding_external_value() -> memref<1x60xui8> {
-  %alloc = memref.alloc() {alignment = 64 : i64} : memref<1x60xui8>  
-  %1 = scf.execute_region -> memref<1x60xui8> no_inline {    
+  %alloc = memref.alloc() {alignment = 64 : i64} : memref<1x60xui8>
+  %1 = scf.execute_region -> memref<1x60xui8> no_inline {
     func.call @foo():()->()
     scf.yield %alloc: memref<1x60xui8>
-  }  
+  }
   return %1 : memref<1x60xui8>
 }
 }
@@ -1688,12 +1688,12 @@ func.func private @execute_region_yeilding_external_value() -> memref<1x60xui8> 
 module {
 func.func private @foo()->()
 func.func private @execute_region_yeilding_external_and_local_values() -> (memref<1x60xui8>, memref<1x120xui8>) {
-  %alloc = memref.alloc() {alignment = 64 : i64} : memref<1x60xui8>  
-  %1, %2 = scf.execute_region -> (memref<1x60xui8>, memref<1x120xui8>) no_inline {    
+  %alloc = memref.alloc() {alignment = 64 : i64} : memref<1x60xui8>
+  %1, %2 = scf.execute_region -> (memref<1x60xui8>, memref<1x120xui8>) no_inline {
     %alloc_1 = memref.alloc() {alignment = 64 : i64} : memref<1x120xui8>
     func.call @foo():()->()
     scf.yield %alloc, %alloc_1: memref<1x60xui8>,  memref<1x120xui8>
-  }  
+  }
   return %1, %2 : memref<1x60xui8>, memref<1x120xui8>
 }
 }
@@ -1716,18 +1716,18 @@ func.func private @execute_region_yeilding_external_and_local_values() -> (memre
 module {
   func.func private @foo()->()
   func.func private @execute_region_multiple_yields_same_operands() -> (memref<1x60xui8>, memref<1x120xui8>) {
-    %alloc = memref.alloc() {alignment = 64 : i64} : memref<1x60xui8>  
-    %alloc_1 = memref.alloc() {alignment = 64 : i64} : memref<1x120xui8>  
+    %alloc = memref.alloc() {alignment = 64 : i64} : memref<1x60xui8>
+    %alloc_1 = memref.alloc() {alignment = 64 : i64} : memref<1x120xui8>
     %1, %2 = scf.execute_region -> (memref<1x60xui8>, memref<1x120xui8>) no_inline {
       %c = "test.cmp"() : () -> i1
       cf.cond_br %c, ^bb2, ^bb3
-    ^bb2:    
+    ^bb2:
       func.call @foo():()->()
       scf.yield %alloc, %alloc_1 : memref<1x60xui8>, memref<1x120xui8>
-    ^bb3: 
-      func.call @foo():()->()   
+    ^bb3:
+      func.call @foo():()->()
       scf.yield %alloc, %alloc_1 : memref<1x60xui8>, memref<1x120xui8>
-    }  
+    }
     return %1, %2 : memref<1x60xui8>, memref<1x120xui8>
   }
 }
@@ -1746,19 +1746,19 @@ module {
 module {
   func.func private @foo()->()
   func.func private @execute_region_multiple_yields_different_operands() -> (memref<1x60xui8>, memref<1x120xui8>) {
-    %alloc = memref.alloc() {alignment = 64 : i64} : memref<1x60xui8>  
-    %alloc_1 = memref.alloc() {alignment = 64 : i64} : memref<1x120xui8>  
-    %alloc_2 = memref.alloc() {alignment = 64 : i64} : memref<1x120xui8>  
+    %alloc = memref.alloc() {alignment = 64 : i64} : memref<1x60xui8>
+    %alloc_1 = memref.alloc() {alignment = 64 : i64} : memref<1x120xui8>
+    %alloc_2 = memref.alloc() {alignment = 64 : i64} : memref<1x120xui8>
     %1, %2 = scf.execute_region -> (memref<1x60xui8>, memref<1x120xui8>) no_inline {
       %c = "test.cmp"() : () -> i1
       cf.cond_br %c, ^bb2, ^bb3
-    ^bb2:    
+    ^bb2:
       func.call @foo():()->()
       scf.yield %alloc, %alloc_1 : memref<1x60xui8>, memref<1x120xui8>
-    ^bb3: 
-      func.call @foo():()->()   
+    ^bb3:
+      func.call @foo():()->()
       scf.yield %alloc, %alloc_2 : memref<1x60xui8>, memref<1x120xui8>
-    }  
+    }
     return %1, %2 : memref<1x60xui8>, memref<1x120xui8>
   }
 }
@@ -1778,18 +1778,18 @@ module {
 module {
 func.func private @foo()->()
 func.func private @execute_region_multiple_yields_different_operands() -> (memref<1x60xui8>) {
-  %alloc = memref.alloc() {alignment = 64 : i64} : memref<1x60xui8>  
-  %alloc_1 = memref.alloc() {alignment = 64 : i64} : memref<1x60xui8>   
+  %alloc = memref.alloc() {alignment = 64 : i64} : memref<1x60xui8>
+  %alloc_1 = memref.alloc() {alignment = 64 : i64} : memref<1x60xui8>
   %1 = scf.execute_region -> (memref<1x60xui8>) no_inline {
     %c = "test.cmp"() : () -> i1
     cf.cond_br %c, ^bb2, ^bb3
-  ^bb2:    
+  ^bb2:
     func.call @foo():()->()
     scf.yield %alloc : memref<1x60xui8>
-  ^bb3:    
+  ^bb3:
     func.call @foo():()->()
     scf.yield %alloc_1 : memref<1x60xui8>
-  }    
+  }
   return %1 : memref<1x60xui8>
 }
 }
@@ -2170,4 +2170,71 @@ func.func @scf_for_all_step_size_0()  {
     scf.forall.in_parallel {}
   }
   return
+}
+
+// -----
+
+func.func private @side_effect()
+
+// CHECK-LABEL: func @iter_args_cycles
+//  CHECK-SAME:   (%[[LB:.*]]: index, %[[UB:.*]]: index, %[[STEP:.*]]: index, %[[A:.*]]: i32, %[[B:.*]]: i64, %[[C:.*]]: f32)
+//       CHECK:   scf.for %[[IV:.*]] = %[[LB]] to %[[UB]] step %[[STEP]] {
+//       CHECK:   func.call @side_effect()
+//   CHECK-NOT:   yield
+//       CHECK:   return %[[A]], %[[B]], %[[A]], %[[B]], %[[B]], %[[C]] : i32, i64, i32, i64, i64, f32
+func.func @iter_args_cycles(%lb : index, %ub : index, %step : index, %a : i32, %b : i64, %c : f32) -> (i32, i64, i32, i64, i64, f32) {
+  %res:6 = scf.for %i = %lb to %ub step %step iter_args(%0 = %a, %1 = %b, %2 = %a, %3 = %b, %4 = %b, %5 = %c) -> (i32, i64, i32, i64, i64, f32) {
+    func.call @side_effect() : () -> ()
+    scf.yield %2, %4, %0, %1, %3, %5 : i32, i64, i32, i64, i64, f32
+  }
+  return %res#0, %res#1, %res#2, %res#3, %res#4, %res#5 : i32, i64, i32, i64, i64, f32
+}
+
+// -----
+
+func.func private @side_effect(i32)
+
+// CHECK-LABEL: func @iter_args_cycles_non_cycle_start
+//  CHECK-SAME:   (%[[LB:.*]]: index, %[[UB:.*]]: index, %[[STEP:.*]]: index, %[[A:.*]]: i32, %[[B:.*]]: i32)
+//       CHECK:   %[[RES:.*]] = scf.for %[[IV:.*]] = %[[LB]] to %[[UB]] step %[[STEP]] iter_args(%[[ITER_ARG:.*]] = %[[A]]) -> (i32) {
+//       CHECK:   func.call @side_effect(%[[ITER_ARG]])
+//       CHECK:   yield %[[B]] : i32
+//       CHECK:   return %[[RES]], %[[B]], %[[B]] : i32, i32, i32
+func.func @iter_args_cycles_non_cycle_start(%lb : index, %ub : index, %step : index, %a : i32, %b : i32) -> (i32, i32, i32) {
+  %res:3 = scf.for %i = %lb to %ub step %step iter_args(%0 = %a, %1 = %b, %2 = %b) -> (i32, i32, i32) {
+    func.call @side_effect(%0) : (i32) -> ()
+    scf.yield %1, %2, %1 : i32, i32, i32
+  }
+  return %res#0, %res#1, %res#2 : i32, i32, i32
+}
+
+// -----
+
+// CHECK-LABEL: func @dead_index_switch_result(
+//  CHECK-SAME:     %[[arg0:.*]]: index
+//   CHECK-DAG:   %[[c10:.*]] = arith.constant 10
+//   CHECK-DAG:   %[[c11:.*]] = arith.constant 11
+//       CHECK:   %[[switch:.*]] = scf.index_switch %[[arg0]] -> index
+//       CHECK:   case 1 {
+//       CHECK:     memref.store %[[c10]]
+//       CHECK:     scf.yield %[[arg0]] : index
+//       CHECK:   } 
+//       CHECK:   default {
+//       CHECK:     memref.store %[[c11]]
+//       CHECK:     scf.yield %[[arg0]] : index
+//       CHECK:   }
+//       CHECK:   return %[[switch]]
+func.func @dead_index_switch_result(%arg0 : index, %arg1 : memref<i32>) -> index {
+  %non_live, %live = scf.index_switch %arg0 -> i32, index
+  case 1 {
+    %c10 = arith.constant 10 : i32
+    memref.store %c10, %arg1[] : memref<i32>
+    scf.yield %c10, %arg0 : i32, index
+  }
+  default {
+    %c11 = arith.constant 11 : i32
+    memref.store %c11, %arg1[] : memref<i32>
+    scf.yield %c11, %arg0 : i32, index
+  }
+  return %live : index
 }
