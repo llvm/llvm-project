@@ -17,6 +17,7 @@
 #include "llvm/IR/PseudoProbe.h"
 #include "llvm/MC/MCPseudoProbe.h"
 #include "llvm/MC/MCStreamer.h"
+#include "llvm/ProfileData/SampleProf.h"
 
 #ifndef NDEBUG
 #include "llvm/IR/Module.h"
@@ -32,10 +33,15 @@ void PseudoProbeHandler::emitPseudoProbe(uint64_t Guid, uint64_t Index,
   // When it's done ReversedInlineStack looks like ([66, B], [88, A])
   // which means, Function A inlines function B at calliste with a probe id 88,
   // and B inlines C at probe 66 where C is represented by Guid.
+  static const SmallVector<StringRef, 3> CoroSuffixes{".cleanup", ".destroy",
+                                                      ".resume"};
   SmallVector<InlineSite, 8> ReversedInlineStack;
   auto *InlinedAt = DebugLoc ? DebugLoc->getInlinedAt() : nullptr;
   while (InlinedAt) {
     auto Name = InlinedAt->getSubprogramLinkageName();
+    // Strip Coroutine suffixes from CoroSplit Pass, since pseudo probes are
+    // generated in an earlier stage.
+    Name = FunctionSamples::getCanonicalFnName(Name, CoroSuffixes);
     // Use caching to avoid redundant md5 computation for build speed.
     uint64_t &CallerGuid = NameGuidMap[Name];
     if (!CallerGuid)
