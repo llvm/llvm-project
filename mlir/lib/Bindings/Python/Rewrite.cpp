@@ -299,10 +299,12 @@ void mlir::python::populateRewriteSubmodule(nb::module_ &m) {
 
             Args:
               root: The root operation to apply the pattern on,
-                    which can be an OpView class (type) or an operation name (str).
+                    which can be an OpView subclass (e.g. arith.AddIOp)
+                    or an operation name string (e.g. "arith.addi").
               fn: The callable to use for matching and rewriting,
                   which takes an operation and a pattern rewriter as arguments.
-                  The matching succeeds iff the callable returns a value castable to False (e.g. None).
+                  The matching succeeds iff the callable returns
+                  a value castable to False (e.g. None).
               benefit: The benefit of the pattern, defaults to 1.)")
       .def("freeze", &PyRewritePatternSet::freeze,
            "Freeze the pattern set into a frozen one.");
