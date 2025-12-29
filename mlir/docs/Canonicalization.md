@@ -75,11 +75,9 @@ form potentially contentious. Whether a transformation belongs in the canonical
 form must be decided on a case-by-case basis, but common community-agreed
 canonicalizations include:
 
-* Identity / no-op elimination. E.g., folding `arith.addi %x, %c0` to `%x` or
-  erasing `memref.copy %x, %x`.
-* Scalar constant folding. E.g., folding `arith.addi %c1, %c2` to `%c3`. Note:
-  this is not true for "large" tensors where constant folding can lead to IR
-  size explosion.
+* Identity / no-op elimination. E.g., folding `arith.addi(%x, %c0)` to `%x` or
+  erasing `memref.copy(%x, %x)`.
+* Scalar constant folding. E.g., folding `arith.addi(%c1, %c2)` to `%c3`.
 * Folding inverse ops. E.g., folding `arith.xori(arith.xori(%x, %a), %a)` to
   `%x`.
 * Unused/redundant value elimination. E.g., removing unused loop-carried
@@ -93,8 +91,15 @@ canonicalizations include:
   shaped types. E.g., rewriting `%v = tensor.empty(%c5) : tensor<?xf32>` as
   `%0 = tensor.empty() : tensor<5xf32>` and
   `%v = tensor.cast %0 : tensor<5xf32> to tensor<?xf32>`.
-* Cast propagation / folding. E.g., pushing casts through operations or folding
-  them away if it introduces more static type information.
+* Cast propagation / folding such as pushing casts through operations or
+  folding them away if it introduces more static type information. E.g.,
+  rewriting `tensor.insert_slice(%src, tensor.cast(%dst))` (where the cast
+  converts from `tensor<5xf32>` to `tensor<?xf32>`) as
+  `tensor.cast(tensor.insert_slice(%src, %dst))`.
+
+
+Note: Some canonicalizations do not apply when they would lead to IR size
+explosion. (E.g., when they would produce "large" tensor/vector attributes.)
 
 Note: Some dialects define multiple IR forms, sometimes depending on the
 follow-up transformation ([example](https://mlir.llvm.org/docs/Rationale/RationaleLinalgDialect/#interchangeability-of-formsa-nameformsa)).
