@@ -683,6 +683,8 @@ let test_functions () =
   let abs_decl = intrinsic_declaration m abs_id [|i32_type|] in
   insist ("llvm.abs.i8" = intrinsic_overloaded_name m abs_id [|i8_type|]);
   insist ("llvm.abs.i32" = intrinsic_overloaded_name m abs_id [|i32_type|]);
+  let abs_i8_type = intrinsic_type context abs_id [|i8_type|] in
+  insist (TypeKind.Function = classify_type abs_i8_type);
   insist (is_intrinsic abs_decl);
   insist (intrinsic_is_overloaded abs_id);
   let stackmap_id = lookup_intrinsic_id "llvm.experimental.stackmap" in
