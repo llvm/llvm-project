@@ -346,6 +346,16 @@ using AllRecipe_commutative_match =
                  VPWidenRecipe, VPReplicateRecipe, VPInstruction>;
 
 template <unsigned Opcode, typename... OpTys>
+using VPWidenRecipe_match = Recipe_match<std::tuple<OpTys...>, Opcode,
+                                         /*Commutative*/ false, VPWidenRecipe>;
+
+template <unsigned Opcode, typename... OpTys>
+inline VPWidenRecipe_match<Opcode, OpTys...>
+m_VPWidenRecipe(const OpTys &...Ops) {
+  return VPWidenRecipe_match<Opcode, OpTys...>(Ops...);
+}
+
+template <unsigned Opcode, typename... OpTys>
 using VPInstruction_match = Recipe_match<std::tuple<OpTys...>, Opcode,
                                          /*Commutative*/ false, VPInstruction>;
 

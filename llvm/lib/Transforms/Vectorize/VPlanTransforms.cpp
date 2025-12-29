@@ -1444,6 +1444,49 @@ static void simplifyRecipe(VPSingleDefRecipe *Def, VPTypeAnalysis &TypeInfo) {
     return;
   }
 
+  // Drop header mask if LHS/RHS range is safe.
+  // (sdiv lhs, (select header, rhs, 1)) -> (sdiv lhs, rhs)
+  // (srem lhs, (select header, rhs, 1)) -> (srem lhs, rhs)
+  VPValue *LHS, *WSel, *RHS, *Mask;
+  if (match(Def, m_CombineOr(m_VPWidenRecipe<Instruction::SDiv>(
+                                 m_VPValue(LHS), m_VPValue(WSel)),
+                             m_VPWidenRecipe<Instruction::SRem>(
+                                 m_VPValue(LHS), m_VPValue(WSel)))) &&
+      match(WSel, m_Select(m_VPValue(Mask), m_VPValue(RHS), m_One())) &&
+      Plan->getVectorLoopRegion() && vputils::isHeaderMask(Mask, *Plan)) {
+    auto InductionWithoutN = [](VPValue *Recipe, APInt N) {
+      auto *IV = dyn_cast<VPWidenIntOrFpInductionRecipe>(Recipe);
+      if (!IV)
+        return false;
+      auto *Start = dyn_cast_or_null<ConstantInt>(
+          IV->getStartValue()->getUnderlyingValue());
+      auto *Increment = dyn_cast_or_null<ConstantInt>(
+          IV->getStepValue()->getUnderlyingValue());
+      if (!Start || !Increment)
+        return false;
+      APInt Range = N - Start->getValue();
+      APInt Step, Remainder;
+      APInt::sdivrem(Range, Increment->getValue(), Step, Remainder);
+      return !Remainder.isZero() || Step.isNegative();
+    };
+    unsigned BW =
+        cast<IntegerType>(TypeInfo.inferScalarType(RHS))->getBitWidth();
+    // SDiv/SRem is safe under any of the following conditions:
+    // 1. Both LHS and RHS are live-ins for which the masked-off lanes equal the
+    //    masked-on lanes.
+    // 2. RHS never produces 0 or -1.
+    // 3. LHS never produces INT_MIN, and RHS is a live-in or
+    //    never produces 0.
+    bool RhsHasNoZero = InductionWithoutN(RHS, APInt::getZero(BW));
+    bool IsSafe =
+        (LHS->isLiveIn() && RHS->isLiveIn()) ||
+        (InductionWithoutN(RHS, APInt(BW, -1, true)) && RhsHasNoZero) ||
+        (InductionWithoutN(LHS, APInt::getSignedMinValue(BW)) &&
+         (RhsHasNoZero || RHS->isLiveIn()));
+    if (IsSafe)
+      Def->setOperand(1, RHS);
+  }
+
   // For i1 vp.merges produced by AnyOf reductions:
   // vp.merge true, (or x, y), x, evl -> vp.merge y, true, x, evl
   if (match(Def, m_Intrinsic<Intrinsic::vp_merge>(m_True(), m_VPValue(A),
