@@ -1262,12 +1262,19 @@ bool LoopVectorizationLegality::canVectorizeMemory() {
   }
 
   if (LAI->hasLoadStoreDependenceInvolvingLoopInvariantAddress()) {
-    reportVectorizationFailure("We don't allow storing to uniform addresses",
-                               "write to a loop invariant address could not "
-                               "be vectorized",
-                               "CantVectorizeStoreToLoopInvariantAddress", ORE,
-                               TheLoop);
-    return false;
+    auto *MSSA = LAIs.getMSSA();
+    auto *AA = &LAIs.getAA();
+    auto *SE = PSE.getSE();
+    for (const auto &[Load, Store] : LAI->getInvariantAddressConflicts()) {
+      if (!isInvariantLoadHoistable(Load, Store, TheLoop, MSSA, AA, *SE)) {
+        reportVectorizationFailure(
+            "We don't allow storing to uniform addresses",
+            "write to a loop invariant address could not "
+            "be vectorized",
+            "CantVectorizeStoreToLoopInvariantAddress", ORE, TheLoop);
+        return false;
+      }
+    }
   }
 
   // We can vectorize stores to invariant address when final reduction value is

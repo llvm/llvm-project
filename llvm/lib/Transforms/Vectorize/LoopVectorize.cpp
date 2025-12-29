@@ -89,6 +89,8 @@
 #include "llvm/Analysis/LoopAnalysisManager.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/LoopIterator.h"
+#include "llvm/Analysis/MemoryLocation.h"
+#include "llvm/Analysis/MemorySSA.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/ScalarEvolution.h"
@@ -10426,3 +10428,216 @@ void LoopVectorizePass::printPipeline(
   OS << (VectorizeOnlyWhenForced ? "" : "no-") << "vectorize-forced-only;";
   OS << '>';
 }
+
+namespace {
+/// Collects all subexpressions that appear within a given SCEV tree.
+struct SCEVSubexprCollector : public SCEVVisitor<SCEVSubexprCollector, void> {
+  SmallPtrSet<const SCEV *, 4> &Subs;
+  SCEVSubexprCollector(SmallPtrSet<const SCEV *, 4> &S) : Subs(S) {}
+
+  template <typename Operands> void visitOperands(Operands operands) {
+    for (auto *Op : operands)
+      visit(Op);
+  }
+  void visitConstant(const SCEVConstant *C) { Subs.insert(C); }
+  void visitUnknown(const SCEVUnknown *U) { Subs.insert(U); }
+  void visitAddExpr(const SCEVAddExpr *E) {
+    Subs.insert(E);
+    for (auto *Op : E->operands())
+      visit(Op);
+  }
+  void visitMulExpr(const SCEVMulExpr *E) {
+    Subs.insert(E);
+    for (auto *Op : E->operands())
+      visit(Op);
+  }
+  void visitAddRecExpr(const SCEVAddRecExpr *E) {
+    Subs.insert(E);
+    for (auto *Op : E->operands())
+      visit(Op);
+  }
+  void visitSMaxExpr(const SCEVSMaxExpr *E) {
+    Subs.insert(E);
+    for (auto *Op : E->operands())
+      visit(Op);
+  }
+  void visitSMinExpr(const SCEVSMinExpr *E) {
+    Subs.insert(E);
+    for (auto *Op : E->operands())
+      visit(Op);
+  }
+  void visitUMinExpr(const SCEVUMinExpr *E) {
+    Subs.insert(E);
+    for (auto *Op : E->operands())
+      visit(Op);
+  }
+  void visitUMaxExpr(const SCEVUMaxExpr *E) {
+    Subs.insert(E);
+    for (auto *Op : E->operands())
+      visit(Op);
+  }
+  void visitMinMaxExpr(const SCEVMinMaxExpr *E) {
+    Subs.insert(E);
+    for (auto *Op : E->operands())
+      visit(Op);
+  }
+  void visitUDivExpr(const SCEVUDivExpr *E) {
+    Subs.insert(E);
+    visit(E->getLHS());
+    visit(E->getRHS());
+  }
+  void visitZeroExtendExpr(const SCEVZeroExtendExpr *E) {
+    Subs.insert(E);
+    visit(E->getOperand());
+  }
+  void visitSignExtendExpr(const SCEVSignExtendExpr *E) {
+    Subs.insert(E);
+    visit(E->getOperand());
+  }
+  void visitTruncateExpr(const SCEVTruncateExpr *E) {
+    Subs.insert(E);
+    visit(E->getOperand());
+  }
+  void visitCouldNotCompute(const SCEVCouldNotCompute *E) { Subs.insert(E); }
+  void visitVScale(const SCEVVScale *E) {
+    Subs.insert(E);
+    visitOperands(E->operands());
+  }
+  void visitPtrToIntExpr(const SCEVPtrToIntExpr *E) {
+    Subs.insert(E);
+    visitOperands(E->operands());
+  }
+  void visitSequentialUMinExpr(const SCEVSequentialUMinExpr *E) {
+    Subs.insert(E);
+    visitOperands(E->operands());
+  }
+};
+} // end namespace
+
+namespace llvm {
+bool isInvariantLoadHoistable(LoadInst *L, StoreInst *S, const Loop *Loop,
+                                    MemorySSA *MSSA, AAResults *AA,
+                                    ScalarEvolution &SE, const SCEV **StepSCEV,
+                                    SmallVectorImpl<Instruction *> *Instructions) {
+  assert(L != nullptr && S != nullptr);
+  assert(Loop->isLoopInvariant(L->getPointerOperand()));
+
+  if (!MSSA)
+    return false;
+
+  if (L->isVolatile() || S->isVolatile())
+    return false;
+
+  MemoryAccess *MA = MSSA->getMemoryAccess(L);
+  auto QLoc = MemoryLocation::get(L);
+
+  AliasResult AR = AA->alias(MemoryLocation::get(S), QLoc);
+  if (AR != AliasResult::MustAlias)
+    return false;
+
+  // I have the memory PHI, so I know where is the backedge
+  // I have to find all memory accesses to the same cell (that I care)
+  // There should be a single memory use and a single memorydef
+  // memory use should have MemoryPhi as transitive clobber
+  // backedge should have the MemoryDef as a transitive clobber (must-alias) (?)
+  MemoryAccess *Clobber = MSSA->getWalker()->getClobberingMemoryAccess(MA);
+  while (auto *MD = dyn_cast<MemoryUseOrDef>(Clobber)) {
+    Instruction *DefI = MD->getMemoryInst();
+
+    if (!DefI)
+      return false;
+
+    AliasResult AR = AA->alias(MemoryLocation::get(DefI), QLoc);
+
+    Clobber = MD->getDefiningAccess();
+
+    // We assume runtime aliasing check will be used
+    if (AR == AliasResult::MustAlias)
+      return false;
+  }
+
+  MemoryAccess *MS = MSSA->getMemoryAccess(S);
+  MemoryAccess *StoreClobber = MSSA->getWalker()->getClobberingMemoryAccess(MS);
+  while (true) {
+    if (isa<MemoryPhi>(StoreClobber))
+      break;
+    if (auto *MD = dyn_cast<MemoryUseOrDef>(StoreClobber)) {
+      Instruction *DefI = MD->getMemoryInst();
+
+      if (!DefI)
+        return false;
+
+      AliasResult AR = AA->alias(MemoryLocation::get(DefI), QLoc);
+
+      StoreClobber = MD->getDefiningAccess();
+
+      if (AR == AliasResult::MustAlias)
+        return false;
+    }
+  }
+
+  if (!SE.isSCEVable(S->getValueOperand()->getType()))
+    return false;
+
+  const SCEV *LoadSCEV = SE.getUnknown(L);
+  const SCEV *StoreSCEV = SE.getSCEV(S->getValueOperand());
+
+  const auto *const Step = SE.getMinusSCEV(StoreSCEV, LoadSCEV);
+
+  if (isa<SCEVCouldNotCompute>(Step) || !SE.isLoopInvariant(Step, Loop))
+    return false;
+
+  SmallVector<Instruction *, 4> WL;
+
+  SmallPtrSet<Instruction *, 4> Slice;
+  SmallPtrSet<const SCEV *, 4> Subs;
+  SCEVSubexprCollector Collector(Subs);
+  Collector.visit(StoreSCEV);
+
+  // Register all instructions that matches the SCEV
+  // to allow its removal when hoisting it and
+  // re-expanding the SCEV
+  auto enqueueIfMatches = [&](Value *X) {
+    if (auto *XI = dyn_cast<Instruction>(X)) {
+      const SCEV *SX = SE.getSCEV(XI);
+      if (Subs.contains(SX) && Slice.insert(XI).second)
+        WL.push_back(XI);
+    }
+  };
+
+  enqueueIfMatches(S->getValueOperand());
+
+  while (!WL.empty()) {
+    Instruction *I = WL.pop_back_val();
+
+    for (Value *Op : I->operands()) {
+      if (isa<Constant>(Op) || isa<Argument>(Op))
+        continue;
+      enqueueIfMatches(Op);
+    }
+  }
+
+  auto hasExternalUsers = [S](const SmallPtrSetImpl<Instruction *> &Slice) {
+    for (Instruction *I : Slice)
+      for (Use &U : I->uses())
+        if (auto *UserI = dyn_cast<Instruction>(U.getUser())) {
+          if (isa<DbgInfoIntrinsic>(UserI))
+            continue;
+          if (!Slice.count(UserI) && UserI != S)
+            return true;
+        }
+    return false;
+  };
+
+  if (hasExternalUsers(Slice))
+    return false;
+
+  if (StepSCEV)
+    *StepSCEV = Step;
+
+  if (Instructions)
+    Instructions->insert(Instructions->end(), Slice.begin(), Slice.end());
+
+  return true;
+}
+} // namespace llvm

@@ -1778,232 +1778,6 @@ bool llvm::isConsecutiveAccess(Value *A, Value *B, const DataLayout &DL,
   return Diff == 1;
 }
 
-/// Collects all subexpressions that appear within a given SCEV tree.
-struct SCEVSubexprCollector : public SCEVVisitor<SCEVSubexprCollector, void> {
-  SmallPtrSet<const SCEV *, 4> &Subs;
-  SCEVSubexprCollector(SmallPtrSet<const SCEV *, 4> &S) : Subs(S) {}
-
-  template <typename Operands> void visitOperands(Operands operands) {
-    for (auto *Op : operands)
-      visit(Op);
-  }
-  void visitConstant(const SCEVConstant *C) { Subs.insert(C); }
-  void visitUnknown(const SCEVUnknown *U) { Subs.insert(U); }
-  void visitAddExpr(const SCEVAddExpr *E) {
-    Subs.insert(E);
-    for (auto *Op : E->operands())
-      visit(Op);
-  }
-  void visitMulExpr(const SCEVMulExpr *E) {
-    Subs.insert(E);
-    for (auto *Op : E->operands())
-      visit(Op);
-  }
-  void visitAddRecExpr(const SCEVAddRecExpr *E) {
-    Subs.insert(E);
-    for (auto *Op : E->operands())
-      visit(Op);
-  }
-  void visitSMaxExpr(const SCEVSMaxExpr *E) {
-    Subs.insert(E);
-    for (auto *Op : E->operands())
-      visit(Op);
-  }
-  void visitSMinExpr(const SCEVSMinExpr *E) {
-    Subs.insert(E);
-    for (auto *Op : E->operands())
-      visit(Op);
-  }
-  void visitUMinExpr(const SCEVUMinExpr *E) {
-    Subs.insert(E);
-    for (auto *Op : E->operands())
-      visit(Op);
-  }
-  void visitUMaxExpr(const SCEVUMaxExpr *E) {
-    Subs.insert(E);
-    for (auto *Op : E->operands())
-      visit(Op);
-  }
-  void visitMinMaxExpr(const SCEVMinMaxExpr *E) {
-    Subs.insert(E);
-    for (auto *Op : E->operands())
-      visit(Op);
-  }
-  void visitUDivExpr(const SCEVUDivExpr *E) {
-    Subs.insert(E);
-    visit(E->getLHS());
-    visit(E->getRHS());
-  }
-  void visitZeroExtendExpr(const SCEVZeroExtendExpr *E) {
-    Subs.insert(E);
-    visit(E->getOperand());
-  }
-  void visitSignExtendExpr(const SCEVSignExtendExpr *E) {
-    Subs.insert(E);
-    visit(E->getOperand());
-  }
-  void visitTruncateExpr(const SCEVTruncateExpr *E) {
-    Subs.insert(E);
-    visit(E->getOperand());
-  }
-  void visitCouldNotCompute(const SCEVCouldNotCompute *E) { Subs.insert(E); }
-  void visitVScale(const SCEVVScale *E) {
-    Subs.insert(E);
-    visitOperands(E->operands());
-  }
-  void visitPtrToIntExpr(const SCEVPtrToIntExpr *E) {
-    Subs.insert(E);
-    visitOperands(E->operands());
-  }
-  void visitSequentialUMinExpr(const SCEVSequentialUMinExpr *E) {
-    Subs.insert(E);
-    visitOperands(E->operands());
-  }
-};
-
-bool MemoryDepChecker::isInvariantLoadHoistable(
-    LoadInst *L, ScalarEvolution &SE, StoreInst **S, const SCEV **StepSCEV,
-    SmallVectorImpl<Instruction *> *Instructions) const {
-  assert(L != nullptr);
-  assert(InnermostLoop->isLoopInvariant(L->getPointerOperand()));
-
-  if (!MSSA)
-    return false;
-
-  MemoryAccess *MA = MSSA->getMemoryAccess(L);
-  auto QLoc = MemoryLocation::get(L);
-
-  SmallVector<StoreInst *> Stores;
-  SmallVector<LoadInst *> Loads;
-
-  for (auto &&I : *InnermostLoop->getHeader()) {
-    if (auto *Store = dyn_cast<StoreInst>(&I)) {
-      AliasResult AR = AA->alias(MemoryLocation::get(Store), QLoc);
-      if (AR == AliasResult::MustAlias)
-        Stores.push_back(Store);
-    }
-    if (auto *Load = dyn_cast<LoadInst>(&I)) {
-      AliasResult AR = AA->alias(MemoryLocation::get(Load), QLoc);
-      if (AR == AliasResult::MustAlias)
-        Loads.push_back(Load);
-    }
-  }
-
-  if (Loads.size() != 1 || Loads[0]->isVolatile() || Stores.size() != 1 ||
-      Stores[0]->isVolatile())
-    return false;
-
-  // I have the memory PHI, so I know where is the backedge
-  // I have to find all memory accesses to the same cell (that I care)
-  // There should be a single memory use and a single memorydef
-  // memory use should have MemoryPhi as transitive clobber
-  // backedge should have the MemoryDef as a transitive clobber (must-alias) (?)
-  MemoryAccess *Clobber = MSSA->getWalker()->getClobberingMemoryAccess(MA);
-  while (auto *MD = dyn_cast<MemoryUseOrDef>(Clobber)) {
-    Instruction *DefI = MD->getMemoryInst();
-
-    if (!DefI)
-      return false;
-
-    AliasResult AR = AA->alias(MemoryLocation::get(DefI), QLoc);
-
-    Clobber = MD->getDefiningAccess();
-
-    // We assume runtime aliasing check will be used
-    if (AR == AliasResult::MustAlias)
-      return false;
-  }
-
-  MemoryAccess *MS = MSSA->getMemoryAccess(Stores[0]);
-  MemoryAccess *StoreClobber = MSSA->getWalker()->getClobberingMemoryAccess(MS);
-  while (true) {
-    if (isa<MemoryPhi>(StoreClobber))
-      break;
-    if (auto *MD = dyn_cast<MemoryUseOrDef>(StoreClobber)) {
-      Instruction *DefI = MD->getMemoryInst();
-
-      if (!DefI)
-        return false;
-
-      AliasResult AR = AA->alias(MemoryLocation::get(DefI), QLoc);
-
-      StoreClobber = MD->getDefiningAccess();
-
-      if (AR == AliasResult::MustAlias)
-        return false;
-    }
-  }
-
-  if (!SE.isSCEVable(Stores[0]->getValueOperand()->getType()))
-    return false;
-
-  const SCEV *LoadSCEV = SE.getUnknown(L);
-  const SCEV *StoreSCEV = SE.getSCEV(Stores[0]->getValueOperand());
-
-  auto Step = SE.getMinusSCEV(StoreSCEV, LoadSCEV);
-
-  if (isa<SCEVCouldNotCompute>(Step) ||
-      !SE.isLoopInvariant(Step, InnermostLoop))
-    return false;
-
-  SmallVector<Instruction *, 4> WL;
-
-  SmallPtrSet<Instruction *, 4> Slice;
-  SmallPtrSet<const SCEV *, 4> Subs;
-  SCEVSubexprCollector Collector(Subs);
-  Collector.visit(StoreSCEV);
-
-  // Register all instructions that matches the SCEV
-  // to allow its removal when hoisting it and
-  // re-expanding the SCEV
-  auto enqueueIfMatches = [&](Value *X) {
-    if (auto *XI = dyn_cast<Instruction>(X)) {
-      const SCEV *SX = SE.getSCEV(XI);
-      if (Subs.contains(SX) && Slice.insert(XI).second)
-        WL.push_back(XI);
-    }
-  };
-
-  enqueueIfMatches(Stores[0]->getValueOperand());
-
-  while (!WL.empty()) {
-    Instruction *I = WL.pop_back_val();
-
-    for (Value *Op : I->operands()) {
-      if (isa<Constant>(Op) || isa<Argument>(Op))
-        continue;
-      enqueueIfMatches(Op);
-    }
-  }
-
-  auto hasExternalUsers =
-      [&Stores](const SmallPtrSetImpl<Instruction *> &Slice) {
-        for (Instruction *I : Slice)
-          for (Use &U : I->uses())
-            if (auto *UserI = dyn_cast<Instruction>(U.getUser())) {
-              if (isa<DbgInfoIntrinsic>(UserI))
-                continue;
-              if (!Slice.count(UserI) &&
-                  !std::count(Stores.begin(), Stores.end(), UserI))
-                return true;
-            }
-        return false;
-      };
-
-  if (hasExternalUsers(Slice))
-    return false;
-
-  if (S)
-    *S = Stores[0];
-  if (StepSCEV)
-    *StepSCEV = Step;
-
-  if (Instructions)
-    Instructions->insert(Instructions->end(), Slice.begin(), Slice.end());
-
-  return true;
-}
-
 void MemoryDepChecker::addAccess(StoreInst *SI) {
   visitPointers(SI->getPointerOperand(), *InnermostLoop,
                 [this, SI](Value *Ptr) {
@@ -2335,8 +2109,10 @@ MemoryDepChecker::getDependenceDistanceStrideAndSize(
       InnermostLoop->isLoopInvariant(APtr) &&
       InnermostLoop->isLoopInvariant(BPtr)) {
     LoadInst *L = dyn_cast<LoadInst>(AIsWrite ? BInst : AInst);
-    if (InnermostLoop->isLoopInvariant(L->getPointerOperand()))
-      if (L && isInvariantLoadHoistable(L, SE, nullptr, nullptr, nullptr))
+    StoreInst *S = dyn_cast<StoreInst>(AIsWrite ? AInst : BInst);
+    if (L && S && InnermostLoop->isLoopInvariant(L->getPointerOperand()))
+      if (AA->alias(MemoryLocation::get(L), MemoryLocation::get(S)) ==
+          AliasResult::MustAlias)
         ShouldRetryWithRuntimeChecks = true;
 
     return MemoryDepChecker::Dependence::Unknown;
@@ -2926,6 +2702,20 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, const LoopInfo *LI,
     }
   }
 
+  for (LoadInst *LD : Loads) {
+    Value *Ptr = LD->getPointerOperand();
+    if (UniformStores.contains(Ptr)) {
+      if (TheLoop->isLoopInvariant(LD->getPointerOperand())) {
+        for (StoreInst *ST : StoresToInvariantAddresses) {
+          if (ST->getPointerOperand() == Ptr) {
+            InvariantAddressConflicts.emplace_back(LD, ST);
+            break;
+          }
+        }
+      }
+    }
+  }
+
   if (IsAnnotatedParallel) {
     LLVM_DEBUG(
         dbgs() << "LAA: A loop annotated parallel, ignore memory dependency "
@@ -2955,13 +2745,9 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, const LoopInfo *LI,
     // See if there is an unsafe dependency between a load to a uniform address and
     // store to the same uniform address.
     if (UniformStores.contains(Ptr)) {
-      auto &SE = *PSE->getSE();
-      if (TheLoop->isLoopInvariant(LD->getPointerOperand()) &&
-          !getDepChecker().isInvariantLoadHoistable(LD, SE, nullptr, nullptr,
-                                                    nullptr)) {
+      if (TheLoop->isLoopInvariant(LD->getPointerOperand())) {
         LLVM_DEBUG(
-            dbgs() << "LAA: Found an unsafe dependency between a uniform "
-                      "load and uniform store to the same address!\n");
+            dbgs() << "LAA: Found an unsafe dependency between a uniform\n");
         HasLoadStoreDependenceInvolvingLoopInvariantAddress = true;
       }
     }

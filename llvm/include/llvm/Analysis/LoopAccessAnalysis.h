@@ -294,14 +294,6 @@ public:
     return PointerBounds;
   }
 
-  /// Return if a Load can be hoisted in this loop with a pattern of a
-  /// memory induction variable. This assumes a alias runtime check
-  /// will be used before hoisting.
-  bool
-  isInvariantLoadHoistable(LoadInst *L, ScalarEvolution &SE, StoreInst **S,
-                           const SCEV **Step,
-                           SmallVectorImpl<Instruction *> *Instructions) const;
-
   DominatorTree *getDT() const {
     assert(DT && "requested DT, but it is not available");
     return DT;
@@ -787,6 +779,12 @@ public:
     return StoresToInvariantAddresses;
   }
 
+  /// Returns conflicts between loads and stores to invariant addresses.
+  ArrayRef<std::pair<LoadInst *, StoreInst *>>
+  getInvariantAddressConflicts() const {
+    return InvariantAddressConflicts;
+  }
+
   /// Used to add runtime SCEV checks. Simplifies SCEV expressions and converts
   /// them to a more usable form.  All SCEV expressions during the analysis
   /// should be re-written (and therefore simplified) according to PSE.
@@ -865,6 +863,9 @@ private:
 
   /// List of stores to invariant addresses.
   SmallVector<StoreInst *> StoresToInvariantAddresses;
+
+  /// List of conflict pair due to accessing the same loop-invariant address.
+  SmallVector<std::pair<LoadInst *, StoreInst *>> InvariantAddressConflicts;
 
   /// The diagnostics report generated for the analysis.  E.g. why we
   /// couldn't analyze the loop.
@@ -985,6 +986,9 @@ public:
                         MemorySSA *MSSA)
       : SE(SE), AA(AA), DT(DT), LI(LI), TTI(TTI), TLI(TLI), AC(AC), MSSA(MSSA) {
   }
+
+  AAResults &getAA() { return AA; }
+  MemorySSA *getMSSA() { return MSSA; }
 
   LLVM_ABI const LoopAccessInfo &getInfo(Loop &L, bool AllowPartial = false);
 

@@ -24,6 +24,7 @@
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
 #include "llvm/Transforms/Utils/LoopVersioning.h"
+#include "llvm/Transforms/Vectorize/LoopVectorize.h"
 
 #define DEBUG_TYPE "vplan"
 
@@ -192,24 +193,26 @@ VPValue *PlainCFGBuilder::getOrCreateVPOperand(Value *IRVal) {
 
 void PlainCFGBuilder::analyzeScalarPromotion(VPBasicBlock *VPBB,
                                              BasicBlock *BB) {
-  for (Instruction &InstRef : BB->instructionsWithoutDebug(false)) {
-    Instruction *Inst = &InstRef;
+  auto *Loop = LI->getLoopFor(BB);
+  if (!Loop)
+    return;
 
-    if (auto *Load = dyn_cast<LoadInst>(Inst)) {
-      auto Loop = LI->getLoopFor(Inst->getParent());
-      auto &LAI = LAIs->getInfo(*Loop);
-      StoreInst *Store = nullptr;
-      const SCEV *Step = nullptr;
+  auto &LAI = LAIs->getInfo(*Loop);
+  auto *AA = &LAIs->getAA();
+  auto *MSSA = LAIs->getMSSA();
+  auto *SE = PSE->getSE();
+  for (const auto &[Load, Store] : LAI.getInvariantAddressConflicts()) {
+    if (Load->getParent() != BB)
+      continue;
 
-      if (Loop->isLoopInvariant(Load->getPointerOperand())) {
-        SmallVector<Instruction *, 4> Is;
-        if (LAI.getDepChecker().isInvariantLoadHoistable(Load, *PSE->getSE(),
-                                                         &Store, &Step, &Is)) {
-          ScalarPromotions.push_back(ScalarPromotionInfo{Load, Store, Step, {}});
-          ScalarPromotions.back().Instructions.insert(
-              ScalarPromotions.back().Instructions.end(), Is.begin(), Is.end());
-        }
-      }
+    const SCEV *Step = nullptr;
+    SmallVector<Instruction *, 4> Is;
+
+    if (isInvariantLoadHoistable(Load, Store, Loop, MSSA, AA, *SE, &Step,
+                                 &Is)) {
+      ScalarPromotions.push_back(ScalarPromotionInfo{Load, Store, Step, {}});
+      ScalarPromotions.back().Instructions.insert(
+          ScalarPromotions.back().Instructions.end(), Is.begin(), Is.end());
     }
   }
 }
