@@ -432,18 +432,21 @@ private:
   CompositeNode *identifyAdditions(AddendList &RealAddends,
                                    AddendList &ImagAddends,
                                    std::optional<FastMathFlags> Flags,
-                                   CompositeNode *Accumulator);
+                                   CompositeNode *Accumulator,
+                                   bool &AccumPositive);
 
-  /// Extract one addend that have both real and imaginary parts positive.
-  CompositeNode *extractPositiveAddend(AddendList &RealAddends,
-                                       AddendList &ImagAddends);
+  /// Extract one addend that have both real and imaginary parts positive/negative.
+  CompositeNode *extractAddend(AddendList &RealAddends,
+                               AddendList &ImagAddends,
+                               bool Positive);
 
   /// Determine if sum of multiplications of complex numbers can be formed from
   /// \p RealMuls and \p ImagMuls. If \p Accumulator is not null, add the result
   /// to it. Return nullptr if it is not possible to construct a complex number.
   CompositeNode *identifyMultiplications(SmallVectorImpl<Product> &RealMuls,
                                          SmallVectorImpl<Product> &ImagMuls,
-                                         CompositeNode *Accumulator);
+                                         CompositeNode *Accumulator,
+                                         bool AccumPositive);
 
   /// Go through pairs of multiplication (one Real and one Imag) and find all
   /// possible candidates for partial multiplication and put them into \p
@@ -1435,21 +1438,32 @@ ComplexDeinterleavingGraph::identifyReassocNodes(Instruction *Real,
     return nullptr;
 
   CompositeNode *FinalNode = nullptr;
+  bool AddendPositive = true;
   if (!RealMuls.empty() || !ImagMuls.empty()) {
     // If there are multiplicands, extract positive addend and use it as an
     // accumulator
-    FinalNode = extractPositiveAddend(RealAddends, ImagAddends);
-    FinalNode = identifyMultiplications(RealMuls, ImagMuls, FinalNode);
+    FinalNode = extractAddend(RealAddends, ImagAddends, true);
+    if (!FinalNode) {
+      FinalNode = extractAddend(RealAddends, ImagAddends, false);
+      if (FinalNode) {
+        AddendPositive = false;
+      }
+    }
+    FinalNode = identifyMultiplications(RealMuls, ImagMuls, FinalNode,
+                                        AddendPositive);
     if (!FinalNode)
       return nullptr;
   }
 
   // Identify and process remaining additions
   if (!RealAddends.empty() || !ImagAddends.empty()) {
-    FinalNode = identifyAdditions(RealAddends, ImagAddends, Flags, FinalNode);
+    FinalNode = identifyAdditions(RealAddends, ImagAddends, Flags, FinalNode,
+                                  AddendPositive);
     if (!FinalNode)
       return nullptr;
   }
+  if (!AddendPositive)
+    FinalNode = negCompositeNode(FinalNode);
   assert(FinalNode && "FinalNode can not be nullptr here");
   assert(FinalNode->Vals.size() == 1);
   // Set the Real and Imag fields of the final node and submit it
@@ -1513,7 +1527,7 @@ bool ComplexDeinterleavingGraph::collectPartialMuls(
 ComplexDeinterleavingGraph::CompositeNode *
 ComplexDeinterleavingGraph::identifyMultiplications(
     SmallVectorImpl<Product> &RealMuls, SmallVectorImpl<Product> &ImagMuls,
-    CompositeNode *Accumulator = nullptr) {
+    CompositeNode *Accumulator, bool AccumPositive) {
   if (RealMuls.size() != ImagMuls.size())
     return nullptr;
 
@@ -1650,7 +1664,7 @@ ComplexDeinterleavingGraph::identifyMultiplications(
 
     CompositeNode *NodeMul = prepareCompositeNode(
         ComplexDeinterleavingOperation::CMulPartial, nullptr, nullptr);
-    NodeMul->Rotation = Rotation;
+    NodeMul->Rotation = flipRotation(Rotation, !AccumPositive);
     NodeMul->addOperand(NodeA);
     NodeMul->addOperand(NodeB);
     if (Result)
@@ -1692,7 +1706,8 @@ ComplexDeinterleavingGraph::identifyMultiplications(
 ComplexDeinterleavingGraph::CompositeNode *
 ComplexDeinterleavingGraph::identifyAdditions(
     AddendList &RealAddends, AddendList &ImagAddends,
-    std::optional<FastMathFlags> Flags, CompositeNode *Accumulator = nullptr) {
+    std::optional<FastMathFlags> Flags, CompositeNode *Accumulator,
+    bool &AccumPositive) {
   if (RealAddends.size() != ImagAddends.size())
     return nullptr;
 
@@ -1701,8 +1716,15 @@ ComplexDeinterleavingGraph::identifyAdditions(
   if (Accumulator)
     Result = Accumulator;
   // Otherwise find an element with both positive real and imaginary parts.
-  else
-    Result = extractPositiveAddend(RealAddends, ImagAddends);
+  else {
+    Result = extractAddend(RealAddends, ImagAddends, true);
+    if (!Result) {
+      Result = extractAddend(RealAddends, ImagAddends, false);
+      if (Result) {
+        AccumPositive = false;
+      }
+    }
+  }
 
   if (!Result)
     return nullptr;
@@ -1723,6 +1745,7 @@ ComplexDeinterleavingGraph::identifyAdditions(
         Rotation = ComplexDeinterleavingRotation::Rotation_180;
       else
         Rotation = ComplexDeinterleavingRotation::Rotation_270;
+      Rotation = flipRotation(Rotation, !AccumPositive);
 
       CompositeNode *AddNode = nullptr;
       if (Rotation == ComplexDeinterleavingRotation::Rotation_0 ||
@@ -1759,6 +1782,10 @@ ComplexDeinterleavingGraph::identifyAdditions(
           } else {
             TmpNode->Opcode = Instruction::Sub;
           }
+          if (!AccumPositive) {
+            std::swap(Result, AddNode);
+            AccumPositive = true;
+          }
         } else {
           TmpNode = prepareCompositeNode(ComplexDeinterleavingOperation::CAdd,
                                          nullptr, nullptr);
@@ -1782,13 +1809,14 @@ ComplexDeinterleavingGraph::identifyAdditions(
 }
 
 ComplexDeinterleavingGraph::CompositeNode *
-ComplexDeinterleavingGraph::extractPositiveAddend(AddendList &RealAddends,
-                                                  AddendList &ImagAddends) {
+ComplexDeinterleavingGraph::extractAddend(AddendList &RealAddends,
+                                          AddendList &ImagAddends,
+                                          bool Positive) {
   for (auto ItR = RealAddends.begin(); ItR != RealAddends.end(); ++ItR) {
     for (auto ItI = ImagAddends.begin(); ItI != ImagAddends.end(); ++ItI) {
       auto [R, IsPositiveR] = *ItR;
       auto [I, IsPositiveI] = *ItI;
-      if (IsPositiveR && IsPositiveI) {
+      if (IsPositiveR == Positive && IsPositiveI == Positive) {
         auto Result = identifyNode(R, I);
         if (Result) {
           RealAddends.erase(ItR);
