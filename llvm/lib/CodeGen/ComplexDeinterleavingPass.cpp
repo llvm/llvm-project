@@ -2350,7 +2350,7 @@ ComplexDeinterleavingGraph::identifySplat(ComplexValues &Vals) {
     if (!VTy->isScalableTy() && VTy->getElementCount().getKnownMinValue() == 1)
       return false;
 
-    return all_equal(Mask) && Mask[0] == 0;
+    return all_equal(Mask);
   };
 
   // The splats must meet the following requirements:
