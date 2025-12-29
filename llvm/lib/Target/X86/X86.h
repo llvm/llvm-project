@@ -141,7 +141,13 @@ FunctionPass *createX86WinEHStatePass();
 /// instructions into a sequence of actual instructions. This pass
 /// must run after prologue/epilogue insertion and before lowering
 /// the MachineInstr to MC.
-FunctionPass *createX86ExpandPseudoPass();
+class X86ExpandPseudoPass : public PassInfoMixin<X86ExpandPseudoPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *createX86ExpandPseudoLegacyPass();
 
 /// This pass converts X86 cmov instructions into branch when profitable.
 FunctionPass *createX86CmovConverterPass();
@@ -220,6 +226,7 @@ InstructionSelector *createX86InstructionSelector(const X86TargetMachine &TM,
                                                   const X86Subtarget &,
                                                   const X86RegisterBankInfo &);
 
+FunctionPass *createX86PreLegalizerCombiner();
 FunctionPass *createX86LoadValueInjectionLoadHardeningPass();
 FunctionPass *createX86LoadValueInjectionRetHardeningPass();
 FunctionPass *createX86SpeculativeLoadHardeningPass();
@@ -243,7 +250,7 @@ void initializeX86DAGToDAGISelLegacyPass(PassRegistry &);
 void initializeX86DomainReassignmentPass(PassRegistry &);
 void initializeX86DynAllocaExpanderLegacyPass(PassRegistry &);
 void initializeX86ExecutionDomainFixPass(PassRegistry &);
-void initializeX86ExpandPseudoPass(PassRegistry &);
+void initializeX86ExpandPseudoLegacyPass(PassRegistry &);
 void initializeX86FPStackifierLegacyPass(PassRegistry &);
 void initializeX86FastPreTileConfigPass(PassRegistry &);
 void initializeX86FastTileConfigPass(PassRegistry &);
@@ -263,6 +270,7 @@ void initializeX86SpeculativeLoadHardeningPassPass(PassRegistry &);
 void initializeX86TileConfigPass(PassRegistry &);
 void initializeX86SuppressAPXForRelocationPassPass(PassRegistry &);
 void initializeX86WinEHUnwindV2Pass(PassRegistry &);
+void initializeX86PreLegalizerCombinerPass(PassRegistry &);
 
 namespace X86AS {
 enum : unsigned {
