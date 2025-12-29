@@ -9,6 +9,7 @@
 
 #include "lldb/API/SBVariableAnnotator.h"
 #include "lldb/API/SBInstruction.h"
+#include "lldb/API/SBStream.h"
 #include "lldb/API/SBStructuredData.h"
 #include "lldb/Core/Disassembler.h" // containts VariableAnnotator declaration
 #include "lldb/Core/StructuredDataImpl.h"
@@ -46,6 +47,14 @@ SBVariableAnnotator::operator bool() const {
 bool SBVariableAnnotator::IsValid() const {
   LLDB_INSTRUMENT_VA(this);
   return this->operator bool();
+}
+
+bool SBVariableAnnotator::GetDescription(SBStream &description) const {
+  LLDB_INSTRUMENT_VA(this, description);
+
+  Stream &strm = description.ref();
+  strm.Printf("SBVariableAnnotator");
+  return true;
 }
 
 lldb::SBStructuredData

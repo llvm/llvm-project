@@ -28,6 +28,8 @@ public:
 
   bool IsValid() const;
 
+  bool GetDescription(SBStream &description) const;
+
   /// Get variable annotations for this instruction as structured data.
   /// Returns an array of dictionaries, each containing:
   /// - "variable_name": string name of the variable

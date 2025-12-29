@@ -106,6 +106,7 @@ protected:
   friend class SBTypeMemberFunction;
   friend class SBTypeMember;
   friend class SBValue;
+  friend class SBVariableAnnotator;
   friend class SBWatchpoint;
 
   friend class lldb_private::ScriptInterpreter;
