@@ -3518,7 +3518,7 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
       SDNode *Parent = nullptr;
       if (NodeStack.size() > 1)
         Parent = NodeStack[NodeStack.size()-2].getNode();
-      RecordedNodes.push_back(std::make_pair(N, Parent));
+      RecordedNodes.emplace_back(N, Parent);
       continue;
     }
 
@@ -3530,8 +3530,7 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
       if (ChildNo >= N.getNumOperands())
         break;  // Match fails if out of range child #.
 
-      RecordedNodes.push_back(std::make_pair(N->getOperand(ChildNo),
-                                             N.getNode()));
+      RecordedNodes.emplace_back(N->getOperand(ChildNo), N.getNode());
       continue;
     }
     case OPC_RecordMemRef:
@@ -3918,10 +3917,10 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
         Val = GetVBR(Val, MatcherTable, MatcherIndex);
       if (Opcode >= OPC_EmitInteger && Opcode <= OPC_EmitIntegerI64)
         Val = decodeSignRotatedValue(Val);
-      RecordedNodes.push_back(std::pair<SDValue, SDNode *>(
+      RecordedNodes.emplace_back(
           CurDAG->getSignedConstant(Val, SDLoc(NodeToMatch), VT,
                                     /*isTarget=*/true),
-          nullptr));
+          nullptr);
       continue;
     }
     case OPC_EmitRegister:
@@ -3940,8 +3939,7 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
         break;
       }
       unsigned RegNo = MatcherTable[MatcherIndex++];
-      RecordedNodes.push_back(std::pair<SDValue, SDNode *>(
-          CurDAG->getRegister(RegNo, VT), nullptr));
+      RecordedNodes.emplace_back(CurDAG->getRegister(RegNo, VT), nullptr);
       continue;
     }
     case OPC_EmitRegister2: {
@@ -3951,8 +3949,7 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
       MVT::SimpleValueType VT = getSimpleVT(MatcherTable, MatcherIndex);
       unsigned RegNo = MatcherTable[MatcherIndex++];
       RegNo |= MatcherTable[MatcherIndex++] << 8;
-      RecordedNodes.push_back(std::pair<SDValue, SDNode*>(
-                              CurDAG->getRegister(RegNo, VT), nullptr));
+      RecordedNodes.emplace_back(CurDAG->getRegister(RegNo, VT), nullptr);
       continue;
     }
 
@@ -3982,7 +3979,7 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
                                           Imm.getValueType());
       }
 
-      RecordedNodes.push_back(std::make_pair(Imm, RecordedNodes[RecNo].second));
+      RecordedNodes.emplace_back(Imm, RecordedNodes[RecNo].second);
       continue;
     }
 
@@ -4098,7 +4095,7 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
       unsigned RecNo = MatcherTable[MatcherIndex++];
       assert(RecNo < RecordedNodes.size() && "Invalid EmitNodeXForm");
       SDValue Res = RunSDNodeXForm(RecordedNodes[RecNo].first, XFormNo);
-      RecordedNodes.push_back(std::pair<SDValue,SDNode*>(Res, nullptr));
+      RecordedNodes.emplace_back(Res, nullptr);
       continue;
     }
     case OPC_Coverage: {
@@ -4269,8 +4266,7 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
         // Add all the non-glue/non-chain results to the RecordedNodes list.
         for (unsigned i = 0, e = VTs.size(); i != e; ++i) {
           if (VTs[i] == MVT::Other || VTs[i] == MVT::Glue) break;
-          RecordedNodes.push_back(std::pair<SDValue,SDNode*>(SDValue(Res, i),
-                                                             nullptr));
+          RecordedNodes.emplace_back(SDValue(Res, i), nullptr);
         }
       } else {
         assert(NodeToMatch->getOpcode() != ISD::DELETED_NODE &&
