@@ -316,6 +316,8 @@ class SimplifyCFGOpt {
                                   uint32_t TrueWeight, uint32_t FalseWeight);
   bool simplifyBranchOnICmpChain(BranchInst *BI, IRBuilder<> &Builder,
                                  const DataLayout &DL);
+  bool simplifyCondCondOnICmpSelect(BranchInst *BI, const CmpPredicate Pred,
+                                    const APInt &CmpC, SelectInst *Select);
   bool simplifySwitchOnSelect(SwitchInst *SI, SelectInst *Select);
   bool simplifyIndirectBrOnSelect(IndirectBrInst *IBI, SelectInst *SI);
   bool turnSwitchRangeIntoICmp(SwitchInst *SI, IRBuilder<> &Builder);
@@ -4949,6 +4951,34 @@ bool SimplifyCFGOpt::simplifyTerminatorOnSelect(Instruction *OldTerm,
   return true;
 }
 
+// Try to replaces
+//   (br (icmp Pred, (select cond, X, Y), Z), TrueBB, FalseBB)
+// on constant X, Y, Z with a unconditional branch.
+bool SimplifyCFGOpt::simplifyCondCondOnICmpSelect(BranchInst *BI,
+                                                  const CmpPredicate Pred,
+                                                  const APInt &CmpC,
+                                                  SelectInst *Select) {
+  // Check for constant integer values in the select.
+  const APInt *TrueVal, *FalseVal;
+  if (!match(Select, m_Select(m_Value(), m_APInt(TrueVal), m_APInt(FalseVal))))
+    return false;
+
+  assert(BI->isConditional() && BI->getNumSuccessors() == 2 &&
+         "Expected conditional branch with 2 successors");
+
+  ConstantRange CmpCR = ConstantRange::makeExactICmpRegion(Pred, CmpC);
+  BasicBlock *TargetBB;
+  if (CmpCR.contains(*TrueVal) && CmpCR.contains(*FalseVal))
+    TargetBB = BI->getSuccessor(0); // br label %TrueBB
+  else if (!CmpCR.contains(*TrueVal) && !CmpCR.contains(*FalseVal))
+    TargetBB = BI->getSuccessor(1); // br label %FalseBB
+  else
+    return false;
+
+  // Perform the actual simplification.
+  return simplifyTerminatorOnSelect(BI, nullptr, TargetBB, TargetBB, 0, 0);
+}
+
 // Replaces
 //   (switch (select cond, X, Y)) on constant X, Y
 // with a branch - conditional if X and Y lead to distinct BBs,
@@ -8543,6 +8573,20 @@ bool SimplifyCFGOpt::simplifyCondBranch(BranchInst *BI, IRBuilder<> &Builder) {
     // switch.
     if (BasicBlock *OnlyPred = BB->getSinglePredecessor())
       if (simplifyEqualityComparisonWithOnlyPredecessor(BI, OnlyPred, Builder))
+        return requestResimplify();
+
+    Instruction *Select;
+    CmpPredicate Pred;
+    const APInt *CmpC;
+    // Match the pattern:
+    // %select = select ...
+    // %cmp = icmp [Pred], %select, [C]
+    // br i1 %cmp, label ..., label ...
+    if (match(BI, m_Br(m_c_ICmp(Pred, m_Instruction(Select), m_APInt(CmpC)),
+                       m_Value(), m_Value())) &&
+        isa<SelectInst>(Select))
+      if (simplifyCondCondOnICmpSelect(BI, Pred, *CmpC,
+                                       cast<SelectInst>(Select)))
         return requestResimplify();
 
     // This block must be empty, except for the setcond inst, if it exists.
