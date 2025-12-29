@@ -1080,7 +1080,7 @@ TEST_F(SelectionDAGPatternMatchTest, MatchSpecificNeg) {
   EXPECT_FALSE(sd_match(Neg, m_SpecificNeg(Op1)));
 
   SDValue Const5 = DAG->getConstant(5, DL, Int32VT);
-  SDValue ConstNeg5 = DAG->getConstant(-5, DL, Int32VT);
+  SDValue ConstNeg5 = DAG->getConstant(APInt(32, -5, true), DL, Int32VT);
   EXPECT_TRUE(sd_match(ConstNeg5, m_SpecificNeg(Const5)));
   EXPECT_TRUE(sd_match(Const5, m_SpecificNeg(ConstNeg5)));
 
@@ -1094,11 +1094,11 @@ TEST_F(SelectionDAGPatternMatchTest, MatchSpecificNeg) {
 
   SDValue Const1 = DAG->getConstant(1, DL, Int32VT);
   SDValue Const2 = DAG->getConstant(2, DL, Int32VT);
-  SDValue ConstNeg1 = DAG->getConstant(-1, DL, Int32VT);
-  SDValue ConstNeg2 = DAG->getConstant(-2, DL, Int32VT);
+  SDValue ConstNeg1 = DAG->getConstant(APInt(32, -1, true), DL, Int32VT);
+  SDValue ConstNeg2 = DAG->getConstant(APInt(32, -2, true), DL, Int32VT);
+  SDValue ConstNeg3 = DAG->getConstant(APInt(32, -3, true), DL, Int32VT);
   SmallVector<SDValue, 4> PosOps = {Const1, Const2, Const5, Const3};
-  SmallVector<SDValue, 4> NegOps = {ConstNeg1, ConstNeg2, ConstNeg5,
-                                    DAG->getConstant(-3, DL, Int32VT)};
+  SmallVector<SDValue, 4> NegOps = {ConstNeg1, ConstNeg2, ConstNeg5, ConstNeg3};
   SDValue VecPos = DAG->getBuildVector(VecVT, DL, PosOps);
   SDValue VecNeg = DAG->getBuildVector(VecVT, DL, NegOps);
   EXPECT_TRUE(sd_match(VecNeg, m_SpecificNeg(VecPos)));
