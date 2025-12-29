@@ -5421,6 +5421,8 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       if (IID == Intrinsic::amdgcn_log && EltTy->isFloatTy())
         Known.knownNot(fcSubnormal);
 
+      Known.knownNot(fcNegZero);
+
       // log(+inf) -> +inf
       // log([+-]0.0) -> -inf
       // log(-inf) -> nan
