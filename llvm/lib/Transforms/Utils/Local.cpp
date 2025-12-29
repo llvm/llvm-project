@@ -1087,6 +1087,14 @@ static void redirectValuesFromPredecessorsToPhi(BasicBlock *BB,
   Instruction *OldInst = dyn_cast<Instruction>(OldVal);
   if (BBSinglePred && OldInst && OldInst->getParent() != BB) {
     PN->addIncoming(OldVal, BBSinglePred);
+    
+    auto *knownDefine = OldVal;
+    for (unsigned i = 0, e = PN->getNumIncomingValues(); i != e; ++i)
+      if (PN->getIncomingBlock(i) == BBSinglePred && !isa<UndefValue>(PN->getIncomingValue(i)))
+        knownDefine = PN->getIncomingValue(i);
+    for (unsigned i = 0, e = PN->getNumIncomingValues(); i != e; ++i)
+      if (PN->getIncomingBlock(i) == BBSinglePred)
+        PN->setIncomingValue(i, knownDefine);
     return;
   }
 
