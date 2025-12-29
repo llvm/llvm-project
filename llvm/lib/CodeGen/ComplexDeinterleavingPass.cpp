@@ -382,6 +382,14 @@ private:
     return Node;
   }
 
+  CompositeNode *negCompositeNode(CompositeNode *Node) {
+    auto NegNode = prepareCompositeNode(ComplexDeinterleavingOperation::Symmetric,
+                                        nullptr, nullptr);
+    NegNode->Opcode = Instruction::FNeg;
+    NegNode->addOperand(Node);
+    return submitCompositeNode(NegNode);
+  }
+
   /// Identifies a complex partial multiply pattern and its rotation, based on
   /// the following patterns
   ///
@@ -634,6 +642,14 @@ static const IntrinsicInst *getFMAOrMulAdd(const Instruction *I) {
   return nullptr;
 }
 
+static inline ComplexDeinterleavingRotation
+flipRotation(ComplexDeinterleavingRotation Rotation, bool Cond=true)
+{
+  if (!Cond)
+    return Rotation;
+  return ComplexDeinterleavingRotation(unsigned(Rotation) ^ 2);
+}
+
 bool ComplexDeinterleaving::evaluateBasicBlock(BasicBlock *B, unsigned Factor) {
   ComplexDeinterleavingGraph Graph(TL, TLI, Factor);
   if (Graph.collectPotentialReductions(B))
@@ -752,7 +768,8 @@ ComplexDeinterleavingGraph::identifyPartialMul(Instruction *Real,
     return false;
   };
 
-  auto MatchCommons = [&](PartialMulNode *PN, CompositeNode *CN) -> CompositeNode* {
+  auto MatchCommons = [&](PartialMulNode *PN,
+                          CompositeNode *CN, bool CNPositive) -> CompositeNode* {
     assert(PN);
     for (auto PN0 = PN; PN0; PN0 = PN0->prev) {
       if (PN0->CommonNode)
@@ -789,13 +806,16 @@ ComplexDeinterleavingGraph::identifyPartialMul(Instruction *Real,
     for (; PN; PN = PN->prev) {
       CompositeNode *NewCN = prepareCompositeNode(
           ComplexDeinterleavingOperation::CMulPartial, nullptr, nullptr);
-      NewCN->Rotation = PN->Rotation;
+      NewCN->Rotation = flipRotation(PN->Rotation, !CNPositive);
       NewCN->addOperand(PN->CommonNode);
       NewCN->addOperand(PN->UncommonNode);
       if (CN) {
         NewCN->addOperand(CN);
       }
       CN = submitCompositeNode(NewCN);
+    }
+    if (!CNPositive) {
+      return negCompositeNode(CN);
     }
     return CN;
   };
@@ -807,14 +827,14 @@ ComplexDeinterleavingGraph::identifyPartialMul(Instruction *Real,
   if (!ProcessInst(Real, RealPositive, RealMuls, RealAddend) ||
       !ProcessInst(Imag, ImagPositive, ImagMuls, ImagAddend)) {
     LLVM_DEBUG(dbgs() << "  - Failed to match PartialMul in Real/Imag terms.\n");
-    if (PN && RealPositive && ImagPositive) {
+    if (PN && RealPositive == ImagPositive) {
       auto CN = identifyNode(Real, Imag);
       if (CN) {
         LLVM_DEBUG({
           dbgs() << "  - Addends matched:\n";
           CN->dump();
         });
-        return MatchCommons(PN, CN);
+        return MatchCommons(PN, CN, RealPositive);
       }
       LLVM_DEBUG(dbgs() << "  - Failed to match Addends "
                  << *Real << " / " << *Imag << ".\n");
@@ -885,13 +905,13 @@ ComplexDeinterleavingGraph::identifyPartialMul(Instruction *Real,
   if (RealMuls.size() == 1) {
     assert(RealAddend.first && ImagAddend.first);
     if (!isa<Instruction>(RealAddend.first) || !isa<Instruction>(ImagAddend.first)) {
-      if (!RealAddend.second || !ImagAddend.second)
+      if (RealAddend.second != ImagAddend.second)
         return nullptr;
       auto CN = identifyNode(RealAddend.first, ImagAddend.first);
       if (!CN)
         return nullptr;
       return ForeachMatch(RealMuls[0], ImagMuls[0], PN, [&](PartialMulNode *PN) {
-        return MatchCommons(PN, CN);
+        return MatchCommons(PN, CN, RealAddend.second);
       });
     }
     return ForeachMatch(RealMuls[0], ImagMuls[0], PN, [&](PartialMulNode *PN) {
@@ -905,7 +925,7 @@ ComplexDeinterleavingGraph::identifyPartialMul(Instruction *Real,
     assert(!RealAddend.first && !ImagAddend.first);
     return ForeachMatch(RealMuls[0], ImagMuls[0], PN, [&](PartialMulNode *PN) {
       return ForeachMatch(RealMuls[1], ImagMuls[1], PN, [&](PartialMulNode *PN) {
-        return MatchCommons(PN, nullptr);
+        return MatchCommons(PN, nullptr, true);
       });
     });
   }
@@ -2383,7 +2403,12 @@ static Value *replaceSymmetricNode(IRBuilderBase &B, unsigned Opcode,
   Value *I;
   switch (Opcode) {
   case Instruction::FNeg:
-    I = B.CreateFNeg(InputA);
+    // We use FNeg to encode both floating point and integer negation
+    if (InputA->getType()->isIntOrIntVectorTy()) {
+      I = B.CreateSub(Constant::getNullValue(InputA->getType()), InputA);
+    } else {
+      I = B.CreateFNeg(InputA);
+    }
     break;
   case Instruction::FAdd:
     I = B.CreateFAdd(InputA, InputB);
