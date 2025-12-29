@@ -13,44 +13,77 @@
 #include "mlir-c/Support.h"
 #include "mlir-c/Target/ExportSMTLIB.h"
 #include "mlir/Bindings/Python/Diagnostics.h"
+#include "mlir/Bindings/Python/IRCore.h"
 #include "mlir/Bindings/Python/Nanobind.h"
 #include "mlir/Bindings/Python/NanobindAdaptors.h"
 
 namespace nb = nanobind;
 
 using namespace nanobind::literals;
-
 using namespace mlir;
-using namespace mlir::python;
 using namespace mlir::python::nanobind_adaptors;
 
-static void populateDialectSMTSubmodule(nanobind::module_ &m) {
+namespace mlir {
+namespace python {
+namespace MLIR_BINDINGS_PYTHON_DOMAIN {
+namespace smt {
+struct BoolType : PyConcreteType<BoolType> {
+  static constexpr IsAFunctionTy isaFunction = mlirSMTTypeIsABool;
+  static constexpr const char *pyClassName = "BoolType";
+  using PyConcreteType::PyConcreteType;
 
-  auto smtBoolType =
-      mlir_type_subclass(m, "BoolType", mlirSMTTypeIsABool)
-          .def_staticmethod(
-              "get",
-              [](MlirContext context) { return mlirSMTTypeGetBool(context); },
-              "context"_a = nb::none());
-  auto smtBitVectorType =
-      mlir_type_subclass(m, "BitVectorType", mlirSMTTypeIsABitVector)
-          .def_staticmethod(
-              "get",
-              [](int32_t width, MlirContext context) {
-                return mlirSMTTypeGetBitVector(context, width);
-              },
-              "width"_a, "context"_a = nb::none());
-  auto smtIntType =
-      mlir_type_subclass(m, "IntType", mlirSMTTypeIsAInt)
-          .def_staticmethod(
-              "get",
-              [](MlirContext context) { return mlirSMTTypeGetInt(context); },
-              "context"_a = nb::none());
+  static void bindDerived(ClassTy &c) {
+    c.def_static(
+        "get",
+        [](DefaultingPyMlirContext context) {
+          return BoolType(context->getRef(),
+                          mlirSMTTypeGetBool(context.get()->get()));
+        },
+        nb::arg("context").none() = nb::none());
+  }
+};
+
+struct BitVectorType : PyConcreteType<BitVectorType> {
+  static constexpr IsAFunctionTy isaFunction = mlirSMTTypeIsABitVector;
+  static constexpr const char *pyClassName = "BitVectorType";
+  using PyConcreteType::PyConcreteType;
+
+  static void bindDerived(ClassTy &c) {
+    c.def_static(
+        "get",
+        [](int32_t width, DefaultingPyMlirContext context) {
+          return BitVectorType(
+              context->getRef(),
+              mlirSMTTypeGetBitVector(context.get()->get(), width));
+        },
+        nb::arg("width"), nb::arg("context").none() = nb::none());
+  }
+};
+
+struct IntType : PyConcreteType<IntType> {
+  static constexpr IsAFunctionTy isaFunction = mlirSMTTypeIsAInt;
+  static constexpr const char *pyClassName = "IntType";
+  using PyConcreteType::PyConcreteType;
+
+  static void bindDerived(ClassTy &c) {
+    c.def_static(
+        "get",
+        [](DefaultingPyMlirContext context) {
+          return IntType(context->getRef(),
+                         mlirSMTTypeGetInt(context.get()->get()));
+        },
+        nb::arg("context").none() = nb::none());
+  }
+};
+
+static void populateDialectSMTSubmodule(nanobind::module_ &m) {
+  BoolType::bind(m);
+  BitVectorType::bind(m);
+  IntType::bind(m);
 
   auto exportSMTLIB = [](MlirOperation module, bool inlineSingleUseValues,
                          bool indentLetBody) {
-    mlir::python::CollectDiagnosticsToStringScope scope(
-        mlirOperationGetContext(module));
+    CollectDiagnosticsToStringScope scope(mlirOperationGetContext(module));
     PyPrintAccumulator printAccum;
     MlirLogicalResult result = mlirTranslateOperationToSMTLIB(
         module, printAccum.getCallback(), printAccum.getUserData(),
@@ -80,9 +113,13 @@ static void populateDialectSMTSubmodule(nanobind::module_ &m) {
       "module"_a, "inline_single_use_values"_a = false,
       "indent_let_body"_a = false);
 }
+} // namespace smt
+} // namespace MLIR_BINDINGS_PYTHON_DOMAIN
+} // namespace python
+} // namespace mlir
 
 NB_MODULE(_mlirDialectsSMT, m) {
   m.doc() = "MLIR SMT Dialect";
 
-  populateDialectSMTSubmodule(m);
+  python::mlir::smt::populateDialectSMTSubmodule(m);
 }
