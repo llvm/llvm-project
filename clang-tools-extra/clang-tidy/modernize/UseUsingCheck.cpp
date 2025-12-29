@@ -130,13 +130,16 @@ void UseUsingCheck::check(const MatchFinder::MatchResult &Result) {
 
   const TypeLoc TL = MatchedDecl->getTypeSourceInfo()->getTypeLoc();
 
-  auto [Type, QualifierStr] = [MatchedDecl, this, &TL, &SM,
+  bool FunctionPointerCase = false;
+  auto [Type, QualifierStr] = [MatchedDecl, this, &TL, &FunctionPointerCase,
+                               &SM,
                                &LO]() -> std::pair<std::string, std::string> {
     SourceRange TypeRange = TL.getSourceRange();
 
     // Function pointer case, get the left and right side of the identifier
     // without the identifier.
     if (TypeRange.fullyContains(MatchedDecl->getLocation())) {
+      FunctionPointerCase = true;
       const auto RangeLeftOfIdentifier = CharSourceRange::getCharRange(
           TypeRange.getBegin(), MatchedDecl->getLocation());
       const auto RangeRightOfIdentifier = CharSourceRange::getCharRange(
@@ -205,8 +208,7 @@ void UseUsingCheck::check(const MatchFinder::MatchResult &Result) {
   }
 
   if (!ReplaceRange.getEnd().isMacroID()) {
-    const SourceLocation::IntTy Offset =
-        MatchedDecl->getFunctionType() ? 0 : Name.size();
+    const SourceLocation::IntTy Offset = FunctionPointerCase ? 0 : Name.size();
     LastReplacementEnd = ReplaceRange.getEnd().getLocWithOffset(Offset);
   }
 
