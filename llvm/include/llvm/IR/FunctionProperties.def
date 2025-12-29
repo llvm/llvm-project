@@ -1,0 +1,35 @@
+//===-- llvm/FunctionProperties.def - File that describes Function Properties -*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// This file contains descriptions of the various LLVM function properties.  This is
+// used as a central place for enumerating the different function properties and
+// should eventually be the place to put comments about the function properties.
+//
+//===----------------------------------------------------------------------===//
+
+// NOTE: NO INCLUDE GUARD DESIRED!
+
+// Provide definitions of macros so that users of this file do not have to
+// define everything to use it...
+//
+
+#ifndef FUNCTION_PROPERTY
+#define FUNCTION_PROPERTY(Name, Description)
+#endif
+
+FUNCTION_PROPERTY(BasicBlockCount, "Number of basic blocks")
+FUNCTION_PROPERTY(TotalInstructionCount, "Number of instructions (of all types)")
+FUNCTION_PROPERTY(ControlFlowEdgeCount, "Number of basic block successors")
+FUNCTION_PROPERTY(UnconditionalBranchCount, "Number of unconditional branch instructions")
+FUNCTION_PROPERTY(ConditionalBranchCount, "Number of conditional branch instructions")
+FUNCTION_PROPERTY(BranchInstructionCount, "Number of branch instructions")
+FUNCTION_PROPERTY(BranchSuccessorCount, "Number of branch successors")
+FUNCTION_PROPERTY(SwitchInstructionCount, "Number of switch instructions")
+FUNCTION_PROPERTY(SwitchSuccessorCount, "Number of switch successors")
+
+#undef FUNCTION_PROPERTY

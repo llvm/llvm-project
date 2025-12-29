@@ -29,16 +29,9 @@ using namespace llvm;
 
 #define DEBUG_TYPE "func-properties-stats"
 
-STATISTIC(TotalBlocks, "Number of basic blocks");
-STATISTIC(TotalInsts, "Number of instructions (of all types)");
-STATISTIC(TotalSuccs, "Number of basic block successors");
-STATISTIC(TotalUncondBranchInsts,
-          "Number of unconditional branch instructions");
-STATISTIC(TotalCondBranchInsts, "Number of conditional branch instructions");
-STATISTIC(TotalBranchInsts, "Number of branch instructions");
-STATISTIC(TotalBranchSuccs, "Number of branch successors");
-STATISTIC(TotalSwitchInsts, "Number of switch instructions");
-STATISTIC(TotalSwitchSuccs, "Number of switch successors");
+#define FUNCTION_PROPERTY(Name, Description) \
+    STATISTIC(Total##Name, Description);
+#include "llvm/IR/FunctionProperties.def"
 
 namespace llvm {
 LLVM_ABI cl::opt<bool> EnableDetailedFunctionProperties(
@@ -426,20 +419,15 @@ FunctionPropertiesPrinterPass::run(Function &F, FunctionAnalysisManager &AM) {
 }
 
 PreservedAnalyses
-FunctionPropertiesStatisticsPass::run(Function &F,
-                                      FunctionAnalysisManager &FAM) {
-  LLVM_DEBUG(dbgs() << "STATSCOUNT: running on function " << F.getName()
-                    << "\n");
+FunctionPropertiesStatisticsPass::run(Function &F, FunctionAnalysisManager &FAM) {
+  LLVM_DEBUG(dbgs() << "STATSCOUNT: running on function " << F.getName() << "\n");
   auto &AnalysisResults = FAM.getResult<FunctionPropertiesAnalysis>(F);
-  TotalBlocks += AnalysisResults.BasicBlockCount;
-  TotalInsts += AnalysisResults.TotalInstructionCount;
-  TotalSuccs += AnalysisResults.ControlFlowEdgeCount;
-  TotalUncondBranchInsts += AnalysisResults.UnconditionalBranchCount;
-  TotalCondBranchInsts += AnalysisResults.ConditionalBranchCount;
-  TotalBranchInsts += AnalysisResults.BranchInstructionCount;
-  TotalBranchSuccs += AnalysisResults.BranchSuccessorCount;
-  TotalSwitchInsts += AnalysisResults.SwitchInstructionCount;
-  TotalSwitchSuccs += AnalysisResults.SwitchSuccessorCount;
+
+  // Use the macro to generate the summation lines
+  #define FUNCTION_PROPERTY(Name, Description) \
+      Total##Name += AnalysisResults.Name;
+  #include "llvm/IR/FunctionProperties.def"
+
   return PreservedAnalyses::all();
 }
 
