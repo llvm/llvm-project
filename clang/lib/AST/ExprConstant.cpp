@@ -12388,6 +12388,41 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
     return Success(APValue(ResultElements.data(), RetLen), E);
   }
 
+  case clang::X86::BI__builtin_ia32_cvtmask2b128:
+  case clang::X86::BI__builtin_ia32_cvtmask2b256:
+  case clang::X86::BI__builtin_ia32_cvtmask2b512:
+  case clang::X86::BI__builtin_ia32_cvtmask2w128:
+  case clang::X86::BI__builtin_ia32_cvtmask2w256:
+  case clang::X86::BI__builtin_ia32_cvtmask2w512:
+  case clang::X86::BI__builtin_ia32_cvtmask2d128:
+  case clang::X86::BI__builtin_ia32_cvtmask2d256:
+  case clang::X86::BI__builtin_ia32_cvtmask2d512:
+  case clang::X86::BI__builtin_ia32_cvtmask2q128:
+  case clang::X86::BI__builtin_ia32_cvtmask2q256:
+  case clang::X86::BI__builtin_ia32_cvtmask2q512: {
+    assert(E->getNumArgs() == 1);
+    APSInt Mask;
+    if (!EvaluateInteger(E->getArg(0), Mask, Info))
+      return false;
+
+    QualType VecTy = E->getType();
+    const VectorType *VT = VecTy->castAs<VectorType>();
+    unsigned VectorLen = VT->getNumElements();
+    QualType ElemTy = VT->getElementType();
+    unsigned ElemWidth = Info.Ctx.getTypeSize(ElemTy);
+
+    SmallVector<APValue, 16> Elems;
+    for (unsigned I = 0; I != VectorLen; ++I) {
+      bool BitSet = Mask[I];
+      APSInt ElemVal(ElemWidth, /*isUnsigned=*/false);
+      if (BitSet) {
+        ElemVal.setAllBits();
+      }
+      Elems.push_back(APValue(ElemVal));
+    }
+    return Success(APValue(Elems.data(), VectorLen), E);
+  }
+
   case X86::BI__builtin_ia32_extracti32x4_256_mask:
   case X86::BI__builtin_ia32_extractf32x4_256_mask:
   case X86::BI__builtin_ia32_extracti32x4_mask:
