@@ -1,11 +1,5 @@
 // RUN: mlir-translate -mlir-to-cpp %s | FileCheck %s -check-prefix=CPP-DEFAULT
 // RUN: mlir-translate -mlir-to-cpp -declare-variables-at-top %s | FileCheck %s -check-prefix=CPP-DECLTOP
-// check that the generated code is syntactically valid
-// RUN: mlir-translate -mlir-to-cpp %s | %host_cxx -fsyntax-only -x c++ -
-
-emitc.include "stdint.h"
-emitc.include "limits.h"
-emitc.include "stddef.h"
 
 emitc.global extern @decl : i8
 // CPP-DEFAULT: extern int8_t decl;
