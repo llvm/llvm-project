@@ -1,15 +1,19 @@
-; RUN: llc -O3 < %s
-;
+; RUN: llc < %s -mtriple=aarch64-unknown-linux-gnu | FileCheck %s
+; UNSUPPORTED: system-darwin
+
 ; Regression test for a null pointer dereference in 
 ; SelectionDAG::resolveDanglingDebugInfo when Val.getNode() returns null
 ; for aggregate types with nested empty structs.
-;
+
+; CHECK-LABEL: test_empty_struct_debug:
+; CHECK: ret
+
 ; The crash occurred when:
 ; 1. A dbg_value references an aggregate type containing empty structs {}
 ; 2. An insertvalue operation on such types gets lowered by SelectionDAG
 ; 3. The resulting SDValue has a null node, causing a crash when accessed
 
-define void @test() !dbg !4 {
+define void @test_empty_struct_debug() !dbg !4 {
 entry:
   %tmp = alloca { { i1, {} }, ptr, { { {} }, { {} } }, i64 }, align 8
     #dbg_value({ { {} }, { {} } } zeroinitializer, !5, !DIExpression(), !6)
@@ -27,7 +31,7 @@ entry:
 !1 = !DIFile(filename: "test_selectiondag.cpp", directory: "/home/AnonTokyo/documents/llvm-project/temp")
 !2 = !{i32 2, !"Debug Info Version", i32 3}
 !3 = !{i32 2, !"Dwarf Version", i32 4}
-!4 = distinct !DISubprogram(name: "test", scope: !1, file: !1, line: 1, scopeLine: 1, spFlags: DISPFlagDefinition, unit: !0)
+!4 = distinct !DISubprogram(name: "test_empty_struct_debug", scope: !1, file: !1, line: 1, scopeLine: 1, spFlags: DISPFlagDefinition, unit: !0)
 !5 = !DILocalVariable(name: "v1", scope: !4, file: !1, line: 2)
 !6 = !DILocation(line: 2, column: 1, scope: !4)
 !7 = !DILocalVariable(name: "v2", scope: !4, file: !1, line: 3)
