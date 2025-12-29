@@ -2462,7 +2462,8 @@ void GlobalISelEmitter::run(raw_ostream &OS) {
     // Skip any patterns containing BF16 types, as GISel cannot currently tell
     // the difference between fp16 and bf16. FIXME: This can be removed once
     // BF16 is supported properly.
-    if (hasBFloatType(Pat.getSrcPattern()))
+    bool UseExtended = LLT::getUseExtended();
+    if (hasBFloatType(Pat.getSrcPattern()) && !UseExtended)
       continue;
 
     auto MatcherOrErr = runOnPattern(Pat);
