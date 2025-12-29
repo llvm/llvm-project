@@ -15896,6 +15896,54 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
   default:
     return false;
 
+  case X86::BI__builtin_ia32_crc32qi:
+  case X86::BI__builtin_ia32_crc32hi:
+  case X86::BI__builtin_ia32_crc32si:
+  case X86::BI__builtin_ia32_crc32di: {
+    APSInt CRC, Data;
+    if (!EvaluateInteger(E->getArg(0), CRC, Info) ||
+        !EvaluateInteger(E->getArg(1), Data, Info))
+      return false;
+
+    // Get the input values
+    uint64_t CRCVal = CRC.getZExtValue();
+    uint64_t DataVal = Data.getZExtValue();
+
+    // Determine the data width based on the builtin
+    unsigned DataBytes;
+    switch (BuiltinOp) {
+    case X86::BI__builtin_ia32_crc32qi:
+      DataBytes = 1;
+      break;
+    case X86::BI__builtin_ia32_crc32hi:
+      DataBytes = 2;
+      break;
+    case X86::BI__builtin_ia32_crc32si:
+      DataBytes = 4;
+      break;
+    case X86::BI__builtin_ia32_crc32di:
+      DataBytes = 8;
+      break;
+    default:
+      llvm_unreachable("Unknown CRC32 builtin");
+    }
+
+    // CRC32C polynomial (iSCSI polynomial, bit-reversed)
+    static const uint32_t CRC32C_POLY = 0x82F63B78;
+
+    // Process each byte
+    uint32_t Result = static_cast<uint32_t>(CRCVal);
+    for (unsigned i = 0; i < DataBytes; ++i) {
+      uint8_t Byte = static_cast<uint8_t>((DataVal >> (i * 8)) & 0xFF);
+      Result ^= Byte;
+      for (int j = 0; j < 8; ++j) {
+        Result = (Result >> 1) ^ ((Result & 1) ? CRC32C_POLY : 0);
+      }
+    }
+
+    return Success(Result, E);
+  }
+
   case Builtin::BI__builtin_dynamic_object_size:
   case Builtin::BI__builtin_object_size: {
     // The type was checked when we built the expression.

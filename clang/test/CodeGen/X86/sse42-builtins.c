@@ -138,3 +138,13 @@ unsigned long long test_mm_crc32_u64(unsigned long long CRC, unsigned long long 
   return _mm_crc32_u64(CRC, V);
 }
 #endif
+
+#ifdef __cplusplus
+TEST_CONSTEXPR(_mm_crc32_u8(0, 42) == 0x4b5fa6e6);
+TEST_CONSTEXPR(_mm_crc32_u8(0x12345678, 42) == 0xb00c9e72);
+TEST_CONSTEXPR(_mm_crc32_u16(0, 42) == 0xc5da1054);
+TEST_CONSTEXPR(_mm_crc32_u32(0, 42) == 0x9e0654ec);
+#ifdef __x86_64__
+TEST_CONSTEXPR(_mm_crc32_u64(0, 42) == 0xdd439b0d);
+#endif
+#endif
