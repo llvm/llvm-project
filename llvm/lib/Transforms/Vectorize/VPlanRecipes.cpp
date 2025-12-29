@@ -1703,8 +1703,11 @@ void VPWidenIntrinsicRecipe::execute(VPTransformState &State) {
 
   SmallVector<Type *, 2> TysForDecl;
   // Add return type if intrinsic is overloaded on it.
-  if (isVectorIntrinsicWithOverloadTypeAtArg(VectorIntrinsicID, -1, State.TTI))
-    TysForDecl.push_back(VectorType::get(getResultType(), State.VF));
+  if (isVectorIntrinsicWithOverloadTypeAtArg(VectorIntrinsicID, -1,
+                                             State.TTI)) {
+    Type *RetTy = toVectorizedTy(getResultType(), State.VF);
+    append_range(TysForDecl, getContainedTypes(RetTy));
+  }
   SmallVector<Value *, 4> Args;
   for (const auto &I : enumerate(operands())) {
     // Some intrinsics have a scalar argument - don't replace it with a

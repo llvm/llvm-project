@@ -825,8 +825,11 @@ template <typename Opnd_t> struct Argument_match {
     if (const auto *R = dyn_cast<VPWidenCallRecipe>(V))
       return Val.match(R->getOperand(OpI));
     if (const auto *R = dyn_cast<VPReplicateRecipe>(V))
-      if (isa<CallInst>(R->getUnderlyingInstr()))
-        return Val.match(R->getOperand(OpI + 1));
+      if (R->getOpcode() == Instruction::Call)
+        return Val.match(R->getOperand(OpI));
+    if (const auto *R = dyn_cast<VPInstruction>(V))
+      if (R->getOpcode() == Instruction::Call)
+        return Val.match(R->getOperand(OpI));
     return false;
   }
 };
@@ -848,10 +851,22 @@ struct IntrinsicID_match {
       return R->getVectorIntrinsicID() == ID;
     if (const auto *R = dyn_cast<VPWidenCallRecipe>(V))
       return R->getCalledScalarFunction()->getIntrinsicID() == ID;
+
+    auto MatchCalleeIntrinsic = [&](VPValue *CalleeOp) {
+      if (!CalleeOp->isLiveIn())
+        return false;
+      auto *F = cast<Function>(CalleeOp->getLiveInIRValue());
+      return F->getIntrinsicID() == ID;
+    };
     if (const auto *R = dyn_cast<VPReplicateRecipe>(V))
-      if (const auto *CI = dyn_cast<CallInst>(R->getUnderlyingInstr()))
-        if (const auto *F = CI->getCalledFunction())
-          return F->getIntrinsicID() == ID;
+      if (R->getOpcode() == Instruction::Call) {
+        // The mask is always the last operand if predicated.
+        return MatchCalleeIntrinsic(
+            R->getOperand(R->getNumOperands() - 1 - R->isPredicated()));
+      }
+    if (const auto *R = dyn_cast<VPInstruction>(V))
+      if (R->getOpcode() == Instruction::Call)
+        return MatchCalleeIntrinsic(R->getOperand(R->getNumOperands() - 1));
     return false;
   }
 };
