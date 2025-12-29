@@ -100,7 +100,8 @@ struct VPlanTransforms {
   ///      >[ ]     <-- original loop exit block(s), wrapped in VPIRBasicBlocks.
   LLVM_ABI_FOR_TEST static std::unique_ptr<VPlan>
   buildVPlan0(Loop *TheLoop, LoopInfo &LI, Type *InductionTy, DebugLoc IVDL,
-              PredicatedScalarEvolution &PSE, LoopAccessInfoManager *LAIs, LoopVersioning *LVer = nullptr);
+              PredicatedScalarEvolution &PSE, LoopAccessInfoManager *LAIs,
+              AAResults *AA, MemorySSA *MSSA, LoopVersioning *LVer = nullptr);
 
   /// Update \p Plan to account for all early exits.
   LLVM_ABI_FOR_TEST static void handleEarlyExits(VPlan &Plan,

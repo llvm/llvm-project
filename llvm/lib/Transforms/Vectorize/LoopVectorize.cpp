@@ -8382,7 +8382,8 @@ void LoopVectorizationPlanner::buildVPlansWithVPRecipes(ElementCount MinVF,
   // candidates built later for specific VF ranges.
   auto VPlan0 = VPlanTransforms::buildVPlan0(
       OrigLoop, *LI, Legal->getWidestInductionType(),
-      getDebugLocFromInstOrOperands(Legal->getPrimaryInduction()), PSE, LAIs, &LVer);
+      getDebugLocFromInstOrOperands(Legal->getPrimaryInduction()), PSE, LAIs,
+      AA, MSSA, &LVer);
 
   auto MaxVFTimes2 = MaxVF * 2;
   for (ElementCount VF = MinVF; ElementCount::isKnownLT(VF, MaxVFTimes2);) {
@@ -8692,7 +8693,8 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VFRange &Range) {
 
   auto Plan = VPlanTransforms::buildVPlan0(
       OrigLoop, *LI, Legal->getWidestInductionType(),
-      getDebugLocFromInstOrOperands(Legal->getPrimaryInduction()), PSE, LAIs);
+      getDebugLocFromInstOrOperands(Legal->getPrimaryInduction()), PSE, LAIs,
+      AA, MSSA);
   VPlanTransforms::handleEarlyExits(*Plan,
                                     /*HasUncountableExit*/ false);
   VPlanTransforms::addMiddleCheck(*Plan, /*RequiresScalarEpilogue*/ true,
@@ -9216,7 +9218,8 @@ static bool processLoopInVPlanNativePath(
     LoopVectorizationLegality *LVL, TargetTransformInfo *TTI,
     TargetLibraryInfo *TLI, DemandedBits *DB, AssumptionCache *AC,
     OptimizationRemarkEmitter *ORE, bool OptForSize, LoopVectorizeHints &Hints,
-    LoopAccessInfoManager *LAIs, LoopVectorizationRequirements &Requirements) {
+    LoopAccessInfoManager *LAIs, AAResults *AA, MemorySSA *MSSA,
+    LoopVectorizationRequirements &Requirements) {
 
   if (isa<SCEVCouldNotCompute>(PSE.getBackedgeTakenCount())) {
     LLVM_DEBUG(dbgs() << "LV: cannot compute the outer-loop trip count\n");
@@ -9235,7 +9238,7 @@ static bool processLoopInVPlanNativePath(
   // TODO: CM is not used at this point inside the planner. Turn CM into an
   // optional argument if we don't need it in the future.
   LoopVectorizationPlanner LVP(L, LI, DT, TLI, *TTI, LVL, CM, IAI, PSE, LAIs,
-                               Hints, ORE);
+                               Hints, ORE, AA, MSSA);
 
   // Get user vectorization factor.
   ElementCount UserVF = Hints.getWidth();
@@ -9935,9 +9938,9 @@ bool LoopVectorizePass::processLoop(Loop *L) {
 
   // Check if it is legal to vectorize the loop.
   LoopVectorizationRequirements Requirements;
-  LoopVectorizationLegality LVL(L, PSE, DT, TTI, TLI, F, *LAIs, LI, ORE,
-                                &Requirements, &Hints, DB, AC,
-                                /*AllowRuntimeSCEVChecks=*/!OptForSize, AA);
+  LoopVectorizationLegality LVL(
+      L, PSE, DT, TTI, TLI, F, *LAIs, LI, ORE, &Requirements, &Hints, DB, AC,
+      /*AllowRuntimeSCEVChecks=*/!OptForSize, AA, MSSA);
   if (!LVL.canVectorize(EnableVPlanNativePath)) {
     LLVM_DEBUG(dbgs() << "LV: Not vectorizing: Cannot prove legality.\n");
     Hints.emitRemarkWithHints();
@@ -9965,7 +9968,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
   // pipeline.
   if (!L->isInnermost())
     return processLoopInVPlanNativePath(L, PSE, LI, DT, &LVL, TTI, TLI, DB, AC,
-                                        ORE, OptForSize, Hints, LAIs,
+                                        ORE, OptForSize, Hints, LAIs, AA, MSSA,
                                         Requirements);
 
   assert(L->isInnermost() && "Inner loop expected.");
@@ -10072,7 +10075,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
                                 F, &Hints, IAI, OptForSize);
   // Use the planner for vectorization.
   LoopVectorizationPlanner LVP(L, LI, DT, TLI, *TTI, &LVL, CM, IAI, PSE, LAIs,
-                               Hints, ORE);
+                               Hints, ORE, AA, MSSA);
 
   // Get user vectorization factor and interleave count.
   ElementCount UserVF = Hints.getWidth();
@@ -10384,6 +10387,7 @@ PreservedAnalyses LoopVectorizePass::run(Function &F,
   ORE = &AM.getResult<OptimizationRemarkEmitterAnalysis>(F);
   LAIs = &AM.getResult<LoopAccessAnalysis>(F);
   AA = &AM.getResult<AAManager>(F);
+  MSSA = &AM.getResult<MemorySSAAnalysis>(F).getMSSA();
 
   auto &MAMProxy = AM.getResult<ModuleAnalysisManagerFunctionProxy>(F);
   PSI = MAMProxy.getCachedResult<ProfileSummaryAnalysis>(*F.getParent());

@@ -1262,8 +1262,6 @@ bool LoopVectorizationLegality::canVectorizeMemory() {
   }
 
   if (LAI->hasLoadStoreDependenceInvolvingLoopInvariantAddress()) {
-    auto *MSSA = LAIs.getMSSA();
-    auto *AA = &LAIs.getAA();
     auto *SE = PSE.getSE();
     for (const auto &[Load, Store] : LAI->getInvariantAddressConflicts()) {
       if (!isInvariantLoadHoistable(Load, Store, TheLoop, MSSA, AA, *SE)) {

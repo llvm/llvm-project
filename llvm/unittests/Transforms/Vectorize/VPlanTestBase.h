@@ -90,8 +90,9 @@ protected:
 
     Loop *L = LI->getLoopFor(LoopHeader);
     PredicatedScalarEvolution PSE(*SE, *L);
-    auto Plan = VPlanTransforms::buildVPlan0(L, *LI, IntegerType::get(*Ctx, 64),
-                                             {}, PSE, LAIs.get());
+    auto Plan =
+        VPlanTransforms::buildVPlan0(L, *LI, IntegerType::get(*Ctx, 64), {},
+                                     PSE, LAIs.get(), AA.get(), MSSA.get());
 
     VPlanTransforms::handleEarlyExits(*Plan, HasUncountableExit);
     VPlanTransforms::addMiddleCheck(*Plan, true, false);

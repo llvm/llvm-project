@@ -987,9 +987,6 @@ public:
       : SE(SE), AA(AA), DT(DT), LI(LI), TTI(TTI), TLI(TLI), AC(AC), MSSA(MSSA) {
   }
 
-  AAResults &getAA() { return AA; }
-  MemorySSA *getMSSA() { return MSSA; }
-
   LLVM_ABI const LoopAccessInfo &getInfo(Loop &L, bool AllowPartial = false);
 
   LLVM_ABI void clear();

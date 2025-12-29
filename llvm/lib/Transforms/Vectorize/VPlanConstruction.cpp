@@ -59,6 +59,10 @@ class PlainCFGBuilder {
 
   LoopAccessInfoManager *LAIs;
 
+  AAResults *AA;
+
+  MemorySSA *MSSA;
+
   // Builder of the VPlan instruction-level representation.
   VPBuilder VPIRBuilder;
 
@@ -89,9 +93,10 @@ class PlainCFGBuilder {
 
 public:
   PlainCFGBuilder(Loop *Lp, LoopInfo *LI, LoopVersioning *LVer,
-                  PredicatedScalarEvolution *PSE, LoopAccessInfoManager *LAIs)
+                  PredicatedScalarEvolution *PSE, LoopAccessInfoManager *LAIs,
+                  AAResults *AA, MemorySSA *MSSA)
       : TheLoop(Lp), LI(LI), LVer(LVer), Plan(std::make_unique<VPlan>(Lp)),
-        PSE(PSE), LAIs(LAIs) {}
+        PSE(PSE), LAIs(LAIs), AA(AA), MSSA(MSSA) {}
 
   /// Build plain CFG for TheLoop and connect it to Plan's entry.
   std::unique_ptr<VPlan> buildPlainCFG();
@@ -198,8 +203,6 @@ void PlainCFGBuilder::analyzeScalarPromotion(VPBasicBlock *VPBB,
     return;
 
   auto &LAI = LAIs->getInfo(*Loop);
-  auto *AA = &LAIs->getAA();
-  auto *MSSA = LAIs->getMSSA();
   auto *SE = PSE->getSE();
   for (const auto &[Load, Store] : LAI.getInvariantAddressConflicts()) {
     if (Load->getParent() != BB)
@@ -658,8 +661,9 @@ static void addInitialSkeleton(VPlan &Plan, Type *InductionTy, DebugLoc IVDL,
 std::unique_ptr<VPlan>
 VPlanTransforms::buildVPlan0(Loop *TheLoop, LoopInfo &LI, Type *InductionTy,
                              DebugLoc IVDL, PredicatedScalarEvolution &PSE,
-                             LoopAccessInfoManager *LAIs, LoopVersioning *LVer) {
-  PlainCFGBuilder Builder(TheLoop, &LI, LVer, &PSE, LAIs);
+                             LoopAccessInfoManager *LAIs, AAResults *AA,
+                             MemorySSA *MSSA, LoopVersioning *LVer) {
+  PlainCFGBuilder Builder(TheLoop, &LI, LVer, &PSE, LAIs, AA, MSSA);
   std::unique_ptr<VPlan> VPlan0 = Builder.buildPlainCFG();
   addInitialSkeleton(*VPlan0, InductionTy, IVDL, PSE, TheLoop);
   return VPlan0;
