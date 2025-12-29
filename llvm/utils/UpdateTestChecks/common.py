@@ -2019,7 +2019,7 @@ def generalize_check_lines(
                     CheckValueInfo(
                         key=None,
                         text=None,
-                        # There only ONE capturing group for the name
+                        # The sole capturing group is only designated for the name.
                         name=m.group(m.lastindex),
                         prefix="",
                         suffix="",
