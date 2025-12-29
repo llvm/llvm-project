@@ -6620,8 +6620,9 @@ static const SCEV *calculateRtStride(ArrayRef<Value *> PointerOps, Type *ElemTy,
                ->isZero())
         return nullptr;
       Dist = SC->getAPInt().getZExtValue();
-    } else
+    } else {
       Coeffs.push_back(0);
+    }
     // If the strides are not the same or repeated, we can't vectorize.
     if ((Dist / Size) * Size != Dist || (Dist / Size) >= SCEVs.size())
       return nullptr;
@@ -7143,7 +7144,7 @@ bool BoUpSLP::analyzeRtStrideCandidate(ArrayRef<Value *> PointerOps,
     OffsetToPointerOpIdxMap[Offset].first.push_back(Ptr);
     OffsetToPointerOpIdxMap[Offset].second.push_back(Idx);
   }
-  int NumOffsets = OffsetToPointerOpIdxMap.size();
+  unsigned NumOffsets = OffsetToPointerOpIdxMap.size();
 
   // Quick detour: at this point we can say what the type of strided load would
   // be if all the checks pass. Check if this type is legal for the target.
@@ -7261,8 +7262,7 @@ bool BoUpSLP::analyzeRtStrideCandidate(ArrayRef<Value *> PointerOps,
       };
 
   int64_t LowestOffset = SortedOffsetsV[0];
-  SmallVector<Value *> &PointerOps0 =
-      OffsetToPointerOpIdxMap[LowestOffset].first;
+  SmallVector<Value *> &PointerOps0 = OffsetToPointerOpIdxMap[LowestOffset].first;
 
   SmallVector<int64_t> Coeffs0;
   SmallVector<unsigned> SortedIndicesForOffset0;
