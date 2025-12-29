@@ -5344,34 +5344,15 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     case Intrinsic::exp2:
     case Intrinsic::exp10:
     case Intrinsic::amdgcn_exp2: {
-      Known.knownNot(fcNegative);
+      KnownFPClass KnownSrc;
+      computeKnownFPClass(II->getArgOperand(0), DemandedElts, InterestedClasses,
+                          KnownSrc, Q, Depth + 1);
+
+      Known = KnownFPClass::exp(KnownSrc);
 
       Type *EltTy = II->getType()->getScalarType();
       if (IID == Intrinsic::amdgcn_exp2 && EltTy->isFloatTy())
         Known.knownNot(fcSubnormal);
-
-      if ((InterestedClasses & fcNan) == fcNone)
-        break;
-
-      KnownFPClass KnownSrc;
-      computeKnownFPClass(II->getArgOperand(0), DemandedElts, InterestedClasses,
-                          KnownSrc, Q, Depth + 1);
-      if (KnownSrc.isKnownNeverNaN()) {
-        Known.knownNot(fcNan);
-        Known.signBitMustBeZero();
-      }
-
-      if (KnownSrc.cannotBeOrderedLessThanZero()) {
-        // If the source is positive this cannot underflow.
-        Known.knownNot(fcPosZero);
-
-        // Cannot introduce denormal values.
-        Known.knownNot(fcPosSubnormal);
-      }
-
-      // If the source is negative, this cannot overflow to infinity.
-      if (KnownSrc.cannotBeOrderedGreaterThanZero())
-        Known.knownNot(fcPosInf);
 
       break;
     }
