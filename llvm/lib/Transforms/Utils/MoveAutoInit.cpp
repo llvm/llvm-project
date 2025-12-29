@@ -157,10 +157,13 @@ static bool runMoveAutoInit(Function &F, DominatorTree &DT, MemorySSA &MSSA) {
         if (!DT.isReachableFromEntry(Pred))
           continue;
 
-        DominatingPredecessor =
-            DominatingPredecessor
-                ? DT.findNearestCommonDominator(DominatingPredecessor, Pred)
-                : Pred;
+        if (!DominatingPredecessor) {
+          if (DT.dominates(Pred, UsersDominatorHead))
+            DominatingPredecessor = Pred;
+        } else {
+          DominatingPredecessor =
+              DT.findNearestCommonDominator(DominatingPredecessor, Pred);
+        }
       }
 
       if (!DominatingPredecessor || DominatingPredecessor == &EntryBB)
