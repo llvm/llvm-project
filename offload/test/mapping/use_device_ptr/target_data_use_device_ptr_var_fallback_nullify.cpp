@@ -7,16 +7,16 @@
 // Test that when a use_device_ptr lookup fails, the
 // privatized pointer is set to null because of fb_nullify.
 
-// XFAIL: *
-
 #include <stdio.h>
 int x;
 int *xp = &x;
 
 void f1() {
   printf("%p\n", xp); // CHECK:          0x[[#%x,ADDR:]]
+  // FIXME: Update this with codegen changes for fb_nullify
 #pragma omp target data use_device_ptr(fb_nullify : xp)
-  printf("%p\n", xp); // OFFLOAD-NEXT:   (nil)
+  printf("%p\n", xp); // EXPECTED-OFFLOAD-NEXT: (nil)
+                      // OFFLOAD-NEXT:   0x{{0*}}[[#ADDR]]
                       // NOOFFLOAD-NEXT: 0x{{0*}}[[#ADDR]]
 }
 

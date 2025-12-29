@@ -8,8 +8,6 @@
 // privatized pointer retains its original value
 // because of fb_preserve.
 
-// XFAIL: *
-
 #include <stdio.h>
 
 int x = 0;

@@ -12,8 +12,6 @@
 // pointee is device-accessible, even if it was not
 // previously mapped.
 
-// XFAIL: *
-
 #include <stdio.h>
 
 int x = 0;
