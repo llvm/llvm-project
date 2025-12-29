@@ -4464,17 +4464,17 @@ static Value *simplifyWithOpsReplaced(Value *V,
     if (auto *II = dyn_cast<IntrinsicInst>(I)) {
       // `x == y ? 0 : ucmp(x, y)` where under the replacement y -> x,
       // `ucmp(x, x)` becomes `0`.
-      if (NewOps[0] == NewOps[1] && (II->getIntrinsicID() == Intrinsic::scmp ||
-                                     II->getIntrinsicID() == Intrinsic::ucmp)) {
+      if ((II->getIntrinsicID() == Intrinsic::scmp ||
+           II->getIntrinsicID() == Intrinsic::ucmp) &&
+          NewOps[0] == NewOps[1]) {
         if (II->hasPoisonGeneratingAnnotations()) {
           if (!DropFlags)
             return nullptr;
-          else
-            DropFlags->push_back(II);
+
+          DropFlags->push_back(II);
         }
 
-        return llvm::ConstantInt::get(II->getFunctionType()->getReturnType(),
-                                      0);
+        return llvm::ConstantInt::get(I->getType(), 0);
       }
     }
 
