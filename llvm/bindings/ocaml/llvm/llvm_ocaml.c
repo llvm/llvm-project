@@ -1608,9 +1608,9 @@ value llvm_intrinsic_id(value Fn) {
 }
 
 /* llmodule -> int -> lltype array -> llvalue */
-value llvm_intrinsic_declaration(value M, value ID, value ParamTys) {
-  mlsize_t Length = Wosize_val(ParamTys);
-  LLVMTypeRef *Temp = from_val_array(ParamTys);
+value llvm_intrinsic_declaration(value M, value ID, value OverloadTypes) {
+  mlsize_t Length = Wosize_val(OverloadTypes);
+  LLVMTypeRef *Temp = from_val_array(OverloadTypes);
   LLVMValueRef Intrinsic =
       LLVMGetIntrinsicDeclaration(Module_val(M), Int_val(ID), Temp, Length);
   free(Temp);
@@ -1618,9 +1618,9 @@ value llvm_intrinsic_declaration(value M, value ID, value ParamTys) {
 }
 
 /* llcontext -> int -> lltype array -> lltype */
-value llvm_intrinsic_type(value C, value ID, value ParamTys) {
-  mlsize_t Length = Wosize_val(ParamTys);
-  LLVMTypeRef *Temp = from_val_array(ParamTys);
+value llvm_intrinsic_type(value C, value ID, value OverloadTypes) {
+  mlsize_t Length = Wosize_val(OverloadTypes);
+  LLVMTypeRef *Temp = from_val_array(OverloadTypes);
   LLVMTypeRef Type =
       LLVMIntrinsicGetType(Context_val(C), Int_val(ID), Temp, Length);
   free(Temp);
@@ -1635,12 +1635,12 @@ value llvm_intrinsic_name(value ID) {
 }
 
 /* llmodule -> int -> lltype array -> string */
-value llvm_intrinsic_overloaded_name(value M, value ID, value ParamTys) {
-  mlsize_t ParamCount = Wosize_val(ParamTys);
-  LLVMTypeRef *Temp = from_val_array(ParamTys);
+value llvm_intrinsic_overloaded_name(value M, value ID, value OverloadTypes) {
+  mlsize_t TypeCount = Wosize_val(OverloadTypes);
+  LLVMTypeRef *Temp = from_val_array(OverloadTypes);
   size_t NameLength = -1;
   char *OverloadedNameCStrOwned = LLVMIntrinsicCopyOverloadedName2(
-      Module_val(M), Int_val(ID), Temp, ParamCount, &NameLength);
+      Module_val(M), Int_val(ID), Temp, TypeCount, &NameLength);
   value OverloadedName = caml_copy_string(OverloadedNameCStrOwned);
   free(OverloadedNameCStrOwned);
   free(Temp);
