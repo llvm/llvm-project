@@ -10,18 +10,18 @@ define void @foo(i32 %v) {
 ; CHECK-NEXT:    switch i32 [[V]], label %[[DEFAULT:.*]] [
 ; CHECK-NEXT:      i32 3, label %[[EXIT:.*]]
 ; CHECK-NEXT:      i32 2, label %[[CASE2]]
-; CHECK-NEXT:      i32 1, label %[[UNREACH:.*]]
+; CHECK-NEXT:      i32 1, label %[[CASE1:.*]]
 ; CHECK-NEXT:    ]
-; CHECK:       [[UNREACH]]:
+; CHECK:       [[CASE1]]:
 ; CHECK-NEXT:    br label %[[DEFAULT]]
 ; CHECK:       [[CASE2]]:
 ; CHECK-NEXT:    br label %[[DEFAULT]]
 ; CHECK:       [[DEFAULT]]:
-; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ 1, %[[UNREACH]] ], [ 2, %[[CASE2]] ], [ [[V]], %[[IF_ELSE]] ]
+; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ 1, %[[CASE1]] ], [ 2, %[[CASE2]] ], [ [[V]], %[[IF_ELSE]] ]
 ; CHECK-NEXT:    br label %[[SWITCH:.*]]
 ; CHECK:       [[SWITCH]]:
 ; CHECK-NEXT:    br label %[[EXIT]]
-; CHECK:       [[UNREACH1:.*:]]
+; CHECK:       [[UNREACH:.*:]]
 ; CHECK-NEXT:    br label %[[EXIT]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
