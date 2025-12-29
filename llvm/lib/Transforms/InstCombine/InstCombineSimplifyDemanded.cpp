@@ -1105,10 +1105,8 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Instruction *I,
                                    Depth + 1) ||
               SimplifyDemandedBits(I, 1, DemandedMaskRHS, RHSKnown, Q,
                                    Depth + 1)) {
-            // Range attribute may no longer hold.
-            I->dropPoisonGeneratingReturnAttributes();
-            // Metadata may also no longer hold.
-            I->dropPoisonGeneratingMetadata();
+            // Range attribute or metadata may no longer hold.
+            I->dropPoisonGeneratingAnnotations();
             return I;
           }
         } else { // fshl is a rotate
