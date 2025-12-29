@@ -281,6 +281,7 @@ public:
     CompositeNode *UncommonNode;
     CompositeNode *CommonNode{nullptr};
     ComplexDeinterleavingRotation Rotation;
+    bool AllowContract;
     bool IsCommonReal() const { return Rotation == ComplexDeinterleavingRotation::Rotation_0 || Rotation == ComplexDeinterleavingRotation::Rotation_180; }
   };
 
@@ -679,6 +680,8 @@ ComplexDeinterleavingGraph::identifyPartialMul(Instruction *Real,
                     << (RealPositive ? " + " : " - ") << *Real << " / "
                     << (ImagPositive ? " + " : " - ") << *Imag << "\n");
 
+  bool AllowContract = true;
+
   auto GetProduct = [](Value *V1, Value *V2, bool IsPositive) -> Product {
     if (isNeg(V1)) {
       V1 = getNegOperand(V1);
@@ -740,8 +743,7 @@ ComplexDeinterleavingGraph::identifyPartialMul(Instruction *Real,
     }
 
     if (isa<FPMathOperator>(I) && !I->getFastMathFlags().allowContract()) {
-      LLVM_DEBUG(dbgs() << "  - Contract is missing from the FastMath flags.\n");
-      return false;
+      AllowContract = false;
     }
 
     bool IsSub;
@@ -816,13 +818,27 @@ ComplexDeinterleavingGraph::identifyPartialMul(Instruction *Real,
     for (; PN; PN = PN->prev) {
       CompositeNode *NewCN = prepareCompositeNode(
           ComplexDeinterleavingOperation::CMulPartial, nullptr, nullptr);
-      NewCN->Rotation = flipRotation(PN->Rotation, !CNPositive);
+      if (!CNPositive && CN && !PN->AllowContract) {
+        NewCN->Rotation = PN->Rotation;
+      } else {
+        NewCN->Rotation = flipRotation(PN->Rotation, !CNPositive);
+      }
       NewCN->addOperand(PN->CommonNode);
       NewCN->addOperand(PN->UncommonNode);
-      if (CN) {
+      if (CN && PN->AllowContract) {
         NewCN->addOperand(CN);
       }
-      CN = submitCompositeNode(NewCN);
+      submitCompositeNode(NewCN);
+      if (CN && !PN->AllowContract) {
+        auto AddNode = prepareCompositeNode(
+            ComplexDeinterleavingOperation::Symmetric, nullptr, nullptr);
+        AddNode->Opcode = CNPositive ? Instruction::FAdd : Instruction::FSub;
+        CNPositive = true;
+        AddNode->addOperand(NewCN);
+        AddNode->addOperand(CN);
+        NewCN = submitCompositeNode(AddNode);
+      }
+      CN = NewCN;
     }
     if (!CNPositive) {
       return negCompositeNode(CN);
@@ -859,6 +875,7 @@ ComplexDeinterleavingGraph::identifyPartialMul(Instruction *Real,
                           PartialMulNode *PN, auto &&cb) -> CompositeNode* {
     PartialMulNode NewPN{};
     NewPN.prev = PN;
+    NewPN.AllowContract = AllowContract;
     if (RealMul.IsPositive) {
       NewPN.Rotation = (ImagMul.IsPositive ?
                         ComplexDeinterleavingRotation::Rotation_0 :
