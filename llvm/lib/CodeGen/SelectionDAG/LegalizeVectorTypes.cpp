@@ -2123,7 +2123,7 @@ void DAGTypeLegalizer::SplitVecRes_INSERT_VECTOR_ELT(SDNode *N, SDValue &Lo,
   EVT EltVT = VecVT.getVectorElementType();
   if (!EltVT.isByteSized()) {
     EltVT = EltVT.changeTypeToInteger().getRoundIntegerType(*DAG.getContext());
-    VecVT = VecVT.changeElementType(EltVT);
+    VecVT = VecVT.changeElementType(*DAG.getContext(), EltVT);
     Vec = DAG.getNode(ISD::ANY_EXTEND, dl, VecVT, Vec);
     // Extend the element type to match if needed.
     if (EltVT.bitsGT(Elt.getValueType()))
@@ -4070,7 +4070,7 @@ SDValue DAGTypeLegalizer::SplitVecOp_EXTRACT_VECTOR_ELT(SDNode *N) {
   EVT EltVT = VecVT.getVectorElementType();
   if (!EltVT.isByteSized()) {
     EltVT = EltVT.changeTypeToInteger().getRoundIntegerType(*DAG.getContext());
-    VecVT = VecVT.changeElementType(EltVT);
+    VecVT = VecVT.changeElementType(*DAG.getContext(), EltVT);
     Vec = DAG.getNode(ISD::ANY_EXTEND, dl, VecVT, Vec);
     SDValue NewExtract =
         DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, EltVT, Vec, Idx);
@@ -4619,7 +4619,8 @@ SDValue DAGTypeLegalizer::SplitVecOp_VSETCC(SDNode *N) {
   GetSplitVector(N->getOperand(isStrict ? 2 : 1), Lo1, Hi1);
 
   EVT VT = N->getValueType(0);
-  EVT PartResVT = Lo0.getValueType().changeElementType(VT.getScalarType());
+  EVT PartResVT = Lo0.getValueType().changeElementType(*DAG.getContext(),
+                                                       VT.getScalarType());
 
   if (Opc == ISD::SETCC) {
     LoRes = DAG.getNode(ISD::SETCC, DL, PartResVT, Lo0, Lo1, N->getOperand(2));
@@ -5891,8 +5892,8 @@ SDValue DAGTypeLegalizer::WidenVecRes_ExpOp(SDNode *N) {
   EVT ExpVT = RHS.getValueType();
   SDValue ExpOp = RHS;
   if (ExpVT.isVector()) {
-    EVT WideExpVT =
-        WidenVT.changeVectorElementType(ExpVT.getVectorElementType());
+    EVT WideExpVT = WidenVT.changeVectorElementType(
+        *DAG.getContext(), ExpVT.getVectorElementType());
     ExpOp = ModifyToType(RHS, WideExpVT);
   }
 
@@ -7550,8 +7551,15 @@ SDValue DAGTypeLegalizer::WidenVecOp_INSERT_SUBVECTOR(SDNode *N) {
                        N->getOperand(2));
 
   if (OrigVT.isScalableVector()) {
-    // Fallback to inserting through memory.
+    // When the widened types match, overwriting the start of a vector is
+    // effectively a merge operation that can be implement as a vselect.
+    if (SubVT == VT && N->getConstantOperandVal(2) == 0) {
+      SDValue Mask =
+          DAG.getMaskFromElementCount(DL, VT, OrigVT.getVectorElementCount());
+      return DAG.getNode(ISD::VSELECT, DL, VT, Mask, SubVec, InVec);
+    }
 
+    // Fallback to inserting through memory.
     Align Alignment = DAG.getReducedAlign(VT, /*UseABI=*/false);
     SDValue StackPtr = DAG.CreateStackTemporary(VT.getStoreSize(), Alignment);
     MachineFunction &MF = DAG.getMachineFunction();

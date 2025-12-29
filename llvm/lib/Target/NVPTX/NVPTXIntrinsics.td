@@ -151,19 +151,19 @@ defm BARRIER_CTA_SYNC_ALL : BARRIER_ALL<"barrier.sync", int_nvvm_barrier_cta_syn
 defm BARRIER_CTA_SYNC : BARRIER_COUNT<"barrier.sync", int_nvvm_barrier_cta_sync_count, [hasPTX<60>]>;
 defm BARRIER_CTA_ARRIVE : BARRIER_COUNT<"barrier.arrive", int_nvvm_barrier_cta_arrive_count, [hasPTX<60>]>;
 
-defm BARRIER_CTA_RED_POPC_ALIGNED_ALL : BARRIER_RED_ALL<"bar.red.popc", int_nvvm_barrier_cta_red_popc_aligned_all, I32RT>;
-defm BARRIER_CTA_RED_AND_ALIGNED_ALL : BARRIER_RED_ALL<"bar.red.and", int_nvvm_barrier_cta_red_and_aligned_all, I1RT>;
-defm BARRIER_CTA_RED_OR_ALIGNED_ALL : BARRIER_RED_ALL<"bar.red.or", int_nvvm_barrier_cta_red_or_aligned_all, I1RT>;
-defm BARRIER_CTA_RED_POPC_ALIGNED : BARRIER_RED_COUNT<"bar.red.popc", int_nvvm_barrier_cta_red_popc_aligned_count, I32RT>;
-defm BARRIER_CTA_RED_AND_ALIGNED : BARRIER_RED_COUNT<"bar.red.and", int_nvvm_barrier_cta_red_and_aligned_count, I1RT>;
-defm BARRIER_CTA_RED_OR_ALIGNED : BARRIER_RED_COUNT<"bar.red.or", int_nvvm_barrier_cta_red_or_aligned_count, I1RT>;
+defm BARRIER_CTA_RED_POPC_ALIGNED_ALL : BARRIER_RED_ALL<"bar.red.popc.u32", int_nvvm_barrier_cta_red_popc_aligned_all, I32RT>;
+defm BARRIER_CTA_RED_AND_ALIGNED_ALL : BARRIER_RED_ALL<"bar.red.and.pred", int_nvvm_barrier_cta_red_and_aligned_all, I1RT>;
+defm BARRIER_CTA_RED_OR_ALIGNED_ALL : BARRIER_RED_ALL<"bar.red.or.pred", int_nvvm_barrier_cta_red_or_aligned_all, I1RT>;
+defm BARRIER_CTA_RED_POPC_ALIGNED : BARRIER_RED_COUNT<"bar.red.popc.u32", int_nvvm_barrier_cta_red_popc_aligned_count, I32RT>;
+defm BARRIER_CTA_RED_AND_ALIGNED : BARRIER_RED_COUNT<"bar.red.and.pred", int_nvvm_barrier_cta_red_and_aligned_count, I1RT>;
+defm BARRIER_CTA_RED_OR_ALIGNED : BARRIER_RED_COUNT<"bar.red.or.pred", int_nvvm_barrier_cta_red_or_aligned_count, I1RT>;
 
-defm BARRIER_CTA_RED_POPC_ALL : BARRIER_RED_ALL<"barrier.red.popc", int_nvvm_barrier_cta_red_popc_all, I32RT, [hasPTX<60>]>;
-defm BARRIER_CTA_RED_AND_ALL : BARRIER_RED_ALL<"barrier.red.and", int_nvvm_barrier_cta_red_and_all, I1RT, [hasPTX<60>]>;
-defm BARRIER_CTA_RED_OR_ALL : BARRIER_RED_ALL<"barrier.red.or", int_nvvm_barrier_cta_red_or_all, I1RT, [hasPTX<60>]>;
-defm BARRIER_CTA_RED_POPC_COUNT : BARRIER_RED_COUNT<"barrier.red.popc", int_nvvm_barrier_cta_red_popc_count, I32RT, [hasPTX<60>]>;
-defm BARRIER_CTA_RED_AND_COUNT : BARRIER_RED_COUNT<"barrier.red.and", int_nvvm_barrier_cta_red_and_count, I1RT, [hasPTX<60>]>;
-defm BARRIER_CTA_RED_OR_COUNT : BARRIER_RED_COUNT<"barrier.red.or", int_nvvm_barrier_cta_red_or_count, I1RT, [hasPTX<60>]>;
+defm BARRIER_CTA_RED_POPC_ALL : BARRIER_RED_ALL<"barrier.red.popc.u32", int_nvvm_barrier_cta_red_popc_all, I32RT, [hasPTX<60>]>;
+defm BARRIER_CTA_RED_AND_ALL : BARRIER_RED_ALL<"barrier.red.and.pred", int_nvvm_barrier_cta_red_and_all, I1RT, [hasPTX<60>]>;
+defm BARRIER_CTA_RED_OR_ALL : BARRIER_RED_ALL<"barrier.red.or.pred", int_nvvm_barrier_cta_red_or_all, I1RT, [hasPTX<60>]>;
+defm BARRIER_CTA_RED_POPC_COUNT : BARRIER_RED_COUNT<"barrier.red.popc.u32", int_nvvm_barrier_cta_red_popc_count, I32RT, [hasPTX<60>]>;
+defm BARRIER_CTA_RED_AND_COUNT : BARRIER_RED_COUNT<"barrier.red.and.pred", int_nvvm_barrier_cta_red_and_count, I1RT, [hasPTX<60>]>;
+defm BARRIER_CTA_RED_OR_COUNT : BARRIER_RED_COUNT<"barrier.red.or.pred", int_nvvm_barrier_cta_red_or_count, I1RT, [hasPTX<60>]>;
 
 class INT_BARRIER_CLUSTER<string variant, Intrinsic Intr,
                           list<Predicate> Preds = [hasPTX<78>, hasSM<90>]>:
@@ -4761,6 +4761,14 @@ def  INT_PTX_SREG_CLUSTER_NCTARANK:
                          int_nvvm_read_ptx_sreg_cluster_nctarank,
                          [hasSM<90>, hasPTX<78>]>;
 
+def INT_PTX_SREG_TOTAL_SMEM_SIZE :
+    PTX_READ_SREG_R32<"total_smem_size", int_nvvm_read_ptx_sreg_total_smem_size>;
+def INT_PTX_SREG_DYNAMIC_SMEM_SIZE :
+    PTX_READ_SREG_R32<"dynamic_smem_size", int_nvvm_read_ptx_sreg_dynamic_smem_size>;
+def INT_PTX_SREG_AGGR_SMEM_SIZE :
+    PTX_READ_SREG_R32<"aggr_smem_size",
+                      int_nvvm_read_ptx_sreg_aggr_smem_size,
+                      [hasSM<90>, hasPTX<81>]>;
 
 def SREG_LANEID : PTX_READ_SREG_R32<"laneid", int_nvvm_read_ptx_sreg_laneid>;
 def SREG_WARPID : PTX_READ_SREG_R32<"warpid", int_nvvm_read_ptx_sreg_warpid>;
