@@ -197,7 +197,7 @@ Source Structure
 
     *   Reads the profile and annotates the IR with metadata.
 
-*   **Context Disambiguation:** ``llvm/lib/transforms/ipo/MemProfContextDisambiguation.cpp``
+*   **Context Disambiguation:** ``llvm/lib/Transforms/IPO/MemProfContextDisambiguation.cpp``
 
     *   Implements the analysis and transformations (e.g., cloning) for resolving ambiguous allocation contexts using LTO.
 
@@ -205,9 +205,9 @@ Source Structure
 
     *   Implements the rewriting of allocation calls based on the hot/cold hints.
 
-*   **Static Data Partitioning:** ``llvm/lib/CodeGen/AsmPrinter/AsmPrinter.cpp`` and ``llvm/lib/CodeGen/StaticDataSplitter.cpp``
+*   **Static Data Partitioning:** ``llvm/lib/CodeGen/AsmPrinter/AsmPrinter.cpp``, ``llvm/lib/CodeGen/StaticDataSplitter.cpp``, and ``llvm/lib/CodeGen/StaticDataAnnotator.cpp``
 
-    *   Implements the splitting of static data into hot and cold sections.
+    *   Implements the splitting of static data (Jump tables, Module-internal global variables, and Constant pools) into hot and cold sections using branch profile data. ``StaticDataAnnotator`` iterates over global variables and sets their section prefixes based on the profile analysis from ``StaticDataSplitter``.
 
 Runtime Implementation
 ----------------------
