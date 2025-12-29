@@ -980,23 +980,39 @@ ComplexDeinterleavingGraph::identifyAdd(Instruction *Real, Instruction *Imag) {
     return nullptr;
   }
 
-  CompositeNode *ResA = identifyNode(AR, AI);
-  if (!ResA) {
-    LLVM_DEBUG(dbgs() << " - AR/AI is not identified as a composite node.\n");
-    return nullptr;
-  }
-  CompositeNode *ResB = identifyNode(BR, BI);
-  if (!ResB) {
-    LLVM_DEBUG(dbgs() << " - BR/BI is not identified as a composite node.\n");
-    return nullptr;
-  }
+  auto MatchCAdd = [&](Instruction *AR, Instruction *BI,
+                       Instruction *AI, Instruction *BR) -> CompositeNode* {
+    CompositeNode *ResA = identifyNode(AR, AI);
+    if (!ResA) {
+      LLVM_DEBUG(dbgs() << " - AR/AI is not identified as a composite node.\n");
+      return nullptr;
+    }
+    CompositeNode *ResB = identifyNode(BR, BI);
+    if (!ResB) {
+      LLVM_DEBUG(dbgs() << " - BR/BI is not identified as a composite node.\n");
+      return nullptr;
+    }
 
-  CompositeNode *Node =
-      prepareCompositeNode(ComplexDeinterleavingOperation::CAdd, Real, Imag);
-  Node->Rotation = Rotation;
-  Node->addOperand(ResA);
-  Node->addOperand(ResB);
-  return submitCompositeNode(Node);
+    CompositeNode *Node =
+        prepareCompositeNode(ComplexDeinterleavingOperation::CAdd, Real, Imag);
+    Node->Rotation = Rotation;
+    Node->addOperand(ResA);
+    Node->addOperand(ResB);
+    return submitCompositeNode(Node);
+  };
+
+  if (auto Res = MatchCAdd(AR, BI, AI, BR))
+    return Res;
+  if (Rotation == ComplexDeinterleavingRotation::Rotation_90) {
+    if (BR != AI) {
+      return MatchCAdd(AR, BI, BR, AI);
+    }
+  } else {
+    if (AR != BI) {
+      return MatchCAdd(BI, AR, AI, BR);
+    }
+  }
+  return nullptr;
 }
 
 static bool isInstructionPairAdd(Instruction *A, Instruction *B) {
