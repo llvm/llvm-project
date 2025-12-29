@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy -std=c99 %s readability-implicit-bool-conversion %t
+// RUN: %check_clang_tidy -std=c99,c11,c17 %s readability-implicit-bool-conversion %t
 
 #define true 1
 #define false 0
