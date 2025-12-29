@@ -2232,6 +2232,12 @@ public:
     Walk(std::get<std::optional<std::list<Modifier>>>(x.t), ": ");
     Walk(std::get<OmpObjectList>(x.t));
   }
+  void Unparse(const OmpDepinfoModifier &x) {
+    Walk(std::get<OmpDepinfoModifier::Value>(x.t));
+    Put("(");
+    Walk(std::get<OmpObject>(x.t));
+    Put(")");
+  }
   void Unparse(const OmpDetachClause &x) { Walk(x.v); }
   void Unparse(const OmpDeviceClause &x) {
     using Modifier = OmpDeviceClause::Modifier;
