@@ -18,6 +18,7 @@
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/CallDescription.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
 #include "llvm/ADT/STLExtras.h"
@@ -127,10 +128,35 @@ private:
                          ProgramStateRef state,
                          const ObjCMethodCall &msg) const;
 
-  bool uninitRefOrPointer(CheckerContext &C, SVal V, SourceRange ArgRange,
-                          const Expr *ArgEx, const BugType &BT,
-                          const ParmVarDecl *ParamDecl,
+  bool uninitRefOrPointer(CheckerContext &C, SVal V, const CallEvent &Call,
+                          const BugType &BT, const ParmVarDecl *ParamDecl,
                           int ArgumentNumber) const;
+
+  // C library functions which have a pointer-to-struct parameter that should be
+  // initialized (at least partially) before the call. The 'uninitRefOrPointer'
+  // check uses this data.
+  CallDescriptionMap<int> FunctionsWithInOutPtrParam = {
+      {{CDM::CLibrary, {"mbrlen"}, 3}, 2},
+      {{CDM::CLibrary, {"mbrtowc"}, 4}, 3},
+      {{CDM::CLibrary, {"wcrtomb"}, 3}, 2},
+      {{CDM::CLibrary, {"mbsrtowcs"}, 4}, 3},
+      {{CDM::CLibrary, {"wcsrtombs"}, 4}, 3},
+      {{CDM::CLibrary, {"mbsnrtowcs"}, 5}, 4},
+      {{CDM::CLibrary, {"wcsnrtombs"}, 5}, 4},
+      {{CDM::CLibrary, {"wcrtomb_s"}, 5}, 4},
+      {{CDM::CLibrary, {"mbsrtowcs_s"}, 6}, 5},
+      {{CDM::CLibrary, {"wcsrtombs_s"}, 6}, 5},
+
+      {{CDM::CLibrary, {"mbrtoc8"}, 4}, 3},
+      {{CDM::CLibrary, {"c8rtomb"}, 3}, 2},
+      {{CDM::CLibrary, {"mbrtoc16"}, 4}, 3},
+      {{CDM::CLibrary, {"c16rtomb"}, 3}, 2},
+      {{CDM::CLibrary, {"mbrtoc32"}, 4}, 3},
+      {{CDM::CLibrary, {"c32rtomb"}, 3}, 2},
+
+      {{CDM::CLibrary, {"mktime"}, 1}, 0},
+      {{CDM::CLibrary, {"timegm"}, 1}, 0},
+  };
 };
 } // end anonymous namespace
 
@@ -249,9 +275,11 @@ template <> struct format_provider<FindUninitializedField::FieldChainTy> {
 };
 } // namespace llvm
 
-bool CallAndMessageChecker::uninitRefOrPointer(
-    CheckerContext &C, SVal V, SourceRange ArgRange, const Expr *ArgEx,
-    const BugType &BT, const ParmVarDecl *ParamDecl, int ArgumentNumber) const {
+bool CallAndMessageChecker::uninitRefOrPointer(CheckerContext &C, SVal V,
+                                               const CallEvent &Call,
+                                               const BugType &BT,
+                                               const ParmVarDecl *ParamDecl,
+                                               int ArgumentNumber) const {
 
   if (!ChecksEnabled[CK_ArgPointeeInitializedness])
     return false;
@@ -264,9 +292,18 @@ bool CallAndMessageChecker::uninitRefOrPointer(
   if (!ParamT->isPointerOrReferenceType())
     return false;
 
+  bool AllowPartialInitializedness = StructInitializednessComplete;
   QualType PointeeT = ParamT->getPointeeType();
-  if (!PointeeT.isConstQualified())
-    return false;
+  if (!PointeeT.isConstQualified()) {
+    if (const int *PI = FunctionsWithInOutPtrParam.lookup(Call)) {
+      if (*PI != ArgumentNumber)
+        return false;
+      // At these functions always allow partial argument initializedness.
+      AllowPartialInitializedness = true;
+    } else {
+      return false;
+    }
+  }
 
   const MemRegion *SValMemRegion = V.getAsRegion();
   if (!SValMemRegion)
@@ -280,6 +317,7 @@ bool CallAndMessageChecker::uninitRefOrPointer(
   if (PointeeT->isVoidType())
     PointeeT = C.getASTContext().CharTy;
   const SVal PointeeV = State->getSVal(SValMemRegion, PointeeT);
+  const Expr *ArgEx = Call.getArgExpr(ArgumentNumber);
 
   if (PointeeV.isUndef()) {
     if (ExplodedNode *N = C.generateErrorNode()) {
@@ -288,7 +326,7 @@ bool CallAndMessageChecker::uninitRefOrPointer(
           ArgumentNumber + 1, llvm::getOrdinalSuffix(ArgumentNumber + 1),
           ParamT->isPointerType() ? "a pointer to" : "an");
       auto R = std::make_unique<PathSensitiveBugReport>(BT, Msg, N);
-      R->addRange(ArgRange);
+      R->addRange(Call.getArgSourceRange(ArgumentNumber));
       if (ArgEx)
         bugreporter::trackExpressionValue(N, ArgEx, *R);
 
@@ -301,7 +339,7 @@ bool CallAndMessageChecker::uninitRefOrPointer(
     const LazyCompoundValData *D = LV->getCVData();
     FindUninitializedField F(C.getState()->getStateManager().getStoreManager(),
                              C.getSValBuilder().getRegionManager(),
-                             D->getStore(), StructInitializednessComplete);
+                             D->getStore(), AllowPartialInitializedness);
 
     if (F.Find(D->getRegion())) {
       if (ExplodedNode *N = C.generateErrorNode()) {
@@ -310,7 +348,7 @@ bool CallAndMessageChecker::uninitRefOrPointer(
             (ArgumentNumber + 1), llvm::getOrdinalSuffix(ArgumentNumber + 1),
             ParamT->isPointerType() ? "points to" : "references", F.FieldChain);
         auto R = std::make_unique<PathSensitiveBugReport>(BT, Msg, N);
-        R->addRange(ArgRange);
+        R->addRange(Call.getArgSourceRange(ArgumentNumber));
         if (ArgEx)
           bugreporter::trackExpressionValue(N, ArgEx, *R);
 
@@ -327,7 +365,7 @@ bool CallAndMessageChecker::PreVisitProcessArg(
     CheckerContext &C, SVal V, SourceRange ArgRange, const Expr *ArgEx,
     int ArgumentNumber, bool CheckUninitFields, const CallEvent &Call,
     const BugType &BT, const ParmVarDecl *ParamDecl) const {
-  if (uninitRefOrPointer(C, V, ArgRange, ArgEx, BT, ParamDecl, ArgumentNumber))
+  if (uninitRefOrPointer(C, V, Call, BT, ParamDecl, ArgumentNumber))
     return true;
 
   if (V.isUndef()) {
