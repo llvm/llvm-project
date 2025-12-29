@@ -795,7 +795,7 @@ unsigned MatcherTableEmitter::EmitMatcher(const Matcher *N,
     case MVT::i32:
     case MVT::i64:
       OpBytes = 1;
-      OS << "OPC_EmitInteger" << VT.getSizeInBits() << ", ";
+      OS << "OPC_EmitIntegerI" << VT.getSizeInBits() << ", ";
       break;
     default:
       OS << "OPC_EmitInteger, ";
@@ -818,7 +818,7 @@ unsigned MatcherTableEmitter::EmitMatcher(const Matcher *N,
     switch (VT.SimpleTy) {
     case MVT::i32:
       OpBytes = 1;
-      OS << "OPC_EmitStringInteger" << VT.getSizeInBits() << ", ";
+      OS << "OPC_EmitStringIntegerI" << VT.getSizeInBits() << ", ";
       break;
     default:
       OS << "OPC_EmitStringInteger, ";
