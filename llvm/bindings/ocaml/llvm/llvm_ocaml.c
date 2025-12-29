@@ -1595,9 +1595,65 @@ value llvm_delete_function(value Fn) {
   return Val_unit;
 }
 
-/* llvalue -> bool */
-value llvm_is_intrinsic(value Fn) {
-  return Val_bool(LLVMGetIntrinsicID(Value_val(Fn)));
+/* string -> int */
+value llvm_lookup_intrinsic_id(value Name) {
+  const char* NameCStr = String_val(Name);
+  size_t Len = caml_string_length(Name);
+  return Val_int(LLVMLookupIntrinsicID(NameCStr, Len));
+}
+
+/* llvalue -> int */
+value llvm_intrinsic_id(value Fn) {
+  return Val_int(LLVMGetIntrinsicID(Value_val(Fn)));
+}
+
+/* llmodule -> int -> lltype array -> llvalue */
+value llvm_intrinsic_declaration(value M, value ID, value ParamTys) {
+  mlsize_t Length = Wosize_val(ParamTys);
+  LLVMTypeRef *Temp = from_val_array(ParamTys);
+  LLVMValueRef Intrinsic =
+    LLVMGetIntrinsicDeclaration(Module_val(M), Int_val(ID), Temp, Length);
+  free(Temp);
+  return to_val(Intrinsic);
+}
+
+/* llcontext -> int -> lltype array -> lltype */
+value llvm_intrinsic_type(value C, value ID, value ParamTys) {
+  mlsize_t Length = Wosize_val(ParamTys);
+  LLVMTypeRef *Temp = from_val_array(ParamTys);
+  LLVMTypeRef Type =
+    LLVMIntrinsicGetType(Context_val(C), Int_val(ID), Temp, Length);
+  free(Temp);
+  return to_val(Type);
+}
+
+/* int -> string */
+value llvm_intrinsic_name(value ID) {
+  size_t Length = -1;
+  const char *NameCStr = LLVMIntrinsicGetName(Int_val(ID), &Length);
+  return caml_copy_string(NameCStr);
+}
+
+/* llmodule -> int -> lltype array -> string */
+value llvm_intrinsic_overloaded_name(value M, value ID, value ParamTys) {
+  mlsize_t ParamCount = Wosize_val(ParamTys);
+  LLVMTypeRef *Temp = from_val_array(ParamTys);
+  size_t NameLength = -1;
+  char *OverloadedNameCStrOwned =
+    LLVMIntrinsicCopyOverloadedName2(Module_val(M),
+                                     Int_val(ID),
+                                     Temp,
+                                     ParamCount,
+                                     &NameLength);
+  value OverloadedName = caml_copy_string(OverloadedNameCStrOwned);
+  free(OverloadedNameCStrOwned);
+  free(Temp);
+  return OverloadedName;
+}
+
+/* int -> bool */
+value llvm_intrinsic_is_overloaded(int ID) {
+  return Val_bool(LLVMIntrinsicIsOverloaded(Int_val(ID)));
 }
 
 /* llvalue -> int */
