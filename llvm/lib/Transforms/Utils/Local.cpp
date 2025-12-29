@@ -926,16 +926,18 @@ using IncomingValueMap = SmallDenseMap<BasicBlock *, Value *, 16>;
 static Value *selectIncomingValueForBlock(Value *OldVal, BasicBlock *BB,
                                           IncomingValueMap &IncomingValues) {
   if (!isa<UndefValue>(OldVal)) {
-    assert((!IncomingValues.count(BB) ||
-            IncomingValues.find(BB)->second == OldVal) &&
+    assert((IncomingValues.count(BB) &&
+            (isa<UndefValue>(IncomingValues.find(BB)->second) ||
+             IncomingValues.find(BB)->second == OldVal)) &&
            "Expected OldVal to match incoming value from BB!");
 
-    IncomingValues.insert(std::make_pair(BB, OldVal));
+    IncomingValues.insert_or_assign(BB, OldVal);
     return OldVal;
   }
 
   IncomingValueMap::const_iterator It = IncomingValues.find(BB);
-  if (It != IncomingValues.end()) return It->second;
+  if (It != IncomingValues.end() && !isa<UndefValue>(It->second))
+    return It->second;
 
   return OldVal;
 }
@@ -943,19 +945,30 @@ static Value *selectIncomingValueForBlock(Value *OldVal, BasicBlock *BB,
 /// Create a map from block to value for the operands of a
 /// given phi.
 ///
-/// Create a map from block to value for each non-undef value flowing
-/// into \p PN.
+/// This function initializes the map with UndefValue for all predecessors
+/// in BBPreds, and then updates the map with concrete non-undef values
+/// found in the PHI node.
 ///
 /// \param PN The phi we are collecting the map for.
+/// \param BBPreds The list of all predecessor blocks to initialize with Undef.
 /// \param IncomingValues [out] The map from block to value for this phi.
-static void gatherIncomingValuesToPhi(PHINode *PN,
-                                      IncomingValueMap &IncomingValues) {
-  for (unsigned i = 0, e = PN->getNumIncomingValues(); i != e; ++i) {
-    BasicBlock *BB = PN->getIncomingBlock(i);
-    Value *V = PN->getIncomingValue(i);
+static void gatherIncomingValuesToPhi(llvm::PHINode *PN,
+                                      IncomingValueMap &IncomingValues,
+                                      const PredBlockVector &BBPreds) {
+  llvm::Value *Undef = llvm::UndefValue::get(PN->getType());
+  for (llvm::BasicBlock *Pred : BBPreds) {
+    IncomingValues[Pred] = Undef;
+  }
 
-    if (!isa<UndefValue>(V))
-      IncomingValues.insert(std::make_pair(BB, V));
+  for (unsigned i = 0, e = PN->getNumIncomingValues(); i != e; ++i) {
+    llvm::Value *V = PN->getIncomingValue(i);
+    if (llvm::isa<llvm::UndefValue>(V))
+      continue;
+
+    llvm::BasicBlock *BB = PN->getIncomingBlock(i);
+    if (IncomingValues.count(BB)) {
+      IncomingValues[BB] = V;
+    }
   }
 }
 
@@ -974,12 +987,15 @@ static void replaceUndefValuesInPhi(PHINode *PN,
 
     BasicBlock *BB = PN->getIncomingBlock(i);
     IncomingValueMap::const_iterator It = IncomingValues.find(BB);
+    if (It == IncomingValues.end()) {
+      continue;
+    }
 
     // Keep track of undef/poison incoming values. Those must match, so we fix
     // them up below if needed.
     // Note: this is conservatively correct, but we could try harder and group
     // the undef values per incoming basic block.
-    if (It == IncomingValues.end()) {
+    if (isa<UndefValue>(It->second)) {
       TrueUndefOps.push_back(i);
       continue;
     }
@@ -1077,28 +1093,7 @@ static void redirectValuesFromPredecessorsToPhi(BasicBlock *BB,
   Value *OldVal = PN->removeIncomingValue(BB, false);
   assert(OldVal && "No entry in PHI for Pred BB!");
 
-  // Fast path: If BB has a single predecessor and the incoming value is not
-  // defined in BB itself, we can directly redirect the edge.
-  //
-  // Note: We rely on TryToSimplifyUncondBranchFromEmptyBlock (the caller) to
-  // have already verified via CanPropagatePredecessorsForPHIs that merging
-  // blocks won't introduce value conflicts for any common predecessors.
-  auto *BBSinglePred = BB->getSinglePredecessor();
-  Instruction *OldInst = dyn_cast<Instruction>(OldVal);
-  if (BBSinglePred && OldInst && OldInst->getParent() != BB) {
-    PN->addIncoming(OldVal, BBSinglePred);
-
-    auto *knownDefine = OldVal;
-    for (unsigned i = 0, e = PN->getNumIncomingValues(); i != e; ++i)
-      if (PN->getIncomingBlock(i) == BBSinglePred &&
-          !isa<UndefValue>(PN->getIncomingValue(i)))
-        knownDefine = PN->getIncomingValue(i);
-    for (unsigned i = 0, e = PN->getNumIncomingValues(); i != e; ++i)
-      if (PN->getIncomingBlock(i) == BBSinglePred)
-        PN->setIncomingValue(i, knownDefine);
-    return;
-  }
-
+  // Map BBPreds to defined or undefined values in PN
   IncomingValueMap IncomingValues;
 
   // We are merging two blocks - BB, and the block containing PN - and
@@ -1110,7 +1105,7 @@ static void redirectValuesFromPredecessorsToPhi(BasicBlock *BB,
   // values flowing into PN, we want to rewrite those values to be
   // consistent with the non-undef values.
 
-  gatherIncomingValuesToPhi(PN, IncomingValues);
+  gatherIncomingValuesToPhi(PN, IncomingValues, BBPreds);
 
   // If this incoming value is one of the PHI nodes in BB, the new entries
   // in the PHI node are the entries from the old PHI.
