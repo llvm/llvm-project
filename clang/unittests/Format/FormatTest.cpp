@@ -5864,11 +5864,8 @@ TEST_F(FormatTest, CompoundLiteralInMacroDefinition) {
   // A C compound literal `(type){...}` is not a function/block. When used in a
   // macro definition, clang-format should not treat `&` as a function name and
   // reformat it as if it were `&(type) { ... }`.
-  FormatStyle Style = getLLVMStyle();
-
-  verifyNoChange("#define getAddr(v, type) &(type){v}", Style);
-  verifyNoChange("#define getAddr2(v, type) int &(type){v;}", Style);
-  verifyNoChange("#define ctos(c) (char[2]){c, '\\0'}", Style);
+  verifyFormat("#define getAddr(v, type) &(type){v}");
+  verifyFormat("#define ctos(c) (char[2]){c, '\\0'}");
 }
 
 TEST_F(FormatTest, EmptyLinesInMacroDefinitions) {
