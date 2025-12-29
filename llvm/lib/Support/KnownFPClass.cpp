@@ -141,6 +141,27 @@ KnownFPClass KnownFPClass::canonicalize(const KnownFPClass &KnownSrc,
   return Known;
 }
 
+KnownFPClass KnownFPClass::exp(const KnownFPClass &KnownSrc) {
+  KnownFPClass Known;
+  Known.knownNot(fcNegative);
+
+  Known.propagateNaN(KnownSrc);
+
+  if (KnownSrc.cannotBeOrderedLessThanZero()) {
+    // If the source is positive this cannot underflow.
+    Known.knownNot(fcPosZero);
+
+    // Cannot introduce denormal values.
+    Known.knownNot(fcPosSubnormal);
+  }
+
+  // If the source is negative, this cannot overflow to infinity.
+  if (KnownSrc.cannotBeOrderedGreaterThanZero())
+    Known.knownNot(fcPosInf);
+
+  return Known;
+}
+
 void KnownFPClass::propagateCanonicalizingSrc(const KnownFPClass &Src,
                                               DenormalMode Mode) {
   propagateDenormal(Src, Mode);
