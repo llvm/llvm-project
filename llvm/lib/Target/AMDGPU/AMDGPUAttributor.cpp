@@ -224,15 +224,6 @@ public:
     return std::make_pair(Val->first, *(Val->second));
   }
 
-  std::pair<unsigned, unsigned>
-  getEffectiveWavesPerEU(const Function &F,
-                         std::pair<unsigned, unsigned> WavesPerEU,
-                         std::pair<unsigned, unsigned> FlatWorkGroupSize) {
-    const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(F);
-    return ST.getEffectiveWavesPerEU(WavesPerEU, FlatWorkGroupSize,
-                                     getLDSSize(F));
-  }
-
   unsigned getMaxWavesPerEU(const Function &F) {
     const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(F);
     return ST.getMaxWavesPerEU();
