@@ -7408,8 +7408,8 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   // Regions are dissolved after optimizing for VF and UF, which completely
   // removes unneeded loop regions first.
   VPlanTransforms::dissolveLoopRegions(BestVPlan);
-  // Expand BranchOnTwoConds after dissolution, when latch has direct access
-  // to its successors.
+  // Expand BranchOnTwoConds after dissolution, when latch has direct access to
+  // its successors.
   VPlanTransforms::expandBranchOnTwoConds(BestVPlan);
   // Canonicalize EVL loops after regions are dissolved.
   VPlanTransforms::canonicalizeEVLLoops(BestVPlan);

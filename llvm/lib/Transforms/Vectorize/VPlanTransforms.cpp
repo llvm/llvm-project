@@ -2023,6 +2023,7 @@ static bool simplifyBranchConditionForVFAndUF(VPlan &Plan, ElementCount BestVF,
   // TODO: VPWidenIntOrFpInductionRecipe is only partially supported; add
   // support for other non-canonical widen induction recipes (e.g.,
   // VPWidenPointerInductionRecipe).
+  // TODO: fold branch-on-constant after dissolving region.
   auto *Header = cast<VPBasicBlock>(VectorRegion->getEntry());
   if (all_of(Header->phis(), [](VPRecipeBase &Phi) {
         if (auto *R = dyn_cast<VPWidenIntOrFpInductionRecipe>(&Phi))
@@ -2030,7 +2031,6 @@ static bool simplifyBranchConditionForVFAndUF(VPlan &Plan, ElementCount BestVF,
         return isa<VPCanonicalIVPHIRecipe, VPEVLBasedIVPHIRecipe,
                    VPFirstOrderRecurrencePHIRecipe, VPPhi>(&Phi);
       })) {
-    // TODO: fold branch-on-constant after dissolving region.
     for (VPRecipeBase &HeaderR : make_early_inc_range(Header->phis())) {
       if (auto *R = dyn_cast<VPWidenIntOrFpInductionRecipe>(&HeaderR)) {
         VPBuilder Builder(Plan.getVectorPreheader());
@@ -2058,6 +2058,8 @@ static bool simplifyBranchConditionForVFAndUF(VPlan &Plan, ElementCount BestVF,
 
     for (VPBlockBase *Exit : Exits)
       VPBlockUtils::connectBlocks(ExitingVPBB, Exit);
+
+    // Replace terminating branch-on-two-conds with branch-on-cond to early exit.
     if (Exits.size() != 1) {
       assert(match(Term, m_BranchOnTwoConds()) && Exits.size() == 2 &&
              "BranchOnTwoConds needs 2 remaining exits");
@@ -3727,6 +3729,7 @@ void VPlanTransforms::dissolveLoopRegions(VPlan &Plan) {
 
 void VPlanTransforms::expandBranchOnTwoConds(VPlan &Plan) {
   SmallVector<VPInstruction *> WorkList;
+  // The transform runs after dissolving loop regions, so all VPBasicBlocks terminated with BranchOnTwoConds are reached via a shallow traversal.
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_shallow(Plan.getEntry()))) {
     if (!VPBB->empty() && match(&VPBB->back(), m_BranchOnTwoConds()))
@@ -3742,34 +3745,34 @@ void VPlanTransforms::expandBranchOnTwoConds(VPlan &Plan) {
     assert(Br->getNumOperands() == 2 &&
            "BranchOnTwoConds must have exactly 2 conditions");
     DebugLoc DL = Br->getDebugLoc();
-    VPBasicBlock *VPBB = Br->getParent();
-    const auto Successors = to_vector(VPBB->getSuccessors());
+    VPBasicBlock *Latch = Br->getParent();
+    const auto Successors = to_vector(Latch->getSuccessors());
     assert(Successors.size() == 3 &&
            "BranchOnTwoConds must have exactly 3 successors");
 
     for (VPBlockBase *Succ : Successors)
-      VPBlockUtils::disconnectBlocks(VPBB, Succ);
+      VPBlockUtils::disconnectBlocks(Latch, Succ);
 
-    VPValue *Cond0 = Br->getOperand(0);
-    VPValue *Cond1 = Br->getOperand(1);
-    VPBlockBase *Succ0 = Successors[0];
-    VPBlockBase *Succ1 = Successors[1];
-    VPBlockBase *Succ2 = Successors[2];
+    VPValue *EarlyExitingCond = Br->getOperand(0);
+    VPValue *LateExitingCond = Br->getOperand(1);
+    VPBlockBase *EarlyExitBB = Successors[0];
+    VPBlockBase *LateExitBB = Successors[1];
+    VPBlockBase *Header = Successors[2];
 
     VPBasicBlock *MiddleSplit = Plan.createVPBasicBlock("middle.split");
-    MiddleSplit->setParent(VPBB->getParent());
+    MiddleSplit->setParent(LateExitBB->getParent());
 
-    VPBuilder Builder(VPBB);
+    VPBuilder Builder(Latch);
     VPValue *AnyExitTaken =
-        Builder.createNaryOp(Instruction::Or, {Cond0, Cond1}, DL);
+        Builder.createNaryOp(Instruction::Or, {EarlyExitingCond, LateExitingCond}, DL);
     Builder.createNaryOp(VPInstruction::BranchOnCond, {AnyExitTaken}, DL);
-    VPBlockUtils::connectBlocks(VPBB, MiddleSplit);
-    VPBlockUtils::connectBlocks(VPBB, Succ2);
+    VPBlockUtils::connectBlocks(Latch, MiddleSplit);
+    VPBlockUtils::connectBlocks(Latch, Header);
 
     VPBuilder(MiddleSplit)
-        .createNaryOp(VPInstruction::BranchOnCond, {Cond0}, DL);
-    VPBlockUtils::connectBlocks(MiddleSplit, Succ0);
-    VPBlockUtils::connectBlocks(MiddleSplit, Succ1);
+        .createNaryOp(VPInstruction::BranchOnCond, {EarlyExitingCond}, DL);
+    VPBlockUtils::connectBlocks(MiddleSplit, EarlyExitBB);
+    VPBlockUtils::connectBlocks(MiddleSplit, LateExitBB);
 
     Br->eraseFromParent();
   }
