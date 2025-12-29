@@ -3,12 +3,7 @@
 
 target triple = "x86_64-unknown-linux-gnu"
 
-@gg = constant [4 x [80 x i8]] [
-  [80 x i8] c"                                                                                ",
-  [80 x i8] c"22                                                                              ",
-  [80 x i8] c"                                                                                ",
-  [80 x i8] c"4444                                                                            "
-]
+@gg = constant [80 x i8] c"22                                                                              "
 
 define i1 @test() #0 {
 entry:
@@ -18,7 +13,7 @@ loop:
   %iv = phi i64 [ 79, %entry ], [ %iv.next, %loop ]
   %iv.next = add i64 %iv, -1
   %bound.check = icmp ne i64 %iv, 0
-  %gep = getelementptr [1 x i8], ptr getelementptr inbounds nuw (i8, ptr @gg, i64 80), i64 %iv
+  %gep = getelementptr [1 x i8], ptr @gg, i64 %iv
   %load = load i8, ptr %gep, align 1
   %cmp = icmp eq i8 %load, 32
   br i1 %cmp, label %loop, label %exit
