@@ -38,6 +38,7 @@ void Flang::addFortranDialectOptions(const ArgList &Args,
                                      ArgStringList &CmdArgs) const {
   Args.addAllArgs(CmdArgs, {options::OPT_ffixed_form,
                             options::OPT_ffree_form,
+                            options::OPT_Mextend, // modify for dcc
                             options::OPT_ffixed_line_length_EQ,
                             options::OPT_fopenacc,
                             options::OPT_finput_charset_EQ,
