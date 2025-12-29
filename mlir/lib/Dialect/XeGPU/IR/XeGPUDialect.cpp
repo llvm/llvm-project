@@ -786,6 +786,10 @@ TensorDescType::verify(llvm::function_ref<InFlightDiagnostic()> emitError,
       return emitError() << "SLM is only supported for 1D block tensor";
   }
 
+  if (!elementType.isIntOrFloat())
+    return emitError() << "unsupported element type " << elementType
+                       << ": expected integer or float";
+
   // for gather and scatter ops, Low-precision types are packed in 32-bit units.
   unsigned bitWidth = elementType.getIntOrFloatBitWidth();
   int chunkAlignmentFactor =

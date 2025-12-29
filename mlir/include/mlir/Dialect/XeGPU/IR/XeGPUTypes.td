@@ -74,7 +74,7 @@ def XeGPU_TensorDesc: XeGPUTypeDef<"TensorDesc", "tensor_desc",
 
     ```
     TensorDesc-type ::= `tensor_desc` `<` dim-list element-type (attr-list)? `>`
-    element-type ::= float-type | integer-type | index-type
+    element-type ::= float-type | integer-type
     dim-list := (static-dim-list `x`)?
     static-dim-list ::= decimal-literal `x` decimal-literal
     attr-list = (, encoding-attr)? (, layout-attr)?

@@ -57,6 +57,10 @@ static LogicalResult storeLoadPreconditions(PatternRewriter &rewriter,
   if (!(vecRank == 1 || vecRank == 2))
     return rewriter.notifyMatchFailure(op, "Expects 1D or 2D vector");
 
+  if (!vecTy.getElementType().isIntOrFloat())
+    return rewriter.notifyMatchFailure(
+        op, "Expected scalar type with known bitwidth");
+
   return success();
 }
 
