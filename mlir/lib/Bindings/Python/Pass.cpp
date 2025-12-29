@@ -55,7 +55,7 @@ private:
   MlirPassManager passManager;
 };
 
-enum PyMlirPassDisplayMode : std::underlying_type<MlirPassDisplayMode>::type {
+enum PyMlirPassDisplayMode : std::underlying_type_t<MlirPassDisplayMode> {
   MLIR_PASS_DISPLAY_MODE_LIST = MLIR_PASS_DISPLAY_MODE_LIST,
   MLIR_PASS_DISPLAY_MODE_PIPELINE = MLIR_PASS_DISPLAY_MODE_PIPELINE
 };

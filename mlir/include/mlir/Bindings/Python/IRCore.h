@@ -319,22 +319,21 @@ private:
   MlirLocation loc;
 };
 
-enum PyMlirDiagnosticSeverity : std::underlying_type<
-    MlirDiagnosticSeverity>::type {
+enum PyMlirDiagnosticSeverity : std::underlying_type_t<MlirDiagnosticSeverity> {
   MlirDiagnosticError = MlirDiagnosticError,
   MlirDiagnosticWarning = MlirDiagnosticWarning,
   MlirDiagnosticNote = MlirDiagnosticNote,
   MlirDiagnosticRemark = MlirDiagnosticRemark
 };
 
-enum PyMlirWalkResult : std::underlying_type<MlirWalkResult>::type {
+enum PyMlirWalkResult : std::underlying_type_t<MlirWalkResult> {
   MlirWalkResultAdvance = MlirWalkResultAdvance,
   MlirWalkResultInterrupt = MlirWalkResultInterrupt,
   MlirWalkResultSkip = MlirWalkResultSkip
 };
 
 /// Traversal order for operation walk.
-enum PyMlirWalkOrder : std::underlying_type<MlirWalkOrder>::type {
+enum PyMlirWalkOrder : std::underlying_type_t<MlirWalkOrder> {
   MlirWalkPreOrder = MlirWalkPreOrder,
   MlirWalkPostOrder = MlirWalkPostOrder
 };
