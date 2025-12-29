@@ -1,8 +1,8 @@
 STRING_EXTENSION_OUTSIDE(SBVariableAnnotator)
 
-    % extend lldb::SBVariableAnnotator {
+%extend lldb::SBVariableAnnotator {
 #ifdef SWIGPYTHON
-  % pythoncode % {
+  %pythoncode %{
         def get_annotations_list(self, instruction):
             """Get variable annotations as a Python list of dictionaries.
 
@@ -46,7 +46,6 @@ STRING_EXTENSION_OUTSIDE(SBVariableAnnotator)
                 annotations.append(annotation)
 
             return annotations
-    %
-  }
+  %}
 #endif
 }
