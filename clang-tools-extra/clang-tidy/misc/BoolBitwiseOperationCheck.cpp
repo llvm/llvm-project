@@ -65,80 +65,6 @@ static bool isBitwiseOperation(StringRef Value) {
                             Value);
 }
 
-/// Checks if a binary operator is a bitwise operation that should be treated
-/// as a boolean operation (i.e., should use logical operators instead).
-///
-/// This function determines whether a bitwise operation (|, &, |=, &=, etc.)
-/// is being used in a boolean context, which typically indicates the case where
-/// logical operators (||, &&) should have been used instead.
-///
-/// \param BinOp The binary operator to check. Must not be null.
-/// \param AC The AST context for type checking and parent traversal.
-/// \param RootAssignsToBoolean An output parameter that tracks whether the
-///        root binary operator in the expression tree assigns to a boolean
-///        type. This is used to propagate the assignment context through
-///        nested binary operations. The value is set to true if any operation
-///        in the chain assigns to boolean, false if both operands are boolean
-///        but no assignment occurs, and remains unset if the operation is not
-///        boolean bitwise.
-///
-/// \returns true if the operation is a bitwise operation used in a boolean
-///          context (both operands are boolean, or it assigns to boolean),
-///          false otherwise.
-static bool isBooleanBitwise(const BinaryOperator *BinOp, ASTContext *AC,
-                             std::optional<bool> &RootAssignsToBoolean) {
-  if (!BinOp)
-    return false;
-
-  if (!isBitwiseOperation(BinOp->getOpcodeStr()))
-    return false;
-
-  // Lambda to check if an expression is boolean type, either directly or
-  // recursively through nested binary operators. This handles cases like
-  // `(a | b) & c` where the LHS is itself a boolean bitwise operation.
-  const auto IsBooleanType = [&AC](const Expr *Expr) -> bool {
-    if (Expr->IgnoreImpCasts()
-            ->getType()
-            .getDesugaredType(*AC)
-            ->isBooleanType())
-      return true;
-    std::optional<bool> DummyFlag = false;
-    return isBooleanBitwise(dyn_cast<BinaryOperator>(
-                                Expr->IgnoreParenImpCasts()),
-                            AC, DummyFlag);
-  };
-
-  const bool IsBooleanLHS = IsBooleanType(BinOp->getLHS());
-  const bool IsBooleanRHS = IsBooleanType(BinOp->getRHS());
-
-  // If both operands are boolean, this is definitely a boolean bitwise
-  // operation. Preserve the existing RootAssignsToBoolean value if set,
-  // otherwise set it to false (no assignment context).
-  if (IsBooleanLHS && IsBooleanRHS) {
-    RootAssignsToBoolean = RootAssignsToBoolean.value_or(false);
-    return true;
-  }
-
-  // Check if this operation assigns to a boolean type. This includes:
-  // 1. Operations where at least one operand is boolean and the result is
-  //    assigned to boolean (e.g., `bool x = a | b` where a is int and b is boolean)
-  // 2. Compound assignments where the LHS is boolean (e.g., `x |= y` where y is int and x is boolean)
-  const bool IsRelevantAssignmentToBoolean = 
-    ((IsBooleanLHS || IsBooleanRHS) && assignsToBoolean(BinOp, AC)) ||
-    (BinOp->isCompoundAssignmentOp() && IsBooleanLHS);
-
-  // If this operation assigns to boolean, or if we've already determined that
-  // the root assigns to boolean (from a nested operation), then this is a
-  // boolean bitwise operation. Set RootAssignsToBoolean to true to propagate
-  // this information up the call stack.
-  if (IsRelevantAssignmentToBoolean || RootAssignsToBoolean.value_or(false)) {
-    RootAssignsToBoolean = RootAssignsToBoolean.value_or(true);
-    return true;
-  }
-
-  return false;
-}
-
 static const Expr *getAcceptableCompoundsLHS(const BinaryOperator *BinOp) {
   assert(BinOp->isCompoundAssignmentOp());
   const Expr *LHS = BinOp->getLHS()->IgnoreImpCasts();
@@ -298,34 +224,131 @@ class BinaryOperatorVisitor : public clang::DynamicRecursiveASTVisitor {
   clang::tidy::misc::BoolBitwiseOperationCheck &Check;
   const clang::SourceManager &SM;
   clang::ASTContext &Ctx;
-  std::optional<bool> &RootAssignsToBoolean;
+  /// Three-state boolean to track whether the root binary operator in the
+  /// expression tree assigns to a boolean type and one of operands is boolean.
+  /// This is used to propagate the assignment context through nested binary
+  /// operations.
+  std::optional<bool> RootAssignsToBoolean;
   // Stack to track parent binary operators during traversal
   std::vector<const clang::BinaryOperator *> ParentStack;
 
+  void setRootAssignsToBoolean(bool Value, bool IsRoot) {
+    if (!IsRoot)
+      return;
+    RootAssignsToBoolean = RootAssignsToBoolean.value_or(Value);
+  }
+
+  /// Checks if an expression is boolean type, either directly or recursively
+  /// through nested binary operators. This handles cases like `(a | b) & c`
+  /// where the LHS is itself a boolean bitwise operation.
+  ///
+  /// \param Expr The expression to check.
+  /// \returns true if the expression is boolean type or is a boolean bitwise
+  ///          operation, false otherwise.
+  bool isBooleanType(const clang::Expr *Expr) {
+    if (Expr->IgnoreImpCasts()
+            ->getType()
+            .getDesugaredType(Ctx)
+            ->isBooleanType())
+      return true;
+    return isBooleanBitwise(
+        dyn_cast<clang::BinaryOperator>(Expr->IgnoreParenImpCasts()),
+        /*IsRoot=*/false);
+  }
+
+  /// Checks if a binary operator is a bitwise operation that should be treated
+  /// as a boolean operation (i.e., should use logical operators instead).
+  ///
+  /// This function determines whether a bitwise operation (|, &, |=, &=, etc.)
+  /// is being used in a boolean context, which typically indicates the case
+  /// where logical operators (||, &&) should have been used instead.
+  ///
+  /// \param BinOp The binary operator to check. Must not be null.
+  /// \param RootAssignsToBoolean An output parameter that
+  ///
+  /// \returns true if the operation is a bitwise operation used in a boolean
+  ///          context (both operands are boolean, or it assigns to boolean),
+  ///          false otherwise.
+  bool isBooleanBitwise(const clang::BinaryOperator *BinOp,
+                        bool IsRoot = true) {
+    if (!BinOp)
+      return false;
+
+    if (!isBitwiseOperation(BinOp->getOpcodeStr()))
+      return false;
+
+    assert(!IsRoot || RootAssignsToBoolean == std::nullopt);
+
+    // If we've already determined that the root assigns to boolean (from a
+    // nested operation), then this is a boolean bitwise operation.
+    if (RootAssignsToBoolean.value_or(false))
+      return true;
+
+    const bool IsBooleanLHS = isBooleanType(BinOp->getLHS());
+    const bool IsBooleanRHS = isBooleanType(BinOp->getRHS());
+
+    // If both operands are boolean, this is definitely a boolean bitwise
+    // operation. Preserve the existing RootAssignsToBoolean value if set,
+    // otherwise set it to false (no assignment context).
+    if (IsBooleanLHS && IsBooleanRHS) {
+      setRootAssignsToBoolean(false, IsRoot);
+      return true;
+    }
+
+    // Check if this operation assigns to a boolean type. This includes:
+    // 1. Operations where at least one operand is boolean and the result is
+    //    assigned to boolean (e.g., `bool x = a | b` where a is int and b is
+    //    boolean)
+    // 2. Compound assignments where the LHS is boolean (e.g., `x |= y` where y
+    // is int and x is boolean)
+    const bool IsRelevantAssignmentToBoolean =
+        ((IsBooleanLHS || IsBooleanRHS) && assignsToBoolean(BinOp, &Ctx)) ||
+        (IsBooleanLHS && BinOp->isCompoundAssignmentOp());
+
+    // If this operation assigns to boolean, then this is a boolean bitwise
+    // operation. Set RootAssignsToBoolean to true to propagate this information
+    // up the call stack.
+    if (IsRelevantAssignmentToBoolean) {
+      setRootAssignsToBoolean(true, IsRoot);
+      return true;
+    }
+
+    return false;
+  }
+
+  /// Checks if BinOp is a direct child of the parent binary operator in the
+  /// stack (ignoring parentheses and implicit casts).
+  bool isDirectChildOfParent(const clang::BinaryOperator *BinOp) const {
+    if (ParentStack.empty())
+      return true;
+
+    const clang::BinaryOperator *Parent = ParentStack.back();
+    const std::array<const Expr *, 2> ParentOperands = {
+        Parent->getLHS(), Parent->getRHS()};
+
+    return llvm::any_of(ParentOperands, [&](const Expr *E) {
+      return E->IgnoreParenImpCasts() == BinOp;
+    });
+  }
+
 public:
   BinaryOperatorVisitor(clang::tidy::misc::BoolBitwiseOperationCheck &Check,
-                        const clang::SourceManager &SM,
-                        clang::ASTContext &Ctx,
-                        std::optional<bool> &RootAssignsToBoolean)
-      : Check(Check), SM(SM), Ctx(Ctx),
-        RootAssignsToBoolean(RootAssignsToBoolean) {}
+                        const clang::SourceManager &SM, clang::ASTContext &Ctx)
+      : Check(Check), SM(SM), Ctx(Ctx) {}
 
   bool TraverseBinaryOperator(clang::BinaryOperator *BinOp) override {
     if (!BinOp)
       return true;
 
-    // Check if this BinOp is a direct child of the parent in the stack.
-    // If not, we skip processing it (don't add to stack).
-    if (!ParentStack.empty() && !(ParentStack.back()->getLHS()->IgnoreParenImpCasts() == BinOp || ParentStack.back()->getRHS()->IgnoreParenImpCasts() == BinOp)) {
+    if (!isDirectChildOfParent(BinOp))
       return true;
-    }
 
-    // Push current binary operator as parent for children
+    // Track this binary operator as a parent for its children.
     ParentStack.push_back(BinOp);
-    // Traverse children
-    bool Result = clang::DynamicRecursiveASTVisitor::TraverseBinaryOperator(BinOp);
-    // Pop after traversal
+    const bool Result =
+        clang::DynamicRecursiveASTVisitor::TraverseBinaryOperator(BinOp);
     ParentStack.pop_back();
+
     return Result;
   }
 
@@ -336,7 +359,7 @@ public:
     const clang::BinaryOperator *ParentBinOp =
         ParentStack.size() < 2 ? nullptr : ParentStack[ParentStack.size() - 2];
 
-    if (isBooleanBitwise(BinOp, &Ctx, RootAssignsToBoolean)) {
+    if (isBooleanBitwise(BinOp)) {
       assert(RootAssignsToBoolean.has_value());
       Check.emitWarningAndChangeOperatorsIfPossible(BinOp, ParentBinOp, SM,
                                                     Ctx);
@@ -349,14 +372,12 @@ public:
 
 void BoolBitwiseOperationCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *BinOpRoot = Result.Nodes.getNodeAs<BinaryOperator>("binOpRoot");
-  if (!BinOpRoot)
-    return;
+  assert(BinOpRoot);
 
   const SourceManager &SM = *Result.SourceManager;
   ASTContext &Ctx = *Result.Context;
-  std::optional<bool> RootAssignsToBoolean = std::nullopt;
 
-  BinaryOperatorVisitor Visitor(*this, SM, Ctx, RootAssignsToBoolean);
+  BinaryOperatorVisitor Visitor(*this, SM, Ctx);
   // TraverseStmt requires non-const pointer, but we're only reading
   Visitor.TraverseStmt(const_cast<BinaryOperator *>(BinOpRoot));
 }
