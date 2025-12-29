@@ -96,6 +96,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/KnownBits.h"
+#include "llvm/Support/LEB128.h"
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
@@ -2719,6 +2720,14 @@ GetVBR(uint64_t Val, const uint8_t *MatcherTable, unsigned &Idx) {
   return Val;
 }
 
+LLVM_ATTRIBUTE_ALWAYS_INLINE static int64_t
+GetSignedVBR(const unsigned char *MatcherTable, unsigned &Idx) {
+  unsigned Len;
+  int64_t Val = decodeSLEB128(&MatcherTable[Idx], &Len);
+  Idx += Len;
+  return Val;
+}
+
 /// getSimpleVT - Decode a value in MatcherTable, if it's a VBR encoded value,
 /// use GetVBR to decode it.
 LLVM_ATTRIBUTE_ALWAYS_INLINE static MVT::SimpleValueType
@@ -3022,24 +3031,9 @@ CheckValueType(const uint8_t *MatcherTable, unsigned &MatcherIndex, SDValue N,
   return VT == MVT::iPTR && cast<VTSDNode>(N)->getVT() == TLI->getPointerTy(DL);
 }
 
-// Bit 0 stores the sign of the immediate. The upper bits contain the magnitude
-// shifted left by 1.
-static uint64_t decodeSignRotatedValue(uint64_t V) {
-  if ((V & 1) == 0)
-    return V >> 1;
-  if (V != 1)
-    return -(V >> 1);
-  // There is no such thing as -0 with integers.  "-0" really means MININT.
-  return 1ULL << 63;
-}
-
 LLVM_ATTRIBUTE_ALWAYS_INLINE static bool
 CheckInteger(const uint8_t *MatcherTable, unsigned &MatcherIndex, SDValue N) {
-  int64_t Val = MatcherTable[MatcherIndex++];
-  if (Val & 128)
-    Val = GetVBR(Val, MatcherTable, MatcherIndex);
-
-  Val = decodeSignRotatedValue(Val);
+  int64_t Val = GetSignedVBR(MatcherTable, MatcherIndex);
 
   ConstantSDNode *C = dyn_cast<ConstantSDNode>(N);
   return C && C->getAPIntValue().trySExtValue() == Val;
@@ -3919,11 +3913,14 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
         VT = getSimpleVT(MatcherTable, MatcherIndex);
         break;
       }
-      int64_t Val = MatcherTable[MatcherIndex++];
-      if (Val & 128)
-        Val = GetVBR(Val, MatcherTable, MatcherIndex);
-      if (Opcode >= OPC_EmitInteger && Opcode <= OPC_EmitIntegerI64)
-        Val = decodeSignRotatedValue(Val);
+      int64_t Val;
+      if (Opcode >= OPC_EmitInteger && Opcode <= OPC_EmitIntegerI64) {
+        Val = GetSignedVBR(MatcherTable, MatcherIndex);
+      } else {
+        Val = MatcherTable[MatcherIndex++];
+        if (Val & 128)
+          Val = GetVBR(Val, MatcherTable, MatcherIndex);
+      }
       RecordedNodes.emplace_back(
           CurDAG->getSignedConstant(Val, SDLoc(NodeToMatch), VT,
                                     /*isTarget=*/true),
