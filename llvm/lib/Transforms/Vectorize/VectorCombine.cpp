@@ -2557,11 +2557,13 @@ bool VectorCombine::foldShuffleOfBinops(Instruction &I) {
 bool VectorCombine::foldShuffleOfSelects(Instruction &I) {
   ArrayRef<int> Mask;
   Value *C1, *T1, *F1, *C2, *T2, *F2;
-  if (!match(&I, m_Shuffle(
-                     m_OneUse(m_Select(m_Value(C1), m_Value(T1), m_Value(F1))),
-                     m_OneUse(m_Select(m_Value(C2), m_Value(T2), m_Value(F2))),
-                     m_Mask(Mask))))
+  if (!match(&I, m_Shuffle(m_Select(m_Value(C1), m_Value(T1), m_Value(F1)),
+                           m_Select(m_Value(C2), m_Value(T2), m_Value(F2)),
+                           m_Mask(Mask))))
     return false;
+
+  auto *Sel1 = cast<Instruction>(I.getOperand(0));
+  auto *Sel2 = cast<Instruction>(I.getOperand(1));
 
   auto *C1VecTy = dyn_cast<FixedVectorType>(C1->getType());
   auto *C2VecTy = dyn_cast<FixedVectorType>(C2->getType());
@@ -2580,11 +2582,14 @@ bool VectorCombine::foldShuffleOfSelects(Instruction &I) {
   auto *DstVecTy = cast<FixedVectorType>(I.getType());
   auto SK = TargetTransformInfo::SK_PermuteTwoSrc;
   auto SelOp = Instruction::Select;
-  InstructionCost OldCost = TTI.getCmpSelInstrCost(
+
+  InstructionCost CostSel1 = TTI.getCmpSelInstrCost(
       SelOp, SrcVecTy, C1VecTy, CmpInst::BAD_ICMP_PREDICATE, CostKind);
-  OldCost += TTI.getCmpSelInstrCost(SelOp, SrcVecTy, C2VecTy,
-                                    CmpInst::BAD_ICMP_PREDICATE, CostKind);
-  OldCost +=
+  InstructionCost CostSel2 = TTI.getCmpSelInstrCost(
+      SelOp, SrcVecTy, C2VecTy, CmpInst::BAD_ICMP_PREDICATE, CostKind);
+
+  InstructionCost OldCost =
+      CostSel1 + CostSel2 +
       TTI.getShuffleCost(SK, DstVecTy, SrcVecTy, Mask, CostKind, 0, nullptr,
                          {I.getOperand(0), I.getOperand(1)}, &I);
 
@@ -2599,6 +2604,11 @@ bool VectorCombine::foldShuffleOfSelects(Instruction &I) {
       toVectorTy(Type::getInt1Ty(I.getContext()), DstVecTy->getNumElements()));
   NewCost += TTI.getCmpSelInstrCost(SelOp, DstVecTy, C1C2ShuffledVecTy,
                                     CmpInst::BAD_ICMP_PREDICATE, CostKind);
+
+  if (!Sel1->hasOneUse())
+    NewCost += CostSel1;
+  if (!Sel2->hasOneUse())
+    NewCost += CostSel2;
 
   LLVM_DEBUG(dbgs() << "Found a shuffle feeding two selects: " << I
                     << "\n  OldCost: " << OldCost << " vs NewCost: " << NewCost
@@ -3086,8 +3096,7 @@ bool VectorCombine::foldShufflesOfLengthChangingShuffles(Instruction &I) {
 bool VectorCombine::foldShuffleOfIntrinsics(Instruction &I) {
   Value *V0, *V1;
   ArrayRef<int> OldMask;
-  if (!match(&I, m_Shuffle(m_OneUse(m_Value(V0)), m_OneUse(m_Value(V1)),
-                           m_Mask(OldMask))))
+  if (!match(&I, m_Shuffle(m_Value(V0), m_Value(V1), m_Mask(OldMask))))
     return false;
 
   auto *II0 = dyn_cast<IntrinsicInst>(V0);
@@ -3098,6 +3107,10 @@ bool VectorCombine::foldShuffleOfIntrinsics(Instruction &I) {
   Intrinsic::ID IID = II0->getIntrinsicID();
   if (IID != II1->getIntrinsicID())
     return false;
+  InstructionCost CostII0 =
+      TTI.getIntrinsicInstrCost(IntrinsicCostAttributes(IID, *II0), CostKind);
+  InstructionCost CostII1 =
+      TTI.getIntrinsicInstrCost(IntrinsicCostAttributes(IID, *II1), CostKind);
 
   auto *ShuffleDstTy = dyn_cast<FixedVectorType>(I.getType());
   auto *II0Ty = dyn_cast<FixedVectorType>(II0->getType());
@@ -3113,8 +3126,7 @@ bool VectorCombine::foldShuffleOfIntrinsics(Instruction &I) {
       return false;
 
   InstructionCost OldCost =
-      TTI.getIntrinsicInstrCost(IntrinsicCostAttributes(IID, *II0), CostKind) +
-      TTI.getIntrinsicInstrCost(IntrinsicCostAttributes(IID, *II1), CostKind) +
+      CostII0 + CostII1 +
       TTI.getShuffleCost(TargetTransformInfo::SK_PermuteTwoSrc, ShuffleDstTy,
                          II0Ty, OldMask, CostKind, 0, nullptr, {II0, II1}, &I);
 
@@ -3141,7 +3153,12 @@ bool VectorCombine::foldShuffleOfIntrinsics(Instruction &I) {
     }
   }
   IntrinsicCostAttributes NewAttr(IID, ShuffleDstTy, NewArgsTy);
+
   NewCost += TTI.getIntrinsicInstrCost(NewAttr, CostKind);
+  if (!II0->hasOneUse())
+    NewCost += CostII0;
+  if (II1 != II0 && !II1->hasOneUse())
+    NewCost += CostII1;
 
   LLVM_DEBUG(dbgs() << "Found a shuffle feeding two intrinsics: " << I
                     << "\n  OldCost: " << OldCost << " vs NewCost: " << NewCost
