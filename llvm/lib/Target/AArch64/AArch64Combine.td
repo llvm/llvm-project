@@ -200,6 +200,13 @@ def vector_unmerge_lowering : GICombineRule <
   (apply [{ applyScalarizeVectorUnmerge(*${root}, MRI, B); }])
 >;
 
+def store_i128_as_v2i64 : GICombineRule <
+  (defs root:$root),
+  (match (wip_match_opcode G_STORE):$root,
+          [{ return matchStorei128AsV2i64(*${root}, MRI); }]),
+  (apply [{ applyStorei128AsV2i64(*${root}, MRI, B); }])
+>;
+
 def adjust_icmp_imm_matchdata :
   GIDefMatchData<"std::pair<uint64_t, CmpInst::Predicate>">;
 def adjust_icmp_imm : GICombineRule <
@@ -342,7 +349,7 @@ def AArch64PostLegalizerLowering
                         lower_vector_fcmp, form_truncstore, fconstant_to_constant,
                         vector_sext_inreg_to_shift,
                         unmerge_ext_to_unmerge, lower_mulv2s64,
-                        vector_unmerge_lowering, insertelt_nonconst,
+                        vector_unmerge_lowering, insertelt_nonconst, store_i128_as_v2i64,
                         unmerge_duplanes]> {
 }
 
