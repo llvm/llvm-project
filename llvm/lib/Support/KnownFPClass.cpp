@@ -145,10 +145,7 @@ KnownFPClass KnownFPClass::exp(const KnownFPClass &KnownSrc) {
   KnownFPClass Known;
   Known.knownNot(fcNegative);
 
-  if (KnownSrc.isKnownNeverNaN()) {
-    Known.knownNot(fcNan);
-    Known.signBitMustBeZero();
-  }
+  Known.propagateNaN(KnownSrc);
 
   if (KnownSrc.cannotBeOrderedLessThanZero()) {
     // If the source is positive this cannot underflow.
