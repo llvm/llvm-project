@@ -65,6 +65,36 @@ entry:
   ret <4 x double> %interleaved.vec
 }
 
+; a * b - c
+define <4 x double> @mull_neg_accum(<4 x double> %a, <4 x double> %b, <4 x double> %c) {
+; CHECK-LABEL: mull_neg_accum:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fcmla   v4.2d, v0.2d, v2.2d, #180
+; CHECK-NEXT:    fcmla   v5.2d, v1.2d, v3.2d, #180
+; CHECK-NEXT:    fcmla   v4.2d, v0.2d, v2.2d, #270
+; CHECK-NEXT:    fcmla   v5.2d, v1.2d, v3.2d, #270
+; CHECK-NEXT:    fneg    v0.2d, v4.2d
+; CHECK-NEXT:    fneg    v1.2d, v5.2d
+; CHECK-NEXT:    ret
+entry:
+  %strided.vec = shufflevector <4 x double> %a, <4 x double> poison, <2 x i32> <i32 0, i32 2>
+  %strided.vec28 = shufflevector <4 x double> %a, <4 x double> poison, <2 x i32> <i32 1, i32 3>
+  %strided.vec30 = shufflevector <4 x double> %b, <4 x double> poison, <2 x i32> <i32 0, i32 2>
+  %strided.vec31 = shufflevector <4 x double> %b, <4 x double> poison, <2 x i32> <i32 1, i32 3>
+  %strided.vec33 = shufflevector <4 x double> %c, <4 x double> poison, <2 x i32> <i32 0, i32 2>
+  %strided.vec34 = shufflevector <4 x double> %c, <4 x double> poison, <2 x i32> <i32 1, i32 3>
+  %0 = fmul contract <2 x double> %strided.vec, %strided.vec31
+  %1 = fsub contract <2 x double> %0, %strided.vec34
+  %2 = fmul contract <2 x double> %strided.vec28, %strided.vec30
+  %3 = fadd contract <2 x double> %1, %2
+  %4 = fmul contract <2 x double> %strided.vec, %strided.vec30
+  %5 = fsub contract <2 x double> %4, %strided.vec33
+  %6 = fmul contract <2 x double> %strided.vec28, %strided.vec31
+  %7 = fsub contract <2 x double> %5, %6
+  %interleaved.vec = shufflevector <2 x double> %7, <2 x double> %3, <4 x i32> <i32 0, i32 2, i32 1, i32 3>
+  ret <4 x double> %interleaved.vec
+}
+
 ; a * b + c * d
 define <4 x double> @mul_add_mull(<4 x double> %a, <4 x double> %b, <4 x double> %c, <4 x double> %d) {
 ; CHECK-LABEL: mul_add_mull:
