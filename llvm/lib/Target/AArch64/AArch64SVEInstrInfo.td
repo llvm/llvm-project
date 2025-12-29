@@ -3557,6 +3557,14 @@ let Predicates = [HasSVE_or_SME] in {
   def : Pat<(f64 (vector_extract nxv2f64:$vec, GPR64:$index)),
             (LASTB_VPZ_D (WHILELS_PXX_D XZR, GPR64:$index), ZPR:$vec)>;
 
+  // LASTB_RPZ_* expect a GPR destination register, LASTB_VPZ_* expect FPR destination registers
+  def : Pat<(i16 (vector_extract nxv8i16:$vec, GPR64:$index)),
+            (LASTB_VPZ_H (WHILELS_PXX_H XZR, GPR64:$index), ZPR:$vec)>;
+  def : Pat<(i32 (vector_extract nxv4i32:$vec, GPR64:$index)),
+            (LASTB_VPZ_S (WHILELS_PXX_S XZR, GPR64:$index), ZPR:$vec)>;
+  def : Pat<(i64 (vector_extract nxv2i64:$vec, GPR64:$index)),
+            (LASTB_VPZ_D (WHILELS_PXX_D XZR, GPR64:$index), ZPR:$vec)>;
+
   // Extract element from vector with immediate index
   def : Pat<(i32 (vector_extract nxv16i8:$vec, sve_elm_idx_extdup_b:$index)),
             (EXTRACT_SUBREG (DUP_ZZI_B ZPR:$vec, sve_elm_idx_extdup_b:$index), ssub)>;
@@ -3653,6 +3661,8 @@ let Predicates = [HasSVE_or_SME] in {
             (EXTRACT_SUBREG ZPR:$Zs, ssub)>;
   def : Pat<(i32 (vector_extract nxv8i16:$Zs, (i64 0))),
             (EXTRACT_SUBREG ZPR:$Zs, ssub)>;
+  def : Pat<(i16 (vector_extract nxv8i16:$Zs, (i64 0))),
+            (EXTRACT_SUBREG ZPR:$Zs, hsub)>;
   def : Pat<(i32 (vector_extract nxv4i32:$Zs, (i64 0))),
             (EXTRACT_SUBREG ZPR:$Zs, ssub)>;
   def : Pat<(i64 (vector_extract nxv2i64:$Zs, (i64 0))),

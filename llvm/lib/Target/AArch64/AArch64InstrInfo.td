@@ -4411,6 +4411,9 @@ defm : LoadInsertPatterns<extloadi8,  v16i8,  v8i8,   nxv16i8,  i32,
 defm : LoadInsertPatterns<extloadi16, v8i16,  v4i16,  nxv8i16,  i32,
                           LDRHui, LDURHi, LDRHroW, LDRHroX,
                           ro16, am_indexed16, am_unscaled16, uimm12s2, hsub>;
+defm : LoadInsertPatterns<load, v8i16,  v4i16,  nxv8i16,  i16,
+                          LDRHui, LDURHi, LDRHroW, LDRHroX,
+                          ro16, am_indexed16, am_unscaled16, uimm12s2, hsub>;
 defm : LoadInsertPatterns<load,       v4i32,  v2i32,  nxv4i32,  i32,
                           LDRSui, LDURSi, LDRSroW, LDRSroX,
                           ro32, am_indexed32, am_unscaled32, uimm12s4, ssub>;
@@ -4686,6 +4689,15 @@ let Predicates = [UseSTRQro], AddedComplexity = 10 in {
                         (ro_Xindexed128 GPR64sp:$Rn, GPR64:$Rm,
                                         ro_Xextend128:$extend)),
             (STRQroX FPR128:$Rt, GPR64sp:$Rn, GPR64:$Rm, ro_Wextend128:$extend)>;
+
+  def : Pat<(store (v2i64 FPR128:$Rt),
+                        (ro_Windexed128 GPR64sp:$Rn, GPR32:$Rm,
+                                        ro_Wextend128:$extend)),
+            (STRQroW FPR128:$Rt, GPR64sp:$Rn, GPR32:$Rm, ro_Wextend128:$extend)>;
+  def : Pat<(store (v2i64 FPR128:$Rt),
+                        (ro_Xindexed128 GPR64sp:$Rn, GPR64:$Rm,
+                                        ro_Xextend128:$extend)),
+            (STRQroX FPR128:$Rt, GPR64sp:$Rn, GPR64:$Rm, ro_Wextend128:$extend)>;
 }
 
 multiclass TruncStoreFrom64ROPat<ROAddrMode ro, SDPatternOperator storeop,
@@ -4769,6 +4781,7 @@ multiclass VecROStoreLane0Pat<ROAddrMode ro, SDPatternOperator storeop,
 
 let AddedComplexity = 19 in {
   defm : VecROStoreLane0Pat<ro16, truncstorei16, v8i16, i32, f16, hsub, STRHroW, STRHroX>;
+  defm : VecROStoreLane0Pat<ro16,         store, v8i16, i16, f16, hsub, STRHroW, STRHroX>;
   defm : VecROStoreLane0Pat<ro16,         store, v8f16, f16, f16, hsub, STRHroW, STRHroX>;
   defm : VecROStoreLane0Pat<ro32,         store, v4i32, i32, i32, ssub, STRSroW, STRSroX>;
   defm : VecROStoreLane0Pat<ro32,         store, v4f32, f32, i32, ssub, STRSroW, STRSroX>;
@@ -4925,6 +4938,7 @@ multiclass VecStoreLane0Pat<ComplexPattern UIAddrMode, SDPatternOperator storeop
 
 let AddedComplexity = 19 in {
   defm : VecStoreLane0Pat<am_indexed16, truncstorei16, v8i16, i32, f16, hsub, uimm12s2, STRHui>;
+  defm : VecStoreLane0Pat<am_indexed16,         store, v8i16, i16, f16, hsub, uimm12s2, STRHui>;
   defm : VecStoreLane0Pat<am_indexed16,         store, v8f16, f16, f16, hsub, uimm12s2, STRHui>;
   defm : VecStoreLane0Pat<am_indexed32,         store, v4i32, i32, i32, ssub, uimm12s4, STRSui>;
   defm : VecStoreLane0Pat<am_indexed32,         store, v4f32, f32, i32, ssub, uimm12s4, STRSui>;
@@ -5078,6 +5092,7 @@ multiclass VecStoreULane0Pat<SDPatternOperator StoreOp,
 
 let AddedComplexity = 19 in {
   defm : VecStoreULane0Pat<truncstorei16, v8i16, i32, f16, hsub, STURHi>;
+  defm : VecStoreULane0Pat<store,         v8i16, i16, f16, hsub, STURHi>;
   defm : VecStoreULane0Pat<store,         v8f16, f16, f16, hsub, STURHi>;
   defm : VecStoreULane0Pat<store,         v4i32, i32, i32, ssub, STURSi>;
   defm : VecStoreULane0Pat<store,         v4f32, f32, i32, ssub, STURSi>;
@@ -7762,6 +7777,31 @@ def DUPv8i16lane : SIMDDup16FromElement<1, ".8h", v8i16, V128>;
 def DUPv8i8lane  : SIMDDup8FromElement <0, ".8b", v8i8, V64>;
 def DUPv16i8lane : SIMDDup8FromElement <1, ".16b", v16i8, V128>;
 
+def : Pat<(v4i32 (AArch64dup (i32 FPR32:$src))),
+          (v4i32 (DUPv4i32lane
+            (INSERT_SUBREG (v4i32 (IMPLICIT_DEF)), FPR32:$src, ssub),
+            (i64 0)))>;
+
+def : Pat<(v2i64 (AArch64dup (i64 FPR64:$Rn))),
+          (v2i64 (DUPv2i64lane
+            (INSERT_SUBREG (v2i64 (IMPLICIT_DEF)), FPR64:$Rn, dsub),
+            (i64 0)))>;
+
+def : Pat<(v2i32 (AArch64dup (i32 FPR32:$Rn))),
+          (v2i32 (DUPv2i32lane
+            (INSERT_SUBREG (v4i32 (IMPLICIT_DEF)), FPR32:$Rn, ssub),
+            (i64 0)))>;
+
+def : Pat<(v4i16 (AArch64dup (i16 FPR16:$Rn))),
+          (v4i16 (DUPv4i16lane
+            (INSERT_SUBREG (v8i16 (IMPLICIT_DEF)), FPR16:$Rn, hsub),
+            (i64 0)))>;
+
+def : Pat<(v8i16 (AArch64dup (i16 FPR16:$Rn))),
+          (v8i16 (DUPv8i16lane
+            (INSERT_SUBREG (v8i16 (IMPLICIT_DEF)), FPR16:$Rn, hsub),
+            (i64 0)))>;
+
 // DUP from a 64-bit register to a 64-bit register is just a copy
 def : Pat<(v1i64 (AArch64dup (i64 GPR64:$Rn))),
           (COPY_TO_REGCLASS GPR64:$Rn, FPR64)>;
@@ -7942,6 +7982,11 @@ def : Pat<(v4i32 (vec_ins_or_scal_vec GPR32:$Rn)),
 def : Pat<(v2i64 (vec_ins_or_scal_vec GPR64:$Rn)),
           (INSERT_SUBREG (v2i64 (IMPLICIT_DEF)), GPR64:$Rn, dsub)>;
 
+def : Pat<(v2i32 (vec_ins_or_scal_vec i32:$Rn)),
+          (INSERT_SUBREG (v2i32 (IMPLICIT_DEF)), GPR32:$Rn, ssub)>;
+def : Pat<(v2i64 (vec_ins_or_scal_vec i64:$Rn)),
+          (INSERT_SUBREG (v2i64 (IMPLICIT_DEF)), GPR64:$Rn, dsub)>;
+
 def : Pat<(v4f16 (vec_ins_or_scal_vec (f16 FPR16:$Rn))),
           (INSERT_SUBREG (v4f16 (IMPLICIT_DEF)), FPR16:$Rn, hsub)>;
 def : Pat<(v8f16 (vec_ins_or_scal_vec (f16 FPR16:$Rn))),
@@ -7966,6 +8011,9 @@ def : Pat<(v4f32 (vec_ins_or_scal_vec (f32 FPR32:$Rn))),
           (INSERT_SUBREG (v4f32 (IMPLICIT_DEF)), FPR32:$Rn, ssub)>;
 def : Pat<(v2f32 (vec_ins_or_scal_vec (f32 FPR32:$Rn))),
           (INSERT_SUBREG (v2f32 (IMPLICIT_DEF)), FPR32:$Rn, ssub)>;
+
+def : Pat<(v4i32 (vec_ins_or_scal_vec (i32 FPR32:$Rn))),
+          (INSERT_SUBREG (v4i32 (IMPLICIT_DEF)), FPR32:$Rn, ssub)>;
 
 def : Pat<(v2f64 (vec_ins_or_scal_vec (f64 FPR64:$Rn))),
           (INSERT_SUBREG (v2f64 (IMPLICIT_DEF)), FPR64:$Rn, dsub)>;
@@ -7992,6 +8040,29 @@ def : Pat<(vector_insert (v2f32 V64:$Rn), (f32 fpimm0), (i64 VectorIndexS:$imm))
 def : Pat<(vector_insert v2f64:$Rn, (f64 fpimm0), (i64 VectorIndexD:$imm)),
           (INSvi64gpr V128:$Rn, VectorIndexS:$imm, XZR)>;
 }
+
+def : Pat<(v8i16 (vector_insert (v8i16 V128:$Rn),
+            (i16 FPR16:$Rm), (i64 VectorIndexH:$imm))),
+          (INSvi16lane
+            V128:$Rn, VectorIndexH:$imm,
+            (v8i16 (INSERT_SUBREG (v8i16 (IMPLICIT_DEF)), FPR16:$Rm, hsub)),
+            (i64 0))>;
+
+def : Pat<(v4i16 (vector_insert (v4i16 V64:$Rn),
+            (i16 FPR16:$Rm), (i64 VectorIndexH:$imm))),
+          (EXTRACT_SUBREG
+            (INSvi16lane
+              (v8i16 (INSERT_SUBREG (v8i16 (IMPLICIT_DEF)), V64:$Rn, dsub)),
+              VectorIndexH:$imm,
+              (v8i16 (INSERT_SUBREG (v8i16 (IMPLICIT_DEF)), FPR16:$Rm, hsub)),
+              (i64 0)),
+            dsub)>;
+
+def : Pat<(v4i16 (vector_insert (v4i16 V64:$Rn), (i32 GPR32:$Rm), (i64 VectorIndexH:$imm))),
+          (EXTRACT_SUBREG
+            (INSvi16gpr (v8i16 (INSERT_SUBREG (v8i16 (IMPLICIT_DEF)), V64:$Rn, dsub)),
+                        VectorIndexH:$imm, GPR32:$Rm),
+            dsub)>;
 
 def : Pat<(v8f16 (vector_insert (v8f16 V128:$Rn),
             (f16 FPR16:$Rm), (i64 VectorIndexH:$imm))),
@@ -8157,21 +8228,24 @@ defm : Neon_INS_elt_pattern<v2f64,  v1f64,  nxv2f64,  f64,  VectorIndexD, INSvi6
 // Accept i8 scalar argument in GlobalISel.
 defm : Neon_INS_elt_pattern<v16i8,  v8i8,   nxv16i8,  i8,   VectorIndexB, INSvi8lane,  DUPi8,  bsub>;
 defm : Neon_INS_elt_pattern<v16i8,  v8i8,   nxv16i8,  i32,  VectorIndexB, INSvi8lane,  DUPi8,  bsub>;
+defm : Neon_INS_elt_pattern<v8i16,  v4i16,  nxv8i16,  i16,  VectorIndexH, INSvi16lane, DUPi16, hsub>;
 defm : Neon_INS_elt_pattern<v8i16,  v4i16,  nxv8i16,  i32,  VectorIndexH, INSvi16lane, DUPi16, hsub>;
 defm : Neon_INS_elt_pattern<v4i32,  v2i32,  nxv4i32,  i32,  VectorIndexS, INSvi32lane, DUPi32, ssub>;
 defm : Neon_INS_elt_pattern<v2i64,  v1i64,  nxv2i64,  i64,  VectorIndexD, INSvi64lane, DUPi64, dsub>;
 
 // Insert from bitcast
-// vector_insert(bitcast(f32 src), n, lane) -> INSvi32lane(src, lane, INSERT_SUBREG(-, n), 0)
-def : Pat<(v4i32 (vector_insert v4i32:$src, (i32 (bitconvert (f32 FPR32:$Sn))), (i64 imm:$Immd))),
-          (INSvi32lane V128:$src, imm:$Immd, (INSERT_SUBREG (IMPLICIT_DEF), FPR32:$Sn, ssub), 0)>;
-def : Pat<(v2i32 (vector_insert v2i32:$src, (i32 (bitconvert (f32 FPR32:$Sn))), (i64 imm:$Immd))),
+// vector_insert(i32, n, lane) -> INSvi32lane(src, lane, INSERT_SUBREG(-, n), 0)
+def : Pat<(v4i32 (vector_insert v4i32:$src, (i32 FPR32:$Sn), (i64 imm:$Immd))),
+          (INSvi32lane V128:$src, imm:$Immd,
+                       (INSERT_SUBREG (IMPLICIT_DEF), FPR32:$Sn, ssub), 0)>;
+def : Pat<(v2i32 (vector_insert v2i32:$src, (i32 FPR32:$Sn), (i64 imm:$Immd))),
           (EXTRACT_SUBREG
             (INSvi32lane (v4i32 (INSERT_SUBREG (v4i32 (IMPLICIT_DEF)), V64:$src, dsub)),
                          imm:$Immd, (INSERT_SUBREG (IMPLICIT_DEF), FPR32:$Sn, ssub), 0),
             dsub)>;
-def : Pat<(v2i64 (vector_insert v2i64:$src, (i64 (bitconvert (f64 FPR64:$Sn))), (i64 imm:$Immd))),
-          (INSvi64lane V128:$src, imm:$Immd, (INSERT_SUBREG (IMPLICIT_DEF), FPR64:$Sn, dsub), 0)>;
+def : Pat<(v2i64 (vector_insert v2i64:$src, (i64 FPR64:$Sn), (i64 imm:$Immd))),
+          (INSvi64lane V128:$src, imm:$Immd,
+                       (INSERT_SUBREG (IMPLICIT_DEF), FPR64:$Sn, dsub), 0)>;
 
 // Patterns for i8/i16 -> v2i32/v4i16 lane moves via insert and extract that go via i32.
 multiclass Neon_INS_elt_ext_pattern<ValueType VT128, ValueType VT64, ValueType OutVT,
@@ -9763,6 +9837,7 @@ class Ld1Lane128Pat<SDPatternOperator scalar_load, Operand VecIndex,
 // Accept i8 scalar argument in GlobalISel.
 def : Ld1Lane128Pat<load,       VectorIndexB, v16i8, i8,  LD1i8>;
 def : Ld1Lane128Pat<extloadi8,  VectorIndexB, v16i8, i32, LD1i8>;
+def : Ld1Lane128Pat<load,       VectorIndexH, v8i16, i16, LD1i16>;
 def : Ld1Lane128Pat<extloadi16, VectorIndexH, v8i16, i32, LD1i16>;
 def : Ld1Lane128Pat<load,       VectorIndexS, v4i32, i32, LD1i32>;
 def : Ld1Lane128Pat<load,       VectorIndexS, v4f32, f32, LD1i32>;
@@ -9838,6 +9913,7 @@ class Ld1Lane64Pat<SDPatternOperator scalar_load, Operand VecIndex,
 // Accept i8 scalar argument in GlobalISel.
 def : Ld1Lane64Pat<load,       VectorIndexB, v8i8,  i8,  LD1i8>;
 def : Ld1Lane64Pat<extloadi8,  VectorIndexB, v8i8,  i32, LD1i8>;
+def : Ld1Lane64Pat<load,       VectorIndexH, v4i16, i16, LD1i16>;
 def : Ld1Lane64Pat<extloadi16, VectorIndexH, v4i16, i32, LD1i16>;
 def : Ld1Lane64Pat<load,       VectorIndexS, v2i32, i32, LD1i32>;
 def : Ld1Lane64Pat<load,       VectorIndexS, v2f32, f32, LD1i32>;
@@ -9866,6 +9942,7 @@ class St1Lane128Pat<SDPatternOperator scalar_store, Operand VecIndex,
 
 def : St1Lane128Pat<truncstorei8,  VectorIndexB, v16i8, i32, ST1i8>;
 def : St1Lane128Pat<truncstorei16, VectorIndexH, v8i16, i32, ST1i16>;
+def : St1Lane128Pat<store,         VectorIndexH, v8i16, i16, ST1i16>;
 def : St1Lane128Pat<store,         VectorIndexS, v4i32, i32, ST1i32>;
 def : St1Lane128Pat<store,         VectorIndexS, v4f32, f32, ST1i32>;
 def : St1Lane128Pat<store,         VectorIndexD, v2i64, i64, ST1i64>;
@@ -9884,6 +9961,7 @@ class St1Lane64Pat<SDPatternOperator scalar_store, Operand VecIndex,
 
 def : St1Lane64Pat<truncstorei8,  VectorIndexB, v8i8, i32, ST1i8>;
 def : St1Lane64Pat<truncstorei16, VectorIndexH, v4i16, i32, ST1i16>;
+def : St1Lane64Pat<store,         VectorIndexH, v4i16, i16, ST1i16>;
 def : St1Lane64Pat<store,         VectorIndexS, v2i32, i32, ST1i32>;
 def : St1Lane64Pat<store,         VectorIndexS, v2f32, f32, ST1i32>;
 def : St1Lane64Pat<store,         VectorIndexH, v4f16, f16, ST1i16>;
