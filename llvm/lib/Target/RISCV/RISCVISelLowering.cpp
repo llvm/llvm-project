@@ -21027,10 +21027,10 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     if (SDValue V = combineBinOpOfExtractToReduceTree(N, DAG, Subtarget))
       return V;
     SDValue N1 = N->getOperand(1);
-    if (!Subtarget.hasStdExtZfa() || N1.getOpcode() != ISD::SPLAT_VECTOR)
+    if (N1.getOpcode() != ISD::SPLAT_VECTOR)
       return SDValue();
     SDValue SplatN0 = N1->getOperand(0);
-    if (!SplatN0.hasOneUse() || SplatN0.getOpcode() != ISD::FNEG)
+    if (SplatN0.getOpcode() != ISD::FNEG || !SplatN0.hasOneUse())
       return SDValue();
     SDLoc DL(N);
     EVT VT = N->getValueType(0);
