@@ -2109,8 +2109,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Value *V,
     case Intrinsic::exp:
     case Intrinsic::exp2:
     case Intrinsic::exp10: {
-      if ((DemandedMask &
-           (fcPosZero | fcPosSubnormal | fcPosNormal | fcPosInf)) == fcNone) {
+      if ((DemandedMask & fcPositive) == fcNone) {
         // Only returns positive values or nans.
         if ((DemandedMask & fcNan) == fcNone)
           return PoisonValue::get(VTy);
