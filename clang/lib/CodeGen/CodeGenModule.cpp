@@ -1583,7 +1583,8 @@ void CodeGenModule::Release() {
         if (!Entry) {
           Visibility Vis = FD->getVisibility();
           if (Vis == DefaultVisibility)
-            getDiags().Report(I.second, diag::err_mips_impossible_musttail) << 1;
+            getDiags().Report(I.second, diag::err_mips_impossible_musttail)
+                << 1;
           continue;
         }
 
