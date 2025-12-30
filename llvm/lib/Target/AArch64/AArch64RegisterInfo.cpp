@@ -1380,7 +1380,13 @@ bool AArch64RegisterInfo::shouldCoalesce(
     MachineInstr *MI, const TargetRegisterClass *SrcRC, unsigned SubReg,
     const TargetRegisterClass *DstRC, unsigned DstSubReg,
     const TargetRegisterClass *NewRC, LiveIntervals &LIS) const {
-  MachineRegisterInfo &MRI = MI->getMF()->getRegInfo();
+  MachineFunction &MF = *MI->getMF();
+  MachineRegisterInfo &MRI = MF.getRegInfo();
+
+  // Coalescing of SUBREG_TO_REG is broken when using subreg liveness tracking,
+  // we must disable it for now.
+  if (MI->isSubregToReg() && MRI.subRegLivenessEnabled())
+    return false;
 
   if (MI->isCopy() &&
       ((DstRC->getID() == AArch64::GPR64RegClassID) ||

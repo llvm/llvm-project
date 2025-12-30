@@ -14,7 +14,8 @@ body: |
     ; SRLT: liveins: $x1
     ; SRLT-NEXT: {{  $}}
     ; SRLT-NEXT: $x0 = ORRXrr $xzr, $x1
-    ; SRLT-NEXT: renamable $w1 = ORRWrr $wzr, renamable $w0
+    ; SRLT-NEXT: renamable $w8 = ORRWrr $wzr, renamable $w0
+    ; SRLT-NEXT: $w1 = ORRWrr $wzr, killed $w8, implicit-def $x1
     ; SRLT-NEXT: RET_ReallyLR implicit $x1, implicit $x0
     ;
     ; NOSRLT-LABEL: name: dont_remove_orr_w
