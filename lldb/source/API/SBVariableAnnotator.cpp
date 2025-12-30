@@ -11,7 +11,7 @@
 #include "lldb/API/SBInstruction.h"
 #include "lldb/API/SBStream.h"
 #include "lldb/API/SBStructuredData.h"
-#include "lldb/Core/Disassembler.h" // containts VariableAnnotator declaration
+#include "lldb/Core/Disassembler.h" // contains VariableAnnotator declaration
 #include "lldb/Core/StructuredDataImpl.h"
 #include "lldb/Utility/Instrumentation.h"
 
