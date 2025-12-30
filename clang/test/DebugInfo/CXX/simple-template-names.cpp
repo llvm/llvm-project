@@ -40,7 +40,7 @@ void f() {
   // Basic examples of simplifiable/rebuildable names
   f1<>();
   // CHECK: !DISubprogram(name: "_STN|f1|<>",
-  // SIMPLE: !DISubprogram(name: "f1",
+  // SIMPLE: !DISubprogram(name: "f1", {{.*}}flags:{{.*}}DIFlagNameIsSimplified,
   // FULL: !DISubprogram(name: "f1<>",
   f1<int>();
   // CHECK: !DISubprogram(name: "_STN|f1|<int>",
