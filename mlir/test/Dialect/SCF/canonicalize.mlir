@@ -2207,34 +2207,3 @@ func.func @iter_args_cycles_non_cycle_start(%lb : index, %ub : index, %step : in
   }
   return %res#0, %res#1, %res#2 : i32, i32, i32
 }
-
-// -----
-
-// CHECK-LABEL: func @dead_index_switch_result(
-//  CHECK-SAME:     %[[arg0:.*]]: index
-//   CHECK-DAG:   %[[c10:.*]] = arith.constant 10
-//   CHECK-DAG:   %[[c11:.*]] = arith.constant 11
-//       CHECK:   %[[switch:.*]] = scf.index_switch %[[arg0]] -> index
-//       CHECK:   case 1 {
-//       CHECK:     memref.store %[[c10]]
-//       CHECK:     scf.yield %[[arg0]] : index
-//       CHECK:   } 
-//       CHECK:   default {
-//       CHECK:     memref.store %[[c11]]
-//       CHECK:     scf.yield %[[arg0]] : index
-//       CHECK:   }
-//       CHECK:   return %[[switch]]
-func.func @dead_index_switch_result(%arg0 : index, %arg1 : memref<i32>) -> index {
-  %non_live, %live = scf.index_switch %arg0 -> i32, index
-  case 1 {
-    %c10 = arith.constant 10 : i32
-    memref.store %c10, %arg1[] : memref<i32>
-    scf.yield %c10, %arg0 : i32, index
-  }
-  default {
-    %c11 = arith.constant 11 : i32
-    memref.store %c11, %arg1[] : memref<i32>
-    scf.yield %c11, %arg0 : i32, index
-  }
-  return %live : index
-}
