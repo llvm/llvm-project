@@ -4012,9 +4012,8 @@ bool IRTranslator::emitSPDescriptorParent(StackProtectorDescriptor &SPD,
                       MachineMemOperand::MOLoad | MachineMemOperand::MOVolatile)
           .getReg(0);
 
-  if (TLI->useStackGuardMixCookie()) {
-    LLVM_DEBUG(
-        dbgs() << "Stack protector mix'ing the cookie not yet implemented");
+  if (TLI->useStackGuardXorFP()) {
+    LLVM_DEBUG(dbgs() << "Stack protector xor'ing with FP not yet implemented");
     return false;
   }
 
