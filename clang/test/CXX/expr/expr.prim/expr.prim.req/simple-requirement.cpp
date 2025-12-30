@@ -39,14 +39,14 @@ using r2i4 = r2<const D>; // expected-error{{constraints not satisfied for class
 
 template<typename T> requires requires { sizeof(T); }
 // expected-note@-1{{because 'sizeof(T)' would be invalid: invalid application of 'sizeof' to an incomplete type 'void'}}
-// expected-note@-2{{because 'sizeof(T)' would be invalid: invalid application of 'sizeof' to an incomplete type 'nonexistent'}}
+// expected-note@-2{{because 'sizeof(T)' would be invalid: invalid application of 'sizeof' to an incomplete type 'class nonexistent'}}
 struct r3 {};
 
 using r3i1 = r3<int>;
 using r3i2 = r3<A>;
 using r3i3 = r3<A &>;
 using r3i4 = r3<void>; // expected-error{{constraints not satisfied for class template 'r3' [with T = void]}}
-using r3i4 = r3<class nonexistent>; // expected-error{{constraints not satisfied for class template 'r3' [with T = nonexistent]}}
+using r3i4 = r3<class nonexistent>; // expected-error{{constraints not satisfied for class template 'r3' [with T = class nonexistent]}}
 
 template<typename T> requires requires (T t) { 0; "a"; (void)'a'; }
 struct r4 {};

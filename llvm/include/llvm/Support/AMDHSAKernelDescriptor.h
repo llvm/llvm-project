@@ -25,11 +25,6 @@
 #include <cstddef>
 #include <cstdint>
 
-// Gets offset of specified member in specified type.
-#ifndef offsetof
-#define offsetof(TYPE, MEMBER) ((size_t)&((TYPE*)0)->MEMBER)
-#endif // offsetof
-
 // Creates enumeration entries used for packing bits into integers. Enumeration
 // entries include bit shift amount, bit width, and bit mask.
 #ifndef AMDHSA_BITS_ENUM_ENTRY
@@ -252,8 +247,7 @@ enum : int32_t {
   KERNEL_CODE_PROPERTY(ENABLE_SGPR_DISPATCH_ID, 4, 1),
   KERNEL_CODE_PROPERTY(ENABLE_SGPR_FLAT_SCRATCH_INIT, 5, 1),
   KERNEL_CODE_PROPERTY(ENABLE_SGPR_PRIVATE_SEGMENT_SIZE, 6, 1),
-  KERNEL_CODE_PROPERTY(RESERVED0, 7, 2),
-  KERNEL_CODE_PROPERTY(USES_CU_STORES, 9, 1),           // GFX12.5 +cu-stores
+  KERNEL_CODE_PROPERTY(RESERVED0, 7, 3),
   KERNEL_CODE_PROPERTY(ENABLE_WAVEFRONT_SIZE32, 10, 1), // GFX10+
   KERNEL_CODE_PROPERTY(USES_DYNAMIC_STACK, 11, 1),
   KERNEL_CODE_PROPERTY(RESERVED1, 12, 4),

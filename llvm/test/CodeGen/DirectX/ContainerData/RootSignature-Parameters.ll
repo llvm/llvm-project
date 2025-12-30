@@ -38,13 +38,13 @@ attributes #0 = { "hlsl.numthreads"="1,1,1" "hlsl.shader"="compute" }
 ;CHECK-NEXT:   - Parameter Type: DescriptorTable
 ;CHECK-NEXT:     Shader Visibility: All
 ;CHECK-NEXT:     NumRanges: 2
-;CHECK-NEXT:     - Range Type: 0
+;CHECK-NEXT:     - Range Type: SRV
 ;CHECK-NEXT:       Register Space: 0
 ;CHECK-NEXT:       Base Shader Register: 1
 ;CHECK-NEXT:       Num Descriptors: 1
 ;CHECK-NEXT:       Offset In Descriptors From Table Start: 4294967295
 ;CHECK-NEXT:       Flags: 4
-;CHECK-NEXT:     - Range Type: 1
+;CHECK-NEXT:     - Range Type: UAV
 ;CHECK-NEXT:       Register Space: 10
 ;CHECK-NEXT:       Base Shader Register: 1
 ;CHECK-NEXT:       Num Descriptors: 5

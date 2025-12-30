@@ -208,7 +208,7 @@ LogicalResult DecomposeProjectedPermutation::matchAndRewrite(
 
     // Does it require broadcast?
     if (!broadcastedDims.empty()) {
-      assert(broadcastedDims.size() && "should have non size broadcast");
+      assert(!broadcastedDims.empty() && "should have non size broadcast");
       Value emptyTensor = tensor::EmptyOp::create(rewriter, loc, outputShape,
                                                   inputRTType.getElementType());
 

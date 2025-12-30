@@ -172,6 +172,7 @@ static bool hasAllNBitUsers(const MachineInstr &OrigMI,
       case RISCV::CTZW:
       case RISCV::CPOPW:
       case RISCV::SLLI_UW:
+      case RISCV::ABSW:
       case RISCV::FMV_W_X:
       case RISCV::FCVT_H_W:
       case RISCV::FCVT_H_W_INX:
@@ -356,6 +357,14 @@ static bool hasAllNBitUsers(const MachineInstr &OrigMI,
           return false;
         Worklist.emplace_back(UserMI, Bits);
         break;
+      case RISCV::TH_EXT:
+      case RISCV::TH_EXTU:
+        unsigned Msb = UserMI->getOperand(2).getImm();
+        unsigned Lsb = UserMI->getOperand(3).getImm();
+        // Behavior of Msb < Lsb is not well documented.
+        if (Msb >= Lsb && Bits > Msb)
+          break;
+        return false;
       }
     }
   }

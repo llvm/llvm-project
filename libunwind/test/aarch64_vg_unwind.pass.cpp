@@ -6,7 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-// REQUIRES: linux && target={{aarch64-.+}}
+// REQUIRES: target={{aarch64-.+}}
+// UNSUPPORTED: target={{.*-windows.*}}
 
 #include <libunwind.h>
 #include <stdlib.h>
@@ -62,4 +63,7 @@ __attribute__((noinline)) void foo() {
   // smstop sm
 }
 
-int main() { foo(); }
+int main(int, char **) {
+  foo();
+  return 0;
+}

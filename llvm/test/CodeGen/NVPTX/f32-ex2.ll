@@ -3,7 +3,8 @@
 ; RUN: %if ptxas-sm_50 && ptxas-isa-3.2 %{ llc < %s -mtriple=nvptx64 -mcpu=sm_50 -mattr=+ptx32 | %ptxas-verify -arch=sm_50 %}
 target triple = "nvptx-nvidia-cuda"
 
-declare float @llvm.nvvm.ex2.approx.f(float)
+declare float @llvm.nvvm.ex2.approx.f32(float)
+declare float @llvm.nvvm.ex2.approx.ftz.f32(float)
 
 ; CHECK-LABEL: ex2_float
 define float @ex2_float(float %0) {
@@ -16,7 +17,7 @@ define float @ex2_float(float %0) {
 ; CHECK-NEXT:    ex2.approx.f32 %r2, %r1;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
-  %res = call float @llvm.nvvm.ex2.approx.f(float %0)
+  %res = call float @llvm.nvvm.ex2.approx.f32(float %0)
   ret float %res
 }
 
@@ -31,6 +32,6 @@ define float @ex2_float_ftz(float %0) {
 ; CHECK-NEXT:    ex2.approx.ftz.f32 %r2, %r1;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
-  %res = call float @llvm.nvvm.ex2.approx.ftz.f(float %0)
+  %res = call float @llvm.nvvm.ex2.approx.ftz.f32(float %0)
   ret float %res
 }

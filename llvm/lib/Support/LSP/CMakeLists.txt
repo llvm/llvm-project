@@ -1,11 +1,8 @@
-add_llvm_library(LLVMSupportLSP STATIC
+add_llvm_component_library(LLVMSupportLSP 
   Protocol.cpp
   Transport.cpp
   Logging.cpp
 
-  ADDITIONAL_HEADER_DIRS
-  ${LLVM_MAIN_INCLUDE_DIR}/llvm/Support/LSP
-
-  LINK_LIBS
-  LLVMSupport
+  LINK_COMPONENTS
+  Support
 )

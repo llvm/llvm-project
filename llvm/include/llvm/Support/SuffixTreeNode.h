@@ -155,7 +155,7 @@ public:
       : SuffixTreeNode(NodeKind::ST_Internal, StartIdx), EndIdx(EndIdx),
         Link(Link) {}
 
-  virtual ~SuffixTreeInternalNode() = default;
+  ~SuffixTreeInternalNode() override = default;
 };
 
 // A node representing a suffix.
@@ -189,7 +189,7 @@ public:
   SuffixTreeLeafNode(unsigned StartIdx, unsigned *EndIdx)
       : SuffixTreeNode(NodeKind::ST_Leaf, StartIdx), EndIdx(EndIdx) {}
 
-  virtual ~SuffixTreeLeafNode() = default;
+  ~SuffixTreeLeafNode() override = default;
 };
 } // namespace llvm
 #endif // LLVM_SUPPORT_SUFFIXTREE_NODE_H

@@ -2067,6 +2067,36 @@ static void inferAttrsFromFunctionBodies(const SCCNodeSet &SCCNodes,
   AI.run(SCCNodes, Changed);
 }
 
+// Determines if the function 'F' can be marked 'norecurse'.
+// It returns true if any call within 'F' could lead to a recursive
+// call back to 'F', and false otherwise.
+// The 'AnyFunctionsAddressIsTaken' parameter is a module-wide flag
+// that is true if any function's address is taken, or if any function
+// has external linkage. This is used to determine the safety of
+// external/library calls.
+static bool mayHaveRecursiveCallee(Function &F,
+                                   bool AnyFunctionsAddressIsTaken = true) {
+  for (const auto &BB : F) {
+    for (const auto &I : BB.instructionsWithoutDebug()) {
+      if (const auto *CB = dyn_cast<CallBase>(&I)) {
+        const Function *Callee = CB->getCalledFunction();
+        if (!Callee || Callee == &F)
+          return true;
+
+        if (Callee->doesNotRecurse())
+          continue;
+
+        if (!AnyFunctionsAddressIsTaken ||
+            (Callee->isDeclaration() &&
+             Callee->hasFnAttribute(Attribute::NoCallback)))
+          continue;
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
 static void addNoRecurseAttrs(const SCCNodeSet &SCCNodes,
                               SmallPtrSet<Function *, 8> &Changed) {
   // Try and identify functions that do not recurse.
@@ -2078,28 +2108,14 @@ static void addNoRecurseAttrs(const SCCNodeSet &SCCNodes,
   Function *F = *SCCNodes.begin();
   if (!F || !F->hasExactDefinition() || F->doesNotRecurse())
     return;
-
-  // If all of the calls in F are identifiable and are to norecurse functions, F
-  // is norecurse. This check also detects self-recursion as F is not currently
-  // marked norecurse, so any called from F to F will not be marked norecurse.
-  for (auto &BB : *F)
-    for (auto &I : BB.instructionsWithoutDebug())
-      if (auto *CB = dyn_cast<CallBase>(&I)) {
-        Function *Callee = CB->getCalledFunction();
-        if (!Callee || Callee == F ||
-            (!Callee->doesNotRecurse() &&
-             !(Callee->isDeclaration() &&
-               Callee->hasFnAttribute(Attribute::NoCallback))))
-          // Function calls a potentially recursive function.
-          return;
-      }
-
-  // Every call was to a non-recursive function other than this function, and
-  // we have no indirect recursion as the SCC size is one. This function cannot
-  // recurse.
-  F->setDoesNotRecurse();
-  ++NumNoRecurse;
-  Changed.insert(F);
+  if (!mayHaveRecursiveCallee(*F)) {
+    // Every call was to a non-recursive function other than this function, and
+    // we have no indirect recursion as the SCC size is one. This function
+    // cannot recurse.
+    F->setDoesNotRecurse();
+    ++NumNoRecurse;
+    Changed.insert(F);
+  }
 }
 
 // Set the noreturn function attribute if possible.
@@ -2427,5 +2443,64 @@ ReversePostOrderFunctionAttrsPass::run(Module &M, ModuleAnalysisManager &AM) {
 
   PreservedAnalyses PA;
   PA.preserve<LazyCallGraphAnalysis>();
+  return PA;
+}
+
+PreservedAnalyses NoRecurseLTOInferencePass::run(Module &M,
+                                                 ModuleAnalysisManager &MAM) {
+
+  // Check if any function in the whole program has its address taken or has
+  // potentially external linkage.
+  // We use this information when inferring norecurse attribute: If there is
+  // no function whose address is taken and all functions have internal
+  // linkage, there is no path for a callback to any user function.
+  bool AnyFunctionsAddressIsTaken = false;
+  for (Function &F : M) {
+    if (F.isDeclaration() || F.doesNotRecurse())
+      continue;
+    if (!F.hasLocalLinkage() || F.hasAddressTaken()) {
+      AnyFunctionsAddressIsTaken = true;
+      break;
+    }
+  }
+
+  // Run norecurse inference on all RefSCCs in the LazyCallGraph for this
+  // module.
+  bool Changed = false;
+  LazyCallGraph &CG = MAM.getResult<LazyCallGraphAnalysis>(M);
+  CG.buildRefSCCs();
+
+  for (LazyCallGraph::RefSCC &RC : CG.postorder_ref_sccs()) {
+    // Skip any RefSCC that is part of a call cycle. A RefSCC containing more
+    // than one SCC indicates a recursive relationship involving indirect calls.
+    if (RC.size() > 1)
+      continue;
+
+    // RefSCC contains a single-SCC. SCC size > 1 indicates mutually recursive
+    // functions. Ex: foo1 -> foo2 -> foo3 -> foo1.
+    LazyCallGraph::SCC &S = *RC.begin();
+    if (S.size() > 1)
+      continue;
+
+    // Get the single function from this SCC.
+    Function &F = S.begin()->getFunction();
+    if (!F.hasExactDefinition() || F.doesNotRecurse())
+      continue;
+
+    // If the analysis confirms that this function has no recursive calls
+    // (either direct, indirect, or through external linkages),
+    // we can safely apply the norecurse attribute.
+    if (!mayHaveRecursiveCallee(F, AnyFunctionsAddressIsTaken)) {
+      F.setDoesNotRecurse();
+      ++NumNoRecurse;
+      Changed = true;
+    }
+  }
+
+  PreservedAnalyses PA;
+  if (Changed)
+    PA.preserve<LazyCallGraphAnalysis>();
+  else
+    PA = PreservedAnalyses::all();
   return PA;
 }

@@ -13,29 +13,29 @@ RUN: not llvm-cgdata --show %t_empty.cgdata 2>&1 | FileCheck %s --check-prefix=E
 EMPTY: {{.}}cgdata: empty codegen data
 
 # Not a magic.
-RUN: printf '\xff' > %t_malformed.cgdata
+RUN: printf '\377' > %t_malformed.cgdata
 RUN: not llvm-cgdata --show %t_malformed.cgdata 2>&1 | FileCheck %s --check-prefix=MALFORMED
 MALFORMED: {{.}}cgdata: malformed codegen data
 
 # The minimum header size is 24.
-RUN: printf '\xffcgdata\x81' > %t_corrupt.cgdata
+RUN: printf '\377cgdata\201' > %t_corrupt.cgdata
 RUN: not llvm-cgdata --show %t_corrupt.cgdata 2>&1 | FileCheck %s  --check-prefix=CORRUPT
 CORRUPT: {{.}}cgdata: invalid codegen data (file header is corrupt)
 
 # The current version 4 while the header says 5.
-RUN: printf '\xffcgdata\x81' > %t_version.cgdata
-RUN: printf '\x05\x00\x00\x00' >> %t_version.cgdata
-RUN: printf '\x00\x00\x00\x00' >> %t_version.cgdata
-RUN: printf '\x20\x00\x00\x00\x00\x00\x00\x00' >> %t_version.cgdata
-RUN: printf '\x20\x00\x00\x00\x00\x00\x00\x00' >> %t_version.cgdata
+RUN: printf '\377cgdata\201' > %t_version.cgdata
+RUN: printf '\005\000\000\000' >> %t_version.cgdata
+RUN: printf '\000\000\000\000' >> %t_version.cgdata
+RUN: printf '\040\000\000\000\000\000\000\000' >> %t_version.cgdata
+RUN: printf '\040\000\000\000\000\000\000\000' >> %t_version.cgdata
 RUN: not llvm-cgdata --show %t_version.cgdata 2>&1 | FileCheck %s  --check-prefix=BAD_VERSION
 BAD_VERSION: {{.}}cgdata: unsupported codegen data version
 
 # Header says an outlined hash tree, but the file ends after the header.
-RUN: printf '\xffcgdata\x81' > %t_eof.cgdata
-RUN: printf '\x02\x00\x00\x00' >> %t_eof.cgdata
-RUN: printf '\x01\x00\x00\x00' >> %t_eof.cgdata
-RUN: printf '\x20\x00\x00\x00\x00\x00\x00\x00' >> %t_eof.cgdata
-RUN: printf '\x20\x00\x00\x00\x00\x00\x00\x00' >> %t_eof.cgdata
+RUN: printf '\377cgdata\201' > %t_eof.cgdata
+RUN: printf '\002\000\000\000' >> %t_eof.cgdata
+RUN: printf '\001\000\000\000' >> %t_eof.cgdata
+RUN: printf '\040\000\000\000\000\000\000\000' >> %t_eof.cgdata
+RUN: printf '\040\000\000\000\000\000\000\000' >> %t_eof.cgdata
 RUN: not llvm-cgdata --show %t_eof.cgdata 2>&1 | FileCheck %s  --check-prefix=EOF
 EOF: {{.}}cgdata: end of File

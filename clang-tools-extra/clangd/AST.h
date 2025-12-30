@@ -18,7 +18,6 @@
 #include "index/SymbolID.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclObjC.h"
-#include "clang/AST/NestedNameSpecifier.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Lex/MacroInfo.h"
@@ -31,6 +30,7 @@ namespace clang {
 class SourceManager;
 class Decl;
 class DynTypedNode;
+class HeuristicResolver;
 
 namespace clangd {
 
@@ -167,7 +167,8 @@ QualType declaredType(const TypeDecl *D);
 /// Retrieves the deduced type at a given location (auto, decltype).
 /// It will return the underlying type.
 /// If the type is an undeduced auto, returns the type itself.
-std::optional<QualType> getDeducedType(ASTContext &, SourceLocation Loc);
+std::optional<QualType> getDeducedType(ASTContext &, const HeuristicResolver *,
+                                       SourceLocation Loc);
 
 // Find the abbreviated-function-template `auto` within a type, or returns null.
 // Similar to getContainedAutoTypeLoc, but these `auto`s are
@@ -250,6 +251,15 @@ resolveForwardingParameters(const FunctionDecl *D, unsigned MaxDepth = 10);
 /// whose type is a bare type parameter pack (e.g. `Args...`), or a
 /// reference to one (e.g. `Args&...` or `Args&&...`).
 bool isExpandedFromParameterPack(const ParmVarDecl *D);
+
+/// Heuristic that checks if FT is likely to be forwarding a parameter pack to
+/// another function (e.g. `make_unique`).
+bool isLikelyForwardingFunction(const FunctionTemplateDecl *FT);
+
+/// Only call if FD is a likely forwarding function. Returns
+/// constructors that might be forwarded to.
+SmallVector<const CXXConstructorDecl *, 1>
+searchConstructorsInForwardingFunction(const FunctionDecl *FD);
 
 } // namespace clangd
 } // namespace clang

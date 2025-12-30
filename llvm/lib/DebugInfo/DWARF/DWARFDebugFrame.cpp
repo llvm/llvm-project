@@ -181,8 +181,8 @@ DWARFDebugFrame::DWARFDebugFrame(Triple::ArchType Arch,
 
 DWARFDebugFrame::~DWARFDebugFrame() = default;
 
-static void LLVM_ATTRIBUTE_UNUSED dumpDataAux(DataExtractor Data,
-                                              uint64_t Offset, int Length) {
+[[maybe_unused]] static void dumpDataAux(DataExtractor Data, uint64_t Offset,
+                                         int Length) {
   errs() << "DUMP: ";
   for (int i = 0; i < Length; ++i) {
     uint8_t c = Data.getU8(&Offset);

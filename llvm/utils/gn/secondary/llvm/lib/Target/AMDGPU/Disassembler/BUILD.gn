@@ -5,6 +5,8 @@ tablegen("AMDGPUGenDisassemblerTables") {
   args = [
     "-gen-disassembler",
     "-specialize-decoders-per-bitwidth",
+    "-ignore-non-decodable-operands",
+    "-ignore-fully-defined-operands",
   ]
   td_file = "../AMDGPU.td"
 }

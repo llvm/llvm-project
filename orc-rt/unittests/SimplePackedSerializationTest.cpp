@@ -103,6 +103,11 @@ TEST(SimplePackedSerializationTest, UInt64Serialization) {
   testFixedIntegralTypeSerialization<uint64_t>();
 }
 
+TEST(SimplePackedSerializationTest, SizeTSerialization) {
+  size_t V = 42;
+  blobSerializationRoundTrip<SPSSize, size_t>(V);
+}
+
 TEST(SimplePackedSerializationTest, SequenceSerialization) {
   std::vector<int32_t> V({1, 2, -47, 139});
   blobSerializationRoundTrip<SPSSequence<int32_t>, std::vector<int32_t>>(V);
@@ -164,6 +169,12 @@ TEST(SimplePackedSerializationTest, StdOptionalValueSerialization) {
   blobSerializationRoundTrip<SPSOptional<int64_t>>(Value);
 }
 
+TEST(SimplePackedSerializationTest, Pointers) {
+  int X = 42;
+  int *P = &X;
+  blobSerializationRoundTrip<SPSExecutorAddr>(P);
+}
+
 TEST(SimplePackedSerializationTest, ArgListSerialization) {
   using BAL = SPSArgList<bool, int32_t, SPSString>;
 
@@ -223,9 +234,29 @@ TEST(SimplePackedSerializationTest, SerializeErrorFailure) {
   EXPECT_EQ(toString(SE.toError()), std::string("test error message"));
 }
 
-TEST(SimplePackedSerializationTest, SerializeExpectedSuccess) {
+TEST(SimplePackedSerializationTest, SerializeExpectedSuccessViaExpected) {
   auto B = spsSerialize<SPSArgList<SPSExpected<uint32_t>>>(
       toSPSSerializableExpected(Expected<uint32_t>(42U)));
+  if (!B) {
+    ADD_FAILURE() << "Unexpected failure to serialize expected-success value";
+    return;
+  }
+  SPSSerializableExpected<uint32_t> SE;
+  if (!spsDeserialize<SPSArgList<SPSExpected<uint32_t>>>(*B, SE)) {
+    ADD_FAILURE() << "Unexpected failure to deserialize expected-success value";
+    return;
+  }
+
+  auto E = SE.toExpected();
+  if (E)
+    EXPECT_EQ(*E, 42U);
+  else
+    ADD_FAILURE() << "Unexpected failure value";
+}
+
+TEST(SimplePackedSerializationTest, SerializeExpectedSuccessViaValue) {
+  auto B = spsSerialize<SPSArgList<SPSExpected<uint32_t>>>(
+      toSPSSerializableExpected(uint32_t(42U)));
   if (!B) {
     ADD_FAILURE() << "Unexpected failure to serialize expected-success value";
     return;

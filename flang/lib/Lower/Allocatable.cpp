@@ -450,9 +450,6 @@ private:
     if (alloc.getSymbol().test(Fortran::semantics::Symbol::Flag::AccDeclare))
       Fortran::lower::attachDeclarePostAllocAction(converter, builder,
                                                    alloc.getSymbol());
-    if (Fortran::semantics::HasCUDAComponent(alloc.getSymbol()))
-      Fortran::lower::initializeDeviceComponentAllocator(
-          converter, alloc.getSymbol(), box);
   }
 
   void setPinnedToFalse() {
@@ -632,6 +629,11 @@ private:
     unsigned allocatorIdx = Fortran::lower::getAllocatorIdx(alloc.getSymbol());
     fir::ExtendedValue exv = isSource ? sourceExv : moldExv;
 
+    bool sourceIsDevice = false;
+    if (const Fortran::semantics::Symbol *sym{GetLastSymbol(sourceExpr)})
+      if (Fortran::semantics::IsCUDADevice(*sym))
+        sourceIsDevice = true;
+
     // Generate a sequence of runtime calls.
     errorManager.genStatCheck(builder, loc);
     genAllocateObjectInit(box, allocatorIdx);
@@ -650,7 +652,7 @@ private:
       genSetDeferredLengthParameters(alloc, box);
     genAllocateObjectBounds(alloc, box);
     mlir::Value stat;
-    if (Fortran::semantics::HasCUDAAttr(alloc.getSymbol())) {
+    if (Fortran::semantics::HasCUDAAttr(alloc.getSymbol()) || sourceIsDevice) {
       stat =
           genCudaAllocate(builder, loc, box, errorManager, alloc.getSymbol());
     } else {
@@ -770,6 +772,15 @@ private:
                               const fir::MutableBoxValue &box,
                               ErrorManager &errorManager,
                               const Fortran::semantics::Symbol &sym) {
+
+    if (const Fortran::semantics::DeclTypeSpec *declTypeSpec = sym.GetType())
+      if (const Fortran::semantics::DerivedTypeSpec *derivedTypeSpec =
+              declTypeSpec->AsDerived())
+        if (derivedTypeSpec->HasDefaultInitialization(
+                /*ignoreAllocatable=*/true, /*ignorePointer=*/true))
+          TODO(loc,
+               "CUDA Fortran: allocate on device with default initialization");
+
     Fortran::lower::StatementContext stmtCtx;
     cuf::DataAttributeAttr cudaAttr =
         Fortran::lower::translateSymbolCUFDataAttribute(builder.getContext(),
@@ -788,10 +799,19 @@ private:
     // Keep return type the same as a standard AllocatableAllocate call.
     mlir::Type retTy = fir::runtime::getModel<int>()(builder.getContext());
 
+    bool isSourceDevice = false;
+    if (const Fortran::semantics::Symbol *sym{GetLastSymbol(sourceExpr)})
+      if (Fortran::semantics::IsCUDADevice(*sym))
+        isSourceDevice = true;
+
+    bool doubleDescriptors = Fortran::lower::hasDoubleDescriptor(box.getAddr());
     return cuf::AllocateOp::create(
                builder, loc, retTy, box.getAddr(), errmsg, stream, pinned,
                source, cudaAttr,
-               errorManager.hasStatSpec() ? builder.getUnitAttr() : nullptr)
+               errorManager.hasStatSpec() ? builder.getUnitAttr() : nullptr,
+               doubleDescriptors ? builder.getUnitAttr() : nullptr,
+               box.isPointer() ? builder.getUnitAttr() : nullptr,
+               isSourceDevice ? builder.getUnitAttr() : nullptr)
         .getResult();
   }
 
@@ -855,11 +875,14 @@ static mlir::Value genCudaDeallocate(fir::FirOpBuilder &builder,
           ? nullptr
           : errorManager.errMsgAddr;
 
-  // Keep return type the same as a standard AllocatableAllocate call.
+  // Keep return type the same as a standard AllocatableDeallocate call.
   mlir::Type retTy = fir::runtime::getModel<int>()(builder.getContext());
+  bool doubleDescriptors = Fortran::lower::hasDoubleDescriptor(box.getAddr());
   return cuf::DeallocateOp::create(
              builder, loc, retTy, box.getAddr(), errmsg, cudaAttr,
-             errorManager.hasStatSpec() ? builder.getUnitAttr() : nullptr)
+             errorManager.hasStatSpec() ? builder.getUnitAttr() : nullptr,
+             doubleDescriptors ? builder.getUnitAttr() : nullptr,
+             box.isPointer() ? builder.getUnitAttr() : nullptr)
       .getResult();
 }
 

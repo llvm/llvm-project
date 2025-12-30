@@ -1,3 +1,6 @@
+// RUN: rm -rf %t && mkdir %t
+// RUN: sed -e "s|DIR|%/S/Inputs|g" %S/Inputs/taint-generic-config-vfs.json > %t/taint-generic-config-vfs.json
+
 // RUN: %clang_analyze_cc1 -Wno-format-security -Wno-pointer-to-int-cast \
 // RUN:   -Wno-incompatible-library-redeclaration -verify %s \
 // RUN:   -analyzer-checker=optin.taint.GenericTaint \
@@ -6,7 +9,8 @@
 // RUN:   -analyzer-checker=security.ArrayBound \
 // RUN:   -analyzer-checker=debug.ExprInspection \
 // RUN:   -analyzer-config \
-// RUN:     optin.taint.TaintPropagation:Config=%S/Inputs/taint-generic-config.yaml
+// RUN:     optin.taint.TaintPropagation:Config=%S/Inputs/taint-generic-config-virtual.yaml \
+// RUN:   -ivfsoverlay %t/taint-generic-config-vfs.json
 
 // RUN: %clang_analyze_cc1 -Wno-format-security -Wno-pointer-to-int-cast \
 // RUN:   -Wno-incompatible-library-redeclaration -verify %s \

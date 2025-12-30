@@ -1,4 +1,4 @@
-//===--- DynamicStaticInitializersCheck.cpp - clang-tidy ------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -43,7 +43,7 @@ void DynamicStaticInitializersCheck::registerMatchers(MatchFinder *Finder) {
 void DynamicStaticInitializersCheck::check(
     const MatchFinder::MatchResult &Result) {
   const auto *Var = Result.Nodes.getNodeAs<VarDecl>("var");
-  SourceLocation Loc = Var->getLocation();
+  const SourceLocation Loc = Var->getLocation();
   if (!Loc.isValid() || !utils::isPresumedLocInHeaderFile(
                             Loc, *Result.SourceManager, HeaderFileExtensions))
     return;

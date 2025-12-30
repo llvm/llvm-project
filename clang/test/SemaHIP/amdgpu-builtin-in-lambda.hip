@@ -10,7 +10,7 @@ struct S {
     };
 
     static constexpr auto global_load_lds_lambda = [](void* src, __shared__ void *dst) {
-        __builtin_amdgcn_global_load_lds(src, dst, 16, 0, 0); // gfx90a-error{{invalid size value}} gfx90a-note{{size must be 1, 2, or 4}}
+        __builtin_amdgcn_global_load_lds(src, dst, 16, 0, 0); // gfx90a-error{{invalid size value}}
     };
 };
 
@@ -19,7 +19,7 @@ __device__ __amdgpu_buffer_rsrc_t test_simple_builtin(void *p, short stride, int
 }
 
 __device__ void test_target_dependant_builtin(void *src, __shared__ void *dst) {
-    S::global_load_lds_lambda(src, dst);
+    S::global_load_lds_lambda(src, dst); // gfx90a-note{{called by 'test_target_dependant_builtin'}}
 }
 
 constexpr auto make_buffer_rsrc_lambda = [](void *p, short stride, int num, int flags) {
@@ -27,7 +27,7 @@ constexpr auto make_buffer_rsrc_lambda = [](void *p, short stride, int num, int 
 };
 
 constexpr auto global_load_lds_lambda = [](void* src, __shared__ void *dst) {
-    __builtin_amdgcn_global_load_lds(src, dst, 16, 0, 0); // gfx90a-error{{invalid size value}} gfx90a-note{{size must be 1, 2, or 4}}
+    __builtin_amdgcn_global_load_lds(src, dst, 16, 0, 0); // gfx90a-error{{invalid size value}}
 };
 
 __device__ __amdgpu_buffer_rsrc_t global_test_simple_builtin(void *p, short stride, int num, int flags) {
@@ -35,7 +35,7 @@ __device__ __amdgpu_buffer_rsrc_t global_test_simple_builtin(void *p, short stri
 }
 
 __device__ void global_test_target_dependant_builtin(void *src, __shared__ void *dst) {
-    global_load_lds_lambda(src, dst);
+    global_load_lds_lambda(src, dst); // gfx90a-note{{called by 'global_test_target_dependant_builtin'}}
 }
 
 __device__ __amdgpu_buffer_rsrc_t local_test_simple_builtin(void *p, short stride, int num, int flags) {
@@ -47,7 +47,7 @@ __device__ __amdgpu_buffer_rsrc_t local_test_simple_builtin(void *p, short strid
 
 __device__ void local_test_target_dependant_builtin(void *src, __shared__ void *dst) {
     constexpr auto f = [](void* src, __shared__ void *dst) {
-        __builtin_amdgcn_global_load_lds(src, dst, 16, 0, 0); // gfx90a-error{{invalid size value}} gfx90a-note{{size must be 1, 2, or 4}}
+        __builtin_amdgcn_global_load_lds(src, dst, 16, 0, 0); // gfx90a-error{{invalid size value}}
     };
-    f(src, dst);
+    f(src, dst); // gfx90a-note{{called by 'local_test_target_dependant_builtin'}}
 }

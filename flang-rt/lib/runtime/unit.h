@@ -59,6 +59,7 @@ class PseudoOpenFile {
 public:
   using FileOffset = std::int64_t;
 
+  RT_API_ATTRS int fd() const { return 1 /*stdout*/; }
   RT_API_ATTRS const char *path() const { return nullptr; }
   RT_API_ATTRS std::size_t pathLength() const { return 0; }
   RT_API_ATTRS void set_path(OwningPtr<char> &&, std::size_t bytes) {}
@@ -98,14 +99,18 @@ using FileFrameClass = FileFrame<ExternalFileUnit>;
 #else // defined(RT_USE_PSEUDO_FILE_UNIT)
 using OpenFileClass = PseudoOpenFile;
 // Use not so big buffer for the pseudo file unit frame.
-using FileFrameClass = FileFrame<ExternalFileUnit, 1024>;
+using FileFrameClass = FileFrame<ExternalFileUnit, 256>;
 #endif // defined(RT_USE_PSEUDO_FILE_UNIT)
 
 class ExternalFileUnit : public ConnectionState,
                          public OpenFileClass,
                          public FileFrameClass {
 public:
+#ifdef RT_USE_PSEUDO_FILE_UNIT
+  static constexpr int maxAsyncIds{64};
+#else
   static constexpr int maxAsyncIds{64 * 16};
+#endif
 
   explicit RT_API_ATTRS ExternalFileUnit(int unitNumber)
       : unitNumber_{unitNumber} {

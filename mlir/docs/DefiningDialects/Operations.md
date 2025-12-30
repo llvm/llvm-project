@@ -287,6 +287,11 @@ like `"0.5f"`, and an integer array default value should be specified as like
 The generated operation printing function will not print default-valued
 attributes when the attribute value is equal to the default.
 
+For enum attributes, you can use `DefaultValuedEnumAttr<EnumAttr, EnumCase>`
+instead of `DefaultValuedAttr`. This allows specifying the default value using a
+TableGen `EnumCase` variable instead of a raw string. For example 
+`DefaultValuedEnumAttr<SomeI64Enum, I64Case5>`.
+
 #### Confining attributes
 
 `ConfinedAttr` is provided as a general mechanism to help modelling further
@@ -1648,6 +1653,15 @@ inline constexpr MyBitEnum operator&(MyBitEnum a, MyBitEnum b) {
 }
 inline constexpr MyBitEnum operator^(MyBitEnum a, MyBitEnum b) {
   return static_cast<MyBitEnum>(static_cast<uint32_t>(a) ^ static_cast<uint32_t>(b));
+}
+inline constexpr MyBitEnum &operator|=(MyBitEnum &a, MyBitEnum b) {
+  return a = a | b;
+}
+inline constexpr MyBitEnum &operator&=(MyBitEnum &a, MyBitEnum b) {
+  return a = a & b;
+}
+inline constexpr MyBitEnum &operator^=(MyBitEnum &a, MyBitEnum b) {
+  return a = a ^ b;
 }
 inline constexpr MyBitEnum operator~(MyBitEnum bits) {
   // Ensure only bits that can be present in the enum are set

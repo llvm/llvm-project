@@ -8,6 +8,7 @@
 
 #include "Pass.h"
 
+#include "Globals.h"
 #include "IRModule.h"
 #include "mlir-c/Pass.h"
 // clang-format off
@@ -57,6 +58,20 @@ private:
 /// Create the `mlir.passmanager` here.
 void mlir::python::populatePassManagerSubmodule(nb::module_ &m) {
   //----------------------------------------------------------------------------
+  // Mapping of enumerated types
+  //----------------------------------------------------------------------------
+  nb::enum_<MlirPassDisplayMode>(m, "PassDisplayMode")
+      .value("LIST", MLIR_PASS_DISPLAY_MODE_LIST)
+      .value("PIPELINE", MLIR_PASS_DISPLAY_MODE_PIPELINE);
+
+  //----------------------------------------------------------------------------
+  // Mapping of MlirExternalPass
+  //----------------------------------------------------------------------------
+  nb::class_<MlirExternalPass>(m, "ExternalPass")
+      .def("signal_pass_failure",
+           [](MlirExternalPass pass) { mlirExternalPassSignalFailure(pass); });
+
+  //----------------------------------------------------------------------------
   // Mapping of the top-level PassManager
   //----------------------------------------------------------------------------
   nb::class_<PyPassManager>(m, "PassManager")
@@ -70,6 +85,9 @@ void mlir::python::populatePassManagerSubmodule(nb::module_ &m) {
             new (&self) PyPassManager(passManager);
           },
           "anchor_op"_a = nb::str("any"), "context"_a = nb::none(),
+          // clang-format off
+          nb::sig("def __init__(self, anchor_op: str = 'any', context: " MAKE_MLIR_PYTHON_QUALNAME("ir.Context") " | None = None) -> None"),
+          // clang-format on
           "Create a new PassManager for the current (or provided) Context.")
       .def_prop_ro(MLIR_PYTHON_CAPI_PTR_ATTR, &PyPassManager::getCapsule)
       .def(MLIR_PYTHON_CAPI_FACTORY_ATTR, &PyPassManager::createFromCapsule)
@@ -128,6 +146,14 @@ void mlir::python::populatePassManagerSubmodule(nb::module_ &m) {
             mlirPassManagerEnableTiming(passManager.get());
           },
           "Enable pass timing.")
+      .def(
+          "enable_statistics",
+          [](PyPassManager &passManager, MlirPassDisplayMode displayMode) {
+            mlirPassManagerEnableStatistics(passManager.get(), displayMode);
+          },
+          "displayMode"_a =
+              MlirPassDisplayMode::MLIR_PASS_DISPLAY_MODE_PIPELINE,
+          "Enable pass statistics.")
       .def_static(
           "parse",
           [](const std::string &pipeline, DefaultingPyMlirContext context) {
@@ -142,6 +168,9 @@ void mlir::python::populatePassManagerSubmodule(nb::module_ &m) {
             return new PyPassManager(passManager);
           },
           "pipeline"_a, "context"_a = nb::none(),
+          // clang-format off
+          nb::sig("def parse(pipeline: str, context: " MAKE_MLIR_PYTHON_QUALNAME("ir.Context") " | None = None) -> PassManager"),
+          // clang-format on
           "Parse a textual pass-pipeline and return a top-level PassManager "
           "that can be applied on a Module. Throw a ValueError if the pipeline "
           "can't be parsed")
@@ -168,9 +197,7 @@ void mlir::python::populatePassManagerSubmodule(nb::module_ &m) {
               name = nb::cast<std::string>(
                   nb::borrow<nb::str>(run.attr("__name__")));
             }
-            MlirTypeIDAllocator typeIDAllocator = mlirTypeIDAllocatorCreate();
-            MlirTypeID passID =
-                mlirTypeIDAllocatorAllocateTypeID(typeIDAllocator);
+            MlirTypeID passID = PyGlobals::get().allocateTypeID();
             MlirExternalPassCallbacks callbacks;
             callbacks.construct = [](void *obj) {
               (void)nb::handle(static_cast<PyObject *>(obj)).inc_ref();
@@ -182,9 +209,9 @@ void mlir::python::populatePassManagerSubmodule(nb::module_ &m) {
             callbacks.clone = [](void *) -> void * {
               throw std::runtime_error("Cloning Python passes not supported");
             };
-            callbacks.run = [](MlirOperation op, MlirExternalPass,
+            callbacks.run = [](MlirOperation op, MlirExternalPass pass,
                                void *userData) {
-              nb::borrow<nb::callable>(static_cast<PyObject *>(userData))(op);
+              nb::handle(static_cast<PyObject *>(userData))(op, pass);
             };
             auto externalPass = mlirCreateExternalPass(
                 passID, mlirStringRefCreate(name->data(), name->length()),
@@ -197,7 +224,19 @@ void mlir::python::populatePassManagerSubmodule(nb::module_ &m) {
           },
           "run"_a, "name"_a.none() = nb::none(), "argument"_a.none() = "",
           "description"_a.none() = "", "op_name"_a.none() = "",
-          "Add a python-defined pass to the pass manager.")
+          R"(
+            Add a python-defined pass to the current pipeline of the pass manager.
+
+            Args:
+              run: A callable with signature ``(op: ir.Operation, pass_: ExternalPass) -> None``.
+                   Called when the pass executes. It receives the operation to be processed and
+                   the current ``ExternalPass`` instance.
+                   Use ``pass_.signal_pass_failure()`` to signal failure.
+              name: The name of the pass. Defaults to ``run.__name__``.
+              argument: The command-line argument for the pass. Defaults to empty.
+              description: The description of the pass. Defaults to empty.
+              op_name: The name of the operation this pass operates on.
+                       It will be a generic operation pass if not specified.)")
       .def(
           "run",
           [](PyPassManager &passManager, PyOperationBase &op) {
@@ -210,6 +249,9 @@ void mlir::python::populatePassManagerSubmodule(nb::module_ &m) {
                               errors.take());
           },
           "operation"_a,
+          // clang-format off
+          nb::sig("def run(self, operation: " MAKE_MLIR_PYTHON_QUALNAME("ir._OperationBase") ") -> None"),
+          // clang-format on
           "Run the pass manager on the provided operation, raising an "
           "MLIRError on failure.")
       .def(

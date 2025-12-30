@@ -14,7 +14,7 @@ define void @example1(i32 %n) nounwind uwtable ssp {
 ; CHECK-NEXT:    [[N4:%.*]] = shl i32 [[N]], 2
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[N4]], -4
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[TMP0]] to i64
-; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -30,7 +30,7 @@ define void @example1(i32 %n) nounwind uwtable ssp {
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX]], [[TMP1]]
 ; CHECK-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH]]
+; CHECK-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH:%.*]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:

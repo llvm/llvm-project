@@ -656,6 +656,10 @@ MlirLocation mlirOperationGetLocation(MlirOperation op) {
   return wrap(unwrap(op)->getLoc());
 }
 
+void mlirOperationSetLocation(MlirOperation op, MlirLocation loc) {
+  unwrap(op)->setLoc(unwrap(loc));
+}
+
 MlirTypeID mlirOperationGetTypeID(MlirOperation op) {
   if (auto info = unwrap(op)->getRegisteredInfo())
     return wrap(info->getTypeID());
@@ -898,6 +902,11 @@ void mlirOperationWalk(MlirOperation op, MlirOperationWalkCallback callback,
   }
 }
 
+void mlirOperationReplaceUsesOfWith(MlirOperation op, MlirValue oldValue,
+                                    MlirValue newValue) {
+  unwrap(op)->replaceUsesOfWith(unwrap(oldValue), unwrap(newValue));
+}
+
 //===----------------------------------------------------------------------===//
 // Region API.
 //===----------------------------------------------------------------------===//
@@ -1123,6 +1132,11 @@ intptr_t mlirBlockArgumentGetArgNumber(MlirValue value) {
 void mlirBlockArgumentSetType(MlirValue value, MlirType type) {
   if (auto blockArg = llvm::dyn_cast<BlockArgument>(unwrap(value)))
     blockArg.setType(unwrap(type));
+}
+
+void mlirBlockArgumentSetLocation(MlirValue value, MlirLocation loc) {
+  if (auto blockArg = llvm::dyn_cast<BlockArgument>(unwrap(value)))
+    blockArg.setLoc(unwrap(loc));
 }
 
 MlirOperation mlirOpResultGetOwner(MlirValue value) {

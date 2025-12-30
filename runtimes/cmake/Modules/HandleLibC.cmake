@@ -10,10 +10,10 @@
 
 include_guard(GLOBAL)
 
-set(RUNTIMES_SUPPORTED_C_LIBRARIES system llvm-libc)
+set(RUNTIMES_SUPPORTED_C_LIBRARIES system llvm-libc picolibc newlib)
 set(RUNTIMES_USE_LIBC "system" CACHE STRING "Specify C library to use. Supported values are ${RUNTIMES_SUPPORTED_C_LIBRARIES}.")
 if (NOT "${RUNTIMES_USE_LIBC}" IN_LIST RUNTIMES_SUPPORTED_C_LIBRARIES)
-  message(FATAL_ERROR "Unsupported C library: '${RUNTIMES_CXX_ABI}'. Supported values are ${RUNTIMES_SUPPORTED_C_LIBRARIES}.")
+  message(FATAL_ERROR "Unsupported C library: '${RUNTIMES_USE_LIBC}'. Supported values are ${RUNTIMES_SUPPORTED_C_LIBRARIES}.")
 endif()
 
 # Link against a system-provided libc
@@ -30,6 +30,9 @@ elseif (RUNTIMES_USE_LIBC STREQUAL "llvm-libc")
   check_cxx_compiler_flag(-nostdlibinc CXX_SUPPORTS_NOSTDLIBINC_FLAG)
   if(CXX_SUPPORTS_NOSTDLIBINC_FLAG)
     target_compile_options(runtimes-libc-headers INTERFACE "-nostdlibinc")
+    if(LIBC_KERNEL_HEADERS)
+      target_compile_options(runtimes-libc-headers INTERFACE "-idirafter${LIBC_KERNEL_HEADERS}")
+    endif()
   endif()
 
   add_library(runtimes-libc-static INTERFACE)

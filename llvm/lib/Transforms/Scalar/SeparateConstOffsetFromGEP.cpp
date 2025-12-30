@@ -1116,22 +1116,23 @@ bool SeparateConstOffsetFromGEP::splitGEP(GetElementPtrInst *GEP) {
 
       // Splits this GEP index into a variadic part and a constant offset, and
       // uses the variadic part as the new index.
-      Value *OldIdx = GEP->getOperand(I);
+      Value *Idx = GEP->getOperand(I);
       User *UserChainTail;
       bool PreservesNUW;
-      Value *NewIdx = ConstantOffsetExtractor::Extract(
-          OldIdx, GEP, UserChainTail, PreservesNUW);
+      Value *NewIdx = ConstantOffsetExtractor::Extract(Idx, GEP, UserChainTail,
+                                                       PreservesNUW);
       if (NewIdx != nullptr) {
         // Switches to the index with the constant offset removed.
         GEP->setOperand(I, NewIdx);
         // After switching to the new index, we can garbage-collect UserChain
         // and the old index if they are not used.
         RecursivelyDeleteTriviallyDeadInstructions(UserChainTail);
-        RecursivelyDeleteTriviallyDeadInstructions(OldIdx);
-        AllOffsetsNonNegative =
-            AllOffsetsNonNegative && isKnownNonNegative(NewIdx, *DL);
+        RecursivelyDeleteTriviallyDeadInstructions(Idx);
+        Idx = NewIdx;
         AllNUWPreserved &= PreservesNUW;
       }
+      AllOffsetsNonNegative =
+          AllOffsetsNonNegative && isKnownNonNegative(Idx, *DL);
     }
   }
   if (ExtractBase) {

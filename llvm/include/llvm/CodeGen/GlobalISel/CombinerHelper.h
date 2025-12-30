@@ -81,6 +81,15 @@ struct ShiftOfShiftedLogic {
   uint64_t ValSum;
 };
 
+struct LshrOfTruncOfLshr {
+  bool Mask = false;
+  APInt MaskVal;
+  Register Src;
+  APInt ShiftAmt;
+  LLT ShiftAmtTy;
+  LLT InnerShiftTy;
+};
+
 using BuildFnTy = std::function<void(MachineIRBuilder &)>;
 
 using OperandBuildSteps =
@@ -267,7 +276,6 @@ public:
                                  SmallVector<Register> &Ops) const;
 
   /// Replace \p MI with a build_vector.
-  bool matchCombineShuffleToBuildVector(MachineInstr &MI) const;
   void applyCombineShuffleToBuildVector(MachineInstr &MI) const;
 
   /// Try to combine G_SHUFFLE_VECTOR into G_CONCAT_VECTORS.
@@ -285,9 +293,7 @@ public:
                                  SmallVectorImpl<Register> &Ops) const;
   /// Replace \p MI with a concat_vectors with \p Ops.
   void applyCombineShuffleVector(MachineInstr &MI,
-                                 const ArrayRef<Register> Ops) const;
-  bool matchShuffleToExtract(MachineInstr &MI) const;
-  void applyShuffleToExtract(MachineInstr &MI) const;
+                                 ArrayRef<Register> Ops) const;
 
   /// Optimize memcpy intrinsics et al, e.g. constant len calls.
   /// /p MaxLen if non-zero specifies the max length of a mem libcall to inline.
@@ -337,6 +343,12 @@ public:
                                 ShiftOfShiftedLogic &MatchInfo) const;
 
   bool matchCommuteShift(MachineInstr &MI, BuildFnTy &MatchInfo) const;
+
+  /// Fold (lshr (trunc (lshr x, C1)), C2) -> trunc (shift x, (C1 + C2))
+  bool matchLshrOfTruncOfLshr(MachineInstr &MI, LshrOfTruncOfLshr &MatchInfo,
+                              MachineInstr &ShiftMI) const;
+  void applyLshrOfTruncOfLshr(MachineInstr &MI,
+                              LshrOfTruncOfLshr &MatchInfo) const;
 
   /// Transform a multiply by a power-of-2 value to a left shift.
   bool matchCombineMulToShl(MachineInstr &MI, unsigned &ShiftVal) const;
@@ -628,11 +640,18 @@ public:
   /// This variant does not erase \p MI after calling the build function.
   void applyBuildFnNoErase(MachineInstr &MI, BuildFnTy &MatchInfo) const;
 
-  bool matchOrShiftToFunnelShift(MachineInstr &MI, BuildFnTy &MatchInfo) const;
+  bool matchOrShiftToFunnelShift(MachineInstr &MI, bool AllowScalarConstants,
+                                 BuildFnTy &MatchInfo) const;
   bool matchFunnelShiftToRotate(MachineInstr &MI) const;
   void applyFunnelShiftToRotate(MachineInstr &MI) const;
   bool matchRotateOutOfRange(MachineInstr &MI) const;
   void applyRotateOutOfRange(MachineInstr &MI) const;
+
+  bool matchCombineBuildUnmerge(MachineInstr &MI, MachineRegisterInfo &MRI,
+                                Register &UnmergeSrc) const;
+  void applyCombineBuildUnmerge(MachineInstr &MI, MachineRegisterInfo &MRI,
+                                MachineIRBuilder &B,
+                                Register &UnmergeSrc) const;
 
   bool matchUseVectorTruncate(MachineInstr &MI, Register &MatchInfo) const;
   void applyUseVectorTruncate(MachineInstr &MI, Register &MatchInfo) const;
@@ -832,6 +851,10 @@ public:
                                                 BuildFnTy &MatchInfo) const;
 
   bool matchCombineFMinMaxNaN(MachineInstr &MI, unsigned &Info) const;
+
+  bool matchRepeatedFPDivisor(MachineInstr &MI,
+                              SmallVector<MachineInstr *> &MatchInfo) const;
+  void applyRepeatedFPDivisor(SmallVector<MachineInstr *> &MatchInfo) const;
 
   /// Transform G_ADD(x, G_SUB(y, x)) to y.
   /// Transform G_ADD(G_SUB(y, x), x) to y.

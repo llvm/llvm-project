@@ -20,7 +20,6 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 
-#include <algorithm>
 #include <cassert>
 #include <cstdint>
 #include <type_traits>
@@ -179,7 +178,7 @@ public:
   /// This function tells the caller whether the element count is known at
   /// compile time to be a multiple of the scalar value RHS.
   constexpr bool isKnownMultipleOf(ScalarTy RHS) const {
-    return getKnownMinValue() % RHS == 0;
+    return RHS != 0 && getKnownMinValue() % RHS == 0;
   }
 
   /// Returns whether or not the callee is known to be a multiple of RHS.
@@ -191,7 +190,8 @@ public:
     // x % y == 0 !=> x % (vscale * y) == 0
     if (!isScalable() && RHS.isScalable())
       return false;
-    return getKnownMinValue() % RHS.getKnownMinValue() == 0;
+    return RHS.getKnownMinValue() != 0 &&
+           getKnownMinValue() % RHS.getKnownMinValue() == 0;
   }
 
   // Return the minimum value with the assumption that the count is exact.

@@ -176,7 +176,7 @@ PreservedAnalyses PGOCtxProfFlatteningPass::run(Module &M,
     assert(areAllBBsReachable(
                F, MAM.getResult<FunctionAnalysisManagerModuleProxy>(M)
                       .getManager()) &&
-           "Function has unreacheable basic blocks. The expectation was that "
+           "Function has unreachable basic blocks. The expectation was that "
            "DCE was run before.");
 
     auto It = FlattenedProfile.find(AssignGUIDPass::getGUID(F));

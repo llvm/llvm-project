@@ -36,6 +36,7 @@
 
 namespace llvm {
 class raw_fd_ostream;
+class PassPlugin;
 class Timer;
 class TimerGroup;
 }
@@ -83,6 +84,9 @@ class CompilerInstance : public ModuleLoader {
   /// The options used in this compiler instance.
   std::shared_ptr<CompilerInvocation> Invocation;
 
+  /// The virtual file system instance.
+  IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS;
+
   /// The diagnostics engine instance.
   IntrusiveRefCntPtr<DiagnosticsEngine> Diagnostics;
 
@@ -127,6 +131,9 @@ class CompilerInstance : public ModuleLoader {
 
   /// The semantic analysis object.
   std::unique_ptr<Sema> TheSema;
+
+  /// Back-end pass plugins.
+  std::vector<std::unique_ptr<llvm::PassPlugin>> PassPlugins;
 
   /// The frontend timer group.
   std::unique_ptr<llvm::TimerGroup> timerGroup;
@@ -409,9 +416,31 @@ public:
   /// @name Virtual File System
   /// @{
 
-  llvm::vfs::FileSystem &getVirtualFileSystem() const;
-  llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem>
-  getVirtualFileSystemPtr() const;
+  bool hasVirtualFileSystem() const { return VFS != nullptr; }
+
+  /// Create a virtual file system instance based on the invocation.
+  ///
+  /// @param BaseFS The file system that may be used when configuring the final
+  ///               file system, and act as the underlying file system. Must not
+  ///               be NULL.
+  /// @param DC If non-NULL, the diagnostic consumer to be used in case
+  ///           configuring the file system emits diagnostics. Note that the
+  ///           DiagnosticsEngine using the consumer won't obey the
+  ///           --warning-suppression-mappings= flag.
+  void createVirtualFileSystem(IntrusiveRefCntPtr<llvm::vfs::FileSystem>
+                                   BaseFS = llvm::vfs::getRealFileSystem(),
+                               DiagnosticConsumer *DC = nullptr);
+
+  /// Use the given file system.
+  void setVirtualFileSystem(IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS) {
+    VFS = std::move(FS);
+  }
+
+  llvm::vfs::FileSystem &getVirtualFileSystem() const { return *VFS; }
+
+  IntrusiveRefCntPtr<llvm::vfs::FileSystem> getVirtualFileSystemPtr() const {
+    return VFS;
+  }
 
   /// @}
   /// @name File Manager
@@ -435,7 +464,7 @@ public:
     FileMgr.resetWithoutRelease();
   }
 
-  /// Replace the current file manager and virtual file system.
+  /// Replace the current file manager.
   void setFileManager(IntrusiveRefCntPtr<FileManager> Value);
 
   /// @}
@@ -619,6 +648,14 @@ public:
   /// the compiler instance takes ownership of \p Value.
   void setCodeCompletionConsumer(CodeCompleteConsumer *Value);
 
+  /// }
+  /// @name Back-end Pass Plugins
+  /// @{
+
+  llvm::ArrayRef<std::unique_ptr<llvm::PassPlugin>> getPassPlugins() const {
+    return PassPlugins;
+  }
+
   /// @}
   /// @name Frontend timer
   /// @{
@@ -650,32 +687,31 @@ public:
   /// Note that this routine also replaces the diagnostic client,
   /// allocating one if one is not provided.
   ///
-  /// \param VFS is used for any IO needed when creating DiagnosticsEngine. It
-  /// doesn't replace VFS in the CompilerInstance (if any).
-  ///
   /// \param Client If non-NULL, a diagnostic client that will be
   /// attached to (and, then, owned by) the DiagnosticsEngine inside this AST
   /// unit.
   ///
   /// \param ShouldOwnClient If Client is non-NULL, specifies whether
   /// the diagnostic object should take ownership of the client.
-  void createDiagnostics(llvm::vfs::FileSystem &VFS,
-                         DiagnosticConsumer *Client = nullptr,
+  void createDiagnostics(DiagnosticConsumer *Client = nullptr,
                          bool ShouldOwnClient = true);
 
-  /// Create a DiagnosticsEngine object with a the TextDiagnosticPrinter.
+  /// Create a DiagnosticsEngine object.
   ///
   /// If no diagnostic client is provided, this creates a
   /// DiagnosticConsumer that is owned by the returned diagnostic
   /// object, if using directly the caller is responsible for
   /// releasing the returned DiagnosticsEngine's client eventually.
   ///
+  /// \param VFS The file system used to load the suppression mappings file.
+  ///
   /// \param Opts - The diagnostic options; note that the created text
   /// diagnostic object contains a reference to these options.
   ///
   /// \param Client If non-NULL, a diagnostic client that will be
   /// attached to (and, then, owned by) the returned DiagnosticsEngine
-  /// object.
+  /// object. If NULL, the returned DiagnosticsEngine will own a newly-created
+  /// client.
   ///
   /// \param CodeGenOpts If non-NULL, the code gen options in use, which may be
   /// used by some diagnostics printers (for logging purposes only).
@@ -688,13 +724,10 @@ public:
                     const CodeGenOptions *CodeGenOpts = nullptr);
 
   /// Create the file manager and replace any existing one with it.
-  ///
-  /// \return The new file manager on success, or null on failure.
-  FileManager *
-  createFileManager(IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS = nullptr);
+  void createFileManager();
 
   /// Create the source manager and replace any existing one with it.
-  void createSourceManager(FileManager &FileMgr);
+  void createSourceManager();
 
   /// Create the preprocessor, using the invocation, file, and source managers,
   /// and replace any existing one with it.
@@ -892,7 +925,7 @@ public:
   /// The \c ThreadSafeConfig takes precedence over the \c DiagnosticConsumer
   /// and \c FileSystem of this instance (and disables \c FileManager sharing).
   std::unique_ptr<CompilerInstance> cloneForModuleCompile(
-      SourceLocation ImportLoc, Module *Module, StringRef ModuleFileName,
+      SourceLocation ImportLoc, const Module *Module, StringRef ModuleFileName,
       std::optional<ThreadSafeCloneConfig> ThreadSafeConfig = std::nullopt);
 
   /// Compile a module file for the given module, using the options
@@ -923,6 +956,12 @@ public:
 
   void addDependencyCollector(std::shared_ptr<DependencyCollector> Listener) {
     DependencyCollectors.push_back(std::move(Listener));
+  }
+
+  void clearDependencyCollectors() { DependencyCollectors.clear(); }
+
+  std::vector<std::shared_ptr<DependencyCollector>> &getDependencyCollectors() {
+    return DependencyCollectors;
   }
 
   void setExternalSemaSource(IntrusiveRefCntPtr<ExternalSemaSource> ESS);
