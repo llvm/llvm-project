@@ -9,7 +9,9 @@
 #include "Pass.h"
 #include "Rewrite.h"
 #include "mlir/Bindings/Python/Globals.h"
+#include "mlir/Bindings/Python/IRAttributes.h"
 #include "mlir/Bindings/Python/IRCore.h"
+#include "mlir/Bindings/Python/IRTypes.h"
 #include "mlir/Bindings/Python/Nanobind.h"
 #include "mlir/Bindings/Python/NanobindUtils.h"
 
@@ -506,8 +508,616 @@ void PyOpAttributeMap::bind(nanobind::module_ &m) {
           "Returns a list of `(name, attribute)` tuples.");
 }
 
+//------------------------------------------------------------------------------
+// Populates the core attributes of the 'ir' submodule.
+//------------------------------------------------------------------------------
+
+void PyAffineMapAttribute::bindDerived(ClassTy &c) {
+  c.def_static(
+      "get",
+      [](PyAffineMap &affineMap) {
+        MlirAttribute attr = mlirAffineMapAttrGet(affineMap.get());
+        return PyAffineMapAttribute(affineMap.getContext(), attr);
+      },
+      nanobind::arg("affine_map"), "Gets an attribute wrapping an AffineMap.");
+  c.def_prop_ro(
+      "value",
+      [](PyAffineMapAttribute &self) {
+        return PyAffineMap(self.getContext(), mlirAffineMapAttrGetValue(self));
+      },
+      "Returns the value of the AffineMap attribute");
+}
+
+void PyIntegerSetAttribute::bindDerived(ClassTy &c) {
+  c.def_static(
+      "get",
+      [](PyIntegerSet &integerSet) {
+        MlirAttribute attr = mlirIntegerSetAttrGet(integerSet.get());
+        return PyIntegerSetAttribute(integerSet.getContext(), attr);
+      },
+      nanobind::arg("integer_set"),
+      "Gets an attribute wrapping an IntegerSet.");
+}
+
+void PyArrayAttribute::PyArrayAttributeIterator::bind(nanobind::module_ &m) {
+  nanobind::class_<PyArrayAttributeIterator>(m, "ArrayAttributeIterator")
+      .def("__iter__", &PyArrayAttributeIterator::dunderIter)
+      .def("__next__", &PyArrayAttributeIterator::dunderNext);
+}
+
+void PyArrayAttribute::bindDerived(ClassTy &c) {
+  c.def_static(
+      "get",
+      [](const nanobind::list &attributes, DefaultingPyMlirContext context) {
+        SmallVector<MlirAttribute> mlirAttributes;
+        mlirAttributes.reserve(nanobind::len(attributes));
+        for (auto attribute : attributes) {
+          mlirAttributes.push_back(pyTryCast<PyAttribute>(attribute));
+        }
+        MlirAttribute attr = mlirArrayAttrGet(
+            context->get(), mlirAttributes.size(), mlirAttributes.data());
+        return PyArrayAttribute(context->getRef(), attr);
+      },
+      nanobind::arg("attributes"), nanobind::arg("context") = nanobind::none(),
+      "Gets a uniqued Array attribute");
+  c.def("__getitem__",
+        [](PyArrayAttribute &arr,
+           intptr_t i) -> nanobind::typed<nanobind::object, PyAttribute> {
+          if (i >= mlirArrayAttrGetNumElements(arr))
+            throw nanobind::index_error("ArrayAttribute index out of range");
+          return PyAttribute(arr.getContext(), arr.getItem(i)).maybeDownCast();
+        })
+      .def("__len__",
+           [](const PyArrayAttribute &arr) {
+             return mlirArrayAttrGetNumElements(arr);
+           })
+      .def("__iter__", [](const PyArrayAttribute &arr) {
+        return PyArrayAttributeIterator(arr);
+      });
+  c.def("__add__", [](PyArrayAttribute arr, const nanobind::list &extras) {
+    std::vector<MlirAttribute> attributes;
+    intptr_t numOldElements = mlirArrayAttrGetNumElements(arr);
+    attributes.reserve(numOldElements + nanobind::len(extras));
+    for (intptr_t i = 0; i < numOldElements; ++i)
+      attributes.push_back(arr.getItem(i));
+    for (nanobind::handle attr : extras)
+      attributes.push_back(pyTryCast<PyAttribute>(attr));
+    MlirAttribute arrayAttr = mlirArrayAttrGet(
+        arr.getContext()->get(), attributes.size(), attributes.data());
+    return PyArrayAttribute(arr.getContext(), arrayAttr);
+  });
+}
+
+void PyFloatAttribute::bindDerived(ClassTy &c) {
+  c.def_static(
+      "get",
+      [](PyType &type, double value, DefaultingPyLocation loc) {
+        PyMlirContext::ErrorCapture errors(loc->getContext());
+        MlirAttribute attr = mlirFloatAttrDoubleGetChecked(loc, type, value);
+        if (mlirAttributeIsNull(attr))
+          throw MLIRError("Invalid attribute", errors.take());
+        return PyFloatAttribute(type.getContext(), attr);
+      },
+      nanobind::arg("type"), nanobind::arg("value"),
+      nanobind::arg("loc") = nanobind::none(),
+      "Gets an uniqued float point attribute associated to a type");
+  c.def_static(
+      "get_unchecked",
+      [](PyType &type, double value, DefaultingPyMlirContext context) {
+        PyMlirContext::ErrorCapture errors(context->getRef());
+        MlirAttribute attr =
+            mlirFloatAttrDoubleGet(context.get()->get(), type, value);
+        if (mlirAttributeIsNull(attr))
+          throw MLIRError("Invalid attribute", errors.take());
+        return PyFloatAttribute(type.getContext(), attr);
+      },
+      nanobind::arg("type"), nanobind::arg("value"),
+      nanobind::arg("context") = nanobind::none(),
+      "Gets an uniqued float point attribute associated to a type");
+  c.def_static(
+      "get_f32",
+      [](double value, DefaultingPyMlirContext context) {
+        MlirAttribute attr = mlirFloatAttrDoubleGet(
+            context->get(), mlirF32TypeGet(context->get()), value);
+        return PyFloatAttribute(context->getRef(), attr);
+      },
+      nanobind::arg("value"), nanobind::arg("context") = nanobind::none(),
+      "Gets an uniqued float point attribute associated to a f32 type");
+  c.def_static(
+      "get_f64",
+      [](double value, DefaultingPyMlirContext context) {
+        MlirAttribute attr = mlirFloatAttrDoubleGet(
+            context->get(), mlirF64TypeGet(context->get()), value);
+        return PyFloatAttribute(context->getRef(), attr);
+      },
+      nanobind::arg("value"), nanobind::arg("context") = nanobind::none(),
+      "Gets an uniqued float point attribute associated to a f64 type");
+  c.def_prop_ro("value", mlirFloatAttrGetValueDouble,
+                "Returns the value of the float attribute");
+  c.def("__float__", mlirFloatAttrGetValueDouble,
+        "Converts the value of the float attribute to a Python float");
+}
+
+void PyIntegerAttribute::bindDerived(ClassTy &c) {
+  c.def_static(
+      "get",
+      [](PyType &type, int64_t value) {
+        MlirAttribute attr = mlirIntegerAttrGet(type, value);
+        return PyIntegerAttribute(type.getContext(), attr);
+      },
+      nanobind::arg("type"), nanobind::arg("value"),
+      "Gets an uniqued integer attribute associated to a type");
+  c.def_prop_ro("value", toPyInt, "Returns the value of the integer attribute");
+  c.def("__int__", toPyInt,
+        "Converts the value of the integer attribute to a Python int");
+  c.def_prop_ro_static(
+      "static_typeid",
+      [](nanobind::object & /*class*/) {
+        return PyTypeID(mlirIntegerAttrGetTypeID());
+      },
+      nanobind::sig("def static_typeid(/) -> TypeID"));
+}
+
+void PyBoolAttribute::bindDerived(ClassTy &c) {
+  c.def_static(
+      "get",
+      [](bool value, DefaultingPyMlirContext context) {
+        MlirAttribute attr = mlirBoolAttrGet(context->get(), value);
+        return PyBoolAttribute(context->getRef(), attr);
+      },
+      nanobind::arg("value"), nanobind::arg("context") = nanobind::none(),
+      "Gets an uniqued bool attribute");
+  c.def_prop_ro("value", mlirBoolAttrGetValue,
+                "Returns the value of the bool attribute");
+  c.def("__bool__", mlirBoolAttrGetValue,
+        "Converts the value of the bool attribute to a Python bool");
+}
+
+void PySymbolRefAttribute::bindDerived(ClassTy &c) {
+  c.def_static(
+      "get",
+      [](const std::vector<std::string> &symbols,
+         DefaultingPyMlirContext context) {
+        return PySymbolRefAttribute::fromList(symbols, context.resolve());
+      },
+      nanobind::arg("symbols"), nanobind::arg("context") = nanobind::none(),
+      "Gets a uniqued SymbolRef attribute from a list of symbol names");
+  c.def_prop_ro(
+      "value",
+      [](PySymbolRefAttribute &self) {
+        std::vector<std::string> symbols = {
+            unwrap(mlirSymbolRefAttrGetRootReference(self)).str()};
+        for (int i = 0; i < mlirSymbolRefAttrGetNumNestedReferences(self); ++i)
+          symbols.push_back(
+              unwrap(mlirSymbolRefAttrGetRootReference(
+                         mlirSymbolRefAttrGetNestedReference(self, i)))
+                  .str());
+        return symbols;
+      },
+      "Returns the value of the SymbolRef attribute as a list[str]");
+}
+
+void PyFlatSymbolRefAttribute::bindDerived(ClassTy &c) {
+  c.def_static(
+      "get",
+      [](const std::string &value, DefaultingPyMlirContext context) {
+        MlirAttribute attr =
+            mlirFlatSymbolRefAttrGet(context->get(), toMlirStringRef(value));
+        return PyFlatSymbolRefAttribute(context->getRef(), attr);
+      },
+      nanobind::arg("value"), nanobind::arg("context") = nanobind::none(),
+      "Gets a uniqued FlatSymbolRef attribute");
+  c.def_prop_ro(
+      "value",
+      [](PyFlatSymbolRefAttribute &self) {
+        MlirStringRef stringRef = mlirFlatSymbolRefAttrGetValue(self);
+        return nanobind::str(stringRef.data, stringRef.length);
+      },
+      "Returns the value of the FlatSymbolRef attribute as a string");
+}
+
+void PyOpaqueAttribute::bindDerived(ClassTy &c) {
+  c.def_static(
+      "get",
+      [](const std::string &dialectNamespace, const nb_buffer &buffer,
+         PyType &type, DefaultingPyMlirContext context) {
+        const nb_buffer_info bufferInfo = buffer.request();
+        intptr_t bufferSize = bufferInfo.size;
+        MlirAttribute attr = mlirOpaqueAttrGet(
+            context->get(), toMlirStringRef(dialectNamespace), bufferSize,
+            static_cast<char *>(bufferInfo.ptr), type);
+        return PyOpaqueAttribute(context->getRef(), attr);
+      },
+      nanobind::arg("dialect_namespace"), nanobind::arg("buffer"),
+      nanobind::arg("type"), nanobind::arg("context") = nanobind::none(),
+      // clang-format off
+        nanobind::sig("def get(dialect_namespace: str, buffer: typing_extensions.Buffer, type: Type, context: Context | None = None) -> OpaqueAttr"),
+      // clang-format on
+      "Gets an Opaque attribute.");
+  c.def_prop_ro(
+      "dialect_namespace",
+      [](PyOpaqueAttribute &self) {
+        MlirStringRef stringRef = mlirOpaqueAttrGetDialectNamespace(self);
+        return nanobind::str(stringRef.data, stringRef.length);
+      },
+      "Returns the dialect namespace for the Opaque attribute as a string");
+  c.def_prop_ro(
+      "data",
+      [](PyOpaqueAttribute &self) {
+        MlirStringRef stringRef = mlirOpaqueAttrGetData(self);
+        return nanobind::bytes(stringRef.data, stringRef.length);
+      },
+      "Returns the data for the Opaqued attributes as `bytes`");
+}
+
+static const char kDenseElementsAttrGetDocstring[] =
+    R"(Gets a DenseElementsAttr from a Python buffer or array.
+
+When `type` is not provided, then some limited type inferencing is done based
+on the buffer format. Support presently exists for 8/16/32/64 signed and
+unsigned integers and float16/float32/float64. DenseElementsAttrs of these
+types can also be converted back to a corresponding buffer.
+
+For conversions outside of these types, a `type=` must be explicitly provided
+and the buffer contents must be bit-castable to the MLIR internal
+representation:
+
+  * Integer types (except for i1): the buffer must be byte aligned to the
+    next byte boundary.
+  * Floating point types: Must be bit-castable to the given floating point
+    size.
+  * i1 (bool): Bit packed into 8bit words where the bit pattern matches a
+    row major ordering. An arbitrary Numpy `bool_` array can be bit packed to
+    this specification with: `np.packbits(ary, axis=None, bitorder='little')`.
+
+If a single element buffer is passed (or for i1, a single byte with value 0
+or 255), then a splat will be created.
+
+Args:
+  array: The array or buffer to convert.
+  signless: If inferring an appropriate MLIR type, use signless types for
+    integers (defaults True).
+  type: Skips inference of the MLIR element type and uses this instead. The
+    storage size must be consistent with the actual contents of the buffer.
+  shape: Overrides the shape of the buffer when constructing the MLIR
+    shaped type. This is needed when the physical and logical shape differ (as
+    for i1).
+  context: Explicit context, if not from context manager.
+
+Returns:
+  DenseElementsAttr on success.
+
+Raises:
+  ValueError: If the type of the buffer or array cannot be matched to an MLIR
+    type or if the buffer does not meet expectations.
+)";
+
+static const char kDenseElementsAttrGetFromListDocstring[] =
+    R"(Gets a DenseElementsAttr from a Python list of attributes.
+
+Note that it can be expensive to construct attributes individually.
+For a large number of elements, consider using a Python buffer or array instead.
+
+Args:
+  attrs: A list of attributes.
+  type: The desired shape and type of the resulting DenseElementsAttr.
+    If not provided, the element type is determined based on the type
+    of the 0th attribute and the shape is `[len(attrs)]`.
+  context: Explicit context, if not from context manager.
+
+Returns:
+  DenseElementsAttr on success.
+
+Raises:
+  ValueError: If the type of the attributes does not match the type
+    specified by `shaped_type`.
+)";
+
+static const char kDenseResourceElementsAttrGetFromBufferDocstring[] =
+    R"(Gets a DenseResourceElementsAttr from a Python buffer or array.
+
+This function does minimal validation or massaging of the data, and it is
+up to the caller to ensure that the buffer meets the characteristics
+implied by the shape.
+
+The backing buffer and any user objects will be retained for the lifetime
+of the resource blob. This is typically bounded to the context but the
+resource can have a shorter lifespan depending on how it is used in
+subsequent processing.
+
+Args:
+  buffer: The array or buffer to convert.
+  name: Name to provide to the resource (may be changed upon collision).
+  type: The explicit ShapedType to construct the attribute with.
+  context: Explicit context, if not from context manager.
+
+Returns:
+  DenseResourceElementsAttr on success.
+
+Raises:
+  ValueError: If the type of the buffer or array cannot be matched to an MLIR
+    type or if the buffer does not meet expectations.
+)";
+
+void PyDenseElementsAttribute::bindDerived(ClassTy &c) {
+#if PY_VERSION_HEX < 0x03090000
+  PyTypeObject *tp = reinterpret_cast<PyTypeObject *>(c.ptr());
+  tp->tp_as_buffer->bf_getbuffer = PyDenseElementsAttribute::bf_getbuffer;
+  tp->tp_as_buffer->bf_releasebuffer =
+      PyDenseElementsAttribute::bf_releasebuffer;
+#endif
+  c.def("__len__", &PyDenseElementsAttribute::dunderLen)
+      .def_static(
+          "get", PyDenseElementsAttribute::getFromBuffer,
+          nanobind::arg("array"), nanobind::arg("signless") = true,
+          nanobind::arg("type") = nanobind::none(),
+          nanobind::arg("shape") = nanobind::none(),
+          nanobind::arg("context") = nanobind::none(),
+          // clang-format off
+            nanobind::sig("def get(array: typing_extensions.Buffer, signless: bool = True, type: Type | None = None, shape: Sequence[int] | None = None, context: Context | None = None) -> DenseElementsAttr"),
+          // clang-format on
+          kDenseElementsAttrGetDocstring)
+      .def_static("get", PyDenseElementsAttribute::getFromList,
+                  nanobind::arg("attrs"),
+                  nanobind::arg("type") = nanobind::none(),
+                  nanobind::arg("context") = nanobind::none(),
+                  kDenseElementsAttrGetFromListDocstring)
+      .def_static("get_splat", PyDenseElementsAttribute::getSplat,
+                  nanobind::arg("shaped_type"), nanobind::arg("element_attr"),
+                  "Gets a DenseElementsAttr where all values are the same")
+      .def_prop_ro("is_splat",
+                   [](PyDenseElementsAttribute &self) -> bool {
+                     return mlirDenseElementsAttrIsSplat(self);
+                   })
+      .def("get_splat_value",
+           [](PyDenseElementsAttribute &self)
+               -> nanobind::typed<nanobind::object, PyAttribute> {
+             if (!mlirDenseElementsAttrIsSplat(self))
+               throw nanobind::value_error(
+                   "get_splat_value called on a non-splat attribute");
+             return PyAttribute(self.getContext(),
+                                mlirDenseElementsAttrGetSplatValue(self))
+                 .maybeDownCast();
+           });
+}
+
+void PyDenseIntElementsAttribute::bindDerived(ClassTy &c) {
+  c.def("__getitem__", &PyDenseIntElementsAttribute::dunderGetItem);
+}
+
+void PyDenseResourceElementsAttribute::bindDerived(ClassTy &c) {
+  c.def_static(
+      "get_from_buffer", PyDenseResourceElementsAttribute::getFromBuffer,
+      nanobind::arg("array"), nanobind::arg("name"), nanobind::arg("type"),
+      nanobind::arg("alignment") = nanobind::none(),
+      nanobind::arg("is_mutable") = false,
+      nanobind::arg("context") = nanobind::none(),
+      // clang-format off
+                 nanobind::sig("def get_from_buffer(array: typing_extensions.Buffer, name: str, type: Type, alignment: int | None = None, is_mutable: bool = False, context: Context | None = None) -> DenseResourceElementsAttr"),
+      // clang-format on
+      kDenseResourceElementsAttrGetFromBufferDocstring);
+}
+
+void PyDictAttribute::bindDerived(ClassTy &c) {
+  c.def("__contains__", &PyDictAttribute::dunderContains);
+  c.def("__len__", &PyDictAttribute::dunderLen);
+  c.def_static(
+      "get",
+      [](const nanobind::dict &attributes, DefaultingPyMlirContext context) {
+        SmallVector<MlirNamedAttribute> mlirNamedAttributes;
+        mlirNamedAttributes.reserve(attributes.size());
+        for (std::pair<nanobind::handle, nanobind::handle> it : attributes) {
+          auto &mlirAttr = nanobind::cast<PyAttribute &>(it.second);
+          auto name = nanobind::cast<std::string>(it.first);
+          mlirNamedAttributes.push_back(mlirNamedAttributeGet(
+              mlirIdentifierGet(mlirAttributeGetContext(mlirAttr),
+                                toMlirStringRef(name)),
+              mlirAttr));
+        }
+        MlirAttribute attr =
+            mlirDictionaryAttrGet(context->get(), mlirNamedAttributes.size(),
+                                  mlirNamedAttributes.data());
+        return PyDictAttribute(context->getRef(), attr);
+      },
+      nanobind::arg("value") = nanobind::dict(),
+      nanobind::arg("context") = nanobind::none(),
+      "Gets an uniqued dict attribute");
+  c.def("__getitem__",
+        [](PyDictAttribute &self, const std::string &name)
+            -> nanobind::typed<nanobind::object, PyAttribute> {
+          MlirAttribute attr =
+              mlirDictionaryAttrGetElementByName(self, toMlirStringRef(name));
+          if (mlirAttributeIsNull(attr))
+            throw nanobind::key_error(
+                "attempt to access a non-existent attribute");
+          return PyAttribute(self.getContext(), attr).maybeDownCast();
+        });
+  c.def("__getitem__", [](PyDictAttribute &self, intptr_t index) {
+    if (index < 0 || index >= self.dunderLen()) {
+      throw nanobind::index_error("attempt to access out of bounds attribute");
+    }
+    MlirNamedAttribute namedAttr = mlirDictionaryAttrGetElement(self, index);
+    return PyNamedAttribute(
+        namedAttr.attribute,
+        std::string(mlirIdentifierStr(namedAttr.name).data));
+  });
+}
+
+void PyDenseFPElementsAttribute::bindDerived(ClassTy &c) {
+  c.def("__getitem__", &PyDenseFPElementsAttribute::dunderGetItem);
+}
+
+void PyTypeAttribute::bindDerived(ClassTy &c) {
+  c.def_static(
+      "get",
+      [](const PyType &value, DefaultingPyMlirContext context) {
+        MlirAttribute attr = mlirTypeAttrGet(value.get());
+        return PyTypeAttribute(context->getRef(), attr);
+      },
+      nanobind::arg("value"), nanobind::arg("context") = nanobind::none(),
+      "Gets a uniqued Type attribute");
+  c.def_prop_ro(
+      "value",
+      [](PyTypeAttribute &self) -> nanobind::typed<nanobind::object, PyType> {
+        return PyType(self.getContext(), mlirTypeAttrGetValue(self.get()))
+            .maybeDownCast();
+      });
+}
+
+void PyUnitAttribute::bindDerived(ClassTy &c) {
+  c.def_static(
+      "get",
+      [](DefaultingPyMlirContext context) {
+        return PyUnitAttribute(context->getRef(),
+                               mlirUnitAttrGet(context->get()));
+      },
+      nanobind::arg("context") = nanobind::none(), "Create a Unit attribute.");
+}
+
+void PyStridedLayoutAttribute::bindDerived(ClassTy &c) {
+  c.def_static(
+      "get",
+      [](int64_t offset, const std::vector<int64_t> &strides,
+         DefaultingPyMlirContext ctx) {
+        MlirAttribute attr = mlirStridedLayoutAttrGet(
+            ctx->get(), offset, strides.size(), strides.data());
+        return PyStridedLayoutAttribute(ctx->getRef(), attr);
+      },
+      nanobind::arg("offset"), nanobind::arg("strides"),
+      nanobind::arg("context") = nanobind::none(),
+      "Gets a strided layout attribute.");
+  c.def_static(
+      "get_fully_dynamic",
+      [](int64_t rank, DefaultingPyMlirContext ctx) {
+        auto dynamic = mlirShapedTypeGetDynamicStrideOrOffset();
+        std::vector<int64_t> strides(rank);
+        llvm::fill(strides, dynamic);
+        MlirAttribute attr = mlirStridedLayoutAttrGet(
+            ctx->get(), dynamic, strides.size(), strides.data());
+        return PyStridedLayoutAttribute(ctx->getRef(), attr);
+      },
+      nanobind::arg("rank"), nanobind::arg("context") = nanobind::none(),
+      "Gets a strided layout attribute with dynamic offset and strides of "
+      "a "
+      "given rank.");
+  c.def_prop_ro(
+      "offset",
+      [](PyStridedLayoutAttribute &self) {
+        return mlirStridedLayoutAttrGetOffset(self);
+      },
+      "Returns the value of the float point attribute");
+  c.def_prop_ro(
+      "strides",
+      [](PyStridedLayoutAttribute &self) {
+        intptr_t size = mlirStridedLayoutAttrGetNumStrides(self);
+        std::vector<int64_t> strides(size);
+        for (intptr_t i = 0; i < size; i++) {
+          strides[i] = mlirStridedLayoutAttrGetStride(self, i);
+        }
+        return strides;
+      },
+      "Returns the value of the float point attribute");
+}
+
+void PyStringAttribute::bindDerived(ClassTy &c) {
+  c.def_static(
+      "get",
+      [](const std::string &value, DefaultingPyMlirContext context) {
+        MlirAttribute attr =
+            mlirStringAttrGet(context->get(), toMlirStringRef(value));
+        return PyStringAttribute(context->getRef(), attr);
+      },
+      nb::arg("value"), nb::arg("context") = nb::none(),
+      "Gets a uniqued string attribute");
+  c.def_static(
+      "get",
+      [](const nb::bytes &value, DefaultingPyMlirContext context) {
+        MlirAttribute attr =
+            mlirStringAttrGet(context->get(), toMlirStringRef(value));
+        return PyStringAttribute(context->getRef(), attr);
+      },
+      nb::arg("value"), nb::arg("context") = nb::none(),
+      "Gets a uniqued string attribute");
+  c.def_static(
+      "get_typed",
+      [](PyType &type, const std::string &value) {
+        MlirAttribute attr =
+            mlirStringAttrTypedGet(type, toMlirStringRef(value));
+        return PyStringAttribute(type.getContext(), attr);
+      },
+      nb::arg("type"), nb::arg("value"),
+      "Gets a uniqued string attribute associated to a type");
+  c.def_prop_ro(
+      "value",
+      [](PyStringAttribute &self) {
+        MlirStringRef stringRef = mlirStringAttrGetValue(self);
+        return nb::str(stringRef.data, stringRef.length);
+      },
+      "Returns the value of the string attribute");
+  c.def_prop_ro(
+      "value_bytes",
+      [](PyStringAttribute &self) {
+        MlirStringRef stringRef = mlirStringAttrGetValue(self);
+        return nb::bytes(stringRef.data, stringRef.length);
+      },
+      "Returns the value of the string attribute as `bytes`");
+}
+
+void populateIRAttributes(nb::module_ &m) {
+  PyAffineMapAttribute::bind(m);
+  PyDenseBoolArrayAttribute::bind(m);
+  PyDenseBoolArrayAttribute::PyDenseArrayIterator::bind(m);
+  PyDenseI8ArrayAttribute::bind(m);
+  PyDenseI8ArrayAttribute::PyDenseArrayIterator::bind(m);
+  PyDenseI16ArrayAttribute::bind(m);
+  PyDenseI16ArrayAttribute::PyDenseArrayIterator::bind(m);
+  PyDenseI32ArrayAttribute::bind(m);
+  PyDenseI32ArrayAttribute::PyDenseArrayIterator::bind(m);
+  PyDenseI64ArrayAttribute::bind(m);
+  PyDenseI64ArrayAttribute::PyDenseArrayIterator::bind(m);
+  PyDenseF32ArrayAttribute::bind(m);
+  PyDenseF32ArrayAttribute::PyDenseArrayIterator::bind(m);
+  PyDenseF64ArrayAttribute::bind(m);
+  PyDenseF64ArrayAttribute::PyDenseArrayIterator::bind(m);
+  PyGlobals::get().registerTypeCaster(
+      mlirDenseArrayAttrGetTypeID(),
+      nb::cast<nb::callable>(nb::cpp_function(denseArrayAttributeCaster)));
+
+  PyArrayAttribute::bind(m);
+  PyArrayAttribute::PyArrayAttributeIterator::bind(m);
+  PyBoolAttribute::bind(m);
+  PyDenseElementsAttribute::bind(m, PyDenseElementsAttribute::slots);
+  PyDenseFPElementsAttribute::bind(m);
+  PyDenseIntElementsAttribute::bind(m);
+  PyGlobals::get().registerTypeCaster(
+      mlirDenseIntOrFPElementsAttrGetTypeID(),
+      nb::cast<nb::callable>(
+          nb::cpp_function(denseIntOrFPElementsAttributeCaster)));
+  PyDenseResourceElementsAttribute::bind(m);
+
+  PyDictAttribute::bind(m);
+  PySymbolRefAttribute::bind(m);
+  PyGlobals::get().registerTypeCaster(
+      mlirSymbolRefAttrGetTypeID(),
+      nb::cast<nb::callable>(
+          nb::cpp_function(symbolRefOrFlatSymbolRefAttributeCaster)));
+
+  PyFlatSymbolRefAttribute::bind(m);
+  PyOpaqueAttribute::bind(m);
+  PyFloatAttribute::bind(m);
+  PyIntegerAttribute::bind(m);
+  PyIntegerSetAttribute::bind(m);
+  PyStringAttribute::bind(m);
+  PyTypeAttribute::bind(m);
+  PyGlobals::get().registerTypeCaster(
+      mlirIntegerAttrGetTypeID(),
+      nb::cast<nb::callable>(nb::cpp_function(integerOrBoolAttributeCaster)));
+  PyUnitAttribute::bind(m);
+
+  PyStridedLayoutAttribute::bind(m);
+}
+
 void populateIRAffine(nb::module_ &m);
-void populateIRAttributes(nb::module_ &m);
 void populateIRInterfaces(nb::module_ &m);
 void populateIRTypes(nb::module_ &m);
 } // namespace MLIR_BINDINGS_PYTHON_DOMAIN

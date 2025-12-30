@@ -979,7 +979,8 @@ public:
       PyGlobals::get().registerTypeCaster(
           DerivedTy::getTypeIdFunction(),
           nanobind::cast<nanobind::callable>(nanobind::cpp_function(
-              [](PyType pyType) -> DerivedTy { return pyType; })));
+              [](PyType pyType) -> DerivedTy { return pyType; })),
+          /*replace*/ true);
     }
 
     DerivedTy::bindDerived(cls);
@@ -1123,7 +1124,8 @@ public:
           nanobind::cast<nanobind::callable>(
               nanobind::cpp_function([](PyAttribute pyAttribute) -> DerivedTy {
                 return pyAttribute;
-              })));
+              })),
+          /*replace*/ true);
     }
 
     DerivedTy::bindDerived(cls);
@@ -1511,6 +1513,8 @@ public:
   // and redefine bindDerived.
   using ClassTy = nanobind::class_<DerivedTy, PyValue>;
   using IsAFunctionTy = bool (*)(MlirValue);
+  using GetTypeIDFunctionTy = MlirTypeID (*)();
+  static constexpr GetTypeIDFunctionTy getTypeIdFunction = nullptr;
 
   PyConcreteValue() = default;
   PyConcreteValue(PyOperationRef operationRef, MlirValue value)
@@ -1553,6 +1557,15 @@ public:
         [](DerivedTy &self) -> nanobind::typed<nanobind::object, DerivedTy> {
           return self.maybeDownCast();
         });
+
+    if (DerivedTy::getTypeIdFunction) {
+      PyGlobals::get().registerValueCaster(
+          DerivedTy::getTypeIdFunction(),
+          nanobind::cast<nanobind::callable>(nanobind::cpp_function(
+              [](PyValue pyValue) -> DerivedTy { return pyValue; })),
+          /*replace*/ true);
+    }
+
     DerivedTy::bindDerived(cls);
   }
 
