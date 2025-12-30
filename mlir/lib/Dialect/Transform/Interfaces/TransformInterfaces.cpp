@@ -810,7 +810,7 @@ transform::TransformState::applyTransform(TransformOpInterface transform) {
   LDBG() << "applying: "
          << OpWithFlags(transform, OpPrintingFlags().skipRegions());
   FULL_LDBG() << "Top-level payload before application:\n" << *getTopLevel();
-  auto printOnFailureRAII = llvm::make_scope_exit([this] {
+  llvm::scope_exit printOnFailureRAII([this] {
     (void)this;
     LDBG() << "Failing Top-level payload:\n"
            << OpWithFlags(getTopLevel(),

@@ -2355,8 +2355,7 @@ private:
     if (Fortran::lower::isInsideOpenACCComputeConstruct(*builder)) {
       // Open up a new scope for the loop variables.
       localSymbols.pushScope();
-      auto scopeGuard =
-          llvm::make_scope_exit([&]() { localSymbols.popScope(); });
+      llvm::scope_exit scopeGuard([&]() { localSymbols.popScope(); });
 
       mlir::Operation *loopOp = Fortran::lower::genOpenACCLoopFromDoConstruct(
           *this, bridge.getSemanticsContext(), localSymbols, doConstruct, eval);

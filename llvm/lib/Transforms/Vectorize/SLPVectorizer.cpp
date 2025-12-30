@@ -8314,7 +8314,7 @@ void BoUpSLP::reorderTopToBottom() {
     // mostly used order.
     ArrayRef<TreeEntry *> OrderedEntries = It->second.getArrayRef();
     // Delete VF entry upon exit.
-    auto Cleanup = make_scope_exit([&]() { VFToOrderedEntries.erase(It); });
+    llvm::scope_exit Cleanup([&]() { VFToOrderedEntries.erase(It); });
 
     // All operands are reordered and used only in this node - propagate the
     // most used order to the user node.
@@ -15973,7 +15973,7 @@ InstructionCost BoUpSLP::getSpillCost() {
     SmallDenseSet<std::pair<const BasicBlock *, const BasicBlock *>>
         ParentsPairsToAdd;
     bool Res = false;
-    auto Cleanup = make_scope_exit([&]() {
+    llvm::scope_exit Cleanup([&]() {
       for (const auto &KeyPair : ParentsPairsToAdd) {
         assert(!ParentOpParentToPreds.contains(KeyPair) &&
                "Should not have been added before.");
@@ -23398,7 +23398,7 @@ bool SLPVectorizerPass::vectorizeStores(
         if (Idx != StoreSeq.size() - 1)
           continue;
       }
-      auto E = make_scope_exit([&, &Dist = Dist, &InstIdx = InstIdx]() {
+      llvm::scope_exit E([&, &Dist = Dist, &InstIdx = InstIdx]() {
         Operands.clear();
         Operands.push_back(Stores[InstIdx]);
         PrevDist = Dist;

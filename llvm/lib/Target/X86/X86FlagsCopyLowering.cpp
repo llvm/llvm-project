@@ -424,7 +424,7 @@ bool X86FlagsCopyLoweringPass::runOnMachineFunction(MachineFunction &MF) {
           "Cannot lower EFLAGS copy unless it is defined in turn by a copy!");
     }
 
-    auto Cleanup = make_scope_exit([&] {
+    llvm::scope_exit Cleanup([&] {
       // All uses of the EFLAGS copy are now rewritten, kill the copy into
       // eflags and if dead the copy from.
       CopyI->eraseFromParent();

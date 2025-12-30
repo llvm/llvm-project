@@ -1418,7 +1418,7 @@ class HLSLBufferCopyEmitter {
                          llvm::ConstantInt *LoadIndex) {
     CurStoreIndices.push_back(StoreIndex);
     CurLoadIndices.push_back(LoadIndex);
-    auto RestoreIndices = llvm::make_scope_exit([&]() {
+    llvm::scope_exit RestoreIndices([&]() {
       CurStoreIndices.pop_back();
       CurLoadIndices.pop_back();
     });
