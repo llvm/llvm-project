@@ -20,6 +20,12 @@
 #include <utility>
 
 template <typename T>
+concept has_iterator = requires {
+  typename T::iterator;
+  typename T::const_iterator;
+};
+
+template <typename T>
 constexpr bool test_range_concept() {
   return std::ranges::range<std::optional<T>>;
 }
@@ -90,6 +96,17 @@ constexpr bool test() {
 }
 
 constexpr bool tests() {
+  // Verify that iterator is present for object type T, but for T&, that iterator is available only if T is
+  // an object type and is not an unbounded array.
+
+  static_assert(has_iterator<std::optional<int>>);
+  static_assert(has_iterator<std::optional<const int>>);
+  static_assert(has_iterator<std::optional<int&>>);
+  static_assert(has_iterator<std::optional<const int&>>);
+  static_assert(has_iterator<std::optional<int (&)[1]>>);
+  static_assert(!has_iterator<std::optional<int (&)[]>>);
+  static_assert(!has_iterator<std::optional<int (&)()>>);
+
   assert((test<int, 1>()));
   assert((test<char, 'a'>()));
   assert((test<bool, true>()));
@@ -103,7 +120,7 @@ constexpr bool tests() {
 
   assert(!test_range_concept<int (&)()>());
   assert(!test_range_concept<int (&)[]>());
-  assert(!test_range_concept<int (&)[42]>());
+  assert(test_range_concept<int (&)[42]>());
 
   return true;
 }
