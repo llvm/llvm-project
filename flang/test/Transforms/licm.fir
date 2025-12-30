@@ -1863,3 +1863,31 @@ func.func @test_shift_licm(%arg0 : index) {
   return
 }
 func.func private @takes_shift(!fir.shift<1>)
+
+// Check that fir.box_addr of !fir.boxproc is not speculated.
+// For some reason, we do not produce proper [hl]fir.declare
+// for optional dummy procedure pointers.
+// CHECK-LABEL: func.func @_QPtest_box_addr_proc(
+// CHECK-NOT: fir.box_addr
+// CHECK: fir.do_loop
+// CHECK: fir.box_addr
+func.func @_QPtest_box_addr_proc(%arg0: !fir.ref<f32> {fir.bindc_name = "x"}, %arg1: !fir.boxproc<() -> ()>) {
+  %c10 = arith.constant 10 : index
+  %c1 = arith.constant 1 : index
+  %0 = fir.dummy_scope : !fir.dscope
+  %1 = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFtest_box_addr_procEi"}
+  %2 = fir.declare %1 {uniq_name = "_QFtest_box_addr_procEi"} : (!fir.ref<i32>) -> !fir.ref<i32>
+  %3 = fir.declare %arg0 dummy_scope %0 arg 1 {uniq_name = "_QFtest_box_addr_procEx"} : (!fir.ref<f32>, !fir.dscope) -> !fir.ref<f32>
+  %4 = fir.convert %c1 : (index) -> i32
+  %5 = fir.do_loop %arg2 = %c1 to %c10 step %c1 iter_args(%arg3 = %4) -> (i32) {
+    fir.store %arg3 to %2 : !fir.ref<i32>
+    %6 = fir.box_addr %arg1 : (!fir.boxproc<() -> ()>) -> (() -> f32)
+    %7 = fir.call %6() : () -> f32
+    fir.store %7 to %3 : !fir.ref<f32>
+    %8 = fir.load %2 : !fir.ref<i32>
+    %9 = arith.addi %8, %4 overflow<nsw> : i32
+    fir.result %9 : i32
+  }
+  fir.store %5 to %2 : !fir.ref<i32>
+  return
+}

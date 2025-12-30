@@ -1157,6 +1157,10 @@ std::optional<std::int64_t> fir::BoxAddrOp::getViewOffset(mlir::OpResult) {
 }
 
 mlir::Speculation::Speculatability fir::BoxAddrOp::getSpeculatability() {
+  // Do not speculate fir.box_addr with BoxProcType and BoxCharType
+  // inputs.
+  if (!mlir::isa<fir::BaseBoxType>(getVal().getType()))
+    mlir::Speculation::NotSpeculatable;
   return mayBeAbsentBox(getVal()) ? mlir::Speculation::NotSpeculatable
                                   : mlir::Speculation::Speculatable;
 }
