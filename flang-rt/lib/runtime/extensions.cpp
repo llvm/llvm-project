@@ -452,7 +452,13 @@ float RTNAME(Rand)(int *i, const char *sourceFile, int line) {
   if (radix == 2) {
     mask = ~(unsigned)0u << (32 - digits + 1);
   } else if (radix == 16) {
-    mask = ~(unsigned)0u << ((8 - digits) * 4 + 1);
+    int shift_val = ((8 - digits) * 4 + 1);
+    if (shift_val < 0) {
+      Terminator terminator{sourceFile, line};
+      terminator.Crash("Radix 16: negative shift for mask. digits value maybe invalid.");
+    } else {
+      mask = ~(unsigned)0u << shift_val;
+    }
   } else {
     Terminator terminator{sourceFile, line};
     terminator.Crash("Radix unknown value.");
