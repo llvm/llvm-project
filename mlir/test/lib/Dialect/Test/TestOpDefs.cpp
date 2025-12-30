@@ -869,7 +869,7 @@ void TestWithBoundsOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
 
 void TestWithoutBoundsOp::inferResultRangesFromOptional(
     ArrayRef<IntegerValueRange> argRanges, SetIntLatticeFn setResultRanges) {
-  // mimic ops with uninitialized range
+  // Mimic ops with uninitialized range.
   setResultRanges(getResult(), IntegerValueRange{});
 }
 

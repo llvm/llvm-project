@@ -3184,7 +3184,7 @@ def TestWithBoundsOp : TEST_Op<"with_bounds",
 
 def TestWithoutBoundsOp : TEST_Op<"without_bounds",
                          [DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRangesFromOptional"]>,
-                         NoMemoryEffect]> {
+                          NoMemoryEffect]> {
   let description = [{
     Creates a value with uninitialized range for integer range analysis tests.
 
