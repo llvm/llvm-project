@@ -33,7 +33,10 @@ public:
   typedef typename A::pint_t pint_t;
   typedef typename A::sint_t sint_t;
 
-  static int stepWithDwarf(A &addressSpace, const typename R::link_reg_t &pc,
+  // Note: R::link_reg_arg_t is used intentionally instead of `pint_t` to keep
+  // signature of `__ptrauth`-qualified values of `link_reg_t` type on AArch64
+  // PAuth-enabled ABI intact. See corresponding typedefs in `Registers_arm64`.
+  static int stepWithDwarf(A &addressSpace, typename R::link_reg_arg_t pc,
                            pint_t fdeStart, R &registers, bool &isSignalFrame,
                            bool stage2);
 
@@ -209,7 +212,7 @@ bool DwarfInstructions<A, R>::isReturnAddressSignedWithPC(A &addressSpace,
 
 template <typename A, typename R>
 int DwarfInstructions<A, R>::stepWithDwarf(A &addressSpace,
-                                           const typename R::link_reg_t &pc,
+                                           typename R::link_reg_arg_t pc,
                                            pint_t fdeStart, R &registers,
                                            bool &isSignalFrame, bool stage2) {
   FDE_Info fdeInfo;
@@ -217,8 +220,8 @@ int DwarfInstructions<A, R>::stepWithDwarf(A &addressSpace,
   if (CFI_Parser<A>::decodeFDE(addressSpace, fdeStart, &fdeInfo,
                                &cieInfo) == NULL) {
     PrologInfo prolog;
-    if (CFI_Parser<A>::parseFDEInstructions(addressSpace, fdeInfo, cieInfo, pc,
-                                            R::getArch(), &prolog)) {
+    if (CFI_Parser<A>::template parseFDEInstructions<R>(
+            addressSpace, fdeInfo, cieInfo, pc, R::getArch(), &prolog)) {
       // get pointer to cfa (architecture specific)
       pint_t cfa = getCFA(addressSpace, prolog, registers);
 
