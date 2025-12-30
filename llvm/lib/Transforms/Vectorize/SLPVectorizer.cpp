@@ -13080,91 +13080,78 @@ static InstructionCost canConvertToFMA(ArrayRef<Value *> VL,
 
 void BoUpSLP::transformNodes() {
   auto withinNodeTransform = [&](VecTreeTy &VT) -> bool {
-  constexpr TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
-  BaseGraphSize = VT.size();
+    constexpr TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
+    BaseGraphSize = VT.size();
 
-  // Turn graph transforming mode on and off, when done.
-  // Operands are profitable if they are:
-  // 1. At least one constant
-  // or
-  // 2. Splats
-  // or
-  // 3. Results in good vectorization opportunity, i.e. may generate vector
-  // nodes and reduce cost of the graph.
-  auto CheckOperandsProfitability = [this](Instruction *I1, Instruction *I2,
-                                           const InstructionsState &S) {
-    SmallVector<SmallVector<std::pair<Value *, Value *>>> Candidates;
-    for (unsigned Op : seq<unsigned>(S.getMainOp()->getNumOperands()))
-      Candidates.emplace_back().emplace_back(I1->getOperand(Op),
-                                             I2->getOperand(Op));
-    return all_of(
-        Candidates, [this](ArrayRef<std::pair<Value *, Value *>> Cand) {
-          return all_of(Cand,
-                        [](const std::pair<Value *, Value *> &P) {
-                          return isa<Constant>(P.first) ||
-                                 isa<Constant>(P.second) || P.first == P.second;
-                        }) ||
-                 findBestRootPair(Cand, LookAheadHeuristics::ScoreSplatLoads);
-        });
-  };
+    // Turn graph transforming mode on and off, when done.
+    // Operands are profitable if they are:
+    // 1. At least one constant
+    // or
+    // 2. Splats
+    // or
+    // 3. Results in good vectorization opportunity, i.e. may generate vector
+    // nodes and reduce cost of the graph.
+    auto CheckOperandsProfitability = [this](Instruction *I1, Instruction *I2,
+                                             const InstructionsState &S) {
+      SmallVector<SmallVector<std::pair<Value *, Value *>>> Candidates;
+      for (unsigned Op : seq<unsigned>(S.getMainOp()->getNumOperands()))
+        Candidates.emplace_back().emplace_back(I1->getOperand(Op),
+                                               I2->getOperand(Op));
+      return all_of(
+          Candidates, [this](ArrayRef<std::pair<Value *, Value *>> Cand) {
+            return all_of(Cand,
+                          [](const std::pair<Value *, Value *> &P) {
+                            return isa<Constant>(P.first) ||
+                                   isa<Constant>(P.second) ||
+                                   P.first == P.second;
+                          }) ||
+                   findBestRootPair(Cand, LookAheadHeuristics::ScoreSplatLoads);
+          });
+    };
 
-  // Try to reorder gather nodes for better vectorization opportunities.
-  for (unsigned Idx : seq<unsigned>(BaseGraphSize)) {
-    TreeEntry &E = *VT[Idx];
-    if (E.isGather())
-      reorderGatherNode(E);
-  }
+    // Try to reorder gather nodes for better vectorization opportunities.
+    for (unsigned Idx : seq<unsigned>(BaseGraphSize)) {
+      TreeEntry &E = *VT[Idx];
+      if (E.isGather())
+        reorderGatherNode(E);
+    }
 
-  // Better to use full gathered loads analysis, if there are only 2 loads
-  // gathered nodes each having less than 16 elements.
-  constexpr unsigned VFLimit = 16;
-  bool ForceLoadGather =
-      count_if(VT, [&](const std::unique_ptr<TreeEntry> &TE) {
-        return TE->isGather() && TE->hasState() &&
-               TE->getOpcode() == Instruction::Load &&
-               TE->getVectorFactor() < VFLimit;
-      }) == 2;
+    // Better to use full gathered loads analysis, if there are only 2 loads
+    // gathered nodes each having less than 16 elements.
+    constexpr unsigned VFLimit = 16;
+    bool ForceLoadGather =
+        count_if(VT, [&](const std::unique_ptr<TreeEntry> &TE) {
+          return TE->isGather() && TE->hasState() &&
+                 TE->getOpcode() == Instruction::Load &&
+                 TE->getVectorFactor() < VFLimit;
+        }) == 2;
 
-  // Checks if the scalars are used in other node.
-  auto AreReusedScalars = [&](const TreeEntry *TE, ArrayRef<Value *> VL,
-                              function_ref<bool(Value *)> CheckContainer) {
-    return TE->isSame(VL) || all_of(VL, [&](Value *V) {
-             if (isa<PoisonValue>(V))
-               return true;
-             auto *I = dyn_cast<Instruction>(V);
-             if (!I)
-               return false;
-             return is_contained(TE->Scalars, I) || CheckContainer(I);
-           });
-  };
-  auto CheckForSameVectorNodes = [&](const TreeEntry &E) {
-    if (E.hasState()) {
-      if (ArrayRef<TreeEntry *> TEs = getTreeEntries(E.getMainOp());
-          !TEs.empty() && any_of(TEs, [&](const TreeEntry *TE) {
-            return AreReusedScalars(TE, E.Scalars, [&](Value *V) {
-              ArrayRef<TreeEntry *> VTEs = getTreeEntries(V);
-              return !VTEs.empty() && any_of(VTEs, [&](const TreeEntry *TE) {
-                return is_contained(TEs, TE);
+    // Checks if the scalars are used in other node.
+    auto AreReusedScalars = [&](const TreeEntry *TE, ArrayRef<Value *> VL,
+                                function_ref<bool(Value *)> CheckContainer) {
+      return TE->isSame(VL) || all_of(VL, [&](Value *V) {
+               if (isa<PoisonValue>(V))
+                 return true;
+               auto *I = dyn_cast<Instruction>(V);
+               if (!I)
+                 return false;
+               return is_contained(TE->Scalars, I) || CheckContainer(I);
+             });
+    };
+    auto CheckForSameVectorNodes = [&](const TreeEntry &E) {
+      if (E.hasState()) {
+        if (ArrayRef<TreeEntry *> TEs = getTreeEntries(E.getMainOp());
+            !TEs.empty() && any_of(TEs, [&](const TreeEntry *TE) {
+              return AreReusedScalars(TE, E.Scalars, [&](Value *V) {
+                ArrayRef<TreeEntry *> VTEs = getTreeEntries(V);
+                return !VTEs.empty() && any_of(VTEs, [&](const TreeEntry *TE) {
+                  return is_contained(TEs, TE);
+                });
               });
-            });
-          }))
-        return true;
-      ;
-      if (ArrayRef<TreeEntry *> TEs = getSplitTreeEntries(E.getMainOp());
-          !TEs.empty() && any_of(TEs, [&](const TreeEntry *TE) {
-            return AreReusedScalars(TE, E.Scalars, [&](Value *V) {
-              ArrayRef<TreeEntry *> VTEs = getSplitTreeEntries(V);
-              return !VTEs.empty() && any_of(VTEs, [&](const TreeEntry *TE) {
-                return is_contained(TEs, TE);
-              });
-            });
-          }))
-        return true;
-    } else {
-      // Check if the gather node full copy of split node.
-      auto *It = find_if(E.Scalars, IsaPred<Instruction>);
-      if (It != E.Scalars.end()) {
-        if (ArrayRef<TreeEntry *> TEs = getSplitTreeEntries(*It);
+            }))
+          return true;
+        ;
+        if (ArrayRef<TreeEntry *> TEs = getSplitTreeEntries(E.getMainOp());
             !TEs.empty() && any_of(TEs, [&](const TreeEntry *TE) {
               return AreReusedScalars(TE, E.Scalars, [&](Value *V) {
                 ArrayRef<TreeEntry *> VTEs = getSplitTreeEntries(V);
@@ -13174,335 +13161,355 @@ void BoUpSLP::transformNodes() {
               });
             }))
           return true;
+      } else {
+        // Check if the gather node full copy of split node.
+        auto *It = find_if(E.Scalars, IsaPred<Instruction>);
+        if (It != E.Scalars.end()) {
+          if (ArrayRef<TreeEntry *> TEs = getSplitTreeEntries(*It);
+              !TEs.empty() && any_of(TEs, [&](const TreeEntry *TE) {
+                return AreReusedScalars(TE, E.Scalars, [&](Value *V) {
+                  ArrayRef<TreeEntry *> VTEs = getSplitTreeEntries(V);
+                  return !VTEs.empty() &&
+                         any_of(VTEs, [&](const TreeEntry *TE) {
+                           return is_contained(TEs, TE);
+                         });
+                });
+              }))
+            return true;
+        }
       }
-    }
-    return false;
-  };
-  // The tree may grow here, so iterate over nodes, built before.
-  for (unsigned Idx : seq<unsigned>(BaseGraphSize)) {
-    TreeEntry &E = *VT[Idx];
-    if (E.isGather()) {
-      ArrayRef<Value *> VL = E.Scalars;
-      const unsigned Sz = getVectorElementSize(VL.front());
-      unsigned MinVF = getMinVF(2 * Sz);
-      // Do not try partial vectorization for small nodes (<= 2), nodes with the
-      // same opcode and same parent block or all constants.
-      if (VL.size() <= 2 || LoadEntriesToVectorize.contains({E.CntIdx, Idx}) ||
-          !(!E.hasState() || E.getOpcode() == Instruction::Load ||
-            // We use allSameOpcode instead of isAltShuffle because we don't
-            // want to use interchangeable instruction here.
-            !allSameOpcode(VL) || !allSameBlock(VL)) ||
-          allConstant(VL) || isSplat(VL))
-        continue;
-      if (ForceLoadGather && E.hasState() && E.getOpcode() == Instruction::Load)
-        continue;
-      // Check if the node is a copy of other vector nodes.
-      if (CheckForSameVectorNodes(E))
-        continue;
-      // Try to find vectorizable sequences and transform them into a series of
-      // insertvector instructions.
-      unsigned StartIdx = 0;
-      unsigned End = VL.size();
-      for (unsigned VF = getFloorFullVectorNumberOfElements(
-               *TTI, VL.front()->getType(), VL.size() - 1);
-           VF >= MinVF; VF = getFloorFullVectorNumberOfElements(
-                            *TTI, VL.front()->getType(), VF - 1)) {
-        if (StartIdx + VF > End)
+      return false;
+    };
+    // The tree may grow here, so iterate over nodes, built before.
+    for (unsigned Idx : seq<unsigned>(BaseGraphSize)) {
+      TreeEntry &E = *VT[Idx];
+      if (E.isGather()) {
+        ArrayRef<Value *> VL = E.Scalars;
+        const unsigned Sz = getVectorElementSize(VL.front());
+        unsigned MinVF = getMinVF(2 * Sz);
+        // Do not try partial vectorization for small nodes (<= 2), nodes with
+        // the same opcode and same parent block or all constants.
+        if (VL.size() <= 2 ||
+            LoadEntriesToVectorize.contains({E.CntIdx, Idx}) ||
+            !(!E.hasState() || E.getOpcode() == Instruction::Load ||
+              // We use allSameOpcode instead of isAltShuffle because we don't
+              // want to use interchangeable instruction here.
+              !allSameOpcode(VL) || !allSameBlock(VL)) ||
+            allConstant(VL) || isSplat(VL))
           continue;
-        SmallVector<std::pair<unsigned, unsigned>> Slices;
-        bool AllStrided = true;
-        for (unsigned Cnt = StartIdx; Cnt + VF <= End; Cnt += VF) {
-          ArrayRef<Value *> Slice = VL.slice(Cnt, VF);
-          // If any instruction is vectorized already - do not try again.
-          // Reuse the existing node, if it fully matches the slice.
-          if (isVectorized(Slice.front()) &&
-              !getSameValuesTreeEntry(Slice.front(), Slice, /*SameVF=*/true))
+        if (ForceLoadGather && E.hasState() &&
+            E.getOpcode() == Instruction::Load)
+          continue;
+        // Check if the node is a copy of other vector nodes.
+        if (CheckForSameVectorNodes(E))
+          continue;
+        // Try to find vectorizable sequences and transform them into a series
+        // of insertvector instructions.
+        unsigned StartIdx = 0;
+        unsigned End = VL.size();
+        for (unsigned VF = getFloorFullVectorNumberOfElements(
+                 *TTI, VL.front()->getType(), VL.size() - 1);
+             VF >= MinVF; VF = getFloorFullVectorNumberOfElements(
+                              *TTI, VL.front()->getType(), VF - 1)) {
+          if (StartIdx + VF > End)
             continue;
-          // Constant already handled effectively - skip.
-          if (allConstant(Slice))
-            continue;
-          // Do not try to vectorize small splats (less than vector register and
-          // only with the single non-undef element).
-          bool IsSplat = isSplat(Slice);
-          bool IsTwoRegisterSplat = true;
-          if (IsSplat && VF == 2) {
-            unsigned NumRegs2VF = ::getNumberOfParts(
-                *TTI, getWidenedType(Slice.front()->getType(), 2 * VF));
-            IsTwoRegisterSplat = NumRegs2VF == 2;
-          }
-          if (Slices.empty() || !IsSplat || !IsTwoRegisterSplat ||
-              count(Slice, Slice.front()) ==
-                  static_cast<long>(isa<UndefValue>(Slice.front()) ? VF - 1
-                                                                   : 1)) {
-            if (IsSplat)
+          SmallVector<std::pair<unsigned, unsigned>> Slices;
+          bool AllStrided = true;
+          for (unsigned Cnt = StartIdx; Cnt + VF <= End; Cnt += VF) {
+            ArrayRef<Value *> Slice = VL.slice(Cnt, VF);
+            // If any instruction is vectorized already - do not try again.
+            // Reuse the existing node, if it fully matches the slice.
+            if (isVectorized(Slice.front()) &&
+                !getSameValuesTreeEntry(Slice.front(), Slice, /*SameVF=*/true))
               continue;
-            InstructionsState S = getSameOpcode(Slice, *TLI);
-            if (!S || !allSameOpcode(Slice) || !allSameBlock(Slice) ||
-                (S.getOpcode() == Instruction::Load &&
-                 areKnownNonVectorizableLoads(Slice)) ||
-                (S.getOpcode() != Instruction::Load &&
-                 !hasFullVectorsOrPowerOf2(*TTI, Slice.front()->getType(), VF)))
+            // Constant already handled effectively - skip.
+            if (allConstant(Slice))
               continue;
-            if (VF == 2) {
-              // Try to vectorize reduced values or if all users are vectorized.
-              // For expensive instructions extra extracts might be profitable.
-              if ((!UserIgnoreList || E.Idx != 0) &&
-                  TTI->getInstructionCost(S.getMainOp(), CostKind) <
-                      TTI::TCC_Expensive &&
-                  !all_of(Slice, [&](Value *V) {
-                    if (isa<PoisonValue>(V))
-                      return true;
-                    return areAllUsersVectorized(cast<Instruction>(V),
-                                                 UserIgnoreList);
-                  }))
+            // Do not try to vectorize small splats (less than vector register
+            // and only with the single non-undef element).
+            bool IsSplat = isSplat(Slice);
+            bool IsTwoRegisterSplat = true;
+            if (IsSplat && VF == 2) {
+              unsigned NumRegs2VF = ::getNumberOfParts(
+                  *TTI, getWidenedType(Slice.front()->getType(), 2 * VF));
+              IsTwoRegisterSplat = NumRegs2VF == 2;
+            }
+            if (Slices.empty() || !IsSplat || !IsTwoRegisterSplat ||
+                count(Slice, Slice.front()) ==
+                    static_cast<long>(isa<UndefValue>(Slice.front()) ? VF - 1
+                                                                     : 1)) {
+              if (IsSplat)
                 continue;
-              if (S.getOpcode() == Instruction::Load) {
-                OrdersType Order;
-                SmallVector<Value *> PointerOps;
-                StridedPtrInfo SPtrInfo;
-                LoadsState Res = canVectorizeLoads(Slice, Slice.front(), Order,
-                                                   PointerOps, SPtrInfo);
-                AllStrided &= Res == LoadsState::StridedVectorize ||
-                              Res == LoadsState::ScatterVectorize ||
-                              Res == LoadsState::Gather;
-                // Do not vectorize gathers.
-                if (Res == LoadsState::ScatterVectorize ||
-                    Res == LoadsState::Gather) {
-                  if (Res == LoadsState::Gather) {
-                    registerNonVectorizableLoads(Slice);
-                    // If reductions and the scalars from the root node are
-                    // analyzed - mark as non-vectorizable reduction.
-                    if (UserIgnoreList && E.Idx == 0)
-                      analyzedReductionVals(Slice);
+              InstructionsState S = getSameOpcode(Slice, *TLI);
+              if (!S || !allSameOpcode(Slice) || !allSameBlock(Slice) ||
+                  (S.getOpcode() == Instruction::Load &&
+                   areKnownNonVectorizableLoads(Slice)) ||
+                  (S.getOpcode() != Instruction::Load &&
+                   !hasFullVectorsOrPowerOf2(*TTI, Slice.front()->getType(),
+                                             VF)))
+                continue;
+              if (VF == 2) {
+                // Try to vectorize reduced values or if all users are
+                // vectorized. For expensive instructions extra extracts might
+                // be profitable.
+                if ((!UserIgnoreList || E.Idx != 0) &&
+                    TTI->getInstructionCost(S.getMainOp(), CostKind) <
+                        TTI::TCC_Expensive &&
+                    !all_of(Slice, [&](Value *V) {
+                      if (isa<PoisonValue>(V))
+                        return true;
+                      return areAllUsersVectorized(cast<Instruction>(V),
+                                                   UserIgnoreList);
+                    }))
+                  continue;
+                if (S.getOpcode() == Instruction::Load) {
+                  OrdersType Order;
+                  SmallVector<Value *> PointerOps;
+                  StridedPtrInfo SPtrInfo;
+                  LoadsState Res = canVectorizeLoads(
+                      Slice, Slice.front(), Order, PointerOps, SPtrInfo);
+                  AllStrided &= Res == LoadsState::StridedVectorize ||
+                                Res == LoadsState::ScatterVectorize ||
+                                Res == LoadsState::Gather;
+                  // Do not vectorize gathers.
+                  if (Res == LoadsState::ScatterVectorize ||
+                      Res == LoadsState::Gather) {
+                    if (Res == LoadsState::Gather) {
+                      registerNonVectorizableLoads(Slice);
+                      // If reductions and the scalars from the root node are
+                      // analyzed - mark as non-vectorizable reduction.
+                      if (UserIgnoreList && E.Idx == 0)
+                        analyzedReductionVals(Slice);
+                    }
+                    continue;
                   }
+                } else if (S.getOpcode() == Instruction::ExtractElement ||
+                           (TTI->getInstructionCost(S.getMainOp(), CostKind) <
+                                TTI::TCC_Expensive &&
+                            !CheckOperandsProfitability(
+                                S.getMainOp(),
+                                cast<Instruction>(*find_if(
+                                    reverse(Slice), IsaPred<Instruction>)),
+                                S))) {
+                  // Do not vectorize extractelements (handled effectively
+                  // alread). Do not vectorize non-profitable instructions (with
+                  // low cost and non-vectorizable operands.)
                   continue;
                 }
-              } else if (S.getOpcode() == Instruction::ExtractElement ||
-                         (TTI->getInstructionCost(S.getMainOp(), CostKind) <
-                              TTI::TCC_Expensive &&
-                          !CheckOperandsProfitability(
-                              S.getMainOp(),
-                              cast<Instruction>(*find_if(reverse(Slice),
-                                                         IsaPred<Instruction>)),
-                              S))) {
-                // Do not vectorize extractelements (handled effectively
-                // alread). Do not vectorize non-profitable instructions (with
-                // low cost and non-vectorizable operands.)
-                continue;
               }
             }
+            Slices.emplace_back(Cnt, Slice.size());
           }
-          Slices.emplace_back(Cnt, Slice.size());
-        }
-        // Do not try to vectorize if all slides are strided or gathered with
-        // vector factor 2 and there are more than 2 slices. Better to handle
-        // them in gathered loads analysis, may result in better vectorization.
-        if (VF == 2 && AllStrided && Slices.size() > 2)
-          continue;
-        auto AddCombinedNode = [&](unsigned Idx, unsigned Cnt, unsigned Sz) {
-          E.CombinedEntriesWithIndices.emplace_back(
-              Idx, Cnt, VectorizableTree.size() - 1);
-          if (StartIdx == Cnt)
-            StartIdx = Cnt + Sz;
-          if (End == Cnt + Sz)
-            End = Cnt;
-        };
-        for (auto [Cnt, Sz] : Slices) {
-          ArrayRef<Value *> Slice = VL.slice(Cnt, Sz);
-          const TreeEntry *SameTE = nullptr;
-          if (const auto *It = find_if(Slice, IsaPred<Instruction>);
-              It != Slice.end()) {
-            // If any instruction is vectorized already - do not try again.
-            SameTE = getSameValuesTreeEntry(*It, Slice);
-          }
-          unsigned PrevSize = VT.size();
-          [[maybe_unused]] unsigned PrevEntriesSize =
-              LoadEntriesToVectorize.size();
-          buildTreeRec(Slice, 0, EdgeInfo(&E, UINT_MAX));
-          if (PrevSize + 1 == VT.size() && !SameTE &&
-              VT[PrevSize]->isGather() &&
-              VT[PrevSize]->hasState() &&
-              VT[PrevSize]->getOpcode() !=
-                  Instruction::ExtractElement &&
-              !isSplat(Slice)) {
-            if (UserIgnoreList && E.Idx == 0 && VF == 2)
-              analyzedReductionVals(Slice);
-            VT.pop_back();
-            assert(PrevEntriesSize == LoadEntriesToVectorize.size() &&
-                   "LoadEntriesToVectorize expected to remain the same");
+          // Do not try to vectorize if all slides are strided or gathered with
+          // vector factor 2 and there are more than 2 slices. Better to handle
+          // them in gathered loads analysis, may result in better
+          // vectorization.
+          if (VF == 2 && AllStrided && Slices.size() > 2)
             continue;
+          auto AddCombinedNode = [&](unsigned Idx, unsigned Cnt, unsigned Sz) {
+            E.CombinedEntriesWithIndices.emplace_back(
+                Idx, Cnt, VectorizableTree.size() - 1);
+            if (StartIdx == Cnt)
+              StartIdx = Cnt + Sz;
+            if (End == Cnt + Sz)
+              End = Cnt;
+          };
+          for (auto [Cnt, Sz] : Slices) {
+            ArrayRef<Value *> Slice = VL.slice(Cnt, Sz);
+            const TreeEntry *SameTE = nullptr;
+            if (const auto *It = find_if(Slice, IsaPred<Instruction>);
+                It != Slice.end()) {
+              // If any instruction is vectorized already - do not try again.
+              SameTE = getSameValuesTreeEntry(*It, Slice);
+            }
+            unsigned PrevSize = VT.size();
+            [[maybe_unused]] unsigned PrevEntriesSize =
+                LoadEntriesToVectorize.size();
+            buildTreeRec(Slice, 0, EdgeInfo(&E, UINT_MAX));
+            if (PrevSize + 1 == VT.size() && !SameTE &&
+                VT[PrevSize]->isGather() && VT[PrevSize]->hasState() &&
+                VT[PrevSize]->getOpcode() != Instruction::ExtractElement &&
+                !isSplat(Slice)) {
+              if (UserIgnoreList && E.Idx == 0 && VF == 2)
+                analyzedReductionVals(Slice);
+              VT.pop_back();
+              assert(PrevEntriesSize == LoadEntriesToVectorize.size() &&
+                     "LoadEntriesToVectorize expected to remain the same");
+              continue;
+            }
+            AddCombinedNode(PrevSize, Cnt, Sz);
           }
-          AddCombinedNode(PrevSize, Cnt, Sz);
+        }
+        // Restore ordering, if no extra vectorization happened.
+        if (E.CombinedEntriesWithIndices.empty() && !E.ReorderIndices.empty()) {
+          SmallVector<int> Mask(E.ReorderIndices.begin(),
+                                E.ReorderIndices.end());
+          reorderScalars(E.Scalars, Mask);
+          E.ReorderIndices.clear();
         }
       }
-      // Restore ordering, if no extra vectorization happened.
-      if (E.CombinedEntriesWithIndices.empty() && !E.ReorderIndices.empty()) {
-        SmallVector<int> Mask(E.ReorderIndices.begin(), E.ReorderIndices.end());
-        reorderScalars(E.Scalars, Mask);
-        E.ReorderIndices.clear();
-      }
-    }
-    if (!E.hasState())
-      continue;
-    switch (E.getOpcode()) {
-    case Instruction::Load: {
-      // No need to reorder masked gather loads, just reorder the scalar
-      // operands.
-      if (E.State != TreeEntry::Vectorize)
+      if (!E.hasState())
+        continue;
+      switch (E.getOpcode()) {
+      case Instruction::Load: {
+        // No need to reorder masked gather loads, just reorder the scalar
+        // operands.
+        if (E.State != TreeEntry::Vectorize)
+          break;
+        Type *ScalarTy = E.getMainOp()->getType();
+        auto *VecTy = getWidenedType(ScalarTy, E.Scalars.size());
+        Align CommonAlignment = computeCommonAlignment<LoadInst>(E.Scalars);
+        // Check if profitable to represent consecutive load + reverse as
+        // strided load with stride -1.
+        if (!E.ReorderIndices.empty() && isReverseOrder(E.ReorderIndices) &&
+            TTI->isLegalStridedLoadStore(VecTy, CommonAlignment)) {
+          SmallVector<int> Mask;
+          inversePermutation(E.ReorderIndices, Mask);
+          auto *BaseLI = cast<LoadInst>(E.Scalars.back());
+          InstructionCost OriginalVecCost =
+              TTI->getMemoryOpCost(Instruction::Load, VecTy, BaseLI->getAlign(),
+                                   BaseLI->getPointerAddressSpace(), CostKind,
+                                   TTI::OperandValueInfo()) +
+              ::getShuffleCost(*TTI, TTI::SK_Reverse, VecTy, Mask, CostKind);
+          InstructionCost StridedCost = TTI->getMemIntrinsicInstrCost(
+              MemIntrinsicCostAttributes(
+                  Intrinsic::experimental_vp_strided_load, VecTy,
+                  BaseLI->getPointerOperand(),
+                  /*VariableMask=*/false, CommonAlignment, BaseLI),
+              CostKind);
+          if (StridedCost < OriginalVecCost || ForceStridedLoads) {
+            // Strided load is more profitable than consecutive load + reverse -
+            // transform the node to strided load.
+            Type *StrideTy = DL->getIndexType(cast<LoadInst>(E.Scalars.front())
+                                                  ->getPointerOperand()
+                                                  ->getType());
+            StridedPtrInfo SPtrInfo;
+            SPtrInfo.StrideVal = ConstantInt::get(StrideTy, 1);
+            SPtrInfo.Ty = VecTy;
+            TreeEntryToStridedPtrInfoMap[&E] = SPtrInfo;
+            E.State = TreeEntry::StridedVectorize;
+          }
+        }
         break;
-      Type *ScalarTy = E.getMainOp()->getType();
-      auto *VecTy = getWidenedType(ScalarTy, E.Scalars.size());
-      Align CommonAlignment = computeCommonAlignment<LoadInst>(E.Scalars);
-      // Check if profitable to represent consecutive load + reverse as strided
-      // load with stride -1.
-      if (!E.ReorderIndices.empty() && isReverseOrder(E.ReorderIndices) &&
-          TTI->isLegalStridedLoadStore(VecTy, CommonAlignment)) {
-        SmallVector<int> Mask;
-        inversePermutation(E.ReorderIndices, Mask);
-        auto *BaseLI = cast<LoadInst>(E.Scalars.back());
-        InstructionCost OriginalVecCost =
-            TTI->getMemoryOpCost(Instruction::Load, VecTy, BaseLI->getAlign(),
-                                 BaseLI->getPointerAddressSpace(), CostKind,
-                                 TTI::OperandValueInfo()) +
-            ::getShuffleCost(*TTI, TTI::SK_Reverse, VecTy, Mask, CostKind);
-        InstructionCost StridedCost = TTI->getMemIntrinsicInstrCost(
-            MemIntrinsicCostAttributes(Intrinsic::experimental_vp_strided_load,
-                                       VecTy, BaseLI->getPointerOperand(),
-                                       /*VariableMask=*/false, CommonAlignment,
-                                       BaseLI),
-            CostKind);
-        if (StridedCost < OriginalVecCost || ForceStridedLoads) {
-          // Strided load is more profitable than consecutive load + reverse -
-          // transform the node to strided load.
-          Type *StrideTy = DL->getIndexType(cast<LoadInst>(E.Scalars.front())
-                                                ->getPointerOperand()
-                                                ->getType());
-          StridedPtrInfo SPtrInfo;
-          SPtrInfo.StrideVal = ConstantInt::get(StrideTy, 1);
-          SPtrInfo.Ty = VecTy;
-          TreeEntryToStridedPtrInfoMap[&E] = SPtrInfo;
-          E.State = TreeEntry::StridedVectorize;
-        }
       }
-      break;
-    }
-    case Instruction::Store: {
-      Type *ScalarTy =
-          cast<StoreInst>(E.getMainOp())->getValueOperand()->getType();
-      auto *VecTy = getWidenedType(ScalarTy, E.Scalars.size());
-      Align CommonAlignment = computeCommonAlignment<StoreInst>(E.Scalars);
-      // Check if profitable to represent consecutive load + reverse as strided
-      // load with stride -1.
-      if (!E.ReorderIndices.empty() && isReverseOrder(E.ReorderIndices) &&
-          TTI->isLegalStridedLoadStore(VecTy, CommonAlignment)) {
-        SmallVector<int> Mask;
-        inversePermutation(E.ReorderIndices, Mask);
-        auto *BaseSI = cast<StoreInst>(E.Scalars.back());
-        InstructionCost OriginalVecCost =
-            TTI->getMemoryOpCost(Instruction::Store, VecTy, BaseSI->getAlign(),
-                                 BaseSI->getPointerAddressSpace(), CostKind,
-                                 TTI::OperandValueInfo()) +
-            ::getShuffleCost(*TTI, TTI::SK_Reverse, VecTy, Mask, CostKind);
-        InstructionCost StridedCost = TTI->getMemIntrinsicInstrCost(
-            MemIntrinsicCostAttributes(Intrinsic::experimental_vp_strided_store,
-                                       VecTy, BaseSI->getPointerOperand(),
-                                       /*VariableMask=*/false, CommonAlignment,
-                                       BaseSI),
-            CostKind);
-        if (StridedCost < OriginalVecCost)
-          // Strided store is more profitable than reverse + consecutive store -
-          // transform the node to strided store.
-          E.State = TreeEntry::StridedVectorize;
-      } else if (!E.ReorderIndices.empty()) {
-        // Check for interleaved stores.
-        auto IsInterleaveMask = [&, &TTI = *TTI](ArrayRef<int> Mask) {
-          auto *BaseSI = cast<StoreInst>(E.Scalars.front());
-          assert(Mask.size() > 1 && "Expected mask greater than 1 element.");
-          if (Mask.size() < 4)
+      case Instruction::Store: {
+        Type *ScalarTy =
+            cast<StoreInst>(E.getMainOp())->getValueOperand()->getType();
+        auto *VecTy = getWidenedType(ScalarTy, E.Scalars.size());
+        Align CommonAlignment = computeCommonAlignment<StoreInst>(E.Scalars);
+        // Check if profitable to represent consecutive load + reverse as
+        // strided load with stride -1.
+        if (!E.ReorderIndices.empty() && isReverseOrder(E.ReorderIndices) &&
+            TTI->isLegalStridedLoadStore(VecTy, CommonAlignment)) {
+          SmallVector<int> Mask;
+          inversePermutation(E.ReorderIndices, Mask);
+          auto *BaseSI = cast<StoreInst>(E.Scalars.back());
+          InstructionCost OriginalVecCost =
+              TTI->getMemoryOpCost(Instruction::Store, VecTy,
+                                   BaseSI->getAlign(),
+                                   BaseSI->getPointerAddressSpace(), CostKind,
+                                   TTI::OperandValueInfo()) +
+              ::getShuffleCost(*TTI, TTI::SK_Reverse, VecTy, Mask, CostKind);
+          InstructionCost StridedCost = TTI->getMemIntrinsicInstrCost(
+              MemIntrinsicCostAttributes(
+                  Intrinsic::experimental_vp_strided_store, VecTy,
+                  BaseSI->getPointerOperand(),
+                  /*VariableMask=*/false, CommonAlignment, BaseSI),
+              CostKind);
+          if (StridedCost < OriginalVecCost)
+            // Strided store is more profitable than reverse + consecutive store
+            // - transform the node to strided store.
+            E.State = TreeEntry::StridedVectorize;
+        } else if (!E.ReorderIndices.empty()) {
+          // Check for interleaved stores.
+          auto IsInterleaveMask = [&, &TTI = *TTI](ArrayRef<int> Mask) {
+            auto *BaseSI = cast<StoreInst>(E.Scalars.front());
+            assert(Mask.size() > 1 && "Expected mask greater than 1 element.");
+            if (Mask.size() < 4)
+              return 0u;
+            for (unsigned Factor : seq<unsigned>(2, Mask.size() / 2 + 1)) {
+              if (ShuffleVectorInst::isInterleaveMask(
+                      Mask, Factor, VecTy->getElementCount().getFixedValue()) &&
+                  TTI.isLegalInterleavedAccessType(
+                      VecTy, Factor, BaseSI->getAlign(),
+                      BaseSI->getPointerAddressSpace()))
+                return Factor;
+            }
+
             return 0u;
-          for (unsigned Factor : seq<unsigned>(2, Mask.size() / 2 + 1)) {
-            if (ShuffleVectorInst::isInterleaveMask(
-                    Mask, Factor, VecTy->getElementCount().getFixedValue()) &&
-                TTI.isLegalInterleavedAccessType(
-                    VecTy, Factor, BaseSI->getAlign(),
-                    BaseSI->getPointerAddressSpace()))
-              return Factor;
-          }
-
-          return 0u;
-        };
-        SmallVector<int> Mask(E.ReorderIndices.begin(), E.ReorderIndices.end());
-        unsigned InterleaveFactor = IsInterleaveMask(Mask);
-        if (InterleaveFactor != 0)
-          E.setInterleave(InterleaveFactor);
+          };
+          SmallVector<int> Mask(E.ReorderIndices.begin(),
+                                E.ReorderIndices.end());
+          unsigned InterleaveFactor = IsInterleaveMask(Mask);
+          if (InterleaveFactor != 0)
+            E.setInterleave(InterleaveFactor);
+        }
+        break;
       }
-      break;
-    }
-    case Instruction::Select: {
-      if (E.State != TreeEntry::Vectorize)
+      case Instruction::Select: {
+        if (E.State != TreeEntry::Vectorize)
+          break;
+        auto [MinMaxID, SelectOnly] = canConvertToMinOrMaxIntrinsic(E.Scalars);
+        if (MinMaxID == Intrinsic::not_intrinsic)
+          break;
+        // This node is a minmax node.
+        E.CombinedOp = TreeEntry::MinMax;
+        TreeEntry *CondEntry = getOperandEntry(&E, 0);
+        if (SelectOnly && CondEntry->UserTreeIndex &&
+            CondEntry->State == TreeEntry::Vectorize) {
+          // The condition node is part of the combined minmax node.
+          CondEntry->State = TreeEntry::CombinedVectorize;
+        }
         break;
-      auto [MinMaxID, SelectOnly] = canConvertToMinOrMaxIntrinsic(E.Scalars);
-      if (MinMaxID == Intrinsic::not_intrinsic)
-        break;
-      // This node is a minmax node.
-      E.CombinedOp = TreeEntry::MinMax;
-      TreeEntry *CondEntry = getOperandEntry(&E, 0);
-      if (SelectOnly && CondEntry->UserTreeIndex &&
-          CondEntry->State == TreeEntry::Vectorize) {
-        // The condition node is part of the combined minmax node.
-        CondEntry->State = TreeEntry::CombinedVectorize;
       }
-      break;
-    }
-    case Instruction::FSub:
-    case Instruction::FAdd: {
-      // Check if possible to convert (a*b)+c to fma.
-      if (E.State != TreeEntry::Vectorize ||
-          !E.getOperations().isAddSubLikeOp())
+      case Instruction::FSub:
+      case Instruction::FAdd: {
+        // Check if possible to convert (a*b)+c to fma.
+        if (E.State != TreeEntry::Vectorize ||
+            !E.getOperations().isAddSubLikeOp())
+          break;
+        if (!canConvertToFMA(E.Scalars, E.getOperations(), *DT, *DL, *TTI, *TLI)
+                 .isValid())
+          break;
+        // This node is a fmuladd node.
+        E.CombinedOp = TreeEntry::FMulAdd;
+        TreeEntry *FMulEntry = getOperandEntry(&E, 0);
+        if (FMulEntry->UserTreeIndex &&
+            FMulEntry->State == TreeEntry::Vectorize) {
+          // The FMul node is part of the combined fmuladd node.
+          FMulEntry->State = TreeEntry::CombinedVectorize;
+        }
         break;
-      if (!canConvertToFMA(E.Scalars, E.getOperations(), *DT, *DL, *TTI, *TLI)
-               .isValid())
-        break;
-      // This node is a fmuladd node.
-      E.CombinedOp = TreeEntry::FMulAdd;
-      TreeEntry *FMulEntry = getOperandEntry(&E, 0);
-      if (FMulEntry->UserTreeIndex &&
-          FMulEntry->State == TreeEntry::Vectorize) {
-        // The FMul node is part of the combined fmuladd node.
-        FMulEntry->State = TreeEntry::CombinedVectorize;
       }
-      break;
+      default:
+        break;
+      }
     }
-    default:
-      break;
+
+    if (LoadEntriesToVectorize.empty()) {
+      // Single load node - exit.
+      if (VT.size() <= 1 && VT.front()->hasState() &&
+          VT.front()->getOpcode() == Instruction::Load)
+        return false;
+      // Small graph with small VF - exit.
+      constexpr unsigned SmallTree = 3;
+      constexpr unsigned SmallVF = 2;
+      if ((VT.size() <= SmallTree && VT.front()->Scalars.size() == SmallVF) ||
+          (VT.size() <= 2 && UserIgnoreList))
+        return false;
+
+      if (VT.front()->isNonPowOf2Vec() &&
+          getCanonicalGraphSize() != getTreeSize() && UserIgnoreList &&
+          getCanonicalGraphSize() <= SmallTree &&
+          count_if(ArrayRef(VT).drop_front(getCanonicalGraphSize()),
+                   [](const std::unique_ptr<TreeEntry> &TE) {
+                     return TE->isGather() && TE->hasState() &&
+                            TE->getOpcode() == Instruction::Load &&
+                            !allSameBlock(TE->Scalars);
+                   }) == 1)
+        return false;
     }
-  }
-
-  if (LoadEntriesToVectorize.empty()) {
-    // Single load node - exit.
-    if (VT.size() <= 1 && VT.front()->hasState() &&
-        VT.front()->getOpcode() == Instruction::Load)
-      return false;
-    // Small graph with small VF - exit.
-    constexpr unsigned SmallTree = 3;
-    constexpr unsigned SmallVF = 2;
-    if ((VT.size() <= SmallTree &&
-         VT.front()->Scalars.size() == SmallVF) ||
-        (VT.size() <= 2 && UserIgnoreList))
-      return false;
-
-    if (VT.front()->isNonPowOf2Vec() &&
-        getCanonicalGraphSize() != getTreeSize() && UserIgnoreList &&
-        getCanonicalGraphSize() <= SmallTree &&
-        count_if(ArrayRef(VT).drop_front(getCanonicalGraphSize()),
-                 [](const std::unique_ptr<TreeEntry> &TE) {
-                   return TE->isGather() && TE->hasState() &&
-                          TE->getOpcode() == Instruction::Load &&
-                          !allSameBlock(TE->Scalars);
-                 }) == 1)
-      return false;
-  }
-  return true;
+    return true;
   };
 
   class GraphTransformModeRAAI {
@@ -13530,31 +13537,33 @@ void BoUpSLP::transformNodes() {
 
   for (auto &VT : VectorizableTree) {
     for (std::unique_ptr<TreeEntry> &TE : VT) {
-    TreeEntry &E = *TE;
-    if (E.isGather() &&
-        ((E.hasState() && E.getOpcode() == Instruction::Load) ||
-         (!E.hasState() && any_of(E.Scalars,
-                                  [&](Value *V) {
-                                    return isa<LoadInst>(V) &&
-                                           !isVectorized(V) &&
-                                           !isDeleted(cast<Instruction>(V));
-                                  }))) &&
-        !isSplat(E.Scalars)) {
-      for (Value *V : E.Scalars) {
-        auto *LI = dyn_cast<LoadInst>(V);
-        if (!LI)
-          continue;
-        if (isDeleted(LI) || isVectorized(LI) || !LI->isSimple())
-          continue;
-        gatherPossiblyVectorizableLoads(
-            *this, V, *DL, *SE, *TTI,
-            GatheredLoads[std::make_tuple(
-                LI->getParent(),
-                getUnderlyingObject(LI->getPointerOperand(), RecursionMaxDepth),
-                LI->getType())]);
+      TreeEntry &E = *TE;
+      if (E.isGather() &&
+          ((E.hasState() && E.getOpcode() == Instruction::Load) ||
+           (!E.hasState() && any_of(E.Scalars,
+                                    [&](Value *V) {
+                                      return isa<LoadInst>(V) &&
+                                             !isVectorized(V) &&
+                                             !isDeleted(cast<Instruction>(V));
+                                    }))) &&
+          !isSplat(E.Scalars)) {
+        for (Value *V : E.Scalars) {
+          auto *LI = dyn_cast<LoadInst>(V);
+          if (!LI)
+            continue;
+          if (isDeleted(LI) || isVectorized(LI) || !LI->isSimple())
+            continue;
+          gatherPossiblyVectorizableLoads(
+              *this, V, *DL, *SE, *TTI,
+              GatheredLoads[std::make_tuple(
+                  LI->getParent(),
+                  getUnderlyingObject(LI->getPointerOperand(),
+                                      RecursionMaxDepth),
+                  LI->getType())]);
+        }
       }
     }
-  }}
+  }
   // Try to vectorize gathered loads if this is not just a gather of loads.
   if (!GatheredLoads.empty())
     tryToVectorizeGatheredLoads(GatheredLoads);
