@@ -182,6 +182,12 @@ subroutine test_derived
      integer :: c
   end type t2
   type(t2) :: vt2 = t2(7,5,3)
+  class(t1), allocatable :: c_t1
+  class(*), allocatable :: c_unlimited
+  allocate(t2 :: c_t1)
+  c_t1 = vt2
+  allocate(c_unlimited, source=vt2)
+
 ! CHECK:           %[[C0:.*]] = arith.constant 0 : index
 ! CHECK:           %[[C2:.*]] = arith.constant 2 : index
 ! CHECK:           %[[C1:.*]] = arith.constant 1 : index
@@ -196,12 +202,28 @@ subroutine test_derived
 ! CHECK:           %[[DECLARE_16:.*]] = fir.declare %[[ADDRESS_OF_15]] typeparams %[[C1]] {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QMtest_show_descriptorFtest_derivedE.n.c"} : (!fir.ref<!fir.char<1>>, index) -> !fir.ref<!fir.char<1>>
 ! CHECK:           %[[ADDRESS_OF_16:.*]] = fir.address_of(@_QMtest_show_descriptorFtest_derivedE.n.t2) : !fir.ref<!fir.char<1,2>>
 ! CHECK:           %[[DECLARE_17:.*]] = fir.declare %[[ADDRESS_OF_16]] typeparams %[[C2]] {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QMtest_show_descriptorFtest_derivedE.n.t2"} : (!fir.ref<!fir.char<1,2>>, index) -> !fir.ref<!fir.char<1,2>>
+! CHECK:           %[[ALLOCA_CT1:.*]] = fir.alloca !fir.class<!fir.heap<!fir.type<_QMtest_show_descriptorFtest_derivedTt1{a:i32,b:i32}>>> {bindc_name = "c_t1", uniq_name = "_QMtest_show_descriptorFtest_derivedEc_t1"}
+! CHECK:           %[[ZERO_BITS_CT1:.*]] = fir.zero_bits !fir.heap<!fir.type<_QMtest_show_descriptorFtest_derivedTt1{a:i32,b:i32}>>
+! CHECK:           %[[EMBOX_CT1:.*]] = fir.embox %[[ZERO_BITS_CT1]] : (!fir.heap<!fir.type<_QMtest_show_descriptorFtest_derivedTt1{a:i32,b:i32}>>) -> !fir.class<!fir.heap<!fir.type<_QMtest_show_descriptorFtest_derivedTt1{a:i32,b:i32}>>>
+! CHECK:           fir.store %[[EMBOX_CT1]] to %[[ALLOCA_CT1]] : !fir.ref<!fir.class<!fir.heap<!fir.type<_QMtest_show_descriptorFtest_derivedTt1{a:i32,b:i32}>>>>
+! CHECK:           %[[DECLARE_CT1:.*]] = fir.declare %[[ALLOCA_CT1]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QMtest_show_descriptorFtest_derivedEc_t1"} : (!fir.ref<!fir.class<!fir.heap<!fir.type<_QMtest_show_descriptorFtest_derivedTt1{a:i32,b:i32}>>>>) -> !fir.ref<!fir.class<!fir.heap<!fir.type<_QMtest_show_descriptorFtest_derivedTt1{a:i32,b:i32}>>>>
+! CHECK:           %[[ALLOCA_CU:.*]] = fir.alloca !fir.class<!fir.heap<none>> {bindc_name = "c_unlimited", uniq_name = "_QMtest_show_descriptorFtest_derivedEc_unlimited"}
+! CHECK:           %[[ZERO_BITS_CU:.*]] = fir.zero_bits !fir.heap<none>
+! CHECK:           %[[EMBOX_CU:.*]] = fir.embox %[[ZERO_BITS_CU]] : (!fir.heap<none>) -> !fir.class<!fir.heap<none>>
+! CHECK:           fir.store %[[EMBOX_CU]] to %[[ALLOCA_CU]] : !fir.ref<!fir.class<!fir.heap<none>>>
+! CHECK:           %[[DECLARE_CU:.*]] = fir.declare %[[ALLOCA_CU]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QMtest_show_descriptorFtest_derivedEc_unlimited"} : (!fir.ref<!fir.class<!fir.heap<none>>>) -> !fir.ref<!fir.class<!fir.heap<none>>>
 ! CHECK:           %[[ADDRESS_OF_17:.*]] = fir.address_of(@_QMtest_show_descriptorFtest_derivedEvt2) : !fir.ref<!fir.type<_QMtest_show_descriptorFtest_derivedTt2{t1:!fir.type<_QMtest_show_descriptorFtest_derivedTt1{a:i32,b:i32}>,c:i32}>>
 ! CHECK:           %[[DECLARE_18:.*]] = fir.declare %[[ADDRESS_OF_17]] {uniq_name = "_QMtest_show_descriptorFtest_derivedEvt2"} : (!fir.ref<!fir.type<_QMtest_show_descriptorFtest_derivedTt2{t1:!fir.type<_QMtest_show_descriptorFtest_derivedTt1{a:i32,b:i32}>,c:i32}>>) -> !fir.ref<!fir.type<_QMtest_show_descriptorFtest_derivedTt2{t1:!fir.type<_QMtest_show_descriptorFtest_derivedTt1{a:i32,b:i32}>,c:i32}>>
 ! CHECK:           %[[ZERO_BITS_6:.*]] = fir.zero_bits !fir.box<none>
 
   call show_descriptor(vt2)
 ! CHECK:           fir.call @_FortranAShowDescriptor(%[[ZERO_BITS_6]]) fastmath<contract> : (!fir.box<none>) -> ()
+
+  call show_descriptor(c_t1)
+! CHECK:           fir.call @_FortranAShowDescriptor(%[[DECLARE_CT1]]) fastmath<contract> : (!fir.ref<!fir.class<!fir.heap<!fir.type<_QMtest_show_descriptorFtest_derivedTt1{a:i32,b:i32}>>>>) -> ()
+
+  call show_descriptor(c_unlimited)
+! CHECK:           fir.call @_FortranAShowDescriptor(%[[DECLARE_CU]]) fastmath<contract> : (!fir.ref<!fir.class<!fir.heap<none>>>) -> ()
 ! CHECK:           return
 end subroutine test_derived
 end module test_show_descriptor
