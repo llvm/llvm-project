@@ -265,6 +265,13 @@ New checks
   Finds virtual function overrides with different visibility than the function
   in the base class.
 
+- New :doc:`modernize-use-init-statement
+  <clang-tidy/checks/modernize/use-init-statement>` check.
+
+  Finds variable declarations before if/switch statements where the variable is
+  used only in the condition, and suggests moving them into C++17 init
+  statements to narrow variable scope.
+
 - New :doc:`readability-redundant-parentheses
   <clang-tidy/checks/readability/redundant-parentheses>` check.
 

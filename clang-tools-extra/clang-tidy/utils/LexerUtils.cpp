@@ -105,6 +105,9 @@ bool rangeContainsExpansionsOrDirectives(SourceRange Range,
     if (!Tok)
       return true;
 
+    if (Tok->getLocation() > Range.getEnd())
+      break;
+
     if (Tok->is(tok::hash))
       return true;
 
