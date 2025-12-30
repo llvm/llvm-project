@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// REQUIRES: libcpp-hardening-mode=none
+
 // ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_ABI_BOUNDED_ITERATORS
 // ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_ABI_BOUNDED_ITERATORS_IN_STD_ARRAY
 
