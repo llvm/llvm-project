@@ -12,6 +12,8 @@
 
 #include <type_traits>
 
+#include "test_macros.h"
+
 // Non-invocable types
 
 static_assert(!std::is_invocable_r_v<void, void>);
@@ -55,10 +57,17 @@ static_assert(std::is_invocable_r_v<const volatile void, decltype(Return<int>)>)
 static_assert(std::is_invocable_r_v<char, decltype(Return<int>)>);
 static_assert(std::is_invocable_r_v<const int*, decltype(Return<int*>)>);
 static_assert(std::is_invocable_r_v<void*, decltype(Return<int*>)>);
-static_assert(std::is_invocable_r_v<const int&, decltype(Return<int>)>);
 static_assert(std::is_invocable_r_v<const int&, decltype(Return<int&>)>);
 static_assert(std::is_invocable_r_v<const int&, decltype(Return<int&&>)>);
+
+// P2255R2 made binding to temporary ill-formed since C++23.
+#if TEST_STD_VER >= 23
+static_assert(!std::is_invocable_r_v<const int&, decltype(Return<int>)>);
+static_assert(!std::is_invocable_r_v<const char&, decltype(Return<int>)>);
+#else
+static_assert(std::is_invocable_r_v<const int&, decltype(Return<int>)>);
 static_assert(std::is_invocable_r_v<const char&, decltype(Return<int>)>);
+#endif
 
 // But not a result type where the conversion doesn't work.
 static_assert(!std::is_invocable_r_v<int, decltype(Return<void>)>);

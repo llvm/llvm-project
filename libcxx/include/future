@@ -1509,6 +1509,10 @@ template <class _Fp>
 __packaged_task_function<_Rp(_ArgTypes...)>::__packaged_task_function(_Fp&& __f) : __f_(nullptr) {
   typedef __libcpp_remove_reference_t<__decay_t<_Fp> > _FR;
   typedef __packaged_task_func<_FR, allocator<_FR>, _Rp(_ArgTypes...)> _FF;
+#    if _LIBCPP_STD_VER >= 23 && _LIBCPP_STD_VER < 26
+  static_assert(
+      !__is_invocable_r_from_temporary<_Rp, _FR&, _ArgTypes...>, "returning reference to local temporary object");
+#    endif
   if (sizeof(_FF) <= sizeof(__buf_)) {
     ::new ((void*)&__buf_) _FF(std::forward<_Fp>(__f));
     __f_ = (__base*)&__buf_;
