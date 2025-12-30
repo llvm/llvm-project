@@ -37,9 +37,9 @@ LogicalResult mlir::IndexingMapOpInterface::verifyImpl() {
 
     // Result rank must match operand rank.
     if (indexingMap.getNumResults() != rank)
-      return this->emitOpError("expected operand rank (")
-             << rank << ") to match the result rank of indexing_map #"
-             << opOperand.getOperandNumber() << " ("
+      return this->emitOpError("expected operand #")
+             << opOperand.getOperandNumber() << " rank (" << rank
+             << ") to match the result rank of indexing_map ("
              << indexingMap.getNumResults() << ")";
 
     llvm::append_range(allShapesSizes, shape);
