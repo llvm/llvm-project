@@ -11818,16 +11818,18 @@ SDValue DAGCombiner::foldCTLZToCTLS(SDValue Src, const SDLoc &DL) {
   EVT VT = Src.getValueType();
 
   auto LK = TLI.getTypeConversion(*DAG.getContext(), VT);
-  if (!(LK.first == TargetLoweringBase::TypeLegal ||
-        LK.first == TargetLoweringBase::TypePromoteInteger) ||
+  if ((LK.first != TargetLoweringBase::TypeLegal &&
+       LK.first != TargetLoweringBase::TypePromoteInteger) ||
       !TLI.isOperationLegalOrCustom(ISD::CTLS, LK.second))
     return SDValue();
 
   unsigned BitWidth = VT.getScalarSizeInBits();
 
   SDValue X;
-  if (!sd_match(Src, m_Xor(m_Value(X),
-                           m_Sra(m_Deferred(X), m_SpecificInt(BitWidth - 1)))))
+  if (!sd_match(Src,
+                m_OneUse(m_Xor(m_Value(X),
+                               m_OneUse(m_Sra(m_Deferred(X),
+                                              m_SpecificInt(BitWidth - 1)))))))
     return SDValue();
 
   SDValue Res = DAG.getNode(ISD::CTLS, DL, VT, X);

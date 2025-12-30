@@ -149,8 +149,8 @@ define i64 @cls_i64(i64 %x) {
 ; CHECK-NEXT:    addi a1, a0, 32
 ; CHECK-NEXT:    j .LBB12_3
 ; CHECK-NEXT:  .LBB12_2:
-; CHECK-NEXT:    cls a1, a1
-; CHECK-NEXT:    addi a1, a1, 1
+; CHECK-NEXT:    xor a1, a1, a2
+; CHECK-NEXT:    clz a1, a1
 ; CHECK-NEXT:  .LBB12_3:
 ; CHECK-NEXT:    addi a0, a1, -1
 ; CHECK-NEXT:    snez a1, a1
