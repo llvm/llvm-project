@@ -817,27 +817,33 @@ unsigned MatcherTableEmitter::EmitMatcher(const Matcher *N,
     return Bytes;
   }
   case Matcher::EmitStringInteger: {
-    const std::string &Val = cast<EmitStringIntegerMatcher>(N)->getValue();
-    MVT VT = cast<EmitStringIntegerMatcher>(N)->getVT();
-    // These should always fit into 7 bits.
-    unsigned OpBytes;
+    const auto *SIM = cast<EmitStringIntegerMatcher>(N);
+    int64_t Val = SIM->getValue();
+    const std::string &Str = SIM->getString();
+    MVT VT = SIM->getVT();
+    unsigned TypeBytes = 0;
     switch (VT.SimpleTy) {
     case MVT::i32:
-      OpBytes = 1;
-      OS << "OPC_EmitStringIntegerI" << VT.getSizeInBits() << ", ";
+      OS << "OPC_EmitIntegerI" << VT.getSizeInBits() << ", ";
       break;
     default:
-      OS << "OPC_EmitStringInteger, ";
+      OS << "OPC_EmitInteger, ";
       if (!OmitComments)
         OS << "/*" << getEnumName(VT) << "*/";
-      OpBytes = EmitVBRValue(VT.SimpleTy, OS) + 1;
+      TypeBytes = EmitVBRValue(VT.SimpleTy, OS) + 1;
       break;
     }
-    OS << Val << ',';
+    // If the value is 63 or smaller, use the string directly. Otherwise, use
+    // a VBR.
+    unsigned ValBytes = 1;
+    if (Val <= 63)
+      OS << Str << ',';
+    else
+      ValBytes = EmitSignedVBRValue(Val, OS);
     if (!OmitComments)
-      OS << " // #" << cast<EmitStringIntegerMatcher>(N)->getResultNo();
+      OS << " // #" << SIM->getResultNo() << " = " << Str;
     OS << '\n';
-    return OpBytes + 1;
+    return 1 + TypeBytes + ValBytes;
   }
 
   case Matcher::EmitRegister: {
