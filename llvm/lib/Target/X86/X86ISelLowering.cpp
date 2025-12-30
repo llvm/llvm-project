@@ -47262,7 +47262,7 @@ static SDValue combineArithReduction(SDNode *ExtElt, SelectionDAG &DAG,
   // sum+zext v8i8 subvectors to vXi64, then perform the reduction.
   // TODO: See if its worth avoiding vXi16/i32 truncations?
   if (Opc == ISD::ADD && NumElts >= 4 && EltSizeInBits >= 16 &&
-      DAG.computeKnownBits(Rdx).getMaxValue().ule(255) &&
+      EltSizeInBits <= 64 && DAG.computeKnownBits(Rdx).getMaxValue().ule(255) &&
       (EltSizeInBits == 16 || Rdx.getOpcode() == ISD::ZERO_EXTEND ||
        Subtarget.hasAVX512())) {
     if (Rdx.getValueType() == MVT::v8i16) {
@@ -48471,8 +48471,9 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
                           MaskVal->getAPIntValue().exactLogBase2());
       }
       // vsel ((X & C) == 0), LHS, RHS --> vsel ((shl X, C') < 0), RHS, LHS
-      SDValue ShlAmt = getConstVector(ShlVals, VT.getSimpleVT(), DAG, DL);
-      SDValue Shl = DAG.getNode(ISD::SHL, DL, VT, And.getOperand(0), ShlAmt);
+      MVT MskVT = Mask.getSimpleValueType();
+      SDValue ShlAmt = getConstVector(ShlVals, MskVT, DAG, DL);
+      SDValue Shl = DAG.getNode(ISD::SHL, DL, MskVT, And.getOperand(0), ShlAmt);
       SDValue NewCond =
           DAG.getSetCC(DL, CondVT, Shl, Cond.getOperand(1), ISD::SETLT);
       return DAG.getSelect(DL, VT, NewCond, RHS, LHS);

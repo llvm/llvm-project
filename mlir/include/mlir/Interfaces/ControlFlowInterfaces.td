@@ -350,6 +350,15 @@ def RegionBranchOpInterface : OpInterface<"RegionBranchOpInterface"> {
     /// Return `true` if there is a loop in the region branching graph. Only
     /// reachable regions (starting from the entry regions) are considered.
     bool hasLoop();
+
+    /// Return the successor operands from the source branch point to the
+    /// destination region successor.
+    ///
+    /// If the branch point is the parent op, this function returns entry
+    /// successor operands of this op. Otherwise, it returns successor operands
+    /// of the respective terminator.
+    ::mlir::OperandRange getSuccessorOperands(
+        ::mlir::RegionBranchPoint src, ::mlir::RegionSuccessor dest);
   }];
 }
 

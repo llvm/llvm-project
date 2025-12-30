@@ -982,6 +982,11 @@ bool RISCVRegisterInfo::getRegAllocationHints(
              MI.getOperand(2).getImm() == -1;
     case RISCV::QC_EXTU:
       return MI.getOperand(2).getImm() >= 6 && MI.getOperand(3).getImm() == 0;
+    case RISCV::BSETI:
+    case RISCV::BEXTI:
+      // qc.c.bseti, qc.c.bexti
+      NeedGPRC = true;
+      return Subtarget.hasVendorXqcibm() && MI.getOperand(2).getImm() != 0;
     }
   };
 
