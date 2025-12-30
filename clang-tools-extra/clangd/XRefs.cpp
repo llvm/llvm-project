@@ -16,7 +16,6 @@
 #include "Quality.h"
 #include "Selection.h"
 #include "SourceCode.h"
-#include "URI.h"
 #include "clang-include-cleaner/Analysis.h"
 #include "clang-include-cleaner/Types.h"
 #include "index/Index.h"
@@ -43,7 +42,6 @@
 #include "clang/AST/StmtVisitor.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/LLVM.h"
-#include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TokenKinds.h"
@@ -60,7 +58,6 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
@@ -929,12 +926,15 @@ public:
     }
   };
 
-  ReferenceFinder(const ParsedAST &AST,
+  ReferenceFinder(ParsedAST &AST,
                   const llvm::ArrayRef<const NamedDecl *> Targets,
                   bool PerToken)
       : PerToken(PerToken), AST(AST) {
-    for (const NamedDecl *ND : Targets)
+    for (const NamedDecl *ND : Targets) {
       TargetDecls.insert(ND->getCanonicalDecl());
+      if (auto *Constructor = llvm::dyn_cast<clang::CXXConstructorDecl>(ND))
+        TargetConstructors.insert(Constructor);
+    }
   }
 
   std::vector<Reference> take() && {
@@ -955,12 +955,41 @@ public:
     return std::move(References);
   }
 
+  bool forwardsToConstructor(const Decl *D) {
+    if (TargetConstructors.empty())
+      return false;
+    auto *FD = llvm::dyn_cast<clang::FunctionDecl>(D);
+    if (FD == nullptr || !FD->isTemplateInstantiation())
+      return false;
+
+    SmallVector<const CXXConstructorDecl *, 1> *Constructors = nullptr;
+    if (auto Entry = AST.ForwardingToConstructorCache.find(FD);
+        Entry != AST.ForwardingToConstructorCache.end())
+      Constructors = &Entry->getSecond();
+    if (Constructors == nullptr) {
+      if (auto *PT = FD->getPrimaryTemplate();
+          PT == nullptr || !isLikelyForwardingFunction(PT))
+        return false;
+
+      SmallVector<const CXXConstructorDecl *, 1> FoundConstructors =
+          searchConstructorsInForwardingFunction(FD);
+      auto Iter = AST.ForwardingToConstructorCache.try_emplace(
+          FD, std::move(FoundConstructors));
+      Constructors = &Iter.first->getSecond();
+    }
+    for (auto *Constructor : *Constructors)
+      if (TargetConstructors.contains(Constructor))
+        return true;
+    return false;
+  }
+
   bool
   handleDeclOccurrence(const Decl *D, index::SymbolRoleSet Roles,
                        llvm::ArrayRef<index::SymbolRelation> Relations,
                        SourceLocation Loc,
                        index::IndexDataConsumer::ASTNodeInfo ASTNode) override {
-    if (!TargetDecls.contains(D->getCanonicalDecl()))
+    if (!TargetDecls.contains(D->getCanonicalDecl()) &&
+        !forwardsToConstructor(ASTNode.OrigD))
       return true;
     const SourceManager &SM = AST.getSourceManager();
     if (!isInsideMainFile(Loc, SM))
@@ -1000,8 +1029,10 @@ public:
 private:
   bool PerToken; // If true, report 3 references for split ObjC selector names.
   std::vector<Reference> References;
-  const ParsedAST &AST;
+  ParsedAST &AST;
   llvm::DenseSet<const Decl *> TargetDecls;
+  // Constructors need special handling since they can be hidden behind forwards
+  llvm::DenseSet<const CXXConstructorDecl *> TargetConstructors;
 };
 
 std::vector<ReferenceFinder::Reference>

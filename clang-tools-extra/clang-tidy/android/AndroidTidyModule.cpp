@@ -8,7 +8,6 @@
 
 #include "../ClangTidy.h"
 #include "../ClangTidyModule.h"
-#include "../ClangTidyModuleRegistry.h"
 #include "CloexecAccept4Check.h"
 #include "CloexecAcceptCheck.h"
 #include "CloexecCreatCheck.h"
