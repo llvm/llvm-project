@@ -810,24 +810,20 @@ void llvm::CloneAndPruneIntoFromInst(Function *NewFunc, const Function *OldFunc,
     NumPreds = pred_size(NewBB);
     if (NumPreds != PN->getNumIncomingValues()) {
       assert(NumPreds < PN->getNumIncomingValues());
-      // Count how many times each predecessor comes to this block.
-      std::map<BasicBlock *, unsigned> PredCount;
-      for (BasicBlock *Pred : predecessors(NewBB))
-        --PredCount[Pred];
-
-      // Figure out how many entries to remove from each PHI.
-      for (BasicBlock *Pred : PN->blocks())
-        ++PredCount[Pred];
+      SmallPtrSet<BasicBlock *, 4> NewBBPreds(llvm::from_range,
+                                              predecessors(NewBB));
 
       // At this point, the excess predecessor entries are positive in the
       // map.  Loop over all of the PHIs and remove excess predecessor
       // entries.
       BasicBlock::iterator I = NewBB->begin();
       for (; (PN = dyn_cast<PHINode>(I)); ++I) {
-        for (const auto &[Pred, Count] : PredCount) {
-          for ([[maybe_unused]] unsigned _ : llvm::seq<unsigned>(Count))
-            PN->removeIncomingValue(Pred, false);
-        }
+        PN->removeIncomingValueIf(
+            [&](unsigned Idx) {
+              BasicBlock *IncomingBlock = PN->getIncomingBlock(Idx);
+              return !NewBBPreds.contains(IncomingBlock);
+            },
+            false);
       }
     }
 
