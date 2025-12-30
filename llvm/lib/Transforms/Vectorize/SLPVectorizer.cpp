@@ -7262,7 +7262,7 @@ bool BoUpSLP::analyzeRtStrideCandidate(ArrayRef<Value *> PointerOps,
       };
 
   int64_t LowestOffset = SortedOffsetsV[0];
-  SmallVector<Value *> &PointerOps0 = OffsetToPointerOpIdxMap[LowestOffset].first;
+  ArrayRef<Value *> PointerOps0 = OffsetToPointerOpIdxMap[LowestOffset].first;
 
   SmallVector<int64_t> Coeffs0;
   SmallVector<unsigned> SortedIndicesForOffset0;
@@ -7288,7 +7288,7 @@ bool BoUpSLP::analyzeRtStrideCandidate(ArrayRef<Value *> PointerOps,
     SortedIndicesForOffset.clear();
 
     int64_t Offset = SortedOffsetsV[J];
-    SmallVector<Value *> &PointerOpsForOffset =
+    ArrayRef<Value *> PointerOpsForOffset =
         OffsetToPointerOpIdxMap[Offset].first;
     SmallVector<unsigned> &IndicesInAllPointerOps =
         OffsetToPointerOpIdxMap[Offset].second;
