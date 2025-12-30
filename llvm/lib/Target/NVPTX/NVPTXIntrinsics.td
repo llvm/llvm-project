@@ -2229,7 +2229,7 @@ let Predicates = [callSubtarget<"hasFP8ConversionSupport">] in {
 let Predicates = [callSubtarget<"hasFP16X2ToNarrowFPConversionSupport">] in {
   foreach dst_type = ["e4m3x2", "e5m2x2"] in {
     foreach relu = ["", "_relu"] in {
-      def : Pat<(!cast<Intrinsic>("int_nvvm_bf16x2_to_" # dst_type # "_rn" # relu)
+      def : Pat<(!cast<Intrinsic>("int_nvvm_bf16x2_to_" # dst_type # "_rn" # relu # "_satfinite")
                   B32:$a),
                 (!cast<NVPTXInst>("CVT_"# dst_type #"_bf16x2") $a,
                   !cast<PatLeaf>("CvtRN" # !toupper(relu)))>;

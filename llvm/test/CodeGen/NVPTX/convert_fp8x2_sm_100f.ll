@@ -19,7 +19,7 @@ define i16 @cvt_rn_e4m3x2_bf16x2(<2 x bfloat> %in) {
 ; CHECK-NEXT:    cvt.u32.u16 %r2, %rs1;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
-  %val = call i16 @llvm.nvvm.bf16x2.to.e4m3x2.rn(<2 x bfloat> %in)
+  %val = call i16 @llvm.nvvm.bf16x2.to.e4m3x2.rn.satfinite(<2 x bfloat> %in)
   ret i16 %val
 }
 
@@ -35,7 +35,7 @@ define i16 @cvt_rn_relu_e4m3x2_bf16x2(<2 x bfloat> %in) {
 ; CHECK-NEXT:    cvt.u32.u16 %r2, %rs1;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
-  %val = call i16 @llvm.nvvm.bf16x2.to.e4m3x2.rn.relu(<2 x bfloat> %in)
+  %val = call i16 @llvm.nvvm.bf16x2.to.e4m3x2.rn.relu.satfinite(<2 x bfloat> %in)
   ret i16 %val
 }
 
@@ -51,7 +51,7 @@ define i16 @cvt_rn_e5m2x2_bf16x2(<2 x bfloat> %in) {
 ; CHECK-NEXT:    cvt.u32.u16 %r2, %rs1;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
-  %val = call i16 @llvm.nvvm.bf16x2.to.e5m2x2.rn(<2 x bfloat> %in)
+  %val = call i16 @llvm.nvvm.bf16x2.to.e5m2x2.rn.satfinite(<2 x bfloat> %in)
   ret i16 %val
 }
 
@@ -67,6 +67,6 @@ define i16 @cvt_rn_relu_e5m2x2_bf16x2(<2 x bfloat> %in) {
 ; CHECK-NEXT:    cvt.u32.u16 %r2, %rs1;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
-  %val = call i16 @llvm.nvvm.bf16x2.to.e5m2x2.rn.relu(<2 x bfloat> %in)
+  %val = call i16 @llvm.nvvm.bf16x2.to.e5m2x2.rn.relu.satfinite(<2 x bfloat> %in)
   ret i16 %val
 }

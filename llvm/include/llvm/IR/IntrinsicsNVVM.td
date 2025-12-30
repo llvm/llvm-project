@@ -1830,7 +1830,7 @@ let TargetPrefix = "nvvm" in {
       def int_nvvm_ # type # _to_f16x2_rn # relu : NVVMBuiltin,
           PureIntrinsic<[llvm_v2f16_ty], [llvm_i16_ty]>;
           
-      def int_nvvm_bf16x2_to_ # type # _rn # relu
+      def int_nvvm_bf16x2_to_ # type # _rn # relu # _satfinite
         : PureIntrinsic<[llvm_i16_ty], [llvm_v2bf16_ty]>;
     }
   }
