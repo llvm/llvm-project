@@ -660,8 +660,8 @@ let hasSideEffects = false in {
       Requires<[hasPTX<81>, hasSM<89>]>;
     def _bf16x2
         : NVPTXInst<(outs B16:$dst), (ins B32:$src, CvtMode:$mode),
-                    !strconcat("cvt${mode:base}.satfinite${mode:relu}.", F8Name,
-                               "x2.bf16x2 \t$dst, $src;"),
+                    "cvt${mode:base}.satfinite${mode:relu}." # F8Name #
+                      "x2.bf16x2 \t$dst, $src;",
                     []>;
   }
 
@@ -765,14 +765,12 @@ let hasSideEffects = false in {
     def _f16x2_sf
         : NVPTXInst<
               (outs B16:$dst), (ins B32:$src, CvtMode:$mode),
-              "cvt${mode:base}.satfinite${mode:relu}."#FP6Name#"x2.f16x2 "
-                                                               "\t$dst, $src;",
+              "cvt${mode:base}.satfinite${mode:relu}." # FP6Name # "x2.f16x2 \t$dst, $src;",
               []>;
     def _bf16x2_sf
         : NVPTXInst<
               (outs B16:$dst), (ins B32:$src, CvtMode:$mode),
-              "cvt${mode:base}.satfinite${mode:relu}."#FP6Name#"x2.bf16x2 "
-                                                               "\t$dst, $src;",
+              "cvt${mode:base}.satfinite${mode:relu}." # FP6Name # "x2.bf16x2 \t$dst, $src;",
               []>;
   }
 
@@ -804,17 +802,19 @@ let hasSideEffects = false in {
 
   def CVT_e2m1x2_f16x2_sf : NVPTXInst<(outs B16:$dst), 
       (ins B32:$src, CvtMode:$mode),
-      !strconcat("{{ \n\t", ".reg .b8 \t%e2m1x2_out; \n\t",
-                "cvt${mode:base}.satfinite${mode:relu}.e2m1x2."
-                "f16x2 \t%e2m1x2_out, $src; \n\t",
-                "cvt.u16.u8 \t$dst, %e2m1x2_out; \n\t", "}}"), []>;
+      "{{ \n\t" #  
+      ".reg .b8 \t%e2m1x2_out; \n\t" #
+      "cvt${mode:base}.satfinite${mode:relu}.e2m1x2.f16x2 \t%e2m1x2_out, $src; \n\t" #
+      "cvt.u16.u8 \t$dst, %e2m1x2_out; \n\t" #
+      "}}", []>;
 
   def CVT_e2m1x2_bf16x2_sf : NVPTXInst<(outs B16:$dst), 
       (ins B32:$src, CvtMode:$mode),
-      !strconcat("{{ \n\t", ".reg .b8 \t%e2m1x2_out; \n\t",
-                "cvt${mode:base}.satfinite${mode:relu}.e2m1x2."
-                "bf16x2 \t%e2m1x2_out, $src; \n\t",
-                "cvt.u16.u8 \t$dst, %e2m1x2_out; \n\t", "}}"), []>;
+      "{{ \n\t" #  
+      ".reg .b8 \t%e2m1x2_out; \n\t" #
+      "cvt${mode:base}.satfinite${mode:relu}.e2m1x2.bf16x2 \t%e2m1x2_out, $src; \n\t" #
+      "cvt.u16.u8 \t$dst, %e2m1x2_out; \n\t" #
+      "}}", []>;
 
   // UE8M0x2 conversions.
   class CVT_f32_to_ue8m0x2<string sat = ""> :
