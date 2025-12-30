@@ -125,6 +125,9 @@ STATISTIC(
 STATISTIC(
     NumBotPathReducePreRA,
     "Number of scheduling units chosen for BotPathReduce heuristic pre-RA");
+STATISTIC(
+    NumNextHighLatencyPreRA,
+    "Number of scheduling units chosen for NextHighLatency heuristic pre-RA");
 STATISTIC(NumNodeOrderPreRA,
           "Number of scheduling units chosen for NodeOrder heuristic pre-RA");
 STATISTIC(NumFirstValidPreRA,
@@ -171,6 +174,9 @@ STATISTIC(
 STATISTIC(
     NumBotPathReducePostRA,
     "Number of scheduling units chosen for BotPathReduce heuristic post-RA");
+STATISTIC(
+    NumNextHighLatencyPostRA,
+    "Number of scheduling units chosen for NextHighLatency heuristic post-RA");
 STATISTIC(NumNodeOrderPostRA,
           "Number of scheduling units chosen for NodeOrder heuristic post-RA");
 STATISTIC(NumFirstValidPostRA,
@@ -3373,6 +3379,7 @@ const char *GenericSchedulerBase::getReasonStr(
   case TopPathReduce:  return "TOP-PATH  ";
   case BotHeightReduce:return "BOT-HEIGHT";
   case BotPathReduce:  return "BOT-PATH  ";
+  case NextHighLatency:return "NEXT-HLAT ";
   case NodeOrder:      return "ORDER     ";
   case FirstValid:     return "FIRST     ";
   };
@@ -3468,6 +3475,21 @@ bool llvm::tryGreater(int TryVal, int CandVal,
   return false;
 }
 
+/// Returns the maximum latency of any immediate successor of SU.
+/// This identifies instructions that feed into high-latency operations
+/// like fsqrt, fdiv, or dependent loads, enabling better chain interleaving.
+static unsigned getMaxSuccessorLatency(const SUnit *SU) {
+  unsigned MaxLat = 0;
+  for (const SDep &Succ : SU->Succs) {
+    if (Succ.isWeak())
+      continue;
+    SUnit *SuccSU = Succ.getSUnit();
+    if (SuccSU && SuccSU->Latency > MaxLat)
+      MaxLat = SuccSU->Latency;
+  }
+  return MaxLat;
+}
+
 bool llvm::tryLatency(GenericSchedulerBase::SchedCandidate &TryCand,
                       GenericSchedulerBase::SchedCandidate &Cand,
                       SchedBoundary &Zone) {
@@ -3559,6 +3581,9 @@ static void tracePick(GenericSchedulerBase::CandReason Reason, bool IsTop,
     case GenericScheduler::BotPathReduce:
       NumBotPathReducePostRA++;
       return;
+    case GenericScheduler::NextHighLatency:
+      NumNextHighLatencyPostRA++;
+      return;
     case GenericScheduler::NodeOrder:
       NumNodeOrderPostRA++;
       return;
@@ -3617,6 +3642,9 @@ static void tracePick(GenericSchedulerBase::CandReason Reason, bool IsTop,
       return;
     case GenericScheduler::BotPathReduce:
       NumBotPathReducePreRA++;
+      return;
+    case GenericScheduler::NextHighLatency:
+      NumNextHighLatencyPreRA++;
       return;
     case GenericScheduler::NodeOrder:
       NumNodeOrderPreRA++;
@@ -4013,6 +4041,20 @@ bool GenericScheduler::tryCandidate(SchedCandidate &Cand,
     if (!RegionPolicy.DisableLatencyHeuristic && TryCand.Policy.ReduceLatency &&
         !Rem.IsAcyclicLatencyLimited && tryLatency(TryCand, Cand, *Zone))
       return TryCand.Reason != NoCand;
+
+    // Prefer instructions that feed high-latency successors (fsqrt, fdiv, etc.)
+    // This encourages interleaving independent chains by prioritizing
+    // instructions that will start long-latency operations, allowing other
+    // chains to execute during the latency period.
+    constexpr unsigned HighLatencyThreshold = 4;
+    unsigned TryMaxSuccLat = getMaxSuccessorLatency(TryCand.SU);
+    unsigned CandMaxSuccLat = getMaxSuccessorLatency(Cand.SU);
+    if (TryMaxSuccLat >= HighLatencyThreshold ||
+        CandMaxSuccLat >= HighLatencyThreshold) {
+      if (tryGreater(TryMaxSuccLat, CandMaxSuccLat, TryCand, Cand,
+                     NextHighLatency))
+        return TryCand.Reason != NoCand;
+    }
 
     // Fall through to original instruction order.
     if ((Zone->isTop() && TryCand.SU->NodeNum < Cand.SU->NodeNum)

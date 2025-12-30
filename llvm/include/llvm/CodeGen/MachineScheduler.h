@@ -1107,6 +1107,7 @@ public:
     BotPathReduce,
     TopDepthReduce,
     TopPathReduce,
+    NextHighLatency,
     NodeOrder,
     FirstValid
   };
