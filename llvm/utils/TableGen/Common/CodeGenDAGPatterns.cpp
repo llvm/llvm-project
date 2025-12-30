@@ -1480,10 +1480,9 @@ static unsigned getPatternSize(const TreePatternNode &P,
   // Count children in the count if they are also nodes.
   for (const TreePatternNode &Child : P.children()) {
     if (!Child.isLeaf() && Child.getNumTypes()) {
-      const TypeSetByHwMode &T0 = Child.getExtType(0);
-      // At this point, all variable type sets should be simple, i.e. only
-      // have a default mode.
-      if (T0.getMachineValueType() != MVT::Other) {
+      // FIXME: Can we assume non-simple VTs should be counted?
+      auto VVT = Child.getType(0);
+      if (llvm::any_of(VVT, [](auto &P) { return P.second != MVT::Other; })) {
         Size += getPatternSize(Child, CGP);
         continue;
       }
