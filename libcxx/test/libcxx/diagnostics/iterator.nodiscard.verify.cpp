@@ -6,11 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_ABI_BOUNDED_ITERATORS
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_ABI_BOUNDED_ITERATORS_IN_STD_ARRAY
+
 // check that <iterator> functions are marked [[nodiscard]]
 
+#include <array>
 #include <initializer_list>
 #include <iterator>
 #include <sstream>
+#include <string_view>
 #include <vector>
 
 #include "test_macros.h"
@@ -59,8 +64,12 @@ void test() {
   }
 
   { // __bounded_iter
-    std::__bounded_iter<int*> it;
-    std::pointer_traits<std::__bounded_iter<int*> > pt;
+    typedef std::basic_string_view<char> Container;
+    ASSERT_SAME_TYPE(Container::const_iterator, std::__bounded_iter<const char*>);
+
+    Container::const_iterator it;
+
+    std::pointer_traits<Container::const_iterator> pt;
 
     // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
     pt.to_address(it);
@@ -372,8 +381,11 @@ void test() {
   }
 #endif
 
-  {
-    std::__static_bounded_iter<int*, 94> it;
+  { // __static_bounded_iter
+    typedef std::array<int, 94> Container;
+    ASSERT_SAME_TYPE(Container::iterator, std::__static_bounded_iter<int*, 94>);
+
+    Container::iterator it;
 
     // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
     *it;
@@ -393,17 +405,17 @@ void test() {
     // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
     it - it;
 
-    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-    std::__make_static_bounded_iter<82>(cont.begin(), cont.begin());
-
-    std::pointer_traits<std::__static_bounded_iter<int*, 94> > pt;
+    std::pointer_traits<Container::iterator> pt;
 
     // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
     pt.to_address(it);
   }
 
-  {
-    std::__wrap_iter<int*> it = cont.begin();
+  { // __wrap_iter
+    typedef std::vector<int> Container;
+    ASSERT_SAME_TYPE(Container::iterator, std::__wrap_iter<int*>);
+
+    Container::iterator it;
 
     // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
     *it;
@@ -423,7 +435,7 @@ void test() {
     // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
     1 + it;
 
-    std::pointer_traits<std::__wrap_iter<int*> > pt;
+    std::pointer_traits<Container::iterator> pt;
 
     // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
     pt.to_address(it);
