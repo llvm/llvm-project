@@ -170,18 +170,10 @@ TEST(LlvmLibcWctypeClassificationUtilsTest, Alpha) {
 
       // Emoji and symbols
       {0x2764, "HEAVY BLACK HEART", false},
-#ifndef LIBC_TARGET_OS_IS_WINDOWS
-      {0x1F600, "GRINNING FACE", false},
-#endif // LIBC_TARGET_OS_IS_WINDOWS
 
       // Special cases
       {0x0000, "NULL", false},
       {0xFFFD, "REPLACEMENT CHARACTER", false},
-
-#ifndef LIBC_TARGET_OS_IS_WINDOWS
-      // Beyond BMP - CJK Extension B
-      {0x20000, "CJK UNIFIED IDEOGRAPH-20000", true},
-#endif // LIBC_TARGET_OS_IS_WINDOWS
 
       // Roman numerals
       {0x2160, "ROMAN NUMERAL ONE", true},
@@ -202,7 +194,14 @@ TEST(LlvmLibcWctypeClassificationUtilsTest, Alpha) {
       {0x09e6, "BENGALI DIGIT ZERO", true},
 
       // Combining marks
-      {0x0300, "COMBINING GRAVE ACCENT", false}};
+      {0x0300, "COMBINING GRAVE ACCENT", false},
+
+#ifndef LIBC_TARGET_OS_IS_WINDOWS
+      {0x1F600, "GRINNING FACE", false},
+      {0x20000, "CJK UNIFIED IDEOGRAPH-20000", true},
+#endif // LIBC_TARGET_OS_IS_WINDOWS
+
+  };
 
   for (const auto &tc : cases) {
     bool res = LIBC_NAMESPACE::lookup_properties(static_cast<wchar_t>(tc.wc)) &
@@ -276,68 +275,68 @@ TEST(LlvmLibcWctypeClassificationUtilsTest, Punct) {
 }
 
 TEST(LlvmLibcWctypeClassificationUtilsTest, Print) {
-  TestCase cases[] = {// ASCII printable characters
-                      {0x0020, "SPACE", true},
-                      {0x0021, "EXCLAMATION MARK", true},
-                      {0x0030, "DIGIT ZERO", true},
-                      {0x0041, "LATIN CAPITAL LETTER A", true},
-                      {0x0061, "LATIN SMALL LETTER A", true},
-                      {0x007E, "TILDE", true},
+  TestCase cases[] = {
+      // ASCII printable characters
+      {0x0020, "SPACE", true},
+      {0x0021, "EXCLAMATION MARK", true},
+      {0x0030, "DIGIT ZERO", true},
+      {0x0041, "LATIN CAPITAL LETTER A", true},
+      {0x0061, "LATIN SMALL LETTER A", true},
+      {0x007E, "TILDE", true},
 
-                      // ASCII control characters
-                      {0x0000, "NULL", false},
-                      {0x0009, "TAB", false},
-                      {0x000A, "LINE FEED", false},
-                      {0x000D, "CARRIAGE RETURN", false},
-                      {0x001F, "UNIT SEPARATOR", false},
-                      {0x007F, "DELETE", false},
+      // ASCII control characters
+      {0x0000, "NULL", false},
+      {0x0009, "TAB", false},
+      {0x000A, "LINE FEED", false},
+      {0x000D, "CARRIAGE RETURN", false},
+      {0x001F, "UNIT SEPARATOR", false},
+      {0x007F, "DELETE", false},
 
-                      // Non ASCII printable
-                      {0x00A0, "NO-BREAK SPACE", true},
-                      {0x00C0, "LATIN CAPITAL LETTER A WITH GRAVE", true},
-                      {0x00E9, "LATIN SMALL LETTER E WITH ACUTE", true},
-                      {0x00FF, "LATIN SMALL LETTER Y WITH DIAERESIS", true},
-                      {0x0391, "GREEK CAPITAL LETTER ALPHA", true},
-                      {0x03B1, "GREEK SMALL LETTER ALPHA", true},
-                      {0x0410, "CYRILLIC CAPITAL LETTER A", true},
-                      {0x0430, "CYRILLIC SMALL LETTER A", true},
-                      {0x0627, "ARABIC LETTER ALEF", true},
-                      {0x05D0, "HEBREW LETTER ALEF", true},
-                      {0x4E00, "CJK UNIFIED IDEOGRAPH-4E00", true},
-                      {0x9FFF, "CJK UNIFIED IDEOGRAPH-9FFF", true},
-                      {0x3042, "HIRAGANA LETTER A", true},
-                      {0x30A2, "KATAKANA LETTER A", true},
-                      {0xAC00, "HANGUL SYLLABLE GA", true},
+      // Non ASCII printable
+      {0x00A0, "NO-BREAK SPACE", true},
+      {0x00C0, "LATIN CAPITAL LETTER A WITH GRAVE", true},
+      {0x00E9, "LATIN SMALL LETTER E WITH ACUTE", true},
+      {0x00FF, "LATIN SMALL LETTER Y WITH DIAERESIS", true},
+      {0x0391, "GREEK CAPITAL LETTER ALPHA", true},
+      {0x03B1, "GREEK SMALL LETTER ALPHA", true},
+      {0x0410, "CYRILLIC CAPITAL LETTER A", true},
+      {0x0430, "CYRILLIC SMALL LETTER A", true},
+      {0x0627, "ARABIC LETTER ALEF", true},
+      {0x05D0, "HEBREW LETTER ALEF", true},
+      {0x4E00, "CJK UNIFIED IDEOGRAPH-4E00", true},
+      {0x9FFF, "CJK UNIFIED IDEOGRAPH-9FFF", true},
+      {0x3042, "HIRAGANA LETTER A", true},
+      {0x30A2, "KATAKANA LETTER A", true},
+      {0xAC00, "HANGUL SYLLABLE GA", true},
 
-                      // Emoji and symbols
-                      {0x2764, "HEAVY BLACK HEART", true},
+      // Emoji and symbols
+      {0x2764, "HEAVY BLACK HEART", true},
+
+      // Punctuation
+      {0x002E, "FULL STOP", true},
+      {0x002C, "COMMA", true},
+      {0x003A, "COLON", true},
+
+      // C1 control characters
+      {0x0080, "PADDING CHARACTER", false},
+      {0x009F, "APPLICATION PROGRAM COMMAND", false},
+
+      {0xFFFD, "REPLACEMENT CHARACTER", true},
+
+      // Format characters
+      {0x00AD, "SOFT HYPHEN", false},
+      {0x200C, "ZERO WIDTH NON-JOINER", false},
+
+      // Combining marks
+      {0x0300, "COMBINING GRAVE ACCENT", true},
+
+      // Private use area
+      {0xE000, "PRIVATE USE AREA (first)", true},
+      {0xF000, "PRIVATE USE AREA (last)", true},
+
 #ifndef LIBC_TARGET_OS_IS_WINDOWS
-                      {0x1F600, "GRINNING FACE", true},
-#endif // LIBC_TARGET_OS_IS_WINDOWS
-
-                      // Punctuation
-                      {0x002E, "FULL STOP", true},
-                      {0x002C, "COMMA", true},
-                      {0x003A, "COLON", true},
-
-                      // C1 control characters
-                      {0x0080, "PADDING CHARACTER", false},
-                      {0x009F, "APPLICATION PROGRAM COMMAND", false},
-
-                      {0xFFFD, "REPLACEMENT CHARACTER", true},
-
-                      // Format characters
-                      {0x00AD, "SOFT HYPHEN", false},
-                      {0x200C, "ZERO WIDTH NON-JOINER", false},
-
-                      // Combining marks
-                      {0x0300, "COMBINING GRAVE ACCENT", true},
-
-                      // Private use area
-                      {0xE000, "PRIVATE USE AREA (first)", true},
-                      {0xF000, "PRIVATE USE AREA (last)", true},
-#ifndef LIBC_TARGET_OS_IS_WINDOWS
-                      {0x10FFFD, "SUPPLEMENTARY PRIVATE USE AREA B", true}
+      {0x10FFFD, "SUPPLEMENTARY PRIVATE USE AREA B", true},
+      {0x1F600, "GRINNING FACE", true},
 #endif // LIBC_TARGET_OS_IS_WINDOWS
   };
 
