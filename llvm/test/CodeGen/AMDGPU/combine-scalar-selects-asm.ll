@@ -265,4 +265,983 @@ entry:
   ret void
 }
 
+; Test <4 x i32> to <8 x i16> (32-bit elements to 16-bit elements)
+define amdgpu_kernel void @combine_v4i32_to_v8i16_asm(
+; CHECK-OPT-LABEL: combine_v4i32_to_v8i16_asm:
+; CHECK-OPT:       ; %bb.0: ; %entry
+; CHECK-OPT-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
+; CHECK-OPT-NEXT:    s_load_dword s6, s[4:5], 0x10
+; CHECK-OPT-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; CHECK-OPT-NEXT:    v_lshlrev_b32_e32 v0, 4, v0
+; CHECK-OPT-NEXT:    v_mov_b32_e32 v4, 0
+; CHECK-OPT-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-OPT-NEXT:    global_load_dwordx4 v[0:3], v0, s[0:1]
+; CHECK-OPT-NEXT:    s_bitcmp1_b32 s6, 0
+; CHECK-OPT-NEXT:    s_cselect_b64 vcc, -1, 0
+; CHECK-OPT-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-OPT-NEXT:    v_cndmask_b32_e32 v3, 0, v3, vcc
+; CHECK-OPT-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
+; CHECK-OPT-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
+; CHECK-OPT-NEXT:    v_cndmask_b32_e32 v0, 0, v0, vcc
+; CHECK-OPT-NEXT:    global_store_dwordx4 v4, v[0:3], s[2:3]
+; CHECK-OPT-NEXT:    s_endpgm
+;
+; CHECK-NOOPT-LABEL: combine_v4i32_to_v8i16_asm:
+; CHECK-NOOPT:       ; %bb.0: ; %entry
+; CHECK-NOOPT-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
+; CHECK-NOOPT-NEXT:    s_load_dword s6, s[4:5], 0x10
+; CHECK-NOOPT-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; CHECK-NOOPT-NEXT:    v_lshlrev_b32_e32 v0, 4, v0
+; CHECK-NOOPT-NEXT:    v_mov_b32_e32 v4, 0
+; CHECK-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-NOOPT-NEXT:    global_load_dwordx4 v[0:3], v0, s[0:1]
+; CHECK-NOOPT-NEXT:    s_bitcmp1_b32 s6, 0
+; CHECK-NOOPT-NEXT:    s_cselect_b64 vcc, -1, 0
+; CHECK-NOOPT-NEXT:    s_mov_b32 s0, 0x5040100
+; CHECK-NOOPT-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NOOPT-NEXT:    v_cndmask_b32_e32 v5, 0, v0, vcc
+; CHECK-NOOPT-NEXT:    v_cndmask_b32_e32 v6, 0, v1, vcc
+; CHECK-NOOPT-NEXT:    v_cndmask_b32_e32 v7, 0, v2, vcc
+; CHECK-NOOPT-NEXT:    v_cndmask_b32_e32 v8, 0, v3, vcc
+; CHECK-NOOPT-NEXT:    v_cndmask_b32_sdwa v0, v4, v0, vcc dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
+; CHECK-NOOPT-NEXT:    v_cndmask_b32_sdwa v1, v4, v1, vcc dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
+; CHECK-NOOPT-NEXT:    v_cndmask_b32_sdwa v2, v4, v2, vcc dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
+; CHECK-NOOPT-NEXT:    v_cndmask_b32_sdwa v3, v4, v3, vcc dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
+; CHECK-NOOPT-NEXT:    v_perm_b32 v1, v1, v6, s0
+; CHECK-NOOPT-NEXT:    v_perm_b32 v2, v2, v7, s0
+; CHECK-NOOPT-NEXT:    v_perm_b32 v3, v3, v8, s0
+; CHECK-NOOPT-NEXT:    v_perm_b32 v0, v0, v5, s0
+; CHECK-NOOPT-NEXT:    global_store_dwordx4 v4, v[0:3], s[2:3]
+; CHECK-NOOPT-NEXT:    s_endpgm
+  ptr addrspace(1) %in,
+  ptr addrspace(1) %out,
+  i1 %cond
+) {
+entry:
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %tid.ext = zext i32 %tid to i64
+  %gep = getelementptr <4 x i32>, ptr addrspace(1) %in, i64 %tid.ext
+  %loaded = load <4 x i32>, ptr addrspace(1) %gep, align 16
+  %halves = bitcast <4 x i32> %loaded to <8 x i16>
+  %e0 = extractelement <8 x i16> %halves, i64 0
+  %e1 = extractelement <8 x i16> %halves, i64 1
+  %e2 = extractelement <8 x i16> %halves, i64 2
+  %e3 = extractelement <8 x i16> %halves, i64 3
+  %e4 = extractelement <8 x i16> %halves, i64 4
+  %e5 = extractelement <8 x i16> %halves, i64 5
+  %e6 = extractelement <8 x i16> %halves, i64 6
+  %e7 = extractelement <8 x i16> %halves, i64 7
+  %s0 = select i1 %cond, i16 %e0, i16 0
+  %s1 = select i1 %cond, i16 %e1, i16 0
+  %s2 = select i1 %cond, i16 %e2, i16 0
+  %s3 = select i1 %cond, i16 %e3, i16 0
+  %s4 = select i1 %cond, i16 %e4, i16 0
+  %s5 = select i1 %cond, i16 %e5, i16 0
+  %s6 = select i1 %cond, i16 %e6, i16 0
+  %s7 = select i1 %cond, i16 %e7, i16 0
+  store i16 %s0, ptr addrspace(1) %out, align 2
+  %ptr1 = getelementptr i16, ptr addrspace(1) %out, i64 1
+  store i16 %s1, ptr addrspace(1) %ptr1, align 2
+  %ptr2 = getelementptr i16, ptr addrspace(1) %out, i64 2
+  store i16 %s2, ptr addrspace(1) %ptr2, align 2
+  %ptr3 = getelementptr i16, ptr addrspace(1) %out, i64 3
+  store i16 %s3, ptr addrspace(1) %ptr3, align 2
+  %ptr4 = getelementptr i16, ptr addrspace(1) %out, i64 4
+  store i16 %s4, ptr addrspace(1) %ptr4, align 2
+  %ptr5 = getelementptr i16, ptr addrspace(1) %out, i64 5
+  store i16 %s5, ptr addrspace(1) %ptr5, align 2
+  %ptr6 = getelementptr i16, ptr addrspace(1) %out, i64 6
+  store i16 %s6, ptr addrspace(1) %ptr6, align 2
+  %ptr7 = getelementptr i16, ptr addrspace(1) %out, i64 7
+  store i16 %s7, ptr addrspace(1) %ptr7, align 2
+  ret void
+}
+
+; Test <4 x float> to <16 x i8> (float elements to byte elements)
+define amdgpu_kernel void @combine_v4f32_to_v16i8_asm(
+; CHECK-OPT-LABEL: combine_v4f32_to_v16i8_asm:
+; CHECK-OPT:       ; %bb.0: ; %entry
+; CHECK-OPT-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
+; CHECK-OPT-NEXT:    s_load_dword s6, s[4:5], 0x10
+; CHECK-OPT-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; CHECK-OPT-NEXT:    v_lshlrev_b32_e32 v0, 4, v0
+; CHECK-OPT-NEXT:    v_mov_b32_e32 v4, 0
+; CHECK-OPT-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-OPT-NEXT:    global_load_dwordx4 v[0:3], v0, s[0:1]
+; CHECK-OPT-NEXT:    s_bitcmp1_b32 s6, 0
+; CHECK-OPT-NEXT:    s_cselect_b64 vcc, -1, 0
+; CHECK-OPT-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-OPT-NEXT:    v_cndmask_b32_e32 v3, 0, v3, vcc
+; CHECK-OPT-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
+; CHECK-OPT-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
+; CHECK-OPT-NEXT:    v_cndmask_b32_e32 v0, 0, v0, vcc
+; CHECK-OPT-NEXT:    global_store_dwordx4 v4, v[0:3], s[2:3]
+; CHECK-OPT-NEXT:    s_endpgm
+;
+; CHECK-NOOPT-LABEL: combine_v4f32_to_v16i8_asm:
+; CHECK-NOOPT:       ; %bb.0: ; %entry
+; CHECK-NOOPT-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
+; CHECK-NOOPT-NEXT:    s_load_dword s6, s[4:5], 0x10
+; CHECK-NOOPT-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; CHECK-NOOPT-NEXT:    v_lshlrev_b32_e32 v0, 4, v0
+; CHECK-NOOPT-NEXT:    v_mov_b32_e32 v4, 0
+; CHECK-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-NOOPT-NEXT:    global_load_dwordx4 v[0:3], v0, s[0:1]
+; CHECK-NOOPT-NEXT:    s_bitcmp1_b32 s6, 0
+; CHECK-NOOPT-NEXT:    s_cselect_b64 vcc, -1, 0
+; CHECK-NOOPT-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NOOPT-NEXT:    v_lshrrev_b32_e32 v5, 8, v0
+; CHECK-NOOPT-NEXT:    v_lshrrev_b32_e32 v7, 24, v0
+; CHECK-NOOPT-NEXT:    v_lshrrev_b32_e32 v8, 8, v1
+; CHECK-NOOPT-NEXT:    v_lshrrev_b32_e32 v10, 24, v1
+; CHECK-NOOPT-NEXT:    v_lshrrev_b32_e32 v11, 8, v2
+; CHECK-NOOPT-NEXT:    v_lshrrev_b32_e32 v13, 24, v2
+; CHECK-NOOPT-NEXT:    v_lshrrev_b32_e32 v14, 8, v3
+; CHECK-NOOPT-NEXT:    v_lshrrev_b32_e32 v16, 24, v3
+; CHECK-NOOPT-NEXT:    v_lshrrev_b32_e32 v6, 16, v0
+; CHECK-NOOPT-NEXT:    v_lshrrev_b32_e32 v9, 16, v1
+; CHECK-NOOPT-NEXT:    v_lshrrev_b32_e32 v12, 16, v2
+; CHECK-NOOPT-NEXT:    v_lshrrev_b32_e32 v15, 16, v3
+; CHECK-NOOPT-NEXT:    v_cndmask_b32_e32 v5, 0, v5, vcc
+; CHECK-NOOPT-NEXT:    v_cndmask_b32_e32 v7, 0, v7, vcc
+; CHECK-NOOPT-NEXT:    v_cndmask_b32_e32 v8, 0, v8, vcc
+; CHECK-NOOPT-NEXT:    v_cndmask_b32_e32 v10, 0, v10, vcc
+; CHECK-NOOPT-NEXT:    v_cndmask_b32_e32 v11, 0, v11, vcc
+; CHECK-NOOPT-NEXT:    v_cndmask_b32_e32 v13, 0, v13, vcc
+; CHECK-NOOPT-NEXT:    v_cndmask_b32_e32 v14, 0, v14, vcc
+; CHECK-NOOPT-NEXT:    v_cndmask_b32_e32 v16, 0, v16, vcc
+; CHECK-NOOPT-NEXT:    v_cndmask_b32_e32 v0, 0, v0, vcc
+; CHECK-NOOPT-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
+; CHECK-NOOPT-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
+; CHECK-NOOPT-NEXT:    v_cndmask_b32_e32 v3, 0, v3, vcc
+; CHECK-NOOPT-NEXT:    v_cndmask_b32_e32 v6, 0, v6, vcc
+; CHECK-NOOPT-NEXT:    v_cndmask_b32_e32 v9, 0, v9, vcc
+; CHECK-NOOPT-NEXT:    v_cndmask_b32_e32 v12, 0, v12, vcc
+; CHECK-NOOPT-NEXT:    v_cndmask_b32_e32 v15, 0, v15, vcc
+; CHECK-NOOPT-NEXT:    v_lshlrev_b16_e32 v14, 8, v14
+; CHECK-NOOPT-NEXT:    v_lshlrev_b16_e32 v16, 8, v16
+; CHECK-NOOPT-NEXT:    v_lshlrev_b16_e32 v11, 8, v11
+; CHECK-NOOPT-NEXT:    v_lshlrev_b16_e32 v13, 8, v13
+; CHECK-NOOPT-NEXT:    v_lshlrev_b16_e32 v8, 8, v8
+; CHECK-NOOPT-NEXT:    v_lshlrev_b16_e32 v10, 8, v10
+; CHECK-NOOPT-NEXT:    v_lshlrev_b16_e32 v5, 8, v5
+; CHECK-NOOPT-NEXT:    v_lshlrev_b16_e32 v7, 8, v7
+; CHECK-NOOPT-NEXT:    v_or_b32_sdwa v3, v3, v14 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
+; CHECK-NOOPT-NEXT:    v_or_b32_sdwa v14, v15, v16 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
+; CHECK-NOOPT-NEXT:    v_or_b32_sdwa v2, v2, v11 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
+; CHECK-NOOPT-NEXT:    v_or_b32_sdwa v11, v12, v13 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
+; CHECK-NOOPT-NEXT:    v_or_b32_sdwa v1, v1, v8 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
+; CHECK-NOOPT-NEXT:    v_or_b32_sdwa v8, v9, v10 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
+; CHECK-NOOPT-NEXT:    v_or_b32_sdwa v0, v0, v5 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
+; CHECK-NOOPT-NEXT:    v_or_b32_sdwa v5, v6, v7 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
+; CHECK-NOOPT-NEXT:    v_or_b32_sdwa v3, v3, v14 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
+; CHECK-NOOPT-NEXT:    v_or_b32_sdwa v2, v2, v11 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
+; CHECK-NOOPT-NEXT:    v_or_b32_sdwa v1, v1, v8 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
+; CHECK-NOOPT-NEXT:    v_or_b32_sdwa v0, v0, v5 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
+; CHECK-NOOPT-NEXT:    global_store_dwordx4 v4, v[0:3], s[2:3]
+; CHECK-NOOPT-NEXT:    s_endpgm
+  ptr addrspace(1) %in,
+  ptr addrspace(1) %out,
+  i1 %cond
+) {
+entry:
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %tid.ext = zext i32 %tid to i64
+  %gep = getelementptr <4 x float>, ptr addrspace(1) %in, i64 %tid.ext
+  %loaded = load <4 x float>, ptr addrspace(1) %gep, align 16
+  %bytes = bitcast <4 x float> %loaded to <16 x i8>
+  %e0 = extractelement <16 x i8> %bytes, i64 0
+  %e1 = extractelement <16 x i8> %bytes, i64 1
+  %e2 = extractelement <16 x i8> %bytes, i64 2
+  %e3 = extractelement <16 x i8> %bytes, i64 3
+  %e4 = extractelement <16 x i8> %bytes, i64 4
+  %e5 = extractelement <16 x i8> %bytes, i64 5
+  %e6 = extractelement <16 x i8> %bytes, i64 6
+  %e7 = extractelement <16 x i8> %bytes, i64 7
+  %e8 = extractelement <16 x i8> %bytes, i64 8
+  %e9 = extractelement <16 x i8> %bytes, i64 9
+  %e10 = extractelement <16 x i8> %bytes, i64 10
+  %e11 = extractelement <16 x i8> %bytes, i64 11
+  %e12 = extractelement <16 x i8> %bytes, i64 12
+  %e13 = extractelement <16 x i8> %bytes, i64 13
+  %e14 = extractelement <16 x i8> %bytes, i64 14
+  %e15 = extractelement <16 x i8> %bytes, i64 15
+  %s0 = select i1 %cond, i8 %e0, i8 0
+  %s1 = select i1 %cond, i8 %e1, i8 0
+  %s2 = select i1 %cond, i8 %e2, i8 0
+  %s3 = select i1 %cond, i8 %e3, i8 0
+  %s4 = select i1 %cond, i8 %e4, i8 0
+  %s5 = select i1 %cond, i8 %e5, i8 0
+  %s6 = select i1 %cond, i8 %e6, i8 0
+  %s7 = select i1 %cond, i8 %e7, i8 0
+  %s8 = select i1 %cond, i8 %e8, i8 0
+  %s9 = select i1 %cond, i8 %e9, i8 0
+  %s10 = select i1 %cond, i8 %e10, i8 0
+  %s11 = select i1 %cond, i8 %e11, i8 0
+  %s12 = select i1 %cond, i8 %e12, i8 0
+  %s13 = select i1 %cond, i8 %e13, i8 0
+  %s14 = select i1 %cond, i8 %e14, i8 0
+  %s15 = select i1 %cond, i8 %e15, i8 0
+  store i8 %s0, ptr addrspace(1) %out, align 1
+  %ptr1 = getelementptr i8, ptr addrspace(1) %out, i64 1
+  store i8 %s1, ptr addrspace(1) %ptr1, align 1
+  %ptr2 = getelementptr i8, ptr addrspace(1) %out, i64 2
+  store i8 %s2, ptr addrspace(1) %ptr2, align 1
+  %ptr3 = getelementptr i8, ptr addrspace(1) %out, i64 3
+  store i8 %s3, ptr addrspace(1) %ptr3, align 1
+  %ptr4 = getelementptr i8, ptr addrspace(1) %out, i64 4
+  store i8 %s4, ptr addrspace(1) %ptr4, align 1
+  %ptr5 = getelementptr i8, ptr addrspace(1) %out, i64 5
+  store i8 %s5, ptr addrspace(1) %ptr5, align 1
+  %ptr6 = getelementptr i8, ptr addrspace(1) %out, i64 6
+  store i8 %s6, ptr addrspace(1) %ptr6, align 1
+  %ptr7 = getelementptr i8, ptr addrspace(1) %out, i64 7
+  store i8 %s7, ptr addrspace(1) %ptr7, align 1
+  %ptr8 = getelementptr i8, ptr addrspace(1) %out, i64 8
+  store i8 %s8, ptr addrspace(1) %ptr8, align 1
+  %ptr9 = getelementptr i8, ptr addrspace(1) %out, i64 9
+  store i8 %s9, ptr addrspace(1) %ptr9, align 1
+  %ptr10 = getelementptr i8, ptr addrspace(1) %out, i64 10
+  store i8 %s10, ptr addrspace(1) %ptr10, align 1
+  %ptr11 = getelementptr i8, ptr addrspace(1) %out, i64 11
+  store i8 %s11, ptr addrspace(1) %ptr11, align 1
+  %ptr12 = getelementptr i8, ptr addrspace(1) %out, i64 12
+  store i8 %s12, ptr addrspace(1) %ptr12, align 1
+  %ptr13 = getelementptr i8, ptr addrspace(1) %out, i64 13
+  store i8 %s13, ptr addrspace(1) %ptr13, align 1
+  %ptr14 = getelementptr i8, ptr addrspace(1) %out, i64 14
+  store i8 %s14, ptr addrspace(1) %ptr14, align 1
+  %ptr15 = getelementptr i8, ptr addrspace(1) %out, i64 15
+  store i8 %s15, ptr addrspace(1) %ptr15, align 1
+  ret void
+}
+
+; Test <4 x float> to <8 x i16> (float elements to 16-bit elements)
+define amdgpu_kernel void @combine_v4f32_to_v8i16_asm(
+; CHECK-OPT-LABEL: combine_v4f32_to_v8i16_asm:
+; CHECK-OPT:       ; %bb.0: ; %entry
+; CHECK-OPT-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
+; CHECK-OPT-NEXT:    s_load_dword s6, s[4:5], 0x10
+; CHECK-OPT-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; CHECK-OPT-NEXT:    v_lshlrev_b32_e32 v0, 4, v0
+; CHECK-OPT-NEXT:    v_mov_b32_e32 v4, 0
+; CHECK-OPT-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-OPT-NEXT:    global_load_dwordx4 v[0:3], v0, s[0:1]
+; CHECK-OPT-NEXT:    s_bitcmp1_b32 s6, 0
+; CHECK-OPT-NEXT:    s_cselect_b64 vcc, -1, 0
+; CHECK-OPT-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-OPT-NEXT:    v_cndmask_b32_e32 v3, 0, v3, vcc
+; CHECK-OPT-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
+; CHECK-OPT-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
+; CHECK-OPT-NEXT:    v_cndmask_b32_e32 v0, 0, v0, vcc
+; CHECK-OPT-NEXT:    global_store_dwordx4 v4, v[0:3], s[2:3]
+; CHECK-OPT-NEXT:    s_endpgm
+;
+; CHECK-NOOPT-LABEL: combine_v4f32_to_v8i16_asm:
+; CHECK-NOOPT:       ; %bb.0: ; %entry
+; CHECK-NOOPT-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
+; CHECK-NOOPT-NEXT:    s_load_dword s6, s[4:5], 0x10
+; CHECK-NOOPT-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; CHECK-NOOPT-NEXT:    v_lshlrev_b32_e32 v0, 4, v0
+; CHECK-NOOPT-NEXT:    v_mov_b32_e32 v4, 0
+; CHECK-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-NOOPT-NEXT:    global_load_dwordx4 v[0:3], v0, s[0:1]
+; CHECK-NOOPT-NEXT:    s_bitcmp1_b32 s6, 0
+; CHECK-NOOPT-NEXT:    s_cselect_b64 vcc, -1, 0
+; CHECK-NOOPT-NEXT:    s_mov_b32 s0, 0x5040100
+; CHECK-NOOPT-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NOOPT-NEXT:    v_cndmask_b32_e32 v5, 0, v0, vcc
+; CHECK-NOOPT-NEXT:    v_cndmask_b32_e32 v6, 0, v1, vcc
+; CHECK-NOOPT-NEXT:    v_cndmask_b32_e32 v7, 0, v2, vcc
+; CHECK-NOOPT-NEXT:    v_cndmask_b32_e32 v8, 0, v3, vcc
+; CHECK-NOOPT-NEXT:    v_cndmask_b32_sdwa v0, v4, v0, vcc dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
+; CHECK-NOOPT-NEXT:    v_cndmask_b32_sdwa v1, v4, v1, vcc dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
+; CHECK-NOOPT-NEXT:    v_cndmask_b32_sdwa v2, v4, v2, vcc dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
+; CHECK-NOOPT-NEXT:    v_cndmask_b32_sdwa v3, v4, v3, vcc dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
+; CHECK-NOOPT-NEXT:    v_perm_b32 v1, v1, v6, s0
+; CHECK-NOOPT-NEXT:    v_perm_b32 v2, v2, v7, s0
+; CHECK-NOOPT-NEXT:    v_perm_b32 v3, v3, v8, s0
+; CHECK-NOOPT-NEXT:    v_perm_b32 v0, v0, v5, s0
+; CHECK-NOOPT-NEXT:    global_store_dwordx4 v4, v[0:3], s[2:3]
+; CHECK-NOOPT-NEXT:    s_endpgm
+  ptr addrspace(1) %in,
+  ptr addrspace(1) %out,
+  i1 %cond
+) {
+entry:
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %tid.ext = zext i32 %tid to i64
+  %gep = getelementptr <4 x float>, ptr addrspace(1) %in, i64 %tid.ext
+  %loaded = load <4 x float>, ptr addrspace(1) %gep, align 16
+  %halves = bitcast <4 x float> %loaded to <8 x i16>
+  %e0 = extractelement <8 x i16> %halves, i64 0
+  %e1 = extractelement <8 x i16> %halves, i64 1
+  %e2 = extractelement <8 x i16> %halves, i64 2
+  %e3 = extractelement <8 x i16> %halves, i64 3
+  %e4 = extractelement <8 x i16> %halves, i64 4
+  %e5 = extractelement <8 x i16> %halves, i64 5
+  %e6 = extractelement <8 x i16> %halves, i64 6
+  %e7 = extractelement <8 x i16> %halves, i64 7
+  %s0 = select i1 %cond, i16 %e0, i16 0
+  %s1 = select i1 %cond, i16 %e1, i16 0
+  %s2 = select i1 %cond, i16 %e2, i16 0
+  %s3 = select i1 %cond, i16 %e3, i16 0
+  %s4 = select i1 %cond, i16 %e4, i16 0
+  %s5 = select i1 %cond, i16 %e5, i16 0
+  %s6 = select i1 %cond, i16 %e6, i16 0
+  %s7 = select i1 %cond, i16 %e7, i16 0
+  store i16 %s0, ptr addrspace(1) %out, align 2
+  %ptr1 = getelementptr i16, ptr addrspace(1) %out, i64 1
+  store i16 %s1, ptr addrspace(1) %ptr1, align 2
+  %ptr2 = getelementptr i16, ptr addrspace(1) %out, i64 2
+  store i16 %s2, ptr addrspace(1) %ptr2, align 2
+  %ptr3 = getelementptr i16, ptr addrspace(1) %out, i64 3
+  store i16 %s3, ptr addrspace(1) %ptr3, align 2
+  %ptr4 = getelementptr i16, ptr addrspace(1) %out, i64 4
+  store i16 %s4, ptr addrspace(1) %ptr4, align 2
+  %ptr5 = getelementptr i16, ptr addrspace(1) %out, i64 5
+  store i16 %s5, ptr addrspace(1) %ptr5, align 2
+  %ptr6 = getelementptr i16, ptr addrspace(1) %out, i64 6
+  store i16 %s6, ptr addrspace(1) %ptr6, align 2
+  %ptr7 = getelementptr i16, ptr addrspace(1) %out, i64 7
+  store i16 %s7, ptr addrspace(1) %ptr7, align 2
+  ret void
+}
+
+; Test <2 x i64> to <16 x i8> (64-bit elements to byte elements)
+define amdgpu_kernel void @combine_v2i64_to_v16i8_asm(
+; CHECK-OPT-LABEL: combine_v2i64_to_v16i8_asm:
+; CHECK-OPT:       ; %bb.0: ; %entry
+; CHECK-OPT-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
+; CHECK-OPT-NEXT:    s_load_dword s6, s[4:5], 0x10
+; CHECK-OPT-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; CHECK-OPT-NEXT:    v_lshlrev_b32_e32 v0, 4, v0
+; CHECK-OPT-NEXT:    v_mov_b32_e32 v4, 0
+; CHECK-OPT-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-OPT-NEXT:    global_load_dwordx4 v[0:3], v0, s[0:1]
+; CHECK-OPT-NEXT:    s_bitcmp1_b32 s6, 0
+; CHECK-OPT-NEXT:    s_cselect_b64 vcc, -1, 0
+; CHECK-OPT-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-OPT-NEXT:    v_cndmask_b32_e32 v3, 0, v3, vcc
+; CHECK-OPT-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
+; CHECK-OPT-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
+; CHECK-OPT-NEXT:    v_cndmask_b32_e32 v0, 0, v0, vcc
+; CHECK-OPT-NEXT:    global_store_dwordx4 v4, v[0:3], s[2:3]
+; CHECK-OPT-NEXT:    s_endpgm
+;
+; CHECK-NOOPT-LABEL: combine_v2i64_to_v16i8_asm:
+; CHECK-NOOPT:       ; %bb.0: ; %entry
+; CHECK-NOOPT-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
+; CHECK-NOOPT-NEXT:    s_load_dword s6, s[4:5], 0x10
+; CHECK-NOOPT-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; CHECK-NOOPT-NEXT:    v_lshlrev_b32_e32 v0, 4, v0
+; CHECK-NOOPT-NEXT:    v_mov_b32_e32 v4, 0
+; CHECK-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-NOOPT-NEXT:    global_load_dwordx4 v[0:3], v0, s[0:1]
+; CHECK-NOOPT-NEXT:    s_bitcmp1_b32 s6, 0
+; CHECK-NOOPT-NEXT:    s_cselect_b64 vcc, -1, 0
+; CHECK-NOOPT-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NOOPT-NEXT:    v_lshrrev_b32_e32 v5, 8, v0
+; CHECK-NOOPT-NEXT:    v_lshrrev_b32_e32 v7, 24, v0
+; CHECK-NOOPT-NEXT:    v_lshrrev_b32_e32 v8, 8, v1
+; CHECK-NOOPT-NEXT:    v_lshrrev_b32_e32 v10, 24, v1
+; CHECK-NOOPT-NEXT:    v_lshrrev_b32_e32 v11, 8, v2
+; CHECK-NOOPT-NEXT:    v_lshrrev_b32_e32 v13, 24, v2
+; CHECK-NOOPT-NEXT:    v_lshrrev_b32_e32 v14, 8, v3
+; CHECK-NOOPT-NEXT:    v_lshrrev_b32_e32 v16, 24, v3
+; CHECK-NOOPT-NEXT:    v_lshrrev_b32_e32 v6, 16, v0
+; CHECK-NOOPT-NEXT:    v_lshrrev_b32_e32 v9, 16, v1
+; CHECK-NOOPT-NEXT:    v_lshrrev_b32_e32 v12, 16, v2
+; CHECK-NOOPT-NEXT:    v_lshrrev_b32_e32 v15, 16, v3
+; CHECK-NOOPT-NEXT:    v_cndmask_b32_e32 v5, 0, v5, vcc
+; CHECK-NOOPT-NEXT:    v_cndmask_b32_e32 v7, 0, v7, vcc
+; CHECK-NOOPT-NEXT:    v_cndmask_b32_e32 v8, 0, v8, vcc
+; CHECK-NOOPT-NEXT:    v_cndmask_b32_e32 v10, 0, v10, vcc
+; CHECK-NOOPT-NEXT:    v_cndmask_b32_e32 v11, 0, v11, vcc
+; CHECK-NOOPT-NEXT:    v_cndmask_b32_e32 v13, 0, v13, vcc
+; CHECK-NOOPT-NEXT:    v_cndmask_b32_e32 v14, 0, v14, vcc
+; CHECK-NOOPT-NEXT:    v_cndmask_b32_e32 v16, 0, v16, vcc
+; CHECK-NOOPT-NEXT:    v_cndmask_b32_e32 v0, 0, v0, vcc
+; CHECK-NOOPT-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
+; CHECK-NOOPT-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
+; CHECK-NOOPT-NEXT:    v_cndmask_b32_e32 v3, 0, v3, vcc
+; CHECK-NOOPT-NEXT:    v_cndmask_b32_e32 v6, 0, v6, vcc
+; CHECK-NOOPT-NEXT:    v_cndmask_b32_e32 v9, 0, v9, vcc
+; CHECK-NOOPT-NEXT:    v_cndmask_b32_e32 v12, 0, v12, vcc
+; CHECK-NOOPT-NEXT:    v_cndmask_b32_e32 v15, 0, v15, vcc
+; CHECK-NOOPT-NEXT:    v_lshlrev_b16_e32 v14, 8, v14
+; CHECK-NOOPT-NEXT:    v_lshlrev_b16_e32 v16, 8, v16
+; CHECK-NOOPT-NEXT:    v_lshlrev_b16_e32 v11, 8, v11
+; CHECK-NOOPT-NEXT:    v_lshlrev_b16_e32 v13, 8, v13
+; CHECK-NOOPT-NEXT:    v_lshlrev_b16_e32 v8, 8, v8
+; CHECK-NOOPT-NEXT:    v_lshlrev_b16_e32 v10, 8, v10
+; CHECK-NOOPT-NEXT:    v_lshlrev_b16_e32 v5, 8, v5
+; CHECK-NOOPT-NEXT:    v_lshlrev_b16_e32 v7, 8, v7
+; CHECK-NOOPT-NEXT:    v_or_b32_sdwa v3, v3, v14 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
+; CHECK-NOOPT-NEXT:    v_or_b32_sdwa v14, v15, v16 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
+; CHECK-NOOPT-NEXT:    v_or_b32_sdwa v2, v2, v11 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
+; CHECK-NOOPT-NEXT:    v_or_b32_sdwa v11, v12, v13 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
+; CHECK-NOOPT-NEXT:    v_or_b32_sdwa v1, v1, v8 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
+; CHECK-NOOPT-NEXT:    v_or_b32_sdwa v8, v9, v10 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
+; CHECK-NOOPT-NEXT:    v_or_b32_sdwa v0, v0, v5 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
+; CHECK-NOOPT-NEXT:    v_or_b32_sdwa v5, v6, v7 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
+; CHECK-NOOPT-NEXT:    v_or_b32_sdwa v3, v3, v14 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
+; CHECK-NOOPT-NEXT:    v_or_b32_sdwa v2, v2, v11 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
+; CHECK-NOOPT-NEXT:    v_or_b32_sdwa v1, v1, v8 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
+; CHECK-NOOPT-NEXT:    v_or_b32_sdwa v0, v0, v5 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
+; CHECK-NOOPT-NEXT:    global_store_dwordx4 v4, v[0:3], s[2:3]
+; CHECK-NOOPT-NEXT:    s_endpgm
+  ptr addrspace(1) %in,
+  ptr addrspace(1) %out,
+  i1 %cond
+) {
+entry:
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %tid.ext = zext i32 %tid to i64
+  %gep = getelementptr <2 x i64>, ptr addrspace(1) %in, i64 %tid.ext
+  %loaded = load <2 x i64>, ptr addrspace(1) %gep, align 16
+  %bytes = bitcast <2 x i64> %loaded to <16 x i8>
+  %e0 = extractelement <16 x i8> %bytes, i64 0
+  %e1 = extractelement <16 x i8> %bytes, i64 1
+  %e2 = extractelement <16 x i8> %bytes, i64 2
+  %e3 = extractelement <16 x i8> %bytes, i64 3
+  %e4 = extractelement <16 x i8> %bytes, i64 4
+  %e5 = extractelement <16 x i8> %bytes, i64 5
+  %e6 = extractelement <16 x i8> %bytes, i64 6
+  %e7 = extractelement <16 x i8> %bytes, i64 7
+  %e8 = extractelement <16 x i8> %bytes, i64 8
+  %e9 = extractelement <16 x i8> %bytes, i64 9
+  %e10 = extractelement <16 x i8> %bytes, i64 10
+  %e11 = extractelement <16 x i8> %bytes, i64 11
+  %e12 = extractelement <16 x i8> %bytes, i64 12
+  %e13 = extractelement <16 x i8> %bytes, i64 13
+  %e14 = extractelement <16 x i8> %bytes, i64 14
+  %e15 = extractelement <16 x i8> %bytes, i64 15
+  %s0 = select i1 %cond, i8 %e0, i8 0
+  %s1 = select i1 %cond, i8 %e1, i8 0
+  %s2 = select i1 %cond, i8 %e2, i8 0
+  %s3 = select i1 %cond, i8 %e3, i8 0
+  %s4 = select i1 %cond, i8 %e4, i8 0
+  %s5 = select i1 %cond, i8 %e5, i8 0
+  %s6 = select i1 %cond, i8 %e6, i8 0
+  %s7 = select i1 %cond, i8 %e7, i8 0
+  %s8 = select i1 %cond, i8 %e8, i8 0
+  %s9 = select i1 %cond, i8 %e9, i8 0
+  %s10 = select i1 %cond, i8 %e10, i8 0
+  %s11 = select i1 %cond, i8 %e11, i8 0
+  %s12 = select i1 %cond, i8 %e12, i8 0
+  %s13 = select i1 %cond, i8 %e13, i8 0
+  %s14 = select i1 %cond, i8 %e14, i8 0
+  %s15 = select i1 %cond, i8 %e15, i8 0
+  store i8 %s0, ptr addrspace(1) %out, align 1
+  %ptr1 = getelementptr i8, ptr addrspace(1) %out, i64 1
+  store i8 %s1, ptr addrspace(1) %ptr1, align 1
+  %ptr2 = getelementptr i8, ptr addrspace(1) %out, i64 2
+  store i8 %s2, ptr addrspace(1) %ptr2, align 1
+  %ptr3 = getelementptr i8, ptr addrspace(1) %out, i64 3
+  store i8 %s3, ptr addrspace(1) %ptr3, align 1
+  %ptr4 = getelementptr i8, ptr addrspace(1) %out, i64 4
+  store i8 %s4, ptr addrspace(1) %ptr4, align 1
+  %ptr5 = getelementptr i8, ptr addrspace(1) %out, i64 5
+  store i8 %s5, ptr addrspace(1) %ptr5, align 1
+  %ptr6 = getelementptr i8, ptr addrspace(1) %out, i64 6
+  store i8 %s6, ptr addrspace(1) %ptr6, align 1
+  %ptr7 = getelementptr i8, ptr addrspace(1) %out, i64 7
+  store i8 %s7, ptr addrspace(1) %ptr7, align 1
+  %ptr8 = getelementptr i8, ptr addrspace(1) %out, i64 8
+  store i8 %s8, ptr addrspace(1) %ptr8, align 1
+  %ptr9 = getelementptr i8, ptr addrspace(1) %out, i64 9
+  store i8 %s9, ptr addrspace(1) %ptr9, align 1
+  %ptr10 = getelementptr i8, ptr addrspace(1) %out, i64 10
+  store i8 %s10, ptr addrspace(1) %ptr10, align 1
+  %ptr11 = getelementptr i8, ptr addrspace(1) %out, i64 11
+  store i8 %s11, ptr addrspace(1) %ptr11, align 1
+  %ptr12 = getelementptr i8, ptr addrspace(1) %out, i64 12
+  store i8 %s12, ptr addrspace(1) %ptr12, align 1
+  %ptr13 = getelementptr i8, ptr addrspace(1) %out, i64 13
+  store i8 %s13, ptr addrspace(1) %ptr13, align 1
+  %ptr14 = getelementptr i8, ptr addrspace(1) %out, i64 14
+  store i8 %s14, ptr addrspace(1) %ptr14, align 1
+  %ptr15 = getelementptr i8, ptr addrspace(1) %out, i64 15
+  store i8 %s15, ptr addrspace(1) %ptr15, align 1
+  ret void
+}
+
+; Test <2 x i64> to <8 x i16> (64-bit elements to 16-bit elements)
+define amdgpu_kernel void @combine_v2i64_to_v8i16_asm(
+; CHECK-OPT-LABEL: combine_v2i64_to_v8i16_asm:
+; CHECK-OPT:       ; %bb.0: ; %entry
+; CHECK-OPT-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
+; CHECK-OPT-NEXT:    s_load_dword s6, s[4:5], 0x10
+; CHECK-OPT-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; CHECK-OPT-NEXT:    v_lshlrev_b32_e32 v0, 4, v0
+; CHECK-OPT-NEXT:    v_mov_b32_e32 v4, 0
+; CHECK-OPT-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-OPT-NEXT:    global_load_dwordx4 v[0:3], v0, s[0:1]
+; CHECK-OPT-NEXT:    s_bitcmp1_b32 s6, 0
+; CHECK-OPT-NEXT:    s_cselect_b64 vcc, -1, 0
+; CHECK-OPT-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-OPT-NEXT:    v_cndmask_b32_e32 v3, 0, v3, vcc
+; CHECK-OPT-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
+; CHECK-OPT-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
+; CHECK-OPT-NEXT:    v_cndmask_b32_e32 v0, 0, v0, vcc
+; CHECK-OPT-NEXT:    global_store_dwordx4 v4, v[0:3], s[2:3]
+; CHECK-OPT-NEXT:    s_endpgm
+;
+; CHECK-NOOPT-LABEL: combine_v2i64_to_v8i16_asm:
+; CHECK-NOOPT:       ; %bb.0: ; %entry
+; CHECK-NOOPT-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
+; CHECK-NOOPT-NEXT:    s_load_dword s6, s[4:5], 0x10
+; CHECK-NOOPT-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; CHECK-NOOPT-NEXT:    v_lshlrev_b32_e32 v0, 4, v0
+; CHECK-NOOPT-NEXT:    v_mov_b32_e32 v4, 0
+; CHECK-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-NOOPT-NEXT:    global_load_dwordx4 v[0:3], v0, s[0:1]
+; CHECK-NOOPT-NEXT:    s_bitcmp1_b32 s6, 0
+; CHECK-NOOPT-NEXT:    s_cselect_b64 vcc, -1, 0
+; CHECK-NOOPT-NEXT:    s_mov_b32 s0, 0x5040100
+; CHECK-NOOPT-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NOOPT-NEXT:    v_cndmask_b32_e32 v5, 0, v0, vcc
+; CHECK-NOOPT-NEXT:    v_cndmask_b32_e32 v6, 0, v1, vcc
+; CHECK-NOOPT-NEXT:    v_cndmask_b32_e32 v7, 0, v2, vcc
+; CHECK-NOOPT-NEXT:    v_cndmask_b32_e32 v8, 0, v3, vcc
+; CHECK-NOOPT-NEXT:    v_cndmask_b32_sdwa v0, v4, v0, vcc dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
+; CHECK-NOOPT-NEXT:    v_cndmask_b32_sdwa v1, v4, v1, vcc dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
+; CHECK-NOOPT-NEXT:    v_cndmask_b32_sdwa v2, v4, v2, vcc dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
+; CHECK-NOOPT-NEXT:    v_cndmask_b32_sdwa v3, v4, v3, vcc dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
+; CHECK-NOOPT-NEXT:    v_perm_b32 v1, v1, v6, s0
+; CHECK-NOOPT-NEXT:    v_perm_b32 v2, v2, v7, s0
+; CHECK-NOOPT-NEXT:    v_perm_b32 v3, v3, v8, s0
+; CHECK-NOOPT-NEXT:    v_perm_b32 v0, v0, v5, s0
+; CHECK-NOOPT-NEXT:    global_store_dwordx4 v4, v[0:3], s[2:3]
+; CHECK-NOOPT-NEXT:    s_endpgm
+  ptr addrspace(1) %in,
+  ptr addrspace(1) %out,
+  i1 %cond
+) {
+entry:
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %tid.ext = zext i32 %tid to i64
+  %gep = getelementptr <2 x i64>, ptr addrspace(1) %in, i64 %tid.ext
+  %loaded = load <2 x i64>, ptr addrspace(1) %gep, align 16
+  %halves = bitcast <2 x i64> %loaded to <8 x i16>
+  %e0 = extractelement <8 x i16> %halves, i64 0
+  %e1 = extractelement <8 x i16> %halves, i64 1
+  %e2 = extractelement <8 x i16> %halves, i64 2
+  %e3 = extractelement <8 x i16> %halves, i64 3
+  %e4 = extractelement <8 x i16> %halves, i64 4
+  %e5 = extractelement <8 x i16> %halves, i64 5
+  %e6 = extractelement <8 x i16> %halves, i64 6
+  %e7 = extractelement <8 x i16> %halves, i64 7
+  %s0 = select i1 %cond, i16 %e0, i16 0
+  %s1 = select i1 %cond, i16 %e1, i16 0
+  %s2 = select i1 %cond, i16 %e2, i16 0
+  %s3 = select i1 %cond, i16 %e3, i16 0
+  %s4 = select i1 %cond, i16 %e4, i16 0
+  %s5 = select i1 %cond, i16 %e5, i16 0
+  %s6 = select i1 %cond, i16 %e6, i16 0
+  %s7 = select i1 %cond, i16 %e7, i16 0
+  store i16 %s0, ptr addrspace(1) %out, align 2
+  %ptr1 = getelementptr i16, ptr addrspace(1) %out, i64 1
+  store i16 %s1, ptr addrspace(1) %ptr1, align 2
+  %ptr2 = getelementptr i16, ptr addrspace(1) %out, i64 2
+  store i16 %s2, ptr addrspace(1) %ptr2, align 2
+  %ptr3 = getelementptr i16, ptr addrspace(1) %out, i64 3
+  store i16 %s3, ptr addrspace(1) %ptr3, align 2
+  %ptr4 = getelementptr i16, ptr addrspace(1) %out, i64 4
+  store i16 %s4, ptr addrspace(1) %ptr4, align 2
+  %ptr5 = getelementptr i16, ptr addrspace(1) %out, i64 5
+  store i16 %s5, ptr addrspace(1) %ptr5, align 2
+  %ptr6 = getelementptr i16, ptr addrspace(1) %out, i64 6
+  store i16 %s6, ptr addrspace(1) %ptr6, align 2
+  %ptr7 = getelementptr i16, ptr addrspace(1) %out, i64 7
+  store i16 %s7, ptr addrspace(1) %ptr7, align 2
+  ret void
+}
+
+; Test <2 x i64> to <4 x i32> (64-bit elements to 32-bit elements)
+define amdgpu_kernel void @combine_v2i64_to_v4i32_asm(
+; CHECK-OPT-LABEL: combine_v2i64_to_v4i32_asm:
+; CHECK-OPT:       ; %bb.0: ; %entry
+; CHECK-OPT-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
+; CHECK-OPT-NEXT:    s_load_dword s6, s[4:5], 0x10
+; CHECK-OPT-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; CHECK-OPT-NEXT:    v_lshlrev_b32_e32 v0, 4, v0
+; CHECK-OPT-NEXT:    v_mov_b32_e32 v4, 0
+; CHECK-OPT-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-OPT-NEXT:    global_load_dwordx4 v[0:3], v0, s[0:1]
+; CHECK-OPT-NEXT:    s_bitcmp1_b32 s6, 0
+; CHECK-OPT-NEXT:    s_cselect_b64 vcc, -1, 0
+; CHECK-OPT-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-OPT-NEXT:    v_cndmask_b32_e32 v3, 0, v3, vcc
+; CHECK-OPT-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
+; CHECK-OPT-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
+; CHECK-OPT-NEXT:    v_cndmask_b32_e32 v0, 0, v0, vcc
+; CHECK-OPT-NEXT:    global_store_dwordx4 v4, v[0:3], s[2:3]
+; CHECK-OPT-NEXT:    s_endpgm
+;
+; CHECK-NOOPT-LABEL: combine_v2i64_to_v4i32_asm:
+; CHECK-NOOPT:       ; %bb.0: ; %entry
+; CHECK-NOOPT-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
+; CHECK-NOOPT-NEXT:    s_load_dword s6, s[4:5], 0x10
+; CHECK-NOOPT-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; CHECK-NOOPT-NEXT:    v_lshlrev_b32_e32 v0, 4, v0
+; CHECK-NOOPT-NEXT:    v_mov_b32_e32 v4, 0
+; CHECK-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-NOOPT-NEXT:    global_load_dwordx4 v[0:3], v0, s[0:1]
+; CHECK-NOOPT-NEXT:    s_bitcmp1_b32 s6, 0
+; CHECK-NOOPT-NEXT:    s_cselect_b64 vcc, -1, 0
+; CHECK-NOOPT-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NOOPT-NEXT:    v_cndmask_b32_e32 v0, 0, v0, vcc
+; CHECK-NOOPT-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
+; CHECK-NOOPT-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
+; CHECK-NOOPT-NEXT:    v_cndmask_b32_e32 v3, 0, v3, vcc
+; CHECK-NOOPT-NEXT:    global_store_dwordx4 v4, v[0:3], s[2:3]
+; CHECK-NOOPT-NEXT:    s_endpgm
+  ptr addrspace(1) %in,
+  ptr addrspace(1) %out,
+  i1 %cond
+) {
+entry:
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %tid.ext = zext i32 %tid to i64
+  %gep = getelementptr <2 x i64>, ptr addrspace(1) %in, i64 %tid.ext
+  %loaded = load <2 x i64>, ptr addrspace(1) %gep, align 16
+  %words = bitcast <2 x i64> %loaded to <4 x i32>
+  %e0 = extractelement <4 x i32> %words, i64 0
+  %e1 = extractelement <4 x i32> %words, i64 1
+  %e2 = extractelement <4 x i32> %words, i64 2
+  %e3 = extractelement <4 x i32> %words, i64 3
+  %s0 = select i1 %cond, i32 %e0, i32 0
+  %s1 = select i1 %cond, i32 %e1, i32 0
+  %s2 = select i1 %cond, i32 %e2, i32 0
+  %s3 = select i1 %cond, i32 %e3, i32 0
+  store i32 %s0, ptr addrspace(1) %out, align 4
+  %ptr1 = getelementptr i32, ptr addrspace(1) %out, i64 1
+  store i32 %s1, ptr addrspace(1) %ptr1, align 4
+  %ptr2 = getelementptr i32, ptr addrspace(1) %out, i64 2
+  store i32 %s2, ptr addrspace(1) %ptr2, align 4
+  %ptr3 = getelementptr i32, ptr addrspace(1) %out, i64 3
+  store i32 %s3, ptr addrspace(1) %ptr3, align 4
+  ret void
+}
+
+; Test <2 x double> to <16 x i8> (double elements to byte elements)
+define amdgpu_kernel void @combine_v2f64_to_v16i8_asm(
+; CHECK-OPT-LABEL: combine_v2f64_to_v16i8_asm:
+; CHECK-OPT:       ; %bb.0: ; %entry
+; CHECK-OPT-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
+; CHECK-OPT-NEXT:    s_load_dword s6, s[4:5], 0x10
+; CHECK-OPT-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; CHECK-OPT-NEXT:    v_lshlrev_b32_e32 v0, 4, v0
+; CHECK-OPT-NEXT:    v_mov_b32_e32 v4, 0
+; CHECK-OPT-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-OPT-NEXT:    global_load_dwordx4 v[0:3], v0, s[0:1]
+; CHECK-OPT-NEXT:    s_bitcmp1_b32 s6, 0
+; CHECK-OPT-NEXT:    s_cselect_b64 vcc, -1, 0
+; CHECK-OPT-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-OPT-NEXT:    v_cndmask_b32_e32 v3, 0, v3, vcc
+; CHECK-OPT-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
+; CHECK-OPT-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
+; CHECK-OPT-NEXT:    v_cndmask_b32_e32 v0, 0, v0, vcc
+; CHECK-OPT-NEXT:    global_store_dwordx4 v4, v[0:3], s[2:3]
+; CHECK-OPT-NEXT:    s_endpgm
+;
+; CHECK-NOOPT-LABEL: combine_v2f64_to_v16i8_asm:
+; CHECK-NOOPT:       ; %bb.0: ; %entry
+; CHECK-NOOPT-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
+; CHECK-NOOPT-NEXT:    s_load_dword s6, s[4:5], 0x10
+; CHECK-NOOPT-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; CHECK-NOOPT-NEXT:    v_lshlrev_b32_e32 v0, 4, v0
+; CHECK-NOOPT-NEXT:    v_mov_b32_e32 v4, 0
+; CHECK-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-NOOPT-NEXT:    global_load_dwordx4 v[0:3], v0, s[0:1]
+; CHECK-NOOPT-NEXT:    s_bitcmp1_b32 s6, 0
+; CHECK-NOOPT-NEXT:    s_cselect_b64 vcc, -1, 0
+; CHECK-NOOPT-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NOOPT-NEXT:    v_lshrrev_b32_e32 v5, 8, v0
+; CHECK-NOOPT-NEXT:    v_lshrrev_b32_e32 v7, 24, v0
+; CHECK-NOOPT-NEXT:    v_lshrrev_b32_e32 v8, 8, v1
+; CHECK-NOOPT-NEXT:    v_lshrrev_b32_e32 v10, 24, v1
+; CHECK-NOOPT-NEXT:    v_lshrrev_b32_e32 v11, 8, v2
+; CHECK-NOOPT-NEXT:    v_lshrrev_b32_e32 v13, 24, v2
+; CHECK-NOOPT-NEXT:    v_lshrrev_b32_e32 v14, 8, v3
+; CHECK-NOOPT-NEXT:    v_lshrrev_b32_e32 v16, 24, v3
+; CHECK-NOOPT-NEXT:    v_lshrrev_b32_e32 v6, 16, v0
+; CHECK-NOOPT-NEXT:    v_lshrrev_b32_e32 v9, 16, v1
+; CHECK-NOOPT-NEXT:    v_lshrrev_b32_e32 v12, 16, v2
+; CHECK-NOOPT-NEXT:    v_lshrrev_b32_e32 v15, 16, v3
+; CHECK-NOOPT-NEXT:    v_cndmask_b32_e32 v5, 0, v5, vcc
+; CHECK-NOOPT-NEXT:    v_cndmask_b32_e32 v7, 0, v7, vcc
+; CHECK-NOOPT-NEXT:    v_cndmask_b32_e32 v8, 0, v8, vcc
+; CHECK-NOOPT-NEXT:    v_cndmask_b32_e32 v10, 0, v10, vcc
+; CHECK-NOOPT-NEXT:    v_cndmask_b32_e32 v11, 0, v11, vcc
+; CHECK-NOOPT-NEXT:    v_cndmask_b32_e32 v13, 0, v13, vcc
+; CHECK-NOOPT-NEXT:    v_cndmask_b32_e32 v14, 0, v14, vcc
+; CHECK-NOOPT-NEXT:    v_cndmask_b32_e32 v16, 0, v16, vcc
+; CHECK-NOOPT-NEXT:    v_cndmask_b32_e32 v0, 0, v0, vcc
+; CHECK-NOOPT-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
+; CHECK-NOOPT-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
+; CHECK-NOOPT-NEXT:    v_cndmask_b32_e32 v3, 0, v3, vcc
+; CHECK-NOOPT-NEXT:    v_cndmask_b32_e32 v6, 0, v6, vcc
+; CHECK-NOOPT-NEXT:    v_cndmask_b32_e32 v9, 0, v9, vcc
+; CHECK-NOOPT-NEXT:    v_cndmask_b32_e32 v12, 0, v12, vcc
+; CHECK-NOOPT-NEXT:    v_cndmask_b32_e32 v15, 0, v15, vcc
+; CHECK-NOOPT-NEXT:    v_lshlrev_b16_e32 v14, 8, v14
+; CHECK-NOOPT-NEXT:    v_lshlrev_b16_e32 v16, 8, v16
+; CHECK-NOOPT-NEXT:    v_lshlrev_b16_e32 v11, 8, v11
+; CHECK-NOOPT-NEXT:    v_lshlrev_b16_e32 v13, 8, v13
+; CHECK-NOOPT-NEXT:    v_lshlrev_b16_e32 v8, 8, v8
+; CHECK-NOOPT-NEXT:    v_lshlrev_b16_e32 v10, 8, v10
+; CHECK-NOOPT-NEXT:    v_lshlrev_b16_e32 v5, 8, v5
+; CHECK-NOOPT-NEXT:    v_lshlrev_b16_e32 v7, 8, v7
+; CHECK-NOOPT-NEXT:    v_or_b32_sdwa v3, v3, v14 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
+; CHECK-NOOPT-NEXT:    v_or_b32_sdwa v14, v15, v16 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
+; CHECK-NOOPT-NEXT:    v_or_b32_sdwa v2, v2, v11 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
+; CHECK-NOOPT-NEXT:    v_or_b32_sdwa v11, v12, v13 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
+; CHECK-NOOPT-NEXT:    v_or_b32_sdwa v1, v1, v8 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
+; CHECK-NOOPT-NEXT:    v_or_b32_sdwa v8, v9, v10 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
+; CHECK-NOOPT-NEXT:    v_or_b32_sdwa v0, v0, v5 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
+; CHECK-NOOPT-NEXT:    v_or_b32_sdwa v5, v6, v7 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
+; CHECK-NOOPT-NEXT:    v_or_b32_sdwa v3, v3, v14 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
+; CHECK-NOOPT-NEXT:    v_or_b32_sdwa v2, v2, v11 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
+; CHECK-NOOPT-NEXT:    v_or_b32_sdwa v1, v1, v8 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
+; CHECK-NOOPT-NEXT:    v_or_b32_sdwa v0, v0, v5 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
+; CHECK-NOOPT-NEXT:    global_store_dwordx4 v4, v[0:3], s[2:3]
+; CHECK-NOOPT-NEXT:    s_endpgm
+  ptr addrspace(1) %in,
+  ptr addrspace(1) %out,
+  i1 %cond
+) {
+entry:
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %tid.ext = zext i32 %tid to i64
+  %gep = getelementptr <2 x double>, ptr addrspace(1) %in, i64 %tid.ext
+  %loaded = load <2 x double>, ptr addrspace(1) %gep, align 16
+  %bytes = bitcast <2 x double> %loaded to <16 x i8>
+  %e0 = extractelement <16 x i8> %bytes, i64 0
+  %e1 = extractelement <16 x i8> %bytes, i64 1
+  %e2 = extractelement <16 x i8> %bytes, i64 2
+  %e3 = extractelement <16 x i8> %bytes, i64 3
+  %e4 = extractelement <16 x i8> %bytes, i64 4
+  %e5 = extractelement <16 x i8> %bytes, i64 5
+  %e6 = extractelement <16 x i8> %bytes, i64 6
+  %e7 = extractelement <16 x i8> %bytes, i64 7
+  %e8 = extractelement <16 x i8> %bytes, i64 8
+  %e9 = extractelement <16 x i8> %bytes, i64 9
+  %e10 = extractelement <16 x i8> %bytes, i64 10
+  %e11 = extractelement <16 x i8> %bytes, i64 11
+  %e12 = extractelement <16 x i8> %bytes, i64 12
+  %e13 = extractelement <16 x i8> %bytes, i64 13
+  %e14 = extractelement <16 x i8> %bytes, i64 14
+  %e15 = extractelement <16 x i8> %bytes, i64 15
+  %s0 = select i1 %cond, i8 %e0, i8 0
+  %s1 = select i1 %cond, i8 %e1, i8 0
+  %s2 = select i1 %cond, i8 %e2, i8 0
+  %s3 = select i1 %cond, i8 %e3, i8 0
+  %s4 = select i1 %cond, i8 %e4, i8 0
+  %s5 = select i1 %cond, i8 %e5, i8 0
+  %s6 = select i1 %cond, i8 %e6, i8 0
+  %s7 = select i1 %cond, i8 %e7, i8 0
+  %s8 = select i1 %cond, i8 %e8, i8 0
+  %s9 = select i1 %cond, i8 %e9, i8 0
+  %s10 = select i1 %cond, i8 %e10, i8 0
+  %s11 = select i1 %cond, i8 %e11, i8 0
+  %s12 = select i1 %cond, i8 %e12, i8 0
+  %s13 = select i1 %cond, i8 %e13, i8 0
+  %s14 = select i1 %cond, i8 %e14, i8 0
+  %s15 = select i1 %cond, i8 %e15, i8 0
+  store i8 %s0, ptr addrspace(1) %out, align 1
+  %ptr1 = getelementptr i8, ptr addrspace(1) %out, i64 1
+  store i8 %s1, ptr addrspace(1) %ptr1, align 1
+  %ptr2 = getelementptr i8, ptr addrspace(1) %out, i64 2
+  store i8 %s2, ptr addrspace(1) %ptr2, align 1
+  %ptr3 = getelementptr i8, ptr addrspace(1) %out, i64 3
+  store i8 %s3, ptr addrspace(1) %ptr3, align 1
+  %ptr4 = getelementptr i8, ptr addrspace(1) %out, i64 4
+  store i8 %s4, ptr addrspace(1) %ptr4, align 1
+  %ptr5 = getelementptr i8, ptr addrspace(1) %out, i64 5
+  store i8 %s5, ptr addrspace(1) %ptr5, align 1
+  %ptr6 = getelementptr i8, ptr addrspace(1) %out, i64 6
+  store i8 %s6, ptr addrspace(1) %ptr6, align 1
+  %ptr7 = getelementptr i8, ptr addrspace(1) %out, i64 7
+  store i8 %s7, ptr addrspace(1) %ptr7, align 1
+  %ptr8 = getelementptr i8, ptr addrspace(1) %out, i64 8
+  store i8 %s8, ptr addrspace(1) %ptr8, align 1
+  %ptr9 = getelementptr i8, ptr addrspace(1) %out, i64 9
+  store i8 %s9, ptr addrspace(1) %ptr9, align 1
+  %ptr10 = getelementptr i8, ptr addrspace(1) %out, i64 10
+  store i8 %s10, ptr addrspace(1) %ptr10, align 1
+  %ptr11 = getelementptr i8, ptr addrspace(1) %out, i64 11
+  store i8 %s11, ptr addrspace(1) %ptr11, align 1
+  %ptr12 = getelementptr i8, ptr addrspace(1) %out, i64 12
+  store i8 %s12, ptr addrspace(1) %ptr12, align 1
+  %ptr13 = getelementptr i8, ptr addrspace(1) %out, i64 13
+  store i8 %s13, ptr addrspace(1) %ptr13, align 1
+  %ptr14 = getelementptr i8, ptr addrspace(1) %out, i64 14
+  store i8 %s14, ptr addrspace(1) %ptr14, align 1
+  %ptr15 = getelementptr i8, ptr addrspace(1) %out, i64 15
+  store i8 %s15, ptr addrspace(1) %ptr15, align 1
+  ret void
+}
+
+; Test <2 x double> to <8 x i16> (double elements to 16-bit elements)
+define amdgpu_kernel void @combine_v2f64_to_v8i16_asm(
+; CHECK-OPT-LABEL: combine_v2f64_to_v8i16_asm:
+; CHECK-OPT:       ; %bb.0: ; %entry
+; CHECK-OPT-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
+; CHECK-OPT-NEXT:    s_load_dword s6, s[4:5], 0x10
+; CHECK-OPT-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; CHECK-OPT-NEXT:    v_lshlrev_b32_e32 v0, 4, v0
+; CHECK-OPT-NEXT:    v_mov_b32_e32 v4, 0
+; CHECK-OPT-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-OPT-NEXT:    global_load_dwordx4 v[0:3], v0, s[0:1]
+; CHECK-OPT-NEXT:    s_bitcmp1_b32 s6, 0
+; CHECK-OPT-NEXT:    s_cselect_b64 vcc, -1, 0
+; CHECK-OPT-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-OPT-NEXT:    v_cndmask_b32_e32 v3, 0, v3, vcc
+; CHECK-OPT-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
+; CHECK-OPT-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
+; CHECK-OPT-NEXT:    v_cndmask_b32_e32 v0, 0, v0, vcc
+; CHECK-OPT-NEXT:    global_store_dwordx4 v4, v[0:3], s[2:3]
+; CHECK-OPT-NEXT:    s_endpgm
+;
+; CHECK-NOOPT-LABEL: combine_v2f64_to_v8i16_asm:
+; CHECK-NOOPT:       ; %bb.0: ; %entry
+; CHECK-NOOPT-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
+; CHECK-NOOPT-NEXT:    s_load_dword s6, s[4:5], 0x10
+; CHECK-NOOPT-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; CHECK-NOOPT-NEXT:    v_lshlrev_b32_e32 v0, 4, v0
+; CHECK-NOOPT-NEXT:    v_mov_b32_e32 v4, 0
+; CHECK-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-NOOPT-NEXT:    global_load_dwordx4 v[0:3], v0, s[0:1]
+; CHECK-NOOPT-NEXT:    s_bitcmp1_b32 s6, 0
+; CHECK-NOOPT-NEXT:    s_cselect_b64 vcc, -1, 0
+; CHECK-NOOPT-NEXT:    s_mov_b32 s0, 0x5040100
+; CHECK-NOOPT-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NOOPT-NEXT:    v_cndmask_b32_e32 v5, 0, v0, vcc
+; CHECK-NOOPT-NEXT:    v_cndmask_b32_e32 v6, 0, v1, vcc
+; CHECK-NOOPT-NEXT:    v_cndmask_b32_e32 v7, 0, v2, vcc
+; CHECK-NOOPT-NEXT:    v_cndmask_b32_e32 v8, 0, v3, vcc
+; CHECK-NOOPT-NEXT:    v_cndmask_b32_sdwa v0, v4, v0, vcc dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
+; CHECK-NOOPT-NEXT:    v_cndmask_b32_sdwa v1, v4, v1, vcc dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
+; CHECK-NOOPT-NEXT:    v_cndmask_b32_sdwa v2, v4, v2, vcc dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
+; CHECK-NOOPT-NEXT:    v_cndmask_b32_sdwa v3, v4, v3, vcc dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
+; CHECK-NOOPT-NEXT:    v_perm_b32 v1, v1, v6, s0
+; CHECK-NOOPT-NEXT:    v_perm_b32 v2, v2, v7, s0
+; CHECK-NOOPT-NEXT:    v_perm_b32 v3, v3, v8, s0
+; CHECK-NOOPT-NEXT:    v_perm_b32 v0, v0, v5, s0
+; CHECK-NOOPT-NEXT:    global_store_dwordx4 v4, v[0:3], s[2:3]
+; CHECK-NOOPT-NEXT:    s_endpgm
+  ptr addrspace(1) %in,
+  ptr addrspace(1) %out,
+  i1 %cond
+) {
+entry:
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %tid.ext = zext i32 %tid to i64
+  %gep = getelementptr <2 x double>, ptr addrspace(1) %in, i64 %tid.ext
+  %loaded = load <2 x double>, ptr addrspace(1) %gep, align 16
+  %halves = bitcast <2 x double> %loaded to <8 x i16>
+  %e0 = extractelement <8 x i16> %halves, i64 0
+  %e1 = extractelement <8 x i16> %halves, i64 1
+  %e2 = extractelement <8 x i16> %halves, i64 2
+  %e3 = extractelement <8 x i16> %halves, i64 3
+  %e4 = extractelement <8 x i16> %halves, i64 4
+  %e5 = extractelement <8 x i16> %halves, i64 5
+  %e6 = extractelement <8 x i16> %halves, i64 6
+  %e7 = extractelement <8 x i16> %halves, i64 7
+  %s0 = select i1 %cond, i16 %e0, i16 0
+  %s1 = select i1 %cond, i16 %e1, i16 0
+  %s2 = select i1 %cond, i16 %e2, i16 0
+  %s3 = select i1 %cond, i16 %e3, i16 0
+  %s4 = select i1 %cond, i16 %e4, i16 0
+  %s5 = select i1 %cond, i16 %e5, i16 0
+  %s6 = select i1 %cond, i16 %e6, i16 0
+  %s7 = select i1 %cond, i16 %e7, i16 0
+  store i16 %s0, ptr addrspace(1) %out, align 2
+  %ptr1 = getelementptr i16, ptr addrspace(1) %out, i64 1
+  store i16 %s1, ptr addrspace(1) %ptr1, align 2
+  %ptr2 = getelementptr i16, ptr addrspace(1) %out, i64 2
+  store i16 %s2, ptr addrspace(1) %ptr2, align 2
+  %ptr3 = getelementptr i16, ptr addrspace(1) %out, i64 3
+  store i16 %s3, ptr addrspace(1) %ptr3, align 2
+  %ptr4 = getelementptr i16, ptr addrspace(1) %out, i64 4
+  store i16 %s4, ptr addrspace(1) %ptr4, align 2
+  %ptr5 = getelementptr i16, ptr addrspace(1) %out, i64 5
+  store i16 %s5, ptr addrspace(1) %ptr5, align 2
+  %ptr6 = getelementptr i16, ptr addrspace(1) %out, i64 6
+  store i16 %s6, ptr addrspace(1) %ptr6, align 2
+  %ptr7 = getelementptr i16, ptr addrspace(1) %out, i64 7
+  store i16 %s7, ptr addrspace(1) %ptr7, align 2
+  ret void
+}
+
+; Test <2 x double> to <4 x i32> (double elements to 32-bit elements)
+define amdgpu_kernel void @combine_v2f64_to_v4i32_asm(
+; CHECK-OPT-LABEL: combine_v2f64_to_v4i32_asm:
+; CHECK-OPT:       ; %bb.0: ; %entry
+; CHECK-OPT-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
+; CHECK-OPT-NEXT:    s_load_dword s6, s[4:5], 0x10
+; CHECK-OPT-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; CHECK-OPT-NEXT:    v_lshlrev_b32_e32 v0, 4, v0
+; CHECK-OPT-NEXT:    v_mov_b32_e32 v4, 0
+; CHECK-OPT-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-OPT-NEXT:    global_load_dwordx4 v[0:3], v0, s[0:1]
+; CHECK-OPT-NEXT:    s_bitcmp1_b32 s6, 0
+; CHECK-OPT-NEXT:    s_cselect_b64 vcc, -1, 0
+; CHECK-OPT-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-OPT-NEXT:    v_cndmask_b32_e32 v3, 0, v3, vcc
+; CHECK-OPT-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
+; CHECK-OPT-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
+; CHECK-OPT-NEXT:    v_cndmask_b32_e32 v0, 0, v0, vcc
+; CHECK-OPT-NEXT:    global_store_dwordx4 v4, v[0:3], s[2:3]
+; CHECK-OPT-NEXT:    s_endpgm
+;
+; CHECK-NOOPT-LABEL: combine_v2f64_to_v4i32_asm:
+; CHECK-NOOPT:       ; %bb.0: ; %entry
+; CHECK-NOOPT-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
+; CHECK-NOOPT-NEXT:    s_load_dword s6, s[4:5], 0x10
+; CHECK-NOOPT-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; CHECK-NOOPT-NEXT:    v_lshlrev_b32_e32 v0, 4, v0
+; CHECK-NOOPT-NEXT:    v_mov_b32_e32 v4, 0
+; CHECK-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-NOOPT-NEXT:    global_load_dwordx4 v[0:3], v0, s[0:1]
+; CHECK-NOOPT-NEXT:    s_bitcmp1_b32 s6, 0
+; CHECK-NOOPT-NEXT:    s_cselect_b64 vcc, -1, 0
+; CHECK-NOOPT-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NOOPT-NEXT:    v_cndmask_b32_e32 v0, 0, v0, vcc
+; CHECK-NOOPT-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
+; CHECK-NOOPT-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
+; CHECK-NOOPT-NEXT:    v_cndmask_b32_e32 v3, 0, v3, vcc
+; CHECK-NOOPT-NEXT:    global_store_dwordx4 v4, v[0:3], s[2:3]
+; CHECK-NOOPT-NEXT:    s_endpgm
+  ptr addrspace(1) %in,
+  ptr addrspace(1) %out,
+  i1 %cond
+) {
+entry:
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %tid.ext = zext i32 %tid to i64
+  %gep = getelementptr <2 x double>, ptr addrspace(1) %in, i64 %tid.ext
+  %loaded = load <2 x double>, ptr addrspace(1) %gep, align 16
+  %words = bitcast <2 x double> %loaded to <4 x i32>
+  %e0 = extractelement <4 x i32> %words, i64 0
+  %e1 = extractelement <4 x i32> %words, i64 1
+  %e2 = extractelement <4 x i32> %words, i64 2
+  %e3 = extractelement <4 x i32> %words, i64 3
+  %s0 = select i1 %cond, i32 %e0, i32 0
+  %s1 = select i1 %cond, i32 %e1, i32 0
+  %s2 = select i1 %cond, i32 %e2, i32 0
+  %s3 = select i1 %cond, i32 %e3, i32 0
+  store i32 %s0, ptr addrspace(1) %out, align 4
+  %ptr1 = getelementptr i32, ptr addrspace(1) %out, i64 1
+  store i32 %s1, ptr addrspace(1) %ptr1, align 4
+  %ptr2 = getelementptr i32, ptr addrspace(1) %out, i64 2
+  store i32 %s2, ptr addrspace(1) %ptr2, align 4
+  %ptr3 = getelementptr i32, ptr addrspace(1) %out, i64 3
+  store i32 %s3, ptr addrspace(1) %ptr3, align 4
+  ret void
+}
+
 declare i32 @llvm.amdgcn.workitem.id.x()
