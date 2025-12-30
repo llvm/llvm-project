@@ -1591,6 +1591,13 @@ Value *ScalarExprEmitter::EmitScalarConversion(Value *Src, QualType SrcType,
   if (DstType->isBooleanType())
     return EmitConversionToBool(Src, SrcType);
 
+  // Also handle conversions to atomic bools
+  if (const AtomicType *atomicType = DstType->getAs<AtomicType>()) {
+    QualType ValueType = atomicType->getValueType();
+    if (ValueType->isBooleanType())
+      return EmitConversionToBool(Src, ValueType);
+  }
+
   llvm::Type *DstTy = ConvertType(DstType);
 
   // Cast from half through float if half isn't a native type.
