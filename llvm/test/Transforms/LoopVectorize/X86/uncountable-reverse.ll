@@ -16,7 +16,8 @@ loop:
   %gep = getelementptr [1 x i8], ptr @gg, i64 %iv
   %load = load i8, ptr %gep, align 1
   %cmp = icmp eq i8 %load, 32
-  br i1 %cmp, label %loop, label %exit
+  %continue = and i1 %cmp, %bound.check
+  br i1 %continue, label %loop, label %exit
 
 exit:
   ret i1 %cmp
