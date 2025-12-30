@@ -392,6 +392,7 @@ Clang-Tidy Checks
    :doc:`readability-identifier-naming <readability/identifier-naming>`, "Yes"
    :doc:`readability-implicit-bool-conversion <readability/implicit-bool-conversion>`, "Yes"
    :doc:`readability-inconsistent-declaration-parameter-name <readability/inconsistent-declaration-parameter-name>`, "Yes"
+   :doc:`readability-inconsistent-ifelse-braces <readability/inconsistent-ifelse-braces>`, "Yes"
    :doc:`readability-isolate-declaration <readability/isolate-declaration>`, "Yes"
    :doc:`readability-magic-numbers <readability/magic-numbers>`,
    :doc:`readability-make-member-function-const <readability/make-member-function-const>`, "Yes"
