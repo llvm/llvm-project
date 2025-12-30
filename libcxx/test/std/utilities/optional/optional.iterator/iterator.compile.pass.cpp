@@ -25,5 +25,6 @@ static_assert(has_iterator_aliases<std::optional<int>>);
 static_assert(has_iterator_aliases<std::optional<const int>>);
 static_assert(has_iterator_aliases<std::optional<int&>>);
 static_assert(has_iterator_aliases<std::optional<const int&>>);
-static_assert(!has_iterator_aliases<std::optional<int (&)[1]>>);
+static_assert(has_iterator_aliases<std::optional<int (&)[1]>>);
+static_assert(!has_iterator_aliases<std::optional<int (&)[]>>);
 static_assert(!has_iterator_aliases<std::optional<int (&)()>>);

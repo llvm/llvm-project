@@ -681,11 +681,12 @@ struct __is_std_optional<optional<_Tp>> : true_type {};
 template <class _Tp, class = void>
 struct __optional_iterator {};
 
+// LWG4308 optional<T&>: Constraint: T is an object type other than an array of unknown bound.
 template <class _Tp>
 struct __optional_iterator<
     _Tp,
-    enable_if_t<!(is_lvalue_reference_v<_Tp> && is_function_v<__libcpp_remove_reference_t<_Tp>>) &&
-                !(is_lvalue_reference_v<_Tp> && is_array_v<__libcpp_remove_reference_t<_Tp>>)> > {
+    enable_if_t<!is_lvalue_reference_v<_Tp> || (is_object_v<__libcpp_remove_reference_t<_Tp>> &&
+                                                !__is_unbounded_array_v<__libcpp_remove_reference_t<_Tp>>)>> {
 private:
   using __pointer _LIBCPP_NODEBUG       = add_pointer_t<remove_reference_t<_Tp>>;
   using __const_pointer _LIBCPP_NODEBUG = add_pointer_t<const remove_reference_t<_Tp>>;
