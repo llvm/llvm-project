@@ -344,3 +344,71 @@ TEST(ProtocolRequestsTest, RestartArguments) {
   EXPECT_NE(attach_args, nullptr);
   EXPECT_EQ(attach_args->pid, 123U);
 }
+
+TEST(ProtocolRequestsTest, StackTraceArguments) {
+  llvm::Expected<StackTraceArguments> expected = parse<StackTraceArguments>(R"({
+    "threadId": 42,
+    "startFrame": 1,
+    "levels": 10,
+    "format": {
+      "parameters": true,
+      "line": true
+    }
+  })");
+  ASSERT_THAT_EXPECTED(expected, llvm::Succeeded());
+  EXPECT_EQ(expected->threadId, 42U);
+  EXPECT_EQ(expected->startFrame, 1U);
+  EXPECT_EQ(expected->levels, 10U);
+  EXPECT_EQ(expected->format->parameters, true);
+  EXPECT_EQ(expected->format->line, true);
+
+  // Check required keys.
+  EXPECT_THAT_EXPECTED(parse<StackTraceArguments>(R"({})"),
+                       FailedWithMessage("missing value at (root).threadId"));
+}
+
+TEST(ProtocolRequestsTest, StackTraceResponseBody) {
+  StackFrame frame1;
+  frame1.id = 1;
+  frame1.name = "main";
+  frame1.source = Source{};
+  frame1.source->name = "main.cpp";
+  frame1.source->sourceReference = 123;
+  frame1.line = 23;
+  frame1.column = 1;
+  StackFrame frame2;
+  frame2.id = 2;
+  frame2.name = "test";
+  frame2.presentationHint = StackFrame::ePresentationHintLabel;
+
+  StackTraceResponseBody body;
+  body.stackFrames = {frame1, frame2};
+  body.totalFrames = 2;
+
+  // Check required keys.
+  Expected<json::Value> expected = parse(R"({
+    "stackFrames": [
+      {
+        "id": 1,
+        "name": "main",
+        "source": {
+          "name": "main.cpp",
+          "sourceReference": 123
+        },
+        "line": 23,
+        "column": 1
+      },
+      {
+        "id": 2,
+        "name": "test",
+        "line": 0,
+        "column": 0,
+        "presentationHint": "label"
+      }
+    ],
+    "totalFrames": 2
+  })");
+
+  ASSERT_THAT_EXPECTED(expected, llvm::Succeeded());
+  EXPECT_EQ(PrettyPrint(*expected), PrettyPrint(body));
+}

@@ -555,8 +555,15 @@ Instruction *InstCombinerImpl::foldSelectIntoOp(SelectInst &SI, Value *TrueVal,
       // Examples: -inf + +inf = NaN, -inf - -inf = NaN, 0 * inf = NaN
       // Specifically, if the original select has both ninf and nnan, we can
       // safely propagate the flag.
+      // Note: This property holds for fadd, fsub, and fmul, but does not
+      // hold for fdiv (e.g. A / Inf == 0.0).
+      bool CanInferFiniteOperandsFromResult =
+          TVI->getOpcode() == Instruction::FAdd ||
+          TVI->getOpcode() == Instruction::FSub ||
+          TVI->getOpcode() == Instruction::FMul;
       NewSelFMF.setNoInfs(TVI->hasNoInfs() ||
-                          (NewSelFMF.noInfs() && NewSelFMF.noNaNs()));
+                          (CanInferFiniteOperandsFromResult &&
+                           NewSelFMF.noInfs() && NewSelFMF.noNaNs()));
       cast<Instruction>(NewSel)->setFastMathFlags(NewSelFMF);
     }
     NewSel->takeName(TVI);
@@ -3839,6 +3846,8 @@ static Instruction *foldBitCeil(SelectInst &SI, IRBuilderBase &Builder,
                                 InstCombinerImpl &IC) {
   Type *SelType = SI.getType();
   unsigned BitWidth = SelType->getScalarSizeInBits();
+  if (!isPowerOf2_32(BitWidth))
+    return nullptr;
 
   Value *FalseVal = SI.getFalseValue();
   Value *TrueVal = SI.getTrueValue();
