@@ -36,7 +36,7 @@ RWBuffer<float> Buf2[10] : register(u4294967294);
 // expected-error@+1 {{register number should not exceed UINT32_MAX, 4294967295}}
 RWBuffer<float> A : register(u9995294967294);
 
-// test a struct within a cbuffer
+// test a cbuffer directly with an excessively high register number.
 // expected-error@+1 {{register number should not exceed UINT32_MAX, 4294967295}}
 cbuffer MyCB : register(b9995294967294) {
   float F[4];
